@@ -1,0 +1,111 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: pastikan user sudah login dan data adalah miliknya
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Helper: cek apakah user adalah admin
+    function isAdmin() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // USERS - profil akun user
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if request.auth != null;
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // PAYMENTS - konfirmasi pembayaran & langganan
+    match /payments/{docId} {
+      // User bisa baca payment miliknya, admin bisa baca semua
+      allow read: if (request.auth != null && resource.data.userId == request.auth.uid) || isAdmin();
+      // User login bisa buat payment (userId boleh null untuk user yang belum login penuh)
+      allow create: if request.auth != null;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ADMIN SETTINGS - konfigurasi global sistem
+    match /admin_settings/{docId} {
+      allow read: if true; // Publik butuh akses untuk cek status maintenance & billing
+      allow write: if isAdmin();
+    }
+
+    // ADMIN LOGS - riwayat aktivitas admin
+    match /admin_logs/{docId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if false; // Logs jangan bisa diedit/hapus
+    }
+
+    // TRANSACTIONS - pemasukan, pengeluaran, topup, transfer, debt
+    match /transactions/{docId} {
+      allow read, delete: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow update: if isOwner(resource.data.userId)
+                    && isOwner(request.resource.data.userId);
+    }
+
+    // ACCOUNTS - rekening bank, e-wallet, kas, dll
+    match /accounts/{docId} {
+      allow read, delete: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow update: if isOwner(resource.data.userId);
+    }
+
+    // BUDGETS - target & limit anggaran
+    match /budgets/{docId} {
+      allow read, delete: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow update: if isOwner(resource.data.userId);
+    }
+
+    // INVESTMENTS - saham, deposito, aset lainnya
+    match /investments/{docId} {
+      allow read, delete: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow update: if isOwner(resource.data.userId);
+    }
+
+    // CATEGORIES - nama akun / ledger kategori
+    match /categories/{docId} {
+      allow read, delete: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow update: if isOwner(resource.data.userId);
+    }
+
+    // RECURRING - transaksi berulang / terjadwal
+    match /recurring/{docId} {
+      allow read, delete: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow update: if isOwner(resource.data.userId);
+    }
+
+    // SAVINGS - catatan setoran tabungan dan goal keuangan
+    match /savings/{docId} {
+      allow read, delete: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow update: if isOwner(resource.data.userId);
+    }
+
+    // CURRENCIES - manajemen mata uang dinamis per user
+    match /currencies/{docId} {
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+      allow create: if isOwner(request.resource.data.userId);
+      allow update: if isOwner(resource.data.userId);
+    }
+
+    // AI CHATS - Riwayat percakapan AI per user
+    match /ai_chats/{docId} {
+      allow read, write: if isOwner(docId);
+    }
+  }
+}
