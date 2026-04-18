@@ -1,4 +1,4 @@
-name = "leosiqra-cloudflare"
+name = "membersite-leosiqra"
 main = "./src/index.js"
 compatibility_date = "2025-04-19"
 
@@ -10,14 +10,14 @@ run_worker_first = ["/api/*", "/dashboard", "/admin*", "/login", "/register", "/
 
 [[d1_databases]]
 binding = "DB"
-database_name = "leosiqra-db"
-database_id = "replace-with-your-d1-database-id"
+database_name = "membersite_leosiqra_db"
+database_id = "a04174cd-6f44-4403-bec1-6ca3dddb1a9c"
 
 [[r2_buckets]]
 binding = "FILES"
-bucket_name = "leosiqra-assets"
+bucket_name = "membersite-leosiqra-assets"
 
 [vars]
-APP_NAME = "Leosiqra Cloudflare"
+APP_NAME = "Membersite Leosiqra"
 PUBLIC_APP_URL = "http://127.0.0.1:8787"
 R2_PUBLIC_BASE_URL = ""

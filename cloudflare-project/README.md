@@ -1,4 +1,4 @@
-# Leosiqra Cloudflare Migration
+# Membersite Leosiqra
 
 Migrasi penuh project lama ke stack Cloudflare:
 
@@ -91,8 +91,8 @@ copy .env.example .env
 3. Buat D1 database dan R2 bucket:
 
 ```bash
-wrangler d1 create leosiqra-db
-wrangler r2 bucket create leosiqra-assets
+wrangler d1 create membersite_leosiqra_db
+wrangler r2 bucket create membersite-leosiqra-assets
 ```
 
 4. Isi `database_id` di `wrangler.toml`, lalu jalankan schema:
@@ -163,7 +163,7 @@ npm run data:import
 Jalankan hasil SQL ke D1:
 
 ```bash
-wrangler d1 execute leosiqra-db --remote --file=./database/generated-import.sql
+wrangler d1 execute membersite_leosiqra_db --remote --file=./database/generated-import.sql
 ```
 
 ### 2. Migrasi Asset Lama -> R2

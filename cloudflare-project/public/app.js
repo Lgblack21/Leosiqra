@@ -83,7 +83,7 @@ function topbar() {
   if (!state.user) {
     return `
       <header class="topbar">
-        <a class="brand" href="/">Leosiqra Cloudflare</a>
+        <a class="brand" href="/">Membersite Leosiqra</a>
         <div class="topbar-actions">
           <a class="ghost-btn" href="/auth/login">Login</a>
           <a class="primary-btn" href="/auth/register">Mulai Migrasi</a>
@@ -94,7 +94,7 @@ function topbar() {
 
   return `
     <header class="topbar">
-      <a class="brand" href="${state.user.role === "admin" ? "/admin/dashboard" : "/membership/dashboard"}">Leosiqra Cloudflare</a>
+      <a class="brand" href="${state.user.role === "admin" ? "/admin/dashboard" : "/membership/dashboard"}">Membersite Leosiqra</a>
       <div class="topbar-actions">
         <span class="pill">${state.user.role === "admin" ? "Admin" : state.user.plan || "FREE"} / ${state.user.status || "-"}</span>
         <a class="ghost-btn" href="${state.user.role === "admin" ? "/admin/pengaturan" : "/membership/profile"}">Profile</a>

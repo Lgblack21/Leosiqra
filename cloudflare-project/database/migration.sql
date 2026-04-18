@@ -2,8 +2,8 @@
 -- 1. `npm install`
 -- 2. Atur `.env` sesuai `.env.example`
 -- 3. `npm run data:import`
--- 4. `wrangler d1 execute leosiqra-db --local --file=./database/generated-import.sql`
--- 5. `wrangler d1 execute leosiqra-db --remote --file=./database/generated-import.sql`
+-- 4. `wrangler d1 execute membersite_leosiqra_db --local --file=./database/generated-import.sql`
+-- 5. `wrangler d1 execute membersite_leosiqra_db --remote --file=./database/generated-import.sql`
 
 INSERT OR IGNORE INTO users (
   id,
