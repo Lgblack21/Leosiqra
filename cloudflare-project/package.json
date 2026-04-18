@@ -1,0 +1,19 @@
+{
+  "name": "leosiqra-cloudflare",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "node --check ./src/index.js && node --check ./src/api/auth.js && node --check ./src/api/admin.js && node --check ./src/api/resources.js && node --check ./src/api/uploads.js && node --check ./src/pages/app.js && node --check ./public/app.js && node --check ./scripts/import-legacy-json.mjs && node --check ./scripts/upload-to-r2.mjs",
+    "db:migrate": "wrangler d1 execute leosiqra-db --local --file=./database/schema.sql",
+    "db:migrate:remote": "wrangler d1 execute leosiqra-db --remote --file=./database/schema.sql",
+    "r2:upload": "node ./scripts/upload-to-r2.mjs",
+    "data:import": "node ./scripts/import-legacy-json.mjs"
+  },
+  "devDependencies": {
+    "aws4fetch": "^1.0.20",
+    "wrangler": "^4.12.0"
+  }
+}

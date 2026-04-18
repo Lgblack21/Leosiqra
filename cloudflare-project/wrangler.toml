@@ -1,0 +1,23 @@
+name = "leosiqra-cloudflare"
+main = "./src/index.js"
+compatibility_date = "2025-04-19"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*", "/dashboard", "/admin*", "/login", "/register", "/profile", "/membership/*", "/auth/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "leosiqra-db"
+database_id = "replace-with-your-d1-database-id"
+
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "leosiqra-assets"
+
+[vars]
+APP_NAME = "Leosiqra Cloudflare"
+PUBLIC_APP_URL = "http://127.0.0.1:8787"
+R2_PUBLIC_BASE_URL = ""
