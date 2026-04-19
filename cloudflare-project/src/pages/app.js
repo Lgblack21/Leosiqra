@@ -3,7 +3,7 @@ import { renderShell } from "../components/layout.js";
 
 export function renderPage({ route, user, turnstileSiteKey }) {
   const titles = {
-    "/": APP_NAME,
+    "/": `${APP_NAME} | Dashboard Finansial Pribadi Premium`,
     "/login": `Login | ${APP_NAME}`,
     "/auth/login": `Login | ${APP_NAME}`,
     "/register": `Register | ${APP_NAME}`,

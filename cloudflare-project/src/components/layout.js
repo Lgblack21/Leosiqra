@@ -6,7 +6,9 @@ export function renderShell({ title, route, user, turnstileSiteKey }) {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${title}</title>
-    <meta name="description" content="Leosiqra Rekapan berjalan penuh di Cloudflare dengan Worker, D1, R2, dan session auth." />
+    <meta name="description" content="Leosiqra adalah dashboard finansial pribadi premium dengan alur member yang cepat dipahami, mobile-friendly, dan berjalan penuh di Cloudflare." />
+    <meta name="theme-color" content="#10243b" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>

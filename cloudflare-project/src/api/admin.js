@@ -19,6 +19,24 @@ async function addAdminLog(env, adminUser, action, target, note, color = "indigo
 
 export async function handleAdmin(request, env, sessionContext) {
   const url = new URL(request.url);
+  if (url.pathname === "/api/billing/settings" && request.method === "GET") {
+    if (!sessionContext) return unauthorized();
+    const settings = (await getSettings(env)) || {};
+    return json({
+      ok: true,
+      data: {
+        billingEmail: settings.billingEmail || "",
+        whatsapp: settings.whatsapp || "",
+        bankName: settings.bankName || "",
+        bankAccountName: settings.bankAccountName || "",
+        bankNumber: settings.bankNumber || "",
+        qrisText: settings.qrisText || "",
+        qrisURL: settings.qrisURL || "",
+        proPackages: settings.proPackages || []
+      }
+    });
+  }
+
   if (url.pathname === "/api/payments" && request.method === "POST") {
     if (!sessionContext) return unauthorized();
     const body = await request.json();

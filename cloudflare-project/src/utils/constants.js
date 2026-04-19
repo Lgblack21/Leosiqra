@@ -1,4 +1,4 @@
-export const APP_NAME = "Membersite Leosiqra";
+export const APP_NAME = "Leosiqra";
 export const SETTINGS_KEY = "global_config";
 export const DEFAULT_CURRENCIES = [
   { code: "IDR", name: "Indonesian Rupiah", symbol: "Rp", isDefault: true },
