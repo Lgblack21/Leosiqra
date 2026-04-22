@@ -1,4 +1,5 @@
-import { authenticator } from "otplib";
+import { verifySync } from "otplib";
+import { DurableObject } from "cloudflare:workers";
 
 export interface Env {
   DB: D1Database;
@@ -412,7 +413,11 @@ async function handleLogin(request: Request, env: Env) {
   if (
     user.two_factor_secret &&
     payload.twoFactorToken &&
-    !authenticator.check(payload.twoFactorToken, user.two_factor_secret)
+    !verifySync({
+      token: payload.twoFactorToken,
+      secret: user.two_factor_secret,
+      strategy: "totp",
+    }).valid
   ) {
     return json({ error: "Kode 2FA tidak valid." }, { status: 401 });
   }
