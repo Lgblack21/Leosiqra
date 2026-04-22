@@ -1,0 +1,38 @@
+name = "membersite-leosiqra"
+main = "cloudflare/src/index.ts"
+compatibility_date = "2026-04-22"
+
+[observability]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "membersite_leosiqra_db"
+database_id = "a04174cd-6f44-4403-bec1-6ca3dddb1a9c"
+migrations_dir = "cloudflare/migrations"
+
+[[r2_buckets]]
+binding = "FILES_BUCKET"
+bucket_name = "leosiqra-assets"
+
+[assets]
+directory = "./out"
+binding = "ASSETS"
+
+[durable_objects]
+bindings = [
+  { name = "REALTIME_ROOM", class_name = "RealtimeRoom" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RealtimeRoom"]
+
+[vars]
+APP_NAME = "Leosiqra"
+APP_ENV = "development"
+APP_URL = "http://127.0.0.1:8787"
+SESSION_COOKIE_NAME = "leosiqra_session"
+DEFAULT_FREE_PLAN_DAYS = "0"
+MAINTENANCE_BYPASS_ADMIN = "true"
+NEXT_PUBLIC_USE_CLOUDFLARE_AUTH = "true"
