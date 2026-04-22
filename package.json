@@ -1,14 +1,43 @@
 {
-  "name": "leosiqra-cloudflare-root",
-  "version": "1.0.0",
+  "name": "finance-tracker",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "npm --prefix cloudflare-project run dev",
-    "deploy": "npm --prefix cloudflare-project run deploy",
-    "check": "npm --prefix cloudflare-project run check",
-    "db:migrate": "npm --prefix cloudflare-project run db:migrate",
-    "db:migrate:remote": "npm --prefix cloudflare-project run db:migrate:remote",
-    "data:import": "npm --prefix cloudflare-project run data:import",
-    "r2:upload": "npm --prefix cloudflare-project run r2:upload"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "cf:dev": "wrangler dev cloudflare/src/index.ts",
+    "cf:deploy": "wrangler deploy cloudflare/src/index.ts",
+    "cf:d1:migrate": "wrangler d1 migrations apply leosiqra-db --local",
+    "cf:d1:seed": "wrangler d1 execute leosiqra-db --local --file=./cloudflare/seeds/seed.sql"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "firebase": "^12.12.0",
+    "framer-motion": "^12.38.0",
+    "lucide-react": "^1.8.0",
+    "next": "16.2.3",
+    "otplib": "^13.4.0",
+    "qrcode": "^1.5.4",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-icons": "^5.6.0",
+    "recharts": "^3.8.1",
+    "tailwind-merge": "^3.5.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.3",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "wrangler": "^4"
   }
 }

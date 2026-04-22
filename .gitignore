@@ -2,7 +2,6 @@
 
 # dependencies
 /node_modules
-/cloudflare-project/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -17,8 +16,6 @@
 # next.js
 /.next/
 /out/
-/cloudflare-project/.wrangler/
-/legacy-app-archive/
 
 # production
 /build
@@ -35,7 +32,6 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
-devserver*.log
 
 # vercel
 .vercel

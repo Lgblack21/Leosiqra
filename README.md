@@ -1,30 +1,36 @@
-# Leosiqra - Cloudflare Migration
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## UI/UX Status
+## Getting Started
 
-Leosiqra has been migrated toward a Cloudflare-based stack with a premium visual system, modular frontend code, responsive layouts, and role-based dashboard flows.
+First, run the development server:
 
-## Current Scope
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
-- `cloudflare-project/public/style.css`: shared visual tokens, layout, and component styling.
-- `cloudflare-project/public/js/app/*`: modular frontend app structure, routing, and page rendering.
-- `cloudflare-project/src/*`: API handlers, auth flow, database access, and supporting utilities.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Product Notes
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-| Area | Previous Experience | Current Cloudflare Build | Next Focus |
-|------|---------------------|--------------------------|------------|
-| Hero | Warmer CTA emphasis | Premium preview layout | Add stronger trust cues |
-| Dashboard | Simpler flow | More detailed stats and ranks | Improve density and scannability |
-| Mobile UX | Comfortable baseline | Responsive implementation | Validate live interaction patterns |
-| CTA | Stronger local tone | Modern gradient treatment | Refine copywriting |
-| Loading | Minimal | Shimmer states | Keep and optimize |
-| Navigation | Simpler sidebar | Quick actions and modular pages | Reduce label friction |
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Immediate Priorities
+## Learn More
 
-1. Validate deployment on `https://leosiqra.pages.dev`.
-2. Improve Indonesian landing-page copy and trust signals.
-3. Increase dashboard information density without hurting readability.
-4. Polish payment and tax-related flows.
-5. Run performance checks and keep Lighthouse targets high.
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
