@@ -43,13 +43,13 @@ const menuGroups = [
     items: [
       { icon: LayoutDashboard, label: 'Bulanan', href: '/membership/dashboard' },
       { icon: Calendar, label: 'Tahunan', href: '/membership/annual' },
+      { icon: TrendingUp, label: 'Investasi', href: '/membership/investment' },
       { icon: ShieldCheck, label: 'Pajak Center', href: '/membership/pajak-center' },
     ]
   },
   {
     label: 'Investasi',
     items: [
-      { icon: TrendingUp, label: 'Dashboard Investasi', href: '/membership/investment' },
       { icon: Briefcase, label: 'Investasi Saham', href: '/membership/investasi/saham' },
       { icon: Banknote, label: 'Deposito', href: '/membership/investasi/deposito' },
       { icon: PieChart, label: 'Investasi Lainnya', href: '/membership/investasi/lainnya' },
