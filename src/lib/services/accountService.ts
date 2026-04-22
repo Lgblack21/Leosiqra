@@ -14,8 +14,6 @@ export interface Account {
   createdAt: Date;
 }
 
-const COLLECTION_NAME = 'accounts';
-
 export const accountService = {
   async createAccount(data: Omit<Account, 'id' | 'createdAt'>) {
     const result = await cloudflareApi<{ id: string }>('/api/member/accounts', {
@@ -35,6 +33,7 @@ export const accountService = {
   },
 
   async getUserAccounts(_userId: string) {
+    void _userId;
     const result = await cloudflareApi<{ items: Record<string, unknown>[] }>('/api/member/accounts');
     return result.items.map((data) => {
       return {

@@ -32,8 +32,6 @@ export interface Investment {
   createdAt: Date;
 }
 
-const COLLECTION_NAME = 'investments';
-
 export const investmentService = {
   async createInvestment(data: Omit<Investment, 'id' | 'createdAt'>) {
     const result = await cloudflareApi<{ id: string }>('/api/member/investments', {
@@ -71,6 +69,7 @@ export const investmentService = {
   },
 
   async getUserInvestments(_userId: string) {
+    void _userId;
     const result = await cloudflareApi<{ items: Record<string, unknown>[] }>('/api/member/investments');
     return result.items.map((data) => {
       return {

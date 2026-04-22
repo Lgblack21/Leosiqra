@@ -11,7 +11,7 @@ import {
   Coins,
   BarChart3
 } from 'lucide-react';
-import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
+import { exchangeRateService } from '@/lib/services/exchangeRateService';
 import { currencyService, Currency } from '@/lib/services/currencyService';
 import { auth } from '@/lib/cf-client';
 
@@ -40,7 +40,6 @@ interface ForexRate {
 export default function MarketDataPage() {
   const [cryptoData, setCryptoData] = useState<CryptoData[]>([]);
   const [exchangeRates, setExchangeRates] = useState<ExchangeRate[]>([]);
-  const [userCurrencies, setUserCurrencies] = useState<Currency[]>([]);
   const [forexRates, setForexRates] = useState<ForexRate[]>([]);
   const [usdIdrRate, setUsdIdrRate] = useState<number>(0);
   const [loading, setLoading] = useState(true);
@@ -61,7 +60,6 @@ export default function MarketDataPage() {
             resolve(data);
           });
         });
-        setUserCurrencies(currentCurs);
       }
 
       // 1. Fetch Crypto dari CoinGecko (gratis, tanpa API key)
@@ -83,7 +81,6 @@ export default function MarketDataPage() {
       
       if (Object.keys(rates).length > 0) {
         const idrRate = rates.IDR || 1;
-        const usdToIdr = idrRate;
         
         // --- DINAMISASI EXCHANGE RATE TABLE ---
         const mappedExchange: ExchangeRate[] = currentCurs
@@ -151,9 +148,9 @@ export default function MarketDataPage() {
           if (cryptoRes.ok) {
             const data = await cryptoRes.json();
             const mappedCrypto: CryptoData[] = targetIds.map(id => {
-              const nameMap: any = { bitcoin: 'Bitcoin', ethereum: 'Ethereum', solana: 'Solana', binancecoin: 'BNB', cardano: 'Cardano' };
-              const symbolMap: any = { bitcoin: 'BTC/USD', ethereum: 'ETH/USD', solana: 'SOL/USD', binancecoin: 'BNB/USD', cardano: 'ADA/USD' };
-              const iconMap: any = { bitcoin: '₿', ethereum: 'Ξ', solana: '◎', binancecoin: '黃', cardano: '₳' };
+              const nameMap: Record<string, string> = { bitcoin: 'Bitcoin', ethereum: 'Ethereum', solana: 'Solana', binancecoin: 'BNB', cardano: 'Cardano' };
+              const symbolMap: Record<string, string> = { bitcoin: 'BTC/USD', ethereum: 'ETH/USD', solana: 'SOL/USD', binancecoin: 'BNB/USD', cardano: 'ADA/USD' };
+              const iconMap: Record<string, string> = { bitcoin: '₿', ethereum: 'Ξ', solana: '◎', binancecoin: '黃', cardano: '₳' };
               
               return {
                 id,
@@ -389,4 +386,5 @@ export default function MarketDataPage() {
     </div>
   );
 }
+
 

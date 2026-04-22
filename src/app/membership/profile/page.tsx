@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { 
   User, 
   Mail, 
@@ -21,14 +22,13 @@ import {
   Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
 import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged, User as FirebaseUser } from '@/lib/cf-auth';
-import { doc, getDoc, setDoc, onSnapshot, collection, query, where } from '@/lib/cf-firestore';
+import { doc, setDoc } from '@/lib/cf-firestore';
 import { accountService, Account } from '@/lib/services/accountService';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
-import { subscribeUserProfile, UserProfile as ServiceProfile } from '@/lib/services/userService';
+import { subscribeUserProfile } from '@/lib/services/userService';
 
 interface UserProfile {
   displayName: string;
@@ -62,12 +62,17 @@ export default function ProfilePage() {
         // subscribe profile dari Firestore (Real-time)
         unsubProfile = subscribeUserProfile(u.uid, (data) => {
           if (data) {
+            const profileExtras = data as typeof data & {
+              username?: string;
+              phone?: string;
+              address?: string;
+            };
             setProfile({
               displayName: data.name || u.displayName || '',
               email: data.email || u.email || '',
-              username: (data as any).username || '',
-              phone: (data as any).phone || '',
-              address: (data as any).address || '',
+              username: profileExtras.username || '',
+              phone: profileExtras.phone || '',
+              address: profileExtras.address || '',
               photoURL: data.photoURL || u.photoURL || '',
               plan: data.plan
             });
@@ -162,7 +167,13 @@ export default function ProfilePage() {
             <div className="w-24 h-24 md:w-32 lg:w-40 md:h-32 lg:h-40 rounded-[28px] md:rounded-[48px] bg-gradient-to-tr from-indigo-600 to-blue-500 p-1 md:p-1.5 shadow-xl shadow-indigo-100 flex items-center justify-center overflow-hidden">
               <div className="w-full h-full rounded-[24px] md:rounded-[42px] bg-white flex items-center justify-center text-2xl md:text-4xl font-black text-indigo-600 overflow-hidden relative">
                 {profile.photoURL ? (
-                  <img src={profile.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                  <Image
+                    src={profile.photoURL}
+                    alt="Profile"
+                    fill
+                    className="object-cover"
+                    sizes="160px"
+                  />
                 ) : (
                   initials
                 )}

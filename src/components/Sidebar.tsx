@@ -5,7 +5,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  BarChart3,
   Calendar,
   LayoutDashboard,
   LogOut,

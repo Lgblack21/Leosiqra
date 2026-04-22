@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from 'next/navigation';
-import { Menu, PlusCircle, ChevronDown, TrendingUp, Briefcase, PiggyBank, CreditCard, Banknote, Target, RefreshCw, ArrowUpDown, Globe } from 'lucide-react';
+import { Menu, PlusCircle, ChevronDown, TrendingUp, Briefcase, PiggyBank, CreditCard, Banknote, Target, RefreshCw, ArrowUpDown, Globe, type LucideIcon } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useModal, ModalType } from '@/context/ModalContext';
 import { cn } from '@/lib/utils';
@@ -26,7 +26,7 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const menuItems: { id: ModalType; label: string; icon: any; color: string }[] = [
+  const menuItems: { id: ModalType; label: string; icon: LucideIcon; color: string }[] = [
     { id: 'harian', label: 'Transaksi Harian', icon: TrendingUp, color: 'text-emerald-600' },
     { id: 'saham', label: 'Investasi Saham', icon: Briefcase, color: 'text-blue-600' },
     { id: 'deposito', label: 'Deposito', icon: PiggyBank, color: 'text-indigo-600' },

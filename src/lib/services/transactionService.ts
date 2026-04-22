@@ -28,8 +28,6 @@ export interface Transaction {
   createdAt: Date;
 }
 
-const COLLECTION_NAME = 'transactions';
-
 export const transactionService = {
   // Create
   async createTransaction(data: Omit<Transaction, 'id' | 'createdAt'>) {
@@ -54,6 +52,7 @@ export const transactionService = {
 
   // Read all for user
   async getUserTransactions(_userId: string) {
+    void _userId;
     const result = await cloudflareApi<{ items: Record<string, unknown>[] }>('/api/member/transactions');
     return result.items.map((data) => {
       return {
@@ -106,14 +105,46 @@ export const transactionService = {
   }
 };
 
-export const addTransaction = (data: any) => {
-  const mappedData = {
+type AddTransactionInput = {
+  type?: string;
+  amount?: number;
+  actual?: number;
+  amountIDR?: number;
+  userId?: string;
+  category?: string;
+  accountId?: string;
+  date?: Date;
+  currency?: string;
+  subCategory?: string;
+  targetAccountId?: string;
+  displayDate?: string;
+  note?: string;
+  item?: string;
+  status?: string;
+  [key: string]: unknown;
+};
+
+export const addTransaction = (data: AddTransactionInput) => {
+  const normalizedType = data.type === 'pemasukkan' ? 'pemasukan' : data.type;
+  const normalizedStatus: Transaction['status'] =
+    data.status === 'PENDING' || data.status === 'FAILED' || data.status === 'VERIFIED'
+      ? data.status
+      : 'VERIFIED';
+  const mappedData: Omit<Transaction, 'id' | 'createdAt'> = {
     ...data,
-    type: data.type === 'pemasukkan' ? 'pemasukan' : data.type,
+    userId: data.userId || '',
+    type: (normalizedType as Transaction['type']) || 'pengeluaran',
     amount: data.amount || data.actual || 0,
     amountIDR: data.amountIDR || data.amount || data.actual || 0,
+    category: data.category || 'Umum',
+    accountId: data.accountId || 'General',
+    date: data.date || new Date(),
+    currency: data.currency || 'IDR',
+    subCategory: data.subCategory,
+    targetAccountId: data.targetAccountId,
+    displayDate: data.displayDate,
     note: data.note || data.item || '',
-    status: data.status || 'VERIFIED'
+    status: normalizedStatus
   };
   return transactionService.createTransaction(mappedData);
 };

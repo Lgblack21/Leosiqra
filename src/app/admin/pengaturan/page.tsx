@@ -1,8 +1,7 @@
 "use client";
 
+import Image from 'next/image';
 import { 
-  CheckCircle2, 
-  Clock, 
   ShieldCheck,
   Zap,
   LayoutDashboard,
@@ -13,7 +12,6 @@ import {
   Database,
   Lock,
   Save,
-  ChevronRight,
   ArrowRight,
   X,
   Image as ImageIcon,
@@ -30,7 +28,6 @@ import { auth, db } from '@/lib/cf-client';
 import { collection, getDocs } from '@/lib/cf-firestore';
 import { subscribeUserProfile, UserProfile } from '@/lib/services/userService';
 import { 
-  getAppSettings,
   subscribeAppSettings,
   saveAppSettings,
   addAdminLog,
@@ -42,13 +39,19 @@ import { uploadToCloudinary } from '@/lib/cloudinary';
 import { exchangeRateService } from '@/lib/services/exchangeRateService';
 import { currencyService, Currency } from '@/lib/services/currencyService';
 
+type LiveCryptoQuote = {
+  idr?: number;
+  usd?: number;
+  usd_24h_change?: number;
+};
+
 export default function AdminPengaturanPage() {
   const [userEmail, setUserEmail] = useState('admin@leosiqra.com');
   const [activeTab, setActiveTab] = useState('billing');
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [isRefreshingMarket, setIsRefreshingMarket] = useState(false);
   const [liveFxRates, setLiveFxRates] = useState<Record<string, number>>({});
-  const [liveCrypto, setLiveCrypto] = useState<Record<string, any>>({});
+  const [liveCrypto, setLiveCrypto] = useState<Record<string, LiveCryptoQuote>>({});
   const [liveTimestamp, setLiveTimestamp] = useState<string>('-');
   const [allCurrencies, setAllCurrencies] = useState<Currency[]>([]);
 
@@ -78,7 +81,7 @@ export default function AdminPengaturanPage() {
         getDocs(collection(db, 'users'))
       ]);
 
-      const crypto = cryptoRes.ok ? await cryptoRes.json() : {};
+      const crypto = (cryptoRes.ok ? await cryptoRes.json() : {}) as Record<string, LiveCryptoQuote>;
       setLiveCrypto(crypto);
       
       // Gunakan exchangeRateService — sama persis dengan halaman member
@@ -134,7 +137,6 @@ export default function AdminPengaturanPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [errorStatus, setErrorStatus] = useState('');
   const [isSavingAccount, setIsSavingAccount] = useState(false);
 
   const passwordStrength = useMemo(() => {
@@ -265,12 +267,14 @@ export default function AdminPengaturanPage() {
         alert('Password berhasil diperbarui!');
         setNewPassword('');
         setConfirmPassword('');
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(error);
-        if (error.code === 'auth/requires-recent-login') {
+        const code = (error as { code?: string } | null)?.code;
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        if (code === 'auth/requires-recent-login') {
           alert('Sesi Anda sudah lama. Silakan logout dan login kembali untuk mengubah password.');
         } else {
-          alert('Gagal memperbarui password: ' + error.message);
+          alert('Gagal memperbarui password: ' + message);
         }
       } finally {
         setIsSavingAccount(false);
@@ -506,8 +510,8 @@ export default function AdminPengaturanPage() {
                 <div className="space-y-4">
                   <div className="p-8 rounded-[32px] bg-white shadow-sm flex flex-col items-center gap-6">
                     {settings?.qrisURL ? (
-                      <div className="w-48 h-48 rounded-2xl overflow-hidden">
-                        <img src={settings.qrisURL} alt="QRIS Preview" className="w-full h-full object-contain" />
+                      <div className="relative w-48 h-48 rounded-2xl overflow-hidden">
+                        <Image src={settings.qrisURL} alt="QRIS Preview" fill className="object-contain" />
                       </div>
                     ) : (
                       <div className="w-48 h-48 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-300">
@@ -743,11 +747,15 @@ export default function AdminPengaturanPage() {
             <div className="w-full lg:w-1/3 space-y-6">
               <div className="p-10 rounded-[48px] bg-white border border-slate-100 shadow-sm flex flex-col items-center text-center space-y-6">
                 <div className="relative group">
-                  <div className="w-32 h-32 rounded-[40px] bg-slate-100 border-4 border-white shadow-xl flex items-center justify-center overflow-hidden">
+                  <div className="relative w-32 h-32 rounded-[40px] bg-slate-100 border-4 border-white shadow-xl flex items-center justify-center overflow-hidden">
                     {profile?.photoURL ? (
-                      <img src={profile.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                      <Image src={profile.photoURL} alt="Profile" fill className="object-cover" />
                     ) : (
-                      <img src={`https://ui-avatars.com/api/?name=${userEmail}&background=6366f1&color=fff&size=128`} alt="Profile" />
+                      <Image
+                        src={`https://ui-avatars.com/api/?name=${userEmail}&background=6366f1&color=fff&size=128`}
+                        alt="Profile"
+                        fill
+                      />
                     )}
                   </div>
                   <button className="absolute -bottom-2 -right-2 w-10 h-10 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg hover:bg-slate-900 transition-all border-4 border-white">
@@ -919,7 +927,7 @@ export default function AdminPengaturanPage() {
                     <div className="aspect-video w-full rounded-[32px] bg-slate-50 border-2 border-dashed border-slate-200 flex flex-col items-center justify-center overflow-hidden relative group">
                       {settings?.maintenance?.imageUrl ? (
                         <>
-                          <img src={settings.maintenance.imageUrl} alt="Maintenance" className="w-full h-full object-cover" />
+                          <Image src={settings.maintenance.imageUrl} alt="Maintenance" fill className="object-cover" />
                           <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <button 
                               onClick={() => setShowPreviewModal(true)}
@@ -965,7 +973,7 @@ export default function AdminPengaturanPage() {
                   <div className="relative z-10 space-y-6">
                     <h5 className="text-xl font-serif font-black tracking-tight">Kenapa Mode Ini?</h5>
                     <p className="text-sm font-medium text-indigo-100 leading-relaxed">
-                      Mode "Advanced" memberikan Anda kebebasan penuh. Gunakan **Mode Program** jika Anda memiliki desain khusus berbasis kode, atau **Mode Gambar** jika Anda sudah menyiapkan banner maintenance dari desainer.
+                      Mode &quot;Advanced&quot; memberikan Anda kebebasan penuh. Gunakan **Mode Program** jika Anda memiliki desain khusus berbasis kode, atau **Mode Gambar** jika Anda sudah menyiapkan banner maintenance dari desainer.
                     </p>
                     <div className="pt-4 flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
@@ -980,7 +988,7 @@ export default function AdminPengaturanPage() {
                 <div className="p-10 rounded-[40px] bg-slate-50 border border-slate-100 flex flex-col gap-6">
                   <div className="space-y-1">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fallback Message</p>
-                    <p className="text-xs font-bold text-slate-500 italic">"Kami kembali sebentar lagi. Leosiqra sedang dalam pemeliharaan sistem."</p>
+                    <p className="text-xs font-bold text-slate-500 italic">&quot;Kami kembali sebentar lagi. Leosiqra sedang dalam pemeliharaan sistem.&quot;</p>
                   </div>
                   <button 
                     onClick={handleSaveSettings}
@@ -1017,9 +1025,9 @@ export default function AdminPengaturanPage() {
                 dangerouslySetInnerHTML={{ __html: settings?.maintenance?.code || '<div style="display:flex;align-items:center;justify-center;height:100vh;font-family:sans-serif;"><h1>No Code Content</h1></div>' }}
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-black">
+              <div className="relative w-full h-full flex items-center justify-center bg-black">
                 {settings?.maintenance?.imageUrl ? (
-                  <img src={settings.maintenance.imageUrl} alt="Maintenance Preview" className="w-full h-full object-contain" />
+                  <Image src={settings.maintenance.imageUrl} alt="Maintenance Preview" fill className="object-contain" />
                 ) : (
                   <p className="text-white/40 font-mono text-xs uppercase tracking-widest">No Image uploaded</p>
                 )}
@@ -1095,7 +1103,7 @@ export default function AdminPengaturanPage() {
                       return (
                         <tr>
                           <td colSpan={4} className="py-8 text-center text-[11px] text-slate-400 italic">
-                            Klik "Refresh Semua User" untuk memuat data kurs.
+                            Klik &quot;Refresh Semua User&quot; untuk memuat data kurs.
                           </td>
                         </tr>
                       );
@@ -1166,7 +1174,7 @@ export default function AdminPengaturanPage() {
                               </>
                             ) : <span className="text-[11px] text-slate-300 italic">Belum direfresh</span>}
                           </td>
-                          <td className={`py-4 text-[11px] font-bold ${change >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                          <td className={`py-4 text-[11px] font-bold ${change == null ? 'text-slate-400' : change >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                             {change != null ? `${change >= 0 ? '+' : ''}${change.toFixed(2)}%` : `—`}
                           </td>
                           <td className="py-4 text-[11px] font-medium text-slate-400">{settings?.marketData?.userCovered || 0}</td>
@@ -1208,7 +1216,7 @@ export default function AdminPengaturanPage() {
                       <td className="py-4 text-[11px] font-bold text-slate-900">{row.price}</td>
                       <td className="py-4 text-[9px] font-black text-indigo-400 uppercase tracking-tighter">{row.source}</td>
                       <td className="py-4 text-[11px] font-medium text-slate-400">{settings?.marketData?.userCovered || 0}</td>
-                      <td className="py-4 text-[11px] font-medium text-slate-400 font-mono tracking-tight">{(window as any).liveMarket?.timestamp || '-'}</td>
+                      <td className="py-4 text-[11px] font-medium text-slate-400 font-mono tracking-tight">{(window as Window & { liveMarket?: { timestamp?: string } }).liveMarket?.timestamp || '-'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1243,7 +1251,7 @@ export default function AdminPengaturanPage() {
                       <td className="py-4 text-[11px] font-bold text-slate-900">{row.price}</td>
                       <td className="py-4 text-[9px] font-black text-amber-500 uppercase tracking-tighter">{row.source}</td>
                       <td className="py-4 text-[11px] font-medium text-slate-400">{settings?.marketData?.userCovered || 0}</td>
-                      <td className="py-4 text-[11px] font-medium text-slate-400 font-mono tracking-tight">{(window as any).liveMarket?.timestamp || '-'}</td>
+                      <td className="py-4 text-[11px] font-medium text-slate-400 font-mono tracking-tight">{(window as Window & { liveMarket?: { timestamp?: string } }).liveMarket?.timestamp || '-'}</td>
                     </tr>
                   ))}
                 </tbody>

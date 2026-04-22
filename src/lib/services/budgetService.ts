@@ -10,8 +10,6 @@ export interface Budget {
   createdAt: Date;
 }
 
-const COLLECTION_NAME = 'budgets';
-
 export const budgetService = {
   async createBudget(data: Omit<Budget, 'id' | 'createdAt'>) {
     const result = await cloudflareApi<{ id: string }>('/api/member/budgets', {
@@ -27,6 +25,7 @@ export const budgetService = {
   },
 
   async getUserBudgets(_userId: string) {
+    void _userId;
     const result = await cloudflareApi<{ items: Record<string, unknown>[] }>('/api/member/budgets');
     return result.items.map((data) => {
       return {

@@ -111,7 +111,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
       const totalResult = invested + interestOnly;
 
       // 1. Create or Update Investment Record
-      const investmentPayload: any = {
+      const investmentPayload: Omit<Investment, 'id' | 'createdAt'> = {
         userId, name: formData.name, type: 'Deposito',
         platform: formData.platform, 
         amountInvested: invested,

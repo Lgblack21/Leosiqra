@@ -1,10 +1,10 @@
 import { cloudflareApi } from "@/lib/cloudflare-api";
 import { auth } from "@/lib/cf-client";
 
-type AnyObj = Record<string, any>;
+type AnyObj = Record<string, unknown>;
 
 type Constraint =
-  | { kind: "where"; field: string; op: string; value: any }
+  | { kind: "where"; field: string; op: string; value: unknown }
   | { kind: "orderBy"; field: string; direction: "asc" | "desc" }
   | { kind: "limit"; value: number };
 
@@ -26,7 +26,26 @@ type QueryRef = {
 };
 
 export type QueryConstraint = Constraint;
-export type DocumentData = Record<string, any>;
+type TimestampLikeField = {
+  toDate?: () => Date;
+};
+
+export type DocumentData = Record<string, unknown> & {
+  date?: TimestampLikeField;
+  createdAt?: TimestampLikeField;
+  updatedAt?: TimestampLikeField;
+  expiredAt?: TimestampLikeField;
+  nextDate?: TimestampLikeField;
+  dateInvested?: TimestampLikeField;
+  targetDate?: TimestampLikeField;
+  timestamp?: TimestampLikeField;
+  date_invested?: TimestampLikeField;
+  target_date?: TimestampLikeField;
+  created_at?: TimestampLikeField;
+  updated_at?: TimestampLikeField;
+  expired_at?: TimestampLikeField;
+  next_date?: TimestampLikeField;
+};
 export type QueryDocumentSnapshot<T = DocumentData> = {
   id: string;
   data: () => T;
@@ -77,7 +96,7 @@ const isDateKey = (key: string) =>
     "nextDate",
   ].includes(key);
 
-const normalize = (input: any): any => {
+const normalize = (input: unknown): unknown => {
   if (Array.isArray(input)) {
     return input.map(normalize);
   }
@@ -106,10 +125,14 @@ const normalize = (input: any): any => {
   return result;
 };
 
-const isIncrement = (value: any): value is IncrementSentinel =>
-  value && typeof value === "object" && value.__op === "increment";
+const isIncrement = (value: unknown): value is IncrementSentinel =>
+  Boolean(
+    value &&
+      typeof value === "object" &&
+      (value as { __op?: string }).__op === "increment"
+  );
 
-const toApiValue = (value: any): any => {
+const toApiValue = (value: unknown): unknown => {
   if (value instanceof Timestamp) {
     return value.toDate().toISOString();
   }
@@ -147,11 +170,11 @@ const applyIncrementFields = (target: AnyObj, patch: AnyObj) => {
 
 const getLocalDb = (): Record<string, AnyObj[]> => {
   const globalKey = "__LEOSIQRA_CF_FIRESTORE__";
-  const root = globalThis as any;
+  const root = globalThis as Record<string, unknown>;
   if (!root[globalKey]) {
     root[globalKey] = {};
   }
-  return root[globalKey];
+  return root[globalKey] as Record<string, AnyObj[]>;
 };
 
 const readLocalCollection = (name: string) => {
@@ -168,7 +191,7 @@ const writeLocalCollection = (name: string, items: AnyObj[]) => {
 };
 
 const makeSnapshotDoc = (row: AnyObj): QueryDocumentSnapshot => ({
-  id: row.id,
+  id: String(row.id ?? ""),
   data: () => row,
 });
 
@@ -212,7 +235,10 @@ const applyConstraints = (items: AnyObj[], constraints: Constraint[]) => {
           case "in":
             return Array.isArray(constraint.value) ? (constraint.value as unknown[]).includes(row[constraint.field]) : false;
           case "array-contains":
-            return Array.isArray(row[constraint.field]) ? row[constraint.field].includes(constraint.value) : false;
+            {
+              const fieldValue = row[constraint.field];
+              return Array.isArray(fieldValue) ? fieldValue.includes(constraint.value) : false;
+            }
           default:
             return true;
         }
@@ -223,9 +249,11 @@ const applyConstraints = (items: AnyObj[], constraints: Constraint[]) => {
   for (const constraint of constraints) {
     if (constraint.kind === "orderBy") {
       output.sort((a, b) => {
-        const av = a[constraint.field];
-        const bv = b[constraint.field];
+        const av = toComparable(a[constraint.field]);
+        const bv = toComparable(b[constraint.field]);
         if (av === bv) return 0;
+        if (av == null) return 1;
+        if (bv == null) return -1;
         if (constraint.direction === "desc") {
           return av > bv ? -1 : 1;
         }
@@ -246,59 +274,59 @@ const applyConstraints = (items: AnyObj[], constraints: Constraint[]) => {
 const readApiCollection = async (name: string): Promise<AnyObj[]> => {
   if (name === "users") {
     const data = await cloudflareApi<{ items: AnyObj[] }>("/api/admin/users");
-    return (data.items ?? []).map((row) => normalize(row));
+    return (data.items ?? []).map((row) => normalize(row) as AnyObj);
   }
   if (name === "payments") {
     if (auth.currentUser?.role === "admin") {
       const data = await cloudflareApi<{ items: AnyObj[] }>("/api/admin/payments");
-      return (data.items ?? []).map((row) => normalize(row));
+      return (data.items ?? []).map((row) => normalize(row) as AnyObj);
     }
     return [];
   }
   if (name === "categories") {
     const data = await cloudflareApi<{ items: AnyObj[] }>("/api/member/categories");
-    return (data.items ?? []).map((row) => normalize(row));
+    return (data.items ?? []).map((row) => normalize(row) as AnyObj);
   }
   if (name === "currencies") {
     const data = await cloudflareApi<{ items: AnyObj[] }>("/api/member/currencies");
-    return (data.items ?? []).map((row) => normalize(row));
+    return (data.items ?? []).map((row) => normalize(row) as AnyObj);
   }
   if (name === "recurring") {
     const data = await cloudflareApi<{ items: AnyObj[] }>("/api/member/recurring");
-    return (data.items ?? []).map((row) => normalize(row));
+    return (data.items ?? []).map((row) => normalize(row) as AnyObj);
   }
   if (name === "savings") {
     const data = await cloudflareApi<{ items: AnyObj[] }>("/api/member/savings");
-    return (data.items ?? []).map((row) => normalize(row));
+    return (data.items ?? []).map((row) => normalize(row) as AnyObj);
   }
   if (name === "admin_logs") {
     const data = await cloudflareApi<{ items: AnyObj[] }>("/api/admin/logs?limit=100");
-    return (data.items ?? []).map((row) => normalize(row));
+    return (data.items ?? []).map((row) => normalize(row) as AnyObj);
   }
   if (name === "admin_settings") {
     const data = await cloudflareApi<{ item?: AnyObj | null }>("/api/admin/settings");
     if (!data.item) return [];
-    return [normalize({ id: "global_config", ...data.item })];
+    return [normalize({ id: "global_config", ...data.item }) as AnyObj];
   }
   if (name === "transactions") {
     const data = await cloudflareApi<{ items: AnyObj[] }>("/api/member/transactions");
-    return (data.items ?? []).map((row) => normalize(row));
+    return (data.items ?? []).map((row) => normalize(row) as AnyObj);
   }
   if (name === "accounts") {
     const data = await cloudflareApi<{ items: AnyObj[] }>("/api/member/accounts");
-    return (data.items ?? []).map((row) => normalize(row));
+    return (data.items ?? []).map((row) => normalize(row) as AnyObj);
   }
   if (name === "budgets") {
     const data = await cloudflareApi<{ items: AnyObj[] }>("/api/member/budgets");
-    return (data.items ?? []).map((row) => normalize(row));
+    return (data.items ?? []).map((row) => normalize(row) as AnyObj);
   }
   if (name === "investments") {
     const data = await cloudflareApi<{ items: AnyObj[] }>("/api/member/investments");
-    return (data.items ?? []).map((row) => normalize(row));
+    return (data.items ?? []).map((row) => normalize(row) as AnyObj);
   }
   if (name === "ai_chats") {
     const data = await cloudflareApi<{ item?: AnyObj | null }>("/api/member/ai/chat/history");
-    return data.item ? [normalize(data.item)] : [];
+    return data.item ? [normalize(data.item) as AnyObj] : [];
   }
   return [];
 };
@@ -315,7 +343,7 @@ const readCollection = async (name: string) => {
 };
 
 const writeDocViaApi = async (ref: DocRef, data: AnyObj) => {
-  const payload = toApiValue(normalize(data));
+  const payload = toApiValue(normalize(data)) as AnyObj;
 
   if (ref.collection === "users") {
     if (auth.currentUser?.role === "admin" && auth.currentUser?.uid !== ref.id) {
@@ -464,35 +492,35 @@ const deleteDocViaApi = async (ref: DocRef) => {
   }
 };
 
-const addDocViaApi = async (collection: string, data: AnyObj) => {
-  const payload = toApiValue(normalize(data));
+const addDocViaApi = async (collection: string, data: AnyObj): Promise<string> => {
+  const payload = toApiValue(normalize(data)) as AnyObj;
   if (collection === "transactions") {
     const result = await cloudflareApi<{ item?: AnyObj }>("/api/member/transactions", {
       method: "POST",
       json: payload,
     });
-    return result.item?.id ?? crypto.randomUUID();
+    return String(result.item?.id ?? crypto.randomUUID());
   }
   if (collection === "accounts") {
     const result = await cloudflareApi<{ item?: AnyObj }>("/api/member/accounts", {
       method: "POST",
       json: payload,
     });
-    return result.item?.id ?? crypto.randomUUID();
+    return String(result.item?.id ?? crypto.randomUUID());
   }
   if (collection === "budgets") {
     const result = await cloudflareApi<{ item?: AnyObj }>("/api/member/budgets", {
       method: "POST",
       json: payload,
     });
-    return result.item?.id ?? crypto.randomUUID();
+    return String(result.item?.id ?? crypto.randomUUID());
   }
   if (collection === "investments") {
     const result = await cloudflareApi<{ item?: AnyObj }>("/api/member/investments", {
       method: "POST",
       json: payload,
     });
-    return result.item?.id ?? crypto.randomUUID();
+    return String(result.item?.id ?? crypto.randomUUID());
   }
   if (collection === "categories") {
     const result = await cloudflareApi<{ id?: string }>("/api/member/categories", {
@@ -567,7 +595,7 @@ export const collection = (_db: unknown, name: string): CollectionRef => ({
 });
 
 export const doc = (
-  parent: any,
+  parent: unknown,
   collectionOrId: string,
   maybeId?: string
 ): DocRef => {
@@ -579,10 +607,10 @@ export const doc = (
     };
   }
 
-  if (parent?.kind === "collection") {
+  if ((parent as { kind?: string } | null)?.kind === "collection") {
     return {
       kind: "doc",
-      collection: parent.name,
+      collection: (parent as { name: string }).name,
       id: collectionOrId,
     };
   }
@@ -594,7 +622,7 @@ export const doc = (
   };
 };
 
-export const where = (field: string, op: string, value: any): Constraint => ({
+export const where = (field: string, op: string, value: unknown): Constraint => ({
   kind: "where",
   field,
   op,
@@ -634,7 +662,7 @@ export const getDoc = async (ref: DocRef): Promise<DocumentSnapshot> => {
           return {
             id: ref.id,
             exists: () => Boolean(normalized),
-            data: () => normalized,
+            data: () => normalized as DocumentData,
           };
         }
         const data = await cloudflareApi<{ item?: AnyObj | null }>("/api/member/profile");
@@ -642,13 +670,13 @@ export const getDoc = async (ref: DocRef): Promise<DocumentSnapshot> => {
         return {
           id: ref.id,
           exists: () => Boolean(normalized),
-          data: () => normalized,
+          data: () => normalized as DocumentData,
         };
       } catch {
         return {
           id: ref.id,
           exists: () => false,
-          data: () => null as any,
+          data: () => null as unknown as DocumentData,
         };
       }
     }
@@ -658,7 +686,7 @@ export const getDoc = async (ref: DocRef): Promise<DocumentSnapshot> => {
       return {
         id: ref.id,
         exists: () => Boolean(normalized),
-        data: () => normalized,
+        data: () => normalized as DocumentData,
       };
     }
     if (ref.collection === "ai_chats") {
@@ -667,7 +695,7 @@ export const getDoc = async (ref: DocRef): Promise<DocumentSnapshot> => {
       return {
         id: ref.id,
         exists: () => Boolean(normalized),
-        data: () => normalized,
+        data: () => normalized as DocumentData,
       };
     }
   }
@@ -679,7 +707,7 @@ export const getDoc = async (ref: DocRef): Promise<DocumentSnapshot> => {
   return {
     id: ref.id,
     exists: () => Boolean(normalized),
-    data: () => normalized,
+    data: () => normalized as DocumentData,
   };
 };
 
@@ -690,7 +718,7 @@ export const getDocs = async (ref: QueryRef | CollectionRef): Promise<QuerySnaps
     ref.kind === "query" ? applyConstraints(rows, ref.constraints) : rows;
 
   return {
-    docs: filtered.map((row) => makeSnapshotDoc(normalize(row))),
+    docs: filtered.map((row) => makeSnapshotDoc(normalize(row) as AnyObj)),
     empty: filtered.length === 0,
     size: filtered.length,
   };
@@ -708,25 +736,25 @@ export function onSnapshot(
 ): () => void;
 export function onSnapshot(
   ref: QueryRef | DocRef | CollectionRef,
-  onNext: (snapshot: any) => void,
-  onError?: (error: any) => void
-) {
+  onNext: (snapshot: QuerySnapshot & DocumentSnapshot) => void,
+  onError?: (error: Error & { code?: string }) => void
+): () => void {
   let active = true;
   const run = async () => {
     try {
       if (!active) return;
       if (ref.kind === "doc") {
         const snap = await getDoc(ref);
-        onNext(snap);
+        onNext(snap as QuerySnapshot & DocumentSnapshot);
         return;
       }
       const snap = await getDocs(ref);
-      onNext(snap);
+      onNext(snap as QuerySnapshot & DocumentSnapshot);
     } catch (error) {
       if (onError) {
         const e = error as Error & { code?: string };
         if (!e.code) {
-          (e as any).code = "compat-error";
+          e.code = "compat-error";
         }
         onError(e);
       }
@@ -751,7 +779,7 @@ export const setDoc = async (
 
   const rows = readLocalCollection(ref.collection);
   const index = rows.findIndex((item) => item.id === ref.id);
-  const incoming = normalize(data);
+  const incoming = normalize(data) as AnyObj;
   const merged = options?.merge && index >= 0
     ? applyIncrementFields(rows[index], incoming)
     : applyIncrementFields({ id: ref.id }, incoming);
@@ -798,9 +826,10 @@ export const addDoc = async (ref: CollectionRef, data: AnyObj) => {
   const rows = readLocalCollection(ref.name);
   rows.push({
     id,
-    ...normalize(data),
+    ...(normalize(data) as AnyObj),
     userId: data.userId ?? auth.currentUser?.uid ?? null,
   });
   writeLocalCollection(ref.name, rows);
   return { id };
 };
+

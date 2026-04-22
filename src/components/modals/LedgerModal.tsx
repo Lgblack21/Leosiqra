@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from 'react';
-import { Save, ChevronDown } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { categoryService } from '@/lib/services/categoryService';
-import { auth } from '@/lib/cf-client';
 
 interface LedgerModalProps {
   isOpen: boolean;

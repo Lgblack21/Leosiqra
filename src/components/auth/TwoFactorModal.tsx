@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
+import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -199,9 +200,9 @@ export function TwoFactorModal({ isOpen, onClose, mode, email, onVerify, secret:
                 <div className="p-6 rounded-[32px] bg-indigo-50/30 border border-indigo-50/50 flex flex-col items-center space-y-6">
                   <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] self-start">Barcode Authenticator</p>
                   
-                  <div className="w-48 h-48 bg-white p-4 rounded-3xl shadow-sm flex items-center justify-center border border-indigo-100/50">
+                  <div className="relative w-48 h-48 bg-white p-4 rounded-3xl shadow-sm flex items-center justify-center border border-indigo-100/50">
                     {qrCodeUrl ? (
-                      <img src={qrCodeUrl} alt="QR Code" className="w-full h-full object-contain" />
+                      <Image src={qrCodeUrl} alt="QR Code" fill className="object-contain p-4" />
                     ) : (
                       <div className="w-full h-full bg-slate-50 animate-pulse rounded-2xl" />
                     )}

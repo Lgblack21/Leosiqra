@@ -4,19 +4,16 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
   PlusCircle,
   PieChart,
-  Target,
   Trash2,
   Gem,
-  ChevronDown,
   TrendingUp,
   Pencil
 } from 'lucide-react';
-import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LogoImage } from '@/components/ui/LogoImage';
 import { investmentService, Investment } from '@/lib/services/investmentService';
-import { accountService, Account } from '@/lib/services/accountService';
-import { updateMemberTotals } from '@/lib/services/userService';
+import { Account } from '@/lib/services/accountService';
+import type { Category } from '@/lib/services/categoryService';
 import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged, User } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
@@ -24,12 +21,10 @@ import { useRef } from 'react';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { OtherInvestmentModal } from '@/components/modals/OtherInvestmentModal';
 
-const ASSET_TYPES = ['Emas', 'Kripto', 'Properti', 'P2P Lending', 'Obligasi', 'Reksa Dana', 'Lainnya'];
-
 export default function OtherInvestmentsPage() {
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -53,7 +48,7 @@ export default function OtherInvestmentsPage() {
         // Fetch Categories for lookup
         const qCat = query(collection(db, 'categories'), where('userId', '==', u.uid));
         onSnapshot(qCat, (snap) => {
-          setCategories(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+          setCategories(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)));
         });
 
         const q = query(
@@ -240,9 +235,6 @@ export default function OtherInvestmentsPage() {
                         <button onClick={async () => { 
                           if (inv.id && user?.uid) { 
                             if (confirm(`Hapus investasi ${inv.name}? Semua total saldo akan dikembalikan.`)) {
-                              const isSell = inv.transactionType === 'Penjualan' || inv.transactionType === 'Jual';
-                              const invested = inv.amountInvested || 0;
-                              
                               await investmentService.hardDeleteInvestment(inv.id, user.uid);
                             }
                           } 

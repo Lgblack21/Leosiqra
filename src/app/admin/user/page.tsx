@@ -1,17 +1,14 @@
 "use client";
 
+import Image from 'next/image';
 import { 
   Search, 
-  CheckCircle2, 
   Clock, 
   Users, 
   ShieldCheck,
   Zap,
   LayoutDashboard,
   Activity,
-  UserPlus,
-  Filter,
-  ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
@@ -68,7 +65,7 @@ export default function AdminUserPage() {
       });
       setUsers((current) => current.filter((item) => item.id !== userId));
       alert('User berhasil dihapus.');
-    } catch (error) {
+  } catch {
       alert('Gagal menghapus user.');
     }
   };
@@ -100,7 +97,7 @@ export default function AdminUserPage() {
         )
       );
       alert('Paket berhasil diperpanjang (akumulatif).');
-    } catch (error) {
+    } catch {
       alert('Gagal memperbarui paket.');
     }
   };
@@ -276,8 +273,8 @@ export default function AdminUserPage() {
                   <td className="py-6 px-4">
                     <div className="flex items-center gap-3">
                       {row.photo_url ? (
-                        <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-100 shadow-sm bg-slate-50">
-                          <img src={row.photo_url} alt={row.name} className="w-full h-full object-cover" />
+                        <div className="relative w-8 h-8 rounded-lg overflow-hidden border border-slate-100 shadow-sm bg-slate-50">
+                          <Image src={row.photo_url} alt={row.name || 'User'} fill className="object-cover" />
                         </div>
                       ) : (
                         <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-[10px] font-black text-indigo-500 border border-indigo-100 uppercase">

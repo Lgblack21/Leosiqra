@@ -4,35 +4,28 @@ import { useState, useEffect } from 'react';
 import { 
   Landmark,
   TrendingDown,
-  PiggyBank,
-  FolderOpen
+  PiggyBank
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { categoryService, Category } from '@/lib/services/categoryService';
+import { Category } from '@/lib/services/categoryService';
 import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged, User } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
 import { useRef } from 'react';
 import { currencyService, Currency } from '@/lib/services/currencyService';
-import { subscribeUserProfile, updateUserProfile, UserProfile } from '@/lib/services/userService';
+import { subscribeUserProfile, UserProfile } from '@/lib/services/userService';
 import { 
   Globe, 
-  Plus, 
   Trash2, 
   FileUp, 
-  X,
-  CreditCard,
-  Coins
+  X
 } from 'lucide-react';
-import { Modal } from '@/components/ui/Modal';
-import { useModal } from '@/context/ModalContext';
 
 export default function NamaAkunPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
-  const { openModal } = useModal();
   
   // Modal states (keep only what's necessary, move currency to global)
 
@@ -336,7 +329,9 @@ export default function NamaAkunPage() {
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            curr.id && handleDeleteCurrency(curr.id);
+                            if (curr.id) {
+                              void handleDeleteCurrency(curr.id);
+                            }
                           }}
                           className="p-2 text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
                         >

@@ -43,7 +43,7 @@ export const categoryService = {
       return {
         ...data,
         id: doc.id,
-        createdAt: data.createdAt.toDate()
+        createdAt: data.createdAt?.toDate?.() ?? new Date()
       } as Category;
     });
   },

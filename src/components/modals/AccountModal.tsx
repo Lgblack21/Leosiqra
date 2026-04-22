@@ -1,7 +1,8 @@
 "use client";
 
+import Image from 'next/image';
 import { useState, useEffect } from 'react';
-import { ChevronDown, Save, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { ChevronDown, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { accountService, Account } from '@/lib/services/accountService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
@@ -96,9 +97,9 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
           <div className="space-y-3">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Logo Rekening</label>
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">
+              <div className="relative w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">
                 {formData.logoUrl ? (
-                  <img src={formData.logoUrl} alt="Logo Preview" className="w-full h-full object-contain" />
+                  <Image src={formData.logoUrl} alt="Logo Preview" fill className="object-contain" />
                 ) : (
                   <ImageIcon className="text-slate-300" size={20} />
                 )}

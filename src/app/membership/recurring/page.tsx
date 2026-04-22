@@ -2,32 +2,24 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { 
-  Plus, 
-  ChevronDown, 
-  Save, 
-  Calendar as CalendarIcon,
   RefreshCw,
   Trash2,
-  Edit2,
-  PlusCircle
+  Edit2
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Modal } from '@/components/ui/Modal';
-import { AddTransactionModal } from '@/components/AddTransactionModal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { recurringService, RecurringTransaction } from '@/lib/services/recurringService';
-import { accountService, Account } from '@/lib/services/accountService';
+import { Account } from '@/lib/services/accountService';
+import type { Category } from '@/lib/services/categoryService';
 import { auth, db } from '@/lib/cf-client';
-import { onAuthStateChanged, User } from '@/lib/cf-auth';
+import { onAuthStateChanged } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 
 export default function RecurringPage() {
   const [transactions, setTransactions] = useState<RecurringTransaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
 
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -36,7 +28,6 @@ export default function RecurringPage() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
       if (u) {
         // Fetch accounts for lookup
         const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
@@ -47,7 +38,7 @@ export default function RecurringPage() {
         // Fetch categories for lookup
         const qCat = query(collection(db, 'categories'), where('userId', '==', u.uid));
         onSnapshot(qCat, (snap) => {
-          setCategories(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+          setCategories(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)));
         });
 
         const startOfMonth = new Date(selectedYear, selectedMonth, 1);

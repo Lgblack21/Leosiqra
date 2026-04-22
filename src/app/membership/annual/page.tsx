@@ -2,57 +2,104 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { 
-  ChevronDown,
-  TrendingDown,
   TrendingUp, 
-  WalletCards, 
-  Landmark, 
-  Activity,
-  ShieldCheck,
-  FileSpreadsheet,
-  Printer,
-  ChevronRight
+  WalletCards
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { YearPicker } from '@/components/ui/YearPicker';
-import { CategorySelect } from '@/components/CategorySelect';
-import { transactionService, Transaction } from '@/lib/services/transactionService';
-import { investmentService, Investment } from '@/lib/services/investmentService';
-import { budgetService, Budget } from '@/lib/services/budgetService';
-import { accountService, Account } from '@/lib/services/accountService';
-import { categoryService, Category } from '@/lib/services/categoryService';
+import type { Transaction } from '@/lib/services/transactionService';
+import type { Investment } from '@/lib/services/investmentService';
+import type { Budget } from '@/lib/services/budgetService';
+import type { Category } from '@/lib/services/categoryService';
 import { auth, db } from '@/lib/cf-client';
-import { onAuthStateChanged, User } from '@/lib/cf-auth';
+import { onAuthStateChanged } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
+
+type CircularProgressProps = {
+  value: number;
+  colorClass: string;
+  strokeClass: string;
+};
+
+const CircularProgress = ({ value, colorClass, strokeClass }: CircularProgressProps) => {
+  const radius = 18;
+  const stroke = 3;
+  const normalizedRadius = radius - stroke * 2;
+  const circumference = normalizedRadius * 2 * Math.PI;
+  const strokeDashoffset = circumference - (value / 100) * circumference;
+
+  return (
+    <div className="relative w-12 h-12 flex items-center justify-center">
+      <svg height={radius * 2} width={radius * 2} className="-rotate-90">
+        <circle 
+          stroke="#f1f5f9" 
+          strokeWidth={stroke} 
+          fill="transparent" 
+          r={normalizedRadius} 
+          cx={radius} 
+          cy={radius} 
+        />
+        <circle 
+          className={strokeClass}
+          strokeDasharray={circumference + ' ' + circumference} 
+          style={{ strokeDashoffset }} 
+          strokeWidth={stroke} 
+          fill="transparent" 
+          r={normalizedRadius} 
+          cx={radius} 
+          cy={radius} 
+          strokeLinecap="round"
+        />
+      </svg>
+      <span className={cn("absolute text-[10px] font-bold", colorClass)}>{value}%</span>
+    </div>
+  );
+};
+
+type FireTimestampLike = {
+  toDate?: () => Date;
+};
+
+const toSafeDate = (value: unknown): Date => {
+  if (value instanceof Date) return value;
+  if (value && typeof value === 'object') {
+    const ts = value as FireTimestampLike;
+    if (typeof ts.toDate === 'function') {
+      return ts.toDate();
+    }
+  }
+  return new Date();
+};
 
 export default function AnnualDashboard() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
-  const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [user, setUser] = useState<User | null>(null);
 
   // States for Category Comparison
   const [cat1Id, setCat1Id] = useState<string>(''); // Default to 'All Income' logic if empty?
   const [cat2Id, setCat2Id] = useState<string>('');
-  
-  // Helper for Category Name from ID
-  const getCatName = (id: string) => {
-    const cat = categories.find(c => c.id === id || c.category === id);
-    return cat?.category || id || 'Pilih Kategori';
-  };
+
+  const categoryNameById = useMemo(() => {
+    return categories.reduce((acc, cat) => {
+      if (cat.id) {
+        acc.set(cat.id, cat.category);
+      }
+      return acc;
+    }, new Map<string, string>());
+  }, [categories]);
+  const category1Name = cat1Id ? (categoryNameById.get(cat1Id) ?? cat1Id) : '';
+  const category2Name = cat2Id ? (categoryNameById.get(cat2Id) ?? cat2Id) : '';
 
   useEffect(() => {
     let unsubTrx: (() => void) | null = null;
     let unsubInv: (() => void) | null = null;
     let unsubBdg: (() => void) | null = null;
-    let unsubAcc: (() => void) | null = null;
     let unsubCat: (() => void) | null = null;
 
     const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
       if (u) {
         // Calculate year range
         const startOfYear = new Date(selectedYear, 0, 1);
@@ -68,7 +115,14 @@ export default function AnnualDashboard() {
         unsubTrx = onSnapshot(qTrx, (snap) => {
           setTransactions(snap.docs.map(doc => {
             const d = doc.data();
-            return { ...d, id: doc.id, amount: Number(d.amount) || 0, date: d.date?.toDate?.() ?? new Date(), createdAt: d.createdAt?.toDate?.() ?? new Date() } as Transaction;
+            const row = d as { amount?: number; date?: unknown; createdAt?: unknown };
+            return {
+              ...d,
+              id: doc.id,
+              amount: Number(row.amount) || 0,
+              date: toSafeDate(row.date),
+              createdAt: toSafeDate(row.createdAt),
+            } as Transaction;
           }));
         }, (err) => console.error("Annual TRX error:", err));
 
@@ -76,7 +130,13 @@ export default function AnnualDashboard() {
         unsubInv = onSnapshot(qInv, (snap) => {
           setInvestments(snap.docs.map(doc => {
             const d = doc.data();
-            return { ...d, id: doc.id, dateInvested: d.dateInvested?.toDate?.() ?? new Date(), createdAt: d.createdAt?.toDate?.() ?? new Date() } as Investment;
+            const row = d as { dateInvested?: unknown; createdAt?: unknown };
+            return {
+              ...d,
+              id: doc.id,
+              dateInvested: toSafeDate(row.dateInvested),
+              createdAt: toSafeDate(row.createdAt),
+            } as Investment;
           }));
         }, (err) => console.error("Annual INV error:", err));
 
@@ -84,15 +144,15 @@ export default function AnnualDashboard() {
         unsubBdg = onSnapshot(qBdg, (snap) => {
           setBudgets(snap.docs.map(doc => {
             const d = doc.data();
-            return { ...d, id: doc.id, amount: Number(d.amount) || 0, createdAt: d.createdAt?.toDate?.() ?? new Date() } as Budget;
+            const row = d as { amount?: number; createdAt?: unknown };
+            return {
+              ...d,
+              id: doc.id,
+              amount: Number(row.amount) || 0,
+              createdAt: toSafeDate(row.createdAt),
+            } as Budget;
           }));
         }, (err) => console.error("Annual BDG error:", err));
-
-        // Add accounts subscription
-        const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
-        unsubAcc = onSnapshot(qAcc, (snap) => {
-          setAccounts(snap.docs.map(doc => ({ ...doc.data(), id: doc.id }) as Account));
-        }, (err) => console.error("Annual ACC error:", err));
 
         // Add categories subscription
         const qCat = query(collection(db, 'categories'), where('userId', '==', u.uid));
@@ -105,11 +165,9 @@ export default function AnnualDashboard() {
         setTransactions([]);
         setInvestments([]);
         setBudgets([]);
-        setAccounts([]);
         if (unsubTrx) unsubTrx();
         if (unsubInv) unsubInv();
         if (unsubBdg) unsubBdg();
-        if (unsubAcc) unsubAcc();
         if (unsubCat) unsubCat();
       }
     });
@@ -118,7 +176,6 @@ export default function AnnualDashboard() {
       if (unsubTrx) unsubTrx();
       if (unsubInv) unsubInv();
       if (unsubBdg) unsubBdg();
-      if (unsubAcc) unsubAcc();
       if (unsubCat) unsubCat();
     };
   }, [selectedYear]);
@@ -144,8 +201,8 @@ export default function AnnualDashboard() {
       // If we have specific categories selected
       if (cat1Id && cat2Id) {
         // Compare by category name or ID (we normalize to name for comparison in charts usually)
-        if (t.category === cat1Id || t.category === getCatName(cat1Id)) data[monthIdx].v1 += t.amount;
-        if (t.category === cat2Id || t.category === getCatName(cat2Id)) data[monthIdx].v2 += t.amount;
+        if (t.category === cat1Id || t.category === category1Name) data[monthIdx].v1 += t.amount;
+        if (t.category === cat2Id || t.category === category2Name) data[monthIdx].v2 += t.amount;
       } else {
         // Default: Income vs Expense
         if (t.type === 'pemasukan') data[monthIdx].v1 += t.amount;
@@ -162,7 +219,7 @@ export default function AnnualDashboard() {
       v1: d.v1,
       v2: d.v2
     }));
-  }, [yearTransactions, cat1Id, cat2Id]);
+  }, [yearTransactions, cat1Id, cat2Id, category1Name, category2Name]);
 
   // Top Transactions
   const topTransactionsList = useMemo(() => {
@@ -199,42 +256,6 @@ export default function AnnualDashboard() {
   const keluarPerc = totalPemasukan > 0 ? Math.min(Math.round((totalPengeluaran / totalPemasukan) * 100), 100) : 0;
   const tabunganPerc = totalPemasukan > 0 ? Math.min(Math.round((Math.max(netSavings,0) / totalPemasukan) * 100), 100) : 0;
   const invPerc = totalPemasukan > 0 ? Math.min(Math.round((totalInvestasi / totalPemasukan) * 100), 100) : 0;
-
-  // Circular Progress Helper Component
-  const CircularProgress = ({ value, colorClass, strokeClass }: {value: number, colorClass: string, strokeClass: string}) => {
-    const radius = 18;
-    const stroke = 3;
-    const normalizedRadius = radius - stroke * 2;
-    const circumference = normalizedRadius * 2 * Math.PI;
-    const strokeDashoffset = circumference - (value / 100) * circumference;
-
-    return (
-      <div className="relative w-12 h-12 flex items-center justify-center">
-        <svg height={radius * 2} width={radius * 2} className="-rotate-90">
-          <circle 
-            stroke="#f1f5f9" 
-            strokeWidth={stroke} 
-            fill="transparent" 
-            r={normalizedRadius} 
-            cx={radius} 
-            cy={radius} 
-          />
-          <circle 
-            className={strokeClass}
-            strokeDasharray={circumference + ' ' + circumference} 
-            style={{ strokeDashoffset }} 
-            strokeWidth={stroke} 
-            fill="transparent" 
-            r={normalizedRadius} 
-            cx={radius} 
-            cy={radius} 
-            strokeLinecap="round"
-          />
-        </svg>
-        <span className={cn("absolute text-[10px] font-bold", colorClass)}>{value}%</span>
-      </div>
-    );
-  };
 
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 max-w-[1400px] print:p-0 print:m-0 print:bg-white print:max-w-none">

@@ -8,7 +8,6 @@ import {
   Copy,
   ArrowRight,
   TrendingUp,
-  LineChart,
   Target,
   Check,
   Bot,
@@ -64,22 +63,35 @@ export default function AILeosiqraPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const normalizeMessage = (msg: Partial<Message> | any): Message => {
-    const role: Message['role'] = msg?.role === 'user' ? 'user' : 'model';
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null;
+
+  const toDate = (value: unknown): Date => {
+    if (value instanceof Date) return value;
+    if (isRecord(value) && typeof value.toDate === 'function') {
+      const maybeDate = value.toDate();
+      if (maybeDate instanceof Date) {
+        return maybeDate;
+      }
+    }
+    const parsed = new Date(typeof value === 'string' || typeof value === 'number' ? value : Date.now());
+    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+  };
+
+  const normalizeMessage = (msg: Partial<Message> | unknown): Message => {
+    const source = isRecord(msg) ? msg : {};
+    const role: Message['role'] = source.role === 'user' ? 'user' : 'model';
     const text =
-      typeof msg?.text === 'string'
-        ? msg.text
-        : (typeof msg?.content === 'string' ? msg.content : '');
-    const rawTime = msg?.timestamp ?? msg?.createdAt ?? msg?.updatedAt;
-    const timestamp =
-      rawTime instanceof Date
-        ? rawTime
-        : (rawTime?.toDate ? rawTime.toDate() : new Date(rawTime ?? Date.now()));
+      typeof source.text === 'string'
+        ? source.text
+        : (typeof source.content === 'string' ? source.content : '');
+    const rawTime = source.timestamp ?? source.createdAt ?? source.updatedAt;
+    const timestamp = toDate(rawTime);
 
     return {
       role,
       text,
-      timestamp: Number.isNaN(timestamp.getTime()) ? new Date() : timestamp
+      timestamp
     };
   };
 
@@ -115,17 +127,16 @@ export default function AILeosiqraPage() {
 
     const loadFinancialData = async () => {
       try {
-        const [accounts, transactions, investments, savings, budgets, userProfileModule] = await Promise.all([
+        const [accounts, transactions, investments, savings, budgets] = await Promise.all([
           accountService.getUserAccounts(userId),
           transactionService.getUserTransactions(userId),
           investmentService.getUserInvestments(userId),
           savingsService.getUserSavings(userId),
-          budgetService.getUserBudgets(userId),
-          import('@/lib/services/userService')
+          budgetService.getUserBudgets(userId)
         ]);
 
         // Calculate actual balances using transactions
-        const savingsData = await savingsService.getUserSavings(userId); // Used for total out globally if needed, though for per-account we just use transactions 
+        const savingsData = savings;
         
         let realTotalBalance = 0;
         const processedAccounts = accounts.map(acc => {
@@ -227,9 +238,11 @@ ${budgets.map(b => `- ${b.category}: Limit ${formatCurrency(b.amount)} (${b.type
           });
           const result = await chat.sendMessage(text.trim());
           return result.response.text();
-        } catch (error: any) {
+        } catch (error: unknown) {
           lastError = error;
-          const msg = String(error?.message || '').toLowerCase();
+          const errorMessage =
+            error instanceof Error ? error.message : String(error ?? '');
+          const msg = errorMessage.toLowerCase();
           const retryable = msg.includes('503') || msg.includes('overloaded') || msg.includes('demand') || msg.includes('unavailable');
           if (!retryable || attempt === 2) {
             break;
@@ -267,9 +280,9 @@ ${budgets.map(b => `- ${b.category}: Limit ${formatCurrency(b.amount)} (${b.type
       }];
       setMessages(newMessages);
       if (userId) aiChatService.saveUserChat(userId, newMessages);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("AI Error:", e);
-      const errorMsg = e?.message || '';
+      const errorMsg = e instanceof Error ? e.message : String(e ?? '');
       
       let friendlyMessage = 'Maaf ya, Leosiqra sedang mengalami sedikit kendala teknis saat berpikir. Silakan coba kirim ulang pertanyaan Anda. 🙏';
       
@@ -325,8 +338,16 @@ ${budgets.map(b => `- ${b.category}: Limit ${formatCurrency(b.amount)} (${b.type
   };
 
   // Simple markdown-like formatter
+  const escapeHtml = (value: string) =>
+    value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
   const formatText = (text: string) => {
-    const safeText = typeof text === 'string' ? text : '';
+    const safeText = escapeHtml(typeof text === 'string' ? text : '');
     return safeText
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')

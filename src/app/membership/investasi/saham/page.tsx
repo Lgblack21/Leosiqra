@@ -8,23 +8,18 @@ import {
   Briefcase, 
   Trash2, 
   BarChart3,
-  Edit2,
-  ChevronDown,
   TrendingDown,
   Pencil
 } from 'lucide-react';
 import { useModal } from '@/context/ModalContext';
-import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LogoImage } from '@/components/ui/LogoImage';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { accountService, Account } from '@/lib/services/accountService';
-import { updateMemberTotals } from '@/lib/services/userService';
 import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged, User } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
-import { cn } from '@/lib/utils';
 import { StockInvestmentModal } from '@/components/modals/StockInvestmentModal';
 
 export default function SahamPage() {
@@ -221,7 +216,7 @@ export default function SahamPage() {
                           className="p-2 rounded-lg bg-blue-50 text-blue-400 hover:bg-blue-500 hover:text-white transition-all">
                           <Pencil size={14} />
                         </button>
-                        <button onClick={() => openModal('saham', inv)}
+                        <button onClick={() => openModal('saham', inv as unknown as Record<string, unknown>)}
                           className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all group/sell relative">
                           <TrendingDown size={14} />
                           <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] px-2 py-1 rounded opacity-0 group-hover/sell:opacity-100 transition-opacity whitespace-nowrap">Jual Saham</span>
@@ -229,9 +224,6 @@ export default function SahamPage() {
                         <button onClick={async () => { 
                           if (inv.id && user?.uid) { 
                             if (confirm(`Hapus investasi ${inv.name}? Semua total saldo akan dikembalikan.`)) {
-                              const isSell = inv.transactionType === 'Jual';
-                              const invested = inv.amountInvested || 0;
-                              
                               await investmentService.hardDeleteInvestment(inv.id, user.uid);
                             }
                           } 

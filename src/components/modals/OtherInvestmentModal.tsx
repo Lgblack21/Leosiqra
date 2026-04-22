@@ -1,5 +1,6 @@
 "use client";
 
+import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { Save, ChevronDown, Image as ImageIcon, Loader2, RefreshCw } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
@@ -18,7 +19,7 @@ interface OtherInvestmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   editData?: Investment;
-  initialData?: any; // For selling mode
+  initialData?: Investment; // For selling mode
 }
 
 export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initialData }: OtherInvestmentModalProps) => {
@@ -131,7 +132,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
     const current = parseFloat(formData.currentValue) || invested;
     
     try {
-      const investmentPayload: any = {
+      const investmentPayload: Omit<Investment, 'id' | 'createdAt'> = {
         userId, name: formData.name, type: 'Lainnya',
         platform: formData.platform || formData.assetType,
         amountInvested: invested, 
@@ -228,9 +229,9 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Logo Produk (Opsional)</label>
             <div className={`flex items-center gap-3 ${initialData ? 'opacity-60 grayscale' : ''}`}>
-              <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">
+              <div className="relative w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">
                 {formData.logoUrl ? (
-                  <img src={formData.logoUrl} alt="Logo Preview" className="w-full h-full object-contain" />
+                  <Image src={formData.logoUrl} alt="Logo Preview" fill className="object-contain" />
                 ) : (
                   <ImageIcon className="text-slate-300" size={16} />
                 )}

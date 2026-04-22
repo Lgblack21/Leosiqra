@@ -2,32 +2,23 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { 
-  PlusCircle, 
   Wallet,
   Target,
   Trash2,
-  TrendingUp,
-  ChevronDown,
-  Plus
+  TrendingUp
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { savingsService, Saving } from '@/lib/services/savingsService';
-import { accountService, Account } from '@/lib/services/accountService';
+import { Account } from '@/lib/services/accountService';
 import { auth, db } from '@/lib/cf-client';
-import { onAuthStateChanged, User } from '@/lib/cf-auth';
+import { onAuthStateChanged } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
-import { AddTransactionModal } from '@/components/AddTransactionModal';
 import { MonthPicker } from '@/components/ui/MonthPicker';
-
-const SAVING_GOALS = ['Dana Darurat', 'Liburan', 'Pendidikan', 'Properti', 'Kendaraan', 'Bisnis', 'Lainnya'];
 
 export default function SavingsPage() {
   const [savings, setSavings] = useState<Saving[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -37,7 +28,6 @@ export default function SavingsPage() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
       if (u) {
         // Fetch accounts for lookup
         const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));

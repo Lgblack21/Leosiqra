@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
+import type { LucideIcon } from 'lucide-react';
 
-export const InsightCard = ({ title, value, subtitle, icon: Icon, colorClass }: { title: string, value: string, subtitle: string, icon: any, colorClass: string }) => (
+export const InsightCard = ({ title, value, subtitle, icon: Icon, colorClass }: { title: string, value: string, subtitle: string, icon: LucideIcon, colorClass: string }) => (
   <div className="p-6 rounded-3xl bg-white border border-slate-100 shadow-sm flex gap-4 items-start transition-all hover:shadow-md group">
     <div className={cn("mt-1 p-3 rounded-2xl transition-transform group-hover:scale-110", colorClass)}>
       <Icon size={20} />

@@ -1,14 +1,13 @@
 "use client";
 
-import { BarChart3, Zap, ShieldCheck, CheckCircle2, Layout, Database, PieChart, Shield, ArrowRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { BarChart3, Zap, CheckCircle2, Layout, Database, PieChart, Shield, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const fadeInUp: any = {
+const fadeInUp = {
   initial: { opacity: 0, y: 30 },
   whileInView: { opacity: 1, y: 0 },
   viewport: { once: true },
-  transition: { duration: 0.8, ease: "easeOut" }
+  transition: { duration: 0.8 }
 };
 
 const staggerContainer = {

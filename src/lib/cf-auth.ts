@@ -9,8 +9,17 @@ export type User = {
   role?: "admin" | "user";
 };
 
-const toCompatUser = (payload: any): User | null => {
-  if (!payload) {
+type CompatUserPayload = {
+  id?: string;
+  email?: string | null;
+  name?: string | null;
+  photo_url?: string | null;
+  photoURL?: string | null;
+  role?: string | null;
+};
+
+const toCompatUser = (payload: CompatUserPayload | null | undefined): User | null => {
+  if (!payload || !payload.id) {
     return null;
   }
 
@@ -28,7 +37,7 @@ export const onAuthStateChanged = (
   callback: (user: User | null) => void
 ) => {
   let active = true;
-  cloudflareApi<{ user?: any | null }>("/api/auth/me")
+  cloudflareApi<{ user?: CompatUserPayload | null }>("/api/auth/me")
     .then((result) => {
       if (!active) return;
       const nextUser = toCompatUser(result.user ?? null);
@@ -55,5 +64,7 @@ export const updateProfile = async (user: User, data: { displayName?: string; ph
 };
 
 export const updatePassword = async (_user: User, _newPassword: string) => {
+  void _user;
+  void _newPassword;
   throw new Error("Ganti password via Firebase sudah dinonaktifkan. Gunakan flow reset password backend.");
 };

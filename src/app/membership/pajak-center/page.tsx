@@ -4,19 +4,16 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
   TrendingDown,
   TrendingUp, 
-  ShieldCheck,
   FileSpreadsheet,
   Printer,
-  ChevronRight,
   Info
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { YearPicker } from '@/components/ui/YearPicker';
-import { transactionService, Transaction } from '@/lib/services/transactionService';
-import { investmentService, Investment } from '@/lib/services/investmentService';
-import { accountService, Account } from '@/lib/services/accountService';
+import { Transaction } from '@/lib/services/transactionService';
+import { Investment } from '@/lib/services/investmentService';
+import { Account } from '@/lib/services/accountService';
 import { auth, db } from '@/lib/cf-client';
-import { onAuthStateChanged, User } from '@/lib/cf-auth';
+import { onAuthStateChanged } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 
 export default function PajakCenterPage() {
@@ -24,7 +21,6 @@ export default function PajakCenterPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
     let unsubTrx: (() => void) | null = null;
@@ -32,7 +28,6 @@ export default function PajakCenterPage() {
     let unsubAcc: (() => void) | null = null;
 
     const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
       if (u) {
         const startOfYear = new Date(selectedYear, 0, 1);
         const endOfYear = new Date(selectedYear, 11, 31, 23, 59, 59);

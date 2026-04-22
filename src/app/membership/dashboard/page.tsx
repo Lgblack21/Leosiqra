@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 
 import {
-  Plus,
   TrendingUp,
   CreditCard,
   Wallet,
@@ -16,7 +15,6 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { transactionService, Transaction } from '@/lib/services/transactionService';

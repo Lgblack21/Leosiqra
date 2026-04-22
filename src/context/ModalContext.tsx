@@ -20,8 +20,8 @@ export type ModalType =
 
 interface ModalContextType {
   activeModal: ModalType;
-  modalData: any;
-  openModal: (type: ModalType, data?: any) => void;
+  modalData: Record<string, unknown> | null;
+  openModal: (type: ModalType, data?: Record<string, unknown> | null) => void;
   closeModal: () => void;
 }
 
@@ -29,9 +29,9 @@ const ModalContext = createContext<ModalContextType | undefined>(undefined);
 
 export function ModalProvider({ children }: { children: ReactNode }) {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
-  const [modalData, setModalData] = useState<any>(null);
+  const [modalData, setModalData] = useState<Record<string, unknown> | null>(null);
 
-  const openModal = (type: ModalType, data?: any) => {
+  const openModal = (type: ModalType, data?: Record<string, unknown> | null) => {
     setModalData(data || null);
     setActiveModal(type);
   };

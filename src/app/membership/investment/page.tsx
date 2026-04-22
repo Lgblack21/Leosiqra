@@ -2,39 +2,90 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { 
-  ChevronDown,
-  TrendingDown,
-  TrendingUp, 
   CheckCircle2,
   Clock,
-  Briefcase,
-  PieChart,
   BarChart2,
   ArrowUpRight,
   ArrowDownRight,
-  ShieldCheck,
   Building2,
   Wallet
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { investmentService, Investment } from '@/lib/services/investmentService';
+import { Investment } from '@/lib/services/investmentService';
 import { auth, db } from '@/lib/cf-client';
-import { onAuthStateChanged, User } from '@/lib/cf-auth';
+import { onAuthStateChanged } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 import { MonthPicker } from '@/components/ui/MonthPicker';
+
+interface DoughnutProps {
+  pSaham: number;
+  pLainnya: number;
+}
+
+const SimulatedDoughnut = ({ pSaham, pLainnya }: DoughnutProps) => {
+  const radius = 50;
+  const stroke = 10;
+  const normalizedRadius = radius - stroke * 1.5;
+  const circumference = normalizedRadius * 2 * Math.PI;
+
+  return (
+    <div className="relative flex items-center justify-center w-32 h-32">
+      <svg height={radius * 2} width={radius * 2} className="-rotate-90">
+        <circle
+          stroke="#e2e8f0"
+          strokeWidth={stroke}
+          fill="transparent"
+          r={normalizedRadius}
+          cx={radius}
+          cy={radius}
+        />
+        {pSaham > 0 && (
+          <circle
+            stroke="#064e3b"
+            strokeDasharray={circumference + ' ' + circumference}
+            style={{ strokeDashoffset: circumference - (pSaham / 100) * circumference }}
+            strokeWidth={stroke}
+            fill="transparent"
+            r={normalizedRadius}
+            cx={radius}
+            cy={radius}
+            strokeLinecap="round"
+          />
+        )}
+        {pLainnya > 0 && (
+          <circle
+            stroke="#e2e8f0"
+            strokeDasharray={circumference + ' ' + circumference}
+            style={{
+              strokeDashoffset: circumference - (pLainnya / 100) * circumference,
+              rotate: `${(pSaham / 100) * 360}deg`,
+              transformOrigin: '50% 50%'
+            }}
+            strokeWidth={stroke}
+            fill="transparent"
+            r={normalizedRadius}
+            cx={radius}
+            cy={radius}
+            strokeLinecap="round"
+          />
+        )}
+      </svg>
+      <div className="absolute flex flex-col items-center">
+        <span className="text-xl font-black text-slate-900">{pSaham}%</span>
+      </div>
+    </div>
+  );
+};
 
 export default function InvestmentDashboard() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   
   const [investments, setInvestments] = useState<Investment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
     let unsubInv: (() => void) | null = null;
     const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
       if (u) {
         // Calculate date range for filtering
         const startOfMonth = new Date(selectedYear, selectedMonth, 1);
@@ -59,11 +110,9 @@ export default function InvestmentDashboard() {
               createdAt: d.createdAt?.toDate?.() ?? new Date()
             } as Investment;
           }));
-          setLoading(false);
         });
       } else {
         setInvestments([]);
-        setLoading(false);
       }
     });
     return () => { unsub(); if (unsubInv) unsubInv(); };
@@ -118,69 +167,6 @@ export default function InvestmentDashboard() {
     if (Math.abs(n) >= 1_000_000_000) return `${(n/1_000_000_000).toFixed(2)}M`;
     if (Math.abs(n) >= 1_000_000) return `${(n/1_000_000).toFixed(2)}Jt`;
     return new Intl.NumberFormat('id-ID').format(n);
-  };
-
-  // Doughnut Chart Simulation Component
-  interface DoughnutProps {
-    pSaham: number;
-    pLainnya: number;
-  }
-  const SimulatedDoughnut = ({ pSaham, pLainnya }: DoughnutProps) => {
-    const radius = 50;
-    const stroke = 10;
-    const normalizedRadius = radius - stroke * 1.5;
-    const circumference = normalizedRadius * 2 * Math.PI;
-
-    return (
-      <div className="relative flex items-center justify-center w-32 h-32">
-        <svg height={radius * 2} width={radius * 2} className="-rotate-90">
-          {/* Gray Background */}
-          <circle
-            stroke="#e2e8f0" // slate-200
-            strokeWidth={stroke}
-            fill="transparent"
-            r={normalizedRadius}
-            cx={radius}
-            cy={radius}
-          />
-          {/* Saham Segment */}
-          {pSaham > 0 && (
-            <circle
-              stroke="#064e3b" // emerald-950
-              strokeDasharray={circumference + ' ' + circumference}
-              style={{ strokeDashoffset: circumference - (pSaham / 100) * circumference }}
-              strokeWidth={stroke}
-              fill="transparent"
-              r={normalizedRadius}
-              cx={radius}
-              cy={radius}
-              strokeLinecap="round"
-            />
-          )}
-          {/* Lainnya Segment */}
-          {pLainnya > 0 && (
-            <circle
-              stroke="#e2e8f0" // slate-200 / use slate-300 or another color for contrast if desired
-              strokeDasharray={circumference + ' ' + circumference}
-              style={{ 
-                strokeDashoffset: circumference - (pLainnya / 100) * circumference,
-                rotate: `${(pSaham / 100) * 360}deg`,
-                transformOrigin: '50% 50%'
-              }}
-              strokeWidth={stroke}
-              fill="transparent"
-              r={normalizedRadius}
-              cx={radius}
-              cy={radius}
-              strokeLinecap="round"
-            />
-          )}
-        </svg>
-        <div className="absolute flex flex-col items-center">
-          <span className="text-xl font-black text-slate-900">{pSaham}%</span>
-        </div>
-      </div>
-    );
   };
 
   return (

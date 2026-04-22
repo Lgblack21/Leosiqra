@@ -1,8 +1,8 @@
 "use client";
 
+import Image from 'next/image';
 import { 
   Search, 
-  CheckCircle2, 
   Clock, 
   Users, 
   TrendingUp, 
@@ -27,10 +27,29 @@ type AdminLog = {
   created_at: string;
 };
 
+type AdminUser = {
+  id?: string;
+  name?: string;
+  email?: string;
+  photoURL?: string | null;
+  photo_url?: string | null;
+  role?: string;
+  status?: string;
+  plan?: string;
+  createdAt?: string;
+  created_at?: string;
+};
+
+type AdminPayment = {
+  status?: string;
+  amount?: number;
+  approvedAt?: string;
+};
+
 export default function AdminDashboard() {
   const [userEmail, setUserEmail] = useState('admin@leosiqra.com');
-  const [users, setUsers] = useState<any[]>([]);
-  const [payments, setPayments] = useState<any[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [payments, setPayments] = useState<AdminPayment[]>([]);
   const [logs, setLogs] = useState<AdminLog[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -38,8 +57,8 @@ export default function AdminDashboard() {
     let active = true;
     Promise.all([
       cloudflareApi<{ user?: { email?: string } | null }>('/api/auth/me'),
-      cloudflareApi<{ items: any[] }>('/api/admin/users'),
-      cloudflareApi<{ items: any[] }>('/api/admin/payments'),
+      cloudflareApi<{ items: AdminUser[] }>('/api/admin/users'),
+      cloudflareApi<{ items: AdminPayment[] }>('/api/admin/payments'),
       cloudflareApi<{ items: AdminLog[] }>('/api/admin/logs?limit=10'),
     ])
       .then(([me, usersRes, paymentsRes, logsRes]) => {
@@ -80,7 +99,8 @@ export default function AdminDashboard() {
     // Additional for signals
     conversionRate: userList.length > 0 ? (userList.filter(u => u.plan === 'PRO').length / userList.length * 100).toFixed(1) : '0',
     newUsersToday: userList.filter(u => {
-      const d = u.createdAt ? new Date(u.createdAt) : null;
+      const createdTime = u.createdAt || u.created_at;
+      const d = createdTime ? new Date(createdTime) : null;
       return d && d.toDateString() === new Date().toDateString();
     }).length,
     weeklyChartData: (() => {
@@ -412,9 +432,9 @@ export default function AdminDashboard() {
               ) : latestUsers.map((member, i) => (
                 <div key={i} className="flex items-center gap-5 p-6 rounded-[32px] border border-slate-50 hover:bg-slate-50 hover:border-slate-100 transition-all group">
                   <div className="flex -space-x-3">
-                    {member.photoURL ? (
-                      <div className="w-12 h-12 rounded-2xl overflow-hidden border-4 border-white shadow-sm ring-1 ring-slate-100 bg-slate-100">
-                        <img src={member.photoURL} alt={member.name} className="w-full h-full object-cover" />
+                    {(member.photoURL || member.photo_url) ? (
+                      <div className="relative w-12 h-12 rounded-2xl overflow-hidden border-4 border-white shadow-sm ring-1 ring-slate-100 bg-slate-100">
+                        <Image src={member.photoURL || member.photo_url || ''} alt={member.name || member.email || 'User'} fill className="object-cover" />
                       </div>
                     ) : (
                       <>

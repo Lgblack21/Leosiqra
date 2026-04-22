@@ -17,7 +17,7 @@ export interface Currency {
   name: string; // e.g. US Dollar
   symbol: string; // e.g. $
   isDefault?: boolean;
-  createdAt: any;
+  createdAt: Date;
 }
 
 export const currencyService = {

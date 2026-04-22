@@ -2,23 +2,18 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { 
-  PlusCircle, 
   Search, 
-  Calendar, 
-  ChevronDown, 
-  SlidersHorizontal,
   ArrowUpRight,
   ArrowDownRight,
-  Wallet,
   Trash2,
-  Copy,
   TrendingUp
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
-import { accountService, Account } from '@/lib/services/accountService';
+import { Account } from '@/lib/services/accountService';
+import type { Category } from '@/lib/services/categoryService';
 import { auth, db } from '@/lib/cf-client';
-import { onAuthStateChanged, User } from '@/lib/cf-auth';
+import { onAuthStateChanged } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 import { useRef } from 'react';
 import { MonthPicker } from '@/components/ui/MonthPicker';
@@ -26,9 +21,8 @@ import { MonthPicker } from '@/components/ui/MonthPicker';
 export default function DailyTransactionLogPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -37,7 +31,6 @@ export default function DailyTransactionLogPage() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
       if (u) {
         // Fetch accounts for lookup
         const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
@@ -48,7 +41,7 @@ export default function DailyTransactionLogPage() {
         // Fetch categories for lookup
         const qCat = query(collection(db, 'categories'), where('userId', '==', u.uid));
         onSnapshot(qCat, (snap) => {
-          setCategories(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+          setCategories(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)));
         });
 
         const startOfMonth = new Date(selectedYear, selectedMonth, 1);

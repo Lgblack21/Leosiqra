@@ -2,7 +2,6 @@ import {
   collection, 
   doc, 
   getDoc, 
-  getDocs,
   setDoc, 
   onSnapshot, 
   query, 
@@ -52,7 +51,7 @@ export interface AppSettings {
 
 export interface AdminLog {
   id?: string;
-  timestamp: any;
+  timestamp: unknown;
   adminEmail: string;
   action: string;
   target: string;
@@ -126,7 +125,7 @@ export const subscribeAdminLogs = (limitCount: number = 20, callback: (logs: Adm
 };
 
 // 3. USER MANAGEMENT (FETCHING)
-export const subscribeAllUsers = (callback: (users: any[]) => void) => {
+export const subscribeAllUsers = (callback: (users: Record<string, unknown>[]) => void) => {
   const colRef = collection(db, USERS_COLLECTION);
   const q = query(colRef, orderBy('createdAt', 'desc'));
   
@@ -146,7 +145,7 @@ export const subscribeAllUsers = (callback: (users: any[]) => void) => {
 };
 
 // 4. PAYMENT QUEUE (FETCHING)
-export const subscribeAllPayments = (callback: (payments: any[]) => void) => {
+export const subscribeAllPayments = (callback: (payments: Record<string, unknown>[]) => void) => {
   const colRef = collection(db, PAYMENTS_COLLECTION);
   const q = query(colRef, orderBy('createdAt', 'desc'));
   
@@ -166,7 +165,7 @@ export const subscribeAllPayments = (callback: (payments: any[]) => void) => {
 };
 
 // 5. ADMIN PROFILE MANAGEMENT
-export const updateAdminProfile = async (uid: string, data: any) => {
+export const updateAdminProfile = async (uid: string, data: Record<string, unknown>) => {
   const docRef = doc(db, USERS_COLLECTION, uid);
   return await updateDoc(docRef, data);
 };

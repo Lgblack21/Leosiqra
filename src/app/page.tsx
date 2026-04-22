@@ -8,11 +8,11 @@ import { LandingFeatures } from '@/components/LandingFeatures';
 import { LandingFooter } from '@/components/LandingFooter';
 import { motion } from 'framer-motion';
 
-const fadeInUp: any = {
+const fadeInUp = {
   initial: { opacity: 0, y: 30 },
   whileInView: { opacity: 1, y: 0 },
   viewport: { once: true },
-  transition: { duration: 0.8, ease: "easeOut" }
+  transition: { duration: 0.8 }
 };
 
 const staggerContainer = {
@@ -201,7 +201,7 @@ export default function LandingPage() {
                 className="p-10 rounded-[40px] bg-white border border-slate-100 flex flex-col justify-between shadow-sm hover:border-indigo-100 transition-colors duration-500"
                 variants={fadeInUp}
               >
-                <p className="text-lg font-medium text-slate-600 mb-8 italic">"{t.quote}"</p>
+                <p className="text-lg font-medium text-slate-600 mb-8 italic">&quot;{t.quote}&quot;</p>
                 <div>
                   <h4 className="font-black text-slate-900">{t.name}</h4>
                   <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{t.role}</p>
@@ -309,7 +309,7 @@ export default function LandingPage() {
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 1, ease: "easeOut" }}
+          transition={{ duration: 1 }}
         >
           <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-[#FCF8F1] text-[#B8926A] text-[10px] font-black uppercase tracking-[0.2em] border border-[#F5E6CF]/50 mx-auto">
             START TODAY

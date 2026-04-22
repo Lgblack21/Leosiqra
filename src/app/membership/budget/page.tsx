@@ -1,16 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
-  Plus, 
   Target,
-  Edit2,
   Trash2,
-  ArrowRight,
   TrendingUp,
-  Wallet,
-  PiggyBank,
-  Briefcase
+  Wallet
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { auth, db } from '@/lib/cf-client';
@@ -44,7 +39,11 @@ export default function BudgetPage() {
         unsubBudgetsRef.current = onSnapshot(qBudgets, (snap) => {
           setBudgets(snap.docs.map(doc => {
             const d = doc.data();
-            return { ...d, id: doc.id, amount: Number(d.amount) || 0, createdAt: d.createdAt?.toDate?.() ?? new Date() } as Budget;
+            const row = d as { amount?: number; createdAt?: { toDate?: () => Date } | Date };
+            const createdAt = row.createdAt instanceof Date
+              ? row.createdAt
+              : row.createdAt?.toDate?.() ?? new Date();
+            return { ...d, id: doc.id, amount: Number(row.amount) || 0, createdAt } as Budget;
           }));
           setLoading(false);
         }, (err) => {

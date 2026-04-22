@@ -1,7 +1,8 @@
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { LucideIcon } from 'lucide-react';
 
-export const MetricCard = ({ title, value, type, icon: Icon }: { title: string, value: string, type?: 'positive' | 'negative' | 'neutral', icon: any }) => (
+export const MetricCard = ({ title, value, type, icon: Icon }: { title: string, value: string, type?: 'positive' | 'negative' | 'neutral', icon: LucideIcon }) => (
   <div className="p-6 rounded-3xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all group">
     <div className="flex items-center justify-between mb-4">
       <div className={cn(

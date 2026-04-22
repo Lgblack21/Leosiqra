@@ -38,7 +38,7 @@ export const RecurringModal = ({ userId, isOpen, onClose }: RecurringModalProps)
         setFormData(p => ({ ...p, nextDate: getToday() }));
       }
     }
-  }, [isOpen, userId]);
+  }, [isOpen, userId, formData.nextDate]);
 
   const handleCreate = async () => {
     if (!userId || !formData.name || !formData.amount || !formData.nextDate) return;
@@ -93,7 +93,7 @@ export const RecurringModal = ({ userId, isOpen, onClose }: RecurringModalProps)
             <div className="relative">
               <select 
                 value={formData.type}
-                onChange={e => setFormData({...formData, type: e.target.value as any})}
+                onChange={e => setFormData({...formData, type: e.target.value as RecurringTransaction['type']})}
                 className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all cursor-pointer"
               >
                 <option value="Pengeluaran">Pengeluaran</option>
@@ -108,7 +108,7 @@ export const RecurringModal = ({ userId, isOpen, onClose }: RecurringModalProps)
             <div className="relative">
               <select 
                 value={formData.interval}
-                onChange={e => setFormData({...formData, interval: e.target.value as any})}
+                onChange={e => setFormData({...formData, interval: e.target.value as RecurringTransaction['interval']})}
                 className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all cursor-pointer"
               >
                 <option value="Harian">Harian</option>

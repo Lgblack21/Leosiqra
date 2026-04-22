@@ -1,16 +1,12 @@
 "use client";
 
-import { useState } from 'react';
 import { 
-  PlusCircle, 
   TrendingUp, 
   Building2, 
   Globe, 
   Wallet, 
   ShieldAlert, 
   ArrowLeftRight,
-  Bot,
-  Info,
   ChevronRight,
   Monitor
 } from 'lucide-react';
@@ -218,7 +214,7 @@ export default function InputTransactionPage() {
           <div className="relative z-10 w-full h-full p-6 md:p-10 flex flex-col justify-center">
             <h3 className="text-xl md:text-2xl font-black text-white mb-3">Automated Insights</h3>
             <p className="text-xs font-medium text-slate-400 max-w-sm leading-relaxed">
-              Sistem kami mencatat pola pengeluaran yang lebih efisien di kategori "Transaksi Harian" Anda.
+              Sistem kami mencatat pola pengeluaran yang lebih efisien di kategori &quot;Transaksi Harian&quot; Anda.
             </p>
           </div>
 

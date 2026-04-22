@@ -65,7 +65,7 @@ export const updateUserProfile = async (uid: string, data: Partial<UserProfile>)
 export const updateMemberTotals = async (userId: string, type: string, actualAmount: number) => {
   const userRef = doc(db, COLLECTION_NAME, userId);
   
-  const updates: any = {};
+  const updates: Record<string, unknown> = {};
   
   if (type === 'pemasukan') updates.totalIncome = increment(actualAmount);
   if (type === 'pengeluaran') updates.totalExpenses = increment(actualAmount);

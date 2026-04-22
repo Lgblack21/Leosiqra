@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import Image from 'next/image';
+import { useMemo, useState } from 'react';
 
 interface LogoImageProps {
   src: string | undefined | null;
@@ -11,14 +12,9 @@ interface LogoImageProps {
 }
 
 export const LogoImage = ({ src, alt, fallbackText, className, fallbackIcon }: LogoImageProps) => {
-  const [error, setError] = useState(false);
-  const [resolvedSrc, setResolvedSrc] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!src) {
-      setResolvedSrc(null);
-      return;
-    }
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const resolvedSrc = useMemo(() => {
+    if (!src) return null;
 
     // Smart Resolver for Google Image Search Links
     // Example: https://www.google.com/imgres?q=logo%20bca&imgurl=https%3A%2F%2Fwww.bca.co.id%2F-...
@@ -27,20 +23,18 @@ export const LogoImage = ({ src, alt, fallbackText, className, fallbackIcon }: L
         const urlObj = new URL(src);
         const imgUrl = urlObj.searchParams.get('imgurl');
         if (imgUrl) {
-          setResolvedSrc(decodeURIComponent(imgUrl));
-          setError(false);
-          return;
+          return decodeURIComponent(imgUrl);
         }
       } catch (e) {
         console.error("Failed to parse Google Image URL:", e);
       }
     }
 
-    setResolvedSrc(src);
-    setError(false);
+    return src;
   }, [src]);
+  const hasError = !!resolvedSrc && failedSrc === resolvedSrc;
 
-  if (!resolvedSrc || error) {
+  if (!resolvedSrc || hasError) {
     return (
       <div className={`${className} bg-slate-50 text-slate-400 flex items-center justify-center text-[8px] font-black overflow-hidden`}>
         {fallbackIcon || fallbackText}
@@ -49,13 +43,16 @@ export const LogoImage = ({ src, alt, fallbackText, className, fallbackIcon }: L
   }
 
   return (
-    <img 
+    <Image 
       src={resolvedSrc} 
       alt={alt} 
+      width={96}
+      height={96}
+      unoptimized
       className={className}
       onError={() => {
         console.warn(`Failed to load image: ${resolvedSrc}`);
-        setError(true);
+        setFailedSrc(resolvedSrc);
       }}
       referrerPolicy="no-referrer"
     />

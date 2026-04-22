@@ -1,17 +1,12 @@
 "use client";
 
 import { 
-  CheckCircle2, 
-  Clock, 
-  ShieldCheck,
   Zap,
   LayoutDashboard,
   Activity,
   Calendar,
   Download,
   LineChart,
-  PieChart,
-  ChevronRight,
   Search
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -104,9 +99,9 @@ export default function AdminLaporanPage() {
       return d > weekAgo;
     }).length,
     topAction: logs.length > 0 ? (() => {
-      const counts: any = {};
+      const counts: Record<string, number> = {};
       logs.forEach(l => { counts[l.action] = (counts[l.action] || 0) + 1; });
-      return Object.entries(counts).sort((a: any, b: any) => b[1] - a[1])[0][0];
+      return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
     })() : '-'
   };
 
@@ -342,7 +337,7 @@ export default function AdminLaporanPage() {
                     </div>
                   </td>
                   <td className="py-8 px-4 text-[13px] font-medium text-slate-900 italic">
-                    "{row.note}"
+                    &quot;{row.note}&quot;
                   </td>
                 </tr>
               ))}

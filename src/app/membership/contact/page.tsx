@@ -1,5 +1,6 @@
 "use client";
 
+import Image from 'next/image';
 import { 
   Check, 
   Copy, 
@@ -9,13 +10,11 @@ import {
   ChevronDown,
   CreditCard,
   QrCode,
-  ShieldCheck,
-  Upload,
   X,
   ImageIcon
 } from 'lucide-react';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { subscribeAppSettings, AppSettings, ProPackage } from '@/lib/services/adminService';
+import { subscribeAppSettings, AppSettings } from '@/lib/services/adminService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { auth, db } from '@/lib/cf-client';
 import { collection, addDoc, serverTimestamp } from '@/lib/cf-firestore';
@@ -251,9 +250,9 @@ export default function ContactPage() {
 
                     <div className="space-y-4 pt-4 border-t border-slate-200">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{settings?.qrisText || 'Pembayaran QRIS'}</p>
-                      <div className="w-48 h-48 flex items-center justify-center overflow-hidden">
+                      <div className="relative w-48 h-48 flex items-center justify-center overflow-hidden">
                         {settings?.qrisURL ? (
-                          <img src={settings.qrisURL} alt="QRIS" className="w-full h-full object-contain" />
+                          <Image src={settings.qrisURL} alt="QRIS" fill className="object-contain" />
                         ) : (
                           <div className="w-full h-full bg-slate-50 rounded-3xl flex items-center justify-center border-2 border-dashed border-slate-200">
                             <QrCode size={80} className="text-slate-300" />
@@ -381,7 +380,13 @@ export default function ContactPage() {
                     />
                     {proofPreview ? (
                       <div className="relative w-full rounded-2xl overflow-hidden border-2 border-indigo-100">
-                        <img src={proofPreview} alt="Bukti Pembayaran" className="w-full max-h-64 object-contain bg-slate-50" />
+                        <Image
+                          src={proofPreview}
+                          alt="Bukti Pembayaran"
+                          width={1200}
+                          height={800}
+                          className="w-full max-h-64 h-auto object-contain bg-slate-50"
+                        />
                         {uploadingProof && (
                           <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
                             <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />

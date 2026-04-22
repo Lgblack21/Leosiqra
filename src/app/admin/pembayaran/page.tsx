@@ -1,17 +1,14 @@
 "use client";
 
+import Image from 'next/image';
 import { 
   Search, 
   CheckCircle2, 
-  Clock, 
-  CreditCard, 
   ShieldCheck,
   Zap,
   LayoutDashboard,
   Activity,
   ArrowUpRight,
-  Filter,
-  ChevronRight,
   X,
   ImageIcon
 } from 'lucide-react';
@@ -377,9 +374,9 @@ export default function AdminPembayaranPage() {
                   <td className="py-6 px-4 text-[12px] font-medium text-slate-400 tracking-tight">{row.id?.slice(-8).toUpperCase()}</td>
                   <td className="py-6 px-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-[10px] font-black text-indigo-500 border border-indigo-100 uppercase overflow-hidden">
+                      <div className="relative w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-[10px] font-black text-indigo-500 border border-indigo-100 uppercase overflow-hidden">
                         {row.user_photo_url ? (
-                          <img src={row.user_photo_url} alt={row.user_name} className="w-full h-full object-cover" />
+                          <Image src={row.user_photo_url} alt={row.user_name || 'User'} fill className="object-cover" />
                         ) : (
                           <span>{row.user_name?.[0] || 'U'}</span>
                         )}
@@ -405,7 +402,7 @@ export default function AdminPembayaranPage() {
                         onClick={() => setProofModal(row.proof_image_url ?? null)}
                         className="group relative w-14 h-14 rounded-xl overflow-hidden border-2 border-indigo-100 hover:border-indigo-400 transition-all"
                       >
-                        <img src={row.proof_image_url} alt="Bukti" className="w-full h-full object-cover" />
+                        <Image src={row.proof_image_url} alt="Bukti" fill className="object-cover" />
                         <div className="absolute inset-0 bg-indigo-600/0 group-hover:bg-indigo-600/40 transition-all flex items-center justify-center">
                           <p className="text-white text-[8px] font-black opacity-0 group-hover:opacity-100">LIHAT</p>
                         </div>
@@ -488,10 +485,12 @@ export default function AdminPembayaranPage() {
                 <ImageIcon size={16} className="text-indigo-500" />
                 <h4 className="text-[13px] font-black text-slate-900 uppercase tracking-widest">Bukti Pembayaran</h4>
               </div>
-              <img 
-                src={proofModal} 
-                alt="Bukti Pembayaran" 
-                className="w-full max-h-[70vh] object-contain bg-slate-50"
+              <Image
+                src={proofModal}
+                alt="Bukti Pembayaran"
+                width={1400}
+                height={900}
+                className="w-full max-h-[70vh] h-auto object-contain bg-slate-50"
               />
             </div>
           </div>

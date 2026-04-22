@@ -18,6 +18,7 @@ import { LedgerModal } from '@/components/modals/LedgerModal';
 import { AccountModal } from '@/components/modals/AccountModal';
 import { CardModal } from '@/components/modals/CardModal';
 import { CurrencyModal } from '@/components/modals/CurrencyModal';
+import type { Investment } from '@/lib/services/investmentService';
 
 export const GlobalModalWrapper = () => {
   const { activeModal, modalData, closeModal } = useModal();
@@ -43,7 +44,7 @@ export const GlobalModalWrapper = () => {
         isOpen={activeModal === 'saham'} 
         onClose={closeModal} 
         userId={user.id} 
-        initialData={modalData}
+        initialData={modalData ? (modalData as unknown as Investment) : undefined}
       />
 
       <DepositModal 

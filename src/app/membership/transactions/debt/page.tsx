@@ -2,27 +2,20 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { 
-  PlusCircle, 
   Search,
   AlertCircle,
   Banknote,
   Trash2,
-  Calendar,
-  CheckCircle2,
-  ChevronDown,
-  Plus
+  CheckCircle2
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
-import { accountService, Account } from '@/lib/services/accountService';
+import { Account } from '@/lib/services/accountService';
 import { updateMemberTotals } from '@/lib/services/userService';
 import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged, User } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 import { useRef } from 'react';
-import { AddTransactionModal } from '@/components/AddTransactionModal';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 
 export default function DebtPage() {

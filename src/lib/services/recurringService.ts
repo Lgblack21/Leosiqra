@@ -50,15 +50,15 @@ export const recurringService = {
       return {
         ...data,
         id: doc.id,
-        nextDate: data.nextDate.toDate(),
-        createdAt: data.createdAt.toDate()
+        nextDate: data.nextDate?.toDate?.() ?? new Date(),
+        createdAt: data.createdAt?.toDate?.() ?? new Date()
       } as RecurringTransaction;
     });
   },
 
   async updateRecurring(id: string, data: Partial<Omit<RecurringTransaction, 'id' | 'createdAt'>>) {
     const docRef = doc(db, COLLECTION_NAME, id);
-    const updates: any = { ...data };
+    const updates: Record<string, unknown> = { ...data };
     if (data.nextDate) updates.nextDate = Timestamp.fromDate(data.nextDate);
     await updateDoc(docRef, updates);
   },

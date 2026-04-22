@@ -4,39 +4,36 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   CreditCard, 
   Wallet, 
-  PiggyBank, 
   LineChart, 
   ArrowUpCircle, 
   ArrowDownCircle,
   Building2,
   Smartphone,
   Banknote,
-  Trash2,
-  ChevronLeft
+  Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { accountService, Account } from '@/lib/services/accountService';
-import { transactionService, Transaction } from '@/lib/services/transactionService';
-import { savingsService, Saving } from '@/lib/services/savingsService';
+import { Transaction } from '@/lib/services/transactionService';
+import { Saving } from '@/lib/services/savingsService';
 import { auth, db } from '@/lib/cf-client';
-import { onAuthStateChanged, User } from '@/lib/cf-auth';
+import { onAuthStateChanged } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
 
 export default function MyCardsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [savings, setSavings] = useState<Saving[]>([]);
-  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
 
   const unsubAccRef = useRef<(() => void) | null>(null);
   const unsubTrxRef = useRef<(() => void) | null>(null);
+  const unsubSavRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
       if (u) {
         const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
         if (unsubAccRef.current) unsubAccRef.current();
@@ -47,8 +44,8 @@ export default function MyCardsPage() {
           });
           setAccounts(accs);
           // Auto-select first account
-          if (accs.length > 0 && !selectedAccountId) {
-            setSelectedAccountId(accs[0].id!);
+          if (accs.length > 0) {
+            setSelectedAccountId((prev) => prev ?? accs[0].id!);
           }
         }, (err) => console.error(err));
 
@@ -63,7 +60,8 @@ export default function MyCardsPage() {
 
         // Fetch savings for totalOut
         const qSav = query(collection(db, 'savings'), where('userId', '==', u.uid));
-        const unsubSav = onSnapshot(qSav, (snap) => {
+        if (unsubSavRef.current) unsubSavRef.current();
+        unsubSavRef.current = onSnapshot(qSav, (snap) => {
           setSavings(snap.docs.map(doc => {
             const d = doc.data();
             return { ...d, id: doc.id, amount: Number(d.amount) || 0, date: d.date?.toDate?.() ?? new Date(), createdAt: d.createdAt?.toDate?.() ?? new Date() } as Saving;
@@ -77,6 +75,7 @@ export default function MyCardsPage() {
       unsub(); 
       if (unsubAccRef.current) unsubAccRef.current(); 
       if (unsubTrxRef.current) unsubTrxRef.current(); 
+      if (unsubSavRef.current) unsubSavRef.current();
     };
   }, []);
 
@@ -203,7 +202,7 @@ export default function MyCardsPage() {
         <div>
           <h1 className="text-2xl md:text-[28px] font-black text-slate-900 tracking-tight">Kartu Saya</h1>
           <p className="text-[12px] md:text-sm font-medium text-slate-500 mt-1 max-w-lg leading-relaxed">
-            Pantau arus kas Anda dan kelola rekening melalui menu 'Tambah Cepat' di header.
+            Pantau arus kas Anda dan kelola rekening melalui menu &apos;Tambah Cepat&apos; di header.
           </p>
         </div>
         <div className="bg-white border border-slate-100 rounded-xl px-6 py-3 shadow-sm text-right">

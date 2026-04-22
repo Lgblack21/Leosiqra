@@ -1,8 +1,7 @@
 "use client";
 
 import { usePathname } from 'next/navigation';
-import { Menu, LayoutDashboard, Users, CreditCard, FileText, Settings } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Menu } from 'lucide-react';
 
 interface AdminHeaderProps {
   onMenuClick?: () => void;

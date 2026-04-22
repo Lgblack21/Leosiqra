@@ -5,15 +5,13 @@ import {
   PlusCircle,
   Banknote,
   Percent,
-  Clock,
   Trash2,
-  ChevronDown,
   Pencil
 } from 'lucide-react';
-import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { investmentService, Investment } from '@/lib/services/investmentService';
-import { accountService, Account } from '@/lib/services/accountService';
+import { Account } from '@/lib/services/accountService';
+import type { Category } from '@/lib/services/categoryService';
 import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged, User } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
@@ -24,7 +22,7 @@ import { DepositModal } from '@/components/modals/DepositModal';
 export default function DepositoPage() {
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -47,7 +45,7 @@ export default function DepositoPage() {
         // Fetch Categories for lookup
         const qCat = query(collection(db, 'categories'), where('userId', '==', u.uid));
         onSnapshot(qCat, (snap) => {
-          setCategories(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+          setCategories(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)));
         });
 
         const q = query(

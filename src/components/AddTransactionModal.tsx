@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, Save, TrendingUp, TrendingDown, Briefcase, PiggyBank, ChevronDown, RefreshCw } from 'lucide-react';
+import { X, Save, TrendingUp, TrendingDown, ChevronDown, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from './Button';
 import { Input } from './Input';
@@ -10,8 +10,6 @@ import { CurrencySelect } from './CurrencySelect';
 import { transactionService, TransactionType } from '@/lib/services/transactionService';
 import { updateMemberTotals } from '@/lib/services/userService';
 import { accountService, Account } from '@/lib/services/accountService';
-import { auth } from '@/lib/cf-client';
-import { onAuthStateChanged } from '@/lib/cf-auth';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { formatCurrency } from '@/lib/utils';
 
@@ -145,7 +143,7 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
                 <button
                   key={t.id}
                   type="button"
-                  onClick={() => setType(t.id as any)}
+                  onClick={() => setType(t.id as TransactionType)}
                   className={cn(
                     "flex items-center justify-center gap-3 p-4 rounded-2xl border transition-all",
                     isActive 

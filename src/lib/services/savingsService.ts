@@ -46,8 +46,8 @@ export const savingsService = {
       return {
         ...data,
         id: doc.id,
-        date: data.date.toDate(),
-        createdAt: data.createdAt.toDate()
+        date: data.date?.toDate?.() ?? new Date(),
+        createdAt: data.createdAt?.toDate?.() ?? new Date()
       } as Saving;
     });
   },

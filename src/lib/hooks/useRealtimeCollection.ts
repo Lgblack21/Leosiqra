@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   collection, 
   query, 
@@ -27,18 +27,20 @@ export function useRealtimeCollection<T>(
   orderField: string = 'createdAt',
   orderDirection: 'asc' | 'desc' = 'desc'
 ) {
-  const [data, setData] = useState<T[]>([]);
-  const [loading, setLoading] = useState(true);
-  const unsubRef = useRef<(() => void) | null>(null);
+  const [state, setState] = useState<{
+    data: T[];
+    loading: boolean;
+    ownerUserId: string | null;
+  }>({
+    data: [],
+    loading: true,
+    ownerUserId: null,
+  });
 
   useEffect(() => {
     if (!userId) {
-      setData([]);
-      setLoading(false);
       return;
     }
-
-    setLoading(true);
 
     const constraints: QueryConstraint[] = [
       where('userId', '==', userId),
@@ -48,9 +50,6 @@ export function useRealtimeCollection<T>(
 
     const q = query(collection(db, collectionName), ...constraints);
 
-    // Cleanup listener lama
-    if (unsubRef.current) unsubRef.current();
-
     const unsub = onSnapshot(
       q,
       (snap) => {
@@ -59,24 +58,30 @@ export function useRealtimeCollection<T>(
           if (transform) return transform(raw, doc.id);
           return { ...raw, id: doc.id } as T;
         });
-        setData(items);
-        setLoading(false);
+        setState({
+          data: items,
+          loading: false,
+          ownerUserId: userId,
+        });
       },
       (err) => {
         // Silently skip permission-denied errors (common during logout/auth transition)
         if (err.code !== 'permission-denied') {
           console.warn(`[useRealtimeCollection] ${collectionName} error:`, err.message);
         }
-        setLoading(false);
+        setState((prev) => ({
+          ...prev,
+          loading: false,
+          ownerUserId: userId,
+        }));
       }
     );
 
-    unsubRef.current = unsub;
-    return () => {
-      if (unsubRef.current) { unsubRef.current(); unsubRef.current = null; }
-    };
-  }, [userId, collectionName, orderField, orderDirection]);
+    return () => unsub();
+  }, [userId, collectionName, orderField, orderDirection, extraConstraints, transform]);
 
+  const data = userId && state.ownerUserId === userId ? state.data : [];
+  const loading = userId ? state.ownerUserId !== userId || state.loading : false;
   return { data, loading };
 }
 

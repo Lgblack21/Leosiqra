@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import type { UserProfile } from '@/lib/services/userService';
 import type { AppSettings } from '@/lib/services/adminService';
@@ -73,11 +74,12 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
       );
     } else if (settings.maintenance.type === 'image' && settings.maintenance.imageUrl) {
       return (
-        <div className="fixed inset-0 z-[9999] bg-black">
-          <img 
-            src={settings.maintenance.imageUrl} 
-            alt="Maintenance" 
-            className="w-full h-full object-contain"
+        <div className="fixed inset-0 z-[9999] bg-black relative">
+          <Image
+            src={settings.maintenance.imageUrl}
+            alt="Maintenance"
+            fill
+            className="object-contain"
           />
         </div>
       );

@@ -11,6 +11,7 @@ interface MonthPickerProps {
 
 export const MonthPicker = ({ value, onChange, className }: MonthPickerProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  type PickerInput = HTMLInputElement & { showPicker?: () => void };
   
   // value.month is 0-11
   // We use a mid-month date to avoid timezone/edge case issues when selecting
@@ -18,16 +19,16 @@ export const MonthPicker = ({ value, onChange, className }: MonthPickerProps) =>
 
   const handleClick = () => {
     // Modern browsers allow calling showPicker() to open the native calendar
-    const input = inputRef.current as any;
+    const input = inputRef.current as PickerInput | null;
     if (!input) return;
 
     try {
-      if ('showPicker' in input) {
-        (input as any).showPicker();
+      if (typeof input.showPicker === 'function') {
+        input.showPicker();
       } else {
         input.click();
       }
-    } catch (e) {
+    } catch {
       input.click();
     }
   };

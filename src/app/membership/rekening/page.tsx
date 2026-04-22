@@ -9,26 +9,23 @@ import {
   Edit2,
   Trash2,
   ExternalLink,
-  ShieldCheck,
-  ChevronDown
+  ShieldCheck
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LogoImage } from '@/components/ui/LogoImage';
 import { accountService, Account } from '@/lib/services/accountService';
 import { auth, db } from '@/lib/cf-client';
-import { onAuthStateChanged, User } from '@/lib/cf-auth';
+import { onAuthStateChanged } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
 
 export default function RekeningPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
 
   const unsubRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
       if (u) {
         const q = query(collection(db, 'accounts'), where('userId', '==', u.uid));
         if (unsubRef.current) unsubRef.current();
@@ -85,7 +82,7 @@ export default function RekeningPage() {
         <div>
           <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Rekening</h1>
           <p className="text-[12px] md:text-sm font-medium text-slate-400 mt-2 max-w-xl leading-relaxed">
-            Kelola akun keuangan dan saldo awal Anda melalui menu 'Tambah Cepat' di header.
+            Kelola akun keuangan dan saldo awal Anda melalui menu &apos;Tambah Cepat&apos; di header.
           </p>
         </div>
       </div>

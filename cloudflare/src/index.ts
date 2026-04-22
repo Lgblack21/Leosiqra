@@ -375,9 +375,16 @@ const sanitizeMaintenanceHtml = (unsafeHtml?: string | null) => {
   }
 
   return unsafeHtml
+    .replaceAll(/<!--[\s\S]*?-->/g, "")
     .replaceAll(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
+    .replaceAll(/<(iframe|object|embed|link|meta|base|form)[\s\S]*?>[\s\S]*?<\/\1>/gi, "")
+    .replaceAll(/<(iframe|object|embed|link|meta|base|form)[^>]*\/?>/gi, "")
     .replaceAll(/\son\w+="[^"]*"/gi, "")
-    .replaceAll(/\son\w+='[^']*'/gi, "");
+    .replaceAll(/\son\w+='[^']*'/gi, "")
+    .replaceAll(/\s(srcdoc|formaction|xlink:href|href|src|poster|action)\s*=\s*"(javascript:|data:text\/html)[^"]*"/gi, "")
+    .replaceAll(/\s(srcdoc|formaction|xlink:href|href|src|poster|action)\s*=\s*'(javascript:|data:text\/html)[^']*'/gi, "")
+    .replaceAll(/\sstyle\s*=\s*"[^"]*(expression|url\s*\(\s*javascript:)[^"]*"/gi, "")
+    .replaceAll(/\sstyle\s*=\s*'[^']*(expression|url\s*\(\s*javascript:)[^']*'/gi, "");
 };
 
 const getMaintenanceSettings = async (env: Env) =>
