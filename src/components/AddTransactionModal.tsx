@@ -10,8 +10,8 @@ import { CurrencySelect } from './CurrencySelect';
 import { transactionService, TransactionType } from '@/lib/services/transactionService';
 import { updateMemberTotals } from '@/lib/services/userService';
 import { accountService, Account } from '@/lib/services/accountService';
-import { auth } from '@/lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/cf-client';
+import { onAuthStateChanged } from '@/lib/cf-auth';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { formatCurrency } from '@/lib/utils';
 
@@ -290,3 +290,4 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
     </div>
   );
 };
+

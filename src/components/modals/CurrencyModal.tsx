@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { currencyService } from '@/lib/services/currencyService';
-import { auth } from '@/lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '@/lib/cf-client';
+import { onAuthStateChanged, User } from '@/lib/cf-auth';
 import { Modal } from '@/components/ui/Modal';
 
 interface CurrencyModalProps {
@@ -97,3 +97,4 @@ export const CurrencyModal = ({ isOpen, onClose }: CurrencyModalProps) => {
     </Modal>
   );
 };
+

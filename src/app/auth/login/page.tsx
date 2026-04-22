@@ -4,15 +4,11 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { Input } from '@/components/Input';
 import { Button } from '@/components/Button';
 import { ShieldCheck, Smartphone, Eye, EyeOff, LayoutGrid } from 'lucide-react';
 import { TwoFactorModal } from '@/components/auth/TwoFactorModal';
-import { twoFactorService } from '@/lib/services/twoFactorService';
 import { cloudflareApi } from '@/lib/cloudflare-api';
-import { isCloudflareAuthEnabled } from '@/lib/runtime-mode';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -21,8 +17,6 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [show2FA, setShow2FA] = useState(false);
-  const [tempSecret, setTempSecret] = useState('');
-  const [pendingRedirect, setPendingRedirect] = useState('');
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -31,72 +25,47 @@ export default function LoginPage() {
     setError('');
 
     try {
-      if (isCloudflareAuthEnabled) {
-        const result = await cloudflareApi<{
-          needsTwoFactor?: boolean;
-          user?: { role: 'admin' | 'user' };
-        }>('/api/auth/login', {
-          method: 'POST',
-          json: { email, password },
-        });
+      const result = await cloudflareApi<{
+        needsTwoFactor?: boolean;
+        user?: { role: 'admin' | 'user' };
+      }>('/api/auth/login', {
+        method: 'POST',
+        json: {
+          email: email.trim().toLowerCase(),
+          password,
+        },
+      });
 
-        if (result.needsTwoFactor) {
-          setPendingRedirect('/membership/dashboard');
-          setShow2FA(true);
-        } else {
-          router.push(result.user?.role === 'admin' ? '/admin' : '/membership/dashboard');
-        }
-        return;
-      }
-
-      const { user } = await signInWithEmailAndPassword(auth, email, password);
-      
-      // Fetch user role & 2FA status
-      const { doc, getDoc } = await import('firebase/firestore');
-      const { db } = await import('@/lib/firebase');
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const secret = userData.twoFactorSecret;
-        const targetPath = userData.role === 'admin' ? '/admin' : '/membership/dashboard';
-
-        if (secret) {
-          setTempSecret(secret);
-          setPendingRedirect(targetPath);
-          setShow2FA(true);
-        } else {
-          router.push(targetPath);
-        }
+      if (result.needsTwoFactor) {
+        setShow2FA(true);
       } else {
-        setError('Data pengguna tidak ditemukan.');
+        router.push(result.user?.role === 'admin' ? '/admin' : '/membership/dashboard');
       }
-    } catch {
-      setError('Gagal login. Periksa kembali email dan password Anda.');
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Gagal login. Periksa kembali email dan password Anda.'
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const handleVerify2FA = async (enteredToken: string) => {
-    if (isCloudflareAuthEnabled) {
-      const result = await cloudflareApi<{
-        user?: { role: 'admin' | 'user' };
-      }>('/api/auth/login', {
-        method: 'POST',
-        json: { email, password, twoFactorToken: enteredToken },
-      });
+    const result = await cloudflareApi<{
+      user?: { role: 'admin' | 'user' };
+    }>('/api/auth/login', {
+      method: 'POST',
+      json: {
+        email: email.trim().toLowerCase(),
+        password,
+        twoFactorToken: enteredToken,
+      },
+    });
 
-      router.push(result.user?.role === 'admin' ? '/admin' : '/membership/dashboard');
-      return true;
-    }
-
-    if (twoFactorService.verifyToken(enteredToken, tempSecret)) {
-      router.push(pendingRedirect);
-      return true;
-    } else {
-      return false;
-    }
+    router.push(result.user?.role === 'admin' ? '/admin' : '/membership/dashboard');
+    return true;
   };
 
   return (
@@ -249,7 +218,7 @@ export default function LoginPage() {
         onClose={() => setShow2FA(false)}
         mode="verify"
         email={email}
-        secret={tempSecret}
+        secret=""
         onVerify={handleVerify2FA}
       />
     </div>

@@ -11,8 +11,8 @@ import {
   addDoc,
   serverTimestamp,
   updateDoc
-} from 'firebase/firestore';
-import { db } from '../firebase';
+} from '@/lib/cf-firestore';
+import { db } from '../cf-client';
 
 // TYPES
 export interface ProPackage {
@@ -170,3 +170,4 @@ export const updateAdminProfile = async (uid: string, data: any) => {
   const docRef = doc(db, USERS_COLLECTION, uid);
   return await updateDoc(docRef, data);
 };
+

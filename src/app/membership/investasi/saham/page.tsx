@@ -21,9 +21,9 @@ import { MonthPicker } from '@/components/ui/MonthPicker';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { updateMemberTotals } from '@/lib/services/userService';
-import { auth, db } from '@/lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { auth, db } from '@/lib/cf-client';
+import { onAuthStateChanged, User } from '@/lib/cf-auth';
+import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 import { cn } from '@/lib/utils';
 import { StockInvestmentModal } from '@/components/modals/StockInvestmentModal';
 
@@ -258,3 +258,4 @@ export default function SahamPage() {
     </div>
   );
 }
+

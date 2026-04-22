@@ -5,8 +5,8 @@ import {
   onSnapshot,
   updateDoc,
   increment 
-} from 'firebase/firestore';
-import { db } from '../firebase';
+} from '@/lib/cf-firestore';
+import { db } from '../cf-client';
 
 export interface UserProfile {
   uid: string;
@@ -78,3 +78,4 @@ export const updateMemberTotals = async (userId: string, type: string, actualAmo
   
   await updateDoc(userRef, updates);
 };
+

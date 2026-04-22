@@ -4,11 +4,7 @@ import { useState, useEffect } from 'react';
 import { AdminSidebar } from '@/components/AdminSidebar';
 import { AdminHeader } from '@/components/AdminHeader';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { getUserProfile } from '@/lib/services/userService';
 import { cloudflareApi } from '@/lib/cloudflare-api';
-import { isCloudflareAuthEnabled } from '@/lib/runtime-mode';
 
 export default function AdminLayout({
   children,
@@ -21,34 +17,18 @@ export default function AdminLayout({
   const router = useRouter();
 
   useEffect(() => {
-    if (isCloudflareAuthEnabled) {
-      cloudflareApi<{ user?: { role: 'admin' | 'user' } | null }>('/api/auth/me')
-        .then((result) => {
-          if (result.user?.role === 'admin') {
-            setAuthorized(true);
-          } else {
-            router.push('/membership/dashboard');
-          }
-        })
-        .catch(() => router.push('/auth/login'))
-        .finally(() => setLoading(false));
-      return;
-    }
-
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const prof = await getUserProfile(user.uid);
-        if (prof?.role === 'admin') {
+    cloudflareApi<{ user?: { role: 'admin' | 'user' } | null }>('/api/auth/me')
+      .then((result) => {
+        if (result.user?.role === 'admin') {
           setAuthorized(true);
-        } else {
+        } else if (result.user) {
           router.push('/membership/dashboard');
+        } else {
+          router.push('/auth/login');
         }
-      } else {
-        router.push('/auth/login');
-      }
-      setLoading(false);
-    });
-    return () => unsub();
+      })
+      .catch(() => router.push('/auth/login'))
+      .finally(() => setLoading(false));
   }, [router]);
 
   // Kita tidak lagi menampilkan spinner full-screen agar transisi terasa instan.

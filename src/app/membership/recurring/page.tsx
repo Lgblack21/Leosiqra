@@ -18,9 +18,9 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { recurringService, RecurringTransaction } from '@/lib/services/recurringService';
 import { accountService, Account } from '@/lib/services/accountService';
-import { auth, db } from '@/lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { auth, db } from '@/lib/cf-client';
+import { onAuthStateChanged, User } from '@/lib/cf-auth';
+import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 
 export default function RecurringPage() {
   const [transactions, setTransactions] = useState<RecurringTransaction[]>([]);
@@ -213,3 +213,4 @@ export default function RecurringPage() {
     </div>
   );
 }
+

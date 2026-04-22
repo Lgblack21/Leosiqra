@@ -2,9 +2,8 @@
 
 import { useModal } from '@/context/ModalContext';
 import { AddTransactionModal } from '@/components/AddTransactionModal';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { useEffect, useState } from 'react';
+import { cloudflareApi } from '@/lib/cloudflare-api';
 
 // Extracted Modals
 import { StockInvestmentModal } from '@/components/modals/StockInvestmentModal';
@@ -22,11 +21,12 @@ import { CurrencyModal } from '@/components/modals/CurrencyModal';
 
 export const GlobalModalWrapper = () => {
   const { activeModal, modalData, closeModal } = useModal();
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<{ id: string } | null>(null);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
-    return () => unsub();
+    cloudflareApi<{ user?: { id: string } | null }>('/api/auth/me')
+      .then((result) => setUser(result.user ?? null))
+      .catch(() => setUser(null));
   }, []);
 
   if (!activeModal || !user) return null;
@@ -36,74 +36,74 @@ export const GlobalModalWrapper = () => {
       <AddTransactionModal 
         isOpen={activeModal === 'harian'} 
         onClose={closeModal} 
-        userId={user.uid} 
+        userId={user.id} 
       />
       
       <StockInvestmentModal 
         isOpen={activeModal === 'saham'} 
         onClose={closeModal} 
-        userId={user.uid} 
+        userId={user.id} 
         initialData={modalData}
       />
 
       <DepositModal 
         isOpen={activeModal === 'deposito'} 
         onClose={closeModal} 
-        userId={user.uid} 
+        userId={user.id} 
       />
 
       <OtherInvestmentModal 
         isOpen={activeModal === 'investasi_lain'} 
         onClose={closeModal} 
-        userId={user.uid} 
+        userId={user.id} 
       />
 
       <SavingsModal 
         isOpen={activeModal === 'tabungan'} 
         onClose={closeModal} 
-        userId={user.uid} 
+        userId={user.id} 
       />
 
       <DebtModal 
         isOpen={activeModal === 'hutang_piutang'} 
         onClose={closeModal} 
-        userId={user.uid} 
+        userId={user.id} 
       />
 
       <TopUpModal 
         isOpen={activeModal === 'topup_transfer'} 
         onClose={closeModal} 
-        userId={user.uid} 
+        userId={user.id} 
       />
 
       <BudgetModal 
         isOpen={activeModal === 'budget_target'} 
         onClose={closeModal} 
-        userId={user.uid} 
+        userId={user.id} 
       />
 
       <RecurringModal 
         isOpen={activeModal === 'recurring'} 
         onClose={closeModal} 
-        userId={user.uid} 
+        userId={user.id} 
       />
 
       <LedgerModal 
         isOpen={activeModal === 'ledger'} 
         onClose={closeModal} 
-        userId={user.uid} 
+        userId={user.id} 
       />
 
       <AccountModal 
         isOpen={activeModal === 'rekening'} 
         onClose={closeModal} 
-        userId={user.uid} 
+        userId={user.id} 
       />
 
       <CardModal 
         isOpen={activeModal === 'kartu'} 
         onClose={closeModal} 
-        userId={user.uid} 
+        userId={user.id} 
       />
       
       <CurrencyModal 

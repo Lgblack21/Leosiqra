@@ -31,11 +31,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { subscribeUserProfile, UserProfile } from '@/lib/services/userService';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { cloudflareApi } from '@/lib/cloudflare-api';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -100,26 +96,28 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const pathname = usePathname();
   const router = useRouter();
   const [openGroups, setOpenGroups] = useState<string[]>(['Utama']);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<{
+    id: string;
+    name: string;
+    email: string;
+    role: 'admin' | 'user';
+    plan: 'FREE' | 'PRO';
+    status: 'AKTIF' | 'NONAKTIF' | 'GUEST' | 'PENDING';
+    photoURL?: string;
+    expiredAt?: string;
+  } | null>(null);
 
   useEffect(() => {
-    let unsubProfile: (() => void) | undefined;
-    
-    const unsubAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        unsubProfile = subscribeUserProfile(user.uid, (prof) => {
-          setProfile(prof);
-        });
-      } else {
-        setProfile(null);
-        if (unsubProfile) unsubProfile();
-      }
-    });
-
-    return () => {
-      unsubAuth();
-      if (unsubProfile) unsubProfile();
-    };
+    cloudflareApi<{ user?: {
+      id: string;
+      name: string;
+      email: string;
+      role: 'admin' | 'user';
+      plan: 'FREE' | 'PRO';
+      status: 'AKTIF' | 'NONAKTIF' | 'GUEST' | 'PENDING';
+    } | null }>('/api/auth/me')
+      .then((result) => setProfile(result.user ?? null))
+      .catch(() => setProfile(null));
   }, []);
 
   const getInitials = (name: string) => {
@@ -141,13 +139,10 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const [isRequesting, setIsRequesting] = useState(false);
 
   const handleRequestPro = async () => {
-    if (!profile?.uid) return;
+    if (!profile?.id) return;
     setIsRequesting(true);
     try {
-      await updateDoc(doc(db, 'users', profile.uid), {
-        status: 'PENDING'
-      });
-      alert('Berhasil! Permintaan akses telah terkirim. Admin akan memverifikasi akun Anda segera.');
+      alert('Mode Cloudflare aktif: request akses Pro dari sidebar belum tersedia. Hubungi admin untuk aktivasi manual sementara.');
     } catch (error) {
       console.error('Error requesting pro:', error);
       alert('Gagal mengirim permintaan. Silakan coba lagi nanti.');
@@ -158,7 +153,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      await cloudflareApi('/api/auth/logout', { method: 'POST' });
       router.push('/auth/login');
     } catch (error) {
       console.error('Error logging out:', error);

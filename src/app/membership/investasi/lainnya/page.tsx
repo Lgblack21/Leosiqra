@@ -17,9 +17,9 @@ import { LogoImage } from '@/components/ui/LogoImage';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { updateMemberTotals } from '@/lib/services/userService';
-import { auth, db } from '@/lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { auth, db } from '@/lib/cf-client';
+import { onAuthStateChanged, User } from '@/lib/cf-auth';
+import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
 import { useRef } from 'react';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { OtherInvestmentModal } from '@/components/modals/OtherInvestmentModal';
@@ -270,3 +270,4 @@ export default function OtherInvestmentsPage() {
     </div>
   );
 }
+

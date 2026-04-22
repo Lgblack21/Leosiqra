@@ -19,9 +19,9 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { accountService, Account } from '@/lib/services/accountService';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { savingsService, Saving } from '@/lib/services/savingsService';
-import { auth, db } from '@/lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { auth, db } from '@/lib/cf-client';
+import { onAuthStateChanged, User } from '@/lib/cf-auth';
+import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
 
 export default function MyCardsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -425,3 +425,4 @@ export default function MyCardsPage() {
     </div>
   );
 }
+

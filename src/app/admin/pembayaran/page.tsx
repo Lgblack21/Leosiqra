@@ -17,84 +17,62 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
-import { 
-  subscribeAllPayments, 
-  addAdminLog 
-} from '@/lib/services/adminService';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { cloudflareApi } from '@/lib/cloudflare-api';
+
+type PaymentRow = {
+  id: string;
+  user_id?: string;
+  user_email?: string;
+  user_name?: string;
+  user_photo_url?: string | null;
+  package_id?: string | null;
+  package_name?: string | null;
+  package_duration_months?: number | null;
+  amount?: number;
+  method?: string | null;
+  ref?: string | null;
+  proof_image_url?: string | null;
+  status: 'MENUNGGU' | 'DISETUJUI' | 'DITOLAK' | 'GAGAL';
+};
 
 export default function AdminPembayaranPage() {
   const [userEmail, setUserEmail] = useState('admin@leosiqra.com');
-  const [payments, setPayments] = useState<any[]>([]);
+  const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('Menunggu');
   const [proofModal, setProofModal] = useState<string | null>(null);
   
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUserEmail(user.email || 'admin@leosiqra.com');
+    (async () => {
+      try {
+        const [me, paymentsResponse] = await Promise.all([
+          cloudflareApi<{ user?: { email?: string } | null }>('/api/auth/me'),
+          cloudflareApi<{ items: PaymentRow[] }>('/api/admin/payments'),
+        ]);
+        setUserEmail(me.user?.email || 'admin@leosiqra.com');
+        setPayments(paymentsResponse.items || []);
+      } catch (error) {
+        console.error(error);
+        setPayments([]);
+      } finally {
+        setLoading(false);
       }
-    });
-
-    const unsubPayments = subscribeAllPayments((data) => {
-      setPayments(data);
-      setLoading(false);
-    });
-
-    return () => {
-      unsubAuth();
-      unsubPayments();
-    };
+    })();
   }, []);
 
-  const handleApprovePayment = async (payment: any) => {
-    if (!confirm(`Aktifkan paket PRO untuk ${payment.userName || payment.userEmail}?`)) return;
+  const handleApprovePayment = async (payment: PaymentRow) => {
+    if (!confirm(`Aktifkan paket PRO untuk ${payment.user_name || payment.user_email}?`)) return;
     try {
-      // 1. Update Payment Status
-      await updateDoc(doc(db, 'payments', payment.id), {
-        status: 'DISETUJUI',
-        approvedAt: new Date().toISOString()
+      await cloudflareApi(`/api/admin/payments/${payment.id}`, {
+        method: 'PATCH',
+        json: {
+          status: 'DISETUJUI',
+        },
       });
-
-      // 2. Update User Plan
-      const userRef = doc(db, 'users', payment.userId);
-      const userSnap = await getDoc(userRef);
-      
-      // Perhitungan expiredAt berdasarkan paket yang dipilih
-      const expiryDate = new Date();
-      let monthsToAdd = payment.package?.durationMonths;
-      
-      if (!monthsToAdd) {
-        // Fallback for legacy payments
-        const pkgName = payment.package?.id || '';
-        monthsToAdd = 1;
-        if (pkgName.includes('6 Bulan')) monthsToAdd = 6;
-        else if (pkgName.includes('12 Bulan')) monthsToAdd = 12;
-      }
-      
-      expiryDate.setMonth(expiryDate.getMonth() + monthsToAdd);
-
-      if (userSnap.exists()) {
-        await updateDoc(userRef, {
-          plan: 'PRO',
-          status: 'AKTIF',
-          expiredAt: expiryDate.toISOString()
-        });
-      }
-
-      // 3. Log Action
-      await addAdminLog({
-        adminEmail: userEmail,
-        action: 'APPROVE_PAYMENT',
-        target: payment.userEmail,
-        note: `Menyetujui pembayaran tiket ${payment.id} dan mengaktifkan PRO`,
-        color: 'emerald'
-      });
-
+      setPayments((current) =>
+        current.map((item) => (item.id === payment.id ? { ...item, status: 'DISETUJUI' } : item))
+      );
       alert('Pembayaran disetujui dan user telah diaktifkan!');
     } catch (error) {
       console.error(error);
@@ -102,10 +80,29 @@ export default function AdminPembayaranPage() {
     }
   };
 
+  const handleRejectPayment = async (payment: PaymentRow) => {
+    if (!confirm('Tolak pembayaran?')) return;
+    try {
+      await cloudflareApi(`/api/admin/payments/${payment.id}`, {
+        method: 'PATCH',
+        json: {
+          status: 'DITOLAK',
+        },
+      });
+      setPayments((current) =>
+        current.map((item) => (item.id === payment.id ? { ...item, status: 'DITOLAK' } : item))
+      );
+      alert('Pembayaran ditolak.');
+    } catch (error) {
+      console.error(error);
+      alert('Gagal menolak pembayaran.');
+    }
+  };
+
   const filteredPayments = payments.filter(p => {
     const matchesSearch = 
-      p.userName?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      p.userEmail?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.user_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      p.user_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.id?.includes(searchQuery);
     
     if (activeFilter === 'Semua') return matchesSearch;
@@ -381,21 +378,21 @@ export default function AdminPembayaranPage() {
                   <td className="py-6 px-4">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-[10px] font-black text-indigo-500 border border-indigo-100 uppercase overflow-hidden">
-                        {row.userPhotoURL ? (
-                          <img src={row.userPhotoURL} alt={row.userName} className="w-full h-full object-cover" />
+                        {row.user_photo_url ? (
+                          <img src={row.user_photo_url} alt={row.user_name} className="w-full h-full object-cover" />
                         ) : (
-                          <span>{row.userName?.[0] || 'U'}</span>
+                          <span>{row.user_name?.[0] || 'U'}</span>
                         )}
                       </div>
                       <div className="space-y-0.5">
-                        <p className="text-[13px] font-black text-slate-900 tracking-tight">{row.userName || 'Anonymous'}</p>
-                        <p className="text-[11px] font-medium text-slate-400">{row.userEmail}</p>
+                        <p className="text-[13px] font-black text-slate-900 tracking-tight">{row.user_name || 'Anonymous'}</p>
+                        <p className="text-[11px] font-medium text-slate-400">{row.user_email}</p>
                       </div>
                     </div>
                   </td>
                   <td className="py-6 px-4">
                     <div className="space-y-0.5">
-                      <p className="text-[12px] font-bold text-slate-700 tracking-widest uppercase">{row.package?.id || 'PRO'}</p>
+                      <p className="text-[12px] font-bold text-slate-700 tracking-widest uppercase">{row.package_name || row.package_id || 'PRO'}</p>
                       <p className="text-[10px] font-medium text-slate-400">Rp {(row.amount || 0).toLocaleString()}</p>
                     </div>
                   </td>
@@ -403,12 +400,12 @@ export default function AdminPembayaranPage() {
                   <td className="py-6 px-4 text-[12px] font-medium text-slate-500 tracking-tighter truncate max-w-[100px]">{row.ref || '-'}</td>
                   {/* KOLOM BUKTI */}
                   <td className="py-6 px-4">
-                    {row.proofImageUrl ? (
+                    {row.proof_image_url ? (
                       <button
-                        onClick={() => setProofModal(row.proofImageUrl)}
+                        onClick={() => setProofModal(row.proof_image_url ?? null)}
                         className="group relative w-14 h-14 rounded-xl overflow-hidden border-2 border-indigo-100 hover:border-indigo-400 transition-all"
                       >
-                        <img src={row.proofImageUrl} alt="Bukti" className="w-full h-full object-cover" />
+                        <img src={row.proof_image_url} alt="Bukti" className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-indigo-600/0 group-hover:bg-indigo-600/40 transition-all flex items-center justify-center">
                           <p className="text-white text-[8px] font-black opacity-0 group-hover:opacity-100">LIHAT</p>
                         </div>
@@ -438,12 +435,7 @@ export default function AdminPembayaranPage() {
                             Aktifkan Pro
                           </button>
                           <button 
-                            onClick={async () => {
-                              if(confirm('Tolak pembayaran?')) {
-                                await updateDoc(doc(db, 'payments', row.id), { status: 'DITOLAK' });
-                                alert('Pembayaran ditolak.');
-                              }
-                            }}
+                            onClick={() => handleRejectPayment(row)}
                             className="px-10 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-black text-slate-400 hover:border-slate-300 transition-all shadow-sm"
                           >
                             Tolak

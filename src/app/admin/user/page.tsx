@@ -15,57 +15,58 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
-import { 
-  subscribeAllUsers, 
-  addAdminLog,
-  subscribeAppSettings,
-  AppSettings
-} from '@/lib/services/adminService';
-import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { cloudflareApi } from '@/lib/cloudflare-api';
+
+type AppSettings = {
+  free_plan_days?: number;
+};
+
+type AdminUserRow = {
+  id: string;
+  name?: string;
+  email: string;
+  role?: 'admin' | 'user';
+  plan?: 'FREE' | 'PRO';
+  status?: 'AKTIF' | 'NONAKTIF' | 'GUEST' | 'PENDING';
+  expired_at?: string | null;
+  photo_url?: string | null;
+};
 
 export default function AdminUserPage() {
   const [userEmail, setUserEmail] = useState('admin@leosiqra.com');
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [settings, setSettings] = useState<AppSettings | null>(null);
   
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUserEmail(user.email || 'admin@leosiqra.com');
+    (async () => {
+      try {
+        const [me, usersResponse, settingsResponse] = await Promise.all([
+          cloudflareApi<{ user?: { email?: string } | null }>('/api/auth/me'),
+          cloudflareApi<{ items: AdminUserRow[] }>('/api/admin/users'),
+          cloudflareApi<{ item?: AppSettings | null }>('/api/admin/settings'),
+        ]);
+
+        setUserEmail(me.user?.email || 'admin@leosiqra.com');
+        setUsers(usersResponse.items || []);
+        setSettings(settingsResponse.item ?? null);
+      } catch (error) {
+        console.error(error);
+        setUsers([]);
+      } finally {
+        setLoading(false);
       }
-    });
-
-    const unsubUsers = subscribeAllUsers((data) => {
-      setUsers(data);
-      setLoading(false);
-    });
-
-    const unsubSettings = subscribeAppSettings((data) => {
-      setSettings(data);
-    });
-
-    return () => {
-      unsubAuth();
-      unsubUsers();
-      unsubSettings();
-    };
+    })();
   }, []);
 
   const handleDeleteUser = async (userId: string, targetEmail: string) => {
     if (!confirm(`Hapus akun ${targetEmail}? Tindakan ini permanen.`)) return;
     try {
-      await deleteDoc(doc(db, 'users', userId));
-      await addAdminLog({
-        adminEmail: userEmail,
-        action: 'DELETE_USER',
-        target: targetEmail,
-        note: `Menghapus akun pengguna dari database`,
-        color: 'rose'
+      await cloudflareApi(`/api/admin/users/${userId}`, {
+        method: 'DELETE',
       });
+      setUsers((current) => current.filter((item) => item.id !== userId));
       alert('User berhasil dihapus.');
     } catch (error) {
       alert('Gagal menghapus user.');
@@ -83,19 +84,21 @@ export default function AdminUserPage() {
       const nextMonth = new Date(baseDate);
       nextMonth.setMonth(nextMonth.getMonth() + 1);
       
-      await updateDoc(doc(db, 'users', userId), {
-        plan: 'PRO',
-        status: 'AKTIF',
-        expiredAt: nextMonth.toISOString()
+      await cloudflareApi(`/api/admin/users/${userId}`, {
+        method: 'PATCH',
+        json: {
+          plan: 'PRO',
+          status: 'AKTIF',
+          expiredAt: nextMonth.toISOString(),
+        },
       });
-
-      await addAdminLog({
-        adminEmail: userEmail,
-        action: 'EXTEND_PRO',
-        target: currentEmail,
-        note: `Memperpanjang paket PRO akumulatif. Expired baru: ${nextMonth.toLocaleDateString('id-ID')}`,
-        color: 'indigo'
-      });
+      setUsers((current) =>
+        current.map((item) =>
+          item.id === userId
+            ? { ...item, plan: 'PRO', status: 'AKTIF', expired_at: nextMonth.toISOString() }
+            : item
+        )
+      );
       alert('Paket berhasil diperpanjang (akumulatif).');
     } catch (error) {
       alert('Gagal memperbarui paket.');
@@ -272,9 +275,9 @@ export default function AdminUserPage() {
                   <td className="py-6 px-4 text-[13px] font-medium text-slate-400">{row.id?.slice(-4) || '-'}</td>
                   <td className="py-6 px-4">
                     <div className="flex items-center gap-3">
-                      {row.photoURL ? (
+                      {row.photo_url ? (
                         <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-100 shadow-sm bg-slate-50">
-                          <img src={row.photoURL} alt={row.name} className="w-full h-full object-cover" />
+                          <img src={row.photo_url} alt={row.name} className="w-full h-full object-cover" />
                         </div>
                       ) : (
                         <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-[10px] font-black text-indigo-500 border border-indigo-100 uppercase">
@@ -295,10 +298,10 @@ export default function AdminUserPage() {
                     </span>
                   </td>
                   <td className="py-6 px-4">
-                    {row.expiredAt ? (
+                    {row.expired_at ? (
                       <div className="flex items-center gap-2 text-[12px] font-bold text-slate-600">
                         <Clock size={12} className="text-slate-400" />
-                        {new Date(row.expiredAt).toLocaleDateString('id-ID', { 
+                        {new Date(row.expired_at).toLocaleDateString('id-ID', { 
                           day: 'numeric', 
                           month: 'short', 
                           year: 'numeric' 
@@ -311,7 +314,7 @@ export default function AdminUserPage() {
                   <td className="py-6 px-4">
                     <div className="flex items-center gap-2">
                       <button 
-                        onClick={() => handleExtendPro(row.id, row.email, row.expiredAt)}
+                        onClick={() => handleExtendPro(row.id, row.email, row.expired_at ?? undefined)}
                         className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-black text-slate-900 hover:border-indigo-600 hover:text-indigo-600 transition-all"
                       >
                         Perpanjang 1 Bulan
@@ -321,24 +324,27 @@ export default function AdminUserPage() {
                           if(!confirm(`Set ${row.email} ke paket FREE?`)) return;
                           
                           let activeExpiredAt = null;
-                          if (settings?.freePlanDays && settings.freePlanDays > 0) {
+                          if (settings?.free_plan_days && settings.free_plan_days > 0) {
                             const d = new Date();
-                            d.setDate(d.getDate() + settings.freePlanDays);
+                            d.setDate(d.getDate() + settings.free_plan_days);
                             activeExpiredAt = d.toISOString();
                           }
                           
-                          await updateDoc(doc(db, 'users', row.id), { 
-                            plan: 'FREE', 
-                            status: 'AKTIF',
-                            expiredAt: activeExpiredAt 
+                          await cloudflareApi(`/api/admin/users/${row.id}`, {
+                            method: 'PATCH',
+                            json: {
+                              plan: 'FREE',
+                              status: 'AKTIF',
+                              expiredAt: activeExpiredAt,
+                            },
                           });
-                          await addAdminLog({
-                            adminEmail: userEmail,
-                            action: 'SET_FREE',
-                            target: row.email,
-                            note: `Mengubah status user menjadi FREE & AKTIF${activeExpiredAt ? ` (Expired dalam ${settings?.freePlanDays} hari)` : ' (Unlimited)'}`,
-                            color: 'orange'
-                          });
+                          setUsers((current) =>
+                            current.map((item) =>
+                              item.id === row.id
+                                ? { ...item, plan: 'FREE', status: 'AKTIF', expired_at: activeExpiredAt }
+                                : item
+                            )
+                          );
                           alert('Status diatur ke FREE');
                         }}
                         className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-black text-slate-900 hover:border-indigo-600 hover:text-indigo-600 transition-all font-sans"

@@ -14,9 +14,9 @@ import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { accountService, Account } from '@/lib/services/accountService';
-import { auth, db } from '@/lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { auth, db } from '@/lib/cf-client';
+import { onAuthStateChanged, User } from '@/lib/cf-auth';
+import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { cn } from '@/lib/utils';
 import { DepositModal } from '@/components/modals/DepositModal';
@@ -257,3 +257,4 @@ export default function DepositoPage() {
     </div>
   );
 }
+

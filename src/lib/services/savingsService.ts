@@ -1,8 +1,8 @@
 import { 
   collection, doc, addDoc, deleteDoc,
   getDocs, query, where, orderBy, Timestamp 
-} from 'firebase/firestore';
-import { db } from '../firebase';
+} from '@/lib/cf-firestore';
+import { db } from '../cf-client';
 
 export interface Saving {
   id?: string;
@@ -56,3 +56,4 @@ export const savingsService = {
     await deleteDoc(doc(db, COLLECTION_NAME, id));
   }
 };
+

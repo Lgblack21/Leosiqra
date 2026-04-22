@@ -7,8 +7,8 @@ import {
   doc,
   deleteDoc,
   getDocs
-} from 'firebase/firestore';
-import { db } from '../firebase';
+} from '@/lib/cf-firestore';
+import { db } from '../cf-client';
 
 export interface Currency {
   id?: string;
@@ -85,3 +85,4 @@ export const currencyService = {
     }
   }
 };
+

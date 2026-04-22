@@ -15,9 +15,9 @@ import { YearPicker } from '@/components/ui/YearPicker';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { accountService, Account } from '@/lib/services/accountService';
-import { auth, db } from '@/lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { auth, db } from '@/lib/cf-client';
+import { onAuthStateChanged, User } from '@/lib/cf-auth';
+import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 
 export default function PajakCenterPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -387,3 +387,4 @@ export default function PajakCenterPage() {
     </div>
   );
 }
+

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Save, ChevronDown } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { categoryService } from '@/lib/services/categoryService';
-import { auth } from '@/lib/firebase';
+import { auth } from '@/lib/cf-client';
 
 interface LedgerModalProps {
   isOpen: boolean;
@@ -73,3 +73,4 @@ export const LedgerModal = ({ isOpen, onClose, userId }: LedgerModalProps) => {
     </Modal>
   );
 };
+

@@ -22,9 +22,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-import { auth, db } from '@/lib/firebase';
-import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot, collection, query, where } from 'firebase/firestore';
+import { auth, db } from '@/lib/cf-client';
+import { onAuthStateChanged, User as FirebaseUser } from '@/lib/cf-auth';
+import { doc, getDoc, setDoc, onSnapshot, collection, query, where } from '@/lib/cf-firestore';
 import { accountService, Account } from '@/lib/services/accountService';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
@@ -358,3 +358,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+

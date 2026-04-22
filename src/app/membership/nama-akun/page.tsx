@@ -9,9 +9,9 @@ import {
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { categoryService, Category } from '@/lib/services/categoryService';
-import { auth, db } from '@/lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { auth, db } from '@/lib/cf-client';
+import { onAuthStateChanged, User } from '@/lib/cf-auth';
+import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
 import { useRef } from 'react';
 import { currencyService, Currency } from '@/lib/services/currencyService';
 import { subscribeUserProfile, updateUserProfile, UserProfile } from '@/lib/services/userService';
@@ -405,3 +405,4 @@ export default function NamaAkunPage() {
     </div>
   );
 }
+

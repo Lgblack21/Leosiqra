@@ -17,9 +17,9 @@ import {
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { subscribeAppSettings, AppSettings, ProPackage } from '@/lib/services/adminService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
-import { auth, db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
+import { auth, db } from '@/lib/cf-client';
+import { collection, addDoc, serverTimestamp } from '@/lib/cf-firestore';
+import { onAuthStateChanged } from '@/lib/cf-auth';
 import { cn } from '@/lib/utils';
 
 export default function ContactPage() {
@@ -453,3 +453,4 @@ export default function ContactPage() {
     </div>
   );
 }
+

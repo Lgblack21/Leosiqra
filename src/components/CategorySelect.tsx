@@ -3,8 +3,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase';
+import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
+import { db, auth } from '@/lib/cf-client';
 
 interface CategoryData {
   id: string;
@@ -137,3 +137,4 @@ export const CategorySelect = ({ label, value, type, onChange, onSubCategoryChan
     </div>
   );
 };
+

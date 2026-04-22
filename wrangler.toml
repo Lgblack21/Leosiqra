@@ -1,4 +1,4 @@
-name = "leosiqra-cloudflare"
+name = "membersite-leosiqra"
 main = "cloudflare/src/index.ts"
 compatibility_date = "2026-04-22"
 
@@ -12,8 +12,12 @@ database_id = "a04174cd-6f44-4403-bec1-6ca3dddb1a9c"
 migrations_dir = "cloudflare/migrations"
 
 [[r2_buckets]]
-binding = "ASSETS"
+binding = "FILES_BUCKET"
 bucket_name = "leosiqra-assets"
+
+[assets]
+directory = "./out"
+binding = "ASSETS"
 
 [durable_objects]
 bindings = [
@@ -31,4 +35,4 @@ APP_URL = "http://127.0.0.1:8787"
 SESSION_COOKIE_NAME = "leosiqra_session"
 DEFAULT_FREE_PLAN_DAYS = "0"
 MAINTENANCE_BYPASS_ADMIN = "true"
-NEXT_PUBLIC_USE_CLOUDFLARE_AUTH = "false"
+NEXT_PUBLIC_USE_CLOUDFLARE_AUTH = "true"

@@ -2,14 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { ModalProvider } from '@/context/ModalContext';
 import { GlobalModalWrapper } from '@/components/GlobalModalWrapper';
 import { cloudflareApi } from '@/lib/cloudflare-api';
-import { isCloudflareAuthEnabled } from '@/lib/runtime-mode';
 
 export default function MembershipLayout({
   children,
@@ -21,22 +18,19 @@ export default function MembershipLayout({
   const router = useRouter();
 
   useEffect(() => {
-    if (isCloudflareAuthEnabled) {
-      cloudflareApi('/api/auth/me')
-        .then(() => setLoading(false))
-        .catch(() => router.push('/auth/login'));
-      return;
-    }
-
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        router.push('/auth/login');
-      } else {
+    cloudflareApi<{ user?: unknown | null }>('/api/auth/me')
+      .then((result) => {
+        if (!result.user) {
+          setLoading(false);
+          router.replace('/auth/login');
+          return;
+        }
         setLoading(false);
-      }
-    });
-
-    return () => unsub();
+      })
+      .catch(() => {
+        setLoading(false);
+        router.replace('/auth/login');
+      });
   }, [router]);
 
   // Hapus spinner agar transisi dari tombol login terasa instan.

@@ -1,5 +1,5 @@
-import { doc, getDoc, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
-import { db } from '../firebase';
+import { doc, getDoc, setDoc, deleteDoc, Timestamp } from '@/lib/cf-firestore';
+import { db } from '../cf-client';
 
 export interface ChatMessage {
   role: 'user' | 'model';
@@ -16,11 +16,30 @@ export const aiChatService = {
     if (snap.exists()) {
       const data = snap.data();
       if (data.messages && Array.isArray(data.messages)) {
-        return data.messages.map((m: any) => ({
-          role: m.role,
-          text: m.text,
-          timestamp: m.timestamp?.toDate ? m.timestamp.toDate() : new Date()
-        }));
+        return data.messages
+          .map((m: any) => {
+            const role: ChatMessage['role'] =
+              m.role === 'assistant' ? 'model' : (m.role === 'user' ? 'user' : 'model');
+            const text =
+              typeof m.text === 'string'
+                ? m.text
+                : (typeof m.content === 'string' ? m.content : '');
+            const timestamp =
+              m.timestamp?.toDate
+                ? m.timestamp.toDate()
+                : (m.createdAt ? new Date(m.createdAt) : new Date());
+
+            if (!text.trim()) {
+              return null;
+            }
+
+            return {
+              role,
+              text,
+              timestamp: Number.isNaN(timestamp.getTime()) ? new Date() : timestamp,
+            } as ChatMessage;
+          })
+          .filter(Boolean) as ChatMessage[];
       }
     }
     return null;
@@ -43,3 +62,4 @@ export const aiChatService = {
     await deleteDoc(docRef);
   }
 };
+

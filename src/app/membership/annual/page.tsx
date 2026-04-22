@@ -21,9 +21,9 @@ import { investmentService, Investment } from '@/lib/services/investmentService'
 import { budgetService, Budget } from '@/lib/services/budgetService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { categoryService, Category } from '@/lib/services/categoryService';
-import { auth, db } from '@/lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { auth, db } from '@/lib/cf-client';
+import { onAuthStateChanged, User } from '@/lib/cf-auth';
+import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 
 export default function AnnualDashboard() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -558,3 +558,4 @@ export default function AnnualDashboard() {
     </div>
   );
 }
+

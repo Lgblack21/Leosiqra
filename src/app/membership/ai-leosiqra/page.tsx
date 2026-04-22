@@ -15,8 +15,9 @@ import {
   User
 } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { auth } from '@/lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/cf-client';
+import { onAuthStateChanged } from '@/lib/cf-auth';
+import { cloudflareApi } from '@/lib/cloudflare-api';
 import { accountService } from '@/lib/services/accountService';
 import { transactionService } from '@/lib/services/transactionService';
 import { investmentService } from '@/lib/services/investmentService';
@@ -62,6 +63,25 @@ export default function AILeosiqraPage() {
   const [financeContext, setFinanceContext] = useState('');
   const [userId, setUserId] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const normalizeMessage = (msg: Partial<Message> | any): Message => {
+    const role: Message['role'] = msg?.role === 'user' ? 'user' : 'model';
+    const text =
+      typeof msg?.text === 'string'
+        ? msg.text
+        : (typeof msg?.content === 'string' ? msg.content : '');
+    const rawTime = msg?.timestamp ?? msg?.createdAt ?? msg?.updatedAt;
+    const timestamp =
+      rawTime instanceof Date
+        ? rawTime
+        : (rawTime?.toDate ? rawTime.toDate() : new Date(rawTime ?? Date.now()));
+
+    return {
+      role,
+      text,
+      timestamp: Number.isNaN(timestamp.getTime()) ? new Date() : timestamp
+    };
+  };
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -165,14 +185,65 @@ ${budgets.map(b => `- ${b.category}: Limit ${formatCurrency(b.amount)} (${b.type
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const sendMessage = async (text: string) => {
-    if (!text.trim() || loading) return;
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+  const sendViaBackendAI = async (text: string) => {
+    const result = await cloudflareApi<{ answer?: string }>('/api/member/ai/chat', {
+      method: 'POST',
+      json: { prompt: text.trim() },
+    });
+    return result.answer || 'Maaf, AI backend belum memberi jawaban.';
+  };
+
+  const sendViaGeminiWithRetry = async (text: string, historyMessages: Message[]) => {
     const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
     if (!apiKey || apiKey === 'YOUR_GEMINI_API_KEY_HERE') {
-      setApiKeyMissing(true);
-      return;
+      throw new Error('API key missing');
     }
+
+    const history = historyMessages
+      .map((m) => normalizeMessage(m))
+      .filter((m) => m.text.trim().length > 0)
+      .map((m) => ({
+        role: m.role,
+        parts: [{ text: m.text }]
+      }));
+    const systemPrompt = SYSTEM_CONTEXT_BASE.replace('{FINANCE_CONTEXT}', financeContext);
+
+    const models = ['gemini-flash-latest', 'gemini-1.5-flash-latest'];
+    let lastError: unknown = null;
+
+    for (const modelName of models) {
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          const genAI = new GoogleGenerativeAI(apiKey);
+          const model = genAI.getGenerativeModel({ model: modelName });
+          const chat = model.startChat({
+            history: [
+              { role: 'user', parts: [{ text: systemPrompt }] },
+              { role: 'model', parts: [{ text: 'Siap! Saya Leosiqra, asisten keuangan AI Anda. Saya sudah menganalisis data keuangan Anda dan siap membantu.' }] },
+              ...history
+            ]
+          });
+          const result = await chat.sendMessage(text.trim());
+          return result.response.text();
+        } catch (error: any) {
+          lastError = error;
+          const msg = String(error?.message || '').toLowerCase();
+          const retryable = msg.includes('503') || msg.includes('overloaded') || msg.includes('demand') || msg.includes('unavailable');
+          if (!retryable || attempt === 2) {
+            break;
+          }
+          await sleep(800 * (attempt + 1));
+        }
+      }
+    }
+
+    throw lastError ?? new Error('Gemini sementara tidak tersedia');
+  };
+
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || loading) return;
 
     const userMsg: Message = { role: 'user', text: text.trim(), timestamp: new Date() };
     const tempMessages = [...messages, userMsg];
@@ -181,27 +252,13 @@ ${budgets.map(b => `- ${b.category}: Limit ${formatCurrency(b.amount)} (${b.type
     setLoading(true);
 
     try {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
-      
-      // Build chat history
-      const history = messages.map(m => ({
-        role: m.role,
-        parts: [{ text: m.text }]
-      }));
-
-      const systemPrompt = SYSTEM_CONTEXT_BASE.replace('{FINANCE_CONTEXT}', financeContext);
-
-      const chat = model.startChat({
-        history: [
-          { role: 'user', parts: [{ text: systemPrompt }] },
-          { role: 'model', parts: [{ text: 'Siap! Saya Leosiqra, asisten keuangan AI Anda. Saya sudah menganalisis data keuangan Anda dan siap membantu.' }] },
-          ...history
-        ]
-      });
-
-      const result = await chat.sendMessage(text.trim());
-      const response = result.response.text();
+      let response = '';
+      try {
+        response = await sendViaGeminiWithRetry(text, messages);
+      } catch {
+        // Fallback ke backend worker AI saat provider eksternal sibuk
+        response = await sendViaBackendAI(text);
+      }
       
       const newMessages = [...tempMessages, {
         role: 'model' as const,
@@ -269,7 +326,8 @@ ${budgets.map(b => `- ${b.category}: Limit ${formatCurrency(b.amount)} (${b.type
 
   // Simple markdown-like formatter
   const formatText = (text: string) => {
-    return text
+    const safeText = typeof text === 'string' ? text : '';
+    return safeText
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/\n/g, '<br/>');
@@ -342,7 +400,7 @@ ${budgets.map(b => `- ${b.category}: Limit ${formatCurrency(b.amount)} (${b.type
           <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Pertanyaan Cepat</h3>
           <div className="space-y-3">
             {QUICK_PROMPTS.map((prompt, i) => (
-              <button key={i} onClick={() => sendMessage(prompt)} disabled={loading || apiKeyMissing}
+              <button key={i} onClick={() => sendMessage(prompt)} disabled={loading}
                 className="w-full text-left p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-indigo-200 hover:bg-indigo-50/30 transition-all text-[11px] font-bold text-slate-700 hover:text-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed group">
                 <div className="flex items-start gap-2">
                   <ArrowRight size={12} className="text-slate-300 group-hover:text-indigo-500 transition-colors mt-0.5 shrink-0" />
@@ -378,7 +436,9 @@ ${budgets.map(b => `- ${b.category}: Limit ${formatCurrency(b.amount)} (${b.type
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5 custom-scrollbar" style={{ maxHeight: '480px' }}>
-            {messages.map((msg, idx) => (
+            {messages.map((rawMsg, idx) => {
+              const msg = normalizeMessage(rawMsg);
+              return (
               <div key={idx} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
                 <div className={`w-8 h-8 rounded-2xl flex items-center justify-center shrink-0 mt-1 ${msg.role === 'user' ? 'bg-slate-900 text-white' : 'bg-indigo-600 text-white'}`}>
                   {msg.role === 'user' ? <User size={14} /> : <Bot size={14} />}
@@ -404,7 +464,7 @@ ${budgets.map(b => `- ${b.category}: Limit ${formatCurrency(b.amount)} (${b.type
                   </div>
                 </div>
               </div>
-            ))}
+            )})}
 
             {/* Loading indicator */}
             {loading && (
@@ -432,13 +492,13 @@ ${budgets.map(b => `- ${b.category}: Limit ${formatCurrency(b.amount)} (${b.type
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage(input)}
-                placeholder={apiKeyMissing ? 'Atur API key Gemini terlebih dahulu...' : 'Tanya Leosiqra sesuatu...'}
-                disabled={loading || apiKeyMissing}
+                placeholder={'Tanya Leosiqra sesuatu...'}
+                disabled={loading}
                 className="flex-1 bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-2xl py-4 px-5 text-sm font-medium text-slate-700 placeholder:text-slate-300 disabled:opacity-50 outline-none transition-all"
               />
               <button
                 onClick={() => sendMessage(input)}
-                disabled={loading || !input.trim() || apiKeyMissing}
+                disabled={loading || !input.trim()}
                 className="w-12 h-12 my-auto bg-indigo-600 disabled:bg-slate-200 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 disabled:cursor-not-allowed">
                 <Send size={16} />
               </button>
@@ -452,3 +512,4 @@ ${budgets.map(b => `- ${b.category}: Limit ${formatCurrency(b.amount)} (${b.type
     </div>
   );
 }
+

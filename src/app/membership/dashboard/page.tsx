@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 
 import {
   Plus,
@@ -21,9 +21,6 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { investmentService, Investment } from '@/lib/services/investmentService';
-import { auth, db } from '@/lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 
 interface MarketTicker {
   label: string; sub: string; val: string; pct: string; up: boolean | null;
@@ -36,64 +33,38 @@ export default function MonthlyDashboard() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
   const [marketTickers, setMarketTickers] = useState<MarketTicker[]>([]);
   const [marketLoading, setMarketLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  const unsubTrxRef = useRef<(() => void) | null>(null);
-
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      if (u) {
-        setLoading(true);
-        // Calculate date range
-        const startOfMonth = new Date(selectedYear, selectedMonth, 1);
-        const endOfMonth = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
-
-        // Setup real-time listener untuk transaksi dengan filter bulan/tahun
-        const q = query(
-          collection(db, 'transactions'),
-          where('userId', '==', u.uid),
-          where('date', '>=', startOfMonth),
-          where('date', '<=', endOfMonth),
-          orderBy('date', 'desc')
-        );
-        // Cleanup listener lama jika ada
-        if (unsubTrxRef.current) unsubTrxRef.current();
-        const unsubTrx = onSnapshot(q, (snap) => {
-          const data: Transaction[] = snap.docs.map(doc => {
-            const d = doc.data();
-            return {
-              ...d,
-              id: doc.id,
-              amount: Number(d.amount) || 0,
-              date: d.date?.toDate?.() ?? new Date(),
-              createdAt: d.createdAt?.toDate?.() ?? new Date()
-            } as Transaction;
-          });
-          setTransactions(data);
-          setLoading(false);
-        }, (err) => {
-          if (err.code !== 'permission-denied') {
-            console.error('Realtime listener error:', err);
-          }
-          setLoading(false);
+    let active = true;
+    setLoading(true);
+    Promise.all([
+      transactionService.getUserTransactions('session'),
+      investmentService.getUserInvestments('session'),
+    ])
+      .then(([allTransactions, allInvestments]) => {
+        if (!active) return;
+        const periodTransactions = allTransactions.filter((t) => {
+          const d = new Date(t.date);
+          return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
         });
-        unsubTrxRef.current = unsubTrx;
-        // Investasi tetap getDocs (jarang berubah)
-        investmentService.getUserInvestments(u.uid).then(setInvestments).catch(console.error);
-      } else {
+        setTransactions(periodTransactions);
+        setInvestments(allInvestments);
+      })
+      .catch((err) => {
+        console.error('Gagal memuat dashboard member:', err);
+        if (!active) return;
         setTransactions([]);
-        setLoading(false);
-        if (unsubTrxRef.current) { unsubTrxRef.current(); unsubTrxRef.current = null; }
-      }
-    });
+        setInvestments([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
     return () => {
-      unsub();
-      if (unsubTrxRef.current) unsubTrxRef.current();
+      active = false;
     };
   }, [selectedMonth, selectedYear]);
 

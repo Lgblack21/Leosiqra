@@ -4,15 +4,11 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
 import { Input } from '@/components/Input';
 import { Button } from '@/components/Button';
 import { ShieldCheck, Smartphone, Eye, EyeOff, LayoutGrid, ArrowLeft } from 'lucide-react';
 import { TwoFactorModal } from '@/components/auth/TwoFactorModal';
 import { cloudflareApi } from '@/lib/cloudflare-api';
-import { isCloudflareAuthEnabled } from '@/lib/runtime-mode';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
@@ -64,49 +60,24 @@ export default function RegisterPage() {
     setError('');
 
     try {
-      if (isCloudflareAuthEnabled) {
-        await cloudflareApi('/api/auth/register', {
-          method: 'POST',
-          json: {
-            name,
-            email,
-            whatsapp,
-            password,
-            twoFactorSecret,
-          },
-        });
-
-        router.push('/membership/dashboard');
-        return;
-      }
-
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      await updateProfile(user, { displayName: name });
-
-      await setDoc(doc(db, 'users', user.uid), {
+      await cloudflareApi('/api/auth/register', {
+        method: 'POST',
+        json: {
         name,
-        email,
+          email: email.trim().toLowerCase(),
         whatsapp,
-        createdAt: new Date().toISOString(),
-        role: 'user',
-        plan: 'FREE',
-        status: 'GUEST',
-        balance: 0,
-        totalWealth: 0,
-        totalIncome: 0,
-        totalExpenses: 0,
-        totalSavings: 0,
-        totalInvestment: 0,
-        creditCardBills: 0,
-        otherDebts: 0,
-        twoFactorSecret: twoFactorSecret // Simpan secret 2FA
+          password,
+          twoFactorSecret,
+        },
       });
 
       router.push('/membership/dashboard');
-    } catch {
-      setError('Gagal mendaftar. Silakan periksa kembali data Anda.');
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Gagal mendaftar. Silakan periksa kembali data Anda.'
+      );
       setShow2FA(false);
     } finally {
       setLoading(false);

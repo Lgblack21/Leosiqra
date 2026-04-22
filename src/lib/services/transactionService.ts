@@ -1,16 +1,4 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  getDocs, 
-  query, 
-  where, 
-  orderBy, 
-  Timestamp 
-} from 'firebase/firestore';
-import { db } from '../firebase';
+import { cloudflareApi } from '../cloudflare-api';
 
 export type TransactionType = 'pemasukan' | 'pengeluaran' | 'transfer' | 'topup' | 'debt' | 'investasi' | 'tabungan';
 
@@ -45,71 +33,76 @@ const COLLECTION_NAME = 'transactions';
 export const transactionService = {
   // Create
   async createTransaction(data: Omit<Transaction, 'id' | 'createdAt'>) {
-    const transactionsRef = collection(db, COLLECTION_NAME);
-    const newDoc = await addDoc(transactionsRef, {
-      ...data,
-      amount: Number(data.amount) || 0,
-      amountIDR: Number(data.amountIDR) || Number(data.amount) || 0,
-      date: Timestamp.fromDate(data.date),
-      createdAt: Timestamp.now()
+    const result = await cloudflareApi<{ id: string }>('/api/member/transactions', {
+      method: 'POST',
+      json: {
+        type: data.type,
+        amount: Number(data.amount) || 0,
+        amount_idr: Number(data.amountIDR) || Number(data.amount) || 0,
+        category: data.category,
+        sub_category: data.subCategory,
+        currency: data.currency || 'IDR',
+        account_id: data.accountId,
+        target_account_id: data.targetAccountId,
+        date: data.date.toISOString(),
+        display_date: data.displayDate || data.date.toISOString(),
+        note: data.note || null,
+      },
     });
-    return newDoc.id;
+    return result.id;
   },
 
   // Read all for user
-  async getUserTransactions(userId: string) {
-    const q = query(
-      collection(db, COLLECTION_NAME),
-      where('userId', '==', userId),
-      orderBy('date', 'desc')
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(doc => {
-      const data = doc.data();
+  async getUserTransactions(_userId: string) {
+    const result = await cloudflareApi<{ items: Record<string, unknown>[] }>('/api/member/transactions');
+    return result.items.map((data) => {
       return {
         ...data,
-        id: doc.id,
-        amount: Number(data.amount) || 0, // guard: selalu number
-        date: data.date?.toDate?.() ?? new Date(),
-        createdAt: data.createdAt?.toDate?.() ?? new Date()
+        id: String(data.id ?? ''),
+        userId: String(data.user_id ?? ''),
+        amount: Number(data.amount) || 0,
+        amountIDR: Number(data.amount_idr) || Number(data.amount) || 0,
+        category: String(data.category ?? ''),
+        subCategory: (data.sub_category as string | undefined) ?? undefined,
+        accountId: (data.account_id as string | undefined) ?? '',
+        targetAccountId: (data.target_account_id as string | undefined) ?? undefined,
+        displayDate: (data.display_date as string | undefined) ?? undefined,
+        relatedId: (data.related_id as string | undefined) ?? undefined,
+        relatedType: (data.related_type as 'investasi' | 'tabungan' | 'debt' | undefined) ?? undefined,
+        date: data.date ? new Date(String(data.date)) : new Date(),
+        createdAt: data.created_at ? new Date(String(data.created_at)) : new Date()
       } as Transaction;
     });
   },
 
   // Read by type
   async getTransactionsByType(userId: string, type: string) {
-    const q = query(
-      collection(db, COLLECTION_NAME),
-      where('userId', '==', userId),
-      where('type', '==', type),
-      orderBy('date', 'desc')
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(doc => {
-      const data = doc.data();
-      return {
-        ...data,
-        id: doc.id,
-        amount: Number(data.amount) || 0, // guard: selalu number
-        date: data.date?.toDate?.() ?? new Date(),
-        createdAt: data.createdAt?.toDate?.() ?? new Date()
-      } as Transaction;
-    });
+    const items = await this.getUserTransactions(userId);
+    return items.filter((item) => item.type === type);
   },
 
   // Update
   async updateTransaction(id: string, data: Partial<Omit<Transaction, 'id' | 'createdAt'>>) {
-    const docRef = doc(db, COLLECTION_NAME, id);
-    const updates: any = { ...data };
-    if (data.date) {
-      updates.date = Timestamp.fromDate(data.date);
-    }
-    await updateDoc(docRef, updates);
+    await cloudflareApi(`/api/member/transactions/${id}`, {
+      method: 'PUT',
+      json: {
+        ...(data.type ? { type: data.type } : {}),
+        ...(typeof data.amount === 'number' ? { amount: data.amount } : {}),
+        ...(typeof data.amountIDR === 'number' ? { amount_idr: data.amountIDR } : {}),
+        ...(data.category ? { category: data.category } : {}),
+        ...(data.subCategory ? { sub_category: data.subCategory } : {}),
+        ...(data.currency ? { currency: data.currency } : {}),
+        ...(data.accountId ? { account_id: data.accountId } : {}),
+        ...(data.targetAccountId ? { target_account_id: data.targetAccountId } : {}),
+        ...(data.date ? { date: data.date.toISOString() } : {}),
+        ...(data.displayDate ? { display_date: data.displayDate } : {}),
+        ...(data.note !== undefined ? { note: data.note } : {}),
+      },
+    });
   },
 
   async deleteTransaction(id: string) {
-    const docRef = doc(db, COLLECTION_NAME, id);
-    await deleteDoc(docRef);
+    await cloudflareApi(`/api/member/transactions/${id}`, { method: 'DELETE' });
   }
 };
 

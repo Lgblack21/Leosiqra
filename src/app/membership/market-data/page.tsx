@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { currencyService, Currency } from '@/lib/services/currencyService';
-import { auth } from '@/lib/firebase';
+import { auth } from '@/lib/cf-client';
 
 interface CryptoData {
   id: string;
@@ -389,3 +389,4 @@ export default function MarketDataPage() {
     </div>
   );
 }
+

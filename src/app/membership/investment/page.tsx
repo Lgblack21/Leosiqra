@@ -18,9 +18,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { investmentService, Investment } from '@/lib/services/investmentService';
-import { auth, db } from '@/lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { auth, db } from '@/lib/cf-client';
+import { onAuthStateChanged, User } from '@/lib/cf-auth';
+import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 
 export default function InvestmentDashboard() {
@@ -454,3 +454,4 @@ export default function InvestmentDashboard() {
     </div>
   );
 }
+

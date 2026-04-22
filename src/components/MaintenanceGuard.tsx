@@ -2,12 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { getUserProfile, UserProfile } from '@/lib/services/userService';
-import { subscribeAppSettings, AppSettings } from '@/lib/services/adminService';
+import type { UserProfile } from '@/lib/services/userService';
+import type { AppSettings } from '@/lib/services/adminService';
 import { cloudflareApi } from '@/lib/cloudflare-api';
-import { isCloudflareAuthEnabled } from '@/lib/runtime-mode';
 
 export default function MaintenanceGuard({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -19,53 +16,35 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
   const isLoginPage = pathname === '/auth/login';
 
   useEffect(() => {
-    if (isCloudflareAuthEnabled) {
-      cloudflareApi<{
-        user?: UserProfile | null;
-        maintenance?: {
-          isActive: boolean;
-          type?: 'code' | 'image' | null;
-          code?: string | null;
-          imageUrl?: string | null;
-        } | null;
-      }>('/api/auth/me')
-        .then((data) => {
-          setProfile(data.user ?? null);
-          setSettings(data.maintenance ? {
-            maintenance: {
-              isActive: data.maintenance.isActive,
-              type: data.maintenance.type === 'code' || data.maintenance.type === 'image' ? data.maintenance.type : undefined,
-              code: data.maintenance.code ?? undefined,
-              imageUrl: data.maintenance.imageUrl ?? undefined,
-            }
-          } : null);
-        })
-        .catch(() => {
-          setProfile(null);
-          setSettings(null);
-        })
-        .finally(() => setIsChecking(false));
-
-      return;
-    }
-
-    const unsubAuth = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const prof = await getUserProfile(user.uid);
-        setProfile(prof);
-      } else {
+    cloudflareApi<{
+      user?: UserProfile | null;
+      maintenance?: {
+        isActive: boolean;
+        type?: 'code' | 'image' | null;
+        code?: string | null;
+        imageUrl?: string | null;
+      } | null;
+    }>('/api/auth/me')
+      .then((data) => {
+        setProfile(data.user ?? null);
+        setSettings(data.maintenance ? {
+          maintenance: {
+            isActive: data.maintenance.isActive,
+            type: data.maintenance.type === 'code' || data.maintenance.type === 'image' ? data.maintenance.type : undefined,
+            code: data.maintenance.code ?? undefined,
+            imageUrl: data.maintenance.imageUrl ?? undefined,
+          }
+        } : null);
+      })
+      .catch(() => {
         setProfile(null);
-      }
-      setIsChecking(false);
-    });
-
-    const unsubSettings = subscribeAppSettings((data) => {
-      setSettings(data);
-    });
+        setSettings(null);
+      })
+      .finally(() => setIsChecking(false));
 
     return () => {
-      unsubAuth();
-      unsubSettings();
+      setProfile(null);
+      setSettings(null);
     };
   }, []);
 

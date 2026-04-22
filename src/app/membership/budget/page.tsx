@@ -13,9 +13,9 @@ import {
   Briefcase
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { auth, db } from '@/lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { auth, db } from '@/lib/cf-client';
+import { onAuthStateChanged, User } from '@/lib/cf-auth';
+import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
 import { budgetService, Budget } from '@/lib/services/budgetService';
 import { Transaction } from '@/lib/services/transactionService';
 import { MonthPicker } from '@/components/ui/MonthPicker';
@@ -213,3 +213,4 @@ export default function BudgetPage() {
     </div>
   );
 }
+

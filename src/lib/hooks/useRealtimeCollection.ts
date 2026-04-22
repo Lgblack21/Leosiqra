@@ -7,8 +7,8 @@ import {
   onSnapshot, 
   QueryConstraint,
   DocumentData
-} from 'firebase/firestore';
-import { db } from '../firebase';
+} from '@/lib/cf-firestore';
+import { db } from '../cf-client';
 
 /**
  * Custom hook untuk mendengarkan perubahan collection Firestore secara real-time.
@@ -79,3 +79,4 @@ export function useRealtimeCollection<T>(
 
   return { data, loading };
 }
+

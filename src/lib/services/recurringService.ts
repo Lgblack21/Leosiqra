@@ -8,8 +8,8 @@ import {
   query, 
   where, 
   Timestamp 
-} from 'firebase/firestore';
-import { db } from '../firebase';
+} from '@/lib/cf-firestore';
+import { db } from '../cf-client';
 
 export interface RecurringTransaction {
   id?: string;
@@ -68,3 +68,4 @@ export const recurringService = {
     await deleteDoc(docRef);
   }
 };
+

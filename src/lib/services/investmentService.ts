@@ -1,15 +1,4 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  getDocs, 
-  query, 
-  where, 
-  Timestamp 
-} from 'firebase/firestore';
-import { db } from '../firebase';
+import { cloudflareApi } from '../cloudflare-api';
 
 export interface Investment {
   id?: string;
@@ -47,114 +36,118 @@ const COLLECTION_NAME = 'investments';
 
 export const investmentService = {
   async createInvestment(data: Omit<Investment, 'id' | 'createdAt'>) {
-    const ref = collection(db, COLLECTION_NAME);
-    const newDoc = await addDoc(ref, {
-      ...data,
-      amountIDR: data.amountIDR || data.amountInvested || 0,
-      currentValueIDR: data.currentValueIDR || data.currentValue || 0,
-      durationMonths: Number(data.durationMonths) || 0,
-      quantity: Number(data.quantity) || 0,
-      pricePerUnit: Number(data.pricePerUnit) || 0,
-      taxPercentage: Number(data.taxPercentage) || 0,
-      sharesCount: Number(data.sharesCount) || 0,
-      pricePerShare: Number(data.pricePerShare) || 0,
-      dateInvested: Timestamp.fromDate(data.dateInvested),
-      targetDate: data.targetDate ? Timestamp.fromDate(data.targetDate) : null,
-      createdAt: Timestamp.now()
+    const result = await cloudflareApi<{ id: string }>('/api/member/investments', {
+      method: 'POST',
+      json: {
+        name: data.name,
+        type: data.type,
+        platform: data.platform,
+        amount_invested: Number(data.amountInvested) || 0,
+        amount_idr: data.amountIDR || data.amountInvested || 0,
+        current_value: Number(data.currentValue) || 0,
+        current_value_idr: data.currentValueIDR || data.currentValue || 0,
+        return_percentage: Number(data.returnPercentage) || 0,
+        tax_percentage: Number(data.taxPercentage) || 0,
+        currency: data.currency,
+        duration_months: Number(data.durationMonths) || 0,
+        transaction_type: data.transactionType || null,
+        category: data.category || null,
+        account_id: data.accountId || null,
+        logo_url: data.logoUrl || null,
+        quantity: Number(data.quantity) || 0,
+        unit: data.unit || null,
+        price_per_unit: Number(data.pricePerUnit) || 0,
+        stock_code: data.stockCode || null,
+        exchange_code: data.exchangeCode || null,
+        shares_count: Number(data.sharesCount) || 0,
+        price_per_share: Number(data.pricePerShare) || 0,
+        date_invested: data.dateInvested.toISOString(),
+        target_date: data.targetDate ? data.targetDate.toISOString() : null,
+        duration_days: Number(data.durationDays) || null,
+        status: data.status,
+      },
     });
-    return newDoc.id;
+    return result.id;
   },
 
-  async getUserInvestments(userId: string) {
-    const q = query(
-      collection(db, COLLECTION_NAME),
-      where('userId', '==', userId)
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(doc => {
-      const data = doc.data();
+  async getUserInvestments(_userId: string) {
+    const result = await cloudflareApi<{ items: Record<string, unknown>[] }>('/api/member/investments');
+    return result.items.map((data) => {
       return {
         ...data,
-        id: doc.id,
-        dateInvested: data.dateInvested.toDate(),
-        targetDate: data.targetDate?.toDate?.() || null,
-        createdAt: data.createdAt.toDate()
+        id: String(data.id ?? ''),
+        userId: String(data.user_id ?? ''),
+        amountInvested: Number(data.amount_invested) || 0,
+        amountIDR: Number(data.amount_idr) || 0,
+        currentValue: Number(data.current_value) || 0,
+        currentValueIDR: Number(data.current_value_idr) || 0,
+        returnPercentage: Number(data.return_percentage) || 0,
+        taxPercentage: Number(data.tax_percentage) || 0,
+        durationMonths: Number(data.duration_months) || 0,
+        transactionType: (data.transaction_type as string | undefined) ?? undefined,
+        accountId: (data.account_id as string | undefined) ?? undefined,
+        logoUrl: (data.logo_url as string | undefined) ?? undefined,
+        pricePerUnit: Number(data.price_per_unit) || 0,
+        stockCode: (data.stock_code as string | undefined) ?? undefined,
+        exchangeCode: (data.exchange_code as string | undefined) ?? undefined,
+        sharesCount: Number(data.shares_count) || 0,
+        pricePerShare: Number(data.price_per_share) || 0,
+        dateInvested: data.date_invested ? new Date(String(data.date_invested)) : new Date(),
+        targetDate: data.target_date ? new Date(String(data.target_date)) : undefined,
+        durationDays: Number(data.duration_days) || 0,
+        createdAt: data.created_at ? new Date(String(data.created_at)) : new Date()
       } as Investment;
     });
   },
 
   async getInvestmentsByType(userId: string, type: string) {
-    const q = query(
-      collection(db, COLLECTION_NAME),
-      where('userId', '==', userId),
-      where('type', '==', type)
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(doc => {
-      const data = doc.data();
-      return {
-        ...data,
-        id: doc.id,
-        dateInvested: data.dateInvested.toDate(),
-        createdAt: data.createdAt.toDate()
-      } as Investment;
-    });
+    const result = await cloudflareApi<{ items: Record<string, unknown>[] }>(`/api/member/investments?type=${encodeURIComponent(type)}`);
+    return result.items.map((data) => ({
+      ...(data as unknown as Investment),
+      id: String(data.id ?? ''),
+      userId: String(data.user_id ?? ''),
+      amountInvested: Number(data.amount_invested) || 0,
+      dateInvested: data.date_invested ? new Date(String(data.date_invested)) : new Date(),
+      createdAt: data.created_at ? new Date(String(data.created_at)) : new Date(),
+    }));
   },
 
   async updateInvestment(id: string, data: Partial<Omit<Investment, 'id' | 'createdAt'>>) {
-    const docRef = doc(db, COLLECTION_NAME, id);
-    const updates: any = { ...data };
-    if (data.dateInvested) {
-      updates.dateInvested = Timestamp.fromDate(data.dateInvested);
-    }
-    await updateDoc(docRef, updates);
+    await cloudflareApi(`/api/member/investments/${id}`, {
+      method: 'PUT',
+      json: {
+        ...(data.name ? { name: data.name } : {}),
+        ...(data.type ? { type: data.type } : {}),
+        ...(data.platform ? { platform: data.platform } : {}),
+        ...(typeof data.amountInvested === 'number' ? { amount_invested: data.amountInvested } : {}),
+        ...(typeof data.amountIDR === 'number' ? { amount_idr: data.amountIDR } : {}),
+        ...(typeof data.currentValue === 'number' ? { current_value: data.currentValue } : {}),
+        ...(typeof data.currentValueIDR === 'number' ? { current_value_idr: data.currentValueIDR } : {}),
+        ...(typeof data.returnPercentage === 'number' ? { return_percentage: data.returnPercentage } : {}),
+        ...(typeof data.taxPercentage === 'number' ? { tax_percentage: data.taxPercentage } : {}),
+        ...(data.currency ? { currency: data.currency } : {}),
+        ...(typeof data.durationMonths === 'number' ? { duration_months: data.durationMonths } : {}),
+        ...(data.transactionType !== undefined ? { transaction_type: data.transactionType } : {}),
+        ...(data.category !== undefined ? { category: data.category } : {}),
+        ...(data.accountId !== undefined ? { account_id: data.accountId } : {}),
+        ...(data.logoUrl !== undefined ? { logo_url: data.logoUrl } : {}),
+        ...(typeof data.quantity === 'number' ? { quantity: data.quantity } : {}),
+        ...(data.unit !== undefined ? { unit: data.unit } : {}),
+        ...(typeof data.pricePerUnit === 'number' ? { price_per_unit: data.pricePerUnit } : {}),
+        ...(data.stockCode !== undefined ? { stock_code: data.stockCode } : {}),
+        ...(data.exchangeCode !== undefined ? { exchange_code: data.exchangeCode } : {}),
+        ...(typeof data.sharesCount === 'number' ? { shares_count: data.sharesCount } : {}),
+        ...(typeof data.pricePerShare === 'number' ? { price_per_share: data.pricePerShare } : {}),
+        ...(data.dateInvested ? { date_invested: data.dateInvested.toISOString() } : {}),
+        ...(data.targetDate !== undefined ? { target_date: data.targetDate ? data.targetDate.toISOString() : null } : {}),
+        ...(typeof data.durationDays === 'number' ? { duration_days: data.durationDays } : {}),
+        ...(data.status ? { status: data.status } : {}),
+      },
+    });
   },
 
   async hardDeleteInvestment(id: string, userId: string) {
-    // 1. Get Investment data first to know what to revert
-    const docRef = doc(db, COLLECTION_NAME, id);
-    const snap = await getDocs(query(collection(db, COLLECTION_NAME), where('userId', '==', userId)));
-    const investment = snap.docs.find(d => d.id === id)?.data() as Investment;
-    
-    if (!investment) return;
-
-    // 2. Find and delete related transactions
-    const qTrx = query(
-      collection(db, 'transactions'),
-      where('userId', '==', userId),
-      where('relatedId', '==', id)
-    );
-    const trxSnap = await getDocs(qTrx);
-    
-    for (const trxDoc of trxSnap.docs) {
-      const trxData = trxDoc.data();
-      const amount = Number(trxData.amount) || 0;
-      const type = trxData.type; // 'pemasukan' or 'pengeluaran'
-      const accountId = trxData.accountId;
-
-      // a. Revert member totals impact of this transaction
-      // Import these dynamically or pass as params to avoid circular dep if any
-      const { updateMemberTotals } = await import('./userService');
-      const financeType = type; // e.g. 'pemasukan'
-      await updateMemberTotals(userId, financeType, -amount);
-      
-      // b. Revert investment total in memberTotals
-      // For purchases (pengeluaran), it added to investasi. For sales (pemasukan), it subtracted.
-      await updateMemberTotals(userId, 'investasi', type === 'pemasukan' ? amount : -amount);
-
-      // c. Revert account balance
-      if (accountId) {
-        const { accountService } = await import('./accountService');
-        // If it was pengeluaran, add back. If it was pemasukan, subtract.
-        const balanceRevert = type === 'pemasukan' ? -amount : amount;
-        await accountService.updateAccountBalance(accountId, balanceRevert);
-      }
-
-      // d. Delete Transaction
-      await deleteDoc(trxDoc.ref);
-    }
-
-    // 3. Delete the investment document
-    await deleteDoc(docRef);
+    void userId;
+    await cloudflareApi(`/api/member/investments/${id}`, { method: 'DELETE' });
   }
 };

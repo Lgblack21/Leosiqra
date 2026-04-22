@@ -8,8 +8,8 @@ import {
   query, 
   where, 
   Timestamp 
-} from 'firebase/firestore';
-import { db } from '../firebase';
+} from '@/lib/cf-firestore';
+import { db } from '../cf-client';
 
 export interface Category {
   id?: string;
@@ -58,3 +58,4 @@ export const categoryService = {
     await deleteDoc(docRef);
   }
 };
+

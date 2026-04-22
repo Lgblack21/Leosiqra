@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "cf:dev": "wrangler dev cloudflare/src/index.ts",
-    "cf:deploy": "wrangler deploy cloudflare/src/index.ts",
+    "cf:deploy": "npm run build && wrangler deploy cloudflare/src/index.ts",
     "cf:d1:migrate": "wrangler d1 migrations apply leosiqra-db --local",
     "cf:d1:seed": "wrangler d1 execute leosiqra-db --local --file=./cloudflare/seeds/seed.sql"
   },

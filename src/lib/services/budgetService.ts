@@ -1,15 +1,4 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  getDocs, 
-  query, 
-  where, 
-  Timestamp 
-} from 'firebase/firestore';
-import { db } from '../firebase';
+import { cloudflareApi } from '../cloudflare-api';
 
 export interface Budget {
   id?: string;
@@ -25,37 +14,43 @@ const COLLECTION_NAME = 'budgets';
 
 export const budgetService = {
   async createBudget(data: Omit<Budget, 'id' | 'createdAt'>) {
-    const ref = collection(db, COLLECTION_NAME);
-    const newDoc = await addDoc(ref, {
-      ...data,
-      createdAt: Timestamp.now()
+    const result = await cloudflareApi<{ id: string }>('/api/member/budgets', {
+      method: 'POST',
+      json: {
+        type: data.type,
+        category: data.category,
+        amount: Number(data.amount) || 0,
+        period: data.period,
+      },
     });
-    return newDoc.id;
+    return result.id;
   },
 
-  async getUserBudgets(userId: string) {
-    const q = query(
-      collection(db, COLLECTION_NAME),
-      where('userId', '==', userId)
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(doc => {
-      const data = doc.data();
+  async getUserBudgets(_userId: string) {
+    const result = await cloudflareApi<{ items: Record<string, unknown>[] }>('/api/member/budgets');
+    return result.items.map((data) => {
       return {
         ...data,
-        id: doc.id,
-        createdAt: data.createdAt.toDate()
+        id: String(data.id ?? ''),
+        userId: String(data.user_id ?? ''),
+        createdAt: data.created_at ? new Date(String(data.created_at)) : new Date(),
       } as Budget;
     });
   },
 
   async updateBudget(id: string, data: Partial<Omit<Budget, 'id' | 'createdAt'>>) {
-    const docRef = doc(db, COLLECTION_NAME, id);
-    await updateDoc(docRef, data);
+    await cloudflareApi(`/api/member/budgets/${id}`, {
+      method: 'PUT',
+      json: {
+        ...(data.type ? { type: data.type } : {}),
+        ...(data.category ? { category: data.category } : {}),
+        ...(typeof data.amount === 'number' ? { amount: data.amount } : {}),
+        ...(data.period ? { period: data.period } : {}),
+      },
+    });
   },
 
   async deleteBudget(id: string) {
-    const docRef = doc(db, COLLECTION_NAME, id);
-    await deleteDoc(docRef);
+    await cloudflareApi(`/api/member/budgets/${id}`, { method: 'DELETE' });
   }
 };

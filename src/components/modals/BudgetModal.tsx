@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { ChevronDown, Save } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { budgetService, Budget } from '@/lib/services/budgetService';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
+import { db } from '@/lib/cf-client';
 
 interface BudgetModalProps {
   userId: string;
@@ -143,3 +143,4 @@ export const BudgetModal = ({ userId, isOpen, onClose }: BudgetModalProps) => {
     </Modal>
   );
 };
+

@@ -25,9 +25,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { onAuthStateChanged, updateProfile, updatePassword } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { onAuthStateChanged, updateProfile, updatePassword } from '@/lib/cf-auth';
+import { auth, db } from '@/lib/cf-client';
+import { collection, getDocs } from '@/lib/cf-firestore';
 import { subscribeUserProfile, UserProfile } from '@/lib/services/userService';
 import { 
   getAppSettings,
@@ -1267,3 +1267,4 @@ export default function AdminPengaturanPage() {
     </div>
   );
 }
+

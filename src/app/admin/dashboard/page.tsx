@@ -15,14 +15,17 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { 
-  subscribeAllUsers, 
-  subscribeAllPayments, 
-  subscribeAdminLogs,
-  AdminLog
-} from '@/lib/services/adminService';
+import { cloudflareApi } from '@/lib/cloudflare-api';
+
+type AdminLog = {
+  id: string;
+  admin_email: string;
+  action: string;
+  target: string;
+  note?: string;
+  color?: 'indigo' | 'orange' | 'emerald' | 'rose' | 'slate';
+  created_at: string;
+};
 
 export default function AdminDashboard() {
   const [userEmail, setUserEmail] = useState('admin@leosiqra.com');
@@ -32,24 +35,32 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUserEmail(user.email || 'admin@leosiqra.com');
-      }
-    });
-
-    const unsubUsers = subscribeAllUsers((data) => setUsers(data));
-    const unsubPayments = subscribeAllPayments((data) => setPayments(data));
-    const unsubLogs = subscribeAdminLogs(10, (data) => {
-      setLogs(data);
-      setLoading(false);
-    });
-
+    let active = true;
+    Promise.all([
+      cloudflareApi<{ user?: { email?: string } | null }>('/api/auth/me'),
+      cloudflareApi<{ items: any[] }>('/api/admin/users'),
+      cloudflareApi<{ items: any[] }>('/api/admin/payments'),
+      cloudflareApi<{ items: AdminLog[] }>('/api/admin/logs?limit=10'),
+    ])
+      .then(([me, usersRes, paymentsRes, logsRes]) => {
+        if (!active) return;
+        setUserEmail(me.user?.email || 'admin@leosiqra.com');
+        setUsers(usersRes.items ?? []);
+        setPayments(paymentsRes.items ?? []);
+        setLogs(logsRes.items ?? []);
+      })
+      .catch((err) => {
+        console.error('Gagal memuat dashboard admin:', err);
+        if (!active) return;
+        setUsers([]);
+        setPayments([]);
+        setLogs([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
     return () => {
-      unsubAuth();
-      unsubUsers();
-      unsubPayments();
-      unsubLogs();
+      active = false;
     };
   }, []);
 
@@ -473,14 +484,14 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between">
                    <h4 className="text-[13px] font-black text-slate-900 tracking-tight">{log.action}</h4>
                    <span className="text-[10px] font-bold text-slate-300 group-hover:text-slate-400 transition-colors">
-                     {log.timestamp?.toDate ? log.timestamp.toDate().toLocaleTimeString() : 'Recent'}
+                     {log.created_at ? new Date(log.created_at).toLocaleTimeString() : 'Recent'}
                    </span>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="text-[10px] font-black text-indigo-400/80 uppercase tracking-widest">AUDIT</span>
                   <div className="w-1 h-1 rounded-full bg-slate-200" />
                   <span className="text-[11px] font-medium text-slate-400 truncate max-w-[150px]">
-                    {log.adminEmail}
+                    {log.admin_email}
                   </span>
                 </div>
               </div>

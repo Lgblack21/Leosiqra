@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { currencyService, Currency } from '@/lib/services/currencyService';
-import { auth } from '@/lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/cf-client';
+import { onAuthStateChanged } from '@/lib/cf-auth';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -64,3 +64,4 @@ export const CurrencySelect = ({ value, onChange, className, label }: CurrencySe
     </div>
   );
 };
+

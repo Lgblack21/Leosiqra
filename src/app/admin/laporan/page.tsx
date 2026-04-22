@@ -16,12 +16,17 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useCallback } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { 
-  subscribeAdminLogs, 
-  AdminLog 
-} from '@/lib/services/adminService';
+import { cloudflareApi } from '@/lib/cloudflare-api';
+
+type AdminLog = {
+  id: string;
+  admin_email: string;
+  action: string;
+  target: string;
+  note: string;
+  color?: 'indigo' | 'orange' | 'emerald' | 'rose' | 'slate';
+  created_at: string;
+};
 
 export default function AdminLaporanPage() {
   const [userEmail, setUserEmail] = useState('admin@leosiqra.com');
@@ -29,29 +34,29 @@ export default function AdminLaporanPage() {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUserEmail(user.email || 'admin@leosiqra.com');
+    (async () => {
+      try {
+        const [me, logsResponse] = await Promise.all([
+          cloudflareApi<{ user?: { email?: string } | null }>('/api/auth/me'),
+          cloudflareApi<{ items: AdminLog[] }>('/api/admin/logs?limit=50'),
+        ]);
+        setUserEmail(me.user?.email || 'admin@leosiqra.com');
+        setLogs(logsResponse.items || []);
+      } catch (error) {
+        console.error(error);
+        setLogs([]);
+      } finally {
+        setLoading(false);
       }
-    });
-
-    const unsubLogs = subscribeAdminLogs(50, (data) => {
-      setLogs(data);
-      setLoading(false);
-    });
-
-    return () => {
-      unsubAuth();
-      unsubLogs();
-    };
+    })();
   }, []);
 
   const exportCSV = useCallback(() => {
     if (logs.length === 0) return;
     const header = ['Waktu', 'Admin', 'Aksi', 'Target', 'Catatan'];
     const rows = logs.map(l => [
-      l.timestamp?.toDate ? l.timestamp.toDate().toLocaleString('id-ID') : '-',
-      l.adminEmail,
+      l.created_at ? new Date(l.created_at).toLocaleString('id-ID') : '-',
+      l.admin_email,
       l.action,
       l.target,
       `"${l.note}"`
@@ -69,8 +74,8 @@ export default function AdminLaporanPage() {
   const exportJSON = useCallback(() => {
     if (logs.length === 0) return;
     const data = logs.map(l => ({
-      waktu: l.timestamp?.toDate ? l.timestamp.toDate().toISOString() : null,
-      admin: l.adminEmail,
+      waktu: l.created_at ? new Date(l.created_at).toISOString() : null,
+      admin: l.admin_email,
       aksi: l.action,
       target: l.target,
       catatan: l.note
@@ -86,13 +91,13 @@ export default function AdminLaporanPage() {
 
   const stats = {
     total: logs.length,
-    admins: new Set(logs.map(l => l.adminEmail)),
+    admins: new Set(logs.map(l => l.admin_email)),
     today: logs.filter(l => {
-      const d = l.timestamp?.toDate ? l.timestamp.toDate() : null;
+      const d = l.created_at ? new Date(l.created_at) : null;
       return d && d.toDateString() === new Date().toDateString();
     }).length,
     thisWeek: logs.filter(l => {
-      const d = l.timestamp?.toDate ? l.timestamp.toDate() : null;
+      const d = l.created_at ? new Date(l.created_at) : null;
       if (!d) return false;
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
@@ -314,9 +319,9 @@ export default function AdminLaporanPage() {
               ) : logs.map((row, idx) => (
                 <tr key={idx} className="group hover:bg-slate-50/50 transition-colors">
                   <td className="py-8 px-4 text-[13px] font-medium text-slate-400 truncate max-w-[150px]">
-                    {row.timestamp?.toDate ? row.timestamp.toDate().toLocaleString() : '-'}
+                    {row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}
                   </td>
-                  <td className="py-8 px-4 text-[13px] font-medium text-slate-900 tracking-tight">{row.adminEmail}</td>
+                  <td className="py-8 px-4 text-[13px] font-medium text-slate-900 tracking-tight">{row.admin_email}</td>
                   <td className="py-8 px-4">
                     <span className={cn(
                       "inline-flex px-5 py-2.5 rounded-full text-[10px] font-black tracking-widest uppercase border",

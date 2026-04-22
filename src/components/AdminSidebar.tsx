@@ -16,9 +16,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { subscribeUserProfile, UserProfile } from '@/lib/services/userService';
+import { cloudflareApi } from '@/lib/cloudflare-api';
 
 interface AdminSidebarProps {
   isOpen?: boolean;
@@ -47,27 +45,22 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
   const pathname = usePathname();
   const router = useRouter();
   const [openGroups, setOpenGroups] = useState<string[]>(['Manajemen']);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<{
+    id: string;
+    name: string;
+    email: string;
+    role: 'admin' | 'user';
+  } | null>(null);
 
   useEffect(() => {
-    let unsubProfile: (() => void) | undefined;
-
-    const unsubAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        // Gunakan onSnapshot untuk update real-time
-        unsubProfile = subscribeUserProfile(user.uid, (prof: UserProfile | null) => {
-          setProfile(prof);
-        });
-      } else {
-        setProfile(null);
-        if (unsubProfile) unsubProfile();
-      }
-    });
-
-    return () => {
-      unsubAuth();
-      if (unsubProfile) unsubProfile();
-    };
+    cloudflareApi<{ user?: {
+      id: string;
+      name: string;
+      email: string;
+      role: 'admin' | 'user';
+    } | null }>('/api/auth/me')
+      .then((result) => setProfile(result.user ?? null))
+      .catch(() => setProfile(null));
   }, []);
 
   const getInitials = (name: string) => {
@@ -88,10 +81,8 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
 
   const handleLogout = async () => {
     try {
-      // Navigasi dulu agar listeners di halaman admin unmount 
-      // saat user masih memiliki permission
+      await cloudflareApi('/api/auth/logout', { method: 'POST' });
       await router.push('/auth/login');
-      await signOut(auth);
     } catch (error) {
       console.error('Error logging out:', error);
     }
@@ -181,15 +172,9 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
           {/* Profile Card */}
           <div className="p-3 bg-slate-800 border border-slate-700 rounded-2xl shadow-sm group">
             <div className="flex items-center gap-3">
-              {profile?.photoURL ? (
-                <div className="w-10 h-10 rounded-xl overflow-hidden border border-slate-700 shadow-lg shadow-indigo-900/20 transform group-hover:scale-110 transition-transform">
-                  <img src={profile.photoURL} alt={profile.name} className="w-full h-full object-cover" />
-                </div>
-              ) : (
-                <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-xs font-black text-white shadow-lg shadow-indigo-900/20 transform group-hover:scale-110 transition-transform">
-                  {profile ? getInitials(profile.name) : '??'}
-                </div>
-              )}
+              <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-xs font-black text-white shadow-lg shadow-indigo-900/20 transform group-hover:scale-110 transition-transform">
+                {profile ? getInitials(profile.name) : '??'}
+              </div>
               <div className="flex flex-col min-w-0">
                 <span className="text-[13px] font-black text-white truncate pr-2">
                   {profile?.name || 'Loading...'}
