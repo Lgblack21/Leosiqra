@@ -62,21 +62,7 @@ export default function MarketDataPage() {
         });
       }
 
-      // 1. Fetch Crypto dari CoinGecko (gratis, tanpa API key)
-      const cryptoRes = await fetch(
-        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,binancecoin,cardano&vs_currencies=usd&include_24hr_change=true'
-      );
-      if (cryptoRes.ok) {
-        const data = await cryptoRes.json();
-        const mapped: CryptoData[] = [
-          { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC/USD', current_price: data.bitcoin?.usd || 0, price_change_percentage_24h: data.bitcoin?.usd_24h_change || 0, icon: '₿' },
-          { id: 'ethereum', name: 'Ethereum', symbol: 'ETH/USD', current_price: data.ethereum?.usd || 0, price_change_percentage_24h: data.ethereum?.usd_24h_change || 0, icon: 'Ξ' },
-          { id: 'solana', name: 'Solana', symbol: 'SOL/USD', current_price: data.solana?.usd || 0, price_change_percentage_24h: data.solana?.usd_24h_change || 0, icon: '◎' },
-        ];
-        setCryptoData(mapped);
-      }
-
-      // 2. Fetch Exchange Rates using our new service
+      // 1. Fetch Exchange Rates using our new service
       const rates = await exchangeRateService.getLatestRates();
       
       if (Object.keys(rates).length > 0) {
@@ -150,7 +136,7 @@ export default function MarketDataPage() {
             const mappedCrypto: CryptoData[] = targetIds.map(id => {
               const nameMap: Record<string, string> = { bitcoin: 'Bitcoin', ethereum: 'Ethereum', solana: 'Solana', binancecoin: 'BNB', cardano: 'Cardano' };
               const symbolMap: Record<string, string> = { bitcoin: 'BTC/USD', ethereum: 'ETH/USD', solana: 'SOL/USD', binancecoin: 'BNB/USD', cardano: 'ADA/USD' };
-              const iconMap: Record<string, string> = { bitcoin: '₿', ethereum: 'Ξ', solana: '◎', binancecoin: '黃', cardano: '₳' };
+              const iconMap: Record<string, string> = { bitcoin: 'BTC', ethereum: 'ETH', solana: 'SOL', binancecoin: 'BNB', cardano: 'ADA' };
               
               return {
                 id,
@@ -198,7 +184,7 @@ export default function MarketDataPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">Market Data</h1>
-          <p className="text-[11px] md:text-sm font-medium text-slate-500 mt-2 leading-relaxed">Data pasar real-time — kurs, crypto, dan komoditas diperbarui otomatis setiap menit.</p>
+          <p className="text-[11px] md:text-sm font-medium text-slate-500 mt-2 leading-relaxed">Data pasar real-time - kurs, crypto, dan komoditas diperbarui otomatis setiap menit.</p>
         </div>
         <div className="flex items-center gap-3">
           {lastUpdated && (
@@ -261,13 +247,13 @@ export default function MarketDataPage() {
                 <div>
                   <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">USD/IDR</p>
                   <p className="text-xl font-black tracking-tight">
-                    {usdIdrRate ? formatIDR(usdIdrRate) : '—'}
+                    {usdIdrRate ? formatIDR(usdIdrRate) : '-'}
                   </p>
                 </div>
                 <div>
                   <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">BTC/USD</p>
                   <p className="text-xl font-black tracking-tight">
-                    ${cryptoData[0] ? formatPrice(cryptoData[0].current_price) : '—'}
+                    ${cryptoData[0] ? formatPrice(cryptoData[0].current_price) : '-'}
                   </p>
                 </div>
               </div>
@@ -292,7 +278,7 @@ export default function MarketDataPage() {
                 <thead>
                   <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">
                     <th className="py-5 font-black">Dari</th>
-                    <th className="py-5 font-black text-center">→</th>
+                    <th className="py-5 font-black text-center">-&gt;</th>
                     <th className="py-5 font-black text-center">Ke</th>
                     <th className="py-5 font-black text-right">Rate</th>
                   </tr>
@@ -386,5 +372,6 @@ export default function MarketDataPage() {
     </div>
   );
 }
+
 
 

@@ -27,13 +27,15 @@ export default function TopUpPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const unsubRef = useRef<(() => void) | null>(null);
+  const unsubAccRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       if (u) {
         // Fetch accounts for lookup
         const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
-        onSnapshot(qAcc, (snap) => {
+        if (unsubAccRef.current) unsubAccRef.current();
+        unsubAccRef.current = onSnapshot(qAcc, (snap) => {
           setAccounts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account)));
         });
 
@@ -64,14 +66,22 @@ export default function TopUpPage() {
           setTransactions(list);
           setLoading(false);
         }, (err) => { console.error(err); setLoading(false); });
-      } else { setTransactions([]); setLoading(false); }
+      } else {
+        setTransactions([]);
+        setAccounts([]);
+        setLoading(false);
+      }
     });
-    return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
+    return () => {
+      unsub();
+      if (unsubRef.current) unsubRef.current();
+      if (unsubAccRef.current) unsubAccRef.current();
+    };
   }, [selectedMonth, selectedYear]);
 
   const getAccountName = (id: string) => {
     const acc = accounts.find(a => a.id === id);
-    return acc ? acc.name : id || '—';
+    return acc ? acc.name : id || '-';
   };
 
   const filtered = useMemo(() => {
@@ -190,7 +200,7 @@ export default function TopUpPage() {
                         <p className="text-sm font-bold text-slate-500">{trx.displayDate || formatDate(trx.date)}</p>
                       </td>
                       <td className="px-4 md:px-6 py-4 md:py-6">
-                        <p className="text-sm font-bold text-slate-700">{trx.note || '—'}</p>
+                        <p className="text-sm font-bold text-slate-700">{trx.note || '-'}</p>
                       </td>
                       <td className="px-4 md:px-6 py-4 md:py-6 text-center whitespace-nowrap">
                         <span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{trx.currency || 'IDR'}</span>

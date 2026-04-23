@@ -76,12 +76,12 @@ export default function DepositoPage() {
 
   const getAccountName = (id: string) => {
     const acc = accounts.find(a => a.id === id);
-    return acc ? acc.name : id || '—';
+    return acc ? acc.name : id || '-';
   };
 
   const getCategoryName = (id: string) => {
     const cat = categories.find(c => c.id === id);
-    return cat ? `${cat.category} - ${cat.subCategory}` : id || '—';
+    return cat ? `${cat.category} - ${cat.subCategory}` : id || '-';
   };
 
   const filteredInvestments = useMemo(() => {
@@ -198,18 +198,18 @@ export default function DepositoPage() {
                       isPlanned && "bg-slate-50/30 opacity-75"
                     )}>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-500">{formatDate(inv.dateInvested)}</td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-black text-indigo-600 italic bg-indigo-50/20">{inv.targetDate ? formatDate(inv.targetDate) : '—'}</td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-black text-indigo-600 italic bg-indigo-50/20">{inv.targetDate ? formatDate(inv.targetDate) : '-'}</td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap">
                       <div className="flex flex-col">
                         <p className={cn("text-sm font-black", isPlanned ? "text-slate-400" : "text-slate-900")}>{inv.name}</p>
                         {isPlanned && <span className="text-[8px] font-black text-indigo-400 uppercase tracking-tighter mt-0.5">Automated Projection</span>}
                       </div>
                     </td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="px-3 py-1 bg-orange-50 text-orange-600 text-[9px] font-black rounded-lg uppercase tracking-widest">{inv.platform || '—'}</span></td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="px-3 py-1 bg-orange-50 text-orange-600 text-[9px] font-black rounded-lg uppercase tracking-widest">{inv.platform || '-'}</span></td>
                     <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatRp(inv.amountInvested)}</td>
                     <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap"><span className="text-sm font-bold text-slate-600">{inv.durationDays || 0} Hari</span></td>
                     <td className="px-4 md:px-6 py-5 text-center whitespace-nowrap"><span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-lg">{inv.returnPercentage.toFixed(2)}%</span></td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.transactionType || '—'}</span></td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.transactionType || '-'}</span></td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap">
                       <span className={cn(
                         "px-2 py-0.5 text-[9px] font-black rounded uppercase tracking-widest",

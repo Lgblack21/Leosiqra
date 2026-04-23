@@ -241,7 +241,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                       </>
                     ) : (
                       <>
-                        🚀 Request Akses
+                        Request Akses
                         <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
                       </>
                     )}

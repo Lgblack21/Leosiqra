@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   RefreshCw,
   Trash2,
-  Edit2
+  Edit2,
+  PlusCircle
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { MonthPicker } from '@/components/ui/MonthPicker';
@@ -12,32 +13,41 @@ import { recurringService, RecurringTransaction } from '@/lib/services/recurring
 import { Account } from '@/lib/services/accountService';
 import type { Category } from '@/lib/services/categoryService';
 import { auth, db } from '@/lib/cf-client';
-import { onAuthStateChanged } from '@/lib/cf-auth';
+import { onAuthStateChanged, User } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
+import { RecurringModal } from '@/components/modals/RecurringModal';
 
 export default function RecurringPage() {
   const [transactions, setTransactions] = useState<RecurringTransaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<RecurringTransaction | null>(null);
 
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const unsubRef = useRef<(() => void) | null>(null);
+  const unsubAccRef = useRef<(() => void) | null>(null);
+  const unsubCatRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
       if (u) {
         // Fetch accounts for lookup
         const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
-        onSnapshot(qAcc, (snap) => {
+        if (unsubAccRef.current) unsubAccRef.current();
+        unsubAccRef.current = onSnapshot(qAcc, (snap) => {
           setAccounts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account)));
         });
 
         // Fetch categories for lookup
         const qCat = query(collection(db, 'categories'), where('userId', '==', u.uid));
-        onSnapshot(qCat, (snap) => {
+        if (unsubCatRef.current) unsubCatRef.current();
+        unsubCatRef.current = onSnapshot(qCat, (snap) => {
           setCategories(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)));
         });
 
@@ -59,19 +69,29 @@ export default function RecurringPage() {
           }));
           setLoading(false);
         }, (err) => { console.error(err); setLoading(false); });
-      } else { setTransactions([]); setLoading(false); }
+      } else {
+        setTransactions([]);
+        setAccounts([]);
+        setCategories([]);
+        setLoading(false);
+      }
     });
-    return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
+    return () => {
+      unsub();
+      if (unsubRef.current) unsubRef.current();
+      if (unsubAccRef.current) unsubAccRef.current();
+      if (unsubCatRef.current) unsubCatRef.current();
+    };
   }, [selectedMonth, selectedYear]);
 
   const getAccountName = (id: string) => {
     const acc = accounts.find(a => a.id === id);
-    return acc ? acc.name : id || '—';
+    return acc ? acc.name : id || '-';
   };
 
   const getCategoryName = (id: string) => {
     const cat = categories.find(c => c.id === id);
-    return cat ? `${cat.category} - ${cat.subCategory}` : id || '—';
+    return cat ? `${cat.category} - ${cat.subCategory}` : id || '-';
   };
 
   const formatRp = (num: number) => {
@@ -117,6 +137,16 @@ export default function RecurringPage() {
             <div className="w-1 h-6 bg-blue-600 rounded-full" />
             <h2 className="text-lg font-black text-slate-900 tracking-tight">Daftar Jadwal Otomatis</h2>
           </div>
+          <button
+            onClick={() => {
+              setEditingTransaction(null);
+              setIsModalOpen(true);
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-black tracking-wide hover:bg-indigo-700 transition-colors"
+          >
+            <PlusCircle size={14} />
+            Tambah Recurring
+          </button>
         </div>
 
         <div className="flex-1">
@@ -177,7 +207,13 @@ export default function RecurringPage() {
                       </td>
                       <td className="px-5 md:px-8 py-5">
                         <div className="flex items-center justify-center gap-2">
-                          <button className="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                          <button
+                            onClick={() => {
+                              setEditingTransaction(trx);
+                              setIsModalOpen(true);
+                            }}
+                            className="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                          >
                             <Edit2 size={16} />
                           </button>
                           <button 
@@ -201,6 +237,17 @@ export default function RecurringPage() {
           )}
         </div>
       </div>
+      {user && (
+        <RecurringModal
+          userId={user.uid}
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingTransaction(null);
+          }}
+          initialData={editingTransaction}
+        />
+      )}
     </div>
   );
 }

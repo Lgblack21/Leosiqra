@@ -408,7 +408,7 @@ export default function AdminPembayaranPage() {
                         </div>
                       </button>
                     ) : (
-                      <span className="text-[10px] font-bold text-slate-300 italic">—</span>
+                      <span className="text-[10px] font-bold text-slate-300 italic">-</span>
                     )}
                   </td>
                   <td className="py-6 px-4">

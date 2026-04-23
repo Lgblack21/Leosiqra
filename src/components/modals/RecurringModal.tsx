@@ -11,9 +11,10 @@ interface RecurringModalProps {
   userId: string;
   isOpen: boolean;
   onClose: () => void;
+  initialData?: RecurringTransaction | null;
 }
 
-export const RecurringModal = ({ userId, isOpen, onClose }: RecurringModalProps) => {
+export const RecurringModal = ({ userId, isOpen, onClose, initialData = null }: RecurringModalProps) => {
   const [loading, setLoading] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   
@@ -33,30 +34,63 @@ export const RecurringModal = ({ userId, isOpen, onClose }: RecurringModalProps)
   useEffect(() => {
     if (isOpen && userId) {
       accountService.getUserAccounts(userId).then(setAccounts).catch(console.error);
-      // Ensure date is reset to today when opening if it was empty
-      if (!formData.nextDate) {
-        setFormData(p => ({ ...p, nextDate: getToday() }));
+      if (initialData) {
+        setFormData({
+          name: initialData.name || '',
+          type: initialData.type || 'Pengeluaran',
+          category: initialData.category || '',
+          accountId: initialData.accountId || '',
+          amount: String(initialData.amount || ''),
+          interval: initialData.interval || 'Bulanan',
+          nextDate: new Date(initialData.nextDate).toISOString().split('T')[0],
+          note: initialData.note || ''
+        });
+      } else {
+        setFormData({
+          name: '',
+          type: 'Pengeluaran',
+          category: '',
+          accountId: '',
+          amount: '',
+          interval: 'Bulanan',
+          nextDate: getToday(),
+          note: ''
+        });
       }
     }
-  }, [isOpen, userId, formData.nextDate]);
+  }, [isOpen, userId, initialData]);
 
   const handleCreate = async () => {
     if (!userId || !formData.name || !formData.amount || !formData.nextDate) return;
     setLoading(true);
     
     try {
-      await recurringService.createRecurring({
-        userId,
-        name: formData.name,
-        type: formData.type,
-        category: formData.category,
-        accountId: formData.accountId || 'General',
-        amount: parseFloat(formData.amount),
-        interval: formData.interval,
-        nextDate: new Date(formData.nextDate),
-        note: formData.note,
-        status: 'ACTIVE'
-      });
+      if (initialData?.id) {
+        await recurringService.updateRecurring(initialData.id, {
+          name: formData.name,
+          type: formData.type,
+          category: formData.category,
+          accountId: formData.accountId || 'General',
+          amount: parseFloat(formData.amount),
+          interval: formData.interval,
+          nextDate: new Date(formData.nextDate),
+          note: formData.note,
+          status: 'ACTIVE'
+        });
+      } else {
+        await recurringService.createRecurring({
+          userId,
+          name: formData.name,
+          type: formData.type,
+          category: formData.category,
+          accountId: formData.accountId || 'General',
+          amount: parseFloat(formData.amount),
+          interval: formData.interval,
+          nextDate: new Date(formData.nextDate),
+          note: formData.note,
+          status: 'ACTIVE'
+        });
+      }
       onClose();
       setFormData({ 
         name: '', type: 'Pengeluaran', category: '', accountId: '', amount: '', interval: 'Bulanan', nextDate: getToday(), note: '' 
@@ -72,7 +106,7 @@ export const RecurringModal = ({ userId, isOpen, onClose }: RecurringModalProps)
     <Modal 
       isOpen={isOpen} 
       onClose={onClose} 
-      title="Set Ringkasan Transaksi Berulang"
+      title={initialData ? 'Edit Transaksi Berulang' : 'Set Ringkasan Transaksi Berulang'}
       maxWidth="max-w-xl"
     >
       <div className="space-y-5 px-1">
@@ -191,7 +225,7 @@ export const RecurringModal = ({ userId, isOpen, onClose }: RecurringModalProps)
           {loading ? 'Menyimpan...' : (
             <>
               <Save size={18} className="transition-transform group-hover:scale-110" />
-              Simpan Recurring
+              {initialData ? 'Simpan Perubahan' : 'Simpan Recurring'}
             </>
           )}
         </button>

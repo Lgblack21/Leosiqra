@@ -76,10 +76,10 @@ export default function MonthlyDashboard() {
       const crypto = cryptoRes.ok ? await cryptoRes.json() : null;
       const fx = fxRes.ok ? await fxRes.json() : null;
       const tickers: MarketTicker[] = [
-        { label: 'BTC/USD', sub: 'Bitcoin', val: crypto ? `$${Number(crypto.bitcoin?.usd).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—', pct: crypto ? `${Number(crypto.bitcoin?.usd_24h_change).toFixed(2)}%` : '—', up: crypto ? crypto.bitcoin?.usd_24h_change >= 0 : null, color: 'bg-amber-100 text-amber-600' },
-        { label: 'ETH/USD', sub: 'Ethereum', val: crypto ? `$${Number(crypto.ethereum?.usd).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—', pct: crypto ? `${Number(crypto.ethereum?.usd_24h_change).toFixed(2)}%` : '—', up: crypto ? crypto.ethereum?.usd_24h_change >= 0 : null, color: 'bg-slate-100 text-slate-600' },
-        { label: 'USD/IDR', sub: 'Rupiah', val: fx ? `Rp${Number(fx.rates?.IDR).toLocaleString('id-ID', { maximumFractionDigits: 0 })}` : '—', pct: '—', up: null, color: 'bg-emerald-100 text-emerald-600' },
-        { label: 'EUR/USD', sub: 'Euro', val: fx ? `$${(1 / Number(fx.rates?.EUR)).toFixed(4)}` : '—', pct: '—', up: null, color: 'bg-blue-100 text-blue-600' },
+        { label: 'BTC/USD', sub: 'Bitcoin', val: crypto ? `$${Number(crypto.bitcoin?.usd).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-', pct: crypto ? `${Number(crypto.bitcoin?.usd_24h_change).toFixed(2)}%` : '-', up: crypto ? crypto.bitcoin?.usd_24h_change >= 0 : null, color: 'bg-amber-100 text-amber-600' },
+        { label: 'ETH/USD', sub: 'Ethereum', val: crypto ? `$${Number(crypto.ethereum?.usd).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-', pct: crypto ? `${Number(crypto.ethereum?.usd_24h_change).toFixed(2)}%` : '-', up: crypto ? crypto.ethereum?.usd_24h_change >= 0 : null, color: 'bg-slate-100 text-slate-600' },
+        { label: 'USD/IDR', sub: 'Rupiah', val: fx ? `Rp${Number(fx.rates?.IDR).toLocaleString('id-ID', { maximumFractionDigits: 0 })}` : '-', pct: '-', up: null, color: 'bg-emerald-100 text-emerald-600' },
+        { label: 'EUR/USD', sub: 'Euro', val: fx ? `$${(1 / Number(fx.rates?.EUR)).toFixed(4)}` : '-', pct: '-', up: null, color: 'bg-blue-100 text-blue-600' },
       ];
       setMarketTickers(tickers);
     } catch (e) { console.error(e); }
@@ -90,7 +90,19 @@ export default function MonthlyDashboard() {
 
   const filteredData = useMemo(() => {
     if (filterType === 'Semua') return transactions;
-    return transactions.filter(t => t.type === filterType.toLowerCase());
+    if (filterType === 'Pemasukan') return transactions.filter((t) => t.type === 'pemasukan');
+    if (filterType === 'Pengeluaran') return transactions.filter((t) => t.type === 'pengeluaran');
+    if (filterType === 'Investasi') {
+      return transactions.filter((t) =>
+        t.type === 'investasi' || /investasi|saham|deposito/i.test(t.category || '')
+      );
+    }
+    if (filterType === 'Tabungan') {
+      return transactions.filter((t) =>
+        t.type === 'tabungan' || /tabungan|dana darurat/i.test(t.category || '')
+      );
+    }
+    return transactions;
   }, [transactions, filterType]);
 
   // Guard Number() agar tidak NaN
@@ -216,7 +228,7 @@ export default function MonthlyDashboard() {
 
         {/* 2x2 Flow Grid (3/4 width) */}
         <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          {/* Pemasukan — Firebase */}
+          {/* Pemasukan - Firebase */}
           <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -234,7 +246,7 @@ export default function MonthlyDashboard() {
               <span className="text-[9px] font-medium text-slate-400 leading-none">{transactions.filter(t => t.type === 'pemasukan').length} trx</span>
             </div>
           </div>
-          {/* Pengeluaran — Firebase */}
+          {/* Pengeluaran - Firebase */}
           <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -252,7 +264,7 @@ export default function MonthlyDashboard() {
               <span className="text-[9px] font-medium text-slate-400 leading-none">{pengeluaranPct}% dari masuk</span>
             </div>
           </div>
-          {/* Tabungan — dihitung dari Net */}
+          {/* Tabungan - dihitung dari Net */}
           <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -268,7 +280,7 @@ export default function MonthlyDashboard() {
               <span className="text-[9px] font-medium text-slate-400 leading-none">Saldo bersih</span>
             </div>
           </div>
-          {/* Investasi — Firebase */}
+          {/* Investasi - Firebase */}
           <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -339,7 +351,7 @@ export default function MonthlyDashboard() {
               </button>
               {isDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-full sm:w-40 bg-white border border-slate-100 rounded-xl shadow-lg shadow-indigo-500/10 z-10 py-2">
-                  {['Semua Kategori', 'Pemasukan', 'Pengeluaran', 'Investasi', 'Tabungan'].map((cat) => (
+                  {['Semua', 'Pemasukan', 'Pengeluaran', 'Investasi', 'Tabungan'].map((cat) => (
                     <button
                       key={cat}
                       onClick={() => { setFilterType(cat); setIsDropdownOpen(false); }}
@@ -380,7 +392,7 @@ export default function MonthlyDashboard() {
                     <td className="px-5 md:px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
-                        <span className="font-bold text-slate-700">{trx.category}{trx.note ? ` — ${trx.note}` : ''}</span>
+                        <span className="font-bold text-slate-700">{trx.category}{trx.note ? ` - ${trx.note}` : ''}</span>
                       </div>
                     </td>
                     <td className="px-5 md:px-6 py-4 text-center">

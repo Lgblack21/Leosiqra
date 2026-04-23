@@ -77,12 +77,12 @@ export default function OtherInvestmentsPage() {
 
   const getAccountName = (id: string) => {
     const acc = accounts.find(a => a.id === id);
-    return acc ? acc.name : id || '—';
+    return acc ? acc.name : id || '-';
   };
 
   const getCategoryName = (id: string) => {
     const cat = categories.find(c => c.id === id);
-    return cat ? `${cat.category} - ${cat.subCategory}` : id || '—';
+    return cat ? `${cat.category} - ${cat.subCategory}` : id || '-';
   };
 
   const filteredInvestments = useMemo(() => {
@@ -209,14 +209,14 @@ export default function OtherInvestmentsPage() {
                     </td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center"><span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{inv.currency || 'IDR'}</span></td>
                     <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap"><span className="text-sm font-bold text-slate-700">{inv.quantity || 0}</span></td>
-                    <td className="px-4 md:px-6 py-5 text-center whitespace-nowrap"><span className="text-xs font-bold text-slate-500">{inv.unit || '—'}</span></td>
+                    <td className="px-4 md:px-6 py-5 text-center whitespace-nowrap"><span className="text-xs font-bold text-slate-500">{inv.unit || '-'}</span></td>
                     <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatRp(inv.pricePerUnit || 0)}</td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.transactionType || '—'}</span></td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.transactionType || '-'}</span></td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{getCategoryName(inv.category || '')}</span></td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{getAccountName(inv.accountId || '')}</span></td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap">
                       <span className={`px-3 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest ${getAssetColor(inv.platform)}`}>
-                        {inv.platform || '—'}
+                        {inv.platform || '-'}
                       </span>
                     </td>
                     <td className="px-4 md:px-6 py-5 text-center">

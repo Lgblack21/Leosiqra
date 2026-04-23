@@ -59,7 +59,7 @@ export default function AdminPengaturanPage() {
   const fetchMarketData = useCallback(async () => {
     setIsRefreshingMarket(true);
     try {
-      // Ambil semua mata uang dari Firestore (semua user, deduplicated) — sama seperti halaman member
+      // Ambil semua mata uang dari Firestore (semua user, deduplicated) - sama seperti halaman member
       const currencies = await currencyService.getAllUniqueCurrencies();
       setAllCurrencies(currencies);
 
@@ -84,7 +84,7 @@ export default function AdminPengaturanPage() {
       const crypto = (cryptoRes.ok ? await cryptoRes.json() : {}) as Record<string, LiveCryptoQuote>;
       setLiveCrypto(crypto);
       
-      // Gunakan exchangeRateService — sama persis dengan halaman member
+      // Gunakan exchangeRateService - sama persis dengan halaman member
       const rates = await exchangeRateService.getLatestRates();
       setLiveFxRates(rates);
       
@@ -819,7 +819,7 @@ export default function AdminPengaturanPage() {
                       <label className="text-[13px] font-black text-slate-900">Ulangi Password</label>
                       <input 
                         type="password" 
-                        placeholder="••••••••" 
+                        placeholder="||||||||" 
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[14px] font-medium" 
@@ -1117,7 +1117,7 @@ export default function AdminPengaturanPage() {
                             <p className="text-[9px] font-medium text-slate-400">{c.name}</p>
                           </td>
                           <td className="py-4 text-[11px] font-bold text-slate-900">
-                            {rate ? `Rp ${rate.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : <span className="text-slate-300 italic">—</span>}
+                            {rate ? `Rp ${rate.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : <span className="text-slate-300 italic">-</span>}
                           </td>
                           <td className="py-4 text-[11px] font-medium text-slate-400">{settings?.marketData?.userCovered || 0}</td>
                           <td className="py-4 text-[11px] font-medium text-slate-400 font-mono tracking-tight">{liveTimestamp}</td>
@@ -1175,7 +1175,7 @@ export default function AdminPengaturanPage() {
                             ) : <span className="text-[11px] text-slate-300 italic">Belum direfresh</span>}
                           </td>
                           <td className={`py-4 text-[11px] font-bold ${change == null ? 'text-slate-400' : change >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                            {change != null ? `${change >= 0 ? '+' : ''}${change.toFixed(2)}%` : `—`}
+                            {change != null ? `${change >= 0 ? '+' : ''}${change.toFixed(2)}%` : `-`}
                           </td>
                           <td className="py-4 text-[11px] font-medium text-slate-400">{settings?.marketData?.userCovered || 0}</td>
                           <td className="py-4 text-[11px] font-medium text-slate-400 font-mono tracking-tight">{liveTimestamp}</td>

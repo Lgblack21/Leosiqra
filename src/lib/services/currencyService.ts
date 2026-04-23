@@ -76,7 +76,7 @@ export const currencyService = {
         { code: 'IDR', name: 'Indonesian Rupiah', symbol: 'Rp', isDefault: true },
         { code: 'USD', name: 'US Dollar', symbol: '$' },
         { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$' },
-        { code: 'EUR', name: 'Euro', symbol: '€' }
+        { code: 'EUR', name: 'Euro', symbol: 'EUR' }
       ];
       
       for (const d of defaults) {

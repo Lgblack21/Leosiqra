@@ -25,13 +25,15 @@ export default function SavingsPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const unsubRef = useRef<(() => void) | null>(null);
+  const unsubAccRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       if (u) {
         // Fetch accounts for lookup
         const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
-        onSnapshot(qAcc, (snap) => {
+        if (unsubAccRef.current) unsubAccRef.current();
+        unsubAccRef.current = onSnapshot(qAcc, (snap) => {
           setAccounts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account)));
         }, (err) => {
           if (err.code !== 'permission-denied') console.error('Account listener error:', err);
@@ -61,14 +63,22 @@ export default function SavingsPage() {
           if (err.code !== 'permission-denied') console.error(err); 
           setLoading(false); 
         });
-      } else { setSavings([]); setLoading(false); }
+      } else {
+        setSavings([]);
+        setAccounts([]);
+        setLoading(false);
+      }
     });
-    return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
+    return () => {
+      unsub();
+      if (unsubRef.current) unsubRef.current();
+      if (unsubAccRef.current) unsubAccRef.current();
+    };
   }, [selectedMonth, selectedYear]);
 
   const getAccountName = (id: string) => {
     const acc = accounts.find(a => a.id === id);
-    return acc ? acc.name : id || '—';
+    return acc ? acc.name : id || '-';
   };
 
   const totalSaldo = useMemo(() => savings.reduce((s, item) => s + item.amount, 0), [savings]);
@@ -187,10 +197,10 @@ export default function SavingsPage() {
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center"><span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{item.currency || 'IDR'}</span></td>
                     <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm"> {formatRp(item.amount)}</td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap">
-                       <span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-[8px] font-black rounded uppercase tracking-widest">{item.subCategory || '—'}</span>
+                       <span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-[8px] font-black rounded uppercase tracking-widest">{item.subCategory || '-'}</span>
                     </td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap font-bold text-slate-600 text-xs">{getAccountName(item.fromAccount || '')}</td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap font-bold text-slate-600 text-xs">{item.toGoal || '—'}</td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap font-bold text-slate-600 text-xs">{item.toGoal || '-'}</td>
                     <td className="px-5 md:px-8 py-5 text-center">
                       <button onClick={async () => { if (item.id) { await savingsService.deleteSaving(item.id); } }}
                         className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all">

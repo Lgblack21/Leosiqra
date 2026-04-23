@@ -50,7 +50,7 @@ export default function AILeosiqraPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'model',
-      text: 'Halo! Saya **Leosiqra**, asisten keuangan AI Anda 👋\n\nSaya sedang menganalisis data keuangan Anda agar dapat memberikan bantuan yang lebih akurat...',
+      text: 'Halo! Saya **Leosiqra**, asisten keuangan AI Anda \n\nSaya sedang menganalisis data keuangan Anda agar dapat memberikan bantuan yang lebih akurat...',
       timestamp: new Date()
     }
   ]);
@@ -284,10 +284,10 @@ ${budgets.map(b => `- ${b.category}: Limit ${formatCurrency(b.amount)} (${b.type
       console.error("AI Error:", e);
       const errorMsg = e instanceof Error ? e.message : String(e ?? '');
       
-      let friendlyMessage = 'Maaf ya, Leosiqra sedang mengalami sedikit kendala teknis saat berpikir. Silakan coba kirim ulang pertanyaan Anda. 🙏';
+      let friendlyMessage = 'Maaf ya, Leosiqra sedang mengalami sedikit kendala teknis saat berpikir. Silakan coba kirim ulang pertanyaan Anda. ';
       
       if (errorMsg.includes('503') || errorMsg.includes('overloaded') || errorMsg.includes('demand')) {
-        friendlyMessage = 'Waduh, server pikiran Leosiqra sedang sangat sibuk melayani banyak antrean nih. Mohon beri waktu sekitar 1-2 menit untuk istirahat, lalu coba tanya lagi ya! ⏳✨';
+        friendlyMessage = 'Waduh, server pikiran Leosiqra sedang sangat sibuk melayani banyak antrean nih. Mohon beri waktu sekitar 1-2 menit untuk istirahat, lalu coba tanya lagi ya! ...';
       } else if (errorMsg.includes('API key not valid')) {
         friendlyMessage = 'Ups, API Key Gemini Bapak sepertinya belum valid atau belum diatur dengan benar di sistem pengaturannya.';
       }
@@ -311,7 +311,7 @@ ${budgets.map(b => `- ${b.category}: Limit ${formatCurrency(b.amount)} (${b.type
         if (prev.length === 1 && prev[0].role === 'model' && prev[0].text.includes('menganalisis data')) {
           return [{
             ...prev[0],
-            text: 'Halo! Saya **Leosiqra**, asisten keuangan AI Anda 👋\n\nSaya sudah selesai menganalisis data keuangan Anda. Anda bisa bertanya tentang saldo rekening, performa investasi, atau pengeluaran bulan ini. Apa yang ingin Anda ketahui?'
+            text: 'Halo! Saya **Leosiqra**, asisten keuangan AI Anda \n\nSaya sudah selesai menganalisis data keuangan Anda. Anda bisa bertanya tentang saldo rekening, performa investasi, atau pengeluaran bulan ini. Apa yang ingin Anda ketahui?'
           }];
         }
         return prev;
@@ -328,7 +328,7 @@ ${budgets.map(b => `- ${b.category}: Limit ${formatCurrency(b.amount)} (${b.type
   const clearChat = async () => {
     const defaultMsg: Message = {
       role: 'model',
-      text: 'Chat direset. Halo lagi! Ada yang bisa saya bantu? 😊',
+      text: 'Chat direset. Halo lagi! Ada yang bisa saya bantu? ',
       timestamp: new Date()
     };
     setMessages([defaultMsg]);

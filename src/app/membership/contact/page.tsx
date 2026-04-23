@@ -348,7 +348,7 @@ export default function ContactPage() {
                         ) : (
                           activePackages.map(pkg => (
                             <option key={pkg.id} value={pkg.id}>
-                              {pkg.name} {pkg.isPopular ? '(⭐ Populer)' : ''}
+                              {pkg.name} {pkg.isPopular ? '(* Populer)' : ''}
                             </option>
                           ))
                         )}
@@ -394,7 +394,7 @@ export default function ContactPage() {
                         )}
                         {!uploadingProof && proofUrl && (
                           <div className="absolute top-3 right-3 px-3 py-1 bg-emerald-500 text-white text-[10px] font-black rounded-full">
-                            ✓ Terupload
+                            OK Terupload
                           </div>
                         )}
                         <button
@@ -416,7 +416,7 @@ export default function ContactPage() {
                         </div>
                         <div className="text-center">
                           <p className="text-[11px] font-black text-slate-600 group-hover:text-indigo-600">Klik untuk upload bukti transfer</p>
-                          <p className="text-[9px] font-bold text-slate-400 mt-1">JPG, PNG, WEBP — Maks 5MB</p>
+                          <p className="text-[9px] font-bold text-slate-400 mt-1">JPG, PNG, WEBP - Maks 5MB</p>
                         </div>
                       </button>
                     )}

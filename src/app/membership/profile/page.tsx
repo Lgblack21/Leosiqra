@@ -296,7 +296,7 @@ export default function ProfilePage() {
               <button onClick={handleSave} disabled={saving}
                 className="w-full md:w-fit px-10 md:px-12 py-4 md:py-5 bg-indigo-600 disabled:bg-slate-300 text-white rounded-xl md:rounded-2xl text-[13px] md:text-xs font-black shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2">
                 <Save size={14} />
-                {saving ? 'Menyimpan...' : saved ? '✓ Tersimpan!' : 'Simpan Perubahan'}
+                {saving ? 'Menyimpan...' : saved ? 'OK Tersimpan!' : 'Simpan Perubahan'}
               </button>
             </div>
           </div>

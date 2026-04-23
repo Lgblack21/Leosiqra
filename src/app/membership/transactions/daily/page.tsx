@@ -28,19 +28,23 @@ export default function DailyTransactionLogPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const unsubRef = useRef<(() => void) | null>(null);
+  const unsubAccRef = useRef<(() => void) | null>(null);
+  const unsubCatRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       if (u) {
         // Fetch accounts for lookup
         const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
-        onSnapshot(qAcc, (snap) => {
+        if (unsubAccRef.current) unsubAccRef.current();
+        unsubAccRef.current = onSnapshot(qAcc, (snap) => {
           setAccounts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account)));
         });
 
         // Fetch categories for lookup
         const qCat = query(collection(db, 'categories'), where('userId', '==', u.uid));
-        onSnapshot(qCat, (snap) => {
+        if (unsubCatRef.current) unsubCatRef.current();
+        unsubCatRef.current = onSnapshot(qCat, (snap) => {
           setCategories(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)));
         });
 
@@ -65,19 +69,29 @@ export default function DailyTransactionLogPage() {
           }));
           setLoading(false);
         }, (err) => { console.error(err); setLoading(false); });
-      } else { setTransactions([]); setLoading(false); }
+      } else {
+        setTransactions([]);
+        setAccounts([]);
+        setCategories([]);
+        setLoading(false);
+      }
     });
-    return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
+    return () => {
+      unsub();
+      if (unsubRef.current) unsubRef.current();
+      if (unsubAccRef.current) unsubAccRef.current();
+      if (unsubCatRef.current) unsubCatRef.current();
+    };
   }, [selectedMonth, selectedYear]);
 
   const getAccountName = (id: string) => {
     const acc = accounts.find(a => a.id === id);
-    return acc ? acc.name : id || '—';
+    return acc ? acc.name : id || '-';
   };
 
   const getCategoryName = (id: string) => {
     const cat = categories.find(c => c.id === id);
-    return cat ? `${cat.category} - ${cat.subCategory}` : id || '—';
+    return cat ? `${cat.category} - ${cat.subCategory}` : id || '-';
   };
 
   const filtered = useMemo(() => {
@@ -204,7 +218,7 @@ export default function DailyTransactionLogPage() {
                         <p className="text-xs md:text-sm font-black text-slate-900">{formatDate(trx.date)}</p>
                       </td>
                       <td className="px-4 md:px-6 py-4">
-                        <p className="text-xs md:text-sm font-bold text-slate-700">{trx.note || '—'}</p>
+                        <p className="text-xs md:text-sm font-bold text-slate-700">{trx.note || '-'}</p>
                       </td>
                       <td className="px-4 md:px-6 py-4 whitespace-nowrap text-center">
                         <span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{trx.currency || 'IDR'}</span>
@@ -223,13 +237,13 @@ export default function DailyTransactionLogPage() {
                         <span className="text-xs font-bold text-slate-600">{getAccountName(trx.accountId || '')}</span>
                       </td>
                       <td className="px-4 md:px-6 py-4 text-right whitespace-nowrap">
-                        <span className="text-xs font-bold text-slate-600">{trx.installmentTenor ? `${trx.installmentTenor} bln` : '—'}</span>
+                        <span className="text-xs font-bold text-slate-600">{trx.installmentTenor ? `${trx.installmentTenor} bln` : '-'}</span>
                       </td>
                       <td className="px-4 md:px-6 py-4 text-right whitespace-nowrap">
-                        <span className="text-xs font-bold text-slate-600">{trx.monthlyInterest ? formatRp(trx.monthlyInterest) : '—'}</span>
+                        <span className="text-xs font-bold text-slate-600">{trx.monthlyInterest ? formatRp(trx.monthlyInterest) : '-'}</span>
                       </td>
                       <td className="px-4 md:px-6 py-4 text-right whitespace-nowrap">
-                        <span className="text-xs font-bold text-slate-600">{trx.totalInterest ? formatRp(trx.totalInterest) : '—'}</span>
+                        <span className="text-xs font-bold text-slate-600">{trx.totalInterest ? formatRp(trx.totalInterest) : '-'}</span>
                       </td>
                       <td className="px-5 md:px-8 py-4 md:py-6 whitespace-nowrap">
                         <div className="flex items-center justify-center gap-2">

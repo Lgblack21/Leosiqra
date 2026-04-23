@@ -222,7 +222,7 @@ export default function MyCardsPage() {
               <div className="relative z-10">
                 <div className="flex justify-between items-start mb-10 md:mb-12">
                   <div>
-                    <p className="text-[9px] md:text-[10px] font-black text-white/60 uppercase tracking-[0.2em] mb-2">{selectedAccount.type} • {selectedAccount.currency}</p>
+                    <p className="text-[9px] md:text-[10px] font-black text-white/60 uppercase tracking-[0.2em] mb-2">{selectedAccount.type} | {selectedAccount.currency}</p>
                     <h2 className="text-xl md:text-3xl lg:text-4xl font-black tracking-tight">{selectedAccount.name}</h2>
                     <p className="text-[10px] font-medium text-white/60 mt-1">Saldo: {formatRp(accountBalance)}</p>
                   </div>
@@ -348,7 +348,7 @@ export default function MyCardsPage() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-[12px] md:text-sm font-bold text-slate-900 truncate">{acc.name}</p>
-                      <p className="text-[9px] md:text-[10px] font-medium text-slate-400">{acc.type} • {acc.currency}</p>
+                      <p className="text-[9px] md:text-[10px] font-medium text-slate-400">{acc.type} | {acc.currency}</p>
                     </div>
                   </div>
                   <div className="text-right shrink-0 flex items-center gap-2">

@@ -159,7 +159,7 @@ export default function LoginPage() {
             <div className="relative">
               <Input 
                 label="Password" 
-                placeholder="••••••••••••••••" 
+                placeholder="||||||||||||||||" 
                 type={showPassword ? "text" : "password"} 
                 required
                 value={password}

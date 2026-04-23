@@ -188,8 +188,8 @@ export default function BudgetPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-        {renderBudgetSection('🎯 Target Pemasukan', 'pemasukan')}
-        {renderBudgetSection('🛒 Batas Pengeluaran', 'pengeluaran')}
+        {renderBudgetSection('Target Target Pemasukan', 'pemasukan')}
+        {renderBudgetSection('Budget Batas Pengeluaran', 'pengeluaran')}
       </div>
 
       {!loading && budgets.length === 0 && (

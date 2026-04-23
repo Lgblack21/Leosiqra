@@ -75,10 +75,12 @@ export default function PajakCenterPage() {
   }, [accounts, investments]);
 
   const daftarUtang = useMemo(() => {
-    return accounts.filter(acc => acc.type === 'Kartu Kredit' && acc.balance < 0).map(acc => ({
-      name: acc.name,
-      value: Math.abs(acc.balance)
-    }));
+    return accounts
+      .filter((acc) => (acc.type === 'Kartu Kredit' || acc.type === 'Credit Card') && acc.balance < 0)
+      .map((acc) => ({
+        name: acc.name,
+        value: Math.abs(acc.balance)
+      }));
   }, [accounts]);
 
   const totalHarta = daftarHarta.reduce((s, h) => s + h.value, 0);

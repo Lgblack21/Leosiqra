@@ -155,13 +155,13 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
                     : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
                 }`}
               >
-                {s === 'lunas' ? '✓ Lunas' : '⏳ Belum Lunas'}
+                {s === 'lunas' ? 'Lunas' : 'Belum Lunas'}
               </button>
             ))}
           </div>
           {formData.paymentStatus === 'lunas' && (
             <p className="text-[10px] font-bold text-emerald-600 pl-1 mt-1">
-              ✓ {formData.debtType === 'hutang' ? 'Pengeluaran' : 'Pemasukan'} akan otomatis tercatat saat disimpan.
+              Status lunas akan otomatis mencatat {formData.debtType === 'hutang' ? 'pengeluaran' : 'pemasukan'} saat disimpan.
             </p>
           )}
         </div>
@@ -192,7 +192,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
               <div>
                 <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">Terkonversi ke IDR</p>
                 <p className="text-sm font-black text-slate-900 leading-none">
-                  ≈ {formatCurrency(convertedAmount, 'IDR')}
+                  ~ {formatCurrency(convertedAmount, 'IDR')}
                 </p>
               </div>
             </div>

@@ -206,7 +206,7 @@ export default function SahamPage() {
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.category || 'Saham'}</span></td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap">
                       <span className="text-xs font-bold text-slate-600">
-                        {accounts.find(a => a.id === inv.accountId)?.name || inv.accountId || '—'}
+                        {accounts.find(a => a.id === inv.accountId)?.name || inv.accountId || '-'}
                       </span>
                     </td>
                     <td className="px-4 md:px-6 py-5 text-center">

@@ -48,7 +48,7 @@ export const CategorySelect = ({ label, value, type, onChange, onSubCategoryChan
     return () => unsub();
   }, []);
 
-  // Group categories by main category name — show unique main category names
+  // Group categories by main category name - show unique main category names
   const uniqueMainCategories = Array.from(
     new Map(categories.map(c => [c.category, c])).values()
   );

@@ -142,7 +142,7 @@ export const SavingsModal = ({ userId, isOpen, onClose }: SavingsModalProps) => 
               <div>
                 <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">Terkonversi ke IDR</p>
                 <p className="text-sm font-black text-slate-900 leading-none">
-                  ≈ {formatCurrency(convertedAmount, 'IDR')}
+                  ~ {formatCurrency(convertedAmount, 'IDR')}
                 </p>
               </div>
             </div>

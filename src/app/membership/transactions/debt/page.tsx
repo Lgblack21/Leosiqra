@@ -29,6 +29,7 @@ export default function DebtPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const unsubRef = useRef<(() => void) | null>(null);
+  const unsubAccRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -36,7 +37,8 @@ export default function DebtPage() {
       if (u) {
         // Fetch accounts for lookup
         const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
-        onSnapshot(qAcc, (snap) => {
+        if (unsubAccRef.current) unsubAccRef.current();
+        unsubAccRef.current = onSnapshot(qAcc, (snap) => {
           setAccounts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account)));
         });
 
@@ -62,14 +64,22 @@ export default function DebtPage() {
           }));
           setLoading(false);
         }, (err) => { console.error(err); setLoading(false); });
-      } else { setTransactions([]); setLoading(false); }
+      } else {
+        setTransactions([]);
+        setAccounts([]);
+        setLoading(false);
+      }
     });
-    return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
+    return () => {
+      unsub();
+      if (unsubRef.current) unsubRef.current();
+      if (unsubAccRef.current) unsubAccRef.current();
+    };
   }, [selectedMonth, selectedYear]);
 
   const getAccountName = (id: string) => {
     const acc = accounts.find(a => a.id === id);
-    return acc ? acc.name : id || '—';
+    return acc ? acc.name : id || '-';
   };
 
   const filtered = useMemo(() => {
@@ -225,7 +235,7 @@ export default function DebtPage() {
                         <p className="text-sm font-bold text-slate-500">{trx.displayDate || formatDate(trx.date)}</p>
                       </td>
                       <td className="px-4 md:px-6 py-4 md:py-6">
-                        <p className="text-sm font-bold text-slate-700">{trx.note || '—'}</p>
+                        <p className="text-sm font-bold text-slate-700">{trx.note || '-'}</p>
                       </td>
                       <td className="px-4 md:px-6 py-4 md:py-6 text-center whitespace-nowrap">
                         <span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{trx.currency || 'IDR'}</span>
@@ -244,11 +254,11 @@ export default function DebtPage() {
                         <span className={`px-3 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest ${
                           trx.paymentStatus === 'lunas' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
                         }`}>
-                          {trx.paymentStatus === 'lunas' ? '✓ Lunas' : '⏳ Belum'}
+                          {trx.paymentStatus === 'lunas' ? 'Lunas' : 'Belum Lunas'}
                         </span>
                       </td>
                       <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap text-sm font-bold text-slate-600">{getAccountName(trx.accountId || '')}</td>
-                      <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap text-sm font-bold text-slate-600">{trx.lenderName || '—'}</td>
+                      <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap text-sm font-bold text-slate-600">{trx.lenderName || '-'}</td>
                       <td className="px-4 md:px-6 py-4 md:py-6 text-center whitespace-nowrap text-sm font-bold text-slate-600">{trx.installmentTenor || 0} bln</td>
                       <td className="px-4 md:px-6 py-4 md:py-6 text-right whitespace-nowrap text-sm font-bold text-slate-600">{formatRp(trx.monthlyInterest || 0)}</td>
                       <td className="px-4 md:px-6 py-4 md:py-6 text-right whitespace-nowrap text-sm font-bold text-slate-600">{formatRp(trx.totalInterest || 0)}</td>
