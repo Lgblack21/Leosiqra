@@ -154,23 +154,50 @@ const sha256Hex = async (value: string) => {
     .join("");
 };
 
-const createSessionToken = async (env: Env, sessionId: string) => {
+const signSession = async (env: Env, sessionId: string) => {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(env.SESSION_SECRET),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(sessionId));
+  return toBase64Url(signature);
+};
+
+// Tanda tangan lama (SHA-256 non-HMAC) — hanya untuk memverifikasi token yang sudah beredar.
+const legacySessionSignature = async (env: Env, sessionId: string) => {
   const payload = `${sessionId}.${env.SESSION_SECRET}`;
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(payload));
-  return `${sessionId}.${toBase64Url(digest)}`;
+  return toBase64Url(digest);
+};
+
+const createSessionToken = async (env: Env, sessionId: string) =>
+  `${sessionId}.${await signSession(env, sessionId)}`;
+
+const constantTimeEqual = (a: string, b: string) => {
+  if (a.length !== b.length) {
+    return false;
+  }
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return mismatch === 0;
 };
 
 const sessionCookie = (env: Env, token: string, maxAgeSeconds: number) =>
   `${env.SESSION_COOKIE_NAME}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAgeSeconds}`;
 
 const roleCookie = (env: Env, role: AppUser["role"], maxAgeSeconds: number) =>
-  `${env.SESSION_COOKIE_NAME}_role=${role}; Path=/; Secure; SameSite=Lax; Max-Age=${maxAgeSeconds}`;
+  `${env.SESSION_COOKIE_NAME}_role=${role}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAgeSeconds}`;
 
 const clearSessionCookie = (env: Env) =>
   `${env.SESSION_COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
 
 const clearRoleCookie = (env: Env) =>
-  `${env.SESSION_COOKIE_NAME}_role=; Path=/; Secure; SameSite=Lax; Max-Age=0`;
+  `${env.SESSION_COOKIE_NAME}_role=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
 
 const getCookieValue = (request: Request, name: string) => {
   const cookieHeader = request.headers.get("cookie");
@@ -188,9 +215,37 @@ const getCookieValue = (request: Request, name: string) => {
   return null;
 };
 
-const hashPassword = async (password: string) => sha256Hex(`leosiqra::${password}`);
+const PBKDF2_ITERATIONS = 210000;
 
-const verifyLegacyPbkdf2 = async (password: string, passwordHash: string) => {
+// Hash password baru dengan PBKDF2 + salt acak per-user (format: pbkdf2$iter$salt$hash).
+const hashPassword = async (password: string) => {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(password),
+    { name: "PBKDF2" },
+    false,
+    ["deriveBits"]
+  );
+
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      hash: "SHA-256",
+      salt,
+      iterations: PBKDF2_ITERATIONS,
+    },
+    keyMaterial,
+    256
+  );
+
+  return `pbkdf2$${PBKDF2_ITERATIONS}$${toBase64Url(salt.buffer)}$${toBase64Url(derivedBits)}`;
+};
+
+// Hash SHA-256 lama (tanpa salt) — hanya untuk memverifikasi akun lama & memicu rehash.
+const legacySha256Hash = async (password: string) => sha256Hex(`leosiqra::${password}`);
+
+const verifyPbkdf2 = async (password: string, passwordHash: string) => {
   const [scheme, iterationsRaw, saltB64Url, expectedB64Url] = passwordHash.split("$");
   if (scheme !== "pbkdf2" || !iterationsRaw || !saltB64Url || !expectedB64Url) {
     return false;
@@ -224,17 +279,14 @@ const verifyLegacyPbkdf2 = async (password: string, passwordHash: string) => {
 };
 
 const verifyPassword = async (password: string, passwordHash: string) => {
-  const hashed = await hashPassword(password);
-  if (hashed === passwordHash) {
-    return { ok: true, needsRehash: false };
-  }
-
   if (passwordHash.startsWith("pbkdf2$")) {
-    const ok = await verifyLegacyPbkdf2(password, passwordHash);
-    return { ok, needsRehash: ok };
+    const ok = await verifyPbkdf2(password, passwordHash);
+    return { ok, needsRehash: false };
   }
 
-  return { ok: false, needsRehash: false };
+  // Hash lama berbasis SHA-256: verifikasi lalu tandai untuk di-rehash ke PBKDF2.
+  const ok = (await legacySha256Hash(password)) === passwordHash;
+  return { ok, needsRehash: ok };
 };
 
 const createSession = async (env: Env, request: Request, user: AppUser) => {
@@ -288,8 +340,12 @@ const readSession = async (env: Env, request: Request) => {
     return null;
   }
 
-  const expected = await createSessionToken(env, sessionId);
-  if (expected !== token) {
+  const expectedHmac = await signSession(env, sessionId);
+  const legacySignature = await legacySessionSignature(env, sessionId);
+  if (
+    !constantTimeEqual(providedSignature, expectedHmac) &&
+    !constantTimeEqual(providedSignature, legacySignature)
+  ) {
     return null;
   }
 
@@ -766,7 +822,8 @@ async function handleListTransactions(request: Request, env: Env) {
   }
 
   const url = new URL(request.url);
-  const limit = Math.min(Number(url.searchParams.get("limit") ?? "50"), 100);
+  const rawLimit = Number(url.searchParams.get("limit") ?? "50");
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 100) : 50;
   const rows = await env.DB.prepare(
     `SELECT *
        FROM transactions
@@ -1334,10 +1391,9 @@ async function handleUpdateMemberProfile(request: Request, env: Env) {
     ["username", "name"],
     ["phone", "whatsapp"],
     ["address", "whatsapp"],
-    ["plan", "plan"],
-    ["status", "status"],
-    ["expiredAt", "expired_at"],
-    ["expired_at", "expired_at"],
+    // CATATAN KEAMANAN: plan/status/expired_at sengaja TIDAK diizinkan di sini.
+    // Field billing hanya boleh diubah lewat alur admin (approve pembayaran)
+    // agar member tidak bisa mengaktifkan PRO sendiri tanpa membayar.
     ["totalWealth", "total_wealth"],
     ["total_wealth", "total_wealth"],
     ["totalIncome", "total_income"],
@@ -2109,7 +2165,8 @@ async function handleAdminLogs(request: Request, env: Env) {
   }
 
   const url = new URL(request.url);
-  const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? "20"), 1), 100);
+  const rawLimit = Number(url.searchParams.get("limit") ?? "20");
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 100) : 20;
   const rows = await env.DB.prepare(
     `SELECT id, admin_email, action, target, note, color, created_at
        FROM admin_logs
