@@ -1771,7 +1771,7 @@ async function handleCreateRecurring(request: Request, env: Env) {
   const payload = await parseJson<Record<string, unknown>>(request);
   const id = generateId();
   await env.DB.prepare(
-    `INSERT INTO recurring (id, user_id, name, type, category, account_id, amount, interval_value, next_date, note, status, created_at, updated_at)
+    `INSERT INTO recurring (id, user_id, name, type, category, account_id, amount, interval, next_date, note, status, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
@@ -1779,11 +1779,11 @@ async function handleCreateRecurring(request: Request, env: Env) {
       authResult.session.user.id,
       String(payload.name ?? ""),
       String(payload.type ?? "Pengeluaran"),
-      payload.category ?? null,
-      pickPayloadValue(payload, "account_id", "accountId") ?? null,
+      String(payload.category ?? ""),
+      String(pickPayloadValue(payload, "account_id", "accountId") ?? ""),
       Number(payload.amount ?? 0),
-      pickPayloadValue(payload, "interval_value", "interval") ?? "Bulanan",
-      toIsoIfDateLike(pickPayloadValue(payload, "next_date", "nextDate")),
+      String(pickPayloadValue(payload, "interval_value", "interval") ?? "Bulanan"),
+      toIsoIfDateLike(pickPayloadValue(payload, "next_date", "nextDate")) ?? nowIso(),
       payload.note ?? null,
       payload.status ?? "ACTIVE",
       nowIso(),
@@ -1807,7 +1807,7 @@ async function handleUpdateRecurring(request: Request, env: Env, recurringId: st
   }
   if (payload.amount !== undefined) updates.set("amount", payload.amount);
   if (payload.interval_value !== undefined || payload.interval !== undefined) {
-    updates.set("interval_value", pickPayloadValue(payload, "interval_value", "interval"));
+    updates.set("interval", pickPayloadValue(payload, "interval_value", "interval"));
   }
   if (payload.next_date !== undefined || payload.nextDate !== undefined) {
     updates.set("next_date", toIsoIfDateLike(pickPayloadValue(payload, "next_date", "nextDate")));
