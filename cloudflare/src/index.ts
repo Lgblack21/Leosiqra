@@ -18,6 +18,8 @@ export interface Env {
   GEMINI_API_KEY?: string;
   AI_PROVIDER?: string;
   R2_PUBLIC_BASE_URL?: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
 }
 
 type AppUser = {
@@ -813,6 +815,161 @@ async function handleLogout(request: Request, env: Env) {
     { ok: true },
     [clearSessionCookie(env), clearRoleCookie(env)]
   );
+}
+
+const googleRedirectUri = (url: URL) => `${url.origin}/api/auth/google/callback`;
+
+const oauthStateCookie = (state: string) =>
+  `oauth_state=${state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`;
+
+const clearOauthStateCookie = () =>
+  `oauth_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
+
+async function handleGoogleStart(request: Request, env: Env) {
+  const url = new URL(request.url);
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+    return Response.redirect(
+      `${url.origin}/auth/login?error=${encodeURIComponent("Login Google belum dikonfigurasi.")}`,
+      302
+    );
+  }
+
+  const state = generateId();
+  const params = new URLSearchParams({
+    client_id: env.GOOGLE_CLIENT_ID,
+    redirect_uri: googleRedirectUri(url),
+    response_type: "code",
+    scope: "openid email profile",
+    state,
+    access_type: "online",
+    prompt: "select_account",
+  });
+
+  const headers = new Headers({
+    location: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`,
+  });
+  headers.append("set-cookie", oauthStateCookie(state));
+  return new Response(null, { status: 302, headers });
+}
+
+async function handleGoogleCallback(request: Request, env: Env) {
+  const url = new URL(request.url);
+  const failRedirect = (message: string) => {
+    const headers = new Headers({
+      location: `${url.origin}/auth/login?error=${encodeURIComponent(message)}`,
+    });
+    headers.append("set-cookie", clearOauthStateCookie());
+    return new Response(null, { status: 302, headers });
+  };
+
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+    return failRedirect("Login Google belum dikonfigurasi.");
+  }
+
+  const code = url.searchParams.get("code");
+  const state = url.searchParams.get("state");
+  const cookieState = getCookieValue(request, "oauth_state");
+  if (!code || !state || !cookieState || !constantTimeEqual(state, cookieState)) {
+    return failRedirect("Sesi login Google tidak valid. Silakan coba lagi.");
+  }
+
+  const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: env.GOOGLE_CLIENT_ID,
+      client_secret: env.GOOGLE_CLIENT_SECRET,
+      code,
+      grant_type: "authorization_code",
+      redirect_uri: googleRedirectUri(url),
+    }).toString(),
+  });
+  if (!tokenResponse.ok) {
+    return failRedirect("Gagal memverifikasi akun Google.");
+  }
+  const tokenData = (await tokenResponse.json()) as { access_token?: string };
+  if (!tokenData.access_token) {
+    return failRedirect("Token Google tidak ditemukan.");
+  }
+
+  const profileResponse = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
+    headers: { authorization: `Bearer ${tokenData.access_token}` },
+  });
+  if (!profileResponse.ok) {
+    return failRedirect("Gagal mengambil profil Google.");
+  }
+  const profile = (await profileResponse.json()) as {
+    email?: string;
+    email_verified?: boolean;
+    name?: string;
+    picture?: string;
+  };
+  if (!profile.email || profile.email_verified === false) {
+    return failRedirect("Email Google belum terverifikasi.");
+  }
+
+  const email = profile.email.toLowerCase();
+  let user = await env.DB.prepare(
+    `SELECT id, name, email, role, plan, status, whatsapp, two_factor_secret, photo_url
+       FROM users WHERE email = ?`
+  )
+    .bind(email)
+    .first<{
+      id: string;
+      name: string;
+      email: string;
+      role: "admin" | "user";
+      plan: "FREE" | "PRO";
+      status: "AKTIF" | "NONAKTIF" | "GUEST" | "PENDING";
+      whatsapp?: string | null;
+      two_factor_secret?: string | null;
+      photo_url?: string | null;
+    }>();
+
+  if (!user) {
+    const userId = generateId();
+    const displayName = profile.name?.trim() || email.split("@")[0];
+    // Sentinel hash: akun Google tidak punya password lokal (login password nonaktif).
+    await env.DB.prepare(
+      `INSERT INTO users (id, name, email, password_hash, photo_url, role, plan, status, currency_initialized)
+       VALUES (?, ?, ?, 'oauth$google', ?, 'user', 'FREE', 'GUEST', 0)`
+    )
+      .bind(userId, displayName, email, profile.picture ?? null)
+      .run();
+    user = {
+      id: userId,
+      name: displayName,
+      email,
+      role: "user",
+      plan: "FREE",
+      status: "GUEST",
+      whatsapp: null,
+      two_factor_secret: null,
+      photo_url: profile.picture ?? null,
+    };
+  } else if (profile.picture && !user.photo_url) {
+    await env.DB.prepare("UPDATE users SET photo_url = ? WHERE id = ?")
+      .bind(profile.picture, user.id)
+      .run();
+  }
+
+  const session = await createSession(env, request, {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    plan: user.plan,
+    status: user.status,
+    whatsapp: user.whatsapp,
+    two_factor_secret: user.two_factor_secret,
+  });
+
+  const destination = user.role === "admin" ? "/admin" : "/membership/dashboard";
+  const headers = new Headers({ location: `${url.origin}${destination}` });
+  headers.append("set-cookie", clearOauthStateCookie());
+  headers.append("set-cookie", sessionCookie(env, session.token, 60 * 60 * 24 * 30));
+  headers.append("set-cookie", roleCookie(env, user.role, 60 * 60 * 24 * 30));
+  return new Response(null, { status: 302, headers });
 }
 
 async function handleListTransactions(request: Request, env: Env) {
@@ -2366,6 +2523,14 @@ const worker = {
 
       if (url.pathname === "/api/auth/logout" && request.method === "POST") {
         return await handleLogout(request, env);
+      }
+
+      if (url.pathname === "/api/auth/google" && request.method === "GET") {
+        return await handleGoogleStart(request, env);
+      }
+
+      if (url.pathname === "/api/auth/google/callback" && request.method === "GET") {
+        return await handleGoogleCallback(request, env);
       }
 
       if (url.pathname === "/api/member/transactions" && request.method === "GET") {
