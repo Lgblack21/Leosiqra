@@ -182,7 +182,7 @@ export default function LoginPage() {
             <div className="relative">
               <Input 
                 label="Password" 
-                placeholder="||||||||||||||||" 
+                placeholder="Masukkan sandi Anda"
                 type={showPassword ? "text" : "password"} 
                 required
                 value={password}
