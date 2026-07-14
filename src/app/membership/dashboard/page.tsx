@@ -153,13 +153,18 @@ export default function MonthlyDashboard() {
     <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 max-w-[1400px]">
 
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] border border-slate-50 shadow-sm">
-        <div>
-          <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Dashboard Bulanan</h2>
-          <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Laporan Periode {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth))}</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-br from-white to-indigo-50/40 p-6 rounded-[24px] border border-slate-100 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-navy to-indigo-700 text-white items-center justify-center shadow-lg shadow-indigo-600/20 shrink-0">
+            <LayoutDashboard size={22} />
+          </div>
+          <div>
+            <h2 className="text-xl md:text-2xl font-serif font-black text-slate-900 tracking-tight leading-tight">Dashboard Bulanan</h2>
+            <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Laporan Periode {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth))}</p>
+          </div>
         </div>
 
-          <MonthPicker 
+          <MonthPicker
             value={{ month: selectedMonth, year: selectedYear }}
             onChange={({ month, year }) => {
               setSelectedMonth(month);
@@ -170,12 +175,12 @@ export default function MonthlyDashboard() {
 
       {/* Top Cards (3 Cols) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-        {/* Card 1: Total Kekayaan */}
-        <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm relative overflow-hidden">
-          <div className="absolute -right-6 -top-6 w-32 h-32 bg-slate-50 rounded-full blur-3xl opacity-50" />
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Saldo Bersih</p>
-          <h3 className={`text-xl md:text-3xl font-black mb-4 tracking-tight ${netBalance >= 0 ? 'text-slate-900' : 'text-rose-500'}`}>{formatRp(netBalance)}</h3>
-          <div className="flex items-center gap-1.5 text-blue-500 text-[10px] md:text-xs font-bold">
+        {/* Card 1: Saldo Bersih (kartu utama) */}
+        <div className="bg-gradient-to-br from-navy to-indigo-700 text-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-indigo-900/10 shadow-xl shadow-indigo-600/15 relative overflow-hidden">
+          <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
+          <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest mb-3">Saldo Bersih</p>
+          <h3 className={`text-2xl md:text-3xl font-black mb-4 tracking-tight ${netBalance >= 0 ? 'text-white' : 'text-rose-300'}`}>{formatRp(netBalance)}</h3>
+          <div className="flex items-center gap-1.5 text-indigo-200 text-[10px] md:text-xs font-bold">
             <TrendingUp size={14} />
             <span>{transactions.length} transaksi tercatat</span>
           </div>
