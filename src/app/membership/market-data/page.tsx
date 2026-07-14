@@ -45,6 +45,7 @@ interface GoldData {
 }
 
 // Kode mata uang kripto yang bisa dikenali & dipetakan ke ID CoinGecko.
+// Catatan: ID CoinGecko untuk Holochain (HOT) adalah 'holotoken', bukan 'holochain'.
 const CRYPTO_ID_MAP: Record<string, string> = {
   BTC: 'bitcoin',
   ETH: 'ethereum',
@@ -54,18 +55,19 @@ const CRYPTO_ID_MAP: Record<string, string> = {
   XRP: 'ripple',
   DOT: 'polkadot',
   DOGE: 'dogecoin',
+  HOT: 'holotoken',
 };
 const CRYPTO_NAME_MAP: Record<string, string> = {
   bitcoin: 'Bitcoin', ethereum: 'Ethereum', solana: 'Solana', binancecoin: 'BNB',
-  cardano: 'Cardano', ripple: 'XRP', polkadot: 'Polkadot', dogecoin: 'Dogecoin',
+  cardano: 'Cardano', ripple: 'XRP', polkadot: 'Polkadot', dogecoin: 'Dogecoin', holotoken: 'Holochain',
 };
 const CRYPTO_SYMBOL_MAP: Record<string, string> = {
   bitcoin: 'BTC/USD', ethereum: 'ETH/USD', solana: 'SOL/USD', binancecoin: 'BNB/USD',
-  cardano: 'ADA/USD', ripple: 'XRP/USD', polkadot: 'DOT/USD', dogecoin: 'DOGE/USD',
+  cardano: 'ADA/USD', ripple: 'XRP/USD', polkadot: 'DOT/USD', dogecoin: 'DOGE/USD', holotoken: 'HOT/USD',
 };
 const CRYPTO_ICON_MAP: Record<string, string> = {
   bitcoin: 'BTC', ethereum: 'ETH', solana: 'SOL', binancecoin: 'BNB',
-  cardano: 'ADA', ripple: 'XRP', polkadot: 'DOT', dogecoin: 'DOGE',
+  cardano: 'ADA', ripple: 'XRP', polkadot: 'DOT', dogecoin: 'DOGE', holotoken: 'HOT',
 };
 
 // currencyService.getUserCurrencies tidak selalu memanggil balik saat gagal (shim
@@ -161,7 +163,7 @@ export default function MarketDataPage() {
         // Tetap gunakan top crypto sebagai default jika user tidak punya
         const targetIds = userCryptos.length > 0
           ? userCryptos.map(c => CRYPTO_ID_MAP[c.code.toUpperCase()])
-          : ['bitcoin', 'ethereum', 'solana'];
+          : ['bitcoin', 'ethereum', 'solana', 'holotoken'];
 
         // 2. Fetch crypto + emas (PAX Gold, dipatok 1:1 ke harga emas spot) sekaligus.
         const cryptoRes = await fetch(
@@ -411,7 +413,7 @@ export default function MarketDataPage() {
               </div>
               <div className="space-y-5">
                 {loading && !lastUpdated ? (
-                  [1, 2, 3].map(i => <div key={i} className="h-12 bg-slate-100 rounded-xl animate-pulse" />)
+                  [1, 2, 3, 4].map(i => <div key={i} className="h-12 bg-slate-100 rounded-xl animate-pulse" />)
                 ) : cryptoData.length === 0 ? (
                   <p className="text-xs font-bold text-slate-400 text-center py-6">Data kripto tidak tersedia saat ini.</p>
                 ) : cryptoData.map((item, i) => (
