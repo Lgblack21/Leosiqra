@@ -22,6 +22,7 @@ interface AddTransactionModalProps {
 export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionModalProps) => {
   const [type, setType] = useState<TransactionType>('pemasukan');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [rates, setRates] = useState<ExchangeRates | null>(null);
   const [convertedAmount, setConvertedAmount] = useState<number>(0);
@@ -42,6 +43,7 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
 
   useEffect(() => {
     if (isOpen && userId) {
+      setError('');
       accountService.getUserAccounts(userId).then(setAccounts).catch(console.error);
       exchangeRateService.getLatestRates().then(setRates).catch(console.error);
     }
@@ -65,10 +67,22 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setError('');
 
+    const amountNum = parseFloat(formData.amount);
+    if (!formData.category) {
+      setError('Kategori wajib dipilih.');
+      return;
+    }
+    if (!amountNum || amountNum <= 0) {
+      setError('Nominal harus lebih dari 0.');
+      return;
+    }
+
+    setLoading(true);
     try {
-      const amountNum = parseFloat(formData.amount);
+      // Penyimpanan inti — jika ini gagal, tidak ada apa pun yang tersimpan
+      // dan aman untuk user mencoba lagi.
       await transactionService.createTransaction({
         userId,
         type: type === 'pemasukan' || type === 'pengeluaran' ? type : 'pemasukan',
@@ -85,17 +99,23 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
         note: formData.note,
         status: 'VERIFIED'
       });
-      
-      await updateMemberTotals(userId, type, amountNum);
-      
-      // Update Account Balance
-      if (formData.accountId) {
-        const balanceChange = type === 'pemasukan' ? amountNum : -amountNum;
-        await accountService.updateAccountBalance(formData.accountId, balanceChange);
+
+      // Sinkronisasi lanjutan (ringkasan & saldo akun) bersifat non-fatal —
+      // transaksinya sendiri sudah tersimpan, jadi kegagalan di sini tidak
+      // boleh membuat modal terlihat "gagal total" dan memicu submit ulang
+      // yang bisa menghasilkan transaksi dobel.
+      try {
+        await updateMemberTotals(userId, type, amountNum);
+        if (formData.accountId) {
+          const balanceChange = type === 'pemasukan' ? amountNum : -amountNum;
+          await accountService.updateAccountBalance(formData.accountId, balanceChange);
+        }
+      } catch (syncErr) {
+        console.error('Transaksi tersimpan, tapi gagal sinkronisasi ringkasan/saldo:', syncErr);
       }
 
       onClose();
-      
+
       // Reset form
       setFormData({
         date: new Date().toISOString().split('T')[0],
@@ -111,6 +131,7 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
       });
     } catch (err) {
       console.error('Error adding transaction:', err);
+      setError(err instanceof Error ? err.message : 'Gagal menyimpan transaksi. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
@@ -134,6 +155,12 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
+          {error && (
+            <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-sm font-medium text-rose-600">
+              {error}
+            </div>
+          )}
+
           {/* Type Selector */}
           <div className="grid grid-cols-2 gap-3">
             {types.map((t) => {

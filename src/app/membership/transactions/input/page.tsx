@@ -1,20 +1,61 @@
 "use client";
 
-import { 
-  TrendingUp, 
-  Building2, 
-  Globe, 
-  Wallet, 
-  ShieldAlert, 
+import { useEffect, useMemo, useState } from 'react';
+import {
+  TrendingUp,
+  Building2,
+  Globe,
+  Wallet,
+  ShieldAlert,
   ArrowLeftRight,
   ChevronRight,
   Monitor
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import { useModal } from '@/context/ModalContext';
+import { auth } from '@/lib/cf-client';
+import { onAuthStateChanged } from '@/lib/cf-auth';
+import { transactionService, Transaction } from '@/lib/services/transactionService';
+import { useCountUp } from '@/lib/hooks/useCountUp';
+
+const isSameDay = (a: Date, b: Date) =>
+  a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
 export default function InputTransactionPage() {
   const { openModal } = useModal();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loadingSummary, setLoadingSummary] = useState(true);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      if (!u) {
+        setTransactions([]);
+        setLoadingSummary(false);
+        return;
+      }
+      transactionService
+        .getUserTransactions(u.uid)
+        .then(setTransactions)
+        .catch((err) => {
+          console.error('Gagal memuat ringkasan transaksi hari ini:', err);
+          setTransactions([]);
+        })
+        .finally(() => setLoadingSummary(false));
+    });
+    return () => unsub();
+  }, []);
+
+  const todayEntries = useMemo(() => {
+    const today = new Date();
+    return transactions.filter((t) => isSameDay(t.date, today));
+  }, [transactions]);
+
+  const todayVolume = useMemo(
+    () => todayEntries.reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
+    [todayEntries]
+  );
+
+  const animatedVolume = useCountUp(todayVolume);
 
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] pb-12">
@@ -175,11 +216,15 @@ export default function InputTransactionPage() {
             <div className="space-y-4">
               <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-50">
                 <span className="text-xs font-bold text-slate-500">Active Entries</span>
-                <span className="text-xs font-black text-slate-900">12 items</span>
+                <span className="text-xs font-black text-slate-900 tabular-nums">
+                  {loadingSummary ? '...' : `${todayEntries.length} item`}
+                </span>
               </div>
               <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-50">
                 <span className="text-xs font-bold text-slate-500">Total Volume</span>
-                <span className="text-xs font-black text-blue-600 tracking-tight">Rp 4.250.000</span>
+                <span className="text-xs font-black text-blue-600 tracking-tight tabular-nums">
+                  {loadingSummary ? '...' : formatCurrency(animatedVolume)}
+                </span>
               </div>
               <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-50">
                 <span className="text-xs font-bold text-slate-500">System Status</span>
