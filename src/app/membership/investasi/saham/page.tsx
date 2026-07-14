@@ -14,7 +14,6 @@ import {
 import { useModal } from '@/context/ModalContext';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LogoImage } from '@/components/ui/LogoImage';
-import { MonthPicker } from '@/components/ui/MonthPicker';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { auth, db } from '@/lib/cf-client';
@@ -28,27 +27,21 @@ export default function SahamPage() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showModal, setShowModal] = useState(false);
   const [editingInvestment, setEditingInvestment] = useState<Investment | undefined>(undefined);
   const { openModal } = useModal();
 
   const unsubRef = useRef<(() => void) | null>(null);
 
+  // Portofolio bersifat all-time: posisi lama tidak "hilang" saat berpindah bulan.
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
-        const startOfMonth = new Date(selectedYear, selectedMonth, 1);
-        const endOfMonth = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
-
         const q = query(
-          collection(db, 'investments'), 
+          collection(db, 'investments'),
           where('userId', '==', u.uid),
           where('type', '==', 'Saham'),
-          where('dateInvested', '>=', startOfMonth),
-          where('dateInvested', '<=', endOfMonth),
           orderBy('dateInvested', 'desc')
         );
         if (unsubRef.current) unsubRef.current();
@@ -56,21 +49,21 @@ export default function SahamPage() {
           setInvestments(snap.docs.map(doc => {
             const d = doc.data();
             return {
-              ...d, id: doc.id, 
+              ...d, id: doc.id,
               amountInvested: Number(d.amountInvested) || 0,
               currentValue: Number(d.currentValue) || 0,
-              dateInvested: d.dateInvested?.toDate?.() ?? new Date(), 
+              dateInvested: d.dateInvested?.toDate?.() ?? new Date(),
               createdAt: d.createdAt?.toDate?.() ?? new Date()
             } as Investment;
           }));
           setLoading(false);
         }, (err) => { console.error(err); setLoading(false); });
-        
+
         accountService.getUserAccounts(u.uid).then(setAccounts).catch(console.error);
       } else { setInvestments([]); setLoading(false); }
     });
     return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
-  }, [selectedMonth, selectedYear]);
+  }, []);
 
   const totalInvested = useMemo(() => investments.reduce((s, i) => s + i.amountInvested, 0), [investments]);
   const totalCurrent = useMemo(() => investments.reduce((s, i) => s + i.currentValue, 0), [investments]);
@@ -92,19 +85,12 @@ export default function SahamPage() {
         <div className="flex flex-col">
           <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Portofolio Saham</h1>
           <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-            Periode {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth))}
+            Seluruh posisi · {investments.length} aktif
           </p>
         </div>
-        
+
         <div className="flex flex-wrap items-center gap-3">
-          <MonthPicker 
-            value={{ month: selectedMonth, year: selectedYear }}
-            onChange={({ month, year }) => {
-              setSelectedMonth(month);
-              setSelectedYear(year);
-            }}
-          />
-          <button 
+          <button
             onClick={() => { setEditingInvestment(undefined); setShowModal(true); }}
             className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
           >

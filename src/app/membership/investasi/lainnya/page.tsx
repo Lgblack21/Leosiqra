@@ -18,7 +18,6 @@ import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged, User } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
 import { useRef } from 'react';
-import { MonthPicker } from '@/components/ui/MonthPicker';
 import { OtherInvestmentModal } from '@/components/modals/OtherInvestmentModal';
 
 export default function OtherInvestmentsPage() {
@@ -27,8 +26,6 @@ export default function OtherInvestmentsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showModal, setShowModal] = useState(false);
   const [editingInvestment, setEditingInvestment] = useState<Investment | undefined>(undefined);
   const [sellingInvestment, setSellingInvestment] = useState<Investment | undefined>(undefined);
@@ -85,12 +82,8 @@ export default function OtherInvestmentsPage() {
     return cat ? `${cat.category} - ${cat.subCategory}` : id || '-';
   };
 
-  const filteredInvestments = useMemo(() => {
-    return investments.filter(inv => {
-      const d = inv.dateInvested;
-      return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
-    });
-  }, [investments, selectedMonth, selectedYear]);
+  // Portofolio aset alternatif bersifat all-time: posisi lama tidak "hilang" saat berpindah bulan.
+  const filteredInvestments = investments;
 
   const totalInvested = useMemo(() => filteredInvestments.reduce((s, i) => s + i.amountInvested, 0), [filteredInvestments]);
   const totalCurrent = useMemo(() => filteredInvestments.reduce((s, i) => s + i.currentValue, 0), [filteredInvestments]);
@@ -114,18 +107,11 @@ export default function OtherInvestmentsPage() {
         <div>
           <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Investasi Lainnya</h1>
           <p className="text-[10px] md:text-sm font-medium text-slate-400 mt-1 max-w-xl">
-            Lacak aset investasi alternatif Anda untuk periode {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth))}.
+            Lacak seluruh aset investasi alternatif Anda.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <MonthPicker 
-            value={{ month: selectedMonth, year: selectedYear }}
-            onChange={({ month, year }) => {
-              setSelectedMonth(month);
-              setSelectedYear(year);
-            }}
-          />
-          <button 
+          <button
             onClick={() => { setEditingInvestment(undefined); setSellingInvestment(undefined); setShowModal(true); }}
             className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
           >
@@ -146,7 +132,7 @@ export default function OtherInvestmentsPage() {
           </div>
           <div>
             <h3 className="text-3xl font-black text-slate-900 leading-tight">Rp {formatRp(totalCurrent)}</h3>
-            <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">{filteredInvestments.length} transaksi di periode ini</p>
+            <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">{filteredInvestments.length} posisi aktif</p>
           </div>
           <Gem size={48} className="absolute -right-2 -bottom-2 text-purple-50/50 group-hover:scale-110 transition-transform -rotate-12" />
         </div>
@@ -173,7 +159,7 @@ export default function OtherInvestmentsPage() {
           <div className="p-12 text-center text-sm font-medium text-slate-400">Memuat aset...</div>
         ) : filteredInvestments.length === 0 ? (
           <div className="p-10">
-            <EmptyState title="Belum ada aset alternatif" description="Belum ada transaksi aset alternatif pada periode ini." icon={<Gem size={24} />} />
+            <EmptyState title="Belum ada aset alternatif" description="Belum ada transaksi aset alternatif yang tercatat." icon={<Gem size={24} />} />
           </div>
         ) : (
           <div className="overflow-x-auto custom-scrollbar">

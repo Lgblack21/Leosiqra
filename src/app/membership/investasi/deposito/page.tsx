@@ -15,7 +15,6 @@ import type { Category } from '@/lib/services/categoryService';
 import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged, User } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
-import { MonthPicker } from '@/components/ui/MonthPicker';
 import { cn } from '@/lib/utils';
 import { DepositModal } from '@/components/modals/DepositModal';
 
@@ -25,8 +24,6 @@ export default function DepositoPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showModal, setShowModal] = useState(false);
   const [editingInvestment, setEditingInvestment] = useState<Investment | undefined>(undefined);
 
@@ -84,12 +81,8 @@ export default function DepositoPage() {
     return cat ? `${cat.category} - ${cat.subCategory}` : id || '-';
   };
 
-  const filteredInvestments = useMemo(() => {
-    return investments.filter(inv => {
-      const d = inv.dateInvested;
-      return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
-    });
-  }, [investments, selectedMonth, selectedYear]);
+  // Portofolio deposito bersifat all-time: penempatan lama tidak "hilang" saat berpindah bulan.
+  const filteredInvestments = investments;
 
   const totalDeposited = useMemo(() => {
     return filteredInvestments.reduce((s, i) => {
@@ -111,18 +104,11 @@ export default function DepositoPage() {
         <div>
           <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Deposito</h1>
           <p className="text-[10px] md:text-sm font-medium text-slate-400 mt-1 max-w-xl">
-            Kelola penempatan dana deposito Anda untuk periode {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth))}.
+            Kelola seluruh penempatan dana deposito Anda.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <MonthPicker 
-            value={{ month: selectedMonth, year: selectedYear }}
-            onChange={({ month, year }) => {
-              setSelectedMonth(month);
-              setSelectedYear(year);
-            }}
-          />
-          <button 
+          <button
             onClick={() => { setEditingInvestment(undefined); setShowModal(true); }}
             className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
           >
@@ -143,7 +129,7 @@ export default function DepositoPage() {
           </div>
           <div>
             <h3 className="text-3xl font-black text-slate-900 leading-tight">Rp {formatRp(totalDeposited)}</h3>
-            <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">{filteredInvestments.length} penempatan di periode ini</p>
+            <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">{filteredInvestments.length} penempatan aktif</p>
           </div>
           <Banknote size={48} className="absolute -right-2 -bottom-2 text-orange-50/50 group-hover:scale-110 transition-transform -rotate-12" />
         </div>
@@ -169,7 +155,7 @@ export default function DepositoPage() {
           <div className="p-12 text-center text-sm font-medium text-slate-400">Memuat data deposito...</div>
         ) : filteredInvestments.length === 0 ? (
           <div className="p-10">
-            <EmptyState title="Belum ada deposito" description="Belum ada penempatan deposito pada periode ini." icon={<Banknote size={24} />} />
+            <EmptyState title="Belum ada deposito" description="Belum ada penempatan deposito yang tercatat." icon={<Banknote size={24} />} />
           </div>
         ) : (
           <div className="overflow-x-auto custom-scrollbar">
