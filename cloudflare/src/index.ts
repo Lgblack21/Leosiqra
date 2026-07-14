@@ -217,7 +217,8 @@ const getCookieValue = (request: Request, name: string) => {
   return null;
 };
 
-const PBKDF2_ITERATIONS = 210000;
+// Cloudflare Workers membatasi PBKDF2 maksimal 100.000 iterasi.
+const PBKDF2_ITERATIONS = 100000;
 
 // Hash password baru dengan PBKDF2 + salt acak per-user (format: pbkdf2$iter$salt$hash).
 const hashPassword = async (password: string) => {
