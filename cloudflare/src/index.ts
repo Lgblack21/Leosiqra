@@ -1878,10 +1878,10 @@ async function handleCreateSaving(request: Request, env: Env) {
       Number(payload.amount ?? 0),
       Number(payload.amount_idr ?? payload.amountIDR ?? payload.amount ?? 0),
       String(payload.currency ?? "IDR"),
-      payload.category ?? null,
+      String(payload.category ?? ""),
       pickPayloadValue(payload, "sub_category", "subCategory") ?? null,
-      pickPayloadValue(payload, "from_account", "fromAccount") ?? null,
-      pickPayloadValue(payload, "to_goal", "toGoal") ?? null,
+      String(pickPayloadValue(payload, "from_account", "fromAccount") ?? ""),
+      String(pickPayloadValue(payload, "to_goal", "toGoal") ?? ""),
       toIsoIfDateLike(payload.date) ?? nowIso(),
       payload.display_date ?? payload.displayDate ?? nowIso(),
       nowIso(),
@@ -1909,27 +1909,32 @@ async function handleCreateMemberPayment(request: Request, env: Env) {
   const payload = await parseJson<Record<string, unknown>>(request);
 
   const packagePayload = (payload.package as Record<string, unknown> | undefined) ?? {};
+  // Skema produksi menyimpan detail paket + metode dalam satu kolom package_json.
+  const packageJson = JSON.stringify({
+    id: packagePayload.id ?? payload.package_id ?? null,
+    name: packagePayload.name ?? payload.package_name ?? null,
+    durationMonths: Number(packagePayload.durationMonths ?? payload.package_duration_months ?? 1),
+    method: payload.method ?? "Bank Transfer",
+    ref: payload.ref ?? null,
+  });
   const id = generateId();
   await env.DB.prepare(
     `INSERT INTO payments (
-      id, user_id, user_email, user_name, user_photo_url, method, ref, package_id, package_name,
-      package_duration_months, amount, note, proof_image_url, status, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      id, user_id, user_name, user_email, user_whatsapp, user_photo_url, amount,
+      package_json, proof_image_url, note, status, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       id,
       authResult.session.user.id,
-      String(payload.user_email ?? payload.userEmail ?? authResult.session.user.email),
       String(payload.user_name ?? payload.userName ?? authResult.session.user.name),
+      String(payload.user_email ?? payload.userEmail ?? authResult.session.user.email),
+      payload.user_whatsapp ?? payload.userWhatsapp ?? authResult.session.user.whatsapp ?? null,
       payload.user_photo_url ?? payload.userPhotoURL ?? null,
-      payload.method ?? "Bank Transfer",
-      payload.ref ?? null,
-      packagePayload.id ?? payload.package_id ?? null,
-      packagePayload.name ?? payload.package_name ?? null,
-      Number(packagePayload.durationMonths ?? payload.package_duration_months ?? 1),
       Number(payload.amount ?? 0),
-      payload.note ?? null,
+      packageJson,
       payload.proof_image_url ?? payload.proofImageUrl ?? null,
+      payload.note ?? null,
       payload.status ?? "MENUNGGU",
       nowIso(),
       nowIso()
@@ -2244,7 +2249,7 @@ async function handleAdminPaymentById(request: Request, env: Env, paymentId: str
   }
 
   const payment = await env.DB.prepare(
-    `SELECT id, user_id, user_email, user_name, package_duration_months
+    `SELECT id, user_id, user_email, user_name, package_json
        FROM payments
       WHERE id = ?`
   )
@@ -2254,7 +2259,7 @@ async function handleAdminPaymentById(request: Request, env: Env, paymentId: str
       user_id: string;
       user_email: string;
       user_name: string;
-      package_duration_months: number | null;
+      package_json: string | null;
     }>();
 
   if (!payment) {
@@ -2275,10 +2280,13 @@ async function handleAdminPaymentById(request: Request, env: Env, paymentId: str
       currentUser?.expired_at && new Date(currentUser.expired_at).getTime() > Date.now()
         ? new Date(currentUser.expired_at)
         : now;
-    const monthsToAdd =
-      payment.package_duration_months && payment.package_duration_months > 0
-        ? payment.package_duration_months
-        : 1;
+    let packageMonths = 1;
+    try {
+      packageMonths = Number(JSON.parse(payment.package_json ?? "{}").durationMonths) || 1;
+    } catch {
+      packageMonths = 1;
+    }
+    const monthsToAdd = packageMonths > 0 ? packageMonths : 1;
     const nextExpired = new Date(baseDate);
     nextExpired.setMonth(nextExpired.getMonth() + monthsToAdd);
 
