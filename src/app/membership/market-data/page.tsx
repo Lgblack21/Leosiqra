@@ -1,19 +1,21 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  RefreshCw, 
-  ArrowRight, 
-  TrendingUp, 
-  TrendingDown, 
+import {
+  RefreshCw,
+  ArrowRight,
+  TrendingUp,
+  TrendingDown,
   Clock,
   Globe,
   Coins,
-  BarChart3
+  BarChart3,
+  AlertCircle
 } from 'lucide-react';
 import { exchangeRateService } from '@/lib/services/exchangeRateService';
 import { currencyService, Currency } from '@/lib/services/currencyService';
 import { auth } from '@/lib/cf-client';
+import { useCountUp } from '@/lib/hooks/useCountUp';
 
 interface CryptoData {
   id: string;
@@ -34,14 +36,53 @@ interface ForexRate {
   pair: string;
   label: string;
   rate: number;
-  change: number;
 }
+
+interface GoldData {
+  price_usd: number;
+  price_idr: number;
+  change_24h: number;
+}
+
+// Kode mata uang kripto yang bisa dikenali & dipetakan ke ID CoinGecko.
+const CRYPTO_ID_MAP: Record<string, string> = {
+  BTC: 'bitcoin',
+  ETH: 'ethereum',
+  SOL: 'solana',
+  BNB: 'binancecoin',
+  ADA: 'cardano',
+  XRP: 'ripple',
+  DOT: 'polkadot',
+  DOGE: 'dogecoin',
+};
+const CRYPTO_NAME_MAP: Record<string, string> = {
+  bitcoin: 'Bitcoin', ethereum: 'Ethereum', solana: 'Solana', binancecoin: 'BNB',
+  cardano: 'Cardano', ripple: 'XRP', polkadot: 'Polkadot', dogecoin: 'Dogecoin',
+};
+const CRYPTO_SYMBOL_MAP: Record<string, string> = {
+  bitcoin: 'BTC/USD', ethereum: 'ETH/USD', solana: 'SOL/USD', binancecoin: 'BNB/USD',
+  cardano: 'ADA/USD', ripple: 'XRP/USD', polkadot: 'DOT/USD', dogecoin: 'DOGE/USD',
+};
+const CRYPTO_ICON_MAP: Record<string, string> = {
+  bitcoin: 'BTC', ethereum: 'ETH', solana: 'SOL', binancecoin: 'BNB',
+  cardano: 'ADA', ripple: 'XRP', polkadot: 'DOT', dogecoin: 'DOGE',
+};
+
+// currencyService.getUserCurrencies tidak selalu memanggil balik saat gagal (shim
+// menelan error jika tidak ada onError), jadi promise pembungkusnya bisa
+// menggantung selamanya. Beri batas waktu agar halaman tidak macet loading.
+const withTimeout = <T,>(promise: Promise<T>, ms: number, fallback: T): Promise<T> =>
+  Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
 
 export default function MarketDataPage() {
   const [cryptoData, setCryptoData] = useState<CryptoData[]>([]);
   const [exchangeRates, setExchangeRates] = useState<ExchangeRate[]>([]);
   const [forexRates, setForexRates] = useState<ForexRate[]>([]);
   const [usdIdrRate, setUsdIdrRate] = useState<number>(0);
+  const [gold, setGold] = useState<GoldData | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,24 +91,28 @@ export default function MarketDataPage() {
     setLoading(true);
     setError(null);
     try {
-      // 0. Get User Currencies
+      // 0. Get User Currencies (dibatasi waktu — lihat catatan withTimeout di atas)
       const currentUser = auth.currentUser;
       let currentCurs: Currency[] = [];
       if (currentUser) {
-        currentCurs = await new Promise<Currency[]>((resolve) => {
-          const unsub = currencyService.getUserCurrencies(currentUser.uid, (data) => {
-            unsub();
-            resolve(data);
-          });
-        });
+        currentCurs = await withTimeout(
+          new Promise<Currency[]>((resolve) => {
+            const unsub = currencyService.getUserCurrencies(currentUser.uid, (data) => {
+              unsub();
+              resolve(data);
+            });
+          }),
+          6000,
+          []
+        );
       }
 
       // 1. Fetch Exchange Rates using our new service
       const rates = await exchangeRateService.getLatestRates();
-      
+
       if (Object.keys(rates).length > 0) {
         const idrRate = rates.IDR || 1;
-        
+
         // --- DINAMISASI EXCHANGE RATE TABLE ---
         const mappedExchange: ExchangeRate[] = currentCurs
           .filter(c => c.code !== 'IDR')
@@ -76,7 +121,7 @@ export default function MarketDataPage() {
             to: 'Indonesian Rupiah (IDR)',
             rate: idrRate / (rates[c.code] || 1)
           }));
-        
+
         if (mappedExchange.length === 0) {
           mappedExchange.push(
             { from: 'United States Dollar (USD)', to: 'Indonesian Rupiah (IDR)', rate: idrRate },
@@ -95,59 +140,52 @@ export default function MarketDataPage() {
           .map(c => ({
             pair: `${c.code}/USD`,
             label: `${c.name} / US Dollar`,
-            rate: 1 / (rates[c.code] || 1),
-            change: 0
+            rate: 1 / (rates[c.code] || 1)
           }));
-        
+
         if (mappedForex.length === 0) {
           mappedForex.push(
-            { pair: 'EUR/USD', label: 'Euro / US Dollar', rate: 1 / (rates.EUR || 1), change: 0 },
-            { pair: 'GBP/USD', label: 'Pound / US Dollar', rate: 1 / (rates.GBP || 1), change: 0 },
-            { pair: 'AUD/USD', label: 'Aussie / US Dollar', rate: 1 / (rates.AUD || 1), change: 0 },
+            { pair: 'EUR/USD', label: 'Euro / US Dollar', rate: 1 / (rates.EUR || 1) },
+            { pair: 'GBP/USD', label: 'Pound / US Dollar', rate: 1 / (rates.GBP || 1) },
+            { pair: 'AUD/USD', label: 'Aussie / US Dollar', rate: 1 / (rates.AUD || 1) },
           );
         }
         // Always add USD/IDR as a reference
-        mappedForex.push({ pair: 'USD/IDR', label: 'US Dollar / Rupiah', rate: idrRate, change: 0 });
+        mappedForex.push({ pair: 'USD/IDR', label: 'US Dollar / Rupiah', rate: idrRate });
         setForexRates(mappedForex);
 
         // --- DINAMISASI CRYPTOCURRENCY CARD ---
         // Mencoba mendeteksi jika user punya mata uang crypto di list-nya
-        const cryptoKeywords = ['BTC', 'ETH', 'SOL', 'BNB', 'ADA', 'XRP', 'DOT', 'DOGE'];
-        const userCryptos = currentCurs.filter(c => cryptoKeywords.includes(c.code.toUpperCase()));
-        
+        const userCryptos = currentCurs.filter(c => CRYPTO_ID_MAP[c.code.toUpperCase()]);
+
         // Tetap gunakan top crypto sebagai default jika user tidak punya
-        const targetIds = userCryptos.length > 0 
-          ? userCryptos.map(c => {
-              if (c.code === 'BTC') return 'bitcoin';
-              if (c.code === 'ETH') return 'ethereum';
-              if (c.code === 'SOL') return 'solana';
-              if (c.code === 'BNB') return 'binancecoin';
-              if (c.code === 'ADA') return 'cardano';
-              return '';
-            }).filter(id => id !== '')
+        const targetIds = userCryptos.length > 0
+          ? userCryptos.map(c => CRYPTO_ID_MAP[c.code.toUpperCase()])
           : ['bitcoin', 'ethereum', 'solana'];
 
-        if (targetIds.length > 0) {
-          const cryptoRes = await fetch(
-            `https://api.coingecko.com/api/v3/simple/price?ids=${targetIds.join(',')}&vs_currencies=usd&include_24hr_change=true`
-          );
-          if (cryptoRes.ok) {
-            const data = await cryptoRes.json();
-            const mappedCrypto: CryptoData[] = targetIds.map(id => {
-              const nameMap: Record<string, string> = { bitcoin: 'Bitcoin', ethereum: 'Ethereum', solana: 'Solana', binancecoin: 'BNB', cardano: 'Cardano' };
-              const symbolMap: Record<string, string> = { bitcoin: 'BTC/USD', ethereum: 'ETH/USD', solana: 'SOL/USD', binancecoin: 'BNB/USD', cardano: 'ADA/USD' };
-              const iconMap: Record<string, string> = { bitcoin: 'BTC', ethereum: 'ETH', solana: 'SOL', binancecoin: 'BNB', cardano: 'ADA' };
-              
-              return {
-                id,
-                name: nameMap[id] || id,
-                symbol: symbolMap[id] || id.toUpperCase(),
-                current_price: data[id]?.usd || 0,
-                price_change_percentage_24h: data[id]?.usd_24h_change || 0,
-                icon: iconMap[id] || 'C'
-              };
+        // 2. Fetch crypto + emas (PAX Gold, dipatok 1:1 ke harga emas spot) sekaligus.
+        const cryptoRes = await fetch(
+          `https://api.coingecko.com/api/v3/simple/price?ids=${[...targetIds, 'pax-gold'].join(',')}&vs_currencies=usd&include_24hr_change=true`
+        );
+        if (cryptoRes.ok) {
+          const data = await cryptoRes.json();
+          const mappedCrypto: CryptoData[] = targetIds.map(id => ({
+            id,
+            name: CRYPTO_NAME_MAP[id] || id,
+            symbol: CRYPTO_SYMBOL_MAP[id] || id.toUpperCase(),
+            current_price: data[id]?.usd || 0,
+            price_change_percentage_24h: data[id]?.usd_24h_change || 0,
+            icon: CRYPTO_ICON_MAP[id] || 'C'
+          }));
+          setCryptoData(mappedCrypto);
+
+          const goldUsd = data['pax-gold']?.usd || 0;
+          if (goldUsd > 0) {
+            setGold({
+              price_usd: goldUsd,
+              price_idr: goldUsd * idrRate,
+              change_24h: data['pax-gold']?.usd_24h_change || 0,
             });
-            setCryptoData(mappedCrypto);
           }
         }
       }
@@ -177,14 +215,24 @@ export default function MarketDataPage() {
 
   const formatTime = (d: Date) => d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
+  // Angka ringkasan dianimasikan naik/turun secara halus tiap kali data diperbarui.
+  const animatedUsdIdr = useCountUp(usdIdrRate);
+  const animatedBtc = useCountUp(cryptoData[0]?.current_price ?? 0);
+  const animatedGoldIdr = useCountUp(gold?.price_idr ?? 0);
+
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1240px] mb-20">
-      
+
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">Market Data</h1>
-          <p className="text-[11px] md:text-sm font-medium text-slate-500 mt-2 leading-relaxed">Data pasar real-time - kurs, crypto, dan komoditas diperbarui otomatis setiap menit.</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-br from-white to-indigo-50/40 p-6 rounded-[24px] border border-slate-100 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-navy to-indigo-700 text-white items-center justify-center shadow-lg shadow-indigo-600/20 shrink-0">
+            <Globe size={22} />
+          </div>
+          <div>
+            <h1 className="text-xl md:text-2xl font-serif font-black text-slate-900 tracking-tight leading-tight">Market Data</h1>
+            <p className="text-[11px] md:text-sm font-medium text-slate-500 mt-1 leading-relaxed">Kurs, kripto, dan emas — diperbarui otomatis setiap menit.</p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           {lastUpdated && (
@@ -194,7 +242,7 @@ export default function MarketDataPage() {
             </div>
           )}
           <button onClick={fetchMarketData} disabled={loading}
-            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-100 rounded-xl text-[11px] font-black text-slate-600 hover:bg-slate-50 transition-all shadow-sm active:scale-95 disabled:opacity-50">
+            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-100 rounded-xl text-[11px] font-black text-slate-600 hover:bg-slate-50 hover:shadow-sm transition-all shadow-sm active:scale-95 disabled:opacity-50">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             Refresh
           </button>
@@ -202,7 +250,8 @@ export default function MarketDataPage() {
       </div>
 
       {error && (
-        <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-sm font-medium text-rose-600">
+        <div className="flex items-center gap-3 bg-rose-50 border border-rose-100 rounded-2xl p-4 text-sm font-medium text-rose-600">
+          <AlertCircle size={18} className="shrink-0" />
           {error}
         </div>
       )}
@@ -222,6 +271,7 @@ export default function MarketDataPage() {
               {[
                 { label: 'CoinGecko Crypto API', status: cryptoData.length > 0 },
                 { label: 'Open Exchange Rates', status: exchangeRates.length > 0 },
+                { label: 'Harga Emas (PAX Gold)', status: gold !== null },
                 { label: 'Auto-refresh (60s)', status: true },
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
@@ -232,29 +282,41 @@ export default function MarketDataPage() {
             </div>
           </div>
 
-          {/* Commodity Snapshot */}
-          <div className="bg-slate-900 p-5 md:p-6 rounded-[20px] md:rounded-[32px] shadow-xl space-y-4 text-white">
+          {/* Ringkasan Live */}
+          <div className="bg-gradient-to-br from-slate-900 to-navy p-5 md:p-6 rounded-[20px] md:rounded-[32px] shadow-xl space-y-4 text-white">
             <div className="flex items-center gap-2">
               <Coins size={16} className="text-amber-400" />
-              <h3 className="text-[11px] font-black uppercase tracking-widest text-white/60">Snippet</h3>
+              <h3 className="text-[11px] font-black uppercase tracking-widest text-white/60">Ringkasan Live</h3>
             </div>
-            {loading ? (
+            {loading && !lastUpdated ? (
               <div className="space-y-3">
-                {[1, 2].map(i => <div key={i} className="h-6 bg-white/10 rounded-lg animate-pulse" />)}
+                {[1, 2, 3].map(i => <div key={i} className="h-6 bg-white/10 rounded-lg animate-pulse" />)}
               </div>
             ) : (
               <div className="space-y-3">
                 <div>
                   <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">USD/IDR</p>
-                  <p className="text-xl font-black tracking-tight">
-                    {usdIdrRate ? formatIDR(usdIdrRate) : '-'}
+                  <p className="text-xl font-black tracking-tight tabular-nums">
+                    {usdIdrRate ? formatIDR(animatedUsdIdr) : '-'}
                   </p>
                 </div>
                 <div>
                   <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">BTC/USD</p>
-                  <p className="text-xl font-black tracking-tight">
-                    ${cryptoData[0] ? formatPrice(cryptoData[0].current_price) : '-'}
+                  <p className="text-xl font-black tracking-tight tabular-nums">
+                    ${cryptoData[0] ? formatPrice(animatedBtc) : '-'}
                   </p>
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-amber-400/70 uppercase tracking-widest">Emas · XAU/IDR (/gram)</p>
+                  <p className="text-xl font-black tracking-tight tabular-nums text-amber-300">
+                    {gold ? formatIDR(animatedGoldIdr / 31.1035) : '-'}
+                  </p>
+                  {gold && (
+                    <p className={`text-[10px] font-bold mt-0.5 flex items-center gap-1 ${gold.change_24h >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {gold.change_24h >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                      {gold.change_24h >= 0 ? '+' : ''}{gold.change_24h.toFixed(2)}% (24j)
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -284,14 +346,18 @@ export default function MarketDataPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {loading ? (
+                  {loading && !lastUpdated ? (
                     [1, 2, 3].map(i => (
                       <tr key={i}>
                         <td colSpan={4} className="py-5"><div className="h-5 bg-slate-100 rounded-lg animate-pulse" /></td>
                       </tr>
                     ))
+                  ) : exchangeRates.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="py-10 text-center text-xs font-bold text-slate-400">Data kurs tidak tersedia saat ini.</td>
+                    </tr>
                   ) : exchangeRates.map((curr, i) => (
-                    <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                    <tr key={i} className="hover:bg-indigo-50/30 transition-colors tabular-nums">
                       <td className="py-4 md:py-5 text-[12px] md:text-[13px] font-bold text-slate-900">{curr.from}</td>
                       <td className="py-4 md:py-5 text-center text-indigo-500"><ArrowRight size={14} className="mx-auto" /></td>
                       <td className="py-4 md:py-5 text-center text-[12px] md:text-[13px] font-bold text-slate-900">{curr.to}</td>
@@ -316,15 +382,17 @@ export default function MarketDataPage() {
                 </div>
               </div>
               <div className="space-y-5">
-                {loading ? (
+                {loading && !lastUpdated ? (
                   [1, 2, 3, 4].map(i => <div key={i} className="h-10 bg-slate-100 rounded-xl animate-pulse" />)
+                ) : forexRates.length === 0 ? (
+                  <p className="text-xs font-bold text-slate-400 text-center py-6">Data forex tidak tersedia saat ini.</p>
                 ) : forexRates.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between">
+                  <div key={i} className="flex items-center justify-between hover:-translate-y-0.5 transition-transform">
                     <div>
                       <h4 className="text-[13px] font-black text-slate-900 tracking-tight">{item.pair}</h4>
                       <p className="text-[10px] font-medium text-slate-400">{item.label}</p>
                     </div>
-                    <p className="text-[13px] font-black text-slate-900">
+                    <p className="text-[13px] font-black text-slate-900 tabular-nums">
                       {item.pair.includes('IDR') ? formatIDR(item.rate) : formatPrice(item.rate, 4)}
                     </p>
                   </div>
@@ -342,10 +410,12 @@ export default function MarketDataPage() {
                 </span>
               </div>
               <div className="space-y-5">
-                {loading ? (
+                {loading && !lastUpdated ? (
                   [1, 2, 3].map(i => <div key={i} className="h-12 bg-slate-100 rounded-xl animate-pulse" />)
+                ) : cryptoData.length === 0 ? (
+                  <p className="text-xs font-bold text-slate-400 text-center py-6">Data kripto tidak tersedia saat ini.</p>
                 ) : cryptoData.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between group cursor-pointer">
+                  <div key={i} className="flex items-center justify-between group cursor-default hover:-translate-y-0.5 transition-transform">
                     <div className="flex items-center gap-3 md:gap-4">
                       <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-500 font-black text-[14px] border border-slate-100 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
                         {item.icon}
@@ -356,8 +426,8 @@ export default function MarketDataPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-[13px] font-black text-slate-900">${formatPrice(item.current_price)}</p>
-                      <p className={`text-[10px] font-bold flex items-center justify-end gap-0.5 mt-0.5 ${item.price_change_percentage_24h >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                      <p className="text-[13px] font-black text-slate-900 tabular-nums">${formatPrice(item.current_price)}</p>
+                      <p className={`text-[10px] font-bold flex items-center justify-end gap-0.5 mt-0.5 tabular-nums ${item.price_change_percentage_24h >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                         {item.price_change_percentage_24h >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
                         {item.price_change_percentage_24h.toFixed(2)}%
                       </p>
