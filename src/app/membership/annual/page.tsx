@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { 
-  TrendingUp, 
-  WalletCards
+import { useState, useEffect, useMemo, useRef } from 'react';
+import {
+  TrendingUp,
+  WalletCards,
+  CalendarRange
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { YearPicker } from '@/components/ui/YearPicker';
@@ -15,6 +16,54 @@ import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 
+// Menghitung nilai dari angka sebelumnya menuju target dengan easing halus,
+// dan langsung melompat ke nilai akhir jika user memilih prefers-reduced-motion.
+const useCountUp = (target: number, duration = 900) => {
+  const [display, setDisplay] = useState(target);
+  const fromRef = useRef(target);
+  const firstRun = useRef(true);
+
+  useEffect(() => {
+    if (firstRun.current) {
+      // Nilai awal state sudah sama dengan target (useState(target)), jadi
+      // render pertama tidak perlu animasi — cukup catat baseline-nya.
+      firstRun.current = false;
+      fromRef.current = target;
+      return;
+    }
+
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      fromRef.current = target;
+      const raf = requestAnimationFrame(() => setDisplay(target));
+      return () => cancelAnimationFrame(raf);
+    }
+
+    const from = fromRef.current;
+    const to = target;
+    const start = performance.now();
+    let raf: number;
+
+    const tick = (now: number) => {
+      const t = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDisplay(from + (to - from) * eased);
+      if (t < 1) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        fromRef.current = to;
+      }
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+
+  return display;
+};
+
 type CircularProgressProps = {
   value: number;
   colorClass: string;
@@ -22,36 +71,37 @@ type CircularProgressProps = {
 };
 
 const CircularProgress = ({ value, colorClass, strokeClass }: CircularProgressProps) => {
+  const animated = useCountUp(value);
   const radius = 18;
   const stroke = 3;
   const normalizedRadius = radius - stroke * 2;
   const circumference = normalizedRadius * 2 * Math.PI;
-  const strokeDashoffset = circumference - (value / 100) * circumference;
+  const strokeDashoffset = circumference - (animated / 100) * circumference;
 
   return (
     <div className="relative w-12 h-12 flex items-center justify-center">
       <svg height={radius * 2} width={radius * 2} className="-rotate-90">
-        <circle 
-          stroke="#f1f5f9" 
-          strokeWidth={stroke} 
-          fill="transparent" 
-          r={normalizedRadius} 
-          cx={radius} 
-          cy={radius} 
+        <circle
+          stroke="#f1f5f9"
+          strokeWidth={stroke}
+          fill="transparent"
+          r={normalizedRadius}
+          cx={radius}
+          cy={radius}
         />
-        <circle 
+        <circle
           className={strokeClass}
-          strokeDasharray={circumference + ' ' + circumference} 
-          style={{ strokeDashoffset }} 
-          strokeWidth={stroke} 
-          fill="transparent" 
-          r={normalizedRadius} 
-          cx={radius} 
-          cy={radius} 
+          strokeDasharray={circumference + ' ' + circumference}
+          style={{ strokeDashoffset }}
+          strokeWidth={stroke}
+          fill="transparent"
+          r={normalizedRadius}
+          cx={radius}
+          cy={radius}
           strokeLinecap="round"
         />
       </svg>
-      <span className={cn("absolute text-[10px] font-bold", colorClass)}>{value}%</span>
+      <span className={cn("absolute text-[10px] font-bold tabular-nums", colorClass)}>{Math.round(animated)}%</span>
     </div>
   );
 };
@@ -257,6 +307,10 @@ export default function AnnualDashboard() {
   const tabunganPerc = totalPemasukan > 0 ? Math.min(Math.round((Math.max(netSavings,0) / totalPemasukan) * 100), 100) : 0;
   const invPerc = totalPemasukan > 0 ? Math.min(Math.round((totalInvestasi / totalPemasukan) * 100), 100) : 0;
 
+  // Angka yang sama dipakai di cincin progres & badge teks supaya animasinya sinkron.
+  const animatedPemasPerc = useCountUp(pemasPerc);
+  const animatedTabunganPerc = useCountUp(tabunganPerc);
+
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 max-w-[1400px] print:p-0 print:m-0 print:bg-white print:max-w-none">
       
@@ -276,18 +330,20 @@ export default function AnnualDashboard() {
       </div>
 
       {/* 1. Header (Top Bar) */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] border border-slate-50 shadow-sm">
-        <div>
-          <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Dashboard Tahunan</h2>
-          <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Laporan Fiskal Tahun {selectedYear}</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-br from-white to-indigo-50/40 p-6 rounded-[24px] border border-slate-100 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="hidden sm:flex print:hidden w-12 h-12 rounded-2xl bg-gradient-to-br from-navy to-indigo-700 text-white items-center justify-center shadow-lg shadow-indigo-600/20 shrink-0">
+            <CalendarRange size={22} />
+          </div>
+          <div>
+            <h2 className="text-xl md:text-2xl font-serif font-black text-slate-900 tracking-tight leading-tight">Dashboard Tahunan</h2>
+            <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Laporan Fiskal Tahun {selectedYear}</p>
+          </div>
         </div>
-        
+
         <div className="flex flex-wrap items-center gap-3 print:hidden">
-
-          <div className="w-px h-6 bg-slate-100 mx-1" />
-
           {/* Year Picker */}
-          <YearPicker 
+          <YearPicker
             value={selectedYear}
             onChange={(y) => setSelectedYear(y)}
           />
@@ -296,9 +352,9 @@ export default function AnnualDashboard() {
 
       {/* 2. Top Summary Cards (4 Cols) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-        
+
         {/* Card 1: Pemasukan */}
-        <div className="bg-white rounded-[20px] p-4 md:p-6 border border-slate-100 shadow-sm flex flex-col">
+        <div className="bg-white rounded-[20px] p-4 md:p-6 border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col">
           <div className="flex justify-between items-center mb-3">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pemasukan</p>
             <CircularProgress value={pemasPerc} colorClass="text-sky-600" strokeClass="stroke-sky-500" />
@@ -306,20 +362,20 @@ export default function AnnualDashboard() {
           <div>
             <div className="flex items-baseline gap-1 mt-1">
               <span className="text-xs md:text-lg font-bold text-slate-900">Rp</span>
-              <h3 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">{formatRpShort(totalPemasukan)}</h3>
+              <h3 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight tabular-nums">{formatRpShort(totalPemasukan)}</h3>
             </div>
             <div className="flex justify-between items-center mt-3 md:mt-5">
               <div>
                 <p className="text-[9px] text-slate-400 font-medium leading-none mb-1">Thn {selectedYear}</p>
                 <p className="text-[10px] font-bold text-slate-600 leading-none">{yearTransactions.filter(t=>t.type==='pemasukan').length} transaksi</p>
               </div>
-              <span className="px-2 py-0.5 md:px-3 md:py-1 bg-sky-50 text-sky-500 text-[9px] md:text-[10px] font-bold rounded-full">{pemasPerc}% dari total</span>
+              <span className="px-2 py-0.5 md:px-3 md:py-1 bg-sky-50 text-sky-500 text-[9px] md:text-[10px] font-bold rounded-full tabular-nums">{Math.round(animatedPemasPerc)}% dari total</span>
             </div>
           </div>
         </div>
 
         {/* Card 2: Pengeluaran */}
-        <div className="bg-white rounded-[20px] p-4 md:p-6 border border-slate-100 shadow-sm flex flex-col">
+        <div className="bg-white rounded-[20px] p-4 md:p-6 border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col">
           <div className="flex justify-between items-center mb-3">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pengeluaran</p>
             <CircularProgress value={keluarPerc} colorClass="text-rose-600" strokeClass="stroke-rose-500" />
@@ -327,20 +383,20 @@ export default function AnnualDashboard() {
           <div>
             <div className="flex items-baseline gap-1 mt-1">
               <span className="text-xs md:text-lg font-bold text-slate-900">Rp</span>
-              <h3 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">{formatRpShort(totalPengeluaran)}</h3>
+              <h3 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight tabular-nums">{formatRpShort(totalPengeluaran)}</h3>
             </div>
             <div className="flex justify-between items-center mt-3 md:mt-5">
               <div>
                 <p className="text-[9px] text-slate-400 font-medium leading-none mb-1">Thn {selectedYear}</p>
                 <p className="text-[10px] font-bold text-slate-600 leading-none">{yearTransactions.filter(t=>t.type==='pengeluaran').length} transaksi</p>
               </div>
-              <span className={`px-2 py-0.5 md:px-3 md:py-1 text-[9px] md:text-[10px] font-bold rounded-full ${keluarPerc > 80 ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-600'}`}>{keluarPerc > 80 ? 'Caution' : 'Normal'}</span>
+              <span className={`px-2 py-0.5 md:px-3 md:py-1 text-[9px] md:text-[10px] font-bold rounded-full tabular-nums ${keluarPerc > 80 ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-600'}`}>{keluarPerc > 80 ? 'Caution' : 'Normal'}</span>
             </div>
           </div>
         </div>
 
         {/* Card 3: Tabungan */}
-        <div className="bg-white rounded-[20px] p-4 md:p-6 border border-slate-100 shadow-sm flex flex-col">
+        <div className="bg-white rounded-[20px] p-4 md:p-6 border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col">
           <div className="flex justify-between items-center mb-3">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tabungan</p>
             <CircularProgress value={tabunganPerc} colorClass="text-slate-700" strokeClass="stroke-slate-600" />
@@ -348,12 +404,12 @@ export default function AnnualDashboard() {
           <div>
             <div className="flex items-baseline gap-1 mt-1">
               <span className="text-xs md:text-lg font-bold text-slate-900">Rp</span>
-              <h3 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">{formatRpShort(Math.max(netSavings, 0))}</h3>
+              <h3 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight tabular-nums">{formatRpShort(Math.max(netSavings, 0))}</h3>
             </div>
             <div className="flex justify-between items-center mt-3 md:mt-5">
               <div>
                 <p className="text-[9px] text-slate-400 font-medium leading-none mb-1">Thn {selectedYear}</p>
-                <p className="text-[10px] font-bold text-slate-600 leading-none">{tabunganPerc}% dari pemasukan</p>
+                <p className="text-[10px] font-bold text-slate-600 leading-none tabular-nums">{Math.round(animatedTabunganPerc)}% dari pemasukan</p>
               </div>
               <span className={`px-2 py-0.5 md:px-3 md:py-1 text-[9px] md:text-[10px] font-bold rounded-full ${tabunganPerc > 20 ? 'bg-indigo-50 text-indigo-500' : 'bg-slate-100 text-slate-400'}`}>{tabunganPerc > 20 ? 'Goal Near' : 'Growing'}</span>
             </div>
@@ -361,7 +417,7 @@ export default function AnnualDashboard() {
         </div>
 
         {/* Card 4: Investasi */}
-        <div className="bg-white rounded-[20px] p-4 md:p-6 border border-slate-100 shadow-sm flex flex-col">
+        <div className="bg-white rounded-[20px] p-4 md:p-6 border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col">
           <div className="flex justify-between items-center mb-3">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Investasi</p>
             <CircularProgress value={invPerc} colorClass="text-teal-600" strokeClass="stroke-teal-600" />
@@ -369,7 +425,7 @@ export default function AnnualDashboard() {
           <div>
             <div className="flex items-baseline gap-1 mt-1">
               <span className="text-xs md:text-lg font-bold text-slate-900">Rp</span>
-              <h3 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">{formatRpShort(totalInvestasi)}</h3>
+              <h3 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight tabular-nums">{formatRpShort(totalInvestasi)}</h3>
             </div>
             <div className="flex justify-between items-center mt-3 md:mt-5">
               <div>
@@ -381,7 +437,6 @@ export default function AnnualDashboard() {
           </div>
         </div>
       </div>
-      
 
 
       {/* 3. Middle Area (2/3 Graph + 1/3 Sidebar List) */}
@@ -435,14 +490,14 @@ export default function AnnualDashboard() {
             {monthlyData.map((col) => (
               <div key={col.m} className="flex flex-col items-center gap-3 w-full h-full justify-end group">
                 <div className="flex items-end gap-1 w-full justify-center h-[200px]">
-                  <div 
+                  <div
                     title={`${cat1Id || 'Pemasukan'}: Rp ${col.v1.toLocaleString()}`}
-                    className="w-1/2 max-w-[12px] bg-indigo-500/40 rounded-t-sm group-hover:bg-indigo-600 transition-colors cursor-help" 
+                    className="w-1/2 max-w-[12px] bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t-md group-hover:from-indigo-700 group-hover:to-indigo-500 transition-all duration-500 cursor-help"
                     style={{ height: `${col.b1}%` }}
                   />
-                  <div 
+                  <div
                     title={`${cat2Id || 'Pengeluaran'}: Rp ${col.v2.toLocaleString()}`}
-                    className="w-1/2 max-w-[12px] bg-slate-400 rounded-t-sm group-hover:bg-slate-700 transition-colors cursor-help" 
+                    className="w-1/2 max-w-[12px] bg-gradient-to-t from-slate-500 to-slate-300 rounded-t-md group-hover:from-slate-700 group-hover:to-slate-500 transition-all duration-500 cursor-help"
                     style={{ height: `${col.b2}%` }}
                   />
                 </div>
@@ -460,9 +515,9 @@ export default function AnnualDashboard() {
             {topTransactionsList.length === 0 ? (
                <p className="text-xs text-slate-400 text-center py-10 font-bold">Belum ada transaksi</p>
             ) : topTransactionsList.map((trx, idx) => (
-              <div key={idx} className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex items-center justify-between">
+              <div key={idx} className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", 
+                  <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center",
                     trx.type === 'pemasukan' ? 'bg-sky-100 text-sky-500' :
                     trx.type === 'pengeluaran' ? 'bg-rose-100 text-rose-500' : 
                     'bg-slate-100 text-slate-500'

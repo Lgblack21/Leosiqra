@@ -60,7 +60,8 @@ export const transactionService = {
   // Read all for user
   async getUserTransactions(_userId: string) {
     void _userId;
-    const result = await cloudflareApi<{ items: Record<string, unknown>[] }>('/api/member/transactions');
+    // limit tinggi agar laporan bulanan/tahunan tidak kehilangan transaksi lama.
+    const result = await cloudflareApi<{ items: Record<string, unknown>[] }>('/api/member/transactions?limit=2000');
     return result.items.map((data) => {
       return {
         ...data,

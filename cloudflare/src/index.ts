@@ -983,7 +983,9 @@ async function handleListTransactions(request: Request, env: Env) {
 
   const url = new URL(request.url);
   const rawLimit = Number(url.searchParams.get("limit") ?? "50");
-  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 100) : 50;
+  // Cap dinaikkan agar laporan bulanan/tahunan tidak diam-diam kehilangan transaksi lama
+  // dari periode yang dipilih (dashboard menyaring berdasarkan tanggal di sisi client).
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 2000) : 50;
   const rows = await env.DB.prepare(
     `SELECT *
        FROM transactions

@@ -309,7 +309,7 @@ const readApiCollection = async (name: string): Promise<AnyObj[]> => {
     return [normalize({ id: "global_config", ...data.item }) as AnyObj];
   }
   if (name === "transactions") {
-    const data = await cloudflareApi<{ items: AnyObj[] }>("/api/member/transactions");
+    const data = await cloudflareApi<{ items: AnyObj[] }>("/api/member/transactions?limit=2000");
     return (data.items ?? []).map((row) => normalize(row) as AnyObj);
   }
   if (name === "accounts") {
