@@ -4,11 +4,9 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 
 import {
   TrendingUp,
-  CreditCard,
   Wallet,
   TrendingDown,
   PiggyBank,
-  Landmark,
   Search,
   ChevronDown,
   LayoutDashboard,
@@ -157,12 +155,12 @@ export default function MonthlyDashboard() {
           </div>
         </div>
 
-        {/* Card 2: Tagihan Kartu Kredit */}
+        {/* Card 2: Total Pemasukan */}
         <div className="bg-slate-50 rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
           <div className="flex justify-between items-start mb-3">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tagihan Kartu Kredit</p>
-            <div className="p-1.5 bg-rose-50 text-rose-600 rounded">
-              <CreditCard size={14} />
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Pemasukan</p>
+            <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded">
+              <TrendingUp size={14} />
             </div>
           </div>
           <h3 className="text-xl md:text-2xl font-black text-emerald-600 mb-5 tracking-tight">{formatRp(totalPemasukan)}</h3>
@@ -174,12 +172,12 @@ export default function MonthlyDashboard() {
           </div>
         </div>
 
-        {/* Card 3: Hutang Lainnya */}
+        {/* Card 3: Total Pengeluaran */}
         <div className="bg-slate-50 rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
           <div className="flex justify-between items-start mb-3">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Hutang Lainnya</p>
-            <div className="text-slate-600 p-1.5 bg-white rounded shadow-sm border border-slate-50">
-              <Landmark size={16} />
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Pengeluaran</p>
+            <div className="p-1.5 bg-rose-50 text-rose-600 rounded">
+              <TrendingDown size={14} />
             </div>
           </div>
           <h3 className="text-xl md:text-2xl font-black text-rose-500 mb-4 tracking-tight">{formatRp(totalPengeluaran)}</h3>
