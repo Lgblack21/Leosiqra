@@ -10,6 +10,15 @@ import { ShieldCheck, Smartphone, Eye, EyeOff, LayoutGrid, ArrowLeft } from 'luc
 import { TwoFactorModal } from '@/components/auth/TwoFactorModal';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 
+const GoogleIcon = ({ size = 18 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
+    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+  </svg>
+);
+
 export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -24,6 +33,16 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [show2FA, setShow2FA] = useState(false);
   const router = useRouter();
+
+  // Tampilkan pesan error dari alur OAuth Google (?error=...).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get('error');
+    if (oauthError) {
+      setError(oauthError);
+      window.history.replaceState({}, '', '/auth/register');
+    }
+  }, []);
 
   useEffect(() => {
     const hasUpperCaseStart = /^[A-Z]/.test(password);
@@ -100,7 +119,7 @@ export default function RegisterPage() {
             Secure Fintech Access
           </div>
           <h1 className="text-4xl xl:text-5xl font-serif font-black text-slate-900 leading-[1.1]">
-            Daftar sekarang. Mulai <br /> kelola aset finansial Anda <br /> dengan tenang.
+            Daftar sekarang. Mulai <br /> kelola aset finansial Anda <br /> dengan <span className="text-gradient">tenang</span>.
           </h1>
           <p className="text-slate-500 font-medium leading-relaxed text-sm max-w-xs">
             Akses member Leosiqra dirancang ringkas, terlindungi 2FA, dan fokus pada satu hal: membawa Anda ke dashboard tanpa kebingungan.
@@ -129,8 +148,9 @@ export default function RegisterPage() {
       </div>
 
       {/* Right Side: Register Card */}
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-10 bg-slate-50/50 relative overflow-hidden overflow-y-auto">
-        <div className="w-full max-w-[480px] bg-white p-10 lg:p-11 rounded-[40px] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.05)] border border-slate-100 relative z-10 space-y-6 my-8">
+      <div className="flex-1 flex items-center justify-center p-6 lg:p-10 bg-gradient-to-br from-slate-50 to-indigo-50/40 relative overflow-hidden overflow-y-auto">
+        <div className="hero-aurora" aria-hidden />
+        <div className="w-full max-w-[480px] bg-white/90 backdrop-blur-xl p-10 lg:p-11 rounded-[40px] shadow-[0_30px_70px_-20px_rgba(79,70,229,0.18)] border border-white ring-1 ring-slate-100 relative z-10 space-y-6 my-8">
           <div className="space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest leading-none">
               Encrypted Access
@@ -144,6 +164,21 @@ export default function RegisterPage() {
               <h2 className="text-2xl font-serif font-black text-slate-900 leading-tight">Buat akun Leosiqra</h2>
               <p className="text-slate-500 font-medium text-xs">Daftar gratis dan aktifkan 2FA untuk menjaga akses dashboard.</p>
             </div>
+          </div>
+
+          {/* Social Signup - Google */}
+          <a
+            href="/api/auth/google"
+            className="flex items-center justify-center gap-3 w-full py-3 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm transition-all active:scale-[0.99]"
+          >
+            <GoogleIcon size={18} />
+            Daftar dengan Google
+          </a>
+
+          <div className="relative flex items-center">
+            <div className="flex-grow border-t border-slate-100"></div>
+            <span className="flex-shrink mx-4 text-[8px] font-black text-slate-300 uppercase tracking-[0.2em]">Atau daftar dengan email</span>
+            <div className="flex-grow border-t border-slate-100"></div>
           </div>
 
           <form onSubmit={handleRegister} className="space-y-4">

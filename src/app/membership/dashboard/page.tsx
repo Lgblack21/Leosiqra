@@ -7,6 +7,8 @@ import {
   Wallet,
   TrendingDown,
   PiggyBank,
+  CreditCard,
+  Landmark,
   Search,
   ChevronDown,
   LayoutDashboard,
@@ -17,6 +19,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { investmentService, Investment } from '@/lib/services/investmentService';
+import { cloudflareApi } from '@/lib/cloudflare-api';
 
 interface MarketTicker {
   label: string; sub: string; val: string; pct: string; up: boolean | null;
@@ -33,6 +36,29 @@ export default function MonthlyDashboard() {
   const [marketLoading, setMarketLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [creditCardBills, setCreditCardBills] = useState(0);
+  const [otherDebts, setOtherDebts] = useState(0);
+
+  // Ambil ringkasan hutang dari profil (tagihan kartu kredit & hutang lainnya).
+  useEffect(() => {
+    let active = true;
+    cloudflareApi<{ item?: { credit_card_bills?: number; other_debts?: number } | null }>(
+      '/api/member/profile'
+    )
+      .then((res) => {
+        if (!active) return;
+        setCreditCardBills(Number(res.item?.credit_card_bills) || 0);
+        setOtherDebts(Number(res.item?.other_debts) || 0);
+      })
+      .catch(() => {
+        if (!active) return;
+        setCreditCardBills(0);
+        setOtherDebts(0);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -155,34 +181,31 @@ export default function MonthlyDashboard() {
           </div>
         </div>
 
-        {/* Card 2: Total Pemasukan */}
+        {/* Card 2: Tagihan Kartu Kredit */}
         <div className="bg-slate-50 rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
           <div className="flex justify-between items-start mb-3">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Pemasukan</p>
-            <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded">
-              <TrendingUp size={14} />
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tagihan Kartu Kredit</p>
+            <div className="p-1.5 bg-rose-50 text-rose-600 rounded">
+              <CreditCard size={14} />
             </div>
           </div>
-          <h3 className="text-xl md:text-2xl font-black text-emerald-600 mb-5 tracking-tight">{formatRp(totalPemasukan)}</h3>
-          <div className="flex items-end gap-3 w-full">
-            <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-500 w-full" />
-            </div>
-            <span className="text-[9px] font-black text-slate-400 shrink-0 uppercase tracking-wider">{transactions.filter(t => t.type === 'pemasukan').length} transaksi</span>
+          <h3 className={`text-xl md:text-2xl font-black mb-5 tracking-tight ${creditCardBills > 0 ? 'text-rose-500' : 'text-slate-900'}`}>{formatRp(creditCardBills)}</h3>
+          <div className="inline-block px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-500">
+            {creditCardBills > 0 ? 'Perlu dibayar' : 'Tidak ada tagihan'}
           </div>
         </div>
 
-        {/* Card 3: Total Pengeluaran */}
+        {/* Card 3: Hutang Lainnya */}
         <div className="bg-slate-50 rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
           <div className="flex justify-between items-start mb-3">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Pengeluaran</p>
-            <div className="p-1.5 bg-rose-50 text-rose-600 rounded">
-              <TrendingDown size={14} />
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Hutang Lainnya</p>
+            <div className="text-slate-600 p-1.5 bg-white rounded shadow-sm border border-slate-50">
+              <Landmark size={16} />
             </div>
           </div>
-          <h3 className="text-xl md:text-2xl font-black text-rose-500 mb-4 tracking-tight">{formatRp(totalPengeluaran)}</h3>
+          <h3 className={`text-xl md:text-2xl font-black mb-4 tracking-tight ${otherDebts > 0 ? 'text-rose-500' : 'text-slate-900'}`}>{formatRp(otherDebts)}</h3>
           <div className="inline-block px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-500">
-            {transactions.filter(t => t.type === 'pengeluaran').length} transaksi pengeluaran
+            {otherDebts > 0 ? 'Kewajiban aktif' : 'Bebas hutang'}
           </div>
         </div>
       </div>
