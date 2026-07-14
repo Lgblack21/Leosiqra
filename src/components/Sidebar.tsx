@@ -178,15 +178,15 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       )}>
         {/* Header / Logo Section */}
         <div className="p-4 flex items-center justify-between shrink-0">
-          <Link href="/" className="block group flex-1" onClick={() => { if (window.innerWidth < 1024) onClose?.(); }}>
-            <div className="bg-white rounded-[20px] p-3 border border-slate-100 shadow-sm flex items-center gap-3 transition-all">
-              <div className="w-10 h-10 flex items-center justify-center shrink-0 overflow-hidden">
+          <div className="block group flex-1 select-none cursor-default" aria-hidden>
+            <div className="bg-white rounded-[20px] p-3 border border-slate-100 shadow-sm flex items-center gap-3 transition-all group-hover:shadow-md">
+              <div className="w-10 h-10 flex items-center justify-center shrink-0 overflow-hidden animate-logo-bob">
                 <Image
                   src="/images/Logo-new.png"
                   alt="Leosiqra"
                   width={34}
                   height={34}
-                  className="object-contain"
+                  className="object-contain transition-transform duration-500 group-hover:rotate-[18deg] group-hover:scale-110"
                 />
               </div>
               <div className="flex flex-col">
@@ -194,7 +194,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.1em] leading-none">MEMBER WORKSPACE</span>
               </div>
             </div>
-          </Link>
+          </div>
 
           <button
             onClick={onClose}
