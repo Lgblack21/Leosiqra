@@ -16,6 +16,7 @@ import { exchangeRateService } from '@/lib/services/exchangeRateService';
 import { currencyService, Currency } from '@/lib/services/currencyService';
 import { auth } from '@/lib/cf-client';
 import { useCountUp } from '@/lib/hooks/useCountUp';
+import { LogoImage } from '@/components/ui/LogoImage';
 
 interface CryptoData {
   id: string;
@@ -24,6 +25,7 @@ interface CryptoData {
   current_price: number;
   price_change_percentage_24h: number;
   icon: string;
+  logoUrl: string;
 }
 
 interface ExchangeRate {
@@ -42,6 +44,7 @@ interface GoldData {
   price_usd: number;
   price_idr: number;
   change_24h: number;
+  logoUrl: string;
 }
 
 // Kode mata uang kripto yang bisa dikenali & dipetakan ke ID CoinGecko.
@@ -165,28 +168,43 @@ export default function MarketDataPage() {
           ? userCryptos.map(c => CRYPTO_ID_MAP[c.code.toUpperCase()])
           : ['bitcoin', 'ethereum', 'solana', 'holotoken'];
 
-        // 2. Fetch crypto + emas (PAX Gold, dipatok 1:1 ke harga emas spot) sekaligus.
+        // 2. Fetch crypto + emas (PAX Gold, dipatok 1:1 ke harga emas spot) sekaligus,
+        // termasuk logo resmi tiap koin (endpoint /coins/markets menyertakan `image`).
+        const marketIds = [...targetIds, 'pax-gold'];
         const cryptoRes = await fetch(
-          `https://api.coingecko.com/api/v3/simple/price?ids=${[...targetIds, 'pax-gold'].join(',')}&vs_currencies=usd&include_24hr_change=true`
+          `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${marketIds.join(',')}&price_change_percentage=24h`
         );
         if (cryptoRes.ok) {
-          const data = await cryptoRes.json();
-          const mappedCrypto: CryptoData[] = targetIds.map(id => ({
-            id,
-            name: CRYPTO_NAME_MAP[id] || id,
-            symbol: CRYPTO_SYMBOL_MAP[id] || id.toUpperCase(),
-            current_price: data[id]?.usd || 0,
-            price_change_percentage_24h: data[id]?.usd_24h_change || 0,
-            icon: CRYPTO_ICON_MAP[id] || 'C'
-          }));
+          const rows = (await cryptoRes.json()) as Array<{
+            id: string;
+            image?: string;
+            current_price?: number;
+            price_change_percentage_24h?: number;
+          }>;
+          const byId = new Map(rows.map((r) => [r.id, r]));
+
+          const mappedCrypto: CryptoData[] = targetIds.map(id => {
+            const row = byId.get(id);
+            return {
+              id,
+              name: CRYPTO_NAME_MAP[id] || id,
+              symbol: CRYPTO_SYMBOL_MAP[id] || id.toUpperCase(),
+              current_price: row?.current_price || 0,
+              price_change_percentage_24h: row?.price_change_percentage_24h || 0,
+              icon: CRYPTO_ICON_MAP[id] || 'C',
+              logoUrl: row?.image || '',
+            };
+          });
           setCryptoData(mappedCrypto);
 
-          const goldUsd = data['pax-gold']?.usd || 0;
+          const goldRow = byId.get('pax-gold');
+          const goldUsd = goldRow?.current_price || 0;
           if (goldUsd > 0) {
             setGold({
               price_usd: goldUsd,
               price_idr: goldUsd * idrRate,
-              change_24h: data['pax-gold']?.usd_24h_change || 0,
+              change_24h: goldRow?.price_change_percentage_24h || 0,
+              logoUrl: goldRow?.image || '',
             });
           }
         }
@@ -419,9 +437,12 @@ export default function MarketDataPage() {
                 ) : cryptoData.map((item, i) => (
                   <div key={i} className="flex items-center justify-between group cursor-default hover:-translate-y-0.5 transition-transform">
                     <div className="flex items-center gap-3 md:gap-4">
-                      <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-500 font-black text-[14px] border border-slate-100 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
-                        {item.icon}
-                      </div>
+                      <LogoImage
+                        src={item.logoUrl}
+                        alt={item.name}
+                        fallbackText={item.icon}
+                        className="w-10 h-10 rounded-full object-contain border border-slate-100 bg-white group-hover:border-indigo-100 transition-colors shrink-0"
+                      />
                       <div>
                         <h4 className="text-[13px] font-black text-slate-900">{item.name}</h4>
                         <p className="text-[10px] font-medium text-slate-400 uppercase">{item.symbol}</p>
