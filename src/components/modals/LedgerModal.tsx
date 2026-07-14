@@ -20,12 +20,22 @@ export const LedgerModal = ({ isOpen, onClose, userId }: LedgerModalProps) => {
   const handleCreate = async () => {
     if (!userId || !formData.category || !formData.subCategory) return;
     try {
-      await categoryService.createCategory({
-        userId: userId,
-        category: formData.category,
-        subCategory: formData.subCategory,
-        status: 'VERIFIED'
-      });
+      // Boleh isi beberapa sub kategori sekaligus dipisah koma — masing-masing
+      // disimpan sebagai baris kategori terpisah, bukan digabung jadi satu
+      // string panjang (yang membuat sub kategori tidak bisa dipilih satu-satu).
+      const subCategories = formData.subCategory
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      for (const subCategory of subCategories) {
+        await categoryService.createCategory({
+          userId: userId,
+          category: formData.category,
+          subCategory,
+          status: 'VERIFIED'
+        });
+      }
       onClose();
       setFormData({ category: '', subCategory: '' });
     } catch (error) {
@@ -52,11 +62,12 @@ export const LedgerModal = ({ isOpen, onClose, userId }: LedgerModalProps) => {
         </div>
         <div className="space-y-3">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Subkategori Spesifik</label>
-          <input 
-            type="text" 
+          <p className="text-[10px] text-slate-400 pl-1">Bisa isi lebih dari satu, pisahkan dengan koma.</p>
+          <input
+            type="text"
             value={formData.subCategory}
             onChange={(e) => setFormData({...formData, subCategory: e.target.value})}
-            placeholder="Contoh: Bensin Kendaraan"
+            placeholder="Contoh: Bensin Kendaraan, Parkir, Tol"
             className="w-full bg-[#e9f0f4] border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all"
           />
         </div>
