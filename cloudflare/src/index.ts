@@ -657,8 +657,8 @@ async function handleRegister(request: Request, env: Env) {
   const userId = generateId();
   await env.DB.prepare(
     `INSERT INTO users (
-      id, name, email, password_hash, whatsapp, role, plan, status, two_factor_secret, currency_initialized, created_at
-    ) VALUES (?, ?, ?, ?, ?, 'user', 'FREE', 'GUEST', ?, 0, ?)`
+      id, name, email, password_hash, whatsapp, role, plan, status, two_factor_secret, currency_initialized, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, 'user', 'FREE', 'GUEST', ?, 0, ?, ?)`
   )
     .bind(
       userId,
@@ -667,6 +667,7 @@ async function handleRegister(request: Request, env: Env) {
       await hashPassword(payload.password),
       payload.whatsapp ?? null,
       payload.twoFactorSecret ?? null,
+      nowIso(),
       nowIso()
     )
     .run();
@@ -933,10 +934,10 @@ async function handleGoogleCallback(request: Request, env: Env) {
     const displayName = profile.name?.trim() || email.split("@")[0];
     // Sentinel hash: akun Google tidak punya password lokal (login password nonaktif).
     await env.DB.prepare(
-      `INSERT INTO users (id, name, email, password_hash, photo_url, role, plan, status, currency_initialized, created_at)
-       VALUES (?, ?, ?, 'oauth$google', ?, 'user', 'FREE', 'GUEST', 0, ?)`
+      `INSERT INTO users (id, name, email, password_hash, photo_url, role, plan, status, currency_initialized, created_at, updated_at)
+       VALUES (?, ?, ?, 'oauth$google', ?, 'user', 'FREE', 'GUEST', 0, ?, ?)`
     )
-      .bind(userId, displayName, email, profile.picture ?? null, nowIso())
+      .bind(userId, displayName, email, profile.picture ?? null, nowIso(), nowIso())
       .run();
     user = {
       id: userId,
@@ -1024,8 +1025,8 @@ async function handleCreateTransaction(request: Request, env: Env) {
   await env.DB.prepare(
     `INSERT INTO transactions (
       id, user_id, type, amount, amount_idr, category, sub_category, currency,
-      account_id, target_account_id, date, display_date, note, status, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'VERIFIED', ?)`
+      account_id, target_account_id, date, display_date, note, status, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'VERIFIED', ?, ?)`
   )
     .bind(
       id,
@@ -1041,6 +1042,7 @@ async function handleCreateTransaction(request: Request, env: Env) {
       payload.date,
       payload.display_date ?? payload.date,
       payload.note ?? null,
+      nowIso(),
       nowIso()
     )
     .run();
@@ -1150,8 +1152,8 @@ async function handleCreateAccount(request: Request, env: Env) {
   const id = generateId();
   await env.DB.prepare(
     `INSERT INTO accounts (
-      id, user_id, name, type, currency, balance, initial_balance, base_value, logo_url, logo_label, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      id, user_id, name, type, currency, balance, initial_balance, base_value, logo_url, logo_label, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       id,
@@ -1164,6 +1166,7 @@ async function handleCreateAccount(request: Request, env: Env) {
       Number(payload.base_value ?? 0),
       payload.logo_url ?? null,
       payload.logo_label ?? null,
+      nowIso(),
       nowIso()
     )
     .run();
@@ -1277,7 +1280,7 @@ async function handleCreateBudget(request: Request, env: Env) {
   const payload = await parseJson<{ type?: string; category?: string; amount?: number; period?: string }>(request);
   const id = generateId();
   await env.DB.prepare(
-    "INSERT INTO budgets (id, user_id, type, category, amount, period, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO budgets (id, user_id, type, category, amount, period, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
   )
     .bind(
       id,
@@ -1286,6 +1289,7 @@ async function handleCreateBudget(request: Request, env: Env) {
       payload.category ?? "Umum",
       Number(payload.amount ?? 0),
       payload.period ?? "monthly",
+      nowIso(),
       nowIso()
     )
     .run();
@@ -1382,8 +1386,8 @@ async function handleCreateInvestment(request: Request, env: Env) {
       id, user_id, name, type, platform, amount_invested, amount_idr, current_value, current_value_idr,
       return_percentage, tax_percentage, currency, duration_months, transaction_type, category, account_id,
       logo_url, quantity, unit, price_per_unit, stock_code, exchange_code, shares_count, price_per_share,
-      date_invested, target_date, duration_days, status, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      date_invested, target_date, duration_days, status, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       id,
@@ -1414,6 +1418,7 @@ async function handleCreateInvestment(request: Request, env: Env) {
       payload.target_date ?? null,
       Number(payload.duration_days ?? 0),
       payload.status ?? "Active",
+      nowIso(),
       nowIso()
     )
     .run();
@@ -1635,7 +1640,7 @@ async function handleCreateCategory(request: Request, env: Env) {
   const payload = await parseJson<Record<string, unknown>>(request);
   const id = generateId();
   await env.DB.prepare(
-    "INSERT INTO categories (id, user_id, category, sub_category, status, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+    "INSERT INTO categories (id, user_id, category, sub_category, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
   )
     .bind(
       id,
@@ -1643,6 +1648,7 @@ async function handleCreateCategory(request: Request, env: Env) {
       String(payload.category ?? "Lainnya"),
       String(pickPayloadValue(payload, "sub_category", "subCategory") ?? "General"),
       String(payload.status ?? "ACTIVE"),
+      nowIso(),
       nowIso()
     )
     .run();
@@ -1717,7 +1723,7 @@ async function handleCreateCurrency(request: Request, env: Env) {
   const id = generateId();
 
   await env.DB.prepare(
-    "INSERT INTO currencies (id, user_id, code, name, symbol, is_default, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO currencies (id, user_id, code, name, symbol, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
   )
     .bind(
       id,
@@ -1726,6 +1732,7 @@ async function handleCreateCurrency(request: Request, env: Env) {
       String(payload.name ?? "Rupiah"),
       String(payload.symbol ?? "Rp"),
       Number(payload.is_default ?? payload.isDefault ?? 0) ? 1 : 0,
+      nowIso(),
       nowIso()
     )
     .run();
@@ -1764,8 +1771,8 @@ async function handleCreateRecurring(request: Request, env: Env) {
   const payload = await parseJson<Record<string, unknown>>(request);
   const id = generateId();
   await env.DB.prepare(
-    `INSERT INTO recurring (id, user_id, name, type, category, account_id, amount, interval_value, next_date, note, status, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO recurring (id, user_id, name, type, category, account_id, amount, interval_value, next_date, note, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       id,
@@ -1779,6 +1786,7 @@ async function handleCreateRecurring(request: Request, env: Env) {
       toIsoIfDateLike(pickPayloadValue(payload, "next_date", "nextDate")),
       payload.note ?? null,
       payload.status ?? "ACTIVE",
+      nowIso(),
       nowIso()
     )
     .run();
@@ -1860,8 +1868,8 @@ async function handleCreateSaving(request: Request, env: Env) {
   await env.DB.prepare(
     `INSERT INTO savings (
       id, user_id, description, amount, amount_idr, currency, category, sub_category,
-      from_account, to_goal, date, display_date, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      from_account, to_goal, date, display_date, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       id,
@@ -1876,6 +1884,7 @@ async function handleCreateSaving(request: Request, env: Env) {
       pickPayloadValue(payload, "to_goal", "toGoal") ?? null,
       toIsoIfDateLike(payload.date) ?? nowIso(),
       payload.display_date ?? payload.displayDate ?? nowIso(),
+      nowIso(),
       nowIso()
     )
     .run();
@@ -1904,8 +1913,8 @@ async function handleCreateMemberPayment(request: Request, env: Env) {
   await env.DB.prepare(
     `INSERT INTO payments (
       id, user_id, user_email, user_name, user_photo_url, method, ref, package_id, package_name,
-      package_duration_months, amount, note, proof_image_url, status, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      package_duration_months, amount, note, proof_image_url, status, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       id,
@@ -1922,6 +1931,7 @@ async function handleCreateMemberPayment(request: Request, env: Env) {
       payload.note ?? null,
       payload.proof_image_url ?? payload.proofImageUrl ?? null,
       payload.status ?? "MENUNGGU",
+      nowIso(),
       nowIso()
     )
     .run();
@@ -1983,8 +1993,8 @@ async function handlePutAiChatHistory(request: Request, env: Env) {
     }
 
     const id = generateId();
-    await env.DB.prepare("INSERT INTO ai_chats (id, user_id, messages_json) VALUES (?, ?, ?)")
-      .bind(id, authResult.session.user.id, JSON.stringify(messages))
+    await env.DB.prepare("INSERT INTO ai_chats (id, user_id, messages_json, updated_at) VALUES (?, ?, ?, ?)")
+      .bind(id, authResult.session.user.id, JSON.stringify(messages), nowIso())
       .run();
     return json({ ok: true, id }, { status: 201 });
   } catch {
