@@ -48,7 +48,7 @@ export default function LandingPage() {
               Layanan Keuangan Terintegrasi
             </div>
             <h1 className="text-4xl sm:text-5xl md:text-7xl font-serif font-black tracking-tight mb-6 sm:mb-8 text-slate-900 leading-[1.05] sm:leading-[1.05]">
-              Member Site <br /> <span className="text-gradient">Premium</span> <span className="text-slate-300 font-light">|</span> SPT <br /> Tahunan Otomatis
+              Member Site <br /> <span className="text-gradient">Premium</span> <span className="text-slate-300 font-light">|</span> Kalkulasi <br /> SPT Otomatis
             </h1>
             <p className="max-w-xl text-slate-500 text-base sm:text-lg mb-8 sm:mb-10 font-medium leading-relaxed">
               Manajemen finansial personal dengan fitur terlengkap mulai dari rekap bulanan, kalkulasi pajak, hingga portfolio investasi dalam satu dashboard bersih.
