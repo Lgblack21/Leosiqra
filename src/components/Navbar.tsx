@@ -32,7 +32,6 @@ export const Navbar = () => {
             <a href="#pajak" className="hover:text-indigo-600 transition-colors">Pajak</a>
             <a href="#cara-kerja" className="hover:text-indigo-600 transition-colors">Cara Kerja</a>
             <a href="#harga" className="hover:text-indigo-600 transition-colors">Harga</a>
-            <a href="#keamanan" className="hover:text-indigo-600 transition-colors">Keamanan</a>
           </div>
         </div>
         
@@ -63,8 +62,7 @@ export const Navbar = () => {
               <a href="#fitur" onClick={() => setIsOpen(false)} className="py-2 hover:text-indigo-600 transition-colors border-b border-slate-50">Fitur</a>
               <a href="#pajak" onClick={() => setIsOpen(false)} className="py-2 hover:text-indigo-600 transition-colors border-b border-slate-50">Pajak</a>
               <a href="#cara-kerja" onClick={() => setIsOpen(false)} className="py-2 hover:text-indigo-600 transition-colors border-b border-slate-50">Cara Kerja</a>
-              <a href="#harga" onClick={() => setIsOpen(false)} className="py-2 hover:text-indigo-600 transition-colors border-b border-slate-50">Harga</a>
-              <a href="#keamanan" onClick={() => setIsOpen(false)} className="py-2 hover:text-indigo-600 transition-colors">Keamanan</a>
+              <a href="#harga" onClick={() => setIsOpen(false)} className="py-2 hover:text-indigo-600 transition-colors">Harga</a>
             </div>
             <div className="pt-2 sm:hidden border-t border-slate-100 flex flex-col gap-3">
               <Link href="/auth/login" className="w-full py-4 rounded-2xl border border-slate-200 text-center font-black text-xs text-slate-700">Masuk</Link>

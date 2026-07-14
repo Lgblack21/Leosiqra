@@ -301,47 +301,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Trust Section */}
-      <section id="keamanan" className="py-32 px-6 bg-navy text-white overflow-hidden relative scroll-mt-20">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-20 items-center">
-          <motion.div 
-            className="flex-1 space-y-8 relative z-10"
-            {...fadeInUp}
-          >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[10px] font-black uppercase tracking-widest">
-              Visi Kami
-            </div>
-            <h2 className="text-4xl md:text-6xl font-serif font-black leading-tight">
-              Transparan sejak awal, <br /> supaya trust terasa <br /> dewasa.
-            </h2>
-          </motion.div>
-          <motion.div 
-            className="flex-1 grid gap-6 relative z-10"
-            variants={staggerContainer}
-            initial="initial"
-            whileInView="whileInView"
-            viewport={{ once: true }}
-          >
-            {[
-              { title: 'Data Keamanan', desc: 'Kami menggunakan enkripsi standar bank untuk memastikan data personal Anda tidak tersentuh pihak ketiga.' },
-              { title: 'Infrastruktur Modern', desc: 'Berjalan di Google Cloud untuk memastikan reliabilitas dan kecepatan akses kapanpun.' },
-            ].map((item, i) => (
-              <motion.div 
-                key={i} 
-                className="p-10 rounded-[48px] bg-white/5 border border-white/10 backdrop-blur-sm group hover:bg-white/10 transition-all"
-                variants={fadeInUp}
-              >
-                <h4 className="text-xl font-black mb-3">{item.title}</h4>
-                <p className="text-indigo-200/70 font-medium leading-relaxed">{item.desc}</p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-        {/* Subtle background graphics */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 blur-[120px] rounded-full" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/10 blur-[120px] rounded-full" />
-      </section>
-
       {/* Final CTA Full */}
       <section className="py-20 sm:py-40 px-6 relative overflow-hidden">
         <motion.div 

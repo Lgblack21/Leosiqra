@@ -93,7 +93,7 @@ export const LandingFeatures = () => (
           { icon: Database, title: 'Alokasi Dana Instan', desc: 'Pengelompokan kategori yang efisien untuk kontrol dana harian.' },
           { icon: PieChart, title: 'Usul Dashboard', desc: 'Sistem request fitur sesuai kebutuhan member komunitas.' },
           { icon: Shield, title: 'Simpan Aman', desc: 'Enkripsi data berlapis untuk menjaga privasi finansial Anda.' },
-          { icon: BarChart3, title: 'SPT Tahunan Otomatis', desc: 'Perhitungan laporan pajak tahunan yang siap unduh kapan saja.' },
+          { icon: BarChart3, title: 'Kalkulasi SPT Tahunan', desc: 'Perhitungan ringkasan pajak tahunan yang siap unduh kapan saja.' },
           { icon: Zap, title: 'Efisien & Terukur', desc: 'Visualisasi grafis modern untuk memantau tren perkembangan kekayaan.' },
         ].map((feat, i) => (
           <motion.div 
@@ -127,10 +127,14 @@ export const LandingFeatures = () => (
           Laporan Pajak
         </div>
         <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif font-black text-slate-900">
-          Laporan Pajak SPT <br className="hidden sm:block" /> Otomatis
+          Kalkulasi SPT <br className="hidden sm:block" /> Tahunan Otomatis
         </h2>
         <p className="text-slate-500 text-sm sm:text-base font-medium leading-relaxed max-w-lg">
-          Tidak perlu lagi menghitung manual. Sistem kami merangkum seluruh transaksi dalam format yang kompatibel dengan pelaporan pajak tahunan Anda.
+          Tidak perlu lagi menghitung manual. Sistem merangkum seluruh transaksi Anda menjadi draft ringkasan pajak tahunan yang siap dipakai untuk pelaporan mandiri.
+        </p>
+        <p className="text-[11px] sm:text-xs text-slate-400 font-medium leading-relaxed max-w-lg border-l-2 border-slate-200 pl-3">
+          * Fitur ini menghitung &amp; menyusun ringkasan SPT secara otomatis. Pelaporan resmi tetap Anda kirim sendiri melalui{' '}
+          <a href="https://coretaxdjp.pajak.go.id/" target="_blank" rel="noopener noreferrer" className="text-indigo-500 font-bold hover:underline">coretaxdjp.pajak.go.id</a>.
         </p>
       </div>
       <div className="flex-1 w-full p-10 rounded-[48px] bg-navy text-white space-y-8">
@@ -139,7 +143,7 @@ export const LandingFeatures = () => (
           <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Paling Populer</span>
         </div>
         <ul className="space-y-6">
-          {['Kalkulasi Otomatis', 'Kompatibel Format DJP', 'Export Excel/PDF', 'Audit Track Record', 'Prediksi Pajak'].map((item, i) => (
+          {['Kalkulasi Otomatis', 'Ringkasan Siap Lapor', 'Export Excel/PDF', 'Audit Track Record', 'Prediksi Pajak'].map((item, i) => (
             <motion.li 
               key={i} 
               className="flex items-center gap-3 font-bold group hover:translate-x-2 transition-transform cursor-pointer"
