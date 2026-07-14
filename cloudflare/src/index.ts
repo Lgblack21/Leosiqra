@@ -568,7 +568,16 @@ Aturan:
 - Jika data yang diminta tidak ada di konteks, sampaikan dengan jujur alih-alih mengarang.
 - Untuk pertanyaan di luar topik keuangan, jawab senormal asisten AI pada umumnya.`;
 
-const OPENROUTER_MODEL_DEFAULT = "openai/gpt-4o-mini";
+// Beberapa provider di balik OpenRouter membatasi akses berdasarkan region IP
+// pemanggil — IP edge Cloudflare Workers bisa saja diblokir oleh satu provider
+// meski modelnya sendiri valid. Kirim beberapa kandidat model sekaligus
+// (fitur routing/fallback bawaan OpenRouter) supaya jika satu provider
+// menolak, permintaan otomatis dicoba ke provider/model berikutnya.
+const OPENROUTER_FALLBACK_MODELS = [
+  "meta-llama/llama-3.1-8b-instruct",
+  "deepseek/deepseek-chat",
+  "google/gemini-2.0-flash-001",
+];
 
 const runOpenRouterAssistant = async (
   env: Env,
@@ -583,6 +592,11 @@ const runOpenRouterAssistant = async (
   // Batasi riwayat agar konteks tidak membengkak tanpa batas.
   const recentHistory = history.slice(-20);
 
+  const preferredModel = env.OPENROUTER_MODEL;
+  const models = preferredModel
+    ? [preferredModel, ...OPENROUTER_FALLBACK_MODELS.filter((m) => m !== preferredModel)]
+    : OPENROUTER_FALLBACK_MODELS;
+
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -592,7 +606,8 @@ const runOpenRouterAssistant = async (
       "x-title": env.APP_NAME || "Leosiqra",
     },
     body: JSON.stringify({
-      model: env.OPENROUTER_MODEL || OPENROUTER_MODEL_DEFAULT,
+      models,
+      route: "fallback",
       messages: [
         { role: "system", content: systemPrompt },
         ...recentHistory,
