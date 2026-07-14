@@ -20,6 +20,7 @@ import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged, User } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 import { StockInvestmentModal } from '@/components/modals/StockInvestmentModal';
+import { useCountUp } from '@/lib/hooks/useCountUp';
 
 export default function SahamPage() {
   const [investments, setInvestments] = useState<Investment[]>([]);
@@ -69,6 +70,10 @@ export default function SahamPage() {
   const totalCurrent = useMemo(() => investments.reduce((s, i) => s + i.currentValue, 0), [investments]);
   const totalReturn = totalInvested > 0 ? ((totalCurrent - totalInvested) / totalInvested) * 100 : 0;
 
+  const animatedTotalCurrent = useCountUp(totalCurrent);
+  const animatedTotalInvested = useCountUp(totalInvested);
+  const animatedTotalReturn = useCountUp(totalReturn);
+
   const filtered = useMemo(() =>
     searchQuery ? investments.filter(s => (s.stockCode || s.name || '').toLowerCase().includes(searchQuery.toLowerCase())) : investments,
     [investments, searchQuery]
@@ -81,12 +86,17 @@ export default function SahamPage() {
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
       
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] border border-slate-50 shadow-sm">
-        <div className="flex flex-col">
-          <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Portofolio Saham</h1>
-          <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-            Seluruh posisi · {investments.length} aktif
-          </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-br from-white to-indigo-50/40 p-6 rounded-[24px] border border-slate-100 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-navy to-indigo-700 text-white items-center justify-center shadow-lg shadow-indigo-600/20 shrink-0">
+            <BarChart3 size={22} />
+          </div>
+          <div className="flex flex-col">
+            <h1 className="text-xl md:text-2xl font-serif font-black text-slate-900 tracking-tight leading-tight">Portofolio Saham</h1>
+            <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+              Seluruh posisi · {investments.length} aktif
+            </p>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -102,7 +112,7 @@ export default function SahamPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4 relative overflow-hidden group">
+        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col gap-4 relative overflow-hidden group">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
               <BarChart3 size={20} />
@@ -110,15 +120,15 @@ export default function SahamPage() {
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nilai Portofolio</p>
           </div>
           <div>
-            <h3 className="text-3xl font-black text-slate-900 leading-tight">Rp {formatRp(totalCurrent)}</h3>
-            <p className={`text-[10px] font-bold mt-1 uppercase tracking-wider ${totalReturn >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-              {totalReturn >= 0 ? '+' : ''}{totalReturn.toFixed(2)}% Unrealized {totalReturn >= 0 ? 'Profit' : 'Loss'}
+            <h3 className="text-3xl font-black text-slate-900 leading-tight tabular-nums">Rp {formatRp(Math.round(animatedTotalCurrent))}</h3>
+            <p className={`text-[10px] font-bold mt-1 uppercase tracking-wider tabular-nums ${totalReturn >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+              {animatedTotalReturn >= 0 ? '+' : ''}{animatedTotalReturn.toFixed(2)}% Unrealized {totalReturn >= 0 ? 'Profit' : 'Loss'}
             </p>
           </div>
           <TrendingUp size={48} className="absolute -right-2 -bottom-2 text-emerald-50/50 group-hover:scale-110 transition-transform -rotate-12" />
         </div>
 
-        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4 relative overflow-hidden group">
+        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col gap-4 relative overflow-hidden group">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-600">
               <Briefcase size={20} />
@@ -126,7 +136,7 @@ export default function SahamPage() {
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estimasi Modal</p>
           </div>
           <div>
-            <h3 className="text-3xl font-black text-slate-900 leading-tight">Rp {formatRp(totalInvested)}</h3>
+            <h3 className="text-3xl font-black text-slate-900 leading-tight tabular-nums">Rp {formatRp(Math.round(animatedTotalInvested))}</h3>
             <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">{investments.length} posisi aktif</p>
           </div>
         </div>
@@ -171,7 +181,7 @@ export default function SahamPage() {
               </thead>
               <tbody>
                 {filtered.map((inv) => (
-                  <tr key={inv.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
+                  <tr key={inv.id} className="group hover:bg-indigo-50/30 transition-colors border-b border-slate-50 last:border-b-0">
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-500">{formatDate(inv.dateInvested)}</td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap">
                       <p className="text-sm font-black text-slate-900">{inv.stockCode || inv.name}</p>

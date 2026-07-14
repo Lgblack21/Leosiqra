@@ -17,6 +17,7 @@ import { onAuthStateChanged, User } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
 import { cn } from '@/lib/utils';
 import { DepositModal } from '@/components/modals/DepositModal';
+import { useCountUp } from '@/lib/hooks/useCountUp';
 
 export default function DepositoPage() {
   const [investments, setInvestments] = useState<Investment[]>([]);
@@ -84,14 +85,24 @@ export default function DepositoPage() {
   // Portofolio deposito bersifat all-time: penempatan lama tidak "hilang" saat berpindah bulan.
   const filteredInvestments = investments;
 
+  // Setiap "Penempatan" baru otomatis membuat baris proyeksi "Hasil Akhir" (status
+  // 'Planned', bertanggal jatuh tempo di masa depan) agar tabel bisa menampilkan
+  // estimasi hasil. Baris proyeksi ini BUKAN uang yang benar-benar ada saat ini,
+  // jadi harus dikecualikan dari total — jika tidak, total akan terhitung dobel
+  // (baris penempatan asli + baris proyeksinya).
+  const realInvestments = useMemo(() => filteredInvestments.filter(i => i.status !== 'Planned'), [filteredInvestments]);
+
   const totalDeposited = useMemo(() => {
-    return filteredInvestments.reduce((s, i) => {
+    return realInvestments.reduce((s, i) => {
       if (i.transactionType === 'Penarikan') return s - i.amountInvested;
       if (i.transactionType === 'Bunga') return s;
       return s + i.amountInvested;
     }, 0);
-  }, [filteredInvestments]);
-  const avgRate = filteredInvestments.length > 0 ? filteredInvestments.reduce((s, i) => s + i.returnPercentage, 0) / filteredInvestments.length : 0;
+  }, [realInvestments]);
+  const avgRate = realInvestments.length > 0 ? realInvestments.reduce((s, i) => s + i.returnPercentage, 0) / realInvestments.length : 0;
+
+  const animatedTotalDeposited = useCountUp(totalDeposited);
+  const animatedAvgRate = useCountUp(avgRate);
 
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n).replace('Rp', '').trim();
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
@@ -100,12 +111,17 @@ export default function DepositoPage() {
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] border border-slate-50 shadow-sm">
-        <div>
-          <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Deposito</h1>
-          <p className="text-[10px] md:text-sm font-medium text-slate-400 mt-1 max-w-xl">
-            Kelola seluruh penempatan dana deposito Anda.
-          </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-br from-white to-indigo-50/40 p-6 rounded-[24px] border border-slate-100 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-navy to-indigo-700 text-white items-center justify-center shadow-lg shadow-indigo-600/20 shrink-0">
+            <Banknote size={22} />
+          </div>
+          <div>
+            <h1 className="text-xl md:text-2xl font-serif font-black text-slate-900 tracking-tight">Deposito</h1>
+            <p className="text-[10px] md:text-sm font-medium text-slate-400 mt-1 max-w-xl">
+              Kelola seluruh penempatan dana deposito Anda.
+            </p>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button
@@ -120,7 +136,7 @@ export default function DepositoPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4 relative overflow-hidden group">
+        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col gap-4 relative overflow-hidden group">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600">
               <Banknote size={20} />
@@ -128,13 +144,13 @@ export default function DepositoPage() {
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Deposito</p>
           </div>
           <div>
-            <h3 className="text-3xl font-black text-slate-900 leading-tight">Rp {formatRp(totalDeposited)}</h3>
-            <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">{filteredInvestments.length} penempatan aktif</p>
+            <h3 className="text-3xl font-black text-slate-900 leading-tight tabular-nums">Rp {formatRp(Math.round(animatedTotalDeposited))}</h3>
+            <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">{realInvestments.length} penempatan aktif</p>
           </div>
           <Banknote size={48} className="absolute -right-2 -bottom-2 text-orange-50/50 group-hover:scale-110 transition-transform -rotate-12" />
         </div>
 
-        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4 relative overflow-hidden group">
+        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col gap-4 relative overflow-hidden group">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
               <Percent size={20} />
@@ -142,7 +158,7 @@ export default function DepositoPage() {
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rata-rata Bunga/Thn</p>
           </div>
           <div>
-            <h3 className="text-3xl font-black text-slate-900 leading-tight">{avgRate.toFixed(2)}%</h3>
+            <h3 className="text-3xl font-black text-slate-900 leading-tight tabular-nums">{animatedAvgRate.toFixed(2)}%</h3>
             <p className="text-[10px] font-bold text-slate-400 mt-1">Per Annum</p>
           </div>
           <Percent size={48} className="absolute -right-2 -bottom-2 text-blue-50/50 group-hover:scale-110 transition-transform -rotate-12" />
@@ -180,7 +196,7 @@ export default function DepositoPage() {
                   const isPlanned = inv.status === 'Planned';
                   return (
                     <tr key={inv.id} className={cn(
-                      "group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0",
+                      "group hover:bg-indigo-50/30 transition-colors border-b border-slate-50 last:border-b-0",
                       isPlanned && "bg-slate-50/30 opacity-75"
                     )}>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-500">{formatDate(inv.dateInvested)}</td>

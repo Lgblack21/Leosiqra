@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   TrendingDown,
   TrendingUp,
@@ -18,52 +18,7 @@ import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 import { cn } from '@/lib/utils';
-
-// Menghitung nilai dari angka sebelumnya menuju target dengan easing halus,
-// dan langsung melompat ke nilai akhir jika user memilih prefers-reduced-motion.
-const useCountUp = (target: number, duration = 900) => {
-  const [display, setDisplay] = useState(target);
-  const fromRef = useRef(target);
-  const firstRun = useRef(true);
-
-  useEffect(() => {
-    if (firstRun.current) {
-      firstRun.current = false;
-      fromRef.current = target;
-      return;
-    }
-
-    const prefersReducedMotion =
-      typeof window !== 'undefined' &&
-      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) {
-      fromRef.current = target;
-      const raf = requestAnimationFrame(() => setDisplay(target));
-      return () => cancelAnimationFrame(raf);
-    }
-
-    const from = fromRef.current;
-    const to = target;
-    const start = performance.now();
-    let raf: number;
-
-    const tick = (now: number) => {
-      const t = Math.min((now - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - t, 3);
-      setDisplay(from + (to - from) * eased);
-      if (t < 1) {
-        raf = requestAnimationFrame(tick);
-      } else {
-        fromRef.current = to;
-      }
-    };
-
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, duration]);
-
-  return display;
-};
+import { useCountUp } from '@/lib/hooks/useCountUp';
 
 export default function PajakCenterPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
