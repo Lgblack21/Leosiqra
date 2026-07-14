@@ -69,7 +69,7 @@ export default function LandingPage() {
                   <Star key={i} size={16} className="fill-amber-400" />
                 ))}
               </div>
-              <span className="text-xs font-semibold">Gratis selamanya · tanpa kartu kredit</span>
+              <span className="text-xs font-semibold">Coba gratis 14 hari · tanpa kartu kredit</span>
             </div>
 
             {/* Quick Stats Point */}
@@ -269,7 +269,7 @@ export default function LandingPage() {
               Mulai gratis. Upgrade <br /> saat produk sudah <br /> menjadi kebiasaan.
             </h2>
             <p className="text-slate-500 font-medium leading-relaxed max-w-md">
-              Akses fitur dasar secara gratis selamanya. Butuh analisis mendalam dan fitur SPT otomatis? Bergabunglah dengan Pro Plan kami.
+              Coba semua fitur dasar gratis selama 14 hari. Butuh analisis mendalam dan fitur SPT otomatis? Bergabunglah dengan Pro Plan kami.
             </p>
           </motion.div>
           <motion.div 
@@ -282,7 +282,7 @@ export default function LandingPage() {
             <div className="flex items-center justify-between pb-8 border-b border-slate-100">
               <div>
                 <p className="text-sm font-black text-indigo-600 uppercase tracking-widest mb-1">Trial Version</p>
-                <h4 className="text-4xl font-black text-slate-900">Rp 0 <span className="text-sm text-slate-400">/ selamanya</span></h4>
+                <h4 className="text-4xl font-black text-slate-900">Rp 0 <span className="text-sm text-slate-400">/ 14 hari</span></h4>
               </div>
               <div className="px-5 py-2 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest border border-emerald-100">EFEKTIF</div>
             </div>
