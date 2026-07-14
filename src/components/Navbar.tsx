@@ -42,7 +42,7 @@ export const Navbar = () => {
               Masuk
             </Link>
           </div>
-          <Link href="/auth/register" className="px-5 sm:px-7 py-2.5 sm:py-3 rounded-full bg-[#0F172A] text-white hover:bg-slate-800 transition-all font-bold text-xs sm:text-sm shadow-lg shadow-slate-200">
+          <Link href="/auth/register" className="px-5 sm:px-7 py-2.5 sm:py-3 rounded-full bg-gradient-to-r from-[#0F172A] to-indigo-700 text-white hover:shadow-indigo-500/30 hover:-translate-y-0.5 transition-all font-bold text-xs sm:text-sm shadow-lg shadow-slate-200">
             Daftar Gratis
           </Link>
 

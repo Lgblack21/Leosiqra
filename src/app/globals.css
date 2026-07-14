@@ -8,9 +8,9 @@ html {
   --background: #F9F8F6;
   --foreground: #111827;
   --accent-navy: #1D2641;
-  --font-geist-sans: "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-geist-sans: var(--font-jakarta), "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
   --font-geist-mono: "Cascadia Code", "Fira Code", "Consolas", "Courier New", monospace;
-  --font-serif: "DM Serif Display", "Georgia", "Times New Roman", serif;
+  --font-serif: var(--font-serif-display), "DM Serif Display", "Georgia", "Times New Roman", serif;
 }
 
 @theme inline {
@@ -27,4 +27,67 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans);
+}
+
+/* Gradien teks untuk aksen judul */
+.text-gradient {
+  background-image: linear-gradient(120deg, #4f46e5 0%, #7c3aed 50%, #6366f1 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Lapisan dekoratif: aurora blobs + dot grid halus */
+.hero-aurora {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.hero-aurora::before,
+.hero-aurora::after {
+  content: "";
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(110px);
+  opacity: 0.55;
+}
+.hero-aurora::before {
+  width: 42rem;
+  height: 42rem;
+  top: -14rem;
+  right: -10rem;
+  background: radial-gradient(circle at center, rgba(99, 102, 241, 0.28), transparent 70%);
+}
+.hero-aurora::after {
+  width: 38rem;
+  height: 38rem;
+  bottom: -16rem;
+  left: -12rem;
+  background: radial-gradient(circle at center, rgba(217, 119, 66, 0.16), transparent 70%);
+}
+
+.dot-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(29, 38, 65, 0.06) 1px, transparent 1px);
+  background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000 40%, transparent 100%);
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000 40%, transparent 100%);
+}
+
+/* Animasi mengambang lembut untuk kartu aksen */
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.animate-floaty {
+  animation: floaty 6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-floaty {
+    animation: none;
+  }
 }

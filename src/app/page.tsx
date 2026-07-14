@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, BarChart3, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, BarChart3, CheckCircle2, Star, TrendingUp, ShieldCheck } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { LandingFeatures } from '@/components/LandingFeatures';
 import { LandingFooter } from '@/components/LandingFooter';
@@ -27,37 +27,55 @@ export default function LandingPage() {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="pt-40 pb-20 px-6 overflow-hidden">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16">
+      <section className="relative pt-40 pb-24 px-6 overflow-hidden">
+        {/* Lapisan dekoratif latar */}
+        <div className="hero-aurora" aria-hidden />
+        <div className="dot-grid" aria-hidden />
+
+        <div className="relative max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16">
           {/* Left Content */}
-          <motion.div 
+          <motion.div
             className="flex-1 text-left"
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 text-[10px] font-black uppercase tracking-[0.2em] mb-8">
+            <div className="inline-flex items-center gap-2.5 pl-2.5 pr-4 py-1.5 rounded-full bg-white/70 backdrop-blur border border-indigo-100 text-indigo-600 text-[10px] font-black uppercase tracking-[0.2em] mb-8 shadow-sm">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75 animate-ping" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" />
+              </span>
               Layanan Keuangan Terintegrasi
             </div>
-            <h1 className="text-4xl sm:text-5xl md:text-7xl font-serif font-black tracking-tight mb-6 sm:mb-8 text-slate-900 leading-[1.1] sm:leading-[1.1]">
-              Member Site <br /> Premium <span className="text-slate-400 font-light">|</span> SPT <br /> Tahunan Otomatis
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-serif font-black tracking-tight mb-6 sm:mb-8 text-slate-900 leading-[1.05] sm:leading-[1.05]">
+              Member Site <br /> <span className="text-gradient">Premium</span> <span className="text-slate-300 font-light">|</span> SPT <br /> Tahunan Otomatis
             </h1>
-            <p className="max-w-xl text-slate-500 text-base sm:text-lg mb-8 sm:mb-12 font-medium leading-relaxed">
+            <p className="max-w-xl text-slate-500 text-base sm:text-lg mb-8 sm:mb-10 font-medium leading-relaxed">
               Manajemen finansial personal dengan fitur terlengkap mulai dari rekap bulanan, kalkulasi pajak, hingga portfolio investasi dalam satu dashboard bersih.
             </p>
             <div className="flex flex-col sm:flex-row items-center gap-5">
-              <Link href="/auth/register" className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-navy text-white font-black text-base hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-2xl shadow-navy/20 active:scale-95">
-                Mulai Sekarang <ArrowRight size={20} />
+              <Link href="/auth/register" className="group w-full sm:w-auto px-10 py-5 rounded-2xl bg-gradient-to-r from-navy to-indigo-700 text-white font-black text-base transition-all flex items-center justify-center gap-2 shadow-2xl shadow-indigo-600/25 hover:shadow-indigo-600/40 hover:-translate-y-0.5 active:scale-95">
+                Mulai Sekarang <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </Link>
-              <button className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-white border border-slate-200 text-slate-600 font-black text-base hover:bg-slate-50 transition-all active:scale-95">
+              <Link href="#harga" className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-white/70 backdrop-blur border border-slate-200 text-slate-600 font-black text-base hover:bg-white hover:border-slate-300 transition-all active:scale-95 text-center">
                 Hubungi Kami
-              </button>
+              </Link>
             </div>
-            
+
+            {/* Social proof ringan */}
+            <div className="mt-8 flex items-center gap-3 text-slate-500">
+              <div className="flex text-amber-400">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <Star key={i} size={16} className="fill-amber-400" />
+                ))}
+              </div>
+              <span className="text-xs font-semibold">Gratis selamanya · tanpa kartu kredit</span>
+            </div>
+
             {/* Quick Stats Point */}
-            <div className="mt-16 flex flex-wrap gap-4">
+            <div className="mt-10 flex flex-wrap gap-3">
               {['Akurat', 'Cepat', 'Efisien', 'Terpantau'].map((tag) => (
-                <div key={tag} className="px-5 py-2.5 rounded-full bg-slate-100/50 border border-slate-200/50 text-slate-500 text-[10px] font-black uppercase tracking-widest hover:border-indigo-600 hover:text-indigo-600 transition-colors cursor-default">
+                <div key={tag} className="px-5 py-2.5 rounded-full bg-white/60 backdrop-blur border border-slate-200/60 text-slate-500 text-[10px] font-black uppercase tracking-widest hover:border-indigo-500 hover:text-indigo-600 hover:-translate-y-0.5 transition-all cursor-default">
                   {tag}
                 </div>
               ))}
@@ -65,13 +83,13 @@ export default function LandingPage() {
           </motion.div>
 
           {/* Right Content - Dashboard Mockup */}
-          <motion.div 
+          <motion.div
             className="flex-1 w-full relative mt-12 lg:mt-0"
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            <div className="relative rounded-[32px] sm:rounded-[48px] bg-slate-100 p-2 sm:p-3 shadow-2xl shadow-slate-200 border border-white">
+            <div className="relative rounded-[32px] sm:rounded-[48px] bg-white/60 backdrop-blur-xl p-2 sm:p-3 shadow-2xl shadow-indigo-200/50 border border-white/80">
               <div className="bg-white rounded-[28px] sm:rounded-[40px] overflow-hidden shadow-inner border border-slate-100 p-4 sm:p-8 space-y-6 sm:space-y-8">
                 <div className="flex items-center justify-between">
                   <div>
@@ -84,11 +102,13 @@ export default function LandingPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 rounded-3xl bg-slate-50 border border-slate-100">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Income</p>
+                  <div className="p-4 rounded-3xl bg-gradient-to-br from-emerald-50 to-slate-50 border border-emerald-100/60">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1">
+                      <TrendingUp size={11} className="text-emerald-500" /> Income
+                    </p>
                     <p className="text-lg font-black text-slate-900">Rp 12,4jt</p>
                   </div>
-                  <div className="p-4 rounded-3xl bg-slate-50 border border-slate-100">
+                  <div className="p-4 rounded-3xl bg-gradient-to-br from-indigo-50 to-slate-50 border border-indigo-100/60">
                     <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Savings</p>
                     <p className="text-lg font-black text-slate-900">82%</p>
                   </div>
@@ -96,20 +116,20 @@ export default function LandingPage() {
 
                 <div className="space-y-4">
                   <div className="h-40 bg-indigo-600 rounded-3xl relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 to-indigo-500" />
+                    <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 via-indigo-600 to-violet-500" />
                     <div className="absolute inset-0 flex items-end p-6 gap-2">
                       {[40, 70, 45, 90, 65, 80].map((h, i) => (
-                        <div key={i} className="flex-1 bg-white/20 rounded-t-lg transition-all group-hover:bg-white/40" style={{ height: `${h}%` }} />
+                        <div key={i} className="flex-1 bg-white/25 rounded-t-lg transition-all duration-500 group-hover:bg-white/50" style={{ height: `${h}%` }} />
                       ))}
                     </div>
                   </div>
                   <div className="p-5 rounded-3xl border border-slate-100">
                     <div className="flex items-center gap-2 mb-8">
-                      <Image 
-                        src="/images/Logo-new.png" 
-                        alt="Leosiqra Logo" 
-                        width={40} 
-                        height={40} 
+                      <Image
+                        src="/images/Logo-new.png"
+                        alt="Leosiqra Logo"
+                        width={40}
+                        height={40}
                       />
                       <span className="font-bold text-slate-800 tracking-tight">Leosiqra</span>
                     </div>
@@ -118,10 +138,30 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            
+
+            {/* Kartu aksen mengambang */}
+            <div className="hidden sm:flex animate-floaty absolute -top-6 -left-6 items-center gap-3 px-4 py-3 rounded-2xl bg-white shadow-xl shadow-slate-200/70 border border-slate-100">
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                <TrendingUp size={18} />
+              </div>
+              <div className="leading-tight">
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Pertumbuhan</p>
+                <p className="text-sm font-black text-slate-900">+12,4%</p>
+              </div>
+            </div>
+            <div className="hidden sm:flex animate-floaty [animation-delay:2s] absolute -bottom-6 -right-4 items-center gap-3 px-4 py-3 rounded-2xl bg-white shadow-xl shadow-slate-200/70 border border-slate-100">
+              <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                <ShieldCheck size={18} />
+              </div>
+              <div className="leading-tight">
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">SPT Tahunan</p>
+                <p className="text-sm font-black text-slate-900">Otomatis</p>
+              </div>
+            </div>
+
             {/* Floating Accents */}
-            <div className="absolute -top-12 -right-12 w-40 h-40 bg-indigo-600/5 blur-[80px] rounded-full" />
-            <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-orange-600/5 blur-[80px] rounded-full" />
+            <div className="absolute -top-12 -right-12 w-40 h-40 bg-indigo-600/10 blur-[80px] rounded-full" />
+            <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-orange-600/10 blur-[80px] rounded-full" />
           </motion.div>
         </div>
       </section>
