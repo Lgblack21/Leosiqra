@@ -7,7 +7,6 @@ export interface Env {
   ASSETS: Fetcher;
   FILES_BUCKET?: R2Bucket;
   REALTIME_ROOM: DurableObjectNamespace;
-  AI?: Ai;
   APP_NAME: string;
   APP_ENV: string;
   APP_URL: string;
@@ -15,11 +14,11 @@ export interface Env {
   SESSION_SECRET: string;
   DEFAULT_FREE_PLAN_DAYS?: string;
   MAINTENANCE_BYPASS_ADMIN?: string;
-  GEMINI_API_KEY?: string;
-  AI_PROVIDER?: string;
   R2_PUBLIC_BASE_URL?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  OPENROUTER_API_KEY?: string;
+  OPENROUTER_MODEL?: string;
 }
 
 type AppUser = {
@@ -468,27 +467,27 @@ const getMaintenanceSettings = async (env: Env) =>
 const buildUserContext = async (env: Env, userId: string) => {
   const [accounts, transactions, budgets, investments, savings] = await Promise.all([
     env.DB.prepare(
-      "SELECT id, name, type, currency, balance FROM accounts WHERE user_id = ? ORDER BY created_at DESC LIMIT 5"
+      "SELECT id, name, type, currency, balance FROM accounts WHERE user_id = ? ORDER BY created_at DESC LIMIT 20"
     )
       .bind(userId)
       .all(),
     env.DB.prepare(
-      "SELECT type, amount, category, note, date FROM transactions WHERE user_id = ? ORDER BY date DESC LIMIT 20"
+      "SELECT type, amount, category, sub_category, note, date FROM transactions WHERE user_id = ? ORDER BY date DESC LIMIT 40"
     )
       .bind(userId)
       .all(),
     env.DB.prepare(
-      "SELECT category, amount, period FROM budgets WHERE user_id = ? ORDER BY created_at DESC LIMIT 10"
+      "SELECT category, amount, period FROM budgets WHERE user_id = ? ORDER BY created_at DESC LIMIT 15"
     )
       .bind(userId)
       .all(),
     env.DB.prepare(
-      "SELECT name, type, current_value_idr, return_percentage FROM investments WHERE user_id = ? ORDER BY created_at DESC LIMIT 10"
+      "SELECT name, type, amount_invested, current_value_idr, return_percentage FROM investments WHERE user_id = ? ORDER BY created_at DESC LIMIT 20"
     )
       .bind(userId)
       .all(),
     env.DB.prepare(
-      "SELECT description, amount_idr, date FROM savings WHERE user_id = ? ORDER BY date DESC LIMIT 10"
+      "SELECT description, amount_idr, to_goal, date FROM savings WHERE user_id = ? ORDER BY date DESC LIMIT 15"
     )
       .bind(userId)
       .all(),
@@ -503,87 +502,128 @@ const buildUserContext = async (env: Env, userId: string) => {
   };
 };
 
-const runGeminiAssistant = async (apiKey: string, intro: string, prompt: string, userContext: unknown) => {
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${encodeURIComponent(
-      apiKey
-    )}`,
-    {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                text: `${intro}\n\nKonteks user:\n${JSON.stringify(
-                  userContext,
-                  null,
-                  2
-                )}\n\nPertanyaan:\n${prompt}`,
-              },
-            ],
-          },
-        ],
-      }),
-    }
-  );
+// Snapshot data pasar (kripto + emas + kurs) di-cache singkat per isolate agar
+// tiap pesan chat tidak selalu memanggil API eksternal, tapi tetap segar.
+type MarketSnapshot = { text: string; fetchedAt: number };
+let marketSnapshotCache: MarketSnapshot | null = null;
+const MARKET_CACHE_MS = 5 * 60 * 1000;
+
+const fetchMarketSnapshot = async (): Promise<string> => {
+  if (marketSnapshotCache && Date.now() - marketSnapshotCache.fetchedAt < MARKET_CACHE_MS) {
+    return marketSnapshotCache.text;
+  }
+
+  try {
+    const [cryptoRes, fxRes] = await Promise.all([
+      fetch(
+        "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,holotoken,pax-gold&vs_currencies=usd&include_24hr_change=true"
+      ),
+      fetch("https://open.er-api.com/v6/latest/USD"),
+    ]);
+
+    const crypto = cryptoRes.ok
+      ? ((await cryptoRes.json()) as Record<string, { usd?: number; usd_24h_change?: number }>)
+      : {};
+    const fx = fxRes.ok ? ((await fxRes.json()) as { rates?: Record<string, number> }) : {};
+    const idrRate = fx.rates?.IDR;
+
+    const fmtUsd = (n?: number) =>
+      typeof n === "number" ? `$${n.toLocaleString("en-US", { maximumFractionDigits: n < 1 ? 6 : 2 })}` : "-";
+    const fmtChange = (n?: number) => (typeof n === "number" ? `${n >= 0 ? "+" : ""}${n.toFixed(2)}%` : "-");
+    const goldPerGramIdr =
+      crypto["pax-gold"]?.usd && idrRate ? (crypto["pax-gold"].usd * idrRate) / 31.1035 : undefined;
+
+    const lines = [
+      `USD/IDR: Rp${idrRate ? Math.round(idrRate).toLocaleString("id-ID") : "-"}`,
+      `BTC/USD: ${fmtUsd(crypto.bitcoin?.usd)} (${fmtChange(crypto.bitcoin?.usd_24h_change)} 24 jam)`,
+      `ETH/USD: ${fmtUsd(crypto.ethereum?.usd)} (${fmtChange(crypto.ethereum?.usd_24h_change)} 24 jam)`,
+      `SOL/USD: ${fmtUsd(crypto.solana?.usd)} (${fmtChange(crypto.solana?.usd_24h_change)} 24 jam)`,
+      `HOT/USD: ${fmtUsd(crypto.holotoken?.usd)} (${fmtChange(crypto.holotoken?.usd_24h_change)} 24 jam)`,
+      `Emas (XAU) per gram: ${goldPerGramIdr ? `Rp${Math.round(goldPerGramIdr).toLocaleString("id-ID")}` : "-"} (${fmtChange(crypto["pax-gold"]?.usd_24h_change)} 24 jam)`,
+    ];
+
+    const text = lines.join("\n");
+    marketSnapshotCache = { text, fetchedAt: Date.now() };
+    return text;
+  } catch (error) {
+    console.error("Gagal mengambil data pasar untuk AI:", error);
+    return marketSnapshotCache?.text ?? "Data pasar sedang tidak tersedia saat ini.";
+  }
+};
+
+const buildAiSystemPrompt = (userContext: unknown, marketSnapshot: string) => `Kamu adalah Leosiqra, asisten AI di aplikasi pencatatan keuangan pribadi Leosiqra.
+
+Kamu boleh menjawab pertanyaan APA SAJA, termasuk topik umum di luar keuangan — layaknya asisten AI serba bisa. Namun keahlian dan fokus utamamu adalah membantu pengguna memahami serta mengelola data keuangan pribadi mereka sendiri di aplikasi ini (transaksi, rekening, investasi, tabungan, budget, hutang/piutang). Setiap kali pertanyaan menyentuh keuangan pengguna, SELALU rujuk data konkret di bawah ini dan jawab dengan angka nyata — jangan mengarang angka atau data yang tidak ada.
+
+Data Pasar Terkini (real-time, boleh dipakai untuk pertanyaan seputar kripto/emas/kurs):
+${marketSnapshot}
+
+Konteks Data Keuangan Pengguna (JSON):
+${JSON.stringify(userContext, null, 2)}
+
+Aturan:
+- Jawab dalam Bahasa Indonesia, ringkas, jelas, dan ramah.
+- Gunakan format Rupiah yang jelas saat membahas nominal.
+- Jangan menjanjikan keuntungan investasi yang pasti.
+- Jika data yang diminta tidak ada di konteks, sampaikan dengan jujur alih-alih mengarang.
+- Untuk pertanyaan di luar topik keuangan, jawab senormal asisten AI pada umumnya.`;
+
+const OPENROUTER_MODEL_DEFAULT = "openai/gpt-4o-mini";
+
+const runOpenRouterAssistant = async (
+  env: Env,
+  systemPrompt: string,
+  history: Array<{ role: "user" | "assistant"; content: string }>,
+  prompt: string
+) => {
+  if (!env.OPENROUTER_API_KEY) {
+    return "AI belum dikonfigurasi. Simpan `OPENROUTER_API_KEY` di Cloudflare untuk mengaktifkan asisten.";
+  }
+
+  // Batasi riwayat agar konteks tidak membengkak tanpa batas.
+  const recentHistory = history.slice(-20);
+
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
+      "http-referer": env.APP_URL || "https://www.leosiqra.com",
+      "x-title": env.APP_NAME || "Leosiqra",
+    },
+    body: JSON.stringify({
+      model: env.OPENROUTER_MODEL || OPENROUTER_MODEL_DEFAULT,
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...recentHistory,
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.6,
+    }),
+  });
 
   if (!response.ok) {
     const payload = await response.text();
-    throw new Error(`Gemini request gagal (${response.status}): ${payload.slice(0, 200)}`);
+    throw new Error(`OpenRouter request gagal (${response.status}): ${payload.slice(0, 300)}`);
   }
 
   const data = (await response.json()) as {
-    candidates?: Array<{
-      content?: {
-        parts?: Array<{ text?: string }>;
-      };
-    }>;
+    choices?: Array<{ message?: { content?: string } }>;
   };
 
-  const textOutput = data.candidates?.[0]?.content?.parts
-    ?.map((part) => part.text ?? "")
-    .join("")
-    .trim();
-
+  const textOutput = data.choices?.[0]?.message?.content?.trim();
   return textOutput || "Maaf, saya belum bisa memproses pertanyaan Anda saat ini.";
 };
 
-const runAiAssistant = async (env: Env, prompt: string, userContext: unknown) => {
-  const intro =
-    "Anda adalah AI assistant finansial Leosiqra. Jawab dalam Bahasa Indonesia, ringkas, aman, dan jangan memberi janji keuntungan investasi.";
-
-  if (env.AI) {
-    const response = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
-      messages: [
-        { role: "system", content: intro },
-        {
-          role: "user",
-          content: `Konteks user:\n${JSON.stringify(userContext, null, 2)}\n\nPertanyaan:\n${prompt}`,
-        },
-      ],
-    });
-
-    const output = Array.isArray((response as { response?: string }).response)
-      ? JSON.stringify((response as { response?: unknown }).response)
-      : (response as { response?: string }).response;
-
-    return output ?? "Maaf, saya belum bisa memproses pertanyaan Anda saat ini.";
-  }
-
-  if (env.GEMINI_API_KEY) {
-    try {
-      return await runGeminiAssistant(env.GEMINI_API_KEY, intro, prompt, userContext);
-    } catch (error) {
-      console.error("Gemini fallback error:", error);
-    }
-  }
-
-  return "AI binding belum dikonfigurasi. Simpan `GEMINI_API_KEY` atau binding `AI` di Cloudflare untuk mengaktifkan assistant.";
+const runAiAssistant = async (
+  env: Env,
+  prompt: string,
+  userContext: unknown,
+  history: Array<{ role: "user" | "assistant"; content: string }>
+) => {
+  const marketSnapshot = await fetchMarketSnapshot();
+  const systemPrompt = buildAiSystemPrompt(userContext, marketSnapshot);
+  return runOpenRouterAssistant(env, systemPrompt, history, prompt);
 };
 
 async function handleRegister(request: Request, env: Env) {
@@ -2378,9 +2418,6 @@ async function handleAiChat(request: Request, env: Env) {
     return json({ error: "Prompt wajib diisi." }, { status: 400 });
   }
 
-  const userContext = await buildUserContext(env, authResult.session.user.id);
-  const answer = await runAiAssistant(env, payload.prompt, userContext);
-
   let existing:
     | { id: string; messages_json: string }
     | { user_id: string; messages_json: string }
@@ -2397,9 +2434,18 @@ async function handleAiChat(request: Request, env: Env) {
       .first<{ user_id: string; messages_json: string }>();
   }
 
-  const nextMessages = existing
+  const nextMessages: Array<{ role: string; content: string; createdAt: string }> = existing
     ? JSON.parse(existing.messages_json)
     : [];
+
+  // Riwayat percakapan sebelumnya diteruskan ke model agar AI ingat konteks
+  // obrolan, bukan hanya menjawab satu pertanyaan tanpa memori.
+  const history = nextMessages
+    .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
+    .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
+
+  const userContext = await buildUserContext(env, authResult.session.user.id);
+  const answer = await runAiAssistant(env, payload.prompt, userContext, history);
 
   nextMessages.push(
     { role: "user", content: payload.prompt, createdAt: nowIso() },

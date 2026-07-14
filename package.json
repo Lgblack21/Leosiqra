@@ -13,7 +13,6 @@
     "cf:d1:seed": "wrangler d1 execute leosiqra-db --local --file=./cloudflare/seeds/seed.sql"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.38.0",
