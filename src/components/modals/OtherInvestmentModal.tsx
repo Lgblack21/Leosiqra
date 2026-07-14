@@ -24,6 +24,7 @@ interface OtherInvestmentModalProps {
 
 export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initialData }: OtherInvestmentModalProps) => {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [rates, setRates] = useState<ExchangeRates | null>(null);
   const [convertedAmount, setConvertedAmount] = useState<number>(0);
@@ -64,9 +65,10 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
 
   useEffect(() => {
     if (isOpen && userId) {
+      setError('');
       accountService.getUserAccounts(userId).then(setAccounts).catch(console.error);
       exchangeRateService.getLatestRates().then(setRates).catch(console.error);
-      
+
       if (editData) {
         setFormData({
           name: editData.name,
@@ -124,23 +126,24 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
 
   const handleCreate = async () => {
     if (!userId || !formData.name || !formData.quantity || !formData.pricePerUnit) return;
+    setError('');
     setLoading(true);
-    
+
     const qty = parseFloat(formData.quantity) || 0;
     const price = parseFloat(formData.pricePerUnit) || 0;
     const invested = qty * price;
     const current = parseFloat(formData.currentValue) || invested;
-    
+
     try {
       const investmentPayload: Omit<Investment, 'id' | 'createdAt'> = {
         userId, name: formData.name, type: 'Lainnya',
         platform: formData.platform || formData.assetType,
-        amountInvested: invested, 
+        amountInvested: invested,
         amountIDR: convertedAmount || invested,
         currentValue: current,
         currentValueIDR: formData.currency === 'IDR' ? current : (current * (convertedAmount / (invested || 1))),
         returnPercentage: invested > 0 ? ((current - invested) / invested) * 100 : 0,
-        currency: formData.currency, 
+        currency: formData.currency,
         logoUrl: formData.logoUrl,
         quantity: qty,
         unit: formData.unit,
@@ -151,40 +154,8 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
         dateInvested: new Date(formData.dateInvested), status: 'Active'
       };
 
-      // Financial Sync Logic (Handle both New and Edit)
-      const currentInvested = invested;
-      const currentType = formData.transactionType;
-
-      if (editData) {
-        // 1. REVERT OLD IMPACT
-        const oldInvested = editData.amountInvested;
-        const oldType = editData.transactionType || 'Pembelian';
-        
-        // Revert member totals
-        if (oldType === 'Pembelian') {
-          await updateMemberTotals(userId, 'pengeluaran', -oldInvested);
-          await updateMemberTotals(userId, 'investasi', -oldInvested);
-        } else if (oldType === 'Penjualan') {
-          await updateMemberTotals(userId, 'pemasukan', -oldInvested);
-          await updateMemberTotals(userId, 'investasi', oldInvested);
-        }
-      }
-
-      // 2. APPLY NEW IMPACT
-      const financeType = currentType === 'Pembelian' ? 'pengeluaran' : 'pemasukan';
-      await updateMemberTotals(userId, financeType, currentInvested);
-      
-      if (currentType === 'Pembelian') await updateMemberTotals(userId, 'investasi', currentInvested);
-      if (currentType === 'Penjualan') await updateMemberTotals(userId, 'investasi', -currentInvested);
-
-      // Update Account Balance
-      if (formData.accountId) {
-        const balanceChange = currentType === 'Penjualan' ? currentInvested : -currentInvested;
-        await accountService.updateAccountBalance(formData.accountId, balanceChange);
-      }
-
+      // Penyimpanan inti — posisi asetnya sendiri.
       let finalInvestmentId = editData?.id || initialData?.id || '';
-      
       if (editData?.id) {
         await investmentService.updateInvestment(editData.id, investmentPayload);
       } else if (initialData?.id) {
@@ -194,23 +165,58 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
         finalInvestmentId = await investmentService.createInvestment(investmentPayload);
       }
 
-      // 3. Create Update-Tracking Transaction
-      await addTransaction({
-        userId, type: financeType, amount: currentInvested,
-        amountIDR: convertedAmount || currentInvested,
-        category: 'Investasi', subCategory: `Lainnya - ${currentType}`,
-        accountId: formData.accountId || 'General',
-        date: new Date(formData.dateInvested),
-        note: `${editData ? '[Update]' : '[Baru]'} ${currentType} ${formData.name}`,
-        status: 'VERIFIED',
-        relatedId: finalInvestmentId,
-        relatedType: 'investasi'
-      });
-      
+      // Sinkronisasi lanjutan (ringkasan total, saldo akun, catatan transaksi
+      // ledger) bersifat non-fatal — posisi asetnya sudah tersimpan, jadi
+      // kegagalan di sini tidak boleh membuat modal terlihat "gagal total"
+      // dan memicu submit ulang yang bisa membuat posisi dobel.
+      try {
+        const currentInvested = invested;
+        const currentType = formData.transactionType;
+
+        if (editData) {
+          const oldInvested = editData.amountInvested;
+          const oldType = editData.transactionType || 'Pembelian';
+
+          if (oldType === 'Pembelian') {
+            await updateMemberTotals(userId, 'pengeluaran', -oldInvested);
+            await updateMemberTotals(userId, 'investasi', -oldInvested);
+          } else if (oldType === 'Penjualan') {
+            await updateMemberTotals(userId, 'pemasukan', -oldInvested);
+            await updateMemberTotals(userId, 'investasi', oldInvested);
+          }
+        }
+
+        const financeType = currentType === 'Pembelian' ? 'pengeluaran' : 'pemasukan';
+        await updateMemberTotals(userId, financeType, currentInvested);
+
+        if (currentType === 'Pembelian') await updateMemberTotals(userId, 'investasi', currentInvested);
+        if (currentType === 'Penjualan') await updateMemberTotals(userId, 'investasi', -currentInvested);
+
+        if (formData.accountId) {
+          const balanceChange = currentType === 'Penjualan' ? currentInvested : -currentInvested;
+          await accountService.updateAccountBalance(formData.accountId, balanceChange);
+        }
+
+        await addTransaction({
+          userId, type: financeType, amount: currentInvested,
+          amountIDR: convertedAmount || currentInvested,
+          category: 'Investasi', subCategory: `Lainnya - ${currentType}`,
+          accountId: formData.accountId || 'General',
+          date: new Date(formData.dateInvested),
+          note: `${editData ? '[Update]' : '[Baru]'} ${currentType} ${formData.name}`,
+          status: 'VERIFIED',
+          relatedId: finalInvestmentId,
+          relatedType: 'investasi'
+        });
+      } catch (syncErr) {
+        console.error('Posisi aset tersimpan, tapi gagal sinkronisasi ringkasan/saldo:', syncErr);
+      }
+
       onClose();
       setFormData({ name: '', logoUrl: '', currency: 'IDR', quantity: '', unit: '', pricePerUnit: '', currentValue: '', transactionType: 'Pembelian', category: '', accountId: '', platform: '', assetType: 'Emas', dateInvested: new Date().toISOString().split('T')[0] });
     } catch (e) {
       console.error(e);
+      setError(e instanceof Error ? e.message : 'Gagal menyimpan aset investasi. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
@@ -219,6 +225,12 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={editData ? "Edit Aset Investasi" : (initialData ? "Jual Aset Investasi" : "Tambah Aset Investasi")} maxWidth="max-w-lg">
       <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1 custom-scrollbar">
+        {error && (
+          <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-sm font-medium text-rose-600">
+            {error}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Judul / Produk Investasi</label>

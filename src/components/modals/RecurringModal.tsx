@@ -16,6 +16,7 @@ interface RecurringModalProps {
 
 export const RecurringModal = ({ userId, isOpen, onClose, initialData = null }: RecurringModalProps) => {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [accounts, setAccounts] = useState<Account[]>([]);
   
   const getToday = () => new Date().toISOString().split('T')[0];
@@ -33,6 +34,7 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null }: 
 
   useEffect(() => {
     if (isOpen && userId) {
+      setError('');
       accountService.getUserAccounts(userId).then(setAccounts).catch(console.error);
       if (initialData) {
         setFormData({
@@ -62,8 +64,9 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null }: 
 
   const handleCreate = async () => {
     if (!userId || !formData.name || !formData.amount || !formData.nextDate) return;
+    setError('');
     setLoading(true);
-    
+
     try {
       if (initialData?.id) {
         await recurringService.updateRecurring(initialData.id, {
@@ -97,6 +100,7 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null }: 
       });
     } catch (error) {
       console.error("Error creating recurring:", error);
+      setError(error instanceof Error ? error.message : 'Gagal menyimpan transaksi berulang. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
@@ -110,6 +114,12 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null }: 
       maxWidth="max-w-xl"
     >
       <div className="space-y-5 px-1">
+        {error && (
+          <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-sm font-medium text-rose-600">
+            {error}
+          </div>
+        )}
+
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nama Transaksi</label>
           <input 

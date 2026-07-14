@@ -18,6 +18,7 @@ interface TopUpModalProps {
 
 export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [rates, setRates] = useState<ExchangeRates | null>(null);
   const [convertedAmount, setConvertedAmount] = useState<number>(0);
@@ -34,6 +35,7 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
 
   useEffect(() => {
     if (isOpen && userId) {
+      setError('');
       accountService.getUserAccounts(userId).then(setAccounts).catch(console.error);
       exchangeRateService.getLatestRates().then(setRates).catch(console.error);
     }
@@ -55,8 +57,9 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
 
   const handleCreate = async () => {
     if (!userId || !formData.amount) return;
+    setError('');
     setLoading(true);
-    
+
     try {
       const amount = parseFloat(formData.amount);
       const selectedDate = new Date(formData.date);
@@ -64,7 +67,7 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
       const label = formData.type === 'topup' ? 'Top Up' : 'Transfer';
       const note = formData.note || `${label} ke ${accounts.find(a => a.id === formData.targetAccountId)?.name || formData.targetAccountId}`;
 
-      // 1. Pengeluaran dari rekening sumber
+      // Penyimpanan inti — pengeluaran dari rekening sumber.
       await transactionService.createTransaction({
         userId,
         type: 'pengeluaran',
@@ -81,45 +84,51 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
         status: 'VERIFIED'
       });
 
-      // 2. Pemasukan ke rekening tujuan
-      if (formData.targetAccountId && formData.targetAccountId !== 'Wallet') {
-        await transactionService.createTransaction({
-          userId,
-          type: 'pemasukan',
-          amount,
-          amountIDR: convertedAmount || amount,
-          currency: formData.currency,
-          category: label,
-          subCategory: `${label} Masuk`,
-          accountId: formData.targetAccountId,
-          date: selectedDate,
-          displayDate,
-          note: `[${label} Masuk] ${note}`,
-          status: 'VERIFIED'
-        });
-      }
+      // Sinkronisasi lanjutan (pemasukan ke tujuan, ringkasan total, saldo
+      // akun) bersifat non-fatal — pengeluaran sumbernya sudah tersimpan,
+      // jadi kegagalan di sini tidak boleh membuat modal terlihat "gagal
+      // total" dan memicu submit ulang yang bisa membuat catatan dobel.
+      try {
+        if (formData.targetAccountId && formData.targetAccountId !== 'Wallet') {
+          await transactionService.createTransaction({
+            userId,
+            type: 'pemasukan',
+            amount,
+            amountIDR: convertedAmount || amount,
+            currency: formData.currency,
+            category: label,
+            subCategory: `${label} Masuk`,
+            accountId: formData.targetAccountId,
+            date: selectedDate,
+            displayDate,
+            note: `[${label} Masuk] ${note}`,
+            status: 'VERIFIED'
+          });
+        }
 
-      // 3. Update member totals (net 0 for transfer; net +amount for external top-up)
-      await updateMemberTotals(userId, 'pengeluaran', convertedAmount || amount);
-      if (formData.targetAccountId && formData.targetAccountId !== 'Wallet') {
-        await updateMemberTotals(userId, 'pemasukan', convertedAmount || amount);
-      }
+        await updateMemberTotals(userId, 'pengeluaran', convertedAmount || amount);
+        if (formData.targetAccountId && formData.targetAccountId !== 'Wallet') {
+          await updateMemberTotals(userId, 'pemasukan', convertedAmount || amount);
+        }
 
-      // 4. Update Account Balances
-      if (formData.accountId) {
-        await accountService.updateAccountBalance(formData.accountId, -(convertedAmount || amount));
-      }
-      if (formData.targetAccountId && formData.targetAccountId !== 'Wallet') {
-        await accountService.updateAccountBalance(formData.targetAccountId, (convertedAmount || amount));
+        if (formData.accountId) {
+          await accountService.updateAccountBalance(formData.accountId, -(convertedAmount || amount));
+        }
+        if (formData.targetAccountId && formData.targetAccountId !== 'Wallet') {
+          await accountService.updateAccountBalance(formData.targetAccountId, (convertedAmount || amount));
+        }
+      } catch (syncErr) {
+        console.error('Pengeluaran sumber tersimpan, tapi gagal sinkronisasi tujuan/saldo:', syncErr);
       }
 
       onClose();
-      setFormData({ 
-        type: 'topup', amount: '', currency: 'IDR', accountId: '', targetAccountId: '', note: '', 
+      setFormData({
+        type: 'topup', amount: '', currency: 'IDR', accountId: '', targetAccountId: '', note: '',
         date: new Date().toISOString().split('T')[0]
       });
     } catch (e) {
       console.error(e);
+      setError(e instanceof Error ? e.message : 'Gagal menyimpan transfer/top up. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
@@ -128,6 +137,12 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Transfer / Top Up Baru" maxWidth="max-w-lg">
       <div className="space-y-5 max-h-[75vh] overflow-y-auto px-1 custom-scrollbar">
+        {error && (
+          <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-sm font-medium text-rose-600">
+            {error}
+          </div>
+        )}
+
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Jenis Layanan</label>
           <div className="grid grid-cols-2 gap-3">

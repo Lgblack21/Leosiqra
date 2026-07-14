@@ -18,6 +18,7 @@ interface DebtModalProps {
 
 export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [rates, setRates] = useState<ExchangeRates | null>(null);
   const [convertedAmount, setConvertedAmount] = useState<number>(0);
@@ -39,6 +40,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
 
   useEffect(() => {
     if (isOpen && userId) {
+      setError('');
       accountService.getUserAccounts(userId).then(setAccounts).catch(console.error);
       exchangeRateService.getLatestRates().then(setRates).catch(console.error);
     }
@@ -60,8 +62,9 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
 
   const handleCreate = async () => {
     if (!userId || !formData.amount) return;
+    setError('');
     setLoading(true);
-    
+
     try {
       const amount = parseFloat(formData.amount);
       const selectedDate = new Date(formData.date);
@@ -69,7 +72,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
       const isLunas = formData.paymentStatus === 'lunas';
       const isHutang = formData.debtType === 'hutang';
 
-      // Save the debt/piutang record
+      // Penyimpanan inti — catatan hutang/piutangnya sendiri.
       await transactionService.createTransaction({
         userId,
         type: 'debt',
@@ -91,34 +94,40 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
         paymentStatus: formData.paymentStatus
       });
 
-      // If Lunas: also record financial impact immediately
+      // Sinkronisasi lanjutan (dampak keuangan saat langsung ditandai lunas)
+      // bersifat non-fatal — catatan hutang/piutangnya sendiri sudah tersimpan.
       if (isLunas) {
-        const financeType = isHutang ? 'pengeluaran' : 'pemasukan';
-        await transactionService.createTransaction({
-          userId,
-          type: financeType,
-          amount,
-          amountIDR: convertedAmount || amount,
-          currency: formData.currency,
-          category: isHutang ? 'Hutang' : 'Piutang',
-          subCategory: `${isHutang ? 'Hutang' : 'Piutang'} Lunas`,
-          accountId: formData.accountId || 'General',
-          date: selectedDate,
-          displayDate,
-          note: `[Lunas] ${isHutang ? 'Hutang' : 'Piutang'} ${formData.lenderName ? `ke/dari ${formData.lenderName}` : ''} - ${formData.note || ''}`.trim(),
-          status: 'VERIFIED'
-        });
-        await updateMemberTotals(userId, financeType, amount);
+        try {
+          const financeType = isHutang ? 'pengeluaran' : 'pemasukan';
+          await transactionService.createTransaction({
+            userId,
+            type: financeType,
+            amount,
+            amountIDR: convertedAmount || amount,
+            currency: formData.currency,
+            category: isHutang ? 'Hutang' : 'Piutang',
+            subCategory: `${isHutang ? 'Hutang' : 'Piutang'} Lunas`,
+            accountId: formData.accountId || 'General',
+            date: selectedDate,
+            displayDate,
+            note: `[Lunas] ${isHutang ? 'Hutang' : 'Piutang'} ${formData.lenderName ? `ke/dari ${formData.lenderName}` : ''} - ${formData.note || ''}`.trim(),
+            status: 'VERIFIED'
+          });
+          await updateMemberTotals(userId, financeType, amount);
+        } catch (syncErr) {
+          console.error('Catatan hutang/piutang tersimpan, tapi gagal sinkronisasi dampak keuangan:', syncErr);
+        }
       }
 
       onClose();
-      setFormData({ 
-        debtType: 'hutang', paymentStatus: 'belum', amount: '', currency: 'IDR', lenderName: '', note: '', accountId: '', 
-        installmentTenor: '', monthlyInterest: '', totalInterest: '', totalDebt: '', 
+      setFormData({
+        debtType: 'hutang', paymentStatus: 'belum', amount: '', currency: 'IDR', lenderName: '', note: '', accountId: '',
+        installmentTenor: '', monthlyInterest: '', totalInterest: '', totalDebt: '',
         date: new Date().toISOString().split('T')[0]
       });
     } catch (e) {
       console.error(e);
+      setError(e instanceof Error ? e.message : 'Gagal menyimpan catatan hutang/piutang. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
@@ -127,6 +136,12 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Catat Hutang / Piutang" maxWidth="max-w-xl">
       <div className="space-y-4 max-h-[75vh] overflow-y-auto px-1 custom-scrollbar">
+        {error && (
+          <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-sm font-medium text-rose-600">
+            {error}
+          </div>
+        )}
+
         {/* Tipe */}
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe</label>

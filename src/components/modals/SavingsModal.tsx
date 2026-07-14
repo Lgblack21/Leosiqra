@@ -19,6 +19,7 @@ const SAVING_GOALS = ['Dana Darurat', 'Liburan', 'Pendidikan', 'Properti', 'Kend
 
 export const SavingsModal = ({ userId, isOpen, onClose }: SavingsModalProps) => {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [rates, setRates] = useState<ExchangeRates | null>(null);
   const [convertedAmount, setConvertedAmount] = useState<number>(0);
@@ -36,6 +37,7 @@ export const SavingsModal = ({ userId, isOpen, onClose }: SavingsModalProps) => 
 
   useEffect(() => {
     if (isOpen && userId) {
+      setError('');
       accountService.getUserAccounts(userId).then(setAccounts).catch(console.error);
       exchangeRateService.getLatestRates().then(setRates).catch(console.error);
     }
@@ -57,8 +59,9 @@ export const SavingsModal = ({ userId, isOpen, onClose }: SavingsModalProps) => 
 
   const handleCreate = async () => {
     if (!userId || !formData.description || !formData.amount) return;
+    setError('');
     setLoading(true);
-    
+
     try {
       const selectedDate = new Date(formData.date);
       const displayDate = selectedDate.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -84,6 +87,7 @@ export const SavingsModal = ({ userId, isOpen, onClose }: SavingsModalProps) => 
       });
     } catch (e) {
       console.error(e);
+      setError(e instanceof Error ? e.message : 'Gagal menyimpan setoran. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
@@ -92,6 +96,12 @@ export const SavingsModal = ({ userId, isOpen, onClose }: SavingsModalProps) => 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Catat Setoran Tabungan" maxWidth="max-w-lg">
       <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1 custom-scrollbar">
+        {error && (
+          <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-sm font-medium text-rose-600">
+            {error}
+          </div>
+        )}
+
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Deskripsi</label>
           <input type="text" value={formData.description} onChange={e => setFormData(p => ({...p, description: e.target.value}))}

@@ -23,6 +23,7 @@ interface StockInvestmentModalProps {
 
 export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initialData }: StockInvestmentModalProps) => {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [rates, setRates] = useState<ExchangeRates | null>(null);
   const [convertedAmount, setConvertedAmount] = useState<number>(0);
@@ -62,9 +63,10 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
 
   useEffect(() => {
     if (isOpen && userId) {
+      setError('');
       accountService.getUserAccounts(userId).then(setAccounts).catch(console.error);
       exchangeRateService.getLatestRates().then(setRates).catch(console.error);
-      
+
       if (editData) {
         setFormData({
           stockCode: editData.stockCode || editData.name || '',
@@ -124,18 +126,19 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
 
   const handleCreate = async () => {
     if (!userId || !formData.stockCode || !formData.sharesCount || !formData.pricePerShare) return;
+    setError('');
     setLoading(true);
-    
+
     const shares = parseFloat(formData.sharesCount) || 0;
     const price = parseFloat(formData.pricePerShare) || 0;
     const invested = shares * price;
     const current = parseFloat(formData.currentValue) || invested;
-    
+
     try {
       const isSell = formData.transactionType === 'Jual';
       const investmentPayload: Omit<Investment, 'id' | 'createdAt'> = {
-        userId, 
-        name: formData.stockCode, 
+        userId,
+        name: formData.stockCode,
         type: 'Saham',
         stockCode: formData.stockCode.toUpperCase(),
         exchangeCode: formData.exchangeCode.toUpperCase(),
@@ -146,41 +149,19 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
         category: formData.category,
         accountId: formData.accountId || 'General',
         platform: formData.platform,
-        amountInvested: invested, 
+        amountInvested: invested,
         amountIDR: convertedAmount || invested,
         currentValue: current,
         currentValueIDR: formData.currency === 'IDR' ? current : (current * (convertedAmount / (invested || 1))),
         returnPercentage: invested > 0 ? ((current - invested) / invested) * 100 : 0,
-        currency: formData.currency, 
-        dateInvested: new Date(formData.dateInvested), 
+        currency: formData.currency,
+        dateInvested: new Date(formData.dateInvested),
         status: isSell ? 'Closed' : 'Active'
       };
 
-      // Financial Sync Logic (Handle both New and Edit)
-      if (editData) {
-        // 1. REVERT OLD IMPACT
-        const oldInvested = Number(editData.amountInvested) || 0;
-        const oldType = editData.transactionType || 'Beli';
-        const isOldSell = oldType === 'Jual';
-        
-        const oldFinanceType = isOldSell ? 'pemasukan' : 'pengeluaran';
-        await updateMemberTotals(userId, oldFinanceType, -oldInvested);
-        await updateMemberTotals(userId, 'investasi', isOldSell ? oldInvested : -oldInvested);
-      }
-
-      // 2. APPLY NEW IMPACT
-      const financeType = isSell ? 'pemasukan' : 'pengeluaran';
-      await updateMemberTotals(userId, financeType, invested);
-      await updateMemberTotals(userId, 'investasi', isSell ? -invested : invested);
-
-      // Update Account Balance
-      if (formData.accountId) {
-        const balanceChange = isSell ? invested : -invested;
-        await accountService.updateAccountBalance(formData.accountId, balanceChange);
-      }
-
+      // Penyimpanan inti — jika ini gagal, belum ada posisi yang tersimpan/berubah
+      // dan aman untuk user mencoba lagi.
       let finalInvestmentId = editData?.id || initialData?.id || '';
-      
       if (editData?.id) {
         await investmentService.updateInvestment(editData.id, investmentPayload);
       } else if (initialData?.id) {
@@ -190,28 +171,55 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
         finalInvestmentId = await investmentService.createInvestment(investmentPayload);
       }
 
-      // 3. Create Update-Tracking Transaction
-      await addTransaction({
-        userId, type: financeType, amount: invested,
-        amountIDR: convertedAmount || invested,
-        category: 'Investasi', subCategory: isSell ? `Jual Saham ${formData.stockCode}` : `Beli Saham ${formData.stockCode}`,
-        accountId: formData.accountId || 'General',
-        date: new Date(formData.dateInvested),
-        note: `${editData ? '[Update]' : '[Baru]'} ${isSell ? 'Penjualan' : 'Pembelian'} ${formData.sharesCount} lembar saham ${formData.stockCode} @ ${formData.pricePerShare}`,
-        status: 'VERIFIED',
-        relatedId: finalInvestmentId,
-        relatedType: 'investasi'
-      });
-      
+      // Sinkronisasi lanjutan (ringkasan total, saldo akun, catatan transaksi
+      // ledger) bersifat non-fatal — posisi investasinya sendiri sudah
+      // tersimpan, jadi kegagalan di sini tidak boleh membuat modal terlihat
+      // "gagal total" dan memicu submit ulang yang bisa membuat posisi dobel.
+      try {
+        const isSellSync = formData.transactionType === 'Jual';
+        if (editData) {
+          const oldInvested = Number(editData.amountInvested) || 0;
+          const oldType = editData.transactionType || 'Beli';
+          const isOldSell = oldType === 'Jual';
+          const oldFinanceType = isOldSell ? 'pemasukan' : 'pengeluaran';
+          await updateMemberTotals(userId, oldFinanceType, -oldInvested);
+          await updateMemberTotals(userId, 'investasi', isOldSell ? oldInvested : -oldInvested);
+        }
+
+        const financeType = isSellSync ? 'pemasukan' : 'pengeluaran';
+        await updateMemberTotals(userId, financeType, invested);
+        await updateMemberTotals(userId, 'investasi', isSellSync ? -invested : invested);
+
+        if (formData.accountId) {
+          const balanceChange = isSellSync ? invested : -invested;
+          await accountService.updateAccountBalance(formData.accountId, balanceChange);
+        }
+
+        await addTransaction({
+          userId, type: financeType, amount: invested,
+          amountIDR: convertedAmount || invested,
+          category: 'Investasi', subCategory: isSellSync ? `Jual Saham ${formData.stockCode}` : `Beli Saham ${formData.stockCode}`,
+          accountId: formData.accountId || 'General',
+          date: new Date(formData.dateInvested),
+          note: `${editData ? '[Update]' : '[Baru]'} ${isSellSync ? 'Penjualan' : 'Pembelian'} ${formData.sharesCount} lembar saham ${formData.stockCode} @ ${formData.pricePerShare}`,
+          status: 'VERIFIED',
+          relatedId: finalInvestmentId,
+          relatedType: 'investasi'
+        });
+      } catch (syncErr) {
+        console.error('Posisi saham tersimpan, tapi gagal sinkronisasi ringkasan/saldo:', syncErr);
+      }
+
       onClose();
       // Reset form
-      setFormData({ 
-        stockCode: '', logoUrl: '', exchangeCode: 'IDX', currency: 'IDR', sharesCount: '', 
-        pricePerShare: '', currentValue: '', transactionType: 'Beli', category: 'Saham', 
-        accountId: '', platform: '', dateInvested: new Date().toISOString().split('T')[0] 
+      setFormData({
+        stockCode: '', logoUrl: '', exchangeCode: 'IDX', currency: 'IDR', sharesCount: '',
+        pricePerShare: '', currentValue: '', transactionType: 'Beli', category: 'Saham',
+        accountId: '', platform: '', dateInvested: new Date().toISOString().split('T')[0]
       });
     } catch (e) {
       console.error(e);
+      setError(e instanceof Error ? e.message : 'Gagal menyimpan posisi saham. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
@@ -220,6 +228,12 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={editData ? "Edit Posisi Saham" : (initialData ? "Jual Posisi Saham" : "Tambah Posisi Saham")} maxWidth="max-w-lg">
       <div className="space-y-4 max-h-[75vh] overflow-y-auto px-1 custom-scrollbar">
+        {error && (
+          <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-sm font-medium text-rose-600">
+            {error}
+          </div>
+        )}
+
         {/* Tipe Transaksi Dropdown */}
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe Transaksi</label>
