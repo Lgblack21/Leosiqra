@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Wrench, MessageCircle, ShieldCheck } from 'lucide-react';
+import { Wrench, MessageCircle } from 'lucide-react';
 import type { UserProfile } from '@/lib/services/userService';
 import type { AppSettings } from '@/lib/services/adminService';
 import { cloudflareApi } from '@/lib/cloudflare-api';
@@ -80,91 +80,94 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
   // 2. Halaman Login SELALU terbuka agar Admin bisa masuk
   if (isLoginPage) return <>{children}</>;
 
-  // 3. Jika maintenance aktif dan BUKAN Admin, blokir SEMUA halaman (termasuk landing & register)
-  // Link kecil ke /auth/login selalu ditampilkan di atas layar maintenance apa pun
-  // (code/image/fallback) agar Admin tetap bisa menemukan jalan masuk ke panel.
-  const adminLoginLink = (
-    <a
-      href="/auth/login"
-      className="fixed bottom-4 right-4 z-[10000] flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white/70 text-[11px] font-bold tracking-wide hover:bg-white/20 hover:text-white transition-all"
-    >
-      <ShieldCheck size={13} /> Admin Login
-    </a>
-  );
-
+  // 3. Jika maintenance aktif dan BUKAN Admin, blokir SEMUA halaman (termasuk landing & register).
+  // Admin tetap bisa masuk lewat /auth/login secara langsung (dibebaskan di atas) —
+  // sengaja tidak ada tombol/link menuju login di layar publik ini.
   if (settings?.maintenance?.isActive) {
     if (settings.maintenance.type === 'code' && settings.maintenance.code) {
       return (
-        <>
-          <div
-            className="fixed inset-0 z-[9999] bg-white overflow-auto"
-            dangerouslySetInnerHTML={{ __html: settings.maintenance.code }}
-          />
-          {adminLoginLink}
-        </>
+        <div
+          className="fixed inset-0 z-[9999] bg-white overflow-auto"
+          dangerouslySetInnerHTML={{ __html: settings.maintenance.code }}
+        />
       );
     } else if (settings.maintenance.type === 'image' && settings.maintenance.imageUrl) {
       return (
-        <>
-          <div className="fixed inset-0 z-[9999] bg-black relative">
-            <Image
-              src={settings.maintenance.imageUrl}
-              alt="Maintenance"
-              fill
-              className="object-contain"
-            />
-          </div>
-          {adminLoginLink}
-        </>
+        <div className="fixed inset-0 z-[9999] bg-black relative">
+          <Image
+            src={settings.maintenance.imageUrl}
+            alt="Maintenance"
+            fill
+            className="object-contain"
+          />
+        </div>
       );
     } else {
       // Fallback — halaman maintenance default, dirancang tetap terasa premium
       // dan konsisten dengan identitas visual Leosiqra (serif display + indigo/slate).
       return (
-        <>
-          <div className="fixed inset-0 z-[9999] bg-slate-950 overflow-auto">
-            <div
-              className="absolute inset-0 opacity-40"
-              style={{
-                backgroundImage:
-                  'radial-gradient(circle at 15% 20%, rgba(99,102,241,0.35), transparent 45%), radial-gradient(circle at 85% 80%, rgba(16,185,129,0.25), transparent 50%)',
-              }}
-            />
-            <div className="relative min-h-screen flex items-center justify-center p-6 text-center">
-              <div className="max-w-lg w-full space-y-8">
-                <div className="mx-auto w-20 h-20 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center">
-                  <Wrench size={32} className="text-indigo-300 animate-[spin_6s_linear_infinite]" />
-                </div>
+        <div className="fixed inset-0 z-[9999] bg-slate-950 overflow-y-auto overflow-x-hidden">
+          <div
+            className="absolute inset-0 opacity-50 pointer-events-none"
+            style={{
+              backgroundImage:
+                'radial-gradient(circle at 12% 15%, rgba(99,102,241,0.30), transparent 42%), radial-gradient(circle at 88% 85%, rgba(16,185,129,0.20), transparent 48%), radial-gradient(circle at 50% 100%, rgba(129,140,248,0.14), transparent 55%)',
+            }}
+          />
+          <div
+            className="absolute inset-0 opacity-[0.05] pointer-events-none"
+            style={{
+              backgroundImage:
+                'linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)',
+              backgroundSize: '44px 44px',
+            }}
+          />
 
-                <div className="space-y-3">
-                  <span className="inline-block px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-black tracking-[0.2em] uppercase text-indigo-300">
-                    Sedang Pemeliharaan
-                  </span>
-                  <h1 className="text-3xl sm:text-4xl font-serif font-black text-white leading-tight">
-                    Leosiqra Sedang Ditingkatkan
-                  </h1>
-                  <p className="text-slate-400 font-medium leading-relaxed">
-                    Kami sedang melakukan pemeliharaan sistem untuk pengalaman yang lebih baik.
-                    Mohon maaf atas ketidaknyamanannya — layanan akan segera aktif kembali.
-                  </p>
+          <div className="relative min-h-screen flex items-center justify-center px-5 py-16 sm:px-6">
+            <div className="w-full max-w-md rounded-[36px] border border-white/10 bg-white/[0.04] backdrop-blur-2xl shadow-[0_20px_70px_-20px_rgba(0,0,0,0.6)] px-7 py-10 sm:px-10 sm:py-12 text-center">
+              <div className="relative mx-auto mb-8 w-16 h-16">
+                <span className="absolute inset-0 rounded-2xl bg-indigo-500/25 animate-ping [animation-duration:2.4s]" />
+                <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-[0_8px_24px_-6px_rgba(99,102,241,0.6)]">
+                  <Wrench size={24} className="text-white" />
                 </div>
-
-                {normalizedWhatsApp && (
-                  <a
-                    href={`https://wa.me/${normalizedWhatsApp}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm transition-colors shadow-[0_8px_30px_rgba(16,185,129,0.35)]"
-                  >
-                    <MessageCircle size={18} />
-                    Hubungi Kami: {whatsapp}
-                  </a>
-                )}
               </div>
+
+              <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-black tracking-[0.2em] uppercase text-indigo-300 mb-5">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75 animate-ping" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-indigo-400" />
+                </span>
+                Sedang Pemeliharaan
+              </span>
+
+              <h1 className="text-3xl sm:text-4xl font-serif font-black text-white leading-tight [text-wrap:balance] mb-3">
+                Leosiqra Sedang Ditingkatkan
+              </h1>
+              <p className="text-slate-400 font-medium leading-relaxed text-[15px] [text-wrap:balance] mb-8">
+                Kami sedang melakukan pemeliharaan sistem untuk pengalaman yang lebih baik.
+                Mohon maaf atas ketidaknyamanannya — layanan akan segera aktif kembali.
+              </p>
+
+              {normalizedWhatsApp && (
+                <a
+                  href={`https://wa.me/${normalizedWhatsApp}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group inline-flex items-center gap-3 pl-4 pr-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm transition-all hover:scale-[1.02] shadow-[0_10px_30px_-8px_rgba(16,185,129,0.55)]"
+                >
+                  <span className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center shrink-0 group-hover:bg-white/30 transition-colors">
+                    <MessageCircle size={14} />
+                  </span>
+                  Hubungi Kami: {whatsapp}
+                </a>
+              )}
+
+              <p className="mt-10 text-[10px] font-bold text-white/25 uppercase tracking-[0.2em]">
+                Leosiqra &middot; Platform Finansial Pribadi
+              </p>
             </div>
           </div>
-          {adminLoginLink}
-        </>
+        </div>
       );
     }
   }
