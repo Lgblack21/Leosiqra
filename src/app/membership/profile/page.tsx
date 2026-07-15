@@ -20,7 +20,9 @@ import {
   Building2,
   Wallet,
   Loader2,
-  Clock
+  Clock,
+  AlertTriangle,
+  Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { auth, db } from '@/lib/cf-client';
@@ -63,6 +65,13 @@ export default function ProfilePage() {
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [fxRates, setFxRates] = useState<Record<string, number> | null>(null);
   const [fxLoading, setFxLoading] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetConfirmText, setResetConfirmText] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetDone, setResetDone] = useState(false);
+  const RESET_CONFIRM_WORD = 'HAPUS SEMUA DATA';
 
   const [profile, setProfile] = useState<UserProfile>({
     displayName: '', email: '', username: '', phone: '', address: '', photoURL: ''
@@ -205,6 +214,30 @@ export default function ProfilePage() {
       setDisable2FAError(e instanceof Error ? e.message : 'Gagal menonaktifkan 2FA.');
     } finally {
       setDisable2FALoading(false);
+    }
+  };
+
+  const handleResetAllData = async () => {
+    setResetError('');
+    if (!resetPassword) {
+      setResetError('Masukkan password saat ini.');
+      return;
+    }
+    if (resetConfirmText.trim().toUpperCase() !== RESET_CONFIRM_WORD) {
+      setResetError(`Ketik persis "${RESET_CONFIRM_WORD}" untuk konfirmasi.`);
+      return;
+    }
+    setResetLoading(true);
+    try {
+      await cloudflareApi('/api/member/reset-data', { method: 'POST', json: { currentPassword: resetPassword } });
+      setResetDone(true);
+      setTimeout(() => {
+        window.location.href = '/membership/dashboard';
+      }, 2000);
+    } catch (e) {
+      setResetError(e instanceof Error ? e.message : 'Gagal mereset data. Silakan coba lagi.');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -478,6 +511,26 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+
+          {/* Danger Zone */}
+          <div className="bg-rose-50 p-5 md:p-8 rounded-[20px] md:rounded-[48px] border border-rose-100 space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600">
+                <AlertTriangle size={18} />
+              </div>
+              <h2 className="text-sm font-black text-rose-700 tracking-tight">Danger Zone</h2>
+            </div>
+            <p className="text-xs font-medium text-rose-600/80 leading-relaxed">
+              Menghapus permanen semua transaksi, rekening, budget, investasi, tabungan, kategori, mata uang, jadwal recurring, dan riwayat chat AI Anda. Akun (login, plan, riwayat pembayaran) tidak terhapus.
+            </p>
+            <button
+              onClick={() => setShowResetModal(true)}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black tracking-wide transition-colors"
+            >
+              <Trash2 size={14} />
+              Reset Semua Data
+            </button>
+          </div>
         </div>
       </div>
 
@@ -573,6 +626,80 @@ export default function ProfilePage() {
             {disable2FALoading ? 'Memproses...' : 'Nonaktifkan 2FA'}
           </button>
         </div>
+      </Modal>
+
+      <Modal
+        isOpen={showResetModal}
+        onClose={() => {
+          setShowResetModal(false);
+          setResetPassword('');
+          setResetConfirmText('');
+          setResetError('');
+          setResetDone(false);
+        }}
+        title="Reset Semua Data"
+        maxWidth="max-w-md"
+      >
+        {resetDone ? (
+          <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-5 text-sm font-medium text-emerald-600 text-center">
+            Semua data berhasil dihapus. Mengalihkan ke Dashboard...
+          </div>
+        ) : (
+          <div className="space-y-5">
+            <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 flex items-start gap-3">
+              <AlertTriangle size={18} className="text-rose-500 shrink-0 mt-0.5" />
+              <p className="text-xs font-medium text-rose-600 leading-relaxed">
+                Tindakan ini <strong>permanen dan tidak bisa dibatalkan</strong>. Semua transaksi, rekening, budget, investasi, tabungan, kategori, mata uang, jadwal recurring, dan riwayat chat AI Anda akan terhapus. Akun login Anda tetap ada.
+              </p>
+            </div>
+
+            {resetError && (
+              <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-sm font-medium text-rose-600">
+                {resetError}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Password Saat Ini</label>
+              <div className="relative group">
+                <Lock size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-rose-500 transition-colors" />
+                <input
+                  type="password"
+                  value={resetPassword}
+                  onChange={e => setResetPassword(e.target.value)}
+                  placeholder="Masukkan password saat ini"
+                  className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-rose-100 rounded-xl py-3.5 pl-12 pr-5 text-sm font-bold text-slate-700 transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+                Ketik &quot;{RESET_CONFIRM_WORD}&quot; untuk konfirmasi
+              </label>
+              <input
+                type="text"
+                value={resetConfirmText}
+                onChange={e => setResetConfirmText(e.target.value)}
+                placeholder={RESET_CONFIRM_WORD}
+                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-rose-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all"
+              />
+            </div>
+
+            <button
+              onClick={handleResetAllData}
+              disabled={resetLoading}
+              className="w-full bg-rose-600 disabled:bg-slate-300 text-white flex items-center justify-center gap-3 py-4 rounded-2xl text-sm font-black transition-all shadow-xl shadow-rose-100"
+            >
+              {resetLoading ? 'Menghapus...' : (
+                <>
+                  <Trash2 size={16} />
+                  Hapus Semua Data Permanen
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </Modal>
     </div>
   );

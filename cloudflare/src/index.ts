@@ -1778,6 +1778,65 @@ async function handleUpdateMemberTwoFactor(request: Request, env: Env) {
   return json({ ok: true });
 }
 
+// Tabel yang berisi data pribadi pengguna (transaksi, rekening, dst) yang
+// dihapus total oleh "Reset Semua Data". Sengaja TIDAK termasuk: users
+// (akun itu sendiri wajib tetap ada), sessions (agar tidak ter-logout),
+// payments (riwayat pembayaran/billing tetap perlu untuk audit),
+// admin_logs, auth_rate_limits, funnel_events, password_resets.
+const RESET_DATA_TABLES = [
+  "transactions",
+  "accounts",
+  "budgets",
+  "categories",
+  "currencies",
+  "investments",
+  "recurring",
+  "savings",
+  "ai_chats",
+  "ai_chat_events",
+  "uploads",
+] as const;
+
+async function handleResetMemberData(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) {
+    return authResult.error;
+  }
+
+  const payload = await parseJson<{ currentPassword?: string }>(request);
+  if (!payload.currentPassword) {
+    return json({ error: "Password saat ini wajib diisi." }, { status: 400 });
+  }
+
+  const user = await env.DB.prepare("SELECT id, password_hash FROM users WHERE id = ?")
+    .bind(authResult.session.user.id)
+    .first<{ id: string; password_hash: string }>();
+  if (!user) {
+    return json({ error: "Pengguna tidak ditemukan." }, { status: 404 });
+  }
+
+  const verification = await verifyPassword(payload.currentPassword, user.password_hash);
+  if (!verification.ok) {
+    return json({ error: "Password saat ini tidak sesuai." }, { status: 401 });
+  }
+
+  const statements = [
+    ...RESET_DATA_TABLES.map((table) =>
+      env.DB.prepare(`DELETE FROM ${table} WHERE user_id = ?`).bind(user.id)
+    ),
+    env.DB.prepare(
+      `UPDATE users
+          SET total_wealth = 0, total_income = 0, total_expenses = 0, total_savings = 0,
+              total_investment = 0, credit_card_bills = 0, other_debts = 0, currency_initialized = 0
+        WHERE id = ?`
+    ).bind(user.id),
+  ];
+
+  await env.DB.batch(statements);
+
+  return json({ ok: true });
+}
+
 async function handleListCategories(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -2818,6 +2877,10 @@ const worker = {
 
       if (url.pathname === "/api/member/2fa" && request.method === "PATCH") {
         return await handleUpdateMemberTwoFactor(request, env);
+      }
+
+      if (url.pathname === "/api/member/reset-data" && request.method === "POST") {
+        return await handleResetMemberData(request, env);
       }
 
       if (url.pathname === "/api/member/categories" && request.method === "GET") {
