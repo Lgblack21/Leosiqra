@@ -2347,8 +2347,9 @@ async function handleAdminSettings(request: Request, env: Env) {
     .bind(...values)
     .run();
 
+  const settingsLogTimestamp = new Date().toISOString();
   await env.DB.prepare(
-    "INSERT INTO admin_logs (id, admin_email, action, target, note, color) VALUES (?, ?, ?, ?, ?, ?)"
+    "INSERT INTO admin_logs (id, admin_email, action, target, note, color, timestamp, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
   )
     .bind(
       generateId(),
@@ -2356,7 +2357,9 @@ async function handleAdminSettings(request: Request, env: Env) {
       "settings.update",
       "admin_settings",
       "Admin settings updated from Cloudflare Worker",
-      "slate"
+      "slate",
+      settingsLogTimestamp,
+      settingsLogTimestamp
     )
     .run();
 
@@ -2386,10 +2389,11 @@ async function insertAdminLog(
   note: string,
   color: string
 ) {
+  const logTimestamp = new Date().toISOString();
   await env.DB.prepare(
-    "INSERT INTO admin_logs (id, admin_email, action, target, note, color) VALUES (?, ?, ?, ?, ?, ?)"
+    "INSERT INTO admin_logs (id, admin_email, action, target, note, color, timestamp, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
   )
-    .bind(generateId(), adminEmail, action, target, note, color)
+    .bind(generateId(), adminEmail, action, target, note, color, logTimestamp, logTimestamp)
     .run();
 }
 
@@ -2597,8 +2601,9 @@ async function handleAdminLogs(request: Request, env: Env) {
       color?: string;
     }>(request);
 
+    const postLogTimestamp = new Date().toISOString();
     await env.DB.prepare(
-      "INSERT INTO admin_logs (id, admin_email, action, target, note, color) VALUES (?, ?, ?, ?, ?, ?)"
+      "INSERT INTO admin_logs (id, admin_email, action, target, note, color, timestamp, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     )
       .bind(
         generateId(),
@@ -2606,7 +2611,9 @@ async function handleAdminLogs(request: Request, env: Env) {
         payload.action ?? "admin.action",
         payload.target ?? "unknown",
         payload.note ?? "",
-        payload.color ?? "slate"
+        payload.color ?? "slate",
+        postLogTimestamp,
+        postLogTimestamp
       )
       .run();
     return json({ ok: true }, { status: 201 });
