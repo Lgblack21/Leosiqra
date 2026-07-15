@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   CreditCard,
   Wallet,
@@ -23,6 +23,7 @@ import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged, User } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
 import { getCardGradientClass, CARD_COLOR_OPTIONS } from '@/lib/cardColors';
+import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { AccountModal } from '@/components/modals/AccountModal';
 
 export default function MyCardsPage() {
@@ -36,6 +37,20 @@ export default function MyCardsPage() {
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [error, setError] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [fxRates, setFxRates] = useState<ExchangeRates>({});
+
+  useEffect(() => {
+    exchangeRateService.getLatestRates().then(setFxRates).catch(console.error);
+  }, []);
+
+  // Saldo akun (initialBalance) belum tentu punya konversi IDR tersimpan
+  // (field "Nilai Base" diisi manual dan sering kosong), jadi dikonversi
+  // langsung pakai kurs live di sini.
+  const toIDR = useCallback(
+    (amount: number, currency: string | undefined) =>
+      exchangeRateService.convert(amount, currency || 'IDR', 'IDR', fxRates),
+    [fxRates]
+  );
 
   const unsubAccRef = useRef<(() => void) | null>(null);
   const unsubTrxRef = useRef<(() => void) | null>(null);
@@ -99,31 +114,37 @@ export default function MyCardsPage() {
   }, []);
 
   // === GLOBAL TOTALS ===
+  // Akun bisa berbeda mata uang (IDR, USD, KHR, ...), jadi setiap nominal
+  // dikonversi ke IDR dulu (pakai kurs live) sebelum dijumlahkan — menjumlah
+  // angka mentah lintas mata uang akan menghasilkan total yang salah.
+  // Transaksi/tabungan sudah menyimpan amountIDR (dihitung modal input saat
+  // disimpan) — pakai itu, bukan konversi ulang, biar konsisten dan tidak
+  // bergantung pada kurs saat halaman ini dibuka.
   const totalIn = useMemo(() => {
-    const dailyIn = transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0);
-    const debtIn = transactions.filter(t => t.type === 'debt' && t.category === 'Hutang').reduce((s, t) => s + t.amount, 0);
+    const dailyIn = transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + (t.amountIDR || t.amount), 0);
+    const debtIn = transactions.filter(t => t.type === 'debt' && t.category === 'Hutang').reduce((s, t) => s + (t.amountIDR || t.amount), 0);
     return dailyIn + debtIn;
   }, [transactions]);
 
   const totalOut = useMemo(() => {
-    const dailyOut = transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0);
-    const piutangOut = transactions.filter(t => t.type === 'debt' && t.category === 'Piutang').reduce((s, t) => s + t.amount, 0);
-    const savingOut = savings.reduce((s, t) => s + t.amount, 0);
+    const dailyOut = transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + (t.amountIDR || t.amount), 0);
+    const piutangOut = transactions.filter(t => t.type === 'debt' && t.category === 'Piutang').reduce((s, t) => s + (t.amountIDR || t.amount), 0);
+    const savingOut = savings.reduce((s, t) => s + (t.amountIDR || t.amount), 0);
     return dailyOut + piutangOut + savingOut;
   }, [transactions, savings]);
 
   const combinedInitial = useMemo(() => {
     return accounts
       .filter(a => a.type !== 'Credit Card' && a.type !== 'kartu')
-      .reduce((s, a) => s + (a.initialBalance || 0), 0);
-  }, [accounts]);
+      .reduce((s, a) => s + toIDR(a.initialBalance || 0, a.currency), 0);
+  }, [accounts, toIDR]);
 
   const totalBalance = useMemo(() => {
     return combinedInitial + totalIn - totalOut;
   }, [combinedInitial, totalIn, totalOut]);
 
   const totalGlobalDebt = useMemo(() => {
-    return transactions.filter(t => t.type === 'debt' && t.category === 'Hutang').reduce((s, t) => s + t.amount, 0);
+    return transactions.filter(t => t.type === 'debt' && t.category === 'Hutang').reduce((s, t) => s + (t.amountIDR || t.amount), 0);
   }, [transactions]);
 
   // === PER-ACCOUNT DETAIL ===
@@ -163,6 +184,13 @@ export default function MyCardsPage() {
     return (acc.initialBalance || 0) + accountTotalIn - accountTotalOut - accountSavingsOut;
   }, [selectedAccount, accountTotalIn, accountTotalOut, accountSavingsOut]);
 
+  // Nilai konversi ke IDR untuk ditampilkan sebagai info kedua saat akun
+  // yang dipilih bukan berdenominasi IDR.
+  const accountBalanceIDR = useMemo(() => {
+    if (!selectedAccount || selectedAccount.currency === 'IDR') return null;
+    return toIDR(accountBalance, selectedAccount.currency);
+  }, [selectedAccount, accountBalance, toIDR]);
+
   // Outstanding debt (belum lunas) for selected account
   const accountDebt = useMemo(() => {
     if (!selectedAccountId) return totalGlobalDebt;
@@ -180,6 +208,13 @@ export default function MyCardsPage() {
   }, [accountTransactionsRecent]);
 
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
+  const formatAmount = (n: number, currency: string | undefined) => {
+    try {
+      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: currency || 'IDR', minimumFractionDigits: 0 }).format(n);
+    } catch {
+      return `${currency || ''} ${new Intl.NumberFormat('id-ID').format(n)}`.trim();
+    }
+  };
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
 
   const getTypeIcon = (type: string) => {
@@ -262,7 +297,12 @@ export default function MyCardsPage() {
                   <div>
                     <p className="text-[9px] md:text-[10px] font-black text-white/60 uppercase tracking-[0.2em] mb-2">{selectedAccount.type} | {selectedAccount.currency}</p>
                     <h2 className="text-xl md:text-3xl lg:text-4xl font-black tracking-tight">{selectedAccount.name}</h2>
-                    <p className="text-[10px] font-medium text-white/60 mt-1">Saldo: {formatRp(accountBalance)}</p>
+                    <p className="text-[10px] font-medium text-white/60 mt-1">
+                      Saldo: {formatAmount(accountBalance, selectedAccount.currency)}
+                      {accountBalanceIDR !== null && (
+                        <span className="text-white/50"> &middot; &asymp; {formatRp(accountBalanceIDR)}</span>
+                      )}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -280,11 +320,11 @@ export default function MyCardsPage() {
                 <div className="grid grid-cols-2 gap-6 md:gap-8 pt-6 md:pt-8 border-t border-white/10">
                   <div>
                     <p className="text-[8px] md:text-[9px] font-black text-white/60 uppercase tracking-widest mb-1">Masuk</p>
-                    <p className="text-sm md:text-lg font-bold">{formatRp(accountTotalIn)}</p>
+                    <p className="text-sm md:text-lg font-bold">{formatAmount(accountTotalIn, selectedAccount.currency)}</p>
                   </div>
                   <div>
                     <p className="text-[8px] md:text-[9px] font-black text-white/60 uppercase tracking-widest mb-1">Keluar</p>
-                    <p className="text-sm md:text-lg font-bold">{formatRp(accountTotalOut)}</p>
+                    <p className="text-sm md:text-lg font-bold">{formatAmount(accountTotalOut, selectedAccount.currency)}</p>
                   </div>
                 </div>
               </div>
@@ -328,7 +368,9 @@ export default function MyCardsPage() {
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Uang Masuk</p>
-                  <p className="text-xl font-black text-slate-900 tracking-tight">{formatRp(selectedAccount ? accountTotalIn : totalIn)}</p>
+                  <p className="text-xl font-black text-slate-900 tracking-tight">
+                    {selectedAccount ? formatAmount(accountTotalIn, selectedAccount.currency) : formatRp(totalIn)}
+                  </p>
                 </div>
               </div>
               <div className="bg-rose-50/30 rounded-2xl p-6 border border-rose-50 flex items-center gap-5">
@@ -337,7 +379,9 @@ export default function MyCardsPage() {
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Uang Keluar</p>
-                  <p className="text-xl font-black text-slate-900 tracking-tight">{formatRp(selectedAccount ? accountTotalOut : totalOut)}</p>
+                  <p className="text-xl font-black text-slate-900 tracking-tight">
+                    {selectedAccount ? formatAmount(accountTotalOut, selectedAccount.currency) : formatRp(totalOut)}
+                  </p>
                 </div>
               </div>
             </div>
@@ -358,7 +402,7 @@ export default function MyCardsPage() {
                       </div>
                     </div>
                     <p className={cn("text-sm font-black shrink-0 ml-2", trx.type === 'pemasukan' ? 'text-emerald-600' : 'text-rose-500')}>
-                      {trx.type === 'pemasukan' ? '+' : '-'}{formatRp(trx.amount)}
+                      {trx.type === 'pemasukan' ? '+' : '-'}{formatAmount(trx.amount, trx.currency)}
                     </p>
                   </div>
                 ))}
@@ -446,13 +490,13 @@ export default function MyCardsPage() {
                   <div className="bg-emerald-50/30 rounded-2xl p-4 border border-emerald-50 transition-all hover:bg-emerald-50">
                     <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-1">Total Masuk</p>
                     <p className="text-sm font-black text-emerald-600 leading-tight">
-                      {formatRp(selectedAccount ? accountTotalIn : totalIn)}
+                      {selectedAccount ? formatAmount(accountTotalIn, selectedAccount.currency) : formatRp(totalIn)}
                     </p>
                   </div>
                   <div className="bg-rose-50/30 rounded-2xl p-4 border border-rose-50 transition-all hover:bg-rose-50">
                     <p className="text-[9px] font-black text-rose-400 uppercase tracking-widest mb-1">Tagihan Berjalan</p>
                     <p className="text-sm font-black text-rose-500 leading-tight">
-                      {formatRp(selectedAccount ? accountDebt : totalGlobalDebt)}
+                      {selectedAccount ? formatAmount(accountDebt, selectedAccount.currency) : formatRp(totalGlobalDebt)}
                     </p>
                   </div>
                 </div>
@@ -460,8 +504,11 @@ export default function MyCardsPage() {
                 <div className="bg-indigo-50/30 rounded-2xl p-5 border border-indigo-50 transition-all hover:bg-indigo-50">
                   <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest mb-1">Saldo Saat Ini</p>
                   <p className="text-base font-black text-indigo-600 leading-tight">
-                    {formatRp(selectedAccount ? accountBalance : totalBalance)}
+                    {selectedAccount ? formatAmount(accountBalance, selectedAccount.currency) : formatRp(totalBalance)}
                   </p>
+                  {accountBalanceIDR !== null && (
+                    <p className="text-[10px] font-bold text-indigo-400 mt-1">&asymp; {formatRp(accountBalanceIDR)}</p>
+                  )}
                 </div>
 
               </div>
