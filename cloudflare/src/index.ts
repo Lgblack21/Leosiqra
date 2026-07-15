@@ -1146,6 +1146,22 @@ async function handleListTransactions(request: Request, env: Env) {
   return json({ items: rows.results });
 }
 
+// Dipakai saat klien (mis. Shortcut iOS) mengirim transaksi dalam mata uang
+// asing tanpa amount_idr — API publik gratis yang sama dipakai frontend
+// (exchangeRateService), supaya nilai IDR-nya tetap akurat tanpa klien
+// perlu tahu kurs sama sekali.
+const fetchIdrConversionRate = async (currency: string): Promise<number | null> => {
+  try {
+    const response = await fetch(`https://open.er-api.com/v6/latest/${encodeURIComponent(currency)}`);
+    if (!response.ok) return null;
+    const data = (await response.json()) as { rates?: Record<string, number> };
+    const rate = data.rates?.IDR;
+    return typeof rate === "number" && Number.isFinite(rate) ? rate : null;
+  } catch {
+    return null;
+  }
+};
+
 async function handleCreateTransaction(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) {
@@ -1170,6 +1186,18 @@ async function handleCreateTransaction(request: Request, env: Env) {
     return json({ error: "type, amount, dan date wajib diisi." }, { status: 400 });
   }
 
+  const currency = payload.currency ?? "IDR";
+  let amountIdr = payload.amount_idr;
+  if (amountIdr === undefined && currency !== "IDR") {
+    const rate = await fetchIdrConversionRate(currency);
+    if (rate) {
+      amountIdr = payload.amount * rate;
+    }
+  }
+  if (amountIdr === undefined) {
+    amountIdr = payload.amount;
+  }
+
   const id = generateId();
   await env.DB.prepare(
     `INSERT INTO transactions (
@@ -1182,10 +1210,10 @@ async function handleCreateTransaction(request: Request, env: Env) {
       authResult.session.user.id,
       payload.type,
       payload.amount,
-      payload.amount_idr ?? payload.amount,
+      amountIdr,
       payload.category ?? null,
       payload.sub_category ?? null,
-      payload.currency ?? "IDR",
+      currency,
       payload.account_id ?? null,
       payload.target_account_id ?? null,
       payload.date,

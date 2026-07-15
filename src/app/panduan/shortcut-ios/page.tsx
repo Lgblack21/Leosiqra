@@ -308,7 +308,6 @@ export default function ShortcutIosGuidePage() {
 {`{
   "type": Tipe,
   "amount": Nominal,
-  "amount_idr": Nominal,
   "category": Kategori,
   "currency": MataUang,
   "account_id": AkunID,
@@ -321,10 +320,10 @@ export default function ShortcutIosGuidePage() {
               </p>
             </div>
 
-            <div className="flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-2xl p-5">
-              <ShieldAlert size={18} className="text-amber-500 shrink-0 mt-0.5" />
-              <p className="text-xs font-medium text-amber-800 leading-relaxed">
-                <strong>Catatan akurasi:</strong> <code className="bg-amber-100/70 px-1.5 py-0.5 rounded text-[11px] font-mono">amount_idr</code> di sini disamakan dengan Nominal — tepat kalau akun yang dipilih memakai IDR (kasus paling umum untuk input harian). Kalau memilih akun mata uang asing, nilai IDR-nya belum dikonversi otomatis lewat Shortcut ini.
+            <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-100 rounded-2xl p-5">
+              <ShieldAlert size={18} className="text-emerald-500 shrink-0 mt-0.5" />
+              <p className="text-xs font-medium text-emerald-800 leading-relaxed">
+                <strong>Konversi otomatis:</strong> field <code className="bg-emerald-100/70 px-1.5 py-0.5 rounded text-[11px] font-mono">amount_idr</code> sengaja tidak dikirim. Kalau <code className="bg-emerald-100/70 px-1.5 py-0.5 rounded text-[11px] font-mono">currency</code> bukan IDR (mis. USD, KHR), server otomatis mengambil kurs live dan menghitung nilai IDR-nya sendiri — Nominal cukup diisi sesuai mata uang akun yang dipilih, tidak perlu dihitung manual.
               </p>
             </div>
 
