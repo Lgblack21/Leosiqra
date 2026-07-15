@@ -2277,8 +2277,20 @@ async function handleAdminSettings(request: Request, env: Env) {
   }
 
   if (request.method === "GET") {
-    const settings = await env.DB.prepare("SELECT * FROM admin_settings WHERE id = 'global'").first();
-    return json({ item: settings });
+    const settings = await env.DB.prepare("SELECT * FROM admin_settings WHERE id = 'global'").first<
+      Record<string, unknown>
+    >();
+    let proPackages: unknown[] = [];
+    const rawJson = settings?.value_json;
+    if (typeof rawJson === "string" && rawJson) {
+      try {
+        const parsed = JSON.parse(rawJson) as { proPackages?: unknown[] };
+        if (Array.isArray(parsed.proPackages)) proPackages = parsed.proPackages;
+      } catch {
+        // value_json lama tidak valid JSON — abaikan.
+      }
+    }
+    return json({ item: settings ? { ...settings, pro_packages: proPackages } : settings });
   }
 
   const payload = await parseJson<Record<string, unknown>>(request);
@@ -2311,6 +2323,12 @@ async function handleAdminSettings(request: Request, env: Env) {
   const sanitizedEntries = fields
     .filter((key) => allowed.has(key))
     .map((key) => [key, key === "maintenance_code" ? sanitizeMaintenanceHtml(String(payload[key] ?? "")) : payload[key]]);
+
+  // Belum ada kolom khusus untuk daftar paket Pro — disimpan sebagai JSON di
+  // kolom value_json yang sudah ada (sebelumnya tidak terpakai sama sekali).
+  if (payload.pro_packages !== undefined) {
+    sanitizedEntries.push(["value_json", JSON.stringify({ proPackages: payload.pro_packages })]);
+  }
 
   if (sanitizedEntries.length === 0) {
     return json({ error: "Tidak ada field yang bisa diperbarui." }, { status: 400 });

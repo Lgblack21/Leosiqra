@@ -700,7 +700,7 @@ export default function AdminPengaturanPage() {
                     <label className="text-[12px] font-black text-slate-600">Ulangi Password</label>
                     <input
                       type="password"
-                      placeholder="||||||||"
+                      placeholder="Ulangi password baru"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-medium"
