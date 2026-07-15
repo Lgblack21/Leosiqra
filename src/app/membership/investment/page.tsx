@@ -114,18 +114,25 @@ export default function InvestmentDashboard() {
     return () => { unsub(); if (unsubInv) unsubInv(); };
   }, []);
 
-  const totalModal = useMemo(() => investments.reduce((sum, i) => sum + i.amountInvested, 0), [investments]);
-  const totalAset = useMemo(() => investments.reduce((sum, i) => sum + i.currentValue, 0), [investments]);
+  // Halaman ini menampilkan semuanya sebagai satu portofolio dalam IDR, jadi
+  // pakai amountIDR/currentValueIDR (dikonversi saat investasi disimpan)
+  // alih-alih amountInvested/currentValue mentah yang masih dalam mata uang
+  // asli tiap investasi.
+  const idrInvested = (i: Investment) => Number(i.amountIDR) || Number(i.amountInvested) || 0;
+  const idrCurrent = (i: Investment) => Number(i.currentValueIDR) || Number(i.currentValue) || 0;
+
+  const totalModal = useMemo(() => investments.reduce((sum, i) => sum + idrInvested(i), 0), [investments]);
+  const totalAset = useMemo(() => investments.reduce((sum, i) => sum + idrCurrent(i), 0), [investments]);
   const totalSelisih = totalAset - totalModal;
   const roiTotal = totalModal > 0 ? (totalSelisih / totalModal) * 100 : 0;
-  
+
   // Additional aggregations
   const allocationTypes = useMemo(() => {
     let saham = 0, lainnya = 0, deposito = 0;
     investments.forEach(i => {
-      if (i.type === 'Saham') saham += i.currentValue;
-      else if (i.type === 'Deposito') deposito += i.currentValue;
-      else lainnya += i.currentValue;
+      if (i.type === 'Saham') saham += idrCurrent(i);
+      else if (i.type === 'Deposito') deposito += idrCurrent(i);
+      else lainnya += idrCurrent(i);
     });
     return { saham, deposito, lainnya };
   }, [investments]);
@@ -134,16 +141,16 @@ export default function InvestmentDashboard() {
   const percentageLainnya = totalAset > 0 ? Math.round(((allocationTypes.deposito + allocationTypes.lainnya) / totalAset) * 100) : 0;
 
   const topAssets = useMemo(() => {
-    return [...investments].sort((a,b) => b.currentValue - a.currentValue).slice(0, 3).map(i => ({
+    return [...investments].sort((a,b) => idrCurrent(b) - idrCurrent(a)).slice(0, 3).map(i => ({
       label: i.name.substring(0, 10),
-      value: totalAset > 0 ? Number(((i.currentValue / totalAset) * 100).toFixed(1)) : 0
+      value: totalAset > 0 ? Number(((idrCurrent(i) / totalAset) * 100).toFixed(1)) : 0
     }));
   }, [investments, totalAset]);
 
   const topPlatforms = useMemo(() => {
     const platMap: Record<string, number> = {};
     investments.forEach(i => {
-      platMap[i.platform] = (platMap[i.platform] || 0) + i.currentValue;
+      platMap[i.platform] = (platMap[i.platform] || 0) + idrCurrent(i);
     });
     const formatBillion = (n: number) => {
       if (n >= 1_000_000_000) return `Rp ${(n/1_000_000_000).toFixed(1)}M`;
@@ -394,8 +401,8 @@ export default function InvestmentDashboard() {
                     </td>
                     <td className="px-5 md:px-6 py-4 md:py-5 font-bold text-slate-500">{s.sharesCount || 0}</td>
                     <td className="px-5 md:px-6 py-4 md:py-5 font-bold text-slate-500">Rp {new Intl.NumberFormat('id-ID').format(s.pricePerShare || 0)}</td>
-                    <td className="px-5 md:px-6 py-4 md:py-5 font-black text-slate-900">Rp {new Intl.NumberFormat('id-ID').format(s.sharesCount ? Math.round(s.currentValue / s.sharesCount) : 0)}</td>
-                    <td className="px-5 md:px-6 py-4 md:py-5 font-black text-slate-900">Rp {new Intl.NumberFormat('id-ID').format(s.currentValue)}</td>
+                    <td className="px-5 md:px-6 py-4 md:py-5 font-black text-slate-900">Rp {new Intl.NumberFormat('id-ID').format(s.sharesCount ? Math.round(idrCurrent(s) / s.sharesCount) : 0)}</td>
+                    <td className="px-5 md:px-6 py-4 md:py-5 font-black text-slate-900">Rp {new Intl.NumberFormat('id-ID').format(idrCurrent(s))}</td>
                     <td className={cn("px-5 md:px-8 py-4 md:py-5 text-right font-black", (s.returnPercentage??0) >= 0 ? 'text-emerald-500' : 'text-rose-500')}>{(s.returnPercentage??0) >= 0 ? '+' : ''}{(s.returnPercentage??0).toFixed(2)}%</td>
                   </tr>
                 ))}
@@ -428,10 +435,10 @@ export default function InvestmentDashboard() {
                   <tr key={a.id} className="hover:bg-slate-50/30 transition-colors">
                     <td className="px-5 md:px-8 py-4 md:py-5 font-black text-slate-900">{a.name} ({a.type})</td>
                     <td className="px-5 md:px-6 py-4 md:py-5 font-bold text-slate-400">{a.platform}</td>
-                    <td className="px-5 md:px-6 py-4 md:py-5 font-black text-slate-900">Rp {new Intl.NumberFormat('id-ID').format(a.amountInvested)}</td>
-                    <td className="px-5 md:px-6 py-4 md:py-5 font-black text-slate-900">Rp {new Intl.NumberFormat('id-ID').format(a.currentValue)}</td>
-                    <td className={cn("px-5 md:px-8 py-4 md:py-5 text-right font-black", ((a.currentValue - a.amountInvested) >= 0) ? 'text-emerald-600' : 'text-rose-500')}>
-                      Rp {new Intl.NumberFormat('id-ID').format(a.currentValue - a.amountInvested)}
+                    <td className="px-5 md:px-6 py-4 md:py-5 font-black text-slate-900">Rp {new Intl.NumberFormat('id-ID').format(idrInvested(a))}</td>
+                    <td className="px-5 md:px-6 py-4 md:py-5 font-black text-slate-900">Rp {new Intl.NumberFormat('id-ID').format(idrCurrent(a))}</td>
+                    <td className={cn("px-5 md:px-8 py-4 md:py-5 text-right font-black", ((idrCurrent(a) - idrInvested(a)) >= 0) ? 'text-emerald-600' : 'text-rose-500')}>
+                      Rp {new Intl.NumberFormat('id-ID').format(idrCurrent(a) - idrInvested(a))}
                     </td>
                   </tr>
                 ))}

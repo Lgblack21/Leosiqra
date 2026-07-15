@@ -129,10 +129,13 @@ export default function MonthlyDashboard() {
     return transactions;
   }, [transactions, filterType]);
 
-  // Guard Number() agar tidak NaN
-  const totalPemasukan = useMemo(() => transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + (Number(t.amount) || 0), 0), [transactions]);
-  const totalPengeluaran = useMemo(() => transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + (Number(t.amount) || 0), 0), [transactions]);
-  const totalInvestasi = useMemo(() => investments.reduce((s, i) => s + (Number(i.amountInvested) || 0), 0), [investments]);
+  // Halaman ini ditandai "(Dalam IDR)" — jadi setiap nominal harus pakai
+  // amountIDR (sudah dikonversi saat transaksi disimpan), bukan .amount
+  // mentah yang masih dalam mata uang asli transaksi itu.
+  const toIdrAmount = (t: { amount: number; amountIDR?: number }) => Number(t.amountIDR) || Number(t.amount) || 0;
+  const totalPemasukan = useMemo(() => transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + toIdrAmount(t), 0), [transactions]);
+  const totalPengeluaran = useMemo(() => transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + toIdrAmount(t), 0), [transactions]);
+  const totalInvestasi = useMemo(() => investments.reduce((s, i) => s + (Number(i.amountIDR) || Number(i.amountInvested) || 0), 0), [investments]);
   const netBalance = totalPemasukan - totalPengeluaran;
   const netTabungan = Math.max(netBalance - totalInvestasi, 0);
 
@@ -337,7 +340,7 @@ export default function MonthlyDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
             {transactions
               .filter(t => t.type === 'pengeluaran')
-              .sort((a, b) => b.amount - a.amount)
+              .sort((a, b) => toIdrAmount(b) - toIdrAmount(a))
               .slice(0, 3)
               .map((trx, i) => (
                 <div key={trx.id || i} className="bg-white rounded-xl p-3.5 md:p-4 border border-slate-100 shadow-sm flex items-center gap-4">
@@ -347,7 +350,7 @@ export default function MonthlyDashboard() {
                   <div className="min-w-0">
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{trx.category}</p>
                     <p className="text-[11px] font-bold text-slate-900 leading-tight truncate">{trx.note || trx.category}</p>
-                    <p className="text-[10px] font-black text-rose-500 mt-1">{formatRp(trx.amount)}</p>
+                    <p className="text-[10px] font-black text-rose-500 mt-1">{formatRp(toIdrAmount(trx))}</p>
                   </div>
                 </div>
               ))}
@@ -429,7 +432,7 @@ export default function MonthlyDashboard() {
                       "px-6 py-4 text-right font-black",
                       trx.type === 'pemasukan' ? "text-emerald-600" : "text-rose-500"
                     )}>
-                      {trx.type === 'pemasukan' ? '+' : '-'} {formatRp(trx.amount)}
+                      {trx.type === 'pemasukan' ? '+' : '-'} {formatRp(toIdrAmount(trx))}
                     </td>
                   </tr>
                 ))}

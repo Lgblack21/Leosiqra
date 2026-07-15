@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   TrendingDown,
   TrendingUp,
@@ -19,6 +19,7 @@ import { onAuthStateChanged } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 import { cn } from '@/lib/utils';
 import { useCountUp } from '@/lib/hooks/useCountUp';
+import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 
 export default function PajakCenterPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -26,6 +27,11 @@ export default function PajakCenterPage() {
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [debtTransactions, setDebtTransactions] = useState<Transaction[]>([]);
+  const [fxRates, setFxRates] = useState<ExchangeRates>({});
+
+  useEffect(() => {
+    exchangeRateService.getLatestRates().then(setFxRates).catch(console.error);
+  }, []);
 
   const isCurrentYear = selectedYear === new Date().getFullYear();
 
@@ -90,20 +96,29 @@ export default function PajakCenterPage() {
     };
   }, [selectedYear]);
 
+  // SPT wajib dilaporkan dalam Rupiah — akun/transaksi dalam mata uang asing
+  // dikonversi ke IDR pakai kurs live sebelum masuk daftar harta/utang,
+  // bukan angka mentahnya (yang sebelumnya dijumlah seolah sudah IDR).
+  const toIDR = useCallback(
+    (amount: number, currency: string | undefined) =>
+      exchangeRateService.convert(amount, currency || 'IDR', 'IDR', fxRates),
+    [fxRates]
+  );
+
   // SPT Specific Aggregations
   const daftarHarta = useMemo(() => {
     return [
-      ...accounts.map(acc => ({ name: acc.name, type: acc.type, value: Number(acc.balance) || 0 })),
-      ...investments.map(inv => ({ name: inv.name, type: 'Investasi', value: Number(inv.amountInvested) || 0 }))
+      ...accounts.map(acc => ({ name: acc.name, type: acc.type, value: toIDR(Number(acc.balance) || 0, acc.currency) })),
+      ...investments.map(inv => ({ name: inv.name, type: 'Investasi', value: Number(inv.amountIDR) || Number(inv.amountInvested) || 0 }))
     ];
-  }, [accounts, investments]);
+  }, [accounts, investments, toIDR]);
 
   const daftarUtang = useMemo(() => {
     return debtTransactions
       .filter((t) => t.category === 'Hutang' && t.paymentStatus !== 'lunas')
       .map((t) => ({
         name: t.lenderName || t.note || 'Hutang',
-        value: t.amount
+        value: Number(t.amountIDR) || t.amount
       }));
   }, [debtTransactions]);
 
@@ -112,7 +127,7 @@ export default function PajakCenterPage() {
       .filter((t) => t.category === 'Piutang' && t.paymentStatus !== 'lunas')
       .map((t) => ({
         name: t.lenderName || t.note || 'Piutang',
-        value: t.amount
+        value: Number(t.amountIDR) || t.amount
       }));
   }, [debtTransactions]);
 
@@ -121,15 +136,15 @@ export default function PajakCenterPage() {
   const totalPiutang = daftarPiutang.reduce((s, p) => s + p.value, 0);
 
   // New Summary Calculations for PDF
-  const totalPemasukan = useMemo(() => transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0), [transactions]);
-  const totalPengeluaran = useMemo(() => transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0), [transactions]);
+  const totalPemasukan = useMemo(() => transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0), [transactions]);
+  const totalPengeluaran = useMemo(() => transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0), [transactions]);
   const netIncome = totalPemasukan - totalPengeluaran;
 
   const investasiPembelian = useMemo(() => {
     // Assuming transactions with category 'Investasi' or related are investment purchases
     return transactions
       .filter(t => t.type === 'pengeluaran' && (t.category?.toLowerCase().includes('investasi') || t.category === 'Saham' || t.category === 'Deposito'))
-      .reduce((s, t) => s + t.amount, 0);
+      .reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0);
   }, [transactions]);
 
   const formatIDR = (val: number) => {

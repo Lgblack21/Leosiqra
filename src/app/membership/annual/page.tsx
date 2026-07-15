@@ -188,28 +188,33 @@ export default function AnnualDashboard() {
     [transactions]
   );
 
-  const totalPemasukan = useMemo(() => yearTransactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0), [yearTransactions]);
-  const totalPengeluaran = useMemo(() => yearTransactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0), [yearTransactions]);
-  const totalInvestasi = useMemo(() => investments.reduce((s, i) => s + (Number(i.amountInvested) || 0), 0), [investments]);
+  // Rincian tahunan ini ditampilkan sepenuhnya dalam IDR, jadi pakai
+  // amountIDR (sudah dikonversi saat transaksi disimpan) — bukan .amount
+  // mentah yang masih dalam mata uang asli transaksi tersebut.
+  const idrAmount = (t: { amount: number; amountIDR?: number }) => Number(t.amountIDR) || Number(t.amount) || 0;
+  const totalPemasukan = useMemo(() => yearTransactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + idrAmount(t), 0), [yearTransactions]);
+  const totalPengeluaran = useMemo(() => yearTransactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + idrAmount(t), 0), [yearTransactions]);
+  const totalInvestasi = useMemo(() => investments.reduce((s, i) => s + (Number(i.amountIDR) || Number(i.amountInvested) || 0), 0), [investments]);
   const netSavings = totalPemasukan - totalPengeluaran;
 
   // Monthly Aggregation for the Chart
   const monthlyData = useMemo(() => {
     const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
     const data = months.map(m => ({ m, v1: 0, v2: 0 }));
-    
+
     yearTransactions.forEach(t => {
       const monthIdx = t.date.getMonth();
-      
+      const amt = idrAmount(t);
+
       // If we have specific categories selected
       if (cat1Id && cat2Id) {
         // Compare by category name or ID (we normalize to name for comparison in charts usually)
-        if (t.category === cat1Id || t.category === category1Name) data[monthIdx].v1 += t.amount;
-        if (t.category === cat2Id || t.category === category2Name) data[monthIdx].v2 += t.amount;
+        if (t.category === cat1Id || t.category === category1Name) data[monthIdx].v1 += amt;
+        if (t.category === cat2Id || t.category === category2Name) data[monthIdx].v2 += amt;
       } else {
         // Default: Income vs Expense
-        if (t.type === 'pemasukan') data[monthIdx].v1 += t.amount;
-        if (t.type === 'pengeluaran') data[monthIdx].v2 += t.amount;
+        if (t.type === 'pemasukan') data[monthIdx].v1 += amt;
+        if (t.type === 'pengeluaran') data[monthIdx].v2 += amt;
       }
     });
 
@@ -226,7 +231,7 @@ export default function AnnualDashboard() {
 
   // Top Transactions
   const topTransactionsList = useMemo(() => {
-    return [...yearTransactions].sort((a, b) => b.amount - a.amount).slice(0, 4);
+    return [...yearTransactions].sort((a, b) => idrAmount(b) - idrAmount(a)).slice(0, 4);
   }, [yearTransactions]);
 
   // Budget vs Actual for the Year Table
@@ -235,7 +240,7 @@ export default function AnnualDashboard() {
       // actual sum across the selected year for this category
       const actual = yearTransactions
         .filter(t => t.type === 'pengeluaran' && t.category === b.category)
-        .reduce((sum, t) => sum + t.amount, 0);
+        .reduce((sum, t) => sum + idrAmount(t), 0);
       const limitTahunan = b.period === 'yearly' ? b.amount : b.amount * 12; // Handle period
       const isOver = actual > limitTahunan;
       return {
@@ -483,7 +488,7 @@ export default function AnnualDashboard() {
                   </div>
                 </div>
                 <span className={cn("text-xs font-black", trx.type === 'pemasukan' ? 'text-sky-500' : 'text-rose-500')}>
-                  {trx.type === 'pemasukan' ? '+' : '-'}Rp {formatRpShort(trx.amount)}
+                  {trx.type === 'pemasukan' ? '+' : '-'}Rp {formatRpShort(idrAmount(trx))}
                 </span>
               </div>
             ))}
