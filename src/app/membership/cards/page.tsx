@@ -1,16 +1,18 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { 
-  CreditCard, 
-  Wallet, 
-  LineChart, 
-  ArrowUpCircle, 
+import {
+  CreditCard,
+  Wallet,
+  LineChart,
+  ArrowUpCircle,
   ArrowDownCircle,
   Building2,
   Smartphone,
   Banknote,
-  Trash2
+  Trash2,
+  Edit2,
+  PlusCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -18,8 +20,10 @@ import { accountService, Account } from '@/lib/services/accountService';
 import { Transaction } from '@/lib/services/transactionService';
 import { Saving } from '@/lib/services/savingsService';
 import { auth, db } from '@/lib/cf-client';
-import { onAuthStateChanged } from '@/lib/cf-auth';
+import { onAuthStateChanged, User } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
+import { getCardGradientClass, CARD_COLOR_OPTIONS } from '@/lib/cardColors';
+import { AccountModal } from '@/components/modals/AccountModal';
 
 export default function MyCardsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -27,6 +31,11 @@ export default function MyCardsPage() {
   const [savings, setSavings] = useState<Saving[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [error, setError] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const unsubAccRef = useRef<(() => void) | null>(null);
   const unsubTrxRef = useRef<(() => void) | null>(null);
@@ -34,13 +43,23 @@ export default function MyCardsPage() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
       if (u) {
         const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
         if (unsubAccRef.current) unsubAccRef.current();
         unsubAccRef.current = onSnapshot(qAcc, (snap) => {
           const accs = snap.docs.map(doc => {
             const d = doc.data();
-            return { ...d, id: doc.id, balance: Number(d.balance) || 0, createdAt: d.createdAt?.toDate?.() ?? new Date() } as Account;
+            let cardColor: string | undefined;
+            const payloadJson = (d.payload_json ?? d.payloadJson) as string | null | undefined;
+            if (payloadJson) {
+              try {
+                cardColor = (JSON.parse(payloadJson) as { cardColor?: string }).cardColor;
+              } catch {
+                // payload_json tidak valid JSON — abaikan.
+              }
+            }
+            return { ...d, id: doc.id, balance: Number(d.balance) || 0, cardColor, createdAt: d.createdAt?.toDate?.() ?? new Date() } as Account;
           });
           setAccounts(accs);
           // Auto-select first account
@@ -69,7 +88,7 @@ export default function MyCardsPage() {
           setLoading(false);
         }, (err) => { console.error(err); setLoading(false); });
 
-      } else { setAccounts([]); setTransactions([]); setSavings([]); setLoading(false); }
+      } else { setAccounts([]); setTransactions([]); setSavings([]); setLoading(false); setSelectedAccountId(null); }
     });
     return () => { 
       unsub(); 
@@ -185,13 +204,18 @@ export default function MyCardsPage() {
     }
   };
 
-  const getCardGradient = (type: string) => {
-    switch (type) {
-      case 'Bank Account': return 'bg-gradient-to-br from-slate-800 to-slate-900';
-      case 'E-Wallet': return 'bg-gradient-to-br from-indigo-500 to-indigo-700';
-      case 'Cash': return 'bg-gradient-to-br from-emerald-500 to-emerald-700';
-      case 'Credit Card': return 'bg-gradient-to-br from-rose-500 to-rose-700';
-      default: return 'bg-gradient-to-br from-indigo-600 to-indigo-800';
+  const handleDeleteAccount = async (id: string) => {
+    if (!confirm('Hapus rekening ini? Tindakan ini tidak bisa dibatalkan.')) return;
+    setError('');
+    setDeletingId(id);
+    try {
+      await accountService.deleteAccount(id);
+      if (selectedAccountId === id) setSelectedAccountId(null);
+    } catch (e) {
+      console.error(e);
+      setError('Gagal menghapus rekening. Silakan coba lagi.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -202,14 +226,28 @@ export default function MyCardsPage() {
         <div>
           <h1 className="text-2xl md:text-[28px] font-black text-slate-900 tracking-tight">Kartu Saya</h1>
           <p className="text-[12px] md:text-sm font-medium text-slate-500 mt-1 max-w-lg leading-relaxed">
-            Pantau arus kas Anda dan kelola rekening melalui menu &apos;Tambah Cepat&apos; di header.
+            Pantau arus kas dan kelola tampilan rekening Anda — pilih kartu untuk lihat detail.
           </p>
         </div>
-        <div className="bg-white border border-slate-100 rounded-xl px-6 py-3 shadow-sm text-right">
-          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Saldo</p>
-          <p className="text-xs font-black text-slate-900">{formatRp(totalBalance)}</p>
+        <div className="flex items-center gap-3">
+          <div className="bg-white border border-slate-100 rounded-xl px-6 py-3 shadow-sm text-right">
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Saldo</p>
+            <p className="text-xs font-black text-slate-900">{formatRp(totalBalance)}</p>
+          </div>
+          <button
+            onClick={() => { setEditingAccount(null); setIsModalOpen(true); }}
+            className="flex items-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 shrink-0"
+          >
+            <PlusCircle size={16} /> Tambah Bank
+          </button>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-sm font-medium text-rose-600">
+          {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
@@ -218,7 +256,7 @@ export default function MyCardsPage() {
           
           {/* Selected card hero */}
           {selectedAccount ? (
-            <div className={cn("relative overflow-hidden rounded-[20px] md:rounded-[32px] p-6 md:p-10 text-white shadow-2xl", getCardGradient(selectedAccount.type))}>
+            <div className={cn("relative overflow-hidden rounded-[20px] md:rounded-[32px] p-6 md:p-10 text-white shadow-2xl", getCardGradientClass(selectedAccount.cardColor, selectedAccount.type))}>
               <div className="relative z-10">
                 <div className="flex justify-between items-start mb-10 md:mb-12">
                   <div>
@@ -226,8 +264,17 @@ export default function MyCardsPage() {
                     <h2 className="text-xl md:text-3xl lg:text-4xl font-black tracking-tight">{selectedAccount.name}</h2>
                     <p className="text-[10px] font-medium text-white/60 mt-1">Saldo: {formatRp(accountBalance)}</p>
                   </div>
-                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20">
-                    {getTypeIcon(selectedAccount.type)}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => { setEditingAccount(selectedAccount); setIsModalOpen(true); }}
+                      title="Edit rekening & warna kartu"
+                      className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20 hover:bg-white/30 transition-all"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20">
+                      {getTypeIcon(selectedAccount.type)}
+                    </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-6 md:gap-8 pt-6 md:pt-8 border-t border-white/10">
@@ -330,41 +377,55 @@ export default function MyCardsPage() {
             <div className="p-6 text-center text-sm text-slate-400">Memuat akun...</div>
           ) : accounts.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-100 p-6">
-              <EmptyState title="Belum ada rekening" description="Tambah rekening bank melalui menu 'Tambah Cepat' di header." icon={<Wallet size={20} />} />
+              <EmptyState title="Belum ada rekening" description="Klik 'Tambah Bank' di atas untuk mulai melacak keuangan Anda." icon={<Wallet size={20} />} />
             </div>
           ) : (
             <div className="space-y-4">
-              {accounts.map((acc) => (
-                <div 
-                  key={acc.id} 
+              {accounts.map((acc) => {
+                const swatch = CARD_COLOR_OPTIONS.find(c => c.key === acc.cardColor)?.swatch;
+                return (
+                <div
+                  key={acc.id}
                   onClick={() => setSelectedAccountId(acc.id!)}
                   className={cn(
                     "bg-white rounded-2xl p-4 md:p-5 border shadow-sm hover:shadow-md transition-all flex items-center justify-between group cursor-pointer",
                     selectedAccountId === acc.id ? "border-indigo-300 ring-2 ring-indigo-100" : "border-slate-100"
                   )}>
                   <div className="flex items-center gap-3 md:gap-4 min-w-0">
-                    <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0 ${getTypeBg(acc.type)}`}>
+                    <div className={`relative w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0 ${getTypeBg(acc.type)}`}>
                       {getTypeIcon(acc.type)}
+                      {swatch && (
+                        <span className={cn("absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white", swatch)} />
+                      )}
                     </div>
                     <div className="min-w-0">
                       <p className="text-[12px] md:text-sm font-bold text-slate-900 truncate">{acc.name}</p>
                       <p className="text-[9px] md:text-[10px] font-medium text-slate-400">{acc.type} | {acc.currency}</p>
                     </div>
                   </div>
-                  <div className="text-right shrink-0 flex items-center gap-2">
-                    <button onClick={async (e) => {
-                      e.stopPropagation();
-                      if (acc.id) {
-                        await accountService.deleteAccount(acc.id);
-                        if (selectedAccountId === acc.id) setSelectedAccountId(null);
-                      }
-                    }}
-                      className="p-1.5 rounded-lg bg-slate-50 text-slate-300 opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-white transition-all">
+                  <div className="text-right shrink-0 flex items-center gap-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingAccount(acc);
+                        setIsModalOpen(true);
+                      }}
+                      className="p-1.5 rounded-lg bg-slate-50 text-slate-300 opacity-0 group-hover:opacity-100 hover:bg-slate-900 hover:text-white transition-all">
+                      <Edit2 size={12} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (acc.id) handleDeleteAccount(acc.id);
+                      }}
+                      disabled={deletingId === acc.id}
+                      className="p-1.5 rounded-lg bg-slate-50 text-slate-300 opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-white transition-all disabled:opacity-50">
                       <Trash2 size={12} />
                     </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -421,6 +482,15 @@ export default function MyCardsPage() {
           </div>
         </div>
       </div>
+
+      {user && (
+        <AccountModal
+          userId={user.uid}
+          isOpen={isModalOpen}
+          onClose={() => { setIsModalOpen(false); setEditingAccount(null); }}
+          initialData={editingAccount}
+        />
+      )}
     </div>
   );
 }

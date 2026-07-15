@@ -2,11 +2,13 @@
 
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
-import { ChevronDown, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { ChevronDown, Image as ImageIcon, Loader2, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { accountService, Account } from '@/lib/services/accountService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { CurrencySelect } from '@/components/CurrencySelect';
+import { CARD_COLOR_OPTIONS } from '@/lib/cardColors';
 import { useRef } from 'react';
 
 interface AccountModalProps {
@@ -26,7 +28,8 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
     currency: 'IDR',
     balance: '',
     initialBalance: '',
-    baseValue: ''
+    baseValue: '',
+    cardColor: ''
   });
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -60,7 +63,8 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
         currency: initialData.currency || 'IDR',
         balance: String(initialData.balance ?? ''),
         initialBalance: String(initialData.initialBalance ?? ''),
-        baseValue: String(initialData.baseValue ?? '')
+        baseValue: String(initialData.baseValue ?? ''),
+        cardColor: initialData.cardColor || ''
       });
     } else {
       setFormData(prev => ({
@@ -83,7 +87,8 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
           currency: formData.currency,
           balance: parseFloat(formData.balance) || parseFloat(formData.initialBalance),
           initialBalance: parseFloat(formData.initialBalance) || 0,
-          baseValue: parseFloat(formData.baseValue) || 0
+          baseValue: parseFloat(formData.baseValue) || 0,
+          cardColor: formData.cardColor
         });
       } else {
         await accountService.createAccount({
@@ -94,11 +99,12 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
           currency: formData.currency,
           balance: parseFloat(formData.balance) || parseFloat(formData.initialBalance),
           initialBalance: parseFloat(formData.initialBalance) || 0,
-          baseValue: parseFloat(formData.baseValue) || 0
+          baseValue: parseFloat(formData.baseValue) || 0,
+          cardColor: formData.cardColor
         });
       }
       onClose();
-      setFormData({ name: '', logoUrl: '', type: initialType, currency: 'IDR', balance: '', initialBalance: '', baseValue: '' });
+      setFormData({ name: '', logoUrl: '', type: initialType, currency: 'IDR', balance: '', initialBalance: '', baseValue: '', cardColor: '' });
     } catch (err) {
       console.error("Error saving account:", err);
       setError(err instanceof Error ? err.message : 'Gagal menyimpan rekening. Silakan coba lagi.');
@@ -217,13 +223,45 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
 
           <div className="space-y-3">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nilai Base</label>
-            <input 
-              type="number" 
+            <input
+              type="number"
               value={formData.baseValue}
               onChange={(e) => setFormData({...formData, baseValue: e.target.value})}
               placeholder="0"
               className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
             />
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Warna Kartu</label>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, cardColor: '' })}
+              title="Default sesuai jenis rekening"
+              className={cn(
+                "w-9 h-9 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 hover:border-slate-400 transition-all",
+                !formData.cardColor && "ring-2 ring-offset-2 ring-slate-400"
+              )}
+            >
+              <span className="text-[9px] font-black">A</span>
+            </button>
+            {CARD_COLOR_OPTIONS.map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setFormData({ ...formData, cardColor: opt.key })}
+                title={opt.label}
+                className={cn(
+                  "w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-110",
+                  opt.swatch,
+                  formData.cardColor === opt.key && "ring-2 ring-offset-2 ring-slate-900"
+                )}
+              >
+                {formData.cardColor === opt.key && <Check size={14} className="text-white" />}
+              </button>
+            ))}
           </div>
         </div>
 

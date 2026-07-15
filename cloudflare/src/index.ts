@@ -1240,10 +1240,11 @@ async function handleCreateAccount(request: Request, env: Env) {
 
   const payload = await parseJson<Record<string, unknown>>(request);
   const id = generateId();
+  const payloadJson = payload.card_color ? JSON.stringify({ cardColor: payload.card_color }) : null;
   await env.DB.prepare(
     `INSERT INTO accounts (
-      id, user_id, name, type, currency, balance, initial_balance, base_value, logo_url, logo_label, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      id, user_id, name, type, currency, balance, initial_balance, base_value, logo_url, logo_label, payload_json, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       id,
@@ -1256,6 +1257,7 @@ async function handleCreateAccount(request: Request, env: Env) {
       Number(payload.base_value ?? 0),
       payload.logo_url ?? null,
       payload.logo_label ?? null,
+      payloadJson,
       nowIso(),
       nowIso()
     )
@@ -1282,6 +1284,23 @@ async function handleUpdateAccount(request: Request, env: Env, accountId: string
     "logo_label",
   ]);
   const entries = Object.entries(payload).filter(([key]) => allowed.has(key));
+
+  if (payload.card_color !== undefined) {
+    const existing = await env.DB.prepare("SELECT payload_json FROM accounts WHERE id = ? AND user_id = ?")
+      .bind(accountId, authResult.session.user.id)
+      .first<{ payload_json: string | null }>();
+    let payloadObj: Record<string, unknown> = {};
+    if (existing?.payload_json) {
+      try {
+        payloadObj = JSON.parse(existing.payload_json);
+      } catch {
+        // payload_json lama tidak valid JSON — mulai dari objek kosong.
+      }
+    }
+    payloadObj.cardColor = payload.card_color;
+    entries.push(["payload_json", JSON.stringify(payloadObj)]);
+  }
+
   if (entries.length === 0) {
     return json({ error: "Tidak ada field yang bisa diperbarui." }, { status: 400 });
   }

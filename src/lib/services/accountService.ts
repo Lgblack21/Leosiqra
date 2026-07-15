@@ -11,6 +11,7 @@ export interface Account {
   baseValue?: number;
   logoUrl?: string;
   logoLabel?: string;
+  cardColor?: string;
   createdAt: Date;
 }
 
@@ -27,6 +28,7 @@ export const accountService = {
         base_value: Number(data.baseValue) || 0,
         logo_url: data.logoUrl || null,
         logo_label: data.logoLabel || null,
+        ...(data.cardColor ? { card_color: data.cardColor } : {}),
       },
     });
     return result.id;
@@ -36,6 +38,16 @@ export const accountService = {
     void _userId;
     const result = await cloudflareApi<{ items: Record<string, unknown>[] }>('/api/member/accounts');
     return result.items.map((data) => {
+      let cardColor: string | undefined;
+      const payloadJson = data.payload_json as string | null | undefined;
+      if (payloadJson) {
+        try {
+          const parsed = JSON.parse(payloadJson) as { cardColor?: string };
+          cardColor = parsed.cardColor;
+        } catch {
+          // payload_json tidak valid JSON — abaikan.
+        }
+      }
       return {
         ...data,
         id: String(data.id ?? ''),
@@ -44,6 +56,7 @@ export const accountService = {
         baseValue: Number(data.base_value) || 0,
         logoUrl: (data.logo_url as string | undefined) ?? undefined,
         logoLabel: (data.logo_label as string | undefined) ?? undefined,
+        cardColor,
         createdAt: data.created_at ? new Date(String(data.created_at)) : new Date(),
       } as Account;
     });
@@ -61,6 +74,7 @@ export const accountService = {
         ...(typeof data.baseValue === 'number' ? { base_value: data.baseValue } : {}),
         ...(data.logoUrl !== undefined ? { logo_url: data.logoUrl } : {}),
         ...(data.logoLabel !== undefined ? { logo_label: data.logoLabel } : {}),
+        ...(data.cardColor !== undefined ? { card_color: data.cardColor } : {}),
       },
     });
   },
