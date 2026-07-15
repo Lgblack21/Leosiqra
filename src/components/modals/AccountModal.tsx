@@ -15,9 +15,10 @@ interface AccountModalProps {
   userId: string;
   initialType?: Account['type'];
   title?: string;
+  initialData?: Account | null;
 }
 
-export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Account', title = 'Tambah Rekening Baru' }: AccountModalProps) => {
+export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Account', title = 'Tambah Rekening Baru', initialData = null }: AccountModalProps) => {
   const [formData, setFormData] = useState({
     name: '',
     logoUrl: '',
@@ -28,6 +29,8 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
     baseValue: ''
   });
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,42 +50,77 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
   };
 
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return;
+    setError('');
+    if (initialData) {
+      setFormData({
+        name: initialData.name || '',
+        logoUrl: initialData.logoUrl || '',
+        type: initialData.type || initialType,
+        currency: initialData.currency || 'IDR',
+        balance: String(initialData.balance ?? ''),
+        initialBalance: String(initialData.initialBalance ?? ''),
+        baseValue: String(initialData.baseValue ?? '')
+      });
+    } else {
       setFormData(prev => ({
         ...prev,
         type: initialType
       }));
     }
-  }, [isOpen, initialType]);
+  }, [isOpen, initialType, initialData]);
 
   const handleCreate = async () => {
     if (!userId || !formData.name || !formData.initialBalance) return;
+    setError('');
+    setSaving(true);
     try {
-      await accountService.createAccount({
-        userId: userId,
-        name: formData.name,
-        logoUrl: formData.logoUrl,
-        type: formData.type,
-        currency: formData.currency,
-        balance: parseFloat(formData.balance) || parseFloat(formData.initialBalance),
-        initialBalance: parseFloat(formData.initialBalance) || 0,
-        baseValue: parseFloat(formData.baseValue) || 0
-      });
+      if (initialData?.id) {
+        await accountService.updateAccount(initialData.id, {
+          name: formData.name,
+          logoUrl: formData.logoUrl,
+          type: formData.type,
+          currency: formData.currency,
+          balance: parseFloat(formData.balance) || parseFloat(formData.initialBalance),
+          initialBalance: parseFloat(formData.initialBalance) || 0,
+          baseValue: parseFloat(formData.baseValue) || 0
+        });
+      } else {
+        await accountService.createAccount({
+          userId: userId,
+          name: formData.name,
+          logoUrl: formData.logoUrl,
+          type: formData.type,
+          currency: formData.currency,
+          balance: parseFloat(formData.balance) || parseFloat(formData.initialBalance),
+          initialBalance: parseFloat(formData.initialBalance) || 0,
+          baseValue: parseFloat(formData.baseValue) || 0
+        });
+      }
       onClose();
       setFormData({ name: '', logoUrl: '', type: initialType, currency: 'IDR', balance: '', initialBalance: '', baseValue: '' });
-    } catch (error) {
-      console.error("Error creating account:", error);
+    } catch (err) {
+      console.error("Error saving account:", err);
+      setError(err instanceof Error ? err.message : 'Gagal menyimpan rekening. Silakan coba lagi.');
+    } finally {
+      setSaving(false);
     }
   };
 
   return (
-    <Modal 
-      isOpen={isOpen} 
-      onClose={onClose} 
-      title={title}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={initialData ? 'Edit Rekening' : title}
       maxWidth="max-w-xl"
     >
       <div className="space-y-6">
+        {error && (
+          <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-sm font-medium text-rose-600">
+            {error}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nama Rekening</label>
@@ -189,12 +227,16 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
           </div>
         </div>
 
-        <button 
+        <button
           onClick={handleCreate}
-          disabled={!formData.name || !formData.initialBalance}
+          disabled={saving || !formData.name || !formData.initialBalance}
           className="w-full bg-blue-600 disabled:bg-slate-300 text-white px-6 py-4 rounded-xl text-xs font-black shadow-lg shadow-blue-100 disabled:shadow-none transition-all mt-6"
         >
-          {title === 'Tambah Kartu Baru' ? 'Simpan Kartu Baru' : 'Simpan Rekening Baru'}
+          {saving
+            ? 'Menyimpan...'
+            : initialData
+              ? 'Simpan Perubahan'
+              : title === 'Tambah Kartu Baru' ? 'Simpan Kartu Baru' : 'Simpan Rekening Baru'}
         </button>
       </div>
     </Modal>

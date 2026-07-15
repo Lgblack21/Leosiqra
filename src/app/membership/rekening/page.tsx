@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { 
+import { useRouter } from 'next/navigation';
+import {
   Building2,
   Wallet,
   Landmark,
@@ -15,17 +16,25 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { LogoImage } from '@/components/ui/LogoImage';
 import { accountService, Account } from '@/lib/services/accountService';
 import { auth, db } from '@/lib/cf-client';
-import { onAuthStateChanged } from '@/lib/cf-auth';
+import { onAuthStateChanged, User } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
+import { AccountModal } from '@/components/modals/AccountModal';
 
 export default function RekeningPage() {
+  const router = useRouter();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [error, setError] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const unsubRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
       if (u) {
         const q = query(collection(db, 'accounts'), where('userId', '==', u.uid));
         if (unsubRef.current) unsubRef.current();
@@ -35,15 +44,29 @@ export default function RekeningPage() {
             return { ...d, id: doc.id, balance: Number(d.balance) || 0, createdAt: d.createdAt?.toDate?.() ?? new Date() } as Account;
           }));
           setLoading(false);
-        }, (err) => { 
+        }, (err) => {
           if (err.code !== 'permission-denied') console.error('Account listener error:', err);
-          setLoading(false); 
+          setLoading(false);
         });
         unsubRef.current = unsubSnap;
       } else { setAccounts([]); setLoading(false); }
     });
     return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
   }, []);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Hapus rekening ini? Tindakan ini tidak bisa dibatalkan.')) return;
+    setError('');
+    setDeletingId(id);
+    try {
+      await accountService.deleteAccount(id);
+    } catch (e) {
+      console.error(e);
+      setError('Gagal menghapus rekening. Silakan coba lagi.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const getIconForType = (type: string) => {
     switch (type) {
@@ -72,6 +95,19 @@ export default function RekeningPage() {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).format(num).replace('Rp', '');
+  };
+
+  const formatBalance = (amount: number, currency: string) => {
+    try {
+      return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: currency || 'IDR',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(amount);
+    } catch {
+      return `${currency || ''} ${formatRp(amount)}`.trim();
+    }
   };
 
   return (
@@ -119,11 +155,20 @@ export default function RekeningPage() {
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-2">
           <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Daftar Rekening</h2>
-          <button className="flex items-center gap-2 text-[10px] font-black text-blue-600 uppercase tracking-widest hover:gap-3 transition-all w-fit">
+          <button
+            onClick={() => router.push('/membership/transactions/daily')}
+            className="flex items-center gap-2 text-[10px] font-black text-blue-600 uppercase tracking-widest hover:gap-3 transition-all w-fit"
+          >
             Lihat Histori Aktivitas
             <ExternalLink size={14} />
           </button>
         </div>
+
+        {error && (
+          <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-sm font-medium text-rose-600">
+            {error}
+          </div>
+        )}
 
         <div className="bg-white rounded-[20px] md:rounded-[40px] border border-slate-50 shadow-sm overflow-hidden">
           {loading ? (
@@ -177,20 +222,19 @@ export default function RekeningPage() {
                       <td className="px-5 md:px-10 py-5 md:py-8 text-center">
                         <span className="px-3 py-1.5 bg-slate-100 text-[9px] font-black text-slate-400 rounded-lg tracking-widest uppercase">{acc.currency}</span>
                       </td>
-                      <td className="px-5 md:px-10 py-5 md:py-8 text-right font-black text-slate-900 text-sm"> {formatRp(acc.balance || 0)}</td>
-                      <td className="px-5 md:px-10 py-5 md:py-8 text-right font-black text-slate-700 text-sm"> {formatRp(acc.baseValue || 0)}</td>
+                      <td className="px-5 md:px-10 py-5 md:py-8 text-right font-black text-slate-900 text-sm whitespace-nowrap">{formatBalance(acc.balance || 0, acc.currency)}</td>
+                      <td className="px-5 md:px-10 py-5 md:py-8 text-right font-black text-slate-700 text-sm whitespace-nowrap"> {formatRp(acc.baseValue || 0)}</td>
                       <td className="px-5 md:px-10 py-5 md:py-8">
                         <div className="flex items-center justify-center gap-3">
-                          <button className="p-2.5 rounded-xl bg-slate-50 text-slate-300 hover:bg-slate-900 hover:text-white transition-all shadow-sm">
+                          <button
+                            onClick={() => { setEditingAccount(acc); setIsModalOpen(true); }}
+                            className="p-2.5 rounded-xl bg-slate-50 text-slate-300 hover:bg-slate-900 hover:text-white transition-all shadow-sm">
                             <Edit2 size={14} />
                           </button>
-                          <button 
-                            onClick={async () => {
-                              if(acc.id) {
-                                await accountService.deleteAccount(acc.id);
-                              }
-                            }}
-                            className="p-2.5 rounded-xl bg-slate-50 text-slate-300 hover:bg-rose-500 hover:text-white transition-all shadow-sm">
+                          <button
+                            onClick={() => acc.id && handleDelete(acc.id)}
+                            disabled={deletingId === acc.id}
+                            className="p-2.5 rounded-xl bg-slate-50 text-slate-300 hover:bg-rose-500 hover:text-white transition-all shadow-sm disabled:opacity-50">
                             <Trash2 size={14} />
                           </button>
                         </div>
@@ -203,6 +247,15 @@ export default function RekeningPage() {
           )}
         </div>
       </div>
+
+      {user && (
+        <AccountModal
+          userId={user.uid}
+          isOpen={isModalOpen}
+          onClose={() => { setIsModalOpen(false); setEditingAccount(null); }}
+          initialData={editingAccount}
+        />
+      )}
     </div>
   );
 }
