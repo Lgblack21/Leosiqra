@@ -210,11 +210,40 @@ export default function ShortcutIosGuidePage() {
       </section>
 
       <section className="px-6 pb-8">
+        <div className="max-w-4xl mx-auto bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-[32px] p-6 md:p-8 shadow-2xl shadow-indigo-200 relative overflow-hidden text-white">
+          <div className="absolute top-0 right-0 p-6 text-white/10 hidden md:block">
+            <Smartphone size={100} />
+          </div>
+          <div className="relative z-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-[10px] font-black uppercase tracking-widest mb-4">
+              <Sparkles size={12} /> Cara termudah · tanpa rakit
+            </div>
+            <h2 className="text-xl md:text-2xl font-black tracking-tight mb-2">Pasang otomatis, cukup 1 tap</h2>
+            <p className="text-sm text-white/75 font-medium leading-relaxed max-w-2xl mb-5">
+              Gak perlu rakit 7 langkah di bawah. Buka halaman ini <strong className="text-white">lewat Safari di iPhone</strong> sambil login,
+              masuk ke <strong className="text-white">Profile → Akses API</strong>, lalu tap <strong className="text-white">Pasang Shortcut (1 tap)</strong>.
+              File shortcut-nya sudah berisi token kamu — di iPhone tinggal &quot;Add Shortcut&quot;, selesai.
+            </p>
+            <Link
+              href="/membership/profile"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-indigo-700 hover:bg-indigo-50 transition-all font-black text-sm shadow-lg"
+            >
+              Buka Profile & Pasang <ArrowRight size={15} />
+            </Link>
+            <p className="text-[11px] text-white/55 font-medium mt-4">
+              Pertama kali saja: kalau ditolak, aktifkan <strong className="text-white/80">Settings → Shortcuts → Allow Untrusted Shortcuts</strong>.
+              Langkah manual di bawah tetap tersedia sebagai cadangan.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="px-6 pb-8">
         <div className="max-w-4xl mx-auto bg-slate-900 rounded-[32px] p-6 md:p-8 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 p-6 text-white/5 hidden md:block">
             <KeyRound size={100} />
           </div>
-          <h2 className="text-[11px] font-black text-white/50 uppercase tracking-widest mb-5 relative z-10">Sebelum mulai</h2>
+          <h2 className="text-[11px] font-black text-white/50 uppercase tracking-widest mb-5 relative z-10">Atau rakit manual — Sebelum mulai</h2>
           <ol className="space-y-4 relative z-10">
             <li className="flex gap-4">
               <span className="w-6 h-6 rounded-lg bg-white/10 text-white flex items-center justify-center text-[11px] font-black shrink-0 mt-0.5">1</span>
