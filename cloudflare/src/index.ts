@@ -516,9 +516,12 @@ const fetchMarketSnapshot = async (): Promise<string> => {
   try {
     const [cryptoRes, fxRes] = await Promise.all([
       fetch(
-        "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,holotoken,pax-gold&vs_currencies=usd&include_24hr_change=true"
+        "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,holotoken,pax-gold&vs_currencies=usd&include_24hr_change=true",
+        { headers: { "User-Agent": "Leosiqra/1.0 (+https://www.leosiqra.com)", Accept: "application/json" } }
       ),
-      fetch("https://open.er-api.com/v6/latest/USD"),
+      fetch("https://open.er-api.com/v6/latest/USD", {
+        headers: { "User-Agent": "Leosiqra/1.0 (+https://www.leosiqra.com)", Accept: "application/json" },
+      }),
     ]);
 
     if (!cryptoRes.ok) {
