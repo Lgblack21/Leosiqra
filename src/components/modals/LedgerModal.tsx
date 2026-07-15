@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Save } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { categoryService } from '@/lib/services/categoryService';
@@ -9,15 +9,23 @@ interface LedgerModalProps {
   isOpen: boolean;
   onClose: () => void;
   userId: string;
+  presetCategory?: string;
 }
 
-export const LedgerModal = ({ isOpen, onClose, userId }: LedgerModalProps) => {
+export const LedgerModal = ({ isOpen, onClose, userId, presetCategory }: LedgerModalProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
-    category: '',
+    category: presetCategory || '',
     subCategory: '',
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      setError('');
+      setFormData({ category: presetCategory || '', subCategory: '' });
+    }
+  }, [isOpen, presetCategory]);
 
   const handleCreate = async () => {
     if (!userId || !formData.category || !formData.subCategory) return;
@@ -51,10 +59,10 @@ export const LedgerModal = ({ isOpen, onClose, userId }: LedgerModalProps) => {
   };
 
   return (
-    <Modal 
-      isOpen={isOpen} 
-      onClose={onClose} 
-      title="Konfigurasi Ledger Baru"
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={presetCategory ? `Tambah Subkategori — ${presetCategory}` : 'Konfigurasi Ledger Baru'}
     >
       <div className="space-y-6">
         {error && (
@@ -65,12 +73,13 @@ export const LedgerModal = ({ isOpen, onClose, userId }: LedgerModalProps) => {
 
         <div className="space-y-3">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kategori Utama</label>
-          <input 
-            type="text" 
+          <input
+            type="text"
             value={formData.category}
+            disabled={Boolean(presetCategory)}
             onChange={(e) => setFormData({...formData, category: e.target.value})}
             placeholder="Contoh: Kebutuhan Hiburan"
-            className="w-full bg-[#e9f0f4] border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all"
+            className="w-full bg-[#e9f0f4] border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           />
         </div>
         <div className="space-y-3">

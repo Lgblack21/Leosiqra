@@ -1,23 +1,25 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { 
+import {
   Landmark,
-  TrendingDown,
-  PiggyBank
+  Tags,
+  PiggyBank,
+  PlusCircle
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { Category } from '@/lib/services/categoryService';
+import { Category, categoryService } from '@/lib/services/categoryService';
 import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged, User } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
 import { useRef } from 'react';
 import { currencyService, Currency } from '@/lib/services/currencyService';
 import { subscribeUserProfile, UserProfile } from '@/lib/services/userService';
-import { 
-  Globe, 
-  Trash2, 
-  FileUp, 
+import { LedgerModal } from '@/components/modals/LedgerModal';
+import {
+  Globe,
+  Trash2,
+  FileUp,
   X
 } from 'lucide-react';
 
@@ -27,14 +29,16 @@ export default function NamaAkunPage() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   
-  // Modal states (keep only what's necessary, move currency to global)
-
   const unsubRef = useRef<(() => void) | null>(null);
   const unsubCurRef = useRef<(() => void) | null>(null);
   const unsubProfRef = useRef<(() => void) | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isLedgerModalOpen, setIsLedgerModalOpen] = useState(false);
+  const [presetCategory, setPresetCategory] = useState<string | undefined>(undefined);
+  const [categoryError, setCategoryError] = useState('');
+  const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -84,6 +88,44 @@ export default function NamaAkunPage() {
 
   // handleAddCurrency moved to CurrencyModal.tsx
 
+  const handleAddCategory = () => {
+    setPresetCategory(undefined);
+    setIsLedgerModalOpen(true);
+  };
+
+  const handleAddSubcategory = (categoryName: string) => {
+    setPresetCategory(categoryName);
+    setIsLedgerModalOpen(true);
+  };
+
+  const handleDeleteSubcategory = async (row: Category) => {
+    if (!row.id) return;
+    if (!confirm(`Hapus subkategori "${row.subCategory}" dari "${row.category}"?`)) return;
+    setCategoryError('');
+    setDeletingCategoryId(row.id);
+    try {
+      await categoryService.deleteCategory(row.id);
+    } catch (e) {
+      console.error(e);
+      setCategoryError('Gagal menghapus subkategori. Silakan coba lagi.');
+    } finally {
+      setDeletingCategoryId(null);
+    }
+  };
+
+  const handleDeleteCategoryGroup = async (categoryName: string, rows: Category[]) => {
+    if (!confirm(`Hapus kategori "${categoryName}" beserta ${rows.length} subkategori di dalamnya?`)) return;
+    setCategoryError('');
+    try {
+      for (const row of rows) {
+        if (row.id) await categoryService.deleteCategory(row.id);
+      }
+    } catch (e) {
+      console.error(e);
+      setCategoryError('Gagal menghapus kategori. Sebagian subkategori mungkin masih tersisa.');
+    }
+  };
+
   const handleDeleteCurrency = async (id: string) => {
     if (confirm("Hapus mata uang ini?")) {
       await currencyService.deleteCurrency(id);
@@ -129,24 +171,41 @@ export default function NamaAkunPage() {
 
     const reader = new FileReader();
     reader.onload = async (event) => {
-      const csv = event.target?.result as string;
-      const lines = csv.split('\n');
-      
-      for (const line of lines) {
-        const [code, name, symbol] = line.split(',').map(s => s.trim());
-        if (code && name) {
-          await currencyService.addCurrency({
-            userId: user.uid,
-            code: code.toUpperCase(),
-            name,
-            symbol: symbol || '$'
-          });
+      try {
+        const csv = event.target?.result as string;
+        const lines = csv.split('\n');
+
+        for (const line of lines) {
+          const [code, name, symbol] = line.split(',').map(s => s.trim());
+          if (code && name) {
+            await currencyService.addCurrency({
+              userId: user.uid,
+              code: code.toUpperCase(),
+              name,
+              symbol: symbol || '$'
+            });
+          }
         }
+        alert("Impor berhasil!");
+      } catch (err) {
+        console.error('CSV import failed:', err);
+        alert('Gagal mengimpor CSV. Sebagian data mungkin sudah tersimpan — periksa daftar mata uang lalu coba lagi.');
       }
-      alert("Impor berhasil!");
     };
     reader.readAsText(file);
   };
+
+  // Kelompokkan tiap baris kategori (satu row = satu subkategori) berdasarkan
+  // nama kategori induk, supaya nama kategori tidak berulang di tiap baris
+  // dan subkategori bisa dikelola satu-satu.
+  const groupedCategories = categories.reduce<Record<string, Category[]>>((acc, row) => {
+    const key = row.category || '(Tanpa Nama)';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(row);
+    return acc;
+  }, {});
+  const categoryGroups = Object.entries(groupedCategories);
+  const totalSubcategories = categories.length;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 max-w-[1400px] mb-12">
@@ -156,7 +215,7 @@ export default function NamaAkunPage() {
         <div>
           <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Nama Akun Transaksi</h1>
           <p className="text-[12px] md:text-sm font-medium text-slate-400 mt-2 max-w-xl">
-            Konfigurasi kategori dan subkategori ledger untuk pelaporan keuangan yang lebih terperinci.
+            Kelola kategori, subkategori, dan mata uang di sini — daftar inilah yang muncul sebagai pilihan setiap kali Anda mencatat transaksi, budget, atau recurring.
           </p>
         </div>
       </div>
@@ -185,44 +244,80 @@ export default function NamaAkunPage() {
           
           {/* 1. Ledger Categories */}
           <div className="bg-white rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm overflow-hidden flex flex-col">
-            <div className="p-6 md:p-8 flex items-center justify-between border-b border-slate-50 bg-slate-50/30">
+            <div className="p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-50 bg-slate-50/30">
               <div className="flex items-center gap-3">
                 <div className="w-1 h-6 bg-indigo-600 rounded-full" />
-                <h2 className="text-lg font-black text-slate-900 tracking-tight">Daftar Kategori / Subkategori Ledger</h2>
+                <div>
+                  <h2 className="text-lg font-black text-slate-900 tracking-tight">Daftar Kategori Transaksi</h2>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Sumber pilihan kategori di semua form transaksi</p>
+                </div>
               </div>
+              <button
+                onClick={handleAddCategory}
+                className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all w-fit"
+              >
+                <PlusCircle size={14} /> Tambah Kategori
+              </button>
             </div>
 
-            <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left min-w-[600px] md:min-w-0">
-                <thead className="bg-[#e9eff2]">
-                  <tr>
-                    <th className="px-5 md:px-10 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Kategori</th>
-                    <th className="px-5 md:px-10 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Subkategori</th>
-                    <th className="px-5 md:px-10 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {categories.length === 0 ? (
-                    <tr><td colSpan={3} className="p-10 text-center text-sm text-slate-400 font-bold">Data ledger kosong</td></tr>
-                  ) : categories.map((row) => (
-                    <tr key={row.id} className="group hover:bg-slate-50/50 transition-colors">
-                      <td className="px-5 md:px-10 py-5">
-                        <p className="text-sm font-black text-slate-900">{row.category}</p>
-                      </td>
-                      <td className="px-5 md:px-10 py-5">
-                        <p className="text-sm font-bold text-slate-500 italic font-serif tracking-tight">{row.subCategory}</p>
-                      </td>
-                      <td className="px-5 md:px-10 py-5 text-right">
-                        <span className={`px-4 py-1.5 rounded-full text-[8px] font-black tracking-widest uppercase ${
-                          row.status === 'VERIFIED' ? 'bg-blue-50 text-blue-500' : 'bg-amber-100 text-amber-600'
-                        }`}>
-                          {row.status === 'VERIFIED' ? 'Terverifikasi' : 'Tertunda'}
-                        </span>
-                      </td>
-                    </tr>
+            {categoryError && (
+              <div className="mx-6 md:mx-8 mt-6 bg-rose-50 border border-rose-100 rounded-xl p-4 text-sm font-medium text-rose-600">
+                {categoryError}
+              </div>
+            )}
+
+            <div className="p-6 md:p-8">
+              {categoryGroups.length === 0 ? (
+                <EmptyState
+                  title="Belum ada kategori"
+                  description="Tambah kategori pertama Anda agar bisa dipilih saat mencatat transaksi, budget, atau recurring."
+                  icon={<Tags size={24} />}
+                />
+              ) : (
+                <div className="space-y-4">
+                  {categoryGroups.map(([categoryName, rows]) => (
+                    <div key={categoryName} className="bg-slate-50/60 border border-slate-100 rounded-2xl p-5 md:p-6">
+                      <div className="flex items-center justify-between gap-3 mb-4">
+                        <h3 className="text-sm font-black text-slate-900 tracking-tight">{categoryName}</h3>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            onClick={() => handleAddSubcategory(categoryName)}
+                            title="Tambah subkategori"
+                            className="p-2 rounded-lg text-indigo-500 hover:bg-indigo-50 transition-colors"
+                          >
+                            <PlusCircle size={15} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCategoryGroup(categoryName, rows)}
+                            title="Hapus seluruh kategori"
+                            className="p-2 rounded-lg text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-colors"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {rows.map((row) => (
+                          <span
+                            key={row.id}
+                            className="inline-flex items-center gap-2 pl-3.5 pr-2 py-1.5 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-600"
+                          >
+                            {row.subCategory}
+                            <button
+                              onClick={() => handleDeleteSubcategory(row)}
+                              disabled={deletingCategoryId === row.id}
+                              title="Hapus subkategori ini"
+                              className="p-1 rounded-full text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-colors disabled:opacity-50"
+                            >
+                              <X size={11} />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              )}
             </div>
           </div>
 
@@ -371,20 +466,20 @@ export default function NamaAkunPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-[#f0f5f7] p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-white flex items-center gap-5 shadow-sm">
           <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-400 shrink-0">
-            < Landmark size={20} />
+            <Landmark size={20} />
           </div>
           <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Ledger</p>
-            <p className="text-lg md:text-xl font-black text-slate-900 tracking-tight">{categories.length} Akun</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Kategori</p>
+            <p className="text-lg md:text-xl font-black text-slate-900 tracking-tight">{categoryGroups.length} Kategori</p>
           </div>
         </div>
         <div className="bg-[#f0f5f7] p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-white flex items-center gap-5 shadow-sm">
-          <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-rose-400 shrink-0">
-            <TrendingDown size={20} />
+          <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-indigo-400 shrink-0">
+            <Tags size={20} />
           </div>
           <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pengeluaran Tersinkron</p>
-            <p className="text-lg md:text-xl font-black text-slate-900 tracking-tight">Rp 0</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Subkategori</p>
+            <p className="text-lg md:text-xl font-black text-slate-900 tracking-tight">{totalSubcategories} Subkategori</p>
           </div>
         </div>
         <div className="bg-[#555555] p-5 md:p-8 rounded-[20px] md:rounded-[28px] flex items-center gap-5 shadow-xl shadow-slate-200">
@@ -392,11 +487,20 @@ export default function NamaAkunPage() {
             <PiggyBank size={20} />
           </div>
           <div>
-            <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Penggunaan Akun</p>
-            <p className="text-lg md:text-xl font-black text-white tracking-tight">System Active</p>
+            <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Mata Uang Tersimpan</p>
+            <p className="text-lg md:text-xl font-black text-white tracking-tight">{currencies.length} Mata Uang</p>
           </div>
         </div>
       </div>
+
+      {user && (
+        <LedgerModal
+          userId={user.uid}
+          isOpen={isLedgerModalOpen}
+          onClose={() => { setIsLedgerModalOpen(false); setPresetCategory(undefined); }}
+          presetCategory={presetCategory}
+        />
+      )}
     </div>
   );
 }
