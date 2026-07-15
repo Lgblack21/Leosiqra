@@ -371,19 +371,19 @@ export default function ProfilePage() {
               ) : accounts.length === 0 ? (
                 <p className="text-sm text-slate-400 text-center py-4">Belum ada rekening</p>
               ) : accounts.map((acc) => (
-                <div key={acc.id} className="flex items-center justify-between p-4 md:p-5 bg-white/60 backdrop-blur-sm rounded-[24px] md:rounded-[28px] border border-white shadow-sm hover:scale-[1.02] transition-transform cursor-pointer">
-                  <div className="flex items-center gap-3 md:gap-4">
+                <div key={acc.id} className="flex items-center justify-between gap-3 p-4 md:p-5 bg-white/60 backdrop-blur-sm rounded-[24px] md:rounded-[28px] border border-white shadow-sm hover:scale-[1.02] transition-transform cursor-pointer">
+                  <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
                     <div className="w-10 h-10 md:w-11 md:h-11 rounded-xl md:rounded-2xl flex-shrink-0 bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-100">
                       {acc.type === 'E-Wallet' ? <Wallet size={16} /> : <Building2 size={16} />}
                     </div>
-                    <div>
-                      <h4 className="text-[12px] md:text-[13px] font-black text-slate-900 leading-tight">{acc.name}</h4>
+                    <div className="min-w-0">
+                      <h4 className="text-[12px] md:text-[13px] font-black text-slate-900 leading-tight truncate">{acc.name}</h4>
                       <p className="text-[9px] md:text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tight">{acc.type}</p>
                     </div>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-[12px] md:text-[13px] font-black text-slate-900">{formatRp(acc.balance)}</p>
-                    <ArrowRight size={12} className="text-slate-300 float-right mt-1" />
+                  <div className="text-right flex-shrink-0 flex items-center gap-2">
+                    <p className="text-[12px] md:text-[13px] font-black text-slate-900 whitespace-nowrap">{formatRp(acc.balance)}</p>
+                    <ArrowRight size={12} className="text-slate-300 shrink-0" />
                   </div>
                 </div>
               ))}
@@ -418,22 +418,22 @@ export default function ProfilePage() {
                 </span>
               </div>
               <div className="pt-6 border-t border-white/10">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[9px] md:text-[10px] font-black text-white uppercase tracking-widest">Two Factor Auth</p>
-                    <p className="text-[9px] font-bold text-white/40 mt-1">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="pt-0.5">
+                    <p className="text-[9px] md:text-[10px] font-black text-white uppercase tracking-widest leading-none">Two Factor Auth</p>
+                    <p className="text-[9px] font-bold text-white/40 mt-1.5">
                       {profile.twoFactorSecret ? 'Aktif — melindungi login Anda' : 'Belum diaktifkan'}
                     </p>
                   </div>
                   <button
                     onClick={() => profile.twoFactorSecret ? setShow2FADisable(true) : setShow2FASetup(true)}
                     className={cn(
-                      "w-10 h-5 md:w-12 md:h-6 rounded-full relative p-1 transition-colors",
+                      "w-10 h-5 md:w-12 md:h-6 rounded-full relative p-1 transition-colors shrink-0",
                       profile.twoFactorSecret ? "bg-indigo-600" : "bg-white/10"
                     )}
                   >
                     <div className={cn(
-                      "w-3 h-3 md:w-4 md:h-4 bg-white rounded-full absolute transition-all",
+                      "w-3 h-3 md:w-4 md:h-4 bg-white rounded-full absolute top-1 transition-all",
                       profile.twoFactorSecret ? "right-1" : "left-1 opacity-60"
                     )} />
                   </button>
