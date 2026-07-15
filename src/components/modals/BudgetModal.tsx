@@ -15,6 +15,7 @@ interface BudgetModalProps {
 
 export const BudgetModal = ({ userId, isOpen, onClose }: BudgetModalProps) => {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     type: 'pengeluaran' as Budget['type'],
     category: '',
@@ -24,6 +25,7 @@ export const BudgetModal = ({ userId, isOpen, onClose }: BudgetModalProps) => {
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
   useEffect(() => {
+    if (isOpen) setError('');
     if (!userId || !isOpen) return;
     const q = query(collection(db, 'categories'), where('userId', '==', userId));
     const unsub = onSnapshot(q, (snap) => {
@@ -36,6 +38,7 @@ export const BudgetModal = ({ userId, isOpen, onClose }: BudgetModalProps) => {
 
   const handleCreate = async () => {
     if (!userId || !formData.category || !formData.amount) return;
+    setError('');
     setLoading(true);
     try {
       await budgetService.createBudget({
@@ -47,8 +50,9 @@ export const BudgetModal = ({ userId, isOpen, onClose }: BudgetModalProps) => {
       });
       onClose();
       setFormData({ type: 'pengeluaran', category: '', amount: '', period: 'monthly' });
-    } catch (error) {
-      console.error("Error creating budget:", error);
+    } catch (err) {
+      console.error("Error creating budget:", err);
+      setError(err instanceof Error ? err.message : 'Gagal menyimpan budget. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
@@ -62,6 +66,12 @@ export const BudgetModal = ({ userId, isOpen, onClose }: BudgetModalProps) => {
       maxWidth="max-w-md"
     >
       <div className="space-y-5">
+        {error && (
+          <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-sm font-medium text-rose-600">
+            {error}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe</label>

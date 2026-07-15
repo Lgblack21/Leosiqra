@@ -23,6 +23,8 @@ export default function SavingsPage() {
 
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [error, setError] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const unsubRef = useRef<(() => void) | null>(null);
   const unsubAccRef = useRef<(() => void) | null>(null);
@@ -91,6 +93,20 @@ export default function SavingsPage() {
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0 }).format(n);
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Hapus setoran tabungan ini? Tindakan ini tidak bisa dibatalkan.')) return;
+    setError('');
+    setDeletingId(id);
+    try {
+      await savingsService.deleteSaving(id);
+    } catch (e) {
+      console.error(e);
+      setError('Gagal menghapus setoran. Silakan coba lagi.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
       
@@ -153,6 +169,12 @@ export default function SavingsPage() {
         </div>
       </div>
 
+      {error && (
+        <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-sm font-medium text-rose-600">
+          {error}
+        </div>
+      )}
+
       {/* Filter Bar */}
       <div className="flex flex-wrap items-center gap-4 bg-white p-3 md:p-2 rounded-[24px] md:rounded-3xl border border-slate-50 shadow-sm">
         <div className="flex-1 min-w-[200px] relative">
@@ -172,11 +194,10 @@ export default function SavingsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left border-collapse min-w-[800px] xl:min-w-0">
+            <table className="w-full text-left border-collapse min-w-[720px] xl:min-w-0">
               <thead>
                 <tr className="border-b border-slate-50">
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal Display</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Deskripsi</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Mata Uang</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Nominal</th>
@@ -192,7 +213,6 @@ export default function SavingsPage() {
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap">
                       <p className="text-sm font-black text-slate-900">{formatDate(item.date)}</p>
                     </td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap font-bold text-slate-500 text-[11px]">{item.displayDate || formatDate(item.date)}</td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap font-bold text-slate-900 text-sm">{item.description}</td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center"><span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{item.currency || 'IDR'}</span></td>
                     <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm"> {formatRp(item.amount)}</td>
@@ -202,8 +222,10 @@ export default function SavingsPage() {
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap font-bold text-slate-600 text-xs">{getAccountName(item.fromAccount || '')}</td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap font-bold text-slate-600 text-xs">{item.toGoal || '-'}</td>
                     <td className="px-5 md:px-8 py-5 text-center">
-                      <button onClick={async () => { if (item.id) { await savingsService.deleteSaving(item.id); } }}
-                        className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all">
+                      <button
+                        onClick={() => item.id && handleDelete(item.id)}
+                        disabled={deletingId === item.id}
+                        className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all disabled:opacity-50">
                         <Trash2 size={14} />
                       </button>
                     </td>

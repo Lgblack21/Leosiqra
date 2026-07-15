@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { 
+import {
   Target,
   Trash2,
   TrendingUp,
-  Wallet
+  Wallet,
+  PlusCircle
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { auth, db } from '@/lib/cf-client';
@@ -25,6 +26,8 @@ export default function BudgetPage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [error, setError] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const unsubBudgetsRef = useRef<(() => void) | null>(null);
   const unsubTransRef = useRef<(() => void) | null>(null);
@@ -91,6 +94,20 @@ export default function BudgetPage() {
 
   const getBudgetsByType = (type: Budget['type']) => budgets.filter(b => b.type === type);
 
+  const handleDeleteBudget = async (id: string) => {
+    if (!confirm('Hapus target budget ini? Tindakan ini tidak bisa dibatalkan.')) return;
+    setError('');
+    setDeletingId(id);
+    try {
+      await budgetService.deleteBudget(id);
+    } catch (e) {
+      console.error(e);
+      setError('Gagal menghapus budget. Silakan coba lagi.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const calculateRealisasi = (budget: Budget) => {
     const total = transactions
       .filter(t => t.category.toLowerCase() === budget.category.toLowerCase())
@@ -146,7 +163,11 @@ export default function BudgetPage() {
                       {percentage.toFixed(0)}%
                     </span>
                     <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2">
-                      <button onClick={() => { if(b.id) budgetService.deleteBudget(b.id) }} className="text-rose-500 hover:text-rose-600">
+                      <button
+                        onClick={() => b.id && handleDeleteBudget(b.id)}
+                        disabled={deletingId === b.id}
+                        className="text-rose-500 hover:text-rose-600 disabled:opacity-50"
+                      >
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -177,15 +198,28 @@ export default function BudgetPage() {
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
-          <MonthPicker 
+          <MonthPicker
             value={{ month: selectedMonth, year: selectedYear }}
             onChange={({ month, year }) => {
               setSelectedMonth(month);
               setSelectedYear(year);
             }}
           />
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-black tracking-wide hover:bg-indigo-700 transition-colors"
+          >
+            <PlusCircle size={14} />
+            Tambah Budget
+          </button>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-sm font-medium text-rose-600">
+          {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
         {renderBudgetSection('Target Target Pemasukan', 'pemasukan')}

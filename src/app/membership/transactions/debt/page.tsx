@@ -27,6 +27,9 @@ export default function DebtPage() {
 
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [error, setError] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [settlingId, setSettlingId] = useState<string | null>(null);
 
   const unsubRef = useRef<(() => void) | null>(null);
   const unsubAccRef = useRef<(() => void) | null>(null);
@@ -93,8 +96,14 @@ export default function DebtPage() {
   const totalHutang = useMemo(() => transactions.filter(t => t.category === 'Hutang' && t.paymentStatus !== 'lunas').reduce((s, t) => s + t.amount, 0), [transactions]);
   const totalPiutang = useMemo(() => transactions.filter(t => t.category === 'Piutang' && t.paymentStatus !== 'lunas').reduce((s, t) => s + t.amount, 0), [transactions]);
 
+  const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n).replace('Rp', '').trim();
+  const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
+
   const handleMarkLunas = async (trx: Transaction) => {
-    if (!trx.id || !user) return;
+    if (!trx.id || !user || settlingId) return;
+    if (!confirm(`Tandai "${trx.category}" senilai Rp ${formatRp(trx.amount)} sebagai lunas? Ini akan membuat catatan transaksi baru dan menyesuaikan saldo akun.`)) return;
+    setError('');
+    setSettlingId(trx.id);
     try {
       const isHutang = trx.category === 'Hutang';
       const financeType = isHutang ? 'pengeluaran' : 'pemasukan';
@@ -121,11 +130,25 @@ export default function DebtPage() {
       await updateMemberTotals(user.uid, financeType, trx.amount);
     } catch (e) {
       console.error(e);
+      setError('Gagal menandai lunas. Silakan coba lagi.');
+    } finally {
+      setSettlingId(null);
     }
   };
 
-  const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n).replace('Rp', '').trim();
-  const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
+  const handleDelete = async (id: string) => {
+    if (!confirm('Hapus catatan hutang/piutang ini? Tindakan ini tidak bisa dibatalkan.')) return;
+    setError('');
+    setDeletingId(id);
+    try {
+      await transactionService.deleteTransaction(id);
+    } catch (e) {
+      console.error(e);
+      setError('Gagal menghapus catatan. Silakan coba lagi.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
@@ -181,6 +204,12 @@ export default function DebtPage() {
         </div>
       </div>
 
+      {error && (
+        <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-sm font-medium text-rose-600">
+          {error}
+        </div>
+      )}
+
       {/* 3. Filter */}
       <div className="bg-white p-3 rounded-[24px] border border-slate-50 shadow-sm">
         <div className="relative group">
@@ -206,11 +235,10 @@ export default function DebtPage() {
         ) : (
           <>
             <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left border-collapse min-w-[700px] xl:min-w-0">
+              <table className="w-full text-left border-collapse min-w-[640px] xl:min-w-0">
                 <thead>
                   <tr className="border-b border-slate-50">
                     <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
-                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal Display</th>
                     <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Deskripsi</th>
                     <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Mata Uang</th>
                     <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Nominal</th>
@@ -230,9 +258,6 @@ export default function DebtPage() {
                     <tr key={trx.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
                       <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap">
                         <p className="text-sm font-black text-slate-900">{formatDate(trx.date)}</p>
-                      </td>
-                      <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap">
-                        <p className="text-sm font-bold text-slate-500">{trx.displayDate || formatDate(trx.date)}</p>
                       </td>
                       <td className="px-4 md:px-6 py-4 md:py-6">
                         <p className="text-sm font-bold text-slate-700">{trx.note || '-'}</p>
@@ -266,15 +291,22 @@ export default function DebtPage() {
                       <td className="px-5 md:px-8 py-4 md:py-6 text-center">
                         <div className="flex items-center justify-center gap-2">
                           {trx.paymentStatus !== 'lunas' && (
-                            <button 
+                            <button
                               onClick={() => handleMarkLunas(trx)}
+                              disabled={settlingId === trx.id}
                               title="Tandai Lunas"
-                              className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-emerald-500 hover:text-white transition-all"
+                              className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-emerald-500 hover:text-white transition-all disabled:opacity-50"
                             >
                               <CheckCircle2 size={14} />
                             </button>
                           )}
-                          <button onClick={async () =>{ if (trx.id) { await transactionService.deleteTransaction(trx.id); } }} className="p-2.5 rounded-xl bg-slate-50 text-slate-300 hover:bg-rose-500 hover:text-white transition-all shadow-sm"><Trash2 size={16} /></button>
+                          <button
+                            onClick={() => trx.id && handleDelete(trx.id)}
+                            disabled={deletingId === trx.id}
+                            className="p-2.5 rounded-xl bg-slate-50 text-slate-300 hover:bg-rose-500 hover:text-white transition-all shadow-sm disabled:opacity-50"
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         </div>
                       </td>
                     </tr>
