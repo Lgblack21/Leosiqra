@@ -1622,7 +1622,7 @@ async function handleGetMemberProfile(request: Request, env: Env) {
   }
 
   const item = await env.DB.prepare(
-    `SELECT id, name, email, whatsapp, photo_url, role, plan, status, expired_at, created_at,
+    `SELECT id, name, email, username, whatsapp, address, photo_url, role, plan, status, expired_at, created_at,
             total_wealth, total_income, total_expenses, total_savings, total_investment,
             credit_card_bills, other_debts, two_factor_secret, currency_initialized
        FROM users
@@ -1646,9 +1646,9 @@ async function handleUpdateMemberProfile(request: Request, env: Env) {
     ["whatsapp", "whatsapp"],
     ["photoURL", "photo_url"],
     ["photo_url", "photo_url"],
-    ["username", "name"],
+    ["username", "username"],
     ["phone", "whatsapp"],
-    ["address", "whatsapp"],
+    ["address", "address"],
     // CATATAN KEAMANAN: plan/status/expired_at sengaja TIDAK diizinkan di sini.
     // Field billing hanya boleh diubah lewat alur admin (approve pembayaran)
     // agar member tidak bisa mengaktifkan PRO sendiri tanpa membayar.
@@ -1703,6 +1703,39 @@ async function handleUpdateMemberProfile(request: Request, env: Env) {
 
   await env.DB.prepare(`UPDATE users SET ${assignments.join(", ")} WHERE id = ?`)
     .bind(...values, authResult.session.user.id)
+    .run();
+
+  return json({ ok: true });
+}
+
+async function handleChangeMemberPassword(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) {
+    return authResult.error;
+  }
+
+  const payload = await parseJson<{ currentPassword?: string; newPassword?: string }>(request);
+  if (!payload.currentPassword || !payload.newPassword) {
+    return json({ error: "Password saat ini dan password baru wajib diisi." }, { status: 400 });
+  }
+  if (payload.newPassword.length < 8) {
+    return json({ error: "Password baru minimal 8 karakter." }, { status: 400 });
+  }
+
+  const user = await env.DB.prepare("SELECT id, password_hash FROM users WHERE id = ?")
+    .bind(authResult.session.user.id)
+    .first<{ id: string; password_hash: string }>();
+  if (!user) {
+    return json({ error: "Pengguna tidak ditemukan." }, { status: 404 });
+  }
+
+  const verification = await verifyPassword(payload.currentPassword, user.password_hash);
+  if (!verification.ok) {
+    return json({ error: "Password saat ini tidak sesuai." }, { status: 401 });
+  }
+
+  await env.DB.prepare("UPDATE users SET password_hash = ? WHERE id = ?")
+    .bind(await hashPassword(payload.newPassword), user.id)
     .run();
 
   return json({ ok: true });
@@ -2740,6 +2773,10 @@ const worker = {
 
       if (url.pathname === "/api/member/profile" && request.method === "PATCH") {
         return await handleUpdateMemberProfile(request, env);
+      }
+
+      if (url.pathname === "/api/member/password" && request.method === "PATCH") {
+        return await handleChangeMemberPassword(request, env);
       }
 
       if (url.pathname === "/api/member/categories" && request.method === "GET") {

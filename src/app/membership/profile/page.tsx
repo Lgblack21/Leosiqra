@@ -2,14 +2,14 @@
 
 import { useMemo, useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  ShieldCheck, 
-  TrendingUp, 
-  TrendingDown, 
+import {
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  ShieldCheck,
+  TrendingUp,
+  TrendingDown,
   ArrowRight,
   ChevronRight,
   Lock,
@@ -19,7 +19,8 @@ import {
   Save,
   Building2,
   Wallet,
-  Loader2
+  Loader2,
+  Clock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { auth, db } from '@/lib/cf-client';
@@ -29,6 +30,7 @@ import { accountService, Account } from '@/lib/services/accountService';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { subscribeUserProfile } from '@/lib/services/userService';
+import { ChangePasswordModal } from '@/components/modals/ChangePasswordModal';
 
 interface UserProfile {
   displayName: string;
@@ -47,6 +49,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const [profile, setProfile] = useState<UserProfile>({
     displayName: '', email: '', username: '', phone: '', address: '', photoURL: ''
@@ -125,6 +129,7 @@ export default function ProfilePage() {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
+    setSaveError('');
     try {
       await setDoc(doc(db, 'users', user.uid), {
         ...profile,
@@ -132,7 +137,10 @@ export default function ProfilePage() {
       }, { merge: true });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      setSaveError('Gagal menyimpan perubahan. Silakan coba lagi.');
+    }
     finally { setSaving(false); }
   };
 
@@ -240,7 +248,13 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between">
               <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight">Identity Settings</h2>
             </div>
- 
+
+            {saveError && (
+              <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-sm font-medium text-rose-600">
+                {saveError}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-x-12 md:gap-y-8">
               <div className="space-y-4">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Full Name</label>
@@ -340,25 +354,34 @@ export default function ProfilePage() {
             </div>
             <h2 className="text-lg md:text-xl font-black text-white tracking-tight relative z-10">Security Center</h2>
             <div className="space-y-4 md:space-y-6 relative z-10">
-              <button className="w-full flex items-center justify-between p-4 md:p-5 bg-white/10 hover:bg-white/20 rounded-xl md:rounded-2xl transition-all border border-white/5 backdrop-blur-md">
+              <button
+                onClick={() => setShowPasswordModal(true)}
+                className="w-full flex items-center justify-between p-4 md:p-5 bg-white/10 hover:bg-white/20 rounded-xl md:rounded-2xl transition-all border border-white/5 backdrop-blur-md"
+              >
                 <div className="flex items-center gap-3 md:gap-4 text-white">
                   <Lock size={16} className="text-indigo-400" />
                   <span className="text-[11px] md:text-[12px] font-black tracking-tight">Change Password</span>
                 </div>
                 <ChevronRight size={14} className="text-white/40" />
               </button>
-              <button className="w-full flex items-center justify-between p-4 md:p-5 bg-white/10 hover:bg-white/20 rounded-xl md:rounded-2xl transition-all border border-white/5 backdrop-blur-md">
+              <div className="w-full flex items-center justify-between p-4 md:p-5 bg-white/5 rounded-xl md:rounded-2xl border border-white/5 backdrop-blur-md opacity-60 cursor-not-allowed">
                 <div className="flex items-center gap-3 md:gap-4 text-white">
                   <Bell size={16} className="text-indigo-400" />
                   <span className="text-[11px] md:text-[12px] font-black tracking-tight">Notification Preferences</span>
                 </div>
-                <ChevronRight size={14} className="text-white/40" />
-              </button>
+                <span className="flex items-center gap-1.5 text-[9px] font-black text-white/50 uppercase tracking-widest">
+                  <Clock size={11} />
+                  Segera Hadir
+                </span>
+              </div>
               <div className="pt-6 border-t border-white/10">
-                <div className="flex items-center justify-between">
-                  <p className="text-[9px] md:text-[10px] font-black text-white opacity-40 uppercase tracking-widest">Two Factor Auth</p>
-                  <div className="w-10 h-5 md:w-12 md:h-6 bg-indigo-600 rounded-full relative p-1 cursor-pointer">
-                    <div className="w-3 h-3 md:w-4 md:h-4 bg-white rounded-full absolute right-1" />
+                <div className="flex items-center justify-between opacity-60">
+                  <div>
+                    <p className="text-[9px] md:text-[10px] font-black text-white uppercase tracking-widest">Two Factor Auth</p>
+                    <p className="text-[9px] font-bold text-white/40 mt-1">Segera hadir</p>
+                  </div>
+                  <div className="w-10 h-5 md:w-12 md:h-6 bg-white/10 rounded-full relative p-1 cursor-not-allowed">
+                    <div className="w-3 h-3 md:w-4 md:h-4 bg-white/40 rounded-full absolute left-1" />
                   </div>
                 </div>
               </div>
@@ -366,6 +389,8 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      <ChangePasswordModal isOpen={showPasswordModal} onClose={() => setShowPasswordModal(false)} />
     </div>
   );
 }
