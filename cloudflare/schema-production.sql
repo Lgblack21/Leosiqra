@@ -31,14 +31,6 @@ CREATE TABLE IF NOT EXISTS api_tokens (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS shortcut_installs (
-  key TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL,
-  raw_token TEXT NOT NULL,
-  expires_at TEXT NOT NULL,
-  created_at TEXT
-);
-
 CREATE TABLE IF NOT EXISTS admin_logs (
   id TEXT PRIMARY KEY,
   admin_user_id TEXT,

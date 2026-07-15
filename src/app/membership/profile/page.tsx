@@ -94,9 +94,6 @@ export default function ProfilePage() {
   const [tokenError, setTokenError] = useState('');
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const [copiedToken, setCopiedToken] = useState(false);
-  const [installingShortcut, setInstallingShortcut] = useState(false);
-  const [shortcutError, setShortcutError] = useState('');
-  const [shortcutOpened, setShortcutOpened] = useState(false);
 
   const [profile, setProfile] = useState<UserProfile>({
     displayName: '', email: '', username: '', phone: '', address: '', photoURL: ''
@@ -286,28 +283,6 @@ export default function ProfilePage() {
       setTokenError(e instanceof Error ? e.message : 'Gagal membuat token.');
     } finally {
       setCreatingToken(false);
-    }
-  };
-
-  const handleInstallShortcut = async () => {
-    setShortcutError('');
-    setInstallingShortcut(true);
-    try {
-      const res = await cloudflareApi<{ importUrl: string; fileUrl: string }>(
-        '/api/member/shortcut-install',
-        { method: 'POST' }
-      );
-      // Buka Shortcuts app iOS. Token sudah tertanam di file yang di-generate server.
-      window.location.href = res.importUrl;
-      setShortcutOpened(true);
-      // Refresh daftar token supaya token "iPhone Shortcut" yang baru muncul.
-      cloudflareApi<{ items: ApiToken[] }>('/api/member/api-tokens')
-        .then(r => setApiTokens(r.items || []))
-        .catch(() => {});
-    } catch (e) {
-      setShortcutError(e instanceof Error ? e.message : 'Gagal menyiapkan shortcut.');
-    } finally {
-      setInstallingShortcut(false);
     }
   };
 
@@ -637,37 +612,20 @@ export default function ProfilePage() {
               </button>
             </div>
 
-            {/* Pasang Shortcut 1-tap — server merakit file .shortcut lengkap
-                dengan token tertanam, jadi di iPhone tinggal "Add Shortcut". */}
-            <div className="rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-700 p-5 text-white shadow-lg shadow-indigo-200">
-              <div className="flex items-center gap-2.5 mb-1.5">
+            {/* Panduan rakit Shortcut iOS (1 action, ~2 menit). */}
+            <a
+              href="/panduan/shortcut-ios"
+              className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-700 p-4 text-white shadow-lg shadow-indigo-200 transition-all hover:-translate-y-0.5"
+            >
+              <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
                 <Smartphone size={16} />
-                <p className="text-sm font-black tracking-tight">Pasang Shortcut iPhone</p>
               </div>
-              <p className="text-[11px] font-medium text-white/70 leading-relaxed mb-4">
-                Sekali tap dari iPhone — file shortcut sudah berisi token kamu, tanpa merakit langkah apa pun.
-                Buka halaman ini lewat Safari di iPhone, lalu tap tombol di bawah.
-              </p>
-              <button
-                onClick={handleInstallShortcut}
-                disabled={installingShortcut}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white text-indigo-700 text-xs font-black tracking-wide transition-all hover:bg-indigo-50 disabled:opacity-60"
-              >
-                {installingShortcut ? (
-                  <><Loader2 size={14} className="animate-spin" /> Menyiapkan...</>
-                ) : shortcutOpened ? (
-                  <><Check size={14} /> Buka Shortcuts lagi</>
-                ) : (
-                  <><Smartphone size={14} /> Pasang Shortcut (1 tap)</>
-                )}
-              </button>
-              {shortcutError && (
-                <p className="text-[11px] font-bold text-amber-200 mt-2.5">{shortcutError}</p>
-              )}
-              <p className="text-[10px] font-medium text-white/50 leading-relaxed mt-3">
-                Pertama kali saja: kalau iPhone menolak, aktifkan <strong className="text-white/80">Settings → Shortcuts → Allow Untrusted Shortcuts</strong> lalu tap lagi.
-              </p>
-            </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-black tracking-tight">Cara pakai di iPhone</p>
+                <p className="text-[10px] font-medium text-white/70 mt-0.5">Rakit Shortcut 1 langkah — buka panduannya</p>
+              </div>
+              <ChevronRight size={16} className="text-white/70 shrink-0" />
+            </a>
 
             <div className="space-y-3">
               {apiTokens.length === 0 ? (
