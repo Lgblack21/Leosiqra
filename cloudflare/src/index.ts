@@ -502,15 +502,26 @@ const buildUserContext = async (env: Env, userId: string) => {
   };
 };
 
-// Snapshot data pasar (kripto + emas + kurs) di-cache singkat per isolate agar
-// tiap pesan chat tidak selalu memanggil API eksternal, tapi tetap segar.
+// Snapshot data pasar (kripto + emas + kurs) di-cache di edge Cloudflare (bukan
+// cuma memori per-isolate) agar tiap chat baru tidak memicu fetch baru ke
+// CoinGecko — isolate Worker sering di-reset di trafik rendah, dan CoinGecko
+// membatasi rate limit publiknya dengan ketat (429 kalau terlalu sering).
 type MarketSnapshot = { text: string; fetchedAt: number };
 let marketSnapshotCache: MarketSnapshot | null = null;
 const MARKET_CACHE_MS = 5 * 60 * 1000;
+const MARKET_CACHE_KEY = new Request("https://cache.internal.leosiqra.com/market-snapshot");
 
 const fetchMarketSnapshot = async (): Promise<string> => {
   if (marketSnapshotCache && Date.now() - marketSnapshotCache.fetchedAt < MARKET_CACHE_MS) {
     return marketSnapshotCache.text;
+  }
+
+  const edgeCache = caches.default;
+  const cachedRes = await edgeCache.match(MARKET_CACHE_KEY);
+  if (cachedRes) {
+    const text = await cachedRes.text();
+    marketSnapshotCache = { text, fetchedAt: Date.now() };
+    return text;
   }
 
   try {
@@ -526,6 +537,10 @@ const fetchMarketSnapshot = async (): Promise<string> => {
 
     if (!cryptoRes.ok) {
       console.error("CoinGecko fetch gagal:", cryptoRes.status, (await cryptoRes.text()).slice(0, 200));
+      // Jangan timpa cache dengan snapshot kosong — pakai data lama kalau ada,
+      // biar percobaan berikutnya (setelah rate limit reda) yang menyegarkan.
+      if (marketSnapshotCache) return marketSnapshotCache.text;
+      throw new Error(`CoinGecko gagal (${cryptoRes.status})`);
     }
     if (!fxRes.ok) {
       console.error("Exchange-rate fetch gagal:", fxRes.status, (await fxRes.text()).slice(0, 200));
@@ -554,6 +569,10 @@ const fetchMarketSnapshot = async (): Promise<string> => {
 
     const text = lines.join("\n");
     marketSnapshotCache = { text, fetchedAt: Date.now() };
+    await edgeCache.put(
+      MARKET_CACHE_KEY,
+      new Response(text, { headers: { "Cache-Control": `max-age=${MARKET_CACHE_MS / 1000}` } })
+    );
     return text;
   } catch (error) {
     console.error("Gagal mengambil data pasar untuk AI:", error);
