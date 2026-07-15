@@ -2320,9 +2320,15 @@ async function handleAdminSettings(request: Request, env: Env) {
     "market_last_update",
   ]);
 
+  // D1 tidak menerima boolean JS mentah lewat .bind() — harus dikonversi ke
+  // integer 0/1 dulu, sama seperti pola is_default di tempat lain.
   const sanitizedEntries = fields
     .filter((key) => allowed.has(key))
-    .map((key) => [key, key === "maintenance_code" ? sanitizeMaintenanceHtml(String(payload[key] ?? "")) : payload[key]]);
+    .map((key) => {
+      if (key === "maintenance_code") return [key, sanitizeMaintenanceHtml(String(payload[key] ?? ""))];
+      if (key === "maintenance_is_active") return [key, payload[key] ? 1 : 0];
+      return [key, payload[key]];
+    });
 
   // Belum ada kolom khusus untuk daftar paket Pro — disimpan sebagai JSON di
   // kolom value_json yang sudah ada (sebelumnya tidak terpakai sama sekali).
