@@ -6,10 +6,6 @@ import {
   KeyRound,
   Type,
   GitBranch,
-  Globe,
-  Filter,
-  ListChecks,
-  CalendarClock,
   Send,
   BellRing,
   Sparkles,
@@ -59,7 +55,7 @@ interface Step {
   recipe: { k: string; v: string }[];
 }
 
-const stepsPart1: Step[] = [
+const steps: Step[] = [
   {
     n: 1,
     kind: 'input',
@@ -68,7 +64,7 @@ const stepsPart1: Step[] = [
     desc: 'Menanyakan nominal transaksi. Ganti nama variabel hasilnya jadi "Nominal" lewat tap-lama pada chip birunya.',
     recipe: [
       { k: 'Input Type', v: 'Number' },
-      { k: 'Prompt', v: 'Nominal transaksi (Rp)' },
+      { k: 'Prompt', v: 'Nominal transaksi' },
     ],
   },
   {
@@ -85,57 +81,28 @@ const stepsPart1: Step[] = [
   },
   {
     n: 3,
-    kind: 'network',
-    Icon: Globe,
-    title: 'Get Contents of URL',
-    desc: 'Ambil daftar kategori yang sudah dibuat di halaman Nama Akun.',
+    kind: 'input',
+    Icon: Type,
+    title: 'Ask for Input',
+    desc: 'Ketik nama kategorinya langsung — tidak perlu mengambil daftar dari server. Simpan sebagai "Kategori".',
     recipe: [
-      { k: 'Method', v: 'GET' },
-      { k: 'URL', v: 'https://www.leosiqra.com/api/member/categories' },
-      { k: 'Headers', v: 'Authorization: Bearer TOKEN_ANDA' },
+      { k: 'Input Type', v: 'Text' },
+      { k: 'Prompt', v: 'Kategori (mis. Makan, Transport)' },
     ],
   },
   {
     n: 4,
-    kind: 'logic',
-    Icon: Filter,
-    title: 'Get Dictionary Value × 2',
-    desc: 'Pertama ambil key "items" dari hasil di atas. Lalu dari hasil itu, ambil key "category" — Shortcuts otomatis menghasilkan daftar nama kategori.',
+    kind: 'input',
+    Icon: Type,
+    title: 'Ask for Input',
+    desc: 'Ketik nama akun/rekening tujuan — boleh sebagian saja (mis. "BCA"), server yang mencocokkan ke akun asli kamu. Simpan sebagai "NamaAkun".',
     recipe: [
-      { k: 'Get value', v: 'for key "items" — input: Contents of URL' },
-      { k: 'Get value', v: 'for key "category" — input: hasil sebelumnya' },
+      { k: 'Input Type', v: 'Text' },
+      { k: 'Prompt', v: 'Nama akun (mis. BCA Utama)' },
     ],
   },
   {
     n: 5,
-    kind: 'input',
-    Icon: ListChecks,
-    title: 'Choose from List',
-    desc: 'Daftar nama kategori muncul sebagai pilihan. Simpan hasilnya sebagai "Kategori".',
-    recipe: [{ k: 'List', v: 'hasil "category" dari langkah 4' }],
-  },
-  {
-    n: 6,
-    kind: 'network',
-    Icon: Globe,
-    title: 'Get Contents of URL',
-    desc: 'Ambil daftar rekening/akun.',
-    recipe: [
-      { k: 'Method', v: 'GET' },
-      { k: 'URL', v: 'https://www.leosiqra.com/api/member/accounts' },
-      { k: 'Headers', v: 'Authorization: Bearer TOKEN_ANDA' },
-    ],
-  },
-  {
-    n: 7,
-    kind: 'logic',
-    Icon: Filter,
-    title: 'Get Dictionary Value, Choose from List, Filter',
-    desc: 'Ulangi pola yang sama seperti kategori: ambil "items", lalu "name", lalu Choose from List untuk memilih nama akun → simpan sebagai "NamaAkun". Tambahkan Filter [items] dengan kondisi "name is NamaAkun", lalu Get Dictionary Value untuk "id" dan "currency" dari hasil filter → simpan sebagai "AkunID" dan "MataUang".',
-    recipe: [],
-  },
-  {
-    n: 8,
     kind: 'input',
     Icon: Type,
     title: 'Ask for Input',
@@ -146,30 +113,19 @@ const stepsPart1: Step[] = [
     ],
   },
   {
-    n: 9,
-    kind: 'logic',
-    Icon: CalendarClock,
-    title: 'Current Date → Format Date',
-    desc: 'Format tanggal hari ini ke bentuk yang dipahami backend. Simpan sebagai "Tanggal".',
-    recipe: [{ k: 'Format', v: 'Custom → yyyy-MM-dd' }],
-  },
-];
-
-const stepsPart2: Step[] = [
-  {
-    n: 10,
+    n: 6,
     kind: 'network',
     Icon: Send,
     title: 'Get Contents of URL',
-    desc: 'Kirim transaksinya. Isi tiap field lewat menu variabel (ikon biru di keyboard), jangan diketik manual — kecuali Authorization & Content-Type.',
+    desc: 'Kirim transaksinya dalam satu panggilan — server yang mencocokkan nama akun, menghitung tanggal hari ini, dan mengonversi mata uang kalau perlu. Isi field lewat menu variabel (ikon biru di keyboard), jangan diketik manual — kecuali Authorization & Content-Type.',
     recipe: [
       { k: 'Method', v: 'POST' },
-      { k: 'URL', v: 'https://www.leosiqra.com/api/member/transactions' },
+      { k: 'URL', v: 'https://www.leosiqra.com/api/member/quick-transaction' },
       { k: 'Headers', v: 'Authorization: Bearer TOKEN_ANDA · Content-Type: application/json' },
     ],
   },
   {
-    n: 11,
+    n: 7,
     kind: 'output',
     Icon: BellRing,
     title: 'Show Notification',
@@ -187,12 +143,12 @@ const faqs = [
     a: 'Token salah ketik atau sudah dicabut. Cek lagi header Authorization, atau buat token baru dari halaman Profile setelah masuk.',
   },
   {
-    q: 'Daftar kategori atau akun kosong',
-    a: 'Tambahkan dulu minimal satu kategori di halaman "Nama Akun" dan satu rekening di halaman "Rekening" lewat aplikasi.',
+    q: 'Respons error "Akun tidak ditemukan"',
+    a: 'Nama akun yang diketik tidak cocok dengan rekening manapun. Errornya menyebutkan daftar nama akun yang tersedia — cek ejaannya, atau cukup ketik sebagian nama yang unik (mis. "BCA" untuk "BCA Utama").',
   },
   {
-    q: 'Mau tanpa pilih sub-kategori',
-    a: 'Sengaja disederhanakan — hanya kategori utama yang dipilih. Field sub_category bersifat opsional di backend, jadi transaksi tetap tersimpan valid.',
+    q: 'Kategori harus sama persis dengan yang ada di Nama Akun?',
+    a: 'Tidak wajib — kategori disimpan apa adanya dari teks yang diketik. Supaya laporan tetap rapi, sebaiknya pakai nama yang konsisten dengan yang biasa dipakai.',
   },
 ];
 
@@ -240,14 +196,15 @@ export default function ShortcutIosGuidePage() {
         <div className="relative max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2.5 pl-2.5 pr-4 py-1.5 rounded-full bg-white/70 backdrop-blur border border-indigo-100 text-indigo-600 text-[10px] font-black uppercase tracking-[0.2em] mb-8 shadow-sm mx-auto">
             <Smartphone size={13} />
-            Panduan Shortcut iOS
+            Panduan Shortcut iOS · 7 langkah
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-serif font-black tracking-tight mb-6 text-slate-900 leading-[1.1]">
             Input transaksi harian <span className="text-gradient">tanpa buka aplikasi</span>
           </h1>
           <p className="max-w-2xl mx-auto text-slate-500 text-base sm:text-lg font-medium leading-relaxed">
             Rakit satu Shortcut di iPhone yang langsung mengirim transaksi ke akun Leosiqra kamu —
-            tinggal tap ikon dari Home Screen atau Action Button, isi nominal &amp; kategori, selesai.
+            tinggal tap ikon dari Home Screen atau Action Button, isi nominal, kategori, dan nama akun, selesai.
+            Server yang mencocokkan akunnya, jadi tidak perlu langkah rumit ambil-daftar dari API.
           </p>
         </div>
       </section>
@@ -268,7 +225,7 @@ export default function ShortcutIosGuidePage() {
             <li className="flex gap-4">
               <span className="w-6 h-6 rounded-lg bg-white/10 text-white flex items-center justify-center text-[11px] font-black shrink-0 mt-0.5">2</span>
               <p className="text-sm text-white/80 font-medium leading-relaxed">
-                Salin token yang muncul — hanya tampil <strong className="text-white">satu kali</strong>. Tempel sementara ke Notes supaya gampang dipakai berkali-kali di bawah. Token ini disebut <code className="bg-white/10 text-emerald-300 px-1.5 py-0.5 rounded text-[12px] font-mono">TOKEN_ANDA</code> di seluruh panduan.
+                Salin token yang muncul — hanya tampil <strong className="text-white">satu kali</strong>. Tempel sementara ke Notes supaya gampang dipakai lagi di bawah. Token ini disebut <code className="bg-white/10 text-emerald-300 px-1.5 py-0.5 rounded text-[12px] font-mono">TOKEN_ANDA</code> di seluruh panduan.
               </p>
             </li>
             <li className="flex gap-4">
@@ -284,34 +241,25 @@ export default function ShortcutIosGuidePage() {
       <section className="px-6 py-8">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center gap-3 mb-8">
-            <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Bagian 1 — Kumpulkan Data</span>
+            <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Rakit Shortcut-nya</span>
             <div className="h-px flex-1 bg-slate-100" />
           </div>
           <div className="space-y-4">
-            {stepsPart1.map((s) => <StepCard key={s.n} step={s} />)}
-          </div>
-        </div>
-      </section>
-
-      <section className="px-6 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-3 mb-8">
-            <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Bagian 2 — Kirim &amp; Konfirmasi</span>
-            <div className="h-px flex-1 bg-slate-100" />
-          </div>
-          <div className="space-y-4">
-            <StepCard step={stepsPart2[0]} />
+            <StepCard step={steps[0]} />
+            <StepCard step={steps[1]} />
+            <StepCard step={steps[2]} />
+            <StepCard step={steps[3]} />
+            <StepCard step={steps[4]} />
+            <StepCard step={steps[5]} />
 
             <div className="bg-slate-900 rounded-[24px] p-6 md:p-7">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-3">Isi Body JSON Langkah 10</p>
+              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-3">Isi Body JSON Langkah 6</p>
               <pre className="text-[12px] font-mono text-emerald-300 leading-relaxed overflow-x-auto">
 {`{
   "type": Tipe,
   "amount": Nominal,
   "category": Kategori,
-  "currency": MataUang,
-  "account_id": AkunID,
-  "date": Tanggal,
+  "account": NamaAkun,
   "note": Catatan
 }`}
               </pre>
@@ -323,11 +271,11 @@ export default function ShortcutIosGuidePage() {
             <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-100 rounded-2xl p-5">
               <ShieldAlert size={18} className="text-emerald-500 shrink-0 mt-0.5" />
               <p className="text-xs font-medium text-emerald-800 leading-relaxed">
-                <strong>Konversi otomatis:</strong> field <code className="bg-emerald-100/70 px-1.5 py-0.5 rounded text-[11px] font-mono">amount_idr</code> sengaja tidak dikirim. Kalau <code className="bg-emerald-100/70 px-1.5 py-0.5 rounded text-[11px] font-mono">currency</code> bukan IDR (mis. USD, KHR), server otomatis mengambil kurs live dan menghitung nilai IDR-nya sendiri — Nominal cukup diisi sesuai mata uang akun yang dipilih, tidak perlu dihitung manual.
+                <strong>Otomatis di server:</strong> tidak perlu kirim <code className="bg-emerald-100/70 px-1.5 py-0.5 rounded text-[11px] font-mono">account_id</code>, <code className="bg-emerald-100/70 px-1.5 py-0.5 rounded text-[11px] font-mono">currency</code>, <code className="bg-emerald-100/70 px-1.5 py-0.5 rounded text-[11px] font-mono">amount_idr</code>, atau <code className="bg-emerald-100/70 px-1.5 py-0.5 rounded text-[11px] font-mono">date</code>. Server mencocokkan nama akun ke rekening asli kamu, mengambil mata uangnya, mengonversi ke IDR pakai kurs live kalau bukan IDR, dan memakai tanggal hari ini secara otomatis.
               </p>
             </div>
 
-            <StepCard step={stepsPart2[1]} />
+            <StepCard step={steps[6]} />
           </div>
         </div>
       </section>

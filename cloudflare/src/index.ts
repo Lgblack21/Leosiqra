@@ -1162,6 +1162,75 @@ const fetchIdrConversionRate = async (currency: string): Promise<number | null> 
   }
 };
 
+interface TransactionInsertParams {
+  type: string;
+  amount: number;
+  amountIdr?: number;
+  category?: string | null;
+  subCategory?: string | null;
+  currency?: string;
+  accountId?: string | null;
+  targetAccountId?: string | null;
+  date: string;
+  displayDate?: string;
+  note?: string | null;
+}
+
+// Inti pembuatan transaksi, dipakai bersama oleh endpoint umum
+// (/api/member/transactions) dan endpoint ringkas untuk otomasi eksternal
+// (/api/member/quick-transaction) supaya logikanya (konversi IDR, publish
+// realtime) tidak dobel.
+const insertTransactionRecord = async (env: Env, userId: string, params: TransactionInsertParams) => {
+  const currency = params.currency ?? "IDR";
+  let amountIdr = params.amountIdr;
+  if (amountIdr === undefined && currency !== "IDR") {
+    const rate = await fetchIdrConversionRate(currency);
+    if (rate) {
+      amountIdr = params.amount * rate;
+    }
+  }
+  if (amountIdr === undefined) {
+    amountIdr = params.amount;
+  }
+
+  const id = generateId();
+  await env.DB.prepare(
+    `INSERT INTO transactions (
+      id, user_id, type, amount, amount_idr, category, sub_category, currency,
+      account_id, target_account_id, date, display_date, note, status, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'VERIFIED', ?, ?)`
+  )
+    .bind(
+      id,
+      userId,
+      params.type,
+      params.amount,
+      amountIdr,
+      params.category ?? null,
+      params.subCategory ?? null,
+      currency,
+      params.accountId ?? null,
+      params.targetAccountId ?? null,
+      params.date,
+      params.displayDate ?? params.date,
+      params.note ?? null,
+      nowIso(),
+      nowIso()
+    )
+    .run();
+
+  const durableId = env.REALTIME_ROOM.idFromName(`member:${userId}`);
+  await env.REALTIME_ROOM.get(durableId).fetch("https://realtime.internal/publish", {
+    method: "POST",
+    body: JSON.stringify({
+      event: "transaction.created",
+      payload: { id, userId },
+    }),
+  });
+
+  return id;
+};
+
 async function handleCreateTransaction(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) {
@@ -1186,54 +1255,76 @@ async function handleCreateTransaction(request: Request, env: Env) {
     return json({ error: "type, amount, dan date wajib diisi." }, { status: 400 });
   }
 
-  const currency = payload.currency ?? "IDR";
-  let amountIdr = payload.amount_idr;
-  if (amountIdr === undefined && currency !== "IDR") {
-    const rate = await fetchIdrConversionRate(currency);
-    if (rate) {
-      amountIdr = payload.amount * rate;
-    }
-  }
-  if (amountIdr === undefined) {
-    amountIdr = payload.amount;
-  }
-
-  const id = generateId();
-  await env.DB.prepare(
-    `INSERT INTO transactions (
-      id, user_id, type, amount, amount_idr, category, sub_category, currency,
-      account_id, target_account_id, date, display_date, note, status, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'VERIFIED', ?, ?)`
-  )
-    .bind(
-      id,
-      authResult.session.user.id,
-      payload.type,
-      payload.amount,
-      amountIdr,
-      payload.category ?? null,
-      payload.sub_category ?? null,
-      currency,
-      payload.account_id ?? null,
-      payload.target_account_id ?? null,
-      payload.date,
-      payload.display_date ?? payload.date,
-      payload.note ?? null,
-      nowIso(),
-      nowIso()
-    )
-    .run();
-
-  const durableId = env.REALTIME_ROOM.idFromName(`member:${authResult.session.user.id}`);
-  await env.REALTIME_ROOM.get(durableId).fetch("https://realtime.internal/publish", {
-    method: "POST",
-    body: JSON.stringify({
-      event: "transaction.created",
-      payload: { id, userId: authResult.session.user.id },
-    }),
+  const id = await insertTransactionRecord(env, authResult.session.user.id, {
+    type: payload.type,
+    amount: payload.amount,
+    amountIdr: payload.amount_idr,
+    category: payload.category,
+    subCategory: payload.sub_category,
+    currency: payload.currency,
+    accountId: payload.account_id,
+    targetAccountId: payload.target_account_id,
+    date: payload.date,
+    displayDate: payload.display_date,
+    note: payload.note,
   });
 
   return json({ ok: true, id }, { status: 201 });
+}
+
+// Endpoint ringkas untuk otomasi eksternal (Shortcut iOS, dll): akun & kategori
+// cukup dikirim sebagai teks biasa (dicocokkan ke data asli di sini), dan
+// tanggal default ke hari ini — supaya Shortcut tidak perlu langkah
+// Get Contents of URL/Choose from List/Filter berlapis untuk sekadar
+// menentukan account_id.
+async function handleQuickTransaction(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) {
+    return authResult.error;
+  }
+
+  const payload = await parseJson<{
+    type?: string;
+    amount?: number;
+    category?: string;
+    account?: string;
+    note?: string;
+    date?: string;
+  }>(request);
+
+  const type = payload.type === "pemasukan" ? "pemasukan" : payload.type === "pengeluaran" ? "pengeluaran" : null;
+  if (!type || !payload.amount || payload.amount <= 0) {
+    return json({ error: "type (pengeluaran/pemasukan) dan amount wajib diisi." }, { status: 400 });
+  }
+  if (!payload.account || !payload.account.trim()) {
+    return json({ error: "account wajib diisi." }, { status: 400 });
+  }
+
+  const accounts = await env.DB.prepare("SELECT id, name, currency FROM accounts WHERE user_id = ?")
+    .bind(authResult.session.user.id)
+    .all<{ id: string; name: string; currency: string }>();
+
+  const needle = payload.account.trim().toLowerCase();
+  const match =
+    accounts.results?.find((a) => a.name.toLowerCase() === needle) ??
+    accounts.results?.find((a) => a.name.toLowerCase().includes(needle));
+
+  if (!match) {
+    const available = (accounts.results ?? []).map((a) => a.name).join(", ") || "(belum ada rekening)";
+    return json({ error: `Akun "${payload.account}" tidak ditemukan. Akun tersedia: ${available}` }, { status: 404 });
+  }
+
+  const id = await insertTransactionRecord(env, authResult.session.user.id, {
+    type,
+    amount: payload.amount,
+    category: payload.category,
+    currency: match.currency,
+    accountId: match.id,
+    date: payload.date ?? nowIso().slice(0, 10),
+    note: payload.note,
+  });
+
+  return json({ ok: true, id, matchedAccount: match.name, currency: match.currency }, { status: 201 });
 }
 
 async function handleUpdateTransaction(request: Request, env: Env, transactionId: string) {
@@ -2987,6 +3078,10 @@ const worker = {
 
       if (url.pathname === "/api/member/transactions" && request.method === "POST") {
         return await handleCreateTransaction(request, env);
+      }
+
+      if (url.pathname === "/api/member/quick-transaction" && request.method === "POST") {
+        return await handleQuickTransaction(request, env);
       }
 
       if (url.pathname.startsWith("/api/member/transactions/")) {
