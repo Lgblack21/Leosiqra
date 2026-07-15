@@ -552,19 +552,20 @@ const fetchMarketSnapshot = async (): Promise<string> => {
     const fx = fxRes.ok ? ((await fxRes.json()) as { rates?: Record<string, number> }) : {};
     const idrRate = fx.rates?.IDR;
 
+    const NA = "tidak tersedia";
     const fmtUsd = (n?: number) =>
-      typeof n === "number" ? `$${n.toLocaleString("en-US", { maximumFractionDigits: n < 1 ? 6 : 2 })}` : "-";
-    const fmtChange = (n?: number) => (typeof n === "number" ? `${n >= 0 ? "+" : ""}${n.toFixed(2)}%` : "-");
+      typeof n === "number" ? `$${n.toLocaleString("en-US", { maximumFractionDigits: n < 1 ? 6 : 2 })}` : NA;
+    const fmtChange = (n?: number) => (typeof n === "number" ? `${n >= 0 ? "+" : ""}${n.toFixed(2)}%` : NA);
     const goldPerGramIdr =
       crypto["pax-gold"]?.usd && idrRate ? (crypto["pax-gold"].usd * idrRate) / 31.1035 : undefined;
 
     const lines = [
-      `USD/IDR: Rp${idrRate ? Math.round(idrRate).toLocaleString("id-ID") : "-"}`,
+      `USD/IDR: ${idrRate ? `Rp${Math.round(idrRate).toLocaleString("id-ID")}` : NA}`,
       `BTC/USD: ${fmtUsd(crypto.bitcoin?.usd)} (${fmtChange(crypto.bitcoin?.usd_24h_change)} 24 jam)`,
       `ETH/USD: ${fmtUsd(crypto.ethereum?.usd)} (${fmtChange(crypto.ethereum?.usd_24h_change)} 24 jam)`,
       `SOL/USD: ${fmtUsd(crypto.solana?.usd)} (${fmtChange(crypto.solana?.usd_24h_change)} 24 jam)`,
       `HOT/USD: ${fmtUsd(crypto.holotoken?.usd)} (${fmtChange(crypto.holotoken?.usd_24h_change)} 24 jam)`,
-      `Emas (XAU) per gram: ${goldPerGramIdr ? `Rp${Math.round(goldPerGramIdr).toLocaleString("id-ID")}` : "-"} (${fmtChange(crypto["pax-gold"]?.usd_24h_change)} 24 jam)`,
+      `Emas (XAU) per gram: ${goldPerGramIdr ? `Rp${Math.round(goldPerGramIdr).toLocaleString("id-ID")}` : NA} (${fmtChange(crypto["pax-gold"]?.usd_24h_change)} 24 jam)`,
     ];
 
     const text = lines.join("\n");
@@ -586,7 +587,7 @@ PENTING — DATA PASAR REAL-TIME (WAJIB DIBACA):
 Sistem SUDAH mengambil data pasar berikut secara real-time khusus untuk menjawab pertanyaanmu saat ini. Ini BUKAN data lama atau perkiraan — ini angka aktual dari beberapa menit terakhir:
 ${marketSnapshot}
 
-Jika user bertanya soal harga kripto, emas, atau kurs USD/IDR, JAWAB LANGSUNG memakai angka-angka di atas. JANGAN PERNAH bilang "saya tidak punya akses data real-time" atau "saya tidak tahu harga terkini" — kamu SUDAH diberi data itu di atas, gunakan!
+Jika user bertanya soal harga kripto, emas, atau kurs USD/IDR, JAWAB LANGSUNG memakai angka-angka di atas — SALIN persis apa adanya, jangan dibulatkan atau diubah. JANGAN PERNAH bilang "saya tidak punya akses data real-time" atau "saya tidak tahu harga terkini" — kamu SUDAH diberi data itu di atas, gunakan! Jika salah satu baris data bertuliskan "tidak tersedia", katakan JUJUR bahwa data itu sedang tidak tersedia — JANGAN mengarang angka 0 atau angka lain untuk menggantikannya.
 
 Kamu boleh menjawab pertanyaan APA SAJA, termasuk topik umum di luar keuangan — layaknya asisten AI serba bisa. Namun keahlian dan fokus utamamu adalah membantu pengguna memahami serta mengelola data keuangan pribadi mereka sendiri di aplikasi ini (transaksi, rekening, investasi, tabungan, budget, hutang/piutang). Setiap kali pertanyaan menyentuh keuangan pengguna, SELALU rujuk data konkret di bawah ini dan jawab dengan angka nyata — jangan mengarang angka atau data yang tidak ada.
 
