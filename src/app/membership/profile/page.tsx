@@ -60,6 +60,7 @@ export default function ProfilePage() {
   const [disable2FAPassword, setDisable2FAPassword] = useState('');
   const [disable2FAError, setDisable2FAError] = useState('');
   const [disable2FALoading, setDisable2FALoading] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
 
   const [profile, setProfile] = useState<UserProfile>({
     displayName: '', email: '', username: '', phone: '', address: '', photoURL: ''
@@ -194,6 +195,18 @@ export default function ProfilePage() {
   }, [transactions]);
 
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
+  const formatAccountBalance = (amount: number, currency: string) => {
+    try {
+      return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: currency || 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      }).format(amount);
+    } catch {
+      return `${currency || ''} ${new Intl.NumberFormat('id-ID').format(amount)}`.trim();
+    }
+  };
   const initials = profile.displayName ? profile.displayName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : (user?.email?.[0].toUpperCase() || 'U');
 
   const accountStats = [
@@ -371,7 +384,11 @@ export default function ProfilePage() {
               ) : accounts.length === 0 ? (
                 <p className="text-sm text-slate-400 text-center py-4">Belum ada rekening</p>
               ) : accounts.map((acc) => (
-                <div key={acc.id} className="flex items-center justify-between gap-3 p-4 md:p-5 bg-white/60 backdrop-blur-sm rounded-[24px] md:rounded-[28px] border border-white shadow-sm hover:scale-[1.02] transition-transform cursor-pointer">
+                <button
+                  key={acc.id}
+                  onClick={() => setSelectedAccount(acc)}
+                  className="w-full flex items-center justify-between gap-3 p-4 md:p-5 bg-white/60 backdrop-blur-sm rounded-[24px] md:rounded-[28px] border border-white shadow-sm hover:scale-[1.02] transition-transform text-left"
+                >
                   <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
                     <div className="w-10 h-10 md:w-11 md:h-11 rounded-xl md:rounded-2xl flex-shrink-0 bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-100">
                       {acc.type === 'E-Wallet' ? <Wallet size={16} /> : <Building2 size={16} />}
@@ -382,10 +399,10 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0 flex items-center gap-2">
-                    <p className="text-[12px] md:text-[13px] font-black text-slate-900 whitespace-nowrap">{formatRp(acc.balance)}</p>
+                    <p className="text-[12px] md:text-[13px] font-black text-slate-900 whitespace-nowrap">{formatAccountBalance(acc.balance, acc.currency)}</p>
                     <ArrowRight size={12} className="text-slate-300 shrink-0" />
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -443,6 +460,43 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      <Modal
+        isOpen={Boolean(selectedAccount)}
+        onClose={() => setSelectedAccount(null)}
+        title="Detail Rekening"
+        maxWidth="max-w-sm"
+      >
+        {selectedAccount && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl flex-shrink-0 bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-100">
+                {selectedAccount.type === 'E-Wallet' ? <Wallet size={22} /> : <Building2 size={22} />}
+              </div>
+              <div className="min-w-0">
+                <h4 className="text-base font-black text-slate-900 leading-tight break-words">{selectedAccount.name}</h4>
+                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">{selectedAccount.type}</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 rounded-2xl p-6 space-y-1">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saldo Saat Ini</p>
+              <p className="text-2xl font-black text-slate-900">{formatAccountBalance(selectedAccount.balance, selectedAccount.currency)}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-slate-50 rounded-2xl p-4">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Mata Uang</p>
+                <p className="text-sm font-black text-slate-900 mt-1">{selectedAccount.currency}</p>
+              </div>
+              <div className="bg-slate-50 rounded-2xl p-4">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Saldo Awal</p>
+                <p className="text-sm font-black text-slate-900 mt-1">{formatAccountBalance(selectedAccount.initialBalance || 0, selectedAccount.currency)}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       <ChangePasswordModal isOpen={showPasswordModal} onClose={() => setShowPasswordModal(false)} />
 
