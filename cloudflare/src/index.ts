@@ -452,7 +452,8 @@ const getMaintenanceSettings = async (env: Env) =>
       maintenance_is_active,
       maintenance_type,
       maintenance_code,
-      maintenance_image_url
+      maintenance_image_url,
+      whatsapp
      FROM admin_settings
      WHERE id = 'global'
      LIMIT 1`
@@ -462,6 +463,7 @@ const getMaintenanceSettings = async (env: Env) =>
     maintenance_type: string | null;
     maintenance_code: string | null;
     maintenance_image_url: string | null;
+    whatsapp: string | null;
   }>();
 
 const buildUserContext = async (env: Env, userId: string) => {
@@ -891,6 +893,7 @@ async function handleMe(request: Request, env: Env) {
           type: settings.maintenance_type,
           code: sanitizeMaintenanceHtml(settings.maintenance_code),
           imageUrl: settings.maintenance_image_url,
+          whatsapp: settings.whatsapp,
         }
       : null,
   });
