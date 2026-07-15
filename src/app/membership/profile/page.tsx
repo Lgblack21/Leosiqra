@@ -31,6 +31,9 @@ import { transactionService, Transaction } from '@/lib/services/transactionServi
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { subscribeUserProfile } from '@/lib/services/userService';
 import { ChangePasswordModal } from '@/components/modals/ChangePasswordModal';
+import { TwoFactorModal } from '@/components/auth/TwoFactorModal';
+import { Modal } from '@/components/ui/Modal';
+import { cloudflareApi } from '@/lib/cloudflare-api';
 
 interface UserProfile {
   displayName: string;
@@ -40,6 +43,7 @@ interface UserProfile {
   address: string;
   photoURL?: string;
   plan?: string;
+  twoFactorSecret?: string | null;
 }
 
 export default function ProfilePage() {
@@ -51,6 +55,11 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [show2FASetup, setShow2FASetup] = useState(false);
+  const [show2FADisable, setShow2FADisable] = useState(false);
+  const [disable2FAPassword, setDisable2FAPassword] = useState('');
+  const [disable2FAError, setDisable2FAError] = useState('');
+  const [disable2FALoading, setDisable2FALoading] = useState(false);
 
   const [profile, setProfile] = useState<UserProfile>({
     displayName: '', email: '', username: '', phone: '', address: '', photoURL: ''
@@ -69,16 +78,19 @@ export default function ProfilePage() {
             const profileExtras = data as typeof data & {
               username?: string;
               phone?: string;
+              whatsapp?: string;
               address?: string;
+              twoFactorSecret?: string | null;
             };
             setProfile({
               displayName: data.name || u.displayName || '',
               email: data.email || u.email || '',
               username: profileExtras.username || '',
-              phone: profileExtras.phone || '',
+              phone: profileExtras.whatsapp || profileExtras.phone || '',
               address: profileExtras.address || '',
               photoURL: data.photoURL || u.photoURL || '',
-              plan: data.plan
+              plan: data.plan,
+              twoFactorSecret: profileExtras.twoFactorSecret || null
             });
           }
         });
@@ -142,6 +154,37 @@ export default function ProfilePage() {
       setSaveError('Gagal menyimpan perubahan. Silakan coba lagi.');
     }
     finally { setSaving(false); }
+  };
+
+  const handleEnable2FA = async (secret: string) => {
+    if (!user) return false;
+    try {
+      await cloudflareApi('/api/member/2fa', { method: 'PATCH', json: { secret } });
+      setProfile(p => ({ ...p, twoFactorSecret: secret }));
+      setShow2FASetup(false);
+    } catch (e) {
+      console.error(e);
+      return false;
+    }
+  };
+
+  const handleDisable2FA = async () => {
+    if (!disable2FAPassword) {
+      setDisable2FAError('Masukkan password saat ini.');
+      return;
+    }
+    setDisable2FALoading(true);
+    setDisable2FAError('');
+    try {
+      await cloudflareApi('/api/member/2fa', { method: 'PATCH', json: { disable: true, currentPassword: disable2FAPassword } });
+      setProfile(p => ({ ...p, twoFactorSecret: null }));
+      setShow2FADisable(false);
+      setDisable2FAPassword('');
+    } catch (e) {
+      setDisable2FAError(e instanceof Error ? e.message : 'Gagal menonaktifkan 2FA.');
+    } finally {
+      setDisable2FALoading(false);
+    }
   };
 
   const totalBalance = useMemo(() => accounts.reduce((s, a) => s + a.balance, 0), [accounts]);
@@ -375,14 +418,25 @@ export default function ProfilePage() {
                 </span>
               </div>
               <div className="pt-6 border-t border-white/10">
-                <div className="flex items-center justify-between opacity-60">
+                <div className="flex items-center justify-between">
                   <div>
                     <p className="text-[9px] md:text-[10px] font-black text-white uppercase tracking-widest">Two Factor Auth</p>
-                    <p className="text-[9px] font-bold text-white/40 mt-1">Segera hadir</p>
+                    <p className="text-[9px] font-bold text-white/40 mt-1">
+                      {profile.twoFactorSecret ? 'Aktif — melindungi login Anda' : 'Belum diaktifkan'}
+                    </p>
                   </div>
-                  <div className="w-10 h-5 md:w-12 md:h-6 bg-white/10 rounded-full relative p-1 cursor-not-allowed">
-                    <div className="w-3 h-3 md:w-4 md:h-4 bg-white/40 rounded-full absolute left-1" />
-                  </div>
+                  <button
+                    onClick={() => profile.twoFactorSecret ? setShow2FADisable(true) : setShow2FASetup(true)}
+                    className={cn(
+                      "w-10 h-5 md:w-12 md:h-6 rounded-full relative p-1 transition-colors",
+                      profile.twoFactorSecret ? "bg-indigo-600" : "bg-white/10"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-3 h-3 md:w-4 md:h-4 bg-white rounded-full absolute transition-all",
+                      profile.twoFactorSecret ? "right-1" : "left-1 opacity-60"
+                    )} />
+                  </button>
                 </div>
               </div>
             </div>
@@ -391,6 +445,49 @@ export default function ProfilePage() {
       </div>
 
       <ChangePasswordModal isOpen={showPasswordModal} onClose={() => setShowPasswordModal(false)} />
+
+      <TwoFactorModal
+        isOpen={show2FASetup}
+        onClose={() => setShow2FASetup(false)}
+        mode="setup"
+        email={profile.email || user?.email || ''}
+        onVerify={handleEnable2FA}
+      />
+
+      <Modal
+        isOpen={show2FADisable}
+        onClose={() => { setShow2FADisable(false); setDisable2FAPassword(''); setDisable2FAError(''); }}
+        title="Nonaktifkan 2FA"
+        maxWidth="max-w-sm"
+      >
+        <div className="space-y-5">
+          <p className="text-sm font-medium text-slate-500">
+            Menonaktifkan 2FA akan mengurangi keamanan akun Anda. Masukkan password saat ini untuk melanjutkan.
+          </p>
+          {disable2FAError && (
+            <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-sm font-medium text-rose-600">
+              {disable2FAError}
+            </div>
+          )}
+          <div className="relative group">
+            <Lock size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
+            <input
+              type="password"
+              value={disable2FAPassword}
+              onChange={e => setDisable2FAPassword(e.target.value)}
+              placeholder="Password saat ini"
+              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-3.5 pl-12 pr-5 text-sm font-bold text-slate-700 transition-all"
+            />
+          </div>
+          <button
+            onClick={handleDisable2FA}
+            disabled={disable2FALoading}
+            className="w-full bg-rose-600 disabled:bg-slate-300 text-white flex items-center justify-center gap-3 py-4 rounded-2xl text-sm font-black transition-all shadow-xl shadow-rose-100"
+          >
+            {disable2FALoading ? 'Memproses...' : 'Nonaktifkan 2FA'}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

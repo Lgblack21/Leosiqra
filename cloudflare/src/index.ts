@@ -1741,6 +1741,43 @@ async function handleChangeMemberPassword(request: Request, env: Env) {
   return json({ ok: true });
 }
 
+async function handleUpdateMemberTwoFactor(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) {
+    return authResult.error;
+  }
+
+  const payload = await parseJson<{ secret?: string; disable?: boolean; currentPassword?: string }>(request);
+
+  if (payload.disable) {
+    if (!payload.currentPassword) {
+      return json({ error: "Password saat ini wajib diisi untuk menonaktifkan 2FA." }, { status: 400 });
+    }
+    const user = await env.DB.prepare("SELECT id, password_hash FROM users WHERE id = ?")
+      .bind(authResult.session.user.id)
+      .first<{ id: string; password_hash: string }>();
+    if (!user) {
+      return json({ error: "Pengguna tidak ditemukan." }, { status: 404 });
+    }
+    const verification = await verifyPassword(payload.currentPassword, user.password_hash);
+    if (!verification.ok) {
+      return json({ error: "Password saat ini tidak sesuai." }, { status: 401 });
+    }
+    await env.DB.prepare("UPDATE users SET two_factor_secret = NULL WHERE id = ?")
+      .bind(authResult.session.user.id)
+      .run();
+    return json({ ok: true });
+  }
+
+  if (!payload.secret) {
+    return json({ error: "Secret 2FA wajib diisi." }, { status: 400 });
+  }
+  await env.DB.prepare("UPDATE users SET two_factor_secret = ? WHERE id = ?")
+    .bind(payload.secret, authResult.session.user.id)
+    .run();
+  return json({ ok: true });
+}
+
 async function handleListCategories(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -2777,6 +2814,10 @@ const worker = {
 
       if (url.pathname === "/api/member/password" && request.method === "PATCH") {
         return await handleChangeMemberPassword(request, env);
+      }
+
+      if (url.pathname === "/api/member/2fa" && request.method === "PATCH") {
+        return await handleUpdateMemberTwoFactor(request, env);
       }
 
       if (url.pathname === "/api/member/categories" && request.method === "GET") {
