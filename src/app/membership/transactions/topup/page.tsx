@@ -25,6 +25,8 @@ export default function TopUpPage() {
 
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [error, setError] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const unsubRef = useRef<(() => void) | null>(null);
   const unsubAccRef = useRef<(() => void) | null>(null);
@@ -93,6 +95,21 @@ export default function TopUpPage() {
   }, [transactions, searchQuery]);
 
   const totalAmount = useMemo(() => transactions.reduce((s, t) => s + t.amount, 0), [transactions]);
+  const avgAmount = transactions.length > 0 ? totalAmount / transactions.length : 0;
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Hapus riwayat transfer ini? Tindakan ini tidak bisa dibatalkan.')) return;
+    setError('');
+    setDeletingId(id);
+    try {
+      await transactionService.deleteTransaction(id);
+    } catch (e) {
+      console.error(e);
+      setError('Gagal menghapus transaksi. Silakan coba lagi.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n).replace('Rp', '').trim();
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
@@ -143,14 +160,20 @@ export default function TopUpPage() {
             <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600">
               <CreditCard size={20} />
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Biaya Admin</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rata-rata Transfer</p>
           </div>
           <div>
-            <h3 className="text-2xl md:text-3xl font-black text-rose-500 leading-tight">Rp 0</h3>
-            <p className="text-[10px] font-bold text-slate-400 mt-1">Kalkulasi otomatis kedepannya</p>
+            <h3 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight">Rp {formatRp(avgAmount)}</h3>
+            <p className="text-[10px] font-bold text-slate-400 mt-1">Per transaksi pada periode ini</p>
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-sm font-medium text-rose-600">
+          {error}
+        </div>
+      )}
 
       {/* 3. Filter */}
       <div className="bg-white p-3 rounded-[24px] border border-slate-50 shadow-sm">
@@ -177,11 +200,10 @@ export default function TopUpPage() {
         ) : (
           <>
             <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left border-collapse min-w-[700px] xl:min-w-0">
+              <table className="w-full text-left border-collapse min-w-[620px] xl:min-w-0">
                 <thead>
                   <tr className="border-b border-slate-50">
                     <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
-                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal Display</th>
                     <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Deskripsi</th>
                     <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Mata Uang</th>
                     <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Nominal</th>
@@ -195,9 +217,6 @@ export default function TopUpPage() {
                     <tr key={trx.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
                       <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap">
                         <p className="text-sm font-black text-slate-900">{formatDate(trx.date)}</p>
-                      </td>
-                      <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap">
-                        <p className="text-sm font-bold text-slate-500">{trx.displayDate || formatDate(trx.date)}</p>
                       </td>
                       <td className="px-4 md:px-6 py-4 md:py-6">
                         <p className="text-sm font-bold text-slate-700">{trx.note || '-'}</p>
@@ -215,8 +234,10 @@ export default function TopUpPage() {
                         <p className="text-sm font-bold text-slate-600">{getAccountName(trx.targetAccountId || '')}</p>
                       </td>
                       <td className="px-5 md:px-8 py-4 md:py-6 text-center">
-                        <button onClick={async () => { if (trx.id) { await transactionService.deleteTransaction(trx.id); } }}
-                          className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all">
+                        <button
+                          onClick={() => trx.id && handleDelete(trx.id)}
+                          disabled={deletingId === trx.id}
+                          className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all disabled:opacity-50">
                           <Trash2 size={14} />
                         </button>
                       </td>

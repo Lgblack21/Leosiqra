@@ -78,7 +78,6 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null }: 
           interval: formData.interval,
           nextDate: new Date(formData.nextDate),
           note: formData.note,
-          status: 'ACTIVE'
         });
       } else {
         await recurringService.createRecurring({

@@ -26,6 +26,8 @@ export default function DailyTransactionLogPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [error, setError] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const unsubRef = useRef<(() => void) | null>(null);
   const unsubAccRef = useRef<(() => void) | null>(null);
@@ -94,6 +96,20 @@ export default function DailyTransactionLogPage() {
     return cat ? `${cat.category} - ${cat.subCategory}` : id || '-';
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Hapus transaksi ini? Tindakan ini tidak bisa dibatalkan.')) return;
+    setError('');
+    setDeletingId(id);
+    try {
+      await transactionService.deleteTransaction(id);
+    } catch (e) {
+      console.error(e);
+      setError('Gagal menghapus transaksi. Silakan coba lagi.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const filtered = useMemo(() => {
     if (!searchQuery) return transactions;
     return transactions.filter(t =>
@@ -158,6 +174,12 @@ export default function DailyTransactionLogPage() {
         </div>
       </div>
 
+      {error && (
+        <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-sm font-medium text-rose-600">
+          {error}
+        </div>
+      )}
+
       {/* 3. Filter Bar */}
       <div className="flex flex-col md:flex-row items-center gap-4 bg-white p-3 rounded-[24px] md:rounded-3xl border border-slate-50 shadow-sm">
         <div className="w-full md:flex-1 relative group">
@@ -196,7 +218,7 @@ export default function DailyTransactionLogPage() {
         ) : (
           <>
             <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left border-collapse min-w-[900px] xl:min-w-0">
+              <table className="w-full text-left border-collapse min-w-[760px] xl:min-w-0">
                 <thead>
                   <tr className="border-b border-slate-50">
                     <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
@@ -205,9 +227,6 @@ export default function DailyTransactionLogPage() {
                     <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Nominal</th>
                     <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Sub Kategori</th>
                     <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Rekening</th>
-                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Tenor Cicilan</th>
-                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Bunga Perbulan</th>
-                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Total Bunga</th>
                     <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Aksi</th>
                   </tr>
                 </thead>
@@ -236,24 +255,12 @@ export default function DailyTransactionLogPage() {
                       <td className="px-4 md:px-6 py-4 whitespace-nowrap">
                         <span className="text-xs font-bold text-slate-600">{getAccountName(trx.accountId || '')}</span>
                       </td>
-                      <td className="px-4 md:px-6 py-4 text-right whitespace-nowrap">
-                        <span className="text-xs font-bold text-slate-600">{trx.installmentTenor ? `${trx.installmentTenor} bln` : '-'}</span>
-                      </td>
-                      <td className="px-4 md:px-6 py-4 text-right whitespace-nowrap">
-                        <span className="text-xs font-bold text-slate-600">{trx.monthlyInterest ? formatRp(trx.monthlyInterest) : '-'}</span>
-                      </td>
-                      <td className="px-4 md:px-6 py-4 text-right whitespace-nowrap">
-                        <span className="text-xs font-bold text-slate-600">{trx.totalInterest ? formatRp(trx.totalInterest) : '-'}</span>
-                      </td>
                       <td className="px-5 md:px-8 py-4 md:py-6 whitespace-nowrap">
                         <div className="flex items-center justify-center gap-2">
-                          <button 
-                            onClick={async () => {
-                              if (trx.id) {
-                                await transactionService.deleteTransaction(trx.id);
-                              }
-                            }}
-                            className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all"
+                          <button
+                            onClick={() => trx.id && handleDelete(trx.id)}
+                            disabled={deletingId === trx.id}
+                            className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all disabled:opacity-50"
                           >
                             <Trash2 size={14} />
                           </button>

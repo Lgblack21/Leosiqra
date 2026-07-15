@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { 
+import {
   RefreshCw,
   Trash2,
   Edit2,
-  PlusCircle
+  PlusCircle,
+  Pause,
+  Play
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { MonthPicker } from '@/components/ui/MonthPicker';
 import { recurringService, RecurringTransaction } from '@/lib/services/recurringService';
 import { Account } from '@/lib/services/accountService';
 import type { Category } from '@/lib/services/categoryService';
@@ -25,9 +26,9 @@ export default function RecurringPage() {
   const [user, setUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<RecurringTransaction | null>(null);
-
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [error, setError] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const unsubRef = useRef<(() => void) | null>(null);
   const unsubAccRef = useRef<(() => void) | null>(null);
@@ -51,14 +52,12 @@ export default function RecurringPage() {
           setCategories(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)));
         });
 
-        const startOfMonth = new Date(selectedYear, selectedMonth, 1);
-        const endOfMonth = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
-
+        // Tampilkan SEMUA jadwal recurring milik user (bukan cuma yang jatuh
+        // tempo di bulan tertentu) — tidak ada proses otomatis yang memajukan
+        // nextDate, jadi filter per-bulan bikin jadwal "hilang" begitu ganti bulan.
         const q = query(
-          collection(db, 'recurring'), 
+          collection(db, 'recurring'),
           where('userId', '==', u.uid),
-          where('nextDate', '>=', startOfMonth),
-          where('nextDate', '<=', endOfMonth),
           orderBy('nextDate', 'asc')
         );
         if (unsubRef.current) unsubRef.current();
@@ -82,7 +81,7 @@ export default function RecurringPage() {
       if (unsubAccRef.current) unsubAccRef.current();
       if (unsubCatRef.current) unsubCatRef.current();
     };
-  }, [selectedMonth, selectedYear]);
+  }, []);
 
   const getAccountName = (id: string) => {
     const acc = accounts.find(a => a.id === id);
@@ -107,6 +106,36 @@ export default function RecurringPage() {
     return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Hapus jadwal transaksi berulang ini? Tindakan ini tidak bisa dibatalkan.')) return;
+    setError('');
+    setDeletingId(id);
+    try {
+      await recurringService.deleteRecurring(id);
+    } catch (e) {
+      console.error(e);
+      setError('Gagal menghapus jadwal. Silakan coba lagi.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleToggleStatus = async (trx: RecurringTransaction) => {
+    if (!trx.id) return;
+    setError('');
+    setTogglingId(trx.id);
+    try {
+      await recurringService.updateRecurring(trx.id, {
+        status: trx.status === 'PAUSED' ? 'ACTIVE' : 'PAUSED',
+      });
+    } catch (e) {
+      console.error(e);
+      setError('Gagal mengubah status jadwal. Silakan coba lagi.');
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 max-w-[1200px] mb-12">
       
@@ -115,20 +144,16 @@ export default function RecurringPage() {
         <div className="flex flex-col">
           <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Transaksi Berulang</h1>
           <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-            Periode {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth))}
+            {transactions.filter(t => t.status !== 'PAUSED').length} aktif &middot; {transactions.filter(t => t.status === 'PAUSED').length} dijeda
           </p>
         </div>
-        
-        <div className="flex flex-wrap items-center gap-3">
-          <MonthPicker 
-            value={{ month: selectedMonth, year: selectedYear }}
-            onChange={({ month, year }) => {
-              setSelectedMonth(month);
-              setSelectedYear(year);
-            }}
-          />
-        </div>
       </div>
+
+      {error && (
+        <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-sm font-medium text-rose-600">
+          {error}
+        </div>
+      )}
 
       {/* 2. List Transaksi Berulang */}
       <div className="bg-white rounded-[20px] md:rounded-[40px] border border-slate-50 shadow-sm overflow-hidden flex flex-col">
@@ -162,7 +187,7 @@ export default function RecurringPage() {
             </div>
           ) : (
             <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left min-w-[800px] md:min-w-0">
+              <table className="w-full text-left min-w-[880px] md:min-w-0">
                 <thead className="bg-[#f8fafc]">
                   <tr>
                     <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Nama</th>
@@ -172,6 +197,7 @@ export default function RecurringPage() {
                     <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Interval</th>
                     <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Berikutnya</th>
                     <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Akun</th>
+                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Status</th>
                     <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Aksi</th>
                   </tr>
                 </thead>
@@ -205,8 +231,23 @@ export default function RecurringPage() {
                       <td className="px-4 md:px-6 py-4">
                          <span className="text-xs font-bold text-slate-600">{getAccountName(trx.accountId || '')}</span>
                       </td>
+                      <td className="px-4 md:px-6 py-4 text-center">
+                        <span className={`px-3 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest whitespace-nowrap ${
+                          trx.status === 'PAUSED' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'
+                        }`}>
+                          {trx.status === 'PAUSED' ? 'Dijeda' : 'Aktif'}
+                        </span>
+                      </td>
                       <td className="px-5 md:px-8 py-5">
                         <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleToggleStatus(trx)}
+                            disabled={togglingId === trx.id}
+                            title={trx.status === 'PAUSED' ? 'Aktifkan' : 'Jeda'}
+                            className="p-2 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors disabled:opacity-50"
+                          >
+                            {trx.status === 'PAUSED' ? <Play size={16} /> : <Pause size={16} />}
+                          </button>
                           <button
                             onClick={() => {
                               setEditingTransaction(trx);
@@ -216,14 +257,10 @@ export default function RecurringPage() {
                           >
                             <Edit2 size={16} />
                           </button>
-                          <button 
-                            onClick={async () => {
-                              if (trx.id) {
-                                await recurringService.deleteRecurring(trx.id);
-                                // onSnapshot otomatis update
-                              }
-                            }}
-                            className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors"
+                          <button
+                            onClick={() => trx.id && handleDelete(trx.id)}
+                            disabled={deletingId === trx.id}
+                            className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors disabled:opacity-50"
                           >
                             <Trash2 size={16} />
                           </button>
