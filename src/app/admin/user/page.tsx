@@ -35,7 +35,13 @@ export default function AdminUserPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [settings, setSettings] = useState<AppSettings | null>(null);
-  
+
+  // Terima pencarian dari luar (mis. Quick Command di Dashboard Admin) lewat ?q=
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('q');
+    if (q) setSearchQuery(q);
+  }, []);
+
   useEffect(() => {
     (async () => {
       try {

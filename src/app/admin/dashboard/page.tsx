@@ -1,11 +1,12 @@
 "use client";
 
 import Image from 'next/image';
-import { 
-  Search, 
-  Clock, 
-  Users, 
-  TrendingUp, 
+import { useRouter } from 'next/navigation';
+import {
+  Search,
+  Clock,
+  Users,
+  TrendingUp,
   Activity,
   ArrowUpRight,
   ChevronRight,
@@ -44,15 +45,24 @@ type AdminPayment = {
   status?: string;
   amount?: number;
   approvedAt?: string;
+  createdAt?: string;
+  created_at?: string;
 };
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const [userEmail, setUserEmail] = useState('admin@leosiqra.com');
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [payments, setPayments] = useState<AdminPayment[]>([]);
   const [logs, setLogs] = useState<AdminLog[]>([]);
   const [loading, setLoading] = useState(true);
-  
+  const [commandQuery, setCommandQuery] = useState('');
+
+  const handleQuickCommand = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter' || !commandQuery.trim()) return;
+    router.push(`/admin/user?q=${encodeURIComponent(commandQuery.trim())}`);
+  };
+
   useEffect(() => {
     let active = true;
     Promise.all([
@@ -122,6 +132,29 @@ export default function AdminDashboard() {
     })()
   };
 
+  // Ringkasan 7 hari terakhir untuk panel "Weekly Motion" — sebelumnya
+  // "Tiket Masuk" dan "Revenue" di sini di-hardcode (selalu "1" dan "Rp 0").
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const ticketsThisWeek = payments.filter(p => {
+    const created = p.createdAt || p.created_at;
+    const d = created ? new Date(created) : null;
+    return d && d >= sevenDaysAgo;
+  }).length;
+  const revenueThisWeek = payments.filter(p => {
+    if (p.status !== 'DISETUJUI') return false;
+    const ad = p.approvedAt ? new Date(p.approvedAt) : null;
+    return ad && ad >= sevenDaysAgo;
+  }).reduce((acc, curr) => acc + (curr.amount || 0), 0);
+
+  // "MRR Aktif" sebelumnya mengalikan jumlah PRO aktif dengan angka tetap
+  // (Rp 30.000) yang tidak merepresentasikan harga paket sebenarnya. Dipakai
+  // rata-rata nilai pembayaran yang disetujui sebagai proksi yang jujur.
+  const approvedPayments = payments.filter(p => p.status === 'DISETUJUI');
+  const avgApprovedAmount = approvedPayments.length > 0
+    ? approvedPayments.reduce((s, p) => s + (p.amount || 0), 0) / approvedPayments.length
+    : 0;
+
   const latestUsers = userList.slice(0, 3);
 
   return (
@@ -183,9 +216,12 @@ export default function AdminDashboard() {
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Quick Command</p>
                 <div className="relative group">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors" size={16} />
-                  <input 
-                    type="text" 
-                    placeholder="Search global console..."
+                  <input
+                    type="text"
+                    value={commandQuery}
+                    onChange={(e) => setCommandQuery(e.target.value)}
+                    onKeyDown={handleQuickCommand}
+                    placeholder="Cari nama/email member, tekan Enter..."
                     className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-[13px] font-medium placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:bg-white/10 transition-all italic"
                   />
                 </div>
@@ -230,7 +266,7 @@ export default function AdminDashboard() {
           { label: 'Total Pendapatan', value: `Rp ${stats.totalRevenue.toLocaleString()}`, note: 'Akumulasi global', progress: 'w-full', icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-50' },
           { label: 'Bulan Ini', value: `Rp ${stats.revenueThisMonth.toLocaleString()}`, note: 'Periode berjalan', progress: 'w-1/3', icon: Activity, color: 'text-blue-500', bg: 'bg-blue-50' },
           { label: 'Menunggu', value: `Rp ${stats.pendingRevenue.toLocaleString()}`, note: `${stats.pendingTickets} tiket pending`, progress: 'w-1/2', icon: Clock, color: 'text-orange-500', bg: 'bg-orange-50' },
-          { label: 'MRR Aktif', value: `Rp ${(stats.activePro * 30000).toLocaleString()}`, note: `${stats.activePro} member pro`, progress: 'w-2/3', icon: Zap, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+          { label: 'Rata-Rata Transaksi', value: `Rp ${Math.round(avgApprovedAmount).toLocaleString()}`, note: `${approvedPayments.length} pembayaran disetujui`, progress: 'w-2/3', icon: Zap, color: 'text-indigo-500', bg: 'bg-indigo-50' },
         ].map((metric) => (
           <div key={metric.label} className="p-8 rounded-[40px] bg-white border border-slate-100 shadow-sm space-y-6 hover:border-indigo-100 transition-all group">
             <div className="flex items-center justify-between">
@@ -258,7 +294,10 @@ export default function AdminDashboard() {
               <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Revenue Lens</p>
               <h3 className="text-3xl font-serif font-black text-slate-900 tracking-tight">Kinerja Operasional</h3>
             </div>
-            <button className="text-[11px] font-black text-slate-400 hover:text-indigo-600 transition-colors uppercase tracking-widest flex items-center gap-1">
+            <button
+              onClick={() => router.push('/admin/laporan')}
+              className="text-[11px] font-black text-slate-400 hover:text-indigo-600 transition-colors uppercase tracking-widest flex items-center gap-1"
+            >
               View Analytics <ChevronRight size={12} />
             </button>
           </div>
@@ -282,7 +321,10 @@ export default function AdminDashboard() {
 
           <div className="space-y-6">
             <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] border-b border-slate-50 pb-4">Revenue Radar</h4>
-            <div className="p-8 rounded-[36px] bg-slate-50/50 border border-slate-100 flex flex-col md:flex-row md:items-center justify-between group hover:bg-white hover:shadow-lg transition-all gap-4">
+            <div
+              onClick={() => router.push('/admin/pembayaran')}
+              className="p-8 rounded-[36px] bg-slate-50/50 border border-slate-100 flex flex-col md:flex-row md:items-center justify-between group hover:bg-white hover:shadow-lg transition-all gap-4 cursor-pointer"
+            >
               <div className="flex items-center gap-6">
                 <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
                   <Layers size={20} />
@@ -327,13 +369,14 @@ export default function AdminDashboard() {
 
             <div className="space-y-3">
               {[
-                { label: 'Verifikasi Pembayaran', note: `${stats.pendingTickets} tiket menunggu`, bg: 'bg-orange-50/50', border: 'border-orange-100/50', color: 'text-orange-600' },
-                { label: 'Kelola Pelanggan', note: `${stats.totalUsers} akun terdaftar`, bg: 'bg-white', border: 'border-slate-100', color: 'text-slate-400' },
-                { label: 'Buka Laporan', note: 'Executive audit', bg: 'bg-emerald-50/50', border: 'border-emerald-100/50', color: 'text-emerald-600' },
-                { label: 'Atur Billing', note: 'System configuration', bg: 'bg-white', border: 'border-slate-100', color: 'text-slate-400' },
+                { label: 'Verifikasi Pembayaran', note: `${stats.pendingTickets} tiket menunggu`, bg: 'bg-orange-50/50', border: 'border-orange-100/50', color: 'text-orange-600', href: '/admin/pembayaran' },
+                { label: 'Kelola Pelanggan', note: `${stats.totalUsers} akun terdaftar`, bg: 'bg-white', border: 'border-slate-100', color: 'text-slate-400', href: '/admin/user' },
+                { label: 'Buka Laporan', note: 'Executive audit', bg: 'bg-emerald-50/50', border: 'border-emerald-100/50', color: 'text-emerald-600', href: '/admin/laporan' },
+                { label: 'Atur Billing', note: 'System configuration', bg: 'bg-white', border: 'border-slate-100', color: 'text-slate-400', href: '/admin/pengaturan' },
               ].map((action) => (
-                <button 
+                <button
                   key={action.label}
+                  onClick={() => router.push(action.href)}
                   className={cn(
                     "w-full px-8 py-7 rounded-[32px] border text-left transition-all hover:shadow-xl hover:shadow-slate-100 group flex items-center justify-between",
                     action.bg,
@@ -387,12 +430,12 @@ export default function AdminDashboard() {
               <div className="flex items-center gap-6 px-6 py-3 rounded-2xl bg-slate-50/80 border border-slate-100">
                 <div className="space-y-0.5">
                   <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Tiket Masuk</p>
-                  <p className="text-base font-black text-slate-900">1</p>
+                  <p className="text-base font-black text-slate-900">{ticketsThisWeek}</p>
                 </div>
                 <div className="h-6 w-px bg-slate-200" />
                 <div className="space-y-0.5">
                   <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Revenue</p>
-                  <p className="text-base font-black text-slate-900">Rp 0</p>
+                  <p className="text-base font-black text-slate-900">Rp {revenueThisWeek.toLocaleString()}</p>
                 </div>
               </div>
             </div>
@@ -430,7 +473,10 @@ export default function AdminDashboard() {
             {latestUsers.length === 0 ? (
                 <p className="text-[12px] text-slate-400 italic text-center py-10">Belum ada member terdaftar.</p>
               ) : latestUsers.map((member, i) => (
-                <div key={i} className="flex items-center gap-5 p-6 rounded-[32px] border border-slate-50 hover:bg-slate-50 hover:border-slate-100 transition-all group">
+                <div
+                  key={i}
+                  onClick={() => router.push(`/admin/user?q=${encodeURIComponent(member.email || member.name || '')}`)}
+                  className="flex items-center gap-5 p-6 rounded-[32px] border border-slate-50 hover:bg-slate-50 hover:border-slate-100 transition-all group cursor-pointer">
                   <div className="flex -space-x-3">
                     {(member.photoURL || member.photo_url) ? (
                       <div className="relative w-12 h-12 rounded-2xl overflow-hidden border-4 border-white shadow-sm ring-1 ring-slate-100 bg-slate-100">
@@ -459,7 +505,10 @@ export default function AdminDashboard() {
               ))}
             </div>
             
-            <button className="w-full py-5 rounded-3xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-600 transition-all shadow-xl shadow-slate-900/10">
+            <button
+              onClick={() => router.push('/admin/user')}
+              className="w-full py-5 rounded-3xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-600 transition-all shadow-xl shadow-slate-900/10"
+            >
               Lihat Semua Member
             </button>
           </div>
