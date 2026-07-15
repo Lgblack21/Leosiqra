@@ -61,6 +61,8 @@ export default function ProfilePage() {
   const [disable2FAError, setDisable2FAError] = useState('');
   const [disable2FALoading, setDisable2FALoading] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [fxRates, setFxRates] = useState<Record<string, number> | null>(null);
+  const [fxLoading, setFxLoading] = useState(false);
 
   const [profile, setProfile] = useState<UserProfile>({
     displayName: '', email: '', username: '', phone: '', address: '', photoURL: ''
@@ -116,6 +118,24 @@ export default function ProfilePage() {
       if (unsubProfile) unsubProfile();
     };
   }, []);
+
+  useEffect(() => {
+    if (!selectedAccount || selectedAccount.currency === 'IDR' || fxRates || fxLoading) return;
+    setFxLoading(true);
+    fetch('https://open.er-api.com/v6/latest/USD')
+      .then(res => res.json())
+      .then((data: { rates?: Record<string, number> }) => {
+        if (data.rates) setFxRates(data.rates);
+      })
+      .catch(console.error)
+      .finally(() => setFxLoading(false));
+  }, [selectedAccount, fxRates, fxLoading]);
+
+  const convertedToIDR = (amount: number, currency: string): number | null => {
+    if (currency === 'IDR') return amount;
+    if (!fxRates || !fxRates.IDR || !fxRates[currency]) return null;
+    return amount * (fxRates.IDR / fxRates[currency]);
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -387,20 +407,20 @@ export default function ProfilePage() {
                 <button
                   key={acc.id}
                   onClick={() => setSelectedAccount(acc)}
-                  className="w-full flex items-center justify-between gap-3 p-4 md:p-5 bg-white/60 backdrop-blur-sm rounded-[24px] md:rounded-[28px] border border-white shadow-sm hover:scale-[1.02] transition-transform text-left"
+                  className="w-full flex items-start gap-3 md:gap-4 p-4 md:p-5 bg-white/60 backdrop-blur-sm rounded-[24px] md:rounded-[28px] border border-white shadow-sm hover:scale-[1.02] transition-transform text-left"
                 >
-                  <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
-                    <div className="w-10 h-10 md:w-11 md:h-11 rounded-xl md:rounded-2xl flex-shrink-0 bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-100">
-                      {acc.type === 'E-Wallet' ? <Wallet size={16} /> : <Building2 size={16} />}
-                    </div>
-                    <div className="min-w-0">
-                      <h4 className="text-[12px] md:text-[13px] font-black text-slate-900 leading-tight truncate">{acc.name}</h4>
-                      <p className="text-[9px] md:text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tight">{acc.type}</p>
-                    </div>
+                  <div className="w-10 h-10 md:w-11 md:h-11 rounded-xl md:rounded-2xl flex-shrink-0 bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-100">
+                    {acc.type === 'E-Wallet' ? <Wallet size={16} /> : <Building2 size={16} />}
                   </div>
-                  <div className="text-right flex-shrink-0 flex items-center gap-2">
-                    <p className="text-[12px] md:text-[13px] font-black text-slate-900 whitespace-nowrap">{formatAccountBalance(acc.balance, acc.currency)}</p>
-                    <ArrowRight size={12} className="text-slate-300 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="text-[12px] md:text-[13px] font-black text-slate-900 leading-tight truncate">{acc.name}</h4>
+                      <ArrowRight size={12} className="text-slate-300 shrink-0" />
+                    </div>
+                    <div className="flex items-center justify-between gap-2 mt-1.5">
+                      <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-tight truncate">{acc.type}</p>
+                      <p className="text-[12px] md:text-[13px] font-black text-slate-900 whitespace-nowrap shrink-0">{formatAccountBalance(acc.balance, acc.currency)}</p>
+                    </div>
                   </div>
                 </button>
               ))}
@@ -482,6 +502,18 @@ export default function ProfilePage() {
             <div className="bg-slate-50 rounded-2xl p-6 space-y-1">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saldo Saat Ini</p>
               <p className="text-2xl font-black text-slate-900">{formatAccountBalance(selectedAccount.balance, selectedAccount.currency)}</p>
+              {selectedAccount.currency !== 'IDR' && (
+                <p className="text-xs font-bold text-slate-400 pt-1">
+                  {fxLoading
+                    ? 'Menghitung konversi...'
+                    : (() => {
+                        const converted = convertedToIDR(selectedAccount.balance, selectedAccount.currency);
+                        return converted !== null
+                          ? `≈ ${formatRp(converted)}`
+                          : 'Kurs tidak tersedia saat ini';
+                      })()}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
