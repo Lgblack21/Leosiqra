@@ -73,13 +73,29 @@ export default function ContactPage() {
     }
   }, [form.package, activePackages]);
 
-  const copyToClipboard = () => {
-    if (settings?.bankNumber) {
-      navigator.clipboard.writeText(settings.bankNumber);
+  const copyToClipboard = async () => {
+    if (!settings?.bankNumber) return;
+    try {
+      await navigator.clipboard.writeText(settings.bankNumber);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Gagal menyalin nomor rekening:', err);
+      alert('Gagal menyalin. Silakan salin nomor rekening secara manual.');
     }
   };
+
+  // Normalisasi nomor WhatsApp jadi format internasional tanpa "+"/spasi/strip
+  // (dibutuhkan wa.me) — anggap nomor lokal Indonesia kalau diawali "0".
+  const normalizedWhatsApp = useMemo(() => {
+    const raw = settings?.whatsapp;
+    if (!raw) return null;
+    let digits = raw.replace(/\D/g, '');
+    if (!digits) return null;
+    if (digits.startsWith('0')) digits = '62' + digits.slice(1);
+    else if (!digits.startsWith('62')) digits = '62' + digits;
+    return digits;
+  }, [settings?.whatsapp]);
 
   const handleProofUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -265,14 +281,36 @@ export default function ContactPage() {
                 </div>
 
                 <div className="pt-8 border-t border-slate-200 space-y-3">
-                  <div className="flex items-center gap-3 text-slate-600 hover:text-indigo-600 transition-colors cursor-pointer">
-                    <Mail size={16} />
-                    <span className="text-[11px] font-bold">{settings?.billingEmail || 'billing@service.com'}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-slate-600 hover:text-indigo-600 transition-colors cursor-pointer">
-                    <Phone size={16} />
-                    <span className="text-[11px] font-bold">+{settings?.whatsapp || '62'} (WhatsApp)</span>
-                  </div>
+                  {settings?.billingEmail ? (
+                    <a
+                      href={`mailto:${settings.billingEmail}`}
+                      className="flex items-center gap-3 text-slate-600 hover:text-indigo-600 transition-colors"
+                    >
+                      <Mail size={16} />
+                      <span className="text-[11px] font-bold">{settings.billingEmail}</span>
+                    </a>
+                  ) : (
+                    <div className="flex items-center gap-3 text-slate-400">
+                      <Mail size={16} />
+                      <span className="text-[11px] font-bold">Email belum diatur</span>
+                    </div>
+                  )}
+                  {normalizedWhatsApp ? (
+                    <a
+                      href={`https://wa.me/${normalizedWhatsApp}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 text-slate-600 hover:text-indigo-600 transition-colors"
+                    >
+                      <Phone size={16} />
+                      <span className="text-[11px] font-bold">+{normalizedWhatsApp} (WhatsApp)</span>
+                    </a>
+                  ) : (
+                    <div className="flex items-center gap-3 text-slate-400">
+                      <Phone size={16} />
+                      <span className="text-[11px] font-bold">WhatsApp belum diatur</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
