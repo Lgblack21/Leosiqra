@@ -521,6 +521,13 @@ const fetchMarketSnapshot = async (): Promise<string> => {
       fetch("https://open.er-api.com/v6/latest/USD"),
     ]);
 
+    if (!cryptoRes.ok) {
+      console.error("CoinGecko fetch gagal:", cryptoRes.status, (await cryptoRes.text()).slice(0, 200));
+    }
+    if (!fxRes.ok) {
+      console.error("Exchange-rate fetch gagal:", fxRes.status, (await fxRes.text()).slice(0, 200));
+    }
+
     const crypto = cryptoRes.ok
       ? ((await cryptoRes.json()) as Record<string, { usd?: number; usd_24h_change?: number }>)
       : {};
