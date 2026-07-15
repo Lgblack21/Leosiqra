@@ -62,9 +62,3 @@ export const updateProfile = async (user: User, data: { displayName?: string; ph
     photoURL: data.photoURL ?? user.photoURL ?? null,
   };
 };
-
-export const updatePassword = async (_user: User, _newPassword: string) => {
-  void _user;
-  void _newPassword;
-  throw new Error("Ganti password via Firebase sudah dinonaktifkan. Gunakan flow reset password backend.");
-};

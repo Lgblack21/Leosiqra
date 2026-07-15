@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { onAuthStateChanged, updateProfile, updatePassword } from '@/lib/cf-auth';
+import { onAuthStateChanged, updateProfile } from '@/lib/cf-auth';
 import { auth, db } from '@/lib/cf-client';
 import { collection, getDocs } from '@/lib/cf-firestore';
 import { subscribeUserProfile, UserProfile } from '@/lib/services/userService';
@@ -34,6 +34,7 @@ import {
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { exchangeRateService } from '@/lib/services/exchangeRateService';
 import { currencyService, Currency } from '@/lib/services/currencyService';
+import { cloudflareApi } from '@/lib/cloudflare-api';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 
 type LiveCryptoQuote = {
@@ -132,6 +133,7 @@ export default function AdminPengaturanPage() {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSavingAccount, setIsSavingAccount] = useState(false);
@@ -240,6 +242,10 @@ export default function AdminPengaturanPage() {
     if (!user) return;
 
     if (newPassword) {
+      if (!currentPassword) {
+        alert('Masukkan password saat ini untuk verifikasi.');
+        return;
+      }
       if (newPassword !== confirmPassword) {
         alert('Konfirmasi password tidak cocok.');
         return;
@@ -251,7 +257,10 @@ export default function AdminPengaturanPage() {
 
       try {
         setIsSavingAccount(true);
-        await updatePassword(user, newPassword);
+        await cloudflareApi('/api/member/password', {
+          method: 'PATCH',
+          json: { currentPassword, newPassword },
+        });
 
         await addAdminLog({
           adminEmail: userEmail,
@@ -262,17 +271,13 @@ export default function AdminPengaturanPage() {
         });
 
         alert('Password berhasil diperbarui!');
+        setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
       } catch (error: unknown) {
         console.error(error);
-        const code = (error as { code?: string } | null)?.code;
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        if (code === 'auth/requires-recent-login') {
-          alert('Sesi Anda sudah lama. Silakan logout dan login kembali untuk mengubah password.');
-        } else {
-          alert('Gagal memperbarui password: ' + message);
-        }
+        const message = error instanceof Error ? error.message : 'Gagal memperbarui password.';
+        alert(message);
       } finally {
         setIsSavingAccount(false);
       }
@@ -674,6 +679,16 @@ export default function AdminPengaturanPage() {
                   <input type="email" defaultValue={userEmail} disabled className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-medium text-slate-500" />
                 </div>
                 <div className="space-y-3">
+                  <div className="space-y-2">
+                    <label className="text-[12px] font-black text-slate-600">Password Saat Ini</label>
+                    <input
+                      type="password"
+                      placeholder="Untuk verifikasi"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-medium"
+                    />
+                  </div>
                   <div className="space-y-2">
                     <label className="text-[12px] font-black text-slate-600">Password Baru</label>
                     <input
