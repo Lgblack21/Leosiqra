@@ -118,10 +118,19 @@ export default function DailyTransactionLogPage() {
     );
   }, [transactions, searchQuery]);
 
-  const totalPemasukan = useMemo(() => transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0), [transactions]);
-  const totalPengeluaran = useMemo(() => transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0), [transactions]);
+  // Ringkasan bulanan digabung lintas rekening, jadi pakai amountIDR
+  // (sudah dikonversi saat transaksi disimpan), bukan .amount mentah.
+  const totalPemasukan = useMemo(() => transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0), [transactions]);
+  const totalPengeluaran = useMemo(() => transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0), [transactions]);
 
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 2 }).format(n).replace('Rp', '').trim();
+  const formatAmount = (n: number, currency: string | undefined) => {
+    try {
+      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: currency || 'IDR', minimumFractionDigits: 2 }).format(n);
+    } catch {
+      return `${currency || ''} ${formatRp(n)}`.trim();
+    }
+  };
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
 
   return (
@@ -244,7 +253,7 @@ export default function DailyTransactionLogPage() {
                       </td>
                       <td className="px-4 md:px-6 py-4 text-right whitespace-nowrap">
                         <p className={`text-sm font-black tracking-tight ${trx.type === 'pemasukan' ? 'text-emerald-600' : 'text-rose-500'}`}>
-                          {trx.type === 'pemasukan' ? '+' : '-'} {formatRp(trx.amount)}
+                          {trx.type === 'pemasukan' ? '+' : '-'} {formatAmount(trx.amount, trx.currency)}
                         </p>
                       </td>
                       <td className="px-4 md:px-6 py-4 whitespace-nowrap">

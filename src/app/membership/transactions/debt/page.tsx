@@ -93,15 +93,24 @@ export default function DebtPage() {
     );
   }, [transactions, searchQuery]);
 
-  const totalHutang = useMemo(() => transactions.filter(t => t.category === 'Hutang' && t.paymentStatus !== 'lunas').reduce((s, t) => s + t.amount, 0), [transactions]);
-  const totalPiutang = useMemo(() => transactions.filter(t => t.category === 'Piutang' && t.paymentStatus !== 'lunas').reduce((s, t) => s + t.amount, 0), [transactions]);
+  // Ringkasan digabung lintas rekening, jadi pakai amountIDR (sudah
+  // dikonversi saat transaksi disimpan), bukan .amount mentah.
+  const totalHutang = useMemo(() => transactions.filter(t => t.category === 'Hutang' && t.paymentStatus !== 'lunas').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0), [transactions]);
+  const totalPiutang = useMemo(() => transactions.filter(t => t.category === 'Piutang' && t.paymentStatus !== 'lunas').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0), [transactions]);
 
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n).replace('Rp', '').trim();
+  const formatAmount = (n: number, currency: string | undefined) => {
+    try {
+      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: currency || 'IDR', minimumFractionDigits: 0 }).format(n);
+    } catch {
+      return `${currency || ''} ${formatRp(n)}`.trim();
+    }
+  };
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
 
   const handleMarkLunas = async (trx: Transaction) => {
     if (!trx.id || !user || settlingId) return;
-    if (!confirm(`Tandai "${trx.category}" senilai Rp ${formatRp(trx.amount)} sebagai lunas? Ini akan membuat catatan transaksi baru dan menyesuaikan saldo akun.`)) return;
+    if (!confirm(`Tandai "${trx.category}" senilai ${formatAmount(trx.amount, trx.currency)} sebagai lunas? Ini akan membuat catatan transaksi baru dan menyesuaikan saldo akun.`)) return;
     setError('');
     setSettlingId(trx.id);
     try {
@@ -266,7 +275,7 @@ export default function DebtPage() {
                         <span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{trx.currency || 'IDR'}</span>
                       </td>
                       <td className="px-4 md:px-6 py-4 md:py-6 text-right whitespace-nowrap">
-                        <p className="text-sm font-black text-slate-900"> {formatRp(trx.amount)}</p>
+                        <p className="text-sm font-black text-slate-900">{formatAmount(trx.amount, trx.currency)}</p>
                       </td>
                       <td className="px-4 md:px-6 py-4 md:py-6 text-center whitespace-nowrap">
                         <span className={`px-3 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest ${
@@ -285,9 +294,9 @@ export default function DebtPage() {
                       <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap text-sm font-bold text-slate-600">{getAccountName(trx.accountId || '')}</td>
                       <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap text-sm font-bold text-slate-600">{trx.lenderName || '-'}</td>
                       <td className="px-4 md:px-6 py-4 md:py-6 text-center whitespace-nowrap text-sm font-bold text-slate-600">{trx.installmentTenor || 0} bln</td>
-                      <td className="px-4 md:px-6 py-4 md:py-6 text-right whitespace-nowrap text-sm font-bold text-slate-600">{formatRp(trx.monthlyInterest || 0)}</td>
-                      <td className="px-4 md:px-6 py-4 md:py-6 text-right whitespace-nowrap text-sm font-bold text-slate-600">{formatRp(trx.totalInterest || 0)}</td>
-                      <td className="px-4 md:px-6 py-4 md:py-6 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatRp(trx.totalDebt || 0)}</td>
+                      <td className="px-4 md:px-6 py-4 md:py-6 text-right whitespace-nowrap text-sm font-bold text-slate-600">{formatAmount(trx.monthlyInterest || 0, trx.currency)}</td>
+                      <td className="px-4 md:px-6 py-4 md:py-6 text-right whitespace-nowrap text-sm font-bold text-slate-600">{formatAmount(trx.totalInterest || 0, trx.currency)}</td>
+                      <td className="px-4 md:px-6 py-4 md:py-6 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatAmount(trx.totalDebt || 0, trx.currency)}</td>
                       <td className="px-5 md:px-8 py-4 md:py-6 text-center">
                         <div className="flex items-center justify-center gap-2">
                           {trx.paymentStatus !== 'lunas' && (

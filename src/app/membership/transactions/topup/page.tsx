@@ -94,7 +94,9 @@ export default function TopUpPage() {
     );
   }, [transactions, searchQuery]);
 
-  const totalAmount = useMemo(() => transactions.reduce((s, t) => s + t.amount, 0), [transactions]);
+  // Ringkasan digabung lintas rekening, jadi pakai amountIDR (sudah
+  // dikonversi saat transaksi disimpan), bukan .amount mentah.
+  const totalAmount = useMemo(() => transactions.reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0), [transactions]);
   const avgAmount = transactions.length > 0 ? totalAmount / transactions.length : 0;
 
   const handleDelete = async (id: string) => {
@@ -112,6 +114,13 @@ export default function TopUpPage() {
   };
 
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n).replace('Rp', '').trim();
+  const formatAmount = (n: number, currency: string | undefined) => {
+    try {
+      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: currency || 'IDR', minimumFractionDigits: 0 }).format(n);
+    } catch {
+      return `${currency || ''} ${formatRp(n)}`.trim();
+    }
+  };
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
 
   return (
@@ -225,7 +234,7 @@ export default function TopUpPage() {
                         <span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{trx.currency || 'IDR'}</span>
                       </td>
                       <td className="px-4 md:px-6 py-4 md:py-6 text-right whitespace-nowrap">
-                        <p className="text-sm font-black text-slate-900"> {formatRp(trx.amount)}</p>
+                        <p className="text-sm font-black text-slate-900">{formatAmount(trx.amount, trx.currency)}</p>
                       </td>
                       <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap">
                         <p className="text-sm font-bold text-slate-600">{getAccountName(trx.accountId || '')}</p>

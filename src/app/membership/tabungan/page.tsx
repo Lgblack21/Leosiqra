@@ -83,7 +83,10 @@ export default function SavingsPage() {
     return acc ? acc.name : id || '-';
   };
 
-  const totalSaldo = useMemo(() => savings.reduce((s, item) => s + item.amount, 0), [savings]);
+  // Total gabungan lintas rekening harus pakai amountIDR (sudah dikonversi
+  // saat setoran disimpan), bukan .amount mentah — setoran bisa dalam
+  // mata uang berbeda-beda.
+  const totalSaldo = useMemo(() => savings.reduce((s, item) => s + (Number(item.amountIDR) || item.amount), 0), [savings]);
 
   const filtered = useMemo(() =>
     searchQuery ? savings.filter(s => s.description.toLowerCase().includes(searchQuery.toLowerCase()) || s.category.toLowerCase().includes(searchQuery.toLowerCase())) : savings,
@@ -91,6 +94,13 @@ export default function SavingsPage() {
   );
 
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0 }).format(n);
+  const formatAmount = (n: number, currency: string | undefined) => {
+    try {
+      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: currency || 'IDR', minimumFractionDigits: 0 }).format(n);
+    } catch {
+      return `${currency || ''} ${formatRp(n)}`.trim();
+    }
+  };
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
 
   const handleDelete = async (id: string) => {
@@ -215,7 +225,7 @@ export default function SavingsPage() {
                     </td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap font-bold text-slate-900 text-sm">{item.description}</td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center"><span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{item.currency || 'IDR'}</span></td>
-                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm"> {formatRp(item.amount)}</td>
+                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatAmount(item.amount, item.currency)}</td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap">
                        <span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-[8px] font-black rounded uppercase tracking-widest">{item.subCategory || '-'}</span>
                     </td>
