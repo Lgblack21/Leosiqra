@@ -64,34 +64,54 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
   if (isLoginPage) return <>{children}</>;
 
   // 3. Jika maintenance aktif dan BUKAN Admin, blokir SEMUA halaman (termasuk landing & register)
+  // Link kecil ke /auth/login selalu ditampilkan di atas layar maintenance apa pun
+  // (code/image/fallback) agar Admin tetap bisa menemukan jalan masuk ke panel.
+  const adminLoginLink = (
+    <a
+      href="/auth/login"
+      className="fixed bottom-4 right-4 z-[10000] px-3 py-1.5 rounded-full bg-slate-900/80 text-white text-[11px] font-bold tracking-wide hover:bg-slate-900 transition-colors"
+    >
+      Admin Login
+    </a>
+  );
+
   if (settings?.maintenance?.isActive) {
     if (settings.maintenance.type === 'code') {
       return (
-        <div 
-          className="fixed inset-0 z-[9999] bg-white overflow-auto"
-          dangerouslySetInnerHTML={{ __html: settings.maintenance.code || '<h1>Maintenance Mode</h1>' }}
-        />
+        <>
+          <div
+            className="fixed inset-0 z-[9999] bg-white overflow-auto"
+            dangerouslySetInnerHTML={{ __html: settings.maintenance.code || '<h1>Maintenance Mode</h1>' }}
+          />
+          {adminLoginLink}
+        </>
       );
     } else if (settings.maintenance.type === 'image' && settings.maintenance.imageUrl) {
       return (
-        <div className="fixed inset-0 z-[9999] bg-black relative">
-          <Image
-            src={settings.maintenance.imageUrl}
-            alt="Maintenance"
-            fill
-            className="object-contain"
-          />
-        </div>
+        <>
+          <div className="fixed inset-0 z-[9999] bg-black relative">
+            <Image
+              src={settings.maintenance.imageUrl}
+              alt="Maintenance"
+              fill
+              className="object-contain"
+            />
+          </div>
+          {adminLoginLink}
+        </>
       );
     } else {
       // Fallback
       return (
-        <div className="fixed inset-0 z-[9999] bg-white flex items-center justify-center p-6 text-center">
-          <div className="max-w-md space-y-4">
-            <h1 className="text-2xl font-black text-slate-900 font-serif">Pemeliharaan Sistem</h1>
-            <p className="text-slate-500 font-medium">Kami akan segera kembali. Terima kasih atas kesabaran Anda.</p>
+        <>
+          <div className="fixed inset-0 z-[9999] bg-white flex items-center justify-center p-6 text-center">
+            <div className="max-w-md space-y-4">
+              <h1 className="text-2xl font-black text-slate-900 font-serif">Pemeliharaan Sistem</h1>
+              <p className="text-slate-500 font-medium">Kami akan segera kembali. Terima kasih atas kesabaran Anda.</p>
+            </div>
           </div>
-        </div>
+          {adminLoginLink}
+        </>
       );
     }
   }
