@@ -22,7 +22,13 @@ import {
   Loader2,
   Clock,
   AlertTriangle,
-  Trash2
+  Trash2,
+  Key,
+  Smartphone,
+  Copy,
+  Check,
+  X,
+  Plus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { auth, db } from '@/lib/cf-client';
@@ -49,6 +55,13 @@ interface UserProfile {
   twoFactorSecret?: string | null;
 }
 
+interface ApiToken {
+  id: string;
+  label: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
 export default function ProfilePage() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -73,6 +86,14 @@ export default function ProfilePage() {
   const [resetLoading, setResetLoading] = useState(false);
   const [resetDone, setResetDone] = useState(false);
   const RESET_CONFIRM_WORD = 'HAPUS SEMUA DATA';
+
+  const [apiTokens, setApiTokens] = useState<ApiToken[]>([]);
+  const [showCreateTokenModal, setShowCreateTokenModal] = useState(false);
+  const [newTokenLabel, setNewTokenLabel] = useState('');
+  const [creatingToken, setCreatingToken] = useState(false);
+  const [tokenError, setTokenError] = useState('');
+  const [generatedToken, setGeneratedToken] = useState<string | null>(null);
+  const [copiedToken, setCopiedToken] = useState(false);
 
   const [profile, setProfile] = useState<UserProfile>({
     displayName: '', email: '', username: '', phone: '', address: '', photoURL: ''
@@ -136,6 +157,13 @@ export default function ProfilePage() {
       .catch(console.error)
       .finally(() => setFxLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    cloudflareApi<{ items: ApiToken[] }>('/api/member/api-tokens')
+      .then((res) => setApiTokens(res.items || []))
+      .catch(console.error);
+  }, [user]);
 
   const convertedToIDR = useCallback((amount: number, currency: string): number | null => {
     if (currency === 'IDR') return amount;
@@ -235,6 +263,56 @@ export default function ProfilePage() {
       setResetError(e instanceof Error ? e.message : 'Gagal mereset data. Silakan coba lagi.');
     } finally {
       setResetLoading(false);
+    }
+  };
+
+  const handleCreateApiToken = async () => {
+    setTokenError('');
+    setCreatingToken(true);
+    try {
+      const label = newTokenLabel.trim() || 'iPhone Shortcut';
+      const res = await cloudflareApi<{ id: string; token: string }>('/api/member/api-tokens', {
+        method: 'POST',
+        json: { label },
+      });
+      setGeneratedToken(res.token);
+      setApiTokens(prev => [{ id: res.id, label, created_at: new Date().toISOString(), last_used_at: null }, ...prev]);
+      setNewTokenLabel('');
+      setShowCreateTokenModal(false);
+    } catch (e) {
+      setTokenError(e instanceof Error ? e.message : 'Gagal membuat token.');
+    } finally {
+      setCreatingToken(false);
+    }
+  };
+
+  const handleDeleteApiToken = async (id: string) => {
+    if (!confirm('Hapus token ini? Shortcut yang memakainya akan berhenti berfungsi.')) return;
+    try {
+      await cloudflareApi(`/api/member/api-tokens/${id}`, { method: 'DELETE' });
+      setApiTokens(prev => prev.filter(t => t.id !== id));
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Gagal menghapus token.');
+    }
+  };
+
+  const handleCopyToken = async () => {
+    if (!generatedToken) return;
+    try {
+      await navigator.clipboard.writeText(generatedToken);
+      setCopiedToken(true);
+      setTimeout(() => setCopiedToken(false), 2000);
+    } catch (e) {
+      console.error('Gagal menyalin token:', e);
+    }
+  };
+
+  const formatTokenDate = (value: string | null) => {
+    if (!value) return 'Belum pernah dipakai';
+    try {
+      return new Date(value).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
+    } catch {
+      return value;
     }
   };
 
@@ -514,6 +592,51 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* API Access / Shortcut iOS */}
+          <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[48px] border border-slate-50 shadow-sm space-y-6 md:space-y-8">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+                  <Smartphone size={18} />
+                </div>
+                <div>
+                  <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight leading-tight">Akses API</h2>
+                  <p className="text-[10px] font-bold text-slate-400 mt-0.5">Untuk Shortcut iOS &amp; otomasi lain</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setShowCreateTokenModal(true); setTokenError(''); setNewTokenLabel(''); }}
+                className="w-9 h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-all shrink-0"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {apiTokens.length === 0 ? (
+                <p className="text-xs font-medium text-slate-400 text-center py-4">
+                  Belum ada token. Buat satu untuk dipakai di Shortcut iOS.
+                </p>
+              ) : apiTokens.map((t) => (
+                <div key={t.id} className="flex items-start gap-3 p-4 bg-slate-50/70 rounded-2xl border border-slate-100">
+                  <div className="w-9 h-9 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-slate-400 shrink-0">
+                    <Key size={14} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[12px] font-black text-slate-900 truncate">{t.label}</p>
+                    <p className="text-[10px] font-bold text-slate-400 mt-1">Terakhir dipakai: {formatTokenDate(t.last_used_at)}</p>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteApiToken(t.id)}
+                    className="text-slate-300 hover:text-rose-600 transition-colors shrink-0 p-1"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Danger Zone */}
           <div className="bg-rose-50 p-5 md:p-8 rounded-[20px] md:rounded-[48px] border border-rose-100 shadow-sm space-y-6 md:space-y-8 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-8 text-rose-600/5 group-hover:text-rose-600/10 transition-colors hidden md:block">
@@ -705,6 +828,77 @@ export default function ProfilePage() {
             </button>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        isOpen={showCreateTokenModal}
+        onClose={() => { setShowCreateTokenModal(false); setNewTokenLabel(''); setTokenError(''); }}
+        title="Buat Token Baru"
+        maxWidth="max-w-sm"
+      >
+        <div className="space-y-5">
+          <p className="text-sm font-medium text-slate-500">
+            Beri nama supaya mudah dikenali, misalnya &quot;iPhone Shortcut&quot;.
+          </p>
+          {tokenError && (
+            <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-sm font-medium text-rose-600">
+              {tokenError}
+            </div>
+          )}
+          <div className="relative group">
+            <Key size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
+            <input
+              type="text"
+              value={newTokenLabel}
+              onChange={e => setNewTokenLabel(e.target.value)}
+              placeholder="iPhone Shortcut"
+              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-3.5 pl-12 pr-5 text-sm font-bold text-slate-700 transition-all"
+            />
+          </div>
+          <button
+            onClick={handleCreateApiToken}
+            disabled={creatingToken}
+            className="w-full bg-indigo-600 disabled:bg-slate-300 text-white flex items-center justify-center gap-3 py-4 rounded-2xl text-sm font-black transition-all shadow-xl shadow-indigo-100"
+          >
+            {creatingToken ? 'Membuat...' : 'Buat Token'}
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(generatedToken)}
+        onClose={() => { setGeneratedToken(null); setCopiedToken(false); }}
+        title="Token Berhasil Dibuat"
+        maxWidth="max-w-md"
+      >
+        <div className="space-y-5">
+          <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 flex items-start gap-3">
+            <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+            <p className="text-xs font-medium text-amber-700 leading-relaxed">
+              Token ini hanya ditampilkan <strong>satu kali</strong>. Salin dan simpan sekarang — Anda tidak bisa melihatnya lagi setelah ditutup.
+            </p>
+          </div>
+
+          <div className="bg-slate-900 rounded-2xl p-4">
+            <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-2">Personal API Token</p>
+            <p className="text-[13px] font-mono font-bold text-emerald-400 break-all leading-relaxed">{generatedToken}</p>
+          </div>
+
+          <button
+            onClick={handleCopyToken}
+            className={cn(
+              "w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-black transition-all",
+              copiedToken ? "bg-emerald-600 text-white" : "bg-slate-900 hover:bg-slate-800 text-white"
+            )}
+          >
+            {copiedToken ? <Check size={16} /> : <Copy size={16} />}
+            {copiedToken ? 'Tersalin!' : 'Salin Token'}
+          </button>
+
+          <p className="text-[11px] font-medium text-slate-400 leading-relaxed">
+            Pakai token ini di header <code className="bg-slate-100 px-1.5 py-0.5 rounded font-mono">Authorization: Bearer &lt;token&gt;</code> saat memanggil API Leosiqra dari Shortcut iOS.
+          </p>
+        </div>
       </Modal>
     </div>
   );

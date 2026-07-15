@@ -416,8 +416,64 @@ const readSession = async (env: Env, request: Request) => {
   };
 };
 
+// Autentikasi alternatif via Personal API Token (header "Authorization: Bearer <token>"),
+// dipakai untuk integrasi eksternal seperti iOS Shortcuts yang tidak praktis
+// menyimpan cookie sesi. Token disimpan sebagai hash SHA-256, tidak pernah disimpan mentah.
+const readApiTokenSession = async (env: Env, request: Request) => {
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return null;
+  }
+  const rawToken = authHeader.slice("Bearer ".length).trim();
+  if (!rawToken) {
+    return null;
+  }
+
+  const tokenHash = await sha256Hex(rawToken);
+  const result = await env.DB.prepare(
+    `SELECT t.id as token_id, u.id as user_id, u.role, u.name, u.email, u.plan, u.status, u.whatsapp, u.two_factor_secret
+       FROM api_tokens t
+       JOIN users u ON u.id = t.user_id
+      WHERE t.token_hash = ?`
+  )
+    .bind(tokenHash)
+    .first<{
+      token_id: string;
+      user_id: string;
+      role: "admin" | "user";
+      name: string;
+      email: string;
+      plan: "FREE" | "PRO";
+      status: "AKTIF" | "NONAKTIF" | "GUEST" | "PENDING";
+      whatsapp?: string | null;
+      two_factor_secret?: string | null;
+    }>();
+
+  if (!result) {
+    return null;
+  }
+
+  await env.DB.prepare("UPDATE api_tokens SET last_used_at = ? WHERE id = ?")
+    .bind(nowIso(), result.token_id)
+    .run();
+
+  return {
+    sessionId: null as string | null,
+    user: {
+      id: result.user_id,
+      role: result.role,
+      email: result.email,
+      name: result.name,
+      plan: result.plan,
+      status: result.status,
+      whatsapp: result.whatsapp,
+      two_factor_secret: result.two_factor_secret,
+    } satisfies AppUser,
+  };
+};
+
 const requireSession = async (env: Env, request: Request, requiredRole?: "admin" | "user") => {
-  const session = await readSession(env, request);
+  const session = (await readSession(env, request)) ?? (await readApiTokenSession(env, request));
   if (!session) {
     return { error: json({ error: "Unauthorized" }, { status: 401 }) };
   }
@@ -1800,6 +1856,63 @@ async function handleUpdateMemberTwoFactor(request: Request, env: Env) {
   return json({ ok: true });
 }
 
+// Personal API Token — dipakai untuk integrasi eksternal (mis. iOS Shortcuts).
+// Pembuatan token WAJIB lewat sesi cookie asli (bukan token lain), agar token
+// tidak bisa dipakai untuk mencetak token baru tanpa batas.
+async function handleCreateApiToken(request: Request, env: Env) {
+  const session = await readSession(env, request);
+  if (!session) {
+    return json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const payload = await parseJson<{ label?: string }>(request);
+  const rawToken = `lsk_${toBase64Url(crypto.getRandomValues(new Uint8Array(32)).buffer)}`;
+  const tokenHash = await sha256Hex(rawToken);
+  const id = generateId();
+
+  await env.DB.prepare(
+    "INSERT INTO api_tokens (id, user_id, token_hash, label, created_at) VALUES (?, ?, ?, ?, ?)"
+  )
+    .bind(id, session.user.id, tokenHash, (payload.label ?? "").trim() || "Tanpa nama", nowIso())
+    .run();
+
+  return json({ ok: true, id, token: rawToken }, { status: 201 });
+}
+
+async function handleListApiTokens(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) {
+    return authResult.error;
+  }
+
+  const rows = await env.DB.prepare(
+    `SELECT id, label, created_at, last_used_at
+       FROM api_tokens
+      WHERE user_id = ?
+      ORDER BY created_at DESC`
+  )
+    .bind(authResult.session.user.id)
+    .all();
+
+  return json({ items: rows.results });
+}
+
+async function handleDeleteApiToken(request: Request, env: Env, tokenId: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) {
+    return authResult.error;
+  }
+
+  const result = await env.DB.prepare("DELETE FROM api_tokens WHERE id = ? AND user_id = ?")
+    .bind(tokenId, authResult.session.user.id)
+    .run();
+
+  if (!result.meta.changes) {
+    return json({ error: "Token tidak ditemukan." }, { status: 404 });
+  }
+  return json({ ok: true });
+}
+
 // Tabel yang berisi data pribadi pengguna (transaksi, rekening, dst) yang
 // dihapus total oleh "Reset Semua Data". Sengaja TIDAK termasuk: users
 // (akun itu sendiri wajib tetap ada), sessions (agar tidak ter-logout),
@@ -2926,6 +3039,19 @@ const worker = {
 
       if (url.pathname === "/api/member/password" && request.method === "PATCH") {
         return await handleChangeMemberPassword(request, env);
+      }
+
+      if (url.pathname === "/api/member/api-tokens" && request.method === "GET") {
+        return await handleListApiTokens(request, env);
+      }
+
+      if (url.pathname === "/api/member/api-tokens" && request.method === "POST") {
+        return await handleCreateApiToken(request, env);
+      }
+
+      if (url.pathname.startsWith("/api/member/api-tokens/") && request.method === "DELETE") {
+        const tokenId = url.pathname.slice("/api/member/api-tokens/".length);
+        return await handleDeleteApiToken(request, env, tokenId);
       }
 
       if (url.pathname === "/api/member/2fa" && request.method === "PATCH") {

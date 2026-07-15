@@ -21,6 +21,16 @@ CREATE TABLE IF NOT EXISTS accounts (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS api_tokens (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  token_hash TEXT NOT NULL UNIQUE,
+  label TEXT,
+  created_at TEXT NOT NULL,
+  last_used_at TEXT,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS admin_logs (
   id TEXT PRIMARY KEY,
   admin_user_id TEXT,
