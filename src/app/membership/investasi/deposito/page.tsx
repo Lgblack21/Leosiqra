@@ -92,11 +92,14 @@ export default function DepositoPage() {
   // (baris penempatan asli + baris proyeksinya).
   const realInvestments = useMemo(() => filteredInvestments.filter(i => i.status !== 'Planned'), [filteredInvestments]);
 
+  // Total digabung lintas deposito yang bisa beda mata uang, jadi pakai
+  // amountIDR (sudah dikonversi saat disimpan).
   const totalDeposited = useMemo(() => {
     return realInvestments.reduce((s, i) => {
-      if (i.transactionType === 'Penarikan') return s - i.amountInvested;
+      const amt = Number(i.amountIDR) || i.amountInvested;
+      if (i.transactionType === 'Penarikan') return s - amt;
       if (i.transactionType === 'Bunga') return s;
-      return s + i.amountInvested;
+      return s + amt;
     }, 0);
   }, [realInvestments]);
   const avgRate = realInvestments.length > 0 ? realInvestments.reduce((s, i) => s + i.returnPercentage, 0) / realInvestments.length : 0;
@@ -105,6 +108,13 @@ export default function DepositoPage() {
   const animatedAvgRate = useCountUp(avgRate);
 
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n).replace('Rp', '').trim();
+  const formatAmount = (n: number, currency: string | undefined) => {
+    try {
+      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: currency || 'IDR', minimumFractionDigits: 0 }).format(n);
+    } catch {
+      return `${currency || ''} ${formatRp(n)}`.trim();
+    }
+  };
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
 
   return (
@@ -208,7 +218,7 @@ export default function DepositoPage() {
                       </div>
                     </td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="px-3 py-1 bg-orange-50 text-orange-600 text-[9px] font-black rounded-lg uppercase tracking-widest">{inv.platform || '-'}</span></td>
-                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatRp(inv.amountInvested)}</td>
+                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatAmount(inv.amountInvested, inv.currency)}</td>
                     <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap"><span className="text-sm font-bold text-slate-600">{inv.durationDays || 0} Hari</span></td>
                     <td className="px-4 md:px-6 py-5 text-center whitespace-nowrap"><span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-lg">{inv.returnPercentage.toFixed(2)}%</span></td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.transactionType || '-'}</span></td>
@@ -235,7 +245,7 @@ export default function DepositoPage() {
                           </button>
                         </div>
                         <span className="text-[9px] font-black text-slate-400 tracking-tighter whitespace-nowrap">
-                          Rp {formatRp(inv.currentValue)}
+                          {formatAmount(inv.currentValue, inv.currency)}
                         </span>
                       </div>
                     </td>

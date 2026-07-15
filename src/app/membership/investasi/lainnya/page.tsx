@@ -86,14 +86,23 @@ export default function OtherInvestmentsPage() {
   // Portofolio aset alternatif bersifat all-time: posisi lama tidak "hilang" saat berpindah bulan.
   const filteredInvestments = investments;
 
-  const totalInvested = useMemo(() => filteredInvestments.reduce((s, i) => s + i.amountInvested, 0), [filteredInvestments]);
-  const totalCurrent = useMemo(() => filteredInvestments.reduce((s, i) => s + i.currentValue, 0), [filteredInvestments]);
+  // Total digabung lintas aset yang bisa beda mata uang, jadi pakai
+  // amountIDR/currentValueIDR (sudah dikonversi saat disimpan).
+  const totalInvested = useMemo(() => filteredInvestments.reduce((s, i) => s + (Number(i.amountIDR) || i.amountInvested), 0), [filteredInvestments]);
+  const totalCurrent = useMemo(() => filteredInvestments.reduce((s, i) => s + (Number(i.currentValueIDR) || i.currentValue), 0), [filteredInvestments]);
   const totalReturn = totalInvested > 0 ? ((totalCurrent - totalInvested) / totalInvested) * 100 : 0;
 
   const animatedTotalCurrent = useCountUp(totalCurrent);
   const animatedTotalReturn = useCountUp(totalReturn);
 
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n).replace('Rp', '').trim();
+  const formatAmount = (n: number, currency: string | undefined) => {
+    try {
+      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: currency || 'IDR', minimumFractionDigits: 0 }).format(n);
+    } catch {
+      return `${currency || ''} ${formatRp(n)}`.trim();
+    }
+  };
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
 
   const getAssetColor = (platform: string) => {
@@ -205,7 +214,7 @@ export default function OtherInvestmentsPage() {
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center"><span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{inv.currency || 'IDR'}</span></td>
                     <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap"><span className="text-sm font-bold text-slate-700">{inv.quantity || 0}</span></td>
                     <td className="px-4 md:px-6 py-5 text-center whitespace-nowrap"><span className="text-xs font-bold text-slate-500">{inv.unit || '-'}</span></td>
-                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatRp(inv.pricePerUnit || 0)}</td>
+                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatAmount(inv.pricePerUnit || 0, inv.currency)}</td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.transactionType || '-'}</span></td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{getCategoryName(inv.category || '')}</span></td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{getAccountName(inv.accountId || '')}</span></td>

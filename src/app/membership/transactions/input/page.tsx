@@ -50,8 +50,10 @@ export default function InputTransactionPage() {
     return transactions.filter((t) => isSameDay(t.date, today));
   }, [transactions]);
 
+  // Digabung lintas rekening, jadi pakai amountIDR (sudah dikonversi saat
+  // transaksi disimpan) — bukan .amount mentah.
   const todayVolume = useMemo(
-    () => todayEntries.reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
+    () => todayEntries.reduce((sum, t) => sum + (Number(t.amountIDR) || Number(t.amount) || 0), 0),
     [todayEntries]
   );
 

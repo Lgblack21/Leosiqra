@@ -114,11 +114,16 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
       const totalResult = invested + interestOnly;
 
       // Penyimpanan inti — baris investasi (penempatan/penarikan/bunga)nya sendiri.
+      // amountIDR/currentValueIDR dihitung juga di sini (bukan cuma di
+      // transaksi sync) supaya halaman ringkasan portofolio yang menjumlah
+      // lintas deposito berbeda mata uang tetap benar.
       const investmentPayload: Omit<Investment, 'id' | 'createdAt'> = {
         userId, name: formData.name, type: 'Deposito',
         platform: formData.platform,
         amountInvested: invested,
+        amountIDR: formData.currency === 'IDR' ? invested : convertedAmount,
         currentValue: totalResult,
+        currentValueIDR: formData.currency === 'IDR' ? totalResult : totalResult * (convertedAmount / (invested || 1)),
         returnPercentage: rate,
         taxPercentage: taxRate,
         currency: formData.currency,

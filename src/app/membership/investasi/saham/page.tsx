@@ -66,8 +66,10 @@ export default function SahamPage() {
     return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
   }, []);
 
-  const totalInvested = useMemo(() => investments.reduce((s, i) => s + i.amountInvested, 0), [investments]);
-  const totalCurrent = useMemo(() => investments.reduce((s, i) => s + i.currentValue, 0), [investments]);
+  // Total portofolio digabung lintas saham yang bisa berbeda mata uang, jadi
+  // pakai amountIDR/currentValueIDR (sudah dikonversi saat disimpan).
+  const totalInvested = useMemo(() => investments.reduce((s, i) => s + (Number(i.amountIDR) || i.amountInvested), 0), [investments]);
+  const totalCurrent = useMemo(() => investments.reduce((s, i) => s + (Number(i.currentValueIDR) || i.currentValue), 0), [investments]);
   const totalReturn = totalInvested > 0 ? ((totalCurrent - totalInvested) / totalInvested) * 100 : 0;
 
   const animatedTotalCurrent = useCountUp(totalCurrent);
@@ -80,6 +82,13 @@ export default function SahamPage() {
   );
 
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0 }).format(n);
+  const formatAmount = (n: number, currency: string | undefined) => {
+    try {
+      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: currency || 'IDR', minimumFractionDigits: 0 }).format(n);
+    } catch {
+      return `${currency || ''} ${formatRp(n)}`.trim();
+    }
+  };
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
 
   return (
@@ -197,7 +206,7 @@ export default function SahamPage() {
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-600 uppercase tracking-tighter">{inv.exchangeCode || 'IDX'}</td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center"><span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{inv.currency || 'IDR'}</span></td>
                     <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-bold text-slate-700">{inv.sharesCount || 0}</td>
-                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatRp(inv.pricePerShare || 0)}</td>
+                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatAmount(inv.pricePerShare || 0, inv.currency)}</td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.transactionType || 'Beli'}</span></td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.category || 'Saham'}</span></td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap">

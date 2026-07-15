@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import {
   User,
@@ -32,6 +32,7 @@ import { accountService, Account } from '@/lib/services/accountService';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { subscribeUserProfile } from '@/lib/services/userService';
+import { exchangeRateService } from '@/lib/services/exchangeRateService';
 import { ChangePasswordModal } from '@/components/modals/ChangePasswordModal';
 import { TwoFactorModal } from '@/components/auth/TwoFactorModal';
 import { Modal } from '@/components/ui/Modal';
@@ -129,22 +130,18 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
-    if (!selectedAccount || selectedAccount.currency === 'IDR' || fxRates || fxLoading) return;
     setFxLoading(true);
-    fetch('https://open.er-api.com/v6/latest/USD')
-      .then(res => res.json())
-      .then((data: { rates?: Record<string, number> }) => {
-        if (data.rates) setFxRates(data.rates);
-      })
+    exchangeRateService.getLatestRates()
+      .then(setFxRates)
       .catch(console.error)
       .finally(() => setFxLoading(false));
-  }, [selectedAccount, fxRates, fxLoading]);
+  }, []);
 
-  const convertedToIDR = (amount: number, currency: string): number | null => {
+  const convertedToIDR = useCallback((amount: number, currency: string): number | null => {
     if (currency === 'IDR') return amount;
     if (!fxRates || !fxRates.IDR || !fxRates[currency]) return null;
-    return amount * (fxRates.IDR / fxRates[currency]);
-  };
+    return exchangeRateService.convert(amount, currency, 'IDR', fxRates);
+  }, [fxRates]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -241,10 +238,15 @@ export default function ProfilePage() {
     }
   };
 
-  const totalBalance = useMemo(() => accounts.reduce((s, a) => s + a.balance, 0), [accounts]);
+  // Digabung lintas rekening yang bisa beda mata uang, jadi dikonversi ke
+  // IDR dulu (baseValue manual sering kosong, jadi pakai kurs live).
+  const totalBalance = useMemo(
+    () => accounts.reduce((s, a) => s + (convertedToIDR(a.balance, a.currency) ?? a.balance), 0),
+    [accounts, convertedToIDR]
+  );
   const todayOut = useMemo(() => {
     const today = new Date().toDateString();
-    return transactions.filter(t => t.type === 'pengeluaran' && t.date.toDateString() === today).reduce((s, t) => s + t.amount, 0);
+    return transactions.filter(t => t.type === 'pengeluaran' && t.date.toDateString() === today).reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0);
   }, [transactions]);
 
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);

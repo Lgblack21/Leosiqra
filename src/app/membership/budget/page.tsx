@@ -109,9 +109,12 @@ export default function BudgetPage() {
   };
 
   const calculateRealisasi = (budget: Budget) => {
+    // Target budget selalu dalam IDR, jadi realisasinya juga dijumlah
+    // pakai amountIDR (bukan .amount mentah) supaya perbandingannya benar
+    // kalau ada transaksi dalam mata uang lain untuk kategori yang sama.
     const total = transactions
       .filter(t => t.category.toLowerCase() === budget.category.toLowerCase())
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (Number(t.amountIDR) || t.amount), 0);
     const percentage = budget.amount > 0 ? (total / budget.amount) * 100 : 0;
     const isOver = percentage > 100;
     return { total, percentage, isOver };
