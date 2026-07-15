@@ -513,19 +513,22 @@ export default function ProfilePage() {
           </div>
 
           {/* Danger Zone */}
-          <div className="bg-rose-50 p-5 md:p-8 rounded-[20px] md:rounded-[48px] border border-rose-100 space-y-5">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600">
+          <div className="bg-rose-50 p-5 md:p-8 rounded-[20px] md:rounded-[48px] border border-rose-100 shadow-sm space-y-6 md:space-y-8 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 text-rose-600/5 group-hover:text-rose-600/10 transition-colors hidden md:block">
+              <AlertTriangle size={120} />
+            </div>
+            <div className="flex items-center gap-3 relative z-10">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600 shrink-0">
                 <AlertTriangle size={18} />
               </div>
-              <h2 className="text-sm font-black text-rose-700 tracking-tight">Danger Zone</h2>
+              <h2 className="text-lg md:text-xl font-black text-rose-700 tracking-tight">Danger Zone</h2>
             </div>
-            <p className="text-xs font-medium text-rose-600/80 leading-relaxed">
+            <p className="text-xs font-medium text-rose-600/80 leading-relaxed relative z-10">
               Menghapus permanen semua transaksi, rekening, budget, investasi, tabungan, kategori, mata uang, jadwal recurring, dan riwayat chat AI Anda. Akun (login, plan, riwayat pembayaran) tidak terhapus.
             </p>
             <button
               onClick={() => setShowResetModal(true)}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black tracking-wide transition-colors"
+              className="relative z-10 w-full flex items-center justify-center gap-2 py-3.5 md:py-4 rounded-xl md:rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black tracking-wide transition-all shadow-xl shadow-rose-200"
             >
               <Trash2 size={14} />
               Reset Semua Data
