@@ -30,6 +30,7 @@ type AppUser = {
   status: "AKTIF" | "NONAKTIF" | "GUEST" | "PENDING";
   whatsapp?: string | null;
   two_factor_secret?: string | null;
+  photoURL?: string | null;
 };
 
 const json = (data: unknown, init: ResponseInit = {}) =>
@@ -362,12 +363,13 @@ const readSession = async (env: Env, request: Request) => {
     status: "AKTIF" | "NONAKTIF" | "GUEST" | "PENDING";
     whatsapp?: string | null;
     two_factor_secret?: string | null;
+    photo_url?: string | null;
   } | null = null;
 
   try {
     result = await env.DB.prepare(
       `SELECT s.id as session_id, s.user_id, s.role, s.expires_at,
-              u.name, u.email, u.plan, u.status, u.whatsapp, u.two_factor_secret
+              u.name, u.email, u.plan, u.status, u.whatsapp, u.two_factor_secret, u.photo_url
          FROM sessions s
          JOIN users u ON u.id = s.user_id
         WHERE s.id = ?`
@@ -377,7 +379,7 @@ const readSession = async (env: Env, request: Request) => {
   } catch {
     result = await env.DB.prepare(
       `SELECT s.id as session_id, s.user_id, u.role as role, s.expires_at,
-              u.name, u.email, u.plan, u.status, u.whatsapp, u.two_factor_secret
+              u.name, u.email, u.plan, u.status, u.whatsapp, u.two_factor_secret, u.photo_url
          FROM sessions s
          JOIN users u ON u.id = s.user_id
         WHERE s.id = ?`
@@ -412,6 +414,7 @@ const readSession = async (env: Env, request: Request) => {
       status: result.status,
       whatsapp: result.whatsapp,
       two_factor_secret: result.two_factor_secret,
+      photoURL: result.photo_url ?? null,
     } satisfies AppUser,
   };
 };
@@ -431,7 +434,7 @@ const readApiTokenSession = async (env: Env, request: Request) => {
 
   const tokenHash = await sha256Hex(rawToken);
   const result = await env.DB.prepare(
-    `SELECT t.id as token_id, u.id as user_id, u.role, u.name, u.email, u.plan, u.status, u.whatsapp, u.two_factor_secret
+    `SELECT t.id as token_id, u.id as user_id, u.role, u.name, u.email, u.plan, u.status, u.whatsapp, u.two_factor_secret, u.photo_url
        FROM api_tokens t
        JOIN users u ON u.id = t.user_id
       WHERE t.token_hash = ?`
@@ -447,6 +450,7 @@ const readApiTokenSession = async (env: Env, request: Request) => {
       status: "AKTIF" | "NONAKTIF" | "GUEST" | "PENDING";
       whatsapp?: string | null;
       two_factor_secret?: string | null;
+      photo_url?: string | null;
     }>();
 
   if (!result) {
@@ -468,6 +472,7 @@ const readApiTokenSession = async (env: Env, request: Request) => {
       status: result.status,
       whatsapp: result.whatsapp,
       two_factor_secret: result.two_factor_secret,
+      photoURL: result.photo_url ?? null,
     } satisfies AppUser,
   };
 };
