@@ -165,17 +165,7 @@ export const CardModal = ({ isOpen, onClose, userId }: CardModalProps) => {
             />
           </div>
 
-          {/* Nilai Base */}
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 text-blue-500">Nilai Base</label>
-            <input 
-              type="number" 
-              value={formData.baseValue}
-              onChange={(e) => setFormData({...formData, baseValue: e.target.value})}
-              placeholder="0"
-              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
-            />
-          </div>
+          {/* Field "Nilai Base" dihapus: nilai IDR dihitung otomatis via kurs live. */}
         </div>
 
         <button 

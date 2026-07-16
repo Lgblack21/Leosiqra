@@ -15,6 +15,7 @@ import {
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LogoImage } from '@/components/ui/LogoImage';
 import { accountService, Account } from '@/lib/services/accountService';
+import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged, User } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
@@ -29,6 +30,11 @@ export default function RekeningPage() {
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [error, setError] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [fxRates, setFxRates] = useState<ExchangeRates>({});
+
+  useEffect(() => {
+    exchangeRateService.getLatestRates().then(setFxRates).catch(console.error);
+  }, []);
 
   const unsubRef = useRef<(() => void) | null>(null);
 
@@ -96,6 +102,10 @@ export default function RekeningPage() {
       maximumFractionDigits: 2
     }).format(num).replace('Rp', '');
   };
+
+  // Nilai IDR otomatis (menggantikan field manual "Nilai Base" yang sudah dihapus).
+  const toIDR = (amount: number, currency: string | undefined) =>
+    exchangeRateService.convert(amount, currency || 'IDR', 'IDR', fxRates);
 
   const formatBalance = (amount: number, currency: string) => {
     try {
@@ -191,7 +201,7 @@ export default function RekeningPage() {
                     <th className="px-5 md:px-10 py-5 md:py-8 text-[10px] font-black text-slate-300 uppercase tracking-widest whitespace-nowrap">Jenis</th>
                     <th className="px-5 md:px-10 py-5 md:py-8 text-[10px] font-black text-slate-300 uppercase tracking-widest text-center whitespace-nowrap">Mata Uang</th>
                     <th className="px-5 md:px-10 py-5 md:py-8 text-[10px] font-black text-slate-300 uppercase tracking-widest text-right whitespace-nowrap">Saldo</th>
-                    <th className="px-5 md:px-10 py-5 md:py-8 text-[10px] font-black text-slate-300 uppercase tracking-widest text-right whitespace-nowrap">Nilai Base</th>
+                    <th className="px-5 md:px-10 py-5 md:py-8 text-[10px] font-black text-slate-300 uppercase tracking-widest text-right whitespace-nowrap">Nilai (IDR)</th>
                     <th className="px-5 md:px-10 py-5 md:py-8 text-[10px] font-black text-slate-300 uppercase tracking-widest text-center">Aksi</th>
                   </tr>
                 </thead>
@@ -223,7 +233,7 @@ export default function RekeningPage() {
                         <span className="px-3 py-1.5 bg-slate-100 text-[9px] font-black text-slate-400 rounded-lg tracking-widest uppercase">{acc.currency}</span>
                       </td>
                       <td className="px-5 md:px-10 py-5 md:py-8 text-right font-black text-slate-900 text-sm whitespace-nowrap">{formatBalance(acc.balance || 0, acc.currency)}</td>
-                      <td className="px-5 md:px-10 py-5 md:py-8 text-right font-black text-slate-700 text-sm whitespace-nowrap"> {formatRp(acc.baseValue || 0)}</td>
+                      <td className="px-5 md:px-10 py-5 md:py-8 text-right font-black text-slate-700 text-sm whitespace-nowrap"> {formatRp(toIDR(acc.balance || 0, acc.currency))}</td>
                       <td className="px-5 md:px-10 py-5 md:py-8">
                         <div className="flex items-center justify-center gap-3">
                           <button

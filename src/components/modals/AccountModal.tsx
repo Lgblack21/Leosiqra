@@ -212,25 +212,16 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
 
           <div className="space-y-3">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Saldo Awal (Initial)</label>
-            <input 
-              type="number" 
+            <input
+              type="number"
               value={formData.initialBalance}
               onChange={(e) => setFormData({...formData, initialBalance: e.target.value})}
               placeholder="0"
               className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
             />
           </div>
-
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nilai Base</label>
-            <input
-              type="number"
-              value={formData.baseValue}
-              onChange={(e) => setFormData({...formData, baseValue: e.target.value})}
-              placeholder="0"
-              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
-            />
-          </div>
+          {/* Field "Nilai Base" dihapus: nilai IDR untuk akun mata uang asing
+              sudah dihitung otomatis via kurs live (lihat toIDR di cards/rekening). */}
         </div>
 
         <div className="space-y-3">
