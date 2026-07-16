@@ -1427,7 +1427,12 @@ async function handleCreateAccount(request: Request, env: Env) {
 
   const payload = await parseJson<Record<string, unknown>>(request);
   const id = generateId();
-  const payloadJson = payload.card_color ? JSON.stringify({ cardColor: payload.card_color }) : null;
+  // Data ekstra akun (cardColor, creditLimit utk kartu kredit/paylater) dititipkan
+  // di kolom payload_json agar tidak perlu migrasi skema.
+  const extra: Record<string, unknown> = {};
+  if (payload.card_color) extra.cardColor = payload.card_color;
+  if (payload.credit_limit !== undefined) extra.creditLimit = Number(payload.credit_limit) || 0;
+  const payloadJson = Object.keys(extra).length ? JSON.stringify(extra) : null;
   await env.DB.prepare(
     `INSERT INTO accounts (
       id, user_id, name, type, currency, balance, initial_balance, base_value, logo_url, logo_label, payload_json, created_at, updated_at
@@ -1472,7 +1477,7 @@ async function handleUpdateAccount(request: Request, env: Env, accountId: string
   ]);
   const entries = Object.entries(payload).filter(([key]) => allowed.has(key));
 
-  if (payload.card_color !== undefined) {
+  if (payload.card_color !== undefined || payload.credit_limit !== undefined) {
     const existing = await env.DB.prepare("SELECT payload_json FROM accounts WHERE id = ? AND user_id = ?")
       .bind(accountId, authResult.session.user.id)
       .first<{ payload_json: string | null }>();
@@ -1484,7 +1489,8 @@ async function handleUpdateAccount(request: Request, env: Env, accountId: string
         // payload_json lama tidak valid JSON — mulai dari objek kosong.
       }
     }
-    payloadObj.cardColor = payload.card_color;
+    if (payload.card_color !== undefined) payloadObj.cardColor = payload.card_color;
+    if (payload.credit_limit !== undefined) payloadObj.creditLimit = Number(payload.credit_limit) || 0;
     entries.push(["payload_json", JSON.stringify(payloadObj)]);
   }
 

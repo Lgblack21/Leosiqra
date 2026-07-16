@@ -29,6 +29,7 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
     balance: '',
     initialBalance: '',
     baseValue: '',
+    creditLimit: '',
     cardColor: ''
   });
   const [uploading, setUploading] = useState(false);
@@ -64,6 +65,7 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
         balance: String(initialData.balance ?? ''),
         initialBalance: String(initialData.initialBalance ?? ''),
         baseValue: String(initialData.baseValue ?? ''),
+        creditLimit: initialData.creditLimit ? String(initialData.creditLimit) : '',
         cardColor: initialData.cardColor || ''
       });
     } else {
@@ -88,6 +90,7 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
           balance: parseFloat(formData.balance) || 0,
           initialBalance: parseFloat(formData.balance) || 0,
           baseValue: parseFloat(formData.baseValue) || 0,
+          creditLimit: parseFloat(formData.creditLimit) || 0,
           cardColor: formData.cardColor
         });
       } else {
@@ -100,11 +103,12 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
           balance: parseFloat(formData.balance) || 0,
           initialBalance: parseFloat(formData.balance) || 0,
           baseValue: parseFloat(formData.baseValue) || 0,
+          creditLimit: parseFloat(formData.creditLimit) || 0,
           cardColor: formData.cardColor
         });
       }
       onClose();
-      setFormData({ name: '', logoUrl: '', type: initialType, currency: 'IDR', balance: '', initialBalance: '', baseValue: '', cardColor: '' });
+      setFormData({ name: '', logoUrl: '', type: initialType, currency: 'IDR', balance: '', initialBalance: '', baseValue: '', creditLimit: '', cardColor: '' });
     } catch (err) {
       console.error("Error saving account:", err);
       setError(err instanceof Error ? err.message : 'Gagal menyimpan rekening. Silakan coba lagi.');
@@ -199,8 +203,24 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
             onChange={(val) => setFormData({...formData, currency: val})}
           />
 
+          {formData.type === 'Credit Card' && (
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 text-indigo-500">Limit Kredit</label>
+              <input
+                type="number"
+                value={formData.creditLimit}
+                onChange={(e) => setFormData({...formData, creditLimit: e.target.value})}
+                placeholder="mis. 10000000"
+                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
+              />
+              <p className="text-[10px] font-medium text-slate-400 pl-1">Plafon maksimal dari aplikasi (Akulaku, ShopeePayLater, Paylater BCA, KK, dll).</p>
+            </div>
+          )}
+
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Saldo Saat Ini</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+              {formData.type === 'Credit Card' ? 'Tagihan Terpakai Saat Ini' : 'Saldo Saat Ini'}
+            </label>
             <input
               type="number"
               value={formData.balance}
@@ -209,7 +229,9 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
               className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
             />
             <p className="text-[10px] font-medium text-slate-400 pl-1 leading-relaxed">
-              Isi saldo rekening kamu sekarang (sesuai bank/dompet). Transaksi yang kamu catat berikutnya akan otomatis menambah/mengurangi saldo ini.
+              {formData.type === 'Credit Card'
+                ? 'Tagihan yang SUDAH terpakai sekarang (isi 0 kalau belum ada). Tiap pengeluaran dari kartu ini otomatis menambah terpakai & mengurangi sisa limit.'
+                : 'Isi saldo rekening kamu sekarang (sesuai bank/dompet). Transaksi yang kamu catat berikutnya akan otomatis menambah/mengurangi saldo ini.'}
             </p>
           </div>
           {/* Field "Saldo Awal (Initial)" & "Nilai Base" digabung/dihapus: satu

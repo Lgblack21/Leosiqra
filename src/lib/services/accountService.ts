@@ -9,6 +9,7 @@ export interface Account {
   balance: number;
   initialBalance: number;
   baseValue?: number;
+  creditLimit?: number; // plafon kartu kredit / paylater (0 = bukan kartu kredit)
   logoUrl?: string;
   logoLabel?: string;
   cardColor?: string;
@@ -26,6 +27,7 @@ export const accountService = {
         balance: Number(data.balance) || 0,
         initial_balance: Number(data.initialBalance) || 0,
         base_value: Number(data.baseValue) || 0,
+        credit_limit: Number(data.creditLimit) || 0,
         logo_url: data.logoUrl || null,
         logo_label: data.logoLabel || null,
         ...(data.cardColor ? { card_color: data.cardColor } : {}),
@@ -39,11 +41,13 @@ export const accountService = {
     const result = await cloudflareApi<{ items: Record<string, unknown>[] }>('/api/member/accounts');
     return result.items.map((data) => {
       let cardColor: string | undefined;
+      let creditLimit = 0;
       const payloadJson = data.payload_json as string | null | undefined;
       if (payloadJson) {
         try {
-          const parsed = JSON.parse(payloadJson) as { cardColor?: string };
+          const parsed = JSON.parse(payloadJson) as { cardColor?: string; creditLimit?: number };
           cardColor = parsed.cardColor;
+          creditLimit = Number(parsed.creditLimit) || 0;
         } catch {
           // payload_json tidak valid JSON — abaikan.
         }
@@ -54,6 +58,7 @@ export const accountService = {
         userId: String(data.user_id ?? ''),
         initialBalance: Number(data.initial_balance) || 0,
         baseValue: Number(data.base_value) || 0,
+        creditLimit,
         logoUrl: (data.logo_url as string | undefined) ?? undefined,
         logoLabel: (data.logo_label as string | undefined) ?? undefined,
         cardColor,
@@ -72,6 +77,7 @@ export const accountService = {
         ...(typeof data.balance === 'number' ? { balance: data.balance } : {}),
         ...(typeof data.initialBalance === 'number' ? { initial_balance: data.initialBalance } : {}),
         ...(typeof data.baseValue === 'number' ? { base_value: data.baseValue } : {}),
+        ...(typeof data.creditLimit === 'number' ? { credit_limit: data.creditLimit } : {}),
         ...(data.logoUrl !== undefined ? { logo_url: data.logoUrl } : {}),
         ...(data.logoLabel !== undefined ? { logo_label: data.logoLabel } : {}),
         ...(data.cardColor !== undefined ? { card_color: data.cardColor } : {}),

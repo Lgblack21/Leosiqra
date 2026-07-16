@@ -191,6 +191,17 @@ export default function MyCardsPage() {
     return toIDR(accountBalance, selectedAccount.currency);
   }, [selectedAccount, accountBalance, toIDR]);
 
+  // Kartu kredit / paylater: pakai model limit, bukan saldo.
+  //   terpakai = tagihan awal + pengeluaran dari kartu - pembayaran ke kartu
+  //   sisa limit = limit - terpakai
+  const isCreditCard = selectedAccount?.type === 'Credit Card' || selectedAccount?.type === 'kartu';
+  const cardUsed = useMemo(() => {
+    if (!selectedAccount) return 0;
+    return Math.max(0, (selectedAccount.initialBalance || 0) + accountTotalOut - accountTotalIn);
+  }, [selectedAccount, accountTotalOut, accountTotalIn]);
+  const cardLimit = selectedAccount?.creditLimit || 0;
+  const cardRemaining = cardLimit - cardUsed;
+
   // Outstanding debt (belum lunas) for selected account
   const accountDebt = useMemo(() => {
     if (!selectedAccountId) return totalGlobalDebt;
@@ -298,9 +309,15 @@ export default function MyCardsPage() {
                     <p className="text-[9px] md:text-[10px] font-black text-white/60 uppercase tracking-[0.2em] mb-2">{selectedAccount.type} | {selectedAccount.currency}</p>
                     <h2 className="text-xl md:text-3xl lg:text-4xl font-black tracking-tight">{selectedAccount.name}</h2>
                     <p className="text-[10px] font-medium text-white/60 mt-1">
-                      Saldo: {formatAmount(accountBalance, selectedAccount.currency)}
-                      {accountBalanceIDR !== null && (
-                        <span className="text-white/50"> &middot; &asymp; {formatRp(accountBalanceIDR)}</span>
+                      {isCreditCard ? (
+                        <>Limit: {formatAmount(cardLimit, selectedAccount.currency)}</>
+                      ) : (
+                        <>
+                          Saldo: {formatAmount(accountBalance, selectedAccount.currency)}
+                          {accountBalanceIDR !== null && (
+                            <span className="text-white/50"> &middot; &asymp; {formatRp(accountBalanceIDR)}</span>
+                          )}
+                        </>
                       )}
                     </p>
                   </div>
@@ -317,16 +334,38 @@ export default function MyCardsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-6 md:gap-8 pt-6 md:pt-8 border-t border-white/10">
-                  <div>
-                    <p className="text-[8px] md:text-[9px] font-black text-white/60 uppercase tracking-widest mb-1">Masuk</p>
-                    <p className="text-sm md:text-lg font-bold">{formatAmount(accountTotalIn, selectedAccount.currency)}</p>
+                {isCreditCard ? (
+                  <div className="pt-6 md:pt-8 border-t border-white/10">
+                    <div className="grid grid-cols-2 gap-6 md:gap-8 mb-4">
+                      <div>
+                        <p className="text-[8px] md:text-[9px] font-black text-white/60 uppercase tracking-widest mb-1">Terpakai</p>
+                        <p className="text-sm md:text-lg font-bold">{formatAmount(cardUsed, selectedAccount.currency)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[8px] md:text-[9px] font-black text-white/60 uppercase tracking-widest mb-1">Sisa Limit</p>
+                        <p className="text-sm md:text-lg font-bold">{formatAmount(cardRemaining, selectedAccount.currency)}</p>
+                      </div>
+                    </div>
+                    {/* Bar penggunaan limit */}
+                    <div className="h-2 rounded-full bg-white/20 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-white/90 transition-all"
+                        style={{ width: `${cardLimit > 0 ? Math.min(100, (cardUsed / cardLimit) * 100) : 0}%` }}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[8px] md:text-[9px] font-black text-white/60 uppercase tracking-widest mb-1">Keluar</p>
-                    <p className="text-sm md:text-lg font-bold">{formatAmount(accountTotalOut, selectedAccount.currency)}</p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-6 md:gap-8 pt-6 md:pt-8 border-t border-white/10">
+                    <div>
+                      <p className="text-[8px] md:text-[9px] font-black text-white/60 uppercase tracking-widest mb-1">Masuk</p>
+                      <p className="text-sm md:text-lg font-bold">{formatAmount(accountTotalIn, selectedAccount.currency)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[8px] md:text-[9px] font-black text-white/60 uppercase tracking-widest mb-1">Keluar</p>
+                      <p className="text-sm md:text-lg font-bold">{formatAmount(accountTotalOut, selectedAccount.currency)}</p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
               <div className="absolute top-[-20%] right-[-10%] w-[400px] h-[400px] bg-white opacity-[0.03] rounded-full pointer-events-none" />
               <div className="absolute bottom-[-30%] left-[-10%] w-[300px] h-[300px] bg-white opacity-[0.05] rounded-full blur-3xl pointer-events-none" />

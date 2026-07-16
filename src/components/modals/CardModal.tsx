@@ -22,7 +22,8 @@ export const CardModal = ({ isOpen, onClose, userId }: CardModalProps) => {
     type: 'Credit Card',
     logoUrl: '',
     currency: 'IDR',
-    initialBalance: '', 
+    initialBalance: '',
+    creditLimit: '',
     baseValue: ''
   });
   const [uploading, setUploading] = useState(false);
@@ -58,9 +59,10 @@ export const CardModal = ({ isOpen, onClose, userId }: CardModalProps) => {
         currency: formData.currency,
         initialBalance: initialBal,
         balance: isCard ? 0 : initialBal, // Cards start with 0 bill/balance, others start with initialBal
+        creditLimit: parseFloat(formData.creditLimit) || 0,
         baseValue: parseFloat(formData.baseValue) || 0
       });
-      setFormData({ name: '', type: 'Credit Card', logoUrl: '', currency: 'IDR', initialBalance: '', baseValue: '' });
+      setFormData({ name: '', type: 'Credit Card', logoUrl: '', currency: 'IDR', initialBalance: '', creditLimit: '', baseValue: '' });
       onClose();
     } catch (error) {
       console.error("Error creating card/account:", error);
@@ -153,19 +155,37 @@ export const CardModal = ({ isOpen, onClose, userId }: CardModalProps) => {
             onChange={(val) => setFormData({...formData, currency: val})}
           />
 
-          {/* Saldo Sekarang / Awal */}
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 text-emerald-500">Saldo Sekarang</label>
-            <input 
-              type="number" 
+          {formData.type === 'Credit Card' && (
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 text-indigo-500">Limit Kredit</label>
+              <input
+                type="number"
+                value={formData.creditLimit}
+                onChange={(e) => setFormData({...formData, creditLimit: e.target.value})}
+                placeholder="mis. 10000000"
+                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
+              />
+              <p className="text-[10px] font-medium text-slate-400 pl-1">Plafon maksimal dari aplikasi (Akulaku, ShopeePayLater, Paylater BCA, KK, dll).</p>
+            </div>
+          )}
+
+          {/* Untuk kartu kredit/paylater: ini tagihan yang SUDAH terpakai saat ini
+              (0 kalau kartu baru). Untuk rekening biasa: saldo sekarang. */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 text-emerald-500">
+              {formData.type === 'Credit Card' ? 'Tagihan Terpakai Saat Ini' : 'Saldo Sekarang'}
+            </label>
+            <input
+              type="number"
               value={formData.initialBalance}
               onChange={(e) => setFormData({...formData, initialBalance: e.target.value})}
               placeholder="0"
               className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-emerald-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
             />
+            {formData.type === 'Credit Card' && (
+              <p className="text-[10px] font-medium text-slate-400 pl-1">Isi 0 kalau belum ada tagihan. Setiap transaksi pengeluaran dari kartu ini otomatis menambah terpakai.</p>
+            )}
           </div>
-
-          {/* Field "Nilai Base" dihapus: nilai IDR dihitung otomatis via kurs live. */}
         </div>
 
         <button 
