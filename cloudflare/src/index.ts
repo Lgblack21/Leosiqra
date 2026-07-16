@@ -1234,6 +1234,7 @@ async function handleQuickTransaction(request: Request, env: Env) {
     type?: string;
     amount?: number;
     category?: string;
+    sub_category?: string;
     account?: string;
     note?: string;
     date?: string;
@@ -1269,6 +1270,7 @@ async function handleQuickTransaction(request: Request, env: Env) {
     type,
     amount,
     category: payload.category?.trim() || undefined,
+    subCategory: payload.sub_category?.trim() || undefined,
     currency: match.currency,
     accountId: match.id,
     date: payload.date ?? nowIso().slice(0, 10),

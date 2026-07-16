@@ -6,7 +6,6 @@ import {
   ArrowDownCircle,
   ArrowUpCircle,
   Wallet,
-  Tag,
   StickyNote,
   Check,
   Loader2,
@@ -16,6 +15,9 @@ import {
 import { cn } from "@/lib/utils";
 import { cloudflareApi } from "@/lib/cloudflare-api";
 import { accountService, Account } from "@/lib/services/accountService";
+import { auth } from "@/lib/cf-client";
+import { onAuthStateChanged } from "@/lib/cf-auth";
+import { CategorySelect } from "@/components/CategorySelect";
 
 type AuthState = "loading" | "ok" | "unauth";
 type TxType = "pengeluaran" | "pemasukan";
@@ -28,55 +30,37 @@ const groupDigits = (digits: string) =>
 export default function InputCepatPage() {
   const [authState, setAuthState] = useState<AuthState>("loading");
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [categorySuggestions, setCategorySuggestions] = useState<string[]>([]);
 
   const [type, setType] = useState<TxType>("pengeluaran");
   const [amount, setAmount] = useState(""); // digit murni
   const [accountId, setAccountId] = useState("");
   const [category, setCategory] = useState("");
+  const [subCategory, setSubCategory] = useState("");
   const [note, setNote] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
 
+  // Pakai onAuthStateChanged (bukan panggil /api/auth/me langsung) supaya
+  // auth.currentUser terisi — dibutuhkan CategorySelect (kategori yang sama
+  // dengan Input Harian) untuk query kategori milik user.
   useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const me = await cloudflareApi<{ user?: unknown | null }>("/api/auth/me");
-        if (!alive) return;
-        if (!me.user) {
-          setAuthState("unauth");
-          return;
-        }
-        setAuthState("ok");
-
-        const accs = await accountService.getUserAccounts("");
-        if (!alive) return;
-        setAccounts(accs);
-        if (accs.length > 0) setAccountId(accs[0].id ?? "");
-
-        // Saran kategori dari transaksi terakhir (best-effort, jangan sampai
-        // menggagalkan halaman kalau error).
-        try {
-          const tx = await cloudflareApi<{ items: { category?: string }[] }>(
-            "/api/member/transactions?limit=100"
-          );
-          if (!alive) return;
-          const uniq = Array.from(
-            new Set((tx.items || []).map((t) => (t.category || "").trim()).filter(Boolean))
-          ).slice(0, 30);
-          setCategorySuggestions(uniq);
-        } catch {
-          /* abaikan */
-        }
-      } catch {
-        if (alive) setAuthState("unauth");
+    const unsub = onAuthStateChanged(auth, (u) => {
+      if (!u) {
+        setAuthState("unauth");
+        return;
       }
-    })();
-    return () => {
-      alive = false;
-    };
+      setAuthState("ok");
+
+      accountService
+        .getUserAccounts(u.uid)
+        .then((accs) => {
+          setAccounts(accs);
+          setAccountId((prev) => prev || accs[0]?.id || "");
+        })
+        .catch(() => setAccounts([]));
+    });
+    return () => unsub();
   }, []);
 
   const selectedAccount = useMemo(
@@ -98,6 +82,7 @@ export default function InputCepatPage() {
           type,
           amount: amountNumber,
           category: category.trim(),
+          sub_category: subCategory.trim(),
           account: selectedAccount.name,
           note: note.trim(),
         },
@@ -236,23 +221,23 @@ export default function InputCepatPage() {
           )}
         </div>
 
-        {/* Kategori */}
+        {/* Kategori — pakai picker yang sama dengan Input Harian, supaya daftar
+            kategori & sub-kategorinya selalu konsisten di seluruh aplikasi. */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-3">
-          <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
-            <Tag size={12} /> Kategori
-          </label>
-          <input
-            list="kategori-suggestions"
+          <CategorySelect
+            label="Kategori"
+            type={type === "pengeluaran" ? "expense" : "income"}
             value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            placeholder="mis. Makan, Transport"
-            className="w-full text-sm font-bold text-slate-800 bg-slate-50 rounded-xl px-3 py-3 outline-none border border-slate-100 focus:border-indigo-300"
+            onChange={setCategory}
+            onSubCategoryChange={setSubCategory}
+            showBadge={false}
           />
-          <datalist id="kategori-suggestions">
-            {categorySuggestions.map((c) => (
-              <option key={c} value={c} />
-            ))}
-          </datalist>
+          <Link
+            href="/membership/nama-akun"
+            className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 mt-2"
+          >
+            Belum ada / kelola kategori <ExternalLink size={10} />
+          </Link>
         </div>
 
         {/* Catatan (opsional) */}
