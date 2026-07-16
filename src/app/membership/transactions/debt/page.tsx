@@ -270,6 +270,14 @@ export default function DebtPage() {
                       </td>
                       <td className="px-4 md:px-6 py-4 md:py-6">
                         <p className="text-sm font-bold text-slate-700">{trx.note || '-'}</p>
+                        {trx.category === 'Hutang' && trx.subCategory && trx.subCategory !== 'Hutang' && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[9px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded whitespace-nowrap">{trx.subCategory}</span>
+                            {trx.installmentTenor ? (
+                              <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap">≈ {formatAmount((trx.totalDebt || 0) / (trx.installmentTenor || 1), trx.currency)}/bln</span>
+                            ) : null}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 md:px-6 py-4 md:py-6 text-center whitespace-nowrap">
                         <span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{trx.currency || 'IDR'}</span>

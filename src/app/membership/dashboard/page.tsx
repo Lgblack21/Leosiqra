@@ -19,7 +19,6 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { investmentService, Investment } from '@/lib/services/investmentService';
-import { cloudflareApi } from '@/lib/cloudflare-api';
 
 interface MarketTicker {
   label: string; sub: string; val: string; pct: string; up: boolean | null;
@@ -39,27 +38,6 @@ export default function MonthlyDashboard() {
   const [creditCardBills, setCreditCardBills] = useState(0);
   const [otherDebts, setOtherDebts] = useState(0);
 
-  // Ambil ringkasan hutang dari profil (tagihan kartu kredit & hutang lainnya).
-  useEffect(() => {
-    let active = true;
-    cloudflareApi<{ item?: { credit_card_bills?: number; other_debts?: number } | null }>(
-      '/api/member/profile'
-    )
-      .then((res) => {
-        if (!active) return;
-        setCreditCardBills(Number(res.item?.credit_card_bills) || 0);
-        setOtherDebts(Number(res.item?.other_debts) || 0);
-      })
-      .catch(() => {
-        if (!active) return;
-        setCreditCardBills(0);
-        setOtherDebts(0);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -75,6 +53,16 @@ export default function MonthlyDashboard() {
         });
         setTransactions(periodTransactions);
         setInvestments(allInvestments);
+
+        // Ringkasan hutang dihitung otomatis dari catatan Hutang yang belum lunas
+        // (jenisnya disimpan di subCategory oleh DebtModal): Kartu Kredit vs lainnya.
+        const unpaidDebts = allTransactions.filter(
+          (t) => t.type === 'debt' && t.category === 'Hutang' && t.paymentStatus !== 'lunas'
+        );
+        const sumIDR = (list: typeof unpaidDebts) =>
+          list.reduce((s, t) => s + (Number(t.amountIDR) || Number(t.amount) || 0), 0);
+        setCreditCardBills(sumIDR(unpaidDebts.filter((t) => t.subCategory === 'Kartu Kredit')));
+        setOtherDebts(sumIDR(unpaidDebts.filter((t) => t.subCategory !== 'Kartu Kredit')));
       })
       .catch((err) => {
         console.error('Gagal memuat dashboard member:', err);

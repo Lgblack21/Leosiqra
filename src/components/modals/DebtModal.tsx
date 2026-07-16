@@ -16,6 +16,10 @@ interface DebtModalProps {
   onClose: () => void;
 }
 
+// Jenis hutang — dipakai untuk memilah "Tagihan Kartu Kredit" vs "Hutang Lainnya"
+// di Dashboard (disimpan di subCategory).
+const DEBT_KINDS = ['Kartu Kredit', 'Pinjol', 'Paylater', 'Bank / KTA', 'Perorangan', 'Lainnya'] as const;
+
 export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -26,17 +30,30 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
   const [formData, setFormData] = useState({
     debtType: 'hutang' as 'hutang' | 'piutang',
     paymentStatus: 'belum' as 'lunas' | 'belum',
+    debtKind: 'Pinjol' as (typeof DEBT_KINDS)[number],
     amount: '',
     currency: 'IDR',
     lenderName: '',
     note: '',
     accountId: '',
     installmentTenor: '',
-    monthlyInterest: '',
-    totalInterest: '',
-    totalDebt: '',
+    interestPct: '', // bunga per bulan dalam persen (%)
     date: new Date().toISOString().split('T')[0]
   });
+
+  // Perhitungan bunga otomatis (flat/bunga tetap per bulan):
+  //   bunga/bln (Rp) = pokok × %bunga; total bunga = bunga/bln × tenor;
+  //   total hutang = pokok + total bunga; cicilan/bln = total hutang ÷ tenor.
+  const calc = (() => {
+    const pokok = parseFloat(formData.amount) || 0;
+    const tenor = parseInt(formData.installmentTenor) || 0;
+    const pct = parseFloat(formData.interestPct) || 0;
+    const bungaPerBulan = pokok * (pct / 100);
+    const totalBunga = bungaPerBulan * tenor;
+    const totalHutang = pokok + totalBunga;
+    const cicilanPerBulan = tenor > 0 ? totalHutang / tenor : totalHutang;
+    return { pokok, tenor, bungaPerBulan, totalBunga, totalHutang, cicilanPerBulan };
+  })();
 
   useEffect(() => {
     if (isOpen && userId) {
@@ -80,14 +97,16 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
         amountIDR: convertedAmount || amount,
         currency: formData.currency,
         category: isHutang ? 'Hutang' : 'Piutang',
-        subCategory: isHutang ? 'Hutang' : 'Piutang',
+        // subCategory menyimpan jenis hutang (Kartu Kredit/Pinjol/Paylater/…)
+        // agar Dashboard bisa memilah tagihan kartu kredit vs hutang lainnya.
+        subCategory: isHutang ? formData.debtKind : 'Piutang',
         lenderName: formData.lenderName,
         note: formData.note,
         accountId: formData.accountId || 'General',
-        installmentTenor: parseInt(formData.installmentTenor) || 0,
-        monthlyInterest: parseFloat(formData.monthlyInterest) || 0,
-        totalInterest: parseFloat(formData.totalInterest) || 0,
-        totalDebt: parseFloat(formData.totalDebt) || 0,
+        installmentTenor: calc.tenor,
+        monthlyInterest: calc.bungaPerBulan,
+        totalInterest: calc.totalBunga,
+        totalDebt: calc.totalHutang,
         date: selectedDate,
         displayDate,
         status: isLunas ? 'VERIFIED' : 'PENDING',
@@ -121,8 +140,8 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
 
       onClose();
       setFormData({
-        debtType: 'hutang', paymentStatus: 'belum', amount: '', currency: 'IDR', lenderName: '', note: '', accountId: '',
-        installmentTenor: '', monthlyInterest: '', totalInterest: '', totalDebt: '',
+        debtType: 'hutang', paymentStatus: 'belum', debtKind: 'Pinjol', amount: '', currency: 'IDR', lenderName: '', note: '', accountId: '',
+        installmentTenor: '', interestPct: '',
         date: new Date().toISOString().split('T')[0]
       });
     } catch (e) {
@@ -157,6 +176,22 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
             ))}
           </div>
         </div>
+
+        {/* Jenis hutang (untuk pemilahan di Dashboard) */}
+        {formData.debtType === 'hutang' && (
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Jenis Hutang</label>
+            <div className="flex flex-wrap gap-2">
+              {DEBT_KINDS.map(k => (
+                <button key={k} type="button" onClick={() => setFormData(p => ({ ...p, debtKind: k }))}
+                  className={`px-3 py-2 rounded-xl text-[11px] font-black transition-all ${
+                    formData.debtKind === k ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                  }`}
+                >{k}</button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Status Pembayaran */}
         <div className="space-y-2">
@@ -246,29 +281,34 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
               placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-4 text-sm font-bold text-slate-700 transition-all" />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Bunga / Bln</label>
-            <input type="number" value={formData.monthlyInterest} onChange={e => setFormData(p => ({...p, monthlyInterest: e.target.value}))}
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Bunga/bln (%)</label>
+            <input type="number" step="0.01" value={formData.interestPct} onChange={e => setFormData(p => ({...p, interestPct: e.target.value}))}
               placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-4 text-sm font-bold text-slate-700 transition-all" />
           </div>
-           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Total Bunga</label>
-            <input type="number" value={formData.totalInterest} onChange={e => setFormData(p => ({...p, totalInterest: e.target.value}))}
-              placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-4 text-sm font-bold text-slate-700 transition-all" />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Total Hutang</label>
-            <input type="number" value={formData.totalDebt} onChange={e => setFormData(p => ({...p, totalDebt: e.target.value}))}
-              placeholder="Nominal + Total Bunga" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-4 text-sm font-bold text-slate-700 transition-all" />
-          </div>
-           <div className="space-y-2">
+          <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
             <input type="date" value={formData.date} onChange={e => setFormData(p => ({...p, date: e.target.value}))}
               className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-4 text-sm font-bold text-slate-700 transition-all" />
           </div>
         </div>
+
+        {/* Ringkasan bunga & cicilan — dihitung otomatis dari pokok, tenor, & %bunga. */}
+        {(calc.tenor > 0 || calc.totalBunga > 0) && (
+          <div className="bg-slate-900 rounded-2xl p-4 grid grid-cols-3 gap-3 text-center">
+            <div>
+              <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Total Bunga</p>
+              <p className="text-xs font-black text-amber-300">{formatCurrency(calc.totalBunga, formData.currency)}</p>
+            </div>
+            <div className="border-x border-white/10">
+              <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Cicilan/bln</p>
+              <p className="text-xs font-black text-white">{formatCurrency(calc.cicilanPerBulan, formData.currency)}</p>
+            </div>
+            <div>
+              <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Total Hutang</p>
+              <p className="text-xs font-black text-emerald-300">{formatCurrency(calc.totalHutang, formData.currency)}</p>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Deskripsi / Catatan</label>
