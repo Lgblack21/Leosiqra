@@ -18,17 +18,28 @@ import { LedgerModal } from '@/components/modals/LedgerModal';
 import { AccountModal } from '@/components/modals/AccountModal';
 import { CardModal } from '@/components/modals/CardModal';
 import { CurrencyModal } from '@/components/modals/CurrencyModal';
+import { accountService } from '@/lib/services/accountService';
 import type { Investment } from '@/lib/services/investmentService';
 
 export const GlobalModalWrapper = () => {
   const { activeModal, modalData, closeModal } = useModal();
   const [user, setUser] = useState<{ id: string } | null>(null);
+  const [accountTypes, setAccountTypes] = useState<string[]>([]);
 
   useEffect(() => {
     cloudflareApi<{ user?: { id: string } | null }>('/api/auth/me')
       .then((result) => setUser(result.user ?? null))
       .catch(() => setUser(null));
   }, []);
+
+  // Jenis rekening custom yang pernah dipakai user, supaya muncul di dropdown
+  // AccountModal saat dibuka dari quick-action header ("Tambah Bank").
+  useEffect(() => {
+    if (!user) return;
+    accountService.getUserAccounts(user.id)
+      .then((accs) => setAccountTypes(Array.from(new Set(accs.map((a) => a.type).filter(Boolean)))))
+      .catch(() => {});
+  }, [user]);
 
   if (!activeModal || !user) return null;
 
@@ -95,10 +106,11 @@ export const GlobalModalWrapper = () => {
         userId={user.id} 
       />
 
-      <AccountModal 
-        isOpen={activeModal === 'rekening'} 
-        onClose={closeModal} 
-        userId={user.id} 
+      <AccountModal
+        isOpen={activeModal === 'rekening'}
+        onClose={closeModal}
+        userId={user.id}
+        existingTypes={accountTypes}
       />
 
       <CardModal 

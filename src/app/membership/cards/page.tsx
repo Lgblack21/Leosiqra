@@ -647,6 +647,7 @@ export default function MyCardsPage() {
           isOpen={isModalOpen}
           onClose={() => { setIsModalOpen(false); setEditingAccount(null); }}
           initialData={editingAccount}
+          existingTypes={Array.from(new Set(accounts.map(a => a.type).filter(Boolean)))}
         />
       )}
     </div>

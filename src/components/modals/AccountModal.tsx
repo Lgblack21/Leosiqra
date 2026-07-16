@@ -18,9 +18,15 @@ interface AccountModalProps {
   initialType?: Account['type'];
   title?: string;
   initialData?: Account | null;
+  // Jenis rekening custom yang sudah pernah dipakai user (mis. "Reksadana",
+  // "Emas Digital"), supaya bisa dipilih ulang tanpa mengetik lagi.
+  existingTypes?: string[];
 }
 
-export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Account', title = 'Tambah Rekening Baru', initialData = null }: AccountModalProps) => {
+const BUILT_IN_TYPES = ['Bank Account', 'E-Wallet', 'Cash', 'Investment Account', 'Credit Card'];
+const CUSTOM_TYPE_VALUE = '__custom__';
+
+export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Account', title = 'Tambah Rekening Baru', initialData = null, existingTypes = [] }: AccountModalProps) => {
   const [formData, setFormData] = useState({
     name: '',
     logoUrl: '',
@@ -35,7 +41,17 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [isCustomTypeMode, setIsCustomTypeMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Gabungan jenis bawaan + jenis custom yang pernah dipakai user + jenis akun
+  // yang sedang diedit (kalau custom), supaya semuanya tetap terpilih di dropdown.
+  const typeOptions = (() => {
+    const set = new Set<string>(BUILT_IN_TYPES);
+    existingTypes.forEach((t) => t && set.add(t));
+    if (formData.type) set.add(formData.type);
+    return Array.from(set);
+  })();
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -56,6 +72,7 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
   useEffect(() => {
     if (!isOpen) return;
     setError('');
+    setIsCustomTypeMode(false);
     if (initialData) {
       setFormData({
         name: initialData.name || '',
@@ -109,6 +126,7 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
       }
       onClose();
       setFormData({ name: '', logoUrl: '', type: initialType, currency: 'IDR', balance: '', initialBalance: '', baseValue: '', creditLimit: '', cardColor: '' });
+      setIsCustomTypeMode(false);
     } catch (err) {
       console.error("Error saving account:", err);
       setError(err instanceof Error ? err.message : 'Gagal menyimpan rekening. Silakan coba lagi.');
@@ -181,22 +199,48 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
           </div>
           <div className="space-y-3">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Jenis Rekening</label>
-            <div className="relative">
-              <select 
-                value={formData.type}
-                onChange={(e) => setFormData({...formData, type: e.target.value as Account['type']})}
-                className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer"
-              >
-                <option value="Bank Account">Bank Account</option>
-                <option value="E-Wallet">E-Wallet</option>
-                <option value="Cash">Cash</option>
-                <option value="Investment Account">Investment Account</option>
-                <option value="Credit Card">Credit Card</option>
-              </select>
-              <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-            </div>
+            {isCustomTypeMode ? (
+              <div className="flex items-center gap-2">
+                <input
+                  autoFocus
+                  type="text"
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  placeholder="mis. Reksadana, Emas Digital, Dompet Digital"
+                  className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => { setIsCustomTypeMode(false); setFormData({ ...formData, type: initialData?.type || initialType }); }}
+                  className="shrink-0 px-3 py-3 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all text-[10px] font-black uppercase tracking-widest"
+                >
+                  Batal
+                </button>
+              </div>
+            ) : (
+              <div className="relative">
+                <select
+                  value={formData.type}
+                  onChange={(e) => {
+                    if (e.target.value === CUSTOM_TYPE_VALUE) {
+                      setIsCustomTypeMode(true);
+                      setFormData({ ...formData, type: '' });
+                      return;
+                    }
+                    setFormData({ ...formData, type: e.target.value as Account['type'] });
+                  }}
+                  className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer"
+                >
+                  {typeOptions.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                  <option value={CUSTOM_TYPE_VALUE}>+ Tambah Jenis Baru...</option>
+                </select>
+                <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+              </div>
+            )}
           </div>
-          
+
           <CurrencySelect 
             label="Mata Uang"
             value={formData.currency}
@@ -274,7 +318,7 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
 
         <button
           onClick={handleCreate}
-          disabled={saving || !formData.name}
+          disabled={saving || !formData.name || !formData.type}
           className="w-full bg-blue-600 disabled:bg-slate-300 text-white px-6 py-4 rounded-xl text-xs font-black shadow-lg shadow-blue-100 disabled:shadow-none transition-all mt-6"
         >
           {saving
