@@ -120,6 +120,12 @@ const normalize = (input: unknown): unknown => {
     if (key.includes("_")) {
       const camel = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
       result[camel] = normalized;
+      // Kapitalisasi non-standar: app memakai `photoURL` (URL kapital), sedangkan
+      // camelCase generik dari `photo_url` menghasilkan `photoUrl` — tanpa alias ini
+      // foto profil terbaca undefined saat reload dan avatar hilang.
+      if (camel === "photoUrl") {
+        result["photoURL"] = normalized;
+      }
     }
   }
   return result;
