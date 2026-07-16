@@ -26,7 +26,7 @@ export const LandingFooter = () => (
             <li><a href="#" className="hover:text-indigo-600 transition-colors">Produk</a></li>
             <li><a href="#" className="hover:text-indigo-600 transition-colors">Fitur</a></li>
             <li><a href="#" className="hover:text-indigo-600 transition-colors">Cara Kerja</a></li>
-            <li><a href="/panduan/shortcut-ios" className="hover:text-indigo-600 transition-colors">Shortcut iOS</a></li>
+            <li><a href="/input-cepat" className="hover:text-indigo-600 transition-colors">Input Cepat</a></li>
           </ul>
         </div>
 

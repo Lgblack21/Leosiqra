@@ -280,13 +280,19 @@ export default function InputCepatPage() {
           </div>
         )}
 
-        <p className="text-center text-[11px] font-medium text-slate-400 mt-4">
-          Tips: buka lewat Safari →{" "}
-          <span className="inline-flex items-center gap-1 font-bold text-slate-500">
-            <ExternalLink size={11} /> Share
-          </span>{" "}
-          → &quot;Add to Home Screen&quot; supaya jadi ikon di layar iPhone.
-        </p>
+        <div className="text-center text-[11px] font-medium text-slate-400 mt-4 space-y-1">
+          <p>
+            <span className="font-bold text-slate-500">iPhone (Safari):</span> tap{" "}
+            <span className="inline-flex items-center gap-1 font-bold text-slate-500">
+              <ExternalLink size={11} /> Share
+            </span>{" "}
+            → &quot;Add to Home Screen&quot;.
+          </p>
+          <p>
+            <span className="font-bold text-slate-500">Android (Chrome):</span> tap menu{" "}
+            <span className="font-bold text-slate-500">⋮</span> → &quot;Add to Home screen&quot; / &quot;Install app&quot;.
+          </p>
+        </div>
       </div>
 
       {/* Tombol simpan — sticky di bawah */}

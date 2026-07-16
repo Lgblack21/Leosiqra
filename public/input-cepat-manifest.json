@@ -1,0 +1,14 @@
+{
+  "name": "Input Cepat - Leosiqra",
+  "short_name": "Input Cepat",
+  "description": "Catat transaksi harian dengan cepat dari layar utama.",
+  "start_url": "/input-cepat",
+  "scope": "/input-cepat",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#4f46e5",
+  "icons": [
+    { "src": "/images/Logo-new.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/images/Logo-new.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
