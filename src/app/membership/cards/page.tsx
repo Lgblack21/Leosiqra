@@ -66,15 +66,18 @@ export default function MyCardsPage() {
           const accs = snap.docs.map(doc => {
             const d = doc.data();
             let cardColor: string | undefined;
+            let creditLimit = 0;
             const payloadJson = (d.payload_json ?? d.payloadJson) as string | null | undefined;
             if (payloadJson) {
               try {
-                cardColor = (JSON.parse(payloadJson) as { cardColor?: string }).cardColor;
+                const parsed = JSON.parse(payloadJson) as { cardColor?: string; creditLimit?: number };
+                cardColor = parsed.cardColor;
+                creditLimit = Number(parsed.creditLimit) || 0;
               } catch {
                 // payload_json tidak valid JSON — abaikan.
               }
             }
-            return { ...d, id: doc.id, balance: Number(d.balance) || 0, cardColor, createdAt: d.createdAt?.toDate?.() ?? new Date() } as Account;
+            return { ...d, id: doc.id, balance: Number(d.balance) || 0, cardColor, creditLimit, createdAt: d.createdAt?.toDate?.() ?? new Date() } as Account;
           });
           setAccounts(accs);
           // Auto-select first account

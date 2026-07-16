@@ -47,7 +47,21 @@ export default function RekeningPage() {
         const unsubSnap = onSnapshot(q, (snap) => {
           setAccounts(snap.docs.map(doc => {
             const d = doc.data();
-            return { ...d, id: doc.id, balance: Number(d.balance) || 0, createdAt: d.createdAt?.toDate?.() ?? new Date() } as Account;
+            // payload_json menyimpan cardColor & creditLimit — wajib di-parse, kalau
+            // tidak keduanya hilang saat rekening ini diedit lewat AccountModal.
+            let cardColor: string | undefined;
+            let creditLimit = 0;
+            const payloadJson = (d.payload_json ?? d.payloadJson) as string | null | undefined;
+            if (payloadJson) {
+              try {
+                const parsed = JSON.parse(payloadJson) as { cardColor?: string; creditLimit?: number };
+                cardColor = parsed.cardColor;
+                creditLimit = Number(parsed.creditLimit) || 0;
+              } catch {
+                // payload_json tidak valid JSON — abaikan.
+              }
+            }
+            return { ...d, id: doc.id, balance: Number(d.balance) || 0, cardColor, creditLimit, createdAt: d.createdAt?.toDate?.() ?? new Date() } as Account;
           }));
           setLoading(false);
         }, (err) => {
