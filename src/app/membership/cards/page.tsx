@@ -147,6 +147,40 @@ export default function MyCardsPage() {
     return transactions.filter(t => t.type === 'debt' && t.category === 'Hutang').reduce((s, t) => s + (t.amountIDR || t.amount), 0);
   }, [transactions]);
 
+  const isCreditType = (type: string | undefined) => type === 'Credit Card' || type === 'kartu';
+
+  // Limit per kartu kredit/paylater (dalam mata uang kartunya):
+  //   terpakai = tagihan awal + pengeluaran dari kartu - pembayaran ke kartu
+  const creditByAccount = useMemo(() => {
+    const map = new Map<string, { limit: number; used: number; remaining: number }>();
+    accounts.filter(a => isCreditType(a.type) && a.id).forEach(acc => {
+      const accTx = transactions.filter(t => t.accountId === acc.id);
+      const inSum = accTx
+        .filter(t => t.type === 'pemasukan' || (t.type === 'debt' && t.category === 'Hutang'))
+        .reduce((s, t) => s + t.amount, 0);
+      const outSum = accTx
+        .filter(t => t.type === 'pengeluaran' || (t.type === 'debt' && t.category === 'Piutang'))
+        .reduce((s, t) => s + t.amount, 0);
+      const limit = acc.creditLimit || 0;
+      const used = Math.max(0, (acc.initialBalance || 0) + outSum - inSum);
+      map.set(acc.id!, { limit, used, remaining: limit - used });
+    });
+    return map;
+  }, [accounts, transactions]);
+
+  // Ringkasan semua kartu, dikonversi ke IDR karena bisa beda mata uang.
+  const creditTotals = useMemo(() => {
+    let limit = 0;
+    let used = 0;
+    accounts.filter(a => isCreditType(a.type) && a.id).forEach(acc => {
+      const info = creditByAccount.get(acc.id!);
+      if (!info) return;
+      limit += toIDR(info.limit, acc.currency);
+      used += toIDR(info.used, acc.currency);
+    });
+    return { limit, used, remaining: limit - used, count: creditByAccount.size };
+  }, [accounts, creditByAccount, toIDR]);
+
   // === PER-ACCOUNT DETAIL ===
   const selectedAccount = useMemo(() => accounts.find(a => a.id === selectedAccountId), [accounts, selectedAccountId]);
 
@@ -191,16 +225,12 @@ export default function MyCardsPage() {
     return toIDR(accountBalance, selectedAccount.currency);
   }, [selectedAccount, accountBalance, toIDR]);
 
-  // Kartu kredit / paylater: pakai model limit, bukan saldo.
-  //   terpakai = tagihan awal + pengeluaran dari kartu - pembayaran ke kartu
-  //   sisa limit = limit - terpakai
-  const isCreditCard = selectedAccount?.type === 'Credit Card' || selectedAccount?.type === 'kartu';
-  const cardUsed = useMemo(() => {
-    if (!selectedAccount) return 0;
-    return Math.max(0, (selectedAccount.initialBalance || 0) + accountTotalOut - accountTotalIn);
-  }, [selectedAccount, accountTotalOut, accountTotalIn]);
-  const cardLimit = selectedAccount?.creditLimit || 0;
-  const cardRemaining = cardLimit - cardUsed;
+  // Kartu kredit / paylater: pakai model limit (dihitung di creditByAccount), bukan saldo.
+  const isCreditCard = isCreditType(selectedAccount?.type);
+  const heroCredit = selectedAccountId ? creditByAccount.get(selectedAccountId) : undefined;
+  const cardLimit = heroCredit?.limit ?? 0;
+  const cardUsed = heroCredit?.used ?? 0;
+  const cardRemaining = heroCredit?.remaining ?? 0;
 
   // Outstanding debt (belum lunas) for selected account
   const accountDebt = useMemo(() => {
@@ -452,6 +482,38 @@ export default function MyCardsPage() {
 
         {/* RIGHT: Account List */}
         <div className="flex flex-col gap-6">
+          {/* Ringkasan limit semua kartu kredit / paylater */}
+          {creditTotals.count > 0 && (
+            <div className="bg-slate-900 rounded-2xl p-5 text-white">
+              <div className="flex items-center gap-2 mb-4">
+                <CreditCard size={14} className="text-white/60" />
+                <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">
+                  Limit Kartu &amp; Paylater ({creditTotals.count})
+                </p>
+              </div>
+              <div className="grid grid-cols-3 gap-3 text-center mb-3">
+                <div>
+                  <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Limit</p>
+                  <p className="text-[11px] font-black text-white">{formatRp(creditTotals.limit)}</p>
+                </div>
+                <div className="border-x border-white/10">
+                  <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Terpakai</p>
+                  <p className="text-[11px] font-black text-rose-300">{formatRp(creditTotals.used)}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Sisa</p>
+                  <p className="text-[11px] font-black text-emerald-300">{formatRp(creditTotals.remaining)}</p>
+                </div>
+              </div>
+              <div className="h-1.5 rounded-full bg-white/15 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-white/80 transition-all"
+                  style={{ width: `${creditTotals.limit > 0 ? Math.min(100, (creditTotals.used / creditTotals.limit) * 100) : 0}%` }}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between px-2">
             <h3 className="text-lg font-black text-slate-900">Daftar Akun</h3>
           </div>
@@ -466,6 +528,7 @@ export default function MyCardsPage() {
             <div className="space-y-4">
               {accounts.map((acc) => {
                 const swatch = CARD_COLOR_OPTIONS.find(c => c.key === acc.cardColor)?.swatch;
+                const creditInfo = acc.id ? creditByAccount.get(acc.id) : undefined;
                 return (
                 <div
                   key={acc.id}
@@ -484,6 +547,12 @@ export default function MyCardsPage() {
                     <div className="min-w-0">
                       <p className="text-[12px] md:text-sm font-bold text-slate-900 truncate">{acc.name}</p>
                       <p className="text-[9px] md:text-[10px] font-medium text-slate-400">{acc.type} | {acc.currency}</p>
+                      {isCreditType(acc.type) && creditInfo && (
+                        <p className="text-[9px] md:text-[10px] font-bold text-slate-500 mt-0.5 truncate">
+                          Sisa <span className={creditInfo.remaining < 0 ? 'text-rose-500' : 'text-emerald-600'}>{formatAmount(creditInfo.remaining, acc.currency)}</span>
+                          <span className="text-slate-300"> / {formatAmount(creditInfo.limit, acc.currency)}</span>
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="text-right shrink-0 flex items-center gap-1">
