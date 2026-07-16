@@ -25,6 +25,7 @@ import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
 import { getCardGradientClass, CARD_COLOR_OPTIONS } from '@/lib/cardColors';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { AccountModal } from '@/components/modals/AccountModal';
+import { isCreditAccountType, computeCreditUsage, CreditUsage } from '@/lib/creditCard';
 
 export default function MyCardsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -150,23 +151,13 @@ export default function MyCardsPage() {
     return transactions.filter(t => t.type === 'debt' && t.category === 'Hutang').reduce((s, t) => s + (t.amountIDR || t.amount), 0);
   }, [transactions]);
 
-  const isCreditType = (type: string | undefined) => type === 'Credit Card' || type === 'kartu';
-
-  // Limit per kartu kredit/paylater (dalam mata uang kartunya):
-  //   terpakai = tagihan awal + pengeluaran dari kartu - pembayaran ke kartu
+  // Limit per kartu kredit/paylater (dalam mata uang kartunya) — sumber
+  // perhitungannya dipakai bersama dengan halaman Rekening (lib/creditCard.ts)
+  // supaya angkanya tidak pernah berbeda antar halaman.
   const creditByAccount = useMemo(() => {
-    const map = new Map<string, { limit: number; used: number; remaining: number }>();
-    accounts.filter(a => isCreditType(a.type) && a.id).forEach(acc => {
-      const accTx = transactions.filter(t => t.accountId === acc.id);
-      const inSum = accTx
-        .filter(t => t.type === 'pemasukan' || (t.type === 'debt' && t.category === 'Hutang'))
-        .reduce((s, t) => s + t.amount, 0);
-      const outSum = accTx
-        .filter(t => t.type === 'pengeluaran' || (t.type === 'debt' && t.category === 'Piutang'))
-        .reduce((s, t) => s + t.amount, 0);
-      const limit = acc.creditLimit || 0;
-      const used = Math.max(0, (acc.initialBalance || 0) + outSum - inSum);
-      map.set(acc.id!, { limit, used, remaining: limit - used });
+    const map = new Map<string, CreditUsage>();
+    accounts.filter(a => isCreditAccountType(a.type) && a.id).forEach(acc => {
+      map.set(acc.id!, computeCreditUsage(acc, transactions));
     });
     return map;
   }, [accounts, transactions]);
@@ -175,7 +166,7 @@ export default function MyCardsPage() {
   const creditTotals = useMemo(() => {
     let limit = 0;
     let used = 0;
-    accounts.filter(a => isCreditType(a.type) && a.id).forEach(acc => {
+    accounts.filter(a => isCreditAccountType(a.type) && a.id).forEach(acc => {
       const info = creditByAccount.get(acc.id!);
       if (!info) return;
       limit += toIDR(info.limit, acc.currency);
@@ -229,7 +220,7 @@ export default function MyCardsPage() {
   }, [selectedAccount, accountBalance, toIDR]);
 
   // Kartu kredit / paylater: pakai model limit (dihitung di creditByAccount), bukan saldo.
-  const isCreditCard = isCreditType(selectedAccount?.type);
+  const isCreditCard = isCreditAccountType(selectedAccount?.type);
   const heroCredit = selectedAccountId ? creditByAccount.get(selectedAccountId) : undefined;
   const cardLimit = heroCredit?.limit ?? 0;
   const cardUsed = heroCredit?.used ?? 0;
@@ -550,7 +541,7 @@ export default function MyCardsPage() {
                     <div className="min-w-0">
                       <p className="text-[12px] md:text-sm font-bold text-slate-900 truncate">{acc.name}</p>
                       <p className="text-[9px] md:text-[10px] font-medium text-slate-400">{acc.type} | {acc.currency}</p>
-                      {isCreditType(acc.type) && creditInfo && (
+                      {isCreditAccountType(acc.type) && creditInfo && (
                         <p className="text-[9px] md:text-[10px] font-bold text-slate-500 mt-0.5 truncate">
                           Sisa <span className={creditInfo.remaining < 0 ? 'text-rose-500' : 'text-emerald-600'}>{formatAmount(creditInfo.remaining, acc.currency)}</span>
                           <span className="text-slate-300"> / {formatAmount(creditInfo.limit, acc.currency)}</span>

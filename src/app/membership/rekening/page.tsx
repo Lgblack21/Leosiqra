@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Building2,
@@ -15,15 +15,18 @@ import {
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LogoImage } from '@/components/ui/LogoImage';
 import { accountService, Account } from '@/lib/services/accountService';
+import { Transaction } from '@/lib/services/transactionService';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged, User } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
 import { AccountModal } from '@/components/modals/AccountModal';
+import { isCreditAccountType, computeCreditUsage } from '@/lib/creditCard';
 
 export default function RekeningPage() {
   const router = useRouter();
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -37,11 +40,23 @@ export default function RekeningPage() {
   }, []);
 
   const unsubRef = useRef<(() => void) | null>(null);
+  const unsubTrxRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
+        // Transaksi dipakai untuk menghitung terpakai/sisa limit kartu kredit
+        // & paylater — lihat lib/creditCard.ts.
+        const qTrx = query(collection(db, 'transactions'), where('userId', '==', u.uid));
+        if (unsubTrxRef.current) unsubTrxRef.current();
+        unsubTrxRef.current = onSnapshot(qTrx, (snap) => {
+          setTransactions(snap.docs.map(doc => {
+            const d = doc.data();
+            return { ...d, id: doc.id, amount: Number(d.amount) || 0, date: d.date?.toDate?.() ?? new Date(), createdAt: d.createdAt?.toDate?.() ?? new Date() } as Transaction;
+          }));
+        }, (err) => console.error(err));
+
         const q = query(collection(db, 'accounts'), where('userId', '==', u.uid));
         if (unsubRef.current) unsubRef.current();
         const unsubSnap = onSnapshot(q, (snap) => {
@@ -69,9 +84,9 @@ export default function RekeningPage() {
           setLoading(false);
         });
         unsubRef.current = unsubSnap;
-      } else { setAccounts([]); setLoading(false); }
+      } else { setAccounts([]); setTransactions([]); setLoading(false); }
     });
-    return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
+    return () => { unsub(); if (unsubRef.current) unsubRef.current(); if (unsubTrxRef.current) unsubTrxRef.current(); };
   }, []);
 
   const handleDelete = async (id: string) => {
@@ -120,6 +135,17 @@ export default function RekeningPage() {
   // Nilai IDR otomatis (menggantikan field manual "Nilai Base" yang sudah dihapus).
   const toIDR = (amount: number, currency: string | undefined) =>
     exchangeRateService.convert(amount, currency || 'IDR', 'IDR', fxRates);
+
+  // Kartu kredit/paylater dimodelkan sebagai limit, bukan saldo kas — kolom
+  // "Saldo" untuk tipe ini menampilkan terpakai (dihitung dari transaksi,
+  // bukan kolom balance) memakai rumus yang sama dengan halaman Kartu Saya.
+  const creditUsageByAccount = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof computeCreditUsage>>();
+    accounts.filter(a => isCreditAccountType(a.type) && a.id).forEach(acc => {
+      map.set(acc.id!, computeCreditUsage(acc, transactions));
+    });
+    return map;
+  }, [accounts, transactions]);
 
   const formatBalance = (amount: number, currency: string) => {
     try {
@@ -220,13 +246,17 @@ export default function RekeningPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {accounts.map((acc) => (
+                  {accounts.map((acc) => {
+                    const isCredit = isCreditAccountType(acc.type);
+                    const creditUsage = acc.id ? creditUsageByAccount.get(acc.id) : undefined;
+                    const displayAmount = isCredit ? (creditUsage?.used ?? 0) : (acc.balance || 0);
+                    return (
                     <tr key={acc.id} className="group hover:bg-slate-50/50 transition-all border-b border-slate-50 last:border-b-0">
                       <td className="px-5 md:px-10 py-5 md:py-8">
                         <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center overflow-hidden bg-white border border-slate-50">
-                          <LogoImage 
-                            src={acc.logoUrl} 
-                            alt={acc.name} 
+                          <LogoImage
+                            src={acc.logoUrl}
+                            alt={acc.name}
                             fallbackText={acc.name.substring(0, 3).toUpperCase()}
                             fallbackIcon={(
                               <div className={`w-full h-full flex items-center justify-center ${getBgForType(acc.type)} text-white`}>
@@ -246,8 +276,13 @@ export default function RekeningPage() {
                       <td className="px-5 md:px-10 py-5 md:py-8 text-center">
                         <span className="px-3 py-1.5 bg-slate-100 text-[9px] font-black text-slate-400 rounded-lg tracking-widest uppercase">{acc.currency}</span>
                       </td>
-                      <td className="px-5 md:px-10 py-5 md:py-8 text-right font-black text-slate-900 text-sm whitespace-nowrap">{formatBalance(acc.balance || 0, acc.currency)}</td>
-                      <td className="px-5 md:px-10 py-5 md:py-8 text-right font-black text-slate-700 text-sm whitespace-nowrap"> {formatRp(toIDR(acc.balance || 0, acc.currency))}</td>
+                      <td className="px-5 md:px-10 py-5 md:py-8 text-right whitespace-nowrap">
+                        <p className={`font-black text-sm ${isCredit ? 'text-rose-500' : 'text-slate-900'}`}>{formatBalance(displayAmount, acc.currency)}</p>
+                        {isCredit && (
+                          <p className="text-[9px] font-bold text-slate-400 mt-0.5">Terpakai / Limit {formatBalance(acc.creditLimit || 0, acc.currency)}</p>
+                        )}
+                      </td>
+                      <td className="px-5 md:px-10 py-5 md:py-8 text-right font-black text-slate-700 text-sm whitespace-nowrap"> {formatRp(toIDR(displayAmount, acc.currency))}</td>
                       <td className="px-5 md:px-10 py-5 md:py-8">
                         <div className="flex items-center justify-center gap-3">
                           <button
@@ -264,7 +299,8 @@ export default function RekeningPage() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
