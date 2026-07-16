@@ -612,17 +612,17 @@ export default function ProfilePage() {
               </button>
             </div>
 
-            {/* Panduan rakit Shortcut iOS (1 action, ~2 menit). */}
+            {/* Input Cepat: cara termudah catat transaksi dari iPhone tanpa Shortcut. */}
             <a
-              href="/panduan/shortcut-ios"
+              href="/input-cepat"
               className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-700 p-4 text-white shadow-lg shadow-indigo-200 transition-all hover:-translate-y-0.5"
             >
               <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
                 <Smartphone size={16} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-black tracking-tight">Cara pakai di iPhone</p>
-                <p className="text-[10px] font-medium text-white/70 mt-0.5">Rakit Shortcut 1 langkah — buka panduannya</p>
+                <p className="text-[13px] font-black tracking-tight">Input Cepat di iPhone</p>
+                <p className="text-[10px] font-medium text-white/70 mt-0.5">Buka → Share → &quot;Add to Home Screen&quot; jadi ikon</p>
               </div>
               <ChevronRight size={16} className="text-white/70 shrink-0" />
             </a>
