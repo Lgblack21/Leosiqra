@@ -39,6 +39,7 @@ import { transactionService, Transaction } from '@/lib/services/transactionServi
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { subscribeUserProfile } from '@/lib/services/userService';
 import { exchangeRateService } from '@/lib/services/exchangeRateService';
+import { isCreditAccountType, computeCreditUsage } from '@/lib/creditCard';
 import { ChangePasswordModal } from '@/components/modals/ChangePasswordModal';
 import { TwoFactorModal } from '@/components/auth/TwoFactorModal';
 import { Modal } from '@/components/ui/Modal';
@@ -516,7 +517,10 @@ export default function ProfilePage() {
                 <p className="text-sm text-slate-400 text-center py-4">Memuat...</p>
               ) : accounts.length === 0 ? (
                 <p className="text-sm text-slate-400 text-center py-4">Belum ada rekening</p>
-              ) : accounts.map((acc) => (
+              ) : accounts.map((acc) => {
+                const isCredit = isCreditAccountType(acc.type);
+                const credit = isCredit ? computeCreditUsage(acc, transactions) : null;
+                return (
                 <button
                   key={acc.id}
                   onClick={() => setSelectedAccount(acc)}
@@ -531,12 +535,17 @@ export default function ProfilePage() {
                       <ArrowRight size={12} className="text-slate-300 shrink-0" />
                     </div>
                     <div className="flex items-center justify-between gap-2 mt-1.5">
-                      <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-tight truncate">{acc.type}</p>
-                      <p className="text-[12px] md:text-[13px] font-black text-slate-900 whitespace-nowrap shrink-0">{formatAccountBalance(acc.balance, acc.currency)}</p>
+                      <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-tight truncate">
+                        {isCredit ? 'Sisa Limit' : acc.type}
+                      </p>
+                      <p className="text-[12px] md:text-[13px] font-black text-slate-900 whitespace-nowrap shrink-0">
+                        {formatAccountBalance(isCredit && credit ? credit.remaining : acc.balance, acc.currency)}
+                      </p>
                     </div>
                   </div>
                 </button>
-              ))}
+                );
+              })}
             </div>
           </div>
  
@@ -695,33 +704,72 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="bg-slate-50 rounded-2xl p-6 space-y-1">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saldo Saat Ini</p>
-              <p className="text-2xl font-black text-slate-900">{formatAccountBalance(selectedAccount.balance, selectedAccount.currency)}</p>
-              {selectedAccount.currency !== 'IDR' && (
-                <p className="text-xs font-bold text-slate-400 pt-1">
-                  {fxLoading
-                    ? 'Menghitung konversi...'
-                    : (() => {
-                        const converted = convertedToIDR(selectedAccount.balance, selectedAccount.currency);
-                        return converted !== null
-                          ? `≈ ${formatRp(converted)}`
-                          : 'Kurs tidak tersedia saat ini';
-                      })()}
-                </p>
-              )}
-            </div>
+            {isCreditAccountType(selectedAccount.type) ? (
+              (() => {
+                const credit = computeCreditUsage(selectedAccount, transactions);
+                return (
+                  <>
+                    <div className="bg-slate-50 rounded-2xl p-6 space-y-1">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sisa Limit</p>
+                      <p className="text-2xl font-black text-emerald-600">{formatAccountBalance(credit.remaining, selectedAccount.currency)}</p>
+                      {selectedAccount.currency !== 'IDR' && (
+                        <p className="text-xs font-bold text-slate-400 pt-1">
+                          {fxLoading
+                            ? 'Menghitung konversi...'
+                            : (() => {
+                                const converted = convertedToIDR(credit.remaining, selectedAccount.currency);
+                                return converted !== null
+                                  ? `≈ ${formatRp(converted)}`
+                                  : 'Kurs tidak tersedia saat ini';
+                              })()}
+                        </p>
+                      )}
+                    </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-slate-50 rounded-2xl p-4">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Mata Uang</p>
-                <p className="text-sm font-black text-slate-900 mt-1">{selectedAccount.currency}</p>
-              </div>
-              <div className="bg-slate-50 rounded-2xl p-4">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Saldo Awal</p>
-                <p className="text-sm font-black text-slate-900 mt-1">{formatAccountBalance(selectedAccount.initialBalance || 0, selectedAccount.currency)}</p>
-              </div>
-            </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-slate-50 rounded-2xl p-4">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Terpakai</p>
+                        <p className="text-sm font-black text-rose-500 mt-1">{formatAccountBalance(credit.used, selectedAccount.currency)}</p>
+                      </div>
+                      <div className="bg-slate-50 rounded-2xl p-4">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Limit Kredit</p>
+                        <p className="text-sm font-black text-slate-900 mt-1">{formatAccountBalance(credit.limit, selectedAccount.currency)}</p>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()
+            ) : (
+              <>
+                <div className="bg-slate-50 rounded-2xl p-6 space-y-1">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saldo Saat Ini</p>
+                  <p className="text-2xl font-black text-slate-900">{formatAccountBalance(selectedAccount.balance, selectedAccount.currency)}</p>
+                  {selectedAccount.currency !== 'IDR' && (
+                    <p className="text-xs font-bold text-slate-400 pt-1">
+                      {fxLoading
+                        ? 'Menghitung konversi...'
+                        : (() => {
+                            const converted = convertedToIDR(selectedAccount.balance, selectedAccount.currency);
+                            return converted !== null
+                              ? `≈ ${formatRp(converted)}`
+                              : 'Kurs tidak tersedia saat ini';
+                          })()}
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-slate-50 rounded-2xl p-4">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Mata Uang</p>
+                    <p className="text-sm font-black text-slate-900 mt-1">{selectedAccount.currency}</p>
+                  </div>
+                  <div className="bg-slate-50 rounded-2xl p-4">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Saldo Awal</p>
+                    <p className="text-sm font-black text-slate-900 mt-1">{formatAccountBalance(selectedAccount.initialBalance || 0, selectedAccount.currency)}</p>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
       </Modal>

@@ -249,7 +249,9 @@ export default function RekeningPage() {
                   {accounts.map((acc) => {
                     const isCredit = isCreditAccountType(acc.type);
                     const creditUsage = acc.id ? creditUsageByAccount.get(acc.id) : undefined;
-                    const displayAmount = isCredit ? (creditUsage?.used ?? 0) : (acc.balance || 0);
+                    // Untuk kartu kredit/paylater, "Saldo" berarti dana yang masih bisa
+                    // dipakai — jadi tampilkan sisa limit (bukan terpakai) sebagai angka utama.
+                    const displayAmount = isCredit ? (creditUsage?.remaining ?? 0) : (acc.balance || 0);
                     return (
                     <tr key={acc.id} className="group hover:bg-slate-50/50 transition-all border-b border-slate-50 last:border-b-0">
                       <td className="px-5 md:px-10 py-5 md:py-8">
@@ -277,9 +279,9 @@ export default function RekeningPage() {
                         <span className="px-3 py-1.5 bg-slate-100 text-[9px] font-black text-slate-400 rounded-lg tracking-widest uppercase">{acc.currency}</span>
                       </td>
                       <td className="px-5 md:px-10 py-5 md:py-8 text-right whitespace-nowrap">
-                        <p className={`font-black text-sm ${isCredit ? 'text-rose-500' : 'text-slate-900'}`}>{formatBalance(displayAmount, acc.currency)}</p>
+                        <p className={`font-black text-sm ${isCredit ? 'text-emerald-600' : 'text-slate-900'}`}>{formatBalance(displayAmount, acc.currency)}</p>
                         {isCredit && (
-                          <p className="text-[9px] font-bold text-slate-400 mt-0.5">Terpakai / Limit {formatBalance(acc.creditLimit || 0, acc.currency)}</p>
+                          <p className="text-[9px] font-bold text-slate-400 mt-0.5">Sisa Limit &middot; Terpakai {formatBalance(creditUsage?.used ?? 0, acc.currency)}</p>
                         )}
                       </td>
                       <td className="px-5 md:px-10 py-5 md:py-8 text-right font-black text-slate-700 text-sm whitespace-nowrap"> {formatRp(toIDR(displayAmount, acc.currency))}</td>
