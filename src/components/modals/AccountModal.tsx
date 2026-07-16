@@ -75,7 +75,7 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
   }, [isOpen, initialType, initialData]);
 
   const handleCreate = async () => {
-    if (!userId || !formData.name || !formData.initialBalance) return;
+    if (!userId || !formData.name) return;
     setError('');
     setSaving(true);
     try {
@@ -85,8 +85,8 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
           logoUrl: formData.logoUrl,
           type: formData.type,
           currency: formData.currency,
-          balance: parseFloat(formData.balance) || parseFloat(formData.initialBalance),
-          initialBalance: parseFloat(formData.initialBalance) || 0,
+          balance: parseFloat(formData.balance) || 0,
+          initialBalance: parseFloat(formData.balance) || 0,
           baseValue: parseFloat(formData.baseValue) || 0,
           cardColor: formData.cardColor
         });
@@ -97,8 +97,8 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
           logoUrl: formData.logoUrl,
           type: formData.type,
           currency: formData.currency,
-          balance: parseFloat(formData.balance) || parseFloat(formData.initialBalance),
-          initialBalance: parseFloat(formData.initialBalance) || 0,
+          balance: parseFloat(formData.balance) || 0,
+          initialBalance: parseFloat(formData.balance) || 0,
           baseValue: parseFloat(formData.baseValue) || 0,
           cardColor: formData.cardColor
         });
@@ -199,29 +199,23 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
             onChange={(val) => setFormData({...formData, currency: val})}
           />
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Saldo Saat Ini</label>
-            <input 
-              type="number" 
+            <input
+              type="number"
               value={formData.balance}
               onChange={(e) => setFormData({...formData, balance: e.target.value})}
               placeholder="0"
               className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
             />
+            <p className="text-[10px] font-medium text-slate-400 pl-1 leading-relaxed">
+              Isi saldo rekening kamu sekarang (sesuai bank/dompet). Transaksi yang kamu catat berikutnya akan otomatis menambah/mengurangi saldo ini.
+            </p>
           </div>
-
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Saldo Awal (Initial)</label>
-            <input
-              type="number"
-              value={formData.initialBalance}
-              onChange={(e) => setFormData({...formData, initialBalance: e.target.value})}
-              placeholder="0"
-              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
-            />
-          </div>
-          {/* Field "Nilai Base" dihapus: nilai IDR untuk akun mata uang asing
-              sudah dihitung otomatis via kurs live (lihat toIDR di cards/rekening). */}
+          {/* Field "Saldo Awal (Initial)" & "Nilai Base" digabung/dihapus: satu
+              nilai "Saldo Saat Ini" mengisi balance sekaligus initialBalance (base
+              yang dipakai kartu), dan nilai IDR akun mata uang asing dihitung
+              otomatis via kurs live. */}
         </div>
 
         <div className="space-y-3">
@@ -258,7 +252,7 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
 
         <button
           onClick={handleCreate}
-          disabled={saving || !formData.name || !formData.initialBalance}
+          disabled={saving || !formData.name}
           className="w-full bg-blue-600 disabled:bg-slate-300 text-white px-6 py-4 rounded-xl text-xs font-black shadow-lg shadow-blue-100 disabled:shadow-none transition-all mt-6"
         >
           {saving
