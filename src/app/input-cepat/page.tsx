@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowDownCircle,
   ArrowUpCircle,
@@ -18,6 +19,11 @@ import { accountService, Account } from "@/lib/services/accountService";
 import { auth } from "@/lib/cf-client";
 import { onAuthStateChanged } from "@/lib/cf-auth";
 import { CategorySelect } from "@/components/CategorySelect";
+import { subscribeUserProfile, UserProfile } from "@/lib/services/userService";
+import { LogoImage } from "@/components/ui/LogoImage";
+import { transactionService, Transaction } from "@/lib/services/transactionService";
+import { isCreditAccountType, computeCreditUsage } from "@/lib/creditCard";
+import { notifyCollectionChanged, subscribeToCollectionChanges } from "@/lib/cf-firestore";
 
 type AuthState = "loading" | "ok" | "unauth";
 type TxType = "pengeluaran" | "pemasukan";
@@ -30,6 +36,8 @@ const groupDigits = (digits: string) =>
 export default function InputCepatPage() {
   const [authState, setAuthState] = useState<AuthState>("loading");
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
 
   const [type, setType] = useState<TxType>("pengeluaran");
   const [amount, setAmount] = useState(""); // digit murni
@@ -45,6 +53,9 @@ export default function InputCepatPage() {
   // auth.currentUser terisi — dibutuhkan CategorySelect (kategori yang sama
   // dengan Input Harian) untuk query kategori milik user.
   useEffect(() => {
+    let unsubProfile: (() => void) | undefined;
+    let unsubAcc: (() => void) | undefined;
+    let unsubTrx: (() => void) | undefined;
     const unsub = onAuthStateChanged(auth, (u) => {
       if (!u) {
         setAuthState("unauth");
@@ -52,21 +63,65 @@ export default function InputCepatPage() {
       }
       setAuthState("ok");
 
-      accountService
-        .getUserAccounts(u.uid)
-        .then((accs) => {
-          setAccounts(accs);
-          setAccountId((prev) => prev || accs[0]?.id || "");
-        })
-        .catch(() => setAccounts([]));
+      const loadAccounts = () =>
+        accountService
+          .getUserAccounts(u.uid)
+          .then((accs) => {
+            setAccounts(accs);
+            setAccountId((prev) => prev || accs[0]?.id || "");
+          })
+          .catch(() => setAccounts([]));
+      loadAccounts();
+
+      // Transaksi dipakai untuk menghitung sisa limit kartu kredit/paylater —
+      // lihat lib/creditCard.ts, kolom `balance` kartu kredit bukan saldo kas.
+      const loadTransactions = () =>
+        transactionService.getUserTransactions(u.uid).then(setTransactions).catch(() => setTransactions([]));
+      loadTransactions();
+
+      unsubProfile = subscribeUserProfile(u.uid, setProfile);
+
+      // getUserAccounts/getUserTransactions cuma fetch sekali — refetch manual
+      // tiap ada tambah rekening/transaksi baru/hapus di mana pun (termasuk
+      // dari halaman ini sendiri) supaya tidak perlu reload manual.
+      unsubAcc = subscribeToCollectionChanges("accounts", loadAccounts);
+      unsubTrx = subscribeToCollectionChanges("transactions", loadTransactions);
     });
-    return () => unsub();
+    return () => {
+      unsub();
+      if (unsubProfile) unsubProfile();
+      if (unsubAcc) unsubAcc();
+      if (unsubTrx) unsubTrx();
+    };
   }, []);
+
+  const formatBalance = (amount: number, currency: string) => {
+    try {
+      return new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: currency || "IDR",
+        maximumFractionDigits: 0,
+      }).format(amount);
+    } catch {
+      return `${currency || ""} ${groupDigits(String(Math.round(amount)))}`.trim();
+    }
+  };
 
   const selectedAccount = useMemo(
     () => accounts.find((a) => a.id === accountId),
     [accounts, accountId]
   );
+
+  // Kartu kredit/paylater dimodelkan sebagai limit, bukan saldo kas — jadi
+  // tampilkan sisa limit (dihitung dari transaksi) alih-alih kolom `balance`
+  // mentah (yang memang 0 untuk kartu kredit), sama seperti halaman Rekening.
+  const creditUsageByAccount = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof computeCreditUsage>>();
+    accounts.filter((a) => isCreditAccountType(a.type) && a.id).forEach((acc) => {
+      map.set(acc.id!, computeCreditUsage(acc, transactions));
+    });
+    return map;
+  }, [accounts, transactions]);
 
   const amountNumber = Number(amount || "0");
   const canSubmit = amountNumber > 0 && Boolean(selectedAccount) && !submitting;
@@ -93,6 +148,11 @@ export default function InputCepatPage() {
           amount
         )} tercatat ✓`,
       });
+      // quick-transaction dipanggil langsung lewat cloudflareApi (bukan lewat
+      // transactionService), jadi notify manual supaya halaman lain (Rekening,
+      // Kartu Saya, dst) langsung lihat transaksi & saldo baru tanpa reload.
+      notifyCollectionChanged("transactions");
+      notifyCollectionChanged("accounts");
       // Reset field yang berubah-ubah; sisakan type/akun/kategori untuk input cepat berikutnya.
       setAmount("");
       setNote("");
@@ -137,13 +197,27 @@ export default function InputCepatPage() {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <div className="w-full max-w-md mx-auto px-5 pt-8 pb-28 flex-1">
         {/* Header */}
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-6 h-6 flex items-center justify-center shrink-0 overflow-hidden">
+            <Image src="/images/Logo-new.png" alt="Leosiqra" width={22} height={22} className="object-contain" />
+          </div>
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Leosiqra</span>
+        </div>
         <div className="flex items-center gap-3 mb-7">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shrink-0">
-            <Wallet size={18} />
+          <div className="w-10 h-10 rounded-full bg-indigo-600 shrink-0 overflow-hidden">
+            <LogoImage
+              src={profile?.photoURL}
+              alt={profile?.name || "Profil"}
+              fallbackText={(profile?.name || "U").slice(0, 1).toUpperCase()}
+              fallbackIcon={<Wallet size={18} className="text-white" />}
+              className="w-full h-full object-cover text-white"
+            />
           </div>
           <div>
             <h1 className="text-lg font-black text-slate-900 tracking-tight leading-none">Input Cepat</h1>
-            <p className="text-[11px] font-bold text-slate-400 mt-1">Catat transaksi dalam hitungan detik</p>
+            <p className="text-[11px] font-bold text-slate-400 mt-1">
+              {profile?.name ? `Halo, ${profile.name}` : "Catat transaksi dalam hitungan detik"}
+            </p>
           </div>
         </div>
 
@@ -207,17 +281,54 @@ export default function InputCepatPage() {
               .
             </p>
           ) : (
-            <select
-              value={accountId}
-              onChange={(e) => setAccountId(e.target.value)}
-              className="w-full text-sm font-bold text-slate-800 bg-slate-50 rounded-xl px-3 py-3 outline-none border border-slate-100 focus:border-indigo-300"
-            >
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name} · {a.currency}
-                </option>
-              ))}
-            </select>
+            <div className="space-y-2 max-h-72 overflow-y-auto -mx-1 px-1">
+              {accounts.map((a) => {
+                const isSelected = a.id === accountId;
+                const isCredit = isCreditAccountType(a.type);
+                const creditUsage = a.id ? creditUsageByAccount.get(a.id) : undefined;
+                const displayAmount = isCredit ? (creditUsage?.remaining ?? 0) : (a.balance || 0);
+                return (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => setAccountId(a.id || "")}
+                    className={cn(
+                      "w-full flex items-center gap-3 rounded-xl border p-3 transition-all text-left",
+                      isSelected
+                        ? "border-indigo-300 bg-indigo-50/60"
+                        : "border-slate-100 bg-slate-50/50 hover:border-slate-200"
+                    )}
+                  >
+                    <div className="w-9 h-9 rounded-lg overflow-hidden shrink-0 border border-slate-100 bg-white">
+                      <LogoImage
+                        src={a.logoUrl}
+                        alt={a.name}
+                        fallbackText={a.name.slice(0, 2).toUpperCase()}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-black text-slate-800 truncate">{a.name}</p>
+                      <p className="text-[10px] font-bold text-slate-400">{a.currency}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p
+                        className={cn(
+                          "text-xs font-black",
+                          isCredit ? "text-emerald-600" : isSelected ? "text-indigo-700" : "text-slate-600"
+                        )}
+                      >
+                        {formatBalance(displayAmount, a.currency)}
+                      </p>
+                      {isCredit && (
+                        <p className="text-[8px] font-bold text-slate-400">Sisa Limit</p>
+                      )}
+                    </div>
+                    {isSelected && <Check size={16} className="text-indigo-600 shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
           )}
         </div>
 

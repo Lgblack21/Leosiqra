@@ -102,6 +102,13 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
     const rate = parseFloat(formData.returnPercentage) || 0;
     const taxRate = parseFloat(formData.taxPercentage) || 0;
 
+    // Kalau kurs gagal dikonversi (rates belum termuat / currency ini tidak
+    // ada di rates), jangan kirim angka mentah sebagai IDR final — biarkan
+    // backend yang menghitung ulang lewat kurs server-side.
+    const canConvert =
+      formData.currency === 'IDR' ||
+      Boolean(rates && rates[formData.currency] && rates['IDR']);
+
     try {
       const isPenempatan = formData.transactionType === 'Penempatan';
       const isPenarikan = formData.transactionType === 'Penarikan';
@@ -121,9 +128,9 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
         userId, name: formData.name, type: 'Deposito',
         platform: formData.platform,
         amountInvested: invested,
-        amountIDR: formData.currency === 'IDR' ? invested : convertedAmount,
+        amountIDR: canConvert ? (formData.currency === 'IDR' ? invested : convertedAmount) : undefined,
         currentValue: totalResult,
-        currentValueIDR: formData.currency === 'IDR' ? totalResult : totalResult * (convertedAmount / (invested || 1)),
+        currentValueIDR: canConvert ? (formData.currency === 'IDR' ? totalResult : totalResult * (convertedAmount / (invested || 1))) : undefined,
         returnPercentage: rate,
         taxPercentage: taxRate,
         currency: formData.currency,
@@ -201,7 +208,9 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
 
           await addTransaction({
             userId, type: financeType, amount: amountToSync,
-            amountIDR: formData.currency === 'IDR' ? amountToSync : (amountToSync * (convertedAmount / (parseFloat(formData.amountInvested) || 1))),
+            amountIDR: canConvert
+              ? (formData.currency === 'IDR' ? amountToSync : (amountToSync * (convertedAmount / (parseFloat(formData.amountInvested) || 1))))
+              : undefined,
             category: 'Investasi', subCategory: `Deposito - ${formData.transactionType}`,
             accountId: formData.accountId || 'General',
             date: new Date(formData.dateInvested),

@@ -1,4 +1,5 @@
 import { cloudflareApi } from '../cloudflare-api';
+import { notifyCollectionChanged } from '../cf-firestore';
 
 export interface Account {
   id?: string;
@@ -33,6 +34,7 @@ export const accountService = {
         ...(data.cardColor ? { card_color: data.cardColor } : {}),
       },
     });
+    notifyCollectionChanged('accounts');
     return result.id;
   },
 
@@ -83,10 +85,12 @@ export const accountService = {
         ...(data.cardColor !== undefined ? { card_color: data.cardColor } : {}),
       },
     });
+    notifyCollectionChanged('accounts');
   },
 
   async deleteAccount(id: string) {
     await cloudflareApi(`/api/member/accounts/${id}`, { method: 'DELETE' });
+    notifyCollectionChanged('accounts');
   },
 
   async updateAccountBalance(id: string, amountChange: number) {
@@ -96,5 +100,6 @@ export const accountService = {
         delta: amountChange,
       },
     });
+    notifyCollectionChanged('accounts');
   }
 };

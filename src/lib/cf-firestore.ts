@@ -1,6 +1,29 @@
 import { cloudflareApi } from "@/lib/cloudflare-api";
 import { auth } from "@/lib/cf-client";
 
+// `onSnapshot` di bawah cuma fetch SEKALI (bukan live subscription sungguhan
+// seperti Firestore asli) — jadi tanpa ini, halaman yang lagi terbuka tidak
+// pernah tahu ada perubahan dari modal/halaman lain (tambah rekening, input
+// transaksi baru, hapus transaksi, dst) sampai di-reload manual. Bus ini
+// menyambungkan setiap mutasi (addDoc/setDoc/updateDoc/deleteDoc, plus
+// service yang manggil cloudflareApi langsung) ke semua listener onSnapshot
+// yang sedang aktif untuk collection yang sama, supaya otomatis refetch.
+const changeListeners = new Map<string, Set<() => void>>();
+
+export const notifyCollectionChanged = (collectionName: string) => {
+  changeListeners.get(collectionName)?.forEach((fn) => fn());
+};
+
+export const subscribeToCollectionChanges = (collectionName: string, fn: () => void) => {
+  if (!changeListeners.has(collectionName)) {
+    changeListeners.set(collectionName, new Set());
+  }
+  changeListeners.get(collectionName)!.add(fn);
+  return () => {
+    changeListeners.get(collectionName)?.delete(fn);
+  };
+};
+
 type AnyObj = Record<string, unknown>;
 
 type Constraint =
@@ -125,6 +148,15 @@ const normalize = (input: unknown): unknown => {
       // foto profil terbaca undefined saat reload dan avatar hilang.
       if (camel === "photoUrl") {
         result["photoURL"] = normalized;
+      }
+      // Sama untuk akhiran `_idr` (amount_idr, current_value_idr, dst) — app
+      // memakai `amountIDR`/`currentValueIDR` (IDR kapital semua), sedangkan
+      // camelCase generik cuma menghasilkan `amountIdr`. Tanpa alias ini,
+      // halaman yang baca langsung lewat onSnapshot (bukan lewat service
+      // wrapper) salah membaca nilai IDR-nya jadi undefined dan diam-diam
+      // fallback ke amount mentah (bug nilai asing tampil seolah IDR 1:1).
+      if (/Idr$/.test(camel)) {
+        result[camel.replace(/Idr$/, "IDR")] = normalized;
       }
     }
   }
@@ -768,8 +800,13 @@ export function onSnapshot(
   };
 
   void run();
+  const collectionName = ref.kind === "collection" ? ref.name : ref.collection;
+  const unsubscribeBus = subscribeToCollectionChanges(collectionName, () => {
+    if (active) void run();
+  });
   return () => {
     active = false;
+    unsubscribeBus();
   };
 };
 
@@ -780,6 +817,7 @@ export const setDoc = async (
 ) => {
   if (API_COLLECTIONS.has(ref.collection)) {
     await writeDocViaApi(ref, data);
+    notifyCollectionChanged(ref.collection);
     return;
   }
 
@@ -801,6 +839,7 @@ export const setDoc = async (
     rows.push(next);
   }
   writeLocalCollection(ref.collection, rows);
+  notifyCollectionChanged(ref.collection);
 };
 
 export const updateDoc = async (ref: DocRef, data: AnyObj) => {
@@ -815,17 +854,20 @@ export const increment = (value: number): IncrementSentinel => ({
 export const deleteDoc = async (ref: DocRef) => {
   if (API_COLLECTIONS.has(ref.collection)) {
     await deleteDocViaApi(ref);
+    notifyCollectionChanged(ref.collection);
     return;
   }
 
   const rows = readLocalCollection(ref.collection).filter((row) => row.id !== ref.id);
   writeLocalCollection(ref.collection, rows);
+  notifyCollectionChanged(ref.collection);
 };
 
 export const addDoc = async (ref: CollectionRef, data: AnyObj) => {
   let id = crypto.randomUUID();
   if (API_COLLECTIONS.has(ref.name)) {
     id = await addDocViaApi(ref.name, data);
+    notifyCollectionChanged(ref.name);
     return { id };
   }
 
@@ -836,6 +878,7 @@ export const addDoc = async (ref: CollectionRef, data: AnyObj) => {
     userId: data.userId ?? auth.currentUser?.uid ?? null,
   });
   writeLocalCollection(ref.name, rows);
+  notifyCollectionChanged(ref.name);
   return { id };
 };
 

@@ -12,7 +12,6 @@ export interface Env {
   APP_URL: string;
   SESSION_COOKIE_NAME: string;
   SESSION_SECRET: string;
-  DEFAULT_FREE_PLAN_DAYS?: string;
   MAINTENANCE_BYPASS_ADMIN?: string;
   R2_PUBLIC_BASE_URL?: string;
   GOOGLE_CLIENT_ID?: string;
@@ -68,6 +67,25 @@ const parseJson = async <T>(request: Request): Promise<T> => {
 const generateId = () => crypto.randomUUID();
 
 const nowIso = () => new Date().toISOString();
+
+// User baru langsung dapat akses penuh (status AKTIF) selama durasi Free Plan
+// yang di-set admin di Pengaturan (admin_settings.free_plan_days — field yang
+// sama dipakai tombol "Set Free" di halaman Kelola Pelanggan), tanpa perlu
+// approval manual. Dipakai bareng oleh registrasi email dan Google OAuth
+// supaya keduanya konsisten. Kalau durasinya 0/belum di-set, fallback ke
+// perilaku lama (GUEST, perlu approval manual lewat "Request Akses").
+const computeTrialGrant = async (env: Env): Promise<{ status: "AKTIF" | "GUEST"; expiredAt: string | null }> => {
+  const settings = await env.DB.prepare("SELECT free_plan_days FROM admin_settings WHERE id = 'global'")
+    .first<{ free_plan_days: number | null }>();
+  const trialDays = Number(settings?.free_plan_days ?? 0);
+  if (!Number.isFinite(trialDays) || trialDays <= 0) {
+    return { status: "GUEST", expiredAt: null };
+  }
+  return {
+    status: "AKTIF",
+    expiredAt: new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).toISOString(),
+  };
+};
 
 const rewriteAuthRscPath = (pathname: string) => {
   const match = pathname.match(
@@ -361,6 +379,7 @@ const readSession = async (env: Env, request: Request) => {
     email: string;
     plan: "FREE" | "PRO";
     status: "AKTIF" | "NONAKTIF" | "GUEST" | "PENDING";
+    expired_at: string | null;
     whatsapp?: string | null;
     two_factor_secret?: string | null;
     photo_url?: string | null;
@@ -369,7 +388,7 @@ const readSession = async (env: Env, request: Request) => {
   try {
     result = await env.DB.prepare(
       `SELECT s.id as session_id, s.user_id, s.role, s.expires_at,
-              u.name, u.email, u.plan, u.status, u.whatsapp, u.two_factor_secret, u.photo_url
+              u.name, u.email, u.plan, u.status, u.expired_at, u.whatsapp, u.two_factor_secret, u.photo_url
          FROM sessions s
          JOIN users u ON u.id = s.user_id
         WHERE s.id = ?`
@@ -379,7 +398,7 @@ const readSession = async (env: Env, request: Request) => {
   } catch {
     result = await env.DB.prepare(
       `SELECT s.id as session_id, s.user_id, u.role as role, s.expires_at,
-              u.name, u.email, u.plan, u.status, u.whatsapp, u.two_factor_secret, u.photo_url
+              u.name, u.email, u.plan, u.status, u.expired_at, u.whatsapp, u.two_factor_secret, u.photo_url
          FROM sessions s
          JOIN users u ON u.id = s.user_id
         WHERE s.id = ?`
@@ -393,6 +412,15 @@ const readSession = async (env: Env, request: Request) => {
       await env.DB.prepare("DELETE FROM sessions WHERE id = ?").bind(result.session_id).run();
     }
     return null;
+  }
+
+  // Trial 14-hari (dan langganan PRO yang habis) sama-sama disimpan lewat
+  // kolom `expired_at` — tidak ada cron di Workers, jadi turunkan status ke
+  // GUEST secara "lazy" begitu ketahuan sudah lewat, di titik tunggal ini
+  // (dipakai semua request terautentikasi) supaya konsisten di mana pun.
+  if (result.status === "AKTIF" && result.expired_at && new Date(result.expired_at).getTime() <= Date.now()) {
+    await env.DB.prepare("UPDATE users SET status = 'GUEST' WHERE id = ?").bind(result.user_id).run();
+    result.status = "GUEST";
   }
 
   try {
@@ -748,10 +776,11 @@ async function handleRegister(request: Request, env: Env) {
   }
 
   const userId = generateId();
+  const trial = await computeTrialGrant(env);
   await env.DB.prepare(
     `INSERT INTO users (
-      id, name, email, password_hash, whatsapp, role, plan, status, two_factor_secret, currency_initialized, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, 'user', 'FREE', 'GUEST', ?, 0, ?, ?)`
+      id, name, email, password_hash, whatsapp, role, plan, status, expired_at, two_factor_secret, currency_initialized, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, 'user', 'FREE', ?, ?, ?, 0, ?, ?)`
   )
     .bind(
       userId,
@@ -759,6 +788,8 @@ async function handleRegister(request: Request, env: Env) {
       payload.email.toLowerCase(),
       await hashPassword(payload.password),
       payload.whatsapp ?? null,
+      trial.status,
+      trial.expiredAt,
       payload.twoFactorSecret ?? null,
       nowIso(),
       nowIso()
@@ -771,7 +802,7 @@ async function handleRegister(request: Request, env: Env) {
     name: payload.name,
     role: "user",
     plan: "FREE",
-    status: "GUEST",
+    status: trial.status,
     whatsapp: payload.whatsapp ?? null,
     two_factor_secret: payload.twoFactorSecret ?? null,
   };
@@ -1027,11 +1058,12 @@ async function handleGoogleCallback(request: Request, env: Env) {
     const userId = generateId();
     const displayName = profile.name?.trim() || email.split("@")[0];
     // Sentinel hash: akun Google tidak punya password lokal (login password nonaktif).
+    const trial = await computeTrialGrant(env);
     await env.DB.prepare(
-      `INSERT INTO users (id, name, email, password_hash, photo_url, role, plan, status, currency_initialized, created_at, updated_at)
-       VALUES (?, ?, ?, 'oauth$google', ?, 'user', 'FREE', 'GUEST', 0, ?, ?)`
+      `INSERT INTO users (id, name, email, password_hash, photo_url, role, plan, status, expired_at, currency_initialized, created_at, updated_at)
+       VALUES (?, ?, ?, 'oauth$google', ?, 'user', 'FREE', ?, ?, 0, ?, ?)`
     )
-      .bind(userId, displayName, email, profile.picture ?? null, nowIso(), nowIso())
+      .bind(userId, displayName, email, profile.picture ?? null, trial.status, trial.expiredAt, nowIso(), nowIso())
       .run();
     user = {
       id: userId,
@@ -1039,7 +1071,7 @@ async function handleGoogleCallback(request: Request, env: Env) {
       email,
       role: "user",
       plan: "FREE",
-      status: "GUEST",
+      status: trial.status,
       whatsapp: null,
       two_factor_secret: null,
       photo_url: profile.picture ?? null,
@@ -1107,6 +1139,25 @@ const fetchIdrConversionRate = async (currency: string): Promise<number | null> 
   } catch {
     return null;
   }
+};
+
+// Dipakai savings & investments (sama seperti transaksi): kalau klien tidak
+// kirim nilai IDR yang valid (mis. fetch kurs gagal di browser karena
+// firewall/CORS), hitung ulang di server lewat fetchIdrConversionRate alih-alih
+// diam-diam menyimpan amount mentah seolah sudah IDR.
+const resolveIdrAmount = async (
+  currency: string,
+  amount: number,
+  providedIdr: unknown
+): Promise<number> => {
+  if (typeof providedIdr === "number" && Number.isFinite(providedIdr) && providedIdr > 0) {
+    return providedIdr;
+  }
+  if (currency && currency !== "IDR") {
+    const rate = await fetchIdrConversionRate(currency);
+    if (rate) return amount * rate;
+  }
+  return amount;
 };
 
 interface TransactionInsertParams {
@@ -1276,6 +1327,19 @@ async function handleQuickTransaction(request: Request, env: Env) {
     date: payload.date ?? nowIso().slice(0, 10),
     note: payload.note?.trim() || undefined,
   });
+
+  // Endpoint transaksi biasa (/api/member/transactions) menyerahkan update saldo
+  // ke klien (accountService.updateAccountBalance) — tapi quick-transaction ini
+  // dipakai otomasi (Shortcut iOS/Input Cepat) yang tidak melakukan panggilan
+  // kedua itu, jadi saldo harus di-update di sini juga supaya tidak diam-diam
+  // tertinggal nol.
+  await env.DB.prepare(
+    `UPDATE accounts
+        SET balance = balance + ?
+      WHERE id = ? AND user_id = ?`
+  )
+    .bind(type === "pemasukan" ? amount : -amount, match.id, authResult.session.user.id)
+    .run();
 
   return json({ ok: true, id, matchedAccount: match.name, currency: match.currency }, { status: 201 });
 }
@@ -1627,6 +1691,11 @@ async function handleCreateInvestment(request: Request, env: Env) {
 
   const payload = await parseJson<Record<string, unknown>>(request);
   const id = generateId();
+  const currency = String(payload.currency ?? "IDR");
+  const amountInvested = Number(payload.amount_invested ?? 0);
+  const currentValue = Number(payload.current_value ?? 0);
+  const amountIdr = await resolveIdrAmount(currency, amountInvested, payload.amount_idr);
+  const currentValueIdr = await resolveIdrAmount(currency, currentValue, payload.current_value_idr);
   await env.DB.prepare(
     `INSERT INTO investments (
       id, user_id, name, type, platform, amount_invested, amount_idr, current_value, current_value_idr,
@@ -1641,10 +1710,10 @@ async function handleCreateInvestment(request: Request, env: Env) {
       String(payload.name ?? ""),
       String(payload.type ?? "Lainnya"),
       payload.platform ?? null,
-      Number(payload.amount_invested ?? 0),
-      Number(payload.amount_idr ?? 0),
-      Number(payload.current_value ?? 0),
-      Number(payload.current_value_idr ?? 0),
+      amountInvested,
+      amountIdr,
+      currentValue,
+      currentValueIdr,
       Number(payload.return_percentage ?? 0),
       Number(payload.tax_percentage ?? 0),
       String(payload.currency ?? "IDR"),
@@ -1788,6 +1857,29 @@ async function handleGetMemberProfile(request: Request, env: Env) {
     .first();
 
   return json({ item });
+}
+
+// Dipanggil dari tombol "Request Akses" di sidebar saat trial 14-hari sudah
+// habis (status balik ke GUEST). Cuma pindah GUEST->PENDING supaya muncul di
+// halaman admin/user untuk diverifikasi manual — bukan dari status lain,
+// supaya tidak bisa dipakai untuk "reset" status NONAKTIF/PENDING sendiri.
+async function handleRequestAccess(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) {
+    return authResult.error;
+  }
+
+  const result = await env.DB.prepare(
+    "UPDATE users SET status = 'PENDING' WHERE id = ? AND status = 'GUEST'"
+  )
+    .bind(authResult.session.user.id)
+    .run();
+
+  if (!result.meta.changes) {
+    return json({ error: "Permintaan hanya bisa dikirim saat status akun GUEST." }, { status: 409 });
+  }
+
+  return json({ ok: true, status: "PENDING" });
 }
 
 async function handleUpdateMemberProfile(request: Request, env: Env) {
@@ -2240,6 +2332,9 @@ async function handleCreateSaving(request: Request, env: Env) {
   if (authResult.error) return authResult.error;
   const payload = await parseJson<Record<string, unknown>>(request);
   const id = generateId();
+  const currency = String(payload.currency ?? "IDR");
+  const amount = Number(payload.amount ?? 0);
+  const amountIdr = await resolveIdrAmount(currency, amount, payload.amount_idr ?? payload.amountIDR);
   await env.DB.prepare(
     `INSERT INTO savings (
       id, user_id, description, amount, amount_idr, currency, category, sub_category,
@@ -2250,9 +2345,9 @@ async function handleCreateSaving(request: Request, env: Env) {
       id,
       authResult.session.user.id,
       String(payload.description ?? ""),
-      Number(payload.amount ?? 0),
-      Number(payload.amount_idr ?? payload.amountIDR ?? payload.amount ?? 0),
-      String(payload.currency ?? "IDR"),
+      amount,
+      amountIdr,
+      currency,
       String(payload.category ?? ""),
       pickPayloadValue(payload, "sub_category", "subCategory") ?? null,
       String(pickPayloadValue(payload, "from_account", "fromAccount") ?? ""),
@@ -3056,6 +3151,10 @@ const worker = {
 
       if (url.pathname === "/api/member/profile" && request.method === "GET") {
         return await handleGetMemberProfile(request, env);
+      }
+
+      if (url.pathname === "/api/member/request-access" && request.method === "POST") {
+        return await handleRequestAccess(request, env);
       }
 
       if (url.pathname === "/api/member/profile" && request.method === "PATCH") {

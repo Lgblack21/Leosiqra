@@ -19,6 +19,9 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { investmentService, Investment } from '@/lib/services/investmentService';
+import { accountService, Account } from '@/lib/services/accountService';
+import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
+import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 
 interface MarketTicker {
   label: string; sub: string; val: string; pct: string; up: boolean | null;
@@ -37,44 +40,69 @@ export default function MonthlyDashboard() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [creditCardBills, setCreditCardBills] = useState(0);
   const [otherDebts, setOtherDebts] = useState(0);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [fxRates, setFxRates] = useState<ExchangeRates>({});
+
+  // Saldo Bersih = total saldo semua rekening saat ini (bukan cuma net arus
+  // kas bulan yang dipilih) — sama seperti "Total Saldo" di halaman Profile,
+  // jadi tidak berubah walau ganti bulan lewat MonthPicker. Tidak terikat
+  // selectedMonth/selectedYear karena ini bukan angka periode.
+  useEffect(() => {
+    const loadAccounts = () => accountService.getUserAccounts('session').then(setAccounts).catch(console.error);
+    loadAccounts();
+    exchangeRateService.getLatestRates().then(setFxRates).catch(console.error);
+    // getUserAccounts cuma fetch sekali, bukan live subscription — refetch
+    // manual tiap ada tambah/edit/hapus rekening di mana pun (modal, halaman
+    // lain) supaya nggak perlu reload manual.
+    return subscribeToCollectionChanges('accounts', loadAccounts);
+  }, []);
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    Promise.all([
-      transactionService.getUserTransactions('session'),
-      investmentService.getUserInvestments('session'),
-    ])
-      .then(([allTransactions, allInvestments]) => {
-        if (!active) return;
-        const periodTransactions = allTransactions.filter((t) => {
-          const d = new Date(t.date);
-          return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
-        });
-        setTransactions(periodTransactions);
-        setInvestments(allInvestments);
+    const loadTransactionsAndInvestments = () => {
+      setLoading(true);
+      Promise.all([
+        transactionService.getUserTransactions('session'),
+        investmentService.getUserInvestments('session'),
+      ])
+        .then(([allTransactions, allInvestments]) => {
+          if (!active) return;
+          const periodTransactions = allTransactions.filter((t) => {
+            const d = new Date(t.date);
+            return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+          });
+          setTransactions(periodTransactions);
+          setInvestments(allInvestments);
 
-        // Ringkasan hutang dihitung otomatis dari catatan Hutang yang belum lunas
-        // (jenisnya disimpan di subCategory oleh DebtModal): Kartu Kredit vs lainnya.
-        const unpaidDebts = allTransactions.filter(
-          (t) => t.type === 'debt' && t.category === 'Hutang' && t.paymentStatus !== 'lunas'
-        );
-        const sumIDR = (list: typeof unpaidDebts) =>
-          list.reduce((s, t) => s + (Number(t.amountIDR) || Number(t.amount) || 0), 0);
-        setCreditCardBills(sumIDR(unpaidDebts.filter((t) => t.subCategory === 'Kartu Kredit')));
-        setOtherDebts(sumIDR(unpaidDebts.filter((t) => t.subCategory !== 'Kartu Kredit')));
-      })
-      .catch((err) => {
-        console.error('Gagal memuat dashboard member:', err);
-        if (!active) return;
-        setTransactions([]);
-        setInvestments([]);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+          // Ringkasan hutang dihitung otomatis dari catatan Hutang yang belum lunas
+          // (jenisnya disimpan di subCategory oleh DebtModal): Kartu Kredit vs lainnya.
+          const unpaidDebts = allTransactions.filter(
+            (t) => t.type === 'debt' && t.category === 'Hutang' && t.paymentStatus !== 'lunas'
+          );
+          const sumIDR = (list: typeof unpaidDebts) =>
+            list.reduce((s, t) => s + (Number(t.amountIDR) || Number(t.amount) || 0), 0);
+          setCreditCardBills(sumIDR(unpaidDebts.filter((t) => t.subCategory === 'Kartu Kredit')));
+          setOtherDebts(sumIDR(unpaidDebts.filter((t) => t.subCategory !== 'Kartu Kredit')));
+        })
+        .catch((err) => {
+          console.error('Gagal memuat dashboard member:', err);
+          if (!active) return;
+          setTransactions([]);
+          setInvestments([]);
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+    };
+    loadTransactionsAndInvestments();
+    // getUserTransactions/getUserInvestments cuma fetch sekali — refetch
+    // manual tiap ada input/hapus transaksi atau investasi di mana pun.
+    const unsubTrx = subscribeToCollectionChanges('transactions', loadTransactionsAndInvestments);
+    const unsubInv = subscribeToCollectionChanges('investments', loadTransactionsAndInvestments);
     return () => {
       active = false;
+      unsubTrx();
+      unsubInv();
     };
   }, [selectedMonth, selectedYear]);
 
@@ -126,6 +154,10 @@ export default function MonthlyDashboard() {
   const totalInvestasi = useMemo(() => investments.reduce((s, i) => s + (Number(i.amountIDR) || Number(i.amountInvested) || 0), 0), [investments]);
   const netBalance = totalPemasukan - totalPengeluaran;
   const netTabungan = Math.max(netBalance - totalInvestasi, 0);
+  const totalSaldoRekening = useMemo(
+    () => accounts.reduce((s, a) => s + exchangeRateService.convert(a.balance || 0, a.currency || 'IDR', 'IDR', fxRates), 0),
+    [accounts, fxRates]
+  );
 
   const formatRp = (num: number) => {
     if (isNaN(num) || !isFinite(num)) return 'Rp 0';
@@ -170,7 +202,7 @@ export default function MonthlyDashboard() {
         <div className="bg-gradient-to-br from-navy to-indigo-700 text-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-indigo-900/10 shadow-xl shadow-indigo-600/15 relative overflow-hidden">
           <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
           <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest mb-3">Saldo Bersih</p>
-          <h3 className={`text-2xl md:text-3xl font-black mb-4 tracking-tight ${netBalance >= 0 ? 'text-white' : 'text-rose-300'}`}>{formatRp(netBalance)}</h3>
+          <h3 className={`text-2xl md:text-3xl font-black mb-4 tracking-tight ${totalSaldoRekening >= 0 ? 'text-white' : 'text-rose-300'}`}>{formatRp(totalSaldoRekening)}</h3>
           <div className="flex items-center gap-1.5 text-indigo-200 text-[10px] md:text-xs font-bold">
             <TrendingUp size={14} />
             <span>{transactions.length} transaksi tercatat</span>

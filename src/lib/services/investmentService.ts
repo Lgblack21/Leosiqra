@@ -1,4 +1,5 @@
 import { cloudflareApi } from '../cloudflare-api';
+import { notifyCollectionChanged } from '../cf-firestore';
 
 export interface Investment {
   id?: string;
@@ -41,9 +42,17 @@ export const investmentService = {
         type: data.type,
         platform: data.platform,
         amount_invested: Number(data.amountInvested) || 0,
-        amount_idr: data.amountIDR || data.amountInvested || 0,
+        // Kalau amountIDR/currentValueIDR tidak berhasil dihitung di klien
+        // (mis. fetch kurs gagal), jangan kirim angka mentah sebagai IDR final —
+        // biarkan backend hitung ulang lewat resolveIdrAmount (server-side, tidak
+        // kena hambatan CORS/firewall seperti fetch dari browser).
+        ...(typeof data.amountIDR === 'number' && Number.isFinite(data.amountIDR)
+          ? { amount_idr: data.amountIDR }
+          : {}),
         current_value: Number(data.currentValue) || 0,
-        current_value_idr: data.currentValueIDR || data.currentValue || 0,
+        ...(typeof data.currentValueIDR === 'number' && Number.isFinite(data.currentValueIDR)
+          ? { current_value_idr: data.currentValueIDR }
+          : {}),
         return_percentage: Number(data.returnPercentage) || 0,
         tax_percentage: Number(data.taxPercentage) || 0,
         currency: data.currency,
@@ -65,6 +74,7 @@ export const investmentService = {
         status: data.status,
       },
     });
+    notifyCollectionChanged('investments');
     return result.id;
   },
 
@@ -143,10 +153,12 @@ export const investmentService = {
         ...(data.status ? { status: data.status } : {}),
       },
     });
+    notifyCollectionChanged('investments');
   },
 
   async hardDeleteInvestment(id: string, userId: string) {
     void userId;
     await cloudflareApi(`/api/member/investments/${id}`, { method: 'DELETE' });
+    notifyCollectionChanged('investments');
   }
 };

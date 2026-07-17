@@ -66,13 +66,18 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
       const displayDate = selectedDate.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
       const label = formData.type === 'topup' ? 'Top Up' : 'Transfer';
       const note = formData.note || `${label} ke ${accounts.find(a => a.id === formData.targetAccountId)?.name || formData.targetAccountId}`;
+      // Kalau kurs gagal dikonversi, jangan kirim amount mentah sebagai
+      // amountIDR — biarkan backend menghitung ulang lewat kurs server-side.
+      const canConvert =
+        formData.currency === 'IDR' ||
+        Boolean(rates && rates[formData.currency] && rates['IDR']);
 
       // Penyimpanan inti — pengeluaran dari rekening sumber.
       await transactionService.createTransaction({
         userId,
         type: 'pengeluaran',
         amount,
-        amountIDR: convertedAmount || amount,
+        amountIDR: canConvert ? convertedAmount : undefined,
         currency: formData.currency,
         category: label,
         subCategory: `${label} Keluar`,
@@ -94,7 +99,7 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
             userId,
             type: 'pemasukan',
             amount,
-            amountIDR: convertedAmount || amount,
+            amountIDR: canConvert ? convertedAmount : undefined,
             currency: formData.currency,
             category: label,
             subCategory: `${label} Masuk`,

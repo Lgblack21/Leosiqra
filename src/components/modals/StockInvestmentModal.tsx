@@ -133,6 +133,11 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
     const price = parseFloat(formData.pricePerShare) || 0;
     const invested = shares * price;
     const current = parseFloat(formData.currentValue) || invested;
+    // Kalau kurs gagal dikonversi, jangan kirim angka mentah sebagai IDR
+    // final — biarkan backend menghitung ulang lewat kurs server-side.
+    const canConvert =
+      formData.currency === 'IDR' ||
+      Boolean(rates && rates[formData.currency] && rates['IDR']);
 
     try {
       const isSell = formData.transactionType === 'Jual';
@@ -150,9 +155,9 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
         accountId: formData.accountId || 'General',
         platform: formData.platform,
         amountInvested: invested,
-        amountIDR: convertedAmount || invested,
+        amountIDR: canConvert ? convertedAmount : undefined,
         currentValue: current,
-        currentValueIDR: formData.currency === 'IDR' ? current : (current * (convertedAmount / (invested || 1))),
+        currentValueIDR: canConvert ? (formData.currency === 'IDR' ? current : (current * (convertedAmount / (invested || 1)))) : undefined,
         returnPercentage: invested > 0 ? ((current - invested) / invested) * 100 : 0,
         currency: formData.currency,
         dateInvested: new Date(formData.dateInvested),
@@ -197,7 +202,7 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
 
         await addTransaction({
           userId, type: financeType, amount: invested,
-          amountIDR: convertedAmount || invested,
+          amountIDR: canConvert ? convertedAmount : undefined,
           category: 'Investasi', subCategory: isSellSync ? `Jual Saham ${formData.stockCode}` : `Beli Saham ${formData.stockCode}`,
           accountId: formData.accountId || 'General',
           date: new Date(formData.dateInvested),

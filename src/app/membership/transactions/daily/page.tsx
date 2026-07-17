@@ -17,6 +17,7 @@ import { onAuthStateChanged } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 import { useRef } from 'react';
 import { MonthPicker } from '@/components/ui/MonthPicker';
+import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 
 export default function DailyTransactionLogPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -28,19 +29,27 @@ export default function DailyTransactionLogPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [error, setError] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [fxRates, setFxRates] = useState<ExchangeRates>({});
 
   const unsubRef = useRef<(() => void) | null>(null);
   const unsubAccRef = useRef<(() => void) | null>(null);
   const unsubCatRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
+    exchangeRateService.getLatestRates().then(setFxRates).catch(console.error);
+  }, []);
+
+  useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       if (u) {
-        // Fetch accounts for lookup
+        // Fetch accounts for lookup & Saldo Bersih (total saldo semua rekening saat ini)
         const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
         if (unsubAccRef.current) unsubAccRef.current();
         unsubAccRef.current = onSnapshot(qAcc, (snap) => {
-          setAccounts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account)));
+          setAccounts(snap.docs.map(doc => {
+            const d = doc.data();
+            return { ...d, id: doc.id, balance: Number(d.balance) || 0 } as Account;
+          }));
         });
 
         // Fetch categories for lookup
@@ -123,6 +132,14 @@ export default function DailyTransactionLogPage() {
   const totalPemasukan = useMemo(() => transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0), [transactions]);
   const totalPengeluaran = useMemo(() => transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0), [transactions]);
 
+  // Saldo Bersih = total saldo semua rekening saat ini (bukan net arus kas
+  // periode yang dipilih) — sama seperti "Total Saldo" di halaman Profile,
+  // jadi tidak berubah walau ganti bulan di MonthPicker.
+  const saldoBersih = useMemo(
+    () => accounts.reduce((s, a) => s + exchangeRateService.convert(a.balance || 0, a.currency || 'IDR', 'IDR', fxRates), 0),
+    [accounts, fxRates]
+  );
+
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 2 }).format(n).replace('Rp', '').trim();
   const formatAmount = (n: number, currency: string | undefined) => {
     try {
@@ -176,8 +193,8 @@ export default function DailyTransactionLogPage() {
         <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saldo Bersih</p>
           <div className="flex items-baseline gap-2">
-            <h3 className={`text-xl md:text-2xl font-black leading-tight ${totalPemasukan - totalPengeluaran >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-              Rp {formatRp(totalPemasukan - totalPengeluaran)}
+            <h3 className={`text-xl md:text-2xl font-black leading-tight ${saldoBersih >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+              Rp {formatRp(saldoBersih)}
             </h3>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { cloudflareApi } from '../cloudflare-api';
+import { notifyCollectionChanged } from '../cf-firestore';
 
 export interface Budget {
   id?: string;
@@ -21,6 +22,7 @@ export const budgetService = {
         period: data.period,
       },
     });
+    notifyCollectionChanged('budgets');
     return result.id;
   },
 
@@ -47,9 +49,11 @@ export const budgetService = {
         ...(data.period ? { period: data.period } : {}),
       },
     });
+    notifyCollectionChanged('budgets');
   },
 
   async deleteBudget(id: string) {
     await cloudflareApi(`/api/member/budgets/${id}`, { method: 'DELETE' });
+    notifyCollectionChanged('budgets');
   }
 };

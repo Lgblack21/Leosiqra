@@ -28,7 +28,7 @@ import {
 import { cn } from '@/lib/utils';
 import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged, User as FirebaseUser } from '@/lib/cf-auth';
-import { doc, setDoc } from '@/lib/cf-firestore';
+import { doc, setDoc, subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { accountService, Account } from '@/lib/services/accountService';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
@@ -39,6 +39,7 @@ import { ChangePasswordModal } from '@/components/modals/ChangePasswordModal';
 import { TwoFactorModal } from '@/components/auth/TwoFactorModal';
 import { Modal } from '@/components/ui/Modal';
 import { cloudflareApi } from '@/lib/cloudflare-api';
+import { useModal } from '@/context/ModalContext';
 
 interface UserProfile {
   displayName: string;
@@ -52,6 +53,7 @@ interface UserProfile {
 }
 
 export default function ProfilePage() {
+  const { activeModal } = useModal();
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -80,6 +82,21 @@ export default function ProfilePage() {
     displayName: '', email: '', username: '', phone: '', address: '', photoURL: ''
   });
   const [uploading, setUploading] = useState(false);
+
+  // Load akun & transaksi dipisah jadi fungsi sendiri supaya bisa dipanggil
+  // ulang saat modal transaksi/rekening manapun ditutup — accountService tidak
+  // pakai live subscription, jadi tanpa ini "Active Banks" nampilin saldo basi
+  // sampai halaman di-reload.
+  const loadAccountsAndTransactions = (uid: string) => {
+    Promise.all([
+      accountService.getUserAccounts(uid),
+      transactionService.getUserTransactions(uid)
+    ]).then(([accs, trxs]) => {
+      setAccounts(accs);
+      setTransactions(trxs);
+    }).catch(console.error)
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
     let unsubProfile: (() => void) | undefined;
@@ -110,17 +127,9 @@ export default function ProfilePage() {
           }
         });
 
-        // Load akun dan transaksi
-        Promise.all([
-          accountService.getUserAccounts(u.uid),
-          transactionService.getUserTransactions(u.uid)
-        ]).then(([accs, trxs]) => {
-          setAccounts(accs);
-          setTransactions(trxs);
-        }).catch(console.error)
-          .finally(() => setLoading(false));
-      } else { 
-        setLoading(false); 
+        loadAccountsAndTransactions(u.uid);
+      } else {
+        setLoading(false);
         if (unsubProfile) unsubProfile();
       }
     });
@@ -130,6 +139,28 @@ export default function ProfilePage() {
       if (unsubProfile) unsubProfile();
     };
   }, []);
+
+  const prevModalRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (prevModalRef.current && !activeModal && user) {
+      loadAccountsAndTransactions(user.uid);
+    }
+    prevModalRef.current = activeModal;
+  }, [activeModal, user]);
+
+  // Jaring pengaman tambahan di luar modal-close (mis. hapus transaksi di
+  // halaman lain, atau delete langsung dari halaman ini) — getUserAccounts/
+  // getUserTransactions cuma fetch sekali, jadi butuh refetch manual.
+  useEffect(() => {
+    if (!user) return;
+    const reload = () => loadAccountsAndTransactions(user.uid);
+    const unsubAcc = subscribeToCollectionChanges('accounts', reload);
+    const unsubTrx = subscribeToCollectionChanges('transactions', reload);
+    return () => {
+      unsubAcc();
+      unsubTrx();
+    };
+  }, [user]);
 
   useEffect(() => {
     setFxLoading(true);

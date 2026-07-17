@@ -81,13 +81,22 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
 
     setLoading(true);
     try {
+      // Kirim amountIDR cuma kalau memang berhasil dikonversi (IDR asli, atau
+      // rates sudah termuat dan punya kurs currency ini). Kalau tidak, biarkan
+      // undefined supaya backend yang menghitung ulang lewat kurs sendiri —
+      // jangan pernah kirim amount mentah sebagai amountIDR, nanti backend
+      // menganggapnya nilai IDR final dan tidak akan dikoreksi lagi.
+      const canConvert =
+        formData.currency === 'IDR' ||
+        Boolean(rates && rates[formData.currency] && rates['IDR']);
+
       // Penyimpanan inti — jika ini gagal, tidak ada apa pun yang tersimpan
       // dan aman untuk user mencoba lagi.
       await transactionService.createTransaction({
         userId,
         type: type === 'pemasukan' || type === 'pengeluaran' ? type : 'pemasukan',
         amount: amountNum,
-        amountIDR: convertedAmount || amountNum,
+        amountIDR: canConvert ? convertedAmount : undefined,
         category: formData.category,
         subCategory: formData.subCategory,
         currency: formData.currency,

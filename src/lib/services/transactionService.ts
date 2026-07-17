@@ -1,4 +1,5 @@
 import { cloudflareApi } from '../cloudflare-api';
+import { notifyCollectionChanged } from '../cf-firestore';
 
 export type TransactionType = 'pemasukan' | 'pengeluaran' | 'transfer' | 'topup' | 'debt' | 'investasi' | 'tabungan';
 
@@ -36,7 +37,15 @@ export const transactionService = {
       json: {
         type: data.type,
         amount: Number(data.amount) || 0,
-        amount_idr: Number(data.amountIDR) || Number(data.amount) || 0,
+        // Kalau amountIDR tidak dikirim (klien gagal konversi kurs, mis. API
+        // kurs kena blok firewall), biarkan field ini kosong — backend punya
+        // fallback konversi sendiri (fetchIdrConversionRate) yang jauh lebih
+        // andal karena jalan server-to-server tanpa hambatan CORS/firewall.
+        // Kalau di sini kita paksa isi dengan `data.amount` mentah, backend
+        // menganggap itu nilai IDR final dan tidak akan pernah mengoreksinya.
+        ...(typeof data.amountIDR === 'number' && Number.isFinite(data.amountIDR)
+          ? { amount_idr: data.amountIDR }
+          : {}),
         category: data.category,
         sub_category: data.subCategory,
         currency: data.currency || 'IDR',
@@ -54,6 +63,7 @@ export const transactionService = {
         status: data.status,
       },
     });
+    notifyCollectionChanged('transactions');
     return result.id;
   },
 
@@ -123,10 +133,12 @@ export const transactionService = {
         ...(data.note !== undefined ? { note: data.note } : {}),
       },
     });
+    notifyCollectionChanged('transactions');
   },
 
   async deleteTransaction(id: string) {
     await cloudflareApi(`/api/member/transactions/${id}`, { method: 'DELETE' });
+    notifyCollectionChanged('transactions');
   }
 };
 
@@ -160,7 +172,10 @@ export const addTransaction = (data: AddTransactionInput) => {
     userId: data.userId || '',
     type: (normalizedType as Transaction['type']) || 'pengeluaran',
     amount: data.amount || data.actual || 0,
-    amountIDR: data.amountIDR || data.amount || data.actual || 0,
+    // Jangan paksa fallback ke amount mentah kalau amountIDR memang belum
+    // berhasil dihitung (undefined) — biarkan backend yang menghitung ulang
+    // lewat kurs server-side (lihat resolveIdrAmount/insertTransactionRecord).
+    amountIDR: typeof data.amountIDR === 'number' ? data.amountIDR : undefined,
     category: data.category || 'Umum',
     accountId: data.accountId || 'General',
     date: data.date || new Date(),

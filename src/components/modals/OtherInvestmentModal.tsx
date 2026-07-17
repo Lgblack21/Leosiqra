@@ -133,15 +133,20 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
     const price = parseFloat(formData.pricePerUnit) || 0;
     const invested = qty * price;
     const current = parseFloat(formData.currentValue) || invested;
+    // Kalau kurs gagal dikonversi, jangan kirim angka mentah sebagai IDR
+    // final — biarkan backend menghitung ulang lewat kurs server-side.
+    const canConvert =
+      formData.currency === 'IDR' ||
+      Boolean(rates && rates[formData.currency] && rates['IDR']);
 
     try {
       const investmentPayload: Omit<Investment, 'id' | 'createdAt'> = {
         userId, name: formData.name, type: 'Lainnya',
         platform: formData.platform || formData.assetType,
         amountInvested: invested,
-        amountIDR: convertedAmount || invested,
+        amountIDR: canConvert ? convertedAmount : undefined,
         currentValue: current,
-        currentValueIDR: formData.currency === 'IDR' ? current : (current * (convertedAmount / (invested || 1))),
+        currentValueIDR: canConvert ? (formData.currency === 'IDR' ? current : (current * (convertedAmount / (invested || 1)))) : undefined,
         returnPercentage: invested > 0 ? ((current - invested) / invested) * 100 : 0,
         currency: formData.currency,
         logoUrl: formData.logoUrl,
@@ -199,7 +204,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
 
         await addTransaction({
           userId, type: financeType, amount: currentInvested,
-          amountIDR: convertedAmount || currentInvested,
+          amountIDR: canConvert ? convertedAmount : undefined,
           category: 'Investasi', subCategory: `Lainnya - ${currentType}`,
           accountId: formData.accountId || 'General',
           date: new Date(formData.dateInvested),

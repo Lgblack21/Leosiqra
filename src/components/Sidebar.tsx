@@ -141,7 +141,8 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     if (!profile?.id) return;
     setIsRequesting(true);
     try {
-      alert('Mode Cloudflare aktif: request akses Pro dari sidebar belum tersedia. Hubungi admin untuk aktivasi manual sementara.');
+      await cloudflareApi('/api/member/request-access', { method: 'POST' });
+      setProfile((prev) => (prev ? { ...prev, status: 'PENDING' } : prev));
     } catch (error) {
       console.error('Error requesting pro:', error);
       alert('Gagal mengirim permintaan. Silakan coba lagi nanti.');

@@ -372,15 +372,6 @@ export default function AdminPengaturanPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[12px] font-black text-slate-600">Harga Pro / Bulan (IDR)</label>
-                <input
-                  type="number"
-                  value={settings?.proPrice || 0}
-                  onChange={(e) => setSettings(prev => ({ ...prev as AppSettings, proPrice: Number(e.target.value) }))}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-bold text-indigo-600 focus:ring-2 focus:ring-indigo-500/20 outline-none"
-                />
-              </div>
-              <div className="space-y-2">
                 <label className="text-[12px] font-black text-slate-600">Nama Bank</label>
                 <input
                   type="text"

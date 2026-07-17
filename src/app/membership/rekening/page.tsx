@@ -22,9 +22,11 @@ import { onAuthStateChanged, User } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
 import { AccountModal } from '@/components/modals/AccountModal';
 import { isCreditAccountType, computeCreditUsage } from '@/lib/creditCard';
+import { useModal } from '@/context/ModalContext';
 
 export default function RekeningPage() {
   const router = useRouter();
+  const { activeModal } = useModal();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,52 +44,67 @@ export default function RekeningPage() {
   const unsubRef = useRef<(() => void) | null>(null);
   const unsubTrxRef = useRef<(() => void) | null>(null);
 
+  // Dipakai baik saat auth berubah maupun saat modal transaksi/rekening manapun
+  // ditutup, supaya Saldo tidak stale — onSnapshot di sini cuma sekali ambil
+  // data (bukan live subscription sungguhan), jadi harus dipanggil ulang manual.
+  const subscribeAccountsAndTransactions = (u: User) => {
+    // Transaksi dipakai untuk menghitung terpakai/sisa limit kartu kredit
+    // & paylater — lihat lib/creditCard.ts.
+    const qTrx = query(collection(db, 'transactions'), where('userId', '==', u.uid));
+    if (unsubTrxRef.current) unsubTrxRef.current();
+    unsubTrxRef.current = onSnapshot(qTrx, (snap) => {
+      setTransactions(snap.docs.map(doc => {
+        const d = doc.data();
+        return { ...d, id: doc.id, amount: Number(d.amount) || 0, date: d.date?.toDate?.() ?? new Date(), createdAt: d.createdAt?.toDate?.() ?? new Date() } as Transaction;
+      }));
+    }, (err) => console.error(err));
+
+    const q = query(collection(db, 'accounts'), where('userId', '==', u.uid));
+    if (unsubRef.current) unsubRef.current();
+    const unsubSnap = onSnapshot(q, (snap) => {
+      setAccounts(snap.docs.map(doc => {
+        const d = doc.data();
+        // payload_json menyimpan cardColor & creditLimit — wajib di-parse, kalau
+        // tidak keduanya hilang saat rekening ini diedit lewat AccountModal.
+        let cardColor: string | undefined;
+        let creditLimit = 0;
+        const payloadJson = (d.payload_json ?? d.payloadJson) as string | null | undefined;
+        if (payloadJson) {
+          try {
+            const parsed = JSON.parse(payloadJson) as { cardColor?: string; creditLimit?: number };
+            cardColor = parsed.cardColor;
+            creditLimit = Number(parsed.creditLimit) || 0;
+          } catch {
+            // payload_json tidak valid JSON — abaikan.
+          }
+        }
+        return { ...d, id: doc.id, balance: Number(d.balance) || 0, cardColor, creditLimit, createdAt: d.createdAt?.toDate?.() ?? new Date() } as Account;
+      }));
+      setLoading(false);
+    }, (err) => {
+      if (err.code !== 'permission-denied') console.error('Account listener error:', err);
+      setLoading(false);
+    });
+    unsubRef.current = unsubSnap;
+  };
+
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
-        // Transaksi dipakai untuk menghitung terpakai/sisa limit kartu kredit
-        // & paylater — lihat lib/creditCard.ts.
-        const qTrx = query(collection(db, 'transactions'), where('userId', '==', u.uid));
-        if (unsubTrxRef.current) unsubTrxRef.current();
-        unsubTrxRef.current = onSnapshot(qTrx, (snap) => {
-          setTransactions(snap.docs.map(doc => {
-            const d = doc.data();
-            return { ...d, id: doc.id, amount: Number(d.amount) || 0, date: d.date?.toDate?.() ?? new Date(), createdAt: d.createdAt?.toDate?.() ?? new Date() } as Transaction;
-          }));
-        }, (err) => console.error(err));
-
-        const q = query(collection(db, 'accounts'), where('userId', '==', u.uid));
-        if (unsubRef.current) unsubRef.current();
-        const unsubSnap = onSnapshot(q, (snap) => {
-          setAccounts(snap.docs.map(doc => {
-            const d = doc.data();
-            // payload_json menyimpan cardColor & creditLimit — wajib di-parse, kalau
-            // tidak keduanya hilang saat rekening ini diedit lewat AccountModal.
-            let cardColor: string | undefined;
-            let creditLimit = 0;
-            const payloadJson = (d.payload_json ?? d.payloadJson) as string | null | undefined;
-            if (payloadJson) {
-              try {
-                const parsed = JSON.parse(payloadJson) as { cardColor?: string; creditLimit?: number };
-                cardColor = parsed.cardColor;
-                creditLimit = Number(parsed.creditLimit) || 0;
-              } catch {
-                // payload_json tidak valid JSON — abaikan.
-              }
-            }
-            return { ...d, id: doc.id, balance: Number(d.balance) || 0, cardColor, creditLimit, createdAt: d.createdAt?.toDate?.() ?? new Date() } as Account;
-          }));
-          setLoading(false);
-        }, (err) => {
-          if (err.code !== 'permission-denied') console.error('Account listener error:', err);
-          setLoading(false);
-        });
-        unsubRef.current = unsubSnap;
+        subscribeAccountsAndTransactions(u);
       } else { setAccounts([]); setTransactions([]); setLoading(false); }
     });
     return () => { unsub(); if (unsubRef.current) unsubRef.current(); if (unsubTrxRef.current) unsubTrxRef.current(); };
   }, []);
+
+  const prevModalRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (prevModalRef.current && !activeModal && user) {
+      subscribeAccountsAndTransactions(user);
+    }
+    prevModalRef.current = activeModal;
+  }, [activeModal, user]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Hapus rekening ini? Tindakan ini tidak bisa dibatalkan.')) return;

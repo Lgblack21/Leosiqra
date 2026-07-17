@@ -88,13 +88,18 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
       const displayDate = selectedDate.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
       const isLunas = formData.paymentStatus === 'lunas';
       const isHutang = formData.debtType === 'hutang';
+      // Kalau kurs gagal dikonversi, jangan kirim amount mentah sebagai
+      // amountIDR — biarkan backend menghitung ulang lewat kurs server-side.
+      const canConvert =
+        formData.currency === 'IDR' ||
+        Boolean(rates && rates[formData.currency] && rates['IDR']);
 
       // Penyimpanan inti — catatan hutang/piutangnya sendiri.
       await transactionService.createTransaction({
         userId,
         type: 'debt',
         amount,
-        amountIDR: convertedAmount || amount,
+        amountIDR: canConvert ? convertedAmount : undefined,
         currency: formData.currency,
         category: isHutang ? 'Hutang' : 'Piutang',
         // subCategory menyimpan jenis hutang (Kartu Kredit/Pinjol/Paylater/…)
@@ -122,7 +127,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
             userId,
             type: financeType,
             amount,
-            amountIDR: convertedAmount || amount,
+            amountIDR: canConvert ? convertedAmount : undefined,
             currency: formData.currency,
             category: isHutang ? 'Hutang' : 'Piutang',
             subCategory: `${isHutang ? 'Hutang' : 'Piutang'} Lunas`,

@@ -65,13 +65,19 @@ export const SavingsModal = ({ userId, isOpen, onClose }: SavingsModalProps) => 
     try {
       const selectedDate = new Date(formData.date);
       const displayDate = selectedDate.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
-      
+      // Kalau kurs gagal dikonversi (rates belum termuat / currency ini tidak
+      // ada di rates), jangan kirim amount mentah sebagai amountIDR — biarkan
+      // backend yang menghitung ulang lewat kurs server-side.
+      const canConvert =
+        formData.currency === 'IDR' ||
+        Boolean(rates && rates[formData.currency] && rates['IDR']);
+
       await savingsService.createSaving({
         userId,
         description: formData.description,
         subCategory: formData.subCategory,
         amount: parseFloat(formData.amount),
-        amountIDR: convertedAmount || parseFloat(formData.amount),
+        amountIDR: canConvert ? convertedAmount : undefined,
         currency: formData.currency,
         category: formData.category,
         fromAccount: formData.fromAccount || 'General',

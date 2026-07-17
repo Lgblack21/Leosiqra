@@ -415,7 +415,7 @@ export default function NamaAkunPage() {
                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{curr.name}</p>
                       <h4 className="text-xl font-black text-slate-900">{curr.code}</h4>
                     </div>
-                    {curr.isDefault && (
+                    {Boolean(curr.isDefault) && (
                       <span className="absolute bottom-4 right-4 text-[7px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100">Default</span>
                     )}
                   </div>

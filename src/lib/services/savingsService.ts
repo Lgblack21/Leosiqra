@@ -25,9 +25,14 @@ const COLLECTION_NAME = 'savings';
 export const savingsService = {
   async createSaving(data: Omit<Saving, 'id' | 'createdAt'>) {
     const ref = collection(db, COLLECTION_NAME);
+    // Kalau amountIDR tidak berhasil dihitung di klien (mis. fetch kurs gagal),
+    // jangan kirim amount mentah sebagai IDR final — biarkan backend hitung
+    // ulang lewat resolveIdrAmount (server-side, tidak kena hambatan
+    // CORS/firewall seperti fetch dari browser).
+    const { amountIDR, ...rest } = data;
     const newDoc = await addDoc(ref, {
-      ...data,
-      amountIDR: data.amountIDR || data.amount || 0,
+      ...rest,
+      ...(typeof amountIDR === 'number' && Number.isFinite(amountIDR) ? { amountIDR } : {}),
       date: Timestamp.fromDate(data.date),
       createdAt: Timestamp.now()
     });
