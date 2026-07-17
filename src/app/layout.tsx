@@ -25,6 +25,7 @@ export const metadata: Metadata = {
 };
 
 import MaintenanceGuard from "@/components/MaintenanceGuard";
+import StaleReloadGuard from "@/components/StaleReloadGuard";
 
 export default function RootLayout({
   children,
@@ -38,6 +39,7 @@ export default function RootLayout({
       data-scroll-behavior="smooth"
     >
       <body className="min-h-full flex flex-col">
+        <StaleReloadGuard />
         <MaintenanceGuard>
           {children}
         </MaintenanceGuard>

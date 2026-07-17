@@ -1,0 +1,6 @@
+# File statis Next.js dinamai dengan hash konten (nama berubah kalau isinya
+# berubah), jadi aman di-cache permanen di browser — mempercepat load dan
+# mengurangi kemungkinan file lama tertimpa cache pendek lalu diminta lagi
+# setelah dihapus oleh deploy berikutnya.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
