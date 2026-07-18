@@ -34,3 +34,13 @@ declare class DurableObject {
 declare interface Ai {
   run(model: string, options: Record<string, unknown>): Promise<unknown>;
 }
+
+declare interface ScheduledEvent {
+  cron: string;
+  scheduledTime: number;
+}
+
+declare interface ExecutionContext {
+  waitUntil(promise: Promise<unknown>): void;
+  passThroughOnException(): void;
+}

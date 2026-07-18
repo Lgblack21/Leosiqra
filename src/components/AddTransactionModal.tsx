@@ -5,6 +5,7 @@ import { X, Save, TrendingUp, TrendingDown, ChevronDown, RefreshCw } from 'lucid
 import { cn } from '@/lib/utils';
 import { Button } from './Button';
 import { Input } from './Input';
+import { NumberInput } from '@/components/ui/NumberInput';
 import { CategorySelect } from './CategorySelect';
 import { CurrencySelect } from './CurrencySelect';
 import { transactionService, TransactionType } from '@/lib/services/transactionService';
@@ -222,14 +223,16 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
               value={formData.currency}
               onChange={(val) => setFormData({...formData, currency: val})}
             />
-            <Input 
-              label="Nominal" 
-              placeholder="0" 
-              type="number"
-              value={formData.amount}
-              onChange={(e) => setFormData({...formData, amount: e.target.value})}
-              required
-            />
+            <div className="w-full space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
+              <NumberInput
+                placeholder="0"
+                value={formData.amount}
+                onChange={(val) => setFormData({...formData, amount: val})}
+                required
+                className="flex w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-900 transition-all placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/5 disabled:cursor-not-allowed disabled:opacity-50 hover:border-slate-300"
+              />
+            </div>
           </div>
           
           {/* Conversion Display */}
@@ -273,9 +276,22 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Rekening / Wallet</label>
             <div className="relative mt-1">
-              <select 
+              <select
                 value={formData.accountId}
-                onChange={(e) => setFormData({...formData, accountId: e.target.value})}
+                onChange={(e) => {
+                  const selectedAccount = accounts.find(acc => acc.id === e.target.value);
+                  setFormData({
+                    ...formData,
+                    accountId: e.target.value,
+                    // Transaksi selalu dalam mata uang rekening yang dipilih —
+                    // tanpa ini, currency picker (independen dari rekening)
+                    // bisa ketinggalan di IDR meski rekeningnya USD/KHR/dll,
+                    // bikin amount tersimpan seolah IDR padahal harusnya
+                    // dikonversi (saldo rekening tetap benar terpotong, tapi
+                    // laporan pengeluaran jadi salah besar).
+                    currency: selectedAccount?.currency || formData.currency,
+                  });
+                }}
                 className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 cursor-pointer transition-all"
               >
                 <option value="">Pilih Rekening</option>

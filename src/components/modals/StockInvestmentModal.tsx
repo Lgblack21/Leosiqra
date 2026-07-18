@@ -140,7 +140,90 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
       Boolean(rates && rates[formData.currency] && rates['IDR']);
 
     try {
-      const isSell = formData.transactionType === 'Jual';
+      const isSell = formData.transactionType === 'Jual' && !!initialData?.id;
+
+      if (isSell && initialData) {
+        // Mode JUAL: dulu baris beli aslinya ditimpa langsung dengan angka
+        // transaksi jual, jadi modal awal hilang dan untung/rugi selalu
+        // tampil 0%. Sekarang: baris beli asli DIPERTAHANKAN (jadi riwayat
+        // cost basis), baris baru dibuat khusus untuk realisasi jualnya,
+        // dengan untung/rugi dihitung proporsional terhadap modal aslinya.
+        const originalShares = Number(initialData.sharesCount) || 0;
+        const originalInvested = Number(initialData.amountInvested) || 0;
+        const costBasisPerShare = originalShares > 0 ? originalInvested / originalShares : 0;
+        const soldShares = shares;
+        const costBasisSold = costBasisPerShare * soldShares;
+        const proceeds = invested; // shares * harga jual
+        const remainingShares = Math.max(0, originalShares - soldShares);
+        const remainingInvested = costBasisPerShare * remainingShares;
+        const ratio = originalInvested > 0 ? remainingInvested / originalInvested : 0;
+
+        await investmentService.updateInvestment(initialData.id!, {
+          sharesCount: remainingShares,
+          amountInvested: remainingInvested,
+          amountIDR: typeof initialData.amountIDR === 'number' ? initialData.amountIDR * ratio : undefined,
+          currentValue: (initialData.currentValue || 0) * ratio,
+          currentValueIDR: typeof initialData.currentValueIDR === 'number' ? initialData.currentValueIDR * ratio : undefined,
+          status: remainingShares > 0 ? 'Active' : 'Closed',
+        });
+
+        const finalInvestmentId = await investmentService.createInvestment({
+          userId,
+          name: initialData.stockCode || initialData.name,
+          type: 'Saham',
+          stockCode: (initialData.stockCode || '').toUpperCase(),
+          exchangeCode: (initialData.exchangeCode || 'IDX').toUpperCase(),
+          logoUrl: initialData.logoUrl,
+          sharesCount: soldShares,
+          pricePerShare: price,
+          transactionType: 'Jual',
+          category: formData.category,
+          accountId: formData.accountId || 'General',
+          platform: initialData.platform,
+          amountInvested: costBasisSold,
+          amountIDR: canConvert ? costBasisSold * (convertedAmount / (invested || 1)) : undefined,
+          currentValue: proceeds,
+          currentValueIDR: canConvert ? convertedAmount : undefined,
+          returnPercentage: costBasisSold > 0 ? ((proceeds - costBasisSold) / costBasisSold) * 100 : 0,
+          currency: formData.currency,
+          dateInvested: new Date(formData.dateInvested),
+          status: 'Closed',
+          relatedInvestmentId: initialData.id
+        });
+
+        try {
+          const realizedPnl = proceeds - costBasisSold;
+          await updateMemberTotals(userId, 'pemasukan', proceeds);
+          await updateMemberTotals(userId, 'investasi', -costBasisSold);
+
+          if (formData.accountId) {
+            await accountService.updateAccountBalance(formData.accountId, proceeds);
+          }
+
+          await addTransaction({
+            userId, type: 'pemasukan', amount: proceeds,
+            amountIDR: canConvert ? convertedAmount : undefined,
+            category: 'Investasi', subCategory: `Jual Saham ${formData.stockCode}`,
+            accountId: formData.accountId || 'General',
+            date: new Date(formData.dateInvested),
+            note: `[Baru] Penjualan ${soldShares} lembar saham ${formData.stockCode} @ ${formData.pricePerShare} (${realizedPnl >= 0 ? 'Untung' : 'Rugi'} ${formatCurrency(Math.abs(realizedPnl), formData.currency)})`,
+            status: 'VERIFIED',
+            relatedId: finalInvestmentId,
+            relatedType: 'investasi'
+          });
+        } catch (syncErr) {
+          console.error('Posisi saham tersimpan, tapi gagal sinkronisasi ringkasan/saldo:', syncErr);
+        }
+
+        onClose();
+        setFormData({
+          stockCode: '', logoUrl: '', exchangeCode: 'IDX', currency: 'IDR', sharesCount: '',
+          pricePerShare: '', currentValue: '', transactionType: 'Beli', category: 'Saham',
+          accountId: '', platform: '', dateInvested: new Date().toISOString().split('T')[0]
+        });
+        return;
+      }
+
       const investmentPayload: Omit<Investment, 'id' | 'createdAt'> = {
         userId,
         name: formData.stockCode,
@@ -161,17 +244,14 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
         returnPercentage: invested > 0 ? ((current - invested) / invested) * 100 : 0,
         currency: formData.currency,
         dateInvested: new Date(formData.dateInvested),
-        status: isSell ? 'Closed' : 'Active'
+        status: 'Active'
       };
 
       // Penyimpanan inti — jika ini gagal, belum ada posisi yang tersimpan/berubah
       // dan aman untuk user mencoba lagi.
-      let finalInvestmentId = editData?.id || initialData?.id || '';
+      let finalInvestmentId = editData?.id || '';
       if (editData?.id) {
         await investmentService.updateInvestment(editData.id, investmentPayload);
-      } else if (initialData?.id) {
-        // Mode JUAL: Update record yang ada alih-alih buat baru
-        await investmentService.updateInvestment(initialData.id, investmentPayload);
       } else {
         finalInvestmentId = await investmentService.createInvestment(investmentPayload);
       }
@@ -181,7 +261,6 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
       // tersimpan, jadi kegagalan di sini tidak boleh membuat modal terlihat
       // "gagal total" dan memicu submit ulang yang bisa membuat posisi dobel.
       try {
-        const isSellSync = formData.transactionType === 'Jual';
         if (editData) {
           const oldInvested = Number(editData.amountInvested) || 0;
           const oldType = editData.transactionType || 'Beli';
@@ -191,22 +270,20 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
           await updateMemberTotals(userId, 'investasi', isOldSell ? oldInvested : -oldInvested);
         }
 
-        const financeType = isSellSync ? 'pemasukan' : 'pengeluaran';
-        await updateMemberTotals(userId, financeType, invested);
-        await updateMemberTotals(userId, 'investasi', isSellSync ? -invested : invested);
+        await updateMemberTotals(userId, 'pengeluaran', invested);
+        await updateMemberTotals(userId, 'investasi', invested);
 
         if (formData.accountId) {
-          const balanceChange = isSellSync ? invested : -invested;
-          await accountService.updateAccountBalance(formData.accountId, balanceChange);
+          await accountService.updateAccountBalance(formData.accountId, -invested);
         }
 
         await addTransaction({
-          userId, type: financeType, amount: invested,
+          userId, type: 'pengeluaran', amount: invested,
           amountIDR: canConvert ? convertedAmount : undefined,
-          category: 'Investasi', subCategory: isSellSync ? `Jual Saham ${formData.stockCode}` : `Beli Saham ${formData.stockCode}`,
+          category: 'Investasi', subCategory: `Beli Saham ${formData.stockCode}`,
           accountId: formData.accountId || 'General',
           date: new Date(formData.dateInvested),
-          note: `${editData ? '[Update]' : '[Baru]'} ${isSellSync ? 'Penjualan' : 'Pembelian'} ${formData.sharesCount} lembar saham ${formData.stockCode} @ ${formData.pricePerShare}`,
+          note: `${editData ? '[Update]' : '[Baru]'} Pembelian ${formData.sharesCount} lembar saham ${formData.stockCode} @ ${formData.pricePerShare}`,
           status: 'VERIFIED',
           relatedId: finalInvestmentId,
           relatedType: 'investasi'
@@ -355,9 +432,19 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Rekening / RDN</label>
             <div className="relative">
-              <select 
+              <select
                 value={formData.accountId}
-                onChange={e => setFormData(p => ({...p, accountId: e.target.value}))}
+                onChange={e => {
+                  const selectedAccount = accounts.find(acc => acc.id === e.target.value);
+                  setFormData(p => ({
+                    ...p,
+                    accountId: e.target.value,
+                    // Nominal saham selalu dalam mata uang rekening sumber —
+                    // tanpa ini currency picker (independen) bisa ketinggalan
+                    // di IDR meski rekeningnya USD/KHR/dll.
+                    currency: selectedAccount?.currency || p.currency,
+                  }));
+                }}
                 disabled={!!initialData}
                 className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer disabled:opacity-60"
               >

@@ -1,25 +1,53 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { 
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import {
   PlusCircle,
   PieChart,
   Trash2,
   Gem,
   TrendingUp,
-  Pencil
+  Pencil,
+  RefreshCw
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LogoImage } from '@/components/ui/LogoImage';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { Account } from '@/lib/services/accountService';
 import type { Category } from '@/lib/services/categoryService';
+import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged, User } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
 import { useRef } from 'react';
 import { OtherInvestmentModal } from '@/components/modals/OtherInvestmentModal';
 import { useCountUp } from '@/lib/hooks/useCountUp';
+
+// Deteksi posisi crypto dari teks bebas di "name"/"unit" (tidak ada field
+// simbol terstruktur untuk Investasi Lainnya) — kalau salah satu kata cocok
+// simbol/nama koin umum, harga live-nya ditarik dari CoinGecko.
+const CRYPTO_ID_MAP: Record<string, string> = {
+  BTC: 'bitcoin', BITCOIN: 'bitcoin',
+  ETH: 'ethereum', ETHEREUM: 'ethereum',
+  SOL: 'solana', SOLANA: 'solana',
+  BNB: 'binancecoin', BINANCECOIN: 'binancecoin',
+  ADA: 'cardano', CARDANO: 'cardano',
+  XRP: 'ripple', RIPPLE: 'ripple',
+  DOT: 'polkadot', POLKADOT: 'polkadot',
+  DOGE: 'dogecoin', DOGECOIN: 'dogecoin',
+  HOT: 'holotoken', HOLOCHAIN: 'holotoken',
+  ASTER: 'aster-2',
+};
+
+const detectCryptoId = (inv: Investment): string | null => {
+  const tokens = `${inv.name} ${inv.unit || ''}`.toUpperCase().split(/[^A-Z]+/).filter(Boolean);
+  for (const t of tokens) {
+    if (CRYPTO_ID_MAP[t]) return CRYPTO_ID_MAP[t];
+  }
+  return null;
+};
+
+type LivePrice = { priceUsd: number; changePercent: number };
 
 export default function OtherInvestmentsPage() {
   const [investments, setInvestments] = useState<Investment[]>([]);
@@ -30,8 +58,11 @@ export default function OtherInvestmentsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingInvestment, setEditingInvestment] = useState<Investment | undefined>(undefined);
   const [sellingInvestment, setSellingInvestment] = useState<Investment | undefined>(undefined);
+  const [livePrices, setLivePrices] = useState<Map<string, LivePrice>>(new Map());
+  const [syncingPrices, setSyncingPrices] = useState(false);
 
   const unsubRef = useRef<(() => void) | null>(null);
+  const syncedKeyRef = useRef<string>('');
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -72,6 +103,71 @@ export default function OtherInvestmentsPage() {
     });
     return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
   }, []);
+
+  // Harga live (CoinGecko, langsung dari browser — endpoint publiknya
+  // mendukung CORS) untuk posisi yang terdeteksi crypto, lalu otomatis
+  // ditulis ke currentValue/currentValueIDR/returnPercentage-nya.
+  const syncLivePrices = useCallback(async (cryptoPositions: Array<{ inv: Investment; coinId: string }>, force = false) => {
+    if (cryptoPositions.length === 0) return;
+
+    const uniqueIds = Array.from(new Set(cryptoPositions.map(p => p.coinId)));
+    const idsKey = uniqueIds.sort().join(',');
+    if (!force && idsKey === syncedKeyRef.current) return;
+    syncedKeyRef.current = idsKey;
+
+    setSyncingPrices(true);
+    try {
+      const res = await fetch(
+        `https://api.coingecko.com/api/v3/simple/price?ids=${uniqueIds.join(',')}&vs_currencies=usd&include_24hr_change=true`
+      );
+      if (!res.ok) throw new Error(`CoinGecko error ${res.status}`);
+      const data = await res.json() as Record<string, { usd?: number; usd_24h_change?: number }>;
+
+      const priceMap = new Map<string, LivePrice>();
+      for (const id of uniqueIds) {
+        if (typeof data[id]?.usd === 'number') {
+          priceMap.set(id, { priceUsd: data[id].usd!, changePercent: data[id].usd_24h_change || 0 });
+        }
+      }
+      setLivePrices(priceMap);
+
+      const rates: ExchangeRates | null = await exchangeRateService.getLatestRates().catch(() => null);
+
+      for (const { inv, coinId } of cryptoPositions) {
+        const live = priceMap.get(coinId);
+        if (!live || !inv.id) continue;
+
+        const pricePerUnitInCurrency = rates
+          ? exchangeRateService.convert(live.priceUsd, 'USD', inv.currency || 'IDR', rates)
+          : live.priceUsd;
+        const newCurrentValue = (inv.quantity || 0) * pricePerUnitInCurrency;
+        const newCurrentValueIdr = rates
+          ? exchangeRateService.convert(newCurrentValue, inv.currency || 'IDR', 'IDR', rates)
+          : newCurrentValue;
+        const newReturnPct = inv.amountInvested > 0
+          ? ((newCurrentValue - inv.amountInvested) / inv.amountInvested) * 100
+          : 0;
+
+        await investmentService.updateInvestment(inv.id, {
+          currentValue: newCurrentValue,
+          currentValueIDR: newCurrentValueIdr,
+          returnPercentage: newReturnPct,
+        }).catch(e => console.error(`Gagal sync harga live ke posisi ${inv.id}:`, e));
+      }
+    } catch (e) {
+      console.error('Gagal ambil harga live crypto:', e);
+    } finally {
+      setSyncingPrices(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const cryptoPositions = investments
+      .filter(i => i.status === 'Active')
+      .map(inv => ({ inv, coinId: detectCryptoId(inv) }))
+      .filter((p): p is { inv: Investment; coinId: string } => p.coinId !== null);
+    syncLivePrices(cryptoPositions);
+  }, [investments, syncLivePrices]);
 
   const getAccountName = (id: string) => {
     const acc = accounts.find(a => a.id === id);
@@ -118,17 +214,31 @@ export default function OtherInvestmentsPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-br from-white to-indigo-50/40 p-6 rounded-[24px] border border-slate-100 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-navy to-indigo-700 text-white items-center justify-center shadow-lg shadow-indigo-600/20 shrink-0">
+          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white items-center justify-center shadow-lg shadow-emerald-600/20 shrink-0">
             <Gem size={22} />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-serif font-black text-slate-900 tracking-tight">Investasi Lainnya</h1>
+            <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Investasi Lainnya</h1>
             <p className="text-[10px] md:text-sm font-medium text-slate-400 mt-1 max-w-xl">
               Lacak seluruh aset investasi alternatif Anda.
             </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => {
+              const cryptoPositions = investments
+                .filter(i => i.status === 'Active')
+                .map(inv => ({ inv, coinId: detectCryptoId(inv) }))
+                .filter((p): p is { inv: Investment; coinId: string } => p.coinId !== null);
+              syncLivePrices(cryptoPositions, true);
+            }}
+            disabled={syncingPrices}
+            className="px-4 py-3 bg-white border border-slate-100 rounded-xl text-[11px] font-black text-slate-600 hover:bg-slate-50 hover:shadow-sm transition-all shadow-sm active:scale-95 disabled:opacity-50 flex items-center gap-2"
+          >
+            <RefreshCw size={14} className={syncingPrices ? 'animate-spin' : ''} />
+            <span className="hidden md:inline">Refresh Harga Crypto</span>
+          </button>
           <button
             onClick={() => { setEditingInvestment(undefined); setSellingInvestment(undefined); setShowModal(true); }}
             className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
@@ -191,6 +301,7 @@ export default function OtherInvestmentsPage() {
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Kuantitas</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">Satuan</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Harga / 1 Satuan</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-indigo-400 uppercase tracking-widest whitespace-nowrap text-right">Nilai Sekarang</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tipe Transaksi</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Kategori</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Rekening</th>
@@ -215,6 +326,17 @@ export default function OtherInvestmentsPage() {
                     <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap"><span className="text-sm font-bold text-slate-700">{inv.quantity || 0}</span></td>
                     <td className="px-4 md:px-6 py-5 text-center whitespace-nowrap"><span className="text-xs font-bold text-slate-500">{inv.unit || '-'}</span></td>
                     <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatAmount(inv.pricePerUnit || 0, inv.currency)}</td>
+                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap">
+                      <p className="font-black text-slate-900 text-sm">{formatAmount(inv.currentValue || 0, inv.currency)}</p>
+                      <p className={`text-[10px] font-bold ${inv.returnPercentage >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                        {inv.returnPercentage >= 0 ? '+' : ''}{inv.returnPercentage.toFixed(2)}%
+                        {(() => {
+                          const coinId = detectCryptoId(inv);
+                          const live = coinId ? livePrices.get(coinId) : null;
+                          return live ? <span className="text-slate-400 font-medium"> · Live {live.changePercent >= 0 ? '+' : ''}{live.changePercent.toFixed(2)}%</span> : null;
+                        })()}
+                      </p>
+                    </td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.transactionType || '-'}</span></td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{getCategoryName(inv.category || '')}</span></td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{getAccountName(inv.accountId || '')}</span></td>

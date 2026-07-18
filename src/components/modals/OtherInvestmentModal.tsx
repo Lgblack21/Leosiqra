@@ -140,6 +140,83 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
       Boolean(rates && rates[formData.currency] && rates['IDR']);
 
     try {
+      const isSell = formData.transactionType === 'Penjualan' && !!initialData?.id;
+
+      if (isSell && initialData) {
+        // Mode JUAL: dulu baris beli aslinya ditimpa langsung dengan angka
+        // transaksi jual, jadi modal awal hilang dan untung/rugi selalu
+        // tampil 0%. Sekarang: baris beli asli DIPERTAHANKAN (jadi riwayat
+        // cost basis), baris baru dibuat khusus untuk realisasi jualnya,
+        // dengan untung/rugi dihitung proporsional terhadap modal aslinya.
+        const originalQty = Number(initialData.quantity) || 0;
+        const originalInvested = Number(initialData.amountInvested) || 0;
+        const costBasisPerUnit = originalQty > 0 ? originalInvested / originalQty : 0;
+        const soldQty = qty;
+        const costBasisSold = costBasisPerUnit * soldQty;
+        const proceeds = invested; // qty * harga jual
+        const remainingQty = Math.max(0, originalQty - soldQty);
+        const remainingInvested = costBasisPerUnit * remainingQty;
+        const ratio = originalInvested > 0 ? remainingInvested / originalInvested : 0;
+
+        await investmentService.updateInvestment(initialData.id!, {
+          quantity: remainingQty,
+          amountInvested: remainingInvested,
+          amountIDR: typeof initialData.amountIDR === 'number' ? initialData.amountIDR * ratio : undefined,
+          currentValue: (initialData.currentValue || 0) * ratio,
+          currentValueIDR: typeof initialData.currentValueIDR === 'number' ? initialData.currentValueIDR * ratio : undefined,
+          status: remainingQty > 0 ? 'Active' : 'Closed',
+        });
+
+        const finalInvestmentId = await investmentService.createInvestment({
+          userId, name: initialData.name, type: 'Lainnya',
+          platform: initialData.platform,
+          amountInvested: costBasisSold,
+          amountIDR: canConvert ? costBasisSold * (convertedAmount / (invested || 1)) : undefined,
+          currentValue: proceeds,
+          currentValueIDR: canConvert ? convertedAmount : undefined,
+          returnPercentage: costBasisSold > 0 ? ((proceeds - costBasisSold) / costBasisSold) * 100 : 0,
+          currency: formData.currency,
+          logoUrl: initialData.logoUrl,
+          quantity: soldQty,
+          unit: initialData.unit,
+          pricePerUnit: price,
+          transactionType: 'Penjualan',
+          category: formData.category,
+          accountId: formData.accountId || 'General',
+          dateInvested: new Date(formData.dateInvested),
+          status: 'Closed',
+          relatedInvestmentId: initialData.id
+        });
+
+        try {
+          const realizedPnl = proceeds - costBasisSold;
+          await updateMemberTotals(userId, 'pemasukan', proceeds);
+          await updateMemberTotals(userId, 'investasi', -costBasisSold);
+
+          if (formData.accountId) {
+            await accountService.updateAccountBalance(formData.accountId, proceeds);
+          }
+
+          await addTransaction({
+            userId, type: 'pemasukan', amount: proceeds,
+            amountIDR: canConvert ? convertedAmount : undefined,
+            category: 'Investasi', subCategory: `Lainnya - Penjualan`,
+            accountId: formData.accountId || 'General',
+            date: new Date(formData.dateInvested),
+            note: `[Baru] Penjualan ${formData.name} (${realizedPnl >= 0 ? 'Untung' : 'Rugi'} ${formatCurrency(Math.abs(realizedPnl), formData.currency)})`,
+            status: 'VERIFIED',
+            relatedId: finalInvestmentId,
+            relatedType: 'investasi'
+          });
+        } catch (syncErr) {
+          console.error('Posisi aset tersimpan, tapi gagal sinkronisasi ringkasan/saldo:', syncErr);
+        }
+
+        onClose();
+        setFormData({ name: '', logoUrl: '', currency: 'IDR', quantity: '', unit: '', pricePerUnit: '', currentValue: '', transactionType: 'Pembelian', category: '', accountId: '', platform: '', assetType: 'Emas', dateInvested: new Date().toISOString().split('T')[0] });
+        return;
+      }
+
       const investmentPayload: Omit<Investment, 'id' | 'createdAt'> = {
         userId, name: formData.name, type: 'Lainnya',
         platform: formData.platform || formData.assetType,
@@ -159,13 +236,10 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
         dateInvested: new Date(formData.dateInvested), status: 'Active'
       };
 
-      // Penyimpanan inti — posisi asetnya sendiri.
-      let finalInvestmentId = editData?.id || initialData?.id || '';
+      // Penyimpanan inti — posisi asetnya sendiri (jalur Pembelian/Edit).
+      let finalInvestmentId = editData?.id || '';
       if (editData?.id) {
         await investmentService.updateInvestment(editData.id, investmentPayload);
-      } else if (initialData?.id) {
-        // Mode JUAL: Update record yang ada alih-alih buat baru
-        await investmentService.updateInvestment(initialData.id, investmentPayload);
       } else {
         finalInvestmentId = await investmentService.createInvestment(investmentPayload);
       }
@@ -175,9 +249,6 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
       // kegagalan di sini tidak boleh membuat modal terlihat "gagal total"
       // dan memicu submit ulang yang bisa membuat posisi dobel.
       try {
-        const currentInvested = invested;
-        const currentType = formData.transactionType;
-
         if (editData) {
           const oldInvested = editData.amountInvested;
           const oldType = editData.transactionType || 'Pembelian';
@@ -191,24 +262,20 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
           }
         }
 
-        const financeType = currentType === 'Pembelian' ? 'pengeluaran' : 'pemasukan';
-        await updateMemberTotals(userId, financeType, currentInvested);
-
-        if (currentType === 'Pembelian') await updateMemberTotals(userId, 'investasi', currentInvested);
-        if (currentType === 'Penjualan') await updateMemberTotals(userId, 'investasi', -currentInvested);
+        await updateMemberTotals(userId, 'pengeluaran', invested);
+        await updateMemberTotals(userId, 'investasi', invested);
 
         if (formData.accountId) {
-          const balanceChange = currentType === 'Penjualan' ? currentInvested : -currentInvested;
-          await accountService.updateAccountBalance(formData.accountId, balanceChange);
+          await accountService.updateAccountBalance(formData.accountId, -invested);
         }
 
         await addTransaction({
-          userId, type: financeType, amount: currentInvested,
+          userId, type: 'pengeluaran', amount: invested,
           amountIDR: canConvert ? convertedAmount : undefined,
-          category: 'Investasi', subCategory: `Lainnya - ${currentType}`,
+          category: 'Investasi', subCategory: `Lainnya - Pembelian`,
           accountId: formData.accountId || 'General',
           date: new Date(formData.dateInvested),
-          note: `${editData ? '[Update]' : '[Baru]'} ${currentType} ${formData.name}`,
+          note: `${editData ? '[Update]' : '[Baru]'} Pembelian ${formData.name}`,
           status: 'VERIFIED',
           relatedId: finalInvestmentId,
           relatedType: 'investasi'
@@ -318,9 +385,19 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Rekening / Sumber</label>
             <div className="relative">
-              <select 
+              <select
                 value={formData.accountId}
-                onChange={e => setFormData(p => ({...p, accountId: e.target.value}))}
+                onChange={e => {
+                  const selectedAccount = accounts.find(acc => acc.id === e.target.value);
+                  setFormData(p => ({
+                    ...p,
+                    accountId: e.target.value,
+                    // Nominal investasi selalu dalam mata uang rekening sumber
+                    // — tanpa ini currency picker (independen) bisa ketinggalan
+                    // di IDR meski rekeningnya USD/KHR/dll.
+                    currency: selectedAccount?.currency || p.currency,
+                  }));
+                }}
                 disabled={!!initialData}
                 className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer disabled:opacity-60"
               >

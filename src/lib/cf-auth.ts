@@ -7,6 +7,10 @@ export type User = {
   displayName?: string | null;
   photoURL?: string | null;
   role?: "admin" | "user";
+  // false untuk akun Google (tidak punya password lokal) — dipakai untuk
+  // menyesuaikan alur Ganti Password / Reset Data, yang keduanya butuh
+  // verifikasi "password saat ini" yang tidak pernah ada untuk akun ini.
+  hasPassword?: boolean;
 };
 
 type CompatUserPayload = {
@@ -16,6 +20,7 @@ type CompatUserPayload = {
   photo_url?: string | null;
   photoURL?: string | null;
   role?: string | null;
+  hasPassword?: boolean;
 };
 
 const toCompatUser = (payload: CompatUserPayload | null | undefined): User | null => {
@@ -29,6 +34,7 @@ const toCompatUser = (payload: CompatUserPayload | null | undefined): User | nul
     displayName: payload.name ?? null,
     photoURL: payload.photo_url ?? payload.photoURL ?? null,
     role: payload.role === "admin" ? "admin" : "user",
+    hasPassword: payload.hasPassword ?? true,
   };
 };
 

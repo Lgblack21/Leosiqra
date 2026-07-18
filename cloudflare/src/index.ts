@@ -18,6 +18,8 @@ export interface Env {
   GOOGLE_CLIENT_SECRET?: string;
   OPENROUTER_API_KEY?: string;
   OPENROUTER_MODEL?: string;
+  TELEGRAM_BOT_TOKEN?: string;
+  TELEGRAM_CHAT_ID?: string;
 }
 
 type AppUser = {
@@ -30,6 +32,10 @@ type AppUser = {
   whatsapp?: string | null;
   two_factor_secret?: string | null;
   photoURL?: string | null;
+  // false untuk akun Google (password_hash cuma sentinel 'oauth$google', bukan
+  // password asli) — dipakai frontend untuk skip verifikasi "password saat
+  // ini" di Ganti Password / Reset Data, karena memang tidak pernah ada.
+  hasPassword?: boolean;
 };
 
 const json = (data: unknown, init: ResponseInit = {}) =>
@@ -67,6 +73,27 @@ const parseJson = async <T>(request: Request): Promise<T> => {
 const generateId = () => crypto.randomUUID();
 
 const nowIso = () => new Date().toISOString();
+
+// Dipakai buat kasih tahu admin lewat Telegram (permintaan akses baru,
+// pembayaran baru) — sengaja tidak pernah melempar error kalau gagal/belum
+// dikonfigurasi, supaya alur utama (request access / submit pembayaran) tidak
+// pernah gagal gara-gara notifikasi Telegram bermasalah.
+const sendTelegramNotification = async (env: Env, message: string) => {
+  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) return;
+  try {
+    await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        chat_id: env.TELEGRAM_CHAT_ID,
+        text: message,
+        parse_mode: "HTML",
+      }),
+    });
+  } catch (err) {
+    console.error("Gagal mengirim notifikasi Telegram:", err);
+  }
+};
 
 // User baru langsung dapat akses penuh (status AKTIF) selama durasi Free Plan
 // yang di-set admin di Pengaturan (admin_settings.free_plan_days — field yang
@@ -383,12 +410,13 @@ const readSession = async (env: Env, request: Request) => {
     whatsapp?: string | null;
     two_factor_secret?: string | null;
     photo_url?: string | null;
+    password_hash?: string;
   } | null = null;
 
   try {
     result = await env.DB.prepare(
       `SELECT s.id as session_id, s.user_id, s.role, s.expires_at,
-              u.name, u.email, u.plan, u.status, u.expired_at, u.whatsapp, u.two_factor_secret, u.photo_url
+              u.name, u.email, u.plan, u.status, u.expired_at, u.whatsapp, u.two_factor_secret, u.photo_url, u.password_hash
          FROM sessions s
          JOIN users u ON u.id = s.user_id
         WHERE s.id = ?`
@@ -398,7 +426,7 @@ const readSession = async (env: Env, request: Request) => {
   } catch {
     result = await env.DB.prepare(
       `SELECT s.id as session_id, s.user_id, u.role as role, s.expires_at,
-              u.name, u.email, u.plan, u.status, u.expired_at, u.whatsapp, u.two_factor_secret, u.photo_url
+              u.name, u.email, u.plan, u.status, u.expired_at, u.whatsapp, u.two_factor_secret, u.photo_url, u.password_hash
          FROM sessions s
          JOIN users u ON u.id = s.user_id
         WHERE s.id = ?`
@@ -443,6 +471,7 @@ const readSession = async (env: Env, request: Request) => {
       whatsapp: result.whatsapp,
       two_factor_secret: result.two_factor_secret,
       photoURL: result.photo_url ?? null,
+      hasPassword: !result.password_hash?.startsWith("oauth$"),
     } satisfies AppUser,
   };
 };
@@ -497,41 +526,124 @@ const getMaintenanceSettings = async (env: Env) =>
     whatsapp: string | null;
   }>();
 
+// Konteks lengkap keuangan user untuk AI — sebelumnya cuma kirim sebagian
+// kolom (tanpa amount_idr/currency di transaksi, tanpa detail hutang, tanpa
+// recurring/currencies sama sekali) dengan limit kecil (40 transaksi dll),
+// jadi AI sering "buta" terhadap transaksi mata uang asing, hutang/piutang,
+// dan riwayat lama user. Sekarang ambil semua tabel keuangan dengan kolom
+// lengkap dan limit yang jauh lebih longgar.
 const buildUserContext = async (env: Env, userId: string) => {
-  const [accounts, transactions, budgets, investments, savings] = await Promise.all([
+  const [accounts, transactions, budgets, investments, savings, recurring, currencies] = await Promise.all([
     env.DB.prepare(
-      "SELECT id, name, type, currency, balance FROM accounts WHERE user_id = ? ORDER BY created_at DESC LIMIT 20"
+      `SELECT id, name, type, currency, balance, initial_balance, payload_json
+         FROM accounts WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`
+    )
+      .bind(userId)
+      .all<{
+        id: string;
+        name: string;
+        type: string;
+        currency: string;
+        balance: number;
+        initial_balance: number;
+        payload_json: string | null;
+      }>(),
+    env.DB.prepare(
+      `SELECT type, amount, amount_idr, currency, category, sub_category, account_id, note, date,
+              lender_name, total_debt, installment_tenor, monthly_interest, total_interest, payment_status
+         FROM transactions WHERE user_id = ? ORDER BY date DESC LIMIT 500`
     )
       .bind(userId)
       .all(),
     env.DB.prepare(
-      "SELECT type, amount, category, sub_category, note, date FROM transactions WHERE user_id = ? ORDER BY date DESC LIMIT 40"
+      "SELECT type, category, amount, period FROM budgets WHERE user_id = ? ORDER BY created_at DESC LIMIT 50"
+    )
+      .bind(userId)
+      .all(),
+    // status != 'Planned' membuang baris proyeksi otomatis "(Hasil Akhir)"
+    // yang dibuat DepositModal untuk tiap deposito baru — bukan posisi nyata,
+    // supaya AI tidak menghitungnya dobel dengan baris "Penempatan" aslinya.
+    env.DB.prepare(
+      `SELECT name, type, currency, amount_invested, amount_idr, current_value, current_value_idr,
+              return_percentage, status FROM investments WHERE user_id = ? AND status != 'Planned' ORDER BY created_at DESC LIMIT 100`
     )
       .bind(userId)
       .all(),
     env.DB.prepare(
-      "SELECT category, amount, period FROM budgets WHERE user_id = ? ORDER BY created_at DESC LIMIT 15"
+      `SELECT description, amount, amount_idr, currency, category, to_goal, date
+         FROM savings WHERE user_id = ? ORDER BY date DESC LIMIT 100`
     )
       .bind(userId)
       .all(),
     env.DB.prepare(
-      "SELECT name, type, amount_invested, current_value_idr, return_percentage FROM investments WHERE user_id = ? ORDER BY created_at DESC LIMIT 20"
+      "SELECT name, type, category, amount, interval, next_date, status FROM recurring WHERE user_id = ? ORDER BY created_at DESC LIMIT 50"
     )
       .bind(userId)
       .all(),
     env.DB.prepare(
-      "SELECT description, amount_idr, to_goal, date FROM savings WHERE user_id = ? ORDER BY date DESC LIMIT 15"
+      "SELECT code, name, symbol, is_default FROM currencies WHERE user_id = ? ORDER BY created_at DESC LIMIT 30"
     )
       .bind(userId)
       .all(),
   ]);
 
+  // Kartu kredit/paylater dimodelkan sebagai limit (creditLimit disimpan di
+  // payload_json), bukan saldo kas — bongkar di sini supaya AI tidak perlu
+  // parse JSON bersarang sendiri dari string.
+  const accountsRaw = (accounts.results ?? []).map((a) => {
+    let creditLimit = 0;
+    if (a.payload_json) {
+      try {
+        const parsed = JSON.parse(a.payload_json) as { creditLimit?: number };
+        creditLimit = Number(parsed.creditLimit) || 0;
+      } catch {
+        // payload_json tidak valid JSON — abaikan.
+      }
+    }
+    return {
+      id: a.id,
+      name: a.name,
+      type: a.type,
+      currency: a.currency || "IDR",
+      balance: a.balance,
+      initialBalance: a.initial_balance,
+      creditLimit,
+    };
+  });
+
+  // AI sering keliru mengonversi lintas mata uang sendiri (mis. mengira
+  // saldo KHR sudah dalam Rupiah, atau tidak bisa konversi USD karena kurs
+  // di ringkasan pasar cuma mencakup beberapa mata uang). Hitung balanceIdr
+  // di server pakai kurs live yang sama dipakai transaksi/investasi
+  // (fetchIdrConversionRate), supaya AI tinggal baca angkanya, tidak perlu
+  // menghitung sendiri.
+  const uniqueCurrencies = Array.from(
+    new Set(accountsRaw.map((a) => a.currency).filter((c) => c && c !== "IDR"))
+  );
+  const rateEntries = await Promise.all(
+    uniqueCurrencies.map(async (c) => [c, await fetchIdrConversionRate(c)] as const)
+  );
+  const rateByCurrency = new Map(rateEntries);
+  const accountsClean = accountsRaw.map((a) => {
+    const rate = a.currency === "IDR" ? 1 : rateByCurrency.get(a.currency);
+    return {
+      ...a,
+      balanceIdr: typeof rate === "number" ? Math.round(a.balance * rate) : null,
+    };
+  });
+  const totalBalanceIdr = accountsClean.reduce((s, a) => s + (a.balanceIdr ?? 0), 0);
+  const accountsMissingRate = accountsClean.filter((a) => a.balanceIdr === null).map((a) => a.currency);
+
   return {
-    accounts: accounts.results,
+    accounts: accountsClean,
+    totalBalanceIdr,
+    accountsMissingRate: accountsMissingRate.length > 0 ? Array.from(new Set(accountsMissingRate)) : undefined,
     transactions: transactions.results,
     budgets: budgets.results,
     investments: investments.results,
     savings: savings.results,
+    recurring: recurring.results,
+    currencies: currencies.results,
   };
 };
 
@@ -568,15 +680,22 @@ const fetchMarketSnapshot = async (): Promise<string> => {
       }),
     ]);
 
+    // Kalau salah satu API gagal (mis. CoinGecko lagi rate-limit), jangan
+    // gagalkan SELURUH snapshot — dulu satu gagal bikin baris yang lain (kurs
+    // USD/IDR dari provider terpisah) ikut tidak tersedia padahal datanya ada.
+    // Tampilkan degradasi sebagian: baris yang gagal jadi "tidak tersedia",
+    // baris yang berhasil tetap tampil.
     if (!cryptoRes.ok) {
       console.error("CoinGecko fetch gagal:", cryptoRes.status, (await cryptoRes.text()).slice(0, 200));
-      // Jangan timpa cache dengan snapshot kosong — pakai data lama kalau ada,
-      // biar percobaan berikutnya (setelah rate limit reda) yang menyegarkan.
-      if (marketSnapshotCache) return marketSnapshotCache.text;
-      throw new Error(`CoinGecko gagal (${cryptoRes.status})`);
     }
     if (!fxRes.ok) {
       console.error("Exchange-rate fetch gagal:", fxRes.status, (await fxRes.text()).slice(0, 200));
+    }
+    if (!cryptoRes.ok && !fxRes.ok) {
+      // Keduanya gagal — pakai cache lama kalau ada, biar percobaan
+      // berikutnya (setelah rate limit reda) yang menyegarkan.
+      if (marketSnapshotCache) return marketSnapshotCache.text;
+      throw new Error(`Fetch data pasar gagal (crypto ${cryptoRes.status}, fx ${fxRes.status})`);
     }
 
     const crypto = cryptoRes.ok
@@ -622,7 +741,15 @@ ${marketSnapshot}
 
 Jika user bertanya soal harga kripto, emas, atau kurs USD/IDR, JAWAB LANGSUNG memakai angka-angka di atas — SALIN persis apa adanya, jangan dibulatkan atau diubah. JANGAN PERNAH bilang "saya tidak punya akses data real-time" atau "saya tidak tahu harga terkini" — kamu SUDAH diberi data itu di atas, gunakan! Jika salah satu baris data bertuliskan "tidak tersedia", katakan JUJUR bahwa data itu sedang tidak tersedia — JANGAN mengarang angka 0 atau angka lain untuk menggantikannya.
 
-Kamu boleh menjawab pertanyaan APA SAJA, termasuk topik umum di luar keuangan — layaknya asisten AI serba bisa. Namun keahlian dan fokus utamamu adalah membantu pengguna memahami serta mengelola data keuangan pribadi mereka sendiri di aplikasi ini (transaksi, rekening, investasi, tabungan, budget, hutang/piutang). Setiap kali pertanyaan menyentuh keuangan pengguna, SELALU rujuk data konkret di bawah ini dan jawab dengan angka nyata — jangan mengarang angka atau data yang tidak ada.
+Kamu boleh menjawab pertanyaan APA SAJA, termasuk topik umum di luar keuangan — layaknya asisten AI serba bisa. Namun keahlian dan fokus utamamu adalah membantu pengguna memahami serta mengelola data keuangan pribadi mereka sendiri di aplikasi ini (transaksi, rekening, investasi, tabungan, budget, recurring, hutang/piutang). Setiap kali pertanyaan menyentuh keuangan pengguna, SELALU rujuk data konkret di bawah ini dan jawab dengan angka nyata — jangan mengarang angka atau data yang tidak ada.
+
+Cara membaca Konteks Data Keuangan Pengguna di bawah:
+- Setiap akun di "accounts" punya field "currency" (mata uang ASLI akun itu — bisa IDR, USD, KHR, dll) dan "balance" (saldo dalam mata uang ASLI itu, BUKAN Rupiah kalau currency-nya bukan IDR). JANGAN PERNAH menyebut "balance" sebagai "Rupiah" kalau currency akun itu bukan "IDR" — sebut sesuai currency aslinya (mis. "175.000 KHR", bukan "175.000 Rupiah").
+- Untuk menjumlahkan/membandingkan saldo LINTAS akun berbeda mata uang, JANGAN hitung sendiri — server SUDAH menghitungkan "balanceIdr" (saldo akun itu dikonversi ke Rupiah) per akun, dan "totalBalanceIdr" (total semua akun, sudah dijumlah dalam Rupiah) di level teratas konteks. Pakai kedua field itu langsung. Kalau "balanceIdr" suatu akun bernilai null, itu berarti kursnya sedang tidak tersedia (lihat "accountsMissingRate") — sebutkan JUJUR bahwa akun itu belum bisa dikonversi, jangan dijumlah sebagai 0 atau diabaikan diam-diam dari total.
+- Pola sama berlaku di "transactions"/"savings"/"investments": field amount_idr (sudah dikonversi ke Rupiah oleh server) dipakai untuk menjumlahkan/membandingkan lintas mata uang — jangan jumlahkan field "amount" mentah dari mata uang berbeda seolah semuanya Rupiah.
+- Akun bertipe "Credit Card"/"kartu" TIDAK memakai "balance" sebagai saldo kas — itu limit kartu. Terpakai = initialBalance + total pengeluaran dari akun ini (transaksi type pengeluaran/debt kategori Piutang dengan account_id ini) − total pemasukan ke akun ini; Sisa Limit = creditLimit − Terpakai.
+- Transaksi dengan type "debt": category "Hutang" berarti pengguna berutang, category "Piutang" berarti pengguna memberi pinjaman. payment_status "lunas" berarti sudah selesai — jangan hitung yang lunas sebagai hutang/piutang aktif.
+- Field "currencies" adalah daftar mata uang yang dipakai pengguna (bukan saldo), dipakai kalau ditanya mata uang apa saja yang mereka lacak.
 
 Konteks Data Keuangan Pengguna (JSON):
 ${JSON.stringify(userContext, null, 2)}
@@ -1419,7 +1546,7 @@ async function handleListAccounts(request: Request, env: Env) {
     `SELECT *
        FROM accounts
       WHERE user_id = ?
-      ORDER BY created_at DESC`
+      ORDER BY sort_order ASC, created_at DESC`
   )
     .bind(authResult.session.user.id)
     .all();
@@ -1441,10 +1568,20 @@ async function handleCreateAccount(request: Request, env: Env) {
   if (payload.card_color) extra.cardColor = payload.card_color;
   if (payload.credit_limit !== undefined) extra.creditLimit = Number(payload.credit_limit) || 0;
   const payloadJson = Object.keys(extra).length ? JSON.stringify(extra) : null;
+
+  // Rekening baru selalu masuk paling akhir di daftar — ambil sort_order
+  // tertinggi yang ada lalu +1.
+  const maxRow = await env.DB.prepare(
+    `SELECT MAX(sort_order) as maxOrder FROM accounts WHERE user_id = ?`
+  )
+    .bind(authResult.session.user.id)
+    .first<{ maxOrder: number | null }>();
+  const nextOrder = (maxRow?.maxOrder ?? -1) + 1;
+
   await env.DB.prepare(
     `INSERT INTO accounts (
-      id, user_id, name, type, currency, balance, initial_balance, base_value, logo_url, logo_label, payload_json, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      id, user_id, name, type, currency, balance, initial_balance, base_value, logo_url, logo_label, payload_json, sort_order, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       id,
@@ -1458,12 +1595,38 @@ async function handleCreateAccount(request: Request, env: Env) {
       payload.logo_url ?? null,
       payload.logo_label ?? null,
       payloadJson,
+      nextOrder,
       nowIso(),
       nowIso()
     )
     .run();
 
   return json({ ok: true, id }, { status: 201 });
+}
+
+// Reorder sekaligus banyak rekening (hasil drag-and-drop di halaman Kartu
+// Saya) — index di array `ids` jadi sort_order barunya.
+async function handleReorderAccounts(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) {
+    return authResult.error;
+  }
+
+  const payload = await parseJson<{ ids?: string[] }>(request);
+  const ids = Array.isArray(payload.ids) ? payload.ids : [];
+  if (ids.length === 0) {
+    return json({ error: "ids wajib diisi." }, { status: 400 });
+  }
+
+  for (let i = 0; i < ids.length; i++) {
+    await env.DB.prepare(
+      `UPDATE accounts SET sort_order = ?, updated_at = ? WHERE id = ? AND user_id = ?`
+    )
+      .bind(i, nowIso(), ids[i], authResult.session.user.id)
+      .run();
+  }
+
+  return json({ ok: true });
 }
 
 async function handleUpdateAccount(request: Request, env: Env, accountId: string) {
@@ -1654,6 +1817,90 @@ async function handleDeleteBudget(request: Request, env: Env, budgetId: string) 
   return json({ ok: true });
 }
 
+// Harga saham live (Yahoo Finance, tidak butuh API key) — diproksi lewat
+// Worker karena endpoint chart Yahoo tidak mengizinkan CORS langsung dari
+// browser. Di-cache di edge Cloudflare per simbol supaya tidak setiap buka
+// halaman Saham memicu fetch baru (Yahoo bisa membatasi/blokir kalau terlalu
+// sering dipanggil dari IP/User-Agent yang sama).
+const YAHOO_EXCHANGE_SUFFIX: Record<string, string> = {
+  IDX: ".JK",
+};
+const STOCK_PRICE_CACHE_MS = 5 * 60 * 1000;
+
+async function fetchStockPrice(symbol: string, exchange: string) {
+  const suffix = YAHOO_EXCHANGE_SUFFIX[exchange.toUpperCase()] ?? "";
+  const yahooSymbol = `${symbol.toUpperCase()}${suffix}`;
+  const cacheKey = new Request(`https://cache.internal.leosiqra.com/stock-price/${encodeURIComponent(yahooSymbol)}`);
+  const edgeCache = caches.default;
+
+  const cached = await edgeCache.match(cacheKey);
+  if (cached) {
+    return (await cached.json()) as { price: number; currency: string; changePercent: number };
+  }
+
+  const res = await fetch(
+    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}`,
+    {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        Accept: "application/json",
+      },
+    }
+  );
+  if (!res.ok) {
+    throw new Error(`Yahoo Finance error ${res.status}`);
+  }
+
+  const data = (await res.json()) as {
+    chart?: {
+      result?: Array<{
+        meta?: { currency?: string; regularMarketPrice?: number; chartPreviousClose?: number; previousClose?: number };
+      }>;
+    };
+  };
+  const meta = data.chart?.result?.[0]?.meta;
+  if (!meta || typeof meta.regularMarketPrice !== "number") {
+    throw new Error(`Simbol ${yahooSymbol} tidak ditemukan.`);
+  }
+
+  const price = meta.regularMarketPrice;
+  const prevClose = meta.chartPreviousClose ?? meta.previousClose;
+  const changePercent = prevClose ? ((price - prevClose) / prevClose) * 100 : 0;
+  const result = { price, currency: meta.currency || "IDR", changePercent };
+
+  await edgeCache.put(
+    cacheKey,
+    new Response(JSON.stringify(result), {
+      headers: { "content-type": "application/json", "Cache-Control": `max-age=${STOCK_PRICE_CACHE_MS / 1000}` },
+    })
+  );
+  return result;
+}
+
+async function handleStockPrice(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) {
+    return authResult.error;
+  }
+
+  const url = new URL(request.url);
+  const symbol = url.searchParams.get("symbol");
+  const exchange = url.searchParams.get("exchange") || "IDX";
+  if (!symbol) {
+    return json({ error: "symbol wajib diisi." }, { status: 400 });
+  }
+
+  try {
+    const data = await fetchStockPrice(symbol, exchange);
+    return json(data);
+  } catch (error) {
+    return json(
+      { error: error instanceof Error ? error.message : "Gagal mengambil harga saham." },
+      { status: 502 }
+    );
+  }
+}
+
 async function handleListInvestments(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) {
@@ -1701,8 +1948,8 @@ async function handleCreateInvestment(request: Request, env: Env) {
       id, user_id, name, type, platform, amount_invested, amount_idr, current_value, current_value_idr,
       return_percentage, tax_percentage, currency, duration_months, transaction_type, category, account_id,
       logo_url, quantity, unit, price_per_unit, stock_code, exchange_code, shares_count, price_per_share,
-      date_invested, target_date, duration_days, status, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      date_invested, target_date, duration_days, status, maturity_action, related_investment_id, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       id,
@@ -1733,6 +1980,8 @@ async function handleCreateInvestment(request: Request, env: Env) {
       payload.target_date ?? null,
       Number(payload.duration_days ?? 0),
       payload.status ?? "Active",
+      payload.maturity_action ?? null,
+      payload.related_investment_id ?? null,
       nowIso(),
       nowIso()
     )
@@ -1775,6 +2024,8 @@ async function handleUpdateInvestment(request: Request, env: Env, investmentId: 
     "target_date",
     "duration_days",
     "status",
+    "maturity_action",
+    "related_investment_id",
   ]);
   const entries = Object.entries(payload).filter(([key]) => allowed.has(key));
   if (entries.length === 0) {
@@ -1785,10 +2036,10 @@ async function handleUpdateInvestment(request: Request, env: Env, investmentId: 
   const values = entries.map(([, value]) => value);
   const result = await env.DB.prepare(
     `UPDATE investments
-        SET ${assignments}
+        SET ${assignments}, updated_at = ?
       WHERE id = ? AND user_id = ?`
   )
-    .bind(...values, investmentId, authResult.session.user.id)
+    .bind(...values, nowIso(), investmentId, authResult.session.user.id)
     .run();
 
   if (!result.meta.changes) {
@@ -1879,6 +2130,14 @@ async function handleRequestAccess(request: Request, env: Env) {
     return json({ error: "Permintaan hanya bisa dikirim saat status akun GUEST." }, { status: 409 });
   }
 
+  await sendTelegramNotification(
+    env,
+    `🔔 <b>Permintaan Akses Baru</b>\n` +
+      `Nama: ${authResult.session.user.name}\n` +
+      `Email: ${authResult.session.user.email}\n\n` +
+      `Verifikasi di Admin &gt; Kelola Pelanggan.`
+  );
+
   return json({ ok: true, status: "PENDING" });
 }
 
@@ -1963,8 +2222,8 @@ async function handleChangeMemberPassword(request: Request, env: Env) {
   }
 
   const payload = await parseJson<{ currentPassword?: string; newPassword?: string }>(request);
-  if (!payload.currentPassword || !payload.newPassword) {
-    return json({ error: "Password saat ini dan password baru wajib diisi." }, { status: 400 });
+  if (!payload.newPassword) {
+    return json({ error: "Password baru wajib diisi." }, { status: 400 });
   }
   if (payload.newPassword.length < 8) {
     return json({ error: "Password baru minimal 8 karakter." }, { status: 400 });
@@ -1977,9 +2236,19 @@ async function handleChangeMemberPassword(request: Request, env: Env) {
     return json({ error: "Pengguna tidak ditemukan." }, { status: 404 });
   }
 
-  const verification = await verifyPassword(payload.currentPassword, user.password_hash);
-  if (!verification.ok) {
-    return json({ error: "Password saat ini tidak sesuai." }, { status: 401 });
+  // Akun Google tidak punya password lokal (password_hash cuma sentinel
+  // 'oauth$google') — jadi tidak ada apa pun untuk diverifikasi, biarkan
+  // mereka langsung SET password baru (sesi yang aktif sudah jadi bukti
+  // identitas). Akun biasa tetap wajib verifikasi password lama.
+  const isOAuthAccount = user.password_hash.startsWith("oauth$");
+  if (!isOAuthAccount) {
+    if (!payload.currentPassword) {
+      return json({ error: "Password saat ini wajib diisi." }, { status: 400 });
+    }
+    const verification = await verifyPassword(payload.currentPassword, user.password_hash);
+    if (!verification.ok) {
+      return json({ error: "Password saat ini tidak sesuai." }, { status: 401 });
+    }
   }
 
   await env.DB.prepare("UPDATE users SET password_hash = ? WHERE id = ?")
@@ -2052,9 +2321,6 @@ async function handleResetMemberData(request: Request, env: Env) {
   }
 
   const payload = await parseJson<{ currentPassword?: string }>(request);
-  if (!payload.currentPassword) {
-    return json({ error: "Password saat ini wajib diisi." }, { status: 400 });
-  }
 
   const user = await env.DB.prepare("SELECT id, password_hash FROM users WHERE id = ?")
     .bind(authResult.session.user.id)
@@ -2063,9 +2329,18 @@ async function handleResetMemberData(request: Request, env: Env) {
     return json({ error: "Pengguna tidak ditemukan." }, { status: 404 });
   }
 
-  const verification = await verifyPassword(payload.currentPassword, user.password_hash);
-  if (!verification.ok) {
-    return json({ error: "Password saat ini tidak sesuai." }, { status: 401 });
+  // Akun Google tidak punya password lokal untuk diverifikasi — sesi yang
+  // aktif + frasa konfirmasi ("HAPUS SEMUA DATA", dicek di frontend) jadi
+  // gerbang keamanannya. Akun biasa tetap wajib masukkan password saat ini.
+  const isOAuthAccount = user.password_hash.startsWith("oauth$");
+  if (!isOAuthAccount) {
+    if (!payload.currentPassword) {
+      return json({ error: "Password saat ini wajib diisi." }, { status: 400 });
+    }
+    const verification = await verifyPassword(payload.currentPassword, user.password_hash);
+    if (!verification.ok) {
+      return json({ error: "Password saat ini tidak sesuai." }, { status: 401 });
+    }
   }
 
   const statements = [
@@ -2093,7 +2368,7 @@ async function handleListCategories(request: Request, env: Env) {
     `SELECT *
        FROM categories
       WHERE user_id = ?
-      ORDER BY created_at DESC`
+      ORDER BY category ASC, sort_order ASC, created_at ASC`
   )
     .bind(authResult.session.user.id)
     .all();
@@ -2106,15 +2381,27 @@ async function handleCreateCategory(request: Request, env: Env) {
 
   const payload = await parseJson<Record<string, unknown>>(request);
   const id = generateId();
+  const category = String(payload.category ?? "Lainnya");
+
+  // Subkategori baru selalu masuk paling akhir di grup kategorinya —
+  // ambil sort_order tertinggi yang ada lalu +1.
+  const maxRow = await env.DB.prepare(
+    `SELECT MAX(sort_order) as maxOrder FROM categories WHERE user_id = ? AND category = ?`
+  )
+    .bind(authResult.session.user.id, category)
+    .first<{ maxOrder: number | null }>();
+  const nextOrder = (maxRow?.maxOrder ?? -1) + 1;
+
   await env.DB.prepare(
-    "INSERT INTO categories (id, user_id, category, sub_category, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO categories (id, user_id, category, sub_category, status, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
   )
     .bind(
       id,
       authResult.session.user.id,
-      String(payload.category ?? "Lainnya"),
+      category,
       String(pickPayloadValue(payload, "sub_category", "subCategory") ?? "General"),
       String(payload.status ?? "ACTIVE"),
+      nextOrder,
       nowIso(),
       nowIso()
     )
@@ -2134,6 +2421,9 @@ async function handleUpdateCategory(request: Request, env: Env, categoryId: stri
     updates.set("sub_category", pickPayloadValue(payload, "sub_category", "subCategory"));
   }
   if (payload.status !== undefined) updates.set("status", payload.status);
+  if (payload.sort_order !== undefined || payload.sortOrder !== undefined) {
+    updates.set("sort_order", Number(pickPayloadValue(payload, "sort_order", "sortOrder")) || 0);
+  }
 
   if (updates.size === 0) {
     return json({ error: "Tidak ada field yang bisa diperbarui." }, { status: 400 });
@@ -2143,15 +2433,38 @@ async function handleUpdateCategory(request: Request, env: Env, categoryId: stri
   const values = Array.from(updates.values());
   const result = await env.DB.prepare(
     `UPDATE categories
-        SET ${assignments}
+        SET ${assignments}, updated_at = ?
       WHERE id = ? AND user_id = ?`
   )
-    .bind(...values, categoryId, authResult.session.user.id)
+    .bind(...values, nowIso(), categoryId, authResult.session.user.id)
     .run();
 
   if (!result.meta.changes) {
     return json({ error: "Kategori tidak ditemukan." }, { status: 404 });
   }
+  return json({ ok: true });
+}
+
+// Reorder sekaligus banyak subkategori dalam satu grup kategori (hasil
+// drag-and-drop di halaman Nama Akun) — index di array `ids` jadi sort_order barunya.
+async function handleReorderCategories(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+
+  const payload = await parseJson<{ ids?: string[] }>(request);
+  const ids = Array.isArray(payload.ids) ? payload.ids : [];
+  if (ids.length === 0) {
+    return json({ error: "ids wajib diisi." }, { status: 400 });
+  }
+
+  for (let i = 0; i < ids.length; i++) {
+    await env.DB.prepare(
+      `UPDATE categories SET sort_order = ?, updated_at = ? WHERE id = ? AND user_id = ?`
+    )
+      .bind(i, nowIso(), ids[i], authResult.session.user.id)
+      .run();
+  }
+
   return json({ ok: true });
 }
 
@@ -2338,8 +2651,8 @@ async function handleCreateSaving(request: Request, env: Env) {
   await env.DB.prepare(
     `INSERT INTO savings (
       id, user_id, description, amount, amount_idr, currency, category, sub_category,
-      from_account, to_goal, date, display_date, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      from_account, to_goal, transaction_type, date, display_date, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       id,
@@ -2352,6 +2665,7 @@ async function handleCreateSaving(request: Request, env: Env) {
       pickPayloadValue(payload, "sub_category", "subCategory") ?? null,
       String(pickPayloadValue(payload, "from_account", "fromAccount") ?? ""),
       String(pickPayloadValue(payload, "to_goal", "toGoal") ?? ""),
+      String(pickPayloadValue(payload, "transaction_type", "transactionType") ?? "Setoran"),
       toIsoIfDateLike(payload.date) ?? nowIso(),
       payload.display_date ?? payload.displayDate ?? nowIso(),
       nowIso(),
@@ -2379,6 +2693,7 @@ async function handleCreateMemberPayment(request: Request, env: Env) {
   const payload = await parseJson<Record<string, unknown>>(request);
 
   const packagePayload = (payload.package as Record<string, unknown> | undefined) ?? {};
+  const packageName = String(packagePayload.name ?? payload.package_name ?? "-");
   // Skema produksi menyimpan detail paket + metode dalam satu kolom package_json.
   const packageJson = JSON.stringify({
     id: packagePayload.id ?? payload.package_id ?? null,
@@ -2388,6 +2703,9 @@ async function handleCreateMemberPayment(request: Request, env: Env) {
     ref: payload.ref ?? null,
   });
   const id = generateId();
+  const userName = String(payload.user_name ?? payload.userName ?? authResult.session.user.name);
+  const userEmail = String(payload.user_email ?? payload.userEmail ?? authResult.session.user.email);
+  const amount = Number(payload.amount ?? 0);
   await env.DB.prepare(
     `INSERT INTO payments (
       id, user_id, user_name, user_email, user_whatsapp, user_photo_url, amount,
@@ -2397,11 +2715,11 @@ async function handleCreateMemberPayment(request: Request, env: Env) {
     .bind(
       id,
       authResult.session.user.id,
-      String(payload.user_name ?? payload.userName ?? authResult.session.user.name),
-      String(payload.user_email ?? payload.userEmail ?? authResult.session.user.email),
+      userName,
+      userEmail,
       payload.user_whatsapp ?? payload.userWhatsapp ?? authResult.session.user.whatsapp ?? null,
       payload.user_photo_url ?? payload.userPhotoURL ?? null,
-      Number(payload.amount ?? 0),
+      amount,
       packageJson,
       payload.proof_image_url ?? payload.proofImageUrl ?? null,
       payload.note ?? null,
@@ -2410,6 +2728,16 @@ async function handleCreateMemberPayment(request: Request, env: Env) {
       nowIso()
     )
     .run();
+
+  await sendTelegramNotification(
+    env,
+    `💰 <b>Pembayaran Baru</b>\n` +
+      `Nama: ${userName}\n` +
+      `Email: ${userEmail}\n` +
+      `Paket: ${packageName}\n` +
+      `Jumlah: Rp ${amount.toLocaleString("id-ID")}\n\n` +
+      `Verifikasi di Admin &gt; Pembayaran.`
+  );
 
   return json({ ok: true, id }, { status: 201 });
 }
@@ -3003,6 +3331,293 @@ export class RealtimeRoom extends DurableObject {
   }
 }
 
+// --- Deposito: perpanjangan/pencairan otomatis saat jatuh tempo -----------
+// Dieksekusi tiap hari lewat Cron Trigger (lihat wrangler.toml). Tiga
+// `maturity_action`: 'cairkan' (tutup, pokok+bunga ke rekening), 'aro_bunga'
+// (bunga cair ke rekening, pokok diperpanjang 1 bulan dengan rate yang sama),
+// 'aro_full' (pokok+bunga digulirkan/compound untuk 1 bulan berikutnya).
+
+interface DepositRow {
+  id: string;
+  user_id: string;
+  name: string;
+  platform: string | null;
+  amount_invested: number;
+  amount_idr: number;
+  return_percentage: number;
+  tax_percentage: number;
+  currency: string;
+  category: string | null;
+  account_id: string | null;
+  date_invested: string;
+  target_date: string;
+  maturity_action: string | null;
+}
+
+const addMonthsIso = (iso: string, months: number) => {
+  const d = new Date(iso);
+  d.setUTCMonth(d.getUTCMonth() + months);
+  return d.toISOString();
+};
+
+const daysBetweenIso = (startIso: string, endIso: string) =>
+  Math.max(0, Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 86400000));
+
+const computeDepositResult = (invested: number, ratePercent: number, taxPercent: number, days: number) => {
+  const grossInterest = invested * (ratePercent / 100) * (days / 365);
+  const taxAmount = grossInterest * (taxPercent / 100);
+  const interestOnly = grossInterest - taxAmount;
+  return { interestOnly, totalResult: invested + interestOnly };
+};
+
+// Baris proyeksi "(Hasil Akhir)" dibuat DepositModal dengan status 'Planned' —
+// dicari lewat related_investment_id (baris baru), dengan fallback cocokkan
+// nama untuk deposito lama yang dibuat sebelum kolom ini ada.
+const findProjectionRowId = async (env: Env, parentId: string, userId: string, parentName: string) => {
+  const byRelation = await env.DB.prepare(
+    `SELECT id FROM investments WHERE related_investment_id = ? AND user_id = ? AND status = 'Planned' LIMIT 1`
+  )
+    .bind(parentId, userId)
+    .first<{ id: string }>();
+  if (byRelation) return byRelation.id;
+
+  const byName = await env.DB.prepare(
+    `SELECT id FROM investments WHERE user_id = ? AND status = 'Planned' AND name = ? LIMIT 1`
+  )
+    .bind(userId, `${parentName} (Hasil Akhir)`)
+    .first<{ id: string }>();
+  return byName?.id ?? null;
+};
+
+const processMaturedDeposit = async (env: Env, inv: DepositRow) => {
+  const invested = Number(inv.amount_invested) || 0;
+  const rate = Number(inv.return_percentage) || 0;
+  const taxRate = Number(inv.tax_percentage) || 0;
+  const currency = inv.currency || "IDR";
+  const days = daysBetweenIso(inv.date_invested, inv.target_date);
+  const { interestOnly, totalResult } = computeDepositResult(invested, rate, taxRate, days);
+  const action = inv.maturity_action || "cairkan";
+  const today = inv.target_date.slice(0, 10);
+  const projectionId = await findProjectionRowId(env, inv.id, inv.user_id, inv.name);
+
+  if (action === "cairkan") {
+    if (inv.account_id) {
+      await env.DB.prepare(`UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?`)
+        .bind(totalResult, inv.account_id, inv.user_id)
+        .run();
+    }
+
+    const totalResultIdr = await resolveIdrAmount(currency, totalResult, undefined);
+    await insertTransactionRecord(env, inv.user_id, {
+      type: "pemasukan",
+      amount: totalResult,
+      amountIdr: totalResultIdr,
+      category: "Investasi",
+      subCategory: "Deposito - Penarikan (Otomatis)",
+      currency,
+      accountId: inv.account_id,
+      date: today,
+      note: `[Otomatis] Deposito ${inv.name} cair jatuh tempo (pokok+bunga)`,
+    });
+
+    await env.DB.prepare(
+      `UPDATE users
+          SET total_income = COALESCE(total_income, 0) + ?,
+              total_wealth = COALESCE(total_wealth, 0) + ?,
+              total_investment = COALESCE(total_investment, 0) - ?
+        WHERE id = ?`
+    )
+      .bind(totalResult, totalResult, invested, inv.user_id)
+      .run();
+
+    // Tandai baris asli selesai (mencegah cron memprosesnya lagi), lalu catat
+    // baris "Penarikan" baru — sama seperti alur manual — supaya total
+    // portofolio (yang dihitung dari transactionType per baris) tetap nol
+    // bersih untuk deposito yang sudah cair.
+    await env.DB.prepare(`UPDATE investments SET status = 'Closed', updated_at = ? WHERE id = ?`)
+      .bind(nowIso(), inv.id)
+      .run();
+
+    const closingId = generateId();
+    await env.DB.prepare(
+      `INSERT INTO investments (
+        id, user_id, name, type, platform, amount_invested, amount_idr, current_value, current_value_idr,
+        return_percentage, tax_percentage, currency, transaction_type, category, account_id,
+        date_invested, target_date, duration_days, status, related_investment_id, created_at, updated_at
+      ) VALUES (?, ?, ?, 'Deposito', ?, ?, ?, ?, ?, ?, ?, ?, 'Penarikan', ?, ?, ?, ?, ?, 'Closed', ?, ?, ?)`
+    )
+      .bind(
+        closingId,
+        inv.user_id,
+        `${inv.name} (Dicairkan)`,
+        inv.platform,
+        invested,
+        await resolveIdrAmount(currency, invested, undefined),
+        totalResult,
+        totalResultIdr,
+        rate,
+        taxRate,
+        currency,
+        inv.category,
+        inv.account_id,
+        inv.target_date,
+        inv.target_date,
+        days,
+        inv.id,
+        nowIso(),
+        nowIso()
+      )
+      .run();
+
+    if (projectionId) {
+      await env.DB.prepare(`DELETE FROM investments WHERE id = ?`).bind(projectionId).run();
+    }
+    return;
+  }
+
+  if (action === "aro_bunga") {
+    if (inv.account_id) {
+      await env.DB.prepare(`UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?`)
+        .bind(interestOnly, inv.account_id, inv.user_id)
+        .run();
+    }
+
+    const interestOnlyIdr = await resolveIdrAmount(currency, interestOnly, undefined);
+    await insertTransactionRecord(env, inv.user_id, {
+      type: "pemasukan",
+      amount: interestOnly,
+      amountIdr: interestOnlyIdr,
+      category: "Investasi",
+      subCategory: "Deposito - Bunga (Otomatis)",
+      currency,
+      accountId: inv.account_id,
+      date: today,
+      note: `[Otomatis] Bunga deposito ${inv.name} cair ke rekening, pokok diperpanjang 1 bulan`,
+    });
+
+    await env.DB.prepare(
+      `UPDATE users
+          SET total_income = COALESCE(total_income, 0) + ?,
+              total_wealth = COALESCE(total_wealth, 0) + ?
+        WHERE id = ?`
+    )
+      .bind(interestOnly, interestOnly, inv.user_id)
+      .run();
+
+    const newDateInvested = inv.target_date;
+    const newTargetDate = addMonthsIso(inv.target_date, 1);
+    const newDurationDays = daysBetweenIso(newDateInvested, newTargetDate);
+
+    await env.DB.prepare(
+      `UPDATE investments
+          SET date_invested = ?, target_date = ?, duration_days = ?, updated_at = ?
+        WHERE id = ?`
+    )
+      .bind(newDateInvested, newTargetDate, newDurationDays, nowIso(), inv.id)
+      .run();
+
+    const nextResult = computeDepositResult(invested, rate, taxRate, newDurationDays);
+    const nextTotalIdr = await resolveIdrAmount(currency, nextResult.totalResult, undefined);
+    if (projectionId) {
+      await env.DB.prepare(
+        `UPDATE investments
+            SET amount_invested = ?, amount_idr = ?, current_value = ?, current_value_idr = ?,
+                date_invested = ?, target_date = ?, duration_days = ?, updated_at = ?
+          WHERE id = ?`
+      )
+        .bind(
+          nextResult.totalResult,
+          nextTotalIdr,
+          nextResult.totalResult,
+          nextTotalIdr,
+          newTargetDate,
+          newTargetDate,
+          newDurationDays,
+          nowIso(),
+          projectionId
+        )
+        .run();
+    }
+    return;
+  }
+
+  if (action === "aro_full") {
+    const newInvested = totalResult;
+    const newInvestedIdr = await resolveIdrAmount(currency, newInvested, undefined);
+    const newDateInvested = inv.target_date;
+    const newTargetDate = addMonthsIso(inv.target_date, 1);
+    const newDurationDays = daysBetweenIso(newDateInvested, newTargetDate);
+
+    await env.DB.prepare(
+      `UPDATE investments
+          SET amount_invested = ?, amount_idr = ?, current_value = ?, current_value_idr = ?,
+              date_invested = ?, target_date = ?, duration_days = ?, updated_at = ?
+        WHERE id = ?`
+    )
+      .bind(
+        newInvested,
+        newInvestedIdr,
+        newInvested,
+        newInvestedIdr,
+        newDateInvested,
+        newTargetDate,
+        newDurationDays,
+        nowIso(),
+        inv.id
+      )
+      .run();
+
+    await env.DB.prepare(
+      `UPDATE users SET total_investment = COALESCE(total_investment, 0) + ? WHERE id = ?`
+    )
+      .bind(interestOnly, inv.user_id)
+      .run();
+
+    const nextResult = computeDepositResult(newInvested, rate, taxRate, newDurationDays);
+    const nextTotalIdr = await resolveIdrAmount(currency, nextResult.totalResult, undefined);
+    if (projectionId) {
+      await env.DB.prepare(
+        `UPDATE investments
+            SET amount_invested = ?, amount_idr = ?, current_value = ?, current_value_idr = ?,
+                date_invested = ?, target_date = ?, duration_days = ?, updated_at = ?
+          WHERE id = ?`
+      )
+        .bind(
+          nextResult.totalResult,
+          nextTotalIdr,
+          nextResult.totalResult,
+          nextTotalIdr,
+          newTargetDate,
+          newTargetDate,
+          newDurationDays,
+          nowIso(),
+          projectionId
+        )
+        .run();
+    }
+  }
+};
+
+const processMaturedDeposits = async (env: Env) => {
+  const { results } = await env.DB.prepare(
+    `SELECT id, user_id, name, platform, amount_invested, amount_idr, return_percentage, tax_percentage,
+            currency, category, account_id, date_invested, target_date, maturity_action
+       FROM investments
+      WHERE type = 'Deposito' AND status = 'Active' AND transaction_type = 'Penempatan'
+        AND target_date IS NOT NULL AND target_date <= ?`
+  )
+    .bind(nowIso())
+    .all<DepositRow>();
+
+  for (const inv of results ?? []) {
+    try {
+      await processMaturedDeposit(env, inv);
+    } catch (error) {
+      console.error(`Gagal memproses jatuh tempo deposito ${inv.id}:`, error);
+    }
+  }
+};
+
 const worker = {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -3099,6 +3714,10 @@ const worker = {
         return await handleCreateAccount(request, env);
       }
 
+      if (url.pathname === "/api/member/accounts/reorder" && request.method === "PUT") {
+        return await handleReorderAccounts(request, env);
+      }
+
       if (url.pathname.startsWith("/api/member/accounts/")) {
         const accountPath = url.pathname.slice("/api/member/accounts/".length);
         if (accountPath.endsWith("/balance") && request.method === "POST") {
@@ -3129,6 +3748,10 @@ const worker = {
         if (request.method === "DELETE") {
           return await handleDeleteBudget(request, env, budgetId);
         }
+      }
+
+      if (url.pathname === "/api/member/stock-price" && request.method === "GET") {
+        return await handleStockPrice(request, env);
       }
 
       if (url.pathname === "/api/member/investments" && request.method === "GET") {
@@ -3179,6 +3802,10 @@ const worker = {
 
       if (url.pathname === "/api/member/categories" && request.method === "POST") {
         return await handleCreateCategory(request, env);
+      }
+
+      if (url.pathname === "/api/member/categories/reorder" && request.method === "PUT") {
+        return await handleReorderCategories(request, env);
       }
 
       if (url.pathname.startsWith("/api/member/categories/")) {
@@ -3334,6 +3961,10 @@ const worker = {
         { status: 500 }
       );
     }
+  },
+
+  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(processMaturedDeposits(env));
   },
 };
 

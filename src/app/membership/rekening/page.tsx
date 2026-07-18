@@ -10,7 +10,8 @@ import {
   Edit2,
   Trash2,
   ExternalLink,
-  ShieldCheck
+  ShieldCheck,
+  X
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LogoImage } from '@/components/ui/LogoImage';
@@ -23,6 +24,7 @@ import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
 import { AccountModal } from '@/components/modals/AccountModal';
 import { isCreditAccountType, computeCreditUsage } from '@/lib/creditCard';
 import { useModal } from '@/context/ModalContext';
+import { cn } from '@/lib/utils';
 
 export default function RekeningPage() {
   const router = useRouter();
@@ -36,6 +38,18 @@ export default function RekeningPage() {
   const [error, setError] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [fxRates, setFxRates] = useState<ExchangeRates>({});
+  const [showSecurityBanner, setShowSecurityBanner] = useState(true);
+
+  useEffect(() => {
+    if (localStorage.getItem('rekening-security-banner-dismissed') === '1') {
+      setShowSecurityBanner(false);
+    }
+  }, []);
+
+  const dismissSecurityBanner = () => {
+    setShowSecurityBanner(false);
+    localStorage.setItem('rekening-security-banner-dismissed', '1');
+  };
 
   useEffect(() => {
     exchangeRateService.getLatestRates().then(setFxRates).catch(console.error);
@@ -193,21 +207,30 @@ export default function RekeningPage() {
       {/* 2. Top Statistic Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* KEAMANAN DATA CARD */}
-        <div className="bg-blue-600 rounded-[20px] md:rounded-[32px] p-6 md:p-8 text-white relative overflow-hidden group shadow-2xl shadow-blue-100 flex items-center justify-between">
-          <div className="relative z-10 space-y-2 max-w-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <ShieldCheck size={20} className="text-blue-200" />
-              <h3 className="text-base font-black tracking-tight">Keamanan Data Terenkripsi</h3>
+        {showSecurityBanner && (
+          <div className="bg-blue-600 rounded-[20px] md:rounded-[32px] p-6 md:p-8 text-white relative overflow-hidden group shadow-2xl shadow-blue-100 flex items-center justify-between">
+            <div className="relative z-10 space-y-2 max-w-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <ShieldCheck size={20} className="text-blue-200" />
+                <h3 className="text-base font-black tracking-tight">Keamanan Data Terenkripsi</h3>
+              </div>
+              <p className="text-[11px] font-medium text-blue-100 leading-relaxed">
+                Informasi saldo dan rekening Anda dienkripsi secara end-to-end. Kami tidak menyimpan detail login bank Anda.
+              </p>
             </div>
-            <p className="text-[11px] font-medium text-blue-100 leading-relaxed">
-              Informasi saldo dan rekening Anda dienkripsi secara end-to-end. Kami tidak menyimpan detail login bank Anda.
-            </p>
+            <button
+              onClick={dismissSecurityBanner}
+              className="absolute top-4 right-4 z-10 text-blue-200 hover:text-white transition-colors"
+              aria-label="Tutup"
+            >
+              <X size={16} />
+            </button>
+            <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl pointer-events-none" />
           </div>
-          <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl pointer-events-none" />
-        </div>
+        )}
 
         {/* QUICK STATS CARD */}
-        <div className="bg-white rounded-[20px] md:rounded-[32px] p-6 md:p-8 border border-slate-50 shadow-sm flex flex-col justify-center">
+        <div className={cn("bg-white rounded-[20px] md:rounded-[32px] p-6 md:p-8 border border-slate-50 shadow-sm flex flex-col justify-center", !showSecurityBanner && "md:col-span-2")}>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Ringkasan Portofolio Akun</p>
           <div className="space-y-4">
             <div className="flex items-center justify-between">

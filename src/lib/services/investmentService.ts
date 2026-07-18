@@ -30,6 +30,12 @@ export interface Investment {
   targetDate?: Date;
   durationDays?: number;
   status: 'Active' | 'Closed' | 'Planned';
+  // Perlakuan otomatis saat deposito jatuh tempo (dieksekusi Cron Trigger
+  // harian): 'cairkan' = pokok+bunga ke rekening; 'aro_bunga' = bunga cair,
+  // pokok diperpanjang; 'aro_full' = pokok+bunga digulirkan (compound).
+  maturityAction?: 'cairkan' | 'aro_bunga' | 'aro_full';
+  // Menghubungkan baris proyeksi "(Hasil Akhir)" balik ke baris Penempatan aslinya.
+  relatedInvestmentId?: string;
   createdAt: Date;
 }
 
@@ -72,6 +78,8 @@ export const investmentService = {
         target_date: data.targetDate ? data.targetDate.toISOString() : null,
         duration_days: Number(data.durationDays) || null,
         status: data.status,
+        maturity_action: data.maturityAction || null,
+        related_investment_id: data.relatedInvestmentId || null,
       },
     });
     notifyCollectionChanged('investments');
@@ -81,32 +89,40 @@ export const investmentService = {
   async getUserInvestments(_userId: string) {
     void _userId;
     const result = await cloudflareApi<{ items: Record<string, unknown>[] }>('/api/member/investments');
-    return result.items.map((data) => {
-      return {
-        ...data,
-        id: String(data.id ?? ''),
-        userId: String(data.user_id ?? ''),
-        amountInvested: Number(data.amount_invested) || 0,
-        amountIDR: Number(data.amount_idr) || 0,
-        currentValue: Number(data.current_value) || 0,
-        currentValueIDR: Number(data.current_value_idr) || 0,
-        returnPercentage: Number(data.return_percentage) || 0,
-        taxPercentage: Number(data.tax_percentage) || 0,
-        durationMonths: Number(data.duration_months) || 0,
-        transactionType: (data.transaction_type as string | undefined) ?? undefined,
-        accountId: (data.account_id as string | undefined) ?? undefined,
-        logoUrl: (data.logo_url as string | undefined) ?? undefined,
-        pricePerUnit: Number(data.price_per_unit) || 0,
-        stockCode: (data.stock_code as string | undefined) ?? undefined,
-        exchangeCode: (data.exchange_code as string | undefined) ?? undefined,
-        sharesCount: Number(data.shares_count) || 0,
-        pricePerShare: Number(data.price_per_share) || 0,
-        dateInvested: data.date_invested ? new Date(String(data.date_invested)) : new Date(),
-        targetDate: data.target_date ? new Date(String(data.target_date)) : undefined,
-        durationDays: Number(data.duration_days) || 0,
-        createdAt: data.created_at ? new Date(String(data.created_at)) : new Date()
-      } as Investment;
-    });
+    return result.items
+      .map((data) => {
+        return {
+          ...data,
+          id: String(data.id ?? ''),
+          userId: String(data.user_id ?? ''),
+          amountInvested: Number(data.amount_invested) || 0,
+          amountIDR: Number(data.amount_idr) || 0,
+          currentValue: Number(data.current_value) || 0,
+          currentValueIDR: Number(data.current_value_idr) || 0,
+          returnPercentage: Number(data.return_percentage) || 0,
+          taxPercentage: Number(data.tax_percentage) || 0,
+          durationMonths: Number(data.duration_months) || 0,
+          transactionType: (data.transaction_type as string | undefined) ?? undefined,
+          accountId: (data.account_id as string | undefined) ?? undefined,
+          logoUrl: (data.logo_url as string | undefined) ?? undefined,
+          pricePerUnit: Number(data.price_per_unit) || 0,
+          stockCode: (data.stock_code as string | undefined) ?? undefined,
+          exchangeCode: (data.exchange_code as string | undefined) ?? undefined,
+          sharesCount: Number(data.shares_count) || 0,
+          pricePerShare: Number(data.price_per_share) || 0,
+          dateInvested: data.date_invested ? new Date(String(data.date_invested)) : new Date(),
+          targetDate: data.target_date ? new Date(String(data.target_date)) : undefined,
+          durationDays: Number(data.duration_days) || 0,
+          maturityAction: (data.maturity_action as Investment['maturityAction']) ?? undefined,
+          relatedInvestmentId: (data.related_investment_id as string | undefined) ?? undefined,
+          createdAt: data.created_at ? new Date(String(data.created_at)) : new Date()
+        } as Investment;
+      })
+      // Deposito "Penempatan" otomatis punya baris proyeksi "(Hasil Akhir)"
+      // berstatus Planned (dibuat DepositModal) — bukan posisi nyata, jadi
+      // dikeluarkan di sini supaya semua konsumen (Dashboard, AI Leosiqra)
+      // tidak perlu ingat memfilternya sendiri-sendiri.
+      .filter((inv) => inv.status !== 'Planned');
   },
 
   async getInvestmentsByType(userId: string, type: string) {
@@ -151,6 +167,8 @@ export const investmentService = {
         ...(data.targetDate !== undefined ? { target_date: data.targetDate ? data.targetDate.toISOString() : null } : {}),
         ...(typeof data.durationDays === 'number' ? { duration_days: data.durationDays } : {}),
         ...(data.status ? { status: data.status } : {}),
+        ...(data.maturityAction !== undefined ? { maturity_action: data.maturityAction } : {}),
+        ...(data.relatedInvestmentId !== undefined ? { related_investment_id: data.relatedInvestmentId } : {}),
       },
     });
     notifyCollectionChanged('investments');
@@ -160,5 +178,12 @@ export const investmentService = {
     void userId;
     await cloudflareApi(`/api/member/investments/${id}`, { method: 'DELETE' });
     notifyCollectionChanged('investments');
+  },
+
+  // Harga live saham (via proksi Yahoo Finance di backend, lihat handleStockPrice).
+  async getStockPrice(symbol: string, exchangeCode: string) {
+    return cloudflareApi<{ price: number; currency: string; changePercent: number }>(
+      `/api/member/stock-price?symbol=${encodeURIComponent(symbol)}&exchange=${encodeURIComponent(exchangeCode || 'IDX')}`
+    );
   }
 };

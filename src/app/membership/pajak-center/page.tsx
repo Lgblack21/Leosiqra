@@ -8,7 +8,8 @@ import {
   Printer,
   Info,
   Landmark,
-  AlertTriangle
+  AlertTriangle,
+  X
 } from 'lucide-react';
 import { YearPicker } from '@/components/ui/YearPicker';
 import { Transaction } from '@/lib/services/transactionService';
@@ -28,10 +29,22 @@ export default function PajakCenterPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [debtTransactions, setDebtTransactions] = useState<Transaction[]>([]);
   const [fxRates, setFxRates] = useState<ExchangeRates>({});
+  const [showDisclaimer, setShowDisclaimer] = useState(true);
 
   useEffect(() => {
     exchangeRateService.getLatestRates().then(setFxRates).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    if (localStorage.getItem('pajak-center-disclaimer-dismissed') === '1') {
+      setShowDisclaimer(false);
+    }
+  }, []);
+
+  const dismissDisclaimer = () => {
+    setShowDisclaimer(false);
+    localStorage.setItem('pajak-center-disclaimer-dismissed', '1');
+  };
 
   const isCurrentYear = selectedYear === new Date().getFullYear();
 
@@ -63,7 +76,14 @@ export default function PajakCenterPage() {
         // Portofolio & rekening bersifat posisi terkini (all-time), bukan per-tahun.
         const qInv = query(collection(db, 'investments'), where('userId', '==', u.uid));
         unsubInv = onSnapshot(qInv, (snap) => {
-          setInvestments(snap.docs.map(doc => ({ ...doc.data(), id: doc.id }) as Investment));
+          setInvestments(
+            snap.docs
+              .map(doc => ({ ...doc.data(), id: doc.id }) as Investment)
+              // Deposito "Penempatan" otomatis punya baris proyeksi "(Hasil Akhir)"
+              // berstatus Planned — bukan harta nyata, jangan ikut dihitung di
+              // Daftar Harta (dulu bikin nilai harta dobel untuk SPT).
+              .filter(inv => inv.status !== 'Planned')
+          );
         });
 
         const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
@@ -138,7 +158,6 @@ export default function PajakCenterPage() {
   // New Summary Calculations for PDF
   const totalPemasukan = useMemo(() => transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0), [transactions]);
   const totalPengeluaran = useMemo(() => transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0), [transactions]);
-  const netIncome = totalPemasukan - totalPengeluaran;
 
   const investasiPembelian = useMemo(() => {
     // Assuming transactions with category 'Investasi' or related are investment purchases
@@ -146,6 +165,15 @@ export default function PajakCenterPage() {
       .filter(t => t.type === 'pengeluaran' && (t.category?.toLowerCase().includes('investasi') || t.category === 'Saham' || t.category === 'Deposito'))
       .reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0);
   }, [transactions]);
+
+  // Penempatan dana ke deposito/saham/investasi lain BUKAN pengeluaran/kerugian
+  // untuk keperluan pajak — itu cuma pemindahan aset (uang tunai jadi
+  // instrumen investasi), dan sudah terhitung terpisah sebagai "Harta" di
+  // Daftar Harta. Kalau ikut dikurangkan di sini, Penghasilan Neto jadi
+  // salah besar-besaran (mis. taruh Rp280 juta ke deposito bikin neto minus
+  // Rp280 juta padahal itu bukan kerugian) — kecualikan dari sini, sama
+  // seperti "Biaya (bucket)" di laporan cetak yang sudah benar duluan.
+  const netIncome = totalPemasukan - (totalPengeluaran - investasiPembelian);
 
   const formatIDR = (val: number) => {
     return 'Rp ' + new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
@@ -336,11 +364,11 @@ export default function PajakCenterPage() {
       {/* 1. Dashboard View Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-br from-white to-indigo-50/40 p-6 rounded-[24px] border border-slate-100 shadow-sm print:hidden">
         <div className="flex items-center gap-4">
-          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-navy to-indigo-700 text-white items-center justify-center shadow-lg shadow-indigo-600/20 shrink-0">
+          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white items-center justify-center shadow-lg shadow-emerald-600/20 shrink-0">
             <Landmark size={22} />
           </div>
           <div>
-            <h2 className="text-xl md:text-2xl font-serif font-black text-slate-900 tracking-tight leading-tight">Pajak Center</h2>
+            <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Pajak Center</h2>
             <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Draft Ringkasan SPT · Tahun Pajak {selectedYear}</p>
           </div>
         </div>
@@ -371,15 +399,24 @@ export default function PajakCenterPage() {
       </div>
 
       {/* 1b. Accuracy Disclaimer — penting untuk alat bantu cek SPT */}
-      <div className="flex items-start gap-4 p-5 rounded-[20px] bg-amber-50 border border-amber-100 print:hidden">
-        <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
-        <p className="text-[11px] md:text-xs text-amber-800 leading-relaxed font-medium">
-          <strong>Daftar Harta, Utang, dan Piutang</strong> menampilkan <strong>posisi terkini (hari ini)</strong>, bukan posisi resmi per 31 Desember {selectedYear}
-          {!isCurrentYear && <> — karena Anda melihat tahun pajak yang sudah lewat, angka ini <strong>kemungkinan tidak sama</strong> dengan kondisi akhir tahun {selectedYear}</>}.
-          {' '}<strong>Penghasilan &amp; Pengeluaran</strong> di bawah sudah difilter khusus tahun {selectedYear}. Gunakan halaman ini sebagai draft pembanding, dan tetap verifikasi manual sebelum melapor resmi melalui{' '}
-          <a href="https://coretaxdjp.pajak.go.id/" target="_blank" rel="noopener noreferrer" className="underline font-bold hover:text-amber-900">coretaxdjp.pajak.go.id</a>.
-        </p>
-      </div>
+      {showDisclaimer && (
+        <div className="flex items-start gap-4 p-5 rounded-[20px] bg-amber-50 border border-amber-100 print:hidden">
+          <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+          <p className="text-[11px] md:text-xs text-amber-800 leading-relaxed font-medium flex-1">
+            <strong>Daftar Harta, Utang, dan Piutang</strong> menampilkan <strong>posisi terkini (hari ini)</strong>, bukan posisi resmi per 31 Desember {selectedYear}
+            {!isCurrentYear && <> — karena Anda melihat tahun pajak yang sudah lewat, angka ini <strong>kemungkinan tidak sama</strong> dengan kondisi akhir tahun {selectedYear}</>}.
+            {' '}<strong>Penghasilan &amp; Pengeluaran</strong> di bawah sudah difilter khusus tahun {selectedYear}. Gunakan halaman ini sebagai draft pembanding, dan tetap verifikasi manual sebelum melapor resmi melalui{' '}
+            <a href="https://coretaxdjp.pajak.go.id/" target="_blank" rel="noopener noreferrer" className="underline font-bold hover:text-amber-900">coretaxdjp.pajak.go.id</a>.
+          </p>
+          <button
+            onClick={dismissDisclaimer}
+            className="text-amber-400 hover:text-amber-700 transition-colors shrink-0"
+            aria-label="Tutup"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {/* 2. Top Info Cards — ringkasan kategori inti SPT (Penghasilan Neto / Harta / Kewajiban) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 print:hidden">
@@ -430,7 +467,7 @@ export default function PajakCenterPage() {
                     </span>
                   </div>
                   <h5 className="text-sm font-bold text-slate-900 mb-1 truncate">{harta.name}</h5>
-                  <p className="text-lg font-serif font-black text-slate-900">
+                  <p className="text-lg font-black text-slate-900">
                     Rp {harta.value.toLocaleString()}
                   </p>
                 </div>
@@ -463,7 +500,7 @@ export default function PajakCenterPage() {
                     </span>
                   </div>
                   <h5 className="text-sm font-bold text-slate-900 mb-1 truncate">{utang.name}</h5>
-                  <p className="text-lg font-serif font-black text-rose-600">
+                  <p className="text-lg font-black text-rose-600">
                     Rp {utang.value.toLocaleString()}
                   </p>
                 </div>
@@ -496,7 +533,7 @@ export default function PajakCenterPage() {
                     </span>
                   </div>
                   <h5 className="text-sm font-bold text-slate-900 mb-1 truncate">{piutang.name}</h5>
-                  <p className="text-lg font-serif font-black text-sky-600">
+                  <p className="text-lg font-black text-sky-600">
                     Rp {piutang.value.toLocaleString()}
                   </p>
                 </div>
@@ -506,24 +543,24 @@ export default function PajakCenterPage() {
         </div>
 
         {/* Total Harta Bersih */}
-        <div className="p-8 rounded-[32px] bg-gradient-to-br from-navy to-indigo-700 text-white shadow-lg shadow-indigo-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="p-8 rounded-[32px] bg-gradient-to-br from-emerald-600 to-teal-700 text-white shadow-lg shadow-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">Total Harta Bersih (Harta + Piutang − Utang)</p>
-            <p className="text-3xl font-serif font-black tabular-nums">
+            <p className="text-[10px] font-black text-emerald-200 uppercase tracking-widest mb-1">Total Harta Bersih (Harta + Piutang − Utang)</p>
+            <p className="text-3xl font-black tabular-nums">
               Rp {Math.round(animatedHartaBersih).toLocaleString()}
             </p>
           </div>
           <div className="flex gap-6 text-right">
             <div>
-              <p className="text-[9px] font-bold text-indigo-200 uppercase tracking-widest">Harta</p>
+              <p className="text-[9px] font-bold text-emerald-200 uppercase tracking-widest">Harta</p>
               <p className="text-sm font-black tabular-nums">Rp {Math.round(animatedTotalHarta).toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-[9px] font-bold text-indigo-200 uppercase tracking-widest">Piutang</p>
+              <p className="text-[9px] font-bold text-emerald-200 uppercase tracking-widest">Piutang</p>
               <p className="text-sm font-black tabular-nums">Rp {Math.round(animatedTotalPiutang).toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-[9px] font-bold text-indigo-200 uppercase tracking-widest">Utang</p>
+              <p className="text-[9px] font-bold text-emerald-200 uppercase tracking-widest">Utang</p>
               <p className="text-sm font-black tabular-nums">Rp {Math.round(animatedTotalUtang).toLocaleString()}</p>
             </div>
           </div>

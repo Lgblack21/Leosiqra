@@ -14,6 +14,9 @@ export interface Account {
   logoUrl?: string;
   logoLabel?: string;
   cardColor?: string;
+  // Urutan tampil rekening (drag-to-reorder di Kartu Saya) — dipakai semua
+  // halaman/dropdown yang menampilkan daftar rekening.
+  sortOrder?: number;
   createdAt: Date;
 }
 
@@ -64,6 +67,7 @@ export const accountService = {
         logoUrl: (data.logo_url as string | undefined) ?? undefined,
         logoLabel: (data.logo_label as string | undefined) ?? undefined,
         cardColor,
+        sortOrder: Number(data.sort_order) || 0,
         createdAt: data.created_at ? new Date(String(data.created_at)) : new Date(),
       } as Account;
     });
@@ -99,6 +103,17 @@ export const accountService = {
       json: {
         delta: amountChange,
       },
+    });
+    notifyCollectionChanged('accounts');
+  },
+
+  // Simpan urutan baru hasil drag-and-drop sekaligus — index tiap id di array
+  // jadi sort_order barunya. Order ini dipakai di semua halaman/dropdown yang
+  // menampilkan daftar rekening (bukan cuma di Kartu Saya).
+  async reorderAccounts(ids: string[]) {
+    await cloudflareApi('/api/member/accounts/reorder', {
+      method: 'PUT',
+      json: { ids },
     });
     notifyCollectionChanged('accounts');
   }

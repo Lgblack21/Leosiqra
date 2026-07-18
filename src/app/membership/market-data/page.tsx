@@ -246,11 +246,11 @@ export default function MarketDataPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-br from-white to-indigo-50/40 p-6 rounded-[24px] border border-slate-100 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-navy to-indigo-700 text-white items-center justify-center shadow-lg shadow-indigo-600/20 shrink-0">
+          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white items-center justify-center shadow-lg shadow-emerald-600/20 shrink-0">
             <Globe size={22} />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-serif font-black text-slate-900 tracking-tight leading-tight">Market Data</h1>
+            <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Market Data</h1>
             <p className="text-[11px] md:text-sm font-medium text-slate-500 mt-1 leading-relaxed">Kurs, kripto, dan emas — diperbarui otomatis setiap menit.</p>
           </div>
         </div>

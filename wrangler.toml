@@ -29,6 +29,10 @@ bindings = [
 tag = "v1"
 new_sqlite_classes = ["RealtimeRoom"]
 
+[triggers]
+# Jam 10:00 WIB (UTC+7) = 03:00 UTC — proses deposito yang jatuh tempo hari ini.
+crons = ["0 3 * * *"]
+
 [vars]
 APP_NAME = "Leosiqra"
 APP_ENV = "development"

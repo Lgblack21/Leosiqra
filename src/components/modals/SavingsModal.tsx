@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ChevronDown, Save, RefreshCw } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
+import { NumberInput } from '@/components/ui/NumberInput';
 import { savingsService } from '@/lib/services/savingsService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { CurrencySelect } from '@/components/CurrencySelect';
@@ -13,17 +14,18 @@ interface SavingsModalProps {
   userId: string;
   isOpen: boolean;
   onClose: () => void;
+  initialTransactionType?: 'Setoran' | 'Penarikan';
 }
 
 const SAVING_GOALS = ['Dana Darurat', 'Liburan', 'Pendidikan', 'Properti', 'Kendaraan', 'Bisnis', 'Lainnya'];
 
-export const SavingsModal = ({ userId, isOpen, onClose }: SavingsModalProps) => {
+export const SavingsModal = ({ userId, isOpen, onClose, initialTransactionType = 'Setoran' }: SavingsModalProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [rates, setRates] = useState<ExchangeRates | null>(null);
   const [convertedAmount, setConvertedAmount] = useState<number>(0);
-  
+
   const [formData, setFormData] = useState({
     description: '',
     subCategory: '',
@@ -31,6 +33,7 @@ export const SavingsModal = ({ userId, isOpen, onClose }: SavingsModalProps) => 
     category: 'Dana Darurat',
     fromAccount: '',
     toGoal: '',
+    transactionType: initialTransactionType as 'Setoran' | 'Penarikan',
     date: new Date().toISOString().split('T')[0],
     currency: 'IDR'
   });
@@ -38,10 +41,11 @@ export const SavingsModal = ({ userId, isOpen, onClose }: SavingsModalProps) => 
   useEffect(() => {
     if (isOpen && userId) {
       setError('');
+      setFormData(p => ({ ...p, transactionType: initialTransactionType }));
       accountService.getUserAccounts(userId).then(setAccounts).catch(console.error);
       exchangeRateService.getLatestRates().then(setRates).catch(console.error);
     }
-  }, [isOpen, userId]);
+  }, [isOpen, userId, initialTransactionType]);
 
   useEffect(() => {
     if (formData.amount && formData.currency && rates) {
@@ -72,35 +76,49 @@ export const SavingsModal = ({ userId, isOpen, onClose }: SavingsModalProps) => 
         formData.currency === 'IDR' ||
         Boolean(rates && rates[formData.currency] && rates['IDR']);
 
+      const isPenarikan = formData.transactionType === 'Penarikan';
+      const amount = parseFloat(formData.amount);
       await savingsService.createSaving({
         userId,
         description: formData.description,
         subCategory: formData.subCategory,
-        amount: parseFloat(formData.amount),
+        amount,
         amountIDR: canConvert ? convertedAmount : undefined,
         currency: formData.currency,
         category: formData.category,
         fromAccount: formData.fromAccount || 'General',
-        toGoal: formData.toGoal || formData.category,
+        toGoal: isPenarikan ? formData.category : (formData.toGoal || formData.category),
+        transactionType: formData.transactionType,
         date: selectedDate,
         displayDate: displayDate
       });
+
+      // Setoran: dana keluar dari rekening sumber ke pos tabungan. Penarikan:
+      // kebalikannya, dana kembali dari pos tabungan ke rekening — tanpa ini
+      // saldo rekening tidak pernah berubah, jadi dana yang sama kehitung
+      // dobel/hilang (di saldo rekening DAN di nilai tabungan).
+      if (formData.fromAccount) {
+        await accountService.updateAccountBalance(formData.fromAccount, isPenarikan ? amount : -amount);
+      }
+
       onClose();
-      setFormData({ 
-        description: '', subCategory: '', amount: '', category: 'Dana Darurat', fromAccount: '', 
-        toGoal: '', date: new Date().toISOString().split('T')[0], 
-        currency: 'IDR' 
+      setFormData({
+        description: '', subCategory: '', amount: '', category: 'Dana Darurat', fromAccount: '',
+        toGoal: '', transactionType: 'Setoran', date: new Date().toISOString().split('T')[0],
+        currency: 'IDR'
       });
     } catch (e) {
       console.error(e);
-      setError(e instanceof Error ? e.message : 'Gagal menyimpan setoran. Silakan coba lagi.');
+      setError(e instanceof Error ? e.message : `Gagal menyimpan ${formData.transactionType === 'Penarikan' ? 'penarikan' : 'setoran'}. Silakan coba lagi.`);
     } finally {
       setLoading(false);
     }
   };
 
+  const isPenarikan = formData.transactionType === 'Penarikan';
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Catat Setoran Tabungan" maxWidth="max-w-lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={isPenarikan ? "Tarik Dana Tabungan" : "Catat Setoran Tabungan"} maxWidth="max-w-lg">
       <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1 custom-scrollbar">
         {error && (
           <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-sm font-medium text-rose-600">
@@ -109,9 +127,11 @@ export const SavingsModal = ({ userId, isOpen, onClose }: SavingsModalProps) => 
         )}
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Deskripsi</label>
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            {isPenarikan ? 'Untuk Apa (Keperluan Penarikan)' : 'Deskripsi'}
+          </label>
           <input type="text" value={formData.description} onChange={e => setFormData(p => ({...p, description: e.target.value}))}
-            placeholder="Setoran Dana Darurat..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all" />
+            placeholder={isPenarikan ? 'Bayar rumah sakit, DP rumah...' : 'Setoran Dana Darurat...'} className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all" />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -137,7 +157,7 @@ export const SavingsModal = ({ userId, isOpen, onClose }: SavingsModalProps) => 
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
-              <input type="number" value={formData.amount} onChange={e => setFormData(p => ({...p, amount: e.target.value}))}
+              <NumberInput value={formData.amount} onChange={val => setFormData(p => ({...p, amount: val}))}
                 placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 pl-11 pr-5 text-sm font-bold text-slate-700 transition-all" />
             </div>
           </div>
@@ -168,11 +188,23 @@ export const SavingsModal = ({ userId, isOpen, onClose }: SavingsModalProps) => 
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Dari Rekening</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+              {isPenarikan ? 'Ke Rekening' : 'Dari Rekening'}
+            </label>
             <div className="relative">
-              <select 
+              <select
                 value={formData.fromAccount}
-                onChange={e => setFormData(p => ({...p, fromAccount: e.target.value}))}
+                onChange={e => {
+                  const selectedAccount = accounts.find(acc => acc.id === e.target.value);
+                  setFormData(p => ({
+                    ...p,
+                    fromAccount: e.target.value,
+                    // Setoran/penarikan tabungan selalu dalam mata uang rekening
+                    // terkait — tanpa ini currency picker (independen) bisa
+                    // ketinggalan di IDR meski rekeningnya USD/KHR/dll.
+                    currency: selectedAccount?.currency || p.currency,
+                  }));
+                }}
                 className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all cursor-pointer"
               >
                 <option value="">Pilih Rekening</option>
@@ -190,18 +222,20 @@ export const SavingsModal = ({ userId, isOpen, onClose }: SavingsModalProps) => 
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Ke Goal (Tujuan)</label>
-          <input type="text" value={formData.toGoal} onChange={e => setFormData(p => ({...p, toGoal: e.target.value}))}
-            placeholder="Ketik tujuan spesifik (opsional)..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all" />
-        </div>
+        {!isPenarikan && (
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Ke Goal (Tujuan)</label>
+            <input type="text" value={formData.toGoal} onChange={e => setFormData(p => ({...p, toGoal: e.target.value}))}
+              placeholder="Ketik tujuan spesifik (opsional)..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all" />
+          </div>
+        )}
 
         <button onClick={handleCreate} disabled={loading || !formData.description || !formData.amount}
-          className="w-full bg-indigo-600 disabled:bg-slate-300 text-white py-4 rounded-xl text-sm font-black transition-all mt-6 shadow-xl shadow-indigo-100 flex items-center justify-center gap-2">
+          className={`w-full disabled:bg-slate-300 text-white py-4 rounded-xl text-sm font-black transition-all mt-6 shadow-xl flex items-center justify-center gap-2 ${isPenarikan ? 'bg-rose-500 hover:bg-rose-600 shadow-rose-100' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100'}`}>
           {loading ? 'Menyimpan...' : (
             <>
               <Save size={18} />
-              Simpan Setoran
+              {isPenarikan ? 'Tarik Dana' : 'Simpan Setoran'}
             </>
           )}
         </button>

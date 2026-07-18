@@ -123,7 +123,12 @@ CREATE TABLE IF NOT EXISTS accounts (
   base_value REAL NOT NULL DEFAULT 0,
   logo_url TEXT,
   logo_label TEXT,
+  payload_json TEXT,
+  -- Urutan tampil rekening (drag-to-reorder di Kartu Saya) — dipakai semua
+  -- halaman/dropdown yang menampilkan daftar rekening, bukan cuma satu halaman.
+  sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -167,7 +172,15 @@ CREATE TABLE IF NOT EXISTS investments (
   target_date TEXT,
   duration_days INTEGER,
   status TEXT,
+  payload_json TEXT,
+  -- Perlakuan otomatis saat jatuh tempo (dieksekusi oleh Cron Trigger harian):
+  -- 'cairkan' = pokok+bunga masuk rekening; 'aro_bunga' = bunga cair ke rekening,
+  -- pokok diperpanjang 1 bulan; 'aro_full' = pokok+bunga digulirkan (compound).
+  maturity_action TEXT DEFAULT 'cairkan',
+  -- Menghubungkan baris proyeksi "(Hasil Akhir)" balik ke baris Penempatan aslinya.
+  related_investment_id TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -177,7 +190,13 @@ CREATE TABLE IF NOT EXISTS categories (
   category TEXT NOT NULL,
   sub_category TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'ACTIVE',
+  payload_json TEXT,
+  -- Urutan tampil subkategori di dalam grup kategorinya (drag-to-reorder di
+  -- halaman Nama Akun) — lebih kecil tampil lebih dulu.
+  sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  scope TEXT,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -208,9 +227,13 @@ CREATE TABLE IF NOT EXISTS savings (
   sub_category TEXT,
   from_account TEXT,
   to_goal TEXT,
+  -- 'Setoran' = dana masuk ke pos tabungan (keluar dari rekening di from_account);
+  -- 'Penarikan' = dana ditarik dari pos tabungan kembali ke rekening di from_account.
+  transaction_type TEXT DEFAULT 'Setoran',
   date TEXT NOT NULL,
   display_date TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 

@@ -40,6 +40,39 @@ export default function MyCardsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [fxRates, setFxRates] = useState<ExchangeRates>({});
 
+  // Urutan tampil lokal, diselaraskan dari server tiap kali berubah tapi
+  // diupdate optimis (instan) saat drag-drop supaya urutan baru langsung
+  // kelihatan sebelum request simpan selesai.
+  const [localAccountOrder, setLocalAccountOrder] = useState<Account[]>([]);
+  useEffect(() => {
+    setLocalAccountOrder(accounts);
+  }, [accounts]);
+
+  const handleReorderAccounts = (newOrder: Account[]) => {
+    setLocalAccountOrder(newOrder);
+    const ids = newOrder.map(a => a.id).filter((id): id is string => Boolean(id));
+    accountService.reorderAccounts(ids).catch(e => {
+      console.error('Gagal menyimpan urutan rekening:', e);
+      setError('Gagal menyimpan urutan baru. Silakan coba lagi.');
+    });
+  };
+
+  // Drag-and-drop native (bukan framer-motion Reorder) — Reorder sempat bikin
+  // kartu ke-drag tampil nyangkut/melayang karena konflik dengan transform
+  // absolute pada badge warna kartu.
+  const [draggedAccountId, setDraggedAccountId] = useState<string | null>(null);
+  const handleAccountDrop = (targetId: string) => {
+    if (!draggedAccountId || draggedAccountId === targetId) return;
+    const fromIndex = localAccountOrder.findIndex(a => a.id === draggedAccountId);
+    const toIndex = localAccountOrder.findIndex(a => a.id === targetId);
+    if (fromIndex === -1 || toIndex === -1) return;
+    const newOrder = [...localAccountOrder];
+    const [moved] = newOrder.splice(fromIndex, 1);
+    newOrder.splice(toIndex, 0, moved);
+    handleReorderAccounts(newOrder);
+    setDraggedAccountId(null);
+  };
+
   useEffect(() => {
     exchangeRateService.getLatestRates().then(setFxRates).catch(console.error);
   }, []);
@@ -127,13 +160,16 @@ export default function MyCardsPage() {
   const totalIn = useMemo(() => {
     const dailyIn = transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + (t.amountIDR || t.amount), 0);
     const debtIn = transactions.filter(t => t.type === 'debt' && t.category === 'Hutang').reduce((s, t) => s + (t.amountIDR || t.amount), 0);
-    return dailyIn + debtIn;
-  }, [transactions]);
+    // Penarikan tabungan = uang balik ke rekening, jadi dihitung sebagai
+    // pemasukan — bukan pengeluaran seperti Setoran.
+    const savingIn = savings.filter(s => s.transactionType === 'Penarikan').reduce((s2, t) => s2 + (t.amountIDR || t.amount), 0);
+    return dailyIn + debtIn + savingIn;
+  }, [transactions, savings]);
 
   const totalOut = useMemo(() => {
     const dailyOut = transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + (t.amountIDR || t.amount), 0);
     const piutangOut = transactions.filter(t => t.type === 'debt' && t.category === 'Piutang').reduce((s, t) => s + (t.amountIDR || t.amount), 0);
-    const savingOut = savings.reduce((s, t) => s + (t.amountIDR || t.amount), 0);
+    const savingOut = savings.filter(s => s.transactionType !== 'Penarikan').reduce((s2, t) => s2 + (t.amountIDR || t.amount), 0);
     return dailyOut + piutangOut + savingOut;
   }, [transactions, savings]);
 
@@ -143,9 +179,14 @@ export default function MyCardsPage() {
       .reduce((s, a) => s + toIDR(a.initialBalance || 0, a.currency), 0);
   }, [accounts, toIDR]);
 
+  // Saldo total pakai field `balance` yang sudah dipelihara live (sama seperti
+  // saldo per-rekening di atas) — bukan direkonstruksi dari initial + transaksi,
+  // supaya tidak salah tanda/tidak lengkap seperti sebelumnya.
   const totalBalance = useMemo(() => {
-    return combinedInitial + totalIn - totalOut;
-  }, [combinedInitial, totalIn, totalOut]);
+    return accounts
+      .filter(a => a.type !== 'Credit Card' && a.type !== 'kartu')
+      .reduce((s, a) => s + toIDR(a.balance || 0, a.currency), 0);
+  }, [accounts, toIDR]);
 
   const totalGlobalDebt = useMemo(() => {
     return transactions.filter(t => t.type === 'debt' && t.category === 'Hutang').reduce((s, t) => s + (t.amountIDR || t.amount), 0);
@@ -201,16 +242,13 @@ export default function MyCardsPage() {
     [accountTransactionsAll]
   );
 
-  const accountSavingsOut = useMemo(() => {
-    if (!selectedAccountId) return 0;
-    return savings.filter(s => s.fromAccount === selectedAccountId).reduce((sum, s) => sum + s.amount, 0);
-  }, [savings, selectedAccountId]);
-
-  const accountBalance = useMemo(() => {
-    const acc = selectedAccount;
-    if (!acc) return 0;
-    return (acc.initialBalance || 0) + accountTotalIn - accountTotalOut - accountSavingsOut;
-  }, [selectedAccount, accountTotalIn, accountTotalOut, accountSavingsOut]);
+  // Saldo rekening pakai field `balance` yang sudah dipelihara live oleh
+  // accountService.updateAccountBalance di setiap transaksi/deposito/tabungan
+  // — bukan dihitung ulang dari initial_balance + transaksi, karena rekonstruksi
+  // itu dulu tidak lengkap (tidak menghitung efek investasi) dan salah tanda
+  // untuk Penarikan tabungan (ikut dianggap uang keluar, padahal uang masuk
+  // kembali ke rekening), jadi saldo yang tampil bisa jauh meleset/minus palsu.
+  const accountBalance = selectedAccount?.balance || 0;
 
   // Nilai konversi ke IDR untuk ditampilkan sebagai info kedua saat akun
   // yang dipilih bukan berdenominasi IDR.
@@ -520,16 +558,22 @@ export default function MyCardsPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {accounts.map((acc) => {
+              {localAccountOrder.map((acc) => {
                 const swatch = CARD_COLOR_OPTIONS.find(c => c.key === acc.cardColor)?.swatch;
                 const creditInfo = acc.id ? creditByAccount.get(acc.id) : undefined;
                 return (
                 <div
                   key={acc.id}
+                  draggable
+                  onDragStart={() => acc.id && setDraggedAccountId(acc.id)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => acc.id && handleAccountDrop(acc.id)}
+                  onDragEnd={() => setDraggedAccountId(null)}
                   onClick={() => setSelectedAccountId(acc.id!)}
                   className={cn(
-                    "bg-white rounded-2xl p-4 md:p-5 border shadow-sm hover:shadow-md transition-all flex items-center justify-between group cursor-pointer",
-                    selectedAccountId === acc.id ? "border-indigo-300 ring-2 ring-indigo-100" : "border-slate-100"
+                    "bg-white rounded-2xl p-4 md:p-5 border shadow-sm hover:shadow-md transition-all flex items-center justify-between group cursor-grab active:cursor-grabbing",
+                    selectedAccountId === acc.id ? "border-indigo-300 ring-2 ring-indigo-100" : "border-slate-100",
+                    draggedAccountId === acc.id && "opacity-40"
                   )}>
                   <div className="flex items-center gap-3 md:gap-4 min-w-0">
                     <div className={`relative w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0 ${getTypeBg(acc.type)}`}>

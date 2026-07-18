@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { 
+import {
   Wallet,
   Target,
   Trash2,
-  TrendingUp
+  TrendingUp,
+  TrendingDown,
+  PlusCircle,
+  ArrowDownToLine
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { savingsService, Saving } from '@/lib/services/savingsService';
@@ -14,12 +17,17 @@ import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 import { MonthPicker } from '@/components/ui/MonthPicker';
+import { SavingsModal } from '@/components/modals/SavingsModal';
+import { cn } from '@/lib/utils';
 
 export default function SavingsPage() {
   const [savings, setSavings] = useState<Saving[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [userId, setUserId] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [modalMode, setModalMode] = useState<'Setoran' | 'Penarikan'>('Setoran');
 
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -31,6 +39,7 @@ export default function SavingsPage() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
+      setUserId(u?.uid || '');
       if (u) {
         // Fetch accounts for lookup
         const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
@@ -85,8 +94,11 @@ export default function SavingsPage() {
 
   // Total gabungan lintas rekening harus pakai amountIDR (sudah dikonversi
   // saat setoran disimpan), bukan .amount mentah — setoran bisa dalam
-  // mata uang berbeda-beda.
-  const totalSaldo = useMemo(() => savings.reduce((s, item) => s + (Number(item.amountIDR) || item.amount), 0), [savings]);
+  // mata uang berbeda-beda. Penarikan mengurangi total, Setoran menambah.
+  const totalSaldo = useMemo(() => savings.reduce((s, item) => {
+    const amt = Number(item.amountIDR) || item.amount;
+    return item.transactionType === 'Penarikan' ? s - amt : s + amt;
+  }, 0), [savings]);
 
   const filtered = useMemo(() =>
     searchQuery ? savings.filter(s => s.description.toLowerCase().includes(searchQuery.toLowerCase()) || s.category.toLowerCase().includes(searchQuery.toLowerCase())) : savings,
@@ -130,13 +142,27 @@ export default function SavingsPage() {
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
-          <MonthPicker 
+          <MonthPicker
             value={{ month: selectedMonth, year: selectedYear }}
             onChange={({ month, year }) => {
               setSelectedMonth(month);
               setSelectedYear(year);
             }}
           />
+          <button
+            onClick={() => { setModalMode('Penarikan'); setShowModal(true); }}
+            className="px-5 py-3 bg-rose-50 text-rose-600 rounded-xl text-sm font-black flex items-center justify-center gap-2 hover:bg-rose-100 transition-all"
+          >
+            <ArrowDownToLine size={18} />
+            <span className="hidden md:inline">Tarik Dana</span>
+          </button>
+          <button
+            onClick={() => { setModalMode('Setoran'); setShowModal(true); }}
+            className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+          >
+            <PlusCircle size={18} />
+            <span className="hidden md:inline">Catat Setoran</span>
+          </button>
         </div>
       </div>
 
@@ -151,7 +177,7 @@ export default function SavingsPage() {
           </div>
           <div>
             <h3 className="text-3xl font-black text-slate-900 leading-tight">Rp {formatRp(totalSaldo)}</h3>
-            <p className="text-[10px] font-bold text-emerald-500 mt-1 uppercase tracking-wider">{savings.length} catatan setoran</p>
+            <p className="text-[10px] font-bold text-emerald-500 mt-1 uppercase tracking-wider">{savings.length} catatan transaksi</p>
           </div>
           <TrendingUp size={48} className="absolute -right-2 -bottom-2 text-indigo-50/50 group-hover:scale-110 transition-transform -rotate-12" />
         </div>
@@ -208,6 +234,7 @@ export default function SavingsPage() {
               <thead>
                 <tr className="border-b border-slate-50">
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tipe</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Deskripsi</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Mata Uang</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Nominal</th>
@@ -218,19 +245,36 @@ export default function SavingsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((item) => (
+                {filtered.map((item) => {
+                  const isPenarikan = item.transactionType === 'Penarikan';
+                  return (
                   <tr key={item.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap">
                       <p className="text-sm font-black text-slate-900">{formatDate(item.date)}</p>
                     </td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap">
+                      <span className={cn(
+                        "px-2.5 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest flex items-center gap-1 w-fit",
+                        isPenarikan ? "bg-rose-50 text-rose-500" : "bg-emerald-50 text-emerald-600"
+                      )}>
+                        {isPenarikan ? <TrendingDown size={11} /> : <TrendingUp size={11} />}
+                        {isPenarikan ? 'Tarik' : 'Setor'}
+                      </span>
+                    </td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap font-bold text-slate-900 text-sm">{item.description}</td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center"><span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{item.currency || 'IDR'}</span></td>
-                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatAmount(item.amount, item.currency)}</td>
+                    <td className={cn("px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-sm", isPenarikan ? "text-rose-500" : "text-slate-900")}>
+                      {isPenarikan ? '-' : '+'} {formatAmount(item.amount, item.currency)}
+                    </td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap">
                        <span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-[8px] font-black rounded uppercase tracking-widest">{item.subCategory || '-'}</span>
                     </td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap font-bold text-slate-600 text-xs">{getAccountName(item.fromAccount || '')}</td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap font-bold text-slate-600 text-xs">{item.toGoal || '-'}</td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap font-bold text-slate-600 text-xs">
+                      {isPenarikan ? (item.category || '-') : getAccountName(item.fromAccount || '')}
+                    </td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap font-bold text-slate-600 text-xs">
+                      {isPenarikan ? getAccountName(item.fromAccount || '') : (item.toGoal || '-')}
+                    </td>
                     <td className="px-5 md:px-8 py-5 text-center">
                       <button
                         onClick={() => item.id && handleDelete(item.id)}
@@ -240,7 +284,8 @@ export default function SavingsPage() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -252,6 +297,13 @@ export default function SavingsPage() {
           </div>
         )}
       </div>
+
+      <SavingsModal
+        userId={userId}
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        initialTransactionType={modalMode}
+      />
     </div>
   );
 }

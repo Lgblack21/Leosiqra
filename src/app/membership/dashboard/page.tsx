@@ -11,16 +11,22 @@ import {
   Landmark,
   Search,
   ChevronDown,
+  ChevronRight,
   LayoutDashboard,
-  RefreshCw
+  RefreshCw,
+  Building2,
+  Banknote
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { MonthPicker } from '@/components/ui/MonthPicker';
+import { Modal } from '@/components/ui/Modal';
+import { LogoImage } from '@/components/ui/LogoImage';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
+import { isCreditAccountType, computeCreditUsage } from '@/lib/creditCard';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 
 interface MarketTicker {
@@ -42,6 +48,7 @@ export default function MonthlyDashboard() {
   const [otherDebts, setOtherDebts] = useState(0);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [fxRates, setFxRates] = useState<ExchangeRates>({});
+  const [showAccountsModal, setShowAccountsModal] = useState(false);
 
   // Saldo Bersih = total saldo semua rekening saat ini (bukan cuma net arus
   // kas bulan yang dipilih) — sama seperti "Total Saldo" di halaman Profile,
@@ -153,7 +160,15 @@ export default function MonthlyDashboard() {
   const totalPengeluaran = useMemo(() => transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + toIdrAmount(t), 0), [transactions]);
   const totalInvestasi = useMemo(() => investments.reduce((s, i) => s + (Number(i.amountIDR) || Number(i.amountInvested) || 0), 0), [investments]);
   const netBalance = totalPemasukan - totalPengeluaran;
-  const netTabungan = Math.max(netBalance - totalInvestasi, 0);
+  // Penempatan dana ke deposito/saham/investasi lain SUDAH tercatat sebagai
+  // transaksi "pengeluaran" kategori Investasi (dan penarikannya sebagai
+  // "pemasukan") — jadi sudah ikut terhitung di totalPengeluaran/netBalance
+  // di atas. Dulu di sini dikurangi totalInvestasi (all-time) SEKALI LAGI,
+  // jadi dana yang sama kepotong dua kali dan Tabungan sering nongol 0
+  // padahal masih ada sisa uang nganggur. totalInvestasi (all-time) tetap
+  // dipakai terpisah untuk kartu "Investasi", cuma tidak lagi dikurangkan
+  // di sini.
+  const netTabungan = Math.max(netBalance, 0);
   const totalSaldoRekening = useMemo(
     () => accounts.reduce((s, a) => s + exchangeRateService.convert(a.balance || 0, a.currency || 'IDR', 'IDR', fxRates), 0),
     [accounts, fxRates]
@@ -162,6 +177,41 @@ export default function MonthlyDashboard() {
   const formatRp = (num: number) => {
     if (isNaN(num) || !isFinite(num)) return 'Rp 0';
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
+  };
+
+  const formatAccountBalance = (amount: number, currency: string) => {
+    try {
+      return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: currency || 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      }).format(amount);
+    } catch {
+      return `${currency || ''} ${amount.toLocaleString('id-ID')}`.trim();
+    }
+  };
+
+  const getIconForType = (type: string) => {
+    switch (type) {
+      case 'Bank Account': return <Building2 size={18} className="text-white" />;
+      case 'E-Wallet': return <Wallet size={18} className="text-white" />;
+      case 'Cash': return <Banknote size={18} className="text-white" />;
+      case 'Investment Account': return <Landmark size={18} className="text-white" />;
+      case 'Credit Card': return <CreditCard size={18} className="text-white" />;
+      default: return <Building2 size={18} className="text-white" />;
+    }
+  };
+
+  const getBgForType = (type: string) => {
+    switch (type) {
+      case 'Bank Account': return 'bg-blue-600';
+      case 'E-Wallet': return 'bg-indigo-600';
+      case 'Cash': return 'bg-emerald-500';
+      case 'Investment Account': return 'bg-slate-900';
+      case 'Credit Card': return 'bg-rose-500';
+      default: return 'bg-blue-500';
+    }
   };
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short' }).format(d);
 
@@ -172,17 +222,61 @@ export default function MonthlyDashboard() {
   const tabunganPct = totalPemasukan > 0 ? Math.min(Math.round((netTabungan / Math.max(totalPemasukan, 1)) * 100), 100) : 0;
   const investasiPct = totalPemasukan > 0 ? Math.min(Math.round((totalInvestasi / Math.max(totalPemasukan, 1)) * 100), 100) : 0;
 
+  // Dirender dua kali: sekali di grid atas (mobile, langsung di bawah Saldo
+  // Bersih) dan sekali di 2x2 Flow Grid (desktop, posisi aslinya) — masing-
+  // masing disembunyikan di breakpoint yang tidak relevan lewat class hidden/
+  // md:hidden, supaya kartunya cuma tampil sekali per ukuran layar.
+  const pemasukanCard = (
+    <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          <TrendingUp size={12} className="text-emerald-500" /> Pemasukan
+        </div>
+        <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${pengeluaranPct <= 80 ? 'bg-sky-50 text-sky-500' : 'bg-rose-50 text-rose-500'}`}>
+          {pengeluaranPct <= 80 ? 'Sehat' : 'Waspada'}
+        </span>
+      </div>
+      <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6 tracking-tight">{formatRp(totalPemasukan)}</h3>
+      <div className="flex justify-between items-end gap-3">
+        <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div className="h-full bg-emerald-500 transition-all" style={{ width: `${pemasukanPct}%` }} />
+        </div>
+        <span className="text-[9px] font-medium text-slate-400 leading-none">{transactions.filter(t => t.type === 'pemasukan').length} trx</span>
+      </div>
+    </div>
+  );
+
+  const pengeluaranCard = (
+    <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          <TrendingDown size={12} className="text-rose-500" /> Pengeluaran
+        </div>
+        <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${pengeluaranPct > 90 ? 'bg-rose-50 text-rose-500' : 'bg-slate-50 text-slate-400'}`}>
+          {pengeluaranPct > 90 ? 'Waspada' : 'Normal'}
+        </span>
+      </div>
+      <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6 tracking-tight">{formatRp(totalPengeluaran)}</h3>
+      <div className="flex justify-between items-end gap-3">
+        <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div className="h-full bg-rose-500 transition-all" style={{ width: `${pengeluaranPct}%` }} />
+        </div>
+        <span className="text-[9px] font-medium text-slate-400 leading-none">{pengeluaranPct}% dari masuk</span>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 max-w-[1400px]">
 
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-br from-white to-indigo-50/40 p-6 rounded-[24px] border border-slate-100 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-navy to-indigo-700 text-white items-center justify-center shadow-lg shadow-indigo-600/20 shrink-0">
+          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white items-center justify-center shadow-lg shadow-emerald-600/20 shrink-0">
             <LayoutDashboard size={22} />
           </div>
           <div>
-            <h2 className="text-xl md:text-2xl font-serif font-black text-slate-900 tracking-tight leading-tight">Dashboard Bulanan</h2>
+            <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Dashboard Bulanan</h2>
             <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Laporan Periode {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth))}</p>
           </div>
         </div>
@@ -198,15 +292,29 @@ export default function MonthlyDashboard() {
 
       {/* Top Cards (3 Cols) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-        {/* Card 1: Saldo Bersih (kartu utama) */}
-        <div className="bg-gradient-to-br from-navy to-indigo-700 text-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-indigo-900/10 shadow-xl shadow-indigo-600/15 relative overflow-hidden">
+        {/* Card 1: Saldo Bersih (kartu utama) — klik untuk lihat rincian rekening */}
+        <button
+          type="button"
+          onClick={() => setShowAccountsModal(true)}
+          className="text-left w-full bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-emerald-900/10 shadow-xl shadow-emerald-600/15 relative overflow-hidden hover:shadow-2xl hover:shadow-emerald-600/25 hover:-translate-y-0.5 active:scale-[0.99] transition-all cursor-pointer"
+        >
           <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
-          <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest mb-3">Saldo Bersih</p>
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <p className="text-[10px] font-bold text-emerald-200 uppercase tracking-widest">Saldo Bersih</p>
+            <ChevronRight size={16} className="text-emerald-200 shrink-0" />
+          </div>
           <h3 className={`text-2xl md:text-3xl font-black mb-4 tracking-tight ${totalSaldoRekening >= 0 ? 'text-white' : 'text-rose-300'}`}>{formatRp(totalSaldoRekening)}</h3>
-          <div className="flex items-center gap-1.5 text-indigo-200 text-[10px] md:text-xs font-bold">
+          <div className="flex items-center gap-1.5 text-emerald-200 text-[10px] md:text-xs font-bold">
             <TrendingUp size={14} />
             <span>{transactions.length} transaksi tercatat</span>
           </div>
+        </button>
+
+        {/* Mobile-only: Pemasukan & Pengeluaran langsung di bawah Saldo Bersih
+            (versi desktop tetap di posisi aslinya, di 2x2 Flow Grid bawah) */}
+        <div className="contents md:hidden">
+          {pemasukanCard}
+          {pengeluaranCard}
         </div>
 
         {/* Card 2: Tagihan Kartu Kredit */}
@@ -277,41 +385,11 @@ export default function MonthlyDashboard() {
 
         {/* 2x2 Flow Grid (3/4 width) */}
         <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          {/* Pemasukan - Firebase */}
-          <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                <TrendingUp size={12} className="text-emerald-500" /> Pemasukan
-              </div>
-              <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${pengeluaranPct <= 80 ? 'bg-sky-50 text-sky-500' : 'bg-rose-50 text-rose-500'}`}>
-                {pengeluaranPct <= 80 ? 'Sehat' : 'Waspada'}
-              </span>
-            </div>
-            <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6 tracking-tight">{formatRp(totalPemasukan)}</h3>
-            <div className="flex justify-between items-end gap-3">
-              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-emerald-500 transition-all" style={{ width: `${pemasukanPct}%` }} />
-              </div>
-              <span className="text-[9px] font-medium text-slate-400 leading-none">{transactions.filter(t => t.type === 'pemasukan').length} trx</span>
-            </div>
-          </div>
-          {/* Pengeluaran - Firebase */}
-          <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                <TrendingDown size={12} className="text-rose-500" /> Pengeluaran
-              </div>
-              <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${pengeluaranPct > 90 ? 'bg-rose-50 text-rose-500' : 'bg-slate-50 text-slate-400'}`}>
-                {pengeluaranPct > 90 ? 'Waspada' : 'Normal'}
-              </span>
-            </div>
-            <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6 tracking-tight">{formatRp(totalPengeluaran)}</h3>
-            <div className="flex justify-between items-end gap-3">
-              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-rose-500 transition-all" style={{ width: `${pengeluaranPct}%` }} />
-              </div>
-              <span className="text-[9px] font-medium text-slate-400 leading-none">{pengeluaranPct}% dari masuk</span>
-            </div>
+          {/* Pemasukan & Pengeluaran (desktop) — di mobile sudah tampil di
+              bawah Saldo Bersih, jadi disembunyikan di sini supaya tidak dobel */}
+          <div className="hidden md:contents">
+            {pemasukanCard}
+            {pengeluaranCard}
           </div>
           {/* Tabungan - dihitung dari Net */}
           <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
@@ -477,6 +555,56 @@ export default function MonthlyDashboard() {
           </div>
         )}
       </div>
+
+      <Modal
+        isOpen={showAccountsModal}
+        onClose={() => setShowAccountsModal(false)}
+        title="Rincian Rekening"
+        maxWidth="max-w-lg"
+      >
+        <div className="space-y-3">
+          {accounts.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-6">Belum ada rekening</p>
+          ) : accounts.map((acc) => {
+            const isCredit = isCreditAccountType(acc.type);
+            const credit = isCredit ? computeCreditUsage(acc, transactions) : null;
+            const displayAmount = isCredit && credit ? credit.remaining : (acc.balance || 0);
+            const idrValue = exchangeRateService.convert(displayAmount, acc.currency || 'IDR', 'IDR', fxRates);
+            return (
+              <div
+                key={acc.id}
+                className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100"
+              >
+                <div className="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden bg-white border border-slate-100 flex items-center justify-center">
+                  <LogoImage
+                    src={acc.logoUrl}
+                    alt={acc.name}
+                    fallbackText={acc.name.substring(0, 3).toUpperCase()}
+                    fallbackIcon={(
+                      <div className={`w-full h-full flex items-center justify-center ${getBgForType(acc.type)}`}>
+                        {getIconForType(acc.type)}
+                      </div>
+                    )}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-black text-slate-900 truncate">{acc.name}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide truncate">
+                    {isCredit ? 'Sisa Limit' : acc.type}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-black text-slate-900 whitespace-nowrap">{formatAccountBalance(displayAmount, acc.currency)}</p>
+                  {acc.currency && acc.currency !== 'IDR' && (
+                    <p className="text-[10px] font-bold text-slate-400 whitespace-nowrap">≈ {formatRp(idrValue)}</p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Modal>
     </div>
   );
 }

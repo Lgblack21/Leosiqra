@@ -117,6 +117,15 @@ const isDateKey = (key: string) =>
     "updatedAt",
     "expiredAt",
     "nextDate",
+    // date_invested/target_date (deposito/saham/investasi lainnya) tadinya
+    // tidak ada di daftar ini — nilainya tetap string mentah tanpa .toDate(),
+    // jadi halaman yang baca lewat onSnapshot (bukan investmentService) diam-diam
+    // fallback ke "new Date()" (tanggal hari ini) untuk dateInvested dan null
+    // (tampil "-") untuk targetDate, alih-alih tanggal aslinya.
+    "date_invested",
+    "target_date",
+    "dateInvested",
+    "targetDate",
   ].includes(key);
 
 const normalize = (input: unknown): unknown => {

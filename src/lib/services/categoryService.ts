@@ -1,15 +1,17 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  getDocs, 
-  query, 
-  where, 
-  Timestamp 
+import {
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  getDocs,
+  query,
+  where,
+  Timestamp,
+  notifyCollectionChanged
 } from '@/lib/cf-firestore';
 import { db } from '../cf-client';
+import { cloudflareApi } from '../cloudflare-api';
 
 export interface Category {
   id?: string;
@@ -17,6 +19,9 @@ export interface Category {
   category: string;     // e.g. Makanan, Transport
   subCategory: string;  // e.g. Makan Siang, Bensin
   status: 'VERIFIED' | 'PENDING';
+  // Urutan tampil subkategori di dalam grup kategorinya (drag-to-reorder di
+  // halaman Nama Akun) — lebih kecil tampil lebih dulu.
+  sortOrder?: number;
   createdAt: Date;
 }
 
@@ -56,6 +61,16 @@ export const categoryService = {
   async deleteCategory(id: string) {
     const docRef = doc(db, COLLECTION_NAME, id);
     await deleteDoc(docRef);
+  },
+
+  // Simpan urutan baru hasil drag-and-drop sekaligus untuk satu grup kategori
+  // — index tiap id di array jadi sort_order barunya.
+  async reorderCategories(ids: string[]) {
+    await cloudflareApi('/api/member/categories/reorder', {
+      method: 'PUT',
+      json: { ids },
+    });
+    notifyCollectionChanged(COLLECTION_NAME);
   }
 };
 

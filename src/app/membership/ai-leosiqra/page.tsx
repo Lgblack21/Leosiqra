@@ -286,10 +286,10 @@ export default function AILeosiqraPage() {
               <span className="text-[10px] font-black uppercase tracking-widest">Powered by OpenRouter AI</span>
             </div>
             <div className="flex items-center gap-4">
-              <div className="hidden sm:flex w-14 h-14 rounded-2xl bg-gradient-to-br from-navy to-indigo-700 text-white items-center justify-center shadow-lg shadow-indigo-600/20 shrink-0 animate-floaty">
+              <div className="hidden sm:flex w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white items-center justify-center shadow-lg shadow-emerald-600/20 shrink-0 animate-floaty">
                 <Sparkles size={26} />
               </div>
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-serif font-black text-slate-900 tracking-tight leading-[1.2]">
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight leading-[1.2]">
                 AI Leosiqra <br className="hidden md:block" />
                 <span className="text-gradient">Asisten Cerdas Anda</span>
               </h1>
@@ -350,7 +350,7 @@ export default function AILeosiqraPage() {
 
           {/* Chat Header */}
           <div className="p-4 md:p-6 border-b border-slate-50 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-navy to-indigo-700 flex items-center justify-center shadow-lg shadow-indigo-600/20">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center shadow-lg shadow-emerald-600/20">
               <Sparkles size={18} className="text-white" />
             </div>
             <div>
@@ -379,7 +379,7 @@ export default function AILeosiqraPage() {
                     transition={{ duration: 0.35, ease: 'easeOut' }}
                     className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
                   >
-                    <div className={`w-8 h-8 rounded-2xl flex items-center justify-center shrink-0 mt-1 ${msg.role === 'user' ? 'bg-slate-900 text-white' : 'bg-gradient-to-br from-navy to-indigo-700 text-white'}`}>
+                    <div className={`w-8 h-8 rounded-2xl flex items-center justify-center shrink-0 mt-1 ${msg.role === 'user' ? 'bg-slate-900 text-white' : 'bg-gradient-to-br from-emerald-600 to-teal-700 text-white'}`}>
                       {msg.role === 'user' ? <User size={14} /> : <Bot size={14} />}
                     </div>
                     <div className={`max-w-[80%] space-y-1 group ${msg.role === 'user' ? 'items-end' : ''}`}>
@@ -414,7 +414,7 @@ export default function AILeosiqraPage() {
             {/* Loading indicator */}
             {loading && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
-                <div className="w-8 h-8 rounded-2xl bg-gradient-to-br from-navy to-indigo-700 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center">
                   <Bot size={14} className="text-white" />
                 </div>
                 <div className="bg-slate-50 border border-slate-100 rounded-2xl rounded-tl-sm px-5 py-4">
@@ -444,7 +444,7 @@ export default function AILeosiqraPage() {
               <button
                 onClick={() => sendMessage(input)}
                 disabled={loading || !input.trim()}
-                className="w-12 h-12 my-auto bg-gradient-to-br from-navy to-indigo-700 disabled:bg-slate-200 disabled:from-slate-200 disabled:to-slate-200 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30 hover:-translate-y-0.5 transition-all active:scale-95 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+                className="w-12 h-12 my-auto bg-gradient-to-br from-emerald-600 to-teal-700 disabled:bg-slate-200 disabled:from-slate-200 disabled:to-slate-200 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-600/20 hover:shadow-emerald-600/30 hover:-translate-y-0.5 transition-all active:scale-95 disabled:cursor-not-allowed disabled:hover:translate-y-0">
                 <Send size={16} />
               </button>
             </div>

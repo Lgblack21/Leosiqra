@@ -1,16 +1,19 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { 
+import {
   PlusCircle,
   Banknote,
   Percent,
   Trash2,
-  Pencil
+  Pencil,
+  Wallet
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { investmentService, Investment } from '@/lib/services/investmentService';
-import { Account } from '@/lib/services/accountService';
+import { accountService, Account } from '@/lib/services/accountService';
+import { addTransaction } from '@/lib/services/transactionService';
+import { updateMemberTotals } from '@/lib/services/userService';
 import type { Category } from '@/lib/services/categoryService';
 import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged, User } from '@/lib/cf-auth';
@@ -83,14 +86,12 @@ export default function DepositoPage() {
   };
 
   // Portofolio deposito bersifat all-time: penempatan lama tidak "hilang" saat berpindah bulan.
-  const filteredInvestments = investments;
+  // Baris berstatus 'Planned' adalah peninggalan baris proyeksi "(Hasil Akhir)"
+  // yang dulu dibuat otomatis (sekarang estimasinya ditampilkan inline di baris
+  // Penempatan-nya sendiri, bukan baris terpisah) — disembunyikan dari tabel.
+  const filteredInvestments = useMemo(() => investments.filter(i => i.status !== 'Planned'), [investments]);
 
-  // Setiap "Penempatan" baru otomatis membuat baris proyeksi "Hasil Akhir" (status
-  // 'Planned', bertanggal jatuh tempo di masa depan) agar tabel bisa menampilkan
-  // estimasi hasil. Baris proyeksi ini BUKAN uang yang benar-benar ada saat ini,
-  // jadi harus dikecualikan dari total — jika tidak, total akan terhitung dobel
-  // (baris penempatan asli + baris proyeksinya).
-  const realInvestments = useMemo(() => filteredInvestments.filter(i => i.status !== 'Planned'), [filteredInvestments]);
+  const realInvestments = filteredInvestments;
 
   // Total digabung lintas deposito yang bisa beda mata uang, jadi pakai
   // amountIDR (sudah dikonversi saat disimpan).
@@ -117,17 +118,87 @@ export default function DepositoPage() {
   };
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
 
+  // Cairkan manual (tombol di tabel) — beda dari cron otomatis (yang cuma
+  // jalan PAS jatuh tempo): di sini deposito boleh dicairkan kapan saja.
+  // Kalau dicairkan SEBELUM jatuh tempo, bunga hangus (cuma pokok yang balik
+  // ke rekening) dan otomatis berhenti/tidak diperpanjang, sama seperti
+  // pencairan lebih awal di bank sungguhan.
+  const handleCairkan = async (inv: Investment) => {
+    if (!user || !inv.id) return;
+
+    const invested = Number(inv.amountInvested) || 0;
+    const rate = Number(inv.returnPercentage) || 0;
+    const taxRate = Number(inv.taxPercentage) || 0;
+    const days = Number(inv.durationDays) || 0;
+    const isMatured = !inv.targetDate || new Date() >= inv.targetDate;
+
+    const grossInterest = invested * (rate / 100) * (days / 365);
+    const interestOnly = isMatured ? grossInterest - grossInterest * (taxRate / 100) : 0;
+    const totalToAccount = invested + interestOnly;
+
+    const confirmMsg = isMatured
+      ? `Cairkan "${inv.name}"? Pokok + bunga (${formatAmount(totalToAccount, inv.currency)}) akan masuk ke rekening sumber.`
+      : `"${inv.name}" belum jatuh tempo (${inv.targetDate ? formatDate(inv.targetDate) : '-'}). Cairkan sekarang akan MENGHANGUSKAN bunga — hanya pokok (${formatAmount(invested, inv.currency)}) yang masuk ke rekening, dan deposito ini tidak akan diperpanjang lagi. Lanjutkan?`;
+    if (!window.confirm(confirmMsg)) return;
+
+    if (inv.accountId) {
+      await accountService.updateAccountBalance(inv.accountId, totalToAccount);
+    }
+
+    await addTransaction({
+      userId: user.uid,
+      type: 'pemasukan',
+      amount: totalToAccount,
+      category: 'Investasi',
+      subCategory: isMatured ? 'Deposito - Penarikan' : 'Deposito - Penarikan (Sebelum Jatuh Tempo)',
+      currency: inv.currency,
+      accountId: inv.accountId || 'General',
+      date: new Date(),
+      note: isMatured
+        ? `Deposito ${inv.name} dicairkan`
+        : `Deposito ${inv.name} dicairkan sebelum jatuh tempo, bunga hangus`,
+      status: 'VERIFIED',
+      relatedId: inv.id,
+      relatedType: 'investasi'
+    });
+
+    await updateMemberTotals(user.uid, 'pemasukan', totalToAccount);
+    await updateMemberTotals(user.uid, 'investasi', -invested);
+
+    await investmentService.updateInvestment(inv.id, { status: 'Closed' });
+
+    await investmentService.createInvestment({
+      userId: user.uid,
+      name: `${inv.name} (Dicairkan${isMatured ? '' : ' - Awal'})`,
+      type: 'Deposito',
+      platform: inv.platform,
+      amountInvested: invested,
+      currentValue: totalToAccount,
+      returnPercentage: rate,
+      taxPercentage: taxRate,
+      currency: inv.currency,
+      durationDays: days,
+      transactionType: 'Penarikan',
+      category: inv.category,
+      accountId: inv.accountId,
+      dateInvested: new Date(),
+      targetDate: new Date(),
+      status: 'Closed',
+      relatedInvestmentId: inv.id
+    });
+  };
+
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-br from-white to-indigo-50/40 p-6 rounded-[24px] border border-slate-100 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-navy to-indigo-700 text-white items-center justify-center shadow-lg shadow-indigo-600/20 shrink-0">
+          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white items-center justify-center shadow-lg shadow-emerald-600/20 shrink-0">
             <Banknote size={22} />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-serif font-black text-slate-900 tracking-tight">Deposito</h1>
+            <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Deposito</h1>
             <p className="text-[10px] md:text-sm font-medium text-slate-400 mt-1 max-w-xl">
               Kelola seluruh penempatan dana deposito Anda.
             </p>
@@ -203,38 +274,64 @@ export default function DepositoPage() {
               </thead>
               <tbody>
                 {filteredInvestments.map((inv) => {
-                  const isPlanned = inv.status === 'Planned';
+                  const isActivePenempatan = inv.transactionType === 'Penempatan' && inv.status === 'Active';
+                  const estimasiCair = isActivePenempatan
+                    ? (() => {
+                        const invested = Number(inv.amountInvested) || 0;
+                        const rate = Number(inv.returnPercentage) || 0;
+                        const tax = Number(inv.taxPercentage) || 0;
+                        const days = Number(inv.durationDays) || 0;
+                        const gross = invested * (rate / 100) * (days / 365);
+                        const interest = gross - gross * (tax / 100);
+                        return invested + interest;
+                      })()
+                    : null;
                   return (
-                    <tr key={inv.id} className={cn(
-                      "group hover:bg-indigo-50/30 transition-colors border-b border-slate-50 last:border-b-0",
-                      isPlanned && "bg-slate-50/30 opacity-75"
-                    )}>
+                    <tr key={inv.id} className="group hover:bg-indigo-50/30 transition-colors border-b border-slate-50 last:border-b-0">
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-500">{formatDate(inv.dateInvested)}</td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-black text-indigo-600 italic bg-indigo-50/20">{inv.targetDate ? formatDate(inv.targetDate) : '-'}</td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap">
                       <div className="flex flex-col">
-                        <p className={cn("text-sm font-black", isPlanned ? "text-slate-400" : "text-slate-900")}>{inv.name}</p>
-                        {isPlanned && <span className="text-[8px] font-black text-indigo-400 uppercase tracking-tighter mt-0.5">Automated Projection</span>}
+                        <p className="text-sm font-black text-slate-900">{inv.name}</p>
+                        {estimasiCair !== null && (
+                          <span className="text-[9px] font-bold text-emerald-500 mt-0.5">
+                            Estimasi cair: {formatAmount(estimasiCair, inv.currency)}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="px-3 py-1 bg-orange-50 text-orange-600 text-[9px] font-black rounded-lg uppercase tracking-widest">{inv.platform || '-'}</span></td>
                     <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatAmount(inv.amountInvested, inv.currency)}</td>
                     <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap"><span className="text-sm font-bold text-slate-600">{inv.durationDays || 0} Hari</span></td>
                     <td className="px-4 md:px-6 py-5 text-center whitespace-nowrap"><span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-lg">{inv.returnPercentage.toFixed(2)}%</span></td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.transactionType || '-'}</span></td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap">
-                      <span className={cn(
-                        "px-2 py-0.5 text-[9px] font-black rounded uppercase tracking-widest",
-                        isPlanned ? "bg-indigo-50 text-indigo-500" : "bg-slate-100 text-slate-600"
-                      )}>
-                        {isPlanned ? 'Rencana' : getCategoryName(inv.category || '')}
+                      <span className="text-xs font-bold text-slate-600">{inv.transactionType || '-'}</span>
+                      {inv.transactionType === 'Penempatan' && inv.status === 'Active' && (
+                        <span className={cn(
+                          "block mt-1 text-[8px] font-black uppercase tracking-tighter",
+                          inv.maturityAction === 'aro_full' ? "text-purple-500" : inv.maturityAction === 'aro_bunga' ? "text-blue-500" : "text-slate-400"
+                        )}>
+                          {inv.maturityAction === 'aro_full' ? 'ARO Pokok+Bunga' : inv.maturityAction === 'aro_bunga' ? 'ARO Bunga' : 'Cairkan Otomatis'}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap">
+                      <span className="px-2 py-0.5 text-[9px] font-black rounded uppercase tracking-widest bg-slate-100 text-slate-600">
+                        {getCategoryName(inv.category || '')}
                       </span>
                     </td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{getAccountName(inv.accountId || '')}</span></td>
                     <td className="px-4 md:px-6 py-5 text-center">
                       <div className="flex flex-col items-center gap-1.5">
                         <div className="flex items-center gap-2">
-                          <button 
+                          {isActivePenempatan && (
+                            <button
+                              onClick={() => handleCairkan(inv)}
+                              className="p-2 rounded-lg bg-emerald-50 text-emerald-500 hover:bg-emerald-600 hover:text-white transition-all">
+                              <Wallet size={14} />
+                            </button>
+                          )}
+                          <button
                             onClick={() => { setEditingInvestment(inv); setShowModal(true); }}
                             className="p-2 rounded-lg bg-blue-50 text-blue-400 hover:bg-blue-500 hover:text-white transition-all">
                             <Pencil size={14} />

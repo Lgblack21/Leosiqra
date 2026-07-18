@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Save, ChevronDown, RefreshCw } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
+import { NumberInput } from '@/components/ui/NumberInput';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { updateMemberTotals } from '@/lib/services/userService';
@@ -38,7 +39,8 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
     category: '',
     accountId: '',
     dateInvested: new Date().toISOString().split('T')[0],
-    targetDate: new Date(new Date().getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] // Default tomorrow
+    targetDate: new Date(new Date().getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Default tomorrow
+    maturityAction: 'cairkan' as 'cairkan' | 'aro_bunga' | 'aro_full'
   });
 
   useEffect(() => {
@@ -60,13 +62,15 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
           category: editData.category || '',
           accountId: editData.accountId || '',
           dateInvested: editData.dateInvested.toISOString().split('T')[0],
-          targetDate: editData.targetDate ? editData.targetDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+          targetDate: editData.targetDate ? editData.targetDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          maturityAction: (editData.maturityAction as 'cairkan' | 'aro_bunga' | 'aro_full') || 'cairkan'
         });
       } else {
         // Reset to initial
-        setFormData({ 
+        setFormData({
           name: '', platform: '', currency: 'IDR', amountInvested: '', durationMonths: '', returnPercentage: '', taxPercentage: '', transactionType: 'Penempatan', category: '', accountId: '', dateInvested: new Date().toISOString().split('T')[0],
-          targetDate: new Date(new Date().getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          targetDate: new Date(new Date().getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          maturityAction: 'cairkan'
         });
       }
     }
@@ -140,7 +144,8 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
         accountId: formData.accountId || 'General',
         dateInvested: new Date(formData.dateInvested),
         targetDate: new Date(formData.targetDate),
-        status: isPenarikan ? 'Closed' : 'Active'
+        status: isPenarikan ? 'Closed' : 'Active',
+        maturityAction: isPenempatan ? formData.maturityAction : undefined
       };
 
       let finalInvestmentId = editData?.id || '';
@@ -151,23 +156,11 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
         finalInvestmentId = await investmentService.createInvestment(investmentPayload);
       }
 
-      // Sinkronisasi lanjutan (baris proyeksi "Hasil Akhir", ringkasan total,
-      // catatan transaksi ledger) bersifat non-fatal — baris investasi
-      // utamanya sudah tersimpan, jadi kegagalan di sini tidak boleh membuat
-      // modal terlihat "gagal total" dan memicu submit ulang yang bisa
-      // membuat baris investasi dobel.
+      // Sinkronisasi lanjutan (ringkasan total, catatan transaksi ledger)
+      // bersifat non-fatal — baris investasi utamanya sudah tersimpan, jadi
+      // kegagalan di sini tidak boleh membuat modal terlihat "gagal total"
+      // dan memicu submit ulang yang bisa membuat baris investasi dobel.
       try {
-        if (!editData?.id && isPenempatan) {
-          await investmentService.createInvestment({
-            ...investmentPayload,
-            name: `${formData.name} (Hasil Akhir)`,
-            amountInvested: totalResult,
-            transactionType: 'Hasil Deposito',
-            dateInvested: new Date(formData.targetDate),
-            status: 'Planned'
-          });
-        }
-
         if (editData) {
           // Revert dampak keuangan lama sebelum menerapkan yang baru.
           const oldInvested = Number(editData.amountInvested) || 0;
@@ -195,6 +188,19 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
 
           if (isOldPenempatan) await updateMemberTotals(userId, 'investasi', -oldInvested);
           else if (isOldPenarikan) await updateMemberTotals(userId, 'investasi', oldInvested);
+
+          // Kembalikan dampak lama ke saldo rekening SUMBER lama sebelum
+          // menerapkan yang baru (mis. Penempatan menarik dana keluar dari
+          // rekening — kalau diedit, dana itu harus dikembalikan dulu).
+          if (editData.accountId) {
+            let oldBalanceChange = 0;
+            if (isOldPenempatan) oldBalanceChange = oldInvested;
+            else if (isOldPenarikan) oldBalanceChange = -oldTotal;
+            else if (isOldBunga) oldBalanceChange = -oldInterest;
+            if (oldBalanceChange !== 0) {
+              await accountService.updateAccountBalance(editData.accountId, oldBalanceChange);
+            }
+          }
         }
 
         const financeType = isPenempatan ? 'pengeluaran' : (isPenarikan || isBunga ? 'pemasukan' : null);
@@ -205,6 +211,18 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
           if (isPenempatan) amountToSync = invested;
 
           await updateMemberTotals(userId, financeType, amountToSync);
+
+          // Penempatan menarik dana KELUAR dari rekening sumber ke deposito;
+          // Penarikan/Bunga mengembalikan/mengkreditkan dana KE rekening —
+          // tanpa ini, saldo rekening tidak pernah berkurang saat bikin
+          // deposito, jadi dana yang sama kehitung dobel (di saldo rekening
+          // DAN di nilai investasi deposito).
+          if (formData.accountId) {
+            const balanceChange = isPenempatan ? -invested : isPenarikan ? totalResult : isBunga ? interestOnly : 0;
+            if (balanceChange !== 0) {
+              await accountService.updateAccountBalance(formData.accountId, balanceChange);
+            }
+          }
 
           await addTransaction({
             userId, type: financeType, amount: amountToSync,
@@ -234,7 +252,8 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
       const initialTargetDate = new Date(new Date().getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       setFormData({
         name: '', platform: '', currency: 'IDR', amountInvested: '', durationMonths: '', returnPercentage: '', taxPercentage: '', transactionType: 'Penempatan', category: '', accountId: '', dateInvested: new Date().toISOString().split('T')[0],
-        targetDate: initialTargetDate
+        targetDate: initialTargetDate,
+        maturityAction: 'cairkan'
       });
     } catch (e) {
       console.error(e);
@@ -271,7 +290,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
-              <input type="number" value={formData.amountInvested} onChange={e => setFormData(p => ({...p, amountInvested: e.target.value}))}
+              <NumberInput value={formData.amountInvested} onChange={val => setFormData(p => ({...p, amountInvested: val}))}
                 placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 pl-11 pr-4 text-sm font-bold text-slate-700 transition-all" />
             </div>
           </div>
@@ -338,9 +357,19 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Rekening / Sumber</label>
             <div className="relative">
-              <select 
+              <select
                 value={formData.accountId}
-                onChange={e => setFormData(p => ({...p, accountId: e.target.value}))}
+                onChange={e => {
+                  const selectedAccount = accounts.find(acc => acc.id === e.target.value);
+                  setFormData(p => ({
+                    ...p,
+                    accountId: e.target.value,
+                    // Nominal deposito selalu dalam mata uang rekening sumber
+                    // — tanpa ini currency picker (independen) bisa ketinggalan
+                    // di IDR meski rekeningnya USD/KHR/dll.
+                    currency: selectedAccount?.currency || p.currency,
+                  }));
+                }}
                 className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer"
               >
                 <option value="">Pilih Rekening</option>
@@ -352,21 +381,59 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe Transaksi</label>
-            <div className="relative">
-              <select 
-                value={formData.transactionType}
-                onChange={e => setFormData(p => ({...p, transactionType: e.target.value}))}
-                className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer"
-              >
-                <option value="Penempatan">Penempatan</option>
-                <option value="Penarikan">Penarikan</option>
-                <option value="Bunga">Bunga</option>
-              </select>
-              <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            </div>
+            {editData ? (
+              <>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe Transaksi</label>
+                <div className="relative">
+                  <select
+                    value={formData.transactionType}
+                    onChange={e => setFormData(p => ({...p, transactionType: e.target.value}))}
+                    className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer"
+                  >
+                    <option value="Penempatan">Penempatan</option>
+                    <option value="Penarikan">Penarikan</option>
+                    <option value="Bunga">Bunga</option>
+                  </select>
+                  <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                </div>
+              </>
+            ) : (
+              <>
+                <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest pl-1">Perlakuan Saat Jatuh Tempo</label>
+                <div className="relative">
+                  <select
+                    value={formData.maturityAction}
+                    onChange={e => setFormData(p => ({...p, maturityAction: e.target.value as typeof p.maturityAction}))}
+                    className="w-full appearance-none bg-emerald-50/50 border border-emerald-100 focus:ring-2 focus:ring-emerald-100 rounded-xl py-3 px-4 text-sm font-bold text-emerald-700 transition-all cursor-pointer"
+                  >
+                    <option value="cairkan">Cairkan Semua (Pokok + Bunga)</option>
+                    <option value="aro_bunga">ARO - Bunga Cair, Pokok Diperpanjang</option>
+                    <option value="aro_full">ARO - Pokok + Bunga Diperpanjang</option>
+                  </select>
+                  <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-400 pointer-events-none" />
+                </div>
+              </>
+            )}
           </div>
         </div>
+
+        {editData && formData.transactionType === 'Penempatan' && (
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest pl-1">Perlakuan Saat Jatuh Tempo</label>
+            <div className="relative">
+              <select
+                value={formData.maturityAction}
+                onChange={e => setFormData(p => ({...p, maturityAction: e.target.value as typeof p.maturityAction}))}
+                className="w-full appearance-none bg-emerald-50/50 border border-emerald-100 focus:ring-2 focus:ring-emerald-100 rounded-xl py-3 px-4 text-sm font-bold text-emerald-700 transition-all cursor-pointer"
+              >
+                <option value="cairkan">Cairkan Semua (Pokok + Bunga)</option>
+                <option value="aro_bunga">ARO - Bunga Cair, Pokok Diperpanjang</option>
+                <option value="aro_full">ARO - Pokok + Bunga Diperpanjang</option>
+              </select>
+              <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-400 pointer-events-none" />
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 gap-4">
           <div className="space-y-2">

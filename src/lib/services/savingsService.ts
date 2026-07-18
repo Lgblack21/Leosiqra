@@ -15,6 +15,9 @@ export interface Saving {
   subCategory?: string;
   fromAccount: string;
   toGoal: string;
+  // 'Setoran' (default) = dana masuk ke pos tabungan, keluar dari fromAccount;
+  // 'Penarikan' = dana ditarik dari pos tabungan, kembali ke fromAccount.
+  transactionType?: 'Setoran' | 'Penarikan';
   date: Date;
   displayDate?: string;
   createdAt: Date;

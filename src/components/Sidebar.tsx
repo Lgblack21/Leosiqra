@@ -27,7 +27,8 @@ import {
   Headphones,
   ChevronDown,
   X,
-  ShieldCheck
+  ShieldCheck,
+  Compass
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
@@ -86,6 +87,7 @@ const menuGroups = [
     label: 'Lainnya',
     items: [
       { icon: Bot, label: 'AI Leosiqra', href: '/membership/ai-leosiqra' },
+      { icon: Compass, label: 'Panduan Leosiqra', href: '/membership/panduan' },
       { icon: Headphones, label: 'Hubungi Kami', href: '/membership/contact' },
     ]
   }
@@ -222,7 +224,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 <p className="text-[11px] font-medium text-slate-400 leading-relaxed">
                   {profile?.status === 'PENDING' 
                     ? 'Permintaan akses Anda sudah terkirim. Admin akan memverifikasi data Anda segera.' 
-                    : 'Akun Anda sedang dalam status tamu. Silakan ajukan akses member untuk melihat dashboard.'}
+                    : 'Akun Anda sedang dalam status tamu. Ajukan akses gratis (menunggu verifikasi admin) atau bayar langsung untuk akses instan.'}
                 </p>
               </div>
               <div className="space-y-3 pt-2">
@@ -252,13 +254,20 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                     Menunggu Konfirmasi...
                   </div>
                 )}
+                <Link
+                  href="/membership/contact"
+                  className="w-full py-4 bg-white text-indigo-600 text-[11px] font-black rounded-xl border border-indigo-200 hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 group"
+                >
+                  Bayar / Upgrade ke PRO
+                  <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                </Link>
               </div>
             </div>
           ) : (
             menuGroups.map((group) => {
               const isOpenGroup = openGroups.includes(group.label);
               return (
-                <div key={group.label} className="space-y-1">
+                <div key={group.label} className="space-y-1" data-tour={`sidebar-group-${group.label}`}>
                   <button
                     onClick={() => toggleGroup(group.label)}
                     className="w-full flex items-center justify-between px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] hover:text-slate-600 transition-colors"

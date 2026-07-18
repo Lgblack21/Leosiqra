@@ -1,26 +1,30 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { 
-  PlusCircle, 
-  Search, 
-  TrendingUp, 
-  Briefcase, 
-  Trash2, 
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import {
+  PlusCircle,
+  Search,
+  TrendingUp,
+  Briefcase,
+  Trash2,
   BarChart3,
   TrendingDown,
-  Pencil
+  Pencil,
+  RefreshCw
 } from 'lucide-react';
 import { useModal } from '@/context/ModalContext';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LogoImage } from '@/components/ui/LogoImage';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { accountService, Account } from '@/lib/services/accountService';
+import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged, User } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 import { StockInvestmentModal } from '@/components/modals/StockInvestmentModal';
 import { useCountUp } from '@/lib/hooks/useCountUp';
+
+type LivePrice = { price: number; currency: string; changePercent: number };
 
 export default function SahamPage() {
   const [investments, setInvestments] = useState<Investment[]>([]);
@@ -30,9 +34,12 @@ export default function SahamPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingInvestment, setEditingInvestment] = useState<Investment | undefined>(undefined);
+  const [livePrices, setLivePrices] = useState<Map<string, LivePrice>>(new Map());
+  const [syncingPrices, setSyncingPrices] = useState(false);
   const { openModal } = useModal();
 
   const unsubRef = useRef<(() => void) | null>(null);
+  const syncedKeyRef = useRef<string>('');
 
   // Portofolio bersifat all-time: posisi lama tidak "hilang" saat berpindah bulan.
   useEffect(() => {
@@ -66,6 +73,72 @@ export default function SahamPage() {
     return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
   }, []);
 
+  // Harga live (Yahoo Finance, via backend) untuk tiap kode saham+bursa unik
+  // yang masih Active, lalu otomatis ditulis ke amountValue/currentValueIDR/
+  // returnPercentage posisi terkait. force=true (tombol Refresh) mengabaikan
+  // guard "sudah pernah sync" supaya bisa ditarik ulang kapan saja.
+  const syncLivePrices = useCallback(async (activeStocks: Investment[], force = false) => {
+    if (activeStocks.length === 0) return;
+
+    const uniquePairs = Array.from(
+      new Map(
+        activeStocks.map(i => {
+          const code = (i.stockCode || i.name || '').toUpperCase();
+          const exchange = (i.exchangeCode || 'IDX').toUpperCase();
+          return [`${code}|${exchange}`, { stockCode: code, exchangeCode: exchange }];
+        })
+      ).values()
+    );
+    const symbolsKey = uniquePairs.map(p => `${p.stockCode}|${p.exchangeCode}`).sort().join(',');
+    if (!force && symbolsKey === syncedKeyRef.current) return;
+    syncedKeyRef.current = symbolsKey;
+
+    setSyncingPrices(true);
+    try {
+      const rates: ExchangeRates | null = await exchangeRateService.getLatestRates().catch(() => null);
+      const priceMap = new Map<string, LivePrice>();
+
+      await Promise.all(uniquePairs.map(async ({ stockCode, exchangeCode }) => {
+        try {
+          const data = await investmentService.getStockPrice(stockCode, exchangeCode);
+          priceMap.set(`${stockCode}|${exchangeCode}`, data);
+        } catch (e) {
+          console.error(`Gagal ambil harga live ${stockCode}.${exchangeCode}:`, e);
+        }
+      }));
+
+      setLivePrices(priceMap);
+
+      for (const inv of activeStocks) {
+        const code = (inv.stockCode || inv.name || '').toUpperCase();
+        const exchange = (inv.exchangeCode || 'IDX').toUpperCase();
+        const live = priceMap.get(`${code}|${exchange}`);
+        if (!live || !inv.id) continue;
+
+        const newCurrentValue = (inv.sharesCount || 0) * live.price;
+        const newCurrentValueIdr = live.currency === 'IDR' || !rates
+          ? newCurrentValue
+          : exchangeRateService.convert(newCurrentValue, live.currency, 'IDR', rates);
+        const newReturnPct = inv.amountInvested > 0
+          ? ((newCurrentValue - inv.amountInvested) / inv.amountInvested) * 100
+          : 0;
+
+        await investmentService.updateInvestment(inv.id, {
+          currentValue: newCurrentValue,
+          currentValueIDR: newCurrentValueIdr,
+          returnPercentage: newReturnPct,
+        }).catch(e => console.error(`Gagal sync harga live ke posisi ${inv.id}:`, e));
+      }
+    } finally {
+      setSyncingPrices(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const activeStocks = investments.filter(i => i.status === 'Active' && (i.stockCode || i.name));
+    syncLivePrices(activeStocks);
+  }, [investments, syncLivePrices]);
+
   // Total portofolio digabung lintas saham yang bisa berbeda mata uang, jadi
   // pakai amountIDR/currentValueIDR (sudah dikonversi saat disimpan).
   const totalInvested = useMemo(() => investments.reduce((s, i) => s + (Number(i.amountIDR) || i.amountInvested), 0), [investments]);
@@ -97,11 +170,11 @@ export default function SahamPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-br from-white to-indigo-50/40 p-6 rounded-[24px] border border-slate-100 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-navy to-indigo-700 text-white items-center justify-center shadow-lg shadow-indigo-600/20 shrink-0">
+          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white items-center justify-center shadow-lg shadow-emerald-600/20 shrink-0">
             <BarChart3 size={22} />
           </div>
           <div className="flex flex-col">
-            <h1 className="text-xl md:text-2xl font-serif font-black text-slate-900 tracking-tight leading-tight">Portofolio Saham</h1>
+            <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Portofolio Saham</h1>
             <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
               Seluruh posisi · {investments.length} aktif
             </p>
@@ -109,6 +182,14 @@ export default function SahamPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => syncLivePrices(investments.filter(i => i.status === 'Active' && (i.stockCode || i.name)), true)}
+            disabled={syncingPrices}
+            className="px-4 py-3 bg-white border border-slate-100 rounded-xl text-[11px] font-black text-slate-600 hover:bg-slate-50 hover:shadow-sm transition-all shadow-sm active:scale-95 disabled:opacity-50 flex items-center gap-2"
+          >
+            <RefreshCw size={14} className={syncingPrices ? 'animate-spin' : ''} />
+            <span className="hidden md:inline">Refresh Harga</span>
+          </button>
           <button
             onClick={() => { setEditingInvestment(undefined); setShowModal(true); }}
             className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
@@ -181,6 +262,7 @@ export default function SahamPage() {
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Mata Uang</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Jumlah Lembar</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Harga / Lembar</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-indigo-400 uppercase tracking-widest text-right whitespace-nowrap">Nilai Sekarang (Live)</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tipe Transaksi</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Kategori</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Rekening</th>
@@ -207,6 +289,16 @@ export default function SahamPage() {
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center"><span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{inv.currency || 'IDR'}</span></td>
                     <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-bold text-slate-700">{inv.sharesCount || 0}</td>
                     <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatAmount(inv.pricePerShare || 0, inv.currency)}</td>
+                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap">
+                      <p className="font-black text-slate-900 text-sm">{formatAmount(inv.currentValue || 0, inv.currency)}</p>
+                      <p className={`text-[10px] font-bold ${inv.returnPercentage >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                        {inv.returnPercentage >= 0 ? '+' : ''}{inv.returnPercentage.toFixed(2)}%
+                        {(() => {
+                          const live = livePrices.get(`${(inv.stockCode || inv.name || '').toUpperCase()}|${(inv.exchangeCode || 'IDX').toUpperCase()}`);
+                          return live ? <span className="text-slate-400 font-medium"> · Live {live.changePercent >= 0 ? '+' : ''}{live.changePercent.toFixed(2)}%</span> : null;
+                        })()}
+                      </p>
+                    </td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.transactionType || 'Beli'}</span></td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.category || 'Saham'}</span></td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap">

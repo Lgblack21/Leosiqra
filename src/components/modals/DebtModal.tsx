@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Save, ChevronDown, RefreshCw } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
+import { NumberInput } from '@/components/ui/NumberInput';
 import { transactionService } from '@/lib/services/transactionService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { updateMemberTotals } from '@/lib/services/userService';
@@ -226,7 +227,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal Pokok</label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
-              <input type="number" value={formData.amount} onChange={e => setFormData(p => ({...p, amount: e.target.value}))}
+              <NumberInput value={formData.amount} onChange={val => setFormData(p => ({...p, amount: val}))}
                 placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 pl-11 pr-4 text-sm font-bold text-slate-700 transition-all" />
             </div>
           </div>
@@ -264,9 +265,19 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Rekening Terkait</label>
             <div className="relative">
-              <select 
+              <select
                 value={formData.accountId}
-                onChange={e => setFormData(p => ({...p, accountId: e.target.value}))}
+                onChange={e => {
+                  const selectedAccount = accounts.find(acc => acc.id === e.target.value);
+                  setFormData(p => ({
+                    ...p,
+                    accountId: e.target.value,
+                    // Nominal hutang/piutang selalu dalam mata uang rekening
+                    // terkait — tanpa ini currency picker (independen) bisa
+                    // ketinggalan di IDR meski rekeningnya USD/KHR/dll.
+                    currency: selectedAccount?.currency || p.currency,
+                  }));
+                }}
                 className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer"
               >
                 <option value="">Pilih Rekening</option>

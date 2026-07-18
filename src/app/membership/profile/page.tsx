@@ -23,7 +23,9 @@ import {
   Clock,
   AlertTriangle,
   Trash2,
-  Smartphone
+  Smartphone,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { auth, db } from '@/lib/cf-client';
@@ -76,6 +78,7 @@ export default function ProfilePage() {
   const [resetError, setResetError] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
   const [resetDone, setResetDone] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
   const RESET_CONFIRM_WORD = 'HAPUS SEMUA DATA';
 
   const [profile, setProfile] = useState<UserProfile>({
@@ -249,7 +252,7 @@ export default function ProfilePage() {
 
   const handleResetAllData = async () => {
     setResetError('');
-    if (!resetPassword) {
+    if (user?.hasPassword !== false && !resetPassword) {
       setResetError('Masukkan password saat ini.');
       return;
     }
@@ -259,7 +262,10 @@ export default function ProfilePage() {
     }
     setResetLoading(true);
     try {
-      await cloudflareApi('/api/member/reset-data', { method: 'POST', json: { currentPassword: resetPassword } });
+      await cloudflareApi('/api/member/reset-data', {
+        method: 'POST',
+        json: user?.hasPassword !== false ? { currentPassword: resetPassword } : {},
+      });
       setResetDone(true);
       setTimeout(() => {
         window.location.href = '/membership/dashboard';
@@ -516,7 +522,7 @@ export default function ProfilePage() {
               >
                 <div className="flex items-center gap-3 md:gap-4 text-white">
                   <Lock size={16} className="text-indigo-400" />
-                  <span className="text-[11px] md:text-[12px] font-black tracking-tight">Change Password</span>
+                  <span className="text-[11px] md:text-[12px] font-black tracking-tight">{user?.hasPassword === false ? 'Set Password' : 'Change Password'}</span>
                 </div>
                 <ChevronRight size={14} className="text-white/40" />
               </button>
@@ -695,7 +701,7 @@ export default function ProfilePage() {
         )}
       </Modal>
 
-      <ChangePasswordModal isOpen={showPasswordModal} onClose={() => setShowPasswordModal(false)} />
+      <ChangePasswordModal isOpen={showPasswordModal} onClose={() => setShowPasswordModal(false)} hasPassword={user?.hasPassword} />
 
       <TwoFactorModal
         isOpen={show2FASetup}
@@ -771,19 +777,33 @@ export default function ProfilePage() {
               </div>
             )}
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Password Saat Ini</label>
-              <div className="relative group">
-                <Lock size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-rose-500 transition-colors" />
-                <input
-                  type="password"
-                  value={resetPassword}
-                  onChange={e => setResetPassword(e.target.value)}
-                  placeholder="Masukkan password saat ini"
-                  className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-rose-100 rounded-xl py-3.5 pl-12 pr-5 text-sm font-bold text-slate-700 transition-all"
-                />
+            {user?.hasPassword === false ? (
+              <p className="text-[12px] text-slate-500 leading-relaxed bg-slate-50 border border-slate-100 rounded-xl p-4">
+                Akun ini masuk pakai Google dan tidak punya password — sesi login yang sedang aktif jadi bukti identitas Anda. Ketik frasa konfirmasi di bawah untuk melanjutkan.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Password Saat Ini</label>
+                <div className="relative group">
+                  <Lock size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-rose-500 transition-colors" />
+                  <input
+                    type={showResetPassword ? 'text' : 'password'}
+                    value={resetPassword}
+                    onChange={e => setResetPassword(e.target.value)}
+                    placeholder="Masukkan password saat ini"
+                    className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-rose-100 rounded-xl py-3.5 pl-12 pr-12 text-sm font-bold text-slate-700 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowResetPassword(v => !v)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors"
+                    aria-label={showResetPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                  >
+                    {showResetPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">

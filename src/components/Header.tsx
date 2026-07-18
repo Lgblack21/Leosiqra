@@ -77,7 +77,8 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
               '/membership/contact': 'Pro Activation & Payment Confirmation',
               '/membership/profile': 'User Identity & Preferences',
               '/membership/ai-leosiqra': 'Ethereal Portfolio Intelligence',
-              '/membership/market-data': 'Global Market Intelligence Dashboard'
+              '/membership/market-data': 'Global Market Intelligence Dashboard',
+              '/membership/panduan': 'Panduan & Tur Leosiqra'
             }[pathname] || 'Dashboard'}
           </h1>
         </div>
@@ -85,7 +86,7 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
 
       <div className="flex items-center gap-4">
         {/* Quick Add Button & Dropdown */}
-        <div className="relative" ref={dropdownRef}>
+        <div className="relative" ref={dropdownRef} data-tour="tambah-cepat">
           <button 
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             className="flex items-center gap-2 bg-[#064e3b] text-white px-4 py-2.5 rounded-xl text-xs font-black shadow-lg shadow-emerald-100 hover:bg-[#054031] transition-all"

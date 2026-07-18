@@ -95,17 +95,25 @@ export default function InvestmentDashboard() {
           orderBy('dateInvested', 'desc')
         );
         unsubInv = onSnapshot(qInv, (snap) => {
-          setInvestments(snap.docs.map(doc => {
-            const d = doc.data();
-            return {
-              ...d, id: doc.id,
-              amountInvested: Number(d.amountInvested) || 0,
-              currentValue: Number(d.currentValue) || 0,
-              returnPercentage: Number(d.returnPercentage) || 0,
-              dateInvested: d.dateInvested?.toDate?.() ?? new Date(),
-              createdAt: d.createdAt?.toDate?.() ?? new Date()
-            } as Investment;
-          }));
+          setInvestments(
+            snap.docs
+              .map(doc => {
+                const d = doc.data();
+                return {
+                  ...d, id: doc.id,
+                  amountInvested: Number(d.amountInvested) || 0,
+                  currentValue: Number(d.currentValue) || 0,
+                  returnPercentage: Number(d.returnPercentage) || 0,
+                  dateInvested: d.dateInvested?.toDate?.() ?? new Date(),
+                  createdAt: d.createdAt?.toDate?.() ?? new Date()
+                } as Investment;
+              })
+              // Deposito "Penempatan" otomatis punya baris proyeksi "(Hasil Akhir)"
+              // berstatus Planned (dibuat DepositModal, lihat lib "Automated
+              // Projection") — bukan posisi nyata, jadi jangan ikut dihitung di
+              // ringkasan portofolio ini (dulu bikin modal/nilai dobel).
+              .filter(inv => inv.status !== 'Planned')
+          );
         });
       } else {
         setInvestments([]);
@@ -186,11 +194,11 @@ export default function InvestmentDashboard() {
       {/* 1. Header (Title & Controls) */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-br from-white to-indigo-50/40 p-6 rounded-[24px] border border-slate-100 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-navy to-indigo-700 text-white items-center justify-center shadow-lg shadow-indigo-600/20 shrink-0">
+          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white items-center justify-center shadow-lg shadow-emerald-600/20 shrink-0">
             <Landmark size={22} />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-serif font-black text-slate-900 tracking-tight leading-tight">Ringkasan Investasi</h1>
+            <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Ringkasan Investasi</h1>
             <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
               Seluruh portofolio · {investments.length} posisi aktif
             </p>

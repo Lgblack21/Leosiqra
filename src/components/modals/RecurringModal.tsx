@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ChevronDown, Save } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
+import { NumberInput } from '@/components/ui/NumberInput';
 import { recurringService, RecurringTransaction } from '@/lib/services/recurringService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { CategorySelect } from '@/components/CategorySelect';
@@ -169,10 +170,9 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null }: 
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
             <div className="relative">
               <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
-              <input 
-                type="number" 
+              <NumberInput
                 value={formData.amount}
-                onChange={e => setFormData({...formData, amount: e.target.value})}
+                onChange={val => setFormData({...formData, amount: val})}
                 placeholder="0"
                 className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 pl-12 pr-5 text-sm font-bold text-slate-700 transition-all"
               />

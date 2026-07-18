@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 import {
   Landmark,
   Tags,
@@ -40,6 +41,7 @@ export default function NamaAkunPage() {
   const [presetCategory, setPresetCategory] = useState<string | undefined>(undefined);
   const [categoryError, setCategoryError] = useState('');
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -181,15 +183,51 @@ export default function NamaAkunPage() {
 
   // Kelompokkan tiap baris kategori (satu row = satu subkategori) berdasarkan
   // nama kategori induk, supaya nama kategori tidak berulang di tiap baris
-  // dan subkategori bisa dikelola satu-satu.
+  // dan subkategori bisa dikelola satu-satu. Backend sudah ORDER BY sort_order,
+  // jadi urutan dari server ini yang jadi urutan tampil default.
   const groupedCategories = categories.reduce<Record<string, Category[]>>((acc, row) => {
     const key = row.category || '(Tanpa Nama)';
     if (!acc[key]) acc[key] = [];
     acc[key].push(row);
     return acc;
   }, {});
-  const categoryGroups = Object.entries(groupedCategories);
+
+  // State lokal terpisah untuk urutan tampil per grup — diselaraskan dari data
+  // server tiap kali berubah, tapi diupdate optimis (instan) saat drag-drop
+  // supaya urutan baru langsung kelihatan sebelum request simpan selesai.
+  const [localOrder, setLocalOrder] = useState<Record<string, Category[]>>({});
+  useEffect(() => {
+    setLocalOrder(groupedCategories);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categories]);
+
+  const categoryGroups = Object.entries(localOrder);
   const totalSubcategories = categories.length;
+
+  const handleReorderGroup = (categoryName: string, newRows: Category[]) => {
+    setLocalOrder(prev => ({ ...prev, [categoryName]: newRows }));
+    const ids = newRows.map(r => r.id).filter((id): id is string => Boolean(id));
+    categoryService.reorderCategories(ids).catch(e => {
+      console.error('Gagal menyimpan urutan kategori:', e);
+      setCategoryError('Gagal menyimpan urutan baru. Silakan coba lagi.');
+    });
+  };
+
+  // Drag-and-drop native (bukan framer-motion Reorder) — chip-nya wrap ke
+  // banyak baris, dan Reorder cuma menghitung posisi di satu sumbu lurus
+  // sehingga tampilannya kacau begitu ada baris yang membungkus.
+  const handleChipDrop = (categoryName: string, targetId: string) => {
+    if (!draggedId || draggedId === targetId) return;
+    const rows = localOrder[categoryName] || [];
+    const fromIndex = rows.findIndex(r => r.id === draggedId);
+    const toIndex = rows.findIndex(r => r.id === targetId);
+    if (fromIndex === -1 || toIndex === -1) return;
+    const newRows = [...rows];
+    const [moved] = newRows.splice(fromIndex, 1);
+    newRows.splice(toIndex, 0, moved);
+    handleReorderGroup(categoryName, newRows);
+    setDraggedId(null);
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 max-w-[1400px] mb-12">
@@ -204,28 +242,9 @@ export default function NamaAkunPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        
-        {/* LEFT COLUMN (1/4) */}
-        <div className="space-y-6">
-          {/* Wawasan Mingguan Banner */}
-          <div className="relative h-[240px] rounded-[20px] md:rounded-[32px] overflow-hidden group shadow-xl shadow-blue-50">
-            <div 
-              className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
-              style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1611974714658-403482794406?q=80&w=600&auto=format&fit=crop")' }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-            
-            <div className="absolute bottom-6 left-6 right-6">
-              <h3 className="text-lg font-black text-white">Wawasan Mingguan</h3>
-              <p className="text-[10px] font-bold text-slate-300 mt-1 uppercase tracking-widest leading-relaxed">Analisis otomatis siap untuk diperiksa.</p>
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 gap-8">
+        <div className="space-y-8">
 
-        {/* RIGHT COLUMN (3/4) */}
-        <div className="lg:col-span-3 space-y-8">
-          
           {/* 1. Ledger Categories */}
           <div className="bg-white rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm overflow-hidden flex flex-col">
             <div className="p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-50 bg-slate-50/30">
@@ -284,7 +303,15 @@ export default function NamaAkunPage() {
                         {rows.map((row) => (
                           <span
                             key={row.id}
-                            className="inline-flex items-center gap-2 pl-3.5 pr-2 py-1.5 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-600"
+                            draggable
+                            onDragStart={() => row.id && setDraggedId(row.id)}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={() => row.id && handleChipDrop(categoryName, row.id)}
+                            onDragEnd={() => setDraggedId(null)}
+                            className={cn(
+                              "inline-flex items-center gap-2 pl-3.5 pr-2 py-1.5 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-600 cursor-grab active:cursor-grabbing transition-opacity",
+                              draggedId === row.id && "opacity-40"
+                            )}
                           >
                             {row.subCategory}
                             <button
