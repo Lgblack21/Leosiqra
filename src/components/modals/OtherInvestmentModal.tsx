@@ -11,6 +11,7 @@ import { updateMemberTotals } from '@/lib/services/userService';
 import { addTransaction } from '@/lib/services/transactionService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { CurrencySelect } from '@/components/CurrencySelect';
+import { NumberInput } from '@/components/ui/NumberInput';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { formatCurrency } from '@/lib/utils';
 
@@ -364,8 +365,8 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{initialData ? "Harga Jual / Satuan" : "Harga Beli / Satuan"}</label>
-            <input type="number" value={formData.pricePerUnit} onChange={e => setFormData(p => ({...p, pricePerUnit: e.target.value}))}
-              placeholder="Rp" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            <NumberInput value={formData.pricePerUnit} onChange={val => setFormData(p => ({...p, pricePerUnit: val}))}
+              placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
           </div>
           <div>
             <CurrencySelect 
@@ -431,7 +432,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
         <div className="grid grid-cols-2 gap-4">
            <div className="space-y-2">
              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Valuasi Saat Ini (Estimasi)</label>
-             <input type="number" value={formData.currentValue} onChange={e => setFormData(p => ({...p, currentValue: e.target.value}))}
+             <NumberInput value={formData.currentValue} onChange={val => setFormData(p => ({...p, currentValue: val}))}
                placeholder="Opsional" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
            </div>
            <div className="space-y-2">

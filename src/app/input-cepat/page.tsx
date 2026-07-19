@@ -282,7 +282,7 @@ export default function InputCepatPage() {
           </div>
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Leosiqra</span>
         </div>
-        <div className="flex items-center gap-3 mb-7">
+        <Link href="/membership/profile" className="flex items-center gap-3 mb-7">
           <div className="w-10 h-10 rounded-full bg-indigo-600 shrink-0 overflow-hidden">
             <LogoImage
               src={profile?.photoURL}
@@ -292,13 +292,13 @@ export default function InputCepatPage() {
               className="w-full h-full object-cover text-white"
             />
           </div>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-lg font-black text-slate-900 tracking-tight leading-none">Input Cepat</h1>
             <p className="text-[11px] font-bold text-slate-400 mt-1">
-              {profile?.name ? `Halo, ${profile.name}` : "Catat transaksi dalam hitungan detik"}
+              {profile?.name ? `Halo, ${profile.name} · Buka Profil` : "Catat transaksi dalam hitungan detik"}
             </p>
           </div>
-        </div>
+        </Link>
 
         {/* Total hari ini — ikut jenis transaksi yang lagi dipilih di tab bawah.
             Diklik untuk lihat rincian transaksi yang menyusun angka ini. */}

@@ -97,6 +97,12 @@ export default function RootLayout({
       data-scroll-behavior="smooth"
     >
       <head>
+        {/* Next.js 16's `appleWebApp` metadata cuma nulis tag generik
+            "mobile-web-app-capable", bukan versi ber-prefix "apple-" yang
+            Safari iOS beneran cek buat mode standalone — tanpa ini, "Add to
+            Home Screen" cuma jadi bookmark biasa (bukan app standalone),
+            jadi navigator.standalone tetap false dan Web Push tidak jalan. */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareAppJsonLd) }}

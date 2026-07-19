@@ -578,14 +578,14 @@ export default function ProfilePage() {
                       </span>
                     </div>
                   </div>
-                  {!notifSupported ? (
-                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest shrink-0">
-                      Tidak Didukung
-                    </span>
-                  ) : notifIosNeedsInstall ? (
+                  {notifIosNeedsInstall ? (
                     <span className="flex items-center gap-1.5 text-[9px] font-black text-amber-400 uppercase tracking-widest shrink-0">
                       <Smartphone size={11} />
                       Install Dulu
+                    </span>
+                  ) : !notifSupported ? (
+                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest shrink-0">
+                      Tidak Didukung
                     </span>
                   ) : notifLoading ? (
                     <Loader2 size={16} className="animate-spin text-white/50 shrink-0" />

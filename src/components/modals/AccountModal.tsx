@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal';
 import { accountService, Account } from '@/lib/services/accountService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { CurrencySelect } from '@/components/CurrencySelect';
+import { NumberInput } from '@/components/ui/NumberInput';
 import { CARD_COLOR_OPTIONS } from '@/lib/cardColors';
 import { useRef } from 'react';
 
@@ -250,11 +251,10 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
           {formData.type === 'Credit Card' && (
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 text-indigo-500">Limit Kredit</label>
-              <input
-                type="number"
+              <NumberInput
                 value={formData.creditLimit}
-                onChange={(e) => setFormData({...formData, creditLimit: e.target.value})}
-                placeholder="mis. 10000000"
+                onChange={(val) => setFormData({...formData, creditLimit: val})}
+                placeholder="0"
                 className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
               />
               <p className="text-[10px] font-medium text-slate-400 pl-1">Plafon maksimal dari aplikasi (Akulaku, ShopeePayLater, Paylater BCA, KK, dll).</p>
@@ -265,10 +265,9 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
               {formData.type === 'Credit Card' ? 'Tagihan Terpakai Saat Ini' : 'Saldo Saat Ini'}
             </label>
-            <input
-              type="number"
+            <NumberInput
               value={formData.balance}
-              onChange={(e) => setFormData({...formData, balance: e.target.value})}
+              onChange={(val) => setFormData({...formData, balance: val})}
               placeholder="0"
               className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
             />
