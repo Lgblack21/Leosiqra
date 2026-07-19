@@ -83,6 +83,13 @@ const generateId = () => crypto.randomUUID();
 
 const nowIso = () => new Date().toISOString();
 
+// Tanggal "hari ini" versi WIB (UTC+7, tanpa DST) — dipakai untuk default
+// tanggal transaksi. Server Cloudflare Workers selalu UTC, jadi antara jam
+// 00:00-06:59 WIB, `new Date().toISOString()` masih menunjukkan tanggal UTC
+// KEMARIN (mis. jam 01:00 WIB tanggal 20 = jam 18:00 UTC tanggal 19) —
+// menggeser waktu +7 jam dulu sebelum diambil tanggalnya memperbaiki ini.
+const todayWIB = () => new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
 // Dipakai buat kasih tahu admin lewat Telegram (permintaan akses baru,
 // pembayaran baru) — sengaja tidak pernah melempar error kalau gagal/belum
 // dikonfigurasi, supaya alur utama (request access / submit pembayaran) tidak
@@ -1530,7 +1537,7 @@ async function handleQuickTransaction(request: Request, env: Env) {
     subCategory: payload.sub_category?.trim() || undefined,
     currency: match.currency,
     accountId: match.id,
-    date: payload.date ?? nowIso().slice(0, 10),
+    date: payload.date ?? todayWIB(),
     note: payload.note?.trim() || undefined,
   });
 
