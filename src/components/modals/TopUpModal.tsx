@@ -9,7 +9,7 @@ import { accountService, Account } from '@/lib/services/accountService';
 import { updateMemberTotals } from '@/lib/services/userService';
 import { CurrencySelect } from '@/components/CurrencySelect';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
-import { formatCurrency, getCurrencySymbol } from '@/lib/utils';
+import { formatCurrency, getCurrencySymbol, toLocalDateString } from '@/lib/utils';
 
 interface TopUpModalProps {
   userId: string;
@@ -31,7 +31,7 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
     accountId: '',
     targetAccountId: '',
     note: '',
-    date: new Date().toISOString().split('T')[0]
+    date: toLocalDateString()
   });
 
   useEffect(() => {
@@ -154,7 +154,7 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
       onClose();
       setFormData({
         type: 'topup', amount: '', currency: 'IDR', accountId: '', targetAccountId: '', note: '',
-        date: new Date().toISOString().split('T')[0]
+        date: toLocalDateString()
       });
     } catch (e) {
       console.error(e);

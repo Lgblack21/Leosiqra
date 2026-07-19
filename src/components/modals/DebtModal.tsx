@@ -9,7 +9,7 @@ import { accountService, Account } from '@/lib/services/accountService';
 import { updateMemberTotals } from '@/lib/services/userService';
 import { CurrencySelect } from '@/components/CurrencySelect';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
-import { formatCurrency, getCurrencySymbol } from '@/lib/utils';
+import { formatCurrency, getCurrencySymbol, toLocalDateString } from '@/lib/utils';
 
 interface DebtModalProps {
   userId: string;
@@ -39,7 +39,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
     accountId: '',
     installmentTenor: '',
     interestPct: '', // bunga per bulan dalam persen (%)
-    date: new Date().toISOString().split('T')[0]
+    date: toLocalDateString()
   });
 
   // Perhitungan bunga otomatis (flat/bunga tetap per bulan):
@@ -152,7 +152,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
       setFormData({
         debtType: 'hutang', paymentStatus: 'belum', debtKind: 'Pinjol', amount: '', currency: 'IDR', lenderName: '', note: '', accountId: '',
         installmentTenor: '', interestPct: '',
-        date: new Date().toISOString().split('T')[0]
+        date: toLocalDateString()
       });
     } catch (e) {
       console.error(e);

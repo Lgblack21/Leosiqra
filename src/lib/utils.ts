@@ -17,3 +17,16 @@ export const formatCurrency = (val: number, currency: string = 'IDR') => {
 export const getCurrencySymbol = (code: string): string => {
   return WORLD_CURRENCIES.find(c => c.code === code)?.symbol || code || 'Rp';
 };
+
+// "YYYY-MM-DD" dari tanggal LOKAL device (bukan UTC). `date.toISOString()`
+// selalu mengonversi ke UTC dulu — jadi antara tengah malam s.d. jam offset
+// timezone user (mis. 00:00-06:59 WIB/UTC+7), `.toISOString().split('T')[0]`
+// diam-diam menunjukkan tanggal KEMARIN. Pakai ini untuk default tanggal apa
+// pun di form (transaksi, hutang, investasi, dll) supaya selalu tanggal hari
+// ini yang benar sesuai jam device user.
+export const toLocalDateString = (date: Date = new Date()): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};

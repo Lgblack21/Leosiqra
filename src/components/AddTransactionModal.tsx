@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { X, Save, TrendingUp, TrendingDown, ChevronDown, RefreshCw } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Button } from './Button';
 import { Input } from './Input';
 import { NumberInput } from '@/components/ui/NumberInput';
@@ -12,7 +11,7 @@ import { transactionService, TransactionType } from '@/lib/services/transactionS
 import { updateMemberTotals } from '@/lib/services/userService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
-import { formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency, toLocalDateString } from '@/lib/utils';
 
 interface AddTransactionModalProps {
   userId: string;
@@ -30,7 +29,7 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
   
   // Form State
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: toLocalDateString(),
     note: '',
     currency: 'IDR',
     amount: '',
@@ -128,7 +127,7 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
 
       // Reset form
       setFormData({
-        date: new Date().toISOString().split('T')[0],
+        date: toLocalDateString(),
         note: '',
         currency: 'IDR',
         amount: '',

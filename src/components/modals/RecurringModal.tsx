@@ -7,6 +7,7 @@ import { NumberInput } from '@/components/ui/NumberInput';
 import { recurringService, RecurringTransaction } from '@/lib/services/recurringService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { CategorySelect } from '@/components/CategorySelect';
+import { toLocalDateString } from '@/lib/utils';
 
 interface RecurringModalProps {
   userId: string;
@@ -20,7 +21,7 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null }: 
   const [error, setError] = useState('');
   const [accounts, setAccounts] = useState<Account[]>([]);
   
-  const getToday = () => new Date().toISOString().split('T')[0];
+  const getToday = () => toLocalDateString();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -45,7 +46,7 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null }: 
           accountId: initialData.accountId || '',
           amount: String(initialData.amount || ''),
           interval: initialData.interval || 'Bulanan',
-          nextDate: new Date(initialData.nextDate).toISOString().split('T')[0],
+          nextDate: toLocalDateString(new Date(initialData.nextDate)),
           note: initialData.note || ''
         });
       } else {

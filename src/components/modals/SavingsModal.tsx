@@ -8,7 +8,7 @@ import { savingsService } from '@/lib/services/savingsService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { CurrencySelect } from '@/components/CurrencySelect';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
-import { formatCurrency, getCurrencySymbol } from '@/lib/utils';
+import { formatCurrency, getCurrencySymbol, toLocalDateString } from '@/lib/utils';
 
 interface SavingsModalProps {
   userId: string;
@@ -34,7 +34,7 @@ export const SavingsModal = ({ userId, isOpen, onClose, initialTransactionType =
     fromAccount: '',
     toGoal: '',
     transactionType: initialTransactionType as 'Setoran' | 'Penarikan',
-    date: new Date().toISOString().split('T')[0],
+    date: toLocalDateString(),
     currency: 'IDR'
   });
 
@@ -99,7 +99,7 @@ export const SavingsModal = ({ userId, isOpen, onClose, initialTransactionType =
       onClose();
       setFormData({
         description: '', subCategory: '', amount: '', category: 'Dana Darurat', fromAccount: '',
-        toGoal: '', transactionType: 'Setoran', date: new Date().toISOString().split('T')[0],
+        toGoal: '', transactionType: 'Setoran', date: toLocalDateString(),
         currency: 'IDR'
       });
     } catch (e) {

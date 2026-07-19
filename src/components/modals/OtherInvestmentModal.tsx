@@ -13,7 +13,7 @@ import { uploadToCloudinary } from '@/lib/cloudinary';
 import { CurrencySelect } from '@/components/CurrencySelect';
 import { NumberInput } from '@/components/ui/NumberInput';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, toLocalDateString } from '@/lib/utils';
 
 interface OtherInvestmentModalProps {
   userId: string;
@@ -43,7 +43,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
     accountId: '',
     platform: '',
     assetType: 'Emas',
-    dateInvested: new Date().toISOString().split('T')[0]
+    dateInvested: toLocalDateString()
   });
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -84,7 +84,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
           accountId: editData.accountId || '',
           platform: editData.platform || '',
           assetType: 'Emas', // default or custom
-          dateInvested: editData.dateInvested.toISOString().split('T')[0]
+          dateInvested: toLocalDateString(editData.dateInvested)
         });
       } else if (initialData) {
         setFormData({
@@ -100,10 +100,10 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
           accountId: initialData.accountId || '',
           platform: initialData.platform || '',
           assetType: 'Emas', // default or custom
-          dateInvested: new Date().toISOString().split('T')[0]
+          dateInvested: toLocalDateString()
         });
       } else {
-        setFormData({ name: '', logoUrl: '', currency: 'IDR', quantity: '', unit: '', pricePerUnit: '', currentValue: '', transactionType: 'Pembelian', category: '', accountId: '', platform: '', assetType: 'Emas', dateInvested: new Date().toISOString().split('T')[0] });
+        setFormData({ name: '', logoUrl: '', currency: 'IDR', quantity: '', unit: '', pricePerUnit: '', currentValue: '', transactionType: 'Pembelian', category: '', accountId: '', platform: '', assetType: 'Emas', dateInvested: toLocalDateString() });
       }
     }
   }, [isOpen, userId, editData, initialData]);
@@ -211,7 +211,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
         }
 
         onClose();
-        setFormData({ name: '', logoUrl: '', currency: 'IDR', quantity: '', unit: '', pricePerUnit: '', currentValue: '', transactionType: 'Pembelian', category: '', accountId: '', platform: '', assetType: 'Emas', dateInvested: new Date().toISOString().split('T')[0] });
+        setFormData({ name: '', logoUrl: '', currency: 'IDR', quantity: '', unit: '', pricePerUnit: '', currentValue: '', transactionType: 'Pembelian', category: '', accountId: '', platform: '', assetType: 'Emas', dateInvested: toLocalDateString() });
         return;
       }
 
@@ -299,7 +299,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
       }
 
       onClose();
-      setFormData({ name: '', logoUrl: '', currency: 'IDR', quantity: '', unit: '', pricePerUnit: '', currentValue: '', transactionType: 'Pembelian', category: '', accountId: '', platform: '', assetType: 'Emas', dateInvested: new Date().toISOString().split('T')[0] });
+      setFormData({ name: '', logoUrl: '', currency: 'IDR', quantity: '', unit: '', pricePerUnit: '', currentValue: '', transactionType: 'Pembelian', category: '', accountId: '', platform: '', assetType: 'Emas', dateInvested: toLocalDateString() });
     } catch (e) {
       console.error(e);
       setError(e instanceof Error ? e.message : 'Gagal menyimpan aset investasi. Silakan coba lagi.');

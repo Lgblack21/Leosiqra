@@ -12,7 +12,7 @@ import { uploadToCloudinary } from '@/lib/cloudinary';
 import { CurrencySelect } from '@/components/CurrencySelect';
 import { NumberInput } from '@/components/ui/NumberInput';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, toLocalDateString } from '@/lib/utils';
 
 interface StockInvestmentModalProps {
   userId: string;
@@ -41,7 +41,7 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
     category: 'Saham',
     accountId: '',
     platform: '',
-    dateInvested: new Date().toISOString().split('T')[0]
+    dateInvested: toLocalDateString()
   });
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -81,7 +81,7 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
           category: editData.category || 'Saham',
           accountId: editData.accountId || '',
           platform: editData.platform || '',
-          dateInvested: editData.dateInvested.toISOString().split('T')[0]
+          dateInvested: toLocalDateString(editData.dateInvested)
         });
       } else if (initialData) {
         setFormData({
@@ -96,13 +96,13 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
           category: 'Saham',
           accountId: initialData.accountId || '',
           platform: initialData.platform || '',
-          dateInvested: new Date().toISOString().split('T')[0]
+          dateInvested: toLocalDateString()
         });
       } else {
         setFormData({ 
           stockCode: '', logoUrl: '', exchangeCode: 'IDX', currency: 'IDR', sharesCount: '', 
           pricePerShare: '', currentValue: '', transactionType: 'Beli', category: 'Saham', 
-          accountId: '', platform: '', dateInvested: new Date().toISOString().split('T')[0] 
+          accountId: '', platform: '', dateInvested: toLocalDateString() 
         });
       }
     }
@@ -217,7 +217,7 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
         setFormData({
           stockCode: '', logoUrl: '', exchangeCode: 'IDX', currency: 'IDR', sharesCount: '',
           pricePerShare: '', currentValue: '', transactionType: 'Beli', category: 'Saham',
-          accountId: '', platform: '', dateInvested: new Date().toISOString().split('T')[0]
+          accountId: '', platform: '', dateInvested: toLocalDateString()
         });
         return;
       }
@@ -292,7 +292,7 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
       setFormData({
         stockCode: '', logoUrl: '', exchangeCode: 'IDX', currency: 'IDR', sharesCount: '',
         pricePerShare: '', currentValue: '', transactionType: 'Beli', category: 'Saham',
-        accountId: '', platform: '', dateInvested: new Date().toISOString().split('T')[0]
+        accountId: '', platform: '', dateInvested: toLocalDateString()
       });
     } catch (e) {
       console.error(e);

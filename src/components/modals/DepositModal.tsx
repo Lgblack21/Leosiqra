@@ -11,7 +11,7 @@ import { addTransaction } from '@/lib/services/transactionService';
 import { CategorySelect } from '@/components/CategorySelect';
 import { CurrencySelect } from '@/components/CurrencySelect';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
-import { formatCurrency, getCurrencySymbol } from '@/lib/utils';
+import { formatCurrency, getCurrencySymbol, toLocalDateString } from '@/lib/utils';
 
 interface DepositModalProps {
   userId: string;
@@ -38,8 +38,8 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
     transactionType: 'Penempatan',
     category: '',
     accountId: '',
-    dateInvested: new Date().toISOString().split('T')[0],
-    targetDate: new Date(new Date().getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Default tomorrow
+    dateInvested: toLocalDateString(),
+    targetDate: toLocalDateString(new Date(Date.now() + 24 * 60 * 60 * 1000)), // Default tomorrow
     maturityAction: 'cairkan' as 'cairkan' | 'aro_bunga' | 'aro_full'
   });
 
@@ -61,15 +61,15 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
           transactionType: editData.transactionType || 'Penempatan',
           category: editData.category || '',
           accountId: editData.accountId || '',
-          dateInvested: editData.dateInvested.toISOString().split('T')[0],
-          targetDate: editData.targetDate ? editData.targetDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          dateInvested: toLocalDateString(editData.dateInvested),
+          targetDate: editData.targetDate ? toLocalDateString(editData.targetDate) : toLocalDateString(),
           maturityAction: (editData.maturityAction as 'cairkan' | 'aro_bunga' | 'aro_full') || 'cairkan'
         });
       } else {
         // Reset to initial
         setFormData({
-          name: '', platform: '', currency: 'IDR', amountInvested: '', durationMonths: '', returnPercentage: '', taxPercentage: '', transactionType: 'Penempatan', category: '', accountId: '', dateInvested: new Date().toISOString().split('T')[0],
-          targetDate: new Date(new Date().getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          name: '', platform: '', currency: 'IDR', amountInvested: '', durationMonths: '', returnPercentage: '', taxPercentage: '', transactionType: 'Penempatan', category: '', accountId: '', dateInvested: toLocalDateString(),
+          targetDate: toLocalDateString(new Date(Date.now() + 24 * 60 * 60 * 1000)),
           maturityAction: 'cairkan'
         });
       }
@@ -249,9 +249,9 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
       }
 
       onClose();
-      const initialTargetDate = new Date(new Date().getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const initialTargetDate = toLocalDateString(new Date(Date.now() + 24 * 60 * 60 * 1000));
       setFormData({
-        name: '', platform: '', currency: 'IDR', amountInvested: '', durationMonths: '', returnPercentage: '', taxPercentage: '', transactionType: 'Penempatan', category: '', accountId: '', dateInvested: new Date().toISOString().split('T')[0],
+        name: '', platform: '', currency: 'IDR', amountInvested: '', durationMonths: '', returnPercentage: '', taxPercentage: '', transactionType: 'Penempatan', category: '', accountId: '', dateInvested: toLocalDateString(),
         targetDate: initialTargetDate,
         maturityAction: 'cairkan'
       });
