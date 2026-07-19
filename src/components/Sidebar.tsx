@@ -88,7 +88,7 @@ const menuGroups = [
     items: [
       { icon: Bot, label: 'AI Leosiqra', href: '/membership/ai-leosiqra' },
       { icon: Compass, label: 'Panduan Leosiqra', href: '/membership/panduan' },
-      { icon: Headphones, label: 'Hubungi Kami', href: '/membership/contact' },
+      { icon: Headphones, label: 'Hubungi Kami', href: '/membership/hubungi-kami' },
     ]
   }
 ];

@@ -99,12 +99,13 @@ export default function TopUpPage() {
   const totalAmount = useMemo(() => transactions.reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0), [transactions]);
   const avgAmount = transactions.length > 0 ? totalAmount / transactions.length : 0;
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (tx: Transaction) => {
+    if (!tx.id) return;
     if (!confirm('Hapus riwayat transfer ini? Tindakan ini tidak bisa dibatalkan.')) return;
     setError('');
-    setDeletingId(id);
+    setDeletingId(tx.id);
     try {
-      await transactionService.deleteTransaction(id);
+      await transactionService.deleteTransaction(tx);
     } catch (e) {
       console.error(e);
       setError('Gagal menghapus transaksi. Silakan coba lagi.');
@@ -122,6 +123,7 @@ export default function TopUpPage() {
     }
   };
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
+  const formatTime = (d: Date) => new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' }).format(d);
 
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
@@ -209,9 +211,11 @@ export default function TopUpPage() {
         ) : (
           <>
             <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left border-collapse min-w-[620px] xl:min-w-0">
+              <table className="w-full text-left border-collapse min-w-[720px] xl:min-w-0">
                 <thead>
                   <tr className="border-b border-slate-50">
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">No</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Jam</th>
                     <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
                     <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Deskripsi</th>
                     <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Mata Uang</th>
@@ -222,8 +226,14 @@ export default function TopUpPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((trx) => (
+                  {filtered.map((trx, i) => (
                     <tr key={trx.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
+                      <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap text-center">
+                        <p className="text-xs font-bold text-slate-400">{i + 1}</p>
+                      </td>
+                      <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap">
+                        <p className="text-sm font-bold text-slate-500">{formatTime(trx.createdAt)}</p>
+                      </td>
                       <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap">
                         <p className="text-sm font-black text-slate-900">{formatDate(trx.date)}</p>
                       </td>
@@ -244,7 +254,7 @@ export default function TopUpPage() {
                       </td>
                       <td className="px-5 md:px-8 py-4 md:py-6 text-center">
                         <button
-                          onClick={() => trx.id && handleDelete(trx.id)}
+                          onClick={() => trx.id && handleDelete(trx)}
                           disabled={deletingId === trx.id}
                           className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all disabled:opacity-50">
                           <Trash2 size={14} />

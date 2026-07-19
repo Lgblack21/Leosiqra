@@ -24,6 +24,7 @@ import { Modal } from '@/components/ui/Modal';
 import { LogoImage } from '@/components/ui/LogoImage';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { investmentService, Investment } from '@/lib/services/investmentService';
+import { savingsService, Saving } from '@/lib/services/savingsService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { isCreditAccountType, computeCreditUsage } from '@/lib/creditCard';
@@ -39,6 +40,7 @@ export default function MonthlyDashboard() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
+  const [savings, setSavings] = useState<Saving[]>([]);
   const [loading, setLoading] = useState(true);
   const [marketTickers, setMarketTickers] = useState<MarketTicker[]>([]);
   const [marketLoading, setMarketLoading] = useState(true);
@@ -50,10 +52,8 @@ export default function MonthlyDashboard() {
   const [fxRates, setFxRates] = useState<ExchangeRates>({});
   const [showAccountsModal, setShowAccountsModal] = useState(false);
 
-  // Saldo Bersih = total saldo semua rekening saat ini (bukan cuma net arus
-  // kas bulan yang dipilih) — sama seperti "Total Saldo" di halaman Profile,
-  // jadi tidak berubah walau ganti bulan lewat MonthPicker. Tidak terikat
-  // selectedMonth/selectedYear karena ini bukan angka periode.
+  // Saldo Bersih = total saldo semua rekening saat ini, tidak terikat bulan
+  // yang dipilih di MonthPicker (sama seperti "Total Saldo" di Profile).
   useEffect(() => {
     const loadAccounts = () => accountService.getUserAccounts('session').then(setAccounts).catch(console.error);
     loadAccounts();
@@ -71,8 +71,9 @@ export default function MonthlyDashboard() {
       Promise.all([
         transactionService.getUserTransactions('session'),
         investmentService.getUserInvestments('session'),
+        savingsService.getUserSavings('session'),
       ])
-        .then(([allTransactions, allInvestments]) => {
+        .then(([allTransactions, allInvestments, allSavings]) => {
           if (!active) return;
           const periodTransactions = allTransactions.filter((t) => {
             const d = new Date(t.date);
@@ -80,6 +81,7 @@ export default function MonthlyDashboard() {
           });
           setTransactions(periodTransactions);
           setInvestments(allInvestments);
+          setSavings(allSavings);
 
           // Ringkasan hutang dihitung otomatis dari catatan Hutang yang belum lunas
           // (jenisnya disimpan di subCategory oleh DebtModal): Kartu Kredit vs lainnya.
@@ -96,20 +98,24 @@ export default function MonthlyDashboard() {
           if (!active) return;
           setTransactions([]);
           setInvestments([]);
+          setSavings([]);
         })
         .finally(() => {
           if (active) setLoading(false);
         });
     };
     loadTransactionsAndInvestments();
-    // getUserTransactions/getUserInvestments cuma fetch sekali — refetch
-    // manual tiap ada input/hapus transaksi atau investasi di mana pun.
+    // getUserTransactions/getUserInvestments/getUserSavings cuma fetch sekali —
+    // refetch manual tiap ada input/hapus transaksi, investasi, atau tabungan
+    // di mana pun.
     const unsubTrx = subscribeToCollectionChanges('transactions', loadTransactionsAndInvestments);
     const unsubInv = subscribeToCollectionChanges('investments', loadTransactionsAndInvestments);
+    const unsubSav = subscribeToCollectionChanges('savings', loadTransactionsAndInvestments);
     return () => {
       active = false;
       unsubTrx();
       unsubInv();
+      unsubSav();
     };
   }, [selectedMonth, selectedYear]);
 
@@ -160,15 +166,13 @@ export default function MonthlyDashboard() {
   const totalPengeluaran = useMemo(() => transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + toIdrAmount(t), 0), [transactions]);
   const totalInvestasi = useMemo(() => investments.reduce((s, i) => s + (Number(i.amountIDR) || Number(i.amountInvested) || 0), 0), [investments]);
   const netBalance = totalPemasukan - totalPengeluaran;
-  // Penempatan dana ke deposito/saham/investasi lain SUDAH tercatat sebagai
-  // transaksi "pengeluaran" kategori Investasi (dan penarikannya sebagai
-  // "pemasukan") — jadi sudah ikut terhitung di totalPengeluaran/netBalance
-  // di atas. Dulu di sini dikurangi totalInvestasi (all-time) SEKALI LAGI,
-  // jadi dana yang sama kepotong dua kali dan Tabungan sering nongol 0
-  // padahal masih ada sisa uang nganggur. totalInvestasi (all-time) tetap
-  // dipakai terpisah untuk kartu "Investasi", cuma tidak lagi dikurangkan
-  // di sini.
-  const netTabungan = Math.max(netBalance, 0);
+  // Saldo Tabungan kartu dashboard bersifat all-time (sama seperti Investasi
+  // di sebelahnya) — bukan sisa pemasukan-pengeluaran bulan berjalan, supaya
+  // benar-benar merefleksikan total setoran aktif di fitur Tabungan.
+  const totalTabunganSaldo = useMemo(() => savings.reduce((s, item) => {
+    const amt = Number(item.amountIDR) || item.amount;
+    return item.transactionType === 'Penarikan' ? s - amt : s + amt;
+  }, 0), [savings]);
   const totalSaldoRekening = useMemo(
     () => accounts.reduce((s, a) => s + exchangeRateService.convert(a.balance || 0, a.currency || 'IDR', 'IDR', fxRates), 0),
     [accounts, fxRates]
@@ -219,7 +223,9 @@ export default function MonthlyDashboard() {
 
   const pemasukanPct = totalPengeluaran > 0 ? Math.min(Math.round((totalPemasukan / Math.max(totalPengeluaran, 1)) * 100), 100) : 100;
   const pengeluaranPct = totalPemasukan > 0 ? Math.min(Math.round((totalPengeluaran / Math.max(totalPemasukan, 1)) * 100), 100) : 0;
-  const tabunganPct = totalPemasukan > 0 ? Math.min(Math.round((netTabungan / Math.max(totalPemasukan, 1)) * 100), 100) : 0;
+  // % porsi Tabungan dari total saldo semua rekening (net worth), bukan lagi
+  // relatif ke pemasukan bulanan — konsisten dengan sifat all-time-nya.
+  const tabunganPct = totalSaldoRekening > 0 ? Math.min(Math.round((totalTabunganSaldo / totalSaldoRekening) * 100), 100) : 0;
   const investasiPct = totalPemasukan > 0 ? Math.min(Math.round((totalInvestasi / Math.max(totalPemasukan, 1)) * 100), 100) : 0;
 
   // Dirender dua kali: sekali di grid atas (mobile, langsung di bawah Saldo
@@ -391,20 +397,21 @@ export default function MonthlyDashboard() {
             {pemasukanCard}
             {pengeluaranCard}
           </div>
-          {/* Tabungan - dihitung dari Net */}
+          {/* Tabungan - saldo all-time dari fitur Tabungan (bukan sisa
+              pemasukan-pengeluaran bulan berjalan) */}
           <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                 <PiggyBank size={12} className="text-blue-500" /> Tabungan
               </div>
-              <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-500">{tabunganPct}% sisa</span>
+              <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-500">{savings.length} trx</span>
             </div>
-            <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6 tracking-tight">{formatRp(netTabungan)}</h3>
+            <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6 tracking-tight">{formatRp(totalTabunganSaldo)}</h3>
             <div className="flex justify-between items-end gap-3">
               <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div className="h-full bg-blue-500 transition-all" style={{ width: `${tabunganPct}%` }} />
               </div>
-              <span className="text-[9px] font-medium text-slate-400 leading-none">Saldo bersih</span>
+              <span className="text-[9px] font-medium text-slate-400 leading-none">{tabunganPct}% dari total saldo</span>
             </div>
           </div>
           {/* Investasi - Firebase */}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, BarChart3, CheckCircle2, Star, TrendingUp, ShieldCheck } from 'lucide-react';
@@ -7,6 +8,7 @@ import { Navbar } from '@/components/Navbar';
 import { LandingFeatures } from '@/components/LandingFeatures';
 import { LandingFooter } from '@/components/LandingFooter';
 import { motion } from 'framer-motion';
+import { getDeveloperInfo, PublicDeveloperInfo } from '@/lib/services/publicContactService';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -22,6 +24,25 @@ const staggerContainer = {
 };
 
 export default function LandingPage() {
+  const [developer, setDeveloper] = useState<PublicDeveloperInfo | null>(null);
+
+  useEffect(() => {
+    getDeveloperInfo().then(setDeveloper).catch(() => setDeveloper(null));
+  }, []);
+
+  // Handoff dari Navbar saat link section diklik dari halaman lain (mis.
+  // /hubungi-kami) — target section disimpan di sessionStorage lalu di-scroll
+  // ke sini setelah landing page selesai render, tanpa pernah menyentuh URL.
+  useEffect(() => {
+    const target = sessionStorage.getItem('leosiqra-scroll-target');
+    if (target) {
+      sessionStorage.removeItem('leosiqra-scroll-target');
+      requestAnimationFrame(() => {
+        document.getElementById(target)?.scrollIntoView({ behavior: 'smooth' });
+      });
+    }
+  }, []);
+
   return (
     <div id="beranda" className="min-h-screen bg-background text-foreground selection:bg-indigo-500/10 scroll-mt-20">
       <Navbar />
@@ -51,13 +72,13 @@ export default function LandingPage() {
               Leosiqra <br /> <span className="text-gradient">Premium</span> <span className="text-slate-300 font-light">|</span> Kalkulasi <br /> SPT Otomatis
             </h1>
             <p className="max-w-xl text-slate-500 text-base sm:text-lg mb-8 sm:mb-10 font-medium leading-relaxed">
-              Manajemen finansial personal dengan fitur terlengkap mulai dari rekap bulanan, kalkulasi pajak, hingga portfolio investasi dalam satu dashboard bersih.
+              Leosiqra adalah aplikasi pencatat keuangan pribadi dengan kalkulasi pajak SPT otomatis — mulai dari rekap bulanan, kalkulasi pajak, hingga portfolio investasi dalam satu dashboard bersih.
             </p>
             <div className="flex flex-col sm:flex-row items-center gap-5">
               <Link href="/auth/register" className="group w-full sm:w-auto px-10 py-5 rounded-2xl bg-gradient-to-r from-navy to-indigo-700 text-white font-black text-base transition-all flex items-center justify-center gap-2 shadow-2xl shadow-indigo-600/25 hover:shadow-indigo-600/40 hover:-translate-y-0.5 active:scale-95">
                 Mulai Sekarang <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </Link>
-              <Link href="#harga" className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-white/70 backdrop-blur border border-slate-200 text-slate-600 font-black text-base hover:bg-white hover:border-slate-300 transition-all active:scale-95 text-center">
+              <Link href="/hubungi-kami" className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-white/70 backdrop-blur border border-slate-200 text-slate-600 font-black text-base hover:bg-white hover:border-slate-300 transition-all active:scale-95 text-center">
                 Hubungi Kami
               </Link>
             </div>
@@ -302,33 +323,33 @@ export default function LandingPage() {
       </section>
 
       {/* Final CTA Full */}
-      <section className="py-20 sm:py-40 px-6 relative overflow-hidden">
-        <motion.div 
-          className="max-w-4xl mx-auto rounded-[48px] sm:rounded-[80px] bg-gradient-to-b from-white to-slate-50 border border-slate-100 p-8 sm:p-16 md:p-24 text-center space-y-6 sm:space-y-8 relative z-10 shadow-2xl shadow-slate-200/50"
+      <section className="py-14 sm:py-24 px-6 relative overflow-hidden">
+        <motion.div
+          className="max-w-3xl mx-auto rounded-[32px] sm:rounded-[48px] bg-gradient-to-b from-white to-slate-50 border border-slate-100 p-6 sm:p-10 md:p-14 text-center space-y-4 sm:space-y-6 relative z-10 shadow-2xl shadow-slate-200/50"
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 1 }}
         >
-          <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-[#FCF8F1] text-[#B8926A] text-[10px] font-black uppercase tracking-[0.2em] border border-[#F5E6CF]/50 mx-auto">
+          <div className="inline-flex items-center gap-2 px-5 py-1.5 rounded-full bg-[#FCF8F1] text-[#B8926A] text-[10px] font-black uppercase tracking-[0.2em] border border-[#F5E6CF]/50 mx-auto">
             START TODAY
           </div>
-          <h2 className="text-4xl md:text-6xl font-serif font-black text-slate-900 leading-[1.1] tracking-tight">
+          <h2 className="text-3xl md:text-4xl font-serif font-black text-slate-900 leading-[1.15] tracking-tight">
             Mulai lebih rapi mengelola <br /> keuangan pribadi hari ini.
           </h2>
-          <p className="text-slate-500 font-medium max-w-[540px] mx-auto leading-relaxed text-[15px]">
+          <p className="text-slate-500 font-medium max-w-[480px] mx-auto leading-relaxed text-sm">
             Buat akun gratis dan lihat kondisi finansial Anda dalam tampilan yang lebih jelas, modern, dan tenang.
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            <Link href="/auth/register" className="w-full sm:w-auto px-10 py-5 rounded-[20px] bg-navy text-white font-black hover:bg-slate-800 transition-all shadow-xl shadow-navy/20 active:scale-95">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <Link href="/auth/register" className="w-full sm:w-auto px-8 py-4 rounded-[18px] bg-navy text-white font-black hover:bg-slate-800 transition-all shadow-xl shadow-navy/20 active:scale-95">
               Daftar Gratis
             </Link>
-            <Link href="/auth/login" className="w-full sm:w-auto px-10 py-5 rounded-[20px] bg-white border border-slate-100 text-slate-900 font-black hover:bg-slate-50 transition-all shadow-sm active:scale-95">
+            <Link href="/auth/login" className="w-full sm:w-auto px-8 py-4 rounded-[18px] bg-white border border-slate-100 text-slate-900 font-black hover:bg-slate-50 transition-all shadow-sm active:scale-95">
               Masuk
             </Link>
           </div>
         </motion.div>
-        
+
         {/* Decorative background blobs */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] pointer-events-none opacity-50">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-100/30 blur-[120px] rounded-full" />
@@ -336,6 +357,35 @@ export default function LandingPage() {
           <div className="absolute top-1/2 right-1/3 w-96 h-96 bg-emerald-50/20 blur-[120px] rounded-full" />
         </div>
       </section>
+
+      {/* Developer Profile */}
+      {developer?.photoUrl && (
+        <section className="pb-20 sm:pb-28 px-6">
+          <motion.div
+            className="max-w-2xl mx-auto text-center space-y-7"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+          >
+            <div className="relative w-28 h-28 sm:w-32 sm:h-32 mx-auto rounded-full overflow-hidden border-4 border-white shadow-xl shadow-slate-200/60">
+              <Image src={developer.photoUrl} alt={developer.name || 'Developer Leosiqra'} fill className="object-cover" />
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.25em]">Dibalik Leosiqra</p>
+              {developer.name && (
+                <h3 className="text-2xl sm:text-3xl font-serif font-black text-slate-900 tracking-tight">{developer.name}</h3>
+              )}
+            </div>
+            {developer.quote && (
+              <p className="text-lg sm:text-xl font-medium text-slate-600 italic leading-relaxed">
+                &ldquo;{developer.quote}&rdquo;
+              </p>
+            )}
+          </motion.div>
+        </section>
+      )}
+
       <LandingFooter />
     </div>
   );

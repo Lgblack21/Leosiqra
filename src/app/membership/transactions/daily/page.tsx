@@ -16,7 +16,7 @@ import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 import { useRef } from 'react';
-import { MonthPicker } from '@/components/ui/MonthPicker';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 
 export default function DailyTransactionLogPage() {
@@ -25,8 +25,7 @@ export default function DailyTransactionLogPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [error, setError] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [fxRates, setFxRates] = useState<ExchangeRates>({});
@@ -59,14 +58,14 @@ export default function DailyTransactionLogPage() {
           setCategories(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)));
         });
 
-        const startOfMonth = new Date(selectedYear, selectedMonth, 1);
-        const endOfMonth = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
+        const startOfDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+        const endOfDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 23, 59, 59, 999);
 
         const q = query(
-          collection(db, 'transactions'), 
+          collection(db, 'transactions'),
           where('userId', '==', u.uid),
-          where('date', '>=', startOfMonth),
-          where('date', '<=', endOfMonth),
+          where('date', '>=', startOfDay),
+          where('date', '<=', endOfDay),
           orderBy('date', 'desc')
         );
         if (unsubRef.current) unsubRef.current();
@@ -93,7 +92,7 @@ export default function DailyTransactionLogPage() {
       if (unsubAccRef.current) unsubAccRef.current();
       if (unsubCatRef.current) unsubCatRef.current();
     };
-  }, [selectedMonth, selectedYear]);
+  }, [selectedDate]);
 
   const getAccountName = (id: string) => {
     const acc = accounts.find(a => a.id === id);
@@ -105,12 +104,13 @@ export default function DailyTransactionLogPage() {
     return cat ? `${cat.category} - ${cat.subCategory}` : id || '-';
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (tx: Transaction) => {
+    if (!tx.id) return;
     if (!confirm('Hapus transaksi ini? Tindakan ini tidak bisa dibatalkan.')) return;
     setError('');
-    setDeletingId(id);
+    setDeletingId(tx.id);
     try {
-      await transactionService.deleteTransaction(id);
+      await transactionService.deleteTransaction(tx);
     } catch (e) {
       console.error(e);
       setError('Gagal menghapus transaksi. Silakan coba lagi.');
@@ -149,6 +149,7 @@ export default function DailyTransactionLogPage() {
     }
   };
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
+  const formatTime = (d: Date) => new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' }).format(d);
 
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
@@ -158,7 +159,7 @@ export default function DailyTransactionLogPage() {
         <div>
           <h1 className="text-2xl md:text-4xl font-black text-slate-900 tracking-tight">Transaksi Harian</h1>
           <p className="text-[12px] md:text-sm font-medium text-slate-400 mt-2 max-w-xl">
-            Lacak dan kelola aliran keuangan Anda pada periode {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth))}.
+            Lacak dan kelola aliran keuangan Anda pada tanggal {new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }).format(selectedDate)}.
           </p>
         </div>
       </div>
@@ -219,12 +220,9 @@ export default function DailyTransactionLogPage() {
           />
         </div>
         <div className="w-full md:w-auto">
-          <MonthPicker 
-            value={{ month: selectedMonth, year: selectedYear }}
-            onChange={({ month, year }) => {
-              setSelectedMonth(month);
-              setSelectedYear(year);
-            }}
+          <DatePicker
+            value={selectedDate}
+            onChange={setSelectedDate}
           />
         </div>
       </div>
@@ -244,9 +242,11 @@ export default function DailyTransactionLogPage() {
         ) : (
           <>
             <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left border-collapse min-w-[760px] xl:min-w-0">
+              <table className="w-full text-left border-collapse min-w-[860px] xl:min-w-0">
                 <thead>
                   <tr className="border-b border-slate-50">
+                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">No</th>
+                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Jam</th>
                     <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
                     <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Deskripsi</th>
                     <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">Mata Uang</th>
@@ -257,8 +257,14 @@ export default function DailyTransactionLogPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((trx) => (
+                  {filtered.map((trx, i) => (
                     <tr key={trx.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
+                      <td className="px-4 md:px-6 py-4 whitespace-nowrap text-center">
+                        <p className="text-xs font-bold text-slate-400">{i + 1}</p>
+                      </td>
+                      <td className="px-4 md:px-6 py-4 whitespace-nowrap">
+                        <p className="text-xs md:text-sm font-bold text-slate-500">{formatTime(trx.createdAt)}</p>
+                      </td>
                       <td className="px-4 md:px-6 py-4 whitespace-nowrap">
                         <p className="text-xs md:text-sm font-black text-slate-900">{formatDate(trx.date)}</p>
                       </td>
@@ -284,7 +290,7 @@ export default function DailyTransactionLogPage() {
                       <td className="px-5 md:px-8 py-4 md:py-6 whitespace-nowrap">
                         <div className="flex items-center justify-center gap-2">
                           <button
-                            onClick={() => trx.id && handleDelete(trx.id)}
+                            onClick={() => trx.id && handleDelete(trx)}
                             disabled={deletingId === trx.id}
                             className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all disabled:opacity-50"
                           >

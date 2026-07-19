@@ -9,7 +9,7 @@ import { accountService, Account } from '@/lib/services/accountService';
 import { updateMemberTotals } from '@/lib/services/userService';
 import { CurrencySelect } from '@/components/CurrencySelect';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, getCurrencySymbol } from '@/lib/utils';
 
 interface TopUpModalProps {
   userId: string;
@@ -73,10 +73,32 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
         formData.currency === 'IDR' ||
         Boolean(rates && rates[formData.currency] && rates['IDR']);
 
-      // Penyimpanan inti — pengeluaran dari rekening sumber.
+      // Saldo tiap rekening tersimpan dalam mata uangnya sendiri, jadi delta
+      // ke rekening tujuan HARUS dikonversi ke mata uang rekening tujuan itu
+      // sendiri — bukan ke IDR (convertedAmount selalu IDR, dipakai cuma
+      // untuk amountIDR/ringkasan total, bukan buat update saldo langsung).
+      const targetAccount = accounts.find(a => a.id === formData.targetAccountId);
+      const targetCurrency = targetAccount?.currency || 'IDR';
+      const canConvertToTarget =
+        formData.currency === targetCurrency ||
+        Boolean(rates && rates[formData.currency] && rates[targetCurrency]);
+      const amountForTarget = formData.currency === targetCurrency
+        ? amount
+        : (canConvertToTarget && rates ? exchangeRateService.convert(amount, formData.currency, targetCurrency, rates) : amount);
+
+      // Kalau tujuannya rekening sendiri (bukan Wallet eksternal), ini cuma
+      // uang pindah kantong — jangan dicatat sebagai pemasukan/pengeluaran
+      // beneran (itu bikin dashboard Pemasukan/Pengeluaran naik palsu tiap
+      // kali transfer antar rekening sendiri). Top Up ke Wallet eksternal
+      // (OVO/Gopay/dll, tidak terlacak akunnya) tetap dihitung pengeluaran
+      // karena uangnya beneran keluar dari rekening yang terlacak.
+      const isInternalTransfer = !!formData.targetAccountId && formData.targetAccountId !== 'Wallet';
+      const sourceType = isInternalTransfer ? 'transfer' : 'pengeluaran';
+
+      // Penyimpanan inti — pengeluaran/transfer dari rekening sumber.
       await transactionService.createTransaction({
         userId,
-        type: 'pengeluaran',
+        type: sourceType,
         amount,
         amountIDR: canConvert ? convertedAmount : undefined,
         currency: formData.currency,
@@ -95,13 +117,13 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
       // jadi kegagalan di sini tidak boleh membuat modal terlihat "gagal
       // total" dan memicu submit ulang yang bisa membuat catatan dobel.
       try {
-        if (formData.targetAccountId && formData.targetAccountId !== 'Wallet') {
+        if (isInternalTransfer) {
           await transactionService.createTransaction({
             userId,
-            type: 'pemasukan',
-            amount,
+            type: 'transfer',
+            amount: amountForTarget,
             amountIDR: canConvert ? convertedAmount : undefined,
-            currency: formData.currency,
+            currency: targetCurrency,
             category: label,
             subCategory: `${label} Masuk`,
             accountId: formData.targetAccountId,
@@ -112,16 +134,18 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
           });
         }
 
-        await updateMemberTotals(userId, 'pengeluaran', convertedAmount || amount);
-        if (formData.targetAccountId && formData.targetAccountId !== 'Wallet') {
-          await updateMemberTotals(userId, 'pemasukan', convertedAmount || amount);
+        // Transfer antar rekening sendiri tidak menambah/mengurangi total
+        // Pemasukan/Pengeluaran — cuma Top Up ke Wallet eksternal yang benar
+        // benar mengurangi kekayaan yang terlacak.
+        if (!isInternalTransfer) {
+          await updateMemberTotals(userId, 'pengeluaran', convertedAmount || amount);
         }
 
         if (formData.accountId) {
-          await accountService.updateAccountBalance(formData.accountId, -(convertedAmount || amount));
+          await accountService.updateAccountBalance(formData.accountId, -amount);
         }
         if (formData.targetAccountId && formData.targetAccountId !== 'Wallet') {
-          await accountService.updateAccountBalance(formData.targetAccountId, (convertedAmount || amount));
+          await accountService.updateAccountBalance(formData.targetAccountId, amountForTarget);
         }
       } catch (syncErr) {
         console.error('Pengeluaran sumber tersimpan, tapi gagal sinkronisasi tujuan/saldo:', syncErr);
@@ -166,7 +190,7 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
           <div className="space-y-2 flex-1">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">{getCurrencySymbol(formData.currency)}</span>
               <NumberInput value={formData.amount} onChange={val => setFormData(p => ({...p, amount: val}))}
                 placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 pl-11 pr-4 text-sm font-bold text-slate-700 transition-all" />
             </div>
@@ -210,9 +234,7 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
                   setFormData(p => ({
                     ...p,
                     accountId: e.target.value,
-                    // Nominal top up/transfer selalu dalam mata uang rekening
-                    // SUMBER — tanpa ini currency picker (independen) bisa
-                    // ketinggalan di IDR meski rekeningnya USD/KHR/dll.
+                    // Ikuti mata uang rekening sumber.
                     currency: selectedAccount?.currency || p.currency,
                   }));
                 }}

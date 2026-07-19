@@ -1,14 +1,19 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { WORLD_CURRENCIES } from '@/lib/data/worldCurrencies';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 export const formatCurrency = (val: number, currency: string = 'IDR') => {
-  return new Intl.NumberFormat('id-ID', { 
-    style: 'currency', 
-    currency: currency, 
-    maximumFractionDigits: 0 
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: currency,
+    maximumFractionDigits: 0
   }).format(val);
+};
+
+export const getCurrencySymbol = (code: string): string => {
+  return WORLD_CURRENCIES.find(c => c.code === code)?.symbol || code || 'Rp';
 };

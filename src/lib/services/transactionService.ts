@@ -1,5 +1,7 @@
 import { cloudflareApi } from '../cloudflare-api';
 import { notifyCollectionChanged } from '../cf-firestore';
+import { accountService } from './accountService';
+import { updateMemberTotals } from './userService';
 
 export type TransactionType = 'pemasukan' | 'pengeluaran' | 'transfer' | 'topup' | 'debt' | 'investasi' | 'tabungan';
 
@@ -57,6 +59,8 @@ export const transactionService = {
         monthly_interest: typeof data.monthlyInterest === 'number' ? data.monthlyInterest : undefined,
         total_interest: typeof data.totalInterest === 'number' ? data.totalInterest : undefined,
         payment_status: data.paymentStatus,
+        related_id: data.relatedId,
+        related_type: data.relatedType,
         date: data.date.toISOString(),
         display_date: data.displayDate || data.date.toISOString(),
         note: data.note || null,
@@ -136,8 +140,22 @@ export const transactionService = {
     notifyCollectionChanged('transactions');
   },
 
-  async deleteTransaction(id: string) {
-    await cloudflareApi(`/api/member/transactions/${id}`, { method: 'DELETE' });
+  // Balikkan dulu efek saldo/total sebelum hapus — cuma pemasukan/pengeluaran
+  // yang menyentuh saldo rekening ('debt' belum-lunas & baris lain tidak).
+  async deleteTransaction(tx: Transaction) {
+    if ((tx.type === 'pemasukan' || tx.type === 'pengeluaran') && tx.id) {
+      try {
+        const amount = Number(tx.amount) || 0;
+        const balanceDelta = tx.type === 'pemasukan' ? -amount : amount;
+        if (tx.accountId && tx.accountId !== 'General') {
+          await accountService.updateAccountBalance(tx.accountId, balanceDelta);
+        }
+        await updateMemberTotals(tx.userId, tx.type, -amount);
+      } catch (e) {
+        console.error('Gagal membalikkan saldo sebelum hapus transaksi:', e);
+      }
+    }
+    await cloudflareApi(`/api/member/transactions/${tx.id}`, { method: 'DELETE' });
     notifyCollectionChanged('transactions');
   }
 };

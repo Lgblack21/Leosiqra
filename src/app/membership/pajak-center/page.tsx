@@ -1,5 +1,6 @@
 "use client";
 
+import Image from 'next/image';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   TrendingDown,
@@ -9,7 +10,9 @@ import {
   Info,
   Landmark,
   AlertTriangle,
-  X
+  X,
+  Calculator,
+  ChevronDown
 } from 'lucide-react';
 import { YearPicker } from '@/components/ui/YearPicker';
 import { Transaction } from '@/lib/services/transactionService';
@@ -22,6 +25,45 @@ import { cn } from '@/lib/utils';
 import { useCountUp } from '@/lib/hooks/useCountUp';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 
+// PTKP (Penghasilan Tidak Kena Pajak) & tarif PPh Pasal 17 UU HPP (berlaku
+// sejak tahun pajak 2022) — dasar hukum untuk estimasi PPh Orang Pribadi.
+const PTKP_BASE: Record<'TK' | 'K', number> = { TK: 54_000_000, K: 58_500_000 };
+const PTKP_PER_TANGGUNGAN = 4_500_000;
+const MAX_TANGGUNGAN = 3;
+
+const TAX_BRACKETS = [
+  { min: 0, max: 60_000_000, rate: 0.05 },
+  { min: 60_000_000, max: 250_000_000, rate: 0.15 },
+  { min: 250_000_000, max: 500_000_000, rate: 0.25 },
+  { min: 500_000_000, max: 5_000_000_000, rate: 0.30 },
+  { min: 5_000_000_000, max: Infinity, rate: 0.35 },
+] as const;
+
+interface TaxBracketResult {
+  min: number;
+  max: number;
+  rate: number;
+  taxableInBracket: number;
+  tax: number;
+}
+
+// Pajak progresif — tiap lapisan cuma kena tarifnya sendiri atas bagian yang
+// masuk lapisan itu, bukan seluruh PKP dikali tarif tertinggi.
+const calculatePPh = (pkp: number): { totalTax: number; breakdown: TaxBracketResult[] } => {
+  if (pkp <= 0) return { totalTax: 0, breakdown: [] };
+  const breakdown: TaxBracketResult[] = [];
+  let totalTax = 0;
+  for (const bracket of TAX_BRACKETS) {
+    if (pkp <= bracket.min) break;
+    const upper = Math.min(pkp, bracket.max);
+    const taxableInBracket = upper - bracket.min;
+    const tax = taxableInBracket * bracket.rate;
+    breakdown.push({ ...bracket, taxableInBracket, tax });
+    totalTax += tax;
+  }
+  return { totalTax, breakdown };
+};
+
 export default function PajakCenterPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -31,6 +73,11 @@ export default function PajakCenterPage() {
   const [fxRates, setFxRates] = useState<ExchangeRates>({});
   const [showDisclaimer, setShowDisclaimer] = useState(true);
 
+  // Status PTKP disimpan lokal di browser (bukan per-tahun-pajak) — jarang
+  // berubah, jadi tidak perlu kolom database sendiri.
+  const [maritalStatus, setMaritalStatus] = useState<'TK' | 'K'>('TK');
+  const [dependents, setDependents] = useState(0);
+
   useEffect(() => {
     exchangeRateService.getLatestRates().then(setFxRates).catch(console.error);
   }, []);
@@ -39,7 +86,23 @@ export default function PajakCenterPage() {
     if (localStorage.getItem('pajak-center-disclaimer-dismissed') === '1') {
       setShowDisclaimer(false);
     }
+    const savedStatus = localStorage.getItem('pajak-center-marital-status');
+    if (savedStatus === 'TK' || savedStatus === 'K') setMaritalStatus(savedStatus);
+    const savedDependents = Number(localStorage.getItem('pajak-center-dependents'));
+    if (Number.isFinite(savedDependents) && savedDependents >= 0 && savedDependents <= MAX_TANGGUNGAN) {
+      setDependents(savedDependents);
+    }
   }, []);
+
+  const updateMaritalStatus = (status: 'TK' | 'K') => {
+    setMaritalStatus(status);
+    localStorage.setItem('pajak-center-marital-status', status);
+  };
+
+  const updateDependents = (count: number) => {
+    setDependents(count);
+    localStorage.setItem('pajak-center-dependents', String(count));
+  };
 
   const dismissDisclaimer = () => {
     setShowDisclaimer(false);
@@ -175,8 +238,16 @@ export default function PajakCenterPage() {
   // seperti "Biaya (bucket)" di laporan cetak yang sudah benar duluan.
   const netIncome = totalPemasukan - (totalPengeluaran - investasiPembelian);
 
+  // PTKP, PKP, dan estimasi PPh terutang (Pasal 17 UU HPP) — PKP dibulatkan
+  // ke bawah kelipatan Rp1.000 sesuai ketentuan resmi.
+  const ptkp = PTKP_BASE[maritalStatus] + Math.min(dependents, MAX_TANGGUNGAN) * PTKP_PER_TANGGUNGAN;
+  const pkp = Math.floor(Math.max(0, netIncome - ptkp) / 1000) * 1000;
+  const { totalTax: pphTerutang, breakdown: pphBreakdown } = useMemo(() => calculatePPh(pkp), [pkp]);
+
+  // SPT resmi melaporkan nilai dalam Rupiah penuh (tanpa desimal) — desimal
+  // di sini cuma bikin angka lebih panjang dan gampang kepotong di cetakan.
   const formatIDR = (val: number) => {
-    return 'Rp ' + new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
+    return 'Rp ' + new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(val));
   };
 
   const formatIDRShort = (val: number) => {
@@ -191,6 +262,7 @@ export default function PajakCenterPage() {
   const animatedTotalUtang = useCountUp(totalUtang);
   const animatedTotalPiutang = useCountUp(totalPiutang);
   const animatedHartaBersih = useCountUp(totalHarta + totalPiutang - totalUtang);
+  const animatedPphTerutang = useCountUp(pphTerutang);
 
   const generatedAt = useMemo(() => {
     const now = new Date();
@@ -244,6 +316,38 @@ export default function PajakCenterPage() {
     tableHtml += buildListTable('Daftar Utang', daftarUtang);
     tableHtml += buildListTable('Daftar Piutang', daftarPiutang);
     tableHtml += `<p>Harta Bersih (Harta + Piutang &minus; Utang): Rp ${(totalHarta + totalPiutang - totalUtang).toLocaleString()}</p>`;
+
+    tableHtml += `<h3>Perhitungan PPh Terutang (Pasal 17 UU HPP)</h3>`;
+    tableHtml += `<table border="1">
+      <tr style="background-color: #f1f5f9;"><th style="padding: 10px;">Komponen</th><th style="padding: 10px;">Nilai (Rp)</th></tr>
+      <tr><td style="padding: 8px;">Status PTKP</td><td style="padding: 8px;">${maritalStatus}/${dependents}</td></tr>
+      <tr><td style="padding: 8px;">PTKP Setahun</td><td style="padding: 8px; text-align: right;">${ptkp.toLocaleString()}</td></tr>
+      <tr><td style="padding: 8px;">Penghasilan Neto</td><td style="padding: 8px; text-align: right;">${netIncome.toLocaleString()}</td></tr>
+      <tr><td style="padding: 8px; font-weight: bold;">Penghasilan Kena Pajak (PKP)</td><td style="padding: 8px; text-align: right; font-weight: bold;">${pkp.toLocaleString()}</td></tr>
+    </table>`;
+
+    tableHtml += `<table border="1">
+      <tr style="background-color: #f1f5f9;">
+        <th style="padding: 10px;">Lapisan PKP</th>
+        <th style="padding: 10px;">Tarif</th>
+        <th style="padding: 10px;">Dasar Pengenaan (Rp)</th>
+        <th style="padding: 10px;">PPh (Rp)</th>
+      </tr>`;
+    if (pphBreakdown.length === 0) {
+      tableHtml += `<tr><td style="padding: 8px;" colspan="4">PKP Rp 0 atau di bawah PTKP &ndash; tidak ada PPh terutang.</td></tr>`;
+    } else {
+      pphBreakdown.forEach((b) => {
+        tableHtml += `<tr>
+          <td style="padding: 8px;">Rp ${b.min.toLocaleString()} s.d. ${b.max === Infinity ? 'ke atas' : 'Rp ' + b.max.toLocaleString()}</td>
+          <td style="padding: 8px; text-align: right;">${(b.rate * 100).toFixed(0)}%</td>
+          <td style="padding: 8px; text-align: right;">${b.taxableInBracket.toLocaleString()}</td>
+          <td style="padding: 8px; text-align: right;">${b.tax.toLocaleString()}</td>
+        </tr>`;
+      });
+    }
+    tableHtml += `<tr style="background-color: #f1f5f9;"><td style="padding: 8px; font-weight: bold;" colspan="3">Total PPh Terutang</td><td style="padding: 8px; text-align: right; font-weight: bold;">${pphTerutang.toLocaleString()}</td></tr>`;
+    tableHtml += `</table>`;
+
     tableHtml += `<p style="font-size: 10px; color: #94a3b8;">Draft pembanding pribadi &ndash; bukan pengganti pelaporan resmi via coretaxdjp.pajak.go.id</p>`;
 
     const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
@@ -264,100 +368,244 @@ export default function PajakCenterPage() {
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] print:p-0 print:m-0 print:bg-white print:max-w-none">
       
-      {/* 0. Print-Only Minimalist Report (Matches User Image) */}
-      <div className="hidden print:block font-sans text-slate-800 p-8 space-y-10">
-        <div className="space-y-1">
-          <h1 className="text-xl font-bold">Draft Ringkasan SPT {selectedYear}</h1>
-          <p className="text-[10px] text-slate-400">Dibuat pada {generatedAt} · Dokumen ini adalah draft pembanding pribadi, bukan pengganti pelaporan resmi via coretaxdjp.pajak.go.id</p>
-        </div>
+      {/* 0. Print-Only Report — layout terinspirasi format SPT Tahunan 1770 */}
+      <div className="hidden print:block font-sans text-slate-800 p-8 text-[11px] leading-relaxed">
 
-        {/* Ringkasan Total */}
-        <div className="space-y-4">
-          <h2 className="text-sm font-bold border-b border-slate-100 pb-2">Ringkasan Total (Tahun {selectedYear})</h2>
-          <div className="space-y-3">
-            {[
-              { label: 'Penghasilan', value: formatIDR(totalPemasukan) },
-              { label: 'Pengeluaran', value: formatIDR(totalPengeluaran) },
-              { label: 'Penghasilan Neto', value: formatIDR(netIncome) },
-              { label: 'Investasi (Pembelian Tahun Ini)', value: formatIDR(investasiPembelian) },
-              { label: 'Total Harta (posisi terkini)', value: formatIDR(totalHarta) },
-              { label: 'Total Utang (posisi terkini)', value: formatIDR(totalUtang) },
-              { label: 'Total Piutang (posisi terkini)', value: formatIDR(totalPiutang) },
-              { label: 'Harta Bersih (Harta + Piutang − Utang)', value: formatIDR(totalHarta + totalPiutang - totalUtang) },
-              { label: 'Jumlah Transaksi', value: transactions.length },
-            ].map((item, idx) => (
-              <div key={idx} className="flex justify-between items-center text-xs">
-                <span className="text-slate-600">{item.label}</span>
-                <span className="font-medium">{item.value}</span>
-              </div>
-            ))}
+        {/* Kop Laporan */}
+        <div className="flex items-center justify-between border-b-2 border-slate-800 pb-4 mb-6">
+          <div className="flex items-center gap-3">
+            <Image src="/images/Logo-new.png" alt="Leosiqra" width={40} height={40} className="rounded-lg" />
+            <div>
+              <p className="text-sm font-black tracking-tight">Leosiqra</p>
+              <p className="text-[9px] text-slate-400 uppercase tracking-widest">Personal Finance &amp; Tax Assistant</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <h1 className="text-base font-black uppercase tracking-tight">Draft Perhitungan Pajak Penghasilan Orang Pribadi</h1>
+            <p className="text-[9px] text-slate-400">Tahun Pajak {selectedYear} &middot; Dicetak {generatedAt}</p>
           </div>
         </div>
 
-        {/* Daftar Harta */}
-        <div className="space-y-4 pt-4">
-          <h2 className="text-sm font-bold border-b border-slate-100 pb-2">Daftar Harta</h2>
-          <div className="space-y-2">
-            {daftarHarta.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">Belum ada aset yang tercatat.</p>
-            ) : daftarHarta.map((h, idx) => (
-              <div key={idx} className="flex justify-between items-center text-xs">
-                <span className="text-slate-600">{h.name} <span className="text-slate-400">({h.type})</span></span>
-                <span className="font-medium">{formatIDR(h.value)}</span>
-              </div>
-            ))}
-          </div>
+        <p className="text-[9px] text-slate-500 bg-slate-50 border border-slate-200 rounded p-2 mb-6">
+          Dokumen ini adalah <strong>draft perhitungan pribadi</strong> berdasarkan data yang Anda catat di Leosiqra, dibuat mengikuti struktur
+          SPT Tahunan 1770 sebagai alat bantu. Ini <strong>bukan dokumen resmi Direktorat Jenderal Pajak</strong> dan tidak menggantikan
+          pelaporan SPT yang sah melalui <strong>coretaxdjp.pajak.go.id</strong>. Verifikasi seluruh angka sebelum melapor resmi.
+        </p>
+
+        {/* A. Identitas & Status PTKP */}
+        <div className="mb-6">
+          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">A. Status Perpajakan (PTKP)</h2>
+          <table className="w-full border-collapse border border-slate-300 table-fixed">
+            <tbody>
+              <tr>
+                <td className="border border-slate-300 px-3 py-1.5 w-1/2 text-slate-500 break-words">Status Pernikahan</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-bold">{maritalStatus === 'TK' ? 'Tidak Kawin (TK)' : 'Kawin (K)'}</td>
+              </tr>
+              <tr>
+                <td className="border border-slate-300 px-3 py-1.5 text-slate-500">Jumlah Tanggungan</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-bold">{dependents} orang</td>
+              </tr>
+              <tr>
+                <td className="border border-slate-300 px-3 py-1.5 text-slate-500">Kategori PTKP</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-bold">{maritalStatus}/{dependents}</td>
+              </tr>
+              <tr>
+                <td className="border border-slate-300 px-3 py-1.5 text-slate-500">Penghasilan Tidak Kena Pajak (PTKP) Setahun</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-bold">{formatIDR(ptkp)}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
-        {/* Daftar Utang */}
-        <div className="space-y-4 pt-4">
-          <h2 className="text-sm font-bold border-b border-slate-100 pb-2">Daftar Utang (Kewajiban)</h2>
-          <div className="space-y-2">
-            {daftarUtang.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">Tidak ada utang belum lunas yang tercatat.</p>
-            ) : daftarUtang.map((u, idx) => (
-              <div key={idx} className="flex justify-between items-center text-xs">
-                <span className="text-slate-600">{u.name}</span>
-                <span className="font-medium">{formatIDR(u.value)}</span>
-              </div>
-            ))}
-          </div>
+        {/* B. Penghasilan Neto & PKP */}
+        <div className="mb-6">
+          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">B. Penghasilan Neto &amp; Penghasilan Kena Pajak (PKP)</h2>
+          <table className="w-full border-collapse border border-slate-300 table-fixed">
+            <tbody>
+              <tr>
+                <td className="border border-slate-300 px-3 py-1.5 w-1/2 text-slate-500">Penghasilan Bruto Setahun</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-bold">{formatIDR(totalPemasukan)}</td>
+              </tr>
+              <tr>
+                <td className="border border-slate-300 px-3 py-1.5 text-slate-500">Pengeluaran / Biaya Setahun</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-bold">{formatIDR(totalPengeluaran - investasiPembelian)}</td>
+              </tr>
+              <tr>
+                <td className="border border-slate-300 px-3 py-1.5 text-slate-500">Penghasilan Neto Setahun</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-bold">{formatIDR(netIncome)}</td>
+              </tr>
+              <tr>
+                <td className="border border-slate-300 px-3 py-1.5 text-slate-500">Dikurangi: PTKP</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-bold">({formatIDR(ptkp)})</td>
+              </tr>
+              <tr className="bg-slate-100">
+                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">Penghasilan Kena Pajak (PKP)</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-black">{formatIDR(pkp)}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
-        {/* Daftar Piutang */}
-        <div className="space-y-4 pt-4">
-          <h2 className="text-sm font-bold border-b border-slate-100 pb-2">Daftar Piutang</h2>
-          <div className="space-y-2">
-            {daftarPiutang.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">Tidak ada piutang belum lunas yang tercatat.</p>
-            ) : daftarPiutang.map((p, idx) => (
-              <div key={idx} className="flex justify-between items-center text-xs">
-                <span className="text-slate-600">{p.name}</span>
-                <span className="font-medium">{formatIDR(p.value)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Mapping Kategori Pajak */}
-        <div className="space-y-4 pt-4">
-          <h2 className="text-sm font-bold border-b border-slate-100 pb-2">Mapping Kategori Pajak (Estimasi Internal)</h2>
-          <div className="space-y-3">
-            {[
-              { label: 'Penghasilan (bucket)', value: formatIDR(totalPemasukan) },
-              { label: 'Biaya (bucket)', value: formatIDR(totalPengeluaran - investasiPembelian) },
-              { label: 'Investasi (bucket)', value: formatIDR(investasiPembelian) },
-              { label: 'Lainnya (bucket)', value: formatIDR(0) },
-            ].map((item, idx) => (
-              <div key={idx} className="flex justify-between items-center text-xs">
-                <span className="text-slate-600">{item.label}</span>
-                <span className="font-medium">{item.value}</span>
-              </div>
-            ))}
-          </div>
-          <p className="text-[10px] text-slate-400 italic pt-2">
-            *Bucket ini adalah estimasi kasar untuk membantu pengecekan pribadi, bukan perhitungan PPh resmi (PTKP/PKP/tarif Pasal 17). Verifikasi ulang saat mengisi SPT resmi.
+        {/* C. Perhitungan PPh Terutang (Pasal 17) */}
+        <div className="mb-6">
+          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">C. Perhitungan PPh Terutang &ndash; Tarif Progresif Pasal 17 UU HPP</h2>
+          <table className="w-full border-collapse border border-slate-300 table-fixed">
+            <thead>
+              <tr className="bg-slate-100">
+                <th className="border border-slate-300 px-3 py-1.5 text-left w-[38%]">Lapisan Penghasilan Kena Pajak</th>
+                <th className="border border-slate-300 px-3 py-1.5 text-right w-[12%]">Tarif</th>
+                <th className="border border-slate-300 px-3 py-1.5 text-right w-[25%]">Dasar Pengenaan</th>
+                <th className="border border-slate-300 px-3 py-1.5 text-right w-[25%]">PPh</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pphBreakdown.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="border border-slate-300 px-3 py-2 text-center italic text-slate-400">
+                    PKP Rp 0 atau di bawah PTKP &ndash; tidak ada dasar pengenaan pajak.
+                  </td>
+                </tr>
+              ) : pphBreakdown.map((b, idx) => (
+                <tr key={idx}>
+                  <td className="border border-slate-300 px-3 py-1.5 break-words">
+                    {formatIDR(b.min)} s.d. {b.max === Infinity ? 'ke atas' : formatIDR(b.max)}
+                  </td>
+                  <td className="border border-slate-300 px-3 py-1.5 text-right">{(b.rate * 100).toFixed(0)}%</td>
+                  <td className="border border-slate-300 px-3 py-1.5 text-right break-words">{formatIDR(b.taxableInBracket)}</td>
+                  <td className="border border-slate-300 px-3 py-1.5 text-right break-words">{formatIDR(b.tax)}</td>
+                </tr>
+              ))}
+              <tr className="bg-slate-100">
+                <td colSpan={3} className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">Total PPh Terutang Setahun</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-black text-right">{formatIDR(pphTerutang)}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="text-[9px] text-slate-500 italic mt-1.5">
+            {pphTerutang > 0
+              ? 'Berdasarkan perhitungan di atas, terdapat PPh Orang Pribadi yang berpotensi terutang untuk tahun pajak ini.'
+              : 'Berdasarkan perhitungan di atas, tidak ada PPh Orang Pribadi yang terutang untuk tahun pajak ini (PKP nihil).'}
           </p>
+        </div>
+
+        {/* D. Daftar Harta */}
+        <div className="mb-6" style={{ pageBreakInside: 'avoid' }}>
+          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">D. Daftar Harta (Posisi Terkini)</h2>
+          <table className="w-full border-collapse border border-slate-300 table-fixed">
+            <thead>
+              <tr className="bg-slate-100">
+                <th className="border border-slate-300 px-3 py-1.5 text-left w-[45%]">Nama Harta</th>
+                <th className="border border-slate-300 px-3 py-1.5 text-left w-[25%]">Jenis</th>
+                <th className="border border-slate-300 px-3 py-1.5 text-right w-[30%]">Nilai (Rp)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {daftarHarta.length === 0 ? (
+                <tr><td colSpan={3} className="border border-slate-300 px-3 py-2 text-center italic text-slate-400">Belum ada aset yang tercatat.</td></tr>
+              ) : daftarHarta.map((h, idx) => (
+                <tr key={idx}>
+                  <td className="border border-slate-300 px-3 py-1.5 break-words">{h.name}</td>
+                  <td className="border border-slate-300 px-3 py-1.5 text-slate-500 break-words">{h.type}</td>
+                  <td className="border border-slate-300 px-3 py-1.5 text-right break-words">{formatIDR(h.value)}</td>
+                </tr>
+              ))}
+              <tr className="bg-slate-100">
+                <td colSpan={2} className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">Total Harta</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-black text-right">{formatIDR(totalHarta)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* E. Daftar Utang */}
+        <div className="mb-6" style={{ pageBreakInside: 'avoid' }}>
+          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">E. Daftar Utang (Kewajiban, Posisi Terkini)</h2>
+          <table className="w-full border-collapse border border-slate-300 table-fixed">
+            <thead>
+              <tr className="bg-slate-100">
+                <th className="border border-slate-300 px-3 py-1.5 text-left w-[65%]">Nama Pemberi Pinjaman</th>
+                <th className="border border-slate-300 px-3 py-1.5 text-right w-[35%]">Nilai (Rp)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {daftarUtang.length === 0 ? (
+                <tr><td colSpan={2} className="border border-slate-300 px-3 py-2 text-center italic text-slate-400">Tidak ada utang belum lunas yang tercatat.</td></tr>
+              ) : daftarUtang.map((u, idx) => (
+                <tr key={idx}>
+                  <td className="border border-slate-300 px-3 py-1.5 break-words">{u.name}</td>
+                  <td className="border border-slate-300 px-3 py-1.5 text-right break-words">{formatIDR(u.value)}</td>
+                </tr>
+              ))}
+              <tr className="bg-slate-100">
+                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">Total Utang</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-black text-right">{formatIDR(totalUtang)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* F. Daftar Piutang */}
+        <div className="mb-6" style={{ pageBreakInside: 'avoid' }}>
+          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">F. Daftar Piutang (Posisi Terkini)</h2>
+          <table className="w-full border-collapse border border-slate-300 table-fixed">
+            <thead>
+              <tr className="bg-slate-100">
+                <th className="border border-slate-300 px-3 py-1.5 text-left w-[65%]">Nama Peminjam</th>
+                <th className="border border-slate-300 px-3 py-1.5 text-right w-[35%]">Nilai (Rp)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {daftarPiutang.length === 0 ? (
+                <tr><td colSpan={2} className="border border-slate-300 px-3 py-2 text-center italic text-slate-400">Tidak ada piutang belum lunas yang tercatat.</td></tr>
+              ) : daftarPiutang.map((p, idx) => (
+                <tr key={idx}>
+                  <td className="border border-slate-300 px-3 py-1.5 break-words">{p.name}</td>
+                  <td className="border border-slate-300 px-3 py-1.5 text-right break-words">{formatIDR(p.value)}</td>
+                </tr>
+              ))}
+              <tr className="bg-slate-100">
+                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">Total Piutang</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-black text-right">{formatIDR(totalPiutang)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* G. Ringkasan Harta Bersih */}
+        <div className="mb-6" style={{ pageBreakInside: 'avoid' }}>
+          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">G. Ringkasan Harta Bersih</h2>
+          <table className="w-full border-collapse border border-slate-300 table-fixed">
+            <tbody>
+              <tr>
+                <td className="border border-slate-300 px-3 py-1.5 w-1/2 text-slate-500">Total Harta</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-bold">{formatIDR(totalHarta)}</td>
+              </tr>
+              <tr>
+                <td className="border border-slate-300 px-3 py-1.5 text-slate-500">Ditambah: Total Piutang</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-bold">{formatIDR(totalPiutang)}</td>
+              </tr>
+              <tr>
+                <td className="border border-slate-300 px-3 py-1.5 text-slate-500">Dikurangi: Total Utang</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-bold">({formatIDR(totalUtang)})</td>
+              </tr>
+              <tr className="bg-slate-100">
+                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">Harta Bersih</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-black">{formatIDR(totalHarta + totalPiutang - totalUtang)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer */}
+        <div className="pt-4 border-t border-slate-300 flex items-center justify-between">
+          <p className="text-[9px] text-slate-400 max-w-md">
+            Dihasilkan otomatis oleh Leosiqra berdasarkan data yang Anda catat sendiri. Bukan dokumen resmi DJP/Coretax &mdash;
+            lapor SPT resmi melalui <strong>coretaxdjp.pajak.go.id</strong>.
+          </p>
+          <div className="text-right">
+            <p className="text-[9px] text-slate-400">Dicetak melalui</p>
+            <p className="text-xs font-black">Leosiqra.com</p>
+          </div>
         </div>
       </div>
 
@@ -436,6 +684,127 @@ export default function PajakCenterPage() {
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Kewajiban (Utang)</p>
           <h3 className={cn("text-2xl font-black tracking-tight tabular-nums", totalUtang > 0 ? "text-rose-500" : "text-slate-900")}>{formatIDRShort(animatedTotalUtang)}</h3>
           <p className="text-[11px] text-slate-400 leading-relaxed font-medium">Hutang belum lunas dari menu Hutang &amp; Piutang.</p>
+        </div>
+      </div>
+
+      {/* 2b. Estimasi PPh Terutang (PTKP/PKP/Tarif Pasal 17) */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 print:hidden">
+        {/* Pengaturan PTKP */}
+        <div className="lg:col-span-2 p-6 rounded-[32px] bg-white border border-slate-100 shadow-sm space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+              <Calculator size={16} />
+            </div>
+            <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">Status PTKP</h4>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status Pernikahan</p>
+            <div className="flex gap-2">
+              {(['TK', 'K'] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => updateMaritalStatus(s)}
+                  className={cn(
+                    "flex-1 px-3 py-2 rounded-xl text-xs font-bold border transition-all",
+                    maritalStatus === s
+                      ? "bg-indigo-600 border-indigo-600 text-white shadow-sm"
+                      : "bg-white border-slate-200 text-slate-500 hover:border-indigo-200"
+                  )}
+                >
+                  {s === 'TK' ? 'Tidak Kawin' : 'Kawin'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Jumlah Tanggungan</p>
+            <div className="flex gap-2">
+              {[0, 1, 2, 3].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => updateDependents(n)}
+                  className={cn(
+                    "flex-1 px-3 py-2 rounded-xl text-xs font-bold border transition-all",
+                    dependents === n
+                      ? "bg-indigo-600 border-indigo-600 text-white shadow-sm"
+                      : "bg-white border-slate-200 text-slate-500 hover:border-indigo-200"
+                  )}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-slate-100 space-y-1.5">
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-slate-500 font-medium">Kategori PTKP</span>
+              <span className="font-black text-slate-900">{maritalStatus}/{dependents}</span>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-slate-500 font-medium">PTKP Setahun</span>
+              <span className="font-black text-slate-900">{formatIDRShort(ptkp)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Estimasi PPh Terutang */}
+        <div className="lg:col-span-3 p-6 rounded-[32px] bg-gradient-to-br from-slate-900 to-navy text-white shadow-xl shadow-slate-200/50 space-y-5">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-black text-slate-300 uppercase tracking-widest">Estimasi PPh Terutang (Pasal 17 UU HPP)</h4>
+            {pphTerutang > 0 ? (
+              <span className="px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-300 text-[9px] font-black uppercase tracking-widest border border-rose-500/30">
+                Ada PPh Terutang
+              </span>
+            ) : (
+              <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[9px] font-black uppercase tracking-widest border border-emerald-500/30">
+                Tidak Ada PPh Terutang
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Penghasilan Neto</p>
+              <p className="text-sm font-black tabular-nums">{formatIDRShort(netIncome)}</p>
+            </div>
+            <div>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">PTKP</p>
+              <p className="text-sm font-black tabular-nums">{formatIDRShort(ptkp)}</p>
+            </div>
+            <div>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">PKP</p>
+              <p className="text-sm font-black tabular-nums">{formatIDRShort(pkp)}</p>
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-white/10">
+            {pphBreakdown.length === 0 ? (
+              <p className="text-xs text-slate-300 italic">
+                Penghasilan Kena Pajak (PKP) Rp 0 atau di bawah PTKP — tidak ada PPh Pasal 21 tahunan yang terutang.
+              </p>
+            ) : (
+              <div className="space-y-1.5">
+                {pphBreakdown.map((b, i) => (
+                  <div key={i} className="flex justify-between items-center text-[11px]">
+                    <span className="text-slate-300">
+                      Lapisan {formatIDRShort(b.min)} &ndash; {b.max === Infinity ? 'ke atas' : formatIDRShort(b.max)} @ {(b.rate * 100).toFixed(0)}%
+                    </span>
+                    <span className="font-bold tabular-nums">{formatIDRShort(b.tax)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="pt-3 border-t border-white/10 flex justify-between items-center">
+            <span className="text-xs font-black text-slate-300 uppercase tracking-widest">Total PPh Terutang</span>
+            <span className={cn("text-2xl font-black tabular-nums", pphTerutang > 0 ? "text-rose-300" : "text-emerald-300")}>
+              {formatIDRShort(animatedPphTerutang)}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -606,6 +975,14 @@ export default function PajakCenterPage() {
           }
           .max-w-[1400px] {
             max-width: none !important;
+          }
+          table {
+            table-layout: fixed !important;
+            width: 100% !important;
+          }
+          td, th {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
           }
         }
       `}</style>

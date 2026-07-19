@@ -72,7 +72,10 @@ CREATE TABLE IF NOT EXISTS admin_settings (
   market_fx_update TEXT,
   market_crypto_update TEXT,
   market_stock_update TEXT,
-  market_last_update TEXT
+  market_last_update TEXT,
+  developer_name TEXT,
+  developer_photo_url TEXT,
+  developer_quote TEXT
 );
 
 CREATE TABLE IF NOT EXISTS admin_logs (

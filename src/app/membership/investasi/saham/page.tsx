@@ -163,6 +163,7 @@ export default function SahamPage() {
     }
   };
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
+  const formatTime = (d: Date) => new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' }).format(d);
 
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
@@ -252,9 +253,11 @@ export default function SahamPage() {
           </div>
         ) : (
           <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left border-collapse min-w-[900px] xl:min-w-0">
+            <table className="w-full text-left border-collapse min-w-[1000px] xl:min-w-0">
               <thead>
                 <tr className="border-b border-slate-50">
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">No</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Jam</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Kode Saham</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Icon/Logo</th>
@@ -271,8 +274,10 @@ export default function SahamPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((inv) => (
+                {filtered.map((inv, i) => (
                   <tr key={inv.id} className="group hover:bg-indigo-50/30 transition-colors border-b border-slate-50 last:border-b-0">
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center text-xs font-bold text-slate-400">{i + 1}</td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-500">{formatTime(inv.createdAt)}</td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-500">{formatDate(inv.dateInvested)}</td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap">
                       <p className="text-sm font-black text-slate-900">{inv.stockCode || inv.name}</p>
@@ -318,12 +323,12 @@ export default function SahamPage() {
                           <TrendingDown size={14} />
                           <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] px-2 py-1 rounded opacity-0 group-hover/sell:opacity-100 transition-opacity whitespace-nowrap">Jual Saham</span>
                         </button>
-                        <button onClick={async () => { 
-                          if (inv.id && user?.uid) { 
+                        <button onClick={async () => {
+                          if (inv.id && user?.uid) {
                             if (confirm(`Hapus investasi ${inv.name}? Semua total saldo akan dikembalikan.`)) {
-                              await investmentService.hardDeleteInvestment(inv.id, user.uid);
+                              await investmentService.hardDeleteInvestment(inv);
                             }
-                          } 
+                          }
                         }}
                           className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all">
                           <Trash2 size={14} />

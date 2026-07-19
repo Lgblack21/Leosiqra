@@ -75,6 +75,7 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
               '/membership/budget': 'Fiscal Strategy & Budgeting',
               '/membership/recurring': 'Recurring Transactions Automation',
               '/membership/contact': 'Pro Activation & Payment Confirmation',
+              '/membership/hubungi-kami': 'Hubungi Kami',
               '/membership/profile': 'User Identity & Preferences',
               '/membership/ai-leosiqra': 'Ethereal Portfolio Intelligence',
               '/membership/market-data': 'Global Market Intelligence Dashboard',

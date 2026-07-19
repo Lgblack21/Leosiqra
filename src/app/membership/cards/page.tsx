@@ -57,9 +57,8 @@ export default function MyCardsPage() {
     });
   };
 
-  // Drag-and-drop native (bukan framer-motion Reorder) — Reorder sempat bikin
-  // kartu ke-drag tampil nyangkut/melayang karena konflik dengan transform
-  // absolute pada badge warna kartu.
+  // Drag-and-drop native, bukan framer-motion Reorder — Reorder bikin kartu
+  // ke-drag nyangkut/melayang gara-gara konflik transform dengan badge kartu.
   const [draggedAccountId, setDraggedAccountId] = useState<string | null>(null);
   const handleAccountDrop = (targetId: string) => {
     if (!draggedAccountId || draggedAccountId === targetId) return;
@@ -151,17 +150,12 @@ export default function MyCardsPage() {
   }, []);
 
   // === GLOBAL TOTALS ===
-  // Akun bisa berbeda mata uang (IDR, USD, KHR, ...), jadi setiap nominal
-  // dikonversi ke IDR dulu (pakai kurs live) sebelum dijumlahkan — menjumlah
-  // angka mentah lintas mata uang akan menghasilkan total yang salah.
-  // Transaksi/tabungan sudah menyimpan amountIDR (dihitung modal input saat
-  // disimpan) — pakai itu, bukan konversi ulang, biar konsisten dan tidak
-  // bergantung pada kurs saat halaman ini dibuka.
+  // Pakai amountIDR yang sudah tersimpan (bukan konversi ulang di sini) — akun
+  // bisa beda mata uang, dan ini menjaga totalnya konsisten dengan kurs saat disimpan.
   const totalIn = useMemo(() => {
     const dailyIn = transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + (t.amountIDR || t.amount), 0);
     const debtIn = transactions.filter(t => t.type === 'debt' && t.category === 'Hutang').reduce((s, t) => s + (t.amountIDR || t.amount), 0);
-    // Penarikan tabungan = uang balik ke rekening, jadi dihitung sebagai
-    // pemasukan — bukan pengeluaran seperti Setoran.
+    // Penarikan tabungan = uang balik ke rekening, dihitung sebagai pemasukan.
     const savingIn = savings.filter(s => s.transactionType === 'Penarikan').reduce((s2, t) => s2 + (t.amountIDR || t.amount), 0);
     return dailyIn + debtIn + savingIn;
   }, [transactions, savings]);
@@ -179,9 +173,7 @@ export default function MyCardsPage() {
       .reduce((s, a) => s + toIDR(a.initialBalance || 0, a.currency), 0);
   }, [accounts, toIDR]);
 
-  // Saldo total pakai field `balance` yang sudah dipelihara live (sama seperti
-  // saldo per-rekening di atas) — bukan direkonstruksi dari initial + transaksi,
-  // supaya tidak salah tanda/tidak lengkap seperti sebelumnya.
+  // Sama seperti accountBalance di atas: pakai `balance` live, bukan rekonstruksi.
   const totalBalance = useMemo(() => {
     return accounts
       .filter(a => a.type !== 'Credit Card' && a.type !== 'kartu')
@@ -242,12 +234,8 @@ export default function MyCardsPage() {
     [accountTransactionsAll]
   );
 
-  // Saldo rekening pakai field `balance` yang sudah dipelihara live oleh
-  // accountService.updateAccountBalance di setiap transaksi/deposito/tabungan
-  // — bukan dihitung ulang dari initial_balance + transaksi, karena rekonstruksi
-  // itu dulu tidak lengkap (tidak menghitung efek investasi) dan salah tanda
-  // untuk Penarikan tabungan (ikut dianggap uang keluar, padahal uang masuk
-  // kembali ke rekening), jadi saldo yang tampil bisa jauh meleset/minus palsu.
+  // Pakai `balance` yang sudah dipelihara live — merekonstruksi dari initial_balance
+  // + transaksi dulu salah tanda untuk Penarikan tabungan dan bikin saldo minus palsu.
   const accountBalance = selectedAccount?.balance || 0;
 
   // Nilai konversi ke IDR untuk ditampilkan sebagai info kedua saat akun
@@ -289,6 +277,7 @@ export default function MyCardsPage() {
     }
   };
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
+  const formatTime = (d: Date) => new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' }).format(d);
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -499,7 +488,7 @@ export default function MyCardsPage() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-slate-700 truncate">{trx.note || trx.category}</p>
-                        <p className="text-[9px] text-slate-400">{formatDate(trx.date)}</p>
+                        <p className="text-[9px] text-slate-400">{formatDate(trx.date)}, {formatTime(trx.createdAt)}</p>
                       </div>
                     </div>
                     <p className={cn("text-sm font-black shrink-0 ml-2", trx.type === 'pemasukan' ? 'text-emerald-600' : 'text-rose-500')}>

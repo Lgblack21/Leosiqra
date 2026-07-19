@@ -11,7 +11,7 @@ import { addTransaction } from '@/lib/services/transactionService';
 import { CategorySelect } from '@/components/CategorySelect';
 import { CurrencySelect } from '@/components/CurrencySelect';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, getCurrencySymbol } from '@/lib/utils';
 
 interface DepositModalProps {
   userId: string;
@@ -289,7 +289,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">{getCurrencySymbol(formData.currency)}</span>
               <NumberInput value={formData.amountInvested} onChange={val => setFormData(p => ({...p, amountInvested: val}))}
                 placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 pl-11 pr-4 text-sm font-bold text-slate-700 transition-all" />
             </div>
@@ -364,9 +364,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
                   setFormData(p => ({
                     ...p,
                     accountId: e.target.value,
-                    // Nominal deposito selalu dalam mata uang rekening sumber
-                    // — tanpa ini currency picker (independen) bisa ketinggalan
-                    // di IDR meski rekeningnya USD/KHR/dll.
+                    // Ikuti mata uang rekening yang dipilih.
                     currency: selectedAccount?.currency || p.currency,
                   }));
                 }}

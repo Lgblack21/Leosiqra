@@ -14,7 +14,7 @@ import {
   ImageIcon
 } from 'lucide-react';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { subscribeAppSettings, AppSettings } from '@/lib/services/adminService';
+import { getMemberPaymentInfo, AppSettings } from '@/lib/services/adminService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { auth, db } from '@/lib/cf-client';
 import { collection, addDoc, serverTimestamp } from '@/lib/cf-firestore';
@@ -47,16 +47,15 @@ export default function ContactPage() {
   }, [settings?.proPackages]);
 
   useEffect(() => {
-    const unsub = subscribeAppSettings((data) => {
-      setSettings(data);
-      setLoading(false);
-    });
+    getMemberPaymentInfo()
+      .then(setSettings)
+      .finally(() => setLoading(false));
     const unsubAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
         setForm(prev => ({ ...prev, email: user.email || '', name: user.displayName || '' }));
       }
     });
-    return () => { unsub(); unsubAuth(); };
+    return () => { unsubAuth(); };
   }, []);
 
   useEffect(() => {

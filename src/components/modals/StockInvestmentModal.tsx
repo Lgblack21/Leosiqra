@@ -143,11 +143,8 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
       const isSell = formData.transactionType === 'Jual' && !!initialData?.id;
 
       if (isSell && initialData) {
-        // Mode JUAL: dulu baris beli aslinya ditimpa langsung dengan angka
-        // transaksi jual, jadi modal awal hilang dan untung/rugi selalu
-        // tampil 0%. Sekarang: baris beli asli DIPERTAHANKAN (jadi riwayat
-        // cost basis), baris baru dibuat khusus untuk realisasi jualnya,
-        // dengan untung/rugi dihitung proporsional terhadap modal aslinya.
+        // Jual: baris beli asli dipertahankan sebagai cost basis, baris baru
+        // dibuat untuk realisasi jualnya (untung/rugi dihitung proporsional).
         const originalShares = Number(initialData.sharesCount) || 0;
         const originalInvested = Number(initialData.amountInvested) || 0;
         const costBasisPerShare = originalShares > 0 ? originalInvested / originalShares : 0;
@@ -247,8 +244,7 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
         status: 'Active'
       };
 
-      // Penyimpanan inti — jika ini gagal, belum ada posisi yang tersimpan/berubah
-      // dan aman untuk user mencoba lagi.
+      // Penyimpanan inti, aman untuk retry kalau gagal.
       let finalInvestmentId = editData?.id || '';
       if (editData?.id) {
         await investmentService.updateInvestment(editData.id, investmentPayload);
@@ -256,10 +252,8 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
         finalInvestmentId = await investmentService.createInvestment(investmentPayload);
       }
 
-      // Sinkronisasi lanjutan (ringkasan total, saldo akun, catatan transaksi
-      // ledger) bersifat non-fatal — posisi investasinya sendiri sudah
-      // tersimpan, jadi kegagalan di sini tidak boleh membuat modal terlihat
-      // "gagal total" dan memicu submit ulang yang bisa membuat posisi dobel.
+      // Sinkronisasi lanjutan bersifat non-fatal — posisinya sendiri sudah
+      // tersimpan, jangan sampai gagal di sini memicu submit ulang (posisi dobel).
       try {
         if (editData) {
           const oldInvested = Number(editData.amountInvested) || 0;
@@ -439,9 +433,7 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
                   setFormData(p => ({
                     ...p,
                     accountId: e.target.value,
-                    // Nominal saham selalu dalam mata uang rekening sumber —
-                    // tanpa ini currency picker (independen) bisa ketinggalan
-                    // di IDR meski rekeningnya USD/KHR/dll.
+                    // Ikuti mata uang rekening yang dipilih.
                     currency: selectedAccount?.currency || p.currency,
                   }));
                 }}

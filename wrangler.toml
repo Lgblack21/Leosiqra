@@ -1,6 +1,7 @@
 name = "membersite-leosiqra"
 main = "cloudflare/src/index.ts"
 compatibility_date = "2026-04-22"
+compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 
 [observability]
@@ -30,8 +31,9 @@ tag = "v1"
 new_sqlite_classes = ["RealtimeRoom"]
 
 [triggers]
-# Jam 10:00 WIB (UTC+7) = 03:00 UTC — proses deposito yang jatuh tempo hari ini.
-crons = ["0 3 * * *"]
+# 03:00 UTC = 10:00 WIB — deposito jatuh tempo + pengingat recurring hari ini.
+# 17:01 UTC = 00:01 WIB (hari berikutnya) — ringkasan pengeluaran/pemasukan kemarin.
+crons = ["0 3 * * *", "1 17 * * *"]
 
 [vars]
 APP_NAME = "Leosiqra"

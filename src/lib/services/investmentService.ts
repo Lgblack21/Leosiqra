@@ -1,5 +1,7 @@
 import { cloudflareApi } from '../cloudflare-api';
 import { notifyCollectionChanged } from '../cf-firestore';
+import { accountService } from './accountService';
+import { updateMemberTotals } from './userService';
 
 export interface Investment {
   id?: string;
@@ -174,9 +176,35 @@ export const investmentService = {
     notifyCollectionChanged('investments');
   },
 
-  async hardDeleteInvestment(id: string, userId: string) {
-    void userId;
-    await cloudflareApi(`/api/member/investments/${id}`, { method: 'DELETE' });
+  // Balikkan dulu efek saldo/total sebelum hapus — kebalikan dari efek saat
+  // posisi ini dibuat (Penempatan/Beli/Pembelian menarik saldo keluar & catat
+  // investasi; Penarikan/Jual/Penjualan/Bunga mengembalikan saldo & catat
+  // pemasukan). Baris proyeksi ("Hasil Deposito", dll) tidak punya efek nyata.
+  async hardDeleteInvestment(inv: Investment) {
+    if (!inv.id) return;
+    const invested = Number(inv.amountInvested) || 0;
+    const current = Number(inv.currentValue) || 0;
+    const isOutflow = inv.transactionType === 'Penempatan' || inv.transactionType === 'Beli' || inv.transactionType === 'Pembelian';
+    const isInflow = inv.transactionType === 'Penarikan' || inv.transactionType === 'Jual' || inv.transactionType === 'Penjualan' || inv.transactionType === 'Bunga';
+
+    try {
+      if (isOutflow && inv.accountId && inv.accountId !== 'General') {
+        await accountService.updateAccountBalance(inv.accountId, invested);
+        await updateMemberTotals(inv.userId, 'pengeluaran', -invested);
+        await updateMemberTotals(inv.userId, 'investasi', -invested);
+      } else if (isInflow && inv.accountId && inv.accountId !== 'General') {
+        await accountService.updateAccountBalance(inv.accountId, -current);
+        await updateMemberTotals(inv.userId, 'pemasukan', -current);
+        // Jual/Penjualan mencatat modal (cost basis) di amountInvested — kembalikan ke total investasi.
+        if (inv.transactionType === 'Jual' || inv.transactionType === 'Penjualan') {
+          await updateMemberTotals(inv.userId, 'investasi', invested);
+        }
+      }
+    } catch (e) {
+      console.error('Gagal membalikkan saldo sebelum hapus investasi:', e);
+    }
+
+    await cloudflareApi(`/api/member/investments/${inv.id}`, { method: 'DELETE' });
     notifyCollectionChanged('investments');
   },
 

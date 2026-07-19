@@ -23,9 +23,9 @@ export const LandingFooter = () => (
         <div className="space-y-4">
           <h4 className="font-serif font-black text-slate-900 tracking-tight text-sm">Produk</h4>
           <ul className="space-y-3 text-xs text-slate-500 font-medium">
-            <li><a href="#" className="hover:text-indigo-600 transition-colors">Produk</a></li>
-            <li><a href="#" className="hover:text-indigo-600 transition-colors">Fitur</a></li>
-            <li><a href="#" className="hover:text-indigo-600 transition-colors">Cara Kerja</a></li>
+            <li><a href="/#produk" className="hover:text-indigo-600 transition-colors">Produk</a></li>
+            <li><a href="/#fitur" className="hover:text-indigo-600 transition-colors">Fitur</a></li>
+            <li><a href="/#cara-kerja" className="hover:text-indigo-600 transition-colors">Cara Kerja</a></li>
             <li><a href="/input-cepat" className="hover:text-indigo-600 transition-colors">Input Cepat</a></li>
           </ul>
         </div>
@@ -33,9 +33,8 @@ export const LandingFooter = () => (
         <div className="space-y-4">
           <h4 className="font-serif font-black text-slate-900 tracking-tight text-sm">Keamanan</h4>
           <ul className="space-y-3 text-xs text-slate-500 font-medium">
-            <li><a href="#" className="hover:text-indigo-600 transition-colors">Transparansi</a></li>
-            <li><a href="#" className="hover:text-indigo-600 transition-colors">Kebijakan Privasi</a></li>
-            <li><a href="#" className="hover:text-indigo-600 transition-colors">Syarat Layanan</a></li>
+            <li><a href="/privacy" className="hover:text-indigo-600 transition-colors">Kebijakan Privasi</a></li>
+            <li><a href="/terms" className="hover:text-indigo-600 transition-colors">Syarat Layanan</a></li>
           </ul>
         </div>
 
@@ -44,7 +43,7 @@ export const LandingFooter = () => (
           <ul className="space-y-3 text-xs text-slate-500 font-medium">
             <li><a href="/auth/login" className="hover:text-indigo-600 transition-colors">Masuk</a></li>
             <li><a href="/auth/register" className="hover:text-indigo-600 transition-colors">Daftar Gratis</a></li>
-            <li><a href="#" className="hover:text-indigo-600 transition-colors">Hubungi Kami</a></li>
+            <li><a href="/hubungi-kami" className="hover:text-indigo-600 transition-colors">Hubungi Kami</a></li>
           </ul>
         </div>
       </div>

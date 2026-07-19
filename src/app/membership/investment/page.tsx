@@ -365,7 +365,7 @@ export default function InvestmentDashboard() {
                 )}
               >
                 <p className={cn("text-[8px] md:text-[9px] font-black uppercase tracking-widest mb-1 truncate", isPositive ? "text-emerald-400" : "text-rose-400")}>{r.name}</p>
-                <p className={cn("text-base md:text-lg font-black tracking-tight tabular-nums", isPositive ? "text-emerald-600" : "text-rose-500")}>{isPositive ? '+' : ''}{(r.returnPercentage??0).toFixed(1)}%</p>
+                <p className={cn("text-base md:text-lg font-black tracking-tight tabular-nums", isPositive ? "text-emerald-600" : "text-rose-500")}>{isPositive ? '+' : ''}{(r.returnPercentage??0).toFixed(2)}%</p>
               </div>
             );
           })}

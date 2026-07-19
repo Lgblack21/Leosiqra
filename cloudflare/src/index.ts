@@ -1,5 +1,11 @@
 import { verifySync } from "otplib";
 import { DurableObject } from "cloudflare:workers";
+import {
+  buildPushPayload,
+  type PushMessage,
+  type PushSubscription as WebPushSubscription,
+  type VapidKeys,
+} from "@block65/webcrypto-web-push";
 
 export interface Env {
   DB: D1Database;
@@ -20,6 +26,9 @@ export interface Env {
   OPENROUTER_MODEL?: string;
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;
+  VAPID_PUBLIC_KEY?: string;
+  VAPID_PRIVATE_KEY?: string;
+  VAPID_SUBJECT?: string;
 }
 
 type AppUser = {
@@ -476,6 +485,12 @@ const readSession = async (env: Env, request: Request) => {
   };
 };
 
+// Satu-satunya akun yang boleh ubah foto & kata motivasi developer di landing
+// page — role tetap 'admin' biasa di DB (enum role cuma admin/user, ubah jadi
+// superadmin penuh butuh migrasi CHECK constraint yang jauh lebih berisiko),
+// jadi pembatasannya dilakukan lewat pengecekan email persis di sini.
+const SUPERADMIN_EMAIL = "leo.wendry@yahoo.com";
+
 const requireSession = async (env: Env, request: Request, requiredRole?: "admin" | "user") => {
   const session = await readSession(env, request);
   if (!session) {
@@ -513,7 +528,11 @@ const getMaintenanceSettings = async (env: Env) =>
       maintenance_type,
       maintenance_code,
       maintenance_image_url,
-      whatsapp
+      whatsapp,
+      billing_email,
+      developer_name,
+      developer_photo_url,
+      developer_quote
      FROM admin_settings
      WHERE id = 'global'
      LIMIT 1`
@@ -524,6 +543,10 @@ const getMaintenanceSettings = async (env: Env) =>
     maintenance_code: string | null;
     maintenance_image_url: string | null;
     whatsapp: string | null;
+    billing_email: string | null;
+    developer_name: string | null;
+    developer_photo_url: string | null;
+    developer_quote: string | null;
   }>();
 
 // Konteks lengkap keuangan user untuk AI — sebelumnya cuma kirim sebagian
@@ -1057,6 +1080,24 @@ async function handleMe(request: Request, env: Env) {
           whatsapp: settings.whatsapp,
         }
       : null,
+    // Kontak publik (WA/email) — sengaja dipisah dari /api/admin/settings
+    // (admin-only) supaya halaman Hubungi Kami tetap tampil untuk pengunjung
+    // yang belum login maupun member biasa (bukan admin).
+    contact: settings
+      ? {
+          whatsapp: settings.whatsapp,
+          billingEmail: settings.billing_email,
+        }
+      : null,
+    // Profil developer (foto + kata motivasi) untuk landing page — publik,
+    // tapi cuma SUPERADMIN_EMAIL yang bisa mengubahnya lewat /api/admin/settings.
+    developer: settings
+      ? {
+          name: settings.developer_name,
+          photoUrl: settings.developer_photo_url,
+          quote: settings.developer_quote,
+        }
+      : null,
   });
 }
 
@@ -1299,6 +1340,15 @@ interface TransactionInsertParams {
   date: string;
   displayDate?: string;
   note?: string | null;
+  status?: string;
+  lenderName?: string | null;
+  totalDebt?: number | null;
+  installmentTenor?: number | null;
+  monthlyInterest?: number | null;
+  totalInterest?: number | null;
+  paymentStatus?: string | null;
+  relatedId?: string | null;
+  relatedType?: string | null;
 }
 
 // Inti pembuatan transaksi, dipakai bersama oleh endpoint umum
@@ -1322,8 +1372,10 @@ const insertTransactionRecord = async (env: Env, userId: string, params: Transac
   await env.DB.prepare(
     `INSERT INTO transactions (
       id, user_id, type, amount, amount_idr, category, sub_category, currency,
-      account_id, target_account_id, date, display_date, note, status, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'VERIFIED', ?, ?)`
+      account_id, target_account_id, lender_name, total_debt, installment_tenor,
+      monthly_interest, total_interest, date, display_date, note, status,
+      payment_status, related_id, related_type, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       id,
@@ -1336,9 +1388,18 @@ const insertTransactionRecord = async (env: Env, userId: string, params: Transac
       currency,
       params.accountId ?? null,
       params.targetAccountId ?? null,
+      params.lenderName ?? null,
+      params.totalDebt ?? null,
+      params.installmentTenor ?? null,
+      params.monthlyInterest ?? null,
+      params.totalInterest ?? null,
       params.date,
       params.displayDate ?? params.date,
       params.note ?? null,
+      params.status ?? "VERIFIED",
+      params.paymentStatus ?? null,
+      params.relatedId ?? null,
+      params.relatedType ?? null,
       nowIso(),
       nowIso()
     )
@@ -1374,6 +1435,15 @@ async function handleCreateTransaction(request: Request, env: Env) {
     date?: string;
     display_date?: string;
     note?: string;
+    status?: string;
+    lender_name?: string;
+    total_debt?: number;
+    installment_tenor?: number;
+    monthly_interest?: number;
+    total_interest?: number;
+    payment_status?: string;
+    related_id?: string;
+    related_type?: string;
   }>(request);
 
   if (!payload.type || !payload.amount || !payload.date) {
@@ -1391,6 +1461,15 @@ async function handleCreateTransaction(request: Request, env: Env) {
     targetAccountId: payload.target_account_id,
     date: payload.date,
     displayDate: payload.display_date,
+    status: payload.status,
+    lenderName: payload.lender_name,
+    totalDebt: payload.total_debt,
+    installmentTenor: payload.installment_tenor,
+    monthlyInterest: payload.monthly_interest,
+    totalInterest: payload.total_interest,
+    paymentStatus: payload.payment_status,
+    relatedId: payload.related_id,
+    relatedType: payload.related_type,
     note: payload.note,
   });
 
@@ -1817,11 +1896,8 @@ async function handleDeleteBudget(request: Request, env: Env, budgetId: string) 
   return json({ ok: true });
 }
 
-// Harga saham live (Yahoo Finance, tidak butuh API key) — diproksi lewat
-// Worker karena endpoint chart Yahoo tidak mengizinkan CORS langsung dari
-// browser. Di-cache di edge Cloudflare per simbol supaya tidak setiap buka
-// halaman Saham memicu fetch baru (Yahoo bisa membatasi/blokir kalau terlalu
-// sering dipanggil dari IP/User-Agent yang sama).
+// Harga saham live dari Yahoo Finance, diproksi lewat Worker (chart endpoint-nya
+// tidak izinkan CORS dari browser). Di-cache per simbol biar tidak kena rate limit.
 const YAHOO_EXCHANGE_SUFFIX: Record<string, string> = {
   IDX: ".JK",
 };
@@ -2878,7 +2954,20 @@ async function handleAdminSettings(request: Request, env: Env) {
     "market_crypto_update",
     "market_stock_update",
     "market_last_update",
+    "developer_name",
+    "developer_photo_url",
+    "developer_quote",
   ]);
+
+  // Field developer_* cuma boleh diubah SUPERADMIN_EMAIL, walau admin lain
+  // tetap bisa akses tab-tab settings yang lain.
+  const developerFields = ["developer_name", "developer_photo_url", "developer_quote"];
+  if (
+    fields.some((key) => developerFields.includes(key)) &&
+    authResult.session.user.email !== SUPERADMIN_EMAIL
+  ) {
+    return json({ error: "Hanya superadmin yang bisa mengubah profil developer." }, { status: 403 });
+  }
 
   // D1 tidak menerima boolean JS mentah lewat .bind() — harus dikonversi ke
   // integer 0/1 dulu, sama seperti pola is_default di tempat lain.
@@ -2924,6 +3013,63 @@ async function handleAdminSettings(request: Request, env: Env) {
     .run();
 
   return json({ ok: true });
+}
+
+// Subset admin_settings yang aman dibaca member biasa (bukan admin) untuk
+// menyelesaikan pembayaran Pro: rekening/QRIS/paket/kontak. Sengaja endpoint
+// terpisah dari /api/admin/settings (admin-only) — sebelumnya halaman
+// Konfirmasi Pembayaran memakai endpoint admin itu langsung sehingga member
+// non-admin selalu gagal fetch (403) dan rekening/QRIS/WA/email kosong.
+async function handleMemberPaymentInfo(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) {
+    return authResult.error;
+  }
+
+  const settings = await env.DB.prepare(
+    `SELECT
+      billing_email,
+      whatsapp,
+      pro_price,
+      bank_name,
+      bank_account_name,
+      bank_number,
+      qris_text,
+      qris_url,
+      free_plan_days,
+      value_json
+     FROM admin_settings
+     WHERE id = 'global'
+     LIMIT 1`
+  ).first<Record<string, unknown>>();
+
+  let proPackages: unknown[] = [];
+  const rawJson = settings?.value_json;
+  if (typeof rawJson === "string" && rawJson) {
+    try {
+      const parsed = JSON.parse(rawJson) as { proPackages?: unknown[] };
+      if (Array.isArray(parsed.proPackages)) proPackages = parsed.proPackages;
+    } catch {
+      // value_json lama tidak valid JSON — abaikan.
+    }
+  }
+
+  return json({
+    item: settings
+      ? {
+          billing_email: settings.billing_email,
+          whatsapp: settings.whatsapp,
+          pro_price: settings.pro_price,
+          bank_name: settings.bank_name,
+          bank_account_name: settings.bank_account_name,
+          bank_number: settings.bank_number,
+          qris_text: settings.qris_text,
+          qris_url: settings.qris_url,
+          free_plan_days: settings.free_plan_days,
+          pro_packages: proPackages,
+        }
+      : null,
+  });
 }
 
 async function handleAdminUsers(request: Request, env: Env) {
@@ -3332,10 +3478,7 @@ export class RealtimeRoom extends DurableObject {
 }
 
 // --- Deposito: perpanjangan/pencairan otomatis saat jatuh tempo -----------
-// Dieksekusi tiap hari lewat Cron Trigger (lihat wrangler.toml). Tiga
-// `maturity_action`: 'cairkan' (tutup, pokok+bunga ke rekening), 'aro_bunga'
-// (bunga cair ke rekening, pokok diperpanjang 1 bulan dengan rate yang sama),
-// 'aro_full' (pokok+bunga digulirkan/compound untuk 1 bulan berikutnya).
+// Cron harian (wrangler.toml). maturity_action: cairkan / aro_bunga / aro_full.
 
 interface DepositRow {
   id: string;
@@ -3430,10 +3573,8 @@ const processMaturedDeposit = async (env: Env, inv: DepositRow) => {
       .bind(totalResult, totalResult, invested, inv.user_id)
       .run();
 
-    // Tandai baris asli selesai (mencegah cron memprosesnya lagi), lalu catat
-    // baris "Penarikan" baru — sama seperti alur manual — supaya total
-    // portofolio (yang dihitung dari transactionType per baris) tetap nol
-    // bersih untuk deposito yang sudah cair.
+    // Tutup baris asli (biar cron tidak memprosesnya lagi) dan catat baris
+    // Penarikan baru, sama seperti alur manual, supaya total portofolio pas.
     await env.DB.prepare(`UPDATE investments SET status = 'Closed', updated_at = ? WHERE id = ?`)
       .bind(nowIso(), inv.id)
       .run();
@@ -3598,6 +3739,246 @@ const processMaturedDeposit = async (env: Env, inv: DepositRow) => {
   }
 };
 
+// ===== Web Push: subscription CRUD + pengiriman notifikasi =====
+
+type PushSubscriptionRow = {
+  id: string;
+  user_id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+};
+
+async function handleVapidPublicKey(env: Env) {
+  if (!env.VAPID_PUBLIC_KEY) {
+    return json({ error: "Push notification belum dikonfigurasi di server." }, { status: 503 });
+  }
+  return json({ publicKey: env.VAPID_PUBLIC_KEY });
+}
+
+async function handleCreatePushSubscription(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const payload = await parseJson<{
+    endpoint?: string;
+    keys?: { p256dh?: string; auth?: string };
+  }>(request);
+  if (!payload.endpoint || !payload.keys?.p256dh || !payload.keys?.auth) {
+    return json({ error: "Data subscription tidak lengkap." }, { status: 400 });
+  }
+  const userAgent = request.headers.get("user-agent") || null;
+  const existing = await env.DB.prepare("SELECT id FROM push_subscriptions WHERE endpoint = ?")
+    .bind(payload.endpoint)
+    .first<{ id: string }>();
+  if (existing) {
+    await env.DB.prepare(
+      `UPDATE push_subscriptions
+          SET user_id = ?, p256dh = ?, auth = ?, user_agent = ?, updated_at = ?
+        WHERE id = ?`
+    )
+      .bind(authResult.session.user.id, payload.keys.p256dh, payload.keys.auth, userAgent, nowIso(), existing.id)
+      .run();
+    return json({ ok: true, id: existing.id });
+  }
+  const id = generateId();
+  await env.DB.prepare(
+    `INSERT INTO push_subscriptions (id, user_id, endpoint, p256dh, auth, user_agent, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  )
+    .bind(
+      id,
+      authResult.session.user.id,
+      payload.endpoint,
+      payload.keys.p256dh,
+      payload.keys.auth,
+      userAgent,
+      nowIso(),
+      nowIso()
+    )
+    .run();
+  return json({ ok: true, id }, { status: 201 });
+}
+
+async function handleDeletePushSubscription(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const payload = await parseJson<{ endpoint?: string }>(request);
+  if (!payload.endpoint) {
+    return json({ error: "endpoint wajib diisi." }, { status: 400 });
+  }
+  await env.DB.prepare("DELETE FROM push_subscriptions WHERE endpoint = ? AND user_id = ?")
+    .bind(payload.endpoint, authResult.session.user.id)
+    .run();
+  return json({ ok: true });
+}
+
+const formatRupiahForPush = (n: number) =>
+  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
+
+// Kirim ke SATU subscription. Kalau push service balas 404/410 (subscription
+// kadaluarsa/dicabut user dari sisi browser), langsung bersihkan baris itu
+// supaya tidak dicoba lagi di pengiriman berikutnya.
+const sendWebPushToSubscription = async (
+  env: Env,
+  sub: PushSubscriptionRow,
+  message: PushMessage
+): Promise<boolean> => {
+  if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) return false;
+  const vapid: VapidKeys = {
+    subject: env.VAPID_SUBJECT || "mailto:admin@leosiqra.com",
+    publicKey: env.VAPID_PUBLIC_KEY,
+    privateKey: env.VAPID_PRIVATE_KEY,
+  };
+  const subscription: WebPushSubscription = {
+    endpoint: sub.endpoint,
+    expirationTime: null,
+    keys: { p256dh: sub.p256dh, auth: sub.auth },
+  };
+  try {
+    const payload = await buildPushPayload(message, subscription, vapid);
+    const res = await fetch(sub.endpoint, payload);
+    if (res.status === 404 || res.status === 410) {
+      await env.DB.prepare("DELETE FROM push_subscriptions WHERE id = ?").bind(sub.id).run();
+    }
+    return res.ok;
+  } catch (error) {
+    console.error(`Gagal mengirim push ke subscription ${sub.id}:`, error);
+    return false;
+  }
+};
+
+// Kirim ke SEMUA perangkat/subscription milik satu user (bisa lebih dari satu).
+const sendWebPushToUser = async (env: Env, userId: string, title: string, body: string, url: string) => {
+  const { results } = await env.DB.prepare(
+    "SELECT id, user_id, endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ?"
+  )
+    .bind(userId)
+    .all<PushSubscriptionRow>();
+  const message: PushMessage = {
+    data: { title, body, url },
+    options: { urgency: "normal" },
+  };
+  for (const sub of results ?? []) {
+    await sendWebPushToSubscription(env, sub, message);
+  }
+};
+
+// ===== Job 1: ringkasan Pengeluaran/Pemasukan kemarin, jam 00:01 WIB =====
+
+const sendDailySummaryNotifications = async (env: Env) => {
+  // WIB = UTC+7, jadi 00:01 WIB = 17:01 UTC hari sebelumnya. Pada saat cron
+  // ini jalan, "kemarin WIB" adalah rentang [hari ini 17:00 UTC - 24 jam,
+  // hari ini 17:00 UTC).
+  const now = new Date();
+  const endOfWibDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 17, 0, 0));
+  const startOfWibDay = new Date(endOfWibDay.getTime() - 24 * 60 * 60 * 1000);
+
+  const { results } = await env.DB.prepare(
+    `SELECT user_id, type, SUM(COALESCE(NULLIF(amount_idr, 0), amount)) as total
+       FROM transactions
+      WHERE date >= ? AND date < ? AND type IN ('pengeluaran', 'pemasukan')
+      GROUP BY user_id, type`
+  )
+    .bind(startOfWibDay.toISOString(), endOfWibDay.toISOString())
+    .all<{ user_id: string; type: string; total: number }>();
+
+  const totalsByUser = new Map<string, { pengeluaran: number; pemasukan: number }>();
+  for (const row of results ?? []) {
+    const entry = totalsByUser.get(row.user_id) ?? { pengeluaran: 0, pemasukan: 0 };
+    if (row.type === "pengeluaran") entry.pengeluaran = row.total || 0;
+    else if (row.type === "pemasukan") entry.pemasukan = row.total || 0;
+    totalsByUser.set(row.user_id, entry);
+  }
+
+  for (const [userId, totals] of totalsByUser) {
+    // Tidak ada aktivitas sama sekali kemarin -> jangan kirim apa-apa.
+    if (totals.pengeluaran <= 0 && totals.pemasukan <= 0) continue;
+    try {
+      let body = `Pengeluaran ${formatRupiahForPush(totals.pengeluaran)}`;
+      if (totals.pemasukan > 0) {
+        body += `, Pemasukan ${formatRupiahForPush(totals.pemasukan)}`;
+      }
+      await sendWebPushToUser(env, userId, "Ringkasan Kemarin", body, "/membership/transactions/daily");
+    } catch (error) {
+      console.error(`Gagal mengirim ringkasan harian ke user ${userId}:`, error);
+    }
+  }
+};
+
+// ===== Job 2: pengingat recurring yang jatuh tempo hari ini, jam 10:00 WIB =====
+
+type RecurringRow = {
+  id: string;
+  user_id: string;
+  name: string;
+  category: string;
+  amount: number;
+  interval: string;
+  next_date: string;
+};
+
+// Majukan next_date ke kemunculan berikutnya sesuai interval-nya. Rollover
+// akhir bulan ditangani manual (mis. 31 Jan + 1 bulan -> akhir Feb, bukan
+// meluber ke awal Maret).
+const advanceNextDate = (dateStr: string, interval: string): string => {
+  const d = new Date(dateStr);
+  switch (interval) {
+    case "Harian":
+      d.setUTCDate(d.getUTCDate() + 1);
+      break;
+    case "Mingguan":
+      d.setUTCDate(d.getUTCDate() + 7);
+      break;
+    case "Tahunan":
+      d.setUTCFullYear(d.getUTCFullYear() + 1);
+      break;
+    case "Bulanan":
+    default: {
+      const day = d.getUTCDate();
+      d.setUTCDate(1);
+      d.setUTCMonth(d.getUTCMonth() + 1);
+      const daysInNewMonth = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+      d.setUTCDate(Math.min(day, daysInNewMonth));
+      break;
+    }
+  }
+  return d.toISOString();
+};
+
+// Notifikasi pengingat SAJA — tidak otomatis membuat transaksinya.
+const processDueRecurringReminders = async (env: Env) => {
+  // Cron ini jalan jam 03:00 UTC = 10:00 WIB, dan karena tidak melewati
+  // tengah malam WIB (03:00 + 7 jam = 10:00, masih tanggal UTC yang sama),
+  // tanggal UTC saat ini SAMA dengan tanggal WIB-nya — tidak perlu offset.
+  const todayStr = nowIso().slice(0, 10);
+  const { results } = await env.DB.prepare(
+    `SELECT id, user_id, name, category, amount, interval, next_date
+       FROM recurring
+      WHERE status = 'ACTIVE' AND substr(next_date, 1, 10) = ?`
+  )
+    .bind(todayStr)
+    .all<RecurringRow>();
+
+  for (const row of results ?? []) {
+    try {
+      const body = `${row.name} (${row.category}) - ${formatRupiahForPush(row.amount)}`;
+      await sendWebPushToUser(env, row.user_id, "Pengingat Recurring", body, "/membership/recurring");
+    } catch (error) {
+      console.error(`Gagal kirim pengingat recurring ${row.id}:`, error);
+    }
+    // Majukan next_date terlepas dari sukses/gagalnya push, supaya reminder
+    // yang gagal terkirim tidak nyangkut dan berulang tiap hari selamanya.
+    try {
+      const newNextDate = advanceNextDate(row.next_date, row.interval);
+      await env.DB.prepare("UPDATE recurring SET next_date = ?, updated_at = ? WHERE id = ?")
+        .bind(newNextDate, nowIso(), row.id)
+        .run();
+    } catch (error) {
+      console.error(`Gagal memajukan next_date recurring ${row.id}:`, error);
+    }
+  }
+};
+
 const processMaturedDeposits = async (env: Env) => {
   const { results } = await env.DB.prepare(
     `SELECT id, user_id, name, platform, amount_invested, amount_idr, return_percentage, tax_percentage,
@@ -3633,6 +4014,11 @@ const worker = {
     }
 
     try {
+      if ((request.method === "GET" || request.method === "HEAD") && url.protocol === "http:") {
+        url.protocol = "https:";
+        return Response.redirect(url.toString(), 301);
+      }
+
       if (
         (request.method === "GET" || request.method === "HEAD") &&
         url.pathname.length > 1 &&
@@ -3866,8 +4252,24 @@ const worker = {
         }
       }
 
+      if (url.pathname === "/api/vapid-public-key" && request.method === "GET") {
+        return await handleVapidPublicKey(env);
+      }
+
+      if (url.pathname === "/api/member/push-subscription" && request.method === "POST") {
+        return await handleCreatePushSubscription(request, env);
+      }
+
+      if (url.pathname === "/api/member/push-subscription" && request.method === "DELETE") {
+        return await handleDeletePushSubscription(request, env);
+      }
+
       if (url.pathname === "/api/member/payments" && request.method === "POST") {
         return await handleCreateMemberPayment(request, env);
+      }
+
+      if (url.pathname === "/api/member/payment-info" && request.method === "GET") {
+        return await handleMemberPaymentInfo(request, env);
       }
 
       if (url.pathname === "/api/member/ai/chat/history" && request.method === "GET") {
@@ -3923,6 +4325,25 @@ const worker = {
         return await handleAdminLogs(request, env);
       }
 
+      // Trigger manual buat testing notifikasi tanpa nunggu jadwal cron —
+      // admin-only. ?job=daily untuk ringkasan harian (aman diulang-ulang,
+      // cuma baca data), ?job=recurring untuk pengingat recurring (HATI-HATI:
+      // ini juga memajukan next_date beneran seperti kalau cron asli jalan,
+      // jangan dipanggil sembarangan kalau cron 10:00 WIB hari itu juga aktif).
+      if (url.pathname === "/api/admin/debug/run-notifications" && request.method === "POST") {
+        const authResult = await requireSession(env, request, "admin");
+        if (authResult.error) return authResult.error;
+        const job = url.searchParams.get("job");
+        if (job === "daily") {
+          await sendDailySummaryNotifications(env);
+        } else if (job === "recurring") {
+          await processDueRecurringReminders(env);
+        } else {
+          return json({ error: "Pakai ?job=daily atau ?job=recurring." }, { status: 400 });
+        }
+        return json({ ok: true, job });
+      }
+
       if (url.pathname === "/api/realtime" && request.method === "GET") {
         return await handleRealtime(new Request("https://realtime.internal/sse", request), env);
       }
@@ -3963,8 +4384,15 @@ const worker = {
     }
   },
 
-  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    if (event.cron === "1 17 * * *") {
+      // 17:01 UTC = 00:01 WIB (hari berikutnya) — ringkasan kemarin.
+      ctx.waitUntil(sendDailySummaryNotifications(env));
+      return;
+    }
+    // 03:00 UTC = 10:00 WIB — deposito jatuh tempo + pengingat recurring hari ini.
     ctx.waitUntil(processMaturedDeposits(env));
+    ctx.waitUntil(processDueRecurringReminders(env));
   },
 };
 

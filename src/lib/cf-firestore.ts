@@ -1,13 +1,8 @@
 import { cloudflareApi } from "@/lib/cloudflare-api";
 import { auth } from "@/lib/cf-client";
 
-// `onSnapshot` di bawah cuma fetch SEKALI (bukan live subscription sungguhan
-// seperti Firestore asli) — jadi tanpa ini, halaman yang lagi terbuka tidak
-// pernah tahu ada perubahan dari modal/halaman lain (tambah rekening, input
-// transaksi baru, hapus transaksi, dst) sampai di-reload manual. Bus ini
-// menyambungkan setiap mutasi (addDoc/setDoc/updateDoc/deleteDoc, plus
-// service yang manggil cloudflareApi langsung) ke semua listener onSnapshot
-// yang sedang aktif untuk collection yang sama, supaya otomatis refetch.
+// onSnapshot di bawah cuma fetch sekali, bukan live subscription beneran —
+// bus ini menyambungkan tiap mutasi ke listener aktif supaya auto-refetch.
 const changeListeners = new Map<string, Set<() => void>>();
 
 export const notifyCollectionChanged = (collectionName: string) => {
@@ -117,11 +112,8 @@ const isDateKey = (key: string) =>
     "updatedAt",
     "expiredAt",
     "nextDate",
-    // date_invested/target_date (deposito/saham/investasi lainnya) tadinya
-    // tidak ada di daftar ini — nilainya tetap string mentah tanpa .toDate(),
-    // jadi halaman yang baca lewat onSnapshot (bukan investmentService) diam-diam
-    // fallback ke "new Date()" (tanggal hari ini) untuk dateInvested dan null
-    // (tampil "-") untuk targetDate, alih-alih tanggal aslinya.
+    // Dulu hilang dari daftar ini, jadi dateInvested/targetDate tampil salah
+    // (fallback ke hari ini / kosong) di halaman yang baca lewat onSnapshot.
     "date_invested",
     "target_date",
     "dateInvested",

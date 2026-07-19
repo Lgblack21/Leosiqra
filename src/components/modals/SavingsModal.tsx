@@ -8,7 +8,7 @@ import { savingsService } from '@/lib/services/savingsService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { CurrencySelect } from '@/components/CurrencySelect';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, getCurrencySymbol } from '@/lib/utils';
 
 interface SavingsModalProps {
   userId: string;
@@ -69,9 +69,7 @@ export const SavingsModal = ({ userId, isOpen, onClose, initialTransactionType =
     try {
       const selectedDate = new Date(formData.date);
       const displayDate = selectedDate.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
-      // Kalau kurs gagal dikonversi (rates belum termuat / currency ini tidak
-      // ada di rates), jangan kirim amount mentah sebagai amountIDR — biarkan
-      // backend yang menghitung ulang lewat kurs server-side.
+      // Kurs belum siap? Biarkan backend hitung ulang amountIDR, jangan kirim amount mentah.
       const canConvert =
         formData.currency === 'IDR' ||
         Boolean(rates && rates[formData.currency] && rates['IDR']);
@@ -93,10 +91,7 @@ export const SavingsModal = ({ userId, isOpen, onClose, initialTransactionType =
         displayDate: displayDate
       });
 
-      // Setoran: dana keluar dari rekening sumber ke pos tabungan. Penarikan:
-      // kebalikannya, dana kembali dari pos tabungan ke rekening — tanpa ini
-      // saldo rekening tidak pernah berubah, jadi dana yang sama kehitung
-      // dobel/hilang (di saldo rekening DAN di nilai tabungan).
+      // Setoran menarik saldo keluar, Penarikan mengembalikannya.
       if (formData.fromAccount) {
         await accountService.updateAccountBalance(formData.fromAccount, isPenarikan ? amount : -amount);
       }
@@ -156,7 +151,7 @@ export const SavingsModal = ({ userId, isOpen, onClose, initialTransactionType =
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">{getCurrencySymbol(formData.currency)}</span>
               <NumberInput value={formData.amount} onChange={val => setFormData(p => ({...p, amount: val}))}
                 placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 pl-11 pr-5 text-sm font-bold text-slate-700 transition-all" />
             </div>
@@ -199,9 +194,7 @@ export const SavingsModal = ({ userId, isOpen, onClose, initialTransactionType =
                   setFormData(p => ({
                     ...p,
                     fromAccount: e.target.value,
-                    // Setoran/penarikan tabungan selalu dalam mata uang rekening
-                    // terkait — tanpa ini currency picker (independen) bisa
-                    // ketinggalan di IDR meski rekeningnya USD/KHR/dll.
+                    // Ikuti mata uang rekening yang dipilih.
                     currency: selectedAccount?.currency || p.currency,
                   }));
                 }}

@@ -143,11 +143,8 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
       const isSell = formData.transactionType === 'Penjualan' && !!initialData?.id;
 
       if (isSell && initialData) {
-        // Mode JUAL: dulu baris beli aslinya ditimpa langsung dengan angka
-        // transaksi jual, jadi modal awal hilang dan untung/rugi selalu
-        // tampil 0%. Sekarang: baris beli asli DIPERTAHANKAN (jadi riwayat
-        // cost basis), baris baru dibuat khusus untuk realisasi jualnya,
-        // dengan untung/rugi dihitung proporsional terhadap modal aslinya.
+        // Jual: baris beli asli dipertahankan sebagai cost basis, baris baru
+        // dibuat untuk realisasi jualnya (untung/rugi dihitung proporsional).
         const originalQty = Number(initialData.quantity) || 0;
         const originalInvested = Number(initialData.amountInvested) || 0;
         const costBasisPerUnit = originalQty > 0 ? originalInvested / originalQty : 0;
@@ -236,7 +233,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
         dateInvested: new Date(formData.dateInvested), status: 'Active'
       };
 
-      // Penyimpanan inti — posisi asetnya sendiri (jalur Pembelian/Edit).
+      // Penyimpanan inti (jalur Pembelian/Edit).
       let finalInvestmentId = editData?.id || '';
       if (editData?.id) {
         await investmentService.updateInvestment(editData.id, investmentPayload);
@@ -244,38 +241,54 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
         finalInvestmentId = await investmentService.createInvestment(investmentPayload);
       }
 
-      // Sinkronisasi lanjutan (ringkasan total, saldo akun, catatan transaksi
-      // ledger) bersifat non-fatal — posisi asetnya sudah tersimpan, jadi
-      // kegagalan di sini tidak boleh membuat modal terlihat "gagal total"
-      // dan memicu submit ulang yang bisa membuat posisi dobel.
+      // Sinkronisasi lanjutan bersifat non-fatal — posisinya sendiri sudah
+      // tersimpan, jangan sampai gagal di sini memicu submit ulang (posisi dobel).
       try {
+        const newType = formData.transactionType === 'Penjualan' ? 'Penjualan' : 'Pembelian';
+
         if (editData) {
+          // Balikkan dampak lama (totals member DAN saldo rekening asalnya) sebelum
+          // menerapkan yang baru — sebelumnya saldo rekening tidak pernah dibalikkan
+          // di sini, jadi tiap kali edit disimpan, rekening kepotong lagi dari nol.
           const oldInvested = editData.amountInvested;
           const oldType = editData.transactionType || 'Pembelian';
+          const oldAccountId = editData.accountId;
 
           if (oldType === 'Pembelian') {
             await updateMemberTotals(userId, 'pengeluaran', -oldInvested);
             await updateMemberTotals(userId, 'investasi', -oldInvested);
+            if (oldAccountId) await accountService.updateAccountBalance(oldAccountId, oldInvested);
           } else if (oldType === 'Penjualan') {
             await updateMemberTotals(userId, 'pemasukan', -oldInvested);
             await updateMemberTotals(userId, 'investasi', oldInvested);
+            if (oldAccountId) await accountService.updateAccountBalance(oldAccountId, -oldInvested);
           }
         }
 
-        await updateMemberTotals(userId, 'pengeluaran', invested);
-        await updateMemberTotals(userId, 'investasi', invested);
-
-        if (formData.accountId) {
-          await accountService.updateAccountBalance(formData.accountId, -invested);
+        // Terapkan dampak baru sesuai Tipe Transaksi yang benar-benar dipilih di
+        // form (sebelumnya selalu diperlakukan sebagai Pembelian/pengeluaran,
+        // walau user memilih Penjualan/pendapatan).
+        if (newType === 'Penjualan') {
+          await updateMemberTotals(userId, 'pemasukan', invested);
+          await updateMemberTotals(userId, 'investasi', -invested);
+          if (formData.accountId) {
+            await accountService.updateAccountBalance(formData.accountId, invested);
+          }
+        } else {
+          await updateMemberTotals(userId, 'pengeluaran', invested);
+          await updateMemberTotals(userId, 'investasi', invested);
+          if (formData.accountId) {
+            await accountService.updateAccountBalance(formData.accountId, -invested);
+          }
         }
 
         await addTransaction({
-          userId, type: 'pengeluaran', amount: invested,
+          userId, type: newType === 'Penjualan' ? 'pemasukan' : 'pengeluaran', amount: invested,
           amountIDR: canConvert ? convertedAmount : undefined,
-          category: 'Investasi', subCategory: `Lainnya - Pembelian`,
+          category: 'Investasi', subCategory: `Lainnya - ${newType}`,
           accountId: formData.accountId || 'General',
           date: new Date(formData.dateInvested),
-          note: `${editData ? '[Update]' : '[Baru]'} Pembelian ${formData.name}`,
+          note: `${editData ? '[Update]' : '[Baru]'} ${newType} ${formData.name}`,
           status: 'VERIFIED',
           relatedId: finalInvestmentId,
           relatedType: 'investasi'
@@ -392,9 +405,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
                   setFormData(p => ({
                     ...p,
                     accountId: e.target.value,
-                    // Nominal investasi selalu dalam mata uang rekening sumber
-                    // — tanpa ini currency picker (independen) bisa ketinggalan
-                    // di IDR meski rekeningnya USD/KHR/dll.
+                    // Ikuti mata uang rekening yang dipilih.
                     currency: selectedAccount?.currency || p.currency,
                   }));
                 }}

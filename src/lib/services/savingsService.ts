@@ -1,8 +1,9 @@
-import { 
+import {
   collection, doc, addDoc, deleteDoc,
-  getDocs, query, where, orderBy, Timestamp 
+  getDocs, query, orderBy, Timestamp
 } from '@/lib/cf-firestore';
 import { db } from '../cf-client';
+import { accountService } from './accountService';
 
 export interface Saving {
   id?: string;
@@ -42,10 +43,17 @@ export const savingsService = {
     return newDoc.id;
   },
 
-  async getUserSavings(userId: string) {
+  async getUserSavings(_userId: string) {
+    void _userId;
+    // /api/member/savings (dipanggil lewat readApiCollection di cf-firestore)
+    // sudah di-scope ke user sesi yang login di backend — filter where('userId')
+    // di sini cuma akan cocok kalau caller kebetulan mengoper UID asli yang
+    // sama persis, dan diam-diam mengembalikan array kosong kalau dioper
+    // placeholder seperti 'session' (konvensi dipakai getUserTransactions/
+    // getUserInvestments). Makanya di sini query-nya dibiarkan tanpa filter
+    // userId, konsisten dengan cara service lain menangani ini.
     const q = query(
       collection(db, COLLECTION_NAME),
-      where('userId', '==', userId),
       orderBy('date', 'desc')
     );
     const snap = await getDocs(q);
@@ -60,8 +68,19 @@ export const savingsService = {
     });
   },
 
-  async deleteSaving(id: string) {
-    await deleteDoc(doc(db, COLLECTION_NAME, id));
+  // Balikkan saldo rekening dulu sebelum hapus — kebalikan dari efek saat dibuat.
+  async deleteSaving(saving: Saving) {
+    if (saving.fromAccount && saving.fromAccount !== 'General') {
+      try {
+        const amount = Number(saving.amount) || 0;
+        const balanceDelta = saving.transactionType === 'Penarikan' ? -amount : amount;
+        await accountService.updateAccountBalance(saving.fromAccount, balanceDelta);
+      } catch (e) {
+        console.error('Gagal membalikkan saldo sebelum hapus setoran:', e);
+      }
+    }
+    if (!saving.id) return;
+    await deleteDoc(doc(db, COLLECTION_NAME, saving.id));
   }
 };
 

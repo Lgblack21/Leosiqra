@@ -181,10 +181,7 @@ export default function NamaAkunPage() {
     );
   };
 
-  // Kelompokkan tiap baris kategori (satu row = satu subkategori) berdasarkan
-  // nama kategori induk, supaya nama kategori tidak berulang di tiap baris
-  // dan subkategori bisa dikelola satu-satu. Backend sudah ORDER BY sort_order,
-  // jadi urutan dari server ini yang jadi urutan tampil default.
+  // Kelompokkan per nama kategori induk (backend sudah ORDER BY sort_order).
   const groupedCategories = categories.reduce<Record<string, Category[]>>((acc, row) => {
     const key = row.category || '(Tanpa Nama)';
     if (!acc[key]) acc[key] = [];
@@ -192,9 +189,7 @@ export default function NamaAkunPage() {
     return acc;
   }, {});
 
-  // State lokal terpisah untuk urutan tampil per grup — diselaraskan dari data
-  // server tiap kali berubah, tapi diupdate optimis (instan) saat drag-drop
-  // supaya urutan baru langsung kelihatan sebelum request simpan selesai.
+  // Urutan lokal, diupdate optimis saat drag-drop sebelum request simpan selesai.
   const [localOrder, setLocalOrder] = useState<Record<string, Category[]>>({});
   useEffect(() => {
     setLocalOrder(groupedCategories);
@@ -213,9 +208,8 @@ export default function NamaAkunPage() {
     });
   };
 
-  // Drag-and-drop native (bukan framer-motion Reorder) — chip-nya wrap ke
-  // banyak baris, dan Reorder cuma menghitung posisi di satu sumbu lurus
-  // sehingga tampilannya kacau begitu ada baris yang membungkus.
+  // Drag-and-drop native, bukan framer-motion Reorder — chip-nya wrap ke
+  // banyak baris dan Reorder cuma menghitung posisi di satu sumbu lurus.
   const handleChipDrop = (categoryName: string, targetId: string) => {
     if (!draggedId || draggedId === targetId) return;
     const rows = localOrder[categoryName] || [];

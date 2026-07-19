@@ -117,12 +117,10 @@ export default function DepositoPage() {
     }
   };
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
+  const formatTime = (d: Date) => new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' }).format(d);
 
-  // Cairkan manual (tombol di tabel) — beda dari cron otomatis (yang cuma
-  // jalan PAS jatuh tempo): di sini deposito boleh dicairkan kapan saja.
-  // Kalau dicairkan SEBELUM jatuh tempo, bunga hangus (cuma pokok yang balik
-  // ke rekening) dan otomatis berhenti/tidak diperpanjang, sama seperti
-  // pencairan lebih awal di bank sungguhan.
+  // Cairkan manual, bisa kapan saja (beda dari cron yang cuma jalan pas jatuh
+  // tempo) — kalau ditarik sebelum jatuh tempo, bunga hangus.
   const handleCairkan = async (inv: Investment) => {
     if (!user || !inv.id) return;
 
@@ -256,9 +254,11 @@ export default function DepositoPage() {
           </div>
         ) : (
           <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left border-collapse min-w-[800px] xl:min-w-0">
+            <table className="w-full text-left border-collapse min-w-[900px] xl:min-w-0">
               <thead>
                 <tr className="border-b border-slate-50">
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">No</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Jam</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tgl Penempatan</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-indigo-400 uppercase tracking-widest whitespace-nowrap">Tgl Jatuh Tempo</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Nama Deposito</th>
@@ -273,7 +273,7 @@ export default function DepositoPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredInvestments.map((inv) => {
+                {filteredInvestments.map((inv, i) => {
                   const isActivePenempatan = inv.transactionType === 'Penempatan' && inv.status === 'Active';
                   const estimasiCair = isActivePenempatan
                     ? (() => {
@@ -288,6 +288,8 @@ export default function DepositoPage() {
                     : null;
                   return (
                     <tr key={inv.id} className="group hover:bg-indigo-50/30 transition-colors border-b border-slate-50 last:border-b-0">
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center text-xs font-bold text-slate-400">{i + 1}</td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-500">{formatTime(inv.createdAt)}</td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-500">{formatDate(inv.dateInvested)}</td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-black text-indigo-600 italic bg-indigo-50/20">{inv.targetDate ? formatDate(inv.targetDate) : '-'}</td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap">
@@ -336,7 +338,11 @@ export default function DepositoPage() {
                             className="p-2 rounded-lg bg-blue-50 text-blue-400 hover:bg-blue-500 hover:text-white transition-all">
                             <Pencil size={14} />
                           </button>
-                          <button onClick={async () => { if (user && inv.id) { await investmentService.hardDeleteInvestment(inv.id, user.uid); } }}
+                          <button onClick={async () => {
+                            if (user && inv.id && confirm(`Hapus deposito ${inv.name}? Saldo rekening akan disesuaikan kembali.`)) {
+                              await investmentService.hardDeleteInvestment(inv);
+                            }
+                          }}
                             className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all">
                             <Trash2 size={14} />
                           </button>

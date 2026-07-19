@@ -1,0 +1,14 @@
+{
+  "name": "Leosiqra",
+  "short_name": "Leosiqra",
+  "description": "Kelola keuangan pribadi Anda dengan mudah.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#4f46e5",
+  "icons": [
+    { "src": "/images/Logo-new.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/images/Logo-new.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

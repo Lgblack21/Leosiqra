@@ -12,6 +12,7 @@ import {
   updateDoc
 } from '@/lib/cf-firestore';
 import { db } from '../cf-client';
+import { cloudflareApi } from '../cloudflare-api';
 
 // TYPES
 export interface ProPackage {
@@ -33,6 +34,9 @@ export interface AppSettings {
   qrisURL?: string;
   freePlanDays?: number;
   proPackages?: ProPackage[];
+  developerName?: string;
+  developerPhotoUrl?: string;
+  developerQuote?: string;
   maintenance?: {
     isActive: boolean;
     message?: string;
@@ -96,6 +100,9 @@ const mapRowToAppSettings = (row: Record<string, unknown> | null): AppSettings |
     qrisURL: (row.qris_url as string) || undefined,
     freePlanDays: row.free_plan_days != null ? Number(row.free_plan_days) : undefined,
     proPackages,
+    developerName: (row.developer_name as string) || undefined,
+    developerPhotoUrl: (row.developer_photo_url as string) || undefined,
+    developerQuote: (row.developer_quote as string) || undefined,
     maintenance: {
       isActive: Boolean(row.maintenance_is_active),
       type: (row.maintenance_type as 'code' | 'image') || 'code',
@@ -123,6 +130,9 @@ const mapAppSettingsToPayload = (data: Partial<AppSettings>): Record<string, unk
   if (data.qrisText !== undefined) payload.qris_text = data.qrisText;
   if (data.qrisURL !== undefined) payload.qris_url = data.qrisURL;
   if (data.freePlanDays !== undefined) payload.free_plan_days = data.freePlanDays;
+  if (data.developerName !== undefined) payload.developer_name = data.developerName;
+  if (data.developerPhotoUrl !== undefined) payload.developer_photo_url = data.developerPhotoUrl;
+  if (data.developerQuote !== undefined) payload.developer_quote = data.developerQuote;
   if (data.maintenance) {
     if (data.maintenance.isActive !== undefined) payload.maintenance_is_active = data.maintenance.isActive;
     if (data.maintenance.type !== undefined) payload.maintenance_type = data.maintenance.type;
@@ -148,6 +158,15 @@ export const getAppSettings = async () => {
     return mapRowToAppSettings(docSnap.data() as Record<string, unknown>);
   }
   return null;
+};
+
+// Untuk member biasa (bukan admin) yang perlu lihat info rekening/QRIS/paket
+// Pro & kontak saat konfirmasi pembayaran — /api/admin/settings menolak
+// non-admin (403), jadi pakai endpoint /api/member/payment-info yang cuma
+// mengembalikan subset kolom yang aman dibaca member.
+export const getMemberPaymentInfo = async (): Promise<AppSettings | null> => {
+  const data = await cloudflareApi<{ item?: Record<string, unknown> | null }>('/api/member/payment-info');
+  return mapRowToAppSettings(data.item ?? null);
 };
 
 export const subscribeAppSettings = (callback: (settings: AppSettings | null) => void) => {

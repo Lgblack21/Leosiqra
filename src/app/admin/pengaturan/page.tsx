@@ -43,6 +43,11 @@ type LiveCryptoQuote = {
   usd_24h_change?: number;
 };
 
+// Tab "Developer" (foto + kata motivasi di landing page) cuma boleh dilihat
+// dan diubah akun ini — backend (/api/admin/settings) juga menolak PUT
+// developer_* dari admin lain, jadi ini bukan satu-satunya lapisan proteksi.
+const SUPERADMIN_EMAIL = 'leo.wendry@yahoo.com';
+
 export default function AdminPengaturanPage() {
   const [userEmail, setUserEmail] = useState('admin@leosiqra.com');
   const [activeTab, setActiveTab] = useState('billing');
@@ -130,6 +135,7 @@ export default function AdminPengaturanPage() {
   const [isUploadingQRIS, setIsUploadingQRIS] = useState(false);
   const [isUploadingProfile, setIsUploadingProfile] = useState(false);
   const [isUploadingMaintenanceImage, setIsUploadingMaintenanceImage] = useState(false);
+  const [isUploadingDeveloperPhoto, setIsUploadingDeveloperPhoto] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -306,12 +312,30 @@ export default function AdminPengaturanPage() {
     }
   };
 
+  const handleDeveloperPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !settings) return;
+
+    try {
+      setIsUploadingDeveloperPhoto(true);
+      const url = await uploadToCloudinary(file);
+      setSettings({ ...settings, developerPhotoUrl: url });
+      alert('Foto developer berhasil diunggah! Jangan lupa simpan perubahan.');
+    } catch (error) {
+      console.error(error);
+      alert('Gagal mengunggah foto developer.');
+    } finally {
+      setIsUploadingDeveloperPhoto(false);
+    }
+  };
+
   const tabs = [
     { id: 'billing', label: 'Pembayaran', icon: Database },
     { id: 'account', label: 'Akun Admin', icon: Lock },
     { id: 'member', label: 'Member', icon: Users },
     { id: 'maintenance', label: 'Maintenance', icon: Zap },
     { id: 'market', label: 'Market Data', icon: Globe },
+    ...(userEmail === SUPERADMIN_EMAIL ? [{ id: 'developer', label: 'Developer', icon: ImageIcon }] : []),
   ];
 
   return (
@@ -1040,7 +1064,90 @@ export default function AdminPengaturanPage() {
         </div>
       )}
 
-      {(activeTab === 'billing' || activeTab === 'member') && (
+      {activeTab === 'developer' && !loading && userEmail === SUPERADMIN_EMAIL && (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+                <ImageIcon size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-slate-900">Profil Developer (Landing Page)</h3>
+                <p className="text-[11px] font-medium text-slate-400">Foto & kata motivasi yang tampil di halaman depan leosiqra.com. Hanya superadmin yang bisa mengubah ini.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+              <div className="p-6 rounded-2xl bg-slate-50 flex flex-col items-center gap-4">
+                {settings?.developerPhotoUrl ? (
+                  <div className="relative w-40 h-40 rounded-full overflow-hidden bg-white border-4 border-white shadow-md">
+                    <Image src={settings.developerPhotoUrl} alt="Foto Developer" fill className="object-cover" />
+                  </div>
+                ) : (
+                  <div className="w-40 h-40 rounded-full bg-white border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-300">
+                    <ImageIcon size={36} strokeWidth={1} />
+                    <span className="text-[10px] font-black uppercase tracking-widest mt-2 text-center px-4">Belum ada foto</span>
+                  </div>
+                )}
+                <div className="w-full">
+                  <input
+                    type="file"
+                    id="developer-photo-input"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleDeveloperPhotoUpload}
+                    disabled={isUploadingDeveloperPhoto}
+                  />
+                  <label
+                    htmlFor="developer-photo-input"
+                    className={cn(
+                      "w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 text-white rounded-xl text-[11px] font-black uppercase tracking-widest cursor-pointer hover:bg-indigo-600 transition-all",
+                      isUploadingDeveloperPhoto && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    {isUploadingDeveloperPhoto ? (
+                      <>
+                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Mengunggah...
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={13} />
+                        Upload Foto Baru
+                      </>
+                    )}
+                  </label>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[12px] font-black text-slate-600">Nama Developer</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Leo Wendry"
+                    value={settings?.developerName || ''}
+                    onChange={(e) => setSettings(prev => ({ ...prev as AppSettings, developerName: e.target.value }))}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-medium focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[12px] font-black text-slate-600">Kata Motivasi</label>
+                  <textarea
+                    rows={5}
+                    placeholder="Tulis pesan atau kata motivasi singkat yang ingin ditampilkan di landing page..."
+                    value={settings?.developerQuote || ''}
+                    onChange={(e) => setSettings(prev => ({ ...prev as AppSettings, developerQuote: e.target.value }))}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-medium focus:ring-2 focus:ring-indigo-500/20 outline-none resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(activeTab === 'billing' || activeTab === 'member' || activeTab === 'developer') && (
         <div className="flex justify-end">
           <button
             onClick={handleSaveSettings}

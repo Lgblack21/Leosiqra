@@ -20,7 +20,6 @@ import {
   Building2,
   Wallet,
   Loader2,
-  Clock,
   AlertTriangle,
   Trash2,
   Smartphone,
@@ -42,6 +41,13 @@ import { TwoFactorModal } from '@/components/auth/TwoFactorModal';
 import { Modal } from '@/components/ui/Modal';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { useModal } from '@/context/ModalContext';
+import {
+  isPushSupported,
+  isIosNeedsInstall,
+  getExistingSubscription,
+  subscribeToPush,
+  unsubscribeFromPush,
+} from '@/lib/pushNotifications';
 
 interface UserProfile {
   displayName: string;
@@ -80,6 +86,41 @@ export default function ProfilePage() {
   const [resetDone, setResetDone] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
   const RESET_CONFIRM_WORD = 'HAPUS SEMUA DATA';
+
+  // Notifikasi push — status "aktif" ditentukan dari subscription browser
+  // yang beneran ada (bukan cuma field lokal), supaya tetap akurat kalau
+  // user cabut izin notifikasi langsung dari setelan HP-nya.
+  const [notifSupported, setNotifSupported] = useState(true);
+  const [notifIosNeedsInstall, setNotifIosNeedsInstall] = useState(false);
+  const [notifEnabled, setNotifEnabled] = useState(false);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifError, setNotifError] = useState('');
+
+  useEffect(() => {
+    setNotifSupported(isPushSupported());
+    setNotifIosNeedsInstall(isIosNeedsInstall());
+    getExistingSubscription()
+      .then((sub) => setNotifEnabled(Boolean(sub)))
+      .catch(() => setNotifEnabled(false));
+  }, []);
+
+  const handleToggleNotifications = async () => {
+    setNotifError('');
+    setNotifLoading(true);
+    try {
+      if (notifEnabled) {
+        await unsubscribeFromPush();
+        setNotifEnabled(false);
+      } else {
+        await subscribeToPush();
+        setNotifEnabled(true);
+      }
+    } catch (e) {
+      setNotifError(e instanceof Error ? e.message : 'Gagal mengubah pengaturan notifikasi.');
+    } finally {
+      setNotifLoading(false);
+    }
+  };
 
   const [profile, setProfile] = useState<UserProfile>({
     displayName: '', email: '', username: '', phone: '', address: '', photoURL: ''
@@ -526,15 +567,54 @@ export default function ProfilePage() {
                 </div>
                 <ChevronRight size={14} className="text-white/40" />
               </button>
-              <div className="w-full flex items-center justify-between p-4 md:p-5 bg-white/5 rounded-xl md:rounded-2xl border border-white/5 backdrop-blur-md opacity-60 cursor-not-allowed">
-                <div className="flex items-center gap-3 md:gap-4 text-white">
-                  <Bell size={16} className="text-indigo-400" />
-                  <span className="text-[11px] md:text-[12px] font-black tracking-tight">Notification Preferences</span>
+              <div className="w-full p-4 md:p-5 bg-white/5 rounded-xl md:rounded-2xl border border-white/5 backdrop-blur-md">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 md:gap-4 text-white min-w-0">
+                    <Bell size={16} className="text-indigo-400 shrink-0" />
+                    <div className="min-w-0">
+                      <span className="text-[11px] md:text-[12px] font-black tracking-tight block">Notifikasi Push</span>
+                      <span className="text-[9px] font-bold text-white/40 block mt-0.5">
+                        Ringkasan harian &amp; pengingat recurring ke HP
+                      </span>
+                    </div>
+                  </div>
+                  {!notifSupported ? (
+                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest shrink-0">
+                      Tidak Didukung
+                    </span>
+                  ) : notifIosNeedsInstall ? (
+                    <span className="flex items-center gap-1.5 text-[9px] font-black text-amber-400 uppercase tracking-widest shrink-0">
+                      <Smartphone size={11} />
+                      Install Dulu
+                    </span>
+                  ) : notifLoading ? (
+                    <Loader2 size={16} className="animate-spin text-white/50 shrink-0" />
+                  ) : (
+                    <button
+                      onClick={handleToggleNotifications}
+                      className={cn(
+                        "w-10 h-5 md:w-12 md:h-6 rounded-full relative p-1 transition-colors shrink-0",
+                        notifEnabled ? "bg-indigo-600" : "bg-white/10"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-3 h-3 md:w-4 md:h-4 bg-white rounded-full absolute top-1 transition-all",
+                        notifEnabled ? "right-1" : "left-1 opacity-60"
+                      )} />
+                    </button>
+                  )}
                 </div>
-                <span className="flex items-center gap-1.5 text-[9px] font-black text-white/50 uppercase tracking-widest">
-                  <Clock size={11} />
-                  Segera Hadir
-                </span>
+                {notifIosNeedsInstall && (
+                  <p className="text-[9px] font-bold text-white/40 mt-3 leading-relaxed">
+                    Di iPhone, notifikasi cuma bisa jalan kalau Leosiqra sudah ditambahkan ke Home Screen dulu:
+                    tap <span className="font-black text-white/70">Share</span> di Safari →{' '}
+                    <span className="font-black text-white/70">&quot;Add to Home Screen&quot;</span>, lalu buka
+                    Leosiqra dari ikon di Home Screen (bukan dari Safari) untuk mengaktifkan notifikasi.
+                  </p>
+                )}
+                {notifError && (
+                  <p className="text-[9px] font-bold text-rose-400 mt-3">{notifError}</p>
+                )}
               </div>
               <div className="pt-6 border-t border-white/10">
                 <div className="flex items-start justify-between gap-4">
