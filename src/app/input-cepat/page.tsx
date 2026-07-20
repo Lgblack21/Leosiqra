@@ -25,6 +25,7 @@ import { onAuthStateChanged } from "@/lib/cf-auth";
 import { CategorySelect } from "@/components/CategorySelect";
 import { subscribeUserProfile, UserProfile } from "@/lib/services/userService";
 import { LogoImage } from "@/components/ui/LogoImage";
+import { SplashScreen } from "@/components/input-cepat/SplashScreen";
 import { Modal } from "@/components/ui/Modal";
 import { NumberInput } from "@/components/ui/NumberInput";
 import { transactionService, Transaction } from "@/lib/services/transactionService";
@@ -244,36 +245,41 @@ export default function InputCepatPage() {
 
   if (authState === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="animate-spin text-indigo-600" size={28} />
-      </div>
+      <>
+        <SplashScreen ready={false} />
+      </>
     );
   }
 
   if (authState === "unauth") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-slate-50 px-6 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
-          <Wallet size={28} />
+      <>
+        <SplashScreen ready />
+        <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-slate-50 px-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+            <Wallet size={28} />
+          </div>
+          <div>
+            <h1 className="text-xl font-black text-slate-900">Masuk dulu</h1>
+            <p className="text-sm font-medium text-slate-400 mt-1 max-w-xs">
+              Login sekali di sini, setelah itu Input Cepat langsung siap dipakai dari layar utama.
+            </p>
+          </div>
+          <Link
+            href="/auth/login"
+            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-indigo-600 text-white font-black text-sm shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
+          >
+            <LogIn size={16} /> Masuk ke Leosiqra
+          </Link>
         </div>
-        <div>
-          <h1 className="text-xl font-black text-slate-900">Masuk dulu</h1>
-          <p className="text-sm font-medium text-slate-400 mt-1 max-w-xs">
-            Login sekali di sini, setelah itu Input Cepat langsung siap dipakai dari layar utama.
-          </p>
-        </div>
-        <Link
-          href="/auth/login"
-          className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-indigo-600 text-white font-black text-sm shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
-        >
-          <LogIn size={16} /> Masuk ke Leosiqra
-        </Link>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <>
+      <SplashScreen ready />
+      <div className="min-h-screen bg-slate-50 flex flex-col">
       <div className="w-full max-w-md mx-auto px-5 pt-8 pb-28 flex-1">
         {/* Header */}
         <div className="flex items-center gap-2 mb-4">
@@ -638,5 +644,6 @@ export default function InputCepatPage() {
         })()}
       </Modal>
     </div>
+    </>
   );
 }
