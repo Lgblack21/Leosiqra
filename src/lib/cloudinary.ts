@@ -1,9 +1,18 @@
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5MB
+
 export const uploadToCloudinary = async (file: File): Promise<string> => {
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
   if (!cloudName || !uploadPreset) {
     throw new Error("Cloudinary configuration is missing. Please check your .env.local");
+  }
+
+  if (!file.type.startsWith("image/")) {
+    throw new Error("File harus berupa gambar.");
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new Error("Ukuran gambar maksimal 5MB.");
   }
 
   const formData = new FormData();
