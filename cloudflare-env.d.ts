@@ -16,6 +16,10 @@ declare interface KVNamespace {
 
 declare type R2Bucket = object;
 
+declare interface RateLimit {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+}
+
 declare interface DurableObjectNamespace {
   idFromName(name: string): DurableObjectId;
   get(id: DurableObjectId): DurableObjectStub;

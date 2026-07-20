@@ -10,6 +10,7 @@ import {
 export interface Env {
   DB: D1Database;
   CACHE?: KVNamespace;
+  LOGIN_RATE_LIMITER?: RateLimit;
   ASSETS: Fetcher;
   FILES_BUCKET?: R2Bucket;
   REALTIME_ROOM: DurableObjectNamespace;
@@ -277,6 +278,22 @@ const getCookieValue = (request: Request, name: string) => {
 
   return null;
 };
+
+// Cegah brute-force/credential-stuffing di login & spam di register — dicek
+// per-IP dan (khusus login) per-email juga, supaya penyerang yang nyebar
+// request dari banyak IP ke satu email korban tetap kena batas.
+// Fail-open kalau binding belum ke-deploy (mis. dev lokal) supaya tidak
+// mem-block auth sama sekali kalau rate limiter-nya belum tersedia.
+const checkRateLimit = async (env: Env, keys: string[]): Promise<boolean> => {
+  if (!env.LOGIN_RATE_LIMITER) return true;
+  for (const key of keys) {
+    const { success } = await env.LOGIN_RATE_LIMITER.limit({ key });
+    if (!success) return false;
+  }
+  return true;
+};
+
+const clientIpOf = (request: Request) => request.headers.get("cf-connecting-ip") || "unknown";
 
 // Cloudflare Workers membatasi PBKDF2 maksimal 100.000 iterasi.
 const PBKDF2_ITERATIONS = 100000;
@@ -877,18 +894,35 @@ async function handleRegister(request: Request, env: Env) {
     return json({ error: "Nama, email, dan password wajib diisi." }, { status: 400 });
   }
 
-  const existing = await env.DB.prepare("SELECT id, role, plan, status FROM users WHERE email = ?")
+  if (!(await checkRateLimit(env, [`register:ip:${clientIpOf(request)}`]))) {
+    return json({ error: "Terlalu banyak percobaan. Coba lagi dalam beberapa saat." }, { status: 429 });
+  }
+
+  const existing = await env.DB.prepare("SELECT id, role, plan, status, password_hash FROM users WHERE email = ?")
     .bind(payload.email.toLowerCase())
     .first<{
       id: string;
       role: "admin" | "user";
       plan: "FREE" | "PRO";
       status: "AKTIF" | "NONAKTIF" | "GUEST" | "PENDING";
+      password_hash: string;
     }>();
 
   if (existing) {
     if (existing.role === "admin") {
       return json({ error: "Email admin tidak bisa diregister ulang." }, { status: 409 });
+    }
+
+    // Cuma boleh "klaim" akun yang belum pernah punya password lokal beneran
+    // (mis. akun yang baru pernah login lewat Google, sentinel `oauth$google`).
+    // Kalau sudah ada password asli, register ulang WAJIB ditolak — kalau tidak,
+    // siapapun yang tahu email orang lain bisa timpa password (+ 2FA) orang itu
+    // dan langsung login sebagai dia tanpa verifikasi apapun (account takeover).
+    if (existing.password_hash !== "oauth$google") {
+      return json(
+        { error: "Email sudah terdaftar. Silakan login, atau gunakan menu lupa password." },
+        { status: 409 }
+      );
     }
 
     await env.DB.prepare(
@@ -990,12 +1024,22 @@ async function handleLogin(request: Request, env: Env) {
     return json({ error: "Email dan password wajib diisi." }, { status: 400 });
   }
 
+  const normalizedEmail = payload.email.toLowerCase();
+  if (
+    !(await checkRateLimit(env, [
+      `login:ip:${clientIpOf(request)}`,
+      `login:email:${normalizedEmail}`,
+    ]))
+  ) {
+    return json({ error: "Terlalu banyak percobaan. Coba lagi dalam beberapa saat." }, { status: 429 });
+  }
+
   const user = await env.DB.prepare(
     `SELECT id, name, email, password_hash, role, plan, status, whatsapp, two_factor_secret
        FROM users
       WHERE email = ?`
   )
-    .bind(payload.email.toLowerCase())
+    .bind(normalizedEmail)
     .first<{
       id: string;
       name: string;
@@ -1977,10 +2021,8 @@ async function handleStockPrice(request: Request, env: Env) {
     const data = await fetchStockPrice(symbol, exchange);
     return json(data);
   } catch (error) {
-    return json(
-      { error: error instanceof Error ? error.message : "Gagal mengambil harga saham." },
-      { status: 502 }
-    );
+    console.error("fetchStockPrice failed", error);
+    return json({ error: "Gagal mengambil harga saham." }, { status: 502 });
   }
 }
 
@@ -4006,18 +4048,32 @@ const processMaturedDeposits = async (env: Env) => {
   }
 };
 
+// App-nya same-origin (frontend + API disajikan dari Worker yang sama), jadi
+// CORS lintas-origin normalnya tidak pernah dipakai — daftar ini cuma buat
+// jaga-jaga (preview domain, dev lokal), bukan wildcard "*" yang kebuka lebar.
+const ALLOWED_ORIGINS = new Set([
+  "https://www.leosiqra.com",
+  "https://leosiqra.com",
+  "https://membersite-leosiqra.leowendry.workers.dev",
+  "http://localhost:3000",
+  "http://127.0.0.1:8787",
+]);
+
 const worker = {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
     if (request.method === "OPTIONS") {
-      return new Response(null, {
-        headers: {
-          "access-control-allow-origin": "*",
-          "access-control-allow-methods": "GET,POST,PUT,DELETE,OPTIONS",
-          "access-control-allow-headers": "content-type",
-        },
-      });
+      const origin = request.headers.get("origin");
+      const headers: Record<string, string> = {
+        "access-control-allow-methods": "GET,POST,PUT,DELETE,OPTIONS",
+        "access-control-allow-headers": "content-type",
+        vary: "Origin",
+      };
+      if (origin && ALLOWED_ORIGINS.has(origin)) {
+        headers["access-control-allow-origin"] = origin;
+      }
+      return new Response(null, { headers });
     }
 
     try {
@@ -4382,12 +4438,8 @@ const worker = {
 
       return text("Not found", { status: 404 });
     } catch (error) {
-      return json(
-        {
-          error: error instanceof Error ? error.message : "Unexpected error",
-        },
-        { status: 500 }
-      );
+      console.error("Unhandled worker error", error);
+      return json({ error: "Terjadi kesalahan pada server." }, { status: 500 });
     }
   },
 

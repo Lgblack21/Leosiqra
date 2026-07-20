@@ -17,6 +17,13 @@ migrations_dir = "cloudflare/migrations"
 binding = "FILES_BUCKET"
 bucket_name = "leosiqra-assets"
 
+[[ratelimits]]
+name = "LOGIN_RATE_LIMITER"
+namespace_id = "1001"
+[ratelimits.simple]
+limit = 5
+period = 60
+
 [assets]
 directory = "./out"
 binding = "ASSETS"
