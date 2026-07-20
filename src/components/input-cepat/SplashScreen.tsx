@@ -35,16 +35,16 @@ export function SplashScreen({ ready }: { ready: boolean }) {
       {visible && (
         <motion.div
           key="splash"
-          className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-gradient-to-b from-slate-950 via-[#161b33] to-slate-950"
+          className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-white"
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5, ease: "easeInOut" }}
         >
           <div
-            className="absolute inset-0 opacity-60 pointer-events-none"
+            className="absolute inset-0 opacity-70 pointer-events-none"
             style={{
               backgroundImage:
-                "radial-gradient(circle at 18% 20%, rgba(99,102,241,0.35), transparent 45%), radial-gradient(circle at 82% 80%, rgba(124,58,237,0.28), transparent 50%)",
+                "radial-gradient(circle at 18% 20%, rgba(99,102,241,0.10), transparent 45%), radial-gradient(circle at 82% 80%, rgba(124,58,237,0.08), transparent 50%)",
             }}
           />
 
@@ -56,11 +56,11 @@ export function SplashScreen({ ready }: { ready: boolean }) {
               transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
             >
               <motion.span
-                className="absolute inset-0 rounded-3xl bg-indigo-500/30 blur-xl"
+                className="absolute inset-0 rounded-3xl bg-indigo-500/15 blur-xl"
                 animate={{ scale: [1, 1.25, 1], opacity: [0.6, 0.3, 0.6] }}
                 transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
               />
-              <div className="relative w-24 h-24 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl shadow-[0_20px_60px_-15px_rgba(99,102,241,0.65)] flex items-center justify-center overflow-hidden">
+              <div className="relative w-24 h-24 rounded-3xl bg-white border border-slate-100 shadow-[0_20px_50px_-15px_rgba(79,70,229,0.25)] flex items-center justify-center overflow-hidden">
                 <Image
                   src="/images/Logo-new.png"
                   alt="Leosiqra"
@@ -73,7 +73,7 @@ export function SplashScreen({ ready }: { ready: boolean }) {
             </motion.div>
 
             <motion.h1
-              className="text-2xl sm:text-3xl font-serif font-black text-white [text-wrap:balance]"
+              className="text-2xl sm:text-3xl font-serif font-black text-slate-900 [text-wrap:balance]"
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.35, duration: 0.6, ease: "easeOut" }}
