@@ -8,6 +8,7 @@ import { accountService } from '@/lib/services/accountService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { CurrencySelect } from '@/components/CurrencySelect';
 import { NumberInput } from '@/components/ui/NumberInput';
+import { matchIndonesianInstitutionLogo } from '@/lib/indonesianBanks';
 import { useRef } from 'react';
 
 interface CardModalProps {
@@ -28,6 +29,9 @@ export const CardModal = ({ isOpen, onClose, userId }: CardModalProps) => {
     baseValue: ''
   });
   const [uploading, setUploading] = useState(false);
+  // Lacak apakah logo saat ini hasil auto-match (boleh ditimpa lagi kalau nama
+  // diganti) atau hasil upload manual (jangan pernah ditimpa diam-diam).
+  const [logoIsAuto, setLogoIsAuto] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,6 +42,7 @@ export const CardModal = ({ isOpen, onClose, userId }: CardModalProps) => {
     try {
       const url = await uploadToCloudinary(file);
       setFormData(prev => ({ ...prev, logoUrl: url }));
+      setLogoIsAuto(false);
     } catch (error) {
       console.error("Upload failed:", error);
       alert("Gagal mengunggah logo.");
@@ -64,6 +69,7 @@ export const CardModal = ({ isOpen, onClose, userId }: CardModalProps) => {
         baseValue: parseFloat(formData.baseValue) || 0
       });
       setFormData({ name: '', type: 'Credit Card', logoUrl: '', currency: 'IDR', initialBalance: '', creditLimit: '', baseValue: '' });
+      setLogoIsAuto(true);
       onClose();
     } catch (error) {
       console.error("Error creating card/account:", error);
@@ -84,10 +90,19 @@ export const CardModal = ({ isOpen, onClose, userId }: CardModalProps) => {
           {/* Nama Rekening */}
           <div className="space-y-3">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nama Rekening</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              onChange={(e) => {
+                const newName = e.target.value;
+                const matched = matchIndonesianInstitutionLogo(newName, formData.type);
+                if (matched && (logoIsAuto || !formData.logoUrl)) {
+                  setFormData({ ...formData, name: newName, logoUrl: matched });
+                  setLogoIsAuto(true);
+                } else {
+                  setFormData({ ...formData, name: newName });
+                }
+              }}
               placeholder="Contoh: BCA Platinum"
               className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-rose-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
             />
@@ -97,9 +112,18 @@ export const CardModal = ({ isOpen, onClose, userId }: CardModalProps) => {
           <div className="space-y-3">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Jenis Rekening</label>
             <div className="relative">
-              <select 
+              <select
                 value={formData.type}
-                onChange={(e) => setFormData({...formData, type: e.target.value})}
+                onChange={(e) => {
+                  const newType = e.target.value;
+                  const matched = matchIndonesianInstitutionLogo(formData.name, newType);
+                  if (matched && (logoIsAuto || !formData.logoUrl)) {
+                    setFormData({ ...formData, type: newType, logoUrl: matched });
+                    setLogoIsAuto(true);
+                  } else {
+                    setFormData({ ...formData, type: newType });
+                  }
+                }}
                 className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-rose-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer"
               >
                 <option value="Bank Account">Bank Account</option>

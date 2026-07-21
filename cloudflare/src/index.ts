@@ -30,6 +30,7 @@ export interface Env {
   VAPID_PUBLIC_KEY?: string;
   VAPID_PRIVATE_KEY?: string;
   VAPID_SUBJECT?: string;
+  LOGO_DEV_TOKEN?: string;
 }
 
 type AppUser = {
@@ -370,9 +371,16 @@ const verifyPassword = async (password: string, passwordHash: string) => {
   return { ok, needsRehash: ok };
 };
 
-const createSession = async (env: Env, request: Request, user: AppUser) => {
+// PWA ter-install minta sesi "permanen" (login dari web tetap 30 hari seperti
+// biasa) — tidak ada expiry sungguhan yang aman di kolom NOT NULL, jadi pakai
+// 100 tahun sebagai proksi permanen.
+const SESSION_TTL_SECONDS_WEB = 60 * 60 * 24 * 30;
+const SESSION_TTL_SECONDS_PWA = 60 * 60 * 24 * 365 * 100;
+
+const createSession = async (env: Env, request: Request, user: AppUser, options: { permanent?: boolean } = {}) => {
   const sessionId = generateId();
-  const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString();
+  const ttlSeconds = options.permanent ? SESSION_TTL_SECONDS_PWA : SESSION_TTL_SECONDS_WEB;
+  const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
   const ipAddress =
     request.headers.get("cf-connecting-ip") ??
     request.headers.get("x-forwarded-for") ??
@@ -407,6 +415,7 @@ const createSession = async (env: Env, request: Request, user: AppUser) => {
   return {
     token: await createSessionToken(env, sessionId),
     expiresAt,
+    maxAgeSeconds: ttlSeconds,
   };
 };
 
@@ -514,6 +523,98 @@ const readSession = async (env: Env, request: Request) => {
 // superadmin penuh butuh migrasi CHECK constraint yang jauh lebih berisiko),
 // jadi pembatasannya dilakukan lewat pengecekan email persis di sini.
 const SUPERADMIN_EMAIL = "leo.wendry@yahoo.com";
+
+// Sesi dianggap "permanen" (PWA ter-install, lihat createSession) kalau masa
+// berlakunya jauh lebih panjang dari sesi web normal — dihitung dari selisih
+// expires_at/created_at, bukan kolom terpisah, supaya tidak perlu migrasi
+// schema baru (lihat catatan drift schema production di tempat lain).
+const PERMANENT_SESSION_THRESHOLD_MS = 1000 * 60 * 60 * 24 * 365; // > 1 tahun
+const isPermanentSession = (createdAt: string, expiresAt: string) =>
+  new Date(expiresAt).getTime() - new Date(createdAt).getTime() > PERMANENT_SESSION_THRESHOLD_MS;
+
+// Batas sesi WEB (non-permanen) yang boleh aktif bersamaan per user — sesi PWA
+// permanen tidak pernah dihitung/di-evict di sini, jadi PWA tidak akan pernah
+// ke-logout paksa gara-gara user login dari banyak PC.
+const MAX_CONCURRENT_WEB_SESSIONS = 3;
+
+const enforceSessionCap = async (env: Env, userId: string) => {
+  const { results } = await env.DB.prepare(
+    `SELECT id, created_at, expires_at, last_seen_at FROM sessions WHERE user_id = ? AND expires_at > ?`
+  )
+    .bind(userId, new Date().toISOString())
+    .all<{ id: string; created_at: string; expires_at: string; last_seen_at: string }>();
+
+  const webSessions = (results ?? [])
+    .filter((s) => !isPermanentSession(s.created_at, s.expires_at))
+    .sort((a, b) => new Date(a.last_seen_at || a.created_at).getTime() - new Date(b.last_seen_at || b.created_at).getTime());
+
+  const excess = webSessions.length - MAX_CONCURRENT_WEB_SESSIONS;
+  if (excess <= 0) return;
+
+  for (const session of webSessions.slice(0, excess)) {
+    await env.DB.prepare("DELETE FROM sessions WHERE id = ?").bind(session.id).run();
+  }
+};
+
+// Label ramah buat notifikasi login baru & halaman "Kelola Perangkat" — cuma
+// tebakan best-effort dari User-Agent, tidak perlu akurat sempurna.
+const describeUserAgent = (ua: string | null | undefined): string => {
+  if (!ua) return "Perangkat tidak dikenal";
+  const isIphone = /iphone/i.test(ua);
+  const isIpad = /ipad/i.test(ua);
+  const isAndroid = /android/i.test(ua);
+  const isMac = /macintosh/i.test(ua);
+  const isWindows = /windows/i.test(ua);
+  const isLinux = /linux/i.test(ua) && !isAndroid;
+  const os = isIphone ? "iPhone" : isIpad ? "iPad" : isAndroid ? "Android" : isMac ? "Mac" : isWindows ? "Windows" : isLinux ? "Linux" : "";
+
+  const isEdge = /edg\//i.test(ua);
+  const isChrome = /chrome\//i.test(ua) && !isEdge && !/opr\//i.test(ua);
+  const isFirefox = /firefox\//i.test(ua);
+  const isSafari = /safari\//i.test(ua) && !isChrome && !isEdge && !/crios\//i.test(ua) && !/fxios\//i.test(ua);
+  const browser = isEdge ? "Edge" : isChrome ? "Chrome" : isFirefox ? "Firefox" : isSafari ? "Safari" : "Browser";
+
+  return os ? `${browser} di ${os}` : browser;
+};
+
+async function handleListSessions(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+
+  const { results } = await env.DB.prepare(
+    `SELECT id, user_agent, created_at, last_seen_at, expires_at
+       FROM sessions
+      WHERE user_id = ? AND expires_at > ?
+      ORDER BY last_seen_at DESC`
+  )
+    .bind(authResult.session.user.id, new Date().toISOString())
+    .all<{ id: string; user_agent: string | null; created_at: string; last_seen_at: string; expires_at: string }>();
+
+  const items = (results ?? []).map((s) => ({
+    id: s.id,
+    device: describeUserAgent(s.user_agent),
+    createdAt: s.created_at,
+    lastSeenAt: s.last_seen_at,
+    isPermanent: isPermanentSession(s.created_at, s.expires_at),
+    isCurrent: s.id === authResult.session.sessionId,
+  }));
+
+  return json({ items });
+}
+
+async function handleDeleteSession(request: Request, env: Env, sessionId: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+
+  const result = await env.DB.prepare("DELETE FROM sessions WHERE id = ? AND user_id = ?")
+    .bind(sessionId, authResult.session.user.id)
+    .run();
+
+  if (!result.meta.changes) {
+    return json({ error: "Sesi tidak ditemukan." }, { status: 404 });
+  }
+  return json({ ok: true });
+}
 
 const requireSession = async (env: Env, request: Request, requiredRole?: "admin" | "user") => {
   const session = await readSession(env, request);
@@ -1018,6 +1119,7 @@ async function handleLogin(request: Request, env: Env) {
     email?: string;
     password?: string;
     twoFactorToken?: string;
+    isPwa?: boolean;
   }>(request);
 
   if (!payload.email || !payload.password) {
@@ -1082,16 +1184,46 @@ async function handleLogin(request: Request, env: Env) {
     return json({ error: "Kode 2FA tidak valid." }, { status: 401 });
   }
 
-  const session = await createSession(env, request, {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    role: user.role,
-    plan: user.plan,
-    status: user.status,
-    whatsapp: user.whatsapp,
-    two_factor_secret: user.two_factor_secret,
-  });
+  const session = await createSession(
+    env,
+    request,
+    {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      plan: user.plan,
+      status: user.status,
+      whatsapp: user.whatsapp,
+      two_factor_secret: user.two_factor_secret,
+    },
+    { permanent: payload.isPwa === true }
+  );
+
+  // Non-fatal: batasi jumlah sesi web bersamaan & kabari device lain kalau ada
+  // login baru — jangan sampai gagal di sini menggagalkan login itu sendiri.
+  try {
+    await enforceSessionCap(env, user.id);
+  } catch (error) {
+    console.error("Gagal enforce session cap:", error);
+  }
+  try {
+    const deviceLabel = describeUserAgent(request.headers.get("user-agent"));
+    const when = new Date().toLocaleString("id-ID", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "Asia/Jakarta",
+    });
+    await sendWebPushToUser(
+      env,
+      user.id,
+      "Login Baru Terdeteksi",
+      `${deviceLabel} · ${when} WIB`,
+      "/membership/profile"
+    );
+  } catch (error) {
+    console.error("Gagal kirim notifikasi login baru:", error);
+  }
 
   return jsonWithCookies(
     {
@@ -1106,8 +1238,8 @@ async function handleLogin(request: Request, env: Env) {
       },
     },
     [
-      sessionCookie(env, session.token, 60 * 60 * 24 * 30),
-      roleCookie(env, user.role, 60 * 60 * 24 * 30),
+      sessionCookie(env, session.token, session.maxAgeSeconds),
+      roleCookie(env, user.role, session.maxAgeSeconds),
     ]
   );
 }
@@ -1816,6 +1948,104 @@ async function handleUpdateAccount(request: Request, env: Env, accountId: string
   return json({ ok: true });
 }
 
+// ===== Backfill logo bank/e-wallet Indonesia untuk rekening lama =====
+// Duplikat kecil dari src/lib/indonesianBanks.ts (frontend) — worker & Next.js
+// di-build terpisah di repo ini (lihat juga CRYPTO_ID_MAP di market-data page
+// vs snapshot pasar di worker), jadi daftar ini sengaja disalin, bukan di-share.
+interface BankLogoEntry {
+  domain: string;
+  aliases: string[];
+}
+
+const BANK_LOGO_ENTRIES: BankLogoEntry[] = [
+  { domain: "bca.co.id", aliases: ["bca"] },
+  { domain: "bankmandiri.co.id", aliases: ["bank mandiri", "mandiri"] },
+  { domain: "bri.co.id", aliases: ["bri"] },
+  { domain: "bni.co.id", aliases: ["bni"] },
+  { domain: "cimbniaga.co.id", aliases: ["cimb niaga", "cimb"] },
+  { domain: "danamon.co.id", aliases: ["danamon"] },
+  { domain: "permatabank.com", aliases: ["permata"] },
+  { domain: "btpn.com", aliases: ["btpn"] },
+  { domain: "jenius.com", aliases: ["jenius"] },
+  { domain: "ocbcnisp.com", aliases: ["ocbc nisp", "ocbc"] },
+  { domain: "maybank.co.id", aliases: ["maybank"] },
+  { domain: "bankmega.com", aliases: ["bank mega", "mega"] },
+  { domain: "sinarmas.co.id", aliases: ["sinarmas"] },
+  { domain: "btn.co.id", aliases: ["btn"] },
+  { domain: "kbbukopin.co.id", aliases: ["bukopin", "kb bank"] },
+  { domain: "panin.co.id", aliases: ["panin"] },
+  { domain: "bankbjb.co.id", aliases: ["bjb", "bank jabar"] },
+  { domain: "jago.com", aliases: ["bank jago", "jago"] },
+  { domain: "seabank.co.id", aliases: ["seabank", "sea bank"] },
+  { domain: "allobank.com", aliases: ["allo bank", "allobank"] },
+  { domain: "dbs.com", aliases: ["dbs", "digibank"] },
+  { domain: "hsbc.co.id", aliases: ["hsbc"] },
+  { domain: "uob.co.id", aliases: ["uob"] },
+  { domain: "sc.com", aliases: ["standard chartered", "stanchart"] },
+  { domain: "citibank.co.id", aliases: ["citibank", "citi"] },
+];
+
+const EWALLET_LOGO_ENTRIES: BankLogoEntry[] = [
+  { domain: "gojek.com", aliases: ["gopay"] },
+  { domain: "ovo.id", aliases: ["ovo"] },
+  { domain: "dana.id", aliases: ["dana"] },
+  { domain: "shopeepay.co.id", aliases: ["shopeepay", "shopee pay"] },
+  { domain: "linkaja.id", aliases: ["linkaja", "link aja"] },
+  { domain: "flip.id", aliases: ["flip"] },
+];
+
+const matchLogoDomain = (accountName: string, entries: BankLogoEntry[]): string | null => {
+  const q = accountName.trim().toLowerCase();
+  if (!q) return null;
+  for (const entry of entries) {
+    for (const alias of entry.aliases) {
+      if (q === alias || q.startsWith(`${alias} `)) return entry.domain;
+    }
+  }
+  return null;
+};
+
+const matchIndonesianInstitutionLogo = (accountName: string, accountType: string, logoDevToken?: string): string | null => {
+  const entries =
+    accountType === "E-Wallet"
+      ? EWALLET_LOGO_ENTRIES
+      : accountType === "Bank Account" || accountType === "Credit Card"
+        ? BANK_LOGO_ENTRIES
+        : null;
+  if (!entries) return null;
+
+  const domain = matchLogoDomain(accountName, entries);
+  if (!domain) return null;
+
+  // Token publishable logo.dev (dipasang buat gambar HD) — kalau belum di-set,
+  // fallback ke favicon Google (resolusi rendah, tapi tetap tampil sesuatu).
+  if (logoDevToken) {
+    return `https://img.logo.dev/${domain}?token=${logoDevToken}&size=128&format=png`;
+  }
+  return `https://www.google.com/s2/favicons?sz=128&domain=${domain}`;
+};
+
+// One-off: isi logo_url untuk rekening LAMA yang cocok nama bank/e-wallet-nya
+// dan belum punya logo sama sekali, ATAU yang masih pakai favicon Google lama
+// (upgrade ke logo.dev) — tidak pernah menimpa logo hasil upload manual asli
+// (mis. dari Cloudinary).
+const backfillIndonesianBankLogos = async (env: Env): Promise<{ updated: number; checked: number }> => {
+  const { results } = await env.DB.prepare(
+    `SELECT id, name, type FROM accounts
+      WHERE logo_url IS NULL OR logo_url = '' OR logo_url LIKE 'https://www.google.com/s2/favicons%'`
+  ).all<{ id: string; name: string; type: string }>();
+  const rows = results ?? [];
+
+  let updated = 0;
+  for (const row of rows) {
+    const matched = matchIndonesianInstitutionLogo(row.name, row.type, env.LOGO_DEV_TOKEN);
+    if (!matched) continue;
+    await env.DB.prepare(`UPDATE accounts SET logo_url = ? WHERE id = ?`).bind(matched, row.id).run();
+    updated++;
+  }
+  return { updated, checked: rows.length };
+};
+
 async function handleDeleteAccount(request: Request, env: Env, accountId: string) {
   const authResult = await requireSession(env, request);
   if (authResult.error) {
@@ -2023,6 +2253,98 @@ async function handleStockPrice(request: Request, env: Env) {
   } catch (error) {
     console.error("fetchStockPrice failed", error);
     return json({ error: "Gagal mengambil harga saham." }, { status: 502 });
+  }
+}
+
+// Cari kode saham dari Yahoo Finance (dipakai combobox "Kode Saham" — biar
+// user tinggal pilih dari hasil pencarian, bukan hafal kode + upload logo
+// manual). Diproksi lewat Worker karena search endpoint-nya juga tidak izinkan
+// CORS langsung dari browser, sama seperti chart endpoint di atas.
+type StockSearchResult = { symbol: string; name: string; exchangeCode: string; logoUrl: string };
+
+async function fetchStockSearch(query: string, env: Env): Promise<StockSearchResult[]> {
+  // v2: cache key sengaja diganti supaya entri lama dengan logoUrl yang salah
+  // (simbol tanpa akhiran bursa, lihat catatan logoUrl di bawah) tidak kepakai lagi.
+  const cacheKey = new Request(`https://cache.internal.leosiqra.com/stock-search-v2/${encodeURIComponent(query.toLowerCase())}`);
+  const edgeCache = caches.default;
+
+  const cached = await edgeCache.match(cacheKey);
+  if (cached) {
+    return (await cached.json()) as StockSearchResult[];
+  }
+
+  const res = await fetch(
+    `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=12&newsCount=0`,
+    {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        Accept: "application/json",
+      },
+    }
+  );
+  if (!res.ok) {
+    throw new Error(`Yahoo Finance search error ${res.status}`);
+  }
+
+  const data = (await res.json()) as {
+    quotes?: Array<{
+      symbol: string;
+      shortname?: string;
+      longname?: string;
+      quoteType?: string;
+      exchDisp?: string;
+    }>;
+  };
+
+  const results: StockSearchResult[] = (data.quotes ?? [])
+    .filter((q) => q.quoteType === "EQUITY")
+    .slice(0, 8)
+    .map((q) => {
+      const isJakarta = q.symbol.endsWith(".JK");
+      const stockCode = isJakarta ? q.symbol.slice(0, -3) : q.symbol;
+      const exchangeCode = isJakarta ? "IDX" : q.exchDisp || "";
+      // Logo HARUS pakai simbol lengkap dengan akhiran bursa asli Yahoo
+      // (mis. "BBCA.JK", "0700.HK") — simbol polos tanpa akhiran sering nyasar
+      // ke instrumen lain yang kebetulan pakai kode sama (mis. "BBCA" polos
+      // matched ke JPMorgan BetaBuilders Canada ETF, bukan Bank Central Asia).
+      const logoUrl = env.LOGO_DEV_TOKEN
+        ? `https://img.logo.dev/ticker/${encodeURIComponent(q.symbol)}?token=${env.LOGO_DEV_TOKEN}&size=128`
+        : "";
+      return {
+        symbol: stockCode,
+        name: q.longname || q.shortname || stockCode,
+        exchangeCode,
+        logoUrl,
+      };
+    });
+
+  await edgeCache.put(
+    cacheKey,
+    new Response(JSON.stringify(results), {
+      headers: { "content-type": "application/json", "Cache-Control": "max-age=1800" },
+    })
+  );
+  return results;
+}
+
+async function handleStockSearch(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) {
+    return authResult.error;
+  }
+
+  const url = new URL(request.url);
+  const q = url.searchParams.get("q")?.trim();
+  if (!q) {
+    return json({ items: [] });
+  }
+
+  try {
+    const items = await fetchStockSearch(q, env);
+    return json({ items });
+  } catch (error) {
+    console.error("fetchStockSearch failed", error);
+    return json({ error: "Gagal mencari saham." }, { status: 502 });
   }
 }
 
@@ -3912,6 +4234,32 @@ const sendWebPushToUser = async (env: Env, userId: string, title: string, body: 
   }
 };
 
+// Broadcast satu kali ke SEMUA subscription semua user (bukan per-user) — untuk
+// pengumuman fitur baru dll. Dipanggil manual dari admin tools, bukan cron.
+const sendWebPushToAllUsers = async (
+  env: Env,
+  title: string,
+  body: string,
+  url: string
+): Promise<{ sent: number; total: number }> => {
+  const { results } = await env.DB.prepare(
+    "SELECT id, user_id, endpoint, p256dh, auth FROM push_subscriptions"
+  ).all<PushSubscriptionRow>();
+  const subs = results ?? [];
+  const message: PushMessage = { data: { title, body, url }, options: { urgency: "normal" } };
+
+  let sent = 0;
+  for (const sub of subs) {
+    try {
+      const ok = await sendWebPushToSubscription(env, sub, message);
+      if (ok) sent++;
+    } catch (error) {
+      console.error(`Gagal broadcast push ke subscription ${sub.id}:`, error);
+    }
+  }
+  return { sent, total: subs.length };
+};
+
 // ===== Job 1: ringkasan Pengeluaran/Pemasukan kemarin, jam 00:01 WIB =====
 
 const sendDailySummaryNotifications = async (env: Env) => {
@@ -4125,6 +4473,15 @@ const worker = {
         return await handleLogout(request, env);
       }
 
+      if (url.pathname === "/api/member/sessions" && request.method === "GET") {
+        return await handleListSessions(request, env);
+      }
+
+      if (url.pathname.startsWith("/api/member/sessions/") && request.method === "DELETE") {
+        const sessionId = url.pathname.slice("/api/member/sessions/".length);
+        return await handleDeleteSession(request, env, sessionId);
+      }
+
       if (url.pathname === "/api/auth/google" && request.method === "GET") {
         return await handleGoogleStart(request, env);
       }
@@ -4201,6 +4558,10 @@ const worker = {
 
       if (url.pathname === "/api/member/stock-price" && request.method === "GET") {
         return await handleStockPrice(request, env);
+      }
+
+      if (url.pathname === "/api/member/stock-search" && request.method === "GET") {
+        return await handleStockSearch(request, env);
       }
 
       if (url.pathname === "/api/member/investments" && request.method === "GET") {
@@ -4405,6 +4766,33 @@ const worker = {
           return json({ error: "Pakai ?job=daily atau ?job=recurring." }, { status: 400 });
         }
         return json({ ok: true, job });
+      }
+
+      // Admin-only, one-off: isi logo_url rekening lama yang cocok nama bank/
+      // e-wallet Indonesia dan belum punya logo. Aman diulang — cuma menyentuh
+      // baris yang logo_url-nya masih kosong.
+      if (url.pathname === "/api/admin/debug/backfill-bank-logos" && request.method === "POST") {
+        const authResult = await requireSession(env, request, "admin");
+        if (authResult.error) return authResult.error;
+        const result = await backfillIndonesianBankLogos(env);
+        return json({ ok: true, ...result });
+      }
+
+      // Admin-only: broadcast push notification ke SEMUA user (bukan cuma satu).
+      // Dipakai untuk pengumuman fitur, jadi isi title/body dikontrol manual
+      // oleh admin, bukan hardcoded.
+      if (url.pathname === "/api/admin/debug/broadcast-notification" && request.method === "POST") {
+        const authResult = await requireSession(env, request, "admin");
+        if (authResult.error) return authResult.error;
+        const payload = await parseJson<{ title?: string; body?: string; url?: string }>(request);
+        const title = typeof payload.title === "string" ? payload.title.trim() : "";
+        const body = typeof payload.body === "string" ? payload.body.trim() : "";
+        const targetUrl = typeof payload.url === "string" && payload.url.trim() ? payload.url.trim() : "/membership/rekening";
+        if (!title || !body) {
+          return json({ error: "title dan body wajib diisi." }, { status: 400 });
+        }
+        const result = await sendWebPushToAllUsers(env, title, body, targetUrl);
+        return json({ ok: true, ...result });
       }
 
       if (url.pathname === "/api/realtime" && request.method === "GET") {

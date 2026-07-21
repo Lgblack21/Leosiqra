@@ -13,6 +13,8 @@ import { CurrencySelect } from '@/components/CurrencySelect';
 import { NumberInput } from '@/components/ui/NumberInput';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { formatCurrency, toLocalDateString } from '@/lib/utils';
+import { StockCombobox } from '@/components/StockPicker';
+import { StockSearchResult } from '@/lib/services/investmentService';
 
 interface StockInvestmentModalProps {
   userId: string;
@@ -331,9 +333,19 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kode Saham</label>
-            <input type="text" value={formData.stockCode} onChange={e => setFormData(p => ({...p, stockCode: e.target.value.toUpperCase()}))}
+            <StockCombobox
+              value={formData.stockCode}
+              onChange={val => setFormData(p => ({...p, stockCode: val}))}
+              onSelect={(stock: StockSearchResult) => setFormData(p => ({
+                ...p,
+                stockCode: stock.symbol,
+                exchangeCode: stock.exchangeCode || p.exchangeCode,
+                logoUrl: stock.logoUrl || p.logoUrl,
+              }))}
               disabled={!!initialData}
-              placeholder="BBCA, TLKM..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all disabled:opacity-60" />
+              placeholder="Cari BBCA, TLKM, AAPL..."
+              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 pl-4 pr-9 text-sm font-bold text-slate-700 transition-all disabled:opacity-60"
+            />
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Icon/Logo</label>

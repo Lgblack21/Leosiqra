@@ -9,6 +9,7 @@ import { Button } from '@/components/Button';
 import { ShieldCheck, Smartphone, Eye, EyeOff, LayoutGrid } from 'lucide-react';
 import { TwoFactorModal } from '@/components/auth/TwoFactorModal';
 import { cloudflareApi } from '@/lib/cloudflare-api';
+import { isStandaloneDisplay } from '@/lib/pushNotifications';
 
 const GoogleIcon = ({ size = 18 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
@@ -52,6 +53,9 @@ export default function LoginPage() {
         json: {
           email: email.trim().toLowerCase(),
           password,
+          // Sesi PWA ter-install dibuat permanen di backend (lihat handleLogin) —
+          // tab browser biasa tetap pakai masa berlaku normal.
+          isPwa: isStandaloneDisplay(),
         },
       });
 
@@ -80,6 +84,7 @@ export default function LoginPage() {
         email: email.trim().toLowerCase(),
         password,
         twoFactorToken: enteredToken,
+        isPwa: isStandaloneDisplay(),
       },
     });
 

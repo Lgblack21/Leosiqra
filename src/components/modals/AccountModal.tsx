@@ -10,6 +10,7 @@ import { uploadToCloudinary } from '@/lib/cloudinary';
 import { CurrencySelect } from '@/components/CurrencySelect';
 import { NumberInput } from '@/components/ui/NumberInput';
 import { CARD_COLOR_OPTIONS } from '@/lib/cardColors';
+import { matchIndonesianInstitutionLogo } from '@/lib/indonesianBanks';
 import { useRef } from 'react';
 
 interface AccountModalProps {
@@ -43,6 +44,9 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [isCustomTypeMode, setIsCustomTypeMode] = useState(false);
+  // Lacak apakah logo saat ini hasil auto-match (boleh ditimpa lagi kalau nama
+  // diganti) atau hasil upload manual/data lama (jangan pernah ditimpa diam-diam).
+  const [logoIsAuto, setLogoIsAuto] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Gabungan jenis bawaan + jenis custom yang pernah dipakai user + jenis akun
@@ -62,6 +66,7 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
     try {
       const url = await uploadToCloudinary(file);
       setFormData(prev => ({ ...prev, logoUrl: url }));
+      setLogoIsAuto(false);
     } catch (error) {
       console.error("Upload failed:", error);
       alert("Gagal mengunggah logo.");
@@ -74,6 +79,9 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
     if (!isOpen) return;
     setError('');
     setIsCustomTypeMode(false);
+    // Auto-logo hanya untuk rekening baru — jangan pernah menimpa diam-diam
+    // logo yang sudah ada di rekening yang sedang diedit.
+    setLogoIsAuto(!initialData);
     if (initialData) {
       setFormData({
         name: initialData.name || '',
@@ -153,13 +161,25 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nama Rekening</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              onChange={(e) => {
+                const newName = e.target.value;
+                const matched = !initialData ? matchIndonesianInstitutionLogo(newName, formData.type) : null;
+                if (matched && (logoIsAuto || !formData.logoUrl)) {
+                  setFormData({ ...formData, name: newName, logoUrl: matched });
+                  setLogoIsAuto(true);
+                } else {
+                  setFormData({ ...formData, name: newName });
+                }
+              }}
               placeholder="Contoh: BCA Personal"
               className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
             />
+            {!initialData && (
+              <p className="text-[10px] font-medium text-slate-400 pl-1">Logo bank/e-wallet Indonesia terisi otomatis. Bank luar negeri tetap perlu upload logo manual.</p>
+            )}
           </div>
           <div className="space-y-3">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Logo Rekening</label>
@@ -228,7 +248,14 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
                       setFormData({ ...formData, type: '' });
                       return;
                     }
-                    setFormData({ ...formData, type: e.target.value as Account['type'] });
+                    const newType = e.target.value as Account['type'];
+                    const matched = !initialData ? matchIndonesianInstitutionLogo(formData.name, newType) : null;
+                    if (matched && (logoIsAuto || !formData.logoUrl)) {
+                      setFormData({ ...formData, type: newType, logoUrl: matched });
+                      setLogoIsAuto(true);
+                    } else {
+                      setFormData({ ...formData, type: newType });
+                    }
                   }}
                   className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer"
                 >

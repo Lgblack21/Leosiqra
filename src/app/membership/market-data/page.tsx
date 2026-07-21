@@ -10,13 +10,32 @@ import {
   Globe,
   Coins,
   BarChart3,
-  AlertCircle
+  AlertCircle,
+  Settings2
 } from 'lucide-react';
 import { exchangeRateService } from '@/lib/services/exchangeRateService';
 import { currencyService, Currency } from '@/lib/services/currencyService';
 import { auth } from '@/lib/cf-client';
 import { useCountUp } from '@/lib/hooks/useCountUp';
 import { LogoImage } from '@/components/ui/LogoImage';
+import { CoinOption } from '@/lib/coingecko';
+import { CryptoWatchlistModal, MAX_WATCHLIST_COINS } from '@/components/modals/CryptoWatchlistModal';
+
+// Watchlist koin custom (maks. 10) disimpan per browser di localStorage —
+// preferensi tampilan, bukan data finansial, jadi tidak perlu tabel D1 baru.
+const WATCHLIST_STORAGE_KEY = 'leosiqra:crypto-watchlist';
+
+const loadStoredWatchlist = (): string[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(WATCHLIST_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string').slice(0, MAX_WATCHLIST_COINS) : [];
+  } catch {
+    return [];
+  }
+};
 
 interface CryptoData {
   id: string;
@@ -91,6 +110,18 @@ export default function MarketDataPage() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [watchlistIds, setWatchlistIds] = useState<string[]>(() => loadStoredWatchlist());
+  const [showWatchlistModal, setShowWatchlistModal] = useState(false);
+
+  const handleSaveWatchlist = (coins: CoinOption[]) => {
+    const ids = coins.map(c => c.id);
+    setWatchlistIds(ids);
+    try {
+      window.localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(ids));
+    } catch (e) {
+      console.error('Gagal menyimpan watchlist koin:', e);
+    }
+  };
 
   const fetchMarketData = useCallback(async () => {
     setLoading(true);
@@ -160,13 +191,15 @@ export default function MarketDataPage() {
         setForexRates(mappedForex);
 
         // --- DINAMISASI CRYPTOCURRENCY CARD ---
-        // Mencoba mendeteksi jika user punya mata uang crypto di list-nya
+        // Prioritas: watchlist custom user (maks 10, dipilih manual) > mata uang
+        // crypto yang sudah ada di daftar mata uangnya > default top crypto.
         const userCryptos = currentCurs.filter(c => CRYPTO_ID_MAP[c.code.toUpperCase()]);
 
-        // Tetap gunakan top crypto sebagai default jika user tidak punya
-        const targetIds = userCryptos.length > 0
-          ? userCryptos.map(c => CRYPTO_ID_MAP[c.code.toUpperCase()])
-          : ['bitcoin', 'ethereum', 'solana', 'holotoken'];
+        const targetIds = watchlistIds.length > 0
+          ? watchlistIds
+          : userCryptos.length > 0
+            ? userCryptos.map(c => CRYPTO_ID_MAP[c.code.toUpperCase()])
+            : ['bitcoin', 'ethereum', 'solana', 'holotoken'];
 
         // 2. Fetch crypto + emas (PAX Gold, dipatok 1:1 ke harga emas spot) sekaligus,
         // termasuk logo resmi tiap koin (endpoint /coins/markets menyertakan `image`).
@@ -177,21 +210,26 @@ export default function MarketDataPage() {
         if (cryptoRes.ok) {
           const rows = (await cryptoRes.json()) as Array<{
             id: string;
+            name?: string;
+            symbol?: string;
             image?: string;
             current_price?: number;
             price_change_percentage_24h?: number;
           }>;
           const byId = new Map(rows.map((r) => [r.id, r]));
 
+          // Koin dari watchlist custom mungkin tidak ada di peta statis di atas
+          // (yang cuma mencakup beberapa koin populer) — pakai nama/simbol asli
+          // dari respons API sebagai fallback supaya tetap tampil benar.
           const mappedCrypto: CryptoData[] = targetIds.map(id => {
             const row = byId.get(id);
             return {
               id,
-              name: CRYPTO_NAME_MAP[id] || id,
-              symbol: CRYPTO_SYMBOL_MAP[id] || id.toUpperCase(),
+              name: CRYPTO_NAME_MAP[id] || row?.name || id,
+              symbol: CRYPTO_SYMBOL_MAP[id] || (row?.symbol ? `${row.symbol.toUpperCase()}/USD` : id.toUpperCase()),
               current_price: row?.current_price || 0,
               price_change_percentage_24h: row?.price_change_percentage_24h || 0,
-              icon: CRYPTO_ICON_MAP[id] || 'C',
+              icon: CRYPTO_ICON_MAP[id] || row?.symbol?.toUpperCase() || 'C',
               logoUrl: row?.image || '',
             };
           });
@@ -217,7 +255,7 @@ export default function MarketDataPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [watchlistIds]);
 
   useEffect(() => {
     fetchMarketData();
@@ -424,10 +462,20 @@ export default function MarketDataPage() {
             <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-black text-slate-900">Cryptocurrency</h3>
-                <span className="text-[9px] font-bold text-emerald-500 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                  CoinGecko
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-[9px] font-bold text-emerald-500 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                    CoinGecko
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowWatchlistModal(true)}
+                    className="flex items-center gap-1.5 text-[9px] font-black text-indigo-500 hover:text-indigo-700 transition-colors"
+                  >
+                    <Settings2 size={12} />
+                    Pilih Koin
+                  </button>
+                </div>
               </div>
               <div className="space-y-5">
                 {loading && !lastUpdated ? (
@@ -462,6 +510,13 @@ export default function MarketDataPage() {
           </div>
         </div>
       </div>
+
+      <CryptoWatchlistModal
+        isOpen={showWatchlistModal}
+        onClose={() => setShowWatchlistModal(false)}
+        initialSelected={cryptoData.map((c): CoinOption => ({ id: c.id, name: c.name, symbol: c.symbol.split('/')[0], logoUrl: c.logoUrl }))}
+        onSave={handleSaveWatchlist}
+      />
     </div>
   );
 }

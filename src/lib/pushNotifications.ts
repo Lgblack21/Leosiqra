@@ -22,7 +22,9 @@ export const isPushSupported = () =>
 const isIos = () =>
   typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent);
 
-const isStandaloneDisplay = () =>
+// Dipakai juga di luar file ini (login) buat minta sesi permanen saat berjalan
+// sebagai PWA ter-install, bukan cuma tab browser biasa.
+export const isStandaloneDisplay = () =>
   typeof window !== "undefined" &&
   (window.matchMedia?.("(display-mode: standalone)").matches ||
     // Properti lama khusus Safari iOS — belum ada tipe standar di lib.dom.

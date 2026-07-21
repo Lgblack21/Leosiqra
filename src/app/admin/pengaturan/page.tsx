@@ -15,7 +15,8 @@ import {
   RefreshCw,
   Users,
   Plus,
-  Trash2
+  Trash2,
+  Bell
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -143,6 +144,52 @@ export default function AdminPengaturanPage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSavingAccount, setIsSavingAccount] = useState(false);
+
+  // Alat admin: backfill logo bank/e-wallet Indonesia untuk rekening lama,
+  // dan broadcast push notification pengumuman fitur ke semua user.
+  const [isBackfillingLogos, setIsBackfillingLogos] = useState(false);
+  const [backfillResult, setBackfillResult] = useState<string | null>(null);
+  const [broadcastTitle, setBroadcastTitle] = useState('Update: Logo Bank Otomatis');
+  const [broadcastBody, setBroadcastBody] = useState(
+    'Sekarang saat menambah rekening bank/e-wallet Indonesia (BCA, Mandiri, GoPay, dll), logonya otomatis muncul — tidak perlu upload manual lagi.'
+  );
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [broadcastResult, setBroadcastResult] = useState<string | null>(null);
+
+  const handleBackfillBankLogos = async () => {
+    setIsBackfillingLogos(true);
+    setBackfillResult(null);
+    try {
+      const res = await cloudflareApi<{ updated: number; checked: number }>('/api/admin/debug/backfill-bank-logos', {
+        method: 'POST',
+      });
+      setBackfillResult(`${res.updated} dari ${res.checked} rekening tanpa logo berhasil diperbarui.`);
+    } catch (error) {
+      console.error(error);
+      setBackfillResult(error instanceof Error ? `Gagal: ${error.message}` : 'Gagal menjalankan backfill logo.');
+    } finally {
+      setIsBackfillingLogos(false);
+    }
+  };
+
+  const handleBroadcastNotification = async () => {
+    if (!broadcastTitle.trim() || !broadcastBody.trim()) return;
+    if (!confirm('Kirim notifikasi ini ke SEMUA user sekarang? Aksi ini tidak bisa dibatalkan.')) return;
+    setIsBroadcasting(true);
+    setBroadcastResult(null);
+    try {
+      const res = await cloudflareApi<{ sent: number; total: number }>('/api/admin/debug/broadcast-notification', {
+        method: 'POST',
+        json: { title: broadcastTitle.trim(), body: broadcastBody.trim(), url: '/membership/rekening' },
+      });
+      setBroadcastResult(`Terkirim ke ${res.sent} dari ${res.total} perangkat yang subscribe.`);
+    } catch (error) {
+      console.error(error);
+      setBroadcastResult(error instanceof Error ? `Gagal: ${error.message}` : 'Gagal mengirim notifikasi.');
+    } finally {
+      setIsBroadcasting(false);
+    }
+  };
 
   const passwordStrength = useMemo(() => {
     const hasUpperCaseStart = /^[A-Z]/.test(newPassword);
@@ -638,6 +685,82 @@ export default function AdminPengaturanPage() {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+
+          <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
+                <RefreshCw size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-slate-900">Backfill Logo Bank/E-Wallet</h3>
+                <p className="text-[11px] font-medium text-slate-400">Isi otomatis logo untuk rekening lama (semua user) yang cocok nama bank/e-wallet Indonesia dan belum punya logo. Aman diulang — tidak menimpa logo yang sudah ada.</p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <button
+                onClick={handleBackfillBankLogos}
+                disabled={isBackfillingLogos}
+                className={cn(
+                  "px-4 py-2.5 bg-slate-900 text-white rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 transition-colors shrink-0 w-fit",
+                  isBackfillingLogos && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                <RefreshCw size={14} className={cn(isBackfillingLogos && "animate-spin")} />
+                {isBackfillingLogos ? "Memproses..." : "Jalankan Backfill"}
+              </button>
+              {backfillResult && (
+                <p className="text-[11px] font-bold text-slate-600">{backfillResult}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+                <Bell size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-slate-900">Kirim Notifikasi ke Semua User</h3>
+                <p className="text-[11px] font-medium text-slate-400">Push notification broadcast (butuh subscribe push aktif di perangkat user). Cek isinya sebelum kirim — tidak bisa dibatalkan.</p>
+              </div>
+            </div>
+            <div className="space-y-3 max-w-xl">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Judul</label>
+                <input
+                  type="text"
+                  value={broadcastTitle}
+                  onChange={(e) => setBroadcastTitle(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-lg text-sm font-bold focus:ring-2 focus:ring-indigo-100 outline-none"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Isi Pesan</label>
+                <textarea
+                  value={broadcastBody}
+                  onChange={(e) => setBroadcastBody(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-lg text-sm font-medium focus:ring-2 focus:ring-indigo-100 outline-none resize-none"
+                />
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <button
+                  onClick={handleBroadcastNotification}
+                  disabled={isBroadcasting || !broadcastTitle.trim() || !broadcastBody.trim()}
+                  className={cn(
+                    "px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-indigo-500 transition-colors shrink-0 w-fit",
+                    (isBroadcasting || !broadcastTitle.trim() || !broadcastBody.trim()) && "opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  <Bell size={14} className={cn(isBroadcasting && "animate-pulse")} />
+                  {isBroadcasting ? "Mengirim..." : "Kirim ke Semua User"}
+                </button>
+                {broadcastResult && (
+                  <p className="text-[11px] font-bold text-slate-600">{broadcastResult}</p>
+                )}
+              </div>
             </div>
           </div>
         </div>

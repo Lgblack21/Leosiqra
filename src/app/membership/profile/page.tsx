@@ -24,7 +24,8 @@ import {
   Trash2,
   Smartphone,
   Eye,
-  EyeOff
+  EyeOff,
+  Monitor
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { auth, db } from '@/lib/cf-client';
@@ -58,6 +59,15 @@ interface UserProfile {
   photoURL?: string;
   plan?: string;
   twoFactorSecret?: string | null;
+}
+
+interface SessionInfo {
+  id: string;
+  device: string;
+  createdAt: string;
+  lastSeenAt: string;
+  isPermanent: boolean;
+  isCurrent: boolean;
 }
 
 export default function ProfilePage() {
@@ -95,6 +105,36 @@ export default function ProfilePage() {
   const [notifEnabled, setNotifEnabled] = useState(false);
   const [notifLoading, setNotifLoading] = useState(false);
   const [notifError, setNotifError] = useState('');
+
+  // Kelola Perangkat — daftar sesi login aktif (web + PWA), bisa logout paksa
+  // sesi tertentu dari jarak jauh kalau ada yang mencurigakan.
+  const [sessions, setSessions] = useState<SessionInfo[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
+
+  const loadSessions = () => {
+    setSessionsLoading(true);
+    cloudflareApi<{ items: SessionInfo[] }>('/api/member/sessions')
+      .then((res) => setSessions(res.items))
+      .catch(console.error)
+      .finally(() => setSessionsLoading(false));
+  };
+
+  const handleRevokeSession = async (id: string) => {
+    if (!confirm('Logout sesi ini dari perangkat tersebut sekarang?')) return;
+    setRevokingSessionId(id);
+    try {
+      await cloudflareApi(`/api/member/sessions/${id}`, { method: 'DELETE' });
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Gagal logout sesi.');
+    } finally {
+      setRevokingSessionId(null);
+    }
+  };
+
+  const formatSessionDate = (iso: string) =>
+    new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
 
   useEffect(() => {
     setNotifSupported(isPushSupported());
@@ -172,6 +212,7 @@ export default function ProfilePage() {
         });
 
         loadAccountsAndTransactions(u.uid);
+        loadSessions();
       } else {
         setLoading(false);
         if (unsubProfile) unsubProfile();
@@ -639,6 +680,56 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Kelola Perangkat */}
+          <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[48px] border border-slate-50 shadow-sm space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+                <Monitor size={18} />
+              </div>
+              <div>
+                <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight leading-tight">Kelola Perangkat</h2>
+                <p className="text-[10px] font-bold text-slate-400 mt-0.5">Sesi login aktif — logout paksa kalau ada yang mencurigakan</p>
+              </div>
+            </div>
+
+            {sessionsLoading ? (
+              <p className="text-sm text-slate-400 text-center py-4">Memuat...</p>
+            ) : sessions.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-4">Tidak ada sesi aktif.</p>
+            ) : (
+              <div className="space-y-3">
+                {sessions.map((s) => (
+                  <div key={s.id} className="flex items-center justify-between gap-3 p-4 bg-slate-50 rounded-2xl">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-xs font-black text-slate-900 truncate">{s.device}</p>
+                        {s.isCurrent && (
+                          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black rounded-full uppercase tracking-widest shrink-0">Sesi Ini</span>
+                        )}
+                        {s.isPermanent && (
+                          <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[9px] font-black rounded-full uppercase tracking-widest shrink-0">PWA</span>
+                        )}
+                      </div>
+                      <p className="text-[10px] font-medium text-slate-400 mt-1">
+                        Aktif terakhir {formatSessionDate(s.lastSeenAt)}
+                      </p>
+                    </div>
+                    {!s.isCurrent && (
+                      <button
+                        onClick={() => handleRevokeSession(s.id)}
+                        disabled={revokingSessionId === s.id}
+                        title="Logout sesi ini"
+                        className="p-2 rounded-lg bg-white text-slate-400 hover:bg-rose-500 hover:text-white transition-all shrink-0 disabled:opacity-50"
+                      >
+                        {revokingSessionId === s.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Input Cepat — satu-satunya jalur input dari HP, jalan di iPhone & Android. */}

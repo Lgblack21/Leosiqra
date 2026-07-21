@@ -213,5 +213,21 @@ export const investmentService = {
     return cloudflareApi<{ price: number; currency: string; changePercent: number }>(
       `/api/member/stock-price?symbol=${encodeURIComponent(symbol)}&exchange=${encodeURIComponent(exchangeCode || 'IDX')}`
     );
+  },
+
+  // Cari kode saham (via proksi Yahoo Finance di backend, lihat handleStockSearch)
+  // untuk combobox "Kode Saham" — auto-isi nama/bursa/logo saat dipilih.
+  async searchStocks(q: string) {
+    const res = await cloudflareApi<{ items: StockSearchResult[] }>(
+      `/api/member/stock-search?q=${encodeURIComponent(q)}`
+    );
+    return res.items;
   }
 };
+
+export interface StockSearchResult {
+  symbol: string;
+  name: string;
+  exchangeCode: string;
+  logoUrl: string;
+}

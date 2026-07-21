@@ -26,6 +26,7 @@ import { getCardGradientClass, CARD_COLOR_OPTIONS } from '@/lib/cardColors';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { AccountModal } from '@/components/modals/AccountModal';
 import { isCreditAccountType, computeCreditUsage, CreditUsage } from '@/lib/creditCard';
+import { LogoImage } from '@/components/ui/LogoImage';
 
 export default function MyCardsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -565,8 +566,18 @@ export default function MyCardsPage() {
                     draggedAccountId === acc.id && "opacity-40"
                   )}>
                   <div className="flex items-center gap-3 md:gap-4 min-w-0">
-                    <div className={`relative w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0 ${getTypeBg(acc.type)}`}>
-                      {getTypeIcon(acc.type)}
+                    <div className="relative w-10 h-10 md:w-12 md:h-12 rounded-xl shrink-0 overflow-hidden">
+                      <LogoImage
+                        src={acc.logoUrl}
+                        alt={acc.name}
+                        fallbackText={acc.name.substring(0, 2).toUpperCase()}
+                        fallbackIcon={(
+                          <div className={`w-full h-full flex items-center justify-center ${getTypeBg(acc.type)}`}>
+                            {getTypeIcon(acc.type)}
+                          </div>
+                        )}
+                        className="w-full h-full object-cover rounded-xl"
+                      />
                       {swatch && (
                         <span className={cn("absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white", swatch)} />
                       )}
