@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
+import { User } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { LogoImage } from "@/components/ui/LogoImage";
 
@@ -17,15 +17,15 @@ interface SplashScreenProps {
   userPhoto?: string | null;
 }
 
-// Splash "Welcome to Leosiqra" — muncul tiap Input Cepat dibuka dari awal
-// (app ditutup lalu dibuka lagi = mount baru = authState balik ke "loading").
+// Splash foto+nama user — muncul tiap Input Cepat dibuka dari awal (app
+// ditutup lalu dibuka lagi = mount baru = authState balik ke "loading").
 // Untuk kasus app dibiarkan lama di background lalu dibuka lagi tanpa
 // benar-benar ditutup, StaleReloadGuard sudah force-reload otomatis setelah
 // idle >30 menit, jadi splash ini ikut muncul lagi lewat mount baru itu juga.
 //
-// Begitu profil user (nama/foto) sudah kebaca, splash-nya personalisasi diri
-// jadi foto + "Halo, {nama}" — kalau belum ada (masih loading/belum login)
-// tetap fallback ke logo + "Welcome to Leosiqra" generik.
+// Sengaja tanpa logo/nama Leosiqra sama sekali — cuma foto & nama user.
+// Sebelum profilnya kebaca, avatar-nya fallback ke ikon silhouette netral
+// (bukan logo brand) supaya tetap konsisten "punya user", bukan "punya app".
 export function SplashScreen({ ready, userName, userPhoto }: SplashScreenProps) {
   const [minElapsed, setMinElapsed] = useState(false);
   const [forceHide, setForceHide] = useState(false);
@@ -74,34 +74,24 @@ export function SplashScreen({ ready, userName, userPhoto }: SplashScreenProps) 
                 transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
               />
 
-              {firstName ? (
-                // Foto profil user aja, tanpa badge Leosiqra menutupinya.
-                <div className="relative w-24 h-24 rounded-full ring-4 ring-white shadow-[0_20px_50px_-15px_rgba(79,70,229,0.35)] overflow-hidden bg-gradient-to-br from-indigo-100 to-violet-100">
-                  {userPhoto ? (
-                    <LogoImage
-                      src={userPhoto}
-                      alt={userName || "Profil"}
-                      fallbackText={firstName.slice(0, 1).toUpperCase()}
-                      className="w-24 h-24 object-cover"
-                    />
-                  ) : (
-                    <div className="w-24 h-24 flex items-center justify-center text-3xl font-black text-indigo-600">
-                      {firstName.slice(0, 1).toUpperCase()}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="relative w-24 h-24 rounded-3xl bg-white border border-slate-100 shadow-[0_20px_50px_-15px_rgba(79,70,229,0.25)] flex items-center justify-center overflow-hidden">
-                  <Image
-                    src="/images/Logo-new.png"
-                    alt="Leosiqra"
-                    width={72}
-                    height={72}
-                    className="object-contain animate-logo-bob"
-                    priority
+              <div className="relative w-24 h-24 rounded-full ring-4 ring-white shadow-[0_20px_50px_-15px_rgba(79,70,229,0.35)] overflow-hidden bg-gradient-to-br from-indigo-100 to-violet-100">
+                {userPhoto ? (
+                  <LogoImage
+                    src={userPhoto}
+                    alt={userName || "Profil"}
+                    fallbackText={(firstName || "U").slice(0, 1).toUpperCase()}
+                    className="w-24 h-24 object-cover"
                   />
-                </div>
-              )}
+                ) : firstName ? (
+                  <div className="w-24 h-24 flex items-center justify-center text-3xl font-black text-indigo-600">
+                    {firstName.slice(0, 1).toUpperCase()}
+                  </div>
+                ) : (
+                  <div className="w-24 h-24 flex items-center justify-center text-indigo-300">
+                    <User size={40} strokeWidth={1.5} />
+                  </div>
+                )}
+              </div>
             </motion.div>
 
             <AnimatePresence mode="wait">
@@ -116,9 +106,6 @@ export function SplashScreen({ ready, userName, userPhoto }: SplashScreenProps) 
                   <h1 className="text-2xl sm:text-3xl font-serif font-black text-slate-900 [text-wrap:balance]">
                     Halo, <span className="text-gradient">{firstName}</span>
                   </h1>
-                  <p className="mt-2 text-sm font-medium text-slate-400">
-                    Selamat datang kembali di Leosiqra
-                  </p>
                 </motion.div>
               ) : (
                 <motion.div
@@ -128,11 +115,8 @@ export function SplashScreen({ ready, userName, userPhoto }: SplashScreenProps) 
                   exit={{ opacity: 0 }}
                   transition={{ delay: 0.35, duration: 0.6, ease: "easeOut" }}
                 >
-                  <h1 className="text-2xl sm:text-3xl font-serif font-black text-slate-900 [text-wrap:balance]">
-                    Welcome to <span className="text-gradient">Leosiqra</span>
-                  </h1>
-                  <p className="mt-2 text-sm font-medium text-slate-400">
-                    Menyiapkan Input Cepat kamu&hellip;
+                  <p className="text-sm font-medium text-slate-400">
+                    Menyiapkan akun kamu&hellip;
                   </p>
                 </motion.div>
               )}
