@@ -75,8 +75,7 @@ export function SplashScreen({ ready, userName, userPhoto }: SplashScreenProps) 
               />
 
               {firstName ? (
-                // Foto profil user jadi elemen utama, logo Leosiqra jadi badge
-                // kecil di pojok bawah kanan (kayak badge terverifikasi).
+                // Foto profil user aja, tanpa badge Leosiqra menutupinya.
                 <div className="relative w-24 h-24 rounded-full ring-4 ring-white shadow-[0_20px_50px_-15px_rgba(79,70,229,0.35)] overflow-hidden bg-gradient-to-br from-indigo-100 to-violet-100">
                   {userPhoto ? (
                     <LogoImage
@@ -90,16 +89,6 @@ export function SplashScreen({ ready, userName, userPhoto }: SplashScreenProps) 
                       {firstName.slice(0, 1).toUpperCase()}
                     </div>
                   )}
-                  <div className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-white ring-2 ring-white shadow-md flex items-center justify-center overflow-hidden">
-                    <Image
-                      src="/images/Logo-new.png"
-                      alt="Leosiqra"
-                      width={28}
-                      height={28}
-                      className="object-contain"
-                      priority
-                    />
-                  </div>
                 </div>
               ) : (
                 <div className="relative w-24 h-24 rounded-3xl bg-white border border-slate-100 shadow-[0_20px_50px_-15px_rgba(79,70,229,0.25)] flex items-center justify-center overflow-hidden">
