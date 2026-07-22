@@ -246,7 +246,7 @@ export default function InputCepatPage() {
   if (authState === "loading") {
     return (
       <>
-        <SplashScreen ready={false} />
+        <SplashScreen ready={false} userName={profile?.name} userPhoto={profile?.photoURL} />
       </>
     );
   }
@@ -254,7 +254,7 @@ export default function InputCepatPage() {
   if (authState === "unauth") {
     return (
       <>
-        <SplashScreen ready />
+        <SplashScreen ready userName={profile?.name} userPhoto={profile?.photoURL} />
         <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-slate-50 px-6 text-center">
           <div className="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
             <Wallet size={28} />
@@ -278,7 +278,7 @@ export default function InputCepatPage() {
 
   return (
     <>
-      <SplashScreen ready />
+      <SplashScreen ready userName={profile?.name} userPhoto={profile?.photoURL} />
       <div className="min-h-screen bg-slate-50 flex flex-col">
       <div className="w-full max-w-md mx-auto px-5 pt-8 pb-28 flex-1">
         {/* Header */}

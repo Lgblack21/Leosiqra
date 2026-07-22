@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
+import { LogoImage } from "@/components/ui/LogoImage";
 
 // Splash tetap tampil minimal sekian lama supaya animasinya sempat terlihat
 // (kalau auth-check-nya kebetulan super cepat/cache), tapi dibatasi maksimal
@@ -10,12 +11,22 @@ import { AnimatePresence, motion } from "framer-motion";
 const MIN_VISIBLE_MS = 1300;
 const MAX_VISIBLE_MS = 4000;
 
+interface SplashScreenProps {
+  ready: boolean;
+  userName?: string | null;
+  userPhoto?: string | null;
+}
+
 // Splash "Welcome to Leosiqra" — muncul tiap Input Cepat dibuka dari awal
 // (app ditutup lalu dibuka lagi = mount baru = authState balik ke "loading").
 // Untuk kasus app dibiarkan lama di background lalu dibuka lagi tanpa
 // benar-benar ditutup, StaleReloadGuard sudah force-reload otomatis setelah
 // idle >30 menit, jadi splash ini ikut muncul lagi lewat mount baru itu juga.
-export function SplashScreen({ ready }: { ready: boolean }) {
+//
+// Begitu profil user (nama/foto) sudah kebaca, splash-nya personalisasi diri
+// jadi foto + "Halo, {nama}" — kalau belum ada (masih loading/belum login)
+// tetap fallback ke logo + "Welcome to Leosiqra" generik.
+export function SplashScreen({ ready, userName, userPhoto }: SplashScreenProps) {
   const [minElapsed, setMinElapsed] = useState(false);
   const [forceHide, setForceHide] = useState(false);
 
@@ -29,6 +40,7 @@ export function SplashScreen({ ready }: { ready: boolean }) {
   }, []);
 
   const visible = !forceHide && !(minElapsed && ready);
+  const firstName = userName?.trim().split(/\s+/)[0] || null;
 
   return (
     <AnimatePresence>
@@ -50,45 +62,92 @@ export function SplashScreen({ ready }: { ready: boolean }) {
 
           <div className="relative flex flex-col items-center px-6 text-center">
             <motion.div
+              layout
               className="relative mb-7 w-24 h-24"
               initial={{ scale: 0.6, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
             >
               <motion.span
-                className="absolute inset-0 rounded-3xl bg-indigo-500/15 blur-xl"
+                className="absolute inset-0 rounded-full bg-indigo-500/15 blur-xl"
                 animate={{ scale: [1, 1.25, 1], opacity: [0.6, 0.3, 0.6] }}
                 transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
               />
-              <div className="relative w-24 h-24 rounded-3xl bg-white border border-slate-100 shadow-[0_20px_50px_-15px_rgba(79,70,229,0.25)] flex items-center justify-center overflow-hidden">
-                <Image
-                  src="/images/Logo-new.png"
-                  alt="Leosiqra"
-                  width={72}
-                  height={72}
-                  className="object-contain animate-logo-bob"
-                  priority
-                />
-              </div>
+
+              {firstName ? (
+                // Foto profil user jadi elemen utama, logo Leosiqra jadi badge
+                // kecil di pojok bawah kanan (kayak badge terverifikasi).
+                <div className="relative w-24 h-24 rounded-full ring-4 ring-white shadow-[0_20px_50px_-15px_rgba(79,70,229,0.35)] overflow-hidden bg-gradient-to-br from-indigo-100 to-violet-100">
+                  {userPhoto ? (
+                    <LogoImage
+                      src={userPhoto}
+                      alt={userName || "Profil"}
+                      fallbackText={firstName.slice(0, 1).toUpperCase()}
+                      className="w-24 h-24 object-cover"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 flex items-center justify-center text-3xl font-black text-indigo-600">
+                      {firstName.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-white ring-2 ring-white shadow-md flex items-center justify-center overflow-hidden">
+                    <Image
+                      src="/images/Logo-new.png"
+                      alt="Leosiqra"
+                      width={28}
+                      height={28}
+                      className="object-contain"
+                      priority
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="relative w-24 h-24 rounded-3xl bg-white border border-slate-100 shadow-[0_20px_50px_-15px_rgba(79,70,229,0.25)] flex items-center justify-center overflow-hidden">
+                  <Image
+                    src="/images/Logo-new.png"
+                    alt="Leosiqra"
+                    width={72}
+                    height={72}
+                    className="object-contain animate-logo-bob"
+                    priority
+                  />
+                </div>
+              )}
             </motion.div>
 
-            <motion.h1
-              className="text-2xl sm:text-3xl font-serif font-black text-slate-900 [text-wrap:balance]"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.35, duration: 0.6, ease: "easeOut" }}
-            >
-              Welcome to <span className="text-gradient">Leosiqra</span>
-            </motion.h1>
-
-            <motion.p
-              className="mt-2 text-sm font-medium text-slate-400"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.55, duration: 0.5 }}
-            >
-              Menyiapkan Input Cepat kamu&hellip;
-            </motion.p>
+            <AnimatePresence mode="wait">
+              {firstName ? (
+                <motion.div
+                  key="personalized"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                >
+                  <h1 className="text-2xl sm:text-3xl font-serif font-black text-slate-900 [text-wrap:balance]">
+                    Halo, <span className="text-gradient">{firstName}</span>
+                  </h1>
+                  <p className="mt-2 text-sm font-medium text-slate-400">
+                    Selamat datang kembali di Leosiqra
+                  </p>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="generic"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ delay: 0.35, duration: 0.6, ease: "easeOut" }}
+                >
+                  <h1 className="text-2xl sm:text-3xl font-serif font-black text-slate-900 [text-wrap:balance]">
+                    Welcome to <span className="text-gradient">Leosiqra</span>
+                  </h1>
+                  <p className="mt-2 text-sm font-medium text-slate-400">
+                    Menyiapkan Input Cepat kamu&hellip;
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <motion.div
               className="mt-8 flex gap-1.5"
