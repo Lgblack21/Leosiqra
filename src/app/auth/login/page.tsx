@@ -169,16 +169,17 @@ export default function LoginPage() {
 
           <div className="relative flex items-center">
             <div className="flex-grow border-t border-slate-100"></div>
-            <span className="flex-shrink mx-4 text-[8px] font-black text-slate-300 uppercase tracking-[0.2em]">Atau email</span>
+            <span className="flex-shrink mx-4 text-[8px] font-black text-slate-300 uppercase tracking-[0.2em]">Atau email/username</span>
             <div className="flex-grow border-t border-slate-100"></div>
           </div>
 
           {/* Login Form */}
           <form onSubmit={handleLogin} className="space-y-4">
-            <Input 
-              label="Email" 
-              placeholder="contoh@gmail.com" 
-              type="email" 
+            <Input
+              label="Email atau Username"
+              placeholder="contoh@gmail.com atau username"
+              type="text"
+              autoCapitalize="none"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}

@@ -25,7 +25,8 @@ import {
   Smartphone,
   Eye,
   EyeOff,
-  Monitor
+  Monitor,
+  Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { auth, db } from '@/lib/cf-client';
@@ -70,9 +71,20 @@ interface SessionInfo {
   isCurrent: boolean;
 }
 
+// Kartu di kolom kanan dikelompokkan di balik tab supaya tidak jadi tumpukan
+// panjang — "Ringkasan" = yang paling sering dilihat, "Keamanan" = semua yang
+// berhubungan dengan akses akun, "Lainnya" = pintasan & zona berbahaya.
+const RIGHT_TABS = [
+  { id: 'ringkasan', label: 'Ringkasan', icon: Wallet },
+  { id: 'keamanan', label: 'Keamanan', icon: ShieldCheck },
+  { id: 'lainnya', label: 'Lainnya', icon: Settings },
+] as const;
+type RightTab = (typeof RIGHT_TABS)[number]['id'];
+
 export default function ProfilePage() {
   const { activeModal } = useModal();
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [rightTab, setRightTab] = useState<RightTab>('ringkasan');
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -511,10 +523,11 @@ export default function ProfilePage() {
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Username</label>
                 <div className="relative group">
                   <AtSign size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
-                  <input type="text" value={profile.username} onChange={e => setProfile(p => ({...p, username: e.target.value}))}
+                  <input type="text" value={profile.username} onChange={e => setProfile(p => ({...p, username: e.target.value.toLowerCase().replace(/\s+/g, '')}))}
                     placeholder="username..."
                     className="w-full bg-slate-50/50 border-none focus:ring-2 focus:ring-indigo-100 rounded-2xl py-5 pl-14 pr-6 text-sm font-bold text-slate-700 transition-all" />
                 </div>
+                <p className="text-[10px] font-medium text-slate-400 pl-1">3-20 karakter (huruf/angka/underscore/titik) — bisa dipakai untuk login selain email.</p>
               </div>
 
               <div className="space-y-4">
@@ -548,9 +561,28 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Right: Banks & Security */}
-        <div className="space-y-6 md:space-y-10">
-          
+        {/* Right: Pengaturan Akun — dikelompokkan lewat tab biar tidak jadi tumpukan panjang */}
+        <div className="space-y-6 md:space-y-8">
+          <div className="flex items-center gap-2 p-1.5 bg-slate-50 border border-slate-100 rounded-2xl w-full overflow-x-auto no-scrollbar">
+            {RIGHT_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setRightTab(tab.id)}
+                className={cn(
+                  "flex items-center justify-center shrink-0 gap-2 px-4 md:px-5 py-2.5 rounded-xl text-[11px] md:text-[12px] font-black transition-all whitespace-nowrap flex-1",
+                  rightTab === tab.id
+                    ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-100"
+                    : "text-slate-400 hover:text-slate-600"
+                )}
+              >
+                <tab.icon size={14} className={rightTab === tab.id ? "text-indigo-600" : "text-slate-300"} />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {rightTab === 'ringkasan' && (
+          <div className="space-y-6 md:space-y-10 animate-in fade-in duration-300">
           {/* Active Banks */}
           <div className="bg-[#f0f5fa] p-5 md:p-8 rounded-[20px] md:rounded-[48px] border border-white shadow-sm space-y-6 md:space-y-8">
             <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight">Active Banks</h2>
@@ -590,7 +622,11 @@ export default function ProfilePage() {
               })}
             </div>
           </div>
- 
+          </div>
+          )}
+
+          {rightTab === 'keamanan' && (
+          <div className="space-y-6 md:space-y-10 animate-in fade-in duration-300">
           {/* Security */}
           <div className="bg-slate-900 p-5 md:p-8 rounded-[20px] md:rounded-[48px] shadow-2xl space-y-6 md:space-y-10 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-8 text-white/5 group-hover:text-white/10 transition-colors hidden md:block">
@@ -731,7 +767,11 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
+          </div>
+          )}
 
+          {rightTab === 'lainnya' && (
+          <div className="space-y-6 md:space-y-10 animate-in fade-in duration-300">
           {/* Input Cepat — satu-satunya jalur input dari HP, jalan di iPhone & Android. */}
           <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[48px] border border-slate-50 shadow-sm space-y-5">
             <div className="flex items-center gap-3">
@@ -781,6 +821,8 @@ export default function ProfilePage() {
               Reset Semua Data
             </button>
           </div>
+          </div>
+          )}
         </div>
       </div>
 

@@ -156,6 +156,25 @@ export default function AdminPengaturanPage() {
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [broadcastResult, setBroadcastResult] = useState<string | null>(null);
 
+  // Kunci uniqueness username di level database (menutup celah race condition
+  // di atas pengecekan aplikasi yang sudah ada di handleUpdateMemberProfile).
+  const [isEnforcingUsername, setIsEnforcingUsername] = useState(false);
+  const [enforceUsernameResult, setEnforceUsernameResult] = useState<string | null>(null);
+
+  const handleEnforceUsernameUnique = async () => {
+    setIsEnforcingUsername(true);
+    setEnforceUsernameResult(null);
+    try {
+      await cloudflareApi('/api/admin/debug/enforce-username-unique', { method: 'POST' });
+      setEnforceUsernameResult('Index unique username berhasil dipasang.');
+    } catch (error) {
+      console.error(error);
+      setEnforceUsernameResult(error instanceof Error ? error.message : 'Gagal memasang index unique username.');
+    } finally {
+      setIsEnforcingUsername(false);
+    }
+  };
+
   const handleBackfillBankLogos = async () => {
     setIsBackfillingLogos(true);
     setBackfillResult(null);
@@ -712,6 +731,34 @@ export default function AdminPengaturanPage() {
               </button>
               {backfillResult && (
                 <p className="text-[11px] font-bold text-slate-600">{backfillResult}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
+                <Lock size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-slate-900">Kunci Username Unik</h3>
+                <p className="text-[11px] font-medium text-slate-400">Pasang UNIQUE index di database untuk kolom username (dipakai login alternatif) — menutup celah race condition di atas pengecekan yang sudah ada. Kalau ada bentrokan lama, ditolak dan ditampilkan daftarnya dulu.</p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <button
+                onClick={handleEnforceUsernameUnique}
+                disabled={isEnforcingUsername}
+                className={cn(
+                  "px-4 py-2.5 bg-slate-900 text-white rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 transition-colors shrink-0 w-fit",
+                  isEnforcingUsername && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                <Lock size={14} />
+                {isEnforcingUsername ? "Memproses..." : "Pasang UNIQUE Index"}
+              </button>
+              {enforceUsernameResult && (
+                <p className="text-[11px] font-bold text-slate-600">{enforceUsernameResult}</p>
               )}
             </div>
           </div>

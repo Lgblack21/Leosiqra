@@ -681,7 +681,7 @@ const getMaintenanceSettings = async (env: Env) =>
 // dan riwayat lama user. Sekarang ambil semua tabel keuangan dengan kolom
 // lengkap dan limit yang jauh lebih longgar.
 const buildUserContext = async (env: Env, userId: string) => {
-  const [accounts, transactions, budgets, investments, savings, recurring, currencies] = await Promise.all([
+  const [accounts, transactions, budgets, investments, savings, recurring, currencies, categories] = await Promise.all([
     env.DB.prepare(
       `SELECT id, name, type, currency, balance, initial_balance, payload_json
          FROM accounts WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`
@@ -697,8 +697,9 @@ const buildUserContext = async (env: Env, userId: string) => {
         payload_json: string | null;
       }>(),
     env.DB.prepare(
-      `SELECT type, amount, amount_idr, currency, category, sub_category, account_id, note, date,
-              lender_name, total_debt, installment_tenor, monthly_interest, total_interest, payment_status
+      `SELECT type, amount, amount_idr, currency, category, sub_category, account_id, target_account_id, note,
+              date, display_date, status, lender_name, total_debt, installment_tenor, monthly_interest,
+              total_interest, payment_status
          FROM transactions WHERE user_id = ? ORDER BY date DESC LIMIT 500`
     )
       .bind(userId)
@@ -712,24 +713,32 @@ const buildUserContext = async (env: Env, userId: string) => {
     // yang dibuat DepositModal untuk tiap deposito baru — bukan posisi nyata,
     // supaya AI tidak menghitungnya dobel dengan baris "Penempatan" aslinya.
     env.DB.prepare(
-      `SELECT name, type, currency, amount_invested, amount_idr, current_value, current_value_idr,
-              return_percentage, status FROM investments WHERE user_id = ? AND status != 'Planned' ORDER BY created_at DESC LIMIT 100`
+      `SELECT name, type, platform, currency, amount_invested, amount_idr, current_value, current_value_idr,
+              return_percentage, transaction_type, category, quantity, unit, stock_code, exchange_code,
+              date_invested, target_date, duration_months, status
+         FROM investments WHERE user_id = ? AND status != 'Planned' ORDER BY created_at DESC LIMIT 100`
     )
       .bind(userId)
       .all(),
     env.DB.prepare(
-      `SELECT description, amount, amount_idr, currency, category, to_goal, date
+      `SELECT description, amount, amount_idr, currency, category, from_account, to_goal, date, display_date
          FROM savings WHERE user_id = ? ORDER BY date DESC LIMIT 100`
     )
       .bind(userId)
       .all(),
     env.DB.prepare(
-      "SELECT name, type, category, amount, interval, next_date, status FROM recurring WHERE user_id = ? ORDER BY created_at DESC LIMIT 50"
+      `SELECT name, type, category, account_id, amount, interval, next_date, note, status
+         FROM recurring WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`
     )
       .bind(userId)
       .all(),
     env.DB.prepare(
       "SELECT code, name, symbol, is_default FROM currencies WHERE user_id = ? ORDER BY created_at DESC LIMIT 30"
+    )
+      .bind(userId)
+      .all(),
+    env.DB.prepare(
+      "SELECT category, sub_category, scope FROM categories WHERE user_id = ? ORDER BY category ASC, sort_order ASC LIMIT 200"
     )
       .bind(userId)
       .all(),
@@ -792,6 +801,7 @@ const buildUserContext = async (env: Env, userId: string) => {
     savings: savings.results,
     recurring: recurring.results,
     currencies: currencies.results,
+    categories: categories.results,
   };
 };
 
@@ -898,6 +908,10 @@ Cara membaca Konteks Data Keuangan Pengguna di bawah:
 - Akun bertipe "Credit Card"/"kartu" TIDAK memakai "balance" sebagai saldo kas — itu limit kartu. Terpakai = initialBalance + total pengeluaran dari akun ini (transaksi type pengeluaran/debt kategori Piutang dengan account_id ini) − total pemasukan ke akun ini; Sisa Limit = creditLimit − Terpakai.
 - Transaksi dengan type "debt": category "Hutang" berarti pengguna berutang, category "Piutang" berarti pengguna memberi pinjaman. payment_status "lunas" berarti sudah selesai — jangan hitung yang lunas sebagai hutang/piutang aktif.
 - Field "currencies" adalah daftar mata uang yang dipakai pengguna (bukan saldo), dipakai kalau ditanya mata uang apa saja yang mereka lacak.
+- Field "categories" adalah daftar kategori/subkategori custom yang pengguna buat sendiri (bukan transaksi) — pakai ini kalau ditanya kategori apa saja yang mereka punya, atau untuk mencocokkan nama kategori yang benar (jangan mengarang nama kategori yang tidak ada di daftar ini).
+- Untuk pertanyaan soal "hari ini"/"kemarin"/tanggal tertentu di "transactions"/"savings", PAKAI field "display_date" (bukan "date" mentah) sebagai tanggal yang dilihat pengguna di aplikasi — keduanya bisa beda sehari karena penyesuaian zona waktu WIB. Kalau "display_date" kosong/null, baru pakai "date" sebagai fallback.
+- Transaksi dengan type "transfer" (atau yang punya "target_account_id" terisi) adalah perpindahan dana ANTAR rekening milik pengguna sendiri (dari account_id ke target_account_id) — bukan pengeluaran/pemasukan riil, jangan dihitung sebagai belanja atau penghasilan.
+- Di "investments", field "transaction_type" membedakan baris "Beli"/"Pembelian" (menambah posisi) vs "Jual"/"Penjualan" (realisasi/keluar posisi) — jangan jumlahkan keduanya begitu saja sebagai total investasi aktif. Field "date_invested" adalah tanggal transaksinya, "stock_code"/"exchange_code" khusus saham, "quantity"/"unit" khusus emas/kripto/aset lain.
 
 Konteks Data Keuangan Pengguna (JSON):
 ${JSON.stringify(userContext, null, 2)}
@@ -1123,14 +1137,18 @@ async function handleLogin(request: Request, env: Env) {
   }>(request);
 
   if (!payload.email || !payload.password) {
-    return json({ error: "Email dan password wajib diisi." }, { status: 400 });
+    return json({ error: "Email/Username dan password wajib diisi." }, { status: 400 });
   }
 
-  const normalizedEmail = payload.email.toLowerCase();
+  // Field "email" di payload sengaja tetap dipakai buat identifier login secara
+  // umum (email ATAU username, lihat kolom users.username) — menghindari ganti
+  // nama field di semua caller, cukup tebak dari isinya: ada "@" -> email.
+  const identifier = payload.email.trim().toLowerCase();
+  const isEmailIdentifier = identifier.includes("@");
   if (
     !(await checkRateLimit(env, [
       `login:ip:${clientIpOf(request)}`,
-      `login:email:${normalizedEmail}`,
+      `login:identifier:${identifier}`,
     ]))
   ) {
     return json({ error: "Terlalu banyak percobaan. Coba lagi dalam beberapa saat." }, { status: 429 });
@@ -1139,9 +1157,9 @@ async function handleLogin(request: Request, env: Env) {
   const user = await env.DB.prepare(
     `SELECT id, name, email, password_hash, role, plan, status, whatsapp, two_factor_secret
        FROM users
-      WHERE email = ?`
+      WHERE ${isEmailIdentifier ? "email" : "LOWER(username)"} = ?`
   )
-    .bind(normalizedEmail)
+    .bind(identifier)
     .first<{
       id: string;
       name: string;
@@ -1159,7 +1177,7 @@ async function handleLogin(request: Request, env: Env) {
     : { ok: false, needsRehash: false };
 
   if (!user || !passwordVerification.ok) {
-    return json({ error: "Email atau password tidak valid." }, { status: 401 });
+    return json({ error: "Email/Username atau password tidak valid." }, { status: 401 });
   }
 
   if (passwordVerification.needsRehash) {
@@ -2046,6 +2064,32 @@ const backfillIndonesianBankLogos = async (env: Env): Promise<{ updated: number;
   return { updated, checked: rows.length };
 };
 
+// One-off: pasang UNIQUE index di kolom username (case-insensitive, cuma untuk
+// baris yang username-nya diisi — banyak user lama masih '' jadi tidak boleh
+// kena unique juga). Pengecekan aplikasi di handleUpdateMemberProfile sudah
+// mencegah tabrakan di alur normal, index ini cuma menutup celah race
+// condition (dua request nyaris bersamaan) di level database.
+const enforceUsernameUniqueIndex = async (
+  env: Env
+): Promise<{ ok: true } | { ok: false; duplicates: { username: string; count: number }[] }> => {
+  const { results } = await env.DB.prepare(
+    `SELECT LOWER(username) as username, COUNT(*) as count
+       FROM users
+      WHERE username IS NOT NULL AND username != ''
+      GROUP BY LOWER(username)
+     HAVING COUNT(*) > 1`
+  ).all<{ username: string; count: number }>();
+
+  if ((results ?? []).length > 0) {
+    return { ok: false, duplicates: results as { username: string; count: number }[] };
+  }
+
+  await env.DB.prepare(
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_unique ON users(LOWER(username)) WHERE username IS NOT NULL AND username != ''`
+  ).run();
+  return { ok: true };
+};
+
 async function handleDeleteAccount(request: Request, env: Env, accountId: string) {
   const authResult = await requireSession(env, request);
   if (authResult.error) {
@@ -2623,6 +2667,28 @@ async function handleUpdateMemberProfile(request: Request, env: Env) {
     ["currencyInitialized", "currency_initialized"],
     ["currency_initialized", "currency_initialized"],
   ]);
+
+  // Username dipakai sebagai identitas login alternatif (selain email, lihat
+  // handleLogin) — tidak ada UNIQUE constraint di kolom ini (schema lama),
+  // jadi keunikannya dijaga di level aplikasi, di sini, sebelum disimpan.
+  if (payload.username !== undefined) {
+    const normalizedUsername = String(payload.username ?? "").trim().toLowerCase();
+    if (normalizedUsername) {
+      if (!/^[a-z0-9_.]{3,20}$/.test(normalizedUsername)) {
+        return json(
+          { error: "Username 3-20 karakter, hanya huruf kecil/angka/underscore/titik (tanpa spasi)." },
+          { status: 400 }
+        );
+      }
+      const existing = await env.DB.prepare("SELECT id FROM users WHERE LOWER(username) = ? AND id != ?")
+        .bind(normalizedUsername, authResult.session.user.id)
+        .first();
+      if (existing) {
+        return json({ error: "Username sudah dipakai user lain, coba yang lain." }, { status: 409 });
+      }
+    }
+    payload.username = normalizedUsername;
+  }
 
   const assignments: string[] = [];
   const values: unknown[] = [];
@@ -4793,6 +4859,24 @@ const worker = {
         }
         const result = await sendWebPushToAllUsers(env, title, body, targetUrl);
         return json({ ok: true, ...result });
+      }
+
+      // Admin-only, one-off: tutup celah race condition di uniqueness username
+      // dengan UNIQUE index di database. Kalau ternyata sudah ada username
+      // yang bentrok (dibuat sebelum pengecekan aplikasi ada), index TIDAK
+      // dipasang — daftar bentrokannya dikembalikan supaya diselesaikan manual dulu.
+      if (url.pathname === "/api/admin/debug/enforce-username-unique" && request.method === "POST") {
+        const authResult = await requireSession(env, request, "admin");
+        if (authResult.error) return authResult.error;
+        const result = await enforceUsernameUniqueIndex(env);
+        if (!result.ok) {
+          const list = result.duplicates.map((d) => `"${d.username}" (${d.count}x)`).join(", ");
+          return json(
+            { ok: false, error: `Ada username yang bentrok, ganti salah satunya dulu: ${list}`, duplicates: result.duplicates },
+            { status: 409 }
+          );
+        }
+        return json({ ok: true });
       }
 
       if (url.pathname === "/api/realtime" && request.method === "GET") {
