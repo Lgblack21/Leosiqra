@@ -93,14 +93,16 @@ export default function RecurringPage() {
     return cat ? `${cat.category} - ${cat.subCategory}` : id || '-';
   };
 
-  const formatRp = (num: number) => {
+  const formatRp = (num: number, currency: string = 'IDR') => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
-      currency: 'IDR',
+      currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(num);
   };
+
+  const getAccountCurrency = (id: string) => accounts.find(a => a.id === id)?.currency || 'IDR';
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
@@ -218,7 +220,7 @@ export default function RecurringPage() {
                          <span className="text-xs font-bold text-slate-600">{getCategoryName(trx.category || '')}</span>
                       </td>
                       <td className="px-4 md:px-6 py-4 text-right font-black text-slate-900 text-sm whitespace-nowrap">
-                        {formatRp(trx.amount)}
+                        {formatRp(trx.amount, getAccountCurrency(trx.accountId || ''))}
                       </td>
                       <td className="px-4 md:px-6 py-4 text-center">
                         <span className="px-3 py-1 bg-slate-100 text-[10px] font-black text-slate-500 rounded-lg tracking-widest uppercase whitespace-nowrap">

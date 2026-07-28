@@ -7,7 +7,7 @@ import { NumberInput } from '@/components/ui/NumberInput';
 import { recurringService, RecurringTransaction } from '@/lib/services/recurringService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { CategorySelect } from '@/components/CategorySelect';
-import { toLocalDateString } from '@/lib/utils';
+import { getCurrencySymbol, toLocalDateString } from '@/lib/utils';
 
 interface RecurringModalProps {
   userId: string;
@@ -33,6 +33,9 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null }: 
     nextDate: getToday(),
     note: ''
   });
+
+  const selectedAccount = accounts.find(acc => acc.id === formData.accountId);
+  const currencySymbol = getCurrencySymbol(selectedAccount?.currency || 'IDR');
 
   useEffect(() => {
     if (isOpen && userId) {
@@ -170,7 +173,7 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null }: 
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
             <div className="relative">
-              <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
+              <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">{currencySymbol}</span>
               <NumberInput
                 value={formData.amount}
                 onChange={val => setFormData({...formData, amount: val})}
