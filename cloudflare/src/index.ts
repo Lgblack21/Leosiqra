@@ -4252,6 +4252,14 @@ async function handleDeletePushSubscription(request: Request, env: Env) {
 const formatRupiahForPush = (n: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
 
+const formatCurrencyForPush = (n: number, currency: string) => {
+  try {
+    return new Intl.NumberFormat("id-ID", { style: "currency", currency, minimumFractionDigits: 0 }).format(n);
+  } catch {
+    return formatRupiahForPush(n);
+  }
+};
+
 // Kirim ke SATU subscription. Kalau push service balas 404/410 (subscription
 // kadaluarsa/dicabut user dari sisi browser), langsung bersihkan baris itu
 // supaya tidak dicoba lagi di pengiriman berikutnya.
@@ -4368,16 +4376,19 @@ const sendDailySummaryNotifications = async (env: Env) => {
   }
 };
 
-// ===== Job 2: pengingat recurring yang jatuh tempo hari ini, jam 10:00 WIB =====
+// ===== Job 2: eksekusi recurring yang jatuh tempo hari ini, jam 10:00 WIB =====
 
 type RecurringRow = {
   id: string;
   user_id: string;
   name: string;
+  type: string;
   category: string;
+  account_id: string | null;
   amount: number;
   interval: string;
   next_date: string;
+  note: string | null;
 };
 
 // Majukan next_date ke kemunculan berikutnya sesuai interval-nya. Rollover
@@ -4408,14 +4419,18 @@ const advanceNextDate = (dateStr: string, interval: string): string => {
   return d.toISOString();
 };
 
-// Notifikasi pengingat SAJA — tidak otomatis membuat transaksinya.
-const processDueRecurringReminders = async (env: Env) => {
+// Eksekusi beneran: bikin baris transaksi + update saldo rekening (di mata
+// uang rekening itu sendiri, tanpa konversi — sama seperti alur input manual/
+// Input Cepat), baru kirim notifikasi "sudah tercatat". Sebelumnya cuma kirim
+// notifikasi pengingat tanpa nyentuh saldo sama sekali — itu sebabnya recurring
+// yang sudah lewat jatuh tempo tidak pernah muncul di transaksi/nambah saldo.
+const processDueRecurringTransactions = async (env: Env) => {
   // Cron ini jalan jam 03:00 UTC = 10:00 WIB, dan karena tidak melewati
   // tengah malam WIB (03:00 + 7 jam = 10:00, masih tanggal UTC yang sama),
   // tanggal UTC saat ini SAMA dengan tanggal WIB-nya — tidak perlu offset.
   const todayStr = nowIso().slice(0, 10);
   const { results } = await env.DB.prepare(
-    `SELECT id, user_id, name, category, amount, interval, next_date
+    `SELECT id, user_id, name, type, category, account_id, amount, interval, next_date, note
        FROM recurring
       WHERE status = 'ACTIVE' AND substr(next_date, 1, 10) = ?`
   )
@@ -4424,13 +4439,46 @@ const processDueRecurringReminders = async (env: Env) => {
 
   for (const row of results ?? []) {
     try {
-      const body = `${row.name} (${row.category}) - ${formatRupiahForPush(row.amount)}`;
-      await sendWebPushToUser(env, row.user_id, "Pengingat Recurring", body, "/membership/recurring");
+      const txType = row.type?.toLowerCase() === "pemasukan" ? "pemasukan" : "pengeluaran";
+
+      let currency = "IDR";
+      if (row.account_id) {
+        const acc = await env.DB.prepare("SELECT currency FROM accounts WHERE id = ? AND user_id = ?")
+          .bind(row.account_id, row.user_id)
+          .first<{ currency: string }>();
+        currency = acc?.currency || "IDR";
+      }
+
+      await insertTransactionRecord(env, row.user_id, {
+        type: txType,
+        amount: row.amount,
+        category: row.category,
+        currency,
+        accountId: row.account_id,
+        date: todayWIB(),
+        note: row.note || `Otomatis dari Recurring: ${row.name}`,
+        relatedId: row.id,
+        relatedType: "recurring",
+      });
+
+      if (row.account_id) {
+        await env.DB.prepare(
+          `UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?`
+        )
+          .bind(txType === "pemasukan" ? row.amount : -row.amount, row.account_id, row.user_id)
+          .run();
+      }
+
+      const body = `${row.name} (${row.category}) - ${formatCurrencyForPush(row.amount, currency)} sudah tercatat otomatis.`;
+      await sendWebPushToUser(env, row.user_id, "Transaksi Berulang Tercatat", body, "/membership/recurring");
     } catch (error) {
-      console.error(`Gagal kirim pengingat recurring ${row.id}:`, error);
+      console.error(`Gagal eksekusi recurring ${row.id}:`, error);
+      // JANGAN majukan next_date kalau eksekusinya gagal — biar bukan silently
+      // kehilangan satu siklus transaksi, next_date tetap di hari ini supaya
+      // ke-retry di percobaan manual/cron berikutnya.
+      continue;
     }
-    // Majukan next_date terlepas dari sukses/gagalnya push, supaya reminder
-    // yang gagal terkirim tidak nyangkut dan berulang tiap hari selamanya.
+
     try {
       const newNextDate = advanceNextDate(row.next_date, row.interval);
       await env.DB.prepare("UPDATE recurring SET next_date = ?, updated_at = ? WHERE id = ?")
@@ -4817,9 +4865,10 @@ const worker = {
 
       // Trigger manual buat testing notifikasi tanpa nunggu jadwal cron —
       // admin-only. ?job=daily untuk ringkasan harian (aman diulang-ulang,
-      // cuma baca data), ?job=recurring untuk pengingat recurring (HATI-HATI:
-      // ini juga memajukan next_date beneran seperti kalau cron asli jalan,
-      // jangan dipanggil sembarangan kalau cron 10:00 WIB hari itu juga aktif).
+      // cuma baca data), ?job=recurring untuk EKSEKUSI recurring jatuh tempo
+      // (HATI-HATI: ini beneran bikin transaksi + update saldo, sama seperti
+      // kalau cron asli jalan — jangan dipanggil sembarangan kalau cron
+      // 10:00 WIB hari itu juga aktif, bisa dobel transaksi).
       if (url.pathname === "/api/admin/debug/run-notifications" && request.method === "POST") {
         const authResult = await requireSession(env, request, "admin");
         if (authResult.error) return authResult.error;
@@ -4827,7 +4876,7 @@ const worker = {
         if (job === "daily") {
           await sendDailySummaryNotifications(env);
         } else if (job === "recurring") {
-          await processDueRecurringReminders(env);
+          await processDueRecurringTransactions(env);
         } else {
           return json({ error: "Pakai ?job=daily atau ?job=recurring." }, { status: 400 });
         }
@@ -4921,9 +4970,9 @@ const worker = {
       ctx.waitUntil(sendDailySummaryNotifications(env));
       return;
     }
-    // 03:00 UTC = 10:00 WIB — deposito jatuh tempo + pengingat recurring hari ini.
+    // 03:00 UTC = 10:00 WIB — deposito jatuh tempo + eksekusi recurring hari ini.
     ctx.waitUntil(processMaturedDeposits(env));
-    ctx.waitUntil(processDueRecurringReminders(env));
+    ctx.waitUntil(processDueRecurringTransactions(env));
   },
 };
 
