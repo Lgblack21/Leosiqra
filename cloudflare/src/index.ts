@@ -4681,9 +4681,19 @@ const computeUserInsights = async (env: Env, userId: string): Promise<UserInsigh
     .bind(userId, historyStart)
     .all<MonthlyCategoryRow>();
 
+  // Menaruh uang ke investasi (Deposito/Saham/dll) tersimpan sebagai type
+  // "pengeluaran" tapi BUKAN kerugian — sama seperti bug yang ditemukan di
+  // Dashboard Tahunan & monthSummary AI chat. Kalau ikut dijumlah di sini,
+  // "tren pengeluaran" jadi salah, dan naik-turunnya alokasi investasi bisa
+  // salah dianggap "anomali pengeluaran" padahal itu perilaku menabung yang
+  // baik, bukan masalah.
+  const isInvestmentCategory = (category: string) =>
+    category?.toLowerCase().includes("investasi") || category === "Saham" || category === "Deposito";
+
   const byCategory = new Map<string, { current: number; history: number[] }>();
   const totalsByYmType = new Map<string, number>();
   for (const row of results ?? []) {
+    if (row.type === "pengeluaran" && isInvestmentCategory(row.category)) continue;
     totalsByYmType.set(`${row.ym}:${row.type}`, (totalsByYmType.get(`${row.ym}:${row.type}`) ?? 0) + row.total);
     if (row.type !== "pengeluaran") continue;
     const entry = byCategory.get(row.category) ?? { current: 0, history: [] };
