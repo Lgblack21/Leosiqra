@@ -286,8 +286,8 @@ export default function PajakCenterPage() {
 
     months.forEach((m, idx) => {
       const monthTrx = transactions.filter(t => t.date.getMonth() === idx);
-      const inc = monthTrx.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0);
-      const exp = monthTrx.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0);
+      const inc = monthTrx.filter(t => t.type === 'pemasukan').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0);
+      const exp = monthTrx.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0);
       tableHtml += `
         <tr>
           <td style="padding: 8px;">${m}</td>
