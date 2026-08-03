@@ -15,7 +15,7 @@ export interface RecurringTransaction {
   id?: string;
   userId: string;
   name: string;
-  type: 'Pemasukan' | 'Pengeluaran' | 'Transfer';
+  type: 'Pemasukan' | 'Pengeluaran';
   category: string;
   accountId: string;
   amount: number;

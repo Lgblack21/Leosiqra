@@ -4439,7 +4439,19 @@ const processDueRecurringTransactions = async (env: Env) => {
 
   for (const row of results ?? []) {
     try {
-      const txType = row.type?.toLowerCase() === "pemasukan" ? "pemasukan" : "pengeluaran";
+      const normalizedType = row.type?.toLowerCase();
+      if (normalizedType !== "pemasukan" && normalizedType !== "pengeluaran") {
+        // Jenis lama seperti "Transfer" tidak pernah punya akun tujuan di skema
+        // ini — mengeksekusinya sebagai "pengeluaran" akan memotong saldo sumber
+        // tanpa ada rekening yang menerima (uang lenyap). Jeda saja jadwalnya
+        // dan biarkan user mengubahnya jadi Pemasukan/Pengeluaran secara sadar.
+        await env.DB.prepare("UPDATE recurring SET status = 'PAUSED', updated_at = ? WHERE id = ?")
+          .bind(nowIso(), row.id)
+          .run();
+        console.error(`Recurring ${row.id} punya type tidak didukung ("${row.type}") — dijeda otomatis.`);
+        continue;
+      }
+      const txType = normalizedType;
 
       let currency = "IDR";
       if (row.account_id) {
