@@ -824,6 +824,68 @@ const MARKET_DEGRADED_CACHE_MS = 20 * 1000;
 // di-deploy.
 const MARKET_CACHE_KEY = new Request("https://cache.internal.leosiqra.com/market-snapshot-v2");
 
+type CryptoPrices = Record<string, { usd?: number; usd_24h_change?: number }>;
+const EXPECTED_CRYPTO_IDS = ["bitcoin", "ethereum", "solana", "holotoken", "pax-gold"];
+
+// Binance jadi provider utama (bukan lagi CoinGecko) — CoinGecko rate-limit
+// (429) trafik dari IP Cloudflare Workers secara konsisten (lihat commit
+// sebelumnya yang menambahkan logging ini), kemungkinan karena akumulasi
+// trafik SEMUA pengguna Cloudflare Workers di seluruh dunia berbagi pool IP
+// yang sama, bukan cuma dari Leosiqra. Binance publik jauh lebih longgar dan
+// kebetulan tetap punya semua instrumen yang kita perlukan: BTC/ETH/SOL/HOT
+// via pair *USDT, dan emas via PAXGUSDT (Pax Gold, token yang sama yang
+// sebelumnya dipakai sebagai proksi harga emas dari CoinGecko).
+const BINANCE_SYMBOL_TO_ID: Record<string, string> = {
+  BTCUSDT: "bitcoin",
+  ETHUSDT: "ethereum",
+  SOLUSDT: "solana",
+  HOTUSDT: "holotoken",
+  PAXGUSDT: "pax-gold",
+};
+
+const fetchCryptoFromBinance = async (): Promise<CryptoPrices | null> => {
+  try {
+    const symbolsParam = encodeURIComponent(JSON.stringify(Object.keys(BINANCE_SYMBOL_TO_ID)));
+    const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbols=${symbolsParam}`, {
+      headers: { "User-Agent": "Leosiqra/1.0 (+https://www.leosiqra.com)", Accept: "application/json" },
+    });
+    if (!res.ok) {
+      console.error("Binance fetch gagal:", res.status, (await res.text()).slice(0, 200));
+      return null;
+    }
+    const raw = (await res.json()) as Array<{ symbol: string; lastPrice: string; priceChangePercent: string }>;
+    const crypto: CryptoPrices = {};
+    for (const t of raw) {
+      const id = BINANCE_SYMBOL_TO_ID[t.symbol];
+      if (!id) continue;
+      crypto[id] = { usd: Number(t.lastPrice), usd_24h_change: Number(t.priceChangePercent) };
+    }
+    return crypto;
+  } catch (error) {
+    console.error("Binance fetch error:", error);
+    return null;
+  }
+};
+
+// Cadangan kalau Binance kebetulan diblokir/gagal dari suatu region —
+// CoinGecko tetap dicoba sebagai fallback kedua, bukan yang utama lagi.
+const fetchCryptoFromCoinGecko = async (): Promise<CryptoPrices | null> => {
+  try {
+    const res = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,holotoken,pax-gold&vs_currencies=usd&include_24hr_change=true",
+      { headers: { "User-Agent": "Leosiqra/1.0 (+https://www.leosiqra.com)", Accept: "application/json" } }
+    );
+    if (!res.ok) {
+      console.error("CoinGecko fallback fetch gagal:", res.status, (await res.text()).slice(0, 200));
+      return null;
+    }
+    return (await res.json()) as CryptoPrices;
+  } catch (error) {
+    console.error("CoinGecko fallback fetch error:", error);
+    return null;
+  }
+};
+
 const fetchMarketSnapshot = async (): Promise<string> => {
   if (marketSnapshotCache) {
     const ttl = marketSnapshotCache.degraded ? MARKET_DEGRADED_CACHE_MS : MARKET_CACHE_MS;
@@ -849,59 +911,41 @@ const fetchMarketSnapshot = async (): Promise<string> => {
   }
 
   try {
-    const [cryptoRes, fxRes] = await Promise.all([
-      fetch(
-        "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,holotoken,pax-gold&vs_currencies=usd&include_24hr_change=true",
-        { headers: { "User-Agent": "Leosiqra/1.0 (+https://www.leosiqra.com)", Accept: "application/json" } }
-      ),
+    const [binanceCrypto, fxRes] = await Promise.all([
+      fetchCryptoFromBinance(),
       fetch("https://open.er-api.com/v6/latest/USD", {
         headers: { "User-Agent": "Leosiqra/1.0 (+https://www.leosiqra.com)", Accept: "application/json" },
       }),
     ]);
 
-    // Kalau salah satu API gagal (mis. CoinGecko lagi rate-limit), jangan
-    // gagalkan SELURUH snapshot — dulu satu gagal bikin baris yang lain (kurs
-    // USD/IDR dari provider terpisah) ikut tidak tersedia padahal datanya ada.
-    // Tampilkan degradasi sebagian: baris yang gagal jadi "tidak tersedia",
-    // baris yang berhasil tetap tampil.
-    if (!cryptoRes.ok) {
-      console.error("CoinGecko fetch gagal:", cryptoRes.status, (await cryptoRes.text()).slice(0, 200));
+    let crypto: CryptoPrices = binanceCrypto ?? {};
+    const binanceMissing = EXPECTED_CRYPTO_IDS.filter((id) => crypto[id]?.usd === undefined);
+    if (binanceMissing.length > 0) {
+      console.error(`Binance tidak lengkap (hilang: ${binanceMissing.join(", ")}) — coba fallback CoinGecko.`);
+      const coinGeckoCrypto = await fetchCryptoFromCoinGecko();
+      if (coinGeckoCrypto) {
+        // Gabung: pakai Binance sebagai basis, isi yang bolong dari CoinGecko.
+        crypto = { ...coinGeckoCrypto, ...crypto };
+      }
     }
+
     if (!fxRes.ok) {
       console.error("Exchange-rate fetch gagal:", fxRes.status, (await fxRes.text()).slice(0, 200));
     }
-    if (!cryptoRes.ok && !fxRes.ok) {
-      // Keduanya gagal — pakai cache lama kalau ada, biar percobaan
-      // berikutnya (setelah rate limit reda) yang menyegarkan.
+    if (Object.keys(crypto).length === 0 && !fxRes.ok) {
+      // Keduanya (crypto & fx) gagal total — pakai cache lama kalau ada, biar
+      // percobaan berikutnya yang menyegarkan.
       if (marketSnapshotCache) return marketSnapshotCache.text;
-      throw new Error(`Fetch data pasar gagal (crypto ${cryptoRes.status}, fx ${fxRes.status})`);
+      throw new Error(`Fetch data pasar gagal total (crypto kosong, fx ${fxRes.status})`);
     }
 
-    const cryptoRaw = cryptoRes.ok ? await cryptoRes.text() : "";
-    let crypto: Record<string, { usd?: number; usd_24h_change?: number }> = {};
-    if (cryptoRes.ok) {
-      try {
-        crypto = JSON.parse(cryptoRaw);
-      } catch (parseError) {
-        console.error("CoinGecko response bukan JSON valid:", parseError, cryptoRaw.slice(0, 300));
-      }
-    }
     const fx = fxRes.ok ? ((await fxRes.json()) as { rates?: Record<string, number> }) : {};
     const idrRate = fx.rates?.IDR;
 
-    // CoinGecko 200 OK tapi kadang balikin payload yang kehilangan sebagian
-    // ID (pernah kejadian berulang untuk bitcoin/pax-gold spesifik, diduga
-    // rate-limit/anti-bot yang selektif per-ID dari IP Cloudflare Workers).
-    // Log detail keynya di sini supaya kalau kejadian lagi, ketahuan persis
-    // ID mana yang hilang dan apa isi payload mentahnya — bukan cuma "tidak
-    // tersedia" di sisi user tanpa jejak.
-    const expectedIds = ["bitcoin", "ethereum", "solana", "holotoken", "pax-gold"];
-    const missingIds = expectedIds.filter((id) => crypto[id]?.usd === undefined);
+    const missingIds = EXPECTED_CRYPTO_IDS.filter((id) => crypto[id]?.usd === undefined);
     const isDegraded = missingIds.length > 0 || idrRate === undefined;
-    if (cryptoRes.ok && missingIds.length > 0) {
-      console.error(
-        `CoinGecko 200 OK tapi ID berikut hilang dari payload: ${missingIds.join(", ")}. Raw (dipotong): ${cryptoRaw.slice(0, 500)}`
-      );
+    if (missingIds.length > 0) {
+      console.error(`Data pasar tetap tidak lengkap setelah fallback — ID hilang: ${missingIds.join(", ")}`);
     }
 
     const NA = "tidak tersedia";
