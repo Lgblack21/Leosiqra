@@ -722,13 +722,13 @@ const buildUserContext = async (env: Env, userId: string) => {
       .bind(userId)
       .all(),
     env.DB.prepare(
-      `SELECT description, amount, amount_idr, currency, category, from_account, to_goal, date, display_date
+      `SELECT description, amount, amount_idr, currency, category, transaction_type, from_account, to_goal, date, display_date
          FROM savings WHERE user_id = ? ORDER BY date DESC LIMIT 100`
     )
       .bind(userId)
       .all(),
     env.DB.prepare(
-      `SELECT name, type, category, account_id, amount, interval, next_date, note, status
+      `SELECT name, type, category, account_id, amount, interval, next_date, note, status, payload_json
          FROM recurring WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`
     )
       .bind(userId)
@@ -829,11 +829,57 @@ const buildUserContext = async (env: Env, userId: string) => {
           : "Seimbang (total pemasukan dan pengeluaran bulan ini persis sama)",
   };
 
+  // Ringkasan tabungan PER GOAL (kategori), DIHITUNG & DIFORMAT DI SERVER —
+  // alasan sama seperti monthSummary di atas. Kasus nyata yang memicu ini:
+  // AI diminta "sisa target tabungan Dana Darurat" dan menjumlahkan beberapa
+  // baris "savings" mentah sendiri, lalu salah tulis ulang hasilnya jadi 10x
+  // lipat (Rp389 juta padahal aslinya Rp38,9 juta) — bukan data yang salah,
+  // AI-nya yang salah transkrip angka besar. Field siap-pakai di sini
+  // menghilangkan kebutuhan itu sama sekali untuk pertanyaan seperti itu.
+  const savingsTotalByCategory = new Map<string, number>();
+  for (const row of (savings.results ?? []) as Array<{
+    category?: string;
+    transaction_type?: string;
+    amount?: number;
+    amount_idr?: number;
+  }>) {
+    const cat = row.category || "Lainnya";
+    const value = Number(row.amount_idr) || Number(row.amount) || 0;
+    const signed = row.transaction_type === "Penarikan" ? -value : value;
+    savingsTotalByCategory.set(cat, (savingsTotalByCategory.get(cat) ?? 0) + signed);
+  }
+  const goalTargetByCategory = new Map<string, number>();
+  for (const row of (recurring.results ?? []) as Array<{
+    type?: string;
+    category?: string;
+    payload_json?: string | null;
+  }>) {
+    if (row.type !== "Tabungan" || !row.category || !row.payload_json) continue;
+    try {
+      const parsed = JSON.parse(row.payload_json) as { targetAmount?: number };
+      if (typeof parsed.targetAmount === "number" && parsed.targetAmount > 0) {
+        goalTargetByCategory.set(row.category, parsed.targetAmount);
+      }
+    } catch {
+      // payload_json tidak valid JSON — abaikan.
+    }
+  }
+  const savingsSummary = Array.from(savingsTotalByCategory.entries()).map(([category, total]) => {
+    const target = goalTargetByCategory.get(category);
+    return {
+      category,
+      totalTerkumpulFormatted: formatRupiah(total),
+      targetFormatted: target ? formatRupiah(target) : undefined,
+      sisaMenujuTargetFormatted: target ? formatRupiah(Math.max(0, target - total)) : undefined,
+    };
+  });
+
   return {
     accounts: accountsClean,
     totalBalanceIdr,
     accountsMissingRate: accountsMissingRate.length > 0 ? Array.from(new Set(accountsMissingRate)) : undefined,
     monthSummary,
+    savingsSummary,
     transactions: transactions.results,
     budgets: budgets.results,
     investments: investments.results,
@@ -1046,6 +1092,7 @@ Cara membaca Konteks Data Keuangan Pengguna di bawah:
 - Transaksi dengan type "transfer" (atau yang punya "target_account_id" terisi) adalah perpindahan dana ANTAR rekening milik pengguna sendiri (dari account_id ke target_account_id) — bukan pengeluaran/pemasukan riil, jangan dihitung sebagai belanja atau penghasilan.
 - Di "investments", field "transaction_type" membedakan baris "Beli"/"Pembelian" (menambah posisi) vs "Jual"/"Penjualan" (realisasi/keluar posisi) — jangan jumlahkan keduanya begitu saja sebagai total investasi aktif. Field "date_invested" adalah tanggal transaksinya, "stock_code"/"exchange_code" khusus saham, "quantity"/"unit" khusus emas/kripto/aset lain.
 - "monthSummary" berisi ringkasan bulan berjalan yang SUDAH dihitung & diformat oleh server (totalPemasukanFormatted, totalPengeluaranFormatted, statusFormatted — sudah menyimpulkan surplus/defisit/seimbang). Untuk pertanyaan umum seperti "apakah pengeluaran bulan ini aman/wajar", PAKAI field ini langsung sebagai jawaban utama — JANGAN menjumlahkan ulang dari "transactions" mentah, dan JANGAN membuat penjelasan berputar-putar soal kenapa dua angka kebetulan sama; cukup sebutkan angkanya dan statusnya.
+- "savingsSummary" berisi total tabungan PER GOAL/kategori (mis. "Dana Darurat") yang SUDAH dijumlahkan & diformat oleh server — totalTerkumpulFormatted (Setoran dikurangi Penarikan), dan kalau goal itu punya target aktif: targetFormatted serta sisaMenujuTargetFormatted (selisih ke target). Untuk pertanyaan "sisa target tabungan X" atau "berapa total tabungan X", PAKAI field ini langsung — JANGAN menjumlahkan sendiri baris-baris "savings" mentah satu per satu (mudah salah transkrip untuk angka besar).
 
 ATURAN FORMAT ANGKA RUPIAH (WAJIB): setiap kali kamu menyebut nominal Rupiah yang kamu hitung/ambil sendiri dari angka mentah (bukan dari field yang namanya sudah berakhiran "Formatted" seperti di atas), WAJIB tulis dengan titik sebagai pemisah ribuan tiap 3 digit dari kanan — misalnya angka mentah 93977366 HARUS ditulis "Rp93.977.366", BUKAN "Rp93977366" atau "Rp93,977,366". Jangan pernah menulis nominal Rupiah sebagai deretan digit tanpa pemisah.
 
