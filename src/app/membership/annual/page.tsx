@@ -4,8 +4,20 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   TrendingUp,
   WalletCards,
-  CalendarRange
+  CalendarRange,
+  ArrowUpRight,
+  ArrowDownRight
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  type TooltipContentProps
+} from 'recharts';
 import { cn, isIncomingTransaction } from '@/lib/utils';
 import { YearPicker } from '@/components/ui/YearPicker';
 import type { Transaction } from '@/lib/services/transactionService';
@@ -62,6 +74,56 @@ const CircularProgress = ({ value, colorClass, strokeClass }: CircularProgressPr
   );
 };
 
+const MONTH_FULL_ID: Record<string, string> = {
+  JAN: 'Januari', FEB: 'Februari', MAR: 'Maret', APR: 'April', MAY: 'Mei', JUN: 'Juni',
+  JUL: 'Juli', AUG: 'Agustus', SEP: 'September', OCT: 'Oktober', NOV: 'November', DEC: 'Desember',
+};
+
+const formatRpTooltip = (n: number) => `Rp ${Math.round(n).toLocaleString('id-ID')}`;
+
+type ChartTooltipContentProps = TooltipContentProps & {
+  label1: string;
+  label2: string;
+  year: number;
+};
+
+// Tooltip kustom (bukan bawaan browser via atribut `title`, yang sebelumnya
+// bikin hover kelihatan cuma "?" di beberapa browser/OS) — pakai komponen
+// React biasa lewat prop `content` Recharts supaya bisa didesain penuh.
+const ChartTooltipContent = ({ active, payload, label, label1, label2, year }: ChartTooltipContentProps) => {
+  if (!active || !payload || payload.length === 0) return null;
+  const v1 = Number(payload.find(p => p.dataKey === 'v1')?.value) || 0;
+  const v2 = Number(payload.find(p => p.dataKey === 'v2')?.value) || 0;
+  const selisih = v1 - v2;
+  const monthName = MONTH_FULL_ID[String(label)] || String(label);
+
+  return (
+    <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-4 min-w-[210px] animate-in fade-in zoom-in-95 duration-150">
+      <p className="text-xs font-black text-slate-900 mb-2.5">{monthName} {year}</p>
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between gap-6">
+          <span className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+            <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0" /> {label1}
+          </span>
+          <span className="text-[11px] font-bold text-indigo-600 tabular-nums whitespace-nowrap">{formatRpTooltip(v1)}</span>
+        </div>
+        <div className="flex items-center justify-between gap-6">
+          <span className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+            <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" /> {label2}
+          </span>
+          <span className="text-[11px] font-bold text-slate-600 tabular-nums whitespace-nowrap">{formatRpTooltip(v2)}</span>
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-6 mt-2.5 pt-2.5 border-t border-slate-100">
+        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Selisih</span>
+        <span className={cn("text-xs font-black tabular-nums whitespace-nowrap", selisih >= 0 ? 'text-emerald-600' : 'text-rose-500')}>
+          {selisih >= 0 ? '+' : '-'}{formatRpTooltip(Math.abs(selisih))}
+        </span>
+      </div>
+    </div>
+  );
+};
+
 type FireTimestampLike = {
   toDate?: () => Date;
 };
@@ -80,9 +142,11 @@ const toSafeDate = (value: unknown): Date => {
 export default function AnnualDashboard() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [prevYearTransactions, setPrevYearTransactions] = useState<Transaction[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [chartMode, setChartMode] = useState<'monthly' | 'cumulative'>('monthly');
 
   // States for Category Comparison
   const [cat1Id, setCat1Id] = useState<string>(''); // Default to 'All Income' logic if empty?
@@ -184,13 +248,43 @@ export default function AnnualDashboard() {
         if (unsubCat) unsubCat();
       }
     });
-    return () => { 
-      unsub(); 
+    return () => {
+      unsub();
       if (unsubTrx) unsubTrx();
       if (unsubInv) unsubInv();
       if (unsubBdg) unsubBdg();
       if (unsubCat) unsubCat();
     };
+  }, [selectedYear]);
+
+  // Tahun sebelumnya, cuma buat pembanding "vs tahun lalu" di ringkasan chart
+  // — query terpisah & lebih ringan (tidak perlu live-update securepat data
+  // tahun berjalan) karena datanya sudah final/tidak berubah lagi.
+  useEffect(() => {
+    let unsubPrev: (() => void) | null = null;
+    const unsub = onAuthStateChanged(auth, (u) => {
+      if (!u) {
+        setPrevYearTransactions([]);
+        return;
+      }
+      const startOfPrevYear = new Date(selectedYear - 1, 0, 1);
+      const endOfPrevYear = new Date(selectedYear - 1, 11, 31, 23, 59, 59);
+      const qPrev = query(
+        collection(db, 'transactions'),
+        where('userId', '==', u.uid),
+        where('date', '>=', startOfPrevYear),
+        where('date', '<=', endOfPrevYear)
+      );
+      if (unsubPrev) unsubPrev();
+      unsubPrev = onSnapshot(qPrev, (snap) => {
+        setPrevYearTransactions(snap.docs.map(doc => {
+          const d = doc.data();
+          const row = d as { amount?: number; date?: unknown };
+          return { ...d, id: doc.id, amount: Number(row.amount) || 0, date: toSafeDate(row.date) } as Transaction;
+        }));
+      }, (err) => console.error("Annual PrevYear TRX error:", err));
+    });
+    return () => { unsub(); if (unsubPrev) unsubPrev(); };
   }, [selectedYear]);
 
   const yearTransactions = useMemo(() =>
@@ -206,6 +300,15 @@ export default function AnnualDashboard() {
   const totalPengeluaran = useMemo(() => yearTransactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + idrAmount(t), 0), [yearTransactions]);
   const totalInvestasi = useMemo(() => investments.reduce((s, i) => s + (Number(i.amountIDR) || Number(i.amountInvested) || 0), 0), [investments]);
   const netSavings = totalPemasukan - totalPengeluaran;
+
+  const prevYearNet = useMemo(() => {
+    const inc = prevYearTransactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + idrAmount(t), 0);
+    const exp = prevYearTransactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + idrAmount(t), 0);
+    return inc - exp;
+  }, [prevYearTransactions]);
+  // null kalau tahun lalu belum ada data sama sekali — jangan tampilkan
+  // persentase yang menyesatkan (mis. "naik tak terhingga") dibanding nol.
+  const netVsLastYearPct = prevYearNet !== 0 ? ((netSavings - prevYearNet) / Math.abs(prevYearNet)) * 100 : null;
 
   // Monthly Aggregation for the Chart
   const monthlyData = useMemo(() => {
@@ -228,16 +331,22 @@ export default function AnnualDashboard() {
       }
     });
 
-    // Convert to percentages relative to max value for chart heights
-    const maxVal = Math.max(...data.map(d => Math.max(d.v1, d.v2, 1)));
-    return data.map(d => ({
-      m: d.m,
-      b1: (d.v1 / maxVal) * 100,
-      b2: (d.v2 / maxVal) * 100,
-      v1: d.v1,
-      v2: d.v2
-    }));
+    return data;
   }, [yearTransactions, cat1Id, cat2Id, category1Name, category2Name]);
+
+  // "Kumulatif" mengubah tiap bulan jadi total berjalan sejak Januari —
+  // dihitung terpisah dari monthlyData supaya toggle-nya instan tanpa
+  // menghitung ulang agregasi transaksi.
+  const chartData = useMemo(() => {
+    if (chartMode === 'monthly') return monthlyData;
+    let runningV1 = 0;
+    let runningV2 = 0;
+    return monthlyData.map(d => {
+      runningV1 += d.v1;
+      runningV2 += d.v2;
+      return { m: d.m, v1: runningV1, v2: runningV2 };
+    });
+  }, [monthlyData, chartMode]);
 
   // Top Transactions
   const topTransactionsList = useMemo(() => {
@@ -412,17 +521,17 @@ export default function AnnualDashboard() {
         
         {/* GRAPH SECTION (2/3) */}
         <div className="lg:col-span-2 bg-white rounded-[20px] md:rounded-[24px] p-5 md:p-8 border border-slate-100 shadow-sm overflow-hidden">
-          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-8 md:mb-10">
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
             <div>
               <h3 className="text-[14px] md:text-[18px] font-bold text-slate-900 leading-tight">Perbandingan Tahunan</h3>
-              <p className="text-[9px] md:text-xs font-medium text-slate-400 mt-1 max-w-sm">Visual comparison of selected financial metrics.</p>
+              <p className="text-[9px] md:text-xs font-medium text-slate-400 mt-1 max-w-sm">Bandingkan performa keuangan sepanjang tahun.</p>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-slate-50/50 p-2 rounded-xl border border-slate-100/50 w-full md:w-fit">
               <div className="flex flex-1 items-center gap-2">
                 <div className="flex flex-1 items-center gap-2 min-w-0">
                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest bg-white h-7 px-2 flex items-center rounded-lg border border-slate-100 shrink-0">1</span>
-                  <select 
-                    value={cat1Id} 
+                  <select
+                    value={cat1Id}
                     onChange={(e) => setCat1Id(e.target.value)}
                     className="flex-1 min-w-[100px] bg-white text-[11px] font-bold px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer truncate"
                   >
@@ -432,13 +541,13 @@ export default function AnnualDashboard() {
                     ))}
                   </select>
                 </div>
-                
+
                 <span className="text-[9px] font-black text-indigo-300 italic px-1 shrink-0">VS</span>
-                
+
                 <div className="flex flex-1 items-center gap-2 min-w-0">
                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest bg-white h-7 px-2 flex items-center rounded-lg border border-slate-100 shrink-0">2</span>
-                  <select 
-                    value={cat2Id} 
+                  <select
+                    value={cat2Id}
                     onChange={(e) => setCat2Id(e.target.value)}
                     className="flex-1 min-w-[100px] bg-white text-[11px] font-bold px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer truncate"
                   >
@@ -452,26 +561,89 @@ export default function AnnualDashboard() {
             </div>
           </div>
 
-          {/* Simulated Bar Chart Layout */}
-          <div className="bg-slate-50/50 rounded-xl p-3 md:p-4 h-[180px] md:h-[280px] flex items-end justify-between gap-1.5 md:gap-4 relative px-2 md:px-8 border border-slate-50 overflow-x-auto custom-scrollbar">
-            {/* Dynamic 12 Months bars */}
-            {monthlyData.map((col) => (
-              <div key={col.m} className="flex flex-col items-center gap-3 w-full h-full justify-end group">
-                <div className="flex items-end gap-1 w-full justify-center h-[200px]">
-                  <div
-                    title={`${cat1Id || 'Pemasukan'}: Rp ${col.v1.toLocaleString()}`}
-                    className="w-1/2 max-w-[12px] bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t-md group-hover:from-indigo-700 group-hover:to-indigo-500 transition-all duration-500 cursor-help"
-                    style={{ height: `${col.b1}%` }}
-                  />
-                  <div
-                    title={`${cat2Id || 'Pengeluaran'}: Rp ${col.v2.toLocaleString()}`}
-                    className="w-1/2 max-w-[12px] bg-gradient-to-t from-slate-500 to-slate-300 rounded-t-md group-hover:from-slate-700 group-hover:to-slate-500 transition-all duration-500 cursor-help"
-                    style={{ height: `${col.b2}%` }}
-                  />
-                </div>
-                <span className="text-[7px] md:text-[8px] font-black text-slate-400 tracking-tight md:tracking-widest uppercase">{col.m}</span>
+          {/* Ringkasan selisih + toggle Bulanan/Kumulatif */}
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+            <div>
+              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                Selisih ({category1Name || 'Pemasukan'} - {category2Name || 'Pengeluaran'})
+              </p>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className={cn("text-xl md:text-2xl font-black tracking-tight tabular-nums", netSavings >= 0 ? 'text-indigo-600' : 'text-rose-500')}>
+                  {netSavings >= 0 ? '+' : '-'}Rp {formatRpShort(Math.abs(netSavings))}
+                </span>
+                {netVsLastYearPct !== null && (
+                  <span className={cn("flex items-center gap-0.5 text-[11px] font-bold", netVsLastYearPct >= 0 ? 'text-emerald-600' : 'text-rose-500')}>
+                    {netVsLastYearPct >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
+                    {Math.abs(netVsLastYearPct).toFixed(1)}% vs tahun lalu
+                  </span>
+                )}
               </div>
-            ))}
+            </div>
+            <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100 w-fit">
+              {(['monthly', 'cumulative'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setChartMode(mode)}
+                  className={cn(
+                    "px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
+                    chartMode === mode ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                  )}
+                >
+                  {mode === 'monthly' ? 'Bulanan' : 'Kumulatif'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Chart */}
+          <div className="h-[220px] md:h-[300px] -ml-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} barGap={4} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis
+                  dataKey="m"
+                  tick={{ fontSize: 9, fontWeight: 700, fill: '#94a3b8' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 10, fontWeight: 600, fill: '#94a3b8' }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v) => v === 0 ? '0' : `${formatRpShort(v)}`}
+                  width={48}
+                />
+                <Tooltip
+                  cursor={{ fill: '#6366f1', opacity: 0.06 }}
+                  content={(props) => (
+                    <ChartTooltipContent
+                      {...props}
+                      label1={category1Name || 'Pemasukan (Total)'}
+                      label2={category2Name || 'Pengeluaran (Total)'}
+                      year={selectedYear}
+                    />
+                  )}
+                />
+                <Bar dataKey="v1" fill="#4f46e5" radius={[6, 6, 0, 0]} maxBarSize={22} animationDuration={900} animationEasing="ease-out" />
+                <Bar dataKey="v2" fill="#94a3b8" radius={[6, 6, 0, 0]} maxBarSize={22} animationDuration={900} animationEasing="ease-out" animationBegin={120} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Legend + timestamp */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-4 pt-4 border-t border-slate-50">
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
+                <span className="w-2 h-2 rounded-full bg-indigo-600" /> {category1Name || 'Pemasukan (Total)'}
+              </span>
+              <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
+                <span className="w-2 h-2 rounded-full bg-slate-400" /> {category2Name || 'Pengeluaran (Total)'}
+              </span>
+            </div>
+            <p className="text-[9px] font-medium text-slate-300">
+              Data diperbarui: {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}, {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
+            </p>
           </div>
         </div>
 
