@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { ChevronDown, Upload, FileSpreadsheet, Check, AlertTriangle } from 'lucide-react';
+import { ChevronDown, Upload, FileSpreadsheet, FileText, Check, AlertTriangle, Loader2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { accountService, Account } from '@/lib/services/accountService';
 import { transactionImportService, ImportRow } from '@/lib/services/transactionImportService';
 import { parseCsv, parseIndoNumber, parseFlexibleDate, detectDbCrType } from '@/lib/csvImport';
+import { extractPdfText } from '@/lib/pdfText';
+import { parseBcaStatementText } from '@/lib/bcaStatementParser';
 import { formatCurrency, toLocalDateString } from '@/lib/utils';
 
 interface ImportTransactionsModalProps {
@@ -15,15 +17,18 @@ interface ImportTransactionsModalProps {
 }
 
 type AmountMode = 'single' | 'debit_credit';
+type SourceMode = 'csv' | 'pdf_bca';
 
 export const ImportTransactionsModal = ({ userId, isOpen, onClose }: ImportTransactionsModalProps) => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [accountId, setAccountId] = useState('');
+  const [sourceMode, setSourceMode] = useState<SourceMode>('csv');
   const [fileName, setFileName] = useState('');
   const [headers, setHeaders] = useState<string[]>([]);
   const [dataRows, setDataRows] = useState<string[][]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [result, setResult] = useState<{ inserted: number; skipped: number; total: number } | null>(null);
 
   const [dateCol, setDateCol] = useState('');
@@ -32,6 +37,8 @@ export const ImportTransactionsModal = ({ userId, isOpen, onClose }: ImportTrans
   const [amountCol, setAmountCol] = useState('');
   const [debitCol, setDebitCol] = useState('');
   const [creditCol, setCreditCol] = useState('');
+
+  const [pdfRows, setPdfRows] = useState<(ImportRow & { rawDate: string })[]>([]);
 
   useEffect(() => {
     if (isOpen && userId) {
@@ -43,7 +50,7 @@ export const ImportTransactionsModal = ({ userId, isOpen, onClose }: ImportTrans
     if (!isOpen) {
       setFileName(''); setHeaders([]); setDataRows([]); setError(''); setResult(null);
       setDateCol(''); setNoteCol(''); setAmountCol(''); setDebitCol(''); setCreditCol('');
-      setAmountMode('single');
+      setAmountMode('single'); setSourceMode('csv'); setPdfRows([]);
     }
   }, [isOpen]);
 
@@ -73,6 +80,36 @@ export const ImportTransactionsModal = ({ userId, isOpen, onClose }: ImportTrans
     } catch (e) {
       console.error(e);
       setError('Gagal membaca file. Pastikan formatnya CSV.');
+    }
+  };
+
+  const handlePdfFile = async (file: File) => {
+    setError('');
+    setResult(null);
+    setFileName(file.name);
+    setPdfLoading(true);
+    setPdfRows([]);
+    try {
+      const text = await extractPdfText(file);
+      const rows = parseBcaStatementText(text);
+      if (rows.length === 0) {
+        setError('Tidak ada transaksi yang terbaca dari PDF ini. Pastikan ini e-statement BCA (Rekening Tahapan/Giro), atau coba mode CSV.');
+        return;
+      }
+      setPdfRows(
+        rows.map((r) => ({
+          rawDate: r.date,
+          date: r.date,
+          note: r.note,
+          amount: r.amount,
+          type: r.type,
+        }))
+      );
+    } catch (e) {
+      console.error(e);
+      setError('Gagal membaca PDF. Pastikan file tidak terproteksi password dan formatnya e-statement BCA.');
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -125,9 +162,12 @@ export const ImportTransactionsModal = ({ userId, isOpen, onClose }: ImportTrans
     });
   })();
 
-  const validRows = parsedRows.filter((r) => r.date && r.amount > 0);
-  const invalidCount = parsedRows.length - validRows.length;
-  const mappingReady = dateCol && (amountMode === 'single' ? amountCol : (debitCol || creditCol));
+  const activeRows = sourceMode === 'csv' ? parsedRows : pdfRows;
+  const validRows = activeRows.filter((r) => r.date && r.amount > 0);
+  const invalidCount = activeRows.length - validRows.length;
+  const mappingReady = sourceMode === 'csv'
+    ? Boolean(dateCol && (amountMode === 'single' ? amountCol : (debitCol || creditCol)))
+    : pdfRows.length > 0;
 
   const handleImport = async () => {
     if (!accountId || validRows.length === 0) return;
@@ -150,10 +190,10 @@ export const ImportTransactionsModal = ({ userId, isOpen, onClose }: ImportTrans
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Impor Mutasi (CSV)" maxWidth="max-w-3xl">
+    <Modal isOpen={isOpen} onClose={onClose} title="Impor Mutasi" maxWidth="max-w-3xl">
       <div className="space-y-5 px-1">
         <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4 text-xs font-medium text-indigo-700 leading-relaxed">
-          Impor ini hanya menambahkan riwayat transaksi untuk laporan/analisis — <strong>tidak mengubah saldo rekening</strong> (saldo tetap kamu kelola manual seperti biasa). Cocok untuk mengisi histori dari mutasi bank/e-wallet yang di-export sebagai CSV.
+          Impor ini hanya menambahkan riwayat transaksi untuk laporan/analisis — <strong>tidak mengubah saldo rekening</strong> (saldo tetap kamu kelola manual seperti biasa).
         </div>
 
         {error && (
@@ -189,25 +229,70 @@ export const ImportTransactionsModal = ({ userId, isOpen, onClose }: ImportTrans
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">2. Upload File CSV Mutasi</label>
-              <label className="flex items-center justify-center gap-3 border-2 border-dashed border-slate-200 rounded-2xl py-8 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50/30 transition-all">
-                <input
-                  type="file"
-                  accept=".csv,text/csv"
-                  className="hidden"
-                  onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
-                />
-                <Upload size={18} className="text-slate-400" />
-                <span className="text-sm font-bold text-slate-500">{fileName || 'Klik untuk pilih file .csv'}</span>
-              </label>
-              <p className="text-[10px] font-medium text-slate-400 pl-1">
-                Export mutasi dari aplikasi bank/e-wallet kamu sebagai CSV, lalu upload di sini.
-              </p>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">2. Sumber Data</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSourceMode('csv')}
+                  className={`flex-1 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${sourceMode === 'csv' ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200'}`}
+                >
+                  File CSV
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSourceMode('pdf_bca')}
+                  className={`flex-1 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${sourceMode === 'pdf_bca' ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200'}`}
+                >
+                  PDF e-Statement BCA
+                </button>
+              </div>
             </div>
 
-            {headers.length > 0 && (
+            {sourceMode === 'csv' ? (
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">3. Upload File CSV Mutasi</label>
+                <label className="flex items-center justify-center gap-3 border-2 border-dashed border-slate-200 rounded-2xl py-8 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50/30 transition-all">
+                  <input
+                    type="file"
+                    accept=".csv,text/csv"
+                    className="hidden"
+                    onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+                  />
+                  <Upload size={18} className="text-slate-400" />
+                  <span className="text-sm font-bold text-slate-500">{fileName || 'Klik untuk pilih file .csv'}</span>
+                </label>
+                <p className="text-[10px] font-medium text-slate-400 pl-1">
+                  Export mutasi dari aplikasi bank/e-wallet kamu sebagai CSV, lalu upload di sini.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">3. Upload PDF e-Statement BCA</label>
+                <label className="flex items-center justify-center gap-3 border-2 border-dashed border-slate-200 rounded-2xl py-8 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50/30 transition-all">
+                  <input
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    className="hidden"
+                    onChange={(e) => e.target.files?.[0] && handlePdfFile(e.target.files[0])}
+                  />
+                  {pdfLoading ? (
+                    <Loader2 size={18} className="text-slate-400 animate-spin" />
+                  ) : (
+                    <FileText size={18} className="text-slate-400" />
+                  )}
+                  <span className="text-sm font-bold text-slate-500">
+                    {pdfLoading ? 'Membaca PDF...' : (fileName || 'Klik untuk pilih file .pdf')}
+                  </span>
+                </label>
+                <p className="text-[10px] font-medium text-slate-400 pl-1">
+                  Khusus e-statement BCA (Rekening Tahapan/Giro) — parsernya spesifik ke format BCA. Selalu cek preview di bawah sebelum impor karena PDF bisa terbaca beda tergantung versi statement.
+                </p>
+              </div>
+            )}
+
+            {sourceMode === 'csv' && headers.length > 0 && (
               <div className="space-y-4 border-t border-slate-100 pt-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">3. Pemetaan Kolom</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Pemetaan Kolom</label>
 
                 <div className="grid grid-cols-2 gap-4">
                   <ColumnSelect label="Kolom Tanggal" value={dateCol} onChange={setDateCol} headers={headers} />
@@ -240,10 +325,10 @@ export const ImportTransactionsModal = ({ userId, isOpen, onClose }: ImportTrans
               </div>
             )}
 
-            {mappingReady && parsedRows.length > 0 && (
+            {mappingReady && activeRows.length > 0 && (
               <div className="space-y-3 border-t border-slate-100 pt-4">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">4. Preview (10 baris pertama)</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Preview (10 baris pertama)</label>
                   {invalidCount > 0 && (
                     <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600">
                       <AlertTriangle size={12} /> {invalidCount} baris tidak valid akan dilewati
@@ -261,7 +346,7 @@ export const ImportTransactionsModal = ({ userId, isOpen, onClose }: ImportTrans
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
-                      {parsedRows.slice(0, 10).map((r, i) => (
+                      {activeRows.slice(0, 10).map((r, i) => (
                         <tr key={i} className={!r.date || r.amount <= 0 ? 'bg-rose-50/50' : ''}>
                           <td className="px-3 py-2 font-bold text-slate-700 whitespace-nowrap">{r.date || `"${r.rawDate}" (gagal parse)`}</td>
                           <td className="px-3 py-2 text-slate-600 max-w-[200px] truncate">{r.note || '-'}</td>
@@ -277,14 +362,14 @@ export const ImportTransactionsModal = ({ userId, isOpen, onClose }: ImportTrans
                   </table>
                 </div>
                 <p className="text-[10px] font-medium text-slate-400 pl-1">
-                  Total {parsedRows.length} baris terbaca, {validRows.length} siap diimpor.
+                  Total {activeRows.length} baris terbaca, {validRows.length} siap diimpor.
                 </p>
               </div>
             )}
 
             <button
               onClick={handleImport}
-              disabled={loading || !accountId || validRows.length === 0}
+              disabled={loading || pdfLoading || !accountId || validRows.length === 0}
               className="w-full bg-indigo-600 disabled:bg-slate-300 text-white flex items-center justify-center gap-3 py-4 rounded-2xl text-sm font-black transition-all mt-2 shadow-xl shadow-indigo-100"
             >
               <FileSpreadsheet size={18} />
