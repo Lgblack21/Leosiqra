@@ -29,6 +29,7 @@ import { accountService, Account } from '@/lib/services/accountService';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { isCreditAccountType, computeCreditUsage } from '@/lib/creditCard';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
+import { GamificationStrip } from '@/components/GamificationStrip';
 
 interface MarketTicker {
   label: string; sub: string; val: string; pct: string; up: boolean | null;
@@ -295,6 +296,8 @@ export default function MonthlyDashboard() {
             }}
           />
       </div>
+
+      <GamificationStrip />
 
       {/* Top Cards (3 Cols) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">

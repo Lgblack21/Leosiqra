@@ -4465,6 +4465,161 @@ async function handleListInsights(request: Request, env: Env) {
   return json({ items });
 }
 
+// ===== Gamifikasi ringan =====
+// Sama seperti insight: dihitung on-demand dari data yang sudah ada, tanpa
+// tabel baru. Streak dipatahkan lembut (grace period 1 hari) supaya user
+// yang belum sempat mencatat transaksi HARI INI tidak langsung kelihatan
+// putus di 0 sebelum harinya berakhir.
+
+const shiftDateStr = (dateStr: string, days: number) => {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+};
+
+const shiftYm = (ym: string, months: number) => {
+  const [y, m] = ym.split("-").map(Number);
+  const d = new Date(Date.UTC(y, m - 1 + months, 1));
+  return d.toISOString().slice(0, 7);
+};
+
+type GamificationBadge = { id: string; label: string; description: string; unlocked: boolean };
+
+const computeUserGamification = async (
+  env: Env,
+  userId: string
+): Promise<{ streakDays: number; surplusStreakMonths: number; badges: GamificationBadge[] }> => {
+  const todayStr = todayWIB();
+  const currentYm = todayStr.slice(0, 7);
+
+  // --- Streak mencatat transaksi (hari berturut-turut) ---
+  const { results: dateRows } = await env.DB.prepare(
+    `SELECT DISTINCT substr(date, 1, 10) as d FROM transactions WHERE user_id = ? AND date >= ?`
+  )
+    .bind(userId, shiftDateStr(todayStr, -120))
+    .all<{ d: string }>();
+  const dateSet = new Set((dateRows ?? []).map((r) => r.d));
+
+  let streakDays = 0;
+  let cursor = dateSet.has(todayStr) ? todayStr : shiftDateStr(todayStr, -1);
+  while (dateSet.has(cursor)) {
+    streakDays++;
+    cursor = shiftDateStr(cursor, -1);
+  }
+
+  // --- Streak bulan surplus (pemasukan > pengeluaran), hanya bulan yang sudah tuntas ---
+  const { results: monthRows } = await env.DB.prepare(
+    `SELECT substr(date, 1, 7) as ym, type, SUM(COALESCE(NULLIF(amount_idr, 0), amount)) as total
+       FROM transactions
+      WHERE user_id = ? AND type IN ('pemasukan', 'pengeluaran') AND date >= ?
+      GROUP BY ym, type`
+  )
+    .bind(userId, shiftYm(currentYm, -13))
+    .all<{ ym: string; type: string; total: number }>();
+
+  const monthTotals = new Map<string, { pemasukan: number; pengeluaran: number }>();
+  for (const row of monthRows ?? []) {
+    const entry = monthTotals.get(row.ym) ?? { pemasukan: 0, pengeluaran: 0 };
+    if (row.type === "pemasukan") entry.pemasukan = row.total;
+    else entry.pengeluaran = row.total;
+    monthTotals.set(row.ym, entry);
+  }
+
+  let surplusStreakMonths = 0;
+  let ymCursor = shiftYm(currentYm, -1); // mulai dari bulan sebelum bulan berjalan (belum tuntas)
+  while (true) {
+    const t = monthTotals.get(ymCursor);
+    if (!t || (t.pemasukan <= 0 && t.pengeluaran <= 0)) break;
+    if (t.pemasukan > t.pengeluaran) {
+      surplusStreakMonths++;
+      ymCursor = shiftYm(ymCursor, -1);
+    } else {
+      break;
+    }
+  }
+
+  // --- Data pendukung badge lain ---
+  const investmentCount = await env.DB.prepare(`SELECT COUNT(*) as c FROM investments WHERE user_id = ?`)
+    .bind(userId)
+    .first<{ c: number }>();
+
+  const debtStats = await env.DB.prepare(
+    `SELECT
+       SUM(CASE WHEN payment_status = 'belum' THEN 1 ELSE 0 END) as outstanding,
+       COUNT(*) as total
+     FROM transactions WHERE user_id = ? AND type = 'debt'`
+  )
+    .bind(userId)
+    .first<{ outstanding: number | null; total: number }>();
+
+  const savingsTotal = await env.DB.prepare(
+    `SELECT SUM(COALESCE(NULLIF(amount_idr, 0), amount)) as total FROM savings WHERE user_id = ?`
+  )
+    .bind(userId)
+    .first<{ total: number | null }>();
+  const totalSavingsIdr = savingsTotal?.total ?? 0;
+
+  const badges: GamificationBadge[] = [
+    {
+      id: "streak-7",
+      label: "Pencatat Konsisten",
+      description: "Catat transaksi 7 hari berturut-turut",
+      unlocked: streakDays >= 7,
+    },
+    {
+      id: "streak-30",
+      label: "Pencatat Disiplin",
+      description: "Catat transaksi 30 hari berturut-turut",
+      unlocked: streakDays >= 30,
+    },
+    {
+      id: "surplus-3",
+      label: "Hemat Konsisten",
+      description: "Surplus (pemasukan > pengeluaran) 3 bulan berturut-turut",
+      unlocked: surplusStreakMonths >= 3,
+    },
+    {
+      id: "surplus-6",
+      label: "Master Anggaran",
+      description: "Surplus 6 bulan berturut-turut",
+      unlocked: surplusStreakMonths >= 6,
+    },
+    {
+      id: "investor",
+      label: "Investor Pemula",
+      description: "Sudah mulai mencatat investasi",
+      unlocked: (investmentCount?.c ?? 0) > 0,
+    },
+    {
+      id: "debt-free",
+      label: "Bebas Utang",
+      description: "Semua utang yang pernah dicatat sudah lunas",
+      unlocked: (debtStats?.total ?? 0) > 0 && (debtStats?.outstanding ?? 0) === 0,
+    },
+    {
+      id: "saver-1jt",
+      label: "Nabung Rp1 Juta",
+      description: "Total setoran tabungan tembus Rp1.000.000",
+      unlocked: totalSavingsIdr >= 1_000_000,
+    },
+    {
+      id: "saver-10jt",
+      label: "Nabung Rp10 Juta",
+      description: "Total setoran tabungan tembus Rp10.000.000",
+      unlocked: totalSavingsIdr >= 10_000_000,
+    },
+  ];
+
+  return { streakDays, surplusStreakMonths, badges };
+};
+
+async function handleGamification(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const data = await computeUserGamification(env, authResult.session.user.id);
+  return json(data);
+}
+
 // ===== Job 1: ringkasan Pengeluaran/Pemasukan kemarin, jam 00:01 WIB =====
 
 const sendDailySummaryNotifications = async (env: Env) => {
@@ -4815,6 +4970,10 @@ const worker = {
 
       if (url.pathname === "/api/member/insights" && request.method === "GET") {
         return await handleListInsights(request, env);
+      }
+
+      if (url.pathname === "/api/member/gamification" && request.method === "GET") {
+        return await handleGamification(request, env);
       }
 
       if (url.pathname === "/api/member/stock-price" && request.method === "GET") {
