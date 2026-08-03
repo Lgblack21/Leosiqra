@@ -792,10 +792,48 @@ const buildUserContext = async (env: Env, userId: string) => {
   const totalBalanceIdr = accountsClean.reduce((s, a) => s + (a.balanceIdr ?? 0), 0);
   const accountsMissingRate = accountsClean.filter((a) => a.balanceIdr === null).map((a) => a.currency);
 
+  // Ringkasan bulan berjalan, DIHITUNG & DIFORMAT DI SERVER — bukan dibiarkan
+  // ke AI untuk menjumlahkan/memformat sendiri dari daftar transaksi mentah.
+  // Sebelumnya AI sering menulis nominal tanpa titik ribuan (mis. "Rp93977366"
+  // alih-alih "Rp93.977.366") dan kadang membuat kesimpulan aneh/muter-muter
+  // saat pemasukan & pengeluaran kebetulan sama besar. Field siap-pakai di
+  // sini menghilangkan kebutuhan AI menghitung/memformat sendiri untuk
+  // pertanyaan umum seputar "aman tidak pengeluaran bulan ini".
+  const formatRupiah = (n: number) => `Rp${Math.round(n).toLocaleString("id-ID")}`;
+  const now = new Date();
+  const currentYm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const monthTx = (transactions.results ?? []).filter((t) => {
+    const row = t as { display_date?: string | null; date?: string | null };
+    const d = String(row.display_date || row.date || "");
+    return d.startsWith(currentYm);
+  });
+  const sumByType = (type: string) =>
+    monthTx
+      .filter((t) => (t as { type?: string }).type === type)
+      .reduce((s, t) => {
+        const row = t as { amount_idr?: number; amount?: number };
+        return s + (Number(row.amount_idr) || Number(row.amount) || 0);
+      }, 0);
+  const monthIncome = sumByType("pemasukan");
+  const monthExpense = sumByType("pengeluaran");
+  const monthNet = monthIncome - monthExpense;
+  const monthSummary = {
+    bulan: currentYm,
+    totalPemasukanFormatted: formatRupiah(monthIncome),
+    totalPengeluaranFormatted: formatRupiah(monthExpense),
+    statusFormatted:
+      monthNet > 0
+        ? `Surplus ${formatRupiah(monthNet)} (pemasukan lebih besar dari pengeluaran)`
+        : monthNet < 0
+          ? `Defisit ${formatRupiah(Math.abs(monthNet))} (pengeluaran lebih besar dari pemasukan)`
+          : "Seimbang (total pemasukan dan pengeluaran bulan ini persis sama)",
+  };
+
   return {
     accounts: accountsClean,
     totalBalanceIdr,
     accountsMissingRate: accountsMissingRate.length > 0 ? Array.from(new Set(accountsMissingRate)) : undefined,
+    monthSummary,
     transactions: transactions.results,
     budgets: budgets.results,
     investments: investments.results,
@@ -1007,6 +1045,9 @@ Cara membaca Konteks Data Keuangan Pengguna di bawah:
 - Untuk pertanyaan soal "hari ini"/"kemarin"/tanggal tertentu di "transactions"/"savings", PAKAI field "display_date" (bukan "date" mentah) sebagai tanggal yang dilihat pengguna di aplikasi — keduanya bisa beda sehari karena penyesuaian zona waktu WIB. Kalau "display_date" kosong/null, baru pakai "date" sebagai fallback.
 - Transaksi dengan type "transfer" (atau yang punya "target_account_id" terisi) adalah perpindahan dana ANTAR rekening milik pengguna sendiri (dari account_id ke target_account_id) — bukan pengeluaran/pemasukan riil, jangan dihitung sebagai belanja atau penghasilan.
 - Di "investments", field "transaction_type" membedakan baris "Beli"/"Pembelian" (menambah posisi) vs "Jual"/"Penjualan" (realisasi/keluar posisi) — jangan jumlahkan keduanya begitu saja sebagai total investasi aktif. Field "date_invested" adalah tanggal transaksinya, "stock_code"/"exchange_code" khusus saham, "quantity"/"unit" khusus emas/kripto/aset lain.
+- "monthSummary" berisi ringkasan bulan berjalan yang SUDAH dihitung & diformat oleh server (totalPemasukanFormatted, totalPengeluaranFormatted, statusFormatted — sudah menyimpulkan surplus/defisit/seimbang). Untuk pertanyaan umum seperti "apakah pengeluaran bulan ini aman/wajar", PAKAI field ini langsung sebagai jawaban utama — JANGAN menjumlahkan ulang dari "transactions" mentah, dan JANGAN membuat penjelasan berputar-putar soal kenapa dua angka kebetulan sama; cukup sebutkan angkanya dan statusnya.
+
+ATURAN FORMAT ANGKA RUPIAH (WAJIB): setiap kali kamu menyebut nominal Rupiah yang kamu hitung/ambil sendiri dari angka mentah (bukan dari field yang namanya sudah berakhiran "Formatted" seperti di atas), WAJIB tulis dengan titik sebagai pemisah ribuan tiap 3 digit dari kanan — misalnya angka mentah 93977366 HARUS ditulis "Rp93.977.366", BUKAN "Rp93977366" atau "Rp93,977,366". Jangan pernah menulis nominal Rupiah sebagai deretan digit tanpa pemisah.
 
 Konteks Data Keuangan Pengguna (JSON):
 ${JSON.stringify(userContext, null, 2)}
