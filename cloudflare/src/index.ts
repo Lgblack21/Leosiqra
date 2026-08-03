@@ -808,9 +808,20 @@ const buildUserContext = async (env: Env, userId: string) => {
     const d = String(row.display_date || row.date || "");
     return d.startsWith(currentYm);
   });
+  // Menaruh uang ke investasi (Deposito/Saham/dll) tersimpan sebagai type
+  // "pengeluaran" tapi BUKAN kerugian — cuma uang tunai berubah jadi
+  // instrumen investasi (sudah dihitung terpisah di "investments"). Kalau
+  // ikut dijumlah di sini, monthSummary jadi menyesatkan persis seperti bug
+  // yang ditemukan di Dashboard Tahunan (taruh Rp280jt ke deposito bikin
+  // kelihatan defisit besar padahal surplus) — lihat juga Pajak Center yang
+  // sudah lebih dulu mengecualikan kasus yang sama.
+  const isInvestmentPurchaseRow = (t: unknown) => {
+    const row = t as { type?: string; category?: string };
+    return row.type === "pengeluaran" && (row.category?.toLowerCase().includes("investasi") || row.category === "Saham" || row.category === "Deposito");
+  };
   const sumByType = (type: string) =>
     monthTx
-      .filter((t) => (t as { type?: string }).type === type)
+      .filter((t) => (t as { type?: string }).type === type && !(type === "pengeluaran" && isInvestmentPurchaseRow(t)))
       .reduce((s, t) => {
         const row = t as { amount_idr?: number; amount?: number };
         return s + (Number(row.amount_idr) || Number(row.amount) || 0);
