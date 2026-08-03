@@ -5,7 +5,7 @@ import { ChevronDown, Upload, FileSpreadsheet, Check, AlertTriangle } from 'luci
 import { Modal } from '@/components/ui/Modal';
 import { accountService, Account } from '@/lib/services/accountService';
 import { transactionImportService, ImportRow } from '@/lib/services/transactionImportService';
-import { parseCsv, parseIndoNumber, parseFlexibleDate } from '@/lib/csvImport';
+import { parseCsv, parseIndoNumber, parseFlexibleDate, detectDbCrType } from '@/lib/csvImport';
 import { formatCurrency, toLocalDateString } from '@/lib/utils';
 
 interface ImportTransactionsModalProps {
@@ -96,9 +96,13 @@ export const ImportTransactionsModal = ({ userId, isOpen, onClose }: ImportTrans
       let amount = 0;
       let type: 'pemasukan' | 'pengeluaran' = 'pengeluaran';
       if (amountMode === 'single') {
-        const raw = parseIndoNumber(r[aIdx] ?? '0');
+        const cellRaw = r[aIdx] ?? '0';
+        const raw = parseIndoNumber(cellRaw);
+        // Beberapa bank (mis. BCA) menandai debit/kredit lewat kode "DB"/"CR"
+        // di kolom nominal yang sama, bukan tanda +/- — cek itu duluan.
+        const suffixType = detectDbCrType(cellRaw);
         amount = Math.abs(raw);
-        type = raw >= 0 ? 'pemasukan' : 'pengeluaran';
+        type = suffixType ?? (raw >= 0 ? 'pemasukan' : 'pengeluaran');
       } else {
         const debit = debIdx >= 0 ? parseIndoNumber(r[debIdx] ?? '0') : 0;
         const credit = credIdx >= 0 ? parseIndoNumber(r[credIdx] ?? '0') : 0;
@@ -220,7 +224,7 @@ export const ImportTransactionsModal = ({ userId, isOpen, onClose }: ImportTrans
                         amountMode === m ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200'
                       }`}
                     >
-                      {m === 'single' ? 'Satu Kolom Nominal (+/-)' : 'Kolom Debit & Kredit Terpisah'}
+                      {m === 'single' ? 'Satu Kolom Nominal (+/- atau DB/CR)' : 'Kolom Debit & Kredit Terpisah'}
                     </button>
                   ))}
                 </div>

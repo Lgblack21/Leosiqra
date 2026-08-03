@@ -87,6 +87,17 @@ export function parseIndoNumber(raw: string): number {
   return negative ? -value : value;
 }
 
+// Beberapa bank (mis. BCA/KlikBCA) menaruh kode DB (debit/keluar) atau CR
+// (kredit/masuk) sebagai akhiran di kolom nominal yang sama alih-alih tanda
+// +/- atau kolom debit/kredit terpisah — misalnya "50.000,00 DB". Deteksi ini
+// duluan; kalau tidak ketemu, caller jatuh balik ke tanda +/- pada angkanya.
+export function detectDbCrType(raw: string): 'pemasukan' | 'pengeluaran' | null {
+  const s = String(raw ?? '').trim().toLowerCase();
+  if (/\b(cr|kredit|credit|masuk)\b/.test(s)) return 'pemasukan';
+  if (/\b(db|debit|keluar)\b/.test(s)) return 'pengeluaran';
+  return null;
+}
+
 // Coba beberapa format tanggal umum di export mutasi bank Indonesia sebelum
 // jatuh ke Date.parse bawaan. Mengembalikan null kalau semuanya gagal supaya
 // caller bisa menandai baris tsb sebagai "perlu dicek manual".
