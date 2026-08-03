@@ -5297,6 +5297,14 @@ const worker = {
         return Response.redirect(url.toString(), 301);
       }
 
+      // Kanonis-kan ke www — Search Console melaporkan leosiqra.com (apex)
+      // dan www.leosiqra.com sama-sama 200 OK sebagai halaman terpisah tanpa
+      // versi kanonis ("Duplikat, tanpa ada versi kanonis pilihan pengguna").
+      if ((request.method === "GET" || request.method === "HEAD") && url.hostname === "leosiqra.com") {
+        url.hostname = "www.leosiqra.com";
+        return Response.redirect(url.toString(), 301);
+      }
+
       if (
         (request.method === "GET" || request.method === "HEAD") &&
         url.pathname.length > 1 &&
@@ -5305,6 +5313,20 @@ const worker = {
       ) {
         const normalized = `${url.origin}${url.pathname.slice(0, -1)}${url.search}`;
         return Response.redirect(normalized, 308);
+      }
+
+      // Kanonis-kan file .html mentah (artefak nama file Next static export)
+      // ke URL bersih tanpa ekstensi — Search Console melaporkan
+      // /index.html, /privacy.html, /terms.html sebagai halaman "dengan
+      // pengalihan"/duplikat terpisah dari versi bersihnya (/, /privacy,
+      // /terms) yang dipakai di sitemap & seluruh link internal.
+      if (
+        (request.method === "GET" || request.method === "HEAD") &&
+        url.pathname.endsWith(".html") &&
+        !url.pathname.startsWith("/_next/")
+      ) {
+        const clean = url.pathname === "/index.html" ? "/" : url.pathname.slice(0, -".html".length);
+        return Response.redirect(`${url.origin}${clean}${url.search}`, 308);
       }
 
       if ((request.method === "GET" || request.method === "HEAD") && url.pathname === "/login") {

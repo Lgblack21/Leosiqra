@@ -20,6 +20,13 @@ const SITE_DESCRIPTION = "Leosiqra adalah aplikasi pencatat keuangan pribadi den
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.leosiqra.com"),
+  // Setiap halaman jadi canonical ke dirinya sendiri (via metadataBase) —
+  // Search Console sempat melaporkan leosiqra.com/http:// sebagai duplikat
+  // dari www.leosiqra.com/https:// karena tidak ada tag canonical eksplisit;
+  // ini melengkapi redirect di level Worker (lihat cloudflare/src/index.ts).
+  alternates: {
+    canonical: "./",
+  },
   title: SITE_TITLE,
   description: SITE_DESCRIPTION,
   keywords: [
