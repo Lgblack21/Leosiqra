@@ -60,10 +60,14 @@ export default function TopUpPage() {
               date: d.date?.toDate?.() ?? new Date(), createdAt: d.createdAt?.toDate?.() ?? new Date()
             } as Transaction;
           })
-          // Filter: hanya tampilkan sisi "keluar" dari transfer/topup untuk menghindari duplikasi
-          .filter(t => 
+          // Filter: hanya tampilkan sisi "keluar" dari transfer/topup untuk
+          // menghindari duplikasi — sisi "Keluar" & "Masuk" transfer internal
+          // sama-sama tersimpan dengan type "transfer" (lihat TopUpModal), jadi
+          // exclude eksplisit dari subCategory-nya "Masuk", bukan cuma dari type.
+          .filter(t =>
             (t.category === 'Top Up' || t.category === 'Transfer') &&
-            (t.type === 'pengeluaran' || t.type === 'topup' || t.type === 'transfer')
+            (t.type === 'pengeluaran' || t.type === 'topup' || t.type === 'transfer') &&
+            !t.subCategory?.includes('Masuk')
           );
           setTransactions(list);
           setLoading(false);

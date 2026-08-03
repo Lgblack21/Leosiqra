@@ -18,6 +18,7 @@ import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestor
 import { useRef } from 'react';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
+import { isIncomingTransaction } from '@/lib/utils';
 
 export default function DailyTransactionLogPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -275,8 +276,8 @@ export default function DailyTransactionLogPage() {
                         <span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{trx.currency || 'IDR'}</span>
                       </td>
                       <td className="px-4 md:px-6 py-4 text-right whitespace-nowrap">
-                        <p className={`text-sm font-black tracking-tight ${trx.type === 'pemasukan' ? 'text-emerald-600' : 'text-rose-500'}`}>
-                          {trx.type === 'pemasukan' ? '+' : '-'} {formatAmount(trx.amount, trx.currency)}
+                        <p className={`text-sm font-black tracking-tight ${isIncomingTransaction(trx) ? 'text-emerald-600' : 'text-rose-500'}`}>
+                          {isIncomingTransaction(trx) ? '+' : '-'} {formatAmount(trx.amount, trx.currency)}
                         </p>
                       </td>
                       <td className="px-4 md:px-6 py-4 whitespace-nowrap">

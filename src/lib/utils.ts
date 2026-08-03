@@ -18,6 +18,19 @@ export const getCurrencySymbol = (code: string): string => {
   return WORLD_CURRENCIES.find(c => c.code === code)?.symbol || code || 'Rp';
 };
 
+// Transfer internal antar rekening sendiri (TopUpModal) menyimpan KEDUA sisi
+// dengan type yang sama persis ("transfer") — sisi "Keluar" (dari rekening
+// sumber) dan sisi "Masuk" (ke rekening tujuan) cuma dibedakan lewat
+// subCategory ("Transfer Masuk" / "Top Up Masuk"). Banyak halaman list
+// transaksi cuma mengecek `type === 'pemasukan'` untuk warna/tanda +/-, jadi
+// sisi "Masuk" ikut ketampil merah/minus seolah pengeluaran — pakai helper
+// ini di semua tempat itu, bukan pengecekan type mentah.
+export const isIncomingTransaction = (trx: { type?: string; subCategory?: string }): boolean => {
+  if (trx.type === 'pemasukan') return true;
+  if (trx.type === 'transfer' && trx.subCategory?.includes('Masuk')) return true;
+  return false;
+};
+
 // "YYYY-MM-DD" dari tanggal LOKAL device (bukan UTC). `date.toISOString()`
 // selalu mengonversi ke UTC dulu — jadi antara tengah malam s.d. jam offset
 // timezone user (mis. 00:00-06:59 WIB/UTC+7), `.toISOString().split('T')[0]`

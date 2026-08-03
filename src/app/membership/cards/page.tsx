@@ -14,7 +14,7 @@ import {
   Edit2,
   PlusCircle
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, isIncomingTransaction } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { accountService, Account } from '@/lib/services/accountService';
 import { Transaction } from '@/lib/services/transactionService';
@@ -484,16 +484,16 @@ export default function MyCardsPage() {
                 {accountTransactionsRecent.slice(0, 8).map(trx => (
                   <div key={trx.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50/50 hover:bg-slate-50 transition-colors">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs", trx.type === 'pemasukan' ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500')}>
-                        {trx.type === 'pemasukan' ? <ArrowDownCircle size={16} /> : <ArrowUpCircle size={16} />}
+                      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs", isIncomingTransaction(trx) ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500')}>
+                        {isIncomingTransaction(trx) ? <ArrowDownCircle size={16} /> : <ArrowUpCircle size={16} />}
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-slate-700 truncate">{trx.note || trx.category}</p>
                         <p className="text-[9px] text-slate-400">{formatDate(trx.date)}, {formatTime(trx.createdAt)}</p>
                       </div>
                     </div>
-                    <p className={cn("text-sm font-black shrink-0 ml-2", trx.type === 'pemasukan' ? 'text-emerald-600' : 'text-rose-500')}>
-                      {trx.type === 'pemasukan' ? '+' : '-'}{formatAmount(trx.amount, trx.currency)}
+                    <p className={cn("text-sm font-black shrink-0 ml-2", isIncomingTransaction(trx) ? 'text-emerald-600' : 'text-rose-500')}>
+                      {isIncomingTransaction(trx) ? '+' : '-'}{formatAmount(trx.amount, trx.currency)}
                     </p>
                   </div>
                 ))}

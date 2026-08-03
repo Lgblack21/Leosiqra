@@ -17,7 +17,7 @@ import {
   Building2,
   Banknote
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, isIncomingTransaction } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { Modal } from '@/components/ui/Modal';
@@ -533,14 +533,14 @@ export default function MonthlyDashboard() {
                       </div>
                     </td>
                     <td className="px-5 md:px-6 py-4 text-center">
-                      <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${trx.type === 'pemasukan' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'
+                      <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${isIncomingTransaction(trx) ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'
                         }`}>{trx.type}</span>
                     </td>
                     <td className={cn(
                       "px-6 py-4 text-right font-black",
-                      trx.type === 'pemasukan' ? "text-emerald-600" : "text-rose-500"
+                      isIncomingTransaction(trx) ? "text-emerald-600" : "text-rose-500"
                     )}>
-                      {trx.type === 'pemasukan' ? '+' : '-'} {formatRp(toIdrAmount(trx))}
+                      {isIncomingTransaction(trx) ? '+' : '-'} {formatRp(toIdrAmount(trx))}
                     </td>
                   </tr>
                 ))}

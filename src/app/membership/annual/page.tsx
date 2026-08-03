@@ -6,7 +6,7 @@ import {
   WalletCards,
   CalendarRange
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, isIncomingTransaction } from '@/lib/utils';
 import { YearPicker } from '@/components/ui/YearPicker';
 import type { Transaction } from '@/lib/services/transactionService';
 import type { Investment } from '@/lib/services/investmentService';
@@ -483,19 +483,19 @@ export default function AnnualDashboard() {
               <div key={idx} className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center",
-                    trx.type === 'pemasukan' ? 'bg-sky-100 text-sky-500' :
-                    trx.type === 'pengeluaran' ? 'bg-rose-100 text-rose-500' : 
+                    isIncomingTransaction(trx) ? 'bg-sky-100 text-sky-500' :
+                    (trx.type === 'pengeluaran' || trx.type === 'transfer') ? 'bg-rose-100 text-rose-500' :
                     'bg-slate-100 text-slate-500'
                   )}>
-                    {trx.type === 'pemasukan' ? <TrendingUp size={16} /> : <WalletCards size={16} />}
+                    {isIncomingTransaction(trx) ? <TrendingUp size={16} /> : <WalletCards size={16} />}
                   </div>
                   <div>
                     <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{trx.type}</p>
                     <p className="text-xs font-bold text-slate-900">{trx.category || 'Transaksi'}</p>
                   </div>
                 </div>
-                <span className={cn("text-xs font-black", trx.type === 'pemasukan' ? 'text-sky-500' : 'text-rose-500')}>
-                  {trx.type === 'pemasukan' ? '+' : '-'}Rp {formatRpShort(idrAmount(trx))}
+                <span className={cn("text-xs font-black", isIncomingTransaction(trx) ? 'text-sky-500' : 'text-rose-500')}>
+                  {isIncomingTransaction(trx) ? '+' : '-'}Rp {formatRpShort(idrAmount(trx))}
                 </span>
               </div>
             ))}
