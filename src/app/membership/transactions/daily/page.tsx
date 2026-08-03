@@ -71,13 +71,21 @@ export default function DailyTransactionLogPage() {
         );
         if (unsubRef.current) unsubRef.current();
         unsubRef.current = onSnapshot(q, (snap) => {
+          // Catatan Hutang/Piutang (type "debt") bukan arus kas — bahkan yang
+          // sudah "lunas" punya baris pemasukan/pengeluaran TERPISAH yang
+          // dibuat DebtModal untuk dampak kasnya. Ikut menampilkan baris
+          // "debt" itu sendiri di sini bikin kelihatan seperti transaksi
+          // dobel (mis. "beli motor" + catatan cicilan motor yang sama,
+          // sama-sama nongol merah minus padahal cuma satu yang benar-benar
+          // memotong saldo). Halaman Hutang & Piutang sudah menampilkan baris
+          // ini dengan benar (tanpa tanda +/- yang menyesatkan).
           setTransactions(snap.docs.map(doc => {
             const d = doc.data();
             return {
               ...d, id: doc.id, amount: Number(d.amount) || 0,
               date: d.date?.toDate?.() ?? new Date(), createdAt: d.createdAt?.toDate?.() ?? new Date()
             } as Transaction;
-          }));
+          }).filter(t => t.type !== 'debt'));
           setLoading(false);
         }, (err) => { console.error(err); setLoading(false); });
       } else {
