@@ -3058,14 +3058,24 @@ async function handleListRecurring(request: Request, env: Env) {
   return json({ items: rows.results });
 }
 
+// Target tabungan (fitur goal-based saving) disimpan di kolom payload_json
+// yang sudah ada di skema `recurring` (lihat schema-production.sql) tapi
+// belum pernah dipakai — jadi tidak perlu migrasi kolom baru.
+const buildRecurringPayloadJson = (payload: Record<string, unknown>): string | null => {
+  const targetAmountRaw = pickPayloadValue(payload, "target_amount", "targetAmount");
+  const targetAmount = typeof targetAmountRaw === "number" ? targetAmountRaw : Number(targetAmountRaw);
+  if (!Number.isFinite(targetAmount) || targetAmount <= 0) return null;
+  return JSON.stringify({ targetAmount });
+};
+
 async function handleCreateRecurring(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
   const payload = await parseJson<Record<string, unknown>>(request);
   const id = generateId();
   await env.DB.prepare(
-    `INSERT INTO recurring (id, user_id, name, type, category, account_id, amount, interval, next_date, note, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO recurring (id, user_id, name, type, category, account_id, amount, interval, next_date, note, status, payload_json, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       id,
@@ -3079,6 +3089,7 @@ async function handleCreateRecurring(request: Request, env: Env) {
       toIsoIfDateLike(pickPayloadValue(payload, "next_date", "nextDate")) ?? nowIso(),
       payload.note ?? null,
       payload.status ?? "ACTIVE",
+      buildRecurringPayloadJson(payload),
       nowIso(),
       nowIso()
     )
@@ -3107,6 +3118,9 @@ async function handleUpdateRecurring(request: Request, env: Env, recurringId: st
   }
   if (payload.note !== undefined) updates.set("note", payload.note);
   if (payload.status !== undefined) updates.set("status", payload.status);
+  if (payload.target_amount !== undefined || payload.targetAmount !== undefined) {
+    updates.set("payload_json", buildRecurringPayloadJson(payload));
+  }
 
   if (updates.size === 0) {
     return json({ error: "Tidak ada field yang bisa diperbarui." }, { status: 400 });
@@ -4620,6 +4634,81 @@ async function handleGamification(request: Request, env: Env) {
   return json(data);
 }
 
+// ===== Goal-based saving otomatis =====
+// Sebuah "goal" adalah baris `recurring` bertipe 'Tabungan' (dieksekusi oleh
+// processDueRecurringTransactions sebagai setoran otomatis ke tabel `savings`).
+// Target total (opsional) disimpan di payload_json — lihat buildRecurringPayloadJson.
+
+type SavingsGoalRow = {
+  id: string;
+  name: string;
+  category: string;
+  account_id: string | null;
+  amount: number;
+  interval: string;
+  next_date: string;
+  status: string;
+  payload_json: string | null;
+};
+
+async function handleListSavingsGoals(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+
+  const { results: goalRows } = await env.DB.prepare(
+    `SELECT id, name, category, account_id, amount, interval, next_date, status, payload_json
+       FROM recurring
+      WHERE user_id = ? AND type = 'Tabungan'
+      ORDER BY created_at DESC`
+  )
+    .bind(userId)
+    .all<SavingsGoalRow>();
+
+  // Total tersetor per kategori goal, dihitung dari amount_idr (bukan amount
+  // mentah) — konsisten dengan aturan laporan ber-IDR lainnya di codebase ini.
+  const { results: totalsRows } = await env.DB.prepare(
+    `SELECT category,
+            SUM(CASE WHEN transaction_type = 'Penarikan' THEN -1 ELSE 1 END * COALESCE(NULLIF(amount_idr, 0), amount)) as total
+       FROM savings
+      WHERE user_id = ?
+      GROUP BY category`
+  )
+    .bind(userId)
+    .all<{ category: string; total: number }>();
+  const totalsByCategory = new Map((totalsRows ?? []).map((r) => [r.category, r.total || 0]));
+
+  const items = (goalRows ?? []).map((row) => {
+    let targetAmount: number | null = null;
+    if (row.payload_json) {
+      try {
+        const parsed = JSON.parse(row.payload_json) as { targetAmount?: number };
+        targetAmount = typeof parsed.targetAmount === "number" ? parsed.targetAmount : null;
+      } catch {
+        // payload_json tidak valid JSON — abaikan.
+      }
+    }
+    const currentTotal = totalsByCategory.get(row.category) ?? 0;
+    const progressPercent = targetAmount && targetAmount > 0 ? Math.min(100, (currentTotal / targetAmount) * 100) : null;
+
+    return {
+      id: row.id,
+      name: row.name,
+      category: row.category,
+      accountId: row.account_id,
+      monthlyAmount: row.amount,
+      interval: row.interval,
+      nextDate: row.next_date,
+      status: row.status,
+      targetAmount,
+      currentTotal,
+      progressPercent,
+    };
+  });
+
+  return json({ items });
+}
+
 // ===== Job 1: ringkasan Pengeluaran/Pemasukan kemarin, jam 00:01 WIB =====
 
 const sendDailySummaryNotifications = async (env: Env) => {
@@ -4726,18 +4815,6 @@ const processDueRecurringTransactions = async (env: Env) => {
   for (const row of results ?? []) {
     try {
       const normalizedType = row.type?.toLowerCase();
-      if (normalizedType !== "pemasukan" && normalizedType !== "pengeluaran") {
-        // Jenis lama seperti "Transfer" tidak pernah punya akun tujuan di skema
-        // ini — mengeksekusinya sebagai "pengeluaran" akan memotong saldo sumber
-        // tanpa ada rekening yang menerima (uang lenyap). Jeda saja jadwalnya
-        // dan biarkan user mengubahnya jadi Pemasukan/Pengeluaran secara sadar.
-        await env.DB.prepare("UPDATE recurring SET status = 'PAUSED', updated_at = ? WHERE id = ?")
-          .bind(nowIso(), row.id)
-          .run();
-        console.error(`Recurring ${row.id} punya type tidak didukung ("${row.type}") — dijeda otomatis.`);
-        continue;
-      }
-      const txType = normalizedType;
 
       let currency = "IDR";
       if (row.account_id) {
@@ -4747,28 +4824,87 @@ const processDueRecurringTransactions = async (env: Env) => {
         currency = acc?.currency || "IDR";
       }
 
-      await insertTransactionRecord(env, row.user_id, {
-        type: txType,
-        amount: row.amount,
-        category: row.category,
-        currency,
-        accountId: row.account_id,
-        date: todayWIB(),
-        note: row.note || `Otomatis dari Recurring: ${row.name}`,
-        relatedId: row.id,
-        relatedType: "recurring",
-      });
+      if (normalizedType === "tabungan") {
+        // Goal-based saving otomatis: setoran ke pos tabungan (bukan baris
+        // `transactions`), memotong saldo akun sumber di mata uangnya sendiri
+        // — persis alur manual SavingsModal (Setoran).
+        const amountIdr = await resolveIdrAmount(currency, row.amount, undefined);
+        const todayIso = todayWIB();
+        const displayDate = new Date(`${todayIso}T00:00:00Z`).toLocaleDateString("id-ID", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        });
 
-      if (row.account_id) {
         await env.DB.prepare(
-          `UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?`
+          `INSERT INTO savings (
+             id, user_id, description, amount, amount_idr, currency, category, sub_category,
+             from_account, to_goal, transaction_type, date, display_date, created_at, updated_at
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
-          .bind(txType === "pemasukan" ? row.amount : -row.amount, row.account_id, row.user_id)
+          .bind(
+            generateId(),
+            row.user_id,
+            row.note || `Setoran otomatis: ${row.name}`,
+            row.amount,
+            amountIdr,
+            currency,
+            row.category,
+            null,
+            row.account_id,
+            row.category,
+            "Setoran",
+            todayIso,
+            displayDate,
+            nowIso(),
+            nowIso()
+          )
           .run();
-      }
 
-      const body = `${row.name} (${row.category}) - ${formatCurrencyForPush(row.amount, currency)} sudah tercatat otomatis.`;
-      await sendWebPushToUser(env, row.user_id, "Transaksi Berulang Tercatat", body, "/membership/recurring");
+        if (row.account_id) {
+          await env.DB.prepare(`UPDATE accounts SET balance = balance - ? WHERE id = ? AND user_id = ?`)
+            .bind(row.amount, row.account_id, row.user_id)
+            .run();
+        }
+
+        const body = `${row.name} (${row.category}) - ${formatCurrencyForPush(row.amount, currency)} berhasil disetor otomatis ke tabungan.`;
+        await sendWebPushToUser(env, row.user_id, "Setoran Tabungan Otomatis", body, "/membership/tabungan");
+      } else if (normalizedType === "pemasukan" || normalizedType === "pengeluaran") {
+        const txType = normalizedType;
+
+        await insertTransactionRecord(env, row.user_id, {
+          type: txType,
+          amount: row.amount,
+          category: row.category,
+          currency,
+          accountId: row.account_id,
+          date: todayWIB(),
+          note: row.note || `Otomatis dari Recurring: ${row.name}`,
+          relatedId: row.id,
+          relatedType: "recurring",
+        });
+
+        if (row.account_id) {
+          await env.DB.prepare(
+            `UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?`
+          )
+            .bind(txType === "pemasukan" ? row.amount : -row.amount, row.account_id, row.user_id)
+            .run();
+        }
+
+        const body = `${row.name} (${row.category}) - ${formatCurrencyForPush(row.amount, currency)} sudah tercatat otomatis.`;
+        await sendWebPushToUser(env, row.user_id, "Transaksi Berulang Tercatat", body, "/membership/recurring");
+      } else {
+        // Jenis lama seperti "Transfer" tidak pernah punya akun tujuan di skema
+        // ini — mengeksekusinya sebagai "pengeluaran" akan memotong saldo sumber
+        // tanpa ada rekening yang menerima (uang lenyap). Jeda saja jadwalnya
+        // dan biarkan user mengubahnya secara sadar.
+        await env.DB.prepare("UPDATE recurring SET status = 'PAUSED', updated_at = ? WHERE id = ?")
+          .bind(nowIso(), row.id)
+          .run();
+        console.error(`Recurring ${row.id} punya type tidak didukung ("${row.type}") — dijeda otomatis.`);
+        continue;
+      }
     } catch (error) {
       console.error(`Gagal eksekusi recurring ${row.id}:`, error);
       // JANGAN majukan next_date kalau eksekusinya gagal — biar bukan silently
@@ -4974,6 +5110,10 @@ const worker = {
 
       if (url.pathname === "/api/member/gamification" && request.method === "GET") {
         return await handleGamification(request, env);
+      }
+
+      if (url.pathname === "/api/member/savings-goals" && request.method === "GET") {
+        return await handleListSavingsGoals(request, env);
       }
 
       if (url.pathname === "/api/member/stock-price" && request.method === "GET") {

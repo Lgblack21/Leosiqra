@@ -8,7 +8,8 @@ import {
   TrendingUp,
   TrendingDown,
   PlusCircle,
-  ArrowDownToLine
+  ArrowDownToLine,
+  Repeat
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { savingsService, Saving } from '@/lib/services/savingsService';
@@ -18,7 +19,9 @@ import { onAuthStateChanged } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { SavingsModal } from '@/components/modals/SavingsModal';
-import { cn } from '@/lib/utils';
+import { RecurringModal } from '@/components/modals/RecurringModal';
+import { savingsGoalService, SavingsGoal } from '@/lib/services/savingsGoalService';
+import { cn, formatCurrency } from '@/lib/utils';
 
 export default function SavingsPage() {
   const [savings, setSavings] = useState<Saving[]>([]);
@@ -28,6 +31,8 @@ export default function SavingsPage() {
   const [userId, setUserId] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState<'Setoran' | 'Penarikan'>('Setoran');
+  const [goals, setGoals] = useState<SavingsGoal[]>([]);
+  const [showGoalModal, setShowGoalModal] = useState(false);
 
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -36,6 +41,17 @@ export default function SavingsPage() {
 
   const unsubRef = useRef<(() => void) | null>(null);
   const unsubAccRef = useRef<(() => void) | null>(null);
+
+  const loadGoals = () => {
+    savingsGoalService.getUserSavingsGoals().then(setGoals).catch((error) => {
+      console.error('Error loading savings goals:', error);
+    });
+  };
+
+  useEffect(() => {
+    if (!userId) return;
+    loadGoals();
+  }, [userId]);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -152,6 +168,13 @@ export default function SavingsPage() {
             }}
           />
           <button
+            onClick={() => setShowGoalModal(true)}
+            className="px-5 py-3 bg-slate-50 text-slate-600 rounded-xl text-sm font-black flex items-center justify-center gap-2 hover:bg-slate-100 transition-all"
+          >
+            <Repeat size={18} />
+            <span className="hidden md:inline">Goal Otomatis</span>
+          </button>
+          <button
             onClick={() => { setModalMode('Penarikan'); setShowModal(true); }}
             className="px-5 py-3 bg-rose-50 text-rose-600 rounded-xl text-sm font-black flex items-center justify-center gap-2 hover:bg-rose-100 transition-all"
           >
@@ -167,6 +190,53 @@ export default function SavingsPage() {
           </button>
         </div>
       </div>
+
+      {/* Goal Otomatis: progress setoran rutin ke target tabungan */}
+      {goals.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Goal Tabungan Otomatis</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {goals.map((goal) => (
+              <div key={goal.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-black text-slate-900">{goal.name}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{goal.category}</p>
+                  </div>
+                  <span className={cn(
+                    "px-2.5 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest shrink-0",
+                    goal.status === 'PAUSED' ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600"
+                  )}>
+                    {goal.status === 'PAUSED' ? 'Dijeda' : `Auto/${goal.interval}`}
+                  </span>
+                </div>
+
+                {goal.targetAmount ? (
+                  <>
+                    <div className="flex items-end justify-between">
+                      <span className="text-lg font-black text-slate-900">{formatCurrency(goal.currentTotal, 'IDR')}</span>
+                      <span className="text-[10px] font-bold text-slate-400">dari {formatCurrency(goal.targetAmount, 'IDR')}</span>
+                    </div>
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-indigo-500 rounded-full transition-all duration-1000"
+                        style={{ width: `${Math.min(goal.progressPercent ?? 0, 100)}%` }}
+                      />
+                    </div>
+                    <p className="text-[10px] font-bold text-slate-400">{(goal.progressPercent ?? 0).toFixed(0)}% tercapai</p>
+                  </>
+                ) : (
+                  <p className="text-sm font-black text-slate-900">{formatCurrency(goal.currentTotal, 'IDR')} terkumpul</p>
+                )}
+
+                <p className="text-[10px] font-medium text-slate-400 border-t border-slate-50 pt-2">
+                  Setoran otomatis {formatCurrency(goal.monthlyAmount, 'IDR')} / {goal.interval.toLowerCase()}, berikutnya {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(goal.nextDate))}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -313,6 +383,13 @@ export default function SavingsPage() {
         isOpen={showModal}
         onClose={() => setShowModal(false)}
         initialTransactionType={modalMode}
+      />
+
+      <RecurringModal
+        userId={userId}
+        isOpen={showGoalModal}
+        onClose={() => { setShowGoalModal(false); loadGoals(); }}
+        initialType="Tabungan"
       />
     </div>
   );

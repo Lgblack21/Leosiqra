@@ -9,6 +9,7 @@ import { accountService, Account } from '@/lib/services/accountService';
 import { CurrencySelect } from '@/components/CurrencySelect';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { formatCurrency, getCurrencySymbol, toLocalDateString } from '@/lib/utils';
+import { SAVING_GOALS } from '@/lib/savingsGoals';
 
 interface SavingsModalProps {
   userId: string;
@@ -16,8 +17,6 @@ interface SavingsModalProps {
   onClose: () => void;
   initialTransactionType?: 'Setoran' | 'Penarikan';
 }
-
-const SAVING_GOALS = ['Dana Darurat', 'Liburan', 'Pendidikan', 'Properti', 'Kendaraan', 'Bisnis', 'Lainnya'];
 
 export const SavingsModal = ({ userId, isOpen, onClose, initialTransactionType = 'Setoran' }: SavingsModalProps) => {
   const [loading, setLoading] = useState(false);

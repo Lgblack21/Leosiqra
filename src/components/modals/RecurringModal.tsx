@@ -8,15 +8,17 @@ import { recurringService, RecurringTransaction } from '@/lib/services/recurring
 import { accountService, Account } from '@/lib/services/accountService';
 import { CategorySelect } from '@/components/CategorySelect';
 import { getCurrencySymbol, toLocalDateString } from '@/lib/utils';
+import { SAVING_GOALS } from '@/lib/savingsGoals';
 
 interface RecurringModalProps {
   userId: string;
   isOpen: boolean;
   onClose: () => void;
   initialData?: RecurringTransaction | null;
+  initialType?: RecurringTransaction['type'];
 }
 
-export const RecurringModal = ({ userId, isOpen, onClose, initialData = null }: RecurringModalProps) => {
+export const RecurringModal = ({ userId, isOpen, onClose, initialData = null, initialType = 'Pengeluaran' }: RecurringModalProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -31,8 +33,11 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null }: 
     amount: '',
     interval: 'Bulanan' as RecurringTransaction['interval'],
     nextDate: getToday(),
-    note: ''
+    note: '',
+    targetAmount: ''
   });
+
+  const isTabungan = formData.type === 'Tabungan';
 
   const selectedAccount = accounts.find(acc => acc.id === formData.accountId);
   const currencySymbol = getCurrencySymbol(selectedAccount?.currency || 'IDR');
@@ -50,22 +55,24 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null }: 
           amount: String(initialData.amount || ''),
           interval: initialData.interval || 'Bulanan',
           nextDate: toLocalDateString(new Date(initialData.nextDate)),
-          note: initialData.note || ''
+          note: initialData.note || '',
+          targetAmount: initialData.targetAmount ? String(initialData.targetAmount) : ''
         });
       } else {
         setFormData({
           name: '',
-          type: 'Pengeluaran',
+          type: initialType,
           category: '',
           accountId: '',
           amount: '',
           interval: 'Bulanan',
           nextDate: getToday(),
-          note: ''
+          note: '',
+          targetAmount: ''
         });
       }
     }
-  }, [isOpen, userId, initialData]);
+  }, [isOpen, userId, initialData, initialType]);
 
   const handleCreate = async () => {
     if (!userId || !formData.name || !formData.amount || !formData.nextDate) return;
@@ -73,6 +80,8 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null }: 
     setLoading(true);
 
     try {
+      const targetAmount = isTabungan && formData.targetAmount ? parseFloat(formData.targetAmount) : undefined;
+
       if (initialData?.id) {
         await recurringService.updateRecurring(initialData.id, {
           name: formData.name,
@@ -83,6 +92,7 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null }: 
           interval: formData.interval,
           nextDate: new Date(formData.nextDate),
           note: formData.note,
+          targetAmount,
         });
       } else {
         await recurringService.createRecurring({
@@ -95,12 +105,13 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null }: 
           interval: formData.interval,
           nextDate: new Date(formData.nextDate),
           note: formData.note,
-          status: 'ACTIVE'
+          status: 'ACTIVE',
+          targetAmount,
         });
       }
       onClose();
-      setFormData({ 
-        name: '', type: 'Pengeluaran', category: '', accountId: '', amount: '', interval: 'Bulanan', nextDate: getToday(), note: '' 
+      setFormData({
+        name: '', type: 'Pengeluaran', category: '', accountId: '', amount: '', interval: 'Bulanan', nextDate: getToday(), note: '', targetAmount: ''
       });
     } catch (error) {
       console.error("Error creating recurring:", error);
@@ -139,13 +150,14 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null }: 
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Jenis</label>
             <div className="relative">
-              <select 
+              <select
                 value={formData.type}
-                onChange={e => setFormData({...formData, type: e.target.value as RecurringTransaction['type']})}
+                onChange={e => setFormData({...formData, type: e.target.value as RecurringTransaction['type'], category: ''})}
                 className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all cursor-pointer"
               >
                 <option value="Pengeluaran">Pengeluaran</option>
                 <option value="Pemasukan">Pemasukan</option>
+                <option value="Tabungan">Tabungan (Goal Otomatis)</option>
               </select>
               <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
             </div>
@@ -181,14 +193,47 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null }: 
               />
             </div>
           </div>
-          <CategorySelect 
-            label="Kategori"
-            value={formData.category}
-            type={formData.type === 'Pemasukan' ? 'income' : 'expense'}
-            onChange={val => setFormData({...formData, category: val})}
-            showBadge={true}
-          />
+          {isTabungan ? (
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Goal Tabungan</label>
+              <div className="relative">
+                <select
+                  value={formData.category}
+                  onChange={e => setFormData({...formData, category: e.target.value})}
+                  className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all cursor-pointer"
+                >
+                  <option value="">Pilih Goal</option>
+                  {SAVING_GOALS.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+              </div>
+            </div>
+          ) : (
+            <CategorySelect
+              label="Kategori"
+              value={formData.category}
+              type={formData.type === 'Pemasukan' ? 'income' : 'expense'}
+              onChange={val => setFormData({...formData, category: val})}
+              showBadge={true}
+            />
+          )}
         </div>
+
+        {isTabungan && (
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Target Total (Opsional)</label>
+            <div className="relative">
+              <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">{currencySymbol}</span>
+              <NumberInput
+                value={formData.targetAmount}
+                onChange={val => setFormData({...formData, targetAmount: val})}
+                placeholder="Contoh: 10000000"
+                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 pl-12 pr-5 text-sm font-bold text-slate-700 transition-all"
+              />
+            </div>
+            <p className="text-[10px] font-medium text-slate-400 pl-1">Isi kalau mau lihat progress bar menuju target. Kosongkan kalau cuma mau setoran rutin tanpa target.</p>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">

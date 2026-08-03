@@ -15,7 +15,7 @@ export interface RecurringTransaction {
   id?: string;
   userId: string;
   name: string;
-  type: 'Pemasukan' | 'Pengeluaran';
+  type: 'Pemasukan' | 'Pengeluaran' | 'Tabungan';
   category: string;
   accountId: string;
   amount: number;
@@ -24,6 +24,9 @@ export interface RecurringTransaction {
   note?: string;
   status: 'ACTIVE' | 'PAUSED';
   createdAt: Date;
+  // Hanya relevan untuk type 'Tabungan' — target total goal (opsional),
+  // disimpan backend di kolom payload_json (bukan kolom baru).
+  targetAmount?: number;
 }
 
 const COLLECTION_NAME = 'recurring';

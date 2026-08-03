@@ -211,7 +211,7 @@ export default function RecurringPage() {
                       </td>
                       <td className="px-4 md:px-6 py-4 text-center">
                         <span className={`px-3 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest ${
-                          trx.type === 'Pemasukan' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'
+                          trx.type === 'Pemasukan' ? 'bg-emerald-50 text-emerald-600' : trx.type === 'Tabungan' ? 'bg-indigo-50 text-indigo-600' : 'bg-rose-50 text-rose-500'
                         }`}>
                           {trx.type}
                         </span>
