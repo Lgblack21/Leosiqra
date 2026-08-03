@@ -296,14 +296,23 @@ export default function AnnualDashboard() {
   // amountIDR (sudah dikonversi saat transaksi disimpan) — bukan .amount
   // mentah yang masih dalam mata uang asli transaksi tersebut.
   const idrAmount = (t: { amount: number; amountIDR?: number }) => Number(t.amountIDR) || Number(t.amount) || 0;
+  // Menaruh uang ke investasi (Deposito/Saham/dll) BUKAN pengeluaran/kerugian
+  // — itu cuma uang tunai berubah jadi instrumen investasi (aset tetap ada,
+  // cuma beda bentuk, dan sudah dihitung terpisah sebagai kekayaan investasi
+  // di "Total Investasi"). Kalau ikut dijumlah sebagai "Pengeluaran", angkanya
+  // salah besar-besaran (mis. taruh Rp280 juta ke deposito bikin kelihatan
+  // defisit besar padahal sebenarnya surplus) — konsisten dengan fix yang
+  // sama di Pajak Center.
+  const isInvestmentPurchase = (t: { type: string; category?: string }) =>
+    t.type === 'pengeluaran' && (t.category?.toLowerCase().includes('investasi') || t.category === 'Saham' || t.category === 'Deposito');
   const totalPemasukan = useMemo(() => yearTransactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + idrAmount(t), 0), [yearTransactions]);
-  const totalPengeluaran = useMemo(() => yearTransactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + idrAmount(t), 0), [yearTransactions]);
+  const totalPengeluaran = useMemo(() => yearTransactions.filter(t => t.type === 'pengeluaran' && !isInvestmentPurchase(t)).reduce((s, t) => s + idrAmount(t), 0), [yearTransactions]);
   const totalInvestasi = useMemo(() => investments.reduce((s, i) => s + (Number(i.amountIDR) || Number(i.amountInvested) || 0), 0), [investments]);
   const netSavings = totalPemasukan - totalPengeluaran;
 
   const prevYearNet = useMemo(() => {
     const inc = prevYearTransactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + idrAmount(t), 0);
-    const exp = prevYearTransactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + idrAmount(t), 0);
+    const exp = prevYearTransactions.filter(t => t.type === 'pengeluaran' && !isInvestmentPurchase(t)).reduce((s, t) => s + idrAmount(t), 0);
     return inc - exp;
   }, [prevYearTransactions]);
   // null kalau tahun lalu belum ada data sama sekali — jangan tampilkan
@@ -325,9 +334,10 @@ export default function AnnualDashboard() {
         if (t.category === cat1Id || t.category === category1Name) data[monthIdx].v1 += amt;
         if (t.category === cat2Id || t.category === category2Name) data[monthIdx].v2 += amt;
       } else {
-        // Default: Income vs Expense
+        // Default: Income vs Expense — penempatan investasi dikecualikan dari
+        // Pengeluaran (lihat isInvestmentPurchase), sama seperti totalPengeluaran.
         if (t.type === 'pemasukan') data[monthIdx].v1 += amt;
-        if (t.type === 'pengeluaran') data[monthIdx].v2 += amt;
+        if (t.type === 'pengeluaran' && !isInvestmentPurchase(t)) data[monthIdx].v2 += amt;
       }
     });
 
