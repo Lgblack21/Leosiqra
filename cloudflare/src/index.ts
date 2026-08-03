@@ -4334,6 +4334,137 @@ const sendWebPushToAllUsers = async (
   return { sent, total: subs.length };
 };
 
+// ===== Insight proaktif (AI Leosiqra) =====
+// Dihitung on-demand dari data transaksi/budget yang sudah ada (tanpa tabel
+// baru) — anomali kategori, proyeksi budget kebablasan, dan tren bulanan.
+// Rule-based (bukan panggilan LLM) supaya cepat, gratis, dan deterministik;
+// AI chat tetap bisa menjelaskan lebih lanjut kalau user tanya.
+
+type MonthlyCategoryRow = { ym: string; category: string; type: string; total: number };
+
+type UserInsight = {
+  id: string;
+  type: "anomaly" | "budget_pace" | "trend";
+  severity: "info" | "warning";
+  title: string;
+  body: string;
+};
+
+const computeUserInsights = async (env: Env, userId: string): Promise<UserInsight[]> => {
+  const insights: UserInsight[] = [];
+
+  const todayStr = todayWIB(); // "YYYY-MM-DD"
+  const currentYm = todayStr.slice(0, 7);
+  const dayOfMonth = Number(todayStr.slice(8, 10));
+  const [yearNum, monthNum] = currentYm.split("-").map(Number);
+  const daysInMonth = new Date(Date.UTC(yearNum, monthNum, 0)).getUTCDate();
+  const prevYm = new Date(Date.UTC(yearNum, monthNum - 2, 1)).toISOString().slice(0, 7);
+  // Ambil ~4 bulan histori — cukup untuk rata-rata 3 bulan pembanding, tidak berat di query.
+  const historyStart = new Date(Date.UTC(yearNum, monthNum - 1 - 4, 1)).toISOString().slice(0, 10);
+
+  const { results } = await env.DB.prepare(
+    `SELECT substr(date, 1, 7) as ym, category, type,
+            SUM(COALESCE(NULLIF(amount_idr, 0), amount)) as total
+       FROM transactions
+      WHERE user_id = ? AND type IN ('pengeluaran', 'pemasukan') AND date >= ?
+      GROUP BY ym, category, type`
+  )
+    .bind(userId, historyStart)
+    .all<MonthlyCategoryRow>();
+
+  const byCategory = new Map<string, { current: number; history: number[] }>();
+  const totalsByYmType = new Map<string, number>();
+  for (const row of results ?? []) {
+    totalsByYmType.set(`${row.ym}:${row.type}`, (totalsByYmType.get(`${row.ym}:${row.type}`) ?? 0) + row.total);
+    if (row.type !== "pengeluaran") continue;
+    const entry = byCategory.get(row.category) ?? { current: 0, history: [] };
+    if (row.ym === currentYm) entry.current += row.total;
+    else if (row.ym < currentYm) entry.history.push(row.total);
+    byCategory.set(row.category, entry);
+  }
+
+  // Butuh minimal beberapa hari berjalan supaya proyeksi pace tidak liar (mis.
+  // sekali belanja gede di tanggal 1 langsung diproyeksikan x30).
+  const canProject = dayOfMonth >= 3;
+
+  // 1) Anomali kategori: proyeksi bulan ini vs rata-rata histori kategori itu.
+  if (canProject) {
+    for (const [category, { current, history }] of byCategory) {
+      if (history.length < 2 || current < 100000) continue;
+      const avg = history.reduce((s, v) => s + v, 0) / history.length;
+      if (avg <= 0) continue;
+      const projected = (current / dayOfMonth) * daysInMonth;
+      if (projected >= avg * 1.4) {
+        const pct = Math.round((projected / avg - 1) * 100);
+        insights.push({
+          id: `anomaly-${category}`,
+          type: "anomaly",
+          severity: "warning",
+          title: `Pengeluaran ${category} berpotensi naik ${pct}%`,
+          body: `Proyeksi bulan ini ~${formatRupiahForPush(projected)}, dibanding rata-rata ${formatRupiahForPush(avg)}/bulan pada bulan-bulan sebelumnya.`,
+        });
+      }
+    }
+  }
+
+  // 2) Proyeksi budget bulanan yang berpotensi kebablasan.
+  if (canProject) {
+    const { results: budgetRows } = await env.DB.prepare(
+      `SELECT category, amount FROM budgets WHERE user_id = ? AND type = 'pengeluaran' AND period = 'monthly'`
+    )
+      .bind(userId)
+      .all<{ category: string; amount: number }>();
+
+    for (const b of budgetRows ?? []) {
+      const spent = byCategory.get(b.category)?.current ?? 0;
+      if (spent <= 0 || !b.amount) continue;
+      const projected = (spent / dayOfMonth) * daysInMonth;
+      if (projected > b.amount * 1.05) {
+        const pct = Math.round((projected / b.amount) * 100);
+        insights.push({
+          id: `budget-${b.category}`,
+          type: "budget_pace",
+          severity: "warning",
+          title: `Budget ${b.category} berpotensi jebol`,
+          body: `Dengan kecepatan belanja sekarang, proyeksi akhir bulan ~${formatRupiahForPush(projected)} (${pct}% dari target ${formatRupiahForPush(b.amount)}).`,
+        });
+      }
+    }
+  }
+
+  // 3) Tren pengeluaran bulan ini vs bulan lalu (keseluruhan, semua kategori).
+  if (canProject) {
+    const curExpense = totalsByYmType.get(`${currentYm}:pengeluaran`) ?? 0;
+    const prevExpense = totalsByYmType.get(`${prevYm}:pengeluaran`) ?? 0;
+    if (prevExpense > 0) {
+      const projectedExpense = (curExpense / dayOfMonth) * daysInMonth;
+      const pct = Math.round((projectedExpense / prevExpense - 1) * 100);
+      if (Math.abs(pct) >= 20) {
+        insights.push({
+          id: "monthly-trend",
+          type: "trend",
+          severity: pct > 0 ? "warning" : "info",
+          title: pct > 0
+            ? `Pengeluaran bulan ini diproyeksi naik ${pct}%`
+            : `Pengeluaran bulan ini diproyeksi turun ${Math.abs(pct)}%`,
+          body: `Dibanding bulan lalu (${formatRupiahForPush(prevExpense)}), proyeksi total bulan ini ~${formatRupiahForPush(projectedExpense)}.`,
+        });
+      }
+    }
+  }
+
+  // Paling relevan dulu (anomali kategori & budget di atas tren umum), batasi
+  // biar UI tidak kebanjiran kartu.
+  return insights.slice(0, 6);
+};
+
+async function handleListInsights(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const items = await computeUserInsights(env, authResult.session.user.id);
+  return json({ items });
+}
+
 // ===== Job 1: ringkasan Pengeluaran/Pemasukan kemarin, jam 00:01 WIB =====
 
 const sendDailySummaryNotifications = async (env: Env) => {
@@ -4680,6 +4811,10 @@ const worker = {
         if (request.method === "DELETE") {
           return await handleDeleteBudget(request, env, budgetId);
         }
+      }
+
+      if (url.pathname === "/api/member/insights" && request.method === "GET") {
+        return await handleListInsights(request, env);
       }
 
       if (url.pathname === "/api/member/stock-price" && request.method === "GET") {

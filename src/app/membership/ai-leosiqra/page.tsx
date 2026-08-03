@@ -9,6 +9,8 @@ import {
   Copy,
   ArrowRight,
   TrendingUp,
+  TrendingDown,
+  AlertTriangle,
   Target,
   Check,
   Bot,
@@ -24,6 +26,8 @@ import { investmentService } from '@/lib/services/investmentService';
 import { savingsService } from '@/lib/services/savingsService';
 import { budgetService } from '@/lib/services/budgetService';
 import { aiChatService, ChatMessage as Message } from '@/lib/services/aiChatService';
+import { insightService, UserInsight } from '@/lib/services/insightService';
+import { InsightCard } from '@/components/InsightCard';
 
 const QUICK_PROMPTS = [
   "Berapa total saldo saya di semua rekening?",
@@ -102,6 +106,7 @@ export default function AILeosiqraPage() {
   const [freshReplyIndex, setFreshReplyIndex] = useState<number | null>(null);
   const [financeContext, setFinanceContext] = useState('');
   const [userId, setUserId] = useState<string | null>(null);
+  const [insights, setInsights] = useState<UserInsight[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -191,6 +196,16 @@ export default function AILeosiqraPage() {
     };
 
     loadFinancialData();
+  }, [userId]);
+
+  // Insight proaktif: anomali kategori, proyeksi budget, tren bulanan — dihitung
+  // di backend dari data transaksi/budget yang sudah ada (lihat computeUserInsights).
+  useEffect(() => {
+    if (!userId) return;
+    insightService.getUserInsights().then(setInsights).catch((error) => {
+      console.error('Error loading insights:', error);
+      setInsights([]);
+    });
   }, [userId]);
 
   useEffect(() => {
@@ -320,6 +335,25 @@ export default function AILeosiqraPage() {
           </div>
         </div>
       </div>
+
+      {/* Insight Proaktif */}
+      {insights.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Insight Proaktif</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {insights.map((insight) => (
+              <InsightCard
+                key={insight.id}
+                title={insight.type === 'anomaly' ? 'Anomali Pengeluaran' : insight.type === 'budget_pace' ? 'Proyeksi Budget' : 'Tren Bulanan'}
+                value={insight.title}
+                subtitle={insight.body}
+                icon={insight.severity === 'warning' ? AlertTriangle : TrendingDown}
+                colorClass={insight.severity === 'warning' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
