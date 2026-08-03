@@ -143,7 +143,13 @@ export default function MonthlyDashboard() {
   useEffect(() => { fetchMarket(); }, [fetchMarket]);
 
   const filteredData = useMemo(() => {
-    if (filterType === 'Semua') return transactions;
+    // Catatan Hutang/Piutang (type "debt") bukan arus kas — kalau ikut
+    // ditampilkan di sini bareng transaksi asli, kelihatan seperti transaksi
+    // dobel untuk pembelian yang sama (lihat fix yang sama di Transaksi
+    // Harian). Tidak ada tab filter khusus "Hutang" di halaman ini, jadi
+    // kalau tidak dikecualikan dari "Semua" ia cuma numpang lewat tanpa
+    // tempat yang benar.
+    if (filterType === 'Semua') return transactions.filter(t => t.type !== 'debt');
     if (filterType === 'Pemasukan') return transactions.filter((t) => t.type === 'pemasukan');
     if (filterType === 'Pengeluaran') return transactions.filter((t) => t.type === 'pengeluaran');
     if (filterType === 'Investasi') {

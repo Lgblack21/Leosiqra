@@ -348,9 +348,12 @@ export default function AnnualDashboard() {
     });
   }, [monthlyData, chartMode]);
 
-  // Top Transactions
+  // Top Transactions — catatan Hutang/Piutang (type "debt") dikecualikan,
+  // sama seperti Transaksi Harian & Cards: bukan arus kas beneran, ikut
+  // masuk ranking + tanda +/- di sini bikin kelihatan seperti transaksi
+  // dobel untuk pembelian yang sama.
   const topTransactionsList = useMemo(() => {
-    return [...yearTransactions].sort((a, b) => idrAmount(b) - idrAmount(a)).slice(0, 4);
+    return [...yearTransactions].filter(t => t.type !== 'debt').sort((a, b) => idrAmount(b) - idrAmount(a)).slice(0, 4);
   }, [yearTransactions]);
 
   // Budget vs Actual for the Year Table

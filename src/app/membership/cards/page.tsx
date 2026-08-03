@@ -218,9 +218,13 @@ export default function MyCardsPage() {
     return transactions.filter(t => t.accountId === selectedAccountId);
   }, [transactions, selectedAccountId]);
 
-  // Recent transactions for display UI
+  // Recent transactions for display UI — catatan Hutang/Piutang (type
+  // "debt") dikecualikan karena bukan arus kas (belum lunas = saldo belum
+  // tersentuh sama sekali), ikut ditampilkan dengan tanda +/- di sini bikin
+  // kelihatan seperti transaksi dobel untuk pembelian yang sama.
   const accountTransactionsRecent = useMemo(() => {
     return [...accountTransactionsAll]
+      .filter(t => t.type !== 'debt')
       .sort((a, b) => b.date.getTime() - a.date.getTime())
       .slice(0, 20);
   }, [accountTransactionsAll]);
