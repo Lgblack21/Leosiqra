@@ -9,7 +9,8 @@ import {
   ShieldAlert,
   ArrowLeftRight,
   ChevronRight,
-  Monitor
+  Monitor,
+  FileSpreadsheet
 } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { useModal } from '@/context/ModalContext';
@@ -177,8 +178,8 @@ export default function InputTransactionPage() {
           </div>
         </div>
 
-        {/* BOTTOM CARDS ROW (2-cols) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+        {/* BOTTOM CARDS ROW (3-cols) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
           {/* Hutang & Piutang */}
           <div 
             onClick={() => openModal('hutang_piutang')}
@@ -204,6 +205,20 @@ export default function InputTransactionPage() {
             <div>
               <h3 className="text-[15px] font-bold text-slate-900 mb-1">Top Up & Transfer</h3>
               <p className="text-[11px] font-medium text-slate-400">Pindahkan dana antar rekening atau isi saldo e-wallet.</p>
+            </div>
+          </div>
+
+          {/* Impor Mutasi CSV */}
+          <div
+            onClick={() => openModal('import_mutasi')}
+            className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center gap-6 group cursor-pointer"
+          >
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+              <FileSpreadsheet size={20} />
+            </div>
+            <div>
+              <h3 className="text-[15px] font-bold text-slate-900 mb-1">Impor Mutasi (CSV)</h3>
+              <p className="text-[11px] font-medium text-slate-400">Upload export mutasi bank/e-wallet, otomatis jadi riwayat transaksi.</p>
             </div>
           </div>
         </div>

@@ -1677,6 +1677,98 @@ async function handleCreateTransaction(request: Request, env: Env) {
   return json({ ok: true, id }, { status: 201 });
 }
 
+// Impor mutasi bank/e-wallet dari CSV (parsing & pemetaan kolom dilakukan di
+// klien — lihat ImportTransactionsModal). SENGAJA TIDAK menyentuh
+// accounts.balance: baris yang diimpor adalah histori yang sudah terjadi dan
+// biasanya saldo akunnya sudah benar/di-maintain manual oleh user, jadi ikut
+// menambah/mengurangi saldo di sini akan menghitung dobel — beda dengan alur
+// input manual/recurring yang memang transaksi baru yang belum pernah
+// tercermin di saldo. Dedup terhadap transaksi yang sudah ada (tanggal+
+// nominal+catatan sama) supaya re-upload file yang sama tidak menggandakan.
+async function handleImportTransactions(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+
+  const payload = await parseJson<{
+    account_id?: string;
+    accountId?: string;
+    currency?: string;
+    rows?: Array<{ date?: string; note?: string; amount?: number; type?: string; category?: string }>;
+  }>(request);
+
+  const accountId = String(pickPayloadValue(payload, "account_id", "accountId") ?? "");
+  const rows = Array.isArray(payload.rows) ? payload.rows : [];
+  if (!accountId || rows.length === 0) {
+    return json({ error: "Rekening dan minimal 1 baris data wajib diisi." }, { status: 400 });
+  }
+  if (rows.length > 1000) {
+    return json({ error: "Maksimal 1000 baris per impor — pecah file jadi beberapa bagian." }, { status: 400 });
+  }
+
+  const acc = await env.DB.prepare("SELECT currency FROM accounts WHERE id = ? AND user_id = ?")
+    .bind(accountId, userId)
+    .first<{ currency: string }>();
+  if (!acc) {
+    return json({ error: "Rekening tidak ditemukan." }, { status: 404 });
+  }
+  const currency = payload.currency || acc.currency || "IDR";
+
+  const dates = rows.map((r) => String(r.date ?? "").slice(0, 10)).filter(Boolean);
+  const minDate = dates.length ? dates.reduce((a, b) => (a < b ? a : b)) : todayWIB();
+  const maxDate = dates.length ? dates.reduce((a, b) => (a > b ? a : b)) : todayWIB();
+
+  const { results: existingRows } = await env.DB.prepare(
+    `SELECT substr(date, 1, 10) as d, amount, note FROM transactions
+      WHERE user_id = ? AND account_id = ? AND substr(date, 1, 10) BETWEEN ? AND ?`
+  )
+    .bind(userId, accountId, minDate, maxDate)
+    .all<{ d: string; amount: number; note: string | null }>();
+
+  const existingKeys = new Set(
+    (existingRows ?? []).map((r) => `${r.d}|${Number(r.amount)}|${(r.note ?? "").trim()}`)
+  );
+
+  let inserted = 0;
+  let skipped = 0;
+  for (const row of rows) {
+    const dateStr = String(row.date ?? "").slice(0, 10);
+    const amount = Number(row.amount) || 0;
+    const note = String(row.note ?? "").trim();
+    const type = row.type === "pemasukan" ? "pemasukan" : "pengeluaran";
+
+    if (!dateStr || amount <= 0) {
+      skipped++;
+      continue;
+    }
+    const key = `${dateStr}|${amount}|${note}`;
+    if (existingKeys.has(key)) {
+      skipped++;
+      continue;
+    }
+    existingKeys.add(key); // cegah baris duplikat di dalam file yang sama
+
+    try {
+      await insertTransactionRecord(env, userId, {
+        type,
+        amount,
+        category: row.category || "Impor Mutasi",
+        currency,
+        accountId,
+        date: dateStr,
+        note: note || undefined,
+        relatedType: "import",
+      });
+      inserted++;
+    } catch (error) {
+      console.error("Gagal impor satu baris mutasi:", error);
+      skipped++;
+    }
+  }
+
+  return json({ ok: true, inserted, skipped, total: rows.length });
+}
+
 // Endpoint ringkas untuk otomasi eksternal (Shortcut iOS, dll): akun & kategori
 // cukup dikirim sebagai teks biasa (dicocokkan ke data asli di sini), dan
 // tanggal default ke hari ini — supaya Shortcut tidak perlu langkah
@@ -5062,6 +5154,10 @@ const worker = {
 
       if (url.pathname === "/api/member/quick-transaction" && request.method === "POST") {
         return await handleQuickTransaction(request, env);
+      }
+
+      if (url.pathname === "/api/member/transactions/import" && request.method === "POST") {
+        return await handleImportTransactions(request, env);
       }
 
       if (url.pathname.startsWith("/api/member/transactions/")) {
