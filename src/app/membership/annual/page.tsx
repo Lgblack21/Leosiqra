@@ -25,14 +25,17 @@ type CircularProgressProps = {
 
 const CircularProgress = ({ value, colorClass, strokeClass }: CircularProgressProps) => {
   const animated = useCountUp(value);
-  const radius = 18;
+  // Lingkaran diperbesar (36px -> 42px svg, container 48px -> 56px) supaya
+  // teks 3 digit ("100%") tidak mepet/ketutupan sama ring-nya seperti
+  // sebelumnya — sebelumnya svg cuma 36px, terlalu sempit untuk 4 karakter.
+  const radius = 21;
   const stroke = 3;
   const normalizedRadius = radius - stroke * 2;
   const circumference = normalizedRadius * 2 * Math.PI;
   const strokeDashoffset = circumference - (animated / 100) * circumference;
 
   return (
-    <div className="relative w-12 h-12 flex items-center justify-center">
+    <div className="relative w-14 h-14 flex items-center justify-center shrink-0">
       <svg height={radius * 2} width={radius * 2} className="-rotate-90">
         <circle
           stroke="#f1f5f9"
@@ -54,7 +57,7 @@ const CircularProgress = ({ value, colorClass, strokeClass }: CircularProgressPr
           strokeLinecap="round"
         />
       </svg>
-      <span className={cn("absolute text-[10px] font-bold tabular-nums", colorClass)}>{Math.round(animated)}%</span>
+      <span className={cn("absolute text-[10px] font-bold tabular-nums leading-none", colorClass)}>{Math.round(animated)}%</span>
     </div>
   );
 };
