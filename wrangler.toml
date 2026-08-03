@@ -49,3 +49,7 @@ APP_URL = "http://127.0.0.1:8787"
 SESSION_COOKIE_NAME = "leosiqra_session"
 MAINTENANCE_BYPASS_ADMIN = "true"
 NEXT_PUBLIC_USE_CLOUDFLARE_AUTH = "true"
+# Plugin web search OpenRouter untuk AI Leosiqra — dikenakan biaya tambahan
+# per request (di luar token biasa, lihat OpenRouter pricing). Set "false"
+# kapan saja buat matikan tanpa perlu ubah kode.
+OPENROUTER_WEB_SEARCH = "true"

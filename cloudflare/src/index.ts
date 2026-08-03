@@ -32,6 +32,7 @@ export interface Env {
   VAPID_SUBJECT?: string;
   LOGO_DEV_TOKEN?: string;
   COINGECKO_API_KEY?: string;
+  OPENROUTER_WEB_SEARCH?: string;
 }
 
 type AppUser = {
@@ -1152,6 +1153,14 @@ const runOpenRouterAssistant = async (
         { role: "user", content: prompt },
       ],
       temperature: 0.6,
+      // Web search (plugin OpenRouter) — model dasar cuma tahu data sampai
+      // cutoff training-nya (mis. tidak tahu presiden Indonesia saat ini),
+      // plugin ini nyuntik hasil pencarian web sebagai konteks tambahan
+      // sebelum model menjawab. INI DIKENAKAN BIAYA TAMBAHAN PER REQUEST oleh
+      // OpenRouter (di luar biaya token biasa) — toggle via env var
+      // OPENROUTER_WEB_SEARCH kalau ternyata kebutuhan biayanya berubah,
+      // tanpa perlu ubah kode lagi.
+      ...(env.OPENROUTER_WEB_SEARCH === "true" ? { plugins: [{ id: "web" }] } : {}),
     }),
   });
 
