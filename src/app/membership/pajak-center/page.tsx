@@ -109,6 +109,21 @@ export default function PajakCenterPage() {
     localStorage.setItem('pajak-center-disclaimer-dismissed', '1');
   };
 
+  // PPh 21 yang sudah dipotong pemberi kerja bersifat per tahun pajak (beda
+  // dengan status PTKP yang jarang berubah), jadi disimpan dengan key per
+  // tahun supaya tidak salah kebawa saat ganti tahun di YearPicker.
+  const [pph21Withheld, setPph21Withheld] = useState('');
+
+  useEffect(() => {
+    const saved = localStorage.getItem(`pajak-center-pph21-${selectedYear}`);
+    setPph21Withheld(saved || '');
+  }, [selectedYear]);
+
+  const updatePph21Withheld = (val: string) => {
+    setPph21Withheld(val);
+    localStorage.setItem(`pajak-center-pph21-${selectedYear}`, val);
+  };
+
   const isCurrentYear = selectedYear === new Date().getFullYear();
 
   useEffect(() => {
@@ -244,6 +259,12 @@ export default function PajakCenterPage() {
   const pkp = Math.floor(Math.max(0, netIncome - ptkp) / 1000) * 1000;
   const { totalTax: pphTerutang, breakdown: pphBreakdown } = useMemo(() => calculatePPh(pkp), [pkp]);
 
+  // PPh Terutang di atas adalah PPh setahun PENUH atas PKP — kalau sebagian
+  // sudah dipotong pemberi kerja tiap bulan (PPh 21 karyawan), sisanya (atau
+  // kelebihannya) inilah yang sebenarnya perlu dibayar/direstitusi saat lapor.
+  const pph21WithheldNum = Number(pph21Withheld) || 0;
+  const pphKurangBayar = pphTerutang - pph21WithheldNum;
+
   // SPT resmi melaporkan nilai dalam Rupiah penuh (tanpa desimal) — desimal
   // di sini cuma bikin angka lebih panjang dan gampang kepotong di cetakan.
   const formatIDR = (val: number) => {
@@ -346,6 +367,10 @@ export default function PajakCenterPage() {
       });
     }
     tableHtml += `<tr style="background-color: #f1f5f9;"><td style="padding: 8px; font-weight: bold;" colspan="3">Total PPh Terutang</td><td style="padding: 8px; text-align: right; font-weight: bold;">${pphTerutang.toLocaleString()}</td></tr>`;
+    if (pph21WithheldNum > 0) {
+      tableHtml += `<tr><td style="padding: 8px;" colspan="3">PPh Pasal 21 Sudah Dipotong Pemberi Kerja</td><td style="padding: 8px; text-align: right;">${pph21WithheldNum.toLocaleString()}</td></tr>`;
+      tableHtml += `<tr style="background-color: #f1f5f9;"><td style="padding: 8px; font-weight: bold;" colspan="3">${pphKurangBayar >= 0 ? 'PPh Kurang Bayar' : 'PPh Lebih Bayar (Restitusi)'}</td><td style="padding: 8px; text-align: right; font-weight: bold;">${Math.abs(pphKurangBayar).toLocaleString()}</td></tr>`;
+    }
     tableHtml += `</table>`;
 
     tableHtml += `<p style="font-size: 10px; color: #94a3b8;">Draft pembanding pribadi &ndash; bukan pengganti pelaporan resmi via coretaxdjp.pajak.go.id</p>`;
@@ -479,6 +504,20 @@ export default function PajakCenterPage() {
                 <td colSpan={3} className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">Total PPh Terutang Setahun</td>
                 <td className="border border-slate-300 px-3 py-1.5 font-black text-right">{formatIDR(pphTerutang)}</td>
               </tr>
+              {pph21WithheldNum > 0 && (
+                <>
+                  <tr>
+                    <td colSpan={3} className="border border-slate-300 px-3 py-1.5">PPh Pasal 21 Sudah Dipotong Pemberi Kerja</td>
+                    <td className="border border-slate-300 px-3 py-1.5 text-right">{formatIDR(pph21WithheldNum)}</td>
+                  </tr>
+                  <tr className="bg-slate-100">
+                    <td colSpan={3} className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">
+                      {pphKurangBayar >= 0 ? 'PPh Kurang Bayar' : 'PPh Lebih Bayar (Restitusi)'}
+                    </td>
+                    <td className="border border-slate-300 px-3 py-1.5 font-black text-right">{formatIDR(Math.abs(pphKurangBayar))}</td>
+                  </tr>
+                </>
+              )}
             </tbody>
           </table>
           <p className="text-[9px] text-slate-500 italic mt-1.5">
@@ -738,6 +777,21 @@ export default function PajakCenterPage() {
             </div>
           </div>
 
+          <div className="space-y-2">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">PPh 21 Sudah Dipotong Pemberi Kerja (Opsional)</p>
+            <input
+              type="number"
+              min={0}
+              value={pph21Withheld}
+              onChange={(e) => updatePph21Withheld(e.target.value)}
+              placeholder="0"
+              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-2.5 px-4 text-sm font-bold text-slate-700 transition-all"
+            />
+            <p className="text-[9px] font-medium text-slate-400 leading-relaxed">
+              Isi kalau kamu karyawan dan sudah dipotong PPh 21 bulanan (lihat slip gaji/bukti potong 1721-A1) — dipakai untuk hitung PPh Kurang/Lebih Bayar, bukan PPh Terutang Setahun.
+            </p>
+          </div>
+
           <div className="pt-2 border-t border-slate-100 space-y-1.5">
             <div className="flex justify-between items-center text-xs">
               <span className="text-slate-500 font-medium">Kategori PTKP</span>
@@ -805,6 +859,23 @@ export default function PajakCenterPage() {
               {formatIDRShort(animatedPphTerutang)}
             </span>
           </div>
+
+          {pph21WithheldNum > 0 && (
+            <div className="pt-3 border-t border-white/10 space-y-1.5">
+              <div className="flex justify-between items-center text-[11px]">
+                <span className="text-slate-300">PPh 21 Sudah Dipotong</span>
+                <span className="font-bold tabular-nums">{formatIDRShort(pph21WithheldNum)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-black text-slate-300 uppercase tracking-widest">
+                  {pphKurangBayar >= 0 ? 'PPh Kurang Bayar' : 'PPh Lebih Bayar (Restitusi)'}
+                </span>
+                <span className={cn("text-xl font-black tabular-nums", pphKurangBayar > 0 ? "text-rose-300" : "text-emerald-300")}>
+                  {formatIDRShort(Math.abs(pphKurangBayar))}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

@@ -4751,6 +4751,20 @@ const sendDailySummaryNotifications = async (env: Env) => {
   }
 };
 
+// Pengingat tenggat SPT Tahunan (31 Maret) — broadcast ke semua user pada
+// tanggal WIB tertentu saja, jadi cukup nebeng cron harian yang sudah ada
+// (tidak perlu cron trigger baru) tanpa perlu tabel "sudah lapor/belum".
+const TAX_DEADLINE_REMINDERS: Record<string, string> = {
+  "02-01": "SPT Tahunan Pajak Penghasilan jatuh tempo 31 Maret. Cek draft otomatis kamu sekarang di Pajak Center — masih ada waktu ~2 bulan buat siap-siap.",
+  "03-20": "Tinggal 11 hari lagi menuju batas lapor SPT Tahunan (31 Maret). Cek & siapkan draft di Pajak Center sebelum kena telat lapor.",
+};
+
+const sendTaxDeadlineReminders = async (env: Env) => {
+  const body = TAX_DEADLINE_REMINDERS[todayWIB().slice(5)];
+  if (!body) return;
+  await sendWebPushToAllUsers(env, "Pengingat SPT Tahunan", body, "/membership/pajak-center");
+};
+
 // ===== Job 2: eksekusi recurring yang jatuh tempo hari ini, jam 10:00 WIB =====
 
 type RecurringRow = {
@@ -5412,8 +5426,10 @@ const worker = {
 
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     if (event.cron === "1 17 * * *") {
-      // 17:01 UTC = 00:01 WIB (hari berikutnya) — ringkasan kemarin.
+      // 17:01 UTC = 00:01 WIB (hari berikutnya) — ringkasan kemarin + (kalau
+      // tanggalnya cocok) pengingat tenggat SPT Tahunan.
       ctx.waitUntil(sendDailySummaryNotifications(env));
+      ctx.waitUntil(sendTaxDeadlineReminders(env));
       return;
     }
     // 03:00 UTC = 10:00 WIB — deposito jatuh tempo + eksekusi recurring hari ini.
