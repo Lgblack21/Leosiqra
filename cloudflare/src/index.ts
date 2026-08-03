@@ -809,21 +809,42 @@ const buildUserContext = async (env: Env, userId: string) => {
 // cuma memori per-isolate) agar tiap chat baru tidak memicu fetch baru ke
 // CoinGecko — isolate Worker sering di-reset di trafik rendah, dan CoinGecko
 // membatasi rate limit publiknya dengan ketat (429 kalau terlalu sering).
-type MarketSnapshot = { text: string; fetchedAt: number };
+type MarketSnapshot = { text: string; fetchedAt: number; degraded: boolean };
 let marketSnapshotCache: MarketSnapshot | null = null;
 const MARKET_CACHE_MS = 5 * 60 * 1000;
-const MARKET_CACHE_KEY = new Request("https://cache.internal.leosiqra.com/market-snapshot");
+// Kalau hasil fetch-nya "degradasi" (ada harga inti yang hilang padahal
+// response CoinGecko-nya 200 OK — pernah kejadian berulang, kemungkinan
+// rate-limit/anti-bot CoinGecko yang selektif per-ID untuk trafik dari IP
+// Cloudflare), jangan simpan itu selama 5 menit penuh — cache pendek supaya
+// permintaan berikutnya cepat coba lagi alih-alih ikut kena "tidak tersedia"
+// selama 5 menit ke semua user.
+const MARKET_DEGRADED_CACHE_MS = 20 * 1000;
+// "v2": versi baru cache key supaya entri lama (yang mungkin degradasi dan
+// masih ke-cache 5 menit) tidak ikut kepakai saat perubahan ini pertama kali
+// di-deploy.
+const MARKET_CACHE_KEY = new Request("https://cache.internal.leosiqra.com/market-snapshot-v2");
 
 const fetchMarketSnapshot = async (): Promise<string> => {
-  if (marketSnapshotCache && Date.now() - marketSnapshotCache.fetchedAt < MARKET_CACHE_MS) {
-    return marketSnapshotCache.text;
+  if (marketSnapshotCache) {
+    const ttl = marketSnapshotCache.degraded ? MARKET_DEGRADED_CACHE_MS : MARKET_CACHE_MS;
+    if (Date.now() - marketSnapshotCache.fetchedAt < ttl) {
+      return marketSnapshotCache.text;
+    }
   }
 
   const edgeCache = caches.default;
   const cachedRes = await edgeCache.match(MARKET_CACHE_KEY);
   if (cachedRes) {
     const text = await cachedRes.text();
-    marketSnapshotCache = { text, fetchedAt: Date.now() };
+    // Cache-Control: max-age dari edgeCache.put menentukan berapa lama entri
+    // ini SEHARUSNYA sudah tidak valid — kalau match() masih mengembalikannya
+    // meski sudah lewat max-age (Cache API Cloudflare tidak selalu strict soal
+    // ini), anggap degraded juga supaya in-memory cache di atas tidak ikut
+    // menahan versi basi selama 5 menit penuh.
+    const cacheControl = cachedRes.headers.get("cache-control") ?? "";
+    const maxAgeMatch = cacheControl.match(/max-age=(\d+)/);
+    const degraded = maxAgeMatch ? Number(maxAgeMatch[1]) * 1000 <= MARKET_DEGRADED_CACHE_MS : false;
+    marketSnapshotCache = { text, fetchedAt: Date.now(), degraded };
     return text;
   }
 
@@ -856,11 +877,32 @@ const fetchMarketSnapshot = async (): Promise<string> => {
       throw new Error(`Fetch data pasar gagal (crypto ${cryptoRes.status}, fx ${fxRes.status})`);
     }
 
-    const crypto = cryptoRes.ok
-      ? ((await cryptoRes.json()) as Record<string, { usd?: number; usd_24h_change?: number }>)
-      : {};
+    const cryptoRaw = cryptoRes.ok ? await cryptoRes.text() : "";
+    let crypto: Record<string, { usd?: number; usd_24h_change?: number }> = {};
+    if (cryptoRes.ok) {
+      try {
+        crypto = JSON.parse(cryptoRaw);
+      } catch (parseError) {
+        console.error("CoinGecko response bukan JSON valid:", parseError, cryptoRaw.slice(0, 300));
+      }
+    }
     const fx = fxRes.ok ? ((await fxRes.json()) as { rates?: Record<string, number> }) : {};
     const idrRate = fx.rates?.IDR;
+
+    // CoinGecko 200 OK tapi kadang balikin payload yang kehilangan sebagian
+    // ID (pernah kejadian berulang untuk bitcoin/pax-gold spesifik, diduga
+    // rate-limit/anti-bot yang selektif per-ID dari IP Cloudflare Workers).
+    // Log detail keynya di sini supaya kalau kejadian lagi, ketahuan persis
+    // ID mana yang hilang dan apa isi payload mentahnya — bukan cuma "tidak
+    // tersedia" di sisi user tanpa jejak.
+    const expectedIds = ["bitcoin", "ethereum", "solana", "holotoken", "pax-gold"];
+    const missingIds = expectedIds.filter((id) => crypto[id]?.usd === undefined);
+    const isDegraded = missingIds.length > 0 || idrRate === undefined;
+    if (cryptoRes.ok && missingIds.length > 0) {
+      console.error(
+        `CoinGecko 200 OK tapi ID berikut hilang dari payload: ${missingIds.join(", ")}. Raw (dipotong): ${cryptoRaw.slice(0, 500)}`
+      );
+    }
 
     const NA = "tidak tersedia";
     const fmtUsd = (n?: number) =>
@@ -879,10 +921,11 @@ const fetchMarketSnapshot = async (): Promise<string> => {
     ];
 
     const text = lines.join("\n");
-    marketSnapshotCache = { text, fetchedAt: Date.now() };
+    const cacheMs = isDegraded ? MARKET_DEGRADED_CACHE_MS : MARKET_CACHE_MS;
+    marketSnapshotCache = { text, fetchedAt: Date.now(), degraded: isDegraded };
     await edgeCache.put(
       MARKET_CACHE_KEY,
-      new Response(text, { headers: { "Cache-Control": `max-age=${MARKET_CACHE_MS / 1000}` } })
+      new Response(text, { headers: { "Cache-Control": `max-age=${cacheMs / 1000}` } })
     );
     return text;
   } catch (error) {
