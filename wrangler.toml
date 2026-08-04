@@ -27,6 +27,14 @@ period = 60
 [assets]
 directory = "./out"
 binding = "ASSETS"
+# Tanpa ini, request ke "/" persis (root) di-serve langsung dari index.html
+# oleh layer static assets Cloudflare SEBELUM sempat masuk ke fetch handler
+# Worker — jadi redirect apex->www / http->https di index.ts tidak pernah
+# kepanggil khusus untuk "/". Path lain (mis. "/privacy.html") tetap lewat
+# Worker seperti biasa karena bukan clean-URL match otomatis, jadi cukup
+# paksa "/" saja lewat Worker dulu, bukan semua asset (biar tidak nambah
+# latency ke tiap request gambar/font/JS).
+run_worker_first = ["/"]
 
 [durable_objects]
 bindings = [
