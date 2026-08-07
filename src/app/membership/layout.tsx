@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { ModalProvider } from '@/context/ModalContext';
 import { GlobalModalWrapper } from '@/components/GlobalModalWrapper';
+import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 import { cloudflareApi } from '@/lib/cloudflare-api';
+
+const ONBOARDING_PATH = '/membership/onboarding';
 
 export default function MembershipLayout({
   children,
@@ -16,13 +19,21 @@ export default function MembershipLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    cloudflareApi<{ user?: unknown | null }>('/api/auth/me')
+    cloudflareApi<{ user?: { onboarded?: boolean } | null }>('/api/auth/me')
       .then((result) => {
         if (!result.user) {
           setLoading(false);
           router.replace('/auth/login');
+          return;
+        }
+        // User baru yang belum menyelesaikan setup awal dipaksa ke wizard
+        // onboarding dulu — kecuali memang sedang berada di halamannya, supaya
+        // tidak terjadi redirect loop.
+        if (!result.user.onboarded && pathname !== ONBOARDING_PATH) {
+          router.replace(ONBOARDING_PATH);
           return;
         }
         setLoading(false);
@@ -31,7 +42,7 @@ export default function MembershipLayout({
         setLoading(false);
         router.replace('/auth/login');
       });
-  }, [router]);
+  }, [router, pathname]);
 
   // Hapus spinner agar transisi dari tombol login terasa instan.
   if (loading) return null;
@@ -64,6 +75,7 @@ export default function MembershipLayout({
         </main>
 
         <GlobalModalWrapper />
+        <OnboardingTour />
       </div>
     </ModalProvider>
   );
