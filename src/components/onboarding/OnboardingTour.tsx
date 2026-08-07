@@ -59,7 +59,7 @@ const STOPS: TourStop[] = [
     content: 'Semua rekening bank, e-wallet, uang tunai, dan kartu kredit/paylater kamu berkumpul di sini lengkap dengan saldonya.',
   },
   {
-    path: '/membership/investasi',
+    path: '/membership/investment',
     icon: TrendingUp,
     title: 'Investasi',
     content: 'Pantau saham, deposito, emas, dan aset lain. Harga saham/kripto tersinkron otomatis biar nilai portofoliomu selalu terkini.',
