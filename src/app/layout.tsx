@@ -72,6 +72,10 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#4f46e5",
+  // Tanpa ini, env(safe-area-inset-*) selalu resolve ke 0 di iOS (dipakai
+  // bottom tab bar/FAB/bottom sheet baru di /app supaya tidak ketiban home
+  // indicator/notch) — inert untuk halaman lain yang tidak memakainya.
+  viewportFit: "cover",
 };
 
 const softwareAppJsonLd = {

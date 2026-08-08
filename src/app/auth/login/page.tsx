@@ -20,6 +20,11 @@ const GoogleIcon = ({ size = 18 }: { size?: number }) => (
   </svg>
 );
 
+// Cuma terima redirect target yang mengarah ke tree /app — mencegah open
+// redirect kalau parameter `next` diisi sembarangan (mis. URL eksternal).
+const sanitizeNext = (value: string | null): string | null =>
+  value && value.startsWith('/app') ? value : null;
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,9 +32,12 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [show2FA, setShow2FA] = useState(false);
+  const [next, setNext] = useState<string | null>(null);
   const router = useRouter();
 
-  // Tampilkan pesan error yang dikirim balik dari alur OAuth Google (?error=...).
+  // Tampilkan pesan error yang dikirim balik dari alur OAuth Google (?error=...),
+  // dan simpan `?next=` (kalau ada) supaya user yang datang dari /app kembali
+  // ke sana setelah login, bukan ke dashboard web.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const oauthError = params.get('error');
@@ -37,7 +45,16 @@ export default function LoginPage() {
       setError(oauthError);
       window.history.replaceState({}, '', '/auth/login');
     }
+    setNext(sanitizeNext(params.get('next')));
   }, []);
+
+  // Admin tidak pernah diarahkan ke /app — tidak ada UI admin di sana.
+  const resolveDestination = (role?: 'admin' | 'user') => {
+    if (role === 'admin') return '/admin';
+    return next ?? '/membership/dashboard';
+  };
+
+  const googleHref = next ? `/api/auth/google?next=${encodeURIComponent(next)}` : '/api/auth/google';
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +79,7 @@ export default function LoginPage() {
       if (result.needsTwoFactor) {
         setShow2FA(true);
       } else {
-        router.push(result.user?.role === 'admin' ? '/admin' : '/membership/dashboard');
+        router.push(resolveDestination(result.user?.role));
       }
     } catch (error) {
       setError(
@@ -88,7 +105,7 @@ export default function LoginPage() {
       },
     });
 
-    router.push(result.user?.role === 'admin' ? '/admin' : '/membership/dashboard');
+    router.push(resolveDestination(result.user?.role));
     return true;
   };
 
@@ -160,7 +177,7 @@ export default function LoginPage() {
 
           {/* Social Login - Google */}
           <a
-            href="/api/auth/google"
+            href={googleHref}
             className="flex items-center justify-center gap-3 w-full py-3 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm transition-all active:scale-[0.99]"
           >
             <GoogleIcon size={18} />

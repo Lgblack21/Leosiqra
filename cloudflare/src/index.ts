@@ -11,6 +11,7 @@ export interface Env {
   DB: D1Database;
   CACHE?: KVNamespace;
   LOGIN_RATE_LIMITER?: RateLimit;
+  AI_PARSE_RATE_LIMITER?: RateLimit;
   ASSETS: Fetcher;
   FILES_BUCKET?: R2Bucket;
   REALTIME_ROOM: DurableObjectNamespace;
@@ -297,6 +298,16 @@ const checkRateLimit = async (env: Env, keys: string[]): Promise<boolean> => {
 };
 
 const clientIpOf = (request: Request) => request.headers.get("cf-connecting-ip") || "unknown";
+
+// Vision-model calls (AI Scan/Voice) biayanya lebih mahal dari chat teks
+// biasa — batasi per-user supaya satu akun tidak bisa memanggil endpoint ini
+// bertubi-tubi. Fail-open kalau binding belum ke-deploy, sama seperti
+// checkRateLimit di atas.
+const checkAiParseRateLimit = async (env: Env, userId: string): Promise<boolean> => {
+  if (!env.AI_PARSE_RATE_LIMITER) return true;
+  const { success } = await env.AI_PARSE_RATE_LIMITER.limit({ key: `ai-parse:user:${userId}` });
+  return success;
+};
 
 // Cloudflare Workers membatasi PBKDF2 maksimal 100.000 iterasi.
 const PBKDF2_ITERATIONS = 100000;
@@ -1525,6 +1536,18 @@ const oauthStateCookie = (state: string) =>
 const clearOauthStateCookie = () =>
   `oauth_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
 
+// Cuma terima redirect target yang mengarah ke tree /app (dipakai native-app
+// shell Capacitor) — mencegah open redirect kalau parameter/cookie ini diisi
+// sembarangan. Mirror dari sanitizeNext di src/app/auth/login/page.tsx.
+const isAppNext = (value: string | null | undefined): value is string =>
+  Boolean(value && value.startsWith("/app"));
+
+const oauthNextCookie = (next: string) =>
+  `oauth_next=${encodeURIComponent(next)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`;
+
+const clearOauthNextCookie = () =>
+  `oauth_next=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
+
 async function handleGoogleStart(request: Request, env: Env) {
   const url = new URL(request.url);
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
@@ -1549,6 +1572,10 @@ async function handleGoogleStart(request: Request, env: Env) {
     location: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`,
   });
   headers.append("set-cookie", oauthStateCookie(state));
+  const next = url.searchParams.get("next");
+  if (isAppNext(next)) {
+    headers.append("set-cookie", oauthNextCookie(next));
+  }
   return new Response(null, { status: 302, headers });
 }
 
@@ -1559,6 +1586,7 @@ async function handleGoogleCallback(request: Request, env: Env) {
       location: `${url.origin}/auth/login?error=${encodeURIComponent(message)}`,
     });
     headers.append("set-cookie", clearOauthStateCookie());
+    headers.append("set-cookie", clearOauthNextCookie());
     return new Response(null, { status: 302, headers });
   };
 
@@ -1665,9 +1693,16 @@ async function handleGoogleCallback(request: Request, env: Env) {
     two_factor_secret: user.two_factor_secret,
   });
 
-  const destination = user.role === "admin" ? "/admin" : "/membership/dashboard";
+  const cookieNext = getCookieValue(request, "oauth_next");
+  const destination =
+    user.role === "admin"
+      ? "/admin"
+      : isAppNext(cookieNext)
+      ? cookieNext
+      : "/membership/dashboard";
   const headers = new Headers({ location: `${url.origin}${destination}` });
   headers.append("set-cookie", clearOauthStateCookie());
+  headers.append("set-cookie", clearOauthNextCookie());
   headers.append("set-cookie", sessionCookie(env, session.token, 60 * 60 * 24 * 30));
   headers.append("set-cookie", roleCookie(env, user.role, 60 * 60 * 24 * 30));
   return new Response(null, { status: 302, headers });
@@ -4158,6 +4193,168 @@ async function handleAiChat(request: Request, env: Env) {
   return json({ answer, messages: nextMessages });
 }
 
+// Dipakai khusus fitur AI Scan (foto struk) & Voice (transkrip suara) — beda
+// dari runOpenRouterAssistant (chat teks) yang boleh jatuh ke model apa saja
+// di rantai fallback. Di sini di-pin ke satu model vision-capable yang
+// terkonfirmasi (google/gemini-2.0-flash-001) karena env.OPENROUTER_MODEL
+// (secret, nilainya tidak diketahui di repo ini) belum tentu bisa terima
+// input gambar — request gambar yang nyasar ke model text-only bisa gagal
+// tak terduga. Dipakai juga untuk jalur teks (Voice) supaya kualitas
+// ekstraksi konsisten antara Scan & Voice, bukan tergantung nilai
+// OPENROUTER_MODEL yang berubah-ubah.
+const PARSE_TRANSACTION_MODEL = "google/gemini-3.5-flash";
+
+type ParsedTransactionSuggestion = {
+  type: "pengeluaran" | "pemasukan";
+  amount: number;
+  category: string | null;
+  sub_category: string | null;
+  note: string | null;
+  confidence: "high" | "medium" | "low";
+};
+
+// Model kadang tetap membungkus JSON dalam code fence markdown walau sudah
+// diminta untuk tidak — buang pembungkusnya dulu sebelum JSON.parse.
+const stripJsonFences = (raw: string) =>
+  raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+
+async function handleParseTransaction(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+
+  if (!(await checkAiParseRateLimit(env, authResult.session.user.id))) {
+    return json({ error: "Terlalu banyak permintaan AI. Coba lagi dalam beberapa saat." }, { status: 429 });
+  }
+
+  const payload = await parseJson<{ text?: string; imageBase64?: string }>(request);
+  const hasText = typeof payload.text === "string" && payload.text.trim().length > 0;
+  const hasImage = typeof payload.imageBase64 === "string" && payload.imageBase64.trim().length > 0;
+  if (hasText === hasImage) {
+    return json({ error: "Kirim salah satu: teks atau foto, tidak boleh dua-duanya atau kosong." }, { status: 400 });
+  }
+
+  if (!env.OPENROUTER_API_KEY) {
+    return json({ ok: false, error: "AI belum dikonfigurasi." }, { status: 422 });
+  }
+
+  const categoryRows = await env.DB.prepare(
+    `SELECT category, sub_category FROM categories WHERE user_id = ? ORDER BY category ASC`
+  )
+    .bind(authResult.session.user.id)
+    .all<{ category: string; sub_category: string }>();
+  const userCategories = (categoryRows.results ?? []).map((c) => ({
+    category: c.category,
+    sub_category: c.sub_category,
+  }));
+
+  const systemPrompt = `Kamu adalah asisten yang mengekstrak detail transaksi keuangan dari foto struk/nota ATAU teks hasil transkrip suara pengguna.
+Balas HANYA dengan satu objek JSON valid, TANPA teks lain, TANPA markdown code fence, sesuai skema persis berikut:
+{
+  "type": "pengeluaran" | "pemasukan",
+  "amount": <angka, tanpa simbol mata uang atau pemisah ribuan>,
+  "category": <string, harus SALAH SATU dari daftar berikut, atau null kalau tidak yakin>,
+  "sub_category": <string sub-kategori dari kategori yang dipilih, atau null>,
+  "note": <string ringkas, misal nama merchant/deskripsi, atau null>,
+  "confidence": "high" | "medium" | "low"
+}
+
+Daftar kategori pengguna yang SAH (jangan mengarang nama di luar daftar ini):
+${JSON.stringify(userCategories)}`;
+
+  const userContent = hasImage
+    ? [
+        { type: "text", text: "Ekstrak detail transaksi dari foto struk/nota ini." },
+        { type: "image_url", image_url: { url: `data:image/jpeg;base64,${payload.imageBase64}` } },
+      ]
+    : payload.text!.trim();
+
+  let rawContent: string;
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
+        "http-referer": env.APP_URL || "https://www.leosiqra.com",
+        "x-title": env.APP_NAME || "Leosiqra",
+      },
+      body: JSON.stringify({
+        model: PARSE_TRANSACTION_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContent },
+        ],
+        temperature: 0.2,
+        // Respons cuma satu objek JSON kecil — batasi output supaya tidak
+        // kena limit token/kredit OpenRouter (model default bisa minta
+        // puluhan ribu token walau responsnya sendiri singkat).
+        max_tokens: 800,
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`OpenRouter request gagal (${response.status}): ${errText.slice(0, 300)}`);
+    }
+    const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    rawContent = data.choices?.[0]?.message?.content?.trim() ?? "";
+  } catch {
+    return json(
+      {
+        ok: false,
+        error: "AI tidak bisa membaca data transaksi dari input ini. Coba foto/ucapan yang lebih jelas, atau isi manual.",
+      },
+      { status: 422 }
+    );
+  }
+
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    return json(
+      {
+        ok: false,
+        error: "AI tidak bisa membaca data transaksi dari input ini. Coba foto/ucapan yang lebih jelas, atau isi manual.",
+      },
+      { status: 422 }
+    );
+  }
+
+  const type = parsed.type === "pengeluaran" || parsed.type === "pemasukan" ? parsed.type : null;
+  const amount = Number(parsed.amount);
+  if (!type || !Number.isFinite(amount) || amount <= 0) {
+    return json(
+      {
+        ok: false,
+        error: "AI tidak bisa membaca data transaksi dari input ini. Coba foto/ucapan yang lebih jelas, atau isi manual.",
+      },
+      { status: 422 }
+    );
+  }
+
+  // Kategori dari AI cuma dipakai kalau persis cocok (case-insensitive) sama
+  // kategori nyata milik user — kalau AI mengarang nama, biarkan kosong
+  // supaya user pilih manual dari CategorySelect, bukan gagal total (amount
+  // & type tetap berguna meski kategorinya tidak match).
+  const matchedCategory = userCategories.find(
+    (c) => c.category.toLowerCase() === String(parsed.category ?? "").toLowerCase()
+  );
+
+  const suggestion: ParsedTransactionSuggestion = {
+    type,
+    amount,
+    category: matchedCategory?.category ?? null,
+    sub_category: matchedCategory ? String(parsed.sub_category ?? matchedCategory.sub_category ?? "") || null : null,
+    note: typeof parsed.note === "string" && parsed.note.trim() ? parsed.note.trim() : null,
+    confidence: parsed.confidence === "high" || parsed.confidence === "medium" || parsed.confidence === "low"
+      ? parsed.confidence
+      : "low",
+  };
+
+  return json({ ok: true, suggestion });
+}
+
 async function handleSignedUpload(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) {
@@ -5615,6 +5812,10 @@ const worker = {
 
       if (url.pathname === "/api/member/ai/chat" && request.method === "POST") {
         return await handleAiChat(request, env);
+      }
+
+      if (url.pathname === "/api/member/ai/parse-transaction" && request.method === "POST") {
+        return await handleParseTransaction(request, env);
       }
 
       if (url.pathname === "/api/member/uploads/sign" && request.method === "POST") {

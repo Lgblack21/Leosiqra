@@ -32,9 +32,12 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [show2FA, setShow2FA] = useState(false);
+  const [next, setNext] = useState<string | null>(null);
   const router = useRouter();
 
-  // Tampilkan pesan error dari alur OAuth Google (?error=...).
+  // Tampilkan pesan error dari alur OAuth Google (?error=...), dan simpan
+  // `?next=` (kalau ada dan mengarah ke /app) supaya user yang daftar dari
+  // /app kembali ke sana, bukan ke dashboard web — mirror dari auth/login.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const oauthError = params.get('error');
@@ -42,7 +45,11 @@ export default function RegisterPage() {
       setError(oauthError);
       window.history.replaceState({}, '', '/auth/register');
     }
+    const rawNext = params.get('next');
+    setNext(rawNext && rawNext.startsWith('/app') ? rawNext : null);
   }, []);
+
+  const googleHref = next ? `/api/auth/google?next=${encodeURIComponent(next)}` : '/api/auth/google';
 
   useEffect(() => {
     const hasUpperCaseStart = /^[A-Z]/.test(password);
@@ -90,7 +97,7 @@ export default function RegisterPage() {
         },
       });
 
-      router.push('/membership/dashboard');
+      router.push(next ?? '/membership/dashboard');
     } catch (error) {
       setError(
         error instanceof Error
@@ -168,7 +175,7 @@ export default function RegisterPage() {
 
           {/* Social Signup - Google */}
           <a
-            href="/api/auth/google"
+            href={googleHref}
             className="flex items-center justify-center gap-3 w-full py-3 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm transition-all active:scale-[0.99]"
           >
             <GoogleIcon size={18} />

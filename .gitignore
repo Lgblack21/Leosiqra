@@ -44,3 +44,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# capacitor native build artifacts (android/ and ios/ project source is committed)
+/android/app/build/
+/android/.gradle/
+/android/local.properties
+/android/captures/
+/android/*/build/
+/ios/App/Pods/
+/ios/App/build/
+/ios/App/DerivedData/
+/ios/App/*.xcuserstate
+/ios/App/**/xcuserdata/
+resources/

@@ -1,0 +1,118 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Plus, Wallet as WalletIcon } from "lucide-react";
+import { accountService, Account } from "@/lib/services/accountService";
+import { subscribeToCollectionChanges } from "@/lib/cf-firestore";
+import { auth } from "@/lib/cf-client";
+import { exchangeRateService, ExchangeRates } from "@/lib/services/exchangeRateService";
+import { AddWalletSheet } from "@/components/app/wallet/AddWalletSheet";
+
+const GROUPS = [
+  { key: "Cash", label: "Cash" },
+  { key: "Bank Account", label: "Bank Accounts" },
+  { key: "E-Wallet", label: "E-Wallets" },
+  { key: "Lainnya", label: "Lainnya" },
+] as const;
+
+const formatAmount = (amount: number, currency: string) => {
+  try {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: currency || "IDR",
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `${currency} ${amount}`;
+  }
+};
+
+const formatIDR = (n: number) =>
+  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n);
+
+export default function WalletPage() {
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [fxRates, setFxRates] = useState<ExchangeRates>({});
+  const [isAddOpen, setIsAddOpen] = useState(false);
+
+  useEffect(() => {
+    const load = () =>
+      accountService.getUserAccounts(auth.currentUser?.uid ?? "").then(setAccounts).catch(() => setAccounts([]));
+    load();
+    return subscribeToCollectionChanges("accounts", load);
+  }, []);
+
+  useEffect(() => {
+    exchangeRateService.getLatestRates().then(setFxRates).catch(() => {});
+  }, []);
+
+  const totalBalance = accounts.reduce(
+    (sum, acc) => sum + exchangeRateService.convert(acc.balance, acc.currency || "IDR", "IDR", fxRates),
+    0
+  );
+
+  const knownTypes = new Set<string>(["Cash", "Bank Account", "E-Wallet"]);
+  const grouped = GROUPS.map((g) => ({
+    ...g,
+    accounts:
+      g.key === "Lainnya"
+        ? accounts.filter((a) => !knownTypes.has(a.type))
+        : accounts.filter((a) => a.type === g.key),
+  })).filter((g) => g.accounts.length > 0);
+
+  return (
+    <div className="max-w-md mx-auto px-5 pt-8 pb-8 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-black text-slate-900">Rekening Saya</h1>
+        <button
+          type="button"
+          onClick={() => setIsAddOpen(true)}
+          className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center active:scale-95 transition-transform"
+        >
+          <Plus size={18} />
+        </button>
+      </div>
+
+      <div className="rounded-3xl bg-gradient-to-br from-indigo-600 to-blue-500 text-white p-6 shadow-lg shadow-indigo-200">
+        <p className="text-xs font-bold text-white/70 uppercase tracking-widest">Total Saldo</p>
+        <p className="text-3xl font-black mt-1 tabular-nums">{formatIDR(totalBalance)}</p>
+      </div>
+
+      {accounts.length === 0 ? (
+        <div className="rounded-2xl bg-white border border-slate-100 p-8 text-center">
+          <WalletIcon size={24} className="mx-auto text-slate-300" />
+          <p className="text-xs font-medium text-slate-400 mt-2">Belum ada rekening.</p>
+        </div>
+      ) : (
+        grouped.map((group) => (
+          <div key={group.key}>
+            <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
+              {group.label}
+            </h2>
+            <div className="space-y-2">
+              {group.accounts.map((acc) => (
+                <div
+                  key={acc.id}
+                  className="flex items-center gap-3 bg-white rounded-2xl border border-slate-100 p-4"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+                    <WalletIcon size={18} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-slate-900 truncate">{acc.name}</p>
+                    <p className="text-[11px] font-medium text-slate-400">{acc.type} &middot; {acc.currency}</p>
+                  </div>
+                  <p className="text-sm font-black text-slate-900 tabular-nums shrink-0">
+                    {formatAmount(acc.balance, acc.currency)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))
+      )}
+
+      <AddWalletSheet isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} />
+    </div>
+  );
+}

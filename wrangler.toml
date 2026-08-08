@@ -24,6 +24,13 @@ namespace_id = "1001"
 limit = 5
 period = 60
 
+[[ratelimits]]
+name = "AI_PARSE_RATE_LIMITER"
+namespace_id = "1002"
+[ratelimits.simple]
+limit = 12
+period = 60
+
 [assets]
 directory = "./out"
 binding = "ASSETS"

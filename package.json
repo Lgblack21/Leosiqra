@@ -10,10 +10,20 @@
     "cf:dev": "wrangler dev cloudflare/src/index.ts",
     "cf:deploy": "npm run build && wrangler deploy cloudflare/src/index.ts",
     "cf:d1:migrate": "wrangler d1 migrations apply leosiqra-db --local",
-    "cf:d1:seed": "wrangler d1 execute leosiqra-db --local --file=./cloudflare/seeds/seed.sql"
+    "cf:d1:seed": "wrangler d1 execute leosiqra-db --local --file=./cloudflare/seeds/seed.sql",
+    "cap:sync": "cap sync",
+    "cap:android": "cap open android",
+    "cap:ios": "cap open ios"
   },
   "dependencies": {
     "@block65/webcrypto-web-push": "^1.0.2",
+    "@capacitor-community/speech-recognition": "^7.0.1",
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/camera": "^8.2.2",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/ios": "^8.5.0",
+    "@capacitor/splash-screen": "^8.0.2",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.38.0",
@@ -29,6 +39,7 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",
