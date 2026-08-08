@@ -50,6 +50,12 @@ type AppUser = {
   // password asli) — dipakai frontend untuk skip verifikasi "password saat
   // ini" di Ganti Password / Reset Data, karena memang tidak pernah ada.
   hasPassword?: boolean;
+  // true kalau user sudah menyelesaikan onboarding awal (setup profil/mata
+  // uang/kategori/rekening). Dipakai membership layout untuk memaksa user baru
+  // ke /membership/onboarding sebelum boleh memakai aplikasi. Disimpan lewat
+  // kolom currency_initialized yang sudah ada (tanpa migrasi baru — lihat
+  // catatan drift schema production di tempat lain).
+  onboarded?: boolean;
 };
 
 const json = (data: unknown, init: ResponseInit = {}) =>
@@ -466,12 +472,13 @@ const readSession = async (env: Env, request: Request) => {
     two_factor_secret?: string | null;
     photo_url?: string | null;
     password_hash?: string;
+    currency_initialized?: number | null;
   } | null = null;
 
   try {
     result = await env.DB.prepare(
       `SELECT s.id as session_id, s.user_id, s.role, s.expires_at,
-              u.name, u.email, u.plan, u.status, u.expired_at, u.whatsapp, u.two_factor_secret, u.photo_url, u.password_hash
+              u.name, u.email, u.plan, u.status, u.expired_at, u.whatsapp, u.two_factor_secret, u.photo_url, u.password_hash, u.currency_initialized
          FROM sessions s
          JOIN users u ON u.id = s.user_id
         WHERE s.id = ?`
@@ -481,7 +488,7 @@ const readSession = async (env: Env, request: Request) => {
   } catch {
     result = await env.DB.prepare(
       `SELECT s.id as session_id, s.user_id, u.role as role, s.expires_at,
-              u.name, u.email, u.plan, u.status, u.expired_at, u.whatsapp, u.two_factor_secret, u.photo_url, u.password_hash
+              u.name, u.email, u.plan, u.status, u.expired_at, u.whatsapp, u.two_factor_secret, u.photo_url, u.password_hash, u.currency_initialized
          FROM sessions s
          JOIN users u ON u.id = s.user_id
         WHERE s.id = ?`
@@ -527,6 +534,7 @@ const readSession = async (env: Env, request: Request) => {
       two_factor_secret: result.two_factor_secret,
       photoURL: result.photo_url ?? null,
       hasPassword: !result.password_hash?.startsWith("oauth$"),
+      onboarded: result.currency_initialized === 1,
     } satisfies AppUser,
   };
 };
