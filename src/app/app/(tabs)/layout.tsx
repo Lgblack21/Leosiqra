@@ -13,7 +13,7 @@ export default function TabsLayout({
   const [isAddOpen, setIsAddOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-28">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-28">
       {children}
       <Fab onClick={() => setIsAddOpen(true)} isOpen={isAddOpen} />
       <BottomTabBar />

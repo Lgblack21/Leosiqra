@@ -32,11 +32,11 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
 
   return (
     <div>
-      <h2 className="text-sm font-black text-slate-900 mb-3">Transaksi Terbaru</h2>
+      <h2 className="text-sm font-black text-slate-900 dark:text-white mb-3">Transaksi Terbaru</h2>
       {recent.length === 0 ? (
-        <div className="rounded-2xl bg-white border border-slate-100 p-8 text-center">
-          <Receipt size={24} className="mx-auto text-slate-300" />
-          <p className="text-xs font-medium text-slate-400 mt-2">Belum ada transaksi.</p>
+        <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-8 text-center">
+          <Receipt size={24} className="mx-auto text-slate-300 dark:text-slate-600" />
+          <p className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-2">Belum ada transaksi.</p>
         </div>
       ) : (
         <StaggerList className="space-y-2">
@@ -44,18 +44,18 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
             const incoming = isIncomingTransaction(tx);
             return (
               <StaggerItem key={tx.id}>
-                <div className="flex items-center gap-3 bg-white rounded-2xl border border-slate-100 p-3.5">
+                <div className="flex items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-3.5">
                   <div
                     className={cn(
                       "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
-                      incoming ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-500"
+                      incoming ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-rose-50 dark:bg-rose-500/10 text-rose-500 dark:text-rose-400"
                     )}
                   >
                     {incoming ? <ArrowDownCircle size={16} /> : <ArrowUpCircle size={16} />}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-slate-900 truncate">{tx.category || "Umum"}</p>
-                    <p className="text-[11px] font-medium text-slate-400">{formatDate(new Date(tx.date))}</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{tx.category || "Umum"}</p>
+                    <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">{formatDate(new Date(tx.date))}</p>
                   </div>
                   <p
                     className={cn(

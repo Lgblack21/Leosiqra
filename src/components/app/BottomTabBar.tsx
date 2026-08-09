@@ -28,14 +28,14 @@ export function BottomTabBar() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-100 pb-[env(safe-area-inset-bottom)]">
+    <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-100 dark:border-slate-800 pb-[env(safe-area-inset-bottom)]">
       <div className="max-w-md mx-auto grid grid-cols-4">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const active = tab.href !== null && pathname === tab.href;
           const itemClass = cn(
             "flex flex-col items-center gap-1 py-2.5 text-[10px] font-bold transition-colors",
-            active ? "text-indigo-600" : "text-slate-300 cursor-default"
+            active ? "text-indigo-600 dark:text-indigo-400" : "text-slate-300 dark:text-slate-600 cursor-default"
           );
 
           if (!tab.href) {

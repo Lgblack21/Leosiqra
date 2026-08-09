@@ -161,7 +161,10 @@ export default function InputCepatPage() {
   }, [accounts, transactions]);
 
   const amountNumber = Number(amount || "0");
-  const canSubmit = amountNumber > 0 && Boolean(selectedAccount) && !submitting;
+  // category wajib — kolom transactions.category di D1 punya constraint
+  // NOT NULL, submit tanpa kategori gagal di server dengan error generik.
+  const canSubmit =
+    amountNumber > 0 && Boolean(selectedAccount) && category.trim().length > 0 && !submitting;
 
   // Transaksi hari ini (kalender lokal), dipisah per jenis — daftar ini yang
   // dipakai BAIK buat kartu total maupun daftar rincian pas diklik, supaya

@@ -15,10 +15,10 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
       <div className="w-20 h-20 rounded-3xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-200 overflow-hidden">
         <Image src="/images/Logo-new.png" alt="Leosiqra" width={48} height={48} className="object-contain" />
       </div>
-      <h1 className="text-2xl font-black text-slate-900 mt-6">
+      <h1 className="text-2xl font-black text-slate-900 dark:text-white mt-6">
         {name ? `Halo, ${name}!` : "Selamat Datang"}
       </h1>
-      <p className="text-sm font-medium text-slate-400 mt-2 max-w-xs">
+      <p className="text-sm font-medium text-slate-400 dark:text-slate-500 mt-2 max-w-xs">
         Yuk siapkan rekening pertama kamu supaya bisa langsung mulai catat transaksi.
       </p>
 

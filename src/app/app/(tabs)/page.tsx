@@ -49,9 +49,9 @@ export default function AppHomePage() {
   if (accounts === null) {
     return (
       <div className="max-w-md mx-auto px-5 pt-8 space-y-4 animate-pulse">
-        <div className="h-40 rounded-3xl bg-slate-100" />
-        <div className="h-24 rounded-2xl bg-slate-100" />
-        <div className="h-24 rounded-2xl bg-slate-100" />
+        <div className="h-40 rounded-3xl bg-slate-100 dark:bg-slate-800" />
+        <div className="h-24 rounded-2xl bg-slate-100 dark:bg-slate-800" />
+        <div className="h-24 rounded-2xl bg-slate-100 dark:bg-slate-800" />
       </div>
     );
   }
@@ -65,8 +65,8 @@ export default function AppHomePage() {
     <div className="max-w-md mx-auto px-5 pt-8 space-y-6">
       <FadeIn className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-bold text-slate-400">Hai,</p>
-          <h1 className="text-lg font-black text-slate-900">{auth.currentUser?.displayName || "Pengguna"}</h1>
+          <p className="text-xs font-bold text-slate-400 dark:text-slate-500">Hai,</p>
+          <h1 className="text-lg font-black text-slate-900 dark:text-white">{auth.currentUser?.displayName || "Pengguna"}</h1>
         </div>
         <div className="flex items-center gap-1.5 bg-amber-50 text-amber-600 rounded-full px-3 py-1.5 text-[11px] font-black">
           <Star size={12} fill="currentColor" /> Lvl 1

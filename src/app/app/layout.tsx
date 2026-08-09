@@ -7,6 +7,7 @@ import { SplashScreen } from "@capacitor/splash-screen";
 import { App as CapacitorApp } from "@capacitor/app";
 import { auth } from "@/lib/cf-client";
 import { onAuthStateChanged } from "@/lib/cf-auth";
+import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 
 // Native splash (drawable/splash.png) cuma nyala sekilas selama Android/iOS
 // nyiapin Activity — begitu WebView aktif dia langsung ilang, dan APK ini
@@ -81,5 +82,17 @@ export default function AppShellLayout({
   // tombol login/splash terasa instan.
   if (loading) return null;
 
-  return <>{children}</>;
+  return (
+    <ThemeProvider>
+      <ThemedShell>{children}</ThemedShell>
+    </ThemeProvider>
+  );
+}
+
+// Kelas .dark diterapkan di div pembungkus ini, bukan <html> root — supaya
+// dark mode terisolasi penuh dari /membership/* yang berbagi root layout,
+// tanpa perlu menyentuh file itu sama sekali.
+function ThemedShell({ children }: { children: React.ReactNode }) {
+  const { resolvedTheme } = useTheme();
+  return <div className={resolvedTheme === "dark" ? "dark" : ""}>{children}</div>;
 }

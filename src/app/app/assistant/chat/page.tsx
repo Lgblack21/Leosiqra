@@ -116,15 +116,15 @@ export default function AssistantChatPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <div className="flex items-center justify-between px-4 py-4 border-b border-slate-100 bg-white shrink-0">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
+      <div className="flex items-center justify-between px-4 py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => router.back()} className="p-1.5 -ml-1.5 text-slate-500">
+          <button type="button" onClick={() => router.back()} className="p-1.5 -ml-1.5 text-slate-500 dark:text-slate-400">
             <ChevronLeft size={22} />
           </button>
-          <h1 className="text-sm font-black text-slate-900">Chat AI</h1>
+          <h1 className="text-sm font-black text-slate-900 dark:text-white">Chat AI</h1>
         </div>
-        <button type="button" onClick={clearChat} className="p-1.5 text-slate-400">
+        <button type="button" onClick={clearChat} className="p-1.5 text-slate-400 dark:text-slate-500">
           <RefreshCw size={16} />
         </button>
       </div>
@@ -142,7 +142,7 @@ export default function AssistantChatPage() {
             >
               <div
                 className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                  msg.role === "user" ? "bg-slate-900 text-white" : "bg-gradient-to-br from-indigo-600 to-blue-500 text-white"
+                  msg.role === "user" ? "bg-slate-900 dark:bg-slate-700 text-white" : "bg-gradient-to-br from-indigo-600 to-blue-500 text-white"
                 }`}
               >
                 {msg.role === "user" ? <User size={13} /> : <Bot size={13} />}
@@ -150,8 +150,8 @@ export default function AssistantChatPage() {
               <div
                 className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm font-medium leading-relaxed ${
                   msg.role === "user"
-                    ? "bg-slate-900 text-white rounded-tr-sm"
-                    : "bg-white text-slate-800 rounded-tl-sm border border-slate-100"
+                    ? "bg-slate-900 dark:bg-slate-700 text-white rounded-tr-sm"
+                    : "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 rounded-tl-sm border border-slate-100 dark:border-slate-800"
                 }`}
                 dangerouslySetInnerHTML={{ __html: formatText(msg.text) }}
               />
@@ -163,7 +163,7 @@ export default function AssistantChatPage() {
             <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-500 flex items-center justify-center">
               <Bot size={13} className="text-white" />
             </div>
-            <div className="bg-white border border-slate-100 rounded-2xl rounded-tl-sm px-4 py-3.5">
+            <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl rounded-tl-sm px-4 py-3.5">
               <div className="flex gap-1.5 items-center h-4">
                 <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
                 <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
@@ -175,7 +175,7 @@ export default function AssistantChatPage() {
         <div ref={chatEndRef} />
       </div>
 
-      <div className="p-4 border-t border-slate-100 bg-white pb-[calc(env(safe-area-inset-bottom)+16px)] shrink-0">
+      <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 pb-[calc(env(safe-area-inset-bottom)+16px)] shrink-0">
         <div className="flex gap-2">
           <input
             type="text"
@@ -184,7 +184,7 @@ export default function AssistantChatPage() {
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage(input)}
             placeholder="Tanya sesuatu..."
             disabled={loading}
-            className="flex-1 bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-2xl py-3.5 px-4 text-sm font-medium text-slate-700 placeholder:text-slate-300 disabled:opacity-50 outline-none"
+            className="flex-1 bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-500/20 rounded-2xl py-3.5 px-4 text-sm font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 disabled:opacity-50 outline-none"
           />
           <motion.button
             type="button"

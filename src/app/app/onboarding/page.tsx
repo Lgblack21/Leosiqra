@@ -12,7 +12,7 @@ export default function OnboardingPage() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-10">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-10">
       {step === "welcome" && <WelcomeStep onNext={() => setStep("wallet")} />}
       {step === "wallet" && <FirstWalletStep onDone={() => router.replace("/app")} />}
     </div>

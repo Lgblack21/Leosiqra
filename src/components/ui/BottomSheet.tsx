@@ -8,6 +8,10 @@ interface BottomSheetProps {
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
+  /** Konten yang nempel di bawah, di luar area scroll — dipakai buat keypad
+   * numerik AddTransactionSheet yang harus tetap kelihatan sementara
+   * kategori/rekening/catatan di atasnya bisa di-scroll. */
+  footer?: React.ReactNode;
 }
 
 // Threshold buat swipe-to-dismiss: cukup salah satu terpenuhi (jarak geser
@@ -16,7 +20,7 @@ interface BottomSheetProps {
 const DISMISS_OFFSET = 120;
 const DISMISS_VELOCITY = 500;
 
-export function BottomSheet({ isOpen, onClose, title, children }: BottomSheetProps) {
+export function BottomSheet({ isOpen, onClose, title, children, footer }: BottomSheetProps) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -55,15 +59,15 @@ export function BottomSheet({ isOpen, onClose, title, children }: BottomSheetPro
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.4 }}
             onDragEnd={handleDragEnd}
-            className="relative w-full max-w-md bg-white rounded-t-[28px] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+            className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[28px] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
           >
             <div className="shrink-0 flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing">
-              <div className="w-10 h-1.5 rounded-full bg-slate-200" />
+              <div className="w-10 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700" />
             </div>
 
             {title && (
               <div className="px-6 pb-3 shrink-0">
-                <h3 className="text-lg font-black text-slate-900">{title}</h3>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">{title}</h3>
               </div>
             )}
 
@@ -71,7 +75,7 @@ export function BottomSheet({ isOpen, onClose, title, children }: BottomSheetPro
               {children}
             </div>
 
-            <div className="pb-[env(safe-area-inset-bottom)]" />
+            {footer ? <div className="shrink-0">{footer}</div> : <div className="pb-[env(safe-area-inset-bottom)]" />}
           </motion.div>
         </div>
       )}

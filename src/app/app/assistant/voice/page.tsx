@@ -122,12 +122,12 @@ export default function AssistantVoicePage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <div className="flex items-center gap-2 px-4 py-4 border-b border-slate-100 bg-white shrink-0">
-        <button type="button" onClick={() => router.back()} className="p-1.5 -ml-1.5 text-slate-500">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
+      <div className="flex items-center gap-2 px-4 py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+        <button type="button" onClick={() => router.back()} className="p-1.5 -ml-1.5 text-slate-500 dark:text-slate-400">
           <ChevronLeft size={22} />
         </button>
-        <h1 className="text-sm font-black text-slate-900">Voice</h1>
+        <h1 className="text-sm font-black text-slate-900 dark:text-white">Voice</h1>
       </div>
 
       <div className="flex-1 flex flex-col overflow-y-auto px-5 py-6 pb-[calc(env(safe-area-inset-bottom)+24px)]">
@@ -135,12 +135,12 @@ export default function AssistantVoicePage() {
           <div className="flex-1 flex flex-col items-center justify-center text-center">
             <div className="relative flex items-center justify-center">
               <span className="absolute w-32 h-32 rounded-full bg-indigo-200/60 blur-xl animate-ambient-pulse" />
-              <div className="relative w-20 h-20 rounded-3xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+              <div className="relative w-20 h-20 rounded-3xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                 <Mic size={32} />
               </div>
             </div>
-            <h2 className="text-lg font-black text-slate-900 mt-6">Catat via Suara</h2>
-            <p className="text-sm font-medium text-slate-400 mt-1.5 max-w-xs">
+            <h2 className="text-lg font-black text-slate-900 dark:text-white mt-6">Catat via Suara</h2>
+            <p className="text-sm font-medium text-slate-400 dark:text-slate-500 mt-1.5 max-w-xs">
               Contoh: &quot;Beli kopi lima puluh ribu pakai Cash&quot;
             </p>
             <motion.button
@@ -155,7 +155,7 @@ export default function AssistantVoicePage() {
               {["Beli kopi 25rb", "Gajian 5jt", "Bayar listrik 200rb"].map((hint) => (
                 <span
                   key={hint}
-                  className="text-[11px] font-bold text-slate-400 bg-white border border-slate-100 rounded-full px-3 py-1.5"
+                  className="text-[11px] font-bold text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-full px-3 py-1.5"
                 >
                   {hint}
                 </span>
@@ -172,8 +172,8 @@ export default function AssistantVoicePage() {
                 <WaveformBars />
               </div>
             </div>
-            <p className="text-xs font-bold text-slate-400 mt-6 uppercase tracking-widest">Mendengarkan...</p>
-            <p className="text-base font-bold text-slate-900 mt-3 max-w-xs min-h-[3lh]">
+            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mt-6 uppercase tracking-widest">Mendengarkan...</p>
+            <p className="text-base font-bold text-slate-900 dark:text-white mt-3 max-w-xs min-h-[3lh]">
               {transcript || "Silakan bicara..."}
             </p>
             <motion.button
@@ -189,9 +189,9 @@ export default function AssistantVoicePage() {
 
         {state === "transcribed" && (
           <div className="space-y-5 pt-6">
-            <div className="bg-white rounded-2xl border border-slate-100 p-5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hasil Ucapan</label>
-              <p className="text-base font-bold text-slate-900 mt-2">{transcript}</p>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5">
+              <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Hasil Ucapan</label>
+              <p className="text-base font-bold text-slate-900 dark:text-white mt-2">{transcript}</p>
             </div>
             <button
               type="button"
@@ -200,7 +200,7 @@ export default function AssistantVoicePage() {
             >
               <Sparkles size={16} /> Proses dengan AI
             </button>
-            <button type="button" onClick={reset} className="w-full py-3.5 rounded-2xl bg-white border border-slate-200 text-slate-500 font-bold text-sm">
+            <button type="button" onClick={reset} className="w-full py-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold text-sm">
               Ulangi
             </button>
           </div>
@@ -209,7 +209,7 @@ export default function AssistantVoicePage() {
         {state === "processing" && (
           <div className="flex flex-col items-center pt-16">
             <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
-            <p className="text-sm font-bold text-slate-400 mt-4">Memproses...</p>
+            <p className="text-sm font-bold text-slate-400 dark:text-slate-500 mt-4">Memproses...</p>
           </div>
         )}
 
@@ -219,10 +219,10 @@ export default function AssistantVoicePage() {
 
         {state === "error" && (
           <div className="space-y-4">
-            <div className="rounded-2xl bg-rose-50 border border-rose-100 px-4 py-3 text-xs font-bold text-rose-600">
+            <div className="rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 px-4 py-3 text-xs font-bold text-rose-600 dark:text-rose-400">
               {errorMsg}
             </div>
-            <button type="button" onClick={reset} className="w-full py-3.5 rounded-2xl bg-white border border-slate-200 text-slate-700 font-bold text-sm">
+            <button type="button" onClick={reset} className="w-full py-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-sm">
               Coba Lagi
             </button>
             <button

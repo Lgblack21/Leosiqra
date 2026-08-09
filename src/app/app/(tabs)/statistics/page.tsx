@@ -71,15 +71,15 @@ export default function StatisticsPage() {
   return (
     <div className="max-w-md mx-auto px-5 pt-8 pb-8 space-y-6">
       <FadeIn>
-        <h1 className="text-lg font-black text-slate-900">Statistik</h1>
+        <h1 className="text-lg font-black text-slate-900 dark:text-white">Statistik</h1>
       </FadeIn>
 
-      <FadeIn delay={0.03} className="flex items-center justify-between bg-white rounded-2xl border border-slate-100 px-4 py-3">
-        <button type="button" onClick={() => shiftMonth(-1)} className="p-1 text-slate-400">
+      <FadeIn delay={0.03} className="flex items-center justify-between bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 px-4 py-3">
+        <button type="button" onClick={() => shiftMonth(-1)} className="p-1 text-slate-400 dark:text-slate-500">
           <ChevronLeft size={18} />
         </button>
-        <span className="text-sm font-black text-slate-900 capitalize">{monthLabel(selectedMonth)}</span>
-        <button type="button" onClick={() => shiftMonth(1)} className="p-1 text-slate-400">
+        <span className="text-sm font-black text-slate-900 dark:text-white capitalize">{monthLabel(selectedMonth)}</span>
+        <button type="button" onClick={() => shiftMonth(1)} className="p-1 text-slate-400 dark:text-slate-500">
           <ChevronRight size={18} />
         </button>
       </FadeIn>
@@ -96,16 +96,16 @@ export default function StatisticsPage() {
       </FadeIn>
 
       <FadeIn delay={0.1}>
-        <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">
+        <h2 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 px-1">
           Berdasarkan Kategori
         </h2>
         {slices.length === 0 ? (
-          <div className="rounded-2xl bg-white border border-slate-100 p-8 text-center">
-            <PieChart size={24} className="mx-auto text-slate-300" />
-            <p className="text-xs font-medium text-slate-400 mt-2">Belum ada transaksi bulan ini.</p>
+          <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-8 text-center">
+            <PieChart size={24} className="mx-auto text-slate-300 dark:text-slate-600" />
+            <p className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-2">Belum ada transaksi bulan ini.</p>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-slate-100 p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-4">
             <CategoryBreakdownChart data={slices} />
           </div>
         )}

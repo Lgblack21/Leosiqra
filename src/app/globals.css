@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Class-based dark mode buat /app/* — .dark diterapkan di wrapper div
+   internal (src/app/app/layout.tsx), bukan <html> root, supaya gak
+   memengaruhi /membership/* yang berbagi root layout. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 html {
   scroll-behavior: smooth;
 }

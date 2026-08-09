@@ -65,12 +65,12 @@ export default function AssistantScanPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <div className="flex items-center gap-2 px-4 py-4 border-b border-slate-100 bg-white shrink-0">
-        <button type="button" onClick={() => router.back()} className="p-1.5 -ml-1.5 text-slate-500">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
+      <div className="flex items-center gap-2 px-4 py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+        <button type="button" onClick={() => router.back()} className="p-1.5 -ml-1.5 text-slate-500 dark:text-slate-400">
           <ChevronLeft size={22} />
         </button>
-        <h1 className="text-sm font-black text-slate-900">AI Scan</h1>
+        <h1 className="text-sm font-black text-slate-900 dark:text-white">AI Scan</h1>
       </div>
 
       <div className="flex-1 flex flex-col overflow-y-auto px-5 py-6 pb-[calc(env(safe-area-inset-bottom)+24px)]">
@@ -86,12 +86,12 @@ export default function AssistantScanPage() {
               ].map((cls) => (
                 <span key={cls} className={`absolute w-8 h-8 border-indigo-200 ${cls}`} />
               ))}
-              <div className="w-20 h-20 rounded-3xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+              <div className="w-20 h-20 rounded-3xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                 <CameraIcon size={32} />
               </div>
             </div>
-            <h2 className="text-lg font-black text-slate-900 mt-6">Foto Struk / Nota</h2>
-            <p className="text-sm font-medium text-slate-400 mt-1.5 max-w-xs">
+            <h2 className="text-lg font-black text-slate-900 dark:text-white mt-6">Foto Struk / Nota</h2>
+            <p className="text-sm font-medium text-slate-400 dark:text-slate-500 mt-1.5 max-w-xs">
               AI bakal baca nominal, kategori, dan catatan dari foto struk kamu.
             </p>
             <motion.button
@@ -107,7 +107,7 @@ export default function AssistantScanPage() {
 
         {(state === "captured" || state === "processing") && photoDataUrl && (
           <div className="flex-1 flex flex-col items-center justify-center">
-            <div className="relative w-full max-w-sm rounded-3xl overflow-hidden border border-slate-100 shadow-sm">
+            <div className="relative w-full max-w-sm rounded-3xl overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={photoDataUrl} alt="Struk" className="w-full block" />
               {state === "processing" && (
@@ -132,7 +132,7 @@ export default function AssistantScanPage() {
                 type="button"
                 onClick={retake}
                 disabled={state === "processing"}
-                className="w-full py-3.5 rounded-2xl bg-white border border-slate-200 text-slate-500 font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+                className="w-full py-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
               >
                 <RotateCcw size={14} /> Ambil Ulang
               </button>
@@ -146,13 +146,13 @@ export default function AssistantScanPage() {
 
         {state === "error" && (
           <div className="space-y-4">
-            <div className="rounded-2xl bg-rose-50 border border-rose-100 px-4 py-3 text-xs font-bold text-rose-600">
+            <div className="rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 px-4 py-3 text-xs font-bold text-rose-600 dark:text-rose-400">
               {errorMsg}
             </div>
             <button
               type="button"
               onClick={retake}
-              className="w-full py-3.5 rounded-2xl bg-white border border-slate-200 text-slate-700 font-bold text-sm"
+              className="w-full py-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-sm"
             >
               Coba Lagi
             </button>
