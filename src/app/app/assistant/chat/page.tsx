@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { ChevronLeft, Send, Bot, User, RefreshCw } from "lucide-react";
 import { auth } from "@/lib/cf-client";
 import { onAuthStateChanged } from "@/lib/cf-auth";
 import { cloudflareApi } from "@/lib/cloudflare-api";
 import { aiChatService, ChatMessage as Message } from "@/lib/services/aiChatService";
+import { lightTap } from "@/lib/haptics";
 
 const escapeHtml = (value: string) =>
   value
@@ -81,6 +83,7 @@ export default function AssistantChatPage() {
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || loading) return;
+    lightTap();
     const userMsg: Message = { role: "user", text: text.trim(), timestamp: new Date() };
     const tempMessages = [...messages, userMsg];
     setMessages(tempMessages);
@@ -130,10 +133,16 @@ export default function AssistantChatPage() {
         {messages.map((rawMsg, idx) => {
           const msg = normalizeMessage(rawMsg);
           return (
-            <div key={idx} className={`flex gap-2.5 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className={`flex gap-2.5 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
+            >
               <div
                 className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                  msg.role === "user" ? "bg-slate-900 text-white" : "bg-indigo-600 text-white"
+                  msg.role === "user" ? "bg-slate-900 text-white" : "bg-gradient-to-br from-indigo-600 to-blue-500 text-white"
                 }`}
               >
                 {msg.role === "user" ? <User size={13} /> : <Bot size={13} />}
@@ -146,12 +155,12 @@ export default function AssistantChatPage() {
                 }`}
                 dangerouslySetInnerHTML={{ __html: formatText(msg.text) }}
               />
-            </div>
+            </motion.div>
           );
         })}
         {loading && (
           <div className="flex gap-2.5">
-            <div className="w-7 h-7 rounded-xl bg-indigo-600 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-500 flex items-center justify-center">
               <Bot size={13} className="text-white" />
             </div>
             <div className="bg-white border border-slate-100 rounded-2xl rounded-tl-sm px-4 py-3.5">
@@ -177,14 +186,15 @@ export default function AssistantChatPage() {
             disabled={loading}
             className="flex-1 bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-2xl py-3.5 px-4 text-sm font-medium text-slate-700 placeholder:text-slate-300 disabled:opacity-50 outline-none"
           />
-          <button
+          <motion.button
             type="button"
             onClick={() => sendMessage(input)}
             disabled={loading || !input.trim()}
-            className="w-11 h-11 shrink-0 bg-indigo-600 disabled:bg-slate-200 text-white rounded-2xl flex items-center justify-center active:scale-95 transition-transform"
+            whileTap={{ scale: 0.9 }}
+            className="w-11 h-11 shrink-0 bg-indigo-600 disabled:bg-slate-200 text-white rounded-2xl flex items-center justify-center"
           >
             <Send size={16} />
-          </button>
+          </motion.button>
         </div>
       </div>
     </div>

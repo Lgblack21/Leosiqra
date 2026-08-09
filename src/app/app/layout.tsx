@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Capacitor } from "@capacitor/core";
 import { SplashScreen } from "@capacitor/splash-screen";
+import { App as CapacitorApp } from "@capacitor/app";
 import { auth } from "@/lib/cf-client";
 import { onAuthStateChanged } from "@/lib/cf-auth";
 
@@ -28,6 +29,27 @@ export default function AppShellLayout({
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
+  pathnameRef.current = pathname;
+
+  // Tanpa ini, tombol back hardware Android langsung nutup app (keluar ke
+  // launcher) dari halaman manapun di /app/* — dikonfirmasi langsung lewat
+  // emulator. Daftar listener sekali di root, baca pathname via ref supaya
+  // gak perlu re-attach tiap ganti rute.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const listenerPromise = CapacitorApp.addListener("backButton", () => {
+      if (pathnameRef.current === "/app") {
+        CapacitorApp.minimizeApp();
+      } else {
+        router.back();
+      }
+    });
+    return () => {
+      listenerPromise.then((listener) => listener.remove());
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Pakai onAuthStateChanged (bukan panggil /api/auth/me langsung) supaya
   // auth.currentUser terisi — CategorySelect/CurrencySelect yang dipakai di

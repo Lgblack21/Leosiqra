@@ -4,6 +4,7 @@ import { ArrowDownCircle, ArrowUpCircle, Receipt } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isIncomingTransaction } from "@/lib/utils";
 import { Transaction } from "@/lib/services/transactionService";
+import { StaggerList, StaggerItem } from "@/components/app/FadeIn";
 
 interface RecentTransactionsProps {
   transactions: Transaction[];
@@ -38,39 +39,38 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
           <p className="text-xs font-medium text-slate-400 mt-2">Belum ada transaksi.</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <StaggerList className="space-y-2">
           {recent.map((tx) => {
             const incoming = isIncomingTransaction(tx);
             return (
-              <div
-                key={tx.id}
-                className="flex items-center gap-3 bg-white rounded-2xl border border-slate-100 p-3.5"
-              >
-                <div
-                  className={cn(
-                    "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
-                    incoming ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-500"
-                  )}
-                >
-                  {incoming ? <ArrowDownCircle size={16} /> : <ArrowUpCircle size={16} />}
+              <StaggerItem key={tx.id}>
+                <div className="flex items-center gap-3 bg-white rounded-2xl border border-slate-100 p-3.5">
+                  <div
+                    className={cn(
+                      "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
+                      incoming ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-500"
+                    )}
+                  >
+                    {incoming ? <ArrowDownCircle size={16} /> : <ArrowUpCircle size={16} />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-slate-900 truncate">{tx.category || "Umum"}</p>
+                    <p className="text-[11px] font-medium text-slate-400">{formatDate(new Date(tx.date))}</p>
+                  </div>
+                  <p
+                    className={cn(
+                      "text-sm font-black tabular-nums shrink-0",
+                      incoming ? "text-emerald-600" : "text-rose-500"
+                    )}
+                  >
+                    {incoming ? "+" : "-"}
+                    {formatAmount(tx.amount, tx.currency || "IDR")}
+                  </p>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-slate-900 truncate">{tx.category || "Umum"}</p>
-                  <p className="text-[11px] font-medium text-slate-400">{formatDate(new Date(tx.date))}</p>
-                </div>
-                <p
-                  className={cn(
-                    "text-sm font-black tabular-nums shrink-0",
-                    incoming ? "text-emerald-600" : "text-rose-500"
-                  )}
-                >
-                  {incoming ? "+" : "-"}
-                  {formatAmount(tx.amount, tx.currency || "IDR")}
-                </p>
-              </div>
+              </StaggerItem>
             );
           })}
-        </div>
+        </StaggerList>
       )}
     </div>
   );

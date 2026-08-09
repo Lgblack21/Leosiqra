@@ -11,6 +11,7 @@ import { BalanceCard } from "@/components/app/home/BalanceCard";
 import { WalletList } from "@/components/app/home/WalletList";
 import { RecentTransactions } from "@/components/app/home/RecentTransactions";
 import { AssistantMenu } from "@/components/app/home/AssistantMenu";
+import { FadeIn, StaggerList, StaggerItem } from "@/components/app/FadeIn";
 
 export default function AppHomePage() {
   const router = useRouter();
@@ -62,7 +63,7 @@ export default function AppHomePage() {
 
   return (
     <div className="max-w-md mx-auto px-5 pt-8 space-y-6">
-      <div className="flex items-center justify-between">
+      <FadeIn className="flex items-center justify-between">
         <div>
           <p className="text-xs font-bold text-slate-400">Hai,</p>
           <h1 className="text-lg font-black text-slate-900">{auth.currentUser?.displayName || "Pengguna"}</h1>
@@ -70,12 +71,22 @@ export default function AppHomePage() {
         <div className="flex items-center gap-1.5 bg-amber-50 text-amber-600 rounded-full px-3 py-1.5 text-[11px] font-black">
           <Star size={12} fill="currentColor" /> Lvl 1
         </div>
-      </div>
+      </FadeIn>
 
-      <BalanceCard accounts={accounts} transactions={transactions} />
-      <WalletList accounts={accounts} />
-      <AssistantMenu />
-      <RecentTransactions transactions={transactions} />
+      <StaggerList className="space-y-6">
+        <StaggerItem>
+          <BalanceCard accounts={accounts} transactions={transactions} />
+        </StaggerItem>
+        <StaggerItem>
+          <WalletList accounts={accounts} />
+        </StaggerItem>
+        <StaggerItem>
+          <AssistantMenu />
+        </StaggerItem>
+        <StaggerItem>
+          <RecentTransactions transactions={transactions} />
+        </StaggerItem>
+      </StaggerList>
     </div>
   );
 }

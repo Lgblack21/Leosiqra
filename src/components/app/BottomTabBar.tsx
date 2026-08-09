@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
 import { Home, BarChart3, Wallet, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { lightTap } from "@/lib/haptics";
 
 interface TabItem {
   key: string;
@@ -46,8 +48,14 @@ export function BottomTabBar() {
           }
 
           return (
-            <Link key={tab.key} href={tab.href} className={itemClass}>
-              <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+            <Link key={tab.key} href={tab.href} onClick={lightTap} className={itemClass}>
+              <motion.span
+                animate={{ scale: active ? 1.15 : 1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                className="flex items-center justify-center"
+              >
+                <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+              </motion.span>
               {tab.label}
             </Link>
           );

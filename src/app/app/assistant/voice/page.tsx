@@ -2,12 +2,33 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { ChevronLeft, Mic, Square, Sparkles } from "lucide-react";
 import { SpeechRecognition } from "@capacitor-community/speech-recognition";
 import { cloudflareApi } from "@/lib/cloudflare-api";
 import { TransactionReviewForm, ParsedTransactionSuggestion } from "@/components/app/assistant/TransactionReviewForm";
+import { lightTap } from "@/lib/haptics";
 
 type VoiceState = "idle" | "listening" | "transcribed" | "processing" | "ready" | "error";
+
+const WAVE_DELAYS = [0, 0.12, 0.24, 0.12, 0];
+
+// Dekoratif, bukan audio-reactive asli (plugin speech-recognition cuma
+// ngasih transcript teks, gak ada level amplitudo) — lihat catatan di
+// globals.css. Cukup buat kesan "lagi dengerin", bukan visualisasi asli.
+function WaveformBars() {
+  return (
+    <div className="flex items-center gap-1.5 h-8">
+      {WAVE_DELAYS.map((delay, i) => (
+        <span
+          key={i}
+          className="w-1.5 h-8 rounded-full bg-white animate-voice-wave"
+          style={{ animationDelay: `${delay}s` }}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function AssistantVoicePage() {
   const router = useRouter();
@@ -24,6 +45,7 @@ export default function AssistantVoicePage() {
   }, []);
 
   const startListening = async () => {
+    lightTap();
     try {
       const { available } = await SpeechRecognition.available();
       if (!available) {
@@ -62,6 +84,7 @@ export default function AssistantVoicePage() {
   };
 
   const stopListening = async () => {
+    lightTap();
     try {
       await SpeechRecognition.stop();
       await SpeechRecognition.removeAllListeners();
@@ -107,45 +130,60 @@ export default function AssistantVoicePage() {
         <h1 className="text-sm font-black text-slate-900">Voice</h1>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 py-6 pb-[calc(env(safe-area-inset-bottom)+24px)]">
+      <div className="flex-1 flex flex-col overflow-y-auto px-5 py-6 pb-[calc(env(safe-area-inset-bottom)+24px)]">
         {state === "idle" && (
-          <div className="flex flex-col items-center text-center pt-12">
-            <div className="w-20 h-20 rounded-3xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-              <Mic size={32} />
+          <div className="flex-1 flex flex-col items-center justify-center text-center">
+            <div className="relative flex items-center justify-center">
+              <span className="absolute w-32 h-32 rounded-full bg-indigo-200/60 blur-xl animate-ambient-pulse" />
+              <div className="relative w-20 h-20 rounded-3xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                <Mic size={32} />
+              </div>
             </div>
-            <h2 className="text-lg font-black text-slate-900 mt-5">Catat via Suara</h2>
+            <h2 className="text-lg font-black text-slate-900 mt-6">Catat via Suara</h2>
             <p className="text-sm font-medium text-slate-400 mt-1.5 max-w-xs">
               Contoh: &quot;Beli kopi lima puluh ribu pakai Cash&quot;
             </p>
-            <button
+            <motion.button
               type="button"
               onClick={startListening}
-              className="mt-8 w-20 h-20 rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-200 flex items-center justify-center active:scale-95 transition-transform"
+              whileTap={{ scale: 0.92 }}
+              className="mt-8 w-20 h-20 rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-200 flex items-center justify-center"
             >
               <Mic size={28} />
-            </button>
+            </motion.button>
+            <div className="flex flex-wrap gap-2 justify-center mt-10 max-w-xs">
+              {["Beli kopi 25rb", "Gajian 5jt", "Bayar listrik 200rb"].map((hint) => (
+                <span
+                  key={hint}
+                  className="text-[11px] font-bold text-slate-400 bg-white border border-slate-100 rounded-full px-3 py-1.5"
+                >
+                  {hint}
+                </span>
+              ))}
+            </div>
           </div>
         )}
 
         {state === "listening" && (
-          <div className="flex flex-col items-center text-center pt-12">
-            <div className="relative">
-              <span className="absolute inset-0 rounded-full bg-rose-400/40 animate-ping" />
-              <div className="relative w-20 h-20 rounded-full bg-rose-500 text-white flex items-center justify-center">
-                <Mic size={28} />
+          <div className="flex-1 flex flex-col items-center justify-center text-center">
+            <div className="relative flex items-center justify-center">
+              <span className="absolute w-32 h-32 rounded-full bg-rose-300/50 blur-xl animate-ambient-pulse" />
+              <div className="relative w-20 h-20 rounded-full bg-rose-500 flex items-center justify-center">
+                <WaveformBars />
               </div>
             </div>
-            <p className="text-xs font-bold text-slate-400 mt-5 uppercase tracking-widest">Mendengarkan...</p>
+            <p className="text-xs font-bold text-slate-400 mt-6 uppercase tracking-widest">Mendengarkan...</p>
             <p className="text-base font-bold text-slate-900 mt-3 max-w-xs min-h-[3lh]">
               {transcript || "Silakan bicara..."}
             </p>
-            <button
+            <motion.button
               type="button"
               onClick={stopListening}
-              className="mt-8 w-16 h-16 rounded-full bg-slate-900 text-white flex items-center justify-center active:scale-95 transition-transform"
+              whileTap={{ scale: 0.92 }}
+              className="mt-8 w-16 h-16 rounded-full bg-slate-900 text-white flex items-center justify-center"
             >
               <Square size={22} />
-            </button>
+            </motion.button>
           </div>
         )}
 

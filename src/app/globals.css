@@ -95,9 +95,48 @@ body {
   animation: logo-bob 3.5s ease-in-out infinite;
 }
 
+/* Glow ambient di belakang ikon mic (idle/listening) — satu animasi loop
+   ringan (transform+opacity), gaya "Siri glow" tanpa perlu data audio asli. */
+@keyframes ambient-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.15); opacity: 0.8; }
+}
+.animate-ambient-pulse {
+  animation: ambient-pulse 2.4s ease-in-out infinite;
+}
+
+/* Bar waveform dekoratif buat state "Mendengarkan" — bukan audio-reactive
+   asli (plugin speech-recognition cuma kasih teks, bukan level suara),
+   tapi kasih kesan "hidup" selama proses dengar berlangsung. */
+@keyframes voice-wave {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+.animate-voice-wave {
+  animation: voice-wave 1s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Garis sweep di atas foto struk selagi AI Scan memproses — reinforce
+   "lagi dibaca", bukan cuma spinner generik. `top` (bukan transform) supaya
+   persentasenya relatif ke tinggi container foto, bukan ke elemen garis
+   itu sendiri. */
+@keyframes scan-sweep {
+  0% { top: 0%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+.animate-scan-sweep {
+  animation: scan-sweep 1.8s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-floaty,
-  .animate-logo-bob {
+  .animate-logo-bob,
+  .animate-ambient-pulse,
+  .animate-voice-wave,
+  .animate-scan-sweep {
     animation: none;
   }
 }

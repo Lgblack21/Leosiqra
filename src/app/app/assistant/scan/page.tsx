@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { ChevronLeft, Camera as CameraIcon, RotateCcw, Sparkles } from "lucide-react";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { cloudflareApi } from "@/lib/cloudflare-api";
 import { TransactionReviewForm, ParsedTransactionSuggestion } from "@/components/app/assistant/TransactionReviewForm";
+import { lightTap } from "@/lib/haptics";
 
 type ScanState = "idle" | "captured" | "processing" | "ready" | "error";
 
@@ -18,6 +20,7 @@ export default function AssistantScanPage() {
   const [errorMsg, setErrorMsg] = useState("");
 
   const capture = async () => {
+    lightTap();
     try {
       const photo = await Camera.getPhoto({
         resultType: CameraResultType.Base64,
@@ -70,40 +73,61 @@ export default function AssistantScanPage() {
         <h1 className="text-sm font-black text-slate-900">AI Scan</h1>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 py-6 pb-[calc(env(safe-area-inset-bottom)+24px)]">
+      <div className="flex-1 flex flex-col overflow-y-auto px-5 py-6 pb-[calc(env(safe-area-inset-bottom)+24px)]">
         {state === "idle" && (
-          <div className="flex flex-col items-center text-center pt-12">
-            <div className="w-20 h-20 rounded-3xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-              <CameraIcon size={32} />
+          <div className="flex-1 flex flex-col items-center justify-center text-center">
+            <div className="relative w-48 h-48 flex items-center justify-center">
+              {/* Bingkai sudut dekoratif — kesan "arahkan ke sini" */}
+              {[
+                "top-0 left-0 border-t-2 border-l-2 rounded-tl-2xl",
+                "top-0 right-0 border-t-2 border-r-2 rounded-tr-2xl",
+                "bottom-0 left-0 border-b-2 border-l-2 rounded-bl-2xl",
+                "bottom-0 right-0 border-b-2 border-r-2 rounded-br-2xl",
+              ].map((cls) => (
+                <span key={cls} className={`absolute w-8 h-8 border-indigo-200 ${cls}`} />
+              ))}
+              <div className="w-20 h-20 rounded-3xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                <CameraIcon size={32} />
+              </div>
             </div>
-            <h2 className="text-lg font-black text-slate-900 mt-5">Foto Struk / Nota</h2>
+            <h2 className="text-lg font-black text-slate-900 mt-6">Foto Struk / Nota</h2>
             <p className="text-sm font-medium text-slate-400 mt-1.5 max-w-xs">
               AI bakal baca nominal, kategori, dan catatan dari foto struk kamu.
             </p>
-            <button
+            <motion.button
               type="button"
               onClick={capture}
-              className="mt-8 w-full max-w-xs py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg shadow-indigo-200 active:scale-[0.98] transition-all"
+              whileTap={{ scale: 0.97 }}
+              className="mt-8 w-full max-w-xs py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg shadow-indigo-200"
             >
               Ambil Foto Struk
-            </button>
+            </motion.button>
           </div>
         )}
 
         {(state === "captured" || state === "processing") && photoDataUrl && (
-          <div className="flex flex-col items-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={photoDataUrl} alt="Struk" className="w-full max-w-sm rounded-3xl border border-slate-100 shadow-sm" />
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <div className="relative w-full max-w-sm rounded-3xl overflow-hidden border border-slate-100 shadow-sm">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={photoDataUrl} alt="Struk" className="w-full block" />
+              {state === "processing" && (
+                <>
+                  <div className="absolute inset-0 bg-indigo-950/10" />
+                  <div className="absolute left-0 right-0 h-0.5 bg-indigo-400 shadow-[0_0_12px_2px_rgba(99,102,241,0.8)] animate-scan-sweep" />
+                </>
+              )}
+            </div>
             <div className="w-full max-w-sm mt-5 space-y-3">
-              <button
+              <motion.button
                 type="button"
                 onClick={process}
                 disabled={state === "processing"}
+                whileTap={{ scale: 0.97 }}
                 className="w-full py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg shadow-indigo-200 disabled:opacity-60 flex items-center justify-center gap-2"
               >
                 <Sparkles size={16} />
                 {state === "processing" ? "Memproses..." : "Proses dengan AI"}
-              </button>
+              </motion.button>
               <button
                 type="button"
                 onClick={retake}

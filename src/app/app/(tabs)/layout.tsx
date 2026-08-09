@@ -15,7 +15,7 @@ export default function TabsLayout({
   return (
     <div className="min-h-screen bg-slate-50 pb-28">
       {children}
-      <Fab onClick={() => setIsAddOpen(true)} />
+      <Fab onClick={() => setIsAddOpen(true)} isOpen={isAddOpen} />
       <BottomTabBar />
       <AddTransactionSheet isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} />
     </div>

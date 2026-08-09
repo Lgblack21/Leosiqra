@@ -6,6 +6,7 @@ import { Account } from "@/lib/services/accountService";
 import { Transaction } from "@/lib/services/transactionService";
 import { exchangeRateService, ExchangeRates } from "@/lib/services/exchangeRateService";
 import { isIncomingTransaction } from "@/lib/utils";
+import { AnimatedNumber } from "@/components/app/AnimatedNumber";
 
 interface BalanceCardProps {
   accounts: Account[];
@@ -43,19 +44,25 @@ export function BalanceCard({ accounts, transactions }: BalanceCardProps) {
   return (
     <div className="rounded-3xl bg-gradient-to-br from-indigo-600 to-blue-500 text-white p-6 shadow-lg shadow-indigo-200">
       <p className="text-xs font-bold text-white/70 uppercase tracking-widest">Total Saldo</p>
-      <p className="text-3xl font-black mt-1 tabular-nums">{formatIDR(totalBalance)}</p>
+      <p className="text-3xl font-black mt-1 tabular-nums">
+        <AnimatedNumber value={totalBalance} format={formatIDR} />
+      </p>
       <div className="grid grid-cols-2 gap-3 mt-5">
         <div className="bg-white/15 rounded-2xl px-4 py-3">
           <div className="flex items-center gap-1.5 text-white/70 text-[11px] font-bold">
             <ArrowDownCircle size={13} /> Pemasukan
           </div>
-          <p className="text-sm font-black mt-1 tabular-nums">{formatIDR(income)}</p>
+          <p className="text-sm font-black mt-1 tabular-nums">
+            <AnimatedNumber value={income} format={formatIDR} />
+          </p>
         </div>
         <div className="bg-white/15 rounded-2xl px-4 py-3">
           <div className="flex items-center gap-1.5 text-white/70 text-[11px] font-bold">
             <ArrowUpCircle size={13} /> Pengeluaran
           </div>
-          <p className="text-sm font-black mt-1 tabular-nums">{formatIDR(expense)}</p>
+          <p className="text-sm font-black mt-1 tabular-nums">
+            <AnimatedNumber value={expense} format={formatIDR} />
+          </p>
         </div>
       </div>
     </div>

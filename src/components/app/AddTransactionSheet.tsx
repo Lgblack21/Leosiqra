@@ -10,6 +10,7 @@ import { NumberInput } from "@/components/ui/NumberInput";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { TxTypeToggle, TxType } from "@/components/app/TxTypeToggle";
 import { AccountPicker } from "@/components/app/AccountPicker";
+import { lightTap } from "@/lib/haptics";
 
 interface AddTransactionSheetProps {
   isOpen: boolean;
@@ -91,6 +92,7 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
       // lihat data baru tanpa reload.
       notifyCollectionChanged("transactions");
       notifyCollectionChanged("accounts");
+      lightTap();
       resetForm();
       onClose();
     } catch (e) {

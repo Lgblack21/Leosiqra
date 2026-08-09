@@ -7,6 +7,8 @@ import { subscribeToCollectionChanges } from "@/lib/cf-firestore";
 import { auth } from "@/lib/cf-client";
 import { exchangeRateService, ExchangeRates } from "@/lib/services/exchangeRateService";
 import { AddWalletSheet } from "@/components/app/wallet/AddWalletSheet";
+import { FadeIn, StaggerList, StaggerItem } from "@/components/app/FadeIn";
+import { AnimatedNumber } from "@/components/app/AnimatedNumber";
 
 const GROUPS = [
   { key: "Cash", label: "Cash" },
@@ -62,7 +64,7 @@ export default function WalletPage() {
 
   return (
     <div className="max-w-md mx-auto px-5 pt-8 pb-8 space-y-6">
-      <div className="flex items-center justify-between">
+      <FadeIn className="flex items-center justify-between">
         <h1 className="text-lg font-black text-slate-900">Rekening Saya</h1>
         <button
           type="button"
@@ -71,12 +73,14 @@ export default function WalletPage() {
         >
           <Plus size={18} />
         </button>
-      </div>
+      </FadeIn>
 
-      <div className="rounded-3xl bg-gradient-to-br from-indigo-600 to-blue-500 text-white p-6 shadow-lg shadow-indigo-200">
+      <FadeIn delay={0.05} className="rounded-3xl bg-gradient-to-br from-indigo-600 to-blue-500 text-white p-6 shadow-lg shadow-indigo-200">
         <p className="text-xs font-bold text-white/70 uppercase tracking-widest">Total Saldo</p>
-        <p className="text-3xl font-black mt-1 tabular-nums">{formatIDR(totalBalance)}</p>
-      </div>
+        <p className="text-3xl font-black mt-1 tabular-nums">
+          <AnimatedNumber value={totalBalance} format={formatIDR} />
+        </p>
+      </FadeIn>
 
       {accounts.length === 0 ? (
         <div className="rounded-2xl bg-white border border-slate-100 p-8 text-center">
@@ -89,25 +93,24 @@ export default function WalletPage() {
             <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
               {group.label}
             </h2>
-            <div className="space-y-2">
+            <StaggerList className="space-y-2">
               {group.accounts.map((acc) => (
-                <div
-                  key={acc.id}
-                  className="flex items-center gap-3 bg-white rounded-2xl border border-slate-100 p-4"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
-                    <WalletIcon size={18} />
+                <StaggerItem key={acc.id}>
+                  <div className="flex items-center gap-3 bg-white rounded-2xl border border-slate-100 p-4">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+                      <WalletIcon size={18} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-slate-900 truncate">{acc.name}</p>
+                      <p className="text-[11px] font-medium text-slate-400">{acc.type} &middot; {acc.currency}</p>
+                    </div>
+                    <p className="text-sm font-black text-slate-900 tabular-nums shrink-0">
+                      {formatAmount(acc.balance, acc.currency)}
+                    </p>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-slate-900 truncate">{acc.name}</p>
-                    <p className="text-[11px] font-medium text-slate-400">{acc.type} &middot; {acc.currency}</p>
-                  </div>
-                  <p className="text-sm font-black text-slate-900 tabular-nums shrink-0">
-                    {formatAmount(acc.balance, acc.currency)}
-                  </p>
-                </div>
+                </StaggerItem>
               ))}
-            </div>
+            </StaggerList>
           </div>
         ))
       )}

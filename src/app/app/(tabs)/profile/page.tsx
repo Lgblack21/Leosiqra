@@ -7,6 +7,7 @@ import { LogOut, Moon, Star } from "lucide-react";
 import { auth } from "@/lib/cf-client";
 import { cloudflareApi } from "@/lib/cloudflare-api";
 import { subscribeUserProfile, UserProfile } from "@/lib/services/userService";
+import { FadeIn } from "@/components/app/FadeIn";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -41,7 +42,7 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-md mx-auto px-5 pt-8 pb-8 space-y-6">
-      <div className="bg-white rounded-3xl border border-slate-100 p-6 flex flex-col items-center text-center">
+      <FadeIn className="bg-white rounded-3xl border border-slate-100 p-6 flex flex-col items-center text-center">
         <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-indigo-600 to-blue-500 p-1">
           <div className="w-full h-full rounded-[20px] bg-white flex items-center justify-center text-xl font-black text-indigo-600 overflow-hidden relative">
             {user?.photoURL ? (
@@ -58,9 +59,9 @@ export default function ProfilePage() {
             <Star size={12} fill="currentColor" /> {profile.plan === "PRO" ? "Premium" : "Free"}
           </div>
         )}
-      </div>
+      </FadeIn>
 
-      <div>
+      <FadeIn delay={0.05}>
         <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 mb-2">Preferensi</h2>
         <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
           <div className="flex items-center gap-3 px-4 py-4 opacity-50">
@@ -71,17 +72,19 @@ export default function ProfilePage() {
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Segera hadir</span>
           </div>
         </div>
-      </div>
+      </FadeIn>
 
-      <button
-        type="button"
-        onClick={handleLogout}
-        disabled={loggingOut}
-        className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-white border border-rose-100 text-rose-500 font-bold text-sm disabled:opacity-50"
-      >
-        <LogOut size={16} />
-        {loggingOut ? "Keluar..." : "Keluar"}
-      </button>
+      <FadeIn delay={0.1}>
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={loggingOut}
+          className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-white border border-rose-100 text-rose-500 font-bold text-sm disabled:opacity-50 active:scale-[0.98] transition-transform"
+        >
+          <LogOut size={16} />
+          {loggingOut ? "Keluar..." : "Keluar"}
+        </button>
+      </FadeIn>
     </div>
   );
 }

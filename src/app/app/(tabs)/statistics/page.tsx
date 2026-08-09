@@ -7,6 +7,8 @@ import { subscribeToCollectionChanges } from "@/lib/cf-firestore";
 import { auth } from "@/lib/cf-client";
 import { TxTypeToggle, TxType } from "@/components/app/TxTypeToggle";
 import { CategoryBreakdownChart, CategorySlice } from "@/components/app/statistics/CategoryBreakdownChart";
+import { FadeIn } from "@/components/app/FadeIn";
+import { AnimatedNumber } from "@/components/app/AnimatedNumber";
 
 const MAX_SLICES = 6;
 
@@ -68,9 +70,11 @@ export default function StatisticsPage() {
 
   return (
     <div className="max-w-md mx-auto px-5 pt-8 pb-8 space-y-6">
-      <h1 className="text-lg font-black text-slate-900">Statistik</h1>
+      <FadeIn>
+        <h1 className="text-lg font-black text-slate-900">Statistik</h1>
+      </FadeIn>
 
-      <div className="flex items-center justify-between bg-white rounded-2xl border border-slate-100 px-4 py-3">
+      <FadeIn delay={0.03} className="flex items-center justify-between bg-white rounded-2xl border border-slate-100 px-4 py-3">
         <button type="button" onClick={() => shiftMonth(-1)} className="p-1 text-slate-400">
           <ChevronLeft size={18} />
         </button>
@@ -78,18 +82,20 @@ export default function StatisticsPage() {
         <button type="button" onClick={() => shiftMonth(1)} className="p-1 text-slate-400">
           <ChevronRight size={18} />
         </button>
-      </div>
+      </FadeIn>
 
       <TxTypeToggle value={type} onChange={setType} />
 
-      <div className="rounded-3xl bg-gradient-to-br from-indigo-600 to-blue-500 text-white p-6 shadow-lg shadow-indigo-200">
+      <FadeIn delay={0.06} className="rounded-3xl bg-gradient-to-br from-indigo-600 to-blue-500 text-white p-6 shadow-lg shadow-indigo-200">
         <p className="text-xs font-bold text-white/70 uppercase tracking-widest">
           Total {type === "pengeluaran" ? "Pengeluaran" : "Pemasukan"}
         </p>
-        <p className="text-3xl font-black mt-1 tabular-nums">{formatIDR(total)}</p>
-      </div>
+        <p className="text-3xl font-black mt-1 tabular-nums">
+          <AnimatedNumber value={total} format={formatIDR} />
+        </p>
+      </FadeIn>
 
-      <div>
+      <FadeIn delay={0.1}>
         <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">
           Berdasarkan Kategori
         </h2>
@@ -103,7 +109,7 @@ export default function StatisticsPage() {
             <CategoryBreakdownChart data={slices} />
           </div>
         )}
-      </div>
+      </FadeIn>
     </div>
   );
 }
