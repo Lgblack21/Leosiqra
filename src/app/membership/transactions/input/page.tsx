@@ -2,25 +2,64 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  TrendingUp,
-  Building2,
-  Globe,
-  Wallet,
-  ShieldAlert,
+  ArrowUpDown,
   ArrowLeftRight,
+  FileSpreadsheet,
+  Briefcase,
+  Landmark,
+  Coins,
+  PiggyBank,
+  HandCoins,
   ChevronRight,
-  Monitor,
-  FileSpreadsheet
+  PlusCircle,
+  type LucideIcon,
 } from 'lucide-react';
-import { cn, formatCurrency } from '@/lib/utils';
-import { useModal } from '@/context/ModalContext';
+import { cn, formatIDR, isIncomingTransaction } from '@/lib/utils';
+import { useModal, ModalType } from '@/context/ModalContext';
 import { auth } from '@/lib/cf-client';
 import { onAuthStateChanged } from '@/lib/cf-auth';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
-import { useCountUp } from '@/lib/hooks/useCountUp';
+import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Card, CardHeader } from '@/components/ui/Card';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 const isSameDay = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+interface Action { id: ModalType; label: string; desc: string; icon: LucideIcon; color: string }
+
+const secondaryActions: Action[] = [
+  { id: 'topup_transfer', label: 'Transfer & Top Up', desc: 'Pindah dana antar rekening sendiri atau isi saldo e-wallet.', icon: ArrowLeftRight, color: 'bg-cyan-50 text-cyan-600' },
+  { id: 'import_mutasi', label: 'Impor Mutasi (CSV)', desc: 'Upload export mutasi bank/e-wallet jadi riwayat transaksi.', icon: FileSpreadsheet, color: 'bg-emerald-50 text-emerald-600' },
+];
+
+const otherActions: Action[] = [
+  { id: 'tabungan', label: 'Tabungan', desc: 'Setor atau tarik dana tabungan.', icon: PiggyBank, color: 'bg-rose-50 text-rose-600' },
+  { id: 'saham', label: 'Saham', desc: 'Beli/jual saham dan update portofolio.', icon: Briefcase, color: 'bg-blue-50 text-blue-600' },
+  { id: 'deposito', label: 'Deposito', desc: 'Penempatan dana berjangka & bunganya.', icon: Landmark, color: 'bg-indigo-50 text-indigo-600' },
+  { id: 'investasi_lain', label: 'Investasi Lainnya', desc: 'Emas, kripto, reksadana, properti.', icon: Coins, color: 'bg-purple-50 text-purple-600' },
+  { id: 'hutang_piutang', label: 'Hutang & Piutang', desc: 'Catat pinjaman, cicilan, dan tagihan.', icon: HandCoins, color: 'bg-orange-50 text-orange-600' },
+];
+
+function ActionTile({ action, onClick }: { action: Action; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full text-left bg-white rounded-card border border-slate-100 shadow-sm p-4 md:p-5 flex items-center gap-4 hover:shadow-md hover:border-slate-200 transition-all group focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-100"
+    >
+      <span className={cn('w-11 h-11 rounded-control flex items-center justify-center shrink-0', action.color)}>
+        <action.icon size={20} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-bold text-slate-900">{action.label}</span>
+        <span className="block text-caption text-slate-400 mt-0.5">{action.desc}</span>
+      </span>
+      <ChevronRight size={16} className="text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all shrink-0" />
+    </button>
+  );
+}
 
 export default function InputTransactionPage() {
   const { openModal } = useModal();
@@ -28,262 +67,143 @@ export default function InputTransactionPage() {
   const [loadingSummary, setLoadingSummary] = useState(true);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
+    let active = true;
+    const load = () =>
+      transactionService
+        .getUserTransactions('session')
+        .then((items) => { if (active) setTransactions(items); })
+        .catch((err) => {
+          console.error('Gagal memuat ringkasan transaksi hari ini:', err);
+          if (active) setTransactions([]);
+        })
+        .finally(() => { if (active) setLoadingSummary(false); });
+
+    const unsubAuth = onAuthStateChanged(auth, (u) => {
       if (!u) {
         setTransactions([]);
         setLoadingSummary(false);
         return;
       }
-      transactionService
-        .getUserTransactions(u.uid)
-        .then(setTransactions)
-        .catch((err) => {
-          console.error('Gagal memuat ringkasan transaksi hari ini:', err);
-          setTransactions([]);
-        })
-        .finally(() => setLoadingSummary(false));
+      load();
     });
-    return () => unsub();
+    // Refetch tiap ada transaksi baru dari modal mana pun, supaya ringkasan
+    // "hari ini" langsung ikut ter-update setelah user mencatat.
+    const unsubTrx = subscribeToCollectionChanges('transactions', load);
+    return () => {
+      active = false;
+      unsubAuth();
+      unsubTrx();
+    };
   }, []);
 
+  // Catatan Hutang/Piutang (type "debt") bukan arus kas — sama seperti di
+  // Dashboard & Riwayat Transaksi, tidak ikut dihitung di sini.
   const todayEntries = useMemo(() => {
     const today = new Date();
-    return transactions.filter((t) => isSameDay(t.date, today));
+    return transactions
+      .filter((t) => t.type !== 'debt' && isSameDay(t.date, today))
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }, [transactions]);
 
   // Digabung lintas rekening, jadi pakai amountIDR (sudah dikonversi saat
   // transaksi disimpan) — bukan .amount mentah.
-  const todayVolume = useMemo(
-    () => todayEntries.reduce((sum, t) => sum + (Number(t.amountIDR) || Number(t.amount) || 0), 0),
-    [todayEntries]
-  );
-
-  const animatedVolume = useCountUp(todayVolume);
+  const toIdr = (t: Transaction) => Number(t.amountIDR) || Number(t.amount) || 0;
+  const todayIn = todayEntries.filter((t) => t.type === 'pemasukan').reduce((s, t) => s + toIdr(t), 0);
+  const todayOut = todayEntries.filter((t) => t.type === 'pengeluaran').reduce((s, t) => s + toIdr(t), 0);
 
   return (
-    <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] pb-12">
-      
-      {/* 1. Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">
-            Input Transaksi <span className="text-blue-600 italic">Harian</span>
-          </h1>
-          <p className="text-[12px] md:text-sm font-medium text-slate-400 mt-2 max-w-xl leading-relaxed">
-            Manajemen aset cerdas dimulai dengan pencatatan yang presisi. Pilih kategori input di bawah untuk memperbarui narasi finansial Anda hari ini.
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6 md:space-y-8 max-w-[1400px] pb-12">
+      <PageHeader
+        icon={<PlusCircle size={22} />}
+        title="Catat Transaksi"
+        subtitle="Pilih jenis catatan. Saldo rekening langsung ter-update setelah disimpan."
+      />
 
-      {/* 2. Pilih Jenis Input Section */}
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap">Pilih Jenis Input</span>
-          <div className="h-[1px] w-48 bg-slate-100" />
-          <div className="ml-auto w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400">
-            <Monitor size={14} />
-          </div>
-        </div>
-
-        {/* TOP CARDS GRID */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Card: Transaksi Harian (2/3) */}
-          <div 
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+        {/* Aksi utama */}
+        <div className="lg:col-span-2 space-y-4 md:space-y-6">
+          <button
+            type="button"
             onClick={() => openModal('harian')}
-            className="lg:col-span-2 bg-white rounded-[32px] p-6 md:p-8 border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden flex flex-col justify-between h-[200px] md:h-[240px] cursor-pointer"
+            className="w-full text-left bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-card p-6 md:p-8 shadow-xl shadow-emerald-600/15 relative overflow-hidden hover:shadow-2xl hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300"
           >
-            <div className="flex justify-between items-start">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-100 group-hover:scale-110 transition-transform">
-                <Monitor size={24} />
-              </div>
-              <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-50/50 px-3 py-1 rounded-full">Most Used</span>
+            <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
+            <div className="flex items-start justify-between gap-4">
+              <span className="w-12 h-12 rounded-control bg-white/15 flex items-center justify-center">
+                <ArrowUpDown size={22} />
+              </span>
+              <span className="text-label font-bold uppercase bg-white/15 px-2.5 py-1 rounded-full">Paling sering</span>
             </div>
-            
-            <div className="max-w-md">
-              <h3 className="text-lg md:text-xl font-black text-slate-900 mb-2">Transaksi Harian</h3>
-              <p className="text-xs font-medium text-slate-400 leading-relaxed">
-                Catat pengeluaran rutin, belanja, dan biaya operasional harian dengan kategorisasi otomatis.
-              </p>
-            </div>
-
-            {/* Decorative background shape */}
-            <div className="absolute right-[-20px] bottom-[-20px] opacity-[0.03] text-indigo-600 group-hover:scale-110 transition-transform duration-700">
-              <Monitor size={180} />
-            </div>
-          </div>
-
-          {/* Side Card: Investasi Saham (1/3) */}
-          <div 
-            onClick={() => openModal('saham')}
-            className="bg-white rounded-[32px] p-6 md:p-8 border border-slate-100 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between h-[200px] md:h-[240px] cursor-pointer"
-          >
-            <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600 shadow-sm border border-purple-100 group-hover:scale-110 transition-transform">
-              <TrendingUp size={24} />
-            </div>
-            
-            <div>
-              <h3 className="text-lg md:text-xl font-black text-slate-900 mb-2">Investasi Saham</h3>
-              <p className="text-xs font-medium text-slate-400 leading-relaxed">
-                Update portofolio saham, dividen, dan capital gain terbaru.
-              </p>
-              <button className="mt-4 flex items-center gap-2 text-[10px] font-black text-blue-600 uppercase tracking-widest hover:translate-x-1 transition-transform">
-                Update Portfolio <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* MIDDLE CARDS GRID (3-cols) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Deposito */}
-          <div 
-            onClick={() => openModal('deposito')}
-            className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all group cursor-pointer"
-          >
-            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 mb-6 group-hover:bg-slate-900 group-hover:text-white transition-colors">
-              <Building2 size={20} />
-            </div>
-            <h3 className="text-[15px] font-bold text-slate-900 mb-2">Deposito</h3>
-            <p className="text-[11px] font-medium text-slate-400 leading-relaxed">
-              Kelola penempatan dana berjangka dan monitor bunga jatuh tempo.
+            <p className="mt-6 text-xl md:text-2xl font-black">Pemasukan / Pengeluaran</p>
+            <p className="mt-1 text-sm text-emerald-50/90 max-w-md">
+              Gaji, belanja, makan, tagihan — semua uang masuk & keluar sehari-hari.
             </p>
-          </div>
+            <span className="mt-5 inline-flex items-center gap-1 text-sm font-bold">
+              Catat sekarang <ChevronRight size={16} />
+            </span>
+          </button>
 
-          {/* Investasi Lainnya */}
-          <div 
-            onClick={() => openModal('investasi_lain')}
-            className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all group cursor-pointer"
-          >
-            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 mb-6 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-              <Globe size={20} />
-            </div>
-            <h3 className="text-[15px] font-bold text-slate-900 mb-2">Investasi Lainnya</h3>
-            <p className="text-[11px] font-medium text-slate-400 leading-relaxed">
-              Emas, Crypto, atau Properti dalam satu dasbor terpadu.
-            </p>
-          </div>
-
-          {/* Tabungan */}
-          <div 
-            onClick={() => openModal('tabungan')}
-            className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all group cursor-pointer"
-          >
-            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 mb-6 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-              <Wallet size={20} />
-            </div>
-            <h3 className="text-[15px] font-bold text-slate-900 mb-2">Tabungan</h3>
-            <p className="text-[11px] font-medium text-slate-400 leading-relaxed">
-              Pantau pertumbuhan dana darurat dan tabungan rencana.
-            </p>
-          </div>
-        </div>
-
-        {/* BOTTOM CARDS ROW (3-cols) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
-          {/* Hutang & Piutang */}
-          <div 
-            onClick={() => openModal('hutang_piutang')}
-            className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center gap-6 group cursor-pointer"
-          >
-            <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition-colors">
-              <ShieldAlert size={20} />
-            </div>
-            <div>
-              <h3 className="text-[15px] font-bold text-slate-900 mb-1">Hutang & Piutang</h3>
-              <p className="text-[11px] font-medium text-slate-400">Lacak kewajiban dan tagihan yang belum tertagih.</p>
-            </div>
-          </div>
-
-          {/* Top Up & Transfer */}
-          <div 
-            onClick={() => openModal('topup_transfer')}
-            className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center gap-6 group cursor-pointer"
-          >
-            <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-              <ArrowLeftRight size={20} />
-            </div>
-            <div>
-              <h3 className="text-[15px] font-bold text-slate-900 mb-1">Top Up & Transfer</h3>
-              <p className="text-[11px] font-medium text-slate-400">Pindahkan dana antar rekening atau isi saldo e-wallet.</p>
-            </div>
-          </div>
-
-          {/* Impor Mutasi CSV */}
-          <div
-            onClick={() => openModal('import_mutasi')}
-            className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center gap-6 group cursor-pointer"
-          >
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-              <FileSpreadsheet size={20} />
-            </div>
-            <div>
-              <h3 className="text-[15px] font-bold text-slate-900 mb-1">Impor Mutasi (CSV)</h3>
-              <p className="text-[11px] font-medium text-slate-400">Upload export mutasi bank/e-wallet, otomatis jadi riwayat transaksi.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Summary Today & Insights Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-6">
-        {/* Left: Stats List */}
-        <div className="space-y-6">
-          <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Summary Today</p>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-50">
-                <span className="text-xs font-bold text-slate-500">Active Entries</span>
-                <span className="text-xs font-black text-slate-900 tabular-nums">
-                  {loadingSummary ? '...' : `${todayEntries.length} item`}
-                </span>
-              </div>
-              <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-50">
-                <span className="text-xs font-bold text-slate-500">Total Volume</span>
-                <span className="text-xs font-black text-blue-600 tracking-tight tabular-nums">
-                  {loadingSummary ? '...' : formatCurrency(animatedVolume)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-50">
-                <span className="text-xs font-bold text-slate-500">System Status</span>
-                <span className="flex items-center gap-2 text-xs font-black text-emerald-500">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Synced
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Insights Banner (Wide) */}
-        <div className="lg:col-span-2 relative h-[180px] md:h-[220px] rounded-[32px] overflow-hidden bg-[#0a192f] group cursor-pointer border border-white/10 shadow-2xl">
-          {/* Mock Candlestick Chart Background overlay */}
-          <div className="absolute inset-0 opacity-20 flex items-end justify-between px-8 gap-1.5 pointer-events-none">
-            {[40, 80, 50, 90, 100, 60, 40, 70, 80, 50, 30, 90, 60, 40, 70].map((h, i) => (
-              <div key={i} className="flex flex-col items-center gap-1 w-full h-full justify-end">
-                <div className="w-[1px] h-full bg-white/20" />
-                <div 
-                  className={cn(
-                    "w-full max-w-[8px] rounded-sm",
-                    i % 3 === 0 ? "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.4)]" : "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]"
-                  )} 
-                  style={{ height: `${h}%` }}
-                />
-                <div className="w-[1px] h-full bg-white/20" />
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            {secondaryActions.map((a) => (
+              <ActionTile key={a.id} action={a} onClick={() => openModal(a.id)} />
             ))}
           </div>
 
-          <div className="relative z-10 w-full h-full p-6 md:p-10 flex flex-col justify-center">
-            <h3 className="text-xl md:text-2xl font-black text-white mb-3">Automated Insights</h3>
-            <p className="text-xs font-medium text-slate-400 max-w-sm leading-relaxed">
-              Sistem kami mencatat pola pengeluaran yang lebih efisien di kategori &quot;Transaksi Harian&quot; Anda.
-            </p>
+          <div>
+            <p className="text-label font-bold text-slate-400 uppercase mb-3">Aset, investasi & kewajiban</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+              {otherActions.map((a) => (
+                <ActionTile key={a.id} action={a} onClick={() => openModal(a.id)} />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Ringkasan hari ini */}
+        <Card className="p-5 md:p-6 h-fit">
+          <CardHeader title="Hari ini" />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-control bg-emerald-50/60 p-3">
+              <p className="text-caption font-medium text-emerald-700">Masuk</p>
+              {loadingSummary ? <Skeleton className="h-5 mt-1" /> : (
+                <p className="text-sm font-black text-emerald-600 tabular-nums truncate">{formatIDR(todayIn)}</p>
+              )}
+            </div>
+            <div className="rounded-control bg-rose-50/60 p-3">
+              <p className="text-caption font-medium text-rose-700">Keluar</p>
+              {loadingSummary ? <Skeleton className="h-5 mt-1" /> : (
+                <p className="text-sm font-black text-rose-500 tabular-nums truncate">{formatIDR(todayOut)}</p>
+              )}
+            </div>
           </div>
 
-          <div className="absolute right-[-40px] top-[-40px] w-64 h-64 bg-blue-500/10 blur-[100px] pointer-events-none" />
-        </div>
+          <p className="text-label font-bold text-slate-400 uppercase mt-6 mb-2">
+            Terakhir dicatat {!loadingSummary && `· ${todayEntries.length} transaksi`}
+          </p>
+          {loadingSummary ? (
+            <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-10" />)}</div>
+          ) : todayEntries.length === 0 ? (
+            <p className="text-sm text-slate-400 py-3">Belum ada transaksi hari ini.</p>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {todayEntries.slice(0, 5).map((t) => {
+                const incoming = isIncomingTransaction(t);
+                return (
+                  <li key={t.id} className="py-2.5 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-slate-800 truncate">{t.note || t.category}</p>
+                      <p className="text-caption text-slate-400 truncate">{t.category}</p>
+                    </div>
+                    <p className={cn('text-sm font-black tabular-nums whitespace-nowrap', incoming ? 'text-emerald-600' : 'text-rose-500')}>
+                      {incoming ? '+' : '−'}{formatIDR(toIdr(t))}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
       </div>
-
     </div>
   );
 }

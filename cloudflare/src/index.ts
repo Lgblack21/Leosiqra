@@ -2137,21 +2137,162 @@ async function handleUpdateTransaction(request: Request, env: Env, transactionId
   return json({ ok: true });
 }
 
+type DeletableTransactionRow = {
+  id: string;
+  type: string | null;
+  amount: number | null;
+  sub_category: string | null;
+  account_id: string | null;
+  target_account_id: string | null;
+  date: string | null;
+  note: string | null;
+  created_at: string | null;
+};
+
+// Transfer antar rekening sendiri (TopUpModal) tersimpan sebagai DUA baris
+// tanpa kolom penghubung: sisi "<Label> Keluar" (account_id = sumber,
+// target_account_id = tujuan) dan sisi "<Label> Masuk" (account_id = tujuan),
+// dengan note "[<Label> Keluar] X" / "[<Label> Masuk] X" dan tanggal yang sama.
+// Pasangan dicari dengan SEMUA kriteria itu sekaligus — kalau tidak ketemu
+// persis, dianggap tidak berpasangan (lebih aman daripada salah hapus).
+async function findTransferPair(env: Env, userId: string, row: DeletableTransactionRow) {
+  const match = /^(.+) (Keluar|Masuk)$/.exec(row.sub_category ?? "");
+  if (!match || !row.note || !row.date || !row.account_id) return null;
+  const [, label, side] = match;
+  const otherSide = side === "Keluar" ? "Masuk" : "Keluar";
+  const expectedNote = row.note.replace(`[${label} ${side}]`, `[${label} ${otherSide}]`);
+  if (expectedNote === row.note) return null;
+
+  if (side === "Keluar") {
+    if (!row.target_account_id || row.target_account_id === "Wallet") return null;
+    return env.DB.prepare(
+      `SELECT id, type, amount, sub_category, account_id, target_account_id, date, note, created_at
+         FROM transactions
+        WHERE user_id = ? AND id != ? AND sub_category = ? AND account_id = ? AND date = ? AND note = ?
+        ORDER BY ABS(julianday(created_at) - julianday(?)) ASC
+        LIMIT 1`
+    )
+      .bind(userId, row.id, `${label} Masuk`, row.target_account_id, row.date, expectedNote, row.created_at)
+      .first<DeletableTransactionRow>();
+  }
+
+  return env.DB.prepare(
+    `SELECT id, type, amount, sub_category, account_id, target_account_id, date, note, created_at
+       FROM transactions
+      WHERE user_id = ? AND id != ? AND sub_category = ? AND target_account_id = ? AND date = ? AND note = ?
+      ORDER BY ABS(julianday(created_at) - julianday(?)) ASC
+      LIMIT 1`
+  )
+    .bind(userId, row.id, `${label} Keluar`, row.account_id, row.date, expectedNote, row.created_at)
+    .first<DeletableTransactionRow>();
+}
+
+// Statement untuk membalikkan efek satu baris transaksi ke saldo rekening &
+// total member — kebalikan persis dari yang dilakukan saat baris dibuat
+// (AddTransactionModal / TopUpModal / updateMemberTotals). Tiap UPDATE
+// disyaratkan baris transaksinya MASIH ADA, dan dijalankan sebelum DELETE
+// dalam satu batch: kalau request hapus terkirim dua kali, batch kedua
+// otomatis no-op, saldo tidak terbalik dua kali.
+function buildReversalStatements(env: Env, userId: string, row: DeletableTransactionRow) {
+  const amount = Number(row.amount) || 0;
+  const statements: D1PreparedStatement[] = [];
+  const stillExists = "EXISTS (SELECT 1 FROM transactions WHERE id = ? AND user_id = ?)";
+  const isTransferSide = row.type === "transfer" || row.type === "topup";
+  const side = /(Keluar|Masuk)$/.exec(row.sub_category ?? "")?.[1];
+
+  let balanceDelta = 0;
+  if (row.type === "pemasukan") balanceDelta = -amount;
+  else if (row.type === "pengeluaran") balanceDelta = amount;
+  else if (isTransferSide && side === "Keluar") balanceDelta = amount;
+  else if (isTransferSide && side === "Masuk") balanceDelta = -amount;
+
+  const accountId = row.account_id;
+  if (balanceDelta !== 0 && accountId && accountId !== "General" && accountId !== "Wallet") {
+    statements.push(
+      env.DB.prepare(
+        `UPDATE accounts SET balance = balance + ?
+          WHERE id = ? AND user_id = ? AND ${stillExists}`
+      ).bind(balanceDelta, accountId, userId, row.id, userId)
+    );
+  }
+
+  if (row.type === "pemasukan") {
+    statements.push(
+      env.DB.prepare(
+        `UPDATE users
+            SET total_income = COALESCE(total_income, 0) - ?,
+                total_wealth = COALESCE(total_wealth, 0) - ?
+          WHERE id = ? AND ${stillExists}`
+      ).bind(amount, amount, userId, row.id, userId)
+    );
+  } else if (row.type === "pengeluaran") {
+    statements.push(
+      env.DB.prepare(
+        `UPDATE users
+            SET total_expenses = COALESCE(total_expenses, 0) - ?,
+                total_wealth = COALESCE(total_wealth, 0) + ?
+          WHERE id = ? AND ${stillExists}`
+      ).bind(amount, amount, userId, row.id, userId)
+    );
+  }
+
+  return statements;
+}
+
 async function handleDeleteTransaction(request: Request, env: Env, transactionId: string) {
   const authResult = await requireSession(env, request);
   if (authResult.error) {
     return authResult.error;
   }
+  const userId = authResult.session.user.id;
 
-  const result = await env.DB.prepare("DELETE FROM transactions WHERE id = ? AND user_id = ?")
-    .bind(transactionId, authResult.session.user.id)
-    .run();
+  // Client lama membalikkan saldo sendiri SEBELUM memanggil endpoint ini, jadi
+  // pembalikan di server hanya jalan kalau client secara eksplisit memintanya
+  // (?reverse=1). Tanpa flag ini perilakunya sama persis seperti dulu — cegah
+  // saldo terbalik dua kali dari tab/PWA/app yang masih pakai bundle lama.
+  const serverSideReversal = new URL(request.url).searchParams.get("reverse") === "1";
 
-  if (!result.meta.changes) {
+  if (!serverSideReversal) {
+    const result = await env.DB.prepare("DELETE FROM transactions WHERE id = ? AND user_id = ?")
+      .bind(transactionId, userId)
+      .run();
+
+    if (!result.meta.changes) {
+      return json({ error: "Transaksi tidak ditemukan." }, { status: 404 });
+    }
+
+    return json({ ok: true, deletedIds: [transactionId] });
+  }
+
+  const row = await env.DB.prepare(
+    `SELECT id, type, amount, sub_category, account_id, target_account_id, date, note, created_at
+       FROM transactions
+      WHERE id = ? AND user_id = ?`
+  )
+    .bind(transactionId, userId)
+    .first<DeletableTransactionRow>();
+
+  if (!row) {
     return json({ error: "Transaksi tidak ditemukan." }, { status: 404 });
   }
 
-  return json({ ok: true });
+  const rows = [row];
+  const pair = await findTransferPair(env, userId, row);
+  if (pair) rows.push(pair);
+
+  const statements: D1PreparedStatement[] = [];
+  for (const item of rows) {
+    statements.push(...buildReversalStatements(env, userId, item));
+    statements.push(
+      env.DB.prepare("DELETE FROM transactions WHERE id = ? AND user_id = ?").bind(item.id, userId)
+    );
+  }
+
+  // D1 batch = satu transaksi SQL: semua pembalikan saldo + penghapusan
+  // berhasil bersama atau gagal bersama.
+  await env.DB.batch(statements);
+
+  return json({ ok: true, deletedIds: rows.map((item) => item.id) });
 }
 
 async function handleListAccounts(request: Request, env: Env) {
@@ -2434,12 +2575,45 @@ async function handleDeleteAccount(request: Request, env: Env, accountId: string
     return authResult.error;
   }
 
-  const result = await env.DB.prepare("DELETE FROM accounts WHERE id = ? AND user_id = ?")
-    .bind(accountId, authResult.session.user.id)
-    .run();
+  const userId = authResult.session.user.id;
 
-  if (!result.meta.changes) {
-    return json({ error: "Akun tidak ditemukan." }, { status: 404 });
+  // transactions.account_id punya FOREIGN KEY ... ON DELETE RESTRICT di
+  // skema produksi — rekening yang masih punya transaksi tidak bisa dihapus
+  // (sebelumnya jadi error 500 generik). Cek dulu supaya user dapat alasan
+  // yang jelas, bukan "Terjadi kesalahan pada server".
+  const usage = await env.DB.prepare(
+    "SELECT COUNT(*) AS total FROM transactions WHERE account_id = ? AND user_id = ?"
+  )
+    .bind(accountId, userId)
+    .first<{ total: number }>();
+  const transactionCount = Number(usage?.total ?? 0);
+  const inUseResponse = (count?: number) =>
+    json(
+      {
+        error: `Rekening ini masih dipakai oleh ${count ? `${count} ` : ""}transaksi, jadi belum bisa dihapus. Hapus transaksinya dulu di Riwayat Transaksi.`,
+        transactionCount: count ?? null,
+      },
+      { status: 409 }
+    );
+
+  if (transactionCount > 0) {
+    return inUseResponse(transactionCount);
+  }
+
+  try {
+    const result = await env.DB.prepare("DELETE FROM accounts WHERE id = ? AND user_id = ?")
+      .bind(accountId, userId)
+      .run();
+
+    if (!result.meta.changes) {
+      return json({ error: "Akun tidak ditemukan." }, { status: 404 });
+    }
+  } catch (error) {
+    // Transaksi baru masuk di antara COUNT dan DELETE di atas.
+    if (String(error).includes("FOREIGN KEY constraint failed")) {
+      return inUseResponse();
+    }
+    throw error;
   }
 
   return json({ ok: true });

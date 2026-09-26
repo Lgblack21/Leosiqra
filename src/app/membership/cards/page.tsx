@@ -27,6 +27,9 @@ import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateS
 import { AccountModal } from '@/components/modals/AccountModal';
 import { isCreditAccountType, computeCreditUsage, CreditUsage } from '@/lib/creditCard';
 import { LogoImage } from '@/components/ui/LogoImage';
+import { useFeedback } from '@/components/ui/Feedback';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function MyCardsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -37,7 +40,7 @@ export default function MyCardsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
-  const [error, setError] = useState('');
+  const { toast, confirm } = useFeedback();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [fxRates, setFxRates] = useState<ExchangeRates>({});
 
@@ -54,7 +57,7 @@ export default function MyCardsPage() {
     const ids = newOrder.map(a => a.id).filter((id): id is string => Boolean(id));
     accountService.reorderAccounts(ids).catch(e => {
       console.error('Gagal menyimpan urutan rekening:', e);
-      setError('Gagal menyimpan urutan baru. Silakan coba lagi.');
+      toast.error('Gagal menyimpan urutan baru. Silakan coba lagi.');
     });
   };
 
@@ -181,8 +184,13 @@ export default function MyCardsPage() {
       .reduce((s, a) => s + toIDR(a.balance || 0, a.currency), 0);
   }, [accounts, toIDR]);
 
+  // Hutang yang BELUM lunas saja — sama seperti "Hutang Lainnya" di
+  // Dashboard. Sebelumnya hutang yang sudah lunas ikut terjumlah, jadi
+  // "Tagihan Berjalan" & Rasio Hutang terus membengkak.
   const totalGlobalDebt = useMemo(() => {
-    return transactions.filter(t => t.type === 'debt' && t.category === 'Hutang').reduce((s, t) => s + (t.amountIDR || t.amount), 0);
+    return transactions
+      .filter(t => t.type === 'debt' && t.category === 'Hutang' && t.paymentStatus !== 'lunas')
+      .reduce((s, t) => s + (t.amountIDR || t.amount), 0);
   }, [transactions]);
 
   // Limit per kartu kredit/paylater (dalam mata uang kartunya) — sumber
@@ -260,8 +268,11 @@ export default function MyCardsPage() {
   // Outstanding debt (belum lunas) for selected account
   const accountDebt = useMemo(() => {
     if (!selectedAccountId) return totalGlobalDebt;
+    // Cuma Hutang (kewajiban kita) — Piutang adalah uang orang lain ke kita,
+    // bukan tagihan.
     return transactions.filter(t =>
       t.type === 'debt' &&
+      t.category === 'Hutang' &&
       t.accountId === selectedAccountId &&
       t.paymentStatus !== 'lunas'
     ).reduce((s, t) => s + t.amount, 0);
@@ -306,63 +317,64 @@ export default function MyCardsPage() {
     }
   };
 
-  const handleDeleteAccount = async (id: string) => {
-    if (!confirm('Hapus rekening ini? Tindakan ini tidak bisa dibatalkan.')) return;
-    setError('');
+  const handleDeleteAccount = async (id: string, name: string) => {
+    const ok = await confirm({
+      title: `Hapus rekening ${name}?`,
+      message: 'Rekening hanya bisa dihapus kalau belum punya transaksi. Tindakan ini tidak bisa dibatalkan.',
+      confirmLabel: 'Hapus rekening',
+      danger: true,
+    });
+    if (!ok) return;
     setDeletingId(id);
     try {
       await accountService.deleteAccount(id);
       if (selectedAccountId === id) setSelectedAccountId(null);
+      toast.success(`Rekening ${name} dihapus.`);
     } catch (e) {
       console.error(e);
-      setError('Gagal menghapus rekening. Silakan coba lagi.');
+      // Backend membalas 409 dengan alasan yang jelas kalau rekening masih
+      // dipakai transaksi — tampilkan apa adanya.
+      toast.error(e instanceof Error && e.message ? e.message : 'Gagal menghapus rekening. Silakan coba lagi.');
     } finally {
       setDeletingId(null);
     }
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700 max-w-[1400px] mb-12">
+    <div className="space-y-6 md:space-y-8 max-w-[1400px] pb-12">
       
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-[28px] font-black text-slate-900 tracking-tight">Kartu Saya</h1>
-          <p className="text-[12px] md:text-sm font-medium text-slate-500 mt-1 max-w-lg leading-relaxed">
-            Pantau arus kas dan kelola tampilan rekening Anda — pilih kartu untuk lihat detail.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="bg-white border border-slate-100 rounded-xl px-6 py-3 shadow-sm text-right">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Saldo</p>
-            <p className="text-xs font-black text-slate-900">{formatRp(totalBalance)}</p>
+      <PageHeader
+        icon={<CreditCard size={22} />}
+        title="Kartu Saya"
+        subtitle="Pilih kartu untuk lihat detail saldo dan transaksinya. Urutan bisa diatur dengan drag & drop."
+        actions={
+          <div className="flex items-center gap-2">
+            <div className="hidden sm:block bg-white border border-slate-100 rounded-control px-4 py-2 shadow-sm text-right">
+              <p className="text-label font-bold text-slate-400 uppercase">Total Saldo</p>
+              <p className="text-sm font-black text-slate-900 tabular-nums">{formatRp(totalBalance)}</p>
+            </div>
+            <button
+              onClick={() => { setEditingAccount(null); setIsModalOpen(true); }}
+              className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-control text-sm font-bold hover:bg-indigo-700 transition-colors"
+            >
+              <PlusCircle size={16} /> Tambah rekening
+            </button>
           </div>
-          <button
-            onClick={() => { setEditingAccount(null); setIsModalOpen(true); }}
-            className="flex items-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 shrink-0"
-          >
-            <PlusCircle size={16} /> Tambah Bank
-          </button>
-        </div>
-      </div>
+        }
+      />
 
-      {error && (
-        <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-sm font-medium text-rose-600">
-          {error}
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         
         {/* LEFT: Main Card Detail (selected account) */}
         <div className="lg:col-span-2 space-y-6 md:space-y-8">
           
           {/* Selected card hero */}
           {selectedAccount ? (
-            <div className={cn("relative overflow-hidden rounded-[20px] md:rounded-[32px] p-6 md:p-10 text-white shadow-2xl", getCardGradientClass(selectedAccount.cardColor, selectedAccount.type))}>
+            <div className={cn("relative overflow-hidden rounded-card p-6 md:p-10 text-white shadow-2xl", getCardGradientClass(selectedAccount.cardColor, selectedAccount.type))}>
               <div className="relative z-10">
                 <div className="flex justify-between items-start mb-10 md:mb-12">
                   <div>
-                    <p className="text-[9px] md:text-[10px] font-black text-white/60 uppercase tracking-[0.2em] mb-2">{selectedAccount.type} | {selectedAccount.currency}</p>
+                    <p className="text-label font-bold text-white/60 uppercase mb-2">{selectedAccount.type} | {selectedAccount.currency}</p>
                     <h2 className="text-xl md:text-3xl lg:text-4xl font-black tracking-tight">{selectedAccount.name}</h2>
                     <p className="text-[10px] font-medium text-white/60 mt-1">
                       {isCreditCard ? (
@@ -394,11 +406,11 @@ export default function MyCardsPage() {
                   <div className="pt-6 md:pt-8 border-t border-white/10">
                     <div className="grid grid-cols-2 gap-6 md:gap-8 mb-4">
                       <div>
-                        <p className="text-[8px] md:text-[9px] font-black text-white/60 uppercase tracking-widest mb-1">Terpakai</p>
+                        <p className="text-label font-bold text-white/60 uppercase mb-1">Terpakai</p>
                         <p className="text-sm md:text-lg font-bold">{formatAmount(cardUsed, selectedAccount.currency)}</p>
                       </div>
                       <div>
-                        <p className="text-[8px] md:text-[9px] font-black text-white/60 uppercase tracking-widest mb-1">Sisa Limit</p>
+                        <p className="text-label font-bold text-white/60 uppercase mb-1">Sisa Limit</p>
                         <p className="text-sm md:text-lg font-bold">{formatAmount(cardRemaining, selectedAccount.currency)}</p>
                       </div>
                     </div>
@@ -413,11 +425,11 @@ export default function MyCardsPage() {
                 ) : (
                   <div className="grid grid-cols-2 gap-6 md:gap-8 pt-6 md:pt-8 border-t border-white/10">
                     <div>
-                      <p className="text-[8px] md:text-[9px] font-black text-white/60 uppercase tracking-widest mb-1">Masuk</p>
+                      <p className="text-label font-bold text-white/60 uppercase mb-1">Masuk</p>
                       <p className="text-sm md:text-lg font-bold">{formatAmount(accountTotalIn, selectedAccount.currency)}</p>
                     </div>
                     <div>
-                      <p className="text-[8px] md:text-[9px] font-black text-white/60 uppercase tracking-widest mb-1">Keluar</p>
+                      <p className="text-label font-bold text-white/60 uppercase mb-1">Keluar</p>
                       <p className="text-sm md:text-lg font-bold">{formatAmount(accountTotalOut, selectedAccount.currency)}</p>
                     </div>
                   </div>
@@ -427,7 +439,7 @@ export default function MyCardsPage() {
               <div className="absolute bottom-[-30%] left-[-10%] w-[300px] h-[300px] bg-white opacity-[0.05] rounded-full blur-3xl pointer-events-none" />
             </div>
           ) : (
-            <div className="relative overflow-hidden bg-indigo-600 rounded-[20px] md:rounded-[32px] p-6 md:p-10 text-white shadow-2xl shadow-indigo-200">
+            <div className="relative overflow-hidden bg-indigo-600 rounded-card p-6 md:p-10 text-white shadow-2xl shadow-indigo-200">
               <div className="relative z-10">
                 <p className="text-[10px] font-black text-indigo-100/60 uppercase tracking-[0.2em] mb-2">Pilih Kartu untuk Detail</p>
                 <h2 className="text-2xl md:text-4xl font-black">{formatRp(totalBalance)}</h2>
@@ -436,7 +448,7 @@ export default function MyCardsPage() {
           )}
 
           {/* Cash flow chart + transactions */}
-          <div className="bg-white rounded-[20px] md:rounded-[32px] p-5 md:p-8 border border-slate-100 shadow-sm">
+          <div className="bg-white rounded-card p-5 md:p-8 border border-slate-100 shadow-sm">
             <div className="flex items-center justify-between mb-6 md:mb-8">
               <h3 className="text-lg font-black text-slate-900">
                 {selectedAccount ? `Transaksi ${selectedAccount.name}` : 'Arus Kas (Cash Flow)'}
@@ -450,9 +462,9 @@ export default function MyCardsPage() {
               {barData.length > 0 ? barData.map((h, i) => (
                 <div key={i} className={cn("flex-1 rounded-md md:rounded-lg transition-all duration-500", i === barData.length - 1 ? "bg-indigo-600 shadow-lg shadow-indigo-100" : "bg-indigo-200/60")}
                   style={{ height: `${Math.max(h, 5)}%` }} />
-              )) : [40, 60, 50, 80, 55, 45].map((h, i) => (
-                <div key={i} className="flex-1 rounded-md bg-slate-100" style={{ height: `${h}%` }} />
-              ))}
+              )) : (
+                <p className="w-full self-center text-center text-sm text-slate-400">Belum ada transaksi di rekening ini.</p>
+              )}
             </div>
 
             {/* In/Out Summary */}
@@ -462,7 +474,7 @@ export default function MyCardsPage() {
                   <ArrowDownCircle size={24} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Uang Masuk</p>
+                  <p className="text-label font-bold text-slate-400 uppercase mb-1">Uang Masuk</p>
                   <p className="text-xl font-black text-slate-900 tracking-tight">
                     {selectedAccount ? formatAmount(accountTotalIn, selectedAccount.currency) : formatRp(totalIn)}
                   </p>
@@ -473,7 +485,7 @@ export default function MyCardsPage() {
                   <ArrowUpCircle size={24} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Uang Keluar</p>
+                  <p className="text-label font-bold text-slate-400 uppercase mb-1">Uang Keluar</p>
                   <p className="text-xl font-black text-slate-900 tracking-tight">
                     {selectedAccount ? formatAmount(accountTotalOut, selectedAccount.currency) : formatRp(totalOut)}
                   </p>
@@ -484,7 +496,7 @@ export default function MyCardsPage() {
             {/* Recent Transactions for this account */}
             {accountTransactionsRecent.length > 0 && (
               <div className="space-y-3">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Transaksi Terkini</p>
+                <p className="text-label font-bold text-slate-400 uppercase">Transaksi Terkini</p>
                 {accountTransactionsRecent.slice(0, 8).map(trx => (
                   <div key={trx.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50/50 hover:bg-slate-50 transition-colors">
                     <div className="flex items-center gap-3 min-w-0">
@@ -510,24 +522,24 @@ export default function MyCardsPage() {
         <div className="flex flex-col gap-6">
           {/* Ringkasan limit semua kartu kredit / paylater */}
           {creditTotals.count > 0 && (
-            <div className="bg-slate-900 rounded-2xl p-5 text-white">
+            <div className="bg-slate-900 rounded-card p-5 text-white">
               <div className="flex items-center gap-2 mb-4">
                 <CreditCard size={14} className="text-white/60" />
-                <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">
+                <p className="text-label font-bold text-white/60 uppercase">
                   Limit Kartu &amp; Paylater ({creditTotals.count})
                 </p>
               </div>
               <div className="grid grid-cols-3 gap-3 text-center mb-3">
                 <div>
-                  <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Limit</p>
+                  <p className="text-label font-bold text-white/40 uppercase mb-1">Limit</p>
                   <p className="text-[11px] font-black text-white">{formatRp(creditTotals.limit)}</p>
                 </div>
                 <div className="border-x border-white/10">
-                  <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Terpakai</p>
+                  <p className="text-label font-bold text-white/40 uppercase mb-1">Terpakai</p>
                   <p className="text-[11px] font-black text-rose-300">{formatRp(creditTotals.used)}</p>
                 </div>
                 <div>
-                  <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Sisa</p>
+                  <p className="text-label font-bold text-white/40 uppercase mb-1">Sisa</p>
                   <p className="text-[11px] font-black text-emerald-300">{formatRp(creditTotals.remaining)}</p>
                 </div>
               </div>
@@ -545,10 +557,10 @@ export default function MyCardsPage() {
           </div>
 
           {loading ? (
-            <div className="p-6 text-center text-sm text-slate-400">Memuat akun...</div>
+            <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-20 rounded-card" />)}</div>
           ) : accounts.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-100 p-6">
-              <EmptyState title="Belum ada rekening" description="Klik 'Tambah Bank' di atas untuk mulai melacak keuangan Anda." icon={<Wallet size={20} />} />
+            <div className="bg-white rounded-card border border-slate-100 p-6">
+              <EmptyState title="Belum ada rekening" description="Klik “Tambah rekening” di atas untuk mulai mencatat." icon={<Wallet size={20} />} />
             </div>
           ) : (
             <div className="space-y-4">
@@ -564,8 +576,12 @@ export default function MyCardsPage() {
                   onDrop={() => acc.id && handleAccountDrop(acc.id)}
                   onDragEnd={() => setDraggedAccountId(null)}
                   onClick={() => setSelectedAccountId(acc.id!)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedAccountId(acc.id!); } }}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={selectedAccountId === acc.id}
                   className={cn(
-                    "bg-white rounded-2xl p-4 md:p-5 border shadow-sm hover:shadow-md transition-all flex items-center justify-between group cursor-grab active:cursor-grabbing",
+                    "bg-white rounded-card p-4 md:p-5 border shadow-sm hover:shadow-md transition-all flex items-center justify-between group cursor-grab active:cursor-grabbing",
                     selectedAccountId === acc.id ? "border-indigo-300 ring-2 ring-indigo-100" : "border-slate-100",
                     draggedAccountId === acc.id && "opacity-40"
                   )}>
@@ -588,9 +604,9 @@ export default function MyCardsPage() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-[12px] md:text-sm font-bold text-slate-900 truncate">{acc.name}</p>
-                      <p className="text-[9px] md:text-[10px] font-medium text-slate-400">{acc.type} | {acc.currency}</p>
+                      <p className="text-caption font-medium text-slate-400">{acc.type} | {acc.currency}</p>
                       {isCreditAccountType(acc.type) && creditInfo && (
-                        <p className="text-[9px] md:text-[10px] font-bold text-slate-500 mt-0.5 truncate">
+                        <p className="text-caption font-bold text-slate-500 mt-0.5 truncate">
                           Sisa <span className={creditInfo.remaining < 0 ? 'text-rose-500' : 'text-emerald-600'}>{formatAmount(creditInfo.remaining, acc.currency)}</span>
                           <span className="text-slate-300"> / {formatAmount(creditInfo.limit, acc.currency)}</span>
                         </p>
@@ -604,16 +620,16 @@ export default function MyCardsPage() {
                         setEditingAccount(acc);
                         setIsModalOpen(true);
                       }}
-                      className="p-1.5 rounded-lg bg-slate-50 text-slate-300 opacity-0 group-hover:opacity-100 hover:bg-slate-900 hover:text-white transition-all">
+                      className="p-1.5 rounded-lg bg-slate-50 text-slate-300 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 hover:bg-slate-900 hover:text-white transition-all">
                       <Edit2 size={12} />
                     </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (acc.id) handleDeleteAccount(acc.id);
+                        if (acc.id) handleDeleteAccount(acc.id, acc.name);
                       }}
                       disabled={deletingId === acc.id}
-                      className="p-1.5 rounded-lg bg-slate-50 text-slate-300 opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-white transition-all disabled:opacity-50">
+                      className="p-1.5 rounded-lg bg-slate-50 text-slate-300 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 hover:bg-rose-500 hover:text-white transition-all disabled:opacity-50">
                       <Trash2 size={12} />
                     </button>
                   </div>
@@ -624,7 +640,7 @@ export default function MyCardsPage() {
           )}
 
           {/* Wealth Summary */}
-          <div className="bg-white rounded-[24px] md:rounded-[32px] p-6 md:p-8 border border-slate-100 shadow-xl shadow-slate-200/50 mt-4 relative overflow-hidden group">
+          <div className="bg-white rounded-card p-6 md:p-8 border border-slate-100 shadow-xl shadow-slate-200/50 mt-4 relative overflow-hidden group">
             <div className="relative z-10 flex flex-col h-full">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-500">
@@ -638,13 +654,13 @@ export default function MyCardsPage() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-emerald-50/30 rounded-2xl p-4 border border-emerald-50 transition-all hover:bg-emerald-50">
-                    <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-1">Total Masuk</p>
+                    <p className="text-label font-bold text-emerald-400 uppercase mb-1">Total Masuk</p>
                     <p className="text-sm font-black text-emerald-600 leading-tight">
                       {selectedAccount ? formatAmount(accountTotalIn, selectedAccount.currency) : formatRp(totalIn)}
                     </p>
                   </div>
                   <div className="bg-rose-50/30 rounded-2xl p-4 border border-rose-50 transition-all hover:bg-rose-50">
-                    <p className="text-[9px] font-black text-rose-400 uppercase tracking-widest mb-1">Tagihan Berjalan</p>
+                    <p className="text-label font-bold text-rose-400 uppercase mb-1">Tagihan Berjalan</p>
                     <p className="text-sm font-black text-rose-500 leading-tight">
                       {selectedAccount ? formatAmount(accountDebt, selectedAccount.currency) : formatRp(totalGlobalDebt)}
                     </p>
@@ -652,7 +668,7 @@ export default function MyCardsPage() {
                 </div>
 
                 <div className="bg-indigo-50/30 rounded-2xl p-5 border border-indigo-50 transition-all hover:bg-indigo-50">
-                  <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest mb-1">Saldo Saat Ini</p>
+                  <p className="text-label font-bold text-indigo-300 uppercase mb-1">Saldo Saat Ini</p>
                   <p className="text-base font-black text-indigo-600 leading-tight">
                     {selectedAccount ? formatAmount(accountBalance, selectedAccount.currency) : formatRp(totalBalance)}
                   </p>
@@ -666,7 +682,7 @@ export default function MyCardsPage() {
               {!selectedAccount && combinedInitial > 0 && (
                 <div className="mt-6 pt-6 border-t border-slate-50">
                    <div className="flex justify-between items-center mb-2">
-                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Rasio Hutang</span>
+                     <span className="text-label font-bold text-slate-400 uppercase">Rasio Hutang</span>
                      <span className="text-[10px] font-black text-rose-500">{((totalGlobalDebt / combinedInitial) * 100).toFixed(0)}%</span>
                    </div>
                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">

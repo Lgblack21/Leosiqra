@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { 
+import {
   Search,
-  ArrowUpDown, 
-  CreditCard, 
   Trash2,
-  Send
+  ArrowLeftRight,
+  ArrowRight,
+  Plus,
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
@@ -16,6 +16,13 @@ import { onAuthStateChanged } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 import { useRef } from 'react';
 import { MonthPicker } from '@/components/ui/MonthPicker';
+import { formatIDR, formatMoney } from '@/lib/utils';
+import { useModal } from '@/context/ModalContext';
+import { useFeedback } from '@/components/ui/Feedback';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Card } from '@/components/ui/Card';
+import { StatCard } from '@/components/ui/StatCard';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function TopUpPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -25,7 +32,8 @@ export default function TopUpPage() {
 
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [error, setError] = useState('');
+  const { toast, confirm } = useFeedback();
+  const { openModal } = useModal();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const unsubRef = useRef<(() => void) | null>(null);
@@ -105,177 +113,139 @@ export default function TopUpPage() {
 
   const handleDelete = async (tx: Transaction) => {
     if (!tx.id) return;
-    if (!confirm('Hapus riwayat transfer ini? Tindakan ini tidak bisa dibatalkan.')) return;
-    setError('');
+    // Backend menghapus kedua sisi transfer internal (Keluar & Masuk) dan
+    // membalikkan saldo keduanya dalam satu batch. Top Up ke wallet eksternal
+    // tersimpan sebagai pengeluaran biasa — cuma saldo sumber yang kembali.
+    const isInternal = tx.type === 'transfer' || tx.type === 'topup';
+    const ok = await confirm({
+      title: 'Hapus transfer ini?',
+      message: isInternal
+        ? `${getAccountName(tx.accountId || '')} dan ${getAccountName(tx.targetAccountId || '')} akan kembali ke saldo sebelum transfer ini. Tindakan ini tidak bisa dibatalkan.`
+        : `Saldo ${getAccountName(tx.accountId || '')} akan dikembalikan. Tindakan ini tidak bisa dibatalkan.`,
+      confirmLabel: 'Hapus',
+      danger: true,
+    });
+    if (!ok) return;
     setDeletingId(tx.id);
     try {
       await transactionService.deleteTransaction(tx);
+      toast.success('Transfer dihapus dan saldo dikembalikan.');
     } catch (e) {
       console.error(e);
-      setError('Gagal menghapus transaksi. Silakan coba lagi.');
+      toast.error('Gagal menghapus transaksi. Silakan coba lagi.');
     } finally {
       setDeletingId(null);
     }
   };
 
-  const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n).replace('Rp', '').trim();
-  const formatAmount = (n: number, currency: string | undefined) => {
-    try {
-      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: currency || 'IDR', minimumFractionDigits: 0 }).format(n);
-    } catch {
-      return `${currency || ''} ${formatRp(n)}`.trim();
-    }
-  };
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
   const formatTime = (d: Date) => new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' }).format(d);
+  const periodLabel = new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth));
 
   return (
-    <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
+    <div className="space-y-6 md:space-y-8 max-w-[1400px] pb-12">
+      <PageHeader
+        icon={<ArrowLeftRight size={22} />}
+        title="Transfer & Top Up"
+        subtitle={`Perpindahan dana antar rekening sendiri · ${periodLabel}`}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <MonthPicker
+              value={{ month: selectedMonth, year: selectedYear }}
+              onChange={({ month, year }) => {
+                setSelectedMonth(month);
+                setSelectedYear(year);
+              }}
+            />
+            <button
+              onClick={() => openModal('topup_transfer')}
+              className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-control text-sm font-bold hover:bg-indigo-700 transition-colors"
+            >
+              <Plus size={16} /> Transfer baru
+            </button>
+          </div>
+        }
+      />
 
-      {/* 1. Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] border border-slate-50 shadow-sm">
-        <div className="flex flex-col">
-          <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Top Up & Transfer</h1>
-          <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-            Periode {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth))}
-          </p>
-        </div>
-        
-        <div className="flex flex-wrap items-center gap-3">
-          <MonthPicker 
-            value={{ month: selectedMonth, year: selectedYear }}
-            onChange={({ month, year }) => {
-              setSelectedMonth(month);
-              setSelectedYear(year);
-            }}
-          />
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+        <StatCard
+          label="Total Dipindahkan"
+          icon={<ArrowLeftRight size={12} className="text-indigo-500" />}
+          value={formatIDR(totalAmount)}
+          loading={loading}
+          caption={`${transactions.length} transfer`}
+        />
+        <StatCard
+          label="Rata-rata per Transfer"
+          icon={<ArrowLeftRight size={12} className="text-slate-500" />}
+          value={formatIDR(avgAmount)}
+          loading={loading}
+          caption="Periode ini"
+        />
       </div>
 
-      {/* 2. Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4 relative overflow-hidden group">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-              <ArrowUpDown size={20} />
-            </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Transaksi</p>
-          </div>
-          <div>
-            <h3 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight">
-              Rp {formatRp(totalAmount)}
-            </h3>
-            <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">{transactions.length} transfer tercatat</p>
-          </div>
-          <Send size={48} className="absolute -right-2 -bottom-2 text-blue-50/50 group-hover:scale-110 transition-transform -rotate-12" />
-        </div>
-
-        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4 relative overflow-hidden group">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600">
-              <CreditCard size={20} />
-            </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rata-rata Transfer</p>
-          </div>
-          <div>
-            <h3 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight">Rp {formatRp(avgAmount)}</h3>
-            <p className="text-[10px] font-bold text-slate-400 mt-1">Per transaksi pada periode ini</p>
-          </div>
-        </div>
-      </div>
-
-      {error && (
-        <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-sm font-medium text-rose-600">
-          {error}
-        </div>
-      )}
-
-      {/* 3. Filter */}
-      <div className="bg-white p-3 rounded-[24px] border border-slate-50 shadow-sm">
-        <div className="relative group">
-          <Search size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" />
-          <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Cari catatan transfer..."
-            className="w-full bg-slate-50/50 border-transparent rounded-[16px] py-3.5 pl-12 pr-6 text-sm font-medium transition-all" />
-        </div>
-      </div>
-
-      {/* 4. Table */}
-      <div className="bg-white rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
-        {loading ? (
-          <div className="p-12 text-center text-sm font-medium text-slate-400">Memuat data transfer...</div>
-        ) : filtered.length === 0 ? (
-          <div className="p-10">
-            <EmptyState 
-              title="Belum ada riwayat transfer"
-              description="Catat top up atau transfer antar rekening Anda di sini."
-              icon={<Send size={24} />}
+      <Card className="overflow-hidden">
+        <div className="p-4 md:p-5 border-b border-slate-100">
+          <div className="relative w-full sm:max-w-sm">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Cari catatan transfer..."
+              aria-label="Cari transfer"
+              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-100 rounded-control text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 transition-all"
             />
           </div>
+        </div>
+
+        {loading ? (
+          <div className="p-5 space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-12" />)}</div>
+        ) : filtered.length === 0 ? (
+          <div className="p-5 md:p-8">
+            {searchQuery ? (
+              <EmptyState title="Tidak ada yang cocok" description="Coba kata kunci lain." icon={<Search size={24} />} />
+            ) : (
+              <EmptyState
+                title="Belum ada transfer di periode ini"
+                description="Klik “Transfer baru” untuk mencatat top up e-wallet atau pindah dana antar rekening."
+                icon={<ArrowLeftRight size={24} />}
+              />
+            )}
+          </div>
         ) : (
-          <>
-            <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left border-collapse min-w-[720px] xl:min-w-0">
-                <thead>
-                  <tr className="border-b border-slate-50">
-                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">No</th>
-                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Jam</th>
-                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
-                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Deskripsi</th>
-                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Mata Uang</th>
-                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Nominal</th>
-                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Dari</th>
-                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Ke</th>
-                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((trx, i) => (
-                    <tr key={trx.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
-                      <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap text-center">
-                        <p className="text-xs font-bold text-slate-400">{i + 1}</p>
-                      </td>
-                      <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap">
-                        <p className="text-sm font-bold text-slate-500">{formatTime(trx.createdAt)}</p>
-                      </td>
-                      <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap">
-                        <p className="text-sm font-black text-slate-900">{formatDate(trx.date)}</p>
-                      </td>
-                      <td className="px-4 md:px-6 py-4 md:py-6">
-                        <p className="text-sm font-bold text-slate-700">{trx.note || '-'}</p>
-                      </td>
-                      <td className="px-4 md:px-6 py-4 md:py-6 text-center whitespace-nowrap">
-                        <span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{trx.currency || 'IDR'}</span>
-                      </td>
-                      <td className="px-4 md:px-6 py-4 md:py-6 text-right whitespace-nowrap">
-                        <p className="text-sm font-black text-slate-900">{formatAmount(trx.amount, trx.currency)}</p>
-                      </td>
-                      <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap">
-                        <p className="text-sm font-bold text-slate-600">{getAccountName(trx.accountId || '')}</p>
-                      </td>
-                      <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap">
-                        <p className="text-sm font-bold text-slate-600">{getAccountName(trx.targetAccountId || '')}</p>
-                      </td>
-                      <td className="px-5 md:px-8 py-4 md:py-6 text-center">
-                        <button
-                          onClick={() => trx.id && handleDelete(trx)}
-                          disabled={deletingId === trx.id}
-                          className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all disabled:opacity-50">
-                          <Trash2 size={14} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="px-8 py-5 bg-slate-50/30 border-t border-slate-50">
-              <p className="text-[11px] font-bold text-slate-400">Menampilkan {filtered.length} dari {transactions.length} transaksi</p>
-            </div>
-          </>
+          <ul className="divide-y divide-slate-100">
+            {filtered.map((trx) => (
+              <li key={trx.id} className="group px-4 md:px-6 py-3.5 flex items-center gap-3 md:gap-4 hover:bg-slate-50/60 transition-colors">
+                <div className="hidden sm:block w-24 shrink-0">
+                  <p className="text-sm font-bold text-slate-900">{formatDate(trx.date)}</p>
+                  <p className="text-caption text-slate-400">{formatTime(trx.createdAt)}</p>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 text-sm font-bold text-slate-800 min-w-0">
+                    <span className="truncate">{getAccountName(trx.accountId || '')}</span>
+                    <ArrowRight size={14} className="text-slate-400 shrink-0" />
+                    <span className="truncate">{getAccountName(trx.targetAccountId || '')}</span>
+                  </div>
+                  <p className="text-caption text-slate-400 truncate">
+                    <span className="sm:hidden">{formatDate(trx.date)} · </span>
+                    {trx.category}{trx.note ? ` · ${trx.note}` : ''}
+                  </p>
+                </div>
+                <p className="text-sm font-black text-slate-900 tabular-nums whitespace-nowrap">{formatMoney(trx.amount, trx.currency)}</p>
+                <button
+                  onClick={() => handleDelete(trx)}
+                  disabled={deletingId === trx.id}
+                  aria-label="Hapus riwayat transfer"
+                  className="p-2 -mr-2 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors disabled:opacity-50 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
+                >
+                  <Trash2 size={15} />
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
-      </div>
+      </Card>
     </div>
   );
 }
-

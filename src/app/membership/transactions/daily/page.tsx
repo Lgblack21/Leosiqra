@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { 
-  Search, 
-  ArrowUpRight,
-  ArrowDownRight,
+import {
+  Search,
   Trash2,
-  TrendingUp
+  TrendingUp,
+  TrendingDown,
+  Wallet,
+  ListOrdered,
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
@@ -18,7 +19,13 @@ import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestor
 import { useRef } from 'react';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
-import { isIncomingTransaction } from '@/lib/utils';
+import { cn, isIncomingTransaction, formatIDR, formatMoney } from '@/lib/utils';
+import { useFeedback } from '@/components/ui/Feedback';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Card } from '@/components/ui/Card';
+import { StatCard } from '@/components/ui/StatCard';
+import { Badge } from '@/components/ui/Badge';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function DailyTransactionLogPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -27,7 +34,7 @@ export default function DailyTransactionLogPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [error, setError] = useState('');
+  const { toast, confirm } = useFeedback();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [fxRates, setFxRates] = useState<ExchangeRates>({});
 
@@ -115,14 +122,26 @@ export default function DailyTransactionLogPage() {
 
   const handleDelete = async (tx: Transaction) => {
     if (!tx.id) return;
-    if (!confirm('Hapus transaksi ini? Tindakan ini tidak bisa dibatalkan.')) return;
-    setError('');
+    const ok = await confirm({
+      title: 'Hapus transaksi ini?',
+      // Sesuai handleDeleteTransaction di worker: pemasukan/pengeluaran &
+      // transfer dibalikkan saldonya; transfer ikut menghapus sisi pasangannya.
+      message: tx.type === 'transfer' || tx.type === 'topup'
+        ? 'Kedua sisi transfer (keluar & masuk) ikut dihapus dan saldo kedua rekening dikembalikan. Tindakan ini tidak bisa dibatalkan.'
+        : tx.type === 'pemasukan' || tx.type === 'pengeluaran'
+          ? 'Saldo rekening terkait akan dikembalikan. Tindakan ini tidak bisa dibatalkan.'
+          : 'Catatan ini dihapus tanpa mengubah saldo rekening. Tindakan ini tidak bisa dibatalkan.',
+      confirmLabel: 'Hapus',
+      danger: true,
+    });
+    if (!ok) return;
     setDeletingId(tx.id);
     try {
       await transactionService.deleteTransaction(tx);
+      toast.success('Transaksi dihapus.');
     } catch (e) {
       console.error(e);
-      setError('Gagal menghapus transaksi. Silakan coba lagi.');
+      toast.error('Gagal menghapus transaksi. Silakan coba lagi.');
     } finally {
       setDeletingId(null);
     }
@@ -149,178 +168,160 @@ export default function DailyTransactionLogPage() {
     [accounts, fxRates]
   );
 
-  const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 2 }).format(n).replace('Rp', '').trim();
-  const formatAmount = (n: number, currency: string | undefined) => {
-    try {
-      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: currency || 'IDR', minimumFractionDigits: 2 }).format(n);
-    } catch {
-      return `${currency || ''} ${formatRp(n)}`.trim();
-    }
-  };
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
   const formatTime = (d: Date) => new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' }).format(d);
+  const dateLabel = new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(selectedDate);
 
   return (
-    <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
-      
-      {/* 1. Header */}
-      <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-        <div>
-          <h1 className="text-2xl md:text-4xl font-black text-slate-900 tracking-tight">Transaksi Harian</h1>
-          <p className="text-[12px] md:text-sm font-medium text-slate-400 mt-2 max-w-xl">
-            Lacak dan kelola aliran keuangan Anda pada tanggal {new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }).format(selectedDate)}.
-          </p>
-        </div>
+    <div className="space-y-6 md:space-y-8 max-w-[1400px] pb-12">
+      <PageHeader
+        icon={<ListOrdered size={22} />}
+        title="Riwayat Transaksi"
+        subtitle={`Transaksi pada ${dateLabel}`}
+        actions={<DatePicker value={selectedDate} onChange={setSelectedDate} />}
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
+        <StatCard
+          label="Pemasukan"
+          icon={<TrendingUp size={12} className="text-emerald-500" />}
+          value={formatIDR(totalPemasukan)}
+          valueClassName="text-emerald-600"
+          loading={loading}
+          caption={`${transactions.filter(t => t.type === 'pemasukan').length} transaksi`}
+        />
+        <StatCard
+          label="Pengeluaran"
+          icon={<TrendingDown size={12} className="text-rose-500" />}
+          value={formatIDR(totalPengeluaran)}
+          valueClassName="text-rose-500"
+          loading={loading}
+          caption={`${transactions.filter(t => t.type === 'pengeluaran').length} transaksi`}
+        />
+        <StatCard
+          label="Saldo Bersih"
+          icon={<Wallet size={12} className="text-slate-500" />}
+          value={formatIDR(saldoBersih)}
+          valueClassName={saldoBersih < 0 ? 'text-rose-500' : undefined}
+          loading={loading}
+          caption="Total saldo semua rekening saat ini"
+        />
       </div>
 
-      {/* 2. Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Data</p>
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl md:text-4xl font-black text-slate-900">{loading ? '-' : transactions.length}</span>
-            <span className="text-xs font-bold text-slate-400">Transaksi</span>
-          </div>
-          <div className="h-1 w-full bg-slate-50 rounded-full"><div className="h-full bg-slate-900 rounded-full" style={{ width: transactions.length > 0 ? '60%' : '0%' }} /></div>
-        </div>
-
-        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4 relative overflow-hidden group">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pemasukan</p>
-          <div>
-            <h3 className="text-xl md:text-2xl font-black text-slate-900 leading-tight">Rp {formatRp(totalPemasukan)}</h3>
-          </div>
-          <ArrowUpRight size={32} className="absolute right-5 top-1/2 -translate-y-1/2 text-emerald-100 group-hover:scale-110 transition-transform" />
-        </div>
-
-        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4 relative overflow-hidden group">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pengeluaran</p>
-          <div>
-            <h3 className="text-xl md:text-2xl font-black text-slate-900 leading-tight">Rp {formatRp(totalPengeluaran)}</h3>
-          </div>
-          <ArrowDownRight size={32} className="absolute right-5 top-1/2 -translate-y-1/2 text-rose-100 group-hover:scale-110 transition-transform" />
-        </div>
-
-        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saldo Bersih</p>
-          <div className="flex items-baseline gap-2">
-            <h3 className={`text-xl md:text-2xl font-black leading-tight ${saldoBersih >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-              Rp {formatRp(saldoBersih)}
-            </h3>
-          </div>
-        </div>
-      </div>
-
-      {error && (
-        <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-sm font-medium text-rose-600">
-          {error}
-        </div>
-      )}
-
-      {/* 3. Filter Bar */}
-      <div className="flex flex-col md:flex-row items-center gap-4 bg-white p-3 rounded-[24px] md:rounded-3xl border border-slate-50 shadow-sm">
-        <div className="w-full md:flex-1 relative group">
-          <Search size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
-          <input 
-            type="text" 
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Cari kategori atau catatan..." 
-            className="w-full bg-slate-50/50 border-transparent focus:border-blue-100 focus:bg-white rounded-[16px] md:rounded-2xl py-3.5 pl-12 pr-6 text-sm font-medium transition-all"
-          />
-        </div>
-        <div className="w-full md:w-auto">
-          <DatePicker
-            value={selectedDate}
-            onChange={setSelectedDate}
-          />
-        </div>
-      </div>
-
-      {/* 4. Table */}
-      <div className="bg-white rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
-        {loading ? (
-          <div className="p-12 text-center text-sm font-medium text-slate-400">Memuat transaksi...</div>
-        ) : filtered.length === 0 ? (
-          <div className="p-10">
-            <EmptyState 
-              title="Belum ada transaksi"
-              description="Catat pemasukan atau pengeluaran pertama Anda melalui menu Tambah Cepat di header."
-              icon={<TrendingUp size={24} />}
+      <Card className="overflow-hidden">
+        <div className="p-4 md:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="relative w-full sm:max-w-sm">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Cari kategori atau catatan..."
+              aria-label="Cari transaksi"
+              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-100 rounded-control text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 transition-all"
             />
+          </div>
+          {!loading && transactions.length > 0 && (
+            <p className="text-caption text-slate-400">
+              {filtered.length === transactions.length ? `${transactions.length} transaksi` : `${filtered.length} dari ${transactions.length} transaksi`}
+            </p>
+          )}
+        </div>
+
+        {loading ? (
+          <div className="p-5 space-y-3">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-10" />)}</div>
+        ) : filtered.length === 0 ? (
+          <div className="p-5 md:p-8">
+            {searchQuery ? (
+              <EmptyState title="Tidak ada yang cocok" description="Coba kata kunci lain." icon={<Search size={24} />} />
+            ) : (
+              <EmptyState
+                title="Belum ada transaksi di tanggal ini"
+                description="Pilih tanggal lain, atau catat transaksi baru lewat tombol Tambah Cepat di kanan atas."
+                icon={<ListOrdered size={24} />}
+              />
+            )}
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left border-collapse min-w-[860px] xl:min-w-0">
+            {/* Mobile: list */}
+            <ul className="md:hidden divide-y divide-slate-100">
+              {filtered.map((trx) => {
+                const incoming = isIncomingTransaction(trx);
+                return (
+                  <li key={trx.id} className="px-4 py-3 flex items-center gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-slate-800 truncate">{trx.note || trx.subCategory || getCategoryName(trx.category || '')}</p>
+                      <p className="text-caption text-slate-400 truncate">
+                        {formatTime(trx.createdAt)} · {trx.subCategory || getCategoryName(trx.category || '')} · {getAccountName(trx.accountId || '')}
+                      </p>
+                    </div>
+                    <p className={cn('text-sm font-black tabular-nums whitespace-nowrap', incoming ? 'text-emerald-600' : 'text-rose-500')}>
+                      {incoming ? '+' : '−'}{formatMoney(trx.amount, trx.currency)}
+                    </p>
+                    <button
+                      onClick={() => handleDelete(trx)}
+                      disabled={deletingId === trx.id}
+                      aria-label="Hapus transaksi"
+                      className="p-2 -mr-2 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors disabled:opacity-50"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {/* Desktop: tabel */}
+            <div className="hidden md:block overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-slate-50">
-                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">No</th>
-                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Jam</th>
-                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
-                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Deskripsi</th>
-                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">Mata Uang</th>
-                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Nominal</th>
-                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Sub Kategori</th>
-                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Rekening</th>
-                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Aksi</th>
+                  <tr className="bg-slate-50/70">
+                    <th className="px-5 py-3 text-label font-bold uppercase text-slate-400 whitespace-nowrap">Waktu</th>
+                    <th className="px-5 py-3 text-label font-bold uppercase text-slate-400">Catatan</th>
+                    <th className="px-5 py-3 text-label font-bold uppercase text-slate-400 whitespace-nowrap">Kategori</th>
+                    <th className="px-5 py-3 text-label font-bold uppercase text-slate-400 whitespace-nowrap">Rekening</th>
+                    <th className="px-5 py-3 text-label font-bold uppercase text-slate-400 text-right whitespace-nowrap">Nominal</th>
+                    <th className="px-5 py-3 w-12"><span className="sr-only">Aksi</span></th>
                   </tr>
                 </thead>
-                <tbody>
-                  {filtered.map((trx, i) => (
-                    <tr key={trx.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
-                      <td className="px-4 md:px-6 py-4 whitespace-nowrap text-center">
-                        <p className="text-xs font-bold text-slate-400">{i + 1}</p>
-                      </td>
-                      <td className="px-4 md:px-6 py-4 whitespace-nowrap">
-                        <p className="text-xs md:text-sm font-bold text-slate-500">{formatTime(trx.createdAt)}</p>
-                      </td>
-                      <td className="px-4 md:px-6 py-4 whitespace-nowrap">
-                        <p className="text-xs md:text-sm font-black text-slate-900">{formatDate(trx.date)}</p>
-                      </td>
-                      <td className="px-4 md:px-6 py-4">
-                        <p className="text-xs md:text-sm font-bold text-slate-700">{trx.note || '-'}</p>
-                      </td>
-                      <td className="px-4 md:px-6 py-4 whitespace-nowrap text-center">
-                        <span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{trx.currency || 'IDR'}</span>
-                      </td>
-                      <td className="px-4 md:px-6 py-4 text-right whitespace-nowrap">
-                        <p className={`text-sm font-black tracking-tight ${isIncomingTransaction(trx) ? 'text-emerald-600' : 'text-rose-500'}`}>
-                          {isIncomingTransaction(trx) ? '+' : '-'} {formatAmount(trx.amount, trx.currency)}
-                        </p>
-                      </td>
-                      <td className="px-4 md:px-6 py-4 whitespace-nowrap">
-                        <span className="text-xs font-bold text-slate-600">
-                          {trx.subCategory || getCategoryName(trx.category || '')}
-                        </span>
-                      </td>
-                      <td className="px-4 md:px-6 py-4 whitespace-nowrap">
-                        <span className="text-xs font-bold text-slate-600">{getAccountName(trx.accountId || '')}</span>
-                      </td>
-                      <td className="px-5 md:px-8 py-4 md:py-6 whitespace-nowrap">
-                        <div className="flex items-center justify-center gap-2">
+                <tbody className="divide-y divide-slate-100">
+                  {filtered.map((trx) => {
+                    const incoming = isIncomingTransaction(trx);
+                    return (
+                      <tr key={trx.id} className="group hover:bg-slate-50/60 transition-colors">
+                        <td className="px-5 py-3.5 whitespace-nowrap">
+                          <p className="font-bold text-slate-900">{formatTime(trx.createdAt)}</p>
+                          <p className="text-caption text-slate-400">{formatDate(trx.date)}</p>
+                        </td>
+                        <td className="px-5 py-3.5 text-slate-700 max-w-[320px] truncate">{trx.note || '—'}</td>
+                        <td className="px-5 py-3.5 whitespace-nowrap text-slate-600">{trx.subCategory || getCategoryName(trx.category || '')}</td>
+                        <td className="px-5 py-3.5 whitespace-nowrap text-slate-600">{getAccountName(trx.accountId || '')}</td>
+                        <td className={cn('px-5 py-3.5 text-right font-black tabular-nums whitespace-nowrap', incoming ? 'text-emerald-600' : 'text-rose-500')}>
+                          {incoming ? '+' : '−'}{formatMoney(trx.amount, trx.currency)}
+                          {trx.currency && trx.currency !== 'IDR' && (
+                            <Badge className="ml-2 align-middle">{trx.currency}</Badge>
+                          )}
+                        </td>
+                        <td className="px-3 py-3.5 text-right">
                           <button
-                            onClick={() => trx.id && handleDelete(trx)}
+                            onClick={() => handleDelete(trx)}
                             disabled={deletingId === trx.id}
-                            className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all disabled:opacity-50"
+                            aria-label="Hapus transaksi"
+                            className="p-2 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors disabled:opacity-50 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={15} />
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-            <div className="px-5 md:px-8 py-5 md:py-6 bg-slate-50/30 flex items-center justify-between gap-4 border-t border-slate-50">
-              <p className="text-[11px] font-bold text-slate-400">
-                Menampilkan {filtered.length} dari {transactions.length} transaksi
-              </p>
-            </div>
           </>
         )}
-      </div>
+      </Card>
     </div>
   );
 }
-

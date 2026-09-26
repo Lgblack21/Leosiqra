@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { ChevronDown, Save, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
+import { useFeedback } from '@/components/ui/Feedback';
 import { accountService } from '@/lib/services/accountService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { CurrencySelect } from '@/components/CurrencySelect';
@@ -18,6 +19,7 @@ interface CardModalProps {
 }
 
 export const CardModal = ({ isOpen, onClose, userId }: CardModalProps) => {
+  const { toast } = useFeedback();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -45,7 +47,7 @@ export const CardModal = ({ isOpen, onClose, userId }: CardModalProps) => {
       setLogoIsAuto(false);
     } catch (error) {
       console.error("Upload failed:", error);
-      alert("Gagal mengunggah logo.");
+      toast.error("Gagal mengunggah logo. Coba file lain atau ulangi sebentar lagi.");
     } finally {
       setUploading(false);
     }

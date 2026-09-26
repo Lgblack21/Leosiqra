@@ -25,6 +25,17 @@ html {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-serif: var(--font-serif);
+
+  /* Design tokens — skala radius & tipografi label yang dipakai komponen
+     src/components/ui/*. Pakai `rounded-card`, `rounded-control`,
+     `text-label`, `text-caption` alih-alih nilai arbitrary ([20px], [10px]). */
+  --radius-card: 1.25rem;
+  --radius-control: 0.75rem;
+  --text-label: 0.625rem;
+  --text-label--line-height: 1rem;
+  --text-label--letter-spacing: 0.1em;
+  --text-caption: 0.6875rem;
+  --text-caption--line-height: 1rem;
 }
 
 
@@ -32,6 +43,31 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans);
+}
+
+/* Shim buat class `animate-in` yang dipakai di banyak komponen — plugin
+   tailwindcss-animate/tw-animate-css gak ter-install, jadi sebelumnya class
+   ini no-op. Cukup fade-in halus; varian slide/zoom tetap diabaikan. */
+@keyframes enter-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-in {
+  animation: enter-fade 0.2s ease-out;
+}
+
+/* Scrollbar tipis untuk area scroll horizontal/vertikal di dalam kartu. */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+/* Area scroll tanpa scrollbar kelihatan (mis. menu sidebar). */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 /* Gradien teks untuk aksen judul */
@@ -141,7 +177,8 @@ body {
   .animate-logo-bob,
   .animate-ambient-pulse,
   .animate-voice-wave,
-  .animate-scan-sweep {
+  .animate-scan-sweep,
+  .animate-in {
     animation: none;
   }
 }

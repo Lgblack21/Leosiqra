@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { ChevronDown, Image as ImageIcon, Loader2, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
+import { useFeedback } from '@/components/ui/Feedback';
 import { accountService, Account } from '@/lib/services/accountService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { CurrencySelect } from '@/components/CurrencySelect';
@@ -29,6 +30,7 @@ const BUILT_IN_TYPES = ['Bank Account', 'E-Wallet', 'Cash', 'Investment Account'
 const CUSTOM_TYPE_VALUE = '__custom__';
 
 export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Account', title = 'Tambah Rekening Baru', initialData = null, existingTypes = [] }: AccountModalProps) => {
+  const { toast } = useFeedback();
   const [formData, setFormData] = useState({
     name: '',
     logoUrl: '',
@@ -69,7 +71,7 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
       setLogoIsAuto(false);
     } catch (error) {
       console.error("Upload failed:", error);
-      alert("Gagal mengunggah logo.");
+      toast.error("Gagal mengunggah logo. Coba file lain atau ulangi sebentar lagi.");
     } finally {
       setUploading(false);
     }

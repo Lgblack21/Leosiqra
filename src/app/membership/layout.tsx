@@ -8,6 +8,7 @@ import { ModalProvider } from '@/context/ModalContext';
 import { GlobalModalWrapper } from '@/components/GlobalModalWrapper';
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 import { cloudflareApi } from '@/lib/cloudflare-api';
+import { FeedbackProvider } from '@/components/ui/Feedback';
 
 const ONBOARDING_PATH = '/membership/onboarding';
 
@@ -48,6 +49,7 @@ export default function MembershipLayout({
   if (loading) return null;
 
   return (
+    <FeedbackProvider>
     <ModalProvider>
       <div className="flex min-h-screen bg-slate-50 relative overflow-x-hidden print:block print:min-h-0 print:h-auto">
         {/* Mobile Backdrop */}
@@ -78,5 +80,6 @@ export default function MembershipLayout({
         <OnboardingTour />
       </div>
     </ModalProvider>
+    </FeedbackProvider>
   );
 }

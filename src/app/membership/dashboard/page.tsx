@@ -10,17 +10,22 @@ import {
   CreditCard,
   Landmark,
   Search,
-  ChevronDown,
   ChevronRight,
   LayoutDashboard,
   RefreshCw,
   Building2,
   Banknote
 } from 'lucide-react';
-import { cn, isIncomingTransaction } from '@/lib/utils';
+import { cn, isIncomingTransaction, formatIDR, formatMoney } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { Modal } from '@/components/ui/Modal';
+import { Card, CardHeader } from '@/components/ui/Card';
+import { StatCard } from '@/components/ui/StatCard';
+import { Badge } from '@/components/ui/Badge';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { LogoImage } from '@/components/ui/LogoImage';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { investmentService, Investment } from '@/lib/services/investmentService';
@@ -36,9 +41,12 @@ interface MarketTicker {
   color: string;
 }
 
+const FILTER_OPTIONS = ['Semua', 'Pemasukan', 'Pengeluaran', 'Investasi', 'Tabungan'] as const;
+type FilterType = typeof FILTER_OPTIONS[number];
+
 export default function MonthlyDashboard() {
-  const [filterType, setFilterType] = useState('Semua');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [filterType, setFilterType] = useState<FilterType>('Semua');
+  const [searchQuery, setSearchQuery] = useState('');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [savings, setSavings] = useState<Saving[]>([]);
@@ -50,13 +58,14 @@ export default function MonthlyDashboard() {
   const [creditCardBills, setCreditCardBills] = useState(0);
   const [otherDebts, setOtherDebts] = useState(0);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [accountsLoaded, setAccountsLoaded] = useState(false);
   const [fxRates, setFxRates] = useState<ExchangeRates>({});
   const [showAccountsModal, setShowAccountsModal] = useState(false);
 
   // Saldo Bersih = total saldo semua rekening saat ini, tidak terikat bulan
   // yang dipilih di MonthPicker (sama seperti "Total Saldo" di Profile).
   useEffect(() => {
-    const loadAccounts = () => accountService.getUserAccounts('session').then(setAccounts).catch(console.error);
+    const loadAccounts = () => accountService.getUserAccounts('session').then(setAccounts).catch(console.error).finally(() => setAccountsLoaded(true));
     loadAccounts();
     exchangeRateService.getLatestRates().then(setFxRates).catch(console.error);
     // getUserAccounts cuma fetch sekali, bukan live subscription — refetch
@@ -185,23 +194,28 @@ export default function MonthlyDashboard() {
     [accounts, fxRates]
   );
 
-  const formatRp = (num: number) => {
-    if (isNaN(num) || !isFinite(num)) return 'Rp 0';
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
-  };
+  const formatRp = formatIDR;
 
-  const formatAccountBalance = (amount: number, currency: string) => {
-    try {
-      return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: currency || 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-      }).format(amount);
-    } catch {
-      return `${currency || ''} ${amount.toLocaleString('id-ID')}`.trim();
+  const visibleData = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return filteredData;
+    return filteredData.filter((t) =>
+      `${t.category || ''} ${t.subCategory || ''} ${t.note || ''}`.toLowerCase().includes(q)
+    );
+  }, [filteredData, searchQuery]);
+
+  // Tab "Semua" tanpa pencarian tetap pakai total resmi (pemasukan vs
+  // pengeluaran murni, transfer tidak dihitung). Selain itu, total dihitung
+  // dari baris yang sedang tampil — sebelumnya footer selalu menampilkan
+  // total pemasukan seluruh bulan meskipun filternya "Pengeluaran".
+  const footerTotals = useMemo(() => {
+    if (filterType === 'Semua' && !searchQuery.trim()) {
+      return { masuk: totalPemasukan, keluar: totalPengeluaran, net: netBalance };
     }
-  };
+    const masuk = visibleData.filter(isIncomingTransaction).reduce((s, t) => s + toIdrAmount(t), 0);
+    const keluar = visibleData.filter((t) => !isIncomingTransaction(t)).reduce((s, t) => s + toIdrAmount(t), 0);
+    return { masuk, keluar, net: masuk - keluar };
+  }, [filterType, searchQuery, visibleData, totalPemasukan, totalPengeluaran, netBalance]);
 
   const getIconForType = (type: string) => {
     switch (type) {
@@ -235,65 +249,24 @@ export default function MonthlyDashboard() {
   const tabunganPct = totalSaldoRekening > 0 ? Math.min(Math.round((totalTabunganSaldo / totalSaldoRekening) * 100), 100) : 0;
   const investasiPct = totalPemasukan > 0 ? Math.min(Math.round((totalInvestasi / Math.max(totalPemasukan, 1)) * 100), 100) : 0;
 
-  // Dirender dua kali: sekali di grid atas (mobile, langsung di bawah Saldo
-  // Bersih) dan sekali di 2x2 Flow Grid (desktop, posisi aslinya) — masing-
-  // masing disembunyikan di breakpoint yang tidak relevan lewat class hidden/
-  // md:hidden, supaya kartunya cuma tampil sekali per ukuran layar.
-  const pemasukanCard = (
-    <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-          <TrendingUp size={12} className="text-emerald-500" /> Pemasukan
-        </div>
-        <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${pengeluaranPct <= 80 ? 'bg-sky-50 text-sky-500' : 'bg-rose-50 text-rose-500'}`}>
-          {pengeluaranPct <= 80 ? 'Sehat' : 'Waspada'}
-        </span>
-      </div>
-      <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6 tracking-tight">{formatRp(totalPemasukan)}</h3>
-      <div className="flex justify-between items-end gap-3">
-        <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-          <div className="h-full bg-emerald-500 transition-all" style={{ width: `${pemasukanPct}%` }} />
-        </div>
-        <span className="text-[9px] font-medium text-slate-400 leading-none">{transactions.filter(t => t.type === 'pemasukan').length} trx</span>
-      </div>
-    </div>
-  );
-
-  const pengeluaranCard = (
-    <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-          <TrendingDown size={12} className="text-rose-500" /> Pengeluaran
-        </div>
-        <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${pengeluaranPct > 90 ? 'bg-rose-50 text-rose-500' : 'bg-slate-50 text-slate-400'}`}>
-          {pengeluaranPct > 90 ? 'Waspada' : 'Normal'}
-        </span>
-      </div>
-      <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6 tracking-tight">{formatRp(totalPengeluaran)}</h3>
-      <div className="flex justify-between items-end gap-3">
-        <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-          <div className="h-full bg-rose-500 transition-all" style={{ width: `${pengeluaranPct}%` }} />
-        </div>
-        <span className="text-[9px] font-medium text-slate-400 leading-none">{pengeluaranPct}% dari masuk</span>
-      </div>
-    </div>
-  );
+  const expenseCount = transactions.filter(t => t.type === 'pengeluaran').length;
+  const incomeCount = transactions.filter(t => t.type === 'pemasukan').length;
+  const topExpenses = transactions
+    .filter(t => t.type === 'pengeluaran')
+    .sort((a, b) => toIdrAmount(b) - toIdrAmount(a))
+    .slice(0, 3);
+  const periodLabel = new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth));
+  // Skeleton cuma di load pertama per periode — refetch realtime (tiap ada
+  // transaksi baru) jangan bikin angka yang sudah tampil kedip jadi skeleton.
+  const statsLoading = loading && transactions.length === 0;
 
   return (
-    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 max-w-[1400px]">
-
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-br from-white to-indigo-50/40 p-6 rounded-[24px] border border-slate-100 shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white items-center justify-center shadow-lg shadow-emerald-600/20 shrink-0">
-            <LayoutDashboard size={22} />
-          </div>
-          <div>
-            <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Dashboard Bulanan</h2>
-            <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Laporan Periode {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth))}</p>
-          </div>
-        </div>
-
+    <div className="space-y-6 md:space-y-8 max-w-[1400px] pb-10">
+      <PageHeader
+        icon={<LayoutDashboard size={22} />}
+        title="Dashboard Bulanan"
+        subtitle={`Ringkasan keuanganmu periode ${periodLabel}`}
+        actions={
           <MonthPicker
             value={{ month: selectedMonth, year: selectedYear }}
             onChange={({ month, year }) => {
@@ -301,276 +274,281 @@ export default function MonthlyDashboard() {
               setSelectedYear(year);
             }}
           />
-      </div>
+        }
+      />
 
       <GamificationStrip />
 
-      {/* Top Cards (3 Cols) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-        {/* Card 1: Saldo Bersih (kartu utama) — klik untuk lihat rincian rekening */}
+      {/* Baris 1: Saldo (kartu utama) + arus kas bulan ini */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         <button
           type="button"
           onClick={() => setShowAccountsModal(true)}
-          className="text-left w-full bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-emerald-900/10 shadow-xl shadow-emerald-600/15 relative overflow-hidden hover:shadow-2xl hover:shadow-emerald-600/25 hover:-translate-y-0.5 active:scale-[0.99] transition-all cursor-pointer"
+          className="md:col-span-2 lg:col-span-1 text-left w-full bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-card p-5 md:p-6 shadow-xl shadow-emerald-600/15 relative overflow-hidden hover:shadow-2xl hover:shadow-emerald-600/25 hover:-translate-y-0.5 active:scale-[0.99] transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300"
         >
           <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
-          <div className="flex items-center justify-between gap-2 mb-3">
-            <p className="text-[10px] font-bold text-emerald-200 uppercase tracking-widest">Saldo Bersih</p>
-            <ChevronRight size={16} className="text-emerald-200 shrink-0" />
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <p className="text-label font-bold text-emerald-100 uppercase">Saldo Bersih</p>
+            <span className="flex items-center gap-0.5 text-caption font-bold text-emerald-100">
+              Lihat rekening <ChevronRight size={14} />
+            </span>
           </div>
-          <h3 className={`text-2xl md:text-3xl font-black mb-4 tracking-tight ${totalSaldoRekening >= 0 ? 'text-white' : 'text-rose-300'}`}>{formatRp(totalSaldoRekening)}</h3>
-          <div className="flex items-center gap-1.5 text-emerald-200 text-[10px] md:text-xs font-bold">
-            <TrendingUp size={14} />
-            <span>{transactions.length} transaksi tercatat</span>
-          </div>
+          {!accountsLoaded ? (
+            <div className="h-9 w-2/3 mb-5 rounded-control bg-white/20 animate-pulse" />
+          ) : (
+            <p className={cn('text-2xl md:text-3xl font-black mb-5 tracking-tight tabular-nums truncate', totalSaldoRekening >= 0 ? 'text-white' : 'text-rose-200')}>
+              {formatRp(totalSaldoRekening)}
+            </p>
+          )}
+          <p className="text-caption font-bold text-emerald-100">
+            {accounts.length} rekening · {transactions.length} transaksi bulan ini
+          </p>
         </button>
 
-        {/* Mobile-only: Pemasukan & Pengeluaran langsung di bawah Saldo Bersih
-            (versi desktop tetap di posisi aslinya, di 2x2 Flow Grid bawah) */}
-        <div className="contents md:hidden">
-          {pemasukanCard}
-          {pengeluaranCard}
-        </div>
-
-        {/* Card 2: Tagihan Kartu Kredit */}
-        <div className="bg-slate-50 rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
-          <div className="flex justify-between items-start mb-3">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tagihan Kartu Kredit</p>
-            <div className="p-1.5 bg-rose-50 text-rose-600 rounded">
-              <CreditCard size={14} />
-            </div>
-          </div>
-          <h3 className={`text-xl md:text-2xl font-black mb-5 tracking-tight ${creditCardBills > 0 ? 'text-rose-500' : 'text-slate-900'}`}>{formatRp(creditCardBills)}</h3>
-          <div className="inline-block px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-500">
-            {creditCardBills > 0 ? 'Perlu dibayar' : 'Tidak ada tagihan'}
-          </div>
-        </div>
-
-        {/* Card 3: Hutang Lainnya */}
-        <div className="bg-slate-50 rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
-          <div className="flex justify-between items-start mb-3">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Hutang Lainnya</p>
-            <div className="text-slate-600 p-1.5 bg-white rounded shadow-sm border border-slate-50">
-              <Landmark size={16} />
-            </div>
-          </div>
-          <h3 className={`text-xl md:text-2xl font-black mb-4 tracking-tight ${otherDebts > 0 ? 'text-rose-500' : 'text-slate-900'}`}>{formatRp(otherDebts)}</h3>
-          <div className="inline-block px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-500">
-            {otherDebts > 0 ? 'Kewajiban aktif' : 'Bebas hutang'}
-          </div>
-        </div>
+        <StatCard
+          label="Pemasukan"
+          icon={<TrendingUp size={12} className="text-emerald-500" />}
+          value={formatRp(totalPemasukan)}
+          loading={statsLoading}
+          badge={<Badge tone={pengeluaranPct <= 80 ? 'info' : 'danger'}>{pengeluaranPct <= 80 ? 'Sehat' : 'Waspada'}</Badge>}
+          progress={pemasukanPct}
+          progressClassName="bg-emerald-500"
+          caption={`${incomeCount} transaksi`}
+        />
+        <StatCard
+          label="Pengeluaran"
+          icon={<TrendingDown size={12} className="text-rose-500" />}
+          value={formatRp(totalPengeluaran)}
+          loading={statsLoading}
+          badge={<Badge tone={pengeluaranPct > 90 ? 'danger' : 'neutral'}>{pengeluaranPct > 90 ? 'Waspada' : 'Normal'}</Badge>}
+          progress={pengeluaranPct}
+          progressClassName="bg-rose-500"
+          caption={`${pengeluaranPct}% dari pemasukan`}
+        />
       </div>
 
-      {/* Middle Grid (Pulse + Cashflows) */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
+      {/* Baris 2: aset & kewajiban */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        <StatCard
+          label="Tabungan"
+          icon={<PiggyBank size={12} className="text-blue-500" />}
+          value={formatRp(totalTabunganSaldo)}
+          loading={statsLoading}
+          badge={<Badge tone="info">{savings.length} trx</Badge>}
+          progress={tabunganPct}
+          progressClassName="bg-blue-500"
+          caption={`${tabunganPct}% dari saldo`}
+        />
+        <StatCard
+          label="Investasi"
+          icon={<Wallet size={12} className="text-slate-600" />}
+          value={formatRp(totalInvestasi)}
+          loading={statsLoading}
+          badge={<Badge tone="info">{investments.filter(i => i.status === 'Active').length} aktif</Badge>}
+          progress={investasiPct}
+          caption={`${investasiPct}% dari pemasukan`}
+        />
+        <StatCard
+          label="Tagihan Kartu Kredit"
+          icon={<CreditCard size={12} className="text-rose-500" />}
+          value={formatRp(creditCardBills)}
+          valueClassName={creditCardBills > 0 ? 'text-rose-500' : undefined}
+          loading={statsLoading}
+          caption={creditCardBills > 0 ? 'Perlu dibayar' : 'Tidak ada tagihan'}
+        />
+        <StatCard
+          label="Hutang Lainnya"
+          icon={<Landmark size={12} className="text-slate-600" />}
+          value={formatRp(otherDebts)}
+          valueClassName={otherDebts > 0 ? 'text-rose-500' : undefined}
+          loading={statsLoading}
+          caption={otherDebts > 0 ? 'Kewajiban aktif' : 'Bebas hutang'}
+        />
+      </div>
 
-        {/* Pulse Pasar (1/4 width) - Live */}
-        <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm lg:col-span-1">
-          <div className="flex items-center justify-between mb-6">
-            <p className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Pulse Pasar</p>
-            <button onClick={fetchMarket} disabled={marketLoading} className="text-slate-300 hover:text-slate-600 transition-colors">
-              <RefreshCw size={12} className={marketLoading ? 'animate-spin' : ''} />
-            </button>
-          </div>
-          <div className="space-y-5">
+      {/* Baris 3: pengeluaran tertinggi + pulse pasar */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+        <Card className="p-5 md:p-6 lg:col-span-2">
+          <CardHeader title="Pengeluaran Tertinggi" icon={<TrendingDown size={12} className="text-rose-500" />} />
+          {statsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {[1, 2, 3].map(i => <Skeleton key={i} className="h-16" />)}
+            </div>
+          ) : topExpenses.length === 0 ? (
+            <p className="text-sm text-slate-400 py-4">Belum ada pengeluaran di periode ini.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {topExpenses.map((trx, i) => (
+                <div key={trx.id || i} className="rounded-control bg-slate-50 p-3.5 flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 text-xs font-black">
+                    #{i + 1}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-caption font-medium text-slate-500 truncate">{trx.category}</p>
+                    <p className="text-sm font-bold text-slate-900 truncate">{trx.note || trx.category}</p>
+                    <p className="text-xs font-black text-rose-500 tabular-nums">{formatRp(toIdrAmount(trx))}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {expenseCount > 3 && (
+            <p className="text-caption text-slate-400 mt-3">dari {expenseCount} transaksi pengeluaran bulan ini</p>
+          )}
+        </Card>
+
+        <Card className="p-5 md:p-6">
+          <CardHeader
+            title="Pulse Pasar"
+            action={
+              <button
+                onClick={fetchMarket}
+                disabled={marketLoading}
+                aria-label="Muat ulang data pasar"
+                className="p-1.5 -m-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                <RefreshCw size={14} className={marketLoading ? 'animate-spin' : ''} />
+              </button>
+            }
+          />
+          <div className="space-y-4">
             {marketLoading ? (
-              [1, 2, 3, 4].map(i => <div key={i} className="h-10 bg-slate-50 rounded-xl animate-pulse" />)
+              [1, 2, 3, 4].map(i => <Skeleton key={i} className="h-9" />)
             ) : marketTickers.map((m, i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-[10px] font-black", m.color)}>
+              <div key={i} className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-label font-black', m.color)}>
                     {m.label.split('/')[0].slice(0, 3)}
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs font-bold text-slate-900 leading-none mb-1">{m.label}</p>
-                    <p className="text-[10px] font-medium text-slate-400">{m.sub}</p>
+                    <p className="text-caption text-slate-400">{m.sub}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs font-black text-slate-900 leading-none mb-1">{m.val}</p>
+                  <p className="text-xs font-black text-slate-900 leading-none mb-1 tabular-nums">{m.val}</p>
                   <p className={cn(
-                    "text-[10px] font-bold",
+                    'text-caption font-bold tabular-nums',
                     m.up === null ? 'text-slate-300' : m.up ? 'text-emerald-500' : 'text-rose-500'
                   )}>{m.up !== null && (m.up ? '+' : '')}{m.pct}</p>
                 </div>
               </div>
             ))}
           </div>
-        </div>
-
-        {/* 2x2 Flow Grid (3/4 width) */}
-        <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          {/* Pemasukan & Pengeluaran (desktop) — di mobile sudah tampil di
-              bawah Saldo Bersih, jadi disembunyikan di sini supaya tidak dobel */}
-          <div className="hidden md:contents">
-            {pemasukanCard}
-            {pengeluaranCard}
-          </div>
-          {/* Tabungan - saldo all-time dari fitur Tabungan (bukan sisa
-              pemasukan-pengeluaran bulan berjalan) */}
-          <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                <PiggyBank size={12} className="text-blue-500" /> Tabungan
-              </div>
-              <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-500">{savings.length} trx</span>
-            </div>
-            <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6 tracking-tight">{formatRp(totalTabunganSaldo)}</h3>
-            <div className="flex justify-between items-end gap-3">
-              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 transition-all" style={{ width: `${tabunganPct}%` }} />
-              </div>
-              <span className="text-[9px] font-medium text-slate-400 leading-none">{tabunganPct}% dari total saldo</span>
-            </div>
-          </div>
-          {/* Investasi - Firebase */}
-          <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                <Wallet size={12} className="text-slate-600" /> Investasi
-              </div>
-              <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-sky-50 text-sky-500 uppercase">
-                {investments.filter(i => i.status === 'Active').length} Aktif
-              </span>
-            </div>
-            <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6 tracking-tight">{formatRp(totalInvestasi)}</h3>
-            <div className="flex justify-between items-end gap-3">
-              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-slate-800 transition-all" style={{ width: `${investasiPct}%` }} />
-              </div>
-              <span className="text-[9px] font-medium text-slate-400 leading-none">{investasiPct}% dari masuk</span>
-            </div>
-          </div>
-        </div>
+        </Card>
       </div>
 
-      {/* Insight Row - Top 3 Pengeluaran Tertinggi */}
-      {transactions.filter(t => t.type === 'pengeluaran').length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={14} className="text-rose-500" />
-            <h4 className="text-[10px] font-black tracking-widest uppercase text-slate-800">Pengeluaran Tertinggi</h4>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-            {transactions
-              .filter(t => t.type === 'pengeluaran')
-              .sort((a, b) => toIdrAmount(b) - toIdrAmount(a))
-              .slice(0, 3)
-              .map((trx, i) => (
-                <div key={trx.id || i} className="bg-white rounded-xl p-3.5 md:p-4 border border-slate-100 shadow-sm flex items-center gap-4">
-                  <div className="w-9 h-9 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shrink-0 text-sm font-black">
-                    #{i + 1}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{trx.category}</p>
-                    <p className="text-[11px] font-bold text-slate-900 leading-tight truncate">{trx.note || trx.category}</p>
-                    <p className="text-[10px] font-black text-rose-500 mt-1">{formatRp(toIdrAmount(trx))}</p>
-                  </div>
-                </div>
-              ))}
-          </div>
-        </div>
-      )}
-
-      {/* Detail Table */}
-      <div className="bg-white rounded-[20px] md:rounded-[20px] shadow-sm overflow-hidden mb-10">
-        <div className="p-5 md:p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-50">
-          <div className="flex items-center gap-3">
-            <h3 className="text-sm md:text-[15px] font-bold text-slate-900">Detail Anggaran & Realisasi</h3>
-            <span className="hidden xs:inline text-[10px] font-medium text-slate-400 tracking-wide mt-0.5">(Dalam IDR)</span>
-          </div>
-          <div className="flex flex-col sm:flex-row items-center gap-2 relative w-full lg:w-auto">
-            <div className="relative w-full sm:flex-1 lg:w-48">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input type="text" placeholder="Cari item..." className="w-full pl-9 pr-4 py-2.5 md:py-2 bg-slate-50 border-none rounded-lg text-xs text-slate-600 font-medium focus:ring-0 outline-none" />
+      {/* Daftar transaksi periode ini */}
+      <Card className="overflow-hidden">
+        <div className="p-5 md:p-6 flex flex-col gap-4 border-b border-slate-100">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Transaksi Bulan Ini</h2>
+              <p className="text-caption text-slate-400">Semua nominal dalam IDR</p>
             </div>
-            <div className="relative w-full sm:w-auto">
-              <button
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="h-10 md:h-8 w-full sm:w-[140px] px-3 flex items-center justify-between gap-2 bg-slate-50 text-slate-600 rounded-lg text-xs font-bold"
-              >
-                <span className="truncate">{filterType}</span>
-                <ChevronDown size={14} className="text-slate-400" />
-              </button>
-              {isDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-full sm:w-40 bg-white border border-slate-100 rounded-xl shadow-lg shadow-indigo-500/10 z-10 py-2">
-                  {['Semua', 'Pemasukan', 'Pengeluaran', 'Investasi', 'Tabungan'].map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => { setFilterType(cat); setIsDropdownOpen(false); }}
-                      className="w-full text-left px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-              )}
+            <div className="relative w-full sm:w-64">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Cari kategori atau catatan..."
+                aria-label="Cari transaksi"
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-100 rounded-control text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 transition-all"
+              />
             </div>
           </div>
+          <SegmentedControl
+            ariaLabel="Filter jenis transaksi"
+            options={FILTER_OPTIONS}
+            value={filterType}
+            onChange={setFilterType}
+            className="self-start max-w-full"
+          />
         </div>
 
-        {loading ? (
-          <div className="p-12 text-center text-sm font-medium text-slate-400">Memuat transaksi...</div>
-        ) : filteredData.length === 0 ? (
-          <div className="p-8">
-            <EmptyState title="Belum ada transaksi" description="Catat pemasukan atau pengeluaran pertama Anda melalui menu Tambah Cepat di header." icon={<LayoutDashboard size={24} />} />
+        {loading && transactions.length === 0 ? (
+          <div className="p-5 md:p-6 space-y-3">
+            {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-10" />)}
+          </div>
+        ) : visibleData.length === 0 ? (
+          <div className="p-5 md:p-8">
+            {searchQuery || filterType !== 'Semua' ? (
+              <EmptyState title="Tidak ada yang cocok" description="Coba ganti filter atau kata kunci pencarian." icon={<Search size={24} />} />
+            ) : (
+              <EmptyState title="Belum ada transaksi" description="Catat pemasukan atau pengeluaran pertama lewat tombol Tambah Cepat di pojok kanan atas." icon={<LayoutDashboard size={24} />} />
+            )}
           </div>
         ) : (
-          <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left text-xs whitespace-nowrap min-w-[650px] md:min-w-0">
-              <thead>
-                <tr className="bg-slate-50/50">
-                  <th className="px-5 md:px-6 py-4 font-bold text-[9px] uppercase tracking-[0.15em] text-slate-400">Tanggal</th>
-                  <th className="px-5 md:px-6 py-4 font-bold text-[9px] uppercase tracking-[0.15em] text-slate-400">Kategori / Catatan</th>
-                  <th className="px-5 md:px-6 py-4 font-bold text-[9px] uppercase tracking-[0.15em] text-slate-400 text-center">Tipe</th>
-                  <th className="px-5 md:px-6 py-4 font-bold text-[9px] uppercase tracking-[0.15em] text-slate-400 text-right">Nominal</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {filteredData.map((trx, i) => (
-                  <tr key={trx.id || i} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-5 md:px-6 py-4">
-                      <span className="font-black text-slate-900">{formatDate(trx.date)}</span>
-                    </td>
-                    <td className="px-5 md:px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
-                        <span className="font-bold text-slate-700">{trx.category}{trx.note ? ` - ${trx.note}` : ''}</span>
-                      </div>
-                    </td>
-                    <td className="px-5 md:px-6 py-4 text-center">
-                      <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${isIncomingTransaction(trx) ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'
-                        }`}>{trx.type}</span>
-                    </td>
-                    <td className={cn(
-                      "px-6 py-4 text-right font-black",
-                      isIncomingTransaction(trx) ? "text-emerald-600" : "text-rose-500"
-                    )}>
-                      {isIncomingTransaction(trx) ? '+' : '-'} {formatRp(toIdrAmount(trx))}
-                    </td>
+          <>
+            {/* Mobile: list */}
+            <ul className="md:hidden divide-y divide-slate-100">
+              {visibleData.map((trx, i) => {
+                const incoming = isIncomingTransaction(trx);
+                return (
+                  <li key={trx.id || i} className="px-5 py-3.5 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-slate-800 truncate">{trx.note || trx.category}</p>
+                      <p className="text-caption text-slate-400 truncate">{formatDate(trx.date)} · {trx.category}</p>
+                    </div>
+                    <p className={cn('text-sm font-black tabular-nums whitespace-nowrap', incoming ? 'text-emerald-600' : 'text-rose-500')}>
+                      {incoming ? '+' : '−'}{formatRp(toIdrAmount(trx))}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {/* Desktop: tabel */}
+            <div className="hidden md:block overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead>
+                  <tr className="bg-slate-50/70">
+                    <th className="px-6 py-3 text-label font-bold uppercase text-slate-400">Tanggal</th>
+                    <th className="px-6 py-3 text-label font-bold uppercase text-slate-400">Kategori / Catatan</th>
+                    <th className="px-6 py-3 text-label font-bold uppercase text-slate-400 text-center">Tipe</th>
+                    <th className="px-6 py-3 text-label font-bold uppercase text-slate-400 text-right">Nominal</th>
                   </tr>
-                ))}
-              </tbody>
-              <tfoot className="bg-black text-white">
-                <tr>
-                  <td colSpan={2} className="px-5 md:px-6 py-4 font-bold text-[10px] uppercase tracking-widest rounded-bl-[14px]">
-                    {footerLabel} ({filteredData.length} transaksi)
-                  </td>
-                  <td className="px-5 md:px-6 py-4 font-black text-xs text-right text-emerald-400">
-                    +{formatRp(totalPemasukan)}
-                  </td>
-                  <td className={cn(
-                    "px-5 md:px-6 py-4 font-black text-xs text-right rounded-br-[14px]",
-                    netBalance < 0 ? "text-rose-400" : "text-emerald-400"
-                  )}>
-                    Net: {netBalance >= 0 ? '+' : ''}{formatRp(netBalance)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {visibleData.map((trx, i) => {
+                    const incoming = isIncomingTransaction(trx);
+                    return (
+                      <tr key={trx.id || i} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="px-6 py-3.5 font-bold text-slate-900">{formatDate(trx.date)}</td>
+                        <td className="px-6 py-3.5 text-slate-700 max-w-[420px] truncate">
+                          <span className="font-bold">{trx.category}</span>
+                          {trx.note && <span className="text-slate-400"> — {trx.note}</span>}
+                        </td>
+                        <td className="px-6 py-3.5 text-center">
+                          <Badge tone={incoming ? 'success' : 'danger'} className="capitalize">{trx.type}</Badge>
+                        </td>
+                        <td className={cn('px-6 py-3.5 text-right font-black tabular-nums', incoming ? 'text-emerald-600' : 'text-rose-500')}>
+                          {incoming ? '+' : '−'}{formatRp(toIdrAmount(trx))}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Ringkasan — dihitung dari baris yang sedang tampil */}
+            <div className="bg-slate-900 text-white px-5 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <p className="text-label font-bold uppercase text-slate-400">
+                {footerLabel} · {visibleData.length} transaksi
+              </p>
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs font-black tabular-nums">
+                <span className="text-emerald-400">Masuk +{formatRp(footerTotals.masuk)}</span>
+                <span className="text-rose-300">Keluar −{formatRp(footerTotals.keluar)}</span>
+                <span className={footerTotals.net < 0 ? 'text-rose-400' : 'text-emerald-400'}>
+                  Net {footerTotals.net >= 0 ? '+' : ''}{formatRp(footerTotals.net)}
+                </span>
+              </div>
+            </div>
+          </>
         )}
-      </div>
+      </Card>
 
       <Modal
         isOpen={showAccountsModal}
@@ -578,7 +556,7 @@ export default function MonthlyDashboard() {
         title="Rincian Rekening"
         maxWidth="max-w-lg"
       >
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {accounts.length === 0 ? (
             <p className="text-sm text-slate-400 text-center py-6">Belum ada rekening</p>
           ) : accounts.map((acc) => {
@@ -589,7 +567,7 @@ export default function MonthlyDashboard() {
             return (
               <div
                 key={acc.id}
-                className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100"
+                className="flex items-center gap-3 p-3.5 bg-slate-50 rounded-control border border-slate-100"
               >
                 <div className="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden bg-white border border-slate-100 flex items-center justify-center">
                   <LogoImage
@@ -605,15 +583,15 @@ export default function MonthlyDashboard() {
                   />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-black text-slate-900 truncate">{acc.name}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide truncate">
+                  <p className="text-sm font-bold text-slate-900 truncate">{acc.name}</p>
+                  <p className="text-caption text-slate-400 truncate">
                     {isCredit ? 'Sisa Limit' : acc.type}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-sm font-black text-slate-900 whitespace-nowrap">{formatAccountBalance(displayAmount, acc.currency)}</p>
+                  <p className="text-sm font-black text-slate-900 whitespace-nowrap tabular-nums">{formatMoney(displayAmount, acc.currency)}</p>
                   {acc.currency && acc.currency !== 'IDR' && (
-                    <p className="text-[10px] font-bold text-slate-400 whitespace-nowrap">≈ {formatRp(idrValue)}</p>
+                    <p className="text-caption text-slate-400 whitespace-nowrap tabular-nums">≈ {formatRp(idrValue)}</p>
                   )}
                 </div>
               </div>

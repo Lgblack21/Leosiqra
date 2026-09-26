@@ -1,7 +1,5 @@
 import { cloudflareApi } from '../cloudflare-api';
 import { notifyCollectionChanged } from '../cf-firestore';
-import { accountService } from './accountService';
-import { updateMemberTotals } from './userService';
 
 export type TransactionType = 'pemasukan' | 'pengeluaran' | 'transfer' | 'topup' | 'debt' | 'investasi' | 'tabungan';
 
@@ -140,23 +138,20 @@ export const transactionService = {
     notifyCollectionChanged('transactions');
   },
 
-  // Balikkan dulu efek saldo/total sebelum hapus — cuma pemasukan/pengeluaran
-  // yang menyentuh saldo rekening ('debt' belum-lunas & baris lain tidak).
+  // Hapus + balikkan efek saldo rekening & total member dikerjakan backend
+  // dalam SATU batch D1 (atomik, aman kalau request terkirim dua kali), dan
+  // untuk transfer antar rekening sendiri sisi pasangannya ("Masuk"/"Keluar")
+  // ikut dihapus & dibalikkan. Flag ?reverse=1 wajib — tanpa itu backend
+  // memakai perilaku lama (hapus saja) demi client versi lama yang masih
+  // membalikkan saldo sendiri. Lihat handleDeleteTransaction di worker.
   async deleteTransaction(tx: Transaction) {
-    if ((tx.type === 'pemasukan' || tx.type === 'pengeluaran') && tx.id) {
-      try {
-        const amount = Number(tx.amount) || 0;
-        const balanceDelta = tx.type === 'pemasukan' ? -amount : amount;
-        if (tx.accountId && tx.accountId !== 'General') {
-          await accountService.updateAccountBalance(tx.accountId, balanceDelta);
-        }
-        await updateMemberTotals(tx.userId, tx.type, -amount);
-      } catch (e) {
-        console.error('Gagal membalikkan saldo sebelum hapus transaksi:', e);
-      }
-    }
-    await cloudflareApi(`/api/member/transactions/${tx.id}`, { method: 'DELETE' });
+    const result = await cloudflareApi<{ ok: boolean; deletedIds?: string[] }>(
+      `/api/member/transactions/${tx.id}?reverse=1`,
+      { method: 'DELETE' }
+    );
+    notifyCollectionChanged('accounts');
     notifyCollectionChanged('transactions');
+    return result.deletedIds ?? [];
   }
 };
 
