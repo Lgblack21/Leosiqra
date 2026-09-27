@@ -2408,6 +2408,7 @@ async function handleQuickTransaction(request: Request, env: Env) {
   if (authResult.error) {
     return authResult.error;
   }
+  const userId = authResult.session.user.id;
 
   const payload = await parseJson<{
     type?: string;
@@ -2415,6 +2416,7 @@ async function handleQuickTransaction(request: Request, env: Env) {
     category?: string;
     sub_category?: string;
     account?: string;
+    account_id?: string;
     note?: string;
     date?: string;
   }>(request);
@@ -2427,49 +2429,85 @@ async function handleQuickTransaction(request: Request, env: Env) {
   if (!type || !Number.isFinite(amount) || amount <= 0) {
     return json({ error: "type (pengeluaran/pemasukan) dan amount wajib diisi." }, { status: 400 });
   }
-  if (!payload.account || !payload.account.trim()) {
+  const accountIdParam = typeof payload.account_id === "string" ? payload.account_id.trim() : "";
+  const accountName = typeof payload.account === "string" ? payload.account.trim() : "";
+  if (!accountIdParam && !accountName) {
     return json({ error: "account wajib diisi." }, { status: 400 });
   }
+  // Tanggal opsional (mis. "kemarin" dari Input Cepat) — hanya YYYY-MM-DD dan
+  // tidak boleh di masa depan (WIB).
+  const today = todayWIB();
+  const rawDate = typeof payload.date === "string" ? payload.date.trim().slice(0, 10) : "";
+  if (rawDate && (!/^\d{4}-\d{2}-\d{2}$/.test(rawDate) || rawDate > today)) {
+    return json({ error: "Tanggal harus format YYYY-MM-DD dan tidak boleh di masa depan." }, { status: 400 });
+  }
+  const date = rawDate || today;
 
   const accounts = await env.DB.prepare("SELECT id, name, currency FROM accounts WHERE user_id = ?")
-    .bind(authResult.session.user.id)
+    .bind(userId)
     .all<{ id: string; name: string; currency: string }>();
 
-  const needle = payload.account.trim().toLowerCase();
-  const match =
-    accounts.results?.find((a) => a.name.toLowerCase() === needle) ??
-    accounts.results?.find((a) => a.name.toLowerCase().includes(needle));
+  // account_id (Input Cepat) lebih dulu — pasti tepat. Nama (Shortcut iOS):
+  // cocok persis dulu, baru "mengandung" — dan kalau "mengandung" cocok ke
+  // lebih dari satu rekening (mis. "BCA" → BCA Blue & BCA Platinum), tolak
+  // daripada menebak rekening yang salah.
+  let match: { id: string; name: string; currency: string } | undefined;
+  if (accountIdParam) {
+    match = accounts.results?.find((a) => a.id === accountIdParam);
+  } else {
+    const needle = accountName.toLowerCase();
+    match = accounts.results?.find((a) => a.name.toLowerCase() === needle);
+    if (!match) {
+      const partial = (accounts.results ?? []).filter((a) => a.name.toLowerCase().includes(needle));
+      if (partial.length > 1) {
+        return json(
+          { error: `Nama akun "${accountName}" cocok ke beberapa rekening: ${partial.map((a) => a.name).join(", ")}. Tulis lebih lengkap.` },
+          { status: 409 }
+        );
+      }
+      match = partial[0];
+    }
+  }
 
   if (!match) {
     const available = (accounts.results ?? []).map((a) => a.name).join(", ") || "(belum ada rekening)";
-    return json({ error: `Akun "${payload.account}" tidak ditemukan. Akun tersedia: ${available}` }, { status: 404 });
+    return json({ error: `Akun "${accountName || accountIdParam}" tidak ditemukan. Akun tersedia: ${available}` }, { status: 404 });
   }
 
-  const id = await insertTransactionRecord(env, authResult.session.user.id, {
-    type,
-    amount,
-    category: payload.category?.trim() || undefined,
-    subCategory: payload.sub_category?.trim() || undefined,
-    currency: match.currency,
-    accountId: match.id,
-    date: payload.date ?? todayWIB(),
-    note: payload.note?.trim() || undefined,
-  });
+  const currency = match.currency || "IDR";
+  const amountIdr = await resolveIdrAmount(currency, amount, undefined);
+  const id = generateId();
+  const now = nowIso();
 
-  // Endpoint transaksi biasa (/api/member/transactions) menyerahkan update saldo
-  // ke klien (accountService.updateAccountBalance) — tapi quick-transaction ini
-  // dipakai otomasi (Shortcut iOS/Input Cepat) yang tidak melakukan panggilan
-  // kedua itu, jadi saldo harus di-update di sini juga supaya tidak diam-diam
-  // tertinggal nol.
-  await env.DB.prepare(
-    `UPDATE accounts
-        SET balance = balance + ?
-      WHERE id = ? AND user_id = ?`
-  )
-    .bind(type === "pemasukan" ? amount : -amount, match.id, authResult.session.user.id)
-    .run();
+  // Catat transaksi + ubah saldo dalam satu batch atomik (dulu dua langkah:
+  // kalau update saldo gagal, transaksi tercatat tapi saldo tertinggal).
+  await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO transactions (
+         id, user_id, type, amount, amount_idr, category, sub_category, currency,
+         account_id, date, display_date, note, status, created_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'VERIFIED', ?, ?)`
+    ).bind(
+      id, userId, type, amount, amountIdr, payload.category?.trim() || null, payload.sub_category?.trim() || null,
+      currency, match.id, date, date, payload.note?.trim() || null, now, now
+    ),
+    env.DB.prepare(
+      `UPDATE accounts SET balance = balance + ?
+        WHERE id = ? AND user_id = ? AND EXISTS (SELECT 1 FROM transactions WHERE id = ? AND user_id = ?)`
+    ).bind(type === "pemasukan" ? amount : -amount, match.id, userId, id, userId),
+  ]);
 
-  return json({ ok: true, id, matchedAccount: match.name, currency: match.currency }, { status: 201 });
+  try {
+    const durableId = env.REALTIME_ROOM.idFromName(`member:${userId}`);
+    await env.REALTIME_ROOM.get(durableId).fetch("https://realtime.internal/publish", {
+      method: "POST",
+      body: JSON.stringify({ event: "transaction.created", payload: { id, userId } }),
+    });
+  } catch (error) {
+    console.error("Realtime publish quick-transaction gagal (transaksi tetap tercatat):", error);
+  }
+
+  return json({ ok: true, id, matchedAccount: match.name, currency }, { status: 201 });
 }
 
 async function handleUpdateTransaction(request: Request, env: Env, transactionId: string) {

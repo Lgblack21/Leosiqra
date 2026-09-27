@@ -221,6 +221,7 @@ export default function InputCepatPage() {
           amount: amountNumber,
           category: category.trim(),
           sub_category: subCategory.trim(),
+          account_id: selectedAccount.id,
           account: selectedAccount.name,
           note: note.trim(),
         },

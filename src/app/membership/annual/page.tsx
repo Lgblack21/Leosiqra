@@ -23,6 +23,7 @@ import { YearPicker } from '@/components/ui/YearPicker';
 import type { Transaction } from '@/lib/services/transactionService';
 import type { Investment } from '@/lib/services/investmentService';
 import type { Budget } from '@/lib/services/budgetService';
+import { budgetRealization } from '@/lib/budget';
 import type { Category } from '@/lib/services/categoryService';
 import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged } from '@/lib/cf-auth';
@@ -366,23 +367,25 @@ export default function AnnualDashboard() {
     return [...yearTransactions].filter(t => t.type !== 'debt').sort((a, b) => idrAmount(b) - idrAmount(a)).slice(0, 4);
   }, [yearTransactions]);
 
-  // Budget vs Actual for the Year Table
+  // Budget vs Actual setahun. Realisasi pakai helper yang sama dengan halaman
+  // Budget (hanya transaksi bertipe sama & kategori sama). Dulu semua budget
+  // dihitung dari PENGELUARAN — target pemasukan (mis. Gaji) selalu tampil
+  // aktual 0 & "HEMAT". Untuk pemasukan, melebihi target = bagus (TERCAPAI).
   const budgetRincian = useMemo(() => {
     return budgets.map(b => {
-      // actual sum across the selected year for this category
-      const actual = yearTransactions
-        .filter(t => t.type === 'pengeluaran' && t.category === b.category)
-        .reduce((sum, t) => sum + idrAmount(t), 0);
+      const actual = budgetRealization(b, yearTransactions).total;
       const limitTahunan = b.period === 'yearly' ? b.amount : b.amount * 12; // Handle period
-      const isOver = actual > limitTahunan;
+      const isIncome = b.type === 'pemasukan';
+      const good = isIncome ? actual >= limitTahunan : actual <= limitTahunan;
+      const diff = Math.abs(limitTahunan - actual);
       return {
-        item: b.category,
+        item: isIncome ? `${b.category} (target pemasukan)` : b.category,
         budgetStr: 'Rp ' + new Intl.NumberFormat('id-ID').format(limitTahunan),
         actualStr: 'Rp ' + new Intl.NumberFormat('id-ID').format(actual),
-        diffStr: (isOver ? '-Rp ' : 'Rp ') + new Intl.NumberFormat('id-ID').format(Math.abs(limitTahunan - actual)),
-        diffColor: isOver ? 'text-rose-500' : 'text-sky-500',
-        status: isOver ? 'OVER' : 'HEMAT',
-        statusStyle: isOver ? 'text-rose-500 border-rose-100 bg-white' : 'text-sky-500 border-sky-100 bg-white'
+        diffStr: (good ? 'Rp ' : '-Rp ') + new Intl.NumberFormat('id-ID').format(diff),
+        diffColor: good ? 'text-sky-500' : 'text-rose-500',
+        status: isIncome ? (good ? 'TERCAPAI' : 'KURANG') : (good ? 'HEMAT' : 'OVER'),
+        statusStyle: good ? 'text-sky-500 border-sky-100 bg-white' : 'text-rose-500 border-rose-100 bg-white'
       };
     });
   }, [budgets, yearTransactions]);
