@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LogoImage } from '@/components/ui/LogoImage';
-import { accountService, Account } from '@/lib/services/accountService';
+import { accountService, Account, parseAccountPayload } from '@/lib/services/accountService';
 import { Transaction } from '@/lib/services/transactionService';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { auth, db } from '@/lib/cf-client';
@@ -86,19 +86,8 @@ export default function RekeningPage() {
         const d = doc.data();
         // payload_json menyimpan cardColor & creditLimit — wajib di-parse, kalau
         // tidak keduanya hilang saat rekening ini diedit lewat AccountModal.
-        let cardColor: string | undefined;
-        let creditLimit = 0;
-        const payloadJson = (d.payload_json ?? d.payloadJson) as string | null | undefined;
-        if (payloadJson) {
-          try {
-            const parsed = JSON.parse(payloadJson) as { cardColor?: string; creditLimit?: number };
-            cardColor = parsed.cardColor;
-            creditLimit = Number(parsed.creditLimit) || 0;
-          } catch {
-            // payload_json tidak valid JSON — abaikan.
-          }
-        }
-        return { ...d, id: doc.id, balance: Number(d.balance) || 0, cardColor, creditLimit, createdAt: d.createdAt?.toDate?.() ?? new Date() } as Account;
+        const extra = parseAccountPayload(d.payload_json ?? d.payloadJson);
+        return { ...d, id: doc.id, balance: Number(d.balance) || 0, ...extra, createdAt: d.createdAt?.toDate?.() ?? new Date() } as Account;
       }));
       setLoading(false);
     }, (err) => {

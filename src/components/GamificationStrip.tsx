@@ -14,7 +14,9 @@ export const GamificationStrip = () => {
     });
   }, []);
 
-  if (!data) return null;
+  // Payload yang tidak sesuai bentuk (mis. API error yang tetap 200) tidak
+  // boleh menjatuhkan seluruh Dashboard — strip ini cuma pelengkap.
+  if (!data || !Array.isArray(data.badges)) return null;
   if (data.streakDays === 0 && data.surplusStreakMonths === 0 && !data.badges.some((b) => b.unlocked)) {
     return null;
   }

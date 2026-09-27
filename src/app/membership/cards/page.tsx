@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { cn, isIncomingTransaction } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { accountService, Account } from '@/lib/services/accountService';
+import { accountService, Account, parseAccountPayload } from '@/lib/services/accountService';
 import { Transaction } from '@/lib/services/transactionService';
 import { Saving } from '@/lib/services/savingsService';
 import { auth, db } from '@/lib/cf-client';
@@ -25,7 +25,7 @@ import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
 import { getCardGradientClass, CARD_COLOR_OPTIONS } from '@/lib/cardColors';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { AccountModal } from '@/components/modals/AccountModal';
-import { isCreditAccountType, computeCreditUsage, CreditUsage } from '@/lib/creditCard';
+import { isCreditAccountType, computeCreditUsage, CreditUsage, getCardCycle } from '@/lib/creditCard';
 import { LogoImage } from '@/components/ui/LogoImage';
 import { useFeedback } from '@/components/ui/Feedback';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -102,19 +102,8 @@ export default function MyCardsPage() {
         unsubAccRef.current = onSnapshot(qAcc, (snap) => {
           const accs = snap.docs.map(doc => {
             const d = doc.data();
-            let cardColor: string | undefined;
-            let creditLimit = 0;
-            const payloadJson = (d.payload_json ?? d.payloadJson) as string | null | undefined;
-            if (payloadJson) {
-              try {
-                const parsed = JSON.parse(payloadJson) as { cardColor?: string; creditLimit?: number };
-                cardColor = parsed.cardColor;
-                creditLimit = Number(parsed.creditLimit) || 0;
-              } catch {
-                // payload_json tidak valid JSON — abaikan.
-              }
-            }
-            return { ...d, id: doc.id, balance: Number(d.balance) || 0, cardColor, creditLimit, createdAt: d.createdAt?.toDate?.() ?? new Date() } as Account;
+            const extra = parseAccountPayload(d.payload_json ?? d.payloadJson);
+            return { ...d, id: doc.id, balance: Number(d.balance) || 0, ...extra, createdAt: d.createdAt?.toDate?.() ?? new Date() } as Account;
           });
           setAccounts(accs);
           // Auto-select first account
@@ -264,6 +253,15 @@ export default function MyCardsPage() {
   const cardLimit = heroCredit?.limit ?? 0;
   const cardUsed = heroCredit?.used ?? 0;
   const cardRemaining = heroCredit?.remaining ?? 0;
+  // Siklus tagihan (tanggal cetak/jatuh tempo) — null kalau belum diatur.
+  const heroCycle = useMemo(
+    () => (selectedAccount && isCreditCard ? getCardCycle(selectedAccount, transactions) : null),
+    [selectedAccount, isCreditCard, transactions]
+  );
+  const formatCycleDate = (ymd: string) => {
+    const [y, m, d] = ymd.split('-').map(Number);
+    return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(y, m - 1, d));
+  };
 
   // Outstanding debt (belum lunas) for selected account
   const accountDebt = useMemo(() => {
@@ -421,6 +419,41 @@ export default function MyCardsPage() {
                         style={{ width: `${cardLimit > 0 ? Math.min(100, (cardUsed / cardLimit) * 100) : 0}%` }}
                       />
                     </div>
+
+                    {/* Siklus tagihan */}
+                    {heroCycle ? (
+                      <div className="mt-5 grid grid-cols-3 gap-3 rounded-2xl bg-black/15 p-3 md:p-4">
+                        <div className="min-w-0">
+                          <p className="text-label font-bold text-white/60 uppercase">Tagihan periode ini</p>
+                          <p className="text-sm md:text-base font-black tabular-nums truncate">{formatAmount(heroCycle.amountDue, selectedAccount.currency)}</p>
+                          <p className="text-caption text-white/60">cetak {formatCycleDate(heroCycle.statementDate)}</p>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-label font-bold text-white/60 uppercase">Minimum bayar</p>
+                          <p className="text-sm md:text-base font-black tabular-nums truncate">{formatAmount(heroCycle.minPayment, selectedAccount.currency)}</p>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-label font-bold text-white/60 uppercase">Jatuh tempo</p>
+                          <p className="text-sm md:text-base font-black">{formatCycleDate(heroCycle.dueDate)}</p>
+                          <p className={cn('text-caption font-bold', heroCycle.overdue ? 'text-rose-200' : heroCycle.amountDue <= 0 ? 'text-emerald-200' : 'text-white/70')}>
+                            {heroCycle.amountDue <= 0
+                              ? 'Sudah lunas'
+                              : heroCycle.overdue
+                                ? `Lewat ${Math.abs(heroCycle.daysUntilDue)} hari!`
+                                : heroCycle.daysUntilDue === 0
+                                  ? 'Hari ini!'
+                                  : `${heroCycle.daysUntilDue} hari lagi`}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setEditingAccount(selectedAccount); setIsModalOpen(true); }}
+                        className="mt-5 w-full rounded-2xl border border-dashed border-white/30 px-4 py-3 text-left text-xs font-bold text-white/80 hover:bg-white/10 transition-colors"
+                      >
+                        Atur tanggal cetak & jatuh tempo → dapat hitungan tagihan per periode dan pengingat H-3 & H-1
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-6 md:gap-8 pt-6 md:pt-8 border-t border-white/10">

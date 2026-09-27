@@ -32,7 +32,7 @@ import { investmentService, Investment } from '@/lib/services/investmentService'
 import { savingsService, Saving } from '@/lib/services/savingsService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
-import { isCreditAccountType, computeCreditUsage } from '@/lib/creditCard';
+import { isCreditAccountType, computeCreditUsage, getCardCycle } from '@/lib/creditCard';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { GamificationStrip } from '@/components/GamificationStrip';
 
@@ -48,6 +48,9 @@ export default function MonthlyDashboard() {
   const [filterType, setFilterType] = useState<FilterType>('Semua');
   const [searchQuery, setSearchQuery] = useState('');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  // Semua transaksi (tanpa filter bulan) — dipakai siklus tagihan kartu
+  // kredit, yang tanggal cetaknya bisa jatuh di bulan sebelumnya.
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [savings, setSavings] = useState<Saving[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +58,9 @@ export default function MonthlyDashboard() {
   const [marketLoading, setMarketLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [creditCardBills, setCreditCardBills] = useState(0);
+  // Catatan Hutang "Kartu Kredit" yang belum lunas — dipakai untuk tagihan
+  // kartu yang dicatat cara lama (tanpa rekening kartu kredit).
+  const [unpaidCardDebts, setUnpaidCardDebts] = useState<Transaction[]>([]);
   const [otherDebts, setOtherDebts] = useState(0);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [accountsLoaded, setAccountsLoaded] = useState(false);
@@ -90,6 +95,7 @@ export default function MonthlyDashboard() {
             return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
           });
           setTransactions(periodTransactions);
+          setAllTransactions(allTransactions);
           setInvestments(allInvestments);
           setSavings(allSavings);
 
@@ -100,7 +106,7 @@ export default function MonthlyDashboard() {
           );
           const sumIDR = (list: typeof unpaidDebts) =>
             list.reduce((s, t) => s + (Number(t.amountIDR) || Number(t.amount) || 0), 0);
-          setCreditCardBills(sumIDR(unpaidDebts.filter((t) => t.subCategory === 'Kartu Kredit')));
+          setUnpaidCardDebts(unpaidDebts.filter((t) => t.subCategory === 'Kartu Kredit'));
           setOtherDebts(sumIDR(unpaidDebts.filter((t) => t.subCategory !== 'Kartu Kredit')));
         })
         .catch((err) => {
@@ -195,6 +201,43 @@ export default function MonthlyDashboard() {
   );
 
   const formatRp = formatIDR;
+
+  // Tagihan Kartu Kredit = total terpakai semua rekening kartu kredit (dari
+  // saldonya, lihat lib/creditCard.ts) + catatan Hutang "Kartu Kredit" yang
+  // belum lunas dan TIDAK menempel ke rekening kartu kredit. Catatan yang
+  // menempel ke rekening kartu dilewati supaya tidak terhitung dobel.
+  const creditCardBills = useMemo(() => {
+    const creditAccounts = accounts.filter((a) => isCreditAccountType(a.type));
+    const creditIds = new Set(creditAccounts.map((a) => a.id));
+    const cardsUsed = creditAccounts.reduce(
+      (s, a) => s + exchangeRateService.convert(computeCreditUsage(a).used, a.currency || 'IDR', 'IDR', fxRates),
+      0
+    );
+    const legacyDebts = unpaidCardDebts
+      .filter((t) => !t.accountId || !creditIds.has(t.accountId))
+      .reduce((s, t) => s + (Number(t.amountIDR) || Number(t.amount) || 0), 0);
+    return cardsUsed + legacyDebts;
+  }, [accounts, fxRates, unpaidCardDebts]);
+
+  // Jatuh tempo terdekat di antara kartu yang siklusnya diatur & masih punya
+  // tagihan periode tercetak.
+  const nearestDue = useMemo(() => {
+    const cycles = accounts
+      .filter((a) => isCreditAccountType(a.type))
+      .map((a) => ({ account: a, cycle: getCardCycle(a, allTransactions) }))
+      .filter((x): x is { account: Account; cycle: NonNullable<typeof x.cycle> } => Boolean(x.cycle && x.cycle.amountDue > 0));
+    cycles.sort((a, b) => a.cycle.daysUntilDue - b.cycle.daysUntilDue);
+    return cycles[0] ?? null;
+  }, [accounts, allTransactions]);
+  const dueLabel = (() => {
+    if (!nearestDue) return null;
+    const { cycle, account } = nearestDue;
+    const [y, m, d] = cycle.dueDate.split('-').map(Number);
+    const date = new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(y, m - 1, d));
+    if (cycle.overdue) return `${account.name}: lewat jatuh tempo ${Math.abs(cycle.daysUntilDue)} hari (${date})`;
+    if (cycle.daysUntilDue === 0) return `${account.name}: jatuh tempo hari ini`;
+    return `${account.name}: jatuh tempo ${date} · ${cycle.daysUntilDue} hari lagi`;
+  })();
 
   const visibleData = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -354,7 +397,10 @@ export default function MonthlyDashboard() {
           value={formatRp(creditCardBills)}
           valueClassName={creditCardBills > 0 ? 'text-rose-500' : undefined}
           loading={statsLoading}
-          caption={creditCardBills > 0 ? 'Perlu dibayar' : 'Tidak ada tagihan'}
+          badge={nearestDue && (nearestDue.cycle.overdue || nearestDue.cycle.daysUntilDue <= 3)
+            ? <Badge tone={nearestDue.cycle.overdue ? 'danger' : 'warning'}>{nearestDue.cycle.overdue ? 'Telat' : 'Segera'}</Badge>
+            : undefined}
+          caption={dueLabel ?? (creditCardBills > 0 ? 'Perlu dibayar' : 'Tidak ada tagihan')}
         />
         <StatCard
           label="Hutang Lainnya"

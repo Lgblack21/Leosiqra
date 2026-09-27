@@ -10,6 +10,7 @@ import { uploadToCloudinary } from '@/lib/cloudinary';
 import { CurrencySelect } from '@/components/CurrencySelect';
 import { NumberInput } from '@/components/ui/NumberInput';
 import { matchIndonesianInstitutionLogo } from '@/lib/indonesianBanks';
+import { CardCycleFields, emptyCardCycleForm, cardCycleFromForm } from './CardCycleFields';
 import { useRef } from 'react';
 
 interface CardModalProps {
@@ -30,6 +31,7 @@ export const CardModal = ({ isOpen, onClose, userId }: CardModalProps) => {
     creditLimit: '',
     baseValue: ''
   });
+  const [cycleForm, setCycleForm] = useState(emptyCardCycleForm);
   const [uploading, setUploading] = useState(false);
   // Lacak apakah logo saat ini hasil auto-match (boleh ditimpa lagi kalau nama
   // diganti) atau hasil upload manual (jangan pernah ditimpa diam-diam).
@@ -59,6 +61,11 @@ export const CardModal = ({ isOpen, onClose, userId }: CardModalProps) => {
     try {
       const initialBal = parseFloat(formData.initialBalance) || 0;
       const isCard = formData.type === 'Credit Card' || formData.type === 'kartu';
+      if (isCard && cycleForm.statementDay && cycleForm.statementDay === cycleForm.dueDay) {
+        toast.error('Tanggal cetak dan jatuh tempo tidak boleh sama.');
+        setLoading(false);
+        return;
+      }
       await accountService.createAccount({
         userId: userId,
         name: formData.name,
@@ -69,8 +76,10 @@ export const CardModal = ({ isOpen, onClose, userId }: CardModalProps) => {
         // Kartu kredit: balance = −tagihan terpakai (lihat lib/creditCard.ts).
         balance: isCard ? -Math.max(0, initialBal) : initialBal,
         creditLimit: parseFloat(formData.creditLimit) || 0,
-        baseValue: parseFloat(formData.baseValue) || 0
+        baseValue: parseFloat(formData.baseValue) || 0,
+        ...(isCard ? cardCycleFromForm(cycleForm) : {}),
       });
+      setCycleForm(emptyCardCycleForm);
       setFormData({ name: '', type: 'Credit Card', logoUrl: '', currency: 'IDR', initialBalance: '', creditLimit: '', baseValue: '' });
       setLogoIsAuto(true);
       onClose();
@@ -195,6 +204,7 @@ export const CardModal = ({ isOpen, onClose, userId }: CardModalProps) => {
               <p className="text-[10px] font-medium text-slate-400 pl-1">Plafon maksimal dari aplikasi (Akulaku, ShopeePayLater, Paylater BCA, KK, dll).</p>
             </div>
           )}
+          {formData.type === 'Credit Card' && <CardCycleFields value={cycleForm} onChange={setCycleForm} />}
 
           {/* Untuk kartu kredit/paylater: ini tagihan yang SUDAH terpakai saat ini
               (0 kalau kartu baru). Untuk rekening biasa: saldo sekarang. */}

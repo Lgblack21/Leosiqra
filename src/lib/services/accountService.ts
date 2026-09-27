@@ -14,11 +14,55 @@ export interface Account {
   logoUrl?: string;
   logoLabel?: string;
   cardColor?: string;
+  // Siklus tagihan kartu kredit (lihat lib/creditCycle.ts) — opsional.
+  statementDay?: number;
+  dueDay?: number;
+  minPaymentPercent?: number;
+  minPaymentAmount?: number;
   // Urutan tampil rekening (drag-to-reorder di Kartu Saya) — dipakai semua
   // halaman/dropdown yang menampilkan daftar rekening.
   sortOrder?: number;
   createdAt: Date;
 }
+
+export interface AccountPayloadFields {
+  cardColor?: string;
+  creditLimit: number;
+  statementDay?: number;
+  dueDay?: number;
+  minPaymentPercent?: number;
+  minPaymentAmount?: number;
+}
+
+// Satu-satunya parser payload_json rekening — dipakai service ini dan
+// halaman yang membaca rekening langsung lewat onSnapshot (Rekening, Kartu
+// Saya), supaya field baru tidak ketinggalan di salah satu tempat.
+export const parseAccountPayload = (payloadJson: unknown): AccountPayloadFields => {
+  if (typeof payloadJson !== 'string' || !payloadJson) return { creditLimit: 0 };
+  try {
+    const p = JSON.parse(payloadJson) as Record<string, unknown>;
+    const num = (v: unknown) => (v === undefined || v === null || v === '' || !Number.isFinite(Number(v)) ? undefined : Number(v));
+    return {
+      cardColor: typeof p.cardColor === 'string' ? p.cardColor : undefined,
+      creditLimit: Number(p.creditLimit) || 0,
+      statementDay: num(p.statementDay),
+      dueDay: num(p.dueDay),
+      minPaymentPercent: num(p.minPaymentPercent),
+      minPaymentAmount: num(p.minPaymentAmount),
+    };
+  } catch {
+    // payload_json tidak valid JSON — abaikan.
+    return { creditLimit: 0 };
+  }
+};
+
+// Field siklus tagihan untuk dikirim ke API (null = hapus pengaturan).
+const cycleFieldsForApi = (data: Partial<Account>) => ({
+  ...('statementDay' in data ? { statement_day: data.statementDay ?? null } : {}),
+  ...('dueDay' in data ? { due_day: data.dueDay ?? null } : {}),
+  ...('minPaymentPercent' in data ? { min_payment_percent: data.minPaymentPercent ?? null } : {}),
+  ...('minPaymentAmount' in data ? { min_payment_amount: data.minPaymentAmount ?? null } : {}),
+});
 
 export const accountService = {
   async createAccount(data: Omit<Account, 'id' | 'createdAt'>) {
@@ -35,6 +79,7 @@ export const accountService = {
         logo_url: data.logoUrl || null,
         logo_label: data.logoLabel || null,
         ...(data.cardColor ? { card_color: data.cardColor } : {}),
+        ...cycleFieldsForApi(data),
       },
     });
     notifyCollectionChanged('accounts');
@@ -45,28 +90,16 @@ export const accountService = {
     void _userId;
     const result = await cloudflareApi<{ items: Record<string, unknown>[] }>('/api/member/accounts');
     return result.items.map((data) => {
-      let cardColor: string | undefined;
-      let creditLimit = 0;
-      const payloadJson = data.payload_json as string | null | undefined;
-      if (payloadJson) {
-        try {
-          const parsed = JSON.parse(payloadJson) as { cardColor?: string; creditLimit?: number };
-          cardColor = parsed.cardColor;
-          creditLimit = Number(parsed.creditLimit) || 0;
-        } catch {
-          // payload_json tidak valid JSON — abaikan.
-        }
-      }
+      const extra = parseAccountPayload(data.payload_json);
       return {
         ...data,
         id: String(data.id ?? ''),
         userId: String(data.user_id ?? ''),
         initialBalance: Number(data.initial_balance) || 0,
         baseValue: Number(data.base_value) || 0,
-        creditLimit,
+        ...extra,
         logoUrl: (data.logo_url as string | undefined) ?? undefined,
         logoLabel: (data.logo_label as string | undefined) ?? undefined,
-        cardColor,
         sortOrder: Number(data.sort_order) || 0,
         createdAt: data.created_at ? new Date(String(data.created_at)) : new Date(),
       } as Account;
@@ -87,6 +120,7 @@ export const accountService = {
         ...(data.logoUrl !== undefined ? { logo_url: data.logoUrl } : {}),
         ...(data.logoLabel !== undefined ? { logo_label: data.logoLabel } : {}),
         ...(data.cardColor !== undefined ? { card_color: data.cardColor } : {}),
+        ...cycleFieldsForApi(data),
       },
     });
     notifyCollectionChanged('accounts');

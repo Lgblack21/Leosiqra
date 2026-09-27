@@ -6,6 +6,7 @@ import {
   type PushSubscription as WebPushSubscription,
   type VapidKeys,
 } from "@block65/webcrypto-web-push";
+import { computeCardCycle, clampCycleDay, lastStatementDate, type CardCycleSettings } from "../../src/lib/creditCycle";
 
 export interface Env {
   DB: D1Database;
@@ -2476,6 +2477,28 @@ async function handleListAccounts(request: Request, env: Env) {
   return json({ items: rows.results });
 }
 
+// Pengaturan siklus tagihan kartu kredit (Tahap 3) — dititipkan di
+// payload_json seperti cardColor/creditLimit. Nilai null = hapus pengaturan.
+// Tanggal dibatasi 1–28 supaya selalu ada di setiap bulan (termasuk Februari).
+const CARD_CYCLE_FIELDS: Array<[string, string, (v: number) => number | null]> = [
+  ["statement_day", "statementDay", (v) => (Number.isFinite(v) ? Math.min(28, Math.max(1, Math.round(v))) : null)],
+  ["due_day", "dueDay", (v) => (Number.isFinite(v) ? Math.min(28, Math.max(1, Math.round(v))) : null)],
+  ["min_payment_percent", "minPaymentPercent", (v) => (Number.isFinite(v) ? Math.min(100, Math.max(0, v)) : null)],
+  ["min_payment_amount", "minPaymentAmount", (v) => (Number.isFinite(v) ? Math.max(0, v) : null)],
+];
+
+const hasCardCycleFields = (payload: Record<string, unknown>) =>
+  CARD_CYCLE_FIELDS.some(([key]) => payload[key] !== undefined);
+
+const applyCardCycleFields = (payload: Record<string, unknown>, target: Record<string, unknown>) => {
+  for (const [key, prop, normalize] of CARD_CYCLE_FIELDS) {
+    if (payload[key] === undefined) continue;
+    const value = payload[key] === null || payload[key] === "" ? null : normalize(Number(payload[key]));
+    if (value === null) delete target[prop];
+    else target[prop] = value;
+  }
+};
+
 async function handleCreateAccount(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) {
@@ -2489,6 +2512,7 @@ async function handleCreateAccount(request: Request, env: Env) {
   const extra: Record<string, unknown> = {};
   if (payload.card_color) extra.cardColor = payload.card_color;
   if (payload.credit_limit !== undefined) extra.creditLimit = Number(payload.credit_limit) || 0;
+  applyCardCycleFields(payload, extra);
   const payloadJson = Object.keys(extra).length ? JSON.stringify(extra) : null;
 
   // Rekening baru selalu masuk paling akhir di daftar — ambil sort_order
@@ -2570,7 +2594,7 @@ async function handleUpdateAccount(request: Request, env: Env, accountId: string
   ]);
   const entries = Object.entries(payload).filter(([key]) => allowed.has(key));
 
-  if (payload.card_color !== undefined || payload.credit_limit !== undefined) {
+  if (payload.card_color !== undefined || payload.credit_limit !== undefined || hasCardCycleFields(payload)) {
     const existing = await env.DB.prepare("SELECT payload_json FROM accounts WHERE id = ? AND user_id = ?")
       .bind(accountId, authResult.session.user.id)
       .first<{ payload_json: string | null }>();
@@ -2584,6 +2608,7 @@ async function handleUpdateAccount(request: Request, env: Env, accountId: string
     }
     if (payload.card_color !== undefined) payloadObj.cardColor = payload.card_color;
     if (payload.credit_limit !== undefined) payloadObj.creditLimit = Number(payload.credit_limit) || 0;
+    applyCardCycleFields(payload, payloadObj);
     entries.push(["payload_json", JSON.stringify(payloadObj)]);
   }
 
@@ -5606,6 +5631,74 @@ const TAX_DEADLINE_REMINDERS: Record<string, string> = {
   "03-20": "Tinggal 11 hari lagi menuju batas lapor SPT Tahunan (31 Maret). Cek & siapkan draft di Pajak Center sebelum kena telat lapor.",
 };
 
+// ===== Pengingat jatuh tempo kartu kredit (H-3, H-1, hari H), jam 10:00 WIB =====
+// Kalkulasi siklus memakai src/lib/creditCycle.ts yang sama dengan frontend
+// (Kartu Saya & Dashboard), jadi angka di notifikasi = angka di layar.
+const CARD_REMINDER_DAYS = new Set([3, 1, 0]);
+
+const formatMoneyForPush = (amount: number, currency: string) => {
+  try {
+    return new Intl.NumberFormat("id-ID", { style: "currency", currency: currency || "IDR", maximumFractionDigits: 0 }).format(amount);
+  } catch {
+    return `${currency || ""} ${Math.round(amount).toLocaleString("id-ID")}`.trim();
+  }
+};
+
+const sendCreditCardDueReminders = async (env: Env) => {
+  const today = todayWIB();
+  const { results } = await env.DB.prepare(
+    `SELECT id, user_id, name, currency, balance, payload_json
+       FROM accounts
+      WHERE type IN ('Credit Card', 'kartu') AND payload_json LIKE '%dueDay%'`
+  ).all<{ id: string; user_id: string; name: string; currency: string | null; balance: number; payload_json: string | null }>();
+
+  for (const card of results ?? []) {
+    try {
+      let settings: CardCycleSettings = {};
+      try {
+        settings = JSON.parse(card.payload_json || "{}") as CardCycleSettings;
+      } catch {
+        continue;
+      }
+      const statementDay = clampCycleDay(settings.statementDay);
+      if (!statementDay || !clampCycleDay(settings.dueDay)) continue;
+      const used = Math.max(0, -(Number(card.balance) || 0));
+      if (used <= 0) continue;
+
+      // Cuma arus SETELAH tanggal cetak terakhir yang memengaruhi tagihan tercetak.
+      const since = lastStatementDate(today, statementDay);
+      const { results: txs } = await env.DB.prepare(
+        `SELECT type, sub_category, amount, date FROM transactions
+          WHERE account_id = ? AND user_id = ? AND type != 'debt' AND substr(date, 1, 10) > ?`
+      )
+        .bind(card.id, card.user_id, since)
+        .all<{ type: string; sub_category: string | null; amount: number; date: string }>();
+      const flows = (txs ?? []).map((t) => {
+        const incoming =
+          t.type === "pemasukan" || ((t.type === "transfer" || t.type === "topup") && (t.sub_category ?? "").includes("Masuk"));
+        return { date: String(t.date).slice(0, 10), delta: incoming ? -(Number(t.amount) || 0) : Number(t.amount) || 0 };
+      });
+
+      const cycle = computeCardCycle(used, flows, settings, today);
+      if (!cycle || cycle.amountDue <= 0 || !CARD_REMINDER_DAYS.has(cycle.daysUntilDue)) continue;
+
+      const currency = card.currency || "IDR";
+      const when = cycle.daysUntilDue === 0 ? "hari ini" : cycle.daysUntilDue === 1 ? "besok" : `${cycle.daysUntilDue} hari lagi`;
+      const [y, m, d] = cycle.dueDate.split("-").map(Number);
+      const dueText = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(Date.UTC(y, m - 1, d)));
+      await sendWebPushToUser(
+        env,
+        card.user_id,
+        `Tagihan ${card.name} jatuh tempo ${when}`,
+        `Tagihan ${formatMoneyForPush(cycle.amountDue, currency)} · minimum ${formatMoneyForPush(cycle.minPayment, currency)} · jatuh tempo ${dueText}.`,
+        "/membership/cards"
+      );
+    } catch (error) {
+      console.error("Gagal memproses pengingat kartu kredit", card.id, error);
+    }
+  }
+};
+
 const sendTaxDeadlineReminders = async (env: Env) => {
   const body = TAX_DEADLINE_REMINDERS[todayWIB().slice(5)];
   if (!body) return;
@@ -6320,6 +6413,7 @@ const worker = {
     // 03:00 UTC = 10:00 WIB — deposito jatuh tempo + eksekusi recurring hari ini.
     ctx.waitUntil(processMaturedDeposits(env));
     ctx.waitUntil(processDueRecurringTransactions(env));
+    ctx.waitUntil(sendCreditCardDueReminders(env));
   },
 };
 

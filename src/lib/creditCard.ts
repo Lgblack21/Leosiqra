@@ -1,5 +1,7 @@
 import type { Account } from '@/lib/services/accountService';
 import type { Transaction } from '@/lib/services/transactionService';
+import { computeCardCycle, type CardCycle, type CardFlow } from '@/lib/creditCycle';
+import { toLocalDateString } from '@/lib/utils';
 
 // Kartu kredit & paylater (Akulaku, ShopeePayLater, Paylater BCA, KK, dst.)
 // dimodelkan sebagai limit, bukan saldo kas. Fungsi di file ini adalah
@@ -37,3 +39,24 @@ export const computeCreditUsage = (account: Account, transactions?: Transaction[
 // Kebalikan konvensi di atas: tagihan terpakai (angka positif yang user isi di
 // form) → nilai `balance` yang disimpan.
 export const creditBalanceFromUsed = (used: number) => -Math.max(0, used || 0);
+
+// ---- Siklus tagihan (Tahap 3) ----------------------------------------------
+
+// Arus uang rekening kartu dari daftar transaksi: belanja/top up keluar
+// menambah terpakai (+), pembayaran/transfer masuk mengurangi (−). Catatan
+// Hutang/Piutang (type "debt") bukan arus uang — dilewati.
+export const cardFlowsFromTransactions = (accountId: string, transactions: Transaction[]): CardFlow[] =>
+  transactions
+    .filter((t) => t.accountId === accountId && t.type !== 'debt')
+    .map((t) => {
+      const amount = Number(t.amount) || 0;
+      const date = t.date instanceof Date ? toLocalDateString(t.date) : String(t.date).slice(0, 10);
+      const isIncoming =
+        t.type === 'pemasukan' || ((t.type === 'transfer' || t.type === 'topup') && Boolean(t.subCategory?.includes('Masuk')));
+      return { date, delta: isIncoming ? -amount : amount };
+    });
+
+export const getCardCycle = (account: Account, transactions: Transaction[], today: string = toLocalDateString()): CardCycle | null =>
+  account.id
+    ? computeCardCycle(computeCreditUsage(account).used, cardFlowsFromTransactions(account.id, transactions), account, today)
+    : null;

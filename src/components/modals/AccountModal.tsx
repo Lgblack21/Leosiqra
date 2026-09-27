@@ -13,6 +13,7 @@ import { NumberInput } from '@/components/ui/NumberInput';
 import { CARD_COLOR_OPTIONS } from '@/lib/cardColors';
 import { matchIndonesianInstitutionLogo } from '@/lib/indonesianBanks';
 import { isCreditAccountType, computeCreditUsage, creditBalanceFromUsed } from '@/lib/creditCard';
+import { CardCycleFields, emptyCardCycleForm, cardCycleFromForm, cardCycleToForm } from './CardCycleFields';
 import { useRef } from 'react';
 
 interface AccountModalProps {
@@ -43,6 +44,7 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
     creditLimit: '',
     cardColor: ''
   });
+  const [cycleForm, setCycleForm] = useState(emptyCardCycleForm);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -101,7 +103,9 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
         creditLimit: initialData.creditLimit ? String(initialData.creditLimit) : '',
         cardColor: initialData.cardColor || ''
       });
+      setCycleForm(cardCycleToForm(initialData));
     } else {
+      setCycleForm(emptyCardCycleForm);
       setFormData(prev => ({
         ...prev,
         type: initialType
@@ -117,6 +121,13 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
       const enteredValue = parseFloat(formData.balance) || 0;
       const isCredit = isCreditAccountType(formData.type);
       const balanceToStore = isCredit ? creditBalanceFromUsed(enteredValue) : enteredValue;
+      if (isCredit && cycleForm.statementDay && cycleForm.statementDay === cycleForm.dueDay) {
+        setError('Tanggal cetak dan jatuh tempo tidak boleh sama.');
+        setSaving(false);
+        return;
+      }
+      // Field siklus cuma dikirim untuk kartu kredit.
+      const cycle = isCredit ? cardCycleFromForm(cycleForm) : {};
       if (initialData?.id) {
         // initialBalance sengaja TIDAK dikirim saat edit — dulu tiap edit
         // (termasuk sekadar ganti nama/warna) menimpanya dengan saldo saat
@@ -130,7 +141,8 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
           balance: balanceToStore,
           baseValue: parseFloat(formData.baseValue) || 0,
           creditLimit: parseFloat(formData.creditLimit) || 0,
-          cardColor: formData.cardColor
+          cardColor: formData.cardColor,
+          ...cycle,
         });
       } else {
         await accountService.createAccount({
@@ -144,7 +156,8 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
           initialBalance: enteredValue,
           baseValue: parseFloat(formData.baseValue) || 0,
           creditLimit: parseFloat(formData.creditLimit) || 0,
-          cardColor: formData.cardColor
+          cardColor: formData.cardColor,
+          ...cycle,
         });
       }
       onClose();
@@ -301,6 +314,7 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
               <p className="text-[10px] font-medium text-slate-400 pl-1">Plafon maksimal dari aplikasi (Akulaku, ShopeePayLater, Paylater BCA, KK, dll).</p>
             </div>
           )}
+          {formData.type === 'Credit Card' && <CardCycleFields value={cycleForm} onChange={setCycleForm} />}
 
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">

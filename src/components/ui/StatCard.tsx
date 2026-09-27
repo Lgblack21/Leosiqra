@@ -46,7 +46,9 @@ export function StatCard({
               />
             </div>
           )}
-          {caption && <span className="text-caption font-medium text-slate-400 whitespace-nowrap">{caption}</span>}
+          {caption && (
+            <span className={cn('text-caption font-medium text-slate-400', progress !== undefined && 'whitespace-nowrap')}>{caption}</span>
+          )}
         </div>
       )}
     </Card>
