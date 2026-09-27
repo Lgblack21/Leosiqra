@@ -95,6 +95,7 @@ const softwareAppJsonLd = {
 
 import MaintenanceGuard from "@/components/MaintenanceGuard";
 import StaleReloadGuard from "@/components/StaleReloadGuard";
+import { NoZoomGuard } from "@/components/NoZoomGuard";
 import LogoUpdateBanner from "@/components/LogoUpdateBanner";
 
 export default function RootLayout({
@@ -122,6 +123,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         <StaleReloadGuard />
+        <NoZoomGuard />
         <LogoUpdateBanner />
         <MaintenanceGuard>
           {children}

@@ -182,3 +182,11 @@ body {
     animation: none;
   }
 }
+
+/* Mode aplikasi (PWA/native/app mobile, dipasang NoZoomGuard): tidak ada
+   pinch-zoom & double-tap zoom, dan teks tidak di-resize otomatis. */
+html.no-zoom {
+  touch-action: pan-x pan-y;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
