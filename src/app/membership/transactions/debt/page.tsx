@@ -42,7 +42,7 @@ export default function DebtPage() {
   // terpilih, jadi hutang bulan lalu yang belum lunas tidak kelihatan dan
   // user harus mundur bulan dulu untuk membayarnya.
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('Belum lunas');
-  const { confirm } = useFeedback();
+  const { confirm, toast } = useFeedback();
 
   // Cicilan/pelunasan (transaksi pemasukan/pengeluaran yang terhubung ke
   // catatan hutang/piutang via relatedId) — diambil all-time (bukan per bulan
@@ -227,9 +227,10 @@ export default function DebtPage() {
         const balanceChange = financeType === 'pemasukan' ? remaining : -remaining;
         await accountService.updateAccountBalance(trx.accountId, balanceChange);
       }
+      toast.success(`${trx.category} ${trx.lenderName ? `${trx.lenderName} ` : ''}ditandai lunas.`);
     } catch (e) {
       console.error(e);
-      setError('Gagal menandai lunas. Silakan coba lagi.');
+      toast.error('Gagal menandai lunas. Silakan coba lagi.');
     } finally {
       setSettlingId(null);
     }
@@ -282,9 +283,14 @@ export default function DebtPage() {
 
       setPayingDebt(null);
       setPayAmount('');
+      toast.success(
+        remaining - paidNow <= 0
+          ? `Cicilan ${formatAmount(paidNow, trx.currency)} tersimpan — ${trx.category.toLowerCase()} ini lunas.`
+          : `Cicilan ${formatAmount(paidNow, trx.currency)} tersimpan. Sisa ${formatAmount(remaining - paidNow, trx.currency)}.`
+      );
     } catch (e) {
       console.error(e);
-      setError('Gagal mencatat cicilan. Silakan coba lagi.');
+      toast.error('Gagal mencatat cicilan. Silakan coba lagi.');
     } finally {
       setPayingLoading(false);
     }
@@ -303,9 +309,10 @@ export default function DebtPage() {
     setDeletingId(tx.id);
     try {
       await transactionService.deleteTransaction(tx);
+      toast.success('Catatan dihapus.');
     } catch (e) {
       console.error(e);
-      setError('Gagal menghapus catatan. Silakan coba lagi.');
+      toast.error('Gagal menghapus catatan. Silakan coba lagi.');
     } finally {
       setDeletingId(null);
     }
@@ -350,7 +357,7 @@ export default function DebtPage() {
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sisa Hutang</p>
           </div>
           <div>
-            <h3 className="text-2xl md:text-3xl font-black text-rose-600 leading-tight">Rp {formatRp(totalHutang)}</h3>
+            <h3 key={totalHutang} className="text-2xl md:text-3xl font-black text-rose-600 leading-tight tabular-nums animate-in">Rp {formatRp(totalHutang)}</h3>
             <p className="text-[10px] font-bold text-rose-400 mt-1 uppercase tracking-wider">Kewajiban Belum Terbayar</p>
           </div>
           <Banknote size={48} className="absolute -right-2 -bottom-2 text-rose-50/60 group-hover:scale-110 transition-transform" />
@@ -364,7 +371,7 @@ export default function DebtPage() {
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sisa Piutang</p>
           </div>
           <div>
-            <h3 className="text-2xl md:text-3xl font-black text-emerald-600 leading-tight">Rp {formatRp(totalPiutang)}</h3>
+            <h3 key={totalPiutang} className="text-2xl md:text-3xl font-black text-emerald-600 leading-tight tabular-nums animate-in">Rp {formatRp(totalPiutang)}</h3>
             <p className="text-[10px] font-bold text-emerald-500 mt-1 uppercase tracking-wider">Dana Dipinjamkan</p>
           </div>
           <Banknote size={48} className="absolute -right-2 -bottom-2 text-emerald-50/60 group-hover:scale-110 transition-transform" />

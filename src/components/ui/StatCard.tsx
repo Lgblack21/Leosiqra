@@ -26,7 +26,13 @@ export function StatCard({
       {loading ? (
         <Skeleton className="h-8 w-3/4 mb-5" />
       ) : (
-        <p className={cn('text-xl md:text-2xl font-black text-slate-900 tracking-tight tabular-nums mb-5 truncate', valueClassName)}>
+        // key = nilainya: tiap angka berubah (mis. setelah input baru), elemen
+        // di-mount ulang dan fade-in halus lewat .animate-in — perubahan
+        // kelihatan tanpa loncatan kasar.
+        <p
+          key={typeof value === 'string' || typeof value === 'number' ? String(value) : undefined}
+          className={cn('text-xl md:text-2xl font-black text-slate-900 tracking-tight tabular-nums mb-5 truncate animate-in', valueClassName)}
+        >
           {value}
         </p>
       )}

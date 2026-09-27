@@ -5,9 +5,44 @@ import { auth } from "@/lib/cf-client";
 // bus ini menyambungkan tiap mutasi ke listener aktif supaya auto-refetch.
 const changeListeners = new Map<string, Set<() => void>>();
 
-export const notifyCollectionChanged = (collectionName: string) => {
+const runLocalListeners = (collectionName: string) => {
   changeListeners.get(collectionName)?.forEach((fn) => fn());
 };
+
+// Bus di atas cuma hidup di satu tab. BroadcastChannel meneruskan sinyal
+// "koleksi berubah" ke tab lain di browser yang sama, supaya input di satu
+// tab langsung tampil di tab lain tanpa F5.
+const syncChannel =
+  typeof window !== "undefined" && "BroadcastChannel" in window
+    ? new BroadcastChannel("leosiqra-data-sync")
+    : null;
+syncChannel?.addEventListener("message", (event: MessageEvent<{ collection?: string }>) => {
+  if (event.data?.collection) runLocalListeners(event.data.collection);
+});
+
+export const notifyCollectionChanged = (collectionName: string) => {
+  runLocalListeners(collectionName);
+  syncChannel?.postMessage({ collection: collectionName });
+};
+
+// Perubahan dari perangkat lain (app HP, Shortcut iOS, cron recurring) tidak
+// lewat bus mana pun — ambil ulang semua data yang sedang ditampilkan setiap
+// tab/app kembali aktif. Dibatasi sekali per 5 detik supaya pindah-pindah
+// jendela tidak membanjiri API.
+const FOCUS_REFRESH_MIN_INTERVAL_MS = 5000;
+let lastFocusRefresh = Date.now();
+const refreshAllOnFocus = () => {
+  const now = Date.now();
+  if (now - lastFocusRefresh < FOCUS_REFRESH_MIN_INTERVAL_MS) return;
+  lastFocusRefresh = now;
+  changeListeners.forEach((listeners) => listeners.forEach((fn) => fn()));
+};
+if (typeof window !== "undefined") {
+  window.addEventListener("focus", refreshAllOnFocus);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") refreshAllOnFocus();
+  });
+}
 
 export const subscribeToCollectionChanges = (collectionName: string, fn: () => void) => {
   if (!changeListeners.has(collectionName)) {
