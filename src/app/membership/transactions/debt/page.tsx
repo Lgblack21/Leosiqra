@@ -19,6 +19,11 @@ import { onAuthStateChanged, User } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 import { useRef } from 'react';
 import { MonthPicker } from '@/components/ui/MonthPicker';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
+import { useFeedback } from '@/components/ui/Feedback';
+
+const STATUS_OPTIONS = ['Belum lunas', 'Lunas', 'Semua'] as const;
+type StatusFilter = typeof STATUS_OPTIONS[number];
 
 export default function DebtPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -32,6 +37,12 @@ export default function DebtPage() {
   const [error, setError] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [settlingId, setSettlingId] = useState<string | null>(null);
+  // Default "Belum lunas" = semua catatan yang masih punya sisa, dari bulan
+  // mana pun. Dulu halaman ini cuma memuat catatan yang DIBUAT di bulan
+  // terpilih, jadi hutang bulan lalu yang belum lunas tidak kelihatan dan
+  // user harus mundur bulan dulu untuk membayarnya.
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('Belum lunas');
+  const { confirm } = useFeedback();
 
   // Cicilan/pelunasan (transaksi pemasukan/pengeluaran yang terhubung ke
   // catatan hutang/piutang via relatedId) — diambil all-time (bukan per bulan
@@ -57,15 +68,10 @@ export default function DebtPage() {
           setAccounts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account)));
         });
 
-        const startOfMonth = new Date(selectedYear, selectedMonth, 1);
-        const endOfMonth = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
-
         const q = query(
-          collection(db, 'transactions'), 
+          collection(db, 'transactions'),
           where('userId', '==', u.uid),
           where('type', '==', 'debt'),
-          where('date', '>=', startOfMonth),
-          where('date', '<=', endOfMonth),
           orderBy('date', 'desc')
         );
         if (unsubRef.current) unsubRef.current();
@@ -108,7 +114,7 @@ export default function DebtPage() {
       if (unsubAccRef.current) unsubAccRef.current();
       if (unsubPaymentsRef.current) unsubPaymentsRef.current();
     };
-  }, [selectedMonth, selectedYear]);
+  }, []);
 
   // Total sudah dibayar per catatan hutang/piutang (dikelompokkan lewat relatedId).
   const paidByDebtId = useMemo(() => {
@@ -131,18 +137,40 @@ export default function DebtPage() {
     return acc ? acc.name : id || '-';
   };
 
+  const inSelectedMonth = (t: Transaction) =>
+    t.date.getMonth() === selectedMonth && t.date.getFullYear() === selectedYear;
+
   const filtered = useMemo(() => {
-    if (!searchQuery) return transactions;
-    return transactions.filter(t =>
-      (t.note || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.category.toLowerCase().includes(searchQuery.toLowerCase())
+    const byStatus = transactions.filter((t) => {
+      if (statusFilter === 'Belum lunas') return getRemaining(t) > 0;
+      if (statusFilter === 'Lunas') return getRemaining(t) <= 0 && inSelectedMonth(t);
+      return inSelectedMonth(t);
+    });
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return byStatus;
+    return byStatus.filter(t =>
+      (t.note || '').toLowerCase().includes(q) ||
+      (t.lenderName || '').toLowerCase().includes(q) ||
+      t.category.toLowerCase().includes(q)
     );
-  }, [transactions, searchQuery]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transactions, searchQuery, statusFilter, selectedMonth, selectedYear, paidByDebtId]);
 
   // Ringkasan digabung lintas rekening, jadi pakai amountIDR (sudah
   // dikonversi saat transaksi disimpan), bukan .amount mentah.
-  const totalHutang = useMemo(() => transactions.filter(t => t.category === 'Hutang' && t.paymentStatus !== 'lunas').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0), [transactions]);
-  const totalPiutang = useMemo(() => transactions.filter(t => t.category === 'Piutang' && t.paymentStatus !== 'lunas').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0), [transactions]);
+  // SISA yang belum dibayar (setelah cicilan), lintas semua bulan, dalam IDR.
+  // Sisa dihitung di mata uang asli catatan lalu dikonversi pakai rasio
+  // amountIDR/amount yang tersimpan saat catatan dibuat.
+  const remainingIdr = (t: Transaction) => {
+    const remaining = getRemaining(t);
+    if (remaining <= 0) return 0;
+    const ratio = t.amount > 0 && Number(t.amountIDR) > 0 ? Number(t.amountIDR) / t.amount : 1;
+    return remaining * ratio;
+  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const totalHutang = useMemo(() => transactions.filter(t => t.category === 'Hutang').reduce((s, t) => s + remainingIdr(t), 0), [transactions, paidByDebtId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const totalPiutang = useMemo(() => transactions.filter(t => t.category === 'Piutang').reduce((s, t) => s + remainingIdr(t), 0), [transactions, paidByDebtId]);
 
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n).replace('Rp', '').trim();
   const formatAmount = (n: number, currency: string | undefined) => {
@@ -161,7 +189,12 @@ export default function DebtPage() {
     if (!trx.id || !user || settlingId) return;
     const remaining = getRemaining(trx);
     if (remaining <= 0) return;
-    if (!confirm(`Tandai "${trx.category}" sisa ${formatAmount(remaining, trx.currency)} sebagai lunas? Ini akan membuat catatan transaksi baru dan menyesuaikan saldo akun.`)) return;
+    const ok = await confirm({
+      title: `Tandai ${trx.category.toLowerCase()} ini lunas?`,
+      message: `Sisa ${formatAmount(remaining, trx.currency)} dicatat sebagai transaksi baru dan saldo rekening disesuaikan.`,
+      confirmLabel: 'Tandai lunas',
+    });
+    if (!ok) return;
     setError('');
     setSettlingId(trx.id);
     try {
@@ -259,7 +292,13 @@ export default function DebtPage() {
 
   const handleDelete = async (tx: Transaction) => {
     if (!tx.id) return;
-    if (!confirm('Hapus catatan hutang/piutang ini? Tindakan ini tidak bisa dibatalkan.')) return;
+    const ok = await confirm({
+      title: 'Hapus catatan hutang/piutang ini?',
+      message: 'Catatan cicilan/pelunasan yang sudah tercatat tidak ikut terhapus. Tindakan ini tidak bisa dibatalkan.',
+      confirmLabel: 'Hapus',
+      danger: true,
+    });
+    if (!ok) return;
     setError('');
     setDeletingId(tx.id);
     try {
@@ -272,6 +311,8 @@ export default function DebtPage() {
     }
   };
 
+  const periodLabel = new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth));
+
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
       
@@ -279,20 +320,24 @@ export default function DebtPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] border border-slate-50 shadow-sm">
         <div className="flex flex-col">
           <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Hutang & Piutang</h1>
-          <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-            Periode {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth))}
+          <p className="text-sm text-slate-500 mt-1">
+            {statusFilter === 'Belum lunas'
+              ? 'Semua yang belum lunas, dari bulan mana pun'
+              : `Periode ${periodLabel}`}
           </p>
         </div>
-        
-        <div className="flex flex-wrap items-center gap-3">
-          <MonthPicker 
-            value={{ month: selectedMonth, year: selectedYear }}
-            onChange={({ month, year }) => {
-              setSelectedMonth(month);
-              setSelectedYear(year);
-            }}
-          />
-        </div>
+
+        {statusFilter !== 'Belum lunas' && (
+          <div className="flex flex-wrap items-center gap-3">
+            <MonthPicker
+              value={{ month: selectedMonth, year: selectedYear }}
+              onChange={({ month, year }) => {
+                setSelectedMonth(month);
+                setSelectedYear(year);
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* 2. Stats Cards */}
@@ -302,7 +347,7 @@ export default function DebtPage() {
             <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600">
               <AlertCircle size={20} />
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Hutang</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sisa Hutang</p>
           </div>
           <div>
             <h3 className="text-2xl md:text-3xl font-black text-rose-600 leading-tight">Rp {formatRp(totalHutang)}</h3>
@@ -316,7 +361,7 @@ export default function DebtPage() {
             <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
               <CheckCircle2 size={20} />
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Piutang</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sisa Piutang</p>
           </div>
           <div>
             <h3 className="text-2xl md:text-3xl font-black text-emerald-600 leading-tight">Rp {formatRp(totalPiutang)}</h3>
@@ -333,8 +378,15 @@ export default function DebtPage() {
       )}
 
       {/* 3. Filter */}
-      <div className="bg-white p-3 rounded-[24px] border border-slate-50 shadow-sm">
-        <div className="relative group">
+      <div className="bg-white p-3 rounded-[24px] border border-slate-50 shadow-sm flex flex-col md:flex-row md:items-center gap-3">
+        <SegmentedControl
+          ariaLabel="Filter status pelunasan"
+          options={STATUS_OPTIONS}
+          value={statusFilter}
+          onChange={setStatusFilter}
+          className="shrink-0 self-start md:self-auto"
+        />
+        <div className="relative group flex-1">
           <Search size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" />
           <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
             placeholder="Cari catatan hutang atau piutang..."
@@ -349,8 +401,8 @@ export default function DebtPage() {
         ) : filtered.length === 0 ? (
           <div className="p-10">
             <EmptyState 
-              title="Belum ada catatan"
-              description="Catat hutang atau piutang Anda untuk tidak ada yang terlewat."
+              title={statusFilter === 'Belum lunas' ? 'Tidak ada yang belum lunas' : 'Belum ada catatan di bulan ini'}
+              description={statusFilter === 'Belum lunas' ? 'Semua hutang dan piutang sudah lunas.' : 'Ganti bulan atau pilih filter lain.'}
               icon={<Banknote size={24} />}
             />
           </div>
@@ -465,7 +517,7 @@ export default function DebtPage() {
               </table>
             </div>
             <div className="px-8 py-5 bg-slate-50/30 border-t border-slate-50">
-              <p className="text-[11px] font-bold text-slate-400">Menampilkan {filtered.length} dari {transactions.length} catatan</p>
+              <p className="text-[11px] font-bold text-slate-400">Menampilkan {filtered.length} catatan · {statusFilter === 'Belum lunas' ? 'semua bulan' : periodLabel}</p>
             </div>
           </>
         )}
