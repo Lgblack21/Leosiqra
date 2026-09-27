@@ -3482,20 +3482,81 @@ async function handleUpdateInvestment(request: Request, env: Env, investmentId: 
   return json({ ok: true });
 }
 
+const INVESTMENT_OUTFLOW_TYPES = new Set(["Penempatan", "Beli", "Pembelian"]);
+const INVESTMENT_INFLOW_TYPES = new Set(["Penarikan", "Jual", "Penjualan", "Bunga"]);
+
 async function handleDeleteInvestment(request: Request, env: Env, investmentId: string) {
   const authResult = await requireSession(env, request);
   if (authResult.error) {
     return authResult.error;
   }
+  const userId = authResult.session.user.id;
 
-  const result = await env.DB.prepare("DELETE FROM investments WHERE id = ? AND user_id = ?")
-    .bind(investmentId, authResult.session.user.id)
-    .run();
+  // Client lama membalikkan saldo & total sendiri SEBELUM memanggil endpoint
+  // ini — pembalikan di server hanya kalau diminta (?reverse=1), supaya tab
+  // yang masih memakai bundle lama tidak membalikkan dua kali.
+  if (new URL(request.url).searchParams.get("reverse") !== "1") {
+    const result = await env.DB.prepare("DELETE FROM investments WHERE id = ? AND user_id = ?")
+      .bind(investmentId, userId)
+      .run();
 
-  if (!result.meta.changes) {
-    return json({ error: "Investasi tidak ditemukan." }, { status: 404 });
+    if (!result.meta.changes) {
+      return json({ error: "Investasi tidak ditemukan." }, { status: 404 });
+    }
+
+    return json({ ok: true });
   }
 
+  const row = await env.DB.prepare(
+    "SELECT id, transaction_type, amount_invested, current_value, account_id FROM investments WHERE id = ? AND user_id = ?"
+  )
+    .bind(investmentId, userId)
+    .first<{ id: string; transaction_type: string | null; amount_invested: number; current_value: number; account_id: string | null }>();
+  if (!row) return json({ error: "Investasi tidak ditemukan." }, { status: 404 });
+
+  // Kebalikan efek saat posisi dibuat — sama persis dengan pembalikan yang
+  // dulu dikerjakan client (investmentService.hardDeleteInvestment):
+  // Penempatan/Beli/Pembelian menarik saldo keluar & menambah pengeluaran +
+  // investasi; Penarikan/Jual/Penjualan/Bunga mengembalikan saldo & mencatat
+  // pemasukan (Jual/Penjualan juga mengurangi total investasi sebesar modal).
+  // Baris tanpa rekening nyata / proyeksi tidak punya efek saldo.
+  const invested = Number(row.amount_invested) || 0;
+  const current = Number(row.current_value) || 0;
+  const type = row.transaction_type ?? "";
+  const hasAccount = Boolean(row.account_id) && !NON_ACCOUNT_IDS.has(row.account_id ?? "");
+  const stillExists = "EXISTS (SELECT 1 FROM investments WHERE id = ? AND user_id = ?)";
+  const statements: D1PreparedStatement[] = [];
+
+  if (hasAccount && INVESTMENT_OUTFLOW_TYPES.has(type)) {
+    statements.push(
+      env.DB.prepare(`UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ? AND ${stillExists}`)
+        .bind(invested, row.account_id, userId, row.id, userId),
+      env.DB.prepare(
+        `UPDATE users SET total_expenses = COALESCE(total_expenses, 0) - ?, total_wealth = COALESCE(total_wealth, 0) + ?,
+                          total_investment = COALESCE(total_investment, 0) - ?
+          WHERE id = ? AND ${stillExists}`
+      ).bind(invested, invested, invested, userId, row.id, userId)
+    );
+  } else if (hasAccount && INVESTMENT_INFLOW_TYPES.has(type)) {
+    const restoresCostBasis = type === "Jual" || type === "Penjualan";
+    statements.push(
+      env.DB.prepare(`UPDATE accounts SET balance = balance - ? WHERE id = ? AND user_id = ? AND ${stillExists}`)
+        .bind(current, row.account_id, userId, row.id, userId),
+      env.DB.prepare(
+        `UPDATE users SET total_income = COALESCE(total_income, 0) - ?, total_wealth = COALESCE(total_wealth, 0) - ?,
+                          total_investment = COALESCE(total_investment, 0) + ?
+          WHERE id = ? AND ${stillExists}`
+      ).bind(current, current, restoresCostBasis ? invested : 0, userId, row.id, userId)
+    );
+  }
+  statements.push(env.DB.prepare("DELETE FROM investments WHERE id = ? AND user_id = ?").bind(row.id, userId));
+
+  // Satu batch = satu transaksi SQL: pembalikan + penghapusan berhasil bersama
+  // atau gagal bersama; hapus ganda (double tap) hanya membalikkan sekali.
+  const results = await env.DB.batch(statements);
+  if (!results[results.length - 1]?.meta.changes) {
+    return json({ error: "Investasi tidak ditemukan." }, { status: 404 });
+  }
   return json({ ok: true });
 }
 
