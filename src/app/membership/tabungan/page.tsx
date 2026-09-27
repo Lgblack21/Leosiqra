@@ -25,6 +25,9 @@ import { cn, formatCurrency } from '@/lib/utils';
 
 export default function SavingsPage() {
   const [savings, setSavings] = useState<Saving[]>([]);
+  // Semua setoran/penarikan sepanjang waktu — saldo tabungan adalah akumulasi,
+  // bukan cuma transaksi bulan yang sedang dipilih di MonthPicker.
+  const [allSavings, setAllSavings] = useState<Saving[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -41,6 +44,7 @@ export default function SavingsPage() {
 
   const unsubRef = useRef<(() => void) | null>(null);
   const unsubAccRef = useRef<(() => void) | null>(null);
+  const unsubAllRef = useRef<(() => void) | null>(null);
 
   const loadGoals = () => {
     savingsGoalService.getUserSavingsGoals().then(setGoals).catch((error) => {
@@ -64,6 +68,20 @@ export default function SavingsPage() {
           setAccounts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account)));
         }, (err) => {
           if (err.code !== 'permission-denied') console.error('Account listener error:', err);
+        });
+
+        const qAll = query(collection(db, 'savings'), where('userId', '==', u.uid), orderBy('date', 'desc'));
+        if (unsubAllRef.current) unsubAllRef.current();
+        unsubAllRef.current = onSnapshot(qAll, (snap) => {
+          setAllSavings(snap.docs.map(doc => {
+            const d = doc.data();
+            return {
+              ...d, id: doc.id, amount: Number(d.amount) || 0,
+              date: d.date?.toDate?.() ?? new Date(), createdAt: d.createdAt?.toDate?.() ?? new Date()
+            } as Saving;
+          }));
+        }, (err) => {
+          if (err.code !== 'permission-denied') console.error(err);
         });
 
         const startOfMonth = new Date(selectedYear, selectedMonth, 1);
@@ -92,6 +110,7 @@ export default function SavingsPage() {
         });
       } else {
         setSavings([]);
+        setAllSavings([]);
         setAccounts([]);
         setLoading(false);
       }
@@ -100,6 +119,7 @@ export default function SavingsPage() {
       unsub();
       if (unsubRef.current) unsubRef.current();
       if (unsubAccRef.current) unsubAccRef.current();
+      if (unsubAllRef.current) unsubAllRef.current();
     };
   }, [selectedMonth, selectedYear]);
 
@@ -111,10 +131,28 @@ export default function SavingsPage() {
   // Total gabungan lintas rekening harus pakai amountIDR (sudah dikonversi
   // saat setoran disimpan), bukan .amount mentah — setoran bisa dalam
   // mata uang berbeda-beda. Penarikan mengurangi total, Setoran menambah.
-  const totalSaldo = useMemo(() => savings.reduce((s, item) => {
-    const amt = Number(item.amountIDR) || item.amount;
+  //
+  // Dulu totalSaldo dihitung dari `savings` (cuma bulan terpilih), jadi bulan
+  // yang isinya hanya penarikan tampil minus walau setoran bulan-bulan
+  // sebelumnya masih ada. Sekarang saldo = akumulasi semua bulan (sama seperti
+  // kartu Tabungan di Dashboard); arus bulan ini ditampilkan terpisah.
+  const toIdr = (item: Saving) => Number(item.amountIDR) || item.amount;
+  const totalSaldo = useMemo(() => allSavings.reduce((s, item) => {
+    const amt = toIdr(item);
     return item.transactionType === 'Penarikan' ? s - amt : s + amt;
-  }, 0), [savings]);
+  }, 0), [allSavings]);
+  const monthSetor = useMemo(() => savings.filter(s => s.transactionType !== 'Penarikan').reduce((s, i) => s + toIdr(i), 0), [savings]);
+  const monthTarik = useMemo(() => savings.filter(s => s.transactionType === 'Penarikan').reduce((s, i) => s + toIdr(i), 0), [savings]);
+  // Saldo per goal (kategori) sepanjang waktu, urut dari yang terbesar.
+  const goalBalances = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const item of allSavings) {
+      const key = item.category || 'Lainnya';
+      const amt = toIdr(item);
+      map.set(key, (map.get(key) ?? 0) + (item.transactionType === 'Penarikan' ? -amt : amt));
+    }
+    return [...map.entries()].sort((a, b) => b[1] - a[1]);
+  }, [allSavings]);
 
   const filtered = useMemo(() =>
     searchQuery ? savings.filter(s => s.description.toLowerCase().includes(searchQuery.toLowerCase()) || s.category.toLowerCase().includes(searchQuery.toLowerCase())) : savings,
@@ -245,11 +283,13 @@ export default function SavingsPage() {
             <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
               <Wallet size={20} />
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Tabungan</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saldo Tabungan</p>
           </div>
           <div>
-            <h3 className="text-3xl font-black text-slate-900 leading-tight">Rp {formatRp(totalSaldo)}</h3>
-            <p className="text-[10px] font-bold text-emerald-500 mt-1 uppercase tracking-wider">{savings.length} catatan transaksi</p>
+            <h3 className={cn("text-3xl font-black leading-tight tabular-nums", totalSaldo < 0 ? "text-rose-500" : "text-slate-900")}>Rp {formatRp(totalSaldo)}</h3>
+            <p className="text-caption font-bold text-slate-400 mt-1 tabular-nums">
+              Bulan ini: <span className="text-emerald-600">+Rp {formatRp(monthSetor)}</span> setor · <span className="text-rose-500">−Rp {formatRp(monthTarik)}</span> tarik
+            </p>
           </div>
           <TrendingUp size={48} className="absolute -right-2 -bottom-2 text-indigo-50/50 group-hover:scale-110 transition-transform -rotate-12" />
         </div>
@@ -262,14 +302,15 @@ export default function SavingsPage() {
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Distribusi Goal</p>
           </div>
           <div>
-            {savings.length > 0 ? (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {[...new Set(savings.map(s => s.category))].slice(0, 4).map(cat => (
-                  <span key={cat} className="px-3 py-1 bg-indigo-50 text-indigo-600 text-[9px] font-black rounded-lg uppercase tracking-widest">
-                    {cat}
-                  </span>
+            {goalBalances.length > 0 ? (
+              <ul className="mt-2 space-y-1.5">
+                {goalBalances.slice(0, 4).map(([cat, bal]) => (
+                  <li key={cat} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="font-bold text-slate-600 truncate">{cat}</span>
+                    <span className={cn("font-black tabular-nums whitespace-nowrap", bal < 0 ? "text-rose-500" : "text-slate-900")}>Rp {formatRp(bal)}</span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             ) : (
               <p className="text-sm font-bold text-slate-300 mt-2">Belum ada data</p>
             )}
@@ -373,7 +414,7 @@ export default function SavingsPage() {
         {!loading && savings.length > 0 && (
           <div className="px-8 py-4 bg-slate-50/30 border-t border-slate-50 flex items-center justify-between">
             <p className="text-[11px] font-bold text-slate-400">{savings.length} catatan tabungan</p>
-            <p className="text-[11px] font-black text-slate-600">Total: Rp {formatRp(totalSaldo)}</p>
+            <p className="text-[11px] font-black text-slate-600 tabular-nums">Net bulan ini: {monthSetor - monthTarik < 0 ? '−' : '+'}Rp {formatRp(Math.abs(monthSetor - monthTarik))}</p>
           </div>
         )}
       </div>
