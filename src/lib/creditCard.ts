@@ -4,7 +4,7 @@ import type { Transaction } from '@/lib/services/transactionService';
 // Kartu kredit & paylater (Akulaku, ShopeePayLater, Paylater BCA, KK, dst.)
 // dimodelkan sebagai limit, bukan saldo kas. Fungsi di file ini adalah
 // SATU-SATUNYA sumber perhitungan terpakai/sisa limit — dipakai bersama oleh
-// halaman Kartu Saya & Rekening supaya angkanya tidak pernah berbeda.
+// Dashboard, Rekening, Kartu Saya, Profil, dan Input Cepat.
 export const isCreditAccountType = (type: string | undefined) =>
   type === 'Credit Card' || type === 'kartu';
 
@@ -14,20 +14,26 @@ export interface CreditUsage {
   remaining: number;
 }
 
-// Terpakai dihitung ULANG dari seluruh transaksi (bukan dari kolom `balance`,
-// yang riwayat konvensi tandanya beda-beda tergantung modal mana yang
-// menulisnya) supaya selalu akurat & konsisten di semua halaman:
-//   terpakai = "Tagihan Terpakai Saat Ini" (initialBalance) + pengeluaran dari
-//              kartu ini - pembayaran/top-up ke kartu ini
-export const computeCreditUsage = (account: Account, transactions: Transaction[]): CreditUsage => {
-  const accTx = transactions.filter((t) => t.accountId === account.id);
-  const inSum = accTx
-    .filter((t) => t.type === 'pemasukan' || (t.type === 'debt' && t.category === 'Hutang'))
-    .reduce((s, t) => s + t.amount, 0);
-  const outSum = accTx
-    .filter((t) => t.type === 'pengeluaran' || (t.type === 'debt' && t.category === 'Piutang'))
-    .reduce((s, t) => s + t.amount, 0);
+// Konvensi: saldo (`balance`) kartu kredit = −tagihan terpakai. Semua alur
+// yang menggerakkan uang sudah memperbarui `balance` (belanja −, pembayaran +,
+// transfer/top up masuk +/keluar −, setoran tabungan & penempatan investasi −,
+// pelunasan hutang ±), jadi terpakai diturunkan langsung dari saldo.
+//
+// Dulu terpakai direkonstruksi dari daftar transaksi (initialBalance +
+// pengeluaran − pemasukan). Itu melewatkan pembayaran lewat Transfer & Top Up
+// (tipe `transfer`), pemakaian lewat top up dari kartu, setoran tabungan &
+// investasi dari kartu, dan menghitung catatan Hutang di kartu dengan arah
+// terbalik — sehingga sisa limit makin lama makin salah.
+//
+// Parameter `transactions` dipertahankan supaya pemanggil lama tidak perlu
+// diubah; tidak dipakai lagi.
+export const computeCreditUsage = (account: Account, transactions?: Transaction[]): CreditUsage => {
+  void transactions;
   const limit = account.creditLimit || 0;
-  const used = Math.max(0, (account.initialBalance || 0) + outSum - inSum);
+  const used = Math.max(0, -(Number(account.balance) || 0));
   return { limit, used, remaining: limit - used };
 };
+
+// Kebalikan konvensi di atas: tagihan terpakai (angka positif yang user isi di
+// form) → nilai `balance` yang disimpan.
+export const creditBalanceFromUsed = (used: number) => -Math.max(0, used || 0);

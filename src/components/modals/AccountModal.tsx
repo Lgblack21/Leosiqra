@@ -12,6 +12,7 @@ import { CurrencySelect } from '@/components/CurrencySelect';
 import { NumberInput } from '@/components/ui/NumberInput';
 import { CARD_COLOR_OPTIONS } from '@/lib/cardColors';
 import { matchIndonesianInstitutionLogo } from '@/lib/indonesianBanks';
+import { isCreditAccountType, computeCreditUsage, creditBalanceFromUsed } from '@/lib/creditCard';
 import { useRef } from 'react';
 
 interface AccountModalProps {
@@ -90,7 +91,11 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
         logoUrl: initialData.logoUrl || '',
         type: initialData.type || initialType,
         currency: initialData.currency || 'IDR',
-        balance: String(initialData.balance ?? ''),
+        // Kartu kredit: field ini berarti "Tagihan Terpakai Saat Ini" (positif),
+        // sedangkan `balance` kartu disimpan sebagai −tagihan.
+        balance: isCreditAccountType(initialData.type)
+          ? String(computeCreditUsage(initialData).used)
+          : String(initialData.balance ?? ''),
         initialBalance: String(initialData.initialBalance ?? ''),
         baseValue: String(initialData.baseValue ?? ''),
         creditLimit: initialData.creditLimit ? String(initialData.creditLimit) : '',
@@ -109,14 +114,20 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
     setError('');
     setSaving(true);
     try {
+      const enteredValue = parseFloat(formData.balance) || 0;
+      const isCredit = isCreditAccountType(formData.type);
+      const balanceToStore = isCredit ? creditBalanceFromUsed(enteredValue) : enteredValue;
       if (initialData?.id) {
+        // initialBalance sengaja TIDAK dikirim saat edit — dulu tiap edit
+        // (termasuk sekadar ganti nama/warna) menimpanya dengan saldo saat
+        // ini, sehingga nilai awal rekening hilang dan tagihan kartu kredit
+        // ikut bergeser.
         await accountService.updateAccount(initialData.id, {
           name: formData.name,
           logoUrl: formData.logoUrl,
           type: formData.type,
           currency: formData.currency,
-          balance: parseFloat(formData.balance) || 0,
-          initialBalance: parseFloat(formData.balance) || 0,
+          balance: balanceToStore,
           baseValue: parseFloat(formData.baseValue) || 0,
           creditLimit: parseFloat(formData.creditLimit) || 0,
           cardColor: formData.cardColor
@@ -128,8 +139,9 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
           logoUrl: formData.logoUrl,
           type: formData.type,
           currency: formData.currency,
-          balance: parseFloat(formData.balance) || 0,
-          initialBalance: parseFloat(formData.balance) || 0,
+          balance: balanceToStore,
+          // Catatan nilai awal saat rekening dibuat (saldo awal / tagihan awal).
+          initialBalance: enteredValue,
           baseValue: parseFloat(formData.baseValue) || 0,
           creditLimit: parseFloat(formData.creditLimit) || 0,
           cardColor: formData.cardColor

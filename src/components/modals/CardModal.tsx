@@ -66,7 +66,8 @@ export const CardModal = ({ isOpen, onClose, userId }: CardModalProps) => {
         logoUrl: formData.logoUrl,
         currency: formData.currency,
         initialBalance: initialBal,
-        balance: isCard ? 0 : initialBal, // Cards start with 0 bill/balance, others start with initialBal
+        // Kartu kredit: balance = −tagihan terpakai (lihat lib/creditCard.ts).
+        balance: isCard ? -Math.max(0, initialBal) : initialBal,
         creditLimit: parseFloat(formData.creditLimit) || 0,
         baseValue: parseFloat(formData.baseValue) || 0
       });
