@@ -2212,6 +2212,103 @@ async function handleImportTransactions(request: Request, env: Env) {
 // tanggal default ke hari ini — supaya Shortcut tidak perlu langkah
 // Get Contents of URL/Choose from List/Filter berlapis untuk sekadar
 // menentukan account_id.
+// POST /api/member/transfer — pindah dana antar rekening sendiri (atau top up
+// ke e-wallet luar yang tidak dilacak, to_account_id = "Wallet"). Format baris
+// SAMA PERSIS dengan TopUpModal di web ("<Label> Keluar"/"<Label> Masuk",
+// note "[<Label> Keluar] ..."/"[<Label> Masuk] ...", tanggal sama) supaya
+// findTransferPair di hapus-transaksi tetap bisa memasangkan kedua sisi.
+// Bedanya: semua (dua baris + saldo kedua rekening + total) dalam SATU batch
+// D1, dan konversi kurs dikerjakan server kalau mata uang rekening berbeda.
+async function handleCreateTransfer(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const payload = await parseJson<{
+    from_account_id?: string;
+    to_account_id?: string;
+    amount?: number;
+    note?: string;
+    date?: string;
+    kind?: "transfer" | "topup";
+  }>(request);
+
+  const amount = Number(payload.amount);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return json({ error: "Nominal transfer harus lebih dari 0." }, { status: 400 });
+  }
+  const fromId = String(payload.from_account_id ?? "");
+  const toId = String(payload.to_account_id ?? "");
+  if (!fromId || !toId) {
+    return json({ error: "Rekening asal dan tujuan wajib dipilih." }, { status: 400 });
+  }
+  if (fromId === toId) {
+    return json({ error: "Rekening asal dan tujuan tidak boleh sama." }, { status: 400 });
+  }
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(String(payload.date ?? "")) ? String(payload.date) : todayWIB();
+
+  type AccRow = { id: string; name: string; currency: string | null; type: string };
+  const from = await env.DB.prepare("SELECT id, name, currency, type FROM accounts WHERE id = ? AND user_id = ?")
+    .bind(fromId, userId)
+    .first<AccRow>();
+  if (!from) return json({ error: "Rekening asal tidak ditemukan." }, { status: 400 });
+  const isExternal = toId === "Wallet";
+  const to = isExternal
+    ? null
+    : await env.DB.prepare("SELECT id, name, currency, type FROM accounts WHERE id = ? AND user_id = ?")
+        .bind(toId, userId)
+        .first<AccRow>();
+  if (!isExternal && !to) return json({ error: "Rekening tujuan tidak ditemukan." }, { status: 400 });
+
+  const fromCur = from.currency || "IDR";
+  const toCur = to?.currency || fromCur;
+  const rateOf = async (cur: string) => (cur === "IDR" ? 1 : await fetchIdrConversionRate(cur));
+  const fromRate = await rateOf(fromCur);
+  const toRate = isExternal ? fromRate : await rateOf(toCur);
+  if (!fromRate || !toRate) {
+    return json({ error: "Kurs mata uang sedang tidak tersedia. Coba lagi sebentar lagi." }, { status: 503 });
+  }
+  const amountIdr = amount * fromRate;
+  const amountTo = fromCur === toCur ? amount : Math.round(((amount * fromRate) / toRate) * 100) / 100;
+
+  const label = payload.kind === "topup" || isExternal || to?.type === "E-Wallet" ? "Top Up" : "Transfer";
+  const baseNote = String(payload.note ?? "").trim() || `${label} ke ${isExternal ? "Digital Wallet" : to!.name}`;
+  const now = nowIso();
+  const outId = generateId();
+  const inId = generateId();
+  const insertSql = `INSERT INTO transactions (
+      id, user_id, type, amount, amount_idr, category, sub_category, currency,
+      account_id, target_account_id, date, display_date, note, status, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'VERIFIED', ?, ?)`;
+
+  const statements: D1PreparedStatement[] = [
+    env.DB.prepare(insertSql).bind(
+      outId, userId, isExternal ? "pengeluaran" : "transfer", amount, amountIdr, label, `${label} Keluar`, fromCur,
+      from.id, toId, date, date, `[${label} Keluar] ${baseNote}`, now, now
+    ),
+    env.DB.prepare("UPDATE accounts SET balance = balance - ? WHERE id = ? AND user_id = ?").bind(amount, from.id, userId),
+  ];
+  if (to) {
+    statements.push(
+      env.DB.prepare(insertSql).bind(
+        inId, userId, "transfer", amountTo, amountIdr, label, `${label} Masuk`, toCur,
+        to.id, null, date, date, `[${label} Masuk] ${baseNote}`, now, now
+      ),
+      env.DB.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?").bind(amountTo, to.id, userId)
+    );
+  } else {
+    // Top up ke e-wallet luar = uang benar-benar keluar dari rekening yang
+    // dilacak — dihitung pengeluaran (sama seperti TopUpModal).
+    statements.push(
+      env.DB.prepare(
+        `UPDATE users SET total_expenses = COALESCE(total_expenses, 0) + ?, total_wealth = COALESCE(total_wealth, 0) - ? WHERE id = ?`
+      ).bind(amountIdr, amountIdr, userId)
+    );
+  }
+  await env.DB.batch(statements);
+
+  return json({ ok: true, ids: to ? [outId, inId] : [outId], amountTo, label }, { status: 201 });
+}
+
 async function handleQuickTransaction(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) {
@@ -6066,6 +6163,10 @@ const worker = {
 
       if (url.pathname === "/api/member/transactions" && request.method === "POST") {
         return await handleCreateTransaction(request, env);
+      }
+
+      if (url.pathname === "/api/member/transfer" && request.method === "POST") {
+        return await handleCreateTransfer(request, env);
       }
 
       if (url.pathname === "/api/member/quick-transaction" && request.method === "POST") {

@@ -9,9 +9,10 @@ interface AccountPickerProps {
   accounts: Account[];
   value: string;
   onChange: (id: string) => void;
+  label?: string;
 }
 
-export function AccountPicker({ accounts, value, onChange }: AccountPickerProps) {
+export function AccountPicker({ accounts, value, onChange, label = "Akun / Rekening" }: AccountPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const selected = accounts.find((a) => a.id === value);
@@ -27,7 +28,7 @@ export function AccountPicker({ accounts, value, onChange }: AccountPickerProps)
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 relative" ref={ref}>
       <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">
-        <Wallet size={12} /> Akun / Rekening
+        <Wallet size={12} /> {label}
       </label>
       {accounts.length === 0 ? (
         <p className="text-xs font-medium text-slate-400 dark:text-slate-500">Belum ada rekening.</p>

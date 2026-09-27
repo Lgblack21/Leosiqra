@@ -9,6 +9,7 @@ import { LandingFeatures } from '@/components/LandingFeatures';
 import { LandingFooter } from '@/components/LandingFooter';
 import { motion } from 'framer-motion';
 import { getDeveloperInfo, PublicDeveloperInfo } from '@/lib/services/publicContactService';
+import { isStandaloneDisplay } from '@/lib/pushNotifications';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -24,6 +25,13 @@ const staggerContainer = {
 };
 
 export default function LandingPage() {
+  // PWA terpasang (Add to Home Screen) memakai UI mobile /app. Termasuk
+  // instalasi lama yang start_url-nya masih "/" — tanpa ini mereka mendarat di
+  // landing page lalu masuk ke dashboard web desktop.
+  useEffect(() => {
+    if (isStandaloneDisplay()) window.location.replace('/app');
+  }, []);
+
   const [developer, setDeveloper] = useState<PublicDeveloperInfo | null>(null);
 
   useEffect(() => {

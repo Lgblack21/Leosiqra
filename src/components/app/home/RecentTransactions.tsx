@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ArrowDownCircle, ArrowUpCircle, Receipt } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isIncomingTransaction } from "@/lib/utils";
@@ -26,13 +27,19 @@ const formatDate = (d: Date) =>
   new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(d);
 
 export function RecentTransactions({ transactions }: RecentTransactionsProps) {
-  const recent = [...transactions]
+  // Catatan Hutang/Piutang (type "debt") bukan arus uang — jangan tampil
+  // sebagai uang keluar di sini (sama seperti halaman web).
+  const recent = transactions
+    .filter((tx) => tx.type !== "debt")
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 8);
 
   return (
     <div>
-      <h2 className="text-sm font-black text-slate-900 dark:text-white mb-3">Transaksi Terbaru</h2>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-black text-slate-900 dark:text-white">Transaksi Terbaru</h2>
+        <Link href="/app/transactions" className="text-xs font-bold text-indigo-600 dark:text-indigo-400">Lihat semua</Link>
+      </div>
       {recent.length === 0 ? (
         <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-8 text-center">
           <Receipt size={24} className="mx-auto text-slate-300 dark:text-slate-600" />

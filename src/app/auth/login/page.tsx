@@ -45,7 +45,8 @@ export default function LoginPage() {
       setError(oauthError);
       window.history.replaceState({}, '', '/auth/login');
     }
-    setNext(sanitizeNext(params.get('next')));
+    // PWA terpasang tanpa ?next= → tetap ke UI mobile, bukan dashboard web.
+    setNext(sanitizeNext(params.get('next')) ?? (isStandaloneDisplay() ? '/app' : null));
   }, []);
 
   // Admin tidak pernah diarahkan ke /app — tidak ada UI admin di sana.

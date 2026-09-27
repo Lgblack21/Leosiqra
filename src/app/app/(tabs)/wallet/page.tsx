@@ -68,7 +68,7 @@ export default function WalletPage() {
   return (
     <div className="max-w-md mx-auto px-5 pt-8 pb-8 space-y-6">
       <FadeIn className="flex items-center justify-between">
-        <h1 className="text-lg font-black text-slate-900 dark:text-white">Rekening Saya</h1>
+        <h1 className="text-lg font-black text-slate-900 dark:text-white">Aset</h1>
         <button
           type="button"
           onClick={() => setIsAddOpen(true)}

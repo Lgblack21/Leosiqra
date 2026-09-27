@@ -2,17 +2,48 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, CalendarDays } from "lucide-react";
+import { Camera, CalendarDays, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight } from "lucide-react";
 import { cloudflareApi } from "@/lib/cloudflare-api";
 import { accountService, Account } from "@/lib/services/accountService";
 import { auth } from "@/lib/cf-client";
 import { notifyCollectionChanged, subscribeToCollectionChanges } from "@/lib/cf-firestore";
 import { CategorySelect } from "@/components/CategorySelect";
 import { BottomSheet } from "@/components/ui/BottomSheet";
-import { TxTypeToggle, TxType } from "@/components/app/TxTypeToggle";
+import type { TxType } from "@/components/app/TxTypeToggle";
+import { transferService, EXTERNAL_WALLET_ID } from "@/lib/services/transferService";
+import { cn } from "@/lib/utils";
 import { AccountPicker } from "@/components/app/AccountPicker";
 import { AmountKeypad, groupDigits } from "@/components/app/AmountKeypad";
 import { lightTap } from "@/lib/haptics";
+
+type SheetMode = TxType | "transfer";
+
+// Tiga mode dalam satu baris: Keluar / Masuk / Transfer. Transfer menukar isian
+// kategori dengan rekening "Dari" & "Ke" dan disimpan lewat endpoint transfer.
+function ModeToggle({ value, onChange }: { value: SheetMode; onChange: (m: SheetMode) => void }) {
+  const items: { mode: SheetMode; label: string; icon: React.ElementType; active: string }[] = [
+    { mode: "pengeluaran", label: "Keluar", icon: ArrowDownCircle, active: "bg-rose-500 border-rose-500 text-white shadow-lg shadow-rose-100 dark:shadow-none" },
+    { mode: "pemasukan", label: "Masuk", icon: ArrowUpCircle, active: "bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-100 dark:shadow-none" },
+    { mode: "transfer", label: "Transfer", icon: ArrowLeftRight, active: "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100 dark:shadow-none" },
+  ];
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {items.map(({ mode, label, icon: Icon, active }) => (
+        <button
+          key={mode}
+          type="button"
+          onClick={() => { lightTap(); onChange(mode); }}
+          className={cn(
+            "flex items-center justify-center gap-1.5 py-3.5 rounded-2xl text-[13px] font-black transition-all border-2",
+            value === mode ? active : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-400 dark:text-slate-500"
+          )}
+        >
+          <Icon size={15} /> {label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 interface AddTransactionSheetProps {
   isOpen: boolean;
@@ -36,6 +67,13 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
   const router = useRouter();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [type, setType] = useState<TxType>("pengeluaran");
+  const [isTransfer, setIsTransfer] = useState(false);
+  const [toAccountId, setToAccountId] = useState("");
+  const mode: SheetMode = isTransfer ? "transfer" : type;
+  const setMode = (m: SheetMode) => {
+    if (m === "transfer") setIsTransfer(true);
+    else { setIsTransfer(false); setType(m); }
+  };
   const [amount, setAmount] = useState("");
   const [accountId, setAccountId] = useState("");
   const [category, setCategory] = useState("");
@@ -72,11 +110,24 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
     [accounts, accountId]
   );
 
+  // Tujuan transfer: rekening sendiri selain asal + e-wallet luar (tidak dilacak).
+  const transferTargets = useMemo<Account[]>(() => [
+    ...accounts.filter((a) => a.id !== accountId),
+    { id: EXTERNAL_WALLET_ID, userId: "", name: "E-Wallet luar (OVO/GoPay/DANA)", type: "E-Wallet", currency: selectedAccount?.currency || "IDR", balance: 0, initialBalance: 0, createdAt: new Date() } as Account,
+  ], [accounts, accountId, selectedAccount]);
+  useEffect(() => {
+    if (!isTransfer) return;
+    if (!toAccountId || toAccountId === accountId || !transferTargets.some((a) => a.id === toAccountId)) {
+      setToAccountId(transferTargets[0]?.id ?? EXTERNAL_WALLET_ID);
+    }
+  }, [isTransfer, accountId, toAccountId, transferTargets]);
+
   const amountNumber = Number(amount || "0");
   // category wajib — kolom transactions.category di D1 punya constraint
   // NOT NULL, submit tanpa kategori gagal di server dengan error generik.
-  const canSubmit =
-    amountNumber > 0 && Boolean(selectedAccount) && category.trim().length > 0 && !submitting;
+  const canSubmit = isTransfer
+    ? amountNumber > 0 && Boolean(selectedAccount) && Boolean(toAccountId) && toAccountId !== accountId && !submitting
+    : amountNumber > 0 && Boolean(selectedAccount) && category.trim().length > 0 && !submitting;
 
   const resetForm = () => {
     setAmount("");
@@ -96,6 +147,19 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
     setFeedback(null);
     setSubmitting(true);
     try {
+      if (isTransfer) {
+        await transferService.createTransfer({
+          fromAccountId: selectedAccount.id ?? "",
+          toAccountId,
+          amount: amountNumber,
+          note: note.trim(),
+          ...(date ? { date } : {}),
+        });
+        lightTap();
+        resetForm();
+        onClose();
+        return;
+      }
       await cloudflareApi("/api/member/quick-transaction", {
         method: "POST",
         json: {
@@ -141,7 +205,7 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
             >
               {submitting
                 ? "Menyimpan..."
-                : `Simpan ${type === "pengeluaran" ? "Pengeluaran" : "Pemasukan"} ${
+                : `Simpan ${isTransfer ? "Transfer" : type === "pengeluaran" ? "Pengeluaran" : "Pemasukan"} ${
                     amountNumber > 0 ? groupDigits(amount) : ""
                   }`}
             </button>
@@ -158,7 +222,7 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
 
         <div className="flex items-center gap-2">
           <div className="flex-1">
-            <TxTypeToggle value={type} onChange={setType} />
+            <ModeToggle value={mode} onChange={setMode} />
           </div>
           <button
             type="button"
@@ -227,16 +291,27 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
           />
         )}
 
-        <AccountPicker accounts={accounts} value={accountId} onChange={setAccountId} />
+        <AccountPicker accounts={accounts} value={accountId} onChange={setAccountId} label={isTransfer ? "Dari rekening" : "Akun / Rekening"} />
 
-        <CategorySelect
-          label="Kategori"
-          value={category}
-          type={type === "pengeluaran" ? "expense" : "income"}
-          onChange={setCategory}
-          onSubCategoryChange={setSubCategory}
-          showBadge={false}
-        />
+        {isTransfer ? (
+          <>
+            <AccountPicker accounts={transferTargets} value={toAccountId} onChange={setToAccountId} label="Ke" />
+            {selectedAccount && transferTargets.find((a) => a.id === toAccountId)?.currency !== selectedAccount.currency && toAccountId !== EXTERNAL_WALLET_ID && (
+              <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 px-1">
+                Nominal dalam {selectedAccount.currency}. Jumlah yang masuk dikonversi otomatis pakai kurs hari ini.
+              </p>
+            )}
+          </>
+        ) : (
+          <CategorySelect
+            label="Kategori"
+            value={category}
+            type={type === "pengeluaran" ? "expense" : "income"}
+            onChange={setCategory}
+            onSubCategoryChange={setSubCategory}
+            showBadge={false}
+          />
+        )}
 
         <input
           type="text"
