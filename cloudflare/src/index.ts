@@ -3529,8 +3529,460 @@ async function handleUpdateInvestment(request: Request, env: Env, investmentId: 
   return json({ ok: true });
 }
 
+// ---- Buku besar investasi ---------------------------------------------------
+// SATU tabel efek per jenis baris investasi, dipakai persis sama saat baris
+// dibuat (sign +1) dan saat dihapus/di-rebook (sign −1) — jadi buat lalu hapus
+// selalu kembali ke nol. Efek: saldo rekening, total member, dan satu baris
+// transaksi tertaut (related_type 'investasi') untuk riwayat/statistik.
+//   Beli/Pembelian/Penempatan : uang keluar sebesar modal (amount_invested)
+//   Jual/Penjualan/Penarikan  : uang masuk sebesar hasil (current_value),
+//                               total investasi berkurang sebesar modal
+//   Bunga                     : uang masuk sebesar bunga (current − modal)
 const INVESTMENT_OUTFLOW_TYPES = new Set(["Penempatan", "Beli", "Pembelian"]);
-const INVESTMENT_INFLOW_TYPES = new Set(["Penarikan", "Jual", "Penjualan", "Bunga"]);
+const INVESTMENT_SALE_TYPES = new Set(["Jual", "Penjualan", "Penarikan"]);
+const INVESTMENT_EFFECT_TYPES = new Set([...INVESTMENT_OUTFLOW_TYPES, ...INVESTMENT_SALE_TYPES, "Bunga"]);
+
+type InvestmentLedgerRow = {
+  id: string;
+  name: string | null;
+  type: string | null;
+  transaction_type: string | null;
+  amount_invested: number;
+  amount_idr: number | null;
+  current_value: number;
+  current_value_idr: number | null;
+  currency: string | null;
+  account_id: string | null;
+};
+
+type InvestmentEffect = {
+  balance: number;
+  income: number;
+  expenses: number;
+  investment: number;
+  tx: { type: "pemasukan" | "pengeluaran"; amount: number; amountIdr: number } | null;
+};
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+const investmentEffect = (row: InvestmentLedgerRow): InvestmentEffect => {
+  const invested = round2(Number(row.amount_invested) || 0);
+  const current = round2(Number(row.current_value) || 0);
+  const type = row.transaction_type ?? "";
+  const investedIdr = Number(row.amount_idr) || invested;
+  const currentIdr = Number(row.current_value_idr) || current;
+  if (INVESTMENT_OUTFLOW_TYPES.has(type)) {
+    return { balance: -invested, income: 0, expenses: invested, investment: invested, tx: { type: "pengeluaran", amount: invested, amountIdr: investedIdr } };
+  }
+  if (INVESTMENT_SALE_TYPES.has(type)) {
+    return { balance: current, income: current, expenses: 0, investment: -invested, tx: { type: "pemasukan", amount: current, amountIdr: currentIdr } };
+  }
+  if (type === "Bunga") {
+    const interest = round2(Math.max(0, current - invested));
+    const ratio = current > 0 ? currentIdr / current : 1;
+    return { balance: interest, income: interest, expenses: 0, investment: 0, tx: { type: "pemasukan", amount: interest, amountIdr: interest * ratio } };
+  }
+  return { balance: 0, income: 0, expenses: 0, investment: 0, tx: null };
+};
+
+const investmentTxLabel = (row: InvestmentLedgerRow) => {
+  const t = row.transaction_type ?? "";
+  if (row.type === "Deposito") return `Deposito - ${t}`;
+  if (row.type === "Saham") return `${t === "Jual" ? "Jual" : "Beli"} Saham ${row.name ?? ""}`.trim();
+  return `${t} ${row.name ?? ""}`.trim();
+};
+
+/**
+ * Statement saldo + total untuk efek baris (sign +1 = terapkan, −1 = balikkan),
+ * dan (kalau sign +1) baris transaksi tertaut. Semua dijaga `guard` (klausa SQL
+ * + bind) supaya hanya jalan kalau statement klaim di batch yang sama berhasil.
+ */
+const investmentEffectStatements = (
+  env: Env,
+  userId: string,
+  row: InvestmentLedgerRow,
+  sign: 1 | -1,
+  guard: { sql: string; binds: unknown[] },
+  tx?: { date: string; note: string; label?: string }
+) => {
+  const effect = investmentEffect(row);
+  const statements: D1PreparedStatement[] = [];
+  const hasAccount = Boolean(row.account_id) && !NON_ACCOUNT_IDS.has(row.account_id ?? "");
+  if (hasAccount && effect.balance !== 0) {
+    statements.push(
+      env.DB.prepare(`UPDATE accounts SET balance = ROUND(balance + ?, 2) WHERE id = ? AND user_id = ? AND ${guard.sql}`)
+        .bind(sign * effect.balance, row.account_id, userId, ...guard.binds)
+    );
+  }
+  if (effect.income || effect.expenses || effect.investment) {
+    statements.push(
+      env.DB.prepare(
+        `UPDATE users SET total_income = ROUND(COALESCE(total_income, 0) + ?, 2), total_expenses = ROUND(COALESCE(total_expenses, 0) + ?, 2),
+                          total_wealth = ROUND(COALESCE(total_wealth, 0) + ?, 2), total_investment = ROUND(COALESCE(total_investment, 0) + ?, 2)
+          WHERE id = ? AND ${guard.sql}`
+      ).bind(
+        sign * effect.income, sign * effect.expenses, sign * (effect.income - effect.expenses), sign * effect.investment,
+        userId, ...guard.binds
+      )
+    );
+  }
+  if (sign === 1 && tx && effect.tx && hasAccount && effect.tx.amount > 0) {
+    const now = nowIso();
+    statements.push(
+      env.DB.prepare(
+        `INSERT INTO transactions (id, user_id, type, amount, amount_idr, category, sub_category, currency, account_id,
+                                   date, display_date, note, status, related_id, related_type, created_at, updated_at)
+         SELECT ?, ?, ?, ?, ?, 'Investasi', ?, ?, ?, ?, ?, ?, 'VERIFIED', ?, 'investasi', ?, ? WHERE ${guard.sql}`
+      ).bind(
+        generateId(), userId, effect.tx.type, round2(effect.tx.amount), effect.tx.amountIdr, tx.label ?? investmentTxLabel(row),
+        row.currency || "IDR", row.account_id, tx.date, tx.date, tx.note, row.id, now, now, ...guard.binds
+      )
+    );
+  }
+  return statements;
+};
+
+/** Hapus transaksi tertaut baris ini (tanpa efek saldo — efeknya dibalik lewat buku besar). */
+const deleteLinkedInvestmentTxStatement = (env: Env, userId: string, row: InvestmentLedgerRow, guard: { sql: string; binds: unknown[] }) => {
+  const effect = investmentEffect(row);
+  // Hanya transaksi yang jenisnya sesuai efek baris ini — catatan lama
+  // "Cairkan" ditautkan ke baris Penempatan tapi berjenis pemasukan, jangan ikut.
+  return env.DB.prepare(
+    `DELETE FROM transactions WHERE user_id = ? AND related_type = 'investasi' AND related_id = ? AND type = ? AND ${guard.sql}`
+  ).bind(userId, row.id, effect.tx?.type ?? "-", ...guard.binds);
+};
+
+const INVESTMENT_LEDGER_COLUMNS =
+  "id, name, type, transaction_type, amount_invested, amount_idr, current_value, current_value_idr, currency, account_id";
+
+const loadInvestmentRow = (env: Env, userId: string, id: string) =>
+  env.DB.prepare(`SELECT ${INVESTMENT_LEDGER_COLUMNS}, status, shares_count, quantity, price_per_share, price_per_unit,
+                         return_percentage, tax_percentage, date_invested, target_date, duration_days, platform,
+                         category, stock_code, exchange_code, logo_url, unit, updated_at, related_investment_id
+                    FROM investments WHERE id = ? AND user_id = ?`)
+    .bind(id, userId)
+    .first<InvestmentLedgerRow & {
+      status: string | null; shares_count: number | null; quantity: number | null; price_per_share: number | null;
+      price_per_unit: number | null; return_percentage: number | null; tax_percentage: number | null;
+      date_invested: string | null; target_date: string | null; duration_days: number | null; platform: string | null;
+      category: string | null; stock_code: string | null; exchange_code: string | null; logo_url: string | null;
+      unit: string | null; updated_at: string | null; related_investment_id: string | null;
+    }>();
+
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}/;
+const dayOf = (value: unknown, fallback: string) => {
+  const s = typeof value === "string" ? value.trim() : "";
+  return ISO_DAY.test(s) ? s.slice(0, 10) : fallback;
+};
+
+/**
+ * Baca & validasi isian posisi baru (dipakai entry & rebook). Nilai uang
+ * dihitung server: Saham = lembar × harga, Lainnya = jumlah × harga/unit,
+ * Deposito = pokok (+ bunga bersih untuk current_value).
+ */
+const buildInvestmentPosition = async (payload: Record<string, unknown>) => {
+  const type = String(payload.type ?? "");
+  const txType = String(payload.transaction_type ?? "");
+  const allowed: Record<string, string[]> = {
+    Saham: ["Beli"],
+    Lainnya: ["Pembelian"],
+    Deposito: ["Penempatan", "Bunga", "Penarikan"],
+  };
+  if (!allowed[type]?.includes(txType)) return { error: "Jenis investasi/transaksi tidak didukung." } as const;
+  const currency = String(payload.currency ?? "IDR").toUpperCase() || "IDR";
+  const name = String(payload.name ?? payload.stock_code ?? "").trim();
+  if (!name) return { error: "Nama investasi wajib diisi." } as const;
+  const today = todayWIB();
+  const dateInvested = dayOf(payload.date_invested, today);
+  if (dateInvested > today) return { error: "Tanggal tidak boleh di masa depan." } as const;
+
+  let invested = 0;
+  let current = 0;
+  const extra: Record<string, unknown> = {};
+  if (type === "Saham") {
+    const shares = Number(payload.shares_count);
+    const price = Number(payload.price_per_share);
+    if (!(shares > 0) || !(price > 0)) return { error: "Jumlah lembar dan harga per lembar harus lebih dari 0." } as const;
+    invested = round2(shares * price);
+    const cur = Number(payload.current_value);
+    current = cur > 0 ? cur : invested;
+    Object.assign(extra, {
+      shares_count: shares, price_per_share: price,
+      stock_code: String(payload.stock_code ?? name).trim().toUpperCase(),
+      exchange_code: String(payload.exchange_code ?? "IDX").trim().toUpperCase() || "IDX",
+    });
+  } else if (type === "Lainnya") {
+    const qty = Number(payload.quantity);
+    const price = Number(payload.price_per_unit);
+    if (!(qty > 0) || !(price > 0)) return { error: "Jumlah dan harga per unit harus lebih dari 0." } as const;
+    invested = round2(qty * price);
+    const cur = Number(payload.current_value);
+    current = cur > 0 ? cur : invested;
+    Object.assign(extra, { quantity: qty, price_per_unit: price, unit: payload.unit ? String(payload.unit) : null });
+  } else {
+    invested = Number(payload.amount_invested);
+    if (!(invested > 0)) return { error: "Nominal deposito harus lebih dari 0." } as const;
+    const rate = Math.max(0, Number(payload.return_percentage) || 0);
+    const tax = Math.min(100, Math.max(0, Number(payload.tax_percentage) || 0));
+    const targetDate = dayOf(payload.target_date, "");
+    if (!targetDate || targetDate <= dateInvested) return { error: "Tanggal jatuh tempo harus setelah tanggal penempatan." } as const;
+    const days = daysBetweenIso(`${dateInvested}T00:00:00Z`, `${targetDate}T00:00:00Z`);
+    current = round2(computeDepositResult(invested, rate, tax, days).totalResult);
+    const action = String(payload.maturity_action ?? "cairkan");
+    Object.assign(extra, {
+      return_percentage: rate, tax_percentage: tax, target_date: `${targetDate}T00:00:00.000Z`, duration_days: days,
+      maturity_action: txType === "Penempatan" ? (["cairkan", "aro_bunga", "aro_full"].includes(action) ? action : "cairkan") : null,
+    });
+  }
+  const ratio = currency === "IDR" ? 1 : (await resolveIdrAmount(currency, 1, undefined)) || 1;
+  return {
+    position: {
+      name: type === "Saham" ? String(extra.stock_code) : name,
+      type, transaction_type: txType, currency,
+      platform: payload.platform ? String(payload.platform).trim() : null,
+      category: payload.category ? String(payload.category) : type,
+      logo_url: payload.logo_url ? String(payload.logo_url) : null,
+      amount_invested: invested, amount_idr: invested * ratio,
+      current_value: current, current_value_idr: current * ratio,
+      return_percentage: invested > 0 && type !== "Deposito" ? ((current - invested) / invested) * 100 : Number(extra.return_percentage ?? 0),
+      date_invested: `${dateInvested}T00:00:00.000Z`,
+      status: txType === "Penarikan" ? "Closed" : "Active",
+      ...extra,
+    } as Record<string, unknown>,
+    date: dateInvested,
+  } as const;
+};
+
+const POSITION_COLUMNS = [
+  "name", "type", "transaction_type", "currency", "platform", "category", "logo_url", "amount_invested", "amount_idr",
+  "current_value", "current_value_idr", "return_percentage", "tax_percentage", "date_invested", "target_date",
+  "duration_days", "status", "maturity_action", "shares_count", "price_per_share", "stock_code", "exchange_code",
+  "quantity", "price_per_unit", "unit",
+] as const;
+// Kolom NOT NULL di tabel investments yang bisa kosong untuk jenis tertentu
+// (mis. saham tidak punya pajak) — isi default, bukan null.
+const POSITION_DEFAULTS: Record<string, unknown> = { platform: "", tax_percentage: 0, return_percentage: 0, currency: "IDR" };
+const positionValue = (pos: Record<string, unknown>, column: string) => pos[column] ?? POSITION_DEFAULTS[column] ?? null;
+
+const requireOwnedAccount = async (env: Env, userId: string, accountId: unknown) => {
+  if (typeof accountId !== "string" || NON_ACCOUNT_IDS.has(accountId)) return null;
+  return env.DB.prepare("SELECT id, currency FROM accounts WHERE id = ? AND user_id = ?")
+    .bind(accountId, userId)
+    .first<{ id: string; currency: string | null }>();
+};
+
+// POST /api/member/investments/entry — catat posisi baru + efek uangnya atomik.
+async function handleInvestmentEntry(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const payload = await parseJson<Record<string, unknown>>(request);
+
+  const built = await buildInvestmentPosition(payload);
+  if ("error" in built) return json({ error: built.error }, { status: 400 });
+  const account = await requireOwnedAccount(env, userId, payload.account_id);
+  if (!account) return json({ error: "Pilih rekening sumber dana." }, { status: 400 });
+
+  // id boleh dikirim client (UUID per percobaan simpan) — submit ganda karena
+  // jaringan lambat ditolak oleh PRIMARY KEY, bukan tercatat dua kali.
+  const clientId = typeof payload.id === "string" && /^[0-9a-f-]{16,64}$/i.test(payload.id) ? payload.id : null;
+  const id = clientId ?? generateId();
+  const pos = built.position;
+  const cols = ["id", "user_id", "account_id", ...POSITION_COLUMNS, "created_at", "updated_at"];
+  const now = nowIso();
+  const values = [id, userId, account.id, ...POSITION_COLUMNS.map((c) => positionValue(pos, c)), now, now];
+  const row: InvestmentLedgerRow = {
+    id, name: String(pos.name), type: String(pos.type), transaction_type: String(pos.transaction_type),
+    amount_invested: Number(pos.amount_invested), amount_idr: Number(pos.amount_idr),
+    current_value: Number(pos.current_value), current_value_idr: Number(pos.current_value_idr),
+    currency: String(pos.currency), account_id: account.id,
+  };
+  const guard = { sql: "EXISTS (SELECT 1 FROM investments WHERE id = ? AND user_id = ? AND created_at = ?)", binds: [id, userId, now] };
+  try {
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO investments (${cols.join(", ")}) VALUES (${cols.map(() => "?").join(", ")})`).bind(...values),
+      ...investmentEffectStatements(env, userId, row, 1, guard, { date: built.date, note: `[Baru] ${investmentTxLabel(row)}` }),
+    ]);
+  } catch (error) {
+    // Dianggap kiriman ganda HANYA kalau baris dengan id ini memang sudah ada
+    // milik user ini — error lain (mis. kolom wajib kosong) tetap dilempar.
+    if (clientId) {
+      const existing = await env.DB.prepare("SELECT 1 AS ok FROM investments WHERE id = ? AND user_id = ?")
+        .bind(clientId, userId)
+        .first<{ ok: number }>();
+      if (existing) return json({ ok: true, id, duplicate: true });
+    }
+    throw error;
+  }
+  return json({ ok: true, id }, { status: 201 });
+}
+
+// POST /api/member/investments/:id/sell — jual sebagian/seluruh posisi Saham/Lainnya.
+async function handleInvestmentSell(request: Request, env: Env, investmentId: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const payload = await parseJson<Record<string, unknown>>(request);
+
+  const orig = await loadInvestmentRow(env, userId, investmentId);
+  if (!orig) return json({ error: "Posisi tidak ditemukan." }, { status: 404 });
+  const isStock = orig.type === "Saham";
+  if (!(isStock || orig.type === "Lainnya") || orig.status !== "Active" || !INVESTMENT_OUTFLOW_TYPES.has(orig.transaction_type ?? "")) {
+    return json({ error: "Posisi ini tidak bisa dijual." }, { status: 409 });
+  }
+  const held = Number(isStock ? orig.shares_count : orig.quantity) || 0;
+  const qty = Number(payload.quantity);
+  const price = Number(payload.price);
+  if (!(qty > 0) || !(price > 0)) return json({ error: "Jumlah dan harga jual harus lebih dari 0." }, { status: 400 });
+  if (qty > held + 1e-9) return json({ error: `Jumlah melebihi yang dimiliki (${held}).` }, { status: 400 });
+  const account = (await requireOwnedAccount(env, userId, payload.account_id)) ?? (await requireOwnedAccount(env, userId, orig.account_id));
+  if (!account) return json({ error: "Pilih rekening tujuan dana." }, { status: 400 });
+  const date = dayOf(payload.date, todayWIB());
+  if (date > todayWIB()) return json({ error: "Tanggal tidak boleh di masa depan." }, { status: 400 });
+
+  const invested = Number(orig.amount_invested) || 0;
+  const costSold = round2(held > 0 ? (invested * qty) / held : 0);
+  const proceeds = round2(qty * price);
+  const remaining = round2(held - qty);
+  const keep = held > 0 ? remaining / held : 0;
+  const idrRatio = invested > 0 && Number(orig.amount_idr) > 0 ? Number(orig.amount_idr) / invested : 1;
+  const saleId = generateId();
+  const now = nowIso();
+  const saleType = isStock ? "Jual" : "Penjualan";
+  const sale: InvestmentLedgerRow = {
+    id: saleId, name: orig.name, type: orig.type, transaction_type: saleType,
+    amount_invested: costSold, amount_idr: costSold * idrRatio, current_value: proceeds, current_value_idr: proceeds * idrRatio,
+    currency: orig.currency, account_id: account.id,
+  };
+  const qtyCol = isStock ? "shares_count" : "quantity";
+  const guard = { sql: "EXISTS (SELECT 1 FROM investments WHERE id = ? AND user_id = ?)", binds: [saleId, userId] };
+  const results = await env.DB.batch([
+    // Klaim: baris jual hanya dibuat kalau jumlah milik posisi asal belum berubah
+    // sejak dibaca (jual ganda/bersamaan → hanya satu yang lolos).
+    env.DB.prepare(
+      `INSERT INTO investments (id, user_id, name, type, platform, category, logo_url, amount_invested, amount_idr,
+                                current_value, current_value_idr, return_percentage, currency, transaction_type, account_id,
+                                ${qtyCol}, ${isStock ? "price_per_share, stock_code, exchange_code" : "price_per_unit, unit"},
+                                date_invested, status, related_investment_id, created_at, updated_at)
+       SELECT ?, ?, name, type, platform, category, logo_url, ?, ?, ?, ?, ?, currency, ?, ?, ?, ?,
+              ${isStock ? "stock_code, exchange_code" : "unit"}, ?, 'Closed', id, ?, ?
+         FROM investments WHERE id = ? AND user_id = ? AND status = 'Active' AND ${qtyCol} = ?`
+    ).bind(
+      saleId, userId, sale.amount_invested, sale.amount_idr, proceeds, sale.current_value_idr,
+      costSold > 0 ? ((proceeds - costSold) / costSold) * 100 : 0, saleType, account.id, qty, price,
+      `${date}T00:00:00.000Z`, now, now, orig.id, userId, held
+    ),
+    env.DB.prepare(
+      `UPDATE investments SET ${qtyCol} = ?, amount_invested = amount_invested * ?, amount_idr = amount_idr * ?,
+              current_value = current_value * ?, current_value_idr = current_value_idr * ?, status = ?, updated_at = ?
+        WHERE id = ? AND user_id = ? AND ${guard.sql}`
+    ).bind(remaining, keep, keep, keep, keep, remaining > 0 ? "Active" : "Closed", now, orig.id, userId, ...guard.binds),
+    ...investmentEffectStatements(env, userId, sale, 1, guard, {
+      date,
+      note: `Penjualan ${qty} ${isStock ? "lembar" : orig.unit || "unit"} ${orig.name ?? ""} @ ${price} (${proceeds - costSold >= 0 ? "untung" : "rugi"} ${round2(Math.abs(proceeds - costSold))})`,
+    }),
+  ]);
+  if (!results[0]?.meta.changes) return json({ error: "Posisi ini baru saja berubah. Muat ulang lalu coba lagi." }, { status: 409 });
+  return json({ ok: true, id: saleId, proceeds, costBasis: costSold, remaining }, { status: 201 });
+}
+
+// POST /api/member/investments/:id/cairkan — cairkan deposito (sebelum jatuh tempo: bunga hangus).
+async function handleDepositCairkan(request: Request, env: Env, investmentId: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const dep = await loadInvestmentRow(env, userId, investmentId);
+  if (!dep) return json({ error: "Deposito tidak ditemukan." }, { status: 404 });
+  if (dep.type !== "Deposito" || dep.transaction_type !== "Penempatan" || dep.status !== "Active") {
+    return json({ error: "Deposito ini sudah tidak aktif." }, { status: 409 });
+  }
+  const account = await requireOwnedAccount(env, userId, dep.account_id);
+  if (!account) return json({ error: "Rekening sumber deposito tidak ditemukan." }, { status: 400 });
+
+  const today = todayWIB();
+  const invested = Number(dep.amount_invested) || 0;
+  const matured = !dep.target_date || dep.target_date.slice(0, 10) <= today;
+  const interest = matured
+    ? round2(computeDepositResult(invested, Number(dep.return_percentage) || 0, Number(dep.tax_percentage) || 0, Number(dep.duration_days) || 0).interestOnly)
+    : 0;
+  const total = round2(invested + interest);
+  const idrRatio = invested > 0 && Number(dep.amount_idr) > 0 ? Number(dep.amount_idr) / invested : 1;
+  const closeId = generateId();
+  const now = nowIso();
+  const closing: InvestmentLedgerRow = {
+    id: closeId, name: `${dep.name} (Dicairkan${matured ? "" : " - Awal"})`, type: "Deposito", transaction_type: "Penarikan",
+    amount_invested: invested, amount_idr: invested * idrRatio, current_value: total, current_value_idr: total * idrRatio,
+    currency: dep.currency, account_id: account.id,
+  };
+  const guard = { sql: "EXISTS (SELECT 1 FROM investments WHERE id = ? AND user_id = ?)", binds: [closeId, userId] };
+  const projectionId = await findProjectionRowId(env, dep.id, userId, dep.name ?? "");
+  const results = await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO investments (id, user_id, name, type, platform, category, amount_invested, amount_idr, current_value,
+                                current_value_idr, return_percentage, tax_percentage, currency, transaction_type, account_id,
+                                date_invested, target_date, duration_days, status, related_investment_id, created_at, updated_at)
+       SELECT ?, ?, ?, 'Deposito', platform, category, ?, ?, ?, ?, return_percentage, tax_percentage, currency, 'Penarikan', ?,
+              ?, ?, duration_days, 'Closed', id, ?, ?
+         FROM investments WHERE id = ? AND user_id = ? AND status = 'Active'`
+    ).bind(
+      closeId, userId, closing.name, closing.amount_invested, closing.amount_idr, total, closing.current_value_idr, account.id,
+      `${today}T00:00:00.000Z`, `${today}T00:00:00.000Z`, now, now, dep.id, userId
+    ),
+    env.DB.prepare(`UPDATE investments SET status = 'Closed', updated_at = ? WHERE id = ? AND user_id = ? AND ${guard.sql}`)
+      .bind(now, dep.id, userId, ...guard.binds),
+    ...(projectionId
+      ? [env.DB.prepare(`DELETE FROM investments WHERE id = ? AND user_id = ? AND status = 'Planned' AND ${guard.sql}`).bind(projectionId, userId, ...guard.binds)]
+      : []),
+    ...investmentEffectStatements(env, userId, closing, 1, guard, {
+      date: today,
+      note: matured ? `Deposito ${dep.name} dicairkan` : `Deposito ${dep.name} dicairkan sebelum jatuh tempo, bunga hangus`,
+    }),
+  ]);
+  if (!results[0]?.meta.changes) return json({ error: "Deposito ini baru saja berubah. Muat ulang lalu coba lagi." }, { status: 409 });
+  return json({ ok: true, id: closeId, total, matured }, { status: 201 });
+}
+
+// PUT /api/member/investments/:id/rebook — edit penuh (web): balikkan efek lama,
+// hapus transaksi tertaut lama, tulis ulang posisi, terapkan efek baru — satu batch.
+async function handleInvestmentRebook(request: Request, env: Env, investmentId: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const payload = await parseJson<Record<string, unknown>>(request);
+  const old = await loadInvestmentRow(env, userId, investmentId);
+  if (!old) return json({ error: "Investasi tidak ditemukan." }, { status: 404 });
+  if (old.status === "Planned") return json({ error: "Baris proyeksi tidak bisa diedit." }, { status: 409 });
+
+  const built = await buildInvestmentPosition({ ...payload, type: payload.type ?? old.type });
+  if ("error" in built) return json({ error: built.error }, { status: 400 });
+  const account = await requireOwnedAccount(env, userId, payload.account_id ?? old.account_id);
+  if (!account) return json({ error: "Pilih rekening sumber dana." }, { status: 400 });
+
+  const now = nowIso();
+  const token = `${now}#${generateId()}`;
+  const pos: Record<string, unknown> = { ...built.position, status: old.status === "Closed" && built.position.transaction_type !== "Penarikan" ? old.status : built.position.status };
+  const assignments = [...POSITION_COLUMNS, "account_id"].map((c) => `${c} = ?`).join(", ");
+  const newRow: InvestmentLedgerRow = {
+    id: old.id, name: String(pos.name), type: String(pos.type), transaction_type: String(pos.transaction_type),
+    amount_invested: Number(pos.amount_invested), amount_idr: Number(pos.amount_idr),
+    current_value: Number(pos.current_value), current_value_idr: Number(pos.current_value_idr),
+    currency: String(pos.currency), account_id: account.id,
+  };
+  // Klaim optimistik: hanya kalau baris belum berubah sejak dibaca (updated_at
+  // sama) — token unik di updated_at menjaga statement lain di batch ini.
+  const guard = { sql: "EXISTS (SELECT 1 FROM investments WHERE id = ? AND user_id = ? AND updated_at = ?)", binds: [old.id, userId, token] };
+  const results = await env.DB.batch([
+    env.DB.prepare(`UPDATE investments SET updated_at = ? WHERE id = ? AND user_id = ? AND updated_at IS ?`)
+      .bind(token, old.id, userId, old.updated_at),
+    ...investmentEffectStatements(env, userId, old, -1, guard),
+    deleteLinkedInvestmentTxStatement(env, userId, old, guard),
+    env.DB.prepare(`UPDATE investments SET ${assignments} WHERE id = ? AND user_id = ? AND ${guard.sql}`)
+      .bind(...POSITION_COLUMNS.map((c) => positionValue(pos, c)), account.id, old.id, userId, ...guard.binds),
+    ...investmentEffectStatements(env, userId, newRow, 1, guard, { date: built.date, note: `[Update] ${investmentTxLabel(newRow)}` }),
+  ]);
+  if (!results[0]?.meta.changes) return json({ error: "Investasi ini baru saja berubah. Muat ulang lalu coba lagi." }, { status: 409 });
+  return json({ ok: true, id: old.id });
+}
 
 async function handleDeleteInvestment(request: Request, env: Env, investmentId: string) {
   const authResult = await requireSession(env, request);
@@ -3554,52 +4006,44 @@ async function handleDeleteInvestment(request: Request, env: Env, investmentId: 
     return json({ ok: true });
   }
 
-  const row = await env.DB.prepare(
-    "SELECT id, transaction_type, amount_invested, current_value, account_id FROM investments WHERE id = ? AND user_id = ?"
-  )
-    .bind(investmentId, userId)
-    .first<{ id: string; transaction_type: string | null; amount_invested: number; current_value: number; account_id: string | null }>();
+  const row = await loadInvestmentRow(env, userId, investmentId);
   if (!row) return json({ error: "Investasi tidak ditemukan." }, { status: 404 });
 
-  // Kebalikan efek saat posisi dibuat — sama persis dengan pembalikan yang
-  // dulu dikerjakan client (investmentService.hardDeleteInvestment):
-  // Penempatan/Beli/Pembelian menarik saldo keluar & menambah pengeluaran +
-  // investasi; Penarikan/Jual/Penjualan/Bunga mengembalikan saldo & mencatat
-  // pemasukan (Jual/Penjualan juga mengurangi total investasi sebesar modal).
-  // Baris tanpa rekening nyata / proyeksi tidak punya efek saldo.
-  const invested = Number(row.amount_invested) || 0;
-  const current = Number(row.current_value) || 0;
-  const type = row.transaction_type ?? "";
-  const hasAccount = Boolean(row.account_id) && !NON_ACCOUNT_IDS.has(row.account_id ?? "");
-  const stillExists = "EXISTS (SELECT 1 FROM investments WHERE id = ? AND user_id = ?)";
-  const statements: D1PreparedStatement[] = [];
-
-  if (hasAccount && INVESTMENT_OUTFLOW_TYPES.has(type)) {
+  // Balikkan efek lewat tabel yang SAMA dengan saat dibuat, hapus transaksi
+  // tertautnya, lalu hapus barisnya — satu batch; hapus ganda hanya sekali.
+  const guard = { sql: "EXISTS (SELECT 1 FROM investments WHERE id = ? AND user_id = ?)", binds: [row.id, userId] };
+  const statements: D1PreparedStatement[] = [
+    ...investmentEffectStatements(env, userId, row, -1, guard),
+    deleteLinkedInvestmentTxStatement(env, userId, row, guard),
+  ];
+  // Baris hasil jual/cairkan: kembalikan posisi asalnya seperti sebelum dijual
+  // (lembar/jumlah & modal ditambah lagi, status aktif) — kalau tidak, hapus
+  // catatan jual membuat lembar yang terjual "hilang" dari posisi asal.
+  if (row.related_investment_id && (row.transaction_type === "Jual" || row.transaction_type === "Penjualan")) {
+    const qtyCol = row.type === "Saham" ? "shares_count" : "quantity";
+    const soldQty = Number(row.type === "Saham" ? row.shares_count : row.quantity) || 0;
     statements.push(
-      env.DB.prepare(`UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ? AND ${stillExists}`)
-        .bind(invested, row.account_id, userId, row.id, userId),
       env.DB.prepare(
-        `UPDATE users SET total_expenses = COALESCE(total_expenses, 0) - ?, total_wealth = COALESCE(total_wealth, 0) + ?,
-                          total_investment = COALESCE(total_investment, 0) - ?
-          WHERE id = ? AND ${stillExists}`
-      ).bind(invested, invested, invested, userId, row.id, userId)
+        `UPDATE investments SET ${qtyCol} = COALESCE(${qtyCol}, 0) + ?, amount_invested = amount_invested + ?,
+                amount_idr = COALESCE(amount_idr, 0) + ?, current_value = current_value + ?,
+                current_value_idr = COALESCE(current_value_idr, 0) + ?, status = 'Active', updated_at = ?
+          WHERE id = ? AND user_id = ? AND status IN ('Active', 'Closed') AND ${guard.sql}`
+      ).bind(
+        soldQty, Number(row.amount_invested) || 0, Number(row.amount_idr) || 0, Number(row.amount_invested) || 0,
+        Number(row.amount_idr) || 0, nowIso(), row.related_investment_id, userId, ...guard.binds
+      )
     );
-  } else if (hasAccount && INVESTMENT_INFLOW_TYPES.has(type)) {
-    const restoresCostBasis = type === "Jual" || type === "Penjualan";
+  } else if (row.related_investment_id && row.type === "Deposito" && row.transaction_type === "Penarikan") {
     statements.push(
-      env.DB.prepare(`UPDATE accounts SET balance = balance - ? WHERE id = ? AND user_id = ? AND ${stillExists}`)
-        .bind(current, row.account_id, userId, row.id, userId),
       env.DB.prepare(
-        `UPDATE users SET total_income = COALESCE(total_income, 0) - ?, total_wealth = COALESCE(total_wealth, 0) - ?,
-                          total_investment = COALESCE(total_investment, 0) + ?
-          WHERE id = ? AND ${stillExists}`
-      ).bind(current, current, restoresCostBasis ? invested : 0, userId, row.id, userId)
+        `UPDATE investments SET status = 'Active', updated_at = ?
+          WHERE id = ? AND user_id = ? AND transaction_type = 'Penempatan' AND status = 'Closed' AND ${guard.sql}`
+      ).bind(nowIso(), row.related_investment_id, userId, ...guard.binds)
     );
   }
-  statements.push(env.DB.prepare("DELETE FROM investments WHERE id = ? AND user_id = ?").bind(row.id, userId));
-
-  // Satu batch = satu transaksi SQL: pembalikan + penghapusan berhasil bersama
-  // atau gagal bersama; hapus ganda (double tap) hanya membalikkan sekali.
+  statements.push(
+    env.DB.prepare("DELETE FROM investments WHERE id = ? AND user_id = ?").bind(row.id, userId),
+  );
   const results = await env.DB.batch(statements);
   if (!results[results.length - 1]?.meta.changes) {
     return json({ error: "Investasi tidak ditemukan." }, { status: 404 });
@@ -5329,204 +5773,133 @@ const processMaturedDeposit = async (env: Env, inv: DepositRow) => {
   const taxRate = Number(inv.tax_percentage) || 0;
   const currency = inv.currency || "IDR";
   const days = daysBetweenIso(inv.date_invested, inv.target_date);
-  const { interestOnly, totalResult } = computeDepositResult(invested, rate, taxRate, days);
+  const raw = computeDepositResult(invested, rate, taxRate, days);
+  // Uang dibulatkan ke 2 desimal sebelum menyentuh saldo/total.
+  const interestOnly = round2(raw.interestOnly);
+  const totalResult = round2(invested + interestOnly);
   const action = inv.maturity_action || "cairkan";
   const today = inv.target_date.slice(0, 10);
   const projectionId = await findProjectionRowId(env, inv.id, inv.user_id, inv.name);
+  const now = nowIso();
+  // Klaim anti-dobel: statement pertama tiap cabang hanya berhasil kalau
+  // deposito masih Active dengan target_date yang sama seperti saat dibaca,
+  // sambil menulis token unik ke updated_at. Semua efek uang di batch yang sama
+  // dijaga token itu — cron yang di-retry/berjalan bersamaan tidak bisa
+  // mencairkan dua kali, dan gagal di tengah = seluruh batch batal.
+  const token = `${now}#${generateId()}`;
+  const claimed = { sql: "EXISTS (SELECT 1 FROM investments WHERE id = ? AND updated_at = ?)", binds: [inv.id, token] };
+  const claimWhere = "id = ? AND user_id = ? AND status = 'Active' AND target_date = ?";
 
   if (action === "cairkan") {
-    if (inv.account_id) {
-      await env.DB.prepare(`UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?`)
-        .bind(totalResult, inv.account_id, inv.user_id)
-        .run();
-    }
-
     const totalResultIdr = await resolveIdrAmount(currency, totalResult, undefined);
-    await insertTransactionRecord(env, inv.user_id, {
-      type: "pemasukan",
-      amount: totalResult,
-      amountIdr: totalResultIdr,
-      category: "Investasi",
-      subCategory: "Deposito - Penarikan (Otomatis)",
-      currency,
-      accountId: inv.account_id,
-      date: today,
-      note: `[Otomatis] Deposito ${inv.name} cair jatuh tempo (pokok+bunga)`,
-    });
-
-    await env.DB.prepare(
-      `UPDATE users
-          SET total_income = COALESCE(total_income, 0) + ?,
-              total_wealth = COALESCE(total_wealth, 0) + ?,
-              total_investment = COALESCE(total_investment, 0) - ?
-        WHERE id = ?`
-    )
-      .bind(totalResult, totalResult, invested, inv.user_id)
-      .run();
-
-    // Tutup baris asli (biar cron tidak memprosesnya lagi) dan catat baris
-    // Penarikan baru, sama seperti alur manual, supaya total portofolio pas.
-    await env.DB.prepare(`UPDATE investments SET status = 'Closed', updated_at = ? WHERE id = ?`)
-      .bind(nowIso(), inv.id)
-      .run();
-
+    const investedIdr = await resolveIdrAmount(currency, invested, undefined);
     const closingId = generateId();
-    await env.DB.prepare(
-      `INSERT INTO investments (
-        id, user_id, name, type, platform, amount_invested, amount_idr, current_value, current_value_idr,
-        return_percentage, tax_percentage, currency, transaction_type, category, account_id,
-        date_invested, target_date, duration_days, status, related_investment_id, created_at, updated_at
-      ) VALUES (?, ?, ?, 'Deposito', ?, ?, ?, ?, ?, ?, ?, ?, 'Penarikan', ?, ?, ?, ?, ?, 'Closed', ?, ?, ?)`
-    )
-      .bind(
-        closingId,
-        inv.user_id,
-        `${inv.name} (Dicairkan)`,
-        inv.platform,
-        invested,
-        await resolveIdrAmount(currency, invested, undefined),
-        totalResult,
-        totalResultIdr,
-        rate,
-        taxRate,
-        currency,
-        inv.category,
-        inv.account_id,
-        inv.target_date,
-        inv.target_date,
-        days,
-        inv.id,
-        nowIso(),
-        nowIso()
-      )
-      .run();
-
-    if (projectionId) {
-      await env.DB.prepare(`DELETE FROM investments WHERE id = ?`).bind(projectionId).run();
-    }
+    const closing: InvestmentLedgerRow = {
+      id: closingId, name: `${inv.name} (Dicairkan)`, type: "Deposito", transaction_type: "Penarikan",
+      amount_invested: invested, amount_idr: investedIdr, current_value: totalResult, current_value_idr: totalResultIdr,
+      currency, account_id: inv.account_id,
+    };
+    await env.DB.batch([
+      env.DB.prepare(`UPDATE investments SET status = 'Closed', updated_at = ? WHERE ${claimWhere}`)
+        .bind(token, inv.id, inv.user_id, inv.target_date),
+      env.DB.prepare(
+        `INSERT INTO investments (
+          id, user_id, name, type, platform, amount_invested, amount_idr, current_value, current_value_idr,
+          return_percentage, tax_percentage, currency, transaction_type, category, account_id,
+          date_invested, target_date, duration_days, status, related_investment_id, created_at, updated_at
+        ) SELECT ?, ?, ?, 'Deposito', ?, ?, ?, ?, ?, ?, ?, ?, 'Penarikan', ?, ?, ?, ?, ?, 'Closed', ?, ?, ? WHERE ${claimed.sql}`
+      ).bind(
+        closingId, inv.user_id, closing.name, inv.platform, invested, investedIdr, totalResult, totalResultIdr, rate, taxRate,
+        currency, inv.category, inv.account_id, inv.target_date, inv.target_date, days, inv.id, now, now, ...claimed.binds
+      ),
+      ...(projectionId
+        ? [env.DB.prepare(`DELETE FROM investments WHERE id = ? AND status = 'Planned' AND ${claimed.sql}`).bind(projectionId, ...claimed.binds)]
+        : []),
+      ...investmentEffectStatements(env, inv.user_id, closing, 1, claimed, {
+        date: today,
+        note: `[Otomatis] Deposito ${inv.name} cair jatuh tempo (pokok+bunga)`,
+        label: "Deposito - Penarikan (Otomatis)",
+      }),
+    ]);
     return;
   }
 
+  const newDateInvested = inv.target_date;
+  const newTargetDate = addMonthsIso(inv.target_date, 1);
+  const newDurationDays = daysBetweenIso(newDateInvested, newTargetDate);
+
   if (action === "aro_bunga") {
-    if (inv.account_id) {
-      await env.DB.prepare(`UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?`)
-        .bind(interestOnly, inv.account_id, inv.user_id)
-        .run();
-    }
-
     const interestOnlyIdr = await resolveIdrAmount(currency, interestOnly, undefined);
-    await insertTransactionRecord(env, inv.user_id, {
-      type: "pemasukan",
-      amount: interestOnly,
-      amountIdr: interestOnlyIdr,
-      category: "Investasi",
-      subCategory: "Deposito - Bunga (Otomatis)",
-      currency,
-      accountId: inv.account_id,
-      date: today,
-      note: `[Otomatis] Bunga deposito ${inv.name} cair ke rekening, pokok diperpanjang 1 bulan`,
-    });
-
-    await env.DB.prepare(
-      `UPDATE users
-          SET total_income = COALESCE(total_income, 0) + ?,
-              total_wealth = COALESCE(total_wealth, 0) + ?
-        WHERE id = ?`
-    )
-      .bind(interestOnly, interestOnly, inv.user_id)
-      .run();
-
-    const newDateInvested = inv.target_date;
-    const newTargetDate = addMonthsIso(inv.target_date, 1);
-    const newDurationDays = daysBetweenIso(newDateInvested, newTargetDate);
-
-    await env.DB.prepare(
-      `UPDATE investments
-          SET date_invested = ?, target_date = ?, duration_days = ?, updated_at = ?
-        WHERE id = ?`
-    )
-      .bind(newDateInvested, newTargetDate, newDurationDays, nowIso(), inv.id)
-      .run();
-
     const nextResult = computeDepositResult(invested, rate, taxRate, newDurationDays);
     const nextTotalIdr = await resolveIdrAmount(currency, nextResult.totalResult, undefined);
-    if (projectionId) {
-      await env.DB.prepare(
-        `UPDATE investments
-            SET amount_invested = ?, amount_idr = ?, current_value = ?, current_value_idr = ?,
-                date_invested = ?, target_date = ?, duration_days = ?, updated_at = ?
-          WHERE id = ?`
-      )
-        .bind(
-          nextResult.totalResult,
-          nextTotalIdr,
-          nextResult.totalResult,
-          nextTotalIdr,
-          newTargetDate,
-          newTargetDate,
-          newDurationDays,
-          nowIso(),
-          projectionId
-        )
-        .run();
-    }
+    const hasAccount = Boolean(inv.account_id) && !NON_ACCOUNT_IDS.has(inv.account_id ?? "");
+    await env.DB.batch([
+      env.DB.prepare(`UPDATE investments SET date_invested = ?, target_date = ?, duration_days = ?, updated_at = ? WHERE ${claimWhere}`)
+        .bind(newDateInvested, newTargetDate, newDurationDays, token, inv.id, inv.user_id, inv.target_date),
+      ...(hasAccount
+        ? [
+            env.DB.prepare(`UPDATE accounts SET balance = ROUND(balance + ?, 2) WHERE id = ? AND user_id = ? AND ${claimed.sql}`)
+              .bind(interestOnly, inv.account_id, inv.user_id, ...claimed.binds),
+            env.DB.prepare(
+              `INSERT INTO transactions (id, user_id, type, amount, amount_idr, category, sub_category, currency, account_id,
+                                         date, display_date, note, status, related_id, related_type, created_at, updated_at)
+               SELECT ?, ?, 'pemasukan', ?, ?, 'Investasi', 'Deposito - Bunga (Otomatis)', ?, ?, ?, ?, ?, 'VERIFIED', ?, 'investasi', ?, ?
+                WHERE ${claimed.sql}`
+            ).bind(
+              generateId(), inv.user_id, round2(interestOnly), interestOnlyIdr, currency, inv.account_id, today, today,
+              `[Otomatis] Bunga deposito ${inv.name} cair ke rekening, pokok diperpanjang 1 bulan`, inv.id, now, now, ...claimed.binds
+            ),
+          ]
+        : []),
+      env.DB.prepare(
+        `UPDATE users SET total_income = ROUND(COALESCE(total_income, 0) + ?, 2), total_wealth = ROUND(COALESCE(total_wealth, 0) + ?, 2)
+          WHERE id = ? AND ${claimed.sql}`
+      ).bind(interestOnly, interestOnly, inv.user_id, ...claimed.binds),
+      ...(projectionId
+        ? [
+            env.DB.prepare(
+              `UPDATE investments SET amount_invested = ?, amount_idr = ?, current_value = ?, current_value_idr = ?,
+                      date_invested = ?, target_date = ?, duration_days = ?, updated_at = ?
+                WHERE id = ? AND ${claimed.sql}`
+            ).bind(
+              nextResult.totalResult, nextTotalIdr, nextResult.totalResult, nextTotalIdr, newTargetDate, newTargetDate,
+              newDurationDays, now, projectionId, ...claimed.binds
+            ),
+          ]
+        : []),
+    ]);
     return;
   }
 
   if (action === "aro_full") {
     const newInvested = totalResult;
     const newInvestedIdr = await resolveIdrAmount(currency, newInvested, undefined);
-    const newDateInvested = inv.target_date;
-    const newTargetDate = addMonthsIso(inv.target_date, 1);
-    const newDurationDays = daysBetweenIso(newDateInvested, newTargetDate);
-
-    await env.DB.prepare(
-      `UPDATE investments
-          SET amount_invested = ?, amount_idr = ?, current_value = ?, current_value_idr = ?,
-              date_invested = ?, target_date = ?, duration_days = ?, updated_at = ?
-        WHERE id = ?`
-    )
-      .bind(
-        newInvested,
-        newInvestedIdr,
-        newInvested,
-        newInvestedIdr,
-        newDateInvested,
-        newTargetDate,
-        newDurationDays,
-        nowIso(),
-        inv.id
-      )
-      .run();
-
-    await env.DB.prepare(
-      `UPDATE users SET total_investment = COALESCE(total_investment, 0) + ? WHERE id = ?`
-    )
-      .bind(interestOnly, inv.user_id)
-      .run();
-
     const nextResult = computeDepositResult(newInvested, rate, taxRate, newDurationDays);
     const nextTotalIdr = await resolveIdrAmount(currency, nextResult.totalResult, undefined);
-    if (projectionId) {
-      await env.DB.prepare(
-        `UPDATE investments
-            SET amount_invested = ?, amount_idr = ?, current_value = ?, current_value_idr = ?,
+    await env.DB.batch([
+      env.DB.prepare(
+        `UPDATE investments SET amount_invested = ?, amount_idr = ?, current_value = ?, current_value_idr = ?,
                 date_invested = ?, target_date = ?, duration_days = ?, updated_at = ?
-          WHERE id = ?`
-      )
-        .bind(
-          nextResult.totalResult,
-          nextTotalIdr,
-          nextResult.totalResult,
-          nextTotalIdr,
-          newTargetDate,
-          newTargetDate,
-          newDurationDays,
-          nowIso(),
-          projectionId
-        )
-        .run();
-    }
+          WHERE ${claimWhere}`
+      ).bind(
+        newInvested, newInvestedIdr, newInvested, newInvestedIdr, newDateInvested, newTargetDate, newDurationDays, token,
+        inv.id, inv.user_id, inv.target_date
+      ),
+      env.DB.prepare(`UPDATE users SET total_investment = ROUND(COALESCE(total_investment, 0) + ?, 2) WHERE id = ? AND ${claimed.sql}`)
+        .bind(interestOnly, inv.user_id, ...claimed.binds),
+      ...(projectionId
+        ? [
+            env.DB.prepare(
+              `UPDATE investments SET amount_invested = ?, amount_idr = ?, current_value = ?, current_value_idr = ?,
+                      date_invested = ?, target_date = ?, duration_days = ?, updated_at = ?
+                WHERE id = ? AND ${claimed.sql}`
+            ).bind(
+              nextResult.totalResult, nextTotalIdr, nextResult.totalResult, nextTotalIdr, newTargetDate, newTargetDate,
+              newDurationDays, now, projectionId, ...claimed.binds
+            ),
+          ]
+        : []),
+    ]);
   }
 };
 
@@ -6622,6 +6995,17 @@ const worker = {
 
       if (url.pathname === "/api/member/investments" && request.method === "POST") {
         return await handleCreateInvestment(request, env);
+      }
+
+      if (url.pathname === "/api/member/investments/entry" && request.method === "POST") {
+        return await handleInvestmentEntry(request, env);
+      }
+
+      {
+        const m = /^\/api\/member\/investments\/([^/]+)\/(sell|cairkan|rebook)$/.exec(url.pathname);
+        if (m && m[2] === "sell" && request.method === "POST") return await handleInvestmentSell(request, env, m[1]);
+        if (m && m[2] === "cairkan" && request.method === "POST") return await handleDepositCairkan(request, env, m[1]);
+        if (m && m[2] === "rebook" && request.method === "PUT") return await handleInvestmentRebook(request, env, m[1]);
       }
 
       if (url.pathname.startsWith("/api/member/investments/")) {
