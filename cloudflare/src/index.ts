@@ -2033,6 +2033,27 @@ const insertTransactionRecord = async (env: Env, userId: string, params: Transac
   return id;
 };
 
+// Id rekening dari request (account_id, target_account_id) harus milik user
+// sesi. Tanpa cek ini user bisa menautkan transaksi/recurring/investasi ke
+// rekening orang lain — saldo korban tetap aman (semua update saldo ber-user_id),
+// tapi FK transactions.account_id ON DELETE RESTRICT membuat korban tidak bisa
+// menghapus rekeningnya. Nilai khusus ('General', 'Wallet', kosong) dilewati.
+const NON_ACCOUNT_IDS = new Set(["", "General", "Wallet"]);
+const assertOwnAccounts = async (env: Env, userId: string, ids: unknown[]): Promise<Response | null> => {
+  const toCheck = [
+    ...new Set(ids.filter((v): v is string => typeof v === "string" && !NON_ACCOUNT_IDS.has(v))),
+  ];
+  for (const accountId of toCheck) {
+    const owned = await env.DB.prepare("SELECT 1 AS ok FROM accounts WHERE id = ? AND user_id = ?")
+      .bind(accountId, userId)
+      .first<{ ok: number }>();
+    if (!owned) {
+      return json({ error: "Rekening tidak ditemukan." }, { status: 400 });
+    }
+  }
+  return null;
+};
+
 async function handleCreateTransaction(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) {
@@ -2061,6 +2082,8 @@ async function handleCreateTransaction(request: Request, env: Env) {
     related_id?: string;
     related_type?: string;
   }>(request);
+  const accountError = await assertOwnAccounts(env, authResult.session.user.id, [payload.account_id, payload.target_account_id]);
+  if (accountError) return accountError;
 
   if (!payload.type || !payload.amount || !payload.date) {
     return json({ error: "type, amount, dan date wajib diisi." }, { status: 400 });
@@ -2265,6 +2288,8 @@ async function handleUpdateTransaction(request: Request, env: Env, transactionId
   }
 
   const payload = await parseJson<Record<string, unknown>>(request);
+  const accountError = await assertOwnAccounts(env, authResult.session.user.id, [payload.account_id, payload.target_account_id]);
+  if (accountError) return accountError;
   const allowed = new Set([
     "type",
     "amount",
@@ -3133,6 +3158,8 @@ async function handleCreateInvestment(request: Request, env: Env) {
   }
 
   const payload = await parseJson<Record<string, unknown>>(request);
+  const accountError = await assertOwnAccounts(env, authResult.session.user.id, [payload.account_id]);
+  if (accountError) return accountError;
   const id = generateId();
   const currency = String(payload.currency ?? "IDR");
   const amountInvested = Number(payload.amount_invested ?? 0);
@@ -3193,6 +3220,8 @@ async function handleUpdateInvestment(request: Request, env: Env, investmentId: 
   }
 
   const payload = await parseJson<Record<string, unknown>>(request);
+  const accountError = await assertOwnAccounts(env, authResult.session.user.id, [payload.account_id]);
+  if (accountError) return accountError;
   const allowed = new Set([
     "name",
     "type",
@@ -3777,10 +3806,12 @@ async function handleCreateRecurring(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
   const payload = await parseJson<Record<string, unknown>>(request);
+  const accountError = await assertOwnAccounts(env, authResult.session.user.id, [pickPayloadValue(payload, "account_id", "accountId")]);
+  if (accountError) return accountError;
   const id = generateId();
   await env.DB.prepare(
     `INSERT INTO recurring (id, user_id, name, type, category, account_id, amount, interval, next_date, note, status, payload_json, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       id,
@@ -3806,6 +3837,8 @@ async function handleUpdateRecurring(request: Request, env: Env, recurringId: st
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
   const payload = await parseJson<Record<string, unknown>>(request);
+  const accountError = await assertOwnAccounts(env, authResult.session.user.id, [pickPayloadValue(payload, "account_id", "accountId")]);
+  if (accountError) return accountError;
   const updates = new Map<string, unknown>();
 
   if (payload.name !== undefined) updates.set("name", payload.name);

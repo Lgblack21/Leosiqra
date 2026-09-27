@@ -43,6 +43,7 @@ python3 .claude/skills/security-check/scripts/scan.py --json   # untuk diolah
 
 Pemindai mencari: route member/admin tanpa `requireSession`, route admin tanpa
 cek role, SQL ke tabel milik user tanpa `user_id`, SQL dengan interpolasi `${}`,
+INSERT yang jumlah kolom ≠ jumlah nilai (query yang pasti gagal),
 error mentah/field `debug` di response, secret ter-hardcode (termasuk di
 `[vars]` wrangler.toml), dan pola frontend berbahaya.
 

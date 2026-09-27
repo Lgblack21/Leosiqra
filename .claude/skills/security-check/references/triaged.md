@@ -18,6 +18,13 @@ Perbarui file ini di akhir setiap audit.
 | `dangerouslySetInnerHTML` → `SandboxedHtml` | `MaintenanceGuard`, preview di `admin/pengaturan` | tidak lagi pakai `dangerouslySetInnerHTML`; iframe sandbox tanpa script |
 | `dangerouslySetInnerHTML` JSON-LD | `src/app/layout.tsx` | `JSON.stringify` objek konstanta |
 | `dangerouslySetInnerHTML` jawaban AI | `ai-leosiqra/page.tsx`, `app/assistant/chat/page.tsx` (`formatText`) | `escapeHtml` (& < > " ') dijalankan dulu, baru ditambah `<strong>/<em>/<br/>` |
+| `sql-interpolasi` `${assignments}` | `handleUpdateTransaction`, `handleUpdateAccount`, `handleUpdateBudget`, `handleUpdateInvestment`, `handleUpdateCategory`, `handleUpdateRecurring` | nama kolom dari whitelist di kode (`allowed.has` / `updates.set` literal); `WHERE id = ? AND user_id = ?` sesi (dicek 2026-09-28) |
+| `sql-interpolasi` profil | `handleUpdateMemberProfile` | whitelist `Map` tanpa `role`/`plan`/`status`/`expired_at` (tidak bisa naik ke PRO/admin); `WHERE id = ?` = user sesi. Kolom `total_*` bisa diubah user tapi cuma angka ringkasan miliknya sendiri (⚪) |
+| `sql-interpolasi` `${table}` | `handleResetMemberData` | `table` dari konstanta `RESET_DATA_TABLES`; tiap DELETE `WHERE user_id = ?` |
+| `sql-interpolasi` admin | `handleAdminSettings`, `handleAdminUserById` | `requireSession(..., "admin")`; kolom dari whitelist/literal (`plan`, `status`, `expired_at`) |
+| `sql-tanpa-user_id` cron | `processDueRecurringTransactions`, `processMaturedDeposit` | id baris dari SELECT cron sendiri; SEMUA update saldo `WHERE id = ? AND user_id = ?` pemilik baris — `account_id` milik orang lain → 0 baris berubah |
+| `sql-tanpa-user_id` admin | `backfillIndonesianBankLogos` (route `/api/admin/debug/backfill-bank-logos`), `handleAdminPayments`, `handleAdminPaymentById` | hanya bisa dipanggil lewat route ber-`requireSession(..., "admin")` |
+| `sql-tanpa-user_id` push | `sendWebPushToSubscription` | DELETE by id dari query internal, hanya saat layanan push membalas 404/410 |
 | GET yang mengubah data (CSRF) | semua route `request.method === "GET"` | semua GET yang terdaftar hanya membaca data |
 | push_subscriptions dicari per endpoint | `handleCreatePushSubscription` | pindah akun di browser yang sama memang disengaja; URL endpoint push tidak bisa ditebak (⚪ info) |
 
@@ -29,15 +36,10 @@ Perbarui file ini di akhir setiap audit.
 
 | Tanggal | Temuan | Perbaikan |
 |---|---|---|
+| 2026-09-28 | 🟡 Kepemilikan `account_id`/`target_account_id` tidak divalidasi (transaksi, recurring, investasi) — bisa menautkan baris ke rekening orang lain & memblokir penghapusan rekening korban lewat FK | `assertOwnAccounts` di create/update transaksi, recurring, investasi (nilai `General`/`Wallet`/kosong dilewati). Diverifikasi di Worker lokal: 5 serangan → 400, alur normal tetap 200/201 |
+| 2026-09-28 | 🐛 `INSERT INTO recurring` 14 kolom tapi 15 `?` → bikin recurring selalu 500 (sejak d80157e) | placeholder dikoreksi; pemindai sekarang punya cek `sql-jumlah-kolom` |
 | 2026-09-27 | 🟠 Sanitasi HTML maintenance bisa ditembus (`on*` tanpa kutip, `<svg/onload>`, `javascript:` tanpa kutip) — HTML tampil ke semua user | HTML maintenance sekarang dirender di `SandboxedHtml` (iframe `sandbox` tanpa `allow-scripts`/`allow-same-origin`) di `MaintenanceGuard` & preview admin; `sanitizeMaintenanceHtml` ditambah pola tanpa kutip sebagai cadangan. Diverifikasi di browser: script & fetch dari HTML jahat yang tidak disanitasi tidak jalan |
 
 ## Belum ditriase
 
-- `sql-interpolasi` `${assignments}` di handler update (transactions, accounts,
-  budgets, investments, profile, categories, recurring, admin settings, admin
-  user): pola `allowed = new Set([...])` terlihat di `handleUpdateAccount`, belum
-  diverifikasi satu per satu di handler lain.
-- `sql-tanpa-user_id` di `backfillIndonesianBankLogos`, `handleAdminPayments`,
-  `handleAdminPaymentById`, `processMaturedDeposit`, `processDueRecurringTransactions`,
-  `sendWebPushToSubscription`: kemungkinan besar cron/admin — pastikan tidak bisa
-  dipanggil dari route member.
+(semua kandidat pemindai per 2026-09-28 sudah ditriase)

@@ -138,6 +138,13 @@ def check_sql(src: str, findings: list[Finding]) -> None:
             exprs = re.findall(r"\$\{([^}]*)\}", sql)
             findings.append(Finding("sql-interpolasi", "sedang", rel(WORKER), ln,
                                     f"{func_at(ln)}: SQL memakai ${{{', '.join(e.strip() for e in exprs)}}} — pastikan hanya identifier dari whitelist, bukan input user"))
+        ins = re.search(r"INSERT\s+(?:OR\s+\w+\s+)?INTO\s+(\w+)\s*\(([^)]*)\)\s*VALUES\s*\(([^)]*)\)", flat, re.I)
+        if ins and "${" not in ins.group(2) + ins.group(3):
+            cols = [c for c in ins.group(2).split(",") if c.strip()]
+            vals = [v for v in ins.group(3).split(",") if v.strip()]
+            if len(cols) != len(vals):
+                findings.append(Finding("sql-jumlah-kolom", "tinggi", rel(WORKER), ln,
+                                        f"{func_at(ln)}: INSERT {ins.group(1)} punya {len(cols)} kolom tapi {len(vals)} nilai — query ini selalu gagal"))
         verb = re.match(r"[`\"']\s*(SELECT|UPDATE|DELETE|INSERT)", flat, re.I)
         if not verb or verb.group(1).upper() == "INSERT":
             continue
