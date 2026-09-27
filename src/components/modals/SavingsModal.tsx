@@ -90,11 +90,7 @@ export const SavingsModal = ({ userId, isOpen, onClose, initialTransactionType =
         displayDate: displayDate
       });
 
-      // Setoran menarik saldo keluar, Penarikan mengembalikannya.
-      if (formData.fromAccount) {
-        await accountService.updateAccountBalance(formData.fromAccount, isPenarikan ? amount : -amount);
-      }
-
+      // Saldo rekening (Setoran −, Penarikan +) diubah server di batch yang sama.
       onClose();
       setFormData({
         description: '', subCategory: '', amount: '', category: 'Dana Darurat', fromAccount: '',

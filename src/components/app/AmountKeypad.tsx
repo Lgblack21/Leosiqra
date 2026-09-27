@@ -34,6 +34,15 @@ export function AmountKeypad({ value, onChange, currencySymbol = "Rp" }: AmountK
   const lastToken = tokens[tokens.length - 1];
   const lastIsOperator = isOperatorToken(lastToken);
 
+  // Nilai bisa diubah dari luar (chip preset "Lunasi", reset form setelah
+  // simpan) — samakan tampilan kalau beda dari angka yang sedang diketik.
+  const [syncedValue, setSyncedValue] = useState(value);
+  if (value !== syncedValue) {
+    setSyncedValue(value);
+    const typed = lastIsOperator ? tokens[tokens.length - 2] : lastToken;
+    if ((value || "0") !== (typed || "0")) setTokens([value || "0"]);
+  }
+
   const commit = (nextTokens: CalcToken[]) => {
     setTokens(nextTokens);
     const last = nextTokens[nextTokens.length - 1];

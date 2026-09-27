@@ -4099,45 +4099,111 @@ async function handleListSavings(request: Request, env: Env) {
 async function handleCreateSaving(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
   const payload = await parseJson<Record<string, unknown>>(request);
   const id = generateId();
   const currency = String(payload.currency ?? "IDR");
   const amount = Number(payload.amount ?? 0);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return json({ error: "Nominal harus lebih dari 0." }, { status: 400 });
+  }
+  const transactionType = String(pickPayloadValue(payload, "transaction_type", "transactionType") ?? "Setoran");
+  if (transactionType !== "Setoran" && transactionType !== "Penarikan") {
+    return json({ error: "Tipe tabungan tidak dikenal." }, { status: 400 });
+  }
+  const fromAccount = String(pickPayloadValue(payload, "from_account", "fromAccount") ?? "");
+  const accountError = await assertOwnAccounts(env, userId, [fromAccount]);
+  if (accountError) return accountError;
+
+  // apply_balance: saldo rekening ikut diubah di batch yang sama (Setoran
+  // mengurangi, Penarikan menambah). Client lama mengubah saldo sendiri lewat
+  // /accounts/:id/balance dan tidak mengirim flag ini — perilakunya tetap.
+  const applyBalance =
+    (payload.apply_balance === true || payload.applyBalance === true) && !NON_ACCOUNT_IDS.has(fromAccount);
+  if (applyBalance) {
+    const account = await env.DB.prepare("SELECT currency FROM accounts WHERE id = ? AND user_id = ?")
+      .bind(fromAccount, userId)
+      .first<{ currency: string | null }>();
+    if ((account?.currency || "IDR") !== currency) {
+      return json({ error: "Mata uang harus sama dengan mata uang rekening." }, { status: 400 });
+    }
+  }
+
   const amountIdr = await resolveIdrAmount(currency, amount, payload.amount_idr ?? payload.amountIDR);
-  await env.DB.prepare(
+  const insert = env.DB.prepare(
     `INSERT INTO savings (
       id, user_id, description, amount, amount_idr, currency, category, sub_category,
       from_account, to_goal, transaction_type, date, display_date, created_at, updated_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  )
-    .bind(
-      id,
-      authResult.session.user.id,
-      String(payload.description ?? ""),
-      amount,
-      amountIdr,
-      currency,
-      String(payload.category ?? ""),
-      pickPayloadValue(payload, "sub_category", "subCategory") ?? null,
-      String(pickPayloadValue(payload, "from_account", "fromAccount") ?? ""),
-      String(pickPayloadValue(payload, "to_goal", "toGoal") ?? ""),
-      String(pickPayloadValue(payload, "transaction_type", "transactionType") ?? "Setoran"),
-      toIsoIfDateLike(payload.date) ?? nowIso(),
-      payload.display_date ?? payload.displayDate ?? nowIso(),
-      nowIso(),
-      nowIso()
-    )
-    .run();
-  return json({ ok: true, id }, { status: 201 });
+  ).bind(
+    id,
+    userId,
+    String(payload.description ?? ""),
+    amount,
+    amountIdr,
+    currency,
+    String(payload.category ?? ""),
+    pickPayloadValue(payload, "sub_category", "subCategory") ?? null,
+    fromAccount,
+    String(pickPayloadValue(payload, "to_goal", "toGoal") ?? ""),
+    transactionType,
+    toIsoIfDateLike(payload.date) ?? nowIso(),
+    payload.display_date ?? payload.displayDate ?? nowIso(),
+    nowIso(),
+    nowIso()
+  );
+
+  if (!applyBalance) {
+    await insert.run();
+    return json({ ok: true, id }, { status: 201 });
+  }
+  await env.DB.batch([
+    insert,
+    env.DB.prepare(
+      `UPDATE accounts SET balance = balance + ?
+        WHERE id = ? AND user_id = ? AND EXISTS (SELECT 1 FROM savings WHERE id = ? AND user_id = ?)`
+    ).bind(transactionType === "Penarikan" ? amount : -amount, fromAccount, userId, id, userId),
+  ]);
+  return json({ ok: true, id, balanceApplied: true }, { status: 201 });
 }
 
 async function handleDeleteSaving(request: Request, env: Env, savingId: string) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
-  const result = await env.DB.prepare("DELETE FROM savings WHERE id = ? AND user_id = ?")
-    .bind(savingId, authResult.session.user.id)
-    .run();
-  if (!result.meta.changes) {
+  const userId = authResult.session.user.id;
+
+  // Sama seperti hapus transaksi: pembalikan saldo di server hanya kalau client
+  // memintanya (?reverse=1) — client lama sudah membalikkan saldo sendiri.
+  if (new URL(request.url).searchParams.get("reverse") !== "1") {
+    const result = await env.DB.prepare("DELETE FROM savings WHERE id = ? AND user_id = ?")
+      .bind(savingId, userId)
+      .run();
+    if (!result.meta.changes) {
+      return json({ error: "Tabungan tidak ditemukan." }, { status: 404 });
+    }
+    return json({ ok: true });
+  }
+
+  const row = await env.DB.prepare(
+    "SELECT id, amount, from_account, transaction_type FROM savings WHERE id = ? AND user_id = ?"
+  )
+    .bind(savingId, userId)
+    .first<{ id: string; amount: number; from_account: string | null; transaction_type: string | null }>();
+  if (!row) return json({ error: "Tabungan tidak ditemukan." }, { status: 404 });
+
+  const amount = Number(row.amount) || 0;
+  const statements: D1PreparedStatement[] = [];
+  if (row.from_account && !NON_ACCOUNT_IDS.has(row.from_account) && amount !== 0) {
+    statements.push(
+      env.DB.prepare(
+        `UPDATE accounts SET balance = balance + ?
+          WHERE id = ? AND user_id = ? AND EXISTS (SELECT 1 FROM savings WHERE id = ? AND user_id = ?)`
+      ).bind(row.transaction_type === "Penarikan" ? -amount : amount, row.from_account, userId, row.id, userId)
+    );
+  }
+  statements.push(env.DB.prepare("DELETE FROM savings WHERE id = ? AND user_id = ?").bind(row.id, userId));
+  const results = await env.DB.batch(statements);
+  if (!results[results.length - 1]?.meta.changes) {
     return json({ error: "Tabungan tidak ditemukan." }, { status: 404 });
   }
   return json({ ok: true });

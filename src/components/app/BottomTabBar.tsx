@@ -23,7 +23,7 @@ const LEFT: TabItem[] = [
 ];
 const RIGHT: TabItem[] = [
   { key: "assets", label: "Aset", icon: Wallet, href: "/app/wallet" },
-  { key: "more", label: "Lainnya", icon: LayoutGrid, href: "/app/more", also: ["/app/statistics", "/app/profile", "/app/debts"] },
+  { key: "more", label: "Lainnya", icon: LayoutGrid, href: "/app/more", also: ["/app/statistics", "/app/profile", "/app/debts", "/app/savings", "/app/cards"] },
 ];
 
 function Tab({ tab, pathname }: { tab: TabItem; pathname: string }) {
