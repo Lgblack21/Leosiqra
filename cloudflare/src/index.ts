@@ -2219,6 +2219,100 @@ async function handleImportTransactions(request: Request, env: Env) {
 // findTransferPair di hapus-transaksi tetap bisa memasangkan kedua sisi.
 // Bedanya: semua (dua baris + saldo kedua rekening + total) dalam SATU batch
 // D1, dan konversi kurs dikerjakan server kalau mata uang rekening berbeda.
+// POST /api/member/debts/:id/pay — bayar cicilan / lunasi hutang atau piutang.
+// Format baris pembayaran SAMA dengan halaman web Hutang & Piutang (type
+// pengeluaran untuk Hutang / pemasukan untuk Piutang, related_type 'debt',
+// related_id = id catatan), supaya sisa tagihan di web & aplikasi selalu
+// sama. Bedanya: sisa dihitung ulang di server dan semuanya (baris
+// pembayaran, saldo, total, status lunas) dalam SATU batch. INSERT-nya
+// bersyarat "total bayar tidak melebihi pokok", dan update lain disyaratkan
+// baris pembayaran itu benar-benar masuk — dua request bersamaan (double tap)
+// tidak bisa membayar melebihi sisa.
+async function handlePayDebt(request: Request, env: Env, debtId: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const payload = await parseJson<{ amount?: number; account_id?: string; date?: string }>(request);
+
+  const debt = await env.DB.prepare(
+    `SELECT id, amount, amount_idr, currency, category, account_id, lender_name, note, payment_status
+       FROM transactions WHERE id = ? AND user_id = ? AND type = 'debt'`
+  )
+    .bind(debtId, userId)
+    .first<{ id: string; amount: number; amount_idr: number; currency: string | null; category: string; account_id: string; lender_name: string | null; note: string | null; payment_status: string | null }>();
+  if (!debt) return json({ error: "Catatan hutang/piutang tidak ditemukan." }, { status: 404 });
+  if (debt.payment_status === "lunas") return json({ error: "Catatan ini sudah lunas." }, { status: 409 });
+
+  const principal = Number(debt.amount) || 0;
+  const paidRow = await env.DB.prepare(
+    `SELECT COALESCE(SUM(amount), 0) AS paid FROM transactions WHERE user_id = ? AND related_id = ? AND related_type = 'debt'`
+  )
+    .bind(userId, debt.id)
+    .first<{ paid: number }>();
+  const remaining = Math.max(0, Math.round((principal - (Number(paidRow?.paid) || 0)) * 100) / 100);
+  if (remaining <= 0) return json({ error: "Tidak ada sisa yang perlu dibayar." }, { status: 409 });
+
+  const requested = Number(payload.amount);
+  if (!Number.isFinite(requested) || requested <= 0) {
+    return json({ error: "Nominal pembayaran harus lebih dari 0." }, { status: 400 });
+  }
+  const payNow = Math.min(Math.round(requested * 100) / 100, remaining);
+  const settles = remaining - payNow <= 0.005;
+
+  // Rekening pembayaran: rekening catatan kalau valid milik user; kalau catatan
+  // lama tidak punya rekening (mis. "General"), wajib dipilih di request.
+  const ownAccount = async (id: unknown) =>
+    typeof id === "string" && id
+      ? await env.DB.prepare("SELECT id FROM accounts WHERE id = ? AND user_id = ?").bind(id, userId).first<{ id: string }>()
+      : null;
+  const account = (await ownAccount(payload.account_id)) ?? (await ownAccount(debt.account_id));
+  if (!account) {
+    return json({ error: "Pilih rekening untuk pembayaran ini.", needAccount: true }, { status: 400 });
+  }
+
+  const isHutang = debt.category === "Hutang";
+  const financeType = isHutang ? "pengeluaran" : "pemasukan";
+  const ratio = principal > 0 && Number(debt.amount_idr) > 0 ? Number(debt.amount_idr) / principal : 1;
+  const amountIdr = payNow * ratio;
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(String(payload.date ?? "")) ? String(payload.date) : todayWIB();
+  const label = settles ? "Lunas" : "Cicilan";
+  const note = `[${label}] ${debt.category} ${debt.lender_name ? `ke/dari ${debt.lender_name}` : ""} - ${debt.note || ""}`.replace(/\s+/g, " ").trim();
+  const now = nowIso();
+  const paymentId = generateId();
+  const inserted = "EXISTS (SELECT 1 FROM transactions WHERE id = ? AND user_id = ?)";
+
+  const results = await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO transactions (id, user_id, type, amount, amount_idr, category, sub_category, currency,
+         account_id, date, display_date, note, status, related_id, related_type, created_at, updated_at)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'VERIFIED', ?, 'debt', ?, ?
+        WHERE (SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE user_id = ? AND related_id = ? AND related_type = 'debt') + ? <= ? + 0.005
+          AND NOT EXISTS (SELECT 1 FROM transactions WHERE id = ? AND payment_status = 'lunas')`
+    ).bind(
+      paymentId, userId, financeType, payNow, amountIdr, debt.category, `${debt.category} ${label}`, debt.currency || "IDR",
+      account.id, date, date, note, debt.id, now, now,
+      userId, debt.id, payNow, principal, debt.id
+    ),
+    env.DB.prepare(`UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ? AND ${inserted}`)
+      .bind(isHutang ? -payNow : payNow, account.id, userId, paymentId, userId),
+    env.DB.prepare(
+      isHutang
+        ? `UPDATE users SET total_expenses = COALESCE(total_expenses, 0) + ?, total_wealth = COALESCE(total_wealth, 0) - ? WHERE id = ? AND ${inserted}`
+        : `UPDATE users SET total_income = COALESCE(total_income, 0) + ?, total_wealth = COALESCE(total_wealth, 0) + ? WHERE id = ? AND ${inserted}`
+    ).bind(payNow, payNow, userId, paymentId, userId),
+    env.DB.prepare(
+      `UPDATE transactions SET payment_status = 'lunas', status = 'VERIFIED', updated_at = ?
+        WHERE id = ? AND user_id = ? AND ${inserted}
+          AND (SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE user_id = ? AND related_id = ? AND related_type = 'debt') >= ? - 0.005`
+    ).bind(now, debt.id, userId, paymentId, userId, userId, debt.id, principal),
+  ]);
+
+  if (!results[0]?.meta.changes) {
+    return json({ error: "Tagihan ini baru saja berubah. Muat ulang lalu coba lagi." }, { status: 409 });
+  }
+  return json({ ok: true, id: paymentId, paid: payNow, remaining: Math.max(0, remaining - payNow), settled: settles }, { status: 201 });
+}
+
 async function handleCreateTransfer(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -6163,6 +6257,11 @@ const worker = {
 
       if (url.pathname === "/api/member/transactions" && request.method === "POST") {
         return await handleCreateTransaction(request, env);
+      }
+
+      if (url.pathname.startsWith("/api/member/debts/") && url.pathname.endsWith("/pay") && request.method === "POST") {
+        const debtId = url.pathname.slice("/api/member/debts/".length, -"/pay".length);
+        return await handlePayDebt(request, env, debtId);
       }
 
       if (url.pathname === "/api/member/transfer" && request.method === "POST") {

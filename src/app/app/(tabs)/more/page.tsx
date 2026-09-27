@@ -15,13 +15,13 @@ const IN_APP: MenuItem[] = [
   { label: "Chat AI", href: "/app/assistant/chat", icon: MessageCircle, color: "bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400" },
   { label: "Scan Struk", href: "/app/assistant/scan", icon: ScanLine, color: "bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-400" },
   { label: "Voice", href: "/app/assistant/voice", icon: Mic, color: "bg-pink-50 text-pink-600 dark:bg-pink-500/10 dark:text-pink-400" },
+  { label: "Hutang & Piutang", href: "/app/debts", icon: HandCoins, color: "bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400" },
 ];
 
 // Fitur yang belum dipindah ke aplikasi — sementara dibuka di versi web lengkap
 // (tetap login dengan sesi yang sama). Pindahkan ke IN_APP begitu versi
 // mobile-nya selesai.
 const WEB_FEATURES: MenuItem[] = [
-  { label: "Hutang & Piutang", desc: "Bayar cicilan, tandai lunas", href: "/membership/transactions/debt", icon: HandCoins, color: "bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400" },
   { label: "Tabungan", desc: "Setor & tarik per goal", href: "/membership/tabungan", icon: PiggyBank, color: "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400" },
   { label: "Kartu Kredit", desc: "Limit, tagihan & jatuh tempo", href: "/membership/cards", icon: CreditCard, color: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
   { label: "Budget & Target", href: "/membership/budget", icon: Target, color: "bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-400" },
