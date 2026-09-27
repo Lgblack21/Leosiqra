@@ -406,3 +406,19 @@ CREATE INDEX IF NOT EXISTS idx_uploads_user_id ON uploads(user_id, created_at DE
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 
 CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
+
+-- 0004_password_reset_tokens.sql
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at TEXT NOT NULL,
+  used_at TEXT,
+  consume_nonce TEXT,
+  ip_hash TEXT,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user
+  ON password_reset_tokens(user_id, created_at DESC);

@@ -1,12 +1,20 @@
+declare interface D1Result<T = Record<string, unknown>> {
+  results?: T[];
+  success: boolean;
+  meta: { changes: number; last_row_id?: number; duration?: number; [key: string]: unknown };
+}
+
 declare interface D1PreparedStatement {
   bind(...values: unknown[]): D1PreparedStatement;
   first<T = Record<string, unknown>>(): Promise<T | null>;
   all<T = Record<string, unknown>>(): Promise<{ results: T[] }>;
-  run(): Promise<unknown>;
+  run(): Promise<D1Result>;
 }
 
 declare interface D1Database {
   prepare(query: string): D1PreparedStatement;
+  // Semua statement dijalankan dalam satu transaksi SQL (atomik).
+  batch(statements: D1PreparedStatement[]): Promise<D1Result[]>;
 }
 
 declare interface KVNamespace {

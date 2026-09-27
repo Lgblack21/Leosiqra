@@ -34,6 +34,10 @@ export interface Env {
   LOGO_DEV_TOKEN?: string;
   COINGECKO_API_KEY?: string;
   OPENROUTER_WEB_SEARCH?: string;
+  // Email transaksional (reset password) lewat Resend. Tanpa RESEND_API_KEY
+  // fitur Lupa Password menjawab 503 "belum aktif" alih-alih diam-diam gagal.
+  RESEND_API_KEY?: string;
+  RESEND_FROM?: string;
 }
 
 type AppUser = {
@@ -1250,56 +1254,22 @@ async function handleRegister(request: Request, env: Env) {
       return json({ error: "Email admin tidak bisa diregister ulang." }, { status: 409 });
     }
 
-    // Cuma boleh "klaim" akun yang belum pernah punya password lokal beneran
-    // (mis. akun yang baru pernah login lewat Google, sentinel `oauth$google`).
-    // Kalau sudah ada password asli, register ulang WAJIB ditolak — kalau tidak,
-    // siapapun yang tahu email orang lain bisa timpa password (+ 2FA) orang itu
-    // dan langsung login sebagai dia tanpa verifikasi apapun (account takeover).
-    if (existing.password_hash !== "oauth$google") {
+    // Email yang sudah terdaftar SELALU ditolak. Dulu akun Google-only
+    // (password_hash sentinel `oauth$google`) boleh "diklaim" lewat register —
+    // itu account takeover: siapa pun yang tahu email user Google bisa set
+    // password + 2FA baru dan langsung dapat sesi sebagai korban tanpa
+    // verifikasi apa pun. User Google yang ingin punya password lokal harus
+    // lewat Lupa Password (membuktikan kepemilikan email) atau Profil (sesi
+    // yang sudah login).
+    if (existing.password_hash.startsWith("oauth$")) {
       return json(
-        { error: "Email sudah terdaftar. Silakan login, atau gunakan menu lupa password." },
+        { error: "Email ini sudah terdaftar lewat Google. Silakan masuk dengan tombol \"Lanjutkan dengan Google\"." },
         { status: 409 }
       );
     }
-
-    await env.DB.prepare(
-      `UPDATE users
-          SET name = ?, password_hash = ?, whatsapp = ?, two_factor_secret = ?
-        WHERE id = ?`
-    )
-      .bind(
-        payload.name,
-        await hashPassword(payload.password),
-        payload.whatsapp ?? null,
-        payload.twoFactorSecret ?? null,
-        existing.id
-      )
-      .run();
-
-    const user: AppUser = {
-      id: existing.id,
-      email: payload.email.toLowerCase(),
-      name: payload.name,
-      role: "user",
-      plan: existing.plan ?? "FREE",
-      status: existing.status ?? "GUEST",
-      whatsapp: payload.whatsapp ?? null,
-      two_factor_secret: payload.twoFactorSecret ?? null,
-    };
-
-    const session = await createSession(env, request, user);
-
-    return jsonWithCookies(
-      {
-        ok: true,
-        recovered: true,
-        user,
-      },
-      [
-        sessionCookie(env, session.token, 60 * 60 * 24 * 30),
-        roleCookie(env, user.role, 60 * 60 * 24 * 30),
-      ],
-      { status: 200 }
+    return json(
+      { error: "Email sudah terdaftar. Silakan login, atau gunakan menu lupa password." },
+      { status: 409 }
     );
   }
 
@@ -1348,6 +1318,199 @@ async function handleRegister(request: Request, env: Env) {
     ],
     { status: 201 }
   );
+}
+
+const PASSWORD_RESET_TTL_MINUTES = 30;
+// Jeda minimal antar email reset ke alamat yang sama — cegah inbox korban
+// dibanjiri lewat endpoint publik ini.
+const PASSWORD_RESET_RESEND_COOLDOWN_SECONDS = 120;
+const PASSWORD_RESET_DEFAULT_ORIGIN = "https://www.leosiqra.com";
+
+const escapeHtml = (value: string) =>
+  value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+
+const sendPasswordResetEmail = async (env: Env, to: string, name: string, link: string) => {
+  const safeName = escapeHtml(name || "Sobat Leosiqra");
+  const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;color:#0f172a">
+  <div style="max-width:480px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:32px">
+    <h1 style="margin:0 0 16px;font-size:20px">Reset password Leosiqra</h1>
+    <p style="margin:0 0 12px;font-size:14px;line-height:1.6">Halo ${safeName},</p>
+    <p style="margin:0 0 20px;font-size:14px;line-height:1.6">Kami menerima permintaan untuk mengatur ulang password akun Leosiqra kamu. Klik tombol di bawah untuk membuat password baru. Link ini berlaku ${PASSWORD_RESET_TTL_MINUTES} menit dan hanya bisa dipakai sekali.</p>
+    <p style="margin:0 0 24px"><a href="${link}" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;font-weight:bold;font-size:14px;padding:12px 20px;border-radius:10px">Buat password baru</a></p>
+    <p style="margin:0 0 8px;font-size:12px;color:#64748b;line-height:1.6">Kalau tombol tidak bisa diklik, salin link ini ke browser:<br><span style="word-break:break-all">${link}</span></p>
+    <p style="margin:16px 0 0;font-size:12px;color:#64748b;line-height:1.6">Tidak merasa meminta reset? Abaikan email ini — password kamu tidak berubah.</p>
+  </div></body></html>`;
+  const textBody = `Halo ${name || "Sobat Leosiqra"},\n\nKlik link berikut untuk membuat password baru (berlaku ${PASSWORD_RESET_TTL_MINUTES} menit, sekali pakai):\n${link}\n\nTidak merasa meminta reset? Abaikan email ini — password kamu tidak berubah.`;
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      from: env.RESEND_FROM || "Leosiqra <no-reply@leosiqra.com>",
+      to: [to],
+      subject: "Reset password Leosiqra",
+      html,
+      text: textBody,
+    }),
+  });
+  if (!response.ok) {
+    // Detail error cuma di log server, tidak pernah ke client.
+    throw new Error(`Resend ${response.status}: ${(await response.text()).slice(0, 300)}`);
+  }
+};
+
+// POST /api/auth/password/forgot — publik. Jawabannya SELALU sama untuk email
+// terdaftar maupun tidak (cegah enumerasi akun).
+async function handleForgotPassword(request: Request, env: Env) {
+  const genericOk = json({
+    ok: true,
+    message: "Kalau email tersebut terdaftar, link reset password sudah kami kirim. Cek inbox dan folder spam.",
+  });
+
+  if (!env.RESEND_API_KEY) {
+    return json(
+      { error: "Reset password lewat email belum aktif. Silakan hubungi admin lewat WhatsApp." },
+      { status: 503 }
+    );
+  }
+
+  const payload = await parseJson<{ email?: string }>(request);
+  const email = (payload.email ?? "").trim().toLowerCase();
+  if (!email || !email.includes("@") || email.length > 254) {
+    return json({ error: "Masukkan alamat email yang valid." }, { status: 400 });
+  }
+
+  if (
+    !(await checkRateLimit(env, [
+      `forgot:ip:${clientIpOf(request)}`,
+      `forgot:email:${email}`,
+    ]))
+  ) {
+    return json({ error: "Terlalu banyak percobaan. Coba lagi dalam beberapa saat." }, { status: 429 });
+  }
+
+  const user = await env.DB.prepare("SELECT id, name, email, role FROM users WHERE email = ?")
+    .bind(email)
+    .first<{ id: string; name: string; email: string; role: string }>();
+  if (!user) {
+    return genericOk;
+  }
+
+  const recent = await env.DB.prepare(
+    "SELECT created_at FROM password_reset_tokens WHERE user_id = ? ORDER BY created_at DESC LIMIT 1"
+  )
+    .bind(user.id)
+    .first<{ created_at: string }>();
+  if (recent && Date.now() - new Date(recent.created_at).getTime() < PASSWORD_RESET_RESEND_COOLDOWN_SECONDS * 1000) {
+    return genericOk;
+  }
+
+  const tokenBytes = crypto.getRandomValues(new Uint8Array(32));
+  const token = toBase64Url(tokenBytes.buffer);
+  const now = nowIso();
+  const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MINUTES * 60 * 1000).toISOString();
+
+  // Token lama yang belum terpakai dimatikan — cuma link terbaru yang berlaku.
+  await env.DB.batch([
+    env.DB.prepare("UPDATE password_reset_tokens SET used_at = ? WHERE user_id = ? AND used_at IS NULL")
+      .bind(now, user.id),
+    env.DB.prepare(
+      `INSERT INTO password_reset_tokens (id, user_id, token_hash, expires_at, ip_hash, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    ).bind(generateId(), user.id, await sha256Hex(token), expiresAt, await sha256Hex(clientIpOf(request)), now),
+  ]);
+
+  // Link cuma boleh mengarah ke origin Leosiqra yang dikenal — jangan pernah
+  // pakai Host dari request mentah-mentah (host header injection di email reset).
+  const requestOrigin = new URL(request.url).origin;
+  const linkOrigin =
+    ALLOWED_ORIGINS.has(requestOrigin) && requestOrigin.startsWith("https://")
+      ? requestOrigin
+      : PASSWORD_RESET_DEFAULT_ORIGIN;
+  const link = `${linkOrigin}/auth/reset-password?token=${encodeURIComponent(token)}`;
+
+  try {
+    await sendPasswordResetEmail(env, user.email, user.name, link);
+  } catch (error) {
+    // Tetap jawab generik: membalas error khusus di sini (padahal email tak
+    // terdaftar dapat 200) membocorkan email mana yang terdaftar setiap kali
+    // Resend sedang gangguan. Kegagalan cukup tercatat di log Worker.
+    console.error("Gagal mengirim email reset password:", error);
+  }
+
+  return genericOk;
+}
+
+// POST /api/auth/password/reset — publik, dibuktikan oleh token dari email.
+async function handleResetPassword(request: Request, env: Env) {
+  const payload = await parseJson<{ token?: string; password?: string }>(request);
+  const token = (payload.token ?? "").trim();
+  const password = payload.password ?? "";
+
+  if (!token) {
+    return json({ error: "Link reset tidak valid." }, { status: 400 });
+  }
+  if (password.length < 8) {
+    return json({ error: "Password baru minimal 8 karakter." }, { status: 400 });
+  }
+  if (password.length > 200) {
+    return json({ error: "Password terlalu panjang." }, { status: 400 });
+  }
+
+  if (!(await checkRateLimit(env, [`reset:ip:${clientIpOf(request)}`]))) {
+    return json({ error: "Terlalu banyak percobaan. Coba lagi dalam beberapa saat." }, { status: 429 });
+  }
+
+  const tokenHash = await sha256Hex(token);
+  const now = nowIso();
+  const row = await env.DB.prepare(
+    `SELECT user_id FROM password_reset_tokens
+      WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?`
+  )
+    .bind(tokenHash, now)
+    .first<{ user_id: string }>();
+
+  const invalid = json(
+    { error: "Link reset tidak valid atau sudah kedaluwarsa. Silakan minta link baru." },
+    { status: 400 }
+  );
+  if (!row) {
+    return invalid;
+  }
+
+  // Satu batch atomik: klaim token (hanya kalau masih belum terpakai), lalu
+  // ganti password, cabut SEMUA sesi user, dan matikan token lain — tiga
+  // langkah terakhir disyaratkan nonce milik request ini yang berhasil
+  // mengklaim token, jadi request kedua dengan token sama tidak mengubah apa pun.
+  const nonce = generateId();
+  const claimed = "EXISTS (SELECT 1 FROM password_reset_tokens WHERE token_hash = ? AND consume_nonce = ?)";
+  const results = await env.DB.batch([
+    env.DB.prepare(
+      `UPDATE password_reset_tokens SET used_at = ?, consume_nonce = ?
+        WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?`
+    ).bind(now, nonce, tokenHash, now),
+    env.DB.prepare(`UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ? AND ${claimed}`)
+      .bind(await hashPassword(password), now, row.user_id, tokenHash, nonce),
+    env.DB.prepare(`DELETE FROM sessions WHERE user_id = ? AND ${claimed}`)
+      .bind(row.user_id, tokenHash, nonce),
+    env.DB.prepare(
+      `UPDATE password_reset_tokens SET used_at = ? WHERE user_id = ? AND used_at IS NULL AND ${claimed}`
+    ).bind(now, row.user_id, tokenHash, nonce),
+  ]);
+
+  if (!results[0]?.meta.changes) {
+    return invalid;
+  }
+
+  return json({ ok: true });
 }
 
 async function handleLogin(request: Request, env: Env) {
@@ -5727,6 +5890,14 @@ const worker = {
 
       if (url.pathname === "/api/auth/register" && request.method === "POST") {
         return await handleRegister(request, env);
+      }
+
+      if (url.pathname === "/api/auth/password/forgot" && request.method === "POST") {
+        return await handleForgotPassword(request, env);
+      }
+
+      if (url.pathname === "/api/auth/password/reset" && request.method === "POST") {
+        return await handleResetPassword(request, env);
       }
 
       if (url.pathname === "/api/auth/login" && request.method === "POST") {

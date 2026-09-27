@@ -226,7 +226,7 @@ export default function LoginPage() {
                 <input type="checkbox" className="w-3.5 h-3.5 rounded-md border-slate-200 text-indigo-600 focus:ring-indigo-500/20" />
                 <span className="text-[10px] font-bold text-slate-400 group-hover:text-slate-600 transition-colors">Percayai browser</span>
               </label>
-              <Link href="#" className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700">Lupa password?</Link>
+              <Link href="/auth/forgot-password" className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700">Lupa password?</Link>
             </div>
 
             <Button type="submit" className="w-full py-3.5 text-xs font-black rounded-xl shadow-lg shadow-indigo-600/10" isLoading={loading}>
