@@ -17,9 +17,7 @@ import { transactionService, Transaction } from "@/lib/services/transactionServi
 import { quickTxService } from "@/lib/services/quickTxService";
 import { useQuickContext } from "@/lib/quick/useQuickContext";
 import type { QuickDraft } from "@/lib/quick/parse";
-import type { QuickFavorite } from "@/lib/quick/favorites";
 import { SmartBar, type DraftSource } from "@/components/quick/SmartBar";
-import { FavoriteChips } from "@/components/quick/FavoriteChips";
 import { UndoToast, type UndoItem } from "@/components/quick/UndoToast";
 
 type SheetMode = TxType | "transfer";
@@ -107,7 +105,7 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
     return subscribeToCollectionChanges("accounts", loadAccounts);
   }, []);
 
-  // Riwayat transaksi untuk ketik pintar & chip favorit — dimuat saat sheet
+  // Riwayat transaksi untuk ketik pintar — dimuat saat sheet
   // pertama kali dibuka (bukan saat app start), lalu ikut ter-update.
   const [historyWanted, setHistoryWanted] = useState(false);
   useEffect(() => { if (isOpen) setHistoryWanted(true); }, [isOpen]);
@@ -117,7 +115,7 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
     load();
     return subscribeToCollectionChanges("transactions", load);
   }, [historyWanted]);
-  const { ctx, favorites } = useQuickContext(auth.currentUser?.uid ?? "", accounts, transactions);
+  const { ctx } = useQuickContext(auth.currentUser?.uid ?? "", accounts, transactions);
 
   useEffect(() => {
     if (!feedback) return;
@@ -167,28 +165,6 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
     if (draft.note) setNote(draft.note);
     if (draft.date) { setDate(draft.date === toISODate(new Date()) ? null : draft.date); setShowDatePicker(false); }
     setHint({ source, text: info });
-  };
-
-  const accountLabel = (id: string) => accounts.find((a) => a.id === id)?.name;
-  const currencyOf = (id: string) => accounts.find((a) => a.id === id)?.currency || "IDR";
-
-  const pickFavorite = async (fav: QuickFavorite) => {
-    if (submitting) return;
-    setSubmitting(true);
-    setFeedback(null);
-    try {
-      const res = await quickTxService.create({
-        type: fav.type, amount: fav.amount, accountId: fav.accountId,
-        category: fav.category, subCategory: fav.subCategory, note: fav.note,
-      });
-      setUndoItem({ id: res.id, label: `${fav.subCategory || fav.category} · ${res.currency} ${groupDigits(String(fav.amount))} · ${res.matchedAccount}` });
-      resetForm();
-      onClose();
-    } catch (e) {
-      setFeedback({ ok: false, msg: e instanceof Error ? e.message : "Gagal menyimpan transaksi." });
-    } finally {
-      setSubmitting(false);
-    }
   };
 
   const handleSubmit = async () => {
@@ -274,10 +250,6 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
             </span>
           </div>
         )}
-        {!isTransfer && !hint && amountNumber === 0 && (
-          <FavoriteChips favorites={favorites} accountName={accountLabel} currencyOf={currencyOf} onPick={pickFavorite} disabled={submitting} />
-        )}
-
         <ModeToggle value={mode} onChange={setMode} />
 
         <div className="flex items-center gap-2">

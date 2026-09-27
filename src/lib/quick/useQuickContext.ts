@@ -7,10 +7,9 @@ import type { Transaction } from '@/lib/services/transactionService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { toLocalDateString } from '@/lib/utils';
 import type { ParseContext } from './parse';
-import { computeFavorites } from './favorites';
 
 // Konteks bersama Input Cepat (halaman /input-cepat & tombol + di /app):
-// kategori milik user + riwayat transaksi untuk parser & chip favorit.
+// kategori milik user + riwayat transaksi untuk parser ketik pintar.
 export const useQuickContext = (userId: string, accounts: Account[], transactions: Transaction[]) => {
   const [categories, setCategories] = useState<ParseContext['categories']>([]);
 
@@ -39,6 +38,5 @@ export const useQuickContext = (userId: string, accounts: Account[], transaction
     };
   }, [accounts, categories, transactions]);
 
-  const favorites = useMemo(() => computeFavorites(transactions), [transactions]);
-  return { ctx, favorites };
+  return { ctx };
 };

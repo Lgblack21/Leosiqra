@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowDownCircle,
@@ -27,6 +26,7 @@ import { CategorySelect } from "@/components/CategorySelect";
 import { subscribeUserProfile, UserProfile } from "@/lib/services/userService";
 import { LogoImage } from "@/components/ui/LogoImage";
 import { SplashScreen } from "@/components/input-cepat/SplashScreen";
+import { isStandaloneDisplay } from "@/lib/pushNotifications";
 import { Modal } from "@/components/ui/Modal";
 import { NumberInput } from "@/components/ui/NumberInput";
 import { transactionService, Transaction } from "@/lib/services/transactionService";
@@ -35,9 +35,7 @@ import { subscribeToCollectionChanges } from "@/lib/cf-firestore";
 import { quickTxService } from "@/lib/services/quickTxService";
 import { useQuickContext } from "@/lib/quick/useQuickContext";
 import type { QuickDraft } from "@/lib/quick/parse";
-import type { QuickFavorite } from "@/lib/quick/favorites";
 import { SmartBar, type DraftSource } from "@/components/quick/SmartBar";
-import { FavoriteChips } from "@/components/quick/FavoriteChips";
 import { UndoToast, type UndoItem } from "@/components/quick/UndoToast";
 
 type AuthState = "loading" | "ok" | "unauth";
@@ -73,6 +71,9 @@ export default function InputCepatPage() {
   const [hint, setHint] = useState<{ source: DraftSource; text?: string } | null>(null);
   const [undoItem, setUndoItem] = useState<UndoItem | null>(null);
   const [uid, setUid] = useState("");
+  // Instruksi "pasang di layar utama" tidak perlu kalau sudah dibuka sebagai app.
+  const [standalone, setStandalone] = useState(true);
+  useEffect(() => { setStandalone(isStandaloneDisplay()); }, []);
 
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -224,7 +225,7 @@ export default function InputCepatPage() {
     new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit" }).format(d);
   const getAccountName = (id?: string) => accounts.find((a) => a.id === id)?.name || "-";
 
-  const { ctx, favorites } = useQuickContext(uid, accounts, transactions);
+  const { ctx } = useQuickContext(uid, accounts, transactions);
   const today = toLocalDateString();
   const yesterday = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return toLocalDateString(d); })();
 
@@ -247,23 +248,6 @@ export default function InputCepatPage() {
     setDate(null);
     setShowDatePicker(false);
     setHint(null);
-  };
-
-  const pickFavorite = async (fav: QuickFavorite) => {
-    if (submitting) return;
-    setFeedback(null);
-    setSubmitting(true);
-    try {
-      const res = await quickTxService.create({
-        type: fav.type, amount: fav.amount, accountId: fav.accountId,
-        category: fav.category, subCategory: fav.subCategory, note: fav.note,
-      });
-      saved(res.id, `${fav.subCategory || fav.category} · ${res.currency} ${groupDigits(String(fav.amount))} · ${res.matchedAccount}`);
-    } catch (e) {
-      setFeedback({ ok: false, msg: e instanceof Error ? e.message : "Gagal menyimpan transaksi." });
-    } finally {
-      setSubmitting(false);
-    }
   };
 
   const handleSubmit = async () => {
@@ -327,54 +311,45 @@ export default function InputCepatPage() {
     <>
       <SplashScreen ready userName={profile?.name} userPhoto={profile?.photoURL} />
       <div className="min-h-screen bg-slate-50 flex flex-col">
-      <div className="w-full max-w-md mx-auto px-5 pt-8 pb-28 flex-1">
-        {/* Header */}
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-6 h-6 flex items-center justify-center shrink-0 overflow-hidden">
-            <Image src="/images/Logo-new.png" alt="Leosiqra" width={22} height={22} className="object-contain" />
-          </div>
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Leosiqra</span>
+      <div className="w-full max-w-md mx-auto px-5 pt-[calc(env(safe-area-inset-top)+20px)] pb-36 flex-1">
+        {/* Header ringkas: profil + total hari ini (tap = rincian). */}
+        <div className="flex items-center gap-3">
+          <Link href="/membership/profile" className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="w-10 h-10 rounded-full bg-indigo-600 shrink-0 overflow-hidden">
+              <LogoImage
+                src={profile?.photoURL}
+                alt={profile?.name || "Profil"}
+                fallbackText={(profile?.name || "U").slice(0, 1).toUpperCase()}
+                fallbackIcon={<Wallet size={18} className="text-white" />}
+                className="w-full h-full object-cover text-white"
+              />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-base font-black text-slate-900 leading-tight">Input Cepat</h1>
+              <p className="text-[11px] font-bold text-slate-400 truncate">{profile?.name ? `Halo, ${profile.name.split(" ")[0]}` : "Leosiqra"}</p>
+            </div>
+          </Link>
+          <button
+            type="button"
+            onClick={() => setShowTodayList(true)}
+            className={cn(
+              "shrink-0 text-right rounded-2xl px-3 py-1.5 border active:scale-95 transition-transform",
+              type === "pengeluaran" ? "bg-rose-50 border-rose-100" : "bg-emerald-50 border-emerald-100"
+            )}
+          >
+            <span className={cn("block text-[9px] font-black uppercase tracking-wider", type === "pengeluaran" ? "text-rose-400" : "text-emerald-500")}>
+              {type === "pengeluaran" ? "Keluar" : "Masuk"} hari ini
+            </span>
+            <span className={cn("block text-sm font-black tabular-nums", type === "pengeluaran" ? "text-rose-600" : "text-emerald-700")}>
+              {formatRp(type === "pengeluaran" ? todayTotals.pengeluaran : todayTotals.pemasukan)}
+            </span>
+          </button>
         </div>
-        <Link href="/membership/profile" className="flex items-center gap-3 mb-7">
-          <div className="w-10 h-10 rounded-full bg-indigo-600 shrink-0 overflow-hidden">
-            <LogoImage
-              src={profile?.photoURL}
-              alt={profile?.name || "Profil"}
-              fallbackText={(profile?.name || "U").slice(0, 1).toUpperCase()}
-              fallbackIcon={<Wallet size={18} className="text-white" />}
-              className="w-full h-full object-cover text-white"
-            />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-lg font-black text-slate-900 tracking-tight leading-none">Input Cepat</h1>
-            <p className="text-[11px] font-bold text-slate-400 mt-1">
-              {profile?.name ? `Halo, ${profile.name} · Buka Profil` : "Catat transaksi dalam hitungan detik"}
-            </p>
-          </div>
-        </Link>
-
-        {/* Total hari ini — ikut jenis transaksi yang lagi dipilih di tab bawah.
-            Diklik untuk lihat rincian transaksi yang menyusun angka ini. */}
-        <button
-          type="button"
-          onClick={() => setShowTodayList(true)}
-          className={cn(
-            "w-full rounded-2xl px-4 py-3 mb-4 flex items-center justify-between transition-transform active:scale-[0.98]",
-            type === "pengeluaran" ? "bg-rose-50 border border-rose-100" : "bg-emerald-50 border border-emerald-100"
-          )}
-        >
-          <span className={cn("text-[11px] font-bold", type === "pengeluaran" ? "text-rose-500" : "text-emerald-600")}>
-            Total {type === "pengeluaran" ? "Pengeluaran" : "Pemasukan"} Hari Ini
-          </span>
-          <span className={cn("text-sm font-black", type === "pengeluaran" ? "text-rose-600" : "text-emerald-700")}>
-            {formatRp(type === "pengeluaran" ? todayTotals.pengeluaran : todayTotals.pemasukan)}
-          </span>
-        </button>
 
         {/* Ketik pintar / suara / foto struk — mengisi form di bawah. */}
-        <SmartBar ctx={ctx} onDraft={applyDraft} className="mb-3" />
+        <SmartBar ctx={ctx} onDraft={applyDraft} className="mt-5" />
         {hint && (
-          <div className="flex items-start gap-2 rounded-2xl bg-indigo-50 px-3.5 py-2.5 mb-3 text-[11px] font-bold text-indigo-700">
+          <div className="flex items-start gap-2 rounded-2xl bg-indigo-50 px-3.5 py-2.5 mt-2 text-[11px] font-bold text-indigo-700">
             <Sparkles size={13} className="mt-0.5 shrink-0" />
             <span>
               Terisi dari {hint.source === "voice" ? "suara" : hint.source === "scan" ? "foto struk" : "teks"} — cek lalu simpan.
@@ -382,278 +357,250 @@ export default function InputCepatPage() {
             </span>
           </div>
         )}
-        {!hint && amountNumber === 0 && (
-          <div className="mb-4">
-            <FavoriteChips
-              favorites={favorites}
-              accountName={(id) => accounts.find((a) => a.id === id)?.name}
-              currencyOf={(id) => accounts.find((a) => a.id === id)?.currency || "IDR"}
-              onPick={pickFavorite}
-              disabled={submitting}
-            />
-          </div>
-        )}
 
-        {/* Jenis transaksi */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          <button
-            type="button"
-            onClick={() => setType("pengeluaran")}
-            className={cn(
-              "flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-black transition-all border-2",
-              type === "pengeluaran"
-                ? "bg-rose-500 border-rose-500 text-white shadow-lg shadow-rose-100"
-                : "bg-white border-slate-100 text-slate-400"
+        {/* Kartu utama: jenis, nominal, tanggal */}
+        <div className="mt-4 bg-white rounded-3xl border border-slate-100 shadow-sm p-4">
+          <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-slate-100">
+            {([["pengeluaran", "Pengeluaran", ArrowDownCircle, "bg-rose-500"], ["pemasukan", "Pemasukan", ArrowUpCircle, "bg-emerald-500"]] as const).map(
+              ([value, label, Icon, active]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setType(value)}
+                  className={cn(
+                    "flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-black transition-all",
+                    type === value ? `${active} text-white shadow-sm` : "text-slate-500"
+                  )}
+                >
+                  <Icon size={14} /> {label}
+                </button>
+              )
             )}
-          >
-            <ArrowDownCircle size={16} /> Pengeluaran
-          </button>
-          <button
-            type="button"
-            onClick={() => setType("pemasukan")}
-            className={cn(
-              "flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-black transition-all border-2",
-              type === "pemasukan"
-                ? "bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-100"
-                : "bg-white border-slate-100 text-slate-400"
-            )}
-          >
-            <ArrowUpCircle size={16} /> Pemasukan
-          </button>
-        </div>
-
-        {/* Nominal */}
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 mb-4">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            Nominal {selectedAccount ? `(${selectedAccount.currency})` : ""}
-          </label>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-2xl font-black text-slate-300">{selectedAccount?.currency ?? "Rp"}</span>
-            <NumberInput
-              autoFocus
-              value={amount}
-              onChange={setAmount}
-              placeholder="0"
-              className="flex-1 min-w-0 text-4xl font-black text-slate-900 bg-transparent outline-none placeholder:text-slate-200 tabular-nums"
-            />
           </div>
-        </div>
 
-        {/* Tanggal — default hari ini; kemarin/tanggal lain untuk yang lupa dicatat. */}
-        <div className="flex items-center gap-2 mb-3">
-          {([[null, "Hari ini"], [yesterday, "Kemarin"]] as const).map(([value, label]) => (
+          <div className="pt-6 pb-4 text-center">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nominal</p>
+            <div className="mt-1 flex items-baseline justify-center gap-2">
+              <span className="text-xl font-black text-slate-300">{selectedAccount?.currency ?? "IDR"}</span>
+              <NumberInput
+                autoFocus
+                value={amount}
+                onChange={setAmount}
+                placeholder="0"
+                aria-label="Nominal"
+                // Lebar mengikuti panjang angka supaya kode mata uang menempel di depannya.
+                style={{ width: `${Math.max(1, groupDigits(amount).length) + 0.5}ch` }}
+                className={cn(
+                  "max-w-[75%] min-w-0 text-4xl font-black bg-transparent outline-none placeholder:text-slate-200 tabular-nums text-left",
+                  type === "pengeluaran" ? "text-rose-600" : "text-emerald-600"
+                )}
+              />
+            </div>
+          </div>
+
+          {/* Tanggal — default hari ini; kemarin/tanggal lain untuk yang lupa dicatat. */}
+          <div className="flex items-center justify-center gap-2">
+            {([[null, "Hari ini"], [yesterday, "Kemarin"]] as const).map(([value, label]) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => { setDate(value); setShowDatePicker(false); }}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-full text-[11px] font-bold border",
+                  date === value ? "bg-slate-900 border-slate-900 text-white" : "bg-white border-slate-200 text-slate-500"
+                )}
+              >
+                {label}
+              </button>
+            ))}
             <button
-              key={label}
               type="button"
-              onClick={() => { setDate(value); setShowDatePicker(false); }}
+              onClick={() => setShowDatePicker((v) => !v)}
+              aria-label="Pilih tanggal lain"
               className={cn(
-                "px-3.5 py-2 rounded-full text-xs font-bold border",
-                date === value ? "bg-indigo-600 border-indigo-600 text-white" : "bg-white border-slate-200 text-slate-500"
+                "h-[30px] shrink-0 rounded-full border flex items-center justify-center gap-1.5 px-3 text-[11px] font-bold",
+                showDatePicker || (date !== null && date !== yesterday) ? "bg-slate-900 border-slate-900 text-white" : "bg-white border-slate-200 text-slate-500"
               )}
             >
-              {label}
+              <CalendarDays size={13} />
+              {date !== null && date !== yesterday ? date.split("-").reverse().join("/") : null}
             </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => setShowDatePicker((v) => !v)}
-            aria-label="Pilih tanggal lain"
-            className={cn(
-              "h-9 shrink-0 rounded-full border flex items-center justify-center gap-1.5 px-3 text-xs font-bold",
-              showDatePicker || (date !== null && date !== yesterday) ? "bg-indigo-600 border-indigo-600 text-white" : "bg-white border-slate-200 text-slate-500"
-            )}
-          >
-            <CalendarDays size={14} />
-            {date !== null && date !== yesterday ? date.split("-").reverse().join("/") : null}
-          </button>
-        </div>
-        {showDatePicker && (
-          <input
-            type="date"
-            value={date ?? today}
-            max={today}
-            onChange={(e) => setDate(e.target.value && e.target.value !== today ? e.target.value : null)}
-            aria-label="Tanggal"
-            className="w-full mb-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-900"
-          />
-        )}
-
-        {/* Akun — dropdown: cuma rekening terpilih yang tampil, tap untuk buka
-            pilihan lain (sebelumnya semua rekening selalu tampil sekaligus). */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-3 relative" ref={accountPickerRef}>
-          <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
-            <Wallet size={12} /> Akun / Rekening
-          </label>
-          {accounts.length === 0 ? (
-            <p className="text-xs font-medium text-slate-400">
-              Belum ada rekening.{" "}
-              <Link href="/membership/rekening" className="text-indigo-600 font-bold underline">
-                Buat dulu
-              </Link>
-              .
-            </p>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => setIsAccountOpen((o) => !o)}
-                className="w-full flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/50 p-3 transition-all text-left hover:border-slate-200"
-              >
-                {selectedAccount ? (
-                  <>
-                    <div className="w-9 h-9 rounded-lg overflow-hidden shrink-0 border border-slate-100 bg-white">
-                      <LogoImage
-                        src={selectedAccount.logoUrl}
-                        alt={selectedAccount.name}
-                        fallbackText={selectedAccount.name.slice(0, 2).toUpperCase()}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-black text-slate-800 truncate">{selectedAccount.name}</p>
-                      <p className="text-[10px] font-bold text-slate-400">{selectedAccount.currency}</p>
-                    </div>
-                  </>
-                ) : (
-                  <span className="flex-1 text-sm font-bold text-slate-400">Pilih Rekening</span>
-                )}
-                <ChevronDown
-                  size={16}
-                  className={cn("text-slate-400 shrink-0 transition-transform", isAccountOpen && "rotate-180")}
-                />
-              </button>
-
-              <AnimatePresence>
-                {isAccountOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    className="absolute left-4 right-4 top-full mt-2 z-20 bg-white border border-slate-100 rounded-2xl shadow-xl p-2 space-y-2 max-h-72 overflow-y-auto"
-                  >
-                    {accounts.map((a) => {
-                      const isSelected = a.id === accountId;
-                      const isCredit = isCreditAccountType(a.type);
-                      const creditUsage = a.id ? creditUsageByAccount.get(a.id) : undefined;
-                      const displayAmount = isCredit ? (creditUsage?.remaining ?? 0) : (a.balance || 0);
-                      return (
-                        <button
-                          key={a.id}
-                          type="button"
-                          onClick={() => {
-                            setAccountId(a.id || "");
-                            setIsAccountOpen(false);
-                          }}
-                          className={cn(
-                            "w-full flex items-center gap-3 rounded-xl border p-3 transition-all text-left",
-                            isSelected
-                              ? "border-indigo-300 bg-indigo-50/60"
-                              : "border-slate-100 bg-slate-50/50 hover:border-slate-200"
-                          )}
-                        >
-                          <div className="w-9 h-9 rounded-lg overflow-hidden shrink-0 border border-slate-100 bg-white">
-                            <LogoImage
-                              src={a.logoUrl}
-                              alt={a.name}
-                              fallbackText={a.name.slice(0, 2).toUpperCase()}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-black text-slate-800 truncate">{a.name}</p>
-                            <p className="text-[10px] font-bold text-slate-400">{a.currency}</p>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <p
-                              className={cn(
-                                "text-xs font-black",
-                                isCredit ? "text-emerald-600" : isSelected ? "text-indigo-700" : "text-slate-600"
-                              )}
-                            >
-                              {formatBalance(displayAmount, a.currency)}
-                            </p>
-                            {isCredit && (
-                              <p className="text-[8px] font-bold text-slate-400">Sisa Limit</p>
-                            )}
-                          </div>
-                          {isSelected && <Check size={16} className="text-indigo-600 shrink-0" />}
-                        </button>
-                      );
-                    })}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </>
+          </div>
+          {showDatePicker && (
+            <input
+              type="date"
+              value={date ?? today}
+              max={today}
+              onChange={(e) => setDate(e.target.value && e.target.value !== today ? e.target.value : null)}
+              aria-label="Tanggal"
+              className="w-full mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900"
+            />
           )}
         </div>
 
-        {/* Kategori — pakai picker yang sama dengan Input Harian, supaya daftar
-            kategori & sub-kategorinya selalu konsisten di seluruh aplikasi. */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-3">
-          <CategorySelect
-            label="Kategori"
-            type={type === "pengeluaran" ? "expense" : "income"}
-            value={category}
-            onChange={setCategory}
-            onSubCategoryChange={setSubCategory}
-            subValue={subCategory}
-            showBadge={false}
-          />
-          <Link
-            href="/membership/nama-akun"
-            className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 mt-2"
-          >
-            Belum ada / kelola kategori <ExternalLink size={10} />
-          </Link>
-        </div>
+        {/* Kartu detail: rekening, kategori, catatan dalam satu daftar. */}
+        <div className="mt-3 bg-white rounded-3xl border border-slate-100 shadow-sm divide-y divide-slate-100">
+          {/* Akun — dropdown: cuma rekening terpilih yang tampil, tap untuk buka pilihan lain. */}
+          <div className="p-4 relative" ref={accountPickerRef}>
+            <p className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+              <Wallet size={12} /> {type === "pengeluaran" ? "Dari rekening" : "Masuk ke rekening"}
+            </p>
+            {accounts.length === 0 ? (
+              <p className="text-xs font-medium text-slate-400">
+                Belum ada rekening.{" "}
+                <Link href="/membership/rekening" className="text-indigo-600 font-bold underline">Buat dulu</Link>.
+              </p>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsAccountOpen((o) => !o)}
+                  className="w-full flex items-center gap-3 text-left"
+                >
+                  {selectedAccount ? (
+                    <>
+                      <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0 border border-slate-100 bg-white">
+                        <LogoImage
+                          src={selectedAccount.logoUrl}
+                          alt={selectedAccount.name}
+                          fallbackText={selectedAccount.name.slice(0, 2).toUpperCase()}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-black text-slate-800 truncate">{selectedAccount.name}</p>
+                        <p className="text-[11px] font-bold text-slate-400 tabular-nums">
+                          {isCreditAccountType(selectedAccount.type)
+                            ? `Sisa limit ${formatBalance(creditUsageByAccount.get(selectedAccount.id ?? "")?.remaining ?? 0, selectedAccount.currency)}`
+                            : `Saldo ${formatBalance(selectedAccount.balance || 0, selectedAccount.currency)}`}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <span className="flex-1 text-sm font-bold text-slate-400">Pilih rekening</span>
+                  )}
+                  <ChevronDown size={16} className={cn("text-slate-400 shrink-0 transition-transform", isAccountOpen && "rotate-180")} />
+                </button>
 
-        {/* Catatan (opsional) */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-3">
-          <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
-            <StickyNote size={12} /> Catatan <span className="text-slate-300 normal-case tracking-normal font-medium">(opsional)</span>
+                <AnimatePresence>
+                  {isAccountOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      className="absolute left-3 right-3 top-full -mt-1 z-20 bg-white border border-slate-100 rounded-2xl shadow-xl p-1.5 max-h-72 overflow-y-auto"
+                    >
+                      {accounts.map((a) => {
+                        const isSelected = a.id === accountId;
+                        const isCredit = isCreditAccountType(a.type);
+                        const creditUsage = a.id ? creditUsageByAccount.get(a.id) : undefined;
+                        const displayAmount = isCredit ? (creditUsage?.remaining ?? 0) : (a.balance || 0);
+                        return (
+                          <button
+                            key={a.id}
+                            type="button"
+                            onClick={() => {
+                              setAccountId(a.id || "");
+                              setIsAccountOpen(false);
+                            }}
+                            className={cn(
+                              "w-full flex items-center gap-3 rounded-xl p-2.5 transition-colors text-left",
+                              isSelected ? "bg-indigo-50" : "hover:bg-slate-50"
+                            )}
+                          >
+                            <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 border border-slate-100 bg-white">
+                              <LogoImage
+                                src={a.logoUrl}
+                                alt={a.name}
+                                fallbackText={a.name.slice(0, 2).toUpperCase()}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <p className="min-w-0 flex-1 text-sm font-bold text-slate-800 truncate">{a.name}</p>
+                            <div className="text-right shrink-0">
+                              <p className={cn("text-xs font-black tabular-nums", isCredit ? "text-emerald-600" : "text-slate-600")}>
+                                {formatBalance(displayAmount, a.currency)}
+                              </p>
+                              {isCredit && <p className="text-[9px] font-bold text-slate-400">Sisa limit</p>}
+                            </div>
+                            {isSelected && <Check size={15} className="text-indigo-600 shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </>
+            )}
+          </div>
+
+          {/* Kategori — picker yang sama dengan Input Harian, supaya daftar
+              kategori & sub-kategorinya konsisten di seluruh aplikasi. */}
+          <div className="p-4">
+            <CategorySelect
+              label="Kategori"
+              type={type === "pengeluaran" ? "expense" : "income"}
+              value={category}
+              onChange={setCategory}
+              onSubCategoryChange={setSubCategory}
+              subValue={subCategory}
+              showBadge={false}
+            />
+            <Link href="/membership/nama-akun" className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 mt-2 pl-1">
+              Kelola kategori <ExternalLink size={10} />
+            </Link>
+          </div>
+
+          <label className="flex items-center gap-3 px-4 py-3.5">
+            <StickyNote size={16} className="text-slate-300 shrink-0" />
+            <input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Catatan (opsional)"
+              aria-label="Catatan"
+              className="flex-1 min-w-0 text-sm font-bold text-slate-800 bg-transparent outline-none placeholder:text-slate-300 placeholder:font-medium"
+            />
           </label>
-          <input
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Tambah keterangan…"
-            className="w-full text-sm font-bold text-slate-800 bg-slate-50 rounded-xl px-3 py-3 outline-none border border-slate-100 focus:border-indigo-300"
-          />
         </div>
 
-        <div className="text-center text-[11px] font-medium text-slate-400 mt-4 space-y-1">
-          <p>
-            <span className="font-bold text-slate-500">iPhone (Safari):</span> tap{" "}
-            <span className="inline-flex items-center gap-1 font-bold text-slate-500">
-              <ExternalLink size={11} /> Share
-            </span>{" "}
-            → &quot;Add to Home Screen&quot;.
-          </p>
-          <p>
-            <span className="font-bold text-slate-500">Android (Chrome):</span> tap menu{" "}
-            <span className="font-bold text-slate-500">⋮</span> → &quot;Add to Home screen&quot; / &quot;Install app&quot;.
-          </p>
-        </div>
+        {!standalone && (
+          <details className="mt-5 text-center text-[11px] font-medium text-slate-400">
+            <summary className="cursor-pointer list-none font-bold text-slate-500">Pasang Input Cepat di layar utama HP</summary>
+            <div className="mt-2 space-y-1">
+              <p><span className="font-bold text-slate-500">iPhone (Safari):</span> tap Share → &quot;Add to Home Screen&quot;.</p>
+              <p><span className="font-bold text-slate-500">Android (Chrome):</span> menu ⋮ → &quot;Install app&quot;.</p>
+            </div>
+          </details>
+        )}
       </div>
 
-      {/* Tombol simpan — sticky di bawah */}
-      <div className="fixed bottom-0 inset-x-0 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent pt-6 pb-6 px-5">
+      {/* Tombol simpan — sticky di bawah, warna mengikuti jenis transaksi. */}
+      <div className="fixed bottom-0 inset-x-0 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent pt-6 pb-[calc(env(safe-area-inset-bottom)+20px)] px-5">
         <div className="max-w-md mx-auto">
           <button
             onClick={handleSubmit}
             disabled={!canSubmit}
             className={cn(
-              "w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-sm font-black transition-all shadow-lg",
-              canSubmit
-                ? "bg-indigo-600 text-white shadow-indigo-200 hover:bg-indigo-700 active:scale-[0.99]"
-                : "bg-slate-200 text-slate-400 shadow-none"
+              "w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-sm font-black transition-all shadow-lg active:scale-[0.99]",
+              !canSubmit
+                ? "bg-slate-200 text-slate-400 shadow-none"
+                : type === "pengeluaran"
+                  ? "bg-rose-500 text-white shadow-rose-200"
+                  : "bg-emerald-500 text-white shadow-emerald-200"
             )}
           >
             {submitting ? (
               <><Loader2 size={16} className="animate-spin" /> Menyimpan…</>
             ) : (
-              <><Check size={16} /> Simpan Transaksi</>
+              <>
+                <Check size={16} /> Simpan {type === "pengeluaran" ? "Pengeluaran" : "Pemasukan"}
+                {amountNumber > 0 ? ` ${selectedAccount?.currency ?? ""} ${groupDigits(amount)}` : ""}
+              </>
             )}
           </button>
+          {!canSubmit && amountNumber > 0 && !category && (
+            <p className="mt-2 text-center text-[11px] font-bold text-slate-400">Pilih kategori dulu</p>
+          )}
         </div>
       </div>
 
