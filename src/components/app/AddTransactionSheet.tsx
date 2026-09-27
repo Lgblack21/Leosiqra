@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Camera, CalendarDays, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight } from "lucide-react";
-import { cloudflareApi } from "@/lib/cloudflare-api";
+import { CalendarDays, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Sparkles } from "lucide-react";
 import { accountService, Account } from "@/lib/services/accountService";
 import { auth } from "@/lib/cf-client";
-import { notifyCollectionChanged, subscribeToCollectionChanges } from "@/lib/cf-firestore";
+import { subscribeToCollectionChanges } from "@/lib/cf-firestore";
 import { CategorySelect } from "@/components/CategorySelect";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import type { TxType } from "@/components/app/TxTypeToggle";
@@ -15,6 +13,14 @@ import { cn } from "@/lib/utils";
 import { AccountPicker } from "@/components/app/AccountPicker";
 import { AmountKeypad, groupDigits } from "@/components/app/AmountKeypad";
 import { lightTap } from "@/lib/haptics";
+import { transactionService, Transaction } from "@/lib/services/transactionService";
+import { quickTxService } from "@/lib/services/quickTxService";
+import { useQuickContext } from "@/lib/quick/useQuickContext";
+import type { QuickDraft } from "@/lib/quick/parse";
+import type { QuickFavorite } from "@/lib/quick/favorites";
+import { SmartBar, type DraftSource } from "@/components/quick/SmartBar";
+import { FavoriteChips } from "@/components/quick/FavoriteChips";
+import { UndoToast, type UndoItem } from "@/components/quick/UndoToast";
 
 type SheetMode = TxType | "transfer";
 
@@ -64,8 +70,10 @@ const yesterdayISO = () => {
 };
 
 export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProps) {
-  const router = useRouter();
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [hint, setHint] = useState<{ source: DraftSource; text?: string } | null>(null);
+  const [undoItem, setUndoItem] = useState<UndoItem | null>(null);
   const [type, setType] = useState<TxType>("pengeluaran");
   const [isTransfer, setIsTransfer] = useState(false);
   const [toAccountId, setToAccountId] = useState("");
@@ -98,6 +106,18 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
     loadAccounts();
     return subscribeToCollectionChanges("accounts", loadAccounts);
   }, []);
+
+  // Riwayat transaksi untuk ketik pintar & chip favorit — dimuat saat sheet
+  // pertama kali dibuka (bukan saat app start), lalu ikut ter-update.
+  const [historyWanted, setHistoryWanted] = useState(false);
+  useEffect(() => { if (isOpen) setHistoryWanted(true); }, [isOpen]);
+  useEffect(() => {
+    if (!historyWanted) return;
+    const load = () => transactionService.getUserTransactions(auth.currentUser?.uid ?? "").then(setTransactions).catch(() => {});
+    load();
+    return subscribeToCollectionChanges("transactions", load);
+  }, [historyWanted]);
+  const { ctx, favorites } = useQuickContext(auth.currentUser?.uid ?? "", accounts, transactions);
 
   useEffect(() => {
     if (!feedback) return;
@@ -134,12 +154,41 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
     setNote("");
     setDate(null);
     setShowDatePicker(false);
+    setHint(null);
   };
 
-  const goToScan = () => {
-    lightTap();
-    onClose();
-    router.push("/app/assistant/scan");
+  // Isi form dari ketik pintar / suara / scan — hanya field yang terbaca,
+  // sisanya tetap seperti yang sudah dipilih user. Tidak langsung disimpan.
+  const applyDraft = (draft: QuickDraft, source: DraftSource, info?: string) => {
+    if (draft.type) { setIsTransfer(false); setType(draft.type); }
+    if (draft.amount) setAmount(String(draft.amount));
+    if (draft.accountId && accounts.some((a) => a.id === draft.accountId)) setAccountId(draft.accountId);
+    if (draft.category) { setCategory(draft.category); setSubCategory(draft.subCategory ?? ""); }
+    if (draft.note) setNote(draft.note);
+    if (draft.date) { setDate(draft.date === toISODate(new Date()) ? null : draft.date); setShowDatePicker(false); }
+    setHint({ source, text: info });
+  };
+
+  const accountLabel = (id: string) => accounts.find((a) => a.id === id)?.name;
+  const currencyOf = (id: string) => accounts.find((a) => a.id === id)?.currency || "IDR";
+
+  const pickFavorite = async (fav: QuickFavorite) => {
+    if (submitting) return;
+    setSubmitting(true);
+    setFeedback(null);
+    try {
+      const res = await quickTxService.create({
+        type: fav.type, amount: fav.amount, accountId: fav.accountId,
+        category: fav.category, subCategory: fav.subCategory, note: fav.note,
+      });
+      setUndoItem({ id: res.id, label: `${fav.subCategory || fav.category} · ${res.currency} ${groupDigits(String(fav.amount))} · ${res.matchedAccount}` });
+      resetForm();
+      onClose();
+    } catch (e) {
+      setFeedback({ ok: false, msg: e instanceof Error ? e.message : "Gagal menyimpan transaksi." });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -160,24 +209,18 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
         onClose();
         return;
       }
-      await cloudflareApi("/api/member/quick-transaction", {
-        method: "POST",
-        json: {
-          type,
-          amount: amountNumber,
-          category: category.trim(),
-          sub_category: subCategory.trim(),
-          account: selectedAccount.name,
-          note: note.trim(),
-          ...(date ? { date } : {}),
-        },
+      // quickTxService memanggil /api/member/quick-transaction (atomik) dan
+      // memberi tahu halaman lain supaya langsung ter-update tanpa reload.
+      const res = await quickTxService.create({
+        type,
+        amount: amountNumber,
+        accountId: selectedAccount.id ?? "",
+        category,
+        subCategory,
+        note,
+        ...(date ? { date } : {}),
       });
-      // quick-transaction dipanggil langsung lewat cloudflareApi (bukan lewat
-      // transactionService), jadi notify manual — sama seperti input-cepat —
-      // supaya Home dashboard & halaman web (Transaksi, Rekening) langsung
-      // lihat data baru tanpa reload.
-      notifyCollectionChanged("transactions");
-      notifyCollectionChanged("accounts");
+      setUndoItem({ id: res.id, label: `${subCategory || category} · ${res.currency} ${groupDigits(amount)} · ${res.matchedAccount}` });
       lightTap();
       resetForm();
       onClose();
@@ -189,6 +232,7 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
   };
 
   return (
+    <>
     <BottomSheet
       isOpen={isOpen}
       onClose={onClose}
@@ -220,19 +264,21 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
           </div>
         )}
 
-        <div className="flex items-center gap-2">
-          <div className="flex-1">
-            <ModeToggle value={mode} onChange={setMode} />
+        <SmartBar ctx={ctx} onDraft={applyDraft} />
+        {hint && (
+          <div className="flex items-start gap-2 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 px-3.5 py-2.5 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
+            <Sparkles size={13} className="mt-0.5 shrink-0" />
+            <span>
+              Terisi dari {hint.source === "voice" ? "suara" : hint.source === "scan" ? "foto struk" : "teks"} — cek lalu simpan.
+              {hint.text ? <span className="block font-medium text-amber-600 dark:text-amber-400">{hint.text}</span> : null}
+            </span>
           </div>
-          <button
-            type="button"
-            onClick={goToScan}
-            className="shrink-0 w-[52px] h-[52px] rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400 flex items-center justify-center"
-            aria-label="Foto struk"
-          >
-            <Camera size={18} />
-          </button>
-        </div>
+        )}
+        {!isTransfer && !hint && amountNumber === 0 && (
+          <FavoriteChips favorites={favorites} accountName={accountLabel} currencyOf={currencyOf} onPick={pickFavorite} disabled={submitting} />
+        )}
+
+        <ModeToggle value={mode} onChange={setMode} />
 
         <div className="flex items-center gap-2">
           <button
@@ -309,6 +355,7 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
             type={type === "pengeluaran" ? "expense" : "income"}
             onChange={setCategory}
             onSubCategoryChange={setSubCategory}
+            subValue={subCategory}
             showBadge={false}
           />
         )}
@@ -322,5 +369,7 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
         />
       </div>
     </BottomSheet>
+    <UndoToast item={undoItem} onUndo={(item) => quickTxService.undo(item.id)} onDone={() => setUndoItem(null)} />
+    </>
   );
 }

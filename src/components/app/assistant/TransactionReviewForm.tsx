@@ -19,6 +19,8 @@ export interface ParsedTransactionSuggestion {
   sub_category: string | null;
   note: string | null;
   confidence: "high" | "medium" | "low";
+  account_id?: string | null;
+  date?: string | null;
 }
 
 interface TransactionReviewFormProps {

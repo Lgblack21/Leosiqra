@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ChevronLeft, Mic, Square, Sparkles } from "lucide-react";
-import { SpeechRecognition } from "@capacitor-community/speech-recognition";
+import { startSpeech, type SpeechSession } from "@/lib/speech";
 import { cloudflareApi } from "@/lib/cloudflare-api";
 import { TransactionReviewForm, ParsedTransactionSuggestion } from "@/components/app/assistant/TransactionReviewForm";
 import { lightTap } from "@/lib/haptics";
@@ -37,61 +37,42 @@ export default function AssistantVoicePage() {
   const [suggestion, setSuggestion] = useState<ParsedTransactionSuggestion | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const transcriptRef = useRef("");
+  const sessionRef = useRef<SpeechSession | null>(null);
 
-  useEffect(() => {
-    return () => {
-      SpeechRecognition.removeAllListeners();
-    };
-  }, []);
+  useEffect(() => () => sessionRef.current?.stop(), []);
 
+  // startSpeech: plugin native di aplikasi Android/iOS, Web Speech API di
+  // browser/PWA (plugin native tidak punya implementasi web).
   const startListening = async () => {
     lightTap();
-    try {
-      const { available } = await SpeechRecognition.available();
-      if (!available) {
-        setErrorMsg("Perangkat ini tidak mendukung pengenalan suara.");
-        setState("error");
-        return;
-      }
-      const perm = await SpeechRecognition.requestPermissions();
-      if (perm.speechRecognition !== "granted") {
-        setErrorMsg("Izin mikrofon/pengenalan suara dibutuhkan untuk fitur ini.");
-        setState("error");
-        return;
-      }
-
-      transcriptRef.current = "";
-      setTranscript("");
-      setState("listening");
-
-      await SpeechRecognition.addListener("partialResults", (data: { matches?: string[] }) => {
-        const latest = data.matches?.[0];
-        if (latest) {
-          transcriptRef.current = latest;
-          setTranscript(latest);
+    transcriptRef.current = "";
+    setTranscript("");
+    setState("listening");
+    const session = await startSpeech({
+      onPartial: (text) => {
+        transcriptRef.current = text;
+        setTranscript(text);
+      },
+      onEnd: (text) => {
+        sessionRef.current = null;
+        if (text) {
+          transcriptRef.current = text;
+          setTranscript(text);
         }
-      });
-
-      await SpeechRecognition.start({
-        language: "id-ID",
-        partialResults: true,
-        popup: false,
-      });
-    } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : "Gagal memulai pengenalan suara.");
-      setState("error");
-    }
+        setState(transcriptRef.current.trim() ? "transcribed" : "idle");
+      },
+      onError: (message) => {
+        sessionRef.current = null;
+        setErrorMsg(message);
+        setState("error");
+      },
+    });
+    sessionRef.current = session;
   };
 
-  const stopListening = async () => {
+  const stopListening = () => {
     lightTap();
-    try {
-      await SpeechRecognition.stop();
-      await SpeechRecognition.removeAllListeners();
-    } catch {
-      // abaikan — tetap lanjut ke transcript yang sudah terkumpul
-    }
-    setState(transcriptRef.current.trim() ? "transcribed" : "idle");
+    sessionRef.current?.stop();
   };
 
   const process = async () => {

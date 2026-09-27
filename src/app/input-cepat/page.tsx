@@ -16,9 +16,10 @@ import {
   X,
   AlertTriangle,
   ChevronDown,
+  CalendarDays,
+  Sparkles,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { cloudflareApi } from "@/lib/cloudflare-api";
+import { cn, toLocalDateString } from "@/lib/utils";
 import { accountService, Account } from "@/lib/services/accountService";
 import { auth } from "@/lib/cf-client";
 import { onAuthStateChanged } from "@/lib/cf-auth";
@@ -30,7 +31,14 @@ import { Modal } from "@/components/ui/Modal";
 import { NumberInput } from "@/components/ui/NumberInput";
 import { transactionService, Transaction } from "@/lib/services/transactionService";
 import { isCreditAccountType, computeCreditUsage } from "@/lib/creditCard";
-import { notifyCollectionChanged, subscribeToCollectionChanges } from "@/lib/cf-firestore";
+import { subscribeToCollectionChanges } from "@/lib/cf-firestore";
+import { quickTxService } from "@/lib/services/quickTxService";
+import { useQuickContext } from "@/lib/quick/useQuickContext";
+import type { QuickDraft } from "@/lib/quick/parse";
+import type { QuickFavorite } from "@/lib/quick/favorites";
+import { SmartBar, type DraftSource } from "@/components/quick/SmartBar";
+import { FavoriteChips } from "@/components/quick/FavoriteChips";
+import { UndoToast, type UndoItem } from "@/components/quick/UndoToast";
 
 type AuthState = "loading" | "ok" | "unauth";
 type TxType = "pengeluaran" | "pemasukan";
@@ -59,6 +67,12 @@ export default function InputCepatPage() {
   const [category, setCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
   const [note, setNote] = useState("");
+  // null = hari ini (tanggal ditentukan server, WIB).
+  const [date, setDate] = useState<string | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [hint, setHint] = useState<{ source: DraftSource; text?: string } | null>(null);
+  const [undoItem, setUndoItem] = useState<UndoItem | null>(null);
+  const [uid, setUid] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -99,6 +113,7 @@ export default function InputCepatPage() {
         return;
       }
       setAuthState("ok");
+      setUid(u.uid);
 
       const loadAccounts = () =>
         accountService
@@ -209,37 +224,65 @@ export default function InputCepatPage() {
     new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit" }).format(d);
   const getAccountName = (id?: string) => accounts.find((a) => a.id === id)?.name || "-";
 
+  const { ctx, favorites } = useQuickContext(uid, accounts, transactions);
+  const today = toLocalDateString();
+  const yesterday = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return toLocalDateString(d); })();
+
+  // Isi form dari ketik pintar / suara / foto struk — tidak langsung disimpan.
+  const applyDraft = (draft: QuickDraft, source: DraftSource, info?: string) => {
+    if (draft.type) setType(draft.type);
+    if (draft.amount) setAmount(String(draft.amount));
+    if (draft.accountId && accounts.some((a) => a.id === draft.accountId)) setAccountId(draft.accountId);
+    if (draft.category) { setCategory(draft.category); setSubCategory(draft.subCategory ?? ""); }
+    if (draft.note) setNote(draft.note);
+    if (draft.date) { setDate(draft.date === today ? null : draft.date); setShowDatePicker(false); }
+    setHint({ source, text: info });
+  };
+
+  const saved = (id: string, label: string) => {
+    setUndoItem({ id, label });
+    // Reset field yang berubah-ubah; sisakan type/akun/kategori untuk input cepat berikutnya.
+    setAmount("");
+    setNote("");
+    setDate(null);
+    setShowDatePicker(false);
+    setHint(null);
+  };
+
+  const pickFavorite = async (fav: QuickFavorite) => {
+    if (submitting) return;
+    setFeedback(null);
+    setSubmitting(true);
+    try {
+      const res = await quickTxService.create({
+        type: fav.type, amount: fav.amount, accountId: fav.accountId,
+        category: fav.category, subCategory: fav.subCategory, note: fav.note,
+      });
+      saved(res.id, `${fav.subCategory || fav.category} · ${res.currency} ${groupDigits(String(fav.amount))} · ${res.matchedAccount}`);
+    } catch (e) {
+      setFeedback({ ok: false, msg: e instanceof Error ? e.message : "Gagal menyimpan transaksi." });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!canSubmit || !selectedAccount) return;
     setFeedback(null);
     setSubmitting(true);
     try {
-      await cloudflareApi("/api/member/quick-transaction", {
-        method: "POST",
-        json: {
-          type,
-          amount: amountNumber,
-          category: category.trim(),
-          sub_category: subCategory.trim(),
-          account_id: selectedAccount.id,
-          account: selectedAccount.name,
-          note: note.trim(),
-        },
+      // quickTxService: transaksi + saldo atomik di server, lalu memberi tahu
+      // halaman lain (Rekening, Kartu Saya, dst) supaya langsung ter-update.
+      const res = await quickTxService.create({
+        type,
+        amount: amountNumber,
+        accountId: selectedAccount.id ?? "",
+        category,
+        subCategory,
+        note,
+        ...(date ? { date } : {}),
       });
-      setFeedback({
-        ok: true,
-        msg: `${type === "pengeluaran" ? "Pengeluaran" : "Pemasukan"} ${selectedAccount.currency} ${groupDigits(
-          amount
-        )} tercatat ✓`,
-      });
-      // quick-transaction dipanggil langsung lewat cloudflareApi (bukan lewat
-      // transactionService), jadi notify manual supaya halaman lain (Rekening,
-      // Kartu Saya, dst) langsung lihat transaksi & saldo baru tanpa reload.
-      notifyCollectionChanged("transactions");
-      notifyCollectionChanged("accounts");
-      // Reset field yang berubah-ubah; sisakan type/akun/kategori untuk input cepat berikutnya.
-      setAmount("");
-      setNote("");
+      saved(res.id, `${type === "pengeluaran" ? "Pengeluaran" : "Pemasukan"} ${res.currency} ${groupDigits(amount)} · ${res.matchedAccount}`);
     } catch (e) {
       setFeedback({ ok: false, msg: e instanceof Error ? e.message : "Gagal menyimpan transaksi." });
     } finally {
@@ -328,6 +371,29 @@ export default function InputCepatPage() {
           </span>
         </button>
 
+        {/* Ketik pintar / suara / foto struk — mengisi form di bawah. */}
+        <SmartBar ctx={ctx} onDraft={applyDraft} className="mb-3" />
+        {hint && (
+          <div className="flex items-start gap-2 rounded-2xl bg-indigo-50 px-3.5 py-2.5 mb-3 text-[11px] font-bold text-indigo-700">
+            <Sparkles size={13} className="mt-0.5 shrink-0" />
+            <span>
+              Terisi dari {hint.source === "voice" ? "suara" : hint.source === "scan" ? "foto struk" : "teks"} — cek lalu simpan.
+              {hint.text ? <span className="block font-medium text-amber-600">{hint.text}</span> : null}
+            </span>
+          </div>
+        )}
+        {!hint && amountNumber === 0 && (
+          <div className="mb-4">
+            <FavoriteChips
+              favorites={favorites}
+              accountName={(id) => accounts.find((a) => a.id === id)?.name}
+              currencyOf={(id) => accounts.find((a) => a.id === id)?.currency || "IDR"}
+              onPick={pickFavorite}
+              disabled={submitting}
+            />
+          </div>
+        )}
+
         {/* Jenis transaksi */}
         <div className="grid grid-cols-2 gap-3 mb-6">
           <button
@@ -372,6 +438,45 @@ export default function InputCepatPage() {
             />
           </div>
         </div>
+
+        {/* Tanggal — default hari ini; kemarin/tanggal lain untuk yang lupa dicatat. */}
+        <div className="flex items-center gap-2 mb-3">
+          {([[null, "Hari ini"], [yesterday, "Kemarin"]] as const).map(([value, label]) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => { setDate(value); setShowDatePicker(false); }}
+              className={cn(
+                "px-3.5 py-2 rounded-full text-xs font-bold border",
+                date === value ? "bg-indigo-600 border-indigo-600 text-white" : "bg-white border-slate-200 text-slate-500"
+              )}
+            >
+              {label}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setShowDatePicker((v) => !v)}
+            aria-label="Pilih tanggal lain"
+            className={cn(
+              "h-9 shrink-0 rounded-full border flex items-center justify-center gap-1.5 px-3 text-xs font-bold",
+              showDatePicker || (date !== null && date !== yesterday) ? "bg-indigo-600 border-indigo-600 text-white" : "bg-white border-slate-200 text-slate-500"
+            )}
+          >
+            <CalendarDays size={14} />
+            {date !== null && date !== yesterday ? date.split("-").reverse().join("/") : null}
+          </button>
+        </div>
+        {showDatePicker && (
+          <input
+            type="date"
+            value={date ?? today}
+            max={today}
+            onChange={(e) => setDate(e.target.value && e.target.value !== today ? e.target.value : null)}
+            aria-label="Tanggal"
+            className="w-full mb-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-900"
+          />
+        )}
 
         {/* Akun — dropdown: cuma rekening terpilih yang tampil, tap untuk buka
             pilihan lain (sebelumnya semua rekening selalu tampil sekaligus). */}
@@ -491,6 +596,7 @@ export default function InputCepatPage() {
             value={category}
             onChange={setCategory}
             onSubCategoryChange={setSubCategory}
+            subValue={subCategory}
             showBadge={false}
           />
           <Link
@@ -550,6 +656,8 @@ export default function InputCepatPage() {
           </button>
         </div>
       </div>
+
+      <UndoToast item={undoItem} onUndo={(item) => quickTxService.undo(item.id)} onDone={() => setUndoItem(null)} />
 
       {/* Popup notifikasi hasil simpan — menggantikan banner inline supaya
           lebih kelihatan di layar kecil dan tidak mendorong-dorong layout. */}

@@ -6,7 +6,7 @@ import {
   type PushSubscription as WebPushSubscription,
   type VapidKeys,
 } from "@block65/webcrypto-web-push";
-import { computeCardCycle, clampCycleDay, lastStatementDate, type CardCycleSettings } from "../../src/lib/creditCycle";
+import { computeCardCycle, clampCycleDay, lastStatementDate, daysBetween, type CardCycleSettings } from "../../src/lib/creditCycle";
 
 export interface Env {
   DB: D1Database;
@@ -2495,6 +2495,15 @@ async function handleQuickTransaction(request: Request, env: Env) {
       `UPDATE accounts SET balance = balance + ?
         WHERE id = ? AND user_id = ? AND EXISTS (SELECT 1 FROM transactions WHERE id = ? AND user_id = ?)`
     ).bind(type === "pemasukan" ? amount : -amount, match.id, userId, id, userId),
+    // Total member ikut dicatat — simetris dengan pembalikan saat transaksi
+    // dihapus (DELETE ?reverse=1), jadi simpan lalu "Batalkan" bersih nol.
+    env.DB.prepare(
+      type === "pemasukan"
+        ? `UPDATE users SET total_income = COALESCE(total_income, 0) + ?, total_wealth = COALESCE(total_wealth, 0) + ?
+            WHERE id = ? AND EXISTS (SELECT 1 FROM transactions WHERE id = ? AND user_id = ?)`
+        : `UPDATE users SET total_expenses = COALESCE(total_expenses, 0) + ?, total_wealth = COALESCE(total_wealth, 0) - ?
+            WHERE id = ? AND EXISTS (SELECT 1 FROM transactions WHERE id = ? AND user_id = ?)`
+    ).bind(amount, amount, userId, id, userId),
   ]);
 
   try {
@@ -5020,6 +5029,10 @@ type ParsedTransactionSuggestion = {
   sub_category: string | null;
   note: string | null;
   confidence: "high" | "medium" | "low";
+  /** Rekening yang disebut (mis. "pakai BCA") — hanya id rekening milik user. */
+  account_id?: string | null;
+  /** Tanggal yang disebut (mis. "kemarin"), YYYY-MM-DD, maks 60 hari ke belakang. */
+  date?: string | null;
 };
 
 // Model kadang tetap membungkus JSON dalam code fence markdown walau sudah
@@ -5055,6 +5068,11 @@ async function handleParseTransaction(request: Request, env: Env) {
     category: c.category,
     sub_category: c.sub_category,
   }));
+  const accountRows = await env.DB.prepare(`SELECT id, name, type, currency FROM accounts WHERE user_id = ?`)
+    .bind(authResult.session.user.id)
+    .all<{ id: string; name: string; type: string; currency: string }>();
+  const userAccounts = accountRows.results ?? [];
+  const today = todayWIB();
 
   const systemPrompt = `Kamu adalah asisten yang mengekstrak detail transaksi keuangan dari foto struk/nota ATAU teks hasil transkrip suara pengguna.
 Balas HANYA dengan satu objek JSON valid, TANPA teks lain, TANPA markdown code fence, sesuai skema persis berikut:
@@ -5064,11 +5082,18 @@ Balas HANYA dengan satu objek JSON valid, TANPA teks lain, TANPA markdown code f
   "category": <string, harus SALAH SATU dari daftar berikut, atau null kalau tidak yakin>,
   "sub_category": <string sub-kategori dari kategori yang dipilih, atau null>,
   "note": <string ringkas, misal nama merchant/deskripsi, atau null>,
-  "confidence": "high" | "medium" | "low"
+  "confidence": "high" | "medium" | "low",
+  "account": <nama rekening PERSIS dari daftar rekening di bawah kalau pengguna menyebutnya (mis. "pakai BCA", "dari cash"), atau null>,
+  "date": <"YYYY-MM-DD" kalau pengguna menyebut waktu (mis. "kemarin", "2 hari lalu", "tanggal 25") atau tanggal tercetak di struk, atau null>
 }
 
+Hari ini (WIB): ${today}.
+
 Daftar kategori pengguna yang SAH (jangan mengarang nama di luar daftar ini):
-${JSON.stringify(userCategories)}`;
+${JSON.stringify(userCategories)}
+
+Daftar rekening pengguna (pakai nama persis, jangan mengarang):
+${JSON.stringify(userAccounts.map((a) => ({ name: a.name, type: a.type, currency: a.currency })))}`;
 
   const userContent = hasImage
     ? [
@@ -5159,7 +5184,21 @@ ${JSON.stringify(userCategories)}`;
     confidence: parsed.confidence === "high" || parsed.confidence === "medium" || parsed.confidence === "low"
       ? parsed.confidence
       : "low",
+    account_id: null,
+    date: null,
   };
+
+  // Rekening & tanggal dari AI hanya dipakai kalau valid: nama rekening harus
+  // persis milik user (tidak ditebak), tanggal format YYYY-MM-DD, tidak di
+  // masa depan dan maksimal 60 hari ke belakang.
+  const aiAccount = String(parsed.account ?? "").trim().toLowerCase();
+  if (aiAccount) {
+    suggestion.account_id = userAccounts.find((a) => a.name.toLowerCase() === aiAccount)?.id ?? null;
+  }
+  const aiDate = String(parsed.date ?? "").trim().slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(aiDate) && aiDate <= today && daysBetween(aiDate, today) <= 60) {
+    suggestion.date = aiDate;
+  }
 
   return json({ ok: true, suggestion });
 }

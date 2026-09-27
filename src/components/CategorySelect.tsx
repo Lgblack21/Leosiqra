@@ -19,9 +19,11 @@ interface CategorySelectProps {
   onChange: (categoryId: string) => void;
   onSubCategoryChange?: (subCategory: string) => void;
   showBadge?: boolean;
+  /** Sub-kategori terpilih, ditampilkan di tombol (mis. hasil isi otomatis). */
+  subValue?: string;
 }
 
-export const CategorySelect = ({ label, value, type, onChange, onSubCategoryChange, showBadge = true }: CategorySelectProps) => {
+export const CategorySelect = ({ label, value, type, onChange, onSubCategoryChange, showBadge = true, subValue }: CategorySelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [categories, setCategories] = useState<CategoryData[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -123,6 +125,9 @@ export const CategorySelect = ({ label, value, type, onChange, onSubCategoryChan
         >
           <span className={cn("text-sm font-bold", !selectedCategory && "text-slate-400")}>
             {selectedCategory ? selectedCategory.category : 'Pilih Kategori'}
+            {selectedCategory && subValue && subValue !== selectedCategory.category && (
+              <span className="font-medium text-slate-400"> · {subValue}</span>
+            )}
           </span>
           <ChevronDown 
             size={18} 
