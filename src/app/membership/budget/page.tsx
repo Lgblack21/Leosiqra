@@ -16,6 +16,7 @@ import { budgetService, Budget } from '@/lib/services/budgetService';
 import { Transaction } from '@/lib/services/transactionService';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { BudgetModal } from '@/components/modals/BudgetModal';
+import { budgetRealization } from '@/lib/budget';
 
 export default function BudgetPage() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -108,17 +109,7 @@ export default function BudgetPage() {
     }
   };
 
-  const calculateRealisasi = (budget: Budget) => {
-    // Target budget selalu dalam IDR, jadi realisasinya juga dijumlah
-    // pakai amountIDR (bukan .amount mentah) supaya perbandingannya benar
-    // kalau ada transaksi dalam mata uang lain untuk kategori yang sama.
-    const total = transactions
-      .filter(t => t.category.toLowerCase() === budget.category.toLowerCase())
-      .reduce((sum, t) => sum + (Number(t.amountIDR) || t.amount), 0);
-    const percentage = budget.amount > 0 ? (total / budget.amount) * 100 : 0;
-    const isOver = percentage > 100;
-    return { total, percentage, isOver };
-  };
+  const calculateRealisasi = (budget: Budget) => budgetRealization(budget, transactions);
 
   const getTypeStyle = (type: Budget['type']) => {
     switch (type) {

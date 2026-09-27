@@ -18,15 +18,15 @@ const IN_APP: MenuItem[] = [
   { label: "Hutang & Piutang", href: "/app/debts", icon: HandCoins, color: "bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400" },
   { label: "Tabungan", href: "/app/savings", icon: PiggyBank, color: "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400" },
   { label: "Kartu Kredit", href: "/app/cards", icon: CreditCard, color: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
+  { label: "Budget", href: "/app/budget", icon: Target, color: "bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-400" },
+  { label: "Rutin", href: "/app/recurring", icon: Repeat, color: "bg-cyan-50 text-cyan-600 dark:bg-cyan-500/10 dark:text-cyan-400" },
+  { label: "Investasi", href: "/app/investments", icon: TrendingUp, color: "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400" },
 ];
 
 // Fitur yang belum dipindah ke aplikasi — sementara dibuka di versi web lengkap
 // (tetap login dengan sesi yang sama). Pindahkan ke IN_APP begitu versi
 // mobile-nya selesai.
 const WEB_FEATURES: MenuItem[] = [
-  { label: "Budget & Target", href: "/membership/budget", icon: Target, color: "bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-400" },
-  { label: "Transaksi Rutin", href: "/membership/recurring", icon: Repeat, color: "bg-cyan-50 text-cyan-600 dark:bg-cyan-500/10 dark:text-cyan-400" },
-  { label: "Investasi", desc: "Saham, deposito, lainnya", href: "/membership/investment", icon: TrendingUp, color: "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400" },
   { label: "Laporan Tahunan", href: "/membership/annual", icon: CalendarRange, color: "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400" },
   { label: "Pajak Center", href: "/membership/pajak-center", icon: ShieldCheck, color: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400" },
   { label: "Data Pasar", href: "/membership/market-data", icon: Globe, color: "bg-lime-50 text-lime-700 dark:bg-lime-500/10 dark:text-lime-400" },
