@@ -37,6 +37,7 @@ import { exchangeRateService } from '@/lib/services/exchangeRateService';
 import { currencyService, Currency } from '@/lib/services/currencyService';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { SandboxedHtml } from '@/components/ui/SandboxedHtml';
 
 type LiveCryptoQuote = {
   idr?: number;
@@ -1087,9 +1088,10 @@ export default function AdminPengaturanPage() {
           </div>
           <div className="flex-1 overflow-hidden relative">
             {settings?.maintenance?.type === 'code' ? (
-              <div
-                className="w-full h-full overflow-auto bg-white"
-                dangerouslySetInnerHTML={{ __html: settings?.maintenance?.code || '<div style="display:flex;align-items:center;justify-center;height:100vh;font-family:sans-serif;"><h1>No Code Content</h1></div>' }}
+              <SandboxedHtml
+                html={settings?.maintenance?.code || '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;"><h1>No Code Content</h1></div>'}
+                title="Preview halaman maintenance"
+                className="w-full h-full border-0 bg-white"
               />
             ) : (
               <div className="relative w-full h-full flex items-center justify-center bg-black">

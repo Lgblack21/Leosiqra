@@ -7,6 +7,7 @@ import { Wrench, MessageCircle } from 'lucide-react';
 import type { UserProfile } from '@/lib/services/userService';
 import type { AppSettings } from '@/lib/services/adminService';
 import { cloudflareApi } from '@/lib/cloudflare-api';
+import { SandboxedHtml } from '@/components/ui/SandboxedHtml';
 
 export default function MaintenanceGuard({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -86,9 +87,10 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
   if (settings?.maintenance?.isActive) {
     if (settings.maintenance.type === 'code' && settings.maintenance.code) {
       return (
-        <div
-          className="fixed inset-0 z-[9999] bg-white overflow-auto"
-          dangerouslySetInnerHTML={{ __html: settings.maintenance.code }}
+        <SandboxedHtml
+          html={settings.maintenance.code}
+          title="Halaman maintenance"
+          className="fixed inset-0 z-[9999] w-full h-full border-0 bg-white"
         />
       );
     } else if (settings.maintenance.type === 'image' && settings.maintenance.imageUrl) {

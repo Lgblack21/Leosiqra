@@ -668,7 +668,12 @@ const sanitizeMaintenanceHtml = (unsafeHtml?: string | null) => {
     .replaceAll(/\s(srcdoc|formaction|xlink:href|href|src|poster|action)\s*=\s*"(javascript:|data:text\/html)[^"]*"/gi, "")
     .replaceAll(/\s(srcdoc|formaction|xlink:href|href|src|poster|action)\s*=\s*'(javascript:|data:text\/html)[^']*'/gi, "")
     .replaceAll(/\sstyle\s*=\s*"[^"]*(expression|url\s*\(\s*javascript:)[^"]*"/gi, "")
-    .replaceAll(/\sstyle\s*=\s*'[^']*(expression|url\s*\(\s*javascript:)[^']*'/gi, "");
+    .replaceAll(/\sstyle\s*=\s*'[^']*(expression|url\s*\(\s*javascript:)[^']*'/gi, "")
+    // Varian tanpa tanda kutip & setelah "/" (mis. <img src=x onerror=...>,
+    // <svg/onload=...>) — dulu lolos. Lapisan utama tetap iframe sandbox di
+    // frontend (SandboxedHtml); ini cuma cadangan.
+    .replaceAll(/[\s/]on\w+\s*=\s*[^\s>"']+/gi, " ")
+    .replaceAll(/\s(srcdoc|formaction|xlink:href|href|src|poster|action)\s*=\s*(javascript:|data:text\/html)[^\s>]*/gi, "");
 };
 
 const getMaintenanceSettings = async (env: Env) =>
