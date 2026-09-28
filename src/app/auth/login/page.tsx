@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Input } from '@/components/Input';
-import { Button } from '@/components/Button';
-import { ShieldCheck, Smartphone, Eye, EyeOff, LayoutGrid } from 'lucide-react';
+import { motion, useAnimationControls, useReducedMotion } from 'framer-motion';
+import { Eye, EyeOff, Mail, Lock, ArrowRight, Check, AlertCircle } from 'lucide-react';
+import { AuthShowcase } from '@/components/auth/AuthShowcase';
 import { TwoFactorModal } from '@/components/auth/TwoFactorModal';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { isStandaloneDisplay } from '@/lib/pushNotifications';
@@ -33,7 +33,20 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [show2FA, setShow2FA] = useState(false);
   const [next, setNext] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
   const router = useRouter();
+  const reduce = useReducedMotion();
+  const card = useAnimationControls();
+
+  // Berhasil: tombol berubah jadi centang sebentar, lalu pindah halaman.
+  const finish = (destination: string) => {
+    setDone(true);
+    setTimeout(() => router.push(destination), reduce ? 0 : 450);
+  };
+  // Gagal: kartu bergoyang pelan supaya kesalahan langsung terasa.
+  const shake = () => {
+    if (!reduce) void card.start({ x: [0, -10, 9, -6, 5, -2, 0], transition: { duration: 0.5 } });
+  };
 
   // Tampilkan pesan error yang dikirim balik dari alur OAuth Google (?error=...),
   // dan simpan `?next=` (kalau ada) supaya user yang datang dari /app kembali
@@ -80,7 +93,7 @@ export default function LoginPage() {
       if (result.needsTwoFactor) {
         setShow2FA(true);
       } else {
-        router.push(resolveDestination(result.user?.role));
+        finish(resolveDestination(result.user?.role));
       }
     } catch (error) {
       setError(
@@ -88,6 +101,7 @@ export default function LoginPage() {
           ? error.message
           : 'Gagal login. Periksa kembali email dan password Anda.'
       );
+      shake();
     } finally {
       setLoading(false);
     }
@@ -106,152 +120,145 @@ export default function LoginPage() {
       },
     });
 
-    router.push(resolveDestination(result.user?.role));
+    finish(resolveDestination(result.user?.role));
     return true;
   };
 
+  const item = (k: number) =>
+    reduce
+      ? {}
+      : {
+          initial: { opacity: 0, y: 14 },
+          animate: { opacity: 1, y: 0 },
+          transition: { duration: 0.6, delay: 0.1 + k * 0.07, ease: [0.16, 1, 0.3, 1] as const },
+        };
+
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex font-sans selection:bg-indigo-100">
-      {/* Left Side: Branding & Features */}
-      <div className="hidden lg:flex flex-[1.1] flex-col p-10 bg-white relative overflow-hidden border-r border-slate-100 space-y-12">
-        {/* Logo */}
-        <div className="relative z-10">
-          <Link href="/" className="flex items-center gap-3 group">
-            <Image src="/images/Logo-new.png" alt="Logo" width={32} height={32} />
-            <span className="font-serif font-black text-2xl tracking-tight text-slate-900">Leosiqra</span>
-          </Link>
-        </div>
+    <div className="min-h-screen bg-[#f7f8fb] flex font-sans selection:bg-indigo-100">
+      <AuthShowcase
+        title={<>Selamat datang <span className="italic text-indigo-200">kembali.</span></>}
+        subtitle="Masuk untuk melihat saldo, tagihan, tabungan, dan investasi Anda — semuanya ter-update sejak terakhir Anda buka."
+      />
 
-        {/* Hero Text */}
-        <div className="relative z-10 max-w-lg space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 text-[10px] font-black uppercase tracking-widest w-fit">
-            Secure Fintech Access
-          </div>
-          <h1 className="text-4xl xl:text-5xl font-serif font-black text-slate-900 leading-[1.1]">
-            Masuk dengan <span className="text-gradient">aman</span> ke <br /> dashboard finansial pribadi <br /> Anda.
-          </h1>
-          <p className="text-slate-500 font-medium leading-relaxed text-sm max-w-xs">
-            Akses member Leosiqra dirancang ringkas, terlindungi 2FA, dan fokus pada satu hal: membawa Anda ke dashboard tanpa kebingungan.
-          </p>
-        </div>
-
-        {/* Feature Cards */}
-        <div className="relative z-10 grid grid-cols-3 gap-3">
-          {[
-            { icon: ShieldCheck, title: '2FA Ready', desc: 'Akses tetap berlapis.' },
-            { icon: LayoutGrid, title: 'Private', desc: 'Data tetap aman.' },
-            { icon: Smartphone, title: 'Trusted', desc: 'Device dipercaya.' },
-          ].map((card, i) => (
-            <div key={i} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2 group hover:bg-white hover:shadow-md transition-all">
-              <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100">
-                <card.icon size={14} />
-              </div>
-              <div className="space-y-0.5">
-                <h4 className="font-black text-slate-900 text-[11px] uppercase tracking-tighter">{card.title}</h4>
-                <p className="text-[10px] text-slate-400 font-medium leading-tight">{card.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Background Decor */}
-        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-50/50 blur-[100px] rounded-full -translate-y-1/2 translate-x-1/2" />
-      </div>
-
-      {/* Right Side: Login Card */}
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-12 bg-gradient-to-br from-slate-50 to-indigo-50/40 relative overflow-hidden">
+      {/* Form */}
+      <div className="relative flex flex-1 items-center justify-center overflow-hidden p-5 sm:p-10">
         <div className="hero-aurora" aria-hidden />
-        <div className="w-full max-w-[460px] bg-white/90 backdrop-blur-xl p-10 lg:p-11 rounded-[40px] shadow-[0_30px_70px_-20px_rgba(79,70,229,0.18)] border border-white ring-1 ring-slate-100 relative z-10 space-y-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest leading-none">
-              Encrypted Access
-            </div>
-            <h2 className="text-2xl font-serif font-black text-slate-900 leading-tight">Selamat datang kembali</h2>
-            <p className="text-slate-500 font-medium text-xs">Masuk untuk melanjutkan review arus kas, target, dan investasi Anda.</p>
-          </div>
+        <div className="dot-grid" aria-hidden />
 
-          {error && (
-            <div className="py-2.5 px-4 rounded-xl bg-red-50 border border-red-100 text-red-600 text-[11px] font-bold text-center">
-              {error}
-            </div>
-          )}
+        <motion.div animate={card} className="relative z-10 w-full max-w-[430px]">
+          {/* Logo (HP; di desktop logo ada di panel kiri) */}
+          <motion.div {...item(0)} className="mb-8 flex justify-center lg:hidden">
+            <Link href="/" className="flex items-center gap-3">
+              <Image src="/images/Logo-new.png" alt="Leosiqra" width={34} height={34} />
+              <span className="font-serif text-2xl font-black tracking-tight text-slate-900">Leosiqra</span>
+            </Link>
+          </motion.div>
 
-          {/* Social Login - Google */}
-          <a
-            href={googleHref}
-            className="flex items-center justify-center gap-3 w-full py-3 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm transition-all active:scale-[0.99]"
-          >
-            <GoogleIcon size={18} />
-            Lanjutkan dengan Google
-          </a>
-
-          <div className="relative flex items-center">
-            <div className="flex-grow border-t border-slate-100"></div>
-            <span className="flex-shrink mx-4 text-[8px] font-black text-slate-300 uppercase tracking-[0.2em]">Atau email/username</span>
-            <div className="flex-grow border-t border-slate-100"></div>
-          </div>
-
-          {/* Login Form */}
-          <form onSubmit={handleLogin} className="space-y-4">
-            <Input
-              label="Email atau Username"
-              placeholder="contoh@gmail.com atau username"
-              type="text"
-              autoCapitalize="none"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="py-3"
-            />
-            <div className="relative">
-              <Input 
-                label="Password" 
-                placeholder="Masukkan sandi Anda"
-                type={showPassword ? "text" : "password"} 
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="py-3"
-              />
-              <button 
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 bottom-3 text-slate-300 hover:text-indigo-600 transition-colors"
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between px-1">
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <input type="checkbox" className="w-3.5 h-3.5 rounded-md border-slate-200 text-indigo-600 focus:ring-indigo-500/20" />
-                <span className="text-[10px] font-bold text-slate-400 group-hover:text-slate-600 transition-colors">Percayai browser</span>
-              </label>
-              <Link href="/auth/forgot-password" className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700">Lupa password?</Link>
-            </div>
-
-            <Button type="submit" className="w-full py-3.5 text-xs font-black rounded-xl shadow-lg shadow-indigo-600/10" isLoading={loading}>
-              Login
-            </Button>
-          </form>
-
-          {/* Footer Card */}
-          <div className="space-y-4">
-            <div className="text-center text-[11px] font-medium text-slate-400">
-              Belum punya akun?{' '}
-              <Link href="/auth/register" className="text-indigo-600 font-bold hover:underline">Daftar</Link>
-            </div>
-
-            <div className="pt-4 border-t border-slate-50">
-              <p className="text-[8px] text-slate-300 text-center leading-normal">
-                Dilindungi password terenkripsi, cookie aman, dan verifikasi Authenticator saat dibutuhkan.
+          <div className="lp-card rounded-[32px] p-7 sm:p-10">
+            <motion.div {...item(1)}>
+              <h2 className="font-serif text-3xl leading-tight text-slate-900">Masuk</h2>
+              <p className="mt-1.5 text-sm text-slate-500">
+                Belum punya akun?{' '}
+                <Link href="/auth/register" className="font-bold text-indigo-600 hover:underline">Daftar gratis 14 hari</Link>
               </p>
-            </div>
-          </div>
-        </div>
+            </motion.div>
 
-        {/* Subtle background graphics */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500/5 via-transparent to-transparent pointer-events-none" />
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="mt-5 flex items-start gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-600"
+                role="alert"
+              >
+                <AlertCircle size={15} className="mt-px shrink-0" /> {error}
+              </motion.div>
+            )}
+
+            <motion.a
+              {...item(2)}
+              href={googleHref}
+              className="mt-7 flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white py-3.5 text-sm font-bold text-slate-700 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md active:scale-[0.99]"
+            >
+              <GoogleIcon size={18} />
+              Lanjutkan dengan Google
+            </motion.a>
+
+            <motion.div {...item(3)} className="my-6 flex items-center gap-4">
+              <span className="h-px flex-1 bg-slate-100" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">atau pakai email</span>
+              <span className="h-px flex-1 bg-slate-100" />
+            </motion.div>
+
+            <form onSubmit={handleLogin} className="space-y-4">
+              <motion.label {...item(4)} className="block">
+                <span className="mb-1.5 block pl-1 text-[11px] font-bold text-slate-500">Email atau username</span>
+                <span className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 transition-all focus-within:border-indigo-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-indigo-500/10">
+                  <Mail size={17} className="shrink-0 text-slate-400 transition-colors group-focus-within:text-indigo-500" />
+                  <input
+                    type="text"
+                    autoCapitalize="none"
+                    autoComplete="username"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="nama@email.com"
+                    className="w-full bg-transparent py-3.5 text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400"
+                  />
+                </span>
+              </motion.label>
+
+              <motion.label {...item(5)} className="block">
+                <span className="mb-1.5 flex items-center justify-between pl-1 text-[11px] font-bold text-slate-500">
+                  Password
+                  <Link href="/auth/forgot-password" className="font-bold text-indigo-600 hover:text-indigo-700">Lupa password?</Link>
+                </span>
+                <span className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 transition-all focus-within:border-indigo-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-indigo-500/10">
+                  <Lock size={17} className="shrink-0 text-slate-400 transition-colors group-focus-within:text-indigo-500" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Masukkan password"
+                    className="w-full bg-transparent py-3.5 text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                    className="shrink-0 text-slate-400 transition-colors hover:text-indigo-600"
+                  >
+                    {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
+                </span>
+              </motion.label>
+
+              <motion.div {...item(6)} className="pt-2">
+                <motion.button
+                  type="submit"
+                  disabled={loading || done}
+                  whileTap={{ scale: 0.98 }}
+                  className={`group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl py-4 text-sm font-bold text-white transition-colors duration-300 ${done ? 'bg-emerald-500 shadow-lg shadow-emerald-500/30' : 'lp-btn'} disabled:cursor-not-allowed`}
+                >
+                  {done ? (
+                    <motion.span initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex items-center gap-2">
+                      <Check size={18} /> Berhasil masuk
+                    </motion.span>
+                  ) : loading ? (
+                    <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> Memeriksa…</>
+                  ) : (
+                    <>Masuk <ArrowRight size={17} className="transition-transform group-hover:translate-x-1" /></>
+                  )}
+                </motion.button>
+              </motion.div>
+            </form>
+          </div>
+
+          <motion.p {...item(7)} className="mt-6 text-center text-xs text-slate-400">
+            Dilindungi password terenkripsi, cookie aman, dan verifikasi Authenticator bila diaktifkan.
+          </motion.p>
+        </motion.div>
       </div>
 
       <TwoFactorModal
