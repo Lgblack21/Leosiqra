@@ -26,35 +26,40 @@ interface ProductTourProps {
 // tanpa sorotan — tetap informatif, cuma tidak menyorot apa pun.
 export const ProductTour = ({ steps, isActive, onFinish }: ProductTourProps) => {
   const [stepIndex, setStepIndex] = useState(0);
-  const [rect, setRect] = useState<DOMRect | null>(null);
+  const [measured, setMeasured] = useState<DOMRect | null>(null);
 
-  useEffect(() => {
+  // Tur ditutup → mulai lagi dari langkah pertama saat dibuka berikutnya.
+  // Disesuaikan saat render (bukan di effect) supaya tidak render dua kali.
+  const [wasActive, setWasActive] = useState(isActive);
+  if (wasActive !== isActive) {
+    setWasActive(isActive);
     if (!isActive) setStepIndex(0);
-  }, [isActive]);
+  }
+
+  // Langkah tanpa target selalu tampil sebagai kartu di tengah, jadi sorotan
+  // sisa langkah sebelumnya diabaikan tanpa perlu di-reset lewat effect.
+  const rect = steps[stepIndex]?.target ? measured : null;
 
   useEffect(() => {
     if (!isActive) return;
     const step = steps[stepIndex];
-    if (!step?.target) {
-      setRect(null);
-      return;
-    }
+    if (!step?.target) return;
 
     const measure = () => {
       const el = document.querySelector(step.target!);
       if (!el) {
-        setRect(null);
+        setMeasured(null);
         return;
       }
       const r = el.getBoundingClientRect();
       // Elemen ada di DOM tapi tak kelihatan (mis. sidebar mobile yang
       // di-translate keluar layar) — anggap tidak ketemu.
       if (r.width === 0 || r.height === 0) {
-        setRect(null);
+        setMeasured(null);
         return;
       }
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setRect(r);
+      setMeasured(r);
     };
 
     measure();

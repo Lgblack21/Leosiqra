@@ -12,9 +12,9 @@ import {
   AlertTriangle,
   X,
   Calculator,
-  ChevronDown
 } from 'lucide-react';
 import { YearPicker } from '@/components/ui/YearPicker';
+import { useStoredValue } from '@/lib/hooks/useStoredValue';
 import { Transaction } from '@/lib/services/transactionService';
 import { Investment } from '@/lib/services/investmentService';
 import { Account } from '@/lib/services/accountService';
@@ -71,58 +71,30 @@ export default function PajakCenterPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [debtTransactions, setDebtTransactions] = useState<Transaction[]>([]);
   const [fxRates, setFxRates] = useState<ExchangeRates>({});
-  const [showDisclaimer, setShowDisclaimer] = useState(true);
 
   // Status PTKP disimpan lokal di browser (bukan per-tahun-pajak) — jarang
   // berubah, jadi tidak perlu kolom database sendiri.
-  const [maritalStatus, setMaritalStatus] = useState<'TK' | 'K'>('TK');
-  const [dependents, setDependents] = useState(0);
+  const [disclaimerDismissed, setDisclaimerDismissed] = useStoredValue('pajak-center-disclaimer-dismissed');
+  const [storedStatus, setStoredStatus] = useStoredValue('pajak-center-marital-status');
+  const [storedDependents, setStoredDependents] = useStoredValue('pajak-center-dependents');
+  const showDisclaimer = disclaimerDismissed !== '1';
+  const maritalStatus: 'TK' | 'K' = storedStatus === 'K' ? 'K' : 'TK';
+  const parsedDependents = Number(storedDependents ?? 0);
+  const dependents = Number.isInteger(parsedDependents) && parsedDependents >= 0 && parsedDependents <= MAX_TANGGUNGAN ? parsedDependents : 0;
 
   useEffect(() => {
     exchangeRateService.getLatestRates().then(setFxRates).catch(console.error);
   }, []);
 
-  useEffect(() => {
-    if (localStorage.getItem('pajak-center-disclaimer-dismissed') === '1') {
-      setShowDisclaimer(false);
-    }
-    const savedStatus = localStorage.getItem('pajak-center-marital-status');
-    if (savedStatus === 'TK' || savedStatus === 'K') setMaritalStatus(savedStatus);
-    const savedDependents = Number(localStorage.getItem('pajak-center-dependents'));
-    if (Number.isFinite(savedDependents) && savedDependents >= 0 && savedDependents <= MAX_TANGGUNGAN) {
-      setDependents(savedDependents);
-    }
-  }, []);
-
-  const updateMaritalStatus = (status: 'TK' | 'K') => {
-    setMaritalStatus(status);
-    localStorage.setItem('pajak-center-marital-status', status);
-  };
-
-  const updateDependents = (count: number) => {
-    setDependents(count);
-    localStorage.setItem('pajak-center-dependents', String(count));
-  };
-
-  const dismissDisclaimer = () => {
-    setShowDisclaimer(false);
-    localStorage.setItem('pajak-center-disclaimer-dismissed', '1');
-  };
+  const updateMaritalStatus = (status: 'TK' | 'K') => setStoredStatus(status);
+  const updateDependents = (count: number) => setStoredDependents(String(count));
+  const dismissDisclaimer = () => setDisclaimerDismissed('1');
 
   // PPh 21 yang sudah dipotong pemberi kerja bersifat per tahun pajak (beda
   // dengan status PTKP yang jarang berubah), jadi disimpan dengan key per
   // tahun supaya tidak salah kebawa saat ganti tahun di YearPicker.
-  const [pph21Withheld, setPph21Withheld] = useState('');
-
-  useEffect(() => {
-    const saved = localStorage.getItem(`pajak-center-pph21-${selectedYear}`);
-    setPph21Withheld(saved || '');
-  }, [selectedYear]);
-
-  const updatePph21Withheld = (val: string) => {
-    setPph21Withheld(val);
-    localStorage.setItem(`pajak-center-pph21-${selectedYear}`, val);
-  };
+  const [storedPph21, updatePph21Withheld] = useStoredValue(`pajak-center-pph21-${selectedYear}`);
+  const pph21Withheld = storedPph21 ?? '';
 
   const isCurrentYear = selectedYear === new Date().getFullYear();
 
