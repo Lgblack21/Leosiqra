@@ -7,5 +7,12 @@
 
 # HSTS — beri tahu browser untuk selalu pakai HTTPS ke domain ini, termasuk
 # subdomain (jawaban untuk temuan "Domains without HSTS" di Cloudflare).
+#
+# Anti-clickjacking — halaman Leosiqra tidak boleh ditampilkan di dalam iframe
+# situs mana pun (termasuk situs sendiri; tidak ada fitur yang butuh itu, dan
+# iframe maintenance di SandboxedHtml pakai srcdoc sehingga tidak terpengaruh).
+# X-Frame-Options untuk browser lama, frame-ancestors untuk yang modern.
 /*
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'
