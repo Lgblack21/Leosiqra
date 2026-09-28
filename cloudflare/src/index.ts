@@ -4817,56 +4817,95 @@ async function handleDeleteSaving(request: Request, env: Env, savingId: string) 
   return json({ ok: true });
 }
 
+type ProPackageRow = { id?: unknown; name?: unknown; durationMonths?: unknown; price?: unknown };
+
 async function handleCreateMemberPayment(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
   const payload = await parseJson<Record<string, unknown>>(request);
 
+  // Paket, durasi & harga resmi diambil dari pengaturan admin — BUKAN dari
+  // request. Dulu durationMonths dari client dipakai saat admin menyetujui,
+  // jadi member bisa bayar 1 bulan tapi minta 1200 bulan PRO.
   const packagePayload = (payload.package as Record<string, unknown> | undefined) ?? {};
-  const packageName = String(packagePayload.name ?? payload.package_name ?? "-");
-  // Skema produksi menyimpan detail paket + metode dalam satu kolom package_json.
+  const packageId = String(packagePayload.id ?? payload.package_id ?? "");
+  const settings = await env.DB.prepare("SELECT value_json FROM admin_settings WHERE id = 'global'").first<{ value_json: string | null }>();
+  let packages: ProPackageRow[] = [];
+  try {
+    const parsed = JSON.parse(settings?.value_json ?? "{}") as { proPackages?: unknown };
+    if (Array.isArray(parsed.proPackages)) packages = parsed.proPackages as ProPackageRow[];
+  } catch {
+    packages = [];
+  }
+  const pkg = packages.find((p) => String(p.id) === packageId);
+  if (!pkg) {
+    return json({ error: "Paket tidak ditemukan. Muat ulang halaman lalu pilih paket lagi." }, { status: 400 });
+  }
+  const durationMonths = Math.max(1, Math.min(120, Math.round(Number(pkg.durationMonths) || 1)));
+  const packageName = String(pkg.name ?? "Paket PRO").slice(0, 80);
+  const expectedPrice = Number(pkg.price) || 0;
+
+  const amount = Number(payload.amount);
+  if (!Number.isFinite(amount) || amount <= 0 || amount > 1_000_000_000) {
+    return json({ error: "Nominal transfer tidak valid." }, { status: 400 });
+  }
+
+  // Bukti bayar hanya dari Cloudinary (tempat upload aplikasi) — URL lain
+  // bisa dipakai melacak atau menipu admin saat gambarnya dibuka.
+  const proofRaw = payload.proof_image_url ?? payload.proofImageUrl;
+  const proofUrl = typeof proofRaw === "string" && proofRaw.trim() ? proofRaw.trim() : null;
+  if (proofUrl && !/^https:\/\/res\.cloudinary\.com\/[\w-]+\/image\/upload\//.test(proofUrl)) {
+    return json({ error: "Bukti pembayaran tidak valid. Unggah ulang gambarnya." }, { status: 400 });
+  }
+
+  // Cegah spam pengajuan: maksimal 5 yang masih menunggu per akun.
+  const pending = await env.DB.prepare("SELECT COUNT(*) AS n FROM payments WHERE user_id = ? AND status = 'MENUNGGU'")
+    .bind(userId)
+    .first<{ n: number }>();
+  if ((pending?.n ?? 0) >= 5) {
+    return json({ error: "Masih ada beberapa pembayaran yang menunggu verifikasi. Tunggu admin memprosesnya dulu." }, { status: 429 });
+  }
+
+  // Identitas dari akun yang login, bukan dari request.
+  const user = await env.DB.prepare("SELECT name, email, whatsapp, photo_url FROM users WHERE id = ?")
+    .bind(userId)
+    .first<{ name: string | null; email: string; whatsapp: string | null; photo_url: string | null }>();
+  const userName = user?.name || authResult.session.user.name || "-";
+  const userEmail = user?.email || authResult.session.user.email;
+
   const packageJson = JSON.stringify({
-    id: packagePayload.id ?? payload.package_id ?? null,
-    name: packagePayload.name ?? payload.package_name ?? null,
-    durationMonths: Number(packagePayload.durationMonths ?? payload.package_duration_months ?? 1),
-    method: payload.method ?? "Bank Transfer",
-    ref: payload.ref ?? null,
+    id: packageId,
+    name: packageName,
+    durationMonths,
+    expectedPrice,
+    method: String(payload.method ?? "Bank Transfer").slice(0, 40),
+    ref: payload.ref ? String(payload.ref).slice(0, 80) : null,
   });
+  const note = payload.note ? String(payload.note).slice(0, 500) : null;
   const id = generateId();
-  const userName = String(payload.user_name ?? payload.userName ?? authResult.session.user.name);
-  const userEmail = String(payload.user_email ?? payload.userEmail ?? authResult.session.user.email);
-  const amount = Number(payload.amount ?? 0);
   await env.DB.prepare(
     `INSERT INTO payments (
       id, user_id, user_name, user_email, user_whatsapp, user_photo_url, amount,
       package_json, proof_image_url, note, status, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'MENUNGGU', ?, ?)`
   )
     .bind(
-      id,
-      authResult.session.user.id,
-      userName,
-      userEmail,
-      payload.user_whatsapp ?? payload.userWhatsapp ?? authResult.session.user.whatsapp ?? null,
-      payload.user_photo_url ?? payload.userPhotoURL ?? null,
-      amount,
-      packageJson,
-      payload.proof_image_url ?? payload.proofImageUrl ?? null,
-      payload.note ?? null,
-      payload.status ?? "MENUNGGU",
-      nowIso(),
-      nowIso()
+      id, userId, userName, userEmail, user?.whatsapp ?? null, user?.photo_url ?? null, amount,
+      packageJson, proofUrl, note, nowIso(), nowIso()
     )
     .run();
 
+  const mismatch = expectedPrice > 0 && Math.round(amount) !== Math.round(expectedPrice);
   await sendTelegramNotification(
     env,
     `💰 <b>Pembayaran Baru</b>\n` +
-      `Nama: ${userName}\n` +
-      `Email: ${userEmail}\n` +
-      `Paket: ${packageName}\n` +
-      `Jumlah: Rp ${amount.toLocaleString("id-ID")}\n\n` +
-      `Verifikasi di Admin &gt; Pembayaran.`
+      `Nama: ${escapeHtml(userName)}\n` +
+      `Email: ${escapeHtml(userEmail)}\n` +
+      `Paket: ${escapeHtml(packageName)} (${durationMonths} bulan)\n` +
+      `Jumlah: Rp ${amount.toLocaleString("id-ID")}` +
+      (mismatch ? ` ⚠️ harga paket Rp ${expectedPrice.toLocaleString("id-ID")}` : "") +
+      `\n\nVerifikasi di Admin &gt; Pembayaran.`
   );
 
   return json({ ok: true, id }, { status: 201 });

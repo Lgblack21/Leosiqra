@@ -21,7 +21,29 @@ type PaymentRow = {
   method?: string | null;
   ref?: string | null;
   proof_image_url?: string | null;
+  package_json?: string | null;
   status: 'MENUNGGU' | 'DISETUJUI' | 'DITOLAK' | 'GAGAL';
+};
+
+// Detail paket disimpan server di kolom package_json (nama, durasi, harga resmi
+// paket saat diajukan). Dulu halaman ini membaca kolom package_name yang tidak
+// ada, jadi admin hanya melihat "PRO" tanpa durasi.
+const packageInfo = (row: PaymentRow) => {
+  let pkg: { name?: string; durationMonths?: number; expectedPrice?: number; method?: string; ref?: string } = {};
+  try {
+    pkg = row.package_json ? JSON.parse(row.package_json) : {};
+  } catch {
+    pkg = {};
+  }
+  const expected = Number(pkg.expectedPrice) || 0;
+  return {
+    name: pkg.name || row.package_name || row.package_id || 'PRO',
+    months: Number(pkg.durationMonths) || row.package_duration_months || null,
+    method: pkg.method || row.method || null,
+    ref: pkg.ref || row.ref || null,
+    expected,
+    mismatch: expected > 0 && Math.round(row.amount || 0) !== Math.round(expected),
+  };
 };
 
 export default function AdminPembayaranPage() {
@@ -208,11 +230,17 @@ export default function AdminPembayaranPage() {
                       </div>
                     </td>
                     <td className="py-4 px-3">
-                      <p className="text-[12px] font-bold text-slate-700">{row.package_name || row.package_id || 'PRO'}</p>
-                      <p className="text-[10px] font-medium text-slate-400">Rp {(row.amount || 0).toLocaleString()}</p>
+                      <p className="text-[12px] font-bold text-slate-700">
+                        {packageInfo(row).name}
+                        {packageInfo(row).months ? <span className="ml-1 text-slate-400">· {packageInfo(row).months} bln</span> : null}
+                      </p>
+                      <p className="text-[10px] font-medium text-slate-400">Rp {(row.amount || 0).toLocaleString('id-ID')}</p>
+                      {packageInfo(row).mismatch && (
+                        <p className="mt-0.5 text-[10px] font-bold text-amber-600">⚠ Harga paket Rp {packageInfo(row).expected.toLocaleString('id-ID')}</p>
+                      )}
                     </td>
-                    <td className="py-4 px-3 text-[12px] font-bold text-slate-500 uppercase">{row.method || 'TRANSFER'}</td>
-                    <td className="py-4 px-3 text-[12px] font-medium text-slate-500 truncate max-w-[100px]">{row.ref || '-'}</td>
+                    <td className="py-4 px-3 text-[12px] font-bold text-slate-500 uppercase">{packageInfo(row).method || 'TRANSFER'}</td>
+                    <td className="py-4 px-3 text-[12px] font-medium text-slate-500 truncate max-w-[100px]">{packageInfo(row).ref || '-'}</td>
                     <td className="py-4 px-3">
                       {row.proof_image_url ? (
                         <button
