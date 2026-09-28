@@ -1,4 +1,35 @@
-const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5MB
+// Batas setelah dikecilkan — batas upload gambar Cloudinary (paket gratis) 10MB.
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const MAX_DIMENSION = 1600;
+const SHRINK_ABOVE_BYTES = 1024 * 1024;
+
+// Foto kamera HP sering 3–12MB. Kecilkan ke sisi terpanjang 1600px (JPEG)
+// sebelum upload: lebih cepat, hemat kuota, dan tidak mentok batas ukuran.
+// Kalau browser tidak bisa membaca formatnya (mis. HEIC di Chrome), kirim
+// file aslinya saja — Cloudinary yang menangani.
+async function shrinkImage(file: File): Promise<File> {
+  if (file.size <= SHRINK_ABOVE_BYTES || file.type === 'image/gif' || file.type === 'image/svg+xml') return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
+    const w = Math.round(bitmap.width * scale);
+    const h = Math.round(bitmap.height * scale);
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return file;
+    ctx.fillStyle = '#fff'; // PNG transparan → latar putih, bukan hitam
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
+  } catch {
+    return file;
+  }
+}
 
 type Signature = {
   cloudName: string;
@@ -25,12 +56,13 @@ async function requestSignature(): Promise<Signature | null> {
   return data as Signature;
 }
 
-export const uploadToCloudinary = async (file: File): Promise<string> => {
-  if (!file.type.startsWith("image/")) {
+export const uploadToCloudinary = async (original: File): Promise<string> => {
+  if (!original.type.startsWith("image/")) {
     throw new Error("File harus berupa gambar.");
   }
+  const file = await shrinkImage(original);
   if (file.size > MAX_UPLOAD_BYTES) {
-    throw new Error("Ukuran gambar maksimal 5MB.");
+    throw new Error("Ukuran gambar terlalu besar (maksimal 10MB).");
   }
 
   const formData = new FormData();
@@ -49,7 +81,8 @@ export const uploadToCloudinary = async (file: File): Promise<string> => {
     cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
     const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
     if (!cloudName || !uploadPreset) {
-      throw new Error("Cloudinary configuration is missing. Please check your .env.local");
+      // Secret Worker belum dipasang DAN build tanpa .env.local — lihat .env.example.
+      throw new Error("Upload gambar sedang tidak tersedia. Coba lagi nanti.");
     }
     formData.append("upload_preset", uploadPreset);
   }
@@ -64,7 +97,8 @@ export const uploadToCloudinary = async (file: File): Promise<string> => {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || "Cloudinary upload failed");
+    console.error("Cloudinary upload failed:", response.status, errorData.error?.message);
+    throw new Error("Upload gambar gagal. Coba lagi, atau pilih gambar lain.");
   }
 
   const data = await response.json();

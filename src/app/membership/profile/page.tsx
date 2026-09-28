@@ -289,7 +289,7 @@ export default function ProfilePage() {
       }, { merge: true });
     } catch (error) {
       console.error("Upload failed:", error);
-      alert("Gagal mengunggah foto. Pastikan konfigurasi Cloudinary benar.");
+      alert(error instanceof Error ? error.message : "Gagal mengunggah foto.");
     } finally {
       setUploading(false);
     }
