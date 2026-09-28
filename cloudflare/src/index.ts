@@ -1240,6 +1240,17 @@ async function handleRegister(request: Request, env: Env) {
   if (!payload.name || !payload.email || !payload.password) {
     return json({ error: "Nama, email, dan password wajib diisi." }, { status: 400 });
   }
+  // Aturan sama dengan reset/ganti password — dulu pendaftaran menerima
+  // password sepanjang apa pun (bahkan 1 karakter) karena hanya dicek di klien.
+  if (payload.password.length < 8) {
+    return json({ error: "Password minimal 8 karakter." }, { status: 400 });
+  }
+  if (payload.password.length > 200) {
+    return json({ error: "Password terlalu panjang." }, { status: 400 });
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(payload.email).trim())) {
+    return json({ error: "Format email tidak valid." }, { status: 400 });
+  }
 
   if (!(await checkRateLimit(env, [`register:ip:${clientIpOf(request)}`]))) {
     return json({ error: "Terlalu banyak percobaan. Coba lagi dalam beberapa saat." }, { status: 429 });

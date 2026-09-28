@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Input } from '@/components/Input';
-import { Button } from '@/components/Button';
-import { ShieldCheck, Smartphone, Eye, EyeOff, LayoutGrid, ArrowLeft } from 'lucide-react';
+import { motion, useAnimationControls, useReducedMotion } from 'framer-motion';
+import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Check, AlertCircle } from 'lucide-react';
+import { AuthShowcase } from '@/components/auth/AuthShowcase';
 import { TwoFactorModal } from '@/components/auth/TwoFactorModal';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 
@@ -28,7 +28,6 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
-  const [strength, setStrength] = useState({ label: 'Lemah', color: 'bg-red-500', width: 'w-1/3' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [show2FA, setShow2FA] = useState(false);
@@ -51,31 +50,41 @@ export default function RegisterPage() {
 
   const googleHref = next ? `/api/auth/google?next=${encodeURIComponent(next)}` : '/api/auth/google';
 
-  useEffect(() => {
-    const hasUpperCaseStart = /^[A-Z]/.test(password);
-    const hasMinLength = password.length >= 6;
-    const hasSymbol = /[!@#$%^&*(),.?":{}|<>;]/.test(password);
-    const hasNumber = /\d/.test(password);
+  const reduce = useReducedMotion();
+  const card = useAnimationControls();
+  const shake = () => {
+    if (!reduce) void card.start({ x: [0, -10, 9, -6, 5, -2, 0], transition: { duration: 0.5 } });
+  };
 
-    const metCriteria = [hasUpperCaseStart, hasMinLength, hasSymbol, hasNumber].filter(Boolean).length;
-
-    if (password.length === 0) {
-      setStrength({ label: 'Lemah', color: 'bg-slate-200', width: 'w-0' });
-    } else if (hasUpperCaseStart && hasMinLength && hasSymbol && hasNumber) {
-      setStrength({ label: 'Kuat', color: 'bg-emerald-500', width: 'w-full' });
-    } else if (metCriteria >= 3) {
-      setStrength({ label: 'Sedang', color: 'bg-orange-500', width: 'w-2/3' });
-    } else {
-      setStrength({ label: 'Lemah', color: 'bg-red-500', width: 'w-1/3' });
-    }
-  }, [password]);
+  // Syarat password — minimal 8 karakter wajib (sama dengan server); sisanya
+  // menaikkan kekuatan.
+  const checks = [
+    { label: 'Min. 8 karakter', ok: password.length >= 8 },
+    { label: 'Huruf besar', ok: /[A-Z]/.test(password) },
+    { label: 'Angka', ok: /\d/.test(password) },
+    { label: 'Simbol', ok: /[^A-Za-z0-9]/.test(password) },
+  ];
+  const score = checks.filter((c) => c.ok).length;
+  const strength = password.length === 0
+    ? { label: '', color: 'bg-slate-200', text: 'text-slate-400' }
+    : score <= 1 ? { label: 'Lemah', color: 'bg-rose-500', text: 'text-rose-500' }
+    : score <= 3 ? { label: 'Sedang', color: 'bg-amber-500', text: 'text-amber-600' }
+    : { label: 'Kuat', color: 'bg-emerald-500', text: 'text-emerald-600' };
+  const confirmState = confirmPassword.length === 0 ? null : confirmPassword === password;
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== confirmPassword) {
-      setError('Konfirmasi password tidak cocok.');
+    if (password.length < 8) {
+      setError('Password minimal 8 karakter.');
+      shake();
       return;
     }
+    if (password !== confirmPassword) {
+      setError('Konfirmasi password tidak cocok.');
+      shake();
+      return;
+    }
+    setError('');
     
     // Tampilkan modal 2FA Setup
     setShow2FA(true);
@@ -105,188 +114,164 @@ export default function RegisterPage() {
           : 'Gagal mendaftar. Silakan periksa kembali data Anda.'
       );
       setShow2FA(false);
+      shake();
     } finally {
       setLoading(false);
     }
   };
 
+  const item = (k: number) =>
+    reduce
+      ? {}
+      : {
+          initial: { opacity: 0, y: 14 },
+          animate: { opacity: 1, y: 0 },
+          transition: { duration: 0.6, delay: 0.1 + k * 0.06, ease: [0.16, 1, 0.3, 1] as const },
+        };
+
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex font-sans selection:bg-indigo-100">
-      {/* Left Side: Branding & Features (Same as Login) */}
-      <div className="hidden lg:flex flex-[1.1] flex-col p-10 bg-white relative overflow-hidden border-r border-slate-100 space-y-12">
-        <div className="relative z-10">
-          <Link href="/" className="flex items-center gap-3 group">
-            <Image src="/images/Logo-new.png" alt="Logo" width={32} height={32} />
-            <span className="font-serif font-black text-2xl tracking-tight text-slate-900">Leosiqra</span>
-          </Link>
-        </div>
+    <div className="min-h-screen bg-[#f7f8fb] flex font-sans selection:bg-indigo-100">
+      <AuthShowcase
+        title={<>Mulai kelola uang dengan <span className="italic text-indigo-200">tenang.</span></>}
+        subtitle="Gratis 14 hari, tanpa kartu kredit. Catat rekening, kartu, tabungan, dan investasi — Leosiqra yang merangkumnya."
+      />
 
-        <div className="relative z-10 max-w-lg space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 text-[10px] font-black uppercase tracking-widest w-fit">
-            Secure Fintech Access
-          </div>
-          <h1 className="text-4xl xl:text-5xl font-serif font-black text-slate-900 leading-[1.1]">
-            Daftar sekarang. Mulai <br /> kelola aset finansial Anda <br /> dengan <span className="text-gradient">tenang</span>.
-          </h1>
-          <p className="text-slate-500 font-medium leading-relaxed text-sm max-w-xs">
-            Akses member Leosiqra dirancang ringkas, terlindungi 2FA, dan fokus pada satu hal: membawa Anda ke dashboard tanpa kebingungan.
-          </p>
-        </div>
-
-        <div className="relative z-10 grid grid-cols-3 gap-3">
-          {[
-            { icon: ShieldCheck, title: '2FA Ready', desc: 'Akses tetap berlapis.' },
-            { icon: LayoutGrid, title: 'Private', desc: 'Data tetap aman.' },
-            { icon: Smartphone, title: 'Trusted', desc: 'Device dipercaya.' },
-          ].map((card, i) => (
-            <div key={i} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2 group hover:bg-white hover:shadow-md transition-all">
-              <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100">
-                <card.icon size={14} />
-              </div>
-              <div className="space-y-0.5">
-                <h4 className="font-black text-slate-900 text-[11px] uppercase tracking-tighter">{card.title}</h4>
-                <p className="text-[10px] text-slate-400 font-medium leading-tight">{card.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-50/50 blur-[100px] rounded-full -translate-y-1/2 translate-x-1/2" />
-      </div>
-
-      {/* Right Side: Register Card */}
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-10 bg-gradient-to-br from-slate-50 to-indigo-50/40 relative overflow-hidden overflow-y-auto">
+      <div className="relative flex flex-1 items-center justify-center overflow-hidden p-5 sm:p-10">
         <div className="hero-aurora" aria-hidden />
-        <div className="w-full max-w-[480px] bg-white/90 backdrop-blur-xl p-10 lg:p-11 rounded-[40px] shadow-[0_30px_70px_-20px_rgba(79,70,229,0.18)] border border-white ring-1 ring-slate-100 relative z-10 space-y-6 my-8">
-          <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest leading-none">
-              Encrypted Access
-            </div>
-            
-            <Link href="/auth/login" className="flex items-center gap-2 text-[11px] font-black text-indigo-600 uppercase tracking-widest hover:translate-x-[-4px] transition-transform w-fit">
-              <ArrowLeft size={14} /> Kembali ke login
+        <div className="dot-grid" aria-hidden />
+
+        <motion.div animate={card} className="relative z-10 my-6 w-full max-w-[460px]">
+          <motion.div {...item(0)} className="mb-8 flex justify-center lg:hidden">
+            <Link href="/" className="flex items-center gap-3">
+              <Image src="/images/Logo-new.png" alt="Leosiqra" width={34} height={34} />
+              <span className="font-serif text-2xl font-black tracking-tight text-slate-900">Leosiqra</span>
             </Link>
+          </motion.div>
 
-            <div className="space-y-1">
-              <h2 className="text-2xl font-serif font-black text-slate-900 leading-tight">Buat akun Leosiqra</h2>
-              <p className="text-slate-500 font-medium text-xs">Daftar gratis dan aktifkan 2FA untuk menjaga akses dashboard.</p>
-            </div>
-          </div>
+          <div className="lp-card rounded-[32px] p-7 sm:p-10">
+            <motion.div {...item(1)}>
+              <h2 className="font-serif text-3xl leading-tight text-slate-900">Buat akun</h2>
+              <p className="mt-1.5 text-sm text-slate-500">
+                Sudah punya akun?{' '}
+                <Link href="/auth/login" className="font-bold text-indigo-600 hover:underline">Masuk</Link>
+              </p>
+            </motion.div>
 
-          {/* Social Signup - Google */}
-          <a
-            href={googleHref}
-            className="flex items-center justify-center gap-3 w-full py-3 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm transition-all active:scale-[0.99]"
-          >
-            <GoogleIcon size={18} />
-            Daftar dengan Google
-          </a>
-
-          <div className="relative flex items-center">
-            <div className="flex-grow border-t border-slate-100"></div>
-            <span className="flex-shrink mx-4 text-[8px] font-black text-slate-300 uppercase tracking-[0.2em]">Atau daftar dengan email</span>
-            <div className="flex-grow border-t border-slate-100"></div>
-          </div>
-
-          <form onSubmit={handleRegister} className="space-y-4">
-            <Input 
-              label="Nama Lengkap" 
-              placeholder="Masukkan nama lengkap Anda" 
-              type="text" 
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="py-3"
-            />
-            <Input 
-              label="Email" 
-              placeholder="contoh@gmail.com" 
-              type="email" 
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="py-3"
-            />
-            <Input 
-              label="Nomor WhatsApp" 
-              placeholder="0812xxxxxx" 
-              type="tel" 
-              required
-              value={whatsapp}
-              onChange={(e) => setWhatsapp(e.target.value)}
-              className="py-3"
-            />
-            
-            <div className="space-y-2">
-              <div className="relative">
-                <Input 
-                  label="Password" 
-                  placeholder="Minimum 6 karakter" 
-                  type={showPassword ? "text" : "password"} 
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="py-3"
-                />
-                <button 
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 bottom-3 text-slate-300 hover:text-indigo-600 transition-colors"
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-              
-              {/* Password Strength Indicator */}
-              <div className="px-1 space-y-1.5">
-                <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div className={`h-full transition-all duration-500 ${strength.width} ${strength.color}`} />
-                </div>
-                <p className="text-[10px] font-bold text-slate-400">
-                  Kekuatan password: <span className="text-slate-900 uppercase">{strength.label}</span>
-                </p>
-              </div>
-            </div>
-
-            <div className="relative">
-              <Input 
-                label="Konfirmasi Password" 
-                placeholder="Ulangi password Anda" 
-                type={showConfirmPassword ? "text" : "password"} 
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="py-3"
-              />
-              <button 
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-4 bottom-3 text-slate-300 hover:text-indigo-600 transition-colors"
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="mt-5 flex items-start gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-600"
+                role="alert"
               >
-                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
+                <AlertCircle size={15} className="mt-px shrink-0" /> {error}
+              </motion.div>
+            )}
 
-            <Button type="submit" className="w-full py-4 text-sm font-black rounded-xl shadow-lg shadow-indigo-600/10" isLoading={loading}>
-              Lanjut Daftar
-            </Button>
-          </form>
+            <motion.a
+              {...item(2)}
+              href={googleHref}
+              className="mt-7 flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white py-3.5 text-sm font-bold text-slate-700 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md active:scale-[0.99]"
+            >
+              <GoogleIcon size={18} />
+              Daftar dengan Google
+            </motion.a>
 
-          {error && (
-            <div className="text-center py-2 px-4 rounded-lg bg-red-50 text-red-600 text-[10px] font-bold">
-              {error}
-            </div>
-          )}
+            <motion.div {...item(3)} className="my-6 flex items-center gap-4">
+              <span className="h-px flex-1 bg-slate-100" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">atau pakai email</span>
+              <span className="h-px flex-1 bg-slate-100" />
+            </motion.div>
 
-          <div className="pt-4 border-t border-slate-50">
-            <p className="text-[9px] text-slate-300 text-center leading-normal">
-              Dilindungi password terenkripsi, session cookie aman, dan verifikasi Authenticator saat dibutuhkan.
-            </p>
+            <form onSubmit={handleRegister} className="space-y-4">
+              <motion.label {...item(4)} className="block">
+                <span className="mb-1.5 block pl-1 text-[11px] font-bold text-slate-500">Nama lengkap</span>
+                <span className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 transition-all focus-within:border-indigo-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-indigo-500/10">
+                  <User size={17} className="shrink-0 text-slate-400 transition-colors group-focus-within:text-indigo-500" />
+                  <input type="text" autoComplete="name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Nama Anda" className="w-full bg-transparent py-3.5 text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400" />
+                </span>
+              </motion.label>
+              <motion.label {...item(5)} className="block">
+                <span className="mb-1.5 block pl-1 text-[11px] font-bold text-slate-500">Email</span>
+                <span className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 transition-all focus-within:border-indigo-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-indigo-500/10">
+                  <Mail size={17} className="shrink-0 text-slate-400 transition-colors group-focus-within:text-indigo-500" />
+                  <input type="email" autoComplete="email" autoCapitalize="none" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nama@email.com" className="w-full bg-transparent py-3.5 text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400" />
+                </span>
+              </motion.label>
+              <motion.label {...item(6)} className="block">
+                <span className="mb-1.5 block pl-1 text-[11px] font-bold text-slate-500">Nomor WhatsApp</span>
+                <span className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 transition-all focus-within:border-indigo-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-indigo-500/10">
+                  <Phone size={17} className="shrink-0 text-slate-400 transition-colors group-focus-within:text-indigo-500" />
+                  <input type="tel" autoComplete="tel" required value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="0812xxxxxxxx" className="w-full bg-transparent py-3.5 text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400" />
+                </span>
+              </motion.label>
+
+              <motion.div {...item(7)}>
+                <label className="block">
+                  <span className="mb-1.5 flex items-center justify-between pl-1 text-[11px] font-bold text-slate-500">
+                    Password
+                    {strength.label && <span className={`font-black ${strength.text}`}>{strength.label}</span>}
+                  </span>
+                  <span className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 transition-all focus-within:border-indigo-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-indigo-500/10">
+                    <Lock size={17} className="shrink-0 text-slate-400 transition-colors group-focus-within:text-indigo-500" />
+                    <input type={showPassword ? 'text' : 'password'} autoComplete="new-password" required value={password} onChange={(e) => { setPassword(e.target.value); if (error) setError(''); }} placeholder="Minimal 8 karakter" className="w-full bg-transparent py-3.5 text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400" />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'} className="shrink-0 text-slate-400 transition-colors hover:text-indigo-600">
+                      {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                    </button>
+                  </span>
+                </label>
+                {/* Meter kekuatan 4 segmen + syarat yang tercentang */}
+                <div className="mt-2.5 grid grid-cols-4 gap-1.5 px-1">
+                  {[0, 1, 2, 3].map((k) => (
+                    <span key={k} className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                      <motion.span className={`block h-full rounded-full ${strength.color}`} initial={false} animate={{ width: k < score ? '100%' : '0%' }} transition={{ duration: 0.35, delay: k * 0.05 }} />
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1.5 px-1">
+                  {checks.map((c) => (
+                    <span key={c.label} className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold transition-colors duration-300 ${c.ok ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                      <motion.span initial={false} animate={{ scale: c.ok ? 1 : 0.6, opacity: c.ok ? 1 : 0.5 }} className="flex"><Check size={11} /></motion.span>
+                      {c.label}
+                    </span>
+                  ))}
+                </div>
+              </motion.div>
+
+              <motion.label {...item(8)} className="block">
+                <span className="mb-1.5 flex items-center justify-between pl-1 text-[11px] font-bold text-slate-500">
+                  Konfirmasi password
+                  {confirmState !== null && (
+                    <span className={confirmState ? 'font-black text-emerald-600' : 'font-black text-rose-500'}>{confirmState ? 'Cocok' : 'Belum cocok'}</span>
+                  )}
+                </span>
+                <span className={`group flex items-center gap-3 rounded-2xl border bg-slate-50/70 px-4 transition-all focus-within:bg-white focus-within:ring-4 ${confirmState === false ? 'border-rose-300 focus-within:ring-rose-500/10' : confirmState ? 'border-emerald-300 focus-within:ring-emerald-500/10' : 'border-slate-200 focus-within:border-indigo-400 focus-within:ring-indigo-500/10'}`}>
+                  <Lock size={17} className="shrink-0 text-slate-400" />
+                  <input type={showConfirmPassword ? 'text' : 'password'} autoComplete="new-password" required value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); if (error) setError(''); }} placeholder="Ulangi password" className="w-full bg-transparent py-3.5 text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400" />
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} aria-label={showConfirmPassword ? 'Sembunyikan password' : 'Tampilkan password'} className="shrink-0 text-slate-400 transition-colors hover:text-indigo-600">
+                    {showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
+                </span>
+              </motion.label>
+
+              <motion.div {...item(9)} className="pt-2">
+                <motion.button
+                  type="submit"
+                  disabled={loading}
+                  whileTap={{ scale: 0.98 }}
+                  className="lp-btn group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl py-4 text-sm font-bold text-white disabled:cursor-not-allowed"
+                >
+                  {loading ? (
+                    <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> Membuat akun…</>
+                  ) : (
+                    <>Lanjut: amankan akun <ArrowRight size={17} className="transition-transform group-hover:translate-x-1" /></>
+                  )}
+                </motion.button>
+                <p className="mt-3 text-center text-[11px] text-slate-400">Langkah berikutnya: sambungkan aplikasi Authenticator untuk verifikasi 2 langkah.</p>
+              </motion.div>
+            </form>
           </div>
-        </div>
-
-        {/* Subtle background graphics */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500/5 via-transparent to-transparent pointer-events-none" />
+        </motion.div>
       </div>
 
       <TwoFactorModal
