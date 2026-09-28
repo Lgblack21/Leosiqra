@@ -177,11 +177,11 @@ function Kartu() {
       <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm @3xl:col-span-3">
         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Rekening</p>
         <ul className="mt-3 divide-y divide-slate-50">
-          {[["BCA Platinum", "Bank", 145_494_000, "bg-blue-600"], ["BCA Blue", "Bank", 7_016_200, "bg-sky-500"], ["ABA USD", "Bank · USD", 9_50, "bg-rose-500"], ["GoPay", "E-Wallet", 412_000, "bg-emerald-500"], ["Cash", "Tunai", 300_000, "bg-amber-500"]].map(([n, t, v, c], i) => (
-            <motion.li key={n as string} initial={{ opacity: 0, x: 14 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 + i * 0.08 }} className="flex items-center gap-3 py-2.5">
-              <span className={`flex h-8 w-8 items-center justify-center rounded-lg text-[10px] font-black text-white ${c}`}>{(n as string).slice(0, 2).toUpperCase()}</span>
-              <span className="flex-1"><span className="block text-[12px] font-bold text-slate-800">{n as string}</span><span className="block text-[10px] text-slate-400">{t as string}</span></span>
-              <span className="text-[12px] font-black tabular-nums text-slate-800">{n === "ABA USD" ? "$9.50" : rp(v as number)}</span>
+          {[["BCA Platinum", "Bank", "BC", rp(145_494_000), "bg-blue-600"], ["BCA Blue", "Bank", "BC", rp(7_016_200), "bg-sky-500"], ["Rekening USD", "Bank · USD", "$", "$1.250,00", "bg-rose-500"], ["GoPay", "E-Wallet", "GO", rp(412_000), "bg-emerald-500"], ["Cash", "Tunai", "CA", rp(300_000), "bg-amber-500"]].map(([n, t, badge, v, c], i) => (
+            <motion.li key={n} initial={{ opacity: 0, x: 14 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 + i * 0.08 }} className="flex items-center gap-3 py-2.5">
+              <span className={`flex h-8 w-8 items-center justify-center rounded-lg text-[10px] font-black text-white ${c}`}>{badge}</span>
+              <span className="flex-1"><span className="block text-[12px] font-bold text-slate-800">{n}</span><span className="block text-[10px] text-slate-400">{t}</span></span>
+              <span className="text-[12px] font-black tabular-nums text-slate-800">{v}</span>
             </motion.li>
           ))}
         </ul>

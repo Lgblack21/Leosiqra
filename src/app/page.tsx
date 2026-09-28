@@ -14,6 +14,7 @@ import { getDeveloperInfo, PublicDeveloperInfo } from '@/lib/services/publicCont
 import { isStandaloneDisplay } from '@/lib/pushNotifications';
 import { Reveal } from '@/components/landing/Reveal';
 import { AppShowcase } from '@/components/landing/AppShowcase';
+import { ScrollTilt } from '@/components/landing/ScrollTilt';
 import { QuickInputShowcase } from '@/components/landing/QuickInputShowcase';
 
 // Semua klaim di halaman ini mengacu ke fitur yang benar-benar ada di aplikasi.
@@ -24,18 +25,18 @@ const MARQUEE = [
 ];
 
 const FEATURES = [
-  { icon: Wallet, title: 'Semua rekening', desc: 'Bank, e-wallet, cash, dan mata uang asing dalam satu saldo.' },
-  { icon: CreditCard, title: 'Kartu kredit', desc: 'Tagihan tercetak, pembayaran minimum, dan pengingat jatuh tempo.' },
-  { icon: PiggyBank, title: 'Tabungan per tujuan', desc: 'Dana darurat, liburan, rumah — lengkap dengan setoran otomatis.' },
-  { icon: HandCoins, title: 'Hutang & piutang', desc: 'Catat cicilan, lihat sisa, lunasi sekali tap.' },
-  { icon: LineChart, title: 'Saham & aset', desc: 'Harga saham live, emas, kripto, dan untung-rugi yang jelas.' },
-  { icon: Landmark, title: 'Deposito', desc: 'Bunga bersih dihitung otomatis, cair atau diperpanjang saat jatuh tempo.' },
-  { icon: Target, title: 'Budget', desc: 'Batas per kategori dengan peringatan sebelum kebablasan.' },
-  { icon: Repeat, title: 'Transaksi rutin', desc: 'Gaji, langganan, dan tagihan tercatat sendiri tiap periode.' },
-  { icon: Sparkles, title: 'Asisten AI', desc: 'Tanya kondisi keuanganmu dalam bahasa sehari-hari.' },
-  { icon: Bell, title: 'Notifikasi', desc: 'Ringkasan harian dan pengingat langsung ke HP.' },
-  { icon: Smartphone, title: 'Android & web', desc: 'Aplikasi Android, bisa dipasang di iPhone, dan versi web lengkap.' },
-  { icon: FileText, title: 'Laporan tahunan', desc: 'Rekap setahun penuh untuk evaluasi dan perencanaan.' },
+  { icon: Wallet, title: 'Semua rekening', desc: 'Bank, e-wallet, cash, dan mata uang asing dalam satu saldo.', tone: 'indigo' as Tone },
+  { icon: CreditCard, title: 'Kartu kredit', desc: 'Tagihan tercetak, pembayaran minimum, dan pengingat jatuh tempo.', tone: 'amber' as Tone },
+  { icon: PiggyBank, title: 'Tabungan per tujuan', desc: 'Dana darurat, liburan, rumah — lengkap dengan setoran otomatis.', tone: 'pink' as Tone },
+  { icon: HandCoins, title: 'Hutang & piutang', desc: 'Catat cicilan, lihat sisa, lunasi sekali tap.', tone: 'rose' as Tone },
+  { icon: LineChart, title: 'Saham & aset', desc: 'Harga saham live, emas, kripto, dan untung-rugi yang jelas.', tone: 'emerald' as Tone },
+  { icon: Landmark, title: 'Deposito', desc: 'Bunga bersih dihitung otomatis, cair atau diperpanjang saat jatuh tempo.', tone: 'sky' as Tone },
+  { icon: Target, title: 'Budget', desc: 'Batas per kategori dengan peringatan sebelum kebablasan.', tone: 'violet' as Tone },
+  { icon: Repeat, title: 'Transaksi rutin', desc: 'Gaji, langganan, dan tagihan tercatat sendiri tiap periode.', tone: 'indigo' as Tone },
+  { icon: Sparkles, title: 'Asisten AI', desc: 'Tanya kondisi keuanganmu dalam bahasa sehari-hari.', tone: 'violet' as Tone },
+  { icon: Bell, title: 'Notifikasi', desc: 'Ringkasan harian dan pengingat langsung ke HP.', tone: 'amber' as Tone },
+  { icon: Smartphone, title: 'Android & web', desc: 'Aplikasi Android, bisa dipasang di iPhone, dan versi web lengkap.', tone: 'sky' as Tone },
+  { icon: FileText, title: 'Laporan tahunan', desc: 'Rekap setahun penuh untuk evaluasi dan perencanaan.', tone: 'emerald' as Tone },
 ];
 
 const STEPS = [
@@ -45,9 +46,36 @@ const STEPS = [
 ];
 
 const PRINCIPLES = [
-  { icon: Scale, title: 'Akurat sampai rupiah', desc: 'Setiap transaksi dan perubahan saldo disimpan bersamaan. Tidak ada data setengah jadi, tidak ada saldo yang terpotong dua kali.' },
-  { icon: Eye, title: 'Data Anda, hanya untuk Anda', desc: 'Setiap data terikat ke akun Anda sendiri dan hanya bisa dibuka lewat sesi login Anda.' },
-  { icon: ShieldCheck, title: 'Jujur, tanpa janji', desc: 'Leosiqra membantu Anda melihat dengan jernih. Bukan saran investasi, dan bukan janji keuntungan.' },
+  { icon: Scale, title: 'Akurat sampai rupiah', desc: 'Setiap transaksi dan perubahan saldo disimpan bersamaan. Tidak ada data setengah jadi, tidak ada saldo yang terpotong dua kali.', tone: 'emerald' as Tone },
+  { icon: Eye, title: 'Data Anda, hanya untuk Anda', desc: 'Setiap data terikat ke akun Anda sendiri dan hanya bisa dibuka lewat sesi login Anda.', tone: 'indigo' as Tone },
+  { icon: ShieldCheck, title: 'Jujur, tanpa janji', desc: 'Leosiqra membantu Anda melihat dengan jernih. Bukan saran investasi, dan bukan janji keuntungan.', tone: 'amber' as Tone },
+];
+
+// Chip ikon berwarna — variasi warna senada dengan aplikasi (indigo, hijau, amber, dst).
+const TONES = {
+  indigo: 'bg-indigo-50 text-indigo-600 ring-indigo-100',
+  emerald: 'bg-emerald-50 text-emerald-600 ring-emerald-100',
+  amber: 'bg-amber-50 text-amber-600 ring-amber-100',
+  pink: 'bg-pink-50 text-pink-600 ring-pink-100',
+  sky: 'bg-sky-50 text-sky-600 ring-sky-100',
+  violet: 'bg-violet-50 text-violet-600 ring-violet-100',
+  rose: 'bg-rose-50 text-rose-600 ring-rose-100',
+} as const;
+type Tone = keyof typeof TONES;
+function IconChip({ icon: Icon, tone, size = 'md' }: { icon: React.ElementType; tone: Tone; size?: 'md' | 'lg' }) {
+  return (
+    <span className={`inline-flex items-center justify-center ring-1 ${TONES[tone]} ${size === 'lg' ? 'h-12 w-12 rounded-2xl' : 'h-10 w-10 rounded-xl'}`}>
+      <Icon size={size === 'lg' ? 22 : 18} />
+    </span>
+  );
+}
+
+// Fakta singkat yang bisa dibuktikan di aplikasi (bukan klaim jumlah pengguna).
+const FACTS = [
+  ['3 cara mencatat', 'ketik · suara · foto struk'],
+  ['12 fitur utama', 'dalam satu akun'],
+  ['Android · iPhone · Web', 'data selalu sinkron'],
+  ['Gratis 14 hari', 'tanpa kartu kredit'],
 ];
 
 export default function LandingPage() {
@@ -127,8 +155,45 @@ export default function LandingPage() {
           transition={{ duration: 1.2, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
         >
           <div aria-hidden className="absolute -inset-x-10 -top-10 bottom-24 -z-10 rounded-[60px] bg-gradient-to-b from-indigo-200/40 via-violet-100/30 to-transparent blur-3xl" />
-          <AppShowcase />
+          <ScrollTilt>
+            <AppShowcase />
+          </ScrollTilt>
+          {/* Notifikasi melayang di sisi jendela (layar lebar saja) */}
+          <motion.div
+            initial={reduce ? false : { opacity: 0, x: -24 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 1.8, duration: 0.8 }}
+            className="lp-card animate-floaty absolute -left-14 top-[64%] hidden items-center gap-3 rounded-2xl px-4 py-3 xl:flex"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600"><CreditCard size={17} /></span>
+            <span className="leading-tight">
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Kartu kredit</span>
+              <span className="block text-sm font-bold text-slate-800">Jatuh tempo 3 hari lagi</span>
+            </span>
+          </motion.div>
+          <motion.div
+            initial={reduce ? false : { opacity: 0, x: 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 2.1, duration: 0.8 }}
+            className="lp-card animate-floaty [animation-delay:2s] absolute -right-10 -top-7 hidden items-center gap-3 rounded-2xl px-4 py-3 xl:flex"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"><Check size={17} /></span>
+            <span className="leading-tight">
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Dana darurat</span>
+              <span className="block text-sm font-bold text-slate-800">Setoran otomatis tercatat</span>
+            </span>
+          </motion.div>
         </motion.div>
+
+        {/* Fakta singkat */}
+        <div className="relative mx-auto mt-16 grid max-w-5xl grid-cols-2 gap-px overflow-hidden rounded-3xl border border-slate-200/80 bg-slate-200/70 lg:grid-cols-4">
+          {FACTS.map(([big, small], i) => (
+            <Reveal key={big} delay={i * 0.08} y={14} className="bg-white/90 px-5 py-6 text-center backdrop-blur">
+              <p className="font-serif text-xl text-slate-900 sm:text-2xl">{big}</p>
+              <p className="mt-1 text-xs text-slate-500">{small}</p>
+            </Reveal>
+          ))}
+        </div>
       </section>
 
       {/* ============ MARQUEE ============ */}
@@ -151,7 +216,7 @@ export default function LandingPage() {
           </Reveal>
 
           <div className="mt-14 grid gap-4 md:grid-cols-6">
-            <Reveal className="lp-card group rounded-[28px] p-7 md:col-span-4">
+            <Reveal className="lp-card lift group rounded-[28px] p-7 md:col-span-4">
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Alokasi aset</p>
               <h3 className="mt-2 font-serif text-2xl sm:text-3xl">Tahu persis ke mana uang Anda bekerja.</h3>
               <div className="mt-8 space-y-4">
@@ -173,8 +238,8 @@ export default function LandingPage() {
               </div>
             </Reveal>
 
-            <Reveal delay={0.1} className="lp-card rounded-[28px] p-7 md:col-span-2">
-              <CreditCard size={22} className="text-indigo-600" />
+            <Reveal delay={0.1} className="lp-card lift rounded-[28px] p-7 md:col-span-2">
+              <IconChip icon={CreditCard} tone="amber" />
               <h3 className="mt-5 font-serif text-2xl">Kartu kredit tanpa kejutan.</h3>
               <p className="mt-3 text-sm leading-relaxed text-slate-500">Tagihan tercetak, minimum bayar, dan hitung mundur jatuh tempo.</p>
               <div className="mt-6 rounded-2xl border border-slate-100 bg-slate-50 p-4">
@@ -184,14 +249,14 @@ export default function LandingPage() {
               </div>
             </Reveal>
 
-            <Reveal delay={0.05} className="lp-card rounded-[28px] p-7 md:col-span-2">
-              <Landmark size={22} className="text-indigo-600" />
+            <Reveal delay={0.05} className="lp-card lift rounded-[28px] p-7 md:col-span-2">
+              <IconChip icon={Landmark} tone="indigo" />
               <h3 className="mt-5 font-serif text-2xl">Deposito yang mengurus dirinya sendiri.</h3>
               <p className="mt-3 text-sm leading-relaxed text-slate-500">Bunga bersih setelah pajak dihitung otomatis. Saat jatuh tempo: cair ke rekening atau diperpanjang — sesuai pilihan Anda.</p>
             </Reveal>
 
-            <Reveal delay={0.1} className="lp-card rounded-[28px] p-7 md:col-span-2">
-              <LineChart size={22} className="text-indigo-600" />
+            <Reveal delay={0.1} className="lp-card lift rounded-[28px] p-7 md:col-span-2">
+              <IconChip icon={LineChart} tone="emerald" />
               <h3 className="mt-5 font-serif text-2xl">Investasi dengan harga live.</h3>
               <div className="mt-6 flex items-end justify-between">
                 <div>
@@ -202,8 +267,8 @@ export default function LandingPage() {
               </div>
             </Reveal>
 
-            <Reveal delay={0.15} className="lp-card rounded-[28px] p-7 md:col-span-2">
-              <PiggyBank size={22} className="text-indigo-600" />
+            <Reveal delay={0.15} className="lp-card lift rounded-[28px] p-7 md:col-span-2">
+              <IconChip icon={PiggyBank} tone="pink" />
               <h3 className="mt-5 font-serif text-2xl">Tabungan per tujuan.</h3>
               <div className="mt-6 flex items-center gap-5">
                 <svg viewBox="0 0 64 64" className="h-16 w-16 -rotate-90" aria-hidden>
@@ -263,7 +328,7 @@ export default function LandingPage() {
       </section>
 
       {/* ============ FITUR ============ */}
-      <section id="fitur" className="relative scroll-mt-24 px-5 py-24 sm:px-6 sm:py-32">
+      <section id="fitur" className="relative scroll-mt-24 border-y border-slate-200/70 bg-white px-5 py-24 sm:px-6 sm:py-32">
         <div className="mx-auto max-w-7xl">
           <Reveal className="mx-auto max-w-2xl text-center">
             <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Fitur</p>
@@ -271,8 +336,8 @@ export default function LandingPage() {
           </Reveal>
           <div className="mt-16 grid grid-cols-2 gap-px overflow-hidden rounded-[28px] border border-slate-200/80 bg-slate-200/70 lg:grid-cols-4">
             {FEATURES.map((f, i) => (
-              <Reveal key={f.title} delay={(i % 4) * 0.06} y={16} className="group bg-white p-5 sm:p-7 transition-colors duration-500 hover:bg-indigo-50/40">
-                <f.icon size={20} className="text-indigo-600 transition-transform duration-500 group-hover:-translate-y-0.5" />
+              <Reveal key={f.title} delay={(i % 4) * 0.06} y={16} className="group bg-white p-5 sm:p-7 transition-colors duration-500 hover:bg-slate-50">
+                <span className="inline-block transition-transform duration-500 group-hover:-translate-y-1"><IconChip icon={f.icon} tone={f.tone} /></span>
                 <h3 className="mt-4 sm:mt-5 text-sm sm:text-base font-semibold">{f.title}</h3>
                 <p className="mt-2 text-xs sm:text-sm leading-relaxed text-slate-500">{f.desc}</p>
               </Reveal>
@@ -323,8 +388,8 @@ export default function LandingPage() {
           </Reveal>
           <div className="mt-14 grid gap-4 md:grid-cols-3">
             {PRINCIPLES.map((p, i) => (
-              <Reveal key={p.title} delay={i * 0.1} className="lp-card rounded-[28px] p-8">
-                <p.icon size={22} className="text-indigo-600" />
+              <Reveal key={p.title} delay={i * 0.1} className="lp-card lift rounded-[28px] p-8">
+                <IconChip icon={p.icon} tone={p.tone} size="lg" />
                 <h3 className="mt-6 font-serif text-2xl">{p.title}</h3>
                 <p className="mt-3 text-sm leading-relaxed text-slate-500">{p.desc}</p>
               </Reveal>
@@ -409,22 +474,26 @@ export default function LandingPage() {
       )}
 
       {/* ============ CTA AKHIR ============ */}
-      <section className="relative overflow-hidden px-5 py-28 sm:px-6 sm:py-36">
-        <div aria-hidden className="absolute left-1/2 top-1/2 h-[520px] w-[820px] max-w-[140vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(99,102,241,0.14),transparent)] blur-2xl" />
-                <Reveal className="relative mx-auto max-w-3xl text-center">
-          <h2 className="font-serif text-4xl leading-[1.08] sm:text-6xl">
-            Mulai hari ini.
-            <br />
-            <span className="lp-shine italic">Tenang</span> seterusnya.
-          </h2>
-          <p className="mx-auto mt-6 max-w-md text-slate-500">Buat akun gratis dan lihat kondisi keuangan Anda dengan jernih — dalam hitungan menit.</p>
-          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link href="/auth/register" className="lp-btn group inline-flex w-full items-center justify-center gap-2 rounded-full px-9 py-4 text-sm font-bold transition-all hover:-translate-y-0.5 sm:w-auto">
-              Daftar gratis <ArrowUpRight size={17} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-            </Link>
-            <Link href="/hubungi-kami" className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-9 py-4 text-sm font-bold text-slate-700 transition-colors hover:border-slate-300 sm:w-auto">
-              <Globe2 size={16} /> Hubungi kami
-            </Link>
+      <section className="relative px-5 py-20 sm:px-6 sm:py-28">
+        <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[40px] bg-gradient-to-br from-[#0f172a] via-indigo-700 to-violet-600 px-6 py-16 text-center text-white shadow-[0_40px_100px_-40px_rgba(79,70,229,0.7)] sm:px-12 sm:py-24">
+          <div aria-hidden className="absolute -left-20 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+          <div aria-hidden className="absolute -bottom-28 -right-10 h-80 w-80 rounded-full bg-emerald-400/20 blur-3xl" />
+          <div aria-hidden className="dot-grid opacity-30" />
+          <div className="relative">
+            <h2 className="font-serif text-4xl leading-[1.08] sm:text-6xl">
+              Mulai hari ini.
+              <br />
+              <span className="italic text-indigo-100">Tenang seterusnya.</span>
+            </h2>
+            <p className="mx-auto mt-6 max-w-md text-indigo-100/90">Buat akun gratis dan lihat kondisi keuangan Anda dengan jernih — dalam hitungan menit.</p>
+            <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Link href="/auth/register" className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-9 py-4 text-sm font-bold text-indigo-700 shadow-xl shadow-black/20 transition-all hover:-translate-y-0.5 sm:w-auto">
+                Daftar gratis <ArrowUpRight size={17} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              </Link>
+              <Link href="/hubungi-kami" className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/30 px-9 py-4 text-sm font-bold text-white transition-colors hover:bg-white/10 sm:w-auto">
+                <Globe2 size={16} /> Hubungi kami
+              </Link>
+            </div>
           </div>
         </Reveal>
       </section>
