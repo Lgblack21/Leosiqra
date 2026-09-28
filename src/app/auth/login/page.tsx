@@ -34,6 +34,8 @@ export default function LoginPage() {
   const [show2FA, setShow2FA] = useState(false);
   const [next, setNext] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  // Login Google untuk akun ber-2FA: server meminta kode Authenticator dulu.
+  const [google2fa, setGoogle2fa] = useState(false);
   const router = useRouter();
   const reduce = useReducedMotion();
   const card = useAnimationControls();
@@ -53,6 +55,11 @@ export default function LoginPage() {
   // ke sana setelah login, bukan ke dashboard web.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    if (params.get('google2fa') === '1') {
+      setGoogle2fa(true);
+      setShow2FA(true);
+      window.history.replaceState({}, '', '/auth/login');
+    }
     const oauthError = params.get('error');
     if (oauthError) {
       setError(oauthError);
@@ -108,6 +115,14 @@ export default function LoginPage() {
   };
 
   const handleVerify2FA = async (enteredToken: string) => {
+    if (google2fa) {
+      const result = await cloudflareApi<{ destination: string }>('/api/auth/google/2fa', {
+        method: 'POST',
+        json: { twoFactorToken: enteredToken, isPwa: isStandaloneDisplay() },
+      });
+      finish(result.destination);
+      return true;
+    }
     const result = await cloudflareApi<{
       user?: { role: 'admin' | 'user' };
     }>('/api/auth/login', {

@@ -1736,6 +1736,32 @@ const oauthNextCookie = (next: string) =>
 const clearOauthNextCookie = () =>
   `oauth_next=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
 
+// Login Google untuk akun yang mengaktifkan 2FA: sesi BELUM dibuat di callback.
+// Cookie sementara bertanda tangan (5 menit) menyimpan user & tujuan, lalu
+// kode Authenticator diverifikasi di POST /api/auth/google/2fa. Dulu login
+// Google langsung masuk tanpa kode — melewati 2FA yang sengaja dipasang user.
+const GOOGLE_2FA_COOKIE = "oauth_2fa";
+const GOOGLE_2FA_TTL_SECONDS = 300;
+const createGoogle2faCookie = async (env: Env, userId: string, next: string) => {
+  const body = `${userId}|${Date.now() + GOOGLE_2FA_TTL_SECONDS * 1000}|${encodeURIComponent(next)}`;
+  const sig = await signSession(env, `g2fa|${body}`);
+  return `${GOOGLE_2FA_COOKIE}=${encodeURIComponent(`${body}.${sig}`)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${GOOGLE_2FA_TTL_SECONDS}`;
+};
+const clearGoogle2faCookie = () => `${GOOGLE_2FA_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
+const readGoogle2faCookie = async (env: Env, request: Request) => {
+  const raw = getCookieValue(request, GOOGLE_2FA_COOKIE);
+  if (!raw) return null;
+  const value = decodeURIComponent(raw);
+  const dot = value.lastIndexOf(".");
+  if (dot < 0) return null;
+  const body = value.slice(0, dot);
+  const sig = value.slice(dot + 1);
+  if (!constantTimeEqual(sig, await signSession(env, `g2fa|${body}`))) return null;
+  const [userId, exp, next] = body.split("|");
+  if (!userId || !(Number(exp) > Date.now())) return null;
+  return { userId, next: decodeURIComponent(next ?? "") };
+};
+
 async function handleGoogleStart(request: Request, env: Env) {
   const url = new URL(request.url);
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
@@ -1820,7 +1846,7 @@ async function handleGoogleCallback(request: Request, env: Env) {
     name?: string;
     picture?: string;
   };
-  if (!profile.email || profile.email_verified === false) {
+  if (!profile.email || profile.email_verified !== true) {
     return failRedirect("Email Google belum terverifikasi.");
   }
 
@@ -1870,6 +1896,17 @@ async function handleGoogleCallback(request: Request, env: Env) {
       .run();
   }
 
+  const cookieNext = getCookieValue(request, "oauth_next");
+
+  if (user.two_factor_secret) {
+    const next = user.role === "admin" ? "/admin" : isAppNext(cookieNext) ? cookieNext : "/membership/dashboard";
+    const headers = new Headers({ location: `${url.origin}/auth/login?google2fa=1` });
+    headers.append("set-cookie", clearOauthStateCookie());
+    headers.append("set-cookie", clearOauthNextCookie());
+    headers.append("set-cookie", await createGoogle2faCookie(env, user.id, next));
+    return new Response(null, { status: 302, headers });
+  }
+
   const session = await createSession(env, request, {
     id: user.id,
     email: user.email,
@@ -1881,7 +1918,6 @@ async function handleGoogleCallback(request: Request, env: Env) {
     two_factor_secret: user.two_factor_secret,
   });
 
-  const cookieNext = getCookieValue(request, "oauth_next");
   const destination =
     user.role === "admin"
       ? "/admin"
@@ -1894,6 +1930,46 @@ async function handleGoogleCallback(request: Request, env: Env) {
   headers.append("set-cookie", sessionCookie(env, session.token, 60 * 60 * 24 * 30));
   headers.append("set-cookie", roleCookie(env, user.role, 60 * 60 * 24 * 30));
   return new Response(null, { status: 302, headers });
+}
+
+async function handleGoogle2fa(request: Request, env: Env) {
+  const pending = await readGoogle2faCookie(env, request);
+  if (!pending) {
+    return json({ error: "Sesi login Google sudah habis. Silakan masuk dengan Google lagi." }, { status: 401 });
+  }
+  if (!(await checkRateLimit(env, [`login:ip:${clientIpOf(request)}`, `login:g2fa:${pending.userId}`]))) {
+    return json({ error: "Terlalu banyak percobaan. Coba lagi dalam beberapa saat." }, { status: 429 });
+  }
+  const payload = await parseJson<{ twoFactorToken?: string; isPwa?: boolean }>(request);
+  const user = await env.DB.prepare(
+    `SELECT id, name, email, role, plan, status, whatsapp, two_factor_secret FROM users WHERE id = ?`
+  )
+    .bind(pending.userId)
+    .first<{
+      id: string; name: string; email: string; role: "admin" | "user"; plan: "FREE" | "PRO";
+      status: "AKTIF" | "NONAKTIF" | "GUEST" | "PENDING"; whatsapp?: string | null; two_factor_secret?: string | null;
+    }>();
+  if (!user) return json({ error: "Akun tidak ditemukan." }, { status: 401 });
+  if (
+    user.two_factor_secret &&
+    !(payload.twoFactorToken && verifySync({ token: payload.twoFactorToken, secret: user.two_factor_secret, strategy: "totp" }).valid)
+  ) {
+    return json({ error: "Kode 2FA tidak valid." }, { status: 401 });
+  }
+  const session = await createSession(
+    env,
+    request,
+    {
+      id: user.id, email: user.email, name: user.name, role: user.role, plan: user.plan,
+      status: user.status, whatsapp: user.whatsapp, two_factor_secret: user.two_factor_secret,
+    },
+    { permanent: payload.isPwa === true }
+  );
+  const destination = user.role === "admin" ? "/admin" : isAppNext(pending.next) ? pending.next : "/membership/dashboard";
+  return jsonWithCookies(
+    { ok: true, destination, user: { role: user.role } },
+    [clearGoogle2faCookie(), sessionCookie(env, session.token, session.maxAgeSeconds), roleCookie(env, user.role, session.maxAgeSeconds)]
+  );
 }
 
 async function handleListTransactions(request: Request, env: Env) {
@@ -4951,7 +5027,21 @@ async function handlePutAiChatHistory(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
   const payload = await parseJson<{ messages?: unknown[] }>(request);
-  const messages = Array.isArray(payload.messages) ? payload.messages : [];
+  // Hanya bentuk pesan yang wajar, maksimal 200 pesan terakhir & 20rb karakter
+  // per pesan — dulu isi apa pun sebesar apa pun disimpan apa adanya.
+  const messages = (Array.isArray(payload.messages) ? payload.messages : [])
+    .filter((m): m is Record<string, unknown> => typeof m === "object" && m !== null)
+    .slice(-200)
+    .map((m) => {
+      const out: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(m)) {
+        if (typeof v === "string") out[k] = v.slice(0, 20_000);
+        else if (typeof v === "number" || typeof v === "boolean" || v === null) out[k] = v;
+        // Objek kecil (mis. timestamp dari client) tetap disimpan.
+        else if (typeof v === "object" && JSON.stringify(v).length <= 1000) out[k] = v;
+      }
+      return out;
+    });
   try {
     const existing = await env.DB.prepare("SELECT id FROM ai_chats WHERE user_id = ?")
       .bind(authResult.session.user.id)
@@ -5443,6 +5533,17 @@ async function handleAiChat(request: Request, env: Env) {
   if (!payload.prompt?.trim()) {
     return json({ error: "Prompt wajib diisi." }, { status: 400 });
   }
+  if (payload.prompt.length > 2000) {
+    return json({ error: "Pesan terlalu panjang (maksimal 2.000 karakter)." }, { status: 400 });
+  }
+  // Tiap pesan memanggil model berbayar — batasi per user (anggaran terpisah
+  // dari AI parse, binding rate limiter yang sama dengan key berbeda).
+  if (env.AI_PARSE_RATE_LIMITER) {
+    const { success } = await env.AI_PARSE_RATE_LIMITER.limit({ key: `ai-chat:user:${authResult.session.user.id}` });
+    if (!success) {
+      return json({ error: "Terlalu banyak pesan dalam waktu singkat. Coba lagi sebentar lagi." }, { status: 429 });
+    }
+  }
 
   let existing:
     | { id: string; messages_json: string }
@@ -5477,6 +5578,8 @@ async function handleAiChat(request: Request, env: Env) {
     { role: "user", content: payload.prompt, createdAt: nowIso() },
     { role: "assistant", content: answer, createdAt: nowIso() }
   );
+  // Simpan paling banyak 200 pesan terakhir — riwayat lama tidak tumbuh tanpa batas.
+  if (nextMessages.length > 200) nextMessages.splice(0, nextMessages.length - 200);
 
   if (existing) {
     if (useLegacyAiChatSchema || !("id" in existing)) {
@@ -5547,6 +5650,13 @@ async function handleParseTransaction(request: Request, env: Env) {
   const hasImage = typeof payload.imageBase64 === "string" && payload.imageBase64.trim().length > 0;
   if (hasText === hasImage) {
     return json({ error: "Kirim salah satu: teks atau foto, tidak boleh dua-duanya atau kosong." }, { status: 400 });
+  }
+  if (hasText && payload.text!.length > 1000) {
+    return json({ error: "Teks terlalu panjang (maksimal 1.000 karakter)." }, { status: 400 });
+  }
+  // base64 ±4/3 ukuran file — ~7 juta karakter ≈ foto 5 MB.
+  if (hasImage && payload.imageBase64!.length > 7_000_000) {
+    return json({ error: "Foto terlalu besar. Coba foto ulang dengan resolusi lebih kecil." }, { status: 413 });
   }
 
   if (!env.OPENROUTER_API_KEY) {
@@ -6938,6 +7048,10 @@ const worker = {
 
       if (url.pathname === "/api/auth/google/callback" && request.method === "GET") {
         return await handleGoogleCallback(request, env);
+      }
+
+      if (url.pathname === "/api/auth/google/2fa" && request.method === "POST") {
+        return await handleGoogle2fa(request, env);
       }
 
       if (url.pathname === "/api/member/transactions" && request.method === "GET") {
