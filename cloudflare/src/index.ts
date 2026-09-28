@@ -6381,11 +6381,52 @@ const shiftYm = (ym: string, months: number) => {
 };
 
 type GamificationBadge = { id: string; label: string; description: string; unlocked: boolean };
+type GamificationChallenge = {
+  id: string;
+  category: string;
+  label: string;
+  description: string;
+  xp: number;
+  progress: number;
+  target: number;
+  done: boolean;
+};
+
+// Level 1–10. XP dihitung ulang dari data user setiap request (bukan disimpan),
+// jadi tidak ada risiko XP dobel dan user lama langsung dapat level sesuai
+// riwayatnya. Total XP semua challenge = 2680; Lv 10 butuh 2350 — tetap
+// tercapai tanpa challenge utang (tidak semua orang punya utang).
+const LEVELS: Array<{ level: number; name: string; minXp: number }> = [
+  { level: 1, name: "Pemula", minXp: 0 },
+  { level: 2, name: "Pencatat", minXp: 60 },
+  { level: 3, name: "Teratur", minXp: 150 },
+  { level: 4, name: "Hemat", minXp: 300 },
+  { level: 5, name: "Perencana", minXp: 500 },
+  { level: 6, name: "Disiplin", minXp: 750 },
+  { level: 7, name: "Penabung", minXp: 1050 },
+  { level: 8, name: "Investor", minXp: 1400 },
+  { level: 9, name: "Master", minXp: 1850 },
+  { level: 10, name: "Legenda", minXp: 2350 },
+];
+
+const levelForXp = (xp: number) => {
+  let current = LEVELS[0];
+  for (const l of LEVELS) if (xp >= l.minXp) current = l;
+  const next = LEVELS.find((l) => l.level === current.level + 1) ?? null;
+  return { level: current.level, name: current.name, minXp: current.minXp, nextXp: next ? next.minXp : null, nextName: next ? next.name : null };
+};
 
 const computeUserGamification = async (
   env: Env,
   userId: string
-): Promise<{ streakDays: number; surplusStreakMonths: number; badges: GamificationBadge[] }> => {
+): Promise<{
+  streakDays: number;
+  surplusStreakMonths: number;
+  badges: GamificationBadge[];
+  challenges: GamificationChallenge[];
+  xp: number;
+  level: ReturnType<typeof levelForXp>;
+}> => {
   const todayStr = todayWIB();
   const currentYm = todayStr.slice(0, 7);
 
@@ -6405,10 +6446,14 @@ const computeUserGamification = async (
   }
 
   // --- Streak bulan surplus (pemasukan > pengeluaran), hanya bulan yang sudah tuntas ---
+  // Beli/jual investasi tercatat sebagai pengeluaran/pemasukan tertaut
+  // (related_type 'investasi'), tapi itu pindah bentuk aset, bukan belanja —
+  // tanpa filter ini bulan saat user berinvestasi jadi dianggap defisit.
   const { results: monthRows } = await env.DB.prepare(
     `SELECT substr(date, 1, 7) as ym, type, SUM(COALESCE(NULLIF(amount_idr, 0), amount)) as total
        FROM transactions
       WHERE user_id = ? AND type IN ('pemasukan', 'pengeluaran') AND date >= ?
+        AND COALESCE(related_type, '') <> 'investasi'
       GROUP BY ym, type`
   )
     .bind(userId, shiftYm(currentYm, -13))
@@ -6449,12 +6494,29 @@ const computeUserGamification = async (
     .bind(userId)
     .first<{ outstanding: number | null; total: number }>();
 
+  // Hanya setoran — penarikan juga tersimpan sebagai baris bernominal positif
+  // di tabel savings, jadi dulu ikut menambah "total setoran".
   const savingsTotal = await env.DB.prepare(
-    `SELECT SUM(COALESCE(NULLIF(amount_idr, 0), amount)) as total FROM savings WHERE user_id = ?`
+    `SELECT SUM(COALESCE(NULLIF(amount_idr, 0), amount)) as total, COUNT(*) as n
+       FROM savings WHERE user_id = ? AND COALESCE(transaction_type, 'Setoran') = 'Setoran'`
   )
     .bind(userId)
-    .first<{ total: number | null }>();
+    .first<{ total: number | null; n: number }>();
   const totalSavingsIdr = savingsTotal?.total ?? 0;
+
+  const counts = await env.DB.prepare(
+    `SELECT
+       (SELECT COUNT(*) FROM accounts WHERE user_id = ?1) as accounts,
+       (SELECT COUNT(*) FROM transactions WHERE user_id = ?1 AND type IN ('pemasukan', 'pengeluaran') AND COALESCE(related_type, '') <> 'investasi') as tx,
+       (SELECT COUNT(*) FROM budgets WHERE user_id = ?1) as budgets,
+       (SELECT COUNT(*) FROM recurring WHERE user_id = ?1) as recurring,
+       (SELECT COUNT(DISTINCT type) FROM investments WHERE user_id = ?1) as invTypes,
+       (SELECT COUNT(*) FROM transactions WHERE user_id = ?1 AND type = 'debt' AND category = 'Hutang') as hutangTotal,
+       (SELECT COUNT(*) FROM transactions WHERE user_id = ?1 AND type = 'debt' AND category = 'Hutang' AND payment_status = 'belum') as hutangOpen`
+  )
+    .bind(userId)
+    .first<{ accounts: number; tx: number; budgets: number; recurring: number; invTypes: number; hutangTotal: number; hutangOpen: number }>();
+  const c = counts ?? { accounts: 0, tx: 0, budgets: 0, recurring: 0, invTypes: 0, hutangTotal: 0, hutangOpen: 0 };
 
   const badges: GamificationBadge[] = [
     {
@@ -6507,7 +6569,37 @@ const computeUserGamification = async (
     },
   ];
 
-  return { streakDays, surplusStreakMonths, badges };
+  const ch = (id: string, category: string, label: string, description: string, xp: number, progress: number, target: number): GamificationChallenge => {
+    const p = Math.max(0, Math.min(target, Math.floor(progress)));
+    return { id, category, label, description, xp, progress: p, target, done: p >= target };
+  };
+  const challenges: GamificationChallenge[] = [
+    ch("first-account", "Mulai", "Rekening pertama", "Tambahkan satu rekening, e-wallet, atau dompet", 20, c.accounts, 1),
+    ch("first-tx", "Mulai", "Transaksi pertama", "Catat pemasukan atau pengeluaran pertamamu", 20, c.tx, 1),
+    ch("streak-3", "Konsisten", "Streak 3 hari", "Catat transaksi 3 hari berturut-turut", 30, streakDays, 3),
+    ch("streak-7", "Konsisten", "Streak 7 hari", "Catat transaksi 7 hari berturut-turut", 60, streakDays, 7),
+    ch("streak-14", "Konsisten", "Streak 14 hari", "Catat transaksi 14 hari berturut-turut", 120, streakDays, 14),
+    ch("streak-30", "Konsisten", "Streak 30 hari", "Catat transaksi 30 hari berturut-turut", 250, streakDays, 30),
+    ch("tx-10", "Rajin", "10 transaksi", "Total 10 transaksi tercatat", 30, c.tx, 10),
+    ch("tx-50", "Rajin", "50 transaksi", "Total 50 transaksi tercatat", 80, c.tx, 50),
+    ch("tx-150", "Rajin", "150 transaksi", "Total 150 transaksi tercatat", 150, c.tx, 150),
+    ch("tx-500", "Rajin", "500 transaksi", "Total 500 transaksi tercatat", 300, c.tx, 500),
+    ch("first-budget", "Rencana", "Budget pertama", "Pasang budget untuk satu kategori", 40, c.budgets, 1),
+    ch("first-recurring", "Rencana", "Transaksi rutin", "Jadwalkan satu transaksi rutin (tagihan/gaji)", 40, c.recurring, 1),
+    ch("surplus-1", "Hemat", "Surplus 1 bulan", "Pemasukan lebih besar dari pengeluaran selama sebulan penuh", 60, surplusStreakMonths, 1),
+    ch("surplus-3", "Hemat", "Surplus 3 bulan", "Surplus 3 bulan berturut-turut", 150, surplusStreakMonths, 3),
+    ch("surplus-6", "Hemat", "Surplus 6 bulan", "Surplus 6 bulan berturut-turut", 300, surplusStreakMonths, 6),
+    ch("first-saving", "Nabung", "Setoran pertama", "Setor ke salah satu tujuan tabungan", 30, savingsTotal?.n ?? 0, 1),
+    ch("saver-1jt", "Nabung", "Nabung Rp1 juta", "Total setoran tabungan Rp1.000.000", 80, totalSavingsIdr / 1_000_000, 1),
+    ch("saver-10jt", "Nabung", "Nabung Rp10 juta", "Total setoran tabungan Rp10.000.000", 200, totalSavingsIdr / 1_000_000, 10),
+    ch("saver-50jt", "Nabung", "Nabung Rp50 juta", "Total setoran tabungan Rp50.000.000", 400, totalSavingsIdr / 1_000_000, 50),
+    ch("first-investment", "Investasi", "Investasi pertama", "Catat satu investasi (saham, emas, deposito, dll)", 50, investmentCount?.c ?? 0, 1),
+    ch("investment-3", "Investasi", "3 jenis investasi", "Punya 3 jenis investasi berbeda", 120, c.invTypes, 3),
+    ch("debt-free", "Utang", "Bebas utang", "Lunasi semua utang yang pernah dicatat", 150, c.hutangTotal > 0 ? c.hutangTotal - c.hutangOpen : 0, Math.max(1, c.hutangTotal)),
+  ];
+  const xp = challenges.reduce((sum, x) => sum + (x.done ? x.xp : 0), 0);
+
+  return { streakDays, surplusStreakMonths, badges, challenges, xp, level: levelForXp(xp) };
 };
 
 async function handleGamification(request: Request, env: Env) {

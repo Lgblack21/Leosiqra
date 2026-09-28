@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Star } from "lucide-react";
 import { accountService, Account } from "@/lib/services/accountService";
 import { transactionService, Transaction } from "@/lib/services/transactionService";
 import { subscribeToCollectionChanges } from "@/lib/cf-firestore";
@@ -11,6 +10,7 @@ import { BalanceCard } from "@/components/app/home/BalanceCard";
 import { WalletList } from "@/components/app/home/WalletList";
 import { RecentTransactions } from "@/components/app/home/RecentTransactions";
 import { AssistantMenu } from "@/components/app/home/AssistantMenu";
+import { LevelBadge } from "@/components/app/home/LevelBadge";
 import { FadeIn, StaggerList, StaggerItem } from "@/components/app/FadeIn";
 
 export default function AppHomePage() {
@@ -68,9 +68,7 @@ export default function AppHomePage() {
           <p className="text-xs font-bold text-slate-400 dark:text-slate-500">Hai,</p>
           <h1 className="text-lg font-black text-slate-900 dark:text-white">{auth.currentUser?.displayName || "Pengguna"}</h1>
         </div>
-        <div className="flex items-center gap-1.5 bg-amber-50 text-amber-600 rounded-full px-3 py-1.5 text-[11px] font-black">
-          <Star size={12} fill="currentColor" /> Lvl 1
-        </div>
+        <LevelBadge />
       </FadeIn>
 
       <StaggerList className="space-y-6">
