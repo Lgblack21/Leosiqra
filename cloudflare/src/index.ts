@@ -26,6 +26,9 @@ export interface Env {
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   OPENROUTER_API_KEY?: string;
+  CLOUDINARY_CLOUD_NAME?: string;
+  CLOUDINARY_API_KEY?: string;
+  CLOUDINARY_API_SECRET?: string;
   OPENROUTER_MODEL?: string;
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;
@@ -5262,7 +5265,8 @@ async function handleAdminUsers(request: Request, env: Env) {
   }
 
   const rows = await env.DB.prepare(
-    `SELECT id, name, email, role, plan, status, expired_at, photo_url, created_at, whatsapp
+    `SELECT id, name, email, role, plan, status, expired_at, photo_url, created_at, whatsapp,
+            CASE WHEN COALESCE(two_factor_secret, '') <> '' THEN 1 ELSE 0 END AS has_2fa
        FROM users
       ORDER BY created_at DESC`
   ).all();
@@ -5302,7 +5306,8 @@ async function handleAdminUserById(request: Request, env: Env, userId: string) {
 
   if (request.method === "GET") {
     const item = await env.DB.prepare(
-      `SELECT id, name, email, role, plan, status, expired_at, photo_url, created_at, whatsapp
+      `SELECT id, name, email, role, plan, status, expired_at, photo_url, created_at, whatsapp,
+              CASE WHEN COALESCE(two_factor_secret, '') <> '' THEN 1 ELSE 0 END AS has_2fa
          FROM users
         WHERE id = ?`
     )
@@ -5336,7 +5341,40 @@ async function handleAdminUserById(request: Request, env: Env, userId: string) {
     plan?: "FREE" | "PRO";
     status?: "AKTIF" | "NONAKTIF" | "GUEST" | "PENDING";
     expiredAt?: string | null;
+    resetTwoFactor?: boolean;
   }>(request);
+
+  // Reset 2FA untuk user yang kehilangan Authenticator (setelah admin
+  // memverifikasi kepemilikan akun di luar aplikasi). Semua sesi user itu ikut
+  // dicabut supaya siapa pun yang sedang login harus masuk ulang.
+  if (payload.resetTwoFactor === true) {
+    if (target.id === authResult.session.user.id) {
+      return json({ error: "Reset 2FA akun sendiri lewat halaman Profil." }, { status: 400 });
+    }
+    await env.DB.batch([
+      env.DB.prepare("UPDATE users SET two_factor_secret = NULL WHERE id = ?").bind(userId),
+      env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(userId),
+    ]);
+    await insertAdminLog(
+      env,
+      authResult.session.user.email,
+      "RESET_2FA",
+      target.email,
+      "Reset verifikasi 2 langkah & cabut semua sesi",
+      "amber"
+    );
+    return json({ ok: true });
+  }
+
+  if (payload.plan !== undefined && !["FREE", "PRO"].includes(payload.plan)) {
+    return json({ error: "Plan tidak valid." }, { status: 400 });
+  }
+  if (payload.status !== undefined && !["AKTIF", "NONAKTIF", "GUEST", "PENDING"].includes(payload.status)) {
+    return json({ error: "Status tidak valid." }, { status: 400 });
+  }
+  if (payload.expiredAt && Number.isNaN(Date.parse(payload.expiredAt))) {
+    return json({ error: "Tanggal kedaluwarsa tidak valid." }, { status: 400 });
+  }
 
   const entries: Array<[string, string | null]> = [];
   if (payload.plan) {
@@ -6602,6 +6640,38 @@ const computeUserGamification = async (
   return { streakDays, surplusStreakMonths, badges, challenges, xp, level: levelForXp(xp) };
 };
 
+// Tanda tangan upload Cloudinary: hanya user yang login yang bisa upload,
+// file masuk folder miliknya, dan format dibatasi ke gambar. Selama secret
+// belum dipasang, balas 503 supaya klien kembali ke preset unsigned lama —
+// setelah preset di Cloudinary diubah jadi "Signed", hanya jalur ini yang jalan.
+const CLOUDINARY_ALLOWED_FORMATS = "jpg,jpeg,png,webp,heic,heif";
+async function handleCloudinarySignature(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  if (!env.CLOUDINARY_CLOUD_NAME || !env.CLOUDINARY_API_KEY || !env.CLOUDINARY_API_SECRET) {
+    return json({ error: "Upload bertanda tangan belum dikonfigurasi." }, { status: 503 });
+  }
+  const userId = authResult.session.user.id;
+  if (env.AI_PARSE_RATE_LIMITER) {
+    const { success } = await env.AI_PARSE_RATE_LIMITER.limit({ key: `upload-sign:user:${userId}` });
+    if (!success) return json({ error: "Terlalu banyak upload. Coba lagi sebentar." }, { status: 429 });
+  }
+  const timestamp = Math.floor(Date.now() / 1000);
+  const folder = `leosiqra/${userId.replace(/[^\w-]/g, "")}`;
+  // Parameter diurutkan alfabetis sesuai aturan tanda tangan Cloudinary.
+  const toSign = `allowed_formats=${CLOUDINARY_ALLOWED_FORMATS}&folder=${folder}&timestamp=${timestamp}`;
+  const digest = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(toSign + env.CLOUDINARY_API_SECRET));
+  const signature = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return json({
+    cloudName: env.CLOUDINARY_CLOUD_NAME,
+    apiKey: env.CLOUDINARY_API_KEY,
+    timestamp,
+    folder,
+    allowedFormats: CLOUDINARY_ALLOWED_FORMATS,
+    signature,
+  });
+}
+
 async function handleGamification(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -7227,6 +7297,10 @@ const worker = {
 
       if (url.pathname === "/api/member/insights" && request.method === "GET") {
         return await handleListInsights(request, env);
+      }
+
+      if (url.pathname === "/api/member/uploads/cloudinary-signature" && request.method === "POST") {
+        return await handleCloudinarySignature(request, env);
       }
 
       if (url.pathname === "/api/member/gamification" && request.method === "GET") {

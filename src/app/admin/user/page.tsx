@@ -1,7 +1,7 @@
 "use client";
 
 import Image from 'next/image';
-import { Search, Clock } from 'lucide-react';
+import { Search, Clock, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 import { cloudflareApi } from '@/lib/cloudflare-api';
@@ -20,6 +20,7 @@ type AdminUserRow = {
   status?: 'AKTIF' | 'NONAKTIF' | 'GUEST' | 'PENDING';
   expired_at?: string | null;
   photo_url?: string | null;
+  has_2fa?: number;
 };
 
 export default function AdminUserPage() {
@@ -129,6 +130,22 @@ export default function AdminUserPage() {
     }
   };
 
+  const handleResetTwoFactor = async (row: AdminUserRow) => {
+    const ok = confirm(
+      `Reset verifikasi 2 langkah untuk ${row.email}?\n\n` +
+      `Pastikan dulu yang meminta benar pemilik akun (mis. menghubungi dari email akun tersebut). ` +
+      `Semua sesi login user ini akan dicabut, lalu ia bisa masuk hanya dengan password dan mengaktifkan 2FA lagi.`
+    );
+    if (!ok) return;
+    try {
+      await cloudflareApi(`/api/admin/users/${row.id}`, { method: 'PATCH', json: { resetTwoFactor: true } });
+      setUsers((current) => current.map((item) => (item.id === row.id ? { ...item, has_2fa: 0 } : item)));
+      alert('2FA berhasil direset. User perlu login ulang.');
+    } catch {
+      alert('Gagal mereset 2FA.');
+    }
+  };
+
   const filteredUsers = users.filter(u =>
     (u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
      u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -205,6 +222,11 @@ export default function AdminUserPage() {
                         </div>
                       )}
                       <p className="text-[13px] font-black text-slate-900">{row.name || 'Anonymous'}</p>
+                      {row.has_2fa ? (
+                        <span title="Verifikasi 2 langkah aktif" className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-black tracking-widest text-emerald-700">
+                          <ShieldCheck size={10} /> 2FA
+                        </span>
+                      ) : null}
                     </div>
                   </td>
                   <td className="py-4 px-3 text-[13px] font-medium text-slate-500">{row.email}</td>
@@ -245,6 +267,14 @@ export default function AdminUserPage() {
                       >
                         Set Free
                       </button>
+                      {row.has_2fa ? (
+                        <button
+                          onClick={() => handleResetTwoFactor(row)}
+                          className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-[11px] font-black hover:bg-amber-500 hover:text-white transition-all"
+                        >
+                          Reset 2FA
+                        </button>
+                      ) : null}
                       <button
                         onClick={() => handleDeleteUser(row.id, row.email)}
                         className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[11px] font-black hover:bg-rose-500 hover:text-white transition-all"
