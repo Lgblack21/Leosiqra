@@ -2,8 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, TrendingUp, TrendingDown, ExternalLink, Landmark, LineChart, Layers } from "lucide-react";
+import { ChevronLeft, TrendingUp, TrendingDown, Landmark, LineChart, Layers, Plus } from "lucide-react";
 import { investmentService, Investment } from "@/lib/services/investmentService";
+import { accountService, Account } from "@/lib/services/accountService";
+import { AddInvestmentSheet } from "@/components/app/investments/AddInvestmentSheet";
+import { InvestmentDetailSheet } from "@/components/app/investments/InvestmentDetailSheet";
 import { subscribeToCollectionChanges } from "@/lib/cf-firestore";
 import { auth } from "@/lib/cf-client";
 import { cn, formatIDR, formatMoney } from "@/lib/utils";
@@ -19,20 +22,29 @@ const idrCurrent = (i: Investment) => Number(i.currentValueIDR) || Number(i.curr
 const fmtDate = (d: Date) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" }).format(d);
 
 const GROUPS = [
-  { key: "Saham", label: "Saham", icon: LineChart, bar: "bg-emerald-600", web: "/membership/investasi/saham" },
-  { key: "Deposito", label: "Deposito", icon: Landmark, bar: "bg-blue-500", web: "/membership/investasi/deposito" },
-  { key: "Lainnya", label: "Lainnya", icon: Layers, bar: "bg-slate-400", web: "/membership/investasi/lainnya" },
+  { key: "Saham", label: "Saham", icon: LineChart, bar: "bg-emerald-600" },
+  { key: "Deposito", label: "Deposito", icon: Landmark, bar: "bg-blue-500" },
+  { key: "Lainnya", label: "Lainnya", icon: Layers, bar: "bg-slate-400" },
 ] as const;
 const groupOf = (i: Investment) => (i.type === "Saham" || i.type === "Deposito" ? i.type : "Lainnya");
 
 export default function AppInvestmentsPage() {
   const [items, setItems] = useState<Investment[] | null>(null);
   const [filter, setFilter] = useState<string>("Semua");
+  const [status, setStatus] = useState<"Aktif" | "Selesai">("Aktif");
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [adding, setAdding] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
-    const load = () => investmentService.getUserInvestments(auth.currentUser?.uid ?? "").then(setItems).catch(() => setItems([]));
+    const uid = auth.currentUser?.uid ?? "";
+    const load = () => investmentService.getUserInvestments(uid).then(setItems).catch(() => setItems([]));
+    const loadAcc = () => accountService.getUserAccounts(uid).then(setAccounts).catch(() => setAccounts([]));
     load();
-    return subscribeToCollectionChanges("investments", load);
+    loadAcc();
+    const u1 = subscribeToCollectionChanges("investments", load);
+    const u2 = subscribeToCollectionChanges("accounts", loadAcc);
+    return () => { u1(); u2(); };
   }, []);
 
   const all = useMemo(() => items ?? [], [items]);
@@ -42,6 +54,7 @@ export default function AppInvestmentsPage() {
   const roi = modal > 0 ? (gain / modal) * 100 : 0;
   const alloc = GROUPS.map((g) => ({ ...g, value: all.filter((i) => groupOf(i) === g.key).reduce((s, i) => s + idrCurrent(i), 0) }));
   const visible = all
+    .filter((i) => (status === "Aktif" ? i.status !== "Closed" : i.status === "Closed"))
     .filter((i) => filter === "Semua" || groupOf(i) === filter)
     .sort((a, b) => idrCurrent(b) - idrCurrent(a));
 
@@ -51,7 +64,10 @@ export default function AppInvestmentsPage() {
         <Link href="/app/more" aria-label="Kembali" className="w-9 h-9 -ml-2 rounded-full flex items-center justify-center text-slate-500">
           <ChevronLeft size={20} />
         </Link>
-        <h1 className="text-xl font-black text-slate-900 dark:text-white">Investasi</h1>
+        <h1 className="flex-1 text-xl font-black text-slate-900 dark:text-white">Investasi</h1>
+        <button type="button" onClick={() => { lightTap(); setAdding(true); }} className="flex items-center gap-1.5 rounded-full bg-indigo-600 text-white text-xs font-black px-3.5 py-2">
+          <Plus size={14} /> Tambah
+        </button>
       </FadeIn>
 
       <FadeIn delay={0.05} className="rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-5 shadow-lg shadow-blue-200/50 dark:shadow-none">
@@ -81,6 +97,19 @@ export default function AppInvestmentsPage() {
           </>
         )}
       </FadeIn>
+
+      <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800">
+        {(["Aktif", "Selesai"] as const).map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => { lightTap(); setStatus(s); }}
+            className={cn("py-2 rounded-xl text-xs font-black transition-colors", status === s ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm" : "text-slate-500")}
+          >
+            {s === "Aktif" ? "Aktif" : "Selesai / terjual"}
+          </button>
+        ))}
+      </div>
 
       <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-5 px-5">
         {["Semua", ...GROUPS.map((g) => g.key)].map((f) => (
@@ -115,7 +144,8 @@ export default function AppInvestmentsPage() {
             const currency = i.currency || "IDR";
             const isDeposit = i.type === "Deposito";
             return (
-              <li key={i.id} className="flex items-center justify-between gap-3 px-4 py-3.5">
+              <li key={i.id}>
+                <button type="button" onClick={() => { lightTap(); setSelectedId(i.id ?? null); }} className="w-full text-left flex items-center justify-between gap-3 px-4 py-3.5 active:bg-slate-50 dark:active:bg-slate-800">
                 <span className="min-w-0">
                   <span className="block text-sm font-bold text-slate-900 dark:text-white truncate">{i.stockCode ? `${i.stockCode} · ` : ""}{i.name}</span>
                   <span className="block text-[11px] text-slate-400 truncate">
@@ -133,24 +163,27 @@ export default function AppInvestmentsPage() {
                     </span>
                   )}
                 </span>
+                </button>
               </li>
             );
           })}
         </ul>
       )}
 
-      <section>
-        <p className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 px-1">Tambah & kelola</p>
-        <div className="grid grid-cols-3 gap-2">
-          {GROUPS.map(({ key, label, icon: Icon, web }) => (
-            <a key={key} href={web} onClick={lightTap} className="flex flex-col items-center gap-1.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 py-3 text-[11px] font-bold text-slate-600 dark:text-slate-300">
-              <Icon size={18} className="text-slate-400" />
-              <span className="flex items-center gap-1">{label} <ExternalLink size={10} className="text-slate-300" /></span>
-            </a>
-          ))}
-        </div>
-        <p className="text-[11px] text-slate-400 mt-2 px-1">Beli/jual saham dan penempatan deposito masih lewat versi web.</p>
-      </section>
+      <AddInvestmentSheet
+        isOpen={adding}
+        onClose={() => setAdding(false)}
+        accounts={accounts}
+        initialKind={filter === "Deposito" || filter === "Lainnya" ? filter : "Saham"}
+      />
+      {/* Ambil versi terbaru dari daftar supaya detail ikut ter-update setelah jual/cairkan. */}
+      {selectedId && (
+        <InvestmentDetailSheet
+          inv={all.find((i) => i.id === selectedId) ?? null}
+          accounts={accounts}
+          onClose={() => setSelectedId(null)}
+        />
+      )}
     </div>
   );
 }
