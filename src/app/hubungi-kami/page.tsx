@@ -1,15 +1,71 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { MessageCircle, Mail, Headphones, Copy, Check, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { MessageCircle, Mail, Copy, Check, ArrowRight, Plus } from 'lucide-react';
+import { Reveal } from '@/components/landing/Reveal';
 import { Navbar } from '@/components/Navbar';
 import { LandingFooter } from '@/components/LandingFooter';
 import { getPublicContact, PublicContact } from '@/lib/services/publicContactService';
+
+// Jawaban singkat untuk pertanyaan yang paling sering — merujuk ke fitur yang ada.
+const FAQ: Array<{ q: string; a: React.ReactNode }> = [
+  {
+    q: 'Saya lupa password',
+    a: <>Buka halaman <Link href="/auth/forgot-password" className="font-bold text-indigo-600 hover:underline">Lupa password</Link> dan masukkan email akun Anda — link untuk membuat password baru akan dikirim. Kalau Anda mendaftar dengan Google, cukup masuk lewat tombol &quot;Lanjutkan dengan Google&quot;.</>,
+  },
+  {
+    q: 'Bagaimana cara upgrade ke Pro?',
+    a: <>Masuk ke akun Anda, buka halaman <strong>Konfirmasi Pembayaran Pro</strong>, pilih paket, transfer sesuai nominal, lalu unggah bukti transfernya. Pembayaran diverifikasi manual oleh tim kami, maksimal 1×24 jam.</>,
+  },
+  {
+    q: 'Saya ganti HP dan kode Authenticator hilang',
+    a: <>Hubungi kami lewat WhatsApp atau email dari alamat email akun Anda. Kami akan membantu memverifikasi kepemilikan akun sebelum mengatur ulang verifikasi 2 langkah.</>,
+  },
+  {
+    q: 'Bagaimana menghapus data saya?',
+    a: <>Seluruh data keuangan bisa Anda hapus sendiri lewat <strong>Profil → Danger Zone</strong>. Untuk menghapus akun sepenuhnya, hubungi kami lewat kontak di atas.</>,
+  },
+  {
+    q: 'Apakah data saya aman?',
+    a: <>Data Anda terikat ke akun Anda dan hanya bisa dibuka lewat sesi login Anda, dikirim lewat HTTPS, dan tidak pernah kami jual. Detail lengkapnya ada di <Link href="/privacy" className="font-bold text-indigo-600 hover:underline">Kebijakan Privasi</Link>.</>,
+  },
+];
+
+function FaqItem({ q, a, open, onToggle }: { q: string; a: React.ReactNode; open: boolean; onToggle: () => void }) {
+  const reduce = useReducedMotion();
+  return (
+    <div className="border-b border-slate-100 last:border-0">
+      <button type="button" onClick={onToggle} aria-expanded={open} className="flex w-full items-center justify-between gap-4 py-5 text-left">
+        <span className="font-semibold text-slate-900">{q}</span>
+        <motion.span animate={{ rotate: open ? 45 : 0 }} transition={{ type: 'spring', stiffness: 400, damping: 24 }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+          <Plus size={16} />
+        </motion.span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={reduce ? { opacity: 1 } : { height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={reduce ? { opacity: 0 } : { height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="overflow-hidden"
+          >
+            <p className="pb-5 pr-12 text-sm leading-relaxed text-slate-600">{a}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 export default function PublicHubungiKamiPage() {
   const [contact, setContact] = useState<PublicContact | null>(null);
   const [loading, setLoading] = useState(true);
   const [copiedEmail, setCopiedEmail] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const reduce = useReducedMotion();
 
   useEffect(() => {
     getPublicContact()
@@ -42,89 +98,97 @@ export default function PublicHubungiKamiPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground selection:bg-indigo-500/10 flex flex-col">
+    <div className="flex min-h-screen flex-col bg-[#f7f8fb] text-slate-900 selection:bg-indigo-500/10">
       <Navbar />
 
-      <section className="flex-1 px-6 pt-40 pb-24">
-        <div className="max-w-2xl mx-auto">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center shadow-lg shadow-emerald-600/20 mb-6">
-            <Headphones size={24} />
-          </div>
-          <h1 className="text-3xl md:text-4xl font-serif font-black text-slate-900 tracking-tight">Hubungi Kami</h1>
-          <p className="text-sm font-medium text-slate-500 mt-3 leading-relaxed">
-            Ada pertanyaan, kendala, atau masukan soal Leosiqra? Langsung hubungi kami lewat WhatsApp atau email di bawah ini.
+      <header className="relative overflow-hidden px-5 pb-12 pt-36 sm:px-6 sm:pt-44">
+        <div aria-hidden className="hero-aurora" />
+        <div aria-hidden className="dot-grid" />
+        <motion.div
+          className="relative mx-auto max-w-4xl text-center"
+          initial={reduce ? false : { opacity: 0, y: 20, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Bantuan</p>
+          <h1 className="mt-4 font-serif text-4xl leading-tight sm:text-6xl">
+            Ada yang bisa kami <span className="lp-shine italic">bantu?</span>
+          </h1>
+          <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-slate-500">
+            Pertanyaan, kendala, atau masukan soal Leosiqra — hubungi kami langsung lewat WhatsApp atau email.
           </p>
-        </div>
+        </motion.div>
+      </header>
 
-        <div className="max-w-2xl mx-auto mt-10">
+      <main className="relative flex-1 px-5 pb-24 sm:px-6">
+        <div className="mx-auto max-w-4xl">
           {loading ? (
-            <div className="py-16 flex flex-col items-center justify-center gap-4">
-              <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Memuat kontak...</p>
+            <div className="grid gap-5 md:grid-cols-2">
+              {[0, 1].map((i) => <div key={i} className="h-60 animate-pulse rounded-[28px] bg-white/70" />)}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid gap-5 md:grid-cols-2">
               {/* WhatsApp */}
-              <div className="bg-white p-6 md:p-8 rounded-[28px] border border-slate-100 shadow-sm space-y-6 flex flex-col">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                  <MessageCircle size={22} />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-lg font-black text-slate-900 tracking-tight">WhatsApp</h2>
-                  <p className="text-[13px] font-bold text-slate-400 mt-1">
-                    {normalizedWhatsApp ? `+${normalizedWhatsApp}` : 'Belum diatur'}
-                  </p>
-                </div>
+              <Reveal className="lp-card lift flex flex-col rounded-[28px] p-7 sm:p-8">
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100"><MessageCircle size={22} /></span>
+                <h2 className="mt-6 font-serif text-2xl">WhatsApp</h2>
+                <p className="mt-1 flex-1 text-sm text-slate-500">{normalizedWhatsApp ? `+${normalizedWhatsApp}` : 'Belum diatur'}</p>
                 {normalizedWhatsApp ? (
                   <a
                     href={`https://wa.me/${normalizedWhatsApp}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-emerald-600 text-white rounded-xl text-sm font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 group"
+                    className="group mt-6 inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition-all hover:-translate-y-0.5 hover:bg-emerald-700"
                   >
-                    Chat Sekarang
-                    <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                    Chat sekarang <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
                   </a>
                 ) : (
-                  <p className="text-[11px] font-bold text-slate-300">Nomor WhatsApp belum diatur admin.</p>
+                  <p className="mt-6 text-xs text-slate-400">Nomor WhatsApp belum diatur admin.</p>
                 )}
-              </div>
+              </Reveal>
 
               {/* Email */}
-              <div className="bg-white p-6 md:p-8 rounded-[28px] border border-slate-100 shadow-sm space-y-6 flex flex-col">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                  <Mail size={22} />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-lg font-black text-slate-900 tracking-tight">Email</h2>
-                  <p className="text-[13px] font-bold text-slate-400 mt-1 break-all">
-                    {contact?.billingEmail || 'Belum diatur'}
-                  </p>
-                </div>
+              <Reveal delay={0.08} className="lp-card lift flex flex-col rounded-[28px] p-7 sm:p-8">
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100"><Mail size={22} /></span>
+                <h2 className="mt-6 font-serif text-2xl">Email</h2>
+                <p className="mt-1 flex-1 break-all text-sm text-slate-500">{contact?.billingEmail || 'Belum diatur'}</p>
                 {contact?.billingEmail ? (
-                  <div className="flex items-center gap-2">
-                    <a
-                      href={`mailto:${contact.billingEmail}`}
-                      className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 text-white rounded-xl text-sm font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
-                    >
-                      Kirim Email
+                  <div className="mt-6 flex items-center gap-2">
+                    <a href={`mailto:${contact.billingEmail}`} className="lp-btn flex-1 rounded-2xl px-6 py-3.5 text-center text-sm font-bold transition-all hover:-translate-y-0.5">
+                      Kirim email
                     </a>
                     <button
+                      type="button"
                       onClick={copyEmail}
-                      title="Salin alamat email"
-                      className="p-3.5 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-all shrink-0"
+                      aria-label="Salin alamat email"
+                      className="shrink-0 rounded-2xl border border-slate-200 bg-white p-3.5 text-slate-500 transition-colors hover:text-slate-800"
                     >
-                      {copiedEmail ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                      <AnimatePresence mode="wait" initial={false}>
+                        <motion.span key={copiedEmail ? 'ok' : 'copy'} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }} className="flex">
+                          {copiedEmail ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                        </motion.span>
+                      </AnimatePresence>
                     </button>
                   </div>
                 ) : (
-                  <p className="text-[11px] font-bold text-slate-300">Email belum diatur admin.</p>
+                  <p className="mt-6 text-xs text-slate-400">Email belum diatur admin.</p>
                 )}
-              </div>
+              </Reveal>
             </div>
           )}
+
+          {/* FAQ */}
+          <Reveal className="mt-16">
+            <p className="text-center text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Pertanyaan umum</p>
+            <h2 className="mt-3 text-center font-serif text-3xl sm:text-4xl">Mungkin jawabannya sudah ada di sini</h2>
+            <div className="lp-card mt-10 rounded-[28px] px-6 sm:px-8">
+              {FAQ.map((f, i) => (
+                <FaqItem key={f.q} q={f.q} a={f.a} open={openFaq === i} onToggle={() => setOpenFaq(openFaq === i ? null : i)} />
+              ))}
+            </div>
+          </Reveal>
         </div>
-      </section>
+      </main>
 
       <LandingFooter />
     </div>

@@ -303,3 +303,20 @@ html.no-zoom {
   .page-enter, .tab-enter, .stagger-in > *, .stagger-grid > *, .sheen::after, .breathe, .mic-wave { animation: none; }
   .lift:hover { transform: none; }
 }
+
+/* Isi halaman legal (Privasi, Syarat). */
+.legal-body ul { list-style: none; padding: 0; display: grid; gap: 0.6rem; }
+.legal-body li { position: relative; padding-left: 1.4rem; }
+.legal-body li::before {
+  content: "";
+  position: absolute;
+  left: 0.25rem;
+  top: 0.62em;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 9999px;
+  background: #a5b4fc;
+}
+.legal-body strong { color: #0f172a; font-weight: 700; }
+.legal-body a { color: #4f46e5; font-weight: 700; text-underline-offset: 3px; }
+.legal-body a:hover { text-decoration: underline; }
