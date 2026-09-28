@@ -6,8 +6,6 @@ import { Save, ChevronDown, Image as ImageIcon, Loader2, RefreshCw } from 'lucid
 import { Modal } from '@/components/ui/Modal';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { accountService, Account } from '@/lib/services/accountService';
-import { updateMemberTotals } from '@/lib/services/userService';
-import { addTransaction } from '@/lib/services/transactionService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { CurrencySelect } from '@/components/CurrencySelect';
 import { NumberInput } from '@/components/ui/NumberInput';
@@ -129,168 +127,51 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
 
   const handleCreate = async () => {
     if (!userId || !formData.stockCode || !formData.sharesCount || !formData.pricePerShare) return;
+    if (!formData.accountId) {
+      setError('Pilih rekening sumber/tujuan dana dulu.');
+      return;
+    }
     setError('');
     setLoading(true);
-
     const shares = parseFloat(formData.sharesCount) || 0;
     const price = parseFloat(formData.pricePerShare) || 0;
-    const invested = shares * price;
-    const current = parseFloat(formData.currentValue) || invested;
-    // Kalau kurs gagal dikonversi, jangan kirim angka mentah sebagai IDR
-    // final — biarkan backend menghitung ulang lewat kurs server-side.
-    const canConvert =
-      formData.currency === 'IDR' ||
-      Boolean(rates && rates[formData.currency] && rates['IDR']);
 
     try {
-      const isSell = formData.transactionType === 'Jual' && !!initialData?.id;
-
-      if (isSell && initialData) {
-        // Jual: baris beli asli dipertahankan sebagai cost basis, baris baru
-        // dibuat untuk realisasi jualnya (untung/rugi dihitung proporsional).
-        const originalShares = Number(initialData.sharesCount) || 0;
-        const originalInvested = Number(initialData.amountInvested) || 0;
-        const costBasisPerShare = originalShares > 0 ? originalInvested / originalShares : 0;
-        const soldShares = shares;
-        const costBasisSold = costBasisPerShare * soldShares;
-        const proceeds = invested; // shares * harga jual
-        const remainingShares = Math.max(0, originalShares - soldShares);
-        const remainingInvested = costBasisPerShare * remainingShares;
-        const ratio = originalInvested > 0 ? remainingInvested / originalInvested : 0;
-
-        await investmentService.updateInvestment(initialData.id!, {
-          sharesCount: remainingShares,
-          amountInvested: remainingInvested,
-          amountIDR: typeof initialData.amountIDR === 'number' ? initialData.amountIDR * ratio : undefined,
-          currentValue: (initialData.currentValue || 0) * ratio,
-          currentValueIDR: typeof initialData.currentValueIDR === 'number' ? initialData.currentValueIDR * ratio : undefined,
-          status: remainingShares > 0 ? 'Active' : 'Closed',
+      // Semua jalur disimpan server dalam satu batch atomik (posisi + transaksi
+      // tertaut + saldo + ringkasan) — dulu 4–6 request terpisah dari browser,
+      // dan edit memotong saldo lagi tanpa mengembalikan potongan lama.
+      if (initialData?.id && formData.transactionType === 'Jual') {
+        await investmentService.sell(initialData.id, {
+          quantity: shares,
+          price,
+          accountId: formData.accountId,
+          date: formData.dateInvested,
         });
-
-        const finalInvestmentId = await investmentService.createInvestment({
-          userId,
-          name: initialData.stockCode || initialData.name,
-          type: 'Saham',
-          stockCode: (initialData.stockCode || '').toUpperCase(),
-          exchangeCode: (initialData.exchangeCode || 'IDX').toUpperCase(),
-          logoUrl: initialData.logoUrl,
-          sharesCount: soldShares,
-          pricePerShare: price,
-          transactionType: 'Jual',
-          category: formData.category,
-          accountId: formData.accountId || 'General',
-          platform: initialData.platform,
-          amountInvested: costBasisSold,
-          amountIDR: canConvert ? costBasisSold * (convertedAmount / (invested || 1)) : undefined,
-          currentValue: proceeds,
-          currentValueIDR: canConvert ? convertedAmount : undefined,
-          returnPercentage: costBasisSold > 0 ? ((proceeds - costBasisSold) / costBasisSold) * 100 : 0,
-          currency: formData.currency,
-          dateInvested: new Date(formData.dateInvested),
-          status: 'Closed',
-          relatedInvestmentId: initialData.id
-        });
-
-        try {
-          const realizedPnl = proceeds - costBasisSold;
-          await updateMemberTotals(userId, 'pemasukan', proceeds);
-          await updateMemberTotals(userId, 'investasi', -costBasisSold);
-
-          if (formData.accountId) {
-            await accountService.updateAccountBalance(formData.accountId, proceeds);
-          }
-
-          await addTransaction({
-            userId, type: 'pemasukan', amount: proceeds,
-            amountIDR: canConvert ? convertedAmount : undefined,
-            category: 'Investasi', subCategory: `Jual Saham ${formData.stockCode}`,
-            accountId: formData.accountId || 'General',
-            date: new Date(formData.dateInvested),
-            note: `[Baru] Penjualan ${soldShares} lembar saham ${formData.stockCode} @ ${formData.pricePerShare} (${realizedPnl >= 0 ? 'Untung' : 'Rugi'} ${formatCurrency(Math.abs(realizedPnl), formData.currency)})`,
-            status: 'VERIFIED',
-            relatedId: finalInvestmentId,
-            relatedType: 'investasi'
-          });
-        } catch (syncErr) {
-          console.error('Posisi saham tersimpan, tapi gagal sinkronisasi ringkasan/saldo:', syncErr);
-        }
-
-        onClose();
-        setFormData({
-          stockCode: '', logoUrl: '', exchangeCode: 'IDX', currency: 'IDR', sharesCount: '',
-          pricePerShare: '', currentValue: '', transactionType: 'Beli', category: 'Saham',
-          accountId: '', platform: '', dateInvested: toLocalDateString()
-        });
+      } else if (editData && editData.transactionType === 'Jual') {
+        setError('Catatan penjualan tidak bisa diedit. Hapus catatan ini (posisi asal dipulihkan), lalu jual ulang.');
         return;
-      }
-
-      const investmentPayload: Omit<Investment, 'id' | 'createdAt'> = {
-        userId,
-        name: formData.stockCode,
-        type: 'Saham',
-        stockCode: formData.stockCode.toUpperCase(),
-        exchangeCode: formData.exchangeCode.toUpperCase(),
-        logoUrl: formData.logoUrl,
-        sharesCount: shares,
-        pricePerShare: price,
-        transactionType: formData.transactionType,
-        category: formData.category,
-        accountId: formData.accountId || 'General',
-        platform: formData.platform,
-        amountInvested: invested,
-        amountIDR: canConvert ? convertedAmount : undefined,
-        currentValue: current,
-        currentValueIDR: canConvert ? (formData.currency === 'IDR' ? current : (current * (convertedAmount / (invested || 1)))) : undefined,
-        returnPercentage: invested > 0 ? ((current - invested) / invested) * 100 : 0,
-        currency: formData.currency,
-        dateInvested: new Date(formData.dateInvested),
-        status: 'Active'
-      };
-
-      // Penyimpanan inti, aman untuk retry kalau gagal.
-      let finalInvestmentId = editData?.id || '';
-      if (editData?.id) {
-        await investmentService.updateInvestment(editData.id, investmentPayload);
       } else {
-        finalInvestmentId = await investmentService.createInvestment(investmentPayload);
-      }
-
-      // Sinkronisasi lanjutan bersifat non-fatal — posisinya sendiri sudah
-      // tersimpan, jangan sampai gagal di sini memicu submit ulang (posisi dobel).
-      try {
-        if (editData) {
-          const oldInvested = Number(editData.amountInvested) || 0;
-          const oldType = editData.transactionType || 'Beli';
-          const isOldSell = oldType === 'Jual';
-          const oldFinanceType = isOldSell ? 'pemasukan' : 'pengeluaran';
-          await updateMemberTotals(userId, oldFinanceType, -oldInvested);
-          await updateMemberTotals(userId, 'investasi', isOldSell ? oldInvested : -oldInvested);
-        }
-
-        await updateMemberTotals(userId, 'pengeluaran', invested);
-        await updateMemberTotals(userId, 'investasi', invested);
-
-        if (formData.accountId) {
-          await accountService.updateAccountBalance(formData.accountId, -invested);
-        }
-
-        await addTransaction({
-          userId, type: 'pengeluaran', amount: invested,
-          amountIDR: canConvert ? convertedAmount : undefined,
-          category: 'Investasi', subCategory: `Beli Saham ${formData.stockCode}`,
-          accountId: formData.accountId || 'General',
-          date: new Date(formData.dateInvested),
-          note: `${editData ? '[Update]' : '[Baru]'} Pembelian ${formData.sharesCount} lembar saham ${formData.stockCode} @ ${formData.pricePerShare}`,
-          status: 'VERIFIED',
-          relatedId: finalInvestmentId,
-          relatedType: 'investasi'
-        });
-      } catch (syncErr) {
-        console.error('Posisi saham tersimpan, tapi gagal sinkronisasi ringkasan/saldo:', syncErr);
+        const position = {
+          type: 'Saham' as const,
+          transactionType: 'Beli',
+          name: formData.stockCode,
+          stockCode: formData.stockCode,
+          exchangeCode: formData.exchangeCode,
+          sharesCount: shares,
+          pricePerShare: price,
+          currentValue: parseFloat(formData.currentValue) || undefined,
+          currency: formData.currency,
+          platform: formData.platform,
+          logoUrl: formData.logoUrl,
+          category: formData.category,
+          accountId: formData.accountId,
+          dateInvested: formData.dateInvested,
+        };
+        if (editData?.id) await investmentService.rebook(editData.id, position);
+        else await investmentService.entry(position);
       }
 
       onClose();
-      // Reset form
       setFormData({
         stockCode: '', logoUrl: '', exchangeCode: 'IDX', currency: 'IDR', sharesCount: '',
         pricePerShare: '', currentValue: '', transactionType: 'Beli', category: 'Saham',
@@ -320,7 +201,9 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
             <select 
               value={formData.transactionType}
               onChange={e => setFormData(p => ({...p, transactionType: e.target.value}))}
-              disabled={!!initialData}
+              // Jual hanya lewat tombol Jual pada posisi (menghitung modal &
+              // untung/rugi dari posisi asal) — form baru selalu Beli.
+              disabled
               className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer disabled:opacity-60"
             >
               <option value="Beli">Beli (Pengeluaran)</option>

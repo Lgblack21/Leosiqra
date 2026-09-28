@@ -6,8 +6,6 @@ import { Modal } from '@/components/ui/Modal';
 import { NumberInput } from '@/components/ui/NumberInput';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { accountService, Account } from '@/lib/services/accountService';
-import { updateMemberTotals } from '@/lib/services/userService';
-import { addTransaction } from '@/lib/services/transactionService';
 import { CategorySelect } from '@/components/CategorySelect';
 import { CurrencySelect } from '@/components/CurrencySelect';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
@@ -99,154 +97,34 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
 
   const handleCreate = async () => {
     if (!userId || !formData.name || !formData.amountInvested) return;
+    if (!formData.accountId) {
+      setError('Pilih rekening sumber/tujuan dana dulu.');
+      return;
+    }
     setError('');
     setLoading(true);
 
-    const invested = parseFloat(formData.amountInvested);
-    const rate = parseFloat(formData.returnPercentage) || 0;
-    const taxRate = parseFloat(formData.taxPercentage) || 0;
-
-    // Kalau kurs gagal dikonversi (rates belum termuat / currency ini tidak
-    // ada di rates), jangan kirim angka mentah sebagai IDR final — biarkan
-    // backend yang menghitung ulang lewat kurs server-side.
-    const canConvert =
-      formData.currency === 'IDR' ||
-      Boolean(rates && rates[formData.currency] && rates['IDR']);
-
     try {
-      const isPenempatan = formData.transactionType === 'Penempatan';
-      const isPenarikan = formData.transactionType === 'Penarikan';
-      const isBunga = formData.transactionType === 'Bunga';
-
-      const diffDays = calculateDays(formData.dateInvested, formData.targetDate);
-      const grossInterest = invested * (rate / 100) * (diffDays / 365);
-      const taxAmount = grossInterest * (taxRate / 100);
-      const interestOnly = grossInterest - taxAmount;
-      const totalResult = invested + interestOnly;
-
-      // Penyimpanan inti — baris investasi (penempatan/penarikan/bunga)nya sendiri.
-      // amountIDR/currentValueIDR dihitung juga di sini (bukan cuma di
-      // transaksi sync) supaya halaman ringkasan portofolio yang menjumlah
-      // lintas deposito berbeda mata uang tetap benar.
-      const investmentPayload: Omit<Investment, 'id' | 'createdAt'> = {
-        userId, name: formData.name, type: 'Deposito',
-        platform: formData.platform,
-        amountInvested: invested,
-        amountIDR: canConvert ? (formData.currency === 'IDR' ? invested : convertedAmount) : undefined,
-        currentValue: totalResult,
-        currentValueIDR: canConvert ? (formData.currency === 'IDR' ? totalResult : totalResult * (convertedAmount / (invested || 1))) : undefined,
-        returnPercentage: rate,
-        taxPercentage: taxRate,
-        currency: formData.currency,
-        durationDays: diffDays,
+      // Server menghitung bunga bersih (tarif, pajak, lama hari) dan menyimpan
+      // posisi + transaksi tertaut + saldo + ringkasan dalam satu batch atomik.
+      // Edit membalikkan efek lama & menerapkan yang baru sekaligus.
+      const position = {
+        type: 'Deposito' as const,
         transactionType: formData.transactionType,
+        name: formData.name,
+        platform: formData.platform,
+        currency: formData.currency,
+        amountInvested: parseFloat(formData.amountInvested) || 0,
+        returnPercentage: parseFloat(formData.returnPercentage) || 0,
+        taxPercentage: parseFloat(formData.taxPercentage) || 0,
         category: formData.category,
-        accountId: formData.accountId || 'General',
-        dateInvested: new Date(formData.dateInvested),
-        targetDate: new Date(formData.targetDate),
-        status: isPenarikan ? 'Closed' : 'Active',
-        maturityAction: isPenempatan ? formData.maturityAction : undefined
+        accountId: formData.accountId,
+        dateInvested: formData.dateInvested,
+        targetDate: formData.targetDate,
+        maturityAction: formData.transactionType === 'Penempatan' ? (formData.maturityAction as 'cairkan' | 'aro_bunga' | 'aro_full') : undefined,
       };
-
-      let finalInvestmentId = editData?.id || '';
-
-      if (editData?.id) {
-        await investmentService.updateInvestment(editData.id, investmentPayload);
-      } else {
-        finalInvestmentId = await investmentService.createInvestment(investmentPayload);
-      }
-
-      // Sinkronisasi lanjutan (ringkasan total, catatan transaksi ledger)
-      // bersifat non-fatal — baris investasi utamanya sudah tersimpan, jadi
-      // kegagalan di sini tidak boleh membuat modal terlihat "gagal total"
-      // dan memicu submit ulang yang bisa membuat baris investasi dobel.
-      try {
-        if (editData) {
-          // Revert dampak keuangan lama sebelum menerapkan yang baru.
-          const oldInvested = Number(editData.amountInvested) || 0;
-          const oldRate = Number(editData.returnPercentage) || 0;
-          const oldTaxRate = Number(editData.taxPercentage) || 0;
-          const oldDays = Number(editData.durationDays) || 0;
-          const oldGross = oldInvested * (oldRate / 100) * (oldDays / 365);
-          const oldTaxAmount = oldGross * (oldTaxRate / 100);
-          const oldInterest = oldGross - oldTaxAmount;
-          const oldTotal = oldInvested + oldInterest;
-          const oldType = editData.transactionType || 'Penempatan';
-
-          const isOldPenempatan = oldType === 'Penempatan';
-          const isOldPenarikan = oldType === 'Penarikan';
-          const isOldBunga = oldType === 'Bunga';
-
-          const oldFinanceType = isOldPenempatan ? 'pengeluaran' : (isOldPenarikan || isOldBunga ? 'pemasukan' : null);
-          if (oldFinanceType) {
-            let oldAmountToSync = oldInvested;
-            if (isOldPenarikan) oldAmountToSync = oldTotal;
-            if (isOldBunga) oldAmountToSync = oldInterest;
-            if (isOldPenempatan) oldAmountToSync = oldInvested;
-            await updateMemberTotals(userId, oldFinanceType, -oldAmountToSync);
-          }
-
-          if (isOldPenempatan) await updateMemberTotals(userId, 'investasi', -oldInvested);
-          else if (isOldPenarikan) await updateMemberTotals(userId, 'investasi', oldInvested);
-
-          // Kembalikan dampak lama ke saldo rekening SUMBER lama sebelum
-          // menerapkan yang baru (mis. Penempatan menarik dana keluar dari
-          // rekening — kalau diedit, dana itu harus dikembalikan dulu).
-          if (editData.accountId) {
-            let oldBalanceChange = 0;
-            if (isOldPenempatan) oldBalanceChange = oldInvested;
-            else if (isOldPenarikan) oldBalanceChange = -oldTotal;
-            else if (isOldBunga) oldBalanceChange = -oldInterest;
-            if (oldBalanceChange !== 0) {
-              await accountService.updateAccountBalance(editData.accountId, oldBalanceChange);
-            }
-          }
-        }
-
-        const financeType = isPenempatan ? 'pengeluaran' : (isPenarikan || isBunga ? 'pemasukan' : null);
-        if (financeType) {
-          let amountToSync = invested;
-          if (isPenarikan) amountToSync = totalResult;
-          if (isBunga) amountToSync = interestOnly;
-          if (isPenempatan) amountToSync = invested;
-
-          await updateMemberTotals(userId, financeType, amountToSync);
-
-          // Penempatan menarik dana KELUAR dari rekening sumber ke deposito;
-          // Penarikan/Bunga mengembalikan/mengkreditkan dana KE rekening —
-          // tanpa ini, saldo rekening tidak pernah berkurang saat bikin
-          // deposito, jadi dana yang sama kehitung dobel (di saldo rekening
-          // DAN di nilai investasi deposito).
-          if (formData.accountId) {
-            const balanceChange = isPenempatan ? -invested : isPenarikan ? totalResult : isBunga ? interestOnly : 0;
-            if (balanceChange !== 0) {
-              await accountService.updateAccountBalance(formData.accountId, balanceChange);
-            }
-          }
-
-          await addTransaction({
-            userId, type: financeType, amount: amountToSync,
-            amountIDR: canConvert
-              ? (formData.currency === 'IDR' ? amountToSync : (amountToSync * (convertedAmount / (parseFloat(formData.amountInvested) || 1))))
-              : undefined,
-            category: 'Investasi', subCategory: `Deposito - ${formData.transactionType}`,
-            accountId: formData.accountId || 'General',
-            date: new Date(formData.dateInvested),
-            note: `${editData ? '[Update]' : '[Baru]'} ${formData.transactionType} ${formData.name} ${isBunga ? '(Hanya Bunga)' : ''}`,
-            status: 'VERIFIED',
-            relatedId: finalInvestmentId,
-            relatedType: 'investasi'
-          });
-        }
-
-        if (isPenempatan) {
-          await updateMemberTotals(userId, 'investasi', invested);
-        } else if (isPenarikan) {
-          await updateMemberTotals(userId, 'investasi', -invested);
-        }
-      } catch (syncErr) {
-        console.error('Baris deposito tersimpan, tapi gagal sinkronisasi ringkasan/proyeksi:', syncErr);
-      }
+      if (editData?.id) await investmentService.rebook(editData.id, position);
+      else await investmentService.entry(position);
 
       onClose();
       const initialTargetDate = toLocalDateString(new Date(Date.now() + 24 * 60 * 60 * 1000));

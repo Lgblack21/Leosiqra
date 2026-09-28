@@ -182,9 +182,58 @@ export const investmentService = {
   async hardDeleteInvestment(inv: Investment) {
     if (!inv.id) return;
     await cloudflareApi(`/api/member/investments/${inv.id}?reverse=1`, { method: 'DELETE' });
-    notifyCollectionChanged('investments');
-    notifyCollectionChanged('accounts');
+    notifyInvestmentChange();
     notifyCollectionChanged('users');
+  },
+
+  // ---- Jalur atomik (server menghitung nilai & efek uang dalam satu batch) ----
+
+  // Catat posisi baru: Saham (Beli), Lainnya (Pembelian), Deposito
+  // (Penempatan/Bunga/Penarikan). id dibuat di sini per percobaan simpan —
+  // kalau request terkirim dua kali (jaringan lambat, tap ganda), server
+  // mengenalinya dan tidak mencatat dobel.
+  async entry(position: InvestmentPositionInput) {
+    const id = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : undefined;
+    const result = await cloudflareApi<{ ok: boolean; id: string }>('/api/member/investments/entry', {
+      method: 'POST',
+      json: { ...positionToApi(position), ...(id ? { id } : {}) },
+    });
+    notifyInvestmentChange();
+    return result.id;
+  },
+
+  // Edit penuh: server membalikkan efek lama & menerapkan yang baru sekaligus.
+  async rebook(investmentId: string, position: InvestmentPositionInput) {
+    await cloudflareApi(`/api/member/investments/${investmentId}/rebook`, { method: 'PUT', json: positionToApi(position) });
+    notifyInvestmentChange();
+  },
+
+  // Jual sebagian/seluruh posisi Saham/Lainnya.
+  async sell(investmentId: string, input: { quantity: number; price: number; accountId?: string; date?: string }) {
+    const result = await cloudflareApi<{ ok: boolean; id: string; proceeds: number; costBasis: number; remaining: number }>(
+      `/api/member/investments/${investmentId}/sell`,
+      {
+        method: 'POST',
+        json: {
+          quantity: input.quantity,
+          price: input.price,
+          ...(input.accountId ? { account_id: input.accountId } : {}),
+          ...(input.date ? { date: input.date } : {}),
+        },
+      }
+    );
+    notifyInvestmentChange();
+    return result;
+  },
+
+  // Cairkan deposito ke rekening sumbernya (sebelum jatuh tempo: bunga hangus).
+  async cairkan(investmentId: string) {
+    const result = await cloudflareApi<{ ok: boolean; id: string; total: number; matured: boolean }>(
+      `/api/member/investments/${investmentId}/cairkan`,
+      { method: 'POST' }
+    );
+    notifyInvestmentChange();
+    return result;
   },
 
   // Harga live saham (via proksi Yahoo Finance di backend, lihat handleStockPrice).
@@ -202,6 +251,66 @@ export const investmentService = {
     );
     return res.items;
   }
+};
+
+export interface InvestmentPositionInput {
+  type: 'Saham' | 'Deposito' | 'Lainnya';
+  transactionType: string;
+  name?: string;
+  accountId: string;
+  currency?: string;
+  platform?: string;
+  category?: string;
+  logoUrl?: string;
+  dateInvested?: string; // YYYY-MM-DD
+  currentValue?: number;
+  // Saham
+  stockCode?: string;
+  exchangeCode?: string;
+  sharesCount?: number;
+  pricePerShare?: number;
+  // Lainnya
+  quantity?: number;
+  unit?: string;
+  pricePerUnit?: number;
+  // Deposito
+  amountInvested?: number;
+  returnPercentage?: number;
+  taxPercentage?: number;
+  targetDate?: string; // YYYY-MM-DD
+  maturityAction?: 'cairkan' | 'aro_bunga' | 'aro_full';
+}
+
+const positionToApi = (p: InvestmentPositionInput) => ({
+  type: p.type,
+  transaction_type: p.transactionType,
+  name: p.name,
+  account_id: p.accountId,
+  currency: p.currency || 'IDR',
+  platform: p.platform || '',
+  category: p.category || p.type,
+  logo_url: p.logoUrl || null,
+  date_invested: p.dateInvested,
+  ...(p.currentValue && p.currentValue > 0 ? { current_value: p.currentValue } : {}),
+  stock_code: p.stockCode,
+  exchange_code: p.exchangeCode,
+  shares_count: p.sharesCount,
+  price_per_share: p.pricePerShare,
+  quantity: p.quantity,
+  unit: p.unit,
+  price_per_unit: p.pricePerUnit,
+  amount_invested: p.amountInvested,
+  return_percentage: p.returnPercentage,
+  tax_percentage: p.taxPercentage,
+  target_date: p.targetDate,
+  maturity_action: p.maturityAction,
+});
+
+// Posisi investasi mengubah saldo rekening, riwayat transaksi & ringkasan.
+const notifyInvestmentChange = () => {
+  notifyCollectionChanged('investments');
+  notifyCollectionChanged('accounts');
+  notifyCollectionChanged('transactions');
 };
 
 export interface StockSearchResult {

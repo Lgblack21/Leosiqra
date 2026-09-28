@@ -11,9 +11,7 @@ import {
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { investmentService, Investment } from '@/lib/services/investmentService';
-import { accountService, Account } from '@/lib/services/accountService';
-import { addTransaction } from '@/lib/services/transactionService';
-import { updateMemberTotals } from '@/lib/services/userService';
+import { Account } from '@/lib/services/accountService';
 import type { Category } from '@/lib/services/categoryService';
 import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged, User } from '@/lib/cf-auth';
@@ -139,51 +137,13 @@ export default function DepositoPage() {
       : `"${inv.name}" belum jatuh tempo (${inv.targetDate ? formatDate(inv.targetDate) : '-'}). Cairkan sekarang akan MENGHANGUSKAN bunga — hanya pokok (${formatAmount(invested, inv.currency)}) yang masuk ke rekening, dan deposito ini tidak akan diperpanjang lagi. Lanjutkan?`;
     if (!window.confirm(confirmMsg)) return;
 
-    if (inv.accountId) {
-      await accountService.updateAccountBalance(inv.accountId, totalToAccount);
+    // Server mencairkan secara atomik: baris penarikan + tutup deposito +
+    // transaksi + saldo + ringkasan dalam satu batch (klik ganda hanya sekali).
+    try {
+      await investmentService.cairkan(inv.id);
+    } catch (e) {
+      window.alert(e instanceof Error && e.message ? e.message : 'Gagal mencairkan deposito. Silakan coba lagi.');
     }
-
-    await addTransaction({
-      userId: user.uid,
-      type: 'pemasukan',
-      amount: totalToAccount,
-      category: 'Investasi',
-      subCategory: isMatured ? 'Deposito - Penarikan' : 'Deposito - Penarikan (Sebelum Jatuh Tempo)',
-      currency: inv.currency,
-      accountId: inv.accountId || 'General',
-      date: new Date(),
-      note: isMatured
-        ? `Deposito ${inv.name} dicairkan`
-        : `Deposito ${inv.name} dicairkan sebelum jatuh tempo, bunga hangus`,
-      status: 'VERIFIED',
-      relatedId: inv.id,
-      relatedType: 'investasi'
-    });
-
-    await updateMemberTotals(user.uid, 'pemasukan', totalToAccount);
-    await updateMemberTotals(user.uid, 'investasi', -invested);
-
-    await investmentService.updateInvestment(inv.id, { status: 'Closed' });
-
-    await investmentService.createInvestment({
-      userId: user.uid,
-      name: `${inv.name} (Dicairkan${isMatured ? '' : ' - Awal'})`,
-      type: 'Deposito',
-      platform: inv.platform,
-      amountInvested: invested,
-      currentValue: totalToAccount,
-      returnPercentage: rate,
-      taxPercentage: taxRate,
-      currency: inv.currency,
-      durationDays: days,
-      transactionType: 'Penarikan',
-      category: inv.category,
-      accountId: inv.accountId,
-      dateInvested: new Date(),
-      targetDate: new Date(),
-      status: 'Closed',
-      relatedInvestmentId: inv.id
-    });
   };
 
   return (
