@@ -190,3 +190,94 @@ html.no-zoom {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
+
+/* ---- Landing "Dark Luxury" ------------------------------------------------
+   Palet: hitam-navy pekat, ivory, emas champagne. Hanya dipakai di bawah
+   .lux (landing page) supaya halaman lain tidak terpengaruh. */
+.lux {
+  --lux-bg: #07080b;
+  --lux-surface: rgba(255, 255, 255, 0.035);
+  --lux-line: rgba(255, 255, 255, 0.08);
+  --lux-ivory: #f4efe6;
+  --lux-muted: #9a958c;
+  --lux-gold: #d6b67e;
+  --lux-gold-deep: #9c7641;
+  background: var(--lux-bg);
+  color: var(--lux-ivory);
+}
+.lux ::selection { background: rgba(214, 182, 126, 0.3); color: #fff; }
+
+/* Teks emas dengan kilau yang lewat pelan. */
+.lux-gold {
+  background: linear-gradient(100deg, #9c7641 0%, #e9d3a6 22%, #fff4dc 30%, #d6b67e 42%, #a88352 62%, #f1ddb5 82%, #9c7641 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: lux-shimmer 7s ease-in-out infinite;
+}
+@keyframes lux-shimmer {
+  0%, 100% { background-position: 100% 50%; }
+  50% { background-position: 0% 50%; }
+}
+
+/* Butiran film halus di atas latar gelap (SVG turbulence, tanpa file). */
+.lux-grain {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+/* Garis kisi tipis yang memudar ke tepi. */
+.lux-grid {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 75%);
+}
+
+/* Di layer components supaya utilitas Tailwind (absolute, dll.) tetap bisa menimpa. */
+@layer components {
+/* Kartu kaca gelap dengan garis emas tipis di tepi atas. */
+.lux-card {
+  position: relative;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--lux-line);
+  box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(14px);
+}
+.lux-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 12% auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(214, 182, 126, 0.7), transparent);
+}
+
+/* Tombol emas. */
+.lux-btn-gold {
+  background: linear-gradient(135deg, #f3e3c3 0%, #d6b67e 45%, #a88352 100%);
+  color: #16120b;
+  box-shadow: 0 10px 40px -10px rgba(214, 182, 126, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.lux-btn-gold:hover { box-shadow: 0 14px 50px -8px rgba(214, 182, 126, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.6); }
+
+}
+
+/* Deret teks berjalan (marquee) tanpa JS. */
+@keyframes lux-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.lux-marquee { animation: lux-marquee 40s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lux-gold, .lux-marquee { animation: none; }
+}

@@ -3,28 +3,56 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, BarChart3, CheckCircle2, Star, TrendingUp, ShieldCheck } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
+import {
+  ArrowRight, ArrowUpRight, CreditCard, Landmark, LineChart, PiggyBank, HandCoins, Wallet, Repeat, Target,
+  FileText, Sparkles, Mic, Camera, Undo2, Globe2, Bell, Smartphone, ShieldCheck, Scale, Eye, CalendarClock, Check,
+} from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
-import { LandingFeatures } from '@/components/LandingFeatures';
 import { LandingFooter } from '@/components/LandingFooter';
-import { motion } from 'framer-motion';
 import { getDeveloperInfo, PublicDeveloperInfo } from '@/lib/services/publicContactService';
 import { isStandaloneDisplay } from '@/lib/pushNotifications';
+import { Reveal } from '@/components/landing/Reveal';
+import { WealthCard } from '@/components/landing/WealthCard';
+import { QuickInputShowcase } from '@/components/landing/QuickInputShowcase';
 
-const fadeInUp = {
-  initial: { opacity: 0, y: 30 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true },
-  transition: { duration: 0.8 }
-};
+// Semua klaim di halaman ini mengacu ke fitur yang benar-benar ada di aplikasi.
+const MARQUEE = [
+  'Multi rekening & mata uang', 'Siklus tagihan kartu kredit', 'Deposito cair otomatis', 'Harga saham live',
+  'Emas & kripto', 'Hutang & piutang', 'Tabungan per tujuan', 'Transaksi rutin otomatis', 'Budget per kategori',
+  'Laporan tahunan', 'Ringkasan SPT', 'Asisten AI',
+];
 
-const staggerContainer = {
-  initial: {},
-  whileInView: { transition: { staggerChildren: 0.15 } },
-  viewport: { once: true }
-};
+const FEATURES = [
+  { icon: Wallet, title: 'Semua rekening', desc: 'Bank, e-wallet, cash, dan mata uang asing dalam satu saldo.' },
+  { icon: CreditCard, title: 'Kartu kredit', desc: 'Tagihan tercetak, pembayaran minimum, dan pengingat jatuh tempo.' },
+  { icon: PiggyBank, title: 'Tabungan per tujuan', desc: 'Dana darurat, liburan, rumah — lengkap dengan setoran otomatis.' },
+  { icon: HandCoins, title: 'Hutang & piutang', desc: 'Catat cicilan, lihat sisa, lunasi sekali tap.' },
+  { icon: LineChart, title: 'Saham & aset', desc: 'Harga saham live, emas, kripto, dan untung-rugi yang jelas.' },
+  { icon: Landmark, title: 'Deposito', desc: 'Bunga bersih dihitung otomatis, cair atau diperpanjang saat jatuh tempo.' },
+  { icon: Target, title: 'Budget', desc: 'Batas per kategori dengan peringatan sebelum kebablasan.' },
+  { icon: Repeat, title: 'Transaksi rutin', desc: 'Gaji, langganan, dan tagihan tercatat sendiri tiap periode.' },
+  { icon: Sparkles, title: 'Asisten AI', desc: 'Tanya kondisi keuanganmu dalam bahasa sehari-hari.' },
+  { icon: Bell, title: 'Notifikasi', desc: 'Ringkasan harian dan pengingat langsung ke HP.' },
+  { icon: Smartphone, title: 'Android & web', desc: 'Aplikasi Android, bisa dipasang di iPhone, dan versi web lengkap.' },
+  { icon: FileText, title: 'Laporan tahunan', desc: 'Rekap setahun penuh untuk evaluasi dan perencanaan.' },
+];
+
+const STEPS = [
+  { n: 'I', title: 'Buat akun', desc: 'Daftar dalam satu menit. Gratis 14 hari, tanpa kartu kredit.' },
+  { n: 'II', title: 'Tambahkan rekening', desc: 'Masukkan saldo awal rekening, kartu, dan aset yang Anda miliki.' },
+  { n: 'III', title: 'Catat seperlunya', desc: 'Ketik, ucapkan, atau foto struk — sisanya dirangkum otomatis.' },
+];
+
+const PRINCIPLES = [
+  { icon: Scale, title: 'Akurat sampai rupiah', desc: 'Setiap transaksi dan perubahan saldo disimpan bersamaan. Tidak ada data setengah jadi, tidak ada saldo yang terpotong dua kali.' },
+  { icon: Eye, title: 'Data Anda, hanya untuk Anda', desc: 'Setiap data terikat ke akun Anda sendiri dan hanya bisa dibuka lewat sesi login Anda.' },
+  { icon: ShieldCheck, title: 'Jujur, tanpa janji', desc: 'Leosiqra membantu Anda melihat dengan jernih. Bukan saran investasi, dan bukan janji keuntungan.' },
+];
 
 export default function LandingPage() {
+  const reduce = useReducedMotion();
+
   // PWA terpasang (Add to Home Screen) memakai UI mobile /app. Termasuk
   // instalasi lama yang start_url-nya masih "/" — tanpa ini mereka mendarat di
   // landing page lalu masuk ke dashboard web desktop.
@@ -33,7 +61,6 @@ export default function LandingPage() {
   }, []);
 
   const [developer, setDeveloper] = useState<PublicDeveloperInfo | null>(null);
-
   useEffect(() => {
     getDeveloperInfo().then(setDeveloper).catch(() => setDeveloper(null));
   }, []);
@@ -51,350 +78,387 @@ export default function LandingPage() {
     }
   }, []);
 
+  const heroItem = (i: number) =>
+    reduce
+      ? {}
+      : {
+          initial: { opacity: 0, y: 24, filter: 'blur(10px)' },
+          animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
+          transition: { duration: 1, delay: 0.15 + i * 0.12, ease: [0.16, 1, 0.3, 1] as const },
+        };
+
   return (
-    <div id="beranda" className="min-h-screen bg-background text-foreground selection:bg-indigo-500/10 scroll-mt-20">
-      <Navbar />
+    <div id="beranda" className="lux min-h-screen overflow-x-clip scroll-mt-20">
+      <Navbar variant="dark" />
 
-      {/* Hero Section */}
-      <section className="relative pt-40 pb-24 px-6 overflow-hidden">
-        {/* Lapisan dekoratif latar */}
-        <div className="hero-aurora" aria-hidden />
-        <div className="dot-grid" aria-hidden />
+      {/* ============ HERO ============ */}
+      <section className="relative pt-36 sm:pt-44 pb-20 sm:pb-28 px-5 sm:px-6">
+        <div aria-hidden className="lux-grid" />
+        <div aria-hidden className="absolute left-1/2 top-[-12%] h-[620px] w-[900px] max-w-[140vw] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(214,182,126,0.16),transparent)] blur-2xl" />
+        <div aria-hidden className="absolute right-[-10%] top-[30%] h-[420px] w-[420px] rounded-full bg-[radial-gradient(closest-side,rgba(99,102,241,0.12),transparent)] blur-3xl" />
+        <div aria-hidden className="lux-grain" />
 
-        <div className="relative max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16">
-          {/* Left Content */}
+        <div className="relative mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
+          <div>
+            <motion.div {...heroItem(0)} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.28em] text-[var(--lux-gold)]">
+              <span className="h-1.5 w-1.5 rotate-45 bg-[var(--lux-gold)]" /> Keuangan pribadi, versi terbaik
+            </motion.div>
+            <motion.h1 {...heroItem(1)} className="mt-7 font-serif text-[2.9rem] leading-[1.02] tracking-tight sm:text-6xl lg:text-[5.2rem]">
+              Kekayaan Anda,
+              <br />
+              dikelola dengan <em className="lux-gold not-italic font-serif italic">tenang.</em>
+            </motion.h1>
+            <motion.p {...heroItem(2)} className="mt-7 max-w-xl text-base leading-relaxed text-[var(--lux-muted)] sm:text-lg">
+              Rekening, kartu kredit, tabungan, hutang, dan investasi — tercatat rapi dalam satu tempat, lengkap dengan ringkasan SPT tahunan. Tanpa spreadsheet, tanpa pusing.
+            </motion.p>
+            <motion.div {...heroItem(3)} className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Link href="/auth/register" className="lux-btn-gold group inline-flex items-center justify-center gap-2 rounded-full px-8 py-4 text-sm font-bold transition-all hover:-translate-y-0.5">
+                Mulai gratis 14 hari <ArrowRight size={17} className="transition-transform group-hover:translate-x-1" />
+              </Link>
+              <Link href="/auth/login" className="inline-flex items-center justify-center gap-2 rounded-full border border-white/12 px-8 py-4 text-sm font-bold text-[var(--lux-ivory)] transition-colors hover:border-[var(--lux-gold)]/60 hover:bg-white/[0.03]">
+                Masuk ke akun
+              </Link>
+            </motion.div>
+            <motion.p {...heroItem(4)} className="mt-6 text-xs text-[var(--lux-muted)]">
+              Tanpa kartu kredit · Android, iPhone & web · Bahasa Indonesia
+            </motion.p>
+          </div>
+
           <motion.div
-            className="flex-1 text-left"
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
+            className="relative"
+            initial={reduce ? false : { opacity: 0, y: 40, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 1.2, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
           >
-            <div className="inline-flex items-center gap-2.5 pl-2.5 pr-4 py-1.5 rounded-full bg-white/70 backdrop-blur border border-indigo-100 text-indigo-600 text-[10px] font-black uppercase tracking-[0.2em] mb-8 shadow-sm">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75 animate-ping" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" />
+            <WealthCard />
+            <motion.div
+              initial={reduce ? false : { opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 1.6, duration: 0.8 }}
+              className="lux-card animate-floaty absolute -left-4 -bottom-8 hidden items-center gap-3 rounded-2xl px-4 py-3 sm:flex"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/10 text-amber-300"><CalendarClock size={17} /></span>
+              <span className="leading-tight">
+                <span className="block text-[10px] uppercase tracking-wider text-[var(--lux-muted)]">Kartu BCA</span>
+                <span className="block text-sm font-semibold">Jatuh tempo 3 hari lagi</span>
               </span>
-              Layanan Keuangan Terintegrasi
-            </div>
-            <h1 className="text-4xl sm:text-5xl md:text-7xl font-serif font-black tracking-tight mb-6 sm:mb-8 text-slate-900 leading-[1.05] sm:leading-[1.05]">
-              Leosiqra <br /> <span className="text-gradient">Premium</span> <span className="text-slate-300 font-light">|</span> Kalkulasi <br /> SPT Otomatis
-            </h1>
-            <p className="max-w-xl text-slate-500 text-base sm:text-lg mb-8 sm:mb-10 font-medium leading-relaxed">
-              Leosiqra adalah aplikasi pencatat keuangan pribadi dengan kalkulasi pajak SPT otomatis — mulai dari rekap bulanan, kalkulasi pajak, hingga portfolio investasi dalam satu dashboard bersih.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center gap-5">
-              <Link href="/auth/register" className="group w-full sm:w-auto px-10 py-5 rounded-2xl bg-gradient-to-r from-navy to-indigo-700 text-white font-black text-base transition-all flex items-center justify-center gap-2 shadow-2xl shadow-indigo-600/25 hover:shadow-indigo-600/40 hover:-translate-y-0.5 active:scale-95">
-                Mulai Sekarang <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link href="/hubungi-kami" className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-white/70 backdrop-blur border border-slate-200 text-slate-600 font-black text-base hover:bg-white hover:border-slate-300 transition-all active:scale-95 text-center">
-                Hubungi Kami
-              </Link>
-            </div>
+            </motion.div>
+            <motion.div
+              initial={reduce ? false : { opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 1.9, duration: 0.8 }}
+              className="lux-card animate-floaty [animation-delay:2s] absolute -right-3 -top-7 hidden items-center gap-3 rounded-2xl px-4 py-3 sm:flex"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-300"><Check size={17} /></span>
+              <span className="leading-tight">
+                <span className="block text-[10px] uppercase tracking-wider text-[var(--lux-muted)]">Dana Darurat</span>
+                <span className="block text-sm font-semibold">Setoran otomatis tercatat</span>
+              </span>
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
 
-            {/* Social proof ringan */}
-            <div className="mt-8 flex items-center gap-3 text-slate-500">
-              <div className="flex text-amber-400">
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <Star key={i} size={16} className="fill-amber-400" />
+      {/* ============ MARQUEE ============ */}
+      <div className="relative border-y border-white/[0.06] py-5 [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
+        <div className="lux-marquee flex w-max gap-10 whitespace-nowrap">
+          {[...MARQUEE, ...MARQUEE].map((m, i) => (
+            <span key={i} className="flex items-center gap-10 text-sm text-[var(--lux-muted)]">
+              {m} <span className="h-1 w-1 rotate-45 bg-[var(--lux-gold)]/70" />
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* ============ PRODUK (BENTO) ============ */}
+      <section id="produk" className="relative scroll-mt-24 px-5 py-24 sm:px-6 sm:py-32">
+        <div className="mx-auto max-w-7xl">
+          <Reveal className="max-w-2xl">
+            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-[var(--lux-gold)]">Produk</p>
+            <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">Semua yang Anda miliki, dalam satu pandangan.</h2>
+          </Reveal>
+
+          <div className="mt-14 grid gap-4 md:grid-cols-6">
+            <Reveal className="lux-card group rounded-[28px] p-7 md:col-span-4">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--lux-muted)]">Alokasi aset</p>
+              <h3 className="mt-2 font-serif text-2xl sm:text-3xl">Tahu persis ke mana uang Anda bekerja.</h3>
+              <div className="mt-8 space-y-4">
+                {[['Rekening & kas', 38, '#f3e3c3'], ['Deposito', 34, '#d6b67e'], ['Saham', 18, '#a88352'], ['Emas & lainnya', 10, '#6f5634']].map(([label, pct, color], i) => (
+                  <div key={label as string}>
+                    <div className="mb-1.5 flex justify-between text-xs"><span className="text-[var(--lux-muted)]">{label}</span><span className="tabular-nums">{pct}%</span></div>
+                    <div className="h-2 overflow-hidden rounded-full bg-white/[0.05]">
+                      <motion.div
+                        className="h-full rounded-full"
+                        style={{ background: color as string }}
+                        initial={reduce ? false : { width: 0 }}
+                        whileInView={{ width: `${pct}%` }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 1.4, delay: 0.2 + i * 0.12, ease: [0.16, 1, 0.3, 1] }}
+                      />
+                    </div>
+                  </div>
                 ))}
               </div>
-              <span className="text-xs font-semibold">Coba gratis 14 hari · tanpa kartu kredit</span>
-            </div>
+            </Reveal>
 
-            {/* Quick Stats Point */}
-            <div className="mt-10 flex flex-wrap gap-3">
-              {['Akurat', 'Cepat', 'Efisien', 'Terpantau'].map((tag) => (
-                <div key={tag} className="px-5 py-2.5 rounded-full bg-white/60 backdrop-blur border border-slate-200/60 text-slate-500 text-[10px] font-black uppercase tracking-widest hover:border-indigo-500 hover:text-indigo-600 hover:-translate-y-0.5 transition-all cursor-default">
-                  {tag}
-                </div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Right Content - Dashboard Mockup */}
-          <motion.div
-            className="flex-1 w-full relative mt-12 lg:mt-0"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          >
-            <div className="relative rounded-[32px] sm:rounded-[48px] bg-white/60 backdrop-blur-xl p-2 sm:p-3 shadow-2xl shadow-indigo-200/50 border border-white/80">
-              <div className="bg-white rounded-[28px] sm:rounded-[40px] overflow-hidden shadow-inner border border-slate-100 p-4 sm:p-8 space-y-6 sm:space-y-8">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Current Balance</p>
-                    <h3 className="text-3xl font-black text-slate-900 leading-none">Rp 84,2jt</h3>
-                  </div>
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100">
-                    <BarChart3 size={24} />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 rounded-3xl bg-gradient-to-br from-emerald-50 to-slate-50 border border-emerald-100/60">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1">
-                      <TrendingUp size={11} className="text-emerald-500" /> Income
-                    </p>
-                    <p className="text-lg font-black text-slate-900">Rp 12,4jt</p>
-                  </div>
-                  <div className="p-4 rounded-3xl bg-gradient-to-br from-indigo-50 to-slate-50 border border-indigo-100/60">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Savings</p>
-                    <p className="text-lg font-black text-slate-900">82%</p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="h-40 bg-indigo-600 rounded-3xl relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-tr from-indigo-700 via-indigo-600 to-violet-500" />
-                    <div className="absolute inset-0 flex items-end p-6 gap-2">
-                      {[40, 70, 45, 90, 65, 80].map((h, i) => (
-                        <div key={i} className="flex-1 bg-white/25 rounded-t-lg transition-all duration-500 group-hover:bg-white/50" style={{ height: `${h}%` }} />
-                      ))}
-                    </div>
-                  </div>
-                  <div className="p-5 rounded-3xl border border-slate-100">
-                    <div className="flex items-center gap-2 mb-8">
-                      <Image
-                        src="/images/Logo-new.png"
-                        alt="Leosiqra Logo"
-                        width={40}
-                        height={40}
-                      />
-                      <span className="font-bold text-slate-800 tracking-tight">Leosiqra</span>
-                    </div>
-                    <p className="text-[10px] text-slate-400 font-medium">Anda berhasil menabung 12% lebih banyak.</p>
-                  </div>
-                </div>
+            <Reveal delay={0.1} className="lux-card rounded-[28px] p-7 md:col-span-2">
+              <CreditCard size={22} className="text-[var(--lux-gold)]" />
+              <h3 className="mt-5 font-serif text-2xl">Kartu kredit tanpa kejutan.</h3>
+              <p className="mt-3 text-sm leading-relaxed text-[var(--lux-muted)]">Tagihan tercetak, minimum bayar, dan hitung mundur jatuh tempo.</p>
+              <div className="mt-6 rounded-2xl border border-white/[0.07] bg-black/30 p-4">
+                <div className="flex justify-between text-[11px] text-[var(--lux-muted)]"><span>Tagihan tercetak</span><span className="text-amber-300">3 hari lagi</span></div>
+                <p className="mt-1 font-serif text-2xl tabular-nums">Rp 4.250.000</p>
+                <p className="mt-1 text-[11px] text-[var(--lux-muted)]">Minimum Rp 425.000</p>
               </div>
-            </div>
+            </Reveal>
 
-            {/* Kartu aksen mengambang */}
-            <div className="hidden sm:flex animate-floaty absolute -top-6 -left-6 items-center gap-3 px-4 py-3 rounded-2xl bg-white shadow-xl shadow-slate-200/70 border border-slate-100">
-              <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-                <TrendingUp size={18} />
-              </div>
-              <div className="leading-tight">
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Pertumbuhan</p>
-                <p className="text-sm font-black text-slate-900">+12,4%</p>
-              </div>
-            </div>
-            <div className="hidden sm:flex animate-floaty [animation-delay:2s] absolute -bottom-6 -right-4 items-center gap-3 px-4 py-3 rounded-2xl bg-white shadow-xl shadow-slate-200/70 border border-slate-100">
-              <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-                <ShieldCheck size={18} />
-              </div>
-              <div className="leading-tight">
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">SPT Tahunan</p>
-                <p className="text-sm font-black text-slate-900">Otomatis</p>
-              </div>
-            </div>
+            <Reveal delay={0.05} className="lux-card rounded-[28px] p-7 md:col-span-2">
+              <Landmark size={22} className="text-[var(--lux-gold)]" />
+              <h3 className="mt-5 font-serif text-2xl">Deposito yang mengurus dirinya sendiri.</h3>
+              <p className="mt-3 text-sm leading-relaxed text-[var(--lux-muted)]">Bunga bersih setelah pajak dihitung otomatis. Saat jatuh tempo: cair ke rekening atau diperpanjang — sesuai pilihan Anda.</p>
+            </Reveal>
 
-            {/* Floating Accents */}
-            <div className="absolute -top-12 -right-12 w-40 h-40 bg-indigo-600/10 blur-[80px] rounded-full" />
-            <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-orange-600/10 blur-[80px] rounded-full" />
-          </motion.div>
-        </div>
-      </section>
-
-      <LandingFeatures />
-
-      {/* Steps Section */}
-      <section id="cara-kerja" className="py-32 px-6 scroll-mt-20 overflow-hidden">
-        <div className="max-w-7xl mx-auto space-y-20">
-          <motion.div 
-            className="text-center space-y-6"
-            {...fadeInUp}
-          >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-50 text-orange-600 text-[10px] font-black uppercase tracking-widest">
-              Cara Mulai
-            </div>
-            <h2 className="text-4xl md:text-5xl font-serif font-black text-slate-900 mx-auto max-w-2xl leading-tight">
-              Mulai dalam tiga langkah yang terasa natural.
-            </h2>
-          </motion.div>
-          <motion.div 
-            className="grid md:grid-cols-3 gap-8"
-            variants={staggerContainer}
-            initial="initial"
-            whileInView="whileInView"
-            viewport={{ once: true }}
-          >
-            {[
-              { step: '01', title: 'Set akun gratis', desc: 'Daftar dalam 1 menit tanpa perlu kartu kredit atau biaya apapun.' },
-              { step: '02', title: 'Transaksi seperlunya', desc: 'Input data pengeluaran harian atau mingguan Anda secara cepat.' },
-              { step: '03', title: 'Pantau rekap', desc: 'Biarkan sistem menyimpulkan kondisi finansial tahunan Anda.' },
-            ].map((s, i) => (
-              <motion.div 
-                key={i} 
-                className="p-10 rounded-[48px] bg-white border border-slate-100 space-y-6 shadow-sm hover:shadow-xl transition-shadow duration-500"
-                variants={fadeInUp}
-              >
-                <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-black text-lg">
-                  {s.step}
-                </div>
-                <h4 className="text-xl font-black text-slate-900">{s.title}</h4>
-                <p className="text-slate-500 font-medium leading-relaxed">{s.desc}</p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="py-32 px-6 bg-slate-50/50 overflow-hidden">
-        <div className="max-w-7xl mx-auto space-y-20">
-          <motion.div 
-            className="text-center space-y-6"
-            {...fadeInUp}
-          >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest">
-              Testimoni
-            </div>
-            <h2 className="text-4xl md:text-5xl font-serif font-black text-slate-900 mx-auto max-w-3xl leading-tight">
-              Rasa profesional yang membuat pengguna percaya untuk mulai.
-            </h2>
-          </motion.div>
-          <motion.div 
-            className="grid md:grid-cols-3 gap-6"
-            variants={staggerContainer}
-            initial="initial"
-            whileInView="whileInView"
-            viewport={{ once: true }}
-          >
-            {[
-              { name: 'Bambang Sudjatmiko', role: 'Business Owner', quote: 'Dulu saya rekap di Excel dan sangat berantakan. Sekarang semua di dashboard.' },
-              { name: 'Siti Aminah', role: 'Freelancer', quote: 'Tampilan bersih dan fitur SPT benar-benar membantu saat lapor pajak tahunan.' },
-              { name: 'Andi Pratama', role: 'Karyawan Swasta', quote: 'Saya bisa pantau tabungan pensiun saya tumbuh perlahan namun pasti.' },
-            ].map((t, i) => (
-              <motion.div 
-                key={i} 
-                className="p-10 rounded-[40px] bg-white border border-slate-100 flex flex-col justify-between shadow-sm hover:border-indigo-100 transition-colors duration-500"
-                variants={fadeInUp}
-              >
-                <p className="text-lg font-medium text-slate-600 mb-8 italic">&quot;{t.quote}&quot;</p>
+            <Reveal delay={0.1} className="lux-card rounded-[28px] p-7 md:col-span-2">
+              <LineChart size={22} className="text-[var(--lux-gold)]" />
+              <h3 className="mt-5 font-serif text-2xl">Investasi dengan harga live.</h3>
+              <div className="mt-6 flex items-end justify-between">
                 <div>
-                  <h4 className="font-black text-slate-900">{t.name}</h4>
-                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{t.role}</p>
+                  <p className="text-xs text-[var(--lux-muted)]">BBCA · 1.200 lembar</p>
+                  <p className="font-serif text-2xl tabular-nums">Rp 11.880.000</p>
                 </div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Pricing CTA Section */}
-      <section id="harga" className="py-32 px-6 scroll-mt-20 overflow-hidden">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-12 items-center">
-          <motion.div 
-            className="flex-1 space-y-8"
-            initial={{ opacity: 0, x: -30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-          >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-50 text-orange-600 text-[10px] font-black uppercase tracking-widest">
-              Harga
-            </div>
-            <h2 className="text-4xl md:text-5xl font-serif font-black text-slate-900 leading-tight">
-              Mulai gratis. Upgrade <br /> saat produk sudah <br /> menjadi kebiasaan.
-            </h2>
-            <p className="text-slate-500 font-medium leading-relaxed max-w-md">
-              Coba semua fitur dasar gratis selama 14 hari. Butuh analisis mendalam dan fitur SPT otomatis? Bergabunglah dengan Pro Plan kami.
-            </p>
-          </motion.div>
-          <motion.div 
-            className="flex-1 w-full p-12 rounded-[56px] bg-white border border-slate-100 shadow-2xl shadow-slate-200 space-y-10"
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-          >
-            <div className="flex items-center justify-between pb-8 border-b border-slate-100">
-              <div>
-                <p className="text-sm font-black text-indigo-600 uppercase tracking-widest mb-1">Trial Version</p>
-                <h4 className="text-4xl font-black text-slate-900">Rp 0 <span className="text-sm text-slate-400">/ 14 hari</span></h4>
+                <span className="rounded-full bg-emerald-400/10 px-2.5 py-1 text-xs font-bold text-emerald-300">+8,3%</span>
               </div>
-              <div className="px-5 py-2 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest border border-emerald-100">EFEKTIF</div>
-            </div>
-            <ul className="space-y-4">
-              {['Rekap Bulanan', 'Limited Categories', 'Dashboard Ringkasan', 'Mobile Friendly'].map((item, i) => (
-                <li key={i} className="flex items-center gap-3 text-slate-500 font-medium">
-                  <CheckCircle2 size={18} className="text-emerald-500" />
-                  {item}
-                </li>
-              ))}
+            </Reveal>
+
+            <Reveal delay={0.15} className="lux-card rounded-[28px] p-7 md:col-span-2">
+              <PiggyBank size={22} className="text-[var(--lux-gold)]" />
+              <h3 className="mt-5 font-serif text-2xl">Tabungan per tujuan.</h3>
+              <div className="mt-6 flex items-center gap-5">
+                <svg viewBox="0 0 64 64" className="h-16 w-16 -rotate-90" aria-hidden>
+                  <circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="6" />
+                  <motion.circle
+                    cx="32" cy="32" r="27" fill="none" stroke="#d6b67e" strokeWidth="6" strokeLinecap="round"
+                    initial={reduce ? false : { pathLength: 0 }}
+                    whileInView={{ pathLength: 0.72 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 1.8, ease: [0.16, 1, 0.3, 1] }}
+                  />
+                </svg>
+                <div>
+                  <p className="text-xs text-[var(--lux-muted)]">Dana Darurat</p>
+                  <p className="font-serif text-xl">72% tercapai</p>
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ INPUT CEPAT ============ */}
+      <section className="relative overflow-hidden px-5 py-24 sm:px-6 sm:py-32">
+        <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        <div className="mx-auto grid max-w-7xl items-center gap-16 lg:grid-cols-2">
+          <Reveal>
+            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-[var(--lux-gold)]">Input Cepat</p>
+            <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">Catat dalam hitungan detik. Dengan cara Anda.</h2>
+            <p className="mt-6 max-w-lg text-[var(--lux-muted)] leading-relaxed">
+              Ketik seperti menulis catatan, ucapkan, atau foto struknya. Nominal, kategori, rekening, dan tanggal terisi sendiri — Anda tinggal memeriksa lalu menyimpan.
+            </p>
+            <ul className="mt-10 space-y-5">
+              {[
+                [Sparkles, 'Ketik pintar', '“25rb kopi bca kemarin” langsung dipahami.'],
+                [Mic, 'Bicara', 'Ucapkan transaksinya, AI yang menuliskan.'],
+                [Camera, 'Foto struk', 'Total, nama toko, dan kategori terbaca otomatis.'],
+                [Undo2, 'Bisa dibatalkan', 'Salah catat? Batalkan, saldo kembali persis.'],
+              ].map(([Icon, title, desc]) => {
+                const I = Icon as React.ElementType;
+                return (
+                  <li key={title as string} className="flex gap-4">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-[var(--lux-gold)]"><I size={17} /></span>
+                    <span>
+                      <span className="block font-semibold">{title as string}</span>
+                      <span className="block text-sm text-[var(--lux-muted)]">{desc as string}</span>
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
-            <Link href="/auth/register" className="block w-full py-5 rounded-2xl bg-navy text-white text-center font-black hover:bg-slate-800 transition-all shadow-xl shadow-navy/20">
-              Mulai Sekarang
-            </Link>
-          </motion.div>
+          </Reveal>
+          <Reveal delay={0.15}>
+            <QuickInputShowcase />
+          </Reveal>
         </div>
       </section>
 
-      {/* Final CTA Full */}
-      <section className="py-14 sm:py-24 px-6 relative overflow-hidden">
-        <motion.div
-          className="max-w-3xl mx-auto rounded-[32px] sm:rounded-[48px] bg-gradient-to-b from-white to-slate-50 border border-slate-100 p-6 sm:p-10 md:p-14 text-center space-y-4 sm:space-y-6 relative z-10 shadow-2xl shadow-slate-200/50"
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 1 }}
-        >
-          <div className="inline-flex items-center gap-2 px-5 py-1.5 rounded-full bg-[#FCF8F1] text-[#B8926A] text-[10px] font-black uppercase tracking-[0.2em] border border-[#F5E6CF]/50 mx-auto">
-            START TODAY
+      {/* ============ FITUR ============ */}
+      <section id="fitur" className="relative scroll-mt-24 px-5 py-24 sm:px-6 sm:py-32">
+        <div className="mx-auto max-w-7xl">
+          <Reveal className="mx-auto max-w-2xl text-center">
+            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-[var(--lux-gold)]">Fitur</p>
+            <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">Lengkap, tanpa terasa rumit.</h2>
+          </Reveal>
+          <div className="mt-16 grid grid-cols-2 gap-px overflow-hidden rounded-[28px] border border-white/[0.07] bg-white/[0.07] lg:grid-cols-4">
+            {FEATURES.map((f, i) => (
+              <Reveal key={f.title} delay={(i % 4) * 0.06} y={16} className="group bg-[var(--lux-bg)] p-5 sm:p-7 transition-colors duration-500 hover:bg-white/[0.025]">
+                <f.icon size={20} className="text-[var(--lux-gold)] transition-transform duration-500 group-hover:-translate-y-0.5" />
+                <h3 className="mt-4 sm:mt-5 text-sm sm:text-base font-semibold">{f.title}</h3>
+                <p className="mt-2 text-xs sm:text-sm leading-relaxed text-[var(--lux-muted)]">{f.desc}</p>
+              </Reveal>
+            ))}
           </div>
-          <h2 className="text-3xl md:text-4xl font-serif font-black text-slate-900 leading-[1.15] tracking-tight">
-            Mulai lebih rapi mengelola <br /> keuangan pribadi hari ini.
-          </h2>
-          <p className="text-slate-500 font-medium max-w-[480px] mx-auto leading-relaxed text-sm">
-            Buat akun gratis dan lihat kondisi finansial Anda dalam tampilan yang lebih jelas, modern, dan tenang.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <Link href="/auth/register" className="w-full sm:w-auto px-8 py-4 rounded-[18px] bg-navy text-white font-black hover:bg-slate-800 transition-all shadow-xl shadow-navy/20 active:scale-95">
-              Daftar Gratis
-            </Link>
-            <Link href="/auth/login" className="w-full sm:w-auto px-8 py-4 rounded-[18px] bg-white border border-slate-100 text-slate-900 font-black hover:bg-slate-50 transition-all shadow-sm active:scale-95">
-              Masuk
-            </Link>
-          </div>
-        </motion.div>
-
-        {/* Decorative background blobs */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] pointer-events-none opacity-50">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-100/30 blur-[120px] rounded-full" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-100/30 blur-[120px] rounded-full" />
-          <div className="absolute top-1/2 right-1/3 w-96 h-96 bg-emerald-50/20 blur-[120px] rounded-full" />
         </div>
       </section>
 
-      {/* Developer Profile */}
+      {/* ============ PAJAK ============ */}
+      <section id="pajak" className="relative scroll-mt-24 px-5 py-24 sm:px-6 sm:py-32">
+        <Reveal className="lux-card relative mx-auto grid max-w-7xl items-center gap-12 overflow-hidden rounded-[36px] p-8 sm:p-14 lg:grid-cols-2">
+          <div aria-hidden className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(closest-side,rgba(214,182,126,0.18),transparent)]" />
+          <div className="relative">
+            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-[var(--lux-gold)]">Pajak Center</p>
+            <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">SPT tahunan, disiapkan dari catatan Anda.</h2>
+            <p className="mt-6 max-w-lg leading-relaxed text-[var(--lux-muted)]">
+              Harta, penghasilan, dan estimasi PPh dirangkum otomatis dari transaksi sepanjang tahun — siap Anda pakai saat lapor.
+            </p>
+            <p className="mt-6 max-w-lg border-l border-[var(--lux-gold)]/40 pl-4 text-xs leading-relaxed text-[var(--lux-muted)]">
+              Leosiqra menghitung &amp; menyusun ringkasan SPT. Pelaporan resmi tetap Anda kirim sendiri melalui{' '}
+              <a href="https://coretaxdjp.pajak.go.id/" target="_blank" rel="noopener noreferrer" className="text-[var(--lux-gold)] underline-offset-4 hover:underline">coretaxdjp.pajak.go.id</a>.
+            </p>
+          </div>
+          <ul className="relative space-y-3">
+            {['Daftar harta otomatis dari saldo & investasi', 'Estimasi PPh dengan PTKP', 'Ringkasan penghasilan setahun', 'Ekspor Excel & PDF'].map((item, i) => (
+              <motion.li
+                key={item}
+                initial={reduce ? false : { opacity: 0, x: 24 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.2 + i * 0.1, duration: 0.7 }}
+                className="flex items-center gap-4 rounded-2xl border border-white/[0.07] bg-black/20 px-5 py-4"
+              >
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--lux-gold)]/15 text-[var(--lux-gold)]"><Check size={14} /></span>
+                <span className="text-sm">{item}</span>
+              </motion.li>
+            ))}
+          </ul>
+        </Reveal>
+      </section>
+
+      {/* ============ PRINSIP ============ */}
+      <section className="relative px-5 py-24 sm:px-6 sm:py-32">
+        <div className="mx-auto max-w-7xl">
+          <Reveal className="max-w-2xl">
+            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-[var(--lux-gold)]">Prinsip kami</p>
+            <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">Dibangun untuk dipercaya.</h2>
+          </Reveal>
+          <div className="mt-14 grid gap-4 md:grid-cols-3">
+            {PRINCIPLES.map((p, i) => (
+              <Reveal key={p.title} delay={i * 0.1} className="lux-card rounded-[28px] p-8">
+                <p.icon size={22} className="text-[var(--lux-gold)]" />
+                <h3 className="mt-6 font-serif text-2xl">{p.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-[var(--lux-muted)]">{p.desc}</p>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ CARA KERJA ============ */}
+      <section id="cara-kerja" className="relative scroll-mt-24 px-5 py-24 sm:px-6 sm:py-32">
+        <div className="mx-auto max-w-7xl">
+          <Reveal className="mx-auto max-w-2xl text-center">
+            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-[var(--lux-gold)]">Cara mulai</p>
+            <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">Tiga langkah menuju keuangan yang tenang.</h2>
+          </Reveal>
+          <div className="relative mt-16 grid gap-10 md:grid-cols-3">
+            <motion.div
+              aria-hidden
+              className="absolute left-[16%] right-[16%] top-8 hidden h-px origin-left bg-gradient-to-r from-[var(--lux-gold)]/0 via-[var(--lux-gold)]/50 to-[var(--lux-gold)]/0 md:block"
+              initial={reduce ? false : { scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1.6, ease: [0.16, 1, 0.3, 1] }}
+            />
+            {STEPS.map((s, i) => (
+              <Reveal key={s.n} delay={0.2 + i * 0.15} className="relative text-center">
+                <span className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[var(--lux-gold)]/40 bg-[var(--lux-bg)] font-serif text-xl text-[var(--lux-gold)]">{s.n}</span>
+                <h3 className="mt-6 font-serif text-2xl">{s.title}</h3>
+                <p className="mx-auto mt-3 max-w-xs text-sm leading-relaxed text-[var(--lux-muted)]">{s.desc}</p>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ HARGA ============ */}
+      <section id="harga" className="relative scroll-mt-24 px-5 py-24 sm:px-6 sm:py-32">
+        <div className="mx-auto max-w-5xl">
+          <Reveal className="mx-auto max-w-2xl text-center">
+            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-[var(--lux-gold)]">Harga</p>
+            <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">Coba dulu. Lanjutkan kalau cocok.</h2>
+          </Reveal>
+          <div className="mt-14 grid gap-4 md:grid-cols-2">
+            <Reveal className="lux-card flex flex-col rounded-[32px] p-9">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--lux-muted)]">Masa coba</p>
+              <p className="mt-4 font-serif text-5xl">Rp 0</p>
+              <p className="mt-1 text-sm text-[var(--lux-muted)]">selama 14 hari · tanpa kartu kredit</p>
+              <ul className="mt-8 flex-1 space-y-3 text-sm">
+                {['Semua fitur aktif', 'Input Cepat: ketik, suara, foto struk', 'Tabungan, hutang, investasi', 'Aplikasi Android & web'].map((x) => (
+                  <li key={x} className="flex items-center gap-3"><Check size={15} className="text-[var(--lux-gold)]" /> {x}</li>
+                ))}
+              </ul>
+              <Link href="/auth/register" className="lux-btn-gold mt-10 block rounded-full py-4 text-center text-sm font-bold transition-all hover:-translate-y-0.5">Mulai gratis</Link>
+            </Reveal>
+            <Reveal delay={0.1} className="relative flex flex-col overflow-hidden rounded-[32px] border border-[var(--lux-gold)]/35 bg-gradient-to-b from-[var(--lux-gold)]/[0.09] to-transparent p-9">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--lux-gold)]">Pro</p>
+              <p className="mt-4 font-serif text-4xl leading-tight">Semua fitur, tanpa batas waktu.</p>
+              <p className="mt-3 text-sm text-[var(--lux-muted)]">Lanjutkan setelah masa coba. Harga & cara pembayaran tersedia di dalam aplikasi.</p>
+              <ul className="mt-8 flex-1 space-y-3 text-sm">
+                {['Semua fitur tetap aktif', 'Pajak Center & laporan tahunan', 'Asisten AI', 'Pengingat & notifikasi'].map((x) => (
+                  <li key={x} className="flex items-center gap-3"><Check size={15} className="text-[var(--lux-gold)]" /> {x}</li>
+                ))}
+              </ul>
+              <Link href="/hubungi-kami" className="mt-10 block rounded-full border border-[var(--lux-gold)]/50 py-4 text-center text-sm font-bold text-[var(--lux-gold)] transition-colors hover:bg-[var(--lux-gold)]/10">Tanya tim kami</Link>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ DEVELOPER ============ */}
       {developer?.photoUrl && (
-        <section className="pb-20 sm:pb-28 px-6">
-          <motion.div
-            className="max-w-2xl mx-auto text-center space-y-7"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-          >
-            <div className="relative w-28 h-28 sm:w-32 sm:h-32 mx-auto rounded-full overflow-hidden border-4 border-white shadow-xl shadow-slate-200/60">
-              <Image src={developer.photoUrl} alt={developer.name || 'Developer Leosiqra'} fill className="object-cover" />
+        <section className="px-5 pb-8 sm:px-6">
+          <Reveal className="mx-auto max-w-2xl text-center">
+            <div className="relative mx-auto h-24 w-24 overflow-hidden rounded-full ring-1 ring-[var(--lux-gold)]/50 ring-offset-4 ring-offset-[var(--lux-bg)]">
+              <Image src={developer.photoUrl} alt={developer.name || 'Pendiri Leosiqra'} fill className="object-cover" />
             </div>
-            <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.25em]">Dibalik Leosiqra</p>
-              {developer.name && (
-                <h3 className="text-2xl sm:text-3xl font-serif font-black text-slate-900 tracking-tight">{developer.name}</h3>
-              )}
-            </div>
-            {developer.quote && (
-              <p className="text-lg sm:text-xl font-medium text-slate-600 italic leading-relaxed">
-                &ldquo;{developer.quote}&rdquo;
-              </p>
-            )}
-          </motion.div>
+            <p className="mt-6 text-[10px] font-bold uppercase tracking-[0.3em] text-[var(--lux-gold)]">Di balik Leosiqra</p>
+            {developer.name && <h3 className="mt-2 font-serif text-3xl">{developer.name}</h3>}
+            {developer.quote && <p className="mt-5 font-serif text-xl italic leading-relaxed text-[var(--lux-ivory)]/80">&ldquo;{developer.quote}&rdquo;</p>}
+          </Reveal>
         </section>
       )}
 
-      <LandingFooter />
+      {/* ============ CTA AKHIR ============ */}
+      <section className="relative overflow-hidden px-5 py-28 sm:px-6 sm:py-36">
+        <div aria-hidden className="absolute left-1/2 top-1/2 h-[520px] w-[820px] max-w-[140vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(214,182,126,0.14),transparent)] blur-2xl" />
+        <div aria-hidden className="lux-grain" />
+        <Reveal className="relative mx-auto max-w-3xl text-center">
+          <h2 className="font-serif text-4xl leading-[1.08] sm:text-6xl">
+            Mulai hari ini.
+            <br />
+            <span className="lux-gold italic">Tenang</span> seterusnya.
+          </h2>
+          <p className="mx-auto mt-6 max-w-md text-[var(--lux-muted)]">Buat akun gratis dan lihat kondisi keuangan Anda dengan jernih — dalam hitungan menit.</p>
+          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link href="/auth/register" className="lux-btn-gold group inline-flex w-full items-center justify-center gap-2 rounded-full px-9 py-4 text-sm font-bold transition-all hover:-translate-y-0.5 sm:w-auto">
+              Daftar gratis <ArrowUpRight size={17} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </Link>
+            <Link href="/hubungi-kami" className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/12 px-9 py-4 text-sm font-bold transition-colors hover:border-[var(--lux-gold)]/60 sm:w-auto">
+              <Globe2 size={16} /> Hubungi kami
+            </Link>
+          </div>
+        </Reveal>
+      </section>
+
+      <LandingFooter variant="dark" />
     </div>
   );
 }
