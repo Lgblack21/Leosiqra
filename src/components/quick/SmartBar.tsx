@@ -148,11 +148,17 @@ export function SmartBar({ ctx, onDraft, className }: Props) {
                 disabled={status.kind === "thinking"}
                 aria-label={status.kind === "listening" ? "Berhenti" : "Input suara"}
                 className={cn(
-                  "shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-white transition-colors disabled:opacity-40",
-                  status.kind === "listening" ? "bg-rose-500 animate-pulse" : "bg-indigo-600"
+                  "relative shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-white transition-colors disabled:opacity-40",
+                  status.kind === "listening" ? "bg-rose-500" : "bg-indigo-600"
                 )}
               >
-                {status.kind === "listening" ? <Square size={14} fill="currentColor" /> : <Mic size={17} />}
+                {status.kind === "listening" && (
+                  <span aria-hidden className="absolute inset-0 rounded-xl">
+                    <span className="mic-wave" />
+                    <span className="mic-wave" />
+                  </span>
+                )}
+                <span className="relative">{status.kind === "listening" ? <Square size={14} fill="currentColor" /> : <Mic size={17} />}</span>
               </button>
             )}
           </>

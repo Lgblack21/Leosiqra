@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useAnimationControls } from "framer-motion";
 import {
   ArrowDownCircle,
   ArrowUpCircle,
@@ -71,6 +71,8 @@ export default function InputCepatPage() {
   const [hint, setHint] = useState<{ source: DraftSource; text?: string } | null>(null);
   const [undoItem, setUndoItem] = useState<UndoItem | null>(null);
   const [uid, setUid] = useState("");
+  // Nominal "meletup" sebentar saat terisi dari ketik pintar / suara / struk.
+  const amountControls = useAnimationControls();
   // Instruksi "pasang di layar utama" tidak perlu kalau sudah dibuka sebagai app.
   const [standalone, setStandalone] = useState(true);
   useEffect(() => { setStandalone(isStandaloneDisplay()); }, []);
@@ -232,7 +234,10 @@ export default function InputCepatPage() {
   // Isi form dari ketik pintar / suara / foto struk — tidak langsung disimpan.
   const applyDraft = (draft: QuickDraft, source: DraftSource, info?: string) => {
     if (draft.type) setType(draft.type);
-    if (draft.amount) setAmount(String(draft.amount));
+    if (draft.amount) {
+      setAmount(String(draft.amount));
+      void amountControls.start({ scale: [1, 1.12, 1], transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } });
+    }
     if (draft.accountId && accounts.some((a) => a.id === draft.accountId)) setAccountId(draft.accountId);
     if (draft.category) { setCategory(draft.category); setSubCategory(draft.subCategory ?? ""); }
     if (draft.note) setNote(draft.note);
@@ -311,7 +316,7 @@ export default function InputCepatPage() {
     <>
       <SplashScreen ready userName={profile?.name} userPhoto={profile?.photoURL} />
       <div className="min-h-screen bg-slate-50 flex flex-col">
-      <div className="w-full max-w-md mx-auto px-5 pt-[calc(env(safe-area-inset-top)+20px)] pb-36 flex-1">
+      <div className="stagger-in w-full max-w-md mx-auto px-5 pt-[calc(env(safe-area-inset-top)+20px)] pb-36 flex-1">
         {/* Header ringkas: profil + total hari ini (tap = rincian). */}
         <div className="flex items-center gap-3">
           <Link href="/membership/profile" className="flex items-center gap-3 min-w-0 flex-1">
@@ -368,11 +373,19 @@ export default function InputCepatPage() {
                   type="button"
                   onClick={() => setType(value)}
                   className={cn(
-                    "flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-black transition-all",
-                    type === value ? `${active} text-white shadow-sm` : "text-slate-500"
+                    "relative flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-black transition-colors duration-300",
+                    type === value ? "text-white" : "text-slate-500"
                   )}
                 >
-                  <Icon size={14} /> {label}
+                  {/* Pil warna meluncur ke jenis terpilih. */}
+                  {type === value && (
+                    <motion.span
+                      layoutId="qc-type-pill"
+                      className={cn("absolute inset-0 rounded-xl shadow-sm", active)}
+                      transition={{ type: "spring", stiffness: 480, damping: 36 }}
+                    />
+                  )}
+                  <span className="relative flex items-center gap-1.5"><Icon size={14} /> {label}</span>
                 </button>
               )
             )}
@@ -380,7 +393,7 @@ export default function InputCepatPage() {
 
           <div className="pt-6 pb-4 text-center">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nominal</p>
-            <div className="mt-1 flex items-baseline justify-center gap-2">
+            <motion.div animate={amountControls} className="mt-1 flex items-baseline justify-center gap-2">
               <span className="text-xl font-black text-slate-300">{selectedAccount?.currency ?? "IDR"}</span>
               <NumberInput
                 autoFocus
@@ -395,7 +408,7 @@ export default function InputCepatPage() {
                   type === "pengeluaran" ? "text-rose-600" : "text-emerald-600"
                 )}
               />
-            </div>
+            </motion.div>
           </div>
 
           {/* Tanggal — default hari ini; kemarin/tanggal lain untuk yang lupa dicatat. */}

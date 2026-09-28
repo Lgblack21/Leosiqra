@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { CalendarDays, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Sparkles } from "lucide-react";
 import { accountService, Account } from "@/lib/services/accountService";
 import { auth } from "@/lib/cf-client";
@@ -31,18 +32,26 @@ function ModeToggle({ value, onChange }: { value: SheetMode; onChange: (m: Sheet
     { mode: "transfer", label: "Transfer", icon: ArrowLeftRight, active: "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100 dark:shadow-none" },
   ];
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800">
       {items.map(({ mode, label, icon: Icon, active }) => (
         <button
           key={mode}
           type="button"
           onClick={() => { lightTap(); onChange(mode); }}
           className={cn(
-            "flex items-center justify-center gap-1.5 py-3.5 rounded-2xl text-[13px] font-black transition-all border-2",
-            value === mode ? active : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-400 dark:text-slate-500"
+            "relative flex items-center justify-center gap-1.5 py-3 rounded-xl text-[13px] font-black transition-colors duration-300",
+            value === mode ? "text-white" : "text-slate-400 dark:text-slate-500"
           )}
         >
-          <Icon size={15} /> {label}
+          {/* Pil warna meluncur ke mode terpilih. */}
+          {value === mode && (
+            <motion.span
+              layoutId="add-mode-pill"
+              className={cn("absolute inset-0 rounded-xl border-0", active)}
+              transition={{ type: "spring", stiffness: 480, damping: 36 }}
+            />
+          )}
+          <span className="relative flex items-center gap-1.5"><Icon size={15} /> {label}</span>
         </button>
       ))}
     </div>

@@ -22,6 +22,7 @@ import { MonthPicker } from '@/components/ui/MonthPicker';
 import { Modal } from '@/components/ui/Modal';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { StatCard } from '@/components/ui/StatCard';
+import { AnimatedNumber } from '@/components/app/AnimatedNumber';
 import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -304,7 +305,7 @@ export default function MonthlyDashboard() {
   const statsLoading = loading && transactions.length === 0;
 
   return (
-    <div className="space-y-6 md:space-y-8 max-w-[1400px] pb-10">
+    <div className="stagger-in space-y-6 md:space-y-8 max-w-[1400px] pb-10">
       <PageHeader
         icon={<LayoutDashboard size={22} />}
         title="Dashboard Bulanan"
@@ -323,11 +324,11 @@ export default function MonthlyDashboard() {
       <GamificationStrip />
 
       {/* Baris 1: Saldo (kartu utama) + arus kas bulan ini */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+      <div className="stagger-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         <button
           type="button"
           onClick={() => setShowAccountsModal(true)}
-          className="md:col-span-2 lg:col-span-1 text-left w-full bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-card p-5 md:p-6 shadow-xl shadow-emerald-600/15 relative overflow-hidden hover:shadow-2xl hover:shadow-emerald-600/25 hover:-translate-y-0.5 active:scale-[0.99] transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300"
+          className="sheen md:col-span-2 lg:col-span-1 text-left w-full bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-card p-5 md:p-6 shadow-xl shadow-emerald-600/15 relative overflow-hidden hover:shadow-2xl hover:shadow-emerald-600/25 hover:-translate-y-0.5 active:scale-[0.99] transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300"
         >
           <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
           <div className="flex items-center justify-between gap-2 mb-4">
@@ -340,7 +341,7 @@ export default function MonthlyDashboard() {
             <div className="h-9 w-2/3 mb-5 rounded-control bg-white/20 animate-pulse" />
           ) : (
             <p className={cn('text-2xl md:text-3xl font-black mb-5 tracking-tight tabular-nums truncate', totalSaldoRekening >= 0 ? 'text-white' : 'text-rose-200')}>
-              {formatRp(totalSaldoRekening)}
+              <AnimatedNumber value={totalSaldoRekening} format={formatRp} />
             </p>
           )}
           <p className="text-caption font-bold text-emerald-100">
@@ -351,7 +352,7 @@ export default function MonthlyDashboard() {
         <StatCard
           label="Pemasukan"
           icon={<TrendingUp size={12} className="text-emerald-500" />}
-          value={formatRp(totalPemasukan)}
+          value={<AnimatedNumber value={totalPemasukan} format={formatRp} />}
           loading={statsLoading}
           badge={<Badge tone={pengeluaranPct <= 80 ? 'info' : 'danger'}>{pengeluaranPct <= 80 ? 'Sehat' : 'Waspada'}</Badge>}
           progress={pemasukanPct}
@@ -361,7 +362,7 @@ export default function MonthlyDashboard() {
         <StatCard
           label="Pengeluaran"
           icon={<TrendingDown size={12} className="text-rose-500" />}
-          value={formatRp(totalPengeluaran)}
+          value={<AnimatedNumber value={totalPengeluaran} format={formatRp} />}
           loading={statsLoading}
           badge={<Badge tone={pengeluaranPct > 90 ? 'danger' : 'neutral'}>{pengeluaranPct > 90 ? 'Waspada' : 'Normal'}</Badge>}
           progress={pengeluaranPct}
@@ -371,11 +372,11 @@ export default function MonthlyDashboard() {
       </div>
 
       {/* Baris 2: aset & kewajiban */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="stagger-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <StatCard
           label="Tabungan"
           icon={<PiggyBank size={12} className="text-blue-500" />}
-          value={formatRp(totalTabunganSaldo)}
+          value={<AnimatedNumber value={totalTabunganSaldo} format={formatRp} />}
           loading={statsLoading}
           badge={<Badge tone="info">{savings.length} trx</Badge>}
           progress={tabunganPct}
@@ -385,7 +386,7 @@ export default function MonthlyDashboard() {
         <StatCard
           label="Investasi"
           icon={<Wallet size={12} className="text-slate-600" />}
-          value={formatRp(totalInvestasi)}
+          value={<AnimatedNumber value={totalInvestasi} format={formatRp} />}
           loading={statsLoading}
           badge={<Badge tone="info">{investments.filter(i => i.status === 'Active').length} aktif</Badge>}
           progress={investasiPct}
@@ -394,7 +395,7 @@ export default function MonthlyDashboard() {
         <StatCard
           label="Tagihan Kartu Kredit"
           icon={<CreditCard size={12} className="text-rose-500" />}
-          value={formatRp(creditCardBills)}
+          value={<AnimatedNumber value={creditCardBills} format={formatRp} />}
           valueClassName={creditCardBills > 0 ? 'text-rose-500' : undefined}
           loading={statsLoading}
           badge={nearestDue && (nearestDue.cycle.overdue || nearestDue.cycle.daysUntilDue <= 3)
@@ -405,7 +406,7 @@ export default function MonthlyDashboard() {
         <StatCard
           label="Hutang Lainnya"
           icon={<Landmark size={12} className="text-slate-600" />}
-          value={formatRp(otherDebts)}
+          value={<AnimatedNumber value={otherDebts} format={formatRp} />}
           valueClassName={otherDebts > 0 ? 'text-rose-500' : undefined}
           loading={statsLoading}
           caption={otherDebts > 0 ? 'Kewajiban aktif' : 'Bebas hutang'}

@@ -38,17 +38,28 @@ function Tab({ tab, pathname }: { tab: TabItem; pathname: string }) {
       onClick={lightTap}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex flex-col items-center gap-1 py-2.5 text-[10px] font-bold transition-colors",
+        "relative flex flex-col items-center gap-1 py-2.5 text-[10px] font-bold transition-colors",
         active ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"
       )}
     >
-      <motion.span
-        animate={{ scale: active ? 1.15 : 1 }}
-        transition={{ type: "spring", stiffness: 400, damping: 20 }}
-        className="flex items-center justify-center"
-      >
-        <Icon size={20} strokeWidth={active ? 2.5 : 2} />
-      </motion.span>
+      {/* Pil latar ikon aktif meluncur antar tab (shared layout). */}
+      <span className="relative flex h-8 w-14 items-center justify-center">
+        {active && (
+          <motion.span
+            layoutId="tab-pill"
+            className="absolute inset-0 rounded-full bg-indigo-50 dark:bg-indigo-500/15"
+            transition={{ type: "spring", stiffness: 500, damping: 38 }}
+          />
+        )}
+        <motion.span
+          animate={{ scale: active ? 1.1 : 1, y: active ? -1 : 0 }}
+          whileTap={{ scale: 0.85 }}
+          transition={{ type: "spring", stiffness: 500, damping: 22 }}
+          className="relative flex items-center justify-center"
+        >
+          <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+        </motion.span>
+      </span>
       {tab.label}
     </Link>
   );

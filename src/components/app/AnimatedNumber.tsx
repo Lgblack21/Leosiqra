@@ -23,8 +23,8 @@ export function AnimatedNumber({ value, format, className }: AnimatedNumberProps
 
   useEffect(() => {
     const controls = animate(motionValue, value, {
-      duration: 0.6,
-      ease: "easeOut",
+      duration: 0.9,
+      ease: [0.16, 1, 0.3, 1],
       onUpdate: (v) => {
         if (ref.current) ref.current.textContent = format(v);
       },

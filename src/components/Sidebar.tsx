@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -84,15 +85,23 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         onClick={closeOnMobile}
         aria-current={active ? 'page' : undefined}
         className={cn(
-          'flex items-center gap-3 rounded-control text-sm transition-colors',
+          'relative flex items-center gap-3 rounded-control text-sm transition-colors',
           nested ? 'pl-10 pr-3 py-2' : 'px-3 py-2.5 font-bold',
           active
-            ? 'bg-white text-indigo-600 font-bold shadow-sm ring-1 ring-slate-200/70'
+            ? 'text-indigo-600 font-bold'
             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
         )}
       >
-        {!nested && <item.icon size={18} className={active ? 'text-indigo-600' : 'text-slate-400'} />}
-        <span className="truncate">{item.label}</span>
+        {/* Latar item aktif meluncur halus dari item sebelumnya (shared layout). */}
+        {active && (
+          <motion.span
+            layoutId="sidebar-active"
+            className="absolute inset-0 rounded-control bg-white shadow-sm ring-1 ring-slate-200/70"
+            transition={{ type: 'spring', stiffness: 420, damping: 36 }}
+          />
+        )}
+        {!nested && <item.icon size={18} className={cn('relative', active ? 'text-indigo-600' : 'text-slate-400')} />}
+        <span className="relative truncate">{item.label}</span>
       </Link>
     );
   };

@@ -281,3 +281,80 @@ html.no-zoom {
 @media (prefers-reduced-motion: reduce) {
   .lux-gold, .lux-marquee { animation: none; }
 }
+
+/* ---- Animasi premium di dalam aplikasi -------------------------------------
+   PENTING: animasi masuk memakai fill-mode `backwards`, BUKAN `both`. Dengan
+   `both`, nilai akhir (matrix identitas / blur(0)) tetap menempel dan elemen
+   jadi containing block untuk anak `position: fixed` — modal di dalam halaman
+   jadi salah posisi (terverifikasi di browser). `backwards` hanya menahan
+   keadaan awal selama jeda, lalu elemen kembali ke gaya aslinya (none). */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(14px); filter: blur(6px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes tab-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+/* Transisi antar halaman web setelah login (membership/template.tsx). */
+.page-enter { animation: page-enter 0.55s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+/* Transisi antar tab aplikasi mobile (app/(tabs)/template.tsx) — tanpa blur, ringan di HP. */
+.tab-enter { animation: tab-enter 0.32s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+
+/* Anak langsung muncul bergantian: .stagger-in untuk susunan section,
+   .stagger-grid untuk kartu di dalam grid. */
+.stagger-in > *, .stagger-grid > * { animation: rise-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.stagger-in > :nth-child(2) { animation-delay: 0.07s; }
+.stagger-in > :nth-child(3) { animation-delay: 0.14s; }
+.stagger-in > :nth-child(4) { animation-delay: 0.21s; }
+.stagger-in > :nth-child(5) { animation-delay: 0.28s; }
+.stagger-in > :nth-child(6) { animation-delay: 0.35s; }
+.stagger-in > :nth-child(n + 7) { animation-delay: 0.42s; }
+.stagger-grid > :nth-child(2) { animation-delay: 0.06s; }
+.stagger-grid > :nth-child(3) { animation-delay: 0.12s; }
+.stagger-grid > :nth-child(4) { animation-delay: 0.18s; }
+.stagger-grid > :nth-child(n + 5) { animation-delay: 0.24s; }
+
+/* Kartu yang bisa diklik: terangkat halus saat hover. */
+.lift { transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease; }
+.lift:hover { transform: translateY(-3px); box-shadow: 0 22px 44px -22px rgba(15, 23, 42, 0.3); }
+
+/* Kilau cahaya yang menyapu kartu saldo sekali saat muncul. */
+@keyframes sheen-sweep {
+  from { transform: translateX(-120%) skewX(-18deg); }
+  to { transform: translateX(220%) skewX(-18deg); }
+}
+.sheen { position: relative; overflow: hidden; }
+.sheen::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+  animation: sheen-sweep 1.6s 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Tombol + mobile: cahaya lembut yang "bernapas". */
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 10px 30px -8px rgba(79, 70, 229, 0.55), 0 0 0 0 rgba(99, 102, 241, 0.35); }
+  50% { box-shadow: 0 14px 38px -8px rgba(79, 70, 229, 0.7), 0 0 0 10px rgba(99, 102, 241, 0); }
+}
+.breathe { animation: breathe 3.2s ease-in-out infinite; }
+
+/* Gelombang cahaya di sekitar mic saat mendengarkan. */
+@keyframes mic-wave {
+  from { transform: scale(1); opacity: 0.55; }
+  to { transform: scale(2.1); opacity: 0; }
+}
+.mic-wave { position: absolute; inset: 0; border-radius: inherit; background: rgba(244, 63, 94, 0.45); animation: mic-wave 1.4s ease-out infinite; }
+.mic-wave:nth-child(2) { animation-delay: 0.7s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter, .tab-enter, .stagger-in > *, .stagger-grid > *, .sheen::after, .breathe, .mic-wave { animation: none; }
+  .lift:hover { transform: none; }
+}
