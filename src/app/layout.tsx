@@ -15,8 +15,8 @@ const jakarta = Plus_Jakarta_Sans({
   display: "swap",
 });
 
-const SITE_TITLE = "Leosiqra | Aplikasi Pencatat Keuangan dengan Kalkulasi Pajak SPT Otomatis";
-const SITE_DESCRIPTION = "Leosiqra adalah aplikasi pencatat keuangan pribadi dengan kalkulasi pajak SPT (PPh) otomatis — rekap bulanan, kalkulasi pajak, dan portfolio investasi dalam satu dashboard bersih.";
+const SITE_TITLE = "Leosiqra — Aplikasi Catatan Keuangan Pribadi & Harian";
+const SITE_DESCRIPTION = "Aplikasi catatan keuangan pribadi dan catatan keuangan harian: catat pemasukan & pengeluaran lewat ketik, suara, atau foto struk. Saldo, budget, tabungan, hutang, investasi, dan ringkasan SPT otomatis. Gratis 14 hari.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.leosiqra.com"),
@@ -31,6 +31,10 @@ export const metadata: Metadata = {
   description: SITE_DESCRIPTION,
   keywords: [
     "Leosiqra",
+    "catatan keuangan pribadi",
+    "catatan keuangan harian",
+    "aplikasi catatan keuangan pribadi",
+    "aplikasi catatan keuangan harian",
     "aplikasi pencatat keuangan",
     "aplikasi pencatat keuangan dengan kalkulasi pajak SPT",
     "aplikasi keuangan pribadi kalkulasi PPh otomatis",

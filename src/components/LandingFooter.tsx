@@ -34,6 +34,8 @@ export const LandingFooter = ({ variant = 'light' }: { variant?: 'light' | 'dark
             <li><Link href="/#fitur" className={link}>Fitur</Link></li>
             <li><Link href="/#cara-kerja" className={link}>Cara Kerja</Link></li>
             <li><Link href="/input-cepat" className={link}>Input Cepat</Link></li>
+            <li><Link href="/catatan-keuangan-pribadi" className={link}>Catatan Keuangan Pribadi</Link></li>
+            <li><Link href="/catatan-keuangan-harian" className={link}>Catatan Keuangan Harian</Link></li>
           </ul>
         </div>
 

@@ -126,7 +126,7 @@ export default function LandingPage() {
         <div className="relative mx-auto max-w-4xl text-center">
           <motion.div {...heroItem(0)} className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white/80 px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-indigo-600 shadow-sm backdrop-blur">
             <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" /></span>
-            Aplikasi keuangan pribadi
+            Aplikasi catatan keuangan pribadi
           </motion.div>
           <motion.h1 {...heroItem(1)} className="mt-7 font-serif text-[2.7rem] leading-[1.04] tracking-tight text-slate-900 sm:text-6xl lg:text-7xl">
             Semua uang Anda,
@@ -134,7 +134,7 @@ export default function LandingPage() {
             <span className="lp-shine italic">dalam satu layar.</span>
           </motion.h1>
           <motion.p {...heroItem(2)} className="mx-auto mt-7 max-w-2xl text-base leading-relaxed text-slate-500 sm:text-lg">
-            Rekening, kartu kredit, tabungan, hutang, dan investasi — tercatat rapi, terhitung otomatis, lengkap dengan ringkasan SPT tahunan. Tanpa spreadsheet, tanpa pusing.
+            Catatan keuangan harian dalam hitungan detik — rekening, kartu kredit, tabungan, hutang, dan investasi tercatat rapi, terhitung otomatis, lengkap dengan ringkasan SPT tahunan. Tanpa spreadsheet, tanpa pusing.
           </motion.p>
           <motion.div {...heroItem(3)} className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
             <Link href="/auth/register" className="lp-btn group inline-flex items-center justify-center gap-2 rounded-full px-8 py-4 text-sm font-bold transition-all hover:-translate-y-0.5">
@@ -292,7 +292,7 @@ export default function LandingPage() {
       </section>
 
       {/* ============ INPUT CEPAT ============ */}
-      <section className="relative overflow-hidden px-5 py-24 sm:px-6 sm:py-32">
+      <section id="input-cepat" className="relative scroll-mt-24 overflow-hidden px-5 py-24 sm:px-6 sm:py-32">
         <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
         <div className="mx-auto grid max-w-7xl items-center gap-16 lg:grid-cols-2">
           <Reveal>

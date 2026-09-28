@@ -5,12 +5,12 @@ export const dynamic = 'force-static';
 const BASE_URL = 'https://www.leosiqra.com';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const routes = ['', '/hubungi-kami', '/auth/register', '/auth/login', '/privacy', '/terms'];
+  const routes = ['', '/catatan-keuangan-pribadi', '/catatan-keuangan-harian', '/auth/register', '/hubungi-kami', '/privacy', '/terms'];
 
   return routes.map((route) => ({
     url: `${BASE_URL}${route}`,
     lastModified: new Date(),
     changeFrequency: route === '' ? 'weekly' : 'monthly',
-    priority: route === '' ? 1 : 0.6,
+    priority: route === '' ? 1 : route.startsWith('/catatan-keuangan') ? 0.9 : 0.6,
   }));
 }
