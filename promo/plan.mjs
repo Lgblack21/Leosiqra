@@ -124,8 +124,6 @@ TIPE SCENE (pilih yang cocok, variasikan):
 Balas HANYA JSON: {"title":"...","scenes":[...],"caption":"caption IG/YouTube 1-3 kalimat + emoji, ajakan komentar/simpan","hashtags":["5-7 hashtag relevan tanpa spasi"]}`;
 
 const callAi = async ({ format, topic, avoidHooks }) => {
-  const key = process.env.OPENROUTER_API_KEY;
-  if (!key) throw new Error("OPENROUTER_API_KEY tidak ada");
   const f = FORMATS[format];
   const user = [
     `FORMAT: ${f.label} — ${f.guide}`,
@@ -136,24 +134,37 @@ const callAi = async ({ format, topic, avoidHooks }) => {
   ]
     .filter(Boolean)
     .join("\n\n");
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${key}`, "x-title": "Leosiqra Promo" },
-    body: JSON.stringify({
-      models: ["google/gemini-2.5-flash", "google/gemini-2.5-flash-lite"],
-      route: "fallback",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: user },
-      ],
-      temperature: 1,
-      max_tokens: 1500,
-      response_format: { type: "json_object" },
-    }),
-  });
-  if (!res.ok) throw new Error(`OpenRouter ${res.status}: ${(await res.text()).slice(0, 200)}`);
-  const data = await res.json();
-  const content = data.choices?.[0]?.message?.content ?? "";
+  let content;
+  if (process.env.PROMO_SECRET) {
+    // Lewat Worker Leosiqra (memakai key OpenRouter yang dipasang di sana).
+    const res = await fetch(`${process.env.PROMO_API_URL || "https://www.leosiqra.com"}/api/promo/script`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-promo-secret": process.env.PROMO_SECRET },
+      body: JSON.stringify({ system: SYSTEM_PROMPT, user }),
+    });
+    if (!res.ok) throw new Error(`Worker promo/script ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    content = (await res.json()).content ?? "";
+  } else if (process.env.OPENROUTER_API_KEY) {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`, "x-title": "Leosiqra Promo" },
+      body: JSON.stringify({
+        models: ["google/gemini-2.5-flash", "google/gemini-2.5-flash-lite"],
+        route: "fallback",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: user },
+        ],
+        temperature: 1,
+        max_tokens: 1500,
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!res.ok) throw new Error(`OpenRouter ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    content = (await res.json()).choices?.[0]?.message?.content ?? "";
+  } else {
+    throw new Error("PROMO_SECRET / OPENROUTER_API_KEY tidak ada");
+  }
   return JSON.parse(content.replace(/^```(?:json)?\s*|\s*```$/g, ""));
 };
 

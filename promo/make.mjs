@@ -3,8 +3,9 @@
 //   node make.mjs            → render + kirim ke Telegram (kalau token ada)
 //   node make.mjs --no-send  → render saja (hasil di promo/out/)
 //
-// Env: OPENROUTER_API_KEY (naskah AI; tanpa ini pakai naskah cadangan),
-//      TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID (pengiriman), PROMO_SEED (opsional),
+// Env: PROMO_SECRET (+ PROMO_API_URL) → naskah AI & kiriman Telegram lewat
+//      Worker Leosiqra; atau langsung: OPENROUTER_API_KEY, TELEGRAM_BOT_TOKEN +
+//      TELEGRAM_CHAT_ID. Tanpa AI → naskah cadangan. PROMO_SEED (opsional),
 //      FFMPEG_PATH (default "ffmpeg"), PYTHON (default "python3").
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -57,36 +58,70 @@ const fontsHref = (font) => {
   return `https://fonts.googleapis.com/css2?${fixed.join("&")}&family=Noto+Color+Emoji&display=block`;
 };
 
-const sendTelegram = async (plan, videoPath, coverPath) => {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (!token || !chatId) {
-    log("TELEGRAM_BOT_TOKEN/CHAT_ID tidak ada — lewati pengiriman.");
+// Kirim ke Telegram: lewat Worker Leosiqra (PROMO_SECRET — token bot tetap di
+// Cloudflare) atau langsung ke Bot API (TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID).
+const telegramTarget = () => {
+  if (process.env.PROMO_SECRET) {
+    return { kind: "worker", url: `${process.env.PROMO_API_URL || "https://www.leosiqra.com"}/api/promo/telegram` };
+  }
+  if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) return { kind: "direct" };
+  return null;
+};
+
+const appendField = (form, key, value) => {
+  if (value instanceof Blob) form.append(key, value, key === "video" ? "leosiqra-promo.mp4" : "cover.jpg");
+  else form.append(key, value);
+};
+
+const postTelegram = async ({ text, video }) => {
+  const target = telegramTarget();
+  if (!target) {
+    log("Tujuan Telegram tidak dikonfigurasi — lewati pengiriman.");
     return;
   }
-  const api = (m) => `https://api.telegram.org/bot${token}/${m}`;
-  const hook = plan.scenes[0]?.text || plan.topic;
-  const form = new FormData();
-  form.append("chat_id", chatId);
-  form.append("supports_streaming", "true");
-  form.append("width", "1080");
-  form.append("height", "1920");
-  form.append("duration", String(Math.round(plan.total)));
-  form.append("caption", `🎬 Video promo hari ini\n“${hook}”\n\nFormat: ${plan.formatLabel} · Topik: ${plan.topic}`);
-  form.append("video", new Blob([readFileSync(videoPath)], { type: "video/mp4" }), "leosiqra-promo.mp4");
-  form.append("thumbnail", new Blob([readFileSync(coverPath)], { type: "image/jpeg" }), "cover.jpg");
-  const res = await fetch(api("sendVideo"), { method: "POST", body: form });
-  if (!res.ok) throw new Error(`Telegram sendVideo ${res.status}: ${(await res.text()).slice(0, 300)}`);
-
-  const esc = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
-  const fullCaption = `${plan.caption}\n\n${plan.hashtags.join(" ")}`;
-  const text = `📋 <b>Caption</b> (tap untuk copy — sama untuk Reels & Shorts):\n<pre>${esc(fullCaption)}</pre>\n\n📝 <b>Judul Shorts</b>:\n<pre>${esc(`${hook} #shorts`.slice(0, 95))}</pre>`;
-  const res2 = await fetch(api("sendMessage"), {
+  if (target.kind === "worker") {
+    const form = new FormData();
+    form.append("text", text);
+    if (video) for (const [k, v] of Object.entries(video)) appendField(form, k, v);
+    const res = await fetch(target.url, { method: "POST", headers: { "x-promo-secret": process.env.PROMO_SECRET }, body: form });
+    if (!res.ok) throw new Error(`Worker promo/telegram ${res.status}: ${(await res.text()).slice(0, 300)}`);
+    return;
+  }
+  const api = (m) => `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/${m}`;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (video) {
+    const form = new FormData();
+    form.append("chat_id", chatId);
+    form.append("supports_streaming", "true");
+    for (const [k, v] of Object.entries(video)) appendField(form, k, v);
+    const res = await fetch(api("sendVideo"), { method: "POST", body: form });
+    if (!res.ok) throw new Error(`Telegram sendVideo ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  }
+  const res = await fetch(api("sendMessage"), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
   });
-  if (!res2.ok) throw new Error(`Telegram sendMessage ${res2.status}: ${(await res2.text()).slice(0, 300)}`);
+  if (!res.ok) throw new Error(`Telegram sendMessage ${res.status}: ${(await res.text()).slice(0, 300)}`);
+};
+
+const escHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+
+const sendTelegram = async (plan, videoPath, coverPath) => {
+  const hook = plan.scenes[0]?.text || plan.topic;
+  const fullCaption = `${plan.caption}\n\n${plan.hashtags.join(" ")}`;
+  const text = `📋 <b>Caption</b> (tap untuk copy — sama untuk Reels &amp; Shorts):\n<pre>${escHtml(fullCaption)}</pre>\n\n📝 <b>Judul Shorts</b>:\n<pre>${escHtml(`${hook} #shorts`.slice(0, 95))}</pre>`;
+  await postTelegram({
+    text,
+    video: {
+      video: new Blob([readFileSync(videoPath)], { type: "video/mp4" }),
+      thumbnail: new Blob([readFileSync(coverPath)], { type: "image/jpeg" }),
+      caption: `🎬 Video promo hari ini\n“${hook}”\n\nFormat: ${plan.formatLabel} · Topik: ${plan.topic}`,
+      width: "1080",
+      height: "1920",
+      duration: String(Math.round(plan.total)),
+    },
+  });
   log("Terkirim ke Telegram.");
 };
 
@@ -211,14 +246,10 @@ const main = async () => {
 main().catch(async (error) => {
   console.error(error);
   // Kabari kalau gagal, supaya tidak diam-diam tidak ada video.
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (SEND && token && chatId) {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text: `⚠️ Video promo hari ini gagal dibuat: ${String(error.message).slice(0, 300)}` }),
-    }).catch(() => {});
+  if (SEND) {
+    await postTelegram({ text: `⚠️ Video promo hari ini gagal dibuat: ${escHtml(String(error.message).slice(0, 300))}` }).catch((e) =>
+      console.error("Gagal mengirim pesan error:", e.message)
+    );
   }
   process.exit(1);
 });

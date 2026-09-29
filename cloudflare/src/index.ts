@@ -32,6 +32,7 @@ export interface Env {
   OPENROUTER_MODEL?: string;
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;
+  PROMO_SECRET?: string;
   VAPID_PUBLIC_KEY?: string;
   VAPID_PRIVATE_KEY?: string;
   VAPID_SUBJECT?: string;
@@ -1633,6 +1634,99 @@ async function handleAdminAiKey(request: Request, env: Env) {
   openRouterKeyCache = null;
   await insertAdminLog(env, admin.email, `Ganti ${keyLabel}`, "OpenRouter", maskApiKey(apiKey), "indigo");
   return json({ ok: true, keyHint: maskApiKey(apiKey) });
+}
+
+// ── Video promo harian (GitHub Actions → Worker) ───────────────────────────
+// Job render di GitHub tidak memegang token Telegram / key OpenRouter; cukup
+// satu PROMO_SECRET bersama. Worker yang memanggil OpenRouter (model & batas
+// token dikunci — bukan proxy AI umum) dan meneruskan video ke chat admin.
+const PROMO_MODELS = ["google/gemini-2.5-flash", "google/gemini-2.5-flash-lite"];
+const PROMO_MAX_VIDEO_BYTES = 49 * 1024 * 1024; // batas sendVideo Bot API 50 MB
+
+const isPromoAuthorized = (request: Request, env: Env) => {
+  const given = request.headers.get("x-promo-secret") ?? "";
+  return Boolean(env.PROMO_SECRET && env.PROMO_SECRET.length >= 32 && constantTimeEqual(given, env.PROMO_SECRET));
+};
+
+async function handlePromoScript(request: Request, env: Env) {
+  if (!isPromoAuthorized(request, env)) return json({ error: "Unauthorized" }, { status: 401 });
+  const payload = await parseJson<{ system?: string; user?: string }>(request);
+  const system = String(payload.system ?? "");
+  const user = String(payload.user ?? "");
+  if (!system || !user || system.length > 12_000 || user.length > 12_000) {
+    return json({ error: "Prompt tidak valid." }, { status: 400 });
+  }
+  const openRouter = await getOpenRouterKey(env);
+  if (!openRouter) return json({ error: "AI belum dikonfigurasi." }, { status: 503 });
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${openRouter.key}`,
+      "http-referer": env.APP_URL || "https://www.leosiqra.com",
+      "x-title": "Leosiqra Promo",
+    },
+    body: JSON.stringify({
+      models: PROMO_MODELS,
+      route: "fallback",
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+      temperature: 1,
+      max_tokens: 1500,
+      response_format: { type: "json_object" },
+    }),
+  });
+  if (!response.ok) {
+    const detail = (await response.text()).slice(0, 300);
+    if (response.status === 402) await notifyAiQuotaOnce(env);
+    console.error("Promo script OpenRouter gagal:", response.status, detail);
+    return json({ error: `AI gagal (${response.status})` }, { status: 502 });
+  }
+  const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  return json({ content: data.choices?.[0]?.message?.content ?? "" });
+}
+
+// multipart: text (wajib, HTML Telegram), video + thumbnail + caption (opsional).
+async function handlePromoTelegram(request: Request, env: Env) {
+  if (!isPromoAuthorized(request, env)) return json({ error: "Unauthorized" }, { status: 401 });
+  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) return json({ error: "Telegram belum dikonfigurasi." }, { status: 503 });
+  const form = await request.formData().catch(() => null);
+  if (!form) return json({ error: "Form tidak valid." }, { status: 400 });
+  const text = String(form.get("text") ?? "").slice(0, 4000);
+  const video = form.get("video");
+  const api = (method: string) => `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`;
+  const telegramError = async (res: Response) => {
+    const body = (await res.json().catch(() => ({}))) as { description?: string };
+    return json({ error: `Telegram ${res.status}: ${body.description ?? "gagal"}` }, { status: 502 });
+  };
+
+  if (video instanceof File) {
+    if (video.size > PROMO_MAX_VIDEO_BYTES) return json({ error: "Video terlalu besar." }, { status: 413 });
+    const out = new FormData();
+    out.append("chat_id", env.TELEGRAM_CHAT_ID);
+    out.append("supports_streaming", "true");
+    for (const key of ["width", "height", "duration"]) {
+      const v = form.get(key);
+      if (typeof v === "string" && /^\d{1,5}$/.test(v)) out.append(key, v);
+    }
+    out.append("caption", String(form.get("caption") ?? "").slice(0, 1000));
+    out.append("video", video, "leosiqra-promo.mp4");
+    const thumb = form.get("thumbnail");
+    if (thumb instanceof File && thumb.size < 2 * 1024 * 1024) out.append("thumbnail", thumb, "cover.jpg");
+    const res = await fetch(api("sendVideo"), { method: "POST", body: out });
+    if (!res.ok) return telegramError(res);
+  }
+  if (text) {
+    const res = await fetch(api("sendMessage"), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID, text, parse_mode: "HTML" }),
+    });
+    if (!res.ok) return telegramError(res);
+  }
+  return json({ ok: true });
 }
 
 const runAiAssistant = async (
@@ -8033,6 +8127,12 @@ const worker = {
       }
       if (url.pathname.startsWith("/api/market/coingecko/") && request.method === "GET") {
         return await handleCoinGeckoProxy(request, env, url.pathname.slice("/api/market/coingecko/".length));
+      }
+      if (url.pathname === "/api/promo/script" && request.method === "POST") {
+        return await handlePromoScript(request, env);
+      }
+      if (url.pathname === "/api/promo/telegram" && request.method === "POST") {
+        return await handlePromoTelegram(request, env);
       }
       if (url.pathname === "/api/admin/ai-status" && request.method === "GET") {
         return await handleAdminAiStatus(request, env);
