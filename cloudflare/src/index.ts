@@ -52,7 +52,10 @@ type AppUser = {
   plan: "FREE" | "PRO";
   status: "AKTIF" | "NONAKTIF" | "GUEST" | "PENDING";
   whatsapp?: string | null;
-  two_factor_secret?: string | null;
+  // Status 2FA saja — kunci rahasia TOTP tidak pernah dikirim ke browser
+  // (dulu ikut terkirim lewat /api/auth/me, jadi siapa pun yang memegang sesi
+  // bisa menyalinnya dan membuat kode 2FA sendiri).
+  twoFactorEnabled?: boolean;
   photoURL?: string | null;
   // false untuk akun Google (password_hash cuma sentinel 'oauth$google', bukan
   // password asli) — dipakai frontend untuk skip verifikasi "password saat
@@ -539,7 +542,7 @@ const readSession = async (env: Env, request: Request) => {
       plan: result.plan,
       status: result.status,
       whatsapp: result.whatsapp,
-      two_factor_secret: result.two_factor_secret,
+      twoFactorEnabled: Boolean(result.two_factor_secret),
       photoURL: result.photo_url ?? null,
       hasPassword: !result.password_hash?.startsWith("oauth$"),
       onboarded: result.currency_initialized === 1,
@@ -1322,7 +1325,7 @@ async function handleRegister(request: Request, env: Env) {
     plan: "FREE",
     status: trial.status,
     whatsapp: payload.whatsapp ?? null,
-    two_factor_secret: payload.twoFactorSecret ?? null,
+    twoFactorEnabled: Boolean(payload.twoFactorSecret),
   };
 
   const session = await createSession(env, request, user);
@@ -1618,7 +1621,7 @@ async function handleLogin(request: Request, env: Env) {
       plan: user.plan,
       status: user.status,
       whatsapp: user.whatsapp,
-      two_factor_secret: user.two_factor_secret,
+      twoFactorEnabled: Boolean(user.two_factor_secret),
     },
     { permanent: payload.isPwa === true }
   );
@@ -1919,7 +1922,7 @@ async function handleGoogleCallback(request: Request, env: Env) {
     plan: user.plan,
     status: user.status,
     whatsapp: user.whatsapp,
-    two_factor_secret: user.two_factor_secret,
+    twoFactorEnabled: Boolean(user.two_factor_secret),
   });
 
   const destination =
@@ -1965,7 +1968,7 @@ async function handleGoogle2fa(request: Request, env: Env) {
     request,
     {
       id: user.id, email: user.email, name: user.name, role: user.role, plan: user.plan,
-      status: user.status, whatsapp: user.whatsapp, two_factor_secret: user.two_factor_secret,
+      status: user.status, whatsapp: user.whatsapp, twoFactorEnabled: Boolean(user.two_factor_secret),
     },
     { permanent: payload.isPwa === true }
   );
@@ -4176,7 +4179,9 @@ async function handleGetMemberProfile(request: Request, env: Env) {
   const item = await env.DB.prepare(
     `SELECT id, name, email, username, whatsapp, address, photo_url, role, plan, status, expired_at, created_at,
             total_wealth, total_income, total_expenses, total_savings, total_investment,
-            credit_card_bills, other_debts, two_factor_secret, currency_initialized
+            credit_card_bills, other_debts, currency_initialized,
+            -- status saja; kunci rahasia 2FA tidak pernah dikirim ke browser
+            CASE WHEN COALESCE(two_factor_secret, '') <> '' THEN 1 ELSE 0 END AS two_factor_enabled
        FROM users
       WHERE id = ?`
   )

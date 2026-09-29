@@ -60,7 +60,7 @@ interface UserProfile {
   address: string;
   photoURL?: string;
   plan?: string;
-  twoFactorSecret?: string | null;
+  twoFactorEnabled?: boolean;
 }
 
 interface SessionInfo {
@@ -209,7 +209,7 @@ export default function ProfilePage() {
               phone?: string;
               whatsapp?: string;
               address?: string;
-              twoFactorSecret?: string | null;
+              twoFactorEnabled?: number | boolean | null;
             };
             setProfile({
               displayName: data.name || u.displayName || '',
@@ -219,7 +219,7 @@ export default function ProfilePage() {
               address: profileExtras.address || '',
               photoURL: data.photoURL || u.photoURL || '',
               plan: data.plan,
-              twoFactorSecret: profileExtras.twoFactorSecret || null
+              twoFactorEnabled: Boolean(profileExtras.twoFactorEnabled)
             });
           }
         });
@@ -318,7 +318,7 @@ export default function ProfilePage() {
     if (!user) return false;
     try {
       await cloudflareApi('/api/member/2fa', { method: 'PATCH', json: { secret } });
-      setProfile(p => ({ ...p, twoFactorSecret: secret }));
+      setProfile(p => ({ ...p, twoFactorEnabled: true }));
       setShow2FASetup(false);
     } catch (e) {
       console.error(e);
@@ -335,7 +335,7 @@ export default function ProfilePage() {
     setDisable2FAError('');
     try {
       await cloudflareApi('/api/member/2fa', { method: 'PATCH', json: { disable: true, currentPassword: disable2FAPassword } });
-      setProfile(p => ({ ...p, twoFactorSecret: null }));
+      setProfile(p => ({ ...p, twoFactorEnabled: false }));
       setShow2FADisable(false);
       setDisable2FAPassword('');
     } catch (e) {
@@ -714,19 +714,19 @@ export default function ProfilePage() {
                   <div className="pt-0.5">
                     <p className="text-[9px] md:text-[10px] font-black text-white uppercase tracking-widest leading-none">Two Factor Auth</p>
                     <p className="text-[9px] font-bold text-white/40 mt-1.5">
-                      {profile.twoFactorSecret ? 'Aktif — melindungi login Anda' : 'Belum diaktifkan'}
+                      {profile.twoFactorEnabled ? 'Aktif — melindungi login Anda' : 'Belum diaktifkan'}
                     </p>
                   </div>
                   <button
-                    onClick={() => profile.twoFactorSecret ? setShow2FADisable(true) : setShow2FASetup(true)}
+                    onClick={() => profile.twoFactorEnabled ? setShow2FADisable(true) : setShow2FASetup(true)}
                     className={cn(
                       "w-10 h-5 md:w-12 md:h-6 rounded-full relative p-1 transition-colors shrink-0",
-                      profile.twoFactorSecret ? "bg-indigo-600" : "bg-white/10"
+                      profile.twoFactorEnabled ? "bg-indigo-600" : "bg-white/10"
                     )}
                   >
                     <div className={cn(
                       "w-3 h-3 md:w-4 md:h-4 bg-white rounded-full absolute top-1 transition-all",
-                      profile.twoFactorSecret ? "right-1" : "left-1 opacity-60"
+                      profile.twoFactorEnabled ? "right-1" : "left-1 opacity-60"
                     )} />
                   </button>
                 </div>
