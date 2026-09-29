@@ -1297,13 +1297,14 @@ ${JSON.stringify(userContext)}`;
 // meski modelnya sendiri valid. Kirim beberapa kandidat model sekaligus
 // (fitur routing/fallback bawaan OpenRouter) supaya jika satu provider
 // menolak, permintaan otomatis dicoba ke provider/model berikutnya.
-// Model chat AI Leosiqra (dipilih pemilik aplikasi, 29 Sep 2026): Gemini 3
-// Flash — paham Bahasa Indonesia santai & hitungan. Cadangan otomatis kalau
-// provider pertama menolak/gangguan. Sengaja di-pin di sini (bukan dari secret
-// OPENROUTER_MODEL yang nilainya tidak terlihat di repo); bisa ditimpa lewat
-// var OPENROUTER_CHAT_MODEL tanpa ubah kode.
+// Model chat AI Leosiqra (dipilih pemilik aplikasi, 30 Sep 2026): Gemini 2.5
+// Flash Lite — ±5x lebih murah dari Gemini 3 Flash (±Rp35 vs Rp182 per pesan
+// untuk akun ber-data besar); angka analisis sudah dihitung server, jadi model
+// cukup merangkum. Cadangan otomatis kalau provider pertama menolak/gangguan.
+// Sengaja di-pin di sini (bukan dari secret OPENROUTER_MODEL yang nilainya
+// tidak terlihat di repo); bisa ditimpa lewat var OPENROUTER_CHAT_MODEL.
 const OPENROUTER_FALLBACK_MODELS = [
-  "google/gemini-3-flash-preview",
+  "google/gemini-2.5-flash-lite",
   "google/gemini-2.5-flash",
   "deepseek/deepseek-v3.2",
 ];
@@ -5941,16 +5942,13 @@ async function handleAiChat(request: Request, env: Env) {
   return json({ answer, messages: nextMessages });
 }
 
-// Dipakai khusus fitur AI Scan (foto struk) & Voice (transkrip suara) — beda
-// dari runOpenRouterAssistant (chat teks) yang boleh jatuh ke model apa saja
-// di rantai fallback. Di sini di-pin ke satu model vision-capable yang
-// terkonfirmasi (google/gemini-2.0-flash-001) karena env.OPENROUTER_MODEL
-// (secret, nilainya tidak diketahui di repo ini) belum tentu bisa terima
-// input gambar — request gambar yang nyasar ke model text-only bisa gagal
-// tak terduga. Dipakai juga untuk jalur teks (Voice) supaya kualitas
-// ekstraksi konsisten antara Scan & Voice, bukan tergantung nilai
-// OPENROUTER_MODEL yang berubah-ubah.
-const PARSE_TRANSACTION_MODEL = "google/gemini-3.5-flash";
+// Dipakai khusus fitur AI Scan (foto struk) & Voice (transkrip suara). Semua
+// kandidat WAJIB bisa menerima gambar — request foto yang nyasar ke model
+// text-only bisa gagal tak terduga — jadi tidak memakai daftar chat di atas.
+// Gemini 2.5 Flash Lite (murah) dengan Gemini 2.5 Flash sebagai cadangan kalau
+// provider pertama gangguan. Dipakai juga untuk Voice supaya hasil ekstraksi
+// konsisten antara Scan & Voice.
+const PARSE_TRANSACTION_MODELS = ["google/gemini-2.5-flash-lite", "google/gemini-2.5-flash"];
 
 type ParsedTransactionSuggestion = {
   type: "pengeluaran" | "pemasukan";
@@ -6050,7 +6048,8 @@ ${JSON.stringify(userAccounts.map((a) => ({ name: a.name, type: a.type, currency
         "x-title": env.APP_NAME || "Leosiqra",
       },
       body: JSON.stringify({
-        model: PARSE_TRANSACTION_MODEL,
+        models: PARSE_TRANSACTION_MODELS,
+        route: "fallback",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userContent },

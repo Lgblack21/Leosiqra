@@ -67,4 +67,7 @@ NEXT_PUBLIC_USE_CLOUDFLARE_AUTH = "true"
 # Plugin web search OpenRouter untuk AI Leosiqra — dikenakan biaya tambahan
 # per request (di luar token biasa, lihat OpenRouter pricing). Set "false"
 # kapan saja buat matikan tanpa perlu ubah kode.
-OPENROUTER_WEB_SEARCH = "true"
+# Dimatikan 30 Sep 2026: ±$0,014 (≈Rp230) per pesan, ±6x biaya model chat
+# (Gemini 2.5 Flash Lite ±Rp35) — sumber utama kredit cepat habis. Harga
+# kripto/emas/kurs & data keuangan sudah disediakan sistem sendiri.
+OPENROUTER_WEB_SEARCH = "false"
