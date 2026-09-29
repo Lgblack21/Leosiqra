@@ -107,6 +107,7 @@ const sections: GuideSection[] = [
       { name: 'Profil & Keamanan', desc: 'Data pribadi (nama, foto, WhatsApp), keamanan (ganti password, 2FA), dan ringkasan saldo semua rekening ("Active Banks").' },
       { name: 'Kategori & Mata Uang', desc: 'Kelola kategori/sub-kategori transaksi (dipakai di semua form pencatatan) dan daftar mata uang dunia yang kamu lacak.' },
       { name: 'Panduan', desc: 'Halaman yang sedang kamu baca ini — penjelasan lengkap semua fitur, plus tombol tur interaktif di bawah.' },
+      { name: 'Saran & Kritik', desc: 'Kirim saran, kritik, laporan masalah, atau pujian langsung ke tim Leosiqra — lengkap dengan riwayat dan balasan dari kami.' },
       { name: 'Hubungi Kami', desc: 'Ajukan upgrade ke paket PRO, lihat instruksi pembayaran (transfer bank/QRIS), dan konfirmasi pembayaran yang sudah dilakukan.' },
     ],
   },

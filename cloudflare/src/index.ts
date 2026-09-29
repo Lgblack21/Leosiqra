@@ -6821,6 +6821,111 @@ async function handleAppOpened(request: Request, env: Env) {
   return json({ ok: true });
 }
 
+// ===== Saran & kritik =====
+const FEEDBACK_CATEGORIES: Record<string, string> = { saran: "💡 Saran", kritik: "🗣️ Kritik", masalah: "🐞 Masalah", pujian: "❤️ Pujian" };
+const FEEDBACK_STATUSES = new Set(["baru", "dibaca", "selesai"]);
+const FEEDBACK_MAX_CHARS = 1000;
+const FEEDBACK_DAILY_LIMIT = 10;
+
+async function handleCreateFeedback(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const user = authResult.session.user;
+  const payload = await parseJson<{ category?: unknown; rating?: unknown; message?: unknown; page?: unknown; platform?: unknown }>(request);
+
+  const category = typeof payload.category === "string" ? payload.category : "";
+  if (!FEEDBACK_CATEGORIES[category]) return json({ error: "Pilih jenis masukan." }, { status: 400 });
+  const message = typeof payload.message === "string" ? payload.message.trim() : "";
+  if (message.length < 5) return json({ error: "Tulis masukanmu minimal 5 karakter." }, { status: 400 });
+  if (message.length > FEEDBACK_MAX_CHARS) return json({ error: `Masukan maksimal ${FEEDBACK_MAX_CHARS} karakter.` }, { status: 400 });
+  const ratingNum = Number(payload.rating);
+  const rating = Number.isInteger(ratingNum) && ratingNum >= 1 && ratingNum <= 5 ? ratingNum : null;
+  const page = typeof payload.page === "string" && payload.page.startsWith("/") ? payload.page.slice(0, 120) : null;
+  const platform = payload.platform === "app" ? "app" : "web";
+
+  if (env.AI_PARSE_RATE_LIMITER) {
+    const { success } = await env.AI_PARSE_RATE_LIMITER.limit({ key: `feedback:user:${user.id}` });
+    if (!success) return json({ error: "Terlalu cepat. Coba lagi sebentar." }, { status: 429 });
+  }
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const recent = await env.DB.prepare("SELECT COUNT(*) AS n FROM feedback WHERE user_id = ? AND created_at >= ?")
+    .bind(user.id, since)
+    .first<{ n: number }>();
+  if ((recent?.n ?? 0) >= FEEDBACK_DAILY_LIMIT) {
+    return json({ error: "Kamu sudah mengirim banyak masukan hari ini. Terima kasih! Coba lagi besok ya." }, { status: 429 });
+  }
+
+  const id = generateId();
+  const now = nowIso();
+  await env.DB.prepare(
+    `INSERT INTO feedback (id, user_id, category, rating, message, page, platform, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'baru', ?, ?)`
+  )
+    .bind(id, user.id, category, rating, message, page, platform, now, now)
+    .run();
+
+  await sendTelegramNotification(
+    env,
+    `<b>${FEEDBACK_CATEGORIES[category]} baru</b>${rating ? ` · ${"★".repeat(rating)}${"☆".repeat(5 - rating)}` : ""}\n` +
+      `Dari: ${escapeHtml(user.name || "-")} (${escapeHtml(user.email)})\n` +
+      (page ? `Halaman: ${escapeHtml(page)} · ${platform}\n` : "") +
+      `\n${escapeHtml(message.length > 600 ? message.slice(0, 600) + "…" : message)}`
+  );
+  return json({ ok: true, id }, { status: 201 });
+}
+
+async function handleListMyFeedback(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const { results } = await env.DB.prepare(
+    `SELECT id, category, rating, message, status, admin_reply, replied_at, created_at
+       FROM feedback WHERE user_id = ? ORDER BY created_at DESC LIMIT 30`
+  )
+    .bind(authResult.session.user.id)
+    .all();
+  return json({ items: results ?? [] });
+}
+
+async function handleAdminListFeedback(request: Request, env: Env) {
+  const authResult = await requireSession(env, request, "admin");
+  if (authResult.error) return authResult.error;
+  const { results } = await env.DB.prepare(
+    `SELECT f.id, f.category, f.rating, f.message, f.page, f.platform, f.status, f.admin_reply, f.replied_at, f.created_at,
+            u.name AS user_name, u.email AS user_email
+       FROM feedback f LEFT JOIN users u ON u.id = f.user_id
+      ORDER BY f.created_at DESC LIMIT 300`
+  ).all();
+  return json({ items: results ?? [] });
+}
+
+async function handleAdminUpdateFeedback(request: Request, env: Env, feedbackId: string) {
+  const authResult = await requireSession(env, request, "admin");
+  if (authResult.error) return authResult.error;
+  const payload = await parseJson<{ status?: unknown; reply?: unknown }>(request);
+  const sets: string[] = [];
+  const binds: unknown[] = [];
+  if (payload.status !== undefined) {
+    if (typeof payload.status !== "string" || !FEEDBACK_STATUSES.has(payload.status)) return json({ error: "Status tidak valid." }, { status: 400 });
+    sets.push("status = ?");
+    binds.push(payload.status);
+  }
+  if (payload.reply !== undefined) {
+    const reply = typeof payload.reply === "string" ? payload.reply.trim() : "";
+    if (reply.length > FEEDBACK_MAX_CHARS) return json({ error: `Balasan maksimal ${FEEDBACK_MAX_CHARS} karakter.` }, { status: 400 });
+    sets.push("admin_reply = ?", "replied_at = ?");
+    binds.push(reply || null, reply ? nowIso() : null);
+    // Membalas otomatis menandai masukan sudah ditindaklanjuti.
+    if (reply && payload.status === undefined) sets.push("status = 'selesai'");
+  }
+  if (sets.length === 0) return json({ error: "Tidak ada perubahan." }, { status: 400 });
+  const result = await env.DB.prepare(`UPDATE feedback SET ${sets.join(", ")}, updated_at = ? WHERE id = ?`)
+    .bind(...binds, nowIso(), feedbackId)
+    .run();
+  if (!result.meta.changes) return json({ error: "Masukan tidak ditemukan." }, { status: 404 });
+  await insertAdminLog(env, authResult.session.user.email, "FEEDBACK_UPDATE", feedbackId, `Update masukan: ${sets.map((x) => x.split(" ")[0]).join(", ")}`, "indigo");
+  return json({ ok: true });
+}
+
 async function handleGamification(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -7446,6 +7551,19 @@ const worker = {
 
       if (url.pathname === "/api/member/insights" && request.method === "GET") {
         return await handleListInsights(request, env);
+      }
+
+      if (url.pathname === "/api/member/feedback" && request.method === "POST") {
+        return await handleCreateFeedback(request, env);
+      }
+      if (url.pathname === "/api/member/feedback" && request.method === "GET") {
+        return await handleListMyFeedback(request, env);
+      }
+      if (url.pathname === "/api/admin/feedback" && request.method === "GET") {
+        return await handleAdminListFeedback(request, env);
+      }
+      if (url.pathname.startsWith("/api/admin/feedback/") && request.method === "PATCH") {
+        return await handleAdminUpdateFeedback(request, env, url.pathname.slice("/api/admin/feedback/".length));
       }
 
       if (url.pathname === "/api/member/app-opened" && request.method === "POST") {

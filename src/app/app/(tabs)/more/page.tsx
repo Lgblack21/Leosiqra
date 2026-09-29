@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {
   BarChart3, MessageCircle, ScanLine, Mic, UserCircle, HandCoins, PiggyBank, CreditCard, Target,
-  Repeat, TrendingUp, CalendarRange, ShieldCheck, Globe, ChevronRight, ExternalLink, Zap, PlayCircle,
+  Repeat, TrendingUp, CalendarRange, ShieldCheck, Globe, ChevronRight, ExternalLink, Zap, PlayCircle, MessageSquareHeart,
 } from "lucide-react";
 import { lightTap } from "@/lib/haptics";
 import { FadeIn, StaggerList, StaggerItem } from "@/components/app/FadeIn";
@@ -76,6 +76,16 @@ export default function AppMorePage() {
           <span className="flex-1">
             <span className="block text-sm font-bold text-slate-900 dark:text-white">Pasang Input Cepat</span>
             <span className="block text-[11px] text-slate-400">Catat kilat dari layar utama HP</span>
+          </span>
+          <ChevronRight size={18} className="text-slate-300" />
+        </Link>
+        <Link href="/app/saran" onClick={lightTap} className="flex items-center gap-3 px-4 py-3.5 active:bg-slate-50 dark:active:bg-slate-800">
+          <span className="w-10 h-10 rounded-xl bg-fuchsia-50 text-fuchsia-600 dark:bg-fuchsia-500/10 dark:text-fuchsia-400 flex items-center justify-center">
+            <MessageSquareHeart size={19} />
+          </span>
+          <span className="flex-1">
+            <span className="block text-sm font-bold text-slate-900 dark:text-white">Saran & Kritik</span>
+            <span className="block text-[11px] text-slate-400">Bantu kami bikin Leosiqra lebih baik</span>
           </span>
           <ChevronRight size={18} className="text-slate-300" />
         </Link>

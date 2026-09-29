@@ -13,7 +13,8 @@ import {
   FileText,
   Settings,
   X,
-  ChevronDown
+  ChevronDown,
+  MessageSquareHeart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
@@ -31,6 +32,7 @@ const adminMenuGroups = [
       { icon: Users, label: 'User', href: '/admin/user' },
       { icon: CreditCard, label: 'Pembayaran', href: '/admin/pembayaran' },
       { icon: FileText, label: 'Laporan', href: '/admin/laporan' },
+      { icon: MessageSquareHeart, label: 'Saran & Kritik', href: '/admin/saran' },
     ]
   },
   {

@@ -21,6 +21,7 @@ import {
   Tags,
   Compass,
   Headphones,
+  MessageSquareHeart,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -102,6 +103,7 @@ export const navGroups: NavGroup[] = [
       { label: 'Profil & Keamanan', href: '/membership/profile', icon: User },
       { label: 'Kategori & Mata Uang', href: '/membership/nama-akun', icon: Tags },
       { label: 'Panduan', href: '/membership/panduan', icon: Compass },
+      { label: 'Saran & Kritik', href: '/membership/saran', icon: MessageSquareHeart },
       { label: 'Hubungi Kami', href: '/membership/hubungi-kami', icon: Headphones },
     ],
   },
