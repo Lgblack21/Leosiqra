@@ -5901,6 +5901,7 @@ async function handleAiChat(request: Request, env: Env) {
     answer = await runAiAssistant(env, payload.prompt, userContext, history);
   } catch (error) {
     if (isAiQuotaError(error)) {
+      console.warn("AI quota (402):", error instanceof Error ? error.message : error);
       await notifyAiQuotaOnce(env);
       return json({ error: AI_QUOTA_MESSAGE, code: "ai_quota" }, { status: 503 });
     }
@@ -6070,6 +6071,7 @@ ${JSON.stringify(userAccounts.map((a) => ({ name: a.name, type: a.type, currency
     rawContent = data.choices?.[0]?.message?.content?.trim() ?? "";
   } catch (error) {
     if (isAiQuotaError(error)) {
+      console.warn("AI quota (402):", error instanceof Error ? error.message : error);
       await notifyAiQuotaOnce(env);
       return json({ ok: false, error: AI_QUOTA_MESSAGE, code: "ai_quota" }, { status: 503 });
     }
