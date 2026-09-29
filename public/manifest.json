@@ -21,5 +21,11 @@
       "purpose": "any"
     }
   ],
-  "id": "/"
+  "id": "/",
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "https://www.leosiqra.com/manifest.json"
+    }
+  ]
 }

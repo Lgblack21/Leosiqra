@@ -56,6 +56,9 @@ type AppUser = {
   // (dulu ikut terkirim lewat /api/auth/me, jadi siapa pun yang memegang sesi
   // bisa menyalinnya dan membuat kode 2FA sendiri).
   twoFactorEnabled?: boolean;
+  // Kapan terakhir akun ini membuka aplikasi terpasang (dari layar utama) —
+  // dipakai iklan "pasang aplikasi" supaya tidak tampil ke yang sudah pasang.
+  appsOpened?: { leosiqra?: string; inputCepat?: string };
   photoURL?: string | null;
   // false untuk akun Google (password_hash cuma sentinel 'oauth$google', bukan
   // password asli) — dipakai frontend untuk skip verifikasi "password saat
@@ -449,6 +452,17 @@ const createSession = async (env: Env, request: Request, user: AppUser, options:
   };
 };
 
+const readAppsOpened = (metadataJson: string | null | undefined) => {
+  if (!metadataJson) return {};
+  try {
+    const m = JSON.parse(metadataJson) as Record<string, unknown>;
+    const pick = (v: unknown) => (typeof v === "string" ? v : undefined);
+    return { leosiqra: pick(m.appOpenedLeosiqra), inputCepat: pick(m.appOpenedInputCepat) };
+  } catch {
+    return {};
+  }
+};
+
 const readSession = async (env: Env, request: Request) => {
   const token = getCookieValue(request, env.SESSION_COOKIE_NAME);
   if (!token) {
@@ -484,12 +498,13 @@ const readSession = async (env: Env, request: Request) => {
     photo_url?: string | null;
     password_hash?: string;
     currency_initialized?: number | null;
+    metadata_json?: string | null;
   } | null = null;
 
   try {
     result = await env.DB.prepare(
       `SELECT s.id as session_id, s.user_id, s.role, s.expires_at,
-              u.name, u.email, u.plan, u.status, u.expired_at, u.whatsapp, u.two_factor_secret, u.photo_url, u.password_hash, u.currency_initialized
+              u.name, u.email, u.plan, u.status, u.expired_at, u.whatsapp, u.two_factor_secret, u.photo_url, u.password_hash, u.currency_initialized, u.metadata_json
          FROM sessions s
          JOIN users u ON u.id = s.user_id
         WHERE s.id = ?`
@@ -499,7 +514,7 @@ const readSession = async (env: Env, request: Request) => {
   } catch {
     result = await env.DB.prepare(
       `SELECT s.id as session_id, s.user_id, u.role as role, s.expires_at,
-              u.name, u.email, u.plan, u.status, u.expired_at, u.whatsapp, u.two_factor_secret, u.photo_url, u.password_hash, u.currency_initialized
+              u.name, u.email, u.plan, u.status, u.expired_at, u.whatsapp, u.two_factor_secret, u.photo_url, u.password_hash, u.currency_initialized, u.metadata_json
          FROM sessions s
          JOIN users u ON u.id = s.user_id
         WHERE s.id = ?`
@@ -543,6 +558,7 @@ const readSession = async (env: Env, request: Request) => {
       status: result.status,
       whatsapp: result.whatsapp,
       twoFactorEnabled: Boolean(result.two_factor_secret),
+      appsOpened: readAppsOpened(result.metadata_json),
       photoURL: result.photo_url ?? null,
       hasPassword: !result.password_hash?.startsWith("oauth$"),
       onboarded: result.currency_initialized === 1,
@@ -6785,6 +6801,26 @@ async function handleCloudinarySignature(request: Request, env: Env) {
   });
 }
 
+// Dipanggil aplikasi terpasang (mode standalone) saat dibuka, maksimal
+// ±sekali per 12 jam per perangkat. Hanya menyimpan waktu terakhir dibuka per
+// aplikasi di users.metadata_json — tidak ada data perangkat yang disimpan.
+const APP_OPENED_KEYS: Record<string, string> = { leosiqra: "$.appOpenedLeosiqra", "input-cepat": "$.appOpenedInputCepat" };
+async function handleAppOpened(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const payload = await parseJson<{ app?: unknown }>(request);
+  const path = typeof payload.app === "string" ? APP_OPENED_KEYS[payload.app] : undefined;
+  if (!path) return json({ error: "Aplikasi tidak dikenal." }, { status: 400 });
+  await env.DB.prepare(
+    `UPDATE users
+        SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, ?, ?)
+      WHERE id = ?`
+  )
+    .bind(path, nowIso(), authResult.session.user.id)
+    .run();
+  return json({ ok: true });
+}
+
 async function handleGamification(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -7410,6 +7446,10 @@ const worker = {
 
       if (url.pathname === "/api/member/insights" && request.method === "GET") {
         return await handleListInsights(request, env);
+      }
+
+      if (url.pathname === "/api/member/app-opened" && request.method === "POST") {
+        return await handleAppOpened(request, env);
       }
 
       if (url.pathname === "/api/member/onboarding" && request.method === "POST") {

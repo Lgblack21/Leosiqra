@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { X, Sparkles } from "lucide-react";
 import { isStandaloneDisplay } from "@/lib/pushNotifications";
 
@@ -12,22 +12,36 @@ const DISMISS_KEY = "leosiqra_logo_update_banner_dismissed_v1";
 // kasih tau manual biar mereka hapus & pasang ulang. Cuma tampil buat user
 // yang memang lagi buka versi standalone (yang sudah install), bukan yang
 // masih browsing lewat tab biasa.
+const noopSubscribe = () => () => {};
+
 export default function LogoUpdateBanner() {
-  // Lazy initializer (bukan effect) — `isStandaloneDisplay`/`localStorage`
-  // aman dipanggil di sini karena sudah dijaga `typeof window` di dalamnya,
-  // dan komponen ini "use client" jadi baris ini cuma jalan di browser.
-  const [visible, setVisible] = useState(() => {
-    if (typeof window === "undefined") return false;
-    if (!isStandaloneDisplay()) return false;
-    return localStorage.getItem(DISMISS_KEY) !== "1";
-  });
+  // Dibaca lewat useSyncExternalStore (snapshot server = false) — dulu lazy
+  // initializer useState, yang membuat render pertama di browser berbeda dari
+  // HTML prerender dan memicu hydration error (React #418) tiap kali aplikasi
+  // terpasang dibuka.
+  const eligible = useSyncExternalStore(
+    noopSubscribe,
+    () => {
+      try {
+        return isStandaloneDisplay() && localStorage.getItem(DISMISS_KEY) !== "1";
+      } catch {
+        return false;
+      }
+    },
+    () => false
+  );
+  const [dismissed, setDismissed] = useState(false);
 
   const dismiss = () => {
-    setVisible(false);
-    localStorage.setItem(DISMISS_KEY, "1");
+    setDismissed(true);
+    try {
+      localStorage.setItem(DISMISS_KEY, "1");
+    } catch {
+      /* tidak tersimpan — tetap ditutup untuk sesi ini */
+    }
   };
 
-  if (!visible) return null;
+  if (!eligible || dismissed) return null;
 
   return (
     <div className="fixed bottom-4 inset-x-4 sm:inset-x-auto sm:right-4 sm:max-w-sm z-[9998] animate-in fade-in slide-in-from-bottom-4 duration-300">

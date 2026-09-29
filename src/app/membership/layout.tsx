@@ -9,6 +9,7 @@ import { GlobalModalWrapper } from '@/components/GlobalModalWrapper';
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { FeedbackProvider } from '@/components/ui/Feedback';
+import { reportAppOpened } from '@/lib/appUsage';
 
 const ONBOARDING_PATH = '/membership/onboarding';
 
@@ -37,6 +38,8 @@ export default function MembershipLayout({
           router.replace(ONBOARDING_PATH);
           return;
         }
+        // Dibuka dari aplikasi Leosiqra terpasang (scope-nya mencakup /membership).
+        reportAppOpened('leosiqra');
         setLoading(false);
       })
       .catch(() => {

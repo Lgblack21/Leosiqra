@@ -9,6 +9,7 @@ import { auth } from "@/lib/cf-client";
 import { onAuthStateChanged } from "@/lib/cf-auth";
 import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 import { AppTour } from "@/components/app/AppTour";
+import { reportAppOpened } from "@/lib/appUsage";
 
 // Native splash (drawable/splash.png) cuma nyala sekilas selama Android/iOS
 // nyiapin Activity — begitu WebView aktif dia langsung ilang, dan APK ini
@@ -70,6 +71,7 @@ export default function AppShell({
         hideSplash();
         return;
       }
+      reportAppOpened("leosiqra");
       setLoading(false);
       hideSplash();
     });

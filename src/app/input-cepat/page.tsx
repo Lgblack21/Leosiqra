@@ -27,6 +27,7 @@ import { subscribeUserProfile, UserProfile } from "@/lib/services/userService";
 import { LogoImage } from "@/components/ui/LogoImage";
 import { SplashScreen } from "@/components/input-cepat/SplashScreen";
 import { InputCepatInstall } from "@/components/install/InputCepatInstall";
+import { reportAppOpened } from "@/lib/appUsage";
 import { Modal } from "@/components/ui/Modal";
 import { NumberInput } from "@/components/ui/NumberInput";
 import { transactionService, Transaction } from "@/lib/services/transactionService";
@@ -114,6 +115,7 @@ export default function InputCepatPage() {
       }
       setAuthState("ok");
       setUid(u.uid);
+      reportAppOpened("input-cepat");
 
       const loadAccounts = () =>
         accountService
