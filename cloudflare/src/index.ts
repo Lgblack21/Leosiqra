@@ -1729,6 +1729,34 @@ async function handlePromoTelegram(request: Request, env: Env) {
   return json({ ok: true });
 }
 
+// Riwayat video promo (topik/format/gaya yang sudah dipakai) — disimpan di R2
+// supaya pembuat video (GitHub Actions / Claude Code routine) yang jalan dari
+// mesin baru tiap hari tidak mengulang ide yang sama.
+const PROMO_HISTORY_KEY = "promo/history.json";
+
+async function handlePromoHistory(request: Request, env: Env) {
+  if (!isPromoAuthorized(request, env)) return json({ error: "Unauthorized" }, { status: 401 });
+  const bucket = env.FILES_BUCKET;
+  if (!bucket) return json({ error: "Penyimpanan belum dikonfigurasi." }, { status: 503 });
+  if (request.method === "GET") {
+    const obj = await bucket.get(PROMO_HISTORY_KEY);
+    return json({ items: obj ? JSON.parse(await obj.text()) : [] });
+  }
+  const body = await request.text();
+  if (body.length > 300_000) return json({ error: "Riwayat terlalu besar." }, { status: 413 });
+  let items: unknown;
+  try {
+    items = (JSON.parse(body) as { items?: unknown }).items;
+  } catch {
+    return json({ error: "JSON tidak valid." }, { status: 400 });
+  }
+  if (!Array.isArray(items)) return json({ error: "items harus array." }, { status: 400 });
+  await bucket.put(PROMO_HISTORY_KEY, JSON.stringify(items.slice(-365)), {
+    httpMetadata: { contentType: "application/json" },
+  });
+  return json({ ok: true, count: Math.min(items.length, 365) });
+}
+
 const runAiAssistant = async (
   env: Env,
   prompt: string,
@@ -8130,6 +8158,9 @@ const worker = {
       }
       if (url.pathname === "/api/promo/script" && request.method === "POST") {
         return await handlePromoScript(request, env);
+      }
+      if (url.pathname === "/api/promo/history" && (request.method === "GET" || request.method === "PUT")) {
+        return await handlePromoHistory(request, env);
       }
       if (url.pathname === "/api/promo/telegram" && request.method === "POST") {
         return await handlePromoTelegram(request, env);

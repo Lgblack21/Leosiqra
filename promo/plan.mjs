@@ -185,6 +185,14 @@ export const buildPlan = async ({ seed, history }) => {
       ? JSON.parse((await import("node:fs")).readFileSync(process.env.PROMO_SCRIPT_FILE, "utf8"))
       : await callAi({ format, topic, avoidHooks: recent.slice(-10).map((h) => h.hook).filter(Boolean) });
     script = normalizeScript(raw);
+    // Naskah dari file (mis. ditulis Claude Code) boleh menentukan format,
+    // topik, dan sebagian gaya sendiri.
+    if (process.env.PROMO_SCRIPT_FILE) {
+      source = "claude";
+      if (typeof raw.format === "string") script.format = raw.format;
+      if (typeof raw.topic === "string") script.topic = raw.topic;
+      if (raw.style && typeof raw.style === "object") script.styleOverride = raw.style;
+    }
   } catch (error) {
     console.warn("Naskah AI gagal, pakai cadangan:", error.message);
     source = "fallback";
@@ -212,6 +220,15 @@ export const buildPlan = async ({ seed, history }) => {
       seed: rng.int(1, 1e9),
     },
   };
+
+  const o = script.styleOverride || {};
+  if (typeof o.palette === "string") style.palette = PALETTES.find((p) => p.name === o.palette) || style.palette;
+  else if (o.palette && typeof o.palette === "object") style.palette = { ...style.palette, ...o.palette, name: o.palette.name || "custom" };
+  if (BACKGROUNDS.includes(o.background)) style.background = o.background;
+  if (TRANSITIONS.includes(o.transition)) style.transition = o.transition;
+  if (SUBTITLE_STYLES.includes(o.subtitle)) style.subtitle = o.subtitle;
+  if (typeof o.font === "string") style.font = FONTS.find((f) => f.head === o.font) || style.font;
+  if (o.music && typeof o.music === "object") style.music = { ...style.music, ...o.music };
 
   return {
     seed,

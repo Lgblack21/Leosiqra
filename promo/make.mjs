@@ -43,11 +43,33 @@ const audioDuration = (file) => {
   return +m[1] * 3600 + +m[2] * 60 + +m[3];
 };
 
-const loadHistory = () => {
+const promoApi = () => process.env.PROMO_API_URL || "https://www.leosiqra.com";
+
+// Riwayat disimpan di Worker (R2) kalau PROMO_SECRET ada — mesin pembuat video
+// (GitHub Actions / Claude Code routine) selalu mulai bersih tiap hari.
+const loadHistory = async () => {
+  if (process.env.PROMO_SECRET) {
+    const res = await fetch(`${promoApi()}/api/promo/history`, { headers: { "x-promo-secret": process.env.PROMO_SECRET } });
+    if (res.ok) return (await res.json()).items ?? [];
+    log(`riwayat dari Worker gagal (${res.status}), pakai lokal`);
+  }
   try {
     return JSON.parse(readFileSync(HISTORY, "utf8"));
   } catch {
     return [];
+  }
+};
+
+const saveHistory = async (items) => {
+  const trimmed = items.slice(-365);
+  writeFileSync(HISTORY, JSON.stringify(trimmed, null, 2));
+  if (process.env.PROMO_SECRET) {
+    const res = await fetch(`${promoApi()}/api/promo/history`, {
+      method: "PUT",
+      headers: { "content-type": "application/json", "x-promo-secret": process.env.PROMO_SECRET },
+      body: JSON.stringify({ items: trimmed }),
+    });
+    if (!res.ok) log(`simpan riwayat ke Worker gagal (${res.status})`);
   }
 };
 
@@ -62,7 +84,7 @@ const fontsHref = (font) => {
 // Cloudflare) atau langsung ke Bot API (TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID).
 const telegramTarget = () => {
   if (process.env.PROMO_SECRET) {
-    return { kind: "worker", url: `${process.env.PROMO_API_URL || "https://www.leosiqra.com"}/api/promo/telegram` };
+    return { kind: "worker", url: `${promoApi()}/api/promo/telegram` };
   }
   if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) return { kind: "direct" };
   return null;
@@ -130,7 +152,7 @@ const main = async () => {
   mkdirSync(OUT, { recursive: true });
   mkdirSync(STATE, { recursive: true });
 
-  const history = loadHistory();
+  const history = await loadHistory();
   const seed = Number(process.env.PROMO_SEED) || Math.floor(Math.random() * 2 ** 31);
   log(`seed ${seed}, riwayat ${history.length} video`);
   const plan = await buildPlan({ seed, history });
@@ -225,11 +247,16 @@ const main = async () => {
   ff.stdin.end();
   await ffDone;
   await browser.close();
+  if (!existsSync(videoPath)) throw new Error("video tidak terbentuk");
   log(`render ${frames} frame dalam ${((Date.now() - started) / 1000).toFixed(0)} dtk → ${videoPath}`);
 
   // 5) Simpan caption + riwayat, lalu kirim.
   writeFileSync(join(OUT, "caption.txt"), `${plan.caption}\n\n${plan.hashtags.join(" ")}\n`);
-  if (SEND) await sendTelegram(plan, videoPath, coverPath);
+  if (!SEND) {
+    log("--no-send: video tidak dikirim & riwayat tidak diubah.");
+    return;
+  }
+  await sendTelegram(plan, videoPath, coverPath);
   history.push({
     date: plan.date.slice(0, 10),
     format: plan.format,
@@ -237,10 +264,11 @@ const main = async () => {
     hook: plan.scenes[0]?.text,
     palette: plan.style.palette.name,
     source: plan.source,
+    style: `${plan.style.background}/${plan.style.transition}/${plan.style.font.head}/${plan.style.subtitle}`,
+    screens: plan.scenes.filter((s) => s.type === "phone").map((s) => s.screen),
     seed,
   });
-  writeFileSync(HISTORY, JSON.stringify(history.slice(-120), null, 2));
-  if (!existsSync(videoPath)) throw new Error("video tidak terbentuk");
+  await saveHistory(history);
 };
 
 main().catch(async (error) => {
