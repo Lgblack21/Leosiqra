@@ -38,6 +38,7 @@ export interface Env {
   LOGO_DEV_TOKEN?: string;
   COINGECKO_API_KEY?: string;
   OPENROUTER_WEB_SEARCH?: string;
+  OPENROUTER_CHAT_MODEL?: string;
   // Email transaksional (reset password) lewat Resend. Tanpa RESEND_API_KEY
   // fitur Lupa Password menjawab 503 "belum aktif" alih-alih diam-diam gagal.
   RESEND_API_KEY?: string;
@@ -734,7 +735,9 @@ const getMaintenanceSettings = async (env: Env) =>
 // dan riwayat lama user. Sekarang ambil semua tabel keuangan dengan kolom
 // lengkap dan limit yang jauh lebih longgar.
 const buildUserContext = async (env: Env, userId: string) => {
-  const [accounts, transactions, budgets, investments, savings, recurring, currencies, categories] = await Promise.all([
+  const today = todayWIB();
+  const currentYmWib = today.slice(0, 7);
+  const [accounts, transactions, budgets, investments, savings, recurring, currencies, categories, categoryMonths] = await Promise.all([
     env.DB.prepare(
       `SELECT id, name, type, currency, balance, initial_balance, payload_json
          FROM accounts WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`
@@ -752,7 +755,7 @@ const buildUserContext = async (env: Env, userId: string) => {
     env.DB.prepare(
       `SELECT type, amount, amount_idr, currency, category, sub_category, account_id, target_account_id, note,
               date, display_date, status, lender_name, total_debt, installment_tenor, monthly_interest,
-              total_interest, payment_status
+              total_interest, payment_status, related_type
          FROM transactions WHERE user_id = ? ORDER BY date DESC LIMIT 500`
     )
       .bind(userId)
@@ -795,6 +798,20 @@ const buildUserContext = async (env: Env, userId: string) => {
     )
       .bind(userId)
       .all(),
+    // Total per kategori per bulan (bulan ini + 3 bulan sebelumnya), dihitung
+    // SQL supaya akurat walau transaksi lebih banyak dari LIMIT di atas.
+    // Beli/jual investasi (related_type 'investasi') & transfer tidak dihitung.
+    env.DB.prepare(
+      `SELECT substr(COALESCE(NULLIF(display_date, ''), date), 1, 7) AS ym, type, COALESCE(NULLIF(category, ''), 'Lainnya') AS category,
+              SUM(COALESCE(NULLIF(amount_idr, 0), amount)) AS total, COUNT(*) AS n
+         FROM transactions
+        WHERE user_id = ? AND type IN ('pemasukan', 'pengeluaran')
+          AND COALESCE(related_type, '') <> 'investasi'
+          AND substr(COALESCE(NULLIF(display_date, ''), date), 1, 7) >= ?
+        GROUP BY ym, type, category`
+    )
+      .bind(userId, shiftYm(currentYmWib, -3))
+      .all<{ ym: string; type: string; category: string; total: number; n: number }>(),
   ]);
 
   // Kartu kredit/paylater dimodelkan sebagai limit (creditLimit disimpan di
@@ -852,8 +869,9 @@ const buildUserContext = async (env: Env, userId: string) => {
   // sini menghilangkan kebutuhan AI menghitung/memformat sendiri untuk
   // pertanyaan umum seputar "aman tidak pengeluaran bulan ini".
   const formatRupiah = (n: number) => `Rp${Math.round(n).toLocaleString("id-ID")}`;
-  const now = new Date();
-  const currentYm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  // Bulan berjalan menurut WIB — dulu jam server (UTC), jadi awal bulan sampai
+  // pukul 07.00 WIB masih terhitung bulan sebelumnya.
+  const currentYm = currentYmWib;
   const monthTx = (transactions.results ?? []).filter((t) => {
     const row = t as { display_date?: string | null; date?: string | null };
     const d = String(row.display_date || row.date || "");
@@ -867,12 +885,13 @@ const buildUserContext = async (env: Env, userId: string) => {
   // kelihatan defisit besar padahal surplus) — lihat juga Pajak Center yang
   // sudah lebih dulu mengecualikan kasus yang sama.
   const isInvestmentPurchaseRow = (t: unknown) => {
-    const row = t as { type?: string; category?: string };
+    const row = t as { type?: string; category?: string; related_type?: string | null };
+    if (row.related_type === "investasi") return true;
     return row.type === "pengeluaran" && (row.category?.toLowerCase().includes("investasi") || row.category === "Saham" || row.category === "Deposito");
   };
   const sumByType = (type: string) =>
     monthTx
-      .filter((t) => (t as { type?: string }).type === type && !(type === "pengeluaran" && isInvestmentPurchaseRow(t)))
+      .filter((t) => (t as { type?: string }).type === type && !isInvestmentPurchaseRow(t) && (t as { related_type?: string | null }).related_type !== "investasi")
       .reduce((s, t) => {
         const row = t as { amount_idr?: number; amount?: number };
         return s + (Number(row.amount_idr) || Number(row.amount) || 0);
@@ -937,13 +956,118 @@ const buildUserContext = async (env: Env, userId: string) => {
     };
   });
 
+  // ===== Analisis siap-pakai (dihitung server, AI tinggal membaca) =====
+  const isInvestCat = (c: string) => c.toLowerCase().includes("investasi") || c === "Saham" || c === "Deposito";
+  const catRows = ((categoryMonths.results ?? []) as Array<{ ym: string; type: string; category: string; total: number }>)
+    .filter((r) => !(r.type === "pengeluaran" && isInvestCat(r.category)));
+  const prevYm = shiftYm(currentYm, -1);
+  const prev3 = [shiftYm(currentYm, -1), shiftYm(currentYm, -2), shiftYm(currentYm, -3)];
+  const sumCat = (type: string, ym: string, cat?: string) =>
+    catRows.filter((r) => r.type === type && r.ym === ym && (!cat || r.category === cat)).reduce((s, r) => s + (Number(r.total) || 0), 0);
+  const pct = (a: number, b: number) => (b > 0 ? Math.round(((a - b) / b) * 100) : null);
+  const [y, m] = currentYm.split("-").map(Number);
+  const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const dayOfMonth = Number(today.slice(8, 10));
+  const expenseThisMonth = sumCat("pengeluaran", currentYm);
+  const incomeThisMonth = sumCat("pemasukan", currentYm);
+  const expensePrevMonth = sumCat("pengeluaran", prevYm);
+  const dailyAvg = dayOfMonth > 0 ? expenseThisMonth / dayOfMonth : 0;
+  const categoriesOf = (type: string) => Array.from(new Set(catRows.filter((r) => r.type === type).map((r) => r.category)));
+  const perCategory = (type: string, limit: number) =>
+    categoriesOf(type)
+      .map((cat) => {
+        const now_ = sumCat(type, currentYm, cat);
+        const prev = sumCat(type, prevYm, cat);
+        const avg3 = prev3.reduce((s, ym) => s + sumCat(type, ym, cat), 0) / 3;
+        return { cat, now_, prev, avg3 };
+      })
+      .filter((x) => x.now_ > 0 || x.prev > 0)
+      .sort((a, b) => b.now_ - a.now_)
+      .slice(0, limit)
+      .map((x) => ({
+        kategori: x.cat,
+        bulanIni: formatRupiah(x.now_),
+        bulanLalu: formatRupiah(x.prev),
+        rataRata3BulanSebelumnya: formatRupiah(x.avg3),
+        perubahanVsRataRataPersen: pct(x.now_, x.avg3),
+      }));
+  const budgetUsage = ((budgets.results ?? []) as Array<{ type?: string; category?: string; amount?: number; period?: string }>)
+    .filter((b) => (b.type ?? "pengeluaran") === "pengeluaran" && (b.period ?? "monthly") === "monthly" && Number(b.amount) > 0)
+    .map((b) => {
+      const used = sumCat("pengeluaran", currentYm, b.category ?? "");
+      const limit = Number(b.amount);
+      const usedPct = Math.round((used / limit) * 100);
+      return {
+        kategori: b.category,
+        batasBulanan: formatRupiah(limit),
+        terpakai: formatRupiah(used),
+        sisa: formatRupiah(Math.max(0, limit - used)),
+        terpakaiPersen: usedPct,
+        status: usedPct >= 100 ? "sudah lewat batas" : usedPct >= 80 ? "hampir habis" : "aman",
+      };
+    });
+  const in14Days = shiftDateStr(today, 14);
+  const upcoming = ((recurring.results ?? []) as Array<{ name?: string; type?: string; amount?: number; next_date?: string; status?: string }>)
+    .filter((r) => r.status !== "PAUSED" && r.next_date && r.next_date.slice(0, 10) >= today && r.next_date.slice(0, 10) <= in14Days)
+    .sort((a, b) => String(a.next_date).localeCompare(String(b.next_date)))
+    .map((r) => ({ nama: r.name, jenis: r.type, nominal: formatRupiah(Number(r.amount) || 0), tanggal: String(r.next_date).slice(0, 10) }));
+  const analisis = {
+    hariIni: today,
+    bulanIni: {
+      bulan: currentYm,
+      hariKe: dayOfMonth,
+      jumlahHariBulanIni: daysInMonth,
+      pemasukan: formatRupiah(incomeThisMonth),
+      pengeluaran: formatRupiah(expenseThisMonth),
+      rataRataPengeluaranPerHari: formatRupiah(dailyAvg),
+      proyeksiPengeluaranSampaiAkhirBulan: formatRupiah(dailyAvg * daysInMonth),
+      selisihPemasukanMinusPengeluaran: formatRupiah(incomeThisMonth - expenseThisMonth),
+    },
+    bulanLalu: { bulan: prevYm, pemasukan: formatRupiah(sumCat("pemasukan", prevYm)), pengeluaran: formatRupiah(expensePrevMonth) },
+    perubahanPengeluaranVsBulanLaluPersen: pct(expenseThisMonth, expensePrevMonth),
+    catatanPerbandingan: "Bulan ini baru berjalan sebagian — bandingkan dengan hati-hati (pakai proyeksi atau rata-rata per hari).",
+    pengeluaranPerKategori: perCategory("pengeluaran", 10),
+    pemasukanPerKategori: perCategory("pemasukan", 5),
+    budgetBulanIni: budgetUsage,
+    jadwalRutin14HariKeDepan: upcoming,
+  };
+
+  // Transaksi mentah versi ringkas (120 hari terakhir, maks 250 baris), nama
+  // rekening sudah dipetakan & field kosong dibuang — hemat token dan lebih
+  // mudah dibaca model dibanding JSON penuh 500 baris.
+  const accountName = new Map(accountsClean.map((a) => [a.id, a.name]));
+  const since120 = shiftDateStr(today, -120);
+  const recentTransactions = ((transactions.results ?? []) as Array<Record<string, unknown>>)
+    .filter((t) => String(t.display_date || t.date || "").slice(0, 10) >= since120)
+    .slice(0, 250)
+    .map((t) => {
+      const out: Record<string, unknown> = {
+        tanggal: String(t.display_date || t.date || "").slice(0, 10),
+        jenis: t.type,
+        nominalIdr: Math.round(Number(t.amount_idr) || Number(t.amount) || 0),
+        kategori: t.category,
+        sub: t.sub_category,
+        rekening: accountName.get(String(t.account_id)) ?? undefined,
+        keRekening: t.target_account_id ? accountName.get(String(t.target_account_id)) : undefined,
+        catatan: t.note,
+        mataUangAsli: t.currency && t.currency !== "IDR" ? `${t.amount} ${t.currency}` : undefined,
+        terkaitInvestasi: t.related_type === "investasi" ? true : undefined,
+        pemberiUtang: t.lender_name,
+        totalUtang: t.total_debt,
+        statusBayar: t.payment_status,
+      };
+      for (const k of Object.keys(out)) if (out[k] === null || out[k] === undefined || out[k] === "") delete out[k];
+      return out;
+    });
+
   return {
+    analisis,
     accounts: accountsClean,
     totalBalanceIdr,
     accountsMissingRate: accountsMissingRate.length > 0 ? Array.from(new Set(accountsMissingRate)) : undefined,
     monthSummary,
     savingsSummary,
-    transactions: transactions.results,
+    transaksiTerbaru: recentTransactions,
     budgets: budgets.results,
     investments: investments.results,
     savings: savings.results,
@@ -1133,51 +1257,55 @@ const fetchMarketSnapshot = async (env: Env): Promise<string> => {
   }
 };
 
-const buildAiSystemPrompt = (userContext: unknown, marketSnapshot: string) => `Kamu adalah Leosiqra, asisten AI di aplikasi pencatatan keuangan pribadi Leosiqra.
+const buildAiSystemPrompt = (userContext: unknown, marketSnapshot: string) => `Kamu adalah Leosiqra — asisten keuangan di aplikasi Leosiqra yang ngobrol kayak teman yang melek duit: santai, jujur, dan to the point.
 
-PENTING — DATA PASAR REAL-TIME (WAJIB DIBACA):
-Sistem SUDAH mengambil data pasar berikut secara real-time khusus untuk menjawab pertanyaanmu saat ini. Ini BUKAN data lama atau perkiraan — ini angka aktual dari beberapa menit terakhir:
+## Gaya ngobrol (WAJIB)
+- Pakai Bahasa Indonesia sehari-hari yang gaul tapi tetap sopan: "aku" & "kamu", boleh "gak", "banget", "sih", "nih", "kok", "yuk", "oke", "mantap", "lumayan". JANGAN pakai "Anda", "saya", atau kalimat kaku ala surat resmi.
+- JANGAN kasar, JANGAN ngejek, JANGAN pakai bahasa alay/singkatan aneh (bkn, yg, dgn). Emoji boleh, maksimal 1–2 per jawaban, tidak wajib.
+- Kalau user nulis pakai bahasa Inggris atau gaya formal, ikutin gaya mereka.
+- Langsung ke inti. Buka dengan jawaban/angka utamanya, baru penjelasan singkat. Hindari basa-basi pembuka ("Tentu!", "Baik, berikut…").
+- Jawaban pendek: umumnya 2–6 kalimat. Kalau ada banyak angka/rincian, pakai poin-poin (- ) dan tebalkan angka penting pakai **dua bintang**. Jangan bikin tabel.
+- Kalau relevan, tutup dengan 1 saran konkret yang bisa langsung dilakukan (mis. "coba pasang budget Hiburan Rp500 ribu"). Jangan ceramah panjang.
+- Kalau pertanyaannya ambigu, tanya balik singkat. Kalau user cuma nyapa, sapa balik singkat dan tawarkan bantuan.
+
+## Cara pakai data (WAJIB)
+- Hari ini (WIB): ${new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10)}.
+- SELALU utamakan angka yang sudah dihitung server di "analisis", "monthSummary", "savingsSummary", "totalBalanceIdr" — jangan menjumlahkan ulang sendiri dari "transaksiTerbaru" kalau angkanya sudah tersedia. Salin angka yang sudah berformat apa adanya.
+- "analisis.pengeluaranPerKategori" membandingkan bulan ini vs bulan lalu vs rata-rata 3 bulan sebelumnya — pakai ini untuk pertanyaan "aku boros di mana", "kategori apa yang naik". Ingat bulan ini baru berjalan sebagian (lihat analisis.bulanIni.hariKe), jadi untuk perbandingan pakai proyeksi atau rata-rata per hari.
+- "analisis.budgetBulanIni" = realisasi budget per kategori; "analisis.jadwalRutin14HariKeDepan" = tagihan/gaji/tabungan rutin yang akan jalan.
+- Saldo per rekening: "balance" dalam mata uang ASLI rekening itu (lihat "currency") — jangan sebut Rupiah kalau currency-nya bukan IDR. Untuk total lintas mata uang pakai "balanceIdr"/"totalBalanceIdr". Kalau balanceIdr null (lihat accountsMissingRate), bilang jujur kursnya belum tersedia.
+- Rekening bertipe "Credit Card"/"kartu": "balance" negatif = tagihan terpakai; "creditLimit" = limit kartu.
+- Transaksi yang "terkaitInvestasi" (beli/jual investasi) dan transfer antar rekening sendiri BUKAN pengeluaran/penghasilan riil — jangan dihitung sebagai belanja atau pemasukan.
+- Hutang/piutang ada di transaksi jenis "debt": kategori "Hutang" = user berutang, "Piutang" = user meminjamkan; statusBayar "lunas" berarti sudah selesai.
+- Di "investments", "transaction_type" Beli/Pembelian menambah posisi, Jual/Penjualan mengurangi; jangan dijumlah mentah jadi satu.
+- Semua nominal Rupiah yang kamu tulis sendiri WAJIB pakai titik ribuan: Rp93.977.366 (bukan Rp93977366). Nominal besar boleh diringkas: Rp12,5 juta.
+- Kalau datanya gak ada, bilang jujur dan sarankan cara mencatatnya di Leosiqra — JANGAN mengarang angka.
+- Jangan menjanjikan keuntungan investasi pasti, dan jangan menyuruh beli/jual aset tertentu sebagai kepastian — kasih pertimbangan, bukan perintah.
+
+## Data pasar real-time (sudah diambil sistem beberapa menit lalu)
 ${marketSnapshot}
+Kalau ditanya harga kripto, emas, atau kurs USD/IDR, jawab langsung pakai angka di atas persis apa adanya. Jangan bilang kamu gak punya akses data real-time. Kalau barisnya "tidak tersedia", bilang jujur datanya lagi gak tersedia.
 
-Jika user bertanya soal harga kripto, emas, atau kurs USD/IDR, JAWAB LANGSUNG memakai angka-angka di atas — SALIN persis apa adanya, jangan dibulatkan atau diubah. JANGAN PERNAH bilang "saya tidak punya akses data real-time" atau "saya tidak tahu harga terkini" — kamu SUDAH diberi data itu di atas, gunakan! Jika salah satu baris data bertuliskan "tidak tersedia", katakan JUJUR bahwa data itu sedang tidak tersedia — JANGAN mengarang angka 0 atau angka lain untuk menggantikannya.
+## Topik lain
+Kamu boleh jawab pertanyaan umum di luar keuangan dengan gaya yang sama, tapi keahlian utamamu adalah keuangan pribadi user di aplikasi ini.
 
-Kamu boleh menjawab pertanyaan APA SAJA, termasuk topik umum di luar keuangan — layaknya asisten AI serba bisa. Namun keahlian dan fokus utamamu adalah membantu pengguna memahami serta mengelola data keuangan pribadi mereka sendiri di aplikasi ini (transaksi, rekening, investasi, tabungan, budget, recurring, hutang/piutang). Setiap kali pertanyaan menyentuh keuangan pengguna, SELALU rujuk data konkret di bawah ini dan jawab dengan angka nyata — jangan mengarang angka atau data yang tidak ada.
-
-Cara membaca Konteks Data Keuangan Pengguna di bawah:
-- Setiap akun di "accounts" punya field "currency" (mata uang ASLI akun itu — bisa IDR, USD, KHR, dll) dan "balance" (saldo dalam mata uang ASLI itu, BUKAN Rupiah kalau currency-nya bukan IDR). JANGAN PERNAH menyebut "balance" sebagai "Rupiah" kalau currency akun itu bukan "IDR" — sebut sesuai currency aslinya (mis. "175.000 KHR", bukan "175.000 Rupiah").
-- Untuk menjumlahkan/membandingkan saldo LINTAS akun berbeda mata uang, JANGAN hitung sendiri — server SUDAH menghitungkan "balanceIdr" (saldo akun itu dikonversi ke Rupiah) per akun, dan "totalBalanceIdr" (total semua akun, sudah dijumlah dalam Rupiah) di level teratas konteks. Pakai kedua field itu langsung. Kalau "balanceIdr" suatu akun bernilai null, itu berarti kursnya sedang tidak tersedia (lihat "accountsMissingRate") — sebutkan JUJUR bahwa akun itu belum bisa dikonversi, jangan dijumlah sebagai 0 atau diabaikan diam-diam dari total.
-- Pola sama berlaku di "transactions"/"savings"/"investments": field amount_idr (sudah dikonversi ke Rupiah oleh server) dipakai untuk menjumlahkan/membandingkan lintas mata uang — jangan jumlahkan field "amount" mentah dari mata uang berbeda seolah semuanya Rupiah.
-- Akun bertipe "Credit Card"/"kartu" TIDAK memakai "balance" sebagai saldo kas — itu limit kartu. Terpakai = initialBalance + total pengeluaran dari akun ini (transaksi type pengeluaran/debt kategori Piutang dengan account_id ini) − total pemasukan ke akun ini; Sisa Limit = creditLimit − Terpakai.
-- Transaksi dengan type "debt": category "Hutang" berarti pengguna berutang, category "Piutang" berarti pengguna memberi pinjaman. payment_status "lunas" berarti sudah selesai — jangan hitung yang lunas sebagai hutang/piutang aktif.
-- Field "currencies" adalah daftar mata uang yang dipakai pengguna (bukan saldo), dipakai kalau ditanya mata uang apa saja yang mereka lacak.
-- Field "categories" adalah daftar kategori/subkategori custom yang pengguna buat sendiri (bukan transaksi) — pakai ini kalau ditanya kategori apa saja yang mereka punya, atau untuk mencocokkan nama kategori yang benar (jangan mengarang nama kategori yang tidak ada di daftar ini).
-- Untuk pertanyaan soal "hari ini"/"kemarin"/tanggal tertentu di "transactions"/"savings", PAKAI field "display_date" (bukan "date" mentah) sebagai tanggal yang dilihat pengguna di aplikasi — keduanya bisa beda sehari karena penyesuaian zona waktu WIB. Kalau "display_date" kosong/null, baru pakai "date" sebagai fallback.
-- Transaksi dengan type "transfer" (atau yang punya "target_account_id" terisi) adalah perpindahan dana ANTAR rekening milik pengguna sendiri (dari account_id ke target_account_id) — bukan pengeluaran/pemasukan riil, jangan dihitung sebagai belanja atau penghasilan.
-- Di "investments", field "transaction_type" membedakan baris "Beli"/"Pembelian" (menambah posisi) vs "Jual"/"Penjualan" (realisasi/keluar posisi) — jangan jumlahkan keduanya begitu saja sebagai total investasi aktif. Field "date_invested" adalah tanggal transaksinya, "stock_code"/"exchange_code" khusus saham, "quantity"/"unit" khusus emas/kripto/aset lain.
-- "monthSummary" berisi ringkasan bulan berjalan yang SUDAH dihitung & diformat oleh server (totalPemasukanFormatted, totalPengeluaranFormatted, statusFormatted — sudah menyimpulkan surplus/defisit/seimbang). Untuk pertanyaan umum seperti "apakah pengeluaran bulan ini aman/wajar", PAKAI field ini langsung sebagai jawaban utama — JANGAN menjumlahkan ulang dari "transactions" mentah, dan JANGAN membuat penjelasan berputar-putar soal kenapa dua angka kebetulan sama; cukup sebutkan angkanya dan statusnya.
-- "savingsSummary" berisi total tabungan PER GOAL/kategori (mis. "Dana Darurat") yang SUDAH dijumlahkan & diformat oleh server — totalTerkumpulFormatted (Setoran dikurangi Penarikan), dan kalau goal itu punya target aktif: targetFormatted serta sisaMenujuTargetFormatted (selisih ke target). Untuk pertanyaan "sisa target tabungan X" atau "berapa total tabungan X", PAKAI field ini langsung — JANGAN menjumlahkan sendiri baris-baris "savings" mentah satu per satu (mudah salah transkrip untuk angka besar).
-
-ATURAN FORMAT ANGKA RUPIAH (WAJIB): setiap kali kamu menyebut nominal Rupiah yang kamu hitung/ambil sendiri dari angka mentah (bukan dari field yang namanya sudah berakhiran "Formatted" seperti di atas), WAJIB tulis dengan titik sebagai pemisah ribuan tiap 3 digit dari kanan — misalnya angka mentah 93977366 HARUS ditulis "Rp93.977.366", BUKAN "Rp93977366" atau "Rp93,977,366". Jangan pernah menulis nominal Rupiah sebagai deretan digit tanpa pemisah.
-
-Konteks Data Keuangan Pengguna (JSON):
-${JSON.stringify(userContext, null, 2)}
-
-Aturan:
-- Jawab dalam Bahasa Indonesia, ringkas, jelas, dan ramah.
-- Gunakan format Rupiah yang jelas saat membahas nominal.
-- Jangan menjanjikan keuntungan investasi yang pasti.
-- Jika data spesifik yang diminta memang tidak ada di konteks (bukan soal data pasar di atas), sampaikan dengan jujur alih-alih mengarang.
-- Untuk pertanyaan di luar topik keuangan, jawab senormal asisten AI pada umumnya.`;
+## Data keuangan user (JSON)
+${JSON.stringify(userContext)}`;
 
 // Beberapa provider di balik OpenRouter membatasi akses berdasarkan region IP
 // pemanggil — IP edge Cloudflare Workers bisa saja diblokir oleh satu provider
 // meski modelnya sendiri valid. Kirim beberapa kandidat model sekaligus
 // (fitur routing/fallback bawaan OpenRouter) supaya jika satu provider
 // menolak, permintaan otomatis dicoba ke provider/model berikutnya.
+// Model chat AI Leosiqra (dipilih pemilik aplikasi, 29 Sep 2026): Gemini 3
+// Flash — paham Bahasa Indonesia santai & hitungan. Cadangan otomatis kalau
+// provider pertama menolak/gangguan. Sengaja di-pin di sini (bukan dari secret
+// OPENROUTER_MODEL yang nilainya tidak terlihat di repo); bisa ditimpa lewat
+// var OPENROUTER_CHAT_MODEL tanpa ubah kode.
 const OPENROUTER_FALLBACK_MODELS = [
-  "meta-llama/llama-3.1-8b-instruct",
-  "deepseek/deepseek-chat",
-  "google/gemini-2.0-flash-001",
+  "google/gemini-3-flash-preview",
+  "google/gemini-2.5-flash",
+  "deepseek/deepseek-v3.2",
 ];
 
 const runOpenRouterAssistant = async (
@@ -1187,13 +1315,13 @@ const runOpenRouterAssistant = async (
   prompt: string
 ) => {
   if (!env.OPENROUTER_API_KEY) {
-    return "AI belum dikonfigurasi. Simpan `OPENROUTER_API_KEY` di Cloudflare untuk mengaktifkan asisten.";
+    return "AI-nya belum aktif nih — admin perlu memasang `OPENROUTER_API_KEY` di Cloudflare dulu.";
   }
 
   // Batasi riwayat agar konteks tidak membengkak tanpa batas.
   const recentHistory = history.slice(-20);
 
-  const preferredModel = env.OPENROUTER_MODEL;
+  const preferredModel = env.OPENROUTER_CHAT_MODEL;
   const models = preferredModel
     ? [preferredModel, ...OPENROUTER_FALLBACK_MODELS.filter((m) => m !== preferredModel)]
     : OPENROUTER_FALLBACK_MODELS;
@@ -1214,7 +1342,8 @@ const runOpenRouterAssistant = async (
         ...recentHistory,
         { role: "user", content: prompt },
       ],
-      temperature: 0.6,
+      temperature: 0.7,
+      max_tokens: 900,
       // Web search (plugin OpenRouter) — model dasar cuma tahu data sampai
       // cutoff training-nya (mis. tidak tahu presiden Indonesia saat ini),
       // plugin ini nyuntik hasil pencarian web sebagai konteks tambahan
@@ -1236,7 +1365,7 @@ const runOpenRouterAssistant = async (
   };
 
   const textOutput = data.choices?.[0]?.message?.content?.trim();
-  return textOutput || "Maaf, saya belum bisa memproses pertanyaan Anda saat ini.";
+  return textOutput || "Waduh, aku lagi gak bisa jawab sekarang. Coba kirim ulang sebentar lagi ya.";
 };
 
 const runAiAssistant = async (
@@ -5734,9 +5863,16 @@ async function handleAiChat(request: Request, env: Env) {
 
   // Riwayat percakapan sebelumnya diteruskan ke model agar AI ingat konteks
   // obrolan, bukan hanya menjawab satu pertanyaan tanpa memori.
-  const history = nextMessages
-    .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
-    .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
+  // Terima dua format: dari server (role user/assistant + content) dan format
+  // lama yang dulu disimpan ulang oleh browser (role model + text) — dulu
+  // format kedua tersaring habis sehingga AI "lupa" obrolan sebelumnya.
+  const history = (nextMessages as Array<Record<string, unknown>>)
+    .map((m) => {
+      const role = m.role === "user" ? "user" : m.role === "assistant" || m.role === "model" ? "assistant" : null;
+      const content = typeof m.content === "string" ? m.content : typeof m.text === "string" ? m.text : "";
+      return role && content.trim() ? { role: role as "user" | "assistant", content } : null;
+    })
+    .filter((m): m is { role: "user" | "assistant"; content: string } => m !== null);
 
   const userContext = await buildUserContext(env, authResult.session.user.id);
   const answer = await runAiAssistant(env, payload.prompt, userContext, history);
