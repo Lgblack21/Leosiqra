@@ -33,6 +33,7 @@ export interface Env {
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;
   PROMO_SECRET?: string;
+  PROMO_ROUTINE_SECRET?: string;
   VAPID_PUBLIC_KEY?: string;
   VAPID_PRIVATE_KEY?: string;
   VAPID_SUBJECT?: string;
@@ -1643,9 +1644,13 @@ async function handleAdminAiKey(request: Request, env: Env) {
 const PROMO_MODELS = ["google/gemini-2.5-flash", "google/gemini-2.5-flash-lite"];
 const PROMO_MAX_VIDEO_BYTES = 49 * 1024 * 1024; // batas sendVideo Bot API 50 MB
 
+// Dua kunci terpisah (GitHub Actions & Claude Code routine) supaya bisa dicabut
+// sendiri-sendiri.
 const isPromoAuthorized = (request: Request, env: Env) => {
   const given = request.headers.get("x-promo-secret") ?? "";
-  return Boolean(env.PROMO_SECRET && env.PROMO_SECRET.length >= 32 && constantTimeEqual(given, env.PROMO_SECRET));
+  return [env.PROMO_SECRET, env.PROMO_ROUTINE_SECRET].some(
+    (secret) => Boolean(secret && secret.length >= 32 && constantTimeEqual(given, secret))
+  );
 };
 
 async function handlePromoScript(request: Request, env: Env) {
