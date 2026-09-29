@@ -62,10 +62,9 @@ jobs:
       - name: Render & kirim ke Telegram
         run: node make.mjs
         env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-
+          PROMO_SECRET: ${{ secrets.PROMO_SECRET }}
+          PROMO_API_URL: https://www.leosiqra.com
+          
       - uses: actions/cache/save@v4
         with:
           path: promo/state
