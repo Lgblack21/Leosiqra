@@ -240,7 +240,8 @@ const main = async () => {
   const ffDone = new Promise((res, rej) =>
     ff.on("close", (code) => {
       ffExited = true;
-      code === 0 ? res() : rej(new Error(`ffmpeg keluar ${code}`));
+      if (code === 0) res();
+      else rej(new Error(`ffmpeg keluar ${code}`));
     })
   );
   ff.stdin.on("error", () => {}); // EPIPE kalau ffmpeg berhenti duluan — ditangani lewat ffExited
