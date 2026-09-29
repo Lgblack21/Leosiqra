@@ -28,6 +28,7 @@ import {
   Monitor,
   Settings
 } from 'lucide-react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged, User as FirebaseUser } from '@/lib/cf-auth';
@@ -405,6 +406,21 @@ export default function ProfilePage() {
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-20">
       
+      {/* Ajakan memasang aplikasi di HP */}
+      <Link
+        href="/install"
+        className="group flex items-center gap-4 rounded-[20px] md:rounded-[28px] border border-indigo-100 bg-gradient-to-r from-indigo-50 to-violet-50 p-4 md:p-5 transition-colors hover:border-indigo-200"
+      >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-indigo-600 shadow-sm">
+          <Smartphone size={20} />
+        </span>
+        <span className="flex-1">
+          <span className="block text-sm font-black text-slate-900">Pasang Leosiqra & Input Cepat di HP</span>
+          <span className="block text-xs font-medium text-slate-500">Buka langsung dari layar utama, tanpa Play Store — lihat caranya</span>
+        </span>
+        <span className="text-sm font-black text-indigo-600 transition-transform group-hover:translate-x-1">→</span>
+      </Link>
+
       {/* Profile Identity Header */}
       <div className="bg-white rounded-[20px] md:rounded-[40px] border border-slate-50 shadow-sm p-5 md:p-10 lg:p-12">
         <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-10">

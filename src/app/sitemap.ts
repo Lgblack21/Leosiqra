@@ -10,6 +10,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/catatan-keuangan-pribadi',
     '/catatan-keuangan-harian',
     '/panduan',
+    '/install',
     '/panduan/cara-mengatur-gaji',
     '/panduan/dana-darurat',
     '/panduan/cara-melunasi-utang',

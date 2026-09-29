@@ -1727,11 +1727,12 @@ const oauthStateCookie = (state: string) =>
 const clearOauthStateCookie = () =>
   `oauth_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
 
-// Cuma terima redirect target yang mengarah ke tree /app (dipakai native-app
-// shell Capacitor) — mencegah open redirect kalau parameter/cookie ini diisi
-// sembarangan. Mirror dari sanitizeNext di src/app/auth/login/page.tsx.
+// Cuma terima redirect target ke tree /app (UI mobile/Capacitor) atau
+// /input-cepat (PWA Input Cepat) — mencegah open redirect kalau parameter/
+// cookie ini diisi sembarangan. Mirror dari sanitizeNext di
+// src/app/auth/login/page.tsx.
 const isAppNext = (value: string | null | undefined): value is string =>
-  Boolean(value && value.startsWith("/app"));
+  Boolean(value && /^\/(app|input-cepat)(\/|\?|$)/.test(value));
 
 const oauthNextCookie = (next: string) =>
   `oauth_next=${encodeURIComponent(next)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`;

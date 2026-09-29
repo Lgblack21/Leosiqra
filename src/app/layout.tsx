@@ -101,6 +101,7 @@ import MaintenanceGuard from "@/components/MaintenanceGuard";
 import StaleReloadGuard from "@/components/StaleReloadGuard";
 import { NoZoomGuard } from "@/components/NoZoomGuard";
 import LogoUpdateBanner from "@/components/LogoUpdateBanner";
+import { InstallPromptCatcher } from "@/components/install/InstallPromptCatcher";
 
 export default function RootLayout({
   children,
@@ -128,6 +129,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <StaleReloadGuard />
         <NoZoomGuard />
+        <InstallPromptCatcher />
         <LogoUpdateBanner />
         <MaintenanceGuard>
           {children}

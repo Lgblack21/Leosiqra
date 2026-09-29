@@ -17,7 +17,9 @@ import {
   X,
   PartyPopper,
 } from 'lucide-react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { FeatureDemo, HowTo, type DemoKind } from '@/components/tour/FeatureDemo';
 
 // Kunci localStorage — dipakai supaya tur tetap jalan walau user reload halaman
 // di tengah-tengah walkthrough (state React di layout hilang saat full reload,
@@ -34,6 +36,8 @@ interface TourStop {
   icon: React.ElementType;
   title: string;
   content: string;
+  demo: DemoKind;
+  how: string[];
 }
 
 // Urutan "keliling halaman" — tiap langkah benar-benar memindahkan user ke
@@ -45,54 +49,72 @@ const STOPS: TourStop[] = [
     icon: LayoutDashboard,
     title: 'Dashboard — Beranda kamu',
     content: 'Ini pusat kendali: total aset, pemasukan, pengeluaran, dan ringkasan keuangan kamu dalam satu layar. Semua angka di sini otomatis mengikuti transaksi yang kamu catat.',
+    demo: 'dashboard',
+    how: ['Lihat saldo bersih semua rekening di kartu hijau', 'Pantau pemasukan vs pengeluaran bulan ini', 'Ganti bulan lewat pemilih tanggal di kanan atas'],
   },
   {
     path: '/membership/transactions/input',
     icon: PlusCircle,
     title: 'Input Transaksi',
     content: 'Catat setiap pemasukan & pengeluaran di sini. Pilih rekening, kategori, dan nominal — saldo rekening langsung ter-update otomatis.',
+    demo: 'input',
+    how: ['Ketik singkat seperti “25rb kopi gopay”', 'Nominal, kategori & rekening terisi otomatis', 'Tekan Simpan — saldo rekening langsung ter-update'],
   },
   {
     path: '/membership/rekening',
     icon: Building2,
     title: 'Rekening',
     content: 'Semua rekening bank, e-wallet, uang tunai, dan kartu kredit/paylater kamu berkumpul di sini lengkap dengan saldonya.',
+    demo: 'rekening',
+    how: ['Tambah rekening bank, e-wallet, atau tunai', 'Isi saldo saat ini sekali saja', 'Saldo berubah sendiri setiap kamu mencatat'],
   },
   {
     path: '/membership/investment',
     icon: TrendingUp,
     title: 'Investasi',
     content: 'Pantau saham, deposito, emas, dan aset lain. Harga saham/kripto tersinkron otomatis biar nilai portofoliomu selalu terkini.',
+    demo: 'investasi',
+    how: ['Catat pembelian saham, emas, atau deposito', 'Nilai & keuntungan dihitung otomatis', 'Lihat alokasi portofolio per jenis aset'],
   },
   {
     path: '/membership/tabungan',
     icon: PiggyBank,
     title: 'Tabungan',
     content: 'Buat target tabungan (mis. Dana Darurat, Liburan) dan pantau progresnya sampai tercapai.',
+    demo: 'tabungan',
+    how: ['Pilih tujuan: Dana Darurat, Liburan, dll', 'Catat setoran dari rekening mana saja', 'Pantau progres sampai target tercapai'],
   },
   {
     path: '/membership/pajak-center',
     icon: Calculator,
     title: 'Pajak Center',
     content: 'Hitung SPT/PPh otomatis dari data penghasilanmu — salah satu fitur andalan Leosiqra biar urusan pajak nggak bikin pusing.',
+    demo: 'pajak',
+    how: ['Pilih status PTKP (TK/K & tanggungan)', 'Penghasilan setahun diringkas otomatis', 'Unduh draft SPT (Excel/PDF) untuk dicocokkan'],
   },
   {
     path: '/membership/ai-leosiqra',
     icon: Sparkles,
     title: 'AI Leosiqra',
     content: 'Asisten AI yang paham datamu. Tanya apa aja: "berapa pengeluaran bulan ini?", "aku boros di mana?", dan dapat jawaban langsung.',
+    demo: 'ai',
+    how: ['Ketik pertanyaan soal keuanganmu', 'AI membaca datamu dan menjawab langsung', 'Pakai pertanyaan cepat kalau bingung mulai'],
   },
   {
     path: '/membership/nama-akun',
     icon: Tags,
     title: 'Nama Akun & Kategori',
     content: 'Atur kategori dan sub-kategori transaksimu sesuka hati. Yang kamu pilih saat setup tadi bisa ditambah/ubah kapan saja di sini.',
+    demo: 'kategori',
+    how: ['Tambah kategori & sub-kategori sendiri', 'Ubah nama atau urutannya kapan saja', 'Dipakai di semua form pencatatan'],
   },
   {
     path: '/membership/profile',
     icon: UserCircle,
     title: 'Profil & Keamanan — Selesai! 🎉',
     content: 'Kelola profil, foto, keamanan 2FA, dan langganan di sini. Itu dia keliling singkatnya — selamat menikmati Leosiqra!',
+    demo: 'profil',
+    how: ['Lengkapi profil & foto', 'Aktifkan verifikasi 2 langkah (Authenticator)', 'Pasang aplikasi di HP lewat tombol di bawah'],
   },
 ];
 
@@ -165,7 +187,7 @@ export const OnboardingTour = () => {
         className={cn(
           'fixed z-[9999] bg-white shadow-2xl border border-slate-100 animate-in slide-in-from-bottom-4 fade-in duration-300',
           'inset-x-0 bottom-0 rounded-t-[28px] p-6 pb-8',
-          'sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-[360px] sm:rounded-[28px] sm:pb-6'
+          'max-h-[88vh] overflow-y-auto sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-[400px] sm:rounded-[28px] sm:pb-6'
         )}
       >
         <div className="flex items-start justify-between gap-3 mb-4">
@@ -187,10 +209,22 @@ export const OnboardingTour = () => {
         </div>
 
         <h3 className="text-lg font-black text-slate-900 mb-2 leading-tight">{stop.title}</h3>
-        <p className="text-[13px] font-medium text-slate-500 leading-relaxed mb-2">{stop.content}</p>
+        <p className="text-[13px] font-medium text-slate-500 leading-relaxed mb-3">{stop.content}</p>
+        <FeatureDemo kind={stop.demo} />
+        <p className="mt-3 mb-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">Cara pakai</p>
+        <HowTo steps={stop.how} />
+        {isLast && (
+          <Link
+            href="/install"
+            onClick={finish}
+            className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-indigo-50 py-3 text-[13px] font-black text-indigo-700 hover:bg-indigo-100"
+          >
+            📱 Pasang Leosiqra & Input Cepat di HP
+          </Link>
+        )}
 
         {/* Progress bar */}
-        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden my-5">
+        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden my-4">
           <div
             className="h-full bg-indigo-600 rounded-full transition-all duration-500"
             style={{ width: `${((step + 1) / STOPS.length) * 100}%` }}

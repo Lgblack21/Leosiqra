@@ -1,14 +1,17 @@
 {
+  "id": "/input-cepat",
   "name": "Input Cepat - Leosiqra",
   "short_name": "Input Cepat",
   "description": "Catat transaksi harian dengan cepat dari layar utama.",
   "start_url": "/input-cepat",
-  "scope": "/",
+  "scope": "/input-cepat",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#4f46e5",
   "icons": [
-    { "src": "/images/Logo-new.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/images/Logo-new.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+    { "src": "/images/input-cepat-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/images/input-cepat-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/images/input-cepat-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/images/input-cepat-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

@@ -37,6 +37,7 @@ export const LandingFooter = ({ variant = 'light' }: { variant?: 'light' | 'dark
             <li><Link href="/catatan-keuangan-pribadi" className={link}>Catatan Keuangan Pribadi</Link></li>
             <li><Link href="/catatan-keuangan-harian" className={link}>Catatan Keuangan Harian</Link></li>
             <li><Link href="/panduan" className={link}>Semua Panduan</Link></li>
+            <li><Link href="/install" className={link}>Pasang di HP</Link></li>
           </ul>
         </div>
 

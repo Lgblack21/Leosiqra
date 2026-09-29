@@ -3,10 +3,11 @@
 import Link from "next/link";
 import {
   BarChart3, MessageCircle, ScanLine, Mic, UserCircle, HandCoins, PiggyBank, CreditCard, Target,
-  Repeat, TrendingUp, CalendarRange, ShieldCheck, Globe, ChevronRight, ExternalLink,
+  Repeat, TrendingUp, CalendarRange, ShieldCheck, Globe, ChevronRight, ExternalLink, Zap, PlayCircle,
 } from "lucide-react";
 import { lightTap } from "@/lib/haptics";
 import { FadeIn, StaggerList, StaggerItem } from "@/components/app/FadeIn";
+import { START_APP_TOUR_EVENT } from "@/components/app/AppTour";
 
 interface MenuItem { label: string; desc?: string; href: string; icon: React.ElementType; color: string }
 
@@ -66,6 +67,36 @@ export default function AppMorePage() {
         </span>
         <ChevronRight size={18} className="text-slate-300" />
       </Link>
+
+      <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden">
+        <Link href="/input-cepat?install=1" onClick={lightTap} className="flex items-center gap-3 px-4 py-3.5 active:bg-slate-50 dark:active:bg-slate-800">
+          <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white flex items-center justify-center">
+            <Zap size={18} fill="currentColor" />
+          </span>
+          <span className="flex-1">
+            <span className="block text-sm font-bold text-slate-900 dark:text-white">Pasang Input Cepat</span>
+            <span className="block text-[11px] text-slate-400">Catat kilat dari layar utama HP</span>
+          </span>
+          <ChevronRight size={18} className="text-slate-300" />
+        </Link>
+        <button
+          type="button"
+          onClick={() => {
+            lightTap();
+            window.dispatchEvent(new Event(START_APP_TOUR_EVENT));
+          }}
+          className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-slate-50 dark:active:bg-slate-800"
+        >
+          <span className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400 flex items-center justify-center">
+            <PlayCircle size={19} />
+          </span>
+          <span className="flex-1">
+            <span className="block text-sm font-bold text-slate-900 dark:text-white">Putar tur aplikasi</span>
+            <span className="block text-[11px] text-slate-400">Lihat lagi cara pakai tiap fitur</span>
+          </span>
+          <ChevronRight size={18} className="text-slate-300" />
+        </button>
+      </div>
 
       <section>
         <div className="flex items-baseline justify-between px-1 mb-2">

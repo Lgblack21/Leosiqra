@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { ProductTour, TourStep } from '@/components/tour/ProductTour';
+import type { DemoKind } from '@/components/tour/FeatureDemo';
 
 interface GuideItem {
   name: string;
@@ -134,28 +135,47 @@ const extras: GuideSection[] = [
 
 const allSections = [...sections, ...extras];
 
+// Peraga & langkah cara pakai per grup menu sidebar (id = GuideSection.id).
+const SECTION_DEMO: Record<string, { demo: DemoKind; how: string[] }> = {
+  primary: { demo: 'dashboard', how: ['Buka Dashboard untuk ringkasan bulan ini', 'Ganti bulan lewat kalender di kanan atas', 'Tanya apa saja di AI Leosiqra'] },
+  transaksi: { demo: 'input', how: ['Buka Catat Transaksi atau Tambah Cepat', 'Pilih rekening, kategori & isi nominal', 'Simpan — saldo rekening ter-update otomatis'] },
+  aset: { demo: 'rekening', how: ['Tambah rekening bank, e-wallet, tunai, atau kartu', 'Isi saldo saat ini sekali saja', 'Saldo berubah sendiri setiap kamu mencatat'] },
+  investasi: { demo: 'investasi', how: ['Pilih jenis: Saham, Deposito, atau Lainnya', 'Catat jumlah & harga beli', 'Nilai & keuntungan dihitung otomatis'] },
+  perencanaan: { demo: 'budget', how: ['Pasang budget per kategori di Budget & Target', 'Catat utang/piutang & cicilannya', 'Lihat Laporan Tahunan & Pajak Center'] },
+  akun: { demo: 'profil', how: ['Lengkapi profil & foto', 'Aktifkan verifikasi 2 langkah', 'Atur kategori & mata uang sesuai kebutuhan'] },
+};
+
 const buildTourSteps = (): TourStep[] => {
   const steps: TourStep[] = [
     {
       title: 'Selamat Datang di Leosiqra 👋',
       content: 'Ini tur singkat mengenalkan navigasi utama aplikasi. Klik "Lanjut" untuk mulai, atau "Lewati Tur" kapan saja.',
+      demo: 'menu',
+      how: ['Semua fitur dikelompokkan di menu kiri', 'Klik nama grup untuk membuka isinya', 'Tombol "Tambah Cepat" selalu ada di kanan atas'],
     },
   ];
   for (const section of sections) {
+    const extra = section.id ? SECTION_DEMO[section.id] : undefined;
     steps.push({
       target: `[data-tour="sidebar-group-${section.id}"]`,
       title: `Menu: ${section.title}`,
       content: `${section.subtitle}. Berisi: ${section.items.map((i) => i.name).join(', ')}.`,
+      ...extra,
     });
   }
   steps.push({
     target: '[data-tour="tambah-cepat"]',
     title: 'Tambah Cepat',
     content: 'Tombol ini ada di setiap halaman — cara tercepat buka form pencatatan apa pun tanpa pindah halaman.',
+    demo: 'tambah-cepat',
+    how: ['Klik tombol hijau "Tambah Cepat"', 'Pilih yang mau dicatat (pengeluaran, transfer, tabungan…)', 'Isi form yang muncul, lalu simpan'],
   });
   steps.push({
     title: 'Selesai! 🎉',
-    content: 'Sekarang kamu sudah kenal semua bagian utama Leosiqra. Scroll ke bawah kapan saja untuk baca penjelasan detail tiap fitur, atau ulangi tur ini lewat tombol "Mulai Tur".',
+    content: 'Sekarang kamu sudah kenal semua bagian utama Leosiqra. Pasang juga aplikasinya di HP supaya mencatat bisa dari mana saja.',
+    demo: 'install',
+    how: ['Leosiqra — aplikasi lengkap di HP', 'Input Cepat — khusus catat kilat dari layar utama', 'Ulangi tur ini kapan saja lewat tombol "Mulai Tur"'],
+    link: { href: '/install', label: '📱 Pasang di HP' },
   });
   return steps;
 };

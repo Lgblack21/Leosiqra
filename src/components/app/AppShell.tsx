@@ -8,6 +8,7 @@ import { App as CapacitorApp } from "@capacitor/app";
 import { auth } from "@/lib/cf-client";
 import { onAuthStateChanged } from "@/lib/cf-auth";
 import { ThemeProvider, useTheme } from "@/context/ThemeContext";
+import { AppTour } from "@/components/app/AppTour";
 
 // Native splash (drawable/splash.png) cuma nyala sekilas selama Android/iOS
 // nyiapin Activity — begitu WebView aktif dia langsung ilang, dan APK ini
@@ -94,5 +95,10 @@ export default function AppShell({
 // tanpa perlu menyentuh file itu sama sekali.
 function ThemedShell({ children }: { children: React.ReactNode }) {
   const { resolvedTheme } = useTheme();
-  return <div className={resolvedTheme === "dark" ? "dark" : ""}>{children}</div>;
+  return (
+    <div className={resolvedTheme === "dark" ? "dark" : ""}>
+      {children}
+      <AppTour />
+    </div>
+  );
 }

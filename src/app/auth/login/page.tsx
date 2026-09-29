@@ -20,10 +20,10 @@ const GoogleIcon = ({ size = 18 }: { size?: number }) => (
   </svg>
 );
 
-// Cuma terima redirect target yang mengarah ke tree /app — mencegah open
+// Cuma terima redirect target ke tree /app atau /input-cepat — mencegah open
 // redirect kalau parameter `next` diisi sembarangan (mis. URL eksternal).
 const sanitizeNext = (value: string | null): string | null =>
-  value && value.startsWith('/app') ? value : null;
+  value && /^\/(app|input-cepat)(\/|\?|$)/.test(value) ? value : null;
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');

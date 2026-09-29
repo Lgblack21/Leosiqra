@@ -7,7 +7,14 @@ import type { Metadata, Viewport } from "next";
 export const metadata: Metadata = {
   title: "Input Cepat · Leosiqra",
   description: "Catat transaksi harian dengan cepat dari layar utama HP kamu.",
+  // id & scope sendiri (lihat manifest) supaya bisa terpasang berdampingan
+  // dengan aplikasi utama Leosiqra tanpa saling "merebut" link di Android,
+  // dan ikonnya beda supaya tidak tertukar di layar utama.
   manifest: "/input-cepat-manifest.json",
+  icons: {
+    icon: "/images/input-cepat-192.png",
+    apple: "/images/input-cepat-180.png",
+  },
   appleWebApp: {
     capable: true,
     title: "Input Cepat",

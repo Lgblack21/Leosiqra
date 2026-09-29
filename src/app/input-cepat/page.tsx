@@ -26,7 +26,7 @@ import { CategorySelect } from "@/components/CategorySelect";
 import { subscribeUserProfile, UserProfile } from "@/lib/services/userService";
 import { LogoImage } from "@/components/ui/LogoImage";
 import { SplashScreen } from "@/components/input-cepat/SplashScreen";
-import { isStandaloneDisplay } from "@/lib/pushNotifications";
+import { InputCepatInstall } from "@/components/install/InputCepatInstall";
 import { Modal } from "@/components/ui/Modal";
 import { NumberInput } from "@/components/ui/NumberInput";
 import { transactionService, Transaction } from "@/lib/services/transactionService";
@@ -73,9 +73,6 @@ export default function InputCepatPage() {
   const [uid, setUid] = useState("");
   // Nominal "meletup" sebentar saat terisi dari ketik pintar / suara / struk.
   const amountControls = useAnimationControls();
-  // Instruksi "pasang di layar utama" tidak perlu kalau sudah dibuka sebagai app.
-  const [standalone, setStandalone] = useState(true);
-  useEffect(() => { setStandalone(isStandaloneDisplay()); }, []);
 
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -302,11 +299,12 @@ export default function InputCepatPage() {
             </p>
           </div>
           <Link
-            href="/auth/login"
+            href="/auth/login?next=/input-cepat"
             className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-indigo-600 text-white font-black text-sm shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
           >
             <LogIn size={16} /> Masuk ke Leosiqra
           </Link>
+          <InputCepatInstall />
         </div>
       </>
     );
@@ -576,15 +574,7 @@ export default function InputCepatPage() {
           </label>
         </div>
 
-        {!standalone && (
-          <details className="mt-5 text-center text-[11px] font-medium text-slate-400">
-            <summary className="cursor-pointer list-none font-bold text-slate-500">Pasang Input Cepat di layar utama HP</summary>
-            <div className="mt-2 space-y-1">
-              <p><span className="font-bold text-slate-500">iPhone (Safari):</span> tap Share → &quot;Add to Home Screen&quot;.</p>
-              <p><span className="font-bold text-slate-500">Android (Chrome):</span> menu ⋮ → &quot;Install app&quot;.</p>
-            </div>
-          </details>
-        )}
+        <InputCepatInstall />
       </div>
 
       {/* Tombol simpan — sticky di bawah, warna mengikuti jenis transaksi. */}

@@ -144,7 +144,7 @@ export default function LandingPage() {
               Masuk ke akun
             </Link>
           </motion.div>
-          <motion.p {...heroItem(4)} className="mt-6 text-xs text-slate-400">Tanpa kartu kredit · Android, iPhone & web · Bahasa Indonesia</motion.p>
+          <motion.p {...heroItem(4)} className="mt-6 text-xs text-slate-400">Tanpa kartu kredit · Android, iPhone & web · Bahasa Indonesia · <Link href="/install" className="font-bold text-indigo-600 hover:underline">Pasang di HP →</Link></motion.p>
         </div>
 
         {/* Tur animasi mode desktop */}
