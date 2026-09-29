@@ -1,0 +1,12 @@
+{
+  "name": "leosiqra-promo",
+  "private": true,
+  "type": "module",
+  "description": "Video promo harian (Reels & Shorts) — dirender otomatis oleh GitHub Actions lalu dikirim ke Telegram.",
+  "scripts": {
+    "make": "node make.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.63.0"
+  }
+}

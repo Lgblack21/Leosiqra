@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<title>Leosiqra Promo Stage</title>
+<!--
+  Panggung animasi video promo 1080x1920. make.mjs memanggil build(plan) lalu
+  renderAt(t) per frame. Semua gerak memakai Web Animations yang di-pause dan
+  di-seek manual (bukan realtime), jadi tiap frame deterministik & mulus.
+-->
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; }
+  body {
+    background: var(--bg1); color: var(--text);
+    font-family: var(--body-font), "Noto Color Emoji", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .emoji { font-family: "Noto Color Emoji", "Apple Color Emoji", sans-serif; }
+  .head { font-family: var(--head-font), "Noto Color Emoji", sans-serif; font-weight: var(--head-weight); letter-spacing: -0.02em; line-height: 1.02; }
+  #stage { position: absolute; inset: 0; overflow: hidden; }
+
+  /* ── Background ── */
+  #bg { position: absolute; inset: -200px; background: linear-gradient(160deg, var(--bg1), var(--bg2)); }
+  .blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .55; }
+  .gridbg { position: absolute; inset: 0; background-image:
+      linear-gradient(color-mix(in srgb, var(--accent) 22%, transparent) 2px, transparent 2px),
+      linear-gradient(90deg, color-mix(in srgb, var(--accent) 22%, transparent) 2px, transparent 2px);
+    background-size: 120px 120px; }
+  .rays { position: absolute; left: 50%; top: 45%; width: 3200px; height: 3200px; margin: -1600px;
+    background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--accent) 16%, transparent) 0 8deg, transparent 8deg 20deg); }
+  .dots { position: absolute; inset: 0; background-image: radial-gradient(color-mix(in srgb, var(--accent) 45%, transparent) 3px, transparent 3.5px); background-size: 64px 64px; }
+  .wave { position: absolute; left: -10%; width: 220%; height: 900px; border-radius: 45%; background: color-mix(in srgb, var(--accent) 16%, transparent); }
+  .vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 40%, transparent 50%, color-mix(in srgb, var(--bg1) 70%, transparent)); }
+
+  /* ── Brand watermark (atas, aman dari UI Reels/Shorts) ── */
+  #brand { position: absolute; top: 96px; left: 64px; right: 64px; display: flex; align-items: center; gap: 22px; z-index: 50; }
+  .logo-tile { width: 92px; height: 92px; border-radius: 26px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,.25); flex: none; background: #fff; }
+  .logo-tile img { width: 150%; height: 150%; object-fit: cover; margin: -14% 0 0 -25%; }
+  .brand-name { font-size: 40px; font-weight: 800; }
+  .brand-sub { font-size: 25px; opacity: .8; font-weight: 600; display: flex; gap: 18px; margin-top: 2px; }
+  .brand-sub b { font-weight: 800; }
+
+  /* ── Scene ── */
+  .scene { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 280px 70px 470px; text-align: center; }
+  .hook-emoji { font-size: 230px; line-height: 1; margin-bottom: 40px; }
+  .hook-text { font-size: 118px; }
+  .hook-text span { display: inline-block; margin: 0 .12em; }
+  .accent { color: var(--pop); }
+  .label { font-size: 56px; font-weight: 800; opacity: .9; margin-bottom: 26px; }
+  .bignum { font-size: 150px; white-space: nowrap; display: inline-block; }
+  .underline { height: 16px; width: 640px; border-radius: 8px; background: var(--pop); margin-top: 26px; transform-origin: left; }
+  .spark { position: absolute; width: 22px; height: 22px; border-radius: 6px; }
+  .list-title { font-size: 76px; margin-bottom: 48px; }
+  .item { display: flex; align-items: center; gap: 30px; width: 940px; background: color-mix(in srgb, var(--card) 94%, transparent); color: var(--ink);
+    border-radius: 36px; padding: 40px 44px; margin-bottom: 30px; font-size: 56px; font-weight: 800; text-align: left; box-shadow: 0 18px 40px rgba(0,0,0,.18); }
+  .check { width: 76px; height: 76px; border-radius: 50%; background: var(--pop); color: var(--ink); display: grid; place-items: center; font-size: 46px; flex: none; }
+  .mf { position: relative; width: 900px; height: 620px; perspective: 2200px; }
+  .mf-card { position: absolute; inset: 0; border-radius: 48px; padding: 60px; display: flex; flex-direction: column; justify-content: center; gap: 30px; backface-visibility: hidden; box-shadow: 0 30px 60px rgba(0,0,0,.25); }
+  .mf-card .tag { align-self: center; font-size: 46px; font-weight: 900; letter-spacing: .12em; padding: 10px 36px; border-radius: 999px; color: #fff; }
+  .mf-card .body { font-size: 70px; color: #0f172a; }
+  .myth { background: #fff1f2; } .myth .tag { background: #e11d48; }
+  .fact { background: #ecfdf5; } .fact .tag { background: #059669; }
+  .quiz-q { font-size: 76px; margin-bottom: 50px; }
+  .opt { width: 880px; border-radius: 32px; padding: 34px 44px; margin-bottom: 24px; font-size: 52px; font-weight: 800; text-align: left; display: flex; gap: 28px; align-items: center;
+    background: color-mix(in srgb, var(--card) 94%, transparent); color: var(--ink); box-shadow: 0 16px 36px rgba(0,0,0,.16); }
+  .opt .letter { width: 78px; height: 78px; border-radius: 22px; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 35%, transparent); flex: none; }
+  .ring { width: 150px; height: 150px; margin-top: 16px; }
+  .cta-logo { width: 380px; height: 380px; border-radius: 90px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.35); margin-bottom: 50px; }
+  .cta-logo img { width: 100%; height: 100%; object-fit: cover; }
+  .cta-text { font-size: 92px; margin-bottom: 40px; }
+  .cta-btn { background: var(--pop); color: #111; font-size: 52px; font-weight: 900; padding: 30px 64px; border-radius: 999px; box-shadow: 0 20px 50px rgba(0,0,0,.3); }
+  .cta-site { font-size: 44px; font-weight: 800; margin-top: 30px; opacity: .92; }
+  .socials { display: flex; gap: 26px; margin-top: 46px; }
+  .soc { display: flex; align-items: center; gap: 18px; padding: 20px 34px; border-radius: 28px; font-size: 40px; font-weight: 800; background: color-mix(in srgb, var(--card) 92%, transparent); color: var(--ink); }
+  .soc svg { width: 54px; height: 54px; flex: none; }
+
+  /* ── Phone mockup ── */
+  .phone-cap { font-size: 80px; margin-bottom: 40px; }
+  .phone { width: 640px; height: 1060px; border-radius: 86px; background: #0b0b0f; padding: 22px; box-shadow: 0 40px 90px rgba(0,0,0,.45), inset 0 0 0 4px #2a2a33; position: relative; }
+  .notch { position: absolute; top: 34px; left: 50%; width: 170px; height: 40px; margin-left: -85px; border-radius: 30px; background: #0b0b0f; z-index: 5; }
+  .screen { width: 100%; height: 100%; border-radius: 66px; overflow: hidden; background: #f8fafc; color: #0f172a; position: relative; padding: 100px 34px 34px; text-align: left; font-size: 30px; }
+  .sample { font-size: 22px; opacity: .6; margin-top: 18px; font-weight: 600; }
+  .app-h { font-size: 40px; font-weight: 800; margin-bottom: 22px; }
+  .box { background: #fff; border-radius: 28px; padding: 24px; box-shadow: 0 8px 24px rgba(15,23,42,.08); margin-bottom: 18px; }
+  .row { display: flex; align-items: center; gap: 18px; }
+  .ic { width: 64px; height: 64px; border-radius: 20px; display: grid; place-items: center; font-size: 34px; flex: none; }
+  .muted { color: #64748b; font-size: 24px; font-weight: 600; }
+  .amt { margin-left: auto; font-weight: 800; white-space: nowrap; font-size: 28px; }
+  .row > div:not(.ic) { min-width: 0; }
+  .neg { color: #e11d48; } .pos { color: #059669; }
+  .input { border: 3px solid #6366f1; border-radius: 26px; padding: 24px; font-size: 34px; font-weight: 700; background: #fff; min-height: 88px; }
+  .caret { display: inline-block; width: 3px; height: 38px; background: #6366f1; vertical-align: middle; margin-left: 4px; }
+  .bubble { max-width: 86%; padding: 22px 26px; border-radius: 30px; font-size: 28px; font-weight: 600; margin-bottom: 18px; line-height: 1.3; }
+  .me { margin-left: auto; background: #4f46e5; color: #fff; border-bottom-right-radius: 8px; }
+  .bot { background: #fff; border-bottom-left-radius: 8px; box-shadow: 0 8px 24px rgba(15,23,42,.08); }
+  .bar { height: 26px; border-radius: 13px; background: #e2e8f0; overflow: hidden; margin: 10px 0 20px; }
+  .bar i { display: block; height: 100%; border-radius: 13px; transform-origin: left; }
+  .receipt { background: #fff; border-radius: 16px; padding: 30px; font-family: "Courier New", monospace; font-size: 24px; box-shadow: 0 8px 24px rgba(15,23,42,.1); position: relative; overflow: hidden; }
+  .scanline { position: absolute; left: 0; right: 0; height: 8px; background: #22d3ee; box-shadow: 0 0 30px 10px rgba(34,211,238,.55); }
+  .result { position: absolute; left: 34px; right: 34px; bottom: 60px; background: #059669; color: #fff; border-radius: 28px; padding: 28px; font-size: 30px; font-weight: 800; box-shadow: 0 20px 40px rgba(5,150,105,.35); }
+  .mic { width: 180px; height: 180px; border-radius: 50%; background: #4f46e5; margin: 40px auto; display: grid; place-items: center; font-size: 80px; }
+  .wavebars { display: flex; gap: 10px; justify-content: center; height: 120px; align-items: center; }
+  .wavebars i { width: 14px; border-radius: 7px; background: #6366f1; height: 30px; }
+  .lvl { width: 260px; height: 260px; border-radius: 50%; margin: 30px auto; display: grid; place-items: center; font-size: 96px; font-weight: 900; color: #fff; background: conic-gradient(#f59e0b, #ec4899, #6366f1, #f59e0b); box-shadow: 0 20px 50px rgba(99,102,241,.35); }
+  .burst { position: absolute; left: 50%; top: 33%; font-size: 70px; font-weight: 900; color: #f59e0b; transform: translate(-50%, -50%); white-space: nowrap; text-shadow: 0 6px 0 #fff; }
+
+  /* ── Subtitle ── */
+  #subs { position: absolute; left: 60px; right: 60px; top: 1400px; z-index: 40; display: flex; justify-content: center; }
+  .chunk { position: absolute; left: 0; right: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 0 18px; font-size: 62px; font-weight: 900; line-height: 1.2; }
+  .chunk .w { display: inline-block; }
+  .sub-pill .chunk { }
+  .sub-pill .chunk-inner { background: rgba(0,0,0,.72); color: #fff; padding: 16px 34px; border-radius: 26px; display: flex; flex-wrap: wrap; justify-content: center; gap: 0 16px; }
+  .sub-pill .w.on { color: var(--pop); }
+  .sub-karaoke .chunk-inner { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 16px; color: #fff; text-shadow: 3px 3px 0 #000, -3px 3px 0 #000, 3px -3px 0 #000, -3px -3px 0 #000, 0 6px 16px rgba(0,0,0,.5); }
+  .sub-karaoke .w.on { background: var(--pop); color: #111; border-radius: 14px; padding: 0 12px; text-shadow: none; }
+  .sub-bold .chunk-inner { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 30px; color: #fff; text-transform: uppercase; font-size: 66px;
+    text-shadow: 4px 4px 0 #000, -4px 4px 0 #000, 4px -4px 0 #000, -4px -4px 0 #000, 0 5px 0 #000, 0 -5px 0 #000, 5px 0 0 #000, -5px 0 0 #000, 0 10px 18px rgba(0,0,0,.45); }
+  .sub-bold .w.on { color: var(--pop); transform: scale(1.12); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bg"></div>
+  <div id="scenes"></div>
+  <div id="subs"></div>
+  <div id="brand"></div>
+</div>
+<script>
+const anims = [];
+const ticks = [];
+const EASE = "cubic-bezier(.2,.8,.2,1)";
+const POP = "cubic-bezier(.34,1.56,.64,1)";
+
+// Animasi ter-pause yang di-seek tiap frame. fill "both" untuk animasi pertama
+// sebuah elemen; animasi berikutnya pada elemen yang sama pakai "forwards"
+// supaya tidak menimpa animasi sebelumnya sebelum waktunya mulai.
+function A(el, frames, start, dur, easing = EASE, fill = "both", extra = {}) {
+  const a = el.animate(frames, { duration: Math.max(1, dur * 1000), delay: start * 1000, fill, easing, ...extra });
+  a.pause();
+  anims.push(a);
+  return a;
+}
+const T = (fn) => ticks.push(fn);
+window.renderAt = (t) => {
+  for (const a of anims) a.currentTime = t * 1000;
+  for (const f of ticks) f(t);
+};
+
+const h = (html) => {
+  const d = document.createElement("div");
+  d.innerHTML = html.trim();
+  return d.firstElementChild;
+};
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const rupiah = (v) => new Intl.NumberFormat("id-ID").format(Math.round(v));
+const clamp01 = (x) => Math.max(0, Math.min(1, x));
+const easeOut = (x) => 1 - Math.pow(1 - clamp01(x), 3);
+const LOGO = "../public/images/Logo-new.png";
+const IG = '<svg viewBox="0 0 24 24"><defs><linearGradient id="ig" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#f58529"/><stop offset=".5" stop-color="#dd2a7b"/><stop offset="1" stop-color="#515bd4"/></linearGradient></defs><rect x="2" y="2" width="20" height="20" rx="6" fill="url(#ig)"/><circle cx="12" cy="12" r="4.3" fill="none" stroke="#fff" stroke-width="2"/><circle cx="17.3" cy="6.7" r="1.3" fill="#fff"/></svg>';
+const YT = '<svg viewBox="0 0 24 24"><rect x="1" y="4.5" width="22" height="15" rx="4.5" fill="#ff0000"/><path d="M10 8.7v6.6l5.7-3.3z" fill="#fff"/></svg>';
+
+function buildBackground(style, total) {
+  const bg = document.getElementById("bg");
+  const kind = style.background;
+  if (kind === "blobs") {
+    const cols = ["var(--accent)", "var(--pop)", "var(--bg2)"];
+    cols.forEach((c, i) => {
+      const b = h(`<div class="blob" style="width:${900 - i * 120}px;height:${900 - i * 120}px;background:${c};left:${[100, 700, 300][i]}px;top:${[300, 900, 1700][i]}px"></div>`);
+      bg.appendChild(b);
+      A(b, [{ transform: "translate(0,0) scale(1)" }, { transform: `translate(${[220, -260, 180][i]}px, ${[260, -200, -320][i]}px) scale(${[1.25, 0.85, 1.15][i]})` }], 0, total, "ease-in-out");
+    });
+  } else if (kind === "grid") {
+    const g = h('<div class="gridbg"></div>');
+    bg.appendChild(g);
+    A(g, [{ transform: "perspective(900px) rotateX(58deg) translateY(0)" }, { transform: "perspective(900px) rotateX(58deg) translateY(480px)" }], 0, total, "linear");
+  } else if (kind === "rays") {
+    const r = h('<div class="rays"></div>');
+    bg.appendChild(r);
+    A(r, [{ transform: "rotate(0deg)" }, { transform: `rotate(${total * 6}deg)` }], 0, total, "linear");
+  } else if (kind === "dots") {
+    const d = h('<div class="dots"></div>');
+    bg.appendChild(d);
+    A(d, [{ backgroundPosition: "0 0" }, { backgroundPosition: `${total * 18}px ${total * 30}px` }], 0, total, "linear");
+  } else {
+    [0, 1, 2].forEach((i) => {
+      const w = h(`<div class="wave" style="top:${1250 + i * 160}px;opacity:${0.9 - i * 0.2}"></div>`);
+      bg.appendChild(w);
+      A(w, [{ transform: `translateX(0) rotate(${i * 8}deg)` }, { transform: `translateX(-${300 + i * 90}px) rotate(${i * 8 + 40}deg)` }], 0, total, "linear");
+    });
+  }
+  bg.appendChild(h('<div class="vignette"></div>'));
+}
+
+function buildBrand(plan, total) {
+  const b = document.getElementById("brand");
+  b.innerHTML = `<div class="logo-tile"><img src="${LOGO}"></div>
+    <div><div class="brand-name">Leosiqra</div>
+    <div class="brand-sub"><span>${IG.replace("<svg", '<svg style="width:26px;height:26px;vertical-align:-4px"')} <b>@leosiqra_official</b></span><span>${YT.replace("<svg", '<svg style="width:28px;height:28px;vertical-align:-5px"')} <b>Leosiqra</b></span></div></div>`;
+  A(b, [{ opacity: 0, transform: "translateY(-30px)" }, { opacity: 1, transform: "none" }], 0.1, 0.6);
+}
+
+function enter(el, kind, s) {
+  const map = {
+    slide: [{ transform: "translateX(1080px)", opacity: 0 }, { transform: "none", opacity: 1 }],
+    zoom: [{ transform: "scale(.6)", opacity: 0 }, { transform: "none", opacity: 1 }],
+    wipe: [{ clipPath: "circle(0% at 50% 50%)" }, { clipPath: "circle(120% at 50% 50%)" }],
+    flip: [{ transform: "perspective(2000px) rotateY(-80deg)", opacity: 0 }, { transform: "none", opacity: 1 }],
+    blur: [{ filter: "blur(40px)", opacity: 0, transform: "scale(1.15)" }, { filter: "blur(0)", opacity: 1, transform: "none" }],
+  };
+  A(el, map[kind] || map.zoom, s, 0.45, EASE, "both");
+}
+function exit(el, kind, e) {
+  const map = {
+    slide: [{ transform: "none", opacity: 1 }, { transform: "translateX(-1080px)", opacity: 0 }],
+    zoom: [{ transform: "none", opacity: 1 }, { transform: "scale(1.4)", opacity: 0 }],
+    wipe: [{ opacity: 1 }, { opacity: 0 }],
+    flip: [{ transform: "none", opacity: 1 }, { transform: "perspective(2000px) rotateY(80deg)", opacity: 0 }],
+    blur: [{ filter: "blur(0)", opacity: 1 }, { filter: "blur(40px)", opacity: 0 }],
+  };
+  // Selesai sedikit SETELAH scene berikutnya mulai masuk (crossfade), supaya
+  // tidak ada frame kosong di pergantian scene.
+  A(el, map[kind] || map.zoom, e - 0.22, 0.34, "ease-in", "forwards");
+}
+
+// Kata-kata judul muncul bergantian + kata terakhir diberi warna aksen.
+function popWords(container, text, s, gap = 0.1) {
+  const ws = String(text).split(" ");
+  container.innerHTML = ws.map((w, i) => `<span class="${i === ws.length - 1 ? "accent" : ""}">${esc(w)}</span>`).join(" ");
+  [...container.children].forEach((sp, i) => A(sp, [{ transform: "scale(0) rotate(-8deg)", opacity: 0 }, { transform: "none", opacity: 1 }], s + i * gap, 0.45, POP));
+}
+
+const SCENES = {
+  hook(el, sc) {
+    el.innerHTML = `${sc.emoji ? `<div class="hook-emoji emoji">${esc(sc.emoji)}</div>` : ""}<div class="hook-text head"></div>`;
+    const em = el.querySelector(".hook-emoji");
+    if (em) {
+      A(em, [{ transform: "scale(0) rotate(-30deg)" }, { transform: "scale(1) rotate(0)" }], sc.start + 0.05, 0.6, POP);
+      A(em, [{ transform: "scale(1) rotate(0)" }, { transform: "scale(1.08) rotate(6deg)" }, { transform: "scale(1) rotate(0)" }], sc.start + 0.7, 1.2, "ease-in-out", "forwards", { iterations: 6 });
+    }
+    popWords(el.querySelector(".hook-text"), sc.text, sc.start + 0.2, 0.12);
+  },
+  number(el, sc) {
+    el.innerHTML = `<div class="label">${esc(sc.label)}</div><div class="bignum head">${esc(sc.prefix)}0${esc(sc.suffix)}</div><div class="underline"></div>`;
+    const num = el.querySelector(".bignum");
+    const s = sc.start + 0.3;
+    const d = Math.min(1.6, sc.dur * 0.5);
+    T((t) => {
+      const v = sc.to * easeOut((t - s) / d);
+      num.textContent = `${sc.prefix || ""}${rupiah(v)}${sc.suffix || ""}`;
+    });
+    // Ukur teks angka AKHIR lalu kecilkan font sampai muat (maks 900px lebar).
+    num.textContent = `${sc.prefix || ""}${rupiah(sc.to)}${sc.suffix || ""}`;
+    let size = 160;
+    num.style.fontSize = `${size}px`;
+    while (num.scrollWidth > 900 && size > 60) num.style.fontSize = `${(size -= 6)}px`;
+    num.dataset.final = num.textContent;
+    A(el.querySelector(".label"), [{ opacity: 0, transform: "translateY(40px)" }, { opacity: 1, transform: "none" }], sc.start + 0.1, 0.5);
+    A(num, [{ transform: "scale(.7)" }, { transform: "scale(1)" }], s, d, POP);
+    A(num, [{ transform: "scale(1)" }, { transform: "scale(1.12)" }, { transform: "scale(1)" }], s + d, 0.4, "ease-out", "forwards");
+    A(el.querySelector(".underline"), [{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], s + d, 0.45);
+    for (let i = 0; i < 18; i++) {
+      const sp = h(`<div class="spark" style="left:540px;top:900px;background:${i % 2 ? "var(--pop)" : "var(--accent)"}"></div>`);
+      el.appendChild(sp);
+      const ang = (i / 18) * Math.PI * 2;
+      const dist = 320 + (i % 3) * 90;
+      A(sp, [{ transform: "translate(0,0) scale(0)", opacity: 1 }, { transform: `translate(${Math.cos(ang) * dist}px, ${Math.sin(ang) * dist}px) rotate(${i * 40}deg) scale(1)`, opacity: 0 }], s + d, 0.9, "cubic-bezier(.1,.8,.3,1)");
+    }
+  },
+  list(el, sc) {
+    el.innerHTML = `<div class="list-title head">${esc(sc.title)}</div>` + sc.items.map((it) => `<div class="item"><div class="check">✓</div><div>${esc(it)}</div></div>`).join("");
+    A(el.querySelector(".list-title"), [{ opacity: 0, transform: "translateY(-40px)" }, { opacity: 1, transform: "none" }], sc.start + 0.1, 0.5);
+    const items = [...el.querySelectorAll(".item")];
+    const span = Math.max(0.5, (sc.dur - 1.2) / items.length);
+    items.forEach((it, i) => {
+      const s = sc.start + 0.45 + i * span;
+      A(it, [{ opacity: 0, transform: "translateX(-200px)" }, { opacity: 1, transform: "none" }], s, 0.45, POP);
+      A(it.querySelector(".check"), [{ transform: "scale(0)" }, { transform: "scale(1)" }], s + 0.25, 0.4, POP);
+    });
+  },
+  mythfact(el, sc) {
+    el.innerHTML = `<div class="mf"><div class="mf-card myth"><div class="tag">❌ MITOS</div><div class="body head">${esc(sc.myth)}</div></div>
+      <div class="mf-card fact"><div class="tag">✅ FAKTA</div><div class="body head">${esc(sc.fact)}</div></div></div>`;
+    const flipAt = sc.start + Math.max(1.2, sc.dur * 0.42);
+    const [myth, fact] = el.querySelectorAll(".mf-card");
+    A(myth, [{ transform: "rotateY(0) scale(.8)", opacity: 0 }, { transform: "rotateY(0) scale(1)", opacity: 1 }], sc.start + 0.1, 0.45, POP);
+    A(myth, [{ transform: "rotateY(0)" }, { transform: "rotateY(180deg)" }], flipAt, 0.6, EASE, "forwards");
+    A(fact, [{ transform: "rotateY(-180deg)" }, { transform: "rotateY(0)" }], flipAt, 0.6, EASE, "both");
+    A(myth.querySelector(".body"), [{ transform: "none" }, { transform: "translateX(-14px)" }, { transform: "translateX(14px)" }, { transform: "none" }], sc.start + 0.7, 0.35, "linear", "forwards", { iterations: 2 });
+  },
+  quiz(el, sc) {
+    const L = ["A", "B", "C"];
+    el.innerHTML = `<div class="quiz-q head">${esc(sc.question)}</div>` +
+      sc.options.map((o, i) => `<div class="opt"><div class="letter">${L[i]}</div><div>${esc(o)}</div></div>`).join("") +
+      `<svg class="ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="10"/><circle class="arc" cx="50" cy="50" r="44" fill="none" stroke="var(--pop)" stroke-width="10" stroke-linecap="round" transform="rotate(-90 50 50)" stroke-dasharray="276.5" stroke-dashoffset="0"/><text x="50" y="62" text-anchor="middle" font-size="36" font-weight="900" fill="currentColor">3</text></svg>`;
+    A(el.querySelector(".quiz-q"), [{ opacity: 0, transform: "scale(.8)" }, { opacity: 1, transform: "none" }], sc.start + 0.1, 0.5, POP);
+    const opts = [...el.querySelectorAll(".opt")];
+    opts.forEach((o, i) => A(o, [{ opacity: 0, transform: "translateY(60px)" }, { opacity: 1, transform: "none" }], sc.start + 0.4 + i * 0.18, 0.45, POP));
+    const cdStart = sc.start + 0.9;
+    const reveal = sc.start + Math.max(2.4, sc.dur * 0.62);
+    const arc = el.querySelector(".arc");
+    const txt = el.querySelector(".ring text");
+    T((t) => {
+      const p = clamp01((t - cdStart) / (reveal - cdStart));
+      arc.setAttribute("stroke-dashoffset", String(276.5 * p));
+      txt.textContent = p >= 1 ? "✓" : String(Math.max(1, Math.ceil(3 * (1 - p))));
+    });
+    opts.forEach((o, i) => {
+      if (i === sc.answer) {
+        A(o, [{ background: "color-mix(in srgb, var(--card) 94%, transparent)", color: "var(--ink)", transform: "none" }, { background: "#059669", color: "#ffffff", transform: "scale(1.06)" }], reveal, 0.35, POP, "forwards");
+      } else {
+        A(o, [{ opacity: 1 }, { opacity: 0.35 }], reveal, 0.3, EASE, "forwards");
+      }
+    });
+  },
+  phone(el, sc) {
+    el.innerHTML = `<div class="phone-cap head">${esc(sc.text)}</div><div class="phone"><div class="notch"></div><div class="screen"></div></div><div class="sample">Ilustrasi · data contoh</div>`;
+    A(el.querySelector(".phone-cap"), [{ opacity: 0, transform: "translateY(-40px)" }, { opacity: 1, transform: "none" }], sc.start + 0.1, 0.45);
+    const phone = el.querySelector(".phone");
+    A(phone, [{ transform: "translateY(500px) rotate(6deg)" }, { transform: "none" }], sc.start + 0.05, 0.6, POP);
+    A(phone, [{ transform: "rotate(0)" }, { transform: "rotate(-1.5deg)" }, { transform: "rotate(1.5deg)" }, { transform: "rotate(0)" }], sc.start + 0.7, 3, "ease-in-out", "forwards");
+    const scr = el.querySelector(".screen");
+    (SCREENS[sc.screen] || SCREENS.quick)(scr, sc.start + 0.55, sc.dur - 0.9);
+  },
+  cta(el, sc) {
+    el.innerHTML = `<div class="cta-logo"><img src="${LOGO}"></div><div class="cta-text head"></div><div class="cta-btn">Coba gratis 14 hari</div><div class="cta-site">leosiqra.com</div>
+      <div class="socials"><div class="soc">${IG}<span>@leosiqra_official</span></div><div class="soc">${YT}<span>Leosiqra</span></div></div>`;
+    A(el.querySelector(".cta-logo"), [{ transform: "scale(0) rotate(-20deg)" }, { transform: "none" }], sc.start + 0.05, 0.7, POP);
+    popWords(el.querySelector(".cta-text"), sc.text, sc.start + 0.35, 0.1);
+    const btn = el.querySelector(".cta-btn");
+    A(btn, [{ transform: "translateY(80px)", opacity: 0 }, { transform: "none", opacity: 1 }], sc.start + 0.7, 0.5, POP);
+    A(btn, [{ transform: "scale(1)" }, { transform: "scale(1.07)" }, { transform: "scale(1)" }], sc.start + 1.3, 0.9, "ease-in-out", "forwards", { iterations: 8 });
+    A(el.querySelector(".cta-site"), [{ opacity: 0 }, { opacity: 0.92 }], sc.start + 0.9, 0.4);
+    [...el.querySelectorAll(".soc")].forEach((s, i) => A(s, [{ transform: "translateY(60px) scale(.8)", opacity: 0 }, { transform: "none", opacity: 1 }], sc.start + 1.05 + i * 0.15, 0.5, POP));
+  },
+};
+
+// Isi layar HP per fitur (s = mulai, d = durasi yang tersedia).
+const typeText = (node, text, s, cps = 14) => T((t) => {
+  const n = Math.max(0, Math.min(text.length, Math.floor((t - s) * cps)));
+  node.innerHTML = esc(text.slice(0, n)) + (n < text.length ? '<span class="caret"></span>' : "");
+});
+const slideIn = (node, s, from = "translateY(60px)") => A(node, [{ opacity: 0, transform: from }, { opacity: 1, transform: "none" }], s, 0.45, POP);
+const SCREENS = {
+  quick(scr, s, d) {
+    scr.innerHTML = `<div class="app-h">Input Cepat ⚡</div><div class="input"></div>
+      <div class="box" style="margin-top:26px"><div class="muted">Saldo Dompet</div><div class="app-h bal" style="margin:6px 0 0">Rp1.250.000</div></div>
+      <div class="box tx"><div class="row"><div class="ic" style="background:#fef3c7">☕</div><div><b>Kopi susu</b><div class="muted">Makanan & Minuman</div></div><div class="amt neg">-Rp25.000</div></div></div>
+      <div class="box"><div class="row"><div class="ic" style="background:#e0e7ff">🚗</div><div><b>Parkir</b><div class="muted">Transportasi</div></div><div class="amt neg">-Rp5.000</div></div></div>`;
+    typeText(scr.querySelector(".input"), "kopi susu 25rb", s, 12);
+    const at = s + 1.4;
+    slideIn(scr.querySelector(".tx"), at, "translateX(-400px)");
+    const bal = scr.querySelector(".bal");
+    T((t) => { bal.textContent = "Rp" + rupiah(1250000 - 25000 * easeOut((t - at) / 0.8)); });
+  },
+  scan(scr, s) {
+    scr.innerHTML = `<div class="app-h">Scan Struk 📸</div><div class="receipt"><div style="text-align:center;font-weight:700">TOKO SERBA ADA</div><div>--------------------------</div>
+      <div>Beras 5kg ....... 68.000</div><div>Telur 1kg ....... 29.500</div><div>Minyak 2L ....... 38.900</div><div>Sabun ........... 12.300</div><div>--------------------------</div><div style="font-weight:700">TOTAL ........ 148.700</div><div class="scanline"></div></div>
+      <div class="result">✓ Rp148.700<div style="font-size:24px;font-weight:600;opacity:.9">Belanja Dapur · hari ini</div></div>`;
+    const line = scr.querySelector(".scanline");
+    A(line, [{ top: "0%" }, { top: "96%" }, { top: "0%" }], s, 1.4, "ease-in-out");
+    slideIn(scr.querySelector(".result"), s + 1.5, "translateY(200px)");
+  },
+  voice(scr, s) {
+    scr.innerHTML = `<div class="app-h">Catat Pakai Suara 🎙️</div><div class="mic">🎙️</div><div class="wavebars">${Array.from({ length: 12 }, () => "<i></i>").join("")}</div>
+      <div class="bubble me said" style="margin-top:20px"></div><div class="box done"><div class="row"><div class="ic" style="background:#dcfce7">⛽</div><div><b>Bensin</b><div class="muted">Transportasi · kemarin · Cash</div></div><div class="amt neg">-Rp50.000</div></div></div>`;
+    const bars = [...scr.querySelectorAll(".wavebars i")];
+    T((t) => bars.forEach((b, i) => { const on = t > s && t < s + 1.6; b.style.height = on ? `${30 + 80 * Math.abs(Math.sin(t * 9 + i * 0.9))}px` : "30px"; }));
+    A(scr.querySelector(".mic"), [{ transform: "scale(1)" }, { transform: "scale(1.12)" }, { transform: "scale(1)" }], s, 0.6, "ease-in-out", "both", { iterations: 3 });
+    typeText(scr.querySelector(".said"), "kemarin beli bensin 50 ribu pakai cash", s + 0.1, 24);
+    slideIn(scr.querySelector(".done"), s + 1.9);
+  },
+  ai(scr, s) {
+    scr.innerHTML = `<div class="app-h">AI Leosiqra 🤖</div><div class="bubble me q">Bulan ini aku boros di mana?</div><div class="bubble bot dots">• • •</div><div class="bubble bot a"></div>`;
+    slideIn(scr.querySelector(".q"), s, "translateX(200px)");
+    const dots = scr.querySelector(".dots");
+    A(dots, [{ opacity: 0 }, { opacity: 1 }], s + 0.4, 0.2);
+    A(dots, [{ opacity: 1 }, { opacity: 0 }], s + 1.2, 0.1, "linear", "forwards");
+    A(dots, [{ height: "auto" }, { height: "0px", padding: "0px", margin: "0px" }], s + 1.3, 0.01, "linear", "forwards");
+    typeText(scr.querySelector(".a"), "Paling banyak di Makanan: Rp1,2 juta (38%) 🍜 Coba kurangi pesan antar, hemat ±Rp300rb!", s + 1.3, 30);
+  },
+  savings(scr, s) {
+    scr.innerHTML = `<div class="app-h">Target Tabungan 🎯</div><div class="box" style="text-align:center"><svg viewBox="0 0 120 120" style="width:320px;height:320px"><circle cx="60" cy="60" r="50" fill="none" stroke="#e2e8f0" stroke-width="14"/><circle class="arc" cx="60" cy="60" r="50" fill="none" stroke="#10b981" stroke-width="14" stroke-linecap="round" transform="rotate(-90 60 60)" stroke-dasharray="314" stroke-dashoffset="314"/><text class="pct" x="60" y="68" text-anchor="middle" font-size="26" font-weight="900">0%</text></svg>
+      <div class="app-h" style="margin:10px 0 0">Dana Darurat</div><div class="muted amtv">Rp0 / Rp15.000.000</div></div>
+      <div class="box row"><div class="ic" style="background:#dcfce7">💰</div><div><b>Setoran</b><div class="muted">Otomatis tiap gajian</div></div><div class="amt pos">+Rp1.000.000</div></div>`;
+    const arc = scr.querySelector(".arc"), pct = scr.querySelector(".pct"), amt = scr.querySelector(".amtv");
+    T((t) => { const p = 0.72 * easeOut((t - s) / 1.6); arc.setAttribute("stroke-dashoffset", String(314 * (1 - p))); pct.textContent = `${Math.round(p * 100)}%`; amt.textContent = `Rp${rupiah(15000000 * p)} / Rp15.000.000`; });
+    slideIn(scr.querySelector(".box.row"), s + 1.2);
+  },
+  budget(scr, s) {
+    const rows = [["🍜 Makanan", 0.64, "#6366f1"], ["🛍️ Belanja", 0.95, "#e11d48"], ["🚗 Transport", 0.41, "#10b981"]];
+    scr.innerHTML = `<div class="app-h">Budget Bulan Ini 📊</div>` + rows.map(([n, p, c]) => `<div class="box"><div class="row"><b>${n}</b><span class="amt muted pv">0%</span></div><div class="bar"><i style="background:${c};width:${p * 100}%"></i></div></div>`).join("") +
+      `<div class="bubble bot warn" style="background:#fff1f2;color:#be123c">⚠️ Budget Belanja hampir habis!</div>`;
+    [...scr.querySelectorAll(".box")].forEach((b, i) => {
+      A(b.querySelector("i"), [{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], s + i * 0.25, 1.1);
+      const pv = b.querySelector(".pv");
+      T((t) => { pv.textContent = `${Math.round(rows[i][1] * 100 * easeOut((t - s - i * 0.25) / 1.1))}%`; });
+    });
+    slideIn(scr.querySelector(".warn"), s + 1.6);
+  },
+  debt(scr, s) {
+    scr.innerHTML = `<div class="app-h">Hutang & Piutang 🤝</div>
+      <div class="box"><div class="row"><div class="ic" style="background:#fee2e2">📱</div><div><b>Cicilan HP</b><div class="muted c1">Cicilan 3/12</div></div><div class="amt neg">Rp450rb</div></div><div class="bar"><i style="background:#6366f1;width:100%"></i></div></div>
+      <div class="box"><div class="row"><div class="ic" style="background:#dcfce7">🙋</div><div><b>Pinjam ke Rina</b><div class="muted">Jatuh tempo 5 Okt</div></div><div class="amt pos">Rp200rb</div></div></div>
+      <div class="bubble bot lunas" style="background:#ecfdf5;color:#047857">✅ Hutang ke Budi LUNAS!</div>`;
+    const i1 = scr.querySelector(".bar i"), c1 = scr.querySelector(".c1");
+    T((t) => { const k = 3 + Math.floor(3 * easeOut((t - s) / 1.4)); c1.textContent = `Cicilan ${k}/12`; i1.style.transform = `scaleX(${k / 12})`; });
+    slideIn(scr.querySelector(".lunas"), s + 1.5);
+  },
+  level(scr, s) {
+    scr.innerHTML = `<div class="app-h">Level Kamu 🎮</div><div class="lvl">3</div><div class="muted xpt" style="text-align:center">XP 0 / 400</div><div class="bar"><i style="background:linear-gradient(90deg,#f59e0b,#ec4899);width:100%"></i></div>
+      <div class="box row"><div class="ic" style="background:#fef3c7">🔥</div><div><b>Streak 7 hari</b><div class="muted">+60 XP</div></div><div class="amt pos">Selesai</div></div><div class="burst">LEVEL UP! 🎉</div>`;
+    const lv = scr.querySelector(".lvl"), bar = scr.querySelector(".bar i"), xp = scr.querySelector(".xpt");
+    T((t) => { const p = easeOut((t - s) / 1.3); bar.style.transform = `scaleX(${p})`; xp.textContent = `XP ${Math.round(400 * p)} / 400`; lv.textContent = t > s + 1.35 ? "4" : "3"; });
+    A(lv, [{ transform: "scale(1)" }, { transform: "scale(1.25) rotate(8deg)" }, { transform: "scale(1)" }], s + 1.3, 0.5, POP);
+    const burst = scr.querySelector(".burst");
+    A(burst, [{ transform: "translate(-50%,-50%) scale(0)", opacity: 0 }, { transform: "translate(-50%,-50%) scale(1.1)", opacity: 1 }], s + 1.35, 0.45, POP);
+    A(burst, [{ opacity: 1, transform: "translate(-50%,-50%) scale(1.1)" }, { opacity: 0, transform: "translate(-50%,-90%) scale(1.3)" }], s + 2.3, 0.5, "ease-in", "forwards");
+    slideIn(scr.querySelector(".box.row"), s + 0.4);
+  },
+  stats(scr, s) {
+    const seg = [[38, "#6366f1", "Makanan"], [24, "#f59e0b", "Belanja"], [20, "#10b981", "Transport"], [18, "#ec4899", "Hiburan"]];
+    let acc = 0;
+    const arcs = seg.map(([p, c]) => { const off = acc; acc += p; return `<circle cx="60" cy="60" r="44" fill="none" stroke="${c}" stroke-width="22" stroke-dasharray="0 276.5" data-p="${p}" data-o="${off}" transform="rotate(-90 60 60)"/>`; }).join("");
+    scr.innerHTML = `<div class="app-h">Pengeluaran Bulan Ini 🍩</div><div class="box" style="text-align:center"><svg viewBox="0 0 120 120" style="width:330px;height:330px">${arcs}</svg></div>` +
+      seg.map(([p, c, n]) => `<div class="row lg" style="margin:8px 6px"><i style="width:26px;height:26px;border-radius:8px;background:${c}"></i><b style="font-size:28px">${n}</b><span class="amt">${p}%</span></div>`).join("");
+    const cs = [...scr.querySelectorAll("circle")];
+    T((t) => { const k = easeOut((t - s) / 1.4); cs.forEach((c) => { const p = +c.dataset.p * k, o = +c.dataset.o * k; c.setAttribute("stroke-dasharray", `${(p / 100) * 276.5} 276.5`); c.setAttribute("stroke-dashoffset", String(-(o / 100) * 276.5)); }); });
+    [...scr.querySelectorAll(".lg")].forEach((r, i) => slideIn(r, s + 0.6 + i * 0.15, "translateX(120px)"));
+  },
+  market(scr, s) {
+    const rows = [["₿", "Bitcoin", 1.8, "#f59e0b"], ["🥇", "Emas /gram", 0.6, "#eab308"], ["💵", "USD/IDR", -0.2, "#10b981"], ["📈", "Saham BBCA", 1.1, "#6366f1"]];
+    scr.innerHTML = `<div class="app-h">Investasi & Pasar 📈</div>` + rows.map(([i, n, ch, c]) => `<div class="box"><div class="row"><div class="ic" style="background:${c}22">${i}</div><div><b>${n}</b><div class="muted">harga live</div></div><div class="amt ${ch >= 0 ? "pos" : "neg"} ch">0%</div></div></div>`).join("");
+    [...scr.querySelectorAll(".box")].forEach((b, i) => { slideIn(b, s + i * 0.18, "translateX(300px)"); const el = b.querySelector(".ch"); T((t) => { const v = rows[i][2] * easeOut((t - s - i * 0.18) / 1); el.textContent = `${v >= 0 ? "▲" : "▼"} ${Math.abs(v).toFixed(1)}%`; }); });
+  },
+  recurring(scr, s) {
+    const rows = [["💼", "Gaji", "+Rp6.500.000", "pos"], ["🏠", "Kos", "-Rp1.500.000", "neg"], ["📶", "Internet", "-Rp350.000", "neg"], ["🎬", "Streaming", "-Rp54.990", "neg"]];
+    scr.innerHTML = `<div class="app-h">Transaksi Berulang 🔁</div>` + rows.map(([i, n, a, k]) => `<div class="box"><div class="row"><div class="ic" style="background:#eef2ff">${i}</div><div><b>${n}</b><div class="muted st">Terjadwal</div></div><div class="amt ${k}">${a}</div></div></div>`).join("");
+    [...scr.querySelectorAll(".box")].forEach((b, i) => { slideIn(b, s + i * 0.2); const st = b.querySelector(".st"); T((t) => { st.textContent = t > s + 0.9 + i * 0.25 ? "✓ Tercatat otomatis" : "Terjadwal"; st.style.color = t > s + 0.9 + i * 0.25 ? "#059669" : ""; }); });
+  },
+  tax(scr, s) {
+    const rows = ["Penghasilan setahun", "Daftar harta", "Utang & piutang", "PPh 21 dipotong"];
+    scr.innerHTML = `<div class="app-h">Pajak Center 🧾</div><div class="muted" style="margin-bottom:18px">Siapkan data SPT tahunan</div>` + rows.map((r) => `<div class="box row"><div class="ic ck" style="background:#e2e8f0">○</div><b>${r}</b></div>`).join("");
+    [...scr.querySelectorAll(".box")].forEach((b, i) => { slideIn(b, s + i * 0.15); const ck = b.querySelector(".ck"); T((t) => { const done = t > s + 0.8 + i * 0.3; ck.textContent = done ? "✓" : "○"; ck.style.background = done ? "#10b981" : "#e2e8f0"; ck.style.color = done ? "#fff" : ""; }); });
+  },
+};
+
+// Subtitle dari waktu kata voice-over: dipecah jadi potongan ±4 kata.
+function buildSubs(style, words) {
+  const box = document.getElementById("subs");
+  box.className = `sub-${style.subtitle}`;
+  const chunks = [];
+  let cur = [];
+  words.forEach((w, i) => {
+    cur.push(w);
+    const gap = words[i + 1] ? words[i + 1].start - w.end : 9;
+    if (cur.length >= 4 || /[.,!?]$/.test(w.text) || gap > 0.35) { chunks.push(cur); cur = []; }
+  });
+  if (cur.length) chunks.push(cur);
+  chunks.forEach((c, ci) => {
+    const s = c[0].start;
+    const next = chunks[ci + 1];
+    const e = next && next[0].start - c.at(-1).end < 0.6 ? next[0].start : c.at(-1).end + 0.25;
+    const el = h(`<div class="chunk"><div class="chunk-inner">${c.map((w) => `<span class="w">${esc(w.text)}</span>`).join("")}</div></div>`);
+    box.appendChild(el);
+    A(el, [{ opacity: 0, transform: "translateY(20px) scale(.9)" }, { opacity: 1, transform: "none" }], s - 0.05, 0.15, POP);
+    A(el, [{ opacity: 1 }, { opacity: 0 }], e, 0.08, "linear", "forwards");
+    const spans = [...el.querySelectorAll(".w")];
+    T((t) => spans.forEach((sp, i) => sp.classList.toggle("on", t >= c[i].start && t < (c[i + 1] ? c[i + 1].start : c[i].end + 0.2))));
+  });
+}
+
+// Dipanggil lagi setelah font selesai dimuat (lebar teks berubah).
+window.refit = () => document.querySelectorAll(".bignum").forEach((num) => {
+  const txt = num.textContent;
+  num.textContent = num.dataset.final;
+  let size = 160;
+  num.style.fontSize = `${size}px`;
+  while (num.scrollWidth > 900 && size > 60) num.style.fontSize = `${(size -= 6)}px`;
+  num.textContent = txt;
+});
+
+window.build = (plan) => {
+  const st = plan.style, p = st.palette;
+  const root = document.documentElement.style;
+  for (const [k, v] of Object.entries(p)) if (k !== "name") root.setProperty(`--${k}`, v);
+  root.setProperty("--head-font", `"${st.font.head}"`);
+  root.setProperty("--body-font", `"${st.font.body}"`);
+  root.setProperty("--head-weight", String(st.font.weight));
+  buildBackground(st, plan.total);
+  buildBrand(plan, plan.total);
+  const wrap = document.getElementById("scenes");
+  plan.scenes.forEach((sc, i) => {
+    const el = h('<div class="scene"></div>');
+    wrap.appendChild(el);
+    SCENES[sc.type](el, sc);
+    enter(el, i === 0 ? "zoom" : st.transition, i === 0 ? sc.start : sc.start - 0.12);
+    if (i < plan.scenes.length - 1) exit(el, st.transition, sc.start + sc.dur);
+  });
+  buildSubs(st, plan.words);
+  window.renderAt(0);
+};
+</script>
+</body>
+</html>
