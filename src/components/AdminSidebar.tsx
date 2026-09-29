@@ -14,7 +14,8 @@ import {
   Settings,
   X,
   ChevronDown,
-  MessageSquareHeart
+  MessageSquareHeart,
+  Bot
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
@@ -39,6 +40,7 @@ const adminMenuGroups = [
     label: 'Sistem',
     items: [
       { icon: Settings, label: 'Pengaturan', href: '/admin/pengaturan' },
+      { icon: Bot, label: 'AI & Saldo', href: '/admin/ai' },
     ]
   }
 ];
@@ -46,7 +48,11 @@ const adminMenuGroups = [
 export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
   const pathname = usePathname();
   const router = useRouter();
-  const [openGroups, setOpenGroups] = useState<string[]>(['Manajemen']);
+  // Grup yang berisi halaman aktif ikut terbuka (mis. buka /admin/ai langsung).
+  const [openGroups, setOpenGroups] = useState<string[]>(() => [
+    'Manajemen',
+    ...adminMenuGroups.filter((g) => g.label !== 'Manajemen' && g.items.some((i) => pathname?.startsWith(i.href))).map((g) => g.label),
+  ]);
   const [profile, setProfile] = useState<{
     id: string;
     name: string;

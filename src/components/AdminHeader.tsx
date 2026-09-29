@@ -32,6 +32,7 @@ export const AdminHeader = ({ onMenuClick }: AdminHeaderProps) => {
               '/admin/pembayaran': 'Payment Confirmations',
               '/admin/laporan': 'Executive Reports',
               '/admin/saran': 'Saran & Kritik',
+              '/admin/ai': 'AI & Saldo',
               '/admin/pengaturan': 'System Configuration'
             }[pathname] || 'Admin Panel'}
           </h1>

@@ -25,7 +25,7 @@ export async function loadPopularCoins(): Promise<CoinOption[]> {
 
   popularPromise = (async () => {
     try {
-      const res = await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${POPULAR_IDS.join(',')}`);
+      const res = await fetch(`/api/market/coingecko/coins/markets?vs_currency=usd&ids=${POPULAR_IDS.join(',')}`);
       if (!res.ok) throw new Error(`CoinGecko fetch gagal: ${res.status}`);
       const rows = await res.json() as Array<{ id: string; name: string; symbol: string; image: string }>;
       const byId = new Map(rows.map(r => [r.id, r]));
@@ -64,7 +64,7 @@ export async function searchCoins(query: string): Promise<CoinOption[]> {
   if (cached) return cached;
 
   try {
-    const res = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(key)}`);
+    const res = await fetch(`/api/market/coingecko/search?query=${encodeURIComponent(key)}`);
     if (!res.ok) throw new Error(`CoinGecko search gagal: ${res.status}`);
     const data = await res.json() as {
       coins?: Array<{ id: string; name: string; symbol: string; thumb?: string; large?: string; market_cap_rank?: number | null }>;

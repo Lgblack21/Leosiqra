@@ -59,8 +59,8 @@ crons = ["0 3 * * *", "1 17 * * *"]
 
 [vars]
 APP_NAME = "Leosiqra"
-APP_ENV = "development"
-APP_URL = "http://127.0.0.1:8787"
+APP_ENV = "production"
+APP_URL = "https://www.leosiqra.com"
 SESSION_COOKIE_NAME = "leosiqra_session"
 MAINTENANCE_BYPASS_ADMIN = "true"
 NEXT_PUBLIC_USE_CLOUDFLARE_AUTH = "true"

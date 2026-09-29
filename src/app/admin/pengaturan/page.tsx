@@ -82,7 +82,7 @@ export default function AdminPengaturanPage() {
         : ['bitcoin', 'ethereum', 'solana', 'binancecoin', 'cardano'];
 
       const [cryptoRes, usersSnap] = await Promise.all([
-        fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${targetIds.join(',')}&vs_currencies=idr,usd&include_24hr_change=true`),
+        fetch(`/api/market/coingecko/simple/price?ids=${targetIds.join(',')}&vs_currencies=idr,usd&include_24hr_change=true`),
         getDocs(collection(db, 'users'))
       ]);
 

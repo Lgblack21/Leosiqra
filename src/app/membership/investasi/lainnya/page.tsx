@@ -118,7 +118,7 @@ export default function OtherInvestmentsPage() {
     setSyncingPrices(true);
     try {
       const res = await fetch(
-        `https://api.coingecko.com/api/v3/simple/price?ids=${uniqueIds.join(',')}&vs_currencies=usd&include_24hr_change=true`
+        `/api/market/coingecko/simple/price?ids=${uniqueIds.join(',')}&vs_currencies=usd&include_24hr_change=true`
       );
       if (!res.ok) throw new Error(`CoinGecko error ${res.status}`);
       const data = await res.json() as Record<string, { usd?: number; usd_24h_change?: number }>;

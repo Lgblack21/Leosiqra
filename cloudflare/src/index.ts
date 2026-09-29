@@ -1165,6 +1165,52 @@ const fetchCryptoFromBinance = async (): Promise<CryptoPrices | null> => {
   }
 };
 
+// Proxy CoinGecko untuk halaman member/admin. Browser dulu memanggil
+// api.coingecko.com langsung — sebagian koneksi (terlihat dari ISP Indonesia)
+// diblokir CloudFront CoinGecko (403 tanpa header CORS), jadi harga kripto di
+// Dashboard/Data Pasar/Investasi Lainnya kosong. Lewat Worker: pakai
+// COINGECKO_API_KEY, hasil di-cache di edge, dan cuma path + parameter yang
+// memang dipakai aplikasi yang diteruskan (bukan open proxy).
+const COINGECKO_PROXY_RULES: Record<string, { params: string[]; ttl: number }> = {
+  "simple/price": { params: ["ids", "vs_currencies", "include_24hr_change"], ttl: 60 },
+  "coins/markets": { params: ["vs_currency", "ids", "price_change_percentage"], ttl: 60 },
+  search: { params: ["query"], ttl: 86400 },
+};
+
+async function handleCoinGeckoProxy(request: Request, env: Env, subpath: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const rule = COINGECKO_PROXY_RULES[subpath];
+  if (!rule) return json({ error: "Not found" }, { status: 404 });
+
+  const incoming = new URL(request.url);
+  const upstream = new URL(`https://api.coingecko.com/api/v3/${subpath}`);
+  for (const name of rule.params) {
+    const value = incoming.searchParams.get(name);
+    if (value === null) continue;
+    if (value.length > 600) return json({ error: "Parameter terlalu panjang." }, { status: 400 });
+    upstream.searchParams.set(name, value);
+  }
+
+  const cacheKey = new Request(upstream.toString());
+  const cache = (caches as unknown as { default: Cache }).default;
+  const cached = await cache.match(cacheKey).catch(() => undefined);
+  if (cached) return new Response(cached.body, { headers: { "content-type": "application/json", "cache-control": "private, max-age=30" } });
+
+  const headers: Record<string, string> = { "User-Agent": "Leosiqra/1.0 (+https://www.leosiqra.com)", Accept: "application/json" };
+  if (env.COINGECKO_API_KEY) headers["x-cg-demo-api-key"] = env.COINGECKO_API_KEY;
+  const res = await fetch(upstream.toString(), { headers }).catch(() => null);
+  if (!res || !res.ok) {
+    console.error("CoinGecko proxy gagal:", subpath, res?.status);
+    return json({ error: "Data kripto sedang tidak tersedia. Coba lagi sebentar." }, { status: 502 });
+  }
+  const body = await res.text();
+  await cache
+    .put(cacheKey, new Response(body, { headers: { "content-type": "application/json", "cache-control": `public, max-age=${rule.ttl}` } }))
+    .catch(() => undefined);
+  return new Response(body, { headers: { "content-type": "application/json", "cache-control": "private, max-age=30" } });
+}
+
 const fetchMarketSnapshot = async (env: Env): Promise<string> => {
   if (marketSnapshotCache) {
     const ttl = marketSnapshotCache.degraded ? MARKET_DEGRADED_CACHE_MS : MARKET_CACHE_MS;
@@ -1315,8 +1361,9 @@ const runOpenRouterAssistant = async (
   history: Array<{ role: "user" | "assistant"; content: string }>,
   prompt: string
 ) => {
-  if (!env.OPENROUTER_API_KEY) {
-    return "AI-nya belum aktif nih — admin perlu memasang `OPENROUTER_API_KEY` di Cloudflare dulu.";
+  const openRouter = await getOpenRouterKey(env);
+  if (!openRouter) {
+    return "AI-nya belum aktif nih — admin perlu memasang API key OpenRouter dulu.";
   }
 
   // Batasi riwayat agar konteks tidak membengkak tanpa batas.
@@ -1331,7 +1378,7 @@ const runOpenRouterAssistant = async (
     method: "POST",
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
+      authorization: `Bearer ${openRouter.key}`,
       "http-referer": env.APP_URL || "https://www.leosiqra.com",
       "x-title": env.APP_NAME || "Leosiqra",
     },
@@ -1388,6 +1435,205 @@ const notifyAiQuotaOnce = async (env: Env) => {
     "⚠️ <b>Kredit OpenRouter habis</b>\nAI Leosiqra (chat, scan struk, voice) tidak bisa menjawab sampai kredit diisi.\nIsi di https://openrouter.ai/settings/credits"
   );
 };
+
+// ── API key OpenRouter yang bisa diganti admin ─────────────────────────────
+// Disimpan terenkripsi (AES-GCM, kunci diturunkan dari SESSION_SECRET via
+// HKDF) di tabel app_secrets. Kalau tidak ada / gagal didekripsi (mis.
+// SESSION_SECRET dirotasi), jatuh balik ke secret Cloudflare
+// OPENROUTER_API_KEY. Sengaja TIDAK lewat Cloudflare API: token yang bisa
+// mengubah secret Worker juga bisa mengubah kodenya — terlalu kuat untuk
+// disimpan di dalam Worker.
+const OPENROUTER_KEY_SECRET_ID = "openrouter_api_key";
+// Management key opsional — HANYA dipakai membaca saldo akun
+// (/api/v1/credits menolak API key biasa). Tidak pernah dipakai untuk chat.
+const OPENROUTER_MANAGEMENT_SECRET_ID = "openrouter_management_key";
+const OPENROUTER_KEY_CACHE_MS = 60_000;
+let openRouterKeyCache: { value: { key: string; source: "admin" | "cloudflare" } | null; at: number } | null = null;
+
+const appSecretCryptoKey = async (env: Env) => {
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(env.SESSION_SECRET), "HKDF", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    { name: "HKDF", hash: "SHA-256", salt: new TextEncoder().encode("leosiqra-app-secrets"), info: new TextEncoder().encode("v1") },
+    base,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+};
+
+const encryptAppSecret = async (env: Env, plain: string) => {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const cipher = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await appSecretCryptoKey(env), new TextEncoder().encode(plain));
+  return `v1.${toBase64Url(iv.buffer)}.${toBase64Url(cipher)}`;
+};
+
+const decryptAppSecret = async (env: Env, stored: string) => {
+  const [version, ivPart, cipherPart] = stored.split(".");
+  if (version !== "v1" || !ivPart || !cipherPart) return null;
+  try {
+    const plain = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: fromBase64Url(ivPart) },
+      await appSecretCryptoKey(env),
+      fromBase64Url(cipherPart)
+    );
+    return new TextDecoder().decode(plain);
+  } catch {
+    return null;
+  }
+};
+
+const getOpenRouterKey = async (env: Env): Promise<{ key: string; source: "admin" | "cloudflare" } | null> => {
+  if (openRouterKeyCache && Date.now() - openRouterKeyCache.at < OPENROUTER_KEY_CACHE_MS) return openRouterKeyCache.value;
+  let value: { key: string; source: "admin" | "cloudflare" } | null = null;
+  try {
+    const row = await env.DB.prepare("SELECT value_enc FROM app_secrets WHERE id = ?")
+      .bind(OPENROUTER_KEY_SECRET_ID)
+      .first<{ value_enc: string }>();
+    const fromAdmin = row ? await decryptAppSecret(env, row.value_enc) : null;
+    if (fromAdmin) value = { key: fromAdmin, source: "admin" };
+  } catch {
+    // Tabel belum ada (migrasi belum jalan) — pakai secret Cloudflare.
+  }
+  if (!value && env.OPENROUTER_API_KEY) value = { key: env.OPENROUTER_API_KEY, source: "cloudflare" };
+  openRouterKeyCache = { value, at: Date.now() };
+  return value;
+};
+
+const readAppSecret = async (env: Env, id: string) => {
+  const row = await env.DB.prepare("SELECT value_enc FROM app_secrets WHERE id = ?")
+    .bind(id)
+    .first<{ value_enc: string }>()
+    .catch(() => null);
+  return row ? decryptAppSecret(env, row.value_enc) : null;
+};
+
+const maskApiKey = (key: string) => (key.length > 14 ? `${key.slice(0, 9)}…${key.slice(-4)}` : "••••");
+
+type OpenRouterKeyInfo = { label: string | null; usage: number; limit: number | null; limitRemaining: number | null; isFreeTier: boolean };
+
+const fetchOpenRouterKeyInfo = async (key: string): Promise<{ ok: true; info: OpenRouterKeyInfo } | { ok: false; status: number }> => {
+  const response = await fetch("https://openrouter.ai/api/v1/key", { headers: { authorization: `Bearer ${key}` } });
+  if (!response.ok) return { ok: false, status: response.status };
+  const body = (await response.json()) as {
+    data?: { label?: string; usage?: number; limit?: number | null; limit_remaining?: number | null; is_free_tier?: boolean };
+  };
+  const d = body.data ?? {};
+  return {
+    ok: true,
+    info: {
+      label: d.label ?? null,
+      usage: Number(d.usage ?? 0),
+      limit: d.limit ?? null,
+      limitRemaining: d.limit_remaining ?? null,
+      isFreeTier: Boolean(d.is_free_tier),
+    },
+  };
+};
+
+const fetchOpenRouterCredits = async (key: string): Promise<{ total: number; used: number } | null> => {
+  const response = await fetch("https://openrouter.ai/api/v1/credits", { headers: { authorization: `Bearer ${key}` } });
+  if (!response.ok) return null;
+  const body = (await response.json()) as { data?: { total_credits?: number; total_usage?: number } };
+  if (typeof body.data?.total_credits !== "number") return null;
+  return { total: body.data.total_credits, used: Number(body.data.total_usage ?? 0) };
+};
+
+async function handleAdminAiStatus(request: Request, env: Env) {
+  const authResult = await requireSession(env, request, "admin");
+  if (authResult.error) return authResult.error;
+
+  const active = await getOpenRouterKey(env);
+  const meta = await env.DB.prepare("SELECT updated_by, updated_at FROM app_secrets WHERE id = ?")
+    .bind(OPENROUTER_KEY_SECRET_ID)
+    .first<{ updated_by: string | null; updated_at: string }>()
+    .catch(() => null);
+  const managementKey = await readAppSecret(env, OPENROUTER_MANAGEMENT_SECRET_ID);
+
+  const base = {
+    source: active?.source ?? "none",
+    keyHint: active ? maskApiKey(active.key) : null,
+    updatedBy: active?.source === "admin" ? meta?.updated_by ?? null : null,
+    updatedAt: active?.source === "admin" ? meta?.updated_at ?? null : null,
+    hasCloudflareSecret: Boolean(env.OPENROUTER_API_KEY),
+    models: { chat: env.OPENROUTER_CHAT_MODEL || OPENROUTER_FALLBACK_MODELS[0], parse: PARSE_TRANSACTION_MODELS[0] },
+    managementKeyHint: managementKey ? maskApiKey(managementKey) : null,
+  };
+  const [keyInfo, credits] = await Promise.all([
+    active ? fetchOpenRouterKeyInfo(active.key).catch(() => ({ ok: false as const, status: 0 })) : { ok: false as const, status: 0 },
+    managementKey ? fetchOpenRouterCredits(managementKey).catch(() => null) : null,
+  ]);
+  return json({
+    ...base,
+    keyValid: keyInfo.ok,
+    keyInfo: keyInfo.ok ? keyInfo.info : null,
+    credits: credits ? { ...credits, remaining: Math.max(0, credits.total - credits.used) } : null,
+  });
+}
+
+// PUT = pasang key baru (dites dulu ke OpenRouter), DELETE = hapus key dari
+// admin (API key → kembali ke secret Cloudflare). kind: "api" (default) atau
+// "management" (khusus baca saldo). Keduanya wajib password admin.
+async function handleAdminAiKey(request: Request, env: Env) {
+  const authResult = await requireSession(env, request, "admin");
+  if (authResult.error) return authResult.error;
+  const admin = authResult.session.user;
+
+  if (!(await checkRateLimit(env, [`ai-key:${admin.id}`]))) {
+    return json({ error: "Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi." }, { status: 429 });
+  }
+
+  const payload = await parseJson<{ apiKey?: string; password?: string; kind?: string }>(request);
+  const isManagement = payload.kind === "management";
+  const secretId = isManagement ? OPENROUTER_MANAGEMENT_SECRET_ID : OPENROUTER_KEY_SECRET_ID;
+  const keyLabel = isManagement ? "Management key AI" : "API key AI";
+  const user = await env.DB.prepare("SELECT password_hash FROM users WHERE id = ?")
+    .bind(admin.id)
+    .first<{ password_hash: string }>();
+  if (!user) return json({ error: "Pengguna tidak ditemukan." }, { status: 404 });
+  if (!user.password_hash.startsWith("oauth$")) {
+    if (!payload.password) return json({ error: "Masukkan password admin untuk konfirmasi." }, { status: 400 });
+    const verification = await verifyPassword(payload.password, user.password_hash);
+    if (!verification.ok) return json({ error: "Password admin salah." }, { status: 401 });
+  }
+
+  if (request.method === "DELETE") {
+    await env.DB.prepare("DELETE FROM app_secrets WHERE id = ?").bind(secretId).run();
+    openRouterKeyCache = null;
+    await insertAdminLog(env, admin.email, `Hapus ${keyLabel}`, "OpenRouter", isManagement ? "Saldo tidak dipantau lagi" : "Kembali ke secret Cloudflare", "amber");
+    return json({ ok: true });
+  }
+
+  const apiKey = String(payload.apiKey ?? "").trim();
+  if (!/^sk-or-[A-Za-z0-9_-]{20,200}$/.test(apiKey)) {
+    return json({ error: "Format API key tidak valid. Key OpenRouter diawali \"sk-or-\"." }, { status: 400 });
+  }
+  if (isManagement) {
+    // Management key diverifikasi dengan endpoint yang memang akan dipakai.
+    const credits = await fetchOpenRouterCredits(apiKey).catch(() => null);
+    if (!credits) {
+      return json({ error: "Key ditolak OpenRouter sebagai Management key. Buat di openrouter.ai/settings/management-keys." }, { status: 400 });
+    }
+  } else {
+    const check = await fetchOpenRouterKeyInfo(apiKey).catch(() => ({ ok: false as const, status: 0 }));
+    if (!("info" in check)) {
+      return json(
+        { error: check.status === 401 ? "Key ditolak OpenRouter — pastikan key-nya benar dan belum dihapus." : "Tidak bisa menghubungi OpenRouter untuk mengecek key. Coba lagi." },
+        { status: 400 }
+      );
+    }
+  }
+
+  const now = nowIso();
+  await env.DB.prepare(
+    `INSERT INTO app_secrets (id, value_enc, updated_by, updated_at) VALUES (?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET value_enc = excluded.value_enc, updated_by = excluded.updated_by, updated_at = excluded.updated_at`
+  )
+    .bind(secretId, await encryptAppSecret(env, apiKey), admin.email, now)
+    .run();
+  openRouterKeyCache = null;
+  await insertAdminLog(env, admin.email, `Ganti ${keyLabel}`, "OpenRouter", maskApiKey(apiKey), "indigo");
+  return json({ ok: true, keyHint: maskApiKey(apiKey) });
+}
 
 const runAiAssistant = async (
   env: Env,
@@ -5991,7 +6237,8 @@ async function handleParseTransaction(request: Request, env: Env) {
     return json({ error: "Foto terlalu besar. Coba foto ulang dengan resolusi lebih kecil." }, { status: 413 });
   }
 
-  if (!env.OPENROUTER_API_KEY) {
+  const openRouter = await getOpenRouterKey(env);
+  if (!openRouter) {
     return json({ ok: false, error: "AI belum dikonfigurasi." }, { status: 422 });
   }
 
@@ -6044,7 +6291,7 @@ ${JSON.stringify(userAccounts.map((a) => ({ name: a.name, type: a.type, currency
       method: "POST",
       headers: {
         "content-type": "application/json",
-        authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
+        authorization: `Bearer ${openRouter.key}`,
         "http-referer": env.APP_URL || "https://www.leosiqra.com",
         "x-title": env.APP_NAME || "Leosiqra",
       },
@@ -7729,6 +7976,15 @@ const worker = {
       }
       if (url.pathname === "/api/member/feedback" && request.method === "GET") {
         return await handleListMyFeedback(request, env);
+      }
+      if (url.pathname.startsWith("/api/market/coingecko/") && request.method === "GET") {
+        return await handleCoinGeckoProxy(request, env, url.pathname.slice("/api/market/coingecko/".length));
+      }
+      if (url.pathname === "/api/admin/ai-status" && request.method === "GET") {
+        return await handleAdminAiStatus(request, env);
+      }
+      if (url.pathname === "/api/admin/ai-key" && (request.method === "PUT" || request.method === "DELETE")) {
+        return await handleAdminAiKey(request, env);
       }
       if (url.pathname === "/api/admin/feedback" && request.method === "GET") {
         return await handleAdminListFeedback(request, env);

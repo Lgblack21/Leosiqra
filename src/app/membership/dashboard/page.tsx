@@ -140,7 +140,7 @@ export default function MonthlyDashboard() {
     setMarketLoading(true);
     try {
       const [cryptoRes, fxRes] = await Promise.all([
-        fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true'),
+        fetch('/api/market/coingecko/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true'),
         fetch('https://open.er-api.com/v6/latest/USD')
       ]);
       const crypto = cryptoRes.ok ? await cryptoRes.json() : null;

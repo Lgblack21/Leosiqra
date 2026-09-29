@@ -205,7 +205,7 @@ export default function MarketDataPage() {
         // termasuk logo resmi tiap koin (endpoint /coins/markets menyertakan `image`).
         const marketIds = [...targetIds, 'pax-gold'];
         const cryptoRes = await fetch(
-          `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${marketIds.join(',')}&price_change_percentage=24h`
+          `/api/market/coingecko/coins/markets?vs_currency=usd&ids=${marketIds.join(',')}&price_change_percentage=24h`
         );
         if (cryptoRes.ok) {
           const rows = (await cryptoRes.json()) as Array<{
