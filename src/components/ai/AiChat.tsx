@@ -84,9 +84,12 @@ export function AiChat({ variant, renderHeader }: { variant: "web" | "app"; rend
         const r = await cloudflareApi<{ answer?: string }>("/api/member/ai/chat", { method: "POST", json: { prompt } });
         setMessages((cur) => [...(cur ?? []), { role: "model", text: r.answer || "Hmm, aku belum dapat jawabannya. Coba tanya lagi ya.", at: new Date(), fresh: true }]);
       } catch (e) {
-        const msg = e instanceof Error && /terlalu banyak/i.test(e.message)
+        const raw = e instanceof Error ? e.message : "";
+        const msg = /terlalu banyak/i.test(raw)
           ? "Pelan-pelan dulu ya 😅 kamu kirim banyak pesan barusan. Coba lagi sebentar lagi."
-          : "Waduh, aku lagi ada kendala nih. Coba kirim ulang sebentar lagi ya.";
+          : /kuota|AI Leosiqra|gangguan/i.test(raw)
+            ? raw
+            : "Waduh, aku lagi ada kendala nih. Coba kirim ulang sebentar lagi ya.";
         setMessages((cur) => [...(cur ?? []), { role: "model", text: msg, at: new Date(), fresh: true }]);
       } finally {
         setThinking(false);

@@ -1368,6 +1368,26 @@ const runOpenRouterAssistant = async (
   return textOutput || "Waduh, aku lagi gak bisa jawab sekarang. Coba kirim ulang sebentar lagi ya.";
 };
 
+// Kredit OpenRouter habis → OpenRouter membalas 402. Tampilkan pesan yang
+// jujur ke user (bukan "coba foto lebih jelas"/"ada kendala") dan kabari admin
+// lewat Telegram — maksimal sekali per 6 jam per lokasi edge.
+const AI_QUOTA_MESSAGE =
+  "AI Leosiqra lagi istirahat sebentar karena kuota AI-nya habis. Tim kami sudah dikabari — coba lagi nanti ya, atau catat manual dulu.";
+const isAiQuotaError = (err: unknown) => /OpenRouter request gagal \(402\)/.test(err instanceof Error ? err.message : String(err));
+const notifyAiQuotaOnce = async (env: Env) => {
+  try {
+    const key = new Request("https://cache.internal.leosiqra.com/ai-quota-alert");
+    if (await caches.default.match(key)) return;
+    await caches.default.put(key, new Response("1", { headers: { "Cache-Control": "max-age=21600" } }));
+  } catch {
+    /* cache tidak tersedia — tetap kirim */
+  }
+  await sendTelegramNotification(
+    env,
+    "⚠️ <b>Kredit OpenRouter habis</b>\nAI Leosiqra (chat, scan struk, voice) tidak bisa menjawab sampai kredit diisi.\nIsi di https://openrouter.ai/settings/credits"
+  );
+};
+
 const runAiAssistant = async (
   env: Env,
   prompt: string,
@@ -5875,7 +5895,17 @@ async function handleAiChat(request: Request, env: Env) {
     .filter((m): m is { role: "user" | "assistant"; content: string } => m !== null);
 
   const userContext = await buildUserContext(env, authResult.session.user.id);
-  const answer = await runAiAssistant(env, payload.prompt, userContext, history);
+  let answer: string;
+  try {
+    answer = await runAiAssistant(env, payload.prompt, userContext, history);
+  } catch (error) {
+    if (isAiQuotaError(error)) {
+      await notifyAiQuotaOnce(env);
+      return json({ error: AI_QUOTA_MESSAGE, code: "ai_quota" }, { status: 503 });
+    }
+    console.error("AI chat gagal:", error);
+    return json({ error: "AI lagi ada gangguan sebentar. Coba kirim ulang ya." }, { status: 502 });
+  }
 
   nextMessages.push(
     { role: "user", content: payload.prompt, createdAt: nowIso() },
@@ -6039,7 +6069,11 @@ ${JSON.stringify(userAccounts.map((a) => ({ name: a.name, type: a.type, currency
     }
     const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
     rawContent = data.choices?.[0]?.message?.content?.trim() ?? "";
-  } catch {
+  } catch (error) {
+    if (isAiQuotaError(error)) {
+      await notifyAiQuotaOnce(env);
+      return json({ ok: false, error: AI_QUOTA_MESSAGE, code: "ai_quota" }, { status: 503 });
+    }
     return json(
       {
         ok: false,
