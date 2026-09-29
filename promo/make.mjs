@@ -13,6 +13,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "playwright";
 import { buildPlan } from "./plan.mjs";
+import { promoFetch } from "./api.mjs";
 import { renderMusic } from "./music.mjs";
 
 const DIR = dirname(fileURLToPath(import.meta.url));
@@ -43,13 +44,11 @@ const audioDuration = (file) => {
   return +m[1] * 3600 + +m[2] * 60 + +m[3];
 };
 
-const promoApi = () => process.env.PROMO_API_URL || "https://www.leosiqra.com";
-
 // Riwayat disimpan di Worker (R2) kalau PROMO_SECRET ada — mesin pembuat video
 // (GitHub Actions / Claude Code routine) selalu mulai bersih tiap hari.
 const loadHistory = async () => {
   if (process.env.PROMO_SECRET) {
-    const res = await fetch(`${promoApi()}/api/promo/history`, { headers: { "x-promo-secret": process.env.PROMO_SECRET } });
+    const res = await promoFetch("/api/promo/history");
     if (res.ok) return (await res.json()).items ?? [];
     log(`riwayat dari Worker gagal (${res.status}), pakai lokal`);
   }
@@ -64,9 +63,9 @@ const saveHistory = async (items) => {
   const trimmed = items.slice(-365);
   writeFileSync(HISTORY, JSON.stringify(trimmed, null, 2));
   if (process.env.PROMO_SECRET) {
-    const res = await fetch(`${promoApi()}/api/promo/history`, {
+    const res = await promoFetch("/api/promo/history", {
       method: "PUT",
-      headers: { "content-type": "application/json", "x-promo-secret": process.env.PROMO_SECRET },
+      headers: { "content-type": "application/json" },
       body: JSON.stringify({ items: trimmed }),
     });
     if (!res.ok) log(`simpan riwayat ke Worker gagal (${res.status})`);
@@ -84,7 +83,7 @@ const fontsHref = (font) => {
 // Cloudflare) atau langsung ke Bot API (TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID).
 const telegramTarget = () => {
   if (process.env.PROMO_SECRET) {
-    return { kind: "worker", url: `${promoApi()}/api/promo/telegram` };
+    return { kind: "worker" };
   }
   if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) return { kind: "direct" };
   return null;
@@ -105,7 +104,7 @@ const postTelegram = async ({ text, video }) => {
     const form = new FormData();
     form.append("text", text);
     if (video) for (const [k, v] of Object.entries(video)) appendField(form, k, v);
-    const res = await fetch(target.url, { method: "POST", headers: { "x-promo-secret": process.env.PROMO_SECRET }, body: form });
+    const res = await promoFetch("/api/promo/telegram", { method: "POST", body: form });
     if (!res.ok) throw new Error(`Worker promo/telegram ${res.status}: ${(await res.text()).slice(0, 300)}`);
     return;
   }
@@ -200,11 +199,14 @@ const main = async () => {
   const delays = voiceClips.map((c, i) => `[${i + 1}:a]aresample=44100,aformat=channel_layouts=stereo,adelay=${Math.round(c.at * 1000)}|${Math.round(c.at * 1000)}[v${i}]`);
   const filter = [
     ...delays,
-    `${voiceClips.map((_, i) => `[v${i}]`).join("")}amix=inputs=${voiceClips.length}:normalize=0,volume=1.6[voice]`,
+    // apad: narasi diperpanjang dengan hening sampai akhir video — tanpa ini
+    // sidechaincompress berhenti saat kata terakhir diucapkan dan ekor video
+    // (endcard CTA) ikut terpotong.
+    `${voiceClips.map((_, i) => `[v${i}]`).join("")}amix=inputs=${voiceClips.length}:normalize=0:duration=longest,volume=1.6,apad=whole_dur=${plan.total}[voice]`,
     `[voice]asplit=2[vk][vm]`,
     `[0:a]volume=0.32[mus]`,
     `[mus][vk]sidechaincompress=threshold=0.03:ratio=8:attack=20:release=350[duck]`,
-    `[duck][vm]amix=inputs=2:normalize=0,loudnorm=I=-14:TP=-1.5:LRA=11,atrim=0:${plan.total}[out]`,
+    `[duck][vm]amix=inputs=2:normalize=0:duration=longest,loudnorm=I=-14:TP=-1.5:LRA=11,apad=whole_dur=${plan.total},atrim=0:${plan.total}[out]`,
   ].join(";");
   run(FFMPEG, ["-y", "-hide_banner", "-loglevel", "error", ...inputs, "-filter_complex", filter, "-map", "[out]", "-ar", "44100", audioPath]);
 
@@ -232,16 +234,25 @@ const main = async () => {
     "-f", "image2pipe", "-framerate", String(FPS), "-c:v", "mjpeg", "-i", "-",
     "-i", audioPath,
     "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-pix_fmt", "yuv420p", "-r", String(FPS),
-    "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart", videoPath,
+    "-c:a", "aac", "-b:a", "192k", "-t", plan.total.toFixed(3), "-movflags", "+faststart", videoPath,
   ], { stdio: ["pipe", "inherit", "inherit"] });
-  const ffDone = new Promise((res, rej) => ff.on("close", (code) => (code === 0 ? res() : rej(new Error(`ffmpeg keluar ${code}`)))));
+  let ffExited = false;
+  const ffDone = new Promise((res, rej) =>
+    ff.on("close", (code) => {
+      ffExited = true;
+      code === 0 ? res() : rej(new Error(`ffmpeg keluar ${code}`));
+    })
+  );
+  ff.stdin.on("error", () => {}); // EPIPE kalau ffmpeg berhenti duluan — ditangani lewat ffExited
 
   const frames = Math.ceil(plan.total * FPS);
   const started = Date.now();
   for (let f = 0; f < frames; f++) {
     await page.evaluate((x) => window.renderAt(x), f / FPS);
     const buf = await page.screenshot({ type: "jpeg", quality: 92 });
-    if (!ff.stdin.write(buf)) await new Promise((r) => ff.stdin.once("drain", r));
+    if (ffExited) throw new Error(`ffmpeg berhenti di frame ${f}/${frames}`);
+    // Jangan menunggu "drain" selamanya kalau ffmpeg keburu keluar.
+    if (!ff.stdin.write(buf)) await Promise.race([new Promise((r) => ff.stdin.once("drain", r)), ffDone.catch(() => {})]);
     if (f % 150 === 0) log(`frame ${f}/${frames}`);
   }
   ff.stdin.end();

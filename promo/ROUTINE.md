@@ -35,12 +35,12 @@ pip install -q edge-tts==7.2.8
   || { npm i --no-save ffmpeg-static && export FFMPEG_PATH=$(node -p "require('ffmpeg-static')"); }
 (apt-get install -y -qq fonts-noto-color-emoji || sudo apt-get install -y -qq fonts-noto-color-emoji) >/dev/null 2>&1 || true
 ```
-`PROMO_SECRET` sudah ada di environment. `PROMO_API_URL` default `https://www.leosiqra.com`.
+`PROMO_SECRET` sudah ada di environment. Pakai `PROMO_API_URL=https://membersite-leosiqra.leowendry.workers.dev` — www.leosiqra.com menantang IP datacenter (proteksi bot Cloudflare); `api.mjs` juga otomatis pindah ke alamat ini kalau kena tantangan.
 Kalau `python3` bukan yang punya edge-tts, set `PYTHON=` ke interpreter yang benar.
 
 ### 1. Baca riwayat
 ```bash
-curl -s -H "x-promo-secret: $PROMO_SECRET" https://www.leosiqra.com/api/promo/history
+curl -s -H "x-promo-secret: $PROMO_SECRET" https://membersite-leosiqra.leowendry.workers.dev/api/promo/history
 ```
 Lihat ±30 entri terakhir (format, topic, hook, palette, style, screens). Pilih
 konsep yang **tidak** mengulang topik/hook, dan gaya visual (palette +
@@ -106,7 +106,7 @@ PROMO_SEED=<seed> PROMO_SCRIPT_FILE=out/script.json node make.mjs
 ```
 Kalau gagal total setelah usaha wajar, kirim kabar singkat:
 ```bash
-curl -s -H "x-promo-secret: $PROMO_SECRET" -F "text=⚠️ Video promo hari ini gagal: <alasan singkat>" https://www.leosiqra.com/api/promo/telegram
+curl -s -H "x-promo-secret: $PROMO_SECRET" -F "text=⚠️ Video promo hari ini gagal: <alasan singkat>" https://membersite-leosiqra.leowendry.workers.dev/api/promo/telegram
 ```
 
 ### 6. Ringkasan

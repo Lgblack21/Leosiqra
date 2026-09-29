@@ -1,5 +1,6 @@
 // Menyusun rencana video hari ini: format & topik (tidak mengulang riwayat),
 // naskah (AI, dengan cadangan naskah bawaan), dan gaya visual/musik acak.
+import { promoFetch } from "./api.mjs";
 import { FORMATS, FORMAT_ORDER, FEATURES, FALLBACK_SCRIPTS, FALLBACK_CAPTION_TAIL, OFFER, HANDLES } from "./content.mjs";
 
 // RNG ber-seed (mulberry32) — seed dicetak di log supaya video bisa dibuat ulang persis.
@@ -137,9 +138,9 @@ const callAi = async ({ format, topic, avoidHooks }) => {
   let content;
   if (process.env.PROMO_SECRET) {
     // Lewat Worker Leosiqra (memakai key OpenRouter yang dipasang di sana).
-    const res = await fetch(`${process.env.PROMO_API_URL || "https://www.leosiqra.com"}/api/promo/script`, {
+    const res = await promoFetch("/api/promo/script", {
       method: "POST",
-      headers: { "content-type": "application/json", "x-promo-secret": process.env.PROMO_SECRET },
+      headers: { "content-type": "application/json" },
       body: JSON.stringify({ system: SYSTEM_PROMPT, user }),
     });
     if (!res.ok) throw new Error(`Worker promo/script ${res.status}: ${(await res.text()).slice(0, 200)}`);
