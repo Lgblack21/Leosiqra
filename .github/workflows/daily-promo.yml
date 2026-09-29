@@ -1,0 +1,85 @@
+# Video promo harian (Reels & Shorts) → dikirim ke Telegram.
+# Jalan di server GitHub, laptop tidak perlu menyala. Bisa juga dipicu manual
+# dari tab Actions → "Video promo harian" → Run workflow.
+#
+# Secrets (Settings → Secrets and variables → Actions):
+#   TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID  — tujuan kiriman
+#   OPENROUTER_API_KEY                    — naskah & caption AI (tanpa ini: naskah cadangan)
+name: Video promo harian
+
+on:
+  schedule:
+    # 22:40 UTC = 05:40 WIB. Antrean jadwal GitHub biasanya telat beberapa
+    # menit + ±4 menit render → video masuk Telegram sekitar jam 06:00 WIB.
+    - cron: "40 22 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-promo
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: promo
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: promo/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ffmpeg, emoji font, edge-tts
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-noto-color-emoji
+          pip install -q edge-tts==7.2.8
+
+      - name: Install Playwright Chromium
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      # Riwayat topik/gaya supaya video tidak berulang (disimpan di cache Actions).
+      - uses: actions/cache/restore@v4
+        with:
+          path: promo/state
+          key: promo-history-${{ github.run_id }}
+          restore-keys: promo-history-
+
+      - name: Render & kirim ke Telegram
+        run: node make.mjs
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+      - uses: actions/cache/save@v4
+        with:
+          path: promo/state
+          key: promo-history-${{ github.run_id }}
+
+      # Cadangan: video juga bisa diunduh dari halaman run selama 7 hari.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: video-promo
+          path: |
+            promo/out/leosiqra-promo.mp4
+            promo/out/cover.jpg
+            promo/out/caption.txt
+            promo/out/plan.json
+          retention-days: 7
+          if-no-files-found: ignore
