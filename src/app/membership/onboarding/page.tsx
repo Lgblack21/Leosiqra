@@ -19,9 +19,6 @@ import {
 import { auth } from '@/lib/cf-client';
 import { onAuthStateChanged } from '@/lib/cf-auth';
 import { cloudflareApi } from '@/lib/cloudflare-api';
-import { currencyService } from '@/lib/services/currencyService';
-import { categoryService } from '@/lib/services/categoryService';
-import { accountService } from '@/lib/services/accountService';
 import { matchIndonesianInstitutionLogo } from '@/lib/indonesianBanks';
 import { LogoImage } from '@/components/ui/LogoImage';
 import { START_TOUR_EVENT } from '@/components/onboarding/OnboardingTour';
@@ -148,60 +145,22 @@ export default function OnboardingPage() {
     setSubmitting(true);
     setError('');
     try {
-      // 1) Mata uang: pastikan mata uang utama tersimpan sebagai default, dan
-      //    IDR selalu ada (dipakai sebagai basis konversi kurs di seluruh app).
-      await currencyService.addCurrency({
-        userId: uid,
-        code: currencyMeta.code,
-        name: currencyMeta.name,
-        symbol: currencyMeta.symbol,
-        isDefault: true,
-      });
-      if (currencyMeta.code !== 'IDR') {
-        await currencyService.addCurrency({
-          userId: uid,
-          code: 'IDR',
-          name: 'Rupiah Indonesia',
-          symbol: 'Rp',
-          isDefault: false,
-        });
-      }
-
-      // 2) Kategori: buat tiap sub-kategori dari grup yang dipilih.
+      // Satu request atomik ke server (mata uang, kategori, rekening opsional,
+      // tandai selesai) — kalau halaman ditutup di tengah, tidak ada setup
+      // setengah jadi, dan mengulang tidak membuat data dobel.
       const groups = DEFAULT_CATEGORY_GROUPS.filter((g) => selectedGroups.includes(g.category));
-      for (const g of groups) {
-        for (const sub of g.subs) {
-          await categoryService.createCategory({
-            userId: uid,
-            category: g.category,
-            subCategory: sub,
-            status: 'VERIFIED',
-          });
-        }
-      }
-
-      // 3) Rekening (opsional).
       const balanceNum = Number(bankBalance) || 0;
-      if (withBank && bankName.trim()) {
-        await accountService.createAccount({
-          userId: uid,
-          name: bankName.trim(),
-          type: bankType,
-          currency: currencyMeta.code,
-          balance: balanceNum,
-          initialBalance: balanceNum,
-          logoUrl: bankLogo || undefined,
-          logoLabel: bankName.trim(),
-        });
-      }
-
-      // 4) Profil + tandai onboarding selesai (currency_initialized = 1).
-      await cloudflareApi('/api/member/profile', {
-        method: 'PATCH',
+      await cloudflareApi('/api/member/onboarding', {
+        method: 'POST',
         json: {
           name: name.trim(),
-          ...(whatsapp.trim() ? { whatsapp: whatsapp.trim() } : {}),
-          currencyInitialized: 1,
+          whatsapp: whatsapp.trim(),
+          currency: { code: currencyMeta.code, name: currencyMeta.name, symbol: currencyMeta.symbol },
+          categories: groups.flatMap((g) => g.subs.map((sub) => ({ category: g.category, subCategory: sub }))),
+          account:
+            withBank && bankName.trim()
+              ? { name: bankName.trim(), type: bankType, balance: balanceNum, logoUrl: bankLogo || undefined, logoLabel: bankName.trim() }
+              : null,
         },
       });
 

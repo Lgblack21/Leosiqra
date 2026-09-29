@@ -4616,6 +4616,113 @@ async function handleCreateCurrency(request: Request, env: Env) {
   return json({ ok: true, id }, { status: 201 });
 }
 
+// Setup Awal (web) dalam satu batch atomik: mata uang, kategori bawaan,
+// rekening pertama (opsional), lalu tandai selesai. Dulu dikirim ±25 request
+// berurutan dan tanda "selesai" paling akhir — kalau user menutup halaman di
+// tengah, ia harus mengulang dan kategori jadi dobel. Sekarang semua atau
+// tidak sama sekali, dan aman diulang: mata uang/kategori/rekening yang sudah
+// ada tidak dibuat lagi.
+const ONBOARDING_ACCOUNT_TYPES = new Set(["Bank Account", "E-Wallet", "Cash"]);
+async function handleCompleteOnboarding(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const payload = await parseJson<{
+    name?: unknown;
+    whatsapp?: unknown;
+    currency?: { code?: unknown; name?: unknown; symbol?: unknown };
+    categories?: Array<{ category?: unknown; subCategory?: unknown }>;
+    account?: { name?: unknown; type?: unknown; balance?: unknown; logoUrl?: unknown; logoLabel?: unknown } | null;
+  }>(request);
+
+  const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+  const name = str(payload.name, 100);
+  if (!name) return json({ error: "Nama wajib diisi." }, { status: 400 });
+  const whatsapp = str(payload.whatsapp, 30);
+  // Validasi SEBELUM dipotong — kalau tidak, "RUPIAH" lolos sebagai "RUP".
+  const code = str(payload.currency?.code, 10).toUpperCase();
+  if (!/^[A-Z]{3}$/.test(code)) return json({ error: "Mata uang tidak valid." }, { status: 400 });
+  const currencyName = str(payload.currency?.name, 60) || code;
+  const currencySymbol = str(payload.currency?.symbol, 8) || code;
+
+  const rawCategories = Array.isArray(payload.categories) ? payload.categories : [];
+  if (rawCategories.length > 80) return json({ error: "Terlalu banyak kategori." }, { status: 400 });
+  const seen = new Set<string>();
+  const categories: Array<{ category: string; sub: string }> = [];
+  for (const c of rawCategories) {
+    const category = str(c?.category, 60);
+    const sub = str(c?.subCategory, 60);
+    if (!category || !sub || seen.has(`${category}\u0000${sub}`)) continue;
+    seen.add(`${category}\u0000${sub}`);
+    categories.push({ category, sub });
+  }
+
+  let account: { name: string; type: string; balance: number; logoUrl: string | null; logoLabel: string | null } | null = null;
+  if (payload.account) {
+    const accName = str(payload.account.name, 60);
+    const accType = str(payload.account.type, 30);
+    const balance = Number(payload.account.balance ?? 0);
+    if (!accName || !ONBOARDING_ACCOUNT_TYPES.has(accType) || !Number.isFinite(balance) || Math.abs(balance) > 1e15) {
+      return json({ error: "Data rekening tidak valid." }, { status: 400 });
+    }
+    const logoUrl = str(payload.account.logoUrl, 500);
+    account = {
+      name: accName,
+      type: accType,
+      balance: Math.round(balance * 100) / 100,
+      logoUrl: /^https:\/\//.test(logoUrl) ? logoUrl : null,
+      logoLabel: str(payload.account.logoLabel, 60) || accName,
+    };
+  }
+
+  const now = nowIso();
+  const insertCurrency = (c: string, n: string, sym: string, isDefault: number) =>
+    env.DB.prepare(
+      `INSERT INTO currencies (id, user_id, code, name, symbol, is_default, created_at, updated_at)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?
+        WHERE NOT EXISTS (SELECT 1 FROM currencies WHERE user_id = ? AND code = ?)`
+    ).bind(generateId(), userId, c, n, sym, isDefault, now, now, userId, c);
+
+  const statements: D1PreparedStatement[] = [
+    insertCurrency(code, currencyName, currencySymbol, 1),
+    // Mata uang pilihan jadi satu-satunya default (kalau sebelumnya sudah ada).
+    env.DB.prepare("UPDATE currencies SET is_default = CASE WHEN code = ? THEN 1 ELSE 0 END WHERE user_id = ?").bind(code, userId),
+  ];
+  // IDR selalu ada — dipakai sebagai basis konversi kurs di seluruh aplikasi.
+  if (code !== "IDR") statements.push(insertCurrency("IDR", "Rupiah Indonesia", "Rp", 0));
+
+  for (const c of categories) {
+    statements.push(
+      env.DB.prepare(
+        `INSERT INTO categories (id, user_id, category, sub_category, status, sort_order, created_at, updated_at)
+         SELECT ?, ?, ?, ?, 'VERIFIED',
+                COALESCE((SELECT MAX(sort_order) FROM categories WHERE user_id = ? AND category = ?), -1) + 1, ?, ?
+          WHERE NOT EXISTS (SELECT 1 FROM categories WHERE user_id = ? AND category = ? AND sub_category = ?)`
+      ).bind(generateId(), userId, c.category, c.sub, userId, c.category, now, now, userId, c.category, c.sub)
+    );
+  }
+
+  if (account) {
+    statements.push(
+      env.DB.prepare(
+        `INSERT INTO accounts (id, user_id, name, type, currency, balance, initial_balance, base_value, logo_url, logo_label, payload_json, sort_order, created_at, updated_at)
+         SELECT ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, NULL,
+                COALESCE((SELECT MAX(sort_order) FROM accounts WHERE user_id = ?), -1) + 1, ?, ?
+          WHERE NOT EXISTS (SELECT 1 FROM accounts WHERE user_id = ? AND name = ?)`
+      ).bind(generateId(), userId, account.name, account.type, code, account.balance, account.balance, account.logoUrl, account.logoLabel, userId, now, now, userId, account.name)
+    );
+  }
+
+  statements.push(
+    env.DB.prepare(
+      `UPDATE users SET name = ?, whatsapp = CASE WHEN ? <> '' THEN ? ELSE whatsapp END, currency_initialized = 1, updated_at = ? WHERE id = ?`
+    ).bind(name, whatsapp, whatsapp, now, userId)
+  );
+
+  await env.DB.batch(statements);
+  return json({ ok: true });
+}
+
 async function handleDeleteCurrency(request: Request, env: Env, currencyId: string) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -7297,6 +7404,10 @@ const worker = {
 
       if (url.pathname === "/api/member/insights" && request.method === "GET") {
         return await handleListInsights(request, env);
+      }
+
+      if (url.pathname === "/api/member/onboarding" && request.method === "POST") {
+        return await handleCompleteOnboarding(request, env);
       }
 
       if (url.pathname === "/api/member/uploads/cloudinary-signature" && request.method === "POST") {
