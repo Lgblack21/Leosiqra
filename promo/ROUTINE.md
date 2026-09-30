@@ -38,6 +38,27 @@ pip install -q edge-tts==7.2.8
 `PROMO_SECRET` sudah ada di environment. Pakai `PROMO_API_URL=https://membersite-leosiqra.leowendry.workers.dev` — www.leosiqra.com menantang IP datacenter (proteksi bot Cloudflare); `api.mjs` juga otomatis pindah ke alamat ini kalau kena tantangan.
 Kalau `python3` bukan yang punya edge-tts, set `PYTHON=` ke interpreter yang benar.
 
+**Catatan sandbox cloud Claude Code** (dari run pertama — lakukan langsung, jangan
+buang waktu mendiagnosis ulang). Internet lewat proxy yang memasang sertifikat
+sendiri di `/root/.ccr/ca-bundle.crt`:
+```bash
+# 1) edge-tts (aiohttp/certifi) harus percaya CA proxy
+mkdir -p ~/py && printf 'import certifi\ncertifi.where = lambda: "/root/.ccr/ca-bundle.crt"\n' > ~/py/sitecustomize.py
+export PYTHONPATH=~/py SSL_CERT_FILE=/root/.ccr/ca-bundle.crt NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt
+# 2) Chromium tidak bisa memuat Google Fonts lewat proxy (ERR_CERT_AUTHORITY_INVALID):
+#    pasang font yang dipakai secara lokal (sesuaikan dengan font pilihanmu)
+mkdir -p ~/.fonts && cd ~/.fonts && curl -sS -A "Mozilla/4.0" \
+  "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;700;800&family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=Poppins:wght@400;600;700;800;900&family=Space+Grotesk:wght@400;700&family=Inter:wght@400;600;700;800&family=Archivo+Black&family=DM+Serif+Display" \
+  | grep -o "https://[^)]*" | while read u; do curl -sS -O "$u"; done; fc-cache -f >/dev/null; cd -
+# 3) Browser bawaan sandbox (/opt/pw-browsers, build 1194) beda versi dengan
+#    Playwright di package.json — kalau launch gagal "Executable doesn't exist
+#    …chromium_headless_shell-XXXX", buat symlink ke build yang ada:
+#    mkdir -p /opt/pw-browsers/chromium_headless_shell-XXXX && \
+#    ln -s /opt/pw-browsers/chromium_headless_shell-1194/chrome-linux /opt/pw-browsers/chromium_headless_shell-XXXX/chrome-headless-shell-linux64 && \
+#    ln -s headless_shell /opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/chrome-headless-shell
+```
+Log "font gagal dimuat" dari make.mjs tidak apa-apa selama font lokal di atas terpasang.
+
 ### 1. Baca riwayat
 ```bash
 curl -s -H "x-promo-secret: $PROMO_SECRET" https://membersite-leosiqra.leowendry.workers.dev/api/promo/history
