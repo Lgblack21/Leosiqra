@@ -10,6 +10,7 @@ import { onAuthStateChanged } from "@/lib/cf-auth";
 import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 import { AppTour } from "@/components/app/AppTour";
 import { reportAppOpened } from "@/lib/appUsage";
+import { BrandSplash } from "@/components/app/BrandSplash";
 
 // Native splash (drawable/splash.png) cuma nyala sekilas selama Android/iOS
 // nyiapin Activity — begitu WebView aktif dia langsung ilang, dan APK ini
@@ -30,6 +31,7 @@ export default function AppShell({
   children: React.ReactNode;
 }) {
   const [loading, setLoading] = useState(true);
+  const [userName, setUserName] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
@@ -54,6 +56,13 @@ export default function AppShell({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Layar pembuka web (BrandSplash, terang + logo) sudah tampil begitu halaman
+  // ini ter-render, jadi splash native (yang versi dark-mode-nya gelap) cukup
+  // sampai di sini — tidak perlu menunggu cek sesi selesai.
+  useEffect(() => {
+    hideSplash();
+  }, []);
+
   // Pakai onAuthStateChanged (bukan panggil /api/auth/me langsung) supaya
   // auth.currentUser terisi — CategorySelect/CurrencySelect yang dipakai di
   // Add Transaction sheet & onboarding butuh itu untuk query data user
@@ -72,6 +81,7 @@ export default function AppShell({
         return;
       }
       reportAppOpened("leosiqra");
+      setUserName(user.displayName ?? null);
       setLoading(false);
       hideSplash();
     });
@@ -81,14 +91,15 @@ export default function AppShell({
     };
   }, [router, pathname]);
 
-  // Sama seperti membership/layout.tsx — tanpa spinner biar transisi dari
-  // tombol login/splash terasa instan.
-  if (loading) return null;
-
   return (
-    <ThemeProvider>
-      <ThemedShell>{children}</ThemedShell>
-    </ThemeProvider>
+    <>
+      <BrandSplash ready={!loading} greetingName={userName} />
+      {!loading && (
+        <ThemeProvider>
+          <ThemedShell>{children}</ThemedShell>
+        </ThemeProvider>
+      )}
+    </>
   );
 }
 
