@@ -21,6 +21,8 @@ const inputClass =
 export function AddDebtSheet({ isOpen, onClose, accounts }: Props) {
   const [isHutang, setIsHutang] = useState(true);
   const [kind, setKind] = useState<string>("Perorangan");
+  // Kartu kredit/paylater: tidak ada uang tunai masuk saat hutangnya dicatat.
+  const noCash = kind === "Kartu Kredit" || kind === "Paylater";
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [accountId, setAccountId] = useState("");
@@ -127,10 +129,16 @@ export function AddDebtSheet({ isOpen, onClose, accounts }: Props) {
         )}
 
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder={isHutang ? "Hutang ke siapa? (mis. Kredivo, Budi)" : "Siapa yang berhutang?"} className={inputClass} aria-label="Nama" />
-        <AccountPicker accounts={accounts} value={accountId} onChange={setAccountId} label={isHutang ? "Nanti dibayar dari" : "Nanti masuk ke"} />
+        <AccountPicker accounts={accounts} value={accountId} onChange={setAccountId} label={!isHutang ? "Uang dipinjamkan dari" : noCash ? "Nanti dibayar dari" : "Uang pinjaman masuk ke"} />
         <input type="date" value={date} max={toLocalDateString()} onChange={(e) => setDate(e.target.value)} className={inputClass} aria-label="Tanggal" />
         <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Catatan (opsional)" className={inputClass} aria-label="Catatan" />
-        <p className="text-[11px] text-slate-400 px-1">Mencatat hutang/piutang tidak mengubah saldo. Saldo berubah saat cicilan dibayar.</p>
+        <p className="text-[11px] text-slate-400 px-1">
+          {!isHutang
+            ? "Saldo rekening langsung berkurang. Saat dibayar kembali, saldo bertambah lagi."
+            : noCash
+              ? "Saldo tidak berubah sekarang — berkurang saat tagihan dibayar."
+              : "Saldo rekening langsung bertambah. Saat cicilan dibayar, saldo berkurang."}
+        </p>
       </div>
     </BottomSheet>
   );

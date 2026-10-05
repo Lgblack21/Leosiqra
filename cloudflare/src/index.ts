@@ -2598,7 +2598,24 @@ interface TransactionInsertParams {
   paymentStatus?: string | null;
   relatedId?: string | null;
   relatedType?: string | null;
+  // Khusus type "debt": saldo rekening langsung ikut berubah saat dicatat
+  // (piutang = uang keluar, hutang tunai = uang masuk). Lihat debtBalanceDelta.
+  applyDebtBalance?: boolean;
 }
+
+// Jenis hutang yang uangnya tidak pernah masuk ke rekening (belanjanya sudah
+// tercatat sebagai pengeluaran) — mencatat hutangnya tidak boleh menambah saldo.
+const DEBT_KINDS_WITHOUT_CASH = new Set(["Kartu Kredit", "Paylater"]);
+
+// Perubahan saldo saat hutang/piutang DICATAT (bukan saat dibayar): piutang
+// mengurangi saldo rekening (uang dipinjamkan), hutang tunai menambah saldo.
+// 0 kalau tidak berlaku. Pembayaran/pelunasan tetap lewat pemasukan/pengeluaran
+// biasa, jadi siklus pinjam → lunas kembali netral.
+const debtBalanceDelta = (category: string | null | undefined, subCategory: string | null | undefined, amount: number) => {
+  if (category === "Piutang") return -amount;
+  if (category === "Hutang" && !DEBT_KINDS_WITHOUT_CASH.has(subCategory ?? "")) return amount;
+  return 0;
+};
 
 // Inti pembuatan transaksi, dipakai bersama oleh endpoint umum
 // (/api/member/transactions) dan endpoint ringkas untuk otomasi eksternal
@@ -2618,13 +2635,28 @@ const insertTransactionRecord = async (env: Env, userId: string, params: Transac
   }
 
   const id = generateId();
-  await env.DB.prepare(
+
+  // Hutang/piutang yang langsung memengaruhi saldo: hanya ke rekening sungguhan
+  // dengan mata uang yang sama (tanpa konversi diam-diam). Penanda
+  // balanceApplied di payload_json dipakai saat catatan dihapus untuk
+  // membalikkan saldonya — catatan lama (tanpa penanda) tidak ikut dibalik.
+  let debtDelta = 0;
+  if (params.type === "debt" && params.applyDebtBalance && params.accountId && !NON_ACCOUNT_IDS.has(params.accountId)) {
+    const account = await env.DB.prepare("SELECT currency FROM accounts WHERE id = ? AND user_id = ?")
+      .bind(params.accountId, userId)
+      .first<{ currency: string | null }>();
+    if (account && (account.currency || "IDR") === currency) {
+      debtDelta = debtBalanceDelta(params.category, params.subCategory, params.amount);
+    }
+  }
+
+  const insert = env.DB.prepare(
     `INSERT INTO transactions (
       id, user_id, type, amount, amount_idr, category, sub_category, currency,
       account_id, target_account_id, lender_name, total_debt, installment_tenor,
       monthly_interest, total_interest, date, display_date, note, status,
-      payment_status, related_id, related_type, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      payment_status, related_id, related_type, payload_json, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       id,
@@ -2649,10 +2681,20 @@ const insertTransactionRecord = async (env: Env, userId: string, params: Transac
       params.paymentStatus ?? null,
       params.relatedId ?? null,
       params.relatedType ?? null,
+      debtDelta !== 0 ? JSON.stringify({ balanceApplied: true }) : null,
       nowIso(),
       nowIso()
-    )
-    .run();
+    );
+
+  if (debtDelta !== 0) {
+    // Satu batch: catatan + saldo tersimpan bersama atau gagal bersama.
+    await env.DB.batch([
+      insert,
+      env.DB.prepare("UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ?").bind(debtDelta, params.accountId, userId),
+    ]);
+  } else {
+    await insert.run();
+  }
 
   const durableId = env.REALTIME_ROOM.idFromName(`member:${userId}`);
   await env.REALTIME_ROOM.get(durableId).fetch("https://realtime.internal/publish", {
@@ -2663,7 +2705,7 @@ const insertTransactionRecord = async (env: Env, userId: string, params: Transac
     }),
   });
 
-  return id;
+  return { id, balanceApplied: debtDelta !== 0 };
 };
 
 // Id rekening dari request (account_id, target_account_id) harus milik user
@@ -2714,6 +2756,7 @@ async function handleCreateTransaction(request: Request, env: Env) {
     payment_status?: string;
     related_id?: string;
     related_type?: string;
+    apply_balance?: boolean;
   }>(request);
   const accountError = await assertOwnAccounts(env, authResult.session.user.id, [payload.account_id, payload.target_account_id]);
   if (accountError) return accountError;
@@ -2722,7 +2765,7 @@ async function handleCreateTransaction(request: Request, env: Env) {
     return json({ error: "type, amount, dan date wajib diisi." }, { status: 400 });
   }
 
-  const id = await insertTransactionRecord(env, authResult.session.user.id, {
+  const { id, balanceApplied } = await insertTransactionRecord(env, authResult.session.user.id, {
     type: payload.type,
     amount: payload.amount,
     amountIdr: payload.amount_idr,
@@ -2743,9 +2786,10 @@ async function handleCreateTransaction(request: Request, env: Env) {
     relatedId: payload.related_id,
     relatedType: payload.related_type,
     note: payload.note,
+    applyDebtBalance: payload.apply_balance === true,
   });
 
-  return json({ ok: true, id }, { status: 201 });
+  return json({ ok: true, id, balance_applied: balanceApplied }, { status: 201 });
 }
 
 // Impor mutasi bank/e-wallet dari CSV (parsing & pemetaan kolom dilakukan di
@@ -3184,6 +3228,22 @@ async function handleUpdateTransaction(request: Request, env: Env, transactionId
     return json({ error: "Tidak ada field yang bisa diperbarui." }, { status: 400 });
   }
 
+  // Hutang/piutang yang saat dicatat sudah mengubah saldo: nominal/rekening/
+  // jenisnya tidak boleh diubah diam-diam (saldo tidak ikut menyesuaikan).
+  // Status lunas, catatan, dll. tetap boleh.
+  const moneyFields = ["type", "amount", "amount_idr", "currency", "account_id", "category", "sub_category"];
+  if (entries.some(([key]) => moneyFields.includes(key))) {
+    const current = await env.DB.prepare("SELECT type, payload_json FROM transactions WHERE id = ? AND user_id = ?")
+      .bind(transactionId, authResult.session.user.id)
+      .first<{ type: string | null; payload_json: string | null }>();
+    if (current?.type === "debt" && /"balanceApplied"\s*:\s*true/.test(current.payload_json ?? "")) {
+      return json(
+        { error: "Nominal/rekening catatan ini sudah memengaruhi saldo. Hapus catatannya lalu catat ulang supaya saldo tetap benar." },
+        { status: 409 }
+      );
+    }
+  }
+
   const assignments = entries.map(([key]) => `${key} = ?`).join(", ");
   const values = entries.map(([, value]) => value);
 
@@ -3206,7 +3266,9 @@ type DeletableTransactionRow = {
   id: string;
   type: string | null;
   amount: number | null;
+  category: string | null;
   sub_category: string | null;
+  payload_json: string | null;
   account_id: string | null;
   target_account_id: string | null;
   date: string | null;
@@ -3231,7 +3293,7 @@ async function findTransferPair(env: Env, userId: string, row: DeletableTransact
   if (side === "Keluar") {
     if (!row.target_account_id || row.target_account_id === "Wallet") return null;
     return env.DB.prepare(
-      `SELECT id, type, amount, sub_category, account_id, target_account_id, date, note, created_at
+      `SELECT id, type, amount, category, sub_category, payload_json, account_id, target_account_id, date, note, created_at
          FROM transactions
         WHERE user_id = ? AND id != ? AND sub_category = ? AND account_id = ? AND date = ? AND note = ?
         ORDER BY ABS(julianday(created_at) - julianday(?)) ASC
@@ -3242,7 +3304,7 @@ async function findTransferPair(env: Env, userId: string, row: DeletableTransact
   }
 
   return env.DB.prepare(
-    `SELECT id, type, amount, sub_category, account_id, target_account_id, date, note, created_at
+    `SELECT id, type, amount, category, sub_category, payload_json, account_id, target_account_id, date, note, created_at
        FROM transactions
       WHERE user_id = ? AND id != ? AND sub_category = ? AND target_account_id = ? AND date = ? AND note = ?
       ORDER BY ABS(julianday(created_at) - julianday(?)) ASC
@@ -3270,6 +3332,16 @@ function buildReversalStatements(env: Env, userId: string, row: DeletableTransac
   else if (row.type === "pengeluaran") balanceDelta = amount;
   else if (isTransferSide && side === "Keluar") balanceDelta = amount;
   else if (isTransferSide && side === "Masuk") balanceDelta = -amount;
+  else if (row.type === "debt") {
+    // Hanya catatan hutang/piutang yang saat dibuat memang mengubah saldo.
+    let applied = false;
+    try {
+      applied = Boolean((JSON.parse(row.payload_json || "{}") as { balanceApplied?: boolean }).balanceApplied);
+    } catch {
+      applied = false;
+    }
+    if (applied) balanceDelta = -debtBalanceDelta(row.category, row.sub_category, amount);
+  }
 
   const accountId = row.account_id;
   if (balanceDelta !== 0 && accountId && accountId !== "General" && accountId !== "Wallet") {
@@ -3330,7 +3402,7 @@ async function handleDeleteTransaction(request: Request, env: Env, transactionId
   }
 
   const row = await env.DB.prepare(
-    `SELECT id, type, amount, sub_category, account_id, target_account_id, date, note, created_at
+    `SELECT id, type, amount, category, sub_category, payload_json, account_id, target_account_id, date, note, created_at
        FROM transactions
       WHERE id = ? AND user_id = ?`
   )

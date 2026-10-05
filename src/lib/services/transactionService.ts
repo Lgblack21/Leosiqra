@@ -26,6 +26,8 @@ export interface Transaction {
   paymentStatus?: 'lunas' | 'belum';
   relatedId?: string; // ID of the related entity (e.g., investmentId)
   relatedType?: 'investasi' | 'tabungan' | 'debt';
+  // Hutang/piutang: saldo rekening langsung ikut berubah saat dicatat (server).
+  applyBalance?: boolean;
   createdAt: Date;
 }
 
@@ -63,9 +65,11 @@ export const transactionService = {
         display_date: data.displayDate || data.date.toISOString(),
         note: data.note || null,
         status: data.status,
+        ...(data.applyBalance ? { apply_balance: true } : {}),
       },
     });
     notifyCollectionChanged('transactions');
+    if (data.applyBalance) notifyCollectionChanged('accounts');
     return result.id;
   },
 

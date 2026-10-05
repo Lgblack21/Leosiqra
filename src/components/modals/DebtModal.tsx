@@ -116,7 +116,10 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
         date: selectedDate,
         displayDate,
         status: isLunas ? 'VERIFIED' : 'PENDING',
-        paymentStatus: formData.paymentStatus
+        paymentStatus: formData.paymentStatus,
+        // Saldo rekening terpilih langsung ikut berubah (piutang keluar,
+        // hutang tunai masuk) — dihitung server dalam satu batch.
+        applyBalance: true,
       });
 
       // Sinkronisasi lanjutan (dampak keuangan saat langsung ditandai lunas)
@@ -289,6 +292,15 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
               </select>
               <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             </div>
+            {formData.accountId && (
+              <p className="text-[11px] font-medium text-slate-400 pl-1">
+                {formData.debtType === 'piutang'
+                  ? 'Saldo rekening ini langsung berkurang (uang dipinjamkan).'
+                  : formData.debtKind === 'Kartu Kredit' || formData.debtKind === 'Paylater'
+                    ? 'Saldo tidak berubah sekarang — berkurang saat tagihan dibayar.'
+                    : 'Saldo rekening ini langsung bertambah (uang pinjaman masuk).'}
+              </p>
+            )}
           </div>
         </div>
 

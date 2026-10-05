@@ -43,8 +43,9 @@ export const debtService = {
     return result;
   },
 
-  // Catat hutang/piutang baru (belum lunas) — tidak mengubah saldo, sama
-  // seperti DebtModal web saat status "belum".
+  // Catat hutang/piutang baru (belum lunas). Saldo rekening langsung ikut
+  // berubah di server (piutang keluar, hutang tunai masuk; kartu kredit/
+  // paylater tidak), sama seperti DebtModal web.
   async create(input: {
     isHutang: boolean;
     kind: string;
@@ -75,6 +76,7 @@ export const debtService = {
         note: input.note ?? '',
         status: 'PENDING',
         payment_status: 'belum',
+        apply_balance: true,
       },
     });
     notifyCollectionChanged('transactions');
