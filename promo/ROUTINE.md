@@ -116,7 +116,9 @@ mkdir -p ~/.fonts && cd ~/.fonts && curl -sS -A "Mozilla/4.0" \
 Log "font gagal dimuat" dari make.mjs tidak apa-apa selama font lokal di atas terpasang.
 
 `PROMO_SECRET`, `OPENAI_API_KEY`, `DEMO_EMAIL`, `DEMO_PASSWORD` sudah ada di
-environment. Tanpa `OPENAI_API_KEY` suara jatuh ke edge-tts; tanpa akun demo
+environment. `OPENAI_API_KEY` boleh key OpenAI (`sk-proj-…`, pakai
+gpt-4o-mini-tts) **atau key OpenRouter (`sk-or-…`, pakai openai/gpt-audio-mini)** —
+`voice.mjs` memilih sendiri. Tanpa key suara jatuh ke edge-tts; tanpa akun demo
 scene `device` jatuh ke ilustrasi — keduanya tercatat di log, sebut di ringkasan.
 
 1. Ambil draft, tulis `draft.script` ke `promo/out/script.json`.

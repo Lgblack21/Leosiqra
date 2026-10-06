@@ -3,12 +3,17 @@
 // ditranskripsi balik (whisper-1, granularitas kata) lalu dicocokkan ke teks
 // `say` asli — ejaan subtitle tetap persis naskah.
 //
-// Tanpa OPENAI_API_KEY (atau kalau OpenAI gagal) → cadangan edge-tts (tts.py).
+// Key OpenRouter (OPENROUTER_API_KEY, atau OPENAI_API_KEY berawalan "sk-or-")
+// → model openai/gpt-audio-mini lewat OpenRouter (streaming audio); waktu kata
+// dihitung dari rentang bicara (silencedetect) dibagi menurut panjang kata.
+// Tanpa key (atau kalau semuanya gagal) → cadangan edge-tts (tts.py).
 // Keluaran sama dengan tts.py: <out>/scene-<i>.mp3 + <out>/voice.json
 //   [{"file": "scene-0.mp3", "words": [[mulai, selesai, "kata"], ...]}, ...]
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+
+const FFMPEG = process.env.FFMPEG_PATH || "ffmpeg";
 
 export const OPENAI_VOICES = ["coral", "nova", "shimmer", "sage", "ballad", "ash"];
 const TTS_MODEL = process.env.PROMO_TTS_MODEL || "gpt-4o-mini-tts";
@@ -105,6 +110,97 @@ export const alignWords = (say, heard) => {
   });
 };
 
+// ── OpenRouter: openai/gpt-audio-mini, audio keluar lewat SSE (pcm16 24 kHz) ──
+const OR_MODEL = process.env.PROMO_OR_AUDIO_MODEL || "openai/gpt-audio-mini";
+// Suara yang tersedia di model audio chat; suara khusus gpt-4o-mini-tts dipetakan.
+const OR_VOICE = { coral: "nova", nova: "nova", shimmer: "shimmer", sage: "shimmer", ballad: "fable", ash: "echo" };
+
+export const openRouterKey = () =>
+  process.env.OPENROUTER_API_KEY || (String(process.env.OPENAI_API_KEY || "").startsWith("sk-or-") ? process.env.OPENAI_API_KEY : "");
+
+const letters = (s) => String(s).toLowerCase().normalize("NFKD").replace(/[^a-z0-9]/g, "");
+// Kemiripan kasar transkrip vs naskah (0..1) — menangkap model yang "ngobrol"
+// alih-alih membacakan teks.
+export const similarity = (a, b) => {
+  const x = letters(a), y = letters(b);
+  if (!x || !y) return 0;
+  const grams = (s) => { const m = new Map(); for (let i = 0; i < s.length - 2; i++) { const g = s.slice(i, i + 3); m.set(g, (m.get(g) || 0) + 1); } return m; };
+  const gx = grams(x), gy = grams(y);
+  let common = 0;
+  for (const [g, n] of gx) common += Math.min(n, gy.get(g) || 0);
+  return (2 * common) / (Math.max(1, x.length - 2) + Math.max(1, y.length - 2));
+};
+
+export const pcmToMp3 = (pcm) => {
+  const r = spawnSync(FFMPEG, ["-hide_banner", "-loglevel", "error", "-f", "s16le", "-ar", "24000", "-ac", "1", "-i", "pipe:0", "-codec:a", "libmp3lame", "-q:a", "2", "-f", "mp3", "pipe:1"], { input: pcm, maxBuffer: 64 * 1024 * 1024 });
+  if (r.status !== 0) throw new Error(`ffmpeg pcm→mp3 gagal: ${String(r.stderr).slice(-300)}`);
+  return r.stdout;
+};
+
+// Rentang bicara [mulai, selesai] dalam detik (buang hening di depan/belakang).
+export const speechSpan = (mp3) => {
+  const r = spawnSync(FFMPEG, ["-hide_banner", "-i", "pipe:0", "-af", "silencedetect=n=-38dB:d=0.12", "-f", "null", "-"], { input: mp3, encoding: "buffer", maxBuffer: 64 * 1024 * 1024 });
+  const log = String(r.stderr);
+  const dur = /Duration: (\d+):(\d+):([\d.]+)/.exec(log);
+  let total = dur ? +dur[1] * 3600 + +dur[2] * 60 + +dur[3] : 0;
+  const starts = [...log.matchAll(/silence_start: ([\d.]+)/g)].map((m) => +m[1]);
+  const ends = [...log.matchAll(/silence_end: ([\d.]+)/g)].map((m) => +m[1]);
+  if (!total) total = Math.max(0, ...ends, ...starts);
+  const begin = starts.length && starts[0] < 0.05 && ends.length ? ends[0] : 0;
+  const last = starts.at(-1);
+  const finish = last !== undefined && last > begin && (ends.length < starts.length || ends.at(-1) >= total - 0.05) ? last : total;
+  return [begin, Math.max(begin + 0.2, finish)];
+};
+
+const speakOpenRouter = async (text, voice, mood) => {
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${openRouterKey()}`, "x-title": "Leosiqra Promo" },
+    body: JSON.stringify({
+      model: OR_MODEL,
+      modalities: ["text", "audio"],
+      audio: { voice: OR_VOICE[voice] || "nova", format: "pcm16" },
+      stream: true,
+      temperature: 0.6,
+      messages: [
+        {
+          role: "system",
+          content: `Kamu pengisi suara (voice-over), BUKAN asisten. Tugasmu hanya MEMBACAKAN teks dari pengguna, persis kata per kata — jangan menjawab, menambah, mengurangi, atau mengomentari. ${INSTRUCTIONS(mood)}`,
+        },
+        { role: "user", content: `Bacakan persis:\n${text}` },
+      ],
+    }),
+  });
+  if (!res.ok) throw new Error(`OpenRouter ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const chunks = [];
+  let transcript = "";
+  let buf = "";
+  const decoder = new TextDecoder();
+  for await (const part of res.body) {
+    buf += decoder.decode(part, { stream: true });
+    let nl;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (!line.startsWith("data:")) continue;
+      const data = line.slice(5).trim();
+      if (data === "[DONE]") continue;
+      let msg;
+      try { msg = JSON.parse(data); } catch { continue; }
+      if (msg.error) throw new Error(`OpenRouter: ${JSON.stringify(msg.error).slice(0, 200)}`);
+      const audio = msg.choices?.[0]?.delta?.audio;
+      if (audio?.data) chunks.push(Buffer.from(audio.data, "base64"));
+      if (audio?.transcript) transcript += audio.transcript;
+    }
+  }
+  const pcm = Buffer.concat(chunks);
+  if (pcm.length < 24000) throw new Error("audio kosong/terlalu pendek");
+  if (transcript && similarity(transcript, text) < 0.55) throw new Error(`model tidak membacakan naskah ("${transcript.slice(0, 60)}…")`);
+  const mp3 = pcmToMp3(pcm);
+  const [a, b] = speechSpan(mp3);
+  return { mp3, heard: [{ start: a, end: b, text }] };
+};
+
 const viaEdge = (planPath, out) => {
   const r = spawnSync(process.env.PYTHON || "python3", [join(import.meta.dirname, "tts.py"), planPath, out], { encoding: "utf8" });
   if (r.status !== 0) throw new Error(`tts.py gagal:\n${(r.stderr || "").slice(-1500)}`);
@@ -114,11 +210,13 @@ const viaEdge = (planPath, out) => {
 // Mengembalikan nama suara yang dipakai (dicatat di riwayat untuk belajar).
 export const synthesizeVoice = async (planPath, out, log = console.log) => {
   const plan = JSON.parse(readFileSync(planPath, "utf8"));
-  if (!process.env.OPENAI_API_KEY) {
-    log("OPENAI_API_KEY tidak ada — suara cadangan edge-tts.");
+  const viaOR = Boolean(openRouterKey());
+  if (!viaOR && !process.env.OPENAI_API_KEY) {
+    log("OPENAI_API_KEY / OPENROUTER_API_KEY tidak ada — suara cadangan edge-tts.");
     return viaEdge(planPath, out);
   }
   const voice = OPENAI_VOICES.includes(plan.style.voice) ? plan.style.voice : OPENAI_VOICES[0];
+  const tag = viaOR ? `openrouter:${OR_VOICE[voice] || "nova"}` : `openai:${voice}`;
   try {
     const result = [];
     for (const [i, scene] of plan.scenes.entries()) {
@@ -131,12 +229,15 @@ export const synthesizeVoice = async (planPath, out, log = console.log) => {
       let heard;
       for (let attempt = 0; ; attempt++) {
         try {
-          mp3 = await speak(text, voice, MOOD[scene.type]);
-          heard = await transcribeWords(mp3, text);
+          if (viaOR) ({ mp3, heard } = await speakOpenRouter(text, voice, MOOD[scene.type]));
+          else {
+            mp3 = await speak(text, voice, MOOD[scene.type]);
+            heard = await transcribeWords(mp3, text);
+          }
           break;
         } catch (error) {
           if (attempt === 2) throw error;
-          log(`OpenAI scene ${i} gagal (${error.message}), coba lagi…`);
+          log(`${tag} scene ${i} gagal (${error.message}), coba lagi…`);
           await new Promise((r) => setTimeout(r, 3000));
         }
       }
@@ -145,9 +246,9 @@ export const synthesizeVoice = async (planPath, out, log = console.log) => {
       result.push({ file: name, words: alignWords(text, heard) });
     }
     writeFileSync(join(out, "voice.json"), JSON.stringify(result));
-    return `openai:${voice}`;
+    return tag;
   } catch (error) {
-    log(`Suara OpenAI gagal (${error.message}) — pakai cadangan edge-tts.`);
+    log(`Suara ${tag} gagal (${error.message}) — pakai cadangan edge-tts.`);
     return viaEdge(planPath, out);
   }
 };
