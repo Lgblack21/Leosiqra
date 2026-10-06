@@ -183,6 +183,14 @@ const prepareClips = async (plan) => {
 };
 
 const main = async () => {
+  // Naskah dari routine biasanya ada di out/script.json — amankan dulu ke
+  // state/ sebelum out/ dibersihkan.
+  if (process.env.PROMO_SCRIPT_FILE && existsSync(process.env.PROMO_SCRIPT_FILE)) {
+    mkdirSync(STATE, { recursive: true });
+    const keep = join(STATE, "script.json");
+    writeFileSync(keep, readFileSync(process.env.PROMO_SCRIPT_FILE));
+    process.env.PROMO_SCRIPT_FILE = keep;
+  }
   rmSync(OUT, { recursive: true, force: true });
   mkdirSync(OUT, { recursive: true });
   mkdirSync(STATE, { recursive: true });
