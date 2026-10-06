@@ -2,6 +2,7 @@
 // naskah (AI, dengan cadangan naskah bawaan), dan gaya visual/musik acak.
 import { promoFetch } from "./api.mjs";
 import { FORMATS, FORMAT_ORDER, FEATURES, FALLBACK_SCRIPTS, FALLBACK_CAPTION_TAIL, OFFER, HANDLES } from "./content.mjs";
+import { OPENAI_VOICES } from "./voice.mjs";
 
 // RNG ber-seed (mulberry32) — seed dicetak di log supaya video bisa dibuat ulang persis.
 export const makeRng = (seed) => {
@@ -40,7 +41,7 @@ export const PALETTES = [
   { name: "neon", bg1: "#09090b", bg2: "#18181b", accent: "#22d3ee", pop: "#f472b6", text: "#fafafa", card: "#18181b", ink: "#fafafa" },
   { name: "rose", bg1: "#fff1f2", bg2: "#fecdd3", accent: "#be123c", pop: "#4f46e5", text: "#4c0519", card: "#ffffff", ink: "#4c0519" },
 ];
-export const BACKGROUNDS = ["blobs", "grid", "rays", "dots", "waves"];
+export const BACKGROUNDS = ["blobs", "grid", "rays", "dots", "waves", "studio", "bokeh"];
 export const FONTS = [
   { head: "Plus Jakarta Sans", body: "Plus Jakarta Sans", weight: 800 },
   { head: "Bricolage Grotesque", body: "Plus Jakarta Sans", weight: 800 },
@@ -52,7 +53,15 @@ export const FONTS = [
 export const TRANSITIONS = ["slide", "zoom", "wipe", "flip", "blur"];
 export const SUBTITLE_STYLES = ["pill", "karaoke", "bold"];
 const SCREENS = ["quick", "scan", "voice", "ai", "savings", "budget", "debt", "level", "stats", "market", "recurring", "tax"];
-const SCENE_TYPES = ["hook", "number", "list", "mythfact", "quiz", "phone", "cta"];
+const SCENE_TYPES = ["hook", "number", "list", "mythfact", "quiz", "phone", "device", "cta"];
+// Scene "device" = rekaman aplikasi asli (record.mjs SHOTS) di HP 3D.
+export const SHOTS = ["quick", "home", "stats", "budget", "savings", "ai", "transactions", "wallet", "recurring"];
+export const CAMERAS = ["orbit", "push", "tilt", "float", "sweep"];
+// Layar ilustrasi ↔ shot rekaman untuk fitur yang sama (cadangan dua arah).
+export const SCREEN_TO_SHOT = { quick: "quick", ai: "ai", savings: "savings", budget: "budget", stats: "stats", recurring: "recurring" };
+export const SHOT_TO_SCREEN = { quick: "quick", home: "stats", stats: "stats", budget: "budget", savings: "savings", ai: "ai", transactions: "quick", wallet: "stats", recurring: "recurring" };
+// Bagian layar yang paling menarik per shot (0 = atas, 1 = bawah) untuk kamera "push".
+const SHOT_FOCUS = { quick: 0.28, home: 0.22, stats: 0.35, budget: 0.3, savings: 0.25, ai: 0.45, transactions: 0.3, wallet: 0.25, recurring: 0.3 };
 
 const clip = (v, n) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
 const words = (s) => clip(s, 400).split(" ").filter(Boolean).length;
@@ -85,6 +94,10 @@ export const normalizeScript = (raw) => {
       scenes.push({ ...base, question: clip(s.question, 70), options, answer });
     } else if (s.type === "phone") {
       scenes.push({ ...base, screen: SCREENS.includes(s.screen) ? s.screen : "quick", text: clip(s.text, 40) });
+    } else if (s.type === "device") {
+      const shot = SHOTS.includes(s.shot) ? s.shot : "quick";
+      const focus = Number(s.focus);
+      scenes.push({ ...base, shot, camera: CAMERAS.includes(s.camera) ? s.camera : undefined, focus: focus >= 0 && focus <= 1 ? focus : SHOT_FOCUS[shot], text: clip(s.text, 40) });
     }
   }
   if (scenes.length < 3 || scenes.length > 7) throw new Error(`jumlah scene ${scenes.length}`);
@@ -99,7 +112,7 @@ export const normalizeScript = (raw) => {
     .filter((h) => h.length > 2)
     .slice(0, 8);
   if (!hashtags.includes("#leosiqra")) hashtags.push("#leosiqra");
-  return { scenes: scenes.filter((s) => s.say || s.type === "hook"), caption: clip(raw.caption, 600), hashtags };
+  return { scenes: scenes.filter((s) => s.say || s.type === "hook" || s.type === "device"), caption: clip(raw.caption, 600), hashtags };
 };
 
 const SYSTEM_PROMPT = `Kamu content creator TikTok/Reels/Shorts untuk Leosiqra, aplikasi pencatat & pengatur keuangan pribadi berbahasa Indonesia.
@@ -119,18 +132,20 @@ TIPE SCENE (pilih yang cocok, variasikan):
 {"type":"list","title":"judul pendek","items":["2-4 poin, maks 5 kata"],"say":"..."}
 {"type":"mythfact","myth":"...","fact":"...","say":"..."}
 {"type":"quiz","question":"...","options":["2-3 opsi pendek"],"answer":0,"say":"pertanyaan lalu jawabannya"}
-{"type":"phone","screen":"${SCREENS.join("|")}","text":"maks 4 kata","say":"..."}
+{"type":"device","shot":"${SHOTS.join("|")}","camera":"${CAMERAS.join("|")}","text":"maks 4 kata","say":"..."}  ← REKAMAN APLIKASI ASLI di HP 3D, utamakan ini (minimal 1, idealnya 2)
+{"type":"phone","screen":"${SCREENS.join("|")}","text":"maks 4 kata","say":"..."}  ← ilustrasi, hanya untuk fitur yang tidak ada di shot (scan, voice, debt, level, market, tax)
 {"type":"cta","text":"maks 5 kata","say":"..."}
 
 Balas HANYA JSON: {"title":"...","scenes":[...],"caption":"caption IG/YouTube 1-3 kalimat + emoji, ajakan komentar/simpan","hashtags":["5-7 hashtag relevan tanpa spasi"]}`;
 
-const callAi = async ({ format, topic, avoidHooks }) => {
+const callAi = async ({ format, topic, avoidHooks, lessons }) => {
   const f = FORMATS[format];
   const user = [
     `FORMAT: ${f.label} — ${f.guide}`,
     `TOPIK: ${topic}`,
     `FITUR (hanya boleh ini):\n${FEATURES.map((x) => `- ${x.name} [screen: ${x.id}]: ${x.fact}`).join("\n")}`,
     avoidHooks.length ? `JANGAN mirip hook lama ini:\n${avoidHooks.map((h) => `- ${h}`).join("\n")}` : "",
+    lessons ? `PELAJARAN DARI RATING PEMILIK (ikuti):\n${lessons}` : "",
     `Handle: Instagram ${HANDLES.instagram}, YouTube ${HANDLES.youtube}. Hari ini: ${new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Jakarta" })}.`,
   ]
     .filter(Boolean)
@@ -169,7 +184,26 @@ const callAi = async ({ format, topic, avoidHooks }) => {
   return JSON.parse(content.replace(/^```(?:json)?\s*|\s*```$/g, ""));
 };
 
-export const buildPlan = async ({ seed, history }) => {
+// Video "2D" (tanpa rekaman aplikasi asli) boleh, tapi jangan sering: maks 1
+// dari 5 video terakhir. Kalau jatahnya habis, layar ilustrasi yang punya
+// padanan rekaman diganti scene device; kalau tidak ada, sisipkan 1 shot.
+export const enforceRealQuota = (scenes, recent, rng) => {
+  if (scenes.some((s) => s.type === "device")) return scenes;
+  const twoD = recent.slice(-4).filter((h) => h.kind === "2d").length;
+  if (twoD === 0) return scenes;
+  const out = scenes.map((s) =>
+    s.type === "phone" && SCREEN_TO_SHOT[s.screen]
+      ? { type: "device", say: s.say, emoji: s.emoji, text: s.text, shot: SCREEN_TO_SHOT[s.screen], focus: SHOT_FOCUS[SCREEN_TO_SHOT[s.screen]] }
+      : s
+  );
+  if (!out.some((s) => s.type === "device")) {
+    const shot = rng.pick(["quick", "stats", "budget", "savings"]);
+    out.splice(out.length - 1, 0, { type: "device", say: "", emoji: "", text: "Tampilan aslinya", shot, focus: SHOT_FOCUS[shot] });
+  }
+  return out;
+};
+
+export const buildPlan = async ({ seed, history, lessons = "" }) => {
   const rng = makeRng(seed);
   const recent = history.slice(-60);
   const lastFormat = recent.at(-1)?.format;
@@ -184,7 +218,7 @@ export const buildPlan = async ({ seed, history }) => {
     // PROMO_SCRIPT_FILE: pakai naskah dari file (uji tampilan tanpa memanggil AI).
     const raw = process.env.PROMO_SCRIPT_FILE
       ? JSON.parse((await import("node:fs")).readFileSync(process.env.PROMO_SCRIPT_FILE, "utf8"))
-      : await callAi({ format, topic, avoidHooks: recent.slice(-10).map((h) => h.hook).filter(Boolean) });
+      : await callAi({ format, topic, lessons, avoidHooks: recent.slice(-10).map((h) => h.hook).filter(Boolean) });
     script = normalizeScript(raw);
     // Naskah dari file (mis. ditulis Claude Code) boleh menentukan format,
     // topik, dan sebagian gaya sendiri.
@@ -205,10 +239,21 @@ export const buildPlan = async ({ seed, history }) => {
     script.topic = fb.topic;
   }
 
+  script.scenes = enforceRealQuota(script.scenes, recent, rng);
+  script.scenes.forEach((sc, i) => {
+    if (sc.type === "device" && !sc.camera) sc.camera = CAMERAS[(i + seed) % CAMERAS.length];
+  });
+  const hasDevice = script.scenes.some((sc) => sc.type === "device");
+  // Suara bergiliran; jangan sama dengan video kemarin.
+  const lastVoice = String(recent.at(-1)?.voice || "").replace(/^openai:/, "");
+  const voice = rng.pick(OPENAI_VOICES.filter((v) => v !== lastVoice));
+
   const palette = rng.pick(PALETTES.filter((p) => p.name !== recent.at(-1)?.palette));
   const style = {
     palette,
-    background: rng.pick(BACKGROUNDS),
+    // Video dengan rekaman HP lebih cocok di latar 3D (studio/bokeh).
+    background: hasDevice && rng.next() < 0.6 ? rng.pick(["studio", "bokeh"]) : rng.pick(BACKGROUNDS),
+    voice,
     font: rng.pick(FONTS),
     transition: rng.pick(TRANSITIONS),
     subtitle: rng.pick(SUBTITLE_STYLES),
@@ -230,6 +275,7 @@ export const buildPlan = async ({ seed, history }) => {
   if (SUBTITLE_STYLES.includes(o.subtitle)) style.subtitle = o.subtitle;
   if (typeof o.font === "string") style.font = FONTS.find((f) => f.head === o.font) || style.font;
   if (o.music && typeof o.music === "object") style.music = { ...style.music, ...o.music };
+  if (OPENAI_VOICES.includes(o.voice)) style.voice = o.voice;
 
   return {
     seed,

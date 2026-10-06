@@ -1707,11 +1707,26 @@ async function handlePromoTelegram(request: Request, env: Env) {
     return json({ error: `Telegram ${res.status}: ${body.description ?? "gagal"}` }, { status: 502 });
   };
 
+  // id riwayat (opsional) → tombol rating di bawah video; jawabannya masuk
+  // lewat /api/promo/telegram-hook dan dibaca routine besok paginya.
+  const id = String(form.get("id") ?? "");
+  let messageId: number | undefined;
+
   if (video instanceof File) {
     if (video.size > PROMO_MAX_VIDEO_BYTES) return json({ error: "Video terlalu besar." }, { status: 413 });
     const out = new FormData();
     out.append("chat_id", env.TELEGRAM_CHAT_ID);
     out.append("supports_streaming", "true");
+    if (PROMO_ID_RE.test(id)) {
+      out.append(
+        "reply_markup",
+        JSON.stringify({
+          inline_keyboard: [
+            PROMO_RATINGS.map((label, n) => ({ text: label, callback_data: `r:${id}:${n + 1}` })),
+          ],
+        })
+      );
+    }
     for (const key of ["width", "height", "duration"]) {
       const v = form.get(key);
       if (typeof v === "string" && /^\d{1,5}$/.test(v)) out.append(key, v);
@@ -1722,6 +1737,8 @@ async function handlePromoTelegram(request: Request, env: Env) {
     if (thumb instanceof File && thumb.size < 2 * 1024 * 1024) out.append("thumbnail", thumb, "cover.jpg");
     const res = await fetch(api("sendVideo"), { method: "POST", body: out });
     if (!res.ok) return telegramError(res);
+    const sent = (await res.json().catch(() => ({}))) as { result?: { message_id?: number } };
+    messageId = sent.result?.message_id;
   }
   if (text) {
     const res = await fetch(api("sendMessage"), {
@@ -1731,7 +1748,7 @@ async function handlePromoTelegram(request: Request, env: Env) {
     });
     if (!res.ok) return telegramError(res);
   }
-  return json({ ok: true });
+  return json({ ok: true, messageId });
 }
 
 // Riwayat video promo (topik/format/gaya yang sudah dipakai) — disimpan di R2
@@ -1756,10 +1773,141 @@ async function handlePromoHistory(request: Request, env: Env) {
     return json({ error: "JSON tidak valid." }, { status: 400 });
   }
   if (!Array.isArray(items)) return json({ error: "items harus array." }, { status: 400 });
+  // Pembuat video menulis ulang seluruh riwayat yang dibacanya di awal render;
+  // rating/catatan yang masuk lewat webhook selama render jangan sampai hilang.
+  const current = await bucket.get(PROMO_HISTORY_KEY);
+  if (current) {
+    const saved = new Map(
+      (JSON.parse(await current.text()) as PromoHistoryItem[]).filter((it) => it && it.id).map((it) => [it.id, it])
+    );
+    for (const it of items as PromoHistoryItem[]) {
+      const prev = it && it.id ? saved.get(it.id) : undefined;
+      if (!prev) continue;
+      if (it.rating === undefined && prev.rating !== undefined) Object.assign(it, { rating: prev.rating, ratedAt: prev.ratedAt });
+      if (!it.note && prev.note) it.note = prev.note;
+    }
+  }
   await bucket.put(PROMO_HISTORY_KEY, JSON.stringify(items.slice(-365)), {
     httpMetadata: { contentType: "application/json" },
   });
   return json({ ok: true, count: Math.min(items.length, 365) });
+}
+
+// Rating video dari pemilik (tombol di bawah video Telegram) + catatan bebas
+// (balas video dengan teks). Tersimpan di item riwayat yang sama, jadi routine
+// besok bisa belajar format/gaya/suara mana yang disukai.
+const PROMO_RATINGS = ["🔥 Bagus", "👍 Oke", "👎 Kurang"];
+const PROMO_ID_RE = /^[A-Za-z0-9_-]{4,40}$/;
+
+// Telegram hanya menerima [A-Za-z0-9_-] untuk secret_token, jadi turunkan
+// dari PROMO_SECRET (promo/setup-webhook.mjs menghitung yang sama).
+const promoHookToken = async (env: Env) => {
+  if (!env.PROMO_SECRET || env.PROMO_SECRET.length < 32) return "";
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`tg-hook:${env.PROMO_SECRET}`));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+};
+
+type PromoHistoryItem = { id?: string; tgMessageId?: number; rating?: number; note?: string; ratedAt?: string };
+
+async function handlePromoTelegramHook(request: Request, env: Env) {
+  const expected = await promoHookToken(env);
+  const given = request.headers.get("x-telegram-bot-api-secret-token") ?? "";
+  if (!expected || !constantTimeEqual(given, expected)) return json({ error: "Unauthorized" }, { status: 401 });
+  const bucket = env.FILES_BUCKET;
+  if (!bucket || !env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) return json({ ok: true });
+
+  const update = await parseJson<{
+    callback_query?: { id: string; data?: string; from?: { id?: number }; message?: { chat?: { id?: number } } };
+    message?: {
+      message_id?: number;
+      text?: string;
+      from?: { id?: number };
+      chat?: { id?: number };
+      reply_to_message?: { message_id?: number };
+    };
+  }>(request).catch(() => ({}) as Record<string, never>);
+  const owner = String(env.TELEGRAM_CHAT_ID);
+  const api = (method: string, body: unknown) =>
+    fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+  const load = async () => {
+    const obj = await bucket.get(PROMO_HISTORY_KEY);
+    return (obj ? JSON.parse(await obj.text()) : []) as PromoHistoryItem[];
+  };
+  const save = (items: PromoHistoryItem[]) =>
+    bucket.put(PROMO_HISTORY_KEY, JSON.stringify(items.slice(-365)), {
+      httpMetadata: { contentType: "application/json" },
+    });
+
+  const cb = update.callback_query;
+  if (cb) {
+    // Hanya pemilik (chat tujuan video) yang boleh menilai.
+    if (String(cb.from?.id ?? "") !== owner && String(cb.message?.chat?.id ?? "") !== owner) {
+      await api("answerCallbackQuery", { callback_query_id: cb.id });
+      return json({ ok: true });
+    }
+    const m = /^r:([A-Za-z0-9_-]{4,40}):([1-3])$/.exec(cb.data ?? "");
+    let reply = "Rating tidak dikenali.";
+    if (m) {
+      const items = await load();
+      const item = items.find((it) => it.id === m[1]);
+      if (item) {
+        item.rating = Number(m[2]);
+        item.ratedAt = nowIso();
+        await save(items);
+        reply = `Tercatat: ${PROMO_RATINGS[item.rating - 1]}. Balas videonya kalau mau kasih catatan.`;
+      } else {
+        reply = "Video ini tidak ada di riwayat.";
+      }
+    }
+    await api("answerCallbackQuery", { callback_query_id: cb.id, text: reply });
+    return json({ ok: true });
+  }
+
+  const msg = update.message;
+  const replyTo = msg?.reply_to_message?.message_id;
+  const text = (msg?.text ?? "").trim();
+  if (msg && replyTo && text && String(msg.chat?.id ?? "") === owner && !text.startsWith("/")) {
+    const items = await load();
+    const item = items.find((it) => it.tgMessageId === replyTo);
+    if (item) {
+      item.note = [item.note, text.slice(0, 500)].filter(Boolean).join(" | ").slice(-1000);
+      await save(items);
+      await api("sendMessage", { chat_id: owner, text: "📝 Catatan disimpan, dipakai tim konten besok.", reply_to_message_id: msg.message_id });
+    }
+  }
+  return json({ ok: true });
+}
+
+// Kerja tim konten dipecah beberapa sesi sehari (ide → naskah → produksi);
+// tiap sesi jalan di mesin baru, jadi hasil antar-sesi disimpan di R2.
+// key: draft-YYYY-MM-DD (per hari) atau playbook (pelajaran jangka panjang).
+async function handlePromoDraft(request: Request, env: Env, url: URL) {
+  if (!isPromoAuthorized(request, env)) return json({ error: "Unauthorized" }, { status: 401 });
+  const bucket = env.FILES_BUCKET;
+  if (!bucket) return json({ error: "Penyimpanan belum dikonfigurasi." }, { status: 503 });
+  const key = url.searchParams.get("key") ?? "";
+  if (!/^(draft-\d{4}-\d{2}-\d{2}|playbook)$/.test(key)) return json({ error: "key tidak valid." }, { status: 400 });
+  const r2Key = `promo/${key}.json`;
+  if (request.method === "GET") {
+    const obj = await bucket.get(r2Key);
+    return json({ data: obj ? JSON.parse(await obj.text()) : null });
+  }
+  const body = await request.text();
+  if (body.length > 200_000) return json({ error: "Draft terlalu besar." }, { status: 413 });
+  let data: unknown;
+  try {
+    data = (JSON.parse(body) as { data?: unknown }).data;
+  } catch {
+    return json({ error: "JSON tidak valid." }, { status: 400 });
+  }
+  if (data === null || typeof data !== "object") return json({ error: "data harus objek." }, { status: 400 });
+  await bucket.put(r2Key, JSON.stringify(data), { httpMetadata: { contentType: "application/json" } });
+  return json({ ok: true });
 }
 
 const runAiAssistant = async (
@@ -8241,6 +8389,12 @@ const worker = {
       }
       if (url.pathname === "/api/promo/telegram" && request.method === "POST") {
         return await handlePromoTelegram(request, env);
+      }
+      if (url.pathname === "/api/promo/telegram-hook" && request.method === "POST") {
+        return await handlePromoTelegramHook(request, env);
+      }
+      if (url.pathname === "/api/promo/draft" && (request.method === "GET" || request.method === "PUT")) {
+        return await handlePromoDraft(request, env, url);
       }
       if (url.pathname === "/api/admin/ai-status" && request.method === "GET") {
         return await handleAdminAiStatus(request, env);

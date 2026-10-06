@@ -7,26 +7,32 @@
 //      Worker Leosiqra; atau langsung: OPENROUTER_API_KEY, TELEGRAM_BOT_TOKEN +
 //      TELEGRAM_CHAT_ID. Tanpa AI → naskah cadangan. PROMO_SEED (opsional),
 //      FFMPEG_PATH (default "ffmpeg"), PYTHON (default "python3").
+//      OPENAI_API_KEY → suara manusia (tanpa ini: edge-tts). DEMO_EMAIL +
+//      DEMO_PASSWORD → rekaman aplikasi asli untuk scene "device" (tanpa ini:
+//      ilustrasi).
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "playwright";
-import { buildPlan } from "./plan.mjs";
+import { buildPlan, SHOT_TO_SCREEN } from "./plan.mjs";
 import { promoFetch } from "./api.mjs";
 import { renderMusic } from "./music.mjs";
+import { synthesizeVoice } from "./voice.mjs";
+import { recordClips } from "./record.mjs";
+import { buildLessons, fetchPlaybook } from "./lessons.mjs";
 
 const DIR = dirname(fileURLToPath(import.meta.url));
 const OUT = join(DIR, "out");
 const STATE = join(DIR, "state");
 const HISTORY = join(STATE, "history.json");
 const FFMPEG = process.env.FFMPEG_PATH || "ffmpeg";
-const PYTHON = process.env.PYTHON || "python3";
 const FPS = 30;
 const SEND = !process.argv.includes("--no-send");
 
 // Durasi minimum tiap tipe scene (detik) — animasinya butuh waktu segini.
-const MIN_DUR = { hook: 2, number: 3, list: 3.4, mythfact: 3.6, quiz: 4.2, phone: 3.4, cta: 3.4 };
+const MIN_DUR = { hook: 2, number: 3, list: 3.4, mythfact: 3.6, quiz: 4.2, phone: 3.4, device: 4.2, cta: 3.4 };
+const CLIP_MAX_RATE = 1.7; // rekaman boleh dipercepat sampai segini
 const LEAD = 0.25; // voice mulai sedikit setelah scene masuk
 
 const log = (...a) => console.log(`[${new Date().toISOString().slice(11, 19)}]`, ...a);
@@ -106,7 +112,7 @@ const postTelegram = async ({ text, video }) => {
     if (video) for (const [k, v] of Object.entries(video)) appendField(form, k, v);
     const res = await promoFetch("/api/promo/telegram", { method: "POST", body: form });
     if (!res.ok) throw new Error(`Worker promo/telegram ${res.status}: ${(await res.text()).slice(0, 300)}`);
-    return;
+    return (await res.json().catch(() => ({}))).messageId;
   }
   const api = (m) => `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/${m}`;
   const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -128,22 +134,52 @@ const postTelegram = async ({ text, video }) => {
 
 const escHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
 
-const sendTelegram = async (plan, videoPath, coverPath) => {
+const sendTelegram = async (plan, videoPath, coverPath, id) => {
   const hook = plan.scenes[0]?.text || plan.topic;
   const fullCaption = `${plan.caption}\n\n${plan.hashtags.join(" ")}`;
   const text = `📋 <b>Caption</b> (tap untuk copy — sama untuk Reels &amp; Shorts):\n<pre>${escHtml(fullCaption)}</pre>\n\n📝 <b>Judul Shorts</b>:\n<pre>${escHtml(`${hook} #shorts`.slice(0, 95))}</pre>`;
-  await postTelegram({
+  const messageId = await postTelegram({
     text,
     video: {
+      id,
       video: new Blob([readFileSync(videoPath)], { type: "video/mp4" }),
       thumbnail: new Blob([readFileSync(coverPath)], { type: "image/jpeg" }),
-      caption: `🎬 Video promo hari ini\n“${hook}”\n\nFormat: ${plan.formatLabel} · Topik: ${plan.topic}`,
+      caption: `🎬 Video promo hari ini\n“${hook}”\n\nFormat: ${plan.formatLabel} · Topik: ${plan.topic}\n\nNilai pakai tombol di bawah, atau balas video ini dengan catatan — tim konten belajar dari situ besok.`,
       width: "1080",
       height: "1920",
       duration: String(Math.round(plan.total)),
     },
   });
   log("Terkirim ke Telegram.");
+  return messageId;
+};
+
+// Rekaman → frame JPG (30 fps, lebar 600) untuk layar HP di stage.html.
+// Scene device yang tidak punya rekaman diganti ilustrasi fitur yang sama.
+const prepareClips = async (plan) => {
+  if (!plan.scenes.some((s) => s.type === "device")) return;
+  let clips = {};
+  try {
+    clips = await recordClips(join(OUT, "plan.json"), OUT, log);
+  } catch (error) {
+    log(`rekaman aplikasi gagal (${error.message.split("\n")[0]}) — pakai ilustrasi`);
+  }
+  plan.scenes.forEach((sc, i) => {
+    if (sc.type !== "device") return;
+    const c = clips[i];
+    if (c) {
+      const dir = join(OUT, "frames", String(i));
+      mkdirSync(dir, { recursive: true });
+      run(FFMPEG, ["-y", "-hide_banner", "-loglevel", "error", "-ss", String(c.start), "-i", join(OUT, c.file), "-vf", `fps=${FPS},scale=600:-2`, "-q:v", "3", join(dir, "%04d.jpg")]);
+      const count = readdirSync(dir).filter((f) => f.endsWith(".jpg")).length;
+      if (count > FPS) {
+        sc.clip = { dir: `out/frames/${i}/`, count, fps: FPS, rate: 1 };
+        return;
+      }
+    }
+    log(`scene ${i} (${sc.shot}) tanpa rekaman → ilustrasi`);
+    Object.assign(sc, { type: "phone", screen: SHOT_TO_SCREEN[sc.shot] || "quick", say: sc.say });
+  });
 };
 
 const main = async () => {
@@ -154,14 +190,20 @@ const main = async () => {
   const history = await loadHistory();
   const seed = Number(process.env.PROMO_SEED) || Math.floor(Math.random() * 2 ** 31);
   log(`seed ${seed}, riwayat ${history.length} video`);
-  const plan = await buildPlan({ seed, history });
+  const lessons = buildLessons(history, await fetchPlaybook().catch(() => null));
+  const plan = await buildPlan({ seed, history, lessons });
   const { FORMATS } = await import("./content.mjs");
   plan.formatLabel = FORMATS[plan.format]?.label ?? plan.format;
   log(`format ${plan.format} · topik "${plan.topic}" · naskah ${plan.source} · gaya ${plan.style.palette.name}/${plan.style.background}/${plan.style.transition}/${plan.style.font.head}`);
   writeFileSync(join(OUT, "plan.json"), JSON.stringify(plan, null, 2));
 
-  // 1) Voice-over per scene + waktu tiap kata.
-  run(PYTHON, [join(DIR, "tts.py"), join(OUT, "plan.json"), OUT]);
+  // 0) Rekam aplikasi asli untuk scene device (akun demo).
+  await prepareClips(plan);
+  writeFileSync(join(OUT, "plan.json"), JSON.stringify(plan, null, 2));
+
+  // 1) Voice-over per scene + waktu tiap kata (OpenAI, cadangan edge-tts).
+  const voiceName = await synthesizeVoice(join(OUT, "plan.json"), OUT, log);
+  log(`suara ${voiceName}`);
   const voice = JSON.parse(readFileSync(join(OUT, "voice.json"), "utf8"));
 
   // 2) Timeline: durasi scene mengikuti panjang narasinya.
@@ -175,6 +217,12 @@ const main = async () => {
     sc.start = +t.toFixed(3);
     sc.dur = +Math.max(MIN_DUR[sc.type] ?? 3, lead + vDur + 0.45).toFixed(3);
     if (sc.type === "cta") sc.dur += 1.2; // tahan endcard sedikit lebih lama
+    if (sc.clip) {
+      // Beri waktu rekaman tampil (maks 7,5 dtk), percepat sisanya.
+      const clipLen = sc.clip.count / sc.clip.fps;
+      sc.dur = +Math.max(sc.dur, Math.min(clipLen / 1.4 + 0.4, 7.5)).toFixed(3);
+      sc.clip.rate = +Math.min(CLIP_MAX_RATE, Math.max(1, clipLen / (sc.dur - 0.3))).toFixed(3);
+    }
     if (v.file) {
       voiceClips.push({ file: join(OUT, v.file), at: sc.start + lead });
       for (const [ws, we, text] of v.words) words.push({ start: +(sc.start + lead + ws).toFixed(3), end: +(sc.start + lead + we).toFixed(3), text });
@@ -268,8 +316,11 @@ const main = async () => {
     log("--no-send: video tidak dikirim & riwayat tidak diubah.");
     return;
   }
-  await sendTelegram(plan, videoPath, coverPath);
+  const id = `${plan.date.slice(0, 10)}-${seed.toString(36)}`;
+  const tgMessageId = await sendTelegram(plan, videoPath, coverPath, id);
   history.push({
+    id,
+    tgMessageId,
     date: plan.date.slice(0, 10),
     format: plan.format,
     topic: plan.topic,
@@ -278,6 +329,10 @@ const main = async () => {
     source: plan.source,
     style: `${plan.style.background}/${plan.style.transition}/${plan.style.font.head}/${plan.style.subtitle}`,
     screens: plan.scenes.filter((s) => s.type === "phone").map((s) => s.screen),
+    shots: plan.scenes.filter((s) => s.clip).map((s) => s.shot),
+    kind: plan.scenes.some((s) => s.clip) ? "real" : "2d",
+    voice: voiceName,
+    dur: Math.round(plan.total),
     seed,
   });
   await saveHistory(history);

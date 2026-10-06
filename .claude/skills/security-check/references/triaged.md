@@ -28,6 +28,7 @@ Perbarui file ini di akhir setiap audit.
 | `sql-tanpa-user_id` admin | `backfillIndonesianBankLogos` (route `/api/admin/debug/backfill-bank-logos`), `handleAdminPayments`, `handleAdminPaymentById` | hanya bisa dipanggil lewat route ber-`requireSession(..., "admin")` |
 | `sql-tanpa-user_id` push | `sendWebPushToSubscription` | DELETE by id dari query internal, hanya saat layanan push membalas 404/410 |
 | GET yang mengubah data (CSRF) | semua route `request.method === "GET"` | semua GET yang terdaftar hanya membaca data |
+| endpoint promo (non-user) | `handlePromoTelegramHook`, `handlePromoDraft`, `handlePromoTelegram` | hook: header `X-Telegram-Bot-Api-Secret-Token` = sha256(`tg-hook:`+PROMO_SECRET) dibandingkan `constantTimeEqual` (PROMO_SECRET kosong/pendek → 401); hanya chat `TELEGRAM_CHAT_ID` yang bisa menilai/mencatat; `callback_data` di-regex; hanya menulis R2 `promo/history.json`. Draft: `isPromoAuthorized`, `key` whitelist regex (`draft-YYYY-MM-DD`/`playbook`) → tidak bisa keluar prefix `promo/`, maks 200 KB. Tidak menyentuh D1/data user (dicek 2026-10-06). ⚪ Kalau TELEGRAM_CHAT_ID grup, anggota grup ikut bisa menilai — disengaja |
 | push_subscriptions dicari per endpoint | `handleCreatePushSubscription` | pindah akun di browser yang sama memang disengaja; URL endpoint push tidak bisa ditebak (⚪ info) |
 
 ## Temuan terbuka
@@ -37,6 +38,8 @@ Perbarui file ini di akhir setiap audit.
 - ⚪ `npm audit`: 9 paket (1 critical di Next.js = middleware bypass) — semua build-time/native, tidak dipakai runtime (static export, Worker tidak memakainya). Update Next.js terpisah.
 
 ## Sudah diperbaiki
+
+- 🟡 (2026-10-06) PUT `/api/promo/history` menimpa rating/catatan yang masuk lewat webhook selama render → sekarang digabung per `id` (`handlePromoHistory`).
 
 | Tanggal | Temuan | Perbaikan |
 |---|---|---|
