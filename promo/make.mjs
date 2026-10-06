@@ -134,7 +134,31 @@ const postTelegram = async ({ text, video }) => {
 
 const escHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
 
-const sendTelegram = async (plan, videoPath, coverPath, id) => {
+// Posting otomatis: unggah video ke Worker + daftarkan antrean (19:00 WIB).
+// Worker yang memposting ke Instagram/YouTube kalau token sudah dipasang.
+const queuePosting = async (plan, videoPath, id) => {
+  if (!process.env.PROMO_SECRET) return null;
+  try {
+    const up = await promoFetch(`/api/promo/upload?id=${id}`, { method: "PUT", headers: { "content-type": "video/mp4" }, body: readFileSync(videoPath) });
+    if (!up.ok) throw new Error(`upload ${up.status}: ${(await up.text()).slice(0, 150)}`);
+    const hook = plan.scenes[0]?.text || plan.topic;
+    const res = await promoFetch("/api/promo/queue", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id, title: hook, caption: `${plan.caption}\n\n${plan.hashtags.join(" ")}`, postAt: process.env.PROMO_POST_AT || undefined }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(`queue ${res.status}: ${JSON.stringify(data).slice(0, 150)}`);
+    const on = data.enabled || {};
+    log(on.ig || on.yt ? `antrean posting ${data.postAt} (IG ${on.ig ? "aktif" : "belum"}, YouTube ${on.yt ? "aktif" : "belum"})` : "antrean tersimpan; posting otomatis belum aktif (token IG/YouTube belum dipasang)");
+    return data;
+  } catch (error) {
+    log(`antrean posting gagal (${error.message}) — video tetap dikirim ke Telegram`);
+    return null;
+  }
+};
+
+const sendTelegram = async (plan, videoPath, coverPath, id, queued) => {
   const hook = plan.scenes[0]?.text || plan.topic;
   const fullCaption = `${plan.caption}\n\n${plan.hashtags.join(" ")}`;
   const text = `📋 <b>Caption</b> (tap untuk copy — sama untuk Reels &amp; Shorts):\n<pre>${escHtml(fullCaption)}</pre>\n\n📝 <b>Judul Shorts</b>:\n<pre>${escHtml(`${hook} #shorts`.slice(0, 95))}</pre>`;
@@ -142,9 +166,10 @@ const sendTelegram = async (plan, videoPath, coverPath, id) => {
     text,
     video: {
       id,
+      schedule: queued ? "1" : "0",
       video: new Blob([readFileSync(videoPath)], { type: "video/mp4" }),
       thumbnail: new Blob([readFileSync(coverPath)], { type: "image/jpeg" }),
-      caption: `🎬 Video promo hari ini\n“${hook}”\n\nFormat: ${plan.formatLabel} · Topik: ${plan.topic}\n\nNilai pakai tombol di bawah, atau balas video ini dengan catatan — tim konten belajar dari situ besok.`,
+      caption: `🎬 Video promo hari ini\n“${hook}”\n\nFormat: ${plan.formatLabel} · Topik: ${plan.topic}\n\nNilai pakai tombol di bawah, atau balas video ini dengan catatan — tim konten belajar dari situ besok.${queued && queued.enabled && (queued.enabled.ig || queued.enabled.yt) ? `\n\n📅 Diposting otomatis ${new Date(queued.postAt).toLocaleTimeString("id-ID", { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit" })} WIB ke ${[queued.enabled.ig && "Instagram", queued.enabled.yt && "YouTube"].filter(Boolean).join(" & ")} — tekan ⛔ kalau tidak mau.` : ""}`,
       width: "1080",
       height: "1920",
       duration: String(Math.round(plan.total)),
@@ -325,7 +350,8 @@ const main = async () => {
     return;
   }
   const id = `${plan.date.slice(0, 10)}-${seed.toString(36)}`;
-  const tgMessageId = await sendTelegram(plan, videoPath, coverPath, id);
+  const queued = await queuePosting(plan, videoPath, id);
+  const tgMessageId = await sendTelegram(plan, videoPath, coverPath, id, queued);
   history.push({
     id,
     tgMessageId,

@@ -17,6 +17,10 @@ draft hari ini tertinggal (mis. sesi pagi gagal), kerjakan tahap yang belum
 ada dulu — tapi tetap maksimal 1 video terkirim per hari: kalau draft sudah
 `terkirim`, berhenti.
 
+**Baca juga `promo/TEAMS.md`**: otak tiap tim (belajar dari hasil nyata) dan
+sinkronisasi ke LGBLACK Tower (kantor 3D Bos). Setiap sesi WAJIB: baca otak
+tim → kerja → tulis pelajaran + status ke Tower.
+
 ## Aturan keras (jangan dilanggar)
 
 - Klaim tentang Leosiqra HANYA dari `promo/content.mjs` (`FEATURES`, `OFFER`):
@@ -66,9 +70,15 @@ cd promo && npm ci --no-audit --no-fund && PROMO_SECRET=$PROMO_SECRET node lesso
 4. Susun shot list. Utamakan **rekaman aplikasi asli** (scene `device`, minimal
    1, idealnya 2). Video 2D murni (tanpa `device`) boleh, tapi maks 1 dari 5
    video terakhir (`kind` di riwayat; `plan.mjs` juga memaksa ini).
-5. Simpan draft `{stage: "ide", ideas, concept, shots}`.
-6. **Update playbook** kalau ada pelajaran yang sudah terbukti (≥3 video dengan
-   pola rating sama): `{rules: ["…", …]}` maks 15 aturan, singkat.
+5. **Senin saja — Tim Promosi**: kampanye minggu ini (tema, seri 5 video,
+   target views/rating) → simpan di draft `campaign` dan pakai sepanjang minggu
+   (hari lain: baca `campaign` dari draft Senin, `draft-<tanggal Senin>`).
+6. Simpan draft `{stage: "ide", ideas, concept, shots, campaign?}`.
+7. **Tower**: tulis `status/hari-ini` (stage 0), `metrik/ringkas`, dan
+   `konten/<id>` (7 video terakhir, sudah termasuk rating & views kemarin);
+   perbarui `otak/analisis` (+ `otak/promosi` hari Senin) — lihat TEAMS.md.
+8. **Update playbook** kalau ada pelajaran yang sudah terbukti (≥3 video dengan
+   pola rating/views sama): `{rules: ["…", …]}` maks 15 aturan, singkat.
 
 ## Sesi 2 — 11:30 Naskah & Review
 
@@ -78,6 +88,8 @@ cd promo && npm ci --no-audit --no-fund && PROMO_SECRET=$PROMO_SECRET node lesso
    matematika benar, tanpa merek lain, `say` enak diucapkan (angka pakai kata),
    hook ≤ 6 kata, total narasi ≤ 75 kata. Revisi sampai lolos.
 3. Simpan draft `{stage: "naskah", …, script}`.
+4. **Tower**: `status/hari-ini` (stage 1) + perbarui `otak/konten` (pelajaran
+   dari review: klaim/angka/hook yang diperbaiki).
 
 ## Sesi 3 — 14:30 Produksi & Kirim
 
@@ -141,7 +153,17 @@ PROMO_SEED=<seed> PROMO_SCRIPT_FILE=out/script.json node make.mjs
 ```
    Video terkirim dengan tombol rating 🔥/👍/👎; pemilik juga bisa membalas
    videonya dengan catatan. Itu masuk ke riwayat untuk sesi besok.
-5. Simpan draft `{stage: "terkirim", …, seed}`.
+   **Tim Promosi**: sebelum kirim, tulis paket posting — `caption` naskah =
+   caption IG final (hook kuat di baris pertama, 1–3 kalimat, ajakan
+   simpan/komentar), hashtag 5–8; judul YouTube = hook (≤ 95 huruf, Worker
+   menambah #Shorts). `make.mjs` otomatis mengunggah video ke antrean posting
+   19:00 WIB (Bos bisa ⛔ batal / 🚀 percepat di Telegram).
+5. Simpan draft `{stage: "terkirim", …, seed, posting}` (`posting` = ringkasan
+   paket posting: jam, platform, caption singkat, hashtag, komentar pertama).
+6. **Tower**: `status/hari-ini` (stage 4, label "Terkirim · posting 19:00"),
+   `konten/<id>` video hari ini (+ field `posting`, `caption`),
+   `metrik/ringkas`; perbarui `otak/konten` & `otak/promosi`. Selama render
+   berjalan, set stage 2 lalu 3 supaya Bos melihat progres.
 
 Kalau gagal total setelah usaha wajar, kirim kabar singkat:
 ```bash

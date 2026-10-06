@@ -2,3 +2,5 @@ node_modules/
 out/
 state/
 .demo.env
+.youtube.env
+.instagram.env

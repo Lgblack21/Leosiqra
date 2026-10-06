@@ -55,7 +55,8 @@ new_sqlite_classes = ["RealtimeRoom"]
 [triggers]
 # 03:00 UTC = 10:00 WIB — deposito jatuh tempo + pengingat recurring hari ini.
 # 17:01 UTC = 00:01 WIB (hari berikutnya) — ringkasan pengeluaran/pemasukan kemarin.
-crons = ["0 3 * * *", "1 17 * * *"]
+# */10 — antrean posting video promo (IG/YouTube) + metrik harian (cabang sendiri di scheduled()).
+crons = ["0 3 * * *", "1 17 * * *", "*/10 * * * *"]
 
 [vars]
 APP_NAME = "Leosiqra"

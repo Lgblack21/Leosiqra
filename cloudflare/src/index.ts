@@ -34,6 +34,12 @@ export interface Env {
   TELEGRAM_CHAT_ID?: string;
   PROMO_SECRET?: string;
   PROMO_ROUTINE_SECRET?: string;
+  // Posting otomatis video promo (opsional — tanpa ini antrean posting tidak aktif).
+  IG_USER_ID?: string;
+  IG_ACCESS_TOKEN?: string;
+  YT_CLIENT_ID?: string;
+  YT_CLIENT_SECRET?: string;
+  YT_REFRESH_TOKEN?: string;
   VAPID_PUBLIC_KEY?: string;
   VAPID_PRIVATE_KEY?: string;
   VAPID_SUBJECT?: string;
@@ -1718,14 +1724,16 @@ async function handlePromoTelegram(request: Request, env: Env) {
     out.append("chat_id", env.TELEGRAM_CHAT_ID);
     out.append("supports_streaming", "true");
     if (PROMO_ID_RE.test(id)) {
-      out.append(
-        "reply_markup",
-        JSON.stringify({
-          inline_keyboard: [
-            PROMO_RATINGS.map((label, n) => ({ text: label, callback_data: `r:${id}:${n + 1}` })),
-          ],
-        })
-      );
+      const rows = [PROMO_RATINGS.map((label, n) => ({ text: label, callback_data: `r:${id}:${n + 1}` }))];
+      // Video yang masuk antrean posting otomatis: bisa dibatalkan / dipercepat.
+      const on = promoPostingEnabled(env);
+      if (form.get("schedule") === "1" && (on.ig || on.yt)) {
+        rows.push([
+          { text: "⛔ Batal posting", callback_data: `q:${id}:x` },
+          { text: "🚀 Posting sekarang", callback_data: `q:${id}:p` },
+        ]);
+      }
+      out.append("reply_markup", JSON.stringify({ inline_keyboard: rows }));
     }
     for (const key of ["width", "height", "duration"]) {
       const v = form.get(key);
@@ -1851,8 +1859,11 @@ async function handlePromoTelegramHook(request: Request, env: Env) {
       return json({ ok: true });
     }
     const m = /^r:([A-Za-z0-9_-]{4,40}):([1-3])$/.exec(cb.data ?? "");
+    const q = /^q:([A-Za-z0-9_-]{4,40}):([xp])$/.exec(cb.data ?? "");
     let reply = "Rating tidak dikenali.";
-    if (m) {
+    if (q) {
+      reply = await setPromoQueueStatus(env, q[1], q[2] === "x" ? "batal" : "sekarang");
+    } else if (m) {
       const items = await load();
       const item = items.find((it) => it.id === m[1]);
       if (item) {
@@ -1881,6 +1892,345 @@ async function handlePromoTelegramHook(request: Request, env: Env) {
     }
   }
   return json({ ok: true });
+}
+
+// Angka nyata untuk tim AI (LGBLACK Tower / routine): HANYA agregat jumlah —
+// tidak ada id, email, nama, atau data keuangan user. Admin & akun demo promo
+// tidak ikut dihitung.
+async function handlePromoStats(request: Request, env: Env) {
+  if (!isPromoAuthorized(request, env)) return json({ error: "Unauthorized" }, { status: 401 });
+  const now = Date.now();
+  const iso = (ms: number) => new Date(ms).toISOString();
+  const row = await env.DB.prepare(
+    `SELECT
+       COUNT(*) AS total,
+       SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) AS new1d,
+       SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) AS new7d,
+       SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) AS new30d,
+       SUM(CASE WHEN plan = 'PRO' AND (expired_at IS NULL OR expired_at > ?) THEN 1 ELSE 0 END) AS pro
+     FROM users
+     WHERE role = 'user' AND lower(email) <> ?`
+  )
+    .bind(iso(now - 86400000), iso(now - 7 * 86400000), iso(now - 30 * 86400000), iso(now), PROMO_DEMO_EMAIL)
+    .first<{ total: number; new1d: number | null; new7d: number | null; new30d: number | null; pro: number | null }>();
+  return json({
+    members: {
+      total: row?.total ?? 0,
+      new1d: row?.new1d ?? 0,
+      new7d: row?.new7d ?? 0,
+      new30d: row?.new30d ?? 0,
+      pro: row?.pro ?? 0,
+    },
+    at: nowIso(),
+  });
+}
+const PROMO_DEMO_EMAIL = "leowendry+demo@gmail.com";
+
+// ── Posting otomatis video promo (Instagram Reels + YouTube Shorts) ─────────
+// Alur: make.mjs mengunggah video (PUT /api/promo/upload) + mendaftarkan
+// antrean (POST /api/promo/queue) → video Telegram dapat tombol ⛔ Batal /
+// 🚀 Posting sekarang → cron 10 menitan memposting yang sudah waktunya
+// (default 19:00 WIB). Instagram butuh URL video publik: dilayani Worker lewat
+// URL bertanda tangan (HMAC, kedaluwarsa 2 hari), bukan bucket publik.
+const PROMO_QUEUE_CRON = "*/10 * * * *";
+const PROMO_QUEUE_KEY = "promo/queue.json";
+const PROMO_IG_TOKEN_KEY = "promo/ig-token.json";
+const IG_API = "https://graph.instagram.com/v23.0";
+
+type PromoPlatformState = { id?: string; container?: string; url?: string; error?: string; tries?: number; doneAt?: string };
+type PromoQueueItem = {
+  id: string;
+  title: string;
+  caption: string;
+  postAt: string;
+  status: "terjadwal" | "batal" | "terposting" | "gagal";
+  createdAt: string;
+  ig?: PromoPlatformState;
+  yt?: PromoPlatformState;
+  metrics?: { ig?: Record<string, number>; yt?: Record<string, number>; at?: string };
+};
+
+const promoPostingEnabled = (env: Env) => ({
+  ig: Boolean(env.IG_USER_ID && env.IG_ACCESS_TOKEN),
+  yt: Boolean(env.YT_CLIENT_ID && env.YT_CLIENT_SECRET && env.YT_REFRESH_TOKEN),
+});
+
+const loadPromoQueue = async (env: Env): Promise<PromoQueueItem[]> => {
+  const obj = await env.FILES_BUCKET?.get(PROMO_QUEUE_KEY);
+  return obj ? (JSON.parse(await obj.text()) as PromoQueueItem[]) : [];
+};
+const savePromoQueue = (env: Env, items: PromoQueueItem[]) =>
+  env.FILES_BUCKET?.put(PROMO_QUEUE_KEY, JSON.stringify(items.slice(-60)), { httpMetadata: { contentType: "application/json" } });
+
+const promoMediaSig = async (env: Env, id: string, exp: number) => {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(`promo-media:${env.PROMO_SECRET ?? ""}`), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${id}.${exp}`));
+  return [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, "0")).join("");
+};
+const promoMediaUrl = async (env: Env, id: string) => {
+  const exp = Math.floor(Date.now() / 1000) + 2 * 86400;
+  // workers.dev, bukan www: proteksi bot Cloudflare di zona www menantang IP
+  // datacenter (termasuk server Meta yang mengunduh video).
+  const base = "https://membersite-leosiqra.leowendry.workers.dev";
+  return `${base}/api/promo/media/${id}.mp4?exp=${exp}&sig=${await promoMediaSig(env, id, exp)}`;
+};
+
+// PUT /api/promo/upload?id=<id> — body = mp4.
+async function handlePromoUpload(request: Request, env: Env, url: URL) {
+  if (!isPromoAuthorized(request, env)) return json({ error: "Unauthorized" }, { status: 401 });
+  const id = url.searchParams.get("id") ?? "";
+  if (!PROMO_ID_RE.test(id)) return json({ error: "id tidak valid." }, { status: 400 });
+  const size = Number(request.headers.get("content-length") ?? 0);
+  if (!size || size > PROMO_MAX_VIDEO_BYTES) return json({ error: "Ukuran video tidak valid (maks 49 MB)." }, { status: 413 });
+  if (!env.FILES_BUCKET) return json({ error: "Penyimpanan belum dikonfigurasi." }, { status: 503 });
+  const body = await request.arrayBuffer();
+  if (body.byteLength > PROMO_MAX_VIDEO_BYTES) return json({ error: "Video terlalu besar." }, { status: 413 });
+  await env.FILES_BUCKET.put(`promo/videos/${id}.mp4`, body, { httpMetadata: { contentType: "video/mp4" } });
+  return json({ ok: true, bytes: body.byteLength });
+}
+
+// GET /api/promo/media/<id>.mp4?exp&sig — untuk Instagram (butuh URL publik).
+async function handlePromoMedia(request: Request, env: Env, url: URL, id: string) {
+  const exp = Number(url.searchParams.get("exp") ?? 0);
+  const sig = url.searchParams.get("sig") ?? "";
+  if (!PROMO_ID_RE.test(id) || !exp || exp < Date.now() / 1000 || !env.PROMO_SECRET) return new Response("Not found", { status: 404 });
+  if (!constantTimeEqual(sig, await promoMediaSig(env, id, exp))) return new Response("Not found", { status: 404 });
+  const obj = await env.FILES_BUCKET?.get(`promo/videos/${id}.mp4`);
+  if (!obj) return new Response("Not found", { status: 404 });
+  return new Response(obj.body, { headers: { "content-type": "video/mp4", "content-length": String(obj.size), "cache-control": "private, max-age=3600" } });
+}
+
+// POST /api/promo/queue {id, title, caption, postAt?} — daftarkan video ke antrean.
+async function handlePromoQueue(request: Request, env: Env) {
+  if (!isPromoAuthorized(request, env)) return json({ error: "Unauthorized" }, { status: 401 });
+  if (!env.FILES_BUCKET) return json({ error: "Penyimpanan belum dikonfigurasi." }, { status: 503 });
+  if (request.method === "GET") return json({ items: await loadPromoQueue(env), enabled: promoPostingEnabled(env) });
+  const p = await parseJson<{ id?: string; title?: string; caption?: string; postAt?: string }>(request);
+  const id = String(p.id ?? "");
+  if (!PROMO_ID_RE.test(id)) return json({ error: "id tidak valid." }, { status: 400 });
+  if (!(await env.FILES_BUCKET.head(`promo/videos/${id}.mp4`))) return json({ error: "Video belum diunggah." }, { status: 400 });
+  const postAt = p.postAt && !Number.isNaN(Date.parse(p.postAt)) ? new Date(p.postAt).toISOString() : defaultPromoPostAt();
+  const items = await loadPromoQueue(env);
+  const item: PromoQueueItem = {
+    id,
+    title: String(p.title ?? "").slice(0, 95),
+    caption: String(p.caption ?? "").slice(0, 2100),
+    postAt,
+    status: "terjadwal",
+    createdAt: nowIso(),
+  };
+  const i = items.findIndex((x) => x.id === id);
+  if (i >= 0) items[i] = { ...items[i], ...item, ig: items[i].ig, yt: items[i].yt };
+  else items.push(item);
+  await savePromoQueue(env, items);
+  return json({ ok: true, postAt, enabled: promoPostingEnabled(env) });
+}
+
+// 19:00 WIB hari ini (atau besok kalau sudah lewat).
+const defaultPromoPostAt = () => {
+  const now = Date.now();
+  const wib = new Date(now + 7 * 3600e3);
+  const target = Date.UTC(wib.getUTCFullYear(), wib.getUTCMonth(), wib.getUTCDate(), 19 - 7, 0, 0);
+  return new Date(target > now ? target : target + 86400e3).toISOString();
+};
+
+const setPromoQueueStatus = async (env: Env, id: string, action: "batal" | "sekarang") => {
+  const items = await loadPromoQueue(env);
+  const item = items.find((x) => x.id === id);
+  if (!item) return "Video ini tidak ada di antrean posting.";
+  if (item.status === "terposting") return "Sudah terposting.";
+  if (action === "batal") {
+    item.status = "batal";
+    await savePromoQueue(env, items);
+    return "⛔ Posting dibatalkan.";
+  }
+  item.status = "terjadwal";
+  item.postAt = nowIso();
+  await savePromoQueue(env, items);
+  return "🚀 Diposting dalam ±10 menit.";
+};
+
+// ── Instagram (Instagram API with Instagram Login) ──
+const instagramToken = async (env: Env) => {
+  const obj = await env.FILES_BUCKET?.get(PROMO_IG_TOKEN_KEY);
+  const saved = obj ? (JSON.parse(await obj.text()) as { token: string; refreshedAt: string }) : null;
+  let token = saved?.token || env.IG_ACCESS_TOKEN || "";
+  const age = saved ? Date.now() - Date.parse(saved.refreshedAt) : Infinity;
+  // Token long-lived berlaku 60 hari; perpanjang tiap ±20 hari.
+  if (token && age > 20 * 86400e3) {
+    const res = await fetch(`https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${encodeURIComponent(token)}`);
+    const data = (await res.json().catch(() => ({}))) as { access_token?: string };
+    if (res.ok && data.access_token) {
+      token = data.access_token;
+      await env.FILES_BUCKET?.put(PROMO_IG_TOKEN_KEY, JSON.stringify({ token, refreshedAt: nowIso() }), { httpMetadata: { contentType: "application/json" } });
+    }
+  }
+  return token;
+};
+
+const igCall = async (path: string, token: string, params: Record<string, string> = {}, method: "GET" | "POST" = "GET") => {
+  const qs = new URLSearchParams({ ...params, access_token: token });
+  const res = await fetch(`${IG_API}/${path}${method === "GET" ? `?${qs}` : ""}`, method === "POST" ? { method, body: qs } : undefined);
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown> & { error?: { message?: string } };
+  if (!res.ok || data.error) throw new Error(`Instagram ${res.status}: ${data.error?.message ?? "gagal"}`.slice(0, 200));
+  return data;
+};
+
+// Satu langkah per cron (container → tunggu FINISHED → publish) supaya tidak
+// menunggu lama di satu eksekusi.
+const stepInstagram = async (env: Env, item: PromoQueueItem) => {
+  const st = (item.ig ??= {});
+  if (st.id) return;
+  const token = await instagramToken(env);
+  if (!st.container) {
+    const data = await igCall(`${env.IG_USER_ID}/media`, token, { media_type: "REELS", video_url: await promoMediaUrl(env, item.id), caption: item.caption, share_to_feed: "true" }, "POST");
+    st.container = String(data.id);
+    return;
+  }
+  const c = await igCall(st.container, token, { fields: "status_code,status" });
+  if (c.status_code === "ERROR" || c.status_code === "EXPIRED") throw new Error(`Instagram memproses video gagal: ${String(c.status ?? c.status_code)}`);
+  if (c.status_code !== "FINISHED") return;
+  const pub = await igCall(`${env.IG_USER_ID}/media_publish`, token, { creation_id: st.container }, "POST");
+  st.id = String(pub.id);
+  const info = await igCall(st.id, token, { fields: "permalink" }).catch(() => ({}) as Record<string, unknown>);
+  st.url = String(info.permalink ?? "");
+  st.doneAt = nowIso();
+};
+
+// ── YouTube (Data API v3, upload resumable) ──
+const youtubeAccessToken = async (env: Env) => {
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ client_id: env.YT_CLIENT_ID ?? "", client_secret: env.YT_CLIENT_SECRET ?? "", refresh_token: env.YT_REFRESH_TOKEN ?? "", grant_type: "refresh_token" }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { access_token?: string; error_description?: string; error?: string };
+  if (!res.ok || !data.access_token) throw new Error(`Token YouTube gagal: ${data.error_description ?? data.error ?? res.status}`);
+  return data.access_token;
+};
+
+const stepYoutube = async (env: Env, item: PromoQueueItem) => {
+  const st = (item.yt ??= {});
+  if (st.id) return;
+  const obj = await env.FILES_BUCKET?.get(`promo/videos/${item.id}.mp4`);
+  if (!obj) throw new Error("file video hilang dari R2");
+  const token = await youtubeAccessToken(env);
+  const title = /#shorts/i.test(item.title) ? item.title : `${item.title} #Shorts`.slice(0, 100);
+  const init = await fetch("https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status", {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json; charset=UTF-8", "x-upload-content-type": "video/mp4", "x-upload-content-length": String(obj.size) },
+    body: JSON.stringify({
+      snippet: { title, description: item.caption.slice(0, 4900), categoryId: "22", defaultLanguage: "id", defaultAudioLanguage: "id" },
+      status: { privacyStatus: "public", selfDeclaredMadeForKids: false },
+    }),
+  });
+  const session = init.headers.get("location");
+  if (!init.ok || !session) throw new Error(`YouTube init ${init.status}: ${(await init.text()).slice(0, 150)}`);
+  const up = await fetch(session, { method: "PUT", headers: { "content-type": "video/mp4", "content-length": String(obj.size) }, body: await obj.arrayBuffer() });
+  const data = (await up.json().catch(() => ({}))) as { id?: string; error?: { message?: string } };
+  if (!up.ok || !data.id) throw new Error(`YouTube upload ${up.status}: ${data.error?.message ?? ""}`.slice(0, 200));
+  st.id = data.id;
+  st.url = `https://youtube.com/shorts/${data.id}`;
+  st.doneAt = nowIso();
+};
+
+const promoTelegram = (env: Env, text: string) =>
+  env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID
+    ? fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID, text, disable_web_page_preview: true }),
+      }).catch(() => null)
+    : Promise.resolve(null);
+
+// Metrik nyata (views/likes/komentar) untuk video 7 hari terakhir — sekali sehari.
+const collectPromoMetrics = async (env: Env, items: PromoQueueItem[]) => {
+  const recent = items.filter((x) => x.status === "terposting" && Date.now() - Date.parse(x.postAt) < 8 * 86400e3);
+  const ytIds = recent.map((x) => x.yt?.id).filter(Boolean) as string[];
+  const yt: Record<string, Record<string, number>> = {};
+  if (ytIds.length && promoPostingEnabled(env).yt) {
+    try {
+      const token = await youtubeAccessToken(env);
+      const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${ytIds.join(",")}`, { headers: { authorization: `Bearer ${token}` } });
+      const data = (await res.json().catch(() => ({}))) as { items?: Array<{ id: string; statistics?: Record<string, string> }> };
+      for (const v of data.items ?? []) yt[v.id] = { views: Number(v.statistics?.viewCount ?? 0), likes: Number(v.statistics?.likeCount ?? 0), comments: Number(v.statistics?.commentCount ?? 0) };
+    } catch (error) {
+      console.error("metrik YouTube:", error);
+    }
+  }
+  const igToken = promoPostingEnabled(env).ig ? await instagramToken(env).catch(() => "") : "";
+  for (const item of recent) {
+    item.metrics ??= {};
+    if (item.yt?.id && yt[item.yt.id]) item.metrics.yt = yt[item.yt.id];
+    if (igToken && item.ig?.id) {
+      try {
+        const base = await igCall(item.ig.id, igToken, { fields: "like_count,comments_count" });
+        const ins = await igCall(`${item.ig.id}/insights`, igToken, { metric: "views,reach,saved,shares" }).catch(() => ({ data: [] }) as Record<string, unknown>);
+        const m: Record<string, number> = { likes: Number(base.like_count ?? 0), comments: Number(base.comments_count ?? 0) };
+        for (const d of (ins.data as Array<{ name: string; values?: Array<{ value: number }> }>) ?? []) m[d.name] = Number(d.values?.[0]?.value ?? 0);
+        item.metrics.ig = m;
+      } catch (error) {
+        console.error("metrik Instagram:", error);
+      }
+    }
+    item.metrics.at = nowIso();
+  }
+  // Salin ke riwayat supaya routine (lessons.mjs) belajar dari angka nyata.
+  const obj = await env.FILES_BUCKET?.get(PROMO_HISTORY_KEY);
+  if (obj) {
+    const hist = JSON.parse(await obj.text()) as Array<Record<string, unknown>>;
+    for (const item of recent) {
+      const h = hist.find((x) => x.id === item.id);
+      if (!h) continue;
+      h.metrics = item.metrics;
+      h.igUrl = item.ig?.url || undefined;
+      h.ytUrl = item.yt?.url || undefined;
+    }
+    await env.FILES_BUCKET?.put(PROMO_HISTORY_KEY, JSON.stringify(hist.slice(-365)), { httpMetadata: { contentType: "application/json" } });
+  }
+};
+
+async function processPromoQueue(env: Env) {
+  if (!env.FILES_BUCKET) return;
+  const on = promoPostingEnabled(env);
+  const items = await loadPromoQueue(env);
+  let changed = false;
+  for (const item of items) {
+    if (item.status !== "terjadwal" || Date.parse(item.postAt) > Date.now()) continue;
+    for (const [name, enabled, step] of [["ig", on.ig, stepInstagram], ["yt", on.yt, stepYoutube]] as const) {
+      const st = (item[name] ??= {});
+      if (!enabled || st.id || (st.tries ?? 0) >= 3) continue;
+      try {
+        await step(env, item);
+        st.error = undefined;
+      } catch (error) {
+        st.tries = (st.tries ?? 0) + 1;
+        st.error = String(error instanceof Error ? error.message : error).slice(0, 200);
+        if (name === "ig") st.container = undefined;
+      }
+      changed = true;
+    }
+    const states = [on.ig ? item.ig : null, on.yt ? item.yt : null].filter(Boolean) as PromoPlatformState[];
+    const finished = states.every((s) => s.id || (s.tries ?? 0) >= 3);
+    if (states.length && finished) {
+      item.status = states.some((s) => s.id) ? "terposting" : "gagal";
+      changed = true;
+      const lines = [
+        item.status === "terposting" ? `✅ Video promo terposting: "${item.title}"` : `⚠️ Posting video "${item.title}" gagal`,
+        on.ig ? `Instagram: ${item.ig?.url || item.ig?.error || "-"}` : "",
+        on.yt ? `YouTube: ${item.yt?.url || item.yt?.error || "-"}` : "",
+      ].filter(Boolean);
+      await promoTelegram(env, lines.join("\n"));
+    }
+  }
+  // Metrik sekali sehari, sekitar 07:00 WIB.
+  const wibHour = new Date(Date.now() + 7 * 3600e3).getUTCHours();
+  const wibMin = new Date().getUTCMinutes();
+  if (wibHour === 7 && wibMin < 10) {
+    await collectPromoMetrics(env, items);
+    changed = true;
+  }
+  if (changed) await savePromoQueue(env, items);
 }
 
 // Kerja tim konten dipecah beberapa sesi sehari (ide → naskah → produksi);
@@ -8393,6 +8743,18 @@ const worker = {
       if (url.pathname === "/api/promo/telegram-hook" && request.method === "POST") {
         return await handlePromoTelegramHook(request, env);
       }
+      if (url.pathname === "/api/promo/upload" && request.method === "PUT") {
+        return await handlePromoUpload(request, env, url);
+      }
+      if (url.pathname === "/api/promo/queue" && (request.method === "GET" || request.method === "POST")) {
+        return await handlePromoQueue(request, env);
+      }
+      if (url.pathname.startsWith("/api/promo/media/") && url.pathname.endsWith(".mp4") && (request.method === "GET" || request.method === "HEAD")) {
+        return await handlePromoMedia(request, env, url, url.pathname.slice("/api/promo/media/".length, -".mp4".length));
+      }
+      if (url.pathname === "/api/promo/stats" && request.method === "GET") {
+        return await handlePromoStats(request, env);
+      }
       if (url.pathname === "/api/promo/draft" && (request.method === "GET" || request.method === "PUT")) {
         return await handlePromoDraft(request, env, url);
       }
@@ -8739,6 +9101,12 @@ const worker = {
   },
 
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    if (event.cron === PROMO_QUEUE_CRON) {
+      // Tiap 10 menit: posting video promo yang sudah waktunya + metrik harian.
+      // Cabang sendiri supaya TIDAK ikut menjalankan deposito/recurring di bawah.
+      ctx.waitUntil(processPromoQueue(env));
+      return;
+    }
     if (event.cron === "1 17 * * *") {
       // 17:01 UTC = 00:01 WIB (hari berikutnya) — ringkasan kemarin + (kalau
       // tanggalnya cocok) pengingat tenggat SPT Tahunan.
