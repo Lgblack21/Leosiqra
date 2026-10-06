@@ -31,6 +31,11 @@ ada dulu — tapi tetap maksimal 1 video terkirim per hari: kalau draft sudah
 - Jangan commit/push apa pun, jangan ubah kode aplikasi (`src/`, `cloudflare/`),
   jangan menampilkan isi `PROMO_SECRET`, `OPENAI_API_KEY`, `DEMO_PASSWORD` di log/pesan.
 - Akun demo hanya untuk direkam: jangan ubah profil/password/data massal-nya.
+- JANGAN pernah mematikan/mengosongkan `OPENAI_API_KEY`, `DEMO_EMAIL`,
+  `DEMO_PASSWORD` (mis. `env -u …`) untuk "mempercepat" atau menghindari error.
+  Suara manusia & rekaman asli adalah inti video. Kalau OpenAI/rekaman gagal,
+  pipeline sudah otomatis pakai cadangan — biarkan, lalu laporkan penyebabnya
+  (pesan error dari log, tanpa nilai secret) di ringkasan.
 - Maksimal 1 video terkirim per hari.
 
 ## Alat bersama
