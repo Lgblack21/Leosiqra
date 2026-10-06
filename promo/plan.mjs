@@ -245,7 +245,7 @@ export const buildPlan = async ({ seed, history, lessons = "" }) => {
   });
   const hasDevice = script.scenes.some((sc) => sc.type === "device");
   // Suara bergiliran; jangan sama dengan video kemarin.
-  const lastVoice = String(recent.at(-1)?.voice || "").replace(/^openai:/, "");
+  const lastVoice = String(recent.at(-1)?.voice || "").replace(/^\w+:/, "");
   const voice = rng.pick(OPENAI_VOICES.filter((v) => v !== lastVoice));
 
   const palette = rng.pick(PALETTES.filter((p) => p.name !== recent.at(-1)?.palette));

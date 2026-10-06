@@ -15,7 +15,9 @@ import { join } from "node:path";
 
 const FFMPEG = process.env.FFMPEG_PATH || "ffmpeg";
 
-export const OPENAI_VOICES = ["coral", "nova", "shimmer", "sage", "ballad", "ash"];
+// Suara yang didukung gpt-4o-mini-tts DAN model audio chat (gpt-audio) —
+// dipilih acak per video oleh plan.mjs (tidak sama dengan kemarin).
+export const OPENAI_VOICES = ["coral", "shimmer", "sage", "alloy", "ash", "ballad", "echo", "verse"];
 const TTS_MODEL = process.env.PROMO_TTS_MODEL || "gpt-4o-mini-tts";
 
 // Arahan gaya bicara — inti "biar kayak orang beneran, bukan suara Google".
@@ -112,8 +114,6 @@ export const alignWords = (say, heard) => {
 
 // ── OpenRouter: openai/gpt-audio-mini, audio keluar lewat SSE (pcm16 24 kHz) ──
 const OR_MODEL = process.env.PROMO_OR_AUDIO_MODEL || "openai/gpt-audio-mini";
-// Suara yang tersedia di model audio chat; suara khusus gpt-4o-mini-tts dipetakan.
-const OR_VOICE = { coral: "nova", nova: "nova", shimmer: "shimmer", sage: "shimmer", ballad: "fable", ash: "echo" };
 
 export const openRouterKey = () =>
   process.env.OPENROUTER_API_KEY || (String(process.env.OPENAI_API_KEY || "").startsWith("sk-or-") ? process.env.OPENAI_API_KEY : "");
@@ -159,7 +159,7 @@ const speakOpenRouter = async (text, voice, mood) => {
     body: JSON.stringify({
       model: OR_MODEL,
       modalities: ["text", "audio"],
-      audio: { voice: OR_VOICE[voice] || "nova", format: "pcm16" },
+      audio: { voice, format: "pcm16" },
       stream: true,
       temperature: 0.6,
       messages: [
@@ -171,7 +171,12 @@ const speakOpenRouter = async (text, voice, mood) => {
       ],
     }),
   });
-  if (!res.ok) throw new Error(`OpenRouter ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  if (!res.ok) {
+    const detail = (await res.text()).slice(0, 200);
+    const err = new Error(`OpenRouter ${res.status}: ${detail}`);
+    err.badVoice = res.status === 400 && /voice/i.test(detail);
+    throw err;
+  }
   const chunks = [];
   let transcript = "";
   let buf = "";
@@ -215,8 +220,10 @@ export const synthesizeVoice = async (planPath, out, log = console.log) => {
     log("OPENAI_API_KEY / OPENROUTER_API_KEY tidak ada — suara cadangan edge-tts.");
     return viaEdge(planPath, out);
   }
-  const voice = OPENAI_VOICES.includes(plan.style.voice) ? plan.style.voice : OPENAI_VOICES[0];
-  const tag = viaOR ? `openrouter:${OR_VOICE[voice] || "nova"}` : `openai:${voice}`;
+  let voice = OPENAI_VOICES.includes(plan.style.voice) ? plan.style.voice : OPENAI_VOICES[0];
+  // Cadangan kalau suara pilihan ditolak model: suara lain secara bergiliran.
+  const spare = OPENAI_VOICES.filter((v) => v !== voice);
+  const tag = () => `${viaOR ? "openrouter" : "openai"}:${voice}`;
   try {
     const result = [];
     for (const [i, scene] of plan.scenes.entries()) {
@@ -236,8 +243,15 @@ export const synthesizeVoice = async (planPath, out, log = console.log) => {
           }
           break;
         } catch (error) {
+          if (error.badVoice && spare.length) {
+            const next = spare.shift();
+            log(`suara ${voice} ditolak model, ganti ke ${next}`);
+            voice = next;
+            attempt = -1;
+            continue;
+          }
           if (attempt === 2) throw error;
-          log(`${tag} scene ${i} gagal (${error.message}), coba lagi…`);
+          log(`${tag()} scene ${i} gagal (${error.message}), coba lagi…`);
           await new Promise((r) => setTimeout(r, 3000));
         }
       }
@@ -246,9 +260,9 @@ export const synthesizeVoice = async (planPath, out, log = console.log) => {
       result.push({ file: name, words: alignWords(text, heard) });
     }
     writeFileSync(join(out, "voice.json"), JSON.stringify(result));
-    return tag;
+    return tag();
   } catch (error) {
-    log(`Suara ${tag} gagal (${error.message}) — pakai cadangan edge-tts.`);
+    log(`Suara ${tag()} gagal (${error.message}) — pakai cadangan edge-tts.`);
     return viaEdge(planPath, out);
   }
 };

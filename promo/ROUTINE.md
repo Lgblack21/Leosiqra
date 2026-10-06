@@ -154,7 +154,7 @@ curl -s -H "$H" -F "text=⚠️ Video promo hari ini gagal: <alasan singkat>" "$
 {
   "format": "pov", "topic": "…",
   "style": { "palette": "sunset", "background": "studio", "transition": "flip", "subtitle": "karaoke", "font": "Poppins",
-             "voice": "coral", "music": { "bpm": 110 } },
+             "music": { "bpm": 110 } },
   "scenes": [
     { "type": "hook", "text": "maks 6 kata", "emoji": "🫠", "say": "…" },
     { "type": "device", "shot": "quick|home|stats|budget|savings|ai|transactions|wallet|recurring",
@@ -177,8 +177,9 @@ curl -s -H "$H" -F "text=⚠️ Video promo hari ini gagal: <alasan singkat>" "$
   `focus` = bagian layar yang didekati kamera `push` (0 atas … 1 bawah).
   `phone` = ilustrasi — untuk fitur yang tidak bisa direkam (scan struk,
   suara, hutang, level, pasar, pajak).
-- Suara: `voice` salah satu `coral|nova|shimmer|sage|ballad|ash` (OpenAI) —
-  jangan sama dengan kemarin kecuali rating bilang suara itu disukai.
+- Suara: biarkan `plan.mjs` memilih acak (field `voice` dikosongkan) — 8 suara
+  `coral|shimmer|sage|alloy|ash|ballad|echo|verse`, tidak sama dengan kemarin.
+  Isi `voice` sendiri HANYA kalau rating/catatan pemilik jelas menyukai suara tertentu.
 - Gaya lain ada di `plan.mjs` (`PALETTES`, `BACKGROUNDS` termasuk latar 3D
   `studio`/`bokeh`, `FONTS`, `TRANSITIONS`, `SUBTITLE_STYLES`).
 
