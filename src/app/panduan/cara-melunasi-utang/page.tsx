@@ -14,6 +14,13 @@ export const metadata: Metadata = {
     url: 'https://www.leosiqra.com/panduan/cara-melunasi-utang',
     type: 'article',
     locale: 'id_ID',
+    images: ['/images/Logo-new.png'],
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Cara Melunasi Utang: Metode Snowball vs Avalanche',
+    description: 'Dua strategi melunasi utang, contoh urutannya, dan kapan memakai masing-masing.',
+    images: ['/images/Logo-new.png'],
   },
 };
 

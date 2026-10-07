@@ -14,6 +14,13 @@ export const metadata: Metadata = {
     url: 'https://www.leosiqra.com/panduan/dana-darurat',
     type: 'article',
     locale: 'id_ID',
+    images: ['/images/Logo-new.png'],
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Dana Darurat: Berapa Idealnya & Cara Mengumpulkannya',
+    description: 'Hitung target dana darurat Anda dan mulai kumpulkan dari gaji bulanan.',
+    images: ['/images/Logo-new.png'],
   },
 };
 

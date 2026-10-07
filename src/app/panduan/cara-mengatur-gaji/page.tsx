@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { GuideLayout, type GuideFaq } from '@/components/guide/GuideLayout';
 
 export const metadata: Metadata = {
-  title: 'Cara Mengatur Gaji Bulanan: Contoh Gaji 5 Juta (50/30/20) | Leosiqra',
+  title: 'Cara Mengatur Gaji: Contoh Gaji 5 Juta (50/30/20) | Leosiqra',
   description:
     'Cara mengatur gaji bulanan dengan metode 50/30/20 — lengkap dengan contoh pembagian gaji 5 juta, urutan prioritas, dan cara memantaunya setiap bulan.',
   keywords: ['cara mengatur gaji', 'cara mengatur gaji 5 juta', 'metode 50 30 20', 'cara mengatur keuangan bulanan', 'budgeting gaji'],
@@ -14,6 +14,13 @@ export const metadata: Metadata = {
     url: 'https://www.leosiqra.com/panduan/cara-mengatur-gaji',
     type: 'article',
     locale: 'id_ID',
+    images: ['/images/Logo-new.png'],
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Cara Mengatur Gaji Bulanan: Contoh Gaji 5 Juta',
+    description: 'Metode 50/30/20 dengan contoh angka nyata dan urutan prioritasnya.',
+    images: ['/images/Logo-new.png'],
   },
 };
 

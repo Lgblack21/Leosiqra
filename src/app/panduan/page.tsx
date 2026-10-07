@@ -9,6 +9,20 @@ export const metadata: Metadata = {
   description:
     'Kumpulan panduan praktis keuangan pribadi: catatan keuangan pribadi & harian, mengatur gaji bulanan, dana darurat, dan cara melunasi utang.',
   alternates: { canonical: '/panduan' },
+  openGraph: {
+    title: 'Panduan Keuangan Pribadi | Leosiqra',
+    description: 'Panduan praktis: catatan keuangan, mengatur gaji, dana darurat, dan melunasi utang.',
+    url: 'https://www.leosiqra.com/panduan',
+    type: 'website',
+    locale: 'id_ID',
+    images: ['/images/Logo-new.png'],
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Panduan Keuangan Pribadi | Leosiqra',
+    description: 'Panduan praktis: catatan keuangan, mengatur gaji, dana darurat, dan melunasi utang.',
+    images: ['/images/Logo-new.png'],
+  },
 };
 
 const GUIDES = [

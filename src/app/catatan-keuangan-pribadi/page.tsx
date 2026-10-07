@@ -5,7 +5,7 @@ import { GuideLayout, type GuideFaq } from '@/components/guide/GuideLayout';
 export const metadata: Metadata = {
   title: 'Catatan Keuangan Pribadi: Cara Membuat & Contohnya | Leosiqra',
   description:
-    'Panduan membuat catatan keuangan pribadi yang rapi: apa saja yang dicatat, contoh format, langkah memulai, dan aplikasi catatan keuangan pribadi yang menghitung saldo otomatis.',
+    'Panduan membuat catatan keuangan pribadi yang rapi: apa saja yang dicatat, contoh format, langkah memulai, dan aplikasi yang menghitung saldo otomatis.',
   keywords: ['catatan keuangan pribadi', 'cara membuat catatan keuangan pribadi', 'contoh catatan keuangan pribadi', 'aplikasi catatan keuangan pribadi'],
   alternates: { canonical: '/catatan-keuangan-pribadi' },
   openGraph: {
@@ -14,6 +14,13 @@ export const metadata: Metadata = {
     url: 'https://www.leosiqra.com/catatan-keuangan-pribadi',
     type: 'article',
     locale: 'id_ID',
+    images: ['/images/Logo-new.png'],
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Catatan Keuangan Pribadi: Cara Membuat & Contohnya',
+    description: 'Apa saja yang dicatat, contoh format, dan cara memulai catatan keuangan pribadi yang rapi.',
+    images: ['/images/Logo-new.png'],
   },
 };
 

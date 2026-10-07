@@ -16,7 +16,7 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 const SITE_TITLE = "Leosiqra — Aplikasi Catatan Keuangan Pribadi & Harian";
-const SITE_DESCRIPTION = "Aplikasi catatan keuangan pribadi dan catatan keuangan harian: catat pemasukan & pengeluaran lewat ketik, suara, atau foto struk. Saldo, budget, tabungan, hutang, investasi, dan ringkasan SPT otomatis. Gratis 14 hari.";
+const SITE_DESCRIPTION = "Aplikasi catatan keuangan pribadi & harian. Catat lewat ketik, suara, atau foto struk; saldo, budget, tabungan, dan hutang otomatis. Gratis 14 hari.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.leosiqra.com"),
