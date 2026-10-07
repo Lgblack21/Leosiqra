@@ -1825,7 +1825,12 @@ async function handlePromoTelegramHook(request: Request, env: Env) {
   if (!bucket || !env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) return json({ ok: true });
 
   const update = await parseJson<{
-    callback_query?: { id: string; data?: string; from?: { id?: number }; message?: { chat?: { id?: number } } };
+    callback_query?: {
+      id: string;
+      data?: string;
+      from?: { id?: number };
+      message?: { message_id?: number; chat?: { id?: number }; reply_markup?: { inline_keyboard?: { text: string; callback_data?: string }[][] } };
+    };
     message?: {
       message_id?: number;
       text?: string;
@@ -1860,9 +1865,22 @@ async function handlePromoTelegramHook(request: Request, env: Env) {
     }
     const m = /^r:([A-Za-z0-9_-]{4,40}):([1-3])$/.exec(cb.data ?? "");
     const q = /^q:([A-Za-z0-9_-]{4,40}):([xp])$/.exec(cb.data ?? "");
+    if (/^n:/.test(cb.data ?? "")) {   // tombol status (sudah dipilih): tidak melakukan apa-apa
+      await api("answerCallbackQuery", { callback_query_id: cb.id });
+      return json({ ok: true });
+    }
     let reply = "Rating tidak dikenali.";
+    // Tanda yang TETAP terlihat di pesan (notifikasi kecil cepat hilang): tombol terpilih diberi ✅,
+    // tombol antrean diganti status, supaya jelas tombolnya bekerja.
+    let kb = (cb.message?.reply_markup?.inline_keyboard ?? []).map((row) => row.map((b) => ({ ...b })));
+    let touch = false;
     if (q) {
       reply = await setPromoQueueStatus(env, q[1], q[2] === "x" ? "batal" : "sekarang");
+      const label = reply.startsWith("⛔") ? "⛔ Posting dibatalkan" : reply.startsWith("🚀") ? "🚀 Akan diposting ±10 menit" : reply.startsWith("Sudah") ? "✅ Sudah terposting" : null;
+      if (label) {
+        kb = kb.map((row) => (row.some((b) => b.callback_data?.startsWith("q:")) ? [{ text: label, callback_data: `n:${q[1]}` }] : row));
+        touch = true;
+      }
     } else if (m) {
       const items = await load();
       const item = items.find((it) => it.id === m[1]);
@@ -1871,11 +1889,18 @@ async function handlePromoTelegramHook(request: Request, env: Env) {
         item.ratedAt = nowIso();
         await save(items);
         reply = `Tercatat: ${PROMO_RATINGS[item.rating - 1]}. Balas videonya kalau mau kasih catatan.`;
+        kb = kb.map((row) => row.map((b) => {
+          const mm = /^r:[A-Za-z0-9_-]{4,40}:([1-3])$/.exec(b.callback_data ?? "");
+          return mm ? { ...b, text: (mm[1] === m[2] ? "✅ " : "") + PROMO_RATINGS[Number(mm[1]) - 1] } : b;
+        }));
+        touch = true;
       } else {
         reply = "Video ini tidak ada di riwayat.";
       }
     }
-    await api("answerCallbackQuery", { callback_query_id: cb.id, text: reply });
+    await api("answerCallbackQuery", { callback_query_id: cb.id, text: reply, show_alert: Boolean(q) });
+    const msgId = cb.message?.message_id;
+    if (touch && msgId && kb.length) await api("editMessageReplyMarkup", { chat_id: owner, message_id: msgId, reply_markup: { inline_keyboard: kb } }).catch(() => undefined);
     return json({ ok: true });
   }
 
