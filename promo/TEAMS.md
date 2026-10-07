@@ -23,7 +23,10 @@ terlihat di LGBLACK Tower (kantor 3D milik Bos).
 | `metrik/ringkas` | `node promo/tower.mjs metrik` | Konten sesi 1 & 3, Developer |
 | `kb/leosiqra` | `node promo/tower.mjs kb` | Developer |
 | `dev/<id>` | temuan/patch/usulan (format di DEV_ROUTINE.md) | Developer |
-| `otak/<tim>` | otak tim (format di bawah) — `konten`, `analisis`, `promosi`, `developer` | tim masing-masing |
+| `otak/<tim>` | otak tim (format di bawah) — `konten`, `analisis`, `promosi`, `developer`, `ceo` | tim masing-masing |
+| `ceo/hari-ini` | rencana pertumbuhan harian CEO + KPI nyata + hambatan (format di GROWTH_ROUTINE.md) | CEO Pertumbuhan |
+| `seo/audit`, `seo/kata-kunci`, `seo/konten-<id>`, `seo/draf-<slug>` | hasil `node promo/growth.mjs`, usulan & draf artikel (status `usul` → `disetujui` oleh Bos → `draf_menunggu_bos` → `terbit`) | CEO Pertumbuhan |
+| `outreach/paket` | saluran + teks siap pakai (Bos yang mengirim, tidak ada spam otomatis) | Tim Promosi |
 
 Bos menekan tombol ACC/Tolak di Tower → status `dev/<id>` berubah jadi
 `disetujui` / `ditolak`. Baca status itu, jangan menimpanya.
