@@ -3,9 +3,9 @@ import Link from 'next/link';
 import { GuideLayout, type GuideFaq } from '@/components/guide/GuideLayout';
 
 export const metadata: Metadata = {
-  title: 'Catatan Keuangan Harian: Contoh Format & Cara Konsisten | Leosiqra',
+  title: 'Catatan Keuangan Harian: Contoh Format & Tips | Leosiqra',
   description:
-    'Cara membuat catatan keuangan harian yang konsisten: contoh format pemasukan dan pengeluaran harian, tips agar tidak lupa mencatat, dan aplikasi catatan keuangan harian yang cepat diisi.',
+    'Cara membuat catatan keuangan harian yang konsisten: contoh format pemasukan dan pengeluaran, tips agar tidak lupa mencatat, dan aplikasi yang cepat diisi.',
   keywords: ['catatan keuangan harian', 'contoh catatan keuangan harian', 'format catatan keuangan harian', 'aplikasi catatan keuangan harian'],
   alternates: { canonical: '/catatan-keuangan-harian' },
   openGraph: {
@@ -14,6 +14,13 @@ export const metadata: Metadata = {
     url: 'https://www.leosiqra.com/catatan-keuangan-harian',
     type: 'article',
     locale: 'id_ID',
+    images: ['/images/Logo-new.png'],
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Catatan Keuangan Harian: Contoh Format & Cara Konsisten',
+    description: 'Contoh format, tips konsisten, dan cara cepat mencatat pemasukan & pengeluaran harian.',
+    images: ['/images/Logo-new.png'],
   },
 };
 
