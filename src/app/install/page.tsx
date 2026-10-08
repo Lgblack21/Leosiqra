@@ -206,7 +206,7 @@ export default function InstallPage() {
                   className="flex flex-col items-center gap-1.5"
                 >
                   <span className="relative block h-14 w-14 overflow-hidden rounded-[16px] bg-white shadow-lg">
-                    <Image src={APP_INFO[app].icon} alt="" fill sizes="56px" className="object-cover" />
+                    <Image src={APP_INFO[app].icon} alt={`Ikon ${APP_INFO[app].name}`} fill sizes="56px" className="object-cover" />
                   </span>
                   <span className="text-[10px] font-bold text-white drop-shadow">{APP_INFO[app].name}</span>
                 </motion.div>
