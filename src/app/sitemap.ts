@@ -15,6 +15,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/panduan/dana-darurat',
     '/panduan/cara-melunasi-utang',
     '/panduan/catat-keuangan-rumah-tangga',
+    '/panduan/catat-pengeluaran-di-excel',
     '/auth/register',
     '/hubungi-kami',
     '/privacy',
