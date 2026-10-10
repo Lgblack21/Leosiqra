@@ -65,6 +65,37 @@ export default function PanduanIndexPage() {
             </Link>
           ))}
         </div>
+        <section className="mx-auto mt-16 max-w-3xl">
+          <h2 className="font-serif text-3xl">Mulai dari mana?</h2>
+          <p className="mt-4 leading-relaxed text-slate-600">
+            Kalau kamu belum pernah mengatur keuangan sama sekali, jangan baca semuanya sekaligus. Urutan di bawah ini
+            dibuat supaya tiap langkah memakai hasil langkah sebelumnya.
+          </p>
+          <ol className="mt-6 list-decimal space-y-3 pl-6 leading-relaxed text-slate-600">
+            <li>
+              <strong className="text-slate-900">Catat dulu selama dua minggu.</strong> Tanpa catatan, semua rencana hanya
+              tebakan. Mulai dari <Link href="/catatan-keuangan-harian" className="font-semibold text-indigo-600 hover:underline">catatan keuangan harian</Link>,
+              atau pakai <Link href="/panduan/catat-pengeluaran-di-excel" className="font-semibold text-indigo-600 hover:underline">Excel</Link> kalau
+              lebih nyaman. Untuk keluarga, lihat <Link href="/panduan/catat-keuangan-rumah-tangga" className="font-semibold text-indigo-600 hover:underline">catatan rumah tangga</Link>.
+            </li>
+            <li>
+              <strong className="text-slate-900">Bagi gaji dengan sadar.</strong> Setelah tahu ke mana uang pergi, susun
+              pembagian gaji bulanan dengan <Link href="/panduan/cara-mengatur-gaji" className="font-semibold text-indigo-600 hover:underline">metode 50/30/20</Link>.
+            </li>
+            <li>
+              <strong className="text-slate-900">Bangun dana darurat.</strong> Sisihkan sedikit tiap bulan sampai mencapai
+              target <Link href="/panduan/dana-darurat" className="font-semibold text-indigo-600 hover:underline">dana darurat</Link>, supaya kejadian
+              mendadak tidak menambah utang baru.
+            </li>
+            <li>
+              <strong className="text-slate-900">Lunasi utang berbunga.</strong> Pilih urutan pelunasan dengan
+              <Link href="/panduan/cara-melunasi-utang" className="font-semibold text-indigo-600 hover:underline"> metode snowball atau avalanche</Link>.
+            </li>
+          </ol>
+          <p className="mt-6 text-sm leading-relaxed text-slate-500">
+            Panduan ini bersifat edukasi umum, bukan nasihat keuangan pribadi. Sesuaikan dengan kondisimu sendiri.
+          </p>
+        </section>
       </main>
       <LandingFooter />
     </div>
