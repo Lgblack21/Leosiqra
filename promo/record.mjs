@@ -30,6 +30,9 @@ export const SHOTS = {
   transactions: { feature: "quick", path: "/app/transactions" },
   wallet: { feature: "stats", path: "/app/wallet" },
   recurring: { feature: "recurring", path: "/app/recurring" },
+  // Situs publik (tanpa login): beranda dan halaman pasang aplikasi (PWA/Android/iPhone).
+  landing: { feature: "landing", path: "/", public: true },
+  install: { feature: "install", path: "/install", public: true },
 };
 
 // Placeholder aplikasi ada yang menyebut merek bank — jangan sampai tampil di
@@ -58,6 +61,12 @@ const INIT = `
   new MutationObserver(fix).observe(document, { subtree: true, childList: true, attributes: true, attributeFilter: ["placeholder"] });
 })();
 `;
+
+// Situs publik: tata letak 390 px sungguhan lewat <meta viewport> (bukan zoom CSS yang merusak elemen
+// position:fixed seperti header), dirender 2x supaya piksel rekaman tetap tajam.
+// Situs publik: viewport HP 390x844 sungguhan dengan deviceScaleFactor 2 (bukan zoom CSS yang merusak elemen
+// position:fixed seperti header). Layout asli, piksel rekaman 780x1688.
+const INIT_PUB = INIT.replace(/html\{zoom:\d+\} /, "");
 
 const readDemoEnv = () => {
   const file = join(import.meta.dirname, ".demo.env");
@@ -146,6 +155,20 @@ const ACTIONS = {
     await glide(page, 250, 1500);
     await pause(page, 1000);
   },
+  // Beranda leosiqra.com di layar HP: gulir pelan dari hero ke bagian fitur.
+  async landing(page) {
+    await pause(page, 1800);
+    await glide(page, 620, 2800);
+    await pause(page, 900);
+    await glide(page, 700, 2600);
+    await pause(page, 900);
+  },
+  // Halaman pasang aplikasi (PWA, Android, iPhone).
+  async install(page) {
+    await pause(page, 1800);
+    await glide(page, 420, 2400);
+    await pause(page, 1000);
+  },
   async recurring(page) {
     await pause(page, 1500);
     await glide(page, 420, 2200);
@@ -183,34 +206,38 @@ export const recordClips = async (planPath, out, log = console.log) => {
   const env = readDemoEnv();
   const email = process.env.DEMO_EMAIL || env.DEMO_EMAIL;
   const password = process.env.DEMO_PASSWORD || env.DEMO_PASSWORD;
-  if (!email || !password) {
-    log("DEMO_EMAIL/DEMO_PASSWORD tidak ada — scene device pakai ilustrasi.");
-    return result;
-  }
+  const needLogin = jobs.some(([, s]) => !SHOTS[s.shot].public);
   const base = await pickBase();
-  const state = await login(base, email, password);
+  let state = null;
+  if (needLogin) {
+    if (!email || !password) log("DEMO_EMAIL/DEMO_PASSWORD tidak ada — shot yang butuh login pakai ilustrasi.");
+    else state = await login(base, email, password).catch((e) => { log(`login demo gagal (${e.message}) — shot yang butuh login pakai ilustrasi`); return null; });
+  }
+  const runnable = jobs.filter(([, s]) => SHOTS[s.shot].public || state);
+  if (!runnable.length) return result;
   const dir = join(out, "clips");
   mkdirSync(dir, { recursive: true });
   const browser = await chromium.launch();
-  for (const [i, scene] of jobs) {
+  for (const [i, scene] of runnable) {
+    const pub = Boolean(SHOTS[scene.shot].public);
     const ctx = await browser.newContext({
-      storageState: state,
-      viewport: { width: W * SCALE, height: H * SCALE },
+      ...(pub ? {} : { storageState: state }),
+      viewport: pub ? { width: W, height: H } : { width: W * SCALE, height: H * SCALE },
       deviceScaleFactor: 1,
       isMobile: true,
       hasTouch: true,
       locale: "id-ID",
       timezoneId: "Asia/Jakarta",
       ignoreHTTPSErrors: true,
-      recordVideo: { dir, size: { width: W * SCALE, height: H * SCALE } },
+      recordVideo: { dir, size: pub ? { width: W, height: H } : { width: W * SCALE, height: H * SCALE } },
     });
-    await ctx.addInitScript(INIT);
+    await ctx.addInitScript(pub ? INIT_PUB : INIT);
     const page = await ctx.newPage();
     const t0 = Date.now();
     const job = { cleanup: [] };
     try {
       await page.goto(`${base}${SHOTS[scene.shot].path}`, { waitUntil: "networkidle", timeout: 30000 });
-      if (/\/auth\/login|\/onboarding/.test(page.url())) throw new Error(`diarahkan ke ${page.url()}`);
+      if (!pub && /\/auth\/login|\/onboarding/.test(page.url())) throw new Error(`diarahkan ke ${page.url()}`);
       // Klip mulai setelah splash "Memuat Leosiqra" hilang.
       await page.getByLabel("Memuat Leosiqra").waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
       await pause(page, 250);
@@ -226,7 +253,7 @@ export const recordClips = async (planPath, out, log = console.log) => {
       log(`rekam scene ${i} (${scene.shot}) gagal: ${error.message.split("\n")[0]}`);
       await ctx.close().catch(() => {});
     }
-    for (const path of job.cleanup) {
+    for (const path of state ? job.cleanup : []) {
       const r = await fetch(`${base}${path}`, { method: "DELETE", headers: { cookie: state.cookies.map((c) => `${c.name}=${c.value}`).join("; "), origin: base } }).catch(() => null);
       if (!r || !r.ok) log(`bersih-bersih ${path} gagal (${r?.status})`);
     }

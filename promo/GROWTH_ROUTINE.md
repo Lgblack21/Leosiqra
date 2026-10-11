@@ -12,7 +12,7 @@ ke Tower lewat `ArtifactData`) lebih dulu.
 1. **Setiap angka dan klaim punya bukti.** Angka hanya dari `node promo/growth.mjs …`
    dan `node promo/tower.mjs metrik`. Dilarang mengarang traffic, peringkat,
    follower, atau hasil. Kalau data tidak ada tulis `null` dan alasannya.
-2. **Siapkan, jangan eksekusi keluar.** Tidak boleh: push ke `main`, merge, deploy,
+2. **Siapkan, jangan eksekusi keluar.** (Menulis draf di branch itu boleh dan otomatis.) Tidak boleh: push ke `main`, merge, deploy,
    menerbitkan artikel ke situs, memposting ke sosmed, mengirim email/pesan ke
    orang luar, mendaftar akun, membeli iklan. Boleh: branch `claude/…`, patch
    di Tower, draf, daftar tugas, dan 1 ringkasan Telegram ke Bos.
@@ -45,14 +45,20 @@ Tulis ke `ceo/hari-ini` (format di bawah). Aksi lama yang belum dikerjakan Bos
 jangan diulang sebagai baru: naikkan kalau tetap penting, tutup kalau sudah selesai.
 
 ### 3. Kerjakan (tim)
-- **Konten SEO** — ambil 1 usulan `seo/konten-*` berstatus `disetujui` oleh Bos
-  (atau, kalau belum ada yang disetujui, tulis 1 draf dari usulan teratas dan
-  tandai `draf_menunggu_bos`). Tulis halaman mengikuti pola
+- **Konten SEO** — setiap run **tulis 1 draf artikel** (maks 1 per hari, maks 3 branch draf
+  terbuka sekaligus): ambil usulan `seo/konten-*` berstatus `disetujui`; kalau tidak ada,
+  ambil usulan **teratas berstatus `usul`** (urut: dekat produk, tanpa risiko pajak/hukum) —
+  **tidak perlu menunggu ACC Bos untuk menulis draf**. ACC Bos hanya diperlukan untuk
+  *menerbitkan* (merge + deploy), dan itu bukan tugasmu. Topik pajak/SPT: tandai
+  `perlu_verifikasi` dan tulis hanya kalau sumber resmi DJP berhasil kamu baca.
+  Tiap draf = **branch sendiri dari `main` terbaru** (`claude/artikel-<slug>`): jangan
+  menumpuk di atas draf lain supaya tidak ada konflik. Tulis halaman mengikuti pola
   `src/app/panduan/*/page.tsx` + `GuideLayout` (metadata lengkap: title ≤60,
-  description ≤155, openGraph + twitter dengan `images`, FAQ, tautan internal
-  ke panduan lain, tambah ke `src/app/sitemap.ts`). Branch `claude/artikel-<slug>`;
-  `npx tsc --noEmit` harus bersih. Push ditolak → simpan `git format-patch -1
-  --stdout` (≤60 KB) di doc `seo/draf-<slug>` bersama `branch`.
+  description ≤155, openGraph + twitter dengan `images`, FAQ, tautan internal ke
+  panduan lain, tambah ke `src/app/sitemap.ts`). `npx tsc --noEmit` dan `npm run build`
+  harus bersih; baca ulang klaim uang/angka (contoh harus bertanda "ilustrasi").
+  Push branch; kalau push ditolak, simpan `git format-patch -1 --stdout` (≤60 KB) di doc
+  `seo/draf-<slug>` bersama `branch`. Ubah status usulan jadi `draf_menunggu_bos`.
 - **SEO teknis** — dari `topIssues` audit: satu perbaikan kecil per run di branch
   `claude/seo-<topik>`; verifikasi dengan `npx tsc --noEmit`; catat di `dev/<id>`
   (`kind: "seo"`, `status: "patch_siap"`, `branch`, `patch`).

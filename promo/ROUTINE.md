@@ -141,12 +141,20 @@ F=${FFMPEG_PATH:-ffmpeg}
 $F -loglevel error -y -i out/leosiqra-promo.mp4 -vf "fps=1,scale=270:480,tile=8x4" -frames:v 1 out/sheet.jpg
 $F -i out/leosiqra-promo.mp4 -af ebur128=framelog=quiet -f null - 2>&1 | grep " I:"
 ```
-3. QA (wajib): buka `out/sheet.jpg`, `out/cover.jpg`, dan beberapa frame penting
-   (`-ss 3.2 -frames:v 1 out/f.jpg`) dengan Read. Cek teks terpotong/bertumpuk,
-   frame kosong, rekaman aplikasi tampil (bukan layar login/kosong/error), tidak
-   ada merek lain di layar rekaman, kontras subtitle, salah ketik, handle
-   tampil, angka benar, durasi 15–35 dtk, loudness ±-14 LUFS, suara terdengar
-   natural. Perbaiki lalu render ulang — maksimal 3 putaran.
+3. QA — **tiga lapis, semua wajib lulus**:
+   - **Otomatis (gerbang keras)**: `make.mjs` sendiri menjalankan `qa.mjs`. Sebelum render ia mengecek
+     teks keluar bingkai / saling tumpuk / gambar rusak di 3 titik tiap scene; sesudah render ia
+     mengecek resolusi 1080x1920, durasi (≤ 60 dtk & cocok rencana), trek audio, loudness
+     (-19…-10 LUFS), clipping, layar hitam, video beku, hening panjang. Temuan berat = `make.mjs`
+     berhenti dengan galat dan **tidak ada yang terkirim** (`out/qa.json` memuat rinciannya).
+     Kalau gagal: perbaiki penyebabnya (naskah terlalu panjang? teks kepanjangan?) atau ganti
+     `PROMO_SEED`, lalu render ulang. **Jangan** mengakali dengan `PROMO_QA_WARN=1` kecuali
+     gerbangnya terbukti salah (positif palsu) — dan sebut itu di ringkasan.
+   - **Visual (kamu)**: buka `out/sheet.jpg`, `out/cover.jpg`, dan beberapa frame penting
+     (`-ss 3.2 -frames:v 1 out/f.jpg`) dengan Read. Cek rekaman aplikasi/situs tampil (bukan
+     layar login/kosong/error), tidak ada merek lain di layar rekaman, kontras subtitle, salah
+     ketik, handle tampil, angka benar, suara terdengar natural.
+   - **Putaran**: maksimal 3 render ulang. Lewat itu, kirim ringkasan hambatan, jangan kirim video cacat.
 4. Kirim (seed sama) — sekitar 16:30, sebelum 17:00:
 ```bash
 PROMO_SEED=<seed> PROMO_SCRIPT_FILE=out/script.json node make.mjs
@@ -179,7 +187,7 @@ curl -s -H "$H" -F "text=⚠️ Video promo hari ini gagal: <alasan singkat>" "$
              "music": { "bpm": 110 } },
   "scenes": [
     { "type": "hook", "text": "maks 6 kata", "emoji": "🫠", "say": "…" },
-    { "type": "device", "shot": "quick|home|stats|budget|savings|ai|transactions|wallet|recurring",
+    { "type": "device", "shot": "quick|home|stats|budget|savings|ai|transactions|wallet|recurring|landing|install",
       "camera": "orbit|push|tilt|float|sweep", "focus": 0.3, "text": "maks 4 kata", "say": "…" },
     { "type": "number", "label": "…", "prefix": "Rp", "to": 9125000, "suffix": "", "say": "…" },
     { "type": "list", "title": "…", "items": ["…", "…", "…"], "say": "…" },
@@ -194,6 +202,9 @@ curl -s -H "$H" -F "text=⚠️ Video promo hari ini gagal: <alasan singkat>" "$
 ```
 - 4–6 scene, pertama `hook`, terakhir `cta`. `say` = yang diucapkan voice-over
   (angka ditulis dengan kata, maks 25 kata/scene, total ≤ 75 kata).
+- `landing` / `install` = rekaman **situs publik** leosiqra.com (beranda) dan halaman /install (cara
+  pasang PWA) — tanpa login, 390 px seperti HP asli. Pakai satu di tiap ±3 video supaya penonton
+  tahu ke mana harus pergi; cocok untuk scene sebelum CTA.
 - `device` = rekaman aplikasi asli dari akun demo (`record.mjs` SHOTS: apa
   yang "jari" lakukan per shot ada di sana) di HP 3D dengan gerak kamera;
   `focus` = bagian layar yang didekati kamera `push` (0 atas … 1 bawah).

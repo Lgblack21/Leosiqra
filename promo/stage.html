@@ -36,7 +36,7 @@
   /* ── Brand watermark (atas, aman dari UI Reels/Shorts) ── */
   #brand { position: absolute; top: 96px; left: 64px; right: 64px; display: flex; align-items: center; gap: 22px; z-index: 50; }
   .logo-tile { width: 92px; height: 92px; border-radius: 26px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,.25); flex: none; background: #fff; }
-  .logo-tile img { width: 150%; height: 150%; object-fit: cover; margin: -14% 0 0 -25%; }
+  .logo-tile img { width: 100%; height: 100%; object-fit: contain; padding: 6px; box-sizing: border-box; }
   .brand-name { font-size: 40px; font-weight: 800; }
   .brand-sub { font-size: 25px; opacity: .8; font-weight: 600; display: flex; gap: 18px; margin-top: 2px; }
   .brand-sub b { font-weight: 800; }
@@ -80,7 +80,7 @@
   .phone { width: 640px; height: 1060px; border-radius: 86px; background: #0b0b0f; padding: 22px; box-shadow: 0 40px 90px rgba(0,0,0,.45), inset 0 0 0 4px #2a2a33; position: relative; }
   .notch { position: absolute; top: 34px; left: 50%; width: 170px; height: 40px; margin-left: -85px; border-radius: 30px; background: #0b0b0f; z-index: 5; }
   .screen { width: 100%; height: 100%; border-radius: 66px; overflow: hidden; background: #f8fafc; color: #0f172a; position: relative; padding: 100px 34px 34px; text-align: left; font-size: 30px; }
-  .sample { font-size: 22px; opacity: .6; margin-top: 18px; font-weight: 600; }
+  .sample { position: absolute; left: 0; right: 0; top: 1640px; font-size: 24px; opacity: .65; font-weight: 600; text-align: center; }
   .app-h { font-size: 40px; font-weight: 800; margin-bottom: 22px; }
   .box { background: #fff; border-radius: 28px; padding: 24px; box-shadow: 0 8px 24px rgba(15,23,42,.08); margin-bottom: 18px; }
   .row { display: flex; align-items: center; gap: 18px; }

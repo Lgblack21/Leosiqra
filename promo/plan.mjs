@@ -55,13 +55,13 @@ export const SUBTITLE_STYLES = ["pill", "karaoke", "bold"];
 const SCREENS = ["quick", "scan", "voice", "ai", "savings", "budget", "debt", "level", "stats", "market", "recurring", "tax"];
 const SCENE_TYPES = ["hook", "number", "list", "mythfact", "quiz", "phone", "device", "cta"];
 // Scene "device" = rekaman aplikasi asli (record.mjs SHOTS) di HP 3D.
-export const SHOTS = ["quick", "home", "stats", "budget", "savings", "ai", "transactions", "wallet", "recurring"];
+export const SHOTS = ["quick", "home", "stats", "budget", "savings", "ai", "transactions", "wallet", "recurring", "landing", "install"];
 export const CAMERAS = ["orbit", "push", "tilt", "float", "sweep"];
 // Layar ilustrasi ↔ shot rekaman untuk fitur yang sama (cadangan dua arah).
 export const SCREEN_TO_SHOT = { quick: "quick", ai: "ai", savings: "savings", budget: "budget", stats: "stats", recurring: "recurring" };
-export const SHOT_TO_SCREEN = { quick: "quick", home: "stats", stats: "stats", budget: "budget", savings: "savings", ai: "ai", transactions: "quick", wallet: "stats", recurring: "recurring" };
+export const SHOT_TO_SCREEN = { quick: "quick", home: "stats", stats: "stats", budget: "budget", savings: "savings", ai: "ai", transactions: "quick", wallet: "stats", recurring: "recurring", landing: "quick", install: "quick" };
 // Bagian layar yang paling menarik per shot (0 = atas, 1 = bawah) untuk kamera "push".
-const SHOT_FOCUS = { quick: 0.28, home: 0.22, stats: 0.35, budget: 0.3, savings: 0.25, ai: 0.45, transactions: 0.3, wallet: 0.25, recurring: 0.3 };
+const SHOT_FOCUS = { quick: 0.28, home: 0.22, stats: 0.35, budget: 0.3, savings: 0.25, ai: 0.45, transactions: 0.3, wallet: 0.25, recurring: 0.3, landing: 0.25, install: 0.3 };
 
 const clip = (v, n) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
 const words = (s) => clip(s, 400).split(" ").filter(Boolean).length;

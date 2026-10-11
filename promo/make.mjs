@@ -10,6 +10,7 @@
 //      OPENAI_API_KEY → suara manusia (tanpa ini: edge-tts). DEMO_EMAIL +
 //      DEMO_PASSWORD → rekaman aplikasi asli untuk scene "device" (tanpa ini:
 //      ilustrasi).
+import { layoutQA, videoQA, verdict, describe } from "./qa.mjs";
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -308,6 +309,16 @@ const main = async () => {
   await page.evaluate(() => window.refit());
   await page.waitForTimeout(300);
 
+  // Gerbang mutu 1: tata letak (teks keluar bingkai / bertumpuk / gambar rusak).
+  const qaLayout = await layoutQA(page, plan);
+  const vLayout = verdict(qaLayout);
+  qaLayout.forEach((i) => log("QA tata letak:", describe(i)));
+  if (!vLayout.ok) {
+    writeFileSync(join(OUT, "qa.json"), JSON.stringify({ stage: "layout", ok: false, issues: qaLayout }, null, 2));
+    await browser.close();
+    throw new Error(`QA tata letak gagal (${vLayout.heavy.length} masalah berat) — video TIDAK dirender/dikirim. Lihat out/qa.json; jalankan ulang dengan PROMO_SEED lain.`);
+  }
+
   const coverPath = join(OUT, "cover.jpg");
   const hookEnd = plan.scenes[0].start + plan.scenes[0].dur - 0.5;
   await page.evaluate((x) => window.renderAt(x), Math.min(1.6, hookEnd));
@@ -345,6 +356,13 @@ const main = async () => {
   await ffDone;
   await browser.close();
   if (!existsSync(videoPath)) throw new Error("video tidak terbentuk");
+  // Gerbang mutu 2: hasil akhir (resolusi, durasi, audio, loudness, hitam/beku/hening).
+  const qaVideo = videoQA(FFMPEG, videoPath, plan);
+  const vVideo = verdict(qaVideo);
+  qaVideo.forEach((i) => log("QA video:", describe(i)));
+  writeFileSync(join(OUT, "qa.json"), JSON.stringify({ ok: vVideo.ok, layout: qaLayout, video: qaVideo }, null, 2));
+  if (!vVideo.ok) throw new Error(`QA video gagal: ${vVideo.heavy.map(describe).join("; ")} — TIDAK dikirim. Lihat out/qa.json.`);
+  log(`QA lulus (${qaVideo.length + qaLayout.length} peringatan).`);
   log(`render ${frames} frame dalam ${((Date.now() - started) / 1000).toFixed(0)} dtk → ${videoPath}`);
 
   // 5) Simpan caption + riwayat, lalu kirim.
