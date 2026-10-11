@@ -58,7 +58,8 @@ jobs:
           fi
 
       - name: Gabungkan ke salinan main (belum di-push)
-        run: git merge --no-ff -m "Artikel: $SLUG (disetujui Bos lewat Telegram)" "origin/claude/artikel-$SLUG"
+        run: |
+          git merge --no-ff -m "Artikel $SLUG (disetujui Bos lewat Telegram)" "origin/claude/artikel-$SLUG"
 
       - uses: actions/setup-node@v4
         with:
