@@ -50,7 +50,7 @@ export const FONTS = [
   { head: "Archivo Black", body: "Inter", weight: 400 },
   { head: "DM Serif Display", body: "Plus Jakarta Sans", weight: 400 },
 ];
-export const TRANSITIONS = ["slide", "zoom", "wipe", "flip", "blur"];
+export const TRANSITIONS = ["slide", "zoom", "wipe", "flip", "blur", "whip", "rise", "spin"];
 export const SUBTITLE_STYLES = ["pill", "karaoke", "bold"];
 const SCREENS = ["quick", "scan", "voice", "ai", "savings", "budget", "debt", "level", "stats", "market", "recurring", "tax"];
 const SCENE_TYPES = ["hook", "number", "list", "mythfact", "quiz", "phone", "device", "cta"];

@@ -258,8 +258,11 @@ function enter(el, kind, s) {
     wipe: [{ clipPath: "circle(0% at 50% 50%)" }, { clipPath: "circle(120% at 50% 50%)" }],
     flip: [{ transform: "perspective(2000px) rotateY(-80deg)", opacity: 0 }, { transform: "none", opacity: 1 }],
     blur: [{ filter: "blur(40px)", opacity: 0, transform: "scale(1.15)" }, { filter: "blur(0)", opacity: 1, transform: "none" }],
+    whip: [{ transform: "translateX(900px) skewX(-14deg)", filter: "blur(26px)", opacity: 0 }, { transform: "none", filter: "blur(0)", opacity: 1 }],
+    rise: [{ transform: "translateY(520px) scale(.92)", filter: "blur(18px)", opacity: 0 }, { transform: "none", filter: "blur(0)", opacity: 1 }],
+    spin: [{ transform: "rotate(-9deg) scale(.55)", opacity: 0 }, { transform: "none", opacity: 1 }],
   };
-  A(el, map[kind] || map.zoom, s, 0.45, EASE, "both");
+  A(el, map[kind] || map.zoom, s, 0.5, kind === "whip" || kind === "rise" ? "cubic-bezier(.16,1,.3,1)" : EASE, "both");
 }
 function exit(el, kind, e) {
   const map = {
@@ -268,6 +271,9 @@ function exit(el, kind, e) {
     wipe: [{ opacity: 1 }, { opacity: 0 }],
     flip: [{ transform: "none", opacity: 1 }, { transform: "perspective(2000px) rotateY(80deg)", opacity: 0 }],
     blur: [{ filter: "blur(0)", opacity: 1 }, { filter: "blur(40px)", opacity: 0 }],
+    whip: [{ transform: "none", filter: "blur(0)", opacity: 1 }, { transform: "translateX(-900px) skewX(14deg)", filter: "blur(26px)", opacity: 0 }],
+    rise: [{ transform: "none", filter: "blur(0)", opacity: 1 }, { transform: "translateY(-420px) scale(1.06)", filter: "blur(18px)", opacity: 0 }],
+    spin: [{ transform: "none", opacity: 1 }, { transform: "rotate(8deg) scale(1.35)", opacity: 0 }],
   };
   // Selesai sedikit SETELAH scene berikutnya mulai masuk (crossfade), supaya
   // tidak ada frame kosong di pergantian scene.
@@ -597,6 +603,18 @@ window.build = (plan) => {
     enter(el, i === 0 ? "zoom" : st.transition, i === 0 ? sc.start : sc.start - 0.12);
     if (i < plan.scenes.length - 1) exit(el, st.transition, sc.start + sc.dur);
   });
+  // Kilatan cahaya di tiap pergantian scene + progress bar tipis di atas.
+  const fx = document.createElement("div");
+  fx.style.cssText = "position:absolute;inset:0;pointer-events:none;z-index:45";
+  document.body.querySelector("#scenes").parentElement.appendChild(fx);
+  plan.scenes.slice(1).forEach((sc) => {
+    const f = h('<div style="position:absolute;inset:0;background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.55) 50%,transparent 70%);opacity:0"></div>');
+    fx.appendChild(f);
+    A(f, [{ opacity: 0, transform: "translateX(-100%)" }, { opacity: 1, offset: .35 }, { opacity: 0, transform: "translateX(100%)" }], sc.start - 0.2, 0.6, "ease-in-out", "both");
+  });
+  const bar = h('<div style="position:absolute;left:0;top:0;height:8px;width:100%;transform-origin:left;background:linear-gradient(90deg,var(--accent),var(--pop))"></div>');
+  fx.appendChild(bar);
+  A(bar, [{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], 0, plan.total, "linear", "both");
   buildSubs(st, plan.words);
   window.renderAt(0);
 };
