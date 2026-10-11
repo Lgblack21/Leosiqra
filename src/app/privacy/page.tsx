@@ -57,6 +57,16 @@ const sections: LegalSection[] = [
     ),
   },
   {
+    id: 'analitik',
+    title: 'Statistik kunjungan',
+    content: (
+      <p>
+        Kami memakai Cloudflare Web Analytics untuk menghitung jumlah kunjungan, halaman yang dibuka, dan asal pengunjung secara
+        agregat. Layanan ini tidak memakai cookie dan tidak melacak Anda lintas situs. Data keuangan yang Anda catat tidak ikut terkirim ke layanan ini.
+      </p>
+    ),
+  },
+  {
     id: 'keamanan',
     title: 'Keamanan data',
     content: (
