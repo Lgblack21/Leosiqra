@@ -34,6 +34,8 @@ export interface Env {
   TELEGRAM_CHAT_ID?: string;
   PROMO_SECRET?: string;
   PROMO_ROUTINE_SECRET?: string;
+  // Token GitHub (fine-grained, hanya Actions: write di repo ini) untuk tombol ✅ Terbitkan artikel di Telegram.
+  GITHUB_DISPATCH_TOKEN?: string;
   // Posting otomatis video promo (opsional — tanpa ini antrean posting tidak aktif).
   IG_USER_ID?: string;
   IG_ACCESS_TOKEN?: string;
@@ -1749,10 +1751,23 @@ async function handlePromoTelegram(request: Request, env: Env) {
     messageId = sent.result?.message_id;
   }
   if (text) {
+    // Pratinjau artikel dari CEO: tombol ✅ Terbitkan / ❌ Tolak (+ tautan baca draf di GitHub repo ini saja).
+    const article = String(form.get("article") ?? "");
+    const link = String(form.get("link") ?? "");
+    let markup: unknown;
+    if (PROMO_SLUG_RE.test(article)) {
+      const rows: unknown[][] = [];
+      if (link.startsWith(PROMO_REPO_URL + "/")) rows.push([{ text: "📖 Baca draf lengkap", url: link }]);
+      rows.push([
+        { text: "✅ Terbitkan", callback_data: `a:${article}:y` },
+        { text: "❌ Tolak", callback_data: `a:${article}:n` },
+      ]);
+      markup = { inline_keyboard: rows };
+    }
     const res = await fetch(api("sendMessage"), {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID, text, parse_mode: "HTML" }),
+      body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID, text, parse_mode: "HTML", reply_markup: markup }),
     });
     if (!res.ok) return telegramError(res);
   }
@@ -1805,6 +1820,12 @@ async function handlePromoHistory(request: Request, env: Env) {
 // (balas video dengan teks). Tersimpan di item riwayat yang sama, jadi routine
 // besok bisa belajar format/gaya/suara mana yang disukai.
 const PROMO_RATINGS = ["🔥 Bagus", "👍 Oke", "👎 Kurang"];
+const PROMO_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const PROMO_REPO = "Lgblack21/Leosiqra";
+const PROMO_REPO_URL = `https://github.com/${PROMO_REPO}`;
+const PROMO_ARTICLES_KEY = "promo/articles.json";
+const PROMO_HOOK_URL = "https://membersite-leosiqra.leowendry.workers.dev/api/promo/telegram-hook";
+type PromoArticleState = { slug: string; status: "diproses" | "ditolak" | "gagal"; at: string };
 const PROMO_ID_RE = /^[A-Za-z0-9_-]{4,40}$/;
 
 // Telegram hanya menerima [A-Za-z0-9_-] untuk secret_token, jadi turunkan
@@ -1816,6 +1837,60 @@ const promoHookToken = async (env: Env) => {
 };
 
 type PromoHistoryItem = { id?: string; tgMessageId?: number; rating?: number; note?: string; ratedAt?: string };
+
+// Webhook Telegram dipasang ulang otomatis kalau hilang / salah alamat / baru saja error
+// (mis. PROMO_SECRET diganti sehingga token rahasia lama ditolak → semua tombol "mati").
+async function ensurePromoWebhook(env: Env, force = false) {
+  if (!env.TELEGRAM_BOT_TOKEN) return { ok: false, note: "TELEGRAM_BOT_TOKEN belum diatur" };
+  const secretToken = await promoHookToken(env);
+  if (!secretToken) return { ok: false, note: "PROMO_SECRET belum diatur / kurang dari 32 karakter" };
+  const call = async (method: string, body?: unknown) =>
+    (await (
+      await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, body ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) } : undefined)
+    ).json().catch(() => ({}))) as { ok?: boolean; description?: string; result?: { url?: string; pending_update_count?: number; last_error_message?: string; last_error_date?: number } };
+  const info = (await call("getWebhookInfo")).result ?? {};
+  const recentError = Boolean(info.last_error_message && info.last_error_date && Date.now() / 1000 - info.last_error_date < 3600);
+  if (!force && info.url === PROMO_HOOK_URL && !recentError) return { ok: true, fixed: false, pending: info.pending_update_count ?? 0 };
+  const set = await call("setWebhook", { url: PROMO_HOOK_URL, secret_token: secretToken, allowed_updates: ["callback_query", "message"] });
+  return { ok: Boolean(set.ok), fixed: true, before: { url: info.url || null, error: info.last_error_message || null }, note: set.description };
+}
+
+async function handlePromoWebhookStatus(request: Request, env: Env) {
+  if (!isPromoAuthorized(request, env)) return json({ error: "Unauthorized" }, { status: 401 });
+  return json(await ensurePromoWebhook(env, request.method === "POST"));
+}
+
+const loadPromoArticles = async (env: Env) => {
+  const obj = await env.FILES_BUCKET?.get(PROMO_ARTICLES_KEY);
+  return obj ? (JSON.parse(await obj.text()) as PromoArticleState[]) : [];
+};
+const savePromoArticles = (env: Env, items: PromoArticleState[]) =>
+  env.FILES_BUCKET?.put(PROMO_ARTICLES_KEY, JSON.stringify(items.slice(-100)), { httpMetadata: { contentType: "application/json" } });
+
+// Tombol ✅ Terbitkan → picu workflow publish-article.yml (validasi → build → deploy → lapor ke Telegram).
+const approvePromoArticle = async (env: Env, slug: string, approve: boolean) => {
+  const items = await loadPromoArticles(env);
+  const prev = items.find((x) => x.slug === slug);
+  if (prev && prev.status === "diproses" && Date.now() - Date.parse(prev.at) < 30 * 60e3) return { text: "Artikel ini sudah disetujui dan sedang diproses.", label: null as string | null };
+  if (prev && prev.status === "ditolak") return { text: "Artikel ini sudah ditolak sebelumnya.", label: null };
+  if (!approve) {
+    items.push({ slug, status: "ditolak", at: nowIso() });
+    await savePromoArticles(env, items);
+    return { text: `❌ Ditolak: ${slug}. Tidak diterbitkan, branch dibiarkan.`, label: "❌ Ditolak" };
+  }
+  if (!env.GITHUB_DISPATCH_TOKEN) return { text: "⚠️ GITHUB_DISPATCH_TOKEN belum dipasang di Worker, jadi belum bisa menerbitkan otomatis. Draf aman di branch GitHub.", label: null };
+  const res = await fetch(`https://api.github.com/repos/${PROMO_REPO}/actions/workflows/publish-article.yml/dispatches`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${env.GITHUB_DISPATCH_TOKEN}`, accept: "application/vnd.github+json", "user-agent": "leosiqra-worker", "x-github-api-version": "2022-11-28", "content-type": "application/json" },
+    body: JSON.stringify({ ref: "main", inputs: { slug } }),
+  }).catch(() => null);
+  if (!res || res.status !== 204) {
+    return { text: `⚠️ Gagal memicu penerbitan (GitHub ${res?.status ?? "tidak terjangkau"}). Tekan tombol lagi sebentar lagi.`, label: null };
+  }
+  items.push({ slug, status: "diproses", at: nowIso() });
+  await savePromoArticles(env, items);
+  return { text: `🚀 Disetujui: ${slug}. Sedang divalidasi, di-build, dan di-deploy (±5 menit). Gua kabari di sini kalau sudah live.`, label: "🚀 Sedang diterbitkan…" };
+};
 
 async function handlePromoTelegramHook(request: Request, env: Env) {
   const expected = await promoHookToken(env);
@@ -1869,12 +1944,22 @@ async function handlePromoTelegramHook(request: Request, env: Env) {
       await api("answerCallbackQuery", { callback_query_id: cb.id });
       return json({ ok: true });
     }
+    const art = /^a:([a-z0-9-]{3,50}):([yn])$/.exec(cb.data ?? "");
     let reply = "Rating tidak dikenali.";
+    let say = "";   // pesan balasan yang TETAP tinggal di chat (toast cepat hilang)
     // Tanda yang TETAP terlihat di pesan (notifikasi kecil cepat hilang): tombol terpilih diberi ✅,
     // tombol antrean diganti status, supaya jelas tombolnya bekerja.
     let kb = (cb.message?.reply_markup?.inline_keyboard ?? []).map((row) => row.map((b) => ({ ...b })));
     let touch = false;
-    if (q) {
+    if (art && PROMO_SLUG_RE.test(art[1])) {
+      const r = await approvePromoArticle(env, art[1], art[2] === "y");
+      reply = r.text.slice(0, 190);
+      say = r.text;
+      if (r.label) {
+        kb = kb.map((row) => (row.some((b) => b.callback_data?.startsWith("a:")) ? [{ text: r.label as string, callback_data: `n:${art[1]}` }] : row));
+        touch = true;
+      }
+    } else if (q) {
       reply = await setPromoQueueStatus(env, q[1], q[2] === "x" ? "batal" : "sekarang");
       const label = reply.startsWith("⛔") ? "⛔ Posting dibatalkan" : reply.startsWith("🚀") ? "🚀 Akan diposting ±10 menit" : reply.startsWith("Sudah") ? "✅ Sudah terposting" : null;
       if (label) {
@@ -1889,6 +1974,7 @@ async function handlePromoTelegramHook(request: Request, env: Env) {
         item.ratedAt = nowIso();
         await save(items);
         reply = `Tercatat: ${PROMO_RATINGS[item.rating - 1]}. Balas videonya kalau mau kasih catatan.`;
+        say = `✅ Rating tersimpan: ${PROMO_RATINGS[item.rating - 1]}\nTim konten memakai ini untuk video besok. Mau kasih catatan? Balas video ini dengan teks.`;
         kb = kb.map((row) => row.map((b) => {
           const mm = /^r:[A-Za-z0-9_-]{4,40}:([1-3])$/.exec(b.callback_data ?? "");
           return mm ? { ...b, text: (mm[1] === m[2] ? "✅ " : "") + PROMO_RATINGS[Number(mm[1]) - 1] } : b;
@@ -1898,7 +1984,9 @@ async function handlePromoTelegramHook(request: Request, env: Env) {
         reply = "Video ini tidak ada di riwayat.";
       }
     }
-    await api("answerCallbackQuery", { callback_query_id: cb.id, text: reply, show_alert: Boolean(q) });
+    if (!say) say = reply;
+    await api("answerCallbackQuery", { callback_query_id: cb.id, text: reply.slice(0, 190), show_alert: Boolean(q) });
+    if (say && cb.message?.message_id) await api("sendMessage", { chat_id: owner, text: say, reply_to_message_id: cb.message.message_id }).catch(() => undefined);
     const msgId = cb.message?.message_id;
     if (touch && msgId && kb.length) await api("editMessageReplyMarkup", { chat_id: owner, message_id: msgId, reply_markup: { inline_keyboard: kb } }).catch(() => undefined);
     return json({ ok: true });
@@ -2216,6 +2304,8 @@ const collectPromoMetrics = async (env: Env, items: PromoQueueItem[]) => {
 };
 
 async function processPromoQueue(env: Env) {
+  // Jaga tombol Telegram tetap hidup (memasang ulang webhook kalau hilang/salah).
+  await ensurePromoWebhook(env).catch((error) => console.error("webhook Telegram:", error));
   if (!env.FILES_BUCKET) return;
   const on = promoPostingEnabled(env);
   const items = await loadPromoQueue(env);
@@ -8767,6 +8857,12 @@ const worker = {
       }
       if (url.pathname === "/api/promo/telegram-hook" && request.method === "POST") {
         return await handlePromoTelegramHook(request, env);
+      }
+      if (url.pathname === "/api/promo/telegram-webhook" && (request.method === "GET" || request.method === "POST")) {
+        return await handlePromoWebhookStatus(request, env);
+      }
+      if (url.pathname === "/api/promo/articles" && request.method === "GET") {
+        return isPromoAuthorized(request, env) ? json({ items: await loadPromoArticles(env) }) : json({ error: "Unauthorized" }, { status: 401 });
       }
       if (url.pathname === "/api/promo/upload" && request.method === "PUT") {
         return await handlePromoUpload(request, env, url);

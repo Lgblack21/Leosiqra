@@ -15,7 +15,7 @@ ke Tower lewat `ArtifactData`) lebih dulu.
 2. **Siapkan, jangan eksekusi keluar.** (Menulis draf di branch itu boleh dan otomatis.) Tidak boleh: push ke `main`, merge, deploy,
    menerbitkan artikel ke situs, memposting ke sosmed, mengirim email/pesan ke
    orang luar, mendaftar akun, membeli iklan. Boleh: branch `claude/…`, patch
-   di Tower, draf, daftar tugas, dan 1 ringkasan Telegram ke Bos.
+   di Tower, draf, daftar tugas, 1 ringkasan Telegram ke Bos, dan pratinjau artikel ber-tombol ✅/❌ (lihat Konten SEO).
 3. **Bukan spam & bukan trik terlarang.** Tidak ada pembelian backlink, jaringan
    blog, konten tipis massal, kata kunci disisipkan paksa, ulasan palsu.
 4. **Konten uang/pajak harus akurat.** Artikel soal pajak/SPT wajib bersumber
@@ -59,6 +59,28 @@ jangan diulang sebagai baru: naikkan kalau tetap penting, tutup kalau sudah sele
   harus bersih; baca ulang klaim uang/angka (contoh harus bertanda "ilustrasi").
   Push branch; kalau push ditolak, simpan `git format-patch -1 --stdout` (≤60 KB) di doc
   `seo/draf-<slug>` bersama `branch`. Ubah status usulan jadi `draf_menunggu_bos`.
+  **Setelah push berhasil, kirim PRATINJAU ke Telegram Bos** (satu kali per slug; cek dulu
+  `curl -s -H "x-promo-secret: $PROMO_SECRET" $PROMO_API_URL/api/promo/articles` — kalau slug sudah
+  ada di sana jangan kirim ulang). Pesan ini membawa tombol ✅ Terbitkan / ❌ Tolak:
+  ```bash
+  curl -s -H "x-promo-secret: $PROMO_SECRET" \
+    -F "article=<slug>" \
+    -F "link=https://github.com/Lgblack21/Leosiqra/blob/claude/artikel-<slug>/src/app/panduan/<slug>/page.tsx" \
+    -F "text=<b>📝 Draf artikel siap dibaca</b>
+  <b>Judul:</b> …
+  <b>Deskripsi:</b> …
+  <b>Isi:</b> 4–6 poin ringkas (apa yang dijelaskan)
+  <b>Klaim angka/uang:</b> apa saja & dari mana sumbernya (atau 'ilustrasi')
+  <b>Risiko:</b> jujur — bagian yang paling perlu Bos periksa
+  Tekan ✅ untuk terbitkan otomatis (build + deploy + kabar balik di sini)." \
+    $PROMO_API_URL/api/promo/telegram
+  ```
+  Teks pesan memakai HTML Telegram: escape `<`, `>`, `&` di isi yang kamu kutip. `<slug>` HARUS
+  sama persis dengan nama branch `claude/artikel-<slug>`. Hanya kirim pratinjau bila branch
+  benar-benar ter-push (penerbitan otomatis mengambil dari branch itu). **Kamu sendiri tidak pernah
+  menerbitkan** — Bos menekan ✅ lalu sistem (GitHub Action) yang memvalidasi, build, dan deploy.
+  Run berikutnya: baca `/api/promo/articles` — `diproses` → ubah status usulan jadi `terbit`
+  (kalau halamannya sudah 200 di leosiqra.com), `ditolak` → `ditolak` dan jangan tulis ulang topik itu.
 - **SEO teknis** — dari `topIssues` audit: satu perbaikan kecil per run di branch
   `claude/seo-<topik>`; verifikasi dengan `npx tsc --noEmit`; catat di `dev/<id>`
   (`kind: "seo"`, `status: "patch_siap"`, `branch`, `patch`).

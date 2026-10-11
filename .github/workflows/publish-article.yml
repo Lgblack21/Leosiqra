@@ -1,0 +1,94 @@
+# Menerbitkan artikel draf CEO setelah Bos menekan ✅ Terbitkan di Telegram.
+# Dipicu Worker (workflow_dispatch). Berlapis pengaman:
+#   1. slug harus huruf-kecil-dan-strip; branch HARUS claude/artikel-<slug>
+#   2. diff vs main HANYA boleh menyentuh src/app/panduan/<slug>/ dan src/app/sitemap.ts
+#   3. kode berbahaya (script, dangerouslySetInnerHTML, eval, fetch, process.env) ditolak
+#   4. tsc + build harus lulus
+# Baru setelah itu: deploy → merge ke main → kabar ke Telegram (sukses ATAU gagal).
+#
+# Secrets (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID — deploy Worker (izin: Workers Scripts:Edit)
+#   PROMO_SECRET                                — lapor ke Telegram lewat Worker
+name: Terbitkan artikel
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: "slug artikel (branch claude/artikel-<slug>)"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-article
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SLUG: ${{ inputs.slug }}
+      API: https://membersite-leosiqra.leowendry.workers.dev
+    steps:
+      - name: Validasi slug
+        run: |
+          [[ "$SLUG" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ && ${#SLUG} -ge 3 && ${#SLUG} -le 50 ]] || { echo "slug tidak valid"; exit 1; }
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Periksa isi branch
+        run: |
+          git config user.name "leosiqra-bot"
+          git config user.email "leosiqra-bot@users.noreply.github.com"
+          BR="origin/claude/artikel-$SLUG"
+          git rev-parse --verify "$BR" >/dev/null || { echo "branch $BR tidak ada"; exit 1; }
+          FILES=$(git diff --name-only "origin/main...$BR")
+          echo "$FILES"
+          [ -n "$FILES" ] || { echo "tidak ada perubahan"; exit 1; }
+          echo "$FILES" | grep -qx "src/app/panduan/$SLUG/page.tsx" || { echo "page.tsx artikel tidak ada"; exit 1; }
+          BAD=$(echo "$FILES" | grep -vE "^(src/app/panduan/$SLUG/|src/app/sitemap\.ts$)" || true)
+          [ -z "$BAD" ] || { echo "file di luar izin:"; echo "$BAD"; exit 1; }
+          if git diff "origin/main...$BR" | grep -E '^\+' | grep -E 'dangerouslySetInnerHTML|<script|eval\(|new Function|fetch\(|process\.env|document\.cookie'; then
+            echo "kode terlarang ditemukan"; exit 1
+          fi
+
+      - name: Gabungkan ke salinan main (belum di-push)
+        run: git merge --no-ff -m "Artikel: $SLUG (disetujui Bos lewat Telegram)" "origin/claude/artikel-$SLUG"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run build
+
+      - name: Deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy cloudflare/src/index.ts
+
+      - name: Merge ke main
+        run: git push origin HEAD:main
+
+      - name: Kabari Telegram (sukses)
+        if: success()
+        env:
+          PROMO_SECRET: ${{ secrets.PROMO_SECRET }}
+        run: |
+          curl -s -H "x-promo-secret: $PROMO_SECRET" -F "text=✅ Artikel LIVE: https://www.leosiqra.com/panduan/$SLUG
+          Sudah masuk sitemap. Biar Google lebih cepat, buka Search Console → Inspeksi URL → Minta pengindeksan." "$API/api/promo/telegram"
+
+      - name: Kabari Telegram (gagal)
+        if: failure()
+        env:
+          PROMO_SECRET: ${{ secrets.PROMO_SECRET }}
+        run: |
+          curl -s -H "x-promo-secret: $PROMO_SECRET" -F "text=❌ Penerbitan artikel $SLUG GAGAL (belum ada yang berubah di situs). Lihat log: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" "$API/api/promo/telegram"
