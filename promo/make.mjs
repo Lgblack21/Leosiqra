@@ -134,6 +134,10 @@ const postTelegram = async ({ text, video }) => {
 
 const escHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
 
+// Tautan ke situs di caption/deskripsi: tanpa ini views YouTube tidak punya jalan ke
+// pendaftaran. UTM per video supaya klik bisa diatribusikan begitu analitik terpasang.
+const siteLink = (id) => `https://www.leosiqra.com/?utm_source=shorts&utm_medium=video&utm_campaign=${encodeURIComponent(id)}`;
+
 // Posting otomatis: unggah video ke Worker + daftarkan antrean (19:00 WIB).
 // Worker yang memposting ke Instagram/YouTube kalau token sudah dipasang.
 const queuePosting = async (plan, videoPath, id) => {
@@ -145,7 +149,7 @@ const queuePosting = async (plan, videoPath, id) => {
     const res = await promoFetch("/api/promo/queue", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ id, title: hook, caption: `${plan.caption}\n\n${plan.hashtags.join(" ")}`, postAt: process.env.PROMO_POST_AT || undefined }),
+      body: JSON.stringify({ id, title: hook, caption: `${plan.caption}\n\n📲 Coba gratis 14 hari: ${siteLink(id)}\n\n${plan.hashtags.join(" ")}`, postAt: process.env.PROMO_POST_AT || undefined }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(`queue ${res.status}: ${JSON.stringify(data).slice(0, 150)}`);
