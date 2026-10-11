@@ -66,7 +66,7 @@ jangan diulang sebagai baru: naikkan kalau tetap penting, tutup kalau sudah sele
   curl -s -H "x-promo-secret: $PROMO_SECRET" \
     -F "article=<slug>" \
     -F "link=https://github.com/Lgblack21/Leosiqra/blob/claude/artikel-<slug>/src/app/panduan/<slug>/page.tsx" \
-    -F "text=<b>📝 Draf artikel siap dibaca</b>
+    --form-string "text=<b>📝 Draf artikel siap dibaca</b>
   <b>Judul:</b> …
   <b>Deskripsi:</b> …
   <b>Isi:</b> 4–6 poin ringkas (apa yang dijelaskan)
@@ -75,7 +75,8 @@ jangan diulang sebagai baru: naikkan kalau tetap penting, tutup kalau sudah sele
   Tekan ✅ untuk terbitkan otomatis (build + deploy + kabar balik di sini)." \
     $PROMO_API_URL/api/promo/telegram
   ```
-  Teks pesan memakai HTML Telegram: escape `<`, `>`, `&` di isi yang kamu kutip. `<slug>` HARUS
+  **Wajib `--form-string` untuk `text`** (bukan `-F`): curl menganggap nilai `-F` yang diawali `<` sebagai nama file
+  dan pesan tidak pernah terkirim. Teks pesan memakai HTML Telegram: escape `<`, `>`, `&` di isi yang kamu kutip. `<slug>` HARUS
   sama persis dengan nama branch `claude/artikel-<slug>`. Hanya kirim pratinjau bila branch
   benar-benar ter-push (penerbitan otomatis mengambil dari branch itu). **Kamu sendiri tidak pernah
   menerbitkan** — Bos menekan ✅ lalu sistem (GitHub Action) yang memvalidasi, build, dan deploy.
