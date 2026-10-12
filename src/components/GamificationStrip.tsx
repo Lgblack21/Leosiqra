@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Flame, Award, TrendingUp, Star, ChevronRight } from 'lucide-react';
+import { Award, TrendingUp, Star, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { gamificationService, GamificationData, levelProgress } from '@/lib/services/gamificationService';
 import { Modal } from '@/components/ui/Modal';
@@ -48,10 +48,7 @@ export const GamificationStrip = () => {
             <ChevronRight size={16} className="text-indigo-400 transition-transform group-hover:translate-x-0.5" />
           </button>
         )}
-        <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-orange-50 text-orange-600">
-          <Flame size={18} />
-          <span className="text-sm font-black">{data.streakDays} hari</span>
-        </div>
+        {/* Streak harian kini dari "Tutup hari" (kartu & header) — tidak diulang di sini. */}
         {data.surplusStreakMonths > 0 && (
           <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-50 text-emerald-600">
             <TrendingUp size={16} />

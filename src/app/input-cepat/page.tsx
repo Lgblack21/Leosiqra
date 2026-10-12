@@ -56,6 +56,12 @@ const groupDigits = (raw: string) => {
 
 export default function InputCepatPage() {
   const [authState, setAuthState] = useState<AuthState>("loading");
+  // ?start=voice|scan dari tombol "Suara"/"Struk" di header web.
+  const [startMode, setStartMode] = useState<"voice" | "scan" | null>(null);
+  useEffect(() => {
+    const start = new URLSearchParams(window.location.search).get("start");
+    if (start === "voice" || start === "scan") setStartMode(start);
+  }, []);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -352,7 +358,7 @@ export default function InputCepatPage() {
         </div>
 
         {/* Ketik pintar / suara / foto struk — mengisi form di bawah. */}
-        <SmartBar ctx={ctx} onDraft={applyDraft} className="mt-5" />
+        <SmartBar ctx={ctx} onDraft={applyDraft} className="mt-5" autoStartVoice={startMode === "voice"} highlightScan={startMode === "scan"} />
         {hint && (
           <div className="flex items-start gap-2 rounded-2xl bg-indigo-50 px-3.5 py-2.5 mt-2 text-[11px] font-bold text-indigo-700">
             <Sparkles size={13} className="mt-0.5 shrink-0" />

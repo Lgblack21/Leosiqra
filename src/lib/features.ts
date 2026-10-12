@@ -1,0 +1,100 @@
+"use client";
+
+import { useEffect, useState } from 'react';
+import {
+  Flame,
+  Gem,
+  PiggyBank,
+  TrendingUp,
+  CreditCard,
+  HandCoins,
+  Repeat,
+  Users,
+  ShieldCheck,
+  Globe,
+  type LucideIcon,
+} from 'lucide-react';
+
+// Fitur yang bisa dinyalakan/dimatikan user ("Kelola fitur"). Mematikan fitur
+// hanya menyembunyikan menu & kotaknya di Dashboard — datanya TIDAK dihapus.
+// Pilihan disimpan per perangkat (localStorage), tanpa tabel baru.
+export type FeatureId =
+  | 'streak'
+  | 'kekayaan'
+  | 'tabungan'
+  | 'investasi'
+  | 'kartu'
+  | 'hutang'
+  | 'rutin'
+  | 'dompet-bersama'
+  | 'pajak'
+  | 'pasar';
+
+export interface FeatureDef {
+  id: FeatureId;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+  tone: string; // kelas warna ikon
+  href: string;
+  /** Halaman menu yang ikut disembunyikan saat fitur dimatikan. */
+  navHrefs: string[];
+  isNew?: boolean;
+}
+
+export const FEATURES: FeatureDef[] = [
+  { id: 'streak', label: 'Tutup hari & streak', description: 'Cek catatanmu tiap malam, tutup harinya, jaga streak dan kumpulkan koin.', icon: Flame, tone: 'bg-orange-50 text-orange-500', href: '/membership/streak', navHrefs: ['/membership/streak'], isNew: true },
+  { id: 'kekayaan', label: 'Kekayaan', description: 'Rekening, tabungan, investasi, dan piutang dikurangi utang — jadi satu angka kekayaan bersih.', icon: Gem, tone: 'bg-violet-50 text-violet-600', href: '/membership/kekayaan', navHrefs: ['/membership/kekayaan'], isNew: true },
+  { id: 'tabungan', label: 'Tabungan & target', description: 'Setoran tabungan dan target seperti dana darurat, rumah, atau liburan.', icon: PiggyBank, tone: 'bg-sky-50 text-sky-600', href: '/membership/tabungan', navHrefs: ['/membership/tabungan'] },
+  { id: 'investasi', label: 'Investasi', description: 'Saham, deposito, emas, kripto, dan investasi lain dalam satu portofolio.', icon: TrendingUp, tone: 'bg-emerald-50 text-emerald-600', href: '/membership/investment', navHrefs: ['/membership/investment', '/membership/investasi/saham', '/membership/investasi/deposito', '/membership/investasi/lainnya'] },
+  { id: 'kartu', label: 'Kartu kredit', description: 'Limit, tagihan, dan tanggal jatuh tempo tiap kartu kredit atau paylater.', icon: CreditCard, tone: 'bg-amber-50 text-amber-600', href: '/membership/cards', navHrefs: ['/membership/cards'] },
+  { id: 'hutang', label: 'Hutang & piutang', description: 'Catat pinjaman dan uang yang kamu pinjamkan, lengkap dengan cicilannya.', icon: HandCoins, tone: 'bg-rose-50 text-rose-500', href: '/membership/transactions/debt', navHrefs: ['/membership/transactions/debt'] },
+  { id: 'rutin', label: 'Langganan & tagihan rutin', description: 'Netflix, listrik, cicilan, gaji — tercatat otomatis tiap jadwalnya.', icon: Repeat, tone: 'bg-indigo-50 text-indigo-600', href: '/membership/recurring', navHrefs: ['/membership/recurring'] },
+  { id: 'dompet-bersama', label: 'Dompet bersama', description: 'Kas keluarga atau patungan bareng teman, semua anggota bisa mencatat.', icon: Users, tone: 'bg-teal-50 text-teal-600', href: '/membership/dompet-bersama', navHrefs: ['/membership/dompet-bersama'] },
+  { id: 'pajak', label: 'Pajak Center', description: 'Bantu siapkan data SPT dari catatan keuanganmu.', icon: ShieldCheck, tone: 'bg-slate-100 text-slate-600', href: '/membership/pajak-center', navHrefs: ['/membership/pajak-center'] },
+  { id: 'pasar', label: 'Data pasar', description: 'Harga saham, kripto, emas, dan kurs terkini.', icon: Globe, tone: 'bg-cyan-50 text-cyan-600', href: '/membership/market-data', navHrefs: ['/membership/market-data'] },
+];
+
+// Semua nyala secara default supaya menu yang sudah biasa dipakai user lama tidak tiba-tiba hilang.
+const DEFAULT_OFF: FeatureId[] = [];
+const KEY = 'leo-features:v1';
+const EVENT = 'leo-features-change';
+
+const read = (): Record<string, boolean> => {
+  try {
+    return JSON.parse(localStorage.getItem(KEY) || '{}') as Record<string, boolean>;
+  } catch {
+    return {};
+  }
+};
+
+export const isFeatureOn = (prefs: Record<string, boolean>, id: FeatureId) => prefs[id] ?? !DEFAULT_OFF.includes(id);
+
+export function useFeatures() {
+  const [prefs, setPrefs] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    const sync = () => setPrefs(read());
+    sync();
+    window.addEventListener(EVENT, sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener(EVENT, sync);
+      window.removeEventListener('storage', sync);
+    };
+  }, []);
+
+  const setFeature = (id: FeatureId, on: boolean) => {
+    const next = { ...read(), [id]: on };
+    try {
+      localStorage.setItem(KEY, JSON.stringify(next));
+    } catch {
+      /* storage diblokir — pilihan berlaku sampai halaman dimuat ulang */
+    }
+    setPrefs(next);
+    window.dispatchEvent(new Event(EVENT));
+  };
+
+  const enabled = FEATURES.filter((f) => isFeatureOn(prefs, f.id));
+  const hiddenHrefs = new Set(FEATURES.filter((f) => !isFeatureOn(prefs, f.id)).flatMap((f) => f.navHrefs));
+  return { prefs, enabled, hiddenHrefs, setFeature, isOn: (id: FeatureId) => isFeatureOn(prefs, id) };
+}

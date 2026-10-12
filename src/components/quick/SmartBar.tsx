@@ -14,6 +14,10 @@ interface Props {
   ctx: ParseContext;
   onDraft: (draft: QuickDraft, source: DraftSource, info?: string) => void;
   className?: string;
+  /** Mulai merekam suara begitu siap (dari tombol "Suara" di header web). */
+  autoStartVoice?: boolean;
+  /** Sorot tombol kamera (dari tombol "Struk" di header web). */
+  highlightScan?: boolean;
 }
 
 type Status = { kind: "idle" } | { kind: "listening" } | { kind: "thinking"; label: string } | { kind: "error"; msg: string };
@@ -24,7 +28,7 @@ const defined = <T extends object>(o: T) =>
 // Bar "ketik pintar" + mic + kamera. Semua jalur menghasilkan QuickDraft yang
 // diisi ke form oleh pemanggil — tidak ada yang langsung tersimpan, user
 // selalu melihat & mengonfirmasi dulu.
-export function SmartBar({ ctx, onDraft, className }: Props) {
+export function SmartBar({ ctx, onDraft, className, autoStartVoice, highlightScan }: Props) {
   const [text, setText] = useState("");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [canSpeak, setCanSpeak] = useState(false);
@@ -80,6 +84,16 @@ export function SmartBar({ ctx, onDraft, className }: Props) {
     });
     if (session) sessionRef.current = session;
   };
+
+  // Tombol "Suara" di header web membuka halaman ini dengan ?start=voice.
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (!autoStartVoice || !canSpeak || autoStarted.current) return;
+    autoStarted.current = true;
+    void toggleMic();
+    // toggleMic sengaja tidak jadi dependency: cukup dipicu sekali saat siap.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStartVoice, canSpeak]);
 
   const onPhoto = async (file: File | undefined) => {
     if (!file) return;
@@ -137,7 +151,10 @@ export function SmartBar({ ctx, onDraft, className }: Props) {
               onClick={() => { lightTap(); fileRef.current?.click(); }}
               disabled={busy}
               aria-label="Scan struk"
-              className="shrink-0 w-10 h-10 rounded-xl text-slate-500 dark:text-slate-400 flex items-center justify-center disabled:opacity-40"
+              className={cn(
+                "shrink-0 w-10 h-10 rounded-xl text-slate-500 dark:text-slate-400 flex items-center justify-center disabled:opacity-40",
+                highlightScan && "bg-indigo-50 text-indigo-600 ring-2 ring-indigo-400 animate-pulse"
+              )}
             >
               <Camera size={18} />
             </button>

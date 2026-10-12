@@ -1,11 +1,14 @@
 "use client";
 
 import { usePathname } from 'next/navigation';
-import { Menu, Plus, ChevronDown, ArrowUpDown, Briefcase, PiggyBank, CreditCard, HandCoins, Target, RefreshCw, ArrowLeftRight, Globe, Landmark, Coins, Tags, Building2, type LucideIcon } from 'lucide-react';
+import { Menu, Plus, ChevronDown, Flame, Mic, ScanLine, ArrowUpDown, Briefcase, PiggyBank, CreditCard, HandCoins, Target, RefreshCw, ArrowLeftRight, Globe, Landmark, Coins, Tags, Building2, type LucideIcon } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useModal, ModalType } from '@/context/ModalContext';
 import { cn } from '@/lib/utils';
 import { findNavContext } from '@/lib/navigation';
+import Link from 'next/link';
+import { useStreak } from '@/components/streak/CloseDay';
+import { useFeatures } from '@/lib/features';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -56,6 +59,8 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { title, group } = findNavContext(pathname);
+  const { isOn } = useFeatures();
+  const { data: streak } = useStreak();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -93,6 +98,27 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
         </div>
       </div>
 
+      <div className="flex shrink-0 items-center gap-2">
+        {/* Streak + catat cepat lewat struk/suara (membuka Input Cepat). */}
+        {isOn('streak') && streak && (
+          <Link
+            href="/membership/streak"
+            title={streak.todayKind ? 'Hari ini sudah ditutup' : 'Hari ini belum ditutup'}
+            className={cn(
+              'flex items-center gap-1.5 rounded-2xl px-3 py-2.5 text-sm font-bold transition-colors',
+              streak.todayKind ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+            )}
+          >
+            <Flame size={16} className={streak.todayKind ? 'fill-orange-400' : undefined} />
+            <span className="tabular-nums">{streak.streak}</span>
+          </Link>
+        )}
+        <Link href="/input-cepat?start=scan" className="hidden items-center gap-1.5 rounded-2xl bg-slate-100 px-3.5 py-2.5 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-200 md:flex">
+          <ScanLine size={16} /> Struk
+        </Link>
+        <Link href="/input-cepat?start=voice" className="hidden items-center gap-1.5 rounded-2xl bg-slate-100 px-3.5 py-2.5 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-200 md:flex">
+          <Mic size={16} /> Suara
+        </Link>
       <div className="relative shrink-0" ref={dropdownRef} data-tour="tambah-cepat">
         <button
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -132,6 +158,7 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
             </div>
           </div>
         )}
+      </div>
       </div>
     </header>
   );

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AlertTriangle, LineChart, MessageCircleHeart, RotateCcw, ShieldCheck, TrendingDown } from 'lucide-react';
 import { AiChat, AiOrb } from '@/components/ai/AiChat';
 import { insightService, UserInsight } from '@/lib/services/insightService';
@@ -43,10 +44,10 @@ export default function AILeosiqraPage() {
         </div>
         {insights.length > 0 && (
           <div className="space-y-2">
-            <p className="px-1 text-[10px] font-black uppercase tracking-widest text-slate-400">Insight buat kamu</p>
+            <p className="px-1 text-xs font-semibold text-slate-400">Insight buat kamu</p>
             {insights.slice(0, 4).map((ins) => (
               <div key={ins.id} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-                <p className={cn('flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest', ins.severity === 'warning' ? 'text-amber-600' : 'text-sky-600')}>
+                <p className={cn('flex items-center gap-1.5 text-xs font-bold', ins.severity === 'warning' ? 'text-amber-600' : 'text-sky-600')}>
                   {ins.severity === 'warning' ? <AlertTriangle size={12} /> : <TrendingDown size={12} />}
                   {ins.type === 'anomaly' ? 'Anomali' : ins.type === 'budget_pace' ? 'Proyeksi budget' : 'Tren bulanan'}
                 </p>
@@ -60,8 +61,13 @@ export default function AILeosiqraPage() {
 
       {/* Chat */}
       <section className="flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-slate-100 bg-gradient-to-b from-white to-slate-50/80 shadow-sm">
+        <Suspense fallback={<div className="flex-1" />}>
+          <ChatWithQuery>
+            {(initialPrompt, onInitialSent) => (
         <AiChat
           variant="web"
+          initialPrompt={initialPrompt}
+          onInitialSent={onInitialSent}
           renderHeader={({ reset, hasMessages, thinking }) => (
             <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-white/80 px-5 py-4 backdrop-blur md:px-8">
               <div className="flex items-center gap-3">
@@ -89,7 +95,19 @@ export default function AILeosiqraPage() {
             </div>
           )}
         />
+            )}
+          </ChatWithQuery>
+        </Suspense>
       </section>
     </div>
   );
+}
+
+// ?q= dari kolom "Tanya Leo" di Dashboard. useSearchParams (bukan
+// window.location) karena saat navigasi di sisi klien halaman dirender sebelum
+// URL berganti. Setelah terkirim, ?q dihapus supaya tidak terkirim ulang saat reload.
+function ChatWithQuery({ children }: { children: (q: string | undefined, onSent: () => void) => React.ReactNode }) {
+  const params = useSearchParams();
+  const q = params.get('q')?.trim().slice(0, 500) || undefined;
+  return <>{children(q, () => window.history.replaceState(null, '', '/membership/ai-leosiqra'))}</>;
 }

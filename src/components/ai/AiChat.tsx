@@ -43,7 +43,7 @@ const toMsg = (m: { role: string; text: string; timestamp: Date }): Msg => ({ ro
 // Panel chat AI Leosiqra — dipakai halaman web & aplikasi HP.
 export type AiChatHeaderCtx = { reset: () => void; hasMessages: boolean; thinking: boolean };
 
-export function AiChat({ variant, renderHeader }: { variant: "web" | "app"; renderHeader?: (ctx: AiChatHeaderCtx) => React.ReactNode }) {
+export function AiChat({ variant, renderHeader, initialPrompt, onInitialSent }: { variant: "web" | "app"; renderHeader?: (ctx: AiChatHeaderCtx) => React.ReactNode; initialPrompt?: string; onInitialSent?: () => void }) {
   const reduce = useReducedMotion();
   const [messages, setMessages] = useState<Msg[] | null>(null);
   const [input, setInput] = useState("");
@@ -97,6 +97,16 @@ export function AiChat({ variant, renderHeader }: { variant: "web" | "app"; rend
     },
     [thinking]
   );
+
+  // Pertanyaan dari luar (mis. kolom "Tanya Leo" di Dashboard) dikirim sekali
+  // setelah riwayat chat selesai dimuat.
+  const sentInitial = useRef(false);
+  useEffect(() => {
+    if (!initialPrompt || sentInitial.current || messages === null) return;
+    sentInitial.current = true;
+    void send(initialPrompt);
+    onInitialSent?.();
+  }, [initialPrompt, messages, send, onInitialSent]);
 
   const reset = useCallback(async () => {
     setMessages([]);

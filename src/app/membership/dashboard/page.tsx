@@ -21,8 +21,10 @@ import {
   Target,
   Flame,
   Sparkles,
+  ArrowUp,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { cn, isIncomingTransaction, formatIDR, formatMoney } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { MonthPicker } from '@/components/ui/MonthPicker';
@@ -47,6 +49,9 @@ import { LeoMascot, type LeoMood } from '@/components/mascot/LeoMascot';
 import { useModal } from '@/context/ModalContext';
 import { budgetService, type Budget } from '@/lib/services/budgetService';
 import { cloudflareApi } from '@/lib/cloudflare-api';
+import { CloseDayCard } from '@/components/streak/CloseDay';
+import { FeatureTiles, type TileStat } from '@/components/features/FeatureTiles';
+import { useFeatures, type FeatureId } from '@/lib/features';
 
 interface MarketTicker {
   label: string; sub: string; val: string; pct: string; up: boolean | null;
@@ -250,7 +255,6 @@ export default function MonthlyDashboard() {
   const toIdrAmount = (t: { amount: number; amountIDR?: number }) => Number(t.amountIDR) || Number(t.amount) || 0;
   const totalPemasukan = useMemo(() => transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + toIdrAmount(t), 0), [transactions]);
   const totalPengeluaran = useMemo(() => transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + toIdrAmount(t), 0), [transactions]);
-  const totalInvestasi = useMemo(() => investments.reduce((s, i) => s + (Number(i.amountIDR) || Number(i.amountInvested) || 0), 0), [investments]);
   const netBalance = totalPemasukan - totalPengeluaran;
   // Saldo Tabungan kartu dashboard bersifat all-time (sama seperti Investasi
   // di sebelahnya) — bukan sisa pemasukan-pengeluaran bulan berjalan, supaya
@@ -350,10 +354,6 @@ export default function MonthlyDashboard() {
   const footerLabel = filterType === 'Semua' ? 'Total Keseluruhan' : `Total ${filterType}`;
 
   const pengeluaranPct = totalPemasukan > 0 ? Math.min(Math.round((totalPengeluaran / Math.max(totalPemasukan, 1)) * 100), 100) : 0;
-  // % porsi Tabungan dari total saldo semua rekening (net worth), bukan lagi
-  // relatif ke pemasukan bulanan — konsisten dengan sifat all-time-nya.
-  const tabunganPct = totalSaldoRekening > 0 ? Math.min(Math.round((totalTabunganSaldo / totalSaldoRekening) * 100), 100) : 0;
-  const investasiPct = totalPemasukan > 0 ? Math.min(Math.round((totalInvestasi / Math.max(totalPemasukan, 1)) * 100), 100) : 0;
 
   const expenseCount = transactions.filter(t => t.type === 'pengeluaran').length;
   const incomeCount = transactions.filter(t => t.type === 'pemasukan').length;
@@ -427,6 +427,28 @@ export default function MonthlyDashboard() {
           ? { mood: 'idle', text: `Belanja agak ngebut nih, masih ${daysLeft} hari lagi 👀` }
           : { mood: 'idle', text: `Mantap! ${todayTrx.length} catatan hari ini, keuanganmu on track ✨` };
 
+  const router = useRouter();
+  const [ask, setAsk] = useState('');
+  const { isOn } = useFeatures();
+
+  // Angka untuk kotak "Fitur kamu" — aturan sama dengan halaman Kekayaan.
+  const unpaidDebtRows = allTransactions.filter((t) => t.type === 'debt' && t.paymentStatus !== 'lunas');
+  const piutang = unpaidDebtRows.filter((t) => t.category === 'Piutang').reduce((s, t) => s + toIdrAmount(t), 0);
+  const rekeningAset = accounts
+    .filter((a) => !isCreditAccountType(a.type))
+    .reduce((s, a) => s + exchangeRateService.convert(a.balance || 0, a.currency || 'IDR', 'IDR', fxRates), 0);
+  const investasiNilai = investments
+    .filter((i) => i.status === 'Active')
+    .reduce((s, i) => s + (Number(i.currentValueIDR) || Number(i.amountIDR) || Number(i.amountInvested) || 0), 0);
+  const kekayaanBersih = rekeningAset + totalTabunganSaldo + investasiNilai + piutang - creditCardBills - otherDebts;
+  const featureBase: Partial<Record<FeatureId, TileStat>> = {
+    kekayaan: { value: formatRp(kekayaanBersih), sub: 'Kekayaan bersih' },
+    tabungan: { value: formatRp(totalTabunganSaldo), sub: `${savings.length} catatan setoran` },
+    investasi: { value: formatRp(investasiNilai), sub: `${investments.filter((i) => i.status === 'Active').length} aktif` },
+    kartu: { value: formatRp(creditCardBills), sub: dueLabel ?? (creditCardBills > 0 ? 'Tagihan terpakai' : 'Tidak ada tagihan') },
+    hutang: { value: formatRp(otherDebts), sub: piutang > 0 ? `Piutang ${formatRp(piutang)}` : otherDebts > 0 ? 'Belum lunas' : 'Bebas hutang 🎉' },
+  };
+
   const quickActions: { label: string; icon: React.ReactNode; onClick?: () => void; href?: string; primary?: boolean }[] = [
     { label: 'Catat transaksi', icon: <Plus size={16} strokeWidth={2.6} />, onClick: () => openModal('harian'), primary: true },
     { label: 'Transfer', icon: <ArrowLeftRight size={16} />, onClick: () => openModal('topup_transfer') },
@@ -468,7 +490,29 @@ export default function MonthlyDashboard() {
               <span className="text-white/60">· {todayTrx.length} catatan</span>
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-2">
+            {/* Tanya Leo — dikirim ke AI Leosiqra */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const q = ask.trim();
+                if (q) router.push(`/membership/ai-leosiqra?q=${encodeURIComponent(q)}`);
+              }}
+              className="mt-5 flex max-w-md items-center gap-2 rounded-2xl bg-white/95 py-1.5 pl-4 pr-1.5 shadow-lg shadow-indigo-950/20"
+            >
+              <Sparkles size={16} className="shrink-0 text-violet-500" />
+              <input
+                value={ask}
+                onChange={(e) => setAsk(e.target.value)}
+                placeholder="Tanya Leo apa saja… mis. minggu ini habis berapa?"
+                aria-label="Tanya Leo"
+                className="min-w-0 flex-1 bg-transparent py-1.5 text-sm text-slate-800 outline-none placeholder:text-slate-400"
+              />
+              <button type="submit" aria-label="Kirim pertanyaan" disabled={!ask.trim()} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white disabled:opacity-40">
+                <ArrowUp size={16} />
+              </button>
+            </form>
+
+            <div className="mt-3 flex flex-wrap gap-2">
               {quickActions.map((a) => {
                 const cls = cn(
                   'inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition-all hover:-translate-y-0.5 active:scale-[0.98]',
@@ -494,6 +538,11 @@ export default function MonthlyDashboard() {
           </div>
         </div>
       </AuthScene>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        {isOn('streak') && <CloseDayCard transactions={allTransactions} accounts={accounts} className="lg:col-span-1 lg:self-start" />}
+        <FeatureTiles base={featureBase} className={isOn('streak') ? 'lg:col-span-2' : 'lg:col-span-3'} />
+      </div>
 
       <GamificationStrip />
 
@@ -620,51 +669,6 @@ export default function MonthlyDashboard() {
             caption={`${pengeluaranPct}% dari pemasukan · ${expenseCount} transaksi`}
           />
         </div>
-      </div>
-
-      {/* Aset & kewajiban */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-5 lg:grid-cols-4">
-        <Tile
-          label="Tabungan"
-          tone="sky"
-          icon={<PiggyBank size={17} />}
-          value={<AnimatedNumber value={totalTabunganSaldo} format={formatRp} />}
-          loading={statsLoading}
-          progress={tabunganPct}
-          progressClassName="bg-sky-500"
-          caption={`${tabunganPct}% dari saldo · ${savings.length} transaksi`}
-        />
-        <Tile
-          label="Investasi"
-          tone="violet"
-          icon={<Wallet size={17} />}
-          value={<AnimatedNumber value={totalInvestasi} format={formatRp} />}
-          loading={statsLoading}
-          progress={investasiPct}
-          progressClassName="bg-violet-500"
-          caption={`${investments.filter(i => i.status === 'Active').length} aktif · ${investasiPct}% dari pemasukan`}
-        />
-        <Tile
-          label="Tagihan kartu kredit"
-          tone="amber"
-          icon={<CreditCard size={17} />}
-          value={<AnimatedNumber value={creditCardBills} format={formatRp} />}
-          valueClassName={creditCardBills > 0 ? 'text-rose-500' : undefined}
-          loading={statsLoading}
-          badge={nearestDue && (nearestDue.cycle.overdue || nearestDue.cycle.daysUntilDue <= 3)
-            ? <Badge tone={nearestDue.cycle.overdue ? 'danger' : 'warning'}>{nearestDue.cycle.overdue ? 'Telat' : 'Segera'}</Badge>
-            : undefined}
-          caption={dueLabel ?? (creditCardBills > 0 ? 'Perlu dibayar' : 'Tidak ada tagihan')}
-        />
-        <Tile
-          label="Hutang lainnya"
-          tone="slate"
-          icon={<Landmark size={17} />}
-          value={<AnimatedNumber value={otherDebts} format={formatRp} />}
-          valueClassName={otherDebts > 0 ? 'text-rose-500' : undefined}
-          loading={statsLoading}
-          caption={otherDebts > 0 ? 'Kewajiban aktif' : 'Bebas hutang 🎉'}
-        />
       </div>
 
       {/* Pengeluaran terbesar + pasar */}

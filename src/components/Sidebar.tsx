@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { primaryNav, navGroups, type NavItem } from '@/lib/navigation';
 import { useFeedback } from '@/components/ui/Feedback';
+import { useFeatures } from '@/lib/features';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -26,6 +27,11 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const pathname = usePathname();
   const router = useRouter();
   const { toast } = useFeedback();
+  // Menu fitur yang dimatikan user di "Kelola fitur" disembunyikan (data tetap ada).
+  const { hiddenHrefs } = useFeatures();
+  const visibleGroups = navGroups
+    .map((g) => ({ ...g, items: g.items.filter((i) => !hiddenHrefs.has(i.href) || i.href === pathname) }))
+    .filter((g) => g.items.length > 0);
   // Grup yang berisi halaman aktif otomatis terbuka; sisanya bisa dibuka
   // manual. Disimpan sebagai set id yang di-toggle user.
   const activeGroupId = navGroups.find((g) => g.items.some((i) => i.href === pathname))?.id;
@@ -229,7 +235,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
               </div>
 
               <div className="pt-3 mt-3 border-t border-slate-200/70 space-y-1">
-                {navGroups.map((group) => {
+                {visibleGroups.map((group) => {
                   const isOpenGroup = openGroups.includes(group.id);
                   const hasActive = group.id === activeGroupId;
                   return (

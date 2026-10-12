@@ -23,6 +23,9 @@ import {
   Headphones,
   MessageSquareHeart,
   Users,
+  Gem,
+  Flame,
+  SlidersHorizontal,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -68,6 +71,7 @@ export const navGroups: NavGroup[] = [
     label: 'Rekening & Aset',
     icon: Building2,
     items: [
+      { label: 'Kekayaan', href: '/membership/kekayaan', icon: Gem },
       { label: 'Rekening', href: '/membership/rekening', icon: Building2 },
       { label: 'Kartu Saya', href: '/membership/cards', icon: CreditCard },
       { label: 'Tabungan', href: '/membership/tabungan', icon: PiggyBank },
@@ -91,6 +95,7 @@ export const navGroups: NavGroup[] = [
     label: 'Perencanaan & Laporan',
     icon: Target,
     items: [
+      { label: 'Tutup Hari & Streak', href: '/membership/streak', icon: Flame },
       { label: 'Budget & Target', href: '/membership/budget', icon: Target },
       { label: 'Hutang & Piutang', href: '/membership/transactions/debt', icon: HandCoins },
       { label: 'Laporan Tahunan', href: '/membership/annual', icon: CalendarRange },
@@ -103,6 +108,7 @@ export const navGroups: NavGroup[] = [
     icon: User,
     items: [
       { label: 'Profil & Keamanan', href: '/membership/profile', icon: User },
+      { label: 'Kelola Fitur', href: '/membership/fitur', icon: SlidersHorizontal },
       { label: 'Kategori & Mata Uang', href: '/membership/nama-akun', icon: Tags },
       { label: 'Panduan', href: '/membership/panduan', icon: Compass },
       { label: 'Saran & Kritik', href: '/membership/saran', icon: MessageSquareHeart },

@@ -8509,6 +8509,167 @@ async function handleGamification(request: Request, env: Env) {
   return json(data);
 }
 
+// ===== Tutup hari + streak (migrasi 0010, tabel dc_*) =====
+// User "menutup" hari setelah mengecek catatannya (atau menandai tidak belanja).
+// Streak = hari beruntun yang punya baris dc_days (closed/late/shield).
+// Perisai (maks 2): minggu (Sen–Min) dengan >= 5 hari ditutup memberi +1
+// perisai; hari terlewat di tengah streak otomatis ditutup perisai kalau ada.
+// Hari terlewat bisa diisi belakangan sampai 7 hari. Koin dihitung dari data:
+// 3 per hari ditutup sendiri + 20 per minggu dengan >= 5 hari ditutup sendiri.
+// Semua tanggal = tanggal WIB (YYYY-MM-DD).
+
+const DC_MAX_SHIELDS = 2;
+const DC_BACKFILL_DAYS = 7;
+const DC_WEEK_TARGET = 5;
+const DC_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+// Senin (WIB) dari minggu yang memuat `day`.
+const dcWeekStart = (day: string) => {
+  const dow = new Date(`${day}T00:00:00Z`).getUTCDay(); // 0 = Minggu
+  return shiftDateStr(day, dow === 0 ? -6 : 1 - dow);
+};
+
+type DcRow = { day: string; kind: "closed" | "late" | "shield" };
+
+// Nilai hari-hari yang belum dinilai (checked_through+1 .. kemarin): beri
+// perisai di tiap hari Minggu yang minggunya memenuhi target, lalu tutup hari
+// terlewat dengan perisai bila streak masih hidup. Idempoten.
+const dcEvaluate = async (env: Env, userId: string) => {
+  const today = todayWIB();
+  const yesterday = shiftDateStr(today, -1);
+  const state = await env.DB.prepare("SELECT shields, checked_through FROM dc_state WHERE user_id = ?")
+    .bind(userId)
+    .first<{ shields: number; checked_through: string | null }>();
+  if (!state) {
+    await env.DB.prepare("INSERT OR IGNORE INTO dc_state (user_id, shields, checked_through, updated_at) VALUES (?, ?, ?, ?)")
+      .bind(userId, DC_MAX_SHIELDS, yesterday, nowIso())
+      .run();
+    return;
+  }
+  const from = state.checked_through ? shiftDateStr(state.checked_through, 1) : yesterday;
+  if (from > yesterday) return;
+  // Batasi penilaian 60 hari terakhir (user yang lama tidak membuka app).
+  const start = from < shiftDateStr(yesterday, -59) ? shiftDateStr(yesterday, -59) : from;
+  const { results } = await env.DB.prepare("SELECT day, kind FROM dc_days WHERE user_id = ? AND day BETWEEN ? AND ?")
+    .bind(userId, shiftDateStr(start, -7), yesterday)
+    .all<DcRow>();
+  const kinds = new Map((results ?? []).map((r) => [r.day, r.kind]));
+  let shields = Number(state.shields) || 0;
+  const inserts: D1PreparedStatement[] = [];
+  for (let day = start; day <= yesterday; day = shiftDateStr(day, 1)) {
+    if (!kinds.has(day)) {
+      const prev = shiftDateStr(day, -1);
+      if (shields > 0 && kinds.has(prev)) {
+        shields--;
+        kinds.set(day, "shield");
+        inserts.push(
+          env.DB.prepare("INSERT OR IGNORE INTO dc_days (user_id, day, kind, created_at) VALUES (?, ?, 'shield', ?)").bind(userId, day, nowIso())
+        );
+      }
+    }
+    // Hari Minggu: nilai minggu yang baru selesai.
+    if (new Date(`${day}T00:00:00Z`).getUTCDay() === 0) {
+      let own = 0;
+      for (let d = shiftDateStr(day, -6); d <= day; d = shiftDateStr(d, 1)) {
+        const k = kinds.get(d);
+        if (k === "closed" || k === "late") own++;
+      }
+      if (own >= DC_WEEK_TARGET) shields = Math.min(DC_MAX_SHIELDS, shields + 1);
+    }
+  }
+  inserts.push(
+    env.DB.prepare("UPDATE dc_state SET shields = ?, checked_through = ?, updated_at = ? WHERE user_id = ?").bind(shields, yesterday, nowIso(), userId)
+  );
+  await env.DB.batch(inserts);
+};
+
+const dcSummary = async (env: Env, userId: string, month: string) => {
+  await dcEvaluate(env, userId);
+  const today = todayWIB();
+  const [{ results }, state] = await Promise.all([
+    env.DB.prepare("SELECT day, kind FROM dc_days WHERE user_id = ? ORDER BY day").bind(userId).all<DcRow>(),
+    env.DB.prepare("SELECT shields FROM dc_state WHERE user_id = ?").bind(userId).first<{ shields: number }>(),
+  ]);
+  const rows = results ?? [];
+  const kinds = new Map(rows.map((r) => [r.day, r.kind]));
+
+  // Streak berjalan: mulai hari ini kalau sudah ditutup, kalau belum dari kemarin.
+  let streak = 0;
+  for (let d = kinds.has(today) ? today : shiftDateStr(today, -1); kinds.has(d); d = shiftDateStr(d, -1)) streak++;
+
+  let best = 0;
+  let run = 0;
+  let prev: string | null = null;
+  const ownByWeek = new Map<string, number>();
+  let ownDays = 0;
+  for (const r of rows) {
+    run = prev && shiftDateStr(prev, 1) === r.day ? run + 1 : 1;
+    best = Math.max(best, run);
+    prev = r.day;
+    if (r.kind !== "shield") {
+      ownDays++;
+      const w = dcWeekStart(r.day);
+      ownByWeek.set(w, (ownByWeek.get(w) ?? 0) + 1);
+    }
+  }
+  const fullWeeks = [...ownByWeek.values()].filter((n) => n >= DC_WEEK_TARGET).length;
+
+  const weekStart = dcWeekStart(today);
+  const missed: string[] = [];
+  for (let i = DC_BACKFILL_DAYS; i >= 1; i--) {
+    const d = shiftDateStr(today, -i);
+    // Hanya hari setelah user mulai menutup hari — sebelum itu bukan "terlewat".
+    if (rows.length > 0 && d > rows[0].day && !kinds.has(d)) missed.push(d);
+  }
+
+  return {
+    today,
+    todayKind: kinds.get(today) ?? null,
+    streak,
+    best,
+    shields: Number(state?.shields ?? DC_MAX_SHIELDS),
+    maxShields: DC_MAX_SHIELDS,
+    coins: ownDays * 3 + fullWeeks * 20,
+    week: { start: weekStart, closed: ownByWeek.get(weekStart) ?? 0, target: DC_WEEK_TARGET },
+    days: rows.filter((r) => r.day.startsWith(month)),
+    missed,
+  };
+};
+
+async function handleStreak(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const url = new URL(request.url);
+  try {
+    if (request.method === "GET") {
+      const monthParam = url.searchParams.get("month") ?? "";
+      const month = /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : todayWIB().slice(0, 7);
+      return json(await dcSummary(env, userId, month));
+    }
+    // POST /api/member/streak/close { day? } — tutup hari ini atau isi hari terlewat.
+    const payload = await parseJson<{ day?: unknown }>(request);
+    const today = todayWIB();
+    const day = typeof payload.day === "string" && payload.day ? payload.day : today;
+    if (!DC_DAY_RE.test(day) || day > today || day < shiftDateStr(today, -DC_BACKFILL_DAYS)) {
+      return json({ error: `Hanya bisa menutup hari ini atau ${DC_BACKFILL_DAYS} hari ke belakang.` }, { status: 400 });
+    }
+    await env.DB.prepare("INSERT OR IGNORE INTO dc_days (user_id, day, kind, created_at) VALUES (?, ?, ?, ?)")
+      .bind(userId, day, day === today ? "closed" : "late", nowIso())
+      .run();
+    return json(await dcSummary(env, userId, day.slice(0, 7)));
+  } catch (error) {
+    // Migrasi 0010 belum diterapkan → jawab jujur, jangan bocorkan pesan D1.
+    if (error instanceof Error && /no such table: dc_/.test(error.message)) {
+      return json({ error: "Fitur tutup hari belum aktif." }, { status: 503 });
+    }
+    if (error instanceof Error && error.message === "Payload JSON tidak valid.") {
+      return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    }
+    throw error;
+  }
+}
+
 // ===== Goal-based saving otomatis =====
 // Sebuah "goal" adalah baris `recurring` bertipe 'Tabungan' (dieksekusi oleh
 // processDueRecurringTransactions sebagai setoran otomatis ke tabel `savings`).
@@ -10196,6 +10357,13 @@ const worker = {
 
       if (url.pathname === "/api/member/gamification" && request.method === "GET") {
         return await handleGamification(request, env);
+      }
+
+      if (
+        (url.pathname === "/api/member/streak" && request.method === "GET") ||
+        (url.pathname === "/api/member/streak/close" && request.method === "POST")
+      ) {
+        return await handleStreak(request, env);
       }
 
       if (url.pathname === "/api/member/savings-goals" && request.method === "GET") {
