@@ -22,7 +22,60 @@ declare interface KVNamespace {
   put(key: string, value: string, options?: Record<string, unknown>): Promise<void>;
 }
 
-declare type R2Bucket = object;
+declare interface R2HTTPMetadata {
+  contentType?: string;
+  cacheControl?: string;
+  contentDisposition?: string;
+  [key: string]: unknown;
+}
+
+declare interface R2Object {
+  key: string;
+  size: number;
+  etag: string;
+  httpEtag: string;
+  uploaded: Date;
+  httpMetadata?: R2HTTPMetadata;
+  customMetadata?: Record<string, string>;
+  writeHttpMetadata(headers: Headers): void;
+}
+
+declare interface R2ObjectBody extends R2Object {
+  body: ReadableStream;
+  bodyUsed: boolean;
+  text(): Promise<string>;
+  json<T = unknown>(): Promise<T>;
+  arrayBuffer(): Promise<ArrayBuffer>;
+}
+
+declare interface R2PutOptions {
+  httpMetadata?: R2HTTPMetadata | Headers;
+  customMetadata?: Record<string, string>;
+  [key: string]: unknown;
+}
+
+declare interface R2Bucket {
+  get(key: string, options?: Record<string, unknown>): Promise<R2ObjectBody | null>;
+  head(key: string): Promise<R2Object | null>;
+  put(key: string, value: ReadableStream | ArrayBuffer | ArrayBufferView | string | null | Blob, options?: R2PutOptions): Promise<R2Object | null>;
+  delete(keys: string | string[]): Promise<void>;
+  list(options?: Record<string, unknown>): Promise<{ objects: R2Object[]; truncated: boolean; cursor?: string }>;
+}
+
+declare interface Fetcher {
+  fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
+}
+
+// caches.default (Cache API khusus Workers)
+declare interface CacheStorage {
+  default: Cache;
+}
+
+declare module "cloudflare:workers" {
+  export class DurableObject {
+    constructor(state: unknown, env: unknown);
+  }
+}
 
 declare interface RateLimit {
   limit(options: { key: string }): Promise<{ success: boolean }>;

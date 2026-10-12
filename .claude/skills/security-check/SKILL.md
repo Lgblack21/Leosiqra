@@ -124,8 +124,7 @@ sudah live di produksi: sebutkan di awal pesan, jangan ditunda ke akhir.
 - **Node dari nvm** tidak ada di PATH default: `export PATH=~/.nvm/versions/node/v24.19.0/bin:$PATH`.
 - **Typecheck Worker** (tidak ikut `tsc` root):
   `npx tsc --noEmit --strict --skipLibCheck --target es2022 --module esnext --moduleResolution bundler --lib es2022,webworker cloudflare/src/index.ts cloudflare-env.d.ts`
-  — sudah ada ±27 error bawaan (tipe sesi, `caches.default`, web push). Bandingkan
-  jumlah/isi error sebelum vs sesudah, jangan cuma lihat angka mentah.
+  — sejak 2026-10-12 baseline **0 error**: error baru apa pun = harus diperbaiki.
 - **Skema dump tertinggal kolom** dari produksi: `savings.transaction_type`,
   `categories.sort_order`, `accounts.sort_order` (tanpa ini `GET /api/member/accounts` 500 di lokal), `investments.maturity_action`, `investments.related_investment_id`.
   Tambahkan dengan `ALTER TABLE` di D1 lokal sebelum tes.

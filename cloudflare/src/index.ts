@@ -12,6 +12,10 @@ export interface Env {
   DB: D1Database;
   CACHE?: KVNamespace;
   LOGIN_RATE_LIMITER?: RateLimit;
+  // Pepper rahasia untuk hash password (opsional). Kalau diisi, hash baru memakai format pbkdf2p$…
+  // dan hash lama di-upgrade saat login. JANGAN diganti/dihapus setelah dipakai: hash pbkdf2p tidak
+  // bisa diverifikasi tanpa nilai yang sama (user terdampak harus reset password).
+  PASSWORD_PEPPER?: string;
   AI_PARSE_RATE_LIMITER?: RateLimit;
   ASSETS: Fetcher;
   FILES_BUCKET?: R2Bucket;
@@ -317,10 +321,16 @@ const getCookieValue = (request: Request, name: string) => {
 // Cegah brute-force/credential-stuffing di login & spam di register — dicek
 // per-IP dan (khusus login) per-email juga, supaya penyerang yang nyebar
 // request dari banyak IP ke satu email korban tetap kena batas.
-// Fail-open kalau binding belum ke-deploy (mis. dev lokal) supaya tidak
-// mem-block auth sama sekali kalau rate limiter-nya belum tersedia.
+// Fail-open hanya di luar produksi (dev lokal tanpa binding); di produksi fail-closed.
+// Produksi: kalau binding hilang (salah konfigurasi deploy), TOLAK (fail-closed) dan catat error —
+// lebih baik login sementara gagal daripada brute-force tanpa batas.
+const rateLimiterMissing = (env: Env, name: string) => {
+  if (env.APP_ENV !== "production") return true;
+  console.error(`${name} tidak terpasang di produksi — permintaan ditolak (fail-closed).`);
+  return false;
+};
 const checkRateLimit = async (env: Env, keys: string[]): Promise<boolean> => {
-  if (!env.LOGIN_RATE_LIMITER) return true;
+  if (!env.LOGIN_RATE_LIMITER) return rateLimiterMissing(env, "LOGIN_RATE_LIMITER");
   for (const key of keys) {
     const { success } = await env.LOGIN_RATE_LIMITER.limit({ key });
     if (!success) return false;
@@ -332,10 +342,9 @@ const clientIpOf = (request: Request) => request.headers.get("cf-connecting-ip")
 
 // Vision-model calls (AI Scan/Voice) biayanya lebih mahal dari chat teks
 // biasa — batasi per-user supaya satu akun tidak bisa memanggil endpoint ini
-// bertubi-tubi. Fail-open kalau binding belum ke-deploy, sama seperti
-// checkRateLimit di atas.
+// bertubi-tubi. Fail-open hanya di luar produksi, sama seperti checkRateLimit di atas.
 const checkAiParseRateLimit = async (env: Env, userId: string): Promise<boolean> => {
-  if (!env.AI_PARSE_RATE_LIMITER) return true;
+  if (!env.AI_PARSE_RATE_LIMITER) return rateLimiterMissing(env, "AI_PARSE_RATE_LIMITER");
   const { success } = await env.AI_PARSE_RATE_LIMITER.limit({ key: `ai-parse:user:${userId}` });
   return success;
 };
@@ -343,75 +352,67 @@ const checkAiParseRateLimit = async (env: Env, userId: string): Promise<boolean>
 // Cloudflare Workers membatasi PBKDF2 maksimal 100.000 iterasi.
 const PBKDF2_ITERATIONS = 100000;
 
-// Hash password baru dengan PBKDF2 + salt acak per-user (format: pbkdf2$iter$salt$hash).
-const hashPassword = async (password: string) => {
+// Hash password dengan PBKDF2 + salt acak per-user.
+// Format: pbkdf2$iter$salt$hash (tanpa pepper) atau pbkdf2p$iter$salt$hash (dengan pepper).
+// Pepper = HMAC-SHA256(PASSWORD_PEPPER, password) dipakai sebagai input PBKDF2. Pepper disimpan
+// sebagai secret Worker, bukan di D1 — kalau isi database bocor, hash tidak bisa ditebak offline
+// tanpa pepper (mengimbangi batas 100.000 iterasi PBKDF2 di Workers).
+const passwordKeyBytes = async (password: string, pepper: string | null) => {
+  const raw = new TextEncoder().encode(password);
+  if (!pepper) return raw;
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(pepper), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", key, raw));
+};
+
+const pbkdf2Bits = async (keyBytes: Uint8Array, salt: Uint8Array, iterations: number) => {
+  // salinan ber-ArrayBuffer murni (tipe BufferSource di lib DOM terbaru menolak ArrayBufferLike)
+  const keyMaterial = await crypto.subtle.importKey("raw", new Uint8Array(keyBytes), { name: "PBKDF2" }, false, ["deriveBits"]);
+  return crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: new Uint8Array(salt), iterations }, keyMaterial, 256);
+};
+
+const hashPassword = async (env: Env, password: string) => {
   const salt = crypto.getRandomValues(new Uint8Array(16));
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(password),
-    { name: "PBKDF2" },
-    false,
-    ["deriveBits"]
-  );
-
-  const derivedBits = await crypto.subtle.deriveBits(
-    {
-      name: "PBKDF2",
-      hash: "SHA-256",
-      salt,
-      iterations: PBKDF2_ITERATIONS,
-    },
-    keyMaterial,
-    256
-  );
-
-  return `pbkdf2$${PBKDF2_ITERATIONS}$${toBase64Url(salt.buffer)}$${toBase64Url(derivedBits)}`;
+  const pepper = env.PASSWORD_PEPPER || null;
+  const derivedBits = await pbkdf2Bits(await passwordKeyBytes(password, pepper), salt, PBKDF2_ITERATIONS);
+  return `${pepper ? "pbkdf2p" : "pbkdf2"}$${PBKDF2_ITERATIONS}$${toBase64Url(salt.buffer)}$${toBase64Url(derivedBits)}`;
 };
 
 // Hash SHA-256 lama (tanpa salt) — hanya untuk memverifikasi akun lama & memicu rehash.
 const legacySha256Hash = async (password: string) => sha256Hex(`leosiqra::${password}`);
 
-const verifyPbkdf2 = async (password: string, passwordHash: string) => {
+const verifyPbkdf2 = async (password: string, passwordHash: string, pepper: string | null) => {
   const [scheme, iterationsRaw, saltB64Url, expectedB64Url] = passwordHash.split("$");
-  if (scheme !== "pbkdf2" || !iterationsRaw || !saltB64Url || !expectedB64Url) {
+  if ((scheme !== "pbkdf2" && scheme !== "pbkdf2p") || !iterationsRaw || !saltB64Url || !expectedB64Url) {
+    return false;
+  }
+  if (scheme === "pbkdf2p" && !pepper) {
+    console.error("Hash password ber-pepper ditemukan tapi PASSWORD_PEPPER tidak terpasang.");
     return false;
   }
 
   const iterations = Number(iterationsRaw);
-  if (!Number.isFinite(iterations) || iterations <= 0) {
+  if (!Number.isFinite(iterations) || iterations <= 0 || iterations > PBKDF2_ITERATIONS) {
     return false;
   }
 
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(password),
-    { name: "PBKDF2" },
-    false,
-    ["deriveBits"]
-  );
-
-  const derivedBits = await crypto.subtle.deriveBits(
-    {
-      name: "PBKDF2",
-      hash: "SHA-256",
-      salt: fromBase64Url(saltB64Url),
-      iterations,
-    },
-    keyMaterial,
-    256
-  );
-
-  return toBase64Url(derivedBits) === expectedB64Url;
+  const derivedBits = await pbkdf2Bits(await passwordKeyBytes(password, scheme === "pbkdf2p" ? pepper : null), fromBase64Url(saltB64Url), iterations);
+  return constantTimeEqual(toBase64Url(derivedBits), expectedB64Url);
 };
 
-const verifyPassword = async (password: string, passwordHash: string) => {
-  if (passwordHash.startsWith("pbkdf2$")) {
-    const ok = await verifyPbkdf2(password, passwordHash);
-    return { ok, needsRehash: false };
+// Hash tiruan untuk email yang tidak terdaftar: waktu respons login tetap sama dengan email
+// terdaftar (mencegah enumerasi akun lewat selisih waktu PBKDF2).
+const DUMMY_PASSWORD_HASH = "pbkdf2$100000$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
+const verifyPassword = async (env: Env, password: string, passwordHash: string) => {
+  const pepper = env.PASSWORD_PEPPER || null;
+  if (passwordHash.startsWith("pbkdf2$") || passwordHash.startsWith("pbkdf2p$")) {
+    const ok = await verifyPbkdf2(password, passwordHash, pepper);
+    // Hash tanpa pepper di-upgrade begitu pepper tersedia.
+    return { ok, needsRehash: ok && !!pepper && passwordHash.startsWith("pbkdf2$") };
   }
 
   // Hash lama berbasis SHA-256: verifikasi lalu tandai untuk di-rehash ke PBKDF2.
-  const ok = (await legacySha256Hash(password)) === passwordHash;
+  const ok = constantTimeEqual(await legacySha256Hash(password), passwordHash);
   return { ok, needsRehash: ok };
 };
 
@@ -494,7 +495,7 @@ const readSession = async (env: Env, request: Request) => {
     return null;
   }
 
-  let result: {
+  type SessionJoinRow = {
     session_id: string;
     user_id: string;
     role: "admin" | "user";
@@ -510,7 +511,8 @@ const readSession = async (env: Env, request: Request) => {
     password_hash?: string;
     currency_initialized?: number | null;
     metadata_json?: string | null;
-  } | null = null;
+  };
+  let result: SessionJoinRow | null = null;
 
   try {
     result = await env.DB.prepare(
@@ -521,7 +523,7 @@ const readSession = async (env: Env, request: Request) => {
         WHERE s.id = ?`
     )
       .bind(sessionId)
-      .first<typeof result>();
+      .first<SessionJoinRow>();
   } catch {
     result = await env.DB.prepare(
       `SELECT s.id as session_id, s.user_id, u.role as role, s.expires_at,
@@ -531,7 +533,7 @@ const readSession = async (env: Env, request: Request) => {
         WHERE s.id = ?`
     )
       .bind(sessionId)
-      .first<typeof result>();
+      .first<SessionJoinRow>();
   }
 
   if (!result || new Date(result.expires_at).getTime() <= Date.now()) {
@@ -1602,7 +1604,7 @@ async function handleAdminAiKey(request: Request, env: Env) {
   if (!user) return json({ error: "Pengguna tidak ditemukan." }, { status: 404 });
   if (!user.password_hash.startsWith("oauth$")) {
     if (!payload.password) return json({ error: "Masukkan password admin untuk konfirmasi." }, { status: 400 });
-    const verification = await verifyPassword(payload.password, user.password_hash);
+    const verification = await verifyPassword(env, payload.password, user.password_hash);
     if (!verification.ok) return json({ error: "Password admin salah." }, { status: 401 });
   }
 
@@ -2459,7 +2461,7 @@ async function handleRegister(request: Request, env: Env) {
       userId,
       payload.name,
       payload.email.toLowerCase(),
-      await hashPassword(payload.password),
+      await hashPassword(env, payload.password),
       payload.whatsapp ?? null,
       trial.status,
       trial.expiredAt,
@@ -2673,7 +2675,7 @@ async function handleResetPassword(request: Request, env: Env) {
         WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?`
     ).bind(now, nonce, tokenHash, now),
     env.DB.prepare(`UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ? AND ${claimed}`)
-      .bind(await hashPassword(password), now, row.user_id, tokenHash, nonce),
+      .bind(await hashPassword(env, password), now, row.user_id, tokenHash, nonce),
     env.DB.prepare(`DELETE FROM sessions WHERE user_id = ? AND ${claimed}`)
       .bind(row.user_id, tokenHash, nonce),
     env.DB.prepare(
@@ -2733,8 +2735,8 @@ async function handleLogin(request: Request, env: Env) {
     }>();
 
   const passwordVerification = user
-    ? await verifyPassword(payload.password, user.password_hash)
-    : { ok: false, needsRehash: false };
+    ? await verifyPassword(env, payload.password, user.password_hash)
+    : await verifyPassword(env, payload.password, DUMMY_PASSWORD_HASH).then(() => ({ ok: false, needsRehash: false }));
 
   if (!user || !passwordVerification.ok) {
     return json({ error: "Email/Username atau password tidak valid." }, { status: 401 });
@@ -2742,7 +2744,7 @@ async function handleLogin(request: Request, env: Env) {
 
   if (passwordVerification.needsRehash) {
     await env.DB.prepare("UPDATE users SET password_hash = ? WHERE id = ?")
-      .bind(await hashPassword(payload.password), user.id)
+      .bind(await hashPassword(env, payload.password), user.id)
       .run();
   }
 
@@ -5572,14 +5574,14 @@ async function handleChangeMemberPassword(request: Request, env: Env) {
     if (!payload.currentPassword) {
       return json({ error: "Password saat ini wajib diisi." }, { status: 400 });
     }
-    const verification = await verifyPassword(payload.currentPassword, user.password_hash);
+    const verification = await verifyPassword(env, payload.currentPassword, user.password_hash);
     if (!verification.ok) {
       return json({ error: "Password saat ini tidak sesuai." }, { status: 401 });
     }
   }
 
   await env.DB.prepare("UPDATE users SET password_hash = ? WHERE id = ?")
-    .bind(await hashPassword(payload.newPassword), user.id)
+    .bind(await hashPassword(env, payload.newPassword), user.id)
     .run();
 
   return json({ ok: true });
@@ -5603,7 +5605,7 @@ async function handleUpdateMemberTwoFactor(request: Request, env: Env) {
     if (!user) {
       return json({ error: "Pengguna tidak ditemukan." }, { status: 404 });
     }
-    const verification = await verifyPassword(payload.currentPassword, user.password_hash);
+    const verification = await verifyPassword(env, payload.currentPassword, user.password_hash);
     if (!verification.ok) {
       return json({ error: "Password saat ini tidak sesuai." }, { status: 401 });
     }
@@ -5664,7 +5666,7 @@ async function handleResetMemberData(request: Request, env: Env) {
     if (!payload.currentPassword) {
       return json({ error: "Password saat ini wajib diisi." }, { status: 400 });
     }
-    const verification = await verifyPassword(payload.currentPassword, user.password_hash);
+    const verification = await verifyPassword(env, payload.currentPassword, user.password_hash);
     if (!verification.ok) {
       return json({ error: "Password saat ini tidak sesuai." }, { status: 401 });
     }
@@ -7565,7 +7567,7 @@ const sendWebPushToSubscription = async (
   };
   try {
     const payload = await buildPushPayload(message, subscription, vapid);
-    const res = await fetch(sub.endpoint, payload);
+    const res = await fetch(sub.endpoint, payload as RequestInit);
     if (res.status === 404 || res.status === 410) {
       await env.DB.prepare("DELETE FROM push_subscriptions WHERE id = ?").bind(sub.id).run();
     }

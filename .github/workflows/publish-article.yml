@@ -57,7 +57,7 @@ jobs:
           BAD=$(echo "$FILES" | grep -vE "^(src/app/panduan/$SLUG/|src/app/sitemap\.ts$)" || true)
           [ -z "$BAD" ] || { echo "file di luar izin:"; echo "$BAD"; exit 1; }
           ADDED=$(git diff "origin/main...$BR" | grep -E '^\+' | grep -vE '^\+\+\+ ' || true)
-          if echo "$ADDED" | grep -iE 'dangerouslySetInnerHTML|<script|next/script|eval\(|new Function|fetch\(|XMLHttpRequest|process\.env|document\.cookie|localStorage|child_process|require\(|import\(|import\.meta'; then
+          if echo "$ADDED" | grep -iE 'dangerouslySetInnerHTML|</?script|next/script|eval\(|new Function|fetch\(|XMLHttpRequest|process\.env|document\.cookie|localStorage|child_process|require\(|import\(|import\.meta'; then
             echo "kode terlarang ditemukan"; exit 1
           fi
           BADIMP=$(echo "$ADDED" | grep -E '^\+\s*(import|export .* from)' | grep -vE "from ['\"](next|next/link|lucide-react|@/components/guide/GuideLayout)['\"];?\s*$" || true)

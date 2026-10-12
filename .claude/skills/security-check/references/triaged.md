@@ -40,7 +40,6 @@ Perbarui file ini di akhir setiap audit.
 - ⚪ `POST /api/member/uploads/sign` (R2) tidak dipakai frontend — kode mati, aman (sesi + key di folder user).
 - ⚪ `npm audit`: 9 paket (1 critical di Next.js = middleware bypass) — semua build-time/native, tidak dipakai runtime (static export, Worker tidak memakainya). Update Next.js terpisah.
 
-- 🟡 (2026-10-12) `.github/workflows/publish-article.yml`: filter kode terlarang memakai `grep -E` case-sensitive — `<Script src=…>` (next/script), `import()` dinamis, atau `require("child_process")` lolos; dan `npm run build` (yang mengeksekusi kode page.tsx artikel) berjalan dengan token `contents: write` yang tersimpan di `.git/config` oleh `actions/checkout`. Penyerang perlu bisa menulis branch `claude/artikel-*` (routine CEO lewat prompt injection, atau kolaborator) DAN Bos menekan ✅. Saran: `grep -iE` + tolak semua baris `import` selain allowlist (`next`, `next/link`, `@/components/guide/GuideLayout`), dan `persist-credentials: false` + push dengan token eksplisit hanya di langkah "Merge ke main".
 
 ## Sudah diperbaiki
 
@@ -48,6 +47,11 @@ Perbarui file ini di akhir setiap audit.
 
 | Tanggal | Temuan | Perbaikan |
 |---|---|---|
+| 2026-10-12 | 🟡 Filter kode workflow `publish-article` case-sensitive (`<Script>`, `import()`, `require()` lolos) + `npm run build` berjalan dengan token GitHub tersimpan | `grep -iE` (+ `</?script`, `next/script`, `import(`, `require(`, `localStorage`…), import hanya allowlist (`next`, `next/link`, `lucide-react`, GuideLayout), `persist-credentials: false`, token eksplisit hanya di langkah merge. Diuji ke 6 artikel CEO (lolos) & contoh jahat (ditolak) |
+| 2026-10-12 | 🟡 JSON-LD FAQ (`GuideLayout`) bisa ditembus `</script>` dari teks FAQ artikel | `JSON.stringify(...).replace(/</g,'\\u003c')` di GuideLayout & layout |
+| 2026-10-12 | 🟡 PBKDF2 100.000 iterasi (batas Workers) di bawah saran OWASP | Pepper rahasia `PASSWORD_PEPPER` (secret Worker, bukan di D1): hash baru `pbkdf2p$…`, hash lama di-upgrade saat login; bandingkan hash `constantTimeEqual`; email tak terdaftar tetap menjalankan PBKDF2 (anti-enumerasi lewat waktu). Diuji lokal: register/login/upgrade/salah password |
+| 2026-10-12 | 🟡 Rate limiter fail-open kalau binding hilang di produksi | `APP_ENV=production` tanpa binding → tolak + `console.error` (fail-closed); dev lokal tetap fail-open |
+| 2026-10-12 | ⚪ Typecheck Worker 49 error bawaan (stub R2/Fetcher/caches.default/never) menutupi error asli | `cloudflare-env.d.ts` diberi tipe minimal R2/Fetcher/CacheStorage/`cloudflare:workers`; typecheck Worker sekarang **0 error** — baseline baru 0 |
 | 2026-09-28 | 🔴 Pengajuan pembayaran PRO memakai `durationMonths`, `status`, nama/email dari request — bisa bayar 1 bulan minta 1200 bulan; nama mentah masuk Telegram HTML admin | Paket dicari by id di `admin_settings` (nama/durasi/harga resmi), status selalu MENUNGGU, identitas dari akun, bukti hanya URL Cloudinary, maks 5 pending, Telegram di-escape; panel admin menampilkan durasi & peringatan selisih harga. Produksi: 2 pembayaran, durasi maks 1 → tidak dieksploitasi |
 | 2026-09-28 | 🟠 Login Google melewati 2FA untuk akun yang mengaktifkan Authenticator | Callback tidak membuat sesi untuk akun ber-2FA; cookie titipan bertanda tangan 5 menit + `POST /api/auth/google/2fa` (rate limit) memverifikasi TOTP. `email_verified` wajib `true`. Diverifikasi lokal: tanpa cookie/palsu/kedaluwarsa/kode salah → tanpa sesi |
 | 2026-09-28 | 🟠 Pendaftaran menerima password berapa pun panjangnya (aturan hanya di klien) | Server wajib 8–200 karakter & format email wajar, sama dengan reset/ganti password |

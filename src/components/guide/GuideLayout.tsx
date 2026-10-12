@@ -42,7 +42,7 @@ export function GuideLayout({
 
   return (
     <div className="flex min-h-screen flex-col bg-[#f7f8fb] text-slate-900">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd).replace(/</g, '\\u003c') }} />
       <Navbar />
 
       <header className="relative overflow-hidden px-5 pb-12 pt-36 sm:px-6 sm:pt-44">
