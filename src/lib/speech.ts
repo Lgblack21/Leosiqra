@@ -39,7 +39,18 @@ const webCtor = (): WebRecognitionCtor | null => {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 };
 
-export const speechSupport = (): 'native' | 'web' | null => {
+// Perekam sendiri (mic → WAV → transkripsi di server) dipakai lebih dulu di semua platform:
+// mesin suara bawaan HP (Android/iOS) di dalam WebView/PWA terbukti sering hanya jalan
+// sekali per buka aplikasi. Kalau server/izin bermasalah, jatuh ke mesin bawaan.
+let recorderBroken = false;
+const recorderSupport = () =>
+  typeof window !== 'undefined' &&
+  !recorderBroken &&
+  !!navigator.mediaDevices?.getUserMedia &&
+  !!(window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext);
+
+export const speechSupport = (): 'recorder' | 'native' | 'web' | null => {
+  if (recorderSupport()) return 'recorder';
   if (Capacitor.isNativePlatform()) return 'native';
   return webCtor() ? 'web' : null;
 };
@@ -73,6 +84,7 @@ export const startSpeech = async (cb: SpeechCallbacks, lang = 'id-ID'): Promise<
     cb.onError('Perangkat/browser ini belum mendukung input suara. Pakai ketik pintar saja.');
     return null;
   }
+  if (support === 'recorder') return startRecorder(cb);
 
   if (support === 'native') {
     // Plugin @capacitor-community/speech-recognition 7 di Android:
@@ -189,4 +201,97 @@ export const startSpeech = async (cb: SpeechCallbacks, lang = 'id-ID'): Promise<
     return null;
   }
   return { stop: () => { stoppedByUs = true; try { rec.stop(); } catch { /* sudah berhenti */ } } };
+};
+
+// ---- Perekam sendiri: rekam PCM lewat Web Audio, berhenti otomatis saat diam, kirim WAV ke server.
+const API_BASE = process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? '';
+const REC_RATE = 16000;
+const VOICE_RMS = 0.018;        // ambang "ada suara"
+const SILENCE_MS = 1300;        // berhenti setelah diam sekian lama sesudah bicara
+const NO_SPEECH_MS = 7000;      // tidak bicara sama sekali → selesai
+const MAX_MS = 20000;           // batas satu rekaman
+
+const encodeWav = (chunks: Float32Array[], inRate: number): Blob => {
+  const total = chunks.reduce((n, c) => n + c.length, 0);
+  const ratio = inRate / REC_RATE;
+  const outLen = Math.floor(total / ratio);
+  const pcm = new Int16Array(outLen);
+  // gabung + turunkan sample rate (rata-rata per jendela, cukup untuk ucapan)
+  let ci = 0, off = 0, acc = 0, cnt = 0, o = 0, next = ratio;
+  for (let i = 0; i < total && o < outLen; i++) {
+    while (off >= chunks[ci].length) { ci++; off = 0; }
+    acc += chunks[ci][off++]; cnt++;
+    if (i + 1 >= next) { const v = Math.max(-1, Math.min(1, acc / cnt)); pcm[o++] = v < 0 ? v * 0x8000 : v * 0x7fff; acc = 0; cnt = 0; next += ratio; }
+  }
+  const buf = new ArrayBuffer(44 + pcm.length * 2), dv = new DataView(buf);
+  const w = (p: number, t: string) => { for (let i = 0; i < t.length; i++) dv.setUint8(p + i, t.charCodeAt(i)); };
+  w(0, 'RIFF'); dv.setUint32(4, 36 + pcm.length * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+  dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true); dv.setUint32(24, REC_RATE, true);
+  dv.setUint32(28, REC_RATE * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true); w(36, 'data'); dv.setUint32(40, pcm.length * 2, true);
+  new Int16Array(buf, 44).set(pcm);
+  return new Blob([buf], { type: 'audio/wav' });
+};
+
+const startRecorder = async (cb: SpeechCallbacks): Promise<SpeechSession | null> => {
+  const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  // AudioContext dibuat sinkron di dalam ketukan (iOS mewajibkan gesture pengguna).
+  const ac = new AC();
+  void ac.resume?.();
+  let stream: MediaStream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 } });
+  } catch (e) {
+    void ac.close().catch(() => {});
+    const name = e instanceof DOMException ? e.name : '';
+    if (name === 'NotAllowedError' || name === 'SecurityError') { cb.onError('Izin mikrofon ditolak. Aktifkan izin mikrofon untuk Leosiqra di pengaturan HP.'); return null; }
+    // Perangkat/WebView tidak mendukung perekaman langsung → pakai mesin suara bawaan.
+    recorderBroken = true;
+    return startSpeech(cb);
+  }
+  const src = ac.createMediaStreamSource(stream);
+  const proc = ac.createScriptProcessor(4096, 1, 1);
+  const chunks: Float32Array[] = [];
+  const t0 = Date.now();
+  let spoke = false, lastVoice = 0, stopped = false;
+  const release = () => {
+    try { proc.disconnect(); src.disconnect(); } catch { /* sudah lepas */ }
+    stream.getTracks().forEach((t) => t.stop());   // mic SELALU dilepas → rekaman berikutnya bisa jalan
+    void ac.close().catch(() => {});
+  };
+  const finish = async () => {
+    if (stopped) return;
+    stopped = true;
+    clearTimeout(maxTimer);
+    proc.onaudioprocess = null;
+    const rate = ac.sampleRate;
+    release();
+    if (!spoke || chunks.length === 0) { cb.onEnd(''); return; }
+    try {
+      const res = await fetch(`${API_BASE}/api/member/ai/transcribe`, { method: 'POST', credentials: 'include', headers: { 'content-type': 'audio/wav' }, body: encodeWav(chunks, rate) });
+      const data = (await res.json().catch(() => ({}))) as { text?: string; error?: string };
+      if (!res.ok) {
+        if (res.status === 503 || res.status === 404) recorderBroken = true;   // server belum siap → pakai mesin bawaan berikutnya
+        cb.onError(data.error ?? 'Pengenalan suara gagal. Coba lagi.');
+        return;
+      }
+      const text = (data.text ?? '').trim();
+      if (text) cb.onPartial(text);
+      cb.onEnd(text);
+    } catch {
+      cb.onError('Pengenalan suara butuh koneksi internet. Coba lagi.');
+    }
+  };
+  proc.onaudioprocess = (e) => {
+    if (stopped) return;
+    const d = e.inputBuffer.getChannelData(0);
+    chunks.push(new Float32Array(d));
+    let sum = 0; for (let i = 0; i < d.length; i += 4) sum += d[i] * d[i];
+    const rms = Math.sqrt(sum / (d.length / 4)), now = Date.now();
+    if (rms > VOICE_RMS) { spoke = true; lastVoice = now; }
+    if ((spoke && now - lastVoice > SILENCE_MS) || (!spoke && now - t0 > NO_SPEECH_MS)) void finish();
+  };
+  src.connect(proc);
+  proc.connect(ac.destination);
+  const maxTimer = setTimeout(() => void finish(), MAX_MS);
+  return { stop: () => { void finish(); } };
 };

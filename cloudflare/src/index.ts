@@ -7120,6 +7120,88 @@ type ParsedTransactionSuggestion = {
 const stripJsonFences = (raw: string) =>
   raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
 
+// Ucapan → teks di server (rekaman WAV 16 kHz mono dari src/lib/speech.ts). Dipakai menggantikan
+// mesin suara bawaan HP yang di WebView/PWA sering hanya jalan sekali per buka aplikasi.
+// Audio hanya diteruskan ke model AI lewat OpenRouter untuk ditranskrip, TIDAK disimpan.
+const TRANSCRIBE_MODELS = ["google/gemini-2.5-flash-lite", "google/gemini-2.5-flash"];
+const MAX_TRANSCRIBE_BYTES = 1_500_000; // ±45 detik WAV 16 kHz 16-bit mono
+
+const bytesToBase64 = (bytes: Uint8Array) => {
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(binary);
+};
+
+async function handleTranscribe(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  if (!(await checkAiParseRateLimit(env, authResult.session.user.id))) {
+    return json({ error: "Terlalu banyak permintaan AI. Coba lagi dalam beberapa saat." }, { status: 429 });
+  }
+  const contentType = (request.headers.get("content-type") ?? "").toLowerCase();
+  if (!/^audio\/(wav|x-wav|wave)\b/.test(contentType)) {
+    return json({ error: "Format audio tidak didukung." }, { status: 415 });
+  }
+  if (Number(request.headers.get("content-length") ?? 0) > MAX_TRANSCRIBE_BYTES) {
+    return json({ error: "Rekaman terlalu panjang." }, { status: 413 });
+  }
+  const bytes = new Uint8Array(await request.arrayBuffer());
+  if (bytes.byteLength < 44 || bytes.byteLength > MAX_TRANSCRIBE_BYTES) {
+    return json({ error: bytes.byteLength < 44 ? "Rekaman kosong." : "Rekaman terlalu panjang." }, { status: bytes.byteLength < 44 ? 400 : 413 });
+  }
+  const tag = (o: number) => String.fromCharCode(bytes[o], bytes[o + 1], bytes[o + 2], bytes[o + 3]);
+  if (tag(0) !== "RIFF" || tag(8) !== "WAVE") {
+    return json({ error: "Format audio tidak didukung." }, { status: 415 });
+  }
+
+  const openRouter = await getOpenRouterKey(env);
+  if (!openRouter) return json({ error: "AI belum dikonfigurasi." }, { status: 503 });
+
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${openRouter.key}`,
+        "http-referer": env.APP_URL || "https://www.leosiqra.com",
+        "x-title": env.APP_NAME || "Leosiqra",
+      },
+      body: JSON.stringify({
+        models: TRANSCRIBE_MODELS,
+        route: "fallback",
+        temperature: 0,
+        max_tokens: 200,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text:
+                  "Transkripsikan ucapan dalam rekaman ini (bahasa Indonesia, kadang bercampur bahasa daerah/Inggris) PERSIS seperti yang diucapkan, satu baris, tanpa penjelasan, tanpa tanda kutip. Tulis nominal seperti diucapkan (mis. 'bakso 25 ribu'). Kalau tidak ada ucapan yang jelas, balas persis: -",
+              },
+              { type: "input_audio", input_audio: { data: bytesToBase64(bytes), format: "wav" } },
+            ],
+          },
+        ],
+      }),
+    });
+    if (!response.ok) {
+      console.error(`Transkripsi gagal (${response.status}): ${(await response.text()).slice(0, 300)}`);
+      return json({ error: "Pengenalan suara sedang gangguan. Coba lagi." }, { status: 502 });
+    }
+    const data = (await response.json()) as { choices?: Array<{ message?: { content?: unknown } }> };
+    const raw = data.choices?.[0]?.message?.content;
+    let text = typeof raw === "string" ? raw : "";
+    text = text.replace(/[\r\n]+/g, " ").replace(/^["'“”\s]+|["'“”\s]+$/g, "").trim().slice(0, 300);
+    if (text === "-" || /^\(?(kosong|tidak ada ucapan)/i.test(text)) text = "";
+    return json({ text });
+  } catch (error) {
+    console.error("Transkripsi gagal:", error instanceof Error ? error.message : String(error));
+    return json({ error: "Pengenalan suara sedang gangguan. Coba lagi." }, { status: 502 });
+  }
+}
+
 async function handleParseTransaction(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -9463,6 +9545,10 @@ const worker = {
 
       if (url.pathname === "/api/member/ai/chat" && request.method === "POST") {
         return await handleAiChat(request, env);
+      }
+
+      if (url.pathname === "/api/member/ai/transcribe" && request.method === "POST") {
+        return await handleTranscribe(request, env);
       }
 
       if (url.pathname === "/api/member/ai/parse-transaction" && request.method === "POST") {

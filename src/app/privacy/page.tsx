@@ -46,7 +46,7 @@ const sections: LegalSection[] = [
           <li><strong>Cloudflare</strong> — hosting aplikasi, database, dan server.</li>
           <li><strong>Google</strong> — login dengan Google (hanya nama, email, dan foto profil dasar).</li>
           <li><strong>Penyedia model AI melalui OpenRouter</strong> — saat Anda memakai asisten AI, ketik pintar dengan suara, atau foto struk, isi pertanyaan/foto Anda beserta ringkasan data keuangan yang relevan (mis. saldo, transaksi terbaru, kategori) dikirim untuk menghasilkan jawaban. Tanpa memakai fitur AI, tidak ada data yang dikirim ke sana.</li>
-          <li><strong>Layanan pengenalan suara perangkat/browser</strong> — input suara diubah menjadi teks oleh layanan bawaan perangkat Anda (mis. Google atau Apple).</li>
+          <li><strong>Pengenalan suara</strong> — saat Anda memakai input suara, rekaman singkat ucapan Anda dikirim ke model AI (melalui OpenRouter) hanya untuk diubah menjadi teks; rekaman tidak disimpan oleh Leosiqra. Pada perangkat yang tidak mendukung, layanan pengenalan suara bawaan perangkat (mis. Google atau Apple) dipakai sebagai cadangan.</li>
           <li><strong>Cloudinary</strong> — penyimpanan gambar yang Anda unggah (bukti pembayaran, foto profil, logo).</li>
           <li><strong>Resend</strong> — pengiriman email, mis. link reset password.</li>
           <li><strong>Telegram</strong> — notifikasi internal ke admin saat ada konfirmasi pembayaran (nama, email, paket, dan nominal).</li>
