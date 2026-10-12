@@ -443,6 +443,7 @@ export default function MonthlyDashboard() {
   const kekayaanBersih = rekeningAset + totalTabunganSaldo + investasiNilai + piutang - creditCardBills - otherDebts;
   const featureBase: Partial<Record<FeatureId, TileStat>> = {
     kekayaan: { value: formatRp(kekayaanBersih), sub: 'Kekayaan bersih' },
+    arus: { value: `${netBalance >= 0 ? '+' : '−'}${formatRp(Math.abs(netBalance))}`, sub: `Masuk ${formatRp(totalPemasukan)} · keluar ${formatRp(totalPengeluaran)}` },
     tabungan: { value: formatRp(totalTabunganSaldo), sub: `${savings.length} catatan setoran` },
     investasi: { value: formatRp(investasiNilai), sub: `${investments.filter((i) => i.status === 'Active').length} aktif` },
     kartu: { value: formatRp(creditCardBills), sub: dueLabel ?? (creditCardBills > 0 ? 'Tagihan terpakai' : 'Tidak ada tagihan') },

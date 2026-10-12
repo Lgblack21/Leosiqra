@@ -13,6 +13,7 @@ import { SavingsModal } from '@/components/modals/SavingsModal';
 import { DebtModal } from '@/components/modals/DebtModal';
 import { TopUpModal } from '@/components/modals/TopUpModal';
 import { RecurringModal } from '@/components/modals/RecurringModal';
+import type { RecurringTransaction } from '@/lib/services/recurringService';
 import { BudgetModal } from '@/components/modals/BudgetModal';
 import { LedgerModal } from '@/components/modals/LedgerModal';
 import { AccountModal } from '@/components/modals/AccountModal';
@@ -99,6 +100,8 @@ export const GlobalModalWrapper = () => {
         isOpen={activeModal === 'recurring'} 
         onClose={closeModal} 
         userId={user.id} 
+        // Isian awal tanpa id (mis. dari "Cek langganan") → tetap membuat baru.
+        initialData={activeModal === 'recurring' && modalData?.prefill ? (modalData.prefill as RecurringTransaction) : null}
       />
 
       <LedgerModal 

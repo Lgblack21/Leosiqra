@@ -26,6 +26,9 @@ import {
   Gem,
   Flame,
   SlidersHorizontal,
+  BarChart3,
+  Waypoints,
+  CalendarClock,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -95,8 +98,11 @@ export const navGroups: NavGroup[] = [
     label: 'Perencanaan & Laporan',
     icon: Target,
     items: [
+      { label: 'Laporan Bulanan', href: '/membership/laporan', icon: BarChart3 },
+      { label: 'Ikuti Uangmu', href: '/membership/arus', icon: Waypoints },
       { label: 'Tutup Hari & Streak', href: '/membership/streak', icon: Flame },
-      { label: 'Budget & Target', href: '/membership/budget', icon: Target },
+      { label: 'Anggaran', href: '/membership/budget', icon: Target },
+      { label: 'Langganan', href: '/membership/langganan', icon: CalendarClock },
       { label: 'Hutang & Piutang', href: '/membership/transactions/debt', icon: HandCoins },
       { label: 'Laporan Tahunan', href: '/membership/annual', icon: CalendarRange },
       { label: 'Pajak Center', href: '/membership/pajak-center', icon: ShieldCheck },

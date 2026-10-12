@@ -12,6 +12,7 @@ import {
   Users,
   ShieldCheck,
   Globe,
+  Waypoints,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -28,7 +29,8 @@ export type FeatureId =
   | 'rutin'
   | 'dompet-bersama'
   | 'pajak'
-  | 'pasar';
+  | 'pasar'
+  | 'arus';
 
 export interface FeatureDef {
   id: FeatureId;
@@ -49,7 +51,8 @@ export const FEATURES: FeatureDef[] = [
   { id: 'investasi', label: 'Investasi', description: 'Saham, deposito, emas, kripto, dan investasi lain dalam satu portofolio.', icon: TrendingUp, tone: 'bg-emerald-50 text-emerald-600', href: '/membership/investment', navHrefs: ['/membership/investment', '/membership/investasi/saham', '/membership/investasi/deposito', '/membership/investasi/lainnya'] },
   { id: 'kartu', label: 'Kartu kredit', description: 'Limit, tagihan, dan tanggal jatuh tempo tiap kartu kredit atau paylater.', icon: CreditCard, tone: 'bg-amber-50 text-amber-600', href: '/membership/cards', navHrefs: ['/membership/cards'] },
   { id: 'hutang', label: 'Hutang & piutang', description: 'Catat pinjaman dan uang yang kamu pinjamkan, lengkap dengan cicilannya.', icon: HandCoins, tone: 'bg-rose-50 text-rose-500', href: '/membership/transactions/debt', navHrefs: ['/membership/transactions/debt'] },
-  { id: 'rutin', label: 'Langganan & tagihan rutin', description: 'Netflix, listrik, cicilan, gaji — tercatat otomatis tiap jadwalnya.', icon: Repeat, tone: 'bg-indigo-50 text-indigo-600', href: '/membership/recurring', navHrefs: ['/membership/recurring'] },
+  { id: 'arus', label: 'Ikuti uangmu', description: 'Dari mana uangmu datang dan ke mana perginya, dalam satu gambar.', icon: Waypoints, tone: 'bg-fuchsia-50 text-fuchsia-600', href: '/membership/arus', navHrefs: ['/membership/arus'], isNew: true },
+  { id: 'rutin', label: 'Langganan & tagihan rutin', description: 'Netflix, listrik, cicilan, gaji — total per bulan, kalender tagihan, dan cek langganan otomatis.', icon: Repeat, tone: 'bg-indigo-50 text-indigo-600', href: '/membership/langganan', navHrefs: ['/membership/langganan', '/membership/recurring'] },
   { id: 'dompet-bersama', label: 'Dompet bersama', description: 'Kas keluarga atau patungan bareng teman, semua anggota bisa mencatat.', icon: Users, tone: 'bg-teal-50 text-teal-600', href: '/membership/dompet-bersama', navHrefs: ['/membership/dompet-bersama'] },
   { id: 'pajak', label: 'Pajak Center', description: 'Bantu siapkan data SPT dari catatan keuanganmu.', icon: ShieldCheck, tone: 'bg-slate-100 text-slate-600', href: '/membership/pajak-center', navHrefs: ['/membership/pajak-center'] },
   { id: 'pasar', label: 'Data pasar', description: 'Harga saham, kripto, emas, dan kurs terkini.', icon: Globe, tone: 'bg-cyan-50 text-cyan-600', href: '/membership/market-data', navHrefs: ['/membership/market-data'] },
