@@ -18,7 +18,7 @@ const RULES: [RegExp, string][] = [
   [/gaji|salary/i, '💼'],
   [/freelance|proyek|usaha|bisnis|jualan/i, '🧑‍💻'],
   [/bonus|thr/i, '🎉'],
-  [/investasi|saham|reksa|deposito|emas|kripto/i, '📈'],
+  [/investasi|saham|reksa|deposito|\bemas\b|kripto/i, '📈'],
   [/tabungan|nabung/i, '🐷'],
   [/hutang|cicilan|kredit|pinjam/i, '💳'],
 ];
