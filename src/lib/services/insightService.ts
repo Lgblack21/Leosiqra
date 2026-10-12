@@ -14,3 +14,20 @@ export const insightService = {
     return result.items;
   }
 };
+
+export interface WeeklyInsight {
+  id: string;
+  tone: 'warning' | 'positive' | 'info';
+  title: string;
+  body: string;
+  cta: { label: string; web: string; app: string };
+}
+
+export const weeklyInsightService = {
+  async getWeeklyInsights() {
+    const result = await cloudflareApi<{ period: { start: string; end: string }; items: WeeklyInsight[] }>(
+      '/api/member/insights/weekly'
+    );
+    return Array.isArray(result.items) ? result.items : [];
+  }
+};

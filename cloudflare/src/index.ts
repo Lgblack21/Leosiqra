@@ -7934,6 +7934,163 @@ async function handleListInsights(request: Request, env: Env) {
   return json({ items });
 }
 
+// ===== Insight mingguan (Beranda) =====
+// 2–3 kartu proaktif dari 7 hari terakhir (WIB) vs 7 hari sebelumnya, plus
+// konsistensi menabung per blok 7 hari. Sama seperti insight bulanan:
+// rule-based, on-demand, tanpa tabel baru dan tanpa LLM (tidak ada data
+// keuangan yang dikirim ke pihak ketiga). Tiap kartu membawa CTA ke halaman
+// web (/membership) dan aplikasi HP (/app) yang relevan.
+
+type WeeklyInsight = {
+  id: string;
+  tone: "warning" | "positive" | "info";
+  title: string;
+  body: string;
+  cta: { label: string; web: string; app: string };
+};
+
+const WEEKLY_SAVING_BLOCKS = 12;
+
+const computeWeeklyInsights = async (env: Env, userId: string) => {
+  const today = todayWIB();
+  const weekStart = shiftDateStr(today, -6);
+  const prevStart = shiftDateStr(today, -13);
+  const savingsStart = shiftDateStr(today, -(WEEKLY_SAVING_BLOCKS * 7 - 1));
+
+  const { results: trxRows } = await env.DB.prepare(
+    `SELECT category, CASE WHEN date >= ? THEN 'now' ELSE 'prev' END as wk,
+            SUM(COALESCE(NULLIF(amount_idr, 0), amount)) as total, COUNT(*) as n
+       FROM transactions
+      WHERE user_id = ? AND type = 'pengeluaran' AND substr(date, 1, 10) BETWEEN ? AND ?
+      GROUP BY category, wk`
+  )
+    .bind(weekStart, userId, prevStart, today)
+    .all<{ category: string; wk: "now" | "prev"; total: number; n: number }>();
+
+  const { results: savingRows } = await env.DB.prepare(
+    `SELECT substr(date, 1, 10) as d, transaction_type, SUM(COALESCE(NULLIF(amount_idr, 0), amount)) as total
+       FROM savings
+      WHERE user_id = ? AND substr(date, 1, 10) BETWEEN ? AND ?
+      GROUP BY d, transaction_type`
+  )
+    .bind(userId, savingsStart, today)
+    .all<{ d: string; transaction_type: string | null; total: number }>();
+
+  // Beli investasi tersimpan sebagai "pengeluaran" tapi bukan biaya hidup —
+  // aturan yang sama dengan insight bulanan & laporan bulanan.
+  const isInvestmentCategory = (category: string) =>
+    category?.toLowerCase().includes("investasi") || category === "Saham" || category === "Deposito";
+
+  const byCategory = new Map<string, { now: number; prev: number }>();
+  let totalNow = 0;
+  let totalPrev = 0;
+  let countNow = 0;
+  for (const row of trxRows ?? []) {
+    if (isInvestmentCategory(row.category)) continue;
+    const value = Number(row.total) || 0;
+    const entry = byCategory.get(row.category) ?? { now: 0, prev: 0 };
+    if (row.wk === "now") {
+      entry.now += value;
+      totalNow += value;
+      countNow += Number(row.n) || 0;
+    } else {
+      entry.prev += value;
+      totalPrev += value;
+    }
+    byCategory.set(row.category, entry);
+  }
+
+  const items: WeeklyInsight[] = [];
+
+  // 1) Kategori yang naik paling besar (nominal), minimal Rp50rb & +30%.
+  let spike: { category: string; now: number; prev: number } | null = null;
+  for (const [category, v] of byCategory) {
+    if (v.prev <= 0 || v.now < 50000 || v.now < v.prev * 1.3) continue;
+    if (!spike || v.now - v.prev > spike.now - spike.prev) spike = { category, ...v };
+  }
+  if (spike) {
+    const pct = Math.round((spike.now / spike.prev - 1) * 100);
+    items.push({
+      id: `weekly-spike-${spike.category}`,
+      tone: "warning",
+      title: `Pengeluaran ${spike.category} naik ${pct}% minggu ini`,
+      body: `7 hari terakhir ${formatRupiahForPush(spike.now)}, minggu sebelumnya ${formatRupiahForPush(spike.prev)}.`,
+      cta: { label: "Atur budget", web: "/membership/budget", app: "/app/budget" },
+    });
+  }
+
+  // 2) Total pengeluaran turun ≥15% → apresiasi.
+  if (totalPrev > 0 && totalNow < totalPrev * 0.85) {
+    const pct = Math.round((1 - totalNow / totalPrev) * 100);
+    items.push({
+      id: "weekly-expense-down",
+      tone: "positive",
+      title: `Pengeluaran turun ${pct}% minggu ini`,
+      body: `7 hari terakhir ${formatRupiahForPush(totalNow)}, minggu sebelumnya ${formatRupiahForPush(totalPrev)}. Pertahankan!`,
+      cta: { label: "Lihat statistik", web: "/membership/dashboard", app: "/app/statistics" },
+    });
+  }
+
+  // 3) Konsistensi menabung: blok 7 hari berturut-turut dengan setoran bersih > 0.
+  // Blok minggu ini belum ada setoran → hitung dari blok sebelumnya (masih bisa
+  // disambung), supaya streak tidak langsung tampil putus di awal minggu.
+  const netByBlock = new Array<number>(WEEKLY_SAVING_BLOCKS).fill(0);
+  const todayMs = Date.parse(`${today}T00:00:00Z`);
+  for (const row of savingRows ?? []) {
+    const block = Math.floor((todayMs - Date.parse(`${row.d}T00:00:00Z`)) / (7 * 86400000));
+    if (!(block >= 0 && block < WEEKLY_SAVING_BLOCKS)) continue;
+    const value = Number(row.total) || 0;
+    netByBlock[block] += row.transaction_type === "Penarikan" ? -value : value;
+  }
+  const thisWeekSaved = netByBlock[0] > 0;
+  let streak = 0;
+  for (let i = thisWeekSaved ? 0 : 1; i < WEEKLY_SAVING_BLOCKS && netByBlock[i] > 0; i++) streak++;
+  if (streak >= 2) {
+    items.push({
+      id: "weekly-saving-streak",
+      tone: "positive",
+      title: thisWeekSaved
+        ? `Kamu konsisten nabung ${streak} minggu berturut-turut, lanjutkan!`
+        : `Sudah ${streak} minggu berturut-turut nabung — jangan putus minggu ini`,
+      body: thisWeekSaved
+        ? `Setoran bersih minggu ini ${formatRupiahForPush(netByBlock[0])}.`
+        : "Belum ada setoran tabungan dalam 7 hari terakhir.",
+      cta: { label: thisWeekSaved ? "Lihat tabungan" : "Setor tabungan", web: "/membership/tabungan", app: "/app/savings" },
+    });
+  }
+
+  // 4) Pelengkap kalau kartu masih sedikit: rekap singkat minggu ini.
+  if (items.length < 2) {
+    let top: { category: string; now: number } | null = null;
+    for (const [category, v] of byCategory) if (v.now > 0 && (!top || v.now > top.now)) top = { category, now: v.now };
+    if (top && totalNow > 0) {
+      items.push({
+        id: "weekly-recap",
+        tone: "info",
+        title: `Minggu ini keluar ${formatRupiahForPush(totalNow)} dari ${countNow} transaksi`,
+        body: `Terbesar: ${top.category} (${formatRupiahForPush(top.now)}).`,
+        cta: { label: "Lihat detail", web: "/membership/transactions/daily", app: "/app/transactions" },
+      });
+    } else if (items.length === 0) {
+      items.push({
+        id: "weekly-empty",
+        tone: "info",
+        title: "Belum ada pengeluaran tercatat 7 hari terakhir",
+        body: "Catat pengeluaranmu supaya AI Leosiqra bisa memberi insight mingguan yang akurat.",
+        cta: { label: "Catat transaksi", web: "/membership/transactions/daily", app: "/app/transactions" },
+      });
+    }
+  }
+
+  return { period: { start: weekStart, end: today }, items: items.slice(0, 3) };
+};
+
+async function handleWeeklyInsights(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  return json(await computeWeeklyInsights(env, authResult.session.user.id));
+}
+
 // ===== Gamifikasi ringan =====
 // Sama seperti insight: dihitung on-demand dari data yang sudah ada, tanpa
 // tabel baru. Streak dipatahkan lembut (grace period 1 hari) supaya user
@@ -9299,6 +9456,10 @@ const worker = {
 
       if (url.pathname === "/api/member/insights" && request.method === "GET") {
         return await handleListInsights(request, env);
+      }
+
+      if (url.pathname === "/api/member/insights/weekly" && request.method === "GET") {
+        return await handleWeeklyInsights(request, env);
       }
 
       if (url.pathname === "/api/member/feedback" && request.method === "POST") {
