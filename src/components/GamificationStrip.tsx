@@ -28,7 +28,7 @@ export const GamificationStrip = () => {
   const xp = data.xp ?? 0;
 
   return (
-    <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
+    <div className="bg-white rounded-[24px] p-4 md:p-5 border border-slate-100 shadow-[0_8px_30px_-18px_rgba(49,46,129,0.25)] flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
       <div className="flex items-center gap-3 shrink-0 flex-wrap">
         {level && (
           <button
@@ -66,10 +66,10 @@ export const GamificationStrip = () => {
             key={badge.id}
             title={badge.description}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-widest whitespace-nowrap shrink-0 transition-all",
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold whitespace-nowrap shrink-0 transition-all",
               badge.unlocked
                 ? "bg-indigo-50 border-indigo-100 text-indigo-600"
-                : "bg-slate-50 border-slate-100 text-slate-300"
+                : "bg-slate-50 border-slate-100 text-slate-400"
             )}
           >
             <Award size={12} />

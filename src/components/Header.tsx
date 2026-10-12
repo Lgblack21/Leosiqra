@@ -75,7 +75,7 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
   }, []);
 
   return (
-    <header className="fixed top-0 right-0 left-0 lg:left-72 h-20 border-b border-slate-200 flex items-center justify-between gap-3 px-4 md:px-8 bg-white/80 backdrop-blur-md z-30 print:hidden">
+    <header className="fixed top-0 right-0 left-0 lg:left-72 h-20 border-b border-slate-200/70 flex items-center justify-between gap-3 px-4 md:px-8 bg-white/80 backdrop-blur-md z-30 print:hidden">
       <div className="flex items-center gap-3 min-w-0">
         <button
           onClick={onMenuClick}
@@ -87,9 +87,9 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
 
         <div className="flex flex-col min-w-0">
           {group && (
-            <p className="text-label font-bold text-slate-400 uppercase leading-none mb-1 truncate">{group}</p>
+            <p className="text-xs font-semibold text-slate-400 leading-none mb-1 truncate">{group}</p>
           )}
-          <h1 className="text-lg md:text-xl font-black text-slate-900 leading-tight truncate">{title}</h1>
+          <h1 className="text-lg md:text-xl font-extrabold tracking-tight text-slate-900 leading-tight truncate">{title}</h1>
         </div>
       </div>
 
@@ -98,19 +98,19 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           aria-expanded={isDropdownOpen}
           aria-haspopup="menu"
-          className="flex items-center gap-2 bg-[#064e3b] text-white pl-3 pr-3 sm:pl-4 py-2.5 rounded-control text-sm font-bold shadow-lg shadow-emerald-900/10 hover:bg-[#054031] transition-colors"
+          className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white pl-3 pr-3 sm:pl-4 py-2.5 rounded-2xl text-sm font-bold shadow-lg shadow-indigo-500/25 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-500/30 transition-all"
         >
           <Plus size={16} strokeWidth={2.5} />
-          <span className="hidden sm:inline">Tambah Cepat</span>
+          <span className="hidden sm:inline">Tambah cepat</span>
           <ChevronDown size={14} className={cn('transition-transform', isDropdownOpen && 'rotate-180')} />
         </button>
 
         {isDropdownOpen && (
-          <div role="menu" className="absolute right-0 mt-2 w-72 bg-white border border-slate-100 rounded-card shadow-2xl z-50 animate-in overflow-hidden">
+          <div role="menu" className="absolute right-0 mt-2 w-72 bg-white border border-slate-100 rounded-[22px] shadow-2xl z-50 animate-in overflow-hidden">
             <div className="max-h-[70vh] overflow-y-auto p-2">
               {quickActionGroups.map((g) => (
                 <div key={g.label} className="py-1">
-                  <p className="px-3 pt-2 pb-1 text-label font-bold text-slate-400 uppercase">{g.label}</p>
+                  <p className="px-3 pt-2 pb-1 text-xs font-semibold text-slate-400">{g.label}</p>
                   {g.items.map((item) => (
                     <button
                       key={item.id}
@@ -119,9 +119,9 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
                         openModal(item.id);
                         setIsDropdownOpen(false);
                       }}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-control hover:bg-slate-50 transition-colors text-left"
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 transition-colors text-left"
                     >
-                      <span className={cn('w-8 h-8 rounded-lg flex items-center justify-center shrink-0', item.color)}>
+                      <span className={cn('w-8 h-8 rounded-xl flex items-center justify-center shrink-0', item.color)}>
                         <item.icon size={16} />
                       </span>
                       <span className="text-sm font-bold text-slate-700">{item.label}</span>

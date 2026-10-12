@@ -85,7 +85,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         onClick={closeOnMobile}
         aria-current={active ? 'page' : undefined}
         className={cn(
-          'relative flex items-center gap-3 rounded-control text-sm transition-colors',
+          'relative flex items-center gap-3 rounded-xl text-sm transition-colors',
           nested ? 'pl-10 pr-3 py-2' : 'px-3 py-2.5 font-bold',
           active
             ? 'text-indigo-600 font-bold'
@@ -96,7 +96,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         {active && (
           <motion.span
             layoutId="sidebar-active"
-            className="absolute inset-0 rounded-control bg-white shadow-sm ring-1 ring-slate-200/70"
+            className="absolute inset-0 rounded-xl bg-white shadow-sm ring-1 ring-indigo-100"
             transition={{ type: 'spring', stiffness: 420, damping: 36 }}
           />
         )}
@@ -153,8 +153,8 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           <div className="flex items-center gap-3 select-none" aria-hidden>
             <Image src="/images/Logo-new.png" alt="" width={34} height={34} className="object-contain" />
             <div className="flex flex-col">
-              <span className="font-black text-lg text-slate-900 tracking-tight leading-none">Leosiqra</span>
-              <span className="text-label font-bold text-slate-400 uppercase mt-1">Member Workspace</span>
+              <span className="font-extrabold text-lg text-slate-900 tracking-tight leading-none">Leosiqra</span>
+              <span className="text-xs font-medium text-slate-400 mt-1">Ruang keuanganmu</span>
             </div>
           </div>
           <button
@@ -177,7 +177,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 )}
               </div>
               <div className="space-y-2">
-                <h3 className="text-sm font-black text-slate-900 tracking-tight uppercase">
+                <h3 className="text-sm font-extrabold text-slate-900 tracking-tight">
                   {profile?.status === 'PENDING' ? 'Sedang Diverifikasi' : 'Akses Terbatas'}
                 </h3>
                 <p className="text-[11px] font-medium text-slate-400 leading-relaxed">
@@ -209,8 +209,8 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                     )}
                   </button>
                 ) : (
-                  <div className="w-full py-4 bg-slate-100 text-slate-400 text-[10px] font-black rounded-xl border border-slate-200 uppercase tracking-widest">
-                    Menunggu Konfirmasi...
+                  <div className="w-full py-4 bg-slate-100 text-slate-400 text-xs font-bold rounded-xl border border-slate-200">
+                    Menunggu konfirmasi…
                   </div>
                 )}
                 <Link
@@ -238,7 +238,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                         onClick={() => toggleGroup(group.id)}
                         aria-expanded={isOpenGroup}
                         className={cn(
-                          'w-full flex items-center gap-3 px-3 py-2.5 rounded-control text-sm font-bold transition-colors',
+                          'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-colors',
                           hasActive && !isOpenGroup ? 'text-indigo-600' : 'text-slate-600',
                           'hover:text-slate-900 hover:bg-slate-100'
                         )}
@@ -262,14 +262,14 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
         {/* Footer: profil + paket + logout jadi satu kartu */}
         <div className="p-3 border-t border-slate-200/70 shrink-0">
-          <div className="p-3 bg-white border border-slate-100 rounded-card shadow-sm">
+          <div className="p-3 bg-white border border-slate-100 rounded-[20px] shadow-sm">
             <div className="flex items-center gap-3">
               <Link
                 href="/membership/profile"
                 onClick={closeOnMobile}
                 className="flex items-center gap-3 min-w-0 flex-1 group"
               >
-                <div className="w-10 h-10 rounded-control bg-indigo-600 flex items-center justify-center text-xs font-black text-white overflow-hidden relative shrink-0">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-xs font-black text-white overflow-hidden relative shrink-0">
                   {profile?.photoURL ? (
                     <Image src={profile.photoURL} alt={profile.name} fill unoptimized className="object-cover" />
                   ) : (

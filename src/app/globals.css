@@ -367,6 +367,8 @@ html[data-daypart="malam"] .auth-day, html[data-daypart="malam"] .auth-sun { dis
 html:not([data-daypart]) .auth-greet[data-p="sore"],
 html[data-daypart="pagi"] .auth-greet[data-p="pagi"], html[data-daypart="siang"] .auth-greet[data-p="siang"],
 html[data-daypart="sore"] .auth-greet[data-p="sore"], html[data-daypart="malam"] .auth-greet[data-p="malam"] { display: inline; }
+/* Kartu sapaan dashboard: di HP bulan/matahari menabrak angka saldo — sembunyikan. */
+@media (max-width: 767px) { .auth-hero .auth-moon, .auth-hero .auth-sun { display: none !important; } }
 /* Animasi masuk pakai CSS (bukan JS) supaya jalan sejak frame pertama, tidak menunggu hydrate. */
 .auth-enter { animation: auth-enter .6s cubic-bezier(.16, 1, .3, 1) both; animation-delay: var(--d, 0s); }
 @keyframes auth-enter { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
