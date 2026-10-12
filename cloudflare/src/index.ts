@@ -6751,6 +6751,20 @@ async function handleAdminUserById(request: Request, env: Env, userId: string) {
       return json({ error: "Admin tidak bisa menghapus akun sendiri." }, { status: 400 });
     }
 
+    // Pemilik dompet bersama tidak bisa dihapus sebelum kepemilikan diserahkan
+    // (keputusan Bos; FK sw_wallets.owner_id RESTRICT). Sebelum migrasi 0009
+    // diterapkan tabelnya belum ada → lewati cek.
+    const ownedWallets = await env.DB.prepare("SELECT COUNT(*) AS n FROM sw_wallets WHERE owner_id = ?")
+      .bind(userId)
+      .first<{ n: number }>()
+      .catch(() => null);
+    if ((ownedWallets?.n ?? 0) > 0) {
+      return json(
+        { error: "User ini masih pemilik dompet bersama. Minta user menyerahkan kepemilikan atau menghapus dompetnya dulu." },
+        { status: 409 }
+      );
+    }
+
     await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
     await insertAdminLog(
       env,
@@ -9089,6 +9103,654 @@ const processMaturedDeposits = async (env: Env) => {
 // App-nya same-origin (frontend + API disajikan dari Worker yang sama), jadi
 // CORS lintas-origin normalnya tidak pernah dipakai — daftar ini cuma buat
 // jaga-jaga (preview domain, dev lokal), bukan wildcard "*" yang kebuka lebar.
+// ===== Dompet Bersama (Mode Keluarga/Patungan) fase 1 =====
+// Rancangan: docs/rancangan/shared-wallet.md (ACC Bos 2026-10-12). Buku kas
+// TERPISAH (tabel sw_*): tidak menyentuh transactions/accounts/budgets pribadi,
+// jadi isolasi data pribadi tetap seperti sebelumnya. Setiap akses ke dompet
+// lewat requireWalletRole (keanggotaan dibaca dengan user_id dari sesi);
+// wallet_id/txId dari URL tidak pernah dipercaya tanpa cek itu. Saldo = SUM
+// (tanpa UPDATE balance → bebas race), uang INTEGER rupiah utuh, anti-dobel
+// lewat UNIQUE (wallet_id, client_request_id). Respons tidak memuat email
+// anggota — hanya display_name.
+
+type SwRole = "owner" | "editor" | "viewer";
+type SwWalletAccess = { id: string; name: string; currency: string; owner_id: string; archived_at: string | null; role: SwRole };
+
+// Keputusan Bos #1: FREE 1 dompet/3 anggota, PRO 5 dompet/10 anggota.
+const SW_LIMITS: Record<"FREE" | "PRO", { wallets: number; members: number }> = {
+  FREE: { wallets: 1, members: 3 },
+  PRO: { wallets: 5, members: 10 },
+};
+const SW_ROLE_RANK: Record<SwRole, number> = { viewer: 1, editor: 2, owner: 3 };
+const SW_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const SW_CLIENT_ID_RE = /^[A-Za-z0-9_-]{8,64}$/;
+const SW_MAX_AMOUNT = 1_000_000_000_000; // Rp1 triliun per transaksi
+const SW_INVITE_MAX_DAYS = 30;
+
+const swLimitsFor = (plan: string | null | undefined) => SW_LIMITS[plan === "PRO" ? "PRO" : "FREE"];
+
+const swCleanText = (value: unknown, max: number) =>
+  typeof value === "string" ? value.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, max) : "";
+
+const swDisplayName = (name: string | null | undefined) => swCleanText(name, 60) || "Anggota";
+
+const swIsValidDay = (value: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const d = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
+};
+
+const swParseAmount = (value: unknown): number | null => {
+  // String hanya digit polos — "1e3", "0x10", "1.000" ditolak.
+  const n = typeof value === "string" ? (/^\d{1,13}$/.test(value) ? Number(value) : NaN) : value;
+  if (typeof n !== "number" || !Number.isSafeInteger(n) || n <= 0 || n > SW_MAX_AMOUNT) return null;
+  return n;
+};
+
+const swForbidden = (message: string) => json({ error: message }, { status: 403 });
+const swNotFound = () => json({ error: "Dompet bersama tidak ditemukan." }, { status: 404 });
+
+// Peran user di dompet — null = bukan anggota (dijawab 404, bukan 403, supaya
+// keberadaan dompet orang lain tidak bisa ditebak).
+const requireWalletRole = async (env: Env, userId: string, walletId: string): Promise<SwWalletAccess | null> => {
+  if (!SW_ID_RE.test(walletId)) return null;
+  return env.DB.prepare(
+    `SELECT w.id, w.name, w.currency, w.owner_id, w.archived_at, m.role
+       FROM sw_wallets w
+       JOIN sw_members m ON m.wallet_id = w.id
+      WHERE w.id = ? AND m.user_id = ?`
+  )
+    .bind(walletId, userId)
+    .first<SwWalletAccess>();
+};
+
+const swActivity = (env: Env, walletId: string, actorId: string, action: string, targetId: string | null) =>
+  env.DB.prepare("INSERT INTO sw_activity (id, wallet_id, actor_id, action, target_id, created_at) VALUES (?, ?, ?, ?, ?, ?)").bind(
+    generateId(),
+    walletId,
+    actorId,
+    action,
+    targetId,
+    nowIso()
+  );
+
+// Kabari semua anggota lewat room realtime pribadi masing-masing. Payload tanpa
+// nominal — klien me-refetch lewat API ber-auth. Gagal kirim tidak menggagalkan tulis.
+const swNotifyMembers = async (env: Env, walletId: string) => {
+  try {
+    const { results } = await env.DB.prepare("SELECT user_id FROM sw_members WHERE wallet_id = ?").bind(walletId).all<{ user_id: string }>();
+    await Promise.all(
+      (results ?? []).map(async ({ user_id }) => {
+        try {
+          const room = env.REALTIME_ROOM.get(env.REALTIME_ROOM.idFromName(`member:${user_id}`));
+          await room.fetch("https://realtime.internal/publish", {
+            method: "POST",
+            body: JSON.stringify({ event: "shared_wallet.changed", payload: { walletId } }),
+          });
+        } catch {
+          // klien tetap bisa refresh manual
+        }
+      })
+    );
+  } catch (error) {
+    console.error("Dompet bersama: gagal notifikasi realtime", error);
+  }
+};
+
+const swCurrentMonth = () => todayWIB().slice(0, 7);
+
+async function handleListSharedWallets(env: Env, user: AppUser) {
+  const { results } = await env.DB.prepare(
+    `SELECT w.id, w.name, w.currency, w.archived_at, m.role,
+            (SELECT COUNT(*) FROM sw_members mm WHERE mm.wallet_id = w.id) AS member_count,
+            COALESCE((SELECT SUM(CASE WHEN t.type = 'pemasukan' THEN t.amount ELSE -t.amount END)
+                        FROM sw_transactions t WHERE t.wallet_id = w.id AND t.deleted_at IS NULL), 0) AS balance
+       FROM sw_members m
+       JOIN sw_wallets w ON w.id = m.wallet_id
+      WHERE m.user_id = ?
+      ORDER BY w.archived_at IS NOT NULL, w.created_at`
+  )
+    .bind(user.id)
+    .all();
+  const limits = swLimitsFor(user.plan);
+  const owned = await env.DB.prepare("SELECT COUNT(*) AS n FROM sw_wallets WHERE owner_id = ? AND archived_at IS NULL")
+    .bind(user.id)
+    .first<{ n: number }>();
+  return json({ items: results ?? [], limits: { ...limits, plan: user.plan, ownedActive: owned?.n ?? 0 } });
+}
+
+async function handleCreateSharedWallet(request: Request, env: Env, user: AppUser) {
+  const payload = await parseJson<{ name?: unknown }>(request);
+  const name = swCleanText(payload.name, 60);
+  if (name.length < 2) return json({ error: "Nama dompet minimal 2 karakter." }, { status: 400 });
+
+  const limits = swLimitsFor(user.plan);
+  const owned = await env.DB.prepare("SELECT COUNT(*) AS n FROM sw_wallets WHERE owner_id = ? AND archived_at IS NULL")
+    .bind(user.id)
+    .first<{ n: number }>();
+  if ((owned?.n ?? 0) >= limits.wallets) {
+    return json(
+      {
+        error:
+          user.plan === "PRO"
+            ? `Batas ${limits.wallets} dompet bersama aktif sudah tercapai. Arsipkan salah satu dulu.`
+            : "Paket FREE bisa membuat 1 dompet bersama. Upgrade ke PRO untuk sampai 5 dompet.",
+      },
+      { status: 403 }
+    );
+  }
+
+  const id = generateId();
+  const now = nowIso();
+  await env.DB.batch([
+    env.DB.prepare(
+      "INSERT INTO sw_wallets (id, name, currency, owner_id, archived_at, created_at, updated_at) VALUES (?, ?, 'IDR', ?, NULL, ?, ?)"
+    ).bind(id, name, user.id, now, now),
+    env.DB.prepare("INSERT INTO sw_members (wallet_id, user_id, role, display_name, joined_at) VALUES (?, ?, 'owner', ?, ?)").bind(
+      id,
+      user.id,
+      swDisplayName(user.name),
+      now
+    ),
+    swActivity(env, id, user.id, "wallet_create", null),
+  ]);
+  return json({ ok: true, id }, { status: 201 });
+}
+
+async function handleGetSharedWallet(env: Env, user: AppUser, wallet: SwWalletAccess) {
+  const month = swCurrentMonth();
+  const [totals, monthTotals, members, budgets, spent, activity] = await Promise.all([
+    env.DB.prepare(
+      `SELECT COALESCE(SUM(CASE WHEN type = 'pemasukan' THEN amount ELSE -amount END), 0) AS balance
+         FROM sw_transactions WHERE wallet_id = ? AND deleted_at IS NULL`
+    )
+      .bind(wallet.id)
+      .first<{ balance: number }>(),
+    env.DB.prepare(
+      `SELECT COALESCE(SUM(CASE WHEN type = 'pemasukan' THEN amount ELSE 0 END), 0) AS income,
+              COALESCE(SUM(CASE WHEN type = 'pengeluaran' THEN amount ELSE 0 END), 0) AS expense
+         FROM sw_transactions WHERE wallet_id = ? AND deleted_at IS NULL AND substr(date, 1, 7) = ?`
+    )
+      .bind(wallet.id, month)
+      .first<{ income: number; expense: number }>(),
+    env.DB.prepare(
+      `SELECT user_id, display_name, role, joined_at FROM sw_members WHERE wallet_id = ?
+        ORDER BY CASE role WHEN 'owner' THEN 0 WHEN 'editor' THEN 1 ELSE 2 END, joined_at`
+    )
+      .bind(wallet.id)
+      .all(),
+    env.DB.prepare("SELECT category, amount FROM sw_budgets WHERE wallet_id = ? ORDER BY category").bind(wallet.id).all<{ category: string; amount: number }>(),
+    env.DB.prepare(
+      `SELECT category, SUM(amount) AS spent FROM sw_transactions
+        WHERE wallet_id = ? AND deleted_at IS NULL AND type = 'pengeluaran' AND substr(date, 1, 7) = ?
+        GROUP BY category`
+    )
+      .bind(wallet.id, month)
+      .all<{ category: string; spent: number }>(),
+    env.DB.prepare(
+      `SELECT a.action, a.target_id, a.created_at, COALESCE(m.display_name, 'Mantan anggota') AS actor_name
+         FROM sw_activity a LEFT JOIN sw_members m ON m.wallet_id = a.wallet_id AND m.user_id = a.actor_id
+        WHERE a.wallet_id = ? ORDER BY a.created_at DESC LIMIT 20`
+    )
+      .bind(wallet.id)
+      .all(),
+  ]);
+  const spentBy = new Map((spent.results ?? []).map((r) => [r.category, r.spent]));
+  let invites: unknown[] = [];
+  if (wallet.role === "owner") {
+    const r = await env.DB.prepare(
+      `SELECT id, role, max_uses, used_count, expires_at, created_at FROM sw_invites
+        WHERE wallet_id = ? AND revoked_at IS NULL AND expires_at > ? AND used_count < max_uses
+        ORDER BY created_at DESC`
+    )
+      .bind(wallet.id, nowIso())
+      .all();
+    invites = r.results ?? [];
+  }
+  const owner = await env.DB.prepare("SELECT plan FROM users WHERE id = ?").bind(wallet.owner_id).first<{ plan: string }>();
+  return json({
+    wallet: { id: wallet.id, name: wallet.name, currency: wallet.currency, archived_at: wallet.archived_at, role: wallet.role, me: user.id },
+    month,
+    balance: totals?.balance ?? 0,
+    income: monthTotals?.income ?? 0,
+    expense: monthTotals?.expense ?? 0,
+    members: members.results ?? [],
+    memberLimit: swLimitsFor(owner?.plan).members,
+    budgets: (budgets.results ?? []).map((b) => ({ ...b, spent: spentBy.get(b.category) ?? 0 })),
+    invites,
+    activity: activity.results ?? [],
+  });
+}
+
+async function handleUpdateSharedWallet(request: Request, env: Env, user: AppUser, wallet: SwWalletAccess) {
+  if (wallet.role !== "owner") return swForbidden("Hanya pemilik dompet yang bisa mengubah pengaturan dompet.");
+  const payload = await parseJson<{ name?: unknown; archived?: unknown }>(request);
+  const now = nowIso();
+  if (payload.name !== undefined) {
+    const name = swCleanText(payload.name, 60);
+    if (name.length < 2) return json({ error: "Nama dompet minimal 2 karakter." }, { status: 400 });
+    await env.DB.batch([
+      env.DB.prepare("UPDATE sw_wallets SET name = ?, updated_at = ? WHERE id = ?").bind(name, now, wallet.id),
+      swActivity(env, wallet.id, user.id, "wallet_rename", null),
+    ]);
+  }
+  if (typeof payload.archived === "boolean") {
+    if (!payload.archived && wallet.archived_at) {
+      // Buka arsip = dompet aktif lagi → kena batas paket.
+      const owned = await env.DB.prepare("SELECT COUNT(*) AS n FROM sw_wallets WHERE owner_id = ? AND archived_at IS NULL")
+        .bind(user.id)
+        .first<{ n: number }>();
+      if ((owned?.n ?? 0) >= swLimitsFor(user.plan).wallets) {
+        return json({ error: "Batas dompet bersama aktif untuk paketmu sudah tercapai." }, { status: 403 });
+      }
+    }
+    await env.DB.batch([
+      env.DB.prepare("UPDATE sw_wallets SET archived_at = ?, updated_at = ? WHERE id = ?").bind(payload.archived ? now : null, now, wallet.id),
+      swActivity(env, wallet.id, user.id, payload.archived ? "wallet_archive" : "wallet_unarchive", null),
+    ]);
+  }
+  await swNotifyMembers(env, wallet.id);
+  return json({ ok: true });
+}
+
+// Hapus permanen hanya kalau pemilik adalah satu-satunya anggota — tidak ada
+// catatan milik orang lain yang ikut hilang. Selain itu: arsipkan atau serahkan.
+async function handleDeleteSharedWallet(env: Env, wallet: SwWalletAccess) {
+  if (wallet.role !== "owner") return swForbidden("Hanya pemilik dompet yang bisa menghapus dompet.");
+  const others = await env.DB.prepare("SELECT COUNT(*) AS n FROM sw_members WHERE wallet_id = ? AND role <> 'owner'")
+    .bind(wallet.id)
+    .first<{ n: number }>();
+  if ((others?.n ?? 0) > 0) {
+    return json({ error: "Dompet masih punya anggota lain. Keluarkan anggota dulu, atau arsipkan dompet." }, { status: 409 });
+  }
+  await env.DB.prepare("DELETE FROM sw_wallets WHERE id = ? AND owner_id = ?").bind(wallet.id, wallet.owner_id).run();
+  return json({ ok: true });
+}
+
+async function handleListSharedWalletTransactions(env: Env, url: URL, wallet: SwWalletAccess) {
+  const monthParam = url.searchParams.get("month") ?? swCurrentMonth();
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(monthParam)) return json({ error: "Format bulan harus YYYY-MM." }, { status: 400 });
+  const { results } = await env.DB.prepare(
+    `SELECT t.id, t.type, t.amount, t.category, t.note, t.date, t.created_by, t.created_at, t.updated_at,
+            COALESCE(m.display_name, 'Mantan anggota') AS created_by_name
+       FROM sw_transactions t
+       LEFT JOIN sw_members m ON m.wallet_id = t.wallet_id AND m.user_id = t.created_by
+      WHERE t.wallet_id = ? AND t.deleted_at IS NULL AND substr(t.date, 1, 7) = ?
+      ORDER BY t.date DESC, t.created_at DESC
+      LIMIT 500`
+  )
+    .bind(wallet.id, monthParam)
+    .all();
+  return json({ items: results ?? [], month: monthParam });
+}
+
+type SwTxInput = { type?: unknown; amount?: unknown; category?: unknown; note?: unknown; date?: unknown; clientRequestId?: unknown };
+
+const swValidateTx = (payload: SwTxInput, partial: boolean) => {
+  const out: { type?: string; amount?: number; category?: string; note?: string | null; date?: string } = {};
+  if (!partial || payload.type !== undefined) {
+    if (payload.type !== "pemasukan" && payload.type !== "pengeluaran") return { error: "Jenis transaksi harus pemasukan atau pengeluaran." };
+    out.type = payload.type;
+  }
+  if (!partial || payload.amount !== undefined) {
+    const amount = swParseAmount(payload.amount);
+    if (amount === null) return { error: "Nominal harus bilangan bulat rupiah lebih dari 0." };
+    out.amount = amount;
+  }
+  if (!partial || payload.category !== undefined) {
+    const category = swCleanText(payload.category, 40);
+    if (!category) return { error: "Kategori wajib diisi." };
+    out.category = category;
+  }
+  if (payload.note !== undefined) out.note = swCleanText(payload.note, 200) || null;
+  if (!partial || payload.date !== undefined) {
+    const date = payload.date === undefined || payload.date === "" ? todayWIB() : String(payload.date);
+    if (!swIsValidDay(date)) return { error: "Tanggal tidak valid." };
+    out.date = date;
+  }
+  return { value: out };
+};
+
+async function handleCreateSharedWalletTransaction(request: Request, env: Env, user: AppUser, wallet: SwWalletAccess) {
+  if (SW_ROLE_RANK[wallet.role] < SW_ROLE_RANK.editor) return swForbidden("Peran Pengamat hanya bisa melihat, tidak bisa mencatat.");
+  if (wallet.archived_at) return swForbidden("Dompet ini sudah diarsipkan.");
+  const payload = await parseJson<SwTxInput>(request);
+  const clientRequestId = typeof payload.clientRequestId === "string" ? payload.clientRequestId : "";
+  if (!SW_CLIENT_ID_RE.test(clientRequestId)) return json({ error: "clientRequestId tidak valid." }, { status: 400 });
+  const checked = swValidateTx(payload, false);
+  if ("error" in checked) return json({ error: checked.error }, { status: 400 });
+  const tx = checked.value;
+
+  const id = generateId();
+  const now = nowIso();
+  const result = await env.DB.prepare(
+    `INSERT OR IGNORE INTO sw_transactions
+       (id, wallet_id, type, amount, category, note, date, paid_by, created_by, client_request_id, deleted_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`
+  )
+    .bind(id, wallet.id, tx.type, tx.amount, tx.category, tx.note ?? null, tx.date, user.id, user.id, clientRequestId, now, now)
+    .run();
+  if ((result.meta?.changes ?? 0) === 0) {
+    // Klik dobel / retry jaringan: kembalikan transaksi yang sudah tercatat.
+    const existing = await env.DB.prepare("SELECT id FROM sw_transactions WHERE wallet_id = ? AND client_request_id = ?")
+      .bind(wallet.id, clientRequestId)
+      .first<{ id: string }>();
+    return json({ ok: true, id: existing?.id ?? null, duplicate: true });
+  }
+  await swActivity(env, wallet.id, user.id, "tx_create", id).run();
+  await swNotifyMembers(env, wallet.id);
+  return json({ ok: true, id }, { status: 201 });
+}
+
+// Keputusan Bos #3: editor hanya boleh mengubah/menghapus transaksi buatannya
+// sendiri; owner boleh semua. txId selalu dicari dengan AND wallet_id = ?.
+const swLoadEditableTx = async (env: Env, user: AppUser, wallet: SwWalletAccess, txId: string) => {
+  if (SW_ROLE_RANK[wallet.role] < SW_ROLE_RANK.editor) return { error: swForbidden("Peran Pengamat hanya bisa melihat.") };
+  if (wallet.archived_at) return { error: swForbidden("Dompet ini sudah diarsipkan.") };
+  if (!SW_ID_RE.test(txId)) return { error: json({ error: "Transaksi tidak ditemukan." }, { status: 404 }) };
+  const row = await env.DB.prepare("SELECT id, created_by FROM sw_transactions WHERE id = ? AND wallet_id = ? AND deleted_at IS NULL")
+    .bind(txId, wallet.id)
+    .first<{ id: string; created_by: string | null }>();
+  if (!row) return { error: json({ error: "Transaksi tidak ditemukan." }, { status: 404 }) };
+  if (wallet.role !== "owner" && row.created_by !== user.id) {
+    return { error: swForbidden("Kamu hanya bisa mengubah transaksi yang kamu catat sendiri.") };
+  }
+  return { row };
+};
+
+async function handleUpdateSharedWalletTransaction(request: Request, env: Env, user: AppUser, wallet: SwWalletAccess, txId: string) {
+  const loaded = await swLoadEditableTx(env, user, wallet, txId);
+  if (loaded.error) return loaded.error;
+  const checked = swValidateTx(await parseJson<SwTxInput>(request), true);
+  if ("error" in checked) return json({ error: checked.error }, { status: 400 });
+  const tx = checked.value;
+  // Kolom dari daftar tetap di kode — tidak ada nama kolom dari request.
+  const columns = (["type", "amount", "category", "note", "date"] as const).filter((k) => tx[k] !== undefined);
+  if (columns.length === 0) return json({ error: "Tidak ada perubahan." }, { status: 400 });
+  const assignments = columns.map((k) => `${k} = ?`).join(", ");
+  await env.DB.batch([
+    env.DB.prepare(`UPDATE sw_transactions SET ${assignments}, updated_at = ? WHERE id = ? AND wallet_id = ? AND deleted_at IS NULL`).bind(
+      ...columns.map((k) => tx[k] ?? null),
+      nowIso(),
+      txId,
+      wallet.id
+    ),
+    swActivity(env, wallet.id, user.id, "tx_update", txId),
+  ]);
+  await swNotifyMembers(env, wallet.id);
+  return json({ ok: true });
+}
+
+async function handleDeleteSharedWalletTransaction(env: Env, user: AppUser, wallet: SwWalletAccess, txId: string) {
+  const loaded = await swLoadEditableTx(env, user, wallet, txId);
+  if (loaded.error) return loaded.error;
+  const now = nowIso();
+  await env.DB.batch([
+    env.DB.prepare("UPDATE sw_transactions SET deleted_at = ?, updated_at = ? WHERE id = ? AND wallet_id = ? AND deleted_at IS NULL").bind(
+      now,
+      now,
+      txId,
+      wallet.id
+    ),
+    swActivity(env, wallet.id, user.id, "tx_delete", txId),
+  ]);
+  await swNotifyMembers(env, wallet.id);
+  return json({ ok: true });
+}
+
+// PUT { category, amount } — amount 0/null menghapus budget kategori itu.
+async function handleSetSharedWalletBudget(request: Request, env: Env, user: AppUser, wallet: SwWalletAccess) {
+  if (SW_ROLE_RANK[wallet.role] < SW_ROLE_RANK.editor) return swForbidden("Peran Pengamat hanya bisa melihat.");
+  if (wallet.archived_at) return swForbidden("Dompet ini sudah diarsipkan.");
+  const payload = await parseJson<{ category?: unknown; amount?: unknown }>(request);
+  const category = swCleanText(payload.category, 40);
+  if (!category) return json({ error: "Kategori wajib diisi." }, { status: 400 });
+  const now = nowIso();
+  if (payload.amount === 0 || payload.amount === null || payload.amount === "0") {
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM sw_budgets WHERE wallet_id = ? AND category = ?").bind(wallet.id, category),
+      swActivity(env, wallet.id, user.id, "budget_delete", null),
+    ]);
+  } else {
+    const amount = swParseAmount(payload.amount);
+    if (amount === null) return json({ error: "Budget harus bilangan bulat rupiah lebih dari 0." }, { status: 400 });
+    const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM sw_budgets WHERE wallet_id = ? AND category <> ?")
+      .bind(wallet.id, category)
+      .first<{ n: number }>();
+    if ((count?.n ?? 0) >= 30) return json({ error: "Maksimal 30 kategori budget per dompet." }, { status: 400 });
+    await env.DB.batch([
+      env.DB.prepare(
+        `INSERT INTO sw_budgets (wallet_id, category, amount, updated_by, updated_at) VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT (wallet_id, category) DO UPDATE SET amount = excluded.amount, updated_by = excluded.updated_by, updated_at = excluded.updated_at`
+      ).bind(wallet.id, category, amount, user.id, now),
+      swActivity(env, wallet.id, user.id, "budget_set", null),
+    ]);
+  }
+  await swNotifyMembers(env, wallet.id);
+  return json({ ok: true });
+}
+
+async function handleCreateSharedWalletInvite(request: Request, env: Env, user: AppUser, wallet: SwWalletAccess) {
+  if (wallet.role !== "owner") return swForbidden("Hanya pemilik dompet yang bisa membuat undangan.");
+  if (wallet.archived_at) return swForbidden("Dompet ini sudah diarsipkan.");
+  const payload = await parseJson<{ role?: unknown; maxUses?: unknown; expiresDays?: unknown }>(request);
+  const role = payload.role === "viewer" ? "viewer" : payload.role === "editor" ? "editor" : null;
+  if (!role) return json({ error: "Peran undangan harus editor atau viewer." }, { status: 400 });
+  const maxUses = Number(payload.maxUses ?? 1);
+  if (!Number.isInteger(maxUses) || maxUses < 1 || maxUses > 10) return json({ error: "Jumlah pemakaian undangan 1–10." }, { status: 400 });
+  const days = Number(payload.expiresDays ?? 7);
+  if (!Number.isInteger(days) || days < 1 || days > SW_INVITE_MAX_DAYS) {
+    return json({ error: `Masa berlaku undangan 1–${SW_INVITE_MAX_DAYS} hari.` }, { status: 400 });
+  }
+  const active = await env.DB.prepare(
+    "SELECT COUNT(*) AS n FROM sw_invites WHERE wallet_id = ? AND revoked_at IS NULL AND expires_at > ? AND used_count < max_uses"
+  )
+    .bind(wallet.id, nowIso())
+    .first<{ n: number }>();
+  if ((active?.n ?? 0) >= 10) return json({ error: "Maksimal 10 undangan aktif. Cabut undangan lama dulu." }, { status: 400 });
+
+  const token = toBase64Url(crypto.getRandomValues(new Uint8Array(32)).buffer as ArrayBuffer);
+  const id = generateId();
+  const now = nowIso();
+  const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+  await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO sw_invites (id, wallet_id, token_hash, role, max_uses, used_count, expires_at, revoked_at, created_by, created_at)
+       VALUES (?, ?, ?, ?, ?, 0, ?, NULL, ?, ?)`
+    ).bind(id, wallet.id, await sha256Hex(token), role, maxUses, expiresAt, user.id, now),
+    swActivity(env, wallet.id, user.id, "invite_create", id),
+  ]);
+  // Token mentah hanya dikirim SEKALI di sini; yang tersimpan cuma hash-nya.
+  return json({ ok: true, id, token, role, maxUses, expiresAt }, { status: 201 });
+}
+
+async function handleRevokeSharedWalletInvite(env: Env, user: AppUser, wallet: SwWalletAccess, inviteId: string) {
+  if (wallet.role !== "owner") return swForbidden("Hanya pemilik dompet yang bisa mencabut undangan.");
+  if (!SW_ID_RE.test(inviteId)) return json({ error: "Undangan tidak ditemukan." }, { status: 404 });
+  const res = await env.DB.prepare("UPDATE sw_invites SET revoked_at = ? WHERE id = ? AND wallet_id = ? AND revoked_at IS NULL")
+    .bind(nowIso(), inviteId, wallet.id)
+    .run();
+  if ((res.meta?.changes ?? 0) === 0) return json({ error: "Undangan tidak ditemukan." }, { status: 404 });
+  await swActivity(env, wallet.id, user.id, "invite_revoke", inviteId).run();
+  return json({ ok: true });
+}
+
+async function handleJoinSharedWallet(request: Request, env: Env, user: AppUser) {
+  if (!(await checkRateLimit(env, [`sw-join:user:${user.id}`, `sw-join:ip:${clientIpOf(request)}`]))) {
+    return json({ error: "Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi." }, { status: 429 });
+  }
+  const payload = await parseJson<{ token?: unknown }>(request);
+  const token = typeof payload.token === "string" ? payload.token.trim() : "";
+  const invalid = () => json({ error: "Undangan tidak valid, sudah dipakai, atau kedaluwarsa." }, { status: 404 });
+  if (!/^[A-Za-z0-9_-]{40,64}$/.test(token)) return invalid();
+
+  const now = nowIso();
+  const invite = await env.DB.prepare(
+    `SELECT i.id, i.wallet_id, i.role, w.archived_at, u.plan AS owner_plan
+       FROM sw_invites i
+       JOIN sw_wallets w ON w.id = i.wallet_id
+       JOIN users u ON u.id = w.owner_id
+      WHERE i.token_hash = ? AND i.revoked_at IS NULL AND i.expires_at > ? AND i.used_count < i.max_uses`
+  )
+    .bind(await sha256Hex(token), now)
+    .first<{ id: string; wallet_id: string; role: SwRole; archived_at: string | null; owner_plan: string }>();
+  if (!invite || invite.archived_at) return invalid();
+
+  // Sudah anggota → jangan habiskan kuota undangan.
+  const already = await env.DB.prepare("SELECT role FROM sw_members WHERE wallet_id = ? AND user_id = ?")
+    .bind(invite.wallet_id, user.id)
+    .first<{ role: SwRole }>();
+  if (already) return json({ ok: true, walletId: invite.wallet_id, alreadyMember: true });
+
+  // Pakai kuota undangan secara atomik (dua orang klik bersamaan → hanya yang
+  // lolos WHERE used_count < max_uses yang masuk).
+  const claim = await env.DB.prepare(
+    "UPDATE sw_invites SET used_count = used_count + 1 WHERE id = ? AND revoked_at IS NULL AND expires_at > ? AND used_count < max_uses"
+  )
+    .bind(invite.id, now)
+    .run();
+  if ((claim.meta?.changes ?? 0) === 0) return invalid();
+
+  // Batas anggota dicek di statement INSERT yang sama (atomik).
+  const memberLimit = swLimitsFor(invite.owner_plan).members;
+  const inserted = await env.DB.prepare(
+    `INSERT OR IGNORE INTO sw_members (wallet_id, user_id, role, display_name, joined_at)
+     SELECT ?, ?, ?, ?, ?
+      WHERE (SELECT COUNT(*) FROM sw_members WHERE wallet_id = ?) < ?`
+  )
+    .bind(invite.wallet_id, user.id, invite.role, swDisplayName(user.name), now, invite.wallet_id, memberLimit)
+    .run();
+  if ((inserted.meta?.changes ?? 0) === 0) {
+    await env.DB.prepare("UPDATE sw_invites SET used_count = used_count - 1 WHERE id = ? AND used_count > 0").bind(invite.id).run();
+    return json({ error: `Dompet ini sudah penuh (maks ${memberLimit} anggota untuk paket pemiliknya).` }, { status: 409 });
+  }
+  await swActivity(env, invite.wallet_id, user.id, "member_join", user.id).run();
+  await swNotifyMembers(env, invite.wallet_id);
+  return json({ ok: true, walletId: invite.wallet_id }, { status: 201 });
+}
+
+// PATCH { role } — owner mengubah peran anggota lain; role 'owner' =
+// menyerahkan kepemilikan (owner lama turun jadi editor).
+async function handleUpdateSharedWalletMember(request: Request, env: Env, user: AppUser, wallet: SwWalletAccess, memberId: string) {
+  if (wallet.role !== "owner") return swForbidden("Hanya pemilik dompet yang bisa mengubah peran anggota.");
+  if (memberId === user.id) return json({ error: "Tidak bisa mengubah peran sendiri. Serahkan kepemilikan ke anggota lain." }, { status: 400 });
+  const payload = await parseJson<{ role?: unknown }>(request);
+  const role = payload.role;
+  if (role !== "owner" && role !== "editor" && role !== "viewer") return json({ error: "Peran tidak valid." }, { status: 400 });
+  const target = await env.DB.prepare("SELECT user_id FROM sw_members WHERE wallet_id = ? AND user_id = ?")
+    .bind(wallet.id, memberId)
+    .first<{ user_id: string }>();
+  if (!target) return json({ error: "Anggota tidak ditemukan." }, { status: 404 });
+  const now = nowIso();
+
+  if (role === "owner") {
+    if (!wallet.archived_at) {
+      const t = await env.DB.prepare(
+        "SELECT u.plan, (SELECT COUNT(*) FROM sw_wallets w WHERE w.owner_id = u.id AND w.archived_at IS NULL) AS owned FROM users u WHERE u.id = ?"
+      )
+        .bind(memberId)
+        .first<{ plan: string; owned: number }>();
+      if (!t || t.owned >= swLimitsFor(t.plan).wallets) {
+        return json({ error: "Anggota ini sudah mencapai batas dompet bersama untuk paketnya." }, { status: 409 });
+      }
+    }
+    // owner_id = ? di WHERE: kalau dua serah-terima balapan, yang kedua no-op.
+    const results = await env.DB.batch([
+      env.DB.prepare("UPDATE sw_wallets SET owner_id = ?, updated_at = ? WHERE id = ? AND owner_id = ?").bind(memberId, now, wallet.id, user.id),
+      env.DB.prepare(
+        "UPDATE sw_members SET role = 'owner' WHERE wallet_id = ? AND user_id = ? AND (SELECT owner_id FROM sw_wallets WHERE id = ?) = ?"
+      ).bind(wallet.id, memberId, wallet.id, memberId),
+      env.DB.prepare(
+        "UPDATE sw_members SET role = 'editor' WHERE wallet_id = ? AND user_id = ? AND (SELECT owner_id FROM sw_wallets WHERE id = ?) = ?"
+      ).bind(wallet.id, user.id, wallet.id, memberId),
+      swActivity(env, wallet.id, user.id, "owner_transfer", memberId),
+    ]);
+    if ((results[0].meta?.changes ?? 0) === 0) return json({ error: "Kepemilikan sudah berubah. Muat ulang halaman." }, { status: 409 });
+  } else {
+    await env.DB.batch([
+      env.DB.prepare("UPDATE sw_members SET role = ? WHERE wallet_id = ? AND user_id = ? AND role <> 'owner'").bind(role, wallet.id, memberId),
+      swActivity(env, wallet.id, user.id, "role_change", memberId),
+    ]);
+  }
+  await swNotifyMembers(env, wallet.id);
+  return json({ ok: true });
+}
+
+// DELETE — owner mengeluarkan anggota lain, atau anggota (non-owner) keluar sendiri.
+async function handleRemoveSharedWalletMember(env: Env, user: AppUser, wallet: SwWalletAccess, memberId: string) {
+  const self = memberId === user.id;
+  if (self && wallet.role === "owner") {
+    return json({ error: "Pemilik tidak bisa keluar. Serahkan kepemilikan ke anggota lain dulu." }, { status: 400 });
+  }
+  if (!self && wallet.role !== "owner") return swForbidden("Hanya pemilik dompet yang bisa mengeluarkan anggota.");
+  const res = await env.DB.prepare("DELETE FROM sw_members WHERE wallet_id = ? AND user_id = ? AND role <> 'owner'")
+    .bind(wallet.id, memberId)
+    .run();
+  if ((res.meta?.changes ?? 0) === 0) return json({ error: "Anggota tidak ditemukan." }, { status: 404 });
+  await swActivity(env, wallet.id, user.id, self ? "member_leave" : "member_remove", memberId).run();
+  await swNotifyMembers(env, wallet.id);
+  return json({ ok: true });
+}
+
+const SW_BASE = "/api/member/shared-wallets";
+
+async function handleSharedWallets(request: Request, env: Env, url: URL) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const user = authResult.session.user;
+  const method = request.method;
+  try {
+    const rest = url.pathname.slice(SW_BASE.length).replace(/^\//, "");
+    const parts = rest ? rest.split("/") : [];
+
+    if (parts.length === 0) {
+      if (method === "GET") return await handleListSharedWallets(env, user);
+      if (method === "POST") return await handleCreateSharedWallet(request, env, user);
+      return json({ error: "Method not allowed" }, { status: 405 });
+    }
+    if (parts.length === 1 && parts[0] === "join") {
+      if (method === "POST") return await handleJoinSharedWallet(request, env, user);
+      return json({ error: "Method not allowed" }, { status: 405 });
+    }
+
+    const wallet = await requireWalletRole(env, user.id, parts[0]);
+    if (!wallet) return swNotFound();
+    const [, sub, subId] = parts;
+
+    if (!sub && parts.length === 1) {
+      if (method === "GET") return await handleGetSharedWallet(env, user, wallet);
+      if (method === "PATCH") return await handleUpdateSharedWallet(request, env, user, wallet);
+      if (method === "DELETE") return await handleDeleteSharedWallet(env, wallet);
+    }
+    if (sub === "transactions" && parts.length === 2) {
+      if (method === "GET") return await handleListSharedWalletTransactions(env, url, wallet);
+      if (method === "POST") return await handleCreateSharedWalletTransaction(request, env, user, wallet);
+    }
+    if (sub === "transactions" && parts.length === 3) {
+      if (method === "PATCH") return await handleUpdateSharedWalletTransaction(request, env, user, wallet, subId);
+      if (method === "DELETE") return await handleDeleteSharedWalletTransaction(env, user, wallet, subId);
+    }
+    if (sub === "budgets" && parts.length === 2 && method === "PUT") return await handleSetSharedWalletBudget(request, env, user, wallet);
+    if (sub === "invites" && parts.length === 2 && method === "POST") return await handleCreateSharedWalletInvite(request, env, user, wallet);
+    if (sub === "invites" && parts.length === 3 && method === "DELETE") return await handleRevokeSharedWalletInvite(env, user, wallet, subId);
+    if (sub === "members" && parts.length === 3) {
+      if (method === "PATCH") return await handleUpdateSharedWalletMember(request, env, user, wallet, subId);
+      if (method === "DELETE") return await handleRemoveSharedWalletMember(env, user, wallet, subId);
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (error) {
+    // Migrasi 0009 belum diterapkan → jawab jujur, jangan bocorkan pesan D1.
+    if (error instanceof Error && /no such table: sw_/.test(error.message)) {
+      console.error("Dompet bersama: tabel sw_* belum ada (migrasi 0009 belum diterapkan)");
+      return json({ error: "Fitur Dompet Bersama belum aktif. Coba lagi nanti." }, { status: 503 });
+    }
+    if (error instanceof Error && error.message === "Payload JSON tidak valid.") {
+      return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    }
+    throw error;
+  }
+}
+
 const ALLOWED_ORIGINS = new Set([
   "https://www.leosiqra.com",
   "https://leosiqra.com",
@@ -9306,6 +9968,9 @@ const worker = {
       }
       if (url.pathname === "/api/member/feedback" && request.method === "GET") {
         return await handleListMyFeedback(request, env);
+      }
+      if (url.pathname === SW_BASE || url.pathname.startsWith(`${SW_BASE}/`)) {
+        return await handleSharedWallets(request, env, url);
       }
       if (url.pathname.startsWith("/api/market/coingecko/") && request.method === "GET") {
         return await handleCoinGeckoProxy(request, env, url.pathname.slice("/api/market/coingecko/".length));

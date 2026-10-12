@@ -22,6 +22,7 @@ import {
   Compass,
   Headphones,
   MessageSquareHeart,
+  Users,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -70,6 +71,7 @@ export const navGroups: NavGroup[] = [
       { label: 'Rekening', href: '/membership/rekening', icon: Building2 },
       { label: 'Kartu Saya', href: '/membership/cards', icon: CreditCard },
       { label: 'Tabungan', href: '/membership/tabungan', icon: PiggyBank },
+      { label: 'Dompet Bersama', href: '/membership/dompet-bersama', icon: Users },
     ],
   },
   {
