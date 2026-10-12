@@ -8473,6 +8473,11 @@ const sendMonthlyReports = async (env: Env) => {
   if (Number(today.slice(8, 10)) > MONTHLY_REPORT_LAST_DAY) return;
   const [y, m] = today.slice(0, 7).split("-").map(Number);
   const period = new Date(Date.UTC(y, m - 2, 1)).toISOString().slice(0, 7); // bulan lalu (WIB)
+  // Klaim 'mengirim' yang nyangkut > 6 jam (Worker terhenti di tengah kirim) dilepas supaya
+  // dicoba lagi; kalau ternyata sudah terkirim, Idempotency-Key Resend (24 jam) mencegah dobel.
+  await env.DB.prepare(`DELETE FROM monthly_report_log WHERE period = ? AND status = 'mengirim' AND created_at < ?`)
+    .bind(period, new Date(Date.now() - 6 * 3600e3).toISOString())
+    .run();
 
   const { results } = await env.DB.prepare(
     `SELECT u.id, u.email, u.name
