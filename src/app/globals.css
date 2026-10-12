@@ -339,3 +339,23 @@ html.no-zoom {
 .guide-body th, .guide-body td { padding: 0.65rem 0.9rem; border-bottom: 1px solid #f1f5f9; }
 .guide-body tr:last-child td { border-bottom: 0; }
 .guide-body td.num, .guide-body th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ===== Leo (maskot singa) & latar auth ===== */
+.leo-breathe { animation: leo-breathe 4.2s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+@keyframes leo-breathe { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-2px) scale(1.012); } }
+.leo-mane { animation: leo-mane 6s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 50%; }
+@keyframes leo-mane { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+.leo-ear-l, .leo-ear-r { transform-box: fill-box; transform-origin: 50% 100%; animation: leo-ear 7s ease-in-out infinite; }
+.leo-ear-r { animation-delay: 3.4s; }
+@keyframes leo-ear { 0%, 86%, 100% { transform: rotate(0); } 89% { transform: rotate(-14deg); } 92% { transform: rotate(8deg); } 95% { transform: rotate(-4deg); } }
+.leo-blink { transform-box: fill-box; transform-origin: 50% 50%; animation: leo-blink 5.5s infinite; }
+@keyframes leo-blink { 0%, 93%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.08); } 97% { transform: scaleY(1); } }
+.auth-cloud { animation: auth-cloud linear infinite; }
+@keyframes auth-cloud { from { transform: translateX(-30%); } to { transform: translateX(130%); } }
+.auth-star { animation: auth-star 3.2s ease-in-out infinite; }
+@keyframes auth-star { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+.auth-window { animation: auth-window 6s ease-in-out infinite; }
+@keyframes auth-window { 0%, 100% { opacity: 0.95; } 50% { opacity: 0.55; } }
+@media (prefers-reduced-motion: reduce) {
+  .leo-breathe, .leo-mane, .leo-ear-l, .leo-ear-r, .leo-blink, .auth-cloud, .auth-star, .auth-window { animation: none !important; }
+}
