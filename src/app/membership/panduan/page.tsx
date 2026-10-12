@@ -15,7 +15,6 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { ProductTour, TourStep } from '@/components/tour/ProductTour';
-import type { DemoKind } from '@/components/tour/FeatureDemo';
 
 interface GuideItem {
   name: string;
