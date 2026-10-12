@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import {
   Banknote,
@@ -12,6 +13,7 @@ import {
   Gem,
   HandCoins,
   Landmark,
+  Package,
   PiggyBank,
   Plus,
   TrendingUp,
@@ -24,6 +26,7 @@ import { accountService, type Account } from '@/lib/services/accountService';
 import { savingsService, type Saving } from '@/lib/services/savingsService';
 import { investmentService, type Investment } from '@/lib/services/investmentService';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
+import { itemService, type Item } from '@/lib/services/itemService';
 import { exchangeRateService, type ExchangeRates } from '@/lib/services/exchangeRateService';
 import { computeCreditUsage, isCreditAccountType } from '@/lib/creditCard';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
@@ -41,7 +44,7 @@ import { LeoMascot } from '@/components/mascot/LeoMascot';
 
 const HISTORY_KEY = 'leo-networth-history:v1';
 
-const ADD_ITEMS: { label: string; desc: string; icon: LucideIcon; tone: string; modal: ModalType }[] = [
+const ADD_ITEMS: { label: string; desc: string; icon: LucideIcon; tone: string; modal?: ModalType; href?: string }[] = [
   { label: 'Rekening & e-wallet', desc: 'BCA, Mandiri, GoPay, OVO, tunai', icon: Building2, tone: 'bg-blue-50 text-blue-600', modal: 'rekening' },
   { label: 'Tabungan', desc: 'Dana darurat, target, celengan', icon: PiggyBank, tone: 'bg-sky-50 text-sky-600', modal: 'tabungan' },
   { label: 'Saham & reksa dana', desc: 'Portofolio di sekuritas', icon: TrendingUp, tone: 'bg-emerald-50 text-emerald-600', modal: 'saham' },
@@ -49,6 +52,7 @@ const ADD_ITEMS: { label: string; desc: string; icon: LucideIcon; tone: string; 
   { label: 'Emas, kripto, properti', desc: 'Investasi dan aset lainnya', icon: Coins, tone: 'bg-amber-50 text-amber-600', modal: 'investasi_lain' },
   { label: 'Kartu kredit & paylater', desc: 'Limit dan tagihan', icon: CreditCard, tone: 'bg-rose-50 text-rose-500', modal: 'kartu' },
   { label: 'Hutang & piutang', desc: 'Pinjaman dan uang yang dipinjamkan', icon: HandCoins, tone: 'bg-orange-50 text-orange-600', modal: 'hutang_piutang' },
+  { label: 'Barang & koleksi', desc: 'HP, laptop, motor, sneakers, kartu', icon: Package, tone: 'bg-stone-100 text-stone-600', href: '/membership/barang' },
 ];
 
 const readHistory = (): Record<string, number> => {
@@ -61,11 +65,13 @@ const readHistory = (): Record<string, number> => {
 
 export default function KekayaanPage() {
   const { openModal } = useModal();
+  const router = useRouter();
   const [accounts, setAccounts] = useState<Account[] | null>(null);
   const [savings, setSavings] = useState<Saving[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [fx, setFx] = useState<ExchangeRates>({});
+  const [items, setItems] = useState<Item[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [history, setHistory] = useState<Record<string, number>>({});
@@ -87,9 +93,15 @@ export default function KekayaanPage() {
         .catch(console.error)
         .finally(() => setLoaded(true));
     load();
+    const loadItems = () => itemService.list().then(setItems).catch(() => setItems([]));
+    loadItems();
+    const unsubItems = subscribeToCollectionChanges('items', loadItems);
     exchangeRateService.getLatestRates().then(setFx).catch(() => {});
     const unsubs = ['accounts', 'savings', 'investments', 'transactions'].map((c) => subscribeToCollectionChanges(c, load));
-    return () => unsubs.forEach((u) => u());
+    return () => {
+      unsubs.forEach((u) => u());
+      unsubItems();
+    };
   }, []);
 
   const toIdr = (amount: number, currency?: string) => exchangeRateService.convert(amount || 0, currency || 'IDR', 'IDR', fx);
@@ -114,12 +126,13 @@ export default function KekayaanPage() {
       .reduce((s, t) => s + idrOf(t), 0);
     const kartu = credit.reduce((s, a) => s + toIdr(computeCreditUsage(a).used, a.currency), 0) + hutangKartuLama;
     const hutang = unpaid.filter((t) => t.category === 'Hutang' && t.subCategory !== 'Kartu Kredit').reduce((s, t) => s + idrOf(t), 0);
-    const aset = rekening + tabungan + investasi + piutang;
+    const barang = items.reduce((s, i) => s + (Number(i.current_value) || 0), 0);
+    const aset = rekening + tabungan + investasi + piutang + barang;
     const kewajiban = kartu + hutang;
-    return { cash, credit, rekening, tabungan, investasi, activeInv, piutang, kartu, hutang, aset, kewajiban, bersih: aset - kewajiban };
+    return { cash, credit, rekening, tabungan, investasi, activeInv, piutang, barang, kartu, hutang, aset, kewajiban, bersih: aset - kewajiban };
     // toIdr bergantung pada fx — cukup fx di dependency.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accounts, savings, investments, transactions, fx]);
+  }, [accounts, savings, investments, transactions, fx, items]);
 
   // Simpan satu titik riwayat per hari (perangkat ini).
   useEffect(() => {
@@ -143,6 +156,7 @@ export default function KekayaanPage() {
     { label: 'Rekening & e-wallet', icon: Wallet, tone: 'bg-blue-50 text-blue-600', value: w.rekening, sub: `${w.cash.length} rekening` },
     { label: 'Tabungan', icon: PiggyBank, tone: 'bg-sky-50 text-sky-600', value: w.tabungan, sub: `${savings.length} catatan setoran` },
     { label: 'Investasi', icon: TrendingUp, tone: 'bg-emerald-50 text-emerald-600', value: w.investasi, sub: `${w.activeInv.length} aktif · nilai terakhir` },
+    { label: 'Barang & koleksi', icon: Package, tone: 'bg-stone-100 text-stone-600', value: w.barang, sub: `${items.length} barang · nilai taksiran` },
     { label: 'Piutang', icon: HandCoins, tone: 'bg-teal-50 text-teal-600', value: w.piutang, sub: 'Uang yang kamu pinjamkan' },
     { label: 'Kartu kredit', icon: CreditCard, tone: 'bg-rose-50 text-rose-500', value: w.kartu, sub: `${w.credit.length} kartu · tagihan terpakai`, negative: true },
     { label: 'Hutang', icon: Banknote, tone: 'bg-orange-50 text-orange-600', value: w.hutang, sub: 'Pinjaman yang belum lunas', negative: true },
@@ -211,7 +225,7 @@ export default function KekayaanPage() {
               <button
                 key={it.label}
                 type="button"
-                onClick={() => openModal(it.modal)}
+                onClick={() => (it.href ? router.push(it.href) : it.modal && openModal(it.modal))}
                 className="flex w-full items-center gap-3 rounded-2xl px-2.5 py-2.5 text-left transition-colors hover:bg-slate-50"
               >
                 <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', it.tone)}><it.icon size={17} /></span>

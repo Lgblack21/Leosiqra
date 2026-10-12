@@ -16,6 +16,10 @@ import {
   Timer,
   NotebookPen,
   Calculator,
+  Package,
+  Sparkle,
+  Coins,
+  Network,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -36,7 +40,11 @@ export type FeatureId =
   | 'arus'
   | 'fokus'
   | 'jurnal'
-  | 'investasiku';
+  | 'investasiku'
+  | 'barang'
+  | 'koleksi'
+  | 'cuan'
+  | 'kanvas';
 
 export interface FeatureDef {
   id: FeatureId;
@@ -63,6 +71,10 @@ export const FEATURES: FeatureDef[] = [
   { id: 'dompet-bersama', label: 'Dompet bersama', description: 'Kas keluarga atau patungan bareng teman, semua anggota bisa mencatat.', icon: Users, tone: 'bg-teal-50 text-teal-600', href: '/membership/dompet-bersama', navHrefs: ['/membership/dompet-bersama'] },
   { id: 'fokus', label: 'Fokus', description: 'Timer Pomodoro bareng Leo untuk belajar, kerja, atau baca — lengkap dengan rekap mingguan.', icon: Timer, tone: 'bg-indigo-50 text-indigo-600', href: '/membership/fokus', navHrefs: ['/membership/fokus'], isNew: true },
   { id: 'jurnal', label: 'Jurnal', description: 'Satu halaman tiap hari: mood, satu kalimat, dan satu hal yang berarti. Tahunmu jadi titik-titik warna.', icon: NotebookPen, tone: 'bg-pink-50 text-pink-600', href: '/membership/jurnal', navHrefs: ['/membership/jurnal'], isNew: true },
+  { id: 'barang', label: 'Barang', description: 'Semua barang milikmu — HP, laptop, motor — lengkap dengan nilai dan masa garansi.', icon: Package, tone: 'bg-stone-100 text-stone-600', href: '/membership/barang', navHrefs: ['/membership/barang'], isNew: true },
+  { id: 'koleksi', label: 'Koleksi', description: 'Kartu, sneakers, figur, dan barang koleksi lain dengan nilai taksiranmu.', icon: Sparkle, tone: 'bg-yellow-50 text-yellow-600', href: '/membership/koleksi', navHrefs: ['/membership/koleksi'], isNew: true },
+  { id: 'cuan', label: 'Cuan', description: 'Target cuan bulanan, jual barang nganggur, tagih piutang lewat WhatsApp, dan ide dari Leo.', icon: Coins, tone: 'bg-emerald-50 text-emerald-600', href: '/membership/cuan', navHrefs: ['/membership/cuan'], isNew: true },
+  { id: 'kanvas', label: 'Kanvas', description: 'Semua uangmu dalam satu papan: dari uang masuk, rekening, sampai pengeluaran dan tabungan.', icon: Network, tone: 'bg-sky-50 text-sky-600', href: '/membership/kanvas', navHrefs: ['/membership/kanvas'], isNew: true },
   { id: 'pajak', label: 'Pajak Center', description: 'Bantu siapkan data SPT dari catatan keuanganmu.', icon: ShieldCheck, tone: 'bg-slate-100 text-slate-600', href: '/membership/pajak-center', navHrefs: ['/membership/pajak-center'] },
   { id: 'pasar', label: 'Data pasar', description: 'Harga saham, kripto, emas, dan kurs terkini.', icon: Globe, tone: 'bg-cyan-50 text-cyan-600', href: '/membership/market-data', navHrefs: ['/membership/market-data'] },
 ];

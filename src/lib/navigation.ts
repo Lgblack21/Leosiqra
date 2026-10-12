@@ -33,6 +33,10 @@ import {
   NotebookPen,
   Calculator,
   Sparkles,
+  Package,
+  Gem as GemIcon,
+  Coins as CoinsIcon,
+  Network,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -83,6 +87,8 @@ export const navGroups: NavGroup[] = [
       { label: 'Kartu Saya', href: '/membership/cards', icon: CreditCard },
       { label: 'Tabungan', href: '/membership/tabungan', icon: PiggyBank },
       { label: 'Dompet Bersama', href: '/membership/dompet-bersama', icon: Users },
+      { label: 'Barang', href: '/membership/barang', icon: Package },
+      { label: 'Koleksi', href: '/membership/koleksi', icon: GemIcon },
     ],
   },
   {
@@ -105,6 +111,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: 'Laporan Bulanan', href: '/membership/laporan', icon: BarChart3 },
       { label: 'Ikuti Uangmu', href: '/membership/arus', icon: Waypoints },
+      { label: 'Kanvas', href: '/membership/kanvas', icon: Network },
       { label: 'Tutup Hari & Streak', href: '/membership/streak', icon: Flame },
       { label: 'Anggaran', href: '/membership/budget', icon: Target },
       { label: 'Langganan', href: '/membership/langganan', icon: CalendarClock },
@@ -120,6 +127,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: 'Fokus', href: '/membership/fokus', icon: Timer },
       { label: 'Jurnal', href: '/membership/jurnal', icon: NotebookPen },
+      { label: 'Cuan', href: '/membership/cuan', icon: CoinsIcon },
     ],
   },
   {

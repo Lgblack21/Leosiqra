@@ -11,6 +11,7 @@ import { sharedWalletService, type SharedWalletSummary } from '@/lib/services/sh
 import { savingsGoalService, type SavingsGoal } from '@/lib/services/savingsGoalService';
 import { useStreak } from '@/components/streak/CloseDay';
 import { focusService, type FocusSession } from '@/lib/services/focusService';
+import { itemService, type Item } from '@/lib/services/itemService';
 
 export type TileStat = { value: string; sub?: string; progress?: number };
 
@@ -23,6 +24,7 @@ export function FeatureTiles({ base, className }: { base: Partial<Record<Feature
   const [recurring, setRecurring] = useState<RecurringTransaction[] | null>(null);
   const [wallets, setWallets] = useState<SharedWalletSummary[] | null>(null);
   const [goals, setGoals] = useState<SavingsGoal[] | null>(null);
+  const [items, setItems] = useState<Item[] | null>(null);
   const [focus, setFocus] = useState<{ today: string; items: FocusSession[] } | null>(null);
 
   useEffect(() => {
@@ -33,6 +35,7 @@ export function FeatureTiles({ base, className }: { base: Partial<Record<Feature
         .catch(() => setRecurring([]));
     }
     if (isOn('dompet-bersama')) sharedWalletService.list().then((r) => setWallets(r.items)).catch(() => setWallets([]));
+    if (isOn('barang') || isOn('koleksi')) itemService.list().then(setItems).catch(() => setItems(null));
     if (isOn('fokus')) focusService.list().then(setFocus).catch(() => setFocus(null));
     if (isOn('tabungan')) savingsGoalService.getUserSavingsGoals().then(setGoals).catch(() => setGoals([]));
     // isOn berubah identitas tiap render; cukup muat ulang saat daftar fitur aktif berubah.
@@ -59,6 +62,13 @@ export function FeatureTiles({ base, className }: { base: Partial<Record<Feature
     const pct = Math.round(((+n - +start) / (+end - +start)) * 100);
     stats.jurnal = { value: `${left} hari lagi`, sub: `menuju ${n.getFullYear() + 1} · ${pct}% tahun ini`, progress: pct };
   }
+  if (items) {
+    for (const k of ['barang', 'koleksi'] as const) {
+      const list = items.filter((i) => i.kind === k);
+      stats[k] = list.length ? { value: formatIDR(list.reduce((s, i) => s + i.current_value, 0)), sub: `${list.length} ${k}` } : { value: 'Belum ada', sub: `Tambah ${k}` };
+    }
+  }
+  stats.kanvas = { value: 'Lihat aliran', sub: 'Uang masuk → rekening → keluar' };
   stats.investasiku = { value: 'Simulasi', sub: 'SBN vs deposito vs reksa dana' };
   if (recurring) {
     const active = recurring.filter((r) => r.status === 'ACTIVE' && r.type !== 'Tabungan');

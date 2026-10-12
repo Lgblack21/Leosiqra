@@ -52,6 +52,7 @@ import { cloudflareApi } from '@/lib/cloudflare-api';
 import { CloseDayCard } from '@/components/streak/CloseDay';
 import { FeatureTiles, type TileStat } from '@/components/features/FeatureTiles';
 import { useFeatures, type FeatureId } from '@/lib/features';
+import { itemService } from '@/lib/services/itemService';
 
 interface MarketTicker {
   label: string; sub: string; val: string; pct: string; up: boolean | null;
@@ -429,6 +430,12 @@ export default function MonthlyDashboard() {
 
   const router = useRouter();
   const [ask, setAsk] = useState('');
+  const [itemsValue, setItemsValue] = useState(0);
+  useEffect(() => {
+    const load = () => itemService.list().then((l) => setItemsValue(l.reduce((s, i) => s + (Number(i.current_value) || 0), 0))).catch(() => setItemsValue(0));
+    load();
+    return subscribeToCollectionChanges('items', load);
+  }, []);
   const { isOn } = useFeatures();
 
   // Angka untuk kotak "Fitur kamu" — aturan sama dengan halaman Kekayaan.
@@ -440,9 +447,13 @@ export default function MonthlyDashboard() {
   const investasiNilai = investments
     .filter((i) => i.status === 'Active')
     .reduce((s, i) => s + (Number(i.currentValueIDR) || Number(i.amountIDR) || Number(i.amountInvested) || 0), 0);
-  const kekayaanBersih = rekeningAset + totalTabunganSaldo + investasiNilai + piutang - creditCardBills - otherDebts;
+  const kekayaanBersih = rekeningAset + totalTabunganSaldo + investasiNilai + piutang + itemsValue - creditCardBills - otherDebts;
   const featureBase: Partial<Record<FeatureId, TileStat>> = {
     kekayaan: { value: formatRp(kekayaanBersih), sub: 'Kekayaan bersih' },
+    cuan: (() => {
+      const side = transactions.filter((t) => t.type === 'pemasukan' && !/gaji|salary/i.test(t.category || '')).reduce((s, t) => s + toIdrAmount(t), 0);
+      return { value: formatRp(side), sub: 'Cuan bulan ini (di luar gaji)' };
+    })(),
     arus: { value: `${netBalance >= 0 ? '+' : '−'}${formatRp(Math.abs(netBalance))}`, sub: `Masuk ${formatRp(totalPemasukan)} · keluar ${formatRp(totalPengeluaran)}` },
     tabungan: { value: formatRp(totalTabunganSaldo), sub: `${savings.length} catatan setoran` },
     investasi: { value: formatRp(investasiNilai), sub: `${investments.filter((i) => i.status === 'Active').length} aktif` },

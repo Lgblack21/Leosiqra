@@ -8745,6 +8745,100 @@ async function handleFocus(request: Request, env: Env) {
   }
 }
 
+// ===== Barang & Koleksi (migrasi 0012, tabel br_items) =====
+// Semua query dibatasi user_id dari sesi; id dari URL hanya dipakai bersama
+// user_id (tidak bisa menyentuh barang user lain).
+
+const BR_KINDS = new Set(["barang", "koleksi"]);
+const BR_MAX_ITEMS = 500;
+const BR_MAX_VALUE = 100_000_000_000;
+
+const brMoney = (v: unknown) => {
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) && n >= 0 && n <= BR_MAX_VALUE ? n : null;
+};
+const brDate = (v: unknown) => (typeof v === "string" && DC_DAY_RE.test(v) ? v : null);
+
+const brParse = (payload: Record<string, unknown>) => {
+  const name = cleanText(payload.name, 80);
+  if (!name) return { error: "Nama barang wajib diisi." } as const;
+  const price = payload.purchase_price === undefined || payload.purchase_price === null || payload.purchase_price === "" ? 0 : brMoney(payload.purchase_price);
+  const value = payload.current_value === undefined || payload.current_value === null || payload.current_value === "" ? 0 : brMoney(payload.current_value);
+  if (price === null || value === null) return { error: "Nilai barang tidak valid." } as const;
+  return {
+    data: {
+      name,
+      category: cleanText(payload.category, 40),
+      purchase_price: price,
+      current_value: value,
+      purchase_date: brDate(payload.purchase_date),
+      warranty_until: brDate(payload.warranty_until),
+      for_sale: payload.for_sale === true || payload.for_sale === 1 ? 1 : 0,
+      note: cleanText(payload.note, 300),
+    },
+  } as const;
+};
+
+async function handleItems(request: Request, env: Env, itemId: string | null) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const cols = "id, kind, name, category, purchase_price, current_value, purchase_date, warranty_until, for_sale, note, created_at, updated_at";
+  try {
+    if (request.method === "GET") {
+      const kind = new URL(request.url).searchParams.get("kind");
+      const stmt = kind && BR_KINDS.has(kind)
+        ? env.DB.prepare(`SELECT ${cols} FROM br_items WHERE user_id = ? AND kind = ? ORDER BY current_value DESC, created_at DESC`).bind(userId, kind)
+        : env.DB.prepare(`SELECT ${cols} FROM br_items WHERE user_id = ? ORDER BY current_value DESC, created_at DESC`).bind(userId);
+      const { results } = await stmt.all();
+      return json({ items: results ?? [] });
+    }
+    if (request.method === "DELETE" && itemId) {
+      const res = await env.DB.prepare("DELETE FROM br_items WHERE id = ? AND user_id = ?").bind(itemId, userId).run();
+      if (!res.meta.changes) return json({ error: "Barang tidak ditemukan." }, { status: 404 });
+      return json({ ok: true });
+    }
+    const payload = await parseJson<Record<string, unknown>>(request);
+    const parsed = brParse(payload);
+    if ("error" in parsed) return json({ error: parsed.error }, { status: 400 });
+    const d = parsed.data;
+    const now = nowIso();
+    if (request.method === "POST" && !itemId) {
+      const kind = typeof payload.kind === "string" && BR_KINDS.has(payload.kind) ? payload.kind : null;
+      if (!kind) return json({ error: "Jenis barang tidak valid." }, { status: 400 });
+      const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM br_items WHERE user_id = ?").bind(userId).first<{ n: number }>();
+      if ((count?.n ?? 0) >= BR_MAX_ITEMS) return json({ error: `Maksimal ${BR_MAX_ITEMS} barang.` }, { status: 400 });
+      const id = generateId();
+      await env.DB.prepare(
+        `INSERT INTO br_items (id, user_id, kind, name, category, purchase_price, current_value, purchase_date, warranty_until, for_sale, note, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+        .bind(id, userId, kind, d.name, d.category, d.purchase_price, d.current_value, d.purchase_date, d.warranty_until, d.for_sale, d.note, now, now)
+        .run();
+      return json({ ok: true, id }, { status: 201 });
+    }
+    if (request.method === "PUT" && itemId) {
+      const res = await env.DB.prepare(
+        `UPDATE br_items SET name = ?, category = ?, purchase_price = ?, current_value = ?, purchase_date = ?, warranty_until = ?, for_sale = ?, note = ?, updated_at = ?
+          WHERE id = ? AND user_id = ?`
+      )
+        .bind(d.name, d.category, d.purchase_price, d.current_value, d.purchase_date, d.warranty_until, d.for_sale, d.note, now, itemId, userId)
+        .run();
+      if (!res.meta.changes) return json({ error: "Barang tidak ditemukan." }, { status: 404 });
+      return json({ ok: true });
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (error) {
+    if (error instanceof Error && /no such table: br_/.test(error.message)) {
+      return json({ error: "Fitur barang belum aktif." }, { status: 503 });
+    }
+    if (error instanceof Error && error.message === "Payload JSON tidak valid.") {
+      return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    }
+    throw error;
+  }
+}
+
 async function handleStreak(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -10468,6 +10562,12 @@ const worker = {
         return await handleGamification(request, env);
       }
 
+      if (url.pathname === "/api/member/items" && (request.method === "GET" || request.method === "POST")) {
+        return await handleItems(request, env, null);
+      }
+      if (url.pathname.startsWith("/api/member/items/") && (request.method === "PUT" || request.method === "DELETE")) {
+        return await handleItems(request, env, decodeURIComponent(url.pathname.slice("/api/member/items/".length)));
+      }
       if (url.pathname === "/api/member/journal" && request.method === "GET") {
         return await handleJournal(request, env, null);
       }
