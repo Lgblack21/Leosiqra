@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowRight, CalendarDays, FileSpreadsheet, HandCoins, Home, LifeBuoy, NotebookPen, Wallet } from 'lucide-react';
+import { ArrowRight, CalendarDays, FileSpreadsheet, HandCoins, Store, Home, LifeBuoy, NotebookPen, Wallet } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { LandingFooter } from '@/components/LandingFooter';
 
@@ -33,6 +33,7 @@ const GUIDES = [
   { href: '/panduan/cara-melunasi-utang', icon: HandCoins, title: 'Cara Melunasi Utang', desc: 'Metode snowball vs avalanche, lengkap dengan contoh urutan.' },
   { href: '/panduan/catat-keuangan-rumah-tangga', icon: Home, title: 'Catatan Keuangan Rumah Tangga', desc: 'Kategori yang dicatat, contoh tabel sebulan, dan cara mencatat berdua.' },
   { href: '/panduan/catat-pengeluaran-di-excel', icon: FileSpreadsheet, title: 'Catat Pengeluaran di Excel vs Aplikasi', desc: 'Template Excel sederhana, rumus SUMIF, dan kapan sebaiknya pindah ke aplikasi.' },
+  { href: '/panduan/catat-keuangan-usaha-kecil', icon: Store, title: 'Catatan Keuangan Jualan (UMKM)', desc: 'Pisahkan uang usaha, catat omzet, HPP, dan biaya, lalu hitung untung bersih.' },
 ];
 
 export default function PanduanIndexPage() {

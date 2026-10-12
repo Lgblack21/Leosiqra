@@ -16,6 +16,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/panduan/cara-melunasi-utang',
     '/panduan/catat-keuangan-rumah-tangga',
     '/panduan/catat-pengeluaran-di-excel',
+    '/panduan/catat-keuangan-usaha-kecil',
     '/auth/register',
     '/hubungi-kami',
     '/privacy',
