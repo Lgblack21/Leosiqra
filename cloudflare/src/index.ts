@@ -8839,6 +8839,261 @@ async function handleItems(request: Request, env: Env, itemId: string | null) {
   }
 }
 
+// ===== Aplikasi terhubung, Kotak masuk, Peta (migrasi 0013, tabel ap_/ib_/pt_) =====
+// Link rahasia per user (token 32 byte acak, yang disimpan hanya SHA-256-nya):
+//   POST /api/hook/inbox/:token        → draf transaksi dari Shortcuts (ditinjau dulu)
+//   GET  /api/feed/calendar/:token.ics → kalender tagihan/transaksi rutin
+//   GET  /api/feed/sheets/:token.csv   → CSV transaksi 12 bulan untuk IMPORTDATA
+// Token bisa dibuat ulang (token lama langsung mati) atau dicabut kapan saja.
+
+const AP_PURPOSES = new Set(["inbox", "calendar", "sheets"]);
+const IB_MAX_DRAFTS = 200;
+const IB_TEXT_MAX = 500;
+
+const checkHookRateLimit = async (env: Env, keys: string[]) => {
+  if (!env.AI_PARSE_RATE_LIMITER) return rateLimiterMissing(env, "AI_PARSE_RATE_LIMITER");
+  for (const key of keys) {
+    const { success } = await env.AI_PARSE_RATE_LIMITER.limit({ key });
+    if (!success) return false;
+  }
+  return true;
+};
+
+const apLinkPath = (purpose: string, token: string) =>
+  purpose === "inbox" ? `/api/hook/inbox/${token}` : purpose === "calendar" ? `/api/feed/calendar/${token}.ics` : `/api/feed/sheets/${token}.csv`;
+
+const apResolveToken = async (env: Env, purpose: string, token: string) => {
+  if (!/^[A-Za-z0-9_-]{40,60}$/.test(token)) return null;
+  const hash = await sha256Hex(`ap:${token}`);
+  const row = await env.DB.prepare("SELECT user_id FROM ap_tokens WHERE token_hash = ? AND purpose = ?")
+    .bind(hash, purpose)
+    .first<{ user_id: string }>();
+  if (!row) return null;
+  await env.DB.prepare("UPDATE ap_tokens SET last_used_at = ? WHERE token_hash = ?").bind(nowIso(), hash).run();
+  return { userId: row.user_id, hash };
+};
+
+const apMissingTable = (error: unknown) => error instanceof Error && /no such table: (ap|ib|pt)_/.test(error.message);
+
+async function handleConnect(request: Request, env: Env, purpose: string | null) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  try {
+    if (request.method === "GET") {
+      const { results } = await env.DB.prepare("SELECT purpose, created_at, last_used_at FROM ap_tokens WHERE user_id = ?").bind(userId).all();
+      return json({ items: results ?? [] });
+    }
+    if (!purpose || !AP_PURPOSES.has(purpose)) return json({ error: "Jenis tautan tidak valid." }, { status: 400 });
+    if (request.method === "DELETE") {
+      await env.DB.prepare("DELETE FROM ap_tokens WHERE user_id = ? AND purpose = ?").bind(userId, purpose).run();
+      return json({ ok: true });
+    }
+    // POST: buat / buat ulang — token lama otomatis tidak berlaku.
+    const token = toBase64Url(crypto.getRandomValues(new Uint8Array(32)).buffer as ArrayBuffer);
+    const hash = await sha256Hex(`ap:${token}`);
+    await env.DB.prepare(
+      `INSERT INTO ap_tokens (user_id, purpose, token_hash, created_at) VALUES (?, ?, ?, ?)
+       ON CONFLICT(user_id, purpose) DO UPDATE SET token_hash = excluded.token_hash, created_at = excluded.created_at, last_used_at = NULL`
+    )
+      .bind(userId, purpose, hash, nowIso())
+      .run();
+    return json({ ok: true, url: `${new URL(request.url).origin}${apLinkPath(purpose, token)}` });
+  } catch (error) {
+    if (apMissingTable(error)) return json({ error: "Fitur aplikasi terhubung belum aktif." }, { status: 503 });
+    throw error;
+  }
+}
+
+async function handleInboxHook(request: Request, env: Env, token: string) {
+  try {
+    const hit = await apResolveToken(env, "inbox", token);
+    if (!hit) return json({ error: "Tautan tidak valid." }, { status: 404 });
+    if (!(await checkHookRateLimit(env, [`hook:${hit.hash.slice(0, 24)}`, `hook-ip:${clientIpOf(request)}`]))) {
+      return json({ error: "Terlalu banyak kiriman. Coba lagi sebentar lagi." }, { status: 429 });
+    }
+    const type = request.headers.get("content-type") || "";
+    let text = "";
+    if (type.includes("application/json")) {
+      const payload = await parseJson<{ text?: unknown }>(request);
+      text = typeof payload.text === "string" ? payload.text : "";
+    } else {
+      text = (await request.text()).slice(0, 4000);
+    }
+    text = text.replace(/\s+/g, " ").trim().slice(0, IB_TEXT_MAX);
+    if (!text) return json({ error: "Teks kosong." }, { status: 400 });
+    const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM ib_drafts WHERE user_id = ?").bind(hit.userId).first<{ n: number }>();
+    if ((count?.n ?? 0) >= IB_MAX_DRAFTS) return json({ error: "Kotak masuk penuh. Tinjau dulu draf yang ada." }, { status: 429 });
+    await env.DB.prepare("INSERT INTO ib_drafts (id, user_id, source, raw_text, created_at) VALUES (?, ?, 'shortcut', ?, ?)")
+      .bind(generateId(), hit.userId, text, nowIso())
+      .run();
+    return json({ ok: true, message: "Masuk ke Kotak masuk Leosiqra." }, { status: 201 });
+  } catch (error) {
+    if (apMissingTable(error)) return json({ error: "Fitur belum aktif." }, { status: 503 });
+    if (error instanceof Error && error.message === "Payload JSON tidak valid.") return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    throw error;
+  }
+}
+
+async function handleInbox(request: Request, env: Env, draftId: string | null) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  try {
+    if (request.method === "GET") {
+      const { results } = await env.DB.prepare("SELECT id, source, raw_text, created_at FROM ib_drafts WHERE user_id = ? ORDER BY created_at DESC LIMIT 200")
+        .bind(userId)
+        .all();
+      return json({ items: results ?? [] });
+    }
+    if (request.method === "DELETE" && draftId) {
+      await env.DB.prepare("DELETE FROM ib_drafts WHERE id = ? AND user_id = ?").bind(draftId, userId).run();
+      return json({ ok: true });
+    }
+    // POST: tempel teks (SMS / notifikasi bank) dari dalam aplikasi.
+    const payload = await parseJson<{ text?: unknown }>(request);
+    const raw = typeof payload.text === "string" ? payload.text : "";
+    // Banyak baris = banyak draf (mis. tempel beberapa notifikasi sekaligus).
+    const lines = raw.split(/\n+/).map((l) => l.replace(/\s+/g, " ").trim().slice(0, IB_TEXT_MAX)).filter(Boolean).slice(0, 20);
+    if (lines.length === 0) return json({ error: "Teks kosong." }, { status: 400 });
+    const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM ib_drafts WHERE user_id = ?").bind(userId).first<{ n: number }>();
+    if ((count?.n ?? 0) + lines.length > IB_MAX_DRAFTS) return json({ error: "Kotak masuk penuh. Tinjau dulu draf yang ada." }, { status: 429 });
+    const now = nowIso();
+    await env.DB.batch(
+      lines.map((l) => env.DB.prepare("INSERT INTO ib_drafts (id, user_id, source, raw_text, created_at) VALUES (?, ?, 'paste', ?, ?)").bind(generateId(), userId, l, now))
+    );
+    return json({ ok: true, added: lines.length }, { status: 201 });
+  } catch (error) {
+    if (apMissingTable(error)) return json({ error: "Fitur kotak masuk belum aktif." }, { status: 503 });
+    if (error instanceof Error && error.message === "Payload JSON tidak valid.") return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    throw error;
+  }
+}
+
+const icsEscape = (s: string) => s.replace(/\\/g, "\\\\").replace(/;/g, "\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+const icsFold = (line: string) => {
+  const out: string[] = [];
+  for (let i = 0; i < line.length; i += 70) out.push((i ? " " : "") + line.slice(i, i + 70));
+  return out.join("\r\n");
+};
+
+async function handleCalendarFeed(request: Request, env: Env, token: string) {
+  try {
+    const hit = await apResolveToken(env, "calendar", token);
+    if (!hit) return new Response("Not found", { status: 404 });
+    if (!(await checkHookRateLimit(env, [`feed:${hit.hash.slice(0, 24)}`]))) return new Response("Too many requests", { status: 429 });
+    const { results } = await env.DB.prepare(
+      "SELECT id, name, type, category, amount, interval, next_date FROM recurring WHERE user_id = ? AND status = 'ACTIVE' LIMIT 300"
+    )
+      .bind(hit.userId)
+      .all<{ id: string; name: string; type: string; category: string; amount: number; interval: string; next_date: string }>();
+    const freq: Record<string, string> = { Harian: "DAILY", Mingguan: "WEEKLY", Bulanan: "MONTHLY", Tahunan: "YEARLY" };
+    const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+    const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Leosiqra//Tagihan Rutin//ID", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:Leosiqra · Tagihan rutin", "X-WR-TIMEZONE:Asia/Jakarta"];
+    for (const r of results ?? []) {
+      const start = new Date(new Date(r.next_date).getTime() + 7 * 3600 * 1000).toISOString().slice(0, 10).replace(/-/g, "");
+      if (!/^\d{8}$/.test(start)) continue;
+      const label = r.type === "Pemasukan" ? "💰" : r.type === "Tabungan" ? "🐷" : "🧾";
+      lines.push(
+        "BEGIN:VEVENT",
+        `UID:${r.id}@leosiqra.com`,
+        `DTSTAMP:${stamp}`,
+        `DTSTART;VALUE=DATE:${start}`,
+        icsFold(`SUMMARY:${icsEscape(`${label} ${r.name} · ${formatRupiahForPush(Number(r.amount) || 0)}`)}`),
+        icsFold(`DESCRIPTION:${icsEscape(`${r.type} · ${r.category || "-"} — dari Leosiqra`)}`),
+        ...(freq[r.interval] ? [`RRULE:FREQ=${freq[r.interval]}`] : []),
+        "END:VEVENT"
+      );
+    }
+    lines.push("END:VCALENDAR");
+    return new Response(lines.join("\r\n") + "\r\n", {
+      headers: { "content-type": "text/calendar; charset=utf-8", "cache-control": "no-store", "x-robots-tag": "noindex" },
+    });
+  } catch (error) {
+    if (apMissingTable(error)) return new Response("Not available", { status: 503 });
+    throw error;
+  }
+}
+
+// Sel CSV aman untuk spreadsheet: diberi tanda kutip, dan nilai yang diawali
+// = + - @ (bisa dieksekusi sebagai rumus) diawali apostrof.
+const csvCell = (v: unknown) => {
+  let s = v === null || v === undefined ? "" : String(v);
+  if (/^[=+\-@\t\r]/.test(s) && !/^-?\d+(\.\d+)?$/.test(s)) s = `'${s}`;
+  return `"${s.replace(/"/g, '""')}"`;
+};
+
+async function handleSheetsFeed(request: Request, env: Env, token: string) {
+  try {
+    const hit = await apResolveToken(env, "sheets", token);
+    if (!hit) return new Response("Not found", { status: 404 });
+    if (!(await checkHookRateLimit(env, [`feed:${hit.hash.slice(0, 24)}`]))) return new Response("Too many requests", { status: 429 });
+    const since = shiftDateStr(todayWIB(), -365);
+    const { results } = await env.DB.prepare(
+      `SELECT t.date, t.type, t.category, t.sub_category, t.note, COALESCE(NULLIF(t.amount_idr, 0), t.amount) AS amount_idr, t.currency, t.amount, a.name AS account
+         FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id AND a.user_id = t.user_id
+        WHERE t.user_id = ? AND substr(t.date, 1, 10) >= ?
+        ORDER BY t.date DESC LIMIT 5000`
+    )
+      .bind(hit.userId, since)
+      .all<Record<string, unknown>>();
+    const header = ["Tanggal", "Jenis", "Kategori", "Subkategori", "Catatan", "Nominal (IDR)", "Mata uang", "Nominal asli", "Rekening"];
+    const rows = (results ?? []).map((r) =>
+      [String(r.date ?? "").slice(0, 10), r.type, r.category, r.sub_category, r.note, Math.round(Number(r.amount_idr) || 0), r.currency, r.amount, r.account].map(csvCell).join(",")
+    );
+    return new Response([header.map(csvCell).join(","), ...rows].join("\r\n") + "\r\n", {
+      headers: { "content-type": "text/csv; charset=utf-8", "cache-control": "no-store", "x-robots-tag": "noindex" },
+    });
+  } catch (error) {
+    if (apMissingTable(error)) return new Response("Not available", { status: 503 });
+    throw error;
+  }
+}
+
+async function handlePlaces(request: Request, env: Env, txId: string | null) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  try {
+    if (request.method === "GET") {
+      const { results } = await env.DB.prepare(
+        `SELECT p.transaction_id, p.name, p.lat, p.lng, p.created_at,
+                t.date, t.type, t.category, t.note, COALESCE(NULLIF(t.amount_idr, 0), t.amount) AS amount_idr
+           FROM pt_places p JOIN transactions t ON t.id = p.transaction_id AND t.user_id = p.user_id
+          WHERE p.user_id = ? ORDER BY t.date DESC LIMIT 1000`
+      )
+        .bind(userId)
+        .all();
+      return json({ items: results ?? [] });
+    }
+    if (!txId) return json({ error: "Transaksi tidak valid." }, { status: 400 });
+    if (request.method === "DELETE") {
+      await env.DB.prepare("DELETE FROM pt_places WHERE user_id = ? AND transaction_id = ?").bind(userId, txId).run();
+      return json({ ok: true });
+    }
+    // PUT: tandai lokasi transaksi milik user sendiri.
+    const own = await env.DB.prepare("SELECT id FROM transactions WHERE id = ? AND user_id = ?").bind(txId, userId).first();
+    if (!own) return json({ error: "Transaksi tidak ditemukan." }, { status: 404 });
+    const payload = await parseJson<{ lat?: unknown; lng?: unknown; name?: unknown }>(request);
+    const lat = Number(payload.lat);
+    const lng = Number(payload.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+      return json({ error: "Lokasi tidak valid." }, { status: 400 });
+    }
+    await env.DB.prepare(
+      `INSERT INTO pt_places (user_id, transaction_id, name, lat, lng, created_at) VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(user_id, transaction_id) DO UPDATE SET name = excluded.name, lat = excluded.lat, lng = excluded.lng`
+    )
+      .bind(userId, txId, cleanText(payload.name, 80), Math.round(lat * 1e6) / 1e6, Math.round(lng * 1e6) / 1e6, nowIso())
+      .run();
+    return json({ ok: true });
+  } catch (error) {
+    if (apMissingTable(error)) return json({ error: "Fitur peta belum aktif." }, { status: 503 });
+    if (error instanceof Error && error.message === "Payload JSON tidak valid.") return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    throw error;
+  }
+}
+
 async function handleStreak(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -10562,6 +10817,33 @@ const worker = {
         return await handleGamification(request, env);
       }
 
+      if (url.pathname === "/api/member/connect" && request.method === "GET") {
+        return await handleConnect(request, env, null);
+      }
+      if (url.pathname.startsWith("/api/member/connect/") && (request.method === "POST" || request.method === "DELETE")) {
+        return await handleConnect(request, env, url.pathname.slice("/api/member/connect/".length));
+      }
+      if (url.pathname.startsWith("/api/hook/inbox/") && request.method === "POST") {
+        return await handleInboxHook(request, env, url.pathname.slice("/api/hook/inbox/".length));
+      }
+      if (url.pathname.startsWith("/api/feed/calendar/") && url.pathname.endsWith(".ics") && request.method === "GET") {
+        return await handleCalendarFeed(request, env, url.pathname.slice("/api/feed/calendar/".length, -".ics".length));
+      }
+      if (url.pathname.startsWith("/api/feed/sheets/") && url.pathname.endsWith(".csv") && request.method === "GET") {
+        return await handleSheetsFeed(request, env, url.pathname.slice("/api/feed/sheets/".length, -".csv".length));
+      }
+      if (url.pathname === "/api/member/inbox" && (request.method === "GET" || request.method === "POST")) {
+        return await handleInbox(request, env, null);
+      }
+      if (url.pathname.startsWith("/api/member/inbox/") && request.method === "DELETE") {
+        return await handleInbox(request, env, decodeURIComponent(url.pathname.slice("/api/member/inbox/".length)));
+      }
+      if (url.pathname === "/api/member/places" && request.method === "GET") {
+        return await handlePlaces(request, env, null);
+      }
+      if (url.pathname.startsWith("/api/member/places/") && (request.method === "PUT" || request.method === "DELETE")) {
+        return await handlePlaces(request, env, decodeURIComponent(url.pathname.slice("/api/member/places/".length)));
+      }
       if (url.pathname === "/api/member/items" && (request.method === "GET" || request.method === "POST")) {
         return await handleItems(request, env, null);
       }

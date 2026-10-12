@@ -37,6 +37,9 @@ import {
   Gem as GemIcon,
   Coins as CoinsIcon,
   Network,
+  Inbox,
+  Plug,
+  Map as MapIcon,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -121,6 +124,15 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
+    id: 'pencatatan',
+    label: 'Pencatatan',
+    icon: Inbox,
+    items: [
+      { label: 'Kotak Masuk', href: '/membership/kotak-masuk', icon: Inbox },
+      { label: 'Aplikasi Terhubung', href: '/membership/aplikasi-terhubung', icon: Plug },
+    ],
+  },
+  {
     id: 'leo',
     label: 'Teman Leo',
     icon: Sparkles,
@@ -128,6 +140,7 @@ export const navGroups: NavGroup[] = [
       { label: 'Fokus', href: '/membership/fokus', icon: Timer },
       { label: 'Jurnal', href: '/membership/jurnal', icon: NotebookPen },
       { label: 'Cuan', href: '/membership/cuan', icon: CoinsIcon },
+      { label: 'Peta', href: '/membership/peta', icon: MapIcon },
     ],
   },
   {

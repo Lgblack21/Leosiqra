@@ -20,6 +20,8 @@ import {
   Sparkle,
   Coins,
   Network,
+  Inbox,
+  Map as MapIcon,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -44,7 +46,9 @@ export type FeatureId =
   | 'barang'
   | 'koleksi'
   | 'cuan'
-  | 'kanvas';
+  | 'kanvas'
+  | 'kotak-masuk'
+  | 'peta';
 
 export interface FeatureDef {
   id: FeatureId;
@@ -75,6 +79,8 @@ export const FEATURES: FeatureDef[] = [
   { id: 'koleksi', label: 'Koleksi', description: 'Kartu, sneakers, figur, dan barang koleksi lain dengan nilai taksiranmu.', icon: Sparkle, tone: 'bg-yellow-50 text-yellow-600', href: '/membership/koleksi', navHrefs: ['/membership/koleksi'], isNew: true },
   { id: 'cuan', label: 'Cuan', description: 'Target cuan bulanan, jual barang nganggur, tagih piutang lewat WhatsApp, dan ide dari Leo.', icon: Coins, tone: 'bg-emerald-50 text-emerald-600', href: '/membership/cuan', navHrefs: ['/membership/cuan'], isNew: true },
   { id: 'kanvas', label: 'Kanvas', description: 'Semua uangmu dalam satu papan: dari uang masuk, rekening, sampai pengeluaran dan tabungan.', icon: Network, tone: 'bg-sky-50 text-sky-600', href: '/membership/kanvas', navHrefs: ['/membership/kanvas'], isNew: true },
+  { id: 'kotak-masuk', label: 'Kotak masuk', description: 'Draf transaksi dari Shortcuts HP atau SMS/notifikasi bank yang kamu tempel — tinjau lalu simpan.', icon: Inbox, tone: 'bg-violet-50 text-violet-600', href: '/membership/kotak-masuk', navHrefs: ['/membership/kotak-masuk', '/membership/aplikasi-terhubung'], isNew: true },
+  { id: 'peta', label: 'Peta', description: 'Tempat-tempat kamu belanja di peta, jejak harian, dan rekap 30 hari.', icon: MapIcon, tone: 'bg-teal-50 text-teal-600', href: '/membership/peta', navHrefs: ['/membership/peta'], isNew: true },
   { id: 'pajak', label: 'Pajak Center', description: 'Bantu siapkan data SPT dari catatan keuanganmu.', icon: ShieldCheck, tone: 'bg-slate-100 text-slate-600', href: '/membership/pajak-center', navHrefs: ['/membership/pajak-center'] },
   { id: 'pasar', label: 'Data pasar', description: 'Harga saham, kripto, emas, dan kurs terkini.', icon: Globe, tone: 'bg-cyan-50 text-cyan-600', href: '/membership/market-data', navHrefs: ['/membership/market-data'] },
 ];

@@ -68,6 +68,8 @@ export function FeatureTiles({ base, className }: { base: Partial<Record<Feature
       stats[k] = list.length ? { value: formatIDR(list.reduce((s, i) => s + i.current_value, 0)), sub: `${list.length} ${k}` } : { value: 'Belum ada', sub: `Tambah ${k}` };
     }
   }
+  stats['kotak-masuk'] = { value: 'Tinjau draf', sub: 'Dari Shortcuts & SMS bank' };
+  stats.peta = { value: 'Buka peta', sub: 'Tempat belanjamu' };
   stats.kanvas = { value: 'Lihat aliran', sub: 'Uang masuk → rekening → keluar' };
   stats.investasiku = { value: 'Simulasi', sub: 'SBN vs deposito vs reksa dana' };
   if (recurring) {
