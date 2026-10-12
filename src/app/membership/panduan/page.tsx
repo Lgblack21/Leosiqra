@@ -137,14 +137,6 @@ const extras: GuideSection[] = [
 const allSections = [...sections, ...extras];
 
 // Peraga & langkah cara pakai per grup menu sidebar (id = GuideSection.id).
-const SECTION_DEMO: Record<string, { demo: DemoKind; how: string[] }> = {
-  primary: { demo: 'dashboard', how: ['Buka Dashboard untuk ringkasan bulan ini', 'Ganti bulan lewat kalender di kanan atas', 'Tanya apa saja di AI Leosiqra'] },
-  transaksi: { demo: 'input', how: ['Buka Catat Transaksi atau Tambah Cepat', 'Pilih rekening, kategori & isi nominal', 'Simpan — saldo rekening ter-update otomatis'] },
-  aset: { demo: 'rekening', how: ['Tambah rekening bank, e-wallet, tunai, atau kartu', 'Isi saldo saat ini sekali saja', 'Saldo berubah sendiri setiap kamu mencatat'] },
-  investasi: { demo: 'investasi', how: ['Pilih jenis: Saham, Deposito, atau Lainnya', 'Catat jumlah & harga beli', 'Nilai & keuntungan dihitung otomatis'] },
-  perencanaan: { demo: 'budget', how: ['Pasang budget per kategori di Budget & Target', 'Catat utang/piutang & cicilannya', 'Lihat Laporan Tahunan & Pajak Center'] },
-  akun: { demo: 'profil', how: ['Lengkapi profil & foto', 'Aktifkan verifikasi 2 langkah', 'Atur kategori & mata uang sesuai kebutuhan'] },
-};
 
 const buildTourSteps = (): TourStep[] => {
   const steps: TourStep[] = [
@@ -152,24 +144,39 @@ const buildTourSteps = (): TourStep[] => {
       title: 'Selamat Datang di Leosiqra 👋',
       content: 'Ini tur singkat mengenalkan navigasi utama aplikasi. Klik "Lanjut" untuk mulai, atau "Lewati Tur" kapan saja.',
       demo: 'menu',
-      how: ['Semua fitur dikelompokkan di menu kiri', 'Klik nama grup untuk membuka isinya', 'Tombol "Tambah Cepat" selalu ada di kanan atas'],
+      how: ['Menu kiri dibagi jadi Keuangan, Fitur, dan Pencatatan', 'Pengaturan & bantuan ada di menu akun (bawah)', 'Tombol "Tambah transaksi" selalu ada di bawah menu'],
     },
   ];
-  for (const section of sections) {
-    const extra = section.id ? SECTION_DEMO[section.id] : undefined;
-    steps.push({
-      target: `[data-tour="sidebar-group-${section.id}"]`,
-      title: `Menu: ${section.title}`,
-      content: `${section.subtitle}. Berisi: ${section.items.map((i) => i.name).join(', ')}.`,
-      ...extra,
-    });
-  }
+  // Sidebar gaya baru: tiga bagian datar (Keuangan · Fitur · Pencatatan).
+  steps.push(
+    {
+      target: '[data-tour="sidebar-group-keuangan"]',
+      title: 'Keuangan',
+      content: 'Lima halaman inti: Ringkasan, Transaksi, Laporan, Anggaran, dan Dompet. Halaman terkait (mis. Saham, Deposito, Kartu) ada di tab di atas halamannya.',
+      demo: 'dashboard',
+      how: ['Ringkasan = kondisi hari ini & bulan ini', 'Transaksi & Laporan untuk riwayat dan analisis', 'Dompet untuk rekening, kartu, dan tabungan'],
+    },
+    {
+      target: '[data-tour="sidebar-group-fitur"]',
+      title: 'Fitur',
+      content: 'Hanya fitur yang kamu nyalakan yang tampil di sini, supaya menu tetap ringkas. Tambah atau sembunyikan lewat Kelola fitur — data tidak pernah dihapus.',
+      demo: 'menu',
+      how: ['Buka Kelola fitur', 'Nyalakan yang kamu butuhkan (Streak, Kekayaan, Jurnal…)', 'Menu langsung muncul di bagian Fitur'],
+    },
+    {
+      target: '[data-tour="sidebar-group-pencatatan"]',
+      title: 'Pencatatan',
+      content: 'Cara lain memasukkan data: impor mutasi bank, Kotak masuk untuk draf dari SMS/Shortcuts, dan Aplikasi terhubung (Google Calendar, Sheets).',
+      demo: 'input',
+      how: ['Impor mutasi dari file bank', 'Tinjau draf di Kotak masuk', 'Hubungkan Google Calendar / Sheets'],
+    }
+  );
   steps.push({
     target: '[data-tour="tambah-cepat"]',
-    title: 'Tambah Cepat',
-    content: 'Tombol ini ada di setiap halaman — cara tercepat buka form pencatatan apa pun tanpa pindah halaman.',
+    title: 'Tambah transaksi',
+    content: 'Tombol hitam di bawah menu — cara tercepat mencatat. Panah di sebelahnya membuka form lain (transfer, tabungan, hutang, investasi…).',
     demo: 'tambah-cepat',
-    how: ['Klik tombol hijau "Tambah Cepat"', 'Pilih yang mau dicatat (pengeluaran, transfer, tabungan…)', 'Isi form yang muncul, lalu simpan'],
+    how: ['Klik "Tambah transaksi" untuk pemasukan/pengeluaran', 'Klik panah untuk form lain', 'Isi form yang muncul, lalu simpan'],
   });
   steps.push({
     title: 'Selesai! 🎉',

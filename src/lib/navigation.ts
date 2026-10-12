@@ -1,53 +1,28 @@
 import {
   LayoutDashboard,
-  Bot,
-  PlusCircle,
   ListOrdered,
-  ArrowLeftRight,
-  Repeat,
-  Building2,
-  CreditCard,
-  PiggyBank,
-  TrendingUp,
-  Briefcase,
-  Landmark,
-  Coins,
-  Globe,
+  BarChart3,
   Target,
-  HandCoins,
-  ShieldCheck,
-  CalendarRange,
+  Wallet,
+  Inbox,
+  Upload,
+  Plug,
   User,
   Tags,
   Compass,
   Headphones,
   MessageSquareHeart,
-  Users,
-  Gem,
-  Flame,
   SlidersHorizontal,
-  BarChart3,
-  Waypoints,
-  CalendarClock,
-  Timer,
-  NotebookPen,
-  Calculator,
-  Sparkles,
-  Package,
-  Gem as GemIcon,
-  Coins as CoinsIcon,
-  Network,
-  Inbox,
-  Plug,
-  Map as MapIcon,
   type LucideIcon,
 } from 'lucide-react';
+import { FEATURES } from '@/lib/features';
 
-// Satu sumber data navigasi /membership — dipakai Sidebar (menu), Header
-// (judul halaman), dan halaman Panduan (tur yang menyorot grup sidebar lewat
-// data-tour="sidebar-group-<id>"). URL sengaja TIDAK diubah dari struktur
-// lama supaya bookmark user & OnboardingTour (navigasi per path) tetap jalan;
-// yang berubah cuma pengelompokan dan label.
+// Satu sumber navigasi /membership — dipakai Sidebar, Header (judul halaman),
+// tab sub-halaman (SectionTabs), dan tur Panduan. Sidebar sengaja datar dan
+// pendek (gaya baru): Keuangan (5 halaman inti), Fitur (hanya yang dinyalakan
+// user di Kelola fitur), Pencatatan. Halaman lain tetap ada — dijangkau lewat
+// tab di atas halaman induknya, menu akun, atau tombol Tambah transaksi.
+// URL lama TIDAK diubah supaya bookmark & tur per path tetap jalan.
 
 export interface NavItem {
   label: string;
@@ -55,121 +30,104 @@ export interface NavItem {
   icon: LucideIcon;
 }
 
-export interface NavGroup {
-  id: string;
-  label: string;
-  icon: LucideIcon;
-  items: NavItem[];
-}
-
-// Entri tanpa grup — selalu kelihatan di paling atas.
-export const primaryNav: NavItem[] = [
-  { label: 'Dashboard', href: '/membership/dashboard', icon: LayoutDashboard },
-  { label: 'AI Leosiqra', href: '/membership/ai-leosiqra', icon: Bot },
+export const coreNav: NavItem[] = [
+  { label: 'Ringkasan', href: '/membership/dashboard', icon: LayoutDashboard },
+  { label: 'Transaksi', href: '/membership/transactions/daily', icon: ListOrdered },
+  { label: 'Laporan', href: '/membership/laporan', icon: BarChart3 },
+  { label: 'Anggaran', href: '/membership/budget', icon: Target },
+  { label: 'Dompet', href: '/membership/rekening', icon: Wallet },
 ];
 
-export const navGroups: NavGroup[] = [
-  {
-    id: 'transaksi',
-    label: 'Transaksi',
-    icon: ListOrdered,
-    items: [
-      { label: 'Catat Transaksi', href: '/membership/transactions/input', icon: PlusCircle },
-      { label: 'Riwayat Transaksi', href: '/membership/transactions/daily', icon: ListOrdered },
-      { label: 'Transfer & Top Up', href: '/membership/transactions/topup', icon: ArrowLeftRight },
-      { label: 'Transaksi Rutin', href: '/membership/recurring', icon: Repeat },
-    ],
-  },
-  {
-    id: 'aset',
-    label: 'Rekening & Aset',
-    icon: Building2,
-    items: [
-      { label: 'Kekayaan', href: '/membership/kekayaan', icon: Gem },
-      { label: 'Rekening', href: '/membership/rekening', icon: Building2 },
-      { label: 'Kartu Saya', href: '/membership/cards', icon: CreditCard },
-      { label: 'Tabungan', href: '/membership/tabungan', icon: PiggyBank },
-      { label: 'Dompet Bersama', href: '/membership/dompet-bersama', icon: Users },
-      { label: 'Barang', href: '/membership/barang', icon: Package },
-      { label: 'Koleksi', href: '/membership/koleksi', icon: GemIcon },
-    ],
-  },
-  {
-    id: 'investasi',
-    label: 'Investasi',
-    icon: TrendingUp,
-    items: [
-      { label: 'Ringkasan Portofolio', href: '/membership/investment', icon: TrendingUp },
-      { label: 'Saham', href: '/membership/investasi/saham', icon: Briefcase },
-      { label: 'Deposito', href: '/membership/investasi/deposito', icon: Landmark },
-      { label: 'Investasi Lainnya', href: '/membership/investasi/lainnya', icon: Coins },
-      { label: 'Simulasi Investasiku', href: '/membership/investasiku', icon: Calculator },
-      { label: 'Data Pasar', href: '/membership/market-data', icon: Globe },
-    ],
-  },
-  {
-    id: 'perencanaan',
-    label: 'Perencanaan & Laporan',
-    icon: Target,
-    items: [
-      { label: 'Laporan Bulanan', href: '/membership/laporan', icon: BarChart3 },
-      { label: 'Ikuti Uangmu', href: '/membership/arus', icon: Waypoints },
-      { label: 'Kanvas', href: '/membership/kanvas', icon: Network },
-      { label: 'Tutup Hari & Streak', href: '/membership/streak', icon: Flame },
-      { label: 'Anggaran', href: '/membership/budget', icon: Target },
-      { label: 'Langganan', href: '/membership/langganan', icon: CalendarClock },
-      { label: 'Hutang & Piutang', href: '/membership/transactions/debt', icon: HandCoins },
-      { label: 'Laporan Tahunan', href: '/membership/annual', icon: CalendarRange },
-      { label: 'Pajak Center', href: '/membership/pajak-center', icon: ShieldCheck },
-    ],
-  },
-  {
-    id: 'pencatatan',
-    label: 'Pencatatan',
-    icon: Inbox,
-    items: [
-      { label: 'Kotak Masuk', href: '/membership/kotak-masuk', icon: Inbox },
-      { label: 'Aplikasi Terhubung', href: '/membership/aplikasi-terhubung', icon: Plug },
-    ],
-  },
-  {
-    id: 'leo',
-    label: 'Teman Leo',
-    icon: Sparkles,
-    items: [
-      { label: 'Fokus', href: '/membership/fokus', icon: Timer },
-      { label: 'Jurnal', href: '/membership/jurnal', icon: NotebookPen },
-      { label: 'Cuan', href: '/membership/cuan', icon: CoinsIcon },
-      { label: 'Peta', href: '/membership/peta', icon: MapIcon },
-    ],
-  },
-  {
-    id: 'akun',
-    label: 'Akun & Bantuan',
-    icon: User,
-    items: [
-      { label: 'Profil & Keamanan', href: '/membership/profile', icon: User },
-      { label: 'Kelola Fitur', href: '/membership/fitur', icon: SlidersHorizontal },
-      { label: 'Kategori & Mata Uang', href: '/membership/nama-akun', icon: Tags },
-      { label: 'Panduan', href: '/membership/panduan', icon: Compass },
-      { label: 'Saran & Kritik', href: '/membership/saran', icon: MessageSquareHeart },
-      { label: 'Hubungi Kami', href: '/membership/hubungi-kami', icon: Headphones },
-    ],
-  },
+// `modal` = membuka form (bukan pindah halaman).
+export const captureNav: (NavItem & { modal?: 'import_mutasi' })[] = [
+  { label: 'Impor mutasi', href: '#impor', icon: Upload, modal: 'import_mutasi' },
+  { label: 'Kotak masuk', href: '/membership/kotak-masuk', icon: Inbox },
+  { label: 'Aplikasi terhubung', href: '/membership/aplikasi-terhubung', icon: Plug },
 ];
 
-// Halaman yang tidak ada di menu tapi tetap butuh judul di Header.
-const extraTitles: Record<string, string> = {
+// Menu akun (dibuka dari kartu user di bawah sidebar).
+export const accountNav: NavItem[] = [
+  { label: 'Profil & keamanan', href: '/membership/profile', icon: User },
+  { label: 'Kelola fitur', href: '/membership/fitur', icon: SlidersHorizontal },
+  { label: 'Kategori & mata uang', href: '/membership/nama-akun', icon: Tags },
+  { label: 'Panduan', href: '/membership/panduan', icon: Compass },
+  { label: 'Saran & kritik', href: '/membership/saran', icon: MessageSquareHeart },
+  { label: 'Hubungi kami', href: '/membership/hubungi-kami', icon: Headphones },
+];
+
+// Tab sub-halaman: halaman yang "satu keluarga" tampil sebagai tab di atas
+// konten supaya sidebar tidak perlu memuat semuanya.
+export interface SectionTab { label: string; href: string }
+export const sectionTabs: SectionTab[][] = [
+  [
+    { label: 'Riwayat', href: '/membership/transactions/daily' },
+    { label: 'Catat', href: '/membership/transactions/input' },
+    { label: 'Transfer & top up', href: '/membership/transactions/topup' },
+    { label: 'Transaksi rutin', href: '/membership/recurring' },
+  ],
+  [
+    { label: 'Bulanan', href: '/membership/laporan' },
+    { label: 'Tahunan', href: '/membership/annual' },
+    { label: 'Ikuti uangmu', href: '/membership/arus' },
+    { label: 'Kanvas', href: '/membership/kanvas' },
+    { label: 'Pajak', href: '/membership/pajak-center' },
+  ],
+  [
+    { label: 'Rekening', href: '/membership/rekening' },
+    { label: 'Kartu', href: '/membership/cards' },
+    { label: 'Tabungan', href: '/membership/tabungan' },
+    { label: 'Dompet bersama', href: '/membership/dompet-bersama' },
+  ],
+  [
+    { label: 'Ringkasan', href: '/membership/investment' },
+    { label: 'Saham', href: '/membership/investasi/saham' },
+    { label: 'Deposito', href: '/membership/investasi/deposito' },
+    { label: 'Lainnya', href: '/membership/investasi/lainnya' },
+    { label: 'Simulasi', href: '/membership/investasiku' },
+    { label: 'Data pasar', href: '/membership/market-data' },
+  ],
+  [
+    { label: 'Barang', href: '/membership/barang' },
+    { label: 'Koleksi', href: '/membership/koleksi' },
+  ],
+  [
+    { label: 'Langganan', href: '/membership/langganan' },
+    { label: 'Transaksi rutin', href: '/membership/recurring' },
+  ],
+];
+
+export const tabsFor = (pathname: string) => sectionTabs.find((g) => g.some((t) => t.href === pathname)) ?? null;
+
+// Judul halaman untuk Header.
+const TITLES: Record<string, string> = {
+  '/membership/dashboard': 'Ringkasan',
+  '/membership/ai-leosiqra': 'Tanya Leo',
+  '/membership/transactions/daily': 'Transaksi',
+  '/membership/transactions/input': 'Catat transaksi',
+  '/membership/transactions/topup': 'Transfer & top up',
+  '/membership/transactions/debt': 'Hutang & piutang',
+  '/membership/recurring': 'Transaksi rutin',
+  '/membership/laporan': 'Laporan',
+  '/membership/annual': 'Laporan tahunan',
+  '/membership/budget': 'Anggaran',
+  '/membership/rekening': 'Dompet',
+  '/membership/cards': 'Kartu kredit',
+  '/membership/investment': 'Investasi',
+  '/membership/investasi/saham': 'Saham',
+  '/membership/investasi/deposito': 'Deposito',
+  '/membership/investasi/lainnya': 'Investasi lainnya',
+  '/membership/market-data': 'Data pasar',
+  '/membership/pajak-center': 'Pajak',
   '/membership/contact': 'Upgrade ke PRO',
-  '/membership/onboarding': 'Setup Awal',
+  '/membership/onboarding': 'Setup awal',
 };
 
-export function findNavContext(pathname: string): { title: string; group?: string } {
-  const primary = primaryNav.find((i) => i.href === pathname);
-  if (primary) return { title: primary.label };
-  for (const group of navGroups) {
-    const item = group.items.find((i) => i.href === pathname);
-    if (item) return { title: item.label, group: group.label };
-  }
-  return { title: extraTitles[pathname] ?? 'Leosiqra' };
+export function findNavContext(pathname: string): { title: string } {
+  if (TITLES[pathname]) return { title: TITLES[pathname] };
+  const all = [...coreNav, ...captureNav, ...accountNav];
+  const item = all.find((i) => i.href === pathname);
+  if (item) return { title: item.label };
+  const feature = FEATURES.find((f) => f.href === pathname || f.navHrefs.includes(pathname));
+  if (feature) return { title: feature.short ?? feature.label };
+  return { title: 'Leosiqra' };
 }

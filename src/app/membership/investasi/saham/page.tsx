@@ -175,7 +175,7 @@ export default function SahamPage() {
             <BarChart3 size={22} />
           </div>
           <div className="flex flex-col">
-            <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Portofolio Saham</h1>
+            <h1 className="sr-only">Portofolio Saham</h1>
             <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
               Seluruh posisi · {investments.length} aktif
             </p>

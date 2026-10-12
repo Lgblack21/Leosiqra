@@ -219,7 +219,7 @@ export default function OtherInvestmentsPage() {
             <Gem size={22} />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Investasi Lainnya</h1>
+            <h1 className="sr-only">Investasi Lainnya</h1>
             <p className="text-[10px] md:text-sm font-medium text-slate-400 mt-1 max-w-xl">
               Lacak seluruh aset investasi alternatif Anda.
             </p>

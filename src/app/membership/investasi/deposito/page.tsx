@@ -156,7 +156,7 @@ export default function DepositoPage() {
             <Banknote size={22} />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Deposito</h1>
+            <h1 className="sr-only">Deposito</h1>
             <p className="text-[10px] md:text-sm font-medium text-slate-400 mt-1 max-w-xl">
               Kelola seluruh penempatan dana deposito Anda.
             </p>

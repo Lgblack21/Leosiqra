@@ -48,7 +48,7 @@ export default function HubungiKamiPage() {
         <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center shadow-lg shadow-emerald-600/20 mb-5">
           <Headphones size={24} />
         </div>
-        <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Hubungi Kami</h1>
+        <h1 className="sr-only">Hubungi Kami</h1>
         <p className="text-sm font-medium text-slate-500 mt-2 leading-relaxed">
           Ada pertanyaan, kendala, atau masukan soal Leosiqra? Langsung hubungi kami lewat WhatsApp atau email di bawah ini.
         </p>

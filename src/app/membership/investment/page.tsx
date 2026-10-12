@@ -198,7 +198,7 @@ export default function InvestmentDashboard() {
             <Landmark size={22} />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Ringkasan Investasi</h1>
+            <h1 className="sr-only">Ringkasan Investasi</h1>
             <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
               Seluruh portofolio · {investments.length} posisi aktif
             </p>

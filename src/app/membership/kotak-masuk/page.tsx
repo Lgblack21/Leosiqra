@@ -70,7 +70,7 @@ export default function KotakMasukPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-5 pb-12">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Kotak masuk</h1>
+        <h1 className="sr-only">Kotak masuk</h1>
         <p className="mt-0.5 text-sm text-slate-500">Draf dari Shortcuts dan teks yang kamu tempel. Tidak ada yang tersimpan sampai kamu menyimpannya.</p>
       </div>
 

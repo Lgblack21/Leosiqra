@@ -13,7 +13,7 @@ export default function KelolaFiturPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-5 pb-10">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Fitur</h1>
+        <h1 className="sr-only">Fitur</h1>
         <p className="mt-1 text-sm text-slate-500">
           Nyalakan yang kamu butuhkan saja, Leosiqra tetap ringan. Mematikan fitur hanya menyembunyikan menunya — datamu tidak dihapus.
         </p>

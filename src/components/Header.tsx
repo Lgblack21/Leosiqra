@@ -1,12 +1,11 @@
 "use client";
 
-import { usePathname } from 'next/navigation';
-import { Menu, Plus, ChevronDown, Flame, Mic, ScanLine, ArrowUpDown, Briefcase, PiggyBank, CreditCard, HandCoins, Target, RefreshCw, ArrowLeftRight, Globe, Landmark, Coins, Tags, Building2, type LucideIcon } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
-import { useModal, ModalType } from '@/context/ModalContext';
-import { cn } from '@/lib/utils';
-import { findNavContext } from '@/lib/navigation';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Menu, Flame, Mic, ScanLine, Plus } from 'lucide-react';
+import { useModal } from '@/context/ModalContext';
+import { cn } from '@/lib/utils';
+import { findNavContext, tabsFor } from '@/lib/navigation';
 import { useStreak } from '@/components/streak/CloseDay';
 import { useFeatures } from '@/lib/features';
 
@@ -14,152 +13,71 @@ interface HeaderProps {
   onMenuClick?: () => void;
 }
 
-interface QuickAction { id: ModalType; label: string; icon: LucideIcon; color: string }
-
-// Dikelompokkan supaya 12 pintasan gak tampil sebagai satu daftar panjang.
-const quickActionGroups: { label: string; items: QuickAction[] }[] = [
-  {
-    label: 'Transaksi',
-    items: [
-      { id: 'harian', label: 'Pemasukan / Pengeluaran', icon: ArrowUpDown, color: 'bg-emerald-50 text-emerald-600' },
-      { id: 'topup_transfer', label: 'Transfer & Top Up', icon: ArrowLeftRight, color: 'bg-cyan-50 text-cyan-600' },
-      { id: 'recurring', label: 'Transaksi Rutin', icon: RefreshCw, color: 'bg-slate-100 text-slate-600' },
-    ],
-  },
-  {
-    label: 'Aset & Investasi',
-    items: [
-      { id: 'rekening', label: 'Rekening Baru', icon: Building2, color: 'bg-blue-50 text-blue-600' },
-      { id: 'tabungan', label: 'Tabungan', icon: PiggyBank, color: 'bg-rose-50 text-rose-600' },
-      { id: 'saham', label: 'Saham', icon: Briefcase, color: 'bg-blue-50 text-blue-600' },
-      { id: 'deposito', label: 'Deposito', icon: Landmark, color: 'bg-indigo-50 text-indigo-600' },
-      { id: 'investasi_lain', label: 'Investasi Lainnya', icon: Coins, color: 'bg-purple-50 text-purple-600' },
-      { id: 'kartu', label: 'Kartu Baru', icon: CreditCard, color: 'bg-rose-50 text-rose-600' },
-    ],
-  },
-  {
-    label: 'Perencanaan',
-    items: [
-      { id: 'hutang_piutang', label: 'Hutang & Piutang', icon: HandCoins, color: 'bg-orange-50 text-orange-600' },
-      { id: 'budget_target', label: 'Budget & Target', icon: Target, color: 'bg-teal-50 text-teal-600' },
-    ],
-  },
-  {
-    label: 'Pengaturan',
-    items: [
-      { id: 'ledger', label: 'Kategori', icon: Tags, color: 'bg-slate-100 text-slate-600' },
-      { id: 'currency', label: 'Mata Uang', icon: Globe, color: 'bg-emerald-50 text-emerald-600' },
-    ],
-  },
-];
-
+// Header gaya baru: judul halaman besar + aksi cepat (streak, struk, suara),
+// lalu tab sub-halaman kalau halaman ini punya "keluarga" (mis. Investasi:
+// Ringkasan · Saham · Deposito…). Tambah transaksi ada di sidebar; di HP
+// lewat tombol + di kanan atas.
 export const Header = ({ onMenuClick }: HeaderProps) => {
   const pathname = usePathname();
   const { openModal } = useModal();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const { title, group } = findNavContext(pathname);
+  const { title } = findNavContext(pathname);
+  const tabs = tabsFor(pathname);
   const { isOn } = useFeatures();
   const { data: streak } = useStreak();
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-    };
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setIsDropdownOpen(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, []);
-
   return (
-    <header className="fixed top-0 right-0 left-0 lg:left-72 h-20 border-b border-slate-200/70 flex items-center justify-between gap-3 px-4 md:px-8 bg-white/80 backdrop-blur-md z-30 print:hidden">
-      <div className="flex items-center gap-3 min-w-0">
-        <button
-          onClick={onMenuClick}
-          aria-label="Buka menu"
-          className="lg:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-control transition-all"
-        >
-          <Menu size={22} />
-        </button>
+    <header className="sticky top-0 z-30 bg-slate-50/85 px-4 pb-3 pt-4 backdrop-blur-md md:px-8 md:pt-7 print:hidden">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <button onClick={onMenuClick} aria-label="Buka menu" className="-ml-2 rounded-xl p-2 text-slate-500 hover:bg-slate-100 lg:hidden">
+            <Menu size={22} />
+          </button>
+          <h1 className="truncate text-2xl font-extrabold tracking-tight text-slate-900 md:text-[30px]">{title}</h1>
+        </div>
 
-        <div className="flex flex-col min-w-0">
-          {group && (
-            <p className="text-xs font-semibold text-slate-400 leading-none mb-1 truncate">{group}</p>
+        <div className="flex shrink-0 items-center gap-2">
+          {isOn('streak') && streak && (
+            <Link
+              href="/membership/streak"
+              title={streak.todayKind ? 'Hari ini sudah ditutup' : 'Hari ini belum ditutup'}
+              className={cn(
+                'flex items-center gap-1.5 rounded-full px-3.5 py-2.5 text-sm font-bold transition-colors',
+                streak.todayKind ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-100'
+              )}
+            >
+              <Flame size={16} className={streak.todayKind ? 'fill-orange-400' : undefined} />
+              <span className="tabular-nums">{streak.streak}</span>
+            </Link>
           )}
-          <h1 className="text-lg md:text-xl font-extrabold tracking-tight text-slate-900 leading-tight truncate">{title}</h1>
+          <Link href="/input-cepat?start=scan" className="hidden items-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-sm font-bold text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-100 md:flex">
+            <ScanLine size={16} /> Struk
+          </Link>
+          <Link href="/input-cepat?start=voice" className="hidden items-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-sm font-bold text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-100 md:flex">
+            <Mic size={16} /> Suara
+          </Link>
+          <button type="button" onClick={() => openModal('harian')} aria-label="Tambah transaksi" className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-white lg:hidden">
+            <Plus size={18} strokeWidth={2.6} />
+          </button>
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2">
-        {/* Streak + catat cepat lewat struk/suara (membuka Input Cepat). */}
-        {isOn('streak') && streak && (
-          <Link
-            href="/membership/streak"
-            title={streak.todayKind ? 'Hari ini sudah ditutup' : 'Hari ini belum ditutup'}
-            className={cn(
-              'flex items-center gap-1.5 rounded-2xl px-3 py-2.5 text-sm font-bold transition-colors',
-              streak.todayKind ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-            )}
-          >
-            <Flame size={16} className={streak.todayKind ? 'fill-orange-400' : undefined} />
-            <span className="tabular-nums">{streak.streak}</span>
-          </Link>
-        )}
-        <Link href="/input-cepat?start=scan" className="hidden items-center gap-1.5 rounded-2xl bg-slate-100 px-3.5 py-2.5 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-200 md:flex">
-          <ScanLine size={16} /> Struk
-        </Link>
-        <Link href="/input-cepat?start=voice" className="hidden items-center gap-1.5 rounded-2xl bg-slate-100 px-3.5 py-2.5 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-200 md:flex">
-          <Mic size={16} /> Suara
-        </Link>
-      <div className="relative shrink-0" ref={dropdownRef} data-tour="tambah-cepat">
-        <button
-          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          aria-expanded={isDropdownOpen}
-          aria-haspopup="menu"
-          className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white pl-3 pr-3 sm:pl-4 py-2.5 rounded-2xl text-sm font-bold shadow-lg shadow-indigo-500/25 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-500/30 transition-all"
-        >
-          <Plus size={16} strokeWidth={2.5} />
-          <span className="hidden sm:inline">Tambah cepat</span>
-          <ChevronDown size={14} className={cn('transition-transform', isDropdownOpen && 'rotate-180')} />
-        </button>
-
-        {isDropdownOpen && (
-          <div role="menu" className="absolute right-0 mt-2 w-72 bg-white border border-slate-100 rounded-[22px] shadow-2xl z-50 animate-in overflow-hidden">
-            <div className="max-h-[70vh] overflow-y-auto p-2">
-              {quickActionGroups.map((g) => (
-                <div key={g.label} className="py-1">
-                  <p className="px-3 pt-2 pb-1 text-xs font-semibold text-slate-400">{g.label}</p>
-                  {g.items.map((item) => (
-                    <button
-                      key={item.id}
-                      role="menuitem"
-                      onClick={() => {
-                        openModal(item.id);
-                        setIsDropdownOpen(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 transition-colors text-left"
-                    >
-                      <span className={cn('w-8 h-8 rounded-xl flex items-center justify-center shrink-0', item.color)}>
-                        <item.icon size={16} />
-                      </span>
-                      <span className="text-sm font-bold text-slate-700">{item.label}</span>
-                    </button>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-      </div>
+      {tabs && (
+        <nav aria-label="Sub-halaman" className="no-scrollbar mx-auto mt-3 flex max-w-6xl gap-1 overflow-x-auto">
+          {tabs.map((t) => (
+            <Link
+              key={t.href}
+              href={t.href}
+              aria-current={pathname === t.href ? 'page' : undefined}
+              className={cn(
+                'shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors',
+                pathname === t.href ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+              )}
+            >
+              {t.label}
+            </Link>
+          ))}
+        </nav>
+      )}
     </header>
   );
 };

@@ -10,6 +10,7 @@ import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { FeedbackProvider } from '@/components/ui/Feedback';
 import { reportAppOpened } from '@/lib/appUsage';
+import { ShellTitleContext } from '@/components/ui/PageHeader';
 
 const ONBOARDING_PATH = '/membership/onboarding';
 
@@ -70,12 +71,12 @@ export default function MembershipLayout({
             dalam ancestor flex/min-h-screen kepotong di batas tinggi layar
             (bug pagination flexbox saat print di Chrome) alih-alih mengalir
             ke halaman berikutnya. */}
-        <main className="flex-1 lg:ml-72 min-h-screen flex flex-col min-w-0 pt-20 print:block print:min-h-0 print:h-auto print:ml-0 print:pt-0">
+        <main className="flex-1 lg:ml-72 min-h-screen flex flex-col min-w-0 print:block print:min-h-0 print:h-auto print:ml-0 print:pt-0">
           <Header onMenuClick={() => setIsSidebarOpen(true)} />
 
           {/* Page Content */}
-          <div className="p-4 md:p-8 max-w-7xl mx-auto w-full flex-1 print:p-0 print:m-0 print:max-w-none">
-            {children}
+          <div className="px-4 pb-8 pt-2 md:px-8 max-w-7xl mx-auto w-full flex-1 print:p-0 print:m-0 print:max-w-none">
+            <ShellTitleContext.Provider value={true}>{children}</ShellTitleContext.Provider>
           </div>
         </main>
 

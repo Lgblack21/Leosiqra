@@ -133,7 +133,7 @@ export default function AplikasiTerhubungPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-5 pb-12">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Aplikasi terhubung</h1>
+        <h1 className="sr-only">Aplikasi terhubung</h1>
         <p className="mt-0.5 text-sm text-slate-500">Hubungkan aplikasi yang sudah kamu pakai lewat link pribadi. Leosiqra tidak pernah meminta kata sandi akun lain.</p>
       </div>
 

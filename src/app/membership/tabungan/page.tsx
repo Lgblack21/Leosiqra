@@ -191,7 +191,7 @@ export default function SavingsPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] border border-slate-50 shadow-sm">
         <div className="flex flex-col">
-          <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Tabungan & Dana Darurat</h1>
+          <h1 className="sr-only">Tabungan & Dana Darurat</h1>
           <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
             Periode {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth))}
           </p>

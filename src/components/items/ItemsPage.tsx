@@ -75,7 +75,7 @@ export function ItemsPage({ kind, title, intro, categories }: { kind: ItemKind; 
     <div className="mx-auto max-w-5xl space-y-5 pb-12">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">{title}</h1>
+          <h1 className="sr-only">{title}</h1>
           <p className="mt-0.5 text-sm text-slate-500">{intro}</p>
         </div>
         <div className="flex gap-2">

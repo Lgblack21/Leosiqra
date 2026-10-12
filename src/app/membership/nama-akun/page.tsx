@@ -229,7 +229,7 @@ export default function NamaAkunPage() {
       {/* 1. Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Nama Akun Transaksi</h1>
+          <h1 className="sr-only">Nama Akun Transaksi</h1>
           <p className="text-[12px] md:text-sm font-medium text-slate-400 mt-2 max-w-xl">
             Kelola kategori, subkategori, dan mata uang di sini — daftar inilah yang muncul sebagai pilihan setiap kali Anda mencatat transaksi, budget, atau recurring.
           </p>

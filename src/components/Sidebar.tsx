@@ -1,118 +1,141 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LogOut,
   ChevronRight,
-  ChevronDown,
+  ChevronUp,
   X,
   ShieldCheck,
+  Settings,
+  Sparkles,
+  Plus,
+  Crown,
+  ArrowUpDown,
+  ArrowLeftRight,
+  Repeat,
+  Building2,
+  PiggyBank,
+  CreditCard,
+  Briefcase,
+  Landmark,
+  Coins,
+  HandCoins,
+  Target,
+  SlidersHorizontal,
+  type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
-import { primaryNav, navGroups, type NavItem } from '@/lib/navigation';
+import { coreNav, captureNav, accountNav, tabsFor, type NavItem } from '@/lib/navigation';
 import { useFeedback } from '@/components/ui/Feedback';
 import { useFeatures } from '@/lib/features';
+import { useModal, type ModalType } from '@/context/ModalContext';
 
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
 }
 
+// Form lain di balik tombol "Tambah transaksi" (panah ▾).
+const MORE_ADDS: { id: ModalType; label: string; icon: LucideIcon }[] = [
+  { id: 'topup_transfer', label: 'Transfer & top up', icon: ArrowLeftRight },
+  { id: 'recurring', label: 'Transaksi rutin', icon: Repeat },
+  { id: 'tabungan', label: 'Setor tabungan', icon: PiggyBank },
+  { id: 'hutang_piutang', label: 'Hutang & piutang', icon: HandCoins },
+  { id: 'rekening', label: 'Rekening baru', icon: Building2 },
+  { id: 'kartu', label: 'Kartu baru', icon: CreditCard },
+  { id: 'saham', label: 'Saham', icon: Briefcase },
+  { id: 'deposito', label: 'Deposito', icon: Landmark },
+  { id: 'investasi_lain', label: 'Investasi lainnya', icon: Coins },
+  { id: 'budget_target', label: 'Anggaran', icon: Target },
+  { id: 'ledger', label: 'Kategori', icon: SlidersHorizontal },
+];
+
+type Profile = {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'user';
+  plan: 'FREE' | 'PRO';
+  status: 'AKTIF' | 'NONAKTIF' | 'GUEST' | 'PENDING';
+  photoURL?: string;
+  expiredAt?: string;
+};
+
+// Sidebar datar: Keuangan (5 halaman inti) · Fitur (yang dinyalakan) ·
+// Pencatatan. Pengaturan & bantuan ada di menu akun (kartu user di bawah).
 export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const pathname = usePathname();
   const router = useRouter();
   const { toast } = useFeedback();
-  // Menu fitur yang dimatikan user di "Kelola fitur" disembunyikan (data tetap ada).
-  const { hiddenHrefs } = useFeatures();
-  const visibleGroups = navGroups
-    .map((g) => ({ ...g, items: g.items.filter((i) => !hiddenHrefs.has(i.href) || i.href === pathname) }))
-    .filter((g) => g.items.length > 0);
-  // Grup yang berisi halaman aktif otomatis terbuka; sisanya bisa dibuka
-  // manual. Disimpan sebagai set id yang di-toggle user.
-  const activeGroupId = navGroups.find((g) => g.items.some((i) => i.href === pathname))?.id;
-  const [openGroups, setOpenGroups] = useState<string[]>(activeGroupId ? [activeGroupId] : []);
-  const [profile, setProfile] = useState<{
-    id: string;
-    name: string;
-    email: string;
-    role: 'admin' | 'user';
-    plan: 'FREE' | 'PRO';
-    status: 'AKTIF' | 'NONAKTIF' | 'GUEST' | 'PENDING';
-    photoURL?: string;
-    expiredAt?: string;
-  } | null>(null);
+  const { openModal } = useModal();
+  const { enabled } = useFeatures();
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+  const accountRef = useRef<HTMLDivElement>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [isRequesting, setIsRequesting] = useState(false);
 
   useEffect(() => {
-    cloudflareApi<{ user?: {
-      id: string;
-      name: string;
-      email: string;
-      role: 'admin' | 'user';
-      plan: 'FREE' | 'PRO';
-      status: 'AKTIF' | 'NONAKTIF' | 'GUEST' | 'PENDING';
-    } | null }>('/api/auth/me')
+    cloudflareApi<{ user?: Profile | null }>('/api/auth/me')
       .then((result) => setProfile(result.user ?? null))
       .catch(() => setProfile(null));
   }, []);
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
-  }
-
-  // Pindah halaman lewat link di luar sidebar (Header, tombol di halaman,
-  // tur) juga harus membuka grup tujuannya.
+  // Tutup menu kecil saat klik di luar / Escape.
   useEffect(() => {
-    if (activeGroupId) {
-      setOpenGroups((prev) => (prev.includes(activeGroupId) ? prev : [...prev, activeGroupId]));
-    }
-  }, [activeGroupId]);
+    const onDown = (e: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false);
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) setAccountOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMoreOpen(false);
+        setAccountOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, []);
 
-  const toggleGroup = (id: string) => {
-    setOpenGroups(prev =>
-      prev.includes(id)
-        ? prev.filter(g => g !== id)
-        : [...prev, id]
-    );
+  const closeOnMobile = () => {
+    if (window.innerWidth < 1024) onClose?.();
   };
 
-  const closeOnMobile = () => { if (window.innerWidth < 1024) onClose?.(); };
-
-  const renderItem = (item: NavItem, nested = false) => {
-    const active = pathname === item.href;
-    return (
-      <Link
-        key={item.href}
-        href={item.href}
-        onClick={closeOnMobile}
-        aria-current={active ? 'page' : undefined}
-        className={cn(
-          'relative flex items-center gap-3 rounded-xl text-sm transition-colors',
-          nested ? 'pl-10 pr-3 py-2' : 'px-3 py-2.5 font-bold',
-          active
-            ? 'text-indigo-600 font-bold'
-            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-        )}
-      >
-        {/* Latar item aktif meluncur halus dari item sebelumnya (shared layout). */}
-        {active && (
-          <motion.span
-            layoutId="sidebar-active"
-            className="absolute inset-0 rounded-xl bg-white shadow-sm ring-1 ring-indigo-100"
-            transition={{ type: 'spring', stiffness: 420, damping: 36 }}
-          />
-        )}
-        {!nested && <item.icon size={18} className={cn('relative', active ? 'text-indigo-600' : 'text-slate-400')} />}
-        <span className="relative truncate">{item.label}</span>
-      </Link>
-    );
+  // Aktif: cocok persis, atau halaman ini satu keluarga tab dengan item menu.
+  const isActive = (href: string) => {
+    if (pathname === href) return true;
+    const family = tabsFor(pathname);
+    return Boolean(family && family[0].href === href);
   };
 
-  const [isRequesting, setIsRequesting] = useState(false);
+  const renderItem = (item: NavItem, onClick?: () => void) => {
+    const active = isActive(item.href);
+    const cls = cn(
+      'flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[14px] transition-colors',
+      active ? 'bg-slate-200/70 font-bold text-slate-900' : 'font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+    );
+    const inner = (
+      <>
+        <item.icon size={17} className={active ? 'text-slate-900' : 'text-slate-400'} />
+        <span className="truncate">{item.label}</span>
+      </>
+    );
+    return onClick ? (
+      <button key={item.href} type="button" onClick={onClick} className={cls}>{inner}</button>
+    ) : (
+      <Link key={item.href} href={item.href} onClick={closeOnMobile} aria-current={active ? 'page' : undefined} className={cls}>{inner}</Link>
+    );
+  };
 
   const handleRequestPro = async () => {
     if (!profile?.id) return;
@@ -137,176 +160,210 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     }
   };
 
-  const getRemainingDays = () => {
+  const remainingDays = (() => {
     if (!profile?.expiredAt) return null;
-    const now = new Date();
-    const exp = new Date(profile.expiredAt);
-    const diffTime = exp.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays > 0 ? diffDays : 0;
-  };
-
-  const remainingDays = getRemainingDays();
+    const diff = Math.ceil((new Date(profile.expiredAt).getTime() - Date.now()) / 86400000);
+    return diff > 0 ? diff : 0;
+  })();
+  const initials = (name: string) => name.split(' ').map((n) => n[0]).join('').toUpperCase().substring(0, 2);
+  const limited = profile?.status === 'GUEST' || profile?.status === 'PENDING';
 
   return (
-    <>
-      <aside className={cn(
-        "fixed top-0 left-0 h-full w-72 bg-slate-50 border-r border-slate-200 flex flex-col z-50 transition-transform duration-300 ease-in-out lg:translate-x-0 print:hidden",
-        isOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
-        {/* Logo */}
-        <div className="px-5 h-20 flex items-center justify-between shrink-0 border-b border-slate-200/70">
-          <div className="flex items-center gap-3 select-none" aria-hidden>
-            <Image src="/images/Logo-new.png" alt="" width={34} height={34} className="object-contain" />
-            <div className="flex flex-col">
-              <span className="font-extrabold text-lg text-slate-900 tracking-tight leading-none">Leosiqra</span>
-              <span className="text-xs font-medium text-slate-400 mt-1">Ruang keuanganmu</span>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            aria-label="Tutup menu"
-            className="lg:hidden p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-control transition-all"
-          >
-            <X size={20} />
+    <aside
+      className={cn(
+        'fixed left-0 top-0 z-50 flex h-full w-72 flex-col border-r border-slate-200/70 bg-slate-50 transition-transform duration-300 ease-in-out lg:translate-x-0 print:hidden',
+        isOpen ? 'translate-x-0' : '-translate-x-full'
+      )}
+    >
+      {/* Logo + pengaturan */}
+      <div className="flex items-center justify-between px-5 pb-3 pt-5">
+        <Link href="/membership/dashboard" onClick={closeOnMobile} className="flex items-center gap-2.5">
+          <Image src="/images/Logo-new.png" alt="" width={30} height={30} className="object-contain" />
+          <span className="text-lg font-extrabold tracking-tight text-slate-900">Leosiqra</span>
+        </Link>
+        <div className="flex items-center gap-1">
+          <Link href="/membership/profile" onClick={closeOnMobile} aria-label="Pengaturan" title="Pengaturan" className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700">
+            <Settings size={18} />
+          </Link>
+          <button onClick={onClose} aria-label="Tutup menu" className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 lg:hidden">
+            <X size={18} />
           </button>
         </div>
+      </div>
 
-        {/* Navigation */}
-        <nav aria-label="Menu utama" className="flex-1 overflow-y-auto px-3 py-4 no-scrollbar">
-          {profile?.status === 'GUEST' || profile?.status === 'PENDING' ? (
-            <div className="py-10 px-2 space-y-6 text-center animate-in fade-in slide-in-from-bottom-4 duration-1000">
-              <div className="w-16 h-16 rounded-card bg-indigo-50 flex items-center justify-center mx-auto text-indigo-600 border border-indigo-100 shadow-sm relative">
-                <ShieldCheck size={32} />
-                {profile?.status === 'PENDING' && (
-                  <div className="absolute inset-0 rounded-card border-2 border-indigo-600 border-t-transparent animate-spin" />
-                )}
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-sm font-extrabold text-slate-900 tracking-tight">
-                  {profile?.status === 'PENDING' ? 'Sedang Diverifikasi' : 'Akses Terbatas'}
-                </h3>
-                <p className="text-[11px] font-medium text-slate-400 leading-relaxed">
-                  {profile?.status === 'PENDING' 
-                    ? 'Permintaan akses Anda sudah terkirim. Admin akan memverifikasi data Anda segera.' 
-                    : 'Akun Anda sedang dalam status tamu. Ajukan akses gratis (menunggu verifikasi admin) atau bayar langsung untuk akses instan.'}
-                </p>
-              </div>
-              <div className="space-y-3 pt-2">
-                {profile?.status === 'GUEST' ? (
-                  <button 
-                    onClick={handleRequestPro}
-                    disabled={isRequesting}
-                    className={cn(
-                      "w-full py-4 bg-indigo-600 text-white text-[11px] font-black rounded-xl hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 flex items-center justify-center gap-2 group",
-                      isRequesting && "opacity-70 cursor-not-allowed"
-                    )}
-                  >
-                    {isRequesting ? (
-                      <>
-                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Mengirim...
-                      </>
-                    ) : (
-                      <>
-                        Request Akses
-                        <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                      </>
-                    )}
-                  </button>
-                ) : (
-                  <div className="w-full py-4 bg-slate-100 text-slate-400 text-xs font-bold rounded-xl border border-slate-200">
-                    Menunggu konfirmasi…
-                  </div>
-                )}
-                <Link
-                  href="/membership/contact"
-                  className="w-full py-4 bg-white text-indigo-600 text-[11px] font-black rounded-xl border border-indigo-200 hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 group"
-                >
-                  Bayar / Upgrade ke PRO
-                  <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              <div className="space-y-1" data-tour="sidebar-group-primary">
-                {primaryNav.map((item) => renderItem(item))}
-              </div>
-
-              <div className="pt-3 mt-3 border-t border-slate-200/70 space-y-1">
-                {visibleGroups.map((group) => {
-                  const isOpenGroup = openGroups.includes(group.id);
-                  const hasActive = group.id === activeGroupId;
-                  return (
-                    <div key={group.id} data-tour={`sidebar-group-${group.id}`}>
-                      <button
-                        onClick={() => toggleGroup(group.id)}
-                        aria-expanded={isOpenGroup}
-                        className={cn(
-                          'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-colors',
-                          hasActive && !isOpenGroup ? 'text-indigo-600' : 'text-slate-600',
-                          'hover:text-slate-900 hover:bg-slate-100'
-                        )}
-                      >
-                        <group.icon size={18} className={hasActive ? 'text-indigo-600' : 'text-slate-400'} />
-                        <span className="flex-1 text-left truncate">{group.label}</span>
-                        <ChevronDown size={14} className={cn('text-slate-400 transition-transform', !isOpenGroup && '-rotate-90')} />
-                      </button>
-                      {isOpenGroup && (
-                        <div className="mt-0.5 mb-1 space-y-0.5">
-                          {group.items.map((item) => renderItem(item, true))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+      {/* Tanya Leo */}
+      <div className="px-4 pb-3">
+        <Link
+          href="/membership/ai-leosiqra"
+          onClick={closeOnMobile}
+          className={cn(
+            'flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 text-sm transition-colors',
+            pathname === '/membership/ai-leosiqra' ? 'bg-slate-900 text-white' : 'bg-white text-slate-500 ring-1 ring-slate-200/80 hover:text-slate-800'
           )}
-        </nav>
+        >
+          <Sparkles size={16} className={pathname === '/membership/ai-leosiqra' ? 'text-violet-300' : 'text-violet-500'} />
+          Tanya Leo…
+        </Link>
+      </div>
 
-        {/* Footer: profil + paket + logout jadi satu kartu */}
-        <div className="p-3 border-t border-slate-200/70 shrink-0">
-          <div className="p-3 bg-white border border-slate-100 rounded-[20px] shadow-sm">
-            <div className="flex items-center gap-3">
-              <Link
-                href="/membership/profile"
-                onClick={closeOnMobile}
-                className="flex items-center gap-3 min-w-0 flex-1 group"
-              >
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-xs font-black text-white overflow-hidden relative shrink-0">
-                  {profile?.photoURL ? (
-                    <Image src={profile.photoURL} alt={profile.name} fill unoptimized className="object-cover" />
-                  ) : (
-                    profile ? getInitials(profile.name) : '··'
-                  )}
-                </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-sm font-bold text-slate-900 truncate group-hover:text-indigo-600 transition-colors">
-                    {profile?.name || 'Memuat...'}
-                  </span>
-                  <span className={cn(
-                    'text-caption font-bold truncate',
-                    profile?.plan === 'PRO' ? 'text-emerald-600' : 'text-slate-400'
-                  )}>
-                    {profile?.plan === 'PRO' ? 'PRO' : 'Free'}
-                    {remainingDays !== null && ` · sisa ${remainingDays} hari`}
-                  </span>
-                </div>
-              </Link>
+      <nav aria-label="Menu utama" className="no-scrollbar flex-1 overflow-y-auto px-3 pb-3">
+        {limited ? (
+          <div className="space-y-5 px-2 py-8 text-center">
+            <div className="relative mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-indigo-100 bg-indigo-50 text-indigo-600">
+              <ShieldCheck size={28} />
+              {profile?.status === 'PENDING' && <div className="absolute inset-0 animate-spin rounded-2xl border-2 border-indigo-600 border-t-transparent" />}
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-sm font-extrabold text-slate-900">{profile?.status === 'PENDING' ? 'Sedang diverifikasi' : 'Akses terbatas'}</h3>
+              <p className="text-xs leading-relaxed text-slate-500">
+                {profile?.status === 'PENDING'
+                  ? 'Permintaan aksesmu sudah terkirim. Admin akan memverifikasi segera.'
+                  : 'Akunmu masih berstatus tamu. Ajukan akses gratis (menunggu verifikasi admin) atau upgrade untuk akses instan.'}
+              </p>
+            </div>
+            {profile?.status === 'GUEST' ? (
               <button
-                onClick={handleLogout}
-                aria-label="Keluar"
-                title="Keluar"
-                className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-control transition-colors shrink-0"
+                onClick={handleRequestPro}
+                disabled={isRequesting}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-70"
               >
-                <LogOut size={16} />
+                {isRequesting ? 'Mengirim…' : <>Minta akses <ChevronRight size={14} /></>}
+              </button>
+            ) : (
+              <div className="w-full rounded-xl border border-slate-200 bg-slate-100 py-3 text-xs font-bold text-slate-400">Menunggu konfirmasi…</div>
+            )}
+            <Link href="/membership/contact" className="flex w-full items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-white py-3 text-xs font-bold text-indigo-600 hover:bg-indigo-50">
+              Bayar / upgrade ke PRO <ChevronRight size={14} />
+            </Link>
+          </div>
+        ) : (
+          <>
+            <p className="px-3 pb-1 pt-2 text-xs font-semibold text-slate-400">Keuangan</p>
+            <div className="space-y-0.5" data-tour="sidebar-group-keuangan">{coreNav.map((i) => renderItem(i))}</div>
+
+            <p className="px-3 pb-1 pt-5 text-xs font-semibold text-slate-400">Fitur</p>
+            <div className="space-y-0.5" data-tour="sidebar-group-fitur">
+              {enabled.map((f) => renderItem({ label: f.short ?? f.label, href: f.href, icon: f.icon }))}
+              {renderItem({ label: 'Kelola fitur', href: '/membership/fitur', icon: SlidersHorizontal })}
+            </div>
+
+            <p className="px-3 pb-1 pt-5 text-xs font-semibold text-slate-400">Pencatatan</p>
+            <div className="space-y-0.5" data-tour="sidebar-group-pencatatan">
+              {captureNav.map((i) =>
+                i.modal
+                  ? renderItem(i, () => {
+                      openModal(i.modal!);
+                      closeOnMobile();
+                    })
+                  : renderItem(i)
+              )}
+            </div>
+          </>
+        )}
+      </nav>
+
+      {/* Bawah: PRO, Tambah transaksi, akun */}
+      <div className="space-y-2.5 border-t border-slate-200/70 p-3">
+        {profile && profile.plan !== 'PRO' && !limited && (
+          <Link href="/membership/contact" onClick={closeOnMobile} className="flex items-center gap-3 rounded-2xl bg-white px-3.5 py-2.5 ring-1 ring-slate-200/80 transition-colors hover:bg-amber-50/60">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-600"><Crown size={16} /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold text-slate-900">Leosiqra PRO</span>
+              <span className="block text-xs text-slate-500">{remainingDays !== null ? `Sisa ${remainingDays} hari · upgrade` : 'Buka semua fitur'}</span>
+            </span>
+            <ChevronRight size={16} className="text-slate-400" />
+          </Link>
+        )}
+
+        {!limited && (
+          <div className="relative flex" ref={moreRef} data-tour="tambah-cepat">
+            <button
+              type="button"
+              onClick={() => {
+                openModal('harian');
+                closeOnMobile();
+              }}
+              className="flex flex-1 items-center justify-center gap-2 rounded-l-2xl bg-slate-900 py-3 text-sm font-bold text-white transition-colors hover:bg-slate-800"
+            >
+              <Plus size={17} strokeWidth={2.6} /> Tambah transaksi
+            </button>
+            <button
+              type="button"
+              onClick={() => setMoreOpen((v) => !v)}
+              aria-label="Tambah lainnya"
+              aria-expanded={moreOpen}
+              className="flex items-center rounded-r-2xl border-l border-white/15 bg-slate-900 px-3 text-white transition-colors hover:bg-slate-800"
+            >
+              <ChevronUp size={16} className={cn('transition-transform', !moreOpen && 'rotate-180')} />
+            </button>
+            {moreOpen && (
+              <div role="menu" className="absolute bottom-full left-0 right-0 z-10 mb-2 max-h-[60vh] overflow-y-auto rounded-2xl border border-slate-100 bg-white p-1.5 shadow-2xl">
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    openModal('harian');
+                    setMoreOpen(false);
+                    closeOnMobile();
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  <ArrowUpDown size={15} className="text-slate-400" /> Pemasukan / pengeluaran
+                </button>
+                {MORE_ADDS.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      openModal(m.id);
+                      setMoreOpen(false);
+                      closeOnMobile();
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    <m.icon size={15} className="text-slate-400" /> {m.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="relative" ref={accountRef}>
+          <button type="button" onClick={() => setAccountOpen((v) => !v)} aria-expanded={accountOpen} className="flex w-full items-center gap-3 rounded-2xl px-2 py-2 text-left transition-colors hover:bg-slate-100">
+            <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-xs font-bold text-white">
+              {profile?.photoURL ? <Image src={profile.photoURL} alt={profile.name} fill unoptimized className="object-cover" /> : profile ? initials(profile.name) : '··'}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-bold text-slate-900">{profile?.name || 'Memuat…'}</span>
+              <span className="block truncate text-xs text-slate-500">{profile?.plan === 'PRO' ? 'PRO' : 'Free'}{profile?.email ? ` · ${profile.email}` : ''}</span>
+            </span>
+            <ChevronUp size={15} className={cn('text-slate-400 transition-transform', !accountOpen && 'rotate-180')} />
+          </button>
+          {accountOpen && (
+            <div role="menu" className="absolute bottom-full left-0 right-0 z-10 mb-2 rounded-2xl border border-slate-100 bg-white p-1.5 shadow-2xl">
+              {accountNav.map((i) => (
+                <Link
+                  key={i.href}
+                  href={i.href}
+                  role="menuitem"
+                  onClick={() => {
+                    setAccountOpen(false);
+                    closeOnMobile();
+                  }}
+                  className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  <i.icon size={15} className="text-slate-400" /> {i.label}
+                </Link>
+              ))}
+              <button type="button" role="menuitem" onClick={handleLogout} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold text-rose-600 hover:bg-rose-50">
+                <LogOut size={15} /> Keluar
               </button>
             </div>
-          </div>
+          )}
         </div>
-      </aside>
-    </>
+      </div>
+    </aside>
   );
 };

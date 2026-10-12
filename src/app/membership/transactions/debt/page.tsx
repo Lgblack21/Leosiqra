@@ -326,7 +326,7 @@ export default function DebtPage() {
       {/* 1. Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] border border-slate-50 shadow-sm">
         <div className="flex flex-col">
-          <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Hutang & Piutang</h1>
+          <h1 className="sr-only">Hutang & Piutang</h1>
           <p className="text-sm text-slate-500 mt-1">
             {statusFilter === 'Belum lunas'
               ? 'Semua yang belum lunas, dari bulan mana pun'

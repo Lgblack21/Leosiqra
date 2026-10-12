@@ -222,7 +222,7 @@ export default function KanvasPage() {
     <div className="mx-auto max-w-[1400px] space-y-4 pb-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Kanvas</h1>
+          <h1 className="sr-only">Kanvas</h1>
           <p className="mt-0.5 text-sm text-slate-500">Dari uang masuk sampai tabungan: ke mana uangmu mengalir · {accCount} rekening · {graph.edges.length} jalur</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

@@ -288,7 +288,7 @@ export default function MarketDataPage() {
             <Globe size={22} />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Market Data</h1>
+            <h1 className="sr-only">Market Data</h1>
             <p className="text-[11px] md:text-sm font-medium text-slate-500 mt-1 leading-relaxed">Kurs, kripto, dan emas — diperbarui otomatis setiap menit.</p>
           </div>
         </div>

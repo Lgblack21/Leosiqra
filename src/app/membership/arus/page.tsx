@@ -99,7 +99,7 @@ export default function ArusPage() {
     <div className="mx-auto max-w-6xl space-y-5 pb-12">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Ikuti uangmu</h1>
+          <h1 className="sr-only">Ikuti uangmu</h1>
           <p className="mt-0.5 text-sm text-slate-500">Dari mana uangmu datang, dan ke mana saja perginya.</p>
         </div>
         <div className="flex items-center gap-1">
