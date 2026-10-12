@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { motion, useReducedMotion } from "framer-motion";
 import { Mic, Sparkles, Users } from "lucide-react";
-import { AuthScene, greetingOf, useDayPart } from "./AuthScene";
+import { AuthScene, Greeting } from "./AuthScene";
 import { LeoMascot, type LeoMood } from "@/components/mascot/LeoMascot";
 
 // Kerangka halaman masuk/daftar: langit kota + Leo yang mengintip di atas
@@ -31,22 +30,13 @@ export function AuthLayout({
   children: React.ReactNode;
   footer?: React.ReactNode;
 }) {
-  const part = useDayPart();
-  const reduce = useReducedMotion();
-  const enter = (k: number) =>
-    reduce
-      ? {}
-      : {
-          initial: { opacity: 0, y: 16 },
-          animate: { opacity: 1, y: 0 },
-          transition: { duration: 0.6, delay: 0.08 + k * 0.08, ease: [0.16, 1, 0.3, 1] as const },
-        };
-  const greet = greetingOf(part);
+  // Jeda animasi masuk (CSS .auth-enter) per elemen.
+  const d = (k: number) => ({ "--d": `${0.08 + k * 0.08}s` }) as React.CSSProperties;
 
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-indigo-100 lg:flex">
       {/* Langit kota — panel kiri (desktop) */}
-      <AuthScene part={part} className="hidden lg:block lg:w-[52%] lg:min-h-screen">
+      <AuthScene className="hidden lg:block lg:w-[52%] lg:min-h-screen">
         <div className="flex h-full min-h-screen flex-col px-14 py-12 text-white">
           <Link href="/" className="flex w-fit items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/95 shadow-lg shadow-black/10">
@@ -55,15 +45,15 @@ export function AuthLayout({
             <span className="text-xl font-extrabold tracking-tight">Leosiqra</span>
           </Link>
           <div className="mt-[9vh] max-w-lg">
-            <motion.p {...enter(0)} className="text-sm font-semibold text-white/80">{greet} 👋</motion.p>
-            <motion.h1 {...enter(1)} className="mt-3 text-[44px] font-extrabold leading-[1.08] tracking-tight drop-shadow-sm">{headline}</motion.h1>
-            <motion.p {...enter(2)} className="mt-4 text-base leading-relaxed text-white/85">{sub}</motion.p>
+            <p className="auth-enter text-sm font-semibold text-white/80" style={d(0)}><Greeting /> 👋</p>
+            <h1 style={d(1)} className="auth-enter mt-3 text-[44px] font-extrabold leading-[1.08] tracking-tight drop-shadow-sm">{headline}</h1>
+            <p style={d(2)} className="auth-enter mt-4 text-base leading-relaxed text-white/85">{sub}</p>
             <div className="mt-8 flex flex-col gap-2.5">
               {POINTS.map(({ icon: Icon, text }, i) => (
-                <motion.div key={text} {...enter(3 + i)} className="flex w-fit items-center gap-3 rounded-2xl bg-white/15 px-4 py-2.5 text-sm font-semibold backdrop-blur-md ring-1 ring-white/20">
+                <div key={text} style={d(3 + i)} className="auth-enter flex w-fit items-center gap-3 rounded-2xl bg-white/15 px-4 py-2.5 text-sm font-semibold backdrop-blur-md ring-1 ring-white/20">
                   <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-white/20"><Icon size={15} /></span>
                   {text}
-                </motion.div>
+                </div>
               ))}
             </div>
           </div>
@@ -71,7 +61,7 @@ export function AuthLayout({
       </AuthScene>
 
       {/* Banner langit (HP) */}
-      <AuthScene part={part} className="h-[250px] lg:hidden">
+      <AuthScene className="h-[250px] lg:hidden">
         <div className="flex h-full flex-col px-6 pt-7 text-white">
           <Link href="/" className="flex w-fit items-center gap-2.5">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/95 shadow-md">
@@ -79,7 +69,7 @@ export function AuthLayout({
             </span>
             <span className="text-lg font-extrabold tracking-tight">Leosiqra</span>
           </Link>
-          <p className="mt-5 text-xs font-semibold text-white/85">{greet} 👋</p>
+          <p className="mt-5 text-xs font-semibold text-white/85"><Greeting /> 👋</p>
           <h1 className="mt-1 max-w-[17rem] text-[22px] font-extrabold leading-tight drop-shadow-sm">{headline}</h1>
         </div>
       </AuthScene>
@@ -88,12 +78,12 @@ export function AuthLayout({
       <div className="relative flex flex-1 justify-center px-5 pb-10 lg:items-center lg:bg-[#f7f7fb] lg:px-10">
         <div className="relative -mt-24 w-full max-w-[440px] lg:mt-0">
           {/* Leo mengintip di tepi atas kartu */}
-          <div className="pointer-events-none relative z-20 -mb-[30px] flex justify-center">
+          <div style={d(1)} className="auth-enter pointer-events-none relative z-20 -mb-[30px] flex justify-center">
             <LeoMascot mood={mood} lookX={lookX} size={128} interactive />
           </div>
-          <motion.div {...enter(1)} className="relative z-10 rounded-[30px] border border-slate-100 bg-white p-6 pt-8 shadow-[0_20px_60px_-24px_rgba(49,46,129,0.35)] sm:p-9 sm:pt-10">
+          <div style={d(1)} className="auth-enter relative z-10 rounded-[30px] border border-slate-100 bg-white p-6 pt-8 shadow-[0_20px_60px_-24px_rgba(49,46,129,0.35)] sm:p-9 sm:pt-10">
             {children}
-          </motion.div>
+          </div>
           {footer && <div className="mt-5 text-center text-xs text-slate-400">{footer}</div>}
         </div>
       </div>

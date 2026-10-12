@@ -116,6 +116,8 @@ export default function RootLayout({
       lang="id"
       className={`h-full antialiased ${serifDisplay.variable} ${jakarta.variable}`}
       data-scroll-behavior="smooth"
+      // Halaman auth menulis data-daypart sebelum hydrate (lihat AuthScene).
+      suppressHydrationWarning
     >
       <head>
         {/* Next.js 16's `appleWebApp` metadata cuma nulis tag generik

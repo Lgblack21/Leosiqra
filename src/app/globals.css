@@ -350,6 +350,26 @@ html.no-zoom {
 @keyframes leo-ear { 0%, 86%, 100% { transform: rotate(0); } 89% { transform: rotate(-14deg); } 92% { transform: rotate(8deg); } 95% { transform: rotate(-4deg); } }
 .leo-blink { transform-box: fill-box; transform-origin: 50% 50%; animation: leo-blink 5.5s infinite; }
 @keyframes leo-blink { 0%, 93%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.08); } 97% { transform: scaleY(1); } }
+/* Langit auth per waktu — dipilih dari <html data-daypart> (lihat AuthScene). Default = sore. */
+.auth-sky { --sky-top: #4338CA; --sky-mid: #A855F7; --sky-bottom: #FDBA74; --sky-far: #7C5CC4; --sky-near: #3B2A7A; --sky-glow: #FFD8A8;
+  background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 55%, var(--sky-bottom) 100%); }
+html[data-daypart="pagi"] .auth-sky { --sky-top: #7DD3FC; --sky-mid: #C4B5FD; --sky-bottom: #FED7AA; --sky-far: #A5A1E8; --sky-near: #6D5BD0; --sky-glow: #FFF1D6; }
+html[data-daypart="siang"] .auth-sky { --sky-top: #3B82F6; --sky-mid: #818CF8; --sky-bottom: #E0E7FF; --sky-far: #8B93E8; --sky-near: #4F46E5; --sky-glow: #FFFFFF; }
+html[data-daypart="malam"] .auth-sky { --sky-top: #0F0B2E; --sky-mid: #2E1F6B; --sky-bottom: #5B3FA8; --sky-far: #2A2266; --sky-near: #140F38; --sky-glow: #C7B8FF; }
+.auth-sun { width: 120px; height: 120px; right: 14%; top: 38%; background: radial-gradient(circle, var(--sky-glow) 0%, color-mix(in srgb, var(--sky-glow) 67%, transparent) 40%, transparent 70%); }
+html[data-daypart="pagi"] .auth-sun { right: 70%; }
+html[data-daypart="siang"] .auth-sun { top: 12%; }
+.auth-moon { display: none; width: 70px; height: 70px; right: 14%; top: 14%; background: radial-gradient(circle at 35% 35%, #FFFBEB, #E9D5FF); box-shadow: 0 0 60px 10px rgba(199, 184, 255, .35); }
+.auth-night { display: none; }
+html[data-daypart="malam"] .auth-night, html[data-daypart="malam"] .auth-moon { display: block; }
+html[data-daypart="malam"] .auth-day, html[data-daypart="malam"] .auth-sun { display: none; }
+.auth-greet { display: none; }
+html:not([data-daypart]) .auth-greet[data-p="sore"],
+html[data-daypart="pagi"] .auth-greet[data-p="pagi"], html[data-daypart="siang"] .auth-greet[data-p="siang"],
+html[data-daypart="sore"] .auth-greet[data-p="sore"], html[data-daypart="malam"] .auth-greet[data-p="malam"] { display: inline; }
+/* Animasi masuk pakai CSS (bukan JS) supaya jalan sejak frame pertama, tidak menunggu hydrate. */
+.auth-enter { animation: auth-enter .6s cubic-bezier(.16, 1, .3, 1) both; animation-delay: var(--d, 0s); }
+@keyframes auth-enter { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
 .auth-cloud { animation: auth-cloud linear infinite; }
 @keyframes auth-cloud { from { transform: translateX(-30%); } to { transform: translateX(130%); } }
 .auth-star { animation: auth-star 3.2s ease-in-out infinite; }
@@ -357,5 +377,5 @@ html.no-zoom {
 .auth-window { animation: auth-window 6s ease-in-out infinite; }
 @keyframes auth-window { 0%, 100% { opacity: 0.95; } 50% { opacity: 0.55; } }
 @media (prefers-reduced-motion: reduce) {
-  .leo-breathe, .leo-mane, .leo-ear-l, .leo-ear-r, .leo-blink, .auth-cloud, .auth-star, .auth-window { animation: none !important; }
+  .leo-breathe, .leo-mane, .leo-ear-l, .leo-ear-r, .leo-blink, .auth-cloud, .auth-star, .auth-window, .auth-enter { animation: none !important; }
 }
