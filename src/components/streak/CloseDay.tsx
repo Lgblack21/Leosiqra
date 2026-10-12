@@ -61,7 +61,7 @@ export function CloseDayCard({ transactions, accounts, className }: { transactio
   const closed = Boolean(data?.todayKind);
 
   return (
-    <div className={cn('flex flex-col rounded-[24px] border border-slate-100 bg-white p-5 shadow-[0_8px_30px_-18px_rgba(49,46,129,0.25)]', className)}>
+    <div className={cn('flex min-w-0 flex-col rounded-[24px] border border-slate-100 bg-white p-5 shadow-[0_8px_30px_-18px_rgba(49,46,129,0.25)]', className)}>
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-semibold text-slate-400">Hari ini · {dayLabel(now)}</p>
         {data && (
@@ -96,7 +96,7 @@ export function CloseDayCard({ transactions, accounts, className }: { transactio
             <ul className="mt-3 space-y-1.5">
               {out.slice(0, 3).map((t, i) => (
                 <li key={t.id || i} className="flex items-center justify-between gap-3 text-sm">
-                  <span className="truncate text-slate-600">{t.note || t.category}</span>
+                  <span className="min-w-0 truncate text-slate-600">{t.note || t.category}</span>
                   <span className="shrink-0 font-bold text-rose-500 tabular-nums">−{formatIDR(toIdr(t))}</span>
                 </li>
               ))}

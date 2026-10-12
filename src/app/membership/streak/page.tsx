@@ -11,6 +11,7 @@ import { CloseDayDialog } from '@/components/streak/CloseDay';
 import { LeoMascot } from '@/components/mascot/LeoMascot';
 import { useFeedback } from '@/components/ui/Feedback';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { GamificationStrip } from '@/components/GamificationStrip';
 
 const KIND_STYLE: Record<DayKind, string> = {
   closed: 'bg-orange-500 text-white',
@@ -220,6 +221,9 @@ export default function StreakPage() {
           </div>
         </div>
       </div>
+
+      {/* Level & lencana (dipindah dari Dashboard supaya Dashboard ringkas) */}
+      <GamificationStrip />
 
       <CloseDayDialog open={dialog} onClose={() => setDialog(false)} today={todayTrx} accounts={accounts} onClosed={setData} />
     </div>
