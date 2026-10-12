@@ -367,6 +367,9 @@ html[data-daypart="malam"] .auth-day, html[data-daypart="malam"] .auth-sun { dis
 html:not([data-daypart]) .auth-greet[data-p="sore"],
 html[data-daypart="pagi"] .auth-greet[data-p="pagi"], html[data-daypart="siang"] .auth-greet[data-p="siang"],
 html[data-daypart="sore"] .auth-greet[data-p="sore"], html[data-daypart="malam"] .auth-greet[data-p="malam"] { display: inline; }
+/* Uap kopi di halaman Fokus. */
+.focus-steam { animation: focus-steam 2.4s ease-out infinite; opacity: 0; }
+@keyframes focus-steam { 0% { transform: translateY(0) scaleX(1); opacity: 0; } 20% { opacity: .8; } 100% { transform: translateY(-28px) scaleX(1.6); opacity: 0; } }
 /* Kartu sapaan dashboard: di HP bulan/matahari menabrak angka saldo — sembunyikan. */
 @media (max-width: 767px) { .auth-hero .auth-moon, .auth-hero .auth-sun { display: none !important; } }
 /* Animasi masuk pakai CSS (bukan JS) supaya jalan sejak frame pertama, tidak menunggu hydrate. */
@@ -379,5 +382,5 @@ html[data-daypart="sore"] .auth-greet[data-p="sore"], html[data-daypart="malam"]
 .auth-window { animation: auth-window 6s ease-in-out infinite; }
 @keyframes auth-window { 0%, 100% { opacity: 0.95; } 50% { opacity: 0.55; } }
 @media (prefers-reduced-motion: reduce) {
-  .leo-breathe, .leo-mane, .leo-ear-l, .leo-ear-r, .leo-blink, .auth-cloud, .auth-star, .auth-window, .auth-enter { animation: none !important; }
+  .leo-breathe, .leo-mane, .leo-ear-l, .leo-ear-r, .leo-blink, .auth-cloud, .auth-star, .auth-window, .auth-enter, .focus-steam { animation: none !important; }
 }

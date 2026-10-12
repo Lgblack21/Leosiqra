@@ -10,6 +10,7 @@ import { recurringService, type RecurringTransaction } from '@/lib/services/recu
 import { sharedWalletService, type SharedWalletSummary } from '@/lib/services/sharedWalletService';
 import { savingsGoalService, type SavingsGoal } from '@/lib/services/savingsGoalService';
 import { useStreak } from '@/components/streak/CloseDay';
+import { focusService, type FocusSession } from '@/lib/services/focusService';
 
 export type TileStat = { value: string; sub?: string; progress?: number };
 
@@ -22,6 +23,7 @@ export function FeatureTiles({ base, className }: { base: Partial<Record<Feature
   const [recurring, setRecurring] = useState<RecurringTransaction[] | null>(null);
   const [wallets, setWallets] = useState<SharedWalletSummary[] | null>(null);
   const [goals, setGoals] = useState<SavingsGoal[] | null>(null);
+  const [focus, setFocus] = useState<{ today: string; items: FocusSession[] } | null>(null);
 
   useEffect(() => {
     if (isOn('rutin')) {
@@ -31,6 +33,7 @@ export function FeatureTiles({ base, className }: { base: Partial<Record<Feature
         .catch(() => setRecurring([]));
     }
     if (isOn('dompet-bersama')) sharedWalletService.list().then((r) => setWallets(r.items)).catch(() => setWallets([]));
+    if (isOn('fokus')) focusService.list().then(setFocus).catch(() => setFocus(null));
     if (isOn('tabungan')) savingsGoalService.getUserSavingsGoals().then(setGoals).catch(() => setGoals([]));
     // isOn berubah identitas tiap render; cukup muat ulang saat daftar fitur aktif berubah.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -44,6 +47,19 @@ export function FeatureTiles({ base, className }: { base: Partial<Record<Feature
       sub: streak.todayKind ? 'Hari ini sudah ditutup ✓' : `Minggu ini ${streak.week.closed}/${streak.week.target} · ${streak.coins} koin`,
     };
   }
+  if (focus) {
+    const t = focus.items.filter((x) => x.day === focus.today);
+    stats.fokus = { value: `${t.reduce((s, x) => s + x.minutes, 0)} menit`, sub: t.length ? `${t.length} sesi hari ini` : 'Hari ini belum ada sesi' };
+  }
+  {
+    const n = new Date();
+    const end = new Date(n.getFullYear() + 1, 0, 1);
+    const left = Math.floor((+end - +n) / 864e5);
+    const start = new Date(n.getFullYear(), 0, 1);
+    const pct = Math.round(((+n - +start) / (+end - +start)) * 100);
+    stats.jurnal = { value: `${left} hari lagi`, sub: `menuju ${n.getFullYear() + 1} · ${pct}% tahun ini`, progress: pct };
+  }
+  stats.investasiku = { value: 'Simulasi', sub: 'SBN vs deposito vs reksa dana' };
   if (recurring) {
     const active = recurring.filter((r) => r.status === 'ACTIVE' && r.type !== 'Tabungan');
     const next = [...active].sort((a, b) => +new Date(a.nextDate) - +new Date(b.nextDate))[0];

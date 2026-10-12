@@ -8636,6 +8636,115 @@ const dcSummary = async (env: Env, userId: string, month: string) => {
   };
 };
 
+// ===== Jurnal harian + sesi Fokus (migrasi 0011, tabel jr_* / fk_*) =====
+// Semua tanggal = tanggal WIB (YYYY-MM-DD). Isi jurnal dibatasi pendek dan
+// hanya milik user sendiri (user_id selalu dari sesi).
+
+const JR_TEXT_MAX = 500;
+const FK_KINDS = new Set(["belajar", "kerja", "baca"]);
+const FK_DAILY_LIMIT = 60;
+
+const cleanText = (value: unknown, max: number) => {
+  if (typeof value !== "string") return null;
+  const t = value.replace(/\s+/g, " ").trim().slice(0, max);
+  return t || null;
+};
+
+async function handleJournal(request: Request, env: Env, day: string | null) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  try {
+    if (request.method === "GET") {
+      const yearParam = new URL(request.url).searchParams.get("year") ?? "";
+      const year = /^\d{4}$/.test(yearParam) ? yearParam : todayWIB().slice(0, 4);
+      const { results } = await env.DB.prepare(
+        "SELECT day, mood, note, highlight, updated_at FROM jr_entries WHERE user_id = ? AND day BETWEEN ? AND ? ORDER BY day"
+      )
+        .bind(userId, `${year}-01-01`, `${year}-12-31`)
+        .all();
+      return json({ today: todayWIB(), items: results ?? [] });
+    }
+    // PUT /api/member/journal/:day — simpan/ubah entri hari itu (tidak untuk hari depan).
+    if (!day || !DC_DAY_RE.test(day) || day > todayWIB()) {
+      return json({ error: "Tanggal jurnal tidak valid." }, { status: 400 });
+    }
+    const payload = await parseJson<{ mood?: unknown; note?: unknown; highlight?: unknown }>(request);
+    const moodNum = payload.mood === null || payload.mood === undefined ? null : Number(payload.mood);
+    if (moodNum !== null && !(Number.isInteger(moodNum) && moodNum >= 1 && moodNum <= 5)) {
+      return json({ error: "Mood harus 1 sampai 5." }, { status: 400 });
+    }
+    const note = cleanText(payload.note, JR_TEXT_MAX);
+    const highlight = cleanText(payload.highlight, JR_TEXT_MAX);
+    if (moodNum === null && !note && !highlight) {
+      await env.DB.prepare("DELETE FROM jr_entries WHERE user_id = ? AND day = ?").bind(userId, day).run();
+      return json({ ok: true, deleted: true });
+    }
+    const now = nowIso();
+    await env.DB.prepare(
+      `INSERT INTO jr_entries (user_id, day, mood, note, highlight, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(user_id, day) DO UPDATE SET mood = excluded.mood, note = excluded.note,
+         highlight = excluded.highlight, updated_at = excluded.updated_at`
+    )
+      .bind(userId, day, moodNum, note, highlight, now, now)
+      .run();
+    return json({ ok: true, item: { day, mood: moodNum, note, highlight, updated_at: now } });
+  } catch (error) {
+    if (error instanceof Error && /no such table: jr_/.test(error.message)) {
+      return json({ error: "Fitur jurnal belum aktif." }, { status: 503 });
+    }
+    if (error instanceof Error && error.message === "Payload JSON tidak valid.") {
+      return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    }
+    throw error;
+  }
+}
+
+async function handleFocus(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  try {
+    const today = todayWIB();
+    if (request.method === "GET") {
+      const since = shiftDateStr(today, -29);
+      const { results } = await env.DB.prepare(
+        "SELECT id, kind, label, minutes, day, created_at FROM fk_sessions WHERE user_id = ? AND day >= ? ORDER BY created_at DESC LIMIT 500"
+      )
+        .bind(userId, since)
+        .all();
+      return json({ today, items: results ?? [] });
+    }
+    // POST /api/member/focus — catat satu sesi yang selesai.
+    const payload = await parseJson<{ kind?: unknown; label?: unknown; minutes?: unknown }>(request);
+    const kind = typeof payload.kind === "string" && FK_KINDS.has(payload.kind) ? payload.kind : null;
+    const minutes = Number(payload.minutes);
+    if (!kind || !Number.isInteger(minutes) || minutes < 1 || minutes > 180) {
+      return json({ error: "Sesi fokus tidak valid." }, { status: 400 });
+    }
+    const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM fk_sessions WHERE user_id = ? AND day = ?")
+      .bind(userId, today)
+      .first<{ n: number }>();
+    if ((count?.n ?? 0) >= FK_DAILY_LIMIT) {
+      return json({ error: "Sesi hari ini sudah banyak sekali. Istirahat dulu ya!" }, { status: 429 });
+    }
+    const id = generateId();
+    await env.DB.prepare("INSERT INTO fk_sessions (id, user_id, kind, label, minutes, day, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+      .bind(id, userId, kind, cleanText(payload.label, 60), minutes, today, nowIso())
+      .run();
+    return json({ ok: true, id }, { status: 201 });
+  } catch (error) {
+    if (error instanceof Error && /no such table: fk_/.test(error.message)) {
+      return json({ error: "Fitur fokus belum aktif." }, { status: 503 });
+    }
+    if (error instanceof Error && error.message === "Payload JSON tidak valid.") {
+      return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    }
+    throw error;
+  }
+}
+
 async function handleStreak(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -10357,6 +10466,16 @@ const worker = {
 
       if (url.pathname === "/api/member/gamification" && request.method === "GET") {
         return await handleGamification(request, env);
+      }
+
+      if (url.pathname === "/api/member/journal" && request.method === "GET") {
+        return await handleJournal(request, env, null);
+      }
+      if (url.pathname.startsWith("/api/member/journal/") && request.method === "PUT") {
+        return await handleJournal(request, env, decodeURIComponent(url.pathname.slice("/api/member/journal/".length)));
+      }
+      if (url.pathname === "/api/member/focus" && (request.method === "GET" || request.method === "POST")) {
+        return await handleFocus(request, env);
       }
 
       if (

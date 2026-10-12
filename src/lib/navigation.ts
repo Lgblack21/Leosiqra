@@ -29,6 +29,10 @@ import {
   BarChart3,
   Waypoints,
   CalendarClock,
+  Timer,
+  NotebookPen,
+  Calculator,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -90,6 +94,7 @@ export const navGroups: NavGroup[] = [
       { label: 'Saham', href: '/membership/investasi/saham', icon: Briefcase },
       { label: 'Deposito', href: '/membership/investasi/deposito', icon: Landmark },
       { label: 'Investasi Lainnya', href: '/membership/investasi/lainnya', icon: Coins },
+      { label: 'Simulasi Investasiku', href: '/membership/investasiku', icon: Calculator },
       { label: 'Data Pasar', href: '/membership/market-data', icon: Globe },
     ],
   },
@@ -106,6 +111,15 @@ export const navGroups: NavGroup[] = [
       { label: 'Hutang & Piutang', href: '/membership/transactions/debt', icon: HandCoins },
       { label: 'Laporan Tahunan', href: '/membership/annual', icon: CalendarRange },
       { label: 'Pajak Center', href: '/membership/pajak-center', icon: ShieldCheck },
+    ],
+  },
+  {
+    id: 'leo',
+    label: 'Teman Leo',
+    icon: Sparkles,
+    items: [
+      { label: 'Fokus', href: '/membership/fokus', icon: Timer },
+      { label: 'Jurnal', href: '/membership/jurnal', icon: NotebookPen },
     ],
   },
   {
