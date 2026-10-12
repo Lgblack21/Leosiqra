@@ -19,6 +19,7 @@ Perbarui file ini di akhir setiap audit.
 | `dangerouslySetInnerHTML` JSON-LD | `src/app/layout.tsx` | `JSON.stringify` objek konstanta |
 | `dangerouslySetInnerHTML` jawaban AI | `ai-leosiqra/page.tsx`, `app/assistant/chat/page.tsx` (`formatText`) | `escapeHtml` (& < > " ') dijalankan dulu, baru ditambah `<strong>/<em>/<br/>` |
 | `sql-interpolasi` `${assignments}` | `handleUpdateTransaction`, `handleUpdateAccount`, `handleUpdateBudget`, `handleUpdateInvestment`, `handleUpdateCategory`, `handleUpdateRecurring` | nama kolom dari whitelist di kode (`allowed.has` / `updates.set` literal); `WHERE id = ? AND user_id = ?` sesi (dicek 2026-09-28) |
+| `sql-interpolasi` `${assignments}` Dompet Bersama | `handleUpdateSharedWalletTransaction` | kolom dari tuple literal `["type","amount","category","note","date"]`; nilai via bind; `WHERE id = ? AND wallet_id = ?` setelah `requireWalletRole` (keanggotaan dari user sesi) + cek editor-hanya-milik-sendiri. Uji IDOR lokal 52 skenario lulus (dicek 2026-10-12) |
 | `sql-interpolasi` profil | `handleUpdateMemberProfile` | whitelist `Map` tanpa `role`/`plan`/`status`/`expired_at` (tidak bisa naik ke PRO/admin); `WHERE id = ?` = user sesi. Kolom `total_*` bisa diubah user tapi cuma angka ringkasan miliknya sendiri (⚪) |
 | `sql-interpolasi` `${table}` | `handleResetMemberData` | `table` dari konstanta `RESET_DATA_TABLES`; tiap DELETE `WHERE user_id = ?` |
 | `sql-interpolasi` admin | `handleAdminSettings`, `handleAdminUserById` | `requireSession(..., "admin")`; kolom dari whitelist/literal (`plan`, `status`, `expired_at`) |
@@ -37,6 +38,7 @@ Perbarui file ini di akhir setiap audit.
 ## Temuan terbuka
 
 - 🟡 Upload gambar ke Cloudinary memakai *unsigned preset* dari browser (nama cloud & preset terlihat publik) — siapa pun bisa mengunggah gambar ke akun Cloudinary. Mitigasi di dashboard Cloudinary (batasi format/ukuran/folder) atau pindah ke *signed upload* lewat Worker (butuh secret API Cloudinary).
+- ⚪ Realtime SSE tidak tersambung: `handleRealtime` meneruskan request `/api/realtime` apa adanya ke `RealtimeRoom`, padahal DO hanya melayani path `/sse` → selalu 404; frontend juga tidak memakai `EventSource`. Publish `transaction.created` / `shared_wallet.changed` jadi no-op (tidak berbahaya). Dompet Bersama menyegarkan data saat tab/app aktif lagi. (2026-10-12)
 - ⚪ `POST /api/member/uploads/sign` (R2) tidak dipakai frontend — kode mati, aman (sesi + key di folder user).
 - ⚪ `npm audit`: 9 paket (1 critical di Next.js = middleware bypass) — semua build-time/native, tidak dipakai runtime (static export, Worker tidak memakainya). Update Next.js terpisah.
 

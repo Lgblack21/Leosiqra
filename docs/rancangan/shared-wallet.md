@@ -1,9 +1,13 @@
 # Rancangan skema — Mode Keluarga/Patungan (Shared Wallet)
 
-Status: **RANCANGAN, belum ada kode.** Sesuai catatan ACC Bos (2026-10-12):
-"Effort besar + ubah skema DB: kirim rancangan skema dulu sebelum kode."
-Kode baru dikerjakan setelah Bos menyetujui rancangan ini + menjawab
-"Keputusan untuk Bos" di bawah.
+Status: **Fase 1 DIKODE (2026-10-12)** setelah rancangan di-ACC Bos dengan 5
+jawaban (FREE 1 dompet/3 anggota, PRO 5/10; owner tidak bisa dihapus sebelum
+serah kepemilikan; editor hanya ubah/hapus transaksi sendiri; web + HP
+sekaligus; fase 2 nanti). Migrasi menjadi **`0009_shared_wallets.sql`** (nomor
+0008 sudah dipakai `signup_sources`). Halaman: `/membership/dompet-bersama` &
+`/app/dompet-bersama` (komponen sama). Realtime: Worker mem-publish
+`shared_wallet.changed`, tapi SSE `/api/realtime` belum tersambung di app ini,
+jadi UI menyegarkan data saat tab/app aktif lagi.
 
 ## Prinsip (urut prioritas CLAUDE.md)
 
