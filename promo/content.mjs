@@ -3,7 +3,7 @@
 
 export const HANDLES = { instagram: "@leosiqra_official", youtube: "Leosiqra", site: "leosiqra.com" };
 
-export const OFFER = "Coba gratis 14 hari, tanpa kartu kredit. Ada di Android, iPhone, dan web.";
+export const OFFER = "Coba gratis 14 hari, tanpa kartu kredit. Setelah itu PRO mulai Rp15.000/bulan, atau Rp129.000/tahun (paling hemat). Ada di Android, iPhone, dan web.";
 
 // Fitur nyata + layar mockup yang cocok untuk scene "phone".
 export const FEATURES = [
