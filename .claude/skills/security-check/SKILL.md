@@ -127,7 +127,7 @@ sudah live di produksi: sebutkan di awal pesan, jangan ditunda ke akhir.
   — sudah ada ±27 error bawaan (tipe sesi, `caches.default`, web push). Bandingkan
   jumlah/isi error sebelum vs sesudah, jangan cuma lihat angka mentah.
 - **Skema dump tertinggal kolom** dari produksi: `savings.transaction_type`,
-  `categories.sort_order`, `investments.maturity_action`, `investments.related_investment_id`.
+  `categories.sort_order`, `accounts.sort_order` (tanpa ini `GET /api/member/accounts` 500 di lokal), `investments.maturity_action`, `investments.related_investment_id`.
   Tambahkan dengan `ALTER TABLE` di D1 lokal sebelum tes.
 - **`pkill -f <pola>`** bisa ikut membunuh shell yang menjalankannya (pola ada
   di command line shell itu sendiri). Simpan PID dari `$!` lalu `kill` PID itu.

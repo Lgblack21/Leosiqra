@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { LogOut, Moon, Star, Sun, Smartphone } from "lucide-react";
+import { LogOut, Mail, Moon, Star, Sun, Smartphone } from "lucide-react";
 import { auth } from "@/lib/cf-client";
 import { cloudflareApi } from "@/lib/cloudflare-api";
 import { subscribeUserProfile, UserProfile } from "@/lib/services/userService";
@@ -38,6 +38,35 @@ export default function ProfilePage() {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+
+  // Laporan keuangan bulanan via email (opt-in, default mati).
+  const [report, setReport] = useState<{ enabled: boolean; available: boolean } | null>(null);
+  const [reportSaving, setReportSaving] = useState(false);
+  const [reportError, setReportError] = useState("");
+
+  useEffect(() => {
+    cloudflareApi<{ enabled: boolean; available: boolean }>("/api/member/email-report")
+      .then(setReport)
+      .catch(() => setReport({ enabled: false, available: false }));
+  }, []);
+
+  const toggleReport = async () => {
+    if (!report) return;
+    lightTap();
+    setReportError("");
+    setReportSaving(true);
+    try {
+      const res = await cloudflareApi<{ enabled: boolean }>("/api/member/email-report", {
+        method: "PUT",
+        json: { enabled: !report.enabled },
+      });
+      setReport({ ...report, enabled: res.enabled });
+    } catch (e) {
+      setReportError(e instanceof Error ? e.message : "Gagal mengubah pengaturan.");
+    } finally {
+      setReportSaving(false);
+    }
+  };
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -98,6 +127,32 @@ export default function ProfilePage() {
             })}
           </div>
         </div>
+        {report && (report.available || report.enabled) && (
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 mt-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <Mail size={16} className="text-indigo-600 shrink-0" />
+                <div className="min-w-0">
+                  <span className="text-sm font-bold text-slate-700 dark:text-slate-300 block">Laporan bulanan via email</span>
+                  <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 block">Ringkasan keuangan tiap awal bulan</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={toggleReport}
+                disabled={reportSaving}
+                aria-label="Laporan bulanan via email"
+                aria-pressed={report.enabled}
+                className={`w-11 h-6 rounded-full relative shrink-0 transition-colors disabled:opacity-50 ${
+                  report.enabled ? "bg-indigo-600" : "bg-slate-200 dark:bg-slate-700"
+                }`}
+              >
+                <span className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${report.enabled ? "right-1" : "left-1"}`} />
+              </button>
+            </div>
+            {reportError && <p className="text-[11px] font-bold text-rose-500 mt-2">{reportError}</p>}
+          </div>
+        )}
       </FadeIn>
 
       <FadeIn delay={0.1}>

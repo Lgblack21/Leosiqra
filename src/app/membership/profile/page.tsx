@@ -157,6 +157,38 @@ export default function ProfilePage() {
       .catch(() => setNotifEnabled(false));
   }, []);
 
+  // Laporan keuangan bulanan via email (opt-in, default mati).
+  const [reportEnabled, setReportEnabled] = useState(false);
+  const [reportAvailable, setReportAvailable] = useState(false);
+  const [reportLoading, setReportLoading] = useState(true);
+  const [reportError, setReportError] = useState('');
+
+  useEffect(() => {
+    cloudflareApi<{ enabled: boolean; available: boolean }>('/api/member/email-report')
+      .then((res) => {
+        setReportEnabled(res.enabled);
+        setReportAvailable(res.available);
+      })
+      .catch(() => setReportAvailable(false))
+      .finally(() => setReportLoading(false));
+  }, []);
+
+  const handleToggleMonthlyReport = async () => {
+    setReportError('');
+    setReportLoading(true);
+    try {
+      const res = await cloudflareApi<{ enabled: boolean }>('/api/member/email-report', {
+        method: 'PUT',
+        json: { enabled: !reportEnabled },
+      });
+      setReportEnabled(res.enabled);
+    } catch (e) {
+      setReportError(e instanceof Error ? e.message : 'Gagal mengubah pengaturan laporan bulanan.');
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
   const handleToggleNotifications = async () => {
     setNotifError('');
     setNotifLoading(true);
@@ -707,6 +739,44 @@ export default function ProfilePage() {
                 )}
                 {notifError && (
                   <p className="text-[9px] font-bold text-rose-400 mt-3">{notifError}</p>
+                )}
+              </div>
+              <div className="w-full p-4 md:p-5 bg-white/5 rounded-xl md:rounded-2xl border border-white/5 backdrop-blur-md">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 md:gap-4 text-white min-w-0">
+                    <Mail size={16} className="text-indigo-400 shrink-0" />
+                    <div className="min-w-0">
+                      <span className="text-[11px] md:text-[12px] font-black tracking-tight block">Laporan Bulanan via Email</span>
+                      <span className="text-[9px] font-bold text-white/40 block mt-0.5">
+                        Ringkasan pemasukan, pengeluaran &amp; budget tiap awal bulan
+                      </span>
+                    </div>
+                  </div>
+                  {reportLoading ? (
+                    <Loader2 size={16} className="animate-spin text-white/50 shrink-0" />
+                  ) : !reportAvailable && !reportEnabled ? (
+                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest shrink-0">
+                      Segera
+                    </span>
+                  ) : (
+                    <button
+                      onClick={handleToggleMonthlyReport}
+                      aria-label="Laporan bulanan via email"
+                      aria-pressed={reportEnabled}
+                      className={cn(
+                        "w-10 h-5 md:w-12 md:h-6 rounded-full relative p-1 transition-colors shrink-0",
+                        reportEnabled ? "bg-indigo-600" : "bg-white/10"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-3 h-3 md:w-4 md:h-4 bg-white rounded-full absolute top-1 transition-all",
+                        reportEnabled ? "right-1" : "left-1 opacity-60"
+                      )} />
+                    </button>
+                  )}
+                </div>
+                {reportError && (
+                  <p className="text-[9px] font-bold text-rose-400 mt-3">{reportError}</p>
                 )}
               </div>
               <div className="pt-6 border-t border-white/10">

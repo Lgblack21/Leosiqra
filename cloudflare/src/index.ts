@@ -8280,6 +8280,286 @@ const sendDailySummaryNotifications = async (env: Env) => {
   }
 };
 
+// ===== Laporan keuangan bulanan via email (opt-in), jam 10:00 WIB tanggal 1–7 =====
+// Default MATI: user menyalakannya sendiri di Profil (web) / Profil (aplikasi HP).
+// Pilihan disimpan di users.metadata_json ($.monthlyReportEmail = 1/0), jadi
+// tidak perlu kolom baru. Anti-dobel: klaim baris (user_id, period) di tabel
+// monthly_report_log (PRIMARY KEY, INSERT OR IGNORE — migrasi 0007) + header
+// Idempotency-Key di Resend. Kalau tabelnya belum ada di D1, job ini cuma
+// mencatat error di log dan tidak mengirim apa pun.
+const MONTHLY_REPORT_META_PATH = "$.monthlyReportEmail";
+// Jendela tanggal 1–7 WIB: kalau sehari gagal (Resend down / kuota habis),
+// user yang belum terkirim dicoba lagi keesokan harinya.
+const MONTHLY_REPORT_LAST_DAY = 7;
+// Batas per run supaya aman dari limit subrequest & kuota harian Resend.
+const MONTHLY_REPORT_MAX_PER_RUN = 40;
+const MONTH_NAMES_ID = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+const formatYmLabel = (ym: string) => {
+  const [y, m] = ym.split("-").map(Number);
+  return `${MONTH_NAMES_ID[m - 1] ?? ym} ${y}`;
+};
+
+const monthlyReportUnsubscribeSignature = async (env: Env, userId: string) => {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(`monthly-report-unsub:${env.SESSION_SECRET}`),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  return toBase64Url(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(userId)));
+};
+
+const setMonthlyReportPreference = (env: Env, userId: string, enabled: boolean) =>
+  env.DB.prepare(
+    `UPDATE users
+        SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, ?, ?)
+      WHERE id = ?`
+  )
+    .bind(MONTHLY_REPORT_META_PATH, enabled ? 1 : 0, userId)
+    .run();
+
+type MonthlyReport = {
+  income: number;
+  expense: number;
+  txCount: number;
+  topCategories: { category: string; total: number }[];
+  savingsNet: number;
+  budgets: { category: string; amount: number; spent: number }[];
+};
+
+// Angka disamakan dengan aturan laporan lain di codebase ini: pakai amount_idr,
+// beli/jual investasi (related_type 'investasi' / kategori investasi) BUKAN
+// pengeluaran/pemasukan riil.
+const buildMonthlyReport = async (env: Env, userId: string, ym: string): Promise<MonthlyReport> => {
+  const [txRes, savingsRes, budgetRes] = await env.DB.batch([
+    env.DB.prepare(
+      `SELECT type, category, COUNT(*) as n, SUM(COALESCE(NULLIF(amount_idr, 0), amount)) as total
+         FROM transactions
+        WHERE user_id = ? AND substr(date, 1, 7) = ? AND type IN ('pemasukan', 'pengeluaran')
+          AND COALESCE(related_type, '') <> 'investasi'
+        GROUP BY type, category`
+    ).bind(userId, ym),
+    env.DB.prepare(
+      `SELECT SUM(CASE WHEN transaction_type = 'Penarikan' THEN -1 ELSE 1 END * COALESCE(NULLIF(amount_idr, 0), amount)) as total
+         FROM savings
+        WHERE user_id = ? AND substr(date, 1, 7) = ?`
+    ).bind(userId, ym),
+    env.DB.prepare(
+      `SELECT category, amount FROM budgets WHERE user_id = ? AND type = 'pengeluaran' AND period = 'monthly'`
+    ).bind(userId),
+  ]);
+
+  const isInvestmentCategory = (category: string) =>
+    category?.toLowerCase().includes("investasi") || category === "Saham" || category === "Deposito";
+  let income = 0;
+  let expense = 0;
+  let txCount = 0;
+  const byCategory = new Map<string, number>();
+  for (const row of (txRes.results ?? []) as { type: string; category: string; n: number; total: number }[]) {
+    const total = Number(row.total) || 0;
+    if (row.type === "pengeluaran") {
+      if (isInvestmentCategory(row.category)) continue;
+      expense += total;
+      byCategory.set(row.category, (byCategory.get(row.category) ?? 0) + total);
+    } else {
+      income += total;
+    }
+    txCount += Number(row.n) || 0;
+  }
+  const topCategories = [...byCategory.entries()]
+    .filter(([, total]) => total > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([category, total]) => ({ category, total }));
+  const savingsNet = Number(((savingsRes.results ?? [])[0] as { total?: number } | undefined)?.total) || 0;
+  const budgets = ((budgetRes.results ?? []) as { category: string; amount: number }[])
+    .filter((b) => Number(b.amount) > 0)
+    .map((b) => ({ category: b.category, amount: Number(b.amount), spent: byCategory.get(b.category) ?? 0 }));
+  return { income, expense, txCount, topCategories, savingsNet, budgets };
+};
+
+// Satu tips berbasis aturan dari angka bulan itu (tanpa panggilan AI: murah,
+// cepat, dan tidak mengirim data keuangan user ke pihak ketiga).
+const monthlyReportTip = (r: MonthlyReport) => {
+  const over = r.budgets.filter((b) => b.spent > b.amount).sort((a, b) => b.spent / b.amount - a.spent / a.amount)[0];
+  const top = r.topCategories[0];
+  if (r.income > 0 && r.expense > r.income) {
+    return `Pengeluaran bulan ini lebih besar ${formatRupiahForPush(r.expense - r.income)} dari pemasukan.${top ? ` Mulai dari kategori terbesar (${top.category}) — pasang budget supaya bulan depan ada rem.` : ""}`;
+  }
+  if (over) {
+    return `Budget ${over.category} terlewati ${formatRupiahForPush(over.spent - over.amount)}. Cek transaksi kategori ini, lalu sesuaikan target atau kurangi pelan-pelan bulan depan.`;
+  }
+  if (r.budgets.length === 0 && top) {
+    return `Belum ada budget bulanan. Coba pasang satu untuk ${top.category} (kategori terbesar kamu) — cukup satu dulu supaya gampang dipantau.`;
+  }
+  if (r.income > 0) {
+    const rate = Math.round(((r.income - r.expense) / r.income) * 100);
+    return `Kamu menyisakan ±${rate}% dari pemasukan. ${rate >= 20 ? "Mantap, pertahankan!" : "Target sehat: sisihkan minimal 20% di awal bulan, bukan dari sisa."}`;
+  }
+  return "Catat pemasukan juga, supaya Leosiqra bisa menghitung berapa persen yang berhasil kamu sisihkan tiap bulan.";
+};
+
+const sendMonthlyReportEmail = async (env: Env, user: { id: string; email: string; name: string }, ym: string, r: MonthlyReport) => {
+  const origin = PASSWORD_RESET_DEFAULT_ORIGIN;
+  const unsubscribeUrl = `${origin}/api/email/unsubscribe?u=${encodeURIComponent(user.id)}&s=${await monthlyReportUnsubscribeSignature(env, user.id)}`;
+  const label = formatYmLabel(ym);
+  const rp = formatRupiahForPush;
+  const net = r.income - r.expense;
+  const tip = monthlyReportTip(r);
+  const row = (k: string, v: string, color = "#0f172a") =>
+    `<tr><td style="padding:6px 0;font-size:14px;color:#475569">${k}</td><td style="padding:6px 0;font-size:14px;font-weight:bold;text-align:right;color:${color}">${v}</td></tr>`;
+  const topHtml = r.topCategories.length
+    ? r.topCategories.map((c, i) => row(`${i + 1}. ${escapeHtml(c.category)}`, rp(c.total))).join("")
+    : row("Belum ada pengeluaran tercatat", "-");
+  const budgetHtml = r.budgets.length
+    ? r.budgets
+        .slice(0, 5)
+        .map((b) => row(escapeHtml(b.category), `${Math.round((b.spent / b.amount) * 100)}% dari ${rp(b.amount)}`, b.spent > b.amount ? "#e11d48" : "#059669"))
+        .join("")
+    : "";
+  const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;color:#0f172a">
+  <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:32px">
+    <h1 style="margin:0 0 4px;font-size:20px">Laporan Keuangan ${label}</h1>
+    <p style="margin:0 0 20px;font-size:14px;color:#64748b">Halo ${escapeHtml(user.name || "Sobat Leosiqra")}, ini ringkasan bulan lalu dari catatan kamu di Leosiqra.</p>
+    <table style="width:100%;border-collapse:collapse">
+      ${row("Pemasukan", rp(r.income), "#059669")}
+      ${row("Pengeluaran", rp(r.expense), "#e11d48")}
+      ${row("Selisih", `${net < 0 ? "-" : ""}${rp(Math.abs(net))}`, net < 0 ? "#e11d48" : "#059669")}
+      ${r.savingsNet !== 0 ? row("Tabungan (bersih)", `${r.savingsNet < 0 ? "-" : ""}${rp(Math.abs(r.savingsNet))}`) : ""}
+    </table>
+    <h2 style="margin:24px 0 4px;font-size:15px">Pengeluaran terbesar</h2>
+    <table style="width:100%;border-collapse:collapse">${topHtml}</table>
+    ${budgetHtml ? `<h2 style="margin:24px 0 4px;font-size:15px">Status budget</h2><table style="width:100%;border-collapse:collapse">${budgetHtml}</table>` : ""}
+    <div style="margin:24px 0;padding:16px;background:#eef2ff;border-radius:12px;font-size:14px;line-height:1.6"><b>💡 Tips bulan ini</b><br>${escapeHtml(tip)}</div>
+    <p style="margin:0 0 24px"><a href="${origin}/membership/dashboard" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;font-weight:bold;font-size:14px;padding:12px 20px;border-radius:10px">Buka Leosiqra</a></p>
+    <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.6">Kamu menerima email ini karena menyalakan "Laporan bulanan via email" di Profil Leosiqra. <a href="${unsubscribeUrl}" style="color:#64748b">Berhenti berlangganan</a>.</p>
+  </div></body></html>`;
+  const textBody =
+    `Laporan Keuangan ${label}\n\n` +
+    `Pemasukan: ${rp(r.income)}\nPengeluaran: ${rp(r.expense)}\nSelisih: ${net < 0 ? "-" : ""}${rp(Math.abs(net))}\n` +
+    (r.topCategories.length ? `\nPengeluaran terbesar:\n${r.topCategories.map((c, i) => `${i + 1}. ${c.category}: ${rp(c.total)}`).join("\n")}\n` : "") +
+    `\nTips: ${tip}\n\nBuka Leosiqra: ${origin}/membership/dashboard\nBerhenti berlangganan: ${unsubscribeUrl}`;
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "content-type": "application/json",
+      // Resend menolak kiriman kedua dengan kunci sama (24 jam) — lapis kedua anti-dobel.
+      "idempotency-key": `monthly-report/${ym}/${user.id}`,
+    },
+    body: JSON.stringify({
+      from: env.RESEND_FROM || "Leosiqra <no-reply@leosiqra.com>",
+      to: [user.email],
+      subject: `Laporan Keuangan ${label} — Leosiqra`,
+      html,
+      text: textBody,
+      headers: {
+        "List-Unsubscribe": `<${unsubscribeUrl}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(`Resend ${response.status}: ${(await response.text()).slice(0, 300)}`);
+  }
+};
+
+const sendMonthlyReports = async (env: Env) => {
+  if (!env.RESEND_API_KEY) return;
+  const today = todayWIB();
+  if (Number(today.slice(8, 10)) > MONTHLY_REPORT_LAST_DAY) return;
+  const [y, m] = today.slice(0, 7).split("-").map(Number);
+  const period = new Date(Date.UTC(y, m - 2, 1)).toISOString().slice(0, 7); // bulan lalu (WIB)
+
+  const { results } = await env.DB.prepare(
+    `SELECT u.id, u.email, u.name
+       FROM users u
+      WHERE json_valid(u.metadata_json) AND json_extract(u.metadata_json, ?) = 1
+        AND NOT EXISTS (SELECT 1 FROM monthly_report_log l WHERE l.user_id = u.id AND l.period = ?)
+      LIMIT ?`
+  )
+    .bind(MONTHLY_REPORT_META_PATH, period, MONTHLY_REPORT_MAX_PER_RUN)
+    .all<{ id: string; email: string; name: string }>();
+
+  for (const user of results ?? []) {
+    // Klaim dulu: kalau cron jalan dobel, hanya satu yang dapat baris ini.
+    const claim = await env.DB.prepare(
+      `INSERT OR IGNORE INTO monthly_report_log (user_id, period, status, created_at) VALUES (?, ?, 'mengirim', ?)`
+    )
+      .bind(user.id, period, nowIso())
+      .run();
+    if (!claim.meta.changes) continue;
+    try {
+      const report = await buildMonthlyReport(env, user.id, period);
+      if (report.txCount === 0) {
+        // Bulan kosong: tidak dikirim (bukan spam), tapi tetap ditandai selesai.
+        await env.DB.prepare(`UPDATE monthly_report_log SET status = 'kosong' WHERE user_id = ? AND period = ?`).bind(user.id, period).run();
+        continue;
+      }
+      await sendMonthlyReportEmail(env, user, period, report);
+      await env.DB.prepare(`UPDATE monthly_report_log SET status = 'terkirim' WHERE user_id = ? AND period = ?`).bind(user.id, period).run();
+    } catch (error) {
+      console.error(`Gagal mengirim laporan bulanan ${period} ke user ${user.id}:`, error);
+      // Lepas klaim supaya dicoba lagi besok (masih dalam jendela tanggal 1–7).
+      await env.DB.prepare(`DELETE FROM monthly_report_log WHERE user_id = ? AND period = ? AND status = 'mengirim'`)
+        .bind(user.id, period)
+        .run()
+        .catch(() => undefined);
+    }
+  }
+};
+
+// GET  /api/member/email-report → { enabled, available }
+// PUT  /api/member/email-report  { enabled: boolean }
+async function handleMonthlyReportPreference(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  if (request.method === "PUT") {
+    const payload = await parseJson<{ enabled?: unknown }>(request);
+    if (typeof payload.enabled !== "boolean") return json({ error: "Nilai enabled harus true/false." }, { status: 400 });
+    if (payload.enabled && !env.RESEND_API_KEY) return json({ error: "Pengiriman email belum aktif. Coba lagi nanti." }, { status: 503 });
+    await setMonthlyReportPreference(env, userId, payload.enabled);
+    return json({ ok: true, enabled: payload.enabled });
+  }
+  const row = await env.DB.prepare(
+    `SELECT CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, ?) END AS v FROM users WHERE id = ?`
+  )
+    .bind(MONTHLY_REPORT_META_PATH, userId)
+    .first<{ v: number | null }>();
+  return json({ enabled: Number(row?.v) === 1, available: Boolean(env.RESEND_API_KEY) });
+}
+
+// Publik: link "Berhenti berlangganan" di email. GET hanya menampilkan tombol
+// konfirmasi (pemindai link di email tidak boleh ikut memberhentikan); POST
+// (tombol itu, atau one-click RFC 8058 dari Gmail/Yahoo) yang mematikan.
+async function handleMonthlyReportUnsubscribe(request: Request, env: Env, url: URL) {
+  const userId = url.searchParams.get("u") ?? "";
+  const sig = url.searchParams.get("s") ?? "";
+  const page = (title: string, body: string, status = 200) =>
+    new Response(
+      `<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${title}</title></head>` +
+        `<body style="margin:0;padding:24px;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;color:#0f172a"><div style="max-width:440px;margin:40px auto;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:32px;text-align:center">` +
+        `<h1 style="font-size:18px;margin:0 0 12px">${title}</h1>${body}</div></body></html>`,
+      { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-frame-options": "DENY" } }
+    );
+  const valid = userId.length > 0 && userId.length <= 64 && sig.length > 0 && constantTimeEqual(sig, await monthlyReportUnsubscribeSignature(env, userId));
+  if (!valid) return page("Link tidak valid", `<p style="font-size:14px;color:#64748b">Matikan laporan bulanan lewat menu Profil di aplikasi Leosiqra.</p>`, 400);
+  if (request.method === "POST") {
+    await setMonthlyReportPreference(env, userId, false);
+    return page("Berhasil berhenti", `<p style="font-size:14px;color:#64748b">Kamu tidak akan menerima laporan bulanan via email lagi. Bisa dinyalakan kembali kapan saja di Profil.</p>`);
+  }
+  const action = `/api/email/unsubscribe?u=${encodeURIComponent(userId)}&s=${encodeURIComponent(sig)}`;
+  return page(
+    "Berhenti laporan bulanan?",
+    `<p style="font-size:14px;color:#64748b;margin:0 0 20px">Kamu tidak akan menerima ringkasan keuangan bulanan via email lagi.</p>` +
+      `<form method="post" action="${escapeHtml(action)}"><button type="submit" style="background:#4f46e5;color:#fff;border:0;border-radius:10px;padding:12px 20px;font-weight:bold;font-size:14px;cursor:pointer">Ya, berhenti</button></form>`
+  );
+}
+
 // Pengingat tenggat SPT Tahunan (31 Maret) — broadcast ke semua user pada
 // tanggal WIB tertentu saja, jadi cukup nebeng cron harian yang sudah ada
 // (tidak perlu cron trigger baru) tanpa perlu tabel "sudah lapor/belum".
@@ -8713,6 +8993,10 @@ const worker = {
         return await handleRegister(request, env);
       }
 
+      if (url.pathname === "/api/email/unsubscribe" && (request.method === "GET" || request.method === "POST")) {
+        return await handleMonthlyReportUnsubscribe(request, env, url);
+      }
+
       if (url.pathname === "/api/auth/password/forgot" && request.method === "POST") {
         return await handleForgotPassword(request, env);
       }
@@ -9047,6 +9331,10 @@ const worker = {
         return await handleVapidPublicKey(env);
       }
 
+      if (url.pathname === "/api/member/email-report" && (request.method === "GET" || request.method === "PUT")) {
+        return await handleMonthlyReportPreference(request, env);
+      }
+
       if (url.pathname === "/api/member/push-subscription" && request.method === "POST") {
         return await handleCreatePushSubscription(request, env);
       }
@@ -9239,6 +9527,8 @@ const worker = {
     ctx.waitUntil(processMaturedDeposits(env));
     ctx.waitUntil(processDueRecurringTransactions(env));
     ctx.waitUntil(sendCreditCardDueReminders(env));
+    // Tanggal 1–7 WIB saja (dicek di dalam): laporan bulanan via email (opt-in).
+    ctx.waitUntil(sendMonthlyReports(env).catch((error) => console.error("Laporan bulanan:", error)));
   },
 };
 
