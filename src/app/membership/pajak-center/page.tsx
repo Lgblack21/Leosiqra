@@ -621,14 +621,11 @@ export default function PajakCenterPage() {
       </div>
 
       {/* 1. Dashboard View Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-br from-white to-indigo-50/40 p-6 rounded-[24px] border border-slate-100 shadow-sm print:hidden">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 print:hidden">
         <div className="flex items-center gap-4">
-          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white items-center justify-center shadow-lg shadow-emerald-600/20 shrink-0">
-            <Landmark size={22} />
-          </div>
           <div>
-            <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Pajak Center</h2>
-            <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Draft Ringkasan SPT · Tahun Pajak {selectedYear}</p>
+            <h2 className="sr-only">Pajak Center</h2>
+            <p className="text-sm text-slate-500">Draft Ringkasan SPT · Tahun Pajak {selectedYear}</p>
           </div>
         </div>
 
@@ -955,7 +952,7 @@ export default function PajakCenterPage() {
         </div>
 
         {/* Total Harta Bersih */}
-        <div className="p-8 rounded-[32px] bg-gradient-to-br from-emerald-600 to-teal-700 text-white shadow-lg shadow-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="p-8 rounded-[32px] bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <p className="text-[10px] font-black text-emerald-200 uppercase tracking-widest mb-1">Total Harta Bersih (Harta + Piutang − Utang)</p>
             <p className="text-3xl font-black tabular-nums">

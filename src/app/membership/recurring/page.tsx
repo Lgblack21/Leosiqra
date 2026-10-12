@@ -142,10 +142,10 @@ export default function RecurringPage() {
     <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 max-w-[1200px] mb-12">
       
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] border border-slate-50 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex flex-col">
           <h1 className="sr-only">Transaksi Berulang</h1>
-          <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+          <p className="text-sm text-slate-500">
             {transactions.filter(t => t.status !== 'PAUSED').length} aktif &middot; {transactions.filter(t => t.status === 'PAUSED').length} dijeda
           </p>
         </div>

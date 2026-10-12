@@ -100,7 +100,7 @@ export default function ArusPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="sr-only">Ikuti uangmu</h1>
-          <p className="mt-0.5 text-sm text-slate-500">Dari mana uangmu datang, dan ke mana saja perginya.</p>
+          <p className="text-sm text-slate-500">Dari mana uangmu datang, dan ke mana saja perginya.</p>
         </div>
         <div className="flex items-center gap-1">
           <button type="button" onClick={() => shift(-1)} aria-label="Bulan sebelumnya" className="rounded-xl p-2 text-slate-500 hover:bg-slate-100"><ChevronLeft size={18} /></button>

@@ -324,10 +324,10 @@ export default function DebtPage() {
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
       
       {/* 1. Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] border border-slate-50 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex flex-col">
           <h1 className="sr-only">Hutang & Piutang</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500">
             {statusFilter === 'Belum lunas'
               ? 'Semua yang belum lunas, dari bulan mana pun'
               : `Periode ${periodLabel}`}

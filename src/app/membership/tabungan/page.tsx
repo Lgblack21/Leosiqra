@@ -189,10 +189,10 @@ export default function SavingsPage() {
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
       
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] border border-slate-50 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex flex-col">
           <h1 className="sr-only">Tabungan & Dana Darurat</h1>
-          <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+          <p className="text-sm text-slate-500">
             Periode {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth))}
           </p>
         </div>

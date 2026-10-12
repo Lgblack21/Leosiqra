@@ -75,7 +75,7 @@ export default function MembershipLayout({
           <Header onMenuClick={() => setIsSidebarOpen(true)} />
 
           {/* Page Content */}
-          <div className="px-4 pb-8 pt-2 md:px-8 max-w-7xl mx-auto w-full flex-1 print:p-0 print:m-0 print:max-w-none">
+          <div className="member-shell px-4 pb-8 pt-2 md:px-8 max-w-7xl mx-auto w-full flex-1 print:p-0 print:m-0 print:max-w-none">
             <ShellTitleContext.Provider value={true}>{children}</ShellTitleContext.Provider>
           </div>
         </main>

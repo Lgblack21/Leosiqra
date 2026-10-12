@@ -423,14 +423,11 @@ export default function AnnualDashboard() {
       </div>
 
       {/* 1. Header (Top Bar) */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-br from-white to-indigo-50/40 p-6 rounded-[24px] border border-slate-100 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-4">
-          <div className="hidden sm:flex print:hidden w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white items-center justify-center shadow-lg shadow-emerald-600/20 shrink-0">
-            <CalendarRange size={22} />
-          </div>
           <div>
-            <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Dashboard Tahunan</h2>
-            <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Laporan Fiskal Tahun {selectedYear}</p>
+            <h2 className="sr-only">Dashboard Tahunan</h2>
+            <p className="text-sm text-slate-500">Laporan Fiskal Tahun {selectedYear}</p>
           </div>
         </div>
 

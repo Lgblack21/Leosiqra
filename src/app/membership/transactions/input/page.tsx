@@ -125,7 +125,7 @@ export default function InputTransactionPage() {
           <button
             type="button"
             onClick={() => openModal('harian')}
-            className="w-full text-left bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-card p-6 md:p-8 shadow-xl shadow-emerald-600/15 relative overflow-hidden hover:shadow-2xl hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300"
+            className="w-full text-left bg-gradient-to-br from-indigo-600 to-violet-600 text-white rounded-card p-6 md:p-8 shadow-xl shadow-indigo-600/15 relative overflow-hidden hover:shadow-2xl hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-300"
           >
             <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
             <div className="flex items-start justify-between gap-4">

@@ -201,7 +201,7 @@ export default function PetaPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="sr-only">Peta</h1>
-          <p className="mt-0.5 text-sm text-slate-500">Tempat-tempat kamu belanja. Lokasi kamu tandai sendiri — tidak ada yang dilacak dari HP-mu.</p>
+          <p className="text-sm text-slate-500">Tempat-tempat kamu belanja. Lokasi kamu tandai sendiri — tidak ada yang dilacak dari HP-mu.</p>
         </div>
         <div className="flex rounded-2xl bg-slate-100 p-1">
           {(['peta', 'jejak', 'rekap'] as Tab[]).map((t) => (

@@ -112,7 +112,7 @@ export default function LanggananPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="sr-only">Langganan</h1>
-          <p className="mt-0.5 text-sm text-slate-500">Netflix, Spotify, listrik, internet, cicilan — semua tagihan rutinmu dalam satu tempat.</p>
+          <p className="text-sm text-slate-500">Netflix, Spotify, listrik, internet, cicilan — semua tagihan rutinmu dalam satu tempat.</p>
         </div>
         <div className="flex gap-2">
           <Link href="/membership/recurring" className="rounded-2xl bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200">Kelola</Link>

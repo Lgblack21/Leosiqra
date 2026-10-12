@@ -439,7 +439,7 @@ export default function ProfilePage() {
   const initials = profile.displayName ? profile.displayName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : (user?.email?.[0].toUpperCase() || 'U');
 
   const accountStats = [
-    { label: "Today's Expense", value: formatRp(todayOut), icon: TrendingDown, color: "text-rose-600", bg: "bg-rose-50", trend: todayOut > 0 ? "Active" : "Nihil" },
+    { label: "Keluar hari ini", value: formatRp(todayOut), icon: TrendingDown, color: "text-rose-600", bg: "bg-rose-50", trend: todayOut > 0 ? "Ada" : "Nihil" },
     { label: "Total Saldo", value: formatRp(totalBalance), icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50", trend: `${accounts.length} Akun` },
   ];
 
@@ -514,7 +514,7 @@ export default function ProfilePage() {
                     : "bg-indigo-50 text-indigo-600 border-indigo-100"
                 )}>
                   <ShieldCheck size={12} className={cn(profile.plan === 'PRO' && "text-emerald-500")} />
-                  {profile.plan === 'PRO' ? 'PRO MEMBER' : 'Free Plan Active'}
+                  {profile.plan === 'PRO' ? 'Member PRO' : 'Paket gratis'}
                 </span>
               </div>
             </div>
@@ -546,7 +546,7 @@ export default function ProfilePage() {
         <div className="lg:col-span-2 space-y-6 md:space-y-8">
           <div className="bg-white p-5 md:p-8 lg:p-12 rounded-[20px] md:rounded-[48px] border border-slate-50 shadow-sm space-y-6 md:space-y-10">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight">Identity Settings</h2>
+              <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight">Data diri</h2>
             </div>
 
             {saveError && (
@@ -557,7 +557,7 @@ export default function ProfilePage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-x-12 md:gap-y-8">
               <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Full Name</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Nama lengkap</label>
                 <div className="relative group">
                   <User size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
                   <input type="text" value={profile.displayName} onChange={e => setProfile(p => ({...p, displayName: e.target.value}))}
@@ -567,7 +567,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Email Address</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Email</label>
                 <div className="relative group">
                   <Mail size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 transition-colors" />
                   <input type="email" value={profile.email} disabled
@@ -587,7 +587,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Phone Number</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Nomor HP</label>
                 <div className="relative group">
                   <Phone size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
                   <input type="text" value={profile.phone} onChange={e => setProfile(p => ({...p, phone: e.target.value}))}
@@ -611,7 +611,7 @@ export default function ProfilePage() {
               <button onClick={handleSave} disabled={saving}
                 className="w-full md:w-fit px-10 md:px-12 py-4 md:py-5 bg-indigo-600 disabled:bg-slate-300 text-white rounded-xl md:rounded-2xl text-[13px] md:text-xs font-black shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2">
                 <Save size={14} />
-                {saving ? 'Menyimpan...' : saved ? 'OK Tersimpan!' : 'Simpan Perubahan'}
+                {saving ? 'Menyimpan...' : saved ? 'Tersimpan ✓' : 'Simpan Perubahan'}
               </button>
             </div>
           </div>
@@ -641,7 +641,7 @@ export default function ProfilePage() {
           <div className="space-y-6 md:space-y-10 animate-in fade-in duration-300">
           {/* Active Banks */}
           <div className="bg-[#f0f5fa] p-5 md:p-8 rounded-[20px] md:rounded-[48px] border border-white shadow-sm space-y-6 md:space-y-8">
-            <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight">Active Banks</h2>
+            <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight">Rekening aktif</h2>
             <div className="space-y-4">
               {loading ? (
                 <p className="text-sm text-slate-400 text-center py-4">Memuat...</p>
@@ -688,7 +688,7 @@ export default function ProfilePage() {
             <div className="absolute top-0 right-0 p-8 text-white/5 group-hover:text-white/10 transition-colors hidden md:block">
               <ShieldCheck size={120} />
             </div>
-            <h2 className="text-lg md:text-xl font-black text-white tracking-tight relative z-10">Security Center</h2>
+            <h2 className="text-lg md:text-xl font-black text-white tracking-tight relative z-10">Keamanan</h2>
             <div className="space-y-4 md:space-y-6 relative z-10">
               <button
                 onClick={() => setShowPasswordModal(true)}
@@ -696,7 +696,7 @@ export default function ProfilePage() {
               >
                 <div className="flex items-center gap-3 md:gap-4 text-white">
                   <Lock size={16} className="text-indigo-400" />
-                  <span className="text-[11px] md:text-[12px] font-black tracking-tight">{user?.hasPassword === false ? 'Set Password' : 'Change Password'}</span>
+                  <span className="text-[11px] md:text-[12px] font-black tracking-tight">{user?.hasPassword === false ? 'Buat password' : 'Ganti password'}</span>
                 </div>
                 <ChevronRight size={14} className="text-white/40" />
               </button>
@@ -902,7 +902,7 @@ export default function ProfilePage() {
               <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600 shrink-0">
                 <AlertTriangle size={18} />
               </div>
-              <h2 className="text-lg md:text-xl font-black text-rose-700 tracking-tight">Danger Zone</h2>
+              <h2 className="text-lg md:text-xl font-black text-rose-700 tracking-tight">Zona berbahaya</h2>
             </div>
             <p className="text-xs font-medium text-rose-600/80 leading-relaxed relative z-10">
               Menghapus permanen semua transaksi, rekening, budget, investasi, tabungan, kategori, mata uang, jadwal recurring, dan riwayat chat AI Anda. Akun (login, plan, riwayat pembayaran) tidak terhapus.

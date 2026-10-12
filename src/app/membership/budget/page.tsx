@@ -147,7 +147,7 @@ export default function BudgetPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="sr-only">Anggaran</h1>
-          <p className="mt-0.5 text-sm text-slate-500">
+          <p className="text-sm text-slate-500">
             1 – {daysInMonth} {periodLabel}{isCurrent ? ` · sisa ${daysLeft} hari` : ''}
           </p>
         </div>

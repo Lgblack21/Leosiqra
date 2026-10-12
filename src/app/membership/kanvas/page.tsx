@@ -223,7 +223,7 @@ export default function KanvasPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="sr-only">Kanvas</h1>
-          <p className="mt-0.5 text-sm text-slate-500">Dari uang masuk sampai tabungan: ke mana uangmu mengalir · {accCount} rekening · {graph.edges.length} jalur</p>
+          <p className="text-sm text-slate-500">Dari uang masuk sampai tabungan: ke mana uangmu mengalir · {accCount} rekening · {graph.edges.length} jalur</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1 rounded-2xl bg-white px-1 py-1 shadow-sm ring-1 ring-slate-100">

@@ -134,7 +134,7 @@ export default function AplikasiTerhubungPage() {
     <div className="mx-auto max-w-4xl space-y-5 pb-12">
       <div>
         <h1 className="sr-only">Aplikasi terhubung</h1>
-        <p className="mt-0.5 text-sm text-slate-500">Hubungkan aplikasi yang sudah kamu pakai lewat link pribadi. Leosiqra tidak pernah meminta kata sandi akun lain.</p>
+        <p className="text-sm text-slate-500">Hubungkan aplikasi yang sudah kamu pakai lewat link pribadi. Leosiqra tidak pernah meminta kata sandi akun lain.</p>
       </div>
 
       {unavailable && <div className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-800">Fitur ini belum aktif. Coba lagi nanti ya.</div>}

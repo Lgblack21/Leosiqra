@@ -230,7 +230,7 @@ export default function NamaAkunPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="sr-only">Nama Akun Transaksi</h1>
-          <p className="text-[12px] md:text-sm font-medium text-slate-400 mt-2 max-w-xl">
+          <p className="text-sm text-slate-500">
             Kelola kategori, subkategori, dan mata uang di sini — daftar inilah yang muncul sebagai pilihan setiap kali Anda mencatat transaksi, budget, atau recurring.
           </p>
         </div>
@@ -245,7 +245,7 @@ export default function NamaAkunPage() {
               <div className="flex items-center gap-3">
                 <div className="w-1 h-6 bg-indigo-600 rounded-full" />
                 <div>
-                  <h2 className="text-lg font-black text-slate-900 tracking-tight">Daftar Kategori Transaksi</h2>
+                  <h2 className="text-lg font-black text-slate-900 tracking-tight">Kategori transaksi</h2>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Sumber pilihan kategori di semua form transaksi</p>
                 </div>
               </div>
@@ -332,8 +332,8 @@ export default function NamaAkunPage() {
               <div className="flex items-center gap-3">
                 <div className="w-1 h-6 bg-emerald-500 rounded-full" />
                 <div>
-                  <h2 className="text-lg font-black text-slate-900 tracking-tight">Kategori Mata Uang Dunia</h2>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Sistem Dinamis Terintegrasi</p>
+                  <h2 className="text-lg font-black text-slate-900 tracking-tight">Mata uang</h2>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Mata uang yang bisa dipakai di rekening & transaksi</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">

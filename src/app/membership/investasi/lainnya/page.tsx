@@ -213,14 +213,11 @@ export default function OtherInvestmentsPage() {
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-br from-white to-indigo-50/40 p-6 rounded-[24px] border border-slate-100 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-4">
-          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white items-center justify-center shadow-lg shadow-emerald-600/20 shrink-0">
-            <Gem size={22} />
-          </div>
           <div>
             <h1 className="sr-only">Investasi Lainnya</h1>
-            <p className="text-[10px] md:text-sm font-medium text-slate-400 mt-1 max-w-xl">
+            <p className="text-sm text-slate-500">
               Lacak seluruh aset investasi alternatif Anda.
             </p>
           </div>

@@ -201,9 +201,9 @@ export default function RekeningPage() {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-        <div className="md:col-span-1 bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-card p-5 md:p-6 shadow-xl shadow-emerald-600/15 relative overflow-hidden">
+        <div className="md:col-span-1 bg-gradient-to-br from-indigo-600 to-violet-600 text-white rounded-card p-5 md:p-6 shadow-xl shadow-indigo-600/15 relative overflow-hidden">
           <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
-          <p className="text-label font-bold text-emerald-100 uppercase mb-4">Total Saldo</p>
+          <p className="text-label font-bold text-indigo-100 uppercase mb-4">Total Saldo</p>
           {loading ? (
             <div className="h-9 w-2/3 mb-3 rounded-control bg-white/20 animate-pulse" />
           ) : (
@@ -211,7 +211,7 @@ export default function RekeningPage() {
               {formatIDR(totalSaldo)}
             </p>
           )}
-          <p className="text-caption font-bold text-emerald-100">{accounts.length} rekening · dikonversi ke IDR</p>
+          <p className="text-caption font-bold text-indigo-100">{accounts.length} rekening · dikonversi ke IDR</p>
         </div>
 
         {showSecurityBanner && (

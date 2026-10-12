@@ -384,3 +384,24 @@ html[data-daypart="sore"] .auth-greet[data-p="sore"], html[data-daypart="malam"]
 @media (prefers-reduced-motion: reduce) {
   .leo-breathe, .leo-mane, .leo-ear-l, .leo-ear-r, .leo-blink, .auth-cloud, .auth-star, .auth-window, .auth-enter, .focus-steam { animation: none !important; }
 }
+
+/* ===== Gaya bersih untuk halaman /membership (rombak gaya baru) =====
+   Halaman lama memakai label kecil berhuruf kapital & renggang (uppercase +
+   tracking-widest, 9–10px) dan font-black di mana-mana. Di dalam shell member
+   semua itu dinetralkan sekaligus: label jadi huruf biasa, jarak huruf normal,
+   ukuran minimal terbaca, ketebalan maksimal 800. Teks yang memang ditulis
+   kapital di sumbernya (IDR, BTC) tidak berubah. Cetak (print) tidak terpengaruh. */
+@media screen {
+  .member-shell .uppercase { text-transform: none; }
+  .member-shell .tracking-widest,
+  .member-shell .tracking-wider,
+  .member-shell .tracking-wide,
+  .member-shell [class*="tracking-[0."],
+  .member-shell [class*="tracking-[.1"],
+  .member-shell .text-label { letter-spacing: 0; }
+  .member-shell .text-label { font-size: 0.75rem; }
+  .member-shell [class~="text-[8px]"],
+  .member-shell [class~="text-[9px]"],
+  .member-shell [class~="text-[10px]"] { font-size: 11.5px; }
+  .member-shell .font-black { font-weight: 800; }
+}

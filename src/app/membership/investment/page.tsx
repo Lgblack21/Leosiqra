@@ -43,7 +43,7 @@ const SimulatedDoughnut = ({ pSaham, pLainnya }: DoughnutProps) => {
         />
         {animatedSaham > 0 && (
           <circle
-            stroke="#064e3b"
+            stroke="#6366f1"
             strokeDasharray={circumference + ' ' + circumference}
             style={{ strokeDashoffset: circumference - (animatedSaham / 100) * circumference }}
             strokeWidth={stroke}
@@ -192,14 +192,11 @@ export default function InvestmentDashboard() {
     <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 max-w-[1400px]">
 
       {/* 1. Header (Title & Controls) */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-br from-white to-indigo-50/40 p-6 rounded-[24px] border border-slate-100 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-4">
-          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white items-center justify-center shadow-lg shadow-emerald-600/20 shrink-0">
-            <Landmark size={22} />
-          </div>
           <div>
             <h1 className="sr-only">Ringkasan Investasi</h1>
-            <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+            <p className="text-sm text-slate-500">
               Seluruh portofolio · {investments.length} posisi aktif
             </p>
           </div>
@@ -244,11 +241,11 @@ export default function InvestmentDashboard() {
           </div>
         </div>
 
-        {/* Keuntungan Terrealisasi */}
-        <div className="bg-gradient-to-br from-[#023326] to-emerald-950 rounded-[20px] md:rounded-[24px] p-4 md:p-6 border border-emerald-950 shadow-sm relative overflow-hidden">
+        {/* Keuntungan Terealisasi */}
+        <div className="bg-gradient-to-br from-slate-900 to-indigo-950 rounded-[20px] md:rounded-[24px] p-4 md:p-6 border border-slate-900 shadow-sm relative overflow-hidden">
           <div className="flex justify-between items-center mb-3 md:mb-6">
-            <p className="text-[8px] md:text-[9px] font-black text-emerald-100/50 uppercase tracking-[0.1em]">Keuntungan Terrealisasi</p>
-            <div className="w-8 h-8 rounded-full bg-emerald-900/50 flex items-center justify-center text-emerald-300">
+            <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-[0.1em]">Keuntungan Terealisasi</p>
+            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-emerald-300">
               <CheckCircle2 size={16} />
             </div>
           </div>
@@ -261,10 +258,10 @@ export default function InvestmentDashboard() {
           </div>
         </div>
 
-        {/* Keuntungan Belum Terrealisasi */}
+        {/* Keuntungan Belum Terealisasi */}
         <div className="bg-white rounded-[20px] md:rounded-[24px] p-4 md:p-6 border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group">
           <div className="flex justify-between items-center mb-3 md:mb-6">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.1em]">Keuntungan Belum Terrealisasi</p>
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.1em]">Keuntungan Belum Terealisasi</p>
             <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-amber-50 group-hover:text-amber-600 transition-colors">
               <Clock size={16} />
             </div>
@@ -291,7 +288,7 @@ export default function InvestmentDashboard() {
             </div>
             <div className="space-y-3 md:space-y-4 w-full sm:w-auto">
               <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-[#064e3b] shrink-0" />
+                <div className="w-3 h-3 rounded-full bg-indigo-500 shrink-0" />
                 <p className="text-[11px] font-bold text-slate-900 tabular-nums">Saham ({Math.round(animatedPercentageSaham)}%)</p>
               </div>
               <div className="flex items-center gap-3">
@@ -401,7 +398,7 @@ export default function InvestmentDashboard() {
                   <tr key={s.id} className="hover:bg-slate-50/30 transition-colors">
                     <td className="px-5 md:px-8 py-4 md:py-5">
                       <div className="flex items-center gap-3">
-                        <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-white text-[10px] font-black", (s.returnPercentage??0) >= 0 ? 'bg-emerald-900' : 'bg-emerald-700')}>
+                        <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-white text-[10px] font-black", (s.returnPercentage??0) >= 0 ? 'bg-indigo-600' : 'bg-rose-500')}>
                           {s.name[0]}
                         </div>
                         <span className="font-black text-slate-900">{s.name}</span>
