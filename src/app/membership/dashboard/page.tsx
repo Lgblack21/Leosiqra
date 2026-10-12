@@ -18,7 +18,6 @@ import {
   ArrowUp,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { cn, isIncomingTransaction, formatIDR, formatMoney } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
@@ -276,7 +275,6 @@ export default function MonthlyDashboard() {
           ? { mood: 'idle', text: `Belanja agak ngebut nih, masih ${daysLeft} hari lagi 👀` }
           : { mood: 'idle', text: `Mantap! ${todayTrx.length} catatan hari ini, keuanganmu on track ✨` };
 
-  const router = useRouter();
   const [ask, setAsk] = useState('');
   const [itemsValue, setItemsValue] = useState(0);
   useEffect(() => {
@@ -342,7 +340,8 @@ export default function MonthlyDashboard() {
               onSubmit={(e) => {
                 e.preventDefault();
                 const q = ask.trim();
-                if (q) router.push(`/membership/ai-leosiqra?q=${encodeURIComponent(q)}`);
+                openModal('ai_chat', q ? { prompt: q } : null);
+                setAsk('');
               }}
               className="mt-5 flex max-w-md items-center gap-2 rounded-2xl bg-white/95 py-1.5 pl-4 pr-1.5 shadow-lg shadow-indigo-950/20"
             >
@@ -350,11 +349,18 @@ export default function MonthlyDashboard() {
               <input
                 value={ask}
                 onChange={(e) => setAsk(e.target.value)}
+                onFocus={(e) => {
+                  // Klik kolom kosong = buka chat langsung (seperti Oyenza).
+                  if (!ask.trim()) {
+                    e.currentTarget.blur();
+                    openModal('ai_chat');
+                  }
+                }}
                 placeholder="Tanya Leo… mis. minggu ini habis berapa?"
                 aria-label="Tanya Leo"
                 className="min-w-0 flex-1 bg-transparent py-1.5 text-sm text-slate-800 outline-none placeholder:text-slate-400"
               />
-              <button type="submit" aria-label="Kirim pertanyaan" disabled={!ask.trim()} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white disabled:opacity-40">
+              <button type="submit" aria-label="Kirim pertanyaan" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white disabled:opacity-40">
                 <ArrowUp size={16} />
               </button>
             </form>

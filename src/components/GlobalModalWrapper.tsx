@@ -21,6 +21,7 @@ import { CardModal } from '@/components/modals/CardModal';
 import { CurrencyModal } from '@/components/modals/CurrencyModal';
 import { ImportTransactionsModal } from '@/components/modals/ImportTransactionsModal';
 import { accountService } from '@/lib/services/accountService';
+import { AiChatModal } from '@/components/ai/AiChatModal';
 import type { Investment } from '@/lib/services/investmentService';
 
 export const GlobalModalWrapper = () => {
@@ -44,6 +45,11 @@ export const GlobalModalWrapper = () => {
   }, [user]);
 
   if (!activeModal || !user) return null;
+
+  // Tanya Leo (popup chat) — dirender sendiri, tidak perlu data rekening.
+  if (activeModal === 'ai_chat') {
+    return <AiChatModal open onClose={closeModal} prompt={typeof modalData?.prompt === 'string' ? modalData.prompt : undefined} />;
+  }
 
   return (
     <>

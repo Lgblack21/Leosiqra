@@ -191,19 +191,19 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         </div>
       </div>
 
-      {/* Tanya Leo */}
+      {/* Tanya Leo — popup chat, tetap di halaman yang sama */}
       <div className="px-4 pb-3">
-        <Link
-          href="/membership/ai-leosiqra"
-          onClick={closeOnMobile}
-          className={cn(
-            'flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 text-sm transition-colors',
-            pathname === '/membership/ai-leosiqra' ? 'bg-slate-900 text-white' : 'bg-white text-slate-500 ring-1 ring-slate-200/80 hover:text-slate-800'
-          )}
+        <button
+          type="button"
+          onClick={() => {
+            openModal('ai_chat');
+            closeOnMobile();
+          }}
+          className="flex w-full items-center gap-2.5 rounded-2xl bg-white px-3.5 py-2.5 text-left text-sm text-slate-500 ring-1 ring-slate-200/80 transition-colors hover:text-slate-800"
         >
-          <Sparkles size={16} className={pathname === '/membership/ai-leosiqra' ? 'text-violet-300' : 'text-violet-500'} />
+          <Sparkles size={16} className="text-violet-500" />
           Tanya Leo…
-        </Link>
+        </button>
       </div>
 
       <nav aria-label="Menu utama" className="no-scrollbar flex-1 overflow-y-auto px-3 pb-3">

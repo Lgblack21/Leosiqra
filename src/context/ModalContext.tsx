@@ -17,7 +17,8 @@ export type ModalType =
   | 'rekening'
   | 'kartu'
   | 'currency'
-  | 'import_mutasi';
+  | 'import_mutasi'
+  | 'ai_chat';
 
 interface ModalContextType {
   activeModal: ModalType;
