@@ -8,6 +8,7 @@ import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Check, AlertCircle, P
 import { AuthLayout, GoogleIcon, authInput, authInputWrap, authLabel, authPrimaryBtn } from '@/components/auth/AuthLayout';
 import type { LeoMood } from '@/components/mascot/LeoMascot';
 import { cloudflareApi } from '@/lib/cloudflare-api';
+import { resolveNext, withNext } from '@/lib/authNext';
 import { googleAuthHref, readSignupSource, type SignupSource } from '@/lib/signupSource';
 
 // Daftar dibuat seringan mungkin: nama, email, password. WhatsApp opsional
@@ -39,8 +40,7 @@ export default function RegisterPage() {
       setError(oauthError);
       window.history.replaceState({}, '', '/auth/register');
     }
-    const rawNext = params.get('next');
-    setNext(rawNext && rawNext.startsWith('/app') ? rawNext : null);
+    setNext(resolveNext(params.get('next')));
     setSignupSource(readSignupSource());
   }, []);
 
@@ -125,7 +125,7 @@ export default function RegisterPage() {
       sub="Gratis 14 hari, tanpa kartu kredit. Catat rekening, kartu, tabungan, dan investasi — Leo dan AI Leosiqra yang merangkumnya."
       mood={leoMood}
       lookX={Math.min(1, typing.length / 28)}
-      footer={<>Dengan mendaftar, kamu setuju dengan <Link href="/privacy" className="font-semibold text-slate-500 underline">Kebijakan Privasi</Link>.</>}
+      footer={<>Dengan mendaftar, kamu setuju dengan <Link href="/privacy" className="font-semibold text-slate-500 underline">Kebijakan Privasi</Link> dan <Link href="/terms" className="font-semibold text-slate-500 underline">Syarat &amp; Ketentuan</Link>.</>}
     >
       <motion.div animate={card}>
         <AnimatePresence mode="wait">
@@ -140,7 +140,7 @@ export default function RegisterPage() {
               <h2 className="text-[26px] font-extrabold tracking-tight text-slate-900">Buat akun</h2>
               <p className="mt-1 text-sm text-slate-500">
                 Sudah punya akun?{' '}
-                <Link href="/auth/login" className="font-bold text-indigo-600 hover:underline">Masuk</Link>
+                <Link href={withNext('/auth/login', next)} className="font-bold text-indigo-600 hover:underline">Masuk</Link>
               </p>
 
               {error && (
@@ -214,6 +214,9 @@ export default function RegisterPage() {
                       </span>
                     ))}
                   </div>
+                  {password && !showPassword && (
+                    <p className="mt-2 px-1 text-[11px] text-slate-400">Cukup ketik sekali — cek dulu ketikanmu lewat ikon mata.</p>
+                  )}
                 </div>
 
                 {showWhatsapp ? (

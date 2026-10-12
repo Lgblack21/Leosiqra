@@ -10,12 +10,8 @@ import type { LeoMood } from '@/components/mascot/LeoMascot';
 import { TwoFactorModal } from '@/components/auth/TwoFactorModal';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { isStandaloneDisplay } from '@/lib/pushNotifications';
+import { resolveNext, withNext } from '@/lib/authNext';
 import { googleAuthHref, readSignupSource, type SignupSource } from '@/lib/signupSource';
-
-// Cuma terima redirect target ke tree /app atau /input-cepat — mencegah open
-// redirect kalau parameter `next` diisi sembarangan (mis. URL eksternal).
-const sanitizeNext = (value: string | null): string | null =>
-  value && /^\/(app|input-cepat)(\/|\?|$)/.test(value) ? value : null;
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -77,7 +73,7 @@ export default function LoginPage() {
       window.history.replaceState({}, '', '/auth/login');
     }
     // PWA terpasang tanpa ?next= → tetap ke UI mobile, bukan dashboard web.
-    setNext(sanitizeNext(params.get('next')) ?? (isStandaloneDisplay() ? '/app' : null));
+    setNext(resolveNext(params.get('next')));
     setSignupSource(readSignupSource());
   }, []);
 
@@ -164,7 +160,7 @@ export default function LoginPage() {
         <h2 className="text-[26px] font-extrabold tracking-tight text-slate-900">Masuk</h2>
         <p className="mt-1 text-sm text-slate-500">
           Belum punya akun?{' '}
-          <Link href="/auth/register" className="font-bold text-indigo-600 hover:underline">Daftar gratis 14 hari</Link>
+          <Link href={withNext('/auth/register', next)} className="font-bold text-indigo-600 hover:underline">Daftar gratis 14 hari</Link>
         </p>
 
         {error && (

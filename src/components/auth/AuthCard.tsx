@@ -40,7 +40,7 @@ export function AuthCard({ badge, title, subtitle, mood = 'idle', children }: {
         </motion.div>
         <div className="mt-6 w-full max-w-[440px]">
           <div className="pointer-events-none relative z-20 -mb-[27px] flex justify-center">
-            <LeoMascot mood={mood} size={116} />
+            <LeoMascot mood={mood} size={116} interactive />
           </div>
           <motion.div {...enter(1)} className="relative z-10 space-y-6 rounded-[30px] border border-white/60 bg-white p-6 pt-8 shadow-[0_24px_70px_-24px_rgba(30,27,75,0.55)] sm:p-9 sm:pt-10">
             <div className="space-y-2">

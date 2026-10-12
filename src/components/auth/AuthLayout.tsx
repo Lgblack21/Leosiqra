@@ -89,7 +89,7 @@ export function AuthLayout({
         <div className="relative -mt-24 w-full max-w-[440px] lg:mt-0">
           {/* Leo mengintip di tepi atas kartu */}
           <div className="pointer-events-none relative z-20 -mb-[30px] flex justify-center">
-            <LeoMascot mood={mood} lookX={lookX} size={128} />
+            <LeoMascot mood={mood} lookX={lookX} size={128} interactive />
           </div>
           <motion.div {...enter(1)} className="relative z-10 rounded-[30px] border border-slate-100 bg-white p-6 pt-8 shadow-[0_20px_60px_-24px_rgba(49,46,129,0.35)] sm:p-9 sm:pt-10">
             {children}

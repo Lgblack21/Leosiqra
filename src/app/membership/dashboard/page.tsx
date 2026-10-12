@@ -37,6 +37,7 @@ import { isCreditAccountType, computeCreditUsage, getCardCycle } from '@/lib/cre
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { GamificationStrip } from '@/components/GamificationStrip';
 import { WeeklyInsights } from '@/components/WeeklyInsights';
+import { SecurityNudge } from '@/components/SecurityNudge';
 
 interface MarketTicker {
   label: string; sub: string; val: string; pct: string; up: boolean | null;
@@ -323,6 +324,8 @@ export default function MonthlyDashboard() {
       />
 
       <GamificationStrip />
+
+      <SecurityNudge />
 
       <WeeklyInsights target="web" />
 
