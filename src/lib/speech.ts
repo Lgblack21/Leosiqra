@@ -2,7 +2,7 @@
 // hanya punya implementasi native (di web semua method melempar "not
 // implemented"), jadi di browser/PWA pakai Web Speech API bawaan browser
 // (Chrome Android, Safari iOS 14.5+). Dipakai Input Cepat & asisten Voice.
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { SpeechRecognition as NativeSpeech } from '@capacitor-community/speech-recognition';
 
 export interface SpeechCallbacks {
@@ -50,6 +50,12 @@ const WEB_ERRORS: Record<string, string> = {
   network: 'Pengenalan suara butuh koneksi internet.',
 };
 
+// Batas waktu sesi native (ms): tanpa suara/aktivitas, total maksimal, dan
+// jeda menunggu hasil final setelah recognizer berhenti.
+const NATIVE_IDLE_MS = 8000;
+const NATIVE_MAX_MS = 60000;
+const NATIVE_GRACE_MS = 800;
+
 export const startSpeech = async (cb: SpeechCallbacks, lang = 'id-ID'): Promise<SpeechSession | null> => {
   const support = speechSupport();
   if (!support) {
@@ -58,29 +64,89 @@ export const startSpeech = async (cb: SpeechCallbacks, lang = 'id-ID'): Promise<
   }
 
   if (support === 'native') {
+    // Plugin v7 di Android: stop() TIDAK pernah resolve (call.resolve tidak
+    // dipanggil di Java) dan error setelah start (mis. tidak ada suara) tidak
+    // sampai ke JS karena call start sudah resolve. Jadi akhir sesi jangan
+    // ditunggu dari promise stop() — pakai event 'listeningState' + timer
+    // pengaman, dan pastikan onEnd terpanggil tepat sekali.
     let latest = '';
+    let done = false;
+    let started = false;
+    let idleTimer: ReturnType<typeof setTimeout> | undefined;
+    let capTimer: ReturnType<typeof setTimeout> | undefined;
+    let graceTimer: ReturnType<typeof setTimeout> | undefined;
+    const handles: PluginListenerHandle[] = [];
+    // Lepas listener milik sesi ini saja — removeAllListeners() di akhir sesi
+    // bisa ikut mencabut listener sesi baru yang sudah dimulai.
+    const removeOwnListeners = () => {
+      handles.splice(0).forEach((h) => { h.remove().catch(() => {}); });
+    };
+    const clearTimers = () => {
+      clearTimeout(idleTimer);
+      clearTimeout(capTimer);
+      clearTimeout(graceTimer);
+    };
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimers();
+      removeOwnListeners();
+      cb.onEnd(latest);
+    };
+    // Hasil final Android datang lewat 'partialResults' sesaat SETELAH
+    // 'stopped', jadi beri jeda singkat sebelum menutup sesi.
+    const finishSoon = (ms: number) => {
+      if (done) return;
+      clearTimeout(graceTimer);
+      graceTimer = setTimeout(finish, ms);
+    };
+    const bumpIdle = () => {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        NativeSpeech.stop().catch(() => {});
+        finishSoon(NATIVE_GRACE_MS);
+      }, NATIVE_IDLE_MS);
+    };
     try {
       const { available } = await NativeSpeech.available();
       if (!available) throw new Error('Perangkat ini tidak mendukung pengenalan suara.');
       const perm = await NativeSpeech.requestPermissions();
       if (perm.speechRecognition !== 'granted') throw new Error('Izin mikrofon dibutuhkan untuk input suara.');
-      await NativeSpeech.addListener('partialResults', (data: { matches?: string[] }) => {
+      // Bersihkan sisa sesi sebelumnya (listener lama / recognizer yang masih
+      // jalan). stop() sengaja tidak di-await — di Android tidak pernah resolve.
+      await NativeSpeech.removeAllListeners().catch(() => {});
+      NativeSpeech.stop().catch(() => {});
+      handles.push(await NativeSpeech.addListener('partialResults', (data: { matches?: string[] }) => {
+        if (done) return;
         const text = data.matches?.[0];
         if (text) { latest = text; cb.onPartial(text); }
-      });
+        bumpIdle();
+      }));
+      handles.push(await NativeSpeech.addListener('listeningState', (data: { status: 'started' | 'stopped' }) => {
+        if (done) return;
+        // 'stopped' hanya berarti kalau sesi INI sudah 'started' — abaikan
+        // event susulan dari stop() pembersih di atas.
+        if (data.status === 'started') { started = true; bumpIdle(); }
+        else if (started) finishSoon(NATIVE_GRACE_MS);
+      }));
+      bumpIdle();
+      capTimer = setTimeout(() => {
+        NativeSpeech.stop().catch(() => {});
+        finishSoon(NATIVE_GRACE_MS);
+      }, NATIVE_MAX_MS);
       await NativeSpeech.start({ language: lang, partialResults: true, popup: false });
     } catch (e) {
+      done = true;
+      clearTimers();
+      removeOwnListeners();
       cb.onError(e instanceof Error ? e.message : 'Gagal memulai input suara.');
       return null;
     }
     return {
       stop: () => {
-        NativeSpeech.stop()
-          .catch(() => {})
-          .finally(() => {
-            NativeSpeech.removeAllListeners().catch(() => {});
-            cb.onEnd(latest);
-          });
+        if (done) return;
+        NativeSpeech.stop().catch(() => {});
+        finishSoon(NATIVE_GRACE_MS);
       },
     };
   }
