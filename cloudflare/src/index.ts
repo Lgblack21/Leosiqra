@@ -2028,6 +2028,22 @@ async function handlePromoStats(request: Request, env: Env) {
   )
     .bind(iso(now - 86400000), iso(now - 7 * 86400000), iso(now - 30 * 86400000), iso(now), PROMO_DEMO_EMAIL)
     .first<{ total: number; new1d: number | null; new7d: number | null; new30d: number | null; pro: number | null }>();
+  // Agregat sumber pendaftaran 30 hari (tanpa PII). null = tabel belum ada (migrasi 0008).
+  let signupSources30d: Array<{ source: string; medium: string; campaign: string; n: number }> | null = null;
+  try {
+    const rows = await env.DB.prepare(
+      `SELECT COALESCE(s.source, 'langsung') AS source, COALESCE(s.medium, '-') AS medium,
+              COALESCE(s.campaign, '-') AS campaign, COUNT(*) AS n
+         FROM signup_sources s JOIN users u ON u.id = s.user_id
+        WHERE u.role = 'user' AND lower(u.email) <> ? AND s.created_at >= ?
+        GROUP BY 1, 2, 3 ORDER BY n DESC LIMIT 30`
+    )
+      .bind(PROMO_DEMO_EMAIL, iso(now - 30 * 86400000))
+      .all<{ source: string; medium: string; campaign: string; n: number }>();
+    signupSources30d = rows.results ?? [];
+  } catch {
+    signupSources30d = null;
+  }
   return json({
     members: {
       total: row?.total ?? 0,
@@ -2036,6 +2052,7 @@ async function handlePromoStats(request: Request, env: Env) {
       new30d: row?.new30d ?? 0,
       pro: row?.pro ?? 0,
     },
+    signupSources30d,
     at: nowIso(),
   });
 }
@@ -2388,6 +2405,47 @@ const runAiAssistant = async (
   return runOpenRouterAssistant(env, systemPrompt, history, prompt);
 };
 
+// Sumber pendaftaran (first-touch UTM/referrer yang dicatat browser, lihat
+// src/lib/signupSource.ts). Ini input klien → disaring ketat: huruf kecil,
+// hanya [a-z0-9._-], maks 64 karakter; path tanpa query; tidak ada IP/UA.
+type SignupSource = {
+  source: string | null;
+  medium: string | null;
+  campaign: string | null;
+  landingPath: string | null;
+  firstSeenAt: string | null;
+};
+const cleanSourceToken = (value: unknown) => {
+  if (typeof value !== "string") return null;
+  const cleaned = value.trim().toLowerCase().slice(0, 200).replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64);
+  return cleaned || null;
+};
+const sanitizeSignupSource = (raw: unknown): SignupSource | null => {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const r = raw as Record<string, unknown>;
+  const path = typeof r.landingPath === "string" && /^\/[A-Za-z0-9/_.-]{0,99}$/.test(r.landingPath) ? r.landingPath : null;
+  const seenMs = typeof r.firstSeenAt === "string" ? Date.parse(r.firstSeenAt) : NaN;
+  const now = Date.now();
+  const firstSeenAt = Number.isFinite(seenMs) && seenMs <= now + 86400000 && seenMs >= now - 31 * 86400000 ? new Date(seenMs).toISOString() : null;
+  const out = { source: cleanSourceToken(r.source), medium: cleanSourceToken(r.medium), campaign: cleanSourceToken(r.campaign), landingPath: path, firstSeenAt };
+  return out.source || out.medium || out.campaign ? out : null;
+};
+// Dicatat sekali per user (INSERT OR IGNORE). source NULL = datang langsung /
+// tidak diketahui. Gagal simpan (mis. migrasi 0008 belum diterapkan) TIDAK
+// boleh menggagalkan pendaftaran — cukup dicatat di log.
+const saveSignupSource = async (env: Env, userId: string, method: "email" | "google", src: SignupSource | null) => {
+  try {
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO signup_sources (user_id, method, source, medium, campaign, landing_path, first_seen_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+      .bind(userId, method, src?.source ?? null, src?.medium ?? null, src?.campaign ?? null, src?.landingPath ?? null, src?.firstSeenAt ?? null, nowIso())
+      .run();
+  } catch (error) {
+    console.error("Gagal menyimpan sumber pendaftaran:", error instanceof Error ? error.message : String(error));
+  }
+};
+
 async function handleRegister(request: Request, env: Env) {
   const payload = await parseJson<{
     name?: string;
@@ -2395,6 +2453,7 @@ async function handleRegister(request: Request, env: Env) {
     password?: string;
     whatsapp?: string;
     twoFactorSecret?: string;
+    source?: unknown;
   }>(request);
 
   if (!payload.name || !payload.email || !payload.password) {
@@ -2470,6 +2529,7 @@ async function handleRegister(request: Request, env: Env) {
       nowIso()
     )
     .run();
+  await saveSignupSource(env, userId, "email", sanitizeSignupSource(payload.source));
 
   const user: AppUser = {
     id: userId,
@@ -2897,6 +2957,24 @@ const oauthNextCookie = (next: string) =>
 const clearOauthNextCookie = () =>
   `oauth_next=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
 
+// Sumber pendaftaran untuk user baru lewat Google: dibawa dari ?src= di
+// /api/auth/google ke callback lewat cookie singkat (sudah disaring, disaring
+// lagi saat dibaca).
+const oauthSrcCookie = (src: SignupSource) =>
+  `oauth_src=${encodeURIComponent(JSON.stringify(src))}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`;
+
+const clearOauthSrcCookie = () =>
+  `oauth_src=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
+
+const parseSignupSourceJson = (raw: string | null | undefined) => {
+  if (!raw || raw.length > 1000) return null;
+  try {
+    return sanitizeSignupSource(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+};
+
 // Login Google untuk akun yang mengaktifkan 2FA: sesi BELUM dibuat di callback.
 // Cookie sementara bertanda tangan (5 menit) menyimpan user & tujuan, lalu
 // kode Authenticator diverifikasi di POST /api/auth/google/2fa. Dulu login
@@ -2951,6 +3029,8 @@ async function handleGoogleStart(request: Request, env: Env) {
   if (isAppNext(next)) {
     headers.append("set-cookie", oauthNextCookie(next));
   }
+  const src = parseSignupSourceJson(url.searchParams.get("src"));
+  headers.append("set-cookie", src ? oauthSrcCookie(src) : clearOauthSrcCookie());
   return new Response(null, { status: 302, headers });
 }
 
@@ -2962,6 +3042,7 @@ async function handleGoogleCallback(request: Request, env: Env) {
     });
     headers.append("set-cookie", clearOauthStateCookie());
     headers.append("set-cookie", clearOauthNextCookie());
+    headers.append("set-cookie", clearOauthSrcCookie());
     return new Response(null, { status: 302, headers });
   };
 
@@ -3040,6 +3121,14 @@ async function handleGoogleCallback(request: Request, env: Env) {
     )
       .bind(userId, displayName, email, profile.picture ?? null, trial.status, trial.expiredAt, nowIso(), nowIso())
       .run();
+    const rawSrc = getCookieValue(request, "oauth_src");
+    let srcJson: string | null = null;
+    try {
+      srcJson = rawSrc ? decodeURIComponent(rawSrc) : null;
+    } catch {
+      srcJson = null;
+    }
+    await saveSignupSource(env, userId, "google", parseSignupSourceJson(srcJson));
     user = {
       id: userId,
       name: displayName,
@@ -3064,6 +3153,7 @@ async function handleGoogleCallback(request: Request, env: Env) {
     const headers = new Headers({ location: `${url.origin}/auth/login?google2fa=1` });
     headers.append("set-cookie", clearOauthStateCookie());
     headers.append("set-cookie", clearOauthNextCookie());
+    headers.append("set-cookie", clearOauthSrcCookie());
     headers.append("set-cookie", await createGoogle2faCookie(env, user.id, next));
     return new Response(null, { status: 302, headers });
   }
@@ -3088,6 +3178,7 @@ async function handleGoogleCallback(request: Request, env: Env) {
   const headers = new Headers({ location: `${url.origin}${destination}` });
   headers.append("set-cookie", clearOauthStateCookie());
   headers.append("set-cookie", clearOauthNextCookie());
+  headers.append("set-cookie", clearOauthSrcCookie());
   headers.append("set-cookie", sessionCookie(env, session.token, 60 * 60 * 24 * 30));
   headers.append("set-cookie", roleCookie(env, user.role, 60 * 60 * 24 * 30));
   return new Response(null, { status: 302, headers });

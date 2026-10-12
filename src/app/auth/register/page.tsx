@@ -9,6 +9,7 @@ import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Check, AlertCircle } 
 import { AuthShowcase } from '@/components/auth/AuthShowcase';
 import { TwoFactorModal } from '@/components/auth/TwoFactorModal';
 import { cloudflareApi } from '@/lib/cloudflare-api';
+import { googleAuthHref, readSignupSource, type SignupSource } from '@/lib/signupSource';
 
 const GoogleIcon = ({ size = 18 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
@@ -32,6 +33,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [show2FA, setShow2FA] = useState(false);
   const [next, setNext] = useState<string | null>(null);
+  const [signupSource, setSignupSource] = useState<SignupSource | null>(null);
   const router = useRouter();
 
   // Tampilkan pesan error dari alur OAuth Google (?error=...), dan simpan
@@ -46,9 +48,10 @@ export default function RegisterPage() {
     }
     const rawNext = params.get('next');
     setNext(rawNext && rawNext.startsWith('/app') ? rawNext : null);
+    setSignupSource(readSignupSource());
   }, []);
 
-  const googleHref = next ? `/api/auth/google?next=${encodeURIComponent(next)}` : '/api/auth/google';
+  const googleHref = googleAuthHref(next, signupSource);
 
   const reduce = useReducedMotion();
   const card = useAnimationControls();
@@ -103,6 +106,7 @@ export default function RegisterPage() {
         whatsapp,
           password,
           twoFactorSecret,
+          source: signupSource,
         },
       });
 

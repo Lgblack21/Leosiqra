@@ -63,6 +63,8 @@ const sections: LegalSection[] = [
       <p>
         Kami memakai Cloudflare Web Analytics untuk menghitung jumlah kunjungan, halaman yang dibuka, dan asal pengunjung secara
         agregat. Layanan ini tidak memakai cookie dan tidak melacak Anda lintas situs. Data keuangan yang Anda catat tidak ikut terkirim ke layanan ini.
+        Saat mendaftar, kami juga mencatat dari mana Anda pertama kali datang (misalnya tautan video, artikel, atau mesin pencari)
+        supaya tahu promosi mana yang membantu. Yang disimpan hanya nama sumber dan halaman pertama, bukan alamat IP.
       </p>
     ),
   },

@@ -10,6 +10,7 @@ import { AuthShowcase } from '@/components/auth/AuthShowcase';
 import { TwoFactorModal } from '@/components/auth/TwoFactorModal';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { isStandaloneDisplay } from '@/lib/pushNotifications';
+import { googleAuthHref, readSignupSource, type SignupSource } from '@/lib/signupSource';
 
 const GoogleIcon = ({ size = 18 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
@@ -36,6 +37,8 @@ export default function LoginPage() {
   const [done, setDone] = useState(false);
   // Login Google untuk akun ber-2FA: server meminta kode Authenticator dulu.
   const [google2fa, setGoogle2fa] = useState(false);
+  // Sumber kunjungan (UTM/referrer) — ikut ke login Google karena akun baru bisa terdaftar dari sini.
+  const [signupSource, setSignupSource] = useState<SignupSource | null>(null);
   const router = useRouter();
   const reduce = useReducedMotion();
   const card = useAnimationControls();
@@ -67,6 +70,7 @@ export default function LoginPage() {
     }
     // PWA terpasang tanpa ?next= → tetap ke UI mobile, bukan dashboard web.
     setNext(sanitizeNext(params.get('next')) ?? (isStandaloneDisplay() ? '/app' : null));
+    setSignupSource(readSignupSource());
   }, []);
 
   // Admin tidak pernah diarahkan ke /app — tidak ada UI admin di sana.
@@ -75,7 +79,7 @@ export default function LoginPage() {
     return next ?? '/membership/dashboard';
   };
 
-  const googleHref = next ? `/api/auth/google?next=${encodeURIComponent(next)}` : '/api/auth/google';
+  const googleHref = googleAuthHref(next, signupSource);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

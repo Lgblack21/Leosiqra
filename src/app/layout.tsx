@@ -104,6 +104,7 @@ import { NoZoomGuard } from "@/components/NoZoomGuard";
 import LogoUpdateBanner from "@/components/LogoUpdateBanner";
 import { InstallPromptCatcher } from "@/components/install/InstallPromptCatcher";
 import { InstallBanner } from "@/components/install/InstallBanner";
+import { SignupSourceCatcher } from "@/components/SignupSourceCatcher";
 
 export default function RootLayout({
   children,
@@ -132,6 +133,7 @@ export default function RootLayout({
         <StaleReloadGuard />
         <NoZoomGuard />
         <InstallPromptCatcher />
+        <SignupSourceCatcher />
         <LogoUpdateBanner />
         <MaintenanceGuard>
           {children}

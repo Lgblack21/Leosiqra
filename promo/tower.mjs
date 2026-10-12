@@ -47,6 +47,8 @@ export const buildMetrik = (history, queue, stats) => {
     likes7d: likes("ig") + likes("yt"),
     platform: { ig: { views: views("ig"), likes: likes("ig") }, yt: { views: views("yt"), likes: likes("yt") } },
     members: stats?.members ?? null,
+    // Sumber pendaftaran 30 hari (agregat, tanpa PII). null = migrasi 0008 belum diterapkan.
+    signupSources30d: stats?.signupSources30d ?? null,
     lastVideo: history.at(-1) ? { hook: history.at(-1).hook, date: history.at(-1).date, rating: history.at(-1).rating ?? null } : null,
   };
 };
