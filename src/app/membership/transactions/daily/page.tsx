@@ -434,8 +434,8 @@ export default function DailyTransactionLogPage() {
       </div>
 
       {/* Cari + periode */}
-      <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
-        <label className="relative lg:w-[340px] lg:shrink-0">
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="relative min-w-[240px] flex-1">
           <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="search"
@@ -446,7 +446,7 @@ export default function DailyTransactionLogPage() {
             className="w-full rounded-full bg-slate-100 py-2.5 pl-11 pr-4 text-sm text-slate-700 outline-none ring-1 ring-transparent transition-all placeholder:text-slate-400 focus:bg-white focus:ring-indigo-300"
           />
         </label>
-        <div className="no-scrollbar flex items-center gap-2 overflow-x-auto py-0.5">
+        <div className="no-scrollbar flex max-w-full items-center gap-2 overflow-x-auto py-0.5">
           <ChipGroup id="period" items={PERIODS} value={period === 'hari' ? null : period} onChange={(p) => { setPeriod(p); setShown(PAGE); }} />
           <span className={cn('flex shrink-0 items-center rounded-full text-sm font-semibold transition-colors', period === 'hari' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200')}>
             <span className="[&_button]:!border-0 [&_button]:!bg-transparent [&_button]:!shadow-none">
@@ -457,7 +457,7 @@ export default function DailyTransactionLogPage() {
       </div>
 
       {/* Jenis + filter */}
-      <div className="no-scrollbar flex items-center gap-2 overflow-x-auto py-0.5">
+      <div className="no-scrollbar flex items-center gap-2 overflow-x-auto py-0.5 md:flex-wrap md:overflow-visible">
         <ChipGroup id="kind" items={KINDS} value={kind} onChange={setKind} />
         <FilterPopover title="Kategori" icon={<Tag size={14} />} label={catFilter.length ? `Kategori · ${catFilter.length}` : 'Kategori'} active={catFilter.length > 0}>
           {() => categoryOptions.length === 0 ? <p className="px-3 py-3 text-sm text-slate-500">Belum ada kategori.</p> : categoryOptions.map((c) => (
