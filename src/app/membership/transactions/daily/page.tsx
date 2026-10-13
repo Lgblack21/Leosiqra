@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { Suspense, useState, useEffect, useMemo, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion';
 import { Search, Trash2, ListOrdered, Download, Plus, X, Copy, CheckCircle2, Tag, Wallet, Repeat, ArrowDownUp, Check, GitBranch } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -119,16 +120,36 @@ function SelectDot({ on, show, onClick, label }: { on: boolean; show: boolean; o
 }
 
 export default function DailyTransactionLogPage() {
+  // useSearchParams butuh Suspense di static export.
+  return (
+    <Suspense fallback={null}>
+      <TransactionsInner />
+    </Suspense>
+  );
+}
+
+function TransactionsInner() {
   const reduce = useReducedMotion();
+  // Tautan dari Laporan: ?date=YYYY-MM-DD (satu hari) dan ?category=Nama.
+  const params = useSearchParams();
+  const linkDate = params.get('date');
+  const linkCat = params.get('category');
+  const linkPeriod = params.get('period');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [period, setPeriod] = useState<Period>('bulan');
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [period, setPeriod] = useState<Period>(() => (linkDate && /^\d{4}-\d{2}-\d{2}$/.test(linkDate) ? 'hari' : linkPeriod === 'tahun' || linkPeriod === 'semua' ? linkPeriod : 'bulan'));
+  const [selectedDate, setSelectedDate] = useState(() => {
+    if (linkDate && /^\d{4}-\d{2}-\d{2}$/.test(linkDate)) {
+      const [y, m, d] = linkDate.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+    return new Date();
+  });
   const [kind, setKind] = useState<Kind>('semua');
-  const [catFilter, setCatFilter] = useState<string[]>([]);
+  const [catFilter, setCatFilter] = useState<string[]>(() => (linkCat ? [linkCat.slice(0, 80)] : []));
   const [accFilter, setAccFilter] = useState<string[]>([]);
   const [srcFilter, setSrcFilter] = useState<TxSource[]>([]);
   const [sort, setSort] = useState<Sort>('terbaru');

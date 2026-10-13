@@ -2,319 +2,390 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { ArrowDownRight, ArrowUpRight, CalendarRange, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion';
+import {
+  Area, AreaChart, Bar, BarChart, Cell, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
+} from 'recharts';
+import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { cn, formatIDR } from '@/lib/utils';
 import { categoryEmoji, isInvestmentCategory } from '@/lib/categoryEmoji';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
-import { budgetService, type Budget } from '@/lib/services/budgetService';
+import { accountService, type Account } from '@/lib/services/accountService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
+import { AnimatedNumber } from '@/components/app/AnimatedNumber';
 import { Skeleton } from '@/components/ui/Skeleton';
 
-// Laporan bulanan: heatmap pengeluaran per hari, tren kumulatif vs bulan lalu
-// (plus garis anggaran), kategori, tempat teratas, dan pengeluaran terbesar.
-// Semua dihitung di browser dari transaksi yang sudah ada — baca saja.
+// Laporan gaya baru (pola Oyenza): Bulanan/Tahunan, pengeluaran vs pemasukan,
+// heatmap harian (klik → ringkasan hari + "Lihat harinya"), tren kumulatif vs
+// periode lalu, donat "Ke mana uangnya" + daftar kategori (klik → Transaksi
+// tersaring), tempat teratas, pengeluaran terbesar. Baca saja.
 
+type Mode = 'bulan' | 'tahun';
+const COLORS = ['#6366f1', '#0ea5e9', '#f43f5e', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#64748b'];
 const WEEKDAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-const HEAT = ['bg-slate-50 text-slate-400', 'bg-violet-100 text-violet-700', 'bg-violet-300 text-violet-900', 'bg-violet-500 text-white', 'bg-violet-700 text-white'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+const HEAT = ['bg-slate-100', 'bg-indigo-100', 'bg-indigo-200', 'bg-indigo-300', 'bg-indigo-500'];
+
 const toIdr = (t: Transaction) => Number(t.amountIDR) || Number(t.amount) || 0;
 const isExpense = (t: Transaction) => t.type === 'pengeluaran' && !isInvestmentCategory(t.category);
 const short = (n: number) =>
-  n >= 1e9 ? `Rp${(n / 1e9).toFixed(1).replace('.', ',')} M` : n >= 1e6 ? `Rp${(n / 1e6).toFixed(1).replace('.', ',')} jt` : n >= 1e3 ? `Rp${Math.round(n / 1e3)} rb` : `Rp${Math.round(n)}`;
+  n >= 1e9 ? `Rp${(n / 1e9).toFixed(2).replace('.', ',')} M` : n >= 1e6 ? `Rp${(n / 1e6).toFixed(2).replace('.', ',')} jt` : n >= 1e3 ? `Rp${Math.round(n / 1e3)} rb` : `Rp${Math.round(n)}`;
+const ymd = (d: Date) => d.toLocaleDateString('sv-SE');
 
 export default function LaporanPage() {
+  const reduce = useReducedMotion();
   const now = new Date();
+  const [mode, setMode] = useState<Mode>('bulan');
   const [month, setMonth] = useState(now.getMonth());
   const [year, setYear] = useState(now.getFullYear());
   const [all, setAll] = useState<Transaction[] | null>(null);
-  const [budgets, setBudgets] = useState<Budget[]>([]);
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [day, setDay] = useState<{ d: number; x: number; y: number } | null>(null);
+  const [activeCat, setActiveCat] = useState<string | null>(null);
 
   useEffect(() => {
     const load = () => transactionService.getUserTransactions('session').then(setAll).catch(() => setAll([]));
     load();
-    budgetService.getUserBudgets('session').then(setBudgets).catch(() => {});
+    accountService.getUserAccounts('session').then(setAccounts).catch(() => {});
     return subscribeToCollectionChanges('transactions', load);
   }, []);
 
-  const shiftMonth = (delta: number) => {
-    const d = new Date(year, month + delta, 1);
-    setMonth(d.getMonth());
-    setYear(d.getFullYear());
-    setSelectedDay(null);
+  const isCurrent = mode === 'bulan' ? year === now.getFullYear() && month === now.getMonth() : year === now.getFullYear();
+  const shift = (d: number) => {
+    setDay(null);
+    if (mode === 'tahun') return setYear((y) => y + d);
+    const x = new Date(year, month + d, 1);
+    setMonth(x.getMonth());
+    setYear(x.getFullYear());
   };
+  const periodLabel = mode === 'bulan' ? `${MONTHS[month]} '${String(year).slice(2)}` : String(year);
+  const accountName = (id?: string) => accounts.find((a) => a.id === id)?.name ?? '';
 
   const r = useMemo(() => {
-    const inMonth = (t: Transaction, y: number, m: number) => {
+    const txs = all ?? [];
+    const inRange = (t: Transaction, y: number, m: number | null) => {
       const d = new Date(t.date);
-      return d.getFullYear() === y && d.getMonth() === m;
+      return d.getFullYear() === y && (m === null || d.getMonth() === m);
     };
-    const prev = new Date(year, month - 1, 1);
-    const cur = (all ?? []).filter((t) => inMonth(t, year, month));
-    const prv = (all ?? []).filter((t) => inMonth(t, prev.getFullYear(), prev.getMonth()));
-    const curExp = cur.filter(isExpense);
-    const prvExp = prv.filter(isExpense);
-    const days = new Date(year, month + 1, 0).getDate();
-    const prevDays = new Date(prev.getFullYear(), prev.getMonth() + 1, 0).getDate();
-    const isCurrent = year === now.getFullYear() && month === now.getMonth();
-    const elapsed = isCurrent ? now.getDate() : days;
+    const prevY = mode === 'bulan' ? new Date(year, month - 1, 1).getFullYear() : year - 1;
+    const prevM = mode === 'bulan' ? new Date(year, month - 1, 1).getMonth() : null;
+    const cur = txs.filter((t) => inRange(t, year, mode === 'bulan' ? month : null));
+    const prv = txs.filter((t) => inRange(t, prevY, prevM));
+    const exp = cur.filter(isExpense);
+    const total = exp.reduce((s, t) => s + toIdr(t), 0);
+    const income = cur.filter((t) => t.type === 'pemasukan').reduce((s, t) => s + toIdr(t), 0);
 
-    const daily = Array.from({ length: days }, () => 0);
-    for (const t of curExp) daily[new Date(t.date).getDate() - 1] += toIdr(t);
-    const prevDaily = Array.from({ length: prevDays }, () => 0);
-    for (const t of prvExp) prevDaily[new Date(t.date).getDate() - 1] += toIdr(t);
+    // satuan waktu: hari (bulanan) / bulan (tahunan)
+    const units = mode === 'bulan' ? new Date(year, month + 1, 0).getDate() : 12;
+    const prevUnits = mode === 'bulan' ? new Date(prevY, (prevM ?? 0) + 1, 0).getDate() : 12;
+    const elapsed = !isCurrent ? units : mode === 'bulan' ? now.getDate() : now.getMonth() + 1;
+    const unitOf = (t: Transaction) => (mode === 'bulan' ? new Date(t.date).getDate() - 1 : new Date(t.date).getMonth());
+    const series = Array.from({ length: units }, () => 0);
+    for (const t of exp) series[unitOf(t)] += toIdr(t);
+    const prevSeries = Array.from({ length: prevUnits }, () => 0);
+    for (const t of prv.filter(isExpense)) prevSeries[unitOf(t)] += toIdr(t);
+    const prevTotal = prevSeries.reduce((s, v) => s + v, 0);
 
     let a = 0;
     let b = 0;
-    const trend = Array.from({ length: days }, (_, i) => {
-      a += daily[i];
-      b += i < prevDays ? prevDaily[i] : 0;
-      return { day: i + 1, ini: i < elapsed ? a : null, lalu: b };
+    const trend = Array.from({ length: Math.max(units, prevUnits) }, (_, i) => {
+      a += series[i] ?? 0;
+      b += prevSeries[i] ?? 0;
+      return { i: i + 1, ini: i < elapsed && i < units ? a : null, lalu: i < prevUnits ? b : null };
+    });
+    const prevSame = prevSeries.slice(0, Math.min(elapsed, prevUnits)).reduce((s, v) => s + v, 0);
+
+    const byCat = new Map<string, number>();
+    for (const t of exp) byCat.set(t.category || 'Lainnya', (byCat.get(t.category || 'Lainnya') ?? 0) + toIdr(t));
+    const cats = [...byCat.entries()].sort((x, y) => y[1] - x[1]).map(([name, value], i) => ({ name, value, color: COLORS[i % COLORS.length] }));
+
+    // Tahunan: batang bulanan bertumpuk 4 kategori teratas + lainnya
+    const top = cats.slice(0, 4).map((c) => c.name);
+    const stacked = MONTHS.map((m, mi) => {
+      const row: Record<string, number | string> = { m };
+      for (const c of [...top, 'Lainnya']) row[c] = 0;
+      for (const t of exp) {
+        if (new Date(t.date).getMonth() !== mi) continue;
+        const key = top.includes(t.category) ? t.category : 'Lainnya';
+        row[key] = (row[key] as number) + toIdr(t);
+      }
+      return row;
     });
 
-    const total = daily.reduce((s, v) => s + v, 0);
-    const prevTotal = prevDaily.reduce((s, v) => s + v, 0);
-    const prevSameDay = prevDaily.slice(0, Math.min(elapsed, prevDays)).reduce((s, v) => s + v, 0);
-    const income = cur.filter((t) => t.type === 'pemasukan').reduce((s, t) => s + toIdr(t), 0);
-
-    const byCat = new Map<string, { name: string; total: number; prev: number }>();
-    for (const t of curExp) {
-      const k = (t.category || 'Lainnya').toLowerCase();
-      const e = byCat.get(k) ?? { name: t.category || 'Lainnya', total: 0, prev: 0 };
-      e.total += toIdr(t);
-      byCat.set(k, e);
-    }
-    for (const t of prvExp) {
-      const k = (t.category || 'Lainnya').toLowerCase();
-      const e = byCat.get(k);
-      if (e) e.prev += toIdr(t);
-    }
-    const categories = [...byCat.values()].sort((x, y) => y.total - x.total);
-
     const byPlace = new Map<string, { name: string; total: number; count: number }>();
-    for (const t of curExp) {
+    for (const t of exp) {
       const label = (t.note || t.subCategory || t.category || '').trim();
       if (!label) continue;
-      const k = label.toLowerCase();
-      const e = byPlace.get(k) ?? { name: label, total: 0, count: 0 };
+      const e = byPlace.get(label.toLowerCase()) ?? { name: label, total: 0, count: 0 };
       e.total += toIdr(t);
       e.count++;
-      byPlace.set(k, e);
+      byPlace.set(label.toLowerCase(), e);
     }
-    const places = [...byPlace.values()].sort((x, y) => y.count - x.count || y.total - x.total).slice(0, 5);
-    const biggest = [...curExp].sort((x, y) => toIdr(y) - toIdr(x)).slice(0, 5);
+    const places = [...byPlace.values()].sort((x, y) => y.total - x.total).slice(0, 8);
+    const biggest = [...exp].sort((x, y) => toIdr(y) - toIdr(x)).slice(0, 5);
 
-    const budgetCap = budgets
-      .filter((bb) => bb.type === 'pengeluaran')
-      .reduce((s, bb) => s + (bb.period === 'yearly' ? bb.amount / 12 : bb.amount), 0);
-
-    return { cur, curExp, days, elapsed, isCurrent, daily, trend, total, prevTotal, prevSameDay, income, categories, places, biggest, budgetCap };
-    // `now` hanya dipakai untuk tanggal hari ini.
+    return { cur, exp, total, income, units, elapsed, series, trend, prevTotal, prevSame, cats, top, stacked, places, biggest };
+    // now hanya tanggal hari ini
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [all, budgets, month, year]);
+  }, [all, mode, month, year, isCurrent]);
 
   const loading = all === null;
-  const label = new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(year, month, 1));
+  const prevName = mode === 'bulan' ? new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(year, month - 1, 1)) : String(year - 1);
+  const diff = r.total - r.prevSame;
+  const maxDay = Math.max(1, ...r.series);
   const lead = (new Date(year, month, 1).getDay() + 6) % 7;
-  const max = Math.max(1, ...r.daily);
-  const level = (v: number) => (v <= 0 ? 0 : Math.min(4, Math.ceil((v / max) * 4)));
-  const diff = r.total - r.prevSameDay;
-  const dayTx = selectedDay ? r.cur.filter((t) => t.type !== 'debt' && new Date(t.date).getDate() === selectedDay) : [];
+  const level = (v: number) => (v <= 0 ? 0 : Math.min(4, Math.ceil((v / maxDay) * 4)));
+  const perUnit = (v: number) => v / Math.max(1, r.elapsed);
+  const dayTx = day ? r.cur.filter((t) => t.type !== 'debt' && new Date(t.date).getDate() === day.d) : [];
+  const dayOut = dayTx.filter(isExpense);
+  const dayTop = [...dayOut.reduce((m, t) => m.set(t.category, (m.get(t.category) ?? 0) + 1), new Map<string, number>())].sort((x, y) => y[1] - x[1])[0]?.[0];
+  const avgMonth = mode === 'tahun' ? r.total / Math.max(1, r.elapsed) : 0;
+  const card = 'rounded-[26px] bg-white p-5 ring-1 ring-slate-100 md:p-6';
+  const key = `${mode}-${year}-${month}`;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-5 pb-12">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-1 rounded-2xl bg-slate-100 p-1">
-          <span className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-900 shadow-sm">Bulanan</span>
-          <Link href="/membership/annual" className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-slate-500 hover:text-slate-800">
-            <CalendarRange size={14} /> Tahunan
-          </Link>
-        </div>
-        <div className="flex items-center gap-1">
-          <button type="button" onClick={() => shiftMonth(-1)} aria-label="Bulan sebelumnya" className="rounded-xl p-2 text-slate-500 hover:bg-slate-100"><ChevronLeft size={18} /></button>
-          <span className="min-w-[140px] text-center text-sm font-bold capitalize text-slate-900">{label}</span>
-          <button type="button" onClick={() => shiftMonth(1)} disabled={r.isCurrent} aria-label="Bulan berikutnya" className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-30"><ChevronRight size={18} /></button>
+    <div className="mx-auto max-w-6xl space-y-5 pb-12" onClick={() => setDay(null)}>
+      <h1 className="sr-only">Laporan</h1>
+
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <LayoutGroup id="lp-mode">
+          <div className="flex rounded-full bg-slate-100 p-1">
+            {(['bulan', 'tahun'] as Mode[]).map((m) => (
+              <button key={m} type="button" onClick={(e) => { e.stopPropagation(); setMode(m); setDay(null); }} className={cn('relative rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors', mode === m ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800')}>
+                {mode === m && <motion.span layoutId="lp-mode-pill" className="absolute inset-0 rounded-full bg-white shadow-sm" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
+                <span className="relative">{m === 'bulan' ? 'Bulanan' : 'Tahunan'}</span>
+              </button>
+            ))}
+          </div>
+        </LayoutGroup>
+        <div className="flex items-center rounded-full bg-slate-100 p-1">
+          <button type="button" onClick={(e) => { e.stopPropagation(); shift(-1); }} aria-label="Sebelumnya" className="rounded-full p-1.5 text-slate-500 hover:bg-white hover:text-slate-900"><ChevronLeft size={16} /></button>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span key={periodLabel} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }} className="min-w-[72px] text-center text-[13px] font-bold text-slate-900">{periodLabel}</motion.span>
+          </AnimatePresence>
+          <button type="button" onClick={(e) => { e.stopPropagation(); shift(1); }} disabled={isCurrent} aria-label="Berikutnya" className="rounded-full p-1.5 text-slate-500 hover:bg-white hover:text-slate-900 disabled:opacity-30"><ChevronRight size={16} /></button>
         </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-5">
-        {/* Total + heatmap */}
-        <div className="rounded-[26px] border border-slate-100 bg-white p-5 shadow-[0_8px_30px_-18px_rgba(49,46,129,0.25)] md:p-6 lg:col-span-3">
-          <p className="text-sm font-semibold text-slate-500">Pengeluaran</p>
-          {loading ? (
-            <Skeleton className="mt-2 h-10 w-52" />
-          ) : (
-            <p className="text-[34px] font-extrabold leading-tight tracking-tight text-slate-900 tabular-nums">{formatIDR(r.total)}</p>
-          )}
-          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
-            <span>rata-rata {formatIDR(r.total / Math.max(1, r.elapsed))}/hari</span>
-            {r.prevSameDay > 0 && (
-              <span className={cn('flex items-center gap-0.5 font-semibold', diff > 0 ? 'text-rose-500' : 'text-emerald-600')}>
-                {diff > 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                {Math.abs(Math.round((diff / r.prevSameDay) * 100))}% vs bulan lalu di tanggal yang sama
-              </span>
+      <motion.div key={key} initial={reduce ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="grid gap-5 lg:grid-cols-[1.25fr_1fr]">
+        {/* Kiri */}
+        <div className="space-y-5">
+          <div className={card}>
+            <p className="text-sm font-semibold text-slate-500">Pengeluaran{mode === 'tahun' ? ` Jan–${MONTHS[r.elapsed - 1]}` : ''}</p>
+            {loading ? <Skeleton className="mt-2 h-11 w-56" /> : (
+              <p className="text-[38px] font-extrabold leading-tight tracking-tight text-slate-900 tabular-nums"><AnimatedNumber value={r.total} format={formatIDR} /></p>
             )}
-          </p>
+            <p className="mt-0.5 text-sm text-slate-500">
+              dari pemasukan <b className="text-emerald-600">{short(r.income)}</b> · sisa <b className={r.income - r.total < 0 ? 'text-rose-500' : 'text-slate-800'}>{short(r.income - r.total)}</b>
+            </p>
 
-          <div className="mt-5 grid grid-cols-7 gap-1.5">
-            {WEEKDAYS.map((w) => <span key={w} className="text-center text-xs font-semibold text-slate-400">{w}</span>)}
-            {Array.from({ length: lead }, (_, i) => <span key={`l${i}`} />)}
-            {r.daily.map((v, i) => {
-              const future = r.isCurrent && i + 1 > r.elapsed;
-              return (
-                <button
-                  key={i}
-                  type="button"
-                  disabled={future}
-                  onClick={() => setSelectedDay(selectedDay === i + 1 ? null : i + 1)}
-                  title={`${i + 1} ${label}: ${formatIDR(v)}`}
-                  className={cn(
-                    'flex aspect-[1.25] flex-col justify-between rounded-xl p-1.5 text-left transition-transform hover:scale-[1.04] disabled:cursor-default disabled:hover:scale-100',
-                    future ? 'bg-white text-slate-300 ring-1 ring-slate-100' : HEAT[level(v)],
-                    selectedDay === i + 1 && 'ring-2 ring-slate-900',
-                    r.isCurrent && i + 1 === r.elapsed && selectedDay !== i + 1 && 'ring-2 ring-indigo-400'
-                  )}
-                >
-                  <span className="text-[11px] font-bold">{i + 1}</span>
-                  {v > 0 && <span className="hidden truncate text-[10px] font-semibold sm:block">{short(v)}</span>}
-                </button>
-              );
-            })}
-          </div>
-          <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-400">
-            sedikit {HEAT.map((h, i) => <span key={i} className={cn('h-3 w-5 rounded', h.split(' ')[0])} />)} banyak
-          </div>
-
-          {selectedDay && (
-            <div className="mt-4 rounded-2xl bg-slate-50 p-4">
-              <p className="mb-2 text-sm font-bold text-slate-900">{selectedDay} {label}</p>
-              {dayTx.length === 0 ? (
-                <p className="text-sm text-slate-500">Tidak ada transaksi.</p>
-              ) : (
-                <ul className="space-y-1.5">
-                  {dayTx.map((t, i) => (
-                    <li key={t.id || i} className="flex items-center justify-between gap-3 text-sm">
-                      <span className="truncate text-slate-700">{categoryEmoji(t.category)} {t.note || t.category} <span className="text-slate-400">· {t.category}</span></span>
-                      <span className={cn('shrink-0 font-bold tabular-nums', t.type === 'pemasukan' ? 'text-emerald-600' : 'text-rose-500')}>
-                        {t.type === 'pemasukan' ? '+' : '−'}{formatIDR(toIdr(t))}
-                      </span>
-                    </li>
+            {mode === 'bulan' ? (
+              <div className="mt-6">
+                <p className="font-bold text-slate-900">Trend harian</p>
+                <p className="text-xs text-slate-400">rata-rata {short(perUnit(r.total))}/hari</p>
+                <div className="mt-3 grid grid-cols-7 gap-1.5">
+                  {WEEKDAYS.map((w) => <span key={w} className="text-center text-[11px] font-semibold text-slate-400">{w}</span>)}
+                  {Array.from({ length: lead }, (_, i) => <span key={`l${i}`} />)}
+                  {r.series.map((v, i) => {
+                    const future = isCurrent && i + 1 > r.elapsed;
+                    const today = isCurrent && i + 1 === r.elapsed;
+                    return (
+                      <motion.button
+                        key={i}
+                        type="button"
+                        disabled={future}
+                        initial={reduce ? false : { opacity: 0, scale: 0.85 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: Math.min(i * 0.012, 0.35), duration: 0.2 }}
+                        whileHover={future ? undefined : { scale: 1.06 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const b = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                          setDay(day?.d === i + 1 ? null : { d: i + 1, x: b.left + b.width / 2, y: b.top });
+                        }}
+                        className={cn(
+                          'flex aspect-[1.35] flex-col justify-between rounded-xl p-1.5 text-left text-[11px] font-bold',
+                          future ? 'bg-white text-slate-300 ring-1 ring-slate-100' : HEAT[level(v)],
+                          level(v) >= 4 ? 'text-white' : 'text-slate-600',
+                          today && 'ring-2 ring-slate-900',
+                          day?.d === i + 1 && 'bg-slate-900 text-white ring-0'
+                        )}
+                      >
+                        {i + 1}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+                <div className="mt-2 flex items-center gap-1 text-[11px] text-slate-400">sedikit {HEAT.map((h) => <span key={h} className={cn('h-2.5 w-4 rounded', h)} />)} banyak</div>
+              </div>
+            ) : (
+              <div className="mt-6">
+                <p className="font-bold text-slate-900">Trend bulanan</p>
+                <p className="text-xs text-slate-400">rata-rata {short(avgMonth)}/bulan</p>
+                <div className="mt-3 h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={r.stacked} margin={{ top: 10, right: 4, bottom: 0, left: 0 }}>
+                      <XAxis dataKey="m" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                      <YAxis tickFormatter={(v) => short(Number(v)).replace('Rp', '')} tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={44} />
+                      <Tooltip cursor={{ fill: '#f1f5f9' }} formatter={(v, n) => [formatIDR(Number(v)), String(n)]} />
+                      <ReferenceLine y={avgMonth} stroke="#94a3b8" strokeDasharray="4 4" label={{ value: `rata-rata ${short(avgMonth)}`, position: 'insideTopRight', fontSize: 10, fill: '#64748b' }} />
+                      {[...r.top, 'Lainnya'].map((c, i) => (
+                        <Bar key={c} dataKey={c} stackId="a" fill={c === 'Lainnya' ? '#cbd5e1' : r.cats[i]?.color} radius={i === r.top.length ? [6, 6, 0, 0] : 0} />
+                      ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500">
+                  {[...r.top, 'Lainnya'].map((c, i) => (
+                    <span key={c} className="flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ background: c === 'Lainnya' ? '#cbd5e1' : r.cats[i]?.color }} />{c}</span>
                   ))}
-                </ul>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-6">
+              <p className="font-bold text-slate-900">Trend pengeluaran</p>
+              <p className="text-xs text-slate-400">{mode === 'bulan' ? 'Harian' : 'Bulanan'}, dibandingkan {mode === 'bulan' ? 'bulan' : 'tahun'} lalu</p>
+              <div className="mt-2 h-44">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={r.trend} margin={{ top: 10, right: 8, bottom: 0, left: 8 }}>
+                    <defs>
+                      <linearGradient id="lpg" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#6366f1" stopOpacity={0.25} />
+                        <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="i" hide />
+                    <YAxis hide domain={[0, 'auto']} />
+                    <Tooltip formatter={(v, n) => [formatIDR(Number(v)), n === 'ini' ? periodLabel : prevName]} labelFormatter={(i) => (mode === 'bulan' ? `Tanggal ${i}` : MONTHS[Number(i) - 1])} />
+                    <Area type="monotone" dataKey="lalu" stroke="#cbd5e1" strokeWidth={2} fill="none" dot={false} isAnimationActive={!reduce} />
+                    <Area type="monotone" dataKey="ini" stroke="#6366f1" strokeWidth={2.5} fill="url(#lpg)" dot={false} connectNulls={false} isAnimationActive={!reduce} animationDuration={900} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+              {r.prevSame > 0 && (
+                <p className={cn('mt-2 flex items-center gap-1 text-sm font-semibold', diff > 0 ? 'text-rose-500' : 'text-emerald-600')}>
+                  {diff > 0 ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
+                  {short(Math.abs(diff))} {diff > 0 ? 'lebih banyak' : 'lebih sedikit'} dari {prevName}
+                </p>
               )}
             </div>
-          )}
-        </div>
-
-        {/* Kategori */}
-        <div className="rounded-[26px] border border-slate-100 bg-white p-5 shadow-[0_8px_30px_-18px_rgba(49,46,129,0.25)] md:p-6 lg:col-span-2">
-          <p className="font-bold text-slate-900">Kategori</p>
-          <p className="mb-4 text-xs text-slate-400">Pemasukan {formatIDR(r.income)} · sisa {formatIDR(r.income - r.total)}</p>
-          {loading ? (
-            <Skeleton className="h-40" />
-          ) : r.categories.length === 0 ? (
-            <p className="text-sm text-slate-500">Belum ada pengeluaran di periode ini.</p>
-          ) : (
-            <ul className="space-y-3.5">
-              {r.categories.slice(0, 7).map((c) => {
-                const pct = r.total > 0 ? (c.total / r.total) * 100 : 0;
-                const delta = c.prev > 0 ? Math.round(((c.total - c.prev) / c.prev) * 100) : null;
-                return (
-                  <li key={c.name}>
-                    <div className="flex items-baseline justify-between gap-3 text-sm">
-                      <span className="truncate font-bold text-slate-800">{categoryEmoji(c.name)} {c.name}</span>
-                      <span className="shrink-0 font-extrabold text-slate-900 tabular-nums">{formatIDR(c.total)}</span>
-                    </div>
-                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
-                      <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" style={{ width: `${pct}%` }} />
-                    </div>
-                    <p className="mt-0.5 text-xs text-slate-400">
-                      {Math.round(pct)}% dari total
-                      {delta !== null && <span className={delta > 0 ? 'text-rose-500' : 'text-emerald-600'}> · {delta > 0 ? '+' : ''}{delta}% vs bulan lalu</span>}
-                    </p>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-      </div>
-
-      {/* Tren */}
-      <div className="rounded-[26px] border border-slate-100 bg-white p-5 shadow-[0_8px_30px_-18px_rgba(49,46,129,0.25)] md:p-6">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <div>
-            <p className="font-bold text-slate-900">Tren pengeluaran</p>
-            <p className="text-xs text-slate-400">Kumulatif harian, dibandingkan bulan lalu{r.budgetCap > 0 ? ' dan anggaran' : ''}</p>
-          </div>
-          <div className="flex items-center gap-4 text-xs font-semibold text-slate-500">
-            <span className="flex items-center gap-1.5"><span className="h-0.5 w-5 rounded bg-violet-600" /> Bulan ini</span>
-            <span className="flex items-center gap-1.5"><span className="h-0.5 w-5 rounded bg-slate-300" /> Bulan lalu ({formatIDR(r.prevTotal)})</span>
           </div>
         </div>
-        <div className="mt-4 h-64">
-          {loading ? (
-            <Skeleton className="h-full" />
+
+        {/* Kanan: ke mana uangnya */}
+        <div className={cn(card, 'self-start')}>
+          <p className="font-bold text-slate-900">Ke mana uangnya</p>
+          <p className="text-xs text-slate-400">Ketuk kategori untuk lihat transaksinya</p>
+          {loading ? <Skeleton className="mt-4 h-64" /> : r.cats.length === 0 ? (
+            <p className="mt-6 text-sm text-slate-500">Belum ada pengeluaran di periode ini.</p>
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={r.trend} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
-                <CartesianGrid stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} interval={4} />
-                <YAxis domain={[0, (dataMax: number) => Math.max(dataMax, r.budgetCap) * 1.08]} tickFormatter={(v) => short(Number(v))} tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={64} />
-                <Tooltip formatter={(v, n) => [formatIDR(Number(v)), n === 'ini' ? 'Bulan ini' : 'Bulan lalu']} labelFormatter={(d) => `Tanggal ${d}`} />
-                {r.budgetCap > 0 && (
-                  <ReferenceLine y={r.budgetCap} stroke="#f59e0b" strokeDasharray="5 5" label={{ value: `Anggaran ${short(r.budgetCap)}`, position: 'insideTopRight', fontSize: 11, fill: '#b45309' }} />
-                )}
-                <Line type="monotone" dataKey="lalu" stroke="#cbd5e1" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="ini" stroke="#7c3aed" strokeWidth={3} dot={false} connectNulls={false} />
-              </LineChart>
-            </ResponsiveContainer>
+            <>
+              <div className="relative mx-auto mt-3 h-52 w-52">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={r.cats} dataKey="value" nameKey="name" innerRadius={68} outerRadius={96} paddingAngle={1.5} stroke="none" isAnimationActive={!reduce} animationDuration={800}
+                      onMouseEnter={(_, i) => setActiveCat(r.cats[i]?.name ?? null)} onMouseLeave={() => setActiveCat(null)}>
+                      {r.cats.map((c) => <Cell key={c.name} fill={c.color} opacity={activeCat && activeCat !== c.name ? 0.35 : 1} />)}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+                  <span className="text-xs text-slate-400">{activeCat ?? 'Pengeluaran'}</span>
+                  <span className="text-lg font-extrabold text-slate-900">{short(activeCat ? r.cats.find((c) => c.name === activeCat)?.value ?? 0 : r.total)}</span>
+                  <span className="text-[11px] text-slate-400">{activeCat ? `${Math.round(((r.cats.find((c) => c.name === activeCat)?.value ?? 0) / Math.max(1, r.total)) * 100)}%` : `${r.cats.length} kategori`}</span>
+                </div>
+              </div>
+              <ul className="mt-3 space-y-0.5">
+                {r.cats.map((c, i) => (
+                  <motion.li key={c.name} initial={reduce ? false : { opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}>
+                    <Link
+                      href={`/membership/transactions/daily?category=${encodeURIComponent(c.name)}${mode === 'tahun' ? '&period=tahun' : !isCurrent ? '&period=semua' : ''}`}
+                      onMouseEnter={() => setActiveCat(c.name)}
+                      onMouseLeave={() => setActiveCat(null)}
+                      className={cn('flex items-center gap-3 rounded-2xl px-2.5 py-2 transition-colors', activeCat === c.name ? 'bg-slate-50' : 'hover:bg-slate-50')}
+                    >
+                      <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-50 text-base">
+                        {categoryEmoji(c.name)}
+                        <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-white" style={{ background: c.color }} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-slate-800">{c.name}</span>
+                        <span className="text-xs text-slate-400">{Math.round((c.value / Math.max(1, r.total)) * 100)}% · {short(perUnit(c.value))}/{mode === 'bulan' ? 'hari' : 'bln'}</span>
+                      </span>
+                      <span className="text-sm font-bold text-slate-900 tabular-nums">{formatIDR(c.value)}</span>
+                      <ChevronRight size={15} className="text-slate-300" />
+                    </Link>
+                  </motion.li>
+                ))}
+              </ul>
+            </>
           )}
         </div>
-      </div>
+      </motion.div>
 
-      <div className="grid gap-5 md:grid-cols-2">
-        <div className="rounded-[26px] border border-slate-100 bg-white p-5 shadow-sm md:p-6">
-          <p className="font-bold text-slate-900">Paling sering</p>
-          <p className="mb-3 text-xs text-slate-400">Dikelompokkan dari catatan transaksi</p>
-          {r.places.length === 0 ? (
-            <p className="text-sm text-slate-500">Belum ada pengeluaran di periode ini.</p>
-          ) : (
+      <motion.div key={`${key}-b`} initial={reduce ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.08 }} className="grid gap-5 md:grid-cols-2">
+        <div className={card}>
+          <p className="font-bold text-slate-900">Tempat teratas</p>
+          <p className="mb-2 text-xs text-slate-400">Total per tempat, menurut catatan transaksi</p>
+          {r.places.length === 0 ? <p className="py-3 text-sm text-slate-500">Belum ada data.</p> : (
             <ul className="divide-y divide-slate-100">
-              {r.places.map((p) => (
-                <li key={p.name} className="flex items-center justify-between gap-3 py-2.5">
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-bold text-slate-800">{p.name}</span>
-                    <span className="text-xs text-slate-400">{p.count}× transaksi</span>
-                  </span>
-                  <span className="shrink-0 text-sm font-extrabold text-slate-900 tabular-nums">{formatIDR(p.total)}</span>
+              {r.places.map((p, i) => (
+                <li key={p.name} className="flex items-center gap-3 py-2.5">
+                  <span className="w-5 text-center text-sm font-bold text-slate-400">{i + 1}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800">{p.name}</span>
+                  <span className="text-xs text-slate-400">{p.count}×</span>
+                  <span className="w-28 text-right text-sm font-bold text-slate-900 tabular-nums">{formatIDR(p.total)}</span>
                 </li>
               ))}
             </ul>
           )}
         </div>
-        <div className="rounded-[26px] border border-slate-100 bg-white p-5 shadow-sm md:p-6">
+        <div className={card}>
           <p className="font-bold text-slate-900">Pengeluaran terbesar</p>
-          <p className="mb-3 text-xs text-slate-400">Pembayaran tunggal terbesar bulan ini</p>
-          {r.biggest.length === 0 ? (
-            <p className="text-sm text-slate-500">Belum ada pengeluaran di periode ini.</p>
-          ) : (
+          <p className="mb-2 text-xs text-slate-400">Pembayaran tunggal terbesar</p>
+          {r.biggest.length === 0 ? <p className="py-3 text-sm text-slate-500">Belum ada data.</p> : (
             <ul className="divide-y divide-slate-100">
               {r.biggest.map((t, i) => (
-                <li key={t.id || i} className="flex items-center justify-between gap-3 py-2.5">
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-bold text-slate-800">{categoryEmoji(t.category)} {t.note || t.category}</span>
-                    <span className="text-xs text-slate-400">
-                      {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(t.date))} · {t.category}
+                <li key={t.id || i} className="flex items-center gap-3 py-2.5">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-50">{categoryEmoji(t.category)}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-slate-800">{t.note || t.category}</span>
+                    <span className="block truncate text-xs text-slate-400">
+                      {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(t.date))} · {t.category}{accountName(t.accountId) ? ` · ${accountName(t.accountId)}` : ''}
                     </span>
                   </span>
-                  <span className="shrink-0 text-sm font-extrabold text-rose-500 tabular-nums">−{formatIDR(toIdr(t))}</span>
+                  <span className="text-sm font-bold text-slate-900 tabular-nums">−{formatIDR(toIdr(t))}</span>
                 </li>
               ))}
             </ul>
           )}
         </div>
-      </div>
+      </motion.div>
+
+      {/* Ringkasan hari (heatmap) */}
+      <AnimatePresence>
+        {day && (
+          <motion.div
+            key={day.d}
+            onClick={(e) => e.stopPropagation()}
+            initial={{ opacity: 0, y: 6, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.97 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+            style={{ position: 'fixed', left: Math.min(Math.max(day.x - 120, 8), (typeof window !== 'undefined' ? window.innerWidth : 1200) - 248), top: Math.max(day.y - 150, 8), width: 240 }}
+            className="z-50 rounded-2xl bg-white p-4 shadow-2xl ring-1 ring-slate-100"
+          >
+            <button type="button" onClick={() => setDay(null)} aria-label="Tutup" className="absolute right-2 top-2 rounded-full p-1 text-slate-400 hover:bg-slate-100"><X size={14} /></button>
+            <p className="text-xs text-slate-400">{new Intl.DateTimeFormat('id-ID', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(year, month, day.d))}</p>
+            <p className="text-xl font-extrabold text-slate-900 tabular-nums">{formatIDR(dayOut.reduce((s, t) => s + toIdr(t), 0))}</p>
+            <p className="text-xs text-slate-500">{dayOut.length} pembayaran{dayTop ? <> · paling banyak {categoryEmoji(dayTop)} {dayTop}</> : null}</p>
+            <Link href={`/membership/transactions/daily?date=${ymd(new Date(year, month, day.d))}`} className="mt-3 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-sm font-bold text-slate-800 hover:bg-slate-100">
+              Lihat harinya <ChevronRight size={15} />
+            </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
