@@ -24,10 +24,16 @@ const KINDS = [
 ] as const;
 type KindId = (typeof KINDS)[number]['id'];
 
+// Bank penerbit (urutan: paling umum dulu). "Bank lain" = ketik sendiri.
 export const CARD_BANKS = [
-  'BCA', 'Bank Mandiri', 'BRI', 'BNI', 'BSI', 'BTN', 'CIMB Niaga', 'Permata', 'Danamon', 'OCBC', 'Bank Jago', 'Jenius', 'SeaBank',
-  'Maybank', 'Bank Mega', 'Panin', 'Sinarmas', 'KB Bank', 'Allo Bank', 'DBS', 'HSBC', 'UOB', 'Standard Chartered', 'Citibank',
+  'BCA', 'Bank Mandiri', 'BRI', 'BNI', 'BSI', 'BTN', 'CIMB Niaga', 'Permata', 'Danamon', 'OCBC', 'Maybank', 'Bank Mega', 'Panin',
+  'UOB', 'HSBC', 'Standard Chartered', 'Citibank', 'DBS', 'KB Bank', 'Sinarmas',
+  'Bank Jago', 'Jenius', 'SeaBank', 'blu by BCA', 'Allo Bank', 'Bank Neo Commerce', 'Superbank', 'Krom', 'Hibank', 'Line Bank', 'Bank Raya',
+  'BCA Syariah', 'Bank Muamalat', 'Bank Mega Syariah',
+  'Bank DKI', 'BJB', 'Bank Jatim', 'Bank Jateng', 'Bank Sumut', 'Bank Nagari', 'BPD Bali', 'Bank Aceh', 'Bank Kalbar', 'Bank Sulselbar',
+  'MNC Bank', 'Bank Mayapada', 'Bank Victoria', 'Bank Artha Graha', 'QNB', 'ICBC', 'Commonwealth', 'Nobu', 'Bank Sampoerna', 'Amar Bank', 'Bank Mantap',
 ];
+const OTHER_BANK = 'Bank lain';
 const NETWORKS = ['Visa', 'Mastercard', 'JCB', 'Amex', 'GPN'];
 const CARD_COLORS = [
   'linear-gradient(135deg,#374151,#6b7280)',
@@ -79,13 +85,19 @@ const fieldCls = 'w-full rounded-2xl bg-slate-100 px-4 py-3 text-[15px] text-sla
 const Label = ({ children }: { children: React.ReactNode }) => <p className="mb-1.5 pl-1 text-[13px] font-semibold text-slate-500">{children}</p>;
 
 // Daftar pilihan (radio) sebagai lapisan di atas form.
-function PickList<T extends string | number>({ title, options, value, onPick, onClose }: { title: string; options: { v: T; label: string; icon?: React.ReactNode }[]; value: T | null; onPick: (v: T) => void; onClose: () => void }) {
+function PickList<T extends string | number>({ title, options, value, onPick, onClose, searchable }: { title: string; options: { v: T; label: string; icon?: React.ReactNode }[]; value: T | null; onPick: (v: T) => void; onClose: () => void; searchable?: boolean }) {
+  const [q, setQ] = useState('');
+  const shown = q.trim() ? options.filter((o) => o.label.toLowerCase().includes(q.trim().toLowerCase())) : options;
   return (
     <motion.div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/20 p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
       <motion.div initial={{ scale: 0.95, y: 8 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95 }} className="flex max-h-[70vh] w-full max-w-sm flex-col overflow-hidden rounded-3xl bg-white p-3 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <p className="px-2 pb-2 pt-1 font-bold text-slate-900">{title}</p>
+        {searchable && (
+          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari bank…" aria-label="Cari bank" className="mb-2 w-full rounded-full bg-slate-100 px-4 py-2.5 text-sm outline-none focus:bg-white focus:ring-1 focus:ring-indigo-300" />
+        )}
         <ul className="overflow-y-auto rounded-2xl bg-slate-50">
-          {options.map((o) => (
+          {shown.length === 0 && <li className="px-3 py-4 text-center text-sm text-slate-400">Tidak ketemu — pilih “Bank lain”.</li>}
+          {shown.map((o) => (
             <li key={String(o.v)} className="border-b border-slate-100 last:border-0">
               <button type="button" onClick={() => { onPick(o.v); onClose(); }} className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-slate-100">
                 <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2', value === o.v ? 'border-slate-900' : 'border-slate-300')}>{value === o.v && <span className="h-2.5 w-2.5 rounded-full bg-slate-900" />}</span>
@@ -106,7 +118,7 @@ function Logo({ src, fallback, bg, size }: { src: string | null; fallback: strin
     return (
       <span className="flex items-center justify-center overflow-hidden rounded-[22%] bg-white shadow-sm ring-1 ring-slate-100" style={{ width: size, height: size }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt="" className="h-full w-full object-contain" onError={() => setFailed(src)} />
+        <img src={src} alt="" className="h-full w-full object-contain" onError={() => setFailed(src)} onLoad={(e) => e.currentTarget.naturalWidth <= 16 && setFailed(src)} />
       </span>
     );
   }
@@ -207,7 +219,7 @@ export function CardAddModal({ onClose }: { onClose: () => void }) {
   const [saving, setSaving] = useState(false);
   const [scanning, setScanning] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const logo = bank ? logoFor(bank, 'Bank Account') : null;
+  const logo = bank && bank !== OTHER_BANK ? logoFor(bank, 'Bank Account') : name.trim() ? logoFor(name, 'Bank Account') : null;
 
   // Pindai kartu: foto → AI baca bank, jaringan, 4 digit. Foto tidak disimpan.
   const scan = async (file?: File) => {
@@ -232,6 +244,12 @@ export function CardAddModal({ onClose }: { onClose: () => void }) {
   const days = useMemo(() => Array.from({ length: 28 }, (_, i) => ({ v: i + 1, label: `Tanggal ${i + 1}` })), []);
 
   const pickBank = (b: string) => {
+    if (b === OTHER_BANK) {
+      // Ketik sendiri: nama kartu dikosongkan supaya diisi nama banknya.
+      setBank(OTHER_BANK);
+      if (!nameTouched) setName('');
+      return;
+    }
     setBank(b);
     if (!nameTouched) setName(b.replace(/^Bank /, ''));
     // Warna default mengikuti bank (bisa diganti).
@@ -337,7 +355,7 @@ export function CardAddModal({ onClose }: { onClose: () => void }) {
         </div>
         <div>
           <Label>Nama kartu</Label>
-          <input value={name} onChange={(e) => { setName(e.target.value); setNameTouched(true); }} className={fieldCls} />
+          <input value={name} onChange={(e) => { setName(e.target.value); setNameTouched(true); }} placeholder={bank === OTHER_BANK ? 'Nama bank / kartu, mis. Bank Ganesha' : 'Kartu kredit'} autoFocus={bank === OTHER_BANK} className={fieldCls} />
         </div>
         <div>
           <Label>4 digit terakhir</Label>
@@ -409,7 +427,8 @@ export function CardAddModal({ onClose }: { onClose: () => void }) {
           <PickList
             title="Pilih bank"
             value={bank}
-            options={CARD_BANKS.map((b) => ({ v: b, label: b, icon: <Logo src={logoFor(b, 'Bank Account')} fallback="🏦" bg="#e2e8f0" size={26} /> }))}
+            searchable
+            options={[...CARD_BANKS.map((b) => ({ v: b, label: b, icon: <Logo src={logoFor(b, 'Bank Account')} fallback="🏦" bg="#e2e8f0" size={26} /> })), { v: OTHER_BANK, label: 'Bank lain (ketik sendiri)', icon: <span className="flex h-[26px] w-[26px] items-center justify-center rounded-lg bg-slate-200 text-sm">✏️</span> }]}
             onPick={pickBank}
             onClose={() => setPicking(null)}
           />

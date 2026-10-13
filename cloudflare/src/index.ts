@@ -4347,6 +4347,36 @@ interface BankLogoEntry {
 }
 
 const BANK_LOGO_ENTRIES: BankLogoEntry[] = [
+  { domain: "bcasyariah.co.id", aliases: ["bca syariah"] },
+  { domain: "blubybcadigital.id", aliases: ["blu by bca", "blu"] },
+  { domain: "megasyariah.co.id", aliases: ["bank mega syariah", "mega syariah"] },
+  { domain: "bankmuamalat.co.id", aliases: ["bank muamalat", "muamalat"] },
+  { domain: "bankraya.co.id", aliases: ["bank raya", "raya"] },
+  { domain: "bankneocommerce.co.id", aliases: ["bank neo commerce", "neo commerce", "bank neo", "bnc"] },
+  { domain: "superbank.id", aliases: ["superbank"] },
+  { domain: "krom.id", aliases: ["krom"] },
+  { domain: "hibank.co.id", aliases: ["hibank"] },
+  { domain: "linebank.co.id", aliases: ["line bank", "linebank"] },
+  { domain: "bankdki.co.id", aliases: ["bank dki", "dki"] },
+  { domain: "bankjatim.co.id", aliases: ["bank jatim", "jatim"] },
+  { domain: "bankjateng.co.id", aliases: ["bank jateng", "jateng"] },
+  { domain: "banksumut.co.id", aliases: ["bank sumut", "sumut"] },
+  { domain: "banknagari.co.id", aliases: ["bank nagari", "nagari"] },
+  { domain: "bpdbali.co.id", aliases: ["bpd bali", "bank bpd bali"] },
+  { domain: "bankaceh.co.id", aliases: ["bank aceh"] },
+  { domain: "bankkalbar.co.id", aliases: ["bank kalbar"] },
+  { domain: "banksulselbar.co.id", aliases: ["bank sulselbar"] },
+  { domain: "mncbank.co.id", aliases: ["mnc bank", "mnc"] },
+  { domain: "bankmayapada.com", aliases: ["bank mayapada", "mayapada"] },
+  { domain: "victoriabank.co.id", aliases: ["bank victoria", "victoria"] },
+  { domain: "arthagraha.com", aliases: ["bank artha graha", "artha graha"] },
+  { domain: "qnb.co.id", aliases: ["qnb"] },
+  { domain: "icbc.co.id", aliases: ["icbc"] },
+  { domain: "commbank.co.id", aliases: ["commonwealth", "commbank"] },
+  { domain: "nobubank.com", aliases: ["nobu"] },
+  { domain: "banksampoerna.com", aliases: ["bank sampoerna", "sahabat sampoerna"] },
+  { domain: "amarbank.co.id", aliases: ["amar bank", "tunaiku"] },
+  { domain: "bankmantap.co.id", aliases: ["bank mantap", "mandiri taspen"] },
   { domain: "bca.co.id", aliases: ["bca"] },
   { domain: "bankmandiri.co.id", aliases: ["bank mandiri", "mandiri"] },
   { domain: "bri.co.id", aliases: ["bri"] },
@@ -7308,6 +7338,10 @@ async function handleTranscribe(request: Request, env: Env) {
 const CARD_SCAN_BANKS = [
   "BCA", "Bank Mandiri", "BRI", "BNI", "BSI", "BTN", "CIMB Niaga", "Permata", "Danamon", "OCBC", "Bank Jago", "Jenius", "SeaBank",
   "Maybank", "Bank Mega", "Panin", "Sinarmas", "KB Bank", "Allo Bank", "DBS", "HSBC", "UOB", "Standard Chartered", "Citibank",
+  "BCA Syariah", "blu by BCA", "Bank Muamalat", "Bank Mega Syariah", "Bank Raya", "Bank Neo Commerce", "Superbank", "Krom", "Hibank",
+  "Line Bank", "Bank DKI", "Bank Jatim", "Bank Jateng", "BJB", "Bank Sumut", "Bank Nagari", "BPD Bali", "Bank Aceh", "Bank Kalbar",
+  "Bank Sulselbar", "MNC Bank", "Bank Mayapada", "Bank Victoria", "Bank Artha Graha", "QNB", "ICBC", "Commonwealth", "Nobu",
+  "Bank Sampoerna", "Amar Bank", "Bank Mantap",
 ];
 async function handleParseCard(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
