@@ -30,6 +30,7 @@ import { itemService, type Item } from '@/lib/services/itemService';
 import { exchangeRateService, type ExchangeRates } from '@/lib/services/exchangeRateService';
 import { computeCreditUsage, isCreditAccountType } from '@/lib/creditCard';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
+import { AccountLogo } from '@/components/ui/AccountLogo';
 import { AnimatedNumber } from '@/components/app/AnimatedNumber';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { LeoMascot } from '@/components/mascot/LeoMascot';
@@ -279,7 +280,8 @@ export default function KekayaanPage() {
               <ul className="divide-y divide-slate-100">
                 {w.cash.map((a) => (
                   <li key={a.id} className="flex items-center justify-between gap-3 py-2.5">
-                    <span className="min-w-0">
+                    <AccountLogo acc={a} size={34} />
+                    <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-bold text-slate-800">{a.name}</span>
                       <span className="block text-xs text-slate-400">{a.type}</span>
                     </span>

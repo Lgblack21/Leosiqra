@@ -74,7 +74,6 @@ export const sectionTabs: SectionTab[][] = [
   ],
   [
     { label: 'Rekening', href: '/membership/rekening' },
-    { label: 'Kartu', href: '/membership/cards' },
     { label: 'Tabungan', href: '/membership/tabungan' },
     { label: 'Dompet bersama', href: '/membership/dompet-bersama' },
   ],

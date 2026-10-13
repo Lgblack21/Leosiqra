@@ -243,7 +243,8 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
             <p className="px-3 pb-1 pt-5 text-xs font-semibold text-slate-400">Fitur</p>
             <div className="space-y-0.5" data-tour="sidebar-group-fitur">
-              {enabled.map((f) => renderItem({ label: f.short ?? f.label, href: f.href, icon: f.icon }))}
+              {/* Fitur yang sebenarnya bagian halaman inti (mis. Kartu kredit → Dompet) tidak diulang di sini. */}
+              {enabled.filter((f) => !f.href.startsWith('/membership/rekening')).map((f) => renderItem({ label: f.short ?? f.label, href: f.href, icon: f.icon }))}
               {renderItem({ label: 'Kelola fitur', href: '/membership/fitur', icon: SlidersHorizontal })}
             </div>
 

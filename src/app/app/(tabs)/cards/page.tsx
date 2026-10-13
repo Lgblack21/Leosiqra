@@ -118,7 +118,7 @@ export default function AppCardsPage() {
                   </p>
                 </div>
               ) : (
-                <a href="/membership/cards" className="flex items-center justify-between rounded-2xl bg-white dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-700 px-4 py-3 text-xs text-slate-500">
+                <a href="/membership/rekening?panel=kartu" className="flex items-center justify-between rounded-2xl bg-white dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-700 px-4 py-3 text-xs text-slate-500">
                   Atur tanggal cetak & jatuh tempo supaya tagihan dihitung otomatis
                   <ExternalLink size={13} className="shrink-0 text-slate-300" />
                 </a>

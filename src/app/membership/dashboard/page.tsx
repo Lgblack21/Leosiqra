@@ -4,14 +4,9 @@ import { useState, useEffect, useMemo } from 'react';
 
 import {
   TrendingUp,
-  Wallet,
   TrendingDown,
-  CreditCard,
-  Landmark,
   ChevronRight,
   LayoutDashboard,
-  Building2,
-  Banknote,
   Plus,
   Zap,
   Sparkles,
@@ -23,7 +18,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
 import { AnimatedNumber } from '@/components/app/AnimatedNumber';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { LogoImage } from '@/components/ui/LogoImage';
+import { AccountLogo } from '@/components/ui/AccountLogo';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { savingsService, Saving } from '@/lib/services/savingsService';
@@ -194,27 +189,6 @@ export default function MonthlyDashboard() {
     return `${account.name}: jatuh tempo ${date} · ${cycle.daysUntilDue} hari lagi`;
   })();
 
-  const getIconForType = (type: string) => {
-    switch (type) {
-      case 'Bank Account': return <Building2 size={18} className="text-white" />;
-      case 'E-Wallet': return <Wallet size={18} className="text-white" />;
-      case 'Cash': return <Banknote size={18} className="text-white" />;
-      case 'Investment Account': return <Landmark size={18} className="text-white" />;
-      case 'Credit Card': return <CreditCard size={18} className="text-white" />;
-      default: return <Building2 size={18} className="text-white" />;
-    }
-  };
-
-  const getBgForType = (type: string) => {
-    switch (type) {
-      case 'Bank Account': return 'bg-blue-600';
-      case 'E-Wallet': return 'bg-indigo-600';
-      case 'Cash': return 'bg-emerald-500';
-      case 'Investment Account': return 'bg-slate-900';
-      case 'Credit Card': return 'bg-rose-500';
-      default: return 'bg-blue-500';
-    }
-  };
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short' }).format(d);
 
   const periodLabel = new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth));
@@ -500,19 +474,7 @@ export default function MonthlyDashboard() {
                 key={acc.id}
                 className="flex items-center gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-100"
               >
-                <div className="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden bg-white border border-slate-100 flex items-center justify-center">
-                  <LogoImage
-                    src={acc.logoUrl}
-                    alt={acc.name}
-                    fallbackText={acc.name.substring(0, 3).toUpperCase()}
-                    fallbackIcon={(
-                      <div className={`w-full h-full flex items-center justify-center ${getBgForType(acc.type)}`}>
-                        {getIconForType(acc.type)}
-                      </div>
-                    )}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+                <AccountLogo acc={acc} size={40} />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-slate-900 truncate">{acc.name}</p>
                   <p className="text-caption text-slate-400 truncate">

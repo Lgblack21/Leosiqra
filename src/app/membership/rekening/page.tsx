@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
-  ArrowLeftRight, Banknote, Building2, ChevronRight, CreditCard, Eye, EyeOff, Landmark, Pencil, Plus, Trash2, Wallet, X,
+  ArrowLeftRight, ChevronRight, CreditCard, Eye, EyeOff, Pencil, Plus, Trash2, X, Receipt,
 } from 'lucide-react';
-import { LogoImage } from '@/components/ui/LogoImage';
+import { AccountLogo } from '@/components/ui/AccountLogo';
 import { accountService, type Account } from '@/lib/services/accountService';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
 import { savingsGoalService, type SavingsGoal } from '@/lib/services/savingsGoalService';
@@ -30,30 +31,13 @@ import { Skeleton } from '@/components/ui/Skeleton';
 
 const HIDE_KEY = 'leo-wallet-hide:v1';
 const TYPE_LABEL: Record<string, string> = { 'Bank Account': 'Bank', 'E-Wallet': 'E-wallet', Cash: 'Tunai', 'Investment Account': 'Rekening investasi', 'Credit Card': 'Kartu kredit' };
-const TYPE_BG: Record<string, string> = { 'Bank Account': 'bg-blue-600', 'E-Wallet': 'bg-indigo-600', Cash: 'bg-emerald-500', 'Investment Account': 'bg-slate-900', 'Credit Card': 'bg-rose-500' };
-const typeIcon = (type: string) => {
-  const p = { size: 18, className: 'text-white' };
-  return type === 'E-Wallet' ? <Wallet {...p} /> : type === 'Cash' ? <Banknote {...p} /> : type === 'Investment Account' ? <Landmark {...p} /> : type === 'Credit Card' ? <CreditCard {...p} /> : <Building2 {...p} />;
-};
 const CARD_GRADS = ['from-sky-600 to-blue-700', 'from-amber-500 to-orange-600', 'from-teal-600 to-emerald-700', 'from-violet-600 to-indigo-700', 'from-rose-500 to-pink-600', 'from-slate-700 to-slate-900'];
 const fmtDue = (s: string) => {
   const [y, m, d] = s.split('-').map(Number);
   return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(y, m - 1, d));
 };
 
-function AccLogo({ acc, size = 40 }: { acc: Account; size?: number }) {
-  return (
-    <span className="flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-slate-100" style={{ width: size, height: size }}>
-      <LogoImage
-        src={acc.logoUrl}
-        alt={acc.name}
-        fallbackText={acc.name.substring(0, 3).toUpperCase()}
-        fallbackIcon={<span className={cn('flex h-full w-full items-center justify-center', TYPE_BG[acc.type] ?? 'bg-slate-500')}>{typeIcon(acc.type)}</span>}
-        className="h-full w-full object-cover"
-      />
-    </span>
-  );
-}
+const AccLogo = ({ acc, size = 40 }: { acc: Account; size?: number }) => <AccountLogo acc={acc} size={size} />;
 
 function Sheet({ open, onClose, title, children, side = 'right' }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode; side?: 'right' | 'center' }) {
   useEffect(() => {
@@ -87,6 +71,16 @@ function Sheet({ open, onClose, title, children, side = 'right' }: { open: boole
 }
 
 export default function RekeningPage() {
+  return (
+    <Suspense fallback={null}>
+      <DompetInner />
+    </Suspense>
+  );
+}
+
+function DompetInner() {
+  // ?panel=kartu (dari tautan lama /membership/cards) langsung membuka panel kartu.
+  const params = useSearchParams();
   const reduce = useReducedMotion();
   const { toast, confirm } = useFeedback();
   const { openModal } = useModal();
@@ -105,7 +99,7 @@ export default function RekeningPage() {
   });
   const [modal, setModal] = useState<{ open: boolean; account: Account | null; type?: Account['type'] }>({ open: false, account: null });
   const [walletId, setWalletId] = useState<string | null>(null);
-  const [cardsOpen, setCardsOpen] = useState(false);
+  const [cardsOpen, setCardsOpen] = useState(() => params.get('panel') === 'kartu');
 
   const load = useCallback(() => {
     accountService.getUserAccounts('session').then(setAccounts).catch(() => setAccounts([]));
@@ -258,7 +252,7 @@ export default function RekeningPage() {
           <div>
             <div className="mb-2 flex items-center justify-between px-1">
               <p className="font-bold text-slate-900">Kartu kredit</p>
-              {cards.length > 0 && <Link href="/membership/cards" className="text-[13px] font-bold text-slate-600 hover:text-slate-900">Lihat semua</Link>}
+              {cards.length > 0 && <button type="button" onClick={() => setCardsOpen(true)} className="text-[13px] font-bold text-slate-600 hover:text-slate-900">Lihat semua</button>}
             </div>
             {cards.length === 0 ? (
               <button type="button" onClick={() => openModal('kartu')} className="flex w-full items-center gap-3 rounded-[22px] bg-slate-100/70 px-4 py-4 text-left hover:bg-slate-100">
@@ -367,6 +361,36 @@ export default function RekeningPage() {
                 <button type="button" onClick={() => remove(wallet)} className="flex items-center justify-center gap-1.5 rounded-full bg-white py-2 text-[13px] font-bold text-rose-600 ring-1 ring-slate-200 hover:bg-rose-50"><Trash2 size={13} /> Hapus</button>
               </div>
             </div>
+            {isCreditAccountType(wallet.type) && (() => {
+              const used = computeCreditUsage(wallet).used;
+              const limit = wallet.creditLimit || 0;
+              const cyc = getCardCycle(wallet, transactions);
+              return (
+                <div className="mt-3 space-y-3 rounded-[22px] bg-white p-4 ring-1 ring-slate-100">
+                  {limit > 0 && (
+                    <div>
+                      <div className="flex justify-between text-xs"><span className="text-slate-500">Terpakai {Math.round((used / limit) * 100)}%</span><span className="font-semibold text-slate-700">Sisa limit {money(limit - used, wallet.currency)}</span></div>
+                      <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100">
+                        <motion.div className={cn('h-full rounded-full', used / limit > 0.9 ? 'bg-rose-500' : used / limit > 0.7 ? 'bg-amber-500' : 'bg-indigo-500')} initial={reduce ? false : { width: 0 }} animate={{ width: `${Math.min(100, (used / limit) * 100)}%` }} transition={{ duration: 0.7 }} />
+                      </div>
+                    </div>
+                  )}
+                  {cyc ? (
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div><p className="text-xs text-slate-500">Tagihan periode ini</p><p className={cn('font-bold tabular-nums', cyc.overdue ? 'text-rose-500' : 'text-slate-900')}>{money(cyc.amountDue, wallet.currency)}</p></div>
+                      <div><p className="text-xs text-slate-500">Minimum bayar</p><p className="font-bold tabular-nums text-slate-900">{money(cyc.minPayment, wallet.currency)}</p></div>
+                      <div><p className="text-xs text-slate-500">Tanggal cetak</p><p className="font-semibold text-slate-800">{fmtDue(cyc.statementDate)} · berikutnya {fmtDue(cyc.nextStatementDate)}</p></div>
+                      <div><p className="text-xs text-slate-500">Jatuh tempo</p><p className={cn('font-semibold', cyc.overdue ? 'text-rose-500' : 'text-slate-800')}>{fmtDue(cyc.dueDate)} · {cyc.amountDue <= 0 ? 'lunas' : cyc.overdue ? `telat ${Math.abs(cyc.daysUntilDue)} hari` : `${cyc.daysUntilDue} hari lagi`}</p></div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-500">Atur tanggal cetak & jatuh tempo lewat <b>Ubah</b> supaya tagihan & minimum bayar dihitung otomatis.</p>
+                  )}
+                  <button type="button" onClick={() => { setWalletId(null); openModal('topup_transfer'); }} className="flex w-full items-center justify-center gap-1.5 rounded-full bg-slate-900 py-2.5 text-[13px] font-bold text-white hover:bg-slate-800">
+                    <Receipt size={14} /> Bayar tagihan
+                  </button>
+                </div>
+              );
+            })()}
             <div className="mb-1 mt-4 flex items-center justify-between">
               <p className="text-sm font-bold text-slate-900">Transaksi</p>
               <Link href={`/membership/transactions/daily?period=semua`} className="text-xs font-bold text-slate-500 hover:text-slate-900">Lihat di Transaksi</Link>
@@ -463,7 +487,7 @@ export default function RekeningPage() {
             })}
           </ul>
         )}
-        <Link href="/membership/cards" className="mt-4 flex items-center justify-center gap-1 rounded-full bg-slate-100 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-slate-200">Kelola kartu <ChevronRight size={14} /></Link>
+        <button type="button" onClick={() => { setCardsOpen(false); openModal('kartu'); }} className="mt-4 flex w-full items-center justify-center gap-1 rounded-full bg-slate-100 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-slate-200"><Plus size={14} /> Tambah kartu</button>
       </Sheet>
 
       {uid && (
