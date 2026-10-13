@@ -67,8 +67,8 @@ export function KabarTab({ feed, news, transactions, investments, go }: { feed: 
     <div className="space-y-4">
       <section className={cn(card, 'relative overflow-hidden px-5 py-6')}>
         <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Pasar & belajar · {fmtDate(new Date(), { weekday: 'long', day: 'numeric', month: 'short' })}</p>
-        <h2 className="mt-1 text-[28px] font-bold tracking-tight text-slate-900">Kabar uang minggu ini</h2>
-        <p className="text-sm text-slate-600">Dipilih Leo dari berita minggu ini. Tiap kabar ada sumbernya.</p>
+        <h2 className="mt-1 text-[28px] font-bold tracking-tight text-slate-900">Rangkuman uang pekan ini</h2>
+        <p className="text-sm text-slate-600">Leo merangkum berita ekonomi pekan ini — lengkap dengan link aslinya.</p>
         <div className="absolute -bottom-3 right-6 hidden md:block"><LeoMascot mood="happy" size={120} /></div>
       </section>
 
@@ -108,14 +108,14 @@ export function KabarTab({ feed, news, transactions, investments, go }: { feed: 
                   <div className="mt-3 flex items-center gap-2.5 rounded-2xl bg-slate-200/50 px-3 py-2">
                     <LeoMascot mood="happy" size={30} />
                     <span>
-                      <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">Buat kamu</span>
+                      <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">Hubungannya denganmu</span>
                       <span className="block text-[13px] text-slate-800">{mine}</span>
                     </span>
                   </div>
                 )}
                 <div className="mt-auto flex items-center justify-between pt-3">
                   <SourceLink url={n.url} name={n.source} />
-                  {n.topic === 'SBN' && offer && <button type="button" onClick={() => go('sbn')} className="rounded-full bg-slate-200/70 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-200">Bandingkan di SBN</button>}
+                  {n.topic === 'SBN' && offer && <button type="button" onClick={() => go('sbn')} className="rounded-full bg-slate-200/70 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-200">Lihat detail SBN</button>}
                   {n.topic === 'Pajak' && <Link href="/membership/pajak-center" className="rounded-full bg-slate-200/70 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-200">Buka Pajak</Link>}
                 </div>
               </motion.article>
@@ -123,7 +123,7 @@ export function KabarTab({ feed, news, transactions, investments, go }: { feed: 
           })}
         </div>
       )}
-      <p className="pt-1 text-center text-xs text-slate-400">Ringkasan ditulis Leo dari halaman beritanya; angka yang tidak tertulis di sumber dibuang otomatis.</p>
+      <p className="pt-1 text-center text-xs text-slate-400">Rangkuman dibuat Leo dari berita aslinya. Angka yang tidak ada di sumber otomatis dibuang.</p>
     </div>
   );
 }
@@ -155,9 +155,9 @@ export function SbnTab({ feed }: { feed: PasarFeed | null }) {
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
-        {/* Tangga bunga */}
+        {/* Perbandingan bunga */}
         <section className={cn(card, 'flex flex-col p-4')}>
-          <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Tangga bunga</p>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Perbandingan bunga</p>
           <p className="text-xl font-bold text-slate-900">{best ? `SBN ritel sampai ${pct(best.t.kupon)} setahun` : 'Bunga hari ini'}</p>
           <div className="mt-6 flex flex-1 items-end gap-2.5">
             {ladder.map((l, i) => (
@@ -240,7 +240,7 @@ export function SbnTab({ feed }: { feed: PasarFeed | null }) {
         {/* Sebulan dapat berapa */}
         {rows.length > 0 && (
           <section className={cn(card, 'p-4')}>
-            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Sebulan dapat berapa?</p>
+            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Hasil per bulan</p>
             <p className="mt-2 text-sm text-slate-600">Kalau</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {[1, 5, 10, 50, 100].map((j) => (
@@ -276,7 +276,7 @@ export function SbnTab({ feed }: { feed: PasarFeed | null }) {
             {offer && <li className="rounded-2xl bg-white px-3.5 py-3 text-sm"><b className="text-slate-800">Penawaran {offer.seri}</b><span className="block text-xs text-slate-500">dari berita {offer.sourceName}</span></li>}
           </ul>
           {feed?.biRate?.via && <p className="mt-2 text-xs text-slate-500">BI-Rate dibaca dari berita {feed.biRate.via.name} karena situs BI sedang tidak bisa diakses.</p>}
-          <p className="mt-3 text-[11px] text-slate-400">Angka resmi dari tiap lembaga. Pilihannya tetap di kamu.</p>
+          <p className="mt-3 text-[11px] text-slate-400">Data diambil otomatis dari lembaga resminya. Keputusan tetap di tanganmu.</p>
         </section>
       </div>
     </div>
@@ -320,16 +320,16 @@ export function BelajarTab({ feed }: { feed: PasarFeed | null }) {
   return (
     <div className="grid items-start gap-4 md:grid-cols-2">
       <Lesson icon={<Landmark size={18} />} tone="bg-emerald-50 text-emerald-600" title="SBN itu apa?" links={[{ label: 'DJPPR · SBN ritel', url: 'https://www.djppr.kemenkeu.go.id/' }]} points={[
-        'Surat Berharga Negara: kamu meminjamkan uang ke negara. Negara membayar kupon tiap bulan dan mengembalikan pokoknya saat jatuh tempo.',
-        'Pokok dan kuponnya dijamin undang-undang: negara wajib membayarnya saat jatuh tempo.',
-        'SBN ritel bisa dibeli mulai Rp1 juta, lewat bank atau aplikasi yang jadi mitra distribusi, saat masa penawaran.',
-        'Ada empat jenis: ORI dan SBR (konvensional), SR dan ST (syariah).',
+        'SBN adalah surat utang pemerintah. Kamu memberi pinjaman ke negara, lalu menerima imbal hasil (kupon) rutin dan uangmu kembali utuh di akhir tenor.',
+        'Pembayaran pokok dan kupon dijamin oleh undang-undang.',
+        'Seri ritel dijual di masa penawaran tertentu lewat bank atau aplikasi mitra resmi, umumnya mulai Rp1 juta.',
+        'Ada versi konvensional (ORI, SBR) dan syariah (SR, ST).',
       ]} />
 
       <Lesson icon={<TrendingUp size={18} />} tone="bg-orange-50 text-orange-600" title="Kupon tetap atau mengambang" links={[{ label: 'DJPPR', url: 'https://www.djppr.kemenkeu.go.id/' }]} points={[
-        'ORI dan SR: kuponnya tetap sampai jatuh tempo.',
-        'SBR dan ST: kupon = BI-Rate + spread, disesuaikan tiap tiga bulan.',
-        'Kupon pertamanya jadi kupon minimal: kalau BI-Rate turun, kupon tidak ikut turun di bawahnya.',
+        'ORI & SR memakai kupon tetap — angkanya tidak berubah sampai selesai.',
+        'SBR & ST memakai kupon mengambang: mengikuti BI-Rate ditambah selisih tetap (spread), ditinjau tiap 3 bulan.',
+        'Ada batas bawah: kupon awal menjadi kupon minimum, jadi tidak akan turun di bawah angka itu.',
       ]}>
         {bi !== undefined && floating.length > 0 && (
           <div className="space-y-2 rounded-2xl bg-slate-200/50 p-3">
@@ -350,10 +350,10 @@ export function BelajarTab({ feed }: { feed: PasarFeed | null }) {
         )}
       </Lesson>
 
-      <Lesson icon={<ArrowLeftRight size={18} />} tone="bg-blue-50 text-blue-600" title="Butuh uangnya sebelum jatuh tempo?" links={[{ label: 'DJPPR', url: 'https://www.djppr.kemenkeu.go.id/' }]} points={[
-        'ORI dan SR bisa dijual di pasar sekunder setelah lewat masa tahan minimal.',
-        'Harganya bisa di atas atau di bawah 100% dari nominal, tergantung pasar hari itu.',
-        'SBR dan ST tidak bisa dijual, tapi sebagian bisa dicairkan lebih awal (early redemption) di tanggal yang sudah ditentukan.',
+      <Lesson icon={<ArrowLeftRight size={18} />} tone="bg-blue-50 text-blue-600" title="Mau cair sebelum waktunya?" links={[{ label: 'DJPPR', url: 'https://www.djppr.kemenkeu.go.id/' }]} points={[
+        'ORI & SR boleh dijual ke investor lain (pasar sekunder) setelah melewati masa tahan.',
+        'Harga jualnya mengikuti pasar — bisa untung, bisa juga di bawah modal.',
+        'SBR & ST tidak bisa diperjualbelikan, tetapi sebagian dana boleh ditarik lebih awal pada jadwal yang ditentukan pemerintah.',
       ]} />
 
       <Lesson icon={<Receipt size={18} />} tone="bg-slate-200 text-slate-600" title="Pajaknya: 10% atau 20%" links={[{ label: 'PP 91/2021', url: 'https://peraturan.bpk.go.id/Details/174980/pp-no-91-tahun-2021' }]} points={[
@@ -388,12 +388,12 @@ export function BelajarTab({ feed }: { feed: PasarFeed | null }) {
         )}
       </Lesson>
 
-      <Lesson icon={<TrendingDown size={18} />} tone="bg-rose-50 text-rose-600" title="Suku bunga naik, harga obligasi turun" links={[{ label: 'OJK · Sikapi Uangmu', url: 'https://sikapiuangmu.ojk.go.id/' }]} points={[
-        'Harga obligasi bergerak berlawanan dengan suku bunga: kalau suku bunga naik, harga obligasi yang sudah beredar turun, dan sebaliknya.',
-        'Ini penting kalau kamu menjual ORI atau SR sebelum jatuh tempo. Kalau dipegang sampai jatuh tempo, negara membayar kembali pokoknya penuh.',
+      <Lesson icon={<TrendingDown size={18} />} tone="bg-rose-50 text-rose-600" title="Kenapa harga obligasi naik-turun?" links={[{ label: 'OJK · Sikapi Uangmu', url: 'https://sikapiuangmu.ojk.go.id/' }]} points={[
+        'Saat suku bunga baru lebih tinggi, obligasi lama jadi kurang menarik sehingga harganya turun — begitu juga kebalikannya.',
+        'Efeknya baru terasa kalau dijual sebelum selesai. Disimpan sampai akhir tenor, pokokmu tetap kembali penuh.',
       ]} />
 
-      <Lesson icon={<ShieldQuestion size={18} />} tone="bg-amber-50 text-amber-600" title="Cek dulu sebelum pinjam atau investasi" links={[{ label: 'OJK', url: 'https://www.ojk.go.id/' }]} points={[
+      <Lesson icon={<ShieldQuestion size={18} />} tone="bg-amber-50 text-amber-600" title="Waspada investasi & pinjaman bodong" links={[{ label: 'OJK', url: 'https://www.ojk.go.id/' }]} points={[
         'Pastikan perusahaannya berizin dan diawasi OJK.',
         'Waspadai janji untung pasti yang terlalu tinggi, apalagi kalau diminta mengajak orang lain.',
         <>Ragu? Tanya Kontak OJK <b>157</b> atau WhatsApp <b>081-157-157-157</b>.</>,

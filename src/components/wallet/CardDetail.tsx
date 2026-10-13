@@ -13,7 +13,7 @@ import { AccountLogo } from '@/components/ui/AccountLogo';
 
 // Detail satu kartu kredit di panel "Kartu kredit": tagihan & jatuh tempo,
 // Sudah bayar / Ubah kartu, belum ditagih vs total terpakai, limit, dan
-// histori "Belanja siklus ini" (transaksi kartu sejak tanggal cetak terakhir;
+// histori "Pemakaian periode ini" (transaksi kartu sejak tanggal cetak terakhir;
 // tanpa siklus = 30 hari terakhir).
 
 const fmt = (d: string | Date, opt: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('id-ID', opt).format(typeof d === 'string' ? new Date(`${d}T00:00:00`) : d);
@@ -93,11 +93,11 @@ export function CardDetail({ card, used, cycle, transactions, onPay, onEdit }: {
         </div>
       </div>
 
-      {/* Belum ditagih / total / limit */}
+      {/* Belum masuk tagihan / total / limit */}
       <div className="mt-4 rounded-3xl bg-slate-50 p-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <p className="text-xs text-slate-500">Belum ditagih</p>
+            <p className="text-xs text-slate-500">Belum masuk tagihan</p>
             <p className="font-extrabold text-slate-900 tabular-nums">{money(cycle ? unbilled : used)}</p>
             {cycle && <p className="text-xs text-slate-500">Dicetak {fmt(cycle.nextStatementDate, { day: 'numeric', month: 'short' })}</p>}
           </div>
@@ -122,7 +122,7 @@ export function CardDetail({ card, used, cycle, transactions, onPay, onEdit }: {
       {/* Histori */}
       <div className="mb-1 mt-5 flex items-center justify-between px-1">
         <p className="text-sm font-bold text-slate-900">
-          {cycle ? 'Belanja siklus ini' : 'Belanja 30 hari terakhir'}
+          {cycle ? 'Pemakaian periode ini' : 'Belanja 30 hari terakhir'}
           {spent > 0 && <span className="ml-1.5 font-normal text-slate-400">· {money(spent)}</span>}
         </p>
         <Link href={`/membership/transactions/daily?account=${encodeURIComponent(card.id ?? '')}&period=semua`} className="text-[13px] font-bold text-slate-600 hover:text-slate-900">Semua transaksi</Link>

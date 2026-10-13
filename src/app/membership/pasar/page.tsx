@@ -146,9 +146,9 @@ function PasarTab({ feed, news, investments, go }: { feed: PasarFeed | null; new
   return (
     <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
       <div className="min-w-0">
-        {/* Mau taruh berapa? */}
+        {/* Mau mulai dari berapa? */}
         <div className="px-2 pt-2 text-center">
-          <p className="text-sm text-slate-500">Mau taruh berapa?</p>
+          <p className="text-sm text-slate-500">Mau mulai dari berapa?</p>
           <div className="mt-2 flex items-center justify-between gap-3">
             <button type="button" aria-label="Kurangi" onClick={() => setAmount((a) => Math.max(1_000_000, a - stepAmt))} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200"><Minus size={18} /></button>
             {editing ? (
@@ -161,7 +161,7 @@ function PasarTab({ feed, news, investments, go }: { feed: PasarFeed | null; new
             )}
             <button type="button" aria-label="Tambah" onClick={() => setAmount((a) => a + stepAmt)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200"><Plus size={18} /></button>
           </div>
-          <p className="text-xs text-slate-400">Ketuk angkanya untuk mengubah</p>
+          <p className="text-xs text-slate-400">Ketuk nominal untuk mengetik sendiri</p>
           {offer ? (
             <span className="mt-3 inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-1.5 text-sm text-slate-700"><TrendingUp size={15} className="text-emerald-600" /> {offer.seri} · {kuponRange(offer)} per tahun</span>
           ) : feed?.lps ? (
@@ -169,7 +169,7 @@ function PasarTab({ feed, news, investments, go }: { feed: PasarFeed | null; new
           ) : null}
         </div>
         <button type="button" onClick={() => go('sbn')} className="mt-5 h-14 w-full rounded-full bg-slate-900 text-[15px] font-bold text-white transition-colors hover:bg-slate-800">{offer ? `Cara beli ${offer.seri}` : 'Lihat pilihan SBN'}</button>
-        <p className="mt-3 flex items-center justify-center gap-1.5 text-[13px] text-slate-500"><ShieldCheck size={14} /> {offer ? 'Dijamin negara, kupon masuk tiap bulan' : 'Deposito dijamin LPS sampai Rp2 miliar per bank'}</p>
+        <p className="mt-3 flex items-center justify-center gap-1.5 text-[13px] text-slate-500"><ShieldCheck size={14} /> {offer ? 'Pokok & kupon dijamin negara, dibayar bulanan' : 'Deposito dijamin LPS sampai Rp2 miliar per bank'}</p>
 
         {/* Simulasi */}
         <section className={cn(card, 'mt-6 overflow-hidden')}>
@@ -183,7 +183,7 @@ function PasarTab({ feed, news, investments, go }: { feed: PasarFeed | null; new
                   <button key={o.id} type="button" onClick={() => setPick(o.id)} className={cn('rounded-full px-3.5 py-2 text-[13px] font-semibold transition-colors', opt.id === o.id ? 'bg-slate-900 text-white' : 'bg-white text-slate-700 hover:bg-slate-200/60')}>{o.label}</button>
                 ))}
               </div>
-              <p className="mt-4 text-sm text-slate-500">Saldo kamu nanti</p>
+              <p className="mt-4 text-sm text-slate-500">Perkiraan uangmu nanti</p>
               <motion.p key={`${opt.id}-${horizon}-${amount}`} initial={reduce ? false : { opacity: 0.4, y: 4 }} animate={{ opacity: 1, y: 0 }} className="text-[34px] font-extrabold tracking-tight text-slate-900 tabular-nums">{rp(amount + gain)}</motion.p>
               <p className="text-sm text-slate-500">
                 {fmtDate(end, { day: 'numeric', month: 'short', year: 'numeric' })} · <b className="text-emerald-600">+{rp(gain)} setelah pajak</b>{opt.minimal ? ' · paling sedikit' : ''}

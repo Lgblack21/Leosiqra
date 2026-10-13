@@ -485,14 +485,14 @@ function DompetInner() {
               )}
             </motion.button>
           ))}
-          <p className="mt-2 text-center text-xs text-slate-400">Ketuk kartu untuk membukanya</p>
+          <p className="mt-2 text-center text-xs text-slate-400">Klik kartu untuk melihat detailnya</p>
         </div>
 
         {cardInfo.length > 1 && (() => {
           const best = [...cardInfo].filter((c) => c.limit > 0).sort((a, b) => (b.limit - b.used) - (a.limit - a.used))[0];
           return best ? (
             <div className="mt-4 rounded-2xl bg-indigo-50 p-3.5 text-sm text-indigo-900">
-              <p className="font-bold">✨ Paling longgar dipakai hari ini</p>
+              <p className="font-bold">✨ Kartu paling lega hari ini</p>
               <p className="text-indigo-800/80">{best.acc.name} masih punya sisa limit {money(best.limit - best.used)}.</p>
             </div>
           ) : null;

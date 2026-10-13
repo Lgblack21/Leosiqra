@@ -292,7 +292,7 @@ export default function MonthlyDashboard() {
         <div className="min-w-0 space-y-5">
           <section className={cn(card, 'p-5 md:p-6')}>
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-lg font-extrabold tracking-tight text-slate-900">Ke mana uangmu</h2>
+              <h2 className="text-lg font-extrabold tracking-tight text-slate-900">Pengeluaran per kategori</h2>
               <ChartPicker value={chart} onChange={(v) => { setChart(v); writeLS(CHART_KEY, v); }} />
             </div>
 
@@ -408,7 +408,7 @@ function ChartPicker({ value, onChange }: { value: ChartMode; onChange: (v: Char
             className="absolute right-0 top-full z-30 mt-2 w-64 origin-top-right rounded-2xl bg-white p-2 shadow-xl ring-1 ring-slate-200"
             role="menu"
           >
-            <p className="px-3 pb-1 pt-2 text-xs font-bold text-slate-400">Grafik beranda</p>
+            <p className="px-3 pb-1 pt-2 text-xs font-bold text-slate-400">Pilih grafik</p>
             {CHART_MODES.map((c) => (
               <button
                 key={c.id}

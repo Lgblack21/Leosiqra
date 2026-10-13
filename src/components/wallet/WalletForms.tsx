@@ -224,7 +224,7 @@ export function CardAddModal({ onClose }: { onClose: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const logo = bank && bank !== OTHER_BANK ? logoFor(bank, 'Bank Account') : name.trim() ? logoFor(name, 'Bank Account') : null;
 
-  // Pindai kartu: foto → AI baca bank, jaringan, 4 digit. Foto tidak disimpan.
+  // Isi otomatis dari foto: foto → AI baca bank, jaringan, 4 digit. Foto tidak disimpan.
   const scan = async (file?: File) => {
     if (!file) return;
     setScanning(true);
@@ -337,7 +337,7 @@ export function CardAddModal({ onClose }: { onClose: () => void }) {
         <div className="flex items-start gap-3">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600"><ScanLine size={20} /></span>
           <span>
-            <span className="block font-bold text-slate-900">Pindai kartu</span>
+            <span className="block font-bold text-slate-900">Isi otomatis dari foto</span>
             <span className="block text-[13px] leading-snug text-slate-500">Foto bagian depan kartu: Leo membaca bank, jaringan, dan 4 digit terakhirnya. Fotonya tidak disimpan, dan nomor lengkap tidak pernah dicatat.</span>
           </span>
         </div>
@@ -401,7 +401,7 @@ export function CardAddModal({ onClose }: { onClose: () => void }) {
         </div>
       </div>
 
-      <p className="mb-2 mt-5 pl-1 font-bold text-slate-900">Ingatkan aku</p>
+      <p className="mb-2 mt-5 pl-1 font-bold text-slate-900">Pengingat jatuh tempo</p>
       <div className="flex flex-wrap gap-2">
         {REMINDERS.map((r) => (
           <button key={r.v} type="button" onClick={() => setReminder(r.v)} className={cn('rounded-full px-3.5 py-2 text-[13px] font-semibold transition-colors', reminder === r.v ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200')}>{r.label}</button>
@@ -444,7 +444,7 @@ export function CardAddModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ================= Catat pembayaran tagihan kartu =================
+// ================= Bayar tagihan kartu kartu =================
 // Bayar tagihan = transfer dari rekening biasa ke kartu lewat
 // POST /api/member/transfer (atomik di server, kurs dikonversi server) — sama
 // dengan PayCardSheet di aplikasi HP. Bukan pengeluaran: belanjanya sudah
@@ -471,7 +471,7 @@ export function PayBillModal({ card, used, cycle, sources, onClose }: {
   const options = [
     cycle && cycle.amountDue > 0 ? { id: 'tagihan' as const, label: `Tagihan ${stmtMonth} · ${shortRp(cycle.amountDue)}`, v: cycle.amountDue } : null,
     cycle && cycle.minPayment > 0 && cycle.minPayment < cycle.amountDue ? { id: 'min' as const, label: `Minimum · ${shortRp(cycle.minPayment)}`, v: cycle.minPayment } : null,
-    used > 0 ? { id: 'semua' as const, label: `Semua yang terpakai · ${shortRp(used)}`, v: used } : null,
+    used > 0 ? { id: 'semua' as const, label: `Lunasi semua · ${shortRp(used)}`, v: used } : null,
     { id: 'lain' as const, label: 'Jumlah lain', v: 0 },
   ].filter(Boolean) as { id: 'tagihan' | 'min' | 'semua' | 'lain'; label: string; v: number }[];
   const amount = mode === 'lain' ? digits(other) : options.find((o) => o.id === mode)?.v ?? 0;
@@ -492,8 +492,8 @@ export function PayBillModal({ card, used, cycle, sources, onClose }: {
 
   return (
     <Shell
-      title="Catat pembayaran tagihan"
-      label="Catat pembayaran tagihan"
+      title="Bayar tagihan kartu"
+      label="Bayar tagihan kartu"
       onClose={onClose}
       footer={<button type="button" onClick={save} disabled={saving || amount <= 0 || !from} className="h-12 w-full rounded-full bg-slate-900 text-sm font-bold text-white hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400">{saving ? 'Menyimpan…' : 'Simpan pembayaran'}</button>}
     >
@@ -537,7 +537,7 @@ export function PayBillModal({ card, used, cycle, sources, onClose }: {
 
       <div className="mt-4 flex gap-3 rounded-3xl bg-indigo-50 p-4 text-[13px] text-indigo-900">
         <ArrowLeftRight size={16} className="mt-0.5 shrink-0 text-indigo-500" />
-        <span>Dicatat sebagai pindah dana, bukan pengeluaran. Belanjanya sudah dihitung waktu kartu dipakai.</span>
+        <span>Bayar tagihan tidak dihitung sebagai pengeluaran baru — belanjanya sudah tercatat saat kartu dipakai. Ini hanya memindahkan saldo.</span>
       </div>
 
       <AnimatePresence>

@@ -336,7 +336,7 @@ export default function KekayaanPage() {
 
           {missing.length > 0 && (
             <div>
-              <h2 className="mb-2 px-1 text-lg font-bold text-slate-900">Belum dihitung</h2>
+              <h2 className="mb-2 px-1 text-lg font-bold text-slate-900">Belum tercatat</h2>
               <ul className={cn(card, 'overflow-hidden')}>
                 {missing.map((m) => (
                   <li key={m.label} className="border-b border-slate-200/60 last:border-0">

@@ -19,7 +19,7 @@ import { DayReviewModal } from '@/components/reports/DayReviewModal';
 
 // Laporan gaya baru (pola Oyenza): Bulanan/Tahunan, pengeluaran vs pemasukan,
 // heatmap harian (klik → ringkasan hari + "Lihat harinya"), tren kumulatif vs
-// periode lalu, donat "Ke mana uangnya" + daftar kategori (klik → Transaksi
+// periode lalu, donat "Komposisi pengeluaran" + daftar kategori (klik → Transaksi
 // tersaring), tempat teratas, pengeluaran terbesar. Baca saja.
 
 type Mode = 'bulan' | 'tahun';
@@ -283,8 +283,8 @@ export default function LaporanPage() {
             </div>
           </div>
         <div>
-          <p className="text-xl font-extrabold tracking-tight text-slate-900">Ke mana uangnya</p>
-          <p className="text-sm text-slate-500">Ketuk bagian grafik untuk lihat rinciannya</p>
+          <p className="text-xl font-extrabold tracking-tight text-slate-900">Komposisi pengeluaran</p>
+          <p className="text-sm text-slate-500">Klik potongan grafik atau kategori untuk detail</p>
           {loading ? <Skeleton className="mt-4 h-64" /> : r.cats.length === 0 ? (
             <p className="mt-6 text-sm text-slate-500">Belum ada pengeluaran di periode ini.</p>
           ) : (
@@ -336,8 +336,8 @@ export default function LaporanPage() {
 
       {mode === 'tahun' && r.catMonths.length > 0 && (
         <motion.section key={`${key}-cm`} initial={reduce ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.05 }}>
-          <p className="text-xl font-extrabold tracking-tight text-slate-900">Kategori dari waktu ke waktu</p>
-          <p className="text-sm text-slate-500">Makin gelap berarti bulan itu makin besar untuk kategori tersebut</p>
+          <p className="text-xl font-extrabold tracking-tight text-slate-900">Pola kategori sepanjang tahun</p>
+          <p className="text-sm text-slate-500">Warna lebih pekat = pengeluaran kategori itu lebih besar di bulan tersebut</p>
           <div className="mt-3 overflow-x-auto rounded-3xl bg-slate-100/70 p-2">
             <table className="w-full min-w-[760px] border-separate border-spacing-y-1 text-sm">
               <thead>

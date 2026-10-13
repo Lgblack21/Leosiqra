@@ -27,7 +27,7 @@ import {
 
 // Tambah / ubah langganan: (1) pilih layanan dari katalog atau ketik sendiri,
 // (2) isi detail. Disimpan sebagai transaksi rutin "Pengeluaran" plus
-// metadata layanan; "Catat tiap tagihan" mati = cukup diingatkan.
+// metadata layanan; "Catat otomatis tiap jatuh tempo" mati = cukup diingatkan.
 
 export const INTERVALS: { id: BillingInterval; label: string }[] = [
   { id: 'Mingguan', label: 'Mingguan' },
@@ -214,7 +214,7 @@ export function SubscriptionModal({ initial, prefill, onClose }: { initial?: Rec
                 </div>
 
                 <label className="block text-center">
-                  <span className="text-sm text-slate-500">Tiap tagihan</span>
+                  <span className="text-sm text-slate-500">Nominal per tagihan</span>
                   <span className="mt-1 flex items-baseline justify-center gap-2">
                     <span className="text-xl font-semibold text-slate-400">Rp</span>
                     <input
@@ -267,7 +267,7 @@ export function SubscriptionModal({ initial, prefill, onClose }: { initial?: Rec
                 <button type="button" onClick={() => set({ autoRecord: !draft.autoRecord })} className="flex w-full items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-left ring-1 ring-slate-100" aria-pressed={draft.autoRecord}>
                   <Repeat size={17} className="shrink-0 text-slate-500" />
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-bold text-slate-800">Catat tiap tagihan</span>
+                    <span className="block text-sm font-bold text-slate-800">Catat otomatis tiap jatuh tempo</span>
                     <span className="block text-xs text-slate-500">{draft.autoRecord ? 'Otomatis jadi pengeluaran di tanggal tagihannya' : 'Cuma diingatkan, saldo tidak dipotong otomatis'}</span>
                   </span>
                   <span className={cn('relative h-6 w-11 shrink-0 rounded-full transition-colors', draft.autoRecord ? 'bg-emerald-500' : 'bg-slate-300')}>
@@ -288,7 +288,7 @@ export function SubscriptionModal({ initial, prefill, onClose }: { initial?: Rec
                   <SelectBox icon={<span>{categoryEmoji(draft.category)}</span>} value={draft.category} onChange={(v) => set({ category: v })} options={expenseCats.map((c) => ({ value: c, label: c }))} />
                 </Field>
 
-                <Field label="Berlangganan sejak">
+                <Field label="Mulai langganan">
                   <DateInput value={draft.since} onChange={(v) => set({ since: v })} placeholder="Opsional" />
                 </Field>
 

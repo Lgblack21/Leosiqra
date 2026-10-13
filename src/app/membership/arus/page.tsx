@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 
 // Ikuti uangmu (pola Oyenza): diagram aliran dari pemasukan → total →
 // sisa & kategori pengeluaran → tempat (3 teratas + "N tempat lain").
-// Ketuk kategori untuk mengikuti uangnya lebih jauh: kategori → tempat →
+// Klik salah satu kategori untuk melihat rinciannya: kategori → tempat →
 // tiap pembayaran (ketuk pembayaran = buka harinya di Transaksi). Baca saja.
 
 type Mode = 'bulan' | 'tahun';
@@ -309,7 +309,7 @@ export default function ArusPage() {
     <div className="mx-auto max-w-6xl space-y-5 pb-12">
       <h1 className="sr-only">Ikuti uangmu</h1>
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <p className="text-sm text-slate-500">Dari mana uangmu datang, dan ke mana saja perginya</p>
+        <p className="text-sm text-slate-500">Lihat jalur uangmu: masuk dari mana, habis untuk apa</p>
         <div className="flex flex-wrap items-center gap-2">
           <LayoutGroup id="arus-mode">
             <div className="flex rounded-full bg-slate-100 p-1">
@@ -343,7 +343,7 @@ export default function ArusPage() {
       <AnimatePresence mode="wait">
         {focused && (
           <motion.div key="crumb" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="flex items-center gap-3">
-            <button type="button" onClick={() => setFocus(null)} className="flex items-center gap-1 rounded-full bg-slate-100 px-4 py-2 text-sm font-bold text-slate-800 hover:bg-slate-200"><ChevronLeft size={15} /> Semua kategori</button>
+            <button type="button" onClick={() => setFocus(null)} className="flex items-center gap-1 rounded-full bg-slate-100 px-4 py-2 text-sm font-bold text-slate-800 hover:bg-slate-200"><ChevronLeft size={15} /> Kembali</button>
             <span className="text-sm text-slate-600">{categoryEmoji(focused.label)} {focused.label} · {focused.count} pembayaran</span>
           </motion.div>
         )}
@@ -366,7 +366,7 @@ export default function ArusPage() {
           </motion.div>
         </AnimatePresence>
       )}
-      <p className="text-sm text-slate-500">{focused ? 'Ketuk pembayaran untuk membuka harinya' : 'Ketuk kategori untuk mengikuti uangnya lebih jauh'}</p>
+      <p className="text-sm text-slate-500">{focused ? 'Klik tanggal untuk membuka transaksinya' : 'Klik salah satu kategori untuk melihat rinciannya'}</p>
     </div>
   );
 }
