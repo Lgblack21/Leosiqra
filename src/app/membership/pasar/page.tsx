@@ -61,15 +61,21 @@ export default function PasarPage() {
     <div className="pb-32">
       {/* Bar atas sendiri (halaman layar penuh, tanpa sidebar) */}
       <div className="sticky top-0 z-20 bg-white/90 backdrop-blur">
-      <header className="mx-auto flex max-w-[1120px] items-center justify-between px-4 py-3 md:px-6">
+      <header className="mx-auto flex max-w-[1112px] items-center justify-between px-4 py-2.5 md:px-4">
         <button type="button" onClick={() => (window.history.length > 1 ? router.back() : router.push('/membership/dashboard'))} aria-label="Kembali" className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200"><ChevronLeft size={20} /></button>
-        <h1 className="flex items-center gap-2 text-lg font-extrabold text-slate-900">
-          <LeoMascot mood="idle" size={28} /> {tab === 'pasar' ? 'Pasar & belajar' : title.label}
-        </h1>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div key={tab} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }} className="text-center">
+            <h1 className="flex items-center justify-center gap-2 text-[17px] font-bold text-slate-900">
+              {tab === 'pasar' && <LeoMascot mood="idle" size={26} />}
+              {tab === 'pasar' ? 'Pasar & belajar' : tab === 'sbn' ? 'SBN hari ini' : title.label}
+            </h1>
+            {tab === 'sbn' && feed && <p className="text-[11px] text-slate-500">Diperbarui {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(feed.fetchedAt))}</p>}
+          </motion.div>
+        </AnimatePresence>
         <Link href="/membership/profile" aria-label="Profil" className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-amber-50"><LeoMascot mood="happy" size={34} /></Link>
       </header>
       </div>
-      <div className="mx-auto mt-2 max-w-[1120px] px-4 md:px-6">
+      <div className="mx-auto mt-1 max-w-[1112px] px-4">
       {error ? (
         <div className="rounded-3xl bg-amber-50 p-6 text-sm text-amber-800">{error}</div>
       ) : !data ? (
@@ -138,7 +144,7 @@ function PasarTab({ feed, news, investments, go }: { feed: PasarFeed | null; new
   const stepAmt = amount >= 50_000_000 ? 10_000_000 : 1_000_000;
 
   return (
-    <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+    <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
       <div className="min-w-0">
         {/* Mau taruh berapa? */}
         <div className="px-2 pt-2 text-center">
