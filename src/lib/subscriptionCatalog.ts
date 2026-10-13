@@ -58,7 +58,7 @@ export const SERVICES: CatalogService[] = [
   { id: 'canva', name: 'Canva Pro', category: 'Produktivitas', price: 95000, domain: 'canva.com', color: '#00C4CC' },
   { id: 'indihome', name: 'IndiHome', category: 'Pulsa & internet', price: 350000, domain: 'indihome.co.id', color: '#E2001A' },
   { id: 'telkomsel', name: 'Telkomsel', category: 'Pulsa & internet', price: 100000, domain: 'telkomsel.com', color: '#EC1C24' },
-  { id: 'pln', name: 'Listrik PLN', category: 'Tagihan rumah', price: 300000, domain: 'pln.co.id', color: '#0072BC' },
+  { id: 'pln', name: 'PLN (listrik)', category: 'Tagihan rumah', price: 300000, domain: 'pln.co.id', color: '#0072BC' },
   { id: 'viu', name: 'Viu', category: 'Streaming', price: 30000, domain: 'viu.com', color: '#F5B400' },
   { id: 'prime-video', name: 'Prime Video', category: 'Streaming', price: 59000, domain: 'primevideo.com', color: '#00A8E1' },
   { id: 'hbo-max', name: 'HBO Max', category: 'Streaming', price: 59000, domain: 'max.com', color: '#5822B4' },
@@ -105,4 +105,59 @@ export const INTERVAL_LABEL: Record<string, string> = {
   Bulanan: 'per bulan',
   '3 Bulanan': 'per 3 bulan',
   Tahunan: 'per tahun',
+};
+
+// Kata kunci yang biasa muncul di catatan/mutasi untuk tiap layanan (huruf
+// kecil). Dipakai "Cek langganan" untuk mengenali pembayaran ke platform.
+const SERVICE_ALIASES: Record<string, string[]> = {
+  netflix: ['netflix'],
+  spotify: ['spotify'],
+  'youtube-premium': ['youtube premium', 'yt premium', 'youtube'],
+  'disney-plus': ['disney', 'hotstar'],
+  vidio: ['vidio'],
+  chatgpt: ['chatgpt', 'openai'],
+  'google-one': ['google one', 'google storage'],
+  icloud: ['icloud'],
+  canva: ['canva'],
+  indihome: ['indihome'],
+  telkomsel: ['telkomsel', 'simpati', 'kartu halo'],
+  pln: ['pln', 'token listrik', 'listrik'],
+  viu: ['viu'],
+  'prime-video': ['prime video', 'amazon prime'],
+  'hbo-max': ['hbo'],
+  wetv: ['wetv'],
+  'apple-music': ['apple music'],
+  'youtube-music': ['youtube music'],
+  joox: ['joox'],
+  claude: ['claude', 'anthropic'],
+  gemini: ['gemini', 'google ai'],
+  'microsoft-365': ['microsoft 365', 'office 365'],
+  notion: ['notion'],
+  adobe: ['adobe'],
+  capcut: ['capcut'],
+  dropbox: ['dropbox'],
+  duolingo: ['duolingo'],
+  ruangguru: ['ruangguru'],
+  xbox: ['xbox', 'game pass'],
+  playstation: ['playstation', 'psn', 'ps plus'],
+  xl: ['xl axiata', 'paket xl', 'pulsa xl'],
+  indosat: ['indosat', 'im3'],
+  smartfren: ['smartfren'],
+  biznet: ['biznet'],
+  'first-media': ['first media', 'firstmedia'],
+  myrepublic: ['myrepublic'],
+  pdam: ['pdam'],
+  bpjs: ['bpjs'],
+  gym: ['gym', 'fitness'],
+  kompas: ['kompas'],
+};
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// Semua (layanan, alias), alias terpanjang dulu: "youtube music" harus jadi
+// YouTube Music, bukan YouTube Premium (alias "youtube").
+const ALIASES = SERVICES.flatMap((s) => (SERVICE_ALIASES[s.id] ?? [s.name.toLowerCase()]).map((a) => ({ s, re: new RegExp(`(^|[^a-z0-9])${escapeRe(a)}([^a-z0-9]|$)`), len: a.length })))
+  .sort((a, b) => b.len - a.len);
+
+export const matchService = (text: string): CatalogService | undefined => {
+  const t = text.toLowerCase();
+  return ALIASES.find(({ re }) => re.test(t))?.s;
 };

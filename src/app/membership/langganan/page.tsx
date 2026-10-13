@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CalendarClock, Pause, Plus, Search, Sparkles } from 'lucide-react';
+import { CalendarClock, Pause, Plus } from 'lucide-react';
 import { cn, formatIDR } from '@/lib/utils';
 import { categoryEmoji, isInvestmentCategory } from '@/lib/categoryEmoji';
 import { useModal } from '@/context/ModalContext';
@@ -10,6 +10,7 @@ import { cloudflareApi } from '@/lib/cloudflare-api';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { recurringService, recurringPerMonth, type RecurringTransaction } from '@/lib/services/recurringService';
 import { ServiceLogo } from '@/components/subscriptions/ServiceLogo';
+import { SubscriptionScan } from '@/components/subscriptions/SubscriptionScan';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
 import { LeoMascot } from '@/components/mascot/LeoMascot';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -48,7 +49,6 @@ export default function LanggananPage() {
   const { openModal } = useModal();
   const [items, setItems] = useState<RecurringTransaction[] | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [scanned, setScanned] = useState(false);
 
   useEffect(() => {
     let uid = '';
@@ -198,45 +198,14 @@ export default function LanggananPage() {
         </div>
       </div>
 
-      {/* Cek langganan */}
-      <div className="rounded-[26px] border border-indigo-100 bg-gradient-to-br from-indigo-50 to-violet-50 p-5 md:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <LeoMascot mood={scanned ? 'happy' : 'watch'} size={64} />
-            <div>
-              <p className="font-bold text-slate-900">Cek langganan</p>
-              <p className="text-sm text-slate-500">Leo membaca pembayaranmu 4 bulan terakhir dan mengumpulkan yang berulang.</p>
-            </div>
-          </div>
-          {!scanned && (
-            <button type="button" onClick={() => setScanned(true)} className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-indigo-700">
-              <Search size={15} /> Cek sekarang
-            </button>
-          )}
-        </div>
-        {scanned && (
-          <div className="mt-4">
-            {suggestions.length === 0 ? (
-              <p className="rounded-2xl bg-white/70 px-4 py-3 text-sm text-slate-600">Belum ketemu pembayaran berulang yang belum dicatat. Mantap, semuanya sudah rapi ✨</p>
-            ) : (
-              <ul className="grid gap-2 md:grid-cols-2">
-                {suggestions.map((s) => (
-                  <li key={s.key} className="flex items-center gap-3 rounded-2xl bg-white p-3.5 shadow-sm">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-lg">{categoryEmoji(s.category || s.label)}</span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-bold text-slate-800">{s.label}</span>
-                      <span className="text-xs text-slate-400">±{formatIDR(s.amount)} · muncul di {s.months} bulan · sekitar tgl {s.day}</span>
-                    </span>
-                    <button type="button" onClick={() => addFromSuggestion(s)} className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-700">
-                      <Sparkles size={12} /> Jadikan
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-      </div>
+      {/* Cek langganan — Leo memeriksa kalender 30 hari */}
+      <SubscriptionScan
+        transactions={transactions}
+        subs={subs}
+        patterns={suggestions}
+        onAdd={(prefill) => openModal('langganan', { prefill })}
+        onAddPattern={addFromSuggestion}
+      />
     </div>
   );
 }
