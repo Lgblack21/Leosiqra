@@ -70,7 +70,8 @@ export function AuthLayout({
             <span className="text-lg font-extrabold tracking-tight">Leosiqra</span>
           </Link>
           <p className="mt-5 text-xs font-semibold text-white/85"><Greeting /> 👋</p>
-          <h1 className="mt-1 max-w-[17rem] text-[22px] font-extrabold leading-tight drop-shadow-sm">{headline}</h1>
+          {/* <p>, bukan <h1>: headline yang sama sudah jadi <h1> di panel desktop (satu h1 per halaman) */}
+          <p className="mt-1 max-w-[17rem] text-[22px] font-extrabold leading-tight drop-shadow-sm">{headline}</p>
         </div>
       </AuthScene>
 
