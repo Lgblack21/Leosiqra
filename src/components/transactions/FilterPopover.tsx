@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -26,6 +27,28 @@ export function FilterPopover({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  // Panel dirender lewat portal ke <body> dengan posisi fixed — kalau tidak,
+  // baris chip yang bisa di-scroll (overflow-x-auto) memotong panelnya.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const r = ref.current?.getBoundingClientRect();
+      if (!r) return;
+      const vw = window.innerWidth;
+      let left = align === 'left' ? r.left : r.right - width;
+      left = Math.max(8, Math.min(left, vw - width - 8));
+      setPos({ top: r.bottom + 8, left });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [open, align, width]);
 
   useEffect(() => {
     if (!open) return;
@@ -49,33 +72,37 @@ export function FilterPopover({
         {label}
         <ChevronDown size={14} className={cn('transition-transform duration-200', open && 'rotate-180')} />
       </button>
-      <AnimatePresence>
-        {open && (
-          <>
-            <motion.div
-              className="fixed inset-0 z-40 bg-slate-900/10"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.18 }}
-              onClick={() => setOpen(false)}
-            />
-            <motion.div
-              role="dialog"
-              aria-label={title}
-              initial={{ opacity: 0, y: -6, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -4, scale: 0.98 }}
-              transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-              style={{ width, transformOrigin: align === 'left' ? 'top left' : 'top right' }}
-              className={cn('absolute top-full z-50 mt-2 max-h-[60vh] overflow-hidden rounded-[22px] bg-white shadow-2xl ring-1 ring-slate-100', align === 'left' ? 'left-0' : 'right-0')}
-            >
-              <p className="px-4 pb-1 pt-3.5 text-sm font-bold text-slate-900">{title}</p>
-              <div className="max-h-[calc(60vh-44px)] overflow-y-auto px-2 pb-2">{children(() => setOpen(false))}</div>
-            </motion.div>
-          </>
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <AnimatePresence>
+            {open && pos && (
+              <>
+                <motion.div
+                  className="fixed inset-0 z-[70] bg-slate-900/10"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                  onClick={() => setOpen(false)}
+                />
+                <motion.div
+                  role="dialog"
+                  aria-label={title}
+                  initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                  transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                  style={{ width, top: pos.top, left: pos.left, transformOrigin: align === 'left' ? 'top left' : 'top right' }}
+                  className="fixed z-[71] max-h-[60vh] overflow-hidden rounded-[22px] bg-white shadow-2xl ring-1 ring-slate-100"
+                >
+                  <p className="px-4 pb-1 pt-3.5 text-sm font-bold text-slate-900">{title}</p>
+                  <div className="max-h-[calc(60vh-44px)] overflow-y-auto px-2 pb-2">{children(() => setOpen(false))}</div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>,
+          document.body
         )}
-      </AnimatePresence>
     </div>
   );
 }
