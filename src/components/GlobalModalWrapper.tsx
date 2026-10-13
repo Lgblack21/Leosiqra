@@ -24,6 +24,7 @@ import { WalletAddModal, CardAddModal } from '@/components/wallet/WalletForms';
 import { QuickCaptureModal } from '@/components/quick/QuickCaptureModal';
 import { SubscriptionModal } from '@/components/subscriptions/SubscriptionModal';
 import { IncomeModal } from '@/components/subscriptions/IncomeModal';
+import { SettingsModal } from '@/components/settings/SettingsModal';
 import type { Investment } from '@/lib/services/investmentService';
 
 export const GlobalModalWrapper = () => {
@@ -43,6 +44,7 @@ export const GlobalModalWrapper = () => {
   if (activeModal === 'quick_scan' || activeModal === 'quick_voice' || activeModal === 'quick_text') {
     return <QuickCaptureModal mode={activeModal === 'quick_scan' ? 'scan' : activeModal === 'quick_voice' ? 'voice' : 'text'} onClose={closeModal} />;
   }
+  if (activeModal === 'pengaturan') return <SettingsModal onClose={closeModal} />;
   if (activeModal === 'pemasukan_rutin') {
     return <IncomeModal initial={(modalData as { initial?: RecurringTransaction } | null)?.initial} onClose={closeModal} />;
   }

@@ -183,9 +183,9 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           <span className="text-lg font-extrabold tracking-tight text-slate-900">Leosiqra</span>
         </Link>
         <div className="flex items-center gap-1">
-          <Link href="/membership/profile" onClick={closeOnMobile} aria-label="Pengaturan" title="Pengaturan" className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700">
+          <button type="button" onClick={() => { closeOnMobile(); openModal('pengaturan'); }} aria-label="Pengaturan" title="Pengaturan" className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700">
             <Settings size={18} />
-          </Link>
+          </button>
           <button onClick={onClose} aria-label="Tutup menu" className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 lg:hidden">
             <X size={18} />
           </button>
