@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, ChevronDown, X } from 'lucide-react';
+import { Check, ChevronDown, ImageIcon, Loader2, ScanLine, X } from 'lucide-react';
 import { cn, formatIDR } from '@/lib/utils';
 import { accountService } from '@/lib/services/accountService';
 import { matchIndonesianInstitutionLogo } from '@/lib/indonesianBanks';
 import { useFeedback } from '@/components/ui/Feedback';
+import { cloudflareApi } from '@/lib/cloudflare-api';
+import { imageFileToBase64 } from '@/lib/quick/ai';
 
 // Form "Tambah dompet" dan "Kartu kredit baru" gaya baru (popup).
 // Logo bank/e-wallet dikenali otomatis dari nama — tidak perlu unggah.
@@ -203,7 +205,30 @@ export function CardAddModal({ onClose }: { onClose: () => void }) {
   const [color, setColor] = useState(CARD_COLORS[0]);
   const [picking, setPicking] = useState<null | 'bank' | 'cetak' | 'tempo'>(null);
   const [saving, setSaving] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const logo = bank ? logoFor(bank, 'Bank Account') : null;
+
+  // Pindai kartu: foto → AI baca bank, jaringan, 4 digit. Foto tidak disimpan.
+  const scan = async (file?: File) => {
+    if (!file) return;
+    setScanning(true);
+    try {
+      const r = await cloudflareApi<{ ok?: boolean; bank?: string | null; network?: string | null; last4?: string | null; error?: string }>('/api/member/ai/parse-card', {
+        method: 'POST',
+        json: { imageBase64: await imageFileToBase64(file, 1200, 0.8) },
+      });
+      if (r.bank) pickBank(r.bank);
+      if (r.network) setNetwork(r.network);
+      if (r.last4) setLast4(r.last4);
+      toast.success(`Kartu terbaca${r.bank ? ` · ${r.bank}` : ''}${r.last4 ? ` •••• ${r.last4}` : ''}. Cek lagi sebelum disimpan.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Kartu tidak terbaca. Isi manual saja.');
+    } finally {
+      setScanning(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
   const days = useMemo(() => Array.from({ length: 28 }, (_, i) => ({ v: i + 1, label: `Tanggal ${i + 1}` })), []);
 
   const pickBank = (b: string) => {
@@ -260,6 +285,14 @@ export function CardAddModal({ onClose }: { onClose: () => void }) {
       <motion.div layout className="mx-auto mb-5 mt-1 aspect-[1.6] w-full max-w-[320px] overflow-hidden rounded-2xl p-4 text-white shadow-xl transition-[background] duration-500" style={{ background: color }}>
         <div className="relative flex h-full flex-col">
           <span className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/10" />
+          {scanning && (
+            <motion.span
+              className="pointer-events-none absolute -inset-x-4 h-10 bg-gradient-to-b from-transparent via-white/50 to-transparent"
+              initial={{ top: '-20%' }}
+              animate={{ top: ['-20%', '100%'] }}
+              transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+            />
+          )}
           <div className="flex items-center gap-2">
             {logo ? <Logo src={logo} fallback="💳" bg="transparent" size={26} /> : <span className="flex h-[26px] w-[26px] items-center justify-center rounded-lg bg-white/20 text-sm">💳</span>}
             <span className="flex-1 truncate text-sm font-bold">{name || 'Kartu kredit'}</span>
@@ -278,6 +311,20 @@ export function CardAddModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
       </motion.div>
+
+      <div className="mb-4 rounded-3xl bg-slate-50 p-4">
+        <div className="flex items-start gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600"><ScanLine size={20} /></span>
+          <span>
+            <span className="block font-bold text-slate-900">Pindai kartu</span>
+            <span className="block text-[13px] leading-snug text-slate-500">Foto bagian depan kartu: Leo membaca bank, jaringan, dan 4 digit terakhirnya. Fotonya tidak disimpan, dan nomor lengkap tidak pernah dicatat.</span>
+          </span>
+        </div>
+        <button type="button" disabled={scanning} onClick={() => fileRef.current?.click()} className="ml-14 mt-3 inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-[13px] font-bold text-white hover:bg-slate-800 disabled:opacity-60">
+          {scanning ? <><Loader2 size={14} className="animate-spin" /> Membaca kartu…</> : <><ImageIcon size={14} /> Pilih foto</>}
+        </button>
+        <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => void scan(e.target.files?.[0])} />
+      </div>
 
       <div className="space-y-4 rounded-3xl bg-slate-50 p-4">
         <div>

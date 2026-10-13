@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
-  ArrowLeftRight, ChevronRight, CreditCard, Eye, EyeOff, Pencil, Plus, Trash2, X, Receipt,
+  ArrowLeftRight, ChevronLeft, ChevronRight, CreditCard, Eye, EyeOff, Pencil, Plus, Trash2, X, Receipt,
 } from 'lucide-react';
 import { WalletAddModal, CardAddModal } from '@/components/wallet/WalletForms';
 import { AccountLogo } from '@/components/ui/AccountLogo';
@@ -40,7 +40,7 @@ const fmtDue = (s: string) => {
 
 const AccLogo = ({ acc, size = 40 }: { acc: Account; size?: number }) => <AccountLogo acc={acc} size={size} />;
 
-function Sheet({ open, onClose, title, children, side = 'right', action }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode; side?: 'right' | 'center'; action?: React.ReactNode }) {
+function Sheet({ open, onClose, title, children, side = 'right', action, back }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode; side?: 'right' | 'center'; action?: React.ReactNode; back?: boolean }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -57,12 +57,18 @@ function Sheet({ open, onClose, title, children, side = 'right', action }: { ope
             animate={side === 'right' ? { x: 0 } : { opacity: 1, y: 0 }}
             exit={side === 'right' ? { x: '100%' } : { opacity: 0, y: 20 }}
             transition={{ type: 'spring', stiffness: 340, damping: 36 }}
-            className="absolute bottom-0 right-0 top-0 flex w-full max-w-md flex-col overflow-hidden bg-white shadow-2xl sm:m-3 sm:rounded-[28px]"
+            className={cn(
+              'absolute flex w-full flex-col overflow-hidden bg-white shadow-2xl',
+              side === 'right'
+                ? 'bottom-0 right-0 top-0 max-w-md sm:m-3 sm:rounded-[28px]'
+                : 'inset-x-0 bottom-0 mx-auto max-h-[92dvh] max-w-xl rounded-t-[28px] sm:inset-y-0 sm:my-auto sm:h-[min(880px,92dvh)] sm:rounded-[28px]'
+            )}
           >
-            <div className="flex items-center justify-between px-5 pb-2 pt-5">
+            <div className="flex items-center gap-2 px-5 pb-2 pt-5">
+              {back && <button type="button" onClick={onClose} aria-label="Kembali" className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200"><ChevronLeft size={18} /></button>}
               <p className="flex-1 text-lg font-extrabold text-slate-900">{title}</p>
               {action}
-              <button type="button" onClick={onClose} aria-label="Tutup" className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X size={18} /></button>
+              {!back && <button type="button" onClick={onClose} aria-label="Tutup" className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X size={18} /></button>}
             </div>
             <div className="flex-1 overflow-y-auto px-5 pb-5">{children}</div>
           </motion.aside>
@@ -425,12 +431,17 @@ function DompetInner() {
       <Sheet
         open={cardsOpen}
         onClose={() => setCardsOpen(false)}
+        side="center"
+        back
         title="Kartu kredit"
-        action={<button type="button" onClick={() => { setCardsOpen(false); setAdd('kartu'); }} aria-label="Tambah kartu kredit" className="mr-1 flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200"><Plus size={17} /></button>}
+        action={<button type="button" onClick={() => { setCardsOpen(false); setAdd('kartu'); }} aria-label="Tambah kartu kredit" className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200"><Plus size={17} /></button>}
       >
-        <p className="text-xs text-slate-500">Tagihan kartu</p>
-        <p className="text-[30px] font-extrabold tracking-tight text-slate-900 tabular-nums">{money(cardTotal)}</p>
-        {nearest && <p className="text-xs text-slate-500">Terdekat: {nearest.acc.name}, {fmtDue(nearest.cycle!.dueDate)} ({nearest.cycle!.daysUntilDue} hari lagi)</p>}
+        <p className="text-sm text-slate-500">Tagihan kartu</p>
+        <p className="mt-1 flex items-start gap-1 leading-none text-slate-900">
+          <span className="mt-1 text-base font-bold text-slate-400">Rp</span>
+          <span className="text-[36px] font-extrabold tracking-tight tabular-nums">{Math.round(cardTotal).toLocaleString('id-ID')}</span>
+        </p>
+        {nearest && <p className="mt-2 text-sm text-slate-500">Terdekat: {nearest.acc.name}, {fmtDue(nearest.cycle!.dueDate)} ({nearest.cycle!.overdue ? 'lewat jatuh tempo' : `${nearest.cycle!.daysUntilDue} hari lagi`})</p>}
         <div className="mt-4">
           {cardInfo.map((c, i) => (
             <motion.button
@@ -471,7 +482,7 @@ function DompetInner() {
           ) : null;
         })()}
 
-        <p className="mb-1 mt-5 text-sm font-bold text-slate-900">Jatuh tempo 30 hari ke depan</p>
+        <p className="mb-1 mt-5 text-sm font-bold text-slate-900">30 hari ke depan</p>
         {dueSoon.filter((c) => c.cycle!.daysUntilDue <= 30).length === 0 ? (
           <p className="py-3 text-sm text-slate-500">Tidak ada tagihan yang jatuh tempo.</p>
         ) : (
@@ -495,7 +506,6 @@ function DompetInner() {
             })}
           </ul>
         )}
-        <button type="button" onClick={() => { setCardsOpen(false); setAdd('kartu'); }} className="mt-4 flex w-full items-center justify-center gap-1 rounded-full bg-slate-100 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-slate-200"><Plus size={14} /> Tambah kartu</button>
       </Sheet>
 
       {uid && (

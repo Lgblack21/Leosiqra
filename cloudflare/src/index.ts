@@ -7302,6 +7302,76 @@ async function handleTranscribe(request: Request, env: Env) {
   }
 }
 
+// "Pindai kartu" (form Kartu kredit baru): baca bank, jaringan, dan 4 digit
+// terakhir dari foto depan kartu kredit. Foto TIDAK disimpan; hanya tiga field
+// itu yang dikembalikan (nomor lengkap, nama, masa berlaku tidak pernah keluar).
+const CARD_SCAN_BANKS = [
+  "BCA", "Bank Mandiri", "BRI", "BNI", "BSI", "BTN", "CIMB Niaga", "Permata", "Danamon", "OCBC", "Bank Jago", "Jenius", "SeaBank",
+  "Maybank", "Bank Mega", "Panin", "Sinarmas", "KB Bank", "Allo Bank", "DBS", "HSBC", "UOB", "Standard Chartered", "Citibank",
+];
+async function handleParseCard(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  if (!(await checkAiParseRateLimit(env, authResult.session.user.id))) {
+    return json({ error: "Terlalu banyak permintaan AI. Coba lagi dalam beberapa saat." }, { status: 429 });
+  }
+  const payload = await parseJson<{ imageBase64?: string }>(request);
+  const image = typeof payload.imageBase64 === "string" ? payload.imageBase64.trim() : "";
+  if (!image) return json({ error: "Foto kartu belum ada." }, { status: 400 });
+  if (image.length > 7_000_000) return json({ error: "Foto terlalu besar." }, { status: 413 });
+  const openRouter = await getOpenRouterKey(env);
+  if (!openRouter) return json({ ok: false, error: "AI belum dikonfigurasi." }, { status: 422 });
+
+  const systemPrompt = `Kamu membaca foto BAGIAN DEPAN kartu kredit. Balas HANYA satu objek JSON valid tanpa teks lain:
+{"bank": <salah satu PERSIS dari daftar: ${JSON.stringify(CARD_SCAN_BANKS)}, atau null>, "network": "Visa" | "Mastercard" | "JCB" | "Amex" | "GPN" | null, "last4": <4 digit TERAKHIR nomor kartu sebagai string, atau null>}
+JANGAN pernah menuliskan nomor kartu lengkap, nama pemilik, atau masa berlaku.`;
+  let raw = "";
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${openRouter.key}`,
+        "http-referer": env.APP_URL || "https://www.leosiqra.com",
+        "x-title": env.APP_NAME || "Leosiqra",
+      },
+      body: JSON.stringify({
+        models: PARSE_TRANSACTION_MODELS,
+        route: "fallback",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: [{ type: "text", text: "Baca bank, jaringan, dan 4 digit terakhir kartu ini." }, { type: "image_url", image_url: { url: `data:image/jpeg;base64,${image}` } }] },
+        ],
+        temperature: 0,
+        max_tokens: 200,
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!response.ok) throw new Error(`OpenRouter ${response.status}: ${(await response.text()).slice(0, 200)}`);
+    const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    raw = data.choices?.[0]?.message?.content?.trim() ?? "";
+  } catch (error) {
+    if (isAiQuotaError(error)) {
+      await notifyAiQuotaOnce(env);
+      return json({ ok: false, error: AI_QUOTA_MESSAGE, code: "ai_quota" }, { status: 503 });
+    }
+    return json({ ok: false, error: "Kartu tidak terbaca. Coba foto lebih terang dan lurus, atau isi manual." }, { status: 422 });
+  }
+  let parsed: Record<string, unknown> = {};
+  try {
+    parsed = JSON.parse(stripJsonFences(raw));
+  } catch {
+    return json({ ok: false, error: "Kartu tidak terbaca. Coba foto lebih terang dan lurus, atau isi manual." }, { status: 422 });
+  }
+  const bank = typeof parsed.bank === "string" && CARD_SCAN_BANKS.includes(parsed.bank) ? parsed.bank : null;
+  const network = typeof parsed.network === "string" && CARD_NETWORKS.has(parsed.network) ? parsed.network : null;
+  const last4 = typeof parsed.last4 === "string" && /^\d{4}$/.test(parsed.last4) ? parsed.last4 : null;
+  if (!bank && !network && !last4) {
+    return json({ ok: false, error: "Kartu tidak terbaca. Coba foto lebih terang dan lurus, atau isi manual." }, { status: 422 });
+  }
+  return json({ ok: true, bank, network, last4 });
+}
+
 async function handleParseTransaction(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -11157,6 +11227,10 @@ const worker = {
 
       if (url.pathname === "/api/member/ai/transcribe" && request.method === "POST") {
         return await handleTranscribe(request, env);
+      }
+
+      if (url.pathname === "/api/member/ai/parse-card" && request.method === "POST") {
+        return await handleParseCard(request, env);
       }
 
       if (url.pathname === "/api/member/ai/parse-transaction" && request.method === "POST") {
