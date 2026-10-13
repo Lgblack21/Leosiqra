@@ -81,7 +81,7 @@ export const FEATURES: FeatureDef[] = [
   { id: 'kanvas', short: 'Kanvas', label: 'Kanvas', description: 'Semua uangmu dalam satu papan: dari uang masuk, rekening, sampai pengeluaran dan tabungan.', icon: Network, tone: 'bg-sky-50 text-sky-600', href: '/membership/kanvas', navHrefs: ['/membership/kanvas'], isNew: true },
   { id: 'peta', short: 'Peta', label: 'Peta', description: 'Tempat-tempat kamu belanja di peta, jejak harian, dan rekap 30 hari.', icon: MapIcon, tone: 'bg-teal-50 text-teal-600', href: '/membership/peta', navHrefs: ['/membership/peta'], isNew: true },
   { id: 'pajak', short: 'Pajak', label: 'Pajak Center', description: 'Bantu siapkan data SPT dari catatan keuanganmu.', icon: ShieldCheck, tone: 'bg-slate-100 text-slate-600', href: '/membership/pajak-center', navHrefs: ['/membership/pajak-center'] },
-  { id: 'pasar', short: 'Data pasar', label: 'Data pasar', description: 'Harga saham, kripto, emas, dan kurs terkini.', icon: Globe, tone: 'bg-cyan-50 text-cyan-600', href: '/membership/market-data', navHrefs: ['/membership/market-data'] },
+  { id: 'pasar', short: 'Pasar & belajar', label: 'Pasar & belajar', description: 'Simulasi SBN vs deposito, kabar uang minggu ini, BI-Rate & bunga LPS terbaru, dan materi belajar.', icon: Globe, tone: 'bg-cyan-50 text-cyan-600', href: '/membership/pasar', navHrefs: ['/membership/pasar', '/membership/market-data'], isNew: true },
 ];
 
 // Default dibuat ringkas: fitur keuangan inti nyala, fitur tambahan mati

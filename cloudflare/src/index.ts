@@ -9,6 +9,7 @@ import {
 import { computeCardCycle, clampCycleDay, lastStatementDate, daysBetween, type CardCycleSettings } from "../../src/lib/creditCycle";
 import { INSTITUTION_DOMAINS } from "../../src/lib/indonesianBanks";
 import { SERVICES as SUBSCRIPTION_SERVICES } from "../../src/lib/subscriptionCatalog";
+import { refreshPasar, readFeed, readNews } from "./pasar";
 
 export interface Env {
   DB: D1Database;
@@ -7343,6 +7344,46 @@ const CARD_SCAN_BANKS = [
   "Bank Sulselbar", "MNC Bank", "Bank Mayapada", "Bank Victoria", "Bank Artha Graha", "QNB", "ICBC", "Commonwealth", "Nobu",
   "Bank Sampoerna", "Amar Bank", "Bank Mantap",
 ];
+// ===== Pasar & belajar (lihat cloudflare/src/pasar.ts) =====
+const PASAR_STALE_MS = 6 * 60 * 60 * 1000;
+let pasarRefreshing: Promise<void> | null = null;
+const pasarAi = async (env: Env) => {
+  const k = await getOpenRouterKey(env);
+  return k ? { key: k.key, referer: env.APP_URL || "https://www.leosiqra.com", title: env.APP_NAME || "Leosiqra", models: PARSE_TRANSACTION_MODELS } : null;
+};
+const runPasarRefresh = (env: Env) => {
+  if (!pasarRefreshing) {
+    pasarRefreshing = pasarAi(env)
+      .then((ai) => refreshPasar(env.DB, ai))
+      .catch((error) => console.error("Refresh pasar gagal:", error))
+      .finally(() => {
+        pasarRefreshing = null;
+      });
+  }
+  return pasarRefreshing;
+};
+async function handlePasar(request: Request, env: Env, ctx?: ExecutionContext) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  let feed;
+  try {
+    feed = await readFeed(env.DB);
+  } catch {
+    return json({ error: "Fitur Pasar belum siap (migrasi 0014 belum dijalankan)." }, { status: 503 });
+  }
+  const stale = !feed || Date.now() - Date.parse(feed.fetchedAt) > PASAR_STALE_MS;
+  if (!feed) {
+    // Pertama kali: tunggu sampai data pertama selesai diambil.
+    await runPasarRefresh(env);
+    feed = await readFeed(env.DB);
+  } else if (stale) {
+    const job = runPasarRefresh(env);
+    if (ctx) ctx.waitUntil(job);
+  }
+  const news = await readNews(env.DB);
+  return json({ feed, news }, { headers: { "Cache-Control": "private, max-age=300" } });
+}
+
 async function handleParseCard(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -10749,7 +10790,7 @@ const ALLOWED_ORIGINS = new Set([
 ]);
 
 const worker = {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     if (request.method === "OPTIONS") {
@@ -11263,6 +11304,10 @@ const worker = {
         return await handleTranscribe(request, env);
       }
 
+      if (url.pathname === "/api/member/pasar" && request.method === "GET") {
+        return await handlePasar(request, env, ctx);
+      }
+
       if (url.pathname === "/api/member/ai/parse-card" && request.method === "POST") {
         return await handleParseCard(request, env);
       }
@@ -11427,6 +11472,8 @@ const worker = {
     ctx.waitUntil(processMaturedDeposits(env));
     ctx.waitUntil(processDueRecurringTransactions(env));
     ctx.waitUntil(sendCreditCardDueReminders(env));
+    // Pasar & belajar: BI-Rate, LPS, kurs, emas, berita, penawaran SBN.
+    ctx.waitUntil(runPasarRefresh(env));
     // Tanggal 1–7 WIB saja (dicek di dalam): laporan bulanan via email (opt-in).
     ctx.waitUntil(sendMonthlyReports(env).catch((error) => console.error("Laporan bulanan:", error)));
   },
