@@ -13,6 +13,8 @@ export const quickTxService = {
     subCategory?: string;
     note?: string;
     date?: string; // YYYY-MM-DD, kosong = hari ini
+    /** Asal pencatatan untuk filter Sumber (ketik, suara, struk, kotak_masuk, tutup_hari, duplikat). */
+    source?: 'ketik' | 'suara' | 'struk' | 'kotak_masuk' | 'tutup_hari' | 'duplikat';
   }) {
     const res = await cloudflareApi<{ ok: boolean; id: string; matchedAccount: string; currency: string }>(
       '/api/member/quick-transaction',
@@ -26,6 +28,7 @@ export const quickTxService = {
           sub_category: input.subCategory?.trim() ?? '',
           note: input.note?.trim() ?? '',
           ...(input.date ? { date: input.date } : {}),
+          ...(input.source ? { source: input.source } : {}),
         },
       }
     );

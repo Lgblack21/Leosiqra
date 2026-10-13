@@ -275,6 +275,8 @@ export default function InputCepatPage() {
         subCategory,
         note,
         ...(date ? { date } : {}),
+        // Asal pencatatan untuk filter Sumber di Riwayat.
+        source: hint?.source === "voice" ? "suara" : hint?.source === "scan" ? "struk" : "ketik",
       });
       saved(res.id, `${type === "pengeluaran" ? "Pengeluaran" : "Pemasukan"} ${res.currency} ${groupDigits(amount)} · ${res.matchedAccount}`);
     } catch (e) {

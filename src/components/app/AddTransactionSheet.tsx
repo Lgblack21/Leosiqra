@@ -204,6 +204,8 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
         subCategory,
         note,
         ...(date ? { date } : {}),
+        // Asal pencatatan untuk filter Sumber di Riwayat.
+        source: hint?.source === "voice" ? "suara" : hint?.source === "scan" ? "struk" : "ketik",
       });
       setUndoItem({ id: res.id, label: `${subCategory || category} · ${res.currency} ${groupDigits(amount)} · ${res.matchedAccount}` });
       lightTap();

@@ -8,6 +8,7 @@ import { cn, formatMoney, isIncomingTransaction } from '@/lib/utils';
 import { categoryEmoji } from '@/lib/categoryEmoji';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
 import type { Place } from '@/lib/services/connectService';
+import { txSourceLabel, txSourceOf } from '@/lib/txSource';
 import { useFeedback } from '@/components/ui/Feedback';
 
 // Detail satu transaksi sebagai popup. "Ubah" hanya untuk field yang tidak
@@ -176,6 +177,7 @@ export function TxDetailModal({
                       ...(transfer && tx.targetAccountId ? [['Ke', accountName(tx.targetAccountId)]] : []),
                       ['Kategori', `${categoryEmoji(categoryLabel(tx))} ${categoryLabel(tx)}`],
                       ...(tx.subCategory ? [['Subkategori', tx.subCategory]] : []),
+                      ['Dicatat dari', `${txSourceLabel(txSourceOf(tx)).emoji} ${txSourceLabel(txSourceOf(tx)).label}`],
                       ...(tx.currency && tx.currency !== 'IDR' ? [['Setara rupiah', formatMoney(Number(tx.amountIDR) || 0, 'IDR')]] : []),
                     ].map(([k, v]) => (
                       <div key={k} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">

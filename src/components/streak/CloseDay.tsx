@@ -144,7 +144,7 @@ export function CloseDayDialog({
     if (!cashAccount || busy) return;
     setBusy(q.label);
     try {
-      const res = await quickTxService.create({ type: 'pengeluaran', amount: q.amount, accountId: cashAccount.id!, category: q.category, subCategory: q.sub, note: q.label });
+      const res = await quickTxService.create({ type: 'pengeluaran', amount: q.amount, accountId: cashAccount.id!, category: q.category, subCategory: q.sub, note: q.label, source: 'tutup_hari' });
       setAdded((cur) => [...cur, { id: res.id, label: q.label, amount: q.amount }]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Gagal mencatat. Coba lagi.');

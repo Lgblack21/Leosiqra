@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion';
-import { Search, Trash2, ListOrdered, Download, Plus, X, Copy, CheckCircle2, Tag, Wallet, Repeat, ArrowDownUp, Check } from 'lucide-react';
+import { Search, Trash2, ListOrdered, Download, Plus, X, Copy, CheckCircle2, Tag, Wallet, Repeat, ArrowDownUp, Check, GitBranch } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { Account } from '@/lib/services/accountService';
@@ -22,6 +22,7 @@ import { TxDetailModal } from '@/components/transactions/TxDetailModal';
 import { RecurringDrawer } from '@/components/transactions/RecurringDrawer';
 import { quickTxService } from '@/lib/services/quickTxService';
 import { placeService, type Place } from '@/lib/services/connectService';
+import { TX_SOURCES, txSourceOf, type TxSource } from '@/lib/txSource';
 
 // Riwayat transaksi gaya baru (mengikuti pola Oyenza): cari, periode, jenis,
 // filter kategori/rekening (popover), urutan, panel transaksi rutin, mode
@@ -129,6 +130,7 @@ export default function DailyTransactionLogPage() {
   const [kind, setKind] = useState<Kind>('semua');
   const [catFilter, setCatFilter] = useState<string[]>([]);
   const [accFilter, setAccFilter] = useState<string[]>([]);
+  const [srcFilter, setSrcFilter] = useState<TxSource[]>([]);
   const [sort, setSort] = useState<Sort>('terbaru');
   const [shown, setShown] = useState(PAGE);
   const [selectMode, setSelectMode] = useState(false);
@@ -239,7 +241,7 @@ export default function DailyTransactionLogPage() {
     if (tx.type !== 'pemasukan' && tx.type !== 'pengeluaran') return;
     if (!tx.accountId) return toast.error('Transaksi ini tidak punya rekening.');
     try {
-      await quickTxService.create({ type: tx.type, amount: Number(tx.amount) || 0, accountId: tx.accountId, category: categoryLabel(tx), subCategory: tx.subCategory, note: tx.note });
+      await quickTxService.create({ type: tx.type, amount: Number(tx.amount) || 0, accountId: tx.accountId, category: categoryLabel(tx), subCategory: tx.subCategory, note: tx.note, source: 'duplikat' });
       setDetail(null);
       toast.success('Diduplikat untuk hari ini.');
     } catch (e) {
@@ -256,13 +258,14 @@ export default function DailyTransactionLogPage() {
       if ((kind === 'pemasukan' || kind === 'pengeluaran') && t.type !== kind) return false;
       if (catFilter.length && !catFilter.includes(categoryLabel(t))) return false;
       if (accFilter.length && !accFilter.includes(t.accountId || '')) return false;
+      if (srcFilter.length && !srcFilter.includes(txSourceOf(t))) return false;
       if (!q) return true;
       return `${t.note || ''} ${categoryLabel(t)} ${t.subCategory || ''} ${accountName(t.accountId)} ${Math.round(t.amount)}`.toLowerCase().includes(q);
     });
     if (sort === 'terbesar') return [...list].sort((a, b) => toIdr(b) - toIdr(a));
     if (sort === 'terkecil') return [...list].sort((a, b) => toIdr(a) - toIdr(b));
     return list;
-  }, [transactions, kind, catFilter, accFilter, searchQuery, sort, categories, accounts]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [transactions, kind, catFilter, accFilter, srcFilter, searchQuery, sort, categories, accounts]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const masuk = filtered.filter((t) => t.type === 'pemasukan').reduce((s, t) => s + toIdr(t), 0);
   const keluar = filtered.filter((t) => t.type === 'pengeluaran').reduce((s, t) => s + toIdr(t), 0);
@@ -383,15 +386,21 @@ export default function DailyTransactionLogPage() {
   const dayTitle = (d: Date) =>
     sameDay(d, today) ? 'Hari ini' : sameDay(d, yesterday) ? 'Kemarin' : new Intl.DateTimeFormat('id-ID', { weekday: 'short', day: 'numeric', month: 'short', ...(d.getFullYear() !== today.getFullYear() ? { year: 'numeric' } : {}) }).format(d);
   const formatTime = (d: Date) => new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' }).format(d);
-  const hasFilter = kind !== 'semua' || catFilter.length > 0 || accFilter.length > 0 || searchQuery.trim() !== '';
+  const hasFilter = kind !== 'semua' || catFilter.length > 0 || accFilter.length > 0 || srcFilter.length > 0 || searchQuery.trim() !== '';
+  const sourceCounts = useMemo(() => {
+    const m = new Map<TxSource, number>();
+    for (const t of transactions) m.set(txSourceOf(t), (m.get(txSourceOf(t)) ?? 0) + 1);
+    return m;
+  }, [transactions]);
   const resetFilter = () => {
     setKind('semua');
     setCatFilter([]);
     setAccFilter([]);
+    setSrcFilter([]);
     setSearchQuery('');
   };
   const toggleIn = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
-  const listKey = `${period}|${kind}|${catFilter.join()}|${accFilter.join()}|${sort}|${searchQuery.trim()}`;
+  const listKey = `${period}|${kind}|${catFilter.join()}|${accFilter.join()}|${srcFilter.join()}|${sort}|${searchQuery.trim()}`;
 
   return (
     <div className="mx-auto max-w-5xl space-y-3.5 pb-28">
@@ -461,6 +470,13 @@ export default function DailyTransactionLogPage() {
           {() => accounts.map((a) => (
             <OptionRow key={a.id} selected={accFilter.includes(a.id!)} onClick={() => setAccFilter((cur) => toggleIn(cur, a.id!))}>
               {a.name} <span className="text-slate-400">· {a.type}</span>
+            </OptionRow>
+          ))}
+        </FilterPopover>
+        <FilterPopover title="Sumber" icon={<GitBranch size={14} />} label={srcFilter.length ? `Sumber · ${srcFilter.length}` : 'Sumber'} active={srcFilter.length > 0} width={260}>
+          {() => TX_SOURCES.map((src) => (
+            <OptionRow key={src.id} selected={srcFilter.includes(src.id)} onClick={() => setSrcFilter((cur) => (cur.includes(src.id) ? cur.filter((x) => x !== src.id) : [...cur, src.id]))}>
+              {src.emoji}&nbsp;&nbsp;{src.label} <span className="text-slate-400">· {sourceCounts.get(src.id) ?? 0}</span>
             </OptionRow>
           ))}
         </FilterPopover>

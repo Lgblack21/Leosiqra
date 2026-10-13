@@ -141,7 +141,7 @@ function DraftCard({ draft, ctx, accounts, onDone }: { draft: InboxDraft; ctx: P
     if (!num || !accountId || !category.trim()) return toast.error('Lengkapi nominal, kategori, dan rekening.');
     setBusy(true);
     try {
-      await quickTxService.create({ type, amount: num, accountId, category, subCategory: parsed.subCategory, note: parsed.note || draft.raw_text.slice(0, 120), date: parsed.date });
+      await quickTxService.create({ type, amount: num, accountId, category, subCategory: parsed.subCategory, note: parsed.note || draft.raw_text.slice(0, 120), date: parsed.date, source: 'kotak_masuk' });
       await inboxService.remove(draft.id);
       toast.success('Tersimpan jadi transaksi.');
       onDone();

@@ -3802,7 +3802,12 @@ async function handleQuickTransaction(request: Request, env: Env) {
     account_id?: string;
     note?: string;
     date?: string;
+    source?: string;
   }>(request);
+  // Asal pencatatan (untuk filter "Sumber" di Riwayat). Disimpan di payload_json
+  // — tidak perlu kolom baru. Nilai di luar daftar diabaikan.
+  const QUICK_SOURCES = new Set(["ketik", "suara", "struk", "kotak_masuk", "tutup_hari", "duplikat"]);
+  const quickSource = typeof payload.source === "string" && QUICK_SOURCES.has(payload.source) ? payload.source : null;
 
   // Shortcut iOS (Ask Each Time) mengirim semuanya sebagai teks, jadi normalisasi
   // dulu: type di-lowercase/trim, amount di-Number-kan supaya "50000" tetap valid.
@@ -3868,11 +3873,11 @@ async function handleQuickTransaction(request: Request, env: Env) {
     env.DB.prepare(
       `INSERT INTO transactions (
          id, user_id, type, amount, amount_idr, category, sub_category, currency,
-         account_id, date, display_date, note, status, created_at, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'VERIFIED', ?, ?)`
+         account_id, date, display_date, note, status, payload_json, created_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'VERIFIED', ?, ?, ?)`
     ).bind(
       id, userId, type, amount, amountIdr, payload.category?.trim() || null, payload.sub_category?.trim() || null,
-      currency, match.id, date, date, payload.note?.trim() || null, now, now
+      currency, match.id, date, date, payload.note?.trim() || null, quickSource ? JSON.stringify({ source: quickSource }) : null, now, now
     ),
     env.DB.prepare(
       `UPDATE accounts SET balance = balance + ?
