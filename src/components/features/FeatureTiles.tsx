@@ -8,7 +8,6 @@ import { useFeatures, type FeatureId } from '@/lib/features';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { recurringService, recurringPerMonth, type RecurringTransaction } from '@/lib/services/recurringService';
 import { sharedWalletService, type SharedWalletSummary } from '@/lib/services/sharedWalletService';
-import { savingsGoalService, type SavingsGoal } from '@/lib/services/savingsGoalService';
 import { useStreak } from '@/components/streak/CloseDay';
 import { focusService, type FocusSession } from '@/lib/services/focusService';
 import { itemService, type Item } from '@/lib/services/itemService';
@@ -23,7 +22,6 @@ export function FeatureTiles({ base, className, limit, narrow }: { base: Partial
   const { data: streak } = useStreak();
   const [recurring, setRecurring] = useState<RecurringTransaction[] | null>(null);
   const [wallets, setWallets] = useState<SharedWalletSummary[] | null>(null);
-  const [goals, setGoals] = useState<SavingsGoal[] | null>(null);
   const [items, setItems] = useState<Item[] | null>(null);
   const [focus, setFocus] = useState<{ today: string; items: FocusSession[] } | null>(null);
 
@@ -37,7 +35,6 @@ export function FeatureTiles({ base, className, limit, narrow }: { base: Partial
     if (isOn('dompet-bersama')) sharedWalletService.list().then((r) => setWallets(r.items)).catch(() => setWallets([]));
     if (isOn('barang') || isOn('koleksi')) itemService.list().then(setItems).catch(() => setItems(null));
     if (isOn('fokus')) focusService.list().then(setFocus).catch(() => setFocus(null));
-    if (isOn('tabungan')) savingsGoalService.getUserSavingsGoals().then(setGoals).catch(() => setGoals([]));
     // isOn berubah identitas tiap render; cukup muat ulang saat daftar fitur aktif berubah.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled.map((f) => f.id).join(',')]);
@@ -89,18 +86,6 @@ export function FeatureTiles({ base, className, limit, narrow }: { base: Partial
       ? { value: formatIDR(active.reduce((s, w) => s + (Number(w.balance) || 0), 0)), sub: `${active.length} dompet · ${active.reduce((s, w) => s + w.member_count, 0)} anggota` }
       : { value: 'Belum ada', sub: 'Ajak keluarga patungan' };
   }
-  if (goals) {
-    const withTarget = goals.filter((g) => g.targetAmount && g.targetAmount > 0);
-    const top = withTarget.sort((a, b) => (b.progressPercent ?? 0) - (a.progressPercent ?? 0))[0];
-    if (top) {
-      stats.tabungan = {
-        value: `${Math.round(top.progressPercent ?? 0)}%`,
-        sub: `${top.name} · ${formatIDR(top.currentTotal)} dari ${formatIDR(top.targetAmount ?? 0)}`,
-        progress: top.progressPercent ?? 0,
-      };
-    }
-  }
-
   return (
     <div className={className}>
       <div className="mb-3 flex items-center justify-between">

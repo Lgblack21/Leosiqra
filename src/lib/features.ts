@@ -4,10 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   Flame,
   Gem,
-  PiggyBank,
-  TrendingUp,
   CreditCard,
-  HandCoins,
   Repeat,
   Users,
   ShieldCheck,
@@ -29,10 +26,7 @@ import {
 export type FeatureId =
   | 'streak'
   | 'kekayaan'
-  | 'tabungan'
-  | 'investasi'
   | 'kartu'
-  | 'hutang'
   | 'rutin'
   | 'dompet-bersama'
   | 'pajak'
@@ -62,11 +56,8 @@ export interface FeatureDef {
 
 export const FEATURES: FeatureDef[] = [
   { id: 'streak', short: 'Streak', label: 'Tutup hari & streak', description: 'Cek catatanmu tiap malam, tutup harinya, jaga streak dan kumpulkan koin.', icon: Flame, tone: 'bg-orange-50 text-orange-500', href: '/membership/streak', navHrefs: ['/membership/streak'], isNew: true },
-  { id: 'kekayaan', short: 'Kekayaan', label: 'Kekayaan', description: 'Rekening, tabungan, investasi, dan piutang dikurangi utang — jadi satu angka kekayaan bersih.', icon: Gem, tone: 'bg-violet-50 text-violet-600', href: '/membership/kekayaan', navHrefs: ['/membership/kekayaan'], isNew: true },
-  { id: 'tabungan', short: 'Tabungan', label: 'Tabungan & target', description: 'Setoran tabungan dan target seperti dana darurat, rumah, atau liburan.', icon: PiggyBank, tone: 'bg-sky-50 text-sky-600', href: '/membership/tabungan', navHrefs: ['/membership/tabungan'] },
-  { id: 'investasi', short: 'Investasi', label: 'Investasi', description: 'Saham, deposito, emas, kripto, dan investasi lain dalam satu portofolio.', icon: TrendingUp, tone: 'bg-emerald-50 text-emerald-600', href: '/membership/investment', navHrefs: ['/membership/investment', '/membership/investasi/saham', '/membership/investasi/deposito', '/membership/investasi/lainnya'] },
+  { id: 'kekayaan', short: 'Kekayaan', label: 'Kekayaan', description: 'Dompet, tabungan, investasi, barang, piutang & utang — semua dalam satu angka kekayaan bersih.', icon: Gem, tone: 'bg-violet-50 text-violet-600', href: '/membership/kekayaan', navHrefs: ['/membership/kekayaan', '/membership/tabungan', '/membership/investment', '/membership/investasi/saham', '/membership/investasi/deposito', '/membership/investasi/lainnya', '/membership/transactions/debt'], isNew: true },
   { id: 'kartu', short: 'Kartu kredit', label: 'Kartu kredit', description: 'Limit, tagihan, dan tanggal jatuh tempo tiap kartu kredit atau paylater.', icon: CreditCard, tone: 'bg-amber-50 text-amber-600', href: '/membership/rekening?panel=kartu', navHrefs: ['/membership/cards'] },
-  { id: 'hutang', short: 'Hutang & piutang', label: 'Hutang & piutang', description: 'Catat pinjaman dan uang yang kamu pinjamkan, lengkap dengan cicilannya.', icon: HandCoins, tone: 'bg-rose-50 text-rose-500', href: '/membership/transactions/debt', navHrefs: ['/membership/transactions/debt'] },
   { id: 'arus', short: 'Ikuti uangmu', label: 'Ikuti uangmu', description: 'Dari mana uangmu datang dan ke mana perginya, dalam satu gambar.', icon: Waypoints, tone: 'bg-fuchsia-50 text-fuchsia-600', href: '/membership/arus', navHrefs: ['/membership/arus'], isNew: true },
   { id: 'rutin', short: 'Transaksi berulang', label: 'Transaksi berulang', description: 'Langganan & tagihan (Netflix, listrik, cicilan) plus pemasukan rutin seperti gaji — kalender tagihan dan cek langganan otomatis.', icon: Repeat, tone: 'bg-indigo-50 text-indigo-600', href: '/membership/langganan', navHrefs: ['/membership/langganan', '/membership/recurring'] },
   { id: 'dompet-bersama', short: 'Dompet bersama', label: 'Dompet bersama', description: 'Kas keluarga atau patungan bareng teman, semua anggota bisa mencatat.', icon: Users, tone: 'bg-teal-50 text-teal-600', href: '/membership/dompet-bersama', navHrefs: ['/membership/dompet-bersama'] },

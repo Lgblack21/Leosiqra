@@ -189,10 +189,7 @@ export default function MonthlyDashboard() {
     kekayaan: { value: formatIDR(rekeningAset + totalTabungan + investasiNilai + piutang + itemsValue - creditCardBills - otherDebts), sub: 'Kekayaan bersih' },
     cuan: { value: formatIDR(monthTx.filter((t) => t.type === 'pemasukan' && !/gaji|salary/i.test(t.category || '')).reduce((s, t) => s + toIdr(t), 0)), sub: 'Cuan bulan ini (di luar gaji)' },
     arus: { value: `${net >= 0 ? '+' : '−'}${formatIDR(Math.abs(net))}`, sub: `Masuk ${formatIDR(totalPemasukan)} · keluar ${formatIDR(totalPengeluaran)}` },
-    tabungan: { value: formatIDR(totalTabungan), sub: `${savings.length} catatan setoran` },
-    investasi: { value: formatIDR(investasiNilai), sub: `${investments.filter((i) => i.status === 'Active').length} aktif` },
     kartu: { value: formatIDR(creditCardBills), sub: creditCardBills > 0 ? 'Tagihan terpakai' : 'Tidak ada tagihan' },
-    hutang: { value: formatIDR(otherDebts), sub: piutang > 0 ? `Piutang ${formatIDR(piutang)}` : otherDebts > 0 ? 'Belum lunas' : 'Bebas hutang 🎉' },
   };
 
   const recent = [...txs].sort((a, b) => +new Date(b.date) - +new Date(a.date)).slice(0, 6);

@@ -71,8 +71,15 @@ export const sectionTabs: SectionTab[][] = [
   ],
   // Tab Dompet (Rekening · Tabungan · Dompet bersama) DISEMBUNYIKAN — Tabungan
   // & Dompet bersama tetap ada (sidebar Fitur / URL), cuma tidak tampil sebagai tab.
+  // Kekayaan: Tabungan & Hutang-piutang kini bagian dari Kekayaan (bukan menu sendiri).
   [
-    { label: 'Ringkasan', href: '/membership/investment' },
+    { label: 'Kekayaan', href: '/membership/kekayaan' },
+    { label: 'Tabungan', href: '/membership/tabungan' },
+    { label: 'Hutang & piutang', href: '/membership/transactions/debt' },
+  ],
+  [
+    { label: 'Kekayaan', href: '/membership/kekayaan' },
+    { label: 'Investasi', href: '/membership/investment' },
     { label: 'Saham', href: '/membership/investasi/saham' },
     { label: 'Deposito', href: '/membership/investasi/deposito' },
     { label: 'Lainnya', href: '/membership/investasi/lainnya' },
@@ -106,6 +113,8 @@ const TITLES: Record<string, string> = {
   '/membership/rekening': 'Dompet',
   '/membership/cards': 'Kartu kredit',
   '/membership/investment': 'Investasi',
+  '/membership/tabungan': 'Tabungan',
+  '/membership/kekayaan': 'Kekayaan',
   '/membership/investasi/saham': 'Saham',
   '/membership/investasi/deposito': 'Deposito',
   '/membership/investasi/lainnya': 'Investasi lainnya',
