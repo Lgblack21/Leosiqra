@@ -3937,7 +3937,30 @@ async function handleUpdateTransaction(request: Request, env: Env, transactionId
     "related_type",
   ]);
 
-  const entries = Object.entries(payload).filter(([key]) => allowed.has(key));
+  const entries: [string, unknown][] = Object.entries(payload).filter(([key]) => allowed.has(key));
+
+  // Tag transaksi (mis. "liburan-bali") dititipkan di payload_json — tanpa
+  // kolom baru. Maks. 8 tag, huruf kecil/angka/strip, 1–24 karakter.
+  if (payload.tags !== undefined) {
+    if (!Array.isArray(payload.tags)) return json({ error: "Format tag tidak valid." }, { status: 400 });
+    const tags = [...new Set(payload.tags.map((t) => String(t).trim().toLowerCase().replace(/^#/, "").replace(/\s+/g, "-")))]
+      .filter((t) => /^[a-z0-9][a-z0-9-]{0,23}$/.test(t))
+      .slice(0, 8);
+    const cur = await env.DB.prepare("SELECT payload_json FROM transactions WHERE id = ? AND user_id = ?")
+      .bind(transactionId, authResult.session.user.id)
+      .first<{ payload_json: string | null }>();
+    if (!cur) return json({ error: "Transaksi tidak ditemukan." }, { status: 404 });
+    let obj: Record<string, unknown> = {};
+    try {
+      obj = cur.payload_json ? (JSON.parse(cur.payload_json) as Record<string, unknown>) : {};
+    } catch {
+      obj = {};
+    }
+    if (tags.length) obj.tags = tags;
+    else delete obj.tags;
+    entries.push(["payload_json", Object.keys(obj).length ? JSON.stringify(obj) : null]);
+  }
+
   if (entries.length === 0) {
     return json({ error: "Tidak ada field yang bisa diperbarui." }, { status: 400 });
   }

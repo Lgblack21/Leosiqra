@@ -28,6 +28,8 @@ export interface Transaction {
   relatedType?: 'investasi' | 'tabungan' | 'debt';
   // Hutang/piutang: saldo rekening langsung ikut berubah saat dicatat (server).
   applyBalance?: boolean;
+  // Tag bebas (payload_json.tags), mis. ['liburan-bali'].
+  tags?: string[];
   createdAt: Date;
 }
 
@@ -137,6 +139,7 @@ export const transactionService = {
         ...(data.date ? { date: data.date.toISOString() } : {}),
         ...(data.displayDate ? { display_date: data.displayDate } : {}),
         ...(data.note !== undefined ? { note: data.note } : {}),
+        ...(data.tags !== undefined ? { tags: data.tags } : {}),
       },
     });
     notifyCollectionChanged('transactions');

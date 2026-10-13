@@ -39,3 +39,16 @@ export const txSourceOf = (t: Transaction): TxSource => {
 };
 
 export const txSourceLabel = (s: TxSource) => TX_SOURCES.find((x) => x.id === s) ?? TX_SOURCES[0];
+
+// Tag transaksi (disimpan server di payload_json.tags).
+export const txTags = (t: Transaction): string[] => {
+  const raw = (t as Transaction & { payloadJson?: string | null }).payloadJson;
+  if (!raw) return [];
+  try {
+    const v = (JSON.parse(raw) as { tags?: unknown }).tags;
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+};
+export const normalizeTag = (s: string) => s.trim().toLowerCase().replace(/^#/, '').replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 24);

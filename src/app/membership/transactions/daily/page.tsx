@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion';
-import { Search, Trash2, ListOrdered, Download, Plus, X, Copy, CheckCircle2, Tag, Wallet, Repeat, Check, GitBranch } from 'lucide-react';
+import { Search, Trash2, ListOrdered, Download, Plus, X, Copy, CheckCircle2, Tag, Wallet, Repeat, Check, GitBranch, Hash } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { Account } from '@/lib/services/accountService';
@@ -23,7 +23,7 @@ import { TxDetailModal } from '@/components/transactions/TxDetailModal';
 import { RecurringDrawer } from '@/components/transactions/RecurringDrawer';
 import { quickTxService } from '@/lib/services/quickTxService';
 import { placeService, type Place } from '@/lib/services/connectService';
-import { TX_SOURCES, txSourceOf, type TxSource } from '@/lib/txSource';
+import { TX_SOURCES, txSourceOf, txTags, type TxSource } from '@/lib/txSource';
 
 // Riwayat transaksi gaya baru (mengikuti pola Oyenza): cari, periode, jenis,
 // filter kategori/rekening (popover), urutan, panel transaksi rutin, mode
@@ -164,6 +164,8 @@ function TransactionsInner() {
   // ?account=<id> (mis. dari detail kartu kredit di Dompet).
   const [accFilter, setAccFilter] = useState<string[]>(() => (params.get('account') ? [params.get('account')!.slice(0, 80)] : []));
   const [srcFilter, setSrcFilter] = useState<TxSource[]>([]);
+  // ?tag=xxx (mis. dari halaman Perjalanan).
+  const [tagFilter, setTagFilter] = useState<string[]>(() => (params.get('tag') ? [params.get('tag')!.slice(0, 24)] : []));
   const [sort, setSort] = useState<Sort>('terbaru');
   const [shown, setShown] = useState(PAGE);
   const [selectMode, setSelectMode] = useState(false);
@@ -292,13 +294,14 @@ function TransactionsInner() {
       if (catFilter.length && !catFilter.includes(categoryLabel(t))) return false;
       if (accFilter.length && !accFilter.includes(t.accountId || '')) return false;
       if (srcFilter.length && !srcFilter.includes(txSourceOf(t))) return false;
+      if (tagFilter.length && !txTags(t).some((x) => tagFilter.includes(x))) return false;
       if (!q) return true;
-      return `${t.note || ''} ${categoryLabel(t)} ${t.subCategory || ''} ${accountName(t.accountId)} ${Math.round(t.amount)}`.toLowerCase().includes(q);
+      return `${t.note || ''} ${txTags(t).map((x) => '#' + x).join(' ')} ${categoryLabel(t)} ${t.subCategory || ''} ${accountName(t.accountId)} ${Math.round(t.amount)}`.toLowerCase().includes(q);
     });
     if (sort === 'terbesar') return [...list].sort((a, b) => toIdr(b) - toIdr(a));
     if (sort === 'terkecil') return [...list].sort((a, b) => toIdr(a) - toIdr(b));
     return list;
-  }, [transactions, kind, catFilter, accFilter, srcFilter, searchQuery, sort, categories, accounts]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [transactions, kind, catFilter, accFilter, srcFilter, tagFilter, searchQuery, sort, categories, accounts]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const masuk = filtered.filter((t) => t.type === 'pemasukan').reduce((s, t) => s + toIdr(t), 0);
   const keluar = filtered.filter((t) => t.type === 'pengeluaran').reduce((s, t) => s + toIdr(t), 0);
@@ -419,13 +422,19 @@ function TransactionsInner() {
   const dayTitle = (d: Date) =>
     sameDay(d, today) ? 'Hari ini' : sameDay(d, yesterday) ? 'Kemarin' : new Intl.DateTimeFormat('id-ID', { weekday: 'short', day: 'numeric', month: 'short', ...(d.getFullYear() !== today.getFullYear() ? { year: 'numeric' } : {}) }).format(d);
   const formatTime = (d: Date) => new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' }).format(d);
-  const hasFilter = kind !== 'semua' || catFilter.length > 0 || accFilter.length > 0 || srcFilter.length > 0 || searchQuery.trim() !== '';
+  const hasFilter = kind !== 'semua' || catFilter.length > 0 || accFilter.length > 0 || srcFilter.length > 0 || tagFilter.length > 0 || searchQuery.trim() !== '';
   const sourceCounts = useMemo(() => {
     const m = new Map<TxSource, number>();
     for (const t of transactions) m.set(txSourceOf(t), (m.get(txSourceOf(t)) ?? 0) + 1);
     return m;
   }, [transactions]);
+  const tagCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const t of transactions) for (const x of txTags(t)) m.set(x, (m.get(x) ?? 0) + 1);
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  }, [transactions]);
   const resetFilter = () => {
+    setTagFilter([]);
     setKind('semua');
     setCatFilter([]);
     setAccFilter([]);
@@ -433,7 +442,7 @@ function TransactionsInner() {
     setSearchQuery('');
   };
   const toggleIn = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
-  const listKey = `${period}|${kind}|${catFilter.join()}|${accFilter.join()}|${srcFilter.join()}|${sort}|${searchQuery.trim()}`;
+  const listKey = `${period}|${kind}|${catFilter.join()}|${accFilter.join()}|${srcFilter.join()}|${tagFilter.join()}|${sort}|${searchQuery.trim()}`;
 
   return (
     <div className="mx-auto max-w-6xl space-y-4 pb-28">
@@ -518,6 +527,15 @@ function TransactionsInner() {
             </OptionRow>
           ))}
         </FilterPopover>
+        {tagCounts.length > 0 && (
+          <FilterPopover title="Tag" icon={<Hash size={13} />} label={tagFilter.length ? `Tag · ${tagFilter.length}` : 'Tag'} active={tagFilter.length > 0} width={240}>
+            {() => tagCounts.map(([tg, n]) => (
+              <OptionRow key={tg} selected={tagFilter.includes(tg)} onClick={() => setTagFilter((cur) => toggleIn(cur, tg))}>
+                #{tg} <span className="text-slate-400">· {n}</span>
+              </OptionRow>
+            ))}
+          </FilterPopover>
+        )}
         <button type="button" onClick={() => setRecurringOpen(true)} className="flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors bg-slate-100 text-slate-700 hover:bg-slate-200">
           <Repeat size={13} /> Transaksi berulang
         </button>
@@ -627,6 +645,7 @@ function TransactionsInner() {
                         <span className="min-w-0">
                           <span className="block truncate text-sm font-semibold text-slate-900">{t.note || t.subCategory || cat}</span>
                           <span className="block truncate text-xs text-slate-400">
+                            {txTags(t).slice(0, 2).map((x) => <span key={x} className="mr-1 rounded bg-indigo-50 px-1 text-[10px] font-semibold text-indigo-600">#{x}</span>)}
                             {formatTime(t.createdAt)}<span className="md:hidden"> · {cat} · {accountName(t.accountId)}</span>
                           </span>
                         </span>
@@ -667,6 +686,7 @@ function TransactionsInner() {
       )}
 
       <TxDetailModal
+        knownTags={tagCounts.map(([x]) => x)}
         tx={detail}
         accountName={accountName}
         categoryLabel={categoryLabel}

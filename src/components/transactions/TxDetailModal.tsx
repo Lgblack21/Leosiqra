@@ -10,6 +10,7 @@ import { transactionService, type Transaction } from '@/lib/services/transaction
 import type { Place } from '@/lib/services/connectService';
 import { txSourceLabel, txSourceOf } from '@/lib/txSource';
 import { useFeedback } from '@/components/ui/Feedback';
+import { TagEditor } from '@/components/transactions/TagEditor';
 
 // Detail satu transaksi sebagai popup. "Ubah" hanya untuk field yang tidak
 // memengaruhi saldo (catatan, kategori, subkategori, tanggal) — mengubah
@@ -25,6 +26,7 @@ export function TxDetailModal({
   onDelete,
   onDuplicate,
   onAsk,
+  knownTags = [],
 }: {
   tx: Transaction | null;
   accountName: (id?: string) => string;
@@ -35,6 +37,7 @@ export function TxDetailModal({
   onDelete: (t: Transaction) => void;
   onDuplicate?: (t: Transaction) => void;
   onAsk: (t: Transaction) => void;
+  knownTags?: string[];
 }) {
   const { toast } = useFeedback();
   const [editing, setEditing] = useState(false);
@@ -186,6 +189,8 @@ export function TxDetailModal({
                       </div>
                     ))}
                   </div>
+
+                  {tx.id && <TagEditor key={tx.id} tx={tx} suggestions={knownTags} />}
 
                   {place ? (
                     <Link href="/membership/peta" className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50/80 px-4 py-3 text-sm hover:bg-slate-100">
