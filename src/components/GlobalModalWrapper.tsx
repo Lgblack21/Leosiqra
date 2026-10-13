@@ -23,6 +23,7 @@ import { ImportTransactionsModal } from '@/components/modals/ImportTransactionsM
 import { accountService } from '@/lib/services/accountService';
 import { AiChatModal } from '@/components/ai/AiChatModal';
 import { QuickCaptureModal } from '@/components/quick/QuickCaptureModal';
+import { SubscriptionModal } from '@/components/subscriptions/SubscriptionModal';
 import type { Investment } from '@/lib/services/investmentService';
 
 export const GlobalModalWrapper = () => {
@@ -51,6 +52,10 @@ export const GlobalModalWrapper = () => {
   // Catat cepat di web: struk / suara / ketik (tanpa pindah halaman).
   if (activeModal === 'quick_scan' || activeModal === 'quick_voice' || activeModal === 'quick_text') {
     return <QuickCaptureModal mode={activeModal === 'quick_scan' ? 'scan' : activeModal === 'quick_voice' ? 'voice' : 'text'} onClose={closeModal} />;
+  }
+  if (activeModal === 'langganan') {
+    const d = (modalData ?? {}) as { initial?: RecurringTransaction; prefill?: Partial<RecurringTransaction> };
+    return <SubscriptionModal initial={d.initial} prefill={d.prefill} onClose={closeModal} />;
   }
   if (activeModal === 'ai_chat') {
     return <AiChatModal open onClose={closeModal} prompt={typeof modalData?.prompt === 'string' ? modalData.prompt : undefined} />;

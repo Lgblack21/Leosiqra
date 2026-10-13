@@ -21,7 +21,8 @@ export type ModalType =
   | 'ai_chat'
   | 'quick_scan'
   | 'quick_voice'
-  | 'quick_text';
+  | 'quick_text'
+  | 'langganan';
 
 interface ModalContextType {
   activeModal: ModalType;

@@ -6,7 +6,7 @@ import { LayoutGrid, Plus } from 'lucide-react';
 import { cn, formatIDR } from '@/lib/utils';
 import { useFeatures, type FeatureId } from '@/lib/features';
 import { cloudflareApi } from '@/lib/cloudflare-api';
-import { recurringService, type RecurringTransaction } from '@/lib/services/recurringService';
+import { recurringService, recurringPerMonth, type RecurringTransaction } from '@/lib/services/recurringService';
 import { sharedWalletService, type SharedWalletSummary } from '@/lib/services/sharedWalletService';
 import { savingsGoalService, type SavingsGoal } from '@/lib/services/savingsGoalService';
 import { useStreak } from '@/components/streak/CloseDay';
@@ -76,7 +76,7 @@ export function FeatureTiles({ base, className, limit, narrow }: { base: Partial
     const next = [...active].sort((a, b) => +new Date(a.nextDate) - +new Date(b.nextDate))[0];
     const monthly = active
       .filter((r) => r.type === 'Pengeluaran')
-      .reduce((s, r) => s + (r.interval === 'Tahunan' ? r.amount / 12 : r.interval === 'Mingguan' ? r.amount * 4.33 : r.interval === 'Harian' ? r.amount * 30 : r.amount), 0);
+      .reduce((s, r) => s + recurringPerMonth(r), 0);
     stats.rutin = active.length
       ? {
           value: `${formatIDR(monthly)}/bln`,

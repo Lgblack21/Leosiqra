@@ -19,7 +19,7 @@ export interface RecurringTransaction {
   category: string;
   accountId: string;
   amount: number;
-  interval: 'Harian' | 'Mingguan' | 'Bulanan' | 'Tahunan';
+  interval: 'Harian' | 'Mingguan' | 'Bulanan' | '3 Bulanan' | 'Tahunan';
   nextDate: Date;
   note?: string;
   status: 'ACTIVE' | 'PAUSED';
@@ -27,7 +27,28 @@ export interface RecurringTransaction {
   // Hanya relevan untuk type 'Tabungan' — target total goal (opsional),
   // disimpan backend di kolom payload_json (bukan kolom baru).
   targetAmount?: number;
+  // Metadata langganan (juga di payload_json): layanan dari katalog,
+  // kategori layanannya, mulai berlangganan (YYYY-MM-DD), dan
+  // autoRecord=false = cukup diingatkan, tidak dicatat otomatis.
+  service?: string;
+  serviceCategory?: string;
+  since?: string;
+  autoRecord?: boolean;
 }
+
+// Biaya rata-rata per bulan dari satu jadwal.
+export const recurringPerMonth = (r: Pick<RecurringTransaction, 'amount' | 'interval'>) =>
+  r.interval === 'Tahunan' ? r.amount / 12 : r.interval === '3 Bulanan' ? r.amount / 3 : r.interval === 'Mingguan' ? (r.amount * 52) / 12 : r.interval === 'Harian' ? r.amount * 30 : r.amount;
+
+const parseMeta = (raw: unknown): Partial<RecurringTransaction> => {
+  if (typeof raw !== 'string' || !raw) return {};
+  try {
+    const v = JSON.parse(raw);
+    return v && typeof v === 'object' ? v : {};
+  } catch {
+    return {};
+  }
+};
 
 const COLLECTION_NAME = 'recurring';
 
@@ -50,8 +71,14 @@ export const recurringService = {
     const snap = await getDocs(q);
     return snap.docs.map(doc => {
       const data = doc.data();
+      const meta = parseMeta(data.payloadJson);
       return {
         ...data,
+        service: meta.service,
+        serviceCategory: meta.serviceCategory,
+        since: meta.since,
+        autoRecord: meta.autoRecord !== false,
+        targetAmount: data.targetAmount ?? meta.targetAmount,
         id: doc.id,
         nextDate: data.nextDate?.toDate?.() ?? new Date(),
         createdAt: data.createdAt?.toDate?.() ?? new Date()

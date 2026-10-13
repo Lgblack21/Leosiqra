@@ -173,6 +173,7 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null, in
                 <option value="Harian">Harian</option>
                 <option value="Mingguan">Mingguan</option>
                 <option value="Bulanan">Bulanan</option>
+                <option value="3 Bulanan">3 Bulanan</option>
                 <option value="Tahunan">Tahunan</option>
               </select>
               <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />

@@ -6080,18 +6080,57 @@ async function handleListRecurring(request: Request, env: Env) {
 // Target tabungan (fitur goal-based saving) disimpan di kolom payload_json
 // yang sudah ada di skema `recurring` (lihat schema-production.sql) tapi
 // belum pernah dipakai — jadi tidak perlu migrasi kolom baru.
-const buildRecurringPayloadJson = (payload: Record<string, unknown>): string | null => {
-  const targetAmountRaw = pickPayloadValue(payload, "target_amount", "targetAmount");
-  const targetAmount = typeof targetAmountRaw === "number" ? targetAmountRaw : Number(targetAmountRaw);
-  if (!Number.isFinite(targetAmount) || targetAmount <= 0) return null;
-  return JSON.stringify({ targetAmount });
+// Langganan (halaman Langganan) menyimpan metadata ringan di sini juga:
+// layanan dari katalog (`service`), kategori layanannya, tanggal mulai
+// berlangganan, dan `autoRecord: false` = cukup diingatkan, jangan dicatat
+// otomatis. Semua divalidasi ketat — bukan tempat menyimpan data bebas.
+const RECURRING_META_KEYS = ["target_amount", "targetAmount", "service", "service_category", "serviceCategory", "since", "auto_record", "autoRecord"];
+const hasRecurringMeta = (payload: Record<string, unknown>) => RECURRING_META_KEYS.some((k) => payload[k] !== undefined);
+const buildRecurringPayloadJson = (payload: Record<string, unknown>, base: Record<string, unknown> = {}): string | null => {
+  const out: Record<string, unknown> = { ...base };
+  const has = (...keys: string[]) => keys.some((k) => payload[k] !== undefined);
+  if (has("target_amount", "targetAmount")) {
+    const raw = pickPayloadValue(payload, "target_amount", "targetAmount");
+    const targetAmount = typeof raw === "number" ? raw : Number(raw);
+    if (Number.isFinite(targetAmount) && targetAmount > 0) out.targetAmount = targetAmount;
+    else delete out.targetAmount;
+  }
+  if (has("service")) {
+    const v = String(payload.service ?? "").trim().toLowerCase();
+    if (/^[a-z0-9-]{1,40}$/.test(v)) out.service = v;
+    else delete out.service;
+  }
+  if (has("service_category", "serviceCategory")) {
+    const v = String(pickPayloadValue(payload, "service_category", "serviceCategory") ?? "").trim().slice(0, 40);
+    if (v) out.serviceCategory = v;
+    else delete out.serviceCategory;
+  }
+  if (has("since")) {
+    const v = String(payload.since ?? "");
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) out.since = v;
+    else delete out.since;
+  }
+  if (has("auto_record", "autoRecord")) {
+    if (pickPayloadValue(payload, "auto_record", "autoRecord") === false) out.autoRecord = false;
+    else delete out.autoRecord;
+  }
+  return Object.keys(out).length ? JSON.stringify(out) : null;
+};
+const parseRecurringMeta = (raw: unknown): Record<string, unknown> => {
+  if (typeof raw !== "string" || !raw) return {};
+  try {
+    const v = JSON.parse(raw);
+    return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
 };
 
 // Nilai yang boleh disimpan untuk recurring/budget — sama dengan pilihan di
 // form web & mobile. Nominal negatif pada recurring "Pengeluaran" dulu lolos
 // dan membuat cron MENAMBAH saldo tiap periode.
 const RECURRING_TYPES = new Set(["Pengeluaran", "Pemasukan", "Tabungan"]);
-const RECURRING_INTERVALS = new Set(["Harian", "Mingguan", "Bulanan", "Tahunan"]);
+const RECURRING_INTERVALS = new Set(["Harian", "Mingguan", "Bulanan", "3 Bulanan", "Tahunan"]);
 const RECURRING_STATUSES = new Set(["ACTIVE", "PAUSED"]);
 const validateRecurringPayload = (payload: Record<string, unknown>, partial: boolean): string | null => {
   const has = (...keys: string[]) => keys.some((k) => payload[k] !== undefined);
@@ -6169,8 +6208,12 @@ async function handleUpdateRecurring(request: Request, env: Env, recurringId: st
   }
   if (payload.note !== undefined) updates.set("note", payload.note);
   if (payload.status !== undefined) updates.set("status", payload.status);
-  if (payload.target_amount !== undefined || payload.targetAmount !== undefined) {
-    updates.set("payload_json", buildRecurringPayloadJson(payload));
+  if (hasRecurringMeta(payload)) {
+    const current = await env.DB.prepare("SELECT payload_json FROM recurring WHERE id = ? AND user_id = ?")
+      .bind(recurringId, authResult.session.user.id)
+      .first<{ payload_json: string | null }>();
+    if (!current) return json({ error: "Recurring tidak ditemukan." }, { status: 404 });
+    updates.set("payload_json", buildRecurringPayloadJson(payload, parseRecurringMeta(current.payload_json)));
   }
 
   if (updates.size === 0) {
@@ -9630,6 +9673,7 @@ type RecurringRow = {
   interval: string;
   next_date: string;
   note: string | null;
+  payload_json?: string | null;
 };
 
 // Majukan next_date ke kemunculan berikutnya sesuai interval-nya. Rollover
@@ -9647,11 +9691,12 @@ const advanceNextDate = (dateStr: string, interval: string): string => {
     case "Tahunan":
       d.setUTCFullYear(d.getUTCFullYear() + 1);
       break;
+    case "3 Bulanan":
     case "Bulanan":
     default: {
       const day = d.getUTCDate();
       d.setUTCDate(1);
-      d.setUTCMonth(d.getUTCMonth() + 1);
+      d.setUTCMonth(d.getUTCMonth() + (interval === "3 Bulanan" ? 3 : 1));
       const daysInNewMonth = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
       d.setUTCDate(Math.min(day, daysInNewMonth));
       break;
@@ -9678,7 +9723,7 @@ const dayDiff = (fromDay: string, toDay: string) =>
 const processDueRecurringTransactions = async (env: Env) => {
   const todayStr = todayWIB();
   const { results } = await env.DB.prepare(
-    `SELECT id, user_id, name, type, category, account_id, amount, interval, next_date, note
+    `SELECT id, user_id, name, type, category, account_id, amount, interval, next_date, note, payload_json
        FROM recurring
       WHERE status = 'ACTIVE' AND substr(next_date, 1, 10) <= ?`
   )
@@ -9755,6 +9800,23 @@ const processDueRecurringTransactions = async (env: Env) => {
 // kemunculan ini benar-benar dicatat oleh panggilan ini.
 const executeRecurringOccurrence = async (env: Env, row: RecurringRow, occurrenceDay: string): Promise<boolean> => {
   const normalizedType = row.type?.toLowerCase();
+
+  // Langganan dengan "Catat tiap tagihan" mati: cukup ingatkan, saldo tidak
+  // disentuh. Klaim tetap atomik (next_date maju hanya kalau masih nilai lama).
+  if (parseRecurringMeta(row.payload_json).autoRecord === false) {
+    const claim = await env.DB.prepare(
+      "UPDATE recurring SET next_date = ?, updated_at = ? WHERE id = ? AND next_date = ? AND status = 'ACTIVE'"
+    )
+      .bind(advanceNextDate(row.next_date, row.interval), nowIso(), row.id, row.next_date)
+      .run();
+    if (!claim.meta.changes) return false;
+    try {
+      await sendWebPushToUser(env, row.user_id, "Tagihan jatuh tempo", `${row.name} ${formatRupiahForPush(row.amount)} jatuh tempo hari ini. Jangan lupa dicatat kalau sudah dibayar.`, "/membership/langganan");
+    } catch (error) {
+      console.error(`Pengingat langganan ${row.id} gagal:`, error);
+    }
+    return true;
+  }
   let currency = "IDR";
   if (row.account_id) {
     const acc = await env.DB.prepare("SELECT currency FROM accounts WHERE id = ? AND user_id = ?")

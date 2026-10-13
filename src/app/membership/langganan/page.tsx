@@ -8,7 +8,8 @@ import { categoryEmoji, isInvestmentCategory } from '@/lib/categoryEmoji';
 import { useModal } from '@/context/ModalContext';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
-import { recurringService, type RecurringTransaction } from '@/lib/services/recurringService';
+import { recurringService, recurringPerMonth, type RecurringTransaction } from '@/lib/services/recurringService';
+import { ServiceLogo } from '@/components/subscriptions/ServiceLogo';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
 import { LeoMascot } from '@/components/mascot/LeoMascot';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -18,8 +19,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 // langganan" mencari pembayaran berulang di transaksi 4 bulan terakhir yang
 // belum dijadikan transaksi rutin. Menambah tetap lewat form Transaksi Rutin.
 
-const perMonth = (r: RecurringTransaction) =>
-  r.interval === 'Tahunan' ? r.amount / 12 : r.interval === 'Mingguan' ? (r.amount * 52) / 12 : r.interval === 'Harian' ? r.amount * 30 : r.amount;
+const perMonth = recurringPerMonth;
 const norm = (s: string) => s.toLowerCase().replace(/\d+/g, '').replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim();
 const WEEKDAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 
@@ -29,6 +29,10 @@ const dueDaysIn = (r: RecurringTransaction, y: number, m: number) => {
   const days = new Date(y, m + 1, 0).getDate();
   if (r.interval === 'Bulanan') return [Math.min(next.getDate(), days)];
   if (r.interval === 'Tahunan') return next.getMonth() === m ? [next.getDate()] : [];
+  if (r.interval === '3 Bulanan') {
+    const dm = y * 12 + m - (next.getFullYear() * 12 + next.getMonth());
+    return dm >= 0 && dm % 3 === 0 ? [Math.min(next.getDate(), days)] : [];
+  }
   if (r.interval === 'Mingguan') {
     const out: number[] = [];
     const start = new Date(y, m, 1).getTime();
@@ -102,7 +106,7 @@ export default function LanggananPage() {
   const addFromSuggestion = (s: (typeof suggestions)[number]) => {
     const next = new Date(y, m, s.day);
     if (next < now) next.setMonth(next.getMonth() + 1);
-    openModal('recurring', {
+    openModal('langganan', {
       prefill: { name: s.label, type: 'Pengeluaran', category: s.category, accountId: s.accountId, amount: s.amount, interval: 'Bulanan', nextDate: next, status: 'ACTIVE' },
     });
   };
@@ -116,7 +120,7 @@ export default function LanggananPage() {
         </div>
         <div className="flex gap-2">
           <Link href="/membership/recurring" className="rounded-2xl bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200">Kelola</Link>
-          <button type="button" onClick={() => openModal('recurring')} className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800">
+          <button type="button" onClick={() => openModal('langganan')} className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800">
             <Plus size={15} /> Tambah langganan
           </button>
         </div>
@@ -168,12 +172,13 @@ export default function LanggananPage() {
                 const dd = daysUntil(r.nextDate);
                 const paused = r.status !== 'ACTIVE';
                 return (
-                  <li key={r.id} className={cn('flex items-center gap-3 py-3', paused && 'opacity-50')}>
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-lg">{categoryEmoji(r.category || r.name)}</span>
+                  <li key={r.id}>
+                    <button type="button" onClick={() => openModal('langganan', { initial: r })} className={cn('-mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-2xl px-2 py-3 text-left transition-colors hover:bg-slate-50', paused && 'opacity-50')}>
+                    {r.service ? <ServiceLogo service={r.service} name={r.name} size={40} /> : <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-lg">{categoryEmoji(r.category || r.name)}</span>}
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-bold text-slate-800">{r.name}</span>
                       <span className="text-xs text-slate-400">
-                        {r.interval} · {paused ? <span className="inline-flex items-center gap-0.5"><Pause size={10} /> dijeda</span> : new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(r.nextDate))}
+                        {r.interval === '3 Bulanan' ? 'Tiap 3 bulan' : r.interval}{r.autoRecord === false ? ' · pengingat' : ''} · {paused ? <span className="inline-flex items-center gap-0.5"><Pause size={10} /> dijeda</span> : new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(r.nextDate))}
                       </span>
                     </span>
                     <span className="text-right">
@@ -184,6 +189,7 @@ export default function LanggananPage() {
                         </span>
                       )}
                     </span>
+                    </button>
                   </li>
                 );
               })}
