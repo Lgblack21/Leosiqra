@@ -15,7 +15,6 @@ import {
   Waypoints,
   Timer,
   NotebookPen,
-  Calculator,
   Package,
   Sparkle,
   Coins,
@@ -41,7 +40,6 @@ export type FeatureId =
   | 'arus'
   | 'fokus'
   | 'jurnal'
-  | 'investasiku'
   | 'barang'
   | 'koleksi'
   | 'cuan'
@@ -67,7 +65,6 @@ export const FEATURES: FeatureDef[] = [
   { id: 'kekayaan', short: 'Kekayaan', label: 'Kekayaan', description: 'Rekening, tabungan, investasi, dan piutang dikurangi utang — jadi satu angka kekayaan bersih.', icon: Gem, tone: 'bg-violet-50 text-violet-600', href: '/membership/kekayaan', navHrefs: ['/membership/kekayaan'], isNew: true },
   { id: 'tabungan', short: 'Tabungan', label: 'Tabungan & target', description: 'Setoran tabungan dan target seperti dana darurat, rumah, atau liburan.', icon: PiggyBank, tone: 'bg-sky-50 text-sky-600', href: '/membership/tabungan', navHrefs: ['/membership/tabungan'] },
   { id: 'investasi', short: 'Investasi', label: 'Investasi', description: 'Saham, deposito, emas, kripto, dan investasi lain dalam satu portofolio.', icon: TrendingUp, tone: 'bg-emerald-50 text-emerald-600', href: '/membership/investment', navHrefs: ['/membership/investment', '/membership/investasi/saham', '/membership/investasi/deposito', '/membership/investasi/lainnya'] },
-  { id: 'investasiku', short: 'Simulasi investasi', label: 'Simulasi Investasiku', description: 'Uangmu jadi berapa di SBN, reksa dana pasar uang, deposito, atau tabungan — sudah dipotong pajak.', icon: Calculator, tone: 'bg-lime-50 text-lime-600', href: '/membership/investasiku', navHrefs: ['/membership/investasiku'], isNew: true },
   { id: 'kartu', short: 'Kartu kredit', label: 'Kartu kredit', description: 'Limit, tagihan, dan tanggal jatuh tempo tiap kartu kredit atau paylater.', icon: CreditCard, tone: 'bg-amber-50 text-amber-600', href: '/membership/rekening?panel=kartu', navHrefs: ['/membership/cards'] },
   { id: 'hutang', short: 'Hutang & piutang', label: 'Hutang & piutang', description: 'Catat pinjaman dan uang yang kamu pinjamkan, lengkap dengan cicilannya.', icon: HandCoins, tone: 'bg-rose-50 text-rose-500', href: '/membership/transactions/debt', navHrefs: ['/membership/transactions/debt'] },
   { id: 'arus', short: 'Ikuti uangmu', label: 'Ikuti uangmu', description: 'Dari mana uangmu datang dan ke mana perginya, dalam satu gambar.', icon: Waypoints, tone: 'bg-fuchsia-50 text-fuchsia-600', href: '/membership/arus', navHrefs: ['/membership/arus'], isNew: true },
@@ -86,7 +83,7 @@ export const FEATURES: FeatureDef[] = [
 
 // Default dibuat ringkas: fitur keuangan inti nyala, fitur tambahan mati
 // (tinggal dinyalakan di Kelola fitur). Data fitur yang mati tetap aman.
-const DEFAULT_OFF: FeatureId[] = ['arus', 'kanvas', 'fokus', 'jurnal', 'cuan', 'barang', 'koleksi', 'peta', 'investasiku', 'pajak', 'pasar'];
+const DEFAULT_OFF: FeatureId[] = ['arus', 'kanvas', 'fokus', 'jurnal', 'cuan', 'barang', 'koleksi', 'peta', 'pajak', 'pasar'];
 const KEY = 'leo-features:v1';
 const EVENT = 'leo-features-change';
 

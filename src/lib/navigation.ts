@@ -76,7 +76,6 @@ export const sectionTabs: SectionTab[][] = [
     { label: 'Saham', href: '/membership/investasi/saham' },
     { label: 'Deposito', href: '/membership/investasi/deposito' },
     { label: 'Lainnya', href: '/membership/investasi/lainnya' },
-    { label: 'Simulasi', href: '/membership/investasiku' },
     { label: 'Data pasar', href: '/membership/market-data' },
   ],
   [

@@ -70,7 +70,6 @@ export function FeatureTiles({ base, className, limit, narrow }: { base: Partial
   }
   stats.peta = { value: 'Buka peta', sub: 'Tempat belanjamu' };
   stats.kanvas = { value: 'Lihat aliran', sub: 'Uang masuk → rekening → keluar' };
-  stats.investasiku = { value: 'Simulasi', sub: 'SBN vs deposito vs reksa dana' };
   if (recurring) {
     const active = recurring.filter((r) => r.status === 'ACTIVE' && r.type !== 'Tabungan');
     const next = [...active].sort((a, b) => +new Date(a.nextDate) - +new Date(b.nextDate))[0];
