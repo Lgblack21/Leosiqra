@@ -170,7 +170,7 @@ export default function MonthlyDashboard() {
   // Langganan yang jatuh tempo 7 hari ke depan (chip → halaman Langganan).
   const weekBills = recurring.filter((r) => {
     const d = Math.round((new Date(r.nextDate).setHours(0, 0, 0, 0) - new Date(y, m, today).getTime()) / 864e5);
-    return r.status === 'ACTIVE' && r.type === 'Pengeluaran' && d >= 0 && d < 7;
+    return r.status === 'ACTIVE' && r.type === 'Pengeluaran' && d >= 0 && d <= 7;
   }).length;
 
   // ===== Angka "Fitur kamu" (aturan sama dengan halaman Kekayaan)
