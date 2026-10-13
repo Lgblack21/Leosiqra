@@ -17,6 +17,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/panduan/catat-keuangan-rumah-tangga',
     '/panduan/catat-pengeluaran-di-excel',
     '/panduan/catat-keuangan-usaha-kecil',
+    '/panduan/cara-menabung-yang-benar',
     '/auth/register',
     '/hubungi-kami',
     '/privacy',
