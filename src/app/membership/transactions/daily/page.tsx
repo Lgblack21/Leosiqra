@@ -161,7 +161,8 @@ function TransactionsInner() {
   });
   const [kind, setKind] = useState<Kind>('semua');
   const [catFilter, setCatFilter] = useState<string[]>(() => (linkCat ? [linkCat.slice(0, 80)] : []));
-  const [accFilter, setAccFilter] = useState<string[]>([]);
+  // ?account=<id> (mis. dari detail kartu kredit di Dompet).
+  const [accFilter, setAccFilter] = useState<string[]>(() => (params.get('account') ? [params.get('account')!.slice(0, 80)] : []));
   const [srcFilter, setSrcFilter] = useState<TxSource[]>([]);
   const [sort, setSort] = useState<Sort>('terbaru');
   const [shown, setShown] = useState(PAGE);

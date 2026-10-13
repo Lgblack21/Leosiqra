@@ -2,9 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, ChevronDown, ImageIcon, Loader2, ScanLine, X } from 'lucide-react';
-import { cn, formatIDR } from '@/lib/utils';
-import { accountService } from '@/lib/services/accountService';
+import { ArrowLeftRight, Check, ChevronDown, ImageIcon, Loader2, ScanLine, X } from 'lucide-react';
+import { cn, formatIDR, formatMoney, toLocalDateString } from '@/lib/utils';
+import { accountService, type Account } from '@/lib/services/accountService';
+import { transferService } from '@/lib/services/transferService';
+import type { CardCycle } from '@/lib/creditCycle';
+import { AccountLogo } from '@/components/ui/AccountLogo';
 import { matchIndonesianInstitutionLogo } from '@/lib/indonesianBanks';
 import { useFeedback } from '@/components/ui/Feedback';
 import { cloudflareApi } from '@/lib/cloudflare-api';
@@ -435,6 +438,111 @@ export function CardAddModal({ onClose }: { onClose: () => void }) {
         )}
         {(picking === 'cetak' || picking === 'tempo') && (
           <PickList title={picking === 'cetak' ? 'Tanggal cetak' : 'Jatuh tempo'} value={picking === 'cetak' ? statementDay : dueDay} options={days} onPick={(v) => (picking === 'cetak' ? setStatementDay(v) : setDueDay(v))} onClose={() => setPicking(null)} />
+        )}
+      </AnimatePresence>
+    </Shell>
+  );
+}
+
+// ================= Catat pembayaran tagihan kartu =================
+// Bayar tagihan = transfer dari rekening biasa ke kartu lewat
+// POST /api/member/transfer (atomik di server, kurs dikonversi server) — sama
+// dengan PayCardSheet di aplikasi HP. Bukan pengeluaran: belanjanya sudah
+// dihitung waktu kartu dipakai.
+export function PayBillModal({ card, used, cycle, sources, onClose }: {
+  card: Account;
+  used: number;
+  cycle: CardCycle | null;
+  sources: Account[];
+  onClose: () => void;
+}) {
+  const { toast } = useFeedback();
+  const [fromId, setFromId] = useState(sources[0]?.id ?? '');
+  const [mode, setMode] = useState<'tagihan' | 'min' | 'semua' | 'lain'>(cycle && cycle.amountDue > 0 ? 'tagihan' : 'semua');
+  const [other, setOther] = useState('');
+  const [picking, setPicking] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const from = sources.find((a) => a.id === fromId);
+  const cardCur = card.currency || 'IDR';
+  const sameCur = (from?.currency || 'IDR') === cardCur;
+  const stmtMonth = cycle ? new Intl.DateTimeFormat('id-ID', { month: 'short' }).format(new Date(`${cycle.statementDate}T00:00:00`)) : '';
+  const fmtDay = (d: string) => new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(`${d}T00:00:00`));
+  const shortRp = (n: number) => (n >= 1e6 ? `Rp${(n / 1e6).toFixed(2).replace('.', ',').replace(/,?0+$/, '')} jt` : formatMoney(n, cardCur));
+  const options = [
+    cycle && cycle.amountDue > 0 ? { id: 'tagihan' as const, label: `Tagihan ${stmtMonth} · ${shortRp(cycle.amountDue)}`, v: cycle.amountDue } : null,
+    cycle && cycle.minPayment > 0 && cycle.minPayment < cycle.amountDue ? { id: 'min' as const, label: `Minimum · ${shortRp(cycle.minPayment)}`, v: cycle.minPayment } : null,
+    used > 0 ? { id: 'semua' as const, label: `Semua yang terpakai · ${shortRp(used)}`, v: used } : null,
+    { id: 'lain' as const, label: 'Jumlah lain', v: 0 },
+  ].filter(Boolean) as { id: 'tagihan' | 'min' | 'semua' | 'lain'; label: string; v: number }[];
+  const amount = mode === 'lain' ? digits(other) : options.find((o) => o.id === mode)?.v ?? 0;
+
+  const save = async () => {
+    if (!from?.id || !card.id || amount <= 0) return toast.error('Pilih rekening dan jumlahnya.');
+    setSaving(true);
+    try {
+      await transferService.createTransfer({ fromAccountId: from.id, toAccountId: card.id, amount, note: `Bayar tagihan ${card.name}`, date: toLocalDateString() });
+      toast.success(`Pembayaran ${card.name} ${formatMoney(amount, from.currency || 'IDR')} tercatat`);
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Gagal menyimpan pembayaran.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Shell
+      title="Catat pembayaran tagihan"
+      label="Catat pembayaran tagihan"
+      onClose={onClose}
+      footer={<button type="button" onClick={save} disabled={saving || amount <= 0 || !from} className="h-12 w-full rounded-full bg-slate-900 text-sm font-bold text-white hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400">{saving ? 'Menyimpan…' : 'Simpan pembayaran'}</button>}
+    >
+      <div className="flex items-center gap-3 rounded-3xl bg-slate-50 p-4">
+        <AccountLogo acc={card} size={40} />
+        <span className="min-w-0">
+          <span className="block truncate font-bold text-slate-900">{card.name}</span>
+          <span className="block truncate text-[13px] text-slate-500">
+            {cycle ? `Tagihan ${stmtMonth} ${formatMoney(cycle.amountDue, cardCur)} · Jatuh tempo ${fmtDay(cycle.dueDate)}` : `Terpakai ${formatMoney(used, cardCur)}`}
+          </span>
+        </span>
+      </div>
+
+      <div className="mt-4 space-y-4 rounded-3xl bg-slate-50 p-4">
+        <div>
+          <Label>Dibayar dari</Label>
+          <button type="button" onClick={() => setPicking(true)} className="flex w-full items-center gap-3 rounded-2xl bg-slate-100 px-4 py-3 text-left hover:bg-slate-200/70">
+            {from && <AccountLogo acc={from} size={22} />}
+            <span className={cn('flex-1 text-[15px]', from ? 'text-slate-800' : 'text-slate-400')}>{from?.name ?? 'Pilih rekening'}</span>
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-500"><ChevronDown size={14} /></span>
+          </button>
+        </div>
+        <div>
+          <Label>Jumlah</Label>
+          <div className="flex flex-wrap gap-2">
+            {options.map((o) => (
+              <button key={o.id} type="button" onClick={() => setMode(o.id)} className={cn('rounded-full px-3.5 py-2 text-[13px] font-semibold transition-colors', mode === o.id ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200')}>{o.label}</button>
+            ))}
+          </div>
+          <AnimatePresence initial={false}>
+            {mode === 'lain' && (
+              <motion.label initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mt-3 flex items-center gap-2 overflow-hidden rounded-2xl bg-slate-100 px-4 py-3 focus-within:bg-white focus-within:ring-1 focus-within:ring-indigo-300">
+                <span className="text-slate-400">Rp</span>
+                <input autoFocus inputMode="numeric" aria-label="Jumlah lain" value={digits(other) ? digits(other).toLocaleString('id-ID') : ''} onChange={(e) => setOther(e.target.value)} placeholder="0" className="w-full bg-transparent text-[15px] font-semibold text-slate-800 outline-none" />
+              </motion.label>
+            )}
+          </AnimatePresence>
+          {!sameCur && <p className="mt-2 text-xs text-amber-600">Mata uang berbeda — jumlah dikonversi otomatis di server.</p>}
+        </div>
+      </div>
+
+      <div className="mt-4 flex gap-3 rounded-3xl bg-indigo-50 p-4 text-[13px] text-indigo-900">
+        <ArrowLeftRight size={16} className="mt-0.5 shrink-0 text-indigo-500" />
+        <span>Dicatat sebagai pindah dana, bukan pengeluaran. Belanjanya sudah dihitung waktu kartu dipakai.</span>
+      </div>
+
+      <AnimatePresence>
+        {picking && (
+          <PickList title="Dibayar dari" value={fromId} options={sources.map((a) => ({ v: a.id ?? '', label: `${a.name} · ${formatMoney(a.balance || 0, a.currency || 'IDR')}`, icon: <AccountLogo acc={a} size={26} /> }))} onPick={setFromId} onClose={() => setPicking(false)} />
         )}
       </AnimatePresence>
     </Shell>

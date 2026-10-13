@@ -7,7 +7,8 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowLeftRight, ChevronLeft, ChevronRight, CreditCard, Eye, EyeOff, Pencil, Plus, Trash2, X, Receipt,
 } from 'lucide-react';
-import { WalletAddModal, CardAddModal } from '@/components/wallet/WalletForms';
+import { WalletAddModal, CardAddModal, PayBillModal } from '@/components/wallet/WalletForms';
+import { CardDetail } from '@/components/wallet/CardDetail';
 import { AccountLogo } from '@/components/ui/AccountLogo';
 import { accountService, type Account } from '@/lib/services/accountService';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
@@ -109,6 +110,8 @@ function DompetInner() {
   const [walletId, setWalletId] = useState<string | null>(null);
   const [cardsOpen, setCardsOpen] = useState(() => params.get('panel') === 'kartu');
   const [add, setAdd] = useState<null | 'dompet' | 'kartu'>(null);
+  const [payId, setPayId] = useState<string | null>(null);
+  const [cardView, setCardView] = useState<string | null>(null);
 
   const load = useCallback(() => {
     accountService.getUserAccounts('session').then(setAccounts).catch(() => setAccounts([]));
@@ -394,7 +397,7 @@ function DompetInner() {
                   ) : (
                     <p className="text-xs text-slate-500">Atur tanggal cetak & jatuh tempo lewat <b>Ubah</b> supaya tagihan & minimum bayar dihitung otomatis.</p>
                   )}
-                  <button type="button" onClick={() => { setWalletId(null); openModal('topup_transfer'); }} className="flex w-full items-center justify-center gap-1.5 rounded-full bg-slate-900 py-2.5 text-[13px] font-bold text-white hover:bg-slate-800">
+                  <button type="button" onClick={() => { setWalletId(null); setPayId(wallet.id ?? null); }} className="flex w-full items-center justify-center gap-1.5 rounded-full bg-slate-900 py-2.5 text-[13px] font-bold text-white hover:bg-slate-800">
                     <Receipt size={14} /> Bayar tagihan
                   </button>
                 </div>
@@ -430,12 +433,25 @@ function DompetInner() {
       {/* Panel kartu kredit */}
       <Sheet
         open={cardsOpen}
-        onClose={() => setCardsOpen(false)}
+        onClose={() => (cardView ? setCardView(null) : setCardsOpen(false))}
         side="center"
         back
         title="Kartu kredit"
         action={<button type="button" onClick={() => { setCardsOpen(false); setAdd('kartu'); }} aria-label="Tambah kartu kredit" className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200"><Plus size={17} /></button>}
       >
+        {(() => {
+          const c = cardView ? cardInfo.find((x) => x.acc.id === cardView) : null;
+          return c ? (
+            <CardDetail
+              card={c.acc}
+              used={computeCreditUsage(c.acc).used}
+              cycle={c.cycle}
+              transactions={transactions}
+              onPay={() => { setCardsOpen(false); setCardView(null); setPayId(c.acc.id ?? null); }}
+              onEdit={() => { setCardsOpen(false); setCardView(null); setModal({ open: true, account: c.acc }); }}
+            />
+          ) : (
+            <>
         <p className="text-sm text-slate-500">Tagihan kartu</p>
         <p className="mt-1 flex items-start gap-1 leading-none text-slate-900">
           <span className="mt-1 text-base font-bold text-slate-400">Rp</span>
@@ -447,7 +463,7 @@ function DompetInner() {
             <motion.button
               type="button"
               key={c.acc.id}
-              onClick={() => { setCardsOpen(false); setWalletId(c.acc.id!); }}
+              onClick={() => setCardView(c.acc.id!)}
               initial={reduce ? false : { opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.07, type: 'spring', stiffness: 300, damping: 26 }}
@@ -501,11 +517,15 @@ function DompetInner() {
                     <span className="text-xs text-slate-400">{new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(dt)}</span>
                   </span>
                   <span className={cn('text-sm font-bold tabular-nums', c.cycle!.overdue ? 'text-rose-500' : 'text-slate-900')}>{money(c.cycle!.amountDue, c.acc.currency)}</span>
+                  <button type="button" onClick={() => { setCardsOpen(false); setPayId(c.acc.id ?? null); }} className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-bold text-white hover:bg-slate-800">Bayar</button>
                 </li>
               );
             })}
           </ul>
         )}
+            </>
+          );
+        })()}
       </Sheet>
 
       {uid && (
@@ -522,6 +542,19 @@ function DompetInner() {
       <AnimatePresence>
         {add === 'dompet' && <WalletAddModal key="w" onClose={() => setAdd(null)} onCredit={() => setAdd('kartu')} />}
         {add === 'kartu' && <CardAddModal key="k" onClose={() => setAdd(null)} />}
+        {(() => {
+          const card = list.find((a) => a.id === payId);
+          return card ? (
+            <PayBillModal
+              key="p"
+              card={card}
+              used={computeCreditUsage(card).used}
+              cycle={getCardCycle(card, transactions)}
+              sources={list.filter((a) => !isCreditAccountType(a.type))}
+              onClose={() => setPayId(null)}
+            />
+          ) : null;
+        })()}
       </AnimatePresence>
     </div>
   );
