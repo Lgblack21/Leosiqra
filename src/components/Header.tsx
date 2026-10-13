@@ -49,12 +49,12 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
               <span className="tabular-nums">{streak.streak}</span>
             </Link>
           )}
-          <Link href="/input-cepat?start=scan" className="hidden items-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-sm font-bold text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-100 md:flex">
-            <ScanLine size={16} /> Struk
-          </Link>
-          <Link href="/input-cepat?start=voice" className="hidden items-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-sm font-bold text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-100 md:flex">
-            <Mic size={16} /> Suara
-          </Link>
+          <button type="button" onClick={() => openModal('quick_scan')} className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2.5 text-sm font-bold text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-100 md:px-4">
+            <ScanLine size={16} /> <span className="hidden md:inline">Struk</span>
+          </button>
+          <button type="button" onClick={() => openModal('quick_voice')} className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2.5 text-sm font-bold text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-100 md:px-4">
+            <Mic size={16} /> <span className="hidden md:inline">Suara</span>
+          </button>
           <button type="button" onClick={() => openModal('harian')} aria-label="Tambah transaksi" className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-white lg:hidden">
             <Plus size={18} strokeWidth={2.6} />
           </button>

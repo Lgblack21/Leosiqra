@@ -22,6 +22,7 @@ import { CurrencyModal } from '@/components/modals/CurrencyModal';
 import { ImportTransactionsModal } from '@/components/modals/ImportTransactionsModal';
 import { accountService } from '@/lib/services/accountService';
 import { AiChatModal } from '@/components/ai/AiChatModal';
+import { QuickCaptureModal } from '@/components/quick/QuickCaptureModal';
 import type { Investment } from '@/lib/services/investmentService';
 
 export const GlobalModalWrapper = () => {
@@ -47,6 +48,10 @@ export const GlobalModalWrapper = () => {
   if (!activeModal || !user) return null;
 
   // Tanya Leo (popup chat) — dirender sendiri, tidak perlu data rekening.
+  // Catat cepat di web: struk / suara / ketik (tanpa pindah halaman).
+  if (activeModal === 'quick_scan' || activeModal === 'quick_voice' || activeModal === 'quick_text') {
+    return <QuickCaptureModal mode={activeModal === 'quick_scan' ? 'scan' : activeModal === 'quick_voice' ? 'voice' : 'text'} onClose={closeModal} />;
+  }
   if (activeModal === 'ai_chat') {
     return <AiChatModal open onClose={closeModal} prompt={typeof modalData?.prompt === 'string' ? modalData.prompt : undefined} />;
   }

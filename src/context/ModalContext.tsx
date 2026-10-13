@@ -18,7 +18,10 @@ export type ModalType =
   | 'kartu'
   | 'currency'
   | 'import_mutasi'
-  | 'ai_chat';
+  | 'ai_chat'
+  | 'quick_scan'
+  | 'quick_voice'
+  | 'quick_text';
 
 interface ModalContextType {
   activeModal: ModalType;

@@ -18,7 +18,7 @@ export type TileStat = { value: string; sub?: string; progress?: number };
 // "Fitur kamu" — satu kotak per fitur yang aktif, masing-masing dengan angka
 // hidup. Angka yang sudah dihitung Dashboard dikirim lewat `base`; sisanya
 // (rutin, dompet bersama, target tabungan, streak) dimuat di sini. Semua baca saja.
-export function FeatureTiles({ base, className, limit }: { base: Partial<Record<FeatureId, TileStat>>; className?: string; limit?: number }) {
+export function FeatureTiles({ base, className, limit, narrow }: { base: Partial<Record<FeatureId, TileStat>>; className?: string; limit?: number; narrow?: boolean }) {
   const { enabled, isOn } = useFeatures();
   const { data: streak } = useStreak();
   const [recurring, setRecurring] = useState<RecurringTransaction[] | null>(null);
@@ -108,7 +108,7 @@ export function FeatureTiles({ base, className, limit }: { base: Partial<Record<
         <h2 className="text-lg font-extrabold tracking-tight text-slate-900">Fitur kamu</h2>
         <Link href="/membership/fitur" className="text-sm font-bold text-indigo-600 hover:underline">Atur fitur</Link>
       </div>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+      <div className={cn('grid grid-cols-2 gap-3', !narrow && 'md:grid-cols-3')}>
         {(limit ? enabled.slice(0, limit) : enabled).map((f) => {
           const st = stats[f.id];
           return (
