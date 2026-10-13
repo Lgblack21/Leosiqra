@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion';
 import {
-  Area, AreaChart, Bar, BarChart, Cell, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  Area, AreaChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { cn, formatIDR } from '@/lib/utils';
@@ -44,6 +44,7 @@ export default function LaporanPage() {
   const [day, setDay] = useState<{ d: number; x: number; y: number } | null>(null);
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const [review, setReview] = useState<Date | null>(null);
+  const [selM, setSelM] = useState<number | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -124,10 +125,17 @@ export default function LaporanPage() {
       e.count++;
       byPlace.set(label.toLowerCase(), e);
     }
+    // Kategori × bulan (tahunan): 8 kategori teratas.
+    const catMonths = cats.slice(0, 8).map((c) => {
+      const vals = Array.from({ length: 12 }, () => 0);
+      for (const t of exp) if ((t.category || 'Lainnya') === c.name) vals[new Date(t.date).getMonth()] += toIdr(t);
+      return { name: c.name, total: c.value, vals };
+    });
+
     const places = [...byPlace.values()].sort((x, y) => y.total - x.total).slice(0, 8);
     const biggest = [...exp].sort((x, y) => toIdr(y) - toIdr(x)).slice(0, 5);
 
-    return { cur, exp, total, income, units, elapsed, series, trend, prevTotal, prevSame, cats, top, stacked, places, biggest };
+    return { cur, exp, total, income, units, elapsed, series, trend, prevTotal, prevSame, cats, top, stacked, catMonths, places, biggest };
     // now hanya tanggal hari ini
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [all, mode, month, year, isCurrent]);
@@ -142,10 +150,11 @@ export default function LaporanPage() {
   const dayTx = day ? r.cur.filter((t) => t.type !== 'debt' && new Date(t.date).getDate() === day.d) : [];
   const dayOut = dayTx.filter(isExpense);
   const dayTop = [...dayOut.reduce((m, t) => m.set(t.category, (m.get(t.category) ?? 0) + 1), new Map<string, number>())].sort((x, y) => y[1] - x[1])[0]?.[0];
-  const avgMonth = mode === 'tahun' ? r.total / Math.max(1, r.elapsed) : 0;
-  const card = 'rounded-[26px] bg-white p-5 ring-1 ring-slate-100 md:p-6';
   const key = `${mode}-${year}-${month}`;
-  const catHref = (name: string) => `/membership/transactions/daily?category=${encodeURIComponent(name)}${mode === 'tahun' ? '&period=tahun' : !isCurrent ? '&period=semua' : ''}`;
+  const catHref = (name: string, m?: number) =>
+    `/membership/transactions/daily?category=${encodeURIComponent(name)}${
+      m !== undefined ? `&month=${year}-${String(m + 1).padStart(2, '0')}` : mode === 'tahun' ? `&year=${year}` : !isCurrent ? `&month=${year}-${String(month + 1).padStart(2, '0')}` : ''
+    }`;
 
   return (
     <div className="mx-auto max-w-6xl space-y-5 pb-12" onClick={() => setDay(null)}>
@@ -206,28 +215,7 @@ export default function LaporanPage() {
                 <div className="mt-2 flex items-center gap-1 text-[11px] text-slate-400">sedikit {HEAT.map((h) => <span key={h} className={cn('h-2.5 w-4 rounded', h)} />)} banyak</div>
               </div>
             ) : (
-              <div className="mt-6">
-                <p className="text-xl font-extrabold tracking-tight text-slate-900">Trend bulanan</p>
-                <p className="text-sm text-slate-500">rata-rata {short(avgMonth)}/bulan</p>
-                <div className="mt-3 h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={r.stacked} margin={{ top: 10, right: 4, bottom: 0, left: 0 }}>
-                      <XAxis dataKey="m" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-                      <YAxis tickFormatter={(v) => short(Number(v)).replace('Rp', '')} tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={44} />
-                      <Tooltip cursor={{ fill: '#f1f5f9' }} formatter={(v, n) => [formatIDR(Number(v)), String(n)]} />
-                      <ReferenceLine y={avgMonth} stroke="#94a3b8" strokeDasharray="4 4" label={{ value: `rata-rata ${short(avgMonth)}`, position: 'insideTopRight', fontSize: 10, fill: '#64748b' }} />
-                      {[...r.top, 'Lainnya'].map((c, i) => (
-                        <Bar key={c} dataKey={c} stackId="a" fill={c === 'Lainnya' ? '#cbd5e1' : r.cats[i]?.color} radius={i === r.top.length ? [6, 6, 0, 0] : 0} />
-                      ))}
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500">
-                  {[...r.top, 'Lainnya'].map((c, i) => (
-                    <span key={c} className="flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ background: c === 'Lainnya' ? '#cbd5e1' : r.cats[i]?.color }} />{c}</span>
-                  ))}
-                </div>
-              </div>
+              <YearBars r={r} sel={selM} onSel={setSelM} elapsed={isCurrent ? r.elapsed : 12} />
             )}
 
             <div className="mt-6">
@@ -258,6 +246,10 @@ export default function LaporanPage() {
                     <Area type="monotone" dataKey="ini" stroke="#6366f1" strokeWidth={2.5} fill="url(#lpg)" dot={false} connectNulls={false} isAnimationActive={!reduce} animationDuration={900} />
                   </AreaChart>
                 </ResponsiveContainer>
+              </div>
+              <div className="mt-1 flex justify-between text-[11px] text-slate-400">
+                <span>{mode === 'bulan' ? 1 : 'Jan'}</span>
+                <span>{mode === 'bulan' ? r.units : 'Des'}</span>
               </div>
               {r.prevSame > 0 && (
                 <p className={cn('mt-2 flex items-center gap-1 text-sm font-semibold', diff > 0 ? 'text-rose-500' : 'text-emerald-600')}>
@@ -342,14 +334,69 @@ export default function LaporanPage() {
         </div>
       </motion.div>
 
-      <motion.div key={`${key}-b`} initial={reduce ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.08 }} className="grid gap-5 md:grid-cols-2">
-        <div className={card}>
-          <p className="font-bold text-slate-900">Tempat teratas</p>
-          <p className="mb-2 text-xs text-slate-400">Total per tempat, menurut catatan transaksi</p>
+      {mode === 'tahun' && r.catMonths.length > 0 && (
+        <motion.section key={`${key}-cm`} initial={reduce ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.05 }}>
+          <p className="text-xl font-extrabold tracking-tight text-slate-900">Kategori dari waktu ke waktu</p>
+          <p className="text-sm text-slate-500">Makin gelap berarti bulan itu makin besar untuk kategori tersebut</p>
+          <div className="mt-3 overflow-x-auto rounded-3xl bg-slate-100/70 p-2">
+            <table className="w-full min-w-[760px] border-separate border-spacing-y-1 text-sm">
+              <thead>
+                <tr className="text-xs text-slate-500">
+                  <th />
+                  {MONTHS.map((m) => <th key={m} className="font-medium">{m}</th>)}
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {r.catMonths.map((c, ci) => {
+                  const max = Math.max(1, ...c.vals);
+                  return (
+                    <motion.tr key={c.name} initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: ci * 0.04 }} className="group">
+                      <td className="rounded-l-2xl py-1.5 pl-3 pr-2 group-hover:bg-white">
+                        <span className="flex items-center gap-2 whitespace-nowrap font-medium text-slate-800">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-sm">{categoryEmoji(c.name)}</span>{c.name}
+                        </span>
+                      </td>
+                      {c.vals.map((v, mi) => {
+                        const f = v / max;
+                        const future = isCurrent && mi > now.getMonth();
+                        return (
+                          <td key={mi} className="px-1 py-1.5 text-center group-hover:bg-white">
+                            {v > 0 ? (
+                              <Link href={catHref(c.name, mi)} title={`${c.name} · ${MONTHS[mi]} · ${formatIDR(v)}`} className="block">
+                                <motion.span
+                                  initial={reduce ? false : { scale: 0.6, opacity: 0 }}
+                                  animate={{ scale: 1, opacity: 1 }}
+                                  transition={{ delay: ci * 0.04 + mi * 0.015 }}
+                                  whileHover={{ scale: 1.12 }}
+                                  className="mx-auto block h-7 w-10 rounded-lg"
+                                  style={{ background: `rgba(99,102,241,${0.18 + f * 0.82})` }}
+                                />
+                              </Link>
+                            ) : (
+                              <span className={cn('mx-auto block h-7 w-10 rounded-lg', future ? 'bg-transparent' : 'bg-slate-200/70')} />
+                            )}
+                          </td>
+                        );
+                      })}
+                      <td className="whitespace-nowrap rounded-r-2xl py-1.5 pl-2 pr-3 text-right font-bold text-slate-900 tabular-nums group-hover:bg-white">{formatIDR(c.total)}</td>
+                    </motion.tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </motion.section>
+      )}
+
+      <motion.div key={`${key}-b`} initial={reduce ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.08 }} className="grid gap-8 md:grid-cols-2">
+        <div>
+          <p className="text-xl font-extrabold tracking-tight text-slate-900">Tempat teratas</p>
+          <p className="mb-3 text-sm text-slate-500">Total per tempat, menurut catatan transaksi</p>
           {r.places.length === 0 ? <p className="py-3 text-sm text-slate-500">Belum ada data.</p> : (
-            <ul className="divide-y divide-slate-100">
+            <ul className="divide-y divide-slate-200/70 rounded-3xl bg-slate-100/70 px-4">
               {r.places.map((p, i) => (
-                <li key={p.name} className="flex items-center gap-3 py-2.5">
+                <li key={p.name} className="flex items-center gap-3 py-3">
                   <span className="w-5 text-center text-sm font-bold text-slate-400">{i + 1}</span>
                   <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800">{p.name}</span>
                   <span className="text-xs text-slate-400">{p.count}×</span>
@@ -359,18 +406,18 @@ export default function LaporanPage() {
             </ul>
           )}
         </div>
-        <div className={card}>
-          <p className="font-bold text-slate-900">Pengeluaran terbesar</p>
-          <p className="mb-2 text-xs text-slate-400">Pembayaran tunggal terbesar</p>
+        <div>
+          <p className="text-xl font-extrabold tracking-tight text-slate-900">Pengeluaran terbesar</p>
+          <p className="mb-3 text-sm text-slate-500">Pembayaran tunggal terbesar</p>
           {r.biggest.length === 0 ? <p className="py-3 text-sm text-slate-500">Belum ada data.</p> : (
-            <ul className="divide-y divide-slate-100">
+            <ul className="divide-y divide-slate-200/70 rounded-3xl bg-slate-100/70 px-4">
               {r.biggest.map((t, i) => (
-                <li key={t.id || i} className="flex items-center gap-3 py-2.5">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-50">{categoryEmoji(t.category)}</span>
+                <li key={t.id || i} className="flex items-center gap-3 py-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white">{categoryEmoji(t.category)}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-slate-800">{t.note || t.category}</span>
                     <span className="block truncate text-xs text-slate-400">
-                      {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(t.date))} · {t.category}{accountName(t.accountId) ? ` · ${accountName(t.accountId)}` : ''}
+                      {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(t.date))}, {new Date(t.date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} · {t.category}{accountName(t.accountId) ? ` · ${accountName(t.accountId)}` : ''}
                     </span>
                   </span>
                   <span className="text-sm font-bold text-slate-900 tabular-nums">−{formatIDR(toIdr(t))}</span>
@@ -418,6 +465,98 @@ export default function LaporanPage() {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+type Report = { stacked: Record<string, number | string>[]; top: string[]; cats: { name: string; value: number; color: string }[]; total: number };
+
+// Trend bulanan (tahunan): batang bertumpuk per bulan — 4 kategori teratas +
+// Lainnya, garis rata-rata, bulan terpilih disorot (ketuk batang untuk memilih).
+function YearBars({ r, sel, onSel, elapsed }: { r: Report; sel: number | null; onSel: (m: number) => void; elapsed: number }) {
+  const reduce = useReducedMotion();
+  const keys = [...r.top, 'Lainnya'];
+  const colorOf = (k: string, i: number) => (k === 'Lainnya' ? '#a1a1aa' : r.cats[i]?.color ?? '#94a3b8');
+  const totals = r.stacked.map((row) => keys.reduce((s, k) => s + (Number(row[k]) || 0), 0));
+  // Rata-rata bulan yang ada pengeluarannya (bulan kosong sebelum mulai mencatat tidak dihitung).
+  const used = totals.slice(0, elapsed).filter((v) => v > 0);
+  const avg = used.reduce((s, v) => s + v, 0) / Math.max(1, used.length);
+  const rawMax = Math.max(1, ...totals);
+  const step = 10 ** Math.floor(Math.log10(rawMax));
+  const max = Math.ceil(rawMax / step) * step;
+  const active = sel ?? Math.max(0, elapsed - 1);
+  const fullMonth = new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(2000, active, 1));
+  const tick = (v: number) => (v >= 1e6 ? `${Math.round(v / 1e5) / 10} jt`.replace('.', ',') : v >= 1e3 ? `${Math.round(v / 1e3)} rb` : String(v));
+
+  return (
+    <div className="mt-6">
+      <p className="text-xl font-extrabold tracking-tight text-slate-900">Trend bulanan</p>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.p key={active} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }} className="text-sm text-slate-500">
+          {fullMonth} · {formatIDR(totals[active] ?? 0)}
+        </motion.p>
+      </AnimatePresence>
+
+      <div className="relative mt-4 flex h-60 gap-2">
+        <div className="flex w-9 shrink-0 flex-col justify-between pb-6 text-[10px] text-slate-400">
+          <span>{tick(max)}</span>
+          <span>{tick(max / 2)}</span>
+          <span>0</span>
+        </div>
+        <div className="relative flex flex-1 items-stretch gap-1">
+          {avg > 0 && (
+            <div className="pointer-events-none absolute inset-x-0 z-10 border-t border-dashed border-slate-400" style={{ bottom: `calc(24px + (100% - 32px) * ${avg / max})` }}>
+              <span className="absolute -top-5 right-0 rounded-full bg-white/90 px-1.5 text-[10px] font-semibold text-slate-500">rata-rata {formatIDR(avg).replace(/\s/g, '')}</span>
+            </div>
+          )}
+          {r.stacked.map((row, mi) => {
+            const future = mi >= elapsed;
+            const isSel = mi === active;
+            return (
+              <button
+                key={mi}
+                type="button"
+                disabled={future}
+                aria-label={`${MONTHS[mi]} ${formatIDR(totals[mi])}`}
+                aria-pressed={isSel}
+                onClick={() => onSel(mi)}
+                className={cn('group flex flex-1 flex-col items-center rounded-2xl pt-2 transition-colors', isSel ? 'bg-slate-100' : 'hover:bg-slate-50')}
+              >
+                <div className="flex w-full flex-1 flex-col-reverse items-center gap-[2px] px-1.5 md:px-3">
+                  {future ? (
+                    <span className="h-1 w-full rounded-full bg-slate-100" />
+                  ) : (
+                    keys.map((k, ki) => {
+                      const v = Number(row[k]) || 0;
+                      if (!v) return null;
+                      return (
+                        <motion.span
+                          key={k}
+                          title={`${k} · ${formatIDR(v)}`}
+                          initial={reduce ? false : { height: 0 }}
+                          animate={{ height: `${(v / max) * 100}%` }}
+                          transition={{ duration: 0.5, delay: mi * 0.03, ease: 'easeOut' }}
+                          className="w-full rounded-md"
+                          style={{ background: colorOf(k, ki), minHeight: 3 }}
+                        />
+                      );
+                    })
+                  )}
+                </div>
+                <span className={cn('mt-1.5 h-[18px] text-[11px]', isSel ? 'font-bold text-slate-900' : future ? 'text-slate-300' : 'text-slate-500')}>{MONTHS[mi]}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {keys.map((k, i) => (
+          <span key={k} className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs text-slate-600 ring-1 ring-slate-200">
+            <span className="h-2 w-2 rounded-full" style={{ background: colorOf(k, i) }} />{k}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

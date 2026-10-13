@@ -31,7 +31,8 @@ import { TX_SOURCES, txSourceOf, type TxSource } from '@/lib/txSource';
 // animasi halus di semua perpindahan. Data tetap realtime; hapus membalik
 // saldo di server (atomik); duplikat lewat quick-transaction (atomik).
 
-type Period = 'bulan' | '30' | '90' | 'tahun' | 'semua' | 'hari';
+// bulan-x / tahun-x = bulan atau tahun tertentu (dari tautan Laporan), memakai selectedDate.
+type Period = 'bulan' | '30' | '90' | 'tahun' | 'semua' | 'hari' | 'bulan-x' | 'tahun-x';
 type Kind = 'semua' | 'pengeluaran' | 'pemasukan' | 'transfer';
 type Sort = 'terbaru' | 'terbesar' | 'terkecil';
 
@@ -62,6 +63,8 @@ const rangeOf = (period: Period, day: Date): { start?: Date; end?: Date } => {
   if (period === '30') return { start: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29) };
   if (period === '90') return { start: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 89) };
   if (period === 'tahun') return { start: new Date(now.getFullYear(), 0, 1) };
+  if (period === 'bulan-x') return { start: new Date(day.getFullYear(), day.getMonth(), 1), end: new Date(day.getFullYear(), day.getMonth() + 1, 0, 23, 59, 59, 999) };
+  if (period === 'tahun-x') return { start: new Date(day.getFullYear(), 0, 1), end: new Date(day.getFullYear(), 11, 31, 23, 59, 59, 999) };
   return {};
 };
 
@@ -135,13 +138,21 @@ function TransactionsInner() {
   const linkDate = params.get('date');
   const linkCat = params.get('category');
   const linkPeriod = params.get('period');
+  // ?month=YYYY-MM atau ?year=YYYY → rentang bulan/tahun tertentu.
+  const linkMonth = /^\d{4}-\d{2}$/.test(params.get('month') ?? '') ? params.get('month')! : null;
+  const linkYear = /^\d{4}$/.test(params.get('year') ?? '') ? Number(params.get('year')) : null;
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [period, setPeriod] = useState<Period>(() => (linkDate && /^\d{4}-\d{2}-\d{2}$/.test(linkDate) ? 'hari' : linkPeriod === 'tahun' || linkPeriod === 'semua' ? linkPeriod : 'bulan'));
+  const [period, setPeriod] = useState<Period>(() => (linkDate && /^\d{4}-\d{2}-\d{2}$/.test(linkDate) ? 'hari' : linkMonth ? 'bulan-x' : linkYear ? 'tahun-x' : linkPeriod === 'tahun' || linkPeriod === 'semua' ? linkPeriod : 'bulan'));
   const [selectedDate, setSelectedDate] = useState(() => {
+    if (linkMonth) {
+      const [y, m] = linkMonth.split('-').map(Number);
+      return new Date(y, m - 1, 1);
+    }
+    if (linkYear) return new Date(linkYear, 0, 1);
     if (linkDate && /^\d{4}-\d{2}-\d{2}$/.test(linkDate)) {
       const [y, m, d] = linkDate.split('-').map(Number);
       return new Date(y, m - 1, d);
@@ -468,7 +479,12 @@ function TransactionsInner() {
           />
         </label>
         <div className="no-scrollbar flex max-w-full items-center gap-2 overflow-x-auto py-0.5">
-          <ChipGroup id="period" items={PERIODS} value={period === 'hari' ? null : period} onChange={(p) => { setPeriod(p); setShown(PAGE); }} />
+          {(period === 'bulan-x' || period === 'tahun-x') && (
+            <button type="button" onClick={() => { setPeriod('bulan'); setSelectedDate(new Date()); setShown(PAGE); }} className="flex shrink-0 items-center gap-1.5 rounded-full bg-slate-900 px-3.5 py-1.5 text-[13px] font-semibold text-white" title="Kembali ke bulan ini">
+              {period === 'bulan-x' ? new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(selectedDate) : selectedDate.getFullYear()} <X size={13} />
+            </button>
+          )}
+          <ChipGroup id="period" items={PERIODS} value={period === 'hari' || period === 'bulan-x' || period === 'tahun-x' ? null : period} onChange={(p) => { setPeriod(p); setShown(PAGE); }} />
           <span className={cn('flex shrink-0 items-center rounded-full text-[13px] font-semibold transition-colors [&_button]:!py-1 [&_button]:!text-[12px]', period === 'hari' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700')}>
             <span className="[&_button]:!border-0 [&_button]:!bg-transparent [&_button]:!shadow-none">
               <DatePicker value={selectedDate} onChange={(d) => { setSelectedDate(d); setPeriod('hari'); setShown(PAGE); }} />
