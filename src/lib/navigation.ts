@@ -69,11 +69,8 @@ export const sectionTabs: SectionTab[][] = [
     { label: 'Kanvas', href: '/membership/kanvas' },
     { label: 'Pajak', href: '/membership/pajak-center' },
   ],
-  [
-    { label: 'Rekening', href: '/membership/rekening' },
-    { label: 'Tabungan', href: '/membership/tabungan' },
-    { label: 'Dompet bersama', href: '/membership/dompet-bersama' },
-  ],
+  // Tab Dompet (Rekening · Tabungan · Dompet bersama) DISEMBUNYIKAN — Tabungan
+  // & Dompet bersama tetap ada (sidebar Fitur / URL), cuma tidak tampil sebagai tab.
   [
     { label: 'Ringkasan', href: '/membership/investment' },
     { label: 'Saham', href: '/membership/investasi/saham' },
