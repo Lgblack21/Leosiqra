@@ -19,6 +19,11 @@ export interface Account {
   dueDay?: number;
   minPaymentPercent?: number;
   minPaymentAmount?: number;
+  // Identitas kartu kredit (opsional): 4 digit terakhir, jaringan, pengingat
+  // jatuh tempo dalam hari (-1 = mati).
+  last4?: string;
+  network?: string;
+  reminderDays?: number;
   // Urutan tampil rekening (drag-to-reorder di Kartu Saya) — dipakai semua
   // halaman/dropdown yang menampilkan daftar rekening.
   sortOrder?: number;
@@ -32,6 +37,9 @@ export interface AccountPayloadFields {
   dueDay?: number;
   minPaymentPercent?: number;
   minPaymentAmount?: number;
+  last4?: string;
+  network?: string;
+  reminderDays?: number;
 }
 
 // Satu-satunya parser payload_json rekening — dipakai service ini dan
@@ -49,6 +57,9 @@ export const parseAccountPayload = (payloadJson: unknown): AccountPayloadFields 
       dueDay: num(p.dueDay),
       minPaymentPercent: num(p.minPaymentPercent),
       minPaymentAmount: num(p.minPaymentAmount),
+      last4: typeof p.last4 === 'string' ? p.last4 : undefined,
+      network: typeof p.network === 'string' ? p.network : undefined,
+      reminderDays: num(p.reminderDays),
     };
   } catch {
     // payload_json tidak valid JSON — abaikan.
@@ -62,6 +73,9 @@ const cycleFieldsForApi = (data: Partial<Account>) => ({
   ...('dueDay' in data ? { due_day: data.dueDay ?? null } : {}),
   ...('minPaymentPercent' in data ? { min_payment_percent: data.minPaymentPercent ?? null } : {}),
   ...('minPaymentAmount' in data ? { min_payment_amount: data.minPaymentAmount ?? null } : {}),
+  ...('last4' in data ? { card_last4: data.last4 ?? null } : {}),
+  ...('network' in data ? { card_network: data.network ?? null } : {}),
+  ...('reminderDays' in data ? { reminder_days: data.reminderDays ?? null } : {}),
 });
 
 export const accountService = {

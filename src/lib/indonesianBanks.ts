@@ -21,6 +21,7 @@ const BANK_ENTRIES: InstitutionEntry[] = [
   { domain: 'bankmega.com', aliases: ['bank mega', 'mega'] },
   { domain: 'sinarmas.co.id', aliases: ['sinarmas'] },
   { domain: 'btn.co.id', aliases: ['btn'] },
+  { domain: 'bankbsi.co.id', aliases: ['bsi', 'bank syariah indonesia'] },
   { domain: 'kbbukopin.co.id', aliases: ['bukopin', 'kb bank'] },
   { domain: 'panin.co.id', aliases: ['panin'] },
   { domain: 'bankbjb.co.id', aliases: ['bjb', 'bank jabar'] },
@@ -35,7 +36,7 @@ const BANK_ENTRIES: InstitutionEntry[] = [
 ];
 
 const EWALLET_ENTRIES: InstitutionEntry[] = [
-  { domain: 'gojek.com', aliases: ['gopay'] },
+  { domain: 'gopay.co.id', aliases: ['gopay'] },
   { domain: 'ovo.id', aliases: ['ovo'] },
   { domain: 'dana.id', aliases: ['dana'] },
   { domain: 'shopeepay.co.id', aliases: ['shopeepay', 'shopee pay'] },

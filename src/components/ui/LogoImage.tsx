@@ -54,6 +54,11 @@ export const LogoImage = ({ src, alt, fallbackText, className, fallbackIcon }: L
         console.warn(`Failed to load image: ${resolvedSrc}`);
         setFailedSrc(resolvedSrc);
       }}
+      // Favicon Google untuk domain tanpa ikon = bola dunia 16px (status 404
+      // tapi tetap gambar, jadi onError tidak jalan) — anggap gagal.
+      onLoad={(e) => {
+        if (e.currentTarget.naturalWidth > 0 && e.currentTarget.naturalWidth <= 16) setFailedSrc(resolvedSrc);
+      }}
       referrerPolicy="no-referrer"
     />
   );

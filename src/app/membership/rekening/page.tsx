@@ -7,6 +7,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowLeftRight, ChevronRight, CreditCard, Eye, EyeOff, Pencil, Plus, Trash2, X, Receipt,
 } from 'lucide-react';
+import { WalletAddModal, CardAddModal } from '@/components/wallet/WalletForms';
 import { AccountLogo } from '@/components/ui/AccountLogo';
 import { accountService, type Account } from '@/lib/services/accountService';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
@@ -39,7 +40,7 @@ const fmtDue = (s: string) => {
 
 const AccLogo = ({ acc, size = 40 }: { acc: Account; size?: number }) => <AccountLogo acc={acc} size={size} />;
 
-function Sheet({ open, onClose, title, children, side = 'right' }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode; side?: 'right' | 'center' }) {
+function Sheet({ open, onClose, title, children, side = 'right', action }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode; side?: 'right' | 'center'; action?: React.ReactNode }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -59,7 +60,8 @@ function Sheet({ open, onClose, title, children, side = 'right' }: { open: boole
             className="absolute bottom-0 right-0 top-0 flex w-full max-w-md flex-col overflow-hidden bg-white shadow-2xl sm:m-3 sm:rounded-[28px]"
           >
             <div className="flex items-center justify-between px-5 pb-2 pt-5">
-              <p className="text-lg font-extrabold text-slate-900">{title}</p>
+              <p className="flex-1 text-lg font-extrabold text-slate-900">{title}</p>
+              {action}
               <button type="button" onClick={onClose} aria-label="Tutup" className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X size={18} /></button>
             </div>
             <div className="flex-1 overflow-y-auto px-5 pb-5">{children}</div>
@@ -100,6 +102,7 @@ function DompetInner() {
   const [modal, setModal] = useState<{ open: boolean; account: Account | null; type?: Account['type'] }>({ open: false, account: null });
   const [walletId, setWalletId] = useState<string | null>(null);
   const [cardsOpen, setCardsOpen] = useState(() => params.get('panel') === 'kartu');
+  const [add, setAdd] = useState<null | 'dompet' | 'kartu'>(null);
 
   const load = useCallback(() => {
     accountService.getUserAccounts('session').then(setAccounts).catch(() => setAccounts([]));
@@ -185,7 +188,7 @@ function DompetInner() {
         <button type="button" onClick={() => openModal('topup_transfer')} className={cn(btn, 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50')}>
           <ArrowLeftRight size={14} /> Transfer
         </button>
-        <button type="button" onClick={() => setModal({ open: true, account: null })} className={cn(btn, 'bg-slate-900 text-white hover:-translate-y-0.5 hover:bg-slate-800')}>
+        <button type="button" onClick={() => setAdd('dompet')} className={cn(btn, 'bg-slate-900 text-white hover:-translate-y-0.5 hover:bg-slate-800')}>
           <Plus size={15} /> Tambah dompet
         </button>
       </div>
@@ -221,7 +224,7 @@ function DompetInner() {
             {accounts === null ? (
               <Skeleton className="h-40 rounded-[22px]" />
             ) : wallets.length === 0 ? (
-              <button type="button" onClick={() => setModal({ open: true, account: null })} className="flex w-full items-center justify-center gap-2 rounded-[22px] border-2 border-dashed border-slate-200 py-8 text-sm font-bold text-slate-500 hover:border-indigo-300 hover:text-indigo-600">
+              <button type="button" onClick={() => setAdd('dompet')} className="flex w-full items-center justify-center gap-2 rounded-[22px] border-2 border-dashed border-slate-200 py-8 text-sm font-bold text-slate-500 hover:border-indigo-300 hover:text-indigo-600">
                 <Plus size={16} /> Tambah dompet pertama
               </button>
             ) : (
@@ -255,7 +258,7 @@ function DompetInner() {
               {cards.length > 0 && <button type="button" onClick={() => setCardsOpen(true)} className="text-[13px] font-bold text-slate-600 hover:text-slate-900">Lihat semua</button>}
             </div>
             {cards.length === 0 ? (
-              <button type="button" onClick={() => openModal('kartu')} className="flex w-full items-center gap-3 rounded-[22px] bg-slate-100/70 px-4 py-4 text-left hover:bg-slate-100">
+              <button type="button" onClick={() => setAdd('kartu')} className="flex w-full items-center gap-3 rounded-[22px] bg-slate-100/70 px-4 py-4 text-left hover:bg-slate-100">
                 <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-rose-500 shadow-sm"><CreditCard size={20} /></span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-bold text-slate-800">Punya kartu kredit?</span>
@@ -419,7 +422,12 @@ function DompetInner() {
       </Sheet>
 
       {/* Panel kartu kredit */}
-      <Sheet open={cardsOpen} onClose={() => setCardsOpen(false)} title="Kartu kredit">
+      <Sheet
+        open={cardsOpen}
+        onClose={() => setCardsOpen(false)}
+        title="Kartu kredit"
+        action={<button type="button" onClick={() => { setCardsOpen(false); setAdd('kartu'); }} aria-label="Tambah kartu kredit" className="mr-1 flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200"><Plus size={17} /></button>}
+      >
         <p className="text-xs text-slate-500">Tagihan kartu</p>
         <p className="text-[30px] font-extrabold tracking-tight text-slate-900 tabular-nums">{money(cardTotal)}</p>
         {nearest && <p className="text-xs text-slate-500">Terdekat: {nearest.acc.name}, {fmtDue(nearest.cycle!.dueDate)} ({nearest.cycle!.daysUntilDue} hari lagi)</p>}
@@ -487,7 +495,7 @@ function DompetInner() {
             })}
           </ul>
         )}
-        <button type="button" onClick={() => { setCardsOpen(false); openModal('kartu'); }} className="mt-4 flex w-full items-center justify-center gap-1 rounded-full bg-slate-100 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-slate-200"><Plus size={14} /> Tambah kartu</button>
+        <button type="button" onClick={() => { setCardsOpen(false); setAdd('kartu'); }} className="mt-4 flex w-full items-center justify-center gap-1 rounded-full bg-slate-100 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-slate-200"><Plus size={14} /> Tambah kartu</button>
       </Sheet>
 
       {uid && (
@@ -501,6 +509,10 @@ function DompetInner() {
           existingTypes={Array.from(new Set(list.map((a) => a.type).filter(Boolean)))}
         />
       )}
+      <AnimatePresence>
+        {add === 'dompet' && <WalletAddModal key="w" onClose={() => setAdd(null)} onCredit={() => setAdd('kartu')} />}
+        {add === 'kartu' && <CardAddModal key="k" onClose={() => setAdd(null)} />}
+      </AnimatePresence>
     </div>
   );
 }

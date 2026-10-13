@@ -4171,13 +4171,31 @@ const CARD_CYCLE_FIELDS: Array<[string, string, (v: number) => number | null]> =
   ["min_payment_amount", "minPaymentAmount", (v) => (Number.isFinite(v) ? Math.max(0, v) : null)],
 ];
 
+// Identitas kartu (form "Kartu kredit baru"): 4 digit terakhir, jaringan, dan
+// kapan diingatkan sebelum jatuh tempo (-1 = mati). Juga di payload_json.
+const CARD_NETWORKS = new Set(["Visa", "Mastercard", "JCB", "Amex", "GPN"]);
+const CARD_META_FIELDS: Array<[string, string, (v: unknown) => string | number | null]> = [
+  ["card_last4", "last4", (v) => (typeof v === "string" && /^\d{4}$/.test(v) ? v : null)],
+  ["card_network", "network", (v) => (typeof v === "string" && CARD_NETWORKS.has(v) ? v : null)],
+  ["reminder_days", "reminderDays", (v) => {
+    const n = Number(v);
+    return Number.isInteger(n) && (n === -1 || (n >= 0 && n <= 7)) ? n : null;
+  }],
+];
+
 const hasCardCycleFields = (payload: Record<string, unknown>) =>
-  CARD_CYCLE_FIELDS.some(([key]) => payload[key] !== undefined);
+  CARD_CYCLE_FIELDS.some(([key]) => payload[key] !== undefined) || CARD_META_FIELDS.some(([key]) => payload[key] !== undefined);
 
 const applyCardCycleFields = (payload: Record<string, unknown>, target: Record<string, unknown>) => {
   for (const [key, prop, normalize] of CARD_CYCLE_FIELDS) {
     if (payload[key] === undefined) continue;
     const value = payload[key] === null || payload[key] === "" ? null : normalize(Number(payload[key]));
+    if (value === null) delete target[prop];
+    else target[prop] = value;
+  }
+  for (const [key, prop, normalize] of CARD_META_FIELDS) {
+    if (payload[key] === undefined) continue;
+    const value = payload[key] === null || payload[key] === "" ? null : normalize(payload[key]);
     if (value === null) delete target[prop];
     else target[prop] = value;
   }
@@ -9634,8 +9652,12 @@ const sendCreditCardDueReminders = async (env: Env) => {
         return { date: String(t.date).slice(0, 10), delta: incoming ? -(Number(t.amount) || 0) : Number(t.amount) || 0 };
       });
 
+      // "Ingatkan aku": N hari sebelumnya + di hari H; -1 = mati; belum diatur = 3, 1, 0.
+      const reminderDays = (settings as { reminderDays?: unknown }).reminderDays;
+      if (reminderDays === -1) continue;
+      const remindOn = typeof reminderDays === "number" ? new Set([reminderDays, 0]) : CARD_REMINDER_DAYS;
       const cycle = computeCardCycle(used, flows, settings, today);
-      if (!cycle || cycle.amountDue <= 0 || !CARD_REMINDER_DAYS.has(cycle.daysUntilDue)) continue;
+      if (!cycle || cycle.amountDue <= 0 || !remindOn.has(cycle.daysUntilDue)) continue;
 
       const currency = card.currency || "IDR";
       const when = cycle.daysUntilDue === 0 ? "hari ini" : cycle.daysUntilDue === 1 ? "besok" : `${cycle.daysUntilDue} hari lagi`;
@@ -9646,7 +9668,7 @@ const sendCreditCardDueReminders = async (env: Env) => {
         card.user_id,
         `Tagihan ${card.name} jatuh tempo ${when}`,
         `Tagihan ${formatMoneyForPush(cycle.amountDue, currency)} · minimum ${formatMoneyForPush(cycle.minPayment, currency)} · jatuh tempo ${dueText}.`,
-        "/membership/cards"
+        "/membership/rekening?panel=kartu"
       );
     } catch (error) {
       console.error("Gagal memproses pengingat kartu kredit", card.id, error);
