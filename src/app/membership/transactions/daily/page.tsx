@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion';
-import { Search, Trash2, ListOrdered, Download, Plus, X, Copy, CheckCircle2, Tag, Wallet, Repeat, ArrowDownUp, Check, GitBranch } from 'lucide-react';
+import { Search, Trash2, ListOrdered, Download, Plus, X, Copy, CheckCircle2, Tag, Wallet, Repeat, Check, GitBranch } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { Account } from '@/lib/services/accountService';
@@ -86,7 +86,7 @@ function ChipGroup<T extends string>({ id, items, value, onChange }: { id: strin
             key={it.id}
             type="button"
             onClick={() => onChange(it.id)}
-            className={cn('relative shrink-0 rounded-full px-3 py-1 text-[13px] font-semibold transition-colors duration-200', active ? 'text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100')}
+            className={cn('relative shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors duration-200', active ? 'text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200')}
           >
             {active && <motion.span layoutId={`chip-${id}`} className="absolute inset-0 rounded-full bg-slate-900" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
             <span className="relative">{it.label}</span>
@@ -424,7 +424,7 @@ function TransactionsInner() {
   const listKey = `${period}|${kind}|${catFilter.join()}|${accFilter.join()}|${srcFilter.join()}|${sort}|${searchQuery.trim()}`;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-3.5 pb-28">
+    <div className="mx-auto max-w-6xl space-y-4 pb-28">
       <h1 className="sr-only">Riwayat transaksi</h1>
 
       {/* Ringkasan + aksi */}
@@ -438,22 +438,17 @@ function TransactionsInner() {
           )}
         </p>
         <div className="flex items-center gap-2">
-          <FilterPopover title="Urutkan" icon={<ArrowDownUp size={13} />} label={SORTS.find((s) => s.id === sort)?.label} active={sort !== 'terbaru'} width={220} align="right">
-          {(close) => SORTS.map((s) => (
-            <OptionRow key={s.id} kind="radio" selected={sort === s.id} onClick={() => { setSort(s.id); close(); }}>{s.label}</OptionRow>
-          ))}
-        </FilterPopover>
           <button
             type="button"
             onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
-            className={cn('flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-bold transition-colors', selectMode ? 'bg-indigo-600 text-white' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50')}
+            className={cn('flex items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-semibold transition-colors', selectMode ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-800 hover:bg-slate-200')}
           >
             {selectMode ? <><Check size={15} /> Selesai</> : <><CheckCircle2 size={15} /> Pilih</>}
           </button>
-          <button type="button" onClick={exportCsv} disabled={filtered.length === 0} className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[13px] font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-50">
+          <button type="button" onClick={exportCsv} disabled={filtered.length === 0} className="flex items-center gap-1.5 rounded-full bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-200 disabled:opacity-50">
             <Download size={15} /> <span className="hidden sm:inline">Ekspor</span> CSV
           </button>
-          <button type="button" onClick={() => openModal('harian')} className="flex items-center gap-1.5 rounded-full bg-slate-900 px-3.5 py-2 text-[13px] font-bold text-white transition-transform hover:-translate-y-0.5 hover:bg-slate-800">
+          <button type="button" onClick={() => openModal('harian')} className="flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5 hover:bg-slate-800">
             <Plus size={16} /> <span className="hidden sm:inline">Tambah transaksi</span>
           </button>
         </div>
@@ -461,7 +456,7 @@ function TransactionsInner() {
 
       {/* Cari + periode */}
       <div className="flex flex-wrap items-center gap-2">
-        <label className="relative min-w-[220px] flex-1">
+        <label className="relative w-full md:w-[420px] md:shrink-0">
           <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="search"
@@ -469,12 +464,12 @@ function TransactionsInner() {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Cari catatan, kategori, rekening, atau jumlah"
             aria-label="Cari transaksi"
-            className="w-full rounded-full bg-slate-100 py-2 pl-10 pr-4 text-[13px] text-slate-700 outline-none ring-1 ring-transparent transition-all placeholder:text-slate-400 focus:bg-white focus:ring-indigo-300"
+            className="w-full rounded-full bg-slate-100 py-2.5 pl-10 pr-4 text-sm text-slate-700 outline-none ring-1 ring-transparent transition-all placeholder:text-slate-400 focus:bg-white focus:ring-indigo-300"
           />
         </label>
-        <div className="no-scrollbar flex max-w-full items-center gap-1.5 overflow-x-auto py-0.5">
+        <div className="no-scrollbar flex max-w-full items-center gap-2 overflow-x-auto py-0.5">
           <ChipGroup id="period" items={PERIODS} value={period === 'hari' ? null : period} onChange={(p) => { setPeriod(p); setShown(PAGE); }} />
-          <span className={cn('flex shrink-0 items-center rounded-full text-[13px] font-semibold transition-colors [&_button]:!py-1 [&_button]:!text-[12px]', period === 'hari' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200')}>
+          <span className={cn('flex shrink-0 items-center rounded-full text-[13px] font-semibold transition-colors [&_button]:!py-1 [&_button]:!text-[12px]', period === 'hari' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700')}>
             <span className="[&_button]:!border-0 [&_button]:!bg-transparent [&_button]:!shadow-none">
               <DatePicker value={selectedDate} onChange={(d) => { setSelectedDate(d); setPeriod('hari'); setShown(PAGE); }} />
             </span>
@@ -483,7 +478,7 @@ function TransactionsInner() {
       </div>
 
       {/* Jenis + filter */}
-      <div className="no-scrollbar flex items-center gap-1.5 overflow-x-auto py-0.5 md:flex-wrap md:overflow-visible">
+      <div className="no-scrollbar flex items-center gap-2 overflow-x-auto py-0.5 md:flex-wrap md:overflow-visible">
         <ChipGroup id="kind" items={KINDS} value={kind} onChange={setKind} />
         <FilterPopover title="Kategori" icon={<Tag size={13} />} label={catFilter.length ? `Kategori · ${catFilter.length}` : 'Kategori'} active={catFilter.length > 0}>
           {() => categoryOptions.length === 0 ? <p className="px-3 py-3 text-sm text-slate-500">Belum ada kategori.</p> : categoryOptions.map((c) => (
@@ -506,8 +501,8 @@ function TransactionsInner() {
             </OptionRow>
           ))}
         </FilterPopover>
-        <button type="button" onClick={() => setRecurringOpen(true)} title="Transaksi rutin" className="flex shrink-0 items-center gap-1 rounded-full bg-white px-3 py-1 text-[13px] font-semibold text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-100">
-          <Repeat size={13} /> Rutin
+        <button type="button" onClick={() => setRecurringOpen(true)} className="flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors bg-slate-100 text-slate-700 hover:bg-slate-200">
+          <Repeat size={13} /> Transaksi berulang
         </button>
         <AnimatePresence>
           {hasFilter && (
@@ -523,6 +518,13 @@ function TransactionsInner() {
             </motion.button>
           )}
         </AnimatePresence>
+        <span className="ml-auto shrink-0 pl-2">
+          <FilterPopover title="Urutkan" label={SORTS.find((s) => s.id === sort)?.label} active={sort !== 'terbaru'} width={220} align="right">
+            {(close) => SORTS.map((s) => (
+              <OptionRow key={s.id} kind="radio" selected={sort === s.id} onClick={() => { setSort(s.id); close(); }}>{s.label}</OptionRow>
+            ))}
+          </FilterPopover>
+        </span>
       </div>
 
       {/* Bar mode Pilih */}
