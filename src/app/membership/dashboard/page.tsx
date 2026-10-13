@@ -18,7 +18,8 @@ import { recurringService, type RecurringTransaction } from '@/lib/services/recu
 import { isCreditAccountType, computeCreditUsage, getCardCycle } from '@/lib/creditCard';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { SecurityNudge } from '@/components/SecurityNudge';
-import { LeoMascot } from '@/components/mascot/LeoMascot';
+import { LeoMascot, type LeoMood } from '@/components/mascot/LeoMascot';
+import { AuthScene } from '@/components/auth/AuthScene';
 import { useModal } from '@/context/ModalContext';
 import { budgetService, type Budget } from '@/lib/services/budgetService';
 import { cloudflareApi } from '@/lib/cloudflare-api';
@@ -205,78 +206,93 @@ export default function MonthlyDashboard() {
   const hour = now.getHours();
   const greet = hour < 11 ? 'Selamat pagi' : hour < 15 ? 'Selamat siang' : hour < 18 ? 'Selamat sore' : 'Selamat malam';
   const mask = (s: string) => (hidden ? 'Rp•••••' : s);
+  // Komentar Leo di samping angka besar.
+  const leo: { mood: LeoMood; text: string } =
+    budgetTotal > 0 && budgetLeft < 0
+      ? { mood: 'sad', text: 'Anggaran bulan ini sudah terlewati. Rem dikit ya 🙏' }
+      : todayOut.length === 0
+        ? { mood: 'idle', text: 'Belum ada catatan hari ini. Scan struk atau bilang saja ke aku!' }
+        : prevSpendSameDay > 0 && vsPrev > prevSpendSameDay * 0.2
+          ? { mood: 'idle', text: `Bulan ini agak ngebut dibanding ${prevMonthName} 👀` }
+          : { mood: 'happy', text: `Mantap! ${todayOut.length} catatan hari ini, keuanganmu on track ✨` };
 
   return (
     <div className="mx-auto max-w-6xl space-y-5 pb-10">
       {/* 1. Hero: satu angka besar + tanya Leo + chip penting */}
-      <section className={cn(card, 'relative overflow-hidden bg-gradient-to-br from-white via-white to-indigo-50/60 p-6 md:p-8')}>
-        <p className="text-sm font-semibold capitalize text-slate-400">{new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }).format(now)}</p>
-        <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 md:text-[28px]">{greet}{firstName ? `, ${firstName}` : ''}.</h2>
-        <p className="mt-1 text-[15px] text-slate-500">
-          {todayOut.length > 0 ? (
-            <>Hari ini <b className="text-slate-800">{mask(formatIDR(todayOutTotal))}</b> keluar lewat {todayOut.length} pembayaran.</>
-          ) : (
-            'Belum ada pengeluaran tercatat hari ini.'
-          )}
-        </p>
+      <AuthScene className="auth-hero rounded-[28px] shadow-xl shadow-indigo-950/10">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-slate-950/50 via-slate-950/20 to-transparent" aria-hidden />
+        <div className="relative flex gap-6 p-6 text-white md:p-8">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold capitalize text-white/75">{new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }).format(now)}</p>
+            <h2 className="mt-1 text-2xl font-extrabold tracking-tight drop-shadow-sm md:text-[28px]">{greet}{firstName ? `, ${firstName}` : ''}.</h2>
+            <p className="mt-1 text-[15px] text-white/85">
+              {todayOut.length > 0 ? (
+                <>Hari ini <b className="text-white">{mask(formatIDR(todayOutTotal))}</b> keluar lewat {todayOut.length} pembayaran.</>
+              ) : (
+                'Belum ada pengeluaran tercatat hari ini.'
+              )}
+            </p>
 
-        <div className="mt-6 flex items-center gap-3">
-          {firstLoad ? (
-            <Skeleton className="h-14 w-72" />
-          ) : (
-            <span className="text-[44px] font-extrabold leading-none tracking-tight text-slate-900 tabular-nums md:text-[56px]">
-              {hidden ? 'Rp•••••' : <AnimatedNumber value={monthSpend} format={formatIDR} />}
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={() => { setHidden((h) => { writeLS(HIDE_KEY, h ? '0' : '1'); return !h; }); }}
-            aria-label={hidden ? 'Tampilkan nominal' : 'Sembunyikan nominal'}
-            className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
-          >
-            {hidden ? <EyeOff size={20} /> : <Eye size={20} />}
-          </button>
-        </div>
-        <p className="mt-2 text-sm font-semibold text-slate-500">Pengeluaran {monthName} · hari ke-{today}</p>
+            <div className="mt-6 flex items-center gap-3">
+              {firstLoad ? (
+                <span className="block h-14 w-72 animate-pulse rounded-2xl bg-white/20" />
+              ) : (
+                <span className="text-[44px] font-extrabold leading-none tracking-tight tabular-nums drop-shadow-sm md:text-[56px]">
+                  {hidden ? 'Rp•••••' : <AnimatedNumber value={monthSpend} format={formatIDR} />}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => { setHidden((h) => { writeLS(HIDE_KEY, h ? '0' : '1'); return !h; }); }}
+                aria-label={hidden ? 'Tampilkan nominal' : 'Sembunyikan nominal'}
+                className="rounded-full p-2 text-white/70 transition-colors hover:bg-white/15 hover:text-white"
+              >
+                {hidden ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+            <p className="mt-2 text-sm font-semibold text-white/80">Pengeluaran {monthName} · hari ke-{today}</p>
 
-        {/* Tanya Leo — Leo mengintip dari atas kolom */}
-        <form
-          onSubmit={(e) => { e.preventDefault(); const q = ask.trim(); openModal('ai_chat', q ? { prompt: q } : null); setAsk(''); }}
-          className="relative mt-12 max-w-xl"
-        >
-          <div className="pointer-events-none absolute -top-[46px] right-14" aria-hidden><LeoMascot mood="peek" size={64} /></div>
-          <div className="relative flex items-center gap-2 rounded-full bg-white py-1.5 pl-5 pr-1.5 shadow-lg shadow-indigo-950/10 ring-1 ring-slate-200 focus-within:ring-indigo-300">
-            <input
-              value={ask}
-              onChange={(e) => setAsk(e.target.value)}
-              placeholder="Tanya apa saja soal uangmu…"
-              aria-label="Tanya Leo"
-              className="min-w-0 flex-1 bg-transparent py-2 text-[15px] text-slate-800 outline-none placeholder:text-slate-400"
-            />
-            <button type="submit" aria-label="Kirim pertanyaan" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white transition-colors hover:bg-slate-700">
-              <ArrowUp size={17} />
-            </button>
+            <form
+              onSubmit={(e) => { e.preventDefault(); const q = ask.trim(); openModal('ai_chat', q ? { prompt: q } : null); setAsk(''); }}
+              className="mt-6 flex max-w-xl items-center gap-2 rounded-full bg-white py-1.5 pl-5 pr-1.5 shadow-lg shadow-indigo-950/20"
+            >
+              <input
+                value={ask}
+                onChange={(e) => setAsk(e.target.value)}
+                placeholder="Tanya apa saja soal uangmu…"
+                aria-label="Tanya Leo"
+                className="min-w-0 flex-1 bg-transparent py-2 text-[15px] text-slate-800 outline-none placeholder:text-slate-400"
+              />
+              <button type="submit" aria-label="Kirim pertanyaan" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white transition-colors hover:bg-slate-700">
+                <ArrowUp size={17} />
+              </button>
+            </form>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {weekBills > 0 && (
+                <Chip href="/membership/recurring" dot="bg-amber-400">{weekBills} tagihan minggu ini</Chip>
+              )}
+              {prevSpendSameDay > 0 && Math.abs(vsPrev) >= 1000 && (
+                <Chip href="/membership/laporan" dot={vsPrev > 0 ? 'bg-rose-400' : 'bg-emerald-400'}>
+                  {mask(formatIDR(Math.abs(vsPrev)))} {vsPrev > 0 ? 'lebih banyak' : 'lebih hemat'} dari {prevMonthName}
+                </Chip>
+              )}
+              {budgetTotal > 0 ? (
+                <Chip href="/membership/budget" dot={budgetLeft < 0 ? 'bg-rose-400' : 'bg-indigo-300'}>
+                  {budgetLeft < 0 ? `Lewat anggaran ${mask(formatIDR(-budgetLeft))}` : `Sisa anggaran ${mask(formatIDR(budgetLeft))}`}
+                </Chip>
+              ) : (
+                <Chip href="/membership/budget" dot="bg-white/60">Atur anggaran</Chip>
+              )}
+            </div>
           </div>
-        </form>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          {weekBills > 0 && (
-            <Chip href="/membership/recurring" dot="bg-amber-400">{weekBills} tagihan minggu ini</Chip>
-          )}
-          {prevSpendSameDay > 0 && Math.abs(vsPrev) >= 1000 && (
-            <Chip href="/membership/laporan" dot={vsPrev > 0 ? 'bg-rose-400' : 'bg-emerald-400'}>
-              {mask(formatIDR(Math.abs(vsPrev)))} {vsPrev > 0 ? 'lebih banyak' : 'lebih hemat'} dari {prevMonthName}
-            </Chip>
-          )}
-          {budgetTotal > 0 ? (
-            <Chip href="/membership/budget" dot={budgetLeft < 0 ? 'bg-rose-400' : 'bg-indigo-400'}>
-              {budgetLeft < 0 ? `Lewat anggaran ${mask(formatIDR(-budgetLeft))}` : `Sisa anggaran ${mask(formatIDR(budgetLeft))}`}
-            </Chip>
-          ) : (
-            <Chip href="/membership/budget" dot="bg-slate-300">Atur anggaran</Chip>
-          )}
+          <div className="hidden items-end gap-2 self-end lg:flex">
+            <div className="mb-20 max-w-[220px] rounded-2xl rounded-br-md bg-white px-4 py-3 text-[13px] font-semibold leading-snug text-slate-700 shadow-lg">{leo.text}</div>
+            <LeoMascot mood={leo.mood} size={130} interactive className="shrink-0" />
+          </div>
         </div>
-      </section>
+      </AuthScene>
 
       <SecurityNudge />
 
@@ -369,7 +385,7 @@ export default function MonthlyDashboard() {
 
 function Chip({ href, dot, children }: { href: string; dot: string; children: React.ReactNode }) {
   return (
-    <Link href={href} className="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-[13px] font-semibold text-slate-600 ring-1 ring-slate-200 transition-all hover:-translate-y-0.5 hover:text-slate-900">
+    <Link href={href} className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3.5 py-1.5 text-[13px] font-semibold text-white ring-1 ring-white/25 backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-white/25">
       <span className={cn('h-2 w-2 rounded-full', dot)} /> {children}
     </Link>
   );
