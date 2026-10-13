@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion';
 import {
   Area, AreaChart, Bar, BarChart, Cell, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -14,6 +15,7 @@ import { accountService, type Account } from '@/lib/services/accountService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { AnimatedNumber } from '@/components/app/AnimatedNumber';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { DayReviewModal } from '@/components/reports/DayReviewModal';
 
 // Laporan gaya baru (pola Oyenza): Bulanan/Tahunan, pengeluaran vs pemasukan,
 // heatmap harian (klik → ringkasan hari + "Lihat harinya"), tren kumulatif vs
@@ -30,7 +32,6 @@ const toIdr = (t: Transaction) => Number(t.amountIDR) || Number(t.amount) || 0;
 const isExpense = (t: Transaction) => t.type === 'pengeluaran' && !isInvestmentCategory(t.category);
 const short = (n: number) =>
   n >= 1e9 ? `Rp${(n / 1e9).toFixed(2).replace('.', ',')} M` : n >= 1e6 ? `Rp${(n / 1e6).toFixed(2).replace('.', ',')} jt` : n >= 1e3 ? `Rp${Math.round(n / 1e3)} rb` : `Rp${Math.round(n)}`;
-const ymd = (d: Date) => d.toLocaleDateString('sv-SE');
 
 export default function LaporanPage() {
   const reduce = useReducedMotion();
@@ -42,6 +43,8 @@ export default function LaporanPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [day, setDay] = useState<{ d: number; x: number; y: number } | null>(null);
   const [activeCat, setActiveCat] = useState<string | null>(null);
+  const [review, setReview] = useState<Date | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const load = () => transactionService.getUserTransactions('session').then(setAll).catch(() => setAll([]));
@@ -142,38 +145,22 @@ export default function LaporanPage() {
   const avgMonth = mode === 'tahun' ? r.total / Math.max(1, r.elapsed) : 0;
   const card = 'rounded-[26px] bg-white p-5 ring-1 ring-slate-100 md:p-6';
   const key = `${mode}-${year}-${month}`;
+  const catHref = (name: string) => `/membership/transactions/daily?category=${encodeURIComponent(name)}${mode === 'tahun' ? '&period=tahun' : !isCurrent ? '&period=semua' : ''}`;
 
   return (
     <div className="mx-auto max-w-6xl space-y-5 pb-12" onClick={() => setDay(null)}>
       <h1 className="sr-only">Laporan</h1>
 
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <LayoutGroup id="lp-mode">
-          <div className="flex rounded-full bg-slate-100 p-1">
-            {(['bulan', 'tahun'] as Mode[]).map((m) => (
-              <button key={m} type="button" onClick={(e) => { e.stopPropagation(); setMode(m); setDay(null); }} className={cn('relative rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors', mode === m ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800')}>
-                {mode === m && <motion.span layoutId="lp-mode-pill" className="absolute inset-0 rounded-full bg-white shadow-sm" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
-                <span className="relative">{m === 'bulan' ? 'Bulanan' : 'Tahunan'}</span>
-              </button>
-            ))}
-          </div>
-        </LayoutGroup>
-        <div className="flex items-center rounded-full bg-slate-100 p-1">
-          <button type="button" onClick={(e) => { e.stopPropagation(); shift(-1); }} aria-label="Sebelumnya" className="rounded-full p-1.5 text-slate-500 hover:bg-white hover:text-slate-900"><ChevronLeft size={16} /></button>
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.span key={periodLabel} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }} className="min-w-[72px] text-center text-[13px] font-bold text-slate-900">{periodLabel}</motion.span>
-          </AnimatePresence>
-          <button type="button" onClick={(e) => { e.stopPropagation(); shift(1); }} disabled={isCurrent} aria-label="Berikutnya" className="rounded-full p-1.5 text-slate-500 hover:bg-white hover:text-slate-900 disabled:opacity-30"><ChevronRight size={16} /></button>
-        </div>
-      </div>
-
-      <motion.div key={key} initial={reduce ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="grid gap-5 lg:grid-cols-[1.25fr_1fr]">
+      <motion.div key={key} initial={reduce ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="grid gap-8 lg:grid-cols-[1.3fr_1fr]">
         {/* Kiri */}
         <div className="space-y-5">
-          <div className={card}>
+          <div>
             <p className="text-sm font-semibold text-slate-500">Pengeluaran{mode === 'tahun' ? ` Jan–${MONTHS[r.elapsed - 1]}` : ''}</p>
             {loading ? <Skeleton className="mt-2 h-11 w-56" /> : (
-              <p className="text-[38px] font-extrabold leading-tight tracking-tight text-slate-900 tabular-nums"><AnimatedNumber value={r.total} format={formatIDR} /></p>
+              <p className="mt-1 flex items-start gap-1 leading-none text-slate-900">
+                <span className="mt-1.5 text-lg font-bold text-slate-400">Rp</span>
+                <span className="text-[52px] font-extrabold tracking-tight tabular-nums"><AnimatedNumber value={r.total} format={(n) => Math.round(n).toLocaleString('id-ID')} /></span>
+              </p>
             )}
             <p className="mt-0.5 text-sm text-slate-500">
               dari pemasukan <b className="text-emerald-600">{short(r.income)}</b> · sisa <b className={r.income - r.total < 0 ? 'text-rose-500' : 'text-slate-800'}>{short(r.income - r.total)}</b>
@@ -181,9 +168,9 @@ export default function LaporanPage() {
 
             {mode === 'bulan' ? (
               <div className="mt-6">
-                <p className="font-bold text-slate-900">Trend harian</p>
-                <p className="text-xs text-slate-400">rata-rata {short(perUnit(r.total))}/hari</p>
-                <div className="mt-3 grid grid-cols-7 gap-1.5">
+                <p className="text-xl font-extrabold tracking-tight text-slate-900">Trend harian</p>
+                <p className="text-sm text-slate-500">rata-rata {short(perUnit(r.total))}/hari</p>
+                <div className="mt-4 grid grid-cols-7 gap-1.5">
                   {WEEKDAYS.map((w) => <span key={w} className="text-center text-[11px] font-semibold text-slate-400">{w}</span>)}
                   {Array.from({ length: lead }, (_, i) => <span key={`l${i}`} />)}
                   {r.series.map((v, i) => {
@@ -204,8 +191,8 @@ export default function LaporanPage() {
                           setDay(day?.d === i + 1 ? null : { d: i + 1, x: b.left + b.width / 2, y: b.top });
                         }}
                         className={cn(
-                          'flex aspect-[1.35] flex-col justify-between rounded-xl p-1.5 text-left text-[11px] font-bold',
-                          future ? 'bg-white text-slate-300 ring-1 ring-slate-100' : HEAT[level(v)],
+                          'flex h-14 flex-col justify-between rounded-xl p-2 text-left text-xs font-bold md:h-[60px]',
+                          future ? 'border border-dashed border-slate-200 bg-transparent text-slate-300' : HEAT[level(v)],
                           level(v) >= 4 ? 'text-white' : 'text-slate-600',
                           today && 'ring-2 ring-slate-900',
                           day?.d === i + 1 && 'bg-slate-900 text-white ring-0'
@@ -220,8 +207,8 @@ export default function LaporanPage() {
               </div>
             ) : (
               <div className="mt-6">
-                <p className="font-bold text-slate-900">Trend bulanan</p>
-                <p className="text-xs text-slate-400">rata-rata {short(avgMonth)}/bulan</p>
+                <p className="text-xl font-extrabold tracking-tight text-slate-900">Trend bulanan</p>
+                <p className="text-sm text-slate-500">rata-rata {short(avgMonth)}/bulan</p>
                 <div className="mt-3 h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={r.stacked} margin={{ top: 10, right: 4, bottom: 0, left: 0 }}>
@@ -244,9 +231,9 @@ export default function LaporanPage() {
             )}
 
             <div className="mt-6">
-              <p className="font-bold text-slate-900">Trend pengeluaran</p>
-              <p className="text-xs text-slate-400">{mode === 'bulan' ? 'Harian' : 'Bulanan'}, dibandingkan {mode === 'bulan' ? 'bulan' : 'tahun'} lalu</p>
-              <div className="mt-2 h-44">
+              <p className="text-xl font-extrabold tracking-tight text-slate-900">Trend pengeluaran</p>
+              <p className="text-sm text-slate-500">{mode === 'bulan' ? 'Harian' : 'Bulanan'}, dibandingkan {mode === 'bulan' ? 'bulan' : 'tahun'} lalu</p>
+              <div className="mt-3 h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={r.trend} margin={{ top: 10, right: 8, bottom: 0, left: 8 }}>
                     <defs>
@@ -257,7 +244,16 @@ export default function LaporanPage() {
                     </defs>
                     <XAxis dataKey="i" hide />
                     <YAxis hide domain={[0, 'auto']} />
-                    <Tooltip formatter={(v, n) => [formatIDR(Number(v)), n === 'ini' ? periodLabel : prevName]} labelFormatter={(i) => (mode === 'bulan' ? `Tanggal ${i}` : MONTHS[Number(i) - 1])} />
+                    <Tooltip cursor={{ stroke: '#94a3b8', strokeDasharray: '3 3' }} content={({ active, payload }) => active && payload?.length ? (
+                      <div className="space-y-1">
+                        {payload.filter((p) => p.value != null).map((p) => (
+                          <div key={String(p.dataKey)} className={cn('flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold shadow-md', p.dataKey === 'ini' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200')}>
+                            <span className={cn('h-2 w-2 rounded-full', p.dataKey === 'ini' ? 'bg-indigo-400' : 'bg-slate-300')} />
+                            {p.dataKey === 'ini' ? periodLabel.split(' ')[0] : mode === 'bulan' ? MONTHS[new Date(year, month - 1, 1).getMonth()] : String(year - 1)} <b>{short(Number(p.value))}</b>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null} />
                     <Area type="monotone" dataKey="lalu" stroke="#cbd5e1" strokeWidth={2} fill="none" dot={false} isAnimationActive={!reduce} />
                     <Area type="monotone" dataKey="ini" stroke="#6366f1" strokeWidth={2.5} fill="url(#lpg)" dot={false} connectNulls={false} isAnimationActive={!reduce} animationDuration={900} />
                   </AreaChart>
@@ -273,10 +269,30 @@ export default function LaporanPage() {
           </div>
         </div>
 
-        {/* Kanan: ke mana uangnya */}
-        <div className={cn(card, 'self-start')}>
-          <p className="font-bold text-slate-900">Ke mana uangnya</p>
-          <p className="text-xs text-slate-400">Ketuk kategori untuk lihat transaksinya</p>
+        {/* Kanan: periode + ke mana uangnya */}
+        <div className="order-first space-y-5 lg:order-2">
+      <div className="flex flex-wrap items-center justify-end gap-2 lg:justify-between">
+            <LayoutGroup id="lp-mode">
+              <div className="flex rounded-full bg-slate-100 p-1">
+                {(['bulan', 'tahun'] as Mode[]).map((m) => (
+                  <button key={m} type="button" onClick={(e) => { e.stopPropagation(); setMode(m); setDay(null); }} className={cn('relative rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors', mode === m ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800')}>
+                    {mode === m && <motion.span layoutId="lp-mode-pill" className="absolute inset-0 rounded-full bg-white shadow-sm" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
+                    <span className="relative">{m === 'bulan' ? 'Bulanan' : 'Tahunan'}</span>
+                  </button>
+                ))}
+              </div>
+            </LayoutGroup>
+            <div className="flex items-center rounded-full bg-slate-100 p-1">
+              <button type="button" onClick={(e) => { e.stopPropagation(); shift(-1); }} aria-label="Sebelumnya" className="rounded-full p-1.5 text-slate-500 hover:bg-white hover:text-slate-900"><ChevronLeft size={16} /></button>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span key={periodLabel} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }} className="min-w-[72px] text-center text-[13px] font-bold text-slate-900">{periodLabel}</motion.span>
+              </AnimatePresence>
+              <button type="button" onClick={(e) => { e.stopPropagation(); shift(1); }} disabled={isCurrent} aria-label="Berikutnya" className="rounded-full p-1.5 text-slate-500 hover:bg-white hover:text-slate-900 disabled:opacity-30"><ChevronRight size={16} /></button>
+            </div>
+          </div>
+        <div>
+          <p className="text-xl font-extrabold tracking-tight text-slate-900">Ke mana uangnya</p>
+          <p className="text-sm text-slate-500">Ketuk bagian grafik untuk lihat rinciannya</p>
           {loading ? <Skeleton className="mt-4 h-64" /> : r.cats.length === 0 ? (
             <p className="mt-6 text-sm text-slate-500">Belum ada pengeluaran di periode ini.</p>
           ) : (
@@ -284,7 +300,8 @@ export default function LaporanPage() {
               <div className="relative mx-auto mt-3 h-52 w-52">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={r.cats} dataKey="value" nameKey="name" innerRadius={68} outerRadius={96} paddingAngle={1.5} stroke="none" isAnimationActive={!reduce} animationDuration={800}
+                    <Pie data={r.cats} dataKey="value" nameKey="name" innerRadius={68} outerRadius={96} paddingAngle={1.5} stroke="none" isAnimationActive={!reduce} animationDuration={800} className="cursor-pointer"
+                      onClick={(_, i) => { const c = r.cats[i]; if (c) router.push(catHref(c.name)); }}
                       onMouseEnter={(_, i) => setActiveCat(r.cats[i]?.name ?? null)} onMouseLeave={() => setActiveCat(null)}>
                       {r.cats.map((c) => <Cell key={c.name} fill={c.color} opacity={activeCat && activeCat !== c.name ? 0.35 : 1} />)}
                     </Pie>
@@ -296,14 +313,14 @@ export default function LaporanPage() {
                   <span className="text-[11px] text-slate-400">{activeCat ? `${Math.round(((r.cats.find((c) => c.name === activeCat)?.value ?? 0) / Math.max(1, r.total)) * 100)}%` : `${r.cats.length} kategori`}</span>
                 </div>
               </div>
-              <ul className="mt-3 space-y-0.5">
+              <ul className="mt-4 overflow-hidden rounded-3xl bg-white ring-1 ring-slate-100">
                 {r.cats.map((c, i) => (
                   <motion.li key={c.name} initial={reduce ? false : { opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}>
                     <Link
-                      href={`/membership/transactions/daily?category=${encodeURIComponent(c.name)}${mode === 'tahun' ? '&period=tahun' : !isCurrent ? '&period=semua' : ''}`}
+                      href={catHref(c.name)}
                       onMouseEnter={() => setActiveCat(c.name)}
                       onMouseLeave={() => setActiveCat(null)}
-                      className={cn('flex items-center gap-3 rounded-2xl px-2.5 py-2 transition-colors', activeCat === c.name ? 'bg-slate-50' : 'hover:bg-slate-50')}
+                      className={cn('flex items-center gap-3 border-b border-slate-100 px-4 py-3 transition-colors', activeCat === c.name ? 'bg-slate-50' : 'hover:bg-slate-50')}
                     >
                       <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-50 text-base">
                         {categoryEmoji(c.name)}
@@ -321,6 +338,7 @@ export default function LaporanPage() {
               </ul>
             </>
           )}
+        </div>
         </div>
       </motion.div>
 
@@ -363,6 +381,19 @@ export default function LaporanPage() {
         </div>
       </motion.div>
 
+      <AnimatePresence>
+        {review && (
+          <DayReviewModal
+            key="review"
+            date={review}
+            transactions={all ?? []}
+            accounts={accounts}
+            onShift={(d) => setReview((cur) => (cur ? new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + d) : cur))}
+            onClose={() => setReview(null)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Ringkasan hari (heatmap) */}
       <AnimatePresence>
         {day && (
@@ -373,16 +404,17 @@ export default function LaporanPage() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.97 }}
             transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-            style={{ position: 'fixed', left: Math.min(Math.max(day.x - 120, 8), (typeof window !== 'undefined' ? window.innerWidth : 1200) - 248), top: Math.max(day.y - 150, 8), width: 240 }}
+            style={{ position: 'fixed', left: Math.min(Math.max(day.x - 120, 8), (typeof window !== 'undefined' ? window.innerWidth : 1200) - 248), top: Math.max(day.y - 158, 8), width: 240 }}
             className="z-50 rounded-2xl bg-white p-4 shadow-2xl ring-1 ring-slate-100"
           >
             <button type="button" onClick={() => setDay(null)} aria-label="Tutup" className="absolute right-2 top-2 rounded-full p-1 text-slate-400 hover:bg-slate-100"><X size={14} /></button>
             <p className="text-xs text-slate-400">{new Intl.DateTimeFormat('id-ID', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(year, month, day.d))}</p>
             <p className="text-xl font-extrabold text-slate-900 tabular-nums">{formatIDR(dayOut.reduce((s, t) => s + toIdr(t), 0))}</p>
             <p className="text-xs text-slate-500">{dayOut.length} pembayaran{dayTop ? <> · paling banyak {categoryEmoji(dayTop)} {dayTop}</> : null}</p>
-            <Link href={`/membership/transactions/daily?date=${ymd(new Date(year, month, day.d))}`} className="mt-3 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-sm font-bold text-slate-800 hover:bg-slate-100">
+            <button type="button" onClick={() => { setReview(new Date(year, month, day.d)); setDay(null); }} className="mt-3 flex w-full items-center justify-between border-t border-slate-100 pt-3 text-sm font-bold text-slate-800 hover:text-indigo-600">
               Lihat harinya <ChevronRight size={15} />
-            </Link>
+            </button>
+            <span className="absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 bg-white ring-1 ring-slate-100 [clip-path:polygon(100%_0,100%_100%,0_100%)]" />
           </motion.div>
         )}
       </AnimatePresence>
