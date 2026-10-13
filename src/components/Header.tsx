@@ -22,6 +22,8 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
   const { openModal } = useModal();
   const { title } = findNavContext(pathname);
   const tabs = tabsFor(pathname);
+  // Streak, Struk, Suara cuma di Ringkasan — halaman lain tetap bersih.
+  const isHome = pathname === '/membership/dashboard';
   const { isOn } = useFeatures();
   const { data: streak } = useStreak();
 
@@ -36,7 +38,7 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          {isOn('streak') && streak && (
+          {isHome && isOn('streak') && streak && (
             <Link
               href="/membership/streak"
               title={streak.todayKind ? 'Hari ini sudah ditutup' : 'Hari ini belum ditutup'}
@@ -49,12 +51,14 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
               <span className="tabular-nums">{streak.streak}</span>
             </Link>
           )}
+          {isHome && (<>
           <button type="button" onClick={() => openModal('quick_scan')} className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2.5 text-sm font-bold text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-100 md:px-4">
             <ScanLine size={16} /> <span className="hidden md:inline">Struk</span>
           </button>
           <button type="button" onClick={() => openModal('quick_voice')} className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2.5 text-sm font-bold text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-100 md:px-4">
             <Mic size={16} /> <span className="hidden md:inline">Suara</span>
           </button>
+          </>)}
           <button type="button" onClick={() => openModal('harian')} aria-label="Tambah transaksi" className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-white lg:hidden">
             <Plus size={18} strokeWidth={2.6} />
           </button>

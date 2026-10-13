@@ -15,7 +15,7 @@ import { savingsService, Saving } from '@/lib/services/savingsService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { recurringService, type RecurringTransaction } from '@/lib/services/recurringService';
-import { isCreditAccountType, computeCreditUsage, getCardCycle } from '@/lib/creditCard';
+import { isCreditAccountType, computeCreditUsage } from '@/lib/creditCard';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { SecurityNudge } from '@/components/SecurityNudge';
 import { LeoMascot, type LeoMood } from '@/components/mascot/LeoMascot';
@@ -167,17 +167,11 @@ export default function MonthlyDashboard() {
   const daysLeft = daysInMonth - today + 1;
   const perDay = budgetLeft > 0 ? budgetLeft / daysLeft : 0;
 
-  // Tagihan 7 hari ke depan: transaksi rutin pengeluaran + jatuh tempo kartu.
-  const weekBills = (() => {
-    const start = new Date(y, m, today);
-    const end = new Date(y, m, today + 7);
-    const rec = recurring.filter((r) => r.status === 'ACTIVE' && r.type === 'Pengeluaran' && r.nextDate >= start && r.nextDate < end);
-    const cards = accounts
-      .filter((a) => isCreditAccountType(a.type))
-      .map((a) => getCardCycle(a, allTransactions))
-      .filter((c) => c && c.amountDue > 0 && !c.overdue && c.daysUntilDue <= 7);
-    return rec.length + cards.length;
-  })();
+  // Langganan yang jatuh tempo 7 hari ke depan (chip → halaman Langganan).
+  const weekBills = recurring.filter((r) => {
+    const d = Math.round((new Date(r.nextDate).setHours(0, 0, 0, 0) - new Date(y, m, today).getTime()) / 864e5);
+    return r.status === 'ACTIVE' && r.type === 'Pengeluaran' && d >= 0 && d < 7;
+  }).length;
 
   // ===== Angka "Fitur kamu" (aturan sama dengan halaman Kekayaan)
   const totalTabungan = savings.reduce((s, i) => { const a = Number(i.amountIDR) || i.amount; return i.transactionType === 'Penarikan' ? s - a : s + a; }, 0);
@@ -270,7 +264,7 @@ export default function MonthlyDashboard() {
 
             <div className="mt-4 flex flex-wrap gap-2">
               {weekBills > 0 && (
-                <Chip href="/membership/recurring" dot="bg-amber-400">{weekBills} tagihan minggu ini</Chip>
+                <Chip href="/membership/langganan" dot="bg-amber-400">{weekBills} tagihan minggu ini</Chip>
               )}
               {prevSpendSameDay > 0 && Math.abs(vsPrev) >= 1000 && (
                 <Chip href="/membership/laporan" dot={vsPrev > 0 ? 'bg-rose-400' : 'bg-emerald-400'}>
