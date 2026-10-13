@@ -22,7 +22,8 @@ export type ModalType =
   | 'quick_scan'
   | 'quick_voice'
   | 'quick_text'
-  | 'langganan';
+  | 'langganan'
+  | 'pemasukan_rutin';
 
 interface ModalContextType {
   activeModal: ModalType;

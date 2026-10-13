@@ -43,7 +43,8 @@ interface SidebarProps {
 // Form lain di balik tombol "Tambah transaksi" (panah ▾).
 const MORE_ADDS: { id: ModalType; label: string; icon: LucideIcon }[] = [
   { id: 'topup_transfer', label: 'Transfer & top up', icon: ArrowLeftRight },
-  { id: 'recurring', label: 'Transaksi rutin', icon: Repeat },
+  { id: 'langganan', label: 'Langganan', icon: Repeat },
+  { id: 'pemasukan_rutin', label: 'Pemasukan rutin', icon: Repeat },
   { id: 'tabungan', label: 'Setor tabungan', icon: PiggyBank },
   { id: 'hutang_piutang', label: 'Hutang & piutang', icon: HandCoins },
   { id: 'rekening', label: 'Rekening baru', icon: Building2 },

@@ -119,7 +119,7 @@ export default function LanggananPage() {
           <p className="text-sm text-slate-500">Netflix, Spotify, listrik, internet, cicilan — semua tagihan rutinmu dalam satu tempat.</p>
         </div>
         <div className="flex gap-2">
-          <Link href="/membership/recurring" className="rounded-2xl bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200">Kelola</Link>
+          <Link href="/membership/recurring" className="rounded-2xl bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200">Pemasukan rutin</Link>
           <button type="button" onClick={() => openModal('langganan')} className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800">
             <Plus size={15} /> Tambah langganan
           </button>

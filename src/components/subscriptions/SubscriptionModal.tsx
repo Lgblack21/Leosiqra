@@ -29,14 +29,14 @@ import {
 // (2) isi detail. Disimpan sebagai transaksi rutin "Pengeluaran" plus
 // metadata layanan; "Catat tiap tagihan" mati = cukup diingatkan.
 
-const INTERVALS: { id: BillingInterval; label: string }[] = [
+export const INTERVALS: { id: BillingInterval; label: string }[] = [
   { id: 'Mingguan', label: 'Mingguan' },
   { id: 'Bulanan', label: 'Bulanan' },
   { id: '3 Bulanan', label: '3 bulan' },
   { id: 'Tahunan', label: 'Tahunan' },
 ];
 
-const addInterval = (d: Date, interval: BillingInterval) => {
+export const addInterval = (d: Date, interval: BillingInterval) => {
   const r = new Date(d);
   if (interval === 'Mingguan') r.setDate(r.getDate() + 7);
   else if (interval === 'Tahunan') r.setFullYear(r.getFullYear() + 1);
@@ -316,9 +316,9 @@ export function SubscriptionModal({ initial, prefill, onClose }: { initial?: Rec
   );
 }
 
-const inputCls = 'w-full rounded-2xl bg-slate-50 px-4 py-3 text-[15px] text-slate-800 outline-none ring-1 ring-slate-100 placeholder:text-slate-400 focus:bg-white focus:ring-indigo-300';
+export const inputCls = 'w-full rounded-2xl bg-slate-50 px-4 py-3 text-[15px] text-slate-800 outline-none ring-1 ring-slate-100 placeholder:text-slate-400 focus:bg-white focus:ring-indigo-300';
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+export function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
       <p className="mb-1.5 pl-1 text-[13px] font-semibold text-slate-500">{label}</p>
@@ -327,7 +327,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function DateInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+export function DateInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <label className="relative flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100 focus-within:bg-white focus-within:ring-indigo-300">
       <CalendarDays size={17} className="shrink-0 text-slate-500" />
@@ -342,7 +342,7 @@ function DateInput({ value, onChange, placeholder }: { value: string; onChange: 
   );
 }
 
-function SelectBox({ icon, value, onChange, options }: { icon?: React.ReactNode; value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) {
+export function SelectBox({ icon, value, onChange, options }: { icon?: React.ReactNode; value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) {
   return (
     <label className="relative flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100 focus-within:ring-indigo-300">
       {icon && <span className="flex shrink-0 items-center text-lg">{icon}</span>}

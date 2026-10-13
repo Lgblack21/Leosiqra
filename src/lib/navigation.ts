@@ -59,12 +59,9 @@ export const accountNav: NavItem[] = [
 // konten supaya sidebar tidak perlu memuat semuanya.
 export interface SectionTab { label: string; href: string }
 export const sectionTabs: SectionTab[][] = [
-  [
-    { label: 'Riwayat', href: '/membership/transactions/daily' },
-    { label: 'Catat', href: '/membership/transactions/input' },
-    { label: 'Transfer & top up', href: '/membership/transactions/topup' },
-    { label: 'Transaksi rutin', href: '/membership/recurring' },
-  ],
+  // Tab Transaksi (Riwayat · Catat · Transfer & top up) DISEMBUNYIKAN dulu —
+  // halamannya tetap ada & bisa dibuka lewat URL; catat lewat tombol Tambah
+  // transaksi / Struk / Suara, transfer lewat Dompet.
   [
     { label: 'Ringkasan', href: '/membership/laporan' },
     { label: 'Laporan cetak', href: '/membership/annual' },
@@ -91,7 +88,7 @@ export const sectionTabs: SectionTab[][] = [
   ],
   [
     { label: 'Langganan', href: '/membership/langganan' },
-    { label: 'Transaksi rutin', href: '/membership/recurring' },
+    { label: 'Pemasukan rutin', href: '/membership/recurring' },
   ],
 ];
 
@@ -105,7 +102,7 @@ const TITLES: Record<string, string> = {
   '/membership/transactions/input': 'Catat transaksi',
   '/membership/transactions/topup': 'Transfer & top up',
   '/membership/transactions/debt': 'Hutang & piutang',
-  '/membership/recurring': 'Transaksi rutin',
+  '/membership/recurring': 'Pemasukan rutin',
   '/membership/laporan': 'Laporan',
   '/membership/annual': 'Laporan cetak',
   '/membership/budget': 'Anggaran',
