@@ -85,7 +85,7 @@ function ChipGroup<T extends string>({ id, items, value, onChange }: { id: strin
             key={it.id}
             type="button"
             onClick={() => onChange(it.id)}
-            className={cn('relative shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors duration-200', active ? 'text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100')}
+            className={cn('relative shrink-0 rounded-full px-3 py-1 text-[13px] font-semibold transition-colors duration-200', active ? 'text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100')}
           >
             {active && <motion.span layoutId={`chip-${id}`} className="absolute inset-0 rounded-full bg-slate-900" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
             <span className="relative">{it.label}</span>
@@ -416,18 +416,23 @@ export default function DailyTransactionLogPage() {
             </>
           )}
         </p>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <FilterPopover title="Urutkan" icon={<ArrowDownUp size={13} />} label={SORTS.find((s) => s.id === sort)?.label} active={sort !== 'terbaru'} width={220} align="right">
+          {(close) => SORTS.map((s) => (
+            <OptionRow key={s.id} kind="radio" selected={sort === s.id} onClick={() => { setSort(s.id); close(); }}>{s.label}</OptionRow>
+          ))}
+        </FilterPopover>
           <button
             type="button"
             onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
-            className={cn('flex items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-bold transition-colors', selectMode ? 'bg-indigo-600 text-white' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50')}
+            className={cn('flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-bold transition-colors', selectMode ? 'bg-indigo-600 text-white' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50')}
           >
             {selectMode ? <><Check size={15} /> Selesai</> : <><CheckCircle2 size={15} /> Pilih</>}
           </button>
-          <button type="button" onClick={exportCsv} disabled={filtered.length === 0} className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-50">
+          <button type="button" onClick={exportCsv} disabled={filtered.length === 0} className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[13px] font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-50">
             <Download size={15} /> <span className="hidden sm:inline">Ekspor</span> CSV
           </button>
-          <button type="button" onClick={() => openModal('harian')} className="flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition-transform hover:-translate-y-0.5 hover:bg-slate-800">
+          <button type="button" onClick={() => openModal('harian')} className="flex items-center gap-1.5 rounded-full bg-slate-900 px-3.5 py-2 text-[13px] font-bold text-white transition-transform hover:-translate-y-0.5 hover:bg-slate-800">
             <Plus size={16} /> <span className="hidden sm:inline">Tambah transaksi</span>
           </button>
         </div>
@@ -435,20 +440,20 @@ export default function DailyTransactionLogPage() {
 
       {/* Cari + periode */}
       <div className="flex flex-wrap items-center gap-2">
-        <label className="relative min-w-[240px] flex-1">
-          <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+        <label className="relative min-w-[220px] flex-1">
+          <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Cari catatan, kategori, rekening, atau jumlah"
             aria-label="Cari transaksi"
-            className="w-full rounded-full bg-slate-100 py-2.5 pl-11 pr-4 text-sm text-slate-700 outline-none ring-1 ring-transparent transition-all placeholder:text-slate-400 focus:bg-white focus:ring-indigo-300"
+            className="w-full rounded-full bg-slate-100 py-2 pl-10 pr-4 text-[13px] text-slate-700 outline-none ring-1 ring-transparent transition-all placeholder:text-slate-400 focus:bg-white focus:ring-indigo-300"
           />
         </label>
-        <div className="no-scrollbar flex max-w-full items-center gap-2 overflow-x-auto py-0.5">
+        <div className="no-scrollbar flex max-w-full items-center gap-1.5 overflow-x-auto py-0.5">
           <ChipGroup id="period" items={PERIODS} value={period === 'hari' ? null : period} onChange={(p) => { setPeriod(p); setShown(PAGE); }} />
-          <span className={cn('flex shrink-0 items-center rounded-full text-sm font-semibold transition-colors', period === 'hari' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200')}>
+          <span className={cn('flex shrink-0 items-center rounded-full text-[13px] font-semibold transition-colors [&_button]:!py-1 [&_button]:!text-[12px]', period === 'hari' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200')}>
             <span className="[&_button]:!border-0 [&_button]:!bg-transparent [&_button]:!shadow-none">
               <DatePicker value={selectedDate} onChange={(d) => { setSelectedDate(d); setPeriod('hari'); setShown(PAGE); }} />
             </span>
@@ -457,37 +462,32 @@ export default function DailyTransactionLogPage() {
       </div>
 
       {/* Jenis + filter */}
-      <div className="no-scrollbar flex items-center gap-2 overflow-x-auto py-0.5 md:flex-wrap md:overflow-visible">
+      <div className="no-scrollbar flex items-center gap-1.5 overflow-x-auto py-0.5 md:flex-wrap md:overflow-visible">
         <ChipGroup id="kind" items={KINDS} value={kind} onChange={setKind} />
-        <FilterPopover title="Kategori" icon={<Tag size={14} />} label={catFilter.length ? `Kategori · ${catFilter.length}` : 'Kategori'} active={catFilter.length > 0}>
+        <FilterPopover title="Kategori" icon={<Tag size={13} />} label={catFilter.length ? `Kategori · ${catFilter.length}` : 'Kategori'} active={catFilter.length > 0}>
           {() => categoryOptions.length === 0 ? <p className="px-3 py-3 text-sm text-slate-500">Belum ada kategori.</p> : categoryOptions.map((c) => (
             <OptionRow key={c} selected={catFilter.includes(c)} onClick={() => setCatFilter((cur) => toggleIn(cur, c))}>
               {categoryEmoji(c)}&nbsp;&nbsp;{c}
             </OptionRow>
           ))}
         </FilterPopover>
-        <FilterPopover title="Rekening" icon={<Wallet size={14} />} label={accFilter.length ? `Rekening · ${accFilter.length}` : 'Rekening'} active={accFilter.length > 0}>
+        <FilterPopover title="Rekening" icon={<Wallet size={13} />} label={accFilter.length ? `Rekening · ${accFilter.length}` : 'Rekening'} active={accFilter.length > 0}>
           {() => accounts.map((a) => (
             <OptionRow key={a.id} selected={accFilter.includes(a.id!)} onClick={() => setAccFilter((cur) => toggleIn(cur, a.id!))}>
               {a.name} <span className="text-slate-400">· {a.type}</span>
             </OptionRow>
           ))}
         </FilterPopover>
-        <FilterPopover title="Sumber" icon={<GitBranch size={14} />} label={srcFilter.length ? `Sumber · ${srcFilter.length}` : 'Sumber'} active={srcFilter.length > 0} width={260}>
+        <FilterPopover title="Sumber" icon={<GitBranch size={13} />} label={srcFilter.length ? `Sumber · ${srcFilter.length}` : 'Sumber'} active={srcFilter.length > 0} width={260}>
           {() => TX_SOURCES.map((src) => (
             <OptionRow key={src.id} selected={srcFilter.includes(src.id)} onClick={() => setSrcFilter((cur) => (cur.includes(src.id) ? cur.filter((x) => x !== src.id) : [...cur, src.id]))}>
               {src.emoji}&nbsp;&nbsp;{src.label} <span className="text-slate-400">· {sourceCounts.get(src.id) ?? 0}</span>
             </OptionRow>
           ))}
         </FilterPopover>
-        <button type="button" onClick={() => setRecurringOpen(true)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-sm font-semibold text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-100">
-          <Repeat size={14} /> Transaksi rutin
+        <button type="button" onClick={() => setRecurringOpen(true)} title="Transaksi rutin" className="flex shrink-0 items-center gap-1 rounded-full bg-white px-3 py-1 text-[13px] font-semibold text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-100">
+          <Repeat size={13} /> Rutin
         </button>
-        <FilterPopover title="Urutkan" icon={<ArrowDownUp size={14} />} label={SORTS.find((s) => s.id === sort)?.label} active={sort !== 'terbaru'} width={220}>
-          {(close) => SORTS.map((s) => (
-            <OptionRow key={s.id} kind="radio" selected={sort === s.id} onClick={() => { setSort(s.id); close(); }}>{s.label}</OptionRow>
-          ))}
-        </FilterPopover>
         <AnimatePresence>
           {hasFilter && (
             <motion.button
@@ -496,7 +496,7 @@ export default function DailyTransactionLogPage() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -6 }}
               onClick={resetFilter}
-              className="flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-sm font-bold text-slate-500 hover:text-slate-900"
+              className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[13px] font-bold text-slate-500 hover:text-slate-900"
             >
               <X size={14} /> Hapus filter
             </motion.button>

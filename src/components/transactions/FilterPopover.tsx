@@ -64,13 +64,13 @@ export function FilterPopover({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         className={cn(
-          'flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors',
+          'flex items-center gap-1 rounded-full px-3 py-1 text-[13px] font-semibold transition-colors',
           active ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100'
         )}
       >
         {icon}
         {label}
-        <ChevronDown size={14} className={cn('transition-transform duration-200', open && 'rotate-180')} />
+        <ChevronDown size={13} className={cn('transition-transform duration-200', open && 'rotate-180')} />
       </button>
       {typeof document !== 'undefined' &&
         createPortal(
