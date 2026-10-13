@@ -14,6 +14,8 @@ import { ShellTitleContext } from '@/components/ui/PageHeader';
 
 const ONBOARDING_PATH = '/membership/onboarding';
 
+const FULLSCREEN_PATHS = new Set(['/membership/pasar']);
+
 export default function MembershipLayout({
   children,
 }: {
@@ -51,6 +53,21 @@ export default function MembershipLayout({
 
   // Hapus spinner agar transisi dari tombol login terasa instan.
   if (loading) return null;
+
+  // Halaman "layar penuh" (seperti Oyenku): tanpa sidebar & header aplikasi —
+  // halamannya membawa bar atas & navigasi sendiri.
+  if (FULLSCREEN_PATHS.has(pathname)) {
+    return (
+      <FeedbackProvider>
+      <ModalProvider>
+        <div className="min-h-screen bg-white">
+          <ShellTitleContext.Provider value={true}>{children}</ShellTitleContext.Provider>
+          <GlobalModalWrapper />
+        </div>
+      </ModalProvider>
+      </FeedbackProvider>
+    );
+  }
 
   return (
     <FeedbackProvider>

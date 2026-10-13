@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion';
-import { BookOpen, ChevronRight, Landmark, Minus, Newspaper, Plus, ShieldCheck, TrendingUp } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight, Landmark, Minus, Newspaper, Plus, ShieldCheck, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { investmentService, type Investment } from '@/lib/services/investmentService';
@@ -51,12 +52,24 @@ export default function PasarPage() {
     transactionService.getUserTransactions('session').then(setTransactions).catch(() => {});
   }, []);
 
+  const router = useRouter();
   const feed = data?.feed ?? null;
   const news = data?.news ?? [];
+  const title = TABS.find((t) => t.id === tab)!;
 
   return (
-    <div className="mx-auto max-w-6xl pb-32">
-      <h1 className="sr-only">Pasar & belajar</h1>
+    <div className="pb-32">
+      {/* Bar atas sendiri (halaman layar penuh, tanpa sidebar) */}
+      <div className="sticky top-0 z-20 bg-white/90 backdrop-blur">
+      <header className="mx-auto flex max-w-[1120px] items-center justify-between px-4 py-3 md:px-6">
+        <button type="button" onClick={() => (window.history.length > 1 ? router.back() : router.push('/membership/dashboard'))} aria-label="Kembali" className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200"><ChevronLeft size={20} /></button>
+        <h1 className="flex items-center gap-2 text-lg font-extrabold text-slate-900">
+          <LeoMascot mood="idle" size={28} /> {tab === 'pasar' ? 'Pasar & belajar' : title.label}
+        </h1>
+        <Link href="/membership/profile" aria-label="Profil" className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-amber-50"><LeoMascot mood="happy" size={34} /></Link>
+      </header>
+      </div>
+      <div className="mx-auto mt-2 max-w-[1120px] px-4 md:px-6">
       {error ? (
         <div className="rounded-3xl bg-amber-50 p-6 text-sm text-amber-800">{error}</div>
       ) : !data ? (
@@ -72,8 +85,10 @@ export default function PasarPage() {
         </AnimatePresence>
       )}
 
+      </div>
+
       {/* Navigasi bawah mengambang */}
-      <nav aria-label="Bagian Pasar & belajar" className="fixed inset-x-0 bottom-4 z-30 flex justify-center px-4 lg:pl-[288px]">
+      <nav aria-label="Bagian Pasar & belajar" className="fixed inset-x-0 bottom-4 z-30 flex justify-center px-4">
         <LayoutGroup id="pasar-tabs">
           <div className="flex gap-1 rounded-[26px] bg-white/95 p-1.5 shadow-xl shadow-slate-900/10 ring-1 ring-slate-200 backdrop-blur">
             {TABS.map((t) => (
