@@ -64,7 +64,7 @@ export const sectionTabs: SectionTab[][] = [
   // transaksi / Struk / Suara, transfer lewat Dompet.
   [
     { label: 'Ringkasan', href: '/membership/laporan' },
-    { label: 'Laporan cetak', href: '/membership/annual' },
+    // 'Laporan cetak' (/membership/annual) DISEMBUNYIKAN — halamannya tetap ada.
     { label: 'Ikuti uangmu', href: '/membership/arus' },
     { label: 'Kanvas', href: '/membership/kanvas' },
     { label: 'Pajak', href: '/membership/pajak-center' },

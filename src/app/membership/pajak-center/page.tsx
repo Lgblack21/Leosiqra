@@ -1,1032 +1,582 @@
 "use client";
 
+import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import {
-  TrendingDown,
-  TrendingUp,
-  FileSpreadsheet,
-  Printer,
-  Info,
-  Landmark,
-  AlertTriangle,
-  X,
-  Calculator,
-} from 'lucide-react';
-import { YearPicker } from '@/components/ui/YearPicker';
-import { useStoredValue } from '@/lib/hooks/useStoredValue';
-import { Transaction } from '@/lib/services/transactionService';
-import { Investment } from '@/lib/services/investmentService';
-import { Account } from '@/lib/services/accountService';
-import { auth, db } from '@/lib/cf-client';
-import { onAuthStateChanged } from '@/lib/cf-auth';
-import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
+import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
+import { Check, ChevronDown, ExternalLink, FileSpreadsheet, MessageCircle, Minus, Plus, Printer } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useCountUp } from '@/lib/hooks/useCountUp';
-import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
+import { useStoredValue } from '@/lib/hooks/useStoredValue';
+import { useModal } from '@/context/ModalContext';
+import { transactionService, type Transaction } from '@/lib/services/transactionService';
+import { investmentService, type Investment } from '@/lib/services/investmentService';
+import { accountService, type Account } from '@/lib/services/accountService';
+import { itemService, type Item } from '@/lib/services/itemService';
+import { exchangeRateService, type ExchangeRates } from '@/lib/services/exchangeRateService';
+import { isCreditAccountType, computeCreditUsage } from '@/lib/creditCard';
+import { categoryEmoji } from '@/lib/categoryEmoji';
+import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
+import { LeoMascot, type LeoMood } from '@/components/mascot/LeoMascot';
+import { AnimatedNumber } from '@/components/app/AnimatedNumber';
+import { Skeleton } from '@/components/ui/Skeleton';
 
-// PTKP (Penghasilan Tidak Kena Pajak) & tarif PPh Pasal 17 UU HPP (berlaku
-// sejak tahun pajak 2022) — dasar hukum untuk estimasi PPh Orang Pribadi.
-const PTKP_BASE: Record<'TK' | 'K', number> = { TK: 54_000_000, K: 58_500_000 };
-const PTKP_PER_TANGGUNGAN = 4_500_000;
+// Asisten SPT Tahunan PPh Orang Pribadi. Membaca catatan Leosiqra (pemasukan,
+// rekening, investasi, barang, hutang-piutang) lalu menyusun perkiraan:
+//   bruto per jenis penghasilan → neto (biaya jabatan / norma) → PKP → PPh
+//   Pasal 17 → dikurangi kredit pajak (bukti potong) → kurang/lebih bayar/nihil.
+// Plus daftar harta & utang untuk lampiran, dan langkah lapor di Coretax.
+// SEMUA angka = perkiraan pembanding, bukan pengganti perhitungan resmi DJP.
+// Pengaturan disimpan di perangkat ini (localStorage), tidak ada tabel baru.
+
+// ===== Aturan (UU HPP; PTKP PMK 101/2016; biaya jabatan PMK 250/2008) =====
+const PTKP_BASE = 54_000_000;
+const PTKP_KAWIN = 4_500_000;
+const PTKP_TANGGUNGAN = 4_500_000;
 const MAX_TANGGUNGAN = 3;
-
-const TAX_BRACKETS = [
-  { min: 0, max: 60_000_000, rate: 0.05 },
-  { min: 60_000_000, max: 250_000_000, rate: 0.15 },
-  { min: 250_000_000, max: 500_000_000, rate: 0.25 },
-  { min: 500_000_000, max: 5_000_000_000, rate: 0.30 },
-  { min: 5_000_000_000, max: Infinity, rate: 0.35 },
-] as const;
-
-interface TaxBracketResult {
-  min: number;
-  max: number;
-  rate: number;
-  taxableInBracket: number;
-  tax: number;
-}
-
-// Pajak progresif — tiap lapisan cuma kena tarifnya sendiri atas bagian yang
-// masuk lapisan itu, bukan seluruh PKP dikali tarif tertinggi.
-const calculatePPh = (pkp: number): { totalTax: number; breakdown: TaxBracketResult[] } => {
-  if (pkp <= 0) return { totalTax: 0, breakdown: [] };
-  const breakdown: TaxBracketResult[] = [];
-  let totalTax = 0;
-  for (const bracket of TAX_BRACKETS) {
-    if (pkp <= bracket.min) break;
-    const upper = Math.min(pkp, bracket.max);
-    const taxableInBracket = upper - bracket.min;
-    const tax = taxableInBracket * bracket.rate;
-    breakdown.push({ ...bracket, taxableInBracket, tax });
-    totalTax += tax;
+const BIAYA_JABATAN_RATE = 0.05;
+const BIAYA_JABATAN_MAX = 6_000_000;
+const UMKM_RATE = 0.005; // PP 55/2022, final
+const UMKM_BEBAS = 500_000_000; // omzet OP s.d. Rp500 jt/tahun tidak dikenai PPh (UU HPP)
+const BRACKETS = [
+  { upTo: 60_000_000, rate: 0.05 },
+  { upTo: 250_000_000, rate: 0.15 },
+  { upTo: 500_000_000, rate: 0.25 },
+  { upTo: 5_000_000_000, rate: 0.3 },
+  { upTo: Infinity, rate: 0.35 },
+];
+const pph17 = (pkp: number) => {
+  let left = pkp;
+  let prev = 0;
+  const rows: { from: number; to: number; rate: number; base: number; tax: number }[] = [];
+  for (const b of BRACKETS) {
+    if (left <= 0) break;
+    const base = Math.min(left, b.upTo - prev);
+    rows.push({ from: prev, to: b.upTo, rate: b.rate, base, tax: base * b.rate });
+    left -= base;
+    prev = b.upTo;
   }
-  return { totalTax, breakdown };
+  return { total: rows.reduce((s, r) => s + r.tax, 0), rows };
 };
 
+// ===== Jenis penghasilan =====
+type Kind = 'kerja' | 'bebas' | 'usaha' | 'bunga' | 'sewa' | 'dividen' | 'hadiah' | 'bukan';
+const KINDS: { id: Kind; label: string; hint: string }[] = [
+  { id: 'kerja', label: 'Gaji / pekerjaan', hint: 'Gaji, THR, bonus, tunjangan dari pemberi kerja' },
+  { id: 'bebas', label: 'Freelance / pekerjaan bebas', hint: 'Jasa, honor, proyek — dihitung dengan norma (NPPN)' },
+  { id: 'usaha', label: 'Usaha (UMKM)', hint: 'Jualan/usaha — PPh final 0,5% (PP 55/2022)' },
+  { id: 'bunga', label: 'Bunga deposito/tabungan', hint: 'Final, sudah dipotong bank' },
+  { id: 'sewa', label: 'Sewa tanah/bangunan', hint: 'Final 10% dari bruto' },
+  { id: 'dividen', label: 'Dividen', hint: 'Final 10% / bebas bila diinvestasikan kembali' },
+  { id: 'hadiah', label: 'Hadiah / undian', hint: 'Final 25%, dipotong pemberi hadiah' },
+  { id: 'bukan', label: 'Bukan objek pajak', hint: 'Kiriman keluarga, hibah, pengembalian, transfer' },
+];
+const guessKind = (cat: string): Kind => {
+  const c = cat.toLowerCase();
+  if (/gaji|salary|thr|bonus|tunjangan|lembur|insentif|pensiun/.test(c)) return 'kerja';
+  if (/freelance|proyek|project|jasa|honor|komisi|fee|desain|konsultan/.test(c)) return 'bebas';
+  if (/usaha|jualan|penjualan|toko|omzet|dagang|bisnis/.test(c)) return 'usaha';
+  if (/bunga|deposito|interest/.test(c)) return 'bunga';
+  if (/sewa|kos|kontrak/.test(c)) return 'sewa';
+  if (/dividen/.test(c)) return 'dividen';
+  if (/hadiah|undian|giveaway/.test(c)) return 'hadiah';
+  return 'bukan';
+};
+
+const STEPS = [
+  { id: 'akun', title: 'Akun Coretax aktif', desc: 'Login coretaxdjp.pajak.go.id pakai NIK (NIK = NPWP). Pastikan email & HP masih aktif.' },
+  { id: 'a1', title: 'Bukti potong dari kantor', desc: 'Minta bukti potong PPh 21 (A1) — biasanya juga muncul otomatis di Coretax.' },
+  { id: 'lain', title: 'Bukti potong lain', desc: 'Bukti potong PPh 23/final dari klien, bank, atau penyelenggara hadiah.' },
+  { id: 'harta', title: 'Cek daftar harta & utang', desc: 'Pakai daftar di bawah. Harta dilaporkan dengan harga perolehan.' },
+  { id: 'keluarga', title: 'Susunan keluarga', desc: 'Pasangan dan tanggungan (maks. 3) sesuai KK.' },
+  { id: 'bayar', title: 'Bayar kalau kurang bayar', desc: 'Buat kode billing di Coretax lalu bayar sebelum SPT dikirim.' },
+  { id: 'kirim', title: 'Isi & kirim SPT', desc: 'Isi SPT Tahunan PPh OP di Coretax, tanda tangani, dapatkan BPE.' },
+];
+
+const rp = (n: number) => 'Rp' + Math.round(n).toLocaleString('id-ID');
+const short = (n: number) => (Math.abs(n) >= 1e9 ? `Rp${(n / 1e9).toFixed(2).replace('.', ',')} M` : Math.abs(n) >= 1e6 ? `Rp${(n / 1e6).toFixed(1).replace('.', ',')} jt` : rp(n));
+const toIdr = (t: Transaction) => Number(t.amountIDR) || Number(t.amount) || 0;
+const num = (v: string | null | undefined) => Math.max(0, Number(String(v ?? '').replace(/\D/g, '')) || 0);
+const parseJSON = <T,>(v: string | null, fb: T): T => {
+  try {
+    return v ? { ...fb, ...JSON.parse(v) } : fb;
+  } catch {
+    return fb;
+  }
+};
+const card = 'rounded-[24px] border border-slate-100 bg-white shadow-[0_8px_30px_-18px_rgba(49,46,129,0.25)]';
+
 export default function PajakCenterPage() {
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [investments, setInvestments] = useState<Investment[]>([]);
+  const { openModal } = useModal();
+  const now = new Date();
+  // Jan–Mar: biasanya sedang melaporkan tahun lalu.
+  const [year, setYear] = useState(now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear());
+  const [all, setAll] = useState<Transaction[] | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [debtTransactions, setDebtTransactions] = useState<Transaction[]>([]);
-  const [fxRates, setFxRates] = useState<ExchangeRates>({});
+  const [investments, setInvestments] = useState<Investment[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
+  const [fx, setFx] = useState<ExchangeRates>({});
+  const [showBrackets, setShowBrackets] = useState(false);
 
-  // Status PTKP disimpan lokal di browser (bukan per-tahun-pajak) — jarang
-  // berubah, jadi tidak perlu kolom database sendiri.
-  const [disclaimerDismissed, setDisclaimerDismissed] = useStoredValue('pajak-center-disclaimer-dismissed');
-  const [storedStatus, setStoredStatus] = useStoredValue('pajak-center-marital-status');
-  const [storedDependents, setStoredDependents] = useStoredValue('pajak-center-dependents');
-  const showDisclaimer = disclaimerDismissed !== '1';
-  const maritalStatus: 'TK' | 'K' = storedStatus === 'K' ? 'K' : 'TK';
-  const parsedDependents = Number(storedDependents ?? 0);
-  const dependents = Number.isInteger(parsedDependents) && parsedDependents >= 0 && parsedDependents <= MAX_TANGGUNGAN ? parsedDependents : 0;
-
-  useEffect(() => {
-    exchangeRateService.getLatestRates().then(setFxRates).catch(console.error);
-  }, []);
-
-  const updateMaritalStatus = (status: 'TK' | 'K') => setStoredStatus(status);
-  const updateDependents = (count: number) => setStoredDependents(String(count));
-  const dismissDisclaimer = () => setDisclaimerDismissed('1');
-
-  // PPh 21 yang sudah dipotong pemberi kerja bersifat per tahun pajak (beda
-  // dengan status PTKP yang jarang berubah), jadi disimpan dengan key per
-  // tahun supaya tidak salah kebawa saat ganti tahun di YearPicker.
-  const [storedPph21, updatePph21Withheld] = useStoredValue(`pajak-center-pph21-${selectedYear}`);
-  const pph21Withheld = storedPph21 ?? '';
-
-  const isCurrentYear = selectedYear === new Date().getFullYear();
+  // Pengaturan lama dipakai ulang supaya isian member tidak hilang.
+  const [sStatus, setSStatus] = useStoredValue('pajak-center-marital-status');
+  const [sDep, setSDep] = useStoredValue('pajak-center-dependents');
+  const [sPph21, setSPph21] = useStoredValue(`pajak-center-pph21-${year}`);
+  const [sKinds, setSKinds] = useStoredValue('pajak-kinds:v1');
+  const [sInput, setSInput] = useStoredValue(`pajak-input:v1:${year}`);
+  const [sSteps, setSSteps] = useStoredValue(`pajak-langkah:v1:${year}`);
+  const kawin = sStatus === 'K';
+  const tanggungan = Math.min(MAX_TANGGUNGAN, Math.max(0, Number(sDep) || 0));
+  const kindOverride = parseJSON<Record<string, Kind>>(sKinds, {});
+  const input = parseJSON(sInput, { iuran: '', norma: '50', zakat: '', pph23: '', a1Bruto: '' });
+  const steps = parseJSON<Record<string, boolean>>(sSteps, {});
+  const setInput = (k: keyof typeof input, v: string) => setSInput(JSON.stringify({ ...input, [k]: v }));
 
   useEffect(() => {
-    let unsubTrx: (() => void) | null = null;
-    let unsubInv: (() => void) | null = null;
-    let unsubAcc: (() => void) | null = null;
-    let unsubDebt: (() => void) | null = null;
-
-    const unsub = onAuthStateChanged(auth, (u) => {
-      if (u) {
-        const startOfYear = new Date(selectedYear, 0, 1);
-        const endOfYear = new Date(selectedYear, 11, 31, 23, 59, 59);
-
-        const qTrx = query(
-          collection(db, 'transactions'),
-          where('userId', '==', u.uid),
-          where('date', '>=', startOfYear),
-          where('date', '<=', endOfYear),
-          orderBy('date', 'desc')
-        );
-        unsubTrx = onSnapshot(qTrx, (snap) => {
-          setTransactions(snap.docs.map(doc => {
-            const d = doc.data();
-            return { ...d, id: doc.id, amount: Number(d.amount) || 0, date: d.date?.toDate?.() ?? new Date() } as Transaction;
-          }));
-        });
-
-        // Portofolio & rekening bersifat posisi terkini (all-time), bukan per-tahun.
-        const qInv = query(collection(db, 'investments'), where('userId', '==', u.uid));
-        unsubInv = onSnapshot(qInv, (snap) => {
-          setInvestments(
-            snap.docs
-              .map(doc => ({ ...doc.data(), id: doc.id }) as Investment)
-              // Deposito "Penempatan" otomatis punya baris proyeksi "(Hasil Akhir)"
-              // berstatus Planned — bukan harta nyata, jangan ikut dihitung di
-              // Daftar Harta (dulu bikin nilai harta dobel untuk SPT).
-              .filter(inv => inv.status !== 'Planned')
-          );
-        });
-
-        const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
-        unsubAcc = onSnapshot(qAcc, (snap) => {
-          setAccounts(snap.docs.map(doc => ({ ...doc.data(), id: doc.id }) as Account));
-        });
-
-        // Hutang & Piutang tercatat sebagai transaksi bertipe 'debt' (menu Hutang & Piutang),
-        // bukan sebagai akun — sumber data yang benar untuk Daftar Kewajiban SPT.
-        const qDebt = query(
-          collection(db, 'transactions'),
-          where('userId', '==', u.uid),
-          where('type', '==', 'debt')
-        );
-        unsubDebt = onSnapshot(qDebt, (snap) => {
-          setDebtTransactions(snap.docs.map(doc => {
-            const d = doc.data();
-            return { ...d, id: doc.id, amount: Number(d.amount) || 0, date: d.date?.toDate?.() ?? new Date() } as Transaction;
-          }));
-        });
-      }
-    });
-
-    return () => {
-      unsub();
-      if (unsubTrx) unsubTrx();
-      if (unsubInv) unsubInv();
-      if (unsubAcc) unsubAcc();
-      if (unsubDebt) unsubDebt();
-    };
-  }, [selectedYear]);
-
-  // SPT wajib dilaporkan dalam Rupiah — akun/transaksi dalam mata uang asing
-  // dikonversi ke IDR pakai kurs live sebelum masuk daftar harta/utang,
-  // bukan angka mentahnya (yang sebelumnya dijumlah seolah sudah IDR).
-  const toIDR = useCallback(
-    (amount: number, currency: string | undefined) =>
-      exchangeRateService.convert(amount, currency || 'IDR', 'IDR', fxRates),
-    [fxRates]
-  );
-
-  // SPT Specific Aggregations
-  const daftarHarta = useMemo(() => {
-    return [
-      ...accounts.map(acc => ({ name: acc.name, type: acc.type, value: toIDR(Number(acc.balance) || 0, acc.currency) })),
-      ...investments.map(inv => ({ name: inv.name, type: 'Investasi', value: Number(inv.amountIDR) || Number(inv.amountInvested) || 0 }))
-    ];
-  }, [accounts, investments, toIDR]);
-
-  const daftarUtang = useMemo(() => {
-    return debtTransactions
-      .filter((t) => t.category === 'Hutang' && t.paymentStatus !== 'lunas')
-      .map((t) => ({
-        name: t.lenderName || t.note || 'Hutang',
-        value: Number(t.amountIDR) || t.amount
-      }));
-  }, [debtTransactions]);
-
-  const daftarPiutang = useMemo(() => {
-    return debtTransactions
-      .filter((t) => t.category === 'Piutang' && t.paymentStatus !== 'lunas')
-      .map((t) => ({
-        name: t.lenderName || t.note || 'Piutang',
-        value: Number(t.amountIDR) || t.amount
-      }));
-  }, [debtTransactions]);
-
-  const totalHarta = daftarHarta.reduce((s, h) => s + h.value, 0);
-  const totalUtang = daftarUtang.reduce((s, u) => s + u.value, 0);
-  const totalPiutang = daftarPiutang.reduce((s, p) => s + p.value, 0);
-
-  // New Summary Calculations for PDF
-  const totalPemasukan = useMemo(() => transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0), [transactions]);
-  const totalPengeluaran = useMemo(() => transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0), [transactions]);
-
-  const investasiPembelian = useMemo(() => {
-    // Assuming transactions with category 'Investasi' or related are investment purchases
-    return transactions
-      .filter(t => t.type === 'pengeluaran' && (t.category?.toLowerCase().includes('investasi') || t.category === 'Saham' || t.category === 'Deposito'))
-      .reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0);
-  }, [transactions]);
-
-  // Penempatan dana ke deposito/saham/investasi lain BUKAN pengeluaran/kerugian
-  // untuk keperluan pajak — itu cuma pemindahan aset (uang tunai jadi
-  // instrumen investasi), dan sudah terhitung terpisah sebagai "Harta" di
-  // Daftar Harta. Kalau ikut dikurangkan di sini, Penghasilan Neto jadi
-  // salah besar-besaran (mis. taruh Rp280 juta ke deposito bikin neto minus
-  // Rp280 juta padahal itu bukan kerugian) — kecualikan dari sini, sama
-  // seperti "Biaya (bucket)" di laporan cetak yang sudah benar duluan.
-  const netIncome = totalPemasukan - (totalPengeluaran - investasiPembelian);
-
-  // PTKP, PKP, dan estimasi PPh terutang (Pasal 17 UU HPP) — PKP dibulatkan
-  // ke bawah kelipatan Rp1.000 sesuai ketentuan resmi.
-  const ptkp = PTKP_BASE[maritalStatus] + Math.min(dependents, MAX_TANGGUNGAN) * PTKP_PER_TANGGUNGAN;
-  const pkp = Math.floor(Math.max(0, netIncome - ptkp) / 1000) * 1000;
-  const { totalTax: pphTerutang, breakdown: pphBreakdown } = useMemo(() => calculatePPh(pkp), [pkp]);
-
-  // PPh Terutang di atas adalah PPh setahun PENUH atas PKP — kalau sebagian
-  // sudah dipotong pemberi kerja tiap bulan (PPh 21 karyawan), sisanya (atau
-  // kelebihannya) inilah yang sebenarnya perlu dibayar/direstitusi saat lapor.
-  const pph21WithheldNum = Number(pph21Withheld) || 0;
-  const pphKurangBayar = pphTerutang - pph21WithheldNum;
-
-  // SPT resmi melaporkan nilai dalam Rupiah penuh (tanpa desimal) — desimal
-  // di sini cuma bikin angka lebih panjang dan gampang kepotong di cetakan.
-  const formatIDR = (val: number) => {
-    return 'Rp ' + new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(val));
-  };
-
-  const formatIDRShort = (val: number) => {
-    if (Math.abs(val) >= 1_000_000_000) return `${val < 0 ? '-' : ''}Rp ${(Math.abs(val) / 1_000_000_000).toFixed(2)}M`;
-    if (Math.abs(val) >= 1_000_000) return `${val < 0 ? '-' : ''}Rp ${(Math.abs(val) / 1_000_000).toFixed(2)}Jt`;
-    return (val < 0 ? '-Rp ' : 'Rp ') + new Intl.NumberFormat('id-ID').format(Math.abs(val));
-  };
-
-  // Angka kartu ringkasan dianimasikan naik/turun secara halus.
-  const animatedNetIncome = useCountUp(netIncome);
-  const animatedTotalHarta = useCountUp(totalHarta);
-  const animatedTotalUtang = useCountUp(totalUtang);
-  const animatedTotalPiutang = useCountUp(totalPiutang);
-  const animatedHartaBersih = useCountUp(totalHarta + totalPiutang - totalUtang);
-  const animatedPphTerutang = useCountUp(pphTerutang);
-
-  const generatedAt = useMemo(() => {
-    const now = new Date();
-    return `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}, ${now.getHours()}.${now.getMinutes().toString().padStart(2, '0')}.${now.getSeconds().toString().padStart(2, '0')}`;
+    const load = () => transactionService.getUserTransactions('session').then(setAll).catch(() => setAll([]));
+    load();
+    accountService.getUserAccounts('session').then(setAccounts).catch(() => {});
+    investmentService.getUserInvestments('session').then((l) => setInvestments(l.filter((i) => i.status !== 'Planned'))).catch(() => {});
+    itemService.list().then(setItems).catch(() => {});
+    exchangeRateService.getLatestRates().then(setFx).catch(() => {});
+    return subscribeToCollectionChanges('transactions', load);
   }, []);
 
-  // Export Funcs
-  const handleExportExcel = () => {
-    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  // ===== Penghasilan tahun ini per kategori
+  const incomeCats = useMemo(() => {
+    const m = new Map<string, number>();
+    (all ?? []).filter((t) => t.type === 'pemasukan' && new Date(t.date).getFullYear() === year).forEach((t) => m.set(t.category || 'Lainnya', (m.get(t.category || 'Lainnya') ?? 0) + toIdr(t)));
+    return [...m.entries()].sort((a, b) => b[1] - a[1]).map(([cat, total]) => ({ cat, total, kind: kindOverride[cat] ?? guessKind(cat) }));
+  }, [all, year, kindOverride]);
+  const byKind = (k: Kind) => incomeCats.filter((c) => c.kind === k).reduce((s, c) => s + c.total, 0);
 
-    let tableHtml = `
-      <h3>Arus Kas Bulanan &ndash; Tahun ${selectedYear}</h3>
-      <table border="1">
-        <tr style="background-color: #f1f5f9;">
-          <th style="padding: 10px;">Bulan</th>
-          <th style="padding: 10px;">Pemasukan</th>
-          <th style="padding: 10px;">Pengeluaran</th>
-          <th style="padding: 10px;">Net Arus Kas</th>
-        </tr>
-    `;
+  // ===== Hitungan
+  const brutoKerja = num(input.a1Bruto) || byKind('kerja');
+  const biayaJabatan = brutoKerja > 0 ? Math.min(brutoKerja * BIAYA_JABATAN_RATE, BIAYA_JABATAN_MAX) : 0;
+  const iuran = Math.min(num(input.iuran), brutoKerja);
+  const netoKerja = Math.max(0, brutoKerja - biayaJabatan - iuran);
+  const brutoBebas = byKind('bebas');
+  const norma = Math.min(100, Math.max(0, Number(input.norma) || 0));
+  const netoBebas = brutoBebas * (norma / 100);
+  const zakat = num(input.zakat);
+  const neto = Math.max(0, netoKerja + netoBebas - zakat);
+  const ptkp = PTKP_BASE + (kawin ? PTKP_KAWIN : 0) + tanggungan * PTKP_TANGGUNGAN;
+  const pkp = Math.floor(Math.max(0, neto - ptkp) / 1000) * 1000;
+  const { total: terutang, rows: bracketRows } = pph17(pkp);
+  const pph21 = num(sPph21);
+  const pph23 = num(input.pph23);
+  const kredit = pph21 + pph23;
+  const hasil = terutang - kredit;
+  const status: 'kurang' | 'lebih' | 'nihil' = Math.abs(hasil) < 1000 ? 'nihil' : hasil > 0 ? 'kurang' : 'lebih';
+  const omzetUsaha = byKind('usaha');
+  const umkmFinal = Math.max(0, omzetUsaha - UMKM_BEBAS) * UMKM_RATE;
+  const finalLain = byKind('bunga') + byKind('sewa') + byKind('dividen') + byKind('hadiah');
 
-    months.forEach((m, idx) => {
-      const monthTrx = transactions.filter(t => t.date.getMonth() === idx);
-      const inc = monthTrx.filter(t => t.type === 'pemasukan').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0);
-      const exp = monthTrx.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0);
-      tableHtml += `
-        <tr>
-          <td style="padding: 8px;">${m}</td>
-          <td style="padding: 8px; text-align: right;">${inc.toLocaleString()}</td>
-          <td style="padding: 8px; text-align: right;">${exp.toLocaleString()}</td>
-          <td style="padding: 8px; text-align: right; font-weight: bold;">${(inc - exp).toLocaleString()}</td>
-        </tr>
-      `;
+  // ===== Harta & utang (posisi terkini)
+  const toIDR = (v: number, cur?: string) => exchangeRateService.convert(v, cur || 'IDR', 'IDR', fx);
+  const harta = {
+    kas: accounts.filter((a) => !isCreditAccountType(a.type) && a.type !== 'Investment Account').map((a) => ({ name: a.name, sub: a.type === 'Cash' ? 'Uang tunai' : a.type === 'E-Wallet' ? 'Dompet digital' : 'Tabungan/giro', value: toIDR(Number(a.balance) || 0, a.currency) })),
+    investasi: investments.map((i) => ({ name: i.name, sub: i.type || 'Investasi', value: Number(i.amountIDR) || Number(i.amountInvested) || 0 })),
+    barang: items.map((i) => ({ name: i.name, sub: i.category || (i.kind === 'koleksi' ? 'Koleksi' : 'Barang'), value: Number(i.purchase_price) || 0 })),
+  };
+  const debts = (all ?? []).filter((t) => t.type === 'debt' && t.paymentStatus !== 'lunas');
+  const piutang = debts.filter((t) => t.category === 'Piutang').map((t) => ({ name: t.lenderName || t.note || 'Piutang', sub: 'Piutang', value: toIdr(t) }));
+  const utang = [
+    ...accounts.filter((a) => isCreditAccountType(a.type)).map((a) => ({ name: a.name, sub: 'Kartu kredit', value: toIDR(computeCreditUsage(a).used, a.currency) })).filter((x) => x.value > 0),
+    ...debts.filter((t) => t.category === 'Hutang').map((t) => ({ name: t.lenderName || t.note || 'Hutang', sub: t.subCategory || 'Utang', value: toIdr(t) })),
+  ];
+  const sum = (l: { value: number }[]) => l.reduce((s, x) => s + x.value, 0);
+  const totalHarta = sum(harta.kas) + sum(harta.investasi) + sum(harta.barang) + sum(piutang);
+  const totalUtang = sum(utang);
+
+  // ===== Tenggat & kesiapan
+  const deadline = new Date(year + 1, 2, 31);
+  const daysLeft = Math.ceil((deadline.getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 864e5);
+  const doneSteps = STEPS.filter((s) => steps[s.id]).length;
+  const loading = all === null;
+
+  // ===== Saran Leo (aturan sederhana dari data)
+  const tips: string[] = [];
+  if (year === now.getFullYear()) tips.push(`Tahun pajak ${year} masih berjalan — angka di sini baru sampai hari ini dan akan bertambah sampai Desember. Hitungan finalnya dilaporkan Jan–Mar ${year + 1}.`);
+  const unknown = incomeCats.filter((c) => c.kind === 'bukan' && !kindOverride[c.cat] && c.total > 0);
+  if (unknown.length) tips.push(`Ada ${unknown.length} kategori pemasukan yang Leo anggap bukan objek pajak (${unknown.slice(0, 2).map((c) => c.cat).join(', ')}${unknown.length > 2 ? ', …' : ''}). Cek lagi jenisnya di bagian Penghasilan.`);
+  if (brutoKerja > 0 && pph21 === 0) tips.push('Isi PPh 21 yang sudah dipotong kantor (lihat bukti potong A1). Tanpa ini hasilnya kelihatan kurang bayar, padahal biasanya nihil.');
+  if (brutoBebas > 0) tips.push(`Penghasilan freelance ${short(brutoBebas)}. Kalau omzetmu di bawah Rp4,8 M dan kamu pakai norma (NPPN), pemberitahuannya ke DJP paling lambat 3 bulan pertama tahun pajak. Norma tiap jenis jasa & kota berbeda — sesuaikan persentasenya.`);
+  if (omzetUsaha > 0) tips.push(omzetUsaha <= UMKM_BEBAS ? `Omzet usaha ${short(omzetUsaha)} masih di bawah Rp500 jt — belum ada PPh final 0,5%. Tetap laporkan peredaran brutonya di SPT.` : `Omzet usaha melewati Rp500 jt: PPh final 0,5% atas kelebihannya (±${short(umkmFinal)}) disetor sendiri tiap bulan, paling lambat tanggal 15 bulan berikutnya.`);
+  if (finalLain > 0) tips.push(`${short(finalLain)} penghasilan kena PPh final (bunga/sewa/dividen/hadiah). Laporkan di bagian penghasilan final — tidak ditambahkan ke PKP.`);
+  if (status === 'kurang' && hasil > 0) tips.push(`Perkiraan kurang bayar ${short(hasil)}. Bayar lewat kode billing di Coretax sebelum mengirim SPT, supaya tidak kena sanksi bunga.`);
+  if (status === 'lebih') tips.push('Perkiraan lebih bayar. Cek lagi angka bukti potong; kalau benar, kamu bisa minta dikembalikan (restitusi) atau dikompensasikan ke tahun depan.');
+  if (harta.barang.length === 0 && totalHarta > 0) tips.push('Kendaraan, HP, atau laptop juga termasuk harta di SPT. Catat di fitur Barang supaya ikut terdaftar di sini.');
+  if (incomeCats.length === 0 && !loading) tips.push(`Belum ada pemasukan tercatat di ${year}. Kalau kamu tidak berpenghasilan, SPT tetap bisa dilaporkan nihil — atau ajukan status non-efektif.`);
+
+  const leo: { mood: LeoMood; text: string } =
+    loading ? { mood: 'watch', text: 'Lagi menghitung…' }
+      : status === 'nihil' ? { mood: 'happy', text: brutoKerja + brutoBebas > 0 ? 'Perkiraan SPT-mu nihil — tinggal lapor saja.' : 'Belum ada penghasilan kena pajak tercatat.' }
+        : status === 'kurang' ? { mood: 'idle', text: 'Ada yang perlu dibayar. Cek angka bukti potong dulu ya.' }
+          : { mood: 'happy', text: 'Sepertinya kamu lebih bayar. Cek bukti potongnya.' };
+
+  const askLeo = () =>
+    openModal('ai_chat', {
+      prompt: `Bantu aku siapkan SPT Tahunan PPh orang pribadi tahun pajak ${year}. Ringkasanku (perkiraan dari Leosiqra): status PTKP ${kawin ? 'K' : 'TK'}/${tanggungan}; bruto pekerjaan ${rp(brutoKerja)}, biaya jabatan ${rp(biayaJabatan)}, iuran pensiun ${rp(iuran)}; freelance bruto ${rp(brutoBebas)} dengan norma ${norma}%; usaha UMKM ${rp(omzetUsaha)}; penghasilan final lain ${rp(finalLain)}; zakat ${rp(zakat)}; PKP ${rp(pkp)}; PPh terutang ${rp(terutang)}; PPh 21 dipotong ${rp(pph21)}, PPh 23 ${rp(pph23)}; hasil ${status} ${rp(Math.abs(hasil))}. Harta ${rp(totalHarta)}, utang ${rp(totalUtang)}. Apa yang perlu aku cek dan isi di Coretax?`,
     });
-    tableHtml += `</table>`;
 
-    const buildListTable = (title: string, rows: { name: string; value: number }[], extraCol?: (r: { name: string; type?: string }) => string) => {
-      let html = `<h3>${title} (posisi terkini)</h3><table border="1"><tr style="background-color: #f1f5f9;"><th style="padding: 10px;">Nama</th>${extraCol ? '<th style="padding: 10px;">Tipe</th>' : ''}<th style="padding: 10px;">Nilai (Rp)</th></tr>`;
-      if (rows.length === 0) {
-        html += `<tr><td style="padding: 8px;" colspan="${extraCol ? 3 : 2}">Tidak ada data.</td></tr>`;
-      } else {
-        rows.forEach((r) => {
-          html += `<tr><td style="padding: 8px;">${r.name}</td>${extraCol ? `<td style="padding: 8px;">${extraCol(r as { name: string; type?: string })}</td>` : ''}<td style="padding: 8px; text-align: right;">${r.value.toLocaleString()}</td></tr>`;
-        });
-      }
-      html += `</table>`;
-      return html;
-    };
-
-    tableHtml += buildListTable('Daftar Harta', daftarHarta, (r) => (r as { type?: string }).type ?? '-');
-    tableHtml += buildListTable('Daftar Utang', daftarUtang);
-    tableHtml += buildListTable('Daftar Piutang', daftarPiutang);
-    tableHtml += `<p>Harta Bersih (Harta + Piutang &minus; Utang): Rp ${(totalHarta + totalPiutang - totalUtang).toLocaleString()}</p>`;
-
-    tableHtml += `<h3>Perhitungan PPh Terutang (Pasal 17 UU HPP)</h3>`;
-    tableHtml += `<table border="1">
-      <tr style="background-color: #f1f5f9;"><th style="padding: 10px;">Komponen</th><th style="padding: 10px;">Nilai (Rp)</th></tr>
-      <tr><td style="padding: 8px;">Status PTKP</td><td style="padding: 8px;">${maritalStatus}/${dependents}</td></tr>
-      <tr><td style="padding: 8px;">PTKP Setahun</td><td style="padding: 8px; text-align: right;">${ptkp.toLocaleString()}</td></tr>
-      <tr><td style="padding: 8px;">Penghasilan Neto</td><td style="padding: 8px; text-align: right;">${netIncome.toLocaleString()}</td></tr>
-      <tr><td style="padding: 8px; font-weight: bold;">Penghasilan Kena Pajak (PKP)</td><td style="padding: 8px; text-align: right; font-weight: bold;">${pkp.toLocaleString()}</td></tr>
-    </table>`;
-
-    tableHtml += `<table border="1">
-      <tr style="background-color: #f1f5f9;">
-        <th style="padding: 10px;">Lapisan PKP</th>
-        <th style="padding: 10px;">Tarif</th>
-        <th style="padding: 10px;">Dasar Pengenaan (Rp)</th>
-        <th style="padding: 10px;">PPh (Rp)</th>
-      </tr>`;
-    if (pphBreakdown.length === 0) {
-      tableHtml += `<tr><td style="padding: 8px;" colspan="4">PKP Rp 0 atau di bawah PTKP &ndash; tidak ada PPh terutang.</td></tr>`;
-    } else {
-      pphBreakdown.forEach((b) => {
-        tableHtml += `<tr>
-          <td style="padding: 8px;">Rp ${b.min.toLocaleString()} s.d. ${b.max === Infinity ? 'ke atas' : 'Rp ' + b.max.toLocaleString()}</td>
-          <td style="padding: 8px; text-align: right;">${(b.rate * 100).toFixed(0)}%</td>
-          <td style="padding: 8px; text-align: right;">${b.taxableInBracket.toLocaleString()}</td>
-          <td style="padding: 8px; text-align: right;">${b.tax.toLocaleString()}</td>
-        </tr>`;
-      });
-    }
-    tableHtml += `<tr style="background-color: #f1f5f9;"><td style="padding: 8px; font-weight: bold;" colspan="3">Total PPh Terutang</td><td style="padding: 8px; text-align: right; font-weight: bold;">${pphTerutang.toLocaleString()}</td></tr>`;
-    if (pph21WithheldNum > 0) {
-      tableHtml += `<tr><td style="padding: 8px;" colspan="3">PPh Pasal 21 Sudah Dipotong Pemberi Kerja</td><td style="padding: 8px; text-align: right;">${pph21WithheldNum.toLocaleString()}</td></tr>`;
-      tableHtml += `<tr style="background-color: #f1f5f9;"><td style="padding: 8px; font-weight: bold;" colspan="3">${pphKurangBayar >= 0 ? 'PPh Kurang Bayar' : 'PPh Lebih Bayar (Restitusi)'}</td><td style="padding: 8px; text-align: right; font-weight: bold;">${Math.abs(pphKurangBayar).toLocaleString()}</td></tr>`;
-    }
-    tableHtml += `</table>`;
-
-    tableHtml += `<p style="font-size: 10px; color: #94a3b8;">Draft pembanding pribadi &ndash; bukan pengganti pelaporan resmi via coretaxdjp.pajak.go.id</p>`;
-
-    const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Laporan_Pajak_${selectedYear}.xls`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const exportExcel = () => {
+    const row = (a: string, b: string | number) => `<tr><td style="padding:6px">${a}</td><td style="padding:6px;text-align:right">${typeof b === 'number' ? Math.round(b).toLocaleString('id-ID') : b}</td></tr>`;
+    const list = (title: string, l: { name: string; sub: string; value: number }[]) =>
+      `<h3>${title}</h3><table border="1"><tr><th>Nama</th><th>Jenis</th><th>Nilai (Rp)</th></tr>${l.length ? l.map((x) => `<tr><td>${x.name.replace(/</g, '&lt;')}</td><td>${x.sub.replace(/</g, '&lt;')}</td><td style="text-align:right">${Math.round(x.value).toLocaleString('id-ID')}</td></tr>`).join('') : '<tr><td colspan="3">-</td></tr>'}</table>`;
+    const html = `<h2>Draft SPT Tahunan PPh OP — Tahun Pajak ${year}</h2><table border="1">${[
+      row('Status PTKP', `${kawin ? 'K' : 'TK'}/${tanggungan}`), row('Penghasilan bruto pekerjaan', brutoKerja), row('Biaya jabatan', biayaJabatan), row('Iuran pensiun/JHT', iuran),
+      row('Penghasilan bruto pekerjaan bebas', brutoBebas), row(`Neto pekerjaan bebas (norma ${norma}%)`, netoBebas), row('Zakat/sumbangan wajib', zakat), row('Penghasilan neto', neto),
+      row('PTKP', ptkp), row('PKP', pkp), row('PPh terutang (Pasal 17)', terutang), row('Kredit PPh 21', pph21), row('Kredit PPh 23', pph23),
+      row(status === 'kurang' ? 'PPh kurang bayar' : status === 'lebih' ? 'PPh lebih bayar' : 'Nihil', Math.abs(hasil)), row('Peredaran bruto usaha (PP 55)', omzetUsaha), row('Penghasilan final lain', finalLain),
+    ].join('')}</table>${list('Harta — kas & setara kas', harta.kas)}${list('Harta — investasi', harta.investasi)}${list('Harta — barang (harga perolehan)', harta.barang)}${list('Piutang', piutang)}${list('Utang', utang)}<p>Perkiraan dari Leosiqra — bukan pengganti perhitungan resmi di coretaxdjp.pajak.go.id</p>`;
+    const url = URL.createObjectURL(new Blob([html], { type: 'application/vnd.ms-excel' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Draft_SPT_${year}.xls`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
-  const handleExportPDF = () => {
-    window.print();
-  };
+  const hasilColor = status === 'kurang' ? 'text-rose-600' : status === 'lebih' ? 'text-emerald-600' : 'text-slate-900';
 
   return (
-    <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] print:p-0 print:m-0 print:bg-white print:max-w-none">
-      
-      {/* 0. Print-Only Report — layout terinspirasi format SPT Tahunan 1770 */}
-      <div className="hidden print:block font-sans text-slate-800 p-8 text-[11px] leading-relaxed">
+    <div className="mx-auto max-w-6xl space-y-6 pb-14 print:max-w-none">
+      <h1 className="sr-only">Pajak</h1>
 
-        {/* Kop Laporan */}
-        <div className="flex items-center justify-between border-b-2 border-slate-800 pb-4 mb-6">
-          <div className="flex items-center gap-3">
-            <Image src="/images/Logo-new.png" alt="Leosiqra" width={40} height={40} className="rounded-lg" />
-            <div>
-              <p className="text-sm font-black tracking-tight">Leosiqra</p>
-              <p className="text-[9px] text-slate-400 uppercase tracking-widest">Personal Finance &amp; Tax Assistant</p>
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <p className="text-sm text-slate-500">Asisten SPT Tahunan dari catatan keuanganmu.</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center rounded-full bg-slate-100 p-1">
+            {[now.getFullYear() - 2, now.getFullYear() - 1, now.getFullYear()].map((y) => (
+              <button key={y} type="button" onClick={() => setYear(y)} className={cn('relative rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors', year === y ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800')}>
+                {year === y && <motion.span layoutId="tax-year" className="absolute inset-0 rounded-full bg-white shadow-sm" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
+                <span className="relative">{y}</span>
+              </button>
+            ))}
+          </div>
+          <button type="button" onClick={askLeo} className="flex items-center gap-1.5 rounded-full bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-200"><MessageCircle size={15} /> Tanya Leo</button>
+          <button type="button" onClick={exportExcel} className="flex items-center gap-1.5 rounded-full bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-200"><FileSpreadsheet size={15} /> Excel</button>
+          <button type="button" onClick={() => window.print()} className="flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"><Printer size={15} /> Cetak draft</button>
+        </div>
+      </div>
+
+      {/* Hero hasil */}
+      <section className={cn(card, 'relative overflow-hidden bg-gradient-to-br from-white via-white to-indigo-50/70 p-6 md:p-8 print:hidden')}>
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-slate-500">Perkiraan SPT tahun pajak {year}</p>
+            {loading ? <Skeleton className="mt-2 h-14 w-72" /> : (
+              <>
+                <p className={cn('mt-1 text-[15px] font-bold', hasilColor)}>{status === 'kurang' ? 'Kurang bayar' : status === 'lebih' ? 'Lebih bayar' : 'Nihil'}</p>
+                <p className={cn('flex items-start gap-1 leading-none', hasilColor)}>
+                  <span className="mt-1.5 text-lg font-bold text-slate-400">Rp</span>
+                  <span className="text-[48px] font-extrabold tracking-tight tabular-nums md:text-[56px]"><AnimatedNumber value={Math.abs(hasil)} format={(n) => Math.round(n).toLocaleString('id-ID')} /></span>
+                </p>
+              </>
+            )}
+            <p className="mt-2 text-sm text-slate-500">PPh terutang {rp(terutang)} − sudah dipotong {rp(kredit)}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className={cn('rounded-full px-3 py-1.5 text-[13px] font-semibold', daysLeft < 0 ? 'bg-rose-50 text-rose-600' : daysLeft <= 30 ? 'bg-amber-50 text-amber-700' : 'bg-white text-slate-600 ring-1 ring-slate-200')}>
+                {daysLeft < 0 ? `Tenggat 31 Mar ${year + 1} sudah lewat` : `Lapor paling lambat 31 Mar ${year + 1} · ${daysLeft} hari lagi`}
+              </span>
+              <span className="rounded-full bg-white px-3 py-1.5 text-[13px] font-semibold text-slate-600 ring-1 ring-slate-200">Kesiapan {doneSteps}/{STEPS.length}</span>
+              <span className="rounded-full bg-white px-3 py-1.5 text-[13px] font-semibold text-slate-600 ring-1 ring-slate-200">PTKP {kawin ? 'K' : 'TK'}/{tanggungan}</span>
             </div>
           </div>
-          <div className="text-right">
-            <h1 className="text-base font-black uppercase tracking-tight">Draft Perhitungan Pajak Penghasilan Orang Pribadi</h1>
-            <p className="text-[9px] text-slate-400">Tahun Pajak {selectedYear} &middot; Dicetak {generatedAt}</p>
+          <div className="hidden items-end gap-2 md:flex">
+            <p className="mb-16 max-w-[220px] rounded-2xl rounded-br-md bg-white px-4 py-3 text-[13px] font-semibold leading-snug text-slate-700 shadow-sm ring-1 ring-slate-100">{leo.text}</p>
+            <LeoMascot mood={leo.mood} size={110} />
           </div>
         </div>
+      </section>
 
-        <p className="text-[9px] text-slate-500 bg-slate-50 border border-slate-200 rounded p-2 mb-6">
-          Dokumen ini adalah <strong>draft perhitungan pribadi</strong> berdasarkan data yang Anda catat di Leosiqra, dibuat mengikuti struktur
-          SPT Tahunan 1770 sebagai alat bantu. Ini <strong>bukan dokumen resmi Direktorat Jenderal Pajak</strong> dan tidak menggantikan
-          pelaporan SPT yang sah melalui <strong>coretaxdjp.pajak.go.id</strong>. Verifikasi seluruh angka sebelum melapor resmi.
-        </p>
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] print:hidden">
+        <div className="min-w-0 space-y-6">
+          {/* Profil */}
+          <section className={cn(card, 'p-5 md:p-6')}>
+            <h2 className="text-lg font-extrabold tracking-tight text-slate-900">Profil pajak</h2>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <p className="mb-1.5 text-[13px] font-semibold text-slate-500">Status</p>
+                <LayoutGroup id="tax-kawin">
+                  <div className="flex rounded-full bg-slate-100 p-1">
+                    {([['TK', 'Belum kawin'], ['K', 'Kawin']] as const).map(([v, l]) => (
+                      <button key={v} type="button" onClick={() => setSStatus(v)} className={cn('relative flex-1 rounded-full py-2 text-sm font-semibold', (kawin ? 'K' : 'TK') === v ? 'text-slate-900' : 'text-slate-500')}>
+                        {(kawin ? 'K' : 'TK') === v && <motion.span layoutId="kawin-pill" className="absolute inset-0 rounded-full bg-white shadow-sm" />}
+                        <span className="relative">{l}</span>
+                      </button>
+                    ))}
+                  </div>
+                </LayoutGroup>
+              </div>
+              <div>
+                <p className="mb-1.5 text-[13px] font-semibold text-slate-500">Tanggungan (maks. 3)</p>
+                <div className="flex items-center justify-between rounded-full bg-slate-100 p-1">
+                  <button type="button" aria-label="Kurangi tanggungan" onClick={() => setSDep(String(Math.max(0, tanggungan - 1)))} className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-700 shadow-sm disabled:opacity-40" disabled={tanggungan === 0}><Minus size={15} /></button>
+                  <span className="text-sm font-bold text-slate-900">{tanggungan} orang</span>
+                  <button type="button" aria-label="Tambah tanggungan" onClick={() => setSDep(String(Math.min(MAX_TANGGUNGAN, tanggungan + 1)))} className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-700 shadow-sm disabled:opacity-40" disabled={tanggungan === MAX_TANGGUNGAN}><Plus size={15} /></button>
+                </div>
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-slate-500">PTKP setahun {rp(ptkp)} — Rp54 jt untuk diri sendiri{kawin ? ' + Rp4,5 jt kawin' : ''}{tanggungan ? ` + ${tanggungan} × Rp4,5 jt tanggungan` : ''}.</p>
+          </section>
 
-        {/* A. Identitas & Status PTKP */}
-        <div className="mb-6">
-          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">A. Status Perpajakan (PTKP)</h2>
-          <table className="w-full border-collapse border border-slate-300 table-fixed">
-            <tbody>
-              <tr>
-                <td className="border border-slate-300 px-3 py-1.5 w-1/2 text-slate-500 break-words">Status Pernikahan</td>
-                <td className="border border-slate-300 px-3 py-1.5 font-bold">{maritalStatus === 'TK' ? 'Tidak Kawin (TK)' : 'Kawin (K)'}</td>
-              </tr>
-              <tr>
-                <td className="border border-slate-300 px-3 py-1.5 text-slate-500">Jumlah Tanggungan</td>
-                <td className="border border-slate-300 px-3 py-1.5 font-bold">{dependents} orang</td>
-              </tr>
-              <tr>
-                <td className="border border-slate-300 px-3 py-1.5 text-slate-500">Kategori PTKP</td>
-                <td className="border border-slate-300 px-3 py-1.5 font-bold">{maritalStatus}/{dependents}</td>
-              </tr>
-              <tr>
-                <td className="border border-slate-300 px-3 py-1.5 text-slate-500">Penghasilan Tidak Kena Pajak (PTKP) Setahun</td>
-                <td className="border border-slate-300 px-3 py-1.5 font-bold">{formatIDR(ptkp)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+          {/* Penghasilan */}
+          <section className={cn(card, 'p-5 md:p-6')}>
+            <h2 className="text-lg font-extrabold tracking-tight text-slate-900">Penghasilan {year}</h2>
+            <p className="text-sm text-slate-500">Leo menebak jenisnya dari kategori. Ubah kalau kurang tepat — hitungan langsung menyesuaikan.</p>
+            {loading ? <Skeleton className="mt-4 h-32" /> : incomeCats.length === 0 ? (
+              <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">Belum ada pemasukan tercatat di {year}.</p>
+            ) : (
+              <ul className="mt-4 divide-y divide-slate-100 overflow-hidden rounded-2xl bg-slate-50">
+                {incomeCats.map((c) => (
+                  <li key={c.cat} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white">{categoryEmoji(c.cat)}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-bold text-slate-800">{c.cat}</span>
+                      <span className="block truncate text-xs text-slate-400">{KINDS.find((k) => k.id === c.kind)?.hint}</span>
+                    </span>
+                    <span className="text-sm font-bold text-slate-900 tabular-nums">{rp(c.total)}</span>
+                    <label className="relative">
+                      <select
+                        aria-label={`Jenis penghasilan ${c.cat}`}
+                        value={c.kind}
+                        onChange={(e) => setSKinds(JSON.stringify({ ...kindOverride, [c.cat]: e.target.value }))}
+                        className={cn('appearance-none rounded-full py-1.5 pl-3 pr-7 text-xs font-semibold outline-none', c.kind === 'bukan' ? 'bg-amber-50 text-amber-700' : 'bg-white text-slate-700 ring-1 ring-slate-200')}
+                      >
+                        {KINDS.map((k) => <option key={k.id} value={k.id}>{k.label}</option>)}
+                      </select>
+                      <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
-        {/* B. Penghasilan Neto & PKP */}
-        <div className="mb-6">
-          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">B. Penghasilan Neto &amp; Penghasilan Kena Pajak (PKP)</h2>
-          <table className="w-full border-collapse border border-slate-300 table-fixed">
-            <tbody>
-              <tr>
-                <td className="border border-slate-300 px-3 py-1.5 w-1/2 text-slate-500">Penghasilan Bruto Setahun</td>
-                <td className="border border-slate-300 px-3 py-1.5 font-bold">{formatIDR(totalPemasukan)}</td>
-              </tr>
-              <tr>
-                <td className="border border-slate-300 px-3 py-1.5 text-slate-500">Pengeluaran / Biaya Setahun</td>
-                <td className="border border-slate-300 px-3 py-1.5 font-bold">{formatIDR(totalPengeluaran - investasiPembelian)}</td>
-              </tr>
-              <tr>
-                <td className="border border-slate-300 px-3 py-1.5 text-slate-500">Penghasilan Neto Setahun</td>
-                <td className="border border-slate-300 px-3 py-1.5 font-bold">{formatIDR(netIncome)}</td>
-              </tr>
-              <tr>
-                <td className="border border-slate-300 px-3 py-1.5 text-slate-500">Dikurangi: PTKP</td>
-                <td className="border border-slate-300 px-3 py-1.5 font-bold">({formatIDR(ptkp)})</td>
-              </tr>
-              <tr className="bg-slate-100">
-                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">Penghasilan Kena Pajak (PKP)</td>
-                <td className="border border-slate-300 px-3 py-1.5 font-black">{formatIDR(pkp)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* C. Perhitungan PPh Terutang (Pasal 17) */}
-        <div className="mb-6">
-          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">C. Perhitungan PPh Terutang &ndash; Tarif Progresif Pasal 17 UU HPP</h2>
-          <table className="w-full border-collapse border border-slate-300 table-fixed">
-            <thead>
-              <tr className="bg-slate-100">
-                <th className="border border-slate-300 px-3 py-1.5 text-left w-[38%]">Lapisan Penghasilan Kena Pajak</th>
-                <th className="border border-slate-300 px-3 py-1.5 text-right w-[12%]">Tarif</th>
-                <th className="border border-slate-300 px-3 py-1.5 text-right w-[25%]">Dasar Pengenaan</th>
-                <th className="border border-slate-300 px-3 py-1.5 text-right w-[25%]">PPh</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pphBreakdown.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="border border-slate-300 px-3 py-2 text-center italic text-slate-400">
-                    PKP Rp 0 atau di bawah PTKP &ndash; tidak ada dasar pengenaan pajak.
-                  </td>
-                </tr>
-              ) : pphBreakdown.map((b, idx) => (
-                <tr key={idx}>
-                  <td className="border border-slate-300 px-3 py-1.5 break-words">
-                    {formatIDR(b.min)} s.d. {b.max === Infinity ? 'ke atas' : formatIDR(b.max)}
-                  </td>
-                  <td className="border border-slate-300 px-3 py-1.5 text-right">{(b.rate * 100).toFixed(0)}%</td>
-                  <td className="border border-slate-300 px-3 py-1.5 text-right break-words">{formatIDR(b.taxableInBracket)}</td>
-                  <td className="border border-slate-300 px-3 py-1.5 text-right break-words">{formatIDR(b.tax)}</td>
-                </tr>
-              ))}
-              <tr className="bg-slate-100">
-                <td colSpan={3} className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">Total PPh Terutang Setahun</td>
-                <td className="border border-slate-300 px-3 py-1.5 font-black text-right">{formatIDR(pphTerutang)}</td>
-              </tr>
-              {pph21WithheldNum > 0 && (
+          {/* Hitungan */}
+          <section className={cn(card, 'p-5 md:p-6')}>
+            <h2 className="text-lg font-extrabold tracking-tight text-slate-900">Hitungan PPh</h2>
+            <p className="text-sm text-slate-500">Angka abu-abu bisa diisi dari bukti potong supaya lebih akurat.</p>
+            <div className="mt-4 space-y-1 text-sm">
+              {brutoKerja > 0 || byKind('kerja') > 0 ? (
                 <>
-                  <tr>
-                    <td colSpan={3} className="border border-slate-300 px-3 py-1.5">PPh Pasal 21 Sudah Dipotong Pemberi Kerja</td>
-                    <td className="border border-slate-300 px-3 py-1.5 text-right">{formatIDR(pph21WithheldNum)}</td>
-                  </tr>
-                  <tr className="bg-slate-100">
-                    <td colSpan={3} className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">
-                      {pphKurangBayar >= 0 ? 'PPh Kurang Bayar' : 'PPh Lebih Bayar (Restitusi)'}
-                    </td>
-                    <td className="border border-slate-300 px-3 py-1.5 font-black text-right">{formatIDR(Math.abs(pphKurangBayar))}</td>
-                  </tr>
+                  <Line label="Penghasilan bruto pekerjaan" hint={num(input.a1Bruto) ? 'dari bukti potong A1' : 'dari catatan gaji'} value={brutoKerja} />
+                  <InputLine label="Bruto di bukti potong A1 (opsional)" value={input.a1Bruto} onChange={(v) => setInput('a1Bruto', v)} />
+                  <Line label="Biaya jabatan" hint="5%, maks. Rp6 jt/tahun" value={-biayaJabatan} />
+                  <InputLine label="Iuran pensiun / JHT yang kamu bayar" value={input.iuran} onChange={(v) => setInput('iuran', v)} minus />
+                  <Line label="Neto pekerjaan" value={netoKerja} strong />
+                </>
+              ) : null}
+              {brutoBebas > 0 && (
+                <>
+                  <Line label="Bruto pekerjaan bebas" value={brutoBebas} />
+                  <div className="flex items-center justify-between gap-3 rounded-xl px-3 py-2">
+                    <span className="text-slate-600">Norma (NPPN)</span>
+                    <span className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1">
+                      <input inputMode="numeric" aria-label="Persentase norma" value={input.norma} onChange={(e) => setInput('norma', e.target.value.replace(/\D/g, '').slice(0, 3))} className="w-9 bg-transparent text-right font-semibold text-slate-900 outline-none" />%
+                    </span>
+                  </div>
+                  <Line label="Neto pekerjaan bebas" value={netoBebas} strong />
                 </>
               )}
-            </tbody>
-          </table>
-          <p className="text-[9px] text-slate-500 italic mt-1.5">
-            {pphTerutang > 0
-              ? 'Berdasarkan perhitungan di atas, terdapat PPh Orang Pribadi yang berpotensi terutang untuk tahun pajak ini.'
-              : 'Berdasarkan perhitungan di atas, tidak ada PPh Orang Pribadi yang terutang untuk tahun pajak ini (PKP nihil).'}
-          </p>
-        </div>
-
-        {/* D. Daftar Harta */}
-        <div className="mb-6" style={{ pageBreakInside: 'avoid' }}>
-          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">D. Daftar Harta (Posisi Terkini)</h2>
-          <table className="w-full border-collapse border border-slate-300 table-fixed">
-            <thead>
-              <tr className="bg-slate-100">
-                <th className="border border-slate-300 px-3 py-1.5 text-left w-[45%]">Nama Harta</th>
-                <th className="border border-slate-300 px-3 py-1.5 text-left w-[25%]">Jenis</th>
-                <th className="border border-slate-300 px-3 py-1.5 text-right w-[30%]">Nilai (Rp)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {daftarHarta.length === 0 ? (
-                <tr><td colSpan={3} className="border border-slate-300 px-3 py-2 text-center italic text-slate-400">Belum ada aset yang tercatat.</td></tr>
-              ) : daftarHarta.map((h, idx) => (
-                <tr key={idx}>
-                  <td className="border border-slate-300 px-3 py-1.5 break-words">{h.name}</td>
-                  <td className="border border-slate-300 px-3 py-1.5 text-slate-500 break-words">{h.type}</td>
-                  <td className="border border-slate-300 px-3 py-1.5 text-right break-words">{formatIDR(h.value)}</td>
-                </tr>
-              ))}
-              <tr className="bg-slate-100">
-                <td colSpan={2} className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">Total Harta</td>
-                <td className="border border-slate-300 px-3 py-1.5 font-black text-right">{formatIDR(totalHarta)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* E. Daftar Utang */}
-        <div className="mb-6" style={{ pageBreakInside: 'avoid' }}>
-          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">E. Daftar Utang (Kewajiban, Posisi Terkini)</h2>
-          <table className="w-full border-collapse border border-slate-300 table-fixed">
-            <thead>
-              <tr className="bg-slate-100">
-                <th className="border border-slate-300 px-3 py-1.5 text-left w-[65%]">Nama Pemberi Pinjaman</th>
-                <th className="border border-slate-300 px-3 py-1.5 text-right w-[35%]">Nilai (Rp)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {daftarUtang.length === 0 ? (
-                <tr><td colSpan={2} className="border border-slate-300 px-3 py-2 text-center italic text-slate-400">Tidak ada utang belum lunas yang tercatat.</td></tr>
-              ) : daftarUtang.map((u, idx) => (
-                <tr key={idx}>
-                  <td className="border border-slate-300 px-3 py-1.5 break-words">{u.name}</td>
-                  <td className="border border-slate-300 px-3 py-1.5 text-right break-words">{formatIDR(u.value)}</td>
-                </tr>
-              ))}
-              <tr className="bg-slate-100">
-                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">Total Utang</td>
-                <td className="border border-slate-300 px-3 py-1.5 font-black text-right">{formatIDR(totalUtang)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* F. Daftar Piutang */}
-        <div className="mb-6" style={{ pageBreakInside: 'avoid' }}>
-          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">F. Daftar Piutang (Posisi Terkini)</h2>
-          <table className="w-full border-collapse border border-slate-300 table-fixed">
-            <thead>
-              <tr className="bg-slate-100">
-                <th className="border border-slate-300 px-3 py-1.5 text-left w-[65%]">Nama Peminjam</th>
-                <th className="border border-slate-300 px-3 py-1.5 text-right w-[35%]">Nilai (Rp)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {daftarPiutang.length === 0 ? (
-                <tr><td colSpan={2} className="border border-slate-300 px-3 py-2 text-center italic text-slate-400">Tidak ada piutang belum lunas yang tercatat.</td></tr>
-              ) : daftarPiutang.map((p, idx) => (
-                <tr key={idx}>
-                  <td className="border border-slate-300 px-3 py-1.5 break-words">{p.name}</td>
-                  <td className="border border-slate-300 px-3 py-1.5 text-right break-words">{formatIDR(p.value)}</td>
-                </tr>
-              ))}
-              <tr className="bg-slate-100">
-                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">Total Piutang</td>
-                <td className="border border-slate-300 px-3 py-1.5 font-black text-right">{formatIDR(totalPiutang)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* G. Ringkasan Harta Bersih */}
-        <div className="mb-6" style={{ pageBreakInside: 'avoid' }}>
-          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">G. Ringkasan Harta Bersih</h2>
-          <table className="w-full border-collapse border border-slate-300 table-fixed">
-            <tbody>
-              <tr>
-                <td className="border border-slate-300 px-3 py-1.5 w-1/2 text-slate-500">Total Harta</td>
-                <td className="border border-slate-300 px-3 py-1.5 font-bold">{formatIDR(totalHarta)}</td>
-              </tr>
-              <tr>
-                <td className="border border-slate-300 px-3 py-1.5 text-slate-500">Ditambah: Total Piutang</td>
-                <td className="border border-slate-300 px-3 py-1.5 font-bold">{formatIDR(totalPiutang)}</td>
-              </tr>
-              <tr>
-                <td className="border border-slate-300 px-3 py-1.5 text-slate-500">Dikurangi: Total Utang</td>
-                <td className="border border-slate-300 px-3 py-1.5 font-bold">({formatIDR(totalUtang)})</td>
-              </tr>
-              <tr className="bg-slate-100">
-                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">Harta Bersih</td>
-                <td className="border border-slate-300 px-3 py-1.5 font-black">{formatIDR(totalHarta + totalPiutang - totalUtang)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Footer */}
-        <div className="pt-4 border-t border-slate-300 flex items-center justify-between">
-          <p className="text-[9px] text-slate-400 max-w-md">
-            Dihasilkan otomatis oleh Leosiqra berdasarkan data yang Anda catat sendiri. Bukan dokumen resmi DJP/Coretax &mdash;
-            lapor SPT resmi melalui <strong>coretaxdjp.pajak.go.id</strong>.
-          </p>
-          <div className="text-right">
-            <p className="text-[9px] text-slate-400">Dicetak melalui</p>
-            <p className="text-xs font-black">Leosiqra.com</p>
-          </div>
-        </div>
-      </div>
-
-      {/* 1. Dashboard View Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 print:hidden">
-        <div className="flex items-center gap-4">
-          <div>
-            <h2 className="sr-only">Pajak Center</h2>
-            <p className="text-sm text-slate-500">Draft Ringkasan SPT · Tahun Pajak {selectedYear}</p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3 print:hidden">
-          <button
-            onClick={handleExportExcel}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-100 hover:bg-emerald-100 transition-all"
-          >
-            <FileSpreadsheet size={14} />
-            Excel
-          </button>
-          <button
-            onClick={handleExportPDF}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 hover:bg-slate-200 transition-all"
-          >
-            <Printer size={14} />
-            PDF / Print
-          </button>
-
-          <div className="w-px h-6 bg-slate-100 mx-1" />
-
-          <YearPicker
-            value={selectedYear}
-            onChange={(y) => setSelectedYear(y)}
-          />
-        </div>
-      </div>
-
-      {/* 1b. Accuracy Disclaimer — penting untuk alat bantu cek SPT */}
-      {showDisclaimer && (
-        <div className="flex items-start gap-4 p-5 rounded-[20px] bg-amber-50 border border-amber-100 print:hidden">
-          <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
-          <p className="text-[11px] md:text-xs text-amber-800 leading-relaxed font-medium flex-1">
-            <strong>Daftar Harta, Utang, dan Piutang</strong> menampilkan <strong>posisi terkini (hari ini)</strong>, bukan posisi resmi per 31 Desember {selectedYear}
-            {!isCurrentYear && <> — karena Anda melihat tahun pajak yang sudah lewat, angka ini <strong>kemungkinan tidak sama</strong> dengan kondisi akhir tahun {selectedYear}</>}.
-            {' '}<strong>Penghasilan &amp; Pengeluaran</strong> di bawah sudah difilter khusus tahun {selectedYear}. Gunakan halaman ini sebagai draft pembanding, dan tetap verifikasi manual sebelum melapor resmi melalui{' '}
-            <a href="https://coretaxdjp.pajak.go.id/" target="_blank" rel="noopener noreferrer" className="underline font-bold hover:text-amber-900">coretaxdjp.pajak.go.id</a>.
-          </p>
-          <button
-            onClick={dismissDisclaimer}
-            className="text-amber-400 hover:text-amber-700 transition-colors shrink-0"
-            aria-label="Tutup"
-          >
-            <X size={16} />
-          </button>
-        </div>
-      )}
-
-      {/* 2. Top Info Cards — ringkasan kategori inti SPT (Penghasilan Neto / Harta / Kewajiban) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 print:hidden">
-        <div className="p-6 rounded-[32px] bg-gradient-to-br from-slate-900 to-navy text-white space-y-2 shadow-xl shadow-slate-200/50">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Penghasilan Neto {selectedYear}</p>
-          <h3 className={cn("text-2xl font-black tracking-tight tabular-nums", netIncome >= 0 ? "text-white" : "text-rose-300")}>{formatIDRShort(animatedNetIncome)}</h3>
-          <p className="text-[11px] text-slate-400 leading-relaxed font-medium">Total pemasukan dikurangi pengeluaran sepanjang tahun {selectedYear}.</p>
-        </div>
-
-        <div className="p-6 rounded-[32px] bg-white border border-slate-100 space-y-2 shadow-sm">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Harta (Aset)</p>
-          <h3 className="text-2xl font-black tracking-tight text-slate-900 tabular-nums">{formatIDRShort(animatedTotalHarta)}</h3>
-          <p className="text-[11px] text-slate-400 leading-relaxed font-medium">Saldo rekening + nilai portofolio investasi, posisi terkini.</p>
-        </div>
-
-        <div className="p-6 rounded-[32px] bg-white border border-slate-100 space-y-2 shadow-sm">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Kewajiban (Utang)</p>
-          <h3 className={cn("text-2xl font-black tracking-tight tabular-nums", totalUtang > 0 ? "text-rose-500" : "text-slate-900")}>{formatIDRShort(animatedTotalUtang)}</h3>
-          <p className="text-[11px] text-slate-400 leading-relaxed font-medium">Hutang belum lunas dari menu Hutang &amp; Piutang.</p>
-        </div>
-      </div>
-
-      {/* 2b. Estimasi PPh Terutang (PTKP/PKP/Tarif Pasal 17) */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 print:hidden">
-        {/* Pengaturan PTKP */}
-        <div className="lg:col-span-2 p-6 rounded-[32px] bg-white border border-slate-100 shadow-sm space-y-5">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
-              <Calculator size={16} />
+              <InputLine label="Zakat / sumbangan keagamaan wajib (via lembaga resmi)" value={input.zakat} onChange={(v) => setInput('zakat', v)} minus />
+              <Line label="Penghasilan neto" value={neto} strong />
+              <Line label={`PTKP ${kawin ? 'K' : 'TK'}/${tanggungan}`} value={-ptkp} />
+              <Line label="Penghasilan kena pajak (PKP)" hint="dibulatkan ke ribuan" value={pkp} strong />
+              <button type="button" onClick={() => setShowBrackets((v) => !v)} className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left hover:bg-slate-50">
+                <span className="font-semibold text-slate-800">PPh terutang (Pasal 17)</span>
+                <span className="flex items-center gap-1 font-bold text-slate-900 tabular-nums">{rp(terutang)} <ChevronDown size={14} className={cn('text-slate-400 transition-transform', showBrackets && 'rotate-180')} /></span>
+              </button>
+              <AnimatePresence initial={false}>
+                {showBrackets && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                    <div className="mx-3 mb-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
+                      {bracketRows.length === 0 ? 'PKP nol — tidak ada PPh terutang.' : bracketRows.map((b) => (
+                        <div key={b.from} className="flex justify-between py-0.5 tabular-nums">
+                          <span>{Math.round(b.rate * 100)}% × {rp(b.base)}</span><span>{rp(b.tax)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <InputLine label="PPh 21 dipotong kantor (A1)" value={sPph21 ?? ''} onChange={setSPph21} minus />
+              <InputLine label="PPh 23 dipotong klien" value={input.pph23} onChange={(v) => setInput('pph23', v)} minus />
+              <div className={cn('mt-2 flex items-center justify-between rounded-2xl px-4 py-3', status === 'kurang' ? 'bg-rose-50' : status === 'lebih' ? 'bg-emerald-50' : 'bg-slate-100')}>
+                <span className={cn('font-bold', hasilColor)}>{status === 'kurang' ? 'Kurang bayar' : status === 'lebih' ? 'Lebih bayar' : 'Nihil'}</span>
+                <span className={cn('text-lg font-extrabold tabular-nums', hasilColor)}>{rp(Math.abs(hasil))}</span>
+              </div>
+              {(omzetUsaha > 0 || finalLain > 0) && (
+                <div className="mt-3 rounded-2xl bg-indigo-50/60 p-4 text-[13px] text-slate-600">
+                  <p className="font-bold text-slate-800">Dilaporkan terpisah (PPh final)</p>
+                  {omzetUsaha > 0 && <p className="mt-1">Peredaran bruto usaha {rp(omzetUsaha)} · PPh final 0,5% ±{rp(umkmFinal)}{omzetUsaha <= UMKM_BEBAS ? ' (masih di bawah Rp500 jt)' : ''}</p>}
+                  {finalLain > 0 && <p className="mt-1">Bunga, sewa, dividen, hadiah {rp(finalLain)} — pajaknya umumnya sudah dipotong.</p>}
+                </div>
+              )}
             </div>
-            <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">Status PTKP</h4>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status Pernikahan</p>
-            <div className="flex gap-2">
-              {(['TK', 'K'] as const).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => updateMaritalStatus(s)}
-                  className={cn(
-                    "flex-1 px-3 py-2 rounded-xl text-xs font-bold border transition-all",
-                    maritalStatus === s
-                      ? "bg-indigo-600 border-indigo-600 text-white shadow-sm"
-                      : "bg-white border-slate-200 text-slate-500 hover:border-indigo-200"
-                  )}
-                >
-                  {s === 'TK' ? 'Tidak Kawin' : 'Kawin'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Jumlah Tanggungan</p>
-            <div className="flex gap-2">
-              {[0, 1, 2, 3].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => updateDependents(n)}
-                  className={cn(
-                    "flex-1 px-3 py-2 rounded-xl text-xs font-bold border transition-all",
-                    dependents === n
-                      ? "bg-indigo-600 border-indigo-600 text-white shadow-sm"
-                      : "bg-white border-slate-200 text-slate-500 hover:border-indigo-200"
-                  )}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">PPh 21 Sudah Dipotong Pemberi Kerja (Opsional)</p>
-            <input
-              type="number"
-              min={0}
-              value={pph21Withheld}
-              onChange={(e) => updatePph21Withheld(e.target.value)}
-              placeholder="0"
-              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-2.5 px-4 text-sm font-bold text-slate-700 transition-all"
-            />
-            <p className="text-[9px] font-medium text-slate-400 leading-relaxed">
-              Isi kalau kamu karyawan dan sudah dipotong PPh 21 bulanan (lihat slip gaji/bukti potong 1721-A1) — dipakai untuk hitung PPh Kurang/Lebih Bayar, bukan PPh Terutang Setahun.
-            </p>
-          </div>
-
-          <div className="pt-2 border-t border-slate-100 space-y-1.5">
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-500 font-medium">Kategori PTKP</span>
-              <span className="font-black text-slate-900">{maritalStatus}/{dependents}</span>
-            </div>
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-500 font-medium">PTKP Setahun</span>
-              <span className="font-black text-slate-900">{formatIDRShort(ptkp)}</span>
-            </div>
-          </div>
+          </section>
         </div>
 
-        {/* Estimasi PPh Terutang */}
-        <div className="lg:col-span-3 p-6 rounded-[32px] bg-gradient-to-br from-slate-900 to-navy text-white shadow-xl shadow-slate-200/50 space-y-5">
-          <div className="flex items-center justify-between">
-            <h4 className="text-xs font-black text-slate-300 uppercase tracking-widest">Estimasi PPh Terutang (Pasal 17 UU HPP)</h4>
-            {pphTerutang > 0 ? (
-              <span className="px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-300 text-[9px] font-black uppercase tracking-widest border border-rose-500/30">
-                Ada PPh Terutang
-              </span>
-            ) : (
-              <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[9px] font-black uppercase tracking-widest border border-emerald-500/30">
-                Tidak Ada PPh Terutang
-              </span>
-            )}
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Penghasilan Neto</p>
-              <p className="text-sm font-black tabular-nums">{formatIDRShort(netIncome)}</p>
-            </div>
-            <div>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">PTKP</p>
-              <p className="text-sm font-black tabular-nums">{formatIDRShort(ptkp)}</p>
-            </div>
-            <div>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">PKP</p>
-              <p className="text-sm font-black tabular-nums">{formatIDRShort(pkp)}</p>
-            </div>
-          </div>
-
-          <div className="pt-3 border-t border-white/10">
-            {pphBreakdown.length === 0 ? (
-              <p className="text-xs text-slate-300 italic">
-                Penghasilan Kena Pajak (PKP) Rp 0 atau di bawah PTKP — tidak ada PPh Pasal 21 tahunan yang terutang.
-              </p>
-            ) : (
-              <div className="space-y-1.5">
-                {pphBreakdown.map((b, i) => (
-                  <div key={i} className="flex justify-between items-center text-[11px]">
-                    <span className="text-slate-300">
-                      Lapisan {formatIDRShort(b.min)} &ndash; {b.max === Infinity ? 'ke atas' : formatIDRShort(b.max)} @ {(b.rate * 100).toFixed(0)}%
-                    </span>
-                    <span className="font-bold tabular-nums">{formatIDRShort(b.tax)}</span>
-                  </div>
+        <div className="min-w-0 space-y-6">
+          {/* Saran Leo */}
+          {tips.length > 0 && (
+            <section className={cn(card, 'p-5')}>
+              <div className="flex items-center gap-2">
+                <LeoMascot mood="watch" size={40} />
+                <h2 className="text-lg font-extrabold tracking-tight text-slate-900">Catatan Leo</h2>
+              </div>
+              <ul className="mt-3 space-y-2">
+                {tips.map((t, i) => (
+                  <motion.li key={t} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="rounded-2xl bg-slate-50 px-4 py-3 text-[13px] leading-relaxed text-slate-700">{t}</motion.li>
                 ))}
-              </div>
-            )}
-          </div>
-
-          <div className="pt-3 border-t border-white/10 flex justify-between items-center">
-            <span className="text-xs font-black text-slate-300 uppercase tracking-widest">Total PPh Terutang</span>
-            <span className={cn("text-2xl font-black tabular-nums", pphTerutang > 0 ? "text-rose-300" : "text-emerald-300")}>
-              {formatIDRShort(animatedPphTerutang)}
-            </span>
-          </div>
-
-          {pph21WithheldNum > 0 && (
-            <div className="pt-3 border-t border-white/10 space-y-1.5">
-              <div className="flex justify-between items-center text-[11px]">
-                <span className="text-slate-300">PPh 21 Sudah Dipotong</span>
-                <span className="font-bold tabular-nums">{formatIDRShort(pph21WithheldNum)}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-black text-slate-300 uppercase tracking-widest">
-                  {pphKurangBayar >= 0 ? 'PPh Kurang Bayar' : 'PPh Lebih Bayar (Restitusi)'}
-                </span>
-                <span className={cn("text-xl font-black tabular-nums", pphKurangBayar > 0 ? "text-rose-300" : "text-emerald-300")}>
-                  {formatIDRShort(Math.abs(pphKurangBayar))}
-                </span>
-              </div>
-            </div>
+              </ul>
+              <button type="button" onClick={askLeo} className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"><MessageCircle size={15} /> Tanya Leo soal SPT-ku</button>
+            </section>
           )}
+
+          {/* Langkah lapor */}
+          <section className={cn(card, 'p-5')}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-extrabold tracking-tight text-slate-900">Langkah lapor</h2>
+              <span className="text-sm font-semibold text-slate-500">{doneSteps}/{STEPS.length}</span>
+            </div>
+            <div className="mt-2 h-1.5 rounded-full bg-slate-100">
+              <motion.div className="h-full rounded-full bg-emerald-500" animate={{ width: `${(doneSteps / STEPS.length) * 100}%` }} />
+            </div>
+            <ul className="mt-3 space-y-1">
+              {STEPS.map((s, i) => {
+                const done = Boolean(steps[s.id]);
+                return (
+                  <li key={s.id}>
+                    <button type="button" onClick={() => setSSteps(JSON.stringify({ ...steps, [s.id]: !done }))} className="flex w-full items-start gap-3 rounded-2xl px-2 py-2.5 text-left transition-colors hover:bg-slate-50" aria-pressed={done}>
+                      <span className={cn('mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-[11px] font-bold transition-colors', done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-300 text-slate-400')}>
+                        {done ? <Check size={13} strokeWidth={3} /> : i + 1}
+                      </span>
+                      <span className="min-w-0">
+                        <span className={cn('block text-sm font-bold', done ? 'text-slate-400 line-through' : 'text-slate-800')}>{s.title}</span>
+                        <span className="block text-xs text-slate-500">{s.desc}</span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            <a href="https://coretaxdjp.pajak.go.id" target="_blank" rel="noopener noreferrer" className="mt-3 flex items-center justify-center gap-1.5 rounded-full bg-slate-100 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-200">
+              Buka Coretax DJP <ExternalLink size={14} />
+            </a>
+          </section>
         </div>
       </div>
 
-      {/* 3. Main Data Section (Redesigned & Grouped) */}
-      <div className="space-y-12 print:hidden">
-        
-        {/* Grup Asset */}
-        <div className="space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
-              <TrendingUp size={18} />
-            </div>
-            <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">Daftar Harta (Aset)</h4>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {daftarHarta.length === 0 ? (
-              <div className="col-span-full p-12 rounded-[32px] bg-slate-50 border border-dashed border-slate-200 text-center space-y-2">
-                <Info className="mx-auto text-slate-300" size={32} />
-                <p className="text-sm text-slate-500 font-medium">Belum ada aset yang tercatat. Tambahkan rekening atau investasi Anda.</p>
-              </div>
-            ) : (
-              daftarHarta.map((harta, i) => (
-                <div key={i} className="p-6 rounded-[32px] bg-white border border-slate-100 hover:border-indigo-100 hover:shadow-lg hover:shadow-indigo-500/5 transition-all group relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="px-2.5 py-1 rounded-full bg-slate-50 text-slate-500 text-[9px] font-black uppercase tracking-widest border border-slate-100">
-                      {harta.type}
-                    </span>
-                  </div>
-                  <h5 className="text-sm font-bold text-slate-900 mb-1 truncate">{harta.name}</h5>
-                  <p className="text-lg font-black text-slate-900">
-                    Rp {harta.value.toLocaleString()}
-                  </p>
-                </div>
-              ))
-            )}
+      {/* Harta & utang */}
+      <section className="print:hidden">
+        <h2 className="text-lg font-extrabold tracking-tight text-slate-900">Harta & utang untuk lampiran SPT</h2>
+        <p className="text-sm text-slate-500">Posisi terkini dari Leosiqra. Di SPT, harta dilaporkan per 31 Desember dengan <b>harga perolehan</b> — sesuaikan nilainya bila perlu.</p>
+        <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <AssetGroup title="Kas & setara kas" rows={harta.kas} />
+          <AssetGroup title="Investasi" rows={harta.investasi} hint="nilai penempatan" />
+          <AssetGroup title="Barang & kendaraan" rows={harta.barang} hint="harga beli" />
+          <AssetGroup title="Piutang" rows={piutang} />
+          <AssetGroup title="Utang" rows={utang} negative />
+          <div className={cn(card, 'flex flex-col justify-center p-5')}>
+            <p className="text-sm font-semibold text-slate-500">Harta bersih</p>
+            <p className="text-2xl font-extrabold tracking-tight text-slate-900 tabular-nums">{rp(totalHarta - totalUtang)}</p>
+            <p className="text-xs text-slate-500">Harta {short(totalHarta)} − utang {short(totalUtang)}</p>
           </div>
         </div>
+      </section>
 
-        {/* Grup Utang */}
-        <div className="space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600">
-              <TrendingDown size={18} />
-            </div>
-            <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">Daftar Utang (Kewajiban)</h4>
+      <p className="text-center text-xs text-slate-400 print:hidden">
+        Perkiraan pembanding dari data yang kamu catat — bukan pengganti perhitungan resmi. Aturan: UU HPP (tarif Pasal 17), PTKP PMK 101/2016, biaya jabatan PMK 250/2008, PP 55/2022.
+      </p>
+
+      {/* ===== Versi cetak ===== */}
+      <div className="hidden text-[11px] leading-relaxed text-slate-800 print:block">
+        <div className="mb-5 flex items-center justify-between border-b-2 border-slate-800 pb-3">
+          <div className="flex items-center gap-2">
+            <Image src="/images/Logo-new.png" alt="Leosiqra" width={32} height={32} />
+            <span className="text-sm font-bold">Leosiqra</span>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {daftarUtang.length === 0 ? (
-              <div className="col-span-full p-10 rounded-[32px] bg-slate-50 border border-dashed border-slate-200 text-center">
-                <p className="text-sm text-slate-400 font-medium italic">Tidak ada utang belum lunas yang tercatat.</p>
-              </div>
-            ) : (
-              daftarUtang.map((utang, i) => (
-                <div key={i} className="p-6 rounded-[32px] bg-white border border-slate-100 hover:border-rose-100 hover:shadow-lg hover:shadow-rose-500/5 transition-all group relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-rose-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="px-2.5 py-1 rounded-full bg-rose-50 text-rose-500 text-[9px] font-black uppercase tracking-widest border border-rose-100">
-                      KEWAJIBAN
-                    </span>
-                  </div>
-                  <h5 className="text-sm font-bold text-slate-900 mb-1 truncate">{utang.name}</h5>
-                  <p className="text-lg font-black text-rose-600">
-                    Rp {utang.value.toLocaleString()}
-                  </p>
-                </div>
-              ))
-            )}
+          <div className="text-right">
+            <p className="text-sm font-bold">Draft SPT Tahunan PPh Orang Pribadi</p>
+            <p className="text-[10px] text-slate-500">Tahun pajak {year} · dicetak {now.toLocaleDateString('id-ID')}</p>
           </div>
         </div>
-
-        {/* Grup Piutang */}
-        <div className="space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center text-sky-600">
-              <TrendingUp size={18} />
-            </div>
-            <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">Daftar Piutang</h4>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {daftarPiutang.length === 0 ? (
-              <div className="col-span-full p-10 rounded-[32px] bg-slate-50 border border-dashed border-slate-200 text-center">
-                <p className="text-sm text-slate-400 font-medium italic">Tidak ada piutang belum lunas yang tercatat.</p>
-              </div>
-            ) : (
-              daftarPiutang.map((piutang, i) => (
-                <div key={i} className="p-6 rounded-[32px] bg-white border border-slate-100 hover:border-sky-100 hover:shadow-lg hover:shadow-sky-500/5 transition-all group relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-sky-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="px-2.5 py-1 rounded-full bg-sky-50 text-sky-600 text-[9px] font-black uppercase tracking-widest border border-sky-100">
-                      PIUTANG
-                    </span>
-                  </div>
-                  <h5 className="text-sm font-bold text-slate-900 mb-1 truncate">{piutang.name}</h5>
-                  <p className="text-lg font-black text-sky-600">
-                    Rp {piutang.value.toLocaleString()}
-                  </p>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Total Harta Bersih */}
-        <div className="p-8 rounded-[32px] bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <p className="text-[10px] font-black text-emerald-200 uppercase tracking-widest mb-1">Total Harta Bersih (Harta + Piutang − Utang)</p>
-            <p className="text-3xl font-black tabular-nums">
-              Rp {Math.round(animatedHartaBersih).toLocaleString()}
-            </p>
-          </div>
-          <div className="flex gap-6 text-right">
-            <div>
-              <p className="text-[9px] font-bold text-emerald-200 uppercase tracking-widest">Harta</p>
-              <p className="text-sm font-black tabular-nums">Rp {Math.round(animatedTotalHarta).toLocaleString()}</p>
-            </div>
-            <div>
-              <p className="text-[9px] font-bold text-emerald-200 uppercase tracking-widest">Piutang</p>
-              <p className="text-sm font-black tabular-nums">Rp {Math.round(animatedTotalPiutang).toLocaleString()}</p>
-            </div>
-            <div>
-              <p className="text-[9px] font-bold text-emerald-200 uppercase tracking-widest">Utang</p>
-              <p className="text-sm font-black tabular-nums">Rp {Math.round(animatedTotalUtang).toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
+        <PrintTable title="Perhitungan" rows={[
+          ['Status PTKP', `${kawin ? 'K' : 'TK'}/${tanggungan}`], ['Bruto pekerjaan', rp(brutoKerja)], ['Biaya jabatan', rp(biayaJabatan)], ['Iuran pensiun/JHT', rp(iuran)],
+          ['Bruto pekerjaan bebas', rp(brutoBebas)], [`Neto pekerjaan bebas (norma ${norma}%)`, rp(netoBebas)], ['Zakat', rp(zakat)], ['Penghasilan neto', rp(neto)], ['PTKP', rp(ptkp)], ['PKP', rp(pkp)],
+          ['PPh terutang', rp(terutang)], ['PPh 21 dipotong', rp(pph21)], ['PPh 23 dipotong', rp(pph23)], [status === 'kurang' ? 'Kurang bayar' : status === 'lebih' ? 'Lebih bayar' : 'Nihil', rp(Math.abs(hasil))],
+          ['Peredaran bruto usaha (PP 55)', rp(omzetUsaha)], ['Penghasilan final lain', rp(finalLain)],
+        ]} />
+        <PrintTable title="Harta" rows={[...harta.kas, ...harta.investasi, ...harta.barang, ...piutang].map((h) => [`${h.name} (${h.sub})`, rp(h.value)])} />
+        <PrintTable title="Utang" rows={utang.map((h) => [`${h.name} (${h.sub})`, rp(h.value)])} />
+        <p className="mt-4 text-[9px] text-slate-500">Draft pribadi dari catatan Leosiqra — bukan dokumen resmi DJP. Lapor resmi melalui coretaxdjp.pajak.go.id.</p>
       </div>
-
-      {/* 4. Footer Note Section (Dashboard View) */}
-      <div className="bg-slate-50 p-8 rounded-[32px] border border-slate-100 flex items-start gap-6 border-l-4 border-l-slate-300 print:hidden">
-        <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-slate-400 shrink-0 shadow-sm">
-          <Info size={24} />
-        </div>
-        <div className="space-y-1">
-          <h4 className="font-black text-slate-900 uppercase text-xs tracking-widest">Catatan Penting</h4>
-          <p className="text-slate-500 text-sm leading-relaxed">
-            Data ini dikumpulkan dari saldo rekening, daftar aset investasi, dan utang/piutang yang belum lunas dari menu <strong>Hutang &amp; Piutang</strong>.
-            Pastikan seluruh data Anda sudah terupdate di menu <strong>Rekening</strong>, <strong>Investasi</strong>, dan <strong>Hutang &amp; Piutang</strong> untuk akurasi draft yang maksimal.
-            Halaman ini hanya membantu <strong>menghitung dan merangkum</strong> — pelaporan resmi tetap Anda lakukan sendiri melalui <strong>coretaxdjp.pajak.go.id</strong>.
-          </p>
-        </div>
-      </div>
-
-      <style jsx global>{`
-        @media print {
-          @page {
-            size: A4 portrait;
-            margin: 15mm;
-          }
-          body {
-            background-color: white !important;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          .print\\:hidden, 
-          header, 
-          aside, 
-          button, 
-          .YearPicker {
-            display: none !important;
-          }
-          main {
-            margin-left: 0 !important;
-            padding: 0 !important;
-          }
-          .max-w-[1400px] {
-            max-width: none !important;
-          }
-          table {
-            table-layout: fixed !important;
-            width: 100% !important;
-          }
-          td, th {
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-          }
-        }
-      `}</style>
     </div>
   );
 }
 
+function Line({ label, hint, value, strong }: { label: string; hint?: string; value: number; strong?: boolean }) {
+  return (
+    <div className={cn('flex items-center justify-between gap-3 rounded-xl px-3 py-2', strong && 'bg-slate-50')}>
+      <span className={cn(strong ? 'font-semibold text-slate-800' : 'text-slate-600')}>
+        {label}{hint && <span className="ml-1.5 text-xs text-slate-400">{hint}</span>}
+      </span>
+      <span className={cn('tabular-nums', strong ? 'font-bold text-slate-900' : 'text-slate-700')}>{value < 0 ? '−' : ''}{rp(Math.abs(value))}</span>
+    </div>
+  );
+}
+
+function InputLine({ label, value, onChange, minus }: { label: string; value: string; onChange: (v: string) => void; minus?: boolean }) {
+  const n = num(value);
+  return (
+    <label className="flex items-center justify-between gap-3 rounded-xl px-3 py-1.5">
+      <span className="text-slate-600">{label}</span>
+      <span className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 focus-within:bg-white focus-within:ring-1 focus-within:ring-indigo-300">
+        <span className="text-xs text-slate-400">{minus ? '−Rp' : 'Rp'}</span>
+        <input inputMode="numeric" value={n ? n.toLocaleString('id-ID') : ''} placeholder="0" onChange={(e) => onChange(e.target.value.replace(/\D/g, ''))} className="w-28 bg-transparent text-right font-semibold text-slate-900 outline-none tabular-nums placeholder:text-slate-300" />
+      </span>
+    </label>
+  );
+}
+
+function AssetGroup({ title, rows, hint, negative }: { title: string; rows: { name: string; sub: string; value: number }[]; hint?: string; negative?: boolean }) {
+  const total = rows.reduce((s, r) => s + r.value, 0);
+  return (
+    <div className={cn(card, 'p-5')}>
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="font-bold text-slate-900">{title}{hint && <span className="ml-1.5 text-xs font-normal text-slate-400">{hint}</span>}</p>
+        <p className={cn('font-bold tabular-nums', negative ? 'text-rose-600' : 'text-slate-900')}>{rp(total)}</p>
+      </div>
+      {rows.length === 0 ? <p className="mt-2 text-sm text-slate-400">Belum ada.</p> : (
+        <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto">
+          {rows.map((r, i) => (
+            <li key={`${r.name}-${i}`} className="flex items-center justify-between gap-3 text-sm">
+              <span className="min-w-0 truncate text-slate-700">{r.name} <span className="text-xs text-slate-400">· {r.sub}</span></span>
+              <span className="shrink-0 tabular-nums text-slate-600">{rp(r.value)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function PrintTable({ title, rows }: { title: string; rows: (string | number)[][] }) {
+  return (
+    <div className="mb-4">
+      <p className="mb-1 bg-slate-800 px-2 py-1 text-[11px] font-bold text-white">{title}</p>
+      <table className="w-full border-collapse">
+        <tbody>
+          {rows.length === 0 ? <tr><td className="border border-slate-300 px-2 py-1">-</td></tr> : rows.map((r, i) => (
+            <tr key={i}>
+              <td className="border border-slate-300 px-2 py-1">{r[0]}</td>
+              <td className="border border-slate-300 px-2 py-1 text-right">{r[1]}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
