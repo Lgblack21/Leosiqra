@@ -2,7 +2,7 @@
 
 import { Banknote, Building2, CreditCard, Landmark, Wallet } from 'lucide-react';
 import { LogoImage } from '@/components/ui/LogoImage';
-import { matchIndonesianInstitutionLogo } from '@/lib/indonesianBanks';
+import { matchIndonesianInstitutionLogo, upgradeLogoUrl } from '@/lib/indonesianBanks';
 import { cn } from '@/lib/utils';
 import type { Account } from '@/lib/services/accountService';
 
@@ -15,7 +15,7 @@ const typeIcon = (type: string, size: number) => {
 };
 
 export function accountLogoUrl(acc: Pick<Account, 'logoUrl' | 'name' | 'type'>) {
-  return acc.logoUrl || matchIndonesianInstitutionLogo(acc.name, acc.type) || undefined;
+  return upgradeLogoUrl(acc.logoUrl) || matchIndonesianInstitutionLogo(acc.name, acc.type) || undefined;
 }
 
 export function AccountLogo({ acc, size = 40, className }: { acc: Pick<Account, 'logoUrl' | 'name' | 'type'>; size?: number; className?: string }) {

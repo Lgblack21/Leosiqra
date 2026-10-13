@@ -93,11 +93,8 @@ export const POPULAR_COUNT = 12;
 export const serviceById = (id?: string | null) => (id ? SERVICES.find((s) => s.id === id) : undefined);
 export const serviceCategoryOf = (id?: string | null) => SERVICE_CATEGORIES.find((c) => c.id === id) ?? SERVICE_CATEGORIES[SERVICE_CATEGORIES.length - 1];
 
-export const serviceLogoUrl = (domain?: string) => {
-  if (!domain) return null;
-  const token = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN;
-  return token ? `https://img.logo.dev/${domain}?token=${token}&size=128&format=png` : `https://www.google.com/s2/favicons?sz=128&domain=${domain}`;
-};
+// Lewat Worker (/api/logo) supaya memakai token logo.dev server.
+export const serviceLogoUrl = (domain?: string) => (domain ? `/api/logo/${domain}` : null);
 
 export const INTERVAL_LABEL: Record<string, string> = {
   Harian: 'per hari',

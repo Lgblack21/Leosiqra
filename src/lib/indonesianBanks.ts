@@ -68,12 +68,21 @@ export function matchIndonesianInstitutionLogo(accountName: string, accountType:
   const domain = matchDomain(accountName, entries);
   if (!domain) return null;
 
-  // Token publishable logo.dev — aman tampil di bundle browser (memang dibuat
-  // untuk dipasang langsung di <img src>). Tanpa token, Google favicon jadi
-  // fallback (resolusi rendah/pecah kalau di-zoom, tapi tetap jalan).
-  const token = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN;
-  if (token) {
-    return `https://img.logo.dev/${domain}?token=${token}&size=128&format=png`;
-  }
-  return `https://www.google.com/s2/favicons?sz=128&domain=${domain}`;
+  return institutionLogoUrl(domain);
 }
+
+// Semua domain yang logonya boleh diambil lewat /api/logo (allowlist Worker).
+export const INSTITUTION_DOMAINS = [...BANK_ENTRIES, ...EWALLET_ENTRIES].map((e) => e.domain);
+
+// Logo HD lewat Worker: /api/logo/<domain> → logo.dev memakai token server
+// (LOGO_DEV_TOKEN), atau favicon Google kalau token belum dipasang. Token
+// tidak perlu ikut build frontend.
+export const institutionLogoUrl = (domain: string) => `/api/logo/${domain}`;
+
+// Logo lama yang tersimpan sebagai favicon Google (resolusi rendah) di-upgrade
+// ke /api/logo saat ditampilkan — data di database tidak diubah.
+export const upgradeLogoUrl = (url?: string | null) => {
+  if (!url) return url ?? undefined;
+  const m = /^https:\/\/www\.google\.com\/s2\/favicons\?.*domain=([a-z0-9.-]+)/i.exec(url);
+  return m ? institutionLogoUrl(m[1].toLowerCase()) : url;
+};

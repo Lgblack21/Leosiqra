@@ -7,6 +7,8 @@ import {
   type VapidKeys,
 } from "@block65/webcrypto-web-push";
 import { computeCardCycle, clampCycleDay, lastStatementDate, daysBetween, type CardCycleSettings } from "../../src/lib/creditCycle";
+import { INSTITUTION_DOMAINS } from "../../src/lib/indonesianBanks";
+import { SERVICES as SUBSCRIPTION_SERVICES } from "../../src/lib/subscriptionCatalog";
 
 export interface Env {
   DB: D1Database;
@@ -4359,6 +4361,7 @@ const BANK_LOGO_ENTRIES: BankLogoEntry[] = [
   { domain: "bankmega.com", aliases: ["bank mega", "mega"] },
   { domain: "sinarmas.co.id", aliases: ["sinarmas"] },
   { domain: "btn.co.id", aliases: ["btn"] },
+  { domain: "bankbsi.co.id", aliases: ["bsi", "bank syariah indonesia"] },
   { domain: "kbbukopin.co.id", aliases: ["bukopin", "kb bank"] },
   { domain: "panin.co.id", aliases: ["panin"] },
   { domain: "bankbjb.co.id", aliases: ["bjb", "bank jabar"] },
@@ -4373,7 +4376,7 @@ const BANK_LOGO_ENTRIES: BankLogoEntry[] = [
 ];
 
 const EWALLET_LOGO_ENTRIES: BankLogoEntry[] = [
-  { domain: "gojek.com", aliases: ["gopay"] },
+  { domain: "gopay.co.id", aliases: ["gopay"] },
   { domain: "ovo.id", aliases: ["ovo"] },
   { domain: "dana.id", aliases: ["dana"] },
   { domain: "shopeepay.co.id", aliases: ["shopeepay", "shopee pay"] },
@@ -4410,6 +4413,23 @@ const matchIndonesianInstitutionLogo = (accountName: string, accountType: string
     return `https://img.logo.dev/${domain}?token=${logoDevToken}&size=128&format=png`;
   }
   return `https://www.google.com/s2/favicons?sz=128&domain=${domain}`;
+};
+
+// GET /api/logo/<domain> — logo bank/e-wallet/layanan untuk <img>. Hanya domain
+// dari daftar yang dikenal (bukan proxy bebas), diarahkan ke logo.dev dengan
+// token server; tanpa token jatuh ke favicon Google. Publik (gambar), di-cache.
+const LOGO_ALLOWED_DOMAINS = new Set<string>([
+  ...INSTITUTION_DOMAINS,
+  ...BANK_LOGO_ENTRIES.map((e) => e.domain),
+  ...EWALLET_LOGO_ENTRIES.map((e) => e.domain),
+  ...SUBSCRIPTION_SERVICES.map((s) => s.domain).filter((d): d is string => Boolean(d)),
+]);
+const handleLogoRedirect = (env: Env, domain: string) => {
+  if (!LOGO_ALLOWED_DOMAINS.has(domain)) return new Response("Not found", { status: 404 });
+  const target = env.LOGO_DEV_TOKEN
+    ? `https://img.logo.dev/${domain}?token=${env.LOGO_DEV_TOKEN}&size=128&format=png`
+    : `https://www.google.com/s2/favicons?sz=128&domain=${domain}`;
+  return new Response(null, { status: 302, headers: { Location: target, "Cache-Control": "public, max-age=86400" } });
 };
 
 // One-off: isi logo_url untuk rekening LAMA yang cocok nama bank/e-wallet-nya
@@ -10714,6 +10734,10 @@ const worker = {
 
       if (url.pathname === "/api/auth/login" && request.method === "POST") {
         return await handleLogin(request, env);
+      }
+
+      if (url.pathname.startsWith("/api/logo/") && request.method === "GET") {
+        return handleLogoRedirect(env, url.pathname.slice("/api/logo/".length).toLowerCase());
       }
 
       if (url.pathname === "/api/auth/me" && request.method === "GET") {
