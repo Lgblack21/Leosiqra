@@ -17,6 +17,8 @@ Perbarui file ini di akhir setiap audit.
 | `sql-interpolasi` `${isEmailIdentifier ? ... }` | `handleLogin` | hanya memilih antara dua nama kolom literal |
 | `dangerouslySetInnerHTML` → `SandboxedHtml` | `MaintenanceGuard`, preview di `admin/pengaturan` | tidak lagi pakai `dangerouslySetInnerHTML`; iframe sandbox tanpa script |
 | `dangerouslySetInnerHTML` JSON-LD | `src/app/layout.tsx` | `JSON.stringify` objek konstanta |
+| `dangerouslySetInnerHTML` script daypart | `src/components/auth/AuthScene.tsx` (`DAYPART_JS`) | string konstanta (hanya `getHours()` → `data-daypart`), tanpa input user (dicek 2026-10-13) |
+| `next` setelah masuk/daftar | `src/lib/authNext.ts` (`sanitizeNext`) | hanya `/app` atau `/input-cepat` di awal path (regex `^/(app\|input-cepat)(/\|\?\|$)`) → tidak bisa open redirect ke domain luar (dicek 2026-10-13) |
 | `dangerouslySetInnerHTML` jawaban AI | `ai-leosiqra/page.tsx`, `app/assistant/chat/page.tsx` (`formatText`) | `escapeHtml` (& < > " ') dijalankan dulu, baru ditambah `<strong>/<em>/<br/>` |
 | `sql-interpolasi` `${assignments}` | `handleUpdateTransaction`, `handleUpdateAccount`, `handleUpdateBudget`, `handleUpdateInvestment`, `handleUpdateCategory`, `handleUpdateRecurring` | nama kolom dari whitelist di kode (`allowed.has` / `updates.set` literal); `WHERE id = ? AND user_id = ?` sesi (dicek 2026-09-28) |
 | `sql-interpolasi` `${assignments}` Dompet Bersama | `handleUpdateSharedWalletTransaction` | kolom dari tuple literal `["type","amount","category","note","date"]`; nilai via bind; `WHERE id = ? AND wallet_id = ?` setelah `requireWalletRole` (keanggotaan dari user sesi) + cek editor-hanya-milik-sendiri. Uji IDOR lokal 52 skenario lulus (dicek 2026-10-12) |
