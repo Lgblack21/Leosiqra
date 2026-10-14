@@ -17,6 +17,7 @@ import { itemService, type Item } from '@/lib/services/itemService';
 import { exchangeRateService, type ExchangeRates } from '@/lib/services/exchangeRateService';
 import { computeCreditUsage, getCardCycle, isCreditAccountType } from '@/lib/creditCard';
 import { isInvestmentCategory } from '@/lib/categoryEmoji';
+import { cloudflareApi } from '@/lib/cloudflare-api';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { AccountLogo } from '@/components/ui/AccountLogo';
 import { AnimatedNumber } from '@/components/app/AnimatedNumber';
@@ -63,6 +64,7 @@ export default function KekayaanPage() {
   const [range, setRange] = useState<Range>('1B');
   const [addOpen, setAddOpen] = useState(false);
   const [nowMs] = useState(() => Date.now());
+  const [goldGram, setGoldGram] = useState<number | null>(null);
 
   useEffect(() => {
     const load = () =>
@@ -85,6 +87,8 @@ export default function KekayaanPage() {
     loadItems();
     loadGoals();
     exchangeRateService.getLatestRates().then(setFx).catch(() => {});
+    // Harga emas per gram (dari data pasar) untuk menilai emas dengan harga hari ini.
+    cloudflareApi<{ feed: { goldGramIdr: number | null } | null }>('/api/member/pasar').then((r) => setGoldGram(r.feed?.goldGramIdr ?? null)).catch(() => {});
     const unsubs = [
       ...['accounts', 'savings', 'investments', 'transactions'].map((c) => subscribeToCollectionChanges(c, load)),
       subscribeToCollectionChanges('items', loadItems),
@@ -104,7 +108,8 @@ export default function KekayaanPage() {
     const kas = cash.reduce((s, a) => s + toIdr(a.balance, a.currency), 0);
     const tabungan = savings.reduce((s, it) => s + (it.transactionType === 'Penarikan' ? -1 : 1) * (Number(it.amountIDR) || it.amount), 0);
     const activeInv = investments.filter((i) => i.status === 'Active');
-    const invValue = (i: Investment) => Number(i.currentValueIDR) || Number(i.amountIDR) || Number(i.amountInvested) || 0;
+    const isGoldGram = (i: Investment) => /emas|gold|antam|logam mulia/i.test(i.name) && /^(g|gr|gram)$/i.test((i.unit ?? '').trim()) && Number(i.quantity) > 0;
+    const invValue = (i: Investment) => (goldGram && isGoldGram(i) ? Number(i.quantity) * goldGram : Number(i.currentValueIDR) || Number(i.amountIDR) || Number(i.amountInvested) || 0);
     const investasi = activeInv.reduce((s, i) => s + invValue(i), 0);
     const unpaid = transactions.filter((t) => t.type === 'debt' && t.paymentStatus !== 'lunas');
     const piutangList = unpaid.filter((t) => t.category === 'Piutang');
@@ -118,7 +123,7 @@ export default function KekayaanPage() {
     return { cash, credit, kas, tabungan, activeInv, invValue, investasi, piutangList, hutangList, piutang, kartu, hutang, barang, aset, kewajiban, bersih: aset - kewajiban };
     // toIdr bergantung pada fx.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accounts, savings, investments, transactions, items, fx]);
+  }, [accounts, savings, investments, transactions, items, fx, goldGram]);
 
   // Riwayat perkiraan: mundur dari hari ini memakai arus kas harian.
   const series = useMemo(() => {
@@ -162,6 +167,8 @@ export default function KekayaanPage() {
   const compTotal = comp.reduce((s, c) => s + c.value, 0) || 1;
   const missing = [
     w.tabungan <= 0 && { label: 'Tabungan', sub: 'Dana darurat, target, celengan', icon: <PiggyBank size={18} />, tone: 'bg-indigo-50 text-indigo-600', go: () => openModal('tabungan') },
+    !w.activeInv.some((i) => /emas|gold|antam/i.test(i.name)) && { label: 'Emas', sub: goldGram ? `Per gram, harga hari ini ±${formatIDR(goldGram)}` : 'Per gram, dinilai harga hari ini', icon: <Coins size={18} />, tone: 'bg-amber-50 text-amber-600', go: () => openModal('investasi_lain') },
+    !w.activeInv.some((i) => /bpjs|jht|dplk|pensiun|taspen/i.test(i.name)) && { label: 'Pensiun', sub: 'BPJS JHT, DPLK, Taspen — catat saldonya', icon: <Landmark size={18} />, tone: 'bg-teal-50 text-teal-600', go: () => openModal('investasi_lain') },
     w.activeInv.length === 0 && { label: 'Investasi', sub: 'Saham, reksa dana, deposito, emas, kripto', icon: <TrendingUp size={18} />, tone: 'bg-violet-50 text-violet-600', go: () => openModal('saham') },
     !items.some((i) => i.kind === 'barang') && { label: 'Barang', sub: 'HP, laptop, motor, jam tangan', icon: <Package size={18} />, tone: 'bg-rose-50 text-rose-500', go: () => router.push('/membership/barang') },
     !items.some((i) => i.kind === 'koleksi') && { label: 'Koleksi', sub: 'Kartu, sneakers, barang mewah', icon: <Sparkle size={18} />, tone: 'bg-lime-50 text-lime-600', go: () => router.push('/membership/koleksi') },
@@ -283,7 +290,7 @@ export default function KekayaanPage() {
                     const gain = val - cost;
                     return (
                       <Row key={i.id} icon={<Emoji e={i.type === 'Deposito' ? '🏦' : /emas|gold/i.test(i.name) ? '🪙' : /bitcoin|kripto|crypto|eth/i.test(i.name) ? '₿' : '📈'} tone="bg-violet-50" />} title={i.name}
-                        sub={<>{i.type}{cost > 0 && gain !== 0 && <b className={cn('ml-1', gain > 0 ? 'text-emerald-600' : 'text-rose-600')}>{gain > 0 ? '+' : '−'}{formatIDR(Math.abs(gain))} ({((gain / cost) * 100).toFixed(1)}%)</b>}</>}
+                        sub={<>{i.type}{goldGram && /emas|gold|antam/i.test(i.name) && /^(g|gr|gram)$/i.test((i.unit ?? '').trim()) ? ` · ${i.quantity} g × ${formatIDR(goldGram)}` : ''}{cost > 0 && gain !== 0 && <b className={cn('ml-1', gain > 0 ? 'text-emerald-600' : 'text-rose-600')}>{gain > 0 ? '+' : '−'}{formatIDR(Math.abs(gain))} ({((gain / cost) * 100).toFixed(1)}%)</b>}</>}
                         value={val} onClick={() => router.push('/membership/investment')} />
                     );
                   })}
