@@ -10,6 +10,10 @@ import { placeService, type Place } from '@/lib/services/connectService';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { LeoMascot } from '@/components/mascot/LeoMascot';
+import dynamic from 'next/dynamic';
+
+// Peta 3D (MapLibre) hanya dimuat saat dipilih.
+const Map3D = dynamic(() => import('@/components/peta/Map3D').then((m) => m.Map3D), { ssr: false });
 import { useFeedback } from '@/components/ui/Feedback';
 
 // Peta: tempat-tempat kamu belanja. Lokasi ditandai sendiri per transaksi
@@ -43,6 +47,7 @@ export default function PetaPage() {
   const [results, setResults] = useState<{ display_name: string; lat: string; lon: string; name?: string }[]>([]);
   const [clickMode, setClickMode] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [view, setView] = useState<'2d' | '3d'>('2d');
 
   const load = useCallback(() => {
     placeService
@@ -236,7 +241,18 @@ export default function PetaPage() {
           {clickMode && (
             <div className="absolute left-1/2 top-3 z-[500] -translate-x-1/2 rounded-xl bg-orange-500 px-3 py-1.5 text-xs font-bold text-white shadow-md">Klik lokasinya di peta</div>
           )}
-          <div ref={mapEl} className="h-[460px] w-full" />
+          <div className="absolute right-3 top-3 z-[600] flex rounded-full bg-white p-1 shadow-md" style={view === '3d' ? { right: 52 } : undefined}>
+            {(['2d', '3d'] as const).map((v) => (
+              <button key={v} type="button" onClick={() => { setView(v); if (v === '3d') setClickMode(false); }} aria-pressed={view === v} className={cn('rounded-full px-3 py-1 text-xs font-bold transition-colors', view === v ? 'bg-slate-900 text-white' : 'text-slate-500 hover:text-slate-900')}>{v.toUpperCase()}</button>
+            ))}
+          </div>
+          <div ref={mapEl} className={cn('h-[460px] w-full', view === '3d' && 'invisible')} />
+          {view === '3d' && (
+            <div className="absolute inset-0 z-[550]">
+              <Map3D places={shown} path={tab === 'jejak'} />
+              <p className="pointer-events-none absolute bottom-3 left-3 rounded-full bg-white/90 px-3 py-1 text-[11px] font-semibold text-slate-600 shadow">Tiang makin tinggi = belanja makin besar · seret dengan klik kanan untuk memutar</p>
+            </div>
+          )}
           {places && places.length === 0 && !picking && (
             <div className="pointer-events-none absolute inset-x-0 bottom-4 z-[500] mx-auto flex w-fit items-center gap-3 rounded-2xl bg-white/95 px-4 py-3 shadow-lg">
               <LeoMascot mood="idle" size={44} />
