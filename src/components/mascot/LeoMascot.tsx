@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import { useSeason } from "@/lib/season";
 
 // Leo — maskot singa Leosiqra. Digambar langsung sebagai SVG (tanpa aset
 // gambar) supaya ringan, tajam di semua ukuran, dan ekspresinya bisa
@@ -51,6 +52,7 @@ export function LeoMascot({
   interactive?: boolean;
 }) {
   const reduce = useReducedMotion();
+  const season = useSeason();
   const ref = useRef<SVGSVGElement>(null);
   const [gaze, setGaze] = useState({ x: 0, y: 0 });
   const [waving, setWaving] = useState(!reduce);
@@ -246,6 +248,24 @@ export function LeoMascot({
             <path d="M110 128 V134 M100 136 Q105 141 110 135 Q115 141 120 136" stroke={C.nose} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
           )}
         </g>
+
+        {/* Kostum musiman (topi) */}
+        {season === "halloween" && (
+          <g aria-hidden transform="translate(110 46) scale(1.5) translate(-110 -50)">
+            <path d="M74 50 Q104 46 108 -6 Q112 10 128 22 Q122 30 146 50 Z" fill="#3b1f5e" />
+            <path d="M108 -6 Q120 2 128 22" stroke="#5b3a8a" strokeWidth="2" fill="none" />
+            <ellipse cx="110" cy="50" rx="50" ry="9" fill="#2a1545" />
+            <path d="M80 44 Q110 38 140 44 L141 49 Q110 43 79 49 Z" fill="#f97316" />
+            <circle cx="132" cy="30" r="2.4" fill="#fde047" />
+          </g>
+        )}
+        {season === "natal" && (
+          <g aria-hidden transform="translate(110 46) scale(1.35) translate(-110 -50)">
+            <path d="M76 48 Q100 4 132 14 Q150 22 156 52 Z" fill="#dc2626" />
+            <circle cx="158" cy="56" r="8" fill="#fff" />
+            <rect x="70" y="42" width="84" height="12" rx="6" fill="#fff" />
+          </g>
+        )}
 
         {/* Kaki depan — di atas wajah supaya bisa menutup mata */}
         {[

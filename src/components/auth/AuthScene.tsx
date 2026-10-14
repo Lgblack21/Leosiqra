@@ -1,5 +1,7 @@
 "use client";
 
+import { useSeason } from "@/lib/season";
+
 import { useLayoutEffect } from "react";
 
 // Latar "langit kota" untuk halaman auth. Warna langit mengikuti jam perangkat
@@ -90,10 +92,19 @@ function Skyline() {
 
 export function AuthScene({ className = "", children }: { className?: string; children?: React.ReactNode }) {
   useDayPartAttr();
+  const season = useSeason();
   return (
     <div className={`auth-sky relative overflow-hidden ${className}`}>
       <script dangerouslySetInnerHTML={{ __html: DAYPART_JS }} />
       <div className="auth-sun pointer-events-none absolute rounded-full" aria-hidden />
+      {season === "halloween" && (
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          {[0, 1, 2].map((i) => (
+            <span key={i} className="leo-bat absolute text-xl" style={{ top: `${14 + i * 12}%`, animationDelay: `${i * 3.2}s`, animationDuration: `${11 + i * 3}s` }}>🦇</span>
+          ))}
+          <span className="absolute right-6 top-0 text-2xl opacity-70">🕸️</span>
+        </div>
+      )}
       <div className="auth-moon pointer-events-none absolute rounded-full" aria-hidden />
       <div className="auth-night" aria-hidden>
         {Array.from({ length: 36 }, (_, i) => (

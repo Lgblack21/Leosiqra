@@ -13,6 +13,8 @@ import { useFeatures } from '@/lib/features';
 import { useModal } from '@/context/ModalContext';
 import { LeoMascot } from '@/components/mascot/LeoMascot';
 import { useThemePref, type ThemePref } from '@/lib/theme';
+import { useStoredValue } from '@/lib/hooks/useStoredValue';
+import { COSTUME_KEY } from '@/lib/season';
 
 // Pengaturan dalam satu popup (dibuka dari ikon roda gigi di sidebar).
 // Hanya pusat navigasi: tiap baris membuka halaman/form yang sudah ada.
@@ -26,6 +28,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   const [me, setMe] = useState<{ name?: string; email?: string; plan?: string; created_at?: string } | null>(null);
   const [nowMs] = useState(() => Date.now());
   const [theme, setTheme] = useThemePref();
+  const [costumeOff, setCostumeOff] = useStoredValue(COSTUME_KEY);
 
   useEffect(() => {
     cloudflareApi<{ user?: { name?: string; email?: string; plan?: string; created_at?: string } | null }>('/api/auth/me').then((r) => setMe(r.user ?? null)).catch(() => {});
@@ -132,6 +135,11 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                 <button key={v} type="button" onClick={() => setTheme(v)} className={cn('flex-1 rounded-full py-2 text-sm font-semibold transition-colors', theme === v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500')}>{l}</button>
               ))}
             </div>
+            <button type="button" onClick={() => setCostumeOff(costumeOff === '1' ? '0' : '1')} aria-pressed={costumeOff !== '1'} className="flex w-full items-center gap-3 rounded-[20px] bg-slate-100/80 px-4 py-3 text-left">
+              <span className="text-lg">🎃</span>
+              <span className="min-w-0 flex-1"><span className="block text-[15px] text-slate-800">Kostum musiman Leo</span><span className="block text-xs text-slate-500">Topi penyihir di Oktober, topi Santa di Desember</span></span>
+              <span className={cn('relative h-6 w-11 shrink-0 rounded-full transition-colors', costumeOff !== '1' ? 'bg-emerald-500' : 'bg-slate-300')}><span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all', costumeOff !== '1' ? 'right-0.5' : 'left-0.5')} /></span>
+            </button>
           </section>
 
           {groups.map((g) => (

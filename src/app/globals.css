@@ -646,3 +646,8 @@ html[data-theme="dark"] input, html[data-theme="dark"] textarea, html[data-theme
 html[data-theme="dark"] input::placeholder, html[data-theme="dark"] textarea::placeholder { color:#64748b; }
 html[data-theme="dark"] .recharts-cartesian-axis-tick text { fill:#94a3b8; }
 html[data-theme="dark"] .recharts-default-tooltip { background:#151d2e !important; border-color:rgba(255,255,255,.08) !important; }
+
+/* Kelelawar musim Halloween di langit beranda */
+@keyframes leo-bat-fly { 0% { transform: translateX(-10vw) translateY(0) } 25% { transform: translateX(25vw) translateY(-12px) } 50% { transform: translateX(55vw) translateY(8px) } 75% { transform: translateX(85vw) translateY(-10px) } 100% { transform: translateX(120vw) translateY(0) } }
+.leo-bat { left: 0; animation: leo-bat-fly 12s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .leo-bat { animation: none; left: 70%; } }
