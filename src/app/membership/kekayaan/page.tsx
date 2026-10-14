@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { ArrowDown, ArrowUp, ChevronRight, Coins, CreditCard, Eye, EyeOff, Gem, HandCoins, Landmark, Package, PiggyBank, Plus, Sparkle, TrendingUp, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronRight, ImageIcon, Coins, CreditCard, Eye, EyeOff, Gem, HandCoins, Landmark, Package, PiggyBank, Plus, Sparkle, TrendingUp, X } from 'lucide-react';
 import { cn, formatIDR } from '@/lib/utils';
 import { useModal, type ModalType } from '@/context/ModalContext';
 import { accountService, type Account } from '@/lib/services/accountService';
@@ -22,6 +22,7 @@ import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { AccountLogo } from '@/components/ui/AccountLogo';
 import { AnimatedNumber } from '@/components/app/AnimatedNumber';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { ScreenshotImport } from '@/components/wallet/ScreenshotImport';
 
 // Kekayaan (pola Oyenza): satu angka kekayaan bersih + semua yang kamu punya
 // dan kamu utang dalam satu halaman — kartu kredit, dompet, tabungan,
@@ -63,6 +64,7 @@ export default function KekayaanPage() {
   const [hidden, setHidden] = useState(false);
   const [range, setRange] = useState<Range>('1B');
   const [addOpen, setAddOpen] = useState(false);
+  const [shotOpen, setShotOpen] = useState(false);
   const [nowMs] = useState(() => Date.now());
   const [goldGram, setGoldGram] = useState<number | null>(null);
 
@@ -322,7 +324,8 @@ export default function KekayaanPage() {
 
         {/* Kanan: komposisi + belum dihitung */}
         <div className="order-first min-w-0 space-y-6 lg:sticky lg:top-24 lg:order-none">
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setShotOpen(true)} className="flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-200"><ImageIcon size={15} /> Impor screenshot</button>
             <button type="button" onClick={() => setAddOpen(true)} className="flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"><Plus size={16} /> Tambah</button>
           </div>
           {comp.length > 0 && (
@@ -364,6 +367,8 @@ export default function KekayaanPage() {
           </div>
         </div>
       </div>
+
+      <AnimatePresence>{shotOpen && <ScreenshotImport key="shot" accounts={accounts ?? []} onClose={() => setShotOpen(false)} />}</AnimatePresence>
 
       {/* Menu Tambah */}
       <AnimatePresence>

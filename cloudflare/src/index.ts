@@ -7479,6 +7479,69 @@ async function handlePasar(request: Request, env: Env, ctx?: ExecutionContext) {
   return json({ feed, news }, { headers: { "Cache-Control": "private, max-age=300" } });
 }
 
+// "Impor screenshot" (Kekayaan): baca saldo & aset dari screenshot aplikasi
+// bank/e-wallet/sekuritas. Foto tidak disimpan; hasil hanya usulan yang
+// ditinjau member sebelum disimpan. Nomor rekening tidak pernah dikembalikan.
+const SHOT_KINDS = new Set(["bank", "ewallet", "saham", "reksadana", "emas", "kripto", "deposito", "lainnya"]);
+async function handleParseScreenshot(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  if (!(await checkAiParseRateLimit(env, authResult.session.user.id))) {
+    return json({ error: "Terlalu banyak permintaan AI. Coba lagi dalam beberapa saat." }, { status: 429 });
+  }
+  const payload = await parseJson<{ imageBase64?: string }>(request);
+  const image = typeof payload.imageBase64 === "string" ? payload.imageBase64.trim() : "";
+  if (!image) return json({ error: "Screenshot belum ada." }, { status: 400 });
+  if (image.length > 7_000_000) return json({ error: "Gambar terlalu besar." }, { status: 413 });
+  const openRouter = await getOpenRouterKey(env);
+  if (!openRouter) return json({ ok: false, error: "AI belum dikonfigurasi." }, { status: 422 });
+  const sys = `Kamu membaca screenshot aplikasi bank, e-wallet, sekuritas, atau kripto. Balas HANYA JSON:
+{"items":[{"name":"<nama rekening/aset, mis. BCA Tahapan, BBCA, Reksa Dana Pasar Uang X, Bitcoin, Emas>","kind":"bank"|"ewallet"|"saham"|"reksadana"|"emas"|"kripto"|"deposito"|"lainnya","amount":<nilai/saldo dalam angka>,"currency":"IDR"|"USD"|...}]}
+Maks. 15 item. Ambil hanya saldo/nilai yang TERTULIS di gambar. JANGAN tulis nomor rekening/kartu, nama pemilik, atau data login.`;
+  let raw = "";
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${openRouter.key}`, "http-referer": env.APP_URL || "https://www.leosiqra.com", "x-title": env.APP_NAME || "Leosiqra" },
+      body: JSON.stringify({
+        models: PARSE_TRANSACTION_MODELS,
+        route: "fallback",
+        messages: [{ role: "system", content: sys }, { role: "user", content: [{ type: "text", text: "Baca saldo dan aset di screenshot ini." }, { type: "image_url", image_url: { url: `data:image/jpeg;base64,${image}` } }] }],
+        temperature: 0,
+        max_tokens: 900,
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!res.ok) throw new Error(`OpenRouter ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    raw = data.choices?.[0]?.message?.content?.trim() ?? "";
+  } catch (error) {
+    if (isAiQuotaError(error)) {
+      await notifyAiQuotaOnce(env);
+      return json({ ok: false, error: AI_QUOTA_MESSAGE, code: "ai_quota" }, { status: 503 });
+    }
+    return json({ ok: false, error: "Screenshot tidak terbaca. Coba screenshot yang lebih jelas." }, { status: 422 });
+  }
+  let parsed: { items?: unknown } = {};
+  try {
+    parsed = JSON.parse(stripJsonFences(raw));
+  } catch {
+    return json({ ok: false, error: "Screenshot tidak terbaca. Coba screenshot yang lebih jelas." }, { status: 422 });
+  }
+  const items = (Array.isArray(parsed.items) ? parsed.items : [])
+    .map((x) => x as Record<string, unknown>)
+    .map((x) => ({
+      name: String(x.name ?? "").replace(/\d{6,}/g, "").trim().slice(0, 60),
+      kind: SHOT_KINDS.has(String(x.kind)) ? String(x.kind) : "lainnya",
+      amount: Number(x.amount),
+      currency: /^[A-Z]{3}$/.test(String(x.currency ?? "")) ? String(x.currency) : "IDR",
+    }))
+    .filter((x) => x.name && Number.isFinite(x.amount) && x.amount >= 0 && x.amount < 1e15)
+    .slice(0, 15);
+  if (!items.length) return json({ ok: false, error: "Tidak ada saldo yang terbaca di screenshot ini." }, { status: 422 });
+  return json({ ok: true, items });
+}
+
 async function handleParseCard(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -11408,6 +11471,10 @@ const worker = {
 
       if (url.pathname === "/api/member/pasar" && request.method === "GET") {
         return await handlePasar(request, env, ctx);
+      }
+
+      if (url.pathname === "/api/member/ai/parse-screenshot" && request.method === "POST") {
+        return await handleParseScreenshot(request, env);
       }
 
       if (url.pathname === "/api/member/ai/parse-card" && request.method === "POST") {
