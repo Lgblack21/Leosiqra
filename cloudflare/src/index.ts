@@ -1351,7 +1351,11 @@ Kalau ditanya harga kripto, emas, atau kurs USD/IDR, jawab langsung pakai angka 
 Kamu boleh jawab pertanyaan umum di luar keuangan dengan gaya yang sama, tapi keahlian utamamu adalah keuangan pribadi user di aplikasi ini.
 
 ## Data keuangan user (JSON)
-${JSON.stringify(userContext)}`;
+${JSON.stringify(userContext)}
+
+## Ingatan jangka panjang
+- "ingatanLeo" di data atas = hal yang sudah kamu ingat tentang user. Pakai kalau relevan, jangan diumbar.
+- Kalau user menyebut fakta pribadi yang berguna lama (tanggal gajian, target/tujuan, tanggungan, preferensi cara hemat), tambahkan di AKHIR jawaban satu baris persis: [[ingat: <fakta singkat, maks 120 karakter>]]. Maks 2 baris per jawaban. Jangan simpan password, PIN, nomor kartu/rekening, atau data sensitif lain. Jangan simpan hal yang sudah ada di ingatanLeo.`;
 
 // Beberapa provider di balik OpenRouter membatasi akses berdasarkan region IP
 // pemanggil — IP edge Cloudflare Workers bisa saja diblokir oleh satu provider
@@ -7145,6 +7149,59 @@ async function handleAdminLogs(request: Request, env: Env) {
   return json({ items: rows.results });
 }
 
+// ===== Ingatan Leo (migrasi 0016) =====
+const MEMORY_MAX = 50;
+const memoryMissing = (e: unknown) => /no such table: am_memories/i.test(String(e));
+const SENSITIVE_MEMORY = /\b\d{6,}\b|password|kata sandi|\bpin\b|cvv|otp/i;
+const loadMemories = async (env: Env, userId: string) => {
+  try {
+    const { results } = await env.DB.prepare("SELECT id, fact, source, created_at FROM am_memories WHERE user_id = ? ORDER BY created_at DESC LIMIT ?").bind(userId, MEMORY_MAX).all<{ id: string; fact: string; source: string; created_at: string }>();
+    return results ?? [];
+  } catch {
+    return [];
+  }
+};
+const saveMemory = async (env: Env, userId: string, fact: string, source: "ai" | "user") => {
+  const clean = fact.replace(/\s+/g, " ").trim().slice(0, 160);
+  if (clean.length < 4 || SENSITIVE_MEMORY.test(clean)) return null;
+  const existing = await loadMemories(env, userId);
+  if (existing.some((m) => m.fact.toLowerCase() === clean.toLowerCase())) return null;
+  if (existing.length >= MEMORY_MAX) {
+    // Penuh: buang yang paling lama.
+    await env.DB.prepare("DELETE FROM am_memories WHERE id = ? AND user_id = ?").bind(existing[existing.length - 1].id, userId).run();
+  }
+  const id = generateId();
+  await env.DB.prepare("INSERT INTO am_memories (id, user_id, fact, source, created_at) VALUES (?, ?, ?, ?, ?)").bind(id, userId, clean, source, nowIso()).run();
+  return id;
+};
+async function handleMemories(request: Request, env: Env, id?: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const uid = authResult.session.user.id;
+  try {
+    if (request.method === "GET") {
+      const { results } = await env.DB.prepare("SELECT id, fact, source, created_at FROM am_memories WHERE user_id = ? ORDER BY created_at DESC").bind(uid).all();
+      return json({ items: results ?? [] });
+    }
+    if (request.method === "DELETE") {
+      if (id === "semua") {
+        await env.DB.prepare("DELETE FROM am_memories WHERE user_id = ?").bind(uid).run();
+        return json({ ok: true });
+      }
+      const r = await env.DB.prepare("DELETE FROM am_memories WHERE id = ? AND user_id = ?").bind(id ?? "", uid).run();
+      return r.meta.changes ? json({ ok: true }) : json({ error: "Tidak ditemukan." }, { status: 404 });
+    }
+    const p = await parseJson<{ fact?: string }>(request);
+    const fact = String(p.fact ?? "");
+    if (SENSITIVE_MEMORY.test(fact)) return json({ error: "Jangan simpan data sensitif (password, PIN, nomor rekening/kartu)." }, { status: 400 });
+    const newId = await saveMemory(env, uid, fact, "user");
+    return newId ? json({ ok: true, id: newId }, { status: 201 }) : json({ error: "Isi terlalu pendek atau sudah ada." }, { status: 400 });
+  } catch (e) {
+    if (memoryMissing(e)) return json({ error: "Fitur ingatan belum siap (migrasi 0016)." }, { status: 503 });
+    throw e;
+  }
+}
+
 async function handleAiChat(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) {
@@ -7200,10 +7257,23 @@ async function handleAiChat(request: Request, env: Env) {
     })
     .filter((m): m is { role: "user" | "assistant"; content: string } => m !== null);
 
-  const userContext = await buildUserContext(env, authResult.session.user.id);
+  const memories = await loadMemories(env, authResult.session.user.id);
+  const userContext = { ...((await buildUserContext(env, authResult.session.user.id)) as Record<string, unknown>), ingatanLeo: memories.map((m) => m.fact) };
   let answer: string;
   try {
     answer = await runAiAssistant(env, payload.prompt, userContext, history);
+    // Simpan ingatan baru dari penanda [[ingat: ...]] lalu buang dari jawaban.
+    const facts = [...answer.matchAll(/\[\[ingat:\s*([^\]]{3,200})\]\]/gi)].map((m) => m[1]).slice(0, 2);
+    if (facts.length) {
+      answer = answer.replace(/\n?\[\[ingat:[^\]]*\]\]/gi, "").trim();
+      for (const f of facts) {
+        try {
+          await saveMemory(env, authResult.session.user.id, f, "ai");
+        } catch (e) {
+          if (!memoryMissing(e)) console.error("Simpan ingatan gagal:", e);
+        }
+      }
+    }
   } catch (error) {
     if (isAiQuotaError(error)) {
       console.warn("AI quota (402):", error instanceof Error ? error.message : error);
@@ -11460,6 +11530,13 @@ const worker = {
 
       if (url.pathname === "/api/member/ai/transcribe" && request.method === "POST") {
         return await handleTranscribe(request, env);
+      }
+
+      if (url.pathname === "/api/member/memories" && (request.method === "GET" || request.method === "POST")) {
+        return await handleMemories(request, env);
+      }
+      if (url.pathname.startsWith("/api/member/memories/") && request.method === "DELETE") {
+        return await handleMemories(request, env, url.pathname.slice("/api/member/memories/".length));
       }
 
       if (url.pathname === "/api/member/reminders" && (request.method === "GET" || request.method === "POST")) {

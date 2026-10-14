@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
-  AlarmClock, Bell, BookOpen, ChevronRight, Download, FileText, Flame, Grid3x3, Headphones, Inbox, LogOut, MessageSquareHeart, PiggyBank,
+  AlarmClock, Bell, Brain, BookOpen, ChevronRight, Download, FileText, Flame, Grid3x3, Headphones, Inbox, LogOut, MessageSquareHeart, PiggyBank,
   Plug, Repeat, ShieldCheck, Smartphone, Tags, Target, Upload, User, X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -61,6 +61,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
         { icon: <Tags size={18} />, label: 'Kategori & mata uang', href: '/membership/nama-akun' },
         { icon: <Flame size={18} />, label: 'Streak & tutup hari', href: '/membership/streak' },
         { icon: <AlarmClock size={18} />, label: 'Pengingat', href: '/membership/pengingat' },
+        { icon: <Brain size={18} />, label: 'Ingatan Leo', hint: 'Yang Leo ingat tentangmu', href: '/membership/ingatan' },
       ],
     },
     {

@@ -121,6 +121,7 @@ const TITLES: Record<string, string> = {
   '/membership/market-data': 'Data pasar',
   '/membership/pasar': 'Pasar & belajar',
   '/membership/pengingat': 'Pengingat',
+  '/membership/ingatan': 'Ingatan Leo',
   '/membership/pajak-center': 'Pajak',
   '/membership/contact': 'Upgrade ke PRO',
   '/membership/onboarding': 'Setup awal',
