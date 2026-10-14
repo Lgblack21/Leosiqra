@@ -7367,6 +7367,78 @@ const CARD_SCAN_BANKS = [
   "Bank Sulselbar", "MNC Bank", "Bank Mayapada", "Bank Victoria", "Bank Artha Graha", "QNB", "ICBC", "Commonwealth", "Nobu",
   "Bank Sampoerna", "Amar Bank", "Bank Mantap",
 ];
+// ===== Pengingat (migrasi 0015) =====
+// Member mengatur jam (WIB) & hari; cron 10 menitan mengirim push yang jatuh
+// di jendela 10 menit terakhir, maks. sekali per hari per pengingat.
+const REMINDER_MAX = 20;
+const reminderMissing = (e: unknown) => /no such table: rm_reminders/i.test(String(e));
+async function handleReminders(request: Request, env: Env, id?: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const uid = authResult.session.user.id;
+  try {
+    if (request.method === "GET") {
+      const { results } = await env.DB.prepare("SELECT id, title, body, time_wib, days, enabled FROM rm_reminders WHERE user_id = ? ORDER BY time_wib").bind(uid).all();
+      return json({ items: results ?? [] });
+    }
+    if (request.method === "DELETE" && id) {
+      const r = await env.DB.prepare("DELETE FROM rm_reminders WHERE id = ? AND user_id = ?").bind(id, uid).run();
+      return r.meta.changes ? json({ ok: true }) : json({ error: "Tidak ditemukan." }, { status: 404 });
+    }
+    const p = await parseJson<Record<string, unknown>>(request);
+    const title = String(p.title ?? "").trim().slice(0, 80);
+    const body = String(p.body ?? "").trim().slice(0, 160) || null;
+    const time = String(p.time_wib ?? "");
+    const days = Number(p.days ?? 127);
+    const enabled = p.enabled === false ? 0 : 1;
+    if (!title) return json({ error: "Judul pengingat wajib diisi." }, { status: 400 });
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return json({ error: "Jam tidak valid." }, { status: 400 });
+    if (!Number.isInteger(days) || days < 1 || days > 127) return json({ error: "Pilih minimal satu hari." }, { status: 400 });
+    if (request.method === "PUT" && id) {
+      const r = await env.DB.prepare("UPDATE rm_reminders SET title = ?, body = ?, time_wib = ?, days = ?, enabled = ? WHERE id = ? AND user_id = ?")
+        .bind(title, body, time, days, enabled, id, uid).run();
+      return r.meta.changes ? json({ ok: true }) : json({ error: "Tidak ditemukan." }, { status: 404 });
+    }
+    if (request.method === "POST" && !id) {
+      const c = await env.DB.prepare("SELECT COUNT(*) AS n FROM rm_reminders WHERE user_id = ?").bind(uid).first<{ n: number }>();
+      if ((c?.n ?? 0) >= REMINDER_MAX) return json({ error: `Maksimal ${REMINDER_MAX} pengingat.` }, { status: 400 });
+      const newId = generateId();
+      await env.DB.prepare("INSERT INTO rm_reminders (id, user_id, title, body, time_wib, days, enabled, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+        .bind(newId, uid, title, body, time, days, enabled, nowIso()).run();
+      return json({ ok: true, id: newId }, { status: 201 });
+    }
+    return json({ error: "Metode tidak didukung." }, { status: 405 });
+  } catch (e) {
+    if (reminderMissing(e)) return json({ error: "Fitur pengingat belum siap (migrasi 0015)." }, { status: 503 });
+    throw e;
+  }
+}
+const sendDueReminders = async (env: Env) => {
+  const wib = new Date(Date.now() + 7 * 3600 * 1000);
+  const today = wib.toISOString().slice(0, 10);
+  const mins = wib.getUTCHours() * 60 + wib.getUTCMinutes();
+  const from = Math.max(0, mins - 9);
+  const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+  const dayBit = 1 << wib.getUTCDay();
+  try {
+    const { results } = await env.DB.prepare(
+      "SELECT id, user_id, title, body FROM rm_reminders WHERE enabled = 1 AND time_wib >= ? AND time_wib <= ? AND (days & ?) != 0 AND (last_sent IS NULL OR last_sent != ?)"
+    ).bind(hhmm(from), hhmm(mins), dayBit, today).all<{ id: string; user_id: string; title: string; body: string | null }>();
+    for (const r of results ?? []) {
+      // Klaim dulu supaya cron ganda tidak mengirim dua kali.
+      const claim = await env.DB.prepare("UPDATE rm_reminders SET last_sent = ? WHERE id = ? AND (last_sent IS NULL OR last_sent != ?)").bind(today, r.id, today).run();
+      if (!claim.meta.changes) continue;
+      try {
+        await sendWebPushToUser(env, r.user_id, r.title, r.body || "Ketuk untuk membuka Leosiqra.", "/membership/dashboard");
+      } catch (error) {
+        console.error("Pengingat gagal dikirim", r.id, error);
+      }
+    }
+  } catch (e) {
+    if (!reminderMissing(e)) console.error("Pengingat:", e);
+  }
+};
+
 // ===== Pasar & belajar (lihat cloudflare/src/pasar.ts) =====
 const PASAR_STALE_MS = 6 * 60 * 60 * 1000;
 let pasarRefreshing: Promise<void> | null = null;
@@ -11327,6 +11399,13 @@ const worker = {
         return await handleTranscribe(request, env);
       }
 
+      if (url.pathname === "/api/member/reminders" && (request.method === "GET" || request.method === "POST")) {
+        return await handleReminders(request, env);
+      }
+      if (url.pathname.startsWith("/api/member/reminders/") && (request.method === "PUT" || request.method === "DELETE")) {
+        return await handleReminders(request, env, url.pathname.slice("/api/member/reminders/".length));
+      }
+
       if (url.pathname === "/api/member/pasar" && request.method === "GET") {
         return await handlePasar(request, env, ctx);
       }
@@ -11482,6 +11561,7 @@ const worker = {
       // Tiap 10 menit: posting video promo yang sudah waktunya + metrik harian.
       // Cabang sendiri supaya TIDAK ikut menjalankan deposito/recurring di bawah.
       ctx.waitUntil(processPromoQueue(env));
+      ctx.waitUntil(sendDueReminders(env));
       return;
     }
     if (event.cron === "1 17 * * *") {
