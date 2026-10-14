@@ -1,3 +1,4 @@
+import { THEME_BOOT_JS } from '@/lib/themeBoot';
 import type { Metadata, Viewport } from "next";
 import { DM_Serif_Display, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
@@ -126,6 +127,7 @@ export default function RootLayout({
             Home Screen" cuma jadi bookmark biasa (bukan app standalone),
             jadi navigator.standalone tetap false dan Web Push tidak jalan. */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_JS }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareAppJsonLd).replace(/</g, '\\u003c') }}

@@ -12,6 +12,7 @@ import { cloudflareApi } from '@/lib/cloudflare-api';
 import { useFeatures } from '@/lib/features';
 import { useModal } from '@/context/ModalContext';
 import { LeoMascot } from '@/components/mascot/LeoMascot';
+import { useThemePref, type ThemePref } from '@/lib/theme';
 
 // Pengaturan dalam satu popup (dibuka dari ikon roda gigi di sidebar).
 // Hanya pusat navigasi: tiap baris membuka halaman/form yang sudah ada.
@@ -24,6 +25,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   const { enabled } = useFeatures();
   const [me, setMe] = useState<{ name?: string; email?: string; plan?: string; created_at?: string } | null>(null);
   const [nowMs] = useState(() => Date.now());
+  const [theme, setTheme] = useThemePref();
 
   useEffect(() => {
     cloudflareApi<{ user?: { name?: string; email?: string; plan?: string; created_at?: string } | null }>('/api/auth/me').then((r) => setMe(r.user ?? null)).catch(() => {});
@@ -121,6 +123,15 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
               <Row r={{ icon: <Grid3x3 size={18} />, label: 'Kelola fitur', hint: `${enabled.length} aktif`, href: '/membership/fitur' }} />
               <Row r={{ icon: <User size={18} />, label: 'Profil & keamanan', href: '/membership/profile' }} />
             </ul>
+          </section>
+
+          <section className="space-y-2.5">
+            <p className="px-1 text-sm font-semibold text-slate-500">Tampilan</p>
+            <div className="flex rounded-full bg-slate-100 p-1">
+              {([['light', 'Terang'], ['dark', 'Gelap'], ['system', 'Ikuti perangkat']] as [ThemePref, string][]).map(([v, l]) => (
+                <button key={v} type="button" onClick={() => setTheme(v)} className={cn('flex-1 rounded-full py-2 text-sm font-semibold transition-colors', theme === v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500')}>{l}</button>
+              ))}
+            </div>
           </section>
 
           {groups.map((g) => (

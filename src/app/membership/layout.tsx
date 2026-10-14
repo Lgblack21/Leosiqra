@@ -14,6 +14,8 @@ import { ShellTitleContext } from '@/components/ui/PageHeader';
 
 const ONBOARDING_PATH = '/membership/onboarding';
 
+import { useApplyTheme } from '@/lib/theme';
+
 const FULLSCREEN_PATHS = new Set(['/membership/pasar']);
 
 export default function MembershipLayout({
@@ -25,6 +27,7 @@ export default function MembershipLayout({
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
+  useApplyTheme();
 
   useEffect(() => {
     cloudflareApi<{ user?: { onboarded?: boolean } | null }>('/api/auth/me')
