@@ -14,6 +14,7 @@ import { budgetRealization } from '@/lib/budget';
 import { AnimatedNumber } from '@/components/app/AnimatedNumber';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { LeoMascot } from '@/components/mascot/LeoMascot';
+import { useBudgetStart, budgetPeriod } from '@/lib/budgetPeriod';
 import { useFeedback } from '@/components/ui/Feedback';
 
 // Anggaran gaya baru (pola Oyenza): sisa anggaran + per hari + perkiraan akhir
@@ -30,8 +31,11 @@ const HIDE_KEY = 'leo-budget-hide:v1';
 export default function BudgetPage() {
   const reduce = useReducedMotion();
   const now = new Date();
-  const [month, setMonth] = useState(now.getMonth());
-  const [year, setYear] = useState(now.getFullYear());
+  const [startDay, setStartDay] = useBudgetStart();
+  const [offset, setOffset] = useState(0);
+  const per = budgetPeriod(now, startDay, offset);
+  const month = per.from.getMonth();
+  const year = per.from.getFullYear();
   const [budgets, setBudgets] = useState<Budget[] | null>(null);
   const [all, setAll] = useState<Transaction[]>([]);
   const [userCats, setUserCats] = useState<string[]>([]);
@@ -76,19 +80,17 @@ export default function BudgetPage() {
     });
   };
 
-  const isCurrent = month === now.getMonth() && year === now.getFullYear();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const elapsed = isCurrent ? now.getDate() : daysInMonth;
-  const daysLeft = isCurrent ? daysInMonth - now.getDate() + 1 : 0;
+  const isCurrent = per.isCurrent;
+  const daysInMonth = per.days;
+  const elapsed = per.elapsed;
+  const daysLeft = per.daysLeft;
   const dayFrac = elapsed / daysInMonth;
-  const shift = (d: number) => {
-    const x = new Date(year, month + d, 1);
-    setMonth(x.getMonth());
-    setYear(x.getFullYear());
-  };
-  const monthTx = useMemo(() => all.filter((t) => { const d = new Date(t.date); return d.getFullYear() === year && d.getMonth() === month; }), [all, month, year]);
+  const shift = (d: number) => setOffset((o) => Math.min(0, o + d));
+  const pFrom = +per.from;
+  const pTo = +per.to;
+  const monthTx = all.filter((t) => { const d = +new Date(t.date); return d >= pFrom && d < pTo; });
 
-  const r = useMemo(() => {
+  const r = (() => {
     const list = budgets ?? [];
     const exp = list.filter((b) => b.type === 'pengeluaran');
     const inc = list.filter((b) => b.type === 'pemasukan');
@@ -115,9 +117,9 @@ export default function BudgetPage() {
     const projected = elapsed > 0 ? (totalSpent / elapsed) * daysInMonth : totalSpent;
     const incomeRows = inc.map((b) => ({ b, ...budgetRealization(b, monthTx) }));
     return { rows, unbudgeted, cap, spent, outside, left: cap - spent, projected, incomeRows, spendByCat };
-  }, [budgets, monthTx, elapsed, daysInMonth, isCurrent]);
+  })();
 
-  const periodLabel = `1 – ${daysInMonth} ${new Intl.DateTimeFormat('id-ID', { month: 'short', year: 'numeric' }).format(new Date(year, month, 1))}`;
+  const periodLabel = per.label;
   const card = 'rounded-[26px] bg-white p-5 ring-1 ring-slate-100 md:p-6';
   const money = (n: number) => (hidden ? 'Rp •••' : formatIDR(n));
   const loading = budgets === null;
@@ -168,7 +170,7 @@ export default function BudgetPage() {
                   {hidden ? 'Rp •••' : <AnimatedNumber value={Math.abs(r.left)} format={formatIDR} />}
                 </p>
                 <p className="text-sm text-slate-600">
-                  {isCurrent && r.left > 0 ? <>{hidden ? 'Rp •••' : short(r.left / daysLeft)} per hari sampai {daysInMonth} {new Intl.DateTimeFormat('id-ID', { month: 'short' }).format(new Date(year, month, 1))}</> : r.left < 0 ? 'Rem dulu belanja yang tidak mendesak.' : 'Periode ini sudah berakhir.'}
+                  {isCurrent && r.left > 0 ? <>{hidden ? 'Rp •••' : short(r.left / daysLeft)} per hari sampai {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(per.lastDay)}</> : r.left < 0 ? 'Rem dulu belanja yang tidak mendesak.' : 'Periode ini sudah berakhir.'}
                 </p>
                 {r.outside > 0 && <p className="text-sm text-slate-400">{hidden ? 'Rp •••' : short(r.outside)} di luar anggaran</p>}
                 <div className="relative mt-4 h-3 rounded-full bg-slate-100">
@@ -288,8 +290,14 @@ export default function BudgetPage() {
             <motion.div className="absolute inset-0 bg-slate-900/30" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setInfo(false)} />
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ type: 'spring', stiffness: 380, damping: 30 }} className="relative w-full max-w-sm rounded-[24px] bg-white p-6 shadow-2xl">
               <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100"><CalendarDays size={20} /></span>
-              <p className="mt-3 text-lg font-extrabold text-slate-900">Anggaran dimulai tanggal 1</p>
-              <p className="mt-1 text-sm text-slate-500">Anggaran dihitung per bulan kalender (tanggal 1 sampai akhir bulan). Anggaran tahunan dibagi 12 supaya sebanding tiap bulan.</p>
+              <p className="mt-3 text-lg font-extrabold text-slate-900">Periode mulai tanggal {startDay}</p>
+              <p className="mt-1 text-sm text-slate-500">Samakan dengan tanggal gajianmu supaya sisa anggaran pas dengan uang yang kamu pegang. Anggaran tahunan dibagi 12.</p>
+              <div className="mt-4 grid grid-cols-7 gap-1.5">
+                {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                  <button key={d} type="button" onClick={() => { setStartDay(d); setOffset(0); }} className={cn('flex h-9 items-center justify-center rounded-xl text-sm font-semibold transition-colors', startDay === d ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200')}>{d}</button>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-slate-400">Periode sekarang: {periodLabel}</p>
               <button type="button" onClick={() => setInfo(false)} className="mt-5 w-full rounded-full bg-slate-900 py-3 text-sm font-bold text-white hover:bg-slate-800">Mengerti</button>
             </motion.div>
           </div>

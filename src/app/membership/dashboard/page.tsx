@@ -28,6 +28,7 @@ import { FeatureTiles, type TileStat } from '@/components/features/FeatureTiles'
 import { type FeatureId } from '@/lib/features';
 import { itemService } from '@/lib/services/itemService';
 import { categoryEmoji, isInvestmentCategory } from '@/lib/categoryEmoji';
+import { useBudgetStart, budgetPeriod } from '@/lib/budgetPeriod';
 
 // Ringkasan: satu angka besar (pengeluaran bulan ini), ke mana uangnya pergi,
 // transaksi terbaru, lalu "Hari ini" dan fitur yang dinyalakan. Semua baca saja.
@@ -135,7 +136,6 @@ export default function MonthlyDashboard() {
   const y = now.getFullYear();
   const m = now.getMonth();
   const today = now.getDate();
-  const daysInMonth = new Date(y, m + 1, 0).getDate();
   const monthName = new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(now);
   const prevMonthName = new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(y, m - 1, 1));
   const txs = useMemo(() => allTransactions.filter((t) => t.type !== 'debt'), [allTransactions]);
@@ -159,12 +159,16 @@ export default function MonthlyDashboard() {
     return map;
   }, [budgets]);
   const budgetTotal = [...budgetByCat.values()].reduce((s, v) => s + v, 0);
+  // Angka anggaran mengikuti periode anggaran (bisa mulai tanggal gajian).
+  const [budgetStart] = useBudgetStart();
+  const bp = budgetPeriod(now, budgetStart);
+  const budgetTx = txs.filter((t) => bp.contains(new Date(t.date)));
   const spendByCat = new Map<string, number>();
-  monthTx.filter(isSpend).forEach((t) => spendByCat.set(t.category || 'Lainnya', (spendByCat.get(t.category || 'Lainnya') ?? 0) + toIdr(t)));
+  budgetTx.filter(isSpend).forEach((t) => spendByCat.set(t.category || 'Lainnya', (spendByCat.get(t.category || 'Lainnya') ?? 0) + toIdr(t)));
   const budgetedSpent = [...spendByCat.entries()].filter(([c]) => budgetByCat.has(c)).reduce((s, [, v]) => s + v, 0);
-  const outsideBudget = budgetTotal > 0 ? monthSpend - budgetedSpent : 0;
+  const outsideBudget = budgetTotal > 0 ? budgetTx.filter(isSpend).reduce((s, t) => s + toIdr(t), 0) - budgetedSpent : 0;
   const budgetLeft = budgetTotal - budgetedSpent;
-  const daysLeft = daysInMonth - today + 1;
+  const daysLeft = bp.daysLeft;
   const perDay = budgetLeft > 0 ? budgetLeft / daysLeft : 0;
 
   // Langganan yang jatuh tempo 7 hari ke depan (chip → halaman Langganan).
