@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowRight, CalendarDays, FileSpreadsheet, HandCoins, Store, Home, LifeBuoy, NotebookPen, PiggyBank, Wallet } from 'lucide-react';
+import { ArrowRight, CalendarDays, ClipboardList, FileSpreadsheet, HandCoins, Store, Home, LifeBuoy, NotebookPen, PiggyBank, Wallet } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { LandingFooter } from '@/components/LandingFooter';
 
@@ -35,6 +35,7 @@ const GUIDES = [
   { href: '/panduan/catat-pengeluaran-di-excel', icon: FileSpreadsheet, title: 'Catat Pengeluaran di Excel vs Aplikasi', desc: 'Template Excel sederhana, rumus SUMIF, dan kapan sebaiknya pindah ke aplikasi.' },
   { href: '/panduan/catat-keuangan-usaha-kecil', icon: Store, title: 'Catatan Keuangan Jualan (UMKM)', desc: 'Pisahkan uang usaha, catat omzet, HPP, dan biaya, lalu hitung untung bersih.' },
   { href: '/panduan/cara-menabung-yang-benar', icon: PiggyBank, title: 'Cara Menabung yang Benar', desc: 'Sisihkan di awal, urutan dana darurat–utang–tujuan, contoh gaji 5 juta.' },
+  { href: '/panduan/cara-membuat-anggaran-bulanan', icon: ClipboardList, title: 'Cara Membuat Anggaran Bulanan', desc: 'Dari pengeluaran nyata ke batas per kategori, contoh gaji 4 juta, cek laju di tengah bulan.' },
 ];
 
 export default function PanduanIndexPage() {
