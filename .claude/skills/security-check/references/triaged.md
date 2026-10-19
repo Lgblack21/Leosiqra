@@ -35,6 +35,9 @@ Perbarui file ini di akhir setiap audit.
 | laporan bulanan via email | `handleMonthlyReportPreference`, `handleMonthlyReportUnsubscribe`, `sendMonthlyReports` | preferensi: `requireSession`, hanya user sesi, `enabled` wajib boolean. Unsubscribe publik: HMAC (`monthly-report-unsub:`+SESSION_SECRET) atas user id, `constantTimeEqual`; GET hanya halaman konfirmasi (tidak mengubah data → aturan "GET hanya membaca" tetap berlaku), POST yang mematikan; hanya bisa MEMATIKAN laporan, tidak membaca data. Cron: user dari `json_extract` opt-in, klaim `INSERT OR IGNORE` (user_id, period) — 3 cron paralel → 1 email (diuji lokal 2026-10-12); nama user & kategori di-`escapeHtml` |
 | transkripsi suara | `handleTranscribe` (`POST /api/member/ai/transcribe`) | `requireSession` + rate limit `ai-parse:user:*`, hanya `audio/wav` ber-header RIFF/WAVE, ≤ 1,5 MB, audio tidak disimpan, error OpenRouter hanya ke log (dicek 2026-10-12). ⚪ Tanpa `content-length` (chunked) body dibaca utuh dulu baru dicek ukurannya — hanya membebani request milik user ber-sesi itu sendiri, browser selalu mengirim `content-length` untuk Blob |
 | insight mingguan | `computeWeeklyInsights`, `handleWeeklyInsights` (`GET /api/member/insights/weekly`) | `requireSession`; dua SELECT `WHERE user_id = ?` (transactions & savings), tanggal dari `todayWIB()` (bukan request), tanpa tulis & tanpa LLM (dicek 2026-10-12) |
+| `dangerouslySetInnerHTML` `DAYPART_JS` | `src/components/auth/AuthScene.tsx` | `<script>` berisi konstanta string di kode (set atribut waktu-hari sebelum hydrate), tanpa input user/AI (dicek 2026-10-19) |
+| `sql-interpolasi` `${inserted}` | `handlePayDebt` | konstanta `EXISTS (SELECT 1 FROM transactions WHERE id = ? AND user_id = ?)` + bind; catatan hutang dicari `WHERE id = ? AND user_id = ?` sesi, rekening lewat `ownAccount` (milik user); INSERT bersyarat total bayar ≤ pokok → double tap tidak bisa bayar lebih (dicek 2026-10-19) |
+| `sql-interpolasi` `${sets.join(", ")}` | `handleAdminUpdateFeedback` | `requireSession(..., "admin")`; `sets` hanya potongan SQL literal (`status = ?`, `admin_reply = ?`…), status dari whitelist `FEEDBACK_STATUSES`, nilai via bind. Sisi member (`handleCreateFeedback`/`handleListMyFeedback`) `WHERE user_id = ?` sesi, Telegram di-`escapeHtml` (dicek 2026-10-19) |
 | push_subscriptions dicari per endpoint | `handleCreatePushSubscription` | pindah akun di browser yang sama memang disengaja; URL endpoint push tidak bisa ditebak (⚪ info) |
 
 ## Temuan terbuka
@@ -66,4 +69,4 @@ Perbarui file ini di akhir setiap audit.
 
 ## Belum ditriase
 
-(semua kandidat pemindai per 2026-09-28 sudah ditriase)
+(semua kandidat pemindai per 2026-10-19 sudah ditriase — 75 kandidat: 49 sql-interpolasi, 23 sql-tanpa-user_id, 3 frontend)
