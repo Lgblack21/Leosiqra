@@ -18,6 +18,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/panduan/catat-pengeluaran-di-excel',
     '/panduan/catat-keuangan-usaha-kecil',
     '/panduan/cara-menabung-yang-benar',
+    '/panduan/mengatur-gaji-mingguan',
     '/auth/register',
     '/hubungi-kami',
     '/privacy',
