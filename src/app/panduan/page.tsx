@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
+import { CalendarClock } from 'lucide-react';
 import Link from 'next/link';
-import { ArrowRight, CalendarDays, FileSpreadsheet, HandCoins, Store, Home, LifeBuoy, NotebookPen, PiggyBank, Wallet, CalendarClock } from 'lucide-react';
+import { ArrowRight, CalendarDays, FileSpreadsheet, HandCoins, Store, Home, LifeBuoy, NotebookPen, PiggyBank, Wallet } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { LandingFooter } from '@/components/LandingFooter';
 
@@ -29,13 +30,13 @@ const GUIDES = [
   { href: '/catatan-keuangan-pribadi', icon: NotebookPen, title: 'Catatan Keuangan Pribadi', desc: 'Apa saja yang dicatat, contoh format, dan cara memulainya.' },
   { href: '/catatan-keuangan-harian', icon: CalendarDays, title: 'Catatan Keuangan Harian', desc: 'Contoh format harian dan tips agar konsisten mencatat.' },
   { href: '/panduan/cara-mengatur-gaji', icon: Wallet, title: 'Cara Mengatur Gaji Bulanan', desc: 'Metode 50/30/20 dengan contoh pembagian gaji 5 juta.' },
+  { href: '/panduan/mengatur-gaji-mingguan', icon: CalendarClock, title: 'Cara Mengatur Gaji Mingguan', desc: 'Tagihan bulanan jadi jatah mingguan, bulan 5 minggu, contoh 500 ribu per minggu.' },
   { href: '/panduan/dana-darurat', icon: LifeBuoy, title: 'Dana Darurat', desc: 'Berapa idealnya, disimpan di mana, dan cara mengumpulkannya.' },
   { href: '/panduan/cara-melunasi-utang', icon: HandCoins, title: 'Cara Melunasi Utang', desc: 'Metode snowball vs avalanche, lengkap dengan contoh urutan.' },
   { href: '/panduan/catat-keuangan-rumah-tangga', icon: Home, title: 'Catatan Keuangan Rumah Tangga', desc: 'Kategori yang dicatat, contoh tabel sebulan, dan cara mencatat berdua.' },
   { href: '/panduan/catat-pengeluaran-di-excel', icon: FileSpreadsheet, title: 'Catat Pengeluaran di Excel vs Aplikasi', desc: 'Template Excel sederhana, rumus SUMIF, dan kapan sebaiknya pindah ke aplikasi.' },
   { href: '/panduan/catat-keuangan-usaha-kecil', icon: Store, title: 'Catatan Keuangan Jualan (UMKM)', desc: 'Pisahkan uang usaha, catat omzet, HPP, dan biaya, lalu hitung untung bersih.' },
   { href: '/panduan/cara-menabung-yang-benar', icon: PiggyBank, title: 'Cara Menabung yang Benar', desc: 'Sisihkan di awal, urutan dana darurat–utang–tujuan, contoh gaji 5 juta.' },
-  { href: '/panduan/mengatur-gaji-mingguan', icon: CalendarClock, title: 'Cara Mengatur Gaji Mingguan', desc: 'Tagihan bulanan jadi jatah mingguan, bulan 5 minggu, contoh 500 ribu per minggu.' },
 ];
 
 export default function PanduanIndexPage() {
