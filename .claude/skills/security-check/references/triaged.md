@@ -45,6 +45,7 @@ Perbarui file ini di akhir setiap audit.
 - ⚪ Realtime SSE tidak tersambung: `handleRealtime` meneruskan request `/api/realtime` apa adanya ke `RealtimeRoom`, padahal DO hanya melayani path `/sse` → selalu 404; frontend juga tidak memakai `EventSource`. Publish `transaction.created` / `shared_wallet.changed` jadi no-op (tidak berbahaya). Dompet Bersama menyegarkan data saat tab/app aktif lagi. (2026-10-12)
 - ⚪ `POST /api/member/uploads/sign` (R2) tidak dipakai frontend — kode mati, aman (sesi + key di folder user).
 - ⚪ `npm audit`: 9 paket (1 critical di Next.js = middleware bypass) — semua build-time/native, tidak dipakai runtime (static export, Worker tidak memakainya). Update Next.js terpisah.
+- 🟡 `npm audit` 2026-10-23: Next.js ≤16.4.0 kena GHSA-2464-fhr4-w9xw (RCE Image Optimization + SVG), GHSA-673q-mjm6-r5xr (RCE `use cache`), GHSA-p3m5-59mp-jv5r (DoS Server Actions). Produksi tidak terpapar (static export, `images.unoptimized`, tanpa Server Actions/`use cache`) — tetap di-bump ke 16.4.2 di branch `claude/friendly-galileo-71c4q8`, menunggu merge Bos. Sisa: 3 moderate (uuid lewat @capacitor/cli, build-time).
 
 
 ## Sudah diperbaiki
