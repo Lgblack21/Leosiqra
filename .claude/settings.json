@@ -1,8 +1,24 @@
 {
   "extraKnownMarketplaces": {
-    "claude-plugins-official": { "source": { "source": "github", "repo": "anthropics/claude-plugins-official" } },
-    "knowledge-work-plugins": { "source": { "source": "github", "repo": "anthropics/knowledge-work-plugins" } },
-    "humanizer": { "source": { "source": "github", "repo": "blader/humanizer" } }
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
+    },
+    "knowledge-work-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/knowledge-work-plugins"
+      }
+    },
+    "humanizer": {
+      "source": {
+        "source": "github",
+        "repo": "blader/humanizer",
+        "ref": "8c307f367c91bd974002f10f2be2965d642c13df"
+      }
+    }
   },
   "enabledPlugins": {
     "marketing@knowledge-work-plugins": true,
