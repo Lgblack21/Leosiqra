@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { CalendarClock } from 'lucide-react';
 import Link from 'next/link';
 import { ArrowRight, CalendarDays, FileSpreadsheet, HandCoins, Store, Home, LifeBuoy, NotebookPen, PiggyBank, Wallet } from 'lucide-react';
 import { Smartphone } from 'lucide-react';
@@ -31,6 +32,7 @@ const GUIDES = [
   { href: '/catatan-keuangan-pribadi', icon: NotebookPen, title: 'Catatan Keuangan Pribadi', desc: 'Apa saja yang dicatat, contoh format, dan cara memulainya.' },
   { href: '/catatan-keuangan-harian', icon: CalendarDays, title: 'Catatan Keuangan Harian', desc: 'Contoh format harian dan tips agar konsisten mencatat.' },
   { href: '/panduan/cara-mengatur-gaji', icon: Wallet, title: 'Cara Mengatur Gaji Bulanan', desc: 'Metode 50/30/20 dengan contoh pembagian gaji 5 juta.' },
+  { href: '/panduan/mengatur-gaji-mingguan', icon: CalendarClock, title: 'Cara Mengatur Gaji Mingguan', desc: 'Tagihan bulanan jadi jatah mingguan, bulan 5 minggu, contoh 500 ribu per minggu.' },
   { href: '/panduan/dana-darurat', icon: LifeBuoy, title: 'Dana Darurat', desc: 'Berapa idealnya, disimpan di mana, dan cara mengumpulkannya.' },
   { href: '/panduan/cara-membuat-anggaran-bulanan', icon: ClipboardList, title: 'Cara Membuat Anggaran Bulanan', desc: 'Dari pengeluaran nyata ke batas per kategori, contoh gaji 4 juta, cek laju di tengah bulan.' },
   { href: '/panduan/cara-melunasi-utang', icon: HandCoins, title: 'Cara Melunasi Utang', desc: 'Metode snowball vs avalanche, lengkap dengan contoh urutan.' },
