@@ -17,7 +17,7 @@ draft hari ini tertinggal (mis. sesi pagi gagal), kerjakan tahap yang belum
 ada dulu — tapi tetap maksimal 1 video terkirim per hari: kalau draft sudah
 `terkirim`, berhenti.
 
-**Baca juga `promo/TEAMS.md`**: otak tiap tim (belajar dari hasil nyata) dan
+**Baca juga `promo/BELAJAR.md`** (catat kesalahan saat terjadi, eksperimen, jurnal akhir sesi) dan **`promo/TEAMS.md`**: otak tiap tim (belajar dari hasil nyata) dan
 sinkronisasi ke LGBLACK Tower (kantor 3D Bos). Setiap sesi WAJIB: baca otak
 tim → kerja → tulis pelajaran + status ke Tower.
 

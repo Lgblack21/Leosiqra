@@ -45,19 +45,18 @@ Bos menekan tombol ACC/Tolak di Tower → status `dev/<id>` berubah jadi
 }
 ```
 
-Siklus SETIAP run:
-1. **Baca** `otak/<tim>` (kalau belum ada, mulai `{level:1, runs:0, lessons:[]}`),
-   `node promo/lessons.mjs` (rating + catatan Bos + metrik views/likes), dan
-   playbook R2.
-2. **Pakai**: pelajaran dengan skor tertinggi WAJIB dipertimbangkan di
-   keputusan hari ini; tulis di ringkasan pelajaran mana yang dipakai.
-3. **Belajar** (akhir run): tambah maksimal 3 pelajaran BARU yang punya bukti
-   (rating, views/likes, hasil QA, error yang ditemukan). Pelajaran lama yang
-   didukung bukti baru: `skor +1`; yang dibantah bukti: `skor -1`, hapus kalau
-   skor ≤ -2. Simpan maks 20 pelajaran (buang skor terendah). `runs +1`.
-   `level = 1 + floor(jumlah skor positif / 5)` (maks 10).
-4. Pelajaran yang skornya ≥ 3 dan berlaku umum → salin juga ke playbook R2
-   (`/api/promo/draft?key=playbook`, `{rules:[...]}` maks 15).
+Siklus SETIAP run — aturan lengkapnya di **`promo/BELAJAR.md`** (wajib dibaca):
+1. **Baca**: `otak/<tim>` + `otak/bersama`, `kesalahan/*` timmu yang belum
+   `diperbaiki`, eksperimen yang `cekPada`-nya lewat, jurnal 3 hari terakhir
+   (`besokBeda` kemarin wajib dicoba), `node promo/lessons.mjs`, playbook R2.
+2. **Pakai**: pelajaran `strategi` dengan `yakin` tertinggi dipertimbangkan di
+   keputusan hari ini; keputusan berbasis dugaan → `eksperimen/<id>`.
+3. **Catat kesalahan saat terjadi** (`kesalahan/<slug>`, `berulang +1` kalau sama).
+4. **Belajar** (akhir run): selesaikan eksperimen yang jatuh tempo dengan angka nyata,
+   perbarui `uji/menang/kalah/yakin` HANYA dari hasil nyata, tulis
+   `jurnal/<tim>-<tanggal>`, `runs +1`, hitung ulang `level`.
+5. Pelajaran `yakin >= 0.7` yang berlaku umum → playbook R2 (`{rules:[...]}` maks 15)
+   atau `otak/bersama` kalau lintas tim.
 
 Pelajaran harus spesifik dan bisa ditindaklanjuti ("video POV + rekaman
 Input Cepat dapat views 2× rata-rata"), bukan klise ("buat konten menarik").

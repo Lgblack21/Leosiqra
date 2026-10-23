@@ -10,6 +10,7 @@
 //      OPENAI_API_KEY → suara manusia (tanpa ini: edge-tts). DEMO_EMAIL +
 //      DEMO_PASSWORD → rekaman aplikasi asli untuk scene "device" (tanpa ini:
 //      ilustrasi).
+import { launchChromium } from "./browser.mjs";
 import { layoutQA, videoQA, verdict, describe } from "./qa.mjs";
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -215,11 +216,20 @@ const prepareClips = async (plan) => {
 const main = async () => {
   // Naskah dari routine biasanya ada di out/script.json — amankan dulu ke
   // state/ sebelum out/ dibersihkan.
-  if (process.env.PROMO_SCRIPT_FILE && existsSync(process.env.PROMO_SCRIPT_FILE)) {
-    mkdirSync(STATE, { recursive: true });
+  if (process.env.PROMO_SCRIPT_FILE) {
     const keep = join(STATE, "script.json");
-    writeFileSync(keep, readFileSync(process.env.PROMO_SCRIPT_FILE));
-    process.env.PROMO_SCRIPT_FILE = keep;
+    if (existsSync(process.env.PROMO_SCRIPT_FILE)) {
+      mkdirSync(STATE, { recursive: true });
+      writeFileSync(keep, readFileSync(process.env.PROMO_SCRIPT_FILE));
+      process.env.PROMO_SCRIPT_FILE = keep;
+    } else if (existsSync(keep)) {
+      // render uji sebelumnya sudah memindah naskah ke state/ dan menghapus out/
+      log(`naskah ${process.env.PROMO_SCRIPT_FILE} tidak ada — pakai salinan ${keep}`);
+      process.env.PROMO_SCRIPT_FILE = keep;
+    } else {
+      // dulu diam-diam memakai naskah cadangan DAN langsung mengirim — jangan lagi
+      throw new Error(`PROMO_SCRIPT_FILE=${process.env.PROMO_SCRIPT_FILE} tidak ditemukan (juga tidak ada ${keep}). Video TIDAK dibuat.`);
+    }
   }
   rmSync(OUT, { recursive: true, force: true });
   mkdirSync(OUT, { recursive: true });
@@ -297,7 +307,7 @@ const main = async () => {
   run(FFMPEG, ["-y", "-hide_banner", "-loglevel", "error", ...inputs, "-filter_complex", filter, "-map", "[out]", "-ar", "44100", audioPath]);
 
   // 4) Render frame (Chromium headless) → ffmpeg.
-  const browser = await chromium.launch();
+  const browser = await launchChromium();
   const page = await browser.newPage({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1 });
   await page.goto(pathToFileURL(join(DIR, "stage.html")).href);
   await page.addStyleTag({ url: fontsHref(plan.style.font) }).catch((e) => log("font gagal dimuat:", e.message));

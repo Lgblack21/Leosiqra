@@ -245,6 +245,8 @@ export const buildPlan = async ({ seed, history, lessons = "" }) => {
       if (typeof raw.promo === "boolean") promo = raw.promo;
     }
   } catch (error) {
+    // Naskah dari file (ditulis routine) yang rusak harus dibetulkan, bukan diganti cadangan diam-diam.
+    if (process.env.PROMO_SCRIPT_FILE) throw new Error(`Naskah ${process.env.PROMO_SCRIPT_FILE} tidak lolos: ${error.message}`);
     console.warn("Naskah AI gagal, pakai cadangan:", error.message);
     source = "fallback";
     const usedFallback = new Set(recent.filter((h) => h.source === "fallback").map((h) => h.topic));

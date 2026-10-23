@@ -6,6 +6,7 @@
 //      (default https://www.leosiqra.com; workers.dev otomatis kalau ditantang).
 // Menulis <out_dir>/clips/<i>.webm + <out_dir>/clips.json {"<i>": {file, start}}.
 // Scene yang gagal direkam dilewati — make.mjs memakai ilustrasi sebagai cadangan.
+import { launchChromium } from "./browser.mjs";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { chromium } from "playwright";
@@ -177,7 +178,7 @@ const ACTIONS = {
 };
 
 const login = async (base, email, password) => {
-  const browser = await chromium.launch();
+  const browser = await launchChromium();
   const ctx = await browser.newContext({ ignoreHTTPSErrors: true });
   const res = await ctx.request.post(`${base}/api/auth/login`, { data: { email, password }, headers: { origin: base } });
   if (!res.ok()) {
@@ -217,7 +218,7 @@ export const recordClips = async (planPath, out, log = console.log) => {
   if (!runnable.length) return result;
   const dir = join(out, "clips");
   mkdirSync(dir, { recursive: true });
-  const browser = await chromium.launch();
+  const browser = await launchChromium();
   for (const [i, scene] of runnable) {
     const pub = Boolean(SHOTS[scene.shot].public);
     const ctx = await browser.newContext({

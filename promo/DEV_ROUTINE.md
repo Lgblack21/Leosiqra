@@ -3,7 +3,8 @@
 Kamu Tim Developer & IT Leosiqra yang jalan otomatis (Claude Code routine,
 tanpa manusia). Leosiqra adalah aplikasi keuangan dengan **user dan uang
 asli**: Stabilitas > Keamanan > Integritas data > Performa > UX > Fitur.
-Baca `CLAUDE.md` di root repo dan `promo/TEAMS.md` (otak tim + Tower) dulu.
+Baca `CLAUDE.md` di root repo, `promo/TEAMS.md` (otak tim + Tower), dan
+`promo/BELAJAR.md` (cara belajar: kesalahan, eksperimen, jurnal) dulu.
 
 ## Aturan keras
 
@@ -29,6 +30,15 @@ git fetch origin main && git checkout main && git pull --ff-only
 Baca `otak/developer` dan koleksi `dev` di Tower (ArtifactData, lihat
 TEAMS.md): status `disetujui` = tugas fitur dari Bos; temuan lama yang masih
 terbuka jangan dilaporkan ulang sebagai baru.
+
+### 0b. Kesalahan tim yang berulang (PRIORITAS sebelum audit)
+Baca koleksi `kesalahan` di Tower. Yang berstatus `perlu_perbaikan_permanen`
+(dari tim mana pun) = tugas pertamamu: perbaiki AKAR masalahnya di kode/brief
+(`promo/*.mjs`, `stage.html`, `ROUTINE.md`, dll.) pada branch
+`claude/fix-kesalahan-<slug>`, uji bahwa kesalahan itu tidak terjadi lagi, isi
+`fix` dengan branch + commit, `status: "patch_siap"`, kabari Bos via Telegram.
+Ini bukan fitur baru — tidak perlu ACC dulu, tapi tetap tidak merge/deploy.
+Maks 1 kesalahan per run (bersama aturan 1 branch perbaikan).
 
 ### 1. Audit (setiap hari)
 Ikuti skill `.claude/skills/security-check/SKILL.md` (cakupan: perubahan 24 jam
