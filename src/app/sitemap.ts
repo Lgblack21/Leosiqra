@@ -13,6 +13,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/install',
     '/panduan/cara-mengatur-gaji',
     '/panduan/dana-darurat',
+    '/panduan/cara-membuat-anggaran-bulanan',
     '/panduan/cara-melunasi-utang',
     '/panduan/catat-keuangan-rumah-tangga',
     '/panduan/catat-pengeluaran-di-excel',
