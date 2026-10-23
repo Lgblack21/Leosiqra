@@ -429,11 +429,12 @@ const SCENES = {
     });
   },
   cta(el, sc) {
-    el.innerHTML = `<div class="cta-logo"><img src="${LOGO}"></div><div class="cta-text head"></div><div class="cta-btn">Coba gratis 14 hari</div><div class="cta-site">leosiqra.com</div>
+    el.innerHTML = `<div class="cta-logo"><img src="${LOGO}"></div><div class="cta-text head"></div><div class="cta-btn"></div><div class="cta-site">leosiqra.com</div>
       <div class="socials"><div class="soc">${IG}<span>@leosiqra_official</span></div><div class="soc">${YT}<span>Leosiqra</span></div></div>`;
     A(el.querySelector(".cta-logo"), [{ transform: "scale(0) rotate(-20deg)" }, { transform: "none" }], sc.start + 0.05, 0.7, POP);
     popWords(el.querySelector(".cta-text"), sc.text, sc.start + 0.35, 0.1);
     const btn = el.querySelector(".cta-btn");
+    btn.textContent = sc.button || "Coba gratis 14 hari";
     A(btn, [{ transform: "translateY(80px)", opacity: 0 }, { transform: "none", opacity: 1 }], sc.start + 0.7, 0.5, POP);
     A(btn, [{ transform: "scale(1)" }, { transform: "scale(1.07)" }, { transform: "scale(1)" }], sc.start + 1.3, 0.9, "ease-in-out", "forwards", { iterations: 8 });
     A(el.querySelector(".cta-site"), [{ opacity: 0 }, { opacity: 0.92 }], sc.start + 0.9, 0.4);
@@ -566,7 +567,8 @@ function buildSubs(style, words) {
   chunks.forEach((c, ci) => {
     const s = c[0].start;
     const next = chunks[ci + 1];
-    const e = next && next[0].start - c.at(-1).end < 0.6 ? next[0].start : c.at(-1).end + 0.25;
+    // Baris lama pudar 0,1 dtk sebelum baris baru muncul (dulu sempat menumpuk ±2 frame).
+    const e = next && next[0].start - c.at(-1).end < 0.6 ? next[0].start - 0.1 : c.at(-1).end + 0.25;
     const el = h(`<div class="chunk"><div class="chunk-inner">${c.map((w) => `<span class="w">${esc(w.text)}</span>`).join("")}</div></div>`);
     box.appendChild(el);
     A(el, [{ opacity: 0, transform: "translateY(20px) scale(.9)" }, { opacity: 1, transform: "none" }], s - 0.05, 0.15, POP);

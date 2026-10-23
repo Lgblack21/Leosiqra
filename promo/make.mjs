@@ -383,6 +383,7 @@ const main = async () => {
     hook: plan.scenes[0]?.text,
     palette: plan.style.palette.name,
     source: plan.source,
+    promo: plan.promo,
     style: `${plan.style.background}/${plan.style.transition}/${plan.style.font.head}/${plan.style.subtitle}`,
     screens: plan.scenes.filter((s) => s.type === "phone").map((s) => s.screen),
     shots: plan.scenes.filter((s) => s.clip).map((s) => s.shot),

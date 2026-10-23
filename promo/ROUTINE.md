@@ -21,6 +21,22 @@ ada dulu — tapi tetap maksimal 1 video terkirim per hari: kalau draft sudah
 sinkronisasi ke LGBLACK Tower (kantor 3D Bos). Setiap sesi WAJIB: baca otak
 tim → kerja → tulis pelajaran + status ke Tower.
 
+## Prinsip konten — NILAI DULU (sejak 2026-10-23)
+
+Engagement lama ±0 karena semua video terasa iklan. Mulai sekarang:
+- Video harus berguna walaupun nama Leosiqra dihapus: penonton dapat angka,
+  cara, atau pemahaman baru dan pengin **menyimpan/membagikan**-nya.
+- **Mode NILAI (±2 dari 3 video):** tanpa scene `device`/`phone`, tanpa fitur,
+  harga, atau "coba gratis". CTA = simpan/komentar/follow, `button` mis.
+  "Simpan video ini". Set `"promo": false` di script.json.
+- **Mode PROMO (±1 dari 3, atau format `fitur`):** tetap mulai dari nilai,
+  maks 1–2 scene aplikasi, CTA boleh "Coba gratis 14 hari". `"promo": true`.
+  `plan.mjs` memilih slot otomatis dari riwayat (`promo` di history).
+- Hook = situasi/angka spesifik ("Gaji 5,4 juta, ngekos di Jakarta"), bukan
+  pertanyaan klise ("Uangmu habis ke mana?"). Cek 15 hook terakhir — jangan mirip.
+- Pilar topik bergiliran: hitung-hitungan, studi kasus gaji, cara praktis,
+  salah kaprah, mitos vs fakta, kuis, POV (lihat `FORMATS` di content.mjs).
+
 ## Aturan keras (jangan dilanggar)
 
 - Klaim tentang Leosiqra HANYA dari `promo/content.mjs` (`FEATURES`, `OFFER`):
@@ -67,9 +83,9 @@ cd promo && npm ci --no-audit --no-fund && PROMO_SECRET=$PROMO_SECRET node lesso
 3. Pakai topi **Tim Analisis**: beri skor 1–10 untuk tiap ide (kekuatan hook,
    relevansi buat anak muda Indonesia, beda dari 3 video terakhir, cocok
    dengan pelajaran rating). Pilih 1, tulis alasannya.
-4. Susun shot list. Utamakan **rekaman aplikasi asli** (scene `device`, minimal
-   1, idealnya 2). Video 2D murni (tanpa `device`) boleh, tapi maks 1 dari 5
-   video terakhir (`kind` di riwayat; `plan.mjs` juga memaksa ini).
+4. Tentukan mode (NILAI/PROMO, lihat Prinsip konten). Hanya video PROMO yang
+   memakai rekaman aplikasi asli (scene `device`, 1–2) — `plan.mjs` memaksa
+   minimal 1 `device` hanya di mode PROMO.
 5. **Senin saja — Tim Promosi**: kampanye minggu ini (tema, seri 5 video,
    target views/rating) → simpan di draft `campaign` dan pakai sepanjang minggu
    (hari lain: baca `campaign` dari draft Senin, `draft-<tanggal Senin>`).
@@ -182,7 +198,7 @@ curl -s -H "$H" -F "text=⚠️ Video promo hari ini gagal: <alasan singkat>" "$
 
 ```json
 {
-  "format": "pov", "topic": "…",
+  "format": "pov", "topic": "…", "promo": false,
   "style": { "palette": "sunset", "background": "studio", "transition": "flip", "subtitle": "karaoke", "font": "Poppins",
              "music": { "bpm": 110 } },
   "scenes": [
@@ -194,7 +210,7 @@ curl -s -H "$H" -F "text=⚠️ Video promo hari ini gagal: <alasan singkat>" "$
     { "type": "mythfact", "myth": "…", "fact": "…", "say": "…" },
     { "type": "quiz", "question": "…", "options": ["…", "…", "…"], "answer": 1, "say": "…" },
     { "type": "phone", "screen": "scan|voice|debt|level|market|tax|…", "text": "…", "say": "…" },
-    { "type": "cta", "text": "…", "say": "Coba gratis empat belas hari… follow…" }
+    { "type": "cta", "text": "…", "button": "Simpan video ini", "say": "Simpan video ini… follow…" }
   ],
   "caption": "1–3 kalimat + emoji + ajakan komentar/simpan",
   "hashtags": ["#…", "…"]
