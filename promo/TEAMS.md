@@ -62,6 +62,15 @@ Siklus SETIAP run:
 Pelajaran harus spesifik dan bisa ditindaklanjuti ("video POV + rekaman
 Input Cepat dapat views 2× rata-rata"), bukan klise ("buat konten menarik").
 
+## Plugin tiap tim (`.claude/settings.json`, sejak 2026-10-23)
+
+Kalau plugin aktif di sesi routine, pakai sesuai peran:
+- **Tim Konten:** `humanizer` (naskah & caption terdengar manusia), `brand-voice` (cek naskah konsisten dengan gaya Leosiqra; aturan klaim tetap dari content.mjs).
+- **Tim Promosi & Analisis:** `marketing` (rencana kampanye, laporan performa), `data` (olah metrik views/rating jadi insight).
+- **Tim Developer & IT:** `claude-security` (scan celah lebih dalam, pelengkap skill security-check), `code-review` (review branch sebelum Bos merge).
+- **Semua tim:** `skill-creator` — pelajaran di `otak/<tim>` yang sudah terbukti (skor tinggi) boleh diusulkan jadi skill di `.claude/skills/` lewat branch `claude/skill-…` (tunggu ACC Bos, jangan commit ke main).
+Plugin tidak mengubah aturan keras: tetap tanpa commit/push ke main, tanpa deploy, tanpa secret di log.
+
 ## Peran
 
 - **Tim Konten** (`konten`): ide, naskah, produksi video (ROUTINE.md).
