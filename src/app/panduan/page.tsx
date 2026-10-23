@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { CalendarClock } from 'lucide-react';
 import Link from 'next/link';
 import { ArrowRight, CalendarDays, FileSpreadsheet, HandCoins, Store, Home, LifeBuoy, NotebookPen, PiggyBank, Wallet } from 'lucide-react';
-import { Smartphone } from 'lucide-react';
+import { FileCheck, Smartphone, Users } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { LandingFooter } from '@/components/LandingFooter';
 import { ClipboardList } from 'lucide-react';
@@ -40,6 +40,8 @@ const GUIDES = [
   { href: '/panduan/catat-pengeluaran-di-excel', icon: FileSpreadsheet, title: 'Catat Pengeluaran di Excel vs Aplikasi', desc: 'Template Excel sederhana, rumus SUMIF, dan kapan sebaiknya pindah ke aplikasi.' },
   { href: '/panduan/aplikasi-pencatat-pengeluaran', icon: Smartphone, title: 'Memilih Aplikasi Pencatat Pengeluaran', desc: '7 hal yang perlu dicek: kecepatan mencatat, banyak rekening, budget, biaya, privasi.' },
   { href: '/panduan/catat-keuangan-usaha-kecil', icon: Store, title: 'Catatan Keuangan Jualan (UMKM)', desc: 'Pisahkan uang usaha, catat omzet, HPP, dan biaya, lalu hitung untung bersih.' },
+  { href: '/panduan/bukti-lapor-spt-coretax', icon: FileCheck, title: 'Bukti Lapor SPT Coretax (BPE)', desc: 'Di mana BPE SPT Tahunan ditemukan, cara menyimpannya, dan langkah kalau belum muncul.' },
+  { href: '/panduan/cara-mencatat-uang-kas', icon: Users, title: 'Cara Mencatat Uang Kas', desc: 'Buku kas kelas, RT, arisan: kolom wajib, contoh tabel sebulan, cara melapor ke anggota.' },
   { href: '/panduan/cara-menabung-yang-benar', icon: PiggyBank, title: 'Cara Menabung yang Benar', desc: 'Sisihkan di awal, urutan dana darurat–utang–tujuan, contoh gaji 5 juta.' },
 ];
 
