@@ -5,7 +5,7 @@ import { GuideLayout, type GuideFaq } from '@/components/guide/GuideLayout';
 export const metadata: Metadata = {
   title: 'Cara Mencatat Uang Kas (Kelas, RT, Arisan) + Contoh | Leosiqra',
   description:
-    'Cara mencatat uang kas kelas, RT, arisan, atau komunitas: kolom yang wajib ada, contoh tabel buku kas sebulan, cara melaporkan ke anggota, dan kebiasaan bendahara yang membuat kas tetap dipercaya.',
+    'Cara mencatat uang kas kelas, RT, arisan, atau komunitas: kolom wajib, contoh tabel buku kas sebulan, dan cara melaporkannya ke anggota.',
   keywords: [
     'cara mencatat pengeluaran uang kas',
     'cara mencatat uang kas',

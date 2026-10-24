@@ -3,9 +3,9 @@ import Link from 'next/link';
 import { GuideLayout, type GuideFaq } from '@/components/guide/GuideLayout';
 
 export const metadata: Metadata = {
-  title: 'Bukti Lapor SPT Tahunan Coretax (BPE): Cara Mendapatkan | Leosiqra',
+  title: 'Bukti Lapor SPT Coretax (BPE): Cara Mendapatkan | Leosiqra',
   description:
-    'Apa itu Bukti Penerimaan Elektronik (BPE) SPT Tahunan di Coretax, cara mendapatkannya lewat email, Portal Saya > Dokumen Saya, atau Coretax Form, dan apa yang dilakukan kalau BPE belum muncul.',
+    'Apa itu BPE SPT Tahunan di Coretax, cara mendapatkannya lewat email atau Portal Saya > Dokumen Saya, dan yang dilakukan kalau BPE belum muncul.',
   keywords: [
     'contoh bukti lapor spt tahunan coretax',
     'bukti penerimaan elektronik spt coretax',
