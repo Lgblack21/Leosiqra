@@ -21,6 +21,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/panduan/aplikasi-pencatat-pengeluaran',
     '/panduan/catat-keuangan-usaha-kecil',
     '/panduan/cara-menabung-yang-benar',
+    '/panduan/cara-menabung-10-juta',
     '/panduan/cara-mencatat-uang-kas',
     '/panduan/bukti-lapor-spt-coretax',
     '/auth/register',
