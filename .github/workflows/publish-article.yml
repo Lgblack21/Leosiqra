@@ -1,7 +1,7 @@
 # Menerbitkan artikel draf CEO setelah Bos menekan ✅ Terbitkan di Telegram.
 # Dipicu Worker (workflow_dispatch). Berlapis pengaman:
 #   1. slug harus huruf-kecil-dan-strip; branch HARUS claude/artikel-<slug>
-#   2. diff vs main HANYA boleh menyentuh src/app/panduan/<slug>/ dan src/app/sitemap.ts
+#   2. diff vs main HANYA boleh menyentuh src/app/panduan/<slug>/, src/app/panduan/page.tsx (kartu daftar panduan) dan src/app/sitemap.ts
 #   3. kode berbahaya (script, dangerouslySetInnerHTML, eval, fetch, process.env, import/require dinamis) ditolak
 #      tanpa peduli huruf besar/kecil, dan import hanya boleh dari allowlist (next, next/link, lucide-react, GuideLayout)
 #   (checkout tanpa kredensial tersimpan: build tidak bisa memakai token; token hanya dipakai di langkah merge)
@@ -54,7 +54,7 @@ jobs:
           echo "$FILES"
           [ -n "$FILES" ] || { echo "tidak ada perubahan"; exit 1; }
           echo "$FILES" | grep -qx "src/app/panduan/$SLUG/page.tsx" || { echo "page.tsx artikel tidak ada"; exit 1; }
-          BAD=$(echo "$FILES" | grep -vE "^(src/app/panduan/$SLUG/|src/app/sitemap\.ts$)" || true)
+          BAD=$(echo "$FILES" | grep -vE "^(src/app/panduan/$SLUG/|src/app/panduan/page\.tsx$|src/app/sitemap\.ts$)" || true)
           [ -z "$BAD" ] || { echo "file di luar izin:"; echo "$BAD"; exit 1; }
           ADDED=$(git diff "origin/main...$BR" | grep -E '^\+' | grep -vE '^\+\+\+ ' || true)
           if echo "$ADDED" | grep -iE 'dangerouslySetInnerHTML|</?script|next/script|eval\(|new Function|fetch\(|XMLHttpRequest|process\.env|document\.cookie|localStorage|child_process|require\(|import\(|import\.meta'; then
@@ -92,7 +92,7 @@ jobs:
         env:
           PROMO_SECRET: ${{ secrets.PROMO_SECRET }}
         run: |
-          curl -s -H "x-promo-secret: $PROMO_SECRET" -F "text=✅ Artikel LIVE: https://www.leosiqra.com/panduan/$SLUG
+          curl -sS --fail-with-body -H "x-promo-secret: $PROMO_SECRET" -F "text=✅ Artikel LIVE: https://www.leosiqra.com/panduan/$SLUG
           Sudah masuk sitemap. Biar Google lebih cepat, buka Search Console → Inspeksi URL → Minta pengindeksan." "$API/api/promo/telegram"
 
       - name: Kabari Telegram (gagal)
@@ -100,4 +100,4 @@ jobs:
         env:
           PROMO_SECRET: ${{ secrets.PROMO_SECRET }}
         run: |
-          curl -s -H "x-promo-secret: $PROMO_SECRET" -F "text=❌ Penerbitan artikel $SLUG GAGAL (belum ada yang berubah di situs). Lihat log: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" "$API/api/promo/telegram"
+          curl -sS --fail-with-body -H "x-promo-secret: $PROMO_SECRET" -F "text=❌ Penerbitan artikel $SLUG GAGAL (belum ada yang berubah di situs). Lihat log: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" "$API/api/promo/telegram"

@@ -206,8 +206,18 @@ const speakOpenRouter = async (text, voice, mood) => {
   return { mp3, heard: [{ start: a, end: b, text }] };
 };
 
+// Interpreter yang benar-benar punya edge-tts. Di sandbox routine, pip memasang ke
+// /usr/bin/python3 sementara "python3" di PATH versi lain — dulu harus diset manual.
+let _py = null;
+const pythonWithEdgeTts = () => {
+  if (_py) return _py;
+  const cands = [process.env.PYTHON, "python3", "/usr/bin/python3", "/usr/local/bin/python3", "python"].filter(Boolean);
+  _py = cands.find((c) => spawnSync(c, ["-c", "import edge_tts"], { encoding: "utf8" }).status === 0) || process.env.PYTHON || "python3";
+  return _py;
+};
+
 const viaEdge = (planPath, out) => {
-  const r = spawnSync(process.env.PYTHON || "python3", [join(import.meta.dirname, "tts.py"), planPath, out], { encoding: "utf8" });
+  const r = spawnSync(pythonWithEdgeTts(), [join(import.meta.dirname, "tts.py"), planPath, out], { encoding: "utf8" });
   if (r.status !== 0) throw new Error(`tts.py gagal:\n${(r.stderr || "").slice(-1500)}`);
   return "edge:id-ID-GadisNeural";
 };

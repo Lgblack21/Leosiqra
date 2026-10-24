@@ -1,8 +1,12 @@
 import type { Metadata } from 'next';
+import { CalendarClock } from 'lucide-react';
 import Link from 'next/link';
-import { ArrowRight, CalendarDays, FileSpreadsheet, HandCoins, Home, LifeBuoy, NotebookPen, Wallet } from 'lucide-react';
+import { ArrowRight, CalendarDays, FileSpreadsheet, HandCoins, Store, Home, LifeBuoy, NotebookPen, PiggyBank, Wallet } from 'lucide-react';
+import { FileCheck, Smartphone, Users } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { LandingFooter } from '@/components/LandingFooter';
+import { ClipboardList } from 'lucide-react';
+import { Target } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Panduan Keuangan Pribadi | Leosiqra',
@@ -29,10 +33,18 @@ const GUIDES = [
   { href: '/catatan-keuangan-pribadi', icon: NotebookPen, title: 'Catatan Keuangan Pribadi', desc: 'Apa saja yang dicatat, contoh format, dan cara memulainya.' },
   { href: '/catatan-keuangan-harian', icon: CalendarDays, title: 'Catatan Keuangan Harian', desc: 'Contoh format harian dan tips agar konsisten mencatat.' },
   { href: '/panduan/cara-mengatur-gaji', icon: Wallet, title: 'Cara Mengatur Gaji Bulanan', desc: 'Metode 50/30/20 dengan contoh pembagian gaji 5 juta.' },
+  { href: '/panduan/mengatur-gaji-mingguan', icon: CalendarClock, title: 'Cara Mengatur Gaji Mingguan', desc: 'Tagihan bulanan jadi jatah mingguan, bulan 5 minggu, contoh 500 ribu per minggu.' },
   { href: '/panduan/dana-darurat', icon: LifeBuoy, title: 'Dana Darurat', desc: 'Berapa idealnya, disimpan di mana, dan cara mengumpulkannya.' },
+  { href: '/panduan/cara-membuat-anggaran-bulanan', icon: ClipboardList, title: 'Cara Membuat Anggaran Bulanan', desc: 'Dari pengeluaran nyata ke batas per kategori, contoh gaji 4 juta, cek laju di tengah bulan.' },
   { href: '/panduan/cara-melunasi-utang', icon: HandCoins, title: 'Cara Melunasi Utang', desc: 'Metode snowball vs avalanche, lengkap dengan contoh urutan.' },
   { href: '/panduan/catat-keuangan-rumah-tangga', icon: Home, title: 'Catatan Keuangan Rumah Tangga', desc: 'Kategori yang dicatat, contoh tabel sebulan, dan cara mencatat berdua.' },
   { href: '/panduan/catat-pengeluaran-di-excel', icon: FileSpreadsheet, title: 'Catat Pengeluaran di Excel vs Aplikasi', desc: 'Template Excel sederhana, rumus SUMIF, dan kapan sebaiknya pindah ke aplikasi.' },
+  { href: '/panduan/aplikasi-pencatat-pengeluaran', icon: Smartphone, title: 'Memilih Aplikasi Pencatat Pengeluaran', desc: '7 hal yang perlu dicek: kecepatan mencatat, banyak rekening, budget, biaya, privasi.' },
+  { href: '/panduan/catat-keuangan-usaha-kecil', icon: Store, title: 'Catatan Keuangan Jualan (UMKM)', desc: 'Pisahkan uang usaha, catat omzet, HPP, dan biaya, lalu hitung untung bersih.' },
+  { href: '/panduan/bukti-lapor-spt-coretax', icon: FileCheck, title: 'Bukti Lapor SPT Coretax (BPE)', desc: 'Di mana BPE SPT Tahunan ditemukan, cara menyimpannya, dan langkah kalau belum muncul.' },
+  { href: '/panduan/cara-mencatat-uang-kas', icon: Users, title: 'Cara Mencatat Uang Kas', desc: 'Buku kas kelas, RT, arisan: kolom wajib, contoh tabel sebulan, cara melapor ke anggota.' },
+  { href: '/panduan/cara-menabung-yang-benar', icon: PiggyBank, title: 'Cara Menabung yang Benar', desc: 'Sisihkan di awal, urutan dana darurat–utang–tujuan, contoh gaji 5 juta.' },
+  { href: '/panduan/cara-menabung-10-juta', icon: Target, title: 'Cara Menabung 10 Juta dalam 3 Bulan', desc: 'Jatah per bulan, minggu, dan hari, cek realistis dari gaji, alternatif 6 atau 12 bulan.' },
 ];
 
 export default function PanduanIndexPage() {

@@ -1,7 +1,7 @@
 // Menyusun rencana video hari ini: format & topik (tidak mengulang riwayat),
 // naskah (AI, dengan cadangan naskah bawaan), dan gaya visual/musik acak.
 import { promoFetch } from "./api.mjs";
-import { FORMATS, FORMAT_ORDER, FEATURES, FALLBACK_SCRIPTS, FALLBACK_CAPTION_TAIL, OFFER, HANDLES } from "./content.mjs";
+import { FORMATS, FORMAT_ORDER, FEATURES, FALLBACK_SCRIPTS, FALLBACK_CAPTION_TAIL, VALUE_CAPTION_TAIL, OFFER, HANDLES } from "./content.mjs";
 import { OPENAI_VOICES } from "./voice.mjs";
 
 // RNG ber-seed (mulberry32) — seed dicetak di log supaya video bisa dibuat ulang persis.
@@ -75,7 +75,8 @@ export const normalizeScript = (raw) => {
     if (!SCENE_TYPES.includes(s?.type)) continue;
     const base = { type: s.type, say: clip(s.say, 260), emoji: clip(s.emoji, 8) };
     if (!base.say || words(base.say) > 32) throw new Error(`say kosong/terlalu panjang: ${base.say}`);
-    if (s.type === "hook" || s.type === "cta") scenes.push({ ...base, text: clip(s.text, 60) });
+    if (s.type === "hook") scenes.push({ ...base, text: clip(s.text, 60) });
+    else if (s.type === "cta") scenes.push({ ...base, text: clip(s.text, 60), button: clip(s.button, 24) || undefined });
     else if (s.type === "number") {
       const to = Number(s.to);
       if (!Number.isFinite(to) || to <= 0 || to > 1e13) throw new Error("angka tidak valid");
@@ -103,7 +104,7 @@ export const normalizeScript = (raw) => {
   if (scenes.length < 3 || scenes.length > 7) throw new Error(`jumlah scene ${scenes.length}`);
   if (scenes[0].type !== "hook") scenes.unshift({ type: "hook", text: clip(raw.title || "Keuanganmu", 60), say: "", emoji: "💸" });
   if (scenes[scenes.length - 1].type !== "cta") {
-    scenes.push({ type: "cta", text: "Coba gratis 14 hari", say: "Coba gratis empat belas hari. Follow untuk tips berikutnya!", emoji: "" });
+    scenes.push({ type: "cta", text: "Simpan biar nggak lupa", button: "Simpan video ini", say: "Simpan video ini, dan follow buat bagian berikutnya!", emoji: "" });
   }
   const total = scenes.reduce((n, s) => n + words(s.say), 0);
   if (total > 95) throw new Error(`narasi terlalu panjang (${total} kata)`);
@@ -116,7 +117,13 @@ export const normalizeScript = (raw) => {
 };
 
 const SYSTEM_PROMPT = `Kamu content creator TikTok/Reels/Shorts untuk Leosiqra, aplikasi pencatat & pengatur keuangan pribadi berbahasa Indonesia.
-Tulis naskah video vertikal 15–25 detik yang bikin orang berhenti scroll: hook kuat di 2 detik pertama, bahasa santai anak muda Indonesia (boleh "gue/kamu", jangan terlalu baku), padat, tidak klise.
+Tulis naskah video vertikal 15–25 detik yang bikin orang berhenti scroll DAN merasa dapat sesuatu: hook kuat di 2 detik pertama, bahasa santai anak muda Indonesia (boleh "gue/kamu", jangan terlalu baku), padat, tidak klise.
+
+PRINSIP UTAMA — NILAI DULU:
+- Video harus tetap berguna walaupun nama Leosiqra dihapus: penonton dapat angka, cara, atau pemahaman baru yang bisa langsung dipakai, dan pengin menyimpan/membagikannya.
+- Hook = situasi atau angka spesifik ("Gaji 5,4 juta, ngekos di Jakarta — ini pembagiannya"), BUKAN pertanyaan klise ("Uangmu habis ke mana?", "Belum punya dana darurat?").
+- Jangan ceramah, jangan menakut-nakuti, jangan menghakimi. Sebut asumsi angka dengan jujur.
+- Ikuti MODE di pesan pengguna: mode NILAI = jangan promosi sama sekali (tanpa scene device/phone, tanpa penawaran); mode PROMO = boleh 1 scene aplikasi + penawaran di CTA.
 
 ATURAN KETAT:
 - Hanya sebut fitur Leosiqra dari daftar FITUR yang diberikan, jangan mengarang fitur/harga/angka pengguna.
@@ -124,7 +131,8 @@ ATURAN KETAT:
 - Angka hitung-hitungan harus BENAR secara matematika.
 - Field "say" = kalimat yang DIUCAPKAN voice-over: tulis angka dengan kata atau bentuk yang enak diucapkan (mis. "dua puluh lima ribu", bukan "Rp25.000"), maks 25 kata per scene, total semua say maks 75 kata.
 - Field teks di layar (text/label/items/...) pendek & punchy, boleh pakai angka.
-- 4 sampai 6 scene. Scene pertama "hook", scene terakhir "cta" (ajak coba gratis + follow).
+- 4 sampai 6 scene. Scene pertama "hook", scene terakhir "cta".
+- CTA mode NILAI: ajakan simpan/komentar/follow ("Simpan buat gajian nanti", "Komen gaji kamu, aku bikinin versinya"), field "button" diisi teks tombol pendek mis. "Simpan video ini". CTA mode PROMO: ajak coba gratis, button "Coba gratis 14 hari".
 
 TIPE SCENE (pilih yang cocok, variasikan):
 {"type":"hook","text":"maks 6 kata","emoji":"1 emoji","say":"..."}
@@ -134,13 +142,16 @@ TIPE SCENE (pilih yang cocok, variasikan):
 {"type":"quiz","question":"...","options":["2-3 opsi pendek"],"answer":0,"say":"pertanyaan lalu jawabannya"}
 {"type":"device","shot":"${SHOTS.join("|")}","camera":"${CAMERAS.join("|")}","text":"maks 4 kata","say":"..."}  ← REKAMAN APLIKASI ASLI di HP 3D, utamakan ini (minimal 1, idealnya 2)
 {"type":"phone","screen":"${SCREENS.join("|")}","text":"maks 4 kata","say":"..."}  ← ilustrasi, hanya untuk fitur yang tidak ada di shot (scan, voice, debt, level, market, tax)
-{"type":"cta","text":"maks 5 kata","say":"..."}
+{"type":"cta","text":"maks 5 kata","button":"maks 4 kata","say":"..."}
 
 Balas HANYA JSON: {"title":"...","scenes":[...],"caption":"caption IG/YouTube 1-3 kalimat + emoji, ajakan komentar/simpan","hashtags":["5-7 hashtag relevan tanpa spasi"]}`;
 
-const callAi = async ({ format, topic, avoidHooks, lessons }) => {
+const callAi = async ({ format, topic, avoidHooks, lessons, promo }) => {
   const f = FORMATS[format];
   const user = [
+    promo
+      ? "MODE: PROMO — tetap beri nilai, boleh 1 scene aplikasi (device) + penawaran di CTA."
+      : "MODE: NILAI — 100% edukasi/hiburan bernilai. JANGAN pakai scene device/phone, jangan sebut fitur/harga/penawaran. Leosiqra cukup muncul di logo CTA.",
     `FORMAT: ${f.label} — ${f.guide}`,
     `TOPIK: ${topic}`,
     `FITUR (hanya boleh ini):\n${FEATURES.map((x) => `- ${x.name} [screen: ${x.id}]: ${x.fact}`).join("\n")}`,
@@ -187,8 +198,9 @@ const callAi = async ({ format, topic, avoidHooks, lessons }) => {
 // Video "2D" (tanpa rekaman aplikasi asli) boleh, tapi jangan sering: maks 1
 // dari 5 video terakhir. Kalau jatahnya habis, layar ilustrasi yang punya
 // padanan rekaman diganti scene device; kalau tidak ada, sisipkan 1 shot.
-export const enforceRealQuota = (scenes, recent, rng) => {
-  if (scenes.some((s) => s.type === "device")) return scenes;
+export const enforceRealQuota = (scenes, recent, rng, promo = true) => {
+  // Video NILAI sengaja tanpa rekaman aplikasi.
+  if (!promo || scenes.some((s) => s.type === "device")) return scenes;
   const twoD = recent.slice(-4).filter((h) => h.kind === "2d").length;
   if (twoD === 0) return scenes;
   const out = scenes.map((s) =>
@@ -211,6 +223,9 @@ export const buildPlan = async ({ seed, history, lessons = "" }) => {
   const usedTopics = new Set(recent.map((h) => h.topic));
   const fresh = FORMATS[format].topics.filter((t) => !usedTopics.has(t));
   const topic = rng.pick(fresh.length ? fresh : FORMATS[format].topics);
+  // Slot promo: format "fitur" selalu promo; selain itu promo hanya kalau 2
+  // video terakhir sama-sama bukan promo (jadi ±1 dari 3 video).
+  let promo = format === "fitur" || recent.slice(-2).every((h) => h.promo === false);
 
   let script;
   let source = "ai";
@@ -218,7 +233,7 @@ export const buildPlan = async ({ seed, history, lessons = "" }) => {
     // PROMO_SCRIPT_FILE: pakai naskah dari file (uji tampilan tanpa memanggil AI).
     const raw = process.env.PROMO_SCRIPT_FILE
       ? JSON.parse((await import("node:fs")).readFileSync(process.env.PROMO_SCRIPT_FILE, "utf8"))
-      : await callAi({ format, topic, lessons, avoidHooks: recent.slice(-10).map((h) => h.hook).filter(Boolean) });
+      : await callAi({ format, topic, lessons, promo, avoidHooks: recent.slice(-15).map((h) => h.hook).filter(Boolean) });
     script = normalizeScript(raw);
     // Naskah dari file (mis. ditulis Claude Code) boleh menentukan format,
     // topik, dan sebagian gaya sendiri.
@@ -227,19 +242,22 @@ export const buildPlan = async ({ seed, history, lessons = "" }) => {
       if (typeof raw.format === "string") script.format = raw.format;
       if (typeof raw.topic === "string") script.topic = raw.topic;
       if (raw.style && typeof raw.style === "object") script.styleOverride = raw.style;
+      if (typeof raw.promo === "boolean") promo = raw.promo;
     }
   } catch (error) {
+    // Naskah dari file (ditulis routine) yang rusak harus dibetulkan, bukan diganti cadangan diam-diam.
+    if (process.env.PROMO_SCRIPT_FILE) throw new Error(`Naskah ${process.env.PROMO_SCRIPT_FILE} tidak lolos: ${error.message}`);
     console.warn("Naskah AI gagal, pakai cadangan:", error.message);
     source = "fallback";
     const usedFallback = new Set(recent.filter((h) => h.source === "fallback").map((h) => h.topic));
-    const pool = FALLBACK_SCRIPTS.filter((s) => !usedFallback.has(s.topic));
-    const fb = rng.pick(pool.length ? pool : FALLBACK_SCRIPTS);
+    const pool = FALLBACK_SCRIPTS.filter((s) => !usedFallback.has(s.topic) && (s.format === "fitur") === promo);
+    const fb = rng.pick(pool.length ? pool : FALLBACK_SCRIPTS.filter((s) => (s.format === "fitur") === promo));
     script = normalizeScript(fb);
     script.format = fb.format;
     script.topic = fb.topic;
   }
 
-  script.scenes = enforceRealQuota(script.scenes, recent, rng);
+  script.scenes = enforceRealQuota(script.scenes, recent, rng, promo);
   script.scenes.forEach((sc, i) => {
     if (sc.type === "device" && !sc.camera) sc.camera = CAMERAS[(i + seed) % CAMERAS.length];
   });
@@ -283,8 +301,10 @@ export const buildPlan = async ({ seed, history, lessons = "" }) => {
     format: script.format || format,
     topic: script.topic || topic,
     source,
+    promo,
     scenes: script.scenes,
-    caption: (script.caption || "") + FALLBACK_CAPTION_TAIL,
+    // Video NILAI: tanpa iklan di caption, cukup handle akun.
+    caption: (script.caption || "") + (promo ? FALLBACK_CAPTION_TAIL : VALUE_CAPTION_TAIL),
     hashtags: script.hashtags,
     style,
   };

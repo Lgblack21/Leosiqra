@@ -11,6 +11,8 @@ import { WalletList } from "@/components/app/home/WalletList";
 import { RecentTransactions } from "@/components/app/home/RecentTransactions";
 import { AssistantMenu } from "@/components/app/home/AssistantMenu";
 import { LevelBadge } from "@/components/app/home/LevelBadge";
+import { WeeklyInsights } from "@/components/WeeklyInsights";
+import { SecurityNudge } from "@/components/SecurityNudge";
 import { FadeIn, StaggerList, StaggerItem } from "@/components/app/FadeIn";
 
 export default function AppHomePage() {
@@ -77,6 +79,13 @@ export default function AppHomePage() {
         </StaggerItem>
         <StaggerItem>
           <WalletList accounts={accounts} />
+        </StaggerItem>
+        {/* empty:hidden — kartu tidak tampil (belum ada insight) tidak menyisakan jarak kosong */}
+        <StaggerItem className="empty:hidden">
+          <SecurityNudge />
+        </StaggerItem>
+        <StaggerItem className="empty:hidden">
+          <WeeklyInsights target="app" />
         </StaggerItem>
         <StaggerItem>
           <AssistantMenu />

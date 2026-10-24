@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { MailCheck, ArrowLeft } from 'lucide-react';
-import { Input } from '@/components/Input';
+import { MailCheck, ArrowLeft, Mail } from 'lucide-react';
 import { Button } from '@/components/Button';
 import { AuthCard } from '@/components/auth/AuthCard';
+import { authInput, authInputWrap, authLabel, authPrimaryBtn } from '@/components/auth/AuthLayout';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 
 export default function ForgotPasswordPage() {
@@ -33,15 +33,15 @@ export default function ForgotPasswordPage() {
 
   if (sentMessage) {
     return (
-      <AuthCard badge="Cek email kamu" title="Link reset terkirim" subtitle={sentMessage}>
-        <div className="flex items-start gap-3 p-4 rounded-control bg-emerald-50 border border-emerald-100">
+      <AuthCard mood="happy" badge="Cek email kamu" title="Link reset terkirim" subtitle={sentMessage}>
+        <div className="flex items-start gap-3 p-4 rounded-2xl bg-emerald-50 border border-emerald-100">
           <MailCheck size={20} className="text-emerald-600 shrink-0 mt-0.5" />
           <p className="text-sm text-emerald-800">
             Link berlaku 30 menit dan hanya bisa dipakai sekali. Tidak masuk? Tunggu sekitar 2 menit, lalu coba kirim ulang.
           </p>
         </div>
         <div className="flex flex-col gap-2">
-          <Button type="button" variant="secondary" className="w-full py-3 rounded-control" onClick={() => setSentMessage('')}>
+          <Button type="button" variant="secondary" className="w-full py-3 rounded-2xl" onClick={() => setSentMessage('')}>
             Kirim ulang
           </Button>
           <Link href="/auth/login" className="text-center text-sm font-bold text-indigo-600 hover:text-indigo-700 py-2">
@@ -59,25 +59,21 @@ export default function ForgotPasswordPage() {
       subtitle="Masukkan email akunmu. Kami kirim link untuk membuat password baru."
     >
       {error && (
-        <div role="alert" className="py-2.5 px-4 rounded-control bg-red-50 border border-red-100 text-red-600 text-sm font-medium">
+        <div role="alert" className="py-2.5 px-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 text-sm font-medium">
           {error}
         </div>
       )}
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          label="Email"
-          type="email"
-          autoComplete="email"
-          autoCapitalize="none"
-          placeholder="contoh@gmail.com"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="py-3"
-        />
-        <Button type="submit" className="w-full py-3.5 text-sm font-black rounded-control" isLoading={loading}>
-          Kirim link reset
-        </Button>
+        <label className="block">
+          <span className={authLabel}>Email</span>
+          <span className={authInputWrap}>
+            <Mail size={18} className="shrink-0 text-slate-400 transition-colors group-focus-within:text-indigo-500" />
+            <input type="email" autoComplete="email" autoCapitalize="none" placeholder="nama@email.com" required value={email} onChange={(e) => setEmail(e.target.value)} className={authInput} />
+          </span>
+        </label>
+        <button type="submit" disabled={loading} className={authPrimaryBtn}>
+          {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : 'Kirim link reset'}
+        </button>
       </form>
       <p className="text-caption text-slate-400">
         Daftar pakai Google? Kamu tidak butuh password — cukup masuk dengan tombol &quot;Lanjutkan dengan Google&quot;.

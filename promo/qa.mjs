@@ -50,8 +50,16 @@ export async function layoutQA(page, plan) {
         if ((ox * oy) / small > 0.3) out.push({ kind: "teks-bertumpuk", text: `${a.text} ⇄ ${c.text}`, detail: `${Math.round(((ox * oy) / small) * 100)}%` });
       }
       for (const img of document.images) {
-        const cs = getComputedStyle(img);
-        if (cs.display === "none" || parseFloat(cs.opacity) < 0.6) continue;
+        // Sama seperti teks: abaikan gambar milik scene lain (rekaman scene yang
+        // belum tampil belum dimuat → dulu jadi positif palsu "gambar rusak").
+        const own = img.closest("#scenes > .scene");
+        if (own && [...own.parentElement.children].indexOf(own) !== idx) continue;
+        let vis = true;
+        for (let e = img; e && e !== document.body; e = e.parentElement) {
+          const cs = getComputedStyle(e);
+          if (cs.display === "none" || cs.visibility === "hidden" || parseFloat(cs.opacity) < 0.6) { vis = false; break; }
+        }
+        if (!vis) continue;
         const b = img.getBoundingClientRect();
         if (b.width > 8 && b.height > 8 && (!img.complete || img.naturalWidth === 0)) out.push({ kind: "gambar-rusak", text: (img.getAttribute("src") || "").slice(0, 50), detail: "" });
       }

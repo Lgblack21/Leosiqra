@@ -36,6 +36,8 @@ import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateS
 import { isCreditAccountType, computeCreditUsage, getCardCycle } from '@/lib/creditCard';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { GamificationStrip } from '@/components/GamificationStrip';
+import { WeeklyInsights } from '@/components/WeeklyInsights';
+import { SecurityNudge } from '@/components/SecurityNudge';
 
 interface MarketTicker {
   label: string; sub: string; val: string; pct: string; up: boolean | null;
@@ -322,6 +324,10 @@ export default function MonthlyDashboard() {
       />
 
       <GamificationStrip />
+
+      <SecurityNudge />
+
+      <WeeklyInsights target="web" />
 
       {/* Baris 1: Saldo (kartu utama) + arus kas bulan ini */}
       <div className="stagger-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">

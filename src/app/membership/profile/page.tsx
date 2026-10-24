@@ -86,6 +86,14 @@ export default function ProfilePage() {
   const { activeModal } = useModal();
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [rightTab, setRightTab] = useState<RightTab>('ringkasan');
+  // Tautan langsung ke tab tertentu, mis. dari kartu "Aktifkan 2FA" di Beranda.
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    if (tab !== 'keamanan' && tab !== 'lainnya') return;
+    setRightTab(tab);
+    const t = setTimeout(() => document.getElementById('pengaturan-akun')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 600);
+    return () => clearTimeout(t);
+  }, []);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -610,7 +618,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Right: Pengaturan Akun — dikelompokkan lewat tab biar tidak jadi tumpukan panjang */}
-        <div className="space-y-6 md:space-y-8">
+        <div id="pengaturan-akun" className="scroll-mt-24 space-y-6 md:space-y-8">
           <div className="flex items-center gap-2 p-1.5 bg-slate-50 border border-slate-100 rounded-2xl w-full overflow-x-auto no-scrollbar">
             {RIGHT_TABS.map((tab) => (
               <button
