@@ -38,6 +38,7 @@ Perbarui file ini di akhir setiap audit.
 | transkripsi suara | `handleTranscribe` (`POST /api/member/ai/transcribe`) | `requireSession` + rate limit `ai-parse:user:*`, hanya `audio/wav` ber-header RIFF/WAVE, ≤ 1,5 MB, audio tidak disimpan, error OpenRouter hanya ke log (dicek 2026-10-12). ⚪ Tanpa `content-length` (chunked) body dibaca utuh dulu baru dicek ukurannya — hanya membebani request milik user ber-sesi itu sendiri, browser selalu mengirim `content-length` untuk Blob |
 | insight mingguan | `computeWeeklyInsights`, `handleWeeklyInsights` (`GET /api/member/insights/weekly`) | `requireSession`; dua SELECT `WHERE user_id = ?` (transactions & savings), tanggal dari `todayWIB()` (bukan request), tanpa tulis & tanpa LLM (dicek 2026-10-12) |
 | push_subscriptions dicari per endpoint | `handleCreatePushSubscription` | pindah akun di browser yang sama memang disengaja; URL endpoint push tidak bisa ditebak (⚪ info) |
+| `sql-interpolasi` `${where.join(" AND ")}` / `${claimed}` / `${same}` + `sql-tanpa-user_id` UPDATE budgets (Leosiqra MCP, dicek 2026-10-24) | `mcpListTransactions`, `mcpAddTransaction`, `mcpSetBudget` (pemindai menamainya `mcpRateLimit`) | fragmen WHERE adalah literal di kode, nilai lewat bind; `${claimed}` & `${same}` konstanta yang memuat `user_id = ?` dari token (bukan dari argumen tool). Diuji lokal: rekening user lain → "Rekening tidak ditemukan", 3 panggilan paralel kunci sama → 1 baris & saldo bergeser sekali, token MCP ke `/api/member/*` → 401 |
 
 ## Temuan terbuka
 

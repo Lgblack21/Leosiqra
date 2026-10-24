@@ -1,9 +1,36 @@
 # Rancangan keamanan — Leosiqra MCP (sambungkan akun ke Claude/ChatGPT)
 
-Status: **RANCANGAN, belum ada kode/migrasi** (2026-10-12). Sesuai catatan Bos
-di Tower (`dev/mcp-leosiqra`): "ubah skema DB & endpoint publik baru → kirim
-rancangan keamanan dulu sebelum kode". Butuh jawaban Bos untuk 6 keputusan di
-bagian akhir sebelum fase kode dimulai.
+Status: **Tahap 1+2 SUDAH DIKODE (2026-10-24), tahap 3 (OAuth) & 4 (panduan)
+belum.** Keputusan Bos 2026-10-23: OAuth 2.1 + PKCE ikut (tahap 3), DCR terbuka
+dengan rate limit + domain ditampilkan, baca untuk semua member & tulis khusus
+PRO, token manual 30/90/365 hari, URL `www.leosiqra.com/mcp`, tool tulis v1
+hanya `add_transaction` + `set_budget`.
+
+### Yang sudah ada di branch (tahap 1+2)
+
+- Migrasi `cloudflare/migrations/0010_mcp.sql`: `mcp_tokens`, `mcp_activity`,
+  `mcp_idempotency` (tabel OAuth menyusul di migrasi tahap 3). **Jalankan
+  migrasi SEBELUM deploy Worker**; kalau belum, `/mcp` & `/api/member/mcp/*`
+  menjawab 503 "belum aktif" dan fitur lain normal (diuji).
+- `wrangler.toml`: binding baru `MCP_RATE_LIMITER` (60/menit/token) &
+  `MCP_WRITE_RATE_LIMITER` (10/menit/token), fail-closed di produksi.
+- `POST /mcp` (Streamable HTTP stateless, jawaban JSON): `initialize`, `ping`,
+  `tools/list`, `tools/call`; `GET/DELETE /mcp` → 405. Tool tulis hanya muncul
+  di `tools/list` kalau token ber-izin tulis DAN akun PRO (dicek ulang tiap panggilan).
+- `GET/POST /api/member/mcp/tokens`, `DELETE /api/member/mcp/tokens/:id`,
+  `GET /api/member/mcp/activity` (cookie sesi; POST/DELETE wajib Origin terdaftar).
+- Token dicabut otomatis saat reset password, ganti password, dan admin reset 2FA;
+  user `NONAKTIF` → 401.
+- UI: Profil → Keamanan → kartu "Hubungkan ke AI" (web `/membership`). Tree
+  mobile `/app` belum punya UI token — sengaja, token dipakai dari laptop
+  (Claude Code); bisa ditambah kalau Bos mau.
+
+**Koreksi rancangan:** `insertTransactionRecord` TIDAK mengubah saldo rekening
+untuk pemasukan/pengeluaran (hanya hutang/piutang). Yang mengubah saldo +
+total member secara atomik adalah alur `quick-transaction`, jadi
+`add_transaction` memakai `quickTxBalanceStatements` (diekstrak dari
+`handleQuickTransaction`, SQL sama persis) dalam satu batch bersama klaim
+anti-dobel.
 
 ## Temuan penting dari dokumentasi resmi (dicek 2026-10-12)
 

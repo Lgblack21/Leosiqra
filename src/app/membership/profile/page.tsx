@@ -41,6 +41,7 @@ import { exchangeRateService } from '@/lib/services/exchangeRateService';
 import { isCreditAccountType, computeCreditUsage } from '@/lib/creditCard';
 import { ChangePasswordModal } from '@/components/modals/ChangePasswordModal';
 import { TwoFactorModal } from '@/components/auth/TwoFactorModal';
+import { McpConnectCard } from '@/components/profile/McpConnectCard';
 import { Modal } from '@/components/ui/Modal';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { useModal } from '@/context/ModalContext';
@@ -861,6 +862,8 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
+
+          <McpConnectCard />
           </div>
           )}
 
