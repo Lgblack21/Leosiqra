@@ -6,6 +6,7 @@ import { FileCheck, Smartphone, Users } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { LandingFooter } from '@/components/LandingFooter';
 import { ClipboardList } from 'lucide-react';
+import { Target } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Panduan Keuangan Pribadi | Leosiqra',
@@ -43,6 +44,7 @@ const GUIDES = [
   { href: '/panduan/bukti-lapor-spt-coretax', icon: FileCheck, title: 'Bukti Lapor SPT Coretax (BPE)', desc: 'Di mana BPE SPT Tahunan ditemukan, cara menyimpannya, dan langkah kalau belum muncul.' },
   { href: '/panduan/cara-mencatat-uang-kas', icon: Users, title: 'Cara Mencatat Uang Kas', desc: 'Buku kas kelas, RT, arisan: kolom wajib, contoh tabel sebulan, cara melapor ke anggota.' },
   { href: '/panduan/cara-menabung-yang-benar', icon: PiggyBank, title: 'Cara Menabung yang Benar', desc: 'Sisihkan di awal, urutan dana darurat–utang–tujuan, contoh gaji 5 juta.' },
+  { href: '/panduan/cara-menabung-10-juta', icon: Target, title: 'Cara Menabung 10 Juta dalam 3 Bulan', desc: 'Jatah per bulan, minggu, dan hari, cek realistis dari gaji, alternatif 6 atau 12 bulan.' },
 ];
 
 export default function PanduanIndexPage() {
