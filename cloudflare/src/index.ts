@@ -2949,12 +2949,12 @@ const oauthStateCookie = (state: string) =>
 const clearOauthStateCookie = () =>
   `oauth_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
 
-// Cuma terima redirect target ke tree /app (UI mobile/Capacitor) atau
-// /input-cepat (PWA Input Cepat) — mencegah open redirect kalau parameter/
-// cookie ini diisi sembarangan. Mirror dari sanitizeNext di
-// src/app/auth/login/page.tsx.
+// Cuma terima redirect target ke tree /app (UI mobile/Capacitor),
+// /input-cepat (PWA Input Cepat), atau /izinkan-ai (layar izin OAuth MCP) —
+// mencegah open redirect kalau parameter/cookie ini diisi sembarangan. Mirror
+// dari sanitizeNext di src/lib/authNext.ts.
 const isAppNext = (value: string | null | undefined): value is string =>
-  Boolean(value && /^\/(app|input-cepat)(\/|\?|$)/.test(value));
+  Boolean(value && /^\/(app|input-cepat|izinkan-ai)(\/|\?|$)/.test(value));
 
 const oauthNextCookie = (next: string) =>
   `oauth_next=${encodeURIComponent(next)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`;
@@ -10388,10 +10388,17 @@ const mcpRpcResult = (id: unknown, result: unknown) => json({ jsonrpc: "2.0", id
 const mcpRpcError = (id: unknown, code: number, message: string, status = 200) =>
   json({ jsonrpc: "2.0", id: id ?? null, error: { code, message } }, { status });
 
-const mcpUnauthorized = () =>
+// resource_metadata (RFC 9728) memberi tahu klien (claude.ai, ChatGPT) ke mana
+// harus memulai login OAuth.
+const mcpUnauthorized = (url: URL) =>
   json(
     { error: "Token MCP tidak valid, kedaluwarsa, atau sudah dicabut. Buat token baru di Profil → Keamanan." },
-    { status: 401, headers: { "www-authenticate": 'Bearer realm="leosiqra-mcp"' } }
+    {
+      status: 401,
+      headers: {
+        "www-authenticate": `Bearer realm="leosiqra-mcp", resource_metadata="${url.origin}/.well-known/oauth-protected-resource"`,
+      },
+    }
   );
 
 const mcpLogActivity = async (env: Env, auth: McpAuth, tool: string, ok: boolean, summary: string) => {
@@ -10421,7 +10428,7 @@ async function handleMcp(request: Request, env: Env) {
     }
     throw error;
   }
-  if (!auth) return mcpUnauthorized();
+  if (!auth) return mcpUnauthorized(new URL(request.url));
 
   let message: { jsonrpc?: unknown; id?: unknown; method?: unknown; params?: unknown };
   try {
@@ -10495,18 +10502,40 @@ async function handleMcp(request: Request, env: Env) {
 
 // --- Kelola token (cookie sesi, dari Profil → Keamanan) ----------------------
 
+type McpTokenRow = { id: string; name: string; token_hint: string; scopes: string; source: string; expires_at: string; last_used_at: string | null; created_at: string };
+
 async function handleListMcpTokens(env: Env, user: AppUser) {
   const now = nowIso();
-  const rows = await env.DB.prepare(
+  const manual = await env.DB.prepare(
     `SELECT id, name, token_hint, scopes, source, expires_at, last_used_at, created_at
        FROM mcp_tokens
-      WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ?
+      WHERE user_id = ? AND source = 'manual' AND revoked_at IS NULL AND expires_at > ?
       ORDER BY created_at DESC`
   )
     .bind(user.id, now)
-    .all<{ id: string; name: string; token_hint: string; scopes: string; source: string; expires_at: string; last_used_at: string | null; created_at: string }>();
+    .all<McpTokenRow>();
+  // Koneksi OAuth: access token-nya cuma 1 jam, jadi yang menentukan "masih
+  // terhubung" adalah refresh token aktif; expires_at = kedaluwarsa refresh.
+  let oauth: McpTokenRow[] = [];
+  try {
+    const rows = await env.DB.prepare(
+      `SELECT t.id, t.name, t.token_hint, t.scopes, t.source, MAX(r.expires_at) AS expires_at, t.last_used_at, t.created_at
+         FROM mcp_tokens t
+         JOIN mcp_refresh_tokens r ON r.family_id = t.id AND r.user_id = t.user_id
+        WHERE t.user_id = ? AND t.source = 'oauth' AND t.revoked_at IS NULL
+          AND r.used_at IS NULL AND r.revoked_at IS NULL AND r.expires_at > ?
+        GROUP BY t.id
+        ORDER BY t.created_at DESC`
+    )
+      .bind(user.id, now)
+      .all<McpTokenRow>();
+    oauth = rows.results ?? [];
+  } catch (error) {
+    // Migrasi 0011 belum diterapkan → token manual tetap tampil.
+    if (!mcpTableMissing(error)) throw error;
+  }
   return json({
-    items: (rows.results ?? []).map((t) => ({
+    items: [...oauth, ...(manual.results ?? [])].map((t) => ({
       id: t.id,
       name: t.name,
       hint: t.token_hint,
@@ -10534,7 +10563,9 @@ async function handleCreateMcpToken(request: Request, env: Env, user: AppUser) {
   if (write && user.plan !== "PRO") return json({ error: "Izin mencatat lewat AI khusus akun PRO." }, { status: 403 });
 
   const now = nowIso();
-  const active = await env.DB.prepare("SELECT COUNT(*) AS n FROM mcp_tokens WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ?")
+  const active = await env.DB.prepare(
+    "SELECT COUNT(*) AS n FROM mcp_tokens WHERE user_id = ? AND source = 'manual' AND revoked_at IS NULL AND expires_at > ?"
+  )
     .bind(user.id, now)
     .first<{ n: number }>();
   if ((active?.n ?? 0) >= MCP_MAX_ACTIVE_TOKENS) {
@@ -10560,8 +10591,25 @@ async function handleRevokeMcpToken(env: Env, user: AppUser, tokenId: string) {
     .bind(nowIso(), tokenId, user.id)
     .run();
   if ((res.meta?.changes ?? 0) === 0) return json({ error: "Token tidak ditemukan." }, { status: 404 });
+  // Koneksi OAuth: refresh token-nya ikut mati (refresh juga sudah ditolak
+  // karena baris mcp_tokens dicabut — ini kebersihan data).
+  await revokeMcpRefreshTokens(env, user.id, tokenId);
   return json({ ok: true });
 }
+
+const revokeMcpRefreshTokens = async (env: Env, userId: string, familyId?: string) => {
+  try {
+    if (familyId) {
+      await env.DB.prepare("UPDATE mcp_refresh_tokens SET revoked_at = ? WHERE user_id = ? AND family_id = ? AND revoked_at IS NULL")
+        .bind(nowIso(), userId, familyId)
+        .run();
+    } else {
+      await env.DB.prepare("UPDATE mcp_refresh_tokens SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL").bind(nowIso(), userId).run();
+    }
+  } catch (error) {
+    if (!mcpTableMissing(error)) console.error("Cabut refresh token MCP gagal:", error);
+  }
+};
 
 async function handleListMcpActivity(env: Env, user: AppUser) {
   // Simpan 90 hari terakhir saja.
@@ -10597,6 +10645,7 @@ const revokeAllMcpTokens = async (env: Env, userId: string) => {
   } catch (error) {
     if (!mcpTableMissing(error)) console.error("Cabut token MCP gagal:", error);
   }
+  await revokeMcpRefreshTokens(env, userId);
 };
 
 const MCP_MEMBER_BASE = "/api/member/mcp";
@@ -10618,6 +10667,11 @@ async function handleMemberMcp(request: Request, env: Env, url: URL) {
     }
     if (rest.startsWith("tokens/") && method === "DELETE") return await handleRevokeMcpToken(env, user, rest.slice("tokens/".length));
     if (rest === "activity" && method === "GET") return await handleListMcpActivity(env, user);
+    if (rest === "authorize") {
+      if (method === "GET") return await handleMcpAuthorizeInfo(env, user, url);
+      if (method === "POST") return await handleMcpAuthorizeDecision(request, env, user, url);
+      return json({ error: "Method not allowed" }, { status: 405 });
+    }
     return json({ error: "Not found" }, { status: 404 });
   } catch (error) {
     if (mcpTableMissing(error)) {
@@ -10626,6 +10680,515 @@ async function handleMemberMcp(request: Request, env: Env, url: URL) {
     }
     if (error instanceof Error && error.message === "Payload JSON tidak valid.") {
       return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    }
+    throw error;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Leosiqra MCP tahap 3: OAuth 2.1 supaya bisa dipasang dari claude.ai & ChatGPT
+// ("Add custom connector" → login Leosiqra → Izinkan). Keputusan Bos 2026-10-23:
+// #1 OAuth 2.1 + PKCE, #2 DCR terbuka + rate limit + domain klien di layar izin.
+// - Authorization code + PKCE S256 wajib; kode 10 menit, sekali pakai.
+// - Access token = token lsq_mcp_ biasa (1 jam) di mcp_tokens source='oauth',
+//   jadi requireMcpToken/izin/plan PRO/log sama persis dengan token manual.
+// - Refresh token berotasi sekali pakai; dipakai ulang → koneksi dicabut.
+// - Endpoint publik /oauth/* & /.well-known/* tidak membaca/memasang cookie.
+//   Persetujuan member lewat /api/member/mcp/authorize (cookie + Origin).
+// ---------------------------------------------------------------------------
+
+const MCP_ACCESS_TTL_SECONDS = 60 * 60;
+const MCP_REFRESH_TTL_DAYS = 30;
+const MCP_CODE_TTL_MS = 10 * 60 * 1000;
+const MCP_MAX_OAUTH_CONNECTIONS = 10;
+const MCP_REFRESH_PREFIX = "lsq_mcr_";
+const MCP_REFRESH_RE = /^lsq_mcr_[A-Za-z0-9_-]{43}$/;
+const MCP_CODE_RE = /^lsq_mcc_[A-Za-z0-9_-]{43}$/;
+const MCP_CLIENT_ID_RE = /^mcpc_[A-Za-z0-9_-]{22}$/;
+const MCP_PKCE_CHALLENGE_RE = /^[A-Za-z0-9_-]{43}$/;
+const MCP_PKCE_VERIFIER_RE = /^[A-Za-z0-9._~-]{43,128}$/;
+const MCP_OAUTH_AUTH_METHODS = ["none", "client_secret_post", "client_secret_basic"] as const;
+// Klien resmi yang dikenali dari DOMAIN redirect (bukan dari client_name, yang
+// bebas diisi siapa saja lewat DCR).
+const MCP_VERIFIED_HOSTS = ["claude.ai", "claude.com", "chatgpt.com", "openai.com"];
+
+type McpOAuthClient = {
+  client_id: string;
+  client_name: string;
+  redirect_uris: string;
+  auth_method: (typeof MCP_OAUTH_AUTH_METHODS)[number];
+  secret_hash: string | null;
+};
+
+const mcpRandomSecret = (prefix: string) =>
+  prefix + toBase64Url(crypto.getRandomValues(new Uint8Array(32)).buffer as ArrayBuffer);
+
+const mcpSha256B64Url = async (value: string) =>
+  toBase64Url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)));
+
+// Endpoint publik OAuth dipanggil juga dari klien berbasis browser (mis. MCP
+// Inspector). Aman diberi CORS "*": tanpa cookie, rahasia ada di body/header.
+const MCP_PUBLIC_CORS = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "GET,POST,OPTIONS",
+  "access-control-allow-headers": "content-type, authorization, mcp-protocol-version",
+};
+const isMcpPublicOAuthPath = (pathname: string) =>
+  pathname === "/oauth/token" || pathname === "/oauth/register" || pathname.startsWith("/.well-known/oauth-");
+
+const oauthJson = (data: unknown, status = 200) =>
+  json(data, { status, headers: { "cache-control": "no-store", pragma: "no-cache", ...MCP_PUBLIC_CORS } });
+const oauthError = (error: string, description: string, status = 400) =>
+  oauthJson({ error, error_description: description }, status);
+
+const mcpRedirectHost = (uri: string) => {
+  try {
+    return new URL(uri).host;
+  } catch {
+    return "";
+  }
+};
+const mcpIsVerifiedHost = (host: string) => {
+  const h = host.toLowerCase().replace(/:\d+$/, "");
+  return MCP_VERIFIED_HOSTS.some((v) => h === v || h.endsWith(`.${v}`));
+};
+
+// HTTPS saja, kecuali loopback http untuk klien lokal (Claude Code, Inspector).
+// Skema lain (javascript:, data:, custom scheme) ditolak.
+const mcpValidRedirectUri = (value: unknown): value is string => {
+  if (typeof value !== "string" || value.length > 500) return false;
+  let u: URL;
+  try {
+    u = new URL(value);
+  } catch {
+    return false;
+  }
+  if (u.hash || u.username || u.password) return false;
+  if (u.protocol === "https:") return true;
+  return u.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(u.hostname);
+};
+
+const mcpResourceAllowed = (resource: string | null, origin: string) =>
+  !resource || [`${origin}/mcp`, `${origin}/mcp/`, origin, `${origin}/`].includes(resource);
+
+const loadMcpOAuthClient = async (env: Env, clientId: string | null) => {
+  if (!clientId || !MCP_CLIENT_ID_RE.test(clientId)) return null;
+  return env.DB.prepare("SELECT client_id, client_name, redirect_uris, auth_method, secret_hash FROM mcp_oauth_clients WHERE client_id = ?")
+    .bind(clientId)
+    .first<McpOAuthClient>();
+};
+
+// --- Metadata (RFC 9728 & RFC 8414) ------------------------------------------
+
+const handleMcpProtectedResourceMetadata = (url: URL) =>
+  oauthJson({
+    resource: `${url.origin}/mcp`,
+    authorization_servers: [url.origin],
+    scopes_supported: ["read", "write"],
+    bearer_methods_supported: ["header"],
+    resource_name: "Leosiqra",
+    resource_documentation: `${url.origin}/panduan`,
+  });
+
+const handleMcpAuthServerMetadata = (url: URL) =>
+  oauthJson({
+    issuer: url.origin,
+    authorization_endpoint: `${url.origin}/oauth/authorize`,
+    token_endpoint: `${url.origin}/oauth/token`,
+    registration_endpoint: `${url.origin}/oauth/register`,
+    response_types_supported: ["code"],
+    response_modes_supported: ["query"],
+    grant_types_supported: ["authorization_code", "refresh_token"],
+    code_challenge_methods_supported: ["S256"],
+    token_endpoint_auth_methods_supported: [...MCP_OAUTH_AUTH_METHODS],
+    scopes_supported: ["read", "write"],
+    authorization_response_iss_parameter_supported: true,
+  });
+
+// --- Dynamic Client Registration (RFC 7591) ----------------------------------
+
+async function handleMcpOAuthRegister(request: Request, env: Env) {
+  if (request.method !== "POST") return oauthError("invalid_request", "Method not allowed", 405);
+  // Keputusan Bos #2: DCR terbuka, tapi dibatasi per IP.
+  if (!(await checkRateLimit(env, [`mcp-register:ip:${clientIpOf(request)}`]))) {
+    return oauthError("slow_down", "Terlalu banyak pendaftaran klien. Coba lagi sebentar.", 429);
+  }
+  let body: Record<string, unknown>;
+  try {
+    body = (await request.json()) as Record<string, unknown>;
+  } catch {
+    return oauthError("invalid_client_metadata", "Body harus JSON.");
+  }
+  if (!body || typeof body !== "object" || Array.isArray(body)) return oauthError("invalid_client_metadata", "Body harus objek JSON.");
+  const uris = body.redirect_uris;
+  if (!Array.isArray(uris) || uris.length < 1 || uris.length > 5 || !uris.every(mcpValidRedirectUri)) {
+    return oauthError("invalid_redirect_uri", "redirect_uris wajib 1–5 URL https (atau http loopback untuk klien lokal), tanpa fragment.");
+  }
+  // RFC 7591: tanpa token_endpoint_auth_method → client_secret_basic.
+  const method = body.token_endpoint_auth_method ?? "client_secret_basic";
+  if (!MCP_OAUTH_AUTH_METHODS.includes(method as McpOAuthClient["auth_method"])) {
+    return oauthError("invalid_client_metadata", "token_endpoint_auth_method tidak didukung.");
+  }
+  const authMethod = method as McpOAuthClient["auth_method"];
+  if (body.grant_types !== undefined && (!Array.isArray(body.grant_types) || !body.grant_types.includes("authorization_code"))) {
+    return oauthError("invalid_client_metadata", "grant_types harus memuat authorization_code.");
+  }
+  if (body.response_types !== undefined && (!Array.isArray(body.response_types) || !body.response_types.includes("code"))) {
+    return oauthError("invalid_client_metadata", "response_types harus memuat code.");
+  }
+  const clientName = mcpCleanText(body.client_name, 60) || "Aplikasi AI";
+  const clientId = `mcpc_${toBase64Url(crypto.getRandomValues(new Uint8Array(16)).buffer as ArrayBuffer)}`;
+  const secret = authMethod === "none" ? null : mcpRandomSecret("lsq_mcs_");
+  const createdAt = nowIso();
+  await env.DB.prepare(
+    "INSERT INTO mcp_oauth_clients (client_id, client_name, redirect_uris, auth_method, secret_hash, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+  )
+    .bind(clientId, clientName, JSON.stringify(uris), authMethod, secret ? await sha256Hex(secret) : null, createdAt)
+    .run();
+  return oauthJson(
+    {
+      client_id: clientId,
+      ...(secret ? { client_secret: secret, client_secret_expires_at: 0 } : {}),
+      client_id_issued_at: Math.floor(Date.parse(createdAt) / 1000),
+      client_name: clientName,
+      redirect_uris: uris,
+      grant_types: ["authorization_code", "refresh_token"],
+      response_types: ["code"],
+      token_endpoint_auth_method: authMethod,
+      scope: "read write",
+    },
+    201
+  );
+}
+
+// --- Authorization endpoint --------------------------------------------------
+
+type McpAuthorizeParsed =
+  | { ok: true; client: McpOAuthClient; redirectUri: string; state: string | null; codeChallenge: string; writeRequested: boolean }
+  // redirect: hanya diisi kalau client_id & redirect_uri sudah terbukti valid —
+  // selain itu JANGAN redirect (cegah open redirect), tampilkan error saja.
+  | { ok: false; error: string; description: string; redirect?: string };
+
+const mcpErrorRedirect = (redirectUri: string, origin: string, error: string, description: string, state: string | null) => {
+  const target = new URL(redirectUri);
+  target.searchParams.set("error", error);
+  target.searchParams.set("error_description", description);
+  if (state !== null) target.searchParams.set("state", state);
+  target.searchParams.set("iss", origin);
+  return target.toString();
+};
+
+const parseMcpAuthorizeRequest = async (env: Env, params: URLSearchParams, origin: string): Promise<McpAuthorizeParsed> => {
+  const client = await loadMcpOAuthClient(env, params.get("client_id"));
+  if (!client) return { ok: false, error: "invalid_client", description: "Aplikasi AI tidak dikenal. Ulangi pemasangan dari aplikasinya." };
+  const redirectUri = params.get("redirect_uri") ?? "";
+  let registered: string[] = [];
+  try {
+    registered = JSON.parse(client.redirect_uris) as string[];
+  } catch {
+    registered = [];
+  }
+  // Harus sama persis dengan yang didaftarkan (tanpa pencocokan awalan).
+  if (!redirectUri || !registered.includes(redirectUri)) {
+    return { ok: false, error: "invalid_request", description: "Alamat kembali (redirect_uri) tidak cocok dengan aplikasi ini." };
+  }
+  const state = params.get("state");
+  const fail = (error: string, description: string): McpAuthorizeParsed => ({
+    ok: false,
+    error,
+    description,
+    redirect: mcpErrorRedirect(redirectUri, origin, error, description, state),
+  });
+  if (state !== null && state.length > 500) return fail("invalid_request", "state terlalu panjang.");
+  if (params.get("response_type") !== "code") return fail("unsupported_response_type", "response_type harus code.");
+  const codeChallenge = params.get("code_challenge") ?? "";
+  if (params.get("code_challenge_method") !== "S256" || !MCP_PKCE_CHALLENGE_RE.test(codeChallenge)) {
+    return fail("invalid_request", "PKCE S256 wajib (code_challenge + code_challenge_method=S256).");
+  }
+  if (!mcpResourceAllowed(params.get("resource"), origin)) return fail("invalid_target", "resource harus server MCP Leosiqra.");
+  const scope = params.get("scope");
+  // Tanpa scope → klien boleh ditawari izin tulis (tetap tidak dicentang default).
+  const writeRequested = scope === null || scope.split(" ").includes("write");
+  return { ok: true, client, redirectUri, state, codeChallenge, writeRequested };
+};
+
+// GET /oauth/authorize: validasi, lalu serahkan ke halaman persetujuan statis
+// /izinkan-ai (yang memastikan member login dulu, termasuk 2FA).
+async function handleMcpOAuthAuthorize(request: Request, env: Env, url: URL) {
+  const parsed = await parseMcpAuthorizeRequest(env, url.searchParams, url.origin);
+  if (!parsed.ok && parsed.redirect) return Response.redirect(parsed.redirect, 302);
+  const target = new URL("/izinkan-ai", url.origin);
+  if (!parsed.ok) {
+    target.searchParams.set("error", parsed.description);
+    return Response.redirect(target.toString(), 302);
+  }
+  target.search = url.search;
+  return Response.redirect(target.toString(), 302);
+}
+
+// GET /api/member/mcp/authorize?<parameter OAuth asli> → data layar izin.
+async function handleMcpAuthorizeInfo(env: Env, user: AppUser, url: URL) {
+  const parsed = await parseMcpAuthorizeRequest(env, url.searchParams, url.origin);
+  if (!parsed.ok) return json({ error: parsed.description, redirectTo: parsed.redirect ?? null }, { status: 400 });
+  const host = mcpRedirectHost(parsed.redirectUri);
+  return json({
+    clientName: parsed.client.client_name,
+    redirectHost: host,
+    verified: mcpIsVerifiedHost(host),
+    writeRequested: parsed.writeRequested,
+    canWrite: user.plan === "PRO",
+    userName: user.name,
+    userEmail: user.email,
+  });
+}
+
+// POST /api/member/mcp/authorize { query, allow, write } → { redirectTo }.
+// Cookie sesi + Origin terdaftar (dicek di handleMemberMcp) = anti-CSRF 2 lapis.
+async function handleMcpAuthorizeDecision(request: Request, env: Env, user: AppUser, url: URL) {
+  const payload = await parseJson<{ query?: unknown; allow?: unknown; write?: unknown }>(request);
+  if (typeof payload.query !== "string" || payload.query.length > 4000) {
+    return json({ error: "Permintaan izin tidak valid." }, { status: 400 });
+  }
+  const parsed = await parseMcpAuthorizeRequest(env, new URLSearchParams(payload.query), url.origin);
+  if (!parsed.ok) return json({ error: parsed.description, redirectTo: parsed.redirect ?? null }, { status: 400 });
+  if (payload.allow !== true) {
+    return json({
+      redirectTo: mcpErrorRedirect(parsed.redirectUri, url.origin, "access_denied", "Member menolak akses.", parsed.state),
+    });
+  }
+  if (!(await checkRateLimit(env, [`mcp-authorize:user:${user.id}`]))) {
+    return json({ error: "Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi." }, { status: 429 });
+  }
+  const now = nowIso();
+  const connections = await env.DB.prepare(
+    `SELECT COUNT(DISTINCT t.id) AS n
+       FROM mcp_tokens t
+       JOIN mcp_refresh_tokens r ON r.family_id = t.id AND r.user_id = t.user_id
+      WHERE t.user_id = ? AND t.source = 'oauth' AND t.revoked_at IS NULL
+        AND r.used_at IS NULL AND r.revoked_at IS NULL AND r.expires_at > ?`
+  )
+    .bind(user.id, now)
+    .first<{ n: number }>();
+  if ((connections?.n ?? 0) >= MCP_MAX_OAUTH_CONNECTIONS) {
+    return json({ error: `Maksimal ${MCP_MAX_OAUTH_CONNECTIONS} aplikasi AI terhubung. Putuskan yang lama di Profil → Keamanan.` }, { status: 400 });
+  }
+  // Keputusan Bos #3: tulis khusus PRO; izin tulis juga harus diminta klien.
+  const write = payload.write === true && parsed.writeRequested && user.plan === "PRO";
+  const code = mcpRandomSecret("lsq_mcc_");
+  await env.DB.batch([
+    // Bersihkan kode lama milik user ini (kedaluwarsa > 1 hari).
+    env.DB.prepare("DELETE FROM mcp_oauth_codes WHERE user_id = ? AND expires_at < ?")
+      .bind(user.id, new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
+    env.DB.prepare(
+      `INSERT INTO mcp_oauth_codes (code_hash, user_id, client_id, redirect_uri, code_challenge, scopes, expires_at, used_at, family_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?)`
+    ).bind(
+      await sha256Hex(code),
+      user.id,
+      parsed.client.client_id,
+      parsed.redirectUri,
+      parsed.codeChallenge,
+      write ? "read write" : "read",
+      new Date(Date.now() + MCP_CODE_TTL_MS).toISOString(),
+      now
+    ),
+  ]);
+  const target = new URL(parsed.redirectUri);
+  target.searchParams.set("code", code);
+  if (parsed.state !== null) target.searchParams.set("state", parsed.state);
+  target.searchParams.set("iss", url.origin);
+  return json({ redirectTo: target.toString() });
+}
+
+// --- Token endpoint ------------------------------------------------------------
+
+// Koneksi dicabut: baris mcp_tokens + semua refresh token keluarganya.
+const revokeMcpConnection = async (env: Env, familyId: string) => {
+  const now = nowIso();
+  await env.DB.batch([
+    env.DB.prepare("UPDATE mcp_tokens SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL").bind(now, familyId),
+    env.DB.prepare("UPDATE mcp_refresh_tokens SET revoked_at = ? WHERE family_id = ? AND revoked_at IS NULL").bind(now, familyId),
+  ]);
+};
+
+const mcpTokenResponse = (accessToken: string, refreshToken: string, scopes: string) =>
+  oauthJson({
+    access_token: accessToken,
+    token_type: "Bearer",
+    expires_in: MCP_ACCESS_TTL_SECONDS,
+    refresh_token: refreshToken,
+    scope: scopes,
+  });
+
+const mcpRefreshExpiry = () => new Date(Date.now() + MCP_REFRESH_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+async function handleMcpOAuthToken(request: Request, env: Env) {
+  if (request.method !== "POST") return oauthError("invalid_request", "Method not allowed", 405);
+  let params: URLSearchParams;
+  try {
+    const type = request.headers.get("content-type") ?? "";
+    if (type.includes("application/json")) {
+      const body = (await request.json()) as Record<string, unknown>;
+      params = new URLSearchParams();
+      for (const [k, v] of Object.entries(body ?? {})) if (typeof v === "string") params.set(k, v);
+    } else {
+      params = new URLSearchParams(await request.text());
+    }
+  } catch {
+    return oauthError("invalid_request", "Body tidak valid.");
+  }
+
+  // Autentikasi klien: HTTP Basic (RFC 6749 §2.3.1) atau client_id/secret di body.
+  let clientId = params.get("client_id");
+  let clientSecret = params.get("client_secret");
+  const basic = /^Basic\s+(\S+)$/i.exec(request.headers.get("authorization") ?? "");
+  if (basic) {
+    try {
+      const decoded = atob(basic[1]);
+      const sep = decoded.indexOf(":");
+      if (sep < 0) throw new Error("basic");
+      clientId = decodeURIComponent(decoded.slice(0, sep));
+      clientSecret = decodeURIComponent(decoded.slice(sep + 1));
+    } catch {
+      return oauthError("invalid_client", "Header Authorization klien tidak valid.", 401);
+    }
+  }
+  const client = await loadMcpOAuthClient(env, clientId);
+  if (!client) return oauthError("invalid_client", "Klien tidak dikenal.", 401);
+  if (client.secret_hash) {
+    if (!clientSecret || !constantTimeEqual(await sha256Hex(clientSecret), client.secret_hash)) {
+      return oauthError("invalid_client", "Autentikasi klien gagal.", 401);
+    }
+  }
+  if (!env.MCP_RATE_LIMITER) {
+    if (!rateLimiterMissing(env, "MCP_RATE_LIMITER")) return oauthError("temporarily_unavailable", "Coba lagi nanti.", 503);
+  } else if (!(await env.MCP_RATE_LIMITER.limit({ key: `mcp-oauth-token:${client.client_id}` })).success) {
+    return oauthError("slow_down", "Terlalu banyak permintaan token. Tunggu sebentar.", 429);
+  }
+
+  const grantType = params.get("grant_type");
+  const now = nowIso();
+
+  if (grantType === "authorization_code") {
+    const code = params.get("code") ?? "";
+    if (!MCP_CODE_RE.test(code)) return oauthError("invalid_grant", "Kode otorisasi tidak valid.");
+    const codeHash = await sha256Hex(code);
+    // Klaim atomik: hanya satu penukaran yang bisa menang.
+    const claim = await env.DB.prepare("UPDATE mcp_oauth_codes SET used_at = ? WHERE code_hash = ? AND used_at IS NULL AND expires_at > ?")
+      .bind(now, codeHash, now)
+      .run();
+    const row = await env.DB.prepare(
+      "SELECT user_id, client_id, redirect_uri, code_challenge, scopes, used_at, family_id FROM mcp_oauth_codes WHERE code_hash = ?"
+    )
+      .bind(codeHash)
+      .first<{ user_id: string; client_id: string; redirect_uri: string; code_challenge: string; scopes: string; used_at: string | null; family_id: string | null }>();
+    if ((claim.meta?.changes ?? 0) === 0) {
+      // Kode dipakai ulang (bisa jadi dicuri) → cabut koneksi yang diterbitkan darinya.
+      if (row?.used_at && row.family_id) await revokeMcpConnection(env, row.family_id);
+      return oauthError("invalid_grant", "Kode otorisasi kedaluwarsa atau sudah dipakai.");
+    }
+    if (!row || row.client_id !== client.client_id) return oauthError("invalid_grant", "Kode bukan untuk klien ini.");
+    if (params.get("redirect_uri") !== row.redirect_uri) return oauthError("invalid_grant", "redirect_uri tidak cocok.");
+    const verifier = params.get("code_verifier") ?? "";
+    if (!MCP_PKCE_VERIFIER_RE.test(verifier) || !constantTimeEqual(await mcpSha256B64Url(verifier), row.code_challenge)) {
+      return oauthError("invalid_grant", "PKCE code_verifier salah.");
+    }
+    if (!mcpResourceAllowed(params.get("resource"), new URL(request.url).origin)) {
+      return oauthError("invalid_target", "resource harus server MCP Leosiqra.");
+    }
+    const owner = await env.DB.prepare("SELECT status FROM users WHERE id = ?").bind(row.user_id).first<{ status: string }>();
+    if (!owner || owner.status === "NONAKTIF") return oauthError("invalid_grant", "Akun tidak aktif.");
+
+    const familyId = generateId();
+    const accessToken = mcpRandomSecret(MCP_TOKEN_PREFIX);
+    const refreshToken = mcpRandomSecret(MCP_REFRESH_PREFIX);
+    const host = mcpRedirectHost(row.redirect_uri);
+    const name = `${client.client_name} · ${host}`.slice(0, 60);
+    await env.DB.batch([
+      env.DB.prepare(
+        `INSERT INTO mcp_tokens (id, user_id, name, token_hash, token_hint, scopes, source, client_id, expires_at, revoked_at, last_used_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, 'oauth', ?, ?, NULL, NULL, ?)`
+      ).bind(
+        familyId,
+        row.user_id,
+        name,
+        await sha256Hex(accessToken),
+        accessToken.slice(-4),
+        row.scopes,
+        client.client_id,
+        new Date(Date.now() + MCP_ACCESS_TTL_SECONDS * 1000).toISOString(),
+        now
+      ),
+      env.DB.prepare(
+        `INSERT INTO mcp_refresh_tokens (id, user_id, family_id, token_hash, client_id, scopes, used_at, revoked_at, expires_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?)`
+      ).bind(generateId(), row.user_id, familyId, await sha256Hex(refreshToken), client.client_id, row.scopes, mcpRefreshExpiry(), now),
+      env.DB.prepare("UPDATE mcp_oauth_codes SET family_id = ? WHERE code_hash = ?").bind(familyId, codeHash),
+    ]);
+    return mcpTokenResponse(accessToken, refreshToken, row.scopes);
+  }
+
+  if (grantType === "refresh_token") {
+    const presented = params.get("refresh_token") ?? "";
+    if (!MCP_REFRESH_RE.test(presented)) return oauthError("invalid_grant", "Refresh token tidak valid.");
+    const tokenHash = await sha256Hex(presented);
+    const row = await env.DB.prepare(
+      "SELECT id, user_id, family_id, client_id, scopes, used_at, revoked_at, expires_at FROM mcp_refresh_tokens WHERE token_hash = ?"
+    )
+      .bind(tokenHash)
+      .first<{ id: string; user_id: string; family_id: string; client_id: string; scopes: string; used_at: string | null; revoked_at: string | null; expires_at: string }>();
+    if (!row || row.client_id !== client.client_id) return oauthError("invalid_grant", "Refresh token tidak valid.");
+    if (row.used_at) {
+      // Refresh lama dipakai lagi = kemungkinan dicuri → putuskan koneksi (OAuth 2.1 §4.3.1).
+      await revokeMcpConnection(env, row.family_id);
+      return oauthError("invalid_grant", "Refresh token sudah dipakai. Hubungkan ulang dari aplikasinya.");
+    }
+    if (row.revoked_at || row.expires_at <= now) return oauthError("invalid_grant", "Refresh token kedaluwarsa atau dicabut.");
+    const claim = await env.DB.prepare("UPDATE mcp_refresh_tokens SET used_at = ? WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL")
+      .bind(now, row.id)
+      .run();
+    if ((claim.meta?.changes ?? 0) === 0) return oauthError("invalid_grant", "Refresh token sudah dipakai.");
+    const owner = await env.DB.prepare("SELECT status FROM users WHERE id = ?").bind(row.user_id).first<{ status: string }>();
+    if (!owner || owner.status === "NONAKTIF") return oauthError("invalid_grant", "Akun tidak aktif.");
+
+    const accessToken = mcpRandomSecret(MCP_TOKEN_PREFIX);
+    const refreshToken = mcpRandomSecret(MCP_REFRESH_PREFIX);
+    // Rotasi di baris koneksi yang sama; koneksi yang sudah dicabut (Profil,
+    // ganti/reset password) tidak bisa dihidupkan lagi lewat refresh.
+    const alive = "EXISTS (SELECT 1 FROM mcp_tokens WHERE id = ? AND user_id = ? AND revoked_at IS NULL)";
+    const results = await env.DB.batch([
+      env.DB.prepare("UPDATE mcp_tokens SET token_hash = ?, token_hint = ?, expires_at = ? WHERE id = ? AND user_id = ? AND revoked_at IS NULL").bind(
+        await sha256Hex(accessToken),
+        accessToken.slice(-4),
+        new Date(Date.now() + MCP_ACCESS_TTL_SECONDS * 1000).toISOString(),
+        row.family_id,
+        row.user_id
+      ),
+      env.DB.prepare(
+        `INSERT INTO mcp_refresh_tokens (id, user_id, family_id, token_hash, client_id, scopes, used_at, revoked_at, expires_at, created_at)
+         SELECT ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ? WHERE ${alive}`
+      ).bind(generateId(), row.user_id, row.family_id, await sha256Hex(refreshToken), client.client_id, row.scopes, mcpRefreshExpiry(), now, row.family_id, row.user_id),
+      // Baris refresh yang sudah kedaluwarsa tidak perlu disimpan lagi.
+      env.DB.prepare("DELETE FROM mcp_refresh_tokens WHERE family_id = ? AND expires_at < ?").bind(row.family_id, now),
+    ]);
+    if ((results[0].meta?.changes ?? 0) === 0) return oauthError("invalid_grant", "Koneksi sudah diputus. Hubungkan ulang dari aplikasinya.");
+    return mcpTokenResponse(accessToken, refreshToken, row.scopes);
+  }
+
+  return oauthError("unsupported_grant_type", "grant_type harus authorization_code atau refresh_token.");
+}
+
+// Router publik OAuth/metadata. 503 rapi kalau migrasi 0011 belum diterapkan.
+async function handleMcpOAuthPublic(request: Request, env: Env, url: URL) {
+  try {
+    if (url.pathname === "/oauth/token") return await handleMcpOAuthToken(request, env);
+    if (url.pathname === "/oauth/register") return await handleMcpOAuthRegister(request, env);
+    if (url.pathname === "/oauth/authorize") return await handleMcpOAuthAuthorize(request, env, url);
+    return null;
+  } catch (error) {
+    if (mcpTableMissing(error)) {
+      console.error("MCP OAuth: tabel mcp_oauth_*/mcp_refresh_* belum ada (migrasi 0011 belum diterapkan)");
+      return oauthError("temporarily_unavailable", "Login AI (OAuth) belum aktif. Pakai token manual dulu.", 503);
     }
     throw error;
   }
@@ -10644,6 +11207,7 @@ const worker = {
     const url = new URL(request.url);
 
     if (request.method === "OPTIONS") {
+      if (isMcpPublicOAuthPath(url.pathname)) return new Response(null, { status: 204, headers: MCP_PUBLIC_CORS });
       const origin = request.headers.get("origin");
       const headers: Record<string, string> = {
         "access-control-allow-methods": "GET,POST,PUT,DELETE,OPTIONS",
@@ -10855,6 +11419,18 @@ const worker = {
       }
       if (url.pathname === "/mcp") {
         return await handleMcp(request, env);
+      }
+      if (request.method === "GET" || request.method === "HEAD") {
+        if (url.pathname === "/.well-known/oauth-protected-resource" || url.pathname === "/.well-known/oauth-protected-resource/mcp") {
+          return handleMcpProtectedResourceMetadata(url);
+        }
+        if (url.pathname === "/.well-known/oauth-authorization-server" || url.pathname === "/.well-known/oauth-authorization-server/mcp") {
+          return handleMcpAuthServerMetadata(url);
+        }
+      }
+      if (url.pathname.startsWith("/oauth/")) {
+        const oauthResponse = await handleMcpOAuthPublic(request, env, url);
+        if (oauthResponse) return oauthResponse;
       }
 
       if (url.pathname === MCP_MEMBER_BASE || url.pathname.startsWith(`${MCP_MEMBER_BASE}/`)) {

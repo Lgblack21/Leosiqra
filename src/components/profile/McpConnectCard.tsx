@@ -5,9 +5,9 @@ import { Bot, Check, Copy, KeyRound, Loader2, Plus, Trash2 } from 'lucide-react'
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { cn } from '@/lib/utils';
 
-// Hubungkan akun ke AI agent (Claude Code, klien MCP lain) lewat token
-// manual — tahap 1+2 Leosiqra MCP (docs/rancangan/mcp.md). Login OAuth untuk
-// claude.ai & ChatGPT menyusul di tahap 3.
+// Hubungkan akun ke AI agent — Leosiqra MCP (docs/rancangan/mcp.md): token
+// manual untuk Claude Code & klien MCP lain (tahap 1+2), dan koneksi login
+// OAuth dari claude.ai & ChatGPT (tahap 3) yang tampil di daftar yang sama.
 
 const MCP_URL = 'https://www.leosiqra.com/mcp';
 
@@ -92,7 +92,7 @@ export function McpConnectCard() {
   };
 
   const handleRevoke = async (id: string) => {
-    if (!confirm('Cabut token ini? AI yang memakainya langsung tidak bisa mengakses akun Anda.')) return;
+    if (!confirm('Cabut akses ini? AI yang memakainya langsung tidak bisa mengakses akun Anda.')) return;
     setRevokingId(id);
     try {
       await cloudflareApi(`/api/member/mcp/tokens/${id}`, { method: 'DELETE' });
@@ -127,7 +127,7 @@ export function McpConnectCard() {
           </div>
           <div className="min-w-0">
             <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight leading-tight">Hubungkan ke AI</h2>
-            <p className="text-[10px] font-bold text-slate-400 mt-0.5">Tanya &amp; catat keuangan dari Claude Code &amp; klien MCP lain</p>
+            <p className="text-[10px] font-bold text-slate-400 mt-0.5">Tanya &amp; catat keuangan dari Claude, ChatGPT &amp; klien MCP lain</p>
           </div>
         </div>
         {!showForm && !loading && (
@@ -143,6 +143,10 @@ export function McpConnectCard() {
       <p className="text-[11px] font-medium text-slate-500 leading-relaxed">
         Data yang dibaca AI dikirim ke penyedia AI pilihan Anda. Token bisa dicabut kapan saja dan otomatis dicabut saat
         password diganti/direset.
+      </p>
+      <p className="text-[11px] font-medium text-slate-500 leading-relaxed">
+        <b>claude.ai / ChatGPT:</b> tambahkan custom connector dengan URL <code className="text-slate-700">{MCP_URL}</code>, lalu
+        login Leosiqra &amp; pilih Izinkan — tidak perlu token. Token di bawah untuk Claude Code &amp; klien yang memakai header.
       </p>
 
       {error && <p className="text-[11px] font-bold text-rose-500">{error}</p>}
@@ -226,7 +230,7 @@ export function McpConnectCard() {
             </div>
           ))}
           <p className="text-[10px] font-medium text-emerald-800 leading-relaxed">
-            Klien MCP lain yang mendukung header: pakai URL di atas + header <code>Authorization: Bearer &lt;token&gt;</code>. Login langsung dari claude.ai &amp; ChatGPT menyusul.
+            Klien MCP lain yang mendukung header: pakai URL di atas + header <code>Authorization: Bearer &lt;token&gt;</code>.
           </p>
         </div>
       )}
@@ -242,7 +246,11 @@ export function McpConnectCard() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="text-xs font-black text-slate-900 truncate">{t.name}</p>
-                  <span className="px-2 py-0.5 bg-slate-200 text-slate-600 text-[9px] font-black rounded-full shrink-0">…{t.hint}</span>
+                  {t.source === 'oauth' ? (
+                    <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[9px] font-black rounded-full shrink-0">Login AI</span>
+                  ) : (
+                    <span className="px-2 py-0.5 bg-slate-200 text-slate-600 text-[9px] font-black rounded-full shrink-0">…{t.hint}</span>
+                  )}
                   <span
                     className={cn(
                       'px-2 py-0.5 text-[9px] font-black rounded-full uppercase tracking-widest shrink-0',
@@ -253,13 +261,14 @@ export function McpConnectCard() {
                   </span>
                 </div>
                 <p className="text-[10px] font-medium text-slate-400 mt-1">
-                  {t.lastUsedAt ? `Dipakai ${formatDateTime(t.lastUsedAt)}` : 'Belum dipakai'} · berlaku s.d. {formatDate(t.expiresAt)}
+                  {t.lastUsedAt ? `Dipakai ${formatDateTime(t.lastUsedAt)}` : 'Belum dipakai'} ·{' '}
+                  {t.source === 'oauth' ? `tersambung s.d. ${formatDate(t.expiresAt)} (diperpanjang otomatis saat dipakai)` : `berlaku s.d. ${formatDate(t.expiresAt)}`}
                 </p>
               </div>
               <button
                 onClick={() => handleRevoke(t.id)}
                 disabled={revokingId === t.id}
-                title="Cabut token"
+                title={t.source === 'oauth' ? 'Putuskan koneksi' : 'Cabut token'}
                 className="p-2 rounded-lg bg-white text-slate-400 hover:bg-rose-500 hover:text-white transition-all shrink-0 disabled:opacity-50"
               >
                 {revokingId === t.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}

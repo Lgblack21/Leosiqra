@@ -1,7 +1,7 @@
 # Rancangan keamanan — Leosiqra MCP (sambungkan akun ke Claude/ChatGPT)
 
-Status: **Tahap 1+2 SUDAH DIKODE (2026-10-24), tahap 3 (OAuth) & 4 (panduan)
-belum.** Keputusan Bos 2026-10-23: OAuth 2.1 + PKCE ikut (tahap 3), DCR terbuka
+Status: **Tahap 1+2 SUDAH DIKODE (2026-10-24), tahap 3 (OAuth) SUDAH DIKODE
+(2026-10-25), tahap 4 (panduan) belum.** Keputusan Bos 2026-10-23: OAuth 2.1 + PKCE ikut (tahap 3), DCR terbuka
 dengan rate limit + domain ditampilkan, baca untuk semua member & tulis khusus
 PRO, token manual 30/90/365 hari, URL `www.leosiqra.com/mcp`, tool tulis v1
 hanya `add_transaction` + `set_budget`.
@@ -24,6 +24,40 @@ hanya `add_transaction` + `set_budget`.
 - UI: Profil → Keamanan → kartu "Hubungkan ke AI" (web `/membership`). Tree
   mobile `/app` belum punya UI token — sengaja, token dipakai dari laptop
   (Claude Code); bisa ditambah kalau Bos mau.
+
+### Yang sudah ada di branch (tahap 3 — OAuth, 2026-10-25)
+
+- Migrasi additive `cloudflare/migrations/0011_mcp_oauth.sql`: `mcp_oauth_clients`,
+  `mcp_oauth_codes`, `mcp_refresh_tokens`. **Urutan deploy: 0010 → 0011 → Worker.**
+  Tanpa 0011: `/oauth/*` menjawab 503 rapi, token manual & Profil tetap jalan.
+- Metadata: `GET /.well-known/oauth-protected-resource` (RFC 9728) dan
+  `GET /.well-known/oauth-authorization-server` (RFC 8414; S256 saja). 401 dari
+  `/mcp` sekarang membawa `resource_metadata=` supaya claude.ai/ChatGPT tahu
+  harus login.
+- `POST /oauth/register` — DCR terbuka, 5/menit per IP (limiter login). Redirect
+  hanya `https://` atau `http://localhost|127.0.0.1|[::1]`; tanpa
+  `token_endpoint_auth_method` → `client_secret_basic` (RFC 7591), `none` = klien publik.
+- `GET /oauth/authorize` → validasi `client_id` + `redirect_uri` (sama persis) +
+  PKCE S256 + `resource` → halaman statis **`/izinkan-ai`** (login dulu via
+  `?next=`, termasuk 2FA & Google). Parameter salah sebelum redirect_uri terbukti
+  valid = TIDAK di-redirect (cegah open redirect).
+- Layar izin menampilkan nama klien + **domain redirect besar**; ber-badge
+  "resmi" hanya untuk domain `claude.ai`, `claude.com`, `chatgpt.com`,
+  `openai.com`, selain itu peringatan "tidak terverifikasi". Izin tulis tidak
+  dicentang default, hanya untuk PRO dan kalau diminta klien.
+- `POST /api/member/mcp/authorize` (cookie + Origin terdaftar) menerbitkan kode
+  10 menit sekali pakai; maks 10 aplikasi terhubung per member.
+- `POST /oauth/token`: `authorization_code` (klaim kode atomik, cek klien +
+  redirect_uri + PKCE; kode dipakai ulang → koneksi dicabut) dan `refresh_token`
+  (rotasi sekali pakai, 30 hari geser; refresh lama dipakai ulang → koneksi
+  dicabut). Access token = token `lsq_mcp_` 1 jam di `mcp_tokens`
+  (`source='oauth'`), dirotasi di baris yang sama, jadi izin/PRO/rate
+  limit/log persis sama dengan token manual.
+- Profil → Keamanan: koneksi OAuth tampil di daftar yang sama (badge "Login
+  AI"), tombol hapus = putuskan koneksi (access + semua refresh). Reset/ganti
+  password & admin reset 2FA ikut memutus semua koneksi.
+- CORS `*` hanya untuk `/oauth/token`, `/oauth/register`, `/.well-known/oauth-*`
+  (tanpa cookie). `/izinkan-ai` kena `X-Frame-Options: DENY` dari `_headers`.
 
 **Koreksi rancangan:** `insertTransactionRecord` TIDAK mengubah saldo rekening
 untuk pemasukan/pengeluaran (hanya hutang/piutang). Yang mengubah saldo +
