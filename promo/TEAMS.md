@@ -61,6 +61,21 @@ Siklus SETIAP run — aturan lengkapnya di **`promo/BELAJAR.md`** (wajib dibaca)
 Pelajaran harus spesifik dan bisa ditindaklanjuti ("video POV + rekaman
 Input Cepat dapat views 2× rata-rata"), bukan klise ("buat konten menarik").
 
+## Aturan tetap dari evaluasi mingguan
+
+Pelajaran `strategi` yang lolos ambang BELAJAR.md (yakin >= 0.8, uji >= 4) dan
+di-ACC Bos. Berlaku untuk Tim Analisis, Konten, Promosi, dan CEO.
+
+1. **Nilai views di H+3 dengan >= 3 sampel** (2026-W43, uji 4, yakin 0.83).
+   Views harian YouTube Shorts tidak stabil (138 dari 159 views 7 hari dari 1
+   video; kuis 10-08 = 139 vs kuis 10-09 = 2). Jangan ubah skor ide, format,
+   atau target kampanye dari video yang belum H+3 atau dari 1 video viral.
+2. **Gaya teks ajakan komentar bukan tuas** (2026-W43, uji 9, yakin 0.91).
+   9 gaya ajakan komentar di 9 video YT 10-07..10-22 = 0 komentar semuanya.
+   Jangan jadikan gaya CTA komentar sebagai eksperimen baru selama views per
+   video masih ratusan (maks 351 sejauh ini); CTA tetap ada (simpan/komentar/follow), tapi
+   eksperimen Tim Promosi & Analisis diarahkan ke topik/hook/views.
+
 ## Plugin tiap tim (`.claude/settings.json`, sejak 2026-10-23)
 
 Kalau plugin aktif di sesi routine, pakai sesuai peran:
