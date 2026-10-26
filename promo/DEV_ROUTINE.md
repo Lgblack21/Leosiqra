@@ -89,6 +89,14 @@ Temuan audit: `{ "kind": "keamanan"|"bug", "title", "detail", "file",
 "branch"?, "saran"?, "by", "createdAt" }`.
 
 ### 5. Sinkron & belajar
+- **Antrean merge** (tombol ACC di Tower tidak me-merge apa pun): dump koleksi
+  `dev` (dan `seo` kalau ada) dengan `ArtifactData list` + `out_dir` ke scratchpad,
+  `git fetch origin`, lalu `node promo/merge-queue.mjs <scratch>/tower/dev [<scratch>/tower/seo]`.
+  Tulis hasilnya (tanpa `text`) ke `dev/antrean-merge` (`kind: "antrean"`,
+  `status: "catatan"`). Kalau `open > 0`, tempel `text` ke Telegram yang memang
+  kamu kirim run ini (patch/temuan 🔴) — jangan kirim Telegram khusus untuk ini
+  (CEO sudah menyertakannya di ringkasan hariannya). Item yang `sudah_di_main`:
+  sebut di ringkasan; status ACC tetap milik Bos, jangan ditimpa.
 - Tower: `kb/leosiqra` (`node promo/tower.mjs kb`), `metrik/ringkas`
   (`node promo/tower.mjs metrik`), `otak/developer` (pelajaran: pola celah
   yang berulang, area rawan, perintah verifikasi yang terbukti — lihat TEAMS.md).

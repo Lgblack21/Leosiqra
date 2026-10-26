@@ -104,6 +104,12 @@ curl -s -H "x-promo-secret: $PROMO_SECRET" -F "text=…" https://membersite-leos
 Isi ringkas: angka nyata hari ini, 1–3 aksi, apa yang diminta dari Bos. Akhiri run
 dengan ringkasan singkat.
 
+**Antrean merge** — baca `dev/antrean-merge` (ditulis Tim Developer, dihitung
+`promo/merge-queue.mjs` dari git) atau jalankan sendiri skrip itu. Kalau `open > 0`,
+item `disetujui` yang belum di main ADALAH hal yang butuh Bos: tempel `text`-nya di
+ringkasan Telegram hari ini (tanpa diubah — sudah HTML ter-escape), supaya ACC di
+Tower tidak tertahan diam-diam berhari-hari.
+
 ## Format Tower
 
 `ceo/hari-ini`:
