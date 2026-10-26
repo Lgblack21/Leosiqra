@@ -121,7 +121,7 @@ export function McpConnectCard() {
     : '';
 
   return (
-    <div className="bg-white dark:bg-slate-900 p-5 md:p-8 rounded-[20px] md:rounded-[48px] border border-slate-50 dark:border-slate-800 shadow-sm space-y-5">
+    <div className="bg-white dark:bg-slate-900 p-5 md:p-8 rounded-[20px] md:rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm space-y-5">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 shrink-0">

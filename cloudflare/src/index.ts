@@ -10392,7 +10392,7 @@ const mcpRpcError = (id: unknown, code: number, message: string, status = 200) =
 // harus memulai login OAuth.
 const mcpUnauthorized = (url: URL) =>
   json(
-    { error: "Token MCP tidak valid, kedaluwarsa, atau sudah dicabut. Buat token baru di Profil → Keamanan." },
+    { error: "Token MCP tidak valid, kedaluwarsa, atau sudah dicabut. Buat token baru di Profil → Hubungkan ke AI." },
     {
       status: 401,
       headers: {
@@ -10478,7 +10478,7 @@ async function handleMcp(request: Request, env: Env) {
       : {}) as Record<string, unknown>;
     const toolError = (text: string) => mcpRpcResult(id, { content: [{ type: "text", text }], isError: true });
     if (tool.write) {
-      if (!auth.scopes.has("write")) return toolError("Token ini hanya izin baca. Buat token dengan izin tulis di Profil → Keamanan.");
+      if (!auth.scopes.has("write")) return toolError("Token ini hanya izin baca. Buat token dengan izin tulis di Profil → Hubungkan ke AI.");
       if (auth.plan !== "PRO") return toolError("Mencatat lewat AI khusus akun PRO. Membaca data tetap bisa.");
       if (!(await mcpRateLimit(env, auth, true))) return toolError("Terlalu banyak pencatatan dalam semenit. Tunggu sebentar.");
     }
@@ -10500,7 +10500,7 @@ async function handleMcp(request: Request, env: Env) {
   return mcpRpcError(id, -32601, "Method not found");
 }
 
-// --- Kelola token (cookie sesi, dari Profil → Keamanan) ----------------------
+// --- Kelola token (cookie sesi, dari Profil → Hubungkan ke AI) ----------------------
 
 type McpTokenRow = { id: string; name: string; token_hint: string; scopes: string; source: string; expires_at: string; last_used_at: string | null; created_at: string };
 
@@ -10970,7 +10970,7 @@ async function handleMcpAuthorizeDecision(request: Request, env: Env, user: AppU
     .bind(user.id, now)
     .first<{ n: number }>();
   if ((connections?.n ?? 0) >= MCP_MAX_OAUTH_CONNECTIONS) {
-    return json({ error: `Maksimal ${MCP_MAX_OAUTH_CONNECTIONS} aplikasi AI terhubung. Putuskan yang lama di Profil → Keamanan.` }, { status: 400 });
+    return json({ error: `Maksimal ${MCP_MAX_OAUTH_CONNECTIONS} aplikasi AI terhubung. Putuskan yang lama di Profil → Hubungkan ke AI.` }, { status: 400 });
   }
   // Keputusan Bos #3: tulis khusus PRO; izin tulis juga harus diminta klien.
   const write = payload.write === true && parsed.writeRequested && user.plan === "PRO";

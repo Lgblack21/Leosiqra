@@ -10,7 +10,6 @@ import {
   ShieldCheck,
   TrendingUp,
   TrendingDown,
-  ArrowRight,
   ChevronRight,
   Lock,
   Bell,
@@ -26,7 +25,12 @@ import {
   Eye,
   EyeOff,
   Monitor,
-  Settings
+  Settings,
+  Bot,
+  Check,
+  KeyRound,
+  LogOut,
+  type LucideIcon
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -73,24 +77,42 @@ interface SessionInfo {
   isCurrent: boolean;
 }
 
-// Kartu di kolom kanan dikelompokkan di balik tab supaya tidak jadi tumpukan
-// panjang — "Ringkasan" = yang paling sering dilihat, "Keamanan" = semua yang
-// berhubungan dengan akses akun, "Lainnya" = pintasan & zona berbahaya.
-const RIGHT_TABS = [
-  { id: 'ringkasan', label: 'Ringkasan', icon: Wallet },
-  { id: 'keamanan', label: 'Keamanan', icon: ShieldCheck },
-  { id: 'lainnya', label: 'Lainnya', icon: Settings },
+// Pengaturan dikelompokkan per menu (samping di desktop, tab geser di HP) supaya
+// tiap bagian dapat lebar penuh: Akun = data diri & rekening, Keamanan = akses
+// akun, Notifikasi = push & email, Hubungkan ke AI = MCP, Lainnya = pintasan &
+// zona berbahaya. ?tab=<id> membuka menu tertentu (mis. dari SecurityNudge).
+const SETTINGS_TABS = [
+  { id: 'akun', label: 'Akun', desc: 'Data diri & rekening', icon: User },
+  { id: 'keamanan', label: 'Keamanan', desc: 'Password, 2FA, perangkat', icon: ShieldCheck },
+  { id: 'notifikasi', label: 'Notifikasi', desc: 'Push & laporan email', icon: Bell },
+  { id: 'ai', label: 'Hubungkan ke AI', desc: 'Claude, ChatGPT & MCP', icon: Bot },
+  { id: 'lainnya', label: 'Lainnya', desc: 'Input Cepat & reset data', icon: Settings },
 ] as const;
-type RightTab = (typeof RIGHT_TABS)[number]['id'];
+type RightTab = (typeof SETTINGS_TABS)[number]['id'];
+const isSettingsTab = (v: string | null): v is RightTab => SETTINGS_TABS.some((t) => t.id === v);
 
 export default function ProfilePage() {
   const { activeModal } = useModal();
   const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [rightTab, setRightTab] = useState<RightTab>('ringkasan');
+  const [rightTab, setRightTab] = useState<RightTab>('akun');
+  // Simpan menu aktif di URL (?tab=) supaya bisa dibagikan/di-refresh tanpa kembali ke Akun.
+  const selectTab = (tab: RightTab) => {
+    setRightTab(tab);
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    window.history.replaceState(null, '', url.toString());
+  };
+  // Di HP menu berupa tab geser: pastikan tab aktif terlihat (mis. "Lainnya" dari ?tab=lainnya).
+  // Geser horizontal saja (bukan scrollIntoView) supaya halaman tidak ikut melompat.
+  useEffect(() => {
+    const nav = document.querySelector<HTMLElement>('#pengaturan-akun nav');
+    const el = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (nav && el) nav.scrollLeft = el.offsetLeft - (nav.clientWidth - el.clientWidth) / 2;
+  }, [rightTab]);
   // Tautan langsung ke tab tertentu, mis. dari kartu "Aktifkan 2FA" di Beranda.
   useEffect(() => {
     const tab = new URLSearchParams(window.location.search).get('tab');
-    if (tab !== 'keamanan' && tab !== 'lainnya') return;
+    if (!isSettingsTab(tab) || tab === 'akun') return;
     setRightTab(tab);
     const t = setTimeout(() => document.getElementById('pengaturan-akun')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 600);
     return () => clearTimeout(t);
@@ -440,7 +462,7 @@ export default function ProfilePage() {
   const initials = profile.displayName ? profile.displayName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : (user?.email?.[0].toUpperCase() || 'U');
 
   const accountStats = [
-    { label: "Today's Expense", value: formatRp(todayOut), icon: TrendingDown, color: "text-rose-600", bg: "bg-rose-50", trend: todayOut > 0 ? "Active" : "Nihil" },
+    { label: "Pengeluaran hari ini", value: formatRp(todayOut), icon: TrendingDown, color: "text-rose-600", bg: "bg-rose-50", trend: todayOut > 0 ? "Active" : "Nihil" },
     { label: "Total Saldo", value: formatRp(totalBalance), icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50", trend: `${accounts.length} Akun` },
   ];
 
@@ -515,7 +537,7 @@ export default function ProfilePage() {
                     : "bg-indigo-50 text-indigo-600 border-indigo-100"
                 )}>
                   <ShieldCheck size={12} className={cn(profile.plan === 'PRO' && "text-emerald-500")} />
-                  {profile.plan === 'PRO' ? 'PRO MEMBER' : 'Free Plan Active'}
+                  {profile.plan === 'PRO' ? 'Member PRO' : 'Paket Gratis'}
                 </span>
               </div>
             </div>
@@ -540,385 +562,279 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Settings & Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-        
-        {/* Identity Form */}
-        <div className="lg:col-span-2 space-y-6 md:space-y-8">
-          <div className="bg-white p-5 md:p-8 lg:p-12 rounded-[20px] md:rounded-[48px] border border-slate-50 shadow-sm space-y-6 md:space-y-10">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight">Identity Settings</h2>
-            </div>
-
-            {saveError && (
-              <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-sm font-medium text-rose-600">
-                {saveError}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-x-12 md:gap-y-8">
-              <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Full Name</label>
-                <div className="relative group">
-                  <User size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
-                  <input type="text" value={profile.displayName} onChange={e => setProfile(p => ({...p, displayName: e.target.value}))}
-                    placeholder="Nama lengkap..."
-                    className="w-full bg-slate-50/50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl md:rounded-2xl py-4 md:py-5 pl-14 pr-6 text-sm font-bold text-slate-700 transition-all" />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Email Address</label>
-                <div className="relative group">
-                  <Mail size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 transition-colors" />
-                  <input type="email" value={profile.email} disabled
-                    className="w-full bg-slate-50/30 border-none rounded-xl md:rounded-2xl py-4 md:py-5 pl-14 pr-6 text-sm font-bold text-slate-400 cursor-not-allowed" />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Username</label>
-                <div className="relative group">
-                  <AtSign size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
-                  <input type="text" value={profile.username} onChange={e => setProfile(p => ({...p, username: e.target.value.toLowerCase().replace(/\s+/g, '')}))}
-                    placeholder="username..."
-                    className="w-full bg-slate-50/50 border-none focus:ring-2 focus:ring-indigo-100 rounded-2xl py-5 pl-14 pr-6 text-sm font-bold text-slate-700 transition-all" />
-                </div>
-                <p className="text-[10px] font-medium text-slate-400 pl-1">3-20 karakter (huruf/angka/underscore/titik) — bisa dipakai untuk login selain email.</p>
-              </div>
-
-              <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Phone Number</label>
-                <div className="relative group">
-                  <Phone size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
-                  <input type="text" value={profile.phone} onChange={e => setProfile(p => ({...p, phone: e.target.value}))}
-                    placeholder="+62 ..."
-                    className="w-full bg-slate-50/50 border-none focus:ring-2 focus:ring-indigo-100 rounded-2xl py-5 pl-14 pr-6 text-sm font-bold text-slate-700 transition-all" />
-                </div>
-              </div>
-
-              <div className="md:col-span-2 space-y-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Alamat</label>
-                <div className="relative group">
-                  <MapPin size={18} className="absolute left-6 top-8 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
-                  <textarea rows={3} value={profile.address} onChange={e => setProfile(p => ({...p, address: e.target.value}))}
-                    placeholder="Jl. ..."
-                    className="w-full bg-slate-50/50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl md:rounded-2xl py-4 md:py-5 pl-14 pr-6 text-sm font-bold text-slate-700 transition-all resize-none" />
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-8 md:pt-10 border-t border-slate-50 flex flex-col md:flex-row items-center gap-4 md:gap-6">
-              <button onClick={handleSave} disabled={saving}
-                className="w-full md:w-fit px-10 md:px-12 py-4 md:py-5 bg-indigo-600 disabled:bg-slate-300 text-white rounded-xl md:rounded-2xl text-[13px] md:text-xs font-black shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2">
-                <Save size={14} />
-                {saving ? 'Menyimpan...' : saved ? 'OK Tersimpan!' : 'Simpan Perubahan'}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Pengaturan Akun — dikelompokkan lewat tab biar tidak jadi tumpukan panjang */}
-        <div id="pengaturan-akun" className="scroll-mt-24 space-y-6 md:space-y-8">
-          <div className="flex items-center gap-2 p-1.5 bg-slate-50 border border-slate-100 rounded-2xl w-full overflow-x-auto no-scrollbar">
-            {RIGHT_TABS.map((tab) => (
+      {/* Pengaturan — menu samping (desktop) / tab geser (HP), isi selebar kolom kanan */}
+      <div id="pengaturan-akun" className="scroll-mt-24 grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-4 md:gap-6 lg:gap-8 items-start">
+        <nav
+          aria-label="Menu pengaturan"
+          className="relative flex lg:flex-col gap-1.5 p-1.5 bg-white border border-slate-100 rounded-2xl shadow-sm overflow-x-auto no-scrollbar lg:sticky lg:top-28"
+        >
+          {SETTINGS_TABS.map((tab) => {
+            const active = rightTab === tab.id;
+            return (
               <button
                 key={tab.id}
-                onClick={() => setRightTab(tab.id)}
+                onClick={() => selectTab(tab.id)}
+                aria-current={active ? 'page' : undefined}
                 className={cn(
-                  "flex items-center justify-center shrink-0 gap-2 px-4 md:px-5 py-2.5 rounded-xl text-[11px] md:text-[12px] font-black transition-all whitespace-nowrap flex-1",
-                  rightTab === tab.id
-                    ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-100"
-                    : "text-slate-400 hover:text-slate-600"
+                  "flex items-center gap-3 shrink-0 px-3.5 py-2.5 lg:py-3 rounded-xl text-left transition-all whitespace-nowrap",
+                  active ? "bg-indigo-50 text-indigo-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                 )}
               >
-                <tab.icon size={14} className={rightTab === tab.id ? "text-indigo-600" : "text-slate-300"} />
-                {tab.label}
+                <tab.icon size={16} className={active ? "text-indigo-600" : "text-slate-400"} />
+                <span className="min-w-0">
+                  <span className="block text-[12px] font-black">{tab.label}</span>
+                  <span className="hidden lg:block text-[10px] font-medium text-slate-400 truncate">{tab.desc}</span>
+                </span>
               </button>
-            ))}
-          </div>
+            );
+          })}
+        </nav>
 
-          {rightTab === 'ringkasan' && (
-          <div className="space-y-6 md:space-y-10 animate-in fade-in duration-300">
-          {/* Active Banks */}
-          <div className="bg-[#f0f5fa] p-5 md:p-8 rounded-[20px] md:rounded-[48px] border border-white shadow-sm space-y-6 md:space-y-8">
-            <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight">Active Banks</h2>
-            <div className="space-y-4">
-              {loading ? (
-                <p className="text-sm text-slate-400 text-center py-4">Memuat...</p>
-              ) : accounts.length === 0 ? (
-                <p className="text-sm text-slate-400 text-center py-4">Belum ada rekening</p>
-              ) : accounts.map((acc) => {
-                const isCredit = isCreditAccountType(acc.type);
-                const credit = isCredit ? computeCreditUsage(acc, transactions) : null;
-                return (
-                <button
-                  key={acc.id}
-                  onClick={() => setSelectedAccount(acc)}
-                  className="w-full flex items-start gap-3 md:gap-4 p-4 md:p-5 bg-white/60 backdrop-blur-sm rounded-[24px] md:rounded-[28px] border border-white shadow-sm hover:scale-[1.02] transition-transform text-left"
-                >
-                  <div className="w-10 h-10 md:w-11 md:h-11 rounded-xl md:rounded-2xl flex-shrink-0 bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-100">
-                    {acc.type === 'E-Wallet' ? <Wallet size={16} /> : <Building2 size={16} />}
+        <div className="min-w-0 space-y-6 animate-in fade-in duration-300" key={rightTab}>
+          {rightTab === 'akun' && (
+            <>
+              <SettingCard icon={User} title="Data diri" desc="Nama, username, dan kontak yang dipakai di akun Anda">
+                {saveError && (
+                  <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-sm font-medium text-rose-600">
+                    {saveError}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <h4 className="text-[12px] md:text-[13px] font-black text-slate-900 leading-tight truncate">{acc.name}</h4>
-                      <ArrowRight size={12} className="text-slate-300 shrink-0" />
-                    </div>
-                    <div className="flex items-center justify-between gap-2 mt-1.5">
-                      <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-tight truncate">
-                        {isCredit ? 'Sisa Limit' : acc.type}
-                      </p>
-                      <p className="text-[12px] md:text-[13px] font-black text-slate-900 whitespace-nowrap shrink-0">
-                        {formatAccountBalance(isCredit && credit ? credit.remaining : acc.balance, acc.currency)}
-                      </p>
-                    </div>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-x-8 md:gap-y-6">
+                  <Field label="Nama lengkap" icon={User}>
+                    <input type="text" value={profile.displayName} onChange={e => setProfile(p => ({...p, displayName: e.target.value}))}
+                      placeholder="Nama lengkap..." className={inputClass} />
+                  </Field>
+                  <Field label="Email" icon={Mail} hint="Email tidak bisa diubah.">
+                    <input type="email" value={profile.email} disabled className={cn(inputClass, "text-slate-400 bg-slate-50/30 cursor-not-allowed")} />
+                  </Field>
+                  <Field label="Username" icon={AtSign} hint="3–20 karakter (huruf/angka/underscore/titik), bisa dipakai login selain email.">
+                    <input type="text" value={profile.username} onChange={e => setProfile(p => ({...p, username: e.target.value.toLowerCase().replace(/\s+/g, '')}))}
+                      placeholder="username..." className={inputClass} />
+                  </Field>
+                  <Field label="Nomor HP" icon={Phone}>
+                    <input type="text" value={profile.phone} onChange={e => setProfile(p => ({...p, phone: e.target.value}))}
+                      placeholder="+62 ..." className={inputClass} />
+                  </Field>
+                  <div className="md:col-span-2">
+                    <Field label="Alamat" icon={MapPin} iconTop>
+                      <textarea rows={3} value={profile.address} onChange={e => setProfile(p => ({...p, address: e.target.value}))}
+                        placeholder="Jl. ..." className={cn(inputClass, "resize-none")} />
+                    </Field>
                   </div>
-                </button>
-                );
-              })}
-            </div>
-          </div>
-          </div>
+                </div>
+                <div className="pt-6 border-t border-slate-100 flex justify-end">
+                  <button onClick={handleSave} disabled={saving}
+                    className="w-full md:w-fit px-8 py-3.5 bg-indigo-600 disabled:bg-slate-300 text-white rounded-xl text-[13px] font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2">
+                    {saving ? <Loader2 size={14} className="animate-spin" /> : saved ? <Check size={14} /> : <Save size={14} />}
+                    {saving ? 'Menyimpan...' : saved ? 'Tersimpan' : 'Simpan perubahan'}
+                  </button>
+                </div>
+              </SettingCard>
+
+              <SettingCard icon={Wallet} title="Rekening aktif" desc="Ketuk rekening untuk melihat detail saldo & konversi kurs">
+                {loading ? (
+                  <p className="text-sm text-slate-400 text-center py-4">Memuat...</p>
+                ) : accounts.length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-4">Belum ada rekening</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {accounts.map((acc) => {
+                      const isCredit = isCreditAccountType(acc.type);
+                      const credit = isCredit ? computeCreditUsage(acc, transactions) : null;
+                      return (
+                        <button
+                          key={acc.id}
+                          onClick={() => setSelectedAccount(acc)}
+                          className="w-full flex items-center gap-3 p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-colors text-left"
+                        >
+                          <div className="w-10 h-10 rounded-xl shrink-0 bg-blue-600 text-white flex items-center justify-center">
+                            {acc.type === 'E-Wallet' ? <Wallet size={16} /> : <Building2 size={16} />}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[13px] font-black text-slate-900 leading-tight truncate">{acc.name}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight truncate mt-1">
+                              {isCredit ? 'Sisa limit' : acc.type}
+                            </p>
+                          </div>
+                          <p className="text-[13px] font-black text-slate-900 whitespace-nowrap shrink-0">
+                            {formatAccountBalance(isCredit && credit ? credit.remaining : acc.balance, acc.currency)}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </SettingCard>
+            </>
           )}
 
           {rightTab === 'keamanan' && (
-          <div className="space-y-6 md:space-y-10 animate-in fade-in duration-300">
-          {/* Security */}
-          <div className="bg-slate-900 p-5 md:p-8 rounded-[20px] md:rounded-[48px] shadow-2xl space-y-6 md:space-y-10 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-8 text-white/5 group-hover:text-white/10 transition-colors hidden md:block">
-              <ShieldCheck size={120} />
-            </div>
-            <h2 className="text-lg md:text-xl font-black text-white tracking-tight relative z-10">Security Center</h2>
-            <div className="space-y-4 md:space-y-6 relative z-10">
-              <button
-                onClick={() => setShowPasswordModal(true)}
-                className="w-full flex items-center justify-between p-4 md:p-5 bg-white/10 hover:bg-white/20 rounded-xl md:rounded-2xl transition-all border border-white/5 backdrop-blur-md"
-              >
-                <div className="flex items-center gap-3 md:gap-4 text-white">
-                  <Lock size={16} className="text-indigo-400" />
-                  <span className="text-[11px] md:text-[12px] font-black tracking-tight">{user?.hasPassword === false ? 'Set Password' : 'Change Password'}</span>
+            <>
+              <SettingCard icon={ShieldCheck} title="Login & akses" desc="Lindungi akun Anda dari akses orang lain">
+                <div className="divide-y divide-slate-100">
+                  <SettingRow
+                    icon={Lock}
+                    title="Password"
+                    desc={user?.hasPassword === false ? 'Akun ini login dengan Google — buat password agar bisa login dengan email juga' : 'Ganti password secara berkala. Mengganti password memutus semua koneksi AI.'}
+                    action={
+                      <button onClick={() => setShowPasswordModal(true)} className={secondaryButton}>
+                        {user?.hasPassword === false ? 'Buat password' : 'Ganti'}
+                      </button>
+                    }
+                  />
+                  <SettingRow
+                    icon={KeyRound}
+                    title="Verifikasi 2 langkah (2FA)"
+                    desc="Kode dari aplikasi authenticator diminta setiap login"
+                    badge={profile.twoFactorEnabled ? { text: 'Aktif', tone: 'good' } : { text: 'Belum aktif', tone: 'warn' }}
+                    action={
+                      profile.twoFactorEnabled ? (
+                        <button onClick={() => setShow2FADisable(true)} className={secondaryButton}>Nonaktifkan</button>
+                      ) : (
+                        <button onClick={() => setShow2FASetup(true)} className={primaryButton}>Aktifkan</button>
+                      )
+                    }
+                  />
                 </div>
-                <ChevronRight size={14} className="text-white/40" />
-              </button>
-              <div className="w-full p-4 md:p-5 bg-white/5 rounded-xl md:rounded-2xl border border-white/5 backdrop-blur-md">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 md:gap-4 text-white min-w-0">
-                    <Bell size={16} className="text-indigo-400 shrink-0" />
-                    <div className="min-w-0">
-                      <span className="text-[11px] md:text-[12px] font-black tracking-tight block">Notifikasi Push</span>
-                      <span className="text-[9px] font-bold text-white/40 block mt-0.5">
-                        Ringkasan harian &amp; pengingat recurring ke HP
-                      </span>
-                    </div>
+              </SettingCard>
+
+              <SettingCard icon={Monitor} title="Perangkat yang login" desc="Keluarkan perangkat yang tidak Anda kenali">
+                {sessionsLoading ? (
+                  <p className="text-sm text-slate-400 text-center py-4">Memuat...</p>
+                ) : sessions.length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-4">Tidak ada sesi aktif.</p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {sessions.map((s) => (
+                      <div key={s.id} className="flex items-center justify-between gap-3 p-4 bg-slate-50 rounded-2xl">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center text-slate-400 shrink-0">
+                            {s.isPermanent ? <Smartphone size={15} /> : <Monitor size={15} />}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-xs font-black text-slate-900 truncate">{s.device}</p>
+                              {s.isCurrent && (
+                                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black rounded-full uppercase tracking-widest shrink-0">Perangkat ini</span>
+                              )}
+                              {s.isPermanent && (
+                                <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[9px] font-black rounded-full uppercase tracking-widest shrink-0">Aplikasi</span>
+                              )}
+                            </div>
+                            <p className="text-[10px] font-medium text-slate-400 mt-1">Aktif terakhir {formatSessionDate(s.lastSeenAt)}</p>
+                          </div>
+                        </div>
+                        {!s.isCurrent && (
+                          <button
+                            onClick={() => handleRevokeSession(s.id)}
+                            disabled={revokingSessionId === s.id}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white text-[11px] font-black text-slate-500 hover:bg-rose-500 hover:text-white transition-all shrink-0 disabled:opacity-50"
+                          >
+                            {revokingSessionId === s.id ? <Loader2 size={13} className="animate-spin" /> : <LogOut size={13} />}
+                            Keluarkan
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                  {notifIosNeedsInstall ? (
-                    <span className="flex items-center gap-1.5 text-[9px] font-black text-amber-400 uppercase tracking-widest shrink-0">
-                      <Smartphone size={11} />
-                      Install Dulu
-                    </span>
-                  ) : !notifSupported ? (
-                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest shrink-0">
-                      Tidak Didukung
-                    </span>
-                  ) : notifLoading ? (
-                    <Loader2 size={16} className="animate-spin text-white/50 shrink-0" />
-                  ) : (
-                    <button
-                      onClick={handleToggleNotifications}
-                      className={cn(
-                        "w-10 h-5 md:w-12 md:h-6 rounded-full relative p-1 transition-colors shrink-0",
-                        notifEnabled ? "bg-indigo-600" : "bg-white/10"
-                      )}
-                    >
-                      <div className={cn(
-                        "w-3 h-3 md:w-4 md:h-4 bg-white rounded-full absolute top-1 transition-all",
-                        notifEnabled ? "right-1" : "left-1 opacity-60"
-                      )} />
-                    </button>
-                  )}
-                </div>
-                {notifIosNeedsInstall && (
-                  <p className="text-[9px] font-bold text-white/40 mt-3 leading-relaxed">
-                    Di iPhone, notifikasi cuma bisa jalan kalau Leosiqra sudah ditambahkan ke Home Screen dulu:
-                    tap <span className="font-black text-white/70">Share</span> di Safari →{' '}
-                    <span className="font-black text-white/70">&quot;Add to Home Screen&quot;</span>, lalu buka
-                    Leosiqra dari ikon di Home Screen (bukan dari Safari) untuk mengaktifkan notifikasi.
-                  </p>
                 )}
-                {notifError && (
-                  <p className="text-[9px] font-bold text-rose-400 mt-3">{notifError}</p>
-                )}
-              </div>
-              <div className="w-full p-4 md:p-5 bg-white/5 rounded-xl md:rounded-2xl border border-white/5 backdrop-blur-md">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 md:gap-4 text-white min-w-0">
-                    <Mail size={16} className="text-indigo-400 shrink-0" />
-                    <div className="min-w-0">
-                      <span className="text-[11px] md:text-[12px] font-black tracking-tight block">Laporan Bulanan via Email</span>
-                      <span className="text-[9px] font-bold text-white/40 block mt-0.5">
-                        Ringkasan pemasukan, pengeluaran &amp; budget tiap awal bulan
+              </SettingCard>
+            </>
+          )}
+
+          {rightTab === 'notifikasi' && (
+            <SettingCard icon={Bell} title="Notifikasi" desc="Atur apa saja yang dikirim Leosiqra ke Anda">
+              <div className="divide-y divide-slate-100">
+                <SettingRow
+                  icon={Bell}
+                  title="Notifikasi push"
+                  desc="Ringkasan harian & pengingat transaksi rutin ke HP atau browser ini"
+                  action={
+                    notifIosNeedsInstall ? (
+                      <span className="flex items-center gap-1.5 text-[10px] font-black text-amber-600 uppercase tracking-widest">
+                        <Smartphone size={12} /> Pasang dulu
                       </span>
-                    </div>
-                  </div>
-                  {reportLoading ? (
-                    <Loader2 size={16} className="animate-spin text-white/50 shrink-0" />
-                  ) : !reportAvailable && !reportEnabled ? (
-                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest shrink-0">
-                      Segera
-                    </span>
-                  ) : (
-                    <button
-                      onClick={handleToggleMonthlyReport}
-                      aria-label="Laporan bulanan via email"
-                      aria-pressed={reportEnabled}
-                      className={cn(
-                        "w-10 h-5 md:w-12 md:h-6 rounded-full relative p-1 transition-colors shrink-0",
-                        reportEnabled ? "bg-indigo-600" : "bg-white/10"
-                      )}
-                    >
-                      <div className={cn(
-                        "w-3 h-3 md:w-4 md:h-4 bg-white rounded-full absolute top-1 transition-all",
-                        reportEnabled ? "right-1" : "left-1 opacity-60"
-                      )} />
-                    </button>
-                  )}
-                </div>
-                {reportError && (
-                  <p className="text-[9px] font-bold text-rose-400 mt-3">{reportError}</p>
-                )}
-              </div>
-              <div className="pt-6 border-t border-white/10">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="pt-0.5">
-                    <p className="text-[9px] md:text-[10px] font-black text-white uppercase tracking-widest leading-none">Two Factor Auth</p>
-                    <p className="text-[9px] font-bold text-white/40 mt-1.5">
-                      {profile.twoFactorEnabled ? 'Aktif — melindungi login Anda' : 'Belum diaktifkan'}
+                    ) : !notifSupported ? (
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tidak didukung</span>
+                    ) : notifLoading ? (
+                      <Loader2 size={16} className="animate-spin text-slate-400" />
+                    ) : (
+                      <Toggle on={notifEnabled} onClick={handleToggleNotifications} label="Notifikasi push" />
+                    )
+                  }
+                >
+                  {notifIosNeedsInstall && (
+                    <p className="text-[11px] font-medium text-slate-500 leading-relaxed">
+                      Di iPhone, notifikasi hanya jalan kalau Leosiqra sudah ditambahkan ke Home Screen: tap{' '}
+                      <b>Share</b> di Safari → <b>&quot;Add to Home Screen&quot;</b>, lalu buka Leosiqra dari ikon itu.
                     </p>
+                  )}
+                  {notifError && <p className="text-[11px] font-bold text-rose-500">{notifError}</p>}
+                </SettingRow>
+                <SettingRow
+                  icon={Mail}
+                  title="Laporan bulanan via email"
+                  desc="Ringkasan pemasukan, pengeluaran & budget tiap awal bulan"
+                  action={
+                    reportLoading ? (
+                      <Loader2 size={16} className="animate-spin text-slate-400" />
+                    ) : !reportAvailable && !reportEnabled ? (
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Segera</span>
+                    ) : (
+                      <Toggle on={reportEnabled} onClick={handleToggleMonthlyReport} label="Laporan bulanan via email" />
+                    )
+                  }
+                >
+                  {reportError && <p className="text-[11px] font-bold text-rose-500">{reportError}</p>}
+                </SettingRow>
+              </div>
+            </SettingCard>
+          )}
+
+          {rightTab === 'ai' && <McpConnectCard />}
+
+          {rightTab === 'lainnya' && (
+            <>
+              <SettingCard icon={Smartphone} title="Input Cepat" desc="Catat transaksi dari HP — iPhone & Android">
+                <a
+                  href="/input-cepat"
+                  className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-700 p-4 text-white shadow-lg shadow-indigo-200 transition-all hover:-translate-y-0.5"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+                    <Smartphone size={16} />
                   </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-black tracking-tight">Buka Input Cepat</p>
+                    <p className="text-[10px] font-medium text-white/70 mt-0.5">Tambahkan ke layar utama biar tinggal tap</p>
+                  </div>
+                  <ChevronRight size={16} className="text-white/70 shrink-0" />
+                </a>
+              </SettingCard>
+
+              <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[32px] border border-rose-100 shadow-sm space-y-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600 shrink-0">
+                    <AlertTriangle size={18} />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-base md:text-lg font-black text-rose-700 tracking-tight leading-tight">Zona berbahaya</h2>
+                    <p className="text-[11px] font-medium text-slate-400 mt-0.5">Tindakan di sini tidak bisa dibatalkan</p>
+                  </div>
+                </div>
+                <div className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-rose-50/60 rounded-2xl">
+                  <p className="flex-1 text-xs font-medium text-rose-700/80 leading-relaxed">
+                    Menghapus permanen semua transaksi, rekening, budget, investasi, tabungan, kategori, mata uang, jadwal recurring, dan riwayat chat AI Anda. Akun (login, plan, riwayat pembayaran) tidak terhapus.
+                  </p>
                   <button
-                    onClick={() => profile.twoFactorEnabled ? setShow2FADisable(true) : setShow2FASetup(true)}
-                    className={cn(
-                      "w-10 h-5 md:w-12 md:h-6 rounded-full relative p-1 transition-colors shrink-0",
-                      profile.twoFactorEnabled ? "bg-indigo-600" : "bg-white/10"
-                    )}
+                    onClick={() => setShowResetModal(true)}
+                    className="shrink-0 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black transition-all"
                   >
-                    <div className={cn(
-                      "w-3 h-3 md:w-4 md:h-4 bg-white rounded-full absolute top-1 transition-all",
-                      profile.twoFactorEnabled ? "right-1" : "left-1 opacity-60"
-                    )} />
+                    <Trash2 size={14} />
+                    Reset semua data
                   </button>
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* Kelola Perangkat */}
-          <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[48px] border border-slate-50 shadow-sm space-y-5">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
-                <Monitor size={18} />
-              </div>
-              <div>
-                <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight leading-tight">Kelola Perangkat</h2>
-                <p className="text-[10px] font-bold text-slate-400 mt-0.5">Sesi login aktif — logout paksa kalau ada yang mencurigakan</p>
-              </div>
-            </div>
-
-            {sessionsLoading ? (
-              <p className="text-sm text-slate-400 text-center py-4">Memuat...</p>
-            ) : sessions.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-4">Tidak ada sesi aktif.</p>
-            ) : (
-              <div className="space-y-3">
-                {sessions.map((s) => (
-                  <div key={s.id} className="flex items-center justify-between gap-3 p-4 bg-slate-50 rounded-2xl">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-xs font-black text-slate-900 truncate">{s.device}</p>
-                        {s.isCurrent && (
-                          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black rounded-full uppercase tracking-widest shrink-0">Sesi Ini</span>
-                        )}
-                        {s.isPermanent && (
-                          <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[9px] font-black rounded-full uppercase tracking-widest shrink-0">PWA</span>
-                        )}
-                      </div>
-                      <p className="text-[10px] font-medium text-slate-400 mt-1">
-                        Aktif terakhir {formatSessionDate(s.lastSeenAt)}
-                      </p>
-                    </div>
-                    {!s.isCurrent && (
-                      <button
-                        onClick={() => handleRevokeSession(s.id)}
-                        disabled={revokingSessionId === s.id}
-                        title="Logout sesi ini"
-                        className="p-2 rounded-lg bg-white text-slate-400 hover:bg-rose-500 hover:text-white transition-all shrink-0 disabled:opacity-50"
-                      >
-                        {revokingSessionId === s.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <McpConnectCard />
-          </div>
-          )}
-
-          {rightTab === 'lainnya' && (
-          <div className="space-y-6 md:space-y-10 animate-in fade-in duration-300">
-          {/* Input Cepat — satu-satunya jalur input dari HP, jalan di iPhone & Android. */}
-          <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[48px] border border-slate-50 shadow-sm space-y-5">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
-                <Smartphone size={18} />
-              </div>
-              <div>
-                <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight leading-tight">Input Cepat</h2>
-                <p className="text-[10px] font-bold text-slate-400 mt-0.5">Catat transaksi dari HP — iPhone &amp; Android</p>
-              </div>
-            </div>
-
-            <a
-              href="/input-cepat"
-              className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-700 p-4 text-white shadow-lg shadow-indigo-200 transition-all hover:-translate-y-0.5"
-            >
-              <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-                <Smartphone size={16} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-black tracking-tight">Buka Input Cepat</p>
-                <p className="text-[10px] font-medium text-white/70 mt-0.5">Tambahkan ke layar utama biar tinggal tap</p>
-              </div>
-              <ChevronRight size={16} className="text-white/70 shrink-0" />
-            </a>
-          </div>
-
-          {/* Danger Zone */}
-          <div className="bg-rose-50 p-5 md:p-8 rounded-[20px] md:rounded-[48px] border border-rose-100 shadow-sm space-y-6 md:space-y-8 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-8 text-rose-600/5 group-hover:text-rose-600/10 transition-colors hidden md:block">
-              <AlertTriangle size={120} />
-            </div>
-            <div className="flex items-center gap-3 relative z-10">
-              <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600 shrink-0">
-                <AlertTriangle size={18} />
-              </div>
-              <h2 className="text-lg md:text-xl font-black text-rose-700 tracking-tight">Danger Zone</h2>
-            </div>
-            <p className="text-xs font-medium text-rose-600/80 leading-relaxed relative z-10">
-              Menghapus permanen semua transaksi, rekening, budget, investasi, tabungan, kategori, mata uang, jadwal recurring, dan riwayat chat AI Anda. Akun (login, plan, riwayat pembayaran) tidak terhapus.
-            </p>
-            <button
-              onClick={() => setShowResetModal(true)}
-              className="relative z-10 w-full flex items-center justify-center gap-2 py-3.5 md:py-4 rounded-xl md:rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black tracking-wide transition-all shadow-xl shadow-rose-200"
-            >
-              <Trash2 size={14} />
-              Reset Semua Data
-            </button>
-          </div>
-          </div>
+            </>
           )}
         </div>
       </div>
@@ -1147,3 +1063,97 @@ export default function ProfilePage() {
   );
 }
 
+const inputClass =
+  'w-full bg-slate-50/70 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-3.5 pl-12 pr-4 text-sm font-bold text-slate-700 transition-all';
+const primaryButton =
+  'px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-black transition-colors whitespace-nowrap';
+const secondaryButton =
+  'px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-black transition-colors whitespace-nowrap';
+
+function SettingCard({ icon: Icon, title, desc, children }: { icon: LucideIcon; title: string; desc: string; children: React.ReactNode }) {
+  return (
+    <section className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[32px] border border-slate-100 shadow-sm space-y-5">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+          <Icon size={18} />
+        </div>
+        <div className="min-w-0">
+          <h2 className="text-base md:text-lg font-black text-slate-900 tracking-tight leading-tight">{title}</h2>
+          <p className="text-[11px] font-medium text-slate-400 mt-0.5">{desc}</p>
+        </div>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function SettingRow({
+  icon: Icon,
+  title,
+  desc,
+  badge,
+  action,
+  children,
+}: {
+  icon: LucideIcon;
+  title: string;
+  desc: string;
+  badge?: { text: string; tone: 'good' | 'warn' };
+  action: React.ReactNode;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="py-4 first:pt-0 last:pb-0 space-y-3">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-start gap-3 min-w-0">
+          <Icon size={16} className="text-slate-400 shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-[13px] font-black text-slate-900">{title}</p>
+              {badge && (
+                <span
+                  className={cn(
+                    'px-2 py-0.5 text-[9px] font-black rounded-full uppercase tracking-widest',
+                    badge.tone === 'good' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                  )}
+                >
+                  {badge.text}
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] font-medium text-slate-400 mt-0.5 leading-relaxed">{desc}</p>
+          </div>
+        </div>
+        <div className="shrink-0">{action}</div>
+      </div>
+      {children && <div className="pl-7 space-y-2">{children}</div>}
+    </div>
+  );
+}
+
+function Field({ label, icon: Icon, hint, iconTop, children }: { label: string; icon: LucideIcon; hint?: string; iconTop?: boolean; children: React.ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 block">{label}</label>
+      <div className="relative group">
+        <Icon size={16} className={cn('absolute left-4 text-slate-300 group-focus-within:text-indigo-600 transition-colors', iconTop ? 'top-4' : 'top-1/2 -translate-y-1/2')} />
+        {children}
+      </div>
+      {hint && <p className="text-[10px] font-medium text-slate-400 pl-1">{hint}</p>}
+    </div>
+  );
+}
+
+function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={on}
+      className={cn('w-11 h-6 rounded-full relative transition-colors', on ? 'bg-indigo-600' : 'bg-slate-200')}
+    >
+      <span className={cn('w-4 h-4 bg-white rounded-full absolute top-1 transition-all shadow-sm', on ? 'right-1' : 'left-1')} />
+    </button>
+  );
+}

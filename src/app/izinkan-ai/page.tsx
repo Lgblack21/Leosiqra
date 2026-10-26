@@ -159,7 +159,7 @@ export default function IzinkanAiPage() {
             </ul>
 
             <p className="text-[11px] font-medium text-slate-400 leading-relaxed">
-              Data yang dibaca AI dikirim ke penyedia aplikasi tersebut. Koneksi bisa diputus kapan saja di Profil → Keamanan →
+              Data yang dibaca AI dikirim ke penyedia aplikasi tersebut. Koneksi bisa diputus kapan saja di Profil →
               Hubungkan ke AI, dan otomatis terputus saat password diganti/direset.
             </p>
 
