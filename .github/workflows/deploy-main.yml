@@ -7,6 +7,9 @@
 # jadi aman kalau terjalankan ulang. Tambah nama file ke ALLOWED hanya untuk migrasi
 # yang sudah di-review & memang additive.
 #
+# Catatan: input kosong di workflow_dispatch diganti nilai default oleh GitHub,
+# jadi default migrasi HARUS kosong (run #1 2026-10-26 gagal karena ini).
+#
 # Secrets (sama dengan publish-article.yml):
 #   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID — deploy Worker; migrasi butuh izin tambahan D1:Edit
 #   PROMO_SECRET                                — lapor ke Telegram lewat Worker
@@ -19,9 +22,9 @@ on:
         description: 'Ketik "gas" untuk deploy main ke produksi'
         required: true
       migrasi:
-        description: "Migrasi D1 yang dijalankan sebelum deploy (pisahkan spasi; kosongkan kalau tidak ada)"
+        description: "Migrasi D1 sebelum deploy, mis. 0010_mcp.sql (pisahkan spasi; kosong = tanpa migrasi). Token GitHub saat ini belum punya izin D1 — jalankan migrasi lewat Console D1 di dashboard."
         required: false
-        default: "0010_mcp.sql 0011_mcp_oauth.sql"
+        default: ""
 
 permissions:
   contents: read
