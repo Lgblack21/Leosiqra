@@ -1,13 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Bot, Check, Copy, KeyRound, Loader2, Plus, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { BookOpen, Bot, Check, Copy, KeyRound, Loader2, Plus, Trash2 } from 'lucide-react';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { cn } from '@/lib/utils';
 
 // Hubungkan akun ke AI agent — Leosiqra MCP (docs/rancangan/mcp.md): token
 // manual untuk Claude Code & klien MCP lain (tahap 1+2), dan koneksi login
 // OAuth dari claude.ai & ChatGPT (tahap 3) yang tampil di daftar yang sama.
+// Dipakai di Profil web & /app/profile (HP) — kelas dark: hanya aktif di AppShell.
 
 const MCP_URL = 'https://www.leosiqra.com/mcp';
 
@@ -119,14 +121,14 @@ export function McpConnectCard() {
     : '';
 
   return (
-    <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[48px] border border-slate-50 shadow-sm space-y-5">
+    <div className="bg-white dark:bg-slate-900 p-5 md:p-8 rounded-[20px] md:rounded-[48px] border border-slate-50 dark:border-slate-800 shadow-sm space-y-5">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 shrink-0">
             <Bot size={18} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight leading-tight">Hubungkan ke AI</h2>
+            <h2 className="text-lg md:text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">Hubungkan ke AI</h2>
             <p className="text-[10px] font-bold text-slate-400 mt-0.5">Tanya &amp; catat keuangan dari Claude, ChatGPT &amp; klien MCP lain</p>
           </div>
         </div>
@@ -140,25 +142,31 @@ export function McpConnectCard() {
         )}
       </div>
 
-      <p className="text-[11px] font-medium text-slate-500 leading-relaxed">
+      <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
         Data yang dibaca AI dikirim ke penyedia AI pilihan Anda. Token bisa dicabut kapan saja dan otomatis dicabut saat
         password diganti/direset.
       </p>
-      <p className="text-[11px] font-medium text-slate-500 leading-relaxed">
-        <b>claude.ai / ChatGPT:</b> tambahkan custom connector dengan URL <code className="text-slate-700">{MCP_URL}</code>, lalu
+      <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
+        <b>claude.ai / ChatGPT:</b> tambahkan custom connector dengan URL <code className="text-slate-700 dark:text-slate-200 break-all">{MCP_URL}</code>, lalu
         login Leosiqra &amp; pilih Izinkan — tidak perlu token. Token di bawah untuk Claude Code &amp; klien yang memakai header.
       </p>
+      <Link
+        href="/panduan/mcp"
+        className="inline-flex items-center gap-1.5 text-[11px] font-black text-indigo-600 dark:text-indigo-400 hover:underline"
+      >
+        <BookOpen size={13} /> Panduan langkah demi langkah
+      </Link>
 
       {error && <p className="text-[11px] font-bold text-rose-500">{error}</p>}
 
       {showForm && (
-        <div className="p-4 bg-slate-50 rounded-2xl space-y-3">
+        <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl space-y-3">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={60}
             placeholder='Nama token, mis. "Claude di laptop"'
-            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[11px] font-bold text-slate-500 shrink-0">Berlaku</span>
@@ -168,14 +176,14 @@ export function McpConnectCard() {
                 onClick={() => setDays(d)}
                 className={cn(
                   'px-2.5 py-1.5 rounded-lg text-[11px] font-black transition-colors whitespace-nowrap',
-                  days === d ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500 border border-slate-200'
+                  days === d ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
                 )}
               >
                 {d} hari
               </button>
             ))}
           </div>
-          <label className={cn('flex items-start gap-2 text-[11px] font-medium', canWrite ? 'text-slate-600' : 'text-slate-400')}>
+          <label className={cn('flex items-start gap-2 text-[11px] font-medium', canWrite ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400')}>
             <input
               type="checkbox"
               checked={canWrite && write}
@@ -204,7 +212,7 @@ export function McpConnectCard() {
       )}
 
       {newToken && (
-        <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl space-y-3">
+        <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-2xl space-y-3">
           <p className="text-[11px] font-black text-emerald-800">
             Salin token sekarang — token ini hanya ditampilkan sekali.
           </p>
@@ -216,13 +224,13 @@ export function McpConnectCard() {
             <div key={row.label}>
               <p className="text-[10px] font-bold text-emerald-700 mb-1">{row.title}</p>
               <div className="flex items-start gap-2">
-                <code className="flex-1 min-w-0 break-all text-[11px] bg-white px-2.5 py-2 rounded-lg border border-emerald-100 text-slate-800">
+                <code className="flex-1 min-w-0 break-all text-[11px] bg-white dark:bg-slate-900 px-2.5 py-2 rounded-lg border border-emerald-100 dark:border-emerald-500/20 text-slate-800 dark:text-slate-200">
                   {row.value}
                 </code>
                 <button
                   onClick={() => copy(row.label, row.value)}
                   aria-label={`Salin ${row.title}`}
-                  className="p-2 rounded-lg bg-white border border-emerald-100 text-emerald-700 shrink-0"
+                  className="p-2 rounded-lg bg-white dark:bg-slate-900 border border-emerald-100 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 shrink-0"
                 >
                   {copied === row.label ? <Check size={14} /> : <Copy size={14} />}
                 </button>
@@ -242,10 +250,10 @@ export function McpConnectCard() {
       ) : (
         <div className="space-y-3">
           {tokens.map((t) => (
-            <div key={t.id} className="flex items-center justify-between gap-3 p-4 bg-slate-50 rounded-2xl">
+            <div key={t.id} className="flex items-center justify-between gap-3 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-xs font-black text-slate-900 truncate">{t.name}</p>
+                  <p className="text-xs font-black text-slate-900 dark:text-white truncate">{t.name}</p>
                   {t.source === 'oauth' ? (
                     <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[9px] font-black rounded-full shrink-0">Login AI</span>
                   ) : (
@@ -269,7 +277,7 @@ export function McpConnectCard() {
                 onClick={() => handleRevoke(t.id)}
                 disabled={revokingId === t.id}
                 title={t.source === 'oauth' ? 'Putuskan koneksi' : 'Cabut token'}
-                className="p-2 rounded-lg bg-white text-slate-400 hover:bg-rose-500 hover:text-white transition-all shrink-0 disabled:opacity-50"
+                className="p-2 rounded-lg bg-white dark:bg-slate-900 text-slate-400 hover:bg-rose-500 hover:text-white transition-all shrink-0 disabled:opacity-50"
               >
                 {revokingId === t.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
               </button>
@@ -284,7 +292,7 @@ export function McpConnectCard() {
           <ul className="space-y-1.5">
             {activity.slice(0, 8).map((a, i) => (
               <li key={`${a.createdAt}-${i}`} className="flex items-center justify-between gap-3 text-[11px]">
-                <span className={cn('font-bold truncate', a.ok ? 'text-slate-700' : 'text-rose-500')}>
+                <span className={cn('font-bold truncate', a.ok ? 'text-slate-700 dark:text-slate-300' : 'text-rose-500')}>
                   {a.tool}
                   {a.summary ? <span className="font-medium text-slate-400"> · {a.summary}</span> : null}
                 </span>

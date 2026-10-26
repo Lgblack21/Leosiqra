@@ -10,6 +10,7 @@ import { subscribeUserProfile, UserProfile } from "@/lib/services/userService";
 import { FadeIn } from "@/components/app/FadeIn";
 import { useTheme, ThemeMode } from "@/context/ThemeContext";
 import { lightTap } from "@/lib/haptics";
+import { McpConnectCard } from "@/components/profile/McpConnectCard";
 
 const THEME_OPTIONS: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
   { value: "light", label: "Terang", icon: Sun },
@@ -153,6 +154,11 @@ export default function ProfilePage() {
             {reportError && <p className="text-[11px] font-bold text-rose-500 mt-2">{reportError}</p>}
           </div>
         )}
+      </FadeIn>
+
+      <FadeIn delay={0.08}>
+        <h2 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1 mb-2">AI agent</h2>
+        <McpConnectCard />
       </FadeIn>
 
       <FadeIn delay={0.1}>

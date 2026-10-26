@@ -1,7 +1,8 @@
 # Rancangan keamanan — Leosiqra MCP (sambungkan akun ke Claude/ChatGPT)
 
 Status: **Tahap 1+2 SUDAH DIKODE (2026-10-24), tahap 3 (OAuth) SUDAH DIKODE
-(2026-10-25), tahap 4 (panduan) belum.** Keputusan Bos 2026-10-23: OAuth 2.1 + PKCE ikut (tahap 3), DCR terbuka
+(2026-10-25), tahap 4 SUDAH DIKODE (2026-10-26): panduan `/panduan/mcp`, kartu
+"Hubungkan ke AI" di `/app/profile` (HP), poin MCP di `/privacy`.** Keputusan Bos 2026-10-23: OAuth 2.1 + PKCE ikut (tahap 3), DCR terbuka
 dengan rate limit + domain ditampilkan, baca untuk semua member & tulis khusus
 PRO, token manual 30/90/365 hari, URL `www.leosiqra.com/mcp`, tool tulis v1
 hanya `add_transaction` + `set_budget`.
