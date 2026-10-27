@@ -55,16 +55,15 @@ Perbarui file ini di akhir setiap audit.
 - ⚪ `npm audit`: 9 paket (1 critical di Next.js = middleware bypass) — semua build-time/native, tidak dipakai runtime (static export, Worker tidak memakainya). Update Next.js terpisah.
 - 🟡 `npm audit` 2026-10-23: Next.js ≤16.4.0 kena GHSA-2464-fhr4-w9xw (RCE Image Optimization + SVG), GHSA-673q-mjm6-r5xr (RCE `use cache`), GHSA-p3m5-59mp-jv5r (DoS Server Actions). Produksi tidak terpapar (static export, `images.unoptimized`, tanpa Server Actions/`use cache`) — tetap di-bump ke 16.4.2 di branch `claude/friendly-galileo-71c4q8`, menunggu merge Bos. Sisa: 3 moderate (uuid lewat @capacitor/cli, build-time).
 
-- 🟠 (2026-10-27) Kotak Masuk menganggap SEMUA balikan 422 dari `aiExtractTransaction` sebagai "bukan transaksi", padahal 422 juga dipakai untuk AI belum dikonfigurasi & OpenRouter gagal (5xx/429/timeout, tanpa log). Saat AI gangguan, email Gmail ditandai BUKAN permanen dan pesan Slack dilewati (lastTs maju) — usulan hilang. Usulan perbaikan: `code: "ai_unavailable"` di dua kasus itu + `console.error`, inbox hanya menandai BUKAN untuk 422 tanpa kode itu.
-- 🟡 (2026-10-27) Bonus streak koin memakai `idem_key` `streak:<YYYY-MM>` — UNIQUE global, jadi hanya satu user per bulan di seluruh Leosiqra yang bisa dapat streak. Usulan: `streak:<userId>:<YYYY-MM>`.
-- ⚪ (2026-10-27) Tukar PRO pakai koin men-set `status = 'AKTIF'` juga untuk akun GUEST/PENDING (melewati verifikasi manual admin) — dianggap setara bayar PRO; konfirmasi ke Bos apakah memang diinginkan.
-
 ## Sudah diperbaiki
 
 - 🟡 (2026-10-06) PUT `/api/promo/history` menimpa rating/catatan yang masuk lewat webhook selama render → sekarang digabung per `id` (`handlePromoHistory`).
 
 | Tanggal | Temuan | Perbaikan |
 |---|---|---|
+| 2026-10-27 | 🟠 Kotak Masuk menganggap semua 422 dari `aiExtractTransaction` = "bukan transaksi", termasuk AI belum dikonfigurasi & OpenRouter gagal (tanpa log) → saat AI gangguan email ditandai BUKAN permanen & pesan Slack dilewati | dua kasus itu `code: "ai_unavailable"` + `console.error`; Gmail & Slack memakai `aiSaysNotTransaction` (422 tanpa kode itu saja) → selain itu berhenti & dicoba lagi. Pesan ke user jujur ("AI sedang gangguan"). Diuji lokal dengan kunci OpenRouter palsu: 401 → `ai_unavailable` + log |
+| 2026-10-27 | 🟡 Bonus streak `idem_key` `streak:<YYYY-MM>` UNIQUE global → hanya 1 user per bulan se-Leosiqra yang dapat | `streak:<userId>:<YYYY-MM>`. Diuji lokal: 2 user dengan 30 hari berturut-turut → masing-masing +50 |
+| 2026-10-27 | ⚪ Tukar PRO: cek NONAKTIF hanya sebelum batch | cek `status <> 'NONAKTIF'` dipindah ke dalam `INSERT … SELECT` potongan koin (atomik). GUEST (trial/PRO habis) & PENDING tetap boleh tukar — disengaja (koin = bayar). Diuji: 3 request paralel → 1×200 + 2×409, saldo 0, masa PRO +1 bulan sekali |
 | 2026-10-12 | 🟡 Filter kode workflow `publish-article` case-sensitive (`<Script>`, `import()`, `require()` lolos) + `npm run build` berjalan dengan token GitHub tersimpan | `grep -iE` (+ `</?script`, `next/script`, `import(`, `require(`, `localStorage`…), import hanya allowlist (`next`, `next/link`, `lucide-react`, GuideLayout), `persist-credentials: false`, token eksplisit hanya di langkah merge. Diuji ke 6 artikel CEO (lolos) & contoh jahat (ditolak) |
 | 2026-10-12 | 🟡 JSON-LD FAQ (`GuideLayout`) bisa ditembus `</script>` dari teks FAQ artikel | `JSON.stringify(...).replace(/</g,'\\u003c')` di GuideLayout & layout |
 | 2026-10-12 | 🟡 PBKDF2 100.000 iterasi (batas Workers) di bawah saran OWASP | Pepper rahasia `PASSWORD_PEPPER` (secret Worker, bukan di D1): hash baru `pbkdf2p$…`, hash lama di-upgrade saat login; bandingkan hash `constantTimeEqual`; email tak terdaftar tetap menjalankan PBKDF2 (anti-enumerasi lewat waktu). Diuji lokal: register/login/upgrade/salah password |

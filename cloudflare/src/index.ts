@@ -6889,7 +6889,7 @@ const settleCoins = async (env: Env, userId: string) => {
     .bind(userId)
     .first<{ d: number }>();
   if ((Number(streak?.d) || 0) >= 30) {
-    await grantCoins(env, userId, COIN_RULES.streak, "streak", `streak:${nowIso().slice(0, 7)}`, "Mencatat 30 hari berturut-turut");
+    await grantCoins(env, userId, COIN_RULES.streak, "streak", `streak:${userId}:${nowIso().slice(0, 7)}`, "Mencatat 30 hari berturut-turut");
   }
 };
 
@@ -7040,8 +7040,9 @@ async function handleRedeemCoinsForPro(request: Request, env: Env) {
     env.DB.prepare(
       `INSERT INTO coin_ledger (id, user_id, amount, kind, cashable, idem_key, note, created_at)
        SELECT ?, ?, ?, 'redeem_pro', 0, ?, ?, ?
-        WHERE (SELECT COALESCE(SUM(amount), 0) FROM coin_ledger WHERE user_id = ?) >= ?`
-    ).bind(generateId(), userId, -cost, key, `Tukar PRO ${months} bulan`, now, userId, cost),
+        WHERE (SELECT COALESCE(SUM(amount), 0) FROM coin_ledger WHERE user_id = ?) >= ?
+          AND EXISTS (SELECT 1 FROM users WHERE id = ? AND COALESCE(status, '') <> 'NONAKTIF')`
+    ).bind(generateId(), userId, -cost, key, `Tukar PRO ${months} bulan`, now, userId, cost, userId),
     // Perpanjang dari tanggal habis kalau masih aktif, dihitung di SQL supaya
     // dua penukaran bersamaan tetap menambah dua kali.
     env.DB.prepare(
@@ -7712,11 +7713,13 @@ async function handleTranscribe(request: Request, env: Env) {
 // dan Kotak Masuk Gmail). Kategori & rekening hanya yang benar-benar milik
 // user; gagal → { ok: false, status, body } yang siap dikirim apa adanya.
 const aiFail = (body: Record<string, unknown>, status: number) => ({ ok: false as const, body, status });
+// 422 dari aiExtractTransaction = "bukan transaksi", KECUALI bertanda ai_unavailable.
+const aiSaysNotTransaction = (ai: { status: number; body: Record<string, unknown> }) => ai.status === 422 && ai.body.code !== "ai_unavailable";
 async function aiExtractTransaction(env: Env, userId: string, input: { text?: string; imageBase64?: string }) {
   const hasImage = typeof input.imageBase64 === "string" && input.imageBase64.trim().length > 0;
   const openRouter = await getOpenRouterKey(env);
   if (!openRouter) {
-    return aiFail({ ok: false, error: "AI belum dikonfigurasi." }, 422);
+    return aiFail({ ok: false, error: "AI belum dikonfigurasi.", code: "ai_unavailable" }, 422);
   }
 
   const categoryRows = await env.DB.prepare(
@@ -7799,13 +7802,10 @@ ${JSON.stringify(userAccounts.map((a) => ({ name: a.name, type: a.type, currency
       await notifyAiQuotaOnce(env);
       return aiFail({ ok: false, error: AI_QUOTA_MESSAGE, code: "ai_quota" }, 503);
     }
-    return aiFail(
-      {
-        ok: false,
-        error: "AI tidak bisa membaca data transaksi dari input ini. Coba foto/ucapan yang lebih jelas, atau isi manual.",
-      },
-      422
-    );
+    // Gangguan OpenRouter (5xx/429/jaringan) — bukan berarti inputnya bukan
+    // transaksi. Kotak Masuk memakai `code` ini untuk mencoba lagi nanti.
+    console.error("AI ekstrak transaksi gagal:", error instanceof Error ? error.message : error);
+    return aiFail({ ok: false, error: "AI sedang gangguan. Coba lagi sebentar lagi, atau isi manual.", code: "ai_unavailable" }, 422);
   }
 
   let parsed: Record<string, unknown>;
@@ -9026,7 +9026,7 @@ const processGmailInbox = async (env: Env, client: InstanceType<typeof Composio>
       if (ai.ok) {
         stats.suggested++;
         await insert("BARU", ai.suggestion);
-      } else if (ai.status === 422) {
+      } else if (aiSaysNotTransaction(ai)) {
         stats.notTransaction++;
         await insert("BUKAN", null);
       } else {
@@ -9164,7 +9164,7 @@ const processSlackInbox = async (env: Env, client: InstanceType<typeof Composio>
       stats.suggested++;
       await insert("BARU", ai.suggestion);
       await session.execute("SLACK_ADD_REACTION_TO_AN_ITEM", { channel: state.channelId, timestamp: m.ts, name: "white_check_mark" }).catch(() => undefined);
-    } else if (ai.status === 422) {
+    } else if (aiSaysNotTransaction(ai)) {
       stats.notTransaction++;
       await insert("BUKAN", null);
     } else {
