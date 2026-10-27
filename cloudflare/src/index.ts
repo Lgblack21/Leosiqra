@@ -78,6 +78,7 @@ type AppUser = {
   // dipakai iklan "pasang aplikasi" supaya tidak tampil ke yang sudah pasang.
   appsOpened?: { leosiqra?: string; inputCepat?: string };
   photoURL?: string | null;
+  avatar?: AvatarPrefs | null;
   // false untuk akun Google (password_hash cuma sentinel 'oauth$google', bukan
   // password asli) — dipakai frontend untuk skip verifikasi "password saat
   // ini" di Ganti Password / Reset Data, karena memang tidak pernah ada.
@@ -469,6 +470,31 @@ const createSession = async (env: Env, request: Request, user: AppUser, options:
   };
 };
 
+// Avatar profil: "leo" = singa Leosiqra bergaya (bulu/aksesori/latar), atau
+// "photo" = foto yang diunggah (photo_url). Disimpan di $.prefs.avatar.
+const AVATAR_FURS = ["kuning", "oranye", "coklat", "abu", "hitam", "putih"] as const;
+const AVATAR_ACCS = ["none", "topi", "kupluk", "kacamata", "kacamata_hitam", "headphone", "pita", "bunga"] as const;
+const AVATAR_BGS = ["krem", "peach", "kuning", "mint", "biru", "ungu", "pink", "navy"] as const;
+type AvatarPrefs = { mode: "leo" | "photo"; fur: string; acc: string; bg: string };
+const sanitizeAvatar = (raw: unknown): AvatarPrefs | null => {
+  const a = raw as { mode?: unknown; fur?: unknown; acc?: unknown; bg?: unknown } | null;
+  if (!a || typeof a !== "object") return null;
+  if (a.mode !== "leo" && a.mode !== "photo") return null;
+  if (typeof a.fur !== "string" || !(AVATAR_FURS as readonly string[]).includes(a.fur)) return null;
+  if (typeof a.acc !== "string" || !(AVATAR_ACCS as readonly string[]).includes(a.acc)) return null;
+  if (typeof a.bg !== "string" || !(AVATAR_BGS as readonly string[]).includes(a.bg)) return null;
+  return { mode: a.mode, fur: a.fur, acc: a.acc, bg: a.bg };
+};
+const readAvatar = (metadataJson: string | null | undefined): AvatarPrefs | null => {
+  if (!metadataJson) return null;
+  try {
+    const m = JSON.parse(metadataJson) as { prefs?: { avatar?: unknown } };
+    return sanitizeAvatar(m.prefs?.avatar);
+  } catch {
+    return null;
+  }
+};
+
 const readAppsOpened = (metadataJson: string | null | undefined) => {
   if (!metadataJson) return {};
   try {
@@ -579,6 +605,7 @@ const readSession = async (env: Env, request: Request) => {
       twoFactorEnabled: Boolean(result.two_factor_secret),
       appsOpened: readAppsOpened(result.metadata_json),
       photoURL: result.photo_url ?? null,
+      avatar: readAvatar(result.metadata_json),
       hasPassword: !result.password_hash?.startsWith("oauth$"),
       onboarded: result.currency_initialized === 1,
       // Untuk panel Pengaturan: masa aktif paket & "memakai Leosiqra sejak".
@@ -8932,8 +8959,9 @@ type UserPrefs = {
   inputMode: string | null;
   reminder: { on: boolean; time: string };
   categoryStyles: Record<string, CategoryStyle>;
+  avatar: AvatarPrefs | null;
 };
-const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" }, categoryStyles: {} };
+const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" }, categoryStyles: {}, avatar: null };
 const sanitizeCategoryStyles = (raw: unknown): Record<string, CategoryStyle> => {
   const out: Record<string, CategoryStyle> = {};
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
@@ -8967,12 +8995,14 @@ const readUserPrefs = async (env: Env, userId: string): Promise<UserPrefs> => {
       time: typeof raw.reminder?.time === "string" && PREF_TIME_RE.test(raw.reminder.time) ? raw.reminder.time : DEFAULT_PREFS.reminder.time,
     },
     categoryStyles: sanitizeCategoryStyles(raw.categoryStyles),
+    avatar: sanitizeAvatar(raw.avatar),
   };
 };
 
 // GET  /api/member/preferences
 // PUT  /api/member/preferences  { goals?, inputMode?, reminder?: { on, time },
-//        categoryStyle?: { name, emoji, color } | { name, remove: true } } — field yang dikirim saja yang diubah
+//        categoryStyle?: { name, emoji, color } | { name, remove: true },
+//        avatar?: { mode: "leo"|"photo", fur, acc, bg } } — field yang dikirim saja yang diubah
 async function handleUserPreferences(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -8980,7 +9010,7 @@ async function handleUserPreferences(request: Request, env: Env) {
   const current = await readUserPrefs(env, userId);
   if (request.method === "GET") return json({ item: current });
 
-  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown; categoryStyle?: unknown }>(request);
+  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown; categoryStyle?: unknown; avatar?: unknown }>(request);
   const next: UserPrefs = { ...current, reminder: { ...current.reminder }, categoryStyles: { ...current.categoryStyles } };
   if (payload.goals !== undefined) {
     if (!Array.isArray(payload.goals) || payload.goals.length > PREF_GOALS.length || payload.goals.some((g) => !(PREF_GOALS as readonly unknown[]).includes(g))) {
@@ -9019,13 +9049,19 @@ async function handleUserPreferences(request: Request, env: Env) {
       next.categoryStyles[name] = { emoji: c.emoji, color: c.color };
     }
   }
+  if (payload.avatar !== undefined) {
+    const avatar = sanitizeAvatar(payload.avatar);
+    if (!avatar) return json({ error: "Pilihan avatar tidak valid." }, { status: 400 });
+    next.avatar = avatar;
+  }
   await env.DB.prepare(
     `UPDATE users
         SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END,
-              '$.prefs.goals', json(?), '$.prefs.inputMode', ?, '$.prefs.reminder', json(?), '$.prefs.categoryStyles', json(?))
+              '$.prefs.goals', json(?), '$.prefs.inputMode', ?, '$.prefs.reminder', json(?), '$.prefs.categoryStyles', json(?),
+              '$.prefs.avatar', json(?))
       WHERE id = ?`
   )
-    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), JSON.stringify(next.categoryStyles), userId)
+    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), JSON.stringify(next.categoryStyles), JSON.stringify(next.avatar), userId)
     .run();
   return json({ ok: true, item: next });
 }

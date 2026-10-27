@@ -11,6 +11,8 @@ import { cloudflareApi } from '@/lib/cloudflare-api';
 import { keuanganNav, fiturNav, navGroups, SEMUA_FITUR_HREF, type NavItem } from '@/lib/navigation';
 import { useFeedback } from '@/components/ui/Feedback';
 import { useModal } from '@/context/ModalContext';
+import { UserAvatar, type AvatarConfig } from '@/components/profile/LeoAvatar';
+import { PROFILE_UPDATED_EVENT } from '@/components/settings/ProfileEditView';
 
 // Menu samping /membership. Tiga ukuran:
 // - HP (< md): laci yang dibuka dari tombol menu di Header.
@@ -33,6 +35,7 @@ type Profile = {
   status: 'AKTIF' | 'NONAKTIF' | 'GUEST' | 'PENDING';
   photoURL?: string | null;
   expiredAt?: string | null;
+  avatar?: AvatarConfig | null;
 };
 
 const FEATURE_COUNT = navGroups.reduce((s, g) => s + g.items.length, 0);
@@ -47,9 +50,14 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
   const [isRequesting, setIsRequesting] = useState(false);
 
   useEffect(() => {
-    cloudflareApi<{ user?: Profile | null }>('/api/auth/me')
-      .then((result) => setProfile(result.user ?? null))
-      .catch(() => setProfile(null));
+    const load = () =>
+      cloudflareApi<{ user?: Profile | null }>('/api/auth/me')
+        .then((result) => setProfile(result.user ?? null))
+        .catch(() => setProfile(null));
+    load();
+    // Profil diubah di panel Pengaturan → muat ulang nama & avatar.
+    window.addEventListener(PROFILE_UPDATED_EVENT, load);
+    return () => window.removeEventListener(PROFILE_UPDATED_EVENT, load);
   }, []);
 
   // Pintasan keyboard "N" = tambah transaksi (selama tidak sedang mengetik
@@ -67,7 +75,6 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
   }, [activeModal, openModal]);
 
   const closeOnMobile = () => { if (window.innerWidth < 768) onClose?.(); };
-  const getInitials = (name: string) => name.split(' ').map((n) => n[0]).join('').toUpperCase().substring(0, 2);
 
   const handleRequestPro = async () => {
     if (!profile?.id) return;
@@ -235,9 +242,11 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
           title="Profil & pengaturan"
           className="flex w-full items-center gap-3 rounded-xl px-1.5 py-1 text-left transition-colors hover:bg-slate-50 md:max-lg:justify-center md:max-lg:px-0"
         >
-          <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-[12px] font-bold text-white">
-            {profile?.photoURL ? <Image src={profile.photoURL} alt={profile.name} fill unoptimized className="object-cover" /> : profile ? getInitials(profile.name) : '··'}
-          </span>
+          {profile ? (
+            <UserAvatar avatar={profile.avatar} photoURL={profile.photoURL} name={profile.name} size={36} />
+          ) : (
+            <span className="h-9 w-9 shrink-0 rounded-full bg-slate-100" />
+          )}
           <span className={cn('flex min-w-0 flex-1 flex-col', fullOnly)}>
             <span className="truncate text-[14px] font-semibold text-slate-900">{profile?.name || 'Memuat…'}</span>
             <span className={cn('truncate text-[12px] font-medium', profile?.plan === 'PRO' ? 'text-violet-600' : 'text-slate-400')}>

@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import {
@@ -43,6 +42,8 @@ import { getMemberPaymentInfo, type ProPackage } from '@/lib/services/adminServi
 import { LeoMascot } from '@/components/mascot/LeoMascot';
 import { useModal } from '@/context/ModalContext';
 import { KategoriSection, MataUangView } from '@/components/settings/CategoryBudgetViews';
+import { ProfileEditView } from '@/components/settings/ProfileEditView';
+import { UserAvatar, type AvatarConfig } from '@/components/profile/LeoAvatar';
 
 // Panel Pengaturan (dibuka dari ikon roda gigi / profil di menu samping,
 // atau avatar di header HP). Tiga tampilan: menu utama, Profil, dan Paket
@@ -58,10 +59,11 @@ export interface PanelUser {
   photoURL?: string | null;
   expiredAt?: string | null;
   memberSince?: string | null;
+  avatar?: AvatarConfig | null;
 }
 
-export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang';
-const PARENT: Partial<Record<View, View>> = { 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum' };
+export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil';
+const PARENT: Partial<Record<View, View>> = { 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum' };
 
 const FEATURE_COUNT = navGroups.reduce((s, g) => s + g.items.length, 0);
 const STATUS_LABEL: Record<PanelUser['status'], string> = {
@@ -71,7 +73,6 @@ const STATUS_LABEL: Record<PanelUser['status'], string> = {
   NONAKTIF: 'Nonaktif',
 };
 
-const initials = (name: string) => name.split(' ').map((n) => n[0]).join('').toUpperCase().substring(0, 2);
 const daysSince = (iso?: string | null) => {
   if (!iso) return null;
   const t = new Date(iso.includes('T') ? iso : iso.replace(' ', 'T') + 'Z').getTime();
@@ -89,12 +90,7 @@ const dateLong = (iso?: string | null) => {
 };
 
 const Avatar = ({ user, size = 56 }: { user: PanelUser | null; size?: number }) => (
-  <span
-    className="relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 font-bold text-white"
-    style={{ width: size, height: size, fontSize: size * 0.32 }}
-  >
-    {user?.photoURL ? <Image src={user.photoURL} alt={user.name} fill unoptimized className="object-cover" /> : user ? initials(user.name) : '··'}
-  </span>
+  <UserAvatar avatar={user?.avatar} photoURL={user?.photoURL} name={user?.name} size={size} />
 );
 
 const Row = ({ icon: Icon, title, desc, href, onClick, value }: { icon?: React.ElementType; title: string; desc?: string; href?: string; onClick?: () => void; value?: string }) => {
@@ -358,6 +354,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
     'kategori-detail': 'Kategori',
     'kategori-baru': 'Tambah kategori',
     'mata-uang': 'Mata uang',
+    'ubah-profil': 'Ubah profil',
   };
   const { openModal } = useModal();
   const title = TITLES[view];
@@ -455,7 +452,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                         <span className="block truncate text-[18px] font-semibold text-slate-900">{user?.name ?? '—'}</span>
                         <span className="block truncate text-[14px] text-slate-500">{user?.email ?? ''}</span>
                       </span>
-                      <button type="button" onClick={go('/membership/profile?tab=akun')} className="shrink-0 rounded-full bg-white px-4 py-2 text-[14px] font-semibold text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100">
+                      <button type="button" onClick={() => setView('ubah-profil')} className="shrink-0 rounded-full bg-white px-4 py-2 text-[14px] font-semibold text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100">
                         Ubah profil
                       </button>
                     </div>
@@ -537,6 +534,18 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
               )}
 
               {(view === 'kategori' || view === 'kategori-detail' || view === 'kategori-baru') && <KategoriSection view={view} go={setView} />}
+
+              {view === 'ubah-profil' && user && (
+                <ProfileEditView
+                  initialName={user.name}
+                  initialPhoto={user.photoURL ?? null}
+                  initialAvatar={user.avatar ?? null}
+                  onSaved={() => {
+                    cloudflareApi<{ user?: PanelUser | null }>('/api/auth/me').then((r) => setUser(r.user ?? null)).catch(() => undefined);
+                    setView('profil');
+                  }}
+                />
+              )}
 
               {view === 'mata-uang' && <MataUangView onAdd={() => { onClose(); openModal('currency'); }} />}
 
