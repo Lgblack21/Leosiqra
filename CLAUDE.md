@@ -15,7 +15,7 @@ replace reading the code.
 
 - **Stack**: Next.js 16 (App Router, static export via `output: "export"`), React 19,
   TypeScript, Tailwind v4 (CSS-based config, no `tailwind.config.js`). Backend is a
-  single large Cloudflare Worker (`cloudflare/src/index.ts`, 5000+ lines, hand-rolled
+  single large Cloudflare Worker (`cloudflare/src/index.ts`, 9000+ lines, hand-rolled
   routing — no framework router) on D1 (SQLite), R2, Durable Objects (realtime),
   Cloudflare rate-limit bindings. No Prisma, no ORM — raw `env.DB.prepare(...)` SQL.
 - **No automated test suite exists** (no vitest/jest/playwright dependency, no `test`
@@ -23,8 +23,11 @@ replace reading the code.
   `npm run build` succeeds, and — for anything touching live behavior — an actual
   manual verification pass (see Testing below), not a unit-test suite that doesn't
   exist. Don't claim "tests pass" when there are none to run.
-- **No CI/CD** (no `.github/workflows`). Deploys are manual, via `npm run cf:deploy`
-  (`next build && wrangler deploy`), run by you when the user confirms.
+- **No CI on PRs/pushes.** Deploy goes through the manual workflow
+  `.github/workflows/deploy-main.yml` (tsc + build → deploy → Telegram report):
+  after the user says "gas", fast-forward push to `main`, then dispatch that
+  workflow with input `konfirmasi: gas`. D1 migrations are applied by the user
+  in the D1 Console (the GitHub token has no D1 permission).
 - **Two frontends, one backend**: the full web app under `src/app/membership/*`
   (desktop + PWA), and a separate, deliberately leaner mobile UI under `src/app/app/*`
   for the Capacitor-wrapped Android/iOS app (`capacitor.config.ts`, `android/`, `ios/`).
@@ -109,6 +112,19 @@ Treat this as a live app with real users. Before a deploy:
   feature, mass migrations) always need explicit confirmation first — stop and ask.
 - **Deploys need explicit confirmation.** State that a deploy is ready and wait —
   the user confirms with "gas". Don't deploy proactively just because a build succeeded.
+
+## Handoff between sessions (two Claude Code accounts)
+
+The user runs this repo from two Claude Code accounts that share nothing but
+git. `docs/HANDOFF.md` is the shared memory:
+- **Start of session**: read it (who is active, what's live, pending
+  migrations, what's unverified). If another account is marked active on the
+  same area, don't edit the same files — ask first.
+- **End of session** (or before stopping on a limit): update it — status,
+  what was deployed, what's unverified, next steps — then commit and push.
+  Unpushed work is lost when a session dies.
+- Scheduled routines run on one account only; never enable the same routine
+  on both (everything would fire twice).
 
 ## Communication style
 
