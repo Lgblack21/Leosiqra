@@ -1,5 +1,6 @@
 import {
   LayoutDashboard,
+  BarChart3,
   Bot,
   PlusCircle,
   ListOrdered,
@@ -48,6 +49,7 @@ export interface NavGroup {
 // Entri tanpa grup — selalu kelihatan di paling atas.
 export const primaryNav: NavItem[] = [
   { label: 'Ringkasan', href: '/membership/dashboard', icon: LayoutDashboard },
+  { label: 'Laporan', href: '/membership/laporan', icon: BarChart3 },
   { label: 'AI Leosiqra', href: '/membership/ai-leosiqra', icon: Bot },
 ];
 

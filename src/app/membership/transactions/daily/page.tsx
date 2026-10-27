@@ -100,6 +100,15 @@ export default function DailyTransactionLogPage() {
     setShown(PAGE);
   }, [period, pickedDate, kind, category, accountId, sort, searchQuery]);
 
+  // Tautan dari Laporan: ?kategori=…&periode=bulan|tahun|semua
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const kat = params.get('kategori');
+    const per = params.get('periode');
+    if (kat) setCategory(kat);
+    if (per === 'bulan' || per === 'tahun' || per === 'semua' || per === '30' || per === '90') setPeriod(per === 'tahun' ? 'tahun' : per);
+  }, []);
+
   const accountName = useMemo(() => new Map(accounts.map((a) => [a.id, a.name])), [accounts]);
   const categoryOptions = useMemo(
     () => [...new Set(transactions.map((t) => t.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'id')),

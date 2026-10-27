@@ -318,7 +318,7 @@ export default function MonthlyDashboard() {
     { href: '/membership/cards', icon: CreditCard, tile: 'bg-rose-500', label: 'Tagihan kartu', value: formatIDR(creditCardBills), caption: dueLabel ?? 'Tidak ada tagihan tercetak' },
     { href: '/membership/transactions/debt', icon: HandCoins, tile: 'bg-amber-500', label: 'Hutang lain', value: formatIDR(otherDebts), caption: otherDebts > 0 ? 'Belum lunas' : 'Tidak ada hutang' },
     { href: '/membership/pajak-center', icon: FileCheck, tile: 'bg-emerald-500', label: 'Pajak Center', value: 'SPT tahunan', caption: 'Harta, utang & penghasilan setahun' },
-    { href: '/membership/annual', icon: CalendarRange, tile: 'bg-sky-500', label: 'Laporan tahunan', value: String(selectedYear), caption: 'Rekap 12 bulan' },
+    { href: '/membership/laporan', icon: CalendarRange, tile: 'bg-sky-500', label: 'Laporan', value: String(selectedYear), caption: 'Tren, kategori & tempat teratas' },
     { href: '/membership/market-data', icon: Globe, tile: 'bg-slate-700', label: 'Data pasar', value: 'Kurs & saham', caption: 'Pantau harga terbaru' },
   ];
 
