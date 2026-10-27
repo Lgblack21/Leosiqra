@@ -559,7 +559,7 @@ export default function InputCepatPage() {
               subValue={subCategory}
               showBadge={false}
             />
-            <Link href="/membership/nama-akun" className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 mt-2 pl-1">
+            <Link href="/membership/dashboard?pengaturan=kategori" className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 mt-2 pl-1">
               Kelola kategori <ExternalLink size={10} />
             </Link>
           </div>

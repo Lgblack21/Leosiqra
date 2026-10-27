@@ -30,6 +30,7 @@ import { LogoImage } from '@/components/ui/LogoImage';
 import { AnimatedNumber } from '@/components/app/AnimatedNumber';
 import { LeoMascot } from '@/components/mascot/LeoMascot';
 import { useModal } from '@/context/ModalContext';
+import { openSettings } from '@/lib/settingsPanel';
 import { auth } from '@/lib/cf-client';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { investmentService, Investment } from '@/lib/services/investmentService';
@@ -446,7 +447,7 @@ export default function MonthlyDashboard() {
         <div className={cn(card, 'p-5 md:p-6')}>
           <div className="flex items-baseline justify-between">
             <p className="text-[16px] font-bold text-slate-900">Ke mana uangmu</p>
-            <Link href="/membership/budget" className="text-[13px] font-bold text-indigo-600 hover:underline">Atur budget</Link>
+            <button type="button" onClick={() => openSettings('kategori')} className="text-[13px] font-bold text-indigo-600 hover:underline">Atur anggaran</button>
           </div>
           {statsLoading ? (
             <div className="mt-4 space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-10" />)}</div>

@@ -38,7 +38,7 @@ const quickActionGroups: { label: string; items: QuickAction[] }[] = [
     label: 'Perencanaan',
     items: [
       { id: 'hutang_piutang', label: 'Hutang & Piutang', icon: HandCoins, color: 'bg-orange-50 text-orange-600' },
-      { id: 'budget_target', label: 'Budget & Target', icon: Target, color: 'bg-teal-50 text-teal-600' },
+      { id: 'budget_target', label: 'Anggaran', icon: Target, color: 'bg-teal-50 text-teal-600' },
     ],
   },
   {

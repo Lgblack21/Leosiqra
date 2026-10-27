@@ -19,7 +19,6 @@ import {
   ShieldCheck,
   CalendarRange,
   User,
-  Tags,
   Compass,
   Headphones,
   MessageSquareHeart,
@@ -61,8 +60,8 @@ export const fiturNav: NavItem[] = [
   { label: 'AI Leosiqra', href: '/membership/ai-leosiqra', icon: Bot },
   { label: 'Kartu Saya', href: '/membership/cards', icon: CreditCard },
   { label: 'Tabungan', href: '/membership/tabungan', icon: PiggyBank },
-  { label: 'Budget & Target', href: '/membership/budget', icon: Target },
   { label: 'Hutang & Piutang', href: '/membership/transactions/debt', icon: HandCoins },
+  { label: 'Investasi', href: '/membership/investment', icon: TrendingUp },
 ];
 
 export const SEMUA_FITUR_HREF = '/membership/fitur';
@@ -110,7 +109,6 @@ export const navGroups: NavGroup[] = [
     label: 'Perencanaan & Laporan',
     icon: Target,
     items: [
-      { label: 'Budget & Target', href: '/membership/budget', icon: Target },
       { label: 'Hutang & Piutang', href: '/membership/transactions/debt', icon: HandCoins },
       { label: 'Laporan Tahunan', href: '/membership/annual', icon: CalendarRange },
       { label: 'Pajak Center', href: '/membership/pajak-center', icon: ShieldCheck },
@@ -122,7 +120,6 @@ export const navGroups: NavGroup[] = [
     icon: User,
     items: [
       { label: 'Profil & Keamanan', href: '/membership/profile', icon: User },
-      { label: 'Kategori & Mata Uang', href: '/membership/nama-akun', icon: Tags },
       { label: 'Panduan', href: '/membership/panduan', icon: Compass },
       { label: 'Saran & Kritik', href: '/membership/saran', icon: MessageSquareHeart },
       { label: 'Hubungi Kami', href: '/membership/hubungi-kami', icon: Headphones },
@@ -136,6 +133,8 @@ const extraTitles: Record<string, string> = {
   '/membership/onboarding': 'Setup Awal',
   '/membership/fitur': 'Semua fitur',
   '/membership/laporan': 'Laporan',
+  '/membership/budget': 'Kategori & Anggaran',
+  '/membership/nama-akun': 'Kategori & Anggaran',
 };
 
 export function findNavContext(pathname: string): { title: string; group?: string } {

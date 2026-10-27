@@ -8,6 +8,7 @@ import { transactionService, Transaction } from '@/lib/services/transactionServi
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { categoryVisual } from '@/lib/categoryEmoji';
 import { cn, formatIDR } from '@/lib/utils';
+import { openSettings } from '@/lib/settingsPanel';
 
 // Laporan pengeluaran Bulanan / Tahunan: total vs pemasukan, tren per
 // bulan (atau per hari), perbandingan kumulatif dengan periode sebelumnya,
@@ -183,9 +184,9 @@ export default function LaporanPage() {
           </Link>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
-          <Link href="/membership/budget" className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">
+          <button type="button" onClick={() => openSettings('kategori')} className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">
             <Gauge size={16} /> Anggaran
-          </Link>
+          </button>
           <div className="flex rounded-full bg-slate-200/60 p-1">
             {(['bulanan', 'tahunan'] as Mode[]).map((m) => (
               <button

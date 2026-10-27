@@ -91,7 +91,7 @@ const sections: GuideSection[] = [
     title: 'Perencanaan & Laporan',
     subtitle: 'Atur target, pantau kewajiban, dan siapkan laporan',
     items: [
-      { name: 'Budget & Target', desc: 'Tetapkan batas pengeluaran (atau target pemasukan) per kategori, per bulan atau per tahun. Sistem bandingkan otomatis dengan transaksi riil supaya kamu tahu kapan mendekati/melewati batas.' },
+      { name: 'Kategori & Anggaran', desc: 'Di Pengaturan → Kategori & Anggaran: tetapkan anggaran per kategori (bulanan atau tahunan). Leosiqra membandingkannya otomatis dengan transaksi riil supaya kamu tahu kapan mendekati/melewati batas.' },
       { name: 'Hutang & Piutang', desc: 'Catat siapa berutang ke kamu (Piutang) dan ke siapa kamu berutang (Hutang) — termasuk kartu kredit/paylater. Bisa hitung otomatis bunga & cicilan per bulan, dan tandai lunas begitu selesai.' },
       { name: 'Laporan Tahunan', desc: 'Laporan tahunan resmi: perbandingan pemasukan-pengeluaran per bulan dalam satu tahun, dan rincian anggaran tahunan. Cocok untuk evaluasi akhir tahun.' },
       { name: 'Pajak Center', desc: 'Bantu siapkan data untuk SPT Tahunan: daftar harta (saldo rekening + investasi), daftar utang/piutang, dan penghasilan neto setahun — semua dihitung otomatis dari transaksi yang sudah kamu catat.' },
@@ -105,7 +105,7 @@ const sections: GuideSection[] = [
     subtitle: 'Profil, pengaturan data, dan bantuan',
     items: [
       { name: 'Profil & Keamanan', desc: 'Data pribadi (nama, foto, WhatsApp), keamanan (ganti password, 2FA), dan ringkasan saldo semua rekening ("Active Banks").' },
-      { name: 'Kategori & Mata Uang', desc: 'Kelola kategori/sub-kategori transaksi (dipakai di semua form pencatatan) dan daftar mata uang dunia yang kamu lacak.' },
+      { name: 'Pengaturan', desc: 'Ikon ⚙️ atau foto profil di menu kiri: kategori & subkategori, anggaran, mata uang, notifikasi, keamanan, paket, dan aplikasi terhubung.' },
       { name: 'Panduan', desc: 'Halaman yang sedang kamu baca ini — penjelasan lengkap semua fitur, plus tombol tur interaktif di bawah.' },
       { name: 'Saran & Kritik', desc: 'Kirim saran, kritik, laporan masalah, atau pujian langsung ke tim Leosiqra — lengkap dengan riwayat dan balasan dari kami.' },
       { name: 'Hubungi Kami', desc: 'Ajukan upgrade ke paket PRO, lihat instruksi pembayaran (transfer bank/QRIS), dan konfirmasi pembayaran yang sudah dilakukan.' },
@@ -142,8 +142,8 @@ const SECTION_DEMO: Record<string, { demo: DemoKind; how: string[] }> = {
   transaksi: { demo: 'input', how: ['Buka Catat Transaksi atau Tambah Cepat', 'Pilih rekening, kategori & isi nominal', 'Simpan — saldo rekening ter-update otomatis'] },
   aset: { demo: 'rekening', how: ['Tambah rekening bank, e-wallet, tunai, atau kartu', 'Isi saldo saat ini sekali saja', 'Saldo berubah sendiri setiap kamu mencatat'] },
   investasi: { demo: 'investasi', how: ['Pilih jenis: Saham, Deposito, atau Lainnya', 'Catat jumlah & harga beli', 'Nilai & keuntungan dihitung otomatis'] },
-  perencanaan: { demo: 'budget', how: ['Pasang budget per kategori di Budget & Target', 'Catat utang/piutang & cicilannya', 'Lihat Laporan Tahunan & Pajak Center'] },
-  akun: { demo: 'profil', how: ['Lengkapi profil & foto', 'Aktifkan verifikasi 2 langkah', 'Atur kategori & mata uang sesuai kebutuhan'] },
+  perencanaan: { demo: 'budget', how: ['Pasang anggaran per kategori di Pengaturan → Kategori & Anggaran', 'Catat utang/piutang & cicilannya', 'Lihat Laporan Tahunan & Pajak Center'] },
+  akun: { demo: 'profil', how: ['Lengkapi profil & foto', 'Aktifkan verifikasi 2 langkah', 'Atur kategori, anggaran & mata uang di Pengaturan'] },
 };
 
 const buildTourSteps = (): TourStep[] => {

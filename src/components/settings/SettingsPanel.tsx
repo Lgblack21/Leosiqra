@@ -41,6 +41,8 @@ import { cloudflareApi } from '@/lib/cloudflare-api';
 import { navGroups } from '@/lib/navigation';
 import { getMemberPaymentInfo, type ProPackage } from '@/lib/services/adminService';
 import { LeoMascot } from '@/components/mascot/LeoMascot';
+import { useModal } from '@/context/ModalContext';
+import { KategoriSection, MataUangView } from '@/components/settings/CategoryBudgetViews';
 
 // Panel Pengaturan (dibuka dari ikon roda gigi / profil di menu samping,
 // atau avatar di header HP). Tiga tampilan: menu utama, Profil, dan Paket
@@ -58,7 +60,8 @@ export interface PanelUser {
   memberSince?: string | null;
 }
 
-type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal';
+export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang';
+const PARENT: Partial<Record<View, View>> = { 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum' };
 
 const FEATURE_COUNT = navGroups.reduce((s, g) => s + g.items.length, 0);
 const STATUS_LABEL: Record<PanelUser['status'], string> = {
@@ -351,7 +354,12 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
     umum: 'Pengaturan',
     privasi: 'Privasi & keamanan',
     legal: 'Ketentuan & kebijakan',
+    kategori: 'Kategori & Anggaran',
+    'kategori-detail': 'Kategori',
+    'kategori-baru': 'Tambah kategori',
+    'mata-uang': 'Mata uang',
   };
+  const { openModal } = useModal();
   const title = TITLES[view];
 
   return (
@@ -377,7 +385,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
           >
             <div className="flex items-center gap-3 px-6 pb-2 pt-5">
               {view !== 'menu' && (
-                <button type="button" onClick={() => setView('menu')} aria-label="Kembali" className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200">
+                <button type="button" onClick={() => setView(PARENT[view] ?? 'menu')} aria-label="Kembali" className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200">
                   <ChevronLeft size={20} />
                 </button>
               )}
@@ -415,7 +423,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
 
                   <div className="grid grid-cols-2 gap-3">
                     <Tile icon={LayoutGrid} title="Fitur" desc={`${FEATURE_COUNT} tersedia`} onClick={go('/membership/fitur')} />
-                    <Tile icon={Tags} title="Kategori & Anggaran" onClick={go('/membership/nama-akun')} />
+                    <Tile icon={Tags} title="Kategori & Anggaran" onClick={() => setView('kategori')} />
                     <Tile icon={Users} title="Dompet Bersama" onClick={go('/membership/dompet-bersama')} />
                     <Tile icon={LifeBuoy} title="Bantuan" onClick={() => setView('bantuan')} />
                   </div>
@@ -490,10 +498,10 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                 <div className="space-y-4">
                   <p className="px-1 text-[14px] text-slate-500">Uang</p>
                   <Group>
-                    <Row icon={Tags} title="Kategori & Anggaran" onClick={go('/membership/nama-akun')} />
-                    <Row icon={Target} title="Budget & Target" onClick={go('/membership/budget')} />
+                    <Row icon={Tags} title="Kategori & Anggaran" onClick={() => setView('kategori')} />
+                    <Row icon={Target} title="Target tabungan" onClick={go('/membership/tabungan')} />
                     <Row icon={Repeat} title="Transaksi Rutin" onClick={go('/membership/recurring')} />
-                    <Row icon={Coins} title="Mata uang" value="IDR" onClick={go('/membership/nama-akun')} />
+                    <Row icon={Coins} title="Mata uang" value="IDR" onClick={() => setView('mata-uang')} />
                   </Group>
                   <p className="px-1 pt-2 text-[14px] text-slate-500">Mencatat</p>
                   <Group>
@@ -527,6 +535,10 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                   <Row icon={FileText} title="Ketentuan Penggunaan" onClick={go('/terms')} />
                 </Group>
               )}
+
+              {(view === 'kategori' || view === 'kategori-detail' || view === 'kategori-baru') && <KategoriSection view={view} go={setView} />}
+
+              {view === 'mata-uang' && <MataUangView onAdd={() => { onClose(); openModal('currency'); }} />}
 
               {view === 'paket' && <PaketView user={user} onClose={onClose} />}
             </div>

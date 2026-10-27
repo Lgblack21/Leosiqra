@@ -101,12 +101,12 @@ const STOPS: TourStop[] = [
     how: ['Ketik pertanyaan soal keuanganmu', 'AI membaca datamu dan menjawab langsung', 'Pakai pertanyaan cepat kalau bingung mulai'],
   },
   {
-    path: '/membership/nama-akun',
+    path: '/membership/fitur',
     icon: Tags,
-    title: 'Nama Akun & Kategori',
-    content: 'Atur kategori dan sub-kategori transaksimu sesuka hati. Yang kamu pilih saat setup tadi bisa ditambah/ubah kapan saja di sini.',
+    title: 'Semua Fitur & Kategori',
+    content: 'Semua fitur Leosiqra ada di sini. Kategori, anggaran & mata uang diatur di Pengaturan (ikon ⚙️ atau foto profil di menu kiri) → Kategori & Anggaran.',
     demo: 'kategori',
-    how: ['Tambah kategori & sub-kategori sendiri', 'Ubah nama atau urutannya kapan saja', 'Dipakai di semua form pencatatan'],
+    how: ['Buka Pengaturan → Kategori & Anggaran', 'Tambah kategori, subkategori & anggaran bulanan', 'Dipakai di semua form pencatatan'],
   },
   {
     path: '/membership/profile',

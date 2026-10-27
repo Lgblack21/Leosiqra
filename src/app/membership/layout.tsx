@@ -5,7 +5,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { MobileTabBar } from '@/components/MobileTabBar';
-import { SettingsPanel } from '@/components/settings/SettingsPanel';
+import { SettingsPanel, type View as SettingsView } from '@/components/settings/SettingsPanel';
+import { OPEN_SETTINGS_EVENT, SETTINGS_VIEWS_FROM_URL } from '@/lib/settingsPanel';
 import { ModalProvider } from '@/context/ModalContext';
 import { GlobalModalWrapper } from '@/components/GlobalModalWrapper';
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
@@ -22,9 +23,28 @@ export default function MembershipLayout({
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsView, setSettingsView] = useState<SettingsView>('menu');
+
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
+
+  // openSettings(view) dari halaman mana pun, atau ?pengaturan=<view> di URL
+  // (dipakai pengalihan halaman lama Kategori/Budget & tautan dari luar layout).
+  useEffect(() => {
+    const open = (view: SettingsView) => { setSettingsView(view); setSettingsOpen(true); };
+    const onEvent = (e: Event) => open((e as CustomEvent<SettingsView>).detail ?? 'menu');
+    window.addEventListener(OPEN_SETTINGS_EVENT, onEvent);
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get('pengaturan');
+    if (fromUrl && (SETTINGS_VIEWS_FROM_URL as readonly string[]).includes(fromUrl)) {
+      open(fromUrl as SettingsView);
+      params.delete('pengaturan');
+      const rest = params.toString();
+      window.history.replaceState(null, '', window.location.pathname + (rest ? `?${rest}` : ''));
+    }
+    return () => window.removeEventListener(OPEN_SETTINGS_EVENT, onEvent);
+  }, [pathname]);
 
   useEffect(() => {
     cloudflareApi<{ user?: { onboarded?: boolean } | null }>('/api/auth/me')
@@ -66,7 +86,7 @@ export default function MembershipLayout({
           />
         )}
 
-        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onOpenSettings={() => setSettingsOpen(true)} />
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onOpenSettings={() => { setSettingsView('menu'); setSettingsOpen(true); }} />
 
         {/* Main Content */}
         {/* print:block+print:h-auto: tanpa ini, konten cetak yang bersarang di
@@ -83,7 +103,7 @@ export default function MembershipLayout({
         </main>
 
         <MobileTabBar />
-        <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+        <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} initialView={settingsView} />
         <GlobalModalWrapper />
         <OnboardingTour />
       </div>
