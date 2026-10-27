@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Bot, Sheet, CalendarDays, Zap, MonitorSmartphone, ShieldCheck, Copy, ExternalLink, RefreshCw, Unlink, ChevronRight, Loader2, Mail } from 'lucide-react';
+import { Bot, Sheet, CalendarDays, Zap, MonitorSmartphone, ShieldCheck, Copy, ExternalLink, RefreshCw, Unlink, ChevronRight, Loader2, Mail, NotebookText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { useFeedback } from '@/components/ui/Feedback';
@@ -259,12 +259,17 @@ function FeedView({ kind }: { kind: 'sheets' | 'calendar' }) {
 
 // Layar satu aplikasi Composio: penjelasan & persetujuan → login di situs
 // aplikasinya → kembali ke sini, lalu periksa koneksi (panggilan baca-saja).
-export type ComposioToolkit = 'gmail' | 'googlecalendar' | 'googlesheets';
+export type ComposioToolkit = 'gmail' | 'googlecalendar' | 'googlesheets' | 'notion';
 const COMPOSIO_COPY: Record<ComposioToolkit, { name: string; provider: string; about: string }> = {
   gmail: {
     name: 'Gmail',
     provider: 'Google',
     about: 'Leosiqra membaca email pembayaran (bank, e-wallet, toko) dari 3 hari terakhir, lalu AI mengusulkannya sebagai transaksi di Kotak Masuk — tidak ada yang tercatat sebelum kamu menekan Simpan. Isi email tidak disimpan; yang tersimpan hanya subjek, pengirim & usulannya.',
+  },
+  notion: {
+    name: 'Notion',
+    provider: 'Notion',
+    about: 'Leosiqra menulis laporan keuangan bulanan (pemasukan, pengeluaran, kategori terbesar, anggaran) sebagai halaman baru di bawah halaman Notion pilihanmu. Saat login Notion, bagikan halaman tujuan ke Leosiqra — halaman lain tidak bisa dibaca.',
   },
   googlesheets: {
     name: 'Google Sheets',
@@ -435,6 +440,142 @@ function ActivationCard({ toolkit, access, onChange }: { toolkit: ComposioToolki
         </button>
         <a href="/membership/dashboard?pengaturan=koin" className="inline-flex items-center rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-amber-200">Lihat koin</a>
       </div>
+    </div>
+  );
+}
+
+// Laporan bulanan ke Notion (tampil setelah terhubung): pilih halaman induk,
+// otomatis tiap awal bulan, atau tulis laporan bulan lalu sekarang.
+type NotionState = { enabled: boolean; parentId: string | null; parentTitle: string | null; lastPeriod: string | null; lastPageUrl: string | null };
+export function NotionReportCard() {
+  const { toast, confirm } = useFeedback();
+  const [state, setState] = useState<NotionState | null>(null);
+  const [pages, setPages] = useState<{ id: string; title: string }[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ text: string; url?: string | null } | null>(null);
+  const load = useCallback(async () => {
+    try {
+      setState(await cloudflareApi<NotionState>('/api/member/apps/notion/report'));
+    } catch {
+      setState(null);
+    }
+  }, []);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const loadPages = async () => {
+    setBusy(true);
+    try {
+      const r = await cloudflareApi<{ pages: { id: string; title: string }[] }>('/api/member/apps/notion/pages');
+      setPages(r.pages);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Gagal membaca halaman Notion.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const save = async (patch: Record<string, unknown>) => {
+    setBusy(true);
+    try {
+      await cloudflareApi('/api/member/apps/notion/report', { method: 'PUT', json: patch });
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Gagal menyimpan.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const write = async () => {
+    let force = false;
+    if (state?.lastPeriod) {
+      const now = new Date();
+      const last = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastKey = `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}`;
+      if (state.lastPeriod === lastKey) {
+        const ok = await confirm({ title: 'Tulis ulang laporan?', message: 'Laporan bulan lalu sudah ada di Notion. Tulis lagi akan membuat halaman baru.', confirmLabel: 'Tulis lagi' });
+        if (!ok) return;
+        force = true;
+      }
+    }
+    setBusy(true);
+    setResult(null);
+    try {
+      const r = await cloudflareApi<{ already: boolean; empty: boolean; url: string | null }>('/api/member/apps/notion/report', { method: 'POST', json: { force } });
+      setResult(r.empty ? { text: 'Bulan lalu belum ada transaksi — tidak ada yang ditulis.' } : { text: 'Laporan bulan lalu sudah ditulis ke Notion.', url: r.url });
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Gagal menulis laporan.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!state) return null;
+  return (
+    <div className="space-y-3 rounded-[22px] bg-slate-50 p-4">
+      <div className="flex items-center gap-3">
+        <NotebookText size={20} className="shrink-0 text-slate-700" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-semibold text-slate-900">Laporan bulanan</span>
+          <span className="block truncate text-[13px] text-slate-500">{state.parentId ? `Ditulis di bawah “${state.parentTitle}”` : 'Pilih halaman Notion tujuan dulu.'}</span>
+        </span>
+        {state.parentId && (
+          <button
+            type="button"
+            onClick={() => void save({ enabled: !state.enabled })}
+            disabled={busy}
+            aria-label="Tulis otomatis tiap awal bulan"
+            aria-pressed={state.enabled}
+            className={cn('relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-60', state.enabled ? 'bg-emerald-500' : 'bg-slate-300')}
+          >
+            <span className={cn('absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all', state.enabled ? 'right-1' : 'left-1')} />
+          </button>
+        )}
+      </div>
+      {state.parentId && <p className="px-1 text-[12px] text-slate-500">{state.enabled ? 'Otomatis tiap tanggal 1–7 untuk bulan sebelumnya.' : 'Nyalakan untuk menulis otomatis tiap awal bulan.'}</p>}
+
+      {pages && (
+        <div className="max-h-64 space-y-1 overflow-y-auto rounded-2xl bg-white p-2 ring-1 ring-slate-200">
+          {pages.length === 0 ? (
+            <p className="p-3 text-[13px] text-slate-500">Belum ada halaman yang dibagikan. Putuskan lalu hubungkan lagi, dan pilih halaman tujuan saat login Notion.</p>
+          ) : (
+            pages.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => { void save({ parentId: p.id, parentTitle: p.title }); setPages(null); }}
+                className={cn('flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[14px] hover:bg-slate-100', state.parentId === p.id && 'bg-indigo-50 font-semibold text-indigo-700')}
+              >
+                <NotebookText size={15} className="shrink-0 text-slate-400" /> <span className="truncate">{p.title}</span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+
+      {result && (
+        <p className="rounded-2xl bg-white px-4 py-2.5 text-[13px] text-slate-600 ring-1 ring-slate-200">
+          {result.text}{' '}
+          {result.url && <a href={result.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-indigo-600">Buka di Notion</a>}
+        </p>
+      )}
+
+      <div className={cn('grid gap-2', state.parentId && 'sm:grid-cols-2')}>
+        <button type="button" onClick={() => void loadPages()} disabled={busy} className={cn('flex items-center justify-center gap-2 rounded-full py-3 text-[14px] font-bold disabled:opacity-60', state.parentId ? 'bg-white text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100' : 'bg-slate-900 text-white')}>
+          {busy && !state.parentId ? <Loader2 size={15} className="animate-spin" /> : null} {state.parentId ? 'Ganti halaman' : 'Pilih halaman Notion'}
+        </button>
+        {state.parentId && (
+          <button type="button" onClick={() => void write()} disabled={busy} className="flex items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white disabled:opacity-60">
+            {busy ? <Loader2 size={15} className="animate-spin" /> : null} Tulis laporan bulan lalu
+          </button>
+        )}
+      </div>
+      {state.lastPageUrl && !result && (
+        <a href={state.lastPageUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 text-[13px] font-semibold text-indigo-600">
+          Buka laporan terakhir <ExternalLink size={13} />
+        </a>
+      )}
     </div>
   );
 }

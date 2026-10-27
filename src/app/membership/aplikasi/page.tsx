@@ -5,7 +5,7 @@ import { ArrowLeft, Bot, CalendarDays, Check, ChevronRight, Mail, MonitorSmartph
 import { cn } from '@/lib/utils';
 import { LeoAvatarSvg, DEFAULT_AVATAR } from '@/components/profile/LeoAvatar';
 import { McpConnectCard } from '@/components/profile/McpConnectCard';
-import { CalendarSyncCard, ComposioAppView, SheetsSyncCard, useComposioApps, type AppAccess } from '@/components/settings/ConnectedApps';
+import { CalendarSyncCard, ComposioAppView, NotionReportCard, SheetsSyncCard, useComposioApps, type AppAccess } from '@/components/settings/ConnectedApps';
 import { InboxControls, useInbox } from '@/components/inbox/InboxControls';
 
 function GmailInboxSection() {
@@ -17,7 +17,7 @@ function GmailInboxSection() {
 // beserta fungsinya; detail tiap aplikasi dibuka di halaman yang sama lewat
 // ?app=<id> supaya tombol Kembali browser & tautan balik dari Composio jalan.
 
-type AppId = 'gmail' | 'googlecalendar' | 'googlesheets' | 'mcp';
+type AppId = 'gmail' | 'googlecalendar' | 'googlesheets' | 'notion' | 'mcp';
 
 type AppInfo = {
   id: AppId;
@@ -57,6 +57,15 @@ const APPS: Record<AppId, AppInfo> = {
     tagline: 'Salinan semua transaksimu di spreadsheet, selalu ter-update.',
     bullets: ['Spreadsheet "Leosiqra — Transaksi" di Drive-mu', 'Ikut berubah saat transaksi diedit/dihapus', 'Enak untuk olah data, pivot & laporan sendiri'],
     steps: ['Hubungkan Google Sheets.', 'Tekan "Buat spreadsheet & salin".', 'Selesai — Leosiqra memperbaruinya sendiri tiap hari.'],
+  },
+  notion: {
+    id: 'notion',
+    name: 'Notion',
+    icon: NotebookText,
+    tile: 'bg-slate-100 text-slate-800',
+    tagline: 'Laporan keuangan bulanan otomatis di halaman Notion-mu.',
+    bullets: ['Pemasukan, pengeluaran & selisih bulan lalu', 'Kategori terbesar & status anggaran', 'Ditulis otomatis tiap awal bulan'],
+    steps: ['Hubungkan Notion & bagikan halaman tujuan.', 'Pilih halaman tujuan di Leosiqra.', 'Tulis sekarang, atau nyalakan otomatis tiap awal bulan.'],
   },
   mcp: {
     id: 'mcp',
@@ -175,11 +184,12 @@ function Hub({ open }: { open: (id: AppId) => void }) {
 
       <section>
         <h2 className="mb-1 text-[18px] font-bold text-slate-900">Otomatis dari aplikasimu</h2>
-        <p className="mb-4 text-[14px] text-slate-500">Lewat mitra koneksi Composio — kamu masuk di situs Google, Leosiqra tidak pernah melihat kata sandimu.</p>
+        <p className="mb-4 text-[14px] text-slate-500">Lewat mitra koneksi Composio — kamu masuk di situs Google atau Notion langsung, Leosiqra tidak pernah melihat kata sandimu.</p>
         <div className="grid gap-4 md:grid-cols-2">
           <AppCard app={APPS.googlecalendar} connected={apps.items.googlecalendar?.connected} onOpen={() => open('googlecalendar')} disabledNote={composioNote} price={priceLabel(apps.access?.googlecalendar)} />
           <AppCard app={APPS.gmail} connected={apps.items.gmail?.connected} onOpen={() => open('gmail')} disabledNote={composioNote} price={priceLabel(apps.access?.gmail)} />
           <AppCard app={APPS.googlesheets} connected={apps.items.googlesheets?.connected} onOpen={() => open('googlesheets')} disabledNote={composioNote} price={priceLabel(apps.access?.googlesheets)} />
+          <AppCard app={APPS.notion} connected={apps.items.notion?.connected} onOpen={() => open('notion')} disabledNote={composioNote} price={priceLabel(apps.access?.notion)} />
         </div>
       </section>
 
@@ -202,7 +212,6 @@ function Hub({ open }: { open: (id: AppId) => void }) {
         <p className="text-[14px] font-semibold text-slate-700">Menyusul</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {[
-            [NotebookText, 'Notion — laporan bulanan otomatis'],
             [Hash, 'Slack — catat dari pesan channel'],
           ].map(([Icon, label]) => {
             const I = Icon as React.ElementType;
@@ -246,7 +255,9 @@ function Detail({ id, back }: { id: AppId; back: () => void }) {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="min-w-0 rounded-[24px] bg-white p-4 ring-1 ring-slate-100 md:p-6">
-          {id === 'mcp' ? <McpConnectCard /> : id === 'googlesheets' ? (
+          {id === 'mcp' ? <McpConnectCard /> : id === 'notion' ? (
+            <ComposioAppView toolkit="notion"><NotionReportCard /></ComposioAppView>
+          ) : id === 'googlesheets' ? (
             <ComposioAppView toolkit="googlesheets"><SheetsSyncCard /></ComposioAppView>
           ) : id === 'googlecalendar' ? (
             <ComposioAppView toolkit="googlecalendar"><CalendarSyncCard /></ComposioAppView>

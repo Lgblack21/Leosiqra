@@ -8650,6 +8650,152 @@ const syncAllGoogleSheets = async (env: Env) => {
   }
 };
 
+// ── Notion (Composio): laporan keuangan bulanan ke halaman pilihan user ────
+// Angka dari buildMonthlyReport (sama dengan laporan email). Satu halaman
+// baru per bulan di bawah halaman induk pilihan user; otomatis tanggal 1–7,
+// sekali per bulan (diklaim dulu supaya cron/klik bersamaan tidak dobel).
+type NotionReportState = { enabled?: boolean; parentId?: string; parentTitle?: string; lastPeriod?: string; lastPageUrl?: string; lastWrittenAt?: string };
+const NOTION_ID_RE = /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i;
+const ID_MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+const readNotionReport = async (env: Env, userId: string): Promise<NotionReportState> => {
+  const row = await env.DB.prepare(
+    `SELECT CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.notionReport') END AS v FROM users WHERE id = ?`
+  )
+    .bind(userId)
+    .first<{ v: string | null }>();
+  try {
+    const parsed = row?.v ? (JSON.parse(row.v) as NotionReportState) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+const writeNotionReport = (env: Env, userId: string, state: NotionReportState | null) =>
+  state
+    ? env.DB.prepare(
+        `UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.notionReport', json(?)) WHERE id = ?`
+      )
+        .bind(JSON.stringify(state), userId)
+        .run()
+    : env.DB.prepare(`UPDATE users SET metadata_json = json_remove(metadata_json, '$.notionReport') WHERE id = ? AND json_valid(metadata_json)`)
+        .bind(userId)
+        .run();
+
+// Hasil pencarian Notion: bentuk objek page API Notion (judul ada di
+// properti bertipe "title"); dibaca dengan beberapa kemungkinan bungkus.
+const notionPagesFromSearch = (data: Record<string, unknown> | undefined) => {
+  const d = (data ?? {}) as { results?: unknown; response_data?: { results?: unknown }; pages?: unknown };
+  const raw = (Array.isArray(d.results) ? d.results : Array.isArray(d.response_data?.results) ? d.response_data!.results : Array.isArray(d.pages) ? d.pages : []) as Record<string, unknown>[];
+  const pages: { id: string; title: string }[] = [];
+  for (const p of raw) {
+    const id = String(p.id ?? "");
+    if (!NOTION_ID_RE.test(id) || (p.object && p.object !== "page") || p.archived === true || p.in_trash === true) continue;
+    let title = typeof p.title === "string" ? p.title : "";
+    if (!title && p.properties && typeof p.properties === "object") {
+      for (const prop of Object.values(p.properties as Record<string, { type?: string; title?: { plain_text?: string }[] }>)) {
+        if (prop?.type === "title" && Array.isArray(prop.title)) {
+          title = prop.title.map((t) => t.plain_text ?? "").join("");
+          break;
+        }
+      }
+    }
+    pages.push({ id, title: title.trim().slice(0, 120) || "Tanpa judul" });
+  }
+  return pages;
+};
+
+const rupiah = (n: number) => `Rp ${Math.round(n).toLocaleString("id-ID")}`;
+const notionReportMarkdown = (period: string, r: MonthlyReport) => {
+  const [y, m] = period.split("-").map(Number);
+  const month = `${ID_MONTHS[m - 1]} ${y}`;
+  const net = r.income - r.expense;
+  const lines = [
+    `Ringkasan keuangan **${month}** dari Leosiqra (dalam Rupiah).`,
+    "",
+    "## Ringkasan",
+    `- Pemasukan: **${rupiah(r.income)}**`,
+    `- Pengeluaran: **${rupiah(r.expense)}**`,
+    `- Selisih: **${net >= 0 ? "+" : "−"}${rupiah(Math.abs(net))}**`,
+    `- Ditabung: ${rupiah(r.savingsNet)}`,
+    `- Jumlah transaksi: ${r.txCount}`,
+  ];
+  if (r.topCategories.length) {
+    lines.push("", "## Pengeluaran terbesar", ...r.topCategories.map((c, i) => `${i + 1}. ${c.category} — ${rupiah(c.total)}`));
+  }
+  if (r.budgets.length) {
+    lines.push(
+      "",
+      "## Anggaran",
+      ...r.budgets.map((b) => {
+        const pct = b.amount > 0 ? Math.round((b.spent / b.amount) * 100) : 0;
+        return `- ${b.category}: ${rupiah(b.spent)} dari ${rupiah(b.amount)} (${pct}%)${pct > 100 ? " — **lewat anggaran**" : ""}`;
+      })
+    );
+  }
+  lines.push("", "---", "_Dibuat otomatis oleh Leosiqra._");
+  return { title: `Laporan Keuangan ${month}`, markdown: lines.join("\n") };
+};
+
+const lastMonthWIB = () => {
+  const today = todayWIB();
+  const [y, m] = today.slice(0, 7).split("-").map(Number);
+  return new Date(Date.UTC(y, m - 2, 1)).toISOString().slice(0, 7);
+};
+
+const notionPageUrl = (data: Record<string, unknown> | undefined) => {
+  const d = (data ?? {}) as { url?: unknown; id?: unknown; response_data?: { url?: unknown; id?: unknown } };
+  const url = d.url ?? d.response_data?.url;
+  if (typeof url === "string" && /^https:\/\/(www\.)?notion\.so\//.test(url)) return url;
+  const id = String(d.id ?? d.response_data?.id ?? "");
+  return NOTION_ID_RE.test(id) ? `https://www.notion.so/${id.replace(/-/g, "")}` : null;
+};
+
+const writeNotionMonthlyReport = async (env: Env, session: ComposioSession, userId: string, period: string, opts: { force?: boolean } = {}) => {
+  const state = await readNotionReport(env, userId);
+  if (!state.parentId) return { ok: false as const, error: "Pilih halaman Notion dulu." };
+  if (!opts.force && state.lastPeriod === period) return { ok: true as const, already: true, url: state.lastPageUrl ?? null, empty: false };
+  const report = await buildMonthlyReport(env, userId, period);
+  if (report.txCount === 0) return { ok: true as const, already: false, url: null, empty: true };
+  // Klaim periode dulu (cron & tombol bersamaan tidak membuat dua halaman).
+  await writeNotionReport(env, userId, { ...state, lastPeriod: period });
+  const { title, markdown } = notionReportMarkdown(period, report);
+  const res = await session.execute("NOTION_CREATE_NOTION_PAGE", { parent_id: state.parentId, title, icon: "🦁", markdown });
+  if (res.resultType !== "completed") {
+    console.error(`Buat halaman Notion gagal (logId ${res.logId}):`, res.error);
+    await writeNotionReport(env, userId, state); // lepas klaim
+    throw new Error("NOTION_CREATE_FAILED");
+  }
+  const url = notionPageUrl(res.data);
+  await writeNotionReport(env, userId, { ...state, lastPeriod: period, lastPageUrl: url ?? undefined, lastWrittenAt: nowIso() });
+  return { ok: true as const, already: false, url, empty: false };
+};
+
+// Cron harian, tanggal 1–7 WIB: laporan bulan lalu untuk yang menyalakan otomatis.
+const writeAllNotionReports = async (env: Env) => {
+  if (Number(todayWIB().slice(8, 10)) > 7) return;
+  const setup = composioClient(env);
+  if ("error" in setup) return;
+  const period = lastMonthWIB();
+  const { results } = await env.DB.prepare(
+    `SELECT id FROM users
+      WHERE json_valid(metadata_json) AND json_extract(metadata_json, '$.notionReport.enabled') = 1
+        AND COALESCE(json_extract(metadata_json, '$.notionReport.lastPeriod'), '') <> ?
+      LIMIT 200`
+  )
+    .bind(period)
+    .all<{ id: string }>();
+  for (const { id } of results ?? []) {
+    try {
+      if (!(await readAppAccess(env, id, "notion")).active) continue;
+      const session = await setup.client.sessions.create(id, { toolkits: ["notion"] });
+      await writeNotionMonthlyReport(env, session, id, period);
+    } catch (error) {
+      console.error("Laporan Notion bulanan gagal:", error instanceof Error ? error.message : error);
+    }
+  }
+};
+
 // ── Aktivasi aplikasi pakai koin ────────────────────────────────────────────
 // Biaya Composio/AI ditutup koin (user Gratis) atau langganan PRO. Aktivasi
 // 30 hari disimpan di users.metadata_json $.appActive.<toolkit> (ISO); tidak
@@ -8658,6 +8804,7 @@ const syncAllGoogleSheets = async (env: Env) => {
 const APP_ACTIVATION: Partial<Record<ComposioToolkit, { price: number; days: number; beta: boolean; name: string }>> = {
   googlecalendar: { price: 200, days: 30, beta: false, name: "Google Calendar" },
   googlesheets: { price: 200, days: 30, beta: false, name: "Google Sheets" },
+  notion: { price: 200, days: 30, beta: false, name: "Notion" },
   gmail: { price: 500, days: 30, beta: false, name: "Gmail" },
 };
 type AppAccess = { active: boolean; reason: "pro" | "beta" | "coins" | null; until: string | null; price: number; days: number };
@@ -9046,7 +9193,7 @@ async function handleMemberApps(request: Request, env: Env, pathname: string) {
     // Aktivasi koin tidak butuh sesi Composio (hemat satu panggilan API).
     if (action === "activate" && request.method === "POST") return await activateApp(env, userId, toolkit);
     // Hubungkan & sinkron butuh aplikasi aktif (PRO, beta, atau koin).
-    if (toolkitRaw && request.method === "POST" && (action === "connect" || action === "sync")) {
+    if (toolkitRaw && request.method === "POST" && (action === "connect" || action === "sync" || action === "report")) {
       const access = await readAppAccess(env, userId, toolkit);
       if (!access.active) return json({ error: "Aktifkan aplikasi ini dulu.", needActivation: true, access }, { status: 402 });
     }
@@ -9095,6 +9242,52 @@ async function handleMemberApps(request: Request, env: Env, pathname: string) {
       if (request.method === "POST") return json({ ok: true, ...(await syncGoogleCalendar(env, session, userId)) });
     }
 
+    if (toolkit === "notion" && action === "pages" && request.method === "GET") {
+      const query = (new URL(request.url).searchParams.get("q") ?? "").trim().slice(0, 100);
+      const res = await session.execute("NOTION_SEARCH_NOTION_PAGE", { filter_value: "page", page_size: 50, ...(query ? { query } : {}) });
+      if (res.resultType !== "completed") {
+        console.error(`Cari halaman Notion gagal (logId ${res.logId}):`, res.error);
+        return json({ error: "Gagal membaca halaman Notion. Coba hubungkan ulang." }, { status: 502 });
+      }
+      return json({ pages: notionPagesFromSearch(res.data) });
+    }
+
+    if (toolkit === "notion" && action === "report") {
+      if (request.method === "GET") {
+        const state = await readNotionReport(env, userId);
+        return json({ enabled: Boolean(state.enabled), parentId: state.parentId ?? null, parentTitle: state.parentTitle ?? null, lastPeriod: state.lastPeriod ?? null, lastPageUrl: state.lastPageUrl ?? null });
+      }
+      if (request.method === "PUT") {
+        const payload = await parseJson<{ parentId?: unknown; parentTitle?: unknown; enabled?: unknown }>(request);
+        const state = await readNotionReport(env, userId);
+        const next = { ...state };
+        if (payload.parentId !== undefined) {
+          if (typeof payload.parentId !== "string" || !NOTION_ID_RE.test(payload.parentId)) return json({ error: "Halaman Notion tidak valid." }, { status: 400 });
+          next.parentId = payload.parentId;
+          next.parentTitle = String(payload.parentTitle ?? "").slice(0, 120) || "Halaman Notion";
+        }
+        if (payload.enabled !== undefined) {
+          if (typeof payload.enabled !== "boolean") return json({ error: "Pilihan tidak valid." }, { status: 400 });
+          next.enabled = payload.enabled;
+        }
+        await writeNotionReport(env, userId, next);
+        return json({ ok: true });
+      }
+      if (request.method === "POST") {
+        const payload = await parseJson<{ force?: unknown }>(request).catch(() => ({ force: false }));
+        try {
+          const out = await writeNotionMonthlyReport(env, session, userId, lastMonthWIB(), { force: payload.force === true });
+          if (!out.ok) return json({ error: out.error }, { status: 400 });
+          return json(out);
+        } catch (error) {
+          if (error instanceof Error && error.message === "NOTION_CREATE_FAILED") {
+            return json({ error: "Notion menolak membuat halaman. Pastikan halaman induk masih dibagikan ke Leosiqra, lalu coba lagi." }, { status: 502 });
+          }
+          throw error;
+        }
+      }
+    }
+
     if (action === "sync" && toolkit === "googlesheets") {
       if (request.method === "GET") {
         const state = await readSheetsSync(env, userId);
@@ -9114,6 +9307,7 @@ async function handleMemberApps(request: Request, env: Env, pathname: string) {
 
     if (!action && request.method === "DELETE") {
       if (toolkit === "googlesheets") await writeSheetsSync(env, userId, null);
+      if (toolkit === "notion") await writeNotionReport(env, userId, null);
       if (toolkit === "googlecalendar") {
         // Bersihkan acara buatan Leosiqra dulu (selagi aksesnya masih ada).
         const state = await readCalendarSync(env, userId);
@@ -13787,6 +13981,7 @@ const worker = {
     // Tagihan rutin & jatuh tempo kartu → Google Calendar (yang sudah menyalakan sinkron).
     ctx.waitUntil(syncAllGoogleCalendars(env));
     ctx.waitUntil(syncAllGoogleSheets(env));
+    ctx.waitUntil(writeAllNotionReports(env));
     ctx.waitUntil(remindAppActivationExpiry(env).catch((error) => console.error("Pengingat aktivasi:", error)));
   },
 };
