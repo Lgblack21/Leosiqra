@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Caveat, DM_Serif_Display, Plus_Jakarta_Sans } from "next/font/google";
+import { DM_Serif_Display, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
 
@@ -7,14 +7,6 @@ const serifDisplay = DM_Serif_Display({
   weight: "400",
   subsets: ["latin"],
   variable: "--font-serif-display",
-  display: "swap",
-});
-
-// Tulisan tangan untuk hiasan catatan tempel di /mulai & halaman masuk/daftar.
-const hand = Caveat({
-  weight: "700",
-  subsets: ["latin"],
-  variable: "--font-hand",
   display: "swap",
 });
 
@@ -122,7 +114,7 @@ export default function RootLayout({
   return (
     <html
       lang="id"
-      className={`h-full antialiased ${serifDisplay.variable} ${jakarta.variable} ${hand.variable}`}
+      className={`h-full antialiased ${serifDisplay.variable} ${jakarta.variable}`}
       data-scroll-behavior="smooth"
       // Halaman auth menulis data-daypart sebelum hydrate (lihat AuthScene).
       suppressHydrationWarning

@@ -12,16 +12,19 @@ import {
   ChevronLeft,
   CreditCard,
   FileCheck,
+  Flame,
   Keyboard,
   Landmark,
   Mic,
   PiggyBank,
+  ScanLine,
   Sparkles,
   Target,
   TrendingDown,
+  TrendingUp,
 } from 'lucide-react';
 import { LeoMascot } from '@/components/mascot/LeoMascot';
-import { Coin, PaydayNote, Receipt, StickyNote, WalletCard } from '@/components/auth/PaperNotes';
+import { BalanceChip, BrandBackdrop, BudgetChip, ScanChip, TxChip, VoiceChip } from '@/components/auth/FinanceChips';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { resolveNext, sanitizeNext, withNext } from '@/lib/authNext';
 import { parseQuickText } from '@/lib/quick/parse';
@@ -39,6 +42,7 @@ import { cn, formatIDR } from '@/lib/utils';
 
 // Onboarding sebelum punya akun: 0 sambutan → 1 tujuan → 2 cara mencatat →
 // 3 pengingat → 4 catatan pertama → 5 selesai ("Simpan ke akun" = daftar).
+// Panel kanan = HP berisi aplikasi Leosiqra yang ikut terbentuk tiap langkah.
 // Semua pilihan disimpan di browser (lib/guestOnboarding) dan dibawa ke akun
 // setelah daftar (GuestCarryOver di setup akun web & app).
 const LAST = 5;
@@ -53,17 +57,17 @@ const GOAL_ICON: Record<GuestGoal, React.ElementType> = {
 };
 const GOAL_TILE: Record<GuestGoal, string> = {
   arus_uang: 'bg-indigo-600',
-  budget: 'bg-orange-500',
+  budget: 'bg-amber-500',
   nabung: 'bg-pink-500',
   hutang: 'bg-sky-500',
   pajak: 'bg-emerald-500',
   aset: 'bg-violet-500',
 };
 
-const MODES: { id: GuestInputMode; chip: string; title: string; desc: string; hint: string; icon: React.ElementType; bg: string }[] = [
-  { id: 'ketik', chip: 'Tinggal ketik', title: 'Ketik pintar', desc: 'Ketik seperti chat: “makan siang 30rb pakai BCA”.', hint: 'Paling cepat di depan laptop.', icon: Keyboard, bg: 'bg-sky-50' },
-  { id: 'suara', chip: 'Tinggal ngomong', title: 'Suara', desc: '“Parkir lima ribu, kopi dua puluh lima ribu.” Kamu ngomong, Leo yang nulis.', hint: 'Paling enak waktu di jalan.', icon: Mic, bg: 'bg-indigo-50' },
-  { id: 'foto', chip: 'Tinggal foto', title: 'Foto struk', desc: 'Foto struknya, item & totalnya terbaca otomatis.', hint: 'Cocok buat belanja bulanan.', icon: Camera, bg: 'bg-amber-50' },
+const MODES: { id: GuestInputMode; title: string; desc: string; icon: React.ElementType }[] = [
+  { id: 'ketik', title: 'Ketik', desc: 'Seperti chat: “makan siang 30rb bca”.', icon: Keyboard },
+  { id: 'suara', title: 'Ngomong', desc: '“Parkir lima ribu” — Leo yang nulis.', icon: Mic },
+  { id: 'foto', title: 'Foto struk', desc: 'Item & total terbaca otomatis.', icon: Camera },
 ];
 
 const REMINDER_TIMES = ['19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00'];
@@ -75,9 +79,13 @@ const PARSE_CTX = {
   history: GUEST_CATEGORY_HINTS,
 };
 
-const pill = 'h-12 sm:h-14 px-8 rounded-full text-[15px] sm:text-[16px] font-semibold transition-all active:scale-[0.98]';
-const pillDark = cn(pill, 'bg-slate-950 text-white hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:active:scale-100');
-const pillLight = cn(pill, 'bg-slate-100 text-slate-800 hover:bg-slate-200');
+const pill = 'inline-flex h-12 sm:h-14 items-center justify-center gap-2 px-8 rounded-full text-[15px] sm:text-[16px] font-bold transition-all active:scale-[0.98]';
+const pillMain = cn(
+  pill,
+  'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-[0_14px_30px_-12px_rgba(79,70,229,0.7)] hover:-translate-y-0.5 hover:shadow-[0_18px_34px_-12px_rgba(79,70,229,0.75)] disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:hover:translate-y-0'
+);
+const pillGhost = cn(pill, 'bg-white text-indigo-700 ring-1 ring-indigo-100 hover:ring-indigo-200');
+const h2 = 'text-[34px] font-extrabold leading-[1.08] tracking-[-0.03em] text-slate-900 sm:text-[44px]';
 
 export default function MulaiPage() {
   const router = useRouter();
@@ -116,6 +124,7 @@ export default function MulaiPage() {
   const today = useMemo(() => (now ? new Date(now.getTime() + 7 * 3600e3).toISOString().slice(0, 10) : ''), [now]);
   const draft = useMemo(() => (text.trim() && today ? parseQuickText(text, { ...PARSE_CTX, today }) : null), [text, today]);
   const draftOk = !!draft?.amount && draft.amount > 0 && draft.amount < 1e12;
+  const mode = g.inputMode ?? 'ketik';
 
   const go = (s: number) => {
     setStep(s);
@@ -143,9 +152,9 @@ export default function MulaiPage() {
   const loginHref = withNext('/auth/login', next);
 
   return (
-    <div className="min-h-screen bg-white font-sans text-slate-900 lg:grid lg:grid-cols-2 lg:gap-4 lg:p-4">
+    <div className="min-h-screen bg-white font-sans text-slate-900 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
       {/* Kiri: teks & pilihan */}
-      <section className="flex min-h-[60vh] flex-col px-6 pb-10 pt-6 sm:px-12 lg:min-h-0 lg:px-16 lg:py-10">
+      <section className="flex min-h-[60vh] flex-col px-6 pb-10 pt-6 sm:px-12 lg:min-h-screen lg:px-16 lg:py-10 xl:px-20">
         <header className="flex h-12 items-center justify-between">
           {step === 0 ? (
             <Link href="/" className="flex items-center gap-2">
@@ -157,45 +166,52 @@ export default function MulaiPage() {
               type="button"
               onClick={() => go(step === LAST && !g.note ? 4 : step - 1)}
               aria-label="Kembali"
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
             >
               <ChevronLeft size={20} />
             </button>
           )}
           {step > 0 && step < LAST && (
-            <div className="flex gap-1.5" aria-label={`Langkah ${step} dari 4`}>
-              {[1, 2, 3, 4].map((i) => (
-                <span key={i} className={cn('h-1.5 w-6 rounded-full transition-colors', i <= step ? 'bg-slate-900' : 'bg-slate-200')} />
-              ))}
-            </div>
+            <span className="text-[13px] font-bold text-indigo-600">Langkah {step} dari 4</span>
           )}
         </header>
+        {step > 0 && step < LAST && (
+          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-indigo-50">
+            <div className="h-full rounded-full bg-gradient-to-r from-indigo-600 to-violet-500 transition-all duration-500" style={{ width: `${(step / 4) * 100}%` }} />
+          </div>
+        )}
 
         <div key={step} className="flex flex-1 flex-col justify-center py-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
           {step === 0 && (
             <>
-              <h1 className="text-[42px] font-extrabold leading-[1.02] tracking-[-0.035em] sm:text-[54px] xl:text-[60px]">
-                Gajian, jajan, cicilan.
+              <span className="inline-flex w-fit items-center gap-2 rounded-full bg-indigo-50 px-3.5 py-1.5 text-[12px] font-bold text-indigo-700">
+                <Sparkles size={14} /> Catatan keuangan pribadi, dibantu Leo
+              </span>
+              <h1 className="mt-5 text-[44px] font-extrabold leading-[1.02] tracking-[-0.035em] sm:text-[58px] xl:text-[64px]">
+                Catat 5 detik.
                 <br />
-                Semua tercatat rapi.
+                <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-500 bg-clip-text text-transparent">Paham sebulan.</span>
               </h1>
               <p className="mt-5 max-w-md text-[17px] leading-relaxed text-slate-500 sm:text-[19px]">
-                Ketik, ucapkan, atau foto struk. Lihat ke mana uangmu pergi, dengan bahasa yang gampang.
+                Ketik, ngomong, atau foto struk. Leo yang merapikan jadi saldo, budget, dan laporan — tanpa spreadsheet.
               </p>
               <div className="mt-9 flex flex-wrap gap-3">
-                <button type="button" onClick={() => go(1)} className={cn(pillDark, 'min-w-[11rem]')}>Mulai</button>
-                <Link href="/#produk" className={cn(pillLight, 'inline-flex items-center')}>Lihat contoh</Link>
+                <button type="button" onClick={() => go(1)} className={cn(pillMain, 'min-w-[12rem]')}>
+                  Mulai sekarang <ArrowRight size={18} />
+                </button>
+                <Link href="/#produk" className={pillGhost}>Lihat contoh</Link>
               </div>
               <p className="mt-5 text-[14px] text-slate-500">
-                Sudah punya akun? <Link href={loginHref} className="font-semibold text-slate-900 hover:underline">Masuk</Link>
+                Sudah punya akun? <Link href={loginHref} className="font-bold text-indigo-600 hover:underline">Masuk</Link>
               </p>
             </>
           )}
 
           {step === 1 && (
             <>
-              <h2 className="text-[38px] font-extrabold leading-[1.05] tracking-[-0.03em] sm:text-[48px]">Mau Leo bantu apa?</h2>
-              <div className="mt-7 space-y-2.5">
+              <h2 className={h2}>Apa yang paling bikin pusing soal uang?</h2>
+              <p className="mt-3 text-[16px] text-slate-500">Pilih sebanyak yang kamu mau — berandamu disusun dari sini.</p>
+              <div className="mt-6 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 {GUEST_GOALS.map((goal) => {
                   const on = g.goals.includes(goal.id);
                   const Icon = GOAL_ICON[goal.id];
@@ -206,71 +222,72 @@ export default function MulaiPage() {
                       aria-pressed={on}
                       onClick={() => update({ goals: on ? g.goals.filter((x) => x !== goal.id) : [...g.goals, goal.id] })}
                       className={cn(
-                        'flex w-full items-center gap-4 rounded-[20px] px-5 py-4 text-left transition-colors',
-                        on ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-800 hover:bg-slate-200/70'
+                        'relative flex items-center gap-3 rounded-2xl p-3.5 text-left transition-all',
+                        on ? 'bg-indigo-50 ring-2 ring-indigo-600' : 'bg-white ring-1 ring-slate-200 hover:ring-slate-300'
                       )}
                     >
-                      <span className={cn('flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2', on ? 'border-white bg-white text-slate-900' : 'border-slate-300')}>
-                        {on && <Check size={14} strokeWidth={3} />}
+                      <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white', GOAL_TILE[goal.id])}>
+                        <Icon size={18} />
                       </span>
-                      <span className="flex-1 text-[16px] font-semibold">{goal.label}</span>
-                      <span className={cn('flex h-9 w-9 items-center justify-center rounded-xl text-white', GOAL_TILE[goal.id])}>
-                        <Icon size={17} />
+                      <span className="flex-1 text-[15px] font-semibold text-slate-800">{goal.label}</span>
+                      <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full', on ? 'bg-indigo-600 text-white' : 'ring-2 ring-slate-200')}>
+                        {on && <Check size={12} strokeWidth={3.5} />}
                       </span>
                     </button>
                   );
                 })}
               </div>
               <div className="mt-8">
-                <button type="button" disabled={g.goals.length === 0} onClick={() => go(2)} className={cn(pillDark, 'min-w-[11rem]')}>Lanjut</button>
-                <p className="mt-3 text-[13px] text-slate-500">Pilih sebanyak yang kamu mau. Bisa diubah kapan saja.</p>
+                <button type="button" disabled={g.goals.length === 0} onClick={() => go(2)} className={cn(pillMain, 'min-w-[12rem]')}>Lanjut</button>
               </div>
             </>
           )}
 
           {step === 2 && (
             <>
-              <h2 className="text-[38px] font-extrabold leading-[1.05] tracking-[-0.03em] sm:text-[48px]">Paling enak nyatat pakai apa?</h2>
-              {(() => {
-                const m = MODES.find((x) => x.id === (g.inputMode ?? 'ketik'))!;
-                return (
-                  <div className="mt-6 hidden lg:block">
-                    <p className="text-[26px] font-bold tracking-tight">{m.title}</p>
-                    <p className="mt-2 text-[17px] text-slate-500">{m.desc}</p>
-                    <p className="mt-1.5 text-[14px] text-slate-400">{m.hint}</p>
-                  </div>
-                );
-              })()}
-              <div className="mt-6 grid gap-2.5 lg:hidden">
-                {MODES.map((m) => (
-                  <ModeCard key={m.id} m={m} on={(g.inputMode ?? 'ketik') === m.id} onClick={() => update({ inputMode: m.id })} compact />
-                ))}
+              <h2 className={h2}>Paling enak nyatat pakai apa?</h2>
+              <p className="mt-3 text-[16px] text-slate-500">Ketiganya tetap bisa dipakai — ini cuma yang muncul duluan.</p>
+              <div className="mt-6 grid grid-cols-3 gap-2.5">
+                {MODES.map((m) => {
+                  const on = mode === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => update({ inputMode: m.id })}
+                      className={cn(
+                        'flex flex-col items-center gap-2 rounded-2xl px-2 py-4 text-center transition-all',
+                        on ? 'bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-[0_14px_30px_-14px_rgba(79,70,229,0.8)]' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:ring-slate-300'
+                      )}
+                    >
+                      <m.icon size={22} />
+                      <span className="text-[14px] font-bold">{m.title}</span>
+                    </button>
+                  );
+                })}
               </div>
+              <p className="mt-4 text-[15px] text-slate-600">{MODES.find((m) => m.id === mode)!.desc}</p>
               <div className="mt-8">
-                <button type="button" onClick={() => { if (!g.inputMode) update({ inputMode: 'ketik' }); go(3); }} className={cn(pillDark, 'min-w-[11rem]')}>Pakai yang ini</button>
-                <p className="mt-3 text-[13px] text-slate-500">Ketiganya tetap bisa dipakai. Ini cuma pilihan utama.</p>
+                <button type="button" onClick={() => { if (!g.inputMode) update({ inputMode: 'ketik' }); go(3); }} className={cn(pillMain, 'min-w-[12rem]')}>Pakai ini</button>
               </div>
             </>
           )}
 
           {step === 3 && (
             <>
-              <h2 className="text-[38px] font-extrabold leading-[1.05] tracking-[-0.03em] sm:text-[48px]">
-                Semenit,
+              <h2 className={h2}>
+                Leo ingetin
                 <br />
                 tiap malam.
               </h2>
-              <p className="mt-4 text-[17px] text-slate-500">Leo ingatkan kamu menutup hari: catat yang tadi, lalu istirahat.</p>
-              <span className="mt-6 inline-flex w-fit flex-col rounded-2xl bg-indigo-50 px-4 py-2.5">
-                <span className="text-[17px] font-bold text-indigo-700">± 1 menit</span>
-                <span className="text-[12px] font-semibold text-indigo-500">Tutup hari</span>
-              </span>
-              <div className="mt-4 rounded-[20px] bg-slate-100 p-4">
+              <p className="mt-3 text-[16px] text-slate-500">Satu notifikasi buat menutup hari. Kalau hari itu sudah ada catatan, Leo diam.</p>
+              <div className="mt-6 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
                 <div className="flex items-center gap-3">
-                  <Bell size={20} className="shrink-0 text-slate-500" />
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white"><Bell size={18} /></span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[16px] font-semibold">Ingatkan aku?</p>
-                    <p className="text-[13px] text-slate-500">Tidak dikirim kalau hari itu sudah ada catatan.</p>
+                    <p className="text-[16px] font-bold">Ingatkan aku</p>
+                    <p className="text-[13px] text-slate-500">Bisa diubah di Profil → Notifikasi</p>
                   </div>
                   <button
                     type="button"
@@ -284,13 +301,13 @@ export default function MulaiPage() {
                   </button>
                 </div>
                 {g.reminder.on && (
-                  <div className="mt-4 flex flex-wrap gap-2 pl-8">
+                  <div className="mt-4 flex flex-wrap gap-2">
                     {REMINDER_TIMES.map((t) => (
                       <button
                         key={t}
                         type="button"
                         onClick={() => update({ reminder: { on: true, time: t } })}
-                        className={cn('rounded-full px-3.5 py-1.5 text-[13px] font-semibold', g.reminder.time === t ? 'bg-slate-900 text-white' : 'bg-white text-slate-600')}
+                        className={cn('rounded-full px-3.5 py-1.5 text-[13px] font-bold transition-colors', g.reminder.time === t ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100')}
                       >
                         {t}
                       </button>
@@ -299,97 +316,83 @@ export default function MulaiPage() {
                 )}
               </div>
               <div className="mt-8 flex flex-wrap items-center gap-5">
-                <button type="button" onClick={() => go(4)} className={cn(pillDark, 'min-w-[11rem]')}>
-                  {g.reminder.on ? 'Atur ritme harianku' : 'Lanjut'}
-                </button>
+                <button type="button" onClick={() => go(4)} className={cn(pillMain, 'min-w-[12rem]')}>Lanjut</button>
                 {g.reminder.on && (
-                  <button type="button" onClick={() => { update({ reminder: { ...g.reminder, on: false } }); go(4); }} className="text-[15px] font-semibold text-slate-600 hover:text-slate-900">
-                    Nanti saja
+                  <button type="button" onClick={() => { update({ reminder: { ...g.reminder, on: false } }); go(4); }} className="text-[15px] font-semibold text-slate-500 hover:text-slate-800">
+                    Nggak usah
                   </button>
                 )}
               </div>
-              <p className="mt-3 text-[13px] text-slate-400">Notifikasi diaktifkan setelah akunmu jadi.</p>
             </>
           )}
 
           {step === 4 && (
             <>
-              <h2 className="text-[38px] font-extrabold leading-[1.05] tracking-[-0.03em] sm:text-[48px]">
-                Mulai dari
-                <br />
-                hari ini.
-              </h2>
-              <p className="mt-4 text-[17px] text-slate-500">Hari ini sudah bayar apa? Atau ada uang masuk? Tulis jumlahnya, Leo yang rapikan.</p>
-              <label className="mt-6 block rounded-[20px] border border-slate-200 bg-white p-4 focus-within:border-slate-400">
-                <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Catatanmu</span>
+              <h2 className={h2}>Catatan pertamamu.</h2>
+              <p className="mt-3 text-[16px] text-slate-500">Tadi bayar apa? Atau ada uang masuk? Tulis biasa saja, Leo yang menebak sisanya.</p>
+              <div className="mt-6 rounded-2xl bg-white p-4 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-indigo-500">
                 <textarea
                   value={text}
                   onChange={(e) => setText(e.target.value.slice(0, 200))}
                   rows={2}
+                  aria-label="Catatan pertama"
                   placeholder="Kopi susu 25rb"
-                  className="mt-1 w-full resize-none bg-transparent text-[18px] outline-none placeholder:text-slate-300"
+                  className="w-full resize-none bg-transparent text-[18px] font-medium outline-none placeholder:text-slate-300"
                 />
-                <span className="flex items-center justify-between text-[12px] text-slate-400">
-                  <span>
-                    {draftOk ? (
-                      <span className="font-semibold text-emerald-600">
-                        {draft!.type === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'} · {formatIDR(draft!.amount!)}
-                        {draft!.subCategory ? ` · ${draft!.subCategory}` : ''}
-                      </span>
-                    ) : text.trim() ? (
-                      'Sebutkan jumlahnya, mis. 25rb atau 25.000'
-                    ) : (
-                      'Suara & foto struk bisa dipakai setelah punya akun'
-                    )}
-                  </span>
-                  <span>{text.length} / 200</span>
-                </span>
-              </label>
+                <div className="mt-1 flex items-center justify-between gap-3 text-[12px]">
+                  {draftOk ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 font-bold text-emerald-700">
+                      <Check size={12} strokeWidth={3} />
+                      {draft!.type === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'} · {formatIDR(draft!.amount!)}
+                      {draft!.subCategory ? ` · ${draft!.subCategory}` : ''}
+                    </span>
+                  ) : (
+                    <span className="text-slate-400">{text.trim() ? 'Sebutkan jumlahnya, mis. 25rb atau 25.000' : 'Suara & foto struk aktif setelah punya akun'}</span>
+                  )}
+                  <span className="shrink-0 text-slate-400">{text.length}/200</span>
+                </div>
+              </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {EXAMPLES.map((ex) => (
-                  <button key={ex} type="button" onClick={() => setText(ex)} className="rounded-full border border-slate-200 px-4 py-2 text-[14px] text-slate-700 hover:bg-slate-50">
+                  <button key={ex} type="button" onClick={() => setText(ex)} className="rounded-full bg-indigo-50 px-4 py-2 text-[14px] font-semibold text-indigo-700 hover:bg-indigo-100">
                     {ex}
                   </button>
                 ))}
               </div>
-              <div className="mt-8">
-                <button type="button" disabled={!draftOk} onClick={saveNote} className={cn(pillDark, 'min-w-[11rem]')}>Simpan catatanku</button>
-                <p className="mt-3 text-[13px] text-slate-500">
-                  Bisa diubah atau dihapus nanti.{' '}
-                  <button type="button" onClick={() => { update({ note: null, done: true }); go(LAST); }} className="font-semibold text-slate-900 hover:underline">
-                    Lewati
-                  </button>
-                </p>
+              <div className="mt-8 flex flex-wrap items-center gap-5">
+                <button type="button" disabled={!draftOk} onClick={saveNote} className={cn(pillMain, 'min-w-[12rem]')}>Catat</button>
+                <button type="button" onClick={() => { update({ note: null, done: true }); go(LAST); }} className="text-[15px] font-semibold text-slate-500 hover:text-slate-800">
+                  Lewati dulu
+                </button>
               </div>
             </>
           )}
 
           {step === LAST && (
             <>
-              <h2 className="text-[38px] font-extrabold leading-[1.05] tracking-[-0.03em] sm:text-[52px]">Awal yang bagus.</h2>
-              <p className="mt-3 text-[17px] text-slate-500">Semua sudah siap.</p>
-              <span className="mt-6 inline-flex w-fit items-center gap-2 rounded-full bg-slate-100 py-2 pl-2 pr-4 text-[15px] font-semibold">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white">
-                  <Image src="/images/Logo-new.png" alt="" width={20} height={20} />
-                </span>
-                Hari ke-1 bersama Leo
+              <span className="inline-flex w-fit items-center gap-2 rounded-full bg-amber-50 px-3.5 py-1.5 text-[13px] font-bold text-amber-700">
+                <Flame size={15} /> Hari ke-1 bersama Leo
               </span>
-              <Link href={registerHref} className="mt-4 flex items-center gap-4 rounded-[20px] bg-amber-50 p-4 transition-colors hover:bg-amber-100/70">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-amber-500 text-white">
-                  <Sparkles size={18} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[16px] font-semibold">Simpan ke akun biar nggak hilang</span>
-                  <span className="block text-[13px] text-slate-500">
-                    {g.note ? 'Catatan & pilihanmu ikut tersimpan.' : 'Pilihanmu ikut tersimpan.'} Gratis 14 hari, tanpa kartu kredit.
-                  </span>
-                </span>
-                <ArrowRight size={18} className="shrink-0 text-slate-400" />
-              </Link>
+              <h2 className={cn(h2, 'mt-4')}>Hari pertama, beres.</h2>
+              <p className="mt-3 text-[16px] text-slate-500">
+                Simpan ke akun supaya {g.note ? 'catatan & pilihanmu' : 'pilihanmu'} nggak hilang. Gratis 14 hari, tanpa kartu kredit.
+              </p>
+              <ul className="mt-6 space-y-2.5 text-[15px] text-slate-700">
+                <li className="flex items-center gap-2.5"><Check size={17} className="text-emerald-500" strokeWidth={3} /> {g.goals.length} tujuan dipilih</li>
+                <li className="flex items-center gap-2.5"><Check size={17} className="text-emerald-500" strokeWidth={3} /> Catat utama: {MODES.find((m) => m.id === mode)!.title.toLowerCase()}</li>
+                <li className="flex items-center gap-2.5">
+                  <Check size={17} className={g.reminder.on ? 'text-emerald-500' : 'text-slate-300'} strokeWidth={3} />
+                  {g.reminder.on ? `Pengingat jam ${g.reminder.time}` : 'Tanpa pengingat'}
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <Check size={17} className={g.note ? 'text-emerald-500' : 'text-slate-300'} strokeWidth={3} />
+                  {g.note ? `Catatan pertama: ${g.note.note} ${formatIDR(g.note.amount)}` : 'Belum ada catatan — nggak apa-apa'}
+                </li>
+              </ul>
               <div className="mt-8">
-                <Link href={registerHref} className={cn(pillDark, 'inline-flex min-w-[11rem] items-center justify-center')}>Simpan ke akun</Link>
-                <p className="mt-3 text-[13px] text-slate-500">
-                  Sudah punya akun? <Link href={loginHref} className="font-semibold text-slate-900 hover:underline">Masuk</Link>
+                <Link href={registerHref} className={cn(pillMain, 'min-w-[12rem]')}>Simpan ke akun <ArrowRight size={18} /></Link>
+                <p className="mt-4 text-[14px] text-slate-500">
+                  Sudah punya akun? <Link href={loginHref} className="font-bold text-indigo-600 hover:underline">Masuk</Link>
                 </p>
               </div>
             </>
@@ -397,212 +400,295 @@ export default function MulaiPage() {
         </div>
       </section>
 
-      {/* Kanan: pratinjau per langkah */}
-      <aside className={cn('relative mx-4 mb-4 min-h-[420px] overflow-hidden rounded-[32px] bg-[#f5f5f7] lg:m-0 lg:min-h-0', step === 2 && 'hidden lg:block')}>
-        {step === 0 && <WelcomeScene />}
-        {step === 1 && <GoalsPreview goals={g.goals} now={now} />}
-        {step === 2 && (
-          <div className="flex h-full items-center justify-center p-8 xl:p-12">
-            <div className="grid w-full max-w-[480px] grid-cols-1 gap-4">
-              {MODES.map((m) => (
-                <ModeCard key={m.id} m={m} on={(g.inputMode ?? 'ketik') === m.id} onClick={() => update({ inputMode: m.id })} />
-              ))}
-            </div>
+      {/* Kanan: latar indigo + HP berisi aplikasi Leosiqra yang ikut terbentuk */}
+      <aside className="relative mx-4 mb-4 min-h-[540px] overflow-hidden rounded-[32px] lg:m-4 lg:min-h-0">
+        <BrandBackdrop />
+        {step === 0 ? (
+          <WelcomeScene />
+        ) : (
+          <div className="relative flex h-full min-h-[540px] items-center justify-center px-4 py-10">
+            <Phone>
+              {step === 1 && <PhoneHome goals={g.goals} now={now} />}
+              {step === 2 && <PhoneInput mode={mode} />}
+              {step === 3 && <PhoneLock on={g.reminder.on} time={g.reminder.time} now={now} />}
+              {step === 4 && <PhoneHistory draftOk={draftOk} draft={draft} />}
+              {step === LAST && <PhoneDayOne g={g} />}
+            </Phone>
+            {step === LAST && (
+              <div className="pointer-events-none absolute bottom-0 right-[6%] hidden translate-y-[30%] xl:block">
+                <LeoMascot mood="happy" size={190} />
+              </div>
+            )}
           </div>
         )}
-        {step === 3 && <ReminderPreview on={g.reminder.on} time={g.reminder.time} />}
-        {step === 4 && <HistoryPreview draftOk={draftOk} draft={draft} />}
-        {step === LAST && <FirstReceipt g={g} now={now} />}
       </aside>
     </div>
   );
 }
 
-function ModeCard({ m, on, onClick, compact }: { m: (typeof MODES)[number]; on: boolean; onClick: () => void; compact?: boolean }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={on}
-      onClick={onClick}
-      className={cn(
-        'flex flex-col rounded-[24px] text-left transition-all',
-        m.bg,
-        compact ? 'flex-row items-center gap-4 p-4' : 'flex-row items-center gap-5 p-6',
-        on ? 'ring-[3px] ring-slate-900' : 'ring-1 ring-transparent hover:ring-slate-300'
-      )}
-    >
-      <span className={cn('flex shrink-0 items-center justify-center rounded-xl bg-white text-slate-800', compact ? 'h-10 w-10' : 'h-12 w-12')}>
-        <m.icon size={19} />
-      </span>
-      <span className="min-w-0">
-        <span className="inline-block rounded-full bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-700">{m.chip}</span>
-        <span className={cn('mt-2 block text-slate-700', compact ? 'text-[14px]' : 'text-[16px] leading-relaxed')}>{m.desc}</span>
-      </span>
-    </button>
-  );
-}
-
 function WelcomeScene() {
   return (
-    <div className="absolute inset-0">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_55%_60%,rgba(251,191,36,0.18),transparent_60%)]" />
-      <StickyNote className="absolute left-[7%] top-[8%]" />
-      <Coin className="absolute left-[52%] top-[7%]" />
-      <Receipt className="absolute right-[6%] top-[14%] hidden sm:block" />
-      <PaydayNote className="absolute left-[9%] top-[52%]" />
-      <WalletCard className="absolute right-[7%] top-[50%] hidden sm:block" />
-      <div className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[38%]">
-        <LeoMascot mood="idle" size={260} />
+    <div className="relative h-full min-h-[540px]">
+      <VoiceChip className="absolute left-[6%] top-[9%]" />
+      <TxChip className="absolute right-[5%] top-[24%] hidden sm:block" />
+      <BudgetChip className="absolute left-[8%] top-[42%] hidden sm:block" />
+      <ScanChip className="absolute right-[8%] top-[48%] hidden md:block" />
+      <BalanceChip className="absolute right-[6%] top-[28%] sm:hidden" />
+      <div className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[34%]">
+        <LeoMascot mood="idle" size={250} />
       </div>
     </div>
   );
 }
 
-function GoalsPreview({ goals, now }: { goals: GuestGoal[]; now: Date | null }) {
+function Phone({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative w-[280px] rounded-[46px] bg-slate-900 p-[9px] shadow-[0_40px_80px_-30px_rgba(30,27,75,0.6)] sm:w-[300px]">
+      <div className="relative h-[560px] overflow-hidden rounded-[38px] bg-[#f6f7fb] sm:h-[600px]">
+        <div className="absolute left-1/2 top-2 z-20 h-6 w-24 -translate-x-1/2 rounded-full bg-slate-900" />
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function AppTop({ title, sub }: { title: string; sub?: string }) {
+  return (
+    <div className="px-5 pb-3 pt-12">
+      {sub && <p className="text-[11px] font-semibold text-slate-400">{sub}</p>}
+      <p className="text-[20px] font-extrabold tracking-tight text-slate-900">{title}</p>
+    </div>
+  );
+}
+
+function PhoneHome({ goals, now }: { goals: GuestGoal[]; now: Date | null }) {
   const month = now ? now.toLocaleDateString('id-ID', { month: 'long' }) : '';
-  const card = (id: GuestGoal, title: string, value: string, body: React.ReactNode) => {
-    const on = goals.includes(id);
-    return (
-      <div className={cn('rounded-[22px] p-5 transition-all duration-300', on ? 'bg-white shadow-[0_1px_2px_rgba(15,23,42,0.05)]' : 'border border-dashed border-slate-300/80 opacity-45')}>
-        <div className="flex items-start justify-between gap-2">
-          <p className="text-[13px] font-semibold text-slate-500">{title}</p>
-          {!on && <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Belum dipilih</span>}
+  const widgets: Record<GuestGoal, React.ReactNode> = {
+    arus_uang: (
+      <>
+        <p className="text-[11px] font-semibold text-slate-500">Keluar {month}</p>
+        <p className="text-[17px] font-extrabold">Rp3.240.000</p>
+        <div className="mt-2 flex h-10 items-end gap-1.5">
+          {[40, 62, 30, 75, 52, 90, 58].map((h, i) => <span key={i} className={cn('flex-1 rounded', i === 5 ? 'bg-indigo-600' : 'bg-indigo-200')} style={{ height: `${h}%` }} />)}
         </div>
-        <p className="mt-1 text-[22px] font-extrabold tracking-tight">{value}</p>
-        <div className="mt-3">{body}</div>
+      </>
+    ),
+    budget: (
+      <>
+        <p className="text-[11px] font-semibold text-slate-500">Budget makan</p>
+        <p className="text-[17px] font-extrabold">72% terpakai</p>
+        <div className="mt-2 h-2 rounded-full bg-amber-100"><div className="h-full w-[72%] rounded-full bg-amber-500" /></div>
+      </>
+    ),
+    nabung: (
+      <>
+        <p className="text-[11px] font-semibold text-slate-500">Tabungan mudik</p>
+        <p className="text-[17px] font-extrabold">35% · Rp3,5 jt</p>
+        <div className="mt-2 h-2 rounded-full bg-pink-100"><div className="h-full w-[35%] rounded-full bg-pink-500" /></div>
+      </>
+    ),
+    hutang: (
+      <>
+        <p className="text-[11px] font-semibold text-slate-500">Cicilan motor</p>
+        <p className="text-[17px] font-extrabold">Sisa 8 bulan</p>
+        <div className="mt-2 h-2 rounded-full bg-sky-100"><div className="h-full w-[60%] rounded-full bg-sky-500" /></div>
+      </>
+    ),
+    pajak: (
+      <>
+        <p className="text-[11px] font-semibold text-slate-500">SPT Tahunan</p>
+        <p className="text-[17px] font-extrabold">Ringkasan siap</p>
+        <p className="mt-1 text-[11px] text-slate-500">Harta, utang & penghasilan</p>
+      </>
+    ),
+    aset: (
+      <>
+        <p className="text-[11px] font-semibold text-slate-500">Kekayaan bersih</p>
+        <p className="text-[17px] font-extrabold">Rp48.200.000</p>
+        <p className="mt-1 flex items-center gap-1 text-[11px] font-bold text-emerald-600"><TrendingUp size={12} /> naik bulan ini</p>
+      </>
+    ),
+  };
+  return (
+    <>
+      <AppTop sub="Selamat datang" title="Beranda" />
+      <div className="space-y-2.5 px-4">
+        {goals.length === 0 ? (
+          <div className="mt-16 flex flex-col items-center text-center">
+            <LeoMascot mood="peek" size={110} />
+            <p className="mt-2 px-6 text-[13px] text-slate-500">Pilih di sebelah, berandamu terbentuk di sini.</p>
+          </div>
+        ) : (
+          GUEST_GOALS.filter((x) => goals.includes(x.id)).map((x) => (
+            <div key={x.id} className="rounded-2xl bg-white p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.06)] animate-in fade-in slide-in-from-bottom-2 duration-300">
+              {widgets[x.id]}
+            </div>
+          ))
+        )}
+      </div>
+    </>
+  );
+}
+
+function PhoneInput({ mode }: { mode: GuestInputMode }) {
+  if (mode === 'suara') {
+    return (
+      <div className="flex h-full flex-col items-center bg-gradient-to-b from-indigo-600 to-violet-700 px-6 pt-20 text-white">
+        <p className="text-[13px] font-semibold text-white/70">Mendengarkan…</p>
+        <p className="mt-3 text-center text-[22px] font-bold leading-snug">“parkir lima ribu, kopi dua puluh lima ribu”</p>
+        <div className="mt-10 flex h-16 items-center gap-1">
+          {[30, 60, 45, 90, 70, 100, 55, 80, 40, 65, 35].map((h, i) => (
+            <span key={i} className="voice-bar w-1.5 rounded-full bg-white/80" style={{ height: `${h}%`, animationDelay: `${i * 0.07}s` }} />
+          ))}
+        </div>
+        <span className="relative mt-auto mb-14 flex h-20 w-20 items-center justify-center rounded-full bg-white text-indigo-600">
+          <span className="absolute inset-0 animate-ping rounded-full bg-white/40" />
+          <Mic size={30} />
+        </span>
       </div>
     );
-  };
-  const bar = (w: string, on = false) => <div className="h-2.5 rounded-full bg-slate-100"><div className={cn('h-full rounded-full', on ? 'bg-indigo-600' : 'bg-indigo-300')} style={{ width: w }} /></div>;
-  return (
-    <div className="h-full p-6 sm:p-8 xl:p-10">
-      <div className="flex items-baseline justify-between">
-        <p className="text-[22px] font-bold tracking-tight">Ruang Uangku</p>
-        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Beranda · contoh</p>
-      </div>
-      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {card('arus_uang', `Pengeluaran ${month}`, 'Rp 3.240.000',
-          <div className="flex h-16 items-end gap-2">{[40, 62, 30, 75, 52, 90, 58].map((h, i) => <span key={i} className={cn('flex-1 rounded-md', i === 5 ? 'bg-indigo-600' : 'bg-indigo-200')} style={{ height: `${h}%` }} />)}</div>)}
-        {card('budget', 'Anggaran', '3 kategori', <div className="space-y-2">{bar('72%')}{bar('88%', true)}{bar('35%')}</div>)}
-        {card('nabung', 'Tujuan', 'Mudik · 35%', bar('35%', true))}
-        {card('hutang', 'Cicilan motor', 'Sisa 8 bulan', bar('60%'))}
-        {card('pajak', 'SPT Tahunan', 'Ringkasan siap', <p className="text-[12px] text-slate-500">Harta, utang & penghasilan setahun.</p>)}
-        {card('aset', 'Kekayaan bersih', 'Rp 48.200.000', <p className="text-[12px] text-slate-500">Rekening, tabungan & investasi.</p>)}
-      </div>
-    </div>
-  );
-}
-
-function ReminderPreview({ on, time }: { on: boolean; time: string }) {
-  const [h, m] = time.split(':').map(Number);
-  const frac = (h * 60 + m) / (24 * 60);
-  const r = 120;
-  const c = 2 * Math.PI * r;
-  return (
-    <div className="flex h-full flex-col p-6 sm:p-8 xl:p-10">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">Pengingat jam {time}</p>
-        <div className={cn('w-full max-w-[340px] rounded-2xl bg-white/90 p-3.5 shadow-sm transition-opacity', on ? 'opacity-100' : 'opacity-40')}>
-          <div className="flex items-start gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-50"><Image src="/images/Logo-new.png" alt="" width={24} height={24} /></span>
-            <div className="min-w-0 flex-1">
-              <p className="flex justify-between text-[12px] text-slate-400"><span>Leosiqra</span><span>{time}</span></p>
-              <p className="text-[14px] font-semibold">Waktunya tutup hari</p>
-              <p className="text-[12px] text-slate-500">Semenit bareng Leo: catat yang tadi, lalu istirahat.</p>
-            </div>
+  }
+  if (mode === 'foto') {
+    return (
+      <div className="flex h-full flex-col bg-slate-900 px-6 pt-16 text-white">
+        <p className="text-center text-[13px] font-semibold text-white/70">Arahkan ke struk</p>
+        <div className="relative mx-auto mt-5 w-full rounded-2xl border-2 border-dashed border-white/40 p-4">
+          <div className="space-y-2 rounded-lg bg-white p-4 text-slate-700">
+            {[['Beras 5kg', '68.000'], ['Telur 1kg', '28.500'], ['Minyak 2L', '36.000']].map(([a, b]) => (
+              <p key={a} className="flex justify-between font-mono text-[11px]"><span>{a}</span><span>{b}</span></p>
+            ))}
+            <p className="flex justify-between border-t border-dashed border-slate-300 pt-2 font-mono text-[12px] font-bold"><span>TOTAL</span><span>132.500</span></p>
           </div>
+          <span className="scan-line absolute inset-x-4 h-0.5 bg-indigo-400 shadow-[0_0_14px_3px_rgba(129,140,248,0.7)]" />
+        </div>
+        <p className="mt-5 flex items-center justify-center gap-2 text-[13px] font-semibold text-indigo-200"><ScanLine size={15} /> 3 item terbaca · Rp132.500</p>
+        <span className="mx-auto mt-auto mb-12 h-16 w-16 rounded-full border-4 border-white bg-white/20" />
+      </div>
+    );
+  }
+  return (
+    <>
+      <AppTop sub="Input cepat" title="Catat" />
+      <div className="px-4">
+        <div className="rounded-2xl bg-white p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
+          <p className="text-[15px] font-medium text-slate-900">makan siang 30rb bca<span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-indigo-600 align-middle" /></p>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {['Pengeluaran', 'Rp30.000', 'Makan', 'BCA'].map((t) => (
+            <span key={t} className="rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-700">{t}</span>
+          ))}
+        </div>
+        <div className="mt-6 grid grid-cols-10 gap-1">
+          {'qwertyuiopasdfghjkl'.split('').map((k) => (
+            <span key={k} className="flex h-8 items-center justify-center rounded-md bg-white text-[12px] text-slate-600 shadow-[0_1px_0_rgba(15,23,42,0.1)]">{k}</span>
+          ))}
         </div>
       </div>
-      <div className="flex flex-1 items-center justify-center py-6">
-        <svg viewBox="0 0 300 300" className="h-auto w-full max-w-[320px]" aria-hidden>
-          <circle cx="150" cy="150" r={r} fill="none" stroke="#e2e8f0" strokeWidth="26" />
-          <circle cx="150" cy="150" r={r} fill="none" stroke={on ? '#4f46e5' : '#cbd5e1'} strokeWidth="26" strokeLinecap="round" strokeDasharray={`${c * frac} ${c}`} transform="rotate(-90 150 150)" className="transition-all duration-500" />
-          {Array.from({ length: 24 }, (_, i) => {
-            const a = (i / 24) * 2 * Math.PI - Math.PI / 2;
-            const r1 = i % 6 === 0 ? 146 : 150;
-            return <line key={i} x1={150 + Math.cos(a) * r1} y1={150 + Math.sin(a) * r1} x2={150 + Math.cos(a) * 156} y2={150 + Math.sin(a) * 156} stroke="#0f172a" strokeWidth={i % 6 === 0 ? 3 : 1.2} />;
-          })}
-          <text x="150" y="160" textAnchor="middle" className="fill-slate-900" style={{ fontSize: 52, fontWeight: 800, letterSpacing: '-0.03em' }}>{time}</text>
-          <text x="150" y="190" textAnchor="middle" className="fill-slate-500" style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.14em' }}>TIAP MALAM</text>
-        </svg>
-      </div>
-    </div>
+    </>
   );
 }
 
-function HistoryPreview({ draftOk, draft }: { draftOk: boolean; draft: ReturnType<typeof parseQuickText> | null }) {
+function PhoneLock({ on, time, now }: { on: boolean; time: string; now: Date | null }) {
+  const date = now ? now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }) : '';
   return (
-    <div className="flex h-full min-h-[420px] flex-col p-6 sm:p-8 xl:p-10">
-      <div className="flex items-baseline justify-between">
-        <p className="text-[22px] font-bold tracking-tight">Riwayat</p>
-        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Hari ini</p>
-      </div>
-      {draftOk && draft ? (
-        <div className="mt-6 flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm animate-in fade-in slide-in-from-bottom-2">
-          <span className={cn('flex h-10 w-10 items-center justify-center rounded-xl text-white', draft.type === 'pemasukan' ? 'bg-emerald-500' : 'bg-indigo-600')}>
-            {draft.type === 'pemasukan' ? <ArrowRight size={17} className="-rotate-45" /> : <TrendingDown size={17} />}
+    <div className="flex h-full flex-col items-center bg-[radial-gradient(120%_70%_at_50%_0%,#4338ca,#1e1b4b_70%)] px-4 pt-16 text-white">
+      <p className="text-[13px] font-semibold text-white/70">{date}</p>
+      <p className="mt-1 text-[68px] font-extrabold leading-none tracking-tight">{time}</p>
+      <div className={cn('mt-10 w-full rounded-[22px] bg-white/15 p-3.5 backdrop-blur-md transition-all duration-500', on ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-30')}>
+        <div className="flex items-start gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white">
+            <Image src="/images/Logo-new.png" alt="" width={24} height={24} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] font-semibold">{draft.note || 'Catatan'}</p>
-            <p className="text-[12px] text-slate-500">{draft.subCategory || draft.category || (draft.type === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran')}</p>
+            <p className="flex justify-between text-[11px] text-white/70"><span>Leosiqra</span><span>sekarang</span></p>
+            <p className="text-[14px] font-bold">Waktunya tutup hari</p>
+            <p className="text-[12px] text-white/80">Semenit bareng Leo: catat yang tadi, lalu istirahat.</p>
           </div>
-          <p className={cn('text-[15px] font-bold', draft.type === 'pemasukan' ? 'text-emerald-600' : 'text-slate-900')}>
-            {draft.type === 'pemasukan' ? '+' : '−'}{formatIDR(draft.amount!)}
-          </p>
         </div>
-      ) : (
-        <div className="flex flex-1 flex-col items-center justify-center text-center">
-          <LeoMascot mood="watch" size={120} />
-          <p className="mt-2 text-[15px] text-slate-500">Catatanmu muncul di sini.</p>
-        </div>
-      )}
+      </div>
+      {!on && <p className="mt-4 text-[12px] text-white/60">Pengingat mati</p>}
     </div>
   );
 }
 
-function FirstReceipt({ g, now }: { g: GuestOnboarding; now: Date | null }) {
-  const stamp = now
-    ? `${now.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })} · ${now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`
-    : '';
-  const income = g.note?.type === 'pemasukan';
+function PhoneHistory({ draftOk, draft }: { draftOk: boolean; draft: ReturnType<typeof parseQuickText> | null }) {
+  const income = draft?.type === 'pemasukan';
   return (
-    <div className="flex h-full min-h-[460px] items-center justify-center p-6">
-      <div className="w-full max-w-[340px]">
-        <div className="mx-auto h-1.5 w-[110%] -translate-x-[4.5%] rounded-full bg-slate-300" />
-        <div className="receipt-edge -mt-0.5 bg-white px-6 pb-9 pt-6 font-mono text-[13px] text-slate-700 shadow-[0_24px_40px_-24px_rgba(15,23,42,0.35)] animate-in slide-in-from-top-6 duration-700">
-          <div className="text-center">
-            <Image src="/images/Logo-new.png" alt="" width={30} height={30} className="mx-auto" />
-            <p className="mt-2 font-sans text-[19px] font-bold text-slate-900">Struk pertama</p>
-            <p className="mt-1 uppercase tracking-wider text-slate-500">Ruang uangku · No. 0001</p>
-            <p className="uppercase tracking-wider text-slate-500">{stamp}</p>
+    <>
+      <AppTop sub="Hari ini" title="Transaksi" />
+      <div className="px-4">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-2xl bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
+            <p className="text-[11px] font-semibold text-slate-500">Masuk</p>
+            <p className="text-[14px] font-extrabold text-emerald-600">{draftOk && income ? formatIDR(draft!.amount!) : 'Rp0'}</p>
           </div>
-          <p className="my-4 border-t border-dashed border-slate-300" />
-          {g.note ? (
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate font-sans text-[15px] text-slate-900">{g.note.note}</p>
-                <p className="uppercase tracking-wider text-slate-500">{g.note.subCategory || g.note.category || (income ? 'Pemasukan' : 'Pengeluaran')}</p>
-              </div>
-              <p className="shrink-0 font-sans text-[15px] text-slate-900">{formatIDR(g.note.amount)}</p>
-            </div>
-          ) : (
-            <div>
-              <p className="font-sans text-[15px] text-slate-900">Hari pertama</p>
-              <p className="uppercase tracking-wider text-slate-500">Belum ada catatan. Tidak apa-apa.</p>
-            </div>
-          )}
-          <p className="my-4 border-t border-dashed border-slate-300" />
-          <p className="flex items-baseline justify-between">
-            <span className="font-bold uppercase tracking-wider text-slate-900">{income ? 'Masuk' : 'Keluar'}</span>
-            <span className="font-sans text-[24px] font-semibold text-slate-900">{formatIDR(g.note?.amount ?? 0)}</span>
-          </p>
-          <div className="mt-6 flex justify-center">
-            <span className="inline-flex -rotate-6 items-center gap-2 rounded-xl border-[3px] border-indigo-600 px-4 py-1.5 font-sans text-[13px] font-extrabold uppercase tracking-[0.16em] text-indigo-600">
-              <Check size={15} strokeWidth={3} /> Tercatat · Hari 1
-            </span>
+          <div className="rounded-2xl bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
+            <p className="text-[11px] font-semibold text-slate-500">Keluar</p>
+            <p className="text-[14px] font-extrabold text-slate-900">{draftOk && !income ? formatIDR(draft!.amount!) : 'Rp0'}</p>
           </div>
         </div>
+        {draftOk && draft ? (
+          <div className="mt-3 flex items-center gap-3 rounded-2xl bg-white p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.06)] animate-in fade-in slide-in-from-bottom-2">
+            <span className={cn('flex h-9 w-9 items-center justify-center rounded-xl text-white', income ? 'bg-emerald-500' : 'bg-indigo-600')}>
+              {income ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[14px] font-semibold">{draft.note || 'Catatan'}</p>
+              <p className="text-[11px] text-slate-500">{draft.subCategory || draft.category || (income ? 'Pemasukan' : 'Pengeluaran')}</p>
+            </div>
+            <p className={cn('text-[13px] font-bold', income ? 'text-emerald-600' : 'text-slate-900')}>{income ? '+' : '−'}{formatIDR(draft.amount!)}</p>
+          </div>
+        ) : (
+          <div className="mt-14 flex flex-col items-center text-center">
+            <LeoMascot mood="watch" size={110} />
+            <p className="mt-2 text-[13px] text-slate-500">Ketik di sebelah, muncul di sini.</p>
+          </div>
+        )}
       </div>
-    </div>
+    </>
+  );
+}
+
+function PhoneDayOne({ g }: { g: GuestOnboarding }) {
+  const days = ['S', 'S', 'R', 'K', 'J', 'S', 'M'];
+  return (
+    <>
+      <AppTop sub="Leosiqra" title="Hari ke-1" />
+      <div className="space-y-3 px-4">
+        <div className="rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 p-4 text-white">
+          <p className="flex items-center gap-1.5 text-[12px] font-bold text-white/80"><Flame size={14} /> Rutinitas mencatat</p>
+          <div className="mt-3 flex justify-between">
+            {days.map((d, i) => (
+              <span key={i} className="flex flex-col items-center gap-1">
+                <span className={cn('flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold', i === 0 ? 'bg-white text-indigo-700' : 'bg-white/15 text-white/70')}>
+                  {i === 0 ? <Check size={13} strokeWidth={3.5} /> : ''}
+                </span>
+                <span className="text-[10px] text-white/70">{d}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+        {g.note ? (
+          <div className="flex items-center gap-3 rounded-2xl bg-white p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500 text-white"><Check size={16} strokeWidth={3} /></span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[14px] font-semibold">{g.note.note}</p>
+              <p className="text-[11px] text-slate-500">Catatan pertama</p>
+            </div>
+            <p className="text-[13px] font-bold">{g.note.type === 'pemasukan' ? '+' : '−'}{formatIDR(g.note.amount)}</p>
+          </div>
+        ) : (
+          <div className="rounded-2xl bg-white p-3.5 text-[13px] text-slate-500 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">Catatan pertama menyusul — santai.</div>
+        )}
+        <div className="flex flex-wrap gap-1.5">
+          {GUEST_GOALS.filter((x) => g.goals.includes(x.id)).map((x) => (
+            <span key={x.id} className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-slate-600 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">{x.label}</span>
+          ))}
+        </div>
+        {g.reminder.on && (
+          <p className="flex items-center gap-2 text-[12px] font-semibold text-slate-500"><Bell size={13} /> Leo ingetin jam {g.reminder.time}</p>
+        )}
+      </div>
+    </>
   );
 }

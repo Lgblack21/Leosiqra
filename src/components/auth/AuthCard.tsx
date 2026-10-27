@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { BrandBackdrop } from './FinanceChips';
 import { LeoMascot, type LeoMood } from '@/components/mascot/LeoMascot';
 
-// Kerangka halaman auth sekunder (lupa/reset password): latar putih hangat yang
-// sama dengan masuk/daftar, satu kartu di tengah, Leo mengintip di tepi atas
-// kartu. Tanpa hiasan kertas supaya fokus ke satu aksi.
+// Kerangka halaman auth sekunder (lupa/reset password): latar gradasi indigo
+// yang sama dengan masuk/daftar, satu kartu di tengah, Leo mengintip di tepi
+// atas kartu. Tanpa kartu fitur melayang supaya fokus ke satu aksi.
 export function AuthCard({ badge, title, subtitle, mood = 'idle', children }: {
   badge: string;
   title: string;
@@ -17,8 +18,8 @@ export function AuthCard({ badge, title, subtitle, mood = 'idle', children }: {
   const d = (k: number) => ({ "--d": `${k * 0.08}s` }) as React.CSSProperties;
 
   return (
-    <div className="relative min-h-screen bg-white font-sans text-slate-900">
-      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(251,191,36,0.13),transparent_58%)]" />
+    <div className="relative min-h-screen overflow-hidden font-sans text-slate-900">
+      <BrandBackdrop />
       <div className="relative flex min-h-screen flex-col items-center px-5 py-8 sm:justify-center">
         <div style={d(0)} className="auth-enter">
           <Link href="/" className="flex items-center gap-2.5 text-slate-900">

@@ -4,11 +4,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { ChevronLeft } from "lucide-react";
 import { LeoMascot, type LeoMood } from "@/components/mascot/LeoMascot";
-import { Coin, PaydayNote, Receipt, StickyNote } from "./PaperNotes";
+import { BalanceChip, BrandBackdrop, BudgetChip, TxChip, VoiceChip } from "./FinanceChips";
 
-// Kerangka halaman masuk/daftar: latar putih hangat dengan kertas-kertas
-// melayang (catatan tempel, struk, koin), satu kartu di tengah, Leo mengintip
-// di tepi atas kartu, dan tombol kembali ke layar sambutan /mulai.
+// Kerangka halaman masuk/daftar: latar gradasi indigo khas Leosiqra dengan
+// kartu fitur yang melayang (suara → transaksi, budget, saldo), satu kartu
+// form di tengah, Leo mengintip di tepi atas kartu, tombol kembali ke /mulai.
 export function AuthLayout({
   headline,
   sub,
@@ -30,19 +30,19 @@ export function AuthLayout({
   const d = (k: number) => ({ "--d": `${0.08 + k * 0.08}s` }) as React.CSSProperties;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-white font-sans text-slate-900 selection:bg-indigo-100">
-      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(251,191,36,0.13),transparent_58%)]" />
-      <div aria-hidden className="pointer-events-none absolute inset-0 hidden lg:block">
-        <StickyNote className="absolute left-[7%] top-[16%]" />
-        <PaydayNote className="absolute bottom-[14%] left-[11%]" />
-        <Receipt className="absolute right-[7%] top-[14%]" />
-        <Coin className="absolute bottom-[18%] right-[13%]" />
+    <div className="relative min-h-screen overflow-hidden font-sans text-slate-900 selection:bg-indigo-100">
+      <BrandBackdrop />
+      <div aria-hidden className="pointer-events-none absolute inset-0 hidden xl:block">
+        <VoiceChip className="absolute left-[6%] top-[16%]" />
+        <BudgetChip className="absolute bottom-[16%] left-[9%]" />
+        <TxChip className="absolute right-[5%] top-[18%]" />
+        <BalanceChip className="absolute bottom-[18%] right-[8%]" />
       </div>
 
       <Link
         href={backHref}
         aria-label="Kembali"
-        className="absolute left-4 top-5 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition-colors hover:bg-slate-200 sm:left-8 sm:top-8"
+        className="absolute left-4 top-5 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-white/80 text-indigo-700 shadow-sm ring-1 ring-indigo-100 backdrop-blur transition-colors hover:bg-white sm:left-8 sm:top-8"
       >
         <ChevronLeft size={20} />
       </Link>
@@ -60,7 +60,7 @@ export function AuthLayout({
           <div style={d(1)} className="auth-enter pointer-events-none relative z-20 -mb-[30px] flex justify-center">
             <LeoMascot mood={mood} lookX={lookX} size={124} interactive />
           </div>
-          <div style={d(1)} className="auth-enter relative z-10 rounded-[32px] border border-slate-100 bg-white p-6 pt-9 shadow-[0_30px_70px_-30px_rgba(15,23,42,0.35)] sm:p-9 sm:pt-11">
+          <div style={d(1)} className="auth-enter relative z-10 rounded-[32px] border border-white bg-white/95 p-6 pt-9 shadow-[0_40px_80px_-30px_rgba(49,46,129,0.45)] backdrop-blur sm:p-9 sm:pt-11">
             {children}
           </div>
           {footer && <div className="mt-5 text-center text-xs text-slate-400">{footer}</div>}
@@ -72,12 +72,12 @@ export function AuthLayout({
 
 // Komponen kecil yang dipakai bersama halaman masuk & daftar.
 export const authInputWrap =
-  "group flex items-center gap-3 rounded-2xl border border-transparent bg-slate-100 px-4 transition-all focus-within:border-slate-300 focus-within:bg-white focus-within:ring-4 focus-within:ring-slate-900/5";
+  "group flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 transition-all focus-within:border-indigo-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-indigo-500/10";
 export const authInput =
   "w-full bg-transparent py-3.5 text-[15px] font-medium text-slate-900 outline-none placeholder:text-slate-400";
 export const authLabel = "mb-1.5 block pl-1 text-[13px] font-semibold text-slate-600";
 export const authPrimaryBtn =
-  "group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-slate-950 py-4 text-[15px] font-bold text-white transition-all hover:bg-slate-800 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70";
+  "group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 py-4 text-[15px] font-bold text-white shadow-[0_14px_30px_-12px_rgba(79,70,229,0.7)] transition-all hover:-translate-y-0.5 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0";
 
 export const GoogleIcon = ({ size = 18 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
