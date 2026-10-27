@@ -292,56 +292,101 @@ export default function RekeningPage() {
         )}
       </section>
 
-      {/* Kartu kredit: tumpukan kartu */}
+      {/* Kartu kredit bergaya kartu fisik */}
       {cardInfo.length > 0 && (
         <section>
           <div className="mb-3 flex items-baseline justify-between px-1">
             <h2 className="text-[22px] font-extrabold tracking-tight text-slate-900">Kartu kredit</h2>
             <Link href="/membership/cards" className="text-[14px] font-bold text-indigo-600 hover:underline">Lihat semua</Link>
           </div>
-          <div className="mx-auto max-w-xl">
-            {cardInfo.map(({ acc, usage, cycle }, i) => {
+          {/* Kartu fisik: di HP digeser ke samping, di desktop dua kolom */}
+          <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 no-scrollbar md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0">
+            {cardInfo.map(({ acc, usage, cycle }) => {
               const chip = cycle && cycle.amountDue > 0
                 ? cycle.overdue
                   ? `Lewat ${Math.abs(cycle.daysUntilDue)} hari`
                   : `${dueText(cycle.dueDate)} · ${cycle.daysUntilDue === 0 ? 'hari ini' : `${cycle.daysUntilDue} hari lagi`}`
-                : usage.used > 0 ? `Terpakai ${short(usage.used)}` : 'Lunas';
+                : usage.used > 0 ? 'Belum ada tagihan' : 'Lunas';
               const urgent = cycle && cycle.amountDue > 0 && (cycle.overdue || cycle.daysUntilDue <= 5);
+              const pct = usage.limit > 0 ? Math.min(100, (usage.used / usage.limit) * 100) : 0;
               return (
                 <Link
                   key={acc.id}
                   href="/membership/cards"
-                  className={cn('relative flex items-center gap-3 rounded-t-[22px] px-5 pb-8 pt-4 text-white shadow-[0_-6px_16px_-10px_rgba(15,23,42,0.5)]', getCardGradientClass(acc.cardColor, acc.type), i > 0 && '-mt-5')}
-                  style={{ zIndex: i + 1 }}
+                  className={cn(
+                    'relative flex aspect-[1.586/1] w-[85%] shrink-0 snap-center flex-col justify-between overflow-hidden rounded-[22px] p-5 text-white shadow-[0_20px_40px_-20px_rgba(15,23,42,0.6)] transition-transform hover:-translate-y-0.5 sm:w-[360px] md:w-auto',
+                    getCardGradientClass(acc.cardColor, acc.type)
+                  )}
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/90">
-                    <LogoImage
-                      src={acc.logoUrl}
-                      alt={acc.name}
-                      fallbackText={acc.name.substring(0, 3).toUpperCase()}
-                      fallbackIcon={<CreditCard size={18} className="text-slate-700" />}
-                      className="h-full w-full object-cover"
-                    />
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-[18px] font-bold">{acc.name}</span>
-                  <span className={cn('shrink-0 rounded-full px-3 py-1 text-[13px] font-semibold', urgent ? 'bg-white text-rose-600' : 'bg-white/20')}>{chip}</span>
+                  {/* Kilau & lingkaran dekorasi */}
+                  <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-white/15" />
+                  <span aria-hidden className="pointer-events-none absolute -bottom-24 -left-10 h-56 w-56 rounded-full bg-black/10" />
+                  <span aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/20" />
+
+                  <div className="relative flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/95">
+                        <LogoImage
+                          src={acc.logoUrl}
+                          alt={acc.name}
+                          fallbackText={acc.name.substring(0, 3).toUpperCase()}
+                          fallbackIcon={<CreditCard size={17} className="text-slate-700" />}
+                          className="h-full w-full object-cover"
+                        />
+                      </span>
+                      <span className="truncate text-[17px] font-bold tracking-tight">{acc.name}</span>
+                    </div>
+                    <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-[12px] font-semibold', urgent ? 'bg-white text-rose-600' : 'bg-white/20 backdrop-blur')}>{chip}</span>
+                  </div>
+
+                  <div className="relative flex items-center gap-3">
+                    {/* Chip EMV */}
+                    <svg width="42" height="32" viewBox="0 0 42 32" aria-hidden className="drop-shadow-sm">
+                      <rect x="0.5" y="0.5" width="41" height="31" rx="6" fill="#f5d27a" stroke="#d4a943" />
+                      <path d="M14 1v30M28 1v30M1 11h13M28 11h13M1 21h13M28 21h13M14 16h14" stroke="#c99a35" strokeWidth="1.2" fill="none" />
+                    </svg>
+                    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden className="opacity-80" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <path d="M8.5 7.5a6.5 6.5 0 0 1 0 9M12 5a10 10 0 0 1 0 14M5 10a2.5 2.5 0 0 1 0 4" />
+                    </svg>
+                    <span className="ml-auto font-mono text-[14px] tracking-[0.2em] text-white/80">•••• •••• ••••</span>
+                  </div>
+
+                  <div className="relative">
+                    <div className="flex items-end justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/70">Terpakai</p>
+                        <p className="truncate text-[22px] font-extrabold leading-tight tabular-nums">{money(usage.used, acc.currency)}</p>
+                      </div>
+                      {usage.limit > 0 && (
+                        <div className="text-right">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/70">Sisa limit</p>
+                          <p className="text-[14px] font-bold tabular-nums">{hidden ? '••••' : short(usage.remaining)}</p>
+                        </div>
+                      )}
+                    </div>
+                    {usage.limit > 0 && (
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/25">
+                        <div className={cn('h-full rounded-full', pct >= 90 ? 'bg-rose-300' : 'bg-white')} style={{ width: `${Math.max(2, pct)}%` }} />
+                      </div>
+                    )}
+                  </div>
                 </Link>
               );
             })}
-            <Link href="/membership/cards" className="relative -mt-5 flex items-center gap-3 rounded-[22px] bg-white px-5 py-4 shadow-[0_10px_30px_-18px_rgba(15,23,42,0.45)] ring-1 ring-slate-100" style={{ zIndex: cardInfo.length + 1 }}>
-              <div className="flex-1">
-                <p className="text-[13px] text-slate-500">Tagihan kartu</p>
-                <p className="text-[20px] font-extrabold tracking-tight text-slate-900 tabular-nums">{hidden ? 'Rp ••••••' : formatIDR(cardsUsedIdr)}</p>
-              </div>
-              {nearest && (
-                <div className="text-right">
-                  <p className="text-[13px] text-slate-500">{nearest.acc.name}</p>
-                  <p className="text-[14px] font-semibold text-amber-600">{hidden ? '••••' : short(nearest.cycle!.amountDue)} · {dueText(nearest.cycle!.dueDate)}</p>
-                </div>
-              )}
-              <ChevronRight size={18} className="text-slate-300" />
-            </Link>
           </div>
+          <Link href="/membership/cards" className="mt-3 flex items-center gap-3 rounded-[22px] bg-white px-5 py-4 ring-1 ring-slate-100 hover:bg-slate-50">
+            <div className="flex-1">
+              <p className="text-[13px] text-slate-500">Tagihan kartu</p>
+              <p className="text-[20px] font-extrabold tracking-tight text-slate-900 tabular-nums">{hidden ? 'Rp ••••••' : formatIDR(cardsUsedIdr)}</p>
+            </div>
+            {nearest && (
+              <div className="text-right">
+                <p className="text-[13px] text-slate-500">{nearest.acc.name}</p>
+                <p className="text-[14px] font-semibold text-amber-600">{hidden ? '••••' : short(nearest.cycle!.amountDue)} · {dueText(nearest.cycle!.dueDate)}</p>
+              </div>
+            )}
+            <ChevronRight size={18} className="text-slate-300" />
+          </Link>
         </section>
       )}
 
