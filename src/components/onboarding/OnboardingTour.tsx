@@ -104,7 +104,7 @@ const STOPS: TourStop[] = [
     path: '/membership/fitur',
     icon: Tags,
     title: 'Semua Fitur & Kategori',
-    content: 'Semua fitur Leosiqra ada di sini. Kategori, anggaran & mata uang diatur di Pengaturan (ikon ⚙️ atau foto profil di menu kiri) → Kategori & Anggaran.',
+    content: 'Semua fitur Leosiqra ada di sini. Nyalakan/matikan fitur di menu samping lewat Atur fitur (data tidak hilang). Kategori, anggaran & mata uang diatur di Pengaturan → Kategori & Anggaran.',
     demo: 'kategori',
     how: ['Buka Pengaturan → Kategori & Anggaran', 'Tambah kategori, subkategori & anggaran bulanan', 'Dipakai di semua form pencatatan'],
   },

@@ -11258,6 +11258,10 @@ async function handleMonthlyReportPreference(request: Request, env: Env) {
 // isi dari client tidak pernah ditulis apa adanya.
 const PREF_GOALS = ["arus_uang", "budget", "nabung", "hutang", "pajak", "aset"] as const;
 const PREF_INPUT_MODES = ["ketik", "suara", "foto"] as const;
+// Fitur yang tampil di menu samping (panel Pengaturan → Fitur). Hanya
+// visibilitas menu — mematikan fitur tidak menyentuh datanya. Sama dengan
+// FeatureId di src/lib/features.ts. null = bawaan (5 fitur lama).
+const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk"] as const;
 // Jam pengingat per 30 menit (cron tiap 10 menit, lihat sendDailyReminders).
 const PREF_TIME_RE = /^([01]\d|2[0-3]):(00|30)$/;
 // Ikon & warna pilihan user per nama kategori (panel Kategori & Anggaran).
@@ -11274,8 +11278,11 @@ type UserPrefs = {
   avatar: AvatarPrefs | null;
   // Simpan foto struk hasil scan AI sebagai lampiran transaksi (default ya).
   saveAttachments: boolean;
+  features: string[] | null;
 };
-const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" }, categoryStyles: {}, avatar: null, saveAttachments: true };
+const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" }, categoryStyles: {}, avatar: null, saveAttachments: true, features: null };
+const sanitizeFeatures = (raw: unknown): string[] | null =>
+  Array.isArray(raw) ? [...new Set(raw.filter((f): f is string => (PREF_FEATURES as readonly unknown[]).includes(f)))] : null;
 const sanitizeCategoryStyles = (raw: unknown): Record<string, CategoryStyle> => {
   const out: Record<string, CategoryStyle> = {};
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
@@ -11311,13 +11318,15 @@ const readUserPrefs = async (env: Env, userId: string): Promise<UserPrefs> => {
     categoryStyles: sanitizeCategoryStyles(raw.categoryStyles),
     avatar: sanitizeAvatar(raw.avatar),
     saveAttachments: raw.saveAttachments !== false,
+    features: sanitizeFeatures(raw.features),
   };
 };
 
 // GET  /api/member/preferences
 // PUT  /api/member/preferences  { goals?, inputMode?, reminder?: { on, time },
 //        categoryStyle?: { name, emoji, color } | { name, remove: true },
-//        avatar?: { mode: "leo"|"photo", fur, acc, bg }, saveAttachments?: boolean } — field yang dikirim saja yang diubah
+//        avatar?: { mode: "leo"|"photo", fur, acc, bg }, saveAttachments?: boolean,
+//        features?: string[] (urutan menu) } — field yang dikirim saja yang diubah
 async function handleUserPreferences(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -11325,7 +11334,7 @@ async function handleUserPreferences(request: Request, env: Env) {
   const current = await readUserPrefs(env, userId);
   if (request.method === "GET") return json({ item: current });
 
-  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown; categoryStyle?: unknown; avatar?: unknown; saveAttachments?: unknown }>(request);
+  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown; categoryStyle?: unknown; avatar?: unknown; saveAttachments?: unknown; features?: unknown }>(request);
   const next: UserPrefs = { ...current, reminder: { ...current.reminder }, categoryStyles: { ...current.categoryStyles } };
   if (payload.goals !== undefined) {
     if (!Array.isArray(payload.goals) || payload.goals.length > PREF_GOALS.length || payload.goals.some((g) => !(PREF_GOALS as readonly unknown[]).includes(g))) {
@@ -11373,14 +11382,20 @@ async function handleUserPreferences(request: Request, env: Env) {
     if (typeof payload.saveAttachments !== "boolean") return json({ error: "Pilihan simpan lampiran tidak valid." }, { status: 400 });
     next.saveAttachments = payload.saveAttachments;
   }
+  if (payload.features !== undefined) {
+    if (!Array.isArray(payload.features) || payload.features.length > PREF_FEATURES.length || payload.features.some((f) => !(PREF_FEATURES as readonly unknown[]).includes(f))) {
+      return json({ error: "Pilihan fitur tidak valid." }, { status: 400 });
+    }
+    next.features = sanitizeFeatures(payload.features);
+  }
   await env.DB.prepare(
     `UPDATE users
         SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END,
               '$.prefs.goals', json(?), '$.prefs.inputMode', ?, '$.prefs.reminder', json(?), '$.prefs.categoryStyles', json(?),
-              '$.prefs.avatar', json(?), '$.prefs.saveAttachments', json(?))
+              '$.prefs.avatar', json(?), '$.prefs.saveAttachments', json(?), '$.prefs.features', json(?))
       WHERE id = ?`
   )
-    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), JSON.stringify(next.categoryStyles), JSON.stringify(next.avatar), JSON.stringify(next.saveAttachments), userId)
+    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), JSON.stringify(next.categoryStyles), JSON.stringify(next.avatar), JSON.stringify(next.saveAttachments), JSON.stringify(next.features), userId)
     .run();
   return json({ ok: true, item: next });
 }

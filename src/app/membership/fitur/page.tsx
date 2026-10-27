@@ -1,11 +1,15 @@
 "use client";
 
 import Link from 'next/link';
-import { navGroups, fiturNav } from '@/lib/navigation';
+import { navGroups } from '@/lib/navigation';
+import { featuresFromIds } from '@/lib/features';
+import { useFeatures } from '@/lib/useFeatures';
+import { openSettings } from '@/lib/settingsPanel';
 import { cn } from '@/lib/utils';
 
 // Semua fitur dalam bentuk ikon berwarna, dikelompokkan sesuai navGroups.
-// "Fitur kamu" = pintasan yang juga tampil di menu samping.
+// "Fitur kamu" = fitur aktif (tampil di menu samping); diatur lewat pop-up
+// Pengaturan → Fitur (tombol Atur).
 
 const PALETTE = [
   'bg-indigo-50 text-indigo-600',
@@ -29,7 +33,9 @@ const Tile = ({ href, label, icon: Icon, i }: { href: string; label: string; ico
 );
 
 export default function SemuaFiturPage() {
-  const pinned = new Set(fiturNav.map((f) => f.href));
+  const { active } = useFeatures();
+  const mine = featuresFromIds(active);
+  const pinned = new Set(mine.map((f) => f.href));
   let n = 0;
   return (
     <div className="mx-auto max-w-4xl space-y-8 pb-12">
@@ -41,10 +47,10 @@ export default function SemuaFiturPage() {
       <section className="rounded-[24px] bg-white p-4 ring-1 ring-slate-100 md:p-6">
         <div className="mb-3 flex items-baseline justify-between px-1">
           <h2 className="text-[16px] font-bold text-slate-900">Fitur kamu</h2>
-          <span className="text-[13px] text-slate-400">ada di menu samping</span>
+          <button type="button" onClick={() => openSettings('fitur')} className="rounded-full bg-slate-100 px-3 py-1.5 text-[13px] font-semibold text-slate-700 hover:bg-slate-200">Atur</button>
         </div>
         <div className="grid grid-cols-3 gap-y-3 sm:grid-cols-4 lg:grid-cols-5">
-          {fiturNav.map((f) => <Tile key={f.href} href={f.href} label={f.label} icon={f.icon} i={n++} />)}
+          {mine.map((f) => <Tile key={f.href} href={f.href} label={f.label} icon={f.icon} i={n++} />)}
         </div>
       </section>
 

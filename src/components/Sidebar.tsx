@@ -8,7 +8,10 @@ import { usePathname } from 'next/navigation';
 import { ChevronRight, X, ShieldCheck, Plus, Settings, Sparkles, LayoutGrid } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
-import { keuanganNav, fiturNav, navGroups, SEMUA_FITUR_HREF, type NavItem } from '@/lib/navigation';
+import { keuanganNav, type NavItem } from '@/lib/navigation';
+import { featuresFromIds } from '@/lib/features';
+import { useFeatures } from '@/lib/useFeatures';
+import { openSettings } from '@/lib/settingsPanel';
 import { useFeedback } from '@/components/ui/Feedback';
 import { useModal } from '@/context/ModalContext';
 import { UserAvatar, type AvatarConfig } from '@/components/profile/LeoAvatar';
@@ -38,7 +41,6 @@ type Profile = {
   avatar?: AvatarConfig | null;
 };
 
-const FEATURE_COUNT = navGroups.reduce((s, g) => s + g.items.length, 0);
 // Teks yang hanya tampil di mode penuh (HP & laptop), disembunyikan di rel tablet.
 const fullOnly = 'md:max-lg:hidden';
 
@@ -96,6 +98,7 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
     return Number.isFinite(diff) ? Math.max(0, diff) : null;
   })();
 
+  const features = useFeatures();
   const renderItem = (item: NavItem, badge?: string) => {
     const active = pathname === item.href;
     return (
@@ -214,8 +217,18 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
             <div data-tour="sidebar-group-fitur" className="md:max-lg:border-t md:max-lg:border-slate-100 md:max-lg:pt-4">
               <p className={cn('px-3 pb-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400', fullOnly)}>Fitur</p>
               <div className="space-y-0.5">
-                {fiturNav.map((item) => renderItem(item))}
-                {renderItem({ label: 'Semua fitur', href: SEMUA_FITUR_HREF, icon: LayoutGrid }, String(FEATURE_COUNT))}
+                {featuresFromIds(features.active).map((f) => renderItem({ label: f.label, href: f.href, icon: f.icon }))}
+                {/* Atur fitur = pop-up Fitur di panel Pengaturan (× matikan, + aktifkan). */}
+                <button
+                  type="button"
+                  onClick={() => { openSettings('fitur'); closeOnMobile(); }}
+                  title="Atur fitur"
+                  className="relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-[14px] font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 md:max-lg:justify-center md:max-lg:px-0 md:max-lg:py-2.5"
+                >
+                  <LayoutGrid size={19} strokeWidth={1.9} className="relative shrink-0 text-slate-400" />
+                  <span className={cn('relative flex-1 truncate', fullOnly)}>Atur fitur</span>
+                  <span className={cn('relative text-[12px] font-semibold text-slate-400', fullOnly)}>{features.active.length} aktif</span>
+                </button>
               </div>
             </div>
           </div>

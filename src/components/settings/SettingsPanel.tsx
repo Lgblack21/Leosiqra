@@ -40,7 +40,6 @@ import {
 } from 'lucide-react';
 import { cn, formatIDR } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
-import { navGroups } from '@/lib/navigation';
 import { getMemberPaymentInfo, type ProPackage } from '@/lib/services/adminService';
 import { LeoMascot } from '@/components/mascot/LeoMascot';
 import { useModal } from '@/context/ModalContext';
@@ -52,6 +51,8 @@ import { AppsSection } from '@/components/settings/ConnectedApps';
 import { UserAvatar, type AvatarConfig } from '@/components/profile/LeoAvatar';
 import { APP_VERSION } from '@/lib/version';
 import { LeoCoin } from '@/components/coin/LeoCoin';
+import { FeaturesView } from '@/components/settings/FeaturesView';
+import { useFeatures } from '@/lib/useFeatures';
 
 // Panel Pengaturan (dibuka dari ikon roda gigi / profil di menu samping,
 // atau avatar di header HP). Tiga tampilan: menu utama, Profil, dan Paket
@@ -70,10 +71,9 @@ export interface PanelUser {
   avatar?: AvatarConfig | null;
 }
 
-export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil' | 'kontak' | 'notifikasi' | 'ai' | 'lainnya' | 'referral' | 'koin' | 'koin-riwayat' | 'kawanan' | 'app-mcp' | 'app-sheets' | 'app-calendar' | 'app-gmail' | 'app-gcal';
-const PARENT: Partial<Record<View, View>> = { 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum', referral: 'menu', koin: 'menu', 'koin-riwayat': 'referral', kawanan: 'referral', 'app-mcp': 'ai', 'app-sheets': 'ai', 'app-calendar': 'ai', 'app-gmail': 'ai', 'app-gcal': 'ai' };
+export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil' | 'kontak' | 'notifikasi' | 'ai' | 'lainnya' | 'referral' | 'koin' | 'koin-riwayat' | 'kawanan' | 'app-mcp' | 'app-sheets' | 'app-calendar' | 'app-gmail' | 'app-gcal' | 'fitur';
+const PARENT: Partial<Record<View, View>> = { fitur: 'menu', 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum', referral: 'menu', koin: 'menu', 'koin-riwayat': 'referral', kawanan: 'referral', 'app-mcp': 'ai', 'app-sheets': 'ai', 'app-calendar': 'ai', 'app-gmail': 'ai', 'app-gcal': 'ai' };
 
-const FEATURE_COUNT = navGroups.reduce((s, g) => s + g.items.length, 0);
 const STATUS_LABEL: Record<PanelUser['status'], string> = {
   AKTIF: 'Aktif',
   PENDING: 'Menunggu verifikasi',
@@ -364,12 +364,15 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
   const back = () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : [PARENT[s[0]] ?? 'menu']));
   const [user, setUser] = useState<PanelUser | null>(null);
 
+  const features = useFeatures();
+  const [editingFeatures, setEditingFeatures] = useState(false);
   const [coins, setCoins] = useState<number | null>(null);
   const [inboxCount, setInboxCount] = useState(0);
 
   useEffect(() => {
     if (!open) return;
     setStack([initialView]);
+    setEditingFeatures(false);
     cloudflareApi<{ user?: PanelUser | null }>('/api/auth/me').then((r) => setUser(r.user ?? null)).catch(() => undefined);
     // Angka kecil di menu; gagal/fitur belum aktif = disembunyikan.
     cloudflareApi<{ balance?: number }>('/api/member/coins').then((r) => setCoins(typeof r.balance === 'number' ? r.balance : null)).catch(() => setCoins(null));
@@ -418,6 +421,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
     koin: 'Kelola koin',
     'koin-riwayat': 'Riwayat koin',
     kawanan: 'Kawananmu',
+    fitur: 'Fitur',
     'app-mcp': 'Claude & ChatGPT',
     'app-sheets': 'Google Sheets',
     'app-calendar': 'Google Calendar',
@@ -455,6 +459,15 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                 </button>
               )}
               <h2 className="flex-1 text-[20px] font-bold text-slate-900">{title}</h2>
+              {view === 'fitur' && (
+                <button
+                  type="button"
+                  onClick={() => setEditingFeatures((v) => !v)}
+                  className={cn('rounded-full px-4 py-2 text-[14px] font-semibold transition-colors', editingFeatures ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200')}
+                >
+                  {editingFeatures ? 'Selesai' : 'Ubah'}
+                </button>
+              )}
               <button type="button" onClick={onClose} aria-label="Tutup" className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200">
                 <X size={19} />
               </button>
@@ -497,7 +510,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                   </Group>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <Tile icon={LayoutGrid} title="Fitur" desc={`${FEATURE_COUNT} tersedia`} onClick={go('/membership/fitur')} />
+                    <Tile icon={LayoutGrid} title="Fitur" desc={`${features.active.length} aktif`} onClick={() => { setEditingFeatures(false); setView('fitur'); }} />
                     <Tile icon={Tags} title="Kategori & Anggaran" onClick={() => setView('kategori')} />
                     <Tile icon={Users} title="Dompet Bersama" onClick={go('/membership/dompet-bersama')} />
                     <Tile icon={LifeBuoy} title="Bantuan" onClick={() => setView('bantuan')} />
@@ -604,6 +617,8 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                   </button>
                 </div>
               )}
+
+              {view === 'fitur' && <FeaturesView editing={editingFeatures} open={(href) => go(href)()} />}
 
               {view === 'legal' && (
                 <Group>
