@@ -47,12 +47,13 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   baru (kartu ringkasan, cincin %). Grup yang dihapus user tidak muncul lagi.
 - View **Target** di Pengaturan → Uang sudah live (2026-10-28): target = recurring
   tipe Tabungan + targetAmount, memakai RecurringModal yang sama.
-- **Belum di-deploy**: perbaikan "pindah halaman lemot" — `cloudflareApi` kini
+- Perbaikan **"pindah halaman lemot"** sudah live (2026-10-28, run #39): `cloudflareApi` kini
   menggabung GET yang sama & menyimpannya 20 detik (`clearApiCache` dibuang pada
   setiap request non-GET, `notifyCollectionChanged`/BroadcastChannel, dan saat
   tab aktif lagi); animasi `.page-enter` 0.2s tanpa blur, stagger dipersingkat.
   Lokal: muat awal 18→11 API, pindah halaman 0–1 API (dulu transaksi 2.000 baris
   + auth/me tiap klik). Kalau ada data terasa basi, curigai cache ini dulu.
+- **Belum di-deploy**: tidak ada.
 
 ## Migrasi D1
 
