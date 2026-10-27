@@ -45,11 +45,9 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   sinkron user lama lewat POST `/api/member/categories/template` (sekali per user,
   flag `$.prefs.categoryTemplate`, hanya menambah). Tampilan Kategori & Anggaran
   baru (kartu ringkasan, cincin %). Grup yang dihapus user tidak muncul lagi.
-- **Belum di-deploy** (branch `claude/friendly-galileo-d9k5kc`): view **Target** di
-  Pengaturan → Uang (pop-up, bukan pindah halaman): ringkasan terkumpul, kartu
-  target dengan cincin %, estimasi bulan, Ubah/Jeda/Hapus, saran target saat
-  kosong. Target = recurring tipe Tabungan + targetAmount (RecurringModal yang
-  sama; tidak ada logika uang baru).
+- View **Target** di Pengaturan → Uang sudah live (2026-10-28): target = recurring
+  tipe Tabungan + targetAmount, memakai RecurringModal yang sama.
+- **Belum di-deploy**: tidak ada.
 
 ## Migrasi D1
 
