@@ -34,6 +34,9 @@ import {
   RotateCcw,
   UploadCloud,
   Inbox,
+  Gift,
+  Hash,
+  NotebookText,
 } from 'lucide-react';
 import { cn, formatIDR } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
@@ -47,6 +50,7 @@ import { AccountSection, CloudSyncSection, AttachmentPrefSection } from '@/compo
 import { CoinSection, CoinProfileRows } from '@/components/settings/CoinViews';
 import { AppsSection } from '@/components/settings/ConnectedApps';
 import { UserAvatar, type AvatarConfig } from '@/components/profile/LeoAvatar';
+import { APP_VERSION } from '@/lib/version';
 
 // Panel Pengaturan (dibuka dari ikon roda gigi / profil di menu samping,
 // atau avatar di header HP). Tiga tampilan: menu utama, Profil, dan Paket
@@ -66,7 +70,7 @@ export interface PanelUser {
 }
 
 export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil' | 'kontak' | 'notifikasi' | 'ai' | 'lainnya' | 'referral' | 'koin' | 'koin-riwayat' | 'kawanan' | 'app-mcp' | 'app-sheets' | 'app-calendar' | 'app-gmail' | 'app-gcal';
-const PARENT: Partial<Record<View, View>> = { 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum', referral: 'profil', koin: 'profil', 'koin-riwayat': 'referral', kawanan: 'referral', 'app-mcp': 'ai', 'app-sheets': 'ai', 'app-calendar': 'ai', 'app-gmail': 'ai', 'app-gcal': 'ai' };
+const PARENT: Partial<Record<View, View>> = { 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum', referral: 'menu', koin: 'menu', 'koin-riwayat': 'referral', kawanan: 'referral', 'app-mcp': 'ai', 'app-sheets': 'ai', 'app-calendar': 'ai', 'app-gmail': 'ai', 'app-gcal': 'ai' };
 
 const FEATURE_COUNT = navGroups.reduce((s, g) => s + g.items.length, 0);
 const STATUS_LABEL: Record<PanelUser['status'], string> = {
@@ -96,15 +100,20 @@ const Avatar = ({ user, size = 56 }: { user: PanelUser | null; size?: number }) 
   <UserAvatar avatar={user?.avatar} photoURL={user?.photoURL} name={user?.name} size={size} />
 );
 
-const Row = ({ icon: Icon, title, desc, href, onClick, value }: { icon?: React.ElementType; title: string; desc?: string; href?: string; onClick?: () => void; value?: string }) => {
+const Row = ({ icon: Icon, title, desc, href, onClick, value, tint, badge, lead }: { icon?: React.ElementType; title: string; desc?: string; href?: string; onClick?: () => void; value?: string; tint?: string; badge?: number; lead?: React.ReactNode }) => {
   const inner = (
     <>
-      {Icon && <Icon size={21} className="shrink-0 text-slate-600" strokeWidth={1.8} />}
+      {lead ?? (Icon && (tint ? (
+        <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px]', tint)}><Icon size={19} strokeWidth={1.9} /></span>
+      ) : (
+        <Icon size={21} className="shrink-0 text-slate-600" strokeWidth={1.8} />
+      )))}
       <span className="min-w-0 flex-1">
         <span className="block text-[16px] font-medium text-slate-900">{title}</span>
         {desc && <span className="block truncate text-[13px] text-slate-500">{desc}</span>}
       </span>
       {value && <span className="shrink-0 text-[14px] text-slate-500">{value}</span>}
+      {badge ? <span className="shrink-0 rounded-full bg-rose-500 px-2 py-0.5 text-[12px] font-bold text-white">{badge > 99 ? '99+' : badge}</span> : null}
       {(href || onClick) && <ChevronRight size={18} className="shrink-0 text-slate-400" />}
     </>
   );
@@ -131,6 +140,36 @@ const Tile = ({ icon: Icon, title, desc, href, onClick }: { icon: React.ElementT
   const cls = 'flex items-center gap-3.5 rounded-[22px] bg-slate-50 px-5 py-4 text-left transition-colors hover:bg-slate-100';
   return href ? <Link href={href} className={cls}>{inner}</Link> : <button type="button" onClick={onClick} className={cls}>{inner}</button>;
 };
+
+const StatTile = ({ icon: Icon, tint, title, value, onClick }: { icon: React.ElementType; tint: string; title: string; value: string; onClick: () => void }) => (
+  <button type="button" onClick={onClick} className="flex flex-col items-start gap-2.5 rounded-[22px] bg-slate-50 p-4 text-left transition-colors hover:bg-slate-100">
+    <span className={cn('flex h-9 w-9 items-center justify-center rounded-xl', tint)}><Icon size={18} strokeWidth={1.9} /></span>
+    <span className="min-w-0">
+      <span className="block text-[12px] font-medium text-slate-500">{title}</span>
+      <span className="block truncate text-[16px] font-bold text-slate-900">{value}</span>
+    </span>
+  </button>
+);
+
+const SectionLabel = ({ children }: { children: React.ReactNode }) => <p className="px-1 pt-1 text-[13px] font-semibold text-slate-400">{children}</p>;
+
+// Ikon aplikasi bertumpuk di baris "Aplikasi terhubung".
+const AppStack = () => (
+  <span className="flex shrink-0 -space-x-2">
+    {[
+      [Mail, 'bg-rose-100 text-rose-600'],
+      [Hash, 'bg-violet-100 text-violet-600'],
+      [NotebookText, 'bg-slate-200 text-slate-800'],
+    ].map(([I, cls], i) => {
+      const Icon = I as React.ElementType;
+      return (
+        <span key={i} className={cn('flex h-8 w-8 items-center justify-center rounded-full ring-2 ring-slate-50', cls as string)}>
+          <Icon size={14} strokeWidth={2} />
+        </span>
+      );
+    })}
+  </span>
+);
 
 // Perbandingan paket — hanya pembeda yang memang diterapkan di server
 // (batas Dompet Bersama & izin mencatat lewat AI luar/MCP).
@@ -324,10 +363,16 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
   const back = () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : [PARENT[s[0]] ?? 'menu']));
   const [user, setUser] = useState<PanelUser | null>(null);
 
+  const [coins, setCoins] = useState<number | null>(null);
+  const [inboxCount, setInboxCount] = useState(0);
+
   useEffect(() => {
     if (!open) return;
     setStack([initialView]);
     cloudflareApi<{ user?: PanelUser | null }>('/api/auth/me').then((r) => setUser(r.user ?? null)).catch(() => undefined);
+    // Angka kecil di menu; gagal/fitur belum aktif = disembunyikan.
+    cloudflareApi<{ balance?: number }>('/api/member/coins').then((r) => setCoins(typeof r.balance === 'number' ? r.balance : null)).catch(() => setCoins(null));
+    cloudflareApi<{ items?: unknown[] }>('/api/member/inbox').then((r) => setInboxCount(r.items?.length ?? 0)).catch(() => setInboxCount(0));
   }, [open, initialView]);
 
   useEffect(() => {
@@ -417,29 +462,37 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
             <div className="overflow-y-auto px-6 pb-6 pt-2">
               {view === 'menu' && (
                 <div className="space-y-4">
-                  <Group>
-                    <button type="button" onClick={() => setView('profil')} className="flex w-full items-center gap-4 px-5 py-4 text-left hover:bg-slate-100/70">
-                      <Avatar user={user} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[18px] font-semibold text-slate-900">{user?.name ?? 'Memuat…'}</span>
-                        <span className="block truncate text-[14px] text-slate-500">
-                          {days ? `Memakai Leosiqra selama ${days} hari` : user?.email ?? ''}
-                        </span>
+                  <button
+                    type="button"
+                    onClick={() => setView('profil')}
+                    className="relative flex w-full items-center gap-4 overflow-hidden rounded-[24px] bg-gradient-to-br from-indigo-600 via-indigo-600 to-violet-600 px-5 py-5 text-left text-white shadow-[0_14px_34px_-16px_rgba(79,70,229,0.7)]"
+                  >
+                    <span aria-hidden className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/10" />
+                    <span className="rounded-full ring-4 ring-white/25"><Avatar user={user} /></span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[19px] font-bold">{user?.name ?? 'Memuat…'}</span>
+                      <span className="block truncate text-[13px] text-indigo-100">
+                        {days ? `Bersama Leosiqra ${days} hari` : user?.email ?? ''}
                       </span>
-                      <span className={cn('shrink-0 rounded-full px-3 py-1 text-[12px] font-semibold', isPro ? 'bg-violet-100 text-violet-700' : 'bg-slate-200/70 text-slate-600')}>
-                        {isPro ? 'PRO' : 'Gratis'}
-                      </span>
-                    </button>
-                  </Group>
-                  <Group>
-                    <Row icon={Bot} title="Aplikasi terhubung" desc="Gmail, Slack, Google, Notion, Claude & ChatGPT" onClick={go('/membership/aplikasi')} />
-                    <Row icon={UploadCloud} title="Impor" desc="PDF, Excel, CSV, dan tangkapan layar" onClick={go('/membership/impor')} />
-                    <Row icon={Inbox} title="Kotak Masuk" desc="Usulan transaksi dari email & Slack" onClick={go('/membership/kotak-masuk')} />
-                    <Row icon={Zap} title="Input Cepat" desc="Catat dari layar utama HP, suara & foto struk" onClick={() => setView('lainnya')} />
-                  </Group>
+                    </span>
+                    <span className={cn('shrink-0 rounded-full px-3 py-1 text-[12px] font-bold', isPro ? 'bg-amber-300 text-amber-950' : 'bg-white/20 text-white')}>
+                      {isPro ? 'PRO' : 'Gratis'}
+                    </span>
+                    <ChevronRight size={18} className="shrink-0 text-white/70" />
+                  </button>
 
+                  <div className="grid grid-cols-3 gap-3">
+                    <StatTile icon={Sparkles} tint="bg-violet-100 text-violet-600" title="Paket" value={isPro ? 'PRO' : 'Gratis'} onClick={() => setView('paket')} />
+                    <StatTile icon={Gift} tint="bg-emerald-100 text-emerald-600" title="Referral" value="Ajak teman" onClick={() => setView('referral')} />
+                    <StatTile icon={Coins} tint="bg-amber-100 text-amber-600" title="Koin Leo" value={coins === null ? '—' : coins.toLocaleString('id-ID')} onClick={() => setView('koin')} />
+                  </div>
+
+                  <SectionLabel>Catat otomatis</SectionLabel>
                   <Group>
-                    <Row icon={Sparkles} title="Paket" desc={isPro ? `PRO${dateLong(user?.expiredAt) ? ` · sampai ${dateLong(user?.expiredAt)}` : ''}` : 'Gratis'} onClick={() => setView('paket')} />
+                    <Row lead={<AppStack />} title="Aplikasi terhubung" desc="Gmail, Slack, Google, Notion, Claude & ChatGPT" onClick={go('/membership/aplikasi')} />
+                    <Row icon={UploadCloud} tint="bg-sky-100 text-sky-600" title="Impor" desc="PDF, Excel, CSV, dan tangkapan layar" onClick={go('/membership/impor')} />
+                    <Row icon={Inbox} tint="bg-rose-100 text-rose-600" title="Kotak Masuk" desc={inboxCount ? `${inboxCount} usulan menunggu ditinjau` : 'Usulan transaksi dari email & Slack'} badge={inboxCount} onClick={go('/membership/kotak-masuk')} />
+                    <Row icon={Zap} tint="bg-amber-100 text-amber-600" title="Input Cepat" desc="Catat dari layar utama HP, suara & foto struk" onClick={() => setView('lainnya')} />
                   </Group>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -449,6 +502,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                     <Tile icon={LifeBuoy} title="Bantuan" onClick={() => setView('bantuan')} />
                   </div>
 
+                  <SectionLabel>Akun</SectionLabel>
                   <Group>
                     <Row icon={Settings} title="Pengaturan" desc="Uang, cara mencatat, pengingat" onClick={() => setView('umum')} />
                     <Row icon={ShieldCheck} title="Privasi & keamanan" desc="Kata sandi, verifikasi 2 langkah, perangkat" onClick={() => setView('privasi')} />
@@ -459,9 +513,9 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                     <LogOut size={17} /> Keluar
                   </button>
 
-                  <div className="flex justify-center gap-2 pt-1">
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-[12px] text-slate-500">Leosiqra web</span>
-                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-[12px] font-medium text-emerald-700">Tersimpan di akunmu</span>
+                  <div className="flex flex-wrap justify-center gap-2 pt-1">
+                    <span className="rounded-full bg-indigo-50 px-3 py-1 text-[12px] font-semibold text-indigo-700">Leosiqra v{APP_VERSION}</span>
+                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-[12px] font-medium text-emerald-700">Tersinkron ke akunmu</span>
                   </div>
                 </div>
               )}

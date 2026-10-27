@@ -11,6 +11,7 @@ import { FadeIn } from "@/components/app/FadeIn";
 import { useTheme, ThemeMode } from "@/context/ThemeContext";
 import { lightTap } from "@/lib/haptics";
 import { McpConnectCard } from "@/components/profile/McpConnectCard";
+import { APP_VERSION } from "@/lib/version";
 
 const THEME_OPTIONS: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
   { value: "light", label: "Terang", icon: Sun },
@@ -172,6 +173,7 @@ export default function ProfilePage() {
           {loggingOut ? "Keluar..." : "Keluar"}
         </button>
       </FadeIn>
+      <p className="pb-2 text-center text-[11px] font-bold text-slate-400 dark:text-slate-500">Leosiqra v{APP_VERSION}</p>
     </div>
   );
 }
