@@ -125,7 +125,7 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null, in
     <Modal 
       isOpen={isOpen} 
       onClose={onClose} 
-      title={initialData ? 'Edit Transaksi Berulang' : 'Set Ringkasan Transaksi Berulang'}
+      title={initialData?.id ? 'Edit Transaksi Berulang' : initialType === 'Tabungan' ? 'Target baru' : 'Set Ringkasan Transaksi Berulang'}
       maxWidth="max-w-xl"
     >
       <div className="space-y-5 px-1">
@@ -282,7 +282,7 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null, in
           {loading ? 'Menyimpan...' : (
             <>
               <Save size={18} className="transition-transform group-hover:scale-110" />
-              {initialData ? 'Simpan Perubahan' : 'Simpan Recurring'}
+              {initialData?.id ? 'Simpan Perubahan' : 'Simpan Recurring'}
             </>
           )}
         </button>

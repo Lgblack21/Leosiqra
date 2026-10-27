@@ -52,6 +52,7 @@ import { UserAvatar, type AvatarConfig } from '@/components/profile/LeoAvatar';
 import { APP_VERSION } from '@/lib/version';
 import { LeoCoin } from '@/components/coin/LeoCoin';
 import { FeaturesView } from '@/components/settings/FeaturesView';
+import { TargetView } from '@/components/settings/TargetView';
 import { useFeatures } from '@/lib/useFeatures';
 
 // Panel Pengaturan (dibuka dari ikon roda gigi / profil di menu samping,
@@ -71,8 +72,8 @@ export interface PanelUser {
   avatar?: AvatarConfig | null;
 }
 
-export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil' | 'kontak' | 'notifikasi' | 'ai' | 'lainnya' | 'referral' | 'koin' | 'koin-riwayat' | 'kawanan' | 'app-mcp' | 'app-sheets' | 'app-calendar' | 'app-gmail' | 'app-gcal' | 'fitur';
-const PARENT: Partial<Record<View, View>> = { fitur: 'menu', 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum', referral: 'menu', koin: 'menu', 'koin-riwayat': 'referral', kawanan: 'referral', 'app-mcp': 'ai', 'app-sheets': 'ai', 'app-calendar': 'ai', 'app-gmail': 'ai', 'app-gcal': 'ai' };
+export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil' | 'kontak' | 'notifikasi' | 'ai' | 'lainnya' | 'referral' | 'koin' | 'koin-riwayat' | 'kawanan' | 'app-mcp' | 'app-sheets' | 'app-calendar' | 'app-gmail' | 'app-gcal' | 'fitur' | 'target';
+const PARENT: Partial<Record<View, View>> = { fitur: 'menu', target: 'umum', 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum', referral: 'menu', koin: 'menu', 'koin-riwayat': 'referral', kawanan: 'referral', 'app-mcp': 'ai', 'app-sheets': 'ai', 'app-calendar': 'ai', 'app-gmail': 'ai', 'app-gcal': 'ai' };
 
 const STATUS_LABEL: Record<PanelUser['status'], string> = {
   AKTIF: 'Aktif',
@@ -422,6 +423,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
     'koin-riwayat': 'Riwayat koin',
     kawanan: 'Kawananmu',
     fitur: 'Fitur',
+    target: 'Target',
     'app-mcp': 'Claude & ChatGPT',
     'app-sheets': 'Google Sheets',
     'app-calendar': 'Google Calendar',
@@ -591,7 +593,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                   <p className="px-1 text-[14px] text-slate-500">Uang</p>
                   <Group>
                     <Row icon={Tags} title="Kategori & Anggaran" onClick={() => setView('kategori')} />
-                    <Row icon={Target} title="Target tabungan" onClick={go('/membership/tabungan')} />
+                    <Row icon={Target} title="Target" desc="Tabung otomatis untuk tujuanmu" onClick={() => setView('target')} />
                     <Row icon={Repeat} title="Transaksi Rutin" onClick={go('/membership/recurring')} />
                     <Row icon={Coins} title="Mata uang" value="IDR" onClick={() => setView('mata-uang')} />
                   </Group>
@@ -618,6 +620,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                 </div>
               )}
 
+              {view === 'target' && <TargetView />}
               {view === 'fitur' && <FeaturesView editing={editingFeatures} open={(href) => go(href)()} />}
 
               {view === 'legal' && (
