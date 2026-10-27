@@ -435,14 +435,18 @@ function ActivationCard({ toolkit, access, onChange }: { toolkit: ComposioToolki
 }
 
 // Sinkron tagihan ke Google Calendar (tampil setelah terhubung).
+type SyncEvent = { summary: string | null; start: string | null; freq: string | null; link: string | null };
+type SyncState = { enabled: boolean; lastSyncAt: string | null; count: number; events?: SyncEvent[] };
+const FREQ_LABEL: Record<string, string> = { DAILY: 'tiap hari', WEEKLY: 'tiap minggu', MONTHLY: 'tiap bulan', YEARLY: 'tiap tahun' };
+
 export function CalendarSyncCard() {
   const { toast } = useFeedback();
-  const [state, setState] = useState<{ enabled: boolean; lastSyncAt: string | null; count: number } | null>(null);
+  const [state, setState] = useState<SyncState | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState('');
   const load = useCallback(async () => {
     try {
-      setState(await cloudflareApi<{ enabled: boolean; lastSyncAt: string | null; count: number }>('/api/member/apps/googlecalendar/sync'));
+      setState(await cloudflareApi<SyncState>('/api/member/apps/googlecalendar/sync'));
     } catch {
       setState(null);
     }
@@ -479,6 +483,32 @@ export function CalendarSyncCard() {
         </span>
       </div>
       {result && <p className="rounded-2xl bg-white px-4 py-2.5 text-[13px] text-slate-600 ring-1 ring-slate-200">{result}</p>}
+      {Boolean(state?.events?.length) && (
+        <ul className="divide-y divide-slate-100 overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200">
+          {state!.events!.map((e, i) => {
+            const start = e.start ? new Date(`${e.start}T00:00:00`) : null;
+            const dayUrl = start ? `https://calendar.google.com/calendar/r/day/${start.getFullYear()}/${start.getMonth() + 1}/${start.getDate()}` : 'https://calendar.google.com/calendar/r';
+            return (
+              <li key={`${e.summary}-${i}`} className="flex items-center gap-3 px-4 py-3">
+                <span className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl bg-sky-50 text-sky-700">
+                  <span className="text-[10px] font-semibold uppercase leading-none">{start ? new Intl.DateTimeFormat('id-ID', { month: 'short' }).format(start) : '—'}</span>
+                  <span className="text-[15px] font-bold leading-tight">{start ? start.getDate() : ''}</span>
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[14px] font-medium text-slate-900">{e.summary ?? 'Acara tagihan'}</span>
+                  <span className="block text-[12px] text-slate-500">
+                    {start ? `Mulai ${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(start)}` : 'Tanggal belum terbaca — sinkronkan ulang'}
+                    {e.freq ? ` · ${FREQ_LABEL[e.freq] ?? ''}` : ''}
+                  </span>
+                </span>
+                <a href={e.link ?? dayUrl} target="_blank" rel="noopener noreferrer" className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-200">
+                  Lihat <ExternalLink size={12} />
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      )}
       <button type="button" onClick={sync} disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[15px] font-bold text-white disabled:opacity-60">
         {busy ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />} {state?.enabled ? 'Sinkronkan sekarang' : 'Tulis tagihan ke kalender'}
       </button>

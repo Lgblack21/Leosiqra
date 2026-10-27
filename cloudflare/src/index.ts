@@ -8311,7 +8311,8 @@ const composioErrorResponse = (error: unknown, where: string) => {
 // membuat acara dobel: yang berubah diganti, yang hilang dihapus, yang sama
 // dilewati (tanpa memanggil tool → hemat kuota Composio).
 type ComposioSession = Awaited<ReturnType<InstanceType<typeof Composio>["sessions"]["create"]>>;
-type CalendarSyncState = { enabled?: boolean; lastSyncAt?: string; events?: Record<string, { id: string | null; hash: string }> };
+type CalendarSyncEvent = { id: string | null; hash: string; summary?: string; start?: string; freq?: string; link?: string | null };
+type CalendarSyncState = { enabled?: boolean; lastSyncAt?: string; events?: Record<string, CalendarSyncEvent> };
 const CALENDAR_SYNC_MAX_EVENTS = 60;
 const CALENDAR_FREQ: Record<string, string> = { Harian: "DAILY", Mingguan: "WEEKLY", Bulanan: "MONTHLY", Tahunan: "YEARLY" };
 
@@ -8350,7 +8351,7 @@ const addDaysYmd = (ymd: string, days: number) => {
 // tanggal berikutnya — next_date transaksi rutin maju tiap bulan, dan itu
 // tidak boleh memicu hapus-buat ulang acara.
 const desiredCalendarEvents = async (env: Env, userId: string) => {
-  const events: { key: string; hash: string; args: Record<string, unknown> }[] = [];
+  const events: { key: string; hash: string; freq: string; args: Record<string, unknown> }[] = [];
   const recurring = await env.DB.prepare(
     "SELECT id, name, type, amount, interval, next_date FROM recurring WHERE user_id = ? AND status = 'ACTIVE' ORDER BY next_date LIMIT 100"
   )
@@ -8365,6 +8366,7 @@ const desiredCalendarEvents = async (env: Env, userId: string) => {
     events.push({
       key: `recurring:${r.id}`,
       hash: JSON.stringify([summary, freq, anchor]),
+      freq,
       args: {
         summary,
         description: `Transaksi rutin Leosiqra (${r.type}, ${r.interval}).`,
@@ -8395,6 +8397,7 @@ const desiredCalendarEvents = async (env: Env, userId: string) => {
     events.push({
       key: `card:${card.id}`,
       hash: JSON.stringify([summary, "MONTHLY", dueDay]),
+      freq: "MONTHLY",
       args: {
         summary,
         description: "Bayar tagihan kartu kredit. Cek jumlahnya di Leosiqra → Kartu Saya.",
@@ -8411,6 +8414,13 @@ const calendarEventId = (data: Record<string, unknown> | undefined) => {
   const d = (data ?? {}) as { id?: unknown; response_data?: { id?: unknown }; event?: { id?: unknown } };
   const id = d.response_data?.id ?? d.id ?? d.event?.id;
   return typeof id === "string" && id ? id : null;
+};
+
+// Tautan acara di Google Calendar (htmlLink) — hanya https calendar.google.com.
+const calendarEventLink = (data: Record<string, unknown> | undefined) => {
+  const d = (data ?? {}) as { htmlLink?: unknown; response_data?: { htmlLink?: unknown } };
+  const link = d.response_data?.htmlLink ?? d.htmlLink;
+  return typeof link === "string" && /^https:\/\/(www\.)?(calendar\.)?google\.com\//.test(link) ? link : null;
 };
 
 const syncGoogleCalendar = async (env: Env, session: ComposioSession, userId: string) => {
@@ -8440,7 +8450,10 @@ const syncGoogleCalendar = async (env: Env, session: ComposioSession, userId: st
   }
   for (const event of desired) {
     const existing = current[event.key];
+    const info = { summary: String(event.args.summary ?? ""), start: String(event.args.start_date ?? ""), freq: event.freq };
     if (existing && existing.hash === event.hash) {
+      // Lengkapi info tampilan (acara lama belum menyimpannya) — tanpa panggilan tool.
+      current[event.key] = { ...existing, ...info };
       stats.unchanged++;
       continue;
     }
@@ -8458,7 +8471,7 @@ const syncGoogleCalendar = async (env: Env, session: ComposioSession, userId: st
       stats.failed++;
       continue;
     }
-    current[event.key] = { id: calendarEventId(res.data), hash: event.hash };
+    current[event.key] = { id: calendarEventId(res.data), hash: event.hash, ...info, link: calendarEventLink(res.data) };
     if (existing) stats.updated++;
     else stats.created++;
   }
@@ -8641,7 +8654,10 @@ async function handleMemberApps(request: Request, env: Env, pathname: string) {
     if (action === "sync" && toolkit === "googlecalendar") {
       if (request.method === "GET") {
         const state = await readCalendarSync(env, userId);
-        return json({ enabled: Boolean(state.enabled), lastSyncAt: state.lastSyncAt ?? null, count: Object.keys(state.events ?? {}).length });
+        const events = Object.values(state.events ?? {})
+          .map((e) => ({ summary: e.summary ?? null, start: e.start ?? null, freq: e.freq ?? null, link: e.link ?? null }))
+          .sort((a, b) => String(a.start ?? "").localeCompare(String(b.start ?? "")));
+        return json({ enabled: Boolean(state.enabled), lastSyncAt: state.lastSyncAt ?? null, count: events.length, events });
       }
       if (request.method === "POST") return json({ ok: true, ...(await syncGoogleCalendar(env, session, userId)) });
     }
