@@ -34,9 +34,9 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   lagi membalik saldo/total. Pembacaan AI sungguhan belum diuji di produksi.
 - Menu Profil baru + versi **v3.0.1** juga sudah live (2026-10-28). Versi ada di
   `src/lib/version.ts` & `package.json`; versi Android/iOS native belum diubah.
-- **Belum di-deploy** (branch `claude/friendly-galileo-d9k5kc`): koin baru `LeoCoin`
-  (`src/components/coin/LeoCoin.tsx`, warna Leosiqra + cetakan singa maskot) &
-  cincin avatar kartu Profil yang simetris.
+- Koin baru `LeoCoin` (warna Leosiqra + cetakan singa maskot) & avatar Profil
+  simetris juga sudah live (2026-10-28).
+- **Belum di-deploy**: tidak ada.
 
 ## Migrasi D1
 
