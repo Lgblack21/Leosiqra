@@ -41,7 +41,7 @@ import { LeoMascot } from '@/components/mascot/LeoMascot';
 import { useModal } from '@/context/ModalContext';
 import { KategoriSection, MataUangView } from '@/components/settings/CategoryBudgetViews';
 import { ProfileEditView } from '@/components/settings/ProfileEditView';
-import { AccountSection, CloudSyncSection } from '@/components/settings/AccountSettingsViews';
+import { AccountSection, CloudSyncSection, AttachmentPrefSection } from '@/components/settings/AccountSettingsViews';
 import { CoinSection, CoinProfileRows } from '@/components/settings/CoinViews';
 import { UserAvatar, type AvatarConfig } from '@/components/profile/LeoAvatar';
 
@@ -485,6 +485,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                     <Row title="Input Cepat & reset data" onClick={() => setView('lainnya')} />
                   </Group>
                   <div className="pt-2"><CloudSyncSection /></div>
+                  <div className="pt-2"><AttachmentPrefSection /></div>
                   <button type="button" onClick={logout} className="flex w-full items-center justify-center gap-2 rounded-[22px] bg-rose-50 py-3.5 text-[15px] font-semibold text-rose-600 hover:bg-rose-100">
                     <LogOut size={17} /> Keluar
                   </button>

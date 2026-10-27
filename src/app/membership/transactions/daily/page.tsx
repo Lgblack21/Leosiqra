@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Trash2, Download, Plus, ChevronDown, Tags, Wallet, CalendarDays, X } from 'lucide-react';
+import { Search, Trash2, Download, Plus, ChevronDown, Tags, Wallet, CalendarDays, X, Paperclip } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { DatePicker } from '@/components/ui/DatePicker';
@@ -12,6 +12,7 @@ import { cn, isIncomingTransaction, formatIDR, formatMoney, toLocalDateString } 
 import { categoryVisual, useCategoryStyles } from '@/lib/categoryEmoji';
 import { useFeedback } from '@/components/ui/Feedback';
 import { useModal } from '@/context/ModalContext';
+import { attachmentService } from '@/lib/services/attachmentService';
 
 // Riwayat transaksi: semua transaksi dikelompokkan per hari, dengan filter
 // periode, jenis, kategori, dompet, pencarian, dan ekspor CSV.
@@ -64,8 +65,24 @@ export default function DailyTransactionLogPage() {
   useCategoryStyles();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  // transaksi → id foto struk pertama (ikon 📎). Gagal/belum aktif = tanpa ikon.
+  const [attachments, setAttachments] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    const load = () =>
+      attachmentService
+        .list()
+        .then((items) => {
+          const map = new Map<string, string>();
+          for (const a of items) if (!map.has(a.transaction_id)) map.set(a.transaction_id, a.id);
+          setAttachments(map);
+        })
+        .catch(() => undefined);
+    load();
+    return subscribeToCollectionChanges('transactions', load);
+  }, []);
   const [period, setPeriod] = useState<Period>('bulan');
   const [pickedDate, setPickedDate] = useState(() => new Date());
   const [kind, setKind] = useState<Kind>('semua');
@@ -375,7 +392,21 @@ export default function DailyTransactionLogPage() {
                     <li key={t.id} className="group grid grid-cols-[auto_1fr_auto] items-center gap-3.5 px-4 py-3 md:grid-cols-[auto_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto] md:gap-5 md:px-5">
                       <span className={cn('flex h-11 w-11 items-center justify-center rounded-full text-[20px]', v.tile)} aria-hidden>{v.emoji}</span>
                       <div className="min-w-0">
-                        <p className="truncate text-[15px] font-semibold text-slate-900">{titleOf(t)}</p>
+                        <p className="flex min-w-0 items-center gap-1.5 text-[15px] font-semibold text-slate-900">
+                          <span className="truncate">{titleOf(t)}</span>
+                          {t.id && attachments.has(t.id) && (
+                            <a
+                              href={attachmentService.url(attachments.get(t.id)!)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label="Lihat foto struk"
+                              title="Lihat foto struk"
+                              className="shrink-0 rounded-md p-0.5 text-slate-400 hover:bg-slate-100 hover:text-indigo-600"
+                            >
+                              <Paperclip size={14} />
+                            </a>
+                          )}
+                        </p>
                         <p className="truncate text-[13px] text-slate-500">
                           {sort === 'terbesar' ? `${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(t.date))} · ` : ''}
                           {timeOf(t)}

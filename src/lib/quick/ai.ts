@@ -16,7 +16,7 @@ interface AiSuggestion {
 // /api/member/ai/parse-transaction. Server hanya mengembalikan kategori &
 // rekening yang benar-benar milik user, dan tanggal yang masuk akal.
 export const aiParse = async (input: { text: string } | { imageBase64: string }): Promise<QuickDraft & { confidence: AiSuggestion['confidence'] }> => {
-  const res = await cloudflareApi<{ ok: boolean; suggestion?: AiSuggestion; error?: string }>('/api/member/ai/parse-transaction', {
+  const res = await cloudflareApi<{ ok: boolean; suggestion?: AiSuggestion; error?: string; attachmentId?: string | null }>('/api/member/ai/parse-transaction', {
     method: 'POST',
     json: input,
   });
@@ -30,6 +30,7 @@ export const aiParse = async (input: { text: string } | { imageBase64: string })
     note: s.note ?? undefined,
     accountId: s.account_id ?? undefined,
     date: s.date ?? undefined,
+    attachmentId: res.attachmentId ?? undefined,
     confidence: s.confidence,
   };
 };

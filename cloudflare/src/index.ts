@@ -4158,6 +4158,7 @@ async function handleDeleteTransaction(request: Request, env: Env, transactionId
       return json({ error: "Transaksi tidak ditemukan." }, { status: 404 });
     }
 
+    await deleteAttachmentsForTransactions(env, userId, [transactionId]);
     return json({ ok: true, deletedIds: [transactionId] });
   }
 
@@ -4189,6 +4190,7 @@ async function handleDeleteTransaction(request: Request, env: Env, transactionId
   // berhasil bersama atau gagal bersama.
   await env.DB.batch(statements);
 
+  await deleteAttachmentsForTransactions(env, userId, rows.map((item) => item.id));
   return json({ ok: true, deletedIds: rows.map((item) => item.id) });
 }
 
@@ -5831,6 +5833,7 @@ async function handleResetMemberData(request: Request, env: Env) {
   ];
 
   await env.DB.batch(statements);
+  await deleteAllAttachmentsForUser(env, user.id);
 
   return json({ ok: true });
 }
@@ -7831,7 +7834,180 @@ ${JSON.stringify(userAccounts.map((a) => ({ name: a.name, type: a.type, currency
     suggestion.date = aiDate;
   }
 
-  return json({ ok: true, suggestion });
+  // Foto struk disimpan sebagai lampiran "menunggu" (kalau user mengizinkan);
+  // client menautkannya ke transaksi setelah disimpan.
+  const attachmentId = hasImage ? await stashReceiptAttachment(env, authResult.session.user.id, payload.imageBase64!) : null;
+  return json({ ok: true, suggestion, attachmentId });
+}
+
+// ── Lampiran struk (migrasi 0018) ───────────────────────────────────────────
+// Foto struk yang dibaca AI disimpan ke R2 (kalau prefs.saveAttachments
+// aktif) sebagai lampiran "menunggu"; client menautkannya ke transaksi
+// sesudah transaksi tersimpan. Yang tidak pernah ditautkan dibersihkan cron
+// harian. File hanya bisa dibuka pemiliknya (cek sesi + user_id).
+const ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
+const ATTACHMENTS_PER_TRANSACTION = 3;
+const attachmentTableMissing = (error: unknown) => error instanceof Error && /no such table: transaction_attachments/.test(error.message);
+
+const sniffImageType = (bytes: Uint8Array) => {
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return "image/png";
+  if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 && bytes[8] === 0x57 && bytes[9] === 0x45) return "image/webp";
+  return null;
+};
+
+// Dipanggil dari parse-transaction. Gagal menyimpan TIDAK boleh menggagalkan
+// pembacaan struk — kembalikan null saja.
+const stashReceiptAttachment = async (env: Env, userId: string, base64: string) => {
+  try {
+    if (!env.FILES_BUCKET) return null;
+    if (!(await readUserPrefs(env, userId)).saveAttachments) return null;
+    const clean = base64.replace(/^data:[^,]*,/, "").replace(/\s/g, "");
+    const binary = atob(clean);
+    if (binary.length > ATTACHMENT_MAX_BYTES) return null;
+    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+    const type = sniffImageType(bytes);
+    if (!type) return null;
+    const id = generateId();
+    const key = `attachments/${userId}/${id}`;
+    // Baris dulu (gagal kalau migrasi belum ada → tidak ada file yatim di R2),
+    // baru file-nya; kalau unggah gagal, barisnya dibuang lagi.
+    await env.DB.prepare(
+      "INSERT INTO transaction_attachments (id, user_id, transaction_id, r2_key, content_type, size, created_at) VALUES (?, ?, NULL, ?, ?, ?, ?)"
+    )
+      .bind(id, userId, key, type, bytes.length, nowIso())
+      .run();
+    try {
+      await env.FILES_BUCKET.put(key, bytes, { httpMetadata: { contentType: type } });
+    } catch (error) {
+      await env.DB.prepare("DELETE FROM transaction_attachments WHERE id = ?").bind(id).run();
+      throw error;
+    }
+    return id;
+  } catch (error) {
+    if (!attachmentTableMissing(error)) console.error("Simpan lampiran struk gagal:", error instanceof Error ? error.message : error);
+    return null;
+  }
+};
+
+const deleteAttachmentRows = async (env: Env, rows: { id: string; r2_key: string }[]) => {
+  if (!rows.length) return;
+  if (env.FILES_BUCKET) await env.FILES_BUCKET.delete(rows.map((r) => r.r2_key));
+  await env.DB.batch(rows.map((r) => env.DB.prepare("DELETE FROM transaction_attachments WHERE id = ?").bind(r.id)));
+};
+
+// Ikut terhapus bersama transaksinya / saat reset data. Best effort: lampiran
+// yatim tidak boleh menggagalkan penghapusan data utama.
+const deleteAttachmentsForTransactions = async (env: Env, userId: string, transactionIds: string[]) => {
+  try {
+    if (!transactionIds.length) return;
+    const rows = await env.DB.prepare(
+      `SELECT id, r2_key FROM transaction_attachments WHERE user_id = ? AND transaction_id IN (${transactionIds.map(() => "?").join(",")})`
+    )
+      .bind(userId, ...transactionIds)
+      .all<{ id: string; r2_key: string }>();
+    await deleteAttachmentRows(env, rows.results ?? []);
+  } catch (error) {
+    if (!attachmentTableMissing(error)) console.error("Hapus lampiran gagal:", error instanceof Error ? error.message : error);
+  }
+};
+
+const deleteAllAttachmentsForUser = async (env: Env, userId: string) => {
+  try {
+    for (let round = 0; round < 20; round++) {
+      const rows = await env.DB.prepare("SELECT id, r2_key FROM transaction_attachments WHERE user_id = ? LIMIT 500")
+        .bind(userId)
+        .all<{ id: string; r2_key: string }>();
+      const list = rows.results ?? [];
+      if (!list.length) return;
+      await deleteAttachmentRows(env, list);
+    }
+  } catch (error) {
+    if (!attachmentTableMissing(error)) console.error("Hapus semua lampiran gagal:", error instanceof Error ? error.message : error);
+  }
+};
+
+const cleanupPendingAttachments = async (env: Env) => {
+  try {
+    const rows = await env.DB.prepare(
+      "SELECT id, r2_key FROM transaction_attachments WHERE transaction_id IS NULL AND created_at < ? LIMIT 500"
+    )
+      .bind(new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+      .all<{ id: string; r2_key: string }>();
+    await deleteAttachmentRows(env, rows.results ?? []);
+  } catch (error) {
+    if (!attachmentTableMissing(error)) console.error("Bersih-bersih lampiran gagal:", error instanceof Error ? error.message : error);
+  }
+};
+
+async function handleAttachmentRoutes(request: Request, env: Env, pathname: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  try {
+    // GET /api/member/attachments → daftar lampiran yang sudah tertaut (untuk ikon 📎).
+    if (pathname === "/api/member/attachments" && request.method === "GET") {
+      const rows = await env.DB.prepare(
+        "SELECT id, transaction_id FROM transaction_attachments WHERE user_id = ? AND transaction_id IS NOT NULL ORDER BY created_at ASC"
+      )
+        .bind(userId)
+        .all();
+      return json({ items: rows.results ?? [] });
+    }
+
+    const rest = pathname.slice("/api/member/attachments/".length);
+    const [id, action] = rest.split("/");
+    if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "Not found" }, { status: 404 });
+    const row = await env.DB.prepare("SELECT id, transaction_id, r2_key, content_type FROM transaction_attachments WHERE id = ? AND user_id = ?")
+      .bind(id, userId)
+      .first<{ id: string; transaction_id: string | null; r2_key: string; content_type: string }>();
+    if (!row) return json({ error: "Lampiran tidak ditemukan." }, { status: 404 });
+
+    // POST /api/member/attachments/:id/link { transactionId }
+    if (action === "link" && request.method === "POST") {
+      const payload = await parseJson<{ transactionId?: unknown }>(request);
+      const transactionId = String(payload.transactionId ?? "");
+      const tx = await env.DB.prepare("SELECT id FROM transactions WHERE id = ? AND user_id = ?").bind(transactionId, userId).first();
+      if (!tx) return json({ error: "Transaksi tidak ditemukan." }, { status: 404 });
+      const result = await env.DB.prepare(
+        `UPDATE transaction_attachments SET transaction_id = ?
+          WHERE id = ? AND user_id = ? AND transaction_id IS NULL
+            AND (SELECT COUNT(*) FROM transaction_attachments WHERE transaction_id = ?) < ?`
+      )
+        .bind(transactionId, id, userId, transactionId, ATTACHMENTS_PER_TRANSACTION)
+        .run();
+      if (!result.meta.changes) return json({ error: "Lampiran sudah tertaut atau batas lampiran tercapai." }, { status: 409 });
+      return json({ ok: true });
+    }
+
+    if (!action && request.method === "GET") {
+      const obj = await env.FILES_BUCKET?.get(row.r2_key);
+      if (!obj) return json({ error: "File lampiran tidak ada." }, { status: 404 });
+      return new Response(obj.body, {
+        headers: {
+          "content-type": row.content_type,
+          "cache-control": "private, max-age=3600",
+          "x-content-type-options": "nosniff",
+          "content-security-policy": "default-src 'none'; sandbox",
+        },
+      });
+    }
+
+    if (!action && request.method === "DELETE") {
+      await deleteAttachmentRows(env, [row]);
+      return json({ ok: true });
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (error) {
+    if (attachmentTableMissing(error)) {
+      console.error("Lampiran: tabel transaction_attachments belum ada (migrasi 0018 belum diterapkan)");
+      return json({ error: "Fitur lampiran belum aktif. Coba lagi nanti." }, { status: 503 });
+    }
+    if (error instanceof Error && error.message === "Payload JSON tidak valid.") {
+      return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    }
+    throw error;
+  }
 }
 
 async function handleSignedUpload(request: Request, env: Env) {
@@ -9345,8 +9521,10 @@ type UserPrefs = {
   reminder: { on: boolean; time: string };
   categoryStyles: Record<string, CategoryStyle>;
   avatar: AvatarPrefs | null;
+  // Simpan foto struk hasil scan AI sebagai lampiran transaksi (default ya).
+  saveAttachments: boolean;
 };
-const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" }, categoryStyles: {}, avatar: null };
+const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" }, categoryStyles: {}, avatar: null, saveAttachments: true };
 const sanitizeCategoryStyles = (raw: unknown): Record<string, CategoryStyle> => {
   const out: Record<string, CategoryStyle> = {};
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
@@ -9381,13 +9559,14 @@ const readUserPrefs = async (env: Env, userId: string): Promise<UserPrefs> => {
     },
     categoryStyles: sanitizeCategoryStyles(raw.categoryStyles),
     avatar: sanitizeAvatar(raw.avatar),
+    saveAttachments: raw.saveAttachments !== false,
   };
 };
 
 // GET  /api/member/preferences
 // PUT  /api/member/preferences  { goals?, inputMode?, reminder?: { on, time },
 //        categoryStyle?: { name, emoji, color } | { name, remove: true },
-//        avatar?: { mode: "leo"|"photo", fur, acc, bg } } — field yang dikirim saja yang diubah
+//        avatar?: { mode: "leo"|"photo", fur, acc, bg }, saveAttachments?: boolean } — field yang dikirim saja yang diubah
 async function handleUserPreferences(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -9395,7 +9574,7 @@ async function handleUserPreferences(request: Request, env: Env) {
   const current = await readUserPrefs(env, userId);
   if (request.method === "GET") return json({ item: current });
 
-  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown; categoryStyle?: unknown; avatar?: unknown }>(request);
+  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown; categoryStyle?: unknown; avatar?: unknown; saveAttachments?: unknown }>(request);
   const next: UserPrefs = { ...current, reminder: { ...current.reminder }, categoryStyles: { ...current.categoryStyles } };
   if (payload.goals !== undefined) {
     if (!Array.isArray(payload.goals) || payload.goals.length > PREF_GOALS.length || payload.goals.some((g) => !(PREF_GOALS as readonly unknown[]).includes(g))) {
@@ -9439,14 +9618,18 @@ async function handleUserPreferences(request: Request, env: Env) {
     if (!avatar) return json({ error: "Pilihan avatar tidak valid." }, { status: 400 });
     next.avatar = avatar;
   }
+  if (payload.saveAttachments !== undefined) {
+    if (typeof payload.saveAttachments !== "boolean") return json({ error: "Pilihan simpan lampiran tidak valid." }, { status: 400 });
+    next.saveAttachments = payload.saveAttachments;
+  }
   await env.DB.prepare(
     `UPDATE users
         SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END,
               '$.prefs.goals', json(?), '$.prefs.inputMode', ?, '$.prefs.reminder', json(?), '$.prefs.categoryStyles', json(?),
-              '$.prefs.avatar', json(?))
+              '$.prefs.avatar', json(?), '$.prefs.saveAttachments', json(?))
       WHERE id = ?`
   )
-    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), JSON.stringify(next.categoryStyles), JSON.stringify(next.avatar), userId)
+    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), JSON.stringify(next.categoryStyles), JSON.stringify(next.avatar), JSON.stringify(next.saveAttachments), userId)
     .run();
   return json({ ok: true, item: next });
 }
@@ -12241,6 +12424,10 @@ const worker = {
         return await handleMonthlyReportPreference(request, env);
       }
 
+      if (url.pathname === "/api/member/attachments" || url.pathname.startsWith("/api/member/attachments/")) {
+        return await handleAttachmentRoutes(request, env, url.pathname);
+      }
+
       if (url.pathname === "/api/member/coins" || url.pathname.startsWith("/api/member/coins/") || url.pathname === "/api/admin/coin-withdrawals" || url.pathname.startsWith("/api/admin/coin-withdrawals/")) {
         return await handleCoinRoutes(request, env, url.pathname);
       }
@@ -12449,6 +12636,8 @@ const worker = {
     ctx.waitUntil(sendCreditCardDueReminders(env));
     // Tanggal 1–7 WIB saja (dicek di dalam): laporan bulanan via email (opt-in).
     ctx.waitUntil(sendMonthlyReports(env).catch((error) => console.error("Laporan bulanan:", error)));
+    // Foto struk yang tidak pernah ditautkan ke transaksi (>24 jam).
+    ctx.waitUntil(cleanupPendingAttachments(env));
   },
 };
 

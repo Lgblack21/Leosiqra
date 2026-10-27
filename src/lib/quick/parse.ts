@@ -14,6 +14,8 @@ export interface QuickDraft {
   note?: string;
   /** YYYY-MM-DD; undefined = hari ini. */
   date?: string;
+  /** Foto struk yang disimpan server saat scan — ditautkan setelah transaksi tersimpan. */
+  attachmentId?: string;
 }
 
 export interface ParseContext {

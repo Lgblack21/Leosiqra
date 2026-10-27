@@ -11,6 +11,7 @@ import { NumberInput } from "@/components/ui/NumberInput";
 import { TxTypeToggle, TxType } from "@/components/app/TxTypeToggle";
 import { AccountPicker } from "@/components/app/AccountPicker";
 import { cn } from "@/lib/utils";
+import { attachmentService } from "@/lib/services/attachmentService";
 
 export interface ParsedTransactionSuggestion {
   type: TxType;
@@ -21,6 +22,8 @@ export interface ParsedTransactionSuggestion {
   confidence: "high" | "medium" | "low";
   account_id?: string | null;
   date?: string | null;
+  /** Foto struk yang disimpan server saat scan (bukan dari AI). */
+  attachment_id?: string | null;
 }
 
 interface TransactionReviewFormProps {
@@ -82,7 +85,7 @@ export function TransactionReviewForm({ suggestion, onSaved }: TransactionReview
     setFeedback(null);
     setSubmitting(true);
     try {
-      await cloudflareApi("/api/member/quick-transaction", {
+      const res = await cloudflareApi<{ id: string }>("/api/member/quick-transaction", {
         method: "POST",
         json: {
           type,
@@ -93,6 +96,7 @@ export function TransactionReviewForm({ suggestion, onSaved }: TransactionReview
           note: note.trim(),
         },
       });
+      await attachmentService.link(suggestion?.attachment_id, res.id);
       notifyCollectionChanged("transactions");
       notifyCollectionChanged("accounts");
       onSaved();

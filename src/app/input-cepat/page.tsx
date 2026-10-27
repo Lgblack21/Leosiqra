@@ -70,6 +70,8 @@ export default function InputCepatPage() {
   const [date, setDate] = useState<string | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [hint, setHint] = useState<{ source: DraftSource; text?: string } | null>(null);
+  // Foto struk dari scan AI (disimpan server) — ditautkan setelah transaksi tersimpan.
+  const [attachmentId, setAttachmentId] = useState<string | undefined>();
   const [undoItem, setUndoItem] = useState<UndoItem | null>(null);
   const [uid, setUid] = useState("");
   // Nominal "meletup" sebentar saat terisi dari ketik pintar / suara / struk.
@@ -241,6 +243,7 @@ export default function InputCepatPage() {
     if (draft.category) { setCategory(draft.category); setSubCategory(draft.subCategory ?? ""); }
     if (draft.note) setNote(draft.note);
     if (draft.date) { setDate(draft.date === today ? null : draft.date); setShowDatePicker(false); }
+    if (source === "scan") setAttachmentId(draft.attachmentId);
     setHint({ source, text: info });
   };
 
@@ -252,6 +255,7 @@ export default function InputCepatPage() {
     setDate(null);
     setShowDatePicker(false);
     setHint(null);
+    setAttachmentId(undefined);
   };
 
   const handleSubmit = async () => {
@@ -269,6 +273,7 @@ export default function InputCepatPage() {
         subCategory,
         note,
         ...(date ? { date } : {}),
+        attachmentId,
       });
       saved(res.id, `${type === "pengeluaran" ? "Pengeluaran" : "Pemasukan"} ${res.currency} ${groupDigits(amount)} · ${res.matchedAccount}`);
     } catch (e) {

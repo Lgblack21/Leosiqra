@@ -80,6 +80,8 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [hint, setHint] = useState<{ source: DraftSource; text?: string } | null>(null);
+  // Foto struk dari scan AI (disimpan server) — ditautkan setelah transaksi tersimpan.
+  const [attachmentId, setAttachmentId] = useState<string | undefined>();
   const [undoItem, setUndoItem] = useState<UndoItem | null>(null);
   const [type, setType] = useState<TxType>("pengeluaran");
   const [isTransfer, setIsTransfer] = useState(false);
@@ -162,6 +164,7 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
     setDate(null);
     setShowDatePicker(false);
     setHint(null);
+    setAttachmentId(undefined);
   };
 
   // Isi form dari ketik pintar / suara / scan — hanya field yang terbaca,
@@ -173,6 +176,7 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
     if (draft.category) { setCategory(draft.category); setSubCategory(draft.subCategory ?? ""); }
     if (draft.note) setNote(draft.note);
     if (draft.date) { setDate(draft.date === toISODate(new Date()) ? null : draft.date); setShowDatePicker(false); }
+    if (source === "scan") setAttachmentId(draft.attachmentId);
     setHint({ source, text: info });
   };
 
@@ -204,6 +208,7 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
         subCategory,
         note,
         ...(date ? { date } : {}),
+        attachmentId,
       });
       setUndoItem({ id: res.id, label: `${subCategory || category} · ${res.currency} ${groupDigits(amount)} · ${res.matchedAccount}` });
       lightTap();

@@ -21,6 +21,7 @@ import {
   Download,
   Cloud,
   RefreshCw,
+  Paperclip,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { auth, db } from '@/lib/cf-client';
@@ -561,6 +562,43 @@ export function CloudSyncSection() {
               <RefreshCw size={17} className={cn(syncing && 'animate-spin')} />
             </button>
           }
+        />
+      </Group>
+    </>
+  );
+}
+
+// Simpan foto struk hasil scan AI sebagai lampiran transaksi (prefs di server).
+export function AttachmentPrefSection() {
+  const { toast } = useFeedback();
+  const [on, setOn] = useState<boolean | null>(null);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    cloudflareApi<{ item: { saveAttachments?: boolean } }>('/api/member/preferences')
+      .then((res) => setOn(res.item.saveAttachments !== false))
+      .catch(() => setOn(null));
+  }, []);
+  const toggle = async () => {
+    if (on === null) return;
+    setSaving(true);
+    try {
+      const res = await cloudflareApi<{ item: { saveAttachments: boolean } }>('/api/member/preferences', { method: 'PUT', json: { saveAttachments: !on } });
+      setOn(res.item.saveAttachments);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Gagal menyimpan.');
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <>
+      <Label>Preferensi</Label>
+      <Group>
+        <Row
+          icon={Paperclip}
+          title="Simpan file lampiran"
+          desc="Matikan untuk membaca foto struk tanpa menyimpannya di Leosiqra."
+          action={<Toggle on={Boolean(on)} onClick={toggle} label="Simpan file lampiran" disabled={on === null || saving} />}
         />
       </Group>
     </>

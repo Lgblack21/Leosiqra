@@ -1,5 +1,6 @@
 import { cloudflareApi } from '../cloudflare-api';
 import { notifyCollectionChanged } from '../cf-firestore';
+import { attachmentService } from './attachmentService';
 
 // Simpan pemasukan/pengeluaran lewat /api/member/quick-transaction (transaksi +
 // saldo + total dalam satu batch atomik), dan "Batalkan" lewat DELETE
@@ -13,6 +14,7 @@ export const quickTxService = {
     subCategory?: string;
     note?: string;
     date?: string; // YYYY-MM-DD, kosong = hari ini
+    attachmentId?: string; // foto struk dari scan AI
   }) {
     const res = await cloudflareApi<{ ok: boolean; id: string; matchedAccount: string; currency: string }>(
       '/api/member/quick-transaction',
@@ -29,6 +31,7 @@ export const quickTxService = {
         },
       }
     );
+    await attachmentService.link(input.attachmentId, res.id);
     notifyCollectionChanged('transactions');
     notifyCollectionChanged('accounts');
     return res;

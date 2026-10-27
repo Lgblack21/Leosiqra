@@ -41,12 +41,12 @@ export default function AssistantScanPage() {
     if (!photoBase64) return;
     setState("processing");
     try {
-      const result = await cloudflareApi<{ ok: boolean; suggestion?: ParsedTransactionSuggestion; error?: string }>(
+      const result = await cloudflareApi<{ ok: boolean; suggestion?: ParsedTransactionSuggestion; error?: string; attachmentId?: string | null }>(
         "/api/member/ai/parse-transaction",
         { method: "POST", json: { imageBase64: photoBase64 } }
       );
       if (result.ok && result.suggestion) {
-        setSuggestion(result.suggestion);
+        setSuggestion({ ...result.suggestion, attachment_id: result.attachmentId ?? null });
         setState("ready");
       } else {
         setErrorMsg(result.error || "AI tidak bisa membaca struk ini.");
