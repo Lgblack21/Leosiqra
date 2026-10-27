@@ -91,7 +91,7 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
       {children}
 
       {/* Toasts */}
-      <div aria-live="polite" className="fixed z-[70] bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 flex flex-col gap-2 sm:w-96 pointer-events-none print:hidden">
+      <div aria-live="polite" className="fixed z-[70] bottom-24 left-4 right-4 sm:left-auto sm:right-6 md:bottom-6 flex flex-col gap-2 sm:w-96 pointer-events-none print:hidden">
         {toasts.map((t) => {
           const { icon: Icon, className } = toneStyles[t.tone];
           return (

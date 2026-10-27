@@ -152,13 +152,14 @@ const buildTourSteps = (): TourStep[] => {
       title: 'Selamat Datang di Leosiqra 👋',
       content: 'Ini tur singkat mengenalkan navigasi utama aplikasi. Klik "Lanjut" untuk mulai, atau "Lewati Tur" kapan saja.',
       demo: 'menu',
-      how: ['Semua fitur dikelompokkan di menu kiri', 'Klik nama grup untuk membuka isinya', 'Tombol "Tambah Cepat" selalu ada di kanan atas'],
+      how: ['Menu kiri: Keuangan (Ringkasan, Transaksi, Laporan, Rekening) & Fitur', '"Semua fitur" membuka daftar lengkap', 'Tombol "Tambah transaksi" (atau tekan N) selalu siap'],
     },
   ];
   for (const section of sections) {
     const extra = section.id ? SECTION_DEMO[section.id] : undefined;
     steps.push({
-      target: `[data-tour="sidebar-group-${section.id}"]`,
+      // Menu samping kini 2 grup: Keuangan (menu utama & transaksi) dan Fitur (sisanya).
+      target: `[data-tour="sidebar-group-${section.id === 'primary' || section.id === 'transaksi' ? 'keuangan' : 'fitur'}"]`,
       title: `Menu: ${section.title}`,
       content: `${section.subtitle}. Berisi: ${section.items.map((i) => i.name).join(', ')}.`,
       ...extra,

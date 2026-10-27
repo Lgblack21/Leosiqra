@@ -160,7 +160,10 @@ export function InstallBanner() {
             "fixed z-[45] mx-auto rounded-[24px] bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 p-[1.5px] shadow-2xl shadow-indigo-900/25",
             area === "app"
               ? "inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+92px)] max-w-md"
-              : "inset-x-3 bottom-3 max-w-md sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-[380px]"
+              : pathname.startsWith("/membership")
+                // HP di /membership punya tab bawah (MobileTabBar) — banner naik di atasnya.
+                ? "inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+84px)] max-w-md sm:inset-x-auto sm:right-6 sm:w-[380px] md:bottom-6"
+                : "inset-x-3 bottom-3 max-w-md sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-[380px]"
           )}
         >
           <div className="relative flex items-center gap-3.5 rounded-[22px] bg-white p-4 dark:bg-slate-900">

@@ -18,13 +18,24 @@ import {
   ShieldCheck,
   FileText,
   Bot,
-  Compass,
   LogOut,
   Check,
   Minus,
   PenLine,
   MessageCircle,
+  Target,
+  Repeat,
+  Coins,
+  Bell,
+  Zap,
+  Lightbulb,
+  Mail,
+  BookOpen,
+  KeyRound,
+  Smartphone,
+  RotateCcw,
 } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import { cn, formatIDR } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { navGroups } from '@/lib/navigation';
@@ -47,7 +58,7 @@ export interface PanelUser {
   memberSince?: string | null;
 }
 
-type View = 'menu' | 'profil' | 'paket';
+type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal';
 
 const FEATURE_COUNT = navGroups.reduce((s, g) => s + g.items.length, 0);
 const STATUS_LABEL: Record<PanelUser['status'], string> = {
@@ -298,12 +309,12 @@ function PaketView({ user, onClose }: { user: PanelUser | null; onClose: () => v
 
 export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: boolean; onClose: () => void; initialView?: View }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [view, setView] = useState<View>(initialView);
   const [user, setUser] = useState<PanelUser | null>(null);
 
   useEffect(() => {
     if (!open) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- tiap kali dibuka mulai dari tampilan yang diminta
     setView(initialView);
     cloudflareApi<{ user?: PanelUser | null }>('/api/auth/me').then((r) => setUser(r.user ?? null)).catch(() => undefined);
   }, [open, initialView]);
@@ -325,8 +336,23 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
 
   const days = daysSince(user?.memberSince);
   const isPro = user?.plan === 'PRO';
-  const go = (href: string) => () => { onClose(); router.push(href); };
-  const title = view === 'menu' ? 'Pengaturan' : view === 'profil' ? 'Profil' : 'Paket';
+  // Halaman Profil membaca ?tab= sekali saat dibuka — kalau sudah di sana,
+  // muat ulang supaya tab yang diminta benar-benar terbuka.
+  const go = (href: string) => () => {
+    onClose();
+    if (href.startsWith('/membership/profile?') && pathname === '/membership/profile') window.location.assign(href);
+    else router.push(href);
+  };
+  const TITLES: Record<View, string> = {
+    menu: 'Profil',
+    profil: 'Profil',
+    paket: 'Paket',
+    bantuan: 'Bantuan',
+    umum: 'Pengaturan',
+    privasi: 'Privasi & keamanan',
+    legal: 'Ketentuan & kebijakan',
+  };
+  const title = TITLES[view];
 
   return (
     <AnimatePresence>
@@ -377,7 +403,10 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                         {isPro ? 'PRO' : 'Gratis'}
                       </span>
                     </button>
-                    <Row icon={Bot} title="Hubungkan ke AI" desc="Claude, ChatGPT & aplikasi lain lewat MCP" onClick={go('/membership/profile?tab=ai')} />
+                  </Group>
+                  <Group>
+                    <Row icon={Bot} title="Aplikasi terhubung" desc="Claude, ChatGPT & aplikasi lain lewat MCP" onClick={go('/membership/profile?tab=ai')} />
+                    <Row icon={Zap} title="Input Cepat" desc="Catat dari layar utama HP, suara & foto struk" onClick={go('/membership/profile?tab=lainnya')} />
                   </Group>
 
                   <Group>
@@ -386,16 +415,15 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
 
                   <div className="grid grid-cols-2 gap-3">
                     <Tile icon={LayoutGrid} title="Fitur" desc={`${FEATURE_COUNT} tersedia`} onClick={go('/membership/fitur')} />
-                    <Tile icon={Tags} title="Kategori" desc="& mata uang" onClick={go('/membership/nama-akun')} />
+                    <Tile icon={Tags} title="Kategori & Anggaran" onClick={go('/membership/nama-akun')} />
                     <Tile icon={Users} title="Dompet Bersama" onClick={go('/membership/dompet-bersama')} />
-                    <Tile icon={LifeBuoy} title="Bantuan" onClick={go('/membership/hubungi-kami')} />
+                    <Tile icon={LifeBuoy} title="Bantuan" onClick={() => setView('bantuan')} />
                   </div>
 
                   <Group>
-                    <Row icon={Settings} title="Pengaturan" desc="Notifikasi, pengingat tutup hari, laporan email" onClick={go('/membership/profile?tab=notifikasi')} />
-                    <Row icon={ShieldCheck} title="Privasi & keamanan" desc="Kata sandi, verifikasi 2 langkah, perangkat" onClick={go('/membership/profile?tab=keamanan')} />
-                    <Row icon={Compass} title="Panduan" desc="Tur & cara pakai tiap fitur" onClick={go('/membership/panduan')} />
-                    <Row icon={FileText} title="Ketentuan & kebijakan" href="/terms" />
+                    <Row icon={Settings} title="Pengaturan" desc="Uang, cara mencatat, pengingat" onClick={() => setView('umum')} />
+                    <Row icon={ShieldCheck} title="Privasi & keamanan" desc="Kata sandi, verifikasi 2 langkah, perangkat" onClick={() => setView('privasi')} />
+                    <Row icon={FileText} title="Ketentuan & kebijakan" onClick={() => setView('legal')} />
                   </Group>
 
                   <button type="button" onClick={logout} className="flex w-full items-center justify-center gap-2 rounded-[22px] bg-rose-50 py-3.5 text-[15px] font-semibold text-rose-600 hover:bg-rose-100">
@@ -448,6 +476,56 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                     </div>
                   )}
                 </div>
+              )}
+
+              {view === 'bantuan' && (
+                <Group>
+                  <Row icon={BookOpen} title="Panduan & artikel" onClick={go('/membership/panduan')} />
+                  <Row icon={Mail} title="Hubungi kami" onClick={go('/membership/hubungi-kami')} />
+                  <Row icon={Lightbulb} title="Usulkan fitur" onClick={go('/membership/saran')} />
+                </Group>
+              )}
+
+              {view === 'umum' && (
+                <div className="space-y-4">
+                  <p className="px-1 text-[14px] text-slate-500">Uang</p>
+                  <Group>
+                    <Row icon={Tags} title="Kategori & Anggaran" onClick={go('/membership/nama-akun')} />
+                    <Row icon={Target} title="Budget & Target" onClick={go('/membership/budget')} />
+                    <Row icon={Repeat} title="Transaksi Rutin" onClick={go('/membership/recurring')} />
+                    <Row icon={Coins} title="Mata uang" value="IDR" onClick={go('/membership/nama-akun')} />
+                  </Group>
+                  <p className="px-1 pt-2 text-[14px] text-slate-500">Mencatat</p>
+                  <Group>
+                    <Row icon={Zap} title="Input Cepat" desc="Pasang di layar utama HP" onClick={go('/membership/profile?tab=lainnya')} />
+                    <Row icon={Smartphone} title="Shortcut iPhone" desc="Catat lewat Siri, Back Tap & Action Button" onClick={go('/panduan/shortcut-ios')} />
+                    <Row icon={Bot} title="Aplikasi terhubung" desc="Claude, ChatGPT lewat MCP" onClick={go('/membership/profile?tab=ai')} />
+                  </Group>
+                  <p className="px-1 pt-2 text-[14px] text-slate-500">Notifikasi</p>
+                  <Group>
+                    <Row icon={Bell} title="Notifikasi & pengingat" desc="Push, pengingat tutup hari, laporan email" onClick={go('/membership/profile?tab=notifikasi')} />
+                  </Group>
+                </div>
+              )}
+
+              {view === 'privasi' && (
+                <div className="space-y-4">
+                  <Group>
+                    <Row icon={KeyRound} title="Kata sandi" onClick={go('/membership/profile?tab=keamanan')} />
+                    <Row icon={ShieldCheck} title="Verifikasi 2 langkah" onClick={go('/membership/profile?tab=keamanan')} />
+                    <Row icon={Smartphone} title="Perangkat yang masuk" onClick={go('/membership/profile?tab=keamanan')} />
+                  </Group>
+                  <button type="button" onClick={go('/membership/profile?tab=lainnya')} className="flex w-full items-center justify-center gap-2 border-t border-slate-100 pt-5 text-[15px] font-medium text-rose-600 hover:text-rose-700">
+                    <RotateCcw size={16} /> Atur ulang data
+                  </button>
+                </div>
+              )}
+
+              {view === 'legal' && (
+                <Group>
+                  <Row icon={ShieldCheck} title="Kebijakan Privasi" onClick={go('/privacy')} />
+                  <Row icon={FileText} title="Ketentuan Penggunaan" onClick={go('/terms')} />
+                </Group>
               )}
 
               {view === 'paket' && <PaketView user={user} onClose={onClose} />}
