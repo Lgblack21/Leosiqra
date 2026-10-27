@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-10-27 · commit terakhir di main: `7ac3ceb`
+Terakhir diperbarui: 2026-10-27 (setelah deploy perbaikan security check)
 
 ## Siapa sedang kerja
 
@@ -24,7 +24,11 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   Masuk; Claude & ChatGPT (MCP). Kotak Masuk web `/membership/kotak-masuk` dan
   HP `/app/inbox`. Aktivasi aplikasi pakai koin (`APP_ACTIVATION` di Worker:
   Calendar/Sheets/Notion/Slack 200, Gmail 500 koin per 30 hari; PRO gratis).
-- **Belum di-deploy**: perbaikan security check 2026-10-27 (Kotak Masuk tidak menandai "bukan transaksi" saat AI gangguan; streak koin per user; cek NONAKTIF atomik di tukar PRO) — branch `claude/friendly-galileo-d9k5kc`.
+- Perbaikan security check 2026-10-27 juga sudah live: Kotak Masuk tidak
+  menandai "bukan transaksi" saat AI gangguan (`ai_unavailable`), streak koin
+  per user, cek NONAKTIF atomik di tukar PRO. Hasil audit:
+  `.claude/skills/security-check/references/triaged.md`.
+- **Belum di-deploy**: tidak ada.
 
 ## Migrasi D1
 
