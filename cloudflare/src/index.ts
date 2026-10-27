@@ -8305,9 +8305,192 @@ const composioErrorResponse = (error: unknown, where: string) => {
   return json({ error: "Layanan koneksi aplikasi sedang bermasalah. Coba lagi sebentar lagi." }, { status: 502 });
 };
 
+// ── Google Calendar (Composio): tagihan rutin & jatuh tempo kartu ──────────
+// Acara seharian berulang di kalender utama. Peta "kunci tagihan → id acara"
+// disimpan di users.metadata_json $.calendarSync supaya sinkron ulang tidak
+// membuat acara dobel: yang berubah diganti, yang hilang dihapus, yang sama
+// dilewati (tanpa memanggil tool → hemat kuota Composio).
+type ComposioSession = Awaited<ReturnType<InstanceType<typeof Composio>["sessions"]["create"]>>;
+type CalendarSyncState = { enabled?: boolean; lastSyncAt?: string; events?: Record<string, { id: string | null; hash: string }> };
+const CALENDAR_SYNC_MAX_EVENTS = 60;
+const CALENDAR_FREQ: Record<string, string> = { Harian: "DAILY", Mingguan: "WEEKLY", Bulanan: "MONTHLY", Tahunan: "YEARLY" };
+
+const readCalendarSync = async (env: Env, userId: string): Promise<CalendarSyncState> => {
+  const row = await env.DB.prepare(
+    `SELECT CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.calendarSync') END AS v FROM users WHERE id = ?`
+  )
+    .bind(userId)
+    .first<{ v: string | null }>();
+  try {
+    const parsed = row?.v ? (JSON.parse(row.v) as CalendarSyncState) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
+const writeCalendarSync = (env: Env, userId: string, state: CalendarSyncState | null) =>
+  state
+    ? env.DB.prepare(
+        `UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.calendarSync', json(?)) WHERE id = ?`
+      )
+        .bind(JSON.stringify(state), userId)
+        .run()
+    : env.DB.prepare(`UPDATE users SET metadata_json = json_remove(metadata_json, '$.calendarSync') WHERE id = ? AND json_valid(metadata_json)`)
+        .bind(userId)
+        .run();
+
+const addDaysYmd = (ymd: string, days: number) => {
+  const d = new Date(`${ymd.slice(0, 10)}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+};
+
+// Daftar acara yang SEHARUSNYA ada. "anchor" = pola ulang (tanggal/hari), bukan
+// tanggal berikutnya — next_date transaksi rutin maju tiap bulan, dan itu
+// tidak boleh memicu hapus-buat ulang acara.
+const desiredCalendarEvents = async (env: Env, userId: string) => {
+  const events: { key: string; hash: string; args: Record<string, unknown> }[] = [];
+  const recurring = await env.DB.prepare(
+    "SELECT id, name, type, amount, interval, next_date FROM recurring WHERE user_id = ? AND status = 'ACTIVE' ORDER BY next_date LIMIT 100"
+  )
+    .bind(userId)
+    .all<{ id: string; name: string; type: string; amount: number; interval: string; next_date: string }>();
+  for (const r of recurring.results ?? []) {
+    const date = String(r.next_date ?? "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    const freq = CALENDAR_FREQ[r.interval] ?? "MONTHLY";
+    const anchor = freq === "MONTHLY" ? date.slice(8) : freq === "YEARLY" ? date.slice(5) : freq === "WEEKLY" ? String(new Date(`${date}T00:00:00Z`).getUTCDay()) : "";
+    const summary = `${r.name} · Rp ${Math.round(Number(r.amount) || 0).toLocaleString("id-ID")}`;
+    events.push({
+      key: `recurring:${r.id}`,
+      hash: JSON.stringify([summary, freq, anchor]),
+      args: {
+        summary,
+        description: `Transaksi rutin Leosiqra (${r.type}, ${r.interval}).`,
+        start_date: date,
+        end_date: addDaysYmd(date, 1),
+        recurrence: [`RRULE:FREQ=${freq}`],
+      },
+    });
+  }
+  const cards = await env.DB.prepare(
+    "SELECT id, name, payload_json FROM accounts WHERE user_id = ? AND type IN ('Credit Card', 'kartu') AND payload_json LIKE '%dueDay%'"
+  )
+    .bind(userId)
+    .all<{ id: string; name: string; payload_json: string | null }>();
+  const today = todayWIB();
+  for (const card of cards.results ?? []) {
+    let settings: CardCycleSettings = {};
+    try {
+      settings = JSON.parse(card.payload_json || "{}") as CardCycleSettings;
+    } catch {
+      continue;
+    }
+    const statementDay = clampCycleDay(settings.statementDay);
+    const dueDay = clampCycleDay(settings.dueDay);
+    if (!statementDay || !dueDay) continue;
+    const due = dueDateFor(lastStatementDate(today, statementDay), dueDay);
+    const summary = `Jatuh tempo ${card.name}`;
+    events.push({
+      key: `card:${card.id}`,
+      hash: JSON.stringify([summary, "MONTHLY", dueDay]),
+      args: {
+        summary,
+        description: "Bayar tagihan kartu kredit. Cek jumlahnya di Leosiqra → Kartu Saya.",
+        start_date: due,
+        end_date: addDaysYmd(due, 1),
+        recurrence: ["RRULE:FREQ=MONTHLY"],
+      },
+    });
+  }
+  return events.slice(0, CALENDAR_SYNC_MAX_EVENTS);
+};
+
+const calendarEventId = (data: Record<string, unknown> | undefined) => {
+  const d = (data ?? {}) as { id?: unknown; response_data?: { id?: unknown }; event?: { id?: unknown } };
+  const id = d.response_data?.id ?? d.id ?? d.event?.id;
+  return typeof id === "string" && id ? id : null;
+};
+
+const syncGoogleCalendar = async (env: Env, session: ComposioSession, userId: string) => {
+  const state = await readCalendarSync(env, userId);
+  const current = { ...(state.events ?? {}) };
+  const desired = await desiredCalendarEvents(env, userId);
+  const desiredKeys = new Set(desired.map((e) => e.key));
+  const stats = { created: 0, updated: 0, deleted: 0, unchanged: 0, failed: 0 };
+
+  const removeEvent = async (key: string) => {
+    const eventId = current[key]?.id;
+    if (eventId) {
+      const res = await session.execute("GOOGLECALENDAR_DELETE_EVENT", { event_id: eventId, calendar_id: "primary", send_updates: "none" });
+      // Sudah dihapus user dari kalender = tujuan tercapai; gagal lain dicoba lagi lain kali.
+      if (res.resultType !== "completed" && !/not ?found|deleted|410|404/i.test(String(res.error ?? ""))) {
+        console.error(`Hapus acara kalender gagal (logId ${res.logId}):`, res.error);
+        stats.failed++;
+        return false;
+      }
+    }
+    delete current[key];
+    return true;
+  };
+
+  for (const key of Object.keys(current)) {
+    if (!desiredKeys.has(key) && (await removeEvent(key))) stats.deleted++;
+  }
+  for (const event of desired) {
+    const existing = current[event.key];
+    if (existing && existing.hash === event.hash) {
+      stats.unchanged++;
+      continue;
+    }
+    if (existing && !(await removeEvent(event.key))) continue;
+    const res = await session.execute("GOOGLECALENDAR_CREATE_EVENT", {
+      ...event.args,
+      calendar_id: "primary",
+      timezone: "Asia/Jakarta",
+      create_meeting_room: false,
+      send_updates: "none",
+      transparency: "transparent",
+    });
+    if (res.resultType !== "completed") {
+      console.error(`Buat acara kalender gagal (logId ${res.logId}):`, res.error);
+      stats.failed++;
+      continue;
+    }
+    current[event.key] = { id: calendarEventId(res.data), hash: event.hash };
+    if (existing) stats.updated++;
+    else stats.created++;
+  }
+
+  const lastSyncAt = nowIso();
+  await writeCalendarSync(env, userId, { enabled: true, lastSyncAt, events: current });
+  return { ...stats, total: desired.length, lastSyncAt };
+};
+
+// Cron harian: sinkron ulang untuk yang sudah pernah menyalakan sinkron.
+// Tanpa perubahan = tanpa panggilan tool (cuma 1 pembuatan sesi per user).
+const syncAllGoogleCalendars = async (env: Env) => {
+  const setup = composioClient(env);
+  if ("error" in setup) return;
+  const { results } = await env.DB.prepare(
+    `SELECT id FROM users WHERE json_valid(metadata_json) AND json_extract(metadata_json, '$.calendarSync.enabled') = 1 LIMIT 500`
+  ).all<{ id: string }>();
+  for (const { id } of results ?? []) {
+    try {
+      const session = await setup.client.sessions.create(id, { toolkits: ["googlecalendar"] });
+      await syncGoogleCalendar(env, session, id);
+    } catch (error) {
+      console.error("Sinkron kalender harian gagal:", error instanceof Error ? error.message : error);
+    }
+  }
+};
+
 // GET    /api/member/apps                    → status koneksi tiap toolkit
 // POST   /api/member/apps/:toolkit/connect   → { redirectUrl } halaman login aplikasi
 // POST   /api/member/apps/:toolkit/check     → panggilan baca-saja, ringkasan + logId
+// GET    /api/member/apps/googlecalendar/sync → status sinkron tagihan
+// POST   /api/member/apps/googlecalendar/sync → sinkronkan tagihan sekarang
 // DELETE /api/member/apps/:toolkit           → putuskan (cabut token di Composio)
 async function handleMemberApps(request: Request, env: Env, pathname: string) {
   const authResult = await requireSession(env, request);
@@ -8352,7 +8535,24 @@ async function handleMemberApps(request: Request, env: Env, pathname: string) {
       return json({ ok: true, summary: check.summarize(result.data ?? {}), logId: result.logId });
     }
 
+    if (action === "sync" && toolkit === "googlecalendar") {
+      if (request.method === "GET") {
+        const state = await readCalendarSync(env, userId);
+        return json({ enabled: Boolean(state.enabled), lastSyncAt: state.lastSyncAt ?? null, count: Object.keys(state.events ?? {}).length });
+      }
+      if (request.method === "POST") return json({ ok: true, ...(await syncGoogleCalendar(env, session, userId)) });
+    }
+
     if (!action && request.method === "DELETE") {
+      if (toolkit === "googlecalendar") {
+        // Bersihkan acara buatan Leosiqra dulu (selagi aksesnya masih ada).
+        const state = await readCalendarSync(env, userId);
+        for (const event of Object.values(state.events ?? {})) {
+          if (!event.id) continue;
+          await session.execute("GOOGLECALENDAR_DELETE_EVENT", { event_id: event.id, calendar_id: "primary", send_updates: "none" }).catch(() => undefined);
+        }
+        await writeCalendarSync(env, userId, null);
+      }
       const res = await session.toolkits({ toolkits: [toolkit] });
       const accountId = res.items.find((t) => t.slug.toLowerCase() === toolkit)?.connection?.connectedAccount?.id;
       if (accountId) await composio.connectedAccounts.delete(accountId);
@@ -13004,6 +13204,8 @@ const worker = {
     ctx.waitUntil(sendMonthlyReports(env).catch((error) => console.error("Laporan bulanan:", error)));
     // Foto struk yang tidak pernah ditautkan ke transaksi (>24 jam).
     ctx.waitUntil(cleanupPendingAttachments(env));
+    // Tagihan rutin & jatuh tempo kartu → Google Calendar (yang sudah menyalakan sinkron).
+    ctx.waitUntil(syncAllGoogleCalendars(env));
   },
 };
 

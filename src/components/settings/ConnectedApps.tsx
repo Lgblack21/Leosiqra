@@ -11,7 +11,7 @@ import { McpConnectCard } from '@/components/profile/McpConnectCard';
 // jalan: MCP untuk Claude/ChatGPT, tautan rahasia Google Sheets (CSV untuk
 // =IMPORTDATA) & Google Calendar (iCal), Input Cepat, dan pasang aplikasi.
 
-export type AppsView = 'ai' | 'app-mcp' | 'app-sheets' | 'app-calendar' | 'app-gmail';
+export type AppsView = 'ai' | 'app-mcp' | 'app-sheets' | 'app-calendar' | 'app-gmail' | 'app-gcal';
 type Feeds = { sheets: string | null; calendar: string | null };
 const LEGACY_FEEDS_VISIBLE = false;
 
@@ -84,14 +84,15 @@ function useComposioApps() {
 export function AppsHub({ go }: { go: (v: AppsView) => void }) {
   const { feeds } = useFeeds();
   const { apps } = useComposioApps();
-  // Kembali dari halaman login Google (callbackUrl ?terhubung=gmail) → langsung ke layar Gmail.
+  // Kembali dari halaman login (callbackUrl ?terhubung=<toolkit>) → langsung ke layar aplikasinya.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('terhubung') !== 'gmail') return;
+    const target = ({ gmail: 'app-gmail', googlecalendar: 'app-gcal' } as const)[params.get('terhubung') ?? ''];
+    if (!target) return;
     params.delete('terhubung');
     const rest = params.toString();
     window.history.replaceState(null, '', window.location.pathname + (rest ? `?${rest}` : ''));
-    go('app-gmail');
+    go(target);
   }, [go]);
   return (
     <div className="space-y-3">
@@ -107,6 +108,17 @@ export function AppsHub({ go }: { go: (v: AppsView) => void }) {
           connected={Boolean(apps.items.gmail?.connected)}
           action={apps.items.gmail?.connected ? 'Atur' : 'Hubungkan'}
           onClick={() => go('app-gmail')}
+        />
+      )}
+      {apps.state === 'ready' && (
+        <AppCard
+          icon={CalendarDays}
+          tile="bg-sky-50 text-sky-600"
+          title="Google Calendar"
+          desc="Transaksi rutin & jatuh tempo kartu kredit otomatis muncul di kalendermu."
+          connected={Boolean(apps.items.googlecalendar?.connected)}
+          action={apps.items.googlecalendar?.connected ? 'Atur' : 'Hubungkan'}
+          onClick={() => go('app-gcal')}
         />
       )}
       <AppCard icon={Bot} tile="bg-indigo-50 text-indigo-600" title="Claude & ChatGPT" desc="Tanya & catat keuangan dari asisten AI lewat MCP." action="Atur" onClick={() => go('app-mcp')} />
@@ -246,17 +258,32 @@ function FeedView({ kind }: { kind: 'sheets' | 'calendar' }) {
 
 // Layar satu aplikasi Composio: penjelasan & persetujuan → login di situs
 // aplikasinya → kembali ke sini, lalu periksa koneksi (panggilan baca-saja).
-function GmailView() {
+type ComposioToolkit = 'gmail' | 'googlecalendar';
+const COMPOSIO_COPY: Record<ComposioToolkit, { name: string; provider: string; about: string }> = {
+  gmail: {
+    name: 'Gmail',
+    provider: 'Google',
+    about: 'Tahap beta: Leosiqra baru memeriksa akun yang terhubung. Nanti Leosiqra membaca email pembayaran (bank, e-wallet, toko) untuk diusulkan sebagai transaksi — selalu kamu tinjau dulu sebelum tercatat.',
+  },
+  googlecalendar: {
+    name: 'Google Calendar',
+    provider: 'Google',
+    about: 'Leosiqra menulis transaksi rutin dan jatuh tempo kartu kredit sebagai acara seharian berulang di kalender utamamu, lalu memperbaruinya tiap hari. Leosiqra tidak membaca acara lain di kalendermu.',
+  },
+};
+
+function ComposioAppView({ toolkit, children }: { toolkit: ComposioToolkit; children?: React.ReactNode }) {
   const { toast, confirm } = useFeedback();
   const { apps, reload } = useComposioApps();
   const [busy, setBusy] = useState(false);
   const [check, setCheck] = useState<{ ok: boolean; text: string; logId?: string } | null>(null);
-  const connected = Boolean(apps.items.gmail?.connected);
+  const copy = COMPOSIO_COPY[toolkit];
+  const connected = Boolean(apps.items[toolkit]?.connected);
 
   const runCheck = useCallback(async () => {
     setBusy(true);
     try {
-      const res = await fetch('/api/member/apps/gmail/check', { method: 'POST', credentials: 'include' });
+      const res = await fetch(`/api/member/apps/${toolkit}/check`, { method: 'POST', credentials: 'include' });
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean; summary?: string; error?: string; logId?: string };
       setCheck({ ok: Boolean(body.ok), text: body.summary || body.error || 'Gagal memeriksa koneksi.', logId: body.logId });
     } catch {
@@ -264,9 +291,9 @@ function GmailView() {
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [toolkit]);
 
-  // Sekali saja setelah status terhubung terbaca (mis. baru kembali dari Google).
+  // Sekali saja setelah status terhubung terbaca (mis. baru kembali dari login).
   const checked = useRef(false);
   useEffect(() => {
     if (!connected || checked.current) return;
@@ -277,24 +304,31 @@ function GmailView() {
   const connect = async () => {
     setBusy(true);
     try {
-      const res = await cloudflareApi<{ redirectUrl: string }>('/api/member/apps/gmail/connect', { method: 'POST' });
+      const res = await cloudflareApi<{ redirectUrl: string }>(`/api/member/apps/${toolkit}/connect`, { method: 'POST' });
       window.location.href = res.redirectUrl;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Gagal membuka halaman Google.');
+      toast.error(e instanceof Error ? e.message : `Gagal membuka halaman ${copy.provider}.`);
       setBusy(false);
     }
   };
 
   const disconnect = async () => {
-    const ok = await confirm({ title: 'Putuskan Gmail?', message: 'Akses Leosiqra ke Gmail-mu dicabut. Transaksi yang sudah tercatat tidak terhapus.', confirmLabel: 'Putuskan', danger: true });
+    const ok = await confirm({
+      title: `Putuskan ${copy.name}?`,
+      message: toolkit === 'googlecalendar'
+        ? 'Acara tagihan buatan Leosiqra dihapus dari kalendermu, lalu aksesnya dicabut.'
+        : `Akses Leosiqra ke ${copy.name}-mu dicabut. Transaksi yang sudah tercatat tidak terhapus.`,
+      confirmLabel: 'Putuskan',
+      danger: true,
+    });
     if (!ok) return;
     setBusy(true);
     try {
-      await cloudflareApi('/api/member/apps/gmail', { method: 'DELETE' });
+      await cloudflareApi(`/api/member/apps/${toolkit}`, { method: 'DELETE' });
       setCheck(null);
       checked.current = false;
       await reload();
-      toast.success('Gmail diputus.');
+      toast.success(`${copy.name} diputus.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Gagal memutus.');
     } finally {
@@ -311,13 +345,11 @@ function GmailView() {
         <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white ring-1 ring-slate-200">
           <ShieldCheck size={22} className="text-slate-700" />
         </span>
-        <p className="text-[19px] font-semibold text-slate-900">Hubungkan Gmail</p>
+        <p className="text-[19px] font-semibold text-slate-900">Hubungkan {copy.name}</p>
         <p className="text-[14px] leading-relaxed text-slate-600">
-          Setelah ini kamu akan melihat nama mitra koneksi kami, <b>Composio</b>, layanan bersertifikat SOC 2 Type II yang menjaga koneksi ini tetap aman. Leosiqra tidak pernah melihat kata sandi Google-mu.
+          Setelah ini kamu akan melihat nama mitra koneksi kami, <b>Composio</b>, layanan bersertifikat SOC 2 Type II yang menjaga koneksi ini tetap aman. Leosiqra tidak pernah melihat kata sandi {copy.provider}-mu.
         </p>
-        <p className="text-[14px] leading-relaxed text-slate-600">
-          Tahap beta: Leosiqra baru memeriksa akun yang terhubung. Nanti Leosiqra membaca email pembayaran (bank, e-wallet, toko) untuk diusulkan sebagai transaksi — selalu kamu tinjau dulu sebelum tercatat.
-        </p>
+        <p className="text-[14px] leading-relaxed text-slate-600">{copy.about}</p>
       </div>
 
       {connected ? (
@@ -326,6 +358,7 @@ function GmailView() {
             {busy && !check ? 'Memeriksa koneksi…' : check?.text ?? 'Terhubung'}
             {check?.logId && <span className="mt-1 block font-mono text-[11px] opacity-60">log {check.logId}</span>}
           </div>
+          {children}
           <div className="grid grid-cols-2 gap-3">
             <button type="button" onClick={() => void runCheck()} disabled={busy} className="flex items-center justify-center gap-2 rounded-full bg-slate-100 py-3 text-[14px] font-semibold text-slate-800 hover:bg-slate-200 disabled:opacity-60">
               <RefreshCw size={15} className={cn(busy && 'animate-spin')} /> Periksa
@@ -337,15 +370,68 @@ function GmailView() {
         </>
       ) : (
         <button type="button" onClick={connect} disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 text-[16px] font-bold text-white disabled:opacity-60">
-          {busy && <Loader2 size={16} className="animate-spin" />} Lanjutkan ke Google
+          {busy && <Loader2 size={16} className="animate-spin" />} Lanjutkan ke {copy.provider}
         </button>
       )}
     </div>
   );
 }
 
+// Sinkron tagihan ke Google Calendar (tampil setelah terhubung).
+function CalendarSyncCard() {
+  const { toast } = useFeedback();
+  const [state, setState] = useState<{ enabled: boolean; lastSyncAt: string | null; count: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState('');
+  const load = useCallback(async () => {
+    try {
+      setState(await cloudflareApi<{ enabled: boolean; lastSyncAt: string | null; count: number }>('/api/member/apps/googlecalendar/sync'));
+    } catch {
+      setState(null);
+    }
+  }, []);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const sync = async () => {
+    setBusy(true);
+    setResult('');
+    try {
+      const r = await cloudflareApi<{ created: number; updated: number; deleted: number; unchanged: number; failed: number; total: number }>('/api/member/apps/googlecalendar/sync', { method: 'POST' });
+      const parts = [r.created && `${r.created} dibuat`, r.updated && `${r.updated} diperbarui`, r.deleted && `${r.deleted} dihapus`, r.unchanged && `${r.unchanged} tetap`].filter(Boolean);
+      setResult(r.total === 0 && !r.deleted ? 'Belum ada transaksi rutin atau kartu kredit dengan tanggal jatuh tempo.' : `${parts.join(' · ') || 'Selesai'}${r.failed ? ` · ${r.failed} gagal, dicoba lagi besok` : ''}`);
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Gagal menyinkronkan.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const when = state?.lastSyncAt ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(state.lastSyncAt)) : null;
+  return (
+    <div className="space-y-3 rounded-[22px] bg-slate-50 p-4">
+      <div className="flex items-center gap-3">
+        <CalendarDays size={20} className="shrink-0 text-sky-600" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-semibold text-slate-900">Tagihan di kalender</span>
+          <span className="block text-[13px] text-slate-500">
+            {state?.enabled ? `${state.count} acara · sinkron otomatis tiap hari${when ? ` · terakhir ${when}` : ''}` : 'Transaksi rutin & jatuh tempo kartu kredit.'}
+          </span>
+        </span>
+      </div>
+      {result && <p className="rounded-2xl bg-white px-4 py-2.5 text-[13px] text-slate-600 ring-1 ring-slate-200">{result}</p>}
+      <button type="button" onClick={sync} disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[15px] font-bold text-white disabled:opacity-60">
+        {busy ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />} {state?.enabled ? 'Sinkronkan sekarang' : 'Tulis tagihan ke kalender'}
+      </button>
+    </div>
+  );
+}
+
 export function AppsSection({ view, go }: { view: AppsView; go: (v: AppsView) => void }) {
-  if (view === 'app-gmail') return <GmailView />;
+  if (view === 'app-gmail') return <ComposioAppView toolkit="gmail" />;
+  if (view === 'app-gcal') return <ComposioAppView toolkit="googlecalendar"><CalendarSyncCard /></ComposioAppView>;
   if (view === 'app-mcp') return <McpConnectCard />;
   if (view === 'app-sheets') return <FeedView kind="sheets" />;
   if (view === 'app-calendar') return <FeedView kind="calendar" />;
