@@ -46,12 +46,29 @@ export interface NavGroup {
   items: NavItem[];
 }
 
-// Entri tanpa grup — selalu kelihatan di paling atas.
-export const primaryNav: NavItem[] = [
+// Menu samping dibagi dua: "Keuangan" (4 halaman inti, selalu tampil) dan
+// "Fitur" (pintasan ke fitur yang paling sering dipakai + "Semua fitur").
+// navGroups di bawah tetap jadi daftar lengkap semua fitur — dipakai halaman
+// /membership/fitur, judul Header, dan halaman Panduan.
+export const keuanganNav: NavItem[] = [
   { label: 'Ringkasan', href: '/membership/dashboard', icon: LayoutDashboard },
+  { label: 'Transaksi', href: '/membership/transactions/daily', icon: ListOrdered },
   { label: 'Laporan', href: '/membership/laporan', icon: BarChart3 },
-  { label: 'AI Leosiqra', href: '/membership/ai-leosiqra', icon: Bot },
+  { label: 'Rekening', href: '/membership/rekening', icon: Building2 },
 ];
+
+export const fiturNav: NavItem[] = [
+  { label: 'AI Leosiqra', href: '/membership/ai-leosiqra', icon: Bot },
+  { label: 'Kartu Saya', href: '/membership/cards', icon: CreditCard },
+  { label: 'Tabungan', href: '/membership/tabungan', icon: PiggyBank },
+  { label: 'Budget & Target', href: '/membership/budget', icon: Target },
+  { label: 'Hutang & Piutang', href: '/membership/transactions/debt', icon: HandCoins },
+];
+
+export const SEMUA_FITUR_HREF = '/membership/fitur';
+
+// Kompatibilitas: dulu dipakai Sidebar sebagai menu paling atas.
+export const primaryNav: NavItem[] = [keuanganNav[0], fiturNav[0]];
 
 export const navGroups: NavGroup[] = [
   {
@@ -117,11 +134,13 @@ export const navGroups: NavGroup[] = [
 const extraTitles: Record<string, string> = {
   '/membership/contact': 'Upgrade ke PRO',
   '/membership/onboarding': 'Setup Awal',
+  '/membership/fitur': 'Semua fitur',
+  '/membership/laporan': 'Laporan',
 };
 
 export function findNavContext(pathname: string): { title: string; group?: string } {
-  const primary = primaryNav.find((i) => i.href === pathname);
-  if (primary) return { title: primary.label };
+  const main = keuanganNav.find((i) => i.href === pathname) ?? fiturNav.find((i) => i.href === pathname);
+  if (main) return { title: main.label };
   for (const group of navGroups) {
     const item = group.items.find((i) => i.href === pathname);
     if (item) return { title: item.label, group: group.label };

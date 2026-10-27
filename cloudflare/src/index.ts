@@ -88,6 +88,8 @@ type AppUser = {
   // kolom currency_initialized yang sudah ada (tanpa migrasi baru — lihat
   // catatan drift schema production di tempat lain).
   onboarded?: boolean;
+  expiredAt?: string | null;
+  memberSince?: string | null;
 };
 
 const json = (data: unknown, init: ResponseInit = {}) =>
@@ -514,13 +516,14 @@ const readSession = async (env: Env, request: Request) => {
     password_hash?: string;
     currency_initialized?: number | null;
     metadata_json?: string | null;
+    user_created_at?: string | null;
   };
   let result: SessionJoinRow | null = null;
 
   try {
     result = await env.DB.prepare(
       `SELECT s.id as session_id, s.user_id, s.role, s.expires_at,
-              u.name, u.email, u.plan, u.status, u.expired_at, u.whatsapp, u.two_factor_secret, u.photo_url, u.password_hash, u.currency_initialized, u.metadata_json
+              u.name, u.email, u.plan, u.status, u.expired_at, u.whatsapp, u.two_factor_secret, u.photo_url, u.password_hash, u.currency_initialized, u.metadata_json, u.created_at as user_created_at
          FROM sessions s
          JOIN users u ON u.id = s.user_id
         WHERE s.id = ?`
@@ -530,7 +533,7 @@ const readSession = async (env: Env, request: Request) => {
   } catch {
     result = await env.DB.prepare(
       `SELECT s.id as session_id, s.user_id, u.role as role, s.expires_at,
-              u.name, u.email, u.plan, u.status, u.expired_at, u.whatsapp, u.two_factor_secret, u.photo_url, u.password_hash, u.currency_initialized, u.metadata_json
+              u.name, u.email, u.plan, u.status, u.expired_at, u.whatsapp, u.two_factor_secret, u.photo_url, u.password_hash, u.currency_initialized, u.metadata_json, u.created_at as user_created_at
          FROM sessions s
          JOIN users u ON u.id = s.user_id
         WHERE s.id = ?`
@@ -578,6 +581,9 @@ const readSession = async (env: Env, request: Request) => {
       photoURL: result.photo_url ?? null,
       hasPassword: !result.password_hash?.startsWith("oauth$"),
       onboarded: result.currency_initialized === 1,
+      // Untuk panel Pengaturan: masa aktif paket & "memakai Leosiqra sejak".
+      expiredAt: result.expired_at ?? null,
+      memberSince: result.user_created_at ?? null,
     } satisfies AppUser,
   };
 };
