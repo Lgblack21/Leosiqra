@@ -52,10 +52,11 @@ export function FirstWalletStep({ onDone }: FirstWalletStepProps) {
   };
 
   return (
-    <div className="px-6 pt-10">
-      <h1 className="text-xl font-black text-slate-900 dark:text-white">Rekening Pertama</h1>
-      <p className="text-sm font-medium text-slate-400 dark:text-slate-500 mt-1">
-        Buat satu rekening dulu (bisa tambah lagi nanti).
+    <div className="px-6 pt-12">
+      <p className="text-[14px] font-semibold text-slate-500 dark:text-slate-400">Langkah terakhir</p>
+      <h1 className="mt-1.5 text-[34px] leading-[1.05] font-black tracking-[-0.03em] text-slate-900 dark:text-white">Rekening pertama.</h1>
+      <p className="text-[16px] leading-relaxed text-slate-500 dark:text-slate-400 mt-3">
+        Buat satu rekening dulu. Rekening lain bisa ditambah kapan saja.
       </p>
 
       <div className="mt-6 space-y-4">
@@ -68,7 +69,7 @@ export function FirstWalletStep({ onDone }: FirstWalletStepProps) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="mis. Dompet, BCA, GoPay"
-            className="mt-2 w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-5 py-4 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-indigo-500/5"
+            className="mt-2 w-full rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-white dark:bg-slate-900 px-5 py-4 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-indigo-500/5"
           />
         </div>
 
@@ -83,10 +84,10 @@ export function FirstWalletStep({ onDone }: FirstWalletStepProps) {
                   type="button"
                   onClick={() => setType(t.value)}
                   className={cn(
-                    "flex flex-col items-center gap-1.5 py-3.5 rounded-2xl text-xs font-bold border-2 transition-all",
+                    "flex flex-col items-center gap-1.5 py-3.5 rounded-[18px] text-xs font-bold bg-white dark:bg-slate-900 transition-all",
                     type === t.value
-                      ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100"
-                      : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-400 dark:text-slate-500"
+                      ? "ring-2 ring-indigo-600 text-indigo-600 dark:text-indigo-400"
+                      : "ring-1 ring-slate-200/70 dark:ring-slate-800 text-slate-400 dark:text-slate-500"
                   )}
                 >
                   <Icon size={18} />
@@ -97,7 +98,7 @@ export function FirstWalletStep({ onDone }: FirstWalletStepProps) {
           </div>
         </div>
 
-        <div className="bg-slate-50 dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 p-6">
+        <div className="bg-white dark:bg-slate-900 rounded-[22px] p-6">
           <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
             Saldo Awal (IDR)
           </label>
@@ -122,7 +123,7 @@ export function FirstWalletStep({ onDone }: FirstWalletStepProps) {
           type="button"
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="w-full py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg shadow-indigo-200 disabled:opacity-40 disabled:shadow-none transition-all active:scale-[0.98]"
+          className="w-full h-12 rounded-full bg-indigo-600 text-white font-bold text-[15px] disabled:opacity-40 transition-all active:scale-[0.98]"
         >
           {submitting ? "Menyimpan..." : "Selesai"}
         </button>
