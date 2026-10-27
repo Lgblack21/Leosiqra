@@ -5,7 +5,7 @@ import { ArrowLeft, Bot, CalendarDays, Check, ChevronRight, Mail, MonitorSmartph
 import { cn } from '@/lib/utils';
 import { LeoAvatarSvg, DEFAULT_AVATAR } from '@/components/profile/LeoAvatar';
 import { McpConnectCard } from '@/components/profile/McpConnectCard';
-import { CalendarSyncCard, ComposioAppView, useComposioApps } from '@/components/settings/ConnectedApps';
+import { CalendarSyncCard, ComposioAppView, useComposioApps, type AppAccess } from '@/components/settings/ConnectedApps';
 
 // Aplikasi terhubung — halaman sendiri (bukan panel). Daftar aplikasi
 // beserta fungsinya; detail tiap aplikasi dibuka di halaman yang sama lewat
@@ -62,7 +62,7 @@ const StatusChip = ({ on }: { on: boolean }) =>
     </span>
   ) : null;
 
-function AppCard({ app, connected, onOpen, disabledNote }: { app: AppInfo; connected?: boolean; onOpen: () => void; disabledNote?: string }) {
+function AppCard({ app, connected, onOpen, disabledNote, price }: { app: AppInfo; connected?: boolean; onOpen: () => void; disabledNote?: string; price?: string }) {
   const Icon = app.icon;
   return (
     <button
@@ -80,6 +80,7 @@ function AppCard({ app, connected, onOpen, disabledNote }: { app: AppInfo; conne
             {app.beta && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-700">Beta</span>}
             <StatusChip on={Boolean(connected)} />
           </div>
+          {price && <p className="mt-1 text-[12px] font-semibold text-indigo-600">{price}</p>}
           <p className="mt-1 text-[14px] leading-snug text-slate-500">{app.tagline}</p>
           {disabledNote && <p className="mt-1 text-[12px] font-medium text-rose-500">{disabledNote}</p>}
         </div>
@@ -116,6 +117,14 @@ const LinkCard = ({ href, icon: Icon, tile, title, desc, action }: { href: strin
     <ChevronRight size={18} className="shrink-0 text-slate-400 sm:hidden" />
   </a>
 );
+
+const priceLabel = (a?: AppAccess) => {
+  if (!a) return undefined;
+  if (a.reason === 'pro') return 'Gratis untuk member PRO';
+  if (a.reason === 'beta') return 'Gratis selama beta';
+  if (a.reason === 'coins' && a.until) return `Aktif sampai ${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(a.until))}`;
+  return `${a.price.toLocaleString('id-ID')} koin / ${a.days} hari · gratis untuk PRO`;
+};
 
 function Hub({ open }: { open: (id: AppId) => void }) {
   const { apps } = useComposioApps();
@@ -154,8 +163,8 @@ function Hub({ open }: { open: (id: AppId) => void }) {
         <h2 className="mb-1 text-[18px] font-bold text-slate-900">Otomatis dari aplikasimu</h2>
         <p className="mb-4 text-[14px] text-slate-500">Lewat mitra koneksi Composio — kamu masuk di situs Google, Leosiqra tidak pernah melihat kata sandimu.</p>
         <div className="grid gap-4 md:grid-cols-2">
-          <AppCard app={APPS.googlecalendar} connected={apps.items.googlecalendar?.connected} onOpen={() => open('googlecalendar')} disabledNote={composioNote} />
-          <AppCard app={APPS.gmail} connected={apps.items.gmail?.connected} onOpen={() => open('gmail')} disabledNote={composioNote} />
+          <AppCard app={APPS.googlecalendar} connected={apps.items.googlecalendar?.connected} onOpen={() => open('googlecalendar')} disabledNote={composioNote} price={priceLabel(apps.access?.googlecalendar)} />
+          <AppCard app={APPS.gmail} connected={apps.items.gmail?.connected} onOpen={() => open('gmail')} disabledNote={composioNote} price={priceLabel(apps.access?.gmail)} />
         </div>
       </section>
 

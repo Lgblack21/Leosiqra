@@ -8478,6 +8478,8 @@ const syncAllGoogleCalendars = async (env: Env) => {
   ).all<{ id: string }>();
   for (const { id } of results ?? []) {
     try {
+      // Aktivasi habis = sinkron berhenti (koneksi tetap ada), sampai diperpanjang.
+      if (!(await readAppAccess(env, id, "googlecalendar")).active) continue;
       const session = await setup.client.sessions.create(id, { toolkits: ["googlecalendar"] });
       await syncGoogleCalendar(env, session, id);
     } catch (error) {
@@ -8486,9 +8488,99 @@ const syncAllGoogleCalendars = async (env: Env) => {
   }
 };
 
+// ── Aktivasi aplikasi pakai koin ────────────────────────────────────────────
+// Biaya Composio/AI ditutup koin (user Gratis) atau langganan PRO. Aktivasi
+// 30 hari disimpan di users.metadata_json $.appActive.<toolkit> (ISO); tidak
+// pernah dipotong otomatis — pengingat 3 hari sebelum habis, perpanjang manual.
+// beta: true = fitur utamanya belum jalan → gratis dulu (harga sudah disiapkan).
+const APP_ACTIVATION: Partial<Record<ComposioToolkit, { price: number; days: number; beta: boolean; name: string }>> = {
+  googlecalendar: { price: 200, days: 30, beta: false, name: "Google Calendar" },
+  gmail: { price: 500, days: 30, beta: true, name: "Gmail" },
+};
+type AppAccess = { active: boolean; reason: "pro" | "beta" | "coins" | null; until: string | null; price: number; days: number };
+
+const readAppAccess = async (env: Env, userId: string, toolkit: ComposioToolkit): Promise<AppAccess> => {
+  const cfg = APP_ACTIVATION[toolkit];
+  if (!cfg) return { active: true, reason: null, until: null, price: 0, days: 0 };
+  const row = await env.DB.prepare(
+    `SELECT plan, expired_at,
+            CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, ?) END AS until
+       FROM users WHERE id = ?`
+  )
+    .bind(`$.appActive.${toolkit}`, userId)
+    .first<{ plan: string | null; expired_at: string | null; until: string | null }>();
+  const now = nowIso();
+  const until = typeof row?.until === "string" ? row.until : null;
+  const base = { until, price: cfg.price, days: cfg.days };
+  if (cfg.beta) return { ...base, active: true, reason: "beta" };
+  if (row?.plan === "PRO" && (!row.expired_at || row.expired_at > now)) return { ...base, active: true, reason: "pro" };
+  if (until && until > now) return { ...base, active: true, reason: "coins" };
+  return { ...base, active: false, reason: null };
+};
+
+// Potong koin & perpanjang 30 hari dalam satu batch bersyarat (aman dari
+// klik ganda/request paralel — sama seperti tukar PRO).
+const activateApp = async (env: Env, userId: string, toolkit: ComposioToolkit) => {
+  const cfg = APP_ACTIVATION[toolkit];
+  if (!cfg) return json({ error: "Aplikasi ini tidak perlu diaktifkan." }, { status: 400 });
+  const access = await readAppAccess(env, userId, toolkit);
+  if (access.reason === "beta" || access.reason === "pro") return json({ error: "Sudah aktif tanpa koin." }, { status: 400 });
+  const key = `app:${toolkit}:${generateId()}`;
+  const path = `$.appActive.${toolkit}`;
+  const [debit] = await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO coin_ledger (id, user_id, amount, kind, cashable, idem_key, note, created_at)
+       SELECT ?, ?, ?, 'app_activation', 0, ?, ?, ?
+        WHERE (SELECT COALESCE(SUM(amount), 0) FROM coin_ledger WHERE user_id = ?) >= ?`
+    ).bind(generateId(), userId, -cfg.price, key, `Aktifkan ${cfg.name} ${cfg.days} hari`, nowIso(), userId, cfg.price),
+    env.DB.prepare(
+      `UPDATE users
+          SET metadata_json = json_remove(json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, ?,
+                strftime('%Y-%m-%dT%H:%M:%fZ',
+                  CASE WHEN COALESCE(CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, ?) END, '') > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+                       THEN json_extract(metadata_json, ?) ELSE strftime('%Y-%m-%dT%H:%M:%fZ', 'now') END,
+                  ?)), ?)
+        WHERE id = ? AND EXISTS (SELECT 1 FROM coin_ledger WHERE idem_key = ?)`
+    ).bind(path, path, path, `+${cfg.days} days`, `$.appRemind.${toolkit}`, userId, key),
+  ]);
+  if (!debit.meta.changes) return json({ error: `Koin belum cukup — butuh ${cfg.price.toLocaleString("id-ID")} koin.` }, { status: 409 });
+  return json({ ok: true, access: await readAppAccess(env, userId, toolkit) });
+};
+
+// Cron harian: ingatkan (push) 3 hari sebelum aktivasi berbayar habis, sekali per masa aktif.
+const remindAppActivationExpiry = async (env: Env) => {
+  const now = nowIso();
+  const soon = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+  for (const [toolkit, cfg] of Object.entries(APP_ACTIVATION)) {
+    if (!cfg || cfg.beta) continue;
+    const path = `$.appActive.${toolkit}`;
+    const { results } = await env.DB.prepare(
+      `SELECT id, plan, expired_at, json_extract(metadata_json, ?) AS until, json_extract(metadata_json, ?) AS reminded
+         FROM users
+        WHERE json_valid(metadata_json) AND json_extract(metadata_json, ?) > ? AND json_extract(metadata_json, ?) <= ?
+        LIMIT 500`
+    )
+      .bind(path, `$.appRemind.${toolkit}`, path, now, path, soon)
+      .all<{ id: string; plan: string | null; expired_at: string | null; until: string; reminded: string | null }>();
+    for (const u of results ?? []) {
+      if (u.reminded === u.until) continue;
+      if (u.plan === "PRO" && (!u.expired_at || u.expired_at > now)) continue;
+      try {
+        await sendWebPushToUser(env, u.id, `${cfg.name} segera nonaktif`, `Aktivasi habis 3 hari lagi. Perpanjang ${cfg.days} hari dengan ${cfg.price} koin.`, `/membership/aplikasi?app=${toolkit}`);
+        await env.DB.prepare(`UPDATE users SET metadata_json = json_set(metadata_json, ?, ?) WHERE id = ? AND json_valid(metadata_json)`)
+          .bind(`$.appRemind.${toolkit}`, u.until, u.id)
+          .run();
+      } catch (error) {
+        console.error("Pengingat aktivasi aplikasi gagal:", error instanceof Error ? error.message : error);
+      }
+    }
+  }
+};
+
 // GET    /api/member/apps                    → status koneksi tiap toolkit
 // POST   /api/member/apps/:toolkit/connect   → { redirectUrl } halaman login aplikasi (balik ke /membership/aplikasi?app=…)
 // POST   /api/member/apps/:toolkit/check     → panggilan baca-saja, ringkasan + logId
+// POST   /api/member/apps/:toolkit/activate  → aktifkan/perpanjang 30 hari pakai koin
 // GET    /api/member/apps/googlecalendar/sync → status sinkron tagihan
 // POST   /api/member/apps/googlecalendar/sync → sinkronkan tagihan sekarang
 // DELETE /api/member/apps/:toolkit           → putuskan (cabut token di Composio)
@@ -8505,6 +8597,14 @@ async function handleMemberApps(request: Request, env: Env, pathname: string) {
   if (toolkitRaw && !(COMPOSIO_TOOLKITS as readonly string[]).includes(toolkitRaw)) return json({ error: "Aplikasi tidak dikenal." }, { status: 404 });
 
   try {
+    // Aktivasi koin tidak butuh sesi Composio (hemat satu panggilan API).
+    if (action === "activate" && request.method === "POST") return await activateApp(env, userId, toolkit);
+    // Hubungkan & sinkron butuh aplikasi aktif (PRO, beta, atau koin).
+    if (toolkitRaw && request.method === "POST" && (action === "connect" || action === "sync")) {
+      const access = await readAppAccess(env, userId, toolkit);
+      if (!access.active) return json({ error: "Aktifkan aplikasi ini dulu.", needActivation: true, access }, { status: 402 });
+    }
+
     const session = await composio.sessions.create(userId, { toolkits: [...COMPOSIO_TOOLKITS] });
 
     if (!toolkitRaw && request.method === "GET") {
@@ -8512,7 +8612,10 @@ async function handleMemberApps(request: Request, env: Env, pathname: string) {
       const items = Object.fromEntries(
         res.items.map((t) => [t.slug.toLowerCase(), { connected: Boolean(t.connection?.isActive), name: t.name }])
       );
-      return json({ items });
+      const access = Object.fromEntries(
+        await Promise.all(Object.keys(APP_ACTIVATION).map(async (t) => [t, await readAppAccess(env, userId, t as ComposioToolkit)] as const))
+      );
+      return json({ items, access });
     }
 
     if (action === "connect" && request.method === "POST") {
@@ -13206,6 +13309,7 @@ const worker = {
     ctx.waitUntil(cleanupPendingAttachments(env));
     // Tagihan rutin & jatuh tempo kartu → Google Calendar (yang sudah menyalakan sinkron).
     ctx.waitUntil(syncAllGoogleCalendars(env));
+    ctx.waitUntil(remindAppActivationExpiry(env).catch((error) => console.error("Pengingat aktivasi:", error)));
   },
 };
 

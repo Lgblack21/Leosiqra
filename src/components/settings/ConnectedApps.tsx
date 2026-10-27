@@ -60,16 +60,17 @@ function AppCard({ icon, tile, title, desc, connected, action, onClick, href }: 
 
 // Status koneksi Composio. 401/403 = sesi habis / tidak diizinkan →
 // kartunya disembunyikan; error lain ditampilkan apa adanya di kartunya.
-type ComposioApps = { state: 'loading' | 'hidden' | 'ready' | 'error'; items: Record<string, { connected: boolean }>; error?: string };
+export type AppAccess = { active: boolean; reason: 'pro' | 'beta' | 'coins' | null; until: string | null; price: number; days: number };
+type ComposioApps = { state: 'loading' | 'hidden' | 'ready' | 'error'; items: Record<string, { connected: boolean }>; access?: Record<string, AppAccess>; error?: string };
 export function useComposioApps() {
   const [apps, setApps] = useState<ComposioApps>({ state: 'loading', items: {} });
   const load = useCallback(async () => {
     try {
       const res = await fetch('/api/member/apps', { credentials: 'include' });
-      const body = (await res.json().catch(() => ({}))) as { items?: ComposioApps['items']; error?: string };
+      const body = (await res.json().catch(() => ({}))) as { items?: ComposioApps['items']; access?: ComposioApps['access']; error?: string };
       if (res.status === 403 || res.status === 401) setApps({ state: 'hidden', items: {} });
       else if (!res.ok) setApps({ state: 'error', items: {}, error: body.error || 'Belum tersedia.' });
-      else setApps({ state: 'ready', items: body.items ?? {} });
+      else setApps({ state: 'ready', items: body.items ?? {}, access: body.access });
     } catch {
       setApps({ state: 'error', items: {}, error: 'Gagal memuat status koneksi.' });
     }
@@ -352,6 +353,8 @@ export function ComposioAppView({ toolkit, children }: { toolkit: ComposioToolki
         <p className="text-[14px] leading-relaxed text-slate-600">{copy.about}</p>
       </div>
 
+      <ActivationCard toolkit={toolkit} access={apps.access?.[toolkit]} onChange={reload} />
+
       {connected ? (
         <>
           <div className={cn('rounded-[22px] p-4 text-[15px]', check?.ok === false ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-800')}>
@@ -368,11 +371,65 @@ export function ComposioAppView({ toolkit, children }: { toolkit: ComposioToolki
             </button>
           </div>
         </>
-      ) : (
+      ) : apps.access?.[toolkit] && !apps.access[toolkit].active ? null : (
         <button type="button" onClick={connect} disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 text-[16px] font-bold text-white disabled:opacity-60">
           {busy && <Loader2 size={16} className="animate-spin" />} Lanjutkan ke {copy.provider}
         </button>
       )}
+    </div>
+  );
+}
+
+// Status aktivasi: gratis (PRO/beta), aktif sampai tanggal X (koin), atau
+// belum aktif → tombol aktifkan pakai koin. Tidak ada potong otomatis.
+function ActivationCard({ toolkit, access, onChange }: { toolkit: ComposioToolkit; access?: AppAccess; onChange: () => Promise<void> }) {
+  const { toast, confirm } = useFeedback();
+  const [busy, setBusy] = useState(false);
+  if (!access) return null;
+  const name = COMPOSIO_COPY[toolkit].name;
+  const until = access.until ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(access.until)) : null;
+
+  if (access.reason === 'pro' || access.reason === 'beta') {
+    return (
+      <div className="flex items-center gap-3 rounded-[22px] bg-indigo-50 px-4 py-3 text-[14px] text-indigo-900">
+        <ShieldCheck size={18} className="shrink-0 text-indigo-600" />
+        {access.reason === 'pro' ? 'Gratis untuk member PRO.' : `Gratis selama beta. Nanti ${access.price.toLocaleString('id-ID')} koin / ${access.days} hari.`}
+      </div>
+    );
+  }
+
+  const activate = async () => {
+    const ok = await confirm({
+      title: `${access.active ? 'Perpanjang' : 'Aktifkan'} ${name}?`,
+      message: `${access.price.toLocaleString('id-ID')} koin untuk ${access.days} hari${access.active && until ? ` (ditambahkan setelah ${until})` : ''}. Koin tidak dipotong otomatis — kamu akan diingatkan 3 hari sebelum habis.`,
+      confirmLabel: access.active ? 'Perpanjang' : 'Aktifkan',
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await cloudflareApi(`/api/member/apps/${toolkit}/activate`, { method: 'POST' });
+      toast.success(`${name} aktif ${access.days} hari.`);
+      await onChange();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Gagal mengaktifkan.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3 rounded-[22px] bg-amber-50 p-4">
+      <p className="text-[14px] leading-relaxed text-amber-900">
+        {access.active && until
+          ? <>Aktif sampai <b>{until}</b>. Perpanjang kapan saja — sisa harinya tidak hilang.</>
+          : <>{name} butuh aktivasi: <b>{access.price.toLocaleString('id-ID')} koin / {access.days} hari</b>. Gratis untuk member PRO.</>}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={activate} disabled={busy} className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-[14px] font-bold text-white disabled:opacity-60">
+          {busy && <Loader2 size={15} className="animate-spin" />} {access.active ? 'Perpanjang' : 'Aktifkan'} · {access.price.toLocaleString('id-ID')} koin
+        </button>
+        <a href="/membership/dashboard?pengaturan=koin" className="inline-flex items-center rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-amber-200">Lihat koin</a>
+      </div>
     </div>
   );
 }

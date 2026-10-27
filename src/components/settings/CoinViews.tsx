@@ -46,6 +46,7 @@ const KIND: Record<string, { label: string; icon: React.ElementType }> = {
   redeem_pro: { label: 'Tukar ke PRO', icon: Sparkles },
   withdraw: { label: 'Tarik tunai', icon: Banknote },
   withdraw_refund: { label: 'Tarik tunai dikembalikan', icon: Undo2 },
+  app_activation: { label: 'Aktifkan aplikasi', icon: Sparkles },
 };
 
 export function CoinIcon({ size = 20 }: { size?: number }) {
