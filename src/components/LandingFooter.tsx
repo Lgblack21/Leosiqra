@@ -53,7 +53,7 @@ export const LandingFooter = ({ variant = 'light' }: { variant?: 'light' | 'dark
           <h4 className={`font-serif font-black tracking-tight text-sm ${title}`}>Akses</h4>
           <ul className={`space-y-3 text-xs font-medium ${text}`}>
             <li><Link href="/auth/login" className={link}>Masuk</Link></li>
-            <li><Link href="/auth/register" className={link}>Daftar Gratis</Link></li>
+            <li><Link href="/mulai" className={link}>Daftar Gratis</Link></li>
             <li><Link href="/hubungi-kami" className={link}>Hubungi Kami</Link></li>
           </ul>
         </div>

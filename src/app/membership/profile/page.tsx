@@ -28,6 +28,7 @@ import {
   Settings,
   Bot,
   Check,
+  Clock,
   KeyRound,
   LogOut,
   type LucideIcon
@@ -89,6 +90,8 @@ const SETTINGS_TABS = [
   { id: 'lainnya', label: 'Lainnya', desc: 'Input Cepat & reset data', icon: Settings },
 ] as const;
 type RightTab = (typeof SETTINGS_TABS)[number]['id'];
+// Jam pengingat tutup hari: tiap 30 menit 18:00–23:00 (cron tiap 10 menit di Worker).
+const REMINDER_TIMES = Array.from({ length: 11 }, (_, i) => `${String(18 + Math.floor(i / 2)).padStart(2, '0')}:${i % 2 ? '30' : '00'}`);
 const isSettingsTab = (v: string | null): v is RightTab => SETTINGS_TABS.some((t) => t.id === v);
 
 export default function ProfilePage() {
@@ -187,6 +190,34 @@ export default function ProfilePage() {
       .then((sub) => setNotifEnabled(Boolean(sub)))
       .catch(() => setNotifEnabled(false));
   }, []);
+
+  // Pengingat harian "tutup hari" (dipasang dari /mulai atau di sini). Dikirim
+  // sebagai notifikasi push, jadi notifikasi push di perangkat juga harus aktif.
+  const [reminder, setReminder] = useState<{ on: boolean; time: string } | null>(null);
+  const [reminderSaving, setReminderSaving] = useState(false);
+  const [reminderError, setReminderError] = useState('');
+
+  useEffect(() => {
+    cloudflareApi<{ item: { reminder: { on: boolean; time: string } } }>('/api/member/preferences')
+      .then((res) => setReminder(res.item.reminder))
+      .catch(() => setReminder(null));
+  }, []);
+
+  const saveReminder = async (next: { on: boolean; time: string }) => {
+    setReminderError('');
+    setReminderSaving(true);
+    try {
+      const res = await cloudflareApi<{ item: { reminder: { on: boolean; time: string } } }>('/api/member/preferences', {
+        method: 'PUT',
+        json: { reminder: next },
+      });
+      setReminder(res.item.reminder);
+    } catch (e) {
+      setReminderError(e instanceof Error ? e.message : 'Gagal menyimpan pengingat.');
+    } finally {
+      setReminderSaving(false);
+    }
+  };
 
   // Laporan keuangan bulanan via email (opt-in, default mati).
   const [reportEnabled, setReportEnabled] = useState(false);
@@ -787,6 +818,35 @@ export default function ProfilePage() {
                 >
                   {reportError && <p className="text-[11px] font-bold text-rose-500">{reportError}</p>}
                 </SettingRow>
+                {reminder && (
+                  <SettingRow
+                    icon={Clock}
+                    title="Pengingat tutup hari"
+                    desc={`Tiap malam jam ${reminder.time}, tidak dikirim kalau hari itu sudah ada catatan. Butuh notifikasi push aktif.`}
+                    action={
+                      reminderSaving ? (
+                        <Loader2 size={16} className="animate-spin text-slate-400" />
+                      ) : (
+                        <Toggle on={reminder.on} onClick={() => saveReminder({ ...reminder, on: !reminder.on })} label="Pengingat tutup hari" />
+                      )
+                    }
+                  >
+                    {reminder.on && (
+                      <select
+                        value={reminder.time}
+                        disabled={reminderSaving}
+                        onChange={(e) => saveReminder({ on: true, time: e.target.value })}
+                        aria-label="Jam pengingat"
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12px] font-bold text-slate-700"
+                      >
+                        {[...new Set([...REMINDER_TIMES, reminder.time])].sort().map((t) => (
+                          <option key={t} value={t}>{t}</option>
+                        ))}
+                      </select>
+                    )}
+                    {reminderError && <p className="text-[11px] font-bold text-rose-500">{reminderError}</p>}
+                  </SettingRow>
+                )}
               </div>
             </SettingCard>
           )}

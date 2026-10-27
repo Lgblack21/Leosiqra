@@ -137,7 +137,7 @@ export default function LandingPage() {
             Catatan keuangan harian dalam hitungan detik — rekening, kartu kredit, tabungan, hutang, dan investasi tercatat rapi, terhitung otomatis, lengkap dengan ringkasan SPT tahunan. Tanpa spreadsheet, tanpa pusing.
           </motion.p>
           <motion.div {...heroItem(3)} className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
-            <Link href="/auth/register" className="lp-btn group inline-flex items-center justify-center gap-2 rounded-full px-8 py-4 text-sm font-bold transition-all hover:-translate-y-0.5">
+            <Link href="/mulai" className="lp-btn group inline-flex items-center justify-center gap-2 rounded-full px-8 py-4 text-sm font-bold transition-all hover:-translate-y-0.5">
               Mulai gratis 14 hari <ArrowRight size={17} className="transition-transform group-hover:translate-x-1" />
             </Link>
             <Link href="/auth/login" className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/80 px-8 py-4 text-sm font-bold text-slate-700 backdrop-blur transition-colors hover:border-slate-300 hover:bg-white">
@@ -442,7 +442,7 @@ export default function LandingPage() {
                   <li key={x} className="flex items-center gap-3"><Check size={15} className="text-indigo-600" /> {x}</li>
                 ))}
               </ul>
-              <Link href="/auth/register" className="lp-btn mt-10 block rounded-full py-4 text-center text-sm font-bold transition-all hover:-translate-y-0.5">Mulai gratis</Link>
+              <Link href="/mulai" className="lp-btn mt-10 block rounded-full py-4 text-center text-sm font-bold transition-all hover:-translate-y-0.5">Mulai gratis</Link>
             </Reveal>
             <Reveal delay={0.1} className="relative flex flex-col overflow-hidden rounded-[32px] border border-indigo-200 bg-gradient-to-b from-indigo-50 to-white p-9 shadow-[0_24px_60px_-32px_rgba(79,70,229,0.35)]">
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-indigo-600">Pro</p>
@@ -487,7 +487,7 @@ export default function LandingPage() {
             </h2>
             <p className="mx-auto mt-6 max-w-md text-indigo-100/90">Buat akun gratis dan lihat kondisi keuangan Anda dengan jernih — dalam hitungan menit.</p>
             <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Link href="/auth/register" className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-9 py-4 text-sm font-bold text-indigo-700 shadow-xl shadow-black/20 transition-all hover:-translate-y-0.5 sm:w-auto">
+              <Link href="/mulai" className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-9 py-4 text-sm font-bold text-indigo-700 shadow-xl shadow-black/20 transition-all hover:-translate-y-0.5 sm:w-auto">
                 Daftar gratis <ArrowUpRight size={17} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </Link>
               <Link href="/hubungi-kami" className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/30 px-9 py-4 text-sm font-bold text-white transition-colors hover:bg-white/10 sm:w-auto">

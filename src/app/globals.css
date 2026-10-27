@@ -379,3 +379,14 @@ html[data-daypart="sore"] .auth-greet[data-p="sore"], html[data-daypart="malam"]
 @media (prefers-reduced-motion: reduce) {
   .leo-breathe, .leo-mane, .leo-ear-l, .leo-ear-r, .leo-blink, .auth-cloud, .auth-star, .auth-window, .auth-enter { animation: none !important; }
 }
+
+/* ===== Hiasan kertas melayang (/mulai, masuk/daftar) — lihat components/auth/PaperNotes ===== */
+.paper-float { transform: rotate(var(--r, 0deg)); animation: paper-float 7s ease-in-out infinite; }
+@keyframes paper-float { 0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); } 50% { transform: translateY(-8px) rotate(var(--r, 0deg)); } }
+@media (prefers-reduced-motion: reduce) { .paper-float { animation: none; } }
+/* Tepi bawah struk bergerigi */
+.receipt-edge {
+  --z: 7px;
+  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / calc(2 * var(--z)) var(--z) repeat-x, linear-gradient(#000 0 0) top / 100% calc(100% - var(--z) + 1px) no-repeat;
+  mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / calc(2 * var(--z)) var(--z) repeat-x, linear-gradient(#000 0 0) top / 100% calc(100% - var(--z) + 1px) no-repeat;
+}

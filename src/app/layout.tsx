@@ -122,7 +122,7 @@ export default function RootLayout({
   return (
     <html
       lang="id"
-      className={`h-full antialiased ${serifDisplay.variable} ${jakarta.variable}`}
+      className={`h-full antialiased ${serifDisplay.variable} ${jakarta.variable} ${hand.variable}`}
       data-scroll-behavior="smooth"
       // Halaman auth menulis data-daypart sebelum hydrate (lihat AuthScene).
       suppressHydrationWarning

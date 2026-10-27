@@ -124,7 +124,7 @@ export default function CatatanKeuanganPribadiPage() {
         <li>Bisa dipakai di Android, iPhone, dan web dengan data yang selalu sinkron.</li>
       </ul>
       <p>
-        <Link href="/auth/register">Coba gratis 14 hari</Link> — tanpa kartu kredit.
+        <Link href="/mulai">Coba gratis 14 hari</Link> — tanpa kartu kredit.
       </p>
     </GuideLayout>
   );

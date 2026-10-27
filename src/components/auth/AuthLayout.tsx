@@ -2,19 +2,13 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Mic, Sparkles, Users } from "lucide-react";
-import { AuthScene, Greeting } from "./AuthScene";
+import { ChevronLeft } from "lucide-react";
 import { LeoMascot, type LeoMood } from "@/components/mascot/LeoMascot";
+import { Coin, PaydayNote, Receipt, StickyNote } from "./PaperNotes";
 
-// Kerangka halaman masuk/daftar: langit kota + Leo yang mengintip di atas
-// kartu form. Desktop: langit di kiri, form di kanan. HP: langit jadi banner
-// di atas, kartu form naik menimpanya, Leo duduk di tepi atas kartu.
-const POINTS = [
-  { icon: Mic, text: "Catat lewat ketik, suara, atau foto struk" },
-  { icon: Sparkles, text: "AI Leosiqra yang paham keuanganmu" },
-  { icon: Users, text: "Dompet bersama untuk keluarga" },
-];
-
+// Kerangka halaman masuk/daftar: latar putih hangat dengan kertas-kertas
+// melayang (catatan tempel, struk, koin), satu kartu di tengah, Leo mengintip
+// di tepi atas kartu, dan tombol kembali ke layar sambutan /mulai.
 export function AuthLayout({
   headline,
   sub,
@@ -22,6 +16,7 @@ export function AuthLayout({
   lookX,
   children,
   footer,
+  backHref = "/mulai",
 }: {
   headline: string;
   sub: string;
@@ -29,60 +24,43 @@ export function AuthLayout({
   lookX?: number;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  backHref?: string;
 }) {
   // Jeda animasi masuk (CSS .auth-enter) per elemen.
   const d = (k: number) => ({ "--d": `${0.08 + k * 0.08}s` }) as React.CSSProperties;
 
   return (
-    <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-indigo-100 lg:flex">
-      {/* Langit kota — panel kiri (desktop) */}
-      <AuthScene className="hidden lg:block lg:w-[52%] lg:min-h-screen">
-        <div className="flex h-full min-h-screen flex-col px-14 py-12 text-white">
-          <Link href="/" className="flex w-fit items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/95 shadow-lg shadow-black/10">
-              <Image src="/images/Logo-new.png" alt="Leosiqra" width={30} height={30} />
-            </span>
-            <span className="text-xl font-extrabold tracking-tight">Leosiqra</span>
-          </Link>
-          <div className="mt-[9vh] max-w-lg">
-            <p className="auth-enter text-sm font-semibold text-white/80" style={d(0)}><Greeting /> 👋</p>
-            <h1 style={d(1)} className="auth-enter mt-3 text-[44px] font-extrabold leading-[1.08] tracking-tight drop-shadow-sm">{headline}</h1>
-            <p style={d(2)} className="auth-enter mt-4 text-base leading-relaxed text-white/85">{sub}</p>
-            <div className="mt-8 flex flex-col gap-2.5">
-              {POINTS.map(({ icon: Icon, text }, i) => (
-                <div key={text} style={d(3 + i)} className="auth-enter flex w-fit items-center gap-3 rounded-2xl bg-white/15 px-4 py-2.5 text-sm font-semibold backdrop-blur-md ring-1 ring-white/20">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-white/20"><Icon size={15} /></span>
-                  {text}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </AuthScene>
+    <div className="relative min-h-screen overflow-hidden bg-white font-sans text-slate-900 selection:bg-indigo-100">
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(251,191,36,0.13),transparent_58%)]" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 hidden lg:block">
+        <StickyNote className="absolute left-[7%] top-[16%]" />
+        <PaydayNote className="absolute bottom-[14%] left-[11%]" />
+        <Receipt className="absolute right-[7%] top-[14%]" />
+        <Coin className="absolute bottom-[18%] right-[13%]" />
+      </div>
 
-      {/* Banner langit (HP) */}
-      <AuthScene className="h-[250px] lg:hidden">
-        <div className="flex h-full flex-col px-6 pt-7 text-white">
-          <Link href="/" className="flex w-fit items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/95 shadow-md">
-              <Image src="/images/Logo-new.png" alt="Leosiqra" width={24} height={24} />
-            </span>
-            <span className="text-lg font-extrabold tracking-tight">Leosiqra</span>
-          </Link>
-          <p className="mt-5 text-xs font-semibold text-white/85"><Greeting /> 👋</p>
-          {/* <p>, bukan <h1>: headline yang sama sudah jadi <h1> di panel desktop (satu h1 per halaman) */}
-          <p className="mt-1 max-w-[17rem] text-[22px] font-extrabold leading-tight drop-shadow-sm">{headline}</p>
-        </div>
-      </AuthScene>
+      <Link
+        href={backHref}
+        aria-label="Kembali"
+        className="absolute left-4 top-5 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition-colors hover:bg-slate-200 sm:left-8 sm:top-8"
+      >
+        <ChevronLeft size={20} />
+      </Link>
+      <div className="relative flex min-h-screen flex-col items-center px-5 pb-10 pt-8 sm:justify-center">
+        <Link href="/" style={d(0)} className="auth-enter flex items-center gap-2.5">
+          <Image src="/images/Logo-new.png" alt="Leosiqra" width={32} height={32} />
+          <span className="text-[21px] font-extrabold tracking-tight">Leosiqra</span>
+        </Link>
+        <h1 style={d(0)} className="auth-enter mt-2 max-w-sm text-center text-[15px] font-medium text-slate-500" title={sub}>
+          {headline}
+        </h1>
 
-      {/* Form */}
-      <div className="relative flex flex-1 justify-center px-5 pb-10 lg:items-center lg:bg-[#f7f7fb] lg:px-10">
-        <div className="relative -mt-24 w-full max-w-[440px] lg:mt-0">
+        <div className="relative mt-4 w-full max-w-[440px]">
           {/* Leo mengintip di tepi atas kartu */}
           <div style={d(1)} className="auth-enter pointer-events-none relative z-20 -mb-[30px] flex justify-center">
-            <LeoMascot mood={mood} lookX={lookX} size={128} interactive />
+            <LeoMascot mood={mood} lookX={lookX} size={124} interactive />
           </div>
-          <div style={d(1)} className="auth-enter relative z-10 rounded-[30px] border border-slate-100 bg-white p-6 pt-8 shadow-[0_20px_60px_-24px_rgba(49,46,129,0.35)] sm:p-9 sm:pt-10">
+          <div style={d(1)} className="auth-enter relative z-10 rounded-[32px] border border-slate-100 bg-white p-6 pt-9 shadow-[0_30px_70px_-30px_rgba(15,23,42,0.35)] sm:p-9 sm:pt-11">
             {children}
           </div>
           {footer && <div className="mt-5 text-center text-xs text-slate-400">{footer}</div>}
@@ -94,12 +72,12 @@ export function AuthLayout({
 
 // Komponen kecil yang dipakai bersama halaman masuk & daftar.
 export const authInputWrap =
-  "group flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 transition-all focus-within:border-indigo-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-indigo-500/10";
+  "group flex items-center gap-3 rounded-2xl border border-transparent bg-slate-100 px-4 transition-all focus-within:border-slate-300 focus-within:bg-white focus-within:ring-4 focus-within:ring-slate-900/5";
 export const authInput =
   "w-full bg-transparent py-3.5 text-[15px] font-medium text-slate-900 outline-none placeholder:text-slate-400";
 export const authLabel = "mb-1.5 block pl-1 text-[13px] font-semibold text-slate-600";
 export const authPrimaryBtn =
-  "group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 py-4 text-[15px] font-bold text-white shadow-lg shadow-indigo-500/25 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-500/30 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0";
+  "group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-slate-950 py-4 text-[15px] font-bold text-white transition-all hover:bg-slate-800 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70";
 
 export const GoogleIcon = ({ size = 18 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>

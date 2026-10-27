@@ -7,7 +7,7 @@ const hand = 'font-[family-name:var(--font-hand)]';
 
 export function StickyNote({ className = '' }: { className?: string }) {
   return (
-    <div className={`paper-float w-44 rotate-[-6deg] ${className}`} style={{ '--r': '-6deg' } as React.CSSProperties}>
+    <div className={`paper-float w-44 ${className}`} style={{ '--r': '-6deg' } as React.CSSProperties}>
       <div className="relative rounded-[6px_6px_22px_6px] bg-[#fde68a] px-5 pb-6 pt-7 shadow-[0_18px_30px_-14px_rgba(120,80,0,0.45)]">
         <span className="absolute left-1/2 top-2 h-4 w-4 -translate-x-1/2 rounded-full bg-rose-500 shadow-[inset_-2px_-2px_0_rgba(0,0,0,0.2)]" />
         <p className={`${hand} text-[30px] leading-[1.05] text-slate-900`}>
@@ -25,7 +25,7 @@ export function StickyNote({ className = '' }: { className?: string }) {
 
 export function Receipt({ className = '' }: { className?: string }) {
   return (
-    <div className={`paper-float w-52 rotate-[5deg] ${className}`} style={{ '--r': '5deg', animationDelay: '-2s' } as React.CSSProperties}>
+    <div className={`paper-float w-52 ${className}`} style={{ '--r': '5deg', animationDelay: '-2s' } as React.CSSProperties}>
       <div className="receipt-edge bg-white px-5 pb-6 pt-5 font-mono text-[13px] uppercase tracking-wide text-slate-800 shadow-[0_18px_30px_-16px_rgba(15,23,42,0.35)]">
         <p className="font-bold">Nasi Padang</p>
         <p className="mt-1 text-slate-500">1 × 25.000</p>
@@ -41,7 +41,7 @@ export function Receipt({ className = '' }: { className?: string }) {
 
 export function PaydayNote({ className = '' }: { className?: string }) {
   return (
-    <div className={`paper-float w-44 rotate-[3deg] ${className}`} style={{ '--r': '3deg', animationDelay: '-4s' } as React.CSSProperties}>
+    <div className={`paper-float w-44 ${className}`} style={{ '--r': '3deg', animationDelay: '-4s' } as React.CSSProperties}>
       <div className="relative rounded-md bg-[#e0e7ff] px-5 pb-5 pt-6 shadow-[0_18px_30px_-16px_rgba(49,46,129,0.4)]">
         <span className="absolute -top-2 left-1/2 h-5 w-16 -translate-x-1/2 rotate-[-2deg] bg-white/70" />
         <p className={`${hand} text-[28px] leading-none text-slate-900`}>Gajian!</p>
@@ -65,7 +65,7 @@ export function Coin({ className = '' }: { className?: string }) {
 
 export function WalletCard({ className = '' }: { className?: string }) {
   return (
-    <div className={`paper-float w-48 rotate-[-4deg] ${className}`} style={{ '--r': '-4deg', animationDelay: '-3s' } as React.CSSProperties}>
+    <div className={`paper-float w-48 ${className}`} style={{ '--r': '-4deg', animationDelay: '-3s' } as React.CSSProperties}>
       <div className="rounded-2xl bg-white p-4 shadow-[0_18px_30px_-16px_rgba(15,23,42,0.35)]">
         <div className="flex items-center gap-2">
           <span className="h-7 w-7 rounded-lg bg-indigo-600" />

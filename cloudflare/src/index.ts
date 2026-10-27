@@ -8907,6 +8907,133 @@ async function handleMonthlyReportPreference(request: Request, env: Env) {
   return json({ enabled: Number(row?.v) === 1, available: Boolean(env.RESEND_API_KEY) });
 }
 
+// ===== Preferensi dari onboarding (/mulai) + pengingat harian =====
+// Disimpan di users.metadata_json $.prefs (pola sama dengan laporan bulanan:
+// tanpa kolom/tabel baru). Semua nilai divalidasi ke daftar tetap di sini —
+// isi dari client tidak pernah ditulis apa adanya.
+const PREF_GOALS = ["arus_uang", "budget", "nabung", "hutang", "pajak", "aset"] as const;
+const PREF_INPUT_MODES = ["ketik", "suara", "foto"] as const;
+// Jam pengingat per 30 menit (cron tiap 10 menit, lihat sendDailyReminders).
+const PREF_TIME_RE = /^([01]\d|2[0-3]):(00|30)$/;
+type UserPrefs = {
+  goals: string[];
+  inputMode: string | null;
+  reminder: { on: boolean; time: string };
+};
+const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" } };
+
+const readUserPrefs = async (env: Env, userId: string): Promise<UserPrefs> => {
+  const row = await env.DB.prepare(
+    `SELECT CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.prefs') END AS v FROM users WHERE id = ?`
+  )
+    .bind(userId)
+    .first<{ v: string | null }>();
+  let raw: Partial<UserPrefs> = {};
+  try {
+    raw = row?.v ? (JSON.parse(row.v) as Partial<UserPrefs>) : {};
+  } catch {
+    raw = {};
+  }
+  return {
+    goals: Array.isArray(raw.goals) ? raw.goals.filter((g) => (PREF_GOALS as readonly string[]).includes(g)) : [],
+    inputMode: typeof raw.inputMode === "string" && (PREF_INPUT_MODES as readonly string[]).includes(raw.inputMode) ? raw.inputMode : null,
+    reminder: {
+      on: raw.reminder?.on === true,
+      time: typeof raw.reminder?.time === "string" && PREF_TIME_RE.test(raw.reminder.time) ? raw.reminder.time : DEFAULT_PREFS.reminder.time,
+    },
+  };
+};
+
+// GET  /api/member/preferences
+// PUT  /api/member/preferences  { goals?, inputMode?, reminder?: { on, time } } — field yang dikirim saja yang diubah
+async function handleUserPreferences(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const current = await readUserPrefs(env, userId);
+  if (request.method === "GET") return json({ item: current });
+
+  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown }>(request);
+  const next: UserPrefs = { ...current, reminder: { ...current.reminder } };
+  if (payload.goals !== undefined) {
+    if (!Array.isArray(payload.goals) || payload.goals.length > PREF_GOALS.length || payload.goals.some((g) => !(PREF_GOALS as readonly unknown[]).includes(g))) {
+      return json({ error: "Pilihan tujuan tidak valid." }, { status: 400 });
+    }
+    next.goals = [...new Set(payload.goals as string[])];
+  }
+  if (payload.inputMode !== undefined) {
+    if (payload.inputMode !== null && !(PREF_INPUT_MODES as readonly unknown[]).includes(payload.inputMode)) {
+      return json({ error: "Cara mencatat tidak valid." }, { status: 400 });
+    }
+    next.inputMode = payload.inputMode as string | null;
+  }
+  if (payload.reminder !== undefined) {
+    const r = payload.reminder as { on?: unknown; time?: unknown } | null;
+    if (!r || typeof r !== "object" || typeof r.on !== "boolean" || (r.time !== undefined && (typeof r.time !== "string" || !PREF_TIME_RE.test(r.time)))) {
+      return json({ error: "Pengingat harus { on: true/false, time: \"HH:00\" atau \"HH:30\" }." }, { status: 400 });
+    }
+    next.reminder = { on: r.on, time: typeof r.time === "string" ? r.time : current.reminder.time };
+  }
+  await env.DB.prepare(
+    `UPDATE users
+        SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END,
+              '$.prefs.goals', json(?), '$.prefs.inputMode', ?, '$.prefs.reminder', json(?))
+      WHERE id = ?`
+  )
+    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), userId)
+    .run();
+  return json({ ok: true, item: next });
+}
+
+// Cron tiap 10 menit: kirim push "waktunya tutup hari" ke user yang memasang
+// pengingat di jam ini (WIB). Jendela 20 menit setelah jam pengingat supaya
+// cron yang telat tetap kena; anti-dobel lewat klaim $.prefs.reminderSent =
+// tanggal WIB (UPDATE bersyarat — yang menang klaim saja yang mengirim).
+// Hari yang sudah ada catatannya dilewati ("berhenti kalau hari sudah ditutup").
+const DAILY_REMINDER_MAX_PER_RUN = 200;
+const sendDailyReminders = async (env: Env) => {
+  const wib = new Date(Date.now() + 7 * 60 * 60 * 1000);
+  const minute = wib.getUTCMinutes();
+  const half = minute < 30 ? 0 : 30;
+  if (minute - half >= 20) return;
+  const slot = `${String(wib.getUTCHours()).padStart(2, "0")}:${half === 0 ? "00" : "30"}`;
+  const today = wib.toISOString().slice(0, 10);
+  // Awal hari WIB dalam UTC; kolom date berisi YYYY-MM-DD atau ISO UTC —
+  // keduanya >= batas ini kalau jatuh di hari ini (WIB).
+  const startOfWibDayIso = new Date(Date.UTC(wib.getUTCFullYear(), wib.getUTCMonth(), wib.getUTCDate()) - 7 * 60 * 60 * 1000).toISOString();
+
+  const { results } = await env.DB.prepare(
+    `SELECT id FROM users
+      WHERE json_valid(metadata_json)
+        AND json_extract(metadata_json, '$.prefs.reminder.on') = 1
+        AND json_extract(metadata_json, '$.prefs.reminder.time') = ?
+        AND COALESCE(json_extract(metadata_json, '$.prefs.reminderSent'), '') <> ?
+        AND COALESCE(status, '') <> 'NONAKTIF'
+      LIMIT ?`
+  )
+    .bind(slot, today, DAILY_REMINDER_MAX_PER_RUN)
+    .all<{ id: string }>();
+
+  for (const { id: userId } of results ?? []) {
+    try {
+      const claim = await env.DB.prepare(
+        `UPDATE users SET metadata_json = json_set(metadata_json, '$.prefs.reminderSent', ?)
+          WHERE id = ? AND json_valid(metadata_json) AND COALESCE(json_extract(metadata_json, '$.prefs.reminderSent'), '') <> ?`
+      )
+        .bind(today, userId, today)
+        .run();
+      if (!claim.meta.changes) continue;
+      const done = await env.DB.prepare("SELECT 1 AS x FROM transactions WHERE user_id = ? AND date >= ? LIMIT 1")
+        .bind(userId, startOfWibDayIso)
+        .first<{ x: number }>();
+      if (done) continue;
+      await sendWebPushToUser(env, userId, "Waktunya tutup hari", "Semenit bareng Leo: catat yang tadi, lalu istirahat.", "/input-cepat");
+    } catch (error) {
+      console.error(`Gagal mengirim pengingat harian ke user ${userId}:`, error);
+    }
+  }
+};
+
 // Publik: link "Berhenti berlangganan" di email. GET hanya menampilkan tombol
 // konfirmasi (pemindai link di email tidak boleh ikut memberhentikan); POST
 // (tombol itu, atau one-click RFC 8058 dari Gmail/Yahoo) yang mematikan.
@@ -11648,6 +11775,10 @@ const worker = {
         return await handleMonthlyReportPreference(request, env);
       }
 
+      if (url.pathname === "/api/member/preferences" && (request.method === "GET" || request.method === "PUT")) {
+        return await handleUserPreferences(request, env);
+      }
+
       if (url.pathname === "/api/member/push-subscription" && request.method === "POST") {
         return await handleCreatePushSubscription(request, env);
       }
@@ -11831,6 +11962,8 @@ const worker = {
       // Tiap 10 menit: posting video promo yang sudah waktunya + metrik harian.
       // Cabang sendiri supaya TIDAK ikut menjalankan deposito/recurring di bawah.
       ctx.waitUntil(processPromoQueue(env));
+      // Pengingat harian pilihan user (jam :00/:30 WIB) — cek jamnya di dalam.
+      ctx.waitUntil(sendDailyReminders(env).catch((error) => console.error("Pengingat harian:", error)));
       return;
     }
     if (event.cron === "1 17 * * *") {

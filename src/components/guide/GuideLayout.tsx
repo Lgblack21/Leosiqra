@@ -69,7 +69,7 @@ export function GuideLayout({
               <p className="font-serif text-2xl">Catat keuangan tanpa ribet</p>
               <p className="mt-1 text-sm text-indigo-100/90">Gratis 14 hari · Android, iPhone &amp; web · Bahasa Indonesia</p>
             </div>
-            <Link href="/auth/register" className="inline-flex shrink-0 items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-indigo-700 transition-transform hover:-translate-y-0.5">
+            <Link href="/mulai" className="inline-flex shrink-0 items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-indigo-700 transition-transform hover:-translate-y-0.5">
               Coba Leosiqra <ArrowRight size={16} />
             </Link>
           </Reveal>

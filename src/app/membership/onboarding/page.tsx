@@ -25,6 +25,9 @@ import { matchIndonesianInstitutionLogo } from '@/lib/indonesianBanks';
 import { LogoImage } from '@/components/ui/LogoImage';
 import { START_TOUR_EVENT } from '@/components/onboarding/OnboardingTour';
 import { cn } from '@/lib/utils';
+import { DEFAULT_CATEGORY_GROUPS } from '@/lib/defaultCategories';
+import { loadGuest } from '@/lib/guestOnboarding';
+import { GuestCarryOver } from '@/components/onboarding/GuestCarryOver';
 
 // —— Data pilihan ————————————————————————————————————————————————
 
@@ -44,16 +47,6 @@ const CURRENCY_OPTIONS: CurrencyOption[] = [
   { code: 'KRW', name: 'Korean Won', symbol: '₩' },
 ];
 
-interface CategoryGroup { category: string; subs: string[]; }
-const DEFAULT_CATEGORY_GROUPS: CategoryGroup[] = [
-  { category: 'Makanan & Minuman', subs: ['Makan', 'Jajan & Kopi', 'Belanja Dapur'] },
-  { category: 'Transportasi', subs: ['Bensin', 'Parkir & Tol', 'Transportasi Online'] },
-  { category: 'Tagihan & Utilitas', subs: ['Listrik', 'Air', 'Internet & Pulsa'] },
-  { category: 'Belanja', subs: ['Pakaian', 'Elektronik', 'Rumah Tangga'] },
-  { category: 'Hiburan', subs: ['Langganan', 'Nonton & Musik', 'Jalan-jalan'] },
-  { category: 'Kesehatan', subs: ['Obat', 'Dokter', 'Olahraga'] },
-  { category: 'Pemasukan', subs: ['Gaji', 'Bonus', 'Pendapatan Lain'] },
-];
 
 interface BankOption { name: string; type: 'Bank Account' | 'E-Wallet' | 'Cash'; }
 const BANK_OPTIONS: BankOption[] = [
@@ -94,6 +87,8 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  // Datang dari /mulai (onboarding tanpa akun) → satu layar tambahan setelah setup.
+  const [carry, setCarry] = useState(false);
 
   // Step 1 — Profil
   const [name, setName] = useState('');
@@ -153,6 +148,12 @@ export default function OnboardingPage() {
     if (step > 0) setStep((s) => s - 1);
   };
 
+  // Nyalakan tur keliling halaman, lalu masuk ke dashboard.
+  const startApp = () => {
+    window.dispatchEvent(new Event(START_TOUR_EVENT));
+    router.push('/membership/dashboard');
+  };
+
   // Simpan semua ke server sekaligus di akhir, lalu mulai tur keliling halaman.
   const finish = async (withBank: boolean) => {
     if (!uid) {
@@ -181,9 +182,12 @@ export default function OnboardingPage() {
         },
       });
 
-      // 5) Nyalakan tur keliling halaman, lalu masuk ke dashboard.
-      window.dispatchEvent(new Event(START_TOUR_EVENT));
-      router.push('/membership/dashboard');
+      if (loadGuest()) {
+        setSubmitting(false);
+        setCarry(true);
+        return;
+      }
+      startApp();
     } catch (e) {
       console.error(e);
       setError(e instanceof Error ? e.message : 'Gagal menyimpan setup. Coba lagi ya.');
@@ -266,6 +270,12 @@ export default function OnboardingPage() {
           </header>
 
           <div className="flex-1 lg:flex-none w-full max-w-xl mx-auto px-5 pt-10 pb-8 lg:pt-24">
+            {carry ? (
+              <div className="animate-in fade-in slide-in-from-bottom-3 duration-500">
+                <StepHead eyebrow="Akun siap" tile="bg-emerald-500" icon={Check} title="Hampir selesai." subtitle="Pilihanmu dari tadi sudah tersimpan di akun. Tinggal dua hal kecil ini." />
+                <GuestCarryOver onDone={startApp} />
+              </div>
+            ) : (
             <div key={step} className="animate-in fade-in slide-in-from-bottom-3 duration-500">
               {/* ————— STEP 0: Welcome ————— */}
               {step === 0 && (
@@ -445,6 +455,7 @@ export default function OnboardingPage() {
                 </div>
               )}
             </div>
+            )}
 
             {error && (
               <div className="mt-6 py-3 px-4 rounded-2xl bg-rose-50 text-rose-600 text-[13px] font-semibold text-center">
@@ -454,6 +465,7 @@ export default function OnboardingPage() {
           </div>
 
           {/* Navigasi bawah — menempel di HP supaya tombol selalu terjangkau jempol */}
+          {!carry && (
           <div className="sticky bottom-0 bg-[#f5f5f7]/90 backdrop-blur border-t border-slate-200/60 lg:static lg:bg-transparent lg:border-0">
             <div className="w-full max-w-xl mx-auto px-5 py-4 lg:pb-16 flex items-center gap-3">
               {step > 0 && !submitting && (
@@ -497,6 +509,7 @@ export default function OnboardingPage() {
               )}
             </div>
           </div>
+          )}
         </main>
       </div>
     </div>

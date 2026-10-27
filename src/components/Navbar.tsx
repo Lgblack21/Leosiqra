@@ -82,7 +82,7 @@ export const Navbar = ({ variant = 'light' }: { variant?: 'light' | 'dark' }) =>
             </Link>
           </div>
           <Link
-            href="/auth/register"
+            href="/mulai"
             className={
               dark
                 ? 'lux-btn-gold px-5 sm:px-6 py-2.5 rounded-full font-bold text-xs sm:text-sm transition-all hover:-translate-y-0.5'

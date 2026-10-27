@@ -76,7 +76,7 @@ export default function AppShell({
     const unsub = onAuthStateChanged(auth, (user) => {
       clearTimeout(safetyTimer);
       if (!user) {
-        router.replace(`/auth/login?next=${encodeURIComponent(pathname)}`);
+        router.replace(`/mulai?next=${encodeURIComponent(pathname)}`);
         hideSplash();
         return;
       }

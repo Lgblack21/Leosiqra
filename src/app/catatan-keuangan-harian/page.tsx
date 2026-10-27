@@ -111,7 +111,7 @@ export default function CatatanKeuanganHarianPage() {
       </ul>
       <p>
         Lihat cara kerjanya di halaman <Link href="/#input-cepat">Input Cepat</Link>, atau{' '}
-        <Link href="/auth/register">coba gratis 14 hari</Link>.
+        <Link href="/mulai">coba gratis 14 hari</Link>.
       </p>
     </GuideLayout>
   );
