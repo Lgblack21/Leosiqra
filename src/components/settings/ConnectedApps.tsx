@@ -13,6 +13,7 @@ import { McpConnectCard } from '@/components/profile/McpConnectCard';
 
 export type AppsView = 'ai' | 'app-mcp' | 'app-sheets' | 'app-calendar' | 'app-gmail';
 type Feeds = { sheets: string | null; calendar: string | null };
+const LEGACY_FEEDS_VISIBLE = false;
 
 const Tile = ({ icon: Icon, cls }: { icon: React.ElementType; cls: string }) => (
   <span className={cn('flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ring-1 ring-black/5', cls)}>
@@ -95,7 +96,7 @@ export function AppsHub({ go }: { go: (v: AppsView) => void }) {
   return (
     <div className="space-y-3">
       <p className="px-1 pb-1 text-[15px] leading-relaxed text-slate-500">
-        Hubungkan aplikasi yang sudah kamu pakai. Leosiqra bisa dibaca asisten AI, menyalin transaksi ke Google Sheets, dan menaruh tagihan rutin di kalendermu.
+        Hubungkan aplikasi yang sudah kamu pakai — asisten AI, pencatatan cepat dari HP, dan aplikasi lain yang menyusul.
       </p>
       {apps.state !== 'hidden' && apps.state !== 'loading' && (
         <AppCard
@@ -109,8 +110,11 @@ export function AppsHub({ go }: { go: (v: AppsView) => void }) {
         />
       )}
       <AppCard icon={Bot} tile="bg-indigo-50 text-indigo-600" title="Claude & ChatGPT" desc="Tanya & catat keuangan dari asisten AI lewat MCP." action="Atur" onClick={() => go('app-mcp')} />
-      <AppCard icon={Sheet} tile="bg-emerald-50 text-emerald-600" title="Google Sheets" desc="Salinan transaksimu di spreadsheet, ikut ter-update otomatis." connected={Boolean(feeds?.sheets)} action={feeds?.sheets ? 'Atur' : 'Hubungkan'} onClick={() => go('app-sheets')} />
-      <AppCard icon={CalendarDays} tile="bg-sky-50 text-sky-600" title="Google Calendar" desc="Transaksi rutin & jatuh tempo kartu kredit muncul di kalendermu." connected={Boolean(feeds?.calendar)} action={feeds?.calendar ? 'Atur' : 'Hubungkan'} onClick={() => go('app-calendar')} />
+      {/* Cara lama (tautan rahasia IMPORTDATA/iCal) disimpan sebagai cadangan
+          kalau Composio bermasalah; kartunya hanya muncul untuk yang sudah
+          terlanjur memakainya, supaya tidak dobel dengan versi Composio. */}
+      {LEGACY_FEEDS_VISIBLE || feeds?.sheets ? <AppCard icon={Sheet} tile="bg-emerald-50 text-emerald-600" title="Google Sheets" desc="Salinan transaksimu di spreadsheet, ikut ter-update otomatis." connected={Boolean(feeds?.sheets)} action={feeds?.sheets ? 'Atur' : 'Hubungkan'} onClick={() => go('app-sheets')} /> : null}
+      {LEGACY_FEEDS_VISIBLE || feeds?.calendar ? <AppCard icon={CalendarDays} tile="bg-sky-50 text-sky-600" title="Google Calendar" desc="Transaksi rutin & jatuh tempo kartu kredit muncul di kalendermu." connected={Boolean(feeds?.calendar)} action={feeds?.calendar ? 'Atur' : 'Hubungkan'} onClick={() => go('app-calendar')} /> : null}
       <AppCard icon={Zap} tile="bg-amber-50 text-amber-600" title="Input Cepat" desc="Catat dari layar utama HP — ketik, suara, atau foto struk." action="Buka" href="/input-cepat" />
       <AppCard icon={MonitorSmartphone} tile="bg-slate-100 text-slate-700" title="Leosiqra di HP, Mac & PC" desc="Pasang sebagai aplikasi, buka langsung dari layar utama atau taskbar." action="Pasang" href="/install" />
       <p className="px-1 pt-2 text-[13px] leading-relaxed text-slate-400">
