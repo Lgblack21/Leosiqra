@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Inbox, Mail, Sparkles, Check, X, ChevronDown, Loader2 } from 'lucide-react';
+import { Inbox, Mail, Hash, Sparkles, Check, X, ChevronDown, Loader2 } from 'lucide-react';
 import { cn, formatMoney } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { accountService, type Account } from '@/lib/services/accountService';
@@ -33,6 +33,8 @@ function ItemCard({ item, accounts, onDone }: { item: InboxItem; accounts: Accou
   const [subCategory, setSubCategory] = useState(s?.sub_category ?? '');
   const [note, setNote] = useState(s?.note ?? item.title ?? '');
   const [busy, setBusy] = useState(false);
+  const fromSlack = item.source === 'slack';
+  const SourceIcon = fromSlack ? Hash : Mail;
 
   useEffect(() => {
     // Rekening dimuat setelah kartu dibuat → pilih default saat sudah ada.
@@ -88,10 +90,10 @@ function ItemCard({ item, accounts, onDone }: { item: InboxItem; accounts: Accou
     <li className="rounded-[22px] bg-white ring-1 ring-slate-100">
       <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center gap-4 p-4 text-left">
         <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full', s?.type === 'pemasukan' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500')}>
-          <Mail size={19} />
+          <SourceIcon size={19} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[15px] font-semibold text-slate-900">{s?.note || item.title || 'Email pembayaran'}</span>
+          <span className="block truncate text-[15px] font-semibold text-slate-900">{s?.note || item.title || (fromSlack ? 'Pesan Slack' : 'Email pembayaran')}</span>
           <span className="block truncate text-[13px] text-slate-500">{senderName(item.sender)} · {shortDate(item.receivedAt)}</span>
         </span>
         <span className="text-right">
@@ -107,7 +109,7 @@ function ItemCard({ item, accounts, onDone }: { item: InboxItem; accounts: Accou
         <div className="space-y-4 border-t border-slate-100 p-4">
           {s && (
             <p className={cn('flex items-center gap-2 rounded-2xl px-4 py-2.5 text-[13px] font-semibold', s.confidence === 'high' ? 'bg-emerald-50 text-emerald-700' : s.confidence === 'medium' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600')}>
-              <Sparkles size={14} /> Usulan AI dari email “{item.title ?? 'tanpa subjek'}” — periksa dulu sebelum disimpan.
+              <Sparkles size={14} /> Usulan AI dari {fromSlack ? 'pesan Slack' : 'email'} “{item.title ?? 'tanpa subjek'}” — periksa dulu sebelum disimpan.
             </p>
           )}
           <TxTypeToggle value={type} onChange={setType} />
@@ -150,7 +152,7 @@ export default function KotakMasukPage() {
     <div className="mx-auto max-w-3xl space-y-6 pb-12">
       <div>
         <h1 className="text-[30px] font-extrabold tracking-tight text-slate-900 md:text-[38px]">Kotak Masuk</h1>
-        <p className="mt-1 text-[15px] text-slate-500">Usulan transaksi dari email pembayaranmu. Simpan yang benar, abaikan sisanya — tidak ada yang tercatat tanpa persetujuanmu.</p>
+        <p className="mt-1 text-[15px] text-slate-500">Usulan transaksi dari email pembayaran & pesan Slack-mu. Simpan yang benar, abaikan sisanya — tidak ada yang tercatat tanpa persetujuanmu.</p>
       </div>
 
       <InboxControls inbox={inbox} />
@@ -160,7 +162,7 @@ export default function KotakMasukPage() {
           <div className="flex flex-col items-center gap-2 rounded-[24px] bg-white px-6 py-12 text-center ring-1 ring-slate-100">
             <Inbox size={32} className="text-slate-300" />
             <p className="text-[16px] font-semibold text-slate-700">Kotak Masuk kosong</p>
-            <p className="max-w-sm text-[14px] text-slate-500">Usulan baru muncul di sini setelah Leosiqra membaca email pembayaran (otomatis tiap jam, atau tekan Periksa email sekarang).</p>
+            <p className="max-w-sm text-[14px] text-slate-500">Usulan baru muncul di sini setelah Leosiqra membaca email pembayaran atau pesan Slack (otomatis, atau tekan Periksa email sekarang).</p>
           </div>
         ) : (
           <ul className="space-y-3">

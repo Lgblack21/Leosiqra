@@ -5,7 +5,7 @@ import { ArrowLeft, Bot, CalendarDays, Check, ChevronRight, Mail, MonitorSmartph
 import { cn } from '@/lib/utils';
 import { LeoAvatarSvg, DEFAULT_AVATAR } from '@/components/profile/LeoAvatar';
 import { McpConnectCard } from '@/components/profile/McpConnectCard';
-import { CalendarSyncCard, ComposioAppView, NotionReportCard, SheetsSyncCard, useComposioApps, type AppAccess } from '@/components/settings/ConnectedApps';
+import { CalendarSyncCard, ComposioAppView, NotionReportCard, SheetsSyncCard, SlackInboxCard, useComposioApps, type AppAccess } from '@/components/settings/ConnectedApps';
 import { InboxControls, useInbox } from '@/components/inbox/InboxControls';
 
 function GmailInboxSection() {
@@ -17,7 +17,7 @@ function GmailInboxSection() {
 // beserta fungsinya; detail tiap aplikasi dibuka di halaman yang sama lewat
 // ?app=<id> supaya tombol Kembali browser & tautan balik dari Composio jalan.
 
-type AppId = 'gmail' | 'googlecalendar' | 'googlesheets' | 'notion' | 'mcp';
+type AppId = 'gmail' | 'googlecalendar' | 'googlesheets' | 'notion' | 'slack' | 'mcp';
 
 type AppInfo = {
   id: AppId;
@@ -66,6 +66,15 @@ const APPS: Record<AppId, AppInfo> = {
     tagline: 'Laporan keuangan bulanan otomatis di halaman Notion-mu.',
     bullets: ['Pemasukan, pengeluaran & selisih bulan lalu', 'Kategori terbesar & status anggaran', 'Ditulis otomatis tiap awal bulan'],
     steps: ['Hubungkan Notion & bagikan halaman tujuan.', 'Pilih halaman tujuan di Leosiqra.', 'Tulis sekarang, atau nyalakan otomatis tiap awal bulan.'],
+  },
+  slack: {
+    id: 'slack',
+    name: 'Slack',
+    icon: Hash,
+    tile: 'bg-violet-50 text-violet-600',
+    tagline: 'Ketik pengeluaran di channel Slack, jadi usulan transaksi.',
+    bullets: ['Hanya satu channel pilihanmu yang dibaca', '"makan 45rb pakai BCA" → diusulkan di Kotak Masuk', 'Kamu yang menyetujui — tidak ada yang tercatat otomatis'],
+    steps: ['Hubungkan Slack.', 'Pilih channel catatan keuangan (sebaiknya channel pribadi).', 'Kirim pesan pengeluaran/pemasukan, lalu cek Kotak Masuk.'],
   },
   mcp: {
     id: 'mcp',
@@ -184,12 +193,13 @@ function Hub({ open }: { open: (id: AppId) => void }) {
 
       <section>
         <h2 className="mb-1 text-[18px] font-bold text-slate-900">Otomatis dari aplikasimu</h2>
-        <p className="mb-4 text-[14px] text-slate-500">Lewat mitra koneksi Composio — kamu masuk di situs Google atau Notion langsung, Leosiqra tidak pernah melihat kata sandimu.</p>
+        <p className="mb-4 text-[14px] text-slate-500">Lewat mitra koneksi Composio — kamu masuk di situs Google, Notion atau Slack langsung, Leosiqra tidak pernah melihat kata sandimu.</p>
         <div className="grid gap-4 md:grid-cols-2">
           <AppCard app={APPS.googlecalendar} connected={apps.items.googlecalendar?.connected} onOpen={() => open('googlecalendar')} disabledNote={composioNote} price={priceLabel(apps.access?.googlecalendar)} />
           <AppCard app={APPS.gmail} connected={apps.items.gmail?.connected} onOpen={() => open('gmail')} disabledNote={composioNote} price={priceLabel(apps.access?.gmail)} />
           <AppCard app={APPS.googlesheets} connected={apps.items.googlesheets?.connected} onOpen={() => open('googlesheets')} disabledNote={composioNote} price={priceLabel(apps.access?.googlesheets)} />
           <AppCard app={APPS.notion} connected={apps.items.notion?.connected} onOpen={() => open('notion')} disabledNote={composioNote} price={priceLabel(apps.access?.notion)} />
+          <AppCard app={APPS.slack} connected={apps.items.slack?.connected} onOpen={() => open('slack')} disabledNote={composioNote} price={priceLabel(apps.access?.slack)} />
         </div>
       </section>
 
@@ -205,22 +215,6 @@ function Hub({ open }: { open: (id: AppId) => void }) {
         <div className="grid gap-3 md:grid-cols-2">
           <LinkCard href="/input-cepat" icon={Zap} tile="bg-amber-50 text-amber-600" title="Input Cepat" desc="Catat dari layar utama HP — ketik, suara, atau foto struk." action="Buka" />
           <LinkCard href="/install" icon={MonitorSmartphone} tile="bg-slate-100 text-slate-700" title="Leosiqra di HP, Mac & PC" desc="Pasang sebagai aplikasi, buka dari layar utama atau taskbar." action="Pasang" />
-        </div>
-      </section>
-
-      <section className="rounded-[24px] bg-slate-50 p-5">
-        <p className="text-[14px] font-semibold text-slate-700">Menyusul</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {[
-            [Hash, 'Slack — catat dari pesan channel'],
-          ].map(([Icon, label]) => {
-            const I = Icon as React.ElementType;
-            return (
-              <span key={label as string} className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[13px] text-slate-500 ring-1 ring-slate-200">
-                <I size={14} /> {label as string}
-              </span>
-            );
-          })}
         </div>
       </section>
 
@@ -255,7 +249,9 @@ function Detail({ id, back }: { id: AppId; back: () => void }) {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="min-w-0 rounded-[24px] bg-white p-4 ring-1 ring-slate-100 md:p-6">
-          {id === 'mcp' ? <McpConnectCard /> : id === 'notion' ? (
+          {id === 'mcp' ? <McpConnectCard /> : id === 'slack' ? (
+            <ComposioAppView toolkit="slack"><SlackInboxCard /></ComposioAppView>
+          ) : id === 'notion' ? (
             <ComposioAppView toolkit="notion"><NotionReportCard /></ComposioAppView>
           ) : id === 'googlesheets' ? (
             <ComposioAppView toolkit="googlesheets"><SheetsSyncCard /></ComposioAppView>

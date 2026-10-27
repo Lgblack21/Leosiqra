@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Bot, Sheet, CalendarDays, Zap, MonitorSmartphone, ShieldCheck, Copy, ExternalLink, RefreshCw, Unlink, ChevronRight, Loader2, Mail, NotebookText } from 'lucide-react';
+import { Bot, Sheet, CalendarDays, Zap, MonitorSmartphone, ShieldCheck, Copy, ExternalLink, RefreshCw, Unlink, ChevronRight, Loader2, Mail, NotebookText, Hash, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { useFeedback } from '@/components/ui/Feedback';
@@ -259,12 +259,17 @@ function FeedView({ kind }: { kind: 'sheets' | 'calendar' }) {
 
 // Layar satu aplikasi Composio: penjelasan & persetujuan → login di situs
 // aplikasinya → kembali ke sini, lalu periksa koneksi (panggilan baca-saja).
-export type ComposioToolkit = 'gmail' | 'googlecalendar' | 'googlesheets' | 'notion';
+export type ComposioToolkit = 'gmail' | 'googlecalendar' | 'googlesheets' | 'notion' | 'slack';
 const COMPOSIO_COPY: Record<ComposioToolkit, { name: string; provider: string; about: string }> = {
   gmail: {
     name: 'Gmail',
     provider: 'Google',
     about: 'Leosiqra membaca email pembayaran (bank, e-wallet, toko) dari 3 hari terakhir, lalu AI mengusulkannya sebagai transaksi di Kotak Masuk — tidak ada yang tercatat sebelum kamu menekan Simpan. Isi email tidak disimpan; yang tersimpan hanya subjek, pengirim & usulannya.',
+  },
+  slack: {
+    name: 'Slack',
+    provider: 'Slack',
+    about: 'Leosiqra membaca pesan baru di SATU channel pilihanmu (mis. #catatan-keuangan), lalu AI mengusulkannya sebagai transaksi di Kotak Masuk — tidak ada yang tercatat sebelum kamu menekan Simpan. Pesan lama & channel lain tidak dibaca; pesan yang jadi usulan diberi reaksi ✅.',
   },
   notion: {
     name: 'Notion',
@@ -574,6 +579,145 @@ export function NotionReportCard() {
       {state.lastPageUrl && !result && (
         <a href={state.lastPageUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 text-[13px] font-semibold text-indigo-600">
           Buka laporan terakhir <ExternalLink size={13} />
+        </a>
+      )}
+    </div>
+  );
+}
+
+// Slack → Kotak Masuk: pilih satu channel, baca pesan baru tiap ±10 menit.
+type SlackState = { enabled: boolean; channelId: string | null; channelName: string | null; lastCheckAt: string | null };
+type SlackChannel = { id: string; name: string; isPrivate: boolean; isMember: boolean };
+type SlackCheck = { fetched: number; suggested: number; notTransaction: number; skipped: number; aiStopped: boolean };
+export function SlackInboxCard() {
+  const { toast } = useFeedback();
+  const [state, setState] = useState<SlackState | null>(null);
+  const [channels, setChannels] = useState<SlackChannel[] | null>(null);
+  const [query, setQuery] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState('');
+  const load = useCallback(async () => {
+    try {
+      setState(await cloudflareApi<SlackState>('/api/member/apps/slack/inbox'));
+    } catch {
+      setState(null);
+    }
+  }, []);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const loadChannels = async (q = query) => {
+    setBusy(true);
+    try {
+      const r = await cloudflareApi<{ channels: SlackChannel[] }>(`/api/member/apps/slack/channels${q.trim() ? `?q=${encodeURIComponent(q.trim())}` : ''}`);
+      setChannels(r.channels);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Gagal membaca channel Slack.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const save = async (patch: Record<string, unknown>) => {
+    setBusy(true);
+    try {
+      await cloudflareApi('/api/member/apps/slack/inbox', { method: 'PUT', json: patch });
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Gagal menyimpan.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const check = async () => {
+    setBusy(true);
+    setResult('');
+    try {
+      const s = await cloudflareApi<SlackCheck>('/api/member/apps/slack/inbox', { method: 'POST' });
+      setResult([
+        s.fetched ? `${s.fetched} pesan baru` : 'Tidak ada pesan baru',
+        s.suggested ? `${s.suggested} jadi usulan` : null,
+        s.notTransaction ? `${s.notTransaction} bukan transaksi` : null,
+        s.skipped ? `${s.skipped} dilewati (bot/tanpa angka)` : null,
+        s.aiStopped ? 'AI sedang tidak tersedia, sisanya dicoba lagi nanti' : null,
+      ].filter(Boolean).join(' · '));
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Gagal memeriksa Slack.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!state) return null;
+  const when = state.lastCheckAt ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(state.lastCheckAt)) : null;
+  return (
+    <div className="space-y-3 rounded-[22px] bg-slate-50 p-4">
+      <div className="flex items-center gap-3">
+        <Hash size={20} className="shrink-0 text-violet-600" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-semibold text-slate-900">{state.channelId ? `#${state.channelName}` : 'Catat dari pesan channel'}</span>
+          <span className="block truncate text-[13px] text-slate-500">
+            {state.channelId ? `Tiap ±10 menit${when ? ` · terakhir ${when}` : ''}. Hasilnya masuk Kotak Masuk.` : 'Pilih channel yang kamu pakai untuk catatan keuangan.'}
+          </span>
+        </span>
+        {state.channelId && (
+          <button
+            type="button"
+            onClick={() => void save({ enabled: !state.enabled })}
+            disabled={busy}
+            aria-label="Baca pesan channel otomatis"
+            aria-pressed={state.enabled}
+            className={cn('relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-60', state.enabled ? 'bg-emerald-500' : 'bg-slate-300')}
+          >
+            <span className={cn('absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all', state.enabled ? 'right-1' : 'left-1')} />
+          </button>
+        )}
+      </div>
+      {state.channelId && <p className="px-1 text-[12px] text-slate-500">Contoh pesan: “makan siang 45rb pakai BCA” atau “gaji masuk 8jt”. Hanya pesan setelah channel dipilih yang dibaca.</p>}
+
+      {channels && (
+        <div className="space-y-2 rounded-2xl bg-white p-2 ring-1 ring-slate-200">
+          <form onSubmit={(e) => { e.preventDefault(); void loadChannels(); }} className="flex gap-2 p-1">
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari nama channel" className="min-w-0 flex-1 rounded-xl bg-slate-50 px-3 py-2 text-[14px] ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400" />
+            <button type="submit" disabled={busy} className="rounded-xl bg-slate-900 px-3 text-[13px] font-bold text-white disabled:opacity-60">Cari</button>
+          </form>
+          <div className="max-h-64 space-y-1 overflow-y-auto">
+            {channels.length === 0 ? (
+              <p className="p-3 text-[13px] text-slate-500">Channel tidak ditemukan. Coba cari dengan nama lain.</p>
+            ) : (
+              channels.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => { void save({ channelId: c.id, channelName: c.name, ...(state.channelId ? {} : { enabled: true }) }); setChannels(null); }}
+                  className={cn('flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[14px] hover:bg-slate-100', state.channelId === c.id && 'bg-indigo-50 font-semibold text-indigo-700')}
+                >
+                  {c.isPrivate ? <Lock size={14} className="shrink-0 text-slate-400" /> : <Hash size={14} className="shrink-0 text-slate-400" />}
+                  <span className="truncate">{c.name}</span>
+                  {!c.isMember && <span className="ml-auto shrink-0 text-[11px] text-slate-400">belum bergabung</span>}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {result && <p className="rounded-2xl bg-white px-4 py-2.5 text-[13px] text-slate-600 ring-1 ring-slate-200">{result}</p>}
+
+      <div className={cn('grid gap-2', state.channelId && 'sm:grid-cols-2')}>
+        <button type="button" onClick={() => (channels ? setChannels(null) : void loadChannels(''))} disabled={busy} className={cn('flex items-center justify-center gap-2 rounded-full py-3 text-[14px] font-bold disabled:opacity-60', state.channelId ? 'bg-white text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100' : 'bg-slate-900 text-white')}>
+          {busy && !state.channelId ? <Loader2 size={15} className="animate-spin" /> : null} {channels ? 'Tutup daftar' : state.channelId ? 'Ganti channel' : 'Pilih channel'}
+        </button>
+        {state.channelId && (
+          <button type="button" onClick={() => void check()} disabled={busy} className="flex items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white disabled:opacity-60">
+            {busy ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />} Periksa sekarang
+          </button>
+        )}
+      </div>
+      {state.channelId && (
+        <a href="/membership/kotak-masuk" className="flex items-center justify-center gap-1.5 text-[13px] font-semibold text-indigo-600">
+          Buka Kotak Masuk <ChevronRight size={13} />
         </a>
       )}
     </div>

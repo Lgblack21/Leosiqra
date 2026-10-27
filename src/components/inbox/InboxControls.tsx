@@ -19,7 +19,7 @@ export type InboxSuggestion = {
   account_id?: string | null;
   date?: string | null;
 };
-export type InboxItem = { id: string; title: string | null; sender: string | null; receivedAt: string; suggestion: InboxSuggestion | null };
+export type InboxItem = { id: string; source?: string; title: string | null; sender: string | null; receivedAt: string; suggestion: InboxSuggestion | null };
 export type InboxData = { items: InboxItem[]; gmail: { enabled: boolean; lastCheckAt: string | null } };
 
 export function useInbox() {

@@ -8806,6 +8806,7 @@ const APP_ACTIVATION: Partial<Record<ComposioToolkit, { price: number; days: num
   googlesheets: { price: 200, days: 30, beta: false, name: "Google Sheets" },
   notion: { price: 200, days: 30, beta: false, name: "Notion" },
   gmail: { price: 500, days: 30, beta: false, name: "Gmail" },
+  slack: { price: 200, days: 30, beta: false, name: "Slack" },
 };
 type AppAccess = { active: boolean; reason: "pro" | "beta" | "coins" | null; until: string | null; price: number; days: number };
 
@@ -9066,6 +9067,149 @@ const processAllGmailInboxes = async (env: Env) => {
   }
 };
 
+// ── Slack (Composio): pesan di satu channel → usulan di Kotak Masuk ────────
+// User memilih satu channel (sebaiknya pribadi, khusus catatan keuangan).
+// Hanya pesan SETELAH dinyalakan yang dibaca (lastTs), tiap ±10 menit; pesan
+// bot/sistem & tanpa angka dilewati (hemat AI). Usulan masuk inbox_items
+// (source 'slack') — tidak pernah langsung jadi transaksi. Pesan yang jadi
+// usulan diberi reaksi ✅ di Slack sebagai tanda terbaca (best effort).
+type SlackInboxState = { enabled?: boolean; channelId?: string; channelName?: string; lastTs?: string; lastCheckAt?: string };
+const SLACK_CHANNEL_RE = /^[CG][A-Z0-9]{6,20}$/;
+const SLACK_CHECK_COOLDOWN_MS = 30 * 1000;
+const SLACK_AUTO_INTERVAL_MS = 9 * 60 * 1000;
+const SLACK_MAX_PER_RUN = 10;
+
+const readSlackInbox = async (env: Env, userId: string): Promise<SlackInboxState> => {
+  const row = await env.DB.prepare(
+    `SELECT CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.slackInbox') END AS v FROM users WHERE id = ?`
+  )
+    .bind(userId)
+    .first<{ v: string | null }>();
+  try {
+    const parsed = row?.v ? (JSON.parse(row.v) as SlackInboxState) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+const writeSlackInbox = (env: Env, userId: string, state: SlackInboxState | null) =>
+  state
+    ? env.DB.prepare(
+        `UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.slackInbox', json(?)) WHERE id = ?`
+      )
+        .bind(JSON.stringify(state), userId)
+        .run()
+    : env.DB.prepare(`UPDATE users SET metadata_json = json_remove(metadata_json, '$.slackInbox') WHERE id = ? AND json_valid(metadata_json)`)
+        .bind(userId)
+        .run();
+
+// Bentuk balikan tool Slack tidak didokumentasikan rinci — baca beberapa bungkus.
+const slackList = (data: Record<string, unknown> | undefined, key: string) => {
+  const d = (data ?? {}) as Record<string, unknown> & { response_data?: Record<string, unknown> };
+  const v = d[key] ?? d.response_data?.[key] ?? d.results ?? d.response_data?.results;
+  return (Array.isArray(v) ? v : []) as Record<string, unknown>[];
+};
+const slackChannelsFrom = (data: Record<string, unknown> | undefined) =>
+  slackList(data, "channels")
+    .filter((c) => c.is_archived !== true && c.is_im !== true && c.is_mpim !== true)
+    .map((c) => ({ id: String(c.id ?? ""), name: String(c.name ?? c.name_normalized ?? ""), isPrivate: Boolean(c.is_private), isMember: c.is_member !== false }))
+    .filter((c) => SLACK_CHANNEL_RE.test(c.id) && c.name)
+    .sort((a, b) => Number(b.isMember) - Number(a.isMember) || a.name.localeCompare(b.name))
+    .slice(0, 50);
+
+const slackNowTs = () => (Date.now() / 1000).toFixed(6);
+// ts Slack ("1761500100.000200") dibandingkan sebagai teks rata — Number()
+// bisa kehilangan presisi di digit mikrodetik terakhir.
+const slackTsKey = (ts: string) => {
+  const [sec = "", frac = ""] = ts.split(".");
+  return `${sec.padStart(12, "0")}.${frac.padEnd(6, "0")}`;
+};
+
+const processSlackInbox = async (env: Env, client: InstanceType<typeof Composio>, userId: string) => {
+  const state = await readSlackInbox(env, userId);
+  const stats = { fetched: 0, suggested: 0, notTransaction: 0, skipped: 0, aiStopped: false };
+  if (!state.channelId) return stats;
+  const session = await client.sessions.create(userId, { toolkits: ["slack"] });
+  const oldest = state.lastTs ?? slackNowTs();
+  const res = await session.execute("SLACK_FETCH_CONVERSATION_HISTORY", { channel: state.channelId, oldest, limit: 50, inclusive: false });
+  if (res.resultType !== "completed") {
+    console.error(`Slack history gagal (logId ${res.logId}):`, res.error);
+    throw new Error("SLACK_FETCH_FAILED");
+  }
+  // Urut dari lama ke baru supaya lastTs maju dengan benar.
+  const messages = slackList(res.data, "messages")
+    .map((m) => ({ ts: String(m.ts ?? ""), text: String(m.text ?? ""), subtype: m.subtype ? String(m.subtype) : "", bot: Boolean(m.bot_id) }))
+    .filter((m) => /^\d+\.\d+$/.test(m.ts) && slackTsKey(m.ts) > slackTsKey(oldest))
+    .sort((a, b) => slackTsKey(a.ts).localeCompare(slackTsKey(b.ts)));
+  stats.fetched = messages.length;
+  let lastTs = oldest;
+
+  // lastTs hanya maju setelah pesan selesai diproses; sisanya (>10) di putaran berikut.
+  for (const m of messages.slice(0, SLACK_MAX_PER_RUN)) {
+    if (m.bot || m.subtype || !/\d/.test(m.text)) {
+      stats.skipped++;
+      lastTs = m.ts;
+      continue;
+    }
+    const ref = `${state.channelId}:${m.ts}`;
+    const insert = (status: "BARU" | "BUKAN", suggestion: unknown) =>
+      env.DB.prepare(
+        `INSERT OR IGNORE INTO inbox_items (id, user_id, source, source_ref, status, title, sender, suggestion_json, received_at, created_at)
+         VALUES (?, ?, 'slack', ?, ?, ?, ?, ?, ?, ?)`
+      )
+        .bind(generateId(), userId, ref, status, m.text.slice(0, 200), `Slack #${state.channelName ?? "channel"}`, suggestion ? JSON.stringify(suggestion) : null, new Date(Number(m.ts) * 1000).toISOString(), nowIso())
+        .run();
+    const ai = await aiExtractTransaction(env, userId, { text: m.text.slice(0, 1000) });
+    if (ai.ok) {
+      stats.suggested++;
+      await insert("BARU", ai.suggestion);
+      await session.execute("SLACK_ADD_REACTION_TO_AN_ITEM", { channel: state.channelId, timestamp: m.ts, name: "white_check_mark" }).catch(() => undefined);
+    } else if (ai.status === 422) {
+      stats.notTransaction++;
+      await insert("BUKAN", null);
+    } else {
+      // AI tidak tersedia: lastTs tidak maju, pesan ini dicoba lagi nanti.
+      stats.aiStopped = true;
+      break;
+    }
+    lastTs = m.ts;
+  }
+  // Tulis dua kolom ini saja: pengaturan yang diubah user selama proses tetap utuh.
+  await env.DB.prepare(
+    `UPDATE users SET metadata_json = json_set(metadata_json, '$.slackInbox.lastTs', ?, '$.slackInbox.lastCheckAt', ?)
+      WHERE id = ? AND json_valid(metadata_json) AND json_extract(metadata_json, '$.slackInbox.channelId') = ?`
+  )
+    .bind(lastTs, nowIso(), userId, state.channelId)
+    .run();
+  return stats;
+};
+
+const processAllSlackInboxes = async (env: Env) => {
+  const setup = composioClient(env);
+  if ("error" in setup) return;
+  try {
+    const { results } = await env.DB.prepare(
+      `SELECT id FROM users
+        WHERE json_valid(metadata_json) AND json_extract(metadata_json, '$.slackInbox.enabled') = 1
+          AND COALESCE(json_extract(metadata_json, '$.slackInbox.lastCheckAt'), '') < ?
+        LIMIT 30`
+    )
+      .bind(new Date(Date.now() - SLACK_AUTO_INTERVAL_MS).toISOString())
+      .all<{ id: string }>();
+    for (const { id } of results ?? []) {
+      try {
+        if (!(await readAppAccess(env, id, "slack")).active) continue;
+        await processSlackInbox(env, setup.client, id);
+      } catch (error) {
+        if (inboxTableMissing(error)) return;
+        console.error("Kotak Masuk Slack gagal:", error instanceof Error ? error.message : error);
+      }
+    }
+  } catch (error) {
+    if (!inboxTableMissing(error)) console.error("Kotak Masuk Slack gagal:", error instanceof Error ? error.message : error);
+  }
+};
+
 // GET  /api/member/inbox                 → usulan BARU + status Gmail
 // POST /api/member/inbox/check           → baca email sekarang (cooldown 2 menit)
 // PUT  /api/member/inbox/settings        → { enabled } baca otomatis tiap jam
@@ -9081,11 +9225,11 @@ async function handleMemberInbox(request: Request, env: Env, pathname: string) {
   try {
     if (!sub && request.method === "GET") {
       const rows = await env.DB.prepare(
-        `SELECT id, title, sender, suggestion_json, received_at, created_at FROM inbox_items
+        `SELECT id, source, title, sender, suggestion_json, received_at, created_at FROM inbox_items
           WHERE user_id = ? AND status = 'BARU' ORDER BY COALESCE(received_at, created_at) DESC LIMIT 100`
       )
         .bind(userId)
-        .all<{ id: string; title: string | null; sender: string | null; suggestion_json: string | null; received_at: string | null; created_at: string }>();
+        .all<{ id: string; source: string; title: string | null; sender: string | null; suggestion_json: string | null; received_at: string | null; created_at: string }>();
       const items = (rows.results ?? []).map((r) => {
         let suggestion: unknown = null;
         try {
@@ -9093,7 +9237,7 @@ async function handleMemberInbox(request: Request, env: Env, pathname: string) {
         } catch {
           suggestion = null;
         }
-        return { id: r.id, title: r.title, sender: r.sender, receivedAt: r.received_at ?? r.created_at, suggestion };
+        return { id: r.id, source: r.source, title: r.title, sender: r.sender, receivedAt: r.received_at ?? r.created_at, suggestion };
       });
       const state = await readGmailInbox(env, userId);
       return json({ items, gmail: { enabled: Boolean(state.enabled), lastCheckAt: state.lastCheckAt ?? null } });
@@ -9193,7 +9337,7 @@ async function handleMemberApps(request: Request, env: Env, pathname: string) {
     // Aktivasi koin tidak butuh sesi Composio (hemat satu panggilan API).
     if (action === "activate" && request.method === "POST") return await activateApp(env, userId, toolkit);
     // Hubungkan & sinkron butuh aplikasi aktif (PRO, beta, atau koin).
-    if (toolkitRaw && request.method === "POST" && (action === "connect" || action === "sync" || action === "report")) {
+    if (toolkitRaw && request.method === "POST" && (action === "connect" || action === "sync" || action === "report" || (toolkit === "slack" && action === "inbox"))) {
       const access = await readAppAccess(env, userId, toolkit);
       if (!access.active) return json({ error: "Aktifkan aplikasi ini dulu.", needActivation: true, access }, { status: 402 });
     }
@@ -9288,6 +9432,61 @@ async function handleMemberApps(request: Request, env: Env, pathname: string) {
       }
     }
 
+    if (toolkit === "slack" && action === "channels" && request.method === "GET") {
+      const query = (new URL(request.url).searchParams.get("q") ?? "").trim().replace(/^#/, "").slice(0, 80);
+      const res = query
+        ? await session.execute("SLACK_FIND_CHANNELS", { query, limit: 50, exclude_archived: true, types: "public_channel,private_channel" })
+        : await session.execute("SLACK_LIST_CONVERSATIONS", { limit: 200, exclude_archived: true, types: "public_channel,private_channel" });
+      if (res.resultType !== "completed") {
+        console.error(`Daftar channel Slack gagal (logId ${res.logId}):`, res.error);
+        return json({ error: "Gagal membaca channel Slack. Coba hubungkan ulang." }, { status: 502 });
+      }
+      return json({ channels: slackChannelsFrom(res.data) });
+    }
+
+    if (toolkit === "slack" && action === "inbox") {
+      if (request.method === "GET") {
+        const state = await readSlackInbox(env, userId);
+        return json({ enabled: Boolean(state.enabled), channelId: state.channelId ?? null, channelName: state.channelName ?? null, lastCheckAt: state.lastCheckAt ?? null });
+      }
+      if (request.method === "PUT") {
+        const payload = await parseJson<{ channelId?: unknown; channelName?: unknown; enabled?: unknown }>(request);
+        const state = await readSlackInbox(env, userId);
+        const next = { ...state };
+        if (payload.channelId !== undefined) {
+          if (typeof payload.channelId !== "string" || !SLACK_CHANNEL_RE.test(payload.channelId)) return json({ error: "Channel tidak valid." }, { status: 400 });
+          if (payload.channelId !== state.channelId) next.lastTs = slackNowTs(); // channel baru: mulai dari sekarang
+          next.channelId = payload.channelId;
+          next.channelName = String(payload.channelName ?? "").replace(/[^\p{L}\p{N}_.-]/gu, "").slice(0, 80) || "channel";
+        }
+        if (payload.enabled !== undefined) {
+          if (typeof payload.enabled !== "boolean") return json({ error: "Pilihan tidak valid." }, { status: 400 });
+          if (payload.enabled && !next.channelId) return json({ error: "Pilih channel dulu." }, { status: 400 });
+          // Baru dinyalakan: pesan lama tidak ikut dibaca.
+          if (payload.enabled && !state.enabled) next.lastTs = slackNowTs();
+          next.enabled = payload.enabled;
+        }
+        await writeSlackInbox(env, userId, next);
+        return json({ ok: true });
+      }
+      if (request.method === "POST") {
+        const state = await readSlackInbox(env, userId);
+        if (!state.channelId) return json({ error: "Pilih channel dulu." }, { status: 400 });
+        if (state.lastCheckAt && Date.now() - Date.parse(state.lastCheckAt) < SLACK_CHECK_COOLDOWN_MS) {
+          return json({ error: "Baru saja diperiksa. Coba lagi sebentar lagi." }, { status: 429 });
+        }
+        try {
+          return json({ ok: true, ...(await processSlackInbox(env, composio, userId)) });
+        } catch (error) {
+          if (inboxTableMissing(error)) return json({ error: "Fitur Kotak Masuk belum aktif. Coba lagi nanti." }, { status: 503 });
+          if (error instanceof Error && error.message === "SLACK_FETCH_FAILED") {
+            return json({ error: "Gagal membaca channel. Pastikan kamu masih anggota channel itu, atau hubungkan ulang Slack." }, { status: 502 });
+          }
+          throw error;
+        }
+      }
+    }
+
     if (action === "sync" && toolkit === "googlesheets") {
       if (request.method === "GET") {
         const state = await readSheetsSync(env, userId);
@@ -9308,6 +9507,7 @@ async function handleMemberApps(request: Request, env: Env, pathname: string) {
     if (!action && request.method === "DELETE") {
       if (toolkit === "googlesheets") await writeSheetsSync(env, userId, null);
       if (toolkit === "notion") await writeNotionReport(env, userId, null);
+      if (toolkit === "slack") await writeSlackInbox(env, userId, null);
       if (toolkit === "googlecalendar") {
         // Bersihkan acara buatan Leosiqra dulu (selagi aksesnya masih ada).
         const state = await readCalendarSync(env, userId);
@@ -13961,6 +14161,8 @@ const worker = {
       ctx.waitUntil(sendDailyReminders(env).catch((error) => console.error("Pengingat harian:", error)));
       // Kotak Masuk: baca email pembayaran (yang menyalakan), maks sekali per ±jam per user.
       ctx.waitUntil(processAllGmailInboxes(env));
+      // Kotak Masuk: pesan channel Slack pilihan user, maks sekali per ±10 menit.
+      ctx.waitUntil(processAllSlackInboxes(env));
       return;
     }
     if (event.cron === "1 17 * * *") {
