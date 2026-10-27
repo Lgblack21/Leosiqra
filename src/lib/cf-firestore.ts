@@ -31,11 +31,24 @@ export const notifyCollectionChanged = (collectionName: string) => {
 // jendela tidak membanjiri API.
 const FOCUS_REFRESH_MIN_INTERVAL_MS = 5000;
 let lastFocusRefresh = Date.now();
-const refreshAllOnFocus = () => {
-  const now = Date.now();
-  if (now - lastFocusRefresh < FOCUS_REFRESH_MIN_INTERVAL_MS) return;
-  lastFocusRefresh = now;
+const runAllListeners = () => {
+  lastFocusRefresh = Date.now();
   changeListeners.forEach((listeners) => listeners.forEach((fn) => fn()));
+  window.dispatchEvent(new Event(DATA_SYNCED_EVENT));
+};
+const refreshAllOnFocus = () => {
+  if (Date.now() - lastFocusRefresh < FOCUS_REFRESH_MIN_INTERVAL_MS) return;
+  runAllListeners();
+};
+
+// Data selalu langsung tersimpan di server (tidak ada antrean offline), jadi
+// "sinkron" = ambil ulang semua data yang sedang tampil dari server.
+export const DATA_SYNCED_EVENT = "leosiqra:data-synced";
+export const getLastSyncAt = () => lastFocusRefresh;
+export const refreshAllData = async () => {
+  // Cek koneksi & sesi dulu supaya gagal sinkron terlihat, bukan diam-diam.
+  await cloudflareApi("/api/auth/me");
+  runAllListeners();
 };
 if (typeof window !== "undefined") {
   window.addEventListener("focus", refreshAllOnFocus);

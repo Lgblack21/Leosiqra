@@ -41,7 +41,7 @@ import { LeoMascot } from '@/components/mascot/LeoMascot';
 import { useModal } from '@/context/ModalContext';
 import { KategoriSection, MataUangView } from '@/components/settings/CategoryBudgetViews';
 import { ProfileEditView } from '@/components/settings/ProfileEditView';
-import { AccountSection } from '@/components/settings/AccountSettingsViews';
+import { AccountSection, CloudSyncSection } from '@/components/settings/AccountSettingsViews';
 import { UserAvatar, type AvatarConfig } from '@/components/profile/LeoAvatar';
 
 // Panel Pengaturan (dibuka dari ikon roda gigi / profil di menu samping,
@@ -479,6 +479,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                     <Row title="Kata sandi & 2 langkah" onClick={() => setView('privasi')} />
                     <Row title="Input Cepat & reset data" onClick={() => setView('lainnya')} />
                   </Group>
+                  <div className="pt-2"><CloudSyncSection /></div>
                   <button type="button" onClick={logout} className="flex w-full items-center justify-center gap-2 rounded-[22px] bg-rose-50 py-3.5 text-[15px] font-semibold text-rose-600 hover:bg-rose-100">
                     <LogOut size={17} /> Keluar
                   </button>

@@ -19,11 +19,13 @@ import {
   EyeOff,
   ChevronRight,
   Download,
+  Cloud,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged, type User as AuthUser } from '@/lib/cf-auth';
-import { doc, setDoc } from '@/lib/cf-firestore';
+import { doc, setDoc, refreshAllData, getLastSyncAt, DATA_SYNCED_EVENT } from '@/lib/cf-firestore';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { subscribeUserProfile } from '@/lib/services/userService';
 import { ChangePasswordModal } from '@/components/modals/ChangePasswordModal';
@@ -518,6 +520,50 @@ function LainnyaView() {
         )}
       </Modal>
     </div>
+  );
+}
+
+// Sinkron cloud: semua data sudah tersimpan di server saat dicatat; tombol
+// ini mengambil ulang data terbaru (mis. dari app HP / Shortcut) ke layar ini.
+export function CloudSyncSection() {
+  const { toast } = useFeedback();
+  const [last, setLast] = useState<number | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  useEffect(() => {
+    const update = () => setLast(getLastSyncAt());
+    update();
+    window.addEventListener(DATA_SYNCED_EVENT, update);
+    return () => window.removeEventListener(DATA_SYNCED_EVENT, update);
+  }, []);
+  const sync = async () => {
+    setSyncing(true);
+    try {
+      await refreshAllData();
+      toast.success('Data sudah yang terbaru.');
+    } catch (e) {
+      console.error(e);
+      toast.error('Gagal sinkron — cek koneksi internet lalu coba lagi.');
+    } finally {
+      setSyncing(false);
+    }
+  };
+  const fmt = (t: number) => new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(t));
+  return (
+    <>
+      <Label>Cloud</Label>
+      <Group>
+        <Row
+          icon={Cloud}
+          title="Sinkronkan data ke cloud"
+          desc={last ? `Terakhir sinkron ${fmt(last)}` : 'Semua catatan tersimpan langsung di server.'}
+          action={
+            <button type="button" onClick={sync} disabled={syncing} aria-label="Sinkronkan sekarang" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100 disabled:opacity-60">
+              <RefreshCw size={17} className={cn(syncing && 'animate-spin')} />
+            </button>
+          }
+        />
+      </Group>
+    </>
   );
 }
 
