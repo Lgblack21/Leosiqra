@@ -5,7 +5,6 @@ import Link from 'next/link';
 import {
   ArrowDownLeft,
   ArrowUpRight,
-  ArrowLeftRight,
   ChevronRight,
   CreditCard,
   FileCheck,
@@ -40,6 +39,7 @@ import { budgetService, Budget } from '@/lib/services/budgetService';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { isCreditAccountType, computeCreditUsage, getCardCycle } from '@/lib/creditCard';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
+import { categoryVisual } from '@/lib/categoryEmoji';
 import { GamificationStrip } from '@/components/GamificationStrip';
 import { WeeklyInsights } from '@/components/WeeklyInsights';
 import { SecurityNudge } from '@/components/SecurityNudge';
@@ -293,11 +293,10 @@ export default function MonthlyDashboard() {
     const incoming = isIncomingTransaction(t) || (t.type === 'topup' && Boolean(t.subCategory?.includes('Masuk')));
     // Pindah dana antar rekening sendiri / ke tabungan & investasi: netral, bukan belanja.
     const transfer = !incoming && t.type !== 'pengeluaran';
+    const visual = categoryVisual(t.category, t.type);
     return (
       <div className="flex items-center gap-3.5 py-3">
-        <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl', incoming ? 'bg-emerald-50 text-emerald-600' : transfer ? 'bg-slate-100 text-slate-500' : 'bg-indigo-50 text-indigo-600')}>
-          {incoming ? <ArrowDownLeft size={18} /> : transfer ? <ArrowLeftRight size={18} /> : <ArrowUpRight size={18} />}
-        </span>
+        <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[20px]', visual.tile)} aria-hidden>{visual.emoji}</span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-semibold text-slate-900">{txTitle(t)}</p>
           <p className="truncate text-[12px] text-slate-500">{txLine(t, withDate)}</p>
