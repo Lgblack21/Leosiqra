@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
@@ -363,6 +363,12 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
       return i >= 0 ? s.slice(0, i + 1) : [...s, next];
     });
   const back = () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : [PARENT[s[0]] ?? 'menu']));
+  // Wadah gulir dipakai bersama semua tampilan — tanpa ini, membuka tampilan
+  // lain (atau panel lagi) mewarisi posisi gulir sebelumnya dan mulai di tengah.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (open) scrollRef.current?.scrollTo({ top: 0 });
+  }, [open, view]);
   const [user, setUser] = useState<PanelUser | null>(null);
 
   const features = useFeatures();
@@ -475,7 +481,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
               </button>
             </div>
 
-            <div className="overflow-y-auto px-6 pb-6 pt-2">
+            <div ref={scrollRef} className="overflow-y-auto px-6 pb-6 pt-2">
               {view === 'menu' && (
                 <div className="space-y-4">
                   <button
