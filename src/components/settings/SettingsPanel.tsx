@@ -32,6 +32,8 @@ import {
   BookOpen,
   Smartphone,
   RotateCcw,
+  UploadCloud,
+  Inbox,
 } from 'lucide-react';
 import { cn, formatIDR } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
@@ -430,7 +432,9 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                     </button>
                   </Group>
                   <Group>
-                    <Row icon={Bot} title="Aplikasi terhubung" desc="Claude, ChatGPT & aplikasi lain" onClick={go('/membership/aplikasi')} />
+                    <Row icon={Bot} title="Aplikasi terhubung" desc="Gmail, Slack, Google, Notion, Claude & ChatGPT" onClick={go('/membership/aplikasi')} />
+                    <Row icon={UploadCloud} title="Impor" desc="PDF, Excel, CSV, dan tangkapan layar" onClick={go('/membership/impor')} />
+                    <Row icon={Inbox} title="Kotak Masuk" desc="Usulan transaksi dari email & Slack" onClick={go('/membership/kotak-masuk')} />
                     <Row icon={Zap} title="Input Cepat" desc="Catat dari layar utama HP, suara & foto struk" onClick={() => setView('lainnya')} />
                   </Group>
 
@@ -527,7 +531,8 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                   <Group>
                     <Row icon={Zap} title="Input Cepat" desc="Pasang di layar utama HP" onClick={() => setView('lainnya')} />
                     <Row icon={Smartphone} title="Shortcut iPhone" desc="Catat lewat Siri, Back Tap & Action Button" onClick={go('/panduan/shortcut-ios')} />
-                    <Row icon={Bot} title="Aplikasi terhubung" desc="Claude, ChatGPT & aplikasi lain" onClick={go('/membership/aplikasi')} />
+                    <Row icon={UploadCloud} title="Impor mutasi" desc="PDF, Excel, CSV, dan tangkapan layar" onClick={go('/membership/impor')} />
+                    <Row icon={Bot} title="Aplikasi terhubung" desc="Gmail, Slack, Google, Notion, Claude & ChatGPT" onClick={go('/membership/aplikasi')} />
                   </Group>
                   <p className="px-1 pt-2 text-[14px] text-slate-500">Notifikasi</p>
                   <Group>

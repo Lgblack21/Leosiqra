@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   ArrowUpDown,
   ArrowLeftRight,
@@ -27,11 +28,11 @@ import { Skeleton } from '@/components/ui/Skeleton';
 const isSameDay = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
-interface Action { id: ModalType; label: string; desc: string; icon: LucideIcon; color: string }
+interface Action { id: ModalType; label: string; desc: string; icon: LucideIcon; color: string; href?: string }
 
 const secondaryActions: Action[] = [
   { id: 'topup_transfer', label: 'Transfer & Top Up', desc: 'Pindah dana antar rekening sendiri atau isi saldo e-wallet.', icon: ArrowLeftRight, color: 'bg-cyan-50 text-cyan-600' },
-  { id: 'import_mutasi', label: 'Impor Mutasi (CSV)', desc: 'Upload export mutasi bank/e-wallet jadi riwayat transaksi.', icon: FileSpreadsheet, color: 'bg-emerald-50 text-emerald-600' },
+  { id: null, label: 'Impor Mutasi', desc: 'PDF, Excel, CSV, atau tangkapan layar aplikasi bank — ditinjau dulu sebelum disimpan.', icon: FileSpreadsheet, color: 'bg-emerald-50 text-emerald-600', href: '/membership/impor' },
 ];
 
 const otherActions: Action[] = [
@@ -63,6 +64,7 @@ function ActionTile({ action, onClick }: { action: Action; onClick: () => void }
 
 export default function InputTransactionPage() {
   const { openModal } = useModal();
+  const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingSummary, setLoadingSummary] = useState(true);
 
@@ -145,7 +147,7 @@ export default function InputTransactionPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             {secondaryActions.map((a) => (
-              <ActionTile key={a.id} action={a} onClick={() => openModal(a.id)} />
+              <ActionTile key={a.label} action={a} onClick={() => (a.href ? router.push(a.href) : openModal(a.id))} />
             ))}
           </div>
 

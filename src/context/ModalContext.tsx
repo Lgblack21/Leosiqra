@@ -16,8 +16,7 @@ export type ModalType =
   | 'ledger'
   | 'rekening'
   | 'kartu'
-  | 'currency'
-  | 'import_mutasi';
+  | 'currency';
 
 interface ModalContextType {
   activeModal: ModalType;

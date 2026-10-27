@@ -3348,6 +3348,9 @@ interface TransactionInsertParams {
   // Khusus type "debt": saldo rekening langsung ikut berubah saat dicatat
   // (piutang = uang keluar, hutang tunai = uang masuk). Lihat debtBalanceDelta.
   applyDebtBalance?: boolean;
+  // Metadata tambahan di payload_json (mis. nama file impor). Diabaikan kalau
+  // baris debt sudah menulis penanda balanceApplied sendiri.
+  payload?: Record<string, unknown>;
 }
 
 // Jenis hutang yang uangnya tidak pernah masuk ke rekening (belanjanya sudah
@@ -3428,7 +3431,7 @@ const insertTransactionRecord = async (env: Env, userId: string, params: Transac
       params.paymentStatus ?? null,
       params.relatedId ?? null,
       params.relatedType ?? null,
-      debtDelta !== 0 ? JSON.stringify({ balanceApplied: true }) : null,
+      debtDelta !== 0 ? JSON.stringify({ balanceApplied: true }) : params.payload ? JSON.stringify(params.payload) : null,
       nowIso(),
       nowIso()
     );
@@ -3547,88 +3550,305 @@ async function handleCreateTransaction(request: Request, env: Env) {
 // input manual/recurring yang memang transaksi baru yang belum pernah
 // tercermin di saldo. Dedup terhadap transaksi yang sudah ada (tanggal+
 // nominal+catatan sama) supaya re-upload file yang sama tidak menggandakan.
+// ── Impor mutasi (/membership/impor) ───────────────────────────────────────
+// Baris impor = riwayat: TIDAK mengubah saldo rekening maupun total member
+// (saldo di Leosiqra biasanya sudah benar; mutasi bank = yang sudah terjadi).
+// Satu impor = satu batch: related_type 'import', related_id = id batch,
+// nama file di payload_json → riwayat & "Batalkan" tanpa tabel baru.
+const IMPORT_MAX_ROWS = 1000;
+const IMPORT_AI_DAILY_LIMIT = 40;
+const IMPORT_TEXT_MAX = 15_000;
+
+type ImportRowInput = { date?: unknown; note?: unknown; amount?: unknown; type?: unknown; category?: unknown; sub_category?: unknown };
+type CleanImportRow = { date: string; note: string; amount: number; type: "pemasukan" | "pengeluaran"; category: string | null; subCategory: string | null };
+
+const cleanImportRow = (row: ImportRowInput): CleanImportRow | null => {
+  const date = String(row.date ?? "").slice(0, 10);
+  const amount = Math.round((Number(row.amount) || 0) * 100) / 100;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`))) return null;
+  if (!(amount > 0) || amount > 1e13) return null;
+  const text = (v: unknown, max: number) => {
+    const t = String(v ?? "").trim().slice(0, max);
+    return t || null;
+  };
+  return {
+    date,
+    note: String(row.note ?? "").trim().slice(0, 300),
+    amount,
+    type: row.type === "pemasukan" ? "pemasukan" : "pengeluaran",
+    category: text(row.category, 60),
+    subCategory: text(row.sub_category, 60),
+  };
+};
+
+const importRowKey = (r: { date: string; amount: number; note: string }) => `${r.date}|${Number(r.amount)}|${r.note.trim()}`;
+
+// Kunci (tanggal|nominal|catatan) transaksi yang sudah ada di rekening itu —
+// dipakai cek dobel sebelum tinjau & saat simpan.
+const existingImportKeys = async (env: Env, userId: string, accountId: string, rows: CleanImportRow[]) => {
+  if (!rows.length) return new Set<string>();
+  const dates = rows.map((r) => r.date);
+  const minDate = dates.reduce((a, b) => (a < b ? a : b));
+  const maxDate = dates.reduce((a, b) => (a > b ? a : b));
+  const { results } = await env.DB.prepare(
+    `SELECT substr(date, 1, 10) AS d, amount, note FROM transactions
+      WHERE user_id = ? AND account_id = ? AND substr(date, 1, 10) BETWEEN ? AND ?`
+  )
+    .bind(userId, accountId, minDate, maxDate)
+    .all<{ d: string; amount: number; note: string | null }>();
+  return new Set((results ?? []).map((r) => importRowKey({ date: r.d, amount: Number(r.amount), note: r.note ?? "" })));
+};
+
+const ownAccountCurrency = (env: Env, userId: string, accountId: string) =>
+  env.DB.prepare("SELECT currency FROM accounts WHERE id = ? AND user_id = ?").bind(accountId, userId).first<{ currency: string | null }>();
+
 async function handleImportTransactions(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
   const userId = authResult.session.user.id;
 
-  const payload = await parseJson<{
-    account_id?: string;
-    accountId?: string;
-    currency?: string;
-    rows?: Array<{ date?: string; note?: string; amount?: number; type?: string; category?: string }>;
-  }>(request);
-
+  const payload = await parseJson<{ account_id?: string; accountId?: string; fileName?: unknown; rows?: ImportRowInput[] }>(request);
   const accountId = String(pickPayloadValue(payload, "account_id", "accountId") ?? "");
-  const rows = Array.isArray(payload.rows) ? payload.rows : [];
-  if (!accountId || rows.length === 0) {
+  const rawRows = Array.isArray(payload.rows) ? payload.rows : [];
+  if (!accountId || rawRows.length === 0) {
     return json({ error: "Rekening dan minimal 1 baris data wajib diisi." }, { status: 400 });
   }
-  if (rows.length > 1000) {
+  if (rawRows.length > IMPORT_MAX_ROWS) {
     return json({ error: "Maksimal 1000 baris per impor — pecah file jadi beberapa bagian." }, { status: 400 });
   }
+  const acc = await ownAccountCurrency(env, userId, accountId);
+  if (!acc) return json({ error: "Rekening tidak ditemukan." }, { status: 404 });
+  // Mata uang selalu ikut rekening (bukan dari client) supaya nominal tidak salah tafsir.
+  const currency = acc.currency || "IDR";
 
-  const acc = await env.DB.prepare("SELECT currency FROM accounts WHERE id = ? AND user_id = ?")
-    .bind(accountId, userId)
-    .first<{ currency: string }>();
-  if (!acc) {
-    return json({ error: "Rekening tidak ditemukan." }, { status: 404 });
-  }
-  const currency = payload.currency || acc.currency || "IDR";
-
-  const dates = rows.map((r) => String(r.date ?? "").slice(0, 10)).filter(Boolean);
-  const minDate = dates.length ? dates.reduce((a, b) => (a < b ? a : b)) : todayWIB();
-  const maxDate = dates.length ? dates.reduce((a, b) => (a > b ? a : b)) : todayWIB();
-
-  const { results: existingRows } = await env.DB.prepare(
-    `SELECT substr(date, 1, 10) as d, amount, note FROM transactions
-      WHERE user_id = ? AND account_id = ? AND substr(date, 1, 10) BETWEEN ? AND ?`
-  )
-    .bind(userId, accountId, minDate, maxDate)
-    .all<{ d: string; amount: number; note: string | null }>();
-
-  const existingKeys = new Set(
-    (existingRows ?? []).map((r) => `${r.d}|${Number(r.amount)}|${(r.note ?? "").trim()}`)
-  );
+  const rows = rawRows.map(cleanImportRow);
+  const valid = rows.filter((r): r is CleanImportRow => r !== null);
+  const existingKeys = await existingImportKeys(env, userId, accountId, valid);
+  const batchId = generateId();
+  const fileName = String(payload.fileName ?? "").replace(/[\u0000-\u001f]/g, "").trim().slice(0, 120) || "Impor mutasi";
 
   let inserted = 0;
-  let skipped = 0;
-  for (const row of rows) {
-    const dateStr = String(row.date ?? "").slice(0, 10);
-    const amount = Number(row.amount) || 0;
-    const note = String(row.note ?? "").trim();
-    const type = row.type === "pemasukan" ? "pemasukan" : "pengeluaran";
-
-    if (!dateStr || amount <= 0) {
-      skipped++;
-      continue;
-    }
-    const key = `${dateStr}|${amount}|${note}`;
+  let skipped = rows.length - valid.length;
+  for (const row of valid) {
+    const key = importRowKey(row);
     if (existingKeys.has(key)) {
       skipped++;
       continue;
     }
-    existingKeys.add(key); // cegah baris duplikat di dalam file yang sama
-
+    existingKeys.add(key); // cegah baris dobel di dalam file yang sama
     try {
       await insertTransactionRecord(env, userId, {
-        type,
-        amount,
+        type: row.type,
+        amount: row.amount,
         category: row.category || "Impor Mutasi",
+        subCategory: row.subCategory,
         currency,
         accountId,
-        date: dateStr,
-        note: note || undefined,
+        date: row.date,
+        note: row.note || undefined,
         relatedType: "import",
+        relatedId: batchId,
+        payload: { importName: fileName },
       });
       inserted++;
     } catch (error) {
-      console.error("Gagal impor satu baris mutasi:", error);
+      console.error("Gagal impor satu baris mutasi:", error instanceof Error ? error.message : error);
       skipped++;
     }
   }
 
-  return json({ ok: true, inserted, skipped, total: rows.length });
+  return json({ ok: true, inserted, skipped, total: rows.length, batchId: inserted ? batchId : null });
+}
+
+// GET    /api/member/imports              → riwayat impor (per batch)
+// POST   /api/member/imports/check        → { accountId, rows } → indeks baris yang sudah ada
+// POST   /api/member/imports/read         → { imageBase64 | text } → baris mutasi dibaca AI (kuota harian)
+// DELETE /api/member/imports/:batchId     → batalkan impor (hapus semua barisnya)
+async function handleImportRoutes(request: Request, env: Env, pathname: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const sub = pathname.slice("/api/member/imports".length).replace(/^\//, "");
+
+  if (!sub && request.method === "GET") {
+    const { results } = await env.DB.prepare(
+      `SELECT t.related_id AS id, t.account_id, a.name AS account_name, COUNT(*) AS rows_count,
+              MIN(substr(t.date, 1, 10)) AS first_date, MAX(substr(t.date, 1, 10)) AS last_date,
+              SUM(CASE WHEN t.type = 'pemasukan' THEN t.amount ELSE 0 END) AS income,
+              SUM(CASE WHEN t.type = 'pengeluaran' THEN t.amount ELSE 0 END) AS expense,
+              MAX(a.currency) AS currency, MIN(t.created_at) AS created_at,
+              MAX(CASE WHEN json_valid(t.payload_json) THEN json_extract(t.payload_json, '$.importName') END) AS name
+         FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id AND a.user_id = t.user_id
+        WHERE t.user_id = ? AND t.related_type = 'import' AND t.related_id IS NOT NULL
+        GROUP BY t.related_id
+        ORDER BY created_at DESC
+        LIMIT 30`
+    )
+      .bind(userId)
+      .all();
+    return json({ items: results ?? [] });
+  }
+
+  if (sub === "check" && request.method === "POST") {
+    const payload = await parseJson<{ accountId?: unknown; rows?: ImportRowInput[] }>(request);
+    const accountId = String(payload.accountId ?? "");
+    const rows = Array.isArray(payload.rows) ? payload.rows.slice(0, IMPORT_MAX_ROWS) : [];
+    if (!(await ownAccountCurrency(env, userId, accountId))) return json({ error: "Rekening tidak ditemukan." }, { status: 404 });
+    const cleaned = rows.map(cleanImportRow);
+    const keys = await existingImportKeys(env, userId, accountId, cleaned.filter((r): r is CleanImportRow => r !== null));
+    const duplicates = cleaned.flatMap((r, i) => (r && keys.has(importRowKey(r)) ? [i] : []));
+    return json({ duplicates });
+  }
+
+  if (sub === "read" && request.method === "POST") {
+    const payload = await parseJson<{ imageBase64?: unknown; text?: unknown }>(request);
+    const imageBase64 = typeof payload.imageBase64 === "string" ? payload.imageBase64.replace(/^data:[^,]*,/, "") : "";
+    const text = typeof payload.text === "string" ? payload.text.trim() : "";
+    if (!imageBase64 === !text) return json({ error: "Kirim salah satu: foto atau teks." }, { status: 400 });
+    if (imageBase64.length > 7_000_000) return json({ error: "Gambar terlalu besar (maks. ±5 MB)." }, { status: 413 });
+    if (text.length > IMPORT_TEXT_MAX) return json({ error: "Teks terlalu panjang untuk sekali baca." }, { status: 413 });
+
+    // Kuota harian atomik: baris ini hanya berubah kalau kuota masih ada.
+    const today = todayWIB();
+    const quota = await env.DB.prepare(
+      `UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.importAi',
+              json_object('day', ?, 'n', CASE WHEN json_valid(metadata_json) AND json_extract(metadata_json, '$.importAi.day') = ?
+                                             THEN COALESCE(json_extract(metadata_json, '$.importAi.n'), 0) + 1 ELSE 1 END))
+        WHERE id = ?
+          AND NOT (json_valid(metadata_json) AND json_extract(metadata_json, '$.importAi.day') = ?
+                   AND COALESCE(json_extract(metadata_json, '$.importAi.n'), 0) >= ?)`
+    )
+      .bind(today, today, userId, today, IMPORT_AI_DAILY_LIMIT)
+      .run();
+    if (!quota.meta.changes) {
+      return json({ error: `Batas baca AI hari ini (${IMPORT_AI_DAILY_LIMIT} halaman/gambar) sudah habis. Coba lagi besok, atau pakai CSV/Excel.` }, { status: 429 });
+    }
+    const out = await aiReadStatementRows(env, imageBase64 ? { imageBase64 } : { text });
+    if (!out.ok) {
+      // AI tidak tersedia (bukan salah file) → kuota dikembalikan.
+      if (out.status === 503) {
+        await env.DB.prepare(
+          `UPDATE users SET metadata_json = json_set(metadata_json, '$.importAi.n', MAX(0, COALESCE(json_extract(metadata_json, '$.importAi.n'), 1) - 1))
+            WHERE id = ? AND json_valid(metadata_json) AND json_extract(metadata_json, '$.importAi.day') = ?`
+        )
+          .bind(userId, today)
+          .run();
+      }
+      return json(out.body, { status: out.status });
+    }
+    return json({ rows: out.rows });
+  }
+
+  if (sub && /^[0-9a-f-]{36}$/i.test(sub) && request.method === "DELETE") {
+    // Lampiran dulu (lewat subquery — D1 membatasi 100 parameter per query),
+    // lalu barisnya. Baris impor tidak pernah mengubah saldo → tanpa pembalikan.
+    try {
+      const att = await env.DB.prepare(
+        `SELECT id, r2_key FROM transaction_attachments
+          WHERE user_id = ? AND transaction_id IN (SELECT id FROM transactions WHERE user_id = ? AND related_type = 'import' AND related_id = ?)`
+      )
+        .bind(userId, userId, sub)
+        .all<{ id: string; r2_key: string }>();
+      await deleteAttachmentRows(env, att.results ?? []);
+    } catch (error) {
+      if (!attachmentTableMissing(error)) console.error("Hapus lampiran impor gagal:", error instanceof Error ? error.message : error);
+    }
+    const res = await env.DB.prepare("DELETE FROM transactions WHERE user_id = ? AND related_type = 'import' AND related_id = ?").bind(userId, sub).run();
+    if (!res.meta.changes) return json({ error: "Impor ini tidak ditemukan atau sudah dibatalkan." }, { status: 404 });
+    return json({ ok: true, deleted: res.meta.changes });
+  }
+
+  return json({ error: "Not found" }, { status: 404 });
+}
+
+// AI membaca BANYAK baris mutasi dari tangkapan layar aplikasi bank atau teks
+// PDF. Hasilnya hanya usulan untuk ditinjau user, tidak pernah langsung disimpan.
+async function aiReadStatementRows(env: Env, input: { imageBase64?: string; text?: string }) {
+  const openRouter = await getOpenRouterKey(env);
+  if (!openRouter) return aiFail({ ok: false, error: "AI belum dikonfigurasi.", code: "ai_unavailable" }, 503);
+  const today = todayWIB();
+  const systemPrompt = `Kamu membaca mutasi rekening bank/e-wallet Indonesia (tangkapan layar aplikasi atau teks dari PDF rekening koran).
+Balas HANYA satu objek JSON valid tanpa teks lain: {"transactions": [{"date": "YYYY-MM-DD", "note": string, "amount": number, "type": "pemasukan" | "pengeluaran"}]}
+Aturan:
+- Satu objek per baris transaksi. Abaikan baris saldo awal/akhir, total, ringkasan, header, dan iklan.
+- amount selalu positif dalam satuan mata uang aslinya (angka saja; "1.250.000,00" → 1250000).
+- type: uang masuk/kredit/CR/"+" = "pemasukan"; uang keluar/debit/DB/"-" = "pengeluaran".
+- date: kalau tahun tidak tertulis, pakai tahun yang paling masuk akal sebelum atau sama dengan hari ini (${today}). Tanggal Indonesia ditulis hari/bulan.
+- note: keterangan ringkas apa adanya (nama penerima/pengirim/merchant), maks 120 karakter.
+- Kalau tidak ada transaksi yang terbaca, balas {"transactions": []}.`;
+  const userContent = input.imageBase64
+    ? [
+        { type: "text", text: "Baca semua baris mutasi pada gambar ini." },
+        { type: "image_url", image_url: { url: `data:image/jpeg;base64,${input.imageBase64}` } },
+      ]
+    : `Teks mutasi:\n${input.text}`;
+
+  let raw = "";
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${openRouter.key}`,
+        "http-referer": env.APP_URL || "https://www.leosiqra.com",
+        "x-title": env.APP_NAME || "Leosiqra",
+      },
+      body: JSON.stringify({
+        models: PARSE_TRANSACTION_MODELS,
+        route: "fallback",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContent },
+        ],
+        temperature: 0,
+        max_tokens: 6000,
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`OpenRouter request gagal (${response.status}): ${errText.slice(0, 300)}`);
+    }
+    const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    raw = data.choices?.[0]?.message?.content?.trim() ?? "";
+  } catch (error) {
+    if (isAiQuotaError(error)) {
+      await notifyAiQuotaOnce(env);
+      return aiFail({ ok: false, error: AI_QUOTA_MESSAGE, code: "ai_quota" }, 503);
+    }
+    console.error("AI baca mutasi gagal:", error instanceof Error ? error.message : error);
+    return aiFail({ ok: false, error: "AI sedang gangguan. Coba lagi sebentar lagi.", code: "ai_unavailable" }, 503);
+  }
+
+  let list: unknown[] = [];
+  try {
+    const parsed = JSON.parse(stripJsonFences(raw)) as { transactions?: unknown };
+    list = Array.isArray(parsed.transactions) ? parsed.transactions : [];
+  } catch {
+    return aiFail({ ok: false, error: "AI tidak bisa membaca mutasi dari file ini. Coba file lain atau pakai CSV/Excel." }, 422);
+  }
+  const rows = list
+    .map((r) => cleanImportRow(r as ImportRowInput))
+    .filter((r): r is CleanImportRow => r !== null)
+    .slice(0, 300)
+    .map((r) => ({ date: r.date, note: r.note.slice(0, 120), amount: r.amount, type: r.type }));
+  return { ok: true as const, rows };
+}
+
+// GET /api/member/transactions/export.csv — unduh semua transaksi (maks 5.000 terbaru).
+async function handleExportTransactionsCsv(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const rows = await transactionExportRows(env, authResult.session.user.id);
+  const body = "﻿" + rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+  return new Response(body, {
+    headers: {
+      "content-type": "text/csv; charset=utf-8",
+      "content-disposition": `attachment; filename="leosiqra-transaksi-${todayWIB()}.csv"`,
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+    },
+  });
 }
 
 // Endpoint ringkas untuk otomasi eksternal (Shortcut iOS, dll): akun & kategori
@@ -4037,6 +4257,7 @@ type DeletableTransactionRow = {
   date: string | null;
   note: string | null;
   created_at: string | null;
+  related_type?: string | null;
 };
 
 // Transfer antar rekening sendiri (TopUpModal) tersimpan sebagai DUA baris
@@ -4084,6 +4305,9 @@ async function findTransferPair(env: Env, userId: string, row: DeletableTransact
 // dalam satu batch: kalau request hapus terkirim dua kali, batch kedua
 // otomatis no-op, saldo tidak terbalik dua kali.
 function buildReversalStatements(env: Env, userId: string, row: DeletableTransactionRow) {
+  // Baris impor mutasi dicatat sebagai riwayat: saat dibuat tidak mengubah
+  // saldo rekening maupun total member, jadi saat dihapus juga tidak dibalik.
+  if (row.related_type === "import") return [];
   const amount = Number(row.amount) || 0;
   const statements: D1PreparedStatement[] = [];
   const stillExists = "EXISTS (SELECT 1 FROM transactions WHERE id = ? AND user_id = ?)";
@@ -4166,7 +4390,7 @@ async function handleDeleteTransaction(request: Request, env: Env, transactionId
   }
 
   const row = await env.DB.prepare(
-    `SELECT id, type, amount, category, sub_category, payload_json, account_id, target_account_id, date, note, created_at
+    `SELECT id, type, amount, category, sub_category, payload_json, account_id, target_account_id, date, note, created_at, related_type
        FROM transactions
       WHERE id = ? AND user_id = ?`
   )
@@ -13650,6 +13874,14 @@ const worker = {
 
       if (url.pathname === "/api/member/transactions/import" && request.method === "POST") {
         return await handleImportTransactions(request, env);
+      }
+
+      if (url.pathname === "/api/member/transactions/export.csv" && request.method === "GET") {
+        return await handleExportTransactionsCsv(request, env);
+      }
+
+      if (url.pathname === "/api/member/imports" || url.pathname.startsWith("/api/member/imports/")) {
+        return await handleImportRoutes(request, env, url.pathname);
       }
 
       if (url.pathname.startsWith("/api/member/transactions/")) {

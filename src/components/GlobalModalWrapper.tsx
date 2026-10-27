@@ -18,7 +18,6 @@ import { LedgerModal } from '@/components/modals/LedgerModal';
 import { AccountModal } from '@/components/modals/AccountModal';
 import { CardModal } from '@/components/modals/CardModal';
 import { CurrencyModal } from '@/components/modals/CurrencyModal';
-import { ImportTransactionsModal } from '@/components/modals/ImportTransactionsModal';
 import { accountService } from '@/lib/services/accountService';
 import type { Investment } from '@/lib/services/investmentService';
 
@@ -123,12 +122,6 @@ export const GlobalModalWrapper = () => {
       <CurrencyModal
         isOpen={activeModal === 'currency'}
         onClose={closeModal}
-      />
-
-      <ImportTransactionsModal
-        isOpen={activeModal === 'import_mutasi'}
-        onClose={closeModal}
-        userId={user.id}
       />
     </>
   );
