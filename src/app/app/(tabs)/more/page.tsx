@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {
   BarChart3, MessageCircle, ScanLine, Mic, UserCircle, HandCoins, PiggyBank, CreditCard, Target,
-  Repeat, TrendingUp, CalendarRange, ShieldCheck, Globe, ChevronRight, ExternalLink, Zap, PlayCircle, MessageSquareHeart, Users,
+  Repeat, TrendingUp, CalendarRange, ShieldCheck, Globe, ChevronRight, ExternalLink, Zap, PlayCircle, MessageSquareHeart, Users, Inbox,
 } from "lucide-react";
 import { lightTap } from "@/lib/haptics";
 import { FadeIn, StaggerList, StaggerItem } from "@/components/app/FadeIn";
@@ -21,6 +21,7 @@ const IN_APP: MenuItem[] = [
   { label: "Tabungan", href: "/app/savings", icon: PiggyBank, color: "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400" },
   { label: "Kartu Kredit", href: "/app/cards", icon: CreditCard, color: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
   { label: "Budget", href: "/app/budget", icon: Target, color: "bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-400" },
+  { label: "Kotak Masuk", href: "/app/inbox", icon: Inbox, color: "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400" },
   { label: "Rutin", href: "/app/recurring", icon: Repeat, color: "bg-cyan-50 text-cyan-600 dark:bg-cyan-500/10 dark:text-cyan-400" },
   { label: "Investasi", href: "/app/investments", icon: TrendingUp, color: "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400" },
 ];

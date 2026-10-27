@@ -10,7 +10,7 @@ import { InboxControls, useInbox } from '@/components/inbox/InboxControls';
 
 function GmailInboxSection() {
   const inbox = useInbox();
-  return <InboxControls inbox={inbox} showLink />;
+  return <InboxControls inbox={inbox} showLink only="gmail" />;
 }
 
 // Aplikasi terhubung — halaman sendiri (bukan panel). Daftar aplikasi

@@ -9210,7 +9210,7 @@ const processAllSlackInboxes = async (env: Env) => {
   }
 };
 
-// GET  /api/member/inbox                 → usulan BARU + status Gmail
+// GET  /api/member/inbox                 → usulan BARU + status Gmail & Slack
 // POST /api/member/inbox/check           → baca email sekarang (cooldown 2 menit)
 // PUT  /api/member/inbox/settings        → { enabled } baca otomatis tiap jam
 // POST /api/member/inbox/:id/claim       → kunci untuk disimpan (sekali saja)
@@ -9239,8 +9239,12 @@ async function handleMemberInbox(request: Request, env: Env, pathname: string) {
         }
         return { id: r.id, source: r.source, title: r.title, sender: r.sender, receivedAt: r.received_at ?? r.created_at, suggestion };
       });
-      const state = await readGmailInbox(env, userId);
-      return json({ items, gmail: { enabled: Boolean(state.enabled), lastCheckAt: state.lastCheckAt ?? null } });
+      const [state, slack] = await Promise.all([readGmailInbox(env, userId), readSlackInbox(env, userId)]);
+      return json({
+        items,
+        gmail: { enabled: Boolean(state.enabled), lastCheckAt: state.lastCheckAt ?? null },
+        slack: { configured: Boolean(slack.channelId), enabled: Boolean(slack.enabled), channelName: slack.channelName ?? null, lastCheckAt: slack.lastCheckAt ?? null },
+      });
     }
 
     if (sub === "settings" && request.method === "PUT") {
