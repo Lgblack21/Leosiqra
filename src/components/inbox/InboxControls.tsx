@@ -76,7 +76,7 @@ function SourceRow({ icon: Icon, iconCls, title, sub, enabled, onToggle, saving 
     <div className="flex items-center gap-3">
       <Icon size={20} className={cn('shrink-0', iconCls)} />
       <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-semibold text-slate-900 dark:text-white">{title}</span>
+        <span className="block truncate text-[15px] font-semibold text-slate-900 dark:text-white">{title}</span>
         <span className="block text-[13px] text-slate-500 dark:text-slate-400">{sub}</span>
       </span>
       <button
@@ -164,8 +164,8 @@ export function InboxControls({ inbox, onChecked, showLink, only, kotakMasukHref
         <SourceRow
           icon={Inbox}
           iconCls="text-rose-500"
-          title="Baca email pembayaran otomatis"
-          sub={`Tiap ±1 jam${gmailWhen ? ` · terakhir ${gmailWhen}` : ''}. Hasilnya masuk Kotak Masuk, tidak langsung tercatat.`}
+          title="Email pembayaran (Gmail)"
+          sub={`Dibaca tiap ±1 jam${gmailWhen ? ` · terakhir ${gmailWhen}` : ''}`}
           enabled={data.gmail.enabled}
           onToggle={() => void toggle('gmail')}
           saving={saving}
@@ -175,8 +175,8 @@ export function InboxControls({ inbox, onChecked, showLink, only, kotakMasukHref
         <SourceRow
           icon={Hash}
           iconCls="text-violet-600"
-          title={`Baca pesan Slack #${slack.channelName ?? 'channel'}`}
-          sub={`Tiap ±10 menit${slackWhen ? ` · terakhir ${slackWhen}` : ''}. Ganti channel di Aplikasi terhubung → Slack.`}
+          title={`Slack #${slack.channelName ?? 'channel'}`}
+          sub={`Dibaca tiap ±10 menit${slackWhen ? ` · terakhir ${slackWhen}` : ''}`}
           enabled={slack.enabled}
           onToggle={() => void toggle('slack')}
           saving={saving}

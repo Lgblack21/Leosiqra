@@ -100,15 +100,15 @@ function AppCard({ app, connected, onOpen, disabledNote, price }: { app: AppInfo
     <button
       type="button"
       onClick={onOpen}
-      className="group flex h-full flex-col rounded-[24px] bg-white p-5 text-left ring-1 ring-slate-100 transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_30px_-12px_rgba(79,70,229,0.25)] hover:ring-indigo-100"
+      className="group flex h-full flex-col rounded-[22px] bg-white p-4 text-left ring-1 sm:rounded-[24px] sm:p-5 ring-slate-100 transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_30px_-12px_rgba(79,70,229,0.25)] hover:ring-indigo-100"
     >
       <div className="flex items-start gap-4">
-        <span className={cn('flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl', app.tile)}>
-          <Icon size={26} strokeWidth={1.9} />
+        <span className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14', app.tile)}>
+          <Icon size={24} strokeWidth={1.9} />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[18px] font-bold text-slate-900">{app.name}</span>
+            <span className="text-[17px] font-bold text-slate-900 sm:text-[18px]">{app.name}</span>
             {app.beta && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-700">Beta</span>}
             <StatusChip on={Boolean(connected)} />
           </div>
@@ -116,8 +116,9 @@ function AppCard({ app, connected, onOpen, disabledNote, price }: { app: AppInfo
           <p className="mt-1 text-[14px] leading-snug text-slate-500">{app.tagline}</p>
           {disabledNote && <p className="mt-1 text-[12px] font-medium text-rose-500">{disabledNote}</p>}
         </div>
+        <ChevronRight size={20} className="mt-3 shrink-0 text-slate-300 sm:hidden" />
       </div>
-      <ul className="mt-4 flex-1 space-y-2">
+      <ul className="mt-4 hidden flex-1 space-y-2 sm:block">
         {app.bullets.map((b) => (
           <li key={b} className="flex items-start gap-2 text-[14px] text-slate-600">
             <Check size={16} className="mt-0.5 shrink-0 text-indigo-500" /> {b}
@@ -126,7 +127,7 @@ function AppCard({ app, connected, onOpen, disabledNote, price }: { app: AppInfo
       </ul>
       <span
         className={cn(
-          'mt-5 inline-flex items-center justify-center gap-1.5 rounded-full py-2.5 text-[14px] font-bold transition-colors',
+          'mt-5 hidden items-center justify-center gap-1.5 rounded-full sm:inline-flex py-2.5 text-[14px] font-bold transition-colors',
           connected ? 'bg-slate-100 text-slate-800 group-hover:bg-slate-200' : 'bg-slate-900 text-white group-hover:bg-indigo-600'
         )}
       >
@@ -194,7 +195,7 @@ function Hub({ open }: { open: (id: AppId) => void }) {
       <section>
         <h2 className="mb-1 text-[18px] font-bold text-slate-900">Otomatis dari aplikasimu</h2>
         <p className="mb-4 text-[14px] text-slate-500">Lewat mitra koneksi Composio — kamu masuk di situs Google, Notion atau Slack langsung, Leosiqra tidak pernah melihat kata sandimu.</p>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-3 sm:gap-4 md:grid-cols-2 md:[&>*:last-child:nth-child(odd)]:col-span-2">
           <AppCard app={APPS.googlecalendar} connected={apps.items.googlecalendar?.connected} onOpen={() => open('googlecalendar')} disabledNote={composioNote} price={priceLabel(apps.access?.googlecalendar)} />
           <AppCard app={APPS.gmail} connected={apps.items.gmail?.connected} onOpen={() => open('gmail')} disabledNote={composioNote} price={priceLabel(apps.access?.gmail)} />
           <AppCard app={APPS.googlesheets} connected={apps.items.googlesheets?.connected} onOpen={() => open('googlesheets')} disabledNote={composioNote} price={priceLabel(apps.access?.googlesheets)} />
@@ -205,7 +206,7 @@ function Hub({ open }: { open: (id: AppId) => void }) {
 
       <section>
         <h2 className="mb-4 text-[18px] font-bold text-slate-900">Asisten AI</h2>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-3 sm:gap-4 md:grid-cols-2 md:[&>*:last-child:nth-child(odd)]:col-span-2">
           <AppCard app={APPS.mcp} onOpen={() => open('mcp')} />
         </div>
       </section>

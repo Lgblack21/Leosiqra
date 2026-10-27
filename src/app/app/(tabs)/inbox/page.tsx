@@ -29,7 +29,7 @@ function AppInbox() {
   const done = (id: string) => inbox.setData((d) => (d ? { ...d, items: d.items.filter((i) => i.id !== id) } : d));
 
   return (
-    <div className="max-w-md mx-auto px-5 pt-8 space-y-5">
+    <div className="max-w-md md:max-w-2xl mx-auto px-5 md:px-8 pt-8 space-y-5">
       <FadeIn className="flex items-center gap-2">
         <Link href="/app/more" aria-label="Kembali" className="w-9 h-9 -ml-2 rounded-full flex items-center justify-center text-slate-500">
           <ChevronLeft size={20} />
