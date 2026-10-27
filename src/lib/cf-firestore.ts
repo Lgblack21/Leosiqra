@@ -1,4 +1,4 @@
-import { cloudflareApi } from "@/lib/cloudflare-api";
+import { cloudflareApi, clearApiCache } from "@/lib/cloudflare-api";
 import { auth } from "@/lib/cf-client";
 
 // onSnapshot di bawah cuma fetch sekali, bukan live subscription beneran —
@@ -6,6 +6,8 @@ import { auth } from "@/lib/cf-client";
 const changeListeners = new Map<string, Set<() => void>>();
 
 const runLocalListeners = (collectionName: string) => {
+  // Data berubah → jawaban GET yang tersimpan sementara tidak berlaku lagi.
+  clearApiCache();
   changeListeners.get(collectionName)?.forEach((fn) => fn());
 };
 
@@ -33,6 +35,7 @@ const FOCUS_REFRESH_MIN_INTERVAL_MS = 5000;
 let lastFocusRefresh = Date.now();
 const runAllListeners = () => {
   lastFocusRefresh = Date.now();
+  clearApiCache();
   changeListeners.forEach((listeners) => listeners.forEach((fn) => fn()));
   window.dispatchEvent(new Event(DATA_SYNCED_EVENT));
 };
@@ -47,6 +50,7 @@ export const DATA_SYNCED_EVENT = "leosiqra:data-synced";
 export const getLastSyncAt = () => lastFocusRefresh;
 export const refreshAllData = async () => {
   // Cek koneksi & sesi dulu supaya gagal sinkron terlihat, bukan diam-diam.
+  clearApiCache();
   await cloudflareApi("/api/auth/me");
   runAllListeners();
 };
