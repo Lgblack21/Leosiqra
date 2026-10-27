@@ -6,7 +6,7 @@ import {
   type PushSubscription as WebPushSubscription,
   type VapidKeys,
 } from "@block65/webcrypto-web-push";
-import { computeCardCycle, clampCycleDay, lastStatementDate, daysBetween, type CardCycleSettings } from "../../src/lib/creditCycle";
+import { computeCardCycle, clampCycleDay, lastStatementDate, dueDateFor, daysBetween, type CardCycleSettings } from "../../src/lib/creditCycle";
 
 export interface Env {
   DB: D1Database;
@@ -8053,6 +8053,209 @@ async function handleAttachmentRoutes(request: Request, env: Env, pathname: stri
   }
 }
 
+// ── Aplikasi terhubung: tautan rahasia Google Sheets (CSV) & Calendar (iCal) ─
+// Tanpa OAuth Google: user menempel tautan rahasia ke =IMPORTDATA() atau
+// "Tambahkan kalender dari URL". Token = "<userId>.<acak>", disimpan di
+// users.metadata_json $.feeds.<jenis> (tanpa migrasi). Siapa pun yang
+// memegang tautan bisa membaca isinya — sama seperti "alamat rahasia iCal"
+// Google — jadi bisa dibuat ulang (tautan lama mati) atau diputus kapan saja.
+const FEED_KINDS = ["sheets", "calendar"] as const;
+type FeedKind = (typeof FEED_KINDS)[number];
+
+const readFeedTokens = async (env: Env, userId: string) => {
+  const row = await env.DB.prepare(
+    `SELECT CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.feeds') END AS v FROM users WHERE id = ?`
+  )
+    .bind(userId)
+    .first<{ v: string | null }>();
+  try {
+    const parsed = row?.v ? (JSON.parse(row.v) as Partial<Record<FeedKind, { token?: string; createdAt?: string }>>) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
+const feedUrl = (request: Request, kind: FeedKind, token: string) =>
+  `${new URL(request.url).origin}/api/feed/${kind}/${token}.${kind === "sheets" ? "csv" : "ics"}`;
+
+const timingSafeEqualStr = (a: string, b: string) => {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+};
+
+// GET    /api/member/feeds            → { sheets: url|null, calendar: url|null }
+// POST   /api/member/feeds/:jenis     → buat / buat ulang tautan
+// DELETE /api/member/feeds/:jenis     → putuskan
+async function handleMemberFeeds(request: Request, env: Env, pathname: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const current = await readFeedTokens(env, userId);
+
+  if (pathname === "/api/member/feeds" && request.method === "GET") {
+    return json({
+      sheets: current.sheets?.token ? feedUrl(request, "sheets", current.sheets.token) : null,
+      calendar: current.calendar?.token ? feedUrl(request, "calendar", current.calendar.token) : null,
+    });
+  }
+  const kind = pathname.slice("/api/member/feeds/".length) as FeedKind;
+  if (!(FEED_KINDS as readonly string[]).includes(kind)) return json({ error: "Not found" }, { status: 404 });
+
+  if (request.method === "POST") {
+    const bytes = crypto.getRandomValues(new Uint8Array(24));
+    const random = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    const token = `${userId}.${random}`;
+    await env.DB.prepare(
+      `UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, ?, json(?)) WHERE id = ?`
+    )
+      .bind(`$.feeds.${kind}`, JSON.stringify({ token, createdAt: nowIso() }), userId)
+      .run();
+    return json({ ok: true, url: feedUrl(request, kind, token) });
+  }
+  if (request.method === "DELETE") {
+    await env.DB.prepare(
+      `UPDATE users SET metadata_json = json_remove(metadata_json, ?) WHERE id = ? AND json_valid(metadata_json)`
+    )
+      .bind(`$.feeds.${kind}`, userId)
+      .run();
+    return json({ ok: true });
+  }
+  return json({ error: "Method not allowed" }, { status: 405 });
+}
+
+// Sel yang diawali = + - @ dibaca Sheets/Excel sebagai rumus (CSV injection)
+// — catatan/kategori dari user diberi awalan ' supaya tetap teks biasa.
+const csvCell = (value: unknown) => {
+  let s = value === null || value === undefined ? "" : String(value);
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+
+const icsText = (value: string) => value.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+const icsDate = (ymd: string) => ymd.slice(0, 10).replace(/-/g, "");
+const RRULE_BY_INTERVAL: Record<string, string> = { Harian: "DAILY", Mingguan: "WEEKLY", Bulanan: "MONTHLY", Tahunan: "YEARLY" };
+
+// GET /api/feed/:jenis/:token.(csv|ics) — publik, dibuka Google/Apple, bukan browser user.
+async function handlePublicFeed(request: Request, env: Env, pathname: string) {
+  const match = /^\/api\/feed\/(sheets|calendar)\/([0-9a-f-]{36})\.([A-Za-z0-9_-]{20,64})\.(csv|ics)$/i.exec(pathname);
+  if (!match || (match[1] === "sheets") !== (match[4] === "csv")) return text("Not found", { status: 404 });
+  const kind = match[1] as FeedKind;
+  const userId = match[2];
+  const token = `${userId}.${match[3]}`;
+  const stored = (await readFeedTokens(env, userId))[kind]?.token;
+  // Jawaban sama untuk "tidak ada" & "salah" supaya tautan tidak bisa ditebak-tebak.
+  if (!stored || !timingSafeEqualStr(stored, token)) return text("Tautan tidak berlaku. Buat tautan baru di Leosiqra → Aplikasi terhubung.", { status: 404 });
+
+  const baseHeaders = { "cache-control": "private, max-age=300", "x-robots-tag": "noindex", "x-content-type-options": "nosniff" };
+
+  if (kind === "sheets") {
+    const accounts = await env.DB.prepare("SELECT id, name FROM accounts WHERE user_id = ?").bind(userId).all<{ id: string; name: string }>();
+    const accountName = new Map((accounts.results ?? []).map((a) => [a.id, a.name]));
+    const rows = await env.DB.prepare(
+      `SELECT date, type, category, sub_category, account_id, target_account_id, amount, currency, amount_idr, note
+         FROM transactions WHERE user_id = ? ORDER BY date DESC, created_at DESC LIMIT 5000`
+    )
+      .bind(userId)
+      .all<{ date: string; type: string; category: string | null; sub_category: string | null; account_id: string | null; target_account_id: string | null; amount: number; currency: string | null; amount_idr: number | null; note: string | null }>();
+    const lines = [["Tanggal", "Jenis", "Kategori", "Subkategori", "Rekening", "Rekening tujuan", "Nominal", "Mata uang", "Nominal IDR", "Catatan"].join(",")];
+    for (const r of rows.results ?? []) {
+      lines.push(
+        [
+          String(r.date ?? "").slice(0, 10),
+          r.type,
+          r.category,
+          r.sub_category,
+          r.account_id ? accountName.get(r.account_id) ?? "" : "",
+          r.target_account_id ? accountName.get(r.target_account_id) ?? "" : "",
+          Number(r.amount) || 0,
+          r.currency || "IDR",
+          Number(r.amount_idr ?? r.amount) || 0,
+          r.note,
+        ]
+          .map(csvCell)
+          .join(",")
+      );
+    }
+    return new Response(lines.join("\r\n"), { headers: { ...baseHeaders, "content-type": "text/csv; charset=utf-8" } });
+  }
+
+  // Kalender: transaksi rutin aktif + jatuh tempo kartu kredit (acara seharian).
+  const stamp = nowIso().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const events: string[] = [];
+  const recurring = await env.DB.prepare(
+    "SELECT id, name, type, amount, interval, next_date, note FROM recurring WHERE user_id = ? AND status = 'ACTIVE' LIMIT 300"
+  )
+    .bind(userId)
+    .all<{ id: string; name: string; type: string; amount: number; interval: string; next_date: string; note: string | null }>();
+  for (const r of recurring.results ?? []) {
+    if (!/^\d{4}-\d{2}-\d{2}/.test(String(r.next_date ?? ""))) continue;
+    const freq = RRULE_BY_INTERVAL[r.interval] ?? "MONTHLY";
+    const amount = `Rp ${Math.round(Number(r.amount) || 0).toLocaleString("id-ID")}`;
+    events.push(
+      [
+        "BEGIN:VEVENT",
+        `UID:recurring-${r.id}@leosiqra`,
+        `DTSTAMP:${stamp}`,
+        `DTSTART;VALUE=DATE:${icsDate(r.next_date)}`,
+        `RRULE:FREQ=${freq}`,
+        `SUMMARY:${icsText(`${r.name} · ${amount}`)}`,
+        `DESCRIPTION:${icsText(`Transaksi rutin Leosiqra (${r.type}, ${r.interval}).${r.note ? ` ${r.note}` : ""}`)}`,
+        "END:VEVENT",
+      ].join("\r\n")
+    );
+  }
+  const cards = await env.DB.prepare(
+    "SELECT id, name, payload_json FROM accounts WHERE user_id = ? AND type IN ('Credit Card', 'kartu') AND payload_json LIKE '%dueDay%'"
+  )
+    .bind(userId)
+    .all<{ id: string; name: string; payload_json: string | null }>();
+  const today = todayWIB();
+  for (const card of cards.results ?? []) {
+    let settings: CardCycleSettings = {};
+    try {
+      settings = JSON.parse(card.payload_json || "{}") as CardCycleSettings;
+    } catch {
+      continue;
+    }
+    const statementDay = clampCycleDay(settings.statementDay);
+    const dueDay = clampCycleDay(settings.dueDay);
+    if (!statementDay || !dueDay) continue;
+    const due = dueDateFor(lastStatementDate(today, statementDay), dueDay);
+    events.push(
+      [
+        "BEGIN:VEVENT",
+        `UID:card-due-${card.id}@leosiqra`,
+        `DTSTAMP:${stamp}`,
+        `DTSTART;VALUE=DATE:${icsDate(due)}`,
+        "RRULE:FREQ=MONTHLY",
+        `SUMMARY:${icsText(`Jatuh tempo ${card.name}`)}`,
+        `DESCRIPTION:${icsText("Bayar tagihan kartu kredit. Cek jumlahnya di Leosiqra → Kartu Saya.")}`,
+        "BEGIN:VALARM",
+        "TRIGGER:-P2D",
+        "ACTION:DISPLAY",
+        `DESCRIPTION:${icsText(`Jatuh tempo ${card.name} 2 hari lagi`)}`,
+        "END:VALARM",
+        "END:VEVENT",
+      ].join("\r\n")
+    );
+  }
+  const body = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Leosiqra//Kalender Keuangan//ID",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "X-WR-CALNAME:Leosiqra",
+    "X-WR-TIMEZONE:Asia/Jakarta",
+    ...events,
+    "END:VCALENDAR",
+  ].join("\r\n");
+  return new Response(body, { headers: { ...baseHeaders, "content-type": "text/calendar; charset=utf-8" } });
+}
+
 async function handleSignedUpload(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) {
@@ -12259,6 +12462,9 @@ const worker = {
       if (url.pathname === SW_BASE || url.pathname.startsWith(`${SW_BASE}/`)) {
         return await handleSharedWallets(request, env, url);
       }
+      if (url.pathname.startsWith("/api/feed/") && request.method === "GET") {
+        return await handlePublicFeed(request, env, url.pathname);
+      }
       if (url.pathname.startsWith("/api/market/coingecko/") && request.method === "GET") {
         return await handleCoinGeckoProxy(request, env, url.pathname.slice("/api/market/coingecko/".length));
       }
@@ -12465,6 +12671,10 @@ const worker = {
 
       if (url.pathname === "/api/member/email-report" && (request.method === "GET" || request.method === "PUT")) {
         return await handleMonthlyReportPreference(request, env);
+      }
+
+      if (url.pathname === "/api/member/feeds" || url.pathname.startsWith("/api/member/feeds/")) {
+        return await handleMemberFeeds(request, env, url.pathname);
       }
 
       if (url.pathname === "/api/member/attachments" || url.pathname.startsWith("/api/member/attachments/")) {
