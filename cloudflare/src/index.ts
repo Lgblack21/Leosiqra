@@ -8264,6 +8264,8 @@ async function handlePublicFeed(request: Request, env: Env, pathname: string) {
 // managed); Leosiqra hanya memegang COMPOSIO_API_KEY (secret Worker) dan
 // memakai users.id sebagai user_id Composio. Tidak ada token Google/Notion/
 // Slack yang disimpan di D1.
+// Beta tester selain role admin (akun member pemilik aplikasi).
+const COMPOSIO_BETA_EMAILS = [SUPERADMIN_EMAIL, "leowendry@gmail.com"];
 const COMPOSIO_TOOLKITS = ["gmail", "googlecalendar", "googlesheets", "notion", "slack"] as const;
 type ComposioToolkit = (typeof COMPOSIO_TOOLKITS)[number];
 
@@ -8314,7 +8316,8 @@ async function handleMemberApps(request: Request, env: Env, pathname: string) {
   if (authResult.error) return authResult.error;
   const userId = authResult.session.user.id;
   // Beta: baru dibuka untuk admin sampai fitur per aplikasi (baca email, dst.) selesai.
-  if (authResult.session.user.role !== "admin") return json({ error: "Segera hadir." }, { status: 403 });
+  const betaTester = COMPOSIO_BETA_EMAILS.includes(String(authResult.session.user.email ?? "").trim().toLowerCase());
+  if (authResult.session.user.role !== "admin" && !betaTester) return json({ error: "Segera hadir." }, { status: 403 });
   const setup = composioClient(env);
   if ("error" in setup) return json({ error: setup.error }, { status: 503 });
   const composio = setup.client;
