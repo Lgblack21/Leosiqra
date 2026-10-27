@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, X, Trash2, ChevronRight, CalendarDays, Coins } from 'lucide-react';
+import { Plus, X, Trash2, CalendarDays, Coins, ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { cn, formatIDR } from '@/lib/utils';
 import { categoryService, type Category } from '@/lib/services/categoryService';
 import { budgetService, type Budget } from '@/lib/services/budgetService';
@@ -114,7 +114,7 @@ function IconPicker({ value, onPick, onClose }: { value: CategoryStyle; onPick: 
     <div className="fixed inset-0 z-[90] flex items-end justify-center bg-slate-900/30 sm:items-center sm:p-6" onClick={onClose}>
       <div role="dialog" aria-label="Pilih ikon & warna" className="max-h-[85vh] w-full overflow-y-auto rounded-t-[28px] bg-white p-5 shadow-2xl sm:max-w-md sm:rounded-[28px]" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-center pb-2">
-          <span className={cn('flex h-20 w-20 items-center justify-center rounded-full text-[38px]', CATEGORY_COLORS[style.color]?.tile)} aria-hidden>{style.emoji}</span>
+          <span className={cn('flex h-20 w-20 items-center justify-center rounded-[26px] text-[38px]', CATEGORY_COLORS[style.color]?.tile)} aria-hidden>{style.emoji}</span>
         </div>
         <p className="px-1 pb-2 text-[14px] text-slate-500">Warna</p>
         <div className="flex flex-wrap gap-2.5">
@@ -149,71 +149,109 @@ const defaultStyle = (name: string, kind: Kind): CategoryStyle => {
 };
 
 const AvatarButton = ({ emoji, tile, onClick }: { emoji: string; tile: string; onClick: () => void }) => (
-  <button type="button" onClick={onClick} aria-label="Ganti ikon & warna" className={cn('group relative flex h-20 w-20 items-center justify-center rounded-full text-[38px] transition hover:scale-105', tile)}>
+  <button type="button" onClick={onClick} aria-label="Ganti ikon & warna" className={cn('group relative flex h-20 w-20 items-center justify-center rounded-[26px] text-[38px] shadow-[inset_0_-4px_0_rgba(15,23,42,0.06)] transition hover:scale-105', tile)}>
     <span aria-hidden>{emoji}</span>
     <span className="absolute -bottom-1 -right-1 rounded-full bg-white px-1.5 py-0.5 text-[10px] font-bold text-slate-600 shadow ring-1 ring-slate-200">Ubah</span>
   </button>
 );
 
-const BAR = ['bg-sky-500', 'bg-amber-600', 'bg-indigo-500', 'bg-teal-500', 'bg-violet-400', 'bg-pink-500', 'bg-emerald-500', 'bg-orange-500'];
+// Cincin persen anggaran (pengganti bar tipis) — warna ikut status.
+function BudgetRing({ pct, over }: { pct: number; over: boolean }) {
+  const r = 17;
+  const c = 2 * Math.PI * r;
+  const shown = Math.min(100, pct);
+  const color = over ? '#f43f5e' : pct >= 80 ? '#f59e0b' : '#6366f1';
+  return (
+    <span className="relative flex h-12 w-12 shrink-0 items-center justify-center" aria-label={`${Math.round(pct)}% anggaran terpakai`}>
+      <svg viewBox="0 0 40 40" className="absolute inset-0 -rotate-90">
+        <circle cx="20" cy="20" r={r} fill="none" stroke="#e2e8f0" strokeWidth="4" />
+        <circle cx="20" cy="20" r={r} fill="none" stroke={color} strokeWidth="4" strokeLinecap="round" strokeDasharray={`${(shown / 100) * c} ${c}`} />
+      </svg>
+      <span className={cn('text-[11px] font-bold tabular-nums', over ? 'text-rose-600' : 'text-slate-700')}>{Math.round(pct)}%</span>
+    </span>
+  );
+}
 
 export function KategoriListView({ rows, loading, onOpen, onAdd }: { rows: CategoryRow[]; loading: boolean; onOpen: (name: string) => void; onAdd: (kind: Kind) => void }) {
   useCategoryStyles();
   const [tab, setTab] = useState<Kind>('pengeluaran');
   const list = rows.filter((r) => r.kind === tab);
+  const isOut = tab === 'pengeluaran';
+  const total = list.reduce((s, r) => s + r.spent, 0);
+  const budgeted = list.filter((r) => r.budget && r.budget.period === 'monthly');
+  const budgetTotal = budgeted.reduce((s, r) => s + (r.budget?.amount ?? 0), 0);
+  const budgetUsed = budgeted.reduce((s, r) => s + r.spent, 0);
+  const overall = budgetTotal > 0 ? (budgetUsed / budgetTotal) * 100 : 0;
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between px-1">
-        <p className="text-[14px] text-slate-500">Kategori & Anggaran</p>
-        <button type="button" onClick={() => onAdd(tab)} aria-label="Tambah kategori" className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200">
-          <Plus size={19} />
-        </button>
-      </div>
-      <div className="rounded-[22px] bg-slate-50 p-1.5">
-        <div className="flex rounded-full bg-slate-200/60 p-1">
-          {(['pengeluaran', 'pemasukan'] as Kind[]).map((k) => (
-            <button key={k} type="button" onClick={() => setTab(k)} className={cn('flex-1 rounded-full py-2 text-[14px] font-semibold capitalize transition-colors', tab === k ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500')}>
-              {k}
+      <div className="grid grid-cols-2 gap-1.5 rounded-[20px] bg-slate-100 p-1.5">
+        {(['pengeluaran', 'pemasukan'] as Kind[]).map((k) => {
+          const Icon = k === 'pengeluaran' ? ArrowDownRight : ArrowUpRight;
+          const on = tab === k;
+          return (
+            <button key={k} type="button" onClick={() => setTab(k)} className={cn('flex items-center justify-center gap-2 rounded-[15px] py-2.5 text-[14px] font-semibold capitalize transition-colors', on ? (k === 'pengeluaran' ? 'bg-white text-indigo-700 shadow-sm' : 'bg-white text-emerald-700 shadow-sm') : 'text-slate-500 hover:text-slate-700')}>
+              <Icon size={16} strokeWidth={2.4} /> {k}
             </button>
-          ))}
+          );
+        })}
+      </div>
+
+      <div className={cn('relative overflow-hidden rounded-[24px] p-5 text-white', isOut ? 'bg-gradient-to-br from-indigo-600 to-violet-600' : 'bg-gradient-to-br from-emerald-500 to-teal-600')}>
+        <span aria-hidden className="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-white/10" />
+        <div className="relative flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[13px] font-medium text-white/80">{isOut ? 'Pengeluaran' : 'Pemasukan'} bulan ini</p>
+            <p className="mt-0.5 truncate text-[26px] font-extrabold tabular-nums">{formatIDR(total)}</p>
+            <p className="text-[12px] text-white/75">{list.length} kategori{isOut && budgetTotal > 0 ? ` · anggaran ${formatIDR(budgetTotal)}` : ''}</p>
+          </div>
+          <button type="button" onClick={() => onAdd(tab)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/20 px-3.5 py-2 text-[13px] font-bold backdrop-blur hover:bg-white/30">
+            <Plus size={15} strokeWidth={2.6} /> Kategori
+          </button>
         </div>
-        {loading ? (
-          <p className="py-8 text-center text-[14px] text-slate-400">Memuat…</p>
-        ) : list.length === 0 ? (
-          <p className="py-8 text-center text-[14px] text-slate-500">Belum ada kategori {tab}.</p>
-        ) : (
-          <ul className="mt-1 divide-y divide-slate-200/60">
-            {list.map((r, i) => {
-              const v = categoryVisual(r.name, r.kind);
-              const amount = r.budget?.amount ?? 0;
-              const pct = amount > 0 ? Math.min(100, (r.spent / amount) * 100) : 0;
-              const over = amount > 0 && r.spent > amount && r.kind === 'pengeluaran';
-              return (
-                <li key={r.name}>
-                  <button type="button" onClick={() => onOpen(r.name)} className="flex w-full items-center gap-4 px-3 py-3.5 text-left hover:bg-slate-100/60">
-                    <span className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[22px]', v.tile)} aria-hidden>{v.emoji}</span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[16px] font-medium text-slate-900">{r.name}</span>
-                      {r.kind === 'pengeluaran' && (
-                        <span className="mt-1.5 block h-2 overflow-hidden rounded-full bg-slate-200/70">
-                          <span className={cn('block h-full rounded-full', over ? 'bg-rose-500' : BAR[i % BAR.length])} style={{ width: `${amount > 0 ? Math.max(2, pct) : 0}%` }} />
-                        </span>
-                      )}
-                      <span className="mt-1 flex justify-between gap-3 text-[13px] text-slate-500">
-                        <span className={cn('tabular-nums', over && 'font-semibold text-rose-600')}>{formatIDR(r.spent)}</span>
-                        <span className="tabular-nums">{amount > 0 ? `${formatIDR(amount)}${r.budget?.period === 'yearly' ? '/thn' : ''}` : r.kind === 'pengeluaran' ? 'Tanpa anggaran' : ''}</span>
-                      </span>
-                    </span>
-                    <ChevronRight size={17} className="shrink-0 text-slate-300" />
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+        {isOut && budgetTotal > 0 && (
+          <div className="relative mt-4">
+            <div className="h-2.5 overflow-hidden rounded-full bg-white/25">
+              <div className={cn('h-full rounded-full', overall > 100 ? 'bg-rose-300' : 'bg-white')} style={{ width: `${Math.min(100, overall)}%` }} />
+            </div>
+            <p className="mt-1.5 text-[12px] text-white/80">{Math.round(overall)}% anggaran terpakai</p>
+          </div>
         )}
       </div>
-      <p className="flex items-center gap-2 px-1 text-[13px] text-slate-500">
-        <CalendarDays size={15} /> Anggaran bulanan dihitung per bulan kalender (tanggal 1 sampai akhir bulan).
+
+      {loading ? (
+        <p className="py-8 text-center text-[14px] text-slate-400">Memuat…</p>
+      ) : list.length === 0 ? (
+        <p className="rounded-[22px] bg-slate-50 py-8 text-center text-[14px] text-slate-500">Belum ada kategori {tab}.</p>
+      ) : (
+        <ul className="grid gap-2.5">
+          {list.map((r) => {
+            const v = categoryVisual(r.name, r.kind);
+            const amount = r.budget?.amount ?? 0;
+            const pct = amount > 0 ? (r.spent / amount) * 100 : 0;
+            const over = amount > 0 && r.spent > amount && r.kind === 'pengeluaran';
+            return (
+              <li key={r.name}>
+                <button type="button" onClick={() => onOpen(r.name)} className={cn('flex w-full items-center gap-3 rounded-[20px] bg-white p-3 text-left ring-1 transition hover:-translate-y-0.5 hover:shadow-md', over ? 'ring-rose-200' : 'ring-slate-200/70')}>
+                  <span className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[23px]', v.tile)} aria-hidden>{v.emoji}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-semibold text-slate-900">{r.name}</span>
+                    <span className={cn('block truncate text-[13px] tabular-nums', over ? 'font-semibold text-rose-600' : 'text-slate-500')}>
+                      {formatIDR(r.spent)}{amount > 0 ? ` / ${formatIDR(amount)}${r.budget?.period === 'yearly' ? ' thn' : ''}` : ''}
+                    </span>
+                  </span>
+                  {r.kind === 'pengeluaran' ? (
+                    amount > 0 ? <BudgetRing pct={pct} over={over} /> : <span className="shrink-0 rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-600">Atur anggaran</span>
+                  ) : (
+                    <span className="shrink-0 text-[12px] text-slate-400">{r.subs.length} sub</span>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <p className="flex items-center gap-2 px-1 text-[12px] text-slate-500">
+        <CalendarDays size={14} /> Anggaran bulanan dihitung per bulan kalender (tanggal 1 sampai akhir bulan).
       </p>
     </div>
   );
@@ -308,7 +346,10 @@ export function KategoriDetailView({ row, onDone }: { row: CategoryRow; onDone: 
         <AvatarButton emoji={v.emoji} tile={v.tile} onClick={() => setPicking(true)} />
         {picking && <IconPicker value={defaultStyle(row.name, row.kind)} onPick={pickStyle} onClose={() => setPicking(false)} />}
         <p className="text-[20px] font-bold text-slate-900">{row.name}</p>
-        <p className="text-[14px] text-slate-500">{row.kind === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'} · {formatIDR(row.spent)} {row.budget?.period === 'yearly' ? 'tahun ini' : 'bulan ini'}</p>
+        <p className="flex items-center gap-2 text-[14px] text-slate-500">
+          <span className={cn('rounded-full px-2.5 py-0.5 text-[12px] font-semibold', row.kind === 'pemasukan' ? 'bg-emerald-50 text-emerald-700' : 'bg-indigo-50 text-indigo-700')}>{row.kind === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}</span>
+          {formatIDR(row.spent)} {row.budget?.period === 'yearly' ? 'tahun ini' : 'bulan ini'}
+        </p>
       </div>
 
       {row.kind === 'pengeluaran' && (

@@ -48,6 +48,8 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   hanya user yang sudah setup awal): HANYA menambah grup yang belum ada + mengisi
   ikon/jenis yang kosong; tidak me-rename/menghapus apa pun. Setup awal menandai
   template sudah diterapkan (grup yang tidak dipilih tidak ditambah).
+  Plus desain ulang daftar Kategori & Anggaran (kartu ringkasan, cincin %
+  anggaran, ikon kotak) supaya beda dari Oyenza.
 
 ## Migrasi D1
 
