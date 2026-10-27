@@ -32,10 +32,9 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   browser, PDF BCA, PDF lain & tangkapan layar via AI (kuota 40/hari), tinjau per
   baris, cek dobel, riwayat + Batalkan, ekspor CSV; hapus transaksi impor tidak
   lagi membalik saldo/total. Pembacaan AI sungguhan belum diuji di produksi.
-- **Belum di-deploy** (branch `claude/friendly-galileo-d9k5kc`): menu Profil
-  baru (kartu profil gradasi, ubin Paket/Referral/Koin Leo dengan saldo, grup
-  "Catat otomatis" dengan badge Kotak Masuk, label bagian) + versi **v3.0.1**
-  (`src/lib/version.ts` & `package.json`; versi Android/iOS native belum diubah).
+- Menu Profil baru + versi **v3.0.1** juga sudah live (2026-10-28). Versi ada di
+  `src/lib/version.ts` & `package.json`; versi Android/iOS native belum diubah.
+- **Belum di-deploy**: tidak ada.
 
 ## Migrasi D1
 
