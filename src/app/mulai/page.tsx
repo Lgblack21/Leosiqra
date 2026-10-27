@@ -199,7 +199,7 @@ export default function MulaiPage() {
                 <button type="button" onClick={() => go(1)} className={cn(pillMain, 'min-w-[12rem]')}>
                   Mulai sekarang <ArrowRight size={18} />
                 </button>
-                <Link href="/#produk" className={pillGhost}>Lihat contoh</Link>
+                <Link href="/contoh" className={pillGhost}>Lihat contoh</Link>
               </div>
               <p className="mt-5 text-[14px] text-slate-500">
                 Sudah punya akun? <Link href={loginHref} className="font-bold text-indigo-600 hover:underline">Masuk</Link>
