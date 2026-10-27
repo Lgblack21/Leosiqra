@@ -1,37 +1,42 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
-
+import { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import {
-  TrendingUp,
-  Wallet,
-  TrendingDown,
-  PiggyBank,
-  CreditCard,
-  Landmark,
-  Search,
+  ArrowDownLeft,
+  ArrowUpRight,
+  ArrowLeftRight,
   ChevronRight,
-  LayoutDashboard,
-  RefreshCw,
+  CreditCard,
+  FileCheck,
+  Globe,
+  HandCoins,
+  Landmark,
+  Mic,
+  PiggyBank,
+  Plus,
+  ScanLine,
+  Send,
+  Sparkles,
+  Wallet,
+  CalendarRange,
   Building2,
-  Banknote
+  Banknote,
 } from 'lucide-react';
-import { cn, isIncomingTransaction, formatIDR, formatMoney } from '@/lib/utils';
-import { EmptyState } from '@/components/ui/EmptyState';
+import { cn, formatIDR, formatMoney, isIncomingTransaction } from '@/lib/utils';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { Modal } from '@/components/ui/Modal';
-import { Card, CardHeader } from '@/components/ui/Card';
-import { StatCard } from '@/components/ui/StatCard';
-import { AnimatedNumber } from '@/components/app/AnimatedNumber';
-import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { LogoImage } from '@/components/ui/LogoImage';
+import { AnimatedNumber } from '@/components/app/AnimatedNumber';
+import { LeoMascot } from '@/components/mascot/LeoMascot';
+import { useModal } from '@/context/ModalContext';
+import { auth } from '@/lib/cf-client';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { savingsService, Saving } from '@/lib/services/savingsService';
 import { accountService, Account } from '@/lib/services/accountService';
+import { budgetService, Budget } from '@/lib/services/budgetService';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { isCreditAccountType, computeCreditUsage, getCardCycle } from '@/lib/creditCard';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
@@ -39,17 +44,20 @@ import { GamificationStrip } from '@/components/GamificationStrip';
 import { WeeklyInsights } from '@/components/WeeklyInsights';
 import { SecurityNudge } from '@/components/SecurityNudge';
 
-interface MarketTicker {
-  label: string; sub: string; val: string; pct: string; up: boolean | null;
-  color: string;
-}
+// Ringkasan (dashboard member): kartu sapaan hari ini → catatan hari ini →
+// pengeluaran bulan terpilih per kategori + budget → transaksi terbaru →
+// kartu fitur (saldo, tabungan, investasi, tagihan kartu, hutang, pajak…).
+// Semua nominal dalam IDR (amountIDR yang dikonversi saat disimpan).
 
-const FILTER_OPTIONS = ['Semua', 'Pemasukan', 'Pengeluaran', 'Investasi', 'Tabungan'] as const;
-type FilterType = typeof FILTER_OPTIONS[number];
+const greeting = (h: number) => (h >= 4 && h < 11 ? 'Selamat pagi' : h >= 11 && h < 15 ? 'Selamat siang' : h >= 15 && h < 18 ? 'Selamat sore' : 'Selamat malam');
+const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+const short = (n: number) =>
+  Math.abs(n) >= 1e6 ? `Rp${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 2 })} jt` : Math.abs(n) >= 1e3 ? `Rp${Math.round(n / 1e3)} rb` : formatIDR(n);
+const toIdrAmount = (t: { amount: number; amountIDR?: number }) => Number(t.amountIDR) || Number(t.amount) || 0;
+const BAR_COLORS = ['bg-indigo-600', 'bg-violet-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500', 'bg-pink-500', 'bg-slate-400'];
+const card = 'rounded-[24px] bg-white ring-1 ring-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04)]';
 
 export default function MonthlyDashboard() {
-  const [filterType, setFilterType] = useState<FilterType>('Semua');
-  const [searchQuery, setSearchQuery] = useState('');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   // Semua transaksi (tanpa filter bulan) — dipakai siklus tagihan kartu
   // kredit, yang tanggal cetaknya bisa jatuh di bulan sebelumnya.
@@ -57,8 +65,6 @@ export default function MonthlyDashboard() {
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [savings, setSavings] = useState<Saving[]>([]);
   const [loading, setLoading] = useState(true);
-  const [marketTickers, setMarketTickers] = useState<MarketTicker[]>([]);
-  const [marketLoading, setMarketLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   // Catatan Hutang "Kartu Kredit" yang belum lunas — dipakai untuk tagihan
@@ -69,6 +75,18 @@ export default function MonthlyDashboard() {
   const [accountsLoaded, setAccountsLoaded] = useState(false);
   const [fxRates, setFxRates] = useState<ExchangeRates>({});
   const [showAccountsModal, setShowAccountsModal] = useState(false);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  // Jam & tanggal dari perangkat, baru diketahui setelah hydrate (static export).
+  const [now, setNow] = useState<Date | null>(null);
+  const { openModal } = useModal();
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sapaan & "hari ini" mengikuti jam perangkat
+    setNow(new Date());
+    const loadBudgets = () => budgetService.getUserBudgets('session').then(setBudgets).catch(console.error);
+    loadBudgets();
+    return subscribeToCollectionChanges('budgets', loadBudgets);
+  }, []);
 
   // Saldo Bersih = total saldo semua rekening saat ini, tidak terikat bulan
   // yang dipilih di MonthPicker (sama seperti "Total Saldo" di Profile).
@@ -138,62 +156,10 @@ export default function MonthlyDashboard() {
     };
   }, [selectedMonth, selectedYear]);
 
-  const fetchMarket = useCallback(async () => {
-    setMarketLoading(true);
-    try {
-      const [cryptoRes, fxRes] = await Promise.all([
-        fetch('/api/market/coingecko/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true'),
-        fetch('https://open.er-api.com/v6/latest/USD')
-      ]);
-      const crypto = cryptoRes.ok ? await cryptoRes.json() : null;
-      const fx = fxRes.ok ? await fxRes.json() : null;
-      const tickers: MarketTicker[] = [
-        { label: 'BTC/USD', sub: 'Bitcoin', val: crypto ? `$${Number(crypto.bitcoin?.usd).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-', pct: crypto ? `${Number(crypto.bitcoin?.usd_24h_change).toFixed(2)}%` : '-', up: crypto ? crypto.bitcoin?.usd_24h_change >= 0 : null, color: 'bg-amber-100 text-amber-600' },
-        { label: 'ETH/USD', sub: 'Ethereum', val: crypto ? `$${Number(crypto.ethereum?.usd).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-', pct: crypto ? `${Number(crypto.ethereum?.usd_24h_change).toFixed(2)}%` : '-', up: crypto ? crypto.ethereum?.usd_24h_change >= 0 : null, color: 'bg-slate-100 text-slate-600' },
-        { label: 'USD/IDR', sub: 'Rupiah', val: fx ? `Rp${Number(fx.rates?.IDR).toLocaleString('id-ID', { maximumFractionDigits: 0 })}` : '-', pct: '-', up: null, color: 'bg-emerald-100 text-emerald-600' },
-        { label: 'EUR/USD', sub: 'Euro', val: fx ? `$${(1 / Number(fx.rates?.EUR)).toFixed(4)}` : '-', pct: '-', up: null, color: 'bg-blue-100 text-blue-600' },
-      ];
-      setMarketTickers(tickers);
-    } catch (e) { console.error(e); }
-    finally { setMarketLoading(false); }
-  }, []);
-
-  useEffect(() => { fetchMarket(); }, [fetchMarket]);
-
-  const filteredData = useMemo(() => {
-    // Catatan Hutang/Piutang (type "debt") bukan arus kas — kalau ikut
-    // ditampilkan di sini bareng transaksi asli, kelihatan seperti transaksi
-    // dobel untuk pembelian yang sama (lihat fix yang sama di Transaksi
-    // Harian). Tidak ada tab filter khusus "Hutang" di halaman ini, jadi
-    // kalau tidak dikecualikan dari "Semua" ia cuma numpang lewat tanpa
-    // tempat yang benar.
-    if (filterType === 'Semua') return transactions.filter(t => t.type !== 'debt');
-    if (filterType === 'Pemasukan') return transactions.filter((t) => t.type === 'pemasukan');
-    if (filterType === 'Pengeluaran') return transactions.filter((t) => t.type === 'pengeluaran');
-    if (filterType === 'Investasi') {
-      return transactions.filter((t) =>
-        t.type === 'investasi' || /investasi|saham|deposito/i.test(t.category || '')
-      );
-    }
-    if (filterType === 'Tabungan') {
-      return transactions.filter((t) =>
-        t.type === 'tabungan' || /tabungan|dana darurat/i.test(t.category || '')
-      );
-    }
-    return transactions;
-  }, [transactions, filterType]);
-
-  // Halaman ini ditandai "(Dalam IDR)" — jadi setiap nominal harus pakai
-  // amountIDR (sudah dikonversi saat transaksi disimpan), bukan .amount
-  // mentah yang masih dalam mata uang asli transaksi itu.
-  const toIdrAmount = (t: { amount: number; amountIDR?: number }) => Number(t.amountIDR) || Number(t.amount) || 0;
   const totalPemasukan = useMemo(() => transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + toIdrAmount(t), 0), [transactions]);
   const totalPengeluaran = useMemo(() => transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + toIdrAmount(t), 0), [transactions]);
   const totalInvestasi = useMemo(() => investments.reduce((s, i) => s + (Number(i.amountIDR) || Number(i.amountInvested) || 0), 0), [investments]);
-  const netBalance = totalPemasukan - totalPengeluaran;
-  // Saldo Tabungan kartu dashboard bersifat all-time (sama seperti Investasi
-  // di sebelahnya) — bukan sisa pemasukan-pengeluaran bulan berjalan, supaya
-  // benar-benar merefleksikan total setoran aktif di fitur Tabungan.
+  // Saldo Tabungan bersifat all-time (total setoran aktif di fitur Tabungan).
   const totalTabunganSaldo = useMemo(() => savings.reduce((s, item) => {
     const amt = Number(item.amountIDR) || item.amount;
     return item.transactionType === 'Penarikan' ? s - amt : s + amt;
@@ -203,12 +169,9 @@ export default function MonthlyDashboard() {
     [accounts, fxRates]
   );
 
-  const formatRp = formatIDR;
-
-  // Tagihan Kartu Kredit = total terpakai semua rekening kartu kredit (dari
-  // saldonya, lihat lib/creditCard.ts) + catatan Hutang "Kartu Kredit" yang
-  // belum lunas dan TIDAK menempel ke rekening kartu kredit. Catatan yang
-  // menempel ke rekening kartu dilewati supaya tidak terhitung dobel.
+  // Tagihan Kartu Kredit = total terpakai semua rekening kartu kredit + catatan
+  // Hutang "Kartu Kredit" lama yang belum lunas & TIDAK menempel ke rekening
+  // kartu (supaya tidak terhitung dobel). Lihat lib/creditCard.ts.
   const creditCardBills = useMemo(() => {
     const creditAccounts = accounts.filter((a) => isCreditAccountType(a.type));
     const creditIds = new Set(creditAccounts.map((a) => a.id));
@@ -222,8 +185,7 @@ export default function MonthlyDashboard() {
     return cardsUsed + legacyDebts;
   }, [accounts, fxRates, unpaidCardDebts]);
 
-  // Jatuh tempo terdekat di antara kartu yang siklusnya diatur & masih punya
-  // tagihan periode tercetak.
+  // Jatuh tempo terdekat di antara kartu yang siklusnya diatur & masih punya tagihan.
   const nearestDue = useMemo(() => {
     const cycles = accounts
       .filter((a) => isCreditAccountType(a.type))
@@ -242,26 +204,60 @@ export default function MonthlyDashboard() {
     return `${account.name}: jatuh tempo ${date} · ${cycle.daysUntilDue} hari lagi`;
   })();
 
-  const visibleData = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return filteredData;
-    return filteredData.filter((t) =>
-      `${t.category || ''} ${t.subCategory || ''} ${t.note || ''}`.toLowerCase().includes(q)
-    );
-  }, [filteredData, searchQuery]);
+  const accountName = useMemo(() => new Map(accounts.map((a) => [a.id, a.name])), [accounts]);
+  // Arus kas saja — catatan hutang/piutang (type "debt") bukan transaksi kas.
+  const cashFlow = useMemo(() => allTransactions.filter((t) => t.type !== 'debt'), [allTransactions]);
+  const todays = useMemo(() => (now ? cashFlow.filter((t) => sameDay(new Date(t.date), now)) : []), [cashFlow, now]);
+  const todaysSpend = todays.filter((t) => t.type === 'pengeluaran');
+  const spentToday = todaysSpend.reduce((s, t) => s + toIdrAmount(t), 0);
+  const recent = useMemo(
+    () => [...cashFlow].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 8),
+    [cashFlow]
+  );
 
-  // Tab "Semua" tanpa pencarian tetap pakai total resmi (pemasukan vs
-  // pengeluaran murni, transfer tidak dihitung). Selain itu, total dihitung
-  // dari baris yang sedang tampil — sebelumnya footer selalu menampilkan
-  // total pemasukan seluruh bulan meskipun filternya "Pengeluaran".
-  const footerTotals = useMemo(() => {
-    if (filterType === 'Semua' && !searchQuery.trim()) {
-      return { masuk: totalPemasukan, keluar: totalPengeluaran, net: netBalance };
+  // "Biasanya jam segini": pengeluaran yang paling sering dicatat (createdAt)
+  // di jam yang sama (±1 jam) dalam 60 hari terakhir — pintasan untuk mencatat lagi.
+  const usual = useMemo(() => {
+    if (!now) return [];
+    const since = now.getTime() - 60 * 86400e3;
+    const hour = now.getHours();
+    const count = new Map<string, { n: number; sum: number }>();
+    for (const t of cashFlow) {
+      const d = new Date(t.createdAt);
+      if (t.type !== 'pengeluaran' || Number.isNaN(d.getTime()) || d.getTime() < since || Math.abs(d.getHours() - hour) > 1) continue;
+      const key = (t.note || t.subCategory || t.category || '').trim();
+      if (!key) continue;
+      const c = count.get(key) ?? { n: 0, sum: 0 };
+      count.set(key, { n: c.n + 1, sum: c.sum + toIdrAmount(t) });
     }
-    const masuk = visibleData.filter(isIncomingTransaction).reduce((s, t) => s + toIdrAmount(t), 0);
-    const keluar = visibleData.filter((t) => !isIncomingTransaction(t)).reduce((s, t) => s + toIdrAmount(t), 0);
-    return { masuk, keluar, net: masuk - keluar };
-  }, [filterType, searchQuery, visibleData, totalPemasukan, totalPengeluaran, netBalance]);
+    return [...count.entries()].filter(([, c]) => c.n >= 2).sort((a, b) => b[1].n - a[1].n).slice(0, 2).map(([title, c]) => ({ title, avg: Math.round(c.sum / c.n / 1000) * 1000 }));
+  }, [cashFlow, now]);
+
+  // Bulan terpilih vs bulan sebelumnya (pengeluaran, IDR).
+  const isCurrentMonth = now ? selectedMonth === now.getMonth() && selectedYear === now.getFullYear() : false;
+  const prevMonthSpend = useMemo(() => {
+    const pm = new Date(selectedYear, selectedMonth - 1, 1);
+    return cashFlow
+      .filter((t) => {
+        const d = new Date(t.date);
+        return t.type === 'pengeluaran' && d.getMonth() === pm.getMonth() && d.getFullYear() === pm.getFullYear();
+      })
+      .reduce((s, t) => s + toIdrAmount(t), 0);
+  }, [cashFlow, selectedMonth, selectedYear]);
+  const monthLabel = new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(selectedYear, selectedMonth));
+  const prevMonthLabel = new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(selectedYear, selectedMonth - 1));
+
+  // Ke mana uangmu: pengeluaran bulan terpilih per kategori + budget bulanan kategori itu.
+  const categories = useMemo(() => {
+    const byCat = new Map<string, number>();
+    for (const t of transactions) if (t.type === 'pengeluaran') byCat.set(t.category || 'Lainnya', (byCat.get(t.category || 'Lainnya') ?? 0) + toIdrAmount(t));
+    const monthlyBudget = new Map(budgets.filter((b) => b.type === 'pengeluaran' && b.period === 'monthly').map((b) => [b.category, Number(b.amount) || 0]));
+    return [...byCat.entries()].sort((a, b) => b[1] - a[1]).map(([category, spent]) => ({ category, spent, budget: monthlyBudget.get(category) ?? 0 }));
+  }, [transactions, budgets]);
+  const maxCat = Math.max(1, ...categories.map((c) => c.spent));
+  const overBudget = categories.reduce((s, c) => (c.budget > 0 && c.spent > c.budget ? s + (c.spent - c.budget) : s), 0);
+  const outsideBudget = categories.reduce((s, c) => (c.budget > 0 ? s : s + c.spent), 0);
+  const hasBudgets = categories.some((c) => c.budget > 0);
 
   const getIconForType = (type: string) => {
     switch (type) {
@@ -273,7 +269,6 @@ export default function MonthlyDashboard() {
       default: return <Building2 size={18} className="text-white" />;
     }
   };
-
   const getBgForType = (type: string) => {
     switch (type) {
       case 'Bank Account': return 'bg-blue-600';
@@ -284,35 +279,162 @@ export default function MonthlyDashboard() {
       default: return 'bg-blue-500';
     }
   };
-  const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short' }).format(d);
 
-  const footerLabel = filterType === 'Semua' ? 'Total Keseluruhan' : `Total ${filterType}`;
+  const txTitle = (t: Transaction) => t.note || t.subCategory || t.category;
+  // `date` cuma tanggal (YYYY-MM-DD); jam diambil dari waktu dicatat (createdAt).
+  const txLine = (t: Transaction, withDate: boolean) => {
+    const created = new Date(t.createdAt);
+    const time = Number.isNaN(created.getTime()) ? '' : new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' }).format(created);
+    const day = withDate ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(t.date)) : '';
+    const acc = accountName.get(t.accountId);
+    return [day, time, t.category, acc].filter(Boolean).join(' · ');
+  };
+  const TxRow = ({ t, withDate = false }: { t: Transaction; withDate?: boolean }) => {
+    const incoming = isIncomingTransaction(t) || (t.type === 'topup' && Boolean(t.subCategory?.includes('Masuk')));
+    // Pindah dana antar rekening sendiri / ke tabungan & investasi: netral, bukan belanja.
+    const transfer = !incoming && t.type !== 'pengeluaran';
+    return (
+      <div className="flex items-center gap-3.5 py-3">
+        <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl', incoming ? 'bg-emerald-50 text-emerald-600' : transfer ? 'bg-slate-100 text-slate-500' : 'bg-indigo-50 text-indigo-600')}>
+          {incoming ? <ArrowDownLeft size={18} /> : transfer ? <ArrowLeftRight size={18} /> : <ArrowUpRight size={18} />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[15px] font-semibold text-slate-900">{txTitle(t)}</p>
+          <p className="truncate text-[12px] text-slate-500">{txLine(t, withDate)}</p>
+        </div>
+        <p className={cn('shrink-0 text-[15px] font-bold tabular-nums', incoming ? 'text-emerald-600' : transfer ? 'text-slate-500' : 'text-slate-900')}>
+          {incoming ? '+' : transfer ? '' : '−'}{formatIDR(toIdrAmount(t))}
+        </p>
+      </div>
+    );
+  };
 
-  const pemasukanPct = totalPengeluaran > 0 ? Math.min(Math.round((totalPemasukan / Math.max(totalPengeluaran, 1)) * 100), 100) : 100;
-  const pengeluaranPct = totalPemasukan > 0 ? Math.min(Math.round((totalPengeluaran / Math.max(totalPemasukan, 1)) * 100), 100) : 0;
-  // % porsi Tabungan dari total saldo semua rekening (net worth), bukan lagi
-  // relatif ke pemasukan bulanan — konsisten dengan sifat all-time-nya.
-  const tabunganPct = totalSaldoRekening > 0 ? Math.min(Math.round((totalTabunganSaldo / totalSaldoRekening) * 100), 100) : 0;
-  const investasiPct = totalPemasukan > 0 ? Math.min(Math.round((totalInvestasi / Math.max(totalPemasukan, 1)) * 100), 100) : 0;
+  const firstName = auth.currentUser?.displayName?.split(' ')[0];
+  const statsLoading = loading && allTransactions.length === 0;
 
-  const expenseCount = transactions.filter(t => t.type === 'pengeluaran').length;
-  const incomeCount = transactions.filter(t => t.type === 'pemasukan').length;
-  const topExpenses = transactions
-    .filter(t => t.type === 'pengeluaran')
-    .sort((a, b) => toIdrAmount(b) - toIdrAmount(a))
-    .slice(0, 3);
-  const periodLabel = new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth));
-  // Skeleton cuma di load pertama per periode — refetch realtime (tiap ada
-  // transaksi baru) jangan bikin angka yang sudah tampil kedip jadi skeleton.
-  const statsLoading = loading && transactions.length === 0;
+  const features: { href?: string; onClick?: () => void; icon: React.ElementType; tile: string; label: string; value: string; caption: string }[] = [
+    { onClick: () => setShowAccountsModal(true), icon: Wallet, tile: 'bg-indigo-600', label: 'Saldo bersih', value: accountsLoaded ? formatIDR(totalSaldoRekening) : '…', caption: `${accounts.length} rekening & dompet` },
+    { href: '/membership/tabungan', icon: PiggyBank, tile: 'bg-pink-500', label: 'Tabungan', value: formatIDR(totalTabunganSaldo), caption: `${savings.length} catatan tabungan` },
+    { href: '/membership/investment', icon: Landmark, tile: 'bg-violet-500', label: 'Investasi', value: formatIDR(totalInvestasi), caption: `${investments.filter((i) => i.status === 'Active').length} investasi aktif` },
+    { href: '/membership/cards', icon: CreditCard, tile: 'bg-rose-500', label: 'Tagihan kartu', value: formatIDR(creditCardBills), caption: dueLabel ?? 'Tidak ada tagihan tercetak' },
+    { href: '/membership/transactions/debt', icon: HandCoins, tile: 'bg-amber-500', label: 'Hutang lain', value: formatIDR(otherDebts), caption: otherDebts > 0 ? 'Belum lunas' : 'Tidak ada hutang' },
+    { href: '/membership/pajak-center', icon: FileCheck, tile: 'bg-emerald-500', label: 'Pajak Center', value: 'SPT tahunan', caption: 'Harta, utang & penghasilan setahun' },
+    { href: '/membership/annual', icon: CalendarRange, tile: 'bg-sky-500', label: 'Laporan tahunan', value: String(selectedYear), caption: 'Rekap 12 bulan' },
+    { href: '/membership/market-data', icon: Globe, tile: 'bg-slate-700', label: 'Data pasar', value: 'Kurs & saham', caption: 'Pantau harga terbaru' },
+  ];
 
   return (
-    <div className="stagger-in space-y-6 md:space-y-8 max-w-[1400px] pb-10">
-      <PageHeader
-        icon={<LayoutDashboard size={22} />}
-        title="Dashboard Bulanan"
-        subtitle={`Ringkasan keuanganmu periode ${periodLabel}`}
-        actions={
+    <div className="mx-auto max-w-5xl space-y-6 pb-12 md:space-y-8">
+      {/* Judul + aksi cepat */}
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-[30px] font-extrabold tracking-tight text-slate-900 md:text-[40px]">Ringkasan</h1>
+        <div className="flex gap-2">
+          <Link href="/input-cepat" className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">
+            <ScanLine size={16} /> <span className="hidden sm:inline">Struk</span>
+          </Link>
+          <Link href="/input-cepat" className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">
+            <Mic size={16} /> <span className="hidden sm:inline">Suara</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* Kartu sapaan: hari ini */}
+      <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-500 p-6 text-white shadow-[0_24px_50px_-28px_rgba(79,70,229,0.8)] md:p-8">
+        <div aria-hidden className="absolute inset-0 opacity-25 [background-image:radial-gradient(white_1px,transparent_1px)] [background-size:20px_20px]" />
+        <div aria-hidden className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/15 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-8 right-2 hidden md:block">
+          <LeoMascot mood="idle" size={170} />
+        </div>
+        <div className="relative max-w-xl">
+          <p className="text-[28px] font-extrabold tracking-tight md:text-[34px]">
+            {now ? greeting(now.getHours()) : 'Halo'}{firstName ? `, ${firstName}` : ''}.
+          </p>
+          <p className="mt-1 text-[14px] text-white/80">
+            Hari ini{now ? ` · ${now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}` : ''}
+          </p>
+          {statsLoading ? (
+            <div className="mt-4 h-14 w-56 animate-pulse rounded-2xl bg-white/20" />
+          ) : (
+            <p className="mt-4 text-[44px] font-extrabold leading-none tracking-tight tabular-nums md:text-[56px]">
+              <AnimatedNumber value={spentToday} format={formatIDR} />
+            </p>
+          )}
+          <p className="mt-2 text-[14px] text-white/80">
+            {todaysSpend.length > 0 ? `keluar dari ${todaysSpend.length} pembayaran` : 'Belum ada pengeluaran hari ini'}
+          </p>
+          <Link href="/membership/ai-leosiqra" className="mt-6 flex w-full items-center gap-3 rounded-full bg-white/95 py-2 pl-5 pr-2 text-slate-400 shadow-lg transition-colors hover:bg-white">
+            <Sparkles size={17} className="text-indigo-500" />
+            <span className="flex-1 truncate text-[15px]">Tanya Leo: bulan ini boros di mana?</span>
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-white"><Send size={16} /></span>
+          </Link>
+          {(usual.length > 0 || dueLabel) && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {usual.length > 0 && <span className="text-[13px] font-semibold text-white/85">Biasanya jam segini</span>}
+              {usual.map((u) => (
+                <button key={u.title} type="button" onClick={() => openModal('harian')} className="flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[13px] font-semibold backdrop-blur hover:bg-white/30">
+                  {u.title} · {short(u.avg)} <Plus size={13} />
+                </button>
+              ))}
+              {dueLabel && (
+                <Link href="/membership/cards" className="flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[13px] font-semibold backdrop-blur hover:bg-white/30">
+                  <CreditCard size={13} /> {dueLabel}
+                </Link>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <SecurityNudge />
+
+      {/* Hari ini */}
+      <section className={cn(card, 'p-5 md:p-6')}>
+        <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-slate-400">
+          Hari ini{now ? ` · ${now.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })}` : ''}
+        </p>
+        <p className="mt-1 text-[20px] font-extrabold tracking-tight text-slate-900">
+          {todaysSpend.length} pembayaran · {formatIDR(spentToday)}
+        </p>
+        {statsLoading ? (
+          <div className="mt-3 space-y-2">{[1, 2].map((i) => <Skeleton key={i} className="h-12" />)}</div>
+        ) : todays.length === 0 ? (
+          <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl bg-slate-50 py-6 text-center sm:flex-row sm:px-6 sm:text-left">
+            <LeoMascot mood="peek" size={72} />
+            <p className="flex-1 text-[14px] text-slate-500">Belum ada catatan hari ini. Tadi bayar apa?</p>
+            <button type="button" onClick={() => openModal('harian')} className="rounded-full bg-indigo-600 px-5 py-2.5 text-[14px] font-bold text-white">Catat sekarang</button>
+          </div>
+        ) : (
+          <>
+            <div className="mt-2 divide-y divide-slate-100">{todays.slice(0, 3).map((t, i) => <TxRow key={t.id || i} t={t} />)}</div>
+            {todays.length > 3 && <p className="mt-1 text-[13px] font-semibold text-slate-400">+{todays.length - 3} lagi</p>}
+            <Link href="/membership/transactions/daily" className="mt-4 flex items-center justify-center rounded-full bg-slate-50 py-3 text-[14px] font-bold text-slate-700 hover:bg-slate-100">
+              Lihat semua catatan hari ini
+            </Link>
+          </>
+        )}
+      </section>
+
+      <GamificationStrip />
+      <WeeklyInsights target="web" />
+
+      {/* Pengeluaran bulan terpilih per kategori */}
+      <section className="space-y-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-[14px] font-semibold text-slate-500">
+              Pengeluaran {monthLabel}{isCurrentMonth && now ? ` · hari ke-${now.getDate()}` : ''}
+            </p>
+            <Link href="/membership/transactions/daily" className="mt-1 flex items-center gap-1 text-[34px] font-extrabold leading-none tracking-tight text-slate-900 tabular-nums md:text-[40px]">
+              {formatIDR(totalPengeluaran)} <ChevronRight size={22} className="text-slate-300" />
+            </Link>
+            {prevMonthSpend > 0 && (
+              <p className={cn('mt-2 flex items-center gap-1 text-[14px]', totalPengeluaran > prevMonthSpend ? 'text-rose-600' : 'text-emerald-600')}>
+                {totalPengeluaran > prevMonthSpend ? <ArrowUpRight size={15} /> : <ArrowDownLeft size={15} />}
+                {short(Math.abs(totalPengeluaran - prevMonthSpend))} {totalPengeluaran > prevMonthSpend ? 'lebih banyak' : 'lebih sedikit'} dari {prevMonthLabel}
+              </p>
+            )}
+            {totalPemasukan > 0 && <p className="mt-1 text-[13px] text-slate-500">Pemasukan {monthLabel}: <span className="font-bold text-emerald-600">{formatIDR(totalPemasukan)}</span></p>}
+          </div>
           <MonthPicker
             value={{ month: selectedMonth, year: selectedYear }}
             onChange={({ month, year }) => {
@@ -320,288 +442,88 @@ export default function MonthlyDashboard() {
               setSelectedYear(year);
             }}
           />
-        }
-      />
-
-      <GamificationStrip />
-
-      <SecurityNudge />
-
-      <WeeklyInsights target="web" />
-
-      {/* Baris 1: Saldo (kartu utama) + arus kas bulan ini */}
-      <div className="stagger-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-        <button
-          type="button"
-          onClick={() => setShowAccountsModal(true)}
-          className="sheen md:col-span-2 lg:col-span-1 text-left w-full bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-card p-5 md:p-6 shadow-xl shadow-emerald-600/15 relative overflow-hidden hover:shadow-2xl hover:shadow-emerald-600/25 hover:-translate-y-0.5 active:scale-[0.99] transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300"
-        >
-          <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
-          <div className="flex items-center justify-between gap-2 mb-4">
-            <p className="text-label font-bold text-emerald-100 uppercase">Saldo Bersih</p>
-            <span className="flex items-center gap-0.5 text-caption font-bold text-emerald-100">
-              Lihat rekening <ChevronRight size={14} />
-            </span>
-          </div>
-          {!accountsLoaded ? (
-            <div className="h-9 w-2/3 mb-5 rounded-control bg-white/20 animate-pulse" />
-          ) : (
-            <p className={cn('text-2xl md:text-3xl font-black mb-5 tracking-tight tabular-nums truncate', totalSaldoRekening >= 0 ? 'text-white' : 'text-rose-200')}>
-              <AnimatedNumber value={totalSaldoRekening} format={formatRp} />
-            </p>
-          )}
-          <p className="text-caption font-bold text-emerald-100">
-            {accounts.length} rekening · {transactions.length} transaksi bulan ini
-          </p>
-        </button>
-
-        <StatCard
-          label="Pemasukan"
-          icon={<TrendingUp size={12} className="text-emerald-500" />}
-          value={<AnimatedNumber value={totalPemasukan} format={formatRp} />}
-          loading={statsLoading}
-          badge={<Badge tone={pengeluaranPct <= 80 ? 'info' : 'danger'}>{pengeluaranPct <= 80 ? 'Sehat' : 'Waspada'}</Badge>}
-          progress={pemasukanPct}
-          progressClassName="bg-emerald-500"
-          caption={`${incomeCount} transaksi`}
-        />
-        <StatCard
-          label="Pengeluaran"
-          icon={<TrendingDown size={12} className="text-rose-500" />}
-          value={<AnimatedNumber value={totalPengeluaran} format={formatRp} />}
-          loading={statsLoading}
-          badge={<Badge tone={pengeluaranPct > 90 ? 'danger' : 'neutral'}>{pengeluaranPct > 90 ? 'Waspada' : 'Normal'}</Badge>}
-          progress={pengeluaranPct}
-          progressClassName="bg-rose-500"
-          caption={`${pengeluaranPct}% dari pemasukan`}
-        />
-      </div>
-
-      {/* Baris 2: aset & kewajiban */}
-      <div className="stagger-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <StatCard
-          label="Tabungan"
-          icon={<PiggyBank size={12} className="text-blue-500" />}
-          value={<AnimatedNumber value={totalTabunganSaldo} format={formatRp} />}
-          loading={statsLoading}
-          badge={<Badge tone="info">{savings.length} trx</Badge>}
-          progress={tabunganPct}
-          progressClassName="bg-blue-500"
-          caption={`${tabunganPct}% dari saldo`}
-        />
-        <StatCard
-          label="Investasi"
-          icon={<Wallet size={12} className="text-slate-600" />}
-          value={<AnimatedNumber value={totalInvestasi} format={formatRp} />}
-          loading={statsLoading}
-          badge={<Badge tone="info">{investments.filter(i => i.status === 'Active').length} aktif</Badge>}
-          progress={investasiPct}
-          caption={`${investasiPct}% dari pemasukan`}
-        />
-        <StatCard
-          label="Tagihan Kartu Kredit"
-          icon={<CreditCard size={12} className="text-rose-500" />}
-          value={<AnimatedNumber value={creditCardBills} format={formatRp} />}
-          valueClassName={creditCardBills > 0 ? 'text-rose-500' : undefined}
-          loading={statsLoading}
-          badge={nearestDue && (nearestDue.cycle.overdue || nearestDue.cycle.daysUntilDue <= 3)
-            ? <Badge tone={nearestDue.cycle.overdue ? 'danger' : 'warning'}>{nearestDue.cycle.overdue ? 'Telat' : 'Segera'}</Badge>
-            : undefined}
-          caption={dueLabel ?? (creditCardBills > 0 ? 'Perlu dibayar' : 'Tidak ada tagihan')}
-        />
-        <StatCard
-          label="Hutang Lainnya"
-          icon={<Landmark size={12} className="text-slate-600" />}
-          value={<AnimatedNumber value={otherDebts} format={formatRp} />}
-          valueClassName={otherDebts > 0 ? 'text-rose-500' : undefined}
-          loading={statsLoading}
-          caption={otherDebts > 0 ? 'Kewajiban aktif' : 'Bebas hutang'}
-        />
-      </div>
-
-      {/* Baris 3: pengeluaran tertinggi + pulse pasar */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        <Card className="p-5 md:p-6 lg:col-span-2">
-          <CardHeader title="Pengeluaran Tertinggi" icon={<TrendingDown size={12} className="text-rose-500" />} />
-          {statsLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {[1, 2, 3].map(i => <Skeleton key={i} className="h-16" />)}
-            </div>
-          ) : topExpenses.length === 0 ? (
-            <p className="text-sm text-slate-400 py-4">Belum ada pengeluaran di periode ini.</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {topExpenses.map((trx, i) => (
-                <div key={trx.id || i} className="rounded-control bg-slate-50 p-3.5 flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 text-xs font-black">
-                    #{i + 1}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-caption font-medium text-slate-500 truncate">{trx.category}</p>
-                    <p className="text-sm font-bold text-slate-900 truncate">{trx.note || trx.category}</p>
-                    <p className="text-xs font-black text-rose-500 tabular-nums">{formatRp(toIdrAmount(trx))}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          {expenseCount > 3 && (
-            <p className="text-caption text-slate-400 mt-3">dari {expenseCount} transaksi pengeluaran bulan ini</p>
-          )}
-        </Card>
-
-        <Card className="p-5 md:p-6">
-          <CardHeader
-            title="Pulse Pasar"
-            action={
-              <button
-                onClick={fetchMarket}
-                disabled={marketLoading}
-                aria-label="Muat ulang data pasar"
-                className="p-1.5 -m-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
-              >
-                <RefreshCw size={14} className={marketLoading ? 'animate-spin' : ''} />
-              </button>
-            }
-          />
-          <div className="space-y-4">
-            {marketLoading ? (
-              [1, 2, 3, 4].map(i => <Skeleton key={i} className="h-9" />)
-            ) : marketTickers.map((m, i) => (
-              <div key={i} className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-label font-black', m.color)}>
-                    {m.label.split('/')[0].slice(0, 3)}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-900 leading-none mb-1">{m.label}</p>
-                    <p className="text-caption text-slate-400">{m.sub}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-black text-slate-900 leading-none mb-1 tabular-nums">{m.val}</p>
-                  <p className={cn(
-                    'text-caption font-bold tabular-nums',
-                    m.up === null ? 'text-slate-300' : m.up ? 'text-emerald-500' : 'text-rose-500'
-                  )}>{m.up !== null && (m.up ? '+' : '')}{m.pct}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-
-      {/* Daftar transaksi periode ini */}
-      <Card className="overflow-hidden">
-        <div className="p-5 md:p-6 flex flex-col gap-4 border-b border-slate-100">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 className="text-base font-bold text-slate-900">Transaksi Bulan Ini</h2>
-              <p className="text-caption text-slate-400">Semua nominal dalam IDR</p>
-            </div>
-            <div className="relative w-full sm:w-64">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari kategori atau catatan..."
-                aria-label="Cari transaksi"
-                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-100 rounded-control text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 transition-all"
-              />
-            </div>
-          </div>
-          <SegmentedControl
-            ariaLabel="Filter jenis transaksi"
-            options={FILTER_OPTIONS}
-            value={filterType}
-            onChange={setFilterType}
-            className="self-start max-w-full"
-          />
         </div>
 
-        {loading && transactions.length === 0 ? (
-          <div className="p-5 md:p-6 space-y-3">
-            {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-10" />)}
+        <div className={cn(card, 'p-5 md:p-6')}>
+          <div className="flex items-baseline justify-between">
+            <p className="text-[16px] font-bold text-slate-900">Ke mana uangmu</p>
+            <Link href="/membership/budget" className="text-[13px] font-bold text-indigo-600 hover:underline">Atur budget</Link>
           </div>
-        ) : visibleData.length === 0 ? (
-          <div className="p-5 md:p-8">
-            {searchQuery || filterType !== 'Semua' ? (
-              <EmptyState title="Tidak ada yang cocok" description="Coba ganti filter atau kata kunci pencarian." icon={<Search size={24} />} />
-            ) : (
-              <EmptyState title="Belum ada transaksi" description="Catat pemasukan atau pengeluaran pertama lewat tombol Tambah Cepat di pojok kanan atas." icon={<LayoutDashboard size={24} />} />
-            )}
-          </div>
-        ) : (
-          <>
-            {/* Mobile: list */}
-            <ul className="md:hidden divide-y divide-slate-100">
-              {visibleData.map((trx, i) => {
-                const incoming = isIncomingTransaction(trx);
+          {statsLoading ? (
+            <div className="mt-4 space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-10" />)}</div>
+          ) : categories.length === 0 ? (
+            <p className="py-6 text-center text-[14px] text-slate-500">Belum ada pengeluaran di {monthLabel}.</p>
+          ) : (
+            <ul className="mt-4 space-y-4">
+              {categories.slice(0, 7).map((c, i) => {
+                const over = c.budget > 0 && c.spent > c.budget;
+                const width = c.budget > 0 ? Math.min(100, (c.spent / c.budget) * 100) : (c.spent / maxCat) * 100;
                 return (
-                  <li key={trx.id || i} className="px-5 py-3.5 flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-slate-800 truncate">{trx.note || trx.category}</p>
-                      <p className="text-caption text-slate-400 truncate">{formatDate(trx.date)} · {trx.category}</p>
+                  <li key={c.category}>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="truncate text-[15px] font-semibold text-slate-800">{c.category}</span>
+                      <span className={cn('shrink-0 text-[15px] font-bold tabular-nums', over ? 'text-rose-600' : 'text-slate-900')}>{short(c.spent)}</span>
                     </div>
-                    <p className={cn('text-sm font-black tabular-nums whitespace-nowrap', incoming ? 'text-emerald-600' : 'text-rose-500')}>
-                      {incoming ? '+' : '−'}{formatRp(toIdrAmount(trx))}
-                    </p>
+                    <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-slate-100">
+                      <div className={cn('h-full rounded-full', over ? 'bg-rose-500' : BAR_COLORS[i % BAR_COLORS.length])} style={{ width: `${Math.max(2, width)}%` }} />
+                    </div>
+                    {c.budget > 0 && <p className="mt-1 text-[12px] text-slate-400">dari budget {short(c.budget)}</p>}
                   </li>
                 );
               })}
             </ul>
-
-            {/* Desktop: tabel */}
-            <div className="hidden md:block overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead>
-                  <tr className="bg-slate-50/70">
-                    <th className="px-6 py-3 text-label font-bold uppercase text-slate-400">Tanggal</th>
-                    <th className="px-6 py-3 text-label font-bold uppercase text-slate-400">Kategori / Catatan</th>
-                    <th className="px-6 py-3 text-label font-bold uppercase text-slate-400 text-center">Tipe</th>
-                    <th className="px-6 py-3 text-label font-bold uppercase text-slate-400 text-right">Nominal</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {visibleData.map((trx, i) => {
-                    const incoming = isIncomingTransaction(trx);
-                    return (
-                      <tr key={trx.id || i} className="hover:bg-slate-50/60 transition-colors">
-                        <td className="px-6 py-3.5 font-bold text-slate-900">{formatDate(trx.date)}</td>
-                        <td className="px-6 py-3.5 text-slate-700 max-w-[420px] truncate">
-                          <span className="font-bold">{trx.category}</span>
-                          {trx.note && <span className="text-slate-400"> — {trx.note}</span>}
-                        </td>
-                        <td className="px-6 py-3.5 text-center">
-                          <Badge tone={incoming ? 'success' : 'danger'} className="capitalize">{trx.type}</Badge>
-                        </td>
-                        <td className={cn('px-6 py-3.5 text-right font-black tabular-nums', incoming ? 'text-emerald-600' : 'text-rose-500')}>
-                          {incoming ? '+' : '−'}{formatRp(toIdrAmount(trx))}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+          )}
+          {hasBudgets && (overBudget > 0 || outsideBudget > 0) && (
+            <div className="mt-5 border-t border-slate-100 pt-4 text-[14px]">
+              {overBudget > 0 && <p className="font-bold text-rose-600">Lewat budget {short(overBudget)}</p>}
+              {outsideBudget > 0 && <p className="text-slate-500">{short(outsideBudget)} di luar budget</p>}
             </div>
+          )}
+        </div>
+      </section>
 
-            {/* Ringkasan — dihitung dari baris yang sedang tampil */}
-            <div className="bg-slate-900 text-white px-5 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <p className="text-label font-bold uppercase text-slate-400">
-                {footerLabel} · {visibleData.length} transaksi
-              </p>
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs font-black tabular-nums">
-                <span className="text-emerald-400">Masuk +{formatRp(footerTotals.masuk)}</span>
-                <span className="text-rose-300">Keluar −{formatRp(footerTotals.keluar)}</span>
-                <span className={footerTotals.net < 0 ? 'text-rose-400' : 'text-emerald-400'}>
-                  Net {footerTotals.net >= 0 ? '+' : ''}{formatRp(footerTotals.net)}
-                </span>
-              </div>
-            </div>
-          </>
-        )}
-      </Card>
+      {/* Terbaru */}
+      <section>
+        <div className="mb-2 flex items-baseline justify-between px-1">
+          <h2 className="text-[22px] font-extrabold tracking-tight text-slate-900">Terbaru</h2>
+          <Link href="/membership/transactions/daily" className="text-[14px] font-bold text-indigo-600 hover:underline">Lihat semua</Link>
+        </div>
+        <div className={cn(card, 'divide-y divide-slate-100 px-5 py-1 md:px-6')}>
+          {statsLoading ? (
+            <div className="space-y-2 py-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-12" />)}</div>
+          ) : recent.length === 0 ? (
+            <p className="py-8 text-center text-[14px] text-slate-500">Belum ada transaksi. Mulai dari tombol + Tambah transaksi.</p>
+          ) : (
+            recent.map((t, i) => <TxRow key={t.id || i} t={t} withDate />)
+          )}
+        </div>
+      </section>
+
+      {/* Fitur kamu */}
+      <section>
+        <h2 className="mb-3 px-1 text-[22px] font-extrabold tracking-tight text-slate-900">Fitur kamu</h2>
+        <div className="grid grid-cols-2 gap-3">
+          {features.map((f) => {
+            const inner = (
+              <>
+                <div className="flex items-center gap-2.5">
+                  <span className={cn('flex h-9 w-9 items-center justify-center rounded-xl text-white', f.tile)}><f.icon size={17} /></span>
+                  <span className="truncate text-[13px] md:text-[14px] font-semibold text-slate-500">{f.label}</span>
+                  <ChevronRight size={16} className="ml-auto text-slate-300" />
+                </div>
+                <p className="mt-3 truncate text-[17px] font-extrabold md:text-[22px] tracking-tight text-slate-900 tabular-nums">{f.value}</p>
+                <p className="mt-0.5 truncate text-[12px] md:text-[13px] text-slate-500">{f.caption}</p>
+              </>
+            );
+            const cls = cn(card, 'block min-w-0 p-4 md:p-5 text-left transition-shadow hover:shadow-[0_10px_30px_-18px_rgba(49,46,129,0.35)] hover:ring-indigo-100');
+            return f.href ? (
+              <Link key={f.label} href={f.href} className={cls}>{inner}</Link>
+            ) : (
+              <button key={f.label} type="button" onClick={f.onClick} className={cn(cls, 'w-full')}>{inner}</button>
+            );
+          })}
+        </div>
+      </section>
 
       <Modal
         isOpen={showAccountsModal}
@@ -644,7 +566,7 @@ export default function MonthlyDashboard() {
                 <div className="text-right shrink-0">
                   <p className="text-sm font-black text-slate-900 whitespace-nowrap tabular-nums">{formatMoney(displayAmount, acc.currency)}</p>
                   {acc.currency && acc.currency !== 'IDR' && (
-                    <p className="text-caption text-slate-400 whitespace-nowrap tabular-nums">≈ {formatRp(idrValue)}</p>
+                    <p className="text-caption text-slate-400 whitespace-nowrap tabular-nums">≈ {formatIDR(idrValue)}</p>
                   )}
                 </div>
               </div>

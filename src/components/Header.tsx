@@ -75,7 +75,7 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
   }, []);
 
   return (
-    <header className="fixed top-0 right-0 left-0 lg:left-72 h-20 border-b border-slate-200 flex items-center justify-between gap-3 px-4 md:px-8 bg-white/80 backdrop-blur-md z-30 print:hidden">
+    <header className="fixed top-0 right-0 left-0 lg:left-72 h-16 border-b border-slate-100 flex items-center justify-between gap-3 px-4 md:px-8 bg-[#f6f7fb]/85 backdrop-blur-md z-30 print:hidden">
       <div className="flex items-center gap-3 min-w-0">
         <button
           onClick={onMenuClick}
@@ -85,12 +85,15 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
           <Menu size={22} />
         </button>
 
-        <div className="flex flex-col min-w-0">
+        <nav aria-label="Lokasi halaman" className="flex items-center gap-1.5 min-w-0 text-[14px]">
           {group && (
-            <p className="text-label font-bold text-slate-400 uppercase leading-none mb-1 truncate">{group}</p>
+            <>
+              <span className="hidden sm:inline text-slate-400 truncate">{group}</span>
+              <span className="hidden sm:inline text-slate-300">/</span>
+            </>
           )}
-          <h1 className="text-lg md:text-xl font-black text-slate-900 leading-tight truncate">{title}</h1>
-        </div>
+          <span className="font-bold text-slate-900 truncate">{title}</span>
+        </nav>
       </div>
 
       <div className="relative shrink-0" ref={dropdownRef} data-tour="tambah-cepat">
@@ -98,15 +101,15 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           aria-expanded={isDropdownOpen}
           aria-haspopup="menu"
-          className="flex items-center gap-2 bg-[#064e3b] text-white pl-3 pr-3 sm:pl-4 py-2.5 rounded-control text-sm font-bold shadow-lg shadow-emerald-900/10 hover:bg-[#054031] transition-colors"
+          className="flex items-center gap-2 bg-white text-slate-800 pl-3 pr-3 sm:pl-4 py-2 rounded-full text-[14px] font-semibold ring-1 ring-slate-200 shadow-sm hover:bg-slate-50 transition-colors"
         >
-          <Plus size={16} strokeWidth={2.5} />
+          <Plus size={16} strokeWidth={2.5} className="text-indigo-600" />
           <span className="hidden sm:inline">Tambah Cepat</span>
           <ChevronDown size={14} className={cn('transition-transform', isDropdownOpen && 'rotate-180')} />
         </button>
 
         {isDropdownOpen && (
-          <div role="menu" className="absolute right-0 mt-2 w-72 bg-white border border-slate-100 rounded-card shadow-2xl z-50 animate-in overflow-hidden">
+          <div role="menu" className="absolute right-0 mt-2 w-72 bg-white border border-slate-100 rounded-2xl shadow-2xl z-50 animate-in overflow-hidden">
             <div className="max-h-[70vh] overflow-y-auto p-2">
               {quickActionGroups.map((g) => (
                 <div key={g.label} className="py-1">

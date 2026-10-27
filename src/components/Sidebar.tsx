@@ -8,14 +8,17 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LogOut,
   ChevronRight,
-  ChevronDown,
   X,
   ShieldCheck,
+  Plus,
+  Settings,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { primaryNav, navGroups, type NavItem } from '@/lib/navigation';
 import { useFeedback } from '@/components/ui/Feedback';
+import { useModal } from '@/context/ModalContext';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -26,10 +29,6 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const pathname = usePathname();
   const router = useRouter();
   const { toast } = useFeedback();
-  // Grup yang berisi halaman aktif otomatis terbuka; sisanya bisa dibuka
-  // manual. Disimpan sebagai set id yang di-toggle user.
-  const activeGroupId = navGroups.find((g) => g.items.some((i) => i.href === pathname))?.id;
-  const [openGroups, setOpenGroups] = useState<string[]>(activeGroupId ? [activeGroupId] : []);
   const [profile, setProfile] = useState<{
     id: string;
     name: string;
@@ -58,25 +57,25 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
   }
 
-  // Pindah halaman lewat link di luar sidebar (Header, tombol di halaman,
-  // tur) juga harus membuka grup tujuannya.
-  useEffect(() => {
-    if (activeGroupId) {
-      setOpenGroups((prev) => (prev.includes(activeGroupId) ? prev : [...prev, activeGroupId]));
-    }
-  }, [activeGroupId]);
+  const { openModal, activeModal } = useModal();
 
-  const toggleGroup = (id: string) => {
-    setOpenGroups(prev =>
-      prev.includes(id)
-        ? prev.filter(g => g !== id)
-        : [...prev, id]
-    );
-  };
+  // Pintasan keyboard "N" = tambah transaksi (selama tidak sedang mengetik
+  // dan tidak ada modal lain yang terbuka).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() !== 'n' || e.metaKey || e.ctrlKey || e.altKey || activeModal) return;
+      const el = e.target as HTMLElement | null;
+      if (el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))) return;
+      e.preventDefault();
+      openModal('harian');
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [activeModal, openModal]);
 
   const closeOnMobile = () => { if (window.innerWidth < 1024) onClose?.(); };
 
-  const renderItem = (item: NavItem, nested = false) => {
+  const renderItem = (item: NavItem) => {
     const active = pathname === item.href;
     return (
       <Link
@@ -85,22 +84,19 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         onClick={closeOnMobile}
         aria-current={active ? 'page' : undefined}
         className={cn(
-          'relative flex items-center gap-3 rounded-control text-sm transition-colors',
-          nested ? 'pl-10 pr-3 py-2' : 'px-3 py-2.5 font-bold',
-          active
-            ? 'text-indigo-600 font-bold'
-            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          'relative flex items-center gap-3 rounded-xl px-3 py-2 text-[14px] transition-colors',
+          active ? 'font-bold text-indigo-700' : 'font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900'
         )}
       >
         {/* Latar item aktif meluncur halus dari item sebelumnya (shared layout). */}
         {active && (
           <motion.span
             layoutId="sidebar-active"
-            className="absolute inset-0 rounded-control bg-white shadow-sm ring-1 ring-slate-200/70"
+            className="absolute inset-0 rounded-xl bg-indigo-50"
             transition={{ type: 'spring', stiffness: 420, damping: 36 }}
           />
         )}
-        {!nested && <item.icon size={18} className={cn('relative', active ? 'text-indigo-600' : 'text-slate-400')} />}
+        <item.icon size={18} strokeWidth={active ? 2.3 : 1.9} className={cn('relative shrink-0', active ? 'text-indigo-600' : 'text-slate-400')} />
         <span className="relative truncate">{item.label}</span>
       </Link>
     );
@@ -145,29 +141,48 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   return (
     <>
       <aside className={cn(
-        "fixed top-0 left-0 h-full w-72 bg-slate-50 border-r border-slate-200 flex flex-col z-50 transition-transform duration-300 ease-in-out lg:translate-x-0 print:hidden",
+        "fixed top-0 left-0 h-full w-72 bg-white border-r border-slate-100 flex flex-col z-50 transition-transform duration-300 ease-in-out lg:translate-x-0 print:hidden",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         {/* Logo */}
-        <div className="px-5 h-20 flex items-center justify-between shrink-0 border-b border-slate-200/70">
-          <div className="flex items-center gap-3 select-none" aria-hidden>
-            <Image src="/images/Logo-new.png" alt="" width={34} height={34} className="object-contain" />
-            <div className="flex flex-col">
-              <span className="font-black text-lg text-slate-900 tracking-tight leading-none">Leosiqra</span>
-              <span className="text-label font-bold text-slate-400 uppercase mt-1">Member Workspace</span>
-            </div>
+        <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
+          <Link href="/membership/dashboard" onClick={closeOnMobile} className="flex items-center gap-2.5 select-none">
+            <Image src="/images/Logo-new.png" alt="" width={32} height={32} className="object-contain" />
+            <span className="font-extrabold text-[19px] text-slate-900 tracking-tight">Leosiqra</span>
+          </Link>
+          <div className="flex items-center gap-1">
+            <Link
+              href="/membership/profile"
+              onClick={closeOnMobile}
+              aria-label="Pengaturan"
+              title="Pengaturan"
+              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
+            >
+              <Settings size={18} />
+            </Link>
+            <button
+              onClick={onClose}
+              aria-label="Tutup menu"
+              className="lg:hidden p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+            >
+              <X size={20} />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Tutup menu"
-            className="lg:hidden p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-control transition-all"
+        </div>
+
+        <div className="px-4 pb-2 shrink-0">
+          <Link
+            href="/membership/ai-leosiqra"
+            onClick={closeOnMobile}
+            className="flex items-center gap-2.5 rounded-xl bg-slate-50 px-3.5 py-2.5 text-[14px] text-slate-400 ring-1 ring-slate-100 hover:bg-indigo-50/60 hover:text-slate-500 transition-colors"
           >
-            <X size={20} />
-          </button>
+            <Sparkles size={16} className="text-indigo-500" />
+            Tanya Leo…
+          </Link>
         </div>
 
         {/* Navigation */}
-        <nav aria-label="Menu utama" className="flex-1 overflow-y-auto px-3 py-4 no-scrollbar">
+        <nav aria-label="Menu utama" className="flex-1 overflow-y-auto px-3 py-3 no-scrollbar">
           {profile?.status === 'GUEST' || profile?.status === 'PENDING' ? (
             <div className="py-10 px-2 space-y-6 text-center animate-in fade-in slide-in-from-bottom-4 duration-1000">
               <div className="w-16 h-16 rounded-card bg-indigo-50 flex items-center justify-center mx-auto text-indigo-600 border border-indigo-100 shadow-sm relative">
@@ -223,81 +238,67 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
               </div>
             </div>
           ) : (
-            <div className="space-y-1">
-              <div className="space-y-1" data-tour="sidebar-group-primary">
+            <div className="space-y-5">
+              <div className="space-y-0.5" data-tour="sidebar-group-primary">
                 {primaryNav.map((item) => renderItem(item))}
               </div>
-
-              <div className="pt-3 mt-3 border-t border-slate-200/70 space-y-1">
-                {navGroups.map((group) => {
-                  const isOpenGroup = openGroups.includes(group.id);
-                  const hasActive = group.id === activeGroupId;
-                  return (
-                    <div key={group.id} data-tour={`sidebar-group-${group.id}`}>
-                      <button
-                        onClick={() => toggleGroup(group.id)}
-                        aria-expanded={isOpenGroup}
-                        className={cn(
-                          'w-full flex items-center gap-3 px-3 py-2.5 rounded-control text-sm font-bold transition-colors',
-                          hasActive && !isOpenGroup ? 'text-indigo-600' : 'text-slate-600',
-                          'hover:text-slate-900 hover:bg-slate-100'
-                        )}
-                      >
-                        <group.icon size={18} className={hasActive ? 'text-indigo-600' : 'text-slate-400'} />
-                        <span className="flex-1 text-left truncate">{group.label}</span>
-                        <ChevronDown size={14} className={cn('text-slate-400 transition-transform', !isOpenGroup && '-rotate-90')} />
-                      </button>
-                      {isOpenGroup && (
-                        <div className="mt-0.5 mb-1 space-y-0.5">
-                          {group.items.map((item) => renderItem(item, true))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+              {navGroups.map((group) => (
+                <div key={group.id} data-tour={`sidebar-group-${group.id}`}>
+                  <p className="px-3 pb-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">{group.label}</p>
+                  <div className="space-y-0.5">{group.items.map((item) => renderItem(item))}</div>
+                </div>
+              ))}
             </div>
           )}
         </nav>
 
-        {/* Footer: profil + paket + logout jadi satu kartu */}
-        <div className="p-3 border-t border-slate-200/70 shrink-0">
-          <div className="p-3 bg-white border border-slate-100 rounded-card shadow-sm">
-            <div className="flex items-center gap-3">
-              <Link
-                href="/membership/profile"
-                onClick={closeOnMobile}
-                className="flex items-center gap-3 min-w-0 flex-1 group"
-              >
-                <div className="w-10 h-10 rounded-control bg-indigo-600 flex items-center justify-center text-xs font-black text-white overflow-hidden relative shrink-0">
-                  {profile?.photoURL ? (
-                    <Image src={profile.photoURL} alt={profile.name} fill unoptimized className="object-cover" />
-                  ) : (
-                    profile ? getInitials(profile.name) : '··'
-                  )}
-                </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-sm font-bold text-slate-900 truncate group-hover:text-indigo-600 transition-colors">
-                    {profile?.name || 'Memuat...'}
-                  </span>
-                  <span className={cn(
-                    'text-caption font-bold truncate',
-                    profile?.plan === 'PRO' ? 'text-emerald-600' : 'text-slate-400'
-                  )}>
-                    {profile?.plan === 'PRO' ? 'PRO' : 'Free'}
-                    {remainingDays !== null && ` · sisa ${remainingDays} hari`}
-                  </span>
-                </div>
-              </Link>
-              <button
-                onClick={handleLogout}
-                aria-label="Keluar"
-                title="Keluar"
-                className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-control transition-colors shrink-0"
-              >
-                <LogOut size={16} />
-              </button>
-            </div>
+        {/* Footer: tombol tambah transaksi + profil */}
+        <div className="p-3 shrink-0 space-y-2 border-t border-slate-100">
+          {profile && profile.status !== 'GUEST' && profile.status !== 'PENDING' && (
+            <button
+              type="button"
+              onClick={() => { openModal('harian'); closeOnMobile(); }}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 py-3.5 text-[15px] font-bold text-white shadow-[0_12px_24px_-12px_rgba(79,70,229,0.7)] hover:brightness-110 transition"
+            >
+              <Plus size={18} strokeWidth={2.6} />
+              Tambah transaksi
+              <kbd className="ml-1 hidden lg:inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-white/20 px-1.5 text-[11px] font-bold">N</kbd>
+            </button>
+          )}
+          <div className="flex items-center gap-3 px-1.5 py-1">
+            <Link
+              href="/membership/profile"
+              onClick={closeOnMobile}
+              className="flex items-center gap-3 min-w-0 flex-1 group rounded-xl"
+            >
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-[12px] font-bold text-white overflow-hidden relative shrink-0">
+                {profile?.photoURL ? (
+                  <Image src={profile.photoURL} alt={profile.name} fill unoptimized className="object-cover" />
+                ) : (
+                  profile ? getInitials(profile.name) : '··'
+                )}
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[14px] font-semibold text-slate-900 truncate group-hover:text-indigo-600 transition-colors">
+                  {profile?.name || 'Memuat...'}
+                </span>
+                <span className={cn(
+                  'text-[12px] font-medium truncate',
+                  profile?.plan === 'PRO' ? 'text-emerald-600' : 'text-slate-400'
+                )}>
+                  {profile?.plan === 'PRO' ? 'PRO' : 'Free'}
+                  {remainingDays !== null && ` · sisa ${remainingDays} hari`}
+                </span>
+              </div>
+            </Link>
+            <button
+              onClick={handleLogout}
+              aria-label="Keluar"
+              title="Keluar"
+              className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-colors shrink-0"
+            >
+              <LogOut size={16} />
+            </button>
           </div>
         </div>
       </aside>

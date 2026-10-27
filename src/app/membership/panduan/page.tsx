@@ -41,7 +41,7 @@ const sections: GuideSection[] = [
     title: 'Menu Utama',
     subtitle: 'Selalu ada di paling atas sidebar',
     items: [
-      { name: 'Dashboard', desc: 'Ringkasan bulan berjalan: saldo total semua rekening, pemasukan/pengeluaran bulan ini, tagihan kartu kredit, hutang lain, dan pulse pasar (kripto/kurs/emas). Ganti bulan lewat kalender di kanan atas untuk lihat bulan lain.' },
+      { name: 'Ringkasan', desc: 'Pengeluaran hari ini, catatan hari ini, ke mana uangmu bulan ini (per kategori + budget), transaksi terbaru, dan kartu fitur: saldo bersih, tabungan, investasi, tagihan kartu, hutang, pajak. Ganti bulan lewat kalender di bagian Pengeluaran.' },
       { name: 'AI Leosiqra', desc: 'Asisten AI yang sudah tahu seluruh data keuanganmu (transaksi, rekening, investasi, hutang) — tanya apa saja soal kondisi finansialmu, atau soal harga pasar terkini, dalam Bahasa Indonesia.' },
     ],
   },

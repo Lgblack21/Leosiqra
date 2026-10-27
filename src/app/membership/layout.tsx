@@ -54,7 +54,7 @@ export default function MembershipLayout({
   return (
     <FeedbackProvider>
     <ModalProvider>
-      <div className="flex min-h-screen bg-slate-50 relative overflow-x-hidden print:block print:min-h-0 print:h-auto">
+      <div className="flex min-h-screen bg-[#f6f7fb] relative overflow-x-hidden print:block print:min-h-0 print:h-auto">
         {/* Mobile Backdrop */}
         {isSidebarOpen && (
           <div
@@ -70,7 +70,7 @@ export default function MembershipLayout({
             dalam ancestor flex/min-h-screen kepotong di batas tinggi layar
             (bug pagination flexbox saat print di Chrome) alih-alih mengalir
             ke halaman berikutnya. */}
-        <main className="flex-1 lg:ml-72 min-h-screen flex flex-col min-w-0 pt-20 print:block print:min-h-0 print:h-auto print:ml-0 print:pt-0">
+        <main className="flex-1 lg:ml-72 min-h-screen flex flex-col min-w-0 pt-16 print:block print:min-h-0 print:h-auto print:ml-0 print:pt-0">
           <Header onMenuClick={() => setIsSidebarOpen(true)} />
 
           {/* Page Content */}

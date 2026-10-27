@@ -47,7 +47,7 @@ export interface NavGroup {
 
 // Entri tanpa grup — selalu kelihatan di paling atas.
 export const primaryNav: NavItem[] = [
-  { label: 'Dashboard', href: '/membership/dashboard', icon: LayoutDashboard },
+  { label: 'Ringkasan', href: '/membership/dashboard', icon: LayoutDashboard },
   { label: 'AI Leosiqra', href: '/membership/ai-leosiqra', icon: Bot },
 ];
 
