@@ -30,11 +30,9 @@ import {
   Lightbulb,
   Mail,
   BookOpen,
-  KeyRound,
   Smartphone,
   RotateCcw,
 } from 'lucide-react';
-import { usePathname } from 'next/navigation';
 import { cn, formatIDR } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { navGroups } from '@/lib/navigation';
@@ -43,12 +41,13 @@ import { LeoMascot } from '@/components/mascot/LeoMascot';
 import { useModal } from '@/context/ModalContext';
 import { KategoriSection, MataUangView } from '@/components/settings/CategoryBudgetViews';
 import { ProfileEditView } from '@/components/settings/ProfileEditView';
+import { AccountSection } from '@/components/settings/AccountSettingsViews';
 import { UserAvatar, type AvatarConfig } from '@/components/profile/LeoAvatar';
 
 // Panel Pengaturan (dibuka dari ikon roda gigi / profil di menu samping,
 // atau avatar di header HP). Tiga tampilan: menu utama, Profil, dan Paket
-// (Gratis vs PRO). Isinya hanya fitur yang benar-benar ada — pengaturan
-// detail tetap di halaman /membership/profile (tab akun/keamanan/notifikasi/ai).
+// (Gratis vs PRO). Isinya hanya fitur yang benar-benar ada. Kontak,
+// keamanan, notifikasi, MCP & reset data ada di AccountSettingsViews.
 
 export interface PanelUser {
   id: string;
@@ -62,8 +61,8 @@ export interface PanelUser {
   avatar?: AvatarConfig | null;
 }
 
-export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil';
-const PARENT: Partial<Record<View, View>> = { 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum' };
+export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil' | 'kontak' | 'notifikasi' | 'ai' | 'lainnya';
+const PARENT: Partial<Record<View, View>> = { 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum' };
 
 const FEATURE_COUNT = navGroups.reduce((s, g) => s + g.items.length, 0);
 const STATUS_LABEL: Record<PanelUser['status'], string> = {
@@ -308,7 +307,6 @@ function PaketView({ user, onClose }: { user: PanelUser | null; onClose: () => v
 
 export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: boolean; onClose: () => void; initialView?: View }) {
   const router = useRouter();
-  const pathname = usePathname();
   const [view, setView] = useState<View>(initialView);
   const [user, setUser] = useState<PanelUser | null>(null);
 
@@ -335,12 +333,9 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
 
   const days = daysSince(user?.memberSince);
   const isPro = user?.plan === 'PRO';
-  // Halaman Profil membaca ?tab= sekali saat dibuka — kalau sudah di sana,
-  // muat ulang supaya tab yang diminta benar-benar terbuka.
   const go = (href: string) => () => {
     onClose();
-    if (href.startsWith('/membership/profile?') && pathname === '/membership/profile') window.location.assign(href);
-    else router.push(href);
+    router.push(href);
   };
   const TITLES: Record<View, string> = {
     menu: 'Profil',
@@ -355,6 +350,10 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
     'kategori-baru': 'Tambah kategori',
     'mata-uang': 'Mata uang',
     'ubah-profil': 'Ubah profil',
+    kontak: 'Kontak',
+    notifikasi: 'Notifikasi & pengingat',
+    ai: 'Aplikasi terhubung',
+    lainnya: 'Input Cepat & reset data',
   };
   const { openModal } = useModal();
   const title = TITLES[view];
@@ -410,8 +409,8 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                     </button>
                   </Group>
                   <Group>
-                    <Row icon={Bot} title="Aplikasi terhubung" desc="Claude, ChatGPT & aplikasi lain lewat MCP" onClick={go('/membership/profile?tab=ai')} />
-                    <Row icon={Zap} title="Input Cepat" desc="Catat dari layar utama HP, suara & foto struk" onClick={go('/membership/profile?tab=lainnya')} />
+                    <Row icon={Bot} title="Aplikasi terhubung" desc="Claude, ChatGPT & aplikasi lain lewat MCP" onClick={() => setView('ai')} />
+                    <Row icon={Zap} title="Input Cepat" desc="Catat dari layar utama HP, suara & foto struk" onClick={() => setView('lainnya')} />
                   </Group>
 
                   <Group>
@@ -466,9 +465,9 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                   </Group>
                   <p className="px-1 pt-2 text-[14px] text-slate-500">Akun</p>
                   <Group>
-                    <Row title="Kontak (HP & alamat)" onClick={go('/membership/profile?tab=akun')} />
-                    <Row title="Kata sandi & 2 langkah" onClick={go('/membership/profile?tab=keamanan')} />
-                    <Row title="Input Cepat & reset data" onClick={go('/membership/profile?tab=lainnya')} />
+                    <Row title="Kontak (HP & alamat)" onClick={() => setView('kontak')} />
+                    <Row title="Kata sandi & 2 langkah" onClick={() => setView('privasi')} />
+                    <Row title="Input Cepat & reset data" onClick={() => setView('lainnya')} />
                   </Group>
                   <button type="button" onClick={logout} className="flex w-full items-center justify-center gap-2 rounded-[22px] bg-rose-50 py-3.5 text-[15px] font-semibold text-rose-600 hover:bg-rose-100">
                     <LogOut size={17} /> Keluar
@@ -502,25 +501,21 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                   </Group>
                   <p className="px-1 pt-2 text-[14px] text-slate-500">Mencatat</p>
                   <Group>
-                    <Row icon={Zap} title="Input Cepat" desc="Pasang di layar utama HP" onClick={go('/membership/profile?tab=lainnya')} />
+                    <Row icon={Zap} title="Input Cepat" desc="Pasang di layar utama HP" onClick={() => setView('lainnya')} />
                     <Row icon={Smartphone} title="Shortcut iPhone" desc="Catat lewat Siri, Back Tap & Action Button" onClick={go('/panduan/shortcut-ios')} />
-                    <Row icon={Bot} title="Aplikasi terhubung" desc="Claude, ChatGPT lewat MCP" onClick={go('/membership/profile?tab=ai')} />
+                    <Row icon={Bot} title="Aplikasi terhubung" desc="Claude, ChatGPT lewat MCP" onClick={() => setView('ai')} />
                   </Group>
                   <p className="px-1 pt-2 text-[14px] text-slate-500">Notifikasi</p>
                   <Group>
-                    <Row icon={Bell} title="Notifikasi & pengingat" desc="Push, pengingat tutup hari, laporan email" onClick={go('/membership/profile?tab=notifikasi')} />
+                    <Row icon={Bell} title="Notifikasi & pengingat" desc="Push, pengingat tutup hari, laporan email" onClick={() => setView('notifikasi')} />
                   </Group>
                 </div>
               )}
 
               {view === 'privasi' && (
                 <div className="space-y-4">
-                  <Group>
-                    <Row icon={KeyRound} title="Kata sandi" onClick={go('/membership/profile?tab=keamanan')} />
-                    <Row icon={ShieldCheck} title="Verifikasi 2 langkah" onClick={go('/membership/profile?tab=keamanan')} />
-                    <Row icon={Smartphone} title="Perangkat yang masuk" onClick={go('/membership/profile?tab=keamanan')} />
-                  </Group>
-                  <button type="button" onClick={go('/membership/profile?tab=lainnya')} className="flex w-full items-center justify-center gap-2 border-t border-slate-100 pt-5 text-[15px] font-medium text-rose-600 hover:text-rose-700">
+                  <AccountSection view="keamanan" />
+                  <button type="button" onClick={() => setView('lainnya')} className="flex w-full items-center justify-center gap-2 border-t border-slate-100 pt-5 text-[15px] font-medium text-rose-600 hover:text-rose-700">
                     <RotateCcw size={16} /> Atur ulang data
                   </button>
                 </div>
@@ -550,6 +545,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
               {view === 'mata-uang' && <MataUangView onAdd={() => { onClose(); openModal('currency'); }} />}
 
               {view === 'paket' && <PaketView user={user} onClose={onClose} />}
+              {(view === 'kontak' || view === 'notifikasi' || view === 'ai' || view === 'lainnya') && <AccountSection view={view} />}
             </div>
           </motion.div>
         </motion.div>

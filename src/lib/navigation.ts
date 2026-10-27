@@ -119,7 +119,6 @@ export const navGroups: NavGroup[] = [
     label: 'Akun & Bantuan',
     icon: User,
     items: [
-      { label: 'Profil & Keamanan', href: '/membership/profile', icon: User },
       { label: 'Panduan', href: '/membership/panduan', icon: Compass },
       { label: 'Saran & Kritik', href: '/membership/saran', icon: MessageSquareHeart },
       { label: 'Hubungi Kami', href: '/membership/hubungi-kami', icon: Headphones },
@@ -135,6 +134,7 @@ const extraTitles: Record<string, string> = {
   '/membership/laporan': 'Laporan',
   '/membership/budget': 'Kategori & Anggaran',
   '/membership/nama-akun': 'Kategori & Anggaran',
+  '/membership/profile': 'Pengaturan',
 };
 
 export function findNavContext(pathname: string): { title: string; group?: string } {

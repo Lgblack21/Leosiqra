@@ -75,7 +75,7 @@ export function SecurityNudge({ className }: { className?: string }) {
         </p>
         <div className="flex items-center gap-3 mt-2.5">
           <Link
-            href="/membership/profile?tab=keamanan"
+            href="/membership/dashboard?pengaturan=privasi"
             className="inline-flex items-center rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-indigo-700"
           >
             Aktifkan sekarang

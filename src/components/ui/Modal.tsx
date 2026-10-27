@@ -37,7 +37,7 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = "max-w-md" 
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 mt-16 lg:mt-0">
+        <div className="fixed inset-0 z-[88] flex items-center justify-center p-4 sm:p-6 mt-16 lg:mt-0">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}

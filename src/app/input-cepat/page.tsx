@@ -319,7 +319,7 @@ export default function InputCepatPage() {
       <div className="stagger-in w-full max-w-md mx-auto px-5 pt-[calc(env(safe-area-inset-top)+20px)] pb-36 flex-1">
         {/* Header ringkas: profil + total hari ini (tap = rincian). */}
         <div className="flex items-center gap-3">
-          <Link href="/membership/profile" className="flex items-center gap-3 min-w-0 flex-1">
+          <Link href="/membership/dashboard?pengaturan=profil" className="flex items-center gap-3 min-w-0 flex-1">
             <div className="w-10 h-10 rounded-full bg-indigo-600 shrink-0 overflow-hidden">
               <LogoImage
                 src={profile?.photoURL}

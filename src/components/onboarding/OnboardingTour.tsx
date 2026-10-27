@@ -109,12 +109,12 @@ const STOPS: TourStop[] = [
     how: ['Buka Pengaturan → Kategori & Anggaran', 'Tambah kategori, subkategori & anggaran bulanan', 'Dipakai di semua form pencatatan'],
   },
   {
-    path: '/membership/profile',
+    path: '/membership/dashboard',
     icon: UserCircle,
-    title: 'Profil & Keamanan — Selesai! 🎉',
-    content: 'Kelola profil, foto, keamanan 2FA, dan langganan di sini. Itu dia keliling singkatnya — selamat menikmati Leosiqra!',
+    title: 'Profil & Pengaturan — Selesai! 🎉',
+    content: 'Profil, foto, keamanan 2FA, notifikasi, dan langganan ada di Pengaturan (foto profil di menu kiri). Itu dia keliling singkatnya — selamat menikmati Leosiqra!',
     demo: 'profil',
-    how: ['Lengkapi profil & foto', 'Aktifkan verifikasi 2 langkah (Authenticator)', 'Pasang aplikasi di HP lewat tombol di bawah'],
+    how: ['Pengaturan → Ubah profil untuk foto & username', 'Privasi & keamanan → Verifikasi 2 langkah', 'Pasang aplikasi di HP lewat tombol di bawah'],
   },
 ];
 
