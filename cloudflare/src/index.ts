@@ -8189,14 +8189,15 @@ async function handlePublicFeed(request: Request, env: Env, pathname: string) {
   const stamp = nowIso().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
   const events: string[] = [];
   const recurring = await env.DB.prepare(
-    "SELECT id, name, type, amount, interval, next_date, note FROM recurring WHERE user_id = ? AND status = 'ACTIVE' LIMIT 300"
+    `SELECT r.id, r.name, r.type, r.amount, r.interval, r.next_date, r.note, a.currency
+       FROM recurring r LEFT JOIN accounts a ON a.id = r.account_id AND a.user_id = r.user_id
+      WHERE r.user_id = ? AND r.status = 'ACTIVE' LIMIT 300`
   )
     .bind(userId)
-    .all<{ id: string; name: string; type: string; amount: number; interval: string; next_date: string; note: string | null }>();
+    .all<{ id: string; name: string; type: string; amount: number; interval: string; next_date: string; note: string | null; currency: string | null }>();
   for (const r of recurring.results ?? []) {
     if (!/^\d{4}-\d{2}-\d{2}/.test(String(r.next_date ?? ""))) continue;
     const freq = RRULE_BY_INTERVAL[r.interval] ?? "MONTHLY";
-    const amount = `Rp ${Math.round(Number(r.amount) || 0).toLocaleString("id-ID")}`;
     events.push(
       [
         "BEGIN:VEVENT",
@@ -8204,7 +8205,7 @@ async function handlePublicFeed(request: Request, env: Env, pathname: string) {
         `DTSTAMP:${stamp}`,
         `DTSTART;VALUE=DATE:${icsDate(r.next_date)}`,
         `RRULE:FREQ=${freq}`,
-        `SUMMARY:${icsText(`${r.name} · ${amount}`)}`,
+        `SUMMARY:${icsText(recurringCalendarTitle(r).summary)}`,
         `DESCRIPTION:${icsText(`Transaksi rutin Leosiqra (${r.type}, ${r.interval}).${r.note ? ` ${r.note}` : ""}`)}`,
         "END:VEVENT",
       ].join("\r\n")
@@ -8350,26 +8351,40 @@ const addDaysYmd = (ymd: string, days: number) => {
 // Daftar acara yang SEHARUSNYA ada. "anchor" = pola ulang (tanggal/hari), bukan
 // tanggal berikutnya — next_date transaksi rutin maju tiap bulan, dan itu
 // tidak boleh memicu hapus-buat ulang acara.
+// Judul acara: arah uang + nominal dalam mata uang REKENINGNYA (bukan selalu Rp).
+const RECURRING_CALENDAR_LABEL: Record<string, { icon: string; sign: string; desc: string }> = {
+  Pemasukan: { icon: "💰", sign: "+", desc: "Pemasukan rutin" },
+  Pengeluaran: { icon: "🧾", sign: "−", desc: "Pengeluaran rutin" },
+  Tabungan: { icon: "🐷", sign: "", desc: "Setoran tabungan rutin" },
+};
+const recurringCalendarTitle = (r: { name: string; type: string; amount: number; currency: string | null }) => {
+  const label = RECURRING_CALENDAR_LABEL[r.type] ?? RECURRING_CALENDAR_LABEL.Pengeluaran;
+  const money = formatCurrencyForPush(Math.abs(Number(r.amount) || 0), (r.currency || "IDR").toUpperCase());
+  return { summary: `${label.icon} ${r.name} · ${label.sign}${money}`, desc: label.desc };
+};
+
 const desiredCalendarEvents = async (env: Env, userId: string) => {
   const events: { key: string; hash: string; freq: string; args: Record<string, unknown> }[] = [];
   const recurring = await env.DB.prepare(
-    "SELECT id, name, type, amount, interval, next_date FROM recurring WHERE user_id = ? AND status = 'ACTIVE' ORDER BY next_date LIMIT 100"
+    `SELECT r.id, r.name, r.type, r.amount, r.interval, r.next_date, a.currency, a.name AS account_name
+       FROM recurring r LEFT JOIN accounts a ON a.id = r.account_id AND a.user_id = r.user_id
+      WHERE r.user_id = ? AND r.status = 'ACTIVE' ORDER BY r.next_date LIMIT 100`
   )
     .bind(userId)
-    .all<{ id: string; name: string; type: string; amount: number; interval: string; next_date: string }>();
+    .all<{ id: string; name: string; type: string; amount: number; interval: string; next_date: string; currency: string | null; account_name: string | null }>();
   for (const r of recurring.results ?? []) {
     const date = String(r.next_date ?? "").slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
     const freq = CALENDAR_FREQ[r.interval] ?? "MONTHLY";
     const anchor = freq === "MONTHLY" ? date.slice(8) : freq === "YEARLY" ? date.slice(5) : freq === "WEEKLY" ? String(new Date(`${date}T00:00:00Z`).getUTCDay()) : "";
-    const summary = `${r.name} · Rp ${Math.round(Number(r.amount) || 0).toLocaleString("id-ID")}`;
+    const { summary, desc } = recurringCalendarTitle(r);
     events.push({
       key: `recurring:${r.id}`,
       hash: JSON.stringify([summary, freq, anchor]),
       freq,
       args: {
         summary,
-        description: `Transaksi rutin Leosiqra (${r.type}, ${r.interval}).`,
+        description: `${desc} Leosiqra (${r.interval})${r.account_name ? ` · rekening ${r.account_name}` : ""}.`,
         start_date: date,
         end_date: addDaysYmd(date, 1),
         recurrence: [`RRULE:FREQ=${freq}`],
