@@ -51,6 +51,7 @@ import { CoinSection, CoinProfileRows } from '@/components/settings/CoinViews';
 import { AppsSection } from '@/components/settings/ConnectedApps';
 import { UserAvatar, type AvatarConfig } from '@/components/profile/LeoAvatar';
 import { APP_VERSION } from '@/lib/version';
+import { LeoCoin } from '@/components/coin/LeoCoin';
 
 // Panel Pengaturan (dibuka dari ikon roda gigi / profil di menu samping,
 // atau avatar di header HP). Tiga tampilan: menu utama, Profil, dan Paket
@@ -141,9 +142,9 @@ const Tile = ({ icon: Icon, title, desc, href, onClick }: { icon: React.ElementT
   return href ? <Link href={href} className={cls}>{inner}</Link> : <button type="button" onClick={onClick} className={cls}>{inner}</button>;
 };
 
-const StatTile = ({ icon: Icon, tint, title, value, onClick }: { icon: React.ElementType; tint: string; title: string; value: string; onClick: () => void }) => (
+const StatTile = ({ icon: Icon, tint, title, value, onClick, art }: { icon?: React.ElementType; tint?: string; title: string; value: string; onClick: () => void; art?: React.ReactNode }) => (
   <button type="button" onClick={onClick} className="flex flex-col items-start gap-2.5 rounded-[22px] bg-slate-50 p-4 text-left transition-colors hover:bg-slate-100">
-    <span className={cn('flex h-9 w-9 items-center justify-center rounded-xl', tint)}><Icon size={18} strokeWidth={1.9} /></span>
+    {art ?? (Icon && <span className={cn('flex h-9 w-9 items-center justify-center rounded-xl', tint)}><Icon size={18} strokeWidth={1.9} /></span>)}
     <span className="min-w-0">
       <span className="block text-[12px] font-medium text-slate-500">{title}</span>
       <span className="block truncate text-[16px] font-bold text-slate-900">{value}</span>
@@ -468,7 +469,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                     className="relative flex w-full items-center gap-4 overflow-hidden rounded-[24px] bg-gradient-to-br from-indigo-600 via-indigo-600 to-violet-600 px-5 py-5 text-left text-white shadow-[0_14px_34px_-16px_rgba(79,70,229,0.7)]"
                   >
                     <span aria-hidden className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/10" />
-                    <span className="rounded-full ring-4 ring-white/25"><Avatar user={user} /></span>
+                    <span className="flex shrink-0 items-center justify-center rounded-full bg-white/25 p-1"><Avatar user={user} /></span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[19px] font-bold">{user?.name ?? 'Memuat…'}</span>
                       <span className="block truncate text-[13px] text-indigo-100">
@@ -484,7 +485,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                   <div className="grid grid-cols-3 gap-3">
                     <StatTile icon={Sparkles} tint="bg-violet-100 text-violet-600" title="Paket" value={isPro ? 'PRO' : 'Gratis'} onClick={() => setView('paket')} />
                     <StatTile icon={Gift} tint="bg-emerald-100 text-emerald-600" title="Referral" value="Ajak teman" onClick={() => setView('referral')} />
-                    <StatTile icon={Coins} tint="bg-amber-100 text-amber-600" title="Koin Leo" value={coins === null ? '—' : coins.toLocaleString('id-ID')} onClick={() => setView('koin')} />
+                    <StatTile art={<LeoCoin size={36} />} title="Koin Leo" value={coins === null ? '—' : coins.toLocaleString('id-ID')} onClick={() => setView('koin')} />
                   </div>
 
                   <SectionLabel>Catat otomatis</SectionLabel>

@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { useFeedback } from '@/components/ui/Feedback';
 import { PROFILE_UPDATED_EVENT } from '@/components/settings/ProfileEditView';
+import { LeoCoin } from '@/components/coin/LeoCoin';
 
 // Koin Leosiqra & referral (panel Pengaturan). Semua angka & aturan datang
 // dari server (/api/member/coins → rules) — halaman ini tidak menghitung
@@ -50,15 +51,7 @@ const KIND: Record<string, { label: string; icon: React.ElementType }> = {
 };
 
 export function CoinIcon({ size = 20 }: { size?: number }) {
-  return (
-    <span
-      aria-hidden
-      className="inline-flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-200 via-amber-400 to-amber-600 shadow-[inset_0_-2px_0_rgba(0,0,0,0.15)] ring-1 ring-amber-500/60"
-      style={{ width: size, height: size, fontSize: size * 0.58 }}
-    >
-      🦁
-    </span>
-  );
+  return <LeoCoin size={size} />;
 }
 
 // Satu sumber data untuk ketiga tampilan; dimuat ulang sesudah tukar/tarik.
