@@ -28,11 +28,11 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   menandai "bukan transaksi" saat AI gangguan (`ai_unavailable`), streak koin
   per user, cek NONAKTIF atomik di tukar PRO. Hasil audit:
   `.claude/skills/security-check/references/triaged.md`.
-- **Belum di-deploy** (branch `claude/friendly-galileo-d9k5kc`): halaman **Impor**
-  `/membership/impor` (CSV/XLSX di browser, PDF BCA, PDF lain & tangkapan layar via
-  AI kuota 40/hari, tinjau per baris, cek dobel, riwayat + Batalkan, ekspor CSV,
-  entri di panel Pengaturan; modal "Impor Mutasi (CSV)" lama dihapus) + perbaikan
-  bug: hapus transaksi impor tidak lagi membalik saldo/total. Tanpa migrasi.
+- Halaman **Impor** `/membership/impor` juga sudah live (2026-10-28): CSV/XLSX di
+  browser, PDF BCA, PDF lain & tangkapan layar via AI (kuota 40/hari), tinjau per
+  baris, cek dobel, riwayat + Batalkan, ekspor CSV; hapus transaksi impor tidak
+  lagi membalik saldo/total. Pembacaan AI sungguhan belum diuji di produksi.
+- **Belum di-deploy**: tidak ada.
 
 ## Migrasi D1
 
