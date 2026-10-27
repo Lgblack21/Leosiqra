@@ -8658,7 +8658,7 @@ const syncAllGoogleSheets = async (env: Env) => {
 const APP_ACTIVATION: Partial<Record<ComposioToolkit, { price: number; days: number; beta: boolean; name: string }>> = {
   googlecalendar: { price: 200, days: 30, beta: false, name: "Google Calendar" },
   googlesheets: { price: 200, days: 30, beta: false, name: "Google Sheets" },
-  gmail: { price: 500, days: 30, beta: true, name: "Gmail" },
+  gmail: { price: 500, days: 30, beta: false, name: "Gmail" },
 };
 type AppAccess = { active: boolean; reason: "pro" | "beta" | "coins" | null; until: string | null; price: number; days: number };
 

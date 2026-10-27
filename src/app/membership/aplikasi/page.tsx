@@ -38,7 +38,6 @@ const APPS: Record<AppId, AppInfo> = {
     tile: 'bg-rose-50 text-rose-600',
     tagline: 'Catatan dari email pembayaran, tanpa ketik ulang.',
     bullets: ['Membaca email dari bank, e-wallet & toko', 'Diusulkan jadi transaksi — kamu yang menyetujui', 'Teks email tidak disimpan setelah dibaca'],
-    beta: true,
     steps: ['Hubungkan akun Gmail lewat Google.', 'Nyalakan "Baca email pembayaran otomatis" atau tekan Periksa email sekarang.', 'Buka Kotak Masuk, cek usulannya, lalu Simpan atau Abaikan.'],
   },
   googlecalendar: {

@@ -104,7 +104,7 @@ export function AppsHub({ go }: { go: (v: AppsView) => void }) {
         <AppCard
           icon={Mail}
           tile="bg-rose-50 text-rose-600"
-          title="Gmail · Beta"
+          title="Gmail"
           desc={apps.state === 'error' ? apps.error ?? 'Belum tersedia.' : 'Hubungkan akun Gmail lewat mitra koneksi Composio. Pencatatan otomatis dari email menyusul.'}
           connected={Boolean(apps.items.gmail?.connected)}
           action={apps.items.gmail?.connected ? 'Atur' : 'Hubungkan'}
