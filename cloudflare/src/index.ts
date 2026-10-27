@@ -6759,6 +6759,382 @@ async function handleAdminUsers(request: Request, env: Env) {
   return json({ items: rows.results });
 }
 
+// ── Koin & referral (migrasi 0017) ──────────────────────────────────────────
+// Saldo = SUM(coin_ledger.amount); tiap hadiah/penukaran punya idem_key unik
+// (INSERT OR IGNORE) jadi request ganda tidak mencetak koin dua kali.
+// Pemotongan saldo memakai INSERT … SELECT … WHERE saldo >= biaya dalam SATU
+// statement (D1 menjalankan tulis berurutan), lalu efeknya (PRO / pengajuan
+// tarik) di-batch dengan syarat baris ledger-nya ada — tidak ada celah
+// "saldo dicek, lalu dipotong" yang bisa diserbu request paralel.
+const COIN_RULES = {
+  signup: 100,
+  refActiveReferrer: 300,
+  refActiveReferee: 100,
+  refPro: 1000,
+  streak: 50,
+  proMonthCost: 2000,
+  withdrawMin: 50_000,
+  idrPerCoin: 1,
+  refWindowDays: 30,
+  activeMinTx: 10,
+  activeMinDays: 7,
+  refActiveMonthlyCap: 20,
+} as const;
+
+const REFERRAL_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const coinTableMissing = (error: unknown) => error instanceof Error && /no such table: (coin_|referral_)/.test(error.message);
+
+const grantCoins = (env: Env, userId: string, amount: number, kind: string, idemKey: string, note: string | null, cashable = 0) =>
+  env.DB.prepare(
+    "INSERT OR IGNORE INTO coin_ledger (id, user_id, amount, kind, cashable, idem_key, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+  )
+    .bind(generateId(), userId, amount, kind, cashable, idemKey, note, nowIso())
+    .run();
+
+const coinBalances = async (env: Env, userId: string) => {
+  const row = await env.DB.prepare(
+    `SELECT COALESCE(SUM(amount), 0) AS total,
+            COALESCE(SUM(CASE WHEN cashable = 1 THEN amount ELSE 0 END), 0) AS cash
+       FROM coin_ledger WHERE user_id = ?`
+  )
+    .bind(userId)
+    .first<{ total: number; cash: number }>();
+  const total = Number(row?.total) || 0;
+  // Koin yang dibelanjakan (tukar PRO) memakai koin bonus dulu, jadi yang bisa
+  // ditarik = koin tunai, dibatasi total saldo.
+  return { balance: total, cashable: Math.max(0, Math.min(total, Number(row?.cash) || 0)) };
+};
+
+const ensureReferralCode = async (env: Env, userId: string) => {
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const existing = await env.DB.prepare("SELECT code FROM referral_codes WHERE user_id = ?").bind(userId).first<{ code: string }>();
+    if (existing) return existing.code;
+    const bytes = crypto.getRandomValues(new Uint8Array(6));
+    const code = Array.from(bytes, (b) => REFERRAL_ALPHABET[b % REFERRAL_ALPHABET.length]).join("");
+    // Bentrok kode (UNIQUE) atau baris dibuat request lain → diabaikan, cek ulang.
+    await env.DB.prepare("INSERT OR IGNORE INTO referral_codes (user_id, code, created_at) VALUES (?, ?, ?)")
+      .bind(userId, code, nowIso())
+      .run();
+  }
+  throw new Error("Gagal membuat kode referral.");
+};
+
+// Teman "aktif" = minimal 10 transaksi dicatat di 7 hari berbeda sejak memakai
+// kode (pakai created_at — tanggal catat sebenarnya, bukan tanggal transaksi
+// yang bisa dimundurkan).
+const isActiveReferee = async (env: Env, friendId: string, since: string) => {
+  const row = await env.DB.prepare(
+    `SELECT COUNT(*) AS n, COUNT(DISTINCT substr(created_at, 1, 10)) AS d
+       FROM transactions
+      WHERE user_id = ? AND substr(created_at, 1, 10) >= substr(?, 1, 10)`
+  )
+    .bind(friendId, since)
+    .first<{ n: number; d: number }>();
+  return (Number(row?.n) || 0) >= COIN_RULES.activeMinTx && (Number(row?.d) || 0) >= COIN_RULES.activeMinDays;
+};
+
+const rewardActiveReferral = async (env: Env, friendId: string, referrerId: string) => {
+  await grantCoins(env, friendId, COIN_RULES.refActiveReferee, "ref_active_referee", `ref_active_referee:${friendId}`, "Bonus aktif dari kode teman");
+  // Batas per bulan untuk pengajak — sisanya otomatis cair bulan berikutnya.
+  const month = nowIso().slice(0, 7);
+  const count = await env.DB.prepare(
+    "SELECT COUNT(*) AS n FROM coin_ledger WHERE user_id = ? AND kind = 'ref_active' AND substr(created_at, 1, 7) = ?"
+  )
+    .bind(referrerId, month)
+    .first<{ n: number }>();
+  if ((Number(count?.n) || 0) >= COIN_RULES.refActiveMonthlyCap) return;
+  await grantCoins(env, referrerId, COIN_RULES.refActiveReferrer, "ref_active", `ref_active:${friendId}`, "Teman aktif mencatat");
+};
+
+// Hadiah yang syaratnya bisa dihitung ulang kapan saja (daftar, teman aktif,
+// streak) dicairkan saat member membuka halaman koin — idempoten.
+const settleCoins = async (env: Env, userId: string) => {
+  await grantCoins(env, userId, COIN_RULES.signup, "signup", `signup:${userId}`, "Hadiah selamat datang");
+
+  const me = await env.DB.prepare("SELECT referred_by, referred_at FROM referral_codes WHERE user_id = ?")
+    .bind(userId)
+    .first<{ referred_by: string | null; referred_at: string | null }>();
+  if (me?.referred_by && me.referred_at) {
+    const done = await env.DB.prepare("SELECT 1 AS x FROM coin_ledger WHERE idem_key = ?").bind(`ref_active:${userId}`).first();
+    if (!done && (await isActiveReferee(env, userId, me.referred_at))) await rewardActiveReferral(env, userId, me.referred_by);
+  }
+
+  const pending = await env.DB.prepare(
+    `SELECT r.user_id, r.referred_at
+       FROM referral_codes r
+      WHERE r.referred_by = ?
+        AND NOT EXISTS (SELECT 1 FROM coin_ledger l WHERE l.idem_key = 'ref_active:' || r.user_id)
+      ORDER BY r.referred_at DESC
+      LIMIT 30`
+  )
+    .bind(userId)
+    .all<{ user_id: string; referred_at: string }>();
+  for (const friend of pending.results ?? []) {
+    if (await isActiveReferee(env, friend.user_id, friend.referred_at)) await rewardActiveReferral(env, friend.user_id, userId);
+  }
+
+  const streak = await env.DB.prepare(
+    `SELECT COUNT(DISTINCT substr(created_at, 1, 10)) AS d
+       FROM transactions
+      WHERE user_id = ? AND substr(created_at, 1, 10) >= date('now', '-29 days')`
+  )
+    .bind(userId)
+    .first<{ d: number }>();
+  if ((Number(streak?.d) || 0) >= 30) {
+    await grantCoins(env, userId, COIN_RULES.streak, "streak", `streak:${nowIso().slice(0, 7)}`, "Mencatat 30 hari berturut-turut");
+  }
+};
+
+// Dipanggil saat admin menyetujui pembayaran: pengajak dapat koin tunai,
+// sekali per teman (pembelian PRO pertama yang benar-benar dibayar).
+const rewardReferralPurchase = async (env: Env, friendId: string, amount: number) => {
+  if (!(amount > 0)) return;
+  const me = await env.DB.prepare("SELECT referred_by FROM referral_codes WHERE user_id = ?")
+    .bind(friendId)
+    .first<{ referred_by: string | null }>();
+  if (!me?.referred_by) return;
+  await grantCoins(env, me.referred_by, COIN_RULES.refPro, "ref_pro", `ref_pro:${friendId}`, "Teman berlangganan PRO", 1);
+};
+
+async function handleMemberCoins(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+
+  await settleCoins(env, userId);
+  const code = await ensureReferralCode(env, userId);
+  const [balances, me, account, friends, history, withdrawals, earned] = await Promise.all([
+    coinBalances(env, userId),
+    env.DB.prepare("SELECT referred_by FROM referral_codes WHERE user_id = ?").bind(userId).first<{ referred_by: string | null }>(),
+    env.DB.prepare("SELECT julianday('now') - julianday(created_at) AS age FROM users WHERE id = ?").bind(userId).first<{ age: number | null }>(),
+    env.DB.prepare(
+      `SELECT COUNT(*) AS total,
+              SUM(CASE WHEN EXISTS (SELECT 1 FROM coin_ledger l WHERE l.idem_key = 'ref_active:' || r.user_id) THEN 1 ELSE 0 END) AS active
+         FROM referral_codes r WHERE r.referred_by = ?`
+    ).bind(userId).first<{ total: number; active: number | null }>(),
+    env.DB.prepare("SELECT id, amount, kind, note, created_at FROM coin_ledger WHERE user_id = ? ORDER BY created_at DESC LIMIT 50").bind(userId).all(),
+    env.DB.prepare(
+      "SELECT id, coins, amount_idr, method, status, admin_note, created_at, processed_at FROM coin_withdrawals WHERE user_id = ? ORDER BY created_at DESC LIMIT 10"
+    ).bind(userId).all(),
+    env.DB.prepare(
+      `SELECT COALESCE(SUM(CASE WHEN amount > 0 AND kind NOT LIKE 'withdraw%' THEN amount ELSE 0 END), 0) AS earned,
+              COALESCE(SUM(CASE WHEN kind = 'ref_pro' THEN amount ELSE 0 END), 0) AS fromPro
+         FROM coin_ledger WHERE user_id = ?`
+    ).bind(userId).first<{ earned: number; fromPro: number }>(),
+  ]);
+
+  const age = Number(account?.age);
+  return json({
+    balance: balances.balance,
+    cashable: balances.cashable,
+    code,
+    referred: Boolean(me?.referred_by),
+    canApplyCode: !me?.referred_by && Number.isFinite(age) && age <= COIN_RULES.refWindowDays,
+    friends: { total: Number(friends?.total) || 0, active: Number(friends?.active) || 0 },
+    earned: Number(earned?.earned) || 0,
+    fromReferralIdr: (Number(earned?.fromPro) || 0) * COIN_RULES.idrPerCoin,
+    history: history.results ?? [],
+    withdrawals: withdrawals.results ?? [],
+    rules: COIN_RULES,
+  });
+}
+
+async function handleApplyReferralCode(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const payload = await parseJson<{ code?: unknown }>(request);
+  const code = String(payload.code ?? "").trim().toUpperCase();
+  if (!/^[A-Z0-9]{6}$/.test(code)) return json({ error: "Kode referral terdiri dari 6 huruf/angka." }, { status: 400 });
+
+  await ensureReferralCode(env, userId);
+  const owner = await env.DB.prepare("SELECT user_id, referred_by FROM referral_codes WHERE code = ?")
+    .bind(code)
+    .first<{ user_id: string; referred_by: string | null }>();
+  if (!owner) return json({ error: "Kode tidak ditemukan. Cek lagi penulisannya." }, { status: 404 });
+  if (owner.user_id === userId) return json({ error: "Tidak bisa memakai kode sendiri." }, { status: 400 });
+  if (owner.referred_by === userId) return json({ error: "Kode ini milik teman yang kamu ajak." }, { status: 400 });
+
+  const result = await env.DB.prepare(
+    `UPDATE referral_codes SET referred_by = ?, referred_at = ?
+      WHERE user_id = ? AND referred_by IS NULL
+        AND EXISTS (SELECT 1 FROM users WHERE id = ? AND julianday('now') - julianday(created_at) <= ?)`
+  )
+    .bind(owner.user_id, nowIso(), userId, userId, COIN_RULES.refWindowDays)
+    .run();
+  if (!result.meta.changes) {
+    const me = await env.DB.prepare("SELECT referred_by FROM referral_codes WHERE user_id = ?").bind(userId).first<{ referred_by: string | null }>();
+    return json(
+      { error: me?.referred_by ? "Kamu sudah memakai kode referral." : `Kode hanya bisa dipakai dalam ${COIN_RULES.refWindowDays} hari pertama akun.` },
+      { status: 409 }
+    );
+  }
+  return json({ ok: true });
+}
+
+async function handleRedeemCoinsForPro(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const payload = await parseJson<{ months?: unknown }>(request);
+  const months = Math.round(Number(payload.months ?? 1));
+  if (!Number.isInteger(months) || months < 1 || months > 12) return json({ error: "Pilih 1–12 bulan." }, { status: 400 });
+
+  const user = await env.DB.prepare("SELECT status FROM users WHERE id = ?").bind(userId).first<{ status: string }>();
+  if (!user || user.status === "NONAKTIF") return json({ error: "Akun tidak aktif." }, { status: 403 });
+
+  const cost = COIN_RULES.proMonthCost * months;
+  const key = `redeem_pro:${generateId()}`;
+  const now = nowIso();
+  const [debit] = await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO coin_ledger (id, user_id, amount, kind, cashable, idem_key, note, created_at)
+       SELECT ?, ?, ?, 'redeem_pro', 0, ?, ?, ?
+        WHERE (SELECT COALESCE(SUM(amount), 0) FROM coin_ledger WHERE user_id = ?) >= ?`
+    ).bind(generateId(), userId, -cost, key, `Tukar PRO ${months} bulan`, now, userId, cost),
+    // Perpanjang dari tanggal habis kalau masih aktif, dihitung di SQL supaya
+    // dua penukaran bersamaan tetap menambah dua kali.
+    env.DB.prepare(
+      `UPDATE users
+          SET plan = 'PRO', status = 'AKTIF',
+              expired_at = strftime('%Y-%m-%dT%H:%M:%fZ',
+                CASE WHEN expired_at IS NOT NULL AND datetime(expired_at) > datetime('now') THEN datetime(expired_at) ELSE datetime('now') END,
+                ?)
+        WHERE id = ? AND EXISTS (SELECT 1 FROM coin_ledger WHERE idem_key = ?)`
+    ).bind(`+${months} months`, userId, key),
+  ]);
+  if (!debit.meta.changes) return json({ error: `Koin belum cukup — butuh ${cost.toLocaleString("id-ID")} koin.` }, { status: 409 });
+  const after = await env.DB.prepare("SELECT expired_at FROM users WHERE id = ?").bind(userId).first<{ expired_at: string | null }>();
+  return json({ ok: true, expiredAt: after?.expired_at ?? null, ...(await coinBalances(env, userId)) });
+}
+
+async function handleCoinWithdraw(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const payload = await parseJson<{ coins?: unknown; method?: unknown; accountName?: unknown; accountNumber?: unknown }>(request);
+  const coins = Math.floor(Number(payload.coins));
+  const method = String(payload.method ?? "").trim().slice(0, 40);
+  const accountName = String(payload.accountName ?? "").trim().slice(0, 80);
+  const accountNumber = String(payload.accountNumber ?? "").replace(/[\s-]/g, "").slice(0, 32);
+  if (!Number.isInteger(coins) || coins < COIN_RULES.withdrawMin || coins > 100_000_000) {
+    return json({ error: `Minimal tarik ${COIN_RULES.withdrawMin.toLocaleString("id-ID")} koin.` }, { status: 400 });
+  }
+  if (!method || !accountName) return json({ error: "Isi bank/e-wallet dan nama pemilik rekening." }, { status: 400 });
+  if (!/^\d{5,32}$/.test(accountNumber)) return json({ error: "Nomor rekening/e-wallet hanya angka (min. 5 digit)." }, { status: 400 });
+
+  const id = generateId();
+  const key = `withdraw:${id}`;
+  const now = nowIso();
+  const amountIdr = coins * COIN_RULES.idrPerCoin;
+  const [debit] = await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO coin_ledger (id, user_id, amount, kind, cashable, idem_key, note, created_at)
+       SELECT ?, ?, ?, 'withdraw', 1, ?, 'Tarik tunai (menunggu)', ?
+        WHERE (SELECT MIN(COALESCE(SUM(amount), 0), COALESCE(SUM(CASE WHEN cashable = 1 THEN amount ELSE 0 END), 0))
+                 FROM coin_ledger WHERE user_id = ?) >= ?
+          AND NOT EXISTS (SELECT 1 FROM coin_withdrawals WHERE user_id = ? AND status = 'MENUNGGU')`
+    ).bind(generateId(), userId, -coins, key, now, userId, coins, userId),
+    env.DB.prepare(
+      `INSERT INTO coin_withdrawals (id, user_id, coins, amount_idr, method, account_name, account_number, status, created_at)
+       SELECT ?, ?, ?, ?, ?, ?, ?, 'MENUNGGU', ?
+        WHERE EXISTS (SELECT 1 FROM coin_ledger WHERE idem_key = ?)`
+    ).bind(id, userId, coins, amountIdr, method, accountName, accountNumber, now, key),
+  ]);
+  if (!debit.meta.changes) {
+    const open = await env.DB.prepare("SELECT 1 AS x FROM coin_withdrawals WHERE user_id = ? AND status = 'MENUNGGU'").bind(userId).first();
+    return json(
+      { error: open ? "Masih ada penarikan yang menunggu diproses." : "Koin yang bisa ditarik belum cukup." },
+      { status: 409 }
+    );
+  }
+  await sendTelegramNotification(
+    env,
+    `🪙 <b>Tarik Tunai Koin</b>\nEmail: ${escapeHtml(authResult.session.user.email)}\nJumlah: Rp ${amountIdr.toLocaleString("id-ID")} (${coins.toLocaleString("id-ID")} koin)\nTujuan: ${escapeHtml(method)}\nCek di Admin → Koin.`
+  ).catch(() => undefined);
+  return json({ ok: true, id });
+}
+
+async function handleAdminCoinWithdrawals(request: Request, env: Env) {
+  const authResult = await requireSession(env, request, "admin");
+  if (authResult.error) return authResult.error;
+  const rows = await env.DB.prepare(
+    `SELECT w.*, u.name AS user_name, u.email AS user_email
+       FROM coin_withdrawals w LEFT JOIN users u ON u.id = w.user_id
+      ORDER BY CASE w.status WHEN 'MENUNGGU' THEN 0 ELSE 1 END, w.created_at DESC
+      LIMIT 200`
+  ).all();
+  return json({ items: rows.results ?? [] });
+}
+
+async function handleAdminCoinWithdrawalById(request: Request, env: Env, id: string) {
+  const authResult = await requireSession(env, request, "admin");
+  if (authResult.error) return authResult.error;
+  const payload = await parseJson<{ status?: unknown; note?: unknown }>(request);
+  const status = String(payload.status ?? "").toUpperCase();
+  const note = payload.note ? String(payload.note).slice(0, 300) : null;
+  if (status !== "DIBAYAR" && status !== "DITOLAK") return json({ error: "Status tidak valid." }, { status: 400 });
+  const row = await env.DB.prepare(
+    "SELECT w.user_id, w.coins, w.amount_idr, u.email FROM coin_withdrawals w LEFT JOIN users u ON u.id = w.user_id WHERE w.id = ?"
+  )
+    .bind(id)
+    .first<{ user_id: string; coins: number; amount_idr: number; email: string | null }>();
+  if (!row) return json({ error: "Pengajuan tidak ditemukan." }, { status: 404 });
+
+  const now = nowIso();
+  const statements = [
+    env.DB.prepare("UPDATE coin_withdrawals SET status = ?, admin_note = ?, processed_at = ? WHERE id = ? AND status = 'MENUNGGU'")
+      .bind(status, note, now, id),
+  ];
+  if (status === "DITOLAK") {
+    // Koin dikembalikan sekali saja (idem_key), hanya kalau statusnya memang jadi DITOLAK.
+    statements.push(
+      env.DB.prepare(
+        `INSERT OR IGNORE INTO coin_ledger (id, user_id, amount, kind, cashable, idem_key, note, created_at)
+         SELECT ?, ?, ?, 'withdraw_refund', 1, ?, 'Tarik tunai ditolak — koin dikembalikan', ?
+          WHERE EXISTS (SELECT 1 FROM coin_withdrawals WHERE id = ? AND status = 'DITOLAK')`
+      ).bind(generateId(), row.user_id, row.coins, `withdraw_refund:${id}`, now, id)
+    );
+  }
+  const [update] = await env.DB.batch(statements);
+  if (!update.meta.changes) return json({ error: "Pengajuan ini sudah diproses." }, { status: 409 });
+  await insertAdminLog(
+    env,
+    authResult.session.user.email,
+    status === "DIBAYAR" ? "PAY_COIN_WITHDRAWAL" : "REJECT_COIN_WITHDRAWAL",
+    row.email ?? row.user_id,
+    `${status === "DIBAYAR" ? "Membayar" : "Menolak"} tarik tunai koin Rp ${Number(row.amount_idr).toLocaleString("id-ID")}`,
+    status === "DIBAYAR" ? "emerald" : "rose"
+  );
+  return json({ ok: true });
+}
+
+// Semua rute koin lewat sini: tabel belum ada (migrasi 0017 belum diterapkan)
+// → jawab jujur 503, jangan bocorkan pesan D1.
+async function handleCoinRoutes(request: Request, env: Env, pathname: string) {
+  try {
+    const method = request.method;
+    if (pathname === "/api/member/coins" && method === "GET") return await handleMemberCoins(request, env);
+    if (pathname === "/api/member/coins/apply-code" && method === "POST") return await handleApplyReferralCode(request, env);
+    if (pathname === "/api/member/coins/redeem-pro" && method === "POST") return await handleRedeemCoinsForPro(request, env);
+    if (pathname === "/api/member/coins/withdraw" && method === "POST") return await handleCoinWithdraw(request, env);
+    if (pathname === "/api/admin/coin-withdrawals" && method === "GET") return await handleAdminCoinWithdrawals(request, env);
+    if (pathname.startsWith("/api/admin/coin-withdrawals/") && method === "PATCH") {
+      return await handleAdminCoinWithdrawalById(request, env, pathname.slice("/api/admin/coin-withdrawals/".length));
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (error) {
+    if (coinTableMissing(error)) {
+      console.error("Koin: tabel coin_/referral_ belum ada (migrasi 0017 belum diterapkan)");
+      return json({ error: "Fitur koin & referral belum aktif. Coba lagi nanti." }, { status: 503 });
+    }
+    if (error instanceof Error && error.message === "Payload JSON tidak valid.") {
+      return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    }
+    throw error;
+  }
+}
+
 async function insertAdminLog(
   env: Env,
   adminEmail: string,
@@ -6942,7 +7318,7 @@ async function handleAdminPaymentById(request: Request, env: Env, paymentId: str
   }
 
   const payment = await env.DB.prepare(
-    `SELECT id, user_id, user_email, user_name, package_json
+    `SELECT id, user_id, user_email, user_name, package_json, amount, status
        FROM payments
       WHERE id = ?`
   )
@@ -6953,6 +7329,8 @@ async function handleAdminPaymentById(request: Request, env: Env, paymentId: str
       user_email: string;
       user_name: string;
       package_json: string | null;
+      amount: number | null;
+      status: string | null;
     }>();
 
   if (!payment) {
@@ -6995,6 +7373,13 @@ async function handleAdminPaymentById(request: Request, env: Env, paymentId: str
       `Menyetujui pembayaran tiket ${payment.id} dan mengaktifkan PRO`,
       "emerald"
     );
+    // Koin untuk pengajak (sekali per teman). Gagal di sini (mis. migrasi
+    // koin belum diterapkan) tidak boleh menggagalkan persetujuan.
+    try {
+      await rewardReferralPurchase(env, payment.user_id, Number(payment.amount) || 0);
+    } catch (error) {
+      console.error("Koin referral PRO gagal dicatat", error instanceof Error ? error.message : error);
+    }
     return json({ ok: true });
   }
 
@@ -11854,6 +12239,10 @@ const worker = {
 
       if (url.pathname === "/api/member/email-report" && (request.method === "GET" || request.method === "PUT")) {
         return await handleMonthlyReportPreference(request, env);
+      }
+
+      if (url.pathname === "/api/member/coins" || url.pathname.startsWith("/api/member/coins/") || url.pathname === "/api/admin/coin-withdrawals" || url.pathname.startsWith("/api/admin/coin-withdrawals/")) {
+        return await handleCoinRoutes(request, env, url.pathname);
       }
 
       if (url.pathname === "/api/member/preferences" && (request.method === "GET" || request.method === "PUT")) {

@@ -11,6 +11,7 @@ import { ModalProvider } from '@/context/ModalContext';
 import { GlobalModalWrapper } from '@/components/GlobalModalWrapper';
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 import { cloudflareApi } from '@/lib/cloudflare-api';
+import { readReferralCode, clearReferralCode } from '@/lib/signupSource';
 import { FeedbackProvider } from '@/components/ui/Feedback';
 import { reportAppOpened } from '@/lib/appUsage';
 
@@ -53,6 +54,15 @@ export default function MembershipLayout({
           setLoading(false);
           router.replace('/auth/login');
           return;
+        }
+        // Datang dari tautan "Ajak teman" (?ref=) → pakai kodenya sekali.
+        // Ditolak server (kode sendiri/sudah pakai/akun >30 hari) = buang;
+        // gagal jaringan = simpan untuk dicoba lagi.
+        const refCode = readReferralCode();
+        if (refCode) {
+          cloudflareApi('/api/member/coins/apply-code', { method: 'POST', json: { code: refCode } })
+            .then(clearReferralCode)
+            .catch((e) => { if (!(e instanceof TypeError)) clearReferralCode(); });
         }
         // User baru yang belum menyelesaikan setup awal dipaksa ke wizard
         // onboarding dulu — kecuali memang sedang berada di halamannya, supaya

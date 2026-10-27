@@ -71,6 +71,36 @@ export const captureSignupSource = () => {
   }
 };
 
+// Kode referral dari tautan "Ajak teman" (?ref=KODE). Disimpan sampai user
+// masuk, lalu layout membership memakainya sekali (server tetap memvalidasi:
+// akun ≤30 hari, belum pernah pakai kode, bukan kode sendiri).
+const REF_KEY = "leosiqra_ref_code";
+
+export const captureReferralCode = () => {
+  try {
+    const code = (new URLSearchParams(window.location.search).get("ref") ?? "").trim().toUpperCase();
+    if (/^[A-Z0-9]{6}$/.test(code)) window.localStorage.setItem(REF_KEY, code);
+  } catch {
+    // abaikan — kode tetap bisa diketik manual di Pengaturan → Referral.
+  }
+};
+
+export const readReferralCode = () => {
+  try {
+    return window.localStorage.getItem(REF_KEY);
+  } catch {
+    return null;
+  }
+};
+
+export const clearReferralCode = () => {
+  try {
+    window.localStorage.removeItem(REF_KEY);
+  } catch {
+    // abaikan
+  }
+};
+
 // URL login/daftar Google + sumber (dibawa Worker lewat cookie singkat ke callback).
 // `src` dibaca di useEffect halaman (bukan saat render) supaya HTML hasil
 // static export dan render pertama di browser tetap sama.

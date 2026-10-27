@@ -42,6 +42,7 @@ import { useModal } from '@/context/ModalContext';
 import { KategoriSection, MataUangView } from '@/components/settings/CategoryBudgetViews';
 import { ProfileEditView } from '@/components/settings/ProfileEditView';
 import { AccountSection, CloudSyncSection } from '@/components/settings/AccountSettingsViews';
+import { CoinSection, CoinProfileRows } from '@/components/settings/CoinViews';
 import { UserAvatar, type AvatarConfig } from '@/components/profile/LeoAvatar';
 
 // Panel Pengaturan (dibuka dari ikon roda gigi / profil di menu samping,
@@ -61,8 +62,8 @@ export interface PanelUser {
   avatar?: AvatarConfig | null;
 }
 
-export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil' | 'kontak' | 'notifikasi' | 'ai' | 'lainnya';
-const PARENT: Partial<Record<View, View>> = { 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum' };
+export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil' | 'kontak' | 'notifikasi' | 'ai' | 'lainnya' | 'referral' | 'koin' | 'koin-riwayat';
+const PARENT: Partial<Record<View, View>> = { 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum', referral: 'profil', koin: 'profil', 'koin-riwayat': 'referral' };
 
 const FEATURE_COUNT = navGroups.reduce((s, g) => s + g.items.length, 0);
 const STATUS_LABEL: Record<PanelUser['status'], string> = {
@@ -364,6 +365,9 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
     notifikasi: 'Notifikasi & pengingat',
     ai: 'Aplikasi terhubung',
     lainnya: 'Input Cepat & reset data',
+    referral: 'Referral',
+    koin: 'Kelola koin',
+    'koin-riwayat': 'Riwayat koin',
   };
   const { openModal } = useModal();
   const title = TITLES[view];
@@ -473,6 +477,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                     <Row title="Memakai Leosiqra sejak" value={monthYear(user?.memberSince)} />
                     <Row title="Kelola langganan" onClick={() => setView('paket')} />
                   </Group>
+                  <CoinProfileRows go={setView} />
                   <p className="px-1 pt-2 text-[14px] text-slate-500">Akun</p>
                   <Group>
                     <Row title="Kontak (HP & alamat)" onClick={() => setView('kontak')} />
@@ -557,6 +562,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
 
               {view === 'paket' && <PaketView user={user} onClose={onClose} />}
               {(view === 'kontak' || view === 'notifikasi' || view === 'ai' || view === 'lainnya') && <AccountSection view={view} />}
+              {(view === 'referral' || view === 'koin' || view === 'koin-riwayat') && <CoinSection view={view} go={setView} openPaket={() => setView('paket')} />}
             </div>
           </motion.div>
         </motion.div>
