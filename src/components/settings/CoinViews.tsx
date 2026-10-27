@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronRight, Gift, Users, Crown, Banknote, Flame, Undo2, ArrowDownLeft, Share2, Loader2, Sparkles } from 'lucide-react';
+import { ChevronRight, Gift, Users, Crown, Banknote, Flame, Undo2, ArrowDownLeft, Share2, Loader2, Sparkles, Network } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { useFeedback } from '@/components/ui/Feedback';
@@ -11,7 +11,7 @@ import { PROFILE_UPDATED_EVENT } from '@/components/settings/ProfileEditView';
 // dari server (/api/member/coins → rules) — halaman ini tidak menghitung
 // saldo sendiri, hanya menampilkan & mengirim permintaan.
 
-export type CoinView = 'referral' | 'koin' | 'koin-riwayat';
+export type CoinView = 'referral' | 'koin' | 'koin-riwayat' | 'kawanan';
 
 type LedgerRow = { id: string; amount: number; kind: string; note: string | null; created_at: string };
 type Withdrawal = { id: string; coins: number; amount_idr: number; method: string; status: 'MENUNGGU' | 'DIBAYAR' | 'DITOLAK'; admin_note: string | null; created_at: string };
@@ -276,6 +276,120 @@ function ReferralView({ coins, go, openPaket }: { coins: ReturnType<typeof useCo
           <CodeInput onApplied={reload} />
         </>
       )}
+
+      <Group>
+        <button type="button" onClick={() => go('kawanan')} className="flex w-full items-center gap-4 px-5 py-4 text-left hover:bg-slate-100/70">
+          <Network size={20} className="shrink-0 text-slate-600" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-[16px] text-slate-900">Kawananmu</span>
+            <span className="block text-[13px] text-slate-500">Lihat siapa saja yang bergabung lewat kodemu</span>
+          </span>
+          <ChevronRight size={18} className="text-slate-400" />
+        </button>
+      </Group>
+    </div>
+  );
+}
+
+type Team = {
+  upline: string | null;
+  friends: { name: string; joinedAt: string; status: 'menunggu' | 'aktif' | 'pro' }[];
+  secondLevel: number;
+  rules: { refActiveReferrer: number; refPro: number; activeMinTx: number; activeMinDays: number };
+};
+
+// Kawananmu — jaringan ajakan dalam bentuk "batu singa" bertingkat. Hadiah
+// hanya dari teman yang KAMU ajak langsung; tingkat di bawahnya cuma hitungan.
+function KawananView() {
+  const [team, setTeam] = useState<Team | null>(null);
+  const [error, setError] = useState('');
+  const load = useCallback(async () => {
+    try {
+      setTeam(await cloudflareApi<Team>('/api/member/coins/team'));
+      setError('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Gagal memuat kawanan.');
+    }
+  }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- muat sekali saat dibuka
+    void load();
+  }, [load]);
+  if (!team) return error ? <Unavailable error={error} onRetry={load} /> : <p className="py-10 text-center text-[14px] text-slate-400">Memuat…</p>;
+
+  const r = team.rules;
+  const friendsLabel = team.friends.length
+    ? `${team.friends.slice(0, 2).map((f) => f.name).join(', ')}${team.friends.length > 2 ? ` +${team.friends.length - 2}` : ''}`
+    : 'Belum ada';
+  const tiers = [
+    { label: 'Pengajakmu', value: team.upline ?? 'Kamu bergabung sendiri', cls: 'bg-indigo-500 text-white', w: '58%' },
+    { label: 'Kamu', value: 'Pemimpin kawanan', cls: 'bg-slate-900 text-white', w: '72%' },
+    { label: 'Teman yang kamu ajak', value: friendsLabel, cls: 'bg-indigo-200 text-indigo-950', w: '86%' },
+    { label: 'Teman dari temanmu', value: team.secondLevel ? `${team.secondLevel} orang` : 'Belum ada', cls: 'bg-indigo-100 text-indigo-900', w: '100%' },
+  ];
+  const STATUS = {
+    menunggu: { label: 'Belum aktif', cls: 'bg-slate-200 text-slate-600' },
+    aktif: { label: 'Aktif', cls: 'bg-emerald-100 text-emerald-700' },
+    pro: { label: 'PRO', cls: 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white' },
+  } as const;
+
+  return (
+    <div className="space-y-4">
+      <Label>Teman yang kamu ajak · {team.friends.length}</Label>
+      {!team.friends.length && (
+        <p className="rounded-[22px] bg-slate-50 px-5 py-4 text-[14px] leading-relaxed text-slate-600">
+          Belum ada yang memakai kodemu. Bagikan lewat tombol <b>Ajak teman</b> — temanmu cukup daftar dari tautanmu atau memasukkan kodenya.
+        </p>
+      )}
+
+      <div className="flex flex-col items-center gap-2 rounded-[22px] bg-slate-50 px-4 pb-6 pt-5">
+        <p className="text-[17px] font-semibold text-slate-900">Batu Singa</p>
+        <p className="-mt-1 pb-1 text-[13px] text-slate-500">{team.friends.length ? `Kawananmu ${team.friends.length + team.secondLevel} singa` : 'Kawananmu masih sendiri'}</p>
+        <span className="text-[44px] leading-none" aria-hidden>🦁</span>
+        {tiers.map((t) => (
+          <div
+            key={t.label}
+            className={cn('flex flex-col items-center justify-center px-6 py-3.5 text-center', t.cls)}
+            style={{ width: t.w, clipPath: 'polygon(9% 0, 91% 0, 100% 100%, 0 100%)', borderRadius: 14 }}
+          >
+            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] opacity-70">{t.label}</span>
+            <span className="truncate text-[15px] font-semibold">{t.value}</span>
+          </div>
+        ))}
+      </div>
+
+      <Label>Hadiahmu</Label>
+      <Group>
+        <div className="flex items-center gap-4 px-5 py-3.5">
+          <span className="min-w-0 flex-1 text-[15px] text-slate-900">Tiap teman aktif mencatat</span>
+          <span className="flex items-center gap-1.5 text-[15px] font-semibold text-emerald-600">+{nf(r.refActiveReferrer)} <CoinIcon size={16} /></span>
+        </div>
+        <div className="flex items-center gap-4 px-5 py-3.5">
+          <span className="min-w-0 flex-1 text-[15px] text-slate-900">Tiap teman berlangganan PRO</span>
+          <span className="flex items-center gap-1.5 text-[15px] font-semibold text-emerald-600">+{nf(r.refPro)} <CoinIcon size={16} /></span>
+        </div>
+      </Group>
+      <p className="px-1 text-[13px] leading-snug text-slate-500">
+        Hadiah hanya dari teman yang kamu ajak langsung. Teman dianggap aktif setelah mencatat {r.activeMinTx} transaksi di {r.activeMinDays} hari berbeda.
+      </p>
+
+      <Label>Kawananmu</Label>
+      <Group>
+        {team.friends.length === 0 ? (
+          <p className="px-5 py-4 text-[14px] text-slate-500">Belum ada yang bergabung dengan kodemu.</p>
+        ) : (
+          team.friends.map((f, i) => (
+            <div key={`${f.name}-${i}`} className="flex items-center gap-4 px-5 py-3.5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[15px] font-bold text-indigo-700">{f.name.slice(0, 1).toUpperCase()}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[15px] font-medium text-slate-900">{f.name}</span>
+                <span className="block text-[13px] text-slate-500">Bergabung {shortDate(f.joinedAt)}</span>
+              </span>
+              <span className={cn('rounded-full px-2.5 py-1 text-[12px] font-semibold', STATUS[f.status].cls)}>{STATUS[f.status].label}</span>
+            </div>
+          ))
+        )}
+      </Group>
     </div>
   );
 }
@@ -408,6 +522,7 @@ function KelolaKoinView({ coins }: { coins: ReturnType<typeof useCoins> }) {
 // memuat ulang; dipasang oleh SettingsPanel.
 export function CoinSection({ view, go, openPaket }: { view: CoinView; go: (v: CoinView) => void; openPaket: () => void }) {
   const coins = useCoins();
+  if (view === 'kawanan') return <KawananView />;
   if (view === 'koin') return <KelolaKoinView coins={coins} />;
   if (view === 'koin-riwayat') {
     if (!coins.data) return coins.error ? <Unavailable error={coins.error} onRetry={coins.reload} /> : <p className="py-10 text-center text-[14px] text-slate-400">Memuat…</p>;

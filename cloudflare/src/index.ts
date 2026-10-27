@@ -6942,6 +6942,48 @@ async function handleMemberCoins(request: Request, env: Env) {
   });
 }
 
+// Kawananmu: siapa yang mengajak, teman yang diajak (+ statusnya), dan
+// jumlah teman mereka. Hanya nama depan orang lain yang ditampilkan.
+// Hadiah tetap satu tingkat — tingkat 4 cuma hitungan, bukan bagi hasil.
+const firstName = (name: string | null | undefined) => (name ?? "").trim().split(/\s+/)[0]?.slice(0, 20) || "Teman";
+
+async function handleCoinTeam(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const [upline, friends, second] = await Promise.all([
+    env.DB.prepare("SELECT u.name FROM referral_codes r JOIN users u ON u.id = r.referred_by WHERE r.user_id = ?")
+      .bind(userId)
+      .first<{ name: string | null }>(),
+    env.DB.prepare(
+      `SELECT r.user_id, u.name, r.referred_at,
+              EXISTS (SELECT 1 FROM coin_ledger l WHERE l.idem_key = 'ref_active:' || r.user_id) AS active,
+              EXISTS (SELECT 1 FROM coin_ledger l WHERE l.idem_key = 'ref_pro:' || r.user_id) AS pro
+         FROM referral_codes r JOIN users u ON u.id = r.user_id
+        WHERE r.referred_by = ?
+        ORDER BY r.referred_at DESC
+        LIMIT 100`
+    )
+      .bind(userId)
+      .all<{ user_id: string; name: string | null; referred_at: string; active: number; pro: number }>(),
+    env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM referral_codes WHERE referred_by IN (SELECT user_id FROM referral_codes WHERE referred_by = ?)"
+    )
+      .bind(userId)
+      .first<{ n: number }>(),
+  ]);
+  return json({
+    upline: upline ? firstName(upline.name) : null,
+    friends: (friends.results ?? []).map((f) => ({
+      name: firstName(f.name),
+      joinedAt: f.referred_at,
+      status: f.pro ? "pro" : f.active ? "aktif" : "menunggu",
+    })),
+    secondLevel: Number(second?.n) || 0,
+    rules: { refActiveReferrer: COIN_RULES.refActiveReferrer, refPro: COIN_RULES.refPro, activeMinTx: COIN_RULES.activeMinTx, activeMinDays: COIN_RULES.activeMinDays },
+  });
+}
+
 async function handleApplyReferralCode(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -7118,6 +7160,7 @@ async function handleCoinRoutes(request: Request, env: Env, pathname: string) {
   try {
     const method = request.method;
     if (pathname === "/api/member/coins" && method === "GET") return await handleMemberCoins(request, env);
+    if (pathname === "/api/member/coins/team" && method === "GET") return await handleCoinTeam(request, env);
     if (pathname === "/api/member/coins/apply-code" && method === "POST") return await handleApplyReferralCode(request, env);
     if (pathname === "/api/member/coins/redeem-pro" && method === "POST") return await handleRedeemCoinsForPro(request, env);
     if (pathname === "/api/member/coins/withdraw" && method === "POST") return await handleCoinWithdraw(request, env);
