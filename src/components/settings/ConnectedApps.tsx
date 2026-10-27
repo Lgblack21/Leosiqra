@@ -61,7 +61,7 @@ function AppCard({ icon, tile, title, desc, connected, action, onClick, href }: 
 // Status koneksi Composio. 401/403 = sesi habis / tidak diizinkan →
 // kartunya disembunyikan; error lain ditampilkan apa adanya di kartunya.
 type ComposioApps = { state: 'loading' | 'hidden' | 'ready' | 'error'; items: Record<string, { connected: boolean }>; error?: string };
-function useComposioApps() {
+export function useComposioApps() {
   const [apps, setApps] = useState<ComposioApps>({ state: 'loading', items: {} });
   const load = useCallback(async () => {
     try {
@@ -258,7 +258,7 @@ function FeedView({ kind }: { kind: 'sheets' | 'calendar' }) {
 
 // Layar satu aplikasi Composio: penjelasan & persetujuan → login di situs
 // aplikasinya → kembali ke sini, lalu periksa koneksi (panggilan baca-saja).
-type ComposioToolkit = 'gmail' | 'googlecalendar';
+export type ComposioToolkit = 'gmail' | 'googlecalendar';
 const COMPOSIO_COPY: Record<ComposioToolkit, { name: string; provider: string; about: string }> = {
   gmail: {
     name: 'Gmail',
@@ -272,7 +272,7 @@ const COMPOSIO_COPY: Record<ComposioToolkit, { name: string; provider: string; a
   },
 };
 
-function ComposioAppView({ toolkit, children }: { toolkit: ComposioToolkit; children?: React.ReactNode }) {
+export function ComposioAppView({ toolkit, children }: { toolkit: ComposioToolkit; children?: React.ReactNode }) {
   const { toast, confirm } = useFeedback();
   const { apps, reload } = useComposioApps();
   const [busy, setBusy] = useState(false);
@@ -378,7 +378,7 @@ function ComposioAppView({ toolkit, children }: { toolkit: ComposioToolkit; chil
 }
 
 // Sinkron tagihan ke Google Calendar (tampil setelah terhubung).
-function CalendarSyncCard() {
+export function CalendarSyncCard() {
   const { toast } = useFeedback();
   const [state, setState] = useState<{ enabled: boolean; lastSyncAt: string | null; count: number } | null>(null);
   const [busy, setBusy] = useState(false);

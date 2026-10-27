@@ -2,6 +2,7 @@ import {
   LayoutDashboard,
   BarChart3,
   Bot,
+  Plug,
   PlusCircle,
   ListOrdered,
   ArrowLeftRight,
@@ -62,6 +63,7 @@ export const fiturNav: NavItem[] = [
   { label: 'Tabungan', href: '/membership/tabungan', icon: PiggyBank },
   { label: 'Hutang & Piutang', href: '/membership/transactions/debt', icon: HandCoins },
   { label: 'Investasi', href: '/membership/investment', icon: TrendingUp },
+  { label: 'Aplikasi terhubung', href: '/membership/aplikasi', icon: Plug },
 ];
 
 export const SEMUA_FITUR_HREF = '/membership/fitur';

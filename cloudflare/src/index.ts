@@ -8487,7 +8487,7 @@ const syncAllGoogleCalendars = async (env: Env) => {
 };
 
 // GET    /api/member/apps                    → status koneksi tiap toolkit
-// POST   /api/member/apps/:toolkit/connect   → { redirectUrl } halaman login aplikasi
+// POST   /api/member/apps/:toolkit/connect   → { redirectUrl } halaman login aplikasi (balik ke /membership/aplikasi?app=…)
 // POST   /api/member/apps/:toolkit/check     → panggilan baca-saja, ringkasan + logId
 // GET    /api/member/apps/googlecalendar/sync → status sinkron tagihan
 // POST   /api/member/apps/googlecalendar/sync → sinkronkan tagihan sekarang
@@ -8518,7 +8518,7 @@ async function handleMemberApps(request: Request, env: Env, pathname: string) {
     if (action === "connect" && request.method === "POST") {
       const origin = new URL(request.url).origin;
       const connection = await session.authorize(toolkit, {
-        callbackUrl: `${origin}/membership/dashboard?pengaturan=ai&terhubung=${toolkit}`,
+        callbackUrl: `${origin}/membership/aplikasi?app=${toolkit}`,
       });
       if (!connection.redirectUrl) return json({ error: "Tautan masuk aplikasi tidak tersedia. Coba lagi." }, { status: 502 });
       return json({ redirectUrl: connection.redirectUrl });

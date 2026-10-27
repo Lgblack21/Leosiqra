@@ -430,7 +430,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                     </button>
                   </Group>
                   <Group>
-                    <Row icon={Bot} title="Aplikasi terhubung" desc="Claude, ChatGPT & aplikasi lain" onClick={() => setView('ai')} />
+                    <Row icon={Bot} title="Aplikasi terhubung" desc="Claude, ChatGPT & aplikasi lain" onClick={go('/membership/aplikasi')} />
                     <Row icon={Zap} title="Input Cepat" desc="Catat dari layar utama HP, suara & foto struk" onClick={() => setView('lainnya')} />
                   </Group>
 
@@ -527,7 +527,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                   <Group>
                     <Row icon={Zap} title="Input Cepat" desc="Pasang di layar utama HP" onClick={() => setView('lainnya')} />
                     <Row icon={Smartphone} title="Shortcut iPhone" desc="Catat lewat Siri, Back Tap & Action Button" onClick={go('/panduan/shortcut-ios')} />
-                    <Row icon={Bot} title="Aplikasi terhubung" desc="Claude, ChatGPT & aplikasi lain" onClick={() => setView('ai')} />
+                    <Row icon={Bot} title="Aplikasi terhubung" desc="Claude, ChatGPT & aplikasi lain" onClick={go('/membership/aplikasi')} />
                   </Group>
                   <p className="px-1 pt-2 text-[14px] text-slate-500">Notifikasi</p>
                   <Group>
