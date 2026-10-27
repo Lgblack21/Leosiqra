@@ -1,119 +1,125 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import {
-  Building2,
-  Wallet,
-  Landmark,
-  Banknote,
-  CreditCard,
+  Plus,
   Edit2,
   Trash2,
   ChevronRight,
   ShieldCheck,
-  Plus,
-  X
+  X,
+  Eye,
+  EyeOff,
+  CreditCard,
+  ArrowLeftRight,
 } from 'lucide-react';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { LogoImage } from '@/components/ui/LogoImage';
-import { accountService, Account, parseAccountPayload } from '@/lib/services/accountService';
-import { Transaction } from '@/lib/services/transactionService';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { accountService, Account } from '@/lib/services/accountService';
+import { transactionService, Transaction } from '@/lib/services/transactionService';
+import { savingsGoalService, SavingsGoal } from '@/lib/services/savingsGoalService';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
-import { auth, db } from '@/lib/cf-client';
-import { onAuthStateChanged, User } from '@/lib/cf-auth';
-import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
+import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
+import { auth } from '@/lib/cf-client';
+import { onAuthStateChanged } from '@/lib/cf-auth';
 import { AccountModal } from '@/components/modals/AccountModal';
-import { isCreditAccountType, computeCreditUsage } from '@/lib/creditCard';
+import { isCreditAccountType, computeCreditUsage, getCardCycle } from '@/lib/creditCard';
+import { getCardGradientClass } from '@/lib/cardColors';
 import { useModal } from '@/context/ModalContext';
 import { cn, formatIDR, formatMoney } from '@/lib/utils';
 import { useFeedback } from '@/components/ui/Feedback';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { Skeleton } from '@/components/ui/Skeleton';
+
+// Rekening & dompet: total saldo, daftar rekening kas (bank, e-wallet,
+// tunai, investasi), tumpukan kartu kredit dengan jatuh tempo terdekat,
+// dan target tabungan. Rumus saldo & tagihan sama dengan Ringkasan
+// (balance dikonversi ke IDR; kartu kredit lewat lib/creditCard.ts).
+
+const TYPE_LABEL: Record<string, string> = {
+  'Bank Account': 'Bank',
+  'E-Wallet': 'E-wallet',
+  Cash: 'Tunai',
+  'Investment Account': 'Rekening investasi',
+  'Credit Card': 'Kartu kredit',
+};
+const TYPE_EMOJI: Record<string, { emoji: string; tile: string }> = {
+  'Bank Account': { emoji: '🏦', tile: 'bg-blue-50' },
+  'E-Wallet': { emoji: '📱', tile: 'bg-sky-50' },
+  Cash: { emoji: '💵', tile: 'bg-emerald-50' },
+  'Investment Account': { emoji: '📈', tile: 'bg-violet-50' },
+  'Credit Card': { emoji: '💳', tile: 'bg-rose-50' },
+};
+const HIDE_KEY = 'leosiqra-hide-balance';
+const short = (n: number) =>
+  Math.abs(n) >= 1e6 ? `Rp${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 2 })} jt`
+  : Math.abs(n) >= 1e3 ? `Rp${Math.round(n / 1e3)} rb` : formatIDR(n);
+const dueText = (dueDate: string) => {
+  const [y, m, d] = dueDate.split('-').map(Number);
+  return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(y, m - 1, d));
+};
 
 export default function RekeningPage() {
   const { toast, confirm } = useFeedback();
-  const { activeModal } = useModal();
+  const { openModal } = useModal();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [fxRates, setFxRates] = useState<ExchangeRates>({});
-  const [showSecurityBanner, setShowSecurityBanner] = useState(true);
+  const [showSecurityBanner, setShowSecurityBanner] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const [uid, setUid] = useState<string | null>(null);
+
+  useEffect(() => onAuthStateChanged(auth, (u) => setUid(u?.uid ?? null)), []);
 
   useEffect(() => {
-    if (localStorage.getItem('rekening-security-banner-dismissed') === '1') {
-      setShowSecurityBanner(false);
-    }
+    try {
+      setShowSecurityBanner(localStorage.getItem('rekening-security-banner-dismissed') !== '1');
+      setHidden(localStorage.getItem(HIDE_KEY) === '1');
+    } catch { /* storage diblokir: pakai bawaan */ }
+    exchangeRateService.getLatestRates().then(setFxRates).catch(console.error);
+  }, []);
+
+  // Data diambil ulang tiap ada perubahan rekening/transaksi/tabungan di mana pun
+  // (modal tambah transaksi, transfer, AccountModal, dll).
+  useEffect(() => {
+    let active = true;
+    const loadAccounts = () =>
+      accountService
+        .getUserAccounts('session')
+        .then((a) => active && setAccounts(a))
+        .catch(console.error)
+        .finally(() => active && setLoading(false));
+    const loadTrx = () => transactionService.getUserTransactions('session').then((t) => active && setTransactions(t)).catch(console.error);
+    const loadGoals = () => savingsGoalService.getUserSavingsGoals().then((g) => active && setGoals(g)).catch(() => active && setGoals([]));
+    loadAccounts();
+    loadTrx();
+    loadGoals();
+    const unsubs = [
+      subscribeToCollectionChanges('accounts', loadAccounts),
+      subscribeToCollectionChanges('transactions', () => { loadTrx(); loadAccounts(); }),
+      subscribeToCollectionChanges('savings', loadGoals),
+    ];
+    return () => {
+      active = false;
+      unsubs.forEach((u) => u());
+    };
   }, []);
 
   const dismissSecurityBanner = () => {
     setShowSecurityBanner(false);
-    localStorage.setItem('rekening-security-banner-dismissed', '1');
+    try { localStorage.setItem('rekening-security-banner-dismissed', '1'); } catch { /* abaikan */ }
   };
-
-  useEffect(() => {
-    exchangeRateService.getLatestRates().then(setFxRates).catch(console.error);
-  }, []);
-
-  const unsubRef = useRef<(() => void) | null>(null);
-  const unsubTrxRef = useRef<(() => void) | null>(null);
-
-  // Dipakai baik saat auth berubah maupun saat modal transaksi/rekening manapun
-  // ditutup, supaya Saldo tidak stale — onSnapshot di sini cuma sekali ambil
-  // data (bukan live subscription sungguhan), jadi harus dipanggil ulang manual.
-  const subscribeAccountsAndTransactions = (u: User) => {
-    // Transaksi dipakai untuk menghitung terpakai/sisa limit kartu kredit
-    // & paylater — lihat lib/creditCard.ts.
-    const qTrx = query(collection(db, 'transactions'), where('userId', '==', u.uid));
-    if (unsubTrxRef.current) unsubTrxRef.current();
-    unsubTrxRef.current = onSnapshot(qTrx, (snap) => {
-      setTransactions(snap.docs.map(doc => {
-        const d = doc.data();
-        return { ...d, id: doc.id, amount: Number(d.amount) || 0, date: d.date?.toDate?.() ?? new Date(), createdAt: d.createdAt?.toDate?.() ?? new Date() } as Transaction;
-      }));
-    }, (err) => console.error(err));
-
-    const q = query(collection(db, 'accounts'), where('userId', '==', u.uid));
-    if (unsubRef.current) unsubRef.current();
-    const unsubSnap = onSnapshot(q, (snap) => {
-      setAccounts(snap.docs.map(doc => {
-        const d = doc.data();
-        // payload_json menyimpan cardColor & creditLimit — wajib di-parse, kalau
-        // tidak keduanya hilang saat rekening ini diedit lewat AccountModal.
-        const extra = parseAccountPayload(d.payload_json ?? d.payloadJson);
-        return { ...d, id: doc.id, balance: Number(d.balance) || 0, ...extra, createdAt: d.createdAt?.toDate?.() ?? new Date() } as Account;
-      }));
-      setLoading(false);
-    }, (err) => {
-      if (err.code !== 'permission-denied') console.error('Account listener error:', err);
-      setLoading(false);
+  const toggleHidden = () => {
+    setHidden((h) => {
+      try { localStorage.setItem(HIDE_KEY, h ? '0' : '1'); } catch { /* abaikan */ }
+      return !h;
     });
-    unsubRef.current = unsubSnap;
   };
-
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      if (u) {
-        subscribeAccountsAndTransactions(u);
-      } else { setAccounts([]); setTransactions([]); setLoading(false); }
-    });
-    return () => { unsub(); if (unsubRef.current) unsubRef.current(); if (unsubTrxRef.current) unsubTrxRef.current(); };
-  }, []);
-
-  const prevModalRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (prevModalRef.current && !activeModal && user) {
-      subscribeAccountsAndTransactions(user);
-    }
-    prevModalRef.current = activeModal;
-  }, [activeModal, user]);
+  const money = (n: number, currency?: string) => (hidden ? 'Rp ••••••' : formatMoney(n, currency));
 
   const handleDelete = async (id: string, name: string) => {
     const ok = await confirm({
@@ -137,212 +143,247 @@ export default function RekeningPage() {
     }
   };
 
-  const getIconForType = (type: string) => {
-    switch (type) {
-      case 'Bank Account': return <Building2 size={20} className="text-white" />;
-      case 'E-Wallet': return <Wallet size={20} className="text-white" />;
-      case 'Cash': return <Banknote size={20} className="text-white" />;
-      case 'Investment Account': return <Landmark size={20} className="text-white" />;
-      case 'Credit Card': return <CreditCard size={20} className="text-white" />;
-      default: return <Building2 size={20} className="text-white" />;
-    }
-  };
+  const toIDR = (amount: number, currency: string | undefined) => exchangeRateService.convert(amount, currency || 'IDR', 'IDR', fxRates);
+  const sorted = useMemo(() => [...accounts].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)), [accounts]);
+  const cashAccounts = sorted.filter((a) => !isCreditAccountType(a.type));
+  const cards = sorted.filter((a) => isCreditAccountType(a.type));
 
-  const getBgForType = (type: string) => {
-    switch (type) {
-      case 'Bank Account': return 'bg-blue-600';
-      case 'E-Wallet': return 'bg-indigo-600';
-      case 'Cash': return 'bg-emerald-500';
-      case 'Investment Account': return 'bg-slate-900';
-      case 'Credit Card': return 'bg-rose-500';
-      default: return 'bg-blue-500';
-    }
-  };
+  // Sama dengan "Saldo bersih" di Ringkasan: total kolom balance semua rekening (IDR).
+  const totalSaldo = accounts.reduce((s, a) => s + toIDR(a.balance || 0, a.currency), 0);
+  const cashTotal = cashAccounts.reduce((s, a) => s + toIDR(a.balance || 0, a.currency), 0);
 
-  // Nilai IDR otomatis (menggantikan field manual "Nilai Base" yang sudah dihapus).
-  const toIDR = (amount: number, currency: string | undefined) =>
-    exchangeRateService.convert(amount, currency || 'IDR', 'IDR', fxRates);
-
-  // Kartu kredit/paylater dimodelkan sebagai limit, bukan saldo kas — kolom
-  // "Saldo" untuk tipe ini menampilkan terpakai (dihitung dari transaksi,
-  // bukan kolom balance) memakai rumus yang sama dengan halaman Kartu Saya.
-  const creditUsageByAccount = useMemo(() => {
-    const map = new Map<string, ReturnType<typeof computeCreditUsage>>();
-    accounts.filter(a => isCreditAccountType(a.type) && a.id).forEach(acc => {
-      map.set(acc.id!, computeCreditUsage(acc, transactions));
-    });
-    return map;
-  }, [accounts, transactions]);
-
-  // Sama dengan "Saldo Bersih" di Dashboard: total kolom balance semua
-  // rekening, dikonversi ke IDR.
-  const totalSaldo = useMemo(
-    () => accounts.reduce((s, a) => s + toIDR(a.balance || 0, a.currency), 0),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [accounts, fxRates]
+  // Kartu kredit: terpakai (dari transaksi) & siklus tagihan.
+  const cardInfo = useMemo(
+    () =>
+      cards.map((acc) => ({
+        acc,
+        usage: computeCreditUsage(acc, transactions),
+        cycle: getCardCycle(acc, transactions),
+      })),
+    [cards, transactions]
   );
+  const cardsUsedIdr = cardInfo.reduce((s, c) => s + toIDR(c.usage.used, c.acc.currency), 0);
+  const nearest = [...cardInfo]
+    .filter((c) => c.cycle && c.cycle.amountDue > 0)
+    .sort((a, b) => (a.cycle!.daysUntilDue) - (b.cycle!.daysUntilDue))[0];
 
+  const goalsWithTarget = goals.filter((g) => g.targetAmount && g.targetAmount > 0);
   const openCreate = () => { setEditingAccount(null); setIsModalOpen(true); };
 
   return (
-    <div className="space-y-6 md:space-y-8 max-w-[1400px] pb-12">
-      <PageHeader
-        icon={<Building2 size={22} />}
-        title="Rekening"
-        subtitle="Bank, e-wallet, uang tunai, dan kartu kredit kamu beserta saldonya."
-        actions={
+    <div className="mx-auto max-w-5xl space-y-10 pb-12">
+      {/* Judul + aksi */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-[30px] font-extrabold tracking-tight text-slate-900 md:text-[40px]">Rekening</h1>
+        <div className="flex gap-2">
           <button
-            onClick={openCreate}
-            className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-control text-sm font-bold hover:bg-indigo-700 transition-colors"
+            type="button"
+            onClick={() => openModal('topup_transfer')}
+            className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
           >
-            <Plus size={16} /> Tambah rekening
+            <ArrowLeftRight size={16} /> Transfer
           </button>
-        }
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-        <div className="md:col-span-1 bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-card p-5 md:p-6 shadow-xl shadow-emerald-600/15 relative overflow-hidden">
-          <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
-          <p className="text-label font-bold text-emerald-100 uppercase mb-4">Total Saldo</p>
-          {loading ? (
-            <div className="h-9 w-2/3 mb-3 rounded-control bg-white/20 animate-pulse" />
-          ) : (
-            <p className={cn('text-2xl md:text-3xl font-black tracking-tight tabular-nums truncate mb-3', totalSaldo < 0 && 'text-rose-200')}>
-              {formatIDR(totalSaldo)}
-            </p>
-          )}
-          <p className="text-caption font-bold text-emerald-100">{accounts.length} rekening · dikonversi ke IDR</p>
+          <button
+            type="button"
+            onClick={openCreate}
+            className="flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-[14px] font-bold text-white shadow-[0_10px_20px_-12px_rgba(79,70,229,0.8)] hover:brightness-110"
+          >
+            <Plus size={16} strokeWidth={2.6} /> Tambah rekening
+          </button>
         </div>
-
-        {showSecurityBanner && (
-          <Card className="md:col-span-2 p-5 md:p-6 flex items-start gap-4 relative">
-            <span className="w-10 h-10 rounded-control bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-              <ShieldCheck size={20} />
-            </span>
-            <div className="pr-6">
-              <p className="text-sm font-bold text-slate-900">Kami tidak pernah meminta akses ke bank kamu</p>
-              <p className="text-sm text-slate-500 mt-1">
-                Leosiqra tidak terhubung ke rekening bank dan tidak pernah meminta username, password, atau PIN bank.
-                Saldo di sini murni dari catatan yang kamu input sendiri.
-              </p>
-            </div>
-            <button
-              onClick={dismissSecurityBanner}
-              className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-300 hover:text-slate-500 hover:bg-slate-50 transition-colors"
-              aria-label="Tutup"
-            >
-              <X size={16} />
-            </button>
-          </Card>
-        )}
       </div>
 
-      <div>
-        <div className="flex items-center justify-between gap-4 mb-4">
-          <h2 className="text-base font-bold text-slate-900">Daftar Rekening</h2>
-          <Link
-            href="/membership/transactions/daily"
-            className="inline-flex items-center gap-1 text-sm font-bold text-indigo-600 hover:text-indigo-700"
-          >
-            Riwayat transaksi <ChevronRight size={16} />
-          </Link>
-        </div>
-
+      {/* Total saldo */}
+      <section>
+        <p className="text-[15px] font-semibold text-slate-500">{cards.length > 0 ? 'Saldo bersih (kas − tagihan kartu)' : 'Total saldo'}</p>
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-            {[1, 2, 3].map(i => <Skeleton key={i} className="h-32 rounded-card" />)}
-          </div>
-        ) : accounts.length === 0 ? (
-          <Card className="p-5 md:p-8">
-            <EmptyState
-              title="Belum ada rekening"
-              description="Tambahkan rekening bank, e-wallet, atau uang tunai pertamamu untuk mulai mencatat."
-              icon={<Building2 size={24} />}
-            />
-            <div className="flex justify-center mt-4">
-              <button
-                onClick={openCreate}
-                className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-control text-sm font-bold hover:bg-indigo-700 transition-colors"
-              >
-                <Plus size={16} /> Tambah rekening
-              </button>
-            </div>
-          </Card>
+          <Skeleton className="mt-2 h-14 w-72" />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-            {accounts.map((acc) => {
-              const isCredit = isCreditAccountType(acc.type);
-              const creditUsage = acc.id ? creditUsageByAccount.get(acc.id) : undefined;
-              // Untuk kartu kredit/paylater, "Saldo" berarti dana yang masih bisa
-              // dipakai — jadi tampilkan sisa limit (bukan terpakai) sebagai angka utama.
-              const displayAmount = isCredit ? (creditUsage?.remaining ?? 0) : (acc.balance || 0);
+          <div className="mt-1 flex items-center gap-3">
+            <p className={cn('text-[44px] font-extrabold leading-none tracking-tight tabular-nums md:text-[56px]', totalSaldo < 0 ? 'text-rose-600' : 'text-slate-900')}>
+              {hidden ? 'Rp ••••••' : formatIDR(totalSaldo)}
+            </p>
+            <button type="button" onClick={toggleHidden} aria-label={hidden ? 'Tampilkan saldo' : 'Sembunyikan saldo'} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+              {hidden ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
+        )}
+        <p className="mt-3 text-[15px] text-slate-500">
+          {cashAccounts.length} rekening{cards.length > 0 && ` · ${cards.length} kartu kredit`}
+          {cards.length > 0 && !hidden && ` · kas ${short(cashTotal)}`}
+          {Object.keys(fxRates).length > 0 && accounts.some((a) => a.currency && a.currency !== 'IDR') && ' · dikonversi ke IDR'}
+        </p>
+        {nearest && (
+          <Link href="/membership/cards" className="mt-2 inline-flex items-center gap-2 text-[15px] text-slate-600 hover:text-slate-900">
+            <CreditCard size={17} className="text-slate-400" />
+            Tagihan kartu {hidden ? '••••' : short(cardsUsedIdr)} · {nearest.cycle!.overdue ? 'lewat jatuh tempo' : 'jatuh tempo'} {dueText(nearest.cycle!.dueDate)}
+            <ChevronRight size={16} className="text-slate-400" />
+          </Link>
+        )}
+      </section>
+
+      {showSecurityBanner && (
+        <div className="relative flex items-start gap-3 rounded-[20px] bg-indigo-50/70 p-4 pr-10 ring-1 ring-indigo-100">
+          <ShieldCheck size={20} className="mt-0.5 shrink-0 text-indigo-600" />
+          <p className="text-[14px] text-slate-600">
+            <span className="font-semibold text-slate-900">Leosiqra tidak pernah meminta akses ke bank kamu.</span>{' '}
+            Tidak ada username, password, atau PIN bank — saldo di sini murni dari catatan yang kamu input sendiri.
+          </p>
+          <button onClick={dismissSecurityBanner} aria-label="Tutup" className="absolute right-2 top-2 rounded-lg p-1.5 text-slate-400 hover:bg-white">
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
+      {/* Rekening kas */}
+      <section>
+        <div className="mb-3 flex items-baseline justify-between px-1">
+          <h2 className="text-[22px] font-extrabold tracking-tight text-slate-900">Rekeningmu</h2>
+          <Link href="/membership/transactions/daily" className="text-[14px] font-bold text-indigo-600 hover:underline">Riwayat transaksi</Link>
+        </div>
+        {loading ? (
+          <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>
+        ) : cashAccounts.length === 0 ? (
+          <div className="rounded-[24px] bg-white p-8 text-center ring-1 ring-slate-100">
+            <p className="text-[15px] font-semibold text-slate-900">Belum ada rekening</p>
+            <p className="mt-1 text-[14px] text-slate-500">Tambahkan bank, e-wallet, atau uang tunai pertamamu untuk mulai mencatat.</p>
+            <button onClick={openCreate} className="mt-4 inline-flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-2.5 text-[14px] font-bold text-white">
+              <Plus size={16} /> Tambah rekening
+            </button>
+          </div>
+        ) : (
+          <ul className="divide-y divide-slate-100 overflow-hidden rounded-[24px] bg-white ring-1 ring-slate-100">
+            {cashAccounts.map((acc) => {
+              const v = TYPE_EMOJI[acc.type] ?? { emoji: '🏦', tile: 'bg-slate-100' };
+              const bal = acc.balance || 0;
               return (
-                <Card key={acc.id} className="p-5 flex flex-col gap-4 group">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-control flex items-center justify-center overflow-hidden bg-white border border-slate-100 shrink-0">
+                <li key={acc.id} className="group flex items-center gap-3.5 px-4 py-3 md:px-5">
+                  <Link href={`/membership/transactions/daily?rekening=${encodeURIComponent(acc.id ?? '')}&periode=semua`} className="flex min-w-0 flex-1 items-center gap-3.5">
+                    <span className={cn('flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-[22px]', v.tile)}>
                       <LogoImage
                         src={acc.logoUrl}
                         alt={acc.name}
                         fallbackText={acc.name.substring(0, 3).toUpperCase()}
-                        fallbackIcon={(
-                          <div className={`w-full h-full flex items-center justify-center ${getBgForType(acc.type)} text-white`}>
-                            {getIconForType(acc.type)}
-                          </div>
-                        )}
-                        className="w-full h-full object-cover"
+                        fallbackIcon={<span aria-hidden className={cn('flex h-full w-full items-center justify-center text-[22px]', v.tile)}>{v.emoji}</span>}
+                        className="h-full w-full object-cover"
                       />
-                    </div>
+                    </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-slate-900 truncate">{acc.name}</p>
-                      <p className="text-caption text-slate-400 truncate">{acc.type}</p>
+                      <p className="truncate text-[16px] font-semibold text-slate-900">{acc.name}</p>
+                      <p className="truncate text-[13px] text-slate-500">{TYPE_LABEL[acc.type] ?? acc.type}{acc.currency && acc.currency !== 'IDR' ? ` · ${acc.currency}` : ''}</p>
                     </div>
-                    <div className="flex items-center gap-0.5 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => { setEditingAccount(acc); setIsModalOpen(true); }}
-                        aria-label={`Ubah ${acc.name}`}
-                        className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-                      >
-                        <Edit2 size={15} />
-                      </button>
-                      <button
-                        onClick={() => acc.id && handleDelete(acc.id, acc.name)}
-                        disabled={deletingId === acc.id}
-                        aria-label={`Hapus ${acc.name}`}
-                        className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors disabled:opacity-50"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                    <div className="text-right">
+                      <p className={cn('whitespace-nowrap text-[16px] font-bold tabular-nums', bal < 0 ? 'text-rose-600' : 'text-slate-900')}>{money(bal, acc.currency)}</p>
+                      {acc.currency && acc.currency !== 'IDR' && !hidden && <p className="text-[12px] text-slate-400 tabular-nums">≈ {formatIDR(toIDR(bal, acc.currency))}</p>}
                     </div>
+                  </Link>
+                  <div className="flex items-center md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100">
+                    <button onClick={() => { setEditingAccount(acc); setIsModalOpen(true); }} aria-label={`Ubah ${acc.name}`} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+                      <Edit2 size={15} />
+                    </button>
+                    <button onClick={() => acc.id && handleDelete(acc.id, acc.name)} disabled={deletingId === acc.id} aria-label={`Hapus ${acc.name}`} className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-500 disabled:opacity-50">
+                      <Trash2 size={15} />
+                    </button>
                   </div>
-
-                  <div className="mt-auto">
-                    <p className="text-label font-bold text-slate-400 uppercase">{isCredit ? 'Sisa limit' : 'Saldo'}</p>
-                    <div className="flex items-baseline justify-between gap-2">
-                      <p className={cn('text-lg font-black tabular-nums truncate', isCredit ? 'text-emerald-600' : displayAmount < 0 ? 'text-rose-500' : 'text-slate-900')}>
-                        {formatMoney(displayAmount, acc.currency)}
-                      </p>
-                      {acc.currency && acc.currency !== 'IDR' && <Badge>{acc.currency}</Badge>}
-                    </div>
-                    {isCredit ? (
-                      <p className="text-caption text-slate-400 tabular-nums">Terpakai {formatMoney(creditUsage?.used ?? 0, acc.currency)}</p>
-                    ) : acc.currency && acc.currency !== 'IDR' ? (
-                      <p className="text-caption text-slate-400 tabular-nums">≈ {formatIDR(toIDR(displayAmount, acc.currency))}</p>
-                    ) : null}
-                  </div>
-                </Card>
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
-      </div>
+      </section>
 
-      {user && (
+      {/* Kartu kredit: tumpukan kartu */}
+      {cardInfo.length > 0 && (
+        <section>
+          <div className="mb-3 flex items-baseline justify-between px-1">
+            <h2 className="text-[22px] font-extrabold tracking-tight text-slate-900">Kartu kredit</h2>
+            <Link href="/membership/cards" className="text-[14px] font-bold text-indigo-600 hover:underline">Lihat semua</Link>
+          </div>
+          <div className="mx-auto max-w-xl">
+            {cardInfo.map(({ acc, usage, cycle }, i) => {
+              const chip = cycle && cycle.amountDue > 0
+                ? cycle.overdue
+                  ? `Lewat ${Math.abs(cycle.daysUntilDue)} hari`
+                  : `${dueText(cycle.dueDate)} · ${cycle.daysUntilDue === 0 ? 'hari ini' : `${cycle.daysUntilDue} hari lagi`}`
+                : usage.used > 0 ? `Terpakai ${short(usage.used)}` : 'Lunas';
+              const urgent = cycle && cycle.amountDue > 0 && (cycle.overdue || cycle.daysUntilDue <= 5);
+              return (
+                <Link
+                  key={acc.id}
+                  href="/membership/cards"
+                  className={cn('relative flex items-center gap-3 rounded-t-[22px] px-5 pb-8 pt-4 text-white shadow-[0_-6px_16px_-10px_rgba(15,23,42,0.5)]', getCardGradientClass(acc.cardColor, acc.type), i > 0 && '-mt-5')}
+                  style={{ zIndex: i + 1 }}
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/90">
+                    <LogoImage
+                      src={acc.logoUrl}
+                      alt={acc.name}
+                      fallbackText={acc.name.substring(0, 3).toUpperCase()}
+                      fallbackIcon={<CreditCard size={18} className="text-slate-700" />}
+                      className="h-full w-full object-cover"
+                    />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[18px] font-bold">{acc.name}</span>
+                  <span className={cn('shrink-0 rounded-full px-3 py-1 text-[13px] font-semibold', urgent ? 'bg-white text-rose-600' : 'bg-white/20')}>{chip}</span>
+                </Link>
+              );
+            })}
+            <Link href="/membership/cards" className="relative -mt-5 flex items-center gap-3 rounded-[22px] bg-white px-5 py-4 shadow-[0_10px_30px_-18px_rgba(15,23,42,0.45)] ring-1 ring-slate-100" style={{ zIndex: cardInfo.length + 1 }}>
+              <div className="flex-1">
+                <p className="text-[13px] text-slate-500">Tagihan kartu</p>
+                <p className="text-[20px] font-extrabold tracking-tight text-slate-900 tabular-nums">{hidden ? 'Rp ••••••' : formatIDR(cardsUsedIdr)}</p>
+              </div>
+              {nearest && (
+                <div className="text-right">
+                  <p className="text-[13px] text-slate-500">{nearest.acc.name}</p>
+                  <p className="text-[14px] font-semibold text-amber-600">{hidden ? '••••' : short(nearest.cycle!.amountDue)} · {dueText(nearest.cycle!.dueDate)}</p>
+                </div>
+              )}
+              <ChevronRight size={18} className="text-slate-300" />
+            </Link>
+          </div>
+        </section>
+      )}
+
+      {/* Target tabungan */}
+      {goalsWithTarget.length > 0 && (
+        <section>
+          <div className="mb-3 flex items-baseline justify-between px-1">
+            <h2 className="text-[22px] font-extrabold tracking-tight text-slate-900">Target</h2>
+            <Link href="/membership/tabungan" className="text-[14px] font-bold text-indigo-600 hover:underline">Lihat semua</Link>
+          </div>
+          <ul className="divide-y divide-slate-100 overflow-hidden rounded-[24px] bg-white ring-1 ring-slate-100">
+            {goalsWithTarget.slice(0, 5).map((g, i) => {
+              const pct = Math.max(0, Math.min(100, g.progressPercent ?? (g.currentTotal / (g.targetAmount || 1)) * 100));
+              return (
+                <li key={g.id}>
+                  <Link href="/membership/tabungan" className="flex items-center gap-3.5 px-4 py-4 hover:bg-slate-50 md:px-5">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-pink-50 text-[22px]" aria-hidden>🎯</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <p className="truncate text-[16px] font-semibold text-slate-900">{g.name}</p>
+                        <span className="text-[13px] font-semibold text-slate-500">{Math.round(pct)}%</span>
+                      </div>
+                      <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100">
+                        <div className={cn('h-full rounded-full', ['bg-indigo-600', 'bg-teal-500', 'bg-pink-500', 'bg-amber-500'][i % 4])} style={{ width: `${Math.max(2, pct)}%` }} />
+                      </div>
+                      <p className="mt-1 text-[13px] text-slate-500">{hidden ? '••••' : `${short(g.currentTotal)} dari ${short(g.targetAmount || 0)}`}</p>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      {uid && (
         <AccountModal
-          userId={user.uid}
+          userId={uid}
           isOpen={isModalOpen}
           onClose={() => { setIsModalOpen(false); setEditingAccount(null); }}
           initialData={editingAccount}
-          existingTypes={Array.from(new Set(accounts.map(a => a.type).filter(Boolean)))}
+          existingTypes={Array.from(new Set(accounts.map((a) => a.type).filter(Boolean)))}
         />
       )}
     </div>

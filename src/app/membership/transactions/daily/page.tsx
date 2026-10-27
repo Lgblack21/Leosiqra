@@ -100,12 +100,14 @@ export default function DailyTransactionLogPage() {
     setShown(PAGE);
   }, [period, pickedDate, kind, category, accountId, sort, searchQuery]);
 
-  // Tautan dari Laporan: ?kategori=…&periode=bulan|tahun|semua
+  // Tautan dari Laporan/Rekening: ?kategori=…&rekening=…&periode=bulan|tahun|semua
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const kat = params.get('kategori');
     const per = params.get('periode');
+    const rek = params.get('rekening');
     if (kat) setCategory(kat);
+    if (rek) setAccountId(rek);
     if (per === 'bulan' || per === 'tahun' || per === 'semua' || per === '30' || per === '90') setPeriod(per === 'tahun' ? 'tahun' : per);
   }, []);
 
