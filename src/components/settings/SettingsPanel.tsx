@@ -307,12 +307,22 @@ function PaketView({ user, onClose }: { user: PanelUser | null; onClose: () => v
 
 export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: boolean; onClose: () => void; initialView?: View }) {
   const router = useRouter();
-  const [view, setView] = useState<View>(initialView);
+  // Riwayat tampilan: "Kembali" membuka tampilan sebelumnya (bukan induk
+  // tetap). Pindah ke tampilan yang sudah ada di riwayat (mis. sesudah
+  // simpan) memotong riwayat sampai sana, supaya tidak berputar.
+  const [stack, setStack] = useState<View[]>([initialView]);
+  const view = stack[stack.length - 1];
+  const setView = (next: View) =>
+    setStack((s) => {
+      const i = s.indexOf(next);
+      return i >= 0 ? s.slice(0, i + 1) : [...s, next];
+    });
+  const back = () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : [PARENT[s[0]] ?? 'menu']));
   const [user, setUser] = useState<PanelUser | null>(null);
 
   useEffect(() => {
     if (!open) return;
-    setView(initialView);
+    setStack([initialView]);
     cloudflareApi<{ user?: PanelUser | null }>('/api/auth/me').then((r) => setUser(r.user ?? null)).catch(() => undefined);
   }, [open, initialView]);
 
@@ -381,7 +391,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
           >
             <div className="flex items-center gap-3 px-6 pb-2 pt-5">
               {view !== 'menu' && (
-                <button type="button" onClick={() => setView(PARENT[view] ?? 'menu')} aria-label="Kembali" className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200">
+                <button type="button" onClick={back} aria-label="Kembali" className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200">
                   <ChevronLeft size={20} />
                 </button>
               )}
