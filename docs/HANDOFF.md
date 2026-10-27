@@ -36,12 +36,11 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   `src/lib/version.ts` & `package.json`; versi Android/iOS native belum diubah.
 - Koin baru `LeoCoin` (warna Leosiqra + cetakan singa maskot) & avatar Profil
   simetris juga sudah live (2026-10-28).
-- **Belum di-deploy** (branch `claude/friendly-galileo-d9k5kc`): pop-up **Fitur** di
-  panel Pengaturan (Ubah/Selesai, × matikan, + aktifkan) → menu samping "Fitur"
-  ikut pilihan user. Disimpan di `$.prefs.features` (validasi `PREF_FEATURES` di
-  Worker = `FeatureId` di `src/lib/features.ts`; null = 5 fitur bawaan). Mematikan
-  hanya menyembunyikan dari menu, data & halaman tetap ada. Belum berlaku di
-  menu aplikasi HP (`/app/*`).
+- Pop-up **Fitur** di Pengaturan sudah live (2026-10-28): × matikan / + aktifkan
+  fitur menu samping, disimpan di `$.prefs.features` (validasi `PREF_FEATURES` =
+  `FeatureId` di `src/lib/features.ts`; null = 5 bawaan). Hanya visibilitas menu;
+  belum berlaku di menu aplikasi HP (`/app/*`).
+- **Belum di-deploy**: tidak ada.
 
 ## Migrasi D1
 
