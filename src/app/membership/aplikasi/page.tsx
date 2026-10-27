@@ -6,6 +6,12 @@ import { cn } from '@/lib/utils';
 import { LeoAvatarSvg, DEFAULT_AVATAR } from '@/components/profile/LeoAvatar';
 import { McpConnectCard } from '@/components/profile/McpConnectCard';
 import { CalendarSyncCard, ComposioAppView, useComposioApps, type AppAccess } from '@/components/settings/ConnectedApps';
+import { InboxControls, useInbox } from '@/components/inbox/InboxControls';
+
+function GmailInboxSection() {
+  const inbox = useInbox();
+  return <InboxControls inbox={inbox} showLink />;
+}
 
 // Aplikasi terhubung — halaman sendiri (bukan panel). Daftar aplikasi
 // beserta fungsinya; detail tiap aplikasi dibuka di halaman yang sama lewat
@@ -33,7 +39,7 @@ const APPS: Record<AppId, AppInfo> = {
     tagline: 'Catatan dari email pembayaran, tanpa ketik ulang.',
     bullets: ['Membaca email dari bank, e-wallet & toko', 'Diusulkan jadi transaksi — kamu yang menyetujui', 'Teks email tidak disimpan setelah dibaca'],
     beta: true,
-    steps: ['Hubungkan akun Gmail lewat Google.', 'Leosiqra memeriksa akun yang terhubung.', 'Pencatatan dari email menyusul di tahap berikutnya.'],
+    steps: ['Hubungkan akun Gmail lewat Google.', 'Nyalakan "Baca email pembayaran otomatis" atau tekan Periksa email sekarang.', 'Buka Kotak Masuk, cek usulannya, lalu Simpan atau Abaikan.'],
   },
   googlecalendar: {
     id: 'googlecalendar',
@@ -235,7 +241,7 @@ function Detail({ id, back }: { id: AppId; back: () => void }) {
           {id === 'mcp' ? <McpConnectCard /> : id === 'googlecalendar' ? (
             <ComposioAppView toolkit="googlecalendar"><CalendarSyncCard /></ComposioAppView>
           ) : (
-            <ComposioAppView toolkit="gmail" />
+            <ComposioAppView toolkit="gmail"><GmailInboxSection /></ComposioAppView>
           )}
         </div>
         <aside className="space-y-4">

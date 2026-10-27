@@ -264,7 +264,7 @@ const COMPOSIO_COPY: Record<ComposioToolkit, { name: string; provider: string; a
   gmail: {
     name: 'Gmail',
     provider: 'Google',
-    about: 'Tahap beta: Leosiqra baru memeriksa akun yang terhubung. Nanti Leosiqra membaca email pembayaran (bank, e-wallet, toko) untuk diusulkan sebagai transaksi — selalu kamu tinjau dulu sebelum tercatat.',
+    about: 'Leosiqra membaca email pembayaran (bank, e-wallet, toko) dari 3 hari terakhir, lalu AI mengusulkannya sebagai transaksi di Kotak Masuk — tidak ada yang tercatat sebelum kamu menekan Simpan. Isi email tidak disimpan; yang tersimpan hanya subjek, pengirim & usulannya.',
   },
   googlecalendar: {
     name: 'Google Calendar',

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
+import { InboxBanner } from '@/components/inbox/InboxBanner';
 import Link from 'next/link';
 import {
   ArrowDownLeft,
@@ -339,6 +340,8 @@ export default function MonthlyDashboard() {
           </Link>
         </div>
       </div>
+
+      <InboxBanner />
 
       {/* Kartu sapaan: hari ini */}
       <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-500 p-6 text-white shadow-[0_24px_50px_-28px_rgba(79,70,229,0.8)] md:p-8">

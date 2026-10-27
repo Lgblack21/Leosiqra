@@ -5837,6 +5837,8 @@ async function handleResetMemberData(request: Request, env: Env) {
 
   await env.DB.batch(statements);
   await deleteAllAttachmentsForUser(env, user.id);
+  // Kotak Masuk (migrasi 0019) — best effort, tabelnya bisa belum ada.
+  await env.DB.prepare("DELETE FROM inbox_items WHERE user_id = ?").bind(user.id).run().catch(() => undefined);
 
   return json({ ok: true });
 }
@@ -7706,44 +7708,28 @@ async function handleTranscribe(request: Request, env: Env) {
   }
 }
 
-async function handleParseTransaction(request: Request, env: Env) {
-  const authResult = await requireSession(env, request);
-  if (authResult.error) return authResult.error;
-
-  if (!(await checkAiParseRateLimit(env, authResult.session.user.id))) {
-    return json({ error: "Terlalu banyak permintaan AI. Coba lagi dalam beberapa saat." }, { status: 429 });
-  }
-
-  const payload = await parseJson<{ text?: string; imageBase64?: string }>(request);
-  const hasText = typeof payload.text === "string" && payload.text.trim().length > 0;
-  const hasImage = typeof payload.imageBase64 === "string" && payload.imageBase64.trim().length > 0;
-  if (hasText === hasImage) {
-    return json({ error: "Kirim salah satu: teks atau foto, tidak boleh dua-duanya atau kosong." }, { status: 400 });
-  }
-  if (hasText && payload.text!.length > 1000) {
-    return json({ error: "Teks terlalu panjang (maksimal 1.000 karakter)." }, { status: 400 });
-  }
-  // base64 ±4/3 ukuran file — ~7 juta karakter ≈ foto 5 MB.
-  if (hasImage && payload.imageBase64!.length > 7_000_000) {
-    return json({ error: "Foto terlalu besar. Coba foto ulang dengan resolusi lebih kecil." }, { status: 413 });
-  }
-
+// Ekstraksi transaksi dari teks/foto oleh AI (dipakai scan struk, suara,
+// dan Kotak Masuk Gmail). Kategori & rekening hanya yang benar-benar milik
+// user; gagal → { ok: false, status, body } yang siap dikirim apa adanya.
+const aiFail = (body: Record<string, unknown>, status: number) => ({ ok: false as const, body, status });
+async function aiExtractTransaction(env: Env, userId: string, input: { text?: string; imageBase64?: string }) {
+  const hasImage = typeof input.imageBase64 === "string" && input.imageBase64.trim().length > 0;
   const openRouter = await getOpenRouterKey(env);
   if (!openRouter) {
-    return json({ ok: false, error: "AI belum dikonfigurasi." }, { status: 422 });
+    return aiFail({ ok: false, error: "AI belum dikonfigurasi." }, 422);
   }
 
   const categoryRows = await env.DB.prepare(
     `SELECT category, sub_category FROM categories WHERE user_id = ? ORDER BY category ASC`
   )
-    .bind(authResult.session.user.id)
+    .bind(userId)
     .all<{ category: string; sub_category: string }>();
   const userCategories = (categoryRows.results ?? []).map((c) => ({
     category: c.category,
     sub_category: c.sub_category,
   }));
   const accountRows = await env.DB.prepare(`SELECT id, name, type, currency FROM accounts WHERE user_id = ?`)
-    .bind(authResult.session.user.id)
+    .bind(userId)
     .all<{ id: string; name: string; type: string; currency: string }>();
   const userAccounts = accountRows.results ?? [];
   const today = todayWIB();
@@ -7772,9 +7758,9 @@ ${JSON.stringify(userAccounts.map((a) => ({ name: a.name, type: a.type, currency
   const userContent = hasImage
     ? [
         { type: "text", text: "Ekstrak detail transaksi dari foto struk/nota ini." },
-        { type: "image_url", image_url: { url: `data:image/jpeg;base64,${payload.imageBase64}` } },
+        { type: "image_url", image_url: { url: `data:image/jpeg;base64,${input.imageBase64}` } },
       ]
-    : payload.text!.trim();
+    : input.text!.trim();
 
   let rawContent: string;
   try {
@@ -7811,14 +7797,14 @@ ${JSON.stringify(userAccounts.map((a) => ({ name: a.name, type: a.type, currency
     if (isAiQuotaError(error)) {
       console.warn("AI quota (402):", error instanceof Error ? error.message : error);
       await notifyAiQuotaOnce(env);
-      return json({ ok: false, error: AI_QUOTA_MESSAGE, code: "ai_quota" }, { status: 503 });
+      return aiFail({ ok: false, error: AI_QUOTA_MESSAGE, code: "ai_quota" }, 503);
     }
-    return json(
+    return aiFail(
       {
         ok: false,
         error: "AI tidak bisa membaca data transaksi dari input ini. Coba foto/ucapan yang lebih jelas, atau isi manual.",
       },
-      { status: 422 }
+      422
     );
   }
 
@@ -7826,24 +7812,24 @@ ${JSON.stringify(userAccounts.map((a) => ({ name: a.name, type: a.type, currency
   try {
     parsed = JSON.parse(stripJsonFences(rawContent));
   } catch {
-    return json(
+    return aiFail(
       {
         ok: false,
         error: "AI tidak bisa membaca data transaksi dari input ini. Coba foto/ucapan yang lebih jelas, atau isi manual.",
       },
-      { status: 422 }
+      422
     );
   }
 
   const type = parsed.type === "pengeluaran" || parsed.type === "pemasukan" ? parsed.type : null;
   const amount = Number(parsed.amount);
   if (!type || !Number.isFinite(amount) || amount <= 0) {
-    return json(
+    return aiFail(
       {
         ok: false,
         error: "AI tidak bisa membaca data transaksi dari input ini. Coba foto/ucapan yang lebih jelas, atau isi manual.",
       },
-      { status: 422 }
+      422
     );
   }
 
@@ -7879,6 +7865,35 @@ ${JSON.stringify(userAccounts.map((a) => ({ name: a.name, type: a.type, currency
   if (/^\d{4}-\d{2}-\d{2}$/.test(aiDate) && aiDate <= today && daysBetween(aiDate, today) <= 60) {
     suggestion.date = aiDate;
   }
+
+  return { ok: true as const, suggestion };
+}
+
+async function handleParseTransaction(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+
+  if (!(await checkAiParseRateLimit(env, authResult.session.user.id))) {
+    return json({ error: "Terlalu banyak permintaan AI. Coba lagi dalam beberapa saat." }, { status: 429 });
+  }
+
+  const payload = await parseJson<{ text?: string; imageBase64?: string }>(request);
+  const hasText = typeof payload.text === "string" && payload.text.trim().length > 0;
+  const hasImage = typeof payload.imageBase64 === "string" && payload.imageBase64.trim().length > 0;
+  if (hasText === hasImage) {
+    return json({ error: "Kirim salah satu: teks atau foto, tidak boleh dua-duanya atau kosong." }, { status: 400 });
+  }
+  if (hasText && payload.text!.length > 1000) {
+    return json({ error: "Teks terlalu panjang (maksimal 1.000 karakter)." }, { status: 400 });
+  }
+  // base64 ±4/3 ukuran file — ~7 juta karakter ≈ foto 5 MB.
+  if (hasImage && payload.imageBase64!.length > 7_000_000) {
+    return json({ error: "Foto terlalu besar. Coba foto ulang dengan resolusi lebih kecil." }, { status: 413 });
+  }
+
+  const ai = await aiExtractTransaction(env, authResult.session.user.id, hasImage ? { imageBase64: payload.imageBase64 } : { text: payload.text });
+  if (!ai.ok) return json(ai.body, { status: ai.status });
+  const suggestion = ai.suggestion;
 
   // Foto struk disimpan sebagai lampiran "menunggu" (kalau user mengizinkan);
   // client menautkannya ke transaksi setelah disimpan.
@@ -8605,6 +8620,289 @@ const remindAppActivationExpiry = async (env: Env) => {
   }
 };
 
+// ── Kotak Masuk: email pembayaran (Gmail via Composio) → usulan transaksi ──
+// Tidak pernah langsung mencatat: tiap email jadi usulan BARU yang disimpan
+// atau diabaikan user (mencegah transaksi dobel dengan catatan manual). Isi
+// email hanya lewat di memori untuk dibaca AI; yang disimpan cuma subjek,
+// pengirim (dipotong) & usulannya. Migrasi 0019.
+const inboxTableMissing = (error: unknown) => error instanceof Error && /no such table: inbox_items/.test(error.message);
+const GMAIL_PAYMENT_QUERY =
+  'newer_than:3d -category:social -category:promotions (pembayaran OR transaksi OR transfer OR struk OR receipt OR invoice OR tagihan OR "bukti bayar" OR payment OR pesanan OR order OR "top up" OR topup OR berhasil)';
+const INBOX_MAX_PER_RUN = 8;
+const INBOX_CHECK_COOLDOWN_MS = 2 * 60 * 1000;
+const INBOX_AUTO_INTERVAL_MS = 55 * 60 * 1000;
+
+type GmailInboxState = { enabled?: boolean; lastCheckAt?: string };
+const readGmailInbox = async (env: Env, userId: string): Promise<GmailInboxState> => {
+  const row = await env.DB.prepare(
+    `SELECT CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.gmailInbox') END AS v FROM users WHERE id = ?`
+  )
+    .bind(userId)
+    .first<{ v: string | null }>();
+  try {
+    const parsed = row?.v ? (JSON.parse(row.v) as GmailInboxState) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+const writeGmailInbox = (env: Env, userId: string, state: GmailInboxState) =>
+  env.DB.prepare(
+    `UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.gmailInbox', json(?)) WHERE id = ?`
+  )
+    .bind(JSON.stringify(state), userId)
+    .run();
+
+// Bentuk balikan GMAIL_FETCH_EMAILS tidak didokumentasikan rinci — baca
+// beberapa kemungkinan nama field, termasuk payload MIME mentah (base64url).
+const base64UrlToText = (data: string) => {
+  try {
+    const bin = atob(data.replace(/-/g, "+").replace(/_/g, "/"));
+    return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
+  } catch {
+    return "";
+  }
+};
+const htmlToText = (html: string) =>
+  html
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<br\s*\/?>|<\/(p|div|tr|li|h\d)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n\s*\n+/g, "\n")
+    .trim();
+type MimePart = { mimeType?: string; body?: { data?: string }; parts?: MimePart[]; headers?: { name?: string; value?: string }[] };
+const mimeText = (part: MimePart | undefined): { plain: string; html: string } => {
+  const out = { plain: "", html: "" };
+  const walk = (p: MimePart | undefined) => {
+    if (!p) return;
+    const data = p.body?.data ? base64UrlToText(p.body.data) : "";
+    if (data && p.mimeType === "text/plain" && !out.plain) out.plain = data;
+    if (data && p.mimeType === "text/html" && !out.html) out.html = data;
+    (p.parts ?? []).forEach(walk);
+  };
+  walk(part);
+  return out;
+};
+const mimeHeader = (part: MimePart | undefined, name: string) =>
+  part?.headers?.find((h) => String(h.name ?? "").toLowerCase() === name)?.value ?? "";
+
+type GmailMessage = { id: string; subject: string; sender: string; text: string; receivedAt: string | null };
+const normalizeGmailMessages = (data: Record<string, unknown> | undefined): GmailMessage[] => {
+  const d = (data ?? {}) as { messages?: unknown; response_data?: { messages?: unknown }; emails?: unknown };
+  const raw = (Array.isArray(d.messages) ? d.messages : Array.isArray(d.response_data?.messages) ? d.response_data!.messages : Array.isArray(d.emails) ? d.emails : []) as Record<string, unknown>[];
+  const out: GmailMessage[] = [];
+  for (const m of raw) {
+    const id = String(m.messageId ?? m.id ?? m.message_id ?? "");
+    if (!id) continue;
+    const payload = m.payload as MimePart | undefined;
+    const subject = String(m.subject ?? mimeHeader(payload, "subject") ?? "");
+    const sender = String(m.sender ?? m.from ?? mimeHeader(payload, "from") ?? "");
+    const preview = m.preview as { body?: unknown } | undefined;
+    let text = String(m.messageText ?? m.message_text ?? preview?.body ?? m.body ?? "");
+    if (!text.trim() && payload) {
+      const mime = mimeText(payload);
+      text = mime.plain || mime.html;
+    }
+    if (!text.trim()) text = String(m.snippet ?? "");
+    if (/<\/?[a-z][\s\S]*>/i.test(text)) text = htmlToText(text);
+    const internal = Number(m.internalDate);
+    const receivedAt = typeof m.messageTimestamp === "string" ? m.messageTimestamp : Number.isFinite(internal) && internal > 0 ? new Date(internal).toISOString() : null;
+    out.push({ id, subject: subject.slice(0, 300), sender: sender.slice(0, 200), text: text.replace(/\s+\n/g, "\n").trim(), receivedAt });
+  }
+  return out;
+};
+
+// Satu putaran baca email untuk satu user. Mengembalikan angka diagnostik
+// (tanpa isi email) supaya kalau format Composio berubah, langsung kelihatan.
+const processGmailInbox = async (env: Env, client: InstanceType<typeof Composio>, userId: string) => {
+  const session = await client.sessions.create(userId, { toolkits: ["gmail"] });
+  const res = await session.execute("GMAIL_FETCH_EMAILS", { query: GMAIL_PAYMENT_QUERY, max_results: 15, verbose: true, include_payload: true, user_id: "me" });
+  const stats = { fetched: 0, newItems: 0, suggested: 0, notTransaction: 0, noText: 0, aiStopped: false, logId: res.logId as string | undefined };
+  if (res.resultType !== "completed") {
+    console.error(`Gmail fetch gagal (logId ${res.logId}):`, res.error);
+    throw new Error("GMAIL_FETCH_FAILED");
+  }
+  const messages = normalizeGmailMessages(res.data);
+  stats.fetched = messages.length;
+  const state = await readGmailInbox(env, userId);
+
+  if (messages.length) {
+    const known = await env.DB.prepare(
+      `SELECT source_ref FROM inbox_items WHERE user_id = ? AND source = 'gmail' AND source_ref IN (${messages.map(() => "?").join(",")})`
+    )
+      .bind(userId, ...messages.map((m) => m.id))
+      .all<{ source_ref: string }>();
+    const seen = new Set((known.results ?? []).map((r) => r.source_ref));
+    for (const m of messages.filter((x) => !seen.has(x.id)).slice(0, INBOX_MAX_PER_RUN)) {
+      stats.newItems++;
+      const insert = (status: "BARU" | "BUKAN", suggestion: unknown) =>
+        env.DB.prepare(
+          `INSERT OR IGNORE INTO inbox_items (id, user_id, source, source_ref, status, title, sender, suggestion_json, received_at, created_at)
+           VALUES (?, ?, 'gmail', ?, ?, ?, ?, ?, ?, ?)`
+        )
+          .bind(generateId(), userId, m.id, status, m.subject || null, m.sender || null, suggestion ? JSON.stringify(suggestion) : null, m.receivedAt, nowIso())
+          .run();
+      if (!m.text && !m.subject) {
+        stats.noText++;
+        await insert("BUKAN", null);
+        continue;
+      }
+      const ai = await aiExtractTransaction(env, userId, { text: `Email pembayaran\nDari: ${m.sender}\nSubjek: ${m.subject}\n\n${m.text}`.slice(0, 3500) });
+      if (ai.ok) {
+        stats.suggested++;
+        await insert("BARU", ai.suggestion);
+      } else if (ai.status === 422) {
+        stats.notTransaction++;
+        await insert("BUKAN", null);
+      } else {
+        // AI belum dikonfigurasi / kuota habis: berhenti, email dicoba lagi lain kali.
+        stats.aiStopped = true;
+        break;
+      }
+    }
+  }
+  await writeGmailInbox(env, userId, { ...state, lastCheckAt: nowIso() });
+  return stats;
+};
+
+// Cron 10 menitan: user yang menyalakan baca otomatis, maks sekali per ±jam.
+const processAllGmailInboxes = async (env: Env) => {
+  const setup = composioClient(env);
+  if ("error" in setup) return;
+  try {
+    const { results } = await env.DB.prepare(
+      `SELECT id FROM users
+        WHERE json_valid(metadata_json) AND json_extract(metadata_json, '$.gmailInbox.enabled') = 1
+          AND COALESCE(json_extract(metadata_json, '$.gmailInbox.lastCheckAt'), '') < ?
+        LIMIT 20`
+    )
+      .bind(new Date(Date.now() - INBOX_AUTO_INTERVAL_MS).toISOString())
+      .all<{ id: string }>();
+    for (const { id } of results ?? []) {
+      try {
+        if (!(await readAppAccess(env, id, "gmail")).active) continue;
+        await processGmailInbox(env, setup.client, id);
+      } catch (error) {
+        if (inboxTableMissing(error)) return;
+        console.error("Kotak Masuk otomatis gagal:", error instanceof Error ? error.message : error);
+      }
+    }
+  } catch (error) {
+    if (!inboxTableMissing(error)) console.error("Kotak Masuk otomatis gagal:", error instanceof Error ? error.message : error);
+  }
+};
+
+// GET  /api/member/inbox                 → usulan BARU + status Gmail
+// POST /api/member/inbox/check           → baca email sekarang (cooldown 2 menit)
+// PUT  /api/member/inbox/settings        → { enabled } baca otomatis tiap jam
+// POST /api/member/inbox/:id/claim       → kunci untuk disimpan (sekali saja)
+// POST /api/member/inbox/:id/link        → { transactionId } setelah transaksi dibuat
+// POST /api/member/inbox/:id/release     → batal simpan (gagal membuat transaksi)
+// POST /api/member/inbox/:id/ignore      → abaikan
+async function handleMemberInbox(request: Request, env: Env, pathname: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const [, , , , sub, action] = pathname.split("/");
+  try {
+    if (!sub && request.method === "GET") {
+      const rows = await env.DB.prepare(
+        `SELECT id, title, sender, suggestion_json, received_at, created_at FROM inbox_items
+          WHERE user_id = ? AND status = 'BARU' ORDER BY COALESCE(received_at, created_at) DESC LIMIT 100`
+      )
+        .bind(userId)
+        .all<{ id: string; title: string | null; sender: string | null; suggestion_json: string | null; received_at: string | null; created_at: string }>();
+      const items = (rows.results ?? []).map((r) => {
+        let suggestion: unknown = null;
+        try {
+          suggestion = r.suggestion_json ? JSON.parse(r.suggestion_json) : null;
+        } catch {
+          suggestion = null;
+        }
+        return { id: r.id, title: r.title, sender: r.sender, receivedAt: r.received_at ?? r.created_at, suggestion };
+      });
+      const state = await readGmailInbox(env, userId);
+      return json({ items, gmail: { enabled: Boolean(state.enabled), lastCheckAt: state.lastCheckAt ?? null } });
+    }
+
+    if (sub === "settings" && request.method === "PUT") {
+      const payload = await parseJson<{ enabled?: unknown }>(request);
+      if (typeof payload.enabled !== "boolean") return json({ error: "Pilihan tidak valid." }, { status: 400 });
+      const state = await readGmailInbox(env, userId);
+      await writeGmailInbox(env, userId, { ...state, enabled: payload.enabled });
+      return json({ ok: true, enabled: payload.enabled });
+    }
+
+    if (sub === "check" && request.method === "POST") {
+      const setup = composioClient(env);
+      if ("error" in setup) return json({ error: setup.error }, { status: 503 });
+      const access = await readAppAccess(env, userId, "gmail");
+      if (!access.active) return json({ error: "Aktifkan Gmail dulu.", needActivation: true }, { status: 402 });
+      const state = await readGmailInbox(env, userId);
+      if (state.lastCheckAt && Date.now() - Date.parse(state.lastCheckAt) < INBOX_CHECK_COOLDOWN_MS) {
+        return json({ error: "Baru saja diperiksa. Coba lagi 2 menit lagi." }, { status: 429 });
+      }
+      try {
+        return json({ ok: true, ...(await processGmailInbox(env, setup.client, userId)) });
+      } catch (error) {
+        if (inboxTableMissing(error)) throw error;
+        if (error instanceof Error && error.message === "GMAIL_FETCH_FAILED") {
+          return json({ error: "Gmail belum terhubung atau aksesnya dicabut. Hubungkan lagi di Aplikasi terhubung." }, { status: 409 });
+        }
+        return composioErrorResponse(error, "inbox check");
+      }
+    }
+
+    if (sub && action && request.method === "POST") {
+      const id = sub;
+      if (action === "claim") {
+        const res = await env.DB.prepare(`UPDATE inbox_items SET status = 'DISIMPAN', decided_at = ? WHERE id = ? AND user_id = ? AND status = 'BARU'`)
+          .bind(nowIso(), id, userId)
+          .run();
+        if (!res.meta.changes) return json({ error: "Usulan ini sudah diproses." }, { status: 409 });
+        return json({ ok: true });
+      }
+      if (action === "release") {
+        await env.DB.prepare(`UPDATE inbox_items SET status = 'BARU', decided_at = NULL WHERE id = ? AND user_id = ? AND status = 'DISIMPAN' AND transaction_id IS NULL`)
+          .bind(id, userId)
+          .run();
+        return json({ ok: true });
+      }
+      if (action === "link") {
+        const payload = await parseJson<{ transactionId?: unknown }>(request);
+        const transactionId = String(payload.transactionId ?? "");
+        const tx = await env.DB.prepare("SELECT id FROM transactions WHERE id = ? AND user_id = ?").bind(transactionId, userId).first();
+        if (!tx) return json({ error: "Transaksi tidak ditemukan." }, { status: 404 });
+        await env.DB.prepare(`UPDATE inbox_items SET transaction_id = ? WHERE id = ? AND user_id = ? AND status = 'DISIMPAN'`)
+          .bind(transactionId, id, userId)
+          .run();
+        return json({ ok: true });
+      }
+      if (action === "ignore") {
+        await env.DB.prepare(`UPDATE inbox_items SET status = 'DIABAIKAN', decided_at = ? WHERE id = ? AND user_id = ? AND status = 'BARU'`)
+          .bind(nowIso(), id, userId)
+          .run();
+        return json({ ok: true });
+      }
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (error) {
+    if (inboxTableMissing(error)) {
+      console.error("Kotak Masuk: tabel inbox_items belum ada (migrasi 0019 belum diterapkan)");
+      return json({ error: "Fitur Kotak Masuk belum aktif. Coba lagi nanti." }, { status: 503 });
+    }
+    if (error instanceof Error && error.message === "Payload JSON tidak valid.") return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    throw error;
+  }
+}
+
 // GET    /api/member/apps                    → status koneksi tiap toolkit
 // POST   /api/member/apps/:toolkit/connect   → { redirectUrl } halaman login aplikasi (balik ke /membership/aplikasi?app=…)
 // POST   /api/member/apps/:toolkit/check     → panggilan baca-saja, ringkasan + logId
@@ -8686,6 +8984,10 @@ async function handleMemberApps(request: Request, env: Env, pathname: string) {
           await session.execute("GOOGLECALENDAR_DELETE_EVENT", { event_id: event.id, calendar_id: "primary", send_updates: "none" }).catch(() => undefined);
         }
         await writeCalendarSync(env, userId, null);
+      }
+      if (toolkit === "gmail") {
+        const inbox = await readGmailInbox(env, userId);
+        await writeGmailInbox(env, userId, { ...inbox, enabled: false });
       }
       const res = await session.toolkits({ toolkits: [toolkit] });
       const accountId = res.items.find((t) => t.slug.toLowerCase() === toolkit)?.connection?.connectedAccount?.id;
@@ -13116,6 +13418,10 @@ const worker = {
         return await handleMonthlyReportPreference(request, env);
       }
 
+      if (url.pathname === "/api/member/inbox" || url.pathname.startsWith("/api/member/inbox/")) {
+        return await handleMemberInbox(request, env, url.pathname);
+      }
+
       if (url.pathname === "/api/member/apps" || url.pathname.startsWith("/api/member/apps/")) {
         return await handleMemberApps(request, env, url.pathname);
       }
@@ -13321,6 +13627,8 @@ const worker = {
       ctx.waitUntil(processPromoQueue(env));
       // Pengingat harian pilihan user (jam :00/:30 WIB) — cek jamnya di dalam.
       ctx.waitUntil(sendDailyReminders(env).catch((error) => console.error("Pengingat harian:", error)));
+      // Kotak Masuk: baca email pembayaran (yang menyalakan), maks sekali per ±jam per user.
+      ctx.waitUntil(processAllGmailInboxes(env));
       return;
     }
     if (event.cron === "1 17 * * *") {

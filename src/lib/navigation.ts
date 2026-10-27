@@ -132,6 +132,7 @@ const extraTitles: Record<string, string> = {
   '/membership/onboarding': 'Setup Awal',
   '/membership/fitur': 'Semua fitur',
   '/membership/aplikasi': 'Aplikasi terhubung',
+  '/membership/kotak-masuk': 'Kotak Masuk',
   '/membership/laporan': 'Laporan',
   '/membership/budget': 'Kategori & Anggaran',
   '/membership/nama-akun': 'Kategori & Anggaran',
