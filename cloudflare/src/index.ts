@@ -8156,6 +8156,35 @@ const icsText = (value: string) => value.replace(/\\/g, "\\\\").replace(/;/g, "\
 const icsDate = (ymd: string) => ymd.slice(0, 10).replace(/-/g, "");
 const RRULE_BY_INTERVAL: Record<string, string> = { Harian: "DAILY", Mingguan: "WEEKLY", Bulanan: "MONTHLY", Tahunan: "YEARLY" };
 
+// Baris transaksi untuk ekspor (header + maks 5.000 transaksi terbaru) —
+// dipakai tautan CSV lama & Google Sheets (Composio), supaya kolomnya sama.
+const TRANSACTION_EXPORT_HEADER = ["Tanggal", "Jenis", "Kategori", "Subkategori", "Rekening", "Rekening tujuan", "Nominal", "Mata uang", "Nominal IDR", "Catatan"];
+const transactionExportRows = async (env: Env, userId: string): Promise<(string | number)[][]> => {
+  const accounts = await env.DB.prepare("SELECT id, name FROM accounts WHERE user_id = ?").bind(userId).all<{ id: string; name: string }>();
+  const accountName = new Map((accounts.results ?? []).map((a) => [a.id, a.name]));
+  const rows = await env.DB.prepare(
+    `SELECT date, type, category, sub_category, account_id, target_account_id, amount, currency, amount_idr, note
+       FROM transactions WHERE user_id = ? ORDER BY date DESC, created_at DESC LIMIT 5000`
+  )
+    .bind(userId)
+    .all<{ date: string; type: string; category: string | null; sub_category: string | null; account_id: string | null; target_account_id: string | null; amount: number; currency: string | null; amount_idr: number | null; note: string | null }>();
+  return [
+    TRANSACTION_EXPORT_HEADER,
+    ...(rows.results ?? []).map((r) => [
+      String(r.date ?? "").slice(0, 10),
+      r.type ?? "",
+      r.category ?? "",
+      r.sub_category ?? "",
+      r.account_id ? accountName.get(r.account_id) ?? "" : "",
+      r.target_account_id ? accountName.get(r.target_account_id) ?? "" : "",
+      Number(r.amount) || 0,
+      r.currency || "IDR",
+      Number(r.amount_idr ?? r.amount) || 0,
+      r.note ?? "",
+    ]),
+  ];
+};
+
 // GET /api/feed/:jenis/:token.(csv|ics) — publik, dibuka Google/Apple, bukan browser user.
 async function handlePublicFeed(request: Request, env: Env, pathname: string) {
   const match = /^\/api\/feed\/(sheets|calendar)\/([0-9a-f-]{36})\.([A-Za-z0-9_-]{20,64})\.(csv|ics)$/i.exec(pathname);
@@ -8170,33 +8199,8 @@ async function handlePublicFeed(request: Request, env: Env, pathname: string) {
   const baseHeaders = { "cache-control": "private, max-age=300", "x-robots-tag": "noindex", "x-content-type-options": "nosniff" };
 
   if (kind === "sheets") {
-    const accounts = await env.DB.prepare("SELECT id, name FROM accounts WHERE user_id = ?").bind(userId).all<{ id: string; name: string }>();
-    const accountName = new Map((accounts.results ?? []).map((a) => [a.id, a.name]));
-    const rows = await env.DB.prepare(
-      `SELECT date, type, category, sub_category, account_id, target_account_id, amount, currency, amount_idr, note
-         FROM transactions WHERE user_id = ? ORDER BY date DESC, created_at DESC LIMIT 5000`
-    )
-      .bind(userId)
-      .all<{ date: string; type: string; category: string | null; sub_category: string | null; account_id: string | null; target_account_id: string | null; amount: number; currency: string | null; amount_idr: number | null; note: string | null }>();
-    const lines = [["Tanggal", "Jenis", "Kategori", "Subkategori", "Rekening", "Rekening tujuan", "Nominal", "Mata uang", "Nominal IDR", "Catatan"].join(",")];
-    for (const r of rows.results ?? []) {
-      lines.push(
-        [
-          String(r.date ?? "").slice(0, 10),
-          r.type,
-          r.category,
-          r.sub_category,
-          r.account_id ? accountName.get(r.account_id) ?? "" : "",
-          r.target_account_id ? accountName.get(r.target_account_id) ?? "" : "",
-          Number(r.amount) || 0,
-          r.currency || "IDR",
-          Number(r.amount_idr ?? r.amount) || 0,
-          r.note,
-        ]
-          .map(csvCell)
-          .join(",")
-      );
-    }
+    const rows = await transactionExportRows(env, userId);
+    const lines = rows.map((row) => row.map(csvCell).join(","));
     return new Response(lines.join("\r\n"), { headers: { ...baseHeaders, "content-type": "text/csv; charset=utf-8" } });
   }
 
@@ -8531,6 +8535,121 @@ const syncAllGoogleCalendars = async (env: Env) => {
   }
 };
 
+// ── Google Sheets (Composio): salinan transaksi di spreadsheet user ────────
+// Satu spreadsheet "Leosiqra — Transaksi" di Drive user; tiap sinkron isinya
+// ditulis ulang (transaksi yang diedit/dihapus ikut berubah). Tanpa nama
+// sheet di range → Google memakai sheet pertama (nama bawaannya ikut bahasa
+// akun). Nilai ditulis RAW: teks "=..." tidak pernah jadi rumus. Sama persis
+// dengan sinkron terakhir (hash) = tidak memanggil Google sama sekali.
+type SheetsSyncState = { enabled?: boolean; spreadsheetId?: string; url?: string; lastSyncAt?: string; hash?: string; rows?: number };
+const SHEETS_TITLE = "Leosiqra — Transaksi";
+
+const readSheetsSync = async (env: Env, userId: string): Promise<SheetsSyncState> => {
+  const row = await env.DB.prepare(
+    `SELECT CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.sheetsSync') END AS v FROM users WHERE id = ?`
+  )
+    .bind(userId)
+    .first<{ v: string | null }>();
+  try {
+    const parsed = row?.v ? (JSON.parse(row.v) as SheetsSyncState) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+const writeSheetsSync = (env: Env, userId: string, state: SheetsSyncState | null) =>
+  state
+    ? env.DB.prepare(
+        `UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.sheetsSync', json(?)) WHERE id = ?`
+      )
+        .bind(JSON.stringify(state), userId)
+        .run()
+    : env.DB.prepare(`UPDATE users SET metadata_json = json_remove(metadata_json, '$.sheetsSync') WHERE id = ? AND json_valid(metadata_json)`)
+        .bind(userId)
+        .run();
+
+// Balikan CREATE_GOOGLE_SHEET1 tidak didokumentasikan rinci — baca beberapa nama field.
+const createdSpreadsheetId = (data: Record<string, unknown> | undefined) => {
+  const d = (data ?? {}) as Record<string, unknown> & { response_data?: Record<string, unknown> };
+  const id = d.spreadsheetId ?? d.spreadsheet_id ?? d.response_data?.spreadsheetId ?? d.response_data?.spreadsheet_id ?? d.id;
+  return typeof id === "string" && /^[A-Za-z0-9_-]{20,}$/.test(id) ? id : null;
+};
+
+const syncGoogleSheets = async (env: Env, session: ComposioSession, userId: string, opts: { force?: boolean } = {}) => {
+  const state = await readSheetsSync(env, userId);
+  const rows = await transactionExportRows(env, userId);
+  const hash = await sha256Hex(JSON.stringify(rows));
+  if (!opts.force && state.spreadsheetId && state.hash === hash) {
+    return { ok: true, unchanged: true, rows: rows.length - 1, url: state.url ?? null, created: false };
+  }
+
+  const createSheet = async () => {
+    const res = await session.execute("GOOGLESHEETS_CREATE_GOOGLE_SHEET1", { title: SHEETS_TITLE });
+    const id = res.resultType === "completed" ? createdSpreadsheetId(res.data) : null;
+    if (!id) {
+      console.error(`Buat spreadsheet gagal (logId ${res.logId}):`, res.error ?? "id tidak terbaca");
+      throw new Error("SHEETS_CREATE_FAILED");
+    }
+    return id;
+  };
+  const write = async (spreadsheetId: string) => {
+    const cleared = await session.execute("GOOGLESHEETS_CLEAR_VALUES", { spreadsheet_id: spreadsheetId, range: "A:J" });
+    if (cleared.resultType !== "completed") return { ok: false as const, error: String(cleared.error ?? ""), logId: cleared.logId };
+    const updated = await session.execute("GOOGLESHEETS_VALUES_UPDATE", {
+      spreadsheet_id: spreadsheetId,
+      range: `A1:J${rows.length}`,
+      values: rows,
+      value_input_option: "RAW",
+      major_dimension: "ROWS",
+      auto_expand_sheet: true,
+    });
+    if (updated.resultType !== "completed") return { ok: false as const, error: String(updated.error ?? ""), logId: updated.logId };
+    return { ok: true as const };
+  };
+
+  let created = false;
+  let spreadsheetId = state.spreadsheetId;
+  if (!spreadsheetId) {
+    spreadsheetId = await createSheet();
+    created = true;
+  }
+  let result = await write(spreadsheetId);
+  // Spreadsheet dihapus/dipindah user → buat baru sekali, lalu tulis ulang.
+  if (!result.ok && !created && /not ?found|404|requested entity was not found|permission/i.test(result.error)) {
+    spreadsheetId = await createSheet();
+    created = true;
+    result = await write(spreadsheetId);
+  }
+  if (!result.ok) {
+    console.error(`Tulis spreadsheet gagal (logId ${result.logId}):`, result.error);
+    throw new Error("SHEETS_WRITE_FAILED");
+  }
+  const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
+  await writeSheetsSync(env, userId, { enabled: true, spreadsheetId, url, lastSyncAt: nowIso(), hash, rows: rows.length - 1 });
+  return { ok: true, unchanged: false, rows: rows.length - 1, url, created };
+};
+
+// Cron harian: salin ulang untuk yang sudah menyalakan (lewati kalau sama).
+const syncAllGoogleSheets = async (env: Env) => {
+  const setup = composioClient(env);
+  if ("error" in setup) return;
+  const { results } = await env.DB.prepare(
+    `SELECT id FROM users WHERE json_valid(metadata_json) AND json_extract(metadata_json, '$.sheetsSync.enabled') = 1 LIMIT 500`
+  ).all<{ id: string }>();
+  for (const { id } of results ?? []) {
+    try {
+      if (!(await readAppAccess(env, id, "googlesheets")).active) continue;
+      // Data sama dengan salinan terakhir → tidak perlu sesi Composio sama sekali.
+      const state = await readSheetsSync(env, id);
+      if (state.spreadsheetId && state.hash === (await sha256Hex(JSON.stringify(await transactionExportRows(env, id))))) continue;
+      const session = await setup.client.sessions.create(id, { toolkits: ["googlesheets"] });
+      await syncGoogleSheets(env, session, id);
+    } catch (error) {
+      console.error("Sinkron Sheets harian gagal:", error instanceof Error ? error.message : error);
+    }
+  }
+};
+
 // ── Aktivasi aplikasi pakai koin ────────────────────────────────────────────
 // Biaya Composio/AI ditutup koin (user Gratis) atau langganan PRO. Aktivasi
 // 30 hari disimpan di users.metadata_json $.appActive.<toolkit> (ISO); tidak
@@ -8538,6 +8657,7 @@ const syncAllGoogleCalendars = async (env: Env) => {
 // beta: true = fitur utamanya belum jalan → gratis dulu (harga sudah disiapkan).
 const APP_ACTIVATION: Partial<Record<ComposioToolkit, { price: number; days: number; beta: boolean; name: string }>> = {
   googlecalendar: { price: 200, days: 30, beta: false, name: "Google Calendar" },
+  googlesheets: { price: 200, days: 30, beta: false, name: "Google Sheets" },
   gmail: { price: 500, days: 30, beta: true, name: "Gmail" },
 };
 type AppAccess = { active: boolean; reason: "pro" | "beta" | "coins" | null; until: string | null; price: number; days: number };
@@ -8975,7 +9095,25 @@ async function handleMemberApps(request: Request, env: Env, pathname: string) {
       if (request.method === "POST") return json({ ok: true, ...(await syncGoogleCalendar(env, session, userId)) });
     }
 
+    if (action === "sync" && toolkit === "googlesheets") {
+      if (request.method === "GET") {
+        const state = await readSheetsSync(env, userId);
+        return json({ enabled: Boolean(state.enabled), lastSyncAt: state.lastSyncAt ?? null, rows: state.rows ?? 0, url: state.url ?? null });
+      }
+      if (request.method === "POST") {
+        try {
+          return json(await syncGoogleSheets(env, session, userId));
+        } catch (error) {
+          if (error instanceof Error && /^SHEETS_/.test(error.message)) {
+            return json({ error: "Google Sheets menolak permintaan. Coba lagi, atau putuskan lalu hubungkan ulang." }, { status: 502 });
+          }
+          throw error;
+        }
+      }
+    }
+
     if (!action && request.method === "DELETE") {
+      if (toolkit === "googlesheets") await writeSheetsSync(env, userId, null);
       if (toolkit === "googlecalendar") {
         // Bersihkan acara buatan Leosiqra dulu (selagi aksesnya masih ada).
         const state = await readCalendarSync(env, userId);
@@ -13648,6 +13786,7 @@ const worker = {
     ctx.waitUntil(cleanupPendingAttachments(env));
     // Tagihan rutin & jatuh tempo kartu → Google Calendar (yang sudah menyalakan sinkron).
     ctx.waitUntil(syncAllGoogleCalendars(env));
+    ctx.waitUntil(syncAllGoogleSheets(env));
     ctx.waitUntil(remindAppActivationExpiry(env).catch((error) => console.error("Pengingat aktivasi:", error)));
   },
 };

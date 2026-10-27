@@ -5,7 +5,7 @@ import { ArrowLeft, Bot, CalendarDays, Check, ChevronRight, Mail, MonitorSmartph
 import { cn } from '@/lib/utils';
 import { LeoAvatarSvg, DEFAULT_AVATAR } from '@/components/profile/LeoAvatar';
 import { McpConnectCard } from '@/components/profile/McpConnectCard';
-import { CalendarSyncCard, ComposioAppView, useComposioApps, type AppAccess } from '@/components/settings/ConnectedApps';
+import { CalendarSyncCard, ComposioAppView, SheetsSyncCard, useComposioApps, type AppAccess } from '@/components/settings/ConnectedApps';
 import { InboxControls, useInbox } from '@/components/inbox/InboxControls';
 
 function GmailInboxSection() {
@@ -17,7 +17,7 @@ function GmailInboxSection() {
 // beserta fungsinya; detail tiap aplikasi dibuka di halaman yang sama lewat
 // ?app=<id> supaya tombol Kembali browser & tautan balik dari Composio jalan.
 
-type AppId = 'gmail' | 'googlecalendar' | 'mcp';
+type AppId = 'gmail' | 'googlecalendar' | 'googlesheets' | 'mcp';
 
 type AppInfo = {
   id: AppId;
@@ -49,6 +49,15 @@ const APPS: Record<AppId, AppInfo> = {
     tagline: 'Jadwal transaksi berulang & jatuh tempo kartu muncul di kalendermu.',
     bullets: ['Transaksi berulang (gaji, langganan, tabungan) jadi pengingat', 'Jatuh tempo kartu kredit tiap bulan', 'Hanya pengingat — pencatatan tetap otomatis di Leosiqra'],
     steps: ['Hubungkan Google Calendar.', 'Tekan "Salin jadwal ke kalender".', 'Selesai — Leosiqra memperbaruinya sendiri tiap hari.'],
+  },
+  googlesheets: {
+    id: 'googlesheets',
+    name: 'Google Sheets',
+    icon: Sheet,
+    tile: 'bg-emerald-50 text-emerald-600',
+    tagline: 'Salinan semua transaksimu di spreadsheet, selalu ter-update.',
+    bullets: ['Spreadsheet "Leosiqra — Transaksi" di Drive-mu', 'Ikut berubah saat transaksi diedit/dihapus', 'Enak untuk olah data, pivot & laporan sendiri'],
+    steps: ['Hubungkan Google Sheets.', 'Tekan "Buat spreadsheet & salin".', 'Selesai — Leosiqra memperbaruinya sendiri tiap hari.'],
   },
   mcp: {
     id: 'mcp',
@@ -171,6 +180,7 @@ function Hub({ open }: { open: (id: AppId) => void }) {
         <div className="grid gap-4 md:grid-cols-2">
           <AppCard app={APPS.googlecalendar} connected={apps.items.googlecalendar?.connected} onOpen={() => open('googlecalendar')} disabledNote={composioNote} price={priceLabel(apps.access?.googlecalendar)} />
           <AppCard app={APPS.gmail} connected={apps.items.gmail?.connected} onOpen={() => open('gmail')} disabledNote={composioNote} price={priceLabel(apps.access?.gmail)} />
+          <AppCard app={APPS.googlesheets} connected={apps.items.googlesheets?.connected} onOpen={() => open('googlesheets')} disabledNote={composioNote} price={priceLabel(apps.access?.googlesheets)} />
         </div>
       </section>
 
@@ -193,7 +203,6 @@ function Hub({ open }: { open: (id: AppId) => void }) {
         <p className="text-[14px] font-semibold text-slate-700">Menyusul</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {[
-            [Sheet, 'Google Sheets — salinan transaksi di spreadsheet'],
             [NotebookText, 'Notion — laporan bulanan otomatis'],
             [Hash, 'Slack — catat dari pesan channel'],
           ].map(([Icon, label]) => {
@@ -238,7 +247,9 @@ function Detail({ id, back }: { id: AppId; back: () => void }) {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="min-w-0 rounded-[24px] bg-white p-4 ring-1 ring-slate-100 md:p-6">
-          {id === 'mcp' ? <McpConnectCard /> : id === 'googlecalendar' ? (
+          {id === 'mcp' ? <McpConnectCard /> : id === 'googlesheets' ? (
+            <ComposioAppView toolkit="googlesheets"><SheetsSyncCard /></ComposioAppView>
+          ) : id === 'googlecalendar' ? (
             <ComposioAppView toolkit="googlecalendar"><CalendarSyncCard /></ComposioAppView>
           ) : (
             <ComposioAppView toolkit="gmail"><GmailInboxSection /></ComposioAppView>

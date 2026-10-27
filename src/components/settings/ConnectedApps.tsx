@@ -259,12 +259,17 @@ function FeedView({ kind }: { kind: 'sheets' | 'calendar' }) {
 
 // Layar satu aplikasi Composio: penjelasan & persetujuan → login di situs
 // aplikasinya → kembali ke sini, lalu periksa koneksi (panggilan baca-saja).
-export type ComposioToolkit = 'gmail' | 'googlecalendar';
+export type ComposioToolkit = 'gmail' | 'googlecalendar' | 'googlesheets';
 const COMPOSIO_COPY: Record<ComposioToolkit, { name: string; provider: string; about: string }> = {
   gmail: {
     name: 'Gmail',
     provider: 'Google',
     about: 'Leosiqra membaca email pembayaran (bank, e-wallet, toko) dari 3 hari terakhir, lalu AI mengusulkannya sebagai transaksi di Kotak Masuk — tidak ada yang tercatat sebelum kamu menekan Simpan. Isi email tidak disimpan; yang tersimpan hanya subjek, pengirim & usulannya.',
+  },
+  googlesheets: {
+    name: 'Google Sheets',
+    provider: 'Google',
+    about: 'Leosiqra membuat spreadsheet "Leosiqra — Transaksi" di Google Drive-mu dan menyalin transaksimu ke sana (maks. 5.000 terbaru), lalu memperbaruinya tiap hari — termasuk transaksi yang kamu ubah atau hapus. Leosiqra tidak membaca file lain di Drive-mu.',
   },
   googlecalendar: {
     name: 'Google Calendar',
@@ -429,6 +434,64 @@ function ActivationCard({ toolkit, access, onChange }: { toolkit: ComposioToolki
           {busy && <Loader2 size={15} className="animate-spin" />} {access.active ? 'Perpanjang' : 'Aktifkan'} · {access.price.toLocaleString('id-ID')} koin
         </button>
         <a href="/membership/dashboard?pengaturan=koin" className="inline-flex items-center rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-amber-200">Lihat koin</a>
+      </div>
+    </div>
+  );
+}
+
+// Salinan transaksi ke Google Sheets (tampil setelah terhubung).
+export function SheetsSyncCard() {
+  const { toast } = useFeedback();
+  const [state, setState] = useState<{ enabled: boolean; lastSyncAt: string | null; rows: number; url: string | null } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState('');
+  const load = useCallback(async () => {
+    try {
+      setState(await cloudflareApi<{ enabled: boolean; lastSyncAt: string | null; rows: number; url: string | null }>('/api/member/apps/googlesheets/sync'));
+    } catch {
+      setState(null);
+    }
+  }, []);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const sync = async () => {
+    setBusy(true);
+    setResult('');
+    try {
+      const r = await cloudflareApi<{ unchanged: boolean; rows: number; created: boolean }>('/api/member/apps/googlesheets/sync', { method: 'POST' });
+      setResult(r.unchanged ? `Sudah sama — ${r.rows} transaksi.` : `${r.created ? 'Spreadsheet dibuat · ' : ''}${r.rows} transaksi disalin.`);
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Gagal menyalin.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const when = state?.lastSyncAt ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(state.lastSyncAt)) : null;
+  return (
+    <div className="space-y-3 rounded-[22px] bg-slate-50 p-4">
+      <div className="flex items-center gap-3">
+        <Sheet size={20} className="shrink-0 text-emerald-600" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-semibold text-slate-900">Salinan transaksi</span>
+          <span className="block text-[13px] text-slate-500">
+            {state?.enabled ? `${state.rows} transaksi · diperbarui otomatis tiap hari${when ? ` · terakhir ${when}` : ''}` : 'Belum ada spreadsheet — dibuat saat pertama kali disalin.'}
+          </span>
+        </span>
+      </div>
+      {result && <p className="rounded-2xl bg-white px-4 py-2.5 text-[13px] text-slate-600 ring-1 ring-slate-200">{result}</p>}
+      <div className={cn('grid gap-2', state?.url && 'sm:grid-cols-2')}>
+        <button type="button" onClick={sync} disabled={busy} className="flex items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white disabled:opacity-60">
+          {busy ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />} {state?.enabled ? 'Sinkronkan sekarang' : 'Buat spreadsheet & salin'}
+        </button>
+        {state?.url && (
+          <a href={state.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 rounded-full bg-white py-3 text-[14px] font-bold text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100">
+            Buka spreadsheet <ExternalLink size={14} />
+          </a>
+        )}
       </div>
     </div>
   );
