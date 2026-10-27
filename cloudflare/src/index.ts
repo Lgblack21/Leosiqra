@@ -1,4 +1,5 @@
 import { verifySync } from "otplib";
+import { Composio } from "@composio/core";
 import { DurableObject } from "cloudflare:workers";
 import {
   buildPushPayload,
@@ -22,6 +23,8 @@ export interface Env {
   MCP_WRITE_RATE_LIMITER?: RateLimit;
   ASSETS: Fetcher;
   FILES_BUCKET?: R2Bucket;
+  // Kunci project Composio (secret Worker) untuk Aplikasi terhubung.
+  COMPOSIO_API_KEY?: string;
   REALTIME_ROOM: DurableObjectNamespace;
   APP_NAME: string;
   APP_ENV: string;
@@ -8256,6 +8259,114 @@ async function handlePublicFeed(request: Request, env: Env, pathname: string) {
   return new Response(body, { headers: { ...baseHeaders, "content-type": "text/calendar; charset=utf-8" } });
 }
 
+// ── Aplikasi terhubung via Composio (Gmail, Calendar, Sheets, Notion, Slack) ─
+// Composio menyimpan & menyegarkan token OAuth tiap user (auth Composio-
+// managed); Leosiqra hanya memegang COMPOSIO_API_KEY (secret Worker) dan
+// memakai users.id sebagai user_id Composio. Tidak ada token Google/Notion/
+// Slack yang disimpan di D1.
+const COMPOSIO_TOOLKITS = ["gmail", "googlecalendar", "googlesheets", "notion", "slack"] as const;
+type ComposioToolkit = (typeof COMPOSIO_TOOLKITS)[number];
+
+// Pemeriksaan koneksi = satu panggilan baca-saja per toolkit, hasilnya
+// diringkas jadi teks aman (mis. alamat email), bukan data mentah.
+const COMPOSIO_CHECKS: Partial<Record<ComposioToolkit, { tool: string; args: Record<string, unknown>; summarize: (data: Record<string, unknown>) => string }>> = {
+  gmail: {
+    tool: "GMAIL_GET_PROFILE",
+    args: { user_id: "me" },
+    summarize: (d) => {
+      const email = String((d.response_data as { emailAddress?: unknown } | undefined)?.emailAddress ?? d.emailAddress ?? "");
+      return email ? `Terhubung sebagai ${email}` : "Terhubung";
+    },
+  },
+  googlecalendar: {
+    tool: "GOOGLECALENDAR_LIST_CALENDARS",
+    args: { max_results: 10 },
+    summarize: (d) => {
+      const items = ((d.calendars ?? (d.response_data as { items?: unknown[] } | undefined)?.items ?? d.items) as unknown[] | undefined) ?? [];
+      return Array.isArray(items) ? `Terhubung · ${items.length} kalender` : "Terhubung";
+    },
+  },
+};
+
+const composioClient = (env: Env) => {
+  const key = (env.COMPOSIO_API_KEY ?? "").trim();
+  if (!key) return { error: "Aplikasi terhubung belum dikonfigurasi admin." } as const;
+  // Kesalahan isi yang umum (menempel "NAMA=nilai") — beri tahu, jangan tebak.
+  if (key.includes("=") || !/^ak_/.test(key)) {
+    console.error("COMPOSIO_API_KEY formatnya salah: isi hanya kuncinya (diawali ak_), tanpa nama variabel.");
+    return { error: "Aplikasi terhubung belum dikonfigurasi dengan benar." } as const;
+  }
+  return { client: new Composio({ apiKey: key, allowTracking: false }) } as const;
+};
+
+const composioErrorResponse = (error: unknown, where: string) => {
+  // Detail (termasuk log/request id dari Composio) hanya ke log server.
+  console.error(`Composio ${where} gagal:`, error instanceof Error ? `${error.name}: ${error.message}` : error);
+  return json({ error: "Layanan koneksi aplikasi sedang bermasalah. Coba lagi sebentar lagi." }, { status: 502 });
+};
+
+// GET    /api/member/apps                    → status koneksi tiap toolkit
+// POST   /api/member/apps/:toolkit/connect   → { redirectUrl } halaman login aplikasi
+// POST   /api/member/apps/:toolkit/check     → panggilan baca-saja, ringkasan + logId
+// DELETE /api/member/apps/:toolkit           → putuskan (cabut token di Composio)
+async function handleMemberApps(request: Request, env: Env, pathname: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  // Beta: baru dibuka untuk admin sampai fitur per aplikasi (baca email, dst.) selesai.
+  if (authResult.session.user.role !== "admin") return json({ error: "Segera hadir." }, { status: 403 });
+  const setup = composioClient(env);
+  if ("error" in setup) return json({ error: setup.error }, { status: 503 });
+  const composio = setup.client;
+
+  const [, , , , toolkitRaw, action] = pathname.split("/");
+  const toolkit = (toolkitRaw ?? "") as ComposioToolkit;
+  if (toolkitRaw && !(COMPOSIO_TOOLKITS as readonly string[]).includes(toolkitRaw)) return json({ error: "Aplikasi tidak dikenal." }, { status: 404 });
+
+  try {
+    const session = await composio.sessions.create(userId, { toolkits: [...COMPOSIO_TOOLKITS] });
+
+    if (!toolkitRaw && request.method === "GET") {
+      const res = await session.toolkits({ toolkits: [...COMPOSIO_TOOLKITS] });
+      const items = Object.fromEntries(
+        res.items.map((t) => [t.slug.toLowerCase(), { connected: Boolean(t.connection?.isActive), name: t.name }])
+      );
+      return json({ items });
+    }
+
+    if (action === "connect" && request.method === "POST") {
+      const origin = new URL(request.url).origin;
+      const connection = await session.authorize(toolkit, {
+        callbackUrl: `${origin}/membership/dashboard?pengaturan=ai&terhubung=${toolkit}`,
+      });
+      if (!connection.redirectUrl) return json({ error: "Tautan masuk aplikasi tidak tersedia. Coba lagi." }, { status: 502 });
+      return json({ redirectUrl: connection.redirectUrl });
+    }
+
+    if (action === "check" && request.method === "POST") {
+      const check = COMPOSIO_CHECKS[toolkit];
+      if (!check) return json({ ok: true, summary: "Terhubung" });
+      const result = await session.execute(check.tool, check.args);
+      if (result.resultType !== "completed") {
+        console.error(`Composio cek ${toolkit} gagal (logId ${result.logId}):`, result.error);
+        return json({ ok: false, error: "Koneksi tidak bisa dipakai. Coba putuskan lalu hubungkan lagi.", logId: result.logId }, { status: 409 });
+      }
+      return json({ ok: true, summary: check.summarize(result.data ?? {}), logId: result.logId });
+    }
+
+    if (!action && request.method === "DELETE") {
+      const res = await session.toolkits({ toolkits: [toolkit] });
+      const accountId = res.items.find((t) => t.slug.toLowerCase() === toolkit)?.connection?.connectedAccount?.id;
+      if (accountId) await composio.connectedAccounts.delete(accountId);
+      return json({ ok: true });
+    }
+
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (error) {
+    return composioErrorResponse(error, `${request.method} ${pathname.replace(userId, ":user")}`);
+  }
+}
+
 async function handleSignedUpload(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) {
@@ -12671,6 +12782,10 @@ const worker = {
 
       if (url.pathname === "/api/member/email-report" && (request.method === "GET" || request.method === "PUT")) {
         return await handleMonthlyReportPreference(request, env);
+      }
+
+      if (url.pathname === "/api/member/apps" || url.pathname.startsWith("/api/member/apps/")) {
+        return await handleMemberApps(request, env, url.pathname);
       }
 
       if (url.pathname === "/api/member/feeds" || url.pathname.startsWith("/api/member/feeds/")) {

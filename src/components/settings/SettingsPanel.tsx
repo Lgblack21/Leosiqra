@@ -63,8 +63,8 @@ export interface PanelUser {
   avatar?: AvatarConfig | null;
 }
 
-export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil' | 'kontak' | 'notifikasi' | 'ai' | 'lainnya' | 'referral' | 'koin' | 'koin-riwayat' | 'kawanan' | 'app-mcp' | 'app-sheets' | 'app-calendar';
-const PARENT: Partial<Record<View, View>> = { 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum', referral: 'profil', koin: 'profil', 'koin-riwayat': 'referral', kawanan: 'referral', 'app-mcp': 'ai', 'app-sheets': 'ai', 'app-calendar': 'ai' };
+export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil' | 'kontak' | 'notifikasi' | 'ai' | 'lainnya' | 'referral' | 'koin' | 'koin-riwayat' | 'kawanan' | 'app-mcp' | 'app-sheets' | 'app-calendar' | 'app-gmail';
+const PARENT: Partial<Record<View, View>> = { 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum', referral: 'profil', koin: 'profil', 'koin-riwayat': 'referral', kawanan: 'referral', 'app-mcp': 'ai', 'app-sheets': 'ai', 'app-calendar': 'ai', 'app-gmail': 'ai' };
 
 const FEATURE_COUNT = navGroups.reduce((s, g) => s + g.items.length, 0);
 const STATUS_LABEL: Record<PanelUser['status'], string> = {
@@ -373,6 +373,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
     'app-mcp': 'Claude & ChatGPT',
     'app-sheets': 'Google Sheets',
     'app-calendar': 'Google Calendar',
+    'app-gmail': 'Gmail',
   };
   const { openModal } = useModal();
   const title = TITLES[view];
@@ -568,7 +569,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
 
               {view === 'paket' && <PaketView user={user} onClose={onClose} />}
               {(view === 'kontak' || view === 'notifikasi' || view === 'lainnya') && <AccountSection view={view} />}
-              {(view === 'ai' || view === 'app-mcp' || view === 'app-sheets' || view === 'app-calendar') && <AppsSection view={view} go={setView} />}
+              {(view === 'ai' || view === 'app-mcp' || view === 'app-sheets' || view === 'app-calendar' || view === 'app-gmail') && <AppsSection view={view} go={setView} />}
               {(view === 'referral' || view === 'koin' || view === 'koin-riwayat' || view === 'kawanan') && <CoinSection view={view} go={setView} openPaket={() => setView('paket')} />}
             </div>
           </motion.div>
