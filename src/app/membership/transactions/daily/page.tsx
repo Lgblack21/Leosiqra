@@ -9,7 +9,7 @@ import { transactionService, Transaction } from '@/lib/services/transactionServi
 import { accountService, Account } from '@/lib/services/accountService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { cn, isIncomingTransaction, formatIDR, formatMoney, toLocalDateString } from '@/lib/utils';
-import { categoryVisual } from '@/lib/categoryEmoji';
+import { categoryVisual, useCategoryStyles } from '@/lib/categoryEmoji';
 import { useFeedback } from '@/components/ui/Feedback';
 import { useModal } from '@/context/ModalContext';
 
@@ -60,6 +60,8 @@ const chip = (active: boolean) =>
   );
 
 export default function DailyTransactionLogPage() {
+  // Ikon/warna kategori pilihan user (Pengaturan → Kategori & Anggaran).
+  useCategoryStyles();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);

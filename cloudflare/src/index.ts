@@ -8921,12 +8921,31 @@ const PREF_GOALS = ["arus_uang", "budget", "nabung", "hutang", "pajak", "aset"] 
 const PREF_INPUT_MODES = ["ketik", "suara", "foto"] as const;
 // Jam pengingat per 30 menit (cron tiap 10 menit, lihat sendDailyReminders).
 const PREF_TIME_RE = /^([01]\d|2[0-3]):(00|30)$/;
+// Ikon & warna pilihan user per nama kategori (panel Kategori & Anggaran).
+// Disimpan di $.prefs.categoryStyles — tanpa kolom/migrasi baru.
+const CATEGORY_COLORS = ["blue", "sky", "indigo", "teal", "green", "amber", "orange", "red", "pink", "purple", "violet", "slate"] as const;
+const CATEGORY_STYLES_MAX = 200;
+const CATEGORY_EMOJI_RE = /^[^\x00-\x7F]{1,16}$/u;
+type CategoryStyle = { emoji: string; color: string };
 type UserPrefs = {
   goals: string[];
   inputMode: string | null;
   reminder: { on: boolean; time: string };
+  categoryStyles: Record<string, CategoryStyle>;
 };
-const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" } };
+const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" }, categoryStyles: {} };
+const sanitizeCategoryStyles = (raw: unknown): Record<string, CategoryStyle> => {
+  const out: Record<string, CategoryStyle> = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>).slice(0, CATEGORY_STYLES_MAX)) {
+    const v = value as { emoji?: unknown; color?: unknown } | null;
+    if (key.length < 1 || key.length > 60 || !v || typeof v !== "object") continue;
+    if (typeof v.emoji !== "string" || !CATEGORY_EMOJI_RE.test(v.emoji)) continue;
+    if (typeof v.color !== "string" || !(CATEGORY_COLORS as readonly string[]).includes(v.color)) continue;
+    out[key] = { emoji: v.emoji, color: v.color };
+  }
+  return out;
+};
 
 const readUserPrefs = async (env: Env, userId: string): Promise<UserPrefs> => {
   const row = await env.DB.prepare(
@@ -8947,11 +8966,13 @@ const readUserPrefs = async (env: Env, userId: string): Promise<UserPrefs> => {
       on: raw.reminder?.on === true,
       time: typeof raw.reminder?.time === "string" && PREF_TIME_RE.test(raw.reminder.time) ? raw.reminder.time : DEFAULT_PREFS.reminder.time,
     },
+    categoryStyles: sanitizeCategoryStyles(raw.categoryStyles),
   };
 };
 
 // GET  /api/member/preferences
-// PUT  /api/member/preferences  { goals?, inputMode?, reminder?: { on, time } } — field yang dikirim saja yang diubah
+// PUT  /api/member/preferences  { goals?, inputMode?, reminder?: { on, time },
+//        categoryStyle?: { name, emoji, color } | { name, remove: true } } — field yang dikirim saja yang diubah
 async function handleUserPreferences(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -8959,8 +8980,8 @@ async function handleUserPreferences(request: Request, env: Env) {
   const current = await readUserPrefs(env, userId);
   if (request.method === "GET") return json({ item: current });
 
-  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown }>(request);
-  const next: UserPrefs = { ...current, reminder: { ...current.reminder } };
+  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown; categoryStyle?: unknown }>(request);
+  const next: UserPrefs = { ...current, reminder: { ...current.reminder }, categoryStyles: { ...current.categoryStyles } };
   if (payload.goals !== undefined) {
     if (!Array.isArray(payload.goals) || payload.goals.length > PREF_GOALS.length || payload.goals.some((g) => !(PREF_GOALS as readonly unknown[]).includes(g))) {
       return json({ error: "Pilihan tujuan tidak valid." }, { status: 400 });
@@ -8980,13 +9001,31 @@ async function handleUserPreferences(request: Request, env: Env) {
     }
     next.reminder = { on: r.on, time: typeof r.time === "string" ? r.time : current.reminder.time };
   }
+  if (payload.categoryStyle !== undefined) {
+    const c = payload.categoryStyle as { name?: unknown; emoji?: unknown; color?: unknown; remove?: unknown } | null;
+    const name = c && typeof c.name === "string" ? c.name.trim() : "";
+    if (!c || typeof c !== "object" || name.length < 1 || name.length > 60) {
+      return json({ error: "Nama kategori tidak valid." }, { status: 400 });
+    }
+    if (c.remove === true) {
+      delete next.categoryStyles[name];
+    } else {
+      if (typeof c.emoji !== "string" || !CATEGORY_EMOJI_RE.test(c.emoji) || typeof c.color !== "string" || !(CATEGORY_COLORS as readonly string[]).includes(c.color)) {
+        return json({ error: "Ikon atau warna kategori tidak valid." }, { status: 400 });
+      }
+      if (!(name in next.categoryStyles) && Object.keys(next.categoryStyles).length >= CATEGORY_STYLES_MAX) {
+        return json({ error: "Terlalu banyak kategori berikon." }, { status: 400 });
+      }
+      next.categoryStyles[name] = { emoji: c.emoji, color: c.color };
+    }
+  }
   await env.DB.prepare(
     `UPDATE users
         SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END,
-              '$.prefs.goals', json(?), '$.prefs.inputMode', ?, '$.prefs.reminder', json(?))
+              '$.prefs.goals', json(?), '$.prefs.inputMode', ?, '$.prefs.reminder', json(?), '$.prefs.categoryStyles', json(?))
       WHERE id = ?`
   )
-    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), userId)
+    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), JSON.stringify(next.categoryStyles), userId)
     .run();
   return json({ ok: true, item: next });
 }

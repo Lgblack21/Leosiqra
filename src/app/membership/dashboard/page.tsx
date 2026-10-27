@@ -40,7 +40,7 @@ import { budgetService, Budget } from '@/lib/services/budgetService';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { isCreditAccountType, computeCreditUsage, getCardCycle } from '@/lib/creditCard';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
-import { categoryVisual } from '@/lib/categoryEmoji';
+import { categoryVisual, useCategoryStyles } from '@/lib/categoryEmoji';
 import { GamificationStrip } from '@/components/GamificationStrip';
 import { WeeklyInsights } from '@/components/WeeklyInsights';
 import { SecurityNudge } from '@/components/SecurityNudge';
@@ -59,6 +59,8 @@ const BAR_COLORS = ['bg-indigo-600', 'bg-violet-500', 'bg-sky-500', 'bg-emerald-
 const card = 'rounded-[24px] bg-white ring-1 ring-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04)]';
 
 export default function MonthlyDashboard() {
+  // Ikon/warna kategori pilihan user (Pengaturan → Kategori & Anggaran).
+  useCategoryStyles();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   // Semua transaksi (tanpa filter bulan) — dipakai siklus tagihan kartu
   // kredit, yang tanggal cetaknya bisa jatuh di bulan sebelumnya.

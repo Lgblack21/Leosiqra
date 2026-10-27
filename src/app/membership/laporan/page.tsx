@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Gauge, Printer } from 'lucide-react';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
-import { categoryVisual } from '@/lib/categoryEmoji';
+import { categoryVisual, useCategoryStyles } from '@/lib/categoryEmoji';
 import { cn, formatIDR } from '@/lib/utils';
 import { openSettings } from '@/lib/settingsPanel';
 
@@ -43,6 +43,8 @@ const niceMax = (v: number) => {
 };
 
 export default function LaporanPage() {
+  // Ikon/warna kategori pilihan user (Pengaturan → Kategori & Anggaran).
+  useCategoryStyles();
   const [all, setAll] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<Mode>('tahunan');

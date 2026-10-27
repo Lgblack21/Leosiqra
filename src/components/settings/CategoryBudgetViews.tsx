@@ -9,7 +9,7 @@ import { transactionService, type Transaction } from '@/lib/services/transaction
 import { currencyService, type Currency } from '@/lib/services/currencyService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { budgetRealization } from '@/lib/budget';
-import { categoryVisual } from '@/lib/categoryEmoji';
+import { categoryVisual, useCategoryStyles, setCategoryStyle, CATEGORY_COLORS, CATEGORY_ICONS, type CategoryStyle } from '@/lib/categoryEmoji';
 import { DEFAULT_CATEGORY_GROUPS } from '@/lib/defaultCategories';
 import { useFeedback } from '@/components/ui/Feedback';
 import { auth } from '@/lib/cf-client';
@@ -113,9 +113,58 @@ export function useCategoryData() {
   return { rows, loading, refreshHints: () => setHints(readHints()) };
 }
 
+// Pemilih ikon & warna (muncul saat lingkaran ikon kategori diketuk).
+function IconPicker({ value, onPick, onClose }: { value: CategoryStyle; onPick: (s: CategoryStyle) => void; onClose: () => void }) {
+  const [style, setStyle] = useState<CategoryStyle>(value);
+  return (
+    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-slate-900/30 sm:items-center sm:p-6" onClick={onClose}>
+      <div role="dialog" aria-label="Pilih ikon & warna" className="max-h-[85vh] w-full overflow-y-auto rounded-t-[28px] bg-white p-5 shadow-2xl sm:max-w-md sm:rounded-[28px]" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-center pb-2">
+          <span className={cn('flex h-20 w-20 items-center justify-center rounded-full text-[38px]', CATEGORY_COLORS[style.color]?.tile)} aria-hidden>{style.emoji}</span>
+        </div>
+        <p className="px-1 pb-2 text-[14px] text-slate-500">Warna</p>
+        <div className="flex flex-wrap gap-2.5">
+          {Object.entries(CATEGORY_COLORS).map(([key, c]) => (
+            <button key={key} type="button" aria-label={`Warna ${key}`} onClick={() => setStyle((s) => ({ ...s, color: key }))}
+              className={cn('h-10 w-10 rounded-full ring-offset-2 transition', c.swatch, style.color === key ? 'ring-2 ring-slate-900' : 'hover:scale-105')} />
+          ))}
+        </div>
+        <p className="px-1 pb-2 pt-4 text-[14px] text-slate-500">Ikon</p>
+        <div className="grid grid-cols-6 gap-1.5">
+          {CATEGORY_ICONS.map((emoji) => (
+            <button key={emoji} type="button" aria-label={`Ikon ${emoji}`} onClick={() => setStyle((s) => ({ ...s, emoji }))}
+              className={cn('flex aspect-square items-center justify-center rounded-2xl text-[26px]', style.emoji === emoji ? 'bg-slate-100 ring-2 ring-slate-900' : 'hover:bg-slate-50')}>
+              {emoji}
+            </button>
+          ))}
+        </div>
+        <div className="mt-5 flex gap-2">
+          <button type="button" onClick={onClose} className="flex-1 rounded-full bg-slate-100 py-3 text-[15px] font-semibold text-slate-700">Batal</button>
+          <button type="button" onClick={() => { onPick(style); onClose(); }} className="flex-1 rounded-full bg-slate-900 py-3 text-[15px] font-bold text-white">Pakai</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Warna bawaan untuk pemilih: tebak dari tile bawaan kategori (mis. bg-orange-50 → orange).
+const defaultStyle = (name: string, kind: Kind): CategoryStyle => {
+  const v = categoryVisual(name, kind);
+  const color = Object.keys(CATEGORY_COLORS).find((k) => v.tile.includes(`-${k}-`)) ?? (v.tile.includes('emerald') ? 'green' : v.tile.includes('rose') ? 'red' : v.tile.includes('yellow') ? 'amber' : 'slate');
+  return { emoji: name.trim() ? v.emoji : '✨', color };
+};
+
+const AvatarButton = ({ emoji, tile, onClick }: { emoji: string; tile: string; onClick: () => void }) => (
+  <button type="button" onClick={onClick} aria-label="Ganti ikon & warna" className={cn('group relative flex h-20 w-20 items-center justify-center rounded-full text-[38px] transition hover:scale-105', tile)}>
+    <span aria-hidden>{emoji}</span>
+    <span className="absolute -bottom-1 -right-1 rounded-full bg-white px-1.5 py-0.5 text-[10px] font-bold text-slate-600 shadow ring-1 ring-slate-200">Ubah</span>
+  </button>
+);
+
 const BAR = ['bg-sky-500', 'bg-amber-600', 'bg-indigo-500', 'bg-teal-500', 'bg-violet-400', 'bg-pink-500', 'bg-emerald-500', 'bg-orange-500'];
 
 export function KategoriListView({ rows, loading, onOpen, onAdd }: { rows: CategoryRow[]; loading: boolean; onOpen: (name: string) => void; onAdd: (kind: Kind) => void }) {
+  useCategoryStyles();
   const [tab, setTab] = useState<Kind>('pengeluaran');
   const list = rows.filter((r) => r.kind === tab);
   return (
@@ -182,7 +231,12 @@ export function KategoriDetailView({ row, onDone }: { row: CategoryRow; onDone: 
   const [period, setPeriod] = useState<Budget['period']>(row.budget?.period ?? 'monthly');
   const [newSub, setNewSub] = useState('');
   const [busy, setBusy] = useState(false);
+  const [picking, setPicking] = useState(false);
+  useCategoryStyles();
   const v = categoryVisual(row.name, row.kind);
+  const pickStyle = (style: CategoryStyle) => {
+    setCategoryStyle(row.name, style).catch(() => toast.error('Gagal menyimpan ikon. Coba lagi.'));
+  };
 
   const saveBudget = async () => {
     const value = Number(amount.replace(/[^\d]/g, ''));
@@ -243,6 +297,7 @@ export function KategoriDetailView({ row, onDone }: { row: CategoryRow; onDone: 
     try {
       for (const c of row.subs) if (c.id) await categoryService.deleteCategory(c.id);
       if (row.budget?.id) await budgetService.deleteBudget(row.budget.id);
+      setCategoryStyle(row.name, null).catch(() => undefined);
       toast.success('Kategori dihapus.');
       onDone();
     } catch (e) {
@@ -256,7 +311,8 @@ export function KategoriDetailView({ row, onDone }: { row: CategoryRow; onDone: 
   return (
     <div className="space-y-5">
       <div className="flex flex-col items-center gap-2 pt-1 text-center">
-        <span className={cn('flex h-20 w-20 items-center justify-center rounded-full text-[38px]', v.tile)} aria-hidden>{v.emoji}</span>
+        <AvatarButton emoji={v.emoji} tile={v.tile} onClick={() => setPicking(true)} />
+        {picking && <IconPicker value={defaultStyle(row.name, row.kind)} onPick={pickStyle} onClose={() => setPicking(false)} />}
         <p className="text-[20px] font-bold text-slate-900">{row.name}</p>
         <p className="text-[14px] text-slate-500">{row.kind === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'} · {formatIDR(row.spent)} {row.budget?.period === 'yearly' ? 'tahun ini' : 'bulan ini'}</p>
       </div>
@@ -334,10 +390,13 @@ export function KategoriBaruView({ initialKind, existing, onDone }: { initialKin
   const [subs, setSubs] = useState('');
   const [amount, setAmount] = useState('');
   const [busy, setBusy] = useState(false);
+  const [picked, setPicked] = useState<CategoryStyle | null>(null);
+  const [picking, setPicking] = useState(false);
   const exists = existing.some((e) => e.toLowerCase() === name.trim().toLowerCase());
   const suggestions = (kind === 'pemasukan' ? INCOME_SUGGESTIONS : DEFAULT_CATEGORY_GROUPS.filter((g) => g.category !== 'Pemasukan').map((g) => g.category))
     .filter((s) => !existing.some((e) => e.toLowerCase() === s.toLowerCase()));
-  const v = categoryVisual(name, kind);
+  const auto = defaultStyle(name, kind);
+  const shown = picked ?? auto;
 
   const save = async () => {
     const trimmed = name.trim();
@@ -351,6 +410,7 @@ export function KategoriBaruView({ initialKind, existing, onDone }: { initialKin
       const value = Number(amount.replace(/[^\d]/g, ''));
       if (value > 0) await budgetService.createBudget({ userId: uid(), type: kind, category: trimmed, amount: value, period: 'monthly' });
       saveHint(trimmed, kind);
+      if (picked) await setCategoryStyle(trimmed, picked).catch(() => toast.error('Kategori tersimpan, tapi ikonnya gagal disimpan.'));
       toast.success(`Kategori ${trimmed} ditambahkan.`);
       onDone(trimmed);
     } catch (e) {
@@ -365,7 +425,8 @@ export function KategoriBaruView({ initialKind, existing, onDone }: { initialKin
     <div className="space-y-4">
       <div className="space-y-4 rounded-[22px] bg-slate-50 p-4">
         <div className="flex justify-center">
-          <span className={cn('flex h-20 w-20 items-center justify-center rounded-full text-[38px]', v.tile)} aria-hidden>{name.trim() ? v.emoji : '✨'}</span>
+          <AvatarButton emoji={shown.emoji} tile={CATEGORY_COLORS[shown.color]?.tile ?? 'bg-slate-100'} onClick={() => setPicking(true)} />
+          {picking && <IconPicker value={shown} onPick={setPicked} onClose={() => setPicking(false)} />}
         </div>
         <div className="flex rounded-full bg-slate-200/60 p-1">
           {(['pengeluaran', 'pemasukan'] as Kind[]).map((k) => (
