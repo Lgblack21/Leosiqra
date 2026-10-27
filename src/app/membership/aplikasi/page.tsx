@@ -40,9 +40,9 @@ const APPS: Record<AppId, AppInfo> = {
     name: 'Google Calendar',
     icon: CalendarDays,
     tile: 'bg-sky-50 text-sky-600',
-    tagline: 'Tagihan & cicilan muncul di kalendermu, nggak ada yang kelewat.',
-    bullets: ['Transaksi rutin jadi acara berulang', 'Jatuh tempo kartu kredit tiap bulan', 'Diperbarui otomatis setiap hari'],
-    steps: ['Hubungkan Google Calendar.', 'Tekan "Tulis tagihan ke kalender".', 'Selesai — Leosiqra memperbaruinya sendiri tiap hari.'],
+    tagline: 'Jadwal transaksi berulang & jatuh tempo kartu muncul di kalendermu.',
+    bullets: ['Transaksi berulang (gaji, langganan, tabungan) jadi pengingat', 'Jatuh tempo kartu kredit tiap bulan', 'Hanya pengingat — pencatatan tetap otomatis di Leosiqra'],
+    steps: ['Hubungkan Google Calendar.', 'Tekan "Salin jadwal ke kalender".', 'Selesai — Leosiqra memperbaruinya sendiri tiap hari.'],
   },
   mcp: {
     id: 'mcp',
@@ -138,11 +138,11 @@ function Hub({ open }: { open: (id: AppId) => void }) {
             <p className="text-[13px] font-semibold uppercase tracking-[0.18em] text-indigo-200">Aplikasi terhubung</p>
             <h1 className="mt-2 text-[28px] font-extrabold leading-tight tracking-tight md:text-[38px]">Biar Leosiqra kerja sendiri.</h1>
             <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-indigo-100">
-              Sambungkan aplikasi yang sudah kamu pakai. Leosiqra bisa mengingatkan tagihan di kalender, membaca email pembayaran, dan menjawab pertanyaan keuanganmu dari asisten AI.
+              Sambungkan aplikasi yang sudah kamu pakai. Leosiqra bisa menaruh jadwal keuanganmu di kalender, membaca email pembayaran, dan menjawab pertanyaan keuanganmu dari asisten AI.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               {[
-                [CalendarDays, 'Tagihan nggak kelewat'],
+                [CalendarDays, 'Jadwal di kalender'],
                 [Mail, 'Catat dari email'],
                 [Sparkles, 'Tanya dari AI'],
               ].map(([Icon, label]) => {

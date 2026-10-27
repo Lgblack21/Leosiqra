@@ -269,7 +269,7 @@ const COMPOSIO_COPY: Record<ComposioToolkit, { name: string; provider: string; a
   googlecalendar: {
     name: 'Google Calendar',
     provider: 'Google',
-    about: 'Leosiqra menulis transaksi rutin dan jatuh tempo kartu kredit sebagai acara seharian berulang di kalender utamamu, lalu memperbaruinya tiap hari. Leosiqra tidak membaca acara lain di kalendermu.',
+    about: 'Leosiqra menyalin jadwal transaksi berulang (pemasukan, pengeluaran, tabungan) dan jatuh tempo kartu kredit ke kalender utamamu sebagai pengingat, lalu memperbaruinya tiap hari. Pencatatannya tetap otomatis di Leosiqra — kalender hanya pengingat. Leosiqra tidak membaca acara lain di kalendermu.',
   },
 };
 
@@ -317,7 +317,7 @@ export function ComposioAppView({ toolkit, children }: { toolkit: ComposioToolki
     const ok = await confirm({
       title: `Putuskan ${copy.name}?`,
       message: toolkit === 'googlecalendar'
-        ? 'Acara tagihan buatan Leosiqra dihapus dari kalendermu, lalu aksesnya dicabut.'
+        ? 'Acara jadwal buatan Leosiqra dihapus dari kalendermu, lalu aksesnya dicabut. Transaksi berulangmu di Leosiqra tidak berubah.'
         : `Akses Leosiqra ke ${copy.name}-mu dicabut. Transaksi yang sudah tercatat tidak terhapus.`,
       confirmLabel: 'Putuskan',
       danger: true,
@@ -434,7 +434,7 @@ function ActivationCard({ toolkit, access, onChange }: { toolkit: ComposioToolki
   );
 }
 
-// Sinkron tagihan ke Google Calendar (tampil setelah terhubung).
+// Salin jadwal (transaksi berulang & jatuh tempo kartu) ke Google Calendar.
 type SyncEvent = { summary: string | null; start: string | null; freq: string | null; link: string | null };
 type SyncState = { enabled: boolean; lastSyncAt: string | null; count: number; events?: SyncEvent[] };
 const FREQ_LABEL: Record<string, string> = { DAILY: 'tiap hari', WEEKLY: 'tiap minggu', MONTHLY: 'tiap bulan', YEARLY: 'tiap tahun' };
@@ -476,7 +476,7 @@ export function CalendarSyncCard() {
       <div className="flex items-center gap-3">
         <CalendarDays size={20} className="shrink-0 text-sky-600" />
         <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-semibold text-slate-900">Tagihan di kalender</span>
+          <span className="block text-[15px] font-semibold text-slate-900">Jadwal di kalender</span>
           <span className="block text-[13px] text-slate-500">
             {state?.enabled ? `${state.count} acara · sinkron otomatis tiap hari${when ? ` · terakhir ${when}` : ''}` : 'Transaksi rutin & jatuh tempo kartu kredit.'}
           </span>
@@ -495,7 +495,7 @@ export function CalendarSyncCard() {
                   <span className="text-[15px] font-bold leading-tight">{start ? start.getDate() : ''}</span>
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[14px] font-medium text-slate-900">{e.summary ?? 'Acara tagihan'}</span>
+                  <span className="block truncate text-[14px] font-medium text-slate-900">{e.summary ?? 'Acara jadwal'}</span>
                   <span className="block text-[12px] text-slate-500">
                     {start ? `Mulai ${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(start)}` : 'Tanggal belum terbaca — sinkronkan ulang'}
                     {e.freq ? ` · ${FREQ_LABEL[e.freq] ?? ''}` : ''}
@@ -510,7 +510,7 @@ export function CalendarSyncCard() {
         </ul>
       )}
       <button type="button" onClick={sync} disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[15px] font-bold text-white disabled:opacity-60">
-        {busy ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />} {state?.enabled ? 'Sinkronkan sekarang' : 'Tulis tagihan ke kalender'}
+        {busy ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />} {state?.enabled ? 'Sinkronkan sekarang' : 'Salin jadwal ke kalender'}
       </button>
     </div>
   );
