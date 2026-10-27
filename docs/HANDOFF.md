@@ -40,7 +40,14 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   fitur menu samping, disimpan di `$.prefs.features` (validasi `PREF_FEATURES` =
   `FeatureId` di `src/lib/features.ts`; null = 5 bawaan). Hanya visibilitas menu;
   belum berlaku di menu aplikasi HP (`/app/*`).
-- **Belum di-deploy**: tidak ada.
+- **Belum di-deploy** (branch `claude/friendly-galileo-d9k5kc`): **template kategori v1**
+  (15 grup: 10 pengeluaran, 5 pemasukan, ikon+warna — `CATEGORY_TEMPLATE` di
+  `src/lib/defaultCategories.ts` = Worker) + jenis kategori disimpan di akun
+  (`$.prefs.categoryKinds`, dulu localStorage). Sinkron user lama: POST
+  `/api/member/categories/template` sekali per user (flag `$.prefs.categoryTemplate`,
+  hanya user yang sudah setup awal): HANYA menambah grup yang belum ada + mengisi
+  ikon/jenis yang kosong; tidak me-rename/menghapus apa pun. Setup awal menandai
+  template sudah diterapkan (grup yang tidak dipilih tidak ditambah).
 
 ## Migrasi D1
 

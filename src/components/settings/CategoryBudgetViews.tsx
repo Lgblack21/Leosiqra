@@ -9,8 +9,8 @@ import { transactionService, type Transaction } from '@/lib/services/transaction
 import { currencyService, type Currency } from '@/lib/services/currencyService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { budgetRealization } from '@/lib/budget';
-import { categoryVisual, useCategoryStyles, setCategoryStyle, CATEGORY_COLORS, CATEGORY_ICONS, type CategoryStyle } from '@/lib/categoryEmoji';
-import { DEFAULT_CATEGORY_GROUPS } from '@/lib/defaultCategories';
+import { categoryVisual, useCategoryStyles, useCategoryKinds, setCategoryKind, setCategoryStyle, CATEGORY_COLORS, CATEGORY_ICONS, type CategoryStyle } from '@/lib/categoryEmoji';
+import { CATEGORY_TEMPLATE, DEFAULT_CATEGORY_GROUPS } from '@/lib/defaultCategories';
 import { useFeedback } from '@/components/ui/Feedback';
 import { auth } from '@/lib/cf-client';
 import { onAuthStateChanged } from '@/lib/cf-auth';
@@ -22,21 +22,15 @@ const uid = () => auth.currentUser?.uid ?? '';
 // (menggantikan halaman /membership/nama-akun & /membership/budget).
 // Model data tetap sama: kategori = grup `category` dengan baris-baris
 // `subCategory` (tabel categories), anggaran = tabel budgets per kategori.
-// Kategori tidak menyimpan jenis — Pengeluaran/Pemasukan ditebak dari jenis
-// transaksinya, anggarannya, atau namanya (lihat kindOf).
+// Jenis kategori (Pengeluaran/Pemasukan) disimpan di akun ($.prefs.categoryKinds);
+// kategori lama yang belum punya jenis ditebak dari anggaran, transaksi, atau
+// namanya (lihat kindOf).
 
 export type Kind = 'pengeluaran' | 'pemasukan';
 
 const INCOME_WORDS = ['pemasukan', 'gaji', 'bonus', 'thr', 'freelance', 'pendapatan', 'hadiah', 'dividen', 'bunga', 'komisi', 'penjualan', 'income', 'cashback', 'refund', 'upah', 'honor'];
-const KIND_HINT_KEY = 'leosiqra-category-kind';
-const INCOME_SUGGESTIONS = ['Gaji', 'Freelance', 'Bonus', 'Hadiah', 'Pendapatan Lain'];
-
-const readHints = (): Record<string, Kind> => {
-  try { return JSON.parse(localStorage.getItem(KIND_HINT_KEY) || '{}') as Record<string, Kind>; } catch { return {}; }
-};
-const saveHint = (name: string, kind: Kind) => {
-  try { localStorage.setItem(KIND_HINT_KEY, JSON.stringify({ ...readHints(), [name.toLowerCase()]: kind })); } catch { /* abaikan */ }
-};
+const INCOME_SUGGESTIONS = CATEGORY_TEMPLATE.filter((t) => t.kind === 'pemasukan').map((t) => t.category);
+const EXPENSE_SUGGESTIONS = CATEGORY_TEMPLATE.filter((t) => t.kind === 'pengeluaran').map((t) => t.category);
 
 const inPeriod = (t: Transaction, period: Budget['period'], now: Date) => {
   const d = new Date(t.date);
@@ -57,12 +51,10 @@ export function useCategoryData() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hints, setHints] = useState<Record<string, Kind>>({});
+  const kinds = useCategoryKinds();
 
   useEffect(() => {
     let active = true;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- petunjuk jenis kategori dari browser ini
-    setHints(readHints());
     const loadCats = () => categoryService.getUserCategories(uid()).then((c) => active && setCategories(c)).catch(console.error);
     const loadBudgets = () => budgetService.getUserBudgets('session').then((b) => active && setBudgets(b)).catch(console.error);
     const loadTrx = () => transactionService.getUserTransactions('session').then((t) => active && setTransactions(t)).catch(console.error);
@@ -84,10 +76,13 @@ export function useCategoryData() {
     for (const t of transactions) if ((t.type === 'pengeluaran' || t.type === 'pemasukan') && t.category && inPeriod(t, 'monthly', now) && !groups.has(t.category)) groups.set(t.category, []);
     for (const b of budgets) if (!groups.has(b.category)) groups.set(b.category, []);
 
+    const savedKind = (name: string) => kinds[name] ?? Object.entries(kinds).find(([n]) => n.toLowerCase() === name.toLowerCase())?.[1];
     const kindOf = (name: string): Kind => {
       const lower = name.toLowerCase();
       const budget = budgets.find((b) => b.category.toLowerCase() === lower);
       if (budget) return budget.type;
+      const saved = savedKind(name);
+      if (saved) return saved;
       let inc = 0;
       let out = 0;
       for (const t of transactions) {
@@ -96,7 +91,6 @@ export function useCategoryData() {
         else if (t.type === 'pengeluaran') out++;
       }
       if (inc || out) return inc > out ? 'pemasukan' : 'pengeluaran';
-      if (hints[lower]) return hints[lower];
       return INCOME_WORDS.some((w) => lower.includes(w)) ? 'pemasukan' : 'pengeluaran';
     };
 
@@ -108,9 +102,9 @@ export function useCategoryData() {
       const spent = budgetRealization({ id: '', userId: '', type: kind, category: name, amount: budget?.amount ?? 0, period, createdAt: now }, periodTx).total;
       return { name, kind, subs: [...subs].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)), spent, budget };
     }).sort((a, b) => (b.budget ? 1 : 0) - (a.budget ? 1 : 0) || b.spent - a.spent || a.name.localeCompare(b.name, 'id'));
-  }, [categories, budgets, transactions, hints]);
+  }, [categories, budgets, transactions, kinds]);
 
-  return { rows, loading, refreshHints: () => setHints(readHints()) };
+  return { rows, loading };
 }
 
 // Pemilih ikon & warna (muncul saat lingkaran ikon kategori diketuk).
@@ -393,7 +387,7 @@ export function KategoriBaruView({ initialKind, existing, onDone }: { initialKin
   const [picked, setPicked] = useState<CategoryStyle | null>(null);
   const [picking, setPicking] = useState(false);
   const exists = existing.some((e) => e.toLowerCase() === name.trim().toLowerCase());
-  const suggestions = (kind === 'pemasukan' ? INCOME_SUGGESTIONS : DEFAULT_CATEGORY_GROUPS.filter((g) => g.category !== 'Pemasukan').map((g) => g.category))
+  const suggestions = (kind === 'pemasukan' ? INCOME_SUGGESTIONS : EXPENSE_SUGGESTIONS)
     .filter((s) => !existing.some((e) => e.toLowerCase() === s.toLowerCase()));
   const auto = defaultStyle(name, kind);
   const shown = picked ?? auto;
@@ -409,8 +403,10 @@ export function KategoriBaruView({ initialKind, existing, onDone }: { initialKin
       for (const subCategory of finalSubs) await categoryService.createCategory({ userId: uid(), category: trimmed, subCategory, status: 'VERIFIED' });
       const value = Number(amount.replace(/[^\d]/g, ''));
       if (value > 0) await budgetService.createBudget({ userId: uid(), type: kind, category: trimmed, amount: value, period: 'monthly' });
-      saveHint(trimmed, kind);
-      if (picked) await setCategoryStyle(trimmed, picked).catch(() => toast.error('Kategori tersimpan, tapi ikonnya gagal disimpan.'));
+      await setCategoryKind(trimmed, kind).catch(() => undefined);
+      const templ = CATEGORY_TEMPLATE.find((t) => t.category.toLowerCase() === trimmed.toLowerCase());
+      const style = picked ?? (templ ? { emoji: templ.emoji, color: templ.color } : null);
+      if (style) await setCategoryStyle(trimmed, style).catch(() => toast.error('Kategori tersimpan, tapi ikonnya gagal disimpan.'));
       toast.success(`Kategori ${trimmed} ditambahkan.`);
       onDone(trimmed);
     } catch (e) {
@@ -520,13 +516,13 @@ export function MataUangView({ onAdd }: { onAdd: () => void }) {
 // Daftar ↔ detail ↔ tambah dalam satu komponen supaya data dimuat sekali
 // (dan hanya saat bagian ini dibuka).
 export function KategoriSection({ view, go }: { view: 'kategori' | 'kategori-detail' | 'kategori-baru'; go: (v: 'kategori' | 'kategori-detail' | 'kategori-baru') => void }) {
-  const { rows, loading, refreshHints } = useCategoryData();
+  const { rows, loading } = useCategoryData();
   const [selected, setSelected] = useState<string | null>(null);
   const [newKind, setNewKind] = useState<Kind>('pengeluaran');
   const row = rows.find((r) => r.name === selected);
 
   if (view === 'kategori-baru') {
-    return <KategoriBaruView initialKind={newKind} existing={rows.map((r) => r.name)} onDone={(name) => { refreshHints(); setSelected(name); go('kategori-detail'); }} />;
+    return <KategoriBaruView initialKind={newKind} existing={rows.map((r) => r.name)} onDone={(name) => { setSelected(name); go('kategori-detail'); }} />;
   }
   if (view === 'kategori-detail' && row) {
     return <KategoriDetailView key={`${row.name}-${row.budget?.id ?? ''}`} row={row} onDone={() => go('kategori')} />;

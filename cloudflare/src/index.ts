@@ -6330,6 +6330,11 @@ async function handleCompleteOnboarding(request: Request, env: Env) {
   );
 
   await env.DB.batch(statements);
+  // Kategori sudah dipilih sendiri di setup awal → template tidak menambah grup
+  // yang sengaja tidak dipilih; cukup isi ikon/warna & jenis grup yang dipilih.
+  await applyCategoryTemplate(env, userId, { addGroups: false }).catch((error) =>
+    console.error("Gaya kategori setup awal gagal:", error instanceof Error ? error.message : error)
+  );
   return json({ ok: true });
 }
 
@@ -11270,6 +11275,42 @@ const CATEGORY_COLORS = ["blue", "sky", "indigo", "teal", "green", "amber", "ora
 const CATEGORY_STYLES_MAX = 200;
 const CATEGORY_EMOJI_RE = /^[^\x00-\x7F]{1,16}$/u;
 type CategoryStyle = { emoji: string; color: string };
+// Jenis kategori (pengeluaran/pemasukan) per nama grup — dulu hanya ditebak
+// & disimpan di localStorage browser, sekarang di akun supaya sama di semua
+// perangkat. $.prefs.categoryKinds.
+const CATEGORY_KINDS = ["pengeluaran", "pemasukan"] as const;
+type CategoryKindPref = (typeof CATEGORY_KINDS)[number];
+const sanitizeCategoryKinds = (raw: unknown): Record<string, CategoryKindPref> => {
+  const out: Record<string, CategoryKindPref> = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>).slice(0, CATEGORY_STYLES_MAX)) {
+    if (key.length < 1 || key.length > 60 || !(CATEGORY_KINDS as readonly unknown[]).includes(value)) continue;
+    out[key] = value as CategoryKindPref;
+  }
+  return out;
+};
+
+// Template kategori Leosiqra v1 — SAMA dengan CATEGORY_TEMPLATE di
+// src/lib/defaultCategories.ts. Nama grup lama tidak pernah diganti
+// (transaksi menyimpan nama kategori sebagai teks).
+const CATEGORY_TEMPLATE_VERSION = 1;
+const CATEGORY_TEMPLATE: { category: string; kind: CategoryKindPref; emoji: string; color: string; subs: string[] }[] = [
+  { category: "Makanan & Minuman", kind: "pengeluaran", emoji: "🍜", color: "orange", subs: ["Makan", "Jajan & Kopi", "Belanja Dapur"] },
+  { category: "Transportasi", kind: "pengeluaran", emoji: "🛵", color: "indigo", subs: ["Bensin", "Parkir & Tol", "Transportasi Online"] },
+  { category: "Tagihan & Utilitas", kind: "pengeluaran", emoji: "💡", color: "amber", subs: ["Listrik", "Air", "Internet & Pulsa"] },
+  { category: "Belanja", kind: "pengeluaran", emoji: "🛍️", color: "pink", subs: ["Pakaian", "Elektronik", "Rumah Tangga"] },
+  { category: "Hiburan", kind: "pengeluaran", emoji: "🎬", color: "violet", subs: ["Langganan", "Nonton & Musik", "Jalan-jalan"] },
+  { category: "Kesehatan", kind: "pengeluaran", emoji: "💊", color: "teal", subs: ["Obat", "Dokter", "Olahraga"] },
+  { category: "Tempat Tinggal", kind: "pengeluaran", emoji: "🏠", color: "sky", subs: ["Sewa & Kos", "Cicilan Rumah", "Perawatan Rumah"] },
+  { category: "Pendidikan", kind: "pengeluaran", emoji: "📚", color: "blue", subs: ["Sekolah & Kuliah", "Kursus", "Buku"] },
+  { category: "Keluarga & Sosial", kind: "pengeluaran", emoji: "🤝", color: "green", subs: ["Kirim ke Keluarga", "Kondangan & Hadiah", "Donasi"] },
+  { category: "Perawatan Diri", kind: "pengeluaran", emoji: "💈", color: "purple", subs: ["Salon & Cukur", "Skincare"] },
+  { category: "Gaji", kind: "pemasukan", emoji: "💼", color: "green", subs: ["Gaji Bulanan", "Bonus & THR"] },
+  { category: "Usaha & Freelance", kind: "pemasukan", emoji: "💻", color: "teal", subs: ["Proyek", "Penjualan"] },
+  { category: "Hasil Investasi", kind: "pemasukan", emoji: "📈", color: "violet", subs: ["Dividen", "Bunga"] },
+  { category: "Hadiah & Cashback", kind: "pemasukan", emoji: "🎁", color: "pink", subs: ["Hadiah", "Cashback"] },
+  { category: "Pemasukan", kind: "pemasukan", emoji: "✨", color: "slate", subs: ["Pendapatan Lain"] },
+];
 type UserPrefs = {
   goals: string[];
   inputMode: string | null;
@@ -11279,8 +11320,9 @@ type UserPrefs = {
   // Simpan foto struk hasil scan AI sebagai lampiran transaksi (default ya).
   saveAttachments: boolean;
   features: string[] | null;
+  categoryKinds: Record<string, CategoryKindPref>;
 };
-const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" }, categoryStyles: {}, avatar: null, saveAttachments: true, features: null };
+const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" }, categoryStyles: {}, avatar: null, saveAttachments: true, features: null, categoryKinds: {} };
 const sanitizeFeatures = (raw: unknown): string[] | null =>
   Array.isArray(raw) ? [...new Set(raw.filter((f): f is string => (PREF_FEATURES as readonly unknown[]).includes(f)))] : null;
 const sanitizeCategoryStyles = (raw: unknown): Record<string, CategoryStyle> => {
@@ -11319,6 +11361,7 @@ const readUserPrefs = async (env: Env, userId: string): Promise<UserPrefs> => {
     avatar: sanitizeAvatar(raw.avatar),
     saveAttachments: raw.saveAttachments !== false,
     features: sanitizeFeatures(raw.features),
+    categoryKinds: sanitizeCategoryKinds(raw.categoryKinds),
   };
 };
 
@@ -11326,7 +11369,8 @@ const readUserPrefs = async (env: Env, userId: string): Promise<UserPrefs> => {
 // PUT  /api/member/preferences  { goals?, inputMode?, reminder?: { on, time },
 //        categoryStyle?: { name, emoji, color } | { name, remove: true },
 //        avatar?: { mode: "leo"|"photo", fur, acc, bg }, saveAttachments?: boolean,
-//        features?: string[] (urutan menu) } — field yang dikirim saja yang diubah
+//        features?: string[] (urutan menu), categoryKind?: { name, kind } | { name, remove: true },
+//        categoryKindsMerge?: { [name]: kind } (hanya mengisi yang belum ada) } — field yang dikirim saja yang diubah
 async function handleUserPreferences(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -11334,8 +11378,8 @@ async function handleUserPreferences(request: Request, env: Env) {
   const current = await readUserPrefs(env, userId);
   if (request.method === "GET") return json({ item: current });
 
-  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown; categoryStyle?: unknown; avatar?: unknown; saveAttachments?: unknown; features?: unknown }>(request);
-  const next: UserPrefs = { ...current, reminder: { ...current.reminder }, categoryStyles: { ...current.categoryStyles } };
+  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown; categoryStyle?: unknown; avatar?: unknown; saveAttachments?: unknown; features?: unknown; categoryKind?: unknown; categoryKindsMerge?: unknown }>(request);
+  const next: UserPrefs = { ...current, reminder: { ...current.reminder }, categoryStyles: { ...current.categoryStyles }, categoryKinds: { ...current.categoryKinds } };
   if (payload.goals !== undefined) {
     if (!Array.isArray(payload.goals) || payload.goals.length > PREF_GOALS.length || payload.goals.some((g) => !(PREF_GOALS as readonly unknown[]).includes(g))) {
       return json({ error: "Pilihan tujuan tidak valid." }, { status: 400 });
@@ -11388,16 +11432,106 @@ async function handleUserPreferences(request: Request, env: Env) {
     }
     next.features = sanitizeFeatures(payload.features);
   }
+  if (payload.categoryKind !== undefined) {
+    const k = payload.categoryKind as { name?: unknown; kind?: unknown; remove?: unknown } | null;
+    const name = k && typeof k.name === "string" ? k.name.trim() : "";
+    if (!k || typeof k !== "object" || name.length < 1 || name.length > 60) return json({ error: "Nama kategori tidak valid." }, { status: 400 });
+    if (k.remove === true) delete next.categoryKinds[name];
+    else {
+      if (!(CATEGORY_KINDS as readonly unknown[]).includes(k.kind)) return json({ error: "Jenis kategori tidak valid." }, { status: 400 });
+      if (!(name in next.categoryKinds) && Object.keys(next.categoryKinds).length >= CATEGORY_STYLES_MAX) return json({ error: "Terlalu banyak kategori." }, { status: 400 });
+      next.categoryKinds[name] = k.kind as CategoryKindPref;
+    }
+  }
+  if (payload.categoryKindsMerge !== undefined) {
+    // Pindahan petunjuk lama dari localStorage: hanya mengisi yang belum ada.
+    for (const [name, kind] of Object.entries(sanitizeCategoryKinds(payload.categoryKindsMerge))) {
+      if (!(name in next.categoryKinds) && Object.keys(next.categoryKinds).length < CATEGORY_STYLES_MAX) next.categoryKinds[name] = kind;
+    }
+  }
   await env.DB.prepare(
     `UPDATE users
         SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END,
               '$.prefs.goals', json(?), '$.prefs.inputMode', ?, '$.prefs.reminder', json(?), '$.prefs.categoryStyles', json(?),
-              '$.prefs.avatar', json(?), '$.prefs.saveAttachments', json(?), '$.prefs.features', json(?))
+              '$.prefs.avatar', json(?), '$.prefs.saveAttachments', json(?), '$.prefs.features', json(?), '$.prefs.categoryKinds', json(?))
       WHERE id = ?`
   )
-    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), JSON.stringify(next.categoryStyles), JSON.stringify(next.avatar), JSON.stringify(next.saveAttachments), JSON.stringify(next.features), userId)
+    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), JSON.stringify(next.categoryStyles), JSON.stringify(next.avatar), JSON.stringify(next.saveAttachments), JSON.stringify(next.features), JSON.stringify(next.categoryKinds), userId)
     .run();
   return json({ ok: true, item: next });
+}
+
+// Terapkan template kategori ke satu user. Hanya MENAMBAH:
+// - addGroups: grup template yang belum dimiliki user (dicocokkan tanpa beda
+//   huruf besar/kecil) ditambahkan beserta subkategorinya;
+// - ikon/warna & jenis diisi hanya untuk grup template yang belum diatur user.
+// Kategori, transaksi & anggaran yang sudah ada tidak pernah diubah/dihapus.
+const applyCategoryTemplate = async (env: Env, userId: string, opts: { addGroups: boolean }) => {
+  const prefs = await readUserPrefs(env, userId);
+  const { results } = await env.DB.prepare("SELECT DISTINCT category FROM categories WHERE user_id = ?").bind(userId).all<{ category: string }>();
+  const owned = new Set((results ?? []).map((r) => r.category.toLowerCase()));
+  const now = nowIso();
+  const statements: D1PreparedStatement[] = [];
+  let addedGroups = 0;
+  const styles = { ...prefs.categoryStyles };
+  const kinds = { ...prefs.categoryKinds };
+  for (const t of CATEGORY_TEMPLATE) {
+    const has = owned.has(t.category.toLowerCase());
+    if (!has && opts.addGroups) {
+      addedGroups++;
+      t.subs.forEach((sub, i) => {
+        statements.push(
+          env.DB.prepare(
+            `INSERT INTO categories (id, user_id, category, sub_category, status, sort_order, created_at, updated_at)
+             SELECT ?, ?, ?, ?, 'VERIFIED', ?, ?, ?
+              WHERE NOT EXISTS (SELECT 1 FROM categories WHERE user_id = ? AND category = ? AND sub_category = ?)`
+          ).bind(generateId(), userId, t.category, sub, i, now, now, userId, t.category, sub)
+        );
+      });
+    }
+    if (has || opts.addGroups) {
+      if (!styles[t.category] && Object.keys(styles).length < CATEGORY_STYLES_MAX) styles[t.category] = { emoji: t.emoji, color: t.color };
+      if (!kinds[t.category] && Object.keys(kinds).length < CATEGORY_STYLES_MAX) kinds[t.category] = t.kind;
+    }
+  }
+  statements.push(
+    env.DB.prepare(
+      `UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END,
+              '$.prefs.categoryStyles', json(?), '$.prefs.categoryKinds', json(?), '$.prefs.categoryTemplate', ?)
+        WHERE id = ?`
+    ).bind(JSON.stringify(styles), JSON.stringify(kinds), CATEGORY_TEMPLATE_VERSION, userId)
+  );
+  await env.DB.batch(statements);
+  return { addedGroups };
+};
+
+// POST /api/member/categories/template — sinkron template untuk user yang
+// sudah selesai setup awal, sekali per versi template. Diklaim dulu secara
+// atomik (tab/perangkat bersamaan tidak menambah dua kali).
+async function handleCategoryTemplateSync(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const claim = await env.DB.prepare(
+    `UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.prefs.categoryTemplate', ?)
+      WHERE id = ? AND COALESCE(currency_initialized, 0) = 1
+        AND COALESCE(CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.prefs.categoryTemplate') END, 0) < ?`
+  )
+    .bind(CATEGORY_TEMPLATE_VERSION, userId, CATEGORY_TEMPLATE_VERSION)
+    .run();
+  if (!claim.meta.changes) return json({ ok: true, applied: false });
+  try {
+    const out = await applyCategoryTemplate(env, userId, { addGroups: true });
+    return json({ ok: true, applied: true, ...out });
+  } catch (error) {
+    // Gagal di tengah → lepas klaim supaya dicoba lagi lain kali (insert aman diulang).
+    await env.DB.prepare(`UPDATE users SET metadata_json = json_remove(metadata_json, '$.prefs.categoryTemplate') WHERE id = ? AND json_valid(metadata_json)`)
+      .bind(userId)
+      .run()
+      .catch(() => undefined);
+    console.error("Sinkron template kategori gagal:", error instanceof Error ? error.message : error);
+    return json({ error: "Gagal menyiapkan kategori. Coba lagi nanti." }, { status: 500 });
+  }
 }
 
 // Cron tiap 10 menit: kirim push "waktunya tutup hari" ke user yang memasang
@@ -14121,6 +14255,10 @@ const worker = {
 
       if (url.pathname === "/api/member/reset-data" && request.method === "POST") {
         return await handleResetMemberData(request, env);
+      }
+
+      if (url.pathname === "/api/member/categories/template" && request.method === "POST") {
+        return await handleCategoryTemplateSync(request, env);
       }
 
       if (url.pathname === "/api/member/categories" && request.method === "GET") {

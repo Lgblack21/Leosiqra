@@ -14,6 +14,7 @@ import { cloudflareApi } from '@/lib/cloudflare-api';
 import { readReferralCode, clearReferralCode } from '@/lib/signupSource';
 import { FeedbackProvider } from '@/components/ui/Feedback';
 import { reportAppOpened } from '@/lib/appUsage';
+import { useCategoryTemplateSync } from '@/lib/categoryTemplateSync';
 
 const ONBOARDING_PATH = '/membership/onboarding';
 
@@ -22,6 +23,7 @@ export default function MembershipLayout({
 }: {
   children: React.ReactNode;
 }) {
+  useCategoryTemplateSync();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsView, setSettingsView] = useState<SettingsView>('menu');

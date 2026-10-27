@@ -64,18 +64,69 @@ export const CATEGORY_ICONS = [
 ];
 
 export type CategoryStyle = { emoji: string; color: string };
+export type CategoryKind = 'pengeluaran' | 'pemasukan';
 let styles: Record<string, CategoryStyle> = {};
+let kinds: Record<string, CategoryKind> = {};
 let loaded = false;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
+// Petunjuk jenis kategori lama (sebelum disimpan di akun) — dipindah sekali ke server.
+const LEGACY_KIND_KEY = 'leosiqra-category-kind';
+const migrateLegacyKinds = () => {
+  let legacy: Record<string, CategoryKind> = {};
+  try { legacy = JSON.parse(localStorage.getItem(LEGACY_KIND_KEY) || '{}') as Record<string, CategoryKind>; } catch { return; }
+  const entries = Object.entries(legacy).filter(([, k]) => k === 'pengeluaran' || k === 'pemasukan');
+  if (!entries.length) return;
+  // Nama di petunjuk lama huruf kecil; cocokkan ke nama asli yang sudah dikenal kalau ada.
+  const merge = Object.fromEntries(entries.map(([n, k]) => [Object.keys(styles).find((s) => s.toLowerCase() === n) ?? n, k]));
+  cloudflareApi<{ item?: { categoryKinds?: Record<string, CategoryKind> } }>('/api/member/preferences', { method: 'PUT', json: { categoryKindsMerge: merge } })
+    .then((r) => {
+      kinds = r.item?.categoryKinds ?? kinds;
+      emit();
+      try { localStorage.removeItem(LEGACY_KIND_KEY); } catch { /* abaikan */ }
+    })
+    .catch(() => undefined);
+};
+
+const fetchPrefs = () =>
+  cloudflareApi<{ item?: { categoryStyles?: Record<string, CategoryStyle>; categoryKinds?: Record<string, CategoryKind> } }>('/api/member/preferences')
+    .then((r) => {
+      styles = r.item?.categoryStyles ?? {};
+      kinds = r.item?.categoryKinds ?? {};
+      emit();
+    });
+
 const load = () => {
   if (loaded) return;
   loaded = true;
-  cloudflareApi<{ item?: { categoryStyles?: Record<string, CategoryStyle> } }>('/api/member/preferences')
-    .then((r) => { styles = r.item?.categoryStyles ?? {}; emit(); })
-    .catch(() => { loaded = false; });
+  fetchPrefs().then(migrateLegacyKinds).catch(() => { loaded = false; });
 };
+
+// Dipanggil setelah template kategori diterapkan server (ikon & jenis baru).
+export const reloadCategoryPrefs = () => fetchPrefs().catch(() => undefined);
+
+export function useCategoryKinds() {
+  return useSyncExternalStore(
+    (cb) => { listeners.add(cb); load(); return () => { listeners.delete(cb); }; },
+    () => kinds,
+    () => kinds,
+  );
+}
+
+// Simpan jenis satu kategori di akun (semua perangkat). Optimis.
+export async function setCategoryKind(name: string, kind: CategoryKind) {
+  const prev = kinds;
+  kinds = { ...kinds, [name]: kind };
+  emit();
+  try {
+    await cloudflareApi('/api/member/preferences', { method: 'PUT', json: { categoryKind: { name, kind } } });
+  } catch (e) {
+    kinds = prev;
+    emit();
+    throw e;
+  }
+}
 
 export function useCategoryStyles() {
   return useSyncExternalStore(

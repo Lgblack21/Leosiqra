@@ -5,6 +5,7 @@ import { ChevronDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
 import { db, auth } from '@/lib/cf-client';
+import { useCategoryKinds } from '@/lib/categoryEmoji';
 
 interface CategoryData {
   id: string;
@@ -50,10 +51,14 @@ export const CategorySelect = ({ label, value, type, onChange, onSubCategoryChan
     return () => unsub();
   }, []);
 
-  // Group categories by main category name - show unique main category names
+  // Satu entri per nama kategori. Kategori yang jenisnya tersimpan berlawanan
+  // (mis. Gaji saat mencatat pengeluaran) disembunyikan; yang belum punya
+  // jenis atau sedang terpilih tetap tampil.
+  const kinds = useCategoryKinds();
+  const wantKind = type === 'income' ? 'pemasukan' : 'pengeluaran';
   const uniqueMainCategories = Array.from(
     new Map(categories.map(c => [c.category, c])).values()
-  );
+  ).filter((c) => c.category === value || !kinds[c.category] || kinds[c.category] === wantKind);
 
   // Sub-kategori bisa berasal dari beberapa baris kategori dengan nama yang sama,
   // atau (data lama) satu baris dengan sub-kategori digabung tanda koma. Kumpulkan
