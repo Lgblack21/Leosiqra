@@ -58,7 +58,7 @@ function AppCard({ icon, tile, title, desc, connected, action, onClick, href }: 
   return href ? <a href={href} className={cls}>{inner}</a> : <button type="button" onClick={onClick} className={cls}>{inner}</button>;
 }
 
-// Status koneksi Composio. 403 = belum dibuka untuk akun ini (beta admin) →
+// Status koneksi Composio. 401/403 = sesi habis / tidak diizinkan →
 // kartunya disembunyikan; error lain ditampilkan apa adanya di kartunya.
 type ComposioApps = { state: 'loading' | 'hidden' | 'ready' | 'error'; items: Record<string, { connected: boolean }>; error?: string };
 function useComposioApps() {
