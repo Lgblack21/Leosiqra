@@ -466,7 +466,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                   </Group>
                   <p className="px-1 pt-2 text-[14px] text-slate-500">Akun</p>
                   <Group>
-                    <Row title="Data diri & foto" onClick={go('/membership/profile?tab=akun')} />
+                    <Row title="Kontak (HP & alamat)" onClick={go('/membership/profile?tab=akun')} />
                     <Row title="Kata sandi & 2 langkah" onClick={go('/membership/profile?tab=keamanan')} />
                     <Row title="Input Cepat & reset data" onClick={go('/membership/profile?tab=lainnya')} />
                   </Group>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import Image from 'next/image';
 import {
   User,
   Mail,
@@ -14,7 +13,6 @@ import {
   Lock,
   Bell,
   Camera,
-  AtSign,
   Save,
   Building2,
   Wallet,
@@ -40,7 +38,9 @@ import { onAuthStateChanged, User as FirebaseUser } from '@/lib/cf-auth';
 import { doc, setDoc, subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { accountService, Account } from '@/lib/services/accountService';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
-import { uploadToCloudinary } from '@/lib/cloudinary';
+import { UserAvatar, type AvatarConfig } from '@/components/profile/LeoAvatar';
+import { openSettings } from '@/lib/settingsPanel';
+import { PROFILE_UPDATED_EVENT } from '@/components/settings/ProfileEditView';
 import { subscribeUserProfile } from '@/lib/services/userService';
 import { exchangeRateService } from '@/lib/services/exchangeRateService';
 import { isCreditAccountType, computeCreditUsage } from '@/lib/creditCard';
@@ -124,6 +124,20 @@ export default function ProfilePage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // Avatar Leo/foto dari preferensi akun (diubah di panel Ubah profil).
+  const [avatar, setAvatar] = useState<AvatarConfig | null>(null);
+  useEffect(() => {
+    const load = () =>
+      cloudflareApi<{ user?: { avatar?: AvatarConfig | null; name?: string; photoURL?: string | null } | null }>('/api/auth/me')
+        .then((r) => {
+          setAvatar(r.user?.avatar ?? null);
+          if (r.user) setProfile((p) => ({ ...p, displayName: r.user?.name ?? p.displayName, photoURL: r.user?.photoURL ?? p.photoURL }));
+        })
+        .catch(() => undefined);
+    load();
+    window.addEventListener(PROFILE_UPDATED_EVENT, load);
+    return () => window.removeEventListener(PROFILE_UPDATED_EVENT, load);
+  }, []);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -272,7 +286,6 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile>({
     displayName: '', email: '', username: '', phone: '', address: '', photoURL: ''
   });
-  const [uploading, setUploading] = useState(false);
 
   // Load akun & transaksi dipisah jadi fungsi sendiri supaya bisa dipanggil
   // ulang saat modal transaksi/rekening manapun ditutup — accountService tidak
@@ -368,35 +381,16 @@ export default function ProfilePage() {
     return exchangeRateService.convert(amount, currency, 'IDR', fxRates);
   }, [fxRates]);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-
-    setUploading(true);
-    try {
-      const url = await uploadToCloudinary(file);
-      setProfile(prev => ({ ...prev, photoURL: url }));
-      await setDoc(doc(db, 'users', user.uid), {
-        photoURL: url,
-        updatedAt: new Date()
-      }, { merge: true });
-    } catch (error) {
-      console.error("Upload failed:", error);
-      alert(error instanceof Error ? error.message : "Gagal mengunggah foto.");
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
     setSaveError('');
     try {
+      // Hanya kontak — nama/foto/username diubah di panel Ubah profil, jangan
+      // ditimpa nilai lama dari halaman ini.
       await setDoc(doc(db, 'users', user.uid), {
-        ...profile,
+        phone: profile.phone,
+        address: profile.address,
         updatedAt: new Date()
       }, { merge: true });
       setSaved(true);
@@ -490,7 +484,6 @@ export default function ProfilePage() {
       return `${currency || ''} ${new Intl.NumberFormat('id-ID').format(amount)}`.trim();
     }
   };
-  const initials = profile.displayName ? profile.displayName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : (user?.email?.[0].toUpperCase() || 'U');
 
   const accountStats = [
     { label: "Pengeluaran hari ini", value: formatRp(todayOut), icon: TrendingDown, color: "text-rose-600", bg: "bg-rose-50", trend: todayOut > 0 ? "Active" : "Nihil" },
@@ -518,43 +511,19 @@ export default function ProfilePage() {
       {/* Profile Identity Header */}
       <div className="bg-white rounded-[20px] md:rounded-[40px] border border-slate-50 shadow-sm p-5 md:p-10 lg:p-12">
         <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-10">
-          <div className="relative group shrink-0">
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              className="hidden" 
-              accept="image/*" 
-              onChange={handlePhotoUpload} 
-            />
-            <div className="w-24 h-24 md:w-32 lg:w-40 md:h-32 lg:h-40 rounded-[28px] md:rounded-[48px] bg-gradient-to-tr from-indigo-600 to-blue-500 p-1 md:p-1.5 shadow-xl shadow-indigo-100 flex items-center justify-center overflow-hidden">
-              <div className="w-full h-full rounded-[24px] md:rounded-[42px] bg-white flex items-center justify-center text-2xl md:text-4xl font-black text-indigo-600 overflow-hidden relative">
-                {profile.photoURL ? (
-                  <Image
-                    src={profile.photoURL}
-                    alt="Profile"
-                    fill
-                    className="object-cover"
-                    sizes="160px"
-                  />
-                ) : (
-                  initials
-                )}
-                {uploading && (
-                  <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center">
-                    <Loader2 className="animate-spin text-indigo-600" size={24} />
-                  </div>
-                )}
-              </div>
-            </div>
-            <button 
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="absolute -bottom-1 -right-1 md:bottom-2 md:right-2 w-10 h-10 md:w-11 md:h-11 rounded-xl md:rounded-2xl bg-white shadow-lg border border-slate-100 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-all hover:scale-110 disabled:opacity-50"
+          <div className="flex shrink-0 flex-col items-center gap-3">
+            {/* Nama, foto/avatar & username diubah di panel Pengaturan → Ubah profil
+                (satu tempat saja); halaman ini untuk kontak, keamanan & lainnya. */}
+            <UserAvatar avatar={avatar} photoURL={profile.photoURL} name={profile.displayName} size={128} className="shadow-xl shadow-indigo-100 ring-4 ring-white" />
+            <button
+              type="button"
+              onClick={() => openSettings('ubah-profil')}
+              className="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[13px] font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
             >
-              <Camera size={18} />
+              <Camera size={15} /> Ubah profil
             </button>
           </div>
-          
+
           <div className="flex-1 text-center lg:text-left">
             <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-5 mb-3">
               <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">
@@ -624,23 +593,15 @@ export default function ProfilePage() {
         <div className="min-w-0 space-y-6 animate-in fade-in duration-300" key={rightTab}>
           {rightTab === 'akun' && (
             <>
-              <SettingCard icon={User} title="Data diri" desc="Nama, username, dan kontak yang dipakai di akun Anda">
+              <SettingCard icon={User} title="Kontak" desc="Nomor HP & alamat. Nama, foto & username diubah lewat tombol Ubah profil di atas.">
                 {saveError && (
                   <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-sm font-medium text-rose-600">
                     {saveError}
                   </div>
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-x-8 md:gap-y-6">
-                  <Field label="Nama lengkap" icon={User}>
-                    <input type="text" value={profile.displayName} onChange={e => setProfile(p => ({...p, displayName: e.target.value}))}
-                      placeholder="Nama lengkap..." className={inputClass} />
-                  </Field>
                   <Field label="Email" icon={Mail} hint="Email tidak bisa diubah.">
                     <input type="email" value={profile.email} disabled className={cn(inputClass, "text-slate-400 bg-slate-50/30 cursor-not-allowed")} />
-                  </Field>
-                  <Field label="Username" icon={AtSign} hint="3–20 karakter (huruf/angka/underscore/titik), bisa dipakai login selain email.">
-                    <input type="text" value={profile.username} onChange={e => setProfile(p => ({...p, username: e.target.value.toLowerCase().replace(/\s+/g, '')}))}
-                      placeholder="username..." className={inputClass} />
                   </Field>
                   <Field label="Nomor HP" icon={Phone}>
                     <input type="text" value={profile.phone} onChange={e => setProfile(p => ({...p, phone: e.target.value}))}

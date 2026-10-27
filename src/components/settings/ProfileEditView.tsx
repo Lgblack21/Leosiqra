@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { Camera, Loader2 } from 'lucide-react';
+import { Camera, Loader2, AtSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { uploadToCloudinary } from '@/lib/cloudinary';
@@ -10,7 +10,8 @@ import { useFeedback } from '@/components/ui/Feedback';
 import { LeoAvatarSvg, UserAvatar, AVATAR_FURS, AVATAR_BGS, AVATAR_ACCS, DEFAULT_AVATAR, type AvatarConfig } from '@/components/profile/LeoAvatar';
 
 // Ubah profil (panel Pengaturan): avatar singa Leo yang bisa didandani,
-// atau foto sendiri; plus nama. Nama & foto lewat /api/member/profile,
+// atau foto sendiri; plus nama & username. Satu-satunya tempat mengubah
+// nama/foto/username (halaman Profil lama hanya untuk kontak & keamanan). Nama & foto lewat /api/member/profile,
 // pilihan avatar lewat /api/member/preferences ($.prefs.avatar).
 
 export const PROFILE_UPDATED_EVENT = 'leosiqra:profile-updated';
@@ -30,10 +31,30 @@ export function ProfileEditView({
   const [cfg, setCfg] = useState<AvatarConfig>(initialAvatar ?? (initialPhoto ? { ...DEFAULT_AVATAR, mode: 'photo' } : DEFAULT_AVATAR));
   const [photo, setPhoto] = useState<string | null>(initialPhoto);
   const [name, setName] = useState(initialName);
+  const [username, setUsername] = useState('');
+  const [initialUsername, setInitialUsername] = useState('');
+  const [usernameError, setUsernameError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Username tidak ada di /api/auth/me — ambil dari profil.
+  useEffect(() => {
+    let active = true;
+    cloudflareApi<{ item?: { username?: string | null } | null }>('/api/member/profile')
+      .then((r) => {
+        if (!active) return;
+        const u = r.item?.username ?? '';
+        setUsername(u);
+        setInitialUsername(u);
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+
+  const usernameValid = username === '' || /^[a-z0-9_.]{3,20}$/.test(username);
   const dirty =
+    username !== initialUsername ||
     name.trim() !== initialName.trim() ||
     photo !== initialPhoto ||
     JSON.stringify(cfg) !== JSON.stringify(initialAvatar ?? (initialPhoto ? { ...DEFAULT_AVATAR, mode: 'photo' } : DEFAULT_AVATAR));
@@ -64,6 +85,10 @@ export function ProfileEditView({
       toast.error('Nama tidak boleh kosong.');
       return;
     }
+    if (!usernameValid) {
+      setUsernameError('Username 3–20 karakter: huruf kecil, angka, titik, atau garis bawah.');
+      return;
+    }
     if (cfg.mode === 'photo' && !photo) {
       toast.error('Unggah foto dulu, atau pilih avatar Leo.');
       return;
@@ -73,6 +98,7 @@ export function ProfileEditView({
       const profilePatch: Record<string, string> = {};
       if (trimmed !== initialName.trim()) profilePatch.name = trimmed;
       if (photo && photo !== initialPhoto) profilePatch.photoURL = photo;
+      if (username !== initialUsername) profilePatch.username = username;
       if (Object.keys(profilePatch).length) await cloudflareApi('/api/member/profile', { method: 'PATCH', json: profilePatch });
       await cloudflareApi('/api/member/preferences', { method: 'PUT', json: { avatar: cfg } });
       window.dispatchEvent(new Event(PROFILE_UPDATED_EVENT));
@@ -80,7 +106,10 @@ export function ProfileEditView({
       onSaved();
     } catch (e) {
       console.error(e);
-      toast.error('Gagal menyimpan profil. Coba lagi.');
+      const msg = e instanceof Error ? e.message : '';
+      // Server membalas pesan jelas untuk username dipakai/tidak valid.
+      if (/username/i.test(msg)) setUsernameError(msg);
+      else toast.error('Gagal menyimpan profil. Coba lagi.');
     } finally {
       setSaving(false);
     }
@@ -150,10 +179,31 @@ export function ProfileEditView({
         </section>
       )}
 
-      <label className="block rounded-[22px] bg-slate-50 p-4">
-        <span className="px-1 text-[14px] text-slate-500">Nama</span>
-        <input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="Nama kamu" className="mt-1.5 w-full rounded-2xl bg-white px-4 py-3 text-[16px] ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400" />
-      </label>
+      <div className="space-y-3 rounded-[22px] bg-slate-50 p-4">
+        <label className="block">
+          <span className="px-1 text-[14px] text-slate-500">Nama</span>
+          <input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="Nama kamu" className="mt-1.5 w-full rounded-2xl bg-white px-4 py-3 text-[16px] ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400" />
+        </label>
+        <label className="block">
+          <span className="px-1 text-[14px] text-slate-500">Username</span>
+          <span className={cn('mt-1.5 flex items-center gap-2 rounded-2xl bg-white px-4 ring-1 focus-within:ring-2', usernameError || !usernameValid ? 'ring-rose-300 focus-within:ring-rose-400' : 'ring-slate-200 focus-within:ring-indigo-400')}>
+            <AtSign size={17} className="shrink-0 text-slate-400" />
+            <input
+              value={username}
+              onChange={(e) => { setUsername(e.target.value.toLowerCase().replace(/\s+/g, '')); setUsernameError(''); }}
+              maxLength={20}
+              placeholder="Pilih username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              className="w-full bg-transparent py-3 text-[16px] outline-none"
+            />
+          </span>
+          <span className={cn('mt-1.5 block px-1 text-[13px]', usernameError || !usernameValid ? 'text-rose-600' : 'text-slate-500')}>
+            {usernameError || (!usernameValid ? '3–20 karakter: huruf kecil, angka, titik, atau garis bawah.' : 'Bisa dipakai untuk masuk selain email.')}
+          </span>
+        </label>
+      </div>
 
       <div className="sticky bottom-0 -mx-6 bg-gradient-to-t from-white via-white to-white/0 px-6 pt-4">
         <button type="button" onClick={save} disabled={!dirty || saving || uploading} className="w-full rounded-full bg-slate-900 py-3.5 text-[16px] font-bold text-white disabled:bg-slate-100 disabled:text-slate-400">
