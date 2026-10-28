@@ -139,7 +139,18 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     (tgl 1, `buildMonthlyReport`), penanda `$.prefs.weeklySent/monthlySent`. Diuji lokal dengan wrangler dev + D1
     lokal (API, cron dobel, bulanan tgl 31, query kandidat) dan UI lewat Playwright → Worker lokal.
   - Belum: menu Pengingat di aplikasi HP (`/app`). Push sungguhan belum dicoba Bos.
-- **Belum di-deploy**: tidak ada. Branch kerja akun B: `claude/nifty-cannon-y181p6` (= main).
+- **Belum di-deploy** (akun B, `claude/nifty-cannon-y181p6`): **Tampilan**.
+  - **Mode gelap web BERTAHAP** (keputusan Bos): Pengaturan → Mode gelap (`AppearanceView`, ThemeContext yang sama
+    dengan /app, localStorage `leosiqra-theme`). Cara kerja: scope `.web-dark` di globals.css memetakan ulang
+    variabel warna Tailwind v4 (slate dibalik, pastel → tint gelap, teks -700+ → terang; `--color-white` TIDAK
+    diubah, bg-white dkk dioverride di `@layer utilities`). Kerangka (sidebar, header, tab bar, panel Pengaturan)
+    selalu ikut tema; isi halaman hanya rute di `WEB_DARK_READY` (`src/lib/webTheme.ts`, sekarang hanya
+    Ringkasan). Halaman berikutnya: cek tampilannya gelap → tambahkan prefix-nya. JANGAN pasang kelas `.dark` di
+    scope web (varian dark: milik /app akan terbalik). Banner "Pasang Leosiqra" (root layout) belum ikut gelap.
+  - **Tampilkan Leo** & **Tema musiman**: pref `$.prefs.showMascot` / `$.prefs.seasonal` (default true, Worker
+    divalidasi). `useLeoPrefs`, `lib/season.ts` (Ramadan–Lebaran perkiraan 2027–2029, Agustus, Oktober,
+    Desember) → aksesoris di `LeoMascot` (`season` prop) + hiasan emoji di kartu Ringkasan.
+  - Bahasa English: DILEWATI (keputusan Bos) — belum ada sistem terjemahan.
 
 ## Migrasi D1
 

@@ -388,3 +388,176 @@ html[data-daypart="sore"] .auth-greet[data-p="sore"], html[data-daypart="malam"]
 .scan-line { top: 8%; animation: scan-line 2.4s ease-in-out infinite; }
 @keyframes scan-line { 0%, 100% { top: 8%; } 50% { top: 88%; } }
 @media (prefers-reduced-motion: reduce) { .paper-float, .voice-bar, .scan-line { animation: none; } }
+
+/* Hiasan tema musiman di kartu Ringkasan (lib/season.ts). */
+@keyframes leo-season-float { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-8px) rotate(6deg); } }
+.leo-season-float { animation: leo-season-float 4.5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .leo-season-float { animation: none; } }
+
+/* ===== Mode gelap web (bertahap) =====
+   Scope .web-dark dipasang di kerangka (sidebar, header, tab bar, panel
+   Pengaturan) dan halaman yang sudah dicek (lihat WEB_DARK_READY di
+   src/lib/webTheme.ts). Variabel warna Tailwind v4 dipetakan ulang di dalam
+   scope ini: skala slate dibalik, warna pastel (…-50/100/200) jadi tint gelap,
+   teks …-700+ jadi terang. --color-white TIDAK diubah (teks putih di kartu
+   bergradien tetap putih) — permukaan bg-white dkk. dioverride per kelas.
+   JANGAN pasang kelas .dark di scope ini: varian dark: milik /app memakai
+   slate-900 yang di sini sudah dibalik. */
+.web-dark {
+  color-scheme: dark;
+  color: #e5e9f0;
+  --web-bg: #0b1020;
+  --web-surface: #141a2a;
+  --background: #0b1020;
+  --color-slate-50: #1a2133;
+  --color-slate-100: #212a3e;
+  --color-slate-200: #2b3550;
+  --color-slate-300: #3a4560;
+  --color-slate-400: #6f7a92;
+  --color-slate-500: #8f99ae;
+  --color-slate-600: #aab3c4;
+  --color-slate-700: #c6cdda;
+  --color-slate-800: #dde2ea;
+  --color-slate-900: #eef1f6;
+  --color-slate-950: #f8fafc;
+  --color-indigo-50: color-mix(in oklab, #6366f1 13%, #141a2a);
+  --color-indigo-100: color-mix(in oklab, #6366f1 20%, #141a2a);
+  --color-indigo-200: color-mix(in oklab, #6366f1 34%, #141a2a);
+  --color-indigo-700: #a5b4fc;
+  --color-indigo-800: #a5b4fc;
+  --color-indigo-900: #a5b4fc;
+  --color-indigo-950: #a5b4fc;
+  --color-violet-50: color-mix(in oklab, #8b5cf6 13%, #141a2a);
+  --color-violet-100: color-mix(in oklab, #8b5cf6 20%, #141a2a);
+  --color-violet-200: color-mix(in oklab, #8b5cf6 34%, #141a2a);
+  --color-violet-700: #c4b5fd;
+  --color-violet-800: #c4b5fd;
+  --color-violet-900: #c4b5fd;
+  --color-violet-950: #c4b5fd;
+  --color-purple-50: color-mix(in oklab, #a855f7 13%, #141a2a);
+  --color-purple-100: color-mix(in oklab, #a855f7 20%, #141a2a);
+  --color-purple-200: color-mix(in oklab, #a855f7 34%, #141a2a);
+  --color-purple-700: #d8b4fe;
+  --color-purple-800: #d8b4fe;
+  --color-purple-900: #d8b4fe;
+  --color-purple-950: #d8b4fe;
+  --color-emerald-50: color-mix(in oklab, #10b981 13%, #141a2a);
+  --color-emerald-100: color-mix(in oklab, #10b981 20%, #141a2a);
+  --color-emerald-200: color-mix(in oklab, #10b981 34%, #141a2a);
+  --color-emerald-700: #6ee7b7;
+  --color-emerald-800: #6ee7b7;
+  --color-emerald-900: #6ee7b7;
+  --color-emerald-950: #6ee7b7;
+  --color-green-50: color-mix(in oklab, #22c55e 13%, #141a2a);
+  --color-green-100: color-mix(in oklab, #22c55e 20%, #141a2a);
+  --color-green-200: color-mix(in oklab, #22c55e 34%, #141a2a);
+  --color-green-700: #86efac;
+  --color-green-800: #86efac;
+  --color-green-900: #86efac;
+  --color-green-950: #86efac;
+  --color-teal-50: color-mix(in oklab, #14b8a6 13%, #141a2a);
+  --color-teal-100: color-mix(in oklab, #14b8a6 20%, #141a2a);
+  --color-teal-200: color-mix(in oklab, #14b8a6 34%, #141a2a);
+  --color-teal-700: #5eead4;
+  --color-teal-800: #5eead4;
+  --color-teal-900: #5eead4;
+  --color-teal-950: #5eead4;
+  --color-rose-50: color-mix(in oklab, #f43f5e 13%, #141a2a);
+  --color-rose-100: color-mix(in oklab, #f43f5e 20%, #141a2a);
+  --color-rose-200: color-mix(in oklab, #f43f5e 34%, #141a2a);
+  --color-rose-700: #fda4af;
+  --color-rose-800: #fda4af;
+  --color-rose-900: #fda4af;
+  --color-rose-950: #fda4af;
+  --color-red-50: color-mix(in oklab, #ef4444 13%, #141a2a);
+  --color-red-100: color-mix(in oklab, #ef4444 20%, #141a2a);
+  --color-red-200: color-mix(in oklab, #ef4444 34%, #141a2a);
+  --color-red-700: #fca5a5;
+  --color-red-800: #fca5a5;
+  --color-red-900: #fca5a5;
+  --color-red-950: #fca5a5;
+  --color-pink-50: color-mix(in oklab, #ec4899 13%, #141a2a);
+  --color-pink-100: color-mix(in oklab, #ec4899 20%, #141a2a);
+  --color-pink-200: color-mix(in oklab, #ec4899 34%, #141a2a);
+  --color-pink-700: #f9a8d4;
+  --color-pink-800: #f9a8d4;
+  --color-pink-900: #f9a8d4;
+  --color-pink-950: #f9a8d4;
+  --color-amber-50: color-mix(in oklab, #f59e0b 13%, #141a2a);
+  --color-amber-100: color-mix(in oklab, #f59e0b 20%, #141a2a);
+  --color-amber-200: color-mix(in oklab, #f59e0b 34%, #141a2a);
+  --color-amber-700: #fcd34d;
+  --color-amber-800: #fcd34d;
+  --color-amber-900: #fcd34d;
+  --color-amber-950: #fcd34d;
+  --color-yellow-50: color-mix(in oklab, #eab308 13%, #141a2a);
+  --color-yellow-100: color-mix(in oklab, #eab308 20%, #141a2a);
+  --color-yellow-200: color-mix(in oklab, #eab308 34%, #141a2a);
+  --color-yellow-700: #fde047;
+  --color-yellow-800: #fde047;
+  --color-yellow-900: #fde047;
+  --color-yellow-950: #fde047;
+  --color-orange-50: color-mix(in oklab, #f97316 13%, #141a2a);
+  --color-orange-100: color-mix(in oklab, #f97316 20%, #141a2a);
+  --color-orange-200: color-mix(in oklab, #f97316 34%, #141a2a);
+  --color-orange-700: #fdba74;
+  --color-orange-800: #fdba74;
+  --color-orange-900: #fdba74;
+  --color-orange-950: #fdba74;
+  --color-sky-50: color-mix(in oklab, #0ea5e9 13%, #141a2a);
+  --color-sky-100: color-mix(in oklab, #0ea5e9 20%, #141a2a);
+  --color-sky-200: color-mix(in oklab, #0ea5e9 34%, #141a2a);
+  --color-sky-700: #7dd3fc;
+  --color-sky-800: #7dd3fc;
+  --color-sky-900: #7dd3fc;
+  --color-sky-950: #7dd3fc;
+  --color-blue-50: color-mix(in oklab, #3b82f6 13%, #141a2a);
+  --color-blue-100: color-mix(in oklab, #3b82f6 20%, #141a2a);
+  --color-blue-200: color-mix(in oklab, #3b82f6 34%, #141a2a);
+  --color-blue-700: #93c5fd;
+  --color-blue-800: #93c5fd;
+  --color-blue-900: #93c5fd;
+  --color-blue-950: #93c5fd;
+  --color-cyan-50: color-mix(in oklab, #06b6d4 13%, #141a2a);
+  --color-cyan-100: color-mix(in oklab, #06b6d4 20%, #141a2a);
+  --color-cyan-200: color-mix(in oklab, #06b6d4 34%, #141a2a);
+  --color-cyan-700: #67e8f9;
+  --color-cyan-800: #67e8f9;
+  --color-cyan-900: #67e8f9;
+  --color-cyan-950: #67e8f9;
+  --color-lime-50: color-mix(in oklab, #84cc16 13%, #141a2a);
+  --color-lime-100: color-mix(in oklab, #84cc16 20%, #141a2a);
+  --color-lime-200: color-mix(in oklab, #84cc16 34%, #141a2a);
+  --color-lime-700: #bef264;
+  --color-lime-800: #bef264;
+  --color-lime-900: #bef264;
+  --color-lime-950: #bef264;
+  --color-fuchsia-50: color-mix(in oklab, #d946ef 13%, #141a2a);
+  --color-fuchsia-100: color-mix(in oklab, #d946ef 20%, #141a2a);
+  --color-fuchsia-200: color-mix(in oklab, #d946ef 34%, #141a2a);
+  --color-fuchsia-700: #f0abfc;
+  --color-fuchsia-800: #f0abfc;
+  --color-fuchsia-900: #f0abfc;
+  --color-fuchsia-950: #f0abfc;
+}
+@layer utilities {
+  :where(.web-dark) .bg-white, :where(.web-dark) .hover\:bg-white:hover, :where(.web-dark) .focus\:bg-white:focus { background-color: var(--web-surface); }
+  :where(.web-dark) .bg-white\/95 { background-color: rgb(20 26 42 / 0.95); }
+  :where(.web-dark) .bg-white\/90 { background-color: rgb(20 26 42 / 0.9); }
+  :where(.web-dark) .bg-white\/80 { background-color: rgb(20 26 42 / 0.8); }
+  :where(.web-dark) .bg-white\/70, .web-dark .hover\:bg-white\/70:hover { background-color: rgb(20 26 42 / 0.7); }
+  :where(.web-dark) .bg-white\/60 { background-color: rgb(20 26 42 / 0.6); }
+  :where(.web-dark) .from-white { --tw-gradient-from: var(--web-surface); }
+  :where(.web-dark) .via-white { --tw-gradient-via: var(--web-surface); }
+  :where(.web-dark) .to-white { --tw-gradient-to: var(--web-surface); }
+  :where(.web-dark) .to-white\/0 { --tw-gradient-to: rgb(20 26 42 / 0); }
+  /* Tombol utama bg-slate-900 → terang dengan teks gelap (slate-900 sudah dibalik). */
+  .web-dark .bg-slate-900, .web-dark .bg-slate-800 { color: #0b1020; }
+  /* Lapisan gelap modal/menu tetap gelap. */
+  .web-dark .bg-slate-900\/40 { background-color: rgb(0 0 0 / 0.55); }
+  .web-dark.web-page, .web-dark .web-page { background-color: var(--web-bg); }
+  /* Latar halaman & header kaca (warna arbitrer #f6f7fb). */
+  :where(.web-dark) .bg-\[\#f6f7fb\] { background-color: var(--web-bg); }
+  :where(.web-dark) .bg-\[\#f6f7fb\]\/85 { background-color: rgb(11 16 32 / 0.85); }
+  :where(.web-dark) :is(input, select, textarea) { color-scheme: dark; }
+}

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import type { Season } from "@/lib/season";
 
 // Leo — maskot singa Leosiqra. Digambar langsung sebagai SVG (tanpa aset
 // gambar) supaya ringan, tajam di semua ukuran, dan ekspresinya bisa
@@ -43,12 +44,15 @@ export function LeoMascot({
   size = 160,
   className,
   interactive = false,
+  season = null,
 }: {
   mood?: LeoMood;
   lookX?: number;
   size?: number;
   className?: string;
   interactive?: boolean;
+  // Aksesoris musiman (lib/season.ts) — null = tanpa aksesoris.
+  season?: Season | null;
 }) {
   const reduce = useReducedMotion();
   const ref = useRef<SVGSVGElement>(null);
@@ -181,6 +185,8 @@ export function LeoMascot({
           <circle cx="110" cy="114" r="52" fill={C.face} />
           <ellipse cx="110" cy="152" rx="34" ry="12" fill="#F6D29F" opacity="0.45" />
 
+          {season && <SeasonAccessory season={season} />}
+
           {/* Pipi merona */}
           <motion.ellipse cx="76" cy="128" rx="9" ry="5.5" fill={C.blush} animate={{ opacity: happy ? 0.55 : 0.28 }} />
           <motion.ellipse cx="144" cy="128" rx="9" ry="5.5" fill={C.blush} animate={{ opacity: happy ? 0.55 : 0.28 }} />
@@ -305,5 +311,51 @@ export function LeoMascot({
         )}
       </motion.g>
     </motion.svg>
+  );
+}
+
+// Digambar di atas wajah (di dalam grup "bernapas", jadi ikut bergerak).
+function SeasonAccessory({ season }: { season: Season }) {
+  if (season === "halloween") {
+    return (
+      <g>
+        <path d="M80 42 Q97 4 126 -24 Q121 8 140 42 Z" fill="#4C1D95" />
+        <path d="M126 -24 Q134 -22 138 -14" stroke="#4C1D95" strokeWidth="6" strokeLinecap="round" fill="none" />
+        <ellipse cx="110" cy="44" rx="54" ry="10" fill="#3B0764" />
+        <path d="M84 36 Q110 42 136 36 L138 42 Q110 48 82 42 Z" fill="#F59E0B" />
+        <path d="M112 12 l3 6 6 1 -4.5 4 1 6 -5.5 -3 -5.5 3 1 -6 -4.5 -4 6 -1 Z" fill="#FDE047" />
+      </g>
+    );
+  }
+  if (season === "natal") {
+    return (
+      <g>
+        <path d="M70 48 Q94 -6 150 2 Q164 14 154 48 Z" fill="#DC2626" />
+        <path d="M150 2 Q166 6 166 22" stroke="#DC2626" strokeWidth="10" strokeLinecap="round" fill="none" />
+        <rect x="64" y="38" width="96" height="18" rx="9" fill="#FFFFFF" />
+        <circle cx="167" cy="26" r="10" fill="#FFFFFF" />
+      </g>
+    );
+  }
+  if (season === "lebaran") {
+    return (
+      <g>
+        <path d="M74 50 Q74 20 110 18 Q146 20 146 50 Z" fill="#1F2937" />
+        <path d="M76 42 Q110 36 144 42" stroke="#D4A017" strokeWidth="2.5" fill="none" />
+        <path d="M110 18 Q120 20 126 26" stroke="#374151" strokeWidth="2" fill="none" />
+      </g>
+    );
+  }
+  // merdeka: ikat kepala merah-putih + bendera kecil
+  return (
+    <g>
+      <path d="M58 80 Q110 60 162 80 L162 88 Q110 68 58 88 Z" fill="#DC2626" />
+      <path d="M58 88 Q110 68 162 88 L162 95 Q110 75 58 95 Z" fill="#FFFFFF" />
+      <path d="M160 84 L178 76 L176 90 Z" fill="#DC2626" />
+      <path d="M160 88 L176 98 L170 104 Z" fill="#FFFFFF" />
+      <line x1="62" y1="88" x2="46" y2="34" stroke="#92400E" strokeWidth="3" strokeLinecap="round" />
+      <rect x="46" y="34" width="24" height="8" fill="#DC2626" />
+      <rect x="46" y="42" width="24" height="8" fill="#FFFFFF" stroke="#E5E7EB" strokeWidth="0.5" />
+    </g>
   );
 }

@@ -30,6 +30,8 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { LogoImage } from '@/components/ui/LogoImage';
 import { AnimatedNumber } from '@/components/app/AnimatedNumber';
 import { LeoMascot } from '@/components/mascot/LeoMascot';
+import { useLeoPrefs } from '@/lib/useLeoPrefs';
+import { currentSeason, SEASON_INFO } from '@/lib/season';
 import { useModal } from '@/context/ModalContext';
 import { openSettings } from '@/lib/settingsPanel';
 import { auth } from '@/lib/cf-client';
@@ -82,6 +84,8 @@ export default function MonthlyDashboard() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   // Jam & tanggal dari perangkat, baru diketahui setelah hydrate (static export).
   const [now, setNow] = useState<Date | null>(null);
+  const leo = useLeoPrefs();
+  const season = now && leo.seasonal ? currentSeason(now) : null;
   const { openModal } = useModal();
 
   useEffect(() => {
@@ -347,9 +351,18 @@ export default function MonthlyDashboard() {
       <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-500 p-6 text-white shadow-[0_24px_50px_-28px_rgba(79,70,229,0.8)] md:p-8">
         <div aria-hidden className="absolute inset-0 opacity-25 [background-image:radial-gradient(white_1px,transparent_1px)] [background-size:20px_20px]" />
         <div aria-hidden className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/15 blur-2xl" />
-        <div className="pointer-events-none absolute -bottom-8 right-2 hidden md:block">
-          <LeoMascot mood="idle" size={170} />
-        </div>
+        {season && (
+          <div aria-hidden className="pointer-events-none absolute inset-0">
+            {SEASON_INFO[season].deco.map((d, i) => (
+              <span key={i} className="leo-season-float absolute select-none text-[22px] opacity-70" style={{ left: `${[66, 78, 90][i]}%`, top: `${[10, 46, 24][i]}%`, animationDelay: `${i * 0.9}s` }}>{d}</span>
+            ))}
+          </div>
+        )}
+        {leo.showMascot && (
+          <div className="pointer-events-none absolute -bottom-8 right-2 hidden md:block">
+            <LeoMascot mood="idle" size={170} season={season} />
+          </div>
+        )}
         <div className="relative max-w-xl">
           <p className="text-[28px] font-extrabold tracking-tight md:text-[34px]">
             {now ? greeting(now.getHours()) : 'Halo'}{firstName ? `, ${firstName}` : ''}.

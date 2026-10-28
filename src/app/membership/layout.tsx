@@ -15,15 +15,27 @@ import { readReferralCode, clearReferralCode } from '@/lib/signupSource';
 import { FeedbackProvider } from '@/components/ui/Feedback';
 import { reportAppOpened } from '@/lib/appUsage';
 import { useCategoryTemplateSync } from '@/lib/categoryTemplateSync';
+import { ThemeProvider, useTheme } from '@/context/ThemeContext';
+import { isWebDarkReady } from '@/lib/webTheme';
 
 const ONBOARDING_PATH = '/membership/onboarding';
 
-export default function MembershipLayout({
+// Tema (Sistem/Terang/Gelap) disimpan per perangkat, sama dengan aplikasi HP.
+export default function MembershipLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <ThemeProvider>
+      <MembershipShell>{children}</MembershipShell>
+    </ThemeProvider>
+  );
+}
+
+function MembershipShell({
   children,
 }: {
   children: React.ReactNode;
 }) {
   useCategoryTemplateSync();
+  const { resolvedTheme } = useTheme();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsView, setSettingsView] = useState<SettingsView>('menu');
@@ -86,10 +98,18 @@ export default function MembershipLayout({
   // Hapus spinner agar transisi dari tombol login terasa instan.
   if (loading) return null;
 
+  // Mode gelap bertahap: kerangka selalu ikut tema, isi halaman hanya untuk
+  // rute di WEB_DARK_READY (lib/webTheme.ts). Lihat .web-dark di globals.css.
+  const dark = resolvedTheme === 'dark';
+  const pageDark = dark && isWebDarkReady(pathname);
+  // Pembungkus selalu dirender (display: contents) — hanya kelasnya yang
+  // berubah, supaya Sidebar/Header/Panel tidak di-mount ulang.
+  const frameClass = `contents${dark && !pageDark ? ' web-dark' : ''}`;
+
   return (
     <FeedbackProvider>
     <ModalProvider>
-      <div className="flex min-h-screen bg-[#f6f7fb] relative overflow-x-hidden print:block print:min-h-0 print:h-auto">
+      <div className={`web-page flex min-h-screen bg-[#f6f7fb] relative overflow-x-hidden print:block print:min-h-0 print:h-auto${pageDark ? ' web-dark' : ''}`}>
         {/* Mobile Backdrop */}
         {isSidebarOpen && (
           <div
@@ -98,7 +118,7 @@ export default function MembershipLayout({
           />
         )}
 
-        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onOpenSettings={() => { setSettingsView('menu'); setSettingsOpen(true); }} />
+        <div className={frameClass}><Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onOpenSettings={() => { setSettingsView('menu'); setSettingsOpen(true); }} /></div>
 
         {/* Main Content */}
         {/* print:block+print:h-auto: tanpa ini, konten cetak yang bersarang di
@@ -106,7 +126,7 @@ export default function MembershipLayout({
             (bug pagination flexbox saat print di Chrome) alih-alih mengalir
             ke halaman berikutnya. */}
         <main className="flex-1 md:ml-[84px] lg:ml-72 min-h-screen flex flex-col min-w-0 pt-16 pb-24 md:pb-0 print:pb-0 print:block print:min-h-0 print:h-auto print:ml-0 print:pt-0">
-          <Header onMenuClick={() => setIsSidebarOpen(true)} />
+          <div className={frameClass}><Header onMenuClick={() => setIsSidebarOpen(true)} /></div>
 
           {/* Page Content */}
           <div className="p-4 md:p-8 max-w-7xl mx-auto w-full flex-1 print:p-0 print:m-0 print:max-w-none">
@@ -114,8 +134,10 @@ export default function MembershipLayout({
           </div>
         </main>
 
-        <MobileTabBar />
-        <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} initialView={settingsView} />
+        <div className={frameClass}>
+          <MobileTabBar />
+          <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} initialView={settingsView} />
+        </div>
         <GlobalModalWrapper />
         <OnboardingTour />
       </div>

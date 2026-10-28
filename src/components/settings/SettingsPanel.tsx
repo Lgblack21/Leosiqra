@@ -44,6 +44,9 @@ import {
   FileSpreadsheet,
   Nfc,
   AlarmClock,
+  Moon,
+  PawPrint,
+  Palette,
 } from 'lucide-react';
 import { cn, formatIDR } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
@@ -69,6 +72,10 @@ import { ImportMutasi } from '@/components/impor/ImportMutasi';
 import { EmoneyScanner } from '@/components/emoney/EmoneyScanner';
 import { CsvView } from './CsvView';
 import { RemindersView } from './RemindersView';
+import { AppearanceView, THEME_LABEL } from './AppearanceView';
+import { useTheme } from '@/context/ThemeContext';
+import { useLeoPrefs } from '@/lib/useLeoPrefs';
+import { currentSeason, SEASON_INFO } from '@/lib/season';
 import { useRecordingPrefs } from '@/lib/useRecordingPrefs';
 import { useTags } from '@/lib/useTags';
 import { useBudgetStartDay } from '@/lib/useBudgetStartDay';
@@ -92,8 +99,8 @@ export interface PanelUser {
   avatar?: AvatarConfig | null;
 }
 
-export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil' | 'kontak' | 'notifikasi' | 'ai' | 'lainnya' | 'referral' | 'koin' | 'koin-riwayat' | 'kawanan' | 'app-mcp' | 'app-sheets' | 'app-calendar' | 'app-gmail' | 'app-gcal' | 'fitur' | 'target' | 'rutin' | 'periode' | 'tag' | 'cara-catat' | 'keyboard' | 'shortcut' | 'notif-reader' | 'impor' | 'emoney' | 'csv' | 'pengingat';
-const PARENT: Partial<Record<View, View>> = { fitur: 'menu', target: 'umum', rutin: 'umum', periode: 'umum', tag: 'umum', 'cara-catat': 'umum', keyboard: 'umum', shortcut: 'umum', 'notif-reader': 'umum', impor: 'umum', emoney: 'umum', csv: 'umum', pengingat: 'umum', 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum', referral: 'menu', koin: 'menu', 'koin-riwayat': 'referral', kawanan: 'referral', 'app-mcp': 'ai', 'app-sheets': 'ai', 'app-calendar': 'ai', 'app-gmail': 'ai', 'app-gcal': 'ai' };
+export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil' | 'kontak' | 'notifikasi' | 'ai' | 'lainnya' | 'referral' | 'koin' | 'koin-riwayat' | 'kawanan' | 'app-mcp' | 'app-sheets' | 'app-calendar' | 'app-gmail' | 'app-gcal' | 'fitur' | 'target' | 'rutin' | 'periode' | 'tag' | 'cara-catat' | 'keyboard' | 'shortcut' | 'notif-reader' | 'impor' | 'emoney' | 'csv' | 'pengingat' | 'tema';
+const PARENT: Partial<Record<View, View>> = { fitur: 'menu', target: 'umum', rutin: 'umum', periode: 'umum', tag: 'umum', 'cara-catat': 'umum', keyboard: 'umum', shortcut: 'umum', 'notif-reader': 'umum', impor: 'umum', emoney: 'umum', csv: 'umum', pengingat: 'umum', tema: 'umum', 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum', referral: 'menu', koin: 'menu', 'koin-riwayat': 'referral', kawanan: 'referral', 'app-mcp': 'ai', 'app-sheets': 'ai', 'app-calendar': 'ai', 'app-gmail': 'ai', 'app-gcal': 'ai' };
 
 const STATUS_LABEL: Record<PanelUser['status'], string> = {
   AKTIF: 'Aktif',
@@ -144,6 +151,20 @@ const Row = ({ icon: Icon, title, desc, href, onClick, value, tint, badge, lead 
   if (onClick) return <button type="button" onClick={onClick} className={cls}>{inner}</button>;
   return <div className={cls}>{inner}</div>;
 };
+
+// Baris dengan sakelar (tanpa pindah tampilan).
+const ToggleRow = ({ icon: Icon, title, desc, on, onChange }: { icon: React.ElementType; title: string; desc?: string; on: boolean; onChange: (v: boolean) => void }) => (
+  <button type="button" role="switch" aria-checked={on} onClick={() => onChange(!on)} className="flex w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-slate-100/70">
+    <Icon size={21} className="shrink-0 text-slate-600" strokeWidth={1.8} />
+    <span className="min-w-0 flex-1">
+      <span className="block text-[16px] font-medium text-slate-900">{title}</span>
+      {desc && <span className="block text-[13px] leading-snug text-slate-500">{desc}</span>}
+    </span>
+    <span className={cn('relative h-7 w-12 shrink-0 rounded-full transition-colors', on ? 'bg-emerald-500' : 'bg-slate-300')}>
+      <span className={cn('absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all', on ? 'left-[22px]' : 'left-0.5')} />
+    </span>
+  </button>
+);
 
 const Group = ({ children, className }: { children: React.ReactNode; className?: string }) => (
   <div className={cn('divide-y divide-slate-200/60 overflow-hidden rounded-[22px] bg-slate-50', className)}>{children}</div>
@@ -236,6 +257,8 @@ function PaketView({ user, onClose }: { user: PanelUser | null; onClose: () => v
     return Math.min(...list.map((p) => p.price / p.durationMonths));
   }, [packages]);
   const pro = tab === 'PRO';
+  const leo = useLeoPrefs();
+  const season = currentSeason();
   const current = (tab === 'PRO') === isPro;
   const expiry = dateLong(user?.expiredAt);
 
@@ -259,7 +282,7 @@ function PaketView({ user, onClose }: { user: PanelUser | null; onClose: () => v
       <div className="relative -mx-6 flex flex-col items-center px-6 pb-2 pt-2 text-center">
         <span aria-hidden className={cn('absolute inset-x-10 top-0 h-56 rounded-full blur-3xl', pro ? 'bg-violet-200/60' : 'bg-indigo-100/70')} />
         <div className="relative">
-          <LeoMascot mood={pro ? 'happy' : 'idle'} size={170} />
+          {leo.showMascot && <LeoMascot mood={pro ? 'happy' : 'idle'} size={170} season={leo.seasonal ? season : null} />}
         </div>
         <p className="relative mt-1 flex items-center gap-1.5 text-[15px] font-semibold text-slate-500">
           {pro ? <Sparkles size={15} className="text-violet-500" /> : null}
@@ -395,6 +418,9 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
   const { day: budgetStartDay } = useBudgetStartDay();
   const { tags: tagsPref } = useTags();
   const recording = useRecordingPrefs();
+  const { theme } = useTheme();
+  const leo = useLeoPrefs();
+  const season = currentSeason();
   const [editingFeatures, setEditingFeatures] = useState(false);
   // Resep Shortcut yang langsung dibuka saat datang dari Pembaca Notifikasi.
   const [shortcutFocus, setShortcutFocus] = useState<string | null>(null);
@@ -466,6 +492,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
     emoney: 'Kartu e-money',
     csv: 'Impor / ekspor CSV',
     pengingat: 'Pengingat',
+    tema: 'Mode gelap',
     'app-mcp': 'Claude & ChatGPT',
     'app-sheets': 'Google Sheets',
     'app-calendar': 'Google Calendar',
@@ -656,6 +683,18 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                     <Row icon={Nfc} title="Kartu e-money" value="NFC" onClick={() => setView('emoney')} />
                     <Row icon={FileSpreadsheet} title="Impor / ekspor CSV" desc="Unduh per rentang tanggal, template impor" onClick={() => setView('csv')} />
                   </Group>
+                  <p className="px-1 pt-2 text-[14px] text-slate-500">Tampilan</p>
+                  <Group>
+                    <Row icon={Moon} title="Mode gelap" value={THEME_LABEL[theme]} onClick={() => setView('tema')} />
+                    <ToggleRow icon={PawPrint} title="Tampilkan Leo" desc="Singa Leosiqra di kartu Ringkasan & Profil." on={leo.showMascot} onChange={(v) => void leo.save({ showMascot: v })} />
+                    <ToggleRow
+                      icon={Palette}
+                      title="Tema musiman"
+                      desc={season ? `Sekarang: ${SEASON_INFO[season].desc}` : 'Leo berganti gaya saat Ramadan & Lebaran, Agustus, Oktober, dan Desember.'}
+                      on={leo.seasonal}
+                      onChange={(v) => void leo.save({ seasonal: v })}
+                    />
+                  </Group>
                   <p className="px-1 pt-2 text-[14px] text-slate-500">Pengingat & notifikasi</p>
                   <Group>
                     <Row icon={AlarmClock} title="Pengingat" desc="Tagihan & hal yang sering lupa, bisa berulang" onClick={() => setView('pengingat')} />
@@ -683,6 +722,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
               {view === 'impor' && <ImportMutasi inPanel />}
               {view === 'emoney' && <EmoneyScanner />}
               {view === 'csv' && <CsvView openImport={() => setView('impor')} />}
+              {view === 'tema' && <AppearanceView />}
               {view === 'pengingat' && <RemindersView openNotifications={() => setView('notifikasi')} />}
               {view === 'notif-reader' && <NotificationReaderView openShortcut={(id) => { setShortcutFocus(id); setView('shortcut'); }} openHref={(h) => go(h)()} />}
               {view === 'fitur' && <FeaturesView editing={editingFeatures} open={(href) => go(href)()} />}

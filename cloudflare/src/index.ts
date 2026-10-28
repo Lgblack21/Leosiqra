@@ -11479,6 +11479,9 @@ type UserPrefs = {
   amountKeypad: "standar" | "kalkulator";
   // Jenis notifikasi push yang boleh dikirim (default semua nyala).
   notify: NotifyPrefs;
+  // Maskot Leo di Ringkasan & Profil, dan aksesoris musimannya (default nyala).
+  showMascot: boolean;
+  seasonal: boolean;
 };
 const NOTIFY_KEYS = ["reminders", "summary", "weekly", "monthly"] as const;
 type NotifyPrefs = Record<(typeof NOTIFY_KEYS)[number], boolean>;
@@ -11486,7 +11489,7 @@ const sanitizeNotify = (raw: unknown): NotifyPrefs => {
   const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   return Object.fromEntries(NOTIFY_KEYS.map((k) => [k, r[k] !== false])) as NotifyPrefs;
 };
-const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" }, categoryStyles: {}, avatar: null, saveAttachments: true, features: null, categoryKinds: {}, budgetStartDay: 1, tags: { enabled: false, list: [] }, amountKeypad: "standar", notify: sanitizeNotify(null) };
+const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" }, categoryStyles: {}, avatar: null, saveAttachments: true, features: null, categoryKinds: {}, budgetStartDay: 1, tags: { enabled: false, list: [] }, amountKeypad: "standar", notify: sanitizeNotify(null), showMascot: true, seasonal: true };
 const TAGS_MAX = 40;
 const sanitizeTagsPref = (raw: unknown): UserPrefs["tags"] => {
   const r = raw && typeof raw === "object" ? (raw as { enabled?: unknown; list?: unknown }) : {};
@@ -11562,6 +11565,8 @@ const readUserPrefs = async (env: Env, userId: string): Promise<UserPrefs> => {
     tags: sanitizeTagsPref(raw.tags),
     amountKeypad: raw.amountKeypad === "kalkulator" ? "kalkulator" : "standar",
     notify: sanitizeNotify(raw.notify),
+    showMascot: raw.showMascot !== false,
+    seasonal: raw.seasonal !== false,
   };
 };
 
@@ -11578,7 +11583,7 @@ async function handleUserPreferences(request: Request, env: Env) {
   const current = await readUserPrefs(env, userId);
   if (request.method === "GET") return json({ item: current });
 
-  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown; categoryStyle?: unknown; avatar?: unknown; saveAttachments?: unknown; features?: unknown; categoryKind?: unknown; categoryKindsMerge?: unknown; budgetStartDay?: unknown; tags?: unknown; amountKeypad?: unknown; notify?: unknown }>(request);
+  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown; categoryStyle?: unknown; avatar?: unknown; saveAttachments?: unknown; features?: unknown; categoryKind?: unknown; categoryKindsMerge?: unknown; budgetStartDay?: unknown; tags?: unknown; amountKeypad?: unknown; notify?: unknown; showMascot?: unknown; seasonal?: unknown }>(request);
   const next: UserPrefs = { ...current, reminder: { ...current.reminder }, categoryStyles: { ...current.categoryStyles }, categoryKinds: { ...current.categoryKinds } };
   if (payload.goals !== undefined) {
     if (!Array.isArray(payload.goals) || payload.goals.length > PREF_GOALS.length || payload.goals.some((g) => !(PREF_GOALS as readonly unknown[]).includes(g))) {
@@ -11643,6 +11648,11 @@ async function handleUserPreferences(request: Request, env: Env) {
       next.categoryKinds[name] = k.kind as CategoryKindPref;
     }
   }
+  for (const key of ["showMascot", "seasonal"] as const) {
+    if (payload[key] === undefined) continue;
+    if (typeof payload[key] !== "boolean") return json({ error: "Pilihan tampilan tidak valid." }, { status: 400 });
+    next[key] = payload[key] as boolean;
+  }
   if (payload.notify !== undefined) {
     // Sebagian saja boleh: { weekly: false } hanya mengubah wawasan mingguan.
     const n = payload.notify as Record<string, unknown> | null;
@@ -11679,10 +11689,10 @@ async function handleUserPreferences(request: Request, env: Env) {
         SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END,
               '$.prefs.goals', json(?), '$.prefs.inputMode', ?, '$.prefs.reminder', json(?), '$.prefs.categoryStyles', json(?),
               '$.prefs.avatar', json(?), '$.prefs.saveAttachments', json(?), '$.prefs.features', json(?), '$.prefs.categoryKinds', json(?),
-              '$.prefs.budgetStartDay', ?, '$.prefs.tags', json(?), '$.prefs.amountKeypad', ?, '$.prefs.notify', json(?))
+              '$.prefs.budgetStartDay', ?, '$.prefs.tags', json(?), '$.prefs.amountKeypad', ?, '$.prefs.notify', json(?), '$.prefs.showMascot', json(?), '$.prefs.seasonal', json(?))
       WHERE id = ?`
   )
-    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), JSON.stringify(next.categoryStyles), JSON.stringify(next.avatar), JSON.stringify(next.saveAttachments), JSON.stringify(next.features), JSON.stringify(next.categoryKinds), next.budgetStartDay, JSON.stringify(next.tags), next.amountKeypad, JSON.stringify(next.notify), userId)
+    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), JSON.stringify(next.categoryStyles), JSON.stringify(next.avatar), JSON.stringify(next.saveAttachments), JSON.stringify(next.features), JSON.stringify(next.categoryKinds), next.budgetStartDay, JSON.stringify(next.tags), next.amountKeypad, JSON.stringify(next.notify), JSON.stringify(next.showMascot), JSON.stringify(next.seasonal), userId)
     .run();
   return json({ ok: true, item: next });
 }
