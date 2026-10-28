@@ -71,11 +71,12 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 - Sudah live (run #43): halaman `/membership/recurring` ditata ulang (ringkasan masuk/keluar/
   tabungan/sisa per bulan, "7 hari ke depan", filter, kartu jadwal, preset saat kosong) memakai
   `RecurringFormModal`; data lewat `recurringService.listMine()` (API langsung, tanpa filter uid).
-- **Belum di-deploy**: **Awal periode anggaran** (Pengaturan → Pengaturan, view `periode`: grid tgl
+- Sudah live (run #44): **Awal periode anggaran** (Pengaturan → Pengaturan, view `periode`: grid tgl
   1–28 + pratinjau periode berjalan). Pref `$.prefs.budgetStartDay` (1–28, default 1, validasi Worker).
   Dipakai: Kategori & Anggaran (web), `/app/budget`, konteks asisten AI (`budgetUsage`), MCP
   `get_budgets` (`budgetPeriodBounds`). TIDAK dipakai (tetap bulan kalender): laporan bulanan,
   insight proyeksi budget, dashboard "Ke mana uangmu" (pakai pemilih bulan).
+- **Belum di-deploy**: tidak ada.
 
 ## Migrasi D1
 
