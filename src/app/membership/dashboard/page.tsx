@@ -350,7 +350,9 @@ export default function MonthlyDashboard() {
       {/* Kartu sapaan: hari ini */}
       <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-500 p-6 text-white shadow-[0_24px_50px_-28px_rgba(79,70,229,0.8)] md:p-8">
         <div aria-hidden className="absolute inset-0 opacity-25 [background-image:radial-gradient(white_1px,transparent_1px)] [background-size:20px_20px]" />
-        <div aria-hidden className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/15 blur-2xl" />
+        {/* Gradien biasa, bukan blur/backdrop-blur: di Chrome Android lapisan blur
+            berkedip hitam saat overlay (mis. panel Pengaturan) dibuka di atasnya. */}
+        <div aria-hidden className="absolute -right-24 -top-28 h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.18),transparent_65%)]" />
         {season && (
           <div aria-hidden className="pointer-events-none absolute inset-0">
             {SEASON_INFO[season].deco.map((d, i) => (
@@ -389,12 +391,12 @@ export default function MonthlyDashboard() {
             <div className="mt-4 hidden flex-wrap items-center gap-2 md:flex">
               {usual.length > 0 && <span className="text-[13px] font-semibold text-white/85">Biasanya jam segini</span>}
               {usual.map((u) => (
-                <button key={u.title} type="button" onClick={() => openModal('harian')} className="flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[13px] font-semibold backdrop-blur hover:bg-white/30">
+                <button key={u.title} type="button" onClick={() => openModal('harian')} className="flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[13px] font-semibold hover:bg-white/30">
                   {u.title} · {short(u.avg)} <Plus size={13} />
                 </button>
               ))}
               {dueLabel && (
-                <Link href="/membership/cards" className="flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[13px] font-semibold backdrop-blur hover:bg-white/30">
+                <Link href="/membership/cards" className="flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[13px] font-semibold hover:bg-white/30">
                   <CreditCard size={13} /> {dueLabel}
                 </Link>
               )}

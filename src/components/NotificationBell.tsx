@@ -13,7 +13,7 @@ import { useTheme } from '@/context/ThemeContext';
 
 // Lonceng di header: riwayat notifikasi (semua push dari server ikut tercatat)
 // + tab Pengingat. Angka belum dibaca diperbarui tiap 2 menit & saat tab aktif.
-// Panel dirender lewat portal ke <body>: header memakai backdrop-filter, yang
+// Panel dirender lewat portal ke <body>: header dulu memakai backdrop-filter, yang
 // menjadi kotak acuan elemen fixed di dalamnya (panel jadi terkurung di header).
 const POLL_MS = 120_000;
 

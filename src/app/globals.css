@@ -586,5 +586,6 @@ html[data-daypart="sore"] .auth-greet[data-p="sore"], html[data-daypart="malam"]
   /* Latar halaman & header kaca (warna arbitrer #f6f7fb). */
   :where(.web-dark) .bg-\[\#f6f7fb\] { background-color: var(--web-bg); }
   :where(.web-dark) .bg-\[\#f6f7fb\]\/85 { background-color: rgb(11 16 32 / 0.85); }
+  :where(.web-dark) .bg-\[\#f6f7fb\]\/95 { background-color: rgb(11 16 32 / 0.95); }
   :where(.web-dark) :is(input, select, textarea) { color-scheme: dark; }
 }
