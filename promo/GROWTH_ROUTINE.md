@@ -99,7 +99,7 @@ meningkatkan kelengkapan OG dari 7/12 ke 12/12 setelah patch diterapkan").
 ### 5. Lapor
 Telegram hanya jika ada hal yang butuh Bos (patch siap, draf siap, hambatan baru):
 ```bash
-curl -s -H "x-promo-secret: $PROMO_SECRET" -F "text=…" https://membersite-leosiqra.leowendry.workers.dev/api/promo/telegram
+curl -s -H "x-promo-secret: $PROMO_SECRET" --form-string "text=…" https://membersite-leosiqra.leowendry.workers.dev/api/promo/telegram
 ```
 Isi ringkas: angka nyata hari ini, 1–3 aksi, apa yang diminta dari Bos. Akhiri run
 dengan ringkasan singkat.

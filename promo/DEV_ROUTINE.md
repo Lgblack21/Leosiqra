@@ -64,7 +64,8 @@ Untuk temuan 🔴/🟠 (atau bug yang jelas salah & berdampak ke user):
 4. Tower `dev/<id>` status `patch_siap` + `branch`; perbarui
    `references/triaged.md` di branch yang sama.
 5. Telegram (hanya kalau ada patch atau temuan 🔴):
-   `curl -s -H "x-promo-secret: $PROMO_SECRET" -F "text=…" https://membersite-leosiqra.leowendry.workers.dev/api/promo/telegram`
+   `curl -s -H "x-promo-secret: $PROMO_SECRET" --form-string "text=…" https://membersite-leosiqra.leowendry.workers.dev/api/promo/telegram`
+   (`--form-string`, bukan `-F`: `-F` memotong teks di `;` — `&amp;` di HTML jadi "can't parse entities")
    — ringkas: apa masalahnya, dampaknya, link `https://github.com/Lgblack21/Leosiqra/compare/<branch>`.
 
 🟡/⚪ cukup dicatat di Tower (`status: "catatan"`), tidak perlu patch.
