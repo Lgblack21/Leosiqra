@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-10-28 sore (akun A berhenti karena limit; semua sudah live, main = 0794679)
+Terakhir diperbarui: 2026-10-28 (akun B; Pembaca Notifikasi live, main = run #49)
 
 ## Siapa sedang kerja
 
@@ -95,11 +95,12 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   tanpa token — suara (`/input-cepat?mulai=suara`), tangkapan layar (`?mulai=tempel` → tombol baca
   gambar dari clipboard), SMS bank (`?teks=<isi pesan>` → dibaca AI/parser lokal). Semua hanya mengisi
   form; user tetap menyimpan. Belum diuji di iPhone asli (Pintasan, clipboard Safari).
-- **Belum di-deploy** (akun B, branch `claude/nifty-cannon-y181p6`): Pengaturan → **Pembaca Notifikasi**
-  (`NotificationReaderView`, view `notif-reader`, juga `?pengaturan=notif-reader`). Browser tidak bisa membaca
-  notifikasi aplikasi lain, jadi isinya jalur nyata: SMS bank (→ Shortcut iPhone), email bank (→ Gmail/Kotak
-  Masuk), dan "Tempel teks notifikasi" → `/input-cepat?teks=`. Tanpa perubahan Worker/D1. Diuji lokal (mock API).
-  Notifikasi otomatis Android = butuh plugin native (NotificationListenerService) — belum dibuat.
+- Sudah live (run #49): Pengaturan → **Pembaca Notifikasi** (`NotificationReaderView`, view `notif-reader`,
+  juga `?pengaturan=notif-reader`). Browser tidak bisa membaca notifikasi aplikasi lain, jadi isinya jalur nyata:
+  SMS bank (→ Shortcut iPhone), email bank (→ Gmail/Kotak Masuk), dan "Tempel teks notifikasi" →
+  `/input-cepat?teks=`. Tanpa perubahan Worker/D1. Notifikasi otomatis Android = butuh plugin native
+  (NotificationListenerService) — belum dibuat.
+- **Belum di-deploy**: tidak ada. Branch kerja akun B: `claude/nifty-cannon-y181p6` (= main).
 
 ## Migrasi D1
 
@@ -133,9 +134,9 @@ Pola kerja dengan Bos (lanjutkan sama): Bos kirim screenshot Oyenza per menu Pen
 bikin versi Leosiqra yang **fiturnya nyata tapi desainnya beda** (jangan sama) → uji lokal
 (Playwright, ponsel/tablet/desktop) → commit+push branch → lapor ringkas → deploy hanya setelah
 Bos bilang **"gas"**. Menu Pengaturan yang sudah dibuat: Fitur, Target, Transaksi rutin, Awal
-periode anggaran, Tag, Cara catat utama, Keyboard nominal, Shortcut iPhone, Kategori & Anggaran.
+periode anggaran, Tag, Cara catat utama, Keyboard nominal, Shortcut iPhone, Kategori & Anggaran, Pembaca Notifikasi.
 Kemungkinan berikutnya dari screenshot Oyenza: "Impor dari e-money (NFC)", "Impor/ekspor CSV",
-"Pembaca Notifikasi" (tidak bisa di web — jelaskan ke Bos).
+"Pembaca Notifikasi" (sudah, versi web).
 Mode HP: Bos minta tampilan HP **simpel** — jangan menambah kepadatan di <768px.
 
 - Tunggu hasil tes Bos untuk poin di atas, perbaiki parser kalau perlu.
