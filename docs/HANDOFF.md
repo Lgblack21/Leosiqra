@@ -53,7 +53,8 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   tab aktif lagi); animasi `.page-enter` 0.2s tanpa blur, stagger dipersingkat.
   Lokal: muat awal 18→11 API, pindah halaman 0–1 API (dulu transaksi 2.000 baris
   + auth/me tiap klik). Kalau ada data terasa basi, curigai cache ini dulu.
-- **Belum di-deploy**: panel Pengaturan selalu mulai dari atas saat dibuka/pindah tampilan (`scrollRef` di `SettingsPanel.tsx`).
+- Panel Pengaturan selalu mulai dari atas saat dibuka/pindah tampilan (`scrollRef` di `SettingsPanel.tsx`) sudah live (run #40).
+- **Belum di-deploy**: tidak ada.
 
 ## Migrasi D1
 
