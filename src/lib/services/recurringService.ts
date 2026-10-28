@@ -10,6 +10,7 @@ import {
   Timestamp 
 } from '@/lib/cf-firestore';
 import { db } from '../cf-client';
+import { cloudflareApi } from '../cloudflare-api';
 import type { RecurringInterval } from '../recurringIntervals';
 
 export interface RecurringTransaction {
@@ -33,6 +34,26 @@ export interface RecurringTransaction {
 const COLLECTION_NAME = 'recurring';
 
 export const recurringService = {
+  // Semua jadwal milik sesi langsung dari API — tidak bergantung auth.currentUser
+  // (getUserRecurring menyaring userId di klien dan kosong kalau belum siap).
+  async listMine(): Promise<RecurringTransaction[]> {
+    const r = await cloudflareApi<{ items?: Record<string, unknown>[] }>('/api/member/recurring');
+    return (r.items ?? []).map((x) => ({
+      id: String(x.id),
+      userId: String(x.user_id ?? ''),
+      name: String(x.name ?? ''),
+      type: x.type as RecurringTransaction['type'],
+      category: String(x.category ?? ''),
+      accountId: String(x.account_id ?? ''),
+      amount: Number(x.amount) || 0,
+      interval: x.interval as RecurringTransaction['interval'],
+      nextDate: new Date(String(x.next_date ?? '')),
+      note: x.note ? String(x.note) : undefined,
+      status: x.status === 'PAUSED' ? 'PAUSED' : 'ACTIVE',
+      createdAt: new Date(String(x.created_at ?? '')),
+    }));
+  },
+
   async createRecurring(data: Omit<RecurringTransaction, 'id' | 'createdAt'>) {
     const ref = collection(db, COLLECTION_NAME);
     const newDoc = await addDoc(ref, {

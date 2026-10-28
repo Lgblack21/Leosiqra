@@ -10,7 +10,6 @@ import { categoryVisual, useCategoryStyles } from '@/lib/categoryEmoji';
 import { INTERVAL_LABEL, PER_MONTH, type RecurringInterval } from '@/lib/recurringIntervals';
 import { RecurringFormModal } from '@/components/recurring/RecurringFormModal';
 import { useFeedback } from '@/components/ui/Feedback';
-import { cloudflareApi } from '@/lib/cloudflare-api';
 
 // Panel Pengaturan → Transaksi rutin. Pemasukan/Pengeluaran yang dicatat
 // otomatis tiap jatuh tempo. Setoran tabungan otomatis dikelola di Target.
@@ -37,23 +36,8 @@ export function RecurringView({ openTarget }: { openTarget: () => void }) {
   const [modal, setModal] = useState<{ open: boolean; item: RecurringTransaction | null }>({ open: false, item: null });
   const [busy, setBusy] = useState('');
 
-  // Langsung ke API (sudah di-scope ke sesi): getUserRecurring menyaring
-  // userId di klien dan kosong kalau auth.currentUser belum siap.
   const load = useCallback(() => {
-    cloudflareApi<{ items?: Record<string, unknown>[] }>('/api/member/recurring').then((r) => setItems((r.items ?? []).map((x) => ({
-      id: String(x.id),
-      userId: String(x.user_id ?? ''),
-      name: String(x.name ?? ''),
-      type: x.type as RecurringTransaction['type'],
-      category: String(x.category ?? ''),
-      accountId: String(x.account_id ?? ''),
-      amount: Number(x.amount) || 0,
-      interval: x.interval as RecurringTransaction['interval'],
-      nextDate: new Date(String(x.next_date ?? '')),
-      note: x.note ? String(x.note) : undefined,
-      status: x.status === 'PAUSED' ? 'PAUSED' : 'ACTIVE',
-      createdAt: new Date(String(x.created_at ?? '')),
-    })))).catch(() => setItems([]));
+    recurringService.listMine().then(setItems).catch(() => setItems([]));
   }, []);
   useEffect(() => {
     load();

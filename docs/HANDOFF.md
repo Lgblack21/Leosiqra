@@ -68,7 +68,9 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   `Dua Mingguan`/`Dua Bulanan`/`Tiga Bulanan` (advanceNextDate, RRULE `INTERVAL=n` di .ics &
   Google Calendar). Diuji lokal: cron mencatat sekali walau dipicu 2×, next_date +2 bulan.
   Halaman lama `/membership/recurring` tetap ada (tautan notifikasi push).
-- **Belum di-deploy**: tidak ada.
+- **Belum di-deploy**: halaman `/membership/recurring` ditata ulang (ringkasan masuk/keluar/
+  tabungan/sisa per bulan, "7 hari ke depan", filter, kartu jadwal, preset saat kosong) memakai
+  `RecurringFormModal`; data lewat `recurringService.listMine()` (API langsung, tanpa filter uid).
 
 ## Migrasi D1
 
