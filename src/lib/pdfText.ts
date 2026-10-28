@@ -2,13 +2,36 @@
 // terpisah — cukup untuk aksi sekali pakai (impor e-statement), jalan di
 // main thread ("fake worker") sudah cukup dan lebih sederhana daripada
 // meng-host file worker pdf.js sendiri di Next.js/Turbopack.
-export async function extractPdfText(file: File): Promise<string> {
+
+// PDF terkunci (e-statement/tagihan kartu kredit): `wrong` = kata sandi yang
+// diberikan salah. Kata sandi hanya dipakai pdf.js di browser untuk membuka
+// file — tidak dikirim ke server dan tidak disimpan.
+export class PdfPasswordError extends Error {
+  constructor(public wrong: boolean) {
+    super(wrong ? 'Kata sandi PDF salah.' : 'PDF ini dikunci kata sandi.');
+    this.name = 'PdfPasswordError';
+  }
+}
+
+export async function extractPdfText(file: File, password?: string): Promise<string> {
   const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (pdfjsLib as any).GlobalWorkerOptions.workerSrc = '';
+  // "Fake worker" pdf.js hanya aktif kalau modul worker sudah ada di
+  // globalThis.pdfjsWorker — tanpa ini browser melempar 'No
+  // "GlobalWorkerOptions.workerSrc" specified' (Node tidak, karena di sana
+  // pdf.js mengimpor worker-nya sendiri).
+  const g = globalThis as { pdfjsWorker?: unknown };
+  if (!g.pdfjsWorker) g.pdfjsWorker = await import('pdfjs-dist/legacy/build/pdf.worker.mjs');
 
   const buffer = await file.arrayBuffer();
-  const doc = await pdfjsLib.getDocument({ data: buffer }).promise;
+  let doc: Awaited<ReturnType<typeof pdfjsLib.getDocument>['promise']>;
+  try {
+    doc = await pdfjsLib.getDocument({ data: buffer, password }).promise;
+  } catch (e) {
+    // pdf.js: PasswordException code 1 = butuh sandi, 2 = sandi salah.
+    const err = e as { name?: string; code?: number };
+    if (err?.name === 'PasswordException') throw new PdfPasswordError(err.code === 2);
+    throw e;
+  }
 
   const pageTexts: string[] = [];
   for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {

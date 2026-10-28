@@ -41,6 +41,7 @@ import {
   Hash,
   NotebookText,
   BellRing,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { cn, formatIDR } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
@@ -62,6 +63,7 @@ import { TagsView } from './TagsView';
 import { CaraCatatView, KeyboardNominalView } from './RecordingViews';
 import { ShortcutsView } from './ShortcutsView';
 import { NotificationReaderView } from './NotificationReaderView';
+import { ImportMutasi } from '@/components/impor/ImportMutasi';
 import { useRecordingPrefs } from '@/lib/useRecordingPrefs';
 import { useTags } from '@/lib/useTags';
 import { useBudgetStartDay } from '@/lib/useBudgetStartDay';
@@ -85,8 +87,8 @@ export interface PanelUser {
   avatar?: AvatarConfig | null;
 }
 
-export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil' | 'kontak' | 'notifikasi' | 'ai' | 'lainnya' | 'referral' | 'koin' | 'koin-riwayat' | 'kawanan' | 'app-mcp' | 'app-sheets' | 'app-calendar' | 'app-gmail' | 'app-gcal' | 'fitur' | 'target' | 'rutin' | 'periode' | 'tag' | 'cara-catat' | 'keyboard' | 'shortcut' | 'notif-reader';
-const PARENT: Partial<Record<View, View>> = { fitur: 'menu', target: 'umum', rutin: 'umum', periode: 'umum', tag: 'umum', 'cara-catat': 'umum', keyboard: 'umum', shortcut: 'umum', 'notif-reader': 'umum', 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum', referral: 'menu', koin: 'menu', 'koin-riwayat': 'referral', kawanan: 'referral', 'app-mcp': 'ai', 'app-sheets': 'ai', 'app-calendar': 'ai', 'app-gmail': 'ai', 'app-gcal': 'ai' };
+export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil' | 'kontak' | 'notifikasi' | 'ai' | 'lainnya' | 'referral' | 'koin' | 'koin-riwayat' | 'kawanan' | 'app-mcp' | 'app-sheets' | 'app-calendar' | 'app-gmail' | 'app-gcal' | 'fitur' | 'target' | 'rutin' | 'periode' | 'tag' | 'cara-catat' | 'keyboard' | 'shortcut' | 'notif-reader' | 'impor';
+const PARENT: Partial<Record<View, View>> = { fitur: 'menu', target: 'umum', rutin: 'umum', periode: 'umum', tag: 'umum', 'cara-catat': 'umum', keyboard: 'umum', shortcut: 'umum', 'notif-reader': 'umum', impor: 'umum', 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum', referral: 'menu', koin: 'menu', 'koin-riwayat': 'referral', kawanan: 'referral', 'app-mcp': 'ai', 'app-sheets': 'ai', 'app-calendar': 'ai', 'app-gmail': 'ai', 'app-gcal': 'ai' };
 
 const STATUS_LABEL: Record<PanelUser['status'], string> = {
   AKTIF: 'Aktif',
@@ -455,6 +457,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
     keyboard: 'Keyboard nominal',
     shortcut: 'Shortcut iPhone',
     'notif-reader': 'Pembaca Notifikasi',
+    impor: 'Impor mutasi',
     'app-mcp': 'Claude & ChatGPT',
     'app-sheets': 'Google Sheets',
     'app-calendar': 'Google Calendar',
@@ -537,7 +540,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                   <SectionLabel>Catat otomatis</SectionLabel>
                   <Group>
                     <Row lead={<AppStack />} title="Aplikasi terhubung" desc="Gmail, Slack, Google, Notion, Claude & ChatGPT" onClick={go('/membership/aplikasi')} />
-                    <Row icon={UploadCloud} tint="bg-sky-100 text-sky-600" title="Impor" desc="PDF, Excel, CSV, dan tangkapan layar" onClick={go('/membership/impor')} />
+                    <Row icon={UploadCloud} tint="bg-sky-100 text-sky-600" title="Impor" desc="PDF, Excel, CSV, dan tangkapan layar" onClick={() => setView('impor')} />
                     <Row icon={Inbox} tint="bg-rose-100 text-rose-600" title="Kotak Masuk" desc={inboxCount ? `${inboxCount} usulan menunggu ditinjau` : 'Usulan transaksi dari email & Slack'} badge={inboxCount} onClick={go('/membership/kotak-masuk')} />
                     <Row icon={Zap} tint="bg-amber-100 text-amber-600" title="Input Cepat" desc="Catat dari layar utama HP, suara & foto struk" onClick={() => setView('lainnya')} />
                   </Group>
@@ -637,8 +640,12 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                     <Row icon={Zap} title="Input Cepat" desc="Pasang di layar utama HP" onClick={() => setView('lainnya')} />
                     <Row icon={Smartphone} title="Shortcut iPhone" value="Suara, layar, SMS & notif" onClick={() => { setShortcutFocus(null); setView('shortcut'); }} />
                     <Row icon={BellRing} title="Pembaca Notifikasi" value="Notifikasi, SMS & email" onClick={() => setView('notif-reader')} />
-                    <Row icon={UploadCloud} title="Impor mutasi" desc="PDF, Excel, CSV, dan tangkapan layar" onClick={go('/membership/impor')} />
                     <Row icon={Bot} title="Aplikasi terhubung" desc="Gmail, Slack, Google, Notion, Claude & ChatGPT" onClick={go('/membership/aplikasi')} />
+                  </Group>
+                  <p className="px-1 pt-2 text-[14px] text-slate-500">Impor & ekspor</p>
+                  <Group>
+                    <Row icon={UploadCloud} title="Impor mutasi bank/e-wallet" desc="PDF, Excel, CSV, dan tangkapan layar" onClick={() => setView('impor')} />
+                    <Row icon={FileSpreadsheet} title="Ekspor CSV" desc="Unduh semua transaksi" onClick={() => { window.location.href = '/api/member/transactions/export.csv'; }} />
                   </Group>
                   <p className="px-1 pt-2 text-[14px] text-slate-500">Notifikasi</p>
                   <Group>
@@ -663,6 +670,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
               {view === 'cara-catat' && <CaraCatatView />}
               {view === 'keyboard' && <KeyboardNominalView />}
               {view === 'shortcut' && <ShortcutsView initialOpen={shortcutFocus} />}
+              {view === 'impor' && <ImportMutasi inPanel />}
               {view === 'notif-reader' && <NotificationReaderView openShortcut={(id) => { setShortcutFocus(id); setView('shortcut'); }} openHref={(h) => go(h)()} />}
               {view === 'fitur' && <FeaturesView editing={editingFeatures} open={(href) => go(href)()} />}
 
