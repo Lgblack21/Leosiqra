@@ -191,7 +191,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   (Ringkasan, Transaksi, Laporan, Rekening, Semua fitur, Kotak Masuk, Tabungan, Transaksi berulang; dua slot
   `sm:hidden`/`hidden sm:flex` → yang terlihat dipakai). Halaman tanpa slot: baris tipis lonceng (+ ≡). `main`
   tidak lagi `pt-16`. Tambah slot ke halaman lain kalau mau sebaris.
-- **Belum di-deploy** (akun B): dashboard web tidak lagi menghitung **beli/jual investasi** sebagai
+- **Live (run #59)** (akun B): dashboard web tidak lagi menghitung **beli/jual investasi** sebagai
   pengeluaran/pemasukan — `isInvestmentFlow` di `src/lib/utils.ts` (cermin `isInvestmentPurchaseRow` Worker,
   index.ts:940: relatedType "investasi" atau pengeluaran berkategori Investasi/Saham/Deposito). Berlaku ke
   Keluar/Masuk, hari ini, Ke mana uangmu, Ritme, jatah harian, kata-kata Leo; barisnya tampil netral di Catatan
