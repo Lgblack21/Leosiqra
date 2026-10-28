@@ -3872,16 +3872,25 @@ Aturan:
   return { ok: true as const, rows };
 }
 
-// GET /api/member/transactions/export.csv — unduh semua transaksi (maks 5.000 terbaru).
+// GET /api/member/transactions/export.csv[?from=YYYY-MM-DD&to=YYYY-MM-DD] —
+// unduh transaksi (maks 5.000 terbaru; rentang tanggal opsional, inklusif).
 async function handleExportTransactionsCsv(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
-  const rows = await transactionExportRows(env, authResult.session.user.id);
+  const params = new URL(request.url).searchParams;
+  const ymd = (v: string | null) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`)) ? v : null);
+  const from = ymd(params.get("from"));
+  const to = ymd(params.get("to"));
+  if ((params.get("from") && !from) || (params.get("to") && !to) || (from && to && from > to)) {
+    return json({ error: "Rentang tanggal tidak valid." }, { status: 400 });
+  }
+  const rows = await transactionExportRows(env, authResult.session.user.id, { from, to });
   const body = "﻿" + rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+  const range = from || to ? `-${from ?? "awal"}_${to ?? todayWIB()}` : `-${todayWIB()}`;
   return new Response(body, {
     headers: {
       "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="leosiqra-transaksi-${todayWIB()}.csv"`,
+      "content-disposition": `attachment; filename="leosiqra-transaksi${range}.csv"`,
       "cache-control": "no-store",
       "x-content-type-options": "nosniff",
     },
@@ -8511,14 +8520,16 @@ const icsDate = (ymd: string) => ymd.slice(0, 10).replace(/-/g, "");
 // Baris transaksi untuk ekspor (header + maks 5.000 transaksi terbaru) —
 // dipakai tautan CSV lama & Google Sheets (Composio), supaya kolomnya sama.
 const TRANSACTION_EXPORT_HEADER = ["Tanggal", "Jenis", "Kategori", "Subkategori", "Rekening", "Rekening tujuan", "Nominal", "Mata uang", "Nominal IDR", "Catatan"];
-const transactionExportRows = async (env: Env, userId: string): Promise<(string | number)[][]> => {
+const transactionExportRows = async (env: Env, userId: string, range: { from?: string | null; to?: string | null } = {}): Promise<(string | number)[][]> => {
   const accounts = await env.DB.prepare("SELECT id, name FROM accounts WHERE user_id = ?").bind(userId).all<{ id: string; name: string }>();
   const accountName = new Map((accounts.results ?? []).map((a) => [a.id, a.name]));
   const rows = await env.DB.prepare(
     `SELECT date, type, category, sub_category, account_id, target_account_id, amount, currency, amount_idr, note
-       FROM transactions WHERE user_id = ? ORDER BY date DESC, created_at DESC LIMIT 5000`
+       FROM transactions WHERE user_id = ?
+        AND (? IS NULL OR substr(date, 1, 10) >= ?) AND (? IS NULL OR substr(date, 1, 10) <= ?)
+      ORDER BY date DESC, created_at DESC LIMIT 5000`
   )
-    .bind(userId)
+    .bind(userId, range.from ?? null, range.from ?? null, range.to ?? null, range.to ?? null)
     .all<{ date: string; type: string; category: string | null; sub_category: string | null; account_id: string | null; target_account_id: string | null; amount: number; currency: string | null; amount_idr: number | null; note: string | null }>();
   return [
     TRANSACTION_EXPORT_HEADER,

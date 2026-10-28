@@ -9,7 +9,20 @@ export type ImportType = 'pemasukan' | 'pengeluaran';
 export type ParsedRow = { date: string; note: string; amount: number; type: ImportType };
 export type Table = { headers: string[]; rows: string[][] };
 export type AmountMode = 'single' | 'debit_credit';
-export type ColumnMapping = { date: string; note: string; mode: AmountMode; amount: string; debit: string; credit: string };
+// kind = kolom jenis transaksi (opsional), mis. "Jenis" di ekspor Leosiqra atau
+// "Type"/"Income/Expense" di ekspor aplikasi lain — nominalnya sering selalu positif.
+export type ColumnMapping = { date: string; note: string; mode: AmountMode; amount: string; debit: string; credit: string; kind: string };
+
+// Isi kolom jenis → arah. null = jenis lain (transfer, hutang, …) → baris dilewati,
+// karena impor mutasi hanya mencatat uang masuk/keluar satu rekening.
+export function kindFromCell(value: string): ImportType | null | undefined {
+  const s = value.toLowerCase().trim();
+  if (!s) return undefined;
+  if (/transfer|pindah|hutang|piutang|debt|loan/.test(s)) return null;
+  if (/pengeluaran|expense|keluar|spend|outflow|withdraw|^debit$|^db$|^out$/.test(s)) return 'pengeluaran';
+  if (/pemasukan|income|masuk|inflow|deposit|^kredit$|^credit$|^cr$|^in$/.test(s)) return 'pemasukan';
+  return null;
+}
 
 const HEADER_HINTS = ['tanggal', 'date', 'tgl', 'keterangan', 'deskripsi', 'description', 'nominal', 'amount', 'jumlah', 'debit', 'kredit', 'credit', 'mutasi'];
 
@@ -53,6 +66,7 @@ export function guessMapping(headers: string[]): ColumnMapping {
     amount,
     debit,
     credit,
+    kind: headers.find((h) => /^(jenis|type|tipe|income\/expense|kategori jenis)$/i.test(h.trim())) ?? '',
   };
 }
 
@@ -61,7 +75,7 @@ export const mappingReady = (m: ColumnMapping) => Boolean(m.date && (m.mode === 
 export function rowsFromTable(table: Table, m: ColumnMapping): ParsedRow[] {
   if (!mappingReady(m)) return [];
   const idx = (col: string) => (col ? table.headers.indexOf(col) : -1);
-  const [d, n, a, deb, cred] = [idx(m.date), idx(m.note), idx(m.amount), idx(m.debit), idx(m.credit)];
+  const [d, n, a, deb, cred, k] = [idx(m.date), idx(m.note), idx(m.amount), idx(m.debit), idx(m.credit), idx(m.kind)];
   return table.rows.map((r) => {
     const parsedDate = parseFlexibleDate(r[d] ?? '');
     const note = n >= 0 ? String(r[n] ?? '').trim() : '';
@@ -73,6 +87,11 @@ export function rowsFromTable(table: Table, m: ColumnMapping): ParsedRow[] {
       // Sebagian bank menandai arah lewat "DB"/"CR" di kolom nominal yang sama.
       type = detectDbCrType(cell) ?? (raw >= 0 ? 'pemasukan' : 'pengeluaran');
       amount = Math.abs(raw);
+      if (k >= 0) {
+        const kind = kindFromCell(String(r[k] ?? ''));
+        if (kind === null) amount = 0; // jenis lain → disaring sebagai baris tidak valid
+        else if (kind) type = kind;
+      }
     } else {
       const debit = deb >= 0 ? Math.abs(parseIndoNumber(String(r[deb] ?? '0'))) : 0;
       const credit = cred >= 0 ? Math.abs(parseIndoNumber(String(r[cred] ?? '0'))) : 0;
