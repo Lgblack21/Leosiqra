@@ -62,12 +62,13 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   (target tanpa setoran otomatis) — cron & kalender melewati `amount > 0`; nama target
   dobel ditolak 409. Kategori target = nama awal (ganti nama tidak memutus progres).
   Belum: kartu target di aplikasi HP (`/app/savings`) belum menampilkan ikon/warna.
-- **Belum di-deploy**: **Transaksi rutin** di Pengaturan (view `rutin`: ringkasan masuk/keluar
+- Sudah live (run #42): **Transaksi rutin** di Pengaturan (view `rutin`: ringkasan masuk/keluar
   per bulan, daftar, jeda/hapus) + form baru `RecurringFormModal` (uang keluar/masuk, nominal
   besar, chip kategori, rekening, 7 pilihan selang, pratinjau 3 tanggal). Worker: interval baru
   `Dua Mingguan`/`Dua Bulanan`/`Tiga Bulanan` (advanceNextDate, RRULE `INTERVAL=n` di .ics &
   Google Calendar). Diuji lokal: cron mencatat sekali walau dipicu 2×, next_date +2 bulan.
   Halaman lama `/membership/recurring` tetap ada (tautan notifikasi push).
+- **Belum di-deploy**: tidak ada.
 
 ## Migrasi D1
 
