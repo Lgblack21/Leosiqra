@@ -4,13 +4,13 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-10-28 malam (akun B; run #52 live, privasi belum deploy)
+Terakhir diperbarui: 2026-10-28 malam (akun B selesai; semua live, main = run #53)
 
 ## Siapa sedang kerja
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Pengaturan (menu baru dari screenshot Oyenza) |
+| — | tidak ada yang aktif | — | — |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -151,13 +151,14 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     divalidasi). `useLeoPrefs`, `lib/season.ts` (Ramadan–Lebaran perkiraan 2027–2029, Agustus, Oktober,
     Desember) → aksesoris di `LeoMascot` (`season` prop) + hiasan emoji di kartu Ringkasan.
   - Bahasa English: DILEWATI (keputusan Bos) — belum ada sistem terjemahan.
-- **Belum di-deploy** (akun B, `claude/nifty-cannon-y181p6`): **Privasi & keamanan + Perangkat lain**.
+- Sudah live (run #53): **Privasi & keamanan + Perangkat lain**.
   - Privasi: **Izin** (`PermissionsView`: status kamera/mikrofon/notifikasi via Permissions API, tombol Izinkan),
     **Ingatan asisten** (`AssistantMemoryView`, pref `$.prefs.aiMemory` {style, learned, about} maks 600 karakter,
     divalidasi Worker; disisipkan ke prompt Tanya Leo lewat `aiMemoryBlock` — dilabeli catatan user, bukan aturan
     sistem), **Statistik pemakaian** (localStorage `leosiqra:analytics-off`; `WebAnalytics` tidak memuat beacon
     Cloudflare kalau dimatikan). Keamanan akun & Atur ulang data tetap di bawahnya.
   - Pengaturan → Perangkat lain → Pasang di ponsel (`/install`).
+- **Belum di-deploy**: tidak ada. Branch kerja akun B: `claude/nifty-cannon-y181p6` (= main).
 
 ## Migrasi D1
 
@@ -175,6 +176,13 @@ Dijalankan manual oleh Bos lewat Console D1 (token GitHub belum punya izin D1).
 - Kotak Masuk di HP & panel per sumber (Gmail/Slack) — belum dicoba Bos.
 - Shortcut iPhone (Pintasan, Automasi SMS, tempel clipboard Safari) & mode "Ucapkan" (mic otomatis).
 - Asisten AI & MCP dengan awal periode anggaran ≠ 1.
+- (sesi akun B 2026-10-28) Impor PDF asli (BCA & PDF bersandi) setelah perbaikan pdf.js worker; impor balik CSV ekspor.
+- Pengingat: push sungguhan & ketuk → Input Cepat terisi; push wawasan mingguan pertama Senin 2 Nov 10:00 WIB.
+- Resep Shortcut "Notifikasi aplikasi bank" (nama tindakan "Enkode URL"/variabel "Input Pintasan" di iPhone asli).
+- Kartu e-money NFC: perlu kapabilitas "NFC Tag Reading" di App ID Apple, build & rilis ulang iOS/Android, tes kartu
+  asli (Swift belum pernah dikompilasi).
+- Tanya Leo dengan Ingatan asisten terisi (butuh OpenRouter produksi).
+- Mode gelap: halaman selain Ringkasan belum dicek → tambahkan ke WEB_DARK_READY satu per satu.
 
 ## Catatan Impor
 - Impor = riwayat: TIDAK mengubah saldo rekening (keputusan Bos 2026-10-28).
@@ -193,8 +201,9 @@ bikin versi Leosiqra yang **fiturnya nyata tapi desainnya beda** (jangan sama) �
 (Playwright, ponsel/tablet/desktop) → commit+push branch → lapor ringkas → deploy hanya setelah
 Bos bilang **"gas"**. Menu Pengaturan yang sudah dibuat: Fitur, Target, Transaksi rutin, Awal
 periode anggaran, Tag, Cara catat utama, Keyboard nominal, Shortcut iPhone, Kategori & Anggaran, Pembaca Notifikasi, Impor mutasi (pop-up), Kartu e-money, Impor/ekspor CSV, Pengingat, Notifikasi.
-Kemungkinan berikutnya dari screenshot Oyenza: "Impor dari e-money (NFC)", "Impor/ekspor CSV",
-"Pembaca Notifikasi" (sudah, versi web).
+Semua menu Pengaturan dari screenshot Oyenza sudah dibuat (2026-10-28). Sisa: pindahan multi-dompet dari app
+lain (Money Manager dll — tunggu keputusan Bos soal saldo & pembuatan rekening), Bahasa English (dilewati),
+mode gelap halaman lain (bertahap), menu Pengingat di aplikasi HP.
 Mode HP: Bos minta tampilan HP **simpel** — jangan menambah kepadatan di <768px.
 
 - Tunggu hasil tes Bos untuk poin di atas, perbaiki parser kalau perlu.
