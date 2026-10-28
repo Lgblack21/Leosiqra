@@ -6,6 +6,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useModal, ModalType } from '@/context/ModalContext';
 import { cn } from '@/lib/utils';
 import { findNavContext } from '@/lib/navigation';
+import { NotificationBell } from '@/components/NotificationBell';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -96,6 +97,8 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
         </nav>
       </div>
 
+      <div className="flex shrink-0 items-center gap-2">
+      <NotificationBell />
       <div className="relative shrink-0" ref={dropdownRef} data-tour="tambah-cepat">
         <button
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -135,6 +138,7 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
             </div>
           </div>
         )}
+      </div>
       </div>
     </header>
   );

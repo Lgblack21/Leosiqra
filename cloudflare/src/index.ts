@@ -10287,8 +10287,23 @@ const sendWebPushToSubscription = async (
   }
 };
 
+// Riwayat notifikasi (lonceng): setiap push ke user dicatat dulu, juga kalau
+// user belum punya langganan push. Tabel belum ada (migrasi 0021) = dilewati.
+const recordNotification = async (env: Env, userId: string, title: string, body: string, url: string) => {
+  try {
+    await env.DB.prepare("INSERT INTO notifications (id, user_id, title, body, url, created_at) VALUES (?, ?, ?, ?, ?, ?)")
+      .bind(generateId(), userId, title.slice(0, 140), body.slice(0, 500), url.startsWith("/") ? url.slice(0, 500) : null, nowIso())
+      .run();
+  } catch (error) {
+    if (!/no such table:\s*notifications/i.test(error instanceof Error ? error.message : String(error))) {
+      console.error("Gagal mencatat notifikasi:", error);
+    }
+  }
+};
+
 // Kirim ke SEMUA perangkat/subscription milik satu user (bisa lebih dari satu).
 const sendWebPushToUser = async (env: Env, userId: string, title: string, body: string, url: string) => {
+  await recordNotification(env, userId, title, body, url);
   const { results } = await env.DB.prepare(
     "SELECT id, user_id, endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ?"
   )
@@ -11851,6 +11866,60 @@ const sendDailyReminders = async (env: Env) => {
     } catch (error) {
       console.error(`Gagal mengirim pengingat harian ke user ${userId}:`, error);
     }
+  }
+};
+
+// ===== Riwayat notifikasi (lonceng, tabel notifications, migrasi 0021) =====
+// GET  /api/member/notifications            → { items (50 terbaru), unread }
+// POST /api/member/notifications/read-all   → tandai semua dibaca
+// POST /api/member/notifications/:id/read   → tandai satu dibaca
+async function handleNotificationRoutes(request: Request, env: Env, pathname: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const sub = pathname.slice("/api/member/notifications".length).replace(/^\//, "");
+  try {
+    if (!sub && request.method === "GET") {
+      const [list, count] = await env.DB.batch([
+        env.DB.prepare("SELECT id, title, body, url, read_at, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50").bind(userId),
+        env.DB.prepare("SELECT COUNT(*) AS n FROM notifications WHERE user_id = ? AND read_at IS NULL").bind(userId),
+      ]);
+      const items = ((list.results ?? []) as { id: string; title: string; body: string; url: string | null; read_at: string | null; created_at: string }[]).map((r) => ({
+        id: r.id, title: r.title, body: r.body, url: r.url, read: !!r.read_at, createdAt: r.created_at,
+      }));
+      return json({ items, unread: Number((count.results?.[0] as { n: number } | undefined)?.n ?? 0) });
+    }
+    if (sub === "read-all" && request.method === "POST") {
+      await env.DB.prepare("UPDATE notifications SET read_at = ? WHERE user_id = ? AND read_at IS NULL").bind(nowIso(), userId).run();
+      return json({ ok: true });
+    }
+    const m = /^([A-Za-z0-9_-]{1,64})\/read$/.exec(sub);
+    if (m && request.method === "POST") {
+      await env.DB.prepare("UPDATE notifications SET read_at = COALESCE(read_at, ?) WHERE id = ? AND user_id = ?").bind(nowIso(), m[1], userId).run();
+      return json({ ok: true });
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (error) {
+    if (/no such table:\s*notifications/i.test(error instanceof Error ? error.message : String(error))) {
+      // Belum dimigrasi: lonceng tampil kosong, bukan error.
+      return request.method === "GET" ? json({ items: [], unread: 0 }) : json({ ok: true });
+    }
+    throw error;
+  }
+}
+
+// Simpan maks 60 hari & 100 terbaru per user.
+const cleanupNotifications = async (env: Env) => {
+  try {
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM notifications WHERE created_at < ?").bind(new Date(Date.now() - 60 * 86400000).toISOString()),
+      env.DB.prepare(
+        `DELETE FROM notifications WHERE id IN (
+           SELECT id FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC) AS rn FROM notifications) WHERE rn > 100)`
+      ),
+    ]);
+  } catch (error) {
+    if (!/no such table:\s*notifications/i.test(error instanceof Error ? error.message : String(error))) throw error;
   }
 };
 
@@ -14563,6 +14632,10 @@ const worker = {
         return await handleImportRoutes(request, env, url.pathname);
       }
 
+      if (url.pathname === "/api/member/notifications" || url.pathname.startsWith("/api/member/notifications/")) {
+        return await handleNotificationRoutes(request, env, url.pathname);
+      }
+
       if (url.pathname === "/api/member/reminders" || url.pathname.startsWith("/api/member/reminders/")) {
         return await handleReminderRoutes(request, env, url.pathname);
       }
@@ -15110,6 +15183,7 @@ const worker = {
     ctx.waitUntil(syncAllGoogleSheets(env));
     ctx.waitUntil(writeAllNotionReports(env));
     ctx.waitUntil(remindAppActivationExpiry(env).catch((error) => console.error("Pengingat aktivasi:", error)));
+    ctx.waitUntil(cleanupNotifications(env).catch((error) => console.error("Bersihkan notifikasi:", error)));
     // Senin: wawasan mingguan; tanggal 1: rekap bulan lalu (push, bisa dimatikan user).
     ctx.waitUntil(sendInsightPushes(env).catch((error) => console.error("Wawasan push:", error)));
   },

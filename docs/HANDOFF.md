@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-28 malam (akun B selesai; semua live, main = run #5
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| — | tidak ada yang aktif | — | — |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Lonceng notifikasi |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -166,7 +166,11 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   panel di tablet (Chrome Android); dari video: 1 frame bagian atas panel tidak tergambar (latar buram gelap
   terlihat) — glitch compositing GPU dengan backdrop-filter. Video diambil sebelum run #55; BELUM dikonfirmasi
   hilang. Kalau masih: coba hapus animasi spring `y` dialog / tambah `transform-gpu`.
-- **Belum di-deploy**: tidak ada. Branch kerja akun B: `claude/nifty-cannon-y181p6` (= main).
+- **Belum di-deploy** (akun B): **Lonceng notifikasi** di header (`NotificationBell`, portal ke body karena header
+  memakai backdrop-filter). Tab Notifikasi (riwayat, tandai dibaca/semua) + tab Pengingat (`RemindersView`).
+  Worker: tabel `notifications` (**migrasi 0021**), `recordNotification` dipanggil di `sendWebPushToUser` → semua
+  push server tercatat (juga untuk user tanpa langganan push); `/api/member/notifications` (GET, POST read-all,
+  POST :id/read); dibersihkan di cron harian (>60 hari, >100/user). Tanpa migrasi: lonceng kosong, bukan error.
 
 ## Migrasi D1
 
@@ -175,6 +179,7 @@ Dijalankan manual oleh Bos lewat Console D1 (token GitHub belum punya izin D1).
 - `0018_transaction_attachments.sql` — diasumsikan sudah; cek sebelum mengandalkan.
 - `0019_inbox.sql` — sudah (Kotak Masuk Gmail jalan di produksi).
 - `0020_reminders.sql` — sudah (Bos, 2026-10-28; Console D1 butuh SQL tanpa komentar `--` kalau ditempel satu baris).
+- `0021_notifications.sql` — **BELUM** (riwayat lonceng notifikasi).
 
 ## Belum terverifikasi di produksi
 
