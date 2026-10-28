@@ -9,6 +9,7 @@ import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { categoryVisual, useCategoryStyles } from '@/lib/categoryEmoji';
 import { cn, formatIDR } from '@/lib/utils';
 import { openSettings } from '@/lib/settingsPanel';
+import { HeaderSlot } from '@/components/Header';
 
 // Laporan pengeluaran Bulanan / Tahunan: total vs pemasukan, tren per
 // bulan (atau per hari), perbandingan kumulatif dengan periode sebelumnya,
@@ -181,9 +182,12 @@ export default function LaporanPage() {
       <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-[30px] font-extrabold tracking-tight text-slate-900 md:text-[40px]">Laporan</h1>
-          <Link href="/membership/annual" className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">
-            <Printer size={16} /> Laporan tahunan lengkap
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/membership/annual" className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">
+              <Printer size={16} /> <span className="hidden sm:inline">Laporan tahunan lengkap</span><span className="sm:hidden">Tahunan</span>
+            </Link>
+            <HeaderSlot />
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
           <button type="button" onClick={() => openSettings('kategori')} className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">

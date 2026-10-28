@@ -1,43 +1,63 @@
 "use client";
 
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
-import { findNavContext } from '@/lib/navigation';
 import { NotificationBell } from '@/components/NotificationBell';
 
 interface HeaderProps {
   onMenuClick?: () => void;
 }
 
-// Header atas: tombol menu (HP), judul halaman, dan lonceng notifikasi.
-// Dropdown "Tambah Cepat" dihapus (2026-10-28, permintaan Bos) — mencatat
-// lewat tombol "Tambah transaksi" di menu samping / tombol + (pintasan N).
+// Tempat lonceng (dan tombol menu di HP) di baris judul halaman. Halaman yang
+// punya baris judul besar memasang <HeaderSlot /> di ujung kanan baris itu.
+// Boleh ada dua slot (mis. satu `sm:hidden`, satu `hidden sm:flex`) — yang
+// dipakai yang sedang terlihat.
+export const HeaderSlot = ({ className }: { className?: string }) => (
+  <span data-header-slot className={`flex shrink-0 items-center gap-1.5 print:hidden ${className ?? ''}`} />
+);
+
+// Header tanpa judul kecil (judul cukup satu, di halaman — permintaan Bos
+// 2026-10-28). Kalau halaman punya <HeaderSlot />, lonceng + tombol menu
+// dipindah ke sana lewat portal supaya satu baris dengan judul; kalau tidak,
+// tampil sebagai baris tipis di atas konten. Dropdown "Tambah Cepat" sudah
+// dihapus — mencatat lewat "Tambah transaksi" di menu samping / tombol +.
 export const Header = ({ onMenuClick }: HeaderProps) => {
   const pathname = usePathname();
-  const { title, group } = findNavContext(pathname);
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+
+  // Slot baru ada setelah halaman dirender (bisa setelah data dimuat), jadi
+  // dicari ulang tiap ada elemen yang ditambah/dihapus.
+  useEffect(() => {
+    const find = () =>
+      setSlot([...document.querySelectorAll<HTMLElement>('[data-header-slot]')].find((el) => el.getClientRects().length > 0) ?? null);
+    find();
+    const mo = new MutationObserver(find);
+    mo.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('resize', find);
+    return () => {
+      mo.disconnect();
+      window.removeEventListener('resize', find);
+    };
+  }, [pathname]);
+
+  const menu = (
+    <button
+      type="button"
+      onClick={onMenuClick}
+      aria-label="Buka menu"
+      className="flex h-10 w-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 md:hidden"
+    >
+      <Menu size={22} />
+    </button>
+  );
+
+  if (slot) return createPortal(<><NotificationBell />{menu}</>, slot);
 
   return (
-    <header className="fixed top-0 right-0 left-0 md:left-[84px] lg:left-72 h-16 border-b border-slate-100 flex items-center justify-between gap-3 px-4 md:px-8 bg-[#f6f7fb]/95 z-30 print:hidden">
-      <div className="flex items-center gap-3 min-w-0">
-        <button
-          onClick={onMenuClick}
-          aria-label="Buka menu"
-          className="md:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-control transition-all"
-        >
-          <Menu size={22} />
-        </button>
-
-        <nav aria-label="Lokasi halaman" className="flex items-center gap-1.5 min-w-0 text-[14px]">
-          {group && (
-            <>
-              <span className="hidden sm:inline text-slate-400 truncate">{group}</span>
-              <span className="hidden sm:inline text-slate-300">/</span>
-            </>
-          )}
-          <span className="font-bold text-slate-900 truncate">{title}</span>
-        </nav>
-      </div>
-
+    <header className="flex items-center justify-between gap-3 px-4 pt-3 md:justify-end md:px-8 md:pt-4 print:hidden">
+      {menu}
       <NotificationBell />
     </header>
   );

@@ -6,6 +6,7 @@ import { featuresFromIds } from '@/lib/features';
 import { useFeatures } from '@/lib/useFeatures';
 import { openSettings } from '@/lib/settingsPanel';
 import { cn } from '@/lib/utils';
+import { HeaderSlot } from '@/components/Header';
 
 // Semua fitur dalam bentuk ikon berwarna, dikelompokkan sesuai navGroups.
 // "Fitur kamu" = fitur aktif (tampil di menu samping); diatur lewat pop-up
@@ -39,9 +40,12 @@ export default function SemuaFiturPage() {
   let n = 0;
   return (
     <div className="mx-auto max-w-4xl space-y-8 pb-12">
-      <div>
-        <h1 className="text-[30px] font-extrabold tracking-tight text-slate-900 md:text-[40px]">Semua fitur</h1>
-        <p className="mt-1 text-[15px] text-slate-500">Semua yang bisa kamu pakai di Leosiqra, dalam satu tempat.</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-[30px] font-extrabold tracking-tight text-slate-900 md:text-[40px]">Semua fitur</h1>
+          <p className="mt-1 text-[15px] text-slate-500">Semua yang bisa kamu pakai di Leosiqra, dalam satu tempat.</p>
+        </div>
+        <HeaderSlot />
       </div>
 
       <section className="rounded-[24px] bg-white p-4 ring-1 ring-slate-100 md:p-6">

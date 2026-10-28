@@ -29,6 +29,7 @@ import { getCardGradientClass } from '@/lib/cardColors';
 import { useModal } from '@/context/ModalContext';
 import { cn, formatIDR, formatMoney } from '@/lib/utils';
 import { useFeedback } from '@/components/ui/Feedback';
+import { HeaderSlot } from '@/components/Header';
 
 // Rekening & dompet: total saldo, daftar rekening kas (bank, e-wallet,
 // tunai, investasi), tumpukan kartu kredit dengan jatuh tempo terdekat,
@@ -173,23 +174,24 @@ export default function RekeningPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-10 pb-12">
       {/* Judul + aksi */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="text-[30px] font-extrabold tracking-tight text-slate-900 md:text-[40px]">Rekening</h1>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => openModal('topup_transfer')}
             className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
           >
-            <ArrowLeftRight size={16} /> Transfer
+            <ArrowLeftRight size={16} /> <span className="hidden sm:inline">Transfer</span>
           </button>
           <button
             type="button"
             onClick={openCreate}
             className="flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-[14px] font-bold text-white shadow-[0_10px_20px_-12px_rgba(79,70,229,0.8)] hover:brightness-110"
           >
-            <Plus size={16} strokeWidth={2.6} /> Tambah rekening
+            <Plus size={16} strokeWidth={2.6} /> <span className="hidden sm:inline">Tambah rekening</span>
           </button>
+          <HeaderSlot />
         </div>
       </div>
 

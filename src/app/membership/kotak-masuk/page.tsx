@@ -6,6 +6,7 @@ import { accountService, type Account } from '@/lib/services/accountService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { InboxControls, useInbox } from '@/components/inbox/InboxControls';
 import { InboxItemCard } from '@/components/inbox/InboxItemCard';
+import { HeaderSlot } from '@/components/Header';
 
 // Kotak Masuk (web): usulan transaksi dari email pembayaran & pesan Slack.
 
@@ -24,9 +25,12 @@ export default function KotakMasukPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 pb-12">
-      <div>
+      <div className="flex items-start justify-between gap-3">
+        <div>
         <h1 className="text-[30px] font-extrabold tracking-tight text-slate-900 md:text-[38px]">Kotak Masuk</h1>
         <p className="mt-1 text-[15px] text-slate-500">Usulan transaksi dari email pembayaran & pesan Slack-mu. Simpan yang benar, abaikan sisanya — tidak ada yang tercatat tanpa persetujuanmu.</p>
+        </div>
+        <HeaderSlot />
       </div>
 
       <InboxControls inbox={inbox} />

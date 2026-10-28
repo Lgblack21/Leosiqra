@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-28 malam (akun B selesai; semua live, main = run #5
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Ringkasan v2 (Leo Buddy) |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Header satu baris dengan lonceng |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -176,7 +176,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 - **Live (run #56)** (akun B): kedipan hitam saat buka Pengaturan dari Ringkasan (masih ada setelah run #55) —
   semua blur di bawah overlay dibuang: blob `blur-2xl` + tombol `backdrop-blur` di kartu sapaan dashboard (blob jadi
   radial-gradient), `backdrop-blur` header (bg jadi /95) & tab bar HP. Belum dicek di HP asli — tunggu konfirmasi Bos.
-- **Belum di-deploy** (akun B): **Ringkasan v2** (dashboard web) — kartu sapaan dengan langit ikut jam + **Leo Buddy**
+- **Live (run #57)** (akun B): **Ringkasan v2** (dashboard web) — kartu sapaan dengan langit ikut jam + **Leo Buddy**
   (`src/components/dashboard/LeoBuddy.tsx`): Leo ngomong pakai data asli (lewat anggaran, pengingat ≤7 hari, jatah
   harian, ritme vs bulan lalu, kebiasaan jam segini, kategori teratas), ekspresi ikut isi pesan, ketuk Leo → kaget-ketawa
   + pesan berikutnya. Jatah harian = (total anggaran bulanan − belanja kategori beranggaran sebelum hari ini) / sisa
@@ -186,6 +186,14 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   + **Pemandangan langit** (`SkyScene.tsx`, animasi `.sky-*` di globals.css): langit ikut jam (pagi/siang/sore/
   malam), matahari melintas busur (05–19), bulan + bintang berkelip + bintang jatuh (malam), awan & burung, siluet
   kota (jendela menyala malam) + hutan. Tanpa blur. Di HP matahari/bulan di pojok kanan atas; dekor musiman cuma desktop.
+- **Belum di-deploy** (akun B): **judul kecil di header dihapus** (semua halaman member). `Header.tsx` tidak lagi
+  fixed/berjudul; lonceng (+ tombol menu ≡ di HP) dipindah lewat portal ke `<HeaderSlot />` di baris judul halaman
+  (Ringkasan, Transaksi, Laporan, Rekening, Semua fitur, Kotak Masuk, Tabungan, Transaksi berulang; dua slot
+  `sm:hidden`/`hidden sm:flex` → yang terlihat dipakai). Halaman tanpa slot: baris tipis lonceng (+ ≡). `main`
+  tidak lagi `pt-16`. Tambah slot ke halaman lain kalau mau sebaris.
+- **Temuan (belum diubah, tunggu Bos)**: dashboard web menghitung beli investasi sebagai pengeluaran (Leo bilang
+  "Paling banyak … Investasi 83%"), padahal Worker punya aturan `isInvestmentPurchaseRow` (index.ts:940) yang
+  mengecualikannya. Sudah begitu sejak versi lama.
 
 ## Migrasi D1
 

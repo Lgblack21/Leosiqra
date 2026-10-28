@@ -11,6 +11,7 @@ import { categoryVisual, useCategoryStyles } from '@/lib/categoryEmoji';
 import { INTERVAL_LABEL, PER_MONTH, type RecurringInterval } from '@/lib/recurringIntervals';
 import { RecurringFormModal } from '@/components/recurring/RecurringFormModal';
 import { useFeedback } from '@/components/ui/Feedback';
+import { HeaderSlot } from '@/components/Header';
 
 // Halaman Transaksi berulang: ringkasan per bulan, yang jatuh tempo 7 hari ke
 // depan, lalu semua jadwal sebagai kartu. Tambah/ubah memakai form yang sama
@@ -130,13 +131,19 @@ export default function RecurringPage() {
   return (
     <div className="mx-auto mb-12 max-w-[1200px] space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[30px]">Transaksi berulang</h1>
-          <p className="text-[14px] text-slate-500">Dicatat otomatis tiap jatuh tempo — saldo rekening ikut berubah.</p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[30px]">Transaksi berulang</h1>
+            <p className="text-[14px] text-slate-500">Dicatat otomatis tiap jatuh tempo — saldo rekening ikut berubah.</p>
+          </div>
+          <HeaderSlot className="sm:hidden" />
         </div>
-        <button type="button" onClick={() => openNew()} className="flex items-center justify-center gap-1.5 rounded-full bg-indigo-600 px-5 py-2.5 text-[14px] font-semibold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700">
-          <Plus size={16} strokeWidth={2.5} /> Tambah jadwal
-        </button>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => openNew()} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-indigo-600 px-5 py-2.5 text-[14px] font-semibold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700">
+            <Plus size={16} strokeWidth={2.5} /> Tambah jadwal
+          </button>
+          <HeaderSlot className="hidden sm:flex" />
+        </div>
       </div>
 
       {/* Ringkasan per bulan */}

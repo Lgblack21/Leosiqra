@@ -15,6 +15,7 @@ import { categoryVisual, useCategoryStyles } from '@/lib/categoryEmoji';
 import { useFeedback } from '@/components/ui/Feedback';
 import { usePrimaryAdd } from '@/lib/useRecordingPrefs';
 import { attachmentService } from '@/lib/services/attachmentService';
+import { HeaderSlot } from '@/components/Header';
 
 // Riwayat transaksi: semua transaksi dikelompokkan per hari, dengan filter
 // periode, jenis, kategori, dompet, pencarian, dan ekspor CSV.
@@ -295,13 +296,14 @@ export default function DailyTransactionLogPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-6 pb-12">
       {/* Judul + aksi */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
+      <div className="flex items-start justify-between gap-4 md:items-end">
+        <div className="min-w-0 flex-1">
           <h1 className="text-[30px] font-extrabold tracking-tight text-slate-900 md:text-[40px]">Transaksi</h1>
           <p className="mt-1 text-[15px] text-slate-500">
             {loading ? 'Memuat…' : `${filtered.length} transaksi · keluar ${formatIDR(totalOut)}${totalIn > 0 ? ` · masuk ${formatIDR(totalIn)}` : ''}`}
           </p>
         </div>
+        <div className="flex items-center gap-2">
         <div className="hidden gap-2 md:flex">
           <button
             type="button"
@@ -318,6 +320,8 @@ export default function DailyTransactionLogPage() {
           >
             <Plus size={16} strokeWidth={2.6} /> Tambah transaksi
           </button>
+        </div>
+          <HeaderSlot />
         </div>
       </div>
 

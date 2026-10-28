@@ -50,6 +50,7 @@ import { LeoBuddy, type LeoTip } from '@/components/dashboard/LeoBuddy';
 import { SkyScene, skyPeriod } from '@/components/dashboard/SkyScene';
 import { SpendPaceChart, type PacePoint } from '@/components/dashboard/SpendPaceChart';
 import { reminderService, type Reminder } from '@/lib/services/reminderService';
+import { HeaderSlot } from '@/components/Header';
 
 // Ringkasan (dashboard member): kartu sapaan hari ini → catatan hari ini →
 // pengeluaran bulan terpilih per kategori + budget → transaksi terbaru →
@@ -483,6 +484,7 @@ export default function MonthlyDashboard() {
           <Link href="/input-cepat" className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">
             <Mic size={16} /> <span className="hidden sm:inline">Suara</span>
           </Link>
+          <HeaderSlot />
         </div>
       </div>
 

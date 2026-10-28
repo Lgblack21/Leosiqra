@@ -27,6 +27,7 @@ import { targetColor, targetIcon, monthsUntil, neededPerMonth } from '@/lib/targ
 import { useFeedback } from '@/components/ui/Feedback';
 import { INTERVAL_LABEL } from '@/lib/recurringIntervals';
 import { cn, formatIDR } from '@/lib/utils';
+import { HeaderSlot } from '@/components/Header';
 
 // Halaman Tabungan: saldo total, target (kartu berwarna, setor langsung), pos
 // tabungan lain, lalu riwayat per bulan. Logika uang tidak berubah — setor/
@@ -295,9 +296,12 @@ export default function SavingsPage() {
     <div className="mx-auto mb-12 max-w-[1400px] space-y-6">
       {/* Judul + aksi */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[30px]">Tabungan</h1>
-          <p className="text-[14px] text-slate-500">Sisihkan sedikit demi sedikit untuk tujuanmu.</p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[30px]">Tabungan</h1>
+            <p className="text-[14px] text-slate-500">Sisihkan sedikit demi sedikit untuk tujuanmu.</p>
+          </div>
+          <HeaderSlot className="sm:hidden" />
         </div>
         <div className="flex gap-2">
           <button type="button" onClick={() => openSaving('Penarikan')} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 sm:flex-none">
@@ -306,6 +310,7 @@ export default function SavingsPage() {
           <button type="button" onClick={() => openSaving('Setoran')} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-indigo-600 px-5 py-2.5 text-[14px] font-semibold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 sm:flex-none">
             <ArrowDownLeft size={16} /> Setor
           </button>
+          <HeaderSlot className="hidden sm:flex" />
         </div>
       </div>
 
