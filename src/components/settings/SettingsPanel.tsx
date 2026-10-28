@@ -269,7 +269,7 @@ function PaketView({ user, onClose }: { user: PanelUser | null; onClose: () => v
 
   return (
     <div className="relative">
-      <div className="sticky top-0 z-10 flex justify-center bg-white/90 pb-3 pt-1 backdrop-blur">
+      <div className="sticky top-0 z-10 flex justify-center bg-white/95 pb-3 pt-1">
         <div className="flex rounded-full bg-slate-100 p-1">
           {(['FREE', 'PRO'] as const).map((t) => (
             <button
@@ -530,7 +530,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-900/40 backdrop-blur-sm sm:items-center sm:p-6 print:hidden"
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-900/40 sm:items-center sm:p-6 print:hidden"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
