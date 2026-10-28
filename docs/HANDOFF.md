@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-28 malam (akun B selesai; semua live, main = run #5
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Lonceng notifikasi, hapus Tambah Cepat, kedipan hitam |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Ringkasan v2 (Leo Buddy) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -176,6 +176,13 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 - **Live (run #56)** (akun B): kedipan hitam saat buka Pengaturan dari Ringkasan (masih ada setelah run #55) —
   semua blur di bawah overlay dibuang: blob `blur-2xl` + tombol `backdrop-blur` di kartu sapaan dashboard (blob jadi
   radial-gradient), `backdrop-blur` header (bg jadi /95) & tab bar HP. Belum dicek di HP asli — tunggu konfirmasi Bos.
+- **Belum di-deploy** (akun B): **Ringkasan v2** (dashboard web) — kartu sapaan dengan langit ikut jam + **Leo Buddy**
+  (`src/components/dashboard/LeoBuddy.tsx`): Leo ngomong pakai data asli (lewat anggaran, pengingat ≤7 hari, jatah
+  harian, ritme vs bulan lalu, kebiasaan jam segini, kategori teratas), ekspresi ikut isi pesan, ketuk Leo → kaget-ketawa
+  + pesan berikutnya. Jatah harian = (total anggaran bulanan − belanja kategori beranggaran sebelum hari ini) / sisa
+  hari. Baris saldo/keluar/masuk, grafik **Ritme pengeluaran** (`SpendPaceChart`, kumulatif vs bulan lalu + garis
+  anggaran), **Catatan terbaru** per hari, **Segera** (pengingat aktif ≤30 hari + tagihan kartu). Tanpa migrasi baru.
+  Diuji lokal (wrangler dev + data 2 bulan, HP/desktop, terang/gelap, anggaran sisa/habis).
 
 ## Migrasi D1
 
