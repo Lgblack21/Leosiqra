@@ -43,6 +43,7 @@ import {
   BellRing,
   FileSpreadsheet,
   Nfc,
+  AlarmClock,
 } from 'lucide-react';
 import { cn, formatIDR } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
@@ -67,6 +68,7 @@ import { NotificationReaderView } from './NotificationReaderView';
 import { ImportMutasi } from '@/components/impor/ImportMutasi';
 import { EmoneyScanner } from '@/components/emoney/EmoneyScanner';
 import { CsvView } from './CsvView';
+import { RemindersView } from './RemindersView';
 import { useRecordingPrefs } from '@/lib/useRecordingPrefs';
 import { useTags } from '@/lib/useTags';
 import { useBudgetStartDay } from '@/lib/useBudgetStartDay';
@@ -90,8 +92,8 @@ export interface PanelUser {
   avatar?: AvatarConfig | null;
 }
 
-export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil' | 'kontak' | 'notifikasi' | 'ai' | 'lainnya' | 'referral' | 'koin' | 'koin-riwayat' | 'kawanan' | 'app-mcp' | 'app-sheets' | 'app-calendar' | 'app-gmail' | 'app-gcal' | 'fitur' | 'target' | 'rutin' | 'periode' | 'tag' | 'cara-catat' | 'keyboard' | 'shortcut' | 'notif-reader' | 'impor' | 'emoney' | 'csv';
-const PARENT: Partial<Record<View, View>> = { fitur: 'menu', target: 'umum', rutin: 'umum', periode: 'umum', tag: 'umum', 'cara-catat': 'umum', keyboard: 'umum', shortcut: 'umum', 'notif-reader': 'umum', impor: 'umum', emoney: 'umum', csv: 'umum', 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum', referral: 'menu', koin: 'menu', 'koin-riwayat': 'referral', kawanan: 'referral', 'app-mcp': 'ai', 'app-sheets': 'ai', 'app-calendar': 'ai', 'app-gmail': 'ai', 'app-gcal': 'ai' };
+export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil' | 'kontak' | 'notifikasi' | 'ai' | 'lainnya' | 'referral' | 'koin' | 'koin-riwayat' | 'kawanan' | 'app-mcp' | 'app-sheets' | 'app-calendar' | 'app-gmail' | 'app-gcal' | 'fitur' | 'target' | 'rutin' | 'periode' | 'tag' | 'cara-catat' | 'keyboard' | 'shortcut' | 'notif-reader' | 'impor' | 'emoney' | 'csv' | 'pengingat';
+const PARENT: Partial<Record<View, View>> = { fitur: 'menu', target: 'umum', rutin: 'umum', periode: 'umum', tag: 'umum', 'cara-catat': 'umum', keyboard: 'umum', shortcut: 'umum', 'notif-reader': 'umum', impor: 'umum', emoney: 'umum', csv: 'umum', pengingat: 'umum', 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum', referral: 'menu', koin: 'menu', 'koin-riwayat': 'referral', kawanan: 'referral', 'app-mcp': 'ai', 'app-sheets': 'ai', 'app-calendar': 'ai', 'app-gmail': 'ai', 'app-gcal': 'ai' };
 
 const STATUS_LABEL: Record<PanelUser['status'], string> = {
   AKTIF: 'Aktif',
@@ -444,7 +446,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
     'mata-uang': 'Mata uang',
     'ubah-profil': 'Ubah profil',
     kontak: 'Kontak',
-    notifikasi: 'Notifikasi & pengingat',
+    notifikasi: 'Notifikasi',
     ai: 'Aplikasi terhubung',
     lainnya: 'Input Cepat & reset data',
     referral: 'Referral',
@@ -463,6 +465,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
     impor: 'Impor mutasi',
     emoney: 'Kartu e-money',
     csv: 'Impor / ekspor CSV',
+    pengingat: 'Pengingat',
     'app-mcp': 'Claude & ChatGPT',
     'app-sheets': 'Google Sheets',
     'app-calendar': 'Google Calendar',
@@ -653,9 +656,10 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                     <Row icon={Nfc} title="Kartu e-money" value="NFC" onClick={() => setView('emoney')} />
                     <Row icon={FileSpreadsheet} title="Impor / ekspor CSV" desc="Unduh per rentang tanggal, template impor" onClick={() => setView('csv')} />
                   </Group>
-                  <p className="px-1 pt-2 text-[14px] text-slate-500">Notifikasi</p>
+                  <p className="px-1 pt-2 text-[14px] text-slate-500">Pengingat & notifikasi</p>
                   <Group>
-                    <Row icon={Bell} title="Notifikasi & pengingat" desc="Push, pengingat tutup hari, laporan email" onClick={() => setView('notifikasi')} />
+                    <Row icon={AlarmClock} title="Pengingat" desc="Tagihan & hal yang sering lupa, bisa berulang" onClick={() => setView('pengingat')} />
+                    <Row icon={Bell} title="Notifikasi" desc="Push, tutup hari, ringkasan & wawasan, email" onClick={() => setView('notifikasi')} />
                   </Group>
                 </div>
               )}
@@ -679,6 +683,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
               {view === 'impor' && <ImportMutasi inPanel />}
               {view === 'emoney' && <EmoneyScanner />}
               {view === 'csv' && <CsvView openImport={() => setView('impor')} />}
+              {view === 'pengingat' && <RemindersView openNotifications={() => setView('notifikasi')} />}
               {view === 'notif-reader' && <NotificationReaderView openShortcut={(id) => { setShortcutFocus(id); setView('shortcut'); }} openHref={(h) => go(h)()} />}
               {view === 'fitur' && <FeaturesView editing={editingFeatures} open={(href) => go(href)()} />}
 

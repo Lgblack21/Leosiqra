@@ -22,6 +22,10 @@ import {
   Cloud,
   RefreshCw,
   Paperclip,
+  AlarmClock,
+  Moon,
+  TrendingUp,
+  CalendarDays,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { auth, db } from '@/lib/cf-client';
@@ -319,13 +323,20 @@ function NotifikasiView() {
   const [reportAvailable, setReportAvailable] = useState(false);
   const [reportLoading, setReportLoading] = useState(true);
   const [reportError, setReportError] = useState('');
+  // Jenis push yang boleh dikirim ($.prefs.notify; default semua nyala).
+  const [notify, setNotify] = useState<Record<NotifyKey, boolean> | null>(null);
+  const [notifySaving, setNotifySaving] = useState<NotifyKey | null>(null);
+  const [notifyError, setNotifyError] = useState('');
 
   useEffect(() => {
     setSupported(isPushSupported());
     setIosNeedsInstall(isIosNeedsInstall());
     getExistingSubscription().then((sub) => setPushOn(Boolean(sub))).catch(() => setPushOn(false));
-    cloudflareApi<{ item: { reminder: { on: boolean; time: string } } }>('/api/member/preferences')
-      .then((res) => setReminder(res.item.reminder))
+    cloudflareApi<{ item: { reminder: { on: boolean; time: string }; notify?: Record<NotifyKey, boolean> } }>('/api/member/preferences')
+      .then((res) => {
+        setReminder(res.item.reminder);
+        setNotify(res.item.notify ?? { reminders: true, summary: true, weekly: true, monthly: true });
+      })
       .catch(() => setReminder(null));
     cloudflareApi<{ enabled: boolean; available: boolean }>('/api/member/email-report')
       .then((res) => { setReportOn(res.enabled); setReportAvailable(res.available); })
@@ -355,6 +366,20 @@ function NotifikasiView() {
       setReminderError(e instanceof Error ? e.message : 'Gagal menyimpan pengingat.');
     } finally {
       setReminderSaving(false);
+    }
+  };
+
+  const toggleNotify = async (key: NotifyKey) => {
+    if (!notify) return;
+    setNotifyError('');
+    setNotifySaving(key);
+    try {
+      const res = await cloudflareApi<{ item: { notify: Record<NotifyKey, boolean> } }>('/api/member/preferences', { method: 'PUT', json: { notify: { [key]: !notify[key] } } });
+      setNotify(res.item.notify);
+    } catch (e) {
+      setNotifyError(e instanceof Error ? e.message : 'Gagal menyimpan pilihan notifikasi.');
+    } finally {
+      setNotifySaving(null);
     }
   };
 
@@ -421,9 +446,29 @@ function NotifikasiView() {
           {reportError && <p className="text-[12px] text-rose-600">{reportError}</p>}
         </Row>
       </Group>
+      {notify && (
+        <>
+          <Label>Kirim notifikasi push untuk</Label>
+          <Group>
+            {NOTIFY_ROWS.map((r) => (
+              <Row key={r.key} icon={r.icon} title={r.title} desc={r.desc} action={<Toggle on={notify[r.key]} onClick={() => void toggleNotify(r.key)} label={r.title} disabled={notifySaving !== null} />} />
+            ))}
+          </Group>
+          {notifyError && <p className="px-1 text-[12px] text-rose-600">{notifyError}</p>}
+          {!pushOn && <p className="px-1 text-[12px] text-slate-500">Pilihan ini berlaku setelah notifikasi push dinyalakan di atas.</p>}
+        </>
+      )}
     </div>
   );
 }
+
+type NotifyKey = 'reminders' | 'summary' | 'weekly' | 'monthly';
+const NOTIFY_ROWS: { key: NotifyKey; icon: React.ElementType; title: string; desc: string }[] = [
+  { key: 'reminders', icon: AlarmClock, title: 'Pengingat buatanmu', desc: 'Saat pengingat di menu Pengingat jatuh tempo.' },
+  { key: 'summary', icon: Moon, title: 'Ringkasan harian', desc: 'Lewat tengah malam: total keluar & masuk kemarin (kalau ada catatan).' },
+  { key: 'weekly', icon: TrendingUp, title: 'Wawasan mingguan', desc: 'Senin pagi: hal paling penting dari pengeluaran 7 hari terakhir.' },
+  { key: 'monthly', icon: CalendarDays, title: 'Wawasan bulanan', desc: 'Tanggal 1: rekap masuk, keluar & kategori terbesar bulan lalu.' },
+];
 
 function LainnyaView() {
   const { user } = useAccountProfile();

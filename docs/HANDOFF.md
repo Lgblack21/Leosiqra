@@ -127,7 +127,18 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   parameter = perilaku lama). Impor CSV kini mengenali kolom **Jenis/Type** (`kind` di ColumnMapping): sebelumnya
   CSV ekspor Leosiqra yang diimpor balik membuat semua pengeluaran jadi pemasukan; baris transfer/hutang dilewati.
   BELUM: pindahan multi-dompet dari app lain (Money Manager, Money Lover, …) — tunggu keputusan Bos.
-- **Belum di-deploy**: tidak ada. Branch kerja akun B: `claude/nifty-cannon-y181p6` (= main).
+- **Belum di-deploy** (akun B, `claude/nifty-cannon-y181p6`): **Pengingat & Notifikasi**.
+  - Pengaturan → Pengingat (view `pengingat`, `RemindersView.tsx`, `reminderService.ts`): nama, waktu, nominal
+    opsional, ulang sekali/mingguan/bulanan. **Butuh migrasi `0020_reminders.sql`** (tabel `reminders`) — tanpa
+    itu API membalas 503 "belum aktif" & cron diam. Worker: `/api/member/reminders` (GET/POST/PUT/DELETE, maks 50),
+    cron 10 menit `sendDueReminders` (klaim bersyarat `due_at` → tidak dobel; bulanan pakai `anchor_day` WIB,
+    31 → 30/28 tanpa bergeser; tertinggal → lompat ke jadwal berikutnya, 1 notifikasi). Notifikasi dengan nominal
+    membuka `/input-cepat?teks=`.
+  - Notifikasi: pref baru `$.prefs.notify` {reminders, summary, weekly, monthly} (default true). Ringkasan harian
+    00:01 kini bisa dimatikan. BARU: push wawasan mingguan (Senin 10:00 WIB, `computeWeeklyInsights`) & bulanan
+    (tgl 1, `buildMonthlyReport`), penanda `$.prefs.weeklySent/monthlySent`. Diuji lokal dengan wrangler dev + D1
+    lokal (API, cron dobel, bulanan tgl 31, query kandidat) dan UI lewat Playwright → Worker lokal.
+  - Belum: menu Pengingat di aplikasi HP (`/app`).
 
 ## Migrasi D1
 
@@ -135,6 +146,7 @@ Dijalankan manual oleh Bos lewat Console D1 (token GitHub belum punya izin D1).
 - `0017_coins.sql` — sudah (dikonfirmasi Bos).
 - `0018_transaction_attachments.sql` — diasumsikan sudah; cek sebelum mengandalkan.
 - `0019_inbox.sql` — sudah (Kotak Masuk Gmail jalan di produksi).
+- `0020_reminders.sql` — **BELUM** (pengingat buatan user; jalankan di Console D1 sebelum/sesudah deploy).
 
 ## Belum terverifikasi di produksi
 

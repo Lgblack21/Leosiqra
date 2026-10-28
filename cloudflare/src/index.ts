@@ -11127,9 +11127,16 @@ const sendDailySummaryNotifications = async (env: Env) => {
     totalsByUser.set(row.user_id, entry);
   }
 
+  // User yang mematikan "Ringkasan harian" ($.prefs.notify.summary = false).
+  const { results: optedOut } = await env.DB.prepare(
+    `SELECT id FROM users WHERE json_valid(metadata_json) AND json_extract(metadata_json, '$.prefs.notify.summary') = 0`
+  ).all<{ id: string }>();
+  const skip = new Set((optedOut ?? []).map((r) => r.id));
+
   for (const [userId, totals] of totalsByUser) {
     // Tidak ada aktivitas sama sekali kemarin -> jangan kirim apa-apa.
     if (totals.pengeluaran <= 0 && totals.pemasukan <= 0) continue;
+    if (skip.has(userId)) continue;
     try {
       let body = `Pengeluaran ${formatRupiahForPush(totals.pengeluaran)}`;
       if (totals.pemasukan > 0) {
@@ -11470,8 +11477,16 @@ type UserPrefs = {
   tags: { enabled: boolean; list: { name: string; color: string }[] };
   // Kolom nominal: keyboard angka biasa atau kalkulator mini.
   amountKeypad: "standar" | "kalkulator";
+  // Jenis notifikasi push yang boleh dikirim (default semua nyala).
+  notify: NotifyPrefs;
 };
-const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" }, categoryStyles: {}, avatar: null, saveAttachments: true, features: null, categoryKinds: {}, budgetStartDay: 1, tags: { enabled: false, list: [] }, amountKeypad: "standar" };
+const NOTIFY_KEYS = ["reminders", "summary", "weekly", "monthly"] as const;
+type NotifyPrefs = Record<(typeof NOTIFY_KEYS)[number], boolean>;
+const sanitizeNotify = (raw: unknown): NotifyPrefs => {
+  const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  return Object.fromEntries(NOTIFY_KEYS.map((k) => [k, r[k] !== false])) as NotifyPrefs;
+};
+const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" }, categoryStyles: {}, avatar: null, saveAttachments: true, features: null, categoryKinds: {}, budgetStartDay: 1, tags: { enabled: false, list: [] }, amountKeypad: "standar", notify: sanitizeNotify(null) };
 const TAGS_MAX = 40;
 const sanitizeTagsPref = (raw: unknown): UserPrefs["tags"] => {
   const r = raw && typeof raw === "object" ? (raw as { enabled?: unknown; list?: unknown }) : {};
@@ -11546,6 +11561,7 @@ const readUserPrefs = async (env: Env, userId: string): Promise<UserPrefs> => {
     budgetStartDay: sanitizeBudgetStartDay(raw.budgetStartDay),
     tags: sanitizeTagsPref(raw.tags),
     amountKeypad: raw.amountKeypad === "kalkulator" ? "kalkulator" : "standar",
+    notify: sanitizeNotify(raw.notify),
   };
 };
 
@@ -11562,7 +11578,7 @@ async function handleUserPreferences(request: Request, env: Env) {
   const current = await readUserPrefs(env, userId);
   if (request.method === "GET") return json({ item: current });
 
-  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown; categoryStyle?: unknown; avatar?: unknown; saveAttachments?: unknown; features?: unknown; categoryKind?: unknown; categoryKindsMerge?: unknown; budgetStartDay?: unknown; tags?: unknown; amountKeypad?: unknown }>(request);
+  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown; categoryStyle?: unknown; avatar?: unknown; saveAttachments?: unknown; features?: unknown; categoryKind?: unknown; categoryKindsMerge?: unknown; budgetStartDay?: unknown; tags?: unknown; amountKeypad?: unknown; notify?: unknown }>(request);
   const next: UserPrefs = { ...current, reminder: { ...current.reminder }, categoryStyles: { ...current.categoryStyles }, categoryKinds: { ...current.categoryKinds } };
   if (payload.goals !== undefined) {
     if (!Array.isArray(payload.goals) || payload.goals.length > PREF_GOALS.length || payload.goals.some((g) => !(PREF_GOALS as readonly unknown[]).includes(g))) {
@@ -11627,6 +11643,14 @@ async function handleUserPreferences(request: Request, env: Env) {
       next.categoryKinds[name] = k.kind as CategoryKindPref;
     }
   }
+  if (payload.notify !== undefined) {
+    // Sebagian saja boleh: { weekly: false } hanya mengubah wawasan mingguan.
+    const n = payload.notify as Record<string, unknown> | null;
+    if (!n || typeof n !== "object" || Array.isArray(n) || Object.entries(n).some(([k, v]) => !(NOTIFY_KEYS as readonly string[]).includes(k) || typeof v !== "boolean")) {
+      return json({ error: "Pilihan notifikasi tidak valid." }, { status: 400 });
+    }
+    next.notify = { ...current.notify, ...(n as Partial<NotifyPrefs>) };
+  }
   if (payload.amountKeypad !== undefined) {
     if (payload.amountKeypad !== "standar" && payload.amountKeypad !== "kalkulator") return json({ error: "Pilihan keyboard nominal tidak valid." }, { status: 400 });
     next.amountKeypad = payload.amountKeypad;
@@ -11655,10 +11679,10 @@ async function handleUserPreferences(request: Request, env: Env) {
         SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END,
               '$.prefs.goals', json(?), '$.prefs.inputMode', ?, '$.prefs.reminder', json(?), '$.prefs.categoryStyles', json(?),
               '$.prefs.avatar', json(?), '$.prefs.saveAttachments', json(?), '$.prefs.features', json(?), '$.prefs.categoryKinds', json(?),
-              '$.prefs.budgetStartDay', ?, '$.prefs.tags', json(?), '$.prefs.amountKeypad', ?)
+              '$.prefs.budgetStartDay', ?, '$.prefs.tags', json(?), '$.prefs.amountKeypad', ?, '$.prefs.notify', json(?))
       WHERE id = ?`
   )
-    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), JSON.stringify(next.categoryStyles), JSON.stringify(next.avatar), JSON.stringify(next.saveAttachments), JSON.stringify(next.features), JSON.stringify(next.categoryKinds), next.budgetStartDay, JSON.stringify(next.tags), next.amountKeypad, userId)
+    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), JSON.stringify(next.categoryStyles), JSON.stringify(next.avatar), JSON.stringify(next.saveAttachments), JSON.stringify(next.features), JSON.stringify(next.categoryKinds), next.budgetStartDay, JSON.stringify(next.tags), next.amountKeypad, JSON.stringify(next.notify), userId)
     .run();
   return json({ ok: true, item: next });
 }
@@ -11781,6 +11805,257 @@ const sendDailyReminders = async (env: Env) => {
       await sendWebPushToUser(env, userId, "Waktunya tutup hari", "Semenit bareng Leo: catat yang tadi, lalu istirahat.", "/input-cepat");
     } catch (error) {
       console.error(`Gagal mengirim pengingat harian ke user ${userId}:`, error);
+    }
+  }
+};
+
+// ===== Pengingat buatan user (tabel reminders, migrasi 0020) =====
+// GET    /api/member/reminders        → daftar
+// POST   /api/member/reminders        → { title, amount?, dueAt (ISO), repeat? }
+// PUT    /api/member/reminders/:id    → field yang dikirim saja yang diubah (+ active)
+// DELETE /api/member/reminders/:id
+const REMINDER_REPEATS = ["none", "weekly", "monthly"] as const;
+type ReminderRepeat = (typeof REMINDER_REPEATS)[number];
+type ReminderRow = { id: string; user_id: string; title: string; amount: number | null; due_at: string; repeat: ReminderRepeat; anchor_day: number | null; active: number; last_sent_at: string | null; created_at: string; updated_at: string };
+const REMINDERS_MAX = 50;
+const REMINDERS_MAX_PER_RUN = 200;
+const WIB_MS = 7 * 60 * 60 * 1000;
+
+const reminderMissingTable = (error: unknown) => /no such table:\s*reminders/i.test(error instanceof Error ? error.message : String(error));
+const sanitizeReminderTitle = (raw: unknown) => (typeof raw === "string" ? raw.replace(/[\u0000-\u001f]/g, " ").trim().slice(0, 80) : "");
+const parseReminderAmount = (raw: unknown): number | null | undefined => {
+  if (raw === undefined) return undefined;
+  if (raw === null || raw === "" || raw === 0) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 && n <= 1e12 ? Math.round(n * 100) / 100 : undefined;
+};
+const parseReminderDue = (raw: unknown): string | null => {
+  if (typeof raw !== "string" || raw.length > 40) return null;
+  const ms = Date.parse(raw);
+  return Number.isNaN(ms) ? null : new Date(ms).toISOString();
+};
+// Tanggal (WIB) dari waktu UTC ISO — dipakai sebagai patokan ulang bulanan.
+const wibDayOf = (iso: string) => new Date(Date.parse(iso) + WIB_MS).getUTCDate();
+
+// Jadwal berikutnya. Bulanan memakai tanggal patokan (anchor_day) di WIB,
+// dipotong ke akhir bulan (31 → 30/28) tanpa bergeser permanen.
+const nextReminderDue = (dueIso: string, repeat: ReminderRepeat, anchorDay: number | null): string | null => {
+  if (repeat === "weekly") return new Date(Date.parse(dueIso) + 7 * 86400000).toISOString();
+  if (repeat !== "monthly") return null;
+  const wib = new Date(Date.parse(dueIso) + WIB_MS);
+  const day = anchorDay && anchorDay >= 1 && anchorDay <= 31 ? anchorDay : wib.getUTCDate();
+  const y = wib.getUTCFullYear();
+  const m = wib.getUTCMonth() + 1;
+  const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  const next = Date.UTC(y, m, Math.min(day, last), wib.getUTCHours(), wib.getUTCMinutes());
+  return new Date(next - WIB_MS).toISOString();
+};
+
+const reminderItem = (r: ReminderRow) => ({
+  id: r.id,
+  title: r.title,
+  amount: r.amount ?? null,
+  dueAt: r.due_at,
+  repeat: r.repeat,
+  active: r.active === 1,
+  lastSentAt: r.last_sent_at,
+});
+
+async function handleReminderRoutes(request: Request, env: Env, pathname: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const id = pathname.slice("/api/member/reminders".length).replace(/^\//, "");
+  try {
+    if (!id && request.method === "GET") {
+      const { results } = await env.DB.prepare(
+        "SELECT * FROM reminders WHERE user_id = ? ORDER BY active DESC, due_at ASC LIMIT ?"
+      )
+        .bind(userId, REMINDERS_MAX)
+        .all<ReminderRow>();
+      return json({ items: (results ?? []).map(reminderItem) });
+    }
+
+    if (!id && request.method === "POST") {
+      const p = await parseJson<{ title?: unknown; amount?: unknown; dueAt?: unknown; repeat?: unknown }>(request);
+      const title = sanitizeReminderTitle(p.title);
+      const amount = parseReminderAmount(p.amount);
+      const dueAt = parseReminderDue(p.dueAt);
+      const repeat = (p.repeat ?? "none") as ReminderRepeat;
+      if (!title) return json({ error: "Nama pengingat wajib diisi." }, { status: 400 });
+      if (amount === undefined && p.amount !== undefined) return json({ error: "Nominal tidak valid." }, { status: 400 });
+      if (!dueAt) return json({ error: "Tanggal & waktu tidak valid." }, { status: 400 });
+      if (Date.parse(dueAt) < Date.now() - 5 * 60000) return json({ error: "Waktu pengingat sudah lewat." }, { status: 400 });
+      if (!(REMINDER_REPEATS as readonly unknown[]).includes(repeat)) return json({ error: "Pilihan ulang tidak valid." }, { status: 400 });
+      const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM reminders WHERE user_id = ?").bind(userId).first<{ n: number }>();
+      if ((count?.n ?? 0) >= REMINDERS_MAX) return json({ error: `Maksimal ${REMINDERS_MAX} pengingat.` }, { status: 400 });
+      const now = nowIso();
+      const newId = generateId();
+      await env.DB.prepare(
+        `INSERT INTO reminders (id, user_id, title, amount, due_at, repeat, anchor_day, active, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`
+      )
+        .bind(newId, userId, title, amount ?? null, dueAt, repeat, repeat === "monthly" ? wibDayOf(dueAt) : null, now, now)
+        .run();
+      return json({ ok: true, id: newId }, { status: 201 });
+    }
+
+    if (id && (request.method === "PUT" || request.method === "DELETE")) {
+      const current = await env.DB.prepare("SELECT * FROM reminders WHERE id = ? AND user_id = ?").bind(id, userId).first<ReminderRow>();
+      if (!current) return json({ error: "Pengingat tidak ditemukan." }, { status: 404 });
+      if (request.method === "DELETE") {
+        await env.DB.prepare("DELETE FROM reminders WHERE id = ? AND user_id = ?").bind(id, userId).run();
+        return json({ ok: true });
+      }
+      const p = await parseJson<{ title?: unknown; amount?: unknown; dueAt?: unknown; repeat?: unknown; active?: unknown }>(request);
+      const title = p.title !== undefined ? sanitizeReminderTitle(p.title) : current.title;
+      const amount = p.amount !== undefined ? parseReminderAmount(p.amount) : current.amount;
+      const dueAt = p.dueAt !== undefined ? parseReminderDue(p.dueAt) : current.due_at;
+      const repeat = (p.repeat !== undefined ? p.repeat : current.repeat) as ReminderRepeat;
+      const active = p.active !== undefined ? p.active : current.active === 1;
+      if (!title) return json({ error: "Nama pengingat wajib diisi." }, { status: 400 });
+      if (amount === undefined) return json({ error: "Nominal tidak valid." }, { status: 400 });
+      if (!dueAt) return json({ error: "Tanggal & waktu tidak valid." }, { status: 400 });
+      if (!(REMINDER_REPEATS as readonly unknown[]).includes(repeat)) return json({ error: "Pilihan ulang tidak valid." }, { status: 400 });
+      if (typeof active !== "boolean") return json({ error: "Status aktif tidak valid." }, { status: 400 });
+      // Menyalakan lagi pengingat sekali-jalan yang waktunya sudah lewat → minta waktu baru.
+      const turningOn = active && current.active !== 1;
+      if (active && repeat === "none" && (turningOn ? Date.parse(dueAt) <= Date.now() : Date.parse(dueAt) < Date.now() - 5 * 60000)) {
+        return json({ error: "Waktu pengingat sudah lewat — pilih waktu baru." }, { status: 400 });
+      }
+      const anchor = repeat === "monthly" ? (p.dueAt !== undefined || current.repeat !== "monthly" ? wibDayOf(dueAt) : current.anchor_day) : null;
+      // Melanjutkan pengingat berulang yang jadwalnya sudah lewat → lompat ke
+      // jadwal berikutnya (tidak mengirim notifikasi basi begitu dilanjutkan).
+      let finalDue = dueAt;
+      if (turningOn && repeat !== "none") {
+        while (Date.parse(finalDue) <= Date.now()) finalDue = nextReminderDue(finalDue, repeat, anchor) ?? finalDue;
+      }
+      await env.DB.prepare(
+        `UPDATE reminders SET title = ?, amount = ?, due_at = ?, repeat = ?, anchor_day = ?, active = ?, updated_at = ?
+          WHERE id = ? AND user_id = ?`
+      )
+        .bind(title, amount ?? null, finalDue, repeat, anchor, active ? 1 : 0, nowIso(), id, userId)
+        .run();
+      return json({ ok: true });
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (error) {
+    if (reminderMissingTable(error)) {
+      return json({ error: "Fitur pengingat belum aktif (pembaruan database belum dijalankan)." }, { status: 503 });
+    }
+    throw error;
+  }
+}
+
+// Cron 10 menit: kirim pengingat yang jatuh tempo. Klaim bersyarat (due_at
+// masih sama) → kalau cron jalan dobel, hanya satu yang mengirim. Pengingat
+// berulang yang tertinggal jauh (mis. Worker mati) dimajukan ke jadwal
+// berikutnya yang masih di depan, cukup satu notifikasi.
+const sendDueReminders = async (env: Env) => {
+  const nowMs = Date.now();
+  let rows: ReminderRow[];
+  try {
+    const { results } = await env.DB.prepare(
+      "SELECT * FROM reminders WHERE active = 1 AND due_at <= ? ORDER BY due_at LIMIT ?"
+    )
+      .bind(new Date(nowMs).toISOString(), REMINDERS_MAX_PER_RUN)
+      .all<ReminderRow>();
+    rows = results ?? [];
+  } catch (error) {
+    if (reminderMissingTable(error)) return;
+    throw error;
+  }
+  for (const r of rows) {
+    try {
+      let next = nextReminderDue(r.due_at, r.repeat, r.anchor_day);
+      while (next && Date.parse(next) <= nowMs) next = nextReminderDue(next, r.repeat, r.anchor_day);
+      const claim = await env.DB.prepare(
+        `UPDATE reminders SET due_at = ?, active = ?, last_sent_at = ?, updated_at = ?
+          WHERE id = ? AND due_at = ? AND active = 1`
+      )
+        .bind(next ?? r.due_at, next ? 1 : 0, nowIso(), nowIso(), r.id, r.due_at)
+        .run();
+      if (!claim.meta.changes) continue;
+      const optedOut = await env.DB.prepare(
+        `SELECT 1 AS x FROM users WHERE id = ? AND json_valid(metadata_json) AND json_extract(metadata_json, '$.prefs.notify.reminders') = 0`
+      )
+        .bind(r.user_id)
+        .first<{ x: number }>();
+      if (optedOut) continue;
+      const amount = r.amount && r.amount > 0 ? r.amount : null;
+      const body = amount ? `${formatRupiahForPush(amount)} — ketuk untuk mencatat.` : "Ketuk untuk melihat pengingatmu.";
+      const url = amount
+        ? `/input-cepat?teks=${encodeURIComponent(`${r.title} ${Math.round(amount)}`)}`
+        : "/membership/dashboard?pengaturan=pengingat";
+      await sendWebPushToUser(env, r.user_id, `⏰ ${r.title}`, body, url);
+    } catch (error) {
+      console.error(`Gagal mengirim pengingat ${r.id}:`, error);
+    }
+  }
+};
+
+// Push wawasan mingguan (Senin 10:00 WIB) & bulanan (tanggal 1, 10:00 WIB) —
+// hanya untuk user yang punya langganan push & tidak mematikannya
+// ($.prefs.notify.weekly/monthly = false). Penanda $.prefs.weeklySent /
+// monthlySent mencegah kirim dobel kalau cron terpicu lagi di hari yang sama.
+const INSIGHT_PUSH_MAX_PER_RUN = 300;
+const insightPushCandidates = async (env: Env, flag: "weekly" | "monthly", sentKey: string, marker: string) => {
+  const { results } = await env.DB.prepare(
+    `SELECT DISTINCT u.id FROM users u JOIN push_subscriptions p ON p.user_id = u.id
+      WHERE COALESCE(u.status, '') <> 'NONAKTIF'
+        AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.${flag}') END, 1) <> 0
+        AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.${sentKey}') END, '') <> ?
+      LIMIT ?`
+  )
+    .bind(marker, INSIGHT_PUSH_MAX_PER_RUN)
+    .all<{ id: string }>();
+  return (results ?? []).map((r) => r.id);
+};
+const claimInsightPush = async (env: Env, userId: string, sentKey: string, marker: string) => {
+  const res = await env.DB.prepare(
+    `UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.prefs.${sentKey}', ?)
+      WHERE id = ? AND COALESCE(CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.prefs.${sentKey}') END, '') <> ?`
+  )
+    .bind(marker, userId, marker)
+    .run();
+  return res.meta.changes > 0;
+};
+
+const sendInsightPushes = async (env: Env) => {
+  const today = todayWIB();
+  const weekday = new Date(`${today}T00:00:00Z`).getUTCDay(); // 1 = Senin
+  if (weekday === 1) {
+    for (const userId of await insightPushCandidates(env, "weekly", "weeklySent", today)) {
+      try {
+        if (!(await claimInsightPush(env, userId, "weeklySent", today))) continue;
+        const { items } = await computeWeeklyInsights(env, userId);
+        const top = items.find((i) => i.id !== "weekly-empty");
+        if (!top) continue; // minggu kosong → tidak dikirim (bukan spam)
+        await sendWebPushToUser(env, userId, `📊 ${top.title}`, top.body, top.cta.web);
+      } catch (error) {
+        console.error(`Gagal mengirim wawasan mingguan ke ${userId}:`, error);
+      }
+    }
+  }
+  if (today.endsWith("-01")) {
+    const [y, m] = today.slice(0, 7).split("-").map(Number);
+    const period = new Date(Date.UTC(y, m - 2, 1)).toISOString().slice(0, 7);
+    const monthName = new Intl.DateTimeFormat("id-ID", { month: "long", timeZone: "UTC" }).format(new Date(`${period}-01T00:00:00Z`));
+    for (const userId of await insightPushCandidates(env, "monthly", "monthlySent", period)) {
+      try {
+        if (!(await claimInsightPush(env, userId, "monthlySent", period))) continue;
+        const r = await buildMonthlyReport(env, userId, period);
+        if (r.txCount === 0) continue;
+        const top = r.topCategories[0];
+        const net = r.income - r.expense;
+        const body =
+          `Masuk ${formatRupiahForPush(r.income)} · Keluar ${formatRupiahForPush(r.expense)}` +
+          (top ? ` · Terbesar: ${top.category} (${formatRupiahForPush(top.total)})` : "") +
+          (net >= 0 ? `. Sisa ${formatRupiahForPush(net)} 👍` : `. Minus ${formatRupiahForPush(-net)}.`);
+        await sendWebPushToUser(env, userId, `🗓️ Rekap ${monthName}`, body, "/membership/laporan");
+      } catch (error) {
+        console.error(`Gagal mengirim wawasan bulanan ke ${userId}:`, error);
+      }
     }
   }
 };
@@ -14243,6 +14518,10 @@ const worker = {
         return await handleImportRoutes(request, env, url.pathname);
       }
 
+      if (url.pathname === "/api/member/reminders" || url.pathname.startsWith("/api/member/reminders/")) {
+        return await handleReminderRoutes(request, env, url.pathname);
+      }
+
       if (url.pathname.startsWith("/api/member/transactions/")) {
         const transactionId = url.pathname.slice("/api/member/transactions/".length);
         if (request.method === "PUT") {
@@ -14758,6 +15037,8 @@ const worker = {
       ctx.waitUntil(processPromoQueue(env));
       // Pengingat harian pilihan user (jam :00/:30 WIB) — cek jamnya di dalam.
       ctx.waitUntil(sendDailyReminders(env).catch((error) => console.error("Pengingat harian:", error)));
+      // Pengingat buatan user yang jatuh tempo (tabel reminders).
+      ctx.waitUntil(sendDueReminders(env).catch((error) => console.error("Pengingat user:", error)));
       // Kotak Masuk: baca email pembayaran (yang menyalakan), maks sekali per ±jam per user.
       ctx.waitUntil(processAllGmailInboxes(env));
       // Kotak Masuk: pesan channel Slack pilihan user, maks sekali per ±10 menit.
@@ -14784,6 +15065,8 @@ const worker = {
     ctx.waitUntil(syncAllGoogleSheets(env));
     ctx.waitUntil(writeAllNotionReports(env));
     ctx.waitUntil(remindAppActivationExpiry(env).catch((error) => console.error("Pengingat aktivasi:", error)));
+    // Senin: wawasan mingguan; tanggal 1: rekap bulan lalu (push, bisa dimatikan user).
+    ctx.waitUntil(sendInsightPushes(env).catch((error) => console.error("Wawasan push:", error)));
   },
 };
 
