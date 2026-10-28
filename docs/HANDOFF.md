@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-10-28 malam (akun B; run #51 live)
+Terakhir diperbarui: 2026-10-28 malam (akun B; run #52 live, privasi belum deploy)
 
 ## Siapa sedang kerja
 
@@ -139,7 +139,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     (tgl 1, `buildMonthlyReport`), penanda `$.prefs.weeklySent/monthlySent`. Diuji lokal dengan wrangler dev + D1
     lokal (API, cron dobel, bulanan tgl 31, query kandidat) dan UI lewat Playwright → Worker lokal.
   - Belum: menu Pengingat di aplikasi HP (`/app`). Push sungguhan belum dicoba Bos.
-- **Belum di-deploy** (akun B, `claude/nifty-cannon-y181p6`): **Tampilan**.
+- Sudah live (run #52): **Tampilan**.
   - **Mode gelap web BERTAHAP** (keputusan Bos): Pengaturan → Mode gelap (`AppearanceView`, ThemeContext yang sama
     dengan /app, localStorage `leosiqra-theme`). Cara kerja: scope `.web-dark` di globals.css memetakan ulang
     variabel warna Tailwind v4 (slate dibalik, pastel → tint gelap, teks -700+ → terang; `--color-white` TIDAK
@@ -151,6 +151,13 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     divalidasi). `useLeoPrefs`, `lib/season.ts` (Ramadan–Lebaran perkiraan 2027–2029, Agustus, Oktober,
     Desember) → aksesoris di `LeoMascot` (`season` prop) + hiasan emoji di kartu Ringkasan.
   - Bahasa English: DILEWATI (keputusan Bos) — belum ada sistem terjemahan.
+- **Belum di-deploy** (akun B, `claude/nifty-cannon-y181p6`): **Privasi & keamanan + Perangkat lain**.
+  - Privasi: **Izin** (`PermissionsView`: status kamera/mikrofon/notifikasi via Permissions API, tombol Izinkan),
+    **Ingatan asisten** (`AssistantMemoryView`, pref `$.prefs.aiMemory` {style, learned, about} maks 600 karakter,
+    divalidasi Worker; disisipkan ke prompt Tanya Leo lewat `aiMemoryBlock` — dilabeli catatan user, bukan aturan
+    sistem), **Statistik pemakaian** (localStorage `leosiqra:analytics-off`; `WebAnalytics` tidak memuat beacon
+    Cloudflare kalau dimatikan). Keamanan akun & Atur ulang data tetap di bawahnya.
+  - Pengaturan → Perangkat lain → Pasang di ponsel (`/install`).
 
 ## Migrasi D1
 

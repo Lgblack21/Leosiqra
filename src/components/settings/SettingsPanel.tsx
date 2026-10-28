@@ -47,6 +47,9 @@ import {
   Moon,
   PawPrint,
   Palette,
+  Brain,
+  Mic,
+  Activity,
 } from 'lucide-react';
 import { cn, formatIDR } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
@@ -73,6 +76,8 @@ import { EmoneyScanner } from '@/components/emoney/EmoneyScanner';
 import { CsvView } from './CsvView';
 import { RemindersView } from './RemindersView';
 import { AppearanceView, THEME_LABEL } from './AppearanceView';
+import { PermissionsView, AssistantMemoryView } from './PrivacyViews';
+import { analyticsEnabled, setAnalyticsEnabled } from '@/lib/analyticsPref';
 import { useTheme } from '@/context/ThemeContext';
 import { useLeoPrefs } from '@/lib/useLeoPrefs';
 import { currentSeason, SEASON_INFO } from '@/lib/season';
@@ -99,8 +104,8 @@ export interface PanelUser {
   avatar?: AvatarConfig | null;
 }
 
-export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil' | 'kontak' | 'notifikasi' | 'ai' | 'lainnya' | 'referral' | 'koin' | 'koin-riwayat' | 'kawanan' | 'app-mcp' | 'app-sheets' | 'app-calendar' | 'app-gmail' | 'app-gcal' | 'fitur' | 'target' | 'rutin' | 'periode' | 'tag' | 'cara-catat' | 'keyboard' | 'shortcut' | 'notif-reader' | 'impor' | 'emoney' | 'csv' | 'pengingat' | 'tema';
-const PARENT: Partial<Record<View, View>> = { fitur: 'menu', target: 'umum', rutin: 'umum', periode: 'umum', tag: 'umum', 'cara-catat': 'umum', keyboard: 'umum', shortcut: 'umum', 'notif-reader': 'umum', impor: 'umum', emoney: 'umum', csv: 'umum', pengingat: 'umum', tema: 'umum', 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum', referral: 'menu', koin: 'menu', 'koin-riwayat': 'referral', kawanan: 'referral', 'app-mcp': 'ai', 'app-sheets': 'ai', 'app-calendar': 'ai', 'app-gmail': 'ai', 'app-gcal': 'ai' };
+export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil' | 'kontak' | 'notifikasi' | 'ai' | 'lainnya' | 'referral' | 'koin' | 'koin-riwayat' | 'kawanan' | 'app-mcp' | 'app-sheets' | 'app-calendar' | 'app-gmail' | 'app-gcal' | 'fitur' | 'target' | 'rutin' | 'periode' | 'tag' | 'cara-catat' | 'keyboard' | 'shortcut' | 'notif-reader' | 'impor' | 'emoney' | 'csv' | 'pengingat' | 'tema' | 'izin' | 'ingatan';
+const PARENT: Partial<Record<View, View>> = { fitur: 'menu', target: 'umum', rutin: 'umum', periode: 'umum', tag: 'umum', 'cara-catat': 'umum', keyboard: 'umum', shortcut: 'umum', 'notif-reader': 'umum', impor: 'umum', emoney: 'umum', csv: 'umum', pengingat: 'umum', tema: 'umum', izin: 'privasi', ingatan: 'privasi', 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum', referral: 'menu', koin: 'menu', 'koin-riwayat': 'referral', kawanan: 'referral', 'app-mcp': 'ai', 'app-sheets': 'ai', 'app-calendar': 'ai', 'app-gmail': 'ai', 'app-gcal': 'ai' };
 
 const STATUS_LABEL: Record<PanelUser['status'], string> = {
   AKTIF: 'Aktif',
@@ -421,6 +426,8 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
   const { theme } = useTheme();
   const leo = useLeoPrefs();
   const season = currentSeason();
+  const [analyticsOn, setAnalyticsOn] = useState(true);
+  useEffect(() => setAnalyticsOn(analyticsEnabled()), []);
   const [editingFeatures, setEditingFeatures] = useState(false);
   // Resep Shortcut yang langsung dibuka saat datang dari Pembaca Notifikasi.
   const [shortcutFocus, setShortcutFocus] = useState<string | null>(null);
@@ -493,6 +500,8 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
     csv: 'Impor / ekspor CSV',
     pengingat: 'Pengingat',
     tema: 'Mode gelap',
+    izin: 'Izin',
+    ingatan: 'Ingatan asisten',
     'app-mcp': 'Claude & ChatGPT',
     'app-sheets': 'Google Sheets',
     'app-calendar': 'Google Calendar',
@@ -695,6 +704,10 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                       onChange={(v) => void leo.save({ seasonal: v })}
                     />
                   </Group>
+                  <p className="px-1 pt-2 text-[14px] text-slate-500">Perangkat lain</p>
+                  <Group>
+                    <Row icon={Smartphone} title="Pasang di ponsel" value="iPhone · Android" onClick={go('/install')} />
+                  </Group>
                   <p className="px-1 pt-2 text-[14px] text-slate-500">Pengingat & notifikasi</p>
                   <Group>
                     <Row icon={AlarmClock} title="Pengingat" desc="Tagihan & hal yang sering lupa, bisa berulang" onClick={() => setView('pengingat')} />
@@ -705,6 +718,17 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
 
               {view === 'privasi' && (
                 <div className="space-y-4">
+                  <Group>
+                    <Row icon={Mic} title="Izin" desc="Kamera, mikrofon & notifikasi di perangkat ini" onClick={() => setView('izin')} />
+                    <Row icon={Brain} title="Ingatan asisten" desc="Catatan yang dibaca Tanya Leo" onClick={() => setView('ingatan')} />
+                    <ToggleRow
+                      icon={Activity}
+                      title="Statistik pemakaian"
+                      desc="Hitungan kunjungan halaman tanpa cookie (Cloudflare) untuk memperbaiki Leosiqra. Tidak pernah berisi data keuanganmu. Berlaku di perangkat ini."
+                      on={analyticsOn}
+                      onChange={(v) => { setAnalyticsEnabled(v); setAnalyticsOn(v); }}
+                    />
+                  </Group>
                   <AccountSection view="keamanan" />
                   <button type="button" onClick={() => setView('lainnya')} className="flex w-full items-center justify-center gap-2 border-t border-slate-100 pt-5 text-[15px] font-medium text-rose-600 hover:text-rose-700">
                     <RotateCcw size={16} /> Atur ulang data
@@ -723,6 +747,8 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
               {view === 'emoney' && <EmoneyScanner />}
               {view === 'csv' && <CsvView openImport={() => setView('impor')} />}
               {view === 'tema' && <AppearanceView />}
+              {view === 'izin' && <PermissionsView openNotifications={() => setView('notifikasi')} />}
+              {view === 'ingatan' && <AssistantMemoryView />}
               {view === 'pengingat' && <RemindersView openNotifications={() => setView('notifikasi')} />}
               {view === 'notif-reader' && <NotificationReaderView openShortcut={(id) => { setShortcutFocus(id); setView('shortcut'); }} openHref={(h) => go(h)()} />}
               {view === 'fitur' && <FeaturesView editing={editingFeatures} open={(href) => go(href)()} />}

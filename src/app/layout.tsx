@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { DM_Serif_Display, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
-import Script from "next/script";
 
 const serifDisplay = DM_Serif_Display({
   weight: "400",
@@ -104,6 +103,7 @@ import { NoZoomGuard } from "@/components/NoZoomGuard";
 import LogoUpdateBanner from "@/components/LogoUpdateBanner";
 import { InstallPromptCatcher } from "@/components/install/InstallPromptCatcher";
 import { InstallBanner } from "@/components/install/InstallBanner";
+import { WebAnalytics } from "@/components/privacy/WebAnalytics";
 import { SignupSourceCatcher } from "@/components/SignupSourceCatcher";
 
 export default function RootLayout({
@@ -141,8 +141,7 @@ export default function RootLayout({
           {children}
         </MaintenanceGuard>
         <InstallBanner />
-        {/* Cloudflare Web Analytics: hitung kunjungan & asal pengunjung tanpa cookie. Token ini publik (terlihat di kode situs). */}
-        <Script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "f151ddbac01c422d8285df6e6f2e3410"}' strategy="afterInteractive" />
+        <WebAnalytics />
       </body>
     </html>
   );
