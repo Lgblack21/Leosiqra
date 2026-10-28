@@ -82,10 +82,11 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   Tag (`TagsView`), pemilih di `AddTransactionModal`, chip + filter `?tag=` + ubah tag per baris +
   kolom Tag di CSV di Riwayat (`/membership/transactions/daily`). Belum: aplikasi HP (`/app`),
   Tambah Cepat/AI/impor belum bisa memberi tag.
-- **Belum di-deploy**: tampilan HP (<768px) disederhanakan. Ringkasan: tanpa kartu "Hari ini",
+- Sudah live (run #46): tampilan HP (<768px) disederhanakan. Ringkasan: tanpa kartu "Hari ini",
   lencana/streak, Insight Mingguan, chip "biasanya jam segini"; Ke mana uangmu maks 4, Terbaru maks 5,
   "Fitur kamu" → "Saldo" (2 kartu). Riwayat: Ekspor/Tambah disembunyikan (ada FAB), periode & filter
   dilipat di tombol "Filter", aksi Tag/Hapus muncul saat baris diketuk. Tablet/desktop tidak berubah.
+- **Belum di-deploy**: tidak ada.
 
 ## Migrasi D1
 
