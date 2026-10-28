@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-10-28 malam (akun B; run #50 live)
+Terakhir diperbarui: 2026-10-28 malam (akun B; run #51 live)
 
 ## Siapa sedang kerja
 
@@ -127,7 +127,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   parameter = perilaku lama). Impor CSV kini mengenali kolom **Jenis/Type** (`kind` di ColumnMapping): sebelumnya
   CSV ekspor Leosiqra yang diimpor balik membuat semua pengeluaran jadi pemasukan; baris transfer/hutang dilewati.
   BELUM: pindahan multi-dompet dari app lain (Money Manager, Money Lover, …) — tunggu keputusan Bos.
-- **Belum di-deploy** (akun B, `claude/nifty-cannon-y181p6`): **Pengingat & Notifikasi**.
+- Sudah live (run #51): **Pengingat & Notifikasi**.
   - Pengaturan → Pengingat (view `pengingat`, `RemindersView.tsx`, `reminderService.ts`): nama, waktu, nominal
     opsional, ulang sekali/mingguan/bulanan. **Butuh migrasi `0020_reminders.sql`** (tabel `reminders`) — tanpa
     itu API membalas 503 "belum aktif" & cron diam. Worker: `/api/member/reminders` (GET/POST/PUT/DELETE, maks 50),
@@ -138,7 +138,8 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     00:01 kini bisa dimatikan. BARU: push wawasan mingguan (Senin 10:00 WIB, `computeWeeklyInsights`) & bulanan
     (tgl 1, `buildMonthlyReport`), penanda `$.prefs.weeklySent/monthlySent`. Diuji lokal dengan wrangler dev + D1
     lokal (API, cron dobel, bulanan tgl 31, query kandidat) dan UI lewat Playwright → Worker lokal.
-  - Belum: menu Pengingat di aplikasi HP (`/app`).
+  - Belum: menu Pengingat di aplikasi HP (`/app`). Push sungguhan belum dicoba Bos.
+- **Belum di-deploy**: tidak ada. Branch kerja akun B: `claude/nifty-cannon-y181p6` (= main).
 
 ## Migrasi D1
 
@@ -146,7 +147,7 @@ Dijalankan manual oleh Bos lewat Console D1 (token GitHub belum punya izin D1).
 - `0017_coins.sql` — sudah (dikonfirmasi Bos).
 - `0018_transaction_attachments.sql` — diasumsikan sudah; cek sebelum mengandalkan.
 - `0019_inbox.sql` — sudah (Kotak Masuk Gmail jalan di produksi).
-- `0020_reminders.sql` — **BELUM** (pengingat buatan user; jalankan di Console D1 sebelum/sesudah deploy).
+- `0020_reminders.sql` — sudah (Bos, 2026-10-28; Console D1 butuh SQL tanpa komentar `--` kalau ditempel satu baris).
 
 ## Belum terverifikasi di produksi
 
@@ -173,7 +174,7 @@ Pola kerja dengan Bos (lanjutkan sama): Bos kirim screenshot Oyenza per menu Pen
 bikin versi Leosiqra yang **fiturnya nyata tapi desainnya beda** (jangan sama) → uji lokal
 (Playwright, ponsel/tablet/desktop) → commit+push branch → lapor ringkas → deploy hanya setelah
 Bos bilang **"gas"**. Menu Pengaturan yang sudah dibuat: Fitur, Target, Transaksi rutin, Awal
-periode anggaran, Tag, Cara catat utama, Keyboard nominal, Shortcut iPhone, Kategori & Anggaran, Pembaca Notifikasi, Impor mutasi (pop-up), Kartu e-money, Impor/ekspor CSV.
+periode anggaran, Tag, Cara catat utama, Keyboard nominal, Shortcut iPhone, Kategori & Anggaran, Pembaca Notifikasi, Impor mutasi (pop-up), Kartu e-money, Impor/ekspor CSV, Pengingat, Notifikasi.
 Kemungkinan berikutnya dari screenshot Oyenza: "Impor dari e-money (NFC)", "Impor/ekspor CSV",
 "Pembaca Notifikasi" (sudah, versi web).
 Mode HP: Bos minta tampilan HP **simpel** — jangan menambah kepadatan di <768px.
