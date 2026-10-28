@@ -1042,14 +1042,30 @@ const buildUserContext = async (env: Env, userId: string) => {
         rataRata3BulanSebelumnya: formatRupiah(x.avg3),
         perubahanVsRataRataPersen: pct(x.now_, x.avg3),
       }));
+  // Periode anggaran bisa mulai selain tanggal 1 (mis. tanggal gajian).
+  const budgetStartDay = (await readUserPrefs(env, userId)).budgetStartDay;
+  const budgetPeriod = budgetPeriodBounds(budgetStartDay, today);
+  const periodSpent = new Map<string, number>();
+  if (budgetStartDay !== 1) {
+    const { results } = await env.DB.prepare(
+      `SELECT category, SUM(COALESCE(NULLIF(amount_idr, 0), amount)) AS total
+         FROM transactions
+        WHERE user_id = ? AND type = 'pengeluaran' AND substr(date, 1, 10) >= ? AND substr(date, 1, 10) < ?
+        GROUP BY category`
+    )
+      .bind(userId, budgetPeriod.from, budgetPeriod.to)
+      .all<{ category: string; total: number }>();
+    for (const r of results ?? []) periodSpent.set(r.category, Number(r.total) || 0);
+  }
   const budgetUsage = ((budgets.results ?? []) as Array<{ type?: string; category?: string; amount?: number; period?: string }>)
     .filter((b) => (b.type ?? "pengeluaran") === "pengeluaran" && (b.period ?? "monthly") === "monthly" && Number(b.amount) > 0)
     .map((b) => {
-      const used = sumCat("pengeluaran", currentYm, b.category ?? "");
+      const used = budgetStartDay === 1 ? sumCat("pengeluaran", currentYm, b.category ?? "") : periodSpent.get(b.category ?? "") ?? 0;
       const limit = Number(b.amount);
       const usedPct = Math.round((used / limit) * 100);
       return {
         kategori: b.category,
+        periode: `${budgetPeriod.from} s/d ${budgetPeriod.last}`,
         batasBulanan: formatRupiah(limit),
         terpakai: formatRupiah(used),
         sisa: formatRupiah(Math.max(0, limit - used)),
@@ -11410,8 +11426,28 @@ type UserPrefs = {
   saveAttachments: boolean;
   features: string[] | null;
   categoryKinds: Record<string, CategoryKindPref>;
+  // Tanggal mulai periode anggaran bulanan (1–28; 1 = bulan kalender).
+  budgetStartDay: number;
 };
-const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" }, categoryStyles: {}, avatar: null, saveAttachments: true, features: null, categoryKinds: {} };
+const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" }, categoryStyles: {}, avatar: null, saveAttachments: true, features: null, categoryKinds: {}, budgetStartDay: 1 };
+const sanitizeBudgetStartDay = (raw: unknown) => (Number.isInteger(raw) && (raw as number) >= 1 && (raw as number) <= 28 ? (raw as number) : 1);
+// Periode anggaran bulanan yang memuat `today` (YYYY-MM-DD, WIB): [from, to) —
+// mis. mulai tanggal 25 & hari ini 10 Nov → 2026-10-25 s/d sebelum 2026-11-25.
+const budgetPeriodBounds = (startDay: number, today: string) => {
+  const [y, m, d] = today.split("-").map(Number);
+  let sy = y;
+  let sm = m;
+  if (d < startDay) {
+    sm -= 1;
+    if (sm < 1) { sm = 12; sy -= 1; }
+  }
+  const ey = sm === 12 ? sy + 1 : sy;
+  const em = sm === 12 ? 1 : sm + 1;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const from = `${sy}-${pad(sm)}-${pad(startDay)}`;
+  const to = `${ey}-${pad(em)}-${pad(startDay)}`;
+  return { from, to, last: shiftDateStr(to, -1) };
+};
 const sanitizeFeatures = (raw: unknown): string[] | null =>
   Array.isArray(raw) ? [...new Set(raw.filter((f): f is string => (PREF_FEATURES as readonly unknown[]).includes(f)))] : null;
 const sanitizeCategoryStyles = (raw: unknown): Record<string, CategoryStyle> => {
@@ -11451,6 +11487,7 @@ const readUserPrefs = async (env: Env, userId: string): Promise<UserPrefs> => {
     saveAttachments: raw.saveAttachments !== false,
     features: sanitizeFeatures(raw.features),
     categoryKinds: sanitizeCategoryKinds(raw.categoryKinds),
+    budgetStartDay: sanitizeBudgetStartDay(raw.budgetStartDay),
   };
 };
 
@@ -11459,7 +11496,7 @@ const readUserPrefs = async (env: Env, userId: string): Promise<UserPrefs> => {
 //        categoryStyle?: { name, emoji, color } | { name, remove: true },
 //        avatar?: { mode: "leo"|"photo", fur, acc, bg }, saveAttachments?: boolean,
 //        features?: string[] (urutan menu), categoryKind?: { name, kind } | { name, remove: true },
-//        categoryKindsMerge?: { [name]: kind } (hanya mengisi yang belum ada) } — field yang dikirim saja yang diubah
+//        categoryKindsMerge?: { [name]: kind } (hanya mengisi yang belum ada), budgetStartDay?: 1–28 } — field yang dikirim saja yang diubah
 async function handleUserPreferences(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -11467,7 +11504,7 @@ async function handleUserPreferences(request: Request, env: Env) {
   const current = await readUserPrefs(env, userId);
   if (request.method === "GET") return json({ item: current });
 
-  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown; categoryStyle?: unknown; avatar?: unknown; saveAttachments?: unknown; features?: unknown; categoryKind?: unknown; categoryKindsMerge?: unknown }>(request);
+  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown; categoryStyle?: unknown; avatar?: unknown; saveAttachments?: unknown; features?: unknown; categoryKind?: unknown; categoryKindsMerge?: unknown; budgetStartDay?: unknown }>(request);
   const next: UserPrefs = { ...current, reminder: { ...current.reminder }, categoryStyles: { ...current.categoryStyles }, categoryKinds: { ...current.categoryKinds } };
   if (payload.goals !== undefined) {
     if (!Array.isArray(payload.goals) || payload.goals.length > PREF_GOALS.length || payload.goals.some((g) => !(PREF_GOALS as readonly unknown[]).includes(g))) {
@@ -11532,6 +11569,12 @@ async function handleUserPreferences(request: Request, env: Env) {
       next.categoryKinds[name] = k.kind as CategoryKindPref;
     }
   }
+  if (payload.budgetStartDay !== undefined) {
+    if (!Number.isInteger(payload.budgetStartDay) || (payload.budgetStartDay as number) < 1 || (payload.budgetStartDay as number) > 28) {
+      return json({ error: "Awal periode harus tanggal 1–28." }, { status: 400 });
+    }
+    next.budgetStartDay = payload.budgetStartDay as number;
+  }
   if (payload.categoryKindsMerge !== undefined) {
     // Pindahan petunjuk lama dari localStorage: hanya mengisi yang belum ada.
     for (const [name, kind] of Object.entries(sanitizeCategoryKinds(payload.categoryKindsMerge))) {
@@ -11542,10 +11585,11 @@ async function handleUserPreferences(request: Request, env: Env) {
     `UPDATE users
         SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END,
               '$.prefs.goals', json(?), '$.prefs.inputMode', ?, '$.prefs.reminder', json(?), '$.prefs.categoryStyles', json(?),
-              '$.prefs.avatar', json(?), '$.prefs.saveAttachments', json(?), '$.prefs.features', json(?), '$.prefs.categoryKinds', json(?))
+              '$.prefs.avatar', json(?), '$.prefs.saveAttachments', json(?), '$.prefs.features', json(?), '$.prefs.categoryKinds', json(?),
+              '$.prefs.budgetStartDay', ?)
       WHERE id = ?`
   )
-    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), JSON.stringify(next.categoryStyles), JSON.stringify(next.avatar), JSON.stringify(next.saveAttachments), JSON.stringify(next.features), JSON.stringify(next.categoryKinds), userId)
+    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), JSON.stringify(next.categoryStyles), JSON.stringify(next.avatar), JSON.stringify(next.saveAttachments), JSON.stringify(next.features), JSON.stringify(next.categoryKinds), next.budgetStartDay, userId)
     .run();
   return json({ ok: true, item: next });
 }
@@ -12893,18 +12937,19 @@ const mcpGetReport: McpToolDef["run"] = async (env, auth, args) => {
 
 const mcpGetBudgets: McpToolDef["run"] = async (env, auth) => {
   const today = todayWIB();
+  const period = budgetPeriodBounds((await readUserPrefs(env, auth.userId)).budgetStartDay, today);
   const [budgetRes, spentRes] = await env.DB.batch([
     env.DB.prepare(`SELECT category, type, amount, period FROM budgets WHERE user_id = ? ORDER BY created_at DESC`).bind(auth.userId),
     // Realisasi = transaksi bertipe & berkategori sama (tanpa beda huruf besar),
     // dalam IDR — sama dengan budgetRealization di src/lib/budget.ts.
     env.DB.prepare(
       `SELECT type, lower(category) AS cat,
-              SUM(CASE WHEN substr(date, 1, 7) = ? THEN COALESCE(NULLIF(amount_idr, 0), amount) ELSE 0 END) AS month_total,
-              SUM(COALESCE(NULLIF(amount_idr, 0), amount)) AS year_total
+              SUM(CASE WHEN substr(date, 1, 10) >= ? AND substr(date, 1, 10) < ? THEN COALESCE(NULLIF(amount_idr, 0), amount) ELSE 0 END) AS month_total,
+              SUM(CASE WHEN substr(date, 1, 4) = ? THEN COALESCE(NULLIF(amount_idr, 0), amount) ELSE 0 END) AS year_total
          FROM transactions
-        WHERE user_id = ? AND substr(date, 1, 4) = ? AND type IN ('pemasukan', 'pengeluaran')
+        WHERE user_id = ? AND (substr(date, 1, 4) = ? OR substr(date, 1, 10) >= ?) AND type IN ('pemasukan', 'pengeluaran')
         GROUP BY type, lower(category)`
-    ).bind(today.slice(0, 7), auth.userId, today.slice(0, 4)),
+    ).bind(period.from, period.to, today.slice(0, 4), auth.userId, today.slice(0, 4), period.from),
   ]);
   const spent = new Map<string, { month: number; year: number }>();
   for (const row of (spentRes.results ?? []) as { type: string; cat: string | null; month_total: number; year_total: number }[]) {
@@ -12917,7 +12962,7 @@ const mcpGetBudgets: McpToolDef["run"] = async (env, auth) => {
       category: b.category,
       type: b.type,
       period: b.period,
-      period_label: b.period === "yearly" ? today.slice(0, 4) : today.slice(0, 7),
+      period_label: b.period === "yearly" ? today.slice(0, 4) : period.from.slice(8) === "01" ? today.slice(0, 7) : `${period.from} s/d ${period.last}`,
       amount: mcpMoney(b.amount),
       spent: mcpMoney(used),
       percent: Number(b.amount) > 0 ? Math.round((used / Number(b.amount)) * 100) : 0,

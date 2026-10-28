@@ -6,7 +6,8 @@ import { ChevronLeft, ChevronRight, Plus, Target, Trash2 } from "lucide-react";
 import { budgetService, Budget } from "@/lib/services/budgetService";
 import { transactionService, Transaction } from "@/lib/services/transactionService";
 import { categoryService } from "@/lib/services/categoryService";
-import { budgetRealization } from "@/lib/budget";
+import { budgetRealization, budgetPeriodMonthOf, budgetPeriodStartingIn, formatBudgetPeriod, inBudgetPeriod } from "@/lib/budget";
+import { useBudgetStartDay } from "@/lib/useBudgetStartDay";
 import { subscribeToCollectionChanges } from "@/lib/cf-firestore";
 import { auth } from "@/lib/cf-client";
 import { cn, formatIDR } from "@/lib/utils";
@@ -20,7 +21,15 @@ export default function AppBudgetPage() {
   const [budgets, setBudgets] = useState<Budget[] | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categoryNames, setCategoryNames] = useState<string[]>([]);
+  const { day: startDay } = useBudgetStartDay();
+  // Bulan tempat periode anggaran dimulai (awal periode bisa selain tanggal 1).
   const [cursor, setCursor] = useState(() => ({ y: new Date().getFullYear(), m: new Date().getMonth() }));
+  const [syncedDay, setSyncedDay] = useState(1);
+  if (syncedDay !== startDay) {
+    setSyncedDay(startDay);
+    setCursor(budgetPeriodMonthOf(startDay));
+  }
+  const period = budgetPeriodStartingIn(cursor.y, cursor.m, startDay);
   const [adding, setAdding] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -42,8 +51,8 @@ export default function AppBudgetPage() {
 
   const all = useMemo(() => budgets ?? [], [budgets]);
   const inMonth = useMemo(
-    () => transactions.filter((t) => { const d = new Date(t.date); return d.getFullYear() === cursor.y && d.getMonth() === cursor.m; }),
-    [transactions, cursor]
+    () => transactions.filter((t) => inBudgetPeriod(t.date, budgetPeriodStartingIn(cursor.y, cursor.m, startDay))),
+    [transactions, cursor, startDay]
   );
   const inYear = useMemo(() => transactions.filter((t) => new Date(t.date).getFullYear() === cursor.y), [transactions, cursor.y]);
 
@@ -135,13 +144,13 @@ export default function AppBudgetPage() {
 
       <div className="flex items-center justify-between rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 px-2 py-1.5">
         <button type="button" onClick={() => shift(-1)} aria-label="Bulan sebelumnya" className="p-2 text-slate-400"><ChevronLeft size={18} /></button>
-        <span className="text-sm font-black text-slate-900 dark:text-white capitalize">{monthLabel(cursor.y, cursor.m)}</span>
+        <span className="text-sm font-black text-slate-900 dark:text-white capitalize">{startDay === 1 ? monthLabel(cursor.y, cursor.m) : formatBudgetPeriod(period)}</span>
         <button type="button" onClick={() => shift(1)} aria-label="Bulan berikutnya" className="p-2 text-slate-400"><ChevronRight size={18} /></button>
       </div>
 
       {limitTotal > 0 && (
         <FadeIn className="rounded-3xl bg-gradient-to-br from-teal-500 to-emerald-500 text-white p-5 shadow-lg shadow-teal-200/50 dark:shadow-none">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-white/80">Terpakai bulan ini</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-white/80">Terpakai {startDay === 1 ? "bulan ini" : "periode ini"}</p>
           <p className="mt-1 text-2xl font-black tabular-nums">{formatIDR(usedTotal)}</p>
           <p className="text-[11px] text-white/80 tabular-nums">dari total batas {formatIDR(limitTotal)}</p>
           <div className="mt-3 h-2 rounded-full bg-white/25 overflow-hidden">

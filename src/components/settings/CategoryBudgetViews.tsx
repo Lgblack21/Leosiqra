@@ -8,7 +8,8 @@ import { budgetService, type Budget } from '@/lib/services/budgetService';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
 import { currencyService, type Currency } from '@/lib/services/currencyService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
-import { budgetRealization } from '@/lib/budget';
+import { budgetRealization, currentBudgetPeriod, formatBudgetPeriod, inBudgetPeriod } from '@/lib/budget';
+import { useBudgetStartDay } from '@/lib/useBudgetStartDay';
 import { categoryVisual, useCategoryStyles, useCategoryKinds, setCategoryKind, setCategoryStyle, CATEGORY_COLORS, CATEGORY_ICONS, type CategoryStyle } from '@/lib/categoryEmoji';
 import { CATEGORY_TEMPLATE, DEFAULT_CATEGORY_GROUPS } from '@/lib/defaultCategories';
 import { useFeedback } from '@/components/ui/Feedback';
@@ -32,9 +33,10 @@ const INCOME_WORDS = ['pemasukan', 'gaji', 'bonus', 'thr', 'freelance', 'pendapa
 const INCOME_SUGGESTIONS = CATEGORY_TEMPLATE.filter((t) => t.kind === 'pemasukan').map((t) => t.category);
 const EXPENSE_SUGGESTIONS = CATEGORY_TEMPLATE.filter((t) => t.kind === 'pengeluaran').map((t) => t.category);
 
-const inPeriod = (t: Transaction, period: Budget['period'], now: Date) => {
-  const d = new Date(t.date);
-  return d.getFullYear() === now.getFullYear() && (period === 'yearly' || d.getMonth() === now.getMonth());
+// Bulanan mengikuti awal periode anggaran (prefs.budgetStartDay); tahunan = tahun kalender.
+const inPeriod = (t: Transaction, period: Budget['period'], now: Date, startDay: number) => {
+  if (period === 'yearly') return new Date(t.date).getFullYear() === now.getFullYear();
+  return inBudgetPeriod(t.date, currentBudgetPeriod(startDay, now));
 };
 
 export interface CategoryRow {
@@ -52,6 +54,7 @@ export function useCategoryData() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const kinds = useCategoryKinds();
+  const { day: startDay } = useBudgetStartDay();
 
   useEffect(() => {
     let active = true;
@@ -73,7 +76,7 @@ export function useCategoryData() {
     const groups = new Map<string, Category[]>();
     for (const c of categories) groups.set(c.category, [...(groups.get(c.category) ?? []), c]);
     // Kategori yang belum ada di daftar tapi dipakai transaksi bulan ini / punya anggaran ikut tampil.
-    for (const t of transactions) if ((t.type === 'pengeluaran' || t.type === 'pemasukan') && t.category && inPeriod(t, 'monthly', now) && !groups.has(t.category)) groups.set(t.category, []);
+    for (const t of transactions) if ((t.type === 'pengeluaran' || t.type === 'pemasukan') && t.category && inPeriod(t, 'monthly', now, startDay) && !groups.has(t.category)) groups.set(t.category, []);
     for (const b of budgets) if (!groups.has(b.category)) groups.set(b.category, []);
 
     const savedKind = (name: string) => kinds[name] ?? Object.entries(kinds).find(([n]) => n.toLowerCase() === name.toLowerCase())?.[1];
@@ -98,11 +101,11 @@ export function useCategoryData() {
       const kind = kindOf(name);
       const budget = budgets.find((b) => b.category.toLowerCase() === name.toLowerCase() && b.type === kind) ?? null;
       const period = budget?.period ?? 'monthly';
-      const periodTx = transactions.filter((t) => inPeriod(t, period, now));
+      const periodTx = transactions.filter((t) => inPeriod(t, period, now, startDay));
       const spent = budgetRealization({ id: '', userId: '', type: kind, category: name, amount: budget?.amount ?? 0, period, createdAt: now }, periodTx).total;
       return { name, kind, subs: [...subs].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)), spent, budget };
     }).sort((a, b) => (b.budget ? 1 : 0) - (a.budget ? 1 : 0) || b.spent - a.spent || a.name.localeCompare(b.name, 'id'));
-  }, [categories, budgets, transactions, kinds]);
+  }, [categories, budgets, transactions, kinds, startDay]);
 
   return { rows, loading };
 }
@@ -173,6 +176,8 @@ function BudgetRing({ pct, over }: { pct: number; over: boolean }) {
 }
 
 export function KategoriListView({ rows, loading, onOpen, onAdd }: { rows: CategoryRow[]; loading: boolean; onOpen: (name: string) => void; onAdd: (kind: Kind) => void }) {
+  const { day: startDay } = useBudgetStartDay();
+  const periodText = startDay === 1 ? 'bulan ini' : `periode ${formatBudgetPeriod(currentBudgetPeriod(startDay))}`;
   useCategoryStyles();
   const [tab, setTab] = useState<Kind>('pengeluaran');
   const list = rows.filter((r) => r.kind === tab);
@@ -200,7 +205,7 @@ export function KategoriListView({ rows, loading, onOpen, onAdd }: { rows: Categ
         <span aria-hidden className="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-white/10" />
         <div className="relative flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[13px] font-medium text-white/80">{isOut ? 'Pengeluaran' : 'Pemasukan'} bulan ini</p>
+            <p className="text-[13px] font-medium text-white/80">{isOut ? 'Pengeluaran' : 'Pemasukan'} {periodText}</p>
             <p className="mt-0.5 truncate text-[26px] font-extrabold tabular-nums">{formatIDR(total)}</p>
             <p className="text-[12px] text-white/75">{list.length} kategori{isOut && budgetTotal > 0 ? ` · anggaran ${formatIDR(budgetTotal)}` : ''}</p>
           </div>
@@ -258,6 +263,7 @@ export function KategoriListView({ rows, loading, onOpen, onAdd }: { rows: Categ
 }
 
 export function KategoriDetailView({ row, onDone }: { row: CategoryRow; onDone: () => void }) {
+  const { day: startDay } = useBudgetStartDay();
   const { toast, confirm } = useFeedback();
   const [amount, setAmount] = useState(row.budget ? String(Math.round(row.budget.amount)) : '');
   const [period, setPeriod] = useState<Budget['period']>(row.budget?.period ?? 'monthly');
@@ -348,7 +354,7 @@ export function KategoriDetailView({ row, onDone }: { row: CategoryRow; onDone: 
         <p className="text-[20px] font-bold text-slate-900">{row.name}</p>
         <p className="flex items-center gap-2 text-[14px] text-slate-500">
           <span className={cn('rounded-full px-2.5 py-0.5 text-[12px] font-semibold', row.kind === 'pemasukan' ? 'bg-emerald-50 text-emerald-700' : 'bg-indigo-50 text-indigo-700')}>{row.kind === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}</span>
-          {formatIDR(row.spent)} {row.budget?.period === 'yearly' ? 'tahun ini' : 'bulan ini'}
+          {formatIDR(row.spent)} {row.budget?.period === 'yearly' ? 'tahun ini' : startDay === 1 ? 'bulan ini' : 'periode ini'}
         </p>
       </div>
 
