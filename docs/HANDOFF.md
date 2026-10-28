@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-28 sore (akun A berhenti karena limit; semua sudah 
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| — | tidak ada yang aktif | — | — |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Pengaturan (menu baru dari screenshot Oyenza) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
