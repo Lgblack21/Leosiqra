@@ -6,7 +6,6 @@ import {
   Play,
   LayoutDashboard,
   TrendingUp,
-  PlusCircle,
   ArrowUpDown,
   Wallet,
   Target,
@@ -115,15 +114,6 @@ const sections: GuideSection[] = [
 
 const extras: GuideSection[] = [
   {
-    icon: PlusCircle,
-    color: 'bg-teal-600',
-    title: 'Tambah Cepat',
-    subtitle: 'Pintasan di pojok kanan atas header',
-    items: [
-      { name: 'Tambah Cepat', desc: 'Tombol hijau di header (semua halaman member) — buka form transaksi/investasi/tabungan/hutang/kartu/dll tanpa perlu pindah halaman dulu.' },
-    ],
-  },
-  {
     icon: Smartphone,
     color: 'bg-orange-600',
     title: 'Input Cepat',
@@ -139,7 +129,7 @@ const allSections = [...sections, ...extras];
 // Peraga & langkah cara pakai per grup menu sidebar (id = GuideSection.id).
 const SECTION_DEMO: Record<string, { demo: DemoKind; how: string[] }> = {
   primary: { demo: 'dashboard', how: ['Buka Dashboard untuk ringkasan bulan ini', 'Ganti bulan lewat kalender di kanan atas', 'Tanya apa saja di AI Leosiqra'] },
-  transaksi: { demo: 'input', how: ['Buka Catat Transaksi atau Tambah Cepat', 'Pilih rekening, kategori & isi nominal', 'Simpan — saldo rekening ter-update otomatis'] },
+  transaksi: { demo: 'input', how: ['Buka Catat Transaksi atau tombol Tambah transaksi di menu samping', 'Pilih rekening, kategori & isi nominal', 'Simpan — saldo rekening ter-update otomatis'] },
   aset: { demo: 'rekening', how: ['Tambah rekening bank, e-wallet, tunai, atau kartu', 'Isi saldo saat ini sekali saja', 'Saldo berubah sendiri setiap kamu mencatat'] },
   investasi: { demo: 'investasi', how: ['Pilih jenis: Saham, Deposito, atau Lainnya', 'Catat jumlah & harga beli', 'Nilai & keuntungan dihitung otomatis'] },
   perencanaan: { demo: 'budget', how: ['Pasang anggaran per kategori di Pengaturan → Kategori & Anggaran', 'Catat utang/piutang & cicilannya', 'Lihat Laporan Tahunan & Pajak Center'] },
@@ -165,13 +155,6 @@ const buildTourSteps = (): TourStep[] => {
       ...extra,
     });
   }
-  steps.push({
-    target: '[data-tour="tambah-cepat"]',
-    title: 'Tambah Cepat',
-    content: 'Tombol ini ada di setiap halaman — cara tercepat buka form pencatatan apa pun tanpa pindah halaman.',
-    demo: 'tambah-cepat',
-    how: ['Klik tombol hijau "Tambah Cepat"', 'Pilih yang mau dicatat (pengeluaran, transfer, tabungan…)', 'Isi form yang muncul, lalu simpan'],
-  });
   steps.push({
     title: 'Selesai! 🎉',
     content: 'Sekarang kamu sudah kenal semua bagian utama Leosiqra. Pasang juga aplikasinya di HP supaya mencatat bisa dari mana saja.',

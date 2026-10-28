@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-28 malam (akun B selesai; semua live, main = run #5
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Lonceng notifikasi |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Lonceng notifikasi, hapus Tambah Cepat |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -171,6 +171,8 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   Worker: tabel `notifications` (**migrasi 0021**), `recordNotification` dipanggil di `sendWebPushToUser` → semua
   push server tercatat (juga untuk user tanpa langganan push); `/api/member/notifications` (GET, POST read-all,
   POST :id/read); dibersihkan di cron harian (>60 hari, >100/user). Tanpa migrasi: lonceng kosong, bukan error.
+- **Belum di-deploy** (akun B): dropdown **Tambah Cepat** di header dihapus (permintaan Bos) — header kini hanya
+  menu, judul, lonceng. Langkah tur + bagian Panduan soal Tambah Cepat ikut dihapus. Menu Input Cepat di Pengaturan tetap.
 
 ## Migrasi D1
 
