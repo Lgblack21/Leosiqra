@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-10-27 (setelah deploy perbaikan security check)
+Terakhir diperbarui: 2026-10-28 sore (akun A berhenti karena limit; semua sudah live, main = 0794679)
 
 ## Siapa sedang kerja
 
@@ -95,7 +95,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   tanpa token — suara (`/input-cepat?mulai=suara`), tangkapan layar (`?mulai=tempel` → tombol baca
   gambar dari clipboard), SMS bank (`?teks=<isi pesan>` → dibaca AI/parser lokal). Semua hanya mengisi
   form; user tetap menyimpan. Belum diuji di iPhone asli (Pintasan, clipboard Safari).
-- **Belum di-deploy**: tidak ada.
+- **Belum di-deploy**: tidak ada. Branch kerja akun A: `claude/friendly-galileo-d9k5kc` (= main).
 
 ## Migrasi D1
 
@@ -110,6 +110,8 @@ Dijalankan manual oleh Bos lewat Console D1 (token GitHub belum punya izin D1).
 - Notion: tulis laporan bulanan.
 - Gmail: teks "Terhubung sebagai email@…" di cek koneksi.
 - Kotak Masuk di HP & panel per sumber (Gmail/Slack) — belum dicoba Bos.
+- Shortcut iPhone (Pintasan, Automasi SMS, tempel clipboard Safari) & mode "Ucapkan" (mic otomatis).
+- Asisten AI & MCP dengan awal periode anggaran ≠ 1.
 
 ## Catatan Impor
 - Impor = riwayat: TIDAK mengubah saldo rekening (keputusan Bos 2026-10-28).
@@ -122,6 +124,15 @@ Dijalankan manual oleh Bos lewat Console D1 (token GitHub belum punya izin D1).
 - Impor belum ada di aplikasi HP (`/app/*`) — baru versi web.
 
 ## Langkah berikutnya / ide
+
+Pola kerja dengan Bos (lanjutkan sama): Bos kirim screenshot Oyenza per menu Pengaturan →
+bikin versi Leosiqra yang **fiturnya nyata tapi desainnya beda** (jangan sama) → uji lokal
+(Playwright, ponsel/tablet/desktop) → commit+push branch → lapor ringkas → deploy hanya setelah
+Bos bilang **"gas"**. Menu Pengaturan yang sudah dibuat: Fitur, Target, Transaksi rutin, Awal
+periode anggaran, Tag, Cara catat utama, Keyboard nominal, Shortcut iPhone, Kategori & Anggaran.
+Kemungkinan berikutnya dari screenshot Oyenza: "Impor dari e-money (NFC)", "Impor/ekspor CSV",
+"Pembaca Notifikasi" (tidak bisa di web — jelaskan ke Bos).
+Mode HP: Bos minta tampilan HP **simpel** — jangan menambah kepadatan di <768px.
 
 - Tunggu hasil tes Bos untuk poin di atas, perbaiki parser kalau perlu.
 - Aplikasi terhubung versi HP (`/app/*`) belum ada — tombol Hubungkan membuka versi web.
