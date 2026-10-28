@@ -95,7 +95,11 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   tanpa token — suara (`/input-cepat?mulai=suara`), tangkapan layar (`?mulai=tempel` → tombol baca
   gambar dari clipboard), SMS bank (`?teks=<isi pesan>` → dibaca AI/parser lokal). Semua hanya mengisi
   form; user tetap menyimpan. Belum diuji di iPhone asli (Pintasan, clipboard Safari).
-- **Belum di-deploy**: tidak ada. Branch kerja akun A: `claude/friendly-galileo-d9k5kc` (= main).
+- **Belum di-deploy** (akun B, branch `claude/nifty-cannon-y181p6`): Pengaturan → **Pembaca Notifikasi**
+  (`NotificationReaderView`, view `notif-reader`, juga `?pengaturan=notif-reader`). Browser tidak bisa membaca
+  notifikasi aplikasi lain, jadi isinya jalur nyata: SMS bank (→ Shortcut iPhone), email bank (→ Gmail/Kotak
+  Masuk), dan "Tempel teks notifikasi" → `/input-cepat?teks=`. Tanpa perubahan Worker/D1. Diuji lokal (mock API).
+  Notifikasi otomatis Android = butuh plugin native (NotificationListenerService) — belum dibuat.
 
 ## Migrasi D1
 
