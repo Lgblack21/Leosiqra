@@ -509,7 +509,7 @@ export default function ImporPage() {
           <OtherWay href="/input-cepat" icon={Zap} title="Scan struk & suara" desc="Foto struk atau ucapkan transaksinya — AI yang mengisi" />
           <OtherWay href="/membership/aplikasi?app=gmail" icon={Mail} title="Gmail" desc="Email pembayaran jadi usulan di Kotak Masuk" />
           <OtherWay href="/membership/aplikasi?app=slack" icon={Hash} title="Slack" desc="Ketik pengeluaran di channel, jadi usulan transaksi" />
-          <OtherWay href="/panduan/shortcut-ios" icon={Smartphone} title="Shortcut iPhone" desc="Catat lewat Siri, Back Tap & Action Button" />
+          <OtherWay href="/membership/dashboard?pengaturan=shortcut" icon={Smartphone} title="Shortcut iPhone" desc="Suara, tangkapan layar & SMS bank" />
         </div>
       </section>
     </div>

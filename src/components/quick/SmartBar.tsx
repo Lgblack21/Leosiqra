@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Mic, Camera, Sparkles, Loader2, Square, CornerDownLeft } from "lucide-react";
+import { Mic, Camera, Sparkles, Loader2, Square, CornerDownLeft, ClipboardPaste } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { lightTap } from "@/lib/haptics";
 import { parseQuickText, type ParseContext, type QuickDraft } from "@/lib/quick/parse";
@@ -16,7 +16,10 @@ interface Props {
   className?: string;
   // Cara catat utama dari Pengaturan: 'suara' langsung mendengarkan, 'foto'
   // menampilkan tombol kamera besar (pemilih file butuh ketukan user).
-  autoStart?: 'suara' | 'foto';
+  autoStart?: 'suara' | 'foto' | 'tempel';
+  // Teks dari Shortcut iPhone (?teks=, mis. hasil dikte atau isi SMS bank):
+  // dibaca AI seperti ucapan, hasilnya tetap dicek user sebelum disimpan.
+  initialText?: string;
 }
 
 type Status = { kind: "idle" } | { kind: "listening" } | { kind: "thinking"; label: string } | { kind: "error"; msg: string };
@@ -27,7 +30,7 @@ const defined = <T extends object>(o: T) =>
 // Bar "ketik pintar" + mic + kamera. Semua jalur menghasilkan QuickDraft yang
 // diisi ke form oleh pemanggil — tidak ada yang langsung tersimpan, user
 // selalu melihat & mengonfirmasi dulu.
-export function SmartBar({ ctx, onDraft, className, autoStart }: Props) {
+export function SmartBar({ ctx, onDraft, className, autoStart, initialText }: Props) {
   const [text, setText] = useState("");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [canSpeak, setCanSpeak] = useState(false);
@@ -53,7 +56,7 @@ export function SmartBar({ ctx, onDraft, className, autoStart }: Props) {
 
   // Suara: AI dulu (paham kalimat bebas), parser lokal melengkapi field yang
   // kosong — dan jadi cadangan penuh kalau AI gagal/limit/offline.
-  const finishVoice = async (spoken: string) => {
+  const finishVoice = async (spoken: string, source: DraftSource = "voice") => {
     sessionRef.current = null;
     const said = spoken.trim();
     if (!said) { setStatus({ kind: "idle" }); return; }
@@ -63,9 +66,9 @@ export function SmartBar({ ctx, onDraft, className, autoStart }: Props) {
     try {
       const ai = await aiParse({ text: said });
       const { confidence, ...fields } = ai;
-      onDraft({ ...local, ...defined(fields) }, "voice", confidence === "low" ? "AI kurang yakin — cek lagi isinya." : undefined);
+      onDraft({ ...local, ...defined(fields) }, source, confidence === "low" ? "AI kurang yakin — cek lagi isinya." : undefined);
     } catch {
-      onDraft(local, "voice", "AI sedang tidak tersedia — diisi dari teks ucapan.");
+      onDraft(local, source, "AI sedang tidak tersedia — diisi dari teks saja.");
     }
     setText("");
     setStatus({ kind: "idle" });
@@ -83,6 +86,28 @@ export function SmartBar({ ctx, onDraft, className, autoStart }: Props) {
       onError: (msg) => { sessionRef.current = null; setStatus({ kind: "error", msg }); },
     });
     if (session) sessionRef.current = session;
+  };
+
+  useEffect(() => {
+    if (!initialText || autoStarted.current) return;
+    autoStarted.current = true;
+    void finishVoice(initialText.slice(0, 500), "text");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialText]);
+
+  // Tangkapan layar yang disalin Shortcut ke clipboard (butuh ketukan user).
+  const pasteImage = async () => {
+    lightTap();
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const type = item.types.find((t) => t.startsWith("image/"));
+        if (type) return void onPhoto(new File([await item.getType(type)], "layar.png", { type }));
+      }
+      setStatus({ kind: "error", msg: "Clipboard tidak berisi gambar. Jalankan lagi shortcut-nya." });
+    } catch {
+      setStatus({ kind: "error", msg: "Izin membaca clipboard ditolak — pakai tombol kamera untuk memilih gambar." });
+    }
   };
 
   useEffect(() => {
@@ -120,6 +145,15 @@ export function SmartBar({ ctx, onDraft, className, autoStart }: Props) {
 
   return (
     <div className={cn("space-y-2", className)}>
+      {autoStart === "tempel" && status.kind === "idle" && (
+        <button
+          type="button"
+          onClick={() => void pasteImage()}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 py-4 text-sm font-black text-white shadow-lg shadow-indigo-200 active:scale-[0.99]"
+        >
+          <ClipboardPaste size={18} /> Tempel tangkapan layar
+        </button>
+      )}
       {autoStart === "foto" && status.kind === "idle" && (
         <button
           type="button"

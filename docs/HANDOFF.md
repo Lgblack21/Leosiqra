@@ -91,7 +91,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   pintasan N tetap form) dan **Keyboard nominal** (pref baru `amountKeypad` standar/kalkulator →
   tombol kalkulator mini `AmountCalculator` di AddTransactionModal & Input Cepat; parser sendiri,
   tanpa eval). User yang dulu memilih suara/foto di onboarding kini tombol + membuka cara itu.
-- **Belum di-deploy**: tidak ada.
+- **Belum di-deploy**: Pengaturan → **Shortcut iPhone** (`ShortcutsView`, view `shortcut`): 3 resep Pintasan
+  tanpa token — suara (`/input-cepat?mulai=suara`), tangkapan layar (`?mulai=tempel` → tombol baca
+  gambar dari clipboard), SMS bank (`?teks=<isi pesan>` → dibaca AI/parser lokal). Semua hanya mengisi
+  form; user tetap menyimpan. Belum diuji di iPhone asli (Pintasan, clipboard Safari).
 
 ## Migrasi D1
 

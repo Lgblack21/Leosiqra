@@ -9,4 +9,4 @@ export const openSettings = (view: View = 'menu') => {
   window.dispatchEvent(new CustomEvent<View>(OPEN_SETTINGS_EVENT, { detail: view }));
 };
 
-export const SETTINGS_VIEWS_FROM_URL = ['menu', 'profil', 'paket', 'bantuan', 'umum', 'privasi', 'legal', 'kategori', 'mata-uang', 'kontak', 'notifikasi', 'ai', 'lainnya', 'referral', 'koin', 'fitur', 'target', 'rutin', 'periode', 'tag', 'cara-catat', 'keyboard'] as const;
+export const SETTINGS_VIEWS_FROM_URL = ['menu', 'profil', 'paket', 'bantuan', 'umum', 'privasi', 'legal', 'kategori', 'mata-uang', 'kontak', 'notifikasi', 'ai', 'lainnya', 'referral', 'koin', 'fitur', 'target', 'rutin', 'periode', 'tag', 'cara-catat', 'keyboard', 'shortcut'] as const;
