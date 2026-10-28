@@ -23,7 +23,7 @@ import {
   Banknote,
   BellRing,
 } from 'lucide-react';
-import { cn, formatIDR, formatMoney, isIncomingTransaction } from '@/lib/utils';
+import { cn, formatIDR, formatMoney, isIncomingTransaction, isInvestmentFlow } from '@/lib/utils';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { Modal } from '@/components/ui/Modal';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -62,6 +62,9 @@ const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.g
 const short = (n: number) =>
   Math.abs(n) >= 1e6 ? `Rp${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 2 })} jt` : Math.abs(n) >= 1e3 ? `Rp${Math.round(n / 1e3)} rb` : formatIDR(n);
 const toIdrAmount = (t: { amount: number; amountIDR?: number }) => Number(t.amountIDR) || Number(t.amount) || 0;
+// Belanja & pemasukan riil: beli/jual investasi tidak ikut (lihat isInvestmentFlow).
+const isSpend = (t: Transaction) => t.type === 'pengeluaran' && !isInvestmentFlow(t);
+const isIncome = (t: Transaction) => t.type === 'pemasukan' && !isInvestmentFlow(t);
 const BAR_COLORS = ['bg-indigo-600', 'bg-violet-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500', 'bg-pink-500', 'bg-slate-400'];
 const card = 'rounded-[24px] bg-white ring-1 ring-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04)]';
 
@@ -170,8 +173,8 @@ export default function MonthlyDashboard() {
     };
   }, [selectedMonth, selectedYear]);
 
-  const totalPemasukan = useMemo(() => transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + toIdrAmount(t), 0), [transactions]);
-  const totalPengeluaran = useMemo(() => transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + toIdrAmount(t), 0), [transactions]);
+  const totalPemasukan = useMemo(() => transactions.filter(isIncome).reduce((s, t) => s + toIdrAmount(t), 0), [transactions]);
+  const totalPengeluaran = useMemo(() => transactions.filter(isSpend).reduce((s, t) => s + toIdrAmount(t), 0), [transactions]);
   const totalInvestasi = useMemo(() => investments.reduce((s, i) => s + (Number(i.amountIDR) || Number(i.amountInvested) || 0), 0), [investments]);
   // Saldo Tabungan bersifat all-time (total setoran aktif di fitur Tabungan).
   const totalTabunganSaldo = useMemo(() => savings.reduce((s, item) => {
@@ -222,7 +225,7 @@ export default function MonthlyDashboard() {
   // Arus kas saja — catatan hutang/piutang (type "debt") bukan transaksi kas.
   const cashFlow = useMemo(() => allTransactions.filter((t) => t.type !== 'debt'), [allTransactions]);
   const todays = useMemo(() => (now ? cashFlow.filter((t) => sameDay(new Date(t.date), now)) : []), [cashFlow, now]);
-  const todaysSpend = todays.filter((t) => t.type === 'pengeluaran');
+  const todaysSpend = todays.filter(isSpend);
   const spentToday = todaysSpend.reduce((s, t) => s + toIdrAmount(t), 0);
   const recent = useMemo(
     () => [...cashFlow].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 8),
@@ -238,7 +241,7 @@ export default function MonthlyDashboard() {
     const count = new Map<string, { n: number; sum: number }>();
     for (const t of cashFlow) {
       const d = new Date(t.createdAt);
-      if (t.type !== 'pengeluaran' || Number.isNaN(d.getTime()) || d.getTime() < since || Math.abs(d.getHours() - hour) > 1) continue;
+      if (!isSpend(t) || Number.isNaN(d.getTime()) || d.getTime() < since || Math.abs(d.getHours() - hour) > 1) continue;
       const key = (t.note || t.subCategory || t.category || '').trim();
       if (!key) continue;
       const c = count.get(key) ?? { n: 0, sum: 0 };
@@ -255,7 +258,7 @@ export default function MonthlyDashboard() {
   // Ke mana uangmu: pengeluaran bulan terpilih per kategori + budget bulanan kategori itu.
   const categories = useMemo(() => {
     const byCat = new Map<string, number>();
-    for (const t of transactions) if (t.type === 'pengeluaran') byCat.set(t.category || 'Lainnya', (byCat.get(t.category || 'Lainnya') ?? 0) + toIdrAmount(t));
+    for (const t of transactions) if (isSpend(t)) byCat.set(t.category || 'Lainnya', (byCat.get(t.category || 'Lainnya') ?? 0) + toIdrAmount(t));
     const monthlyBudget = new Map(budgets.filter((b) => b.type === 'pengeluaran' && b.period === 'monthly').map((b) => [b.category, Number(b.amount) || 0]));
     return [...byCat.entries()].sort((a, b) => b[1] - a[1]).map(([category, spent]) => ({ category, spent, budget: monthlyBudget.get(category) ?? 0 }));
   }, [transactions, budgets]);
@@ -296,8 +299,9 @@ export default function MonthlyDashboard() {
   };
   const TxRow = ({ t, withDate = false }: { t: Transaction; withDate?: boolean }) => {
     const incoming = isIncomingTransaction(t) || (t.type === 'topup' && Boolean(t.subCategory?.includes('Masuk')));
-    // Pindah dana antar rekening sendiri / ke tabungan & investasi: netral, bukan belanja.
-    const transfer = !incoming && t.type !== 'pengeluaran';
+    // Pindah dana antar rekening sendiri / ke tabungan & investasi (termasuk beli
+    // investasi yang dicatat sebagai pengeluaran): netral, bukan belanja.
+    const transfer = !incoming && (t.type !== 'pengeluaran' || isInvestmentFlow(t));
     const visual = categoryVisual(t.category, t.type);
     return (
       <div className="flex items-center gap-3.5 py-3">
@@ -336,7 +340,7 @@ export default function MonthlyDashboard() {
     const budgeted = new Array<number>(days + 1).fill(0);
     const prev = new Array<number>(Math.max(days, prevDays) + 1).fill(0);
     for (const t of cashFlow) {
-      if (t.type !== 'pengeluaran') continue;
+      if (!isSpend(t)) continue;
       const d = new Date(t.date);
       if (d.getFullYear() === selectedYear && d.getMonth() === selectedMonth) {
         curr[d.getDate()] += toIdrAmount(t);
@@ -563,7 +567,7 @@ export default function MonthlyDashboard() {
               {paceDiff > 0 ? '▲' : '▼'} {short(Math.abs(paceDiff))} vs {prevMonthLabel}
             </span>
           ) : (
-            <span className="mt-0.5 block truncate text-[11px] text-slate-400 md:text-[12px]">{transactions.filter((t) => t.type === 'pengeluaran').length} transaksi</span>
+            <span className="mt-0.5 block truncate text-[11px] text-slate-400 md:text-[12px]">{transactions.filter(isSpend).length} transaksi</span>
           )}
         </Link>
         <Link href="/membership/transactions/daily" className={cn(card, 'min-w-0 p-3.5 transition-shadow hover:shadow-md md:p-5')}>

@@ -61,6 +61,15 @@ export const isIncomingTransaction = (trx: { type?: string; subCategory?: string
   return false;
 };
 
+// Beli/jual investasi = pindah dana ke/dari aset, BUKAN belanja/penghasilan
+// riil. Sama dengan isInvestmentPurchaseRow di Worker (cloudflare/src/index.ts):
+// transaksi tertaut investasi (relatedType "investasi"), atau pengeluaran
+// berkategori Investasi/Saham/Deposito (catatan lama tanpa tautan).
+export const isInvestmentFlow = (trx: { type?: string; category?: string; relatedType?: string }): boolean => {
+  if (trx.relatedType === 'investasi') return true;
+  return trx.type === 'pengeluaran' && (!!trx.category?.toLowerCase().includes('investasi') || trx.category === 'Saham' || trx.category === 'Deposito');
+};
+
 // "YYYY-MM-DD" dari tanggal LOKAL device (bukan UTC). `date.toISOString()`
 // selalu mengonversi ke UTC dulu — jadi antara tengah malam s.d. jam offset
 // timezone user (mis. 00:00-06:59 WIB/UTC+7), `.toISOString().split('T')[0]`

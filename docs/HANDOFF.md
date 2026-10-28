@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-28 malam (akun B selesai; semua live, main = run #5
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Header satu baris dengan lonceng |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Investasi bukan pengeluaran (dashboard) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -186,14 +186,16 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   + **Pemandangan langit** (`SkyScene.tsx`, animasi `.sky-*` di globals.css): langit ikut jam (pagi/siang/sore/
   malam), matahari melintas busur (05–19), bulan + bintang berkelip + bintang jatuh (malam), awan & burung, siluet
   kota (jendela menyala malam) + hutan. Tanpa blur. Di HP matahari/bulan di pojok kanan atas; dekor musiman cuma desktop.
-- **Belum di-deploy** (akun B): **judul kecil di header dihapus** (semua halaman member). `Header.tsx` tidak lagi
+- **Live (run #58)** (akun B): **judul kecil di header dihapus** (semua halaman member). `Header.tsx` tidak lagi
   fixed/berjudul; lonceng (+ tombol menu ≡ di HP) dipindah lewat portal ke `<HeaderSlot />` di baris judul halaman
   (Ringkasan, Transaksi, Laporan, Rekening, Semua fitur, Kotak Masuk, Tabungan, Transaksi berulang; dua slot
   `sm:hidden`/`hidden sm:flex` → yang terlihat dipakai). Halaman tanpa slot: baris tipis lonceng (+ ≡). `main`
   tidak lagi `pt-16`. Tambah slot ke halaman lain kalau mau sebaris.
-- **Temuan (belum diubah, tunggu Bos)**: dashboard web menghitung beli investasi sebagai pengeluaran (Leo bilang
-  "Paling banyak … Investasi 83%"), padahal Worker punya aturan `isInvestmentPurchaseRow` (index.ts:940) yang
-  mengecualikannya. Sudah begitu sejak versi lama.
+- **Belum di-deploy** (akun B): dashboard web tidak lagi menghitung **beli/jual investasi** sebagai
+  pengeluaran/pemasukan — `isInvestmentFlow` di `src/lib/utils.ts` (cermin `isInvestmentPurchaseRow` Worker,
+  index.ts:940: relatedType "investasi" atau pengeluaran berkategori Investasi/Saham/Deposito). Berlaku ke
+  Keluar/Masuk, hari ini, Ke mana uangmu, Ritme, jatah harian, kata-kata Leo; barisnya tampil netral di Catatan
+  terbaru. Halaman lain (Laporan, Transaksi) belum dicek memakai aturan yang sama.
 
 ## Migrasi D1
 
