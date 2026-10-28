@@ -3364,8 +3364,8 @@ interface TransactionInsertParams {
   // Khusus type "debt": saldo rekening langsung ikut berubah saat dicatat
   // (piutang = uang keluar, hutang tunai = uang masuk). Lihat debtBalanceDelta.
   applyDebtBalance?: boolean;
-  // Metadata tambahan di payload_json (mis. nama file impor). Diabaikan kalau
-  // baris debt sudah menulis penanda balanceApplied sendiri.
+  // Metadata tambahan di payload_json (mis. nama file impor, tags). Baris debt
+  // yang mengubah saldo tetap mendapat penanda balanceApplied.
   payload?: Record<string, unknown>;
 }
 
@@ -3447,7 +3447,9 @@ const insertTransactionRecord = async (env: Env, userId: string, params: Transac
       params.paymentStatus ?? null,
       params.relatedId ?? null,
       params.relatedType ?? null,
-      debtDelta !== 0 ? JSON.stringify({ balanceApplied: true }) : params.payload ? JSON.stringify(params.payload) : null,
+      debtDelta !== 0 || params.payload
+        ? JSON.stringify({ ...(params.payload ?? {}), ...(debtDelta !== 0 ? { balanceApplied: true } : {}) })
+        : null,
       nowIso(),
       nowIso()
     );
@@ -3480,6 +3482,23 @@ const insertTransactionRecord = async (env: Env, userId: string, params: Transac
 // tapi FK transactions.account_id ON DELETE RESTRICT membuat korban tidak bisa
 // menghapus rekeningnya. Nilai khusus ('General', 'Wallet', kosong) dilewati.
 const NON_ACCOUNT_IDS = new Set(["", "General", "Wallet"]);
+// Tag transaksi (label bebas di luar kategori) — disimpan di payload_json.tags.
+const TAG_MAX_PER_TX = 5;
+const sanitizeTagName = (raw: unknown) => {
+  if (typeof raw !== "string") return "";
+  const name = raw.replace(/[\u0000-\u001f<>]/g, "").replace(/\s+/g, " ").trim();
+  return name.length >= 1 && name.length <= 24 ? name : "";
+};
+const sanitizeTxTags = (raw: unknown): string[] | null => {
+  if (!Array.isArray(raw)) return null;
+  const out: string[] = [];
+  for (const t of raw) {
+    const name = sanitizeTagName(t);
+    if (name && !out.some((x) => x.toLowerCase() === name.toLowerCase())) out.push(name);
+    if (out.length >= TAG_MAX_PER_TX) break;
+  }
+  return out;
+};
 const assertOwnAccounts = async (env: Env, userId: string, ids: unknown[]): Promise<Response | null> => {
   const toCheck = [
     ...new Set(ids.filter((v): v is string => typeof v === "string" && !NON_ACCOUNT_IDS.has(v))),
@@ -3523,6 +3542,7 @@ async function handleCreateTransaction(request: Request, env: Env) {
     related_id?: string;
     related_type?: string;
     apply_balance?: boolean;
+    tags?: unknown;
   }>(request);
   const accountError = await assertOwnAccounts(env, authResult.session.user.id, [payload.account_id, payload.target_account_id]);
   if (accountError) return accountError;
@@ -3553,6 +3573,7 @@ async function handleCreateTransaction(request: Request, env: Env) {
     relatedType: payload.related_type,
     note: payload.note,
     applyDebtBalance: payload.apply_balance === true,
+    ...(sanitizeTxTags(payload.tags)?.length ? { payload: { tags: sanitizeTxTags(payload.tags) } } : {}),
   });
 
   return json({ ok: true, id, balance_applied: balanceApplied }, { status: 201 });
@@ -4223,7 +4244,10 @@ async function handleUpdateTransaction(request: Request, env: Env, transactionId
   ]);
 
   const entries = Object.entries(payload).filter(([key]) => allowed.has(key));
-  if (entries.length === 0) {
+  // tags → payload_json.tags (field lain di payload_json dipertahankan).
+  const tags = payload.tags !== undefined ? sanitizeTxTags(payload.tags) : null;
+  if (payload.tags !== undefined && tags === null) return json({ error: "Tag harus berupa daftar." }, { status: 400 });
+  if (entries.length === 0 && tags === null) {
     return json({ error: "Tidak ada field yang bisa diperbarui." }, { status: 400 });
   }
 
@@ -4243,8 +4267,11 @@ async function handleUpdateTransaction(request: Request, env: Env, transactionId
     }
   }
 
-  const assignments = entries.map(([key]) => `${key} = ?`).join(", ");
-  const values = entries.map(([, value]) => value);
+  const assignments = [
+    ...entries.map(([key]) => `${key} = ?`),
+    ...(tags !== null ? ["payload_json = json_set(CASE WHEN json_valid(payload_json) THEN payload_json ELSE '{}' END, '$.tags', json(?))"] : []),
+  ].join(", ");
+  const values = [...entries.map(([, value]) => value), ...(tags !== null ? [JSON.stringify(tags)] : [])];
 
   const result = await env.DB.prepare(
     `UPDATE transactions
@@ -11428,8 +11455,24 @@ type UserPrefs = {
   categoryKinds: Record<string, CategoryKindPref>;
   // Tanggal mulai periode anggaran bulanan (1–28; 1 = bulan kalender).
   budgetStartDay: number;
+  // Tag transaksi: dinyalakan user + daftar tag (nama unik, warna CATEGORY_COLORS).
+  tags: { enabled: boolean; list: { name: string; color: string }[] };
 };
-const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" }, categoryStyles: {}, avatar: null, saveAttachments: true, features: null, categoryKinds: {}, budgetStartDay: 1 };
+const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" }, categoryStyles: {}, avatar: null, saveAttachments: true, features: null, categoryKinds: {}, budgetStartDay: 1, tags: { enabled: false, list: [] } };
+const TAGS_MAX = 40;
+const sanitizeTagsPref = (raw: unknown): UserPrefs["tags"] => {
+  const r = raw && typeof raw === "object" ? (raw as { enabled?: unknown; list?: unknown }) : {};
+  const list: { name: string; color: string }[] = [];
+  for (const item of Array.isArray(r.list) ? r.list : []) {
+    const it = item as { name?: unknown; color?: unknown } | null;
+    const name = sanitizeTagName(it?.name);
+    if (!name || list.some((x) => x.name.toLowerCase() === name.toLowerCase())) continue;
+    const color = typeof it?.color === "string" && (CATEGORY_COLORS as readonly string[]).includes(it.color) ? it.color : "slate";
+    list.push({ name, color });
+    if (list.length >= TAGS_MAX) break;
+  }
+  return { enabled: r.enabled === true, list };
+};
 const sanitizeBudgetStartDay = (raw: unknown) => (Number.isInteger(raw) && (raw as number) >= 1 && (raw as number) <= 28 ? (raw as number) : 1);
 // Periode anggaran bulanan yang memuat `today` (YYYY-MM-DD, WIB): [from, to) —
 // mis. mulai tanggal 25 & hari ini 10 Nov → 2026-10-25 s/d sebelum 2026-11-25.
@@ -11488,6 +11531,7 @@ const readUserPrefs = async (env: Env, userId: string): Promise<UserPrefs> => {
     features: sanitizeFeatures(raw.features),
     categoryKinds: sanitizeCategoryKinds(raw.categoryKinds),
     budgetStartDay: sanitizeBudgetStartDay(raw.budgetStartDay),
+    tags: sanitizeTagsPref(raw.tags),
   };
 };
 
@@ -11504,7 +11548,7 @@ async function handleUserPreferences(request: Request, env: Env) {
   const current = await readUserPrefs(env, userId);
   if (request.method === "GET") return json({ item: current });
 
-  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown; categoryStyle?: unknown; avatar?: unknown; saveAttachments?: unknown; features?: unknown; categoryKind?: unknown; categoryKindsMerge?: unknown; budgetStartDay?: unknown }>(request);
+  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown; categoryStyle?: unknown; avatar?: unknown; saveAttachments?: unknown; features?: unknown; categoryKind?: unknown; categoryKindsMerge?: unknown; budgetStartDay?: unknown; tags?: unknown }>(request);
   const next: UserPrefs = { ...current, reminder: { ...current.reminder }, categoryStyles: { ...current.categoryStyles }, categoryKinds: { ...current.categoryKinds } };
   if (payload.goals !== undefined) {
     if (!Array.isArray(payload.goals) || payload.goals.length > PREF_GOALS.length || payload.goals.some((g) => !(PREF_GOALS as readonly unknown[]).includes(g))) {
@@ -11569,6 +11613,13 @@ async function handleUserPreferences(request: Request, env: Env) {
       next.categoryKinds[name] = k.kind as CategoryKindPref;
     }
   }
+  if (payload.tags !== undefined) {
+    const t = payload.tags as { enabled?: unknown; list?: unknown } | null;
+    if (!t || typeof t !== "object" || typeof t.enabled !== "boolean" || !Array.isArray(t.list) || t.list.length > TAGS_MAX) {
+      return json({ error: `Tag harus { enabled, list } dengan maksimal ${TAGS_MAX} tag.` }, { status: 400 });
+    }
+    next.tags = sanitizeTagsPref(t);
+  }
   if (payload.budgetStartDay !== undefined) {
     if (!Number.isInteger(payload.budgetStartDay) || (payload.budgetStartDay as number) < 1 || (payload.budgetStartDay as number) > 28) {
       return json({ error: "Awal periode harus tanggal 1–28." }, { status: 400 });
@@ -11586,10 +11637,10 @@ async function handleUserPreferences(request: Request, env: Env) {
         SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END,
               '$.prefs.goals', json(?), '$.prefs.inputMode', ?, '$.prefs.reminder', json(?), '$.prefs.categoryStyles', json(?),
               '$.prefs.avatar', json(?), '$.prefs.saveAttachments', json(?), '$.prefs.features', json(?), '$.prefs.categoryKinds', json(?),
-              '$.prefs.budgetStartDay', ?)
+              '$.prefs.budgetStartDay', ?, '$.prefs.tags', json(?))
       WHERE id = ?`
   )
-    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), JSON.stringify(next.categoryStyles), JSON.stringify(next.avatar), JSON.stringify(next.saveAttachments), JSON.stringify(next.features), JSON.stringify(next.categoryKinds), next.budgetStartDay, userId)
+    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), JSON.stringify(next.categoryStyles), JSON.stringify(next.avatar), JSON.stringify(next.saveAttachments), JSON.stringify(next.features), JSON.stringify(next.categoryKinds), next.budgetStartDay, JSON.stringify(next.tags), userId)
     .run();
   return json({ ok: true, item: next });
 }

@@ -55,6 +55,8 @@ import { LeoCoin } from '@/components/coin/LeoCoin';
 import { FeaturesView } from '@/components/settings/FeaturesView';
 import { RecurringView } from './RecurringView';
 import { BudgetPeriodView } from './BudgetPeriodView';
+import { TagsView } from './TagsView';
+import { useTags } from '@/lib/useTags';
 import { useBudgetStartDay } from '@/lib/useBudgetStartDay';
 import { TargetView } from '@/components/settings/TargetView';
 import { useFeatures } from '@/lib/useFeatures';
@@ -76,8 +78,8 @@ export interface PanelUser {
   avatar?: AvatarConfig | null;
 }
 
-export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil' | 'kontak' | 'notifikasi' | 'ai' | 'lainnya' | 'referral' | 'koin' | 'koin-riwayat' | 'kawanan' | 'app-mcp' | 'app-sheets' | 'app-calendar' | 'app-gmail' | 'app-gcal' | 'fitur' | 'target' | 'rutin' | 'periode';
-const PARENT: Partial<Record<View, View>> = { fitur: 'menu', target: 'umum', rutin: 'umum', periode: 'umum', 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum', referral: 'menu', koin: 'menu', 'koin-riwayat': 'referral', kawanan: 'referral', 'app-mcp': 'ai', 'app-sheets': 'ai', 'app-calendar': 'ai', 'app-gmail': 'ai', 'app-gcal': 'ai' };
+export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil' | 'kontak' | 'notifikasi' | 'ai' | 'lainnya' | 'referral' | 'koin' | 'koin-riwayat' | 'kawanan' | 'app-mcp' | 'app-sheets' | 'app-calendar' | 'app-gmail' | 'app-gcal' | 'fitur' | 'target' | 'rutin' | 'periode' | 'tag';
+const PARENT: Partial<Record<View, View>> = { fitur: 'menu', target: 'umum', rutin: 'umum', periode: 'umum', tag: 'umum', 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum', referral: 'menu', koin: 'menu', 'koin-riwayat': 'referral', kawanan: 'referral', 'app-mcp': 'ai', 'app-sheets': 'ai', 'app-calendar': 'ai', 'app-gmail': 'ai', 'app-gcal': 'ai' };
 
 const STATUS_LABEL: Record<PanelUser['status'], string> = {
   AKTIF: 'Aktif',
@@ -377,6 +379,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
 
   const features = useFeatures();
   const { day: budgetStartDay } = useBudgetStartDay();
+  const { tags: tagsPref } = useTags();
   const [editingFeatures, setEditingFeatures] = useState(false);
   const [coins, setCoins] = useState<number | null>(null);
   const [inboxCount, setInboxCount] = useState(0);
@@ -437,6 +440,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
     target: 'Target',
     rutin: 'Transaksi rutin',
     periode: 'Awal periode anggaran',
+    tag: 'Tag',
     'app-mcp': 'Claude & ChatGPT',
     'app-sheets': 'Google Sheets',
     'app-calendar': 'Google Calendar',
@@ -610,6 +614,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                     <Row icon={Repeat} title="Transaksi rutin" desc="Gaji, langganan, cicilan — dicatat otomatis" onClick={() => setView('rutin')} />
                     <Row icon={Coins} title="Mata uang" value="IDR" onClick={() => setView('mata-uang')} />
                     <Row icon={CalendarRange} title="Awal periode anggaran" value={`Tanggal ${budgetStartDay}`} onClick={() => setView('periode')} />
+                    <Row icon={Hash} title="Tag" value={tagsPref.enabled ? `${tagsPref.list.length} tag` : 'Mati'} onClick={() => setView('tag')} />
                   </Group>
                   <p className="px-1 pt-2 text-[14px] text-slate-500">Mencatat</p>
                   <Group>
@@ -637,6 +642,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
               {view === 'target' && <TargetView />}
               {view === 'rutin' && <RecurringView openTarget={() => setView('target')} />}
               {view === 'periode' && <BudgetPeriodView />}
+              {view === 'tag' && <TagsView openHref={(h) => go(h)()} />}
               {view === 'fitur' && <FeaturesView editing={editingFeatures} open={(href) => go(href)()} />}
 
               {view === 'legal' && (

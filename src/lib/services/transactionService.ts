@@ -28,8 +28,20 @@ export interface Transaction {
   relatedType?: 'investasi' | 'tabungan' | 'debt';
   // Hutang/piutang: saldo rekening langsung ikut berubah saat dicatat (server).
   applyBalance?: boolean;
+  // Label bebas di luar kategori (payload_json.tags di server).
+  tags?: string[];
   createdAt: Date;
 }
+
+const tagsFromPayload = (raw: unknown): string[] | undefined => {
+  if (typeof raw !== 'string' || !raw.includes('"tags"')) return undefined;
+  try {
+    const t = (JSON.parse(raw) as { tags?: unknown }).tags;
+    return Array.isArray(t) ? t.filter((x): x is string => typeof x === 'string') : undefined;
+  } catch {
+    return undefined;
+  }
+};
 
 export const transactionService = {
   // Create
@@ -66,6 +78,7 @@ export const transactionService = {
         note: data.note || null,
         status: data.status,
         ...(data.applyBalance ? { apply_balance: true } : {}),
+        ...(data.tags?.length ? { tags: data.tags } : {}),
       },
     });
     notifyCollectionChanged('transactions');
@@ -101,6 +114,7 @@ export const transactionService = {
         relatedId: (data.related_id as string | undefined) ?? undefined,
         relatedType: (data.related_type as 'investasi' | 'tabungan' | 'debt' | undefined) ?? undefined,
         note: (data.note as string | undefined) ?? undefined,
+        tags: tagsFromPayload(data.payload_json),
         currency: (data.currency as string | undefined) ?? 'IDR',
         date: data.date ? new Date(String(data.date)) : new Date(),
         createdAt: data.created_at ? new Date(String(data.created_at)) : new Date()
@@ -137,6 +151,7 @@ export const transactionService = {
         ...(data.date ? { date: data.date.toISOString() } : {}),
         ...(data.displayDate ? { display_date: data.displayDate } : {}),
         ...(data.note !== undefined ? { note: data.note } : {}),
+        ...(data.tags !== undefined ? { tags: data.tags } : {}),
       },
     });
     notifyCollectionChanged('transactions');

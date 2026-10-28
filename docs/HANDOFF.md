@@ -76,7 +76,12 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   Dipakai: Kategori & Anggaran (web), `/app/budget`, konteks asisten AI (`budgetUsage`), MCP
   `get_budgets` (`budgetPeriodBounds`). TIDAK dipakai (tetap bulan kalender): laporan bulanan,
   insight proyeksi budget, dashboard "Ke mana uangmu" (pakai pemilih bulan).
-- **Belum di-deploy**: tidak ada.
+- **Belum di-deploy**: **Tag** transaksi. Pref `$.prefs.tags` = { enabled, list: [{name, color}] }
+  (maks 40, warna = CATEGORY_COLORS). Tag per transaksi di `transactions.payload_json.tags` (maks 5;
+  POST `tags`, PUT `tags` lewat json_set — key lain di payload_json tetap). Pengaturan → Pengaturan →
+  Tag (`TagsView`), pemilih di `AddTransactionModal`, chip + filter `?tag=` + ubah tag per baris +
+  kolom Tag di CSV di Riwayat (`/membership/transactions/daily`). Belum: aplikasi HP (`/app`),
+  Tambah Cepat/AI/impor belum bisa memberi tag.
 
 ## Migrasi D1
 

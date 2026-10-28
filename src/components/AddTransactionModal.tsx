@@ -12,6 +12,8 @@ import { updateMemberTotals } from '@/lib/services/userService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { cn, formatCurrency, toLocalDateString } from '@/lib/utils';
+import { useTags } from '@/lib/useTags';
+import { TagPicker } from '@/components/tags/TagPicker';
 
 interface AddTransactionModalProps {
   userId: string;
@@ -26,6 +28,8 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [rates, setRates] = useState<ExchangeRates | null>(null);
   const [convertedAmount, setConvertedAmount] = useState<number>(0);
+  const { tags: tagsPref } = useTags();
+  const [tags, setTags] = useState<string[]>([]);
   
   // Form State
   const [formData, setFormData] = useState({
@@ -106,7 +110,8 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
         totalInterest: parseFloat(formData.totalInterest) || 0,
         date: new Date(formData.date),
         note: formData.note,
-        status: 'VERIFIED'
+        status: 'VERIFIED',
+        tags,
       });
 
       // Sinkronisasi lanjutan (ringkasan & saldo akun) bersifat non-fatal —
@@ -126,6 +131,7 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
       onClose();
 
       // Reset form
+      setTags([]);
       setFormData({
         date: toLocalDateString(),
         note: '',
@@ -215,6 +221,13 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
               required
             />
           </div>
+
+          {tagsPref.enabled && (
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tag <span className="normal-case tracking-normal font-medium">(opsional)</span></label>
+              <TagPicker value={tags} onChange={setTags} />
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <CurrencySelect 

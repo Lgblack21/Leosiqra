@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Trash2, Download, Plus, ChevronDown, Tags, Wallet, CalendarDays, X, Paperclip } from 'lucide-react';
+import { Search, Trash2, Download, Plus, ChevronDown, Tags, Wallet, CalendarDays, X, Paperclip, Hash } from 'lucide-react';
+import { useTags } from '@/lib/useTags';
+import { TagPicker, TagChip } from '@/components/tags/TagPicker';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { DatePicker } from '@/components/ui/DatePicker';
@@ -88,6 +90,9 @@ export default function DailyTransactionLogPage() {
   const [kind, setKind] = useState<Kind>('semua');
   const [category, setCategory] = useState('');
   const [accountId, setAccountId] = useState('');
+  const [tag, setTag] = useState('');
+  const [tagEditId, setTagEditId] = useState<string | null>(null);
+  const { tags: tagsPref, colorOf } = useTags();
   const [sort, setSort] = useState<Sort>('terbaru');
   const [shown, setShown] = useState(PAGE);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -117,7 +122,7 @@ export default function DailyTransactionLogPage() {
   // Daftar baru tiap filter berubah → mulai lagi dari halaman pertama.
   useEffect(() => {
     setShown(PAGE);
-  }, [period, pickedDate, kind, category, accountId, sort, searchQuery]);
+  }, [period, pickedDate, kind, category, accountId, tag, sort, searchQuery]);
 
   // Tautan dari Laporan/Rekening: ?kategori=…&rekening=…&periode=bulan|tahun|semua
   useEffect(() => {
@@ -125,6 +130,11 @@ export default function DailyTransactionLogPage() {
     const kat = params.get('kategori');
     const per = params.get('periode');
     const rek = params.get('rekening');
+    const tg = params.get('tag');
+    if (tg) {
+      setTag(tg);
+      if (!per) setPeriod('semua');
+    }
     if (kat) setCategory(kat);
     if (rek) setAccountId(rek);
     if (per === 'bulan' || per === 'tahun' || per === 'semua' || per === '30' || per === '90') setPeriod(per === 'tahun' ? 'tahun' : per);
@@ -157,8 +167,9 @@ export default function DailyTransactionLogPage() {
       if (kind === 'transfer' && !isMove(t)) return false;
       if (category && t.category !== category) return false;
       if (accountId && t.accountId !== accountId) return false;
+      if (tag && !(t.tags ?? []).some((x) => x.toLowerCase() === tag.toLowerCase())) return false;
       if (q) {
-        const hay = [t.note, t.category, t.subCategory, accountName.get(t.accountId)].filter(Boolean).join(' ').toLowerCase();
+        const hay = [t.note, t.category, t.subCategory, accountName.get(t.accountId), ...(t.tags ?? [])].filter(Boolean).join(' ').toLowerCase();
         const amountHit = qDigits.length >= 3 && String(Math.round(Number(t.amount) || 0)).includes(qDigits);
         if (!hay.includes(q) && !amountHit) return false;
       }
@@ -171,7 +182,21 @@ export default function DailyTransactionLogPage() {
     else if (sort === 'terlama') list.sort((a, b) => time(a) - time(b) || created(a) - created(b));
     else list.sort((a, b) => time(b) - time(a) || created(b) - created(a));
     return list;
-  }, [transactions, period, pickedDate, kind, category, accountId, searchQuery, sort, accountName]);
+  }, [transactions, period, pickedDate, kind, category, accountId, tag, searchQuery, sort, accountName]);
+  const tagOptions = useMemo(
+    () => [...new Set([...tagsPref.list.map((x) => x.name), ...transactions.flatMap((t) => t.tags ?? [])])].sort((a, b) => a.localeCompare(b, 'id')),
+    [transactions, tagsPref.list]
+  );
+  const setTxTags = async (t: Transaction, next: string[]) => {
+    if (!t.id) return;
+    const before = t.tags ?? [];
+    setTransactions((list) => list.map((x) => (x.id === t.id ? { ...x, tags: next } : x)));
+    try {
+      await transactionService.updateTransaction(t.id, { tags: next });
+    } catch {
+      setTransactions((list) => list.map((x) => (x.id === t.id ? { ...x, tags: before } : x)));
+    }
+  };
 
   const totalOut = useMemo(() => filtered.filter((t) => t.type === 'pengeluaran').reduce((s, t) => s + idr(t), 0), [filtered]);
   const totalIn = useMemo(() => filtered.filter((t) => t.type === 'pemasukan').reduce((s, t) => s + idr(t), 0), [filtered]);
@@ -231,7 +256,7 @@ export default function DailyTransactionLogPage() {
   };
 
   const exportCsv = () => {
-    const header = ['Tanggal', 'Jam dicatat', 'Jenis', 'Judul', 'Kategori', 'Sub kategori', 'Rekening', 'Mata uang', 'Nominal', 'Nominal IDR'];
+    const header = ['Tanggal', 'Jam dicatat', 'Jenis', 'Judul', 'Kategori', 'Sub kategori', 'Rekening', 'Mata uang', 'Nominal', 'Nominal IDR', 'Tag'];
     const rows = filtered.map((t) => {
       const created = new Date(t.createdAt);
       return [
@@ -245,6 +270,7 @@ export default function DailyTransactionLogPage() {
         t.currency || 'IDR',
         Number(t.amount) || 0,
         idr(t),
+        (t.tags ?? []).join(', '),
       ];
     });
     const csv = '﻿' + [header, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n');
@@ -260,7 +286,7 @@ export default function DailyTransactionLogPage() {
     const c = new Date(t.createdAt);
     return Number.isNaN(c.getTime()) ? '' : new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' }).format(c);
   };
-  const hasFilter = kind !== 'semua' || category || accountId || searchQuery || period !== 'bulan';
+  const hasFilter = kind !== 'semua' || category || accountId || tag || searchQuery || period !== 'bulan';
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 pb-12">
@@ -335,6 +361,17 @@ export default function DailyTransactionLogPage() {
               {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
           </label>
+          {(tagsPref.enabled || tagOptions.length > 0) && (
+            <label className={cn(chip(Boolean(tag)), 'relative flex items-center gap-2 pr-8')}>
+              <Hash size={15} />
+              <span className="max-w-[140px] truncate">{tag || 'Tag'}</span>
+              <ChevronDown size={14} className="absolute right-3" />
+              <select value={tag} onChange={(e) => setTag(e.target.value)} aria-label="Filter tag" className="absolute inset-0 cursor-pointer opacity-0">
+                <option value="">Semua tag</option>
+                {tagOptions.map((x) => <option key={x} value={x}>#{x}</option>)}
+              </select>
+            </label>
+          )}
           {period === 'tanggal' ? (
             <div className="flex shrink-0 items-center gap-1">
               <DatePicker value={pickedDate} onChange={setPickedDate} />
@@ -394,6 +431,11 @@ export default function DailyTransactionLogPage() {
                       <div className="min-w-0">
                         <p className="flex min-w-0 items-center gap-1.5 text-[15px] font-semibold text-slate-900">
                           <span className="truncate">{titleOf(t)}</span>
+                          {tagsPref.enabled && t.id && !t.tags?.length && tagEditId !== t.id && (
+                            <button type="button" onClick={() => setTagEditId(t.id!)} aria-label="Tambah tag" title="Tambah tag" className="shrink-0 rounded-md p-0.5 text-slate-300 hover:bg-slate-100 hover:text-indigo-600 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100">
+                              <Hash size={14} />
+                            </button>
+                          )}
                           {t.id && attachments.has(t.id) && (
                             <a
                               href={attachmentService.url(attachments.get(t.id)!)}
@@ -439,6 +481,27 @@ export default function DailyTransactionLogPage() {
                       >
                         <Trash2 size={15} />
                       </button>
+                      {((t.tags?.length ?? 0) > 0 || tagEditId === t.id) && (
+                        <div className="col-span-full -mt-1 flex flex-wrap items-center gap-1.5 pl-[58px] md:pl-[64px]">
+                          {tagEditId === t.id ? (
+                            <>
+                              <TagPicker value={t.tags ?? []} onChange={(next) => void setTxTags(t, next)} />
+                              <button type="button" onClick={() => setTagEditId(null)} className="rounded-full px-2.5 py-1 text-[12px] font-semibold text-indigo-600 hover:bg-indigo-50">Selesai</button>
+                            </>
+                          ) : (
+                            <>
+                              {(t.tags ?? []).map((x) => (
+                                <button key={x} type="button" onClick={() => setTag(x)} title={`Saring #${x}`}><TagChip name={x} color={colorOf(x)} /></button>
+                              ))}
+                              {tagsPref.enabled && t.id && (
+                                <button type="button" onClick={() => setTagEditId(t.id!)} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-slate-400 hover:bg-slate-100 hover:text-indigo-600 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100">
+                                  <Hash size={10} /> Ubah
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )}
                     </li>
                   );
                 })}
