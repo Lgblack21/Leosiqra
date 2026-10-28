@@ -162,6 +162,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   (globals.css): `--spacing` 0.22rem (semua jarak Tailwind ±12% lebih rapat) + ukuran `text-[Npx]` turun satu
   tingkat; dialog `sm:max-w-lg`. **Posisi gulir per tampilan** (`scrollPos` di SettingsPanel): sub-menu mulai dari
   atas, Kembali memulihkan posisi menu sebelumnya.
+- Sudah live (run #55): lapisan panel Pengaturan tanpa `backdrop-blur`. Bos melaporkan "kedipan hitam" saat buka
+  panel di tablet (Chrome Android); dari video: 1 frame bagian atas panel tidak tergambar (latar buram gelap
+  terlihat) — glitch compositing GPU dengan backdrop-filter. Video diambil sebelum run #55; BELUM dikonfirmasi
+  hilang. Kalau masih: coba hapus animasi spring `y` dialog / tambah `transform-gpu`.
 - **Belum di-deploy**: tidak ada. Branch kerja akun B: `claude/nifty-cannon-y181p6` (= main).
 
 ## Migrasi D1
