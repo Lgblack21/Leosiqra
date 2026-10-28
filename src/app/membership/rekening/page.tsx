@@ -4,9 +4,10 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Plus,
-  Edit2,
-  Trash2,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
+  ArrowUpDown,
   ShieldCheck,
   X,
   Eye,
@@ -30,10 +31,13 @@ import { useModal } from '@/context/ModalContext';
 import { cn, formatIDR, formatMoney } from '@/lib/utils';
 import { useFeedback } from '@/components/ui/Feedback';
 import { HeaderSlot } from '@/components/Header';
+import { AccountDetail } from '@/components/rekening/AccountDetail';
 
 // Rekening & dompet: total saldo, daftar rekening kas (bank, e-wallet,
 // tunai, investasi), tumpukan kartu kredit dengan jatuh tempo terdekat,
-// dan target tabungan. Rumus saldo & tagihan sama dengan Ringkasan
+// dan target tabungan. Ketuk rekening/kartu → detail (AccountDetail);
+// "Atur urutan" mengganti urutan yang dipakai semua daftar rekening. Halaman
+// Kartu Saya dilebur ke sini (2026-10-28). Rumus saldo & tagihan sama dengan Ringkasan
 // (balance dikonversi ke IDR; kartu kredit lewat lib/creditCard.ts).
 
 const TYPE_LABEL: Record<string, string> = {
@@ -73,6 +77,8 @@ export default function RekeningPage() {
   const [showSecurityBanner, setShowSecurityBanner] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [uid, setUid] = useState<string | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [reordering, setReordering] = useState(false);
 
   useEffect(() => onAuthStateChanged(auth, (u) => setUid(u?.uid ?? null)), []);
 
@@ -122,7 +128,10 @@ export default function RekeningPage() {
   };
   const money = (n: number, currency?: string) => (hidden ? 'Rp ••••••' : formatMoney(n, currency));
 
-  const handleDelete = async (id: string, name: string) => {
+  const handleDelete = async (acc: Account) => {
+    const id = acc.id;
+    const name = acc.name;
+    if (!id) return;
     const ok = await confirm({
       title: `Hapus rekening ${name}?`,
       message: 'Rekening hanya bisa dihapus kalau belum punya transaksi. Tindakan ini tidak bisa dibatalkan.',
@@ -133,6 +142,7 @@ export default function RekeningPage() {
     setDeletingId(id);
     try {
       await accountService.deleteAccount(id);
+      setDetailId(null);
       toast.success(`Rekening ${name} dihapus.`);
     } catch (e) {
       console.error(e);
@@ -169,10 +179,26 @@ export default function RekeningPage() {
     .sort((a, b) => (a.cycle!.daysUntilDue) - (b.cycle!.daysUntilDue))[0];
 
   const goalsWithTarget = goals.filter((g) => g.targetAmount && g.targetAmount > 0);
+
+  // Urutan rekening kas (kartu kredit tetap di belakang, urutannya sendiri).
+  // Optimis: sortOrder lokal langsung diganti, lalu disimpan ke server.
+  const move = (index: number, dir: -1 | 1) => {
+    const next = [...cashAccounts];
+    const j = index + dir;
+    if (j < 0 || j >= next.length) return;
+    [next[index], next[j]] = [next[j], next[index]];
+    const ids = [...next, ...cards].map((a) => a.id).filter((id): id is string => Boolean(id));
+    setAccounts((list) => list.map((a) => ({ ...a, sortOrder: a.id ? ids.indexOf(a.id) : a.sortOrder })));
+    accountService.reorderAccounts(ids).catch((e) => {
+      console.error('Gagal menyimpan urutan rekening:', e);
+      toast.error('Gagal menyimpan urutan baru. Silakan coba lagi.');
+      accountService.getUserAccounts('session').then(setAccounts).catch(console.error);
+    });
+  };
   const openCreate = () => { setEditingAccount(null); setIsModalOpen(true); };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-10 pb-12">
+    <div className="mx-auto max-w-5xl space-y-8 pb-12">
       {/* Judul + aksi */}
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-[30px] font-extrabold tracking-tight text-slate-900 md:text-[40px]">Rekening</h1>
@@ -216,11 +242,11 @@ export default function RekeningPage() {
           {Object.keys(fxRates).length > 0 && accounts.some((a) => a.currency && a.currency !== 'IDR') && ' · dikonversi ke IDR'}
         </p>
         {nearest && (
-          <Link href="/membership/cards" className="mt-2 inline-flex items-center gap-2 text-[15px] text-slate-600 hover:text-slate-900">
+          <button type="button" onClick={() => setDetailId(nearest.acc.id ?? null)} className="mt-2 inline-flex items-center gap-2 text-[15px] text-slate-600 hover:text-slate-900">
             <CreditCard size={17} className="text-slate-400" />
             Tagihan kartu {hidden ? '••••' : short(cardsUsedIdr)} · {nearest.cycle!.overdue ? 'lewat jatuh tempo' : 'jatuh tempo'} {dueText(nearest.cycle!.dueDate)}
             <ChevronRight size={16} className="text-slate-400" />
-          </Link>
+          </button>
         )}
       </section>
 
@@ -241,7 +267,11 @@ export default function RekeningPage() {
       <section>
         <div className="mb-3 flex items-baseline justify-between px-1">
           <h2 className="text-[22px] font-extrabold tracking-tight text-slate-900">Rekeningmu</h2>
-          <Link href="/membership/transactions/daily" className="text-[14px] font-bold text-indigo-600 hover:underline">Riwayat transaksi</Link>
+          {cashAccounts.length > 1 && (
+            <button type="button" onClick={() => setReordering((r) => !r)} className={cn('flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-bold', reordering ? 'bg-slate-900 text-white' : 'text-indigo-600 hover:bg-indigo-50')}>
+              <ArrowUpDown size={14} /> {reordering ? 'Selesai' : 'Atur urutan'}
+            </button>
+          )}
         </div>
         {loading ? (
           <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>
@@ -255,38 +285,46 @@ export default function RekeningPage() {
           </div>
         ) : (
           <ul className="divide-y divide-slate-100 overflow-hidden rounded-[24px] bg-white ring-1 ring-slate-100">
-            {cashAccounts.map((acc) => {
+            {cashAccounts.map((acc, i) => {
               const v = TYPE_EMOJI[acc.type] ?? { emoji: '🏦', tile: 'bg-slate-100' };
               const bal = acc.balance || 0;
-              return (
-                <li key={acc.id} className="group flex items-center gap-3.5 px-4 py-3 md:px-5">
-                  <Link href={`/membership/transactions/daily?rekening=${encodeURIComponent(acc.id ?? '')}&periode=semua`} className="flex min-w-0 flex-1 items-center gap-3.5">
-                    <span className={cn('flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-[22px]', v.tile)}>
-                      <LogoImage
-                        src={acc.logoUrl}
-                        alt={acc.name}
-                        fallbackText={acc.name.substring(0, 3).toUpperCase()}
-                        fallbackIcon={<span aria-hidden className={cn('flex h-full w-full items-center justify-center text-[22px]', v.tile)}>{v.emoji}</span>}
-                        className="h-full w-full object-cover"
-                      />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[16px] font-semibold text-slate-900">{acc.name}</p>
-                      <p className="truncate text-[13px] text-slate-500">{TYPE_LABEL[acc.type] ?? acc.type}{acc.currency && acc.currency !== 'IDR' ? ` · ${acc.currency}` : ''}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className={cn('whitespace-nowrap text-[16px] font-bold tabular-nums', bal < 0 ? 'text-rose-600' : 'text-slate-900')}>{money(bal, acc.currency)}</p>
-                      {acc.currency && acc.currency !== 'IDR' && !hidden && <p className="text-[12px] text-slate-400 tabular-nums">≈ {formatIDR(toIDR(bal, acc.currency))}</p>}
-                    </div>
-                  </Link>
-                  <div className="flex items-center md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100">
-                    <button onClick={() => { setEditingAccount(acc); setIsModalOpen(true); }} aria-label={`Ubah ${acc.name}`} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
-                      <Edit2 size={15} />
-                    </button>
-                    <button onClick={() => acc.id && handleDelete(acc.id, acc.name)} disabled={deletingId === acc.id} aria-label={`Hapus ${acc.name}`} className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-500 disabled:opacity-50">
-                      <Trash2 size={15} />
-                    </button>
+              const body = (
+                <>
+                  <span className={cn('flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-[22px]', v.tile)}>
+                    <LogoImage
+                      src={acc.logoUrl}
+                      alt={acc.name}
+                      fallbackText={acc.name.substring(0, 3).toUpperCase()}
+                      fallbackIcon={<span aria-hidden className={cn('flex h-full w-full items-center justify-center text-[22px]', v.tile)}>{v.emoji}</span>}
+                      className="h-full w-full object-cover"
+                    />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[16px] font-semibold text-slate-900">{acc.name}</p>
+                    <p className="truncate text-[13px] text-slate-500">{TYPE_LABEL[acc.type] ?? acc.type}{acc.currency && acc.currency !== 'IDR' ? ` · ${acc.currency}` : ''}</p>
                   </div>
+                  <div className="text-right">
+                    <p className={cn('whitespace-nowrap text-[16px] font-bold tabular-nums', bal < 0 ? 'text-rose-600' : 'text-slate-900')}>{money(bal, acc.currency)}</p>
+                    {acc.currency && acc.currency !== 'IDR' && !hidden && <p className="text-[12px] text-slate-400 tabular-nums">≈ {formatIDR(toIDR(bal, acc.currency))}</p>}
+                  </div>
+                </>
+              );
+              return (
+                <li key={acc.id}>
+                  {reordering ? (
+                    <div className="flex items-center gap-3.5 px-4 py-3 md:px-5">
+                      {body}
+                      <div className="flex flex-col">
+                        <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Naikkan ${acc.name}`} className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 disabled:opacity-25"><ChevronUp size={18} /></button>
+                        <button type="button" onClick={() => move(i, 1)} disabled={i === cashAccounts.length - 1} aria-label={`Turunkan ${acc.name}`} className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 disabled:opacity-25"><ChevronDown size={18} /></button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => setDetailId(acc.id ?? null)} className="flex w-full items-center gap-3.5 px-4 py-3 text-left hover:bg-slate-50 md:px-5">
+                      {body}
+                      <ChevronRight size={17} className="shrink-0 text-slate-300" />
+                    </button>
+                  )}
                 </li>
               );
             })}
@@ -299,7 +337,7 @@ export default function RekeningPage() {
         <section>
           <div className="mb-3 flex items-baseline justify-between px-1">
             <h2 className="text-[22px] font-extrabold tracking-tight text-slate-900">Kartu kredit</h2>
-            <Link href="/membership/cards" className="text-[14px] font-bold text-indigo-600 hover:underline">Lihat semua</Link>
+            <span className="text-[13px] text-slate-400">Ketuk kartu untuk detail tagihan</span>
           </div>
           {/* Kartu fisik: di HP digeser ke samping, di desktop dua kolom */}
           <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 no-scrollbar md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0">
@@ -312,11 +350,12 @@ export default function RekeningPage() {
               const urgent = cycle && cycle.amountDue > 0 && (cycle.overdue || cycle.daysUntilDue <= 5);
               const pct = usage.limit > 0 ? Math.min(100, (usage.used / usage.limit) * 100) : 0;
               return (
-                <Link
+                <button
                   key={acc.id}
-                  href="/membership/cards"
+                  type="button"
+                  onClick={() => setDetailId(acc.id ?? null)}
                   className={cn(
-                    'relative flex aspect-[1.586/1] w-[85%] shrink-0 snap-center flex-col justify-between overflow-hidden rounded-[22px] p-5 text-white shadow-[0_20px_40px_-20px_rgba(15,23,42,0.6)] transition-transform hover:-translate-y-0.5 sm:w-[360px] md:w-auto',
+                    'relative flex aspect-[1.586/1] w-[85%] shrink-0 snap-center flex-col justify-between overflow-hidden rounded-[22px] p-5 text-left text-white shadow-[0_20px_40px_-20px_rgba(15,23,42,0.6)] transition-transform hover:-translate-y-0.5 sm:w-[360px] md:w-auto',
                     getCardGradientClass(acc.cardColor, acc.type)
                   )}
                 >
@@ -338,7 +377,7 @@ export default function RekeningPage() {
                       </span>
                       <span className="truncate text-[17px] font-bold tracking-tight">{acc.name}</span>
                     </div>
-                    <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-[12px] font-semibold', urgent ? 'bg-white text-rose-600' : 'bg-white/20 backdrop-blur')}>{chip}</span>
+                    <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-[12px] font-semibold', urgent ? 'bg-white text-rose-600' : 'bg-white/25')}>{chip}</span>
                   </div>
 
                   <div className="relative flex items-center gap-3">
@@ -372,11 +411,11 @@ export default function RekeningPage() {
                       </div>
                     )}
                   </div>
-                </Link>
+                </button>
               );
             })}
           </div>
-          <Link href="/membership/cards" className="mt-3 flex items-center gap-3 rounded-[22px] bg-white px-5 py-4 ring-1 ring-slate-100 hover:bg-slate-50">
+          <button type="button" onClick={() => setDetailId((nearest ?? cardInfo[0]).acc.id ?? null)} className="mt-3 flex w-full items-center gap-3 rounded-[22px] bg-white px-5 py-4 text-left ring-1 ring-slate-100 hover:bg-slate-50">
             <div className="flex-1">
               <p className="text-[13px] text-slate-500">Tagihan kartu</p>
               <p className="text-[20px] font-extrabold tracking-tight text-slate-900 tabular-nums">{hidden ? 'Rp ••••••' : formatIDR(cardsUsedIdr)}</p>
@@ -388,7 +427,7 @@ export default function RekeningPage() {
               </div>
             )}
             <ChevronRight size={18} className="text-slate-300" />
-          </Link>
+          </button>
         </section>
       )}
 
@@ -423,6 +462,16 @@ export default function RekeningPage() {
           </ul>
         </section>
       )}
+
+      <AccountDetail
+        account={accounts.find((a) => a.id === detailId) ?? null}
+        transactions={transactions}
+        hidden={hidden}
+        deleting={deletingId === detailId}
+        onClose={() => setDetailId(null)}
+        onEdit={(a) => { setDetailId(null); setEditingAccount(a); setIsModalOpen(true); }}
+        onDelete={(a) => void handleDelete(a)}
+      />
 
       {uid && (
         <AccountModal

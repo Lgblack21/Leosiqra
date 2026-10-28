@@ -7,7 +7,6 @@ import {
   ArrowLeftRight,
   Repeat,
   Building2,
-  CreditCard,
   PiggyBank,
   TrendingUp,
   Briefcase,
@@ -58,7 +57,6 @@ export const keuanganNav: NavItem[] = [
 
 export const fiturNav: NavItem[] = [
   { label: 'AI Leosiqra', href: '/membership/ai-leosiqra', icon: Bot },
-  { label: 'Kartu Saya', href: '/membership/cards', icon: CreditCard },
   { label: 'Tabungan', href: '/membership/tabungan', icon: PiggyBank },
   { label: 'Hutang & Piutang', href: '/membership/transactions/debt', icon: HandCoins },
   { label: 'Investasi', href: '/membership/investment', icon: TrendingUp },
@@ -87,7 +85,6 @@ export const navGroups: NavGroup[] = [
     icon: Building2,
     items: [
       { label: 'Rekening', href: '/membership/rekening', icon: Building2 },
-      { label: 'Kartu Saya', href: '/membership/cards', icon: CreditCard },
       { label: 'Tabungan', href: '/membership/tabungan', icon: PiggyBank },
       { label: 'Dompet Bersama', href: '/membership/dompet-bersama', icon: Users },
     ],

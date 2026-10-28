@@ -1,5 +1,5 @@
 import {
-  Bot, CreditCard, PiggyBank, HandCoins, TrendingUp, ArrowLeftRight, Repeat, Users, Globe, CalendarRange, ShieldCheck, UploadCloud, Inbox,
+  Bot, PiggyBank, HandCoins, TrendingUp, ArrowLeftRight, Repeat, Users, Globe, CalendarRange, ShieldCheck, UploadCloud, Inbox,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -16,7 +16,6 @@ export type Feature = { id: FeatureId; label: string; href: string; icon: Lucide
 
 export const FEATURES: Feature[] = [
   { id: 'ai', label: 'AI Leosiqra', href: '/membership/ai-leosiqra', icon: Bot, tint: 'from-indigo-50 to-indigo-100 text-indigo-600' },
-  { id: 'kartu', label: 'Kartu Saya', href: '/membership/cards', icon: CreditCard, tint: 'from-slate-50 to-slate-200 text-slate-700' },
   { id: 'tabungan', label: 'Tabungan', href: '/membership/tabungan', icon: PiggyBank, tint: 'from-rose-50 to-rose-100 text-rose-500' },
   { id: 'hutang', label: 'Hutang & Piutang', href: '/membership/transactions/debt', icon: HandCoins, tint: 'from-orange-50 to-orange-100 text-orange-500' },
   { id: 'investasi', label: 'Investasi', href: '/membership/investment', icon: TrendingUp, tint: 'from-blue-50 to-blue-100 text-blue-600' },
@@ -31,7 +30,10 @@ export const FEATURES: Feature[] = [
 ];
 
 // Bawaan = isi menu samping sebelum fitur ini ada (perilaku lama tidak berubah).
-export const DEFAULT_FEATURES: FeatureId[] = ['ai', 'kartu', 'tabungan', 'hutang', 'investasi'];
+// 'kartu' (Kartu Saya) dihapus 2026-10-28 — dilebur ke Rekening. Id-nya tetap
+// sah di tipe & Worker (preferensi lama), tapi tidak lagi ditampilkan.
+export const DEFAULT_FEATURES: FeatureId[] = ['ai', 'tabungan', 'hutang', 'investasi'];
 
 const BY_ID = new Map(FEATURES.map((f) => [f.id, f]));
+export const isShownFeature = (id: string) => BY_ID.has(id as FeatureId);
 export const featuresFromIds = (ids: readonly string[]) => ids.map((id) => BY_ID.get(id as FeatureId)).filter((f): f is Feature => Boolean(f));

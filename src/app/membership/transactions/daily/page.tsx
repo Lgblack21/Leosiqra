@@ -10,7 +10,7 @@ import { DatePicker } from '@/components/ui/DatePicker';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
-import { cn, isIncomingTransaction, formatIDR, formatMoney, toLocalDateString } from '@/lib/utils';
+import { cn, isIncomingTransaction, isInvestmentFlow, formatIDR, formatMoney, toLocalDateString } from '@/lib/utils';
 import { categoryVisual, useCategoryStyles } from '@/lib/categoryEmoji';
 import { useFeedback } from '@/components/ui/Feedback';
 import { usePrimaryAdd } from '@/lib/useRecordingPrefs';
@@ -40,12 +40,22 @@ const KINDS: { id: Kind; label: string }[] = [
   { id: 'pemasukan', label: 'Pemasukan' },
   { id: 'transfer', label: 'Transfer & pindah dana' },
 ];
-const PAGE = 150;
+const PAGE = 60;
 
 const idr = (t: Transaction) => Number(t.amountIDR) || Number(t.amount) || 0;
+// Nominal kartu ringkasan: ringkas di HP (kartu sempit), lengkap di desktop.
+const Amount = ({ value }: { value: number }) => (
+  <>
+    <span className="md:hidden">{Math.abs(value) >= 1e6 ? `Rp${(Math.abs(value) / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 2 })} jt` : formatIDR(Math.abs(value))}</span>
+    <span className="hidden md:inline">{formatIDR(Math.abs(value))}</span>
+  </>
+);
 const isIncoming = (t: Transaction) => isIncomingTransaction(t) || (t.type === 'topup' && Boolean(t.subCategory?.includes('Masuk')));
-// Transfer/top up, setor tabungan & beli investasi: memindah uang sendiri, bukan belanja.
-const isMove = (t: Transaction) => t.type !== 'pemasukan' && t.type !== 'pengeluaran';
+// Transfer/top up, setor tabungan & beli/jual investasi: memindah uang sendiri,
+// bukan belanja/penghasilan (investasi lewat isInvestmentFlow, sama dengan Worker).
+const isMove = (t: Transaction) => (t.type !== 'pemasukan' && t.type !== 'pengeluaran') || isInvestmentFlow(t);
+const isSpend = (t: Transaction) => t.type === 'pengeluaran' && !isMove(t);
+const isEarn = (t: Transaction) => t.type === 'pemasukan' && !isMove(t);
 const titleOf = (t: Transaction) => t.note || t.subCategory || t.category || 'Transaksi';
 const dayKey = (d: Date) => toLocalDateString(d);
 
@@ -166,8 +176,8 @@ export default function DailyTransactionLogPage() {
     const list = transactions.filter((t) => {
       const d = new Date(t.date);
       if (period === 'tanggal' ? dayKey(d) !== picked : d.getTime() < from) return false;
-      if (kind === 'pengeluaran' && t.type !== 'pengeluaran') return false;
-      if (kind === 'pemasukan' && t.type !== 'pemasukan') return false;
+      if (kind === 'pengeluaran' && !isSpend(t)) return false;
+      if (kind === 'pemasukan' && !isEarn(t)) return false;
       if (kind === 'transfer' && !isMove(t)) return false;
       if (category && t.category !== category) return false;
       if (accountId && t.accountId !== accountId) return false;
@@ -202,8 +212,9 @@ export default function DailyTransactionLogPage() {
     }
   };
 
-  const totalOut = useMemo(() => filtered.filter((t) => t.type === 'pengeluaran').reduce((s, t) => s + idr(t), 0), [filtered]);
-  const totalIn = useMemo(() => filtered.filter((t) => t.type === 'pemasukan').reduce((s, t) => s + idr(t), 0), [filtered]);
+  const totalOut = useMemo(() => filtered.filter(isSpend).reduce((s, t) => s + idr(t), 0), [filtered]);
+  const totalIn = useMemo(() => filtered.filter(isEarn).reduce((s, t) => s + idr(t), 0), [filtered]);
+  const totalMove = useMemo(() => filtered.filter(isMove).length, [filtered]);
 
   // Dikelompokkan per hari (urutan "terbesar" tidak dikelompokkan supaya urutannya tetap terlihat).
   const groups = useMemo(() => {
@@ -226,8 +237,8 @@ export default function DailyTransactionLogPage() {
         key,
         label,
         items,
-        out: items.filter((t) => t.type === 'pengeluaran').reduce((s, t) => s + idr(t), 0),
-        in: items.filter((t) => t.type === 'pemasukan').reduce((s, t) => s + idr(t), 0),
+        out: items.filter(isSpend).reduce((s, t) => s + idr(t), 0),
+        in: items.filter(isEarn).reduce((s, t) => s + idr(t), 0),
       };
     });
   }, [filtered, shown, sort]);
@@ -300,7 +311,9 @@ export default function DailyTransactionLogPage() {
         <div className="min-w-0 flex-1">
           <h1 className="text-[30px] font-extrabold tracking-tight text-slate-900 md:text-[40px]">Transaksi</h1>
           <p className="mt-1 text-[15px] text-slate-500">
-            {loading ? 'Memuat…' : `${filtered.length} transaksi · keluar ${formatIDR(totalOut)}${totalIn > 0 ? ` · masuk ${formatIDR(totalIn)}` : ''}`}
+            {loading
+              ? 'Memuat…'
+              : `${filtered.length} transaksi · ${period === 'tanggal' ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(pickedDate) : PERIODS.find((p) => p.id === period)?.label.toLowerCase()}`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -324,6 +337,27 @@ export default function DailyTransactionLogPage() {
           <HeaderSlot />
         </div>
       </div>
+
+      {/* Ringkasan periode & filter yang sedang dipakai */}
+      {!loading && (
+        <div className="grid grid-cols-3 gap-2.5 md:gap-4">
+          <div className="min-w-0 rounded-[20px] bg-white p-3.5 ring-1 ring-slate-100 md:p-5">
+            <p className="text-[12px] font-semibold text-slate-500 md:text-[13px]">Keluar</p>
+            <p className="mt-1 truncate text-[15px] font-extrabold tracking-tight text-slate-900 tabular-nums md:text-[22px]"><Amount value={totalOut} /></p>
+          </div>
+          <div className="min-w-0 rounded-[20px] bg-white p-3.5 ring-1 ring-slate-100 md:p-5">
+            <p className="text-[12px] font-semibold text-slate-500 md:text-[13px]">Masuk</p>
+            <p className="mt-1 truncate text-[15px] font-extrabold tracking-tight text-emerald-600 tabular-nums md:text-[22px]"><Amount value={totalIn} /></p>
+          </div>
+          <div className="min-w-0 rounded-[20px] bg-white p-3.5 ring-1 ring-slate-100 md:p-5">
+            <p className="text-[12px] font-semibold text-slate-500 md:text-[13px]">Selisih</p>
+            <p className={cn('mt-1 truncate text-[15px] font-extrabold tracking-tight tabular-nums md:text-[22px]', totalIn - totalOut >= 0 ? 'text-slate-900' : 'text-rose-600')}>
+              {totalIn - totalOut >= 0 ? '+' : '−'}<Amount value={totalIn - totalOut} />
+            </p>
+            {totalMove > 0 && <p className="hidden truncate text-[12px] text-slate-400 md:block">{totalMove} transfer & pindah dana tidak dihitung</p>}
+          </div>
+        </div>
+      )}
 
       {/* Cari + periode */}
       <div className="space-y-3">

@@ -37,14 +37,14 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = "max-w-md" 
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[88] flex items-center justify-center p-4 sm:p-6 mt-16 lg:mt-0">
+        <div className="fixed inset-0 z-[88] flex items-center justify-center p-4 sm:p-6">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm"
+            className="fixed inset-0 bg-slate-900/40"
           />
 
           {/* Modal Panel */}
@@ -56,7 +56,7 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = "max-w-md" 
             className={`relative w-full ${maxWidth} bg-white rounded-[24px] md:rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]`}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 z-10 bg-white/80 backdrop-blur-md sticky top-0">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 z-10 bg-white sticky top-0">
               <h3 className="text-lg font-black text-slate-900">{title}</h3>
               <button
                 onClick={onClose}

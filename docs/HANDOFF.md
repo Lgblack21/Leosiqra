@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-28 malam (akun B selesai; semua live, main = run #5
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Investasi bukan pengeluaran (dashboard) |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Kartu Saya → Rekening, rapikan Transaksi/Laporan |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -196,6 +196,14 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   index.ts:940: relatedType "investasi" atau pengeluaran berkategori Investasi/Saham/Deposito). Berlaku ke
   Keluar/Masuk, hari ini, Ke mana uangmu, Ritme, jatah harian, kata-kata Leo; barisnya tampil netral di Catatan
   terbaru. Halaman lain (Laporan, Transaksi) belum dicek memakai aturan yang sama.
+- **Belum di-deploy** (akun B): **Kartu Saya dihapus, dilebur ke Rekening** + rapikan Transaksi/Laporan/Rekening.
+  Rekening: ketuk rekening/kartu → `AccountDetail` (saldo atau limit/terpakai/sisa, siklus tagihan kartu, masuk/keluar
+  bulan ini, 8 transaksi terakhir, Ubah/Hapus); "Atur urutan" ↑↓ (reorderAccounts, dicek tersimpan setelah reload).
+  `/membership/cards` kini cuma redirect ke Rekening (notifikasi lama). Dihapus dari menu, Fitur (id 'kartu' tetap sah
+  tapi disaring `isShownFeature`), DEFAULT_FEATURES, Panduan; push tagihan kartu Worker → `/membership/rekening`
+  (perlu deploy Worker — ikut workflow). Transaksi: kartu Keluar/Masuk/Selisih, beli/jual investasi = pindah dana
+  (`isInvestmentFlow`), PAGE 60. Laporan: 3 kartu ringkasan, kontrol satu baris, donat + daftar berdampingan,
+  investasi dikecualikan. `Modal` bersama: tanpa backdrop-blur & tanpa `mt-16` sisa header lama.
 
 ## Migrasi D1
 

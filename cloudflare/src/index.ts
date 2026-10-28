@@ -12269,7 +12269,7 @@ const sendCreditCardDueReminders = async (env: Env) => {
         card.user_id,
         `Tagihan ${card.name} jatuh tempo ${when}`,
         `Tagihan ${formatMoneyForPush(cycle.amountDue, currency)} · minimum ${formatMoneyForPush(cycle.minPayment, currency)} · jatuh tempo ${dueText}.`,
-        "/membership/cards"
+        "/membership/rekening"
       );
     } catch (error) {
       console.error("Gagal memproses pengingat kartu kredit", card.id, error);

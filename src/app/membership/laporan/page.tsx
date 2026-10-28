@@ -7,15 +7,16 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { categoryVisual, useCategoryStyles } from '@/lib/categoryEmoji';
-import { cn, formatIDR } from '@/lib/utils';
+import { cn, formatIDR, isInvestmentFlow } from '@/lib/utils';
 import { openSettings } from '@/lib/settingsPanel';
 import { HeaderSlot } from '@/components/Header';
 
 // Laporan pengeluaran Bulanan / Tahunan: total vs pemasukan, tren per
 // bulan (atau per hari), perbandingan kumulatif dengan periode sebelumnya,
 // porsi per kategori, kategori dari waktu ke waktu, dan tempat teratas.
-// Hanya pemasukan/pengeluaran (amountIDR) — transfer, tabungan, investasi
-// dan catatan hutang bukan pengeluaran.
+// Hanya pemasukan/pengeluaran (amountIDR) — transfer, tabungan, beli/jual
+// investasi (isInvestmentFlow, sama dengan Worker) dan catatan hutang bukan
+// pengeluaran.
 
 type Mode = 'bulanan' | 'tahunan';
 
@@ -61,7 +62,7 @@ export default function LaporanPage() {
     const load = () =>
       transactionService
         .getUserTransactions('session')
-        .then((list) => active && setAll(list.filter((t) => t.type === 'pengeluaran' || t.type === 'pemasukan')))
+        .then((list) => active && setAll(list.filter((t) => (t.type === 'pengeluaran' || t.type === 'pemasukan') && !isInvestmentFlow(t))))
         .catch(console.error)
         .finally(() => active && setLoading(false));
     load();
@@ -178,7 +179,7 @@ export default function LaporanPage() {
   const focused = cats.find((c) => c.name === focus);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-10 pb-12">
+    <div className="mx-auto max-w-5xl space-y-8 pb-12">
       <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-[30px] font-extrabold tracking-tight text-slate-900 md:text-[40px]">Laporan</h1>
@@ -190,9 +191,6 @@ export default function LaporanPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
-          <button type="button" onClick={() => openSettings('kategori')} className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">
-            <Gauge size={16} /> Anggaran
-          </button>
           <div className="flex rounded-full bg-slate-200/60 p-1">
             {(['bulanan', 'tahunan'] as Mode[]).map((m) => (
               <button
@@ -210,6 +208,9 @@ export default function LaporanPage() {
             <span className="min-w-[110px] text-center text-[14px] font-bold text-slate-900">{mode === 'tahunan' ? year : `${MONTHS[month]} ${year}`}</span>
             <button type="button" onClick={() => step(1)} disabled={atLatest} aria-label="Periode berikutnya" className="rounded-full p-2.5 text-slate-500 hover:bg-slate-50 disabled:opacity-30"><ChevronRight size={17} /></button>
           </div>
+          <button type="button" onClick={() => openSettings('kategori')} className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 sm:ml-auto">
+            <Gauge size={16} /> Anggaran
+          </button>
         </div>
       </div>
 
@@ -221,15 +222,26 @@ export default function LaporanPage() {
         </div>
       ) : (
         <>
-          {/* Total */}
-          <section>
-            <p className="text-[15px] font-semibold text-slate-500">Pengeluaran {periodLabel}</p>
-            <p className="mt-1 text-[44px] font-extrabold leading-none tracking-tight text-slate-900 tabular-nums md:text-[60px]">{formatIDR(total)}</p>
-            <p className="mt-3 text-[15px] text-slate-500">
-              dari pemasukan <span className="font-bold text-emerald-600">{short(income)}</span>
-              {' · '}
-              {income - total >= 0 ? <>sisa <span className="font-bold text-slate-900">{short(income - total)}</span></> : <>minus <span className="font-bold text-rose-600">{short(total - income)}</span></>}
-            </p>
+          {/* Total: keluar (vs periode lalu), masuk, sisa */}
+          <section className="grid grid-cols-2 gap-3 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)] md:gap-4">
+            <div className="col-span-2 rounded-[24px] bg-white p-5 ring-1 ring-slate-100 md:col-span-1 md:p-6">
+              <p className="text-[14px] font-semibold text-slate-500">Pengeluaran {periodLabel}</p>
+              <p className="mt-1 text-[38px] font-extrabold leading-none tracking-tight text-slate-900 tabular-nums md:text-[44px]">{formatIDR(total)}</p>
+              {prevTotal > 0 && (
+                <p className={cn('mt-2 text-[13px] font-semibold', total > prevTotal ? 'text-rose-600' : 'text-emerald-600')}>
+                  {total > prevTotal ? '▲' : '▼'} {short(Math.abs(total - prevTotal))} vs {mode === 'tahunan' ? year - 1 : MONTHS_LONG[prev.m ?? 0]} ({short(prevTotal)}{(mode === 'tahunan' ? isCurYear : isCurMonth) ? ', penuh' : ''})
+                </p>
+              )}
+            </div>
+            <div className="rounded-[24px] bg-white p-4 ring-1 ring-slate-100 md:p-6">
+              <p className="text-[13px] font-semibold text-slate-500 md:text-[14px]">Pemasukan</p>
+              <p className="mt-1 truncate text-[20px] font-extrabold tracking-tight text-emerald-600 tabular-nums md:text-[26px]">{formatIDR(income)}</p>
+            </div>
+            <div className="rounded-[24px] bg-white p-4 ring-1 ring-slate-100 md:p-6">
+              <p className="text-[13px] font-semibold text-slate-500 md:text-[14px]">{income - total >= 0 ? 'Sisa' : 'Minus'}</p>
+              <p className={cn('mt-1 truncate text-[20px] font-extrabold tracking-tight tabular-nums md:text-[26px]', income - total >= 0 ? 'text-slate-900' : 'text-rose-600')}>{formatIDR(Math.abs(income - total))}</p>
+              {income > 0 && <p className="text-[12px] text-slate-400">{Math.round((Math.max(0, income - total) / income) * 100)}% dari pemasukan</p>}
+            </div>
           </section>
 
           {/* Tren batang */}
@@ -353,8 +365,8 @@ export default function LaporanPage() {
             {cats.length === 0 ? (
               <p className="mt-4 rounded-[24px] bg-white p-8 text-center text-[14px] text-slate-500 ring-1 ring-slate-100">Belum ada pengeluaran di periode ini.</p>
             ) : (
-              <>
-                <div className="my-6 flex justify-center">
+              <div className="mt-4 grid items-start gap-6 md:grid-cols-[240px_minmax(0,1fr)]">
+                <div className="flex justify-center md:sticky md:top-6">
                   <div className="relative h-56 w-56">
                     <svg viewBox="0 0 180 180" className="h-full w-full -rotate-90">
                       {cats.map((c, i) => {
@@ -408,7 +420,7 @@ export default function LaporanPage() {
                     );
                   })}
                 </ul>
-              </>
+              </div>
             )}
           </section>
 

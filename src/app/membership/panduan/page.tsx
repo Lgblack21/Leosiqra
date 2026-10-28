@@ -64,8 +64,7 @@ const sections: GuideSection[] = [
     title: 'Rekening & Aset',
     subtitle: 'Tempat uangmu disimpan',
     items: [
-      { name: 'Rekening', desc: 'Daftar semua akun keuangan kamu (bank, e-wallet, cash, kartu kredit) beserta saldo & mata uang masing-masing. Di sinilah kamu menambah rekening baru pertama kali.' },
-      { name: 'Kartu Saya', desc: 'Tampilan kartu untuk semua rekeningmu — pilih satu kartu untuk lihat saldo, uang masuk/keluar, dan transaksi terakhirnya. Untuk kartu kredit & paylater, ditampilkan limit, terpakai, dan sisa limit yang dihitung otomatis dari transaksi. Urutan kartu bisa diatur dengan drag & drop.' },
+      { name: 'Rekening', desc: 'Daftar semua akun keuangan kamu (bank, e-wallet, cash, kartu kredit) beserta saldo & mata uang masing-masing. Ketuk satu rekening untuk lihat uang masuk/keluar bulan ini dan transaksi terakhirnya; untuk kartu kredit & paylater ada limit, terpakai, sisa limit, dan tagihan + jatuh tempo. Urutan rekening bisa diatur lewat tombol Atur urutan.' },
       { name: 'Tabungan', desc: 'Catat setoran ke tujuan tabungan tertentu (dana darurat, liburan, dll) dari rekening manapun — total tersimpan otomatis dijumlah lintas rekening/mata uang.' },
     ],
   },
