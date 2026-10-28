@@ -421,6 +421,32 @@ html[data-daypart="sore"] .auth-greet[data-p="sore"], html[data-daypart="malam"]
 .leo-season-float { animation: leo-season-float 4.5s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .leo-season-float { animation: none; } }
 
+/* Pemandangan kartu sapaan Ringkasan (components/dashboard/SkyScene.tsx). */
+@keyframes sky-twinkle { 0%, 100% { opacity: 0.25; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.15); } }
+.sky-twinkle { animation: sky-twinkle 3.2s ease-in-out infinite; }
+@keyframes sky-shoot { 0%, 86% { opacity: 0; transform: translate(0, 0) rotate(18deg); } 88% { opacity: 1; } 100% { opacity: 0; transform: translate(260px, 84px) rotate(18deg); } }
+.sky-shoot { animation: sky-shoot 9s ease-in infinite; }
+@keyframes sky-spin { to { transform: rotate(360deg); } }
+.sky-spin { animation: sky-spin 40s linear infinite; }
+@keyframes sky-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+.sky-pulse { animation: sky-pulse 4s ease-in-out infinite; }
+@keyframes sky-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.sky-float { animation: sky-float 6s ease-in-out infinite; }
+@keyframes sky-cloud { from { transform: translateX(-180px); } to { transform: translateX(110vw); } }
+.sky-cloud { animation: sky-cloud linear infinite; }
+@keyframes sky-birds { from { transform: translate(-100px, 0); } 50% { transform: translate(55vw, -14px); } to { transform: translate(110vw, 6px); } }
+.sky-birds { animation: sky-birds 32s linear infinite; }
+@keyframes sky-flap { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.4); } }
+.sky-flap { transform-box: fill-box; transform-origin: center; animation: sky-flap 0.6s ease-in-out infinite; }
+@keyframes sky-window { 0%, 100% { opacity: 1; } 45% { opacity: 0.25; } }
+.sky-window { animation: sky-window 7s ease-in-out infinite; }
+@keyframes sky-blink { 0%, 60%, 100% { opacity: 0.2; } 70%, 90% { opacity: 1; } }
+.sky-blink { animation: sky-blink 2.4s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .sky-twinkle, .sky-shoot, .sky-spin, .sky-pulse, .sky-float, .sky-cloud, .sky-birds, .sky-flap, .sky-window, .sky-blink { animation: none; }
+  .sky-shoot { display: none; }
+}
+
 /* ===== Mode gelap web (bertahap) =====
    Scope .web-dark dipasang di kerangka (sidebar, header, tab bar, panel
    Pengaturan) dan halaman yang sudah dicek (lihat WEB_DARK_READY di

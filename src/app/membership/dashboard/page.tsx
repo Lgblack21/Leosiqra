@@ -47,6 +47,7 @@ import { GamificationStrip } from '@/components/GamificationStrip';
 import { WeeklyInsights } from '@/components/WeeklyInsights';
 import { SecurityNudge } from '@/components/SecurityNudge';
 import { LeoBuddy, type LeoTip } from '@/components/dashboard/LeoBuddy';
+import { SkyScene, skyPeriod } from '@/components/dashboard/SkyScene';
 import { SpendPaceChart, type PacePoint } from '@/components/dashboard/SpendPaceChart';
 import { reminderService, type Reminder } from '@/lib/services/reminderService';
 
@@ -430,17 +431,15 @@ export default function MonthlyDashboard() {
   })();
 
   // Warna langit kartu sapaan ikut jam (hex, bukan kelas slate/indigo, supaya
-  // tidak ikut dibalik mode gelap).
-  const hour = now?.getHours() ?? 12;
-  const sky =
-    hour < 4 || hour >= 19
-      ? 'from-[#0b1026] via-[#1e1b4b] to-[#4c1d95]'
-      : hour < 11
-        ? 'from-[#0ea5e9] via-[#6366f1] to-[#8b5cf6]'
-        : hour < 15
-          ? 'from-[#4f46e5] via-[#7c3aed] to-[#d946ef]'
-          : 'from-[#fb923c] via-[#e11d48] to-[#7c3aed]';
-  const night = hour < 4 || hour >= 19;
+  // tidak ikut dibalik mode gelap). Atas gelap → cakrawala terang, teks putih
+  // tetap terbaca di bagian atas.
+  const period = skyPeriod(now?.getHours() ?? 12);
+  const sky = {
+    morning: 'from-[#075985] via-[#3b82f6] to-[#c4b5fd]',
+    day: 'from-[#3730a3] via-[#6366f1] to-[#c4b5fd]',
+    evening: 'from-[#4c1d95] via-[#be185d] to-[#fb923c]',
+    night: 'from-[#050816] via-[#141a4a] to-[#3b2a7a]',
+  }[period];
 
   const yesterday = now ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1) : null;
   const dayLabel = (d: Date) =>
@@ -490,15 +489,13 @@ export default function MonthlyDashboard() {
       <InboxBanner />
 
       {/* Kartu sapaan: langit ikut jam + Leo yang bisa diajak ngobrol */}
-      <section className={cn('relative overflow-hidden rounded-[32px] bg-gradient-to-br p-5 text-white shadow-[0_28px_60px_-30px_rgba(79,70,229,0.85)] md:p-8', sky)}>
-        <div aria-hidden className={cn('absolute inset-0 [background-image:radial-gradient(white_1px,transparent_1px)] [background-size:22px_22px]', night ? 'opacity-40' : 'opacity-20')} />
-        {/* Gradien biasa, bukan blur/backdrop-blur: di Chrome Android lapisan blur
-            berkedip hitam saat overlay (mis. panel Pengaturan) dibuka di atasnya. */}
-        <div aria-hidden className="absolute -right-24 -top-28 h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.22),transparent_65%)]" />
+      <section className={cn('relative overflow-hidden rounded-[32px] bg-gradient-to-b p-5 pb-8 text-white shadow-[0_28px_60px_-30px_rgba(79,70,229,0.85)] md:p-8 md:pb-10', sky)}>
+        {/* Matahari/bulan, awan, kota & hutan — tanpa blur (lihat SkyScene). */}
+        <SkyScene now={now} />
         {season && (
-          <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div aria-hidden className="pointer-events-none absolute inset-0 hidden md:block">
             {SEASON_INFO[season].deco.map((d, i) => (
-              <span key={i} className="leo-season-float absolute select-none text-[22px] opacity-70" style={{ left: `${[62, 76, 88][i]}%`, top: `${[6, 16, 5][i]}%`, animationDelay: `${i * 0.9}s` }}>{d}</span>
+              <span key={i} className="leo-season-float absolute select-none text-[22px] opacity-70" style={{ left: `${[82, 90, 96][i]}%`, top: `${[7, 17, 5][i]}%`, animationDelay: `${i * 0.9}s` }}>{d}</span>
             ))}
           </div>
         )}
