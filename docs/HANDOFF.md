@@ -86,7 +86,11 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   lencana/streak, Insight Mingguan, chip "biasanya jam segini"; Ke mana uangmu maks 4, Terbaru maks 5,
   "Fitur kamu" → "Saldo" (2 kartu). Riwayat: Ekspor/Tambah disembunyikan (ada FAB), periode & filter
   dilipat di tombol "Filter", aksi Tag/Hapus muncul saat baris diketuk. Tablet/desktop tidak berubah.
-- **Belum di-deploy**: tidak ada.
+- **Belum di-deploy**: Pengaturan → **Cara catat utama** (pref `inputMode` lama: ketik/suara/foto, kini
+  dipakai: tombol + HP, tombol Tambah di menu samping & Riwayat → form / `/input-cepat?mulai=suara|foto`;
+  pintasan N tetap form) dan **Keyboard nominal** (pref baru `amountKeypad` standar/kalkulator →
+  tombol kalkulator mini `AmountCalculator` di AddTransactionModal & Input Cepat; parser sendiri,
+  tanpa eval). User yang dulu memilih suara/foto di onboarding kini tombol + membuka cara itu.
 
 ## Migrasi D1
 

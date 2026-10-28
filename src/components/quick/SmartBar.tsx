@@ -14,6 +14,9 @@ interface Props {
   ctx: ParseContext;
   onDraft: (draft: QuickDraft, source: DraftSource, info?: string) => void;
   className?: string;
+  // Cara catat utama dari Pengaturan: 'suara' langsung mendengarkan, 'foto'
+  // menampilkan tombol kamera besar (pemilih file butuh ketukan user).
+  autoStart?: 'suara' | 'foto';
 }
 
 type Status = { kind: "idle" } | { kind: "listening" } | { kind: "thinking"; label: string } | { kind: "error"; msg: string };
@@ -24,7 +27,7 @@ const defined = <T extends object>(o: T) =>
 // Bar "ketik pintar" + mic + kamera. Semua jalur menghasilkan QuickDraft yang
 // diisi ke form oleh pemanggil — tidak ada yang langsung tersimpan, user
 // selalu melihat & mengonfirmasi dulu.
-export function SmartBar({ ctx, onDraft, className }: Props) {
+export function SmartBar({ ctx, onDraft, className, autoStart }: Props) {
   const [text, setText] = useState("");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [canSpeak, setCanSpeak] = useState(false);
@@ -35,6 +38,7 @@ export function SmartBar({ ctx, onDraft, className }: Props) {
 
   useEffect(() => { setCanSpeak(speechSupport() !== null); }, []);
   useEffect(() => () => sessionRef.current?.stop(), []);
+  const autoStarted = useRef(false);
 
   const preview = useMemo(() => (text.trim() ? parseQuickText(text, ctx) : null), [text, ctx]);
   const accountName = (id?: string) => ctx.accounts.find((a) => a.id === id)?.name;
@@ -81,6 +85,13 @@ export function SmartBar({ ctx, onDraft, className }: Props) {
     if (session) sessionRef.current = session;
   };
 
+  useEffect(() => {
+    if (autoStart !== 'suara' || !canSpeak || autoStarted.current) return;
+    autoStarted.current = true;
+    void toggleMic();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart, canSpeak]);
+
   const onPhoto = async (file: File | undefined) => {
     if (!file) return;
     setStatus({ kind: "thinking", label: "AI membaca struk…" });
@@ -109,6 +120,15 @@ export function SmartBar({ ctx, onDraft, className }: Props) {
 
   return (
     <div className={cn("space-y-2", className)}>
+      {autoStart === "foto" && status.kind === "idle" && (
+        <button
+          type="button"
+          onClick={() => { lightTap(); fileRef.current?.click(); }}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 py-4 text-sm font-black text-white shadow-lg shadow-indigo-200 active:scale-[0.99]"
+        >
+          <Camera size={18} /> Foto struk sekarang
+        </button>
+      )}
       <div
         className={cn(
           "flex items-center gap-2 rounded-2xl border bg-white dark:bg-slate-900 pl-4 pr-1.5 py-1.5 transition-colors",

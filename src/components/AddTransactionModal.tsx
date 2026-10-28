@@ -5,6 +5,7 @@ import { X, Save, TrendingUp, TrendingDown, ChevronDown, RefreshCw } from 'lucid
 import { Button } from './Button';
 import { Input } from './Input';
 import { NumberInput } from '@/components/ui/NumberInput';
+import { AmountCalculatorButton } from '@/components/ui/AmountCalculator';
 import { CategorySelect } from './CategorySelect';
 import { CurrencySelect } from './CurrencySelect';
 import { transactionService, TransactionType } from '@/lib/services/transactionService';
@@ -237,6 +238,7 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
             />
             <div className="w-full space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
+              <div className="flex items-center gap-2">
               <NumberInput
                 placeholder="0"
                 value={formData.amount}
@@ -244,6 +246,8 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
                 required
                 className="flex w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-900 transition-all placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/5 disabled:cursor-not-allowed disabled:opacity-50 hover:border-slate-300"
               />
+              <AmountCalculatorButton value={formData.amount} onChange={(val) => setFormData((f) => ({ ...f, amount: val }))} className="h-[54px] w-[54px] rounded-2xl" />
+              </div>
             </div>
           </div>
           

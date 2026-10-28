@@ -26,6 +26,8 @@ import {
   Repeat,
   Coins,
   CalendarRange,
+  PlusCircle,
+  Calculator,
   Bell,
   Zap,
   Lightbulb,
@@ -56,6 +58,8 @@ import { FeaturesView } from '@/components/settings/FeaturesView';
 import { RecurringView } from './RecurringView';
 import { BudgetPeriodView } from './BudgetPeriodView';
 import { TagsView } from './TagsView';
+import { CaraCatatView, KeyboardNominalView } from './RecordingViews';
+import { useRecordingPrefs } from '@/lib/useRecordingPrefs';
 import { useTags } from '@/lib/useTags';
 import { useBudgetStartDay } from '@/lib/useBudgetStartDay';
 import { TargetView } from '@/components/settings/TargetView';
@@ -78,8 +82,8 @@ export interface PanelUser {
   avatar?: AvatarConfig | null;
 }
 
-export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil' | 'kontak' | 'notifikasi' | 'ai' | 'lainnya' | 'referral' | 'koin' | 'koin-riwayat' | 'kawanan' | 'app-mcp' | 'app-sheets' | 'app-calendar' | 'app-gmail' | 'app-gcal' | 'fitur' | 'target' | 'rutin' | 'periode' | 'tag';
-const PARENT: Partial<Record<View, View>> = { fitur: 'menu', target: 'umum', rutin: 'umum', periode: 'umum', tag: 'umum', 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum', referral: 'menu', koin: 'menu', 'koin-riwayat': 'referral', kawanan: 'referral', 'app-mcp': 'ai', 'app-sheets': 'ai', 'app-calendar': 'ai', 'app-gmail': 'ai', 'app-gcal': 'ai' };
+export type View = 'menu' | 'profil' | 'paket' | 'bantuan' | 'umum' | 'privasi' | 'legal' | 'kategori' | 'kategori-detail' | 'kategori-baru' | 'mata-uang' | 'ubah-profil' | 'kontak' | 'notifikasi' | 'ai' | 'lainnya' | 'referral' | 'koin' | 'koin-riwayat' | 'kawanan' | 'app-mcp' | 'app-sheets' | 'app-calendar' | 'app-gmail' | 'app-gcal' | 'fitur' | 'target' | 'rutin' | 'periode' | 'tag' | 'cara-catat' | 'keyboard';
+const PARENT: Partial<Record<View, View>> = { fitur: 'menu', target: 'umum', rutin: 'umum', periode: 'umum', tag: 'umum', 'cara-catat': 'umum', keyboard: 'umum', 'ubah-profil': 'profil', 'kategori-detail': 'kategori', 'kategori-baru': 'kategori', 'mata-uang': 'umum', kontak: 'profil', notifikasi: 'umum', referral: 'menu', koin: 'menu', 'koin-riwayat': 'referral', kawanan: 'referral', 'app-mcp': 'ai', 'app-sheets': 'ai', 'app-calendar': 'ai', 'app-gmail': 'ai', 'app-gcal': 'ai' };
 
 const STATUS_LABEL: Record<PanelUser['status'], string> = {
   AKTIF: 'Aktif',
@@ -380,6 +384,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
   const features = useFeatures();
   const { day: budgetStartDay } = useBudgetStartDay();
   const { tags: tagsPref } = useTags();
+  const recording = useRecordingPrefs();
   const [editingFeatures, setEditingFeatures] = useState(false);
   const [coins, setCoins] = useState<number | null>(null);
   const [inboxCount, setInboxCount] = useState(0);
@@ -441,6 +446,8 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
     rutin: 'Transaksi rutin',
     periode: 'Awal periode anggaran',
     tag: 'Tag',
+    'cara-catat': 'Cara catat utama',
+    keyboard: 'Keyboard nominal',
     'app-mcp': 'Claude & ChatGPT',
     'app-sheets': 'Google Sheets',
     'app-calendar': 'Google Calendar',
@@ -618,6 +625,8 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                   </Group>
                   <p className="px-1 pt-2 text-[14px] text-slate-500">Mencatat</p>
                   <Group>
+                    <Row icon={PlusCircle} title="Cara catat utama" value={{ ketik: 'Ketik', suara: 'Ucapkan', foto: 'Foto struk' }[recording.inputMode]} onClick={() => setView('cara-catat')} />
+                    <Row icon={Calculator} title="Keyboard nominal" value={recording.amountKeypad === 'kalkulator' ? 'Kalkulator' : 'Standar'} onClick={() => setView('keyboard')} />
                     <Row icon={Zap} title="Input Cepat" desc="Pasang di layar utama HP" onClick={() => setView('lainnya')} />
                     <Row icon={Smartphone} title="Shortcut iPhone" desc="Catat lewat Siri, Back Tap & Action Button" onClick={go('/panduan/shortcut-ios')} />
                     <Row icon={UploadCloud} title="Impor mutasi" desc="PDF, Excel, CSV, dan tangkapan layar" onClick={go('/membership/impor')} />
@@ -643,6 +652,8 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
               {view === 'rutin' && <RecurringView openTarget={() => setView('target')} />}
               {view === 'periode' && <BudgetPeriodView />}
               {view === 'tag' && <TagsView openHref={(h) => go(h)()} />}
+              {view === 'cara-catat' && <CaraCatatView />}
+              {view === 'keyboard' && <KeyboardNominalView />}
               {view === 'fitur' && <FeaturesView editing={editingFeatures} open={(href) => go(href)()} />}
 
               {view === 'legal' && (

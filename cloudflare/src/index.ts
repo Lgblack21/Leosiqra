@@ -11457,8 +11457,10 @@ type UserPrefs = {
   budgetStartDay: number;
   // Tag transaksi: dinyalakan user + daftar tag (nama unik, warna CATEGORY_COLORS).
   tags: { enabled: boolean; list: { name: string; color: string }[] };
+  // Kolom nominal: keyboard angka biasa atau kalkulator mini.
+  amountKeypad: "standar" | "kalkulator";
 };
-const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" }, categoryStyles: {}, avatar: null, saveAttachments: true, features: null, categoryKinds: {}, budgetStartDay: 1, tags: { enabled: false, list: [] } };
+const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" }, categoryStyles: {}, avatar: null, saveAttachments: true, features: null, categoryKinds: {}, budgetStartDay: 1, tags: { enabled: false, list: [] }, amountKeypad: "standar" };
 const TAGS_MAX = 40;
 const sanitizeTagsPref = (raw: unknown): UserPrefs["tags"] => {
   const r = raw && typeof raw === "object" ? (raw as { enabled?: unknown; list?: unknown }) : {};
@@ -11532,6 +11534,7 @@ const readUserPrefs = async (env: Env, userId: string): Promise<UserPrefs> => {
     categoryKinds: sanitizeCategoryKinds(raw.categoryKinds),
     budgetStartDay: sanitizeBudgetStartDay(raw.budgetStartDay),
     tags: sanitizeTagsPref(raw.tags),
+    amountKeypad: raw.amountKeypad === "kalkulator" ? "kalkulator" : "standar",
   };
 };
 
@@ -11548,7 +11551,7 @@ async function handleUserPreferences(request: Request, env: Env) {
   const current = await readUserPrefs(env, userId);
   if (request.method === "GET") return json({ item: current });
 
-  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown; categoryStyle?: unknown; avatar?: unknown; saveAttachments?: unknown; features?: unknown; categoryKind?: unknown; categoryKindsMerge?: unknown; budgetStartDay?: unknown; tags?: unknown }>(request);
+  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown; categoryStyle?: unknown; avatar?: unknown; saveAttachments?: unknown; features?: unknown; categoryKind?: unknown; categoryKindsMerge?: unknown; budgetStartDay?: unknown; tags?: unknown; amountKeypad?: unknown }>(request);
   const next: UserPrefs = { ...current, reminder: { ...current.reminder }, categoryStyles: { ...current.categoryStyles }, categoryKinds: { ...current.categoryKinds } };
   if (payload.goals !== undefined) {
     if (!Array.isArray(payload.goals) || payload.goals.length > PREF_GOALS.length || payload.goals.some((g) => !(PREF_GOALS as readonly unknown[]).includes(g))) {
@@ -11613,6 +11616,10 @@ async function handleUserPreferences(request: Request, env: Env) {
       next.categoryKinds[name] = k.kind as CategoryKindPref;
     }
   }
+  if (payload.amountKeypad !== undefined) {
+    if (payload.amountKeypad !== "standar" && payload.amountKeypad !== "kalkulator") return json({ error: "Pilihan keyboard nominal tidak valid." }, { status: 400 });
+    next.amountKeypad = payload.amountKeypad;
+  }
   if (payload.tags !== undefined) {
     const t = payload.tags as { enabled?: unknown; list?: unknown } | null;
     if (!t || typeof t !== "object" || typeof t.enabled !== "boolean" || !Array.isArray(t.list) || t.list.length > TAGS_MAX) {
@@ -11637,10 +11644,10 @@ async function handleUserPreferences(request: Request, env: Env) {
         SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END,
               '$.prefs.goals', json(?), '$.prefs.inputMode', ?, '$.prefs.reminder', json(?), '$.prefs.categoryStyles', json(?),
               '$.prefs.avatar', json(?), '$.prefs.saveAttachments', json(?), '$.prefs.features', json(?), '$.prefs.categoryKinds', json(?),
-              '$.prefs.budgetStartDay', ?, '$.prefs.tags', json(?))
+              '$.prefs.budgetStartDay', ?, '$.prefs.tags', json(?), '$.prefs.amountKeypad', ?)
       WHERE id = ?`
   )
-    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), JSON.stringify(next.categoryStyles), JSON.stringify(next.avatar), JSON.stringify(next.saveAttachments), JSON.stringify(next.features), JSON.stringify(next.categoryKinds), next.budgetStartDay, JSON.stringify(next.tags), userId)
+    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), JSON.stringify(next.categoryStyles), JSON.stringify(next.avatar), JSON.stringify(next.saveAttachments), JSON.stringify(next.features), JSON.stringify(next.categoryKinds), next.budgetStartDay, JSON.stringify(next.tags), next.amountKeypad, userId)
     .run();
   return json({ ok: true, item: next });
 }

@@ -13,7 +13,7 @@ import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { cn, isIncomingTransaction, formatIDR, formatMoney, toLocalDateString } from '@/lib/utils';
 import { categoryVisual, useCategoryStyles } from '@/lib/categoryEmoji';
 import { useFeedback } from '@/components/ui/Feedback';
-import { useModal } from '@/context/ModalContext';
+import { usePrimaryAdd } from '@/lib/useRecordingPrefs';
 import { attachmentService } from '@/lib/services/attachmentService';
 
 // Riwayat transaksi: semua transaksi dikelompokkan per hari, dengan filter
@@ -100,7 +100,7 @@ export default function DailyTransactionLogPage() {
   const [shown, setShown] = useState(PAGE);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const { toast, confirm } = useFeedback();
-  const { openModal } = useModal();
+  const primaryAdd = usePrimaryAdd();
 
   useEffect(() => {
     let active = true;
@@ -313,7 +313,7 @@ export default function DailyTransactionLogPage() {
           </button>
           <button
             type="button"
-            onClick={() => openModal('harian')}
+            onClick={primaryAdd}
             className="flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-[14px] font-bold text-white shadow-[0_10px_20px_-12px_rgba(79,70,229,0.8)] hover:brightness-110"
           >
             <Plus size={16} strokeWidth={2.6} /> Tambah transaksi

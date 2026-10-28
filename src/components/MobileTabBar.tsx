@@ -5,13 +5,13 @@ import { usePathname } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { keuanganNav } from '@/lib/navigation';
-import { useModal } from '@/context/ModalContext';
+import { usePrimaryAdd } from '@/lib/useRecordingPrefs';
 
 // Tab bawah khusus HP (< md) di /membership: 4 halaman Keuangan + tombol
 // tambah transaksi di tengah. Tablet & laptop memakai menu samping.
 export function MobileTabBar() {
   const pathname = usePathname();
-  const { openModal } = useModal();
+  const primaryAdd = usePrimaryAdd();
   const [left, right] = [keuanganNav.slice(0, 2), keuanganNav.slice(2, 4)];
 
   const tab = (item: (typeof keuanganNav)[number]) => {
@@ -39,7 +39,7 @@ export function MobileTabBar() {
         <div className="flex flex-1 justify-center">
           <button
             type="button"
-            onClick={() => openModal('harian')}
+            onClick={primaryAdd}
             aria-label="Tambah transaksi"
             className="-mt-6 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-[0_12px_24px_-10px_rgba(79,70,229,0.8)] ring-4 ring-[#f6f7fb] active:scale-95"
           >

@@ -30,6 +30,7 @@ import { InputCepatInstall } from "@/components/install/InputCepatInstall";
 import { reportAppOpened } from "@/lib/appUsage";
 import { Modal } from "@/components/ui/Modal";
 import { NumberInput } from "@/components/ui/NumberInput";
+import { AmountCalculatorButton } from "@/components/ui/AmountCalculator";
 import { transactionService, Transaction } from "@/lib/services/transactionService";
 import { isCreditAccountType, computeCreditUsage } from "@/lib/creditCard";
 import { subscribeToCollectionChanges } from "@/lib/cf-firestore";
@@ -56,6 +57,12 @@ const groupDigits = (raw: string) => {
 
 export default function InputCepatPage() {
   const [authState, setAuthState] = useState<AuthState>("loading");
+  // ?mulai=suara|foto dari tombol + (Pengaturan → Cara catat utama).
+  const [autoStart] = useState<"suara" | "foto" | undefined>(() => {
+    if (typeof window === "undefined") return undefined;
+    const m = new URLSearchParams(window.location.search).get("mulai");
+    return m === "suara" || m === "foto" ? m : undefined;
+  });
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -357,7 +364,7 @@ export default function InputCepatPage() {
         </div>
 
         {/* Ketik pintar / suara / foto struk — mengisi form di bawah. */}
-        <SmartBar ctx={ctx} onDraft={applyDraft} className="mt-5" />
+        <SmartBar ctx={ctx} onDraft={applyDraft} className="mt-5" autoStart={autoStart} />
         {hint && (
           <div className="flex items-start gap-2 rounded-2xl bg-indigo-50 px-3.5 py-2.5 mt-2 text-[11px] font-bold text-indigo-700">
             <Sparkles size={13} className="mt-0.5 shrink-0" />
@@ -413,6 +420,7 @@ export default function InputCepatPage() {
                   type === "pengeluaran" ? "text-rose-600" : "text-emerald-600"
                 )}
               />
+              <AmountCalculatorButton value={amount} onChange={setAmount} className="self-center" />
             </motion.div>
           </div>
 

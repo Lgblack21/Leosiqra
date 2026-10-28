@@ -14,6 +14,7 @@ import { useFeatures } from '@/lib/useFeatures';
 import { openSettings } from '@/lib/settingsPanel';
 import { useFeedback } from '@/components/ui/Feedback';
 import { useModal } from '@/context/ModalContext';
+import { usePrimaryAdd } from '@/lib/useRecordingPrefs';
 import { UserAvatar, type AvatarConfig } from '@/components/profile/LeoAvatar';
 import { PROFILE_UPDATED_EVENT } from '@/components/settings/ProfileEditView';
 
@@ -48,6 +49,7 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
   const pathname = usePathname();
   const { toast } = useFeedback();
   const { openModal, activeModal } = useModal();
+  const primaryAdd = usePrimaryAdd();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isRequesting, setIsRequesting] = useState(false);
 
@@ -240,7 +242,7 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
         {profile && !restricted && (
           <button
             type="button"
-            onClick={() => { openModal('harian'); closeOnMobile(); }}
+            onClick={() => { primaryAdd(); closeOnMobile(); }}
             title="Tambah transaksi (N)"
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 py-3.5 text-[15px] font-bold text-white shadow-[0_12px_24px_-12px_rgba(79,70,229,0.7)] transition hover:brightness-110"
           >
