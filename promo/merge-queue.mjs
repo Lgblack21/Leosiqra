@@ -92,5 +92,15 @@ if (process.argv[1] === import.meta.filename) {
     console.error("pakai: node merge-queue.mjs <folder-json-tower>... (jalankan dari dalam repo setelah git fetch origin)");
     process.exit(1);
   }
+  // Clone routine bisa dangkal (--depth): merge-base/cherry/merge-tree lalu
+  // tidak melihat riwayat bersama → branch yang sudah di main tampak
+  // "belum merge, konflik" (terjadi 2026-10-28). Lengkapi riwayat dulu.
+  if (git("rev-parse", "--is-shallow-repository").out === "true") {
+    git("fetch", "--quiet", "--unshallow", "origin");
+    if (git("rev-parse", "--is-shallow-repository").out === "true") {
+      console.error("repo masih shallow (git fetch --unshallow origin gagal) — hasil antrean tidak bisa dipercaya");
+      process.exit(2);
+    }
+  }
   console.log(JSON.stringify(buildQueue(readDocs(dirs)), null, 2));
 }
