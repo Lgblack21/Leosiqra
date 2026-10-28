@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Trash2, Download, Plus, ChevronDown, Tags, Wallet, CalendarDays, X, Paperclip, Hash } from 'lucide-react';
+import { Search, Trash2, Download, Plus, ChevronDown, Tags, Wallet, CalendarDays, X, Paperclip, Hash, SlidersHorizontal } from 'lucide-react';
 import { useTags } from '@/lib/useTags';
 import { TagPicker, TagChip } from '@/components/tags/TagPicker';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -92,6 +92,9 @@ export default function DailyTransactionLogPage() {
   const [accountId, setAccountId] = useState('');
   const [tag, setTag] = useState('');
   const [tagEditId, setTagEditId] = useState<string | null>(null);
+  // HP: filter dilipat & aksi baris muncul saat baris diketuk.
+  const [showFilters, setShowFilters] = useState(false);
+  const [actionId, setActionId] = useState<string | null>(null);
   const { tags: tagsPref, colorOf } = useTags();
   const [sort, setSort] = useState<Sort>('terbaru');
   const [shown, setShown] = useState(PAGE);
@@ -287,6 +290,7 @@ export default function DailyTransactionLogPage() {
     return Number.isNaN(c.getTime()) ? '' : new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' }).format(c);
   };
   const hasFilter = kind !== 'semua' || category || accountId || tag || searchQuery || period !== 'bulan';
+  const activeFilters = [kind !== 'semua', category, accountId, tag, period !== 'bulan', sort !== 'terbaru'].filter(Boolean).length;
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 pb-12">
@@ -298,7 +302,7 @@ export default function DailyTransactionLogPage() {
             {loading ? 'Memuat…' : `${filtered.length} transaksi · keluar ${formatIDR(totalOut)}${totalIn > 0 ? ` · masuk ${formatIDR(totalIn)}` : ''}`}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="hidden gap-2 md:flex">
           <button
             type="button"
             onClick={exportCsv}
@@ -320,18 +324,29 @@ export default function DailyTransactionLogPage() {
       {/* Cari + periode */}
       <div className="space-y-3">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          <div className="relative lg:w-[380px] shrink-0">
-            <Search size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari judul, kategori, rekening, atau jumlah"
-              aria-label="Cari transaksi"
-              className="w-full rounded-full bg-white py-2.5 pl-11 pr-4 text-[14px] text-slate-800 ring-1 ring-slate-200 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-indigo-400"
-            />
+          <div className="flex items-center gap-2">
+            <div className="relative min-w-0 flex-1 lg:w-[380px] lg:flex-none">
+              <Search size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Cari transaksi"
+                aria-label="Cari transaksi"
+                className="w-full rounded-full bg-white py-2.5 pl-11 pr-4 text-[14px] text-slate-800 ring-1 ring-slate-200 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-indigo-400"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowFilters((v) => !v)}
+              aria-expanded={showFilters}
+              className={cn('relative flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2.5 text-[14px] font-semibold ring-1 md:hidden', showFilters ? 'bg-slate-900 text-white ring-slate-900' : 'bg-white text-slate-700 ring-slate-200')}
+            >
+              <SlidersHorizontal size={16} /> Filter
+              {activeFilters > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-600 px-1 text-[11px] text-white">{activeFilters}</span>}
+            </button>
           </div>
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 no-scrollbar lg:mx-0 lg:px-0">
+          <div className={cn('-mx-4 gap-2 overflow-x-auto px-4 no-scrollbar lg:mx-0 lg:px-0', showFilters ? 'flex' : 'hidden md:flex')}>
             {PERIODS.map((p) => (
               <button key={p.id} type="button" onClick={() => setPeriod(p.id)} className={chip(period === p.id)}>{p.label}</button>
             ))}
@@ -339,7 +354,7 @@ export default function DailyTransactionLogPage() {
         </div>
 
         {/* Jenis + kategori + dompet + tanggal + urutan */}
-        <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 no-scrollbar lg:mx-0 lg:flex-wrap lg:px-0">
+        <div className={cn('-mx-4 items-center gap-2 overflow-x-auto px-4 pb-1 no-scrollbar lg:mx-0 lg:flex-wrap lg:px-0', showFilters ? 'flex' : 'hidden md:flex')}>
           {KINDS.map((k) => (
             <button key={k.id} type="button" onClick={() => setKind(k.id)} className={chip(kind === k.id)}>{k.label}</button>
           ))}
@@ -426,13 +441,17 @@ export default function DailyTransactionLogPage() {
                   const move = isMove(t);
                   const v = categoryVisual(t.category, t.type);
                   return (
-                    <li key={t.id} className="group grid grid-cols-[auto_1fr_auto] items-center gap-3.5 px-4 py-3 md:grid-cols-[auto_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto] md:gap-5 md:px-5">
+                    <li
+                      key={t.id}
+                      onClick={(e) => { if (!(e.target as HTMLElement).closest('button,a,input')) setActionId((v) => (v === t.id ? null : t.id ?? null)); }}
+                      className="group grid cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-3.5 px-4 py-3 md:cursor-default md:grid-cols-[auto_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto] md:gap-5 md:px-5"
+                    >
                       <span className={cn('flex h-11 w-11 items-center justify-center rounded-full text-[20px]', v.tile)} aria-hidden>{v.emoji}</span>
                       <div className="min-w-0">
                         <p className="flex min-w-0 items-center gap-1.5 text-[15px] font-semibold text-slate-900">
                           <span className="truncate">{titleOf(t)}</span>
                           {tagsPref.enabled && t.id && !t.tags?.length && tagEditId !== t.id && (
-                            <button type="button" onClick={() => setTagEditId(t.id!)} aria-label="Tambah tag" title="Tambah tag" className="shrink-0 rounded-md p-0.5 text-slate-300 hover:bg-slate-100 hover:text-indigo-600 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100">
+                            <button type="button" onClick={() => setTagEditId(t.id!)} aria-label="Tambah tag" title="Tambah tag" className="hidden shrink-0 rounded-md p-0.5 text-slate-300 hover:bg-slate-100 hover:text-indigo-600 md:inline-block md:opacity-0 md:group-hover:opacity-100 focus:opacity-100">
                               <Hash size={14} />
                             </button>
                           )}
@@ -462,15 +481,6 @@ export default function DailyTransactionLogPage() {
                           {incoming ? '+' : '−'}{formatMoney(Number(t.amount) || 0, t.currency)}
                         </p>
                         {t.currency && t.currency !== 'IDR' && <p className="text-[12px] text-slate-400 tabular-nums">≈ {formatIDR(idr(t))}</p>}
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(t)}
-                          disabled={deletingId === t.id}
-                          aria-label="Hapus transaksi"
-                          className="mt-0.5 inline-flex items-center gap-1 text-[12px] text-slate-400 hover:text-rose-500 disabled:opacity-50 md:hidden"
-                        >
-                          <Trash2 size={12} /> Hapus
-                        </button>
                       </div>
                       <button
                         type="button"
@@ -494,12 +504,24 @@ export default function DailyTransactionLogPage() {
                                 <button key={x} type="button" onClick={() => setTag(x)} title={`Saring #${x}`}><TagChip name={x} color={colorOf(x)} /></button>
                               ))}
                               {tagsPref.enabled && t.id && (
-                                <button type="button" onClick={() => setTagEditId(t.id!)} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-slate-400 hover:bg-slate-100 hover:text-indigo-600 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100">
+                                <button type="button" onClick={() => setTagEditId(t.id!)} className="hidden items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-slate-400 hover:bg-slate-100 hover:text-indigo-600 md:inline-flex md:opacity-0 md:group-hover:opacity-100 focus:opacity-100">
                                   <Hash size={10} /> Ubah
                                 </button>
                               )}
                             </>
                           )}
+                        </div>
+                      )}
+                      {actionId === t.id && tagEditId !== t.id && (
+                        <div className="col-span-full flex gap-2 pl-[58px] md:hidden">
+                          {tagsPref.enabled && (
+                            <button type="button" onClick={() => { setTagEditId(t.id!); setActionId(null); }} className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3.5 py-2 text-[13px] font-semibold text-slate-700">
+                              <Hash size={14} /> Tag
+                            </button>
+                          )}
+                          <button type="button" onClick={() => handleDelete(t)} disabled={deletingId === t.id} className="flex items-center gap-1.5 rounded-full bg-rose-50 px-3.5 py-2 text-[13px] font-semibold text-rose-600 disabled:opacity-50">
+                            <Trash2 size={14} /> Hapus
+                          </button>
                         </div>
                       )}
                     </li>

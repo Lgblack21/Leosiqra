@@ -373,7 +373,7 @@ export default function MonthlyDashboard() {
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-white"><Send size={16} /></span>
           </Link>
           {(usual.length > 0 || dueLabel) && (
-            <div className="mt-4 flex flex-wrap items-center gap-2">
+            <div className="mt-4 hidden flex-wrap items-center gap-2 md:flex">
               {usual.length > 0 && <span className="text-[13px] font-semibold text-white/85">Biasanya jam segini</span>}
               {usual.map((u) => (
                 <button key={u.title} type="button" onClick={() => openModal('harian')} className="flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[13px] font-semibold backdrop-blur hover:bg-white/30">
@@ -392,8 +392,8 @@ export default function MonthlyDashboard() {
 
       <SecurityNudge />
 
-      {/* Hari ini */}
-      <section className={cn(card, 'p-5 md:p-6')}>
+      {/* Hari ini — di HP cukup kartu sapaan + Terbaru (versi ringkas). */}
+      <section className={cn(card, 'hidden p-5 md:block md:p-6')}>
         <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-slate-400">
           Hari ini{now ? ` · ${now.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })}` : ''}
         </p>
@@ -419,8 +419,10 @@ export default function MonthlyDashboard() {
         )}
       </section>
 
-      <GamificationStrip />
-      <WeeklyInsights target="web" />
+      <div className="hidden space-y-6 md:block md:space-y-8">
+        <GamificationStrip />
+        <WeeklyInsights target="web" />
+      </div>
 
       {/* Pengeluaran bulan terpilih per kategori */}
       <section className="space-y-5">
@@ -464,7 +466,7 @@ export default function MonthlyDashboard() {
                 const over = c.budget > 0 && c.spent > c.budget;
                 const width = c.budget > 0 ? Math.min(100, (c.spent / c.budget) * 100) : (c.spent / maxCat) * 100;
                 return (
-                  <li key={c.category}>
+                  <li key={c.category} className={cn(i >= 4 && 'hidden md:block')}>
                     <div className="flex items-baseline justify-between gap-3">
                       <span className="truncate text-[15px] font-semibold text-slate-800">{c.category}</span>
                       <span className={cn('shrink-0 text-[15px] font-bold tabular-nums', over ? 'text-rose-600' : 'text-slate-900')}>{short(c.spent)}</span>
@@ -499,16 +501,18 @@ export default function MonthlyDashboard() {
           ) : recent.length === 0 ? (
             <p className="py-8 text-center text-[14px] text-slate-500">Belum ada transaksi. Mulai dari tombol + Tambah transaksi.</p>
           ) : (
-            recent.map((t, i) => <TxRow key={t.id || i} t={t} withDate />)
+            recent.map((t, i) => (
+              <div key={t.id || i} className={cn(i >= 5 && 'hidden md:block')}><TxRow t={t} withDate /></div>
+            ))
           )}
         </div>
       </section>
 
-      {/* Fitur kamu */}
+      {/* Fitur kamu — di HP cukup dua teratas (saldo & tabungan); sisanya di menu. */}
       <section>
-        <h2 className="mb-3 px-1 text-[22px] font-extrabold tracking-tight text-slate-900">Fitur kamu</h2>
+        <h2 className="mb-3 px-1 text-[22px] font-extrabold tracking-tight text-slate-900"><span className="md:hidden">Saldo</span><span className="hidden md:inline">Fitur kamu</span></h2>
         <div className="grid grid-cols-2 gap-3">
-          {features.map((f) => {
+          {features.map((f, fi) => {
             const inner = (
               <>
                 <div className="flex items-center gap-2.5">
@@ -520,7 +524,7 @@ export default function MonthlyDashboard() {
                 <p className="mt-0.5 truncate text-[12px] md:text-[13px] text-slate-500">{f.caption}</p>
               </>
             );
-            const cls = cn(card, 'block min-w-0 p-4 md:p-5 text-left transition-shadow hover:shadow-[0_10px_30px_-18px_rgba(49,46,129,0.35)] hover:ring-indigo-100');
+            const cls = cn(card, 'block min-w-0 p-4 md:p-5 text-left transition-shadow hover:shadow-[0_10px_30px_-18px_rgba(49,46,129,0.35)] hover:ring-indigo-100', fi >= 2 && 'hidden md:block');
             return f.href ? (
               <Link key={f.label} href={f.href} className={cls}>{inner}</Link>
             ) : (
