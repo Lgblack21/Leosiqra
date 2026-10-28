@@ -6413,7 +6413,21 @@ const buildRecurringPayloadJson = (payload: Record<string, unknown>, existing: s
 // form web & mobile. Nominal negatif pada recurring "Pengeluaran" dulu lolos
 // dan membuat cron MENAMBAH saldo tiap periode.
 const RECURRING_TYPES = new Set(["Pengeluaran", "Pemasukan", "Tabungan"]);
-const RECURRING_INTERVALS = new Set(["Harian", "Mingguan", "Bulanan", "Tahunan"]);
+const RECURRING_INTERVALS = new Set(["Harian", "Mingguan", "Dua Mingguan", "Bulanan", "Dua Bulanan", "Tiga Bulanan", "Tahunan"]);
+// Interval → RRULE (kalender .ics & Google Calendar).
+const RECURRING_RRULE: Record<string, { freq: string; every: number }> = {
+  Harian: { freq: "DAILY", every: 1 },
+  Mingguan: { freq: "WEEKLY", every: 1 },
+  "Dua Mingguan": { freq: "WEEKLY", every: 2 },
+  Bulanan: { freq: "MONTHLY", every: 1 },
+  "Dua Bulanan": { freq: "MONTHLY", every: 2 },
+  "Tiga Bulanan": { freq: "MONTHLY", every: 3 },
+  Tahunan: { freq: "YEARLY", every: 1 },
+};
+const recurringRrule = (interval: string) => {
+  const r = RECURRING_RRULE[interval] ?? RECURRING_RRULE.Bulanan;
+  return { ...r, rule: `FREQ=${r.freq}${r.every > 1 ? `;INTERVAL=${r.every}` : ""}` };
+};
 const RECURRING_STATUSES = new Set(["ACTIVE", "PAUSED"]);
 // Nominal 0 hanya boleh untuk Tabungan: target tanpa setoran otomatis (cron &
 // kalender melewati amount <= 0, jadi tidak pernah dieksekusi).
@@ -8450,7 +8464,6 @@ const csvCell = (value: unknown) => {
 
 const icsText = (value: string) => value.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
 const icsDate = (ymd: string) => ymd.slice(0, 10).replace(/-/g, "");
-const RRULE_BY_INTERVAL: Record<string, string> = { Harian: "DAILY", Mingguan: "WEEKLY", Bulanan: "MONTHLY", Tahunan: "YEARLY" };
 
 // Baris transaksi untuk ekspor (header + maks 5.000 transaksi terbaru) —
 // dipakai tautan CSV lama & Google Sheets (Composio), supaya kolomnya sama.
@@ -8512,14 +8525,14 @@ async function handlePublicFeed(request: Request, env: Env, pathname: string) {
     .all<{ id: string; name: string; type: string; amount: number; interval: string; next_date: string; note: string | null; currency: string | null }>();
   for (const r of recurring.results ?? []) {
     if (!/^\d{4}-\d{2}-\d{2}/.test(String(r.next_date ?? ""))) continue;
-    const freq = RRULE_BY_INTERVAL[r.interval] ?? "MONTHLY";
+    const { rule } = recurringRrule(r.interval);
     events.push(
       [
         "BEGIN:VEVENT",
         `UID:recurring-${r.id}@leosiqra`,
         `DTSTAMP:${stamp}`,
         `DTSTART;VALUE=DATE:${icsDate(r.next_date)}`,
-        `RRULE:FREQ=${freq}`,
+        `RRULE:${rule}`,
         `SUMMARY:${icsText(recurringCalendarTitle(r).summary)}`,
         `DESCRIPTION:${icsText(`Transaksi rutin Leosiqra (${r.type}, ${r.interval}).${r.note ? ` ${r.note}` : ""}`)}`,
         "END:VEVENT",
@@ -8630,7 +8643,6 @@ type ComposioSession = Awaited<ReturnType<InstanceType<typeof Composio>["session
 type CalendarSyncEvent = { id: string | null; hash: string; summary?: string; start?: string; freq?: string; link?: string | null };
 type CalendarSyncState = { enabled?: boolean; lastSyncAt?: string; events?: Record<string, CalendarSyncEvent> };
 const CALENDAR_SYNC_MAX_EVENTS = 60;
-const CALENDAR_FREQ: Record<string, string> = { Harian: "DAILY", Mingguan: "WEEKLY", Bulanan: "MONTHLY", Tahunan: "YEARLY" };
 
 const readCalendarSync = async (env: Env, userId: string): Promise<CalendarSyncState> => {
   const row = await env.DB.prepare(
@@ -8690,19 +8702,20 @@ const desiredCalendarEvents = async (env: Env, userId: string) => {
   for (const r of recurring.results ?? []) {
     const date = String(r.next_date ?? "").slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
-    const freq = CALENDAR_FREQ[r.interval] ?? "MONTHLY";
-    const anchor = freq === "MONTHLY" ? date.slice(8) : freq === "YEARLY" ? date.slice(5) : freq === "WEEKLY" ? String(new Date(`${date}T00:00:00Z`).getUTCDay()) : "";
+    const { freq, every, rule } = recurringRrule(r.interval);
+    // Selang >1 (tiap 2 minggu/2–3 bulan) bergantung tanggal mulai persis.
+    const anchor = every > 1 ? date : freq === "MONTHLY" ? date.slice(8) : freq === "YEARLY" ? date.slice(5) : freq === "WEEKLY" ? String(new Date(`${date}T00:00:00Z`).getUTCDay()) : "";
     const { summary, desc } = recurringCalendarTitle(r);
     events.push({
       key: `recurring:${r.id}`,
-      hash: JSON.stringify([summary, freq, anchor]),
+      hash: JSON.stringify(every > 1 ? [summary, rule, anchor] : [summary, freq, anchor]),
       freq,
       args: {
         summary,
         description: `${desc} Leosiqra (${r.interval})${r.account_name ? ` · rekening ${r.account_name}` : ""}.`,
         start_date: date,
         end_date: addDaysYmd(date, 1),
-        recurrence: [`RRULE:FREQ=${freq}`],
+        recurrence: [`RRULE:${rule}`],
       },
     });
   }
@@ -11795,14 +11808,21 @@ const advanceNextDate = (dateStr: string, interval: string): string => {
     case "Mingguan":
       d.setUTCDate(d.getUTCDate() + 7);
       break;
+    case "Dua Mingguan":
+      d.setUTCDate(d.getUTCDate() + 14);
+      break;
     case "Tahunan":
       d.setUTCFullYear(d.getUTCFullYear() + 1);
       break;
     case "Bulanan":
+    case "Dua Bulanan":
+    case "Tiga Bulanan":
     default: {
+      // Tanggal 31 → hari terakhir bulan tujuan (bukan meluber ke bulan berikutnya).
+      const months = interval === "Dua Bulanan" ? 2 : interval === "Tiga Bulanan" ? 3 : 1;
       const day = d.getUTCDate();
       d.setUTCDate(1);
-      d.setUTCMonth(d.getUTCMonth() + 1);
+      d.setUTCMonth(d.getUTCMonth() + months);
       const daysInNewMonth = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
       d.setUTCDate(Math.min(day, daysInNewMonth));
       break;

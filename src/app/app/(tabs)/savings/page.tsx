@@ -6,6 +6,7 @@ import { ChevronLeft, PiggyBank, ArrowDownToLine, Plus, Trash2, Repeat } from "l
 import { accountService, Account } from "@/lib/services/accountService";
 import { savingsService, Saving } from "@/lib/services/savingsService";
 import { savingsGoalService, SavingsGoal } from "@/lib/services/savingsGoalService";
+import { INTERVAL_LABEL } from "@/lib/recurringIntervals";
 import { subscribeToCollectionChanges } from "@/lib/cf-firestore";
 import { auth } from "@/lib/cf-client";
 import { cn, formatIDR, formatMoney } from "@/lib/utils";
@@ -160,7 +161,7 @@ export default function AppSavingsPage() {
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm font-bold text-slate-900 dark:text-white truncate">{g.name}</span>
                   <span className="block text-[11px] text-slate-400 truncate">
-                    {g.status === "PAUSED" ? "Dijeda" : `${formatIDR(g.monthlyAmount)} / ${g.interval.toLowerCase()} · berikutnya ${fmtDate(new Date(g.nextDate))}`}
+                    {g.status === "PAUSED" ? "Dijeda" : `${formatIDR(g.monthlyAmount)} ${INTERVAL_LABEL[g.interval]?.toLowerCase() ?? ""} · berikutnya ${fmtDate(new Date(g.nextDate))}`}
                   </span>
                 </span>
               </li>

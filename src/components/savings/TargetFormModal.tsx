@@ -13,6 +13,7 @@ import {
   monthsUntil, neededPerMonth, targetService, type TargetInput,
 } from '@/lib/targets';
 import { useFeedback } from '@/components/ui/Feedback';
+import { RECURRING_INTERVALS, INTERVAL_LABEL } from '@/lib/recurringIntervals';
 
 // Form Tambah/Ubah target. Beda dari Transaksi Rutin: target berdiri sendiri
 // (nama, nominal, tanggal, ikon & warna); setoran otomatis dan dana awal
@@ -21,7 +22,7 @@ import { useFeedback } from '@/components/ui/Feedback';
 
 export type TargetPreset = { name?: string; targetAmount?: number; icon?: string; color?: string };
 
-const INTERVALS: SavingsGoal['interval'][] = ['Harian', 'Mingguan', 'Bulanan', 'Tahunan'];
+const INTERVALS: SavingsGoal['interval'][] = [...RECURRING_INTERVALS];
 const inAYear = () => {
   const d = new Date();
   d.setFullYear(d.getFullYear() + 1);
@@ -288,9 +289,9 @@ function TargetForm({ onClose, goal, preset, onSaved }: Props) {
                         </div>
                       </Field>
                     </div>
-                    <Field label="Setiap">
+                    <Field label="Seberapa sering">
                       <select value={interval} onChange={(e) => setIntervalValue(e.target.value as SavingsGoal['interval'])} className={inputCls}>
-                        {INTERVALS.map((i) => <option key={i} value={i}>{i.replace('an', '')}</option>)}
+                        {INTERVALS.map((i) => <option key={i} value={i}>{INTERVAL_LABEL[i]}</option>)}
                       </select>
                     </Field>
                     <Field label="Mulai">

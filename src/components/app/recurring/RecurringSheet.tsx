@@ -9,6 +9,8 @@ import { recurringService, RecurringTransaction } from "@/lib/services/recurring
 import { SAVING_GOALS } from "@/lib/savingsGoals";
 import { cn, toLocalDateString } from "@/lib/utils";
 import { lightTap } from "@/lib/haptics";
+import { RECURRING_INTERVALS, INTERVAL_LABEL } from "@/lib/recurringIntervals";
+
 
 type RType = RecurringTransaction["type"];
 type Interval = RecurringTransaction["interval"];
@@ -23,7 +25,7 @@ interface Props {
 }
 
 const TYPES: Array<[RType, string]> = [["Pengeluaran", "Keluar"], ["Pemasukan", "Masuk"], ["Tabungan", "Tabungan"]];
-const INTERVALS: Interval[] = ["Harian", "Mingguan", "Bulanan", "Tahunan"];
+const INTERVALS: Interval[] = [...RECURRING_INTERVALS];
 
 const inputClass =
   "w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3.5 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500";
@@ -117,7 +119,7 @@ export function RecurringSheet({ isOpen, onClose, accounts, categories, editing 
               disabled={!canSubmit}
               className="w-full py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm disabled:opacity-40 active:scale-[0.98] transition-all"
             >
-              {busy ? "Menyimpan..." : `Simpan ${amountNumber > 0 ? groupDigits(amount) : ""} / ${interval.toLowerCase()}`}
+              {busy ? "Menyimpan..." : `Simpan ${amountNumber > 0 ? groupDigits(amount) : ""} · ${INTERVAL_LABEL[interval].toLowerCase()}`}
             </button>
           </div>
         </div>

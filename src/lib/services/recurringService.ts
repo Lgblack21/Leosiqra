@@ -10,6 +10,7 @@ import {
   Timestamp 
 } from '@/lib/cf-firestore';
 import { db } from '../cf-client';
+import type { RecurringInterval } from '../recurringIntervals';
 
 export interface RecurringTransaction {
   id?: string;
@@ -19,7 +20,7 @@ export interface RecurringTransaction {
   category: string;
   accountId: string;
   amount: number;
-  interval: 'Harian' | 'Mingguan' | 'Bulanan' | 'Tahunan';
+  interval: RecurringInterval;
   nextDate: Date;
   note?: string;
   status: 'ACTIVE' | 'PAUSED';

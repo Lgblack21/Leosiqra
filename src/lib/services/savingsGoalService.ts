@@ -1,4 +1,5 @@
 import { cloudflareApi } from '../cloudflare-api';
+import type { RecurringInterval } from '../recurringIntervals';
 
 export interface SavingsGoal {
   id: string;
@@ -6,7 +7,7 @@ export interface SavingsGoal {
   category: string;
   accountId: string | null;
   monthlyAmount: number;
-  interval: 'Harian' | 'Mingguan' | 'Bulanan' | 'Tahunan';
+  interval: RecurringInterval;
   nextDate: string;
   status: 'ACTIVE' | 'PAUSED';
   targetAmount: number | null;

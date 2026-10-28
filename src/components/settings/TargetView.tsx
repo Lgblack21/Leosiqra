@@ -9,6 +9,7 @@ import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { TargetFormModal, type TargetPreset } from '@/components/savings/TargetFormModal';
 import { targetColor, targetIcon, monthsUntil } from '@/lib/targets';
 import { useFeedback } from '@/components/ui/Feedback';
+import { PER_MONTH, INTERVAL_LABEL } from '@/lib/recurringIntervals';
 
 // Panel Pengaturan → Target. Target = baris recurring bertipe Tabungan dengan
 // targetAmount (+ ikon, warna, tanggal) di payload_json; progres dari setoran
@@ -25,7 +26,6 @@ export const TARGET_SUGGESTIONS: (TargetPreset & { name: string; targetAmount: n
   { name: 'Pendidikan', icon: '🎓', color: '#6366f1', targetAmount: 20_000_000 },
 ];
 
-const PER_MONTH: Record<SavingsGoal['interval'], number> = { Harian: 30, Mingguan: 52 / 12, Bulanan: 1, Tahunan: 1 / 12 };
 const shortDate = (d: string) => new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(d));
 
 // Perkiraan bulan sampai target tercapai dari setoran rutin.
@@ -158,7 +158,7 @@ export function TargetView() {
                 <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
                   <span className="flex min-w-0 flex-1 items-center gap-1.5 text-[12px] text-slate-500">
                     <CalendarClock size={14} className="shrink-0" />
-                    <span className="truncate">{g.monthlyAmount > 0 ? `${formatIDR(g.monthlyAmount)}/${g.interval.toLowerCase()} · berikutnya ${shortDate(g.nextDate)}` : 'Setor manual'}</span>
+                    <span className="truncate">{g.monthlyAmount > 0 ? `${formatIDR(g.monthlyAmount)} ${INTERVAL_LABEL[g.interval]?.toLowerCase() ?? ''} · berikutnya ${shortDate(g.nextDate)}` : 'Setor manual'}</span>
                   </span>
                   <button type="button" onClick={() => edit(g)} disabled={busy === g.id} aria-label={`Ubah ${g.name}`} className="rounded-full bg-slate-100 p-2 text-slate-600 hover:bg-slate-200 disabled:opacity-50"><Pencil size={14} /></button>
                   {g.monthlyAmount > 0 && <button type="button" onClick={() => void togglePause(g)} disabled={busy === g.id} aria-label={g.status === 'PAUSED' ? `Lanjutkan ${g.name}` : `Jeda ${g.name}`} className="rounded-full bg-slate-100 p-2 text-slate-600 hover:bg-slate-200 disabled:opacity-50">

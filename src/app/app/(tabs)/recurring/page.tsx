@@ -12,9 +12,9 @@ import { cn, formatIDR, formatMoney, toLocalDateString } from "@/lib/utils";
 import { lightTap } from "@/lib/haptics";
 import { FadeIn } from "@/components/app/FadeIn";
 import { RecurringSheet } from "@/components/app/recurring/RecurringSheet";
+import { PER_MONTH } from "@/lib/recurringIntervals";
 
 const fmtDate = (d: Date) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" }).format(d);
-const PER_MONTH: Record<string, number> = { Harian: 30, Mingguan: 52 / 12, Bulanan: 1, Tahunan: 1 / 12 };
 const TYPE_STYLE: Record<string, string> = {
   Pemasukan: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400",
   Pengeluaran: "bg-rose-50 text-rose-500 dark:bg-rose-500/10 dark:text-rose-400",

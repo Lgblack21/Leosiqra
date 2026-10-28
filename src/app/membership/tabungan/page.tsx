@@ -25,6 +25,7 @@ import { TargetFormModal, type TargetPreset } from '@/components/savings/TargetF
 import { TARGET_SUGGESTIONS } from '@/components/settings/TargetView';
 import { targetColor, targetIcon, monthsUntil, neededPerMonth } from '@/lib/targets';
 import { useFeedback } from '@/components/ui/Feedback';
+import { INTERVAL_LABEL } from '@/lib/recurringIntervals';
 import { cn, formatIDR } from '@/lib/utils';
 
 // Halaman Tabungan: saldo total, target (kartu berwarna, setor langsung), pos
@@ -54,7 +55,7 @@ function TargetCard({ goal, onDeposit, onEdit, onDelete }: { goal: SavingsGoal; 
         <div className="min-w-0 flex-1">
           <p className="truncate text-[16px] font-bold text-slate-900">{goal.name}</p>
           <p className="text-[12px] text-slate-500">
-            {goal.monthlyAmount > 0 ? `Otomatis ${formatIDR(goal.monthlyAmount)}/${goal.interval.toLowerCase().replace('an', '')}` : 'Setor manual'}
+            {goal.monthlyAmount > 0 ? `Otomatis ${formatIDR(goal.monthlyAmount)} ${INTERVAL_LABEL[goal.interval]?.toLowerCase() ?? ''}` : 'Setor manual'}
           </p>
         </div>
         {status && <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold', status.cls)}>{status.text}</span>}
