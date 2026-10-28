@@ -100,7 +100,11 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   SMS bank (→ Shortcut iPhone), email bank (→ Gmail/Kotak Masuk), dan "Tempel teks notifikasi" →
   `/input-cepat?teks=`. Tanpa perubahan Worker/D1. Notifikasi otomatis Android = butuh plugin native
   (NotificationListenerService) — belum dibuat.
-- **Belum di-deploy**: tidak ada. Branch kerja akun B: `claude/nifty-cannon-y181p6` (= main).
+- **Belum di-deploy** (akun B, `claude/nifty-cannon-y181p6`): resep **Notifikasi aplikasi bank** — Bos
+  konfirmasi iPhone-nya punya Pintasan › Automasi › Aplikasi › "Saat saya menerima notifikasi". Resep baru
+  `notif` di `ShortcutsView` (Enkode URL → Buka URL `/input-cepat?teks=`), kartu pertama di Pembaca Notifikasi
+  membuka Shortcut iPhone dengan resep itu terbuka (`initialOpen`). Nama tindakan "Enkode URL" & variabel
+  "Input Pintasan" belum dicocokkan dengan iPhone asli.
 
 ## Migrasi D1
 

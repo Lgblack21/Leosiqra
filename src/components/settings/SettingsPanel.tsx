@@ -389,6 +389,8 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
   const { tags: tagsPref } = useTags();
   const recording = useRecordingPrefs();
   const [editingFeatures, setEditingFeatures] = useState(false);
+  // Resep Shortcut yang langsung dibuka saat datang dari Pembaca Notifikasi.
+  const [shortcutFocus, setShortcutFocus] = useState<string | null>(null);
   const [coins, setCoins] = useState<number | null>(null);
   const [inboxCount, setInboxCount] = useState(0);
 
@@ -633,8 +635,8 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                     <Row icon={PlusCircle} title="Cara catat utama" value={{ ketik: 'Ketik', suara: 'Ucapkan', foto: 'Foto struk' }[recording.inputMode]} onClick={() => setView('cara-catat')} />
                     <Row icon={Calculator} title="Keyboard nominal" value={recording.amountKeypad === 'kalkulator' ? 'Kalkulator' : 'Standar'} onClick={() => setView('keyboard')} />
                     <Row icon={Zap} title="Input Cepat" desc="Pasang di layar utama HP" onClick={() => setView('lainnya')} />
-                    <Row icon={Smartphone} title="Shortcut iPhone" value="Suara, layar & SMS" onClick={() => setView('shortcut')} />
-                    <Row icon={BellRing} title="Pembaca Notifikasi" value="SMS & email bank" onClick={() => setView('notif-reader')} />
+                    <Row icon={Smartphone} title="Shortcut iPhone" value="Suara, layar, SMS & notif" onClick={() => { setShortcutFocus(null); setView('shortcut'); }} />
+                    <Row icon={BellRing} title="Pembaca Notifikasi" value="Notifikasi, SMS & email" onClick={() => setView('notif-reader')} />
                     <Row icon={UploadCloud} title="Impor mutasi" desc="PDF, Excel, CSV, dan tangkapan layar" onClick={go('/membership/impor')} />
                     <Row icon={Bot} title="Aplikasi terhubung" desc="Gmail, Slack, Google, Notion, Claude & ChatGPT" onClick={go('/membership/aplikasi')} />
                   </Group>
@@ -660,8 +662,8 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
               {view === 'tag' && <TagsView openHref={(h) => go(h)()} />}
               {view === 'cara-catat' && <CaraCatatView />}
               {view === 'keyboard' && <KeyboardNominalView />}
-              {view === 'shortcut' && <ShortcutsView />}
-              {view === 'notif-reader' && <NotificationReaderView openShortcut={() => setView('shortcut')} openHref={(h) => go(h)()} />}
+              {view === 'shortcut' && <ShortcutsView initialOpen={shortcutFocus} />}
+              {view === 'notif-reader' && <NotificationReaderView openShortcut={(id) => { setShortcutFocus(id); setView('shortcut'); }} openHref={(h) => go(h)()} />}
               {view === 'fitur' && <FeaturesView editing={editingFeatures} open={(href) => go(href)()} />}
 
               {view === 'legal' && (

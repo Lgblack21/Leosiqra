@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react';
 import { BellRing, MessageSquareText, Mail, Sparkles, CheckCircle2, ArrowRight, ClipboardPaste, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Panel Pengaturan → Pembaca Notifikasi. Leosiqra berjalan di browser/PWA:
-// browser TIDAK bisa membaca notifikasi aplikasi lain (iOS maupun Android).
-// Jadi halaman ini mengumpulkan jalur yang memang bisa dipakai — SMS bank lewat
-// Automasi Pintasan, email bank lewat Kotak Masuk (Gmail), dan tempel teks
-// notifikasi — semuanya bermuara ke Input Cepat `?teks=` (user tetap cek &
-// simpan sendiri, tidak ada yang tercatat otomatis tanpa dilihat).
+// Panel Pengaturan → Pembaca Notifikasi. Leosiqra berjalan di browser/PWA dan
+// tidak bisa membaca notifikasi aplikasi lain sendiri. Yang membaca adalah app
+// Pintasan iPhone (Automasi › Aplikasi › "Saat menerima notifikasi", juga
+// Automasi › Pesan untuk SMS), lalu membuka Input Cepat `?teks=`. Ditambah
+// email bank lewat Kotak Masuk (Gmail) dan tempel teks notifikasi. User tetap
+// cek & simpan sendiri — tidak ada yang tercatat otomatis tanpa dilihat.
 
 type Platform = 'ios' | 'android' | 'desktop';
 
@@ -23,7 +23,7 @@ const detect = (): Platform => {
 
 const SAMPLE = 'BCA: Transaksi debit Rp 45.000 di KOPI KENANGAN 28/10 12:30';
 
-export function NotificationReaderView({ openShortcut, openHref }: { openShortcut: () => void; openHref: (href: string) => void }) {
+export function NotificationReaderView({ openShortcut, openHref }: { openShortcut: (recipe: string) => void; openHref: (href: string) => void }) {
   const [platform, setPlatform] = useState<Platform>('desktop');
   const [text, setText] = useState('');
   useEffect(() => setPlatform(detect()), []);
@@ -40,6 +40,17 @@ export function NotificationReaderView({ openShortcut, openHref }: { openShortcu
 
   const ways = [
     {
+      id: 'notif',
+      icon: BellRing,
+      tint: 'bg-amber-500',
+      title: 'Notifikasi aplikasi bank',
+      status: platform === 'android' ? 'Khusus iPhone' : 'Otomatis di iPhone',
+      ok: platform !== 'android',
+      desc: 'Automasi Pintasan › Aplikasi: tiap notifikasi dari aplikasi bank/e-wallet, Leosiqra terbuka dengan isiannya.',
+      cta: 'Pasang di Shortcut iPhone',
+      onClick: () => openShortcut('notif'),
+    },
+    {
       id: 'sms',
       icon: MessageSquareText,
       tint: 'bg-emerald-500',
@@ -48,7 +59,7 @@ export function NotificationReaderView({ openShortcut, openHref }: { openShortcu
       ok: platform !== 'android',
       desc: 'Automasi Pintasan › Pesan: tiap SMS dari bank, Leosiqra terbuka dengan isian dari pesannya.',
       cta: 'Pasang di Shortcut iPhone',
-      onClick: openShortcut,
+      onClick: () => openShortcut('sms'),
     },
     {
       id: 'email',
@@ -108,7 +119,7 @@ export function NotificationReaderView({ openShortcut, openHref }: { openShortcu
       {/* Tempel teks notifikasi — jalur manual untuk notifikasi aplikasi */}
       <div className="rounded-[22px] bg-slate-50 p-4 ring-1 ring-slate-200">
         <p className="text-[15px] font-bold text-slate-900">Tempel teks notifikasi</p>
-        <p className="mt-0.5 text-[13px] leading-snug text-slate-500">Notifikasi dari aplikasi bank/e-wallet: salin teksnya, tempel di sini, lalu Leosiqra mengisi formnya.</p>
+        <p className="mt-0.5 text-[13px] leading-snug text-slate-500">Belum pasang otomasi, atau pakai Android? Salin teks notifikasinya, tempel di sini, lalu Leosiqra mengisi formnya.</p>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value.slice(0, 500))}
@@ -144,7 +155,7 @@ export function NotificationReaderView({ openShortcut, openHref }: { openShortcu
           {platform === 'android' ? (
             <>Membaca notifikasi aplikasi lain secara otomatis butuh izin khusus Android yang tidak bisa diberikan ke browser — belum tersedia di Leosiqra. Untuk sekarang pakai email (Gmail) atau tempel teks notifikasi.</>
           ) : (
-            <>Browser tidak bisa membaca notifikasi aplikasi lain, jadi notifikasi push dari aplikasi bank belum bisa dicatat otomatis. SMS & email bisa; notifikasi aplikasi lewat tempel teks.</>
+            <>Notifikasi & SMS dibaca oleh app Pintasan di iPhone-mu, lalu Leosiqra terbuka dengan isiannya. Pastikan sudah login Leosiqra di Safari.</>
           )}
           {' '}Tidak ada yang tersimpan tanpa kamu cek dulu.
         </p>

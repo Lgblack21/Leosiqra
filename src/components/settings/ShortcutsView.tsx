@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Mic, ScanLine, MessageSquareText, Copy, Check, ChevronDown, ExternalLink } from 'lucide-react';
+import { Mic, ScanLine, MessageSquareText, BellRing, Copy, Check, ChevronDown, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFeedback } from '@/components/ui/Feedback';
 
@@ -66,6 +66,20 @@ const ITEMS: Item[] = [
     url: (o) => `${o}/input-cepat?teks=`,
     urlLabel: 'Tautan SMS (+ Isi Pesan)',
   },
+  {
+    id: 'notif',
+    icon: BellRing,
+    tint: 'bg-amber-50 text-amber-600',
+    title: 'Notifikasi aplikasi bank',
+    desc: 'Tiap notifikasi dari aplikasi bank/e-wallet masuk, Leosiqra terbuka dengan isian dari notifikasinya.',
+    steps: [
+      'Pintasan › Automasi › + › Aplikasi → pilih aplikasi bank/e-wallet (bisa beberapa), centang "Saat saya menerima notifikasi", lalu "Jalankan Segera".',
+      'Tindakan "Enkode URL" untuk isi notifikasi (Input Pintasan), lalu "Buka URL": tempel tautan di bawah dan taruh hasil Enkode URL tepat setelah teks=.',
+      'Saat notifikasi masuk, cek isiannya lalu ketuk Simpan. Notifikasi promo ikut terbuka — tinggal tutup.',
+    ],
+    url: (o) => `${o}/input-cepat?teks=`,
+    urlLabel: 'Tautan notifikasi (+ isi notifikasi)',
+  },
 ];
 
 function CopyRow({ text, label }: { text: string; label: string }) {
@@ -93,8 +107,8 @@ function CopyRow({ text, label }: { text: string; label: string }) {
   );
 }
 
-export function ShortcutsView() {
-  const [open, setOpen] = useState<string | null>(null);
+export function ShortcutsView({ initialOpen = null }: { initialOpen?: string | null }) {
+  const [open, setOpen] = useState<string | null>(initialOpen);
   const origin = base();
   return (
     <div className="space-y-4">
@@ -124,7 +138,7 @@ export function ShortcutsView() {
                     ))}
                   </ol>
                   <CopyRow text={url} label={it.urlLabel} />
-                  {it.id !== 'sms' && (
+                  {it.id !== 'sms' && it.id !== 'notif' && (
                     <a href={url} className="inline-flex items-center gap-1.5 px-1 text-[13px] font-semibold text-indigo-600 hover:underline">
                       Coba sekarang <ExternalLink size={13} />
                     </a>
