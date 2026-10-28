@@ -34,4 +34,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Baca saldo kartu e-money (EmoneyPlugin). required=false: HP tanpa NFC tetap bisa memasang aplikasi. -->
+    <uses-permission android:name="android.permission.NFC" />
+    <uses-feature android:name="android.hardware.nfc" android:required="false" />
 </manifest>

@@ -12,6 +12,16 @@
 	<string>Leosiqra butuh akses ini untuk memindai struk/nota transaksi.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Leosiqra butuh akses mikrofon untuk mencatat transaksi lewat suara.</string>
+	<key>NFCReaderUsageDescription</key>
+	<string>Leosiqra membaca saldo kartu e-money (Mandiri e-money, BNI TapCash) lewat NFC. Hanya membaca, tidak pernah menulis ke kartu.</string>
+	<key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>
+	<array>
+		<string>A000000018300001</string>
+		<string>0000000000000001</string>
+		<string>A000424E49100001</string>
+		<string>A000424E49999999</string>
+		<string>112233445566</string>
+	</array>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Leosiqra menggunakan pengenalan suara untuk mengubah ucapan Anda menjadi teks transaksi.</string>
 	<key>CFBundleDevelopmentRegion</key>

@@ -111,6 +111,17 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   **Bug produksi diperbaiki**: semua impor PDF gagal di browser ('No "GlobalWorkerOptions.workerSrc"') sejak
   Impor live — `pdfText.ts` kini memuat `pdf.worker.mjs` ke `globalThis.pdfjsWorker`. Dibuktikan dengan build
   lama vs baru (static export lokal).
+  Juga belum di-deploy: **Kartu e-money (NFC)** — Pengaturan view `emoney` + `/app/emoney` (menu Lainnya HP),
+  komponen `src/components/emoney/EmoneyScanner.tsx`, jembatan `src/lib/emoney.ts`. Plugin native LOKAL
+  "Emoney": iOS `ios/App/App/EmoneyPlugin.swift` (didaftarkan di `AppViewController`, dipakai SceneDelegate;
+  entitlement NFC TAG + daftar AID di Info.plist), Android `EmoneyPlugin.java` (didaftarkan di MainActivity,
+  izin NFC, reader mode). Baca saja: Mandiri e-money (AID A000000018300001 / 0000000000000001; 00B2010400
+  BE @12..15, cadangan 00B500000A LE) & BNI TapCash (AID A000424E49100001 / A000424E49999999 / 112233445566;
+  9032030000 → 3 byte BE @2..4). APDU dari repo open-source muhakmal/osp-kue-reader & agusibrahim/
+  prepaidcard_reader — **belum diuji dengan kartu asli**. Simpan = PUT saldo absolut (idempoten), bukan
+  transaksi. Swift belum pernah dikompilasi (tidak ada Xcode di container); Java dicek javac + stub & uji
+  parsing. Butuh: kapabilitas "NFC Tag Reading" di App ID Apple, build & rilis ulang aplikasi iOS/Android.
+  Aplikasi lama tanpa plugin → layar "Perbarui aplikasi".
 
 ## Migrasi D1
 
