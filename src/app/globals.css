@@ -389,6 +389,33 @@ html[data-daypart="sore"] .auth-greet[data-p="sore"], html[data-daypart="malam"]
 @keyframes scan-line { 0%, 100% { top: 8%; } 50% { top: 88%; } }
 @media (prefers-reduced-motion: reduce) { .paper-float, .voice-bar, .scan-line { animation: none; } }
 
+/* ===== Panel Pengaturan ramping =====
+   Scope .settings-compact di dialog SettingsPanel: semua jarak Tailwind v4
+   dihitung dari --spacing → dikecilkan ±12%; ukuran teks arbitrer turun satu
+   tingkat. Berlaku untuk semua tampilan di dalam panel sekaligus. */
+.settings-compact { --spacing: 0.22rem; }
+@layer utilities {
+  .settings-compact .text-\[52px\] { font-size: 44px; }
+  .settings-compact .text-\[44px\] { font-size: 38px; }
+  .settings-compact .text-\[38px\] { font-size: 32px; }
+  .settings-compact .text-\[32px\] { font-size: 28px; }
+  .settings-compact .text-\[30px\] { font-size: 26px; }
+  .settings-compact .text-\[28px\] { font-size: 24px; }
+  .settings-compact .text-\[26px\] { font-size: 22px; }
+  .settings-compact .text-\[24px\] { font-size: 20px; }
+  .settings-compact .text-\[23px\] { font-size: 20px; }
+  .settings-compact .text-\[22px\] { font-size: 19px; }
+  .settings-compact .text-\[20px\] { font-size: 17px; }
+  .settings-compact .text-\[19px\] { font-size: 16px; }
+  .settings-compact .text-\[18px\] { font-size: 16px; }
+  .settings-compact .text-\[17px\] { font-size: 15px; }
+  .settings-compact .text-\[16px\] { font-size: 14px; }
+  .settings-compact .text-\[15px\] { font-size: 14px; }
+  .settings-compact .text-\[14px\] { font-size: 13px; }
+  .settings-compact .text-\[13px\] { font-size: 12px; }
+  .settings-compact .text-\[12px\] { font-size: 11.5px; }
+}
+
 /* Hiasan tema musiman di kartu Ringkasan (lib/season.ts). */
 @keyframes leo-season-float { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-8px) rotate(6deg); } }
 .leo-season-float { animation: leo-season-float 4.5s ease-in-out infinite; }

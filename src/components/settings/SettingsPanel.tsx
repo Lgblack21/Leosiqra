@@ -166,7 +166,7 @@ const ToggleRow = ({ icon: Icon, title, desc, on, onChange }: { icon: React.Elem
       {desc && <span className="block text-[13px] leading-snug text-slate-500">{desc}</span>}
     </span>
     <span className={cn('relative h-7 w-12 shrink-0 rounded-full transition-colors', on ? 'bg-emerald-500' : 'bg-slate-300')}>
-      <span className={cn('absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all', on ? 'left-[22px]' : 'left-0.5')} />
+      <span className={cn('absolute left-0.5 top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform', on && 'translate-x-5')} />
     </span>
   </button>
 );
@@ -287,7 +287,7 @@ function PaketView({ user, onClose }: { user: PanelUser | null; onClose: () => v
       <div className="relative -mx-6 flex flex-col items-center px-6 pb-2 pt-2 text-center">
         <span aria-hidden className={cn('absolute inset-x-10 top-0 h-56 rounded-full blur-3xl', pro ? 'bg-violet-200/60' : 'bg-indigo-100/70')} />
         <div className="relative">
-          {leo.showMascot && <LeoMascot mood={pro ? 'happy' : 'idle'} size={170} season={leo.seasonal ? season : null} />}
+          {leo.showMascot && <LeoMascot mood={pro ? 'happy' : 'idle'} size={140} season={leo.seasonal ? season : null} />}
         </div>
         <p className="relative mt-1 flex items-center gap-1.5 text-[15px] font-semibold text-slate-500">
           {pro ? <Sparkles size={15} className="text-violet-500" /> : null}
@@ -405,17 +405,31 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
   // simpan) memotong riwayat sampai sana, supaya tidak berputar.
   const [stack, setStack] = useState<View[]>([initialView]);
   const view = stack[stack.length - 1];
-  const setView = (next: View) =>
+  // Wadah gulir dipakai bersama semua tampilan. Posisi gulir disimpan per
+  // tampilan: masuk ke sub-menu mulai dari atas, kembali ke menu sebelumnya
+  // memulihkan posisi terakhirnya (tidak loncat ke atas).
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollPos = useRef<Partial<Record<View, number>>>({});
+  const setView = (next: View) => {
+    if (next !== view) scrollPos.current[view] = scrollRef.current?.scrollTop ?? 0;
     setStack((s) => {
       const i = s.indexOf(next);
       return i >= 0 ? s.slice(0, i + 1) : [...s, next];
     });
-  const back = () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : [PARENT[s[0]] ?? 'menu']));
-  // Wadah gulir dipakai bersama semua tampilan — tanpa ini, membuka tampilan
-  // lain (atau panel lagi) mewarisi posisi gulir sebelumnya dan mulai di tengah.
-  const scrollRef = useRef<HTMLDivElement>(null);
+  };
+  const back = () => {
+    // Tampilan yang ditinggalkan dibuka dari atas lagi lain kali.
+    delete scrollPos.current[view];
+    setStack((s) => (s.length > 1 ? s.slice(0, -1) : [PARENT[s[0]] ?? 'menu']));
+  };
   useEffect(() => {
-    if (open) scrollRef.current?.scrollTo({ top: 0 });
+    if (!open) return;
+    const el = scrollRef.current;
+    const top = scrollPos.current[view] ?? 0;
+    el?.scrollTo({ top });
+    // Isi tampilan bisa muncul sedikit belakangan (data dimuat) — ulangi
+    // sekali setelah render berikutnya supaya posisinya tetap tepat.
+    if (top) requestAnimationFrame(() => el?.scrollTo({ top }));
   }, [open, view]);
   const [user, setUser] = useState<PanelUser | null>(null);
 
@@ -436,6 +450,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
 
   useEffect(() => {
     if (!open) return;
+    scrollPos.current = {};
     setStack([initialView]);
     setEditingFeatures(false);
     cloudflareApi<{ user?: PanelUser | null }>('/api/auth/me').then((r) => setUser(r.user ?? null)).catch(() => undefined);
@@ -525,7 +540,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
             role="dialog"
             aria-modal="true"
             aria-label={title}
-            className="flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[28px] bg-white shadow-2xl sm:max-w-xl sm:rounded-[28px]"
+            className="settings-compact flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[24px] bg-white shadow-2xl sm:max-w-lg sm:rounded-[24px]"
             initial={{ y: 40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 40, opacity: 0 }}

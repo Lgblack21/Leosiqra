@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-28 malam (akun B selesai; semua live, main = run #5
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| — | tidak ada yang aktif | — | — |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Pengaturan: ramping + posisi scroll |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -158,7 +158,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     sistem), **Statistik pemakaian** (localStorage `leosiqra:analytics-off`; `WebAnalytics` tidak memuat beacon
     Cloudflare kalau dimatikan). Keamanan akun & Atur ulang data tetap di bawahnya.
   - Pengaturan → Perangkat lain → Pasang di ponsel (`/install`).
-- **Belum di-deploy**: tidak ada. Branch kerja akun B: `claude/nifty-cannon-y181p6` (= main).
+- **Belum di-deploy** (akun B): **Panel Pengaturan ramping** — kelas `.settings-compact` di dialog SettingsPanel
+  (globals.css): `--spacing` 0.22rem (semua jarak Tailwind ±12% lebih rapat) + ukuran `text-[Npx]` turun satu
+  tingkat; dialog `sm:max-w-lg`. **Posisi gulir per tampilan** (`scrollPos` di SettingsPanel): sub-menu mulai dari
+  atas, Kembali memulihkan posisi menu sebelumnya.
 
 ## Migrasi D1
 
