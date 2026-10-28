@@ -4,30 +4,25 @@ import { useCallback, useEffect, useState } from 'react';
 import { Plus, Pause, Play, Pencil, Trash2, CalendarClock, Sparkles } from 'lucide-react';
 import { cn, formatIDR } from '@/lib/utils';
 import { savingsGoalService, type SavingsGoal } from '@/lib/services/savingsGoalService';
-import { recurringService, type RecurringTransaction } from '@/lib/services/recurringService';
+import { recurringService } from '@/lib/services/recurringService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
-import { RecurringModal } from '@/components/modals/RecurringModal';
+import { TargetFormModal, type TargetPreset } from '@/components/savings/TargetFormModal';
+import { targetColor, targetIcon, monthsUntil } from '@/lib/targets';
 import { useFeedback } from '@/components/ui/Feedback';
-import { auth } from '@/lib/cf-client';
 
-// Query recurring disaring di klien berdasarkan userId — wajib uid asli.
-const uid = () => auth.currentUser?.uid ?? '';
+// Panel Pengaturan → Target. Target = baris recurring bertipe Tabungan dengan
+// targetAmount (+ ikon, warna, tanggal) di payload_json; progres dari setoran
+// tabungan per kategori (GET /api/member/savings-goals). Setoran otomatis
+// opsional. Menghapus target hanya menghapus jadwalnya; riwayat setoran tetap ada.
 
-// Panel Pengaturan → Target. Target = transaksi rutin bertipe Tabungan dengan
-// nominal target (payload_json.targetAmount); progres dari setoran tabungan
-// per kategori (GET /api/member/savings-goals). Tambah/ubah memakai
-// RecurringModal yang sama dengan halaman Transaksi Rutin — tidak ada logika
-// uang baru di sini. Menghapus target hanya menghapus jadwalnya; riwayat
-// setoran tetap ada.
-
-// goal = salah satu SAVING_GOALS (kategori tabungan yang dipakai modal & laporan).
-const SUGGESTIONS: { name: string; goal: string; emoji: string; target: number }[] = [
-  { name: 'Dana darurat', goal: 'Dana Darurat', emoji: '🛟', target: 15_000_000 },
-  { name: 'Liburan', goal: 'Liburan', emoji: '🏝️', target: 8_000_000 },
-  { name: 'Gadget baru', goal: 'Lainnya', emoji: '📱', target: 6_000_000 },
-  { name: 'DP rumah', goal: 'Properti', emoji: '🏡', target: 100_000_000 },
-  { name: 'Kendaraan', goal: 'Kendaraan', emoji: '🛵', target: 25_000_000 },
-  { name: 'Pendidikan', goal: 'Pendidikan', emoji: '🎓', target: 20_000_000 },
+// Nama = kategori tabungan bawaan (SAVING_GOALS) supaya setoran lama ikut terhitung.
+export const TARGET_SUGGESTIONS: (TargetPreset & { name: string; targetAmount: number; icon: string })[] = [
+  { name: 'Dana Darurat', icon: '🛟', color: '#0ea5e9', targetAmount: 15_000_000 },
+  { name: 'Liburan', icon: '🏝️', color: '#14b8a6', targetAmount: 8_000_000 },
+  { name: 'Gadget Baru', icon: '📱', color: '#8b5cf6', targetAmount: 6_000_000 },
+  { name: 'Properti', icon: '🏡', color: '#f97316', targetAmount: 100_000_000 },
+  { name: 'Kendaraan', icon: '🛵', color: '#f43f5e', targetAmount: 25_000_000 },
+  { name: 'Pendidikan', icon: '🎓', color: '#6366f1', targetAmount: 20_000_000 },
 ];
 
 const PER_MONTH: Record<SavingsGoal['interval'], number> = { Harian: 30, Mingguan: 52 / 12, Bulanan: 1, Tahunan: 1 / 12 };
@@ -35,27 +30,21 @@ const shortDate = (d: string) => new Intl.DateTimeFormat('id-ID', { day: 'numeri
 
 // Perkiraan bulan sampai target tercapai dari setoran rutin.
 const monthsLeft = (g: SavingsGoal) => {
-  if (!g.targetAmount || g.status === 'PAUSED') return null;
+  if (!g.targetAmount || g.status === 'PAUSED' || g.monthlyAmount <= 0) return null;
   const remaining = g.targetAmount - g.currentTotal;
   if (remaining <= 0) return 0;
   const monthly = g.monthlyAmount * PER_MONTH[g.interval];
   return monthly > 0 ? Math.ceil(remaining / monthly) : null;
 };
 
-function Ring({ pct, done }: { pct: number; done: boolean }) {
+function Ring({ pct, done, color }: { pct: number; done: boolean; color: string }) {
   const r = 26;
   const c = 2 * Math.PI * r;
   return (
     <span className="relative flex h-16 w-16 shrink-0 items-center justify-center">
       <svg viewBox="0 0 64 64" className="absolute inset-0 -rotate-90">
-        <circle cx="32" cy="32" r={r} fill="none" stroke="#e0e7ff" strokeWidth="7" />
-        <circle cx="32" cy="32" r={r} fill="none" stroke={done ? '#10b981' : 'url(#target-grad)'} strokeWidth="7" strokeLinecap="round" strokeDasharray={`${(Math.min(100, pct) / 100) * c} ${c}`} />
-        <defs>
-          <linearGradient id="target-grad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#6366f1" />
-            <stop offset="1" stopColor="#8b5cf6" />
-          </linearGradient>
-        </defs>
+        <circle cx="32" cy="32" r={r} fill="none" stroke={`${color}26`} strokeWidth="7" />
+        <circle cx="32" cy="32" r={r} fill="none" stroke={done ? '#10b981' : color} strokeWidth="7" strokeLinecap="round" strokeDasharray={`${(Math.min(100, pct) / 100) * c} ${c}`} />
       </svg>
       <span className={cn('text-[13px] font-extrabold tabular-nums', done ? 'text-emerald-600' : 'text-slate-800')}>{done ? '🎉' : `${Math.round(pct)}%`}</span>
     </span>
@@ -65,7 +54,7 @@ function Ring({ pct, done }: { pct: number; done: boolean }) {
 export function TargetView() {
   const { toast, confirm } = useFeedback();
   const [goals, setGoals] = useState<SavingsGoal[] | null>(null);
-  const [modal, setModal] = useState<{ open: boolean; data: RecurringTransaction | null }>({ open: false, data: null });
+  const [modal, setModal] = useState<{ open: boolean; goal: SavingsGoal | null; preset: TargetPreset | null }>({ open: false, goal: null, preset: null });
   const [busy, setBusy] = useState('');
 
   const load = useCallback(() => {
@@ -77,20 +66,8 @@ export function TargetView() {
     return () => unsubs.forEach((u) => u());
   }, [load]);
 
-  const fullRecord = async (id: string) => (await recurringService.getUserRecurring(uid())).find((r) => r.id === id) ?? null;
-
-  const openNew = (name = '', targetAmount?: number, goal = '') =>
-    setModal({
-      open: true,
-      data: name
-        ? { userId: uid(), name, type: 'Tabungan', category: goal, accountId: '', amount: 0, interval: 'Bulanan', nextDate: new Date(), status: 'ACTIVE', createdAt: new Date(), targetAmount }
-        : null,
-    });
-  const edit = async (g: SavingsGoal) => {
-    const rec = await fullRecord(g.id).catch(() => null);
-    if (!rec) return toast.error('Target tidak ditemukan. Coba muat ulang.');
-    setModal({ open: true, data: rec });
-  };
+  const openNew = (preset: TargetPreset | null = null) => setModal({ open: true, goal: null, preset });
+  const edit = (g: SavingsGoal) => setModal({ open: true, goal: g, preset: null });
   const togglePause = async (g: SavingsGoal) => {
     setBusy(g.id);
     try {
@@ -145,11 +122,11 @@ export function TargetView() {
           <p className="flex items-center gap-2 text-[15px] font-semibold text-slate-900"><Sparkles size={16} className="text-indigo-500" /> Mulai dari salah satu ini</p>
           <p className="text-[13px] text-slate-500">Leosiqra menyetor otomatis tiap periode dan menghitung kapan targetmu tercapai.</p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {SUGGESTIONS.map((sg) => (
-              <button key={sg.name} type="button" onClick={() => openNew(sg.name, sg.target, sg.goal)} className="flex flex-col items-start gap-1 rounded-2xl bg-white p-3 text-left ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:ring-indigo-200">
-                <span className="text-[24px]" aria-hidden>{sg.emoji}</span>
+            {TARGET_SUGGESTIONS.map((sg) => (
+              <button key={sg.name} type="button" onClick={() => openNew(sg)} className="flex flex-col items-start gap-1 rounded-2xl bg-white p-3 text-left ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:ring-indigo-200">
+                <span className="text-[24px]" aria-hidden>{sg.icon}</span>
                 <span className="text-[14px] font-semibold text-slate-900">{sg.name}</span>
-                <span className="text-[12px] text-slate-500">± {formatIDR(sg.target)}</span>
+                <span className="text-[12px] text-slate-500">± {formatIDR(sg.targetAmount)}</span>
               </button>
             ))}
           </div>
@@ -163,9 +140,10 @@ export function TargetView() {
             return (
               <li key={g.id} className={cn('rounded-[22px] bg-white p-4 ring-1', done ? 'ring-emerald-200' : 'ring-slate-200/70')}>
                 <div className="flex items-center gap-4">
-                  {g.targetAmount ? <Ring pct={pct} done={done} /> : <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-[26px]">🐷</span>}
+                  {g.targetAmount ? <Ring pct={pct} done={done} color={targetColor(g)} /> : <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-[26px]">🐷</span>}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
+                      <span aria-hidden className="text-[16px]">{targetIcon(g)}</span>
                       <p className="truncate text-[16px] font-bold text-slate-900">{g.name}</p>
                       {g.status === 'PAUSED' && <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">Dijeda</span>}
                     </div>
@@ -173,19 +151,19 @@ export function TargetView() {
                       {formatIDR(g.currentTotal)}{g.targetAmount ? <span className="text-slate-400"> / {formatIDR(g.targetAmount)}</span> : ' terkumpul'}
                     </p>
                     <p className="mt-0.5 text-[12px] text-slate-500">
-                      {done ? 'Target tercapai — hebat!' : left === null ? 'Atur nominal target untuk perkiraan' : left === 0 ? 'Hampir sampai' : `± ${left} bulan lagi`}
+                      {done ? 'Target tercapai — hebat!' : g.targetDate ? (monthsUntil(g.targetDate) ? `${monthsUntil(g.targetDate)} bulan menuju ${shortDate(g.targetDate)}` : 'Tanggal target sudah lewat') : left === null ? 'Atur setoran otomatis untuk perkiraan' : left === 0 ? 'Hampir sampai' : `± ${left} bulan lagi`}
                     </p>
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
                   <span className="flex min-w-0 flex-1 items-center gap-1.5 text-[12px] text-slate-500">
                     <CalendarClock size={14} className="shrink-0" />
-                    <span className="truncate">{formatIDR(g.monthlyAmount)}/{g.interval.toLowerCase()} · berikutnya {shortDate(g.nextDate)}</span>
+                    <span className="truncate">{g.monthlyAmount > 0 ? `${formatIDR(g.monthlyAmount)}/${g.interval.toLowerCase()} · berikutnya ${shortDate(g.nextDate)}` : 'Setor manual'}</span>
                   </span>
-                  <button type="button" onClick={() => void edit(g)} disabled={busy === g.id} aria-label={`Ubah ${g.name}`} className="rounded-full bg-slate-100 p-2 text-slate-600 hover:bg-slate-200 disabled:opacity-50"><Pencil size={14} /></button>
-                  <button type="button" onClick={() => void togglePause(g)} disabled={busy === g.id} aria-label={g.status === 'PAUSED' ? `Lanjutkan ${g.name}` : `Jeda ${g.name}`} className="rounded-full bg-slate-100 p-2 text-slate-600 hover:bg-slate-200 disabled:opacity-50">
+                  <button type="button" onClick={() => edit(g)} disabled={busy === g.id} aria-label={`Ubah ${g.name}`} className="rounded-full bg-slate-100 p-2 text-slate-600 hover:bg-slate-200 disabled:opacity-50"><Pencil size={14} /></button>
+                  {g.monthlyAmount > 0 && <button type="button" onClick={() => void togglePause(g)} disabled={busy === g.id} aria-label={g.status === 'PAUSED' ? `Lanjutkan ${g.name}` : `Jeda ${g.name}`} className="rounded-full bg-slate-100 p-2 text-slate-600 hover:bg-slate-200 disabled:opacity-50">
                     {g.status === 'PAUSED' ? <Play size={14} /> : <Pause size={14} />}
-                  </button>
+                  </button>}
                   <button type="button" onClick={() => void remove(g)} disabled={busy === g.id} aria-label={`Hapus ${g.name}`} className="rounded-full bg-rose-50 p-2 text-rose-600 hover:bg-rose-100 disabled:opacity-50"><Trash2 size={14} /></button>
                 </div>
               </li>
@@ -195,10 +173,10 @@ export function TargetView() {
       )}
 
       <p className="px-1 text-[12px] leading-relaxed text-slate-500">
-        Target memakai jadwal setoran otomatis ke Tabungan (sama dengan Transaksi Rutin bertipe Tabungan). Menjeda/menghapus target tidak mengubah saldo yang sudah tersimpan.
+        Setor ke target dari halaman Tabungan, atau nyalakan setoran otomatis. Menjeda/menghapus target tidak mengubah saldo yang sudah tersimpan.
       </p>
 
-      <RecurringModal userId={uid() || 'session'} isOpen={modal.open} onClose={() => { setModal({ open: false, data: null }); load(); }} initialData={modal.data} initialType="Tabungan" />
+      <TargetFormModal open={modal.open} goal={modal.goal} preset={modal.preset} onClose={() => setModal({ open: false, goal: null, preset: null })} onSaved={load} />
     </div>
   );
 }

@@ -33,7 +33,8 @@ export default function AppRecurringPage() {
 
   useEffect(() => {
     const uid = auth.currentUser?.uid ?? "";
-    const load = () => recurringService.getUserRecurring(uid).then(setItems).catch(() => setItems([]));
+    // Target tanpa setoran otomatis (nominal 0) bukan jadwal — disembunyikan.
+    const load = () => recurringService.getUserRecurring(uid).then((list) => setItems(list.filter((t) => !(t.type === "Tabungan" && Number(t.amount) <= 0)))).catch(() => setItems([]));
     const loadAcc = () => accountService.getUserAccounts(uid).then(setAccounts).catch(() => setAccounts([]));
     load();
     loadAcc();

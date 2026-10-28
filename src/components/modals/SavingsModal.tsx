@@ -10,15 +10,19 @@ import { CurrencySelect } from '@/components/CurrencySelect';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { formatCurrency, getCurrencySymbol, toLocalDateString } from '@/lib/utils';
 import { SAVING_GOALS } from '@/lib/savingsGoals';
+import { savingsGoalService, type SavingsGoal } from '@/lib/services/savingsGoalService';
 
 interface SavingsModalProps {
   userId: string;
   isOpen: boolean;
   onClose: () => void;
   initialTransactionType?: 'Setoran' | 'Penarikan';
+  // Kategori/target yang langsung terpilih (mis. tombol "Setor" di kartu target).
+  initialCategory?: string;
 }
 
-export const SavingsModal = ({ userId, isOpen, onClose, initialTransactionType = 'Setoran' }: SavingsModalProps) => {
+export const SavingsModal = ({ userId, isOpen, onClose, initialTransactionType = 'Setoran', initialCategory }: SavingsModalProps) => {
+  const [targets, setTargets] = useState<SavingsGoal[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -40,11 +44,12 @@ export const SavingsModal = ({ userId, isOpen, onClose, initialTransactionType =
   useEffect(() => {
     if (isOpen && userId) {
       setError('');
-      setFormData(p => ({ ...p, transactionType: initialTransactionType }));
+      setFormData(p => ({ ...p, transactionType: initialTransactionType, ...(initialCategory ? { category: initialCategory } : {}) }));
       accountService.getUserAccounts(userId).then(setAccounts).catch(console.error);
+      savingsGoalService.getUserSavingsGoals().then((g) => setTargets(g.filter((x) => x.targetAmount))).catch(() => setTargets([]));
       exchangeRateService.getLatestRates().then(setRates).catch(console.error);
     }
-  }, [isOpen, userId, initialTransactionType]);
+  }, [isOpen, userId, initialTransactionType, initialCategory]);
 
   useEffect(() => {
     if (formData.amount && formData.currency && rates) {
@@ -130,7 +135,15 @@ export const SavingsModal = ({ userId, isOpen, onClose, initialTransactionType =
             <div className="relative">
               <select value={formData.category} onChange={e => setFormData(p => ({...p, category: e.target.value}))}
                 className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all cursor-pointer">
-                {SAVING_GOALS.map(g => <option key={g} value={g}>{g}</option>)}
+                {targets.length > 0 && (
+                  <optgroup label="Target">
+                    {targets.map(t => <option key={t.id} value={t.category}>{t.icon ? `${t.icon} ` : ''}{t.name}</option>)}
+                  </optgroup>
+                )}
+                <optgroup label="Kategori">
+                  {SAVING_GOALS.filter(g => !targets.some(t => t.category === g)).map(g => <option key={g} value={g}>{g}</option>)}
+                  {formData.category && !SAVING_GOALS.includes(formData.category) && !targets.some(t => t.category === formData.category) && <option value={formData.category}>{formData.category}</option>}
+                </optgroup>
               </select>
               <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
             </div>

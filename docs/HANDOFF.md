@@ -54,7 +54,14 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   Lokal: muat awal 18→11 API, pindah halaman 0–1 API (dulu transaksi 2.000 baris
   + auth/me tiap klik). Kalau ada data terasa basi, curigai cache ini dulu.
 - Panel Pengaturan selalu mulai dari atas saat dibuka/pindah tampilan (`scrollRef` di `SettingsPanel.tsx`) sudah live (run #40).
-- **Belum di-deploy**: tidak ada.
+- **Belum di-deploy**: form **Target baru** (`TargetFormModal`: ikon+warna, nama, nominal,
+  tanggal tercapai, setoran otomatis opsional, dana awal dari rekening) dipakai halaman
+  Tabungan & Pengaturan → Target; halaman **Tabungan** ditata ulang (kartu target + Setor
+  langsung, pos lain, riwayat per tanggal). Worker: payload_json recurring kini juga
+  `icon`/`color`/`targetDate` (digabung, bukan ditimpa); Tabungan boleh `amount = 0`
+  (target tanpa setoran otomatis) — cron & kalender melewati `amount > 0`; nama target
+  dobel ditolak 409. Kategori target = nama awal (ganti nama tidak memutus progres).
+  Belum: kartu target di aplikasi HP (`/app/savings`) belum menampilkan ikon/warna.
 
 ## Migrasi D1
 

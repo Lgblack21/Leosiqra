@@ -65,7 +65,8 @@ export default function RecurringPage() {
           setTransactions(snap.docs.map(doc => {
             const d = doc.data();
             return { ...d, id: doc.id, amount: Number(d.amount) || 0, nextDate: d.nextDate?.toDate?.() ?? new Date(), createdAt: d.createdAt?.toDate?.() ?? new Date() } as RecurringTransaction;
-          }));
+          // Target tanpa setoran otomatis (nominal 0) bukan jadwal — dikelola di Target.
+          }).filter(t => !(t.type === 'Tabungan' && t.amount <= 0)));
           setLoading(false);
         }, (err) => { console.error(err); setLoading(false); });
       } else {

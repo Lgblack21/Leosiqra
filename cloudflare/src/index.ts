@@ -6367,11 +6367,46 @@ async function handleListRecurring(request: Request, env: Env) {
 // Target tabungan (fitur goal-based saving) disimpan di kolom payload_json
 // yang sudah ada di skema `recurring` (lihat schema-production.sql) tapi
 // belum pernah dipakai — jadi tidak perlu migrasi kolom baru.
-const buildRecurringPayloadJson = (payload: Record<string, unknown>): string | null => {
+// Isi: targetAmount, icon (emoji), color (#rrggbb), targetDate (YYYY-MM-DD).
+// Field yang tidak dikirim dipertahankan dari `existing` (ubah sebagian dari
+// RecurringModal lama tidak menghapus ikon/warna/tanggal target).
+const RECURRING_PAYLOAD_KEYS = ["target_amount", "targetAmount", "icon", "color", "target_date", "targetDate"];
+const hasRecurringPayloadFields = (payload: Record<string, unknown>) =>
+  RECURRING_PAYLOAD_KEYS.some((k) => payload[k] !== undefined);
+const buildRecurringPayloadJson = (payload: Record<string, unknown>, existing: string | null = null): string | null => {
+  let out: Record<string, unknown> = {};
+  if (existing) {
+    try {
+      const parsed = JSON.parse(existing) as unknown;
+      if (parsed && typeof parsed === "object") out = { ...(parsed as Record<string, unknown>) };
+    } catch {
+      // payload lama rusak — mulai dari kosong.
+    }
+  }
   const targetAmountRaw = pickPayloadValue(payload, "target_amount", "targetAmount");
-  const targetAmount = typeof targetAmountRaw === "number" ? targetAmountRaw : Number(targetAmountRaw);
-  if (!Number.isFinite(targetAmount) || targetAmount <= 0) return null;
-  return JSON.stringify({ targetAmount });
+  if (targetAmountRaw !== undefined) {
+    const targetAmount = typeof targetAmountRaw === "number" ? targetAmountRaw : Number(targetAmountRaw);
+    if (Number.isFinite(targetAmount) && targetAmount > 0) out.targetAmount = Math.round(targetAmount * 100) / 100;
+    else delete out.targetAmount;
+  }
+  if (payload.icon !== undefined) {
+    const icon = String(payload.icon ?? "").trim();
+    // Emoji saja (beberapa code point); tanpa markup.
+    if (icon && [...icon].length <= 8 && !/[<>"'&]/.test(icon)) out.icon = icon;
+    else delete out.icon;
+  }
+  if (payload.color !== undefined) {
+    const color = String(payload.color ?? "").trim();
+    if (/^#[0-9a-f]{6}$/i.test(color)) out.color = color.toLowerCase();
+    else delete out.color;
+  }
+  const targetDateRaw = pickPayloadValue(payload, "target_date", "targetDate");
+  if (targetDateRaw !== undefined) {
+    const targetDate = String(targetDateRaw ?? "").slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(targetDate) && !Number.isNaN(Date.parse(targetDate))) out.targetDate = targetDate;
+    else delete out.targetDate;
+  }
+  return Object.keys(out).length ? JSON.stringify(out) : null;
 };
 
 // Nilai yang boleh disimpan untuk recurring/budget — sama dengan pilihan di
@@ -6380,11 +6415,17 @@ const buildRecurringPayloadJson = (payload: Record<string, unknown>): string | n
 const RECURRING_TYPES = new Set(["Pengeluaran", "Pemasukan", "Tabungan"]);
 const RECURRING_INTERVALS = new Set(["Harian", "Mingguan", "Bulanan", "Tahunan"]);
 const RECURRING_STATUSES = new Set(["ACTIVE", "PAUSED"]);
-const validateRecurringPayload = (payload: Record<string, unknown>, partial: boolean): string | null => {
+// Nominal 0 hanya boleh untuk Tabungan: target tanpa setoran otomatis (cron &
+// kalender melewati amount <= 0, jadi tidak pernah dieksekusi).
+const validateRecurringPayload = (payload: Record<string, unknown>, partial: boolean, existingType?: string): string | null => {
   const has = (...keys: string[]) => keys.some((k) => payload[k] !== undefined);
   if (!partial || has("amount")) {
     const amount = Number(payload.amount);
-    if (!Number.isFinite(amount) || amount <= 0) return "Nominal harus lebih dari 0.";
+    const type = String(payload.type ?? existingType ?? "Pengeluaran");
+    if (!Number.isFinite(amount) || amount < 0 || (amount === 0 && type !== "Tabungan")) return "Nominal harus lebih dari 0.";
+  }
+  if (partial && has("type") && payload.type !== "Tabungan" && existingType === "Tabungan" && !has("amount")) {
+    return "Nominal wajib diisi saat mengubah jenis jadwal.";
   }
   if ((!partial || has("type")) && !RECURRING_TYPES.has(String(payload.type ?? "Pengeluaran"))) {
     return "Jenis jadwal harus Pengeluaran, Pemasukan, atau Tabungan.";
@@ -6406,6 +6447,18 @@ async function handleCreateRecurring(request: Request, env: Env) {
   if (invalid) return json({ error: invalid }, { status: 400 });
   const accountError = await assertOwnAccounts(env, authResult.session.user.id, [pickPayloadValue(payload, "account_id", "accountId")]);
   if (accountError) return accountError;
+  const payloadJson = buildRecurringPayloadJson(payload);
+  // Progres target dihitung per kategori tabungan — dua target dengan
+  // kategori sama akan berbagi saldo. Tolak yang dobel.
+  if (String(payload.type) === "Tabungan" && payloadJson?.includes('"targetAmount"')) {
+    const dup = await env.DB.prepare(
+      `SELECT 1 FROM recurring
+        WHERE user_id = ? AND type = 'Tabungan' AND lower(category) = lower(?) AND payload_json LIKE '%"targetAmount"%' LIMIT 1`
+    )
+      .bind(authResult.session.user.id, String(payload.category ?? ""))
+      .first();
+    if (dup) return json({ error: "Sudah ada target dengan nama ini. Pakai nama lain." }, { status: 409 });
+  }
   const id = generateId();
   await env.DB.prepare(
     `INSERT INTO recurring (id, user_id, name, type, category, account_id, amount, interval, next_date, note, status, payload_json, created_at, updated_at)
@@ -6423,7 +6476,7 @@ async function handleCreateRecurring(request: Request, env: Env) {
       toIsoIfDateLike(pickPayloadValue(payload, "next_date", "nextDate")) ?? nowIso(),
       payload.note ?? null,
       payload.status ?? "ACTIVE",
-      buildRecurringPayloadJson(payload),
+      payloadJson,
       nowIso(),
       nowIso()
     )
@@ -6435,7 +6488,11 @@ async function handleUpdateRecurring(request: Request, env: Env, recurringId: st
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
   const payload = await parseJson<Record<string, unknown>>(request);
-  const invalid = validateRecurringPayload(payload, true);
+  const existing = await env.DB.prepare("SELECT type, payload_json FROM recurring WHERE id = ? AND user_id = ?")
+    .bind(recurringId, authResult.session.user.id)
+    .first<{ type: string; payload_json: string | null }>();
+  if (!existing) return json({ error: "Recurring tidak ditemukan." }, { status: 404 });
+  const invalid = validateRecurringPayload(payload, true, existing.type);
   if (invalid) return json({ error: invalid }, { status: 400 });
   const accountError = await assertOwnAccounts(env, authResult.session.user.id, [pickPayloadValue(payload, "account_id", "accountId")]);
   if (accountError) return accountError;
@@ -6456,8 +6513,18 @@ async function handleUpdateRecurring(request: Request, env: Env, recurringId: st
   }
   if (payload.note !== undefined) updates.set("note", payload.note);
   if (payload.status !== undefined) updates.set("status", payload.status);
-  if (payload.target_amount !== undefined || payload.targetAmount !== undefined) {
-    updates.set("payload_json", buildRecurringPayloadJson(payload));
+  if (hasRecurringPayloadFields(payload)) {
+    updates.set("payload_json", buildRecurringPayloadJson(payload, existing.payload_json));
+  }
+  const nextPayload = String(updates.get("payload_json") ?? existing.payload_json ?? "");
+  if (payload.category !== undefined && existing.type === "Tabungan" && nextPayload.includes('"targetAmount"')) {
+    const dup = await env.DB.prepare(
+      `SELECT 1 FROM recurring
+        WHERE user_id = ? AND id != ? AND type = 'Tabungan' AND lower(category) = lower(?) AND payload_json LIKE '%"targetAmount"%' LIMIT 1`
+    )
+      .bind(authResult.session.user.id, recurringId, String(payload.category ?? ""))
+      .first();
+    if (dup) return json({ error: "Sudah ada target dengan nama ini. Pakai nama lain." }, { status: 409 });
   }
 
   if (updates.size === 0) {
@@ -8439,7 +8506,7 @@ async function handlePublicFeed(request: Request, env: Env, pathname: string) {
   const recurring = await env.DB.prepare(
     `SELECT r.id, r.name, r.type, r.amount, r.interval, r.next_date, r.note, a.currency
        FROM recurring r LEFT JOIN accounts a ON a.id = r.account_id AND a.user_id = r.user_id
-      WHERE r.user_id = ? AND r.status = 'ACTIVE' LIMIT 300`
+      WHERE r.user_id = ? AND r.status = 'ACTIVE' AND r.amount > 0 LIMIT 300`
   )
     .bind(userId)
     .all<{ id: string; name: string; type: string; amount: number; interval: string; next_date: string; note: string | null; currency: string | null }>();
@@ -8616,7 +8683,7 @@ const desiredCalendarEvents = async (env: Env, userId: string) => {
   const recurring = await env.DB.prepare(
     `SELECT r.id, r.name, r.type, r.amount, r.interval, r.next_date, a.currency, a.name AS account_name
        FROM recurring r LEFT JOIN accounts a ON a.id = r.account_id AND a.user_id = r.user_id
-      WHERE r.user_id = ? AND r.status = 'ACTIVE' ORDER BY r.next_date LIMIT 100`
+      WHERE r.user_id = ? AND r.status = 'ACTIVE' AND r.amount > 0 ORDER BY r.next_date LIMIT 100`
   )
     .bind(userId)
     .all<{ id: string; name: string; type: string; amount: number; interval: string; next_date: string; currency: string | null; account_name: string | null }>();
@@ -10928,10 +10995,16 @@ async function handleListSavingsGoals(request: Request, env: Env) {
 
   const items = (goalRows ?? []).map((row) => {
     let targetAmount: number | null = null;
+    let icon: string | null = null;
+    let color: string | null = null;
+    let targetDate: string | null = null;
     if (row.payload_json) {
       try {
-        const parsed = JSON.parse(row.payload_json) as { targetAmount?: number };
+        const parsed = JSON.parse(row.payload_json) as { targetAmount?: number; icon?: string; color?: string; targetDate?: string };
         targetAmount = typeof parsed.targetAmount === "number" ? parsed.targetAmount : null;
+        icon = typeof parsed.icon === "string" ? parsed.icon : null;
+        color = typeof parsed.color === "string" ? parsed.color : null;
+        targetDate = typeof parsed.targetDate === "string" ? parsed.targetDate : null;
       } catch {
         // payload_json tidak valid JSON — abaikan.
       }
@@ -10951,6 +11024,9 @@ async function handleListSavingsGoals(request: Request, env: Env) {
       targetAmount,
       currentTotal,
       progressPercent,
+      icon,
+      color,
+      targetDate,
     };
   });
 
@@ -11755,7 +11831,7 @@ const processDueRecurringTransactions = async (env: Env) => {
   const { results } = await env.DB.prepare(
     `SELECT id, user_id, name, type, category, account_id, amount, interval, next_date, note
        FROM recurring
-      WHERE status = 'ACTIVE' AND substr(next_date, 1, 10) <= ?`
+      WHERE status = 'ACTIVE' AND amount > 0 AND substr(next_date, 1, 10) <= ?`
   )
     .bind(todayStr)
     .all<RecurringRow>();

@@ -12,6 +12,9 @@ export interface SavingsGoal {
   targetAmount: number | null;
   currentTotal: number;
   progressPercent: number | null;
+  icon?: string | null;
+  color?: string | null;
+  targetDate?: string | null;
 }
 
 export const savingsGoalService = {

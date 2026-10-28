@@ -3,15 +3,14 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Wallet,
-  Target,
   Trash2,
-  TrendingUp,
-  TrendingDown,
-  PlusCircle,
-  ArrowDownToLine,
-  Repeat
+  Plus,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Pencil,
+  Search,
+  PiggyBank,
 } from 'lucide-react';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { savingsService, Saving } from '@/lib/services/savingsService';
 import { Account } from '@/lib/services/accountService';
 import { auth, db } from '@/lib/cf-client';
@@ -19,9 +18,77 @@ import { onAuthStateChanged } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { SavingsModal } from '@/components/modals/SavingsModal';
-import { RecurringModal } from '@/components/modals/RecurringModal';
 import { savingsGoalService, SavingsGoal } from '@/lib/services/savingsGoalService';
-import { cn, formatCurrency } from '@/lib/utils';
+import { recurringService } from '@/lib/services/recurringService';
+import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
+import { TargetFormModal, type TargetPreset } from '@/components/savings/TargetFormModal';
+import { TARGET_SUGGESTIONS } from '@/components/settings/TargetView';
+import { targetColor, targetIcon, monthsUntil, neededPerMonth } from '@/lib/targets';
+import { useFeedback } from '@/components/ui/Feedback';
+import { cn, formatIDR } from '@/lib/utils';
+
+// Halaman Tabungan: saldo total, target (kartu berwarna, setor langsung), pos
+// tabungan lain, lalu riwayat per bulan. Logika uang tidak berubah — setor/
+// tarik lewat SavingsModal (saldo rekening diubah atomik di server), target
+// lewat TargetFormModal.
+
+function TargetCard({ goal, onDeposit, onEdit, onDelete }: { goal: SavingsGoal; onDeposit: () => void; onEdit: () => void; onDelete: () => void }) {
+  const color = targetColor(goal);
+  const pct = goal.targetAmount ? Math.max(0, Math.min(100, (goal.currentTotal / goal.targetAmount) * 100)) : 0;
+  const done = Boolean(goal.targetAmount) && goal.currentTotal >= (goal.targetAmount ?? 0);
+  const months = monthsUntil(goal.targetDate);
+  const need = goal.targetAmount ? neededPerMonth(goal.targetAmount, goal.currentTotal, goal.targetDate) : null;
+  const status = done
+    ? { text: 'Tercapai', cls: 'bg-emerald-50 text-emerald-700' }
+    : goal.status === 'PAUSED' && goal.monthlyAmount > 0
+      ? { text: 'Dijeda', cls: 'bg-amber-50 text-amber-700' }
+      : months === 0
+        ? { text: 'Lewat tanggal', cls: 'bg-rose-50 text-rose-700' }
+        : months
+          ? { text: `${months} bln lagi`, cls: 'bg-slate-100 text-slate-600' }
+          : null;
+  return (
+    <div className="group relative flex flex-col overflow-hidden rounded-[24px] bg-white p-5 ring-1 ring-slate-200/70 transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-18px_rgba(15,23,42,0.35)]">
+      <div className="relative flex items-start gap-3">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[24px]" style={{ background: `${color}1f` }} aria-hidden>{targetIcon(goal)}</span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[16px] font-bold text-slate-900">{goal.name}</p>
+          <p className="text-[12px] text-slate-500">
+            {goal.monthlyAmount > 0 ? `Otomatis ${formatIDR(goal.monthlyAmount)}/${goal.interval.toLowerCase().replace('an', '')}` : 'Setor manual'}
+          </p>
+        </div>
+        {status && <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold', status.cls)}>{status.text}</span>}
+      </div>
+
+      <div className="relative mt-4">
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="text-[20px] font-extrabold tabular-nums text-slate-900">{formatIDR(goal.currentTotal)}</p>
+          {goal.targetAmount ? <p className="text-[13px] font-semibold tabular-nums" style={{ color }}>{Math.floor(pct)}%</p> : null}
+        </div>
+        {goal.targetAmount ? (
+          <>
+            <div className="mt-2 h-2.5 overflow-hidden rounded-full" style={{ background: `${color}1f` }}>
+              <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: done ? '#10b981' : color }} />
+            </div>
+            <p className="mt-1.5 text-[12px] tabular-nums text-slate-500">
+              dari {formatIDR(goal.targetAmount)}{need ? ` · butuh ± ${formatIDR(need)}/bln` : ''}
+            </p>
+          </>
+        ) : (
+          <p className="mt-1 text-[12px] text-slate-500">terkumpul · belum ada nominal target</p>
+        )}
+      </div>
+
+      <div className="relative mt-4 flex items-center gap-2">
+        <button type="button" onClick={onDeposit} className="flex flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 text-[14px] font-semibold text-white transition hover:brightness-110" style={{ background: color }}>
+          <Plus size={16} strokeWidth={2.5} /> Setor
+        </button>
+        <button type="button" onClick={onEdit} aria-label={`Ubah ${goal.name}`} className="rounded-full bg-slate-100 p-2.5 text-slate-600 hover:bg-slate-200"><Pencil size={15} /></button>
+        <button type="button" onClick={onDelete} aria-label={`Hapus ${goal.name}`} className="rounded-full bg-slate-100 p-2.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600"><Trash2 size={15} /></button>
+      </div>
+    </div>
+  );
+}
 
 export default function SavingsPage() {
   const [savings, setSavings] = useState<Saving[]>([]);
@@ -35,7 +102,9 @@ export default function SavingsPage() {
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState<'Setoran' | 'Penarikan'>('Setoran');
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
-  const [showGoalModal, setShowGoalModal] = useState(false);
+  const [depositCategory, setDepositCategory] = useState<string | undefined>(undefined);
+  const [targetModal, setTargetModal] = useState<{ open: boolean; goal: SavingsGoal | null; preset: TargetPreset | null }>({ open: false, goal: null, preset: null });
+  const { confirm, toast } = useFeedback();
 
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -55,6 +124,9 @@ export default function SavingsPage() {
   useEffect(() => {
     if (!userId) return;
     loadGoals();
+    // Progres target ikut berubah saat ada setoran/penarikan atau target diubah.
+    const unsubs = [subscribeToCollectionChanges('savings', loadGoals), subscribeToCollectionChanges('recurring', loadGoals)];
+    return () => unsubs.forEach((u) => u());
   }, [userId]);
 
   useEffect(() => {
@@ -153,6 +225,10 @@ export default function SavingsPage() {
     }
     return [...map.entries()].sort((a, b) => b[1] - a[1]);
   }, [allSavings]);
+  // Pos tabungan yang tidak terhubung ke target/jadwal mana pun.
+  const otherPots = useMemo(() => goalBalances.filter(([cat, bal]) => bal !== 0 && !goals.some((g) => g.category === cat)), [goalBalances, goals]);
+  const targetSaved = goals.filter((g) => g.targetAmount).reduce((s, g) => s + Math.max(0, g.currentTotal), 0);
+  const targetAim = goals.reduce((s, g) => s + (g.targetAmount ?? 0), 0);
 
   const filtered = useMemo(() =>
     searchQuery ? savings.filter(s => s.description.toLowerCase().includes(searchQuery.toLowerCase()) || s.category.toLowerCase().includes(searchQuery.toLowerCase())) : savings,
@@ -168,271 +244,236 @@ export default function SavingsPage() {
     }
   };
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
-  const formatTime = (d: Date) => new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' }).format(d);
+  // Riwayat dikelompokkan per tanggal (data sudah urut terbaru dulu).
+  const grouped = useMemo(() => {
+    const out: { day: string; items: Saving[] }[] = [];
+    for (const item of filtered) {
+      const day = formatDate(item.date);
+      if (out[out.length - 1]?.day === day) out[out.length - 1].items.push(item);
+      else out.push({ day, items: [item] });
+    }
+    return out;
+  }, [filtered]);
 
   const handleDelete = async (item: Saving) => {
     if (!item.id) return;
-    if (!confirm('Hapus setoran tabungan ini? Tindakan ini tidak bisa dibatalkan.')) return;
+    const ok = await confirm({ title: 'Hapus catatan ini?', message: `${item.transactionType === 'Penarikan' ? 'Penarikan' : 'Setoran'} ${formatAmount(item.amount, item.currency)} dihapus dan saldo rekeningnya dikembalikan.`, confirmLabel: 'Hapus', danger: true });
+    if (!ok) return;
     setError('');
     setDeletingId(item.id);
     try {
       await savingsService.deleteSaving(item);
     } catch (e) {
       console.error(e);
-      setError('Gagal menghapus setoran. Silakan coba lagi.');
+      setError('Gagal menghapus catatan. Silakan coba lagi.');
     } finally {
       setDeletingId(null);
     }
   };
 
+  const deleteTarget = async (goal: SavingsGoal) => {
+    const ok = await confirm({ title: `Hapus target "${goal.name}"?`, message: 'Setoran yang sudah masuk tetap tersimpan di tabungan — hanya targetnya yang hilang.', confirmLabel: 'Hapus target', danger: true });
+    if (!ok) return;
+    try {
+      await recurringService.deleteRecurring(goal.id);
+      toast.success('Target dihapus.');
+      loadGoals();
+    } catch {
+      toast.error('Gagal menghapus target.');
+    }
+  };
+
+  const openSaving = (mode: 'Setoran' | 'Penarikan', category?: string) => {
+    setModalMode(mode);
+    setDepositCategory(category);
+    setShowModal(true);
+  };
+  const periodLabel = new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth));
+
   return (
-    <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
-      
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] border border-slate-50 shadow-sm">
-        <div className="flex flex-col">
-          <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Tabungan & Dana Darurat</h1>
-          <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-            Periode {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth))}
-          </p>
+    <div className="mx-auto mb-12 max-w-[1400px] space-y-6">
+      {/* Judul + aksi */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[30px]">Tabungan</h1>
+          <p className="text-[14px] text-slate-500">Sisihkan sedikit demi sedikit untuk tujuanmu.</p>
         </div>
-        
-        <div className="flex flex-wrap items-center gap-3">
-          <MonthPicker
-            value={{ month: selectedMonth, year: selectedYear }}
-            onChange={({ month, year }) => {
-              setSelectedMonth(month);
-              setSelectedYear(year);
-            }}
-          />
-          <button
-            onClick={() => setShowGoalModal(true)}
-            className="px-5 py-3 bg-slate-50 text-slate-600 rounded-xl text-sm font-black flex items-center justify-center gap-2 hover:bg-slate-100 transition-all"
-          >
-            <Repeat size={18} />
-            <span className="hidden md:inline">Goal Otomatis</span>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => openSaving('Penarikan')} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 sm:flex-none">
+            <ArrowUpRight size={16} /> Tarik
           </button>
-          <button
-            onClick={() => { setModalMode('Penarikan'); setShowModal(true); }}
-            className="px-5 py-3 bg-rose-50 text-rose-600 rounded-xl text-sm font-black flex items-center justify-center gap-2 hover:bg-rose-100 transition-all"
-          >
-            <ArrowDownToLine size={18} />
-            <span className="hidden md:inline">Tarik Dana</span>
-          </button>
-          <button
-            onClick={() => { setModalMode('Setoran'); setShowModal(true); }}
-            className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
-          >
-            <PlusCircle size={18} />
-            <span className="hidden md:inline">Catat Setoran</span>
+          <button type="button" onClick={() => openSaving('Setoran')} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-indigo-600 px-5 py-2.5 text-[14px] font-semibold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 sm:flex-none">
+            <ArrowDownLeft size={16} /> Setor
           </button>
         </div>
       </div>
 
-      {/* Goal Otomatis: progress setoran rutin ke target tabungan */}
-      {goals.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Goal Tabungan Otomatis</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Ringkasan */}
+      <div className="relative overflow-hidden rounded-[28px] bg-slate-900 p-6 text-white md:p-8">
+        <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-indigo-500/40 blur-3xl" />
+        <span aria-hidden className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-violet-500/30 blur-3xl" />
+        <div className="relative grid gap-6 md:grid-cols-[1.4fr_1fr] md:items-end">
+          <div>
+            <p className="flex items-center gap-2 text-[14px] text-white/70"><PiggyBank size={16} /> Total tabungan</p>
+            <p className={cn('mt-1 text-[34px] font-extrabold tabular-nums leading-tight md:text-[42px]', totalSaldo < 0 && 'text-rose-300')}>{formatIDR(totalSaldo)}</p>
+            <div className="mt-3 flex flex-wrap gap-2 text-[13px] tabular-nums">
+              <span className="rounded-full bg-white/10 px-3 py-1">Bulan ini <span className="font-semibold text-emerald-300">+{formatIDR(monthSetor)}</span></span>
+              <span className="rounded-full bg-white/10 px-3 py-1">ditarik <span className="font-semibold text-rose-300">−{formatIDR(monthTarik)}</span></span>
+            </div>
+          </div>
+          <div className="rounded-[22px] bg-white/10 p-4 backdrop-blur">
+            <div className="flex items-baseline justify-between">
+              <p className="text-[13px] text-white/70">{goals.length} target</p>
+              {targetAim > 0 && <p className="text-[13px] font-semibold tabular-nums">{Math.min(100, Math.floor((targetSaved / targetAim) * 100))}%</p>}
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/15">
+              <div className="h-full rounded-full bg-gradient-to-r from-indigo-400 to-fuchsia-400" style={{ width: `${targetAim > 0 ? Math.min(100, (targetSaved / targetAim) * 100) : 0}%` }} />
+            </div>
+            <p className="mt-2 text-[12px] tabular-nums text-white/70">{targetAim > 0 ? `${formatIDR(targetSaved)} dari ${formatIDR(targetAim)}` : 'Belum ada nominal target'}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Target */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-[18px] font-bold text-slate-900">Target</h2>
+          <button type="button" onClick={() => setTargetModal({ open: true, goal: null, preset: null })} className="flex items-center gap-1 text-[14px] font-semibold text-indigo-600 hover:text-indigo-700">
+            <Plus size={16} /> Target baru
+          </button>
+        </div>
+        {goals.length === 0 ? (
+          <div className="rounded-[24px] border-2 border-dashed border-slate-200 bg-white/60 p-5">
+            <p className="text-[15px] font-semibold text-slate-900">Mau nabung untuk apa?</p>
+            <p className="mt-0.5 text-[13px] text-slate-500">Pilih salah satu atau buat sendiri — progresnya dihitung dari setoranmu.</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {TARGET_SUGGESTIONS.map((sg) => (
+                <button key={sg.name} type="button" onClick={() => setTargetModal({ open: true, goal: null, preset: sg })} className="flex items-center gap-2 rounded-full bg-white px-3.5 py-2 text-[14px] font-medium text-slate-700 ring-1 ring-slate-200 transition hover:ring-indigo-300">
+                  <span aria-hidden>{sg.icon}</span> {sg.name}
+                </button>
+              ))}
+              <button type="button" onClick={() => setTargetModal({ open: true, goal: null, preset: null })} className="flex items-center gap-1.5 rounded-full bg-indigo-600 px-3.5 py-2 text-[14px] font-semibold text-white hover:bg-indigo-700">
+                <Plus size={15} /> Buat sendiri
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {goals.map((goal) => (
-              <div key={goal.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-black text-slate-900">{goal.name}</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{goal.category}</p>
-                  </div>
-                  <span className={cn(
-                    "px-2.5 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest shrink-0",
-                    goal.status === 'PAUSED' ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600"
-                  )}>
-                    {goal.status === 'PAUSED' ? 'Dijeda' : `Auto/${goal.interval}`}
-                  </span>
-                </div>
+              <TargetCard
+                key={goal.id}
+                goal={goal}
+                onDeposit={() => openSaving('Setoran', goal.category)}
+                onEdit={() => setTargetModal({ open: true, goal, preset: null })}
+                onDelete={() => void deleteTarget(goal)}
+              />
+            ))}
+            <button type="button" onClick={() => setTargetModal({ open: true, goal: null, preset: null })} className="flex min-h-[200px] flex-col items-center justify-center gap-2 rounded-[24px] border-2 border-dashed border-slate-200 text-slate-500 transition hover:border-indigo-300 hover:text-indigo-600">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100"><Plus size={22} /></span>
+              <span className="text-[14px] font-semibold">Tambah target</span>
+            </button>
+          </div>
+        )}
+      </section>
 
-                {goal.targetAmount ? (
-                  <>
-                    <div className="flex items-end justify-between">
-                      <span className="text-lg font-black text-slate-900">{formatCurrency(goal.currentTotal, 'IDR')}</span>
-                      <span className="text-[10px] font-bold text-slate-400">dari {formatCurrency(goal.targetAmount, 'IDR')}</span>
-                    </div>
-                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-indigo-500 rounded-full transition-all duration-1000"
-                        style={{ width: `${Math.min(goal.progressPercent ?? 0, 100)}%` }}
-                      />
-                    </div>
-                    <p className="text-[10px] font-bold text-slate-400">{(goal.progressPercent ?? 0).toFixed(0)}% tercapai</p>
-                  </>
-                ) : (
-                  <p className="text-sm font-black text-slate-900">{formatCurrency(goal.currentTotal, 'IDR')} terkumpul</p>
-                )}
+      {/* Pos lain (kategori tanpa target) */}
+      {otherPots.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="px-1 text-[18px] font-bold text-slate-900">Pos tabungan lain</h2>
+          <div className="flex gap-3 overflow-x-auto pb-1">
+            {otherPots.map(([cat, bal]) => (
+              <button key={cat} type="button" onClick={() => openSaving('Setoran', cat)} className="min-w-[160px] shrink-0 rounded-[20px] bg-white p-4 text-left ring-1 ring-slate-200/70 hover:ring-indigo-200">
+                <p className="truncate text-[13px] text-slate-500">{cat}</p>
+                <p className={cn('mt-0.5 text-[16px] font-bold tabular-nums', bal < 0 ? 'text-rose-600' : 'text-slate-900')}>{formatIDR(bal)}</p>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
-                <p className="text-[10px] font-medium text-slate-400 border-t border-slate-50 pt-2">
-                  Setoran otomatis {formatCurrency(goal.monthlyAmount, 'IDR')} / {goal.interval.toLowerCase()}, berikutnya {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(goal.nextDate))}
-                </p>
+      {error && <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-[14px] text-rose-700">{error}</div>}
+
+      {/* Riwayat */}
+      <section className="overflow-hidden rounded-[28px] bg-white ring-1 ring-slate-200/70">
+        <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between md:px-6">
+          <div>
+            <h2 className="text-[18px] font-bold text-slate-900">Riwayat</h2>
+            <p className="text-[13px] text-slate-500">{periodLabel}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 sm:w-56 sm:flex-none">
+              <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Cari…" className="w-full rounded-full bg-slate-100 py-2.5 pl-10 pr-4 text-[14px] outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100" />
+            </div>
+            <MonthPicker value={{ month: selectedMonth, year: selectedYear }} onChange={({ month, year }) => { setSelectedMonth(month); setSelectedYear(year); }} />
+          </div>
+        </div>
+
+        {loading ? (
+          <p className="p-10 text-center text-[14px] text-slate-400">Memuat…</p>
+        ) : grouped.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 p-10 text-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400"><Wallet size={22} /></span>
+            <p className="text-[15px] font-semibold text-slate-800">{searchQuery ? 'Tidak ada yang cocok' : 'Belum ada setoran bulan ini'}</p>
+            {!searchQuery && <button type="button" onClick={() => openSaving('Setoran')} className="mt-1 text-[14px] font-semibold text-indigo-600">Catat setoran</button>}
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {grouped.map((g) => (
+              <div key={g.day}>
+                <p className="bg-slate-50/70 px-4 py-2 text-[12px] font-semibold text-slate-500 md:px-6">{g.day}</p>
+                <ul>
+                  {g.items.map((item) => {
+                    const out = item.transactionType === 'Penarikan';
+                    const target = goals.find((x) => x.category === item.category);
+                    return (
+                      <li key={item.id} className="group flex items-center gap-3 px-4 py-3 md:px-6">
+                        <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-[18px]', out ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600')} aria-hidden>
+                          {target ? targetIcon(target) : out ? <ArrowUpRight size={18} /> : <ArrowDownLeft size={18} />}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[15px] font-semibold text-slate-900">{item.description || (out ? 'Penarikan' : 'Setoran')}</p>
+                          <p className="truncate text-[12px] text-slate-500">
+                            {target?.name ?? item.category}{item.subCategory ? ` · ${item.subCategory}` : ''} · {out ? 'ke' : 'dari'} {getAccountName(item.fromAccount || '')}
+                          </p>
+                        </div>
+                        <p className={cn('shrink-0 text-right text-[15px] font-bold tabular-nums', out ? 'text-rose-600' : 'text-emerald-600')}>
+                          {out ? '−' : '+'}{formatAmount(item.amount, item.currency)}
+                        </p>
+                        <button type="button" onClick={() => void handleDelete(item)} disabled={deletingId === item.id} aria-label="Hapus catatan" className="shrink-0 rounded-full p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50 md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100">
+                          <Trash2 size={15} />
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 md:p-8 rounded-[24px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col justify-between h-[150px] md:h-[180px] relative overflow-hidden group">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-              <Wallet size={20} />
-            </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saldo Tabungan</p>
-          </div>
-          <div>
-            <h3 className={cn("text-3xl font-black leading-tight tabular-nums", totalSaldo < 0 ? "text-rose-500" : "text-slate-900")}>Rp {formatRp(totalSaldo)}</h3>
-            <p className="text-caption font-bold text-slate-400 mt-1 tabular-nums">
-              Bulan ini: <span className="text-emerald-600">+Rp {formatRp(monthSetor)}</span> setor · <span className="text-rose-500">−Rp {formatRp(monthTarik)}</span> tarik
-            </p>
-          </div>
-          <TrendingUp size={48} className="absolute -right-2 -bottom-2 text-indigo-50/50 group-hover:scale-110 transition-transform -rotate-12" />
-        </div>
-
-        <div className="bg-white p-6 md:p-8 rounded-[24px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col justify-between h-auto md:h-[180px] relative overflow-hidden group">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-              <Target size={20} />
-            </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Distribusi Goal</p>
-          </div>
-          <div>
-            {goalBalances.length > 0 ? (
-              <ul className="mt-2 space-y-1.5">
-                {goalBalances.slice(0, 4).map(([cat, bal]) => (
-                  <li key={cat} className="flex items-center justify-between gap-3 text-sm">
-                    <span className="font-bold text-slate-600 truncate">{cat}</span>
-                    <span className={cn("font-black tabular-nums whitespace-nowrap", bal < 0 ? "text-rose-500" : "text-slate-900")}>Rp {formatRp(bal)}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm font-bold text-slate-300 mt-2">Belum ada data</p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {error && (
-        <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-sm font-medium text-rose-600">
-          {error}
-        </div>
-      )}
-
-      {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-4 bg-white p-3 md:p-2 rounded-[24px] md:rounded-3xl border border-slate-50 shadow-sm">
-        <div className="flex-1 min-w-[200px] relative">
-          <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Cari setoran tabungan..."
-            className="w-full bg-slate-50/50 border-transparent rounded-xl md:rounded-2xl py-3 md:py-4 pl-5 pr-6 text-sm font-medium focus:ring-0 outline-none transition-all" />
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="bg-white rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
-        {loading ? (
-          <div className="p-12 text-center text-sm font-medium text-slate-400">Memuat data tabungan...</div>
-        ) : filtered.length === 0 ? (
-          <div className="p-10">
-            <EmptyState title="Belum ada setoran" description="Catat setoran tabungan pertama Anda untuk mulai tracking tujuan keuangan." icon={<Wallet size={24} />} />
-          </div>
-        ) : (
-          <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left border-collapse min-w-[820px] xl:min-w-0">
-              <thead>
-                <tr className="border-b border-slate-50">
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">No</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Jam</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tipe</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Deskripsi</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Mata Uang</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Nominal</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Sub Kategori</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Dari</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Ke</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((item, i) => {
-                  const isPenarikan = item.transactionType === 'Penarikan';
-                  return (
-                  <tr key={item.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center">
-                      <p className="text-xs font-bold text-slate-400">{i + 1}</p>
-                    </td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap">
-                      <p className="text-sm font-bold text-slate-500">{formatTime(item.createdAt)}</p>
-                    </td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap">
-                      <p className="text-sm font-black text-slate-900">{formatDate(item.date)}</p>
-                    </td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap">
-                      <span className={cn(
-                        "px-2.5 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest flex items-center gap-1 w-fit",
-                        isPenarikan ? "bg-rose-50 text-rose-500" : "bg-emerald-50 text-emerald-600"
-                      )}>
-                        {isPenarikan ? <TrendingDown size={11} /> : <TrendingUp size={11} />}
-                        {isPenarikan ? 'Tarik' : 'Setor'}
-                      </span>
-                    </td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap font-bold text-slate-900 text-sm">{item.description}</td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center"><span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{item.currency || 'IDR'}</span></td>
-                    <td className={cn("px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-sm", isPenarikan ? "text-rose-500" : "text-slate-900")}>
-                      {isPenarikan ? '-' : '+'} {formatAmount(item.amount, item.currency)}
-                    </td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap">
-                       <span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-[8px] font-black rounded uppercase tracking-widest">{item.subCategory || '-'}</span>
-                    </td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap font-bold text-slate-600 text-xs">
-                      {isPenarikan ? (item.category || '-') : getAccountName(item.fromAccount || '')}
-                    </td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap font-bold text-slate-600 text-xs">
-                      {isPenarikan ? getAccountName(item.fromAccount || '') : (item.toGoal || '-')}
-                    </td>
-                    <td className="px-5 md:px-8 py-5 text-center">
-                      <button
-                        onClick={() => item.id && handleDelete(item)}
-                        disabled={deletingId === item.id}
-                        className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all disabled:opacity-50">
-                        <Trash2 size={14} />
-                      </button>
-                    </td>
-                  </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
         )}
         {!loading && savings.length > 0 && (
-          <div className="px-8 py-4 bg-slate-50/30 border-t border-slate-50 flex items-center justify-between">
-            <p className="text-[11px] font-bold text-slate-400">{savings.length} catatan tabungan</p>
-            <p className="text-[11px] font-black text-slate-600 tabular-nums">Net bulan ini: {monthSetor - monthTarik < 0 ? '−' : '+'}Rp {formatRp(Math.abs(monthSetor - monthTarik))}</p>
+          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[13px] md:px-6">
+            <span className="text-slate-500">{savings.length} catatan</span>
+            <span className="font-semibold tabular-nums text-slate-700">Bersih {monthSetor - monthTarik < 0 ? '−' : '+'}{formatIDR(Math.abs(monthSetor - monthTarik))}</span>
           </div>
         )}
-      </div>
+      </section>
 
       <SavingsModal
         userId={userId}
         isOpen={showModal}
         onClose={() => setShowModal(false)}
         initialTransactionType={modalMode}
+        initialCategory={depositCategory}
       />
 
-      <RecurringModal
-        userId={userId}
-        isOpen={showGoalModal}
-        onClose={() => { setShowGoalModal(false); loadGoals(); }}
-        initialType="Tabungan"
+      <TargetFormModal
+        open={targetModal.open}
+        goal={targetModal.goal}
+        preset={targetModal.preset}
+        onClose={() => setTargetModal({ open: false, goal: null, preset: null })}
+        onSaved={loadGoals}
       />
     </div>
   );
 }
-
