@@ -191,7 +191,7 @@ PROMO_SEED=<seed> PROMO_SCRIPT_FILE=out/script.json node make.mjs
 
 Kalau gagal total setelah usaha wajar, kirim kabar singkat:
 ```bash
-curl -s -H "$H" -F "text=⚠️ Video promo hari ini gagal: <alasan singkat>" "$API/api/promo/telegram"
+curl -s -H "$H" --form-string "text=⚠️ Video promo hari ini gagal: <alasan singkat>" "$API/api/promo/telegram"
 ```
 
 ## Format naskah (`script.json`)
