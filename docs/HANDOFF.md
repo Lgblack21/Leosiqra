@@ -166,14 +166,14 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   panel di tablet (Chrome Android); dari video: 1 frame bagian atas panel tidak tergambar (latar buram gelap
   terlihat) — glitch compositing GPU dengan backdrop-filter. Video diambil sebelum run #55; BELUM dikonfirmasi
   hilang. Kalau masih: coba hapus animasi spring `y` dialog / tambah `transform-gpu`.
-- **Belum di-deploy** (akun B): **Lonceng notifikasi** di header (`NotificationBell`, portal ke body karena header
+- **Live (run #56)** (akun B): **Lonceng notifikasi** di header (`NotificationBell`, portal ke body karena header
   memakai backdrop-filter). Tab Notifikasi (riwayat, tandai dibaca/semua) + tab Pengingat (`RemindersView`).
   Worker: tabel `notifications` (**migrasi 0021**), `recordNotification` dipanggil di `sendWebPushToUser` → semua
   push server tercatat (juga untuk user tanpa langganan push); `/api/member/notifications` (GET, POST read-all,
   POST :id/read); dibersihkan di cron harian (>60 hari, >100/user). Tanpa migrasi: lonceng kosong, bukan error.
-- **Belum di-deploy** (akun B): dropdown **Tambah Cepat** di header dihapus (permintaan Bos) — header kini hanya
+- **Live (run #56)** (akun B): dropdown **Tambah Cepat** di header dihapus (permintaan Bos) — header kini hanya
   menu, judul, lonceng. Langkah tur + bagian Panduan soal Tambah Cepat ikut dihapus. Menu Input Cepat di Pengaturan tetap.
-- **Belum di-deploy** (akun B): kedipan hitam saat buka Pengaturan dari Ringkasan (masih ada setelah run #55) —
+- **Live (run #56)** (akun B): kedipan hitam saat buka Pengaturan dari Ringkasan (masih ada setelah run #55) —
   semua blur di bawah overlay dibuang: blob `blur-2xl` + tombol `backdrop-blur` di kartu sapaan dashboard (blob jadi
   radial-gradient), `backdrop-blur` header (bg jadi /95) & tab bar HP. Belum dicek di HP asli — tunggu konfirmasi Bos.
 
@@ -184,7 +184,7 @@ Dijalankan manual oleh Bos lewat Console D1 (token GitHub belum punya izin D1).
 - `0018_transaction_attachments.sql` — diasumsikan sudah; cek sebelum mengandalkan.
 - `0019_inbox.sql` — sudah (Kotak Masuk Gmail jalan di produksi).
 - `0020_reminders.sql` — sudah (Bos, 2026-10-28; Console D1 butuh SQL tanpa komentar `--` kalau ditempel satu baris).
-- `0021_notifications.sql` — **BELUM** (riwayat lonceng notifikasi).
+- `0021_notifications.sql` — **belum dikonfirmasi** Bos (riwayat lonceng; tanpa tabel lonceng kosong, bukan error).
 
 ## Belum terverifikasi di produksi
 
