@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-10-28 (akun B; Pembaca Notifikasi live, main = run #49)
+Terakhir diperbarui: 2026-10-28 malam (akun B; run #50 live)
 
 ## Siapa sedang kerja
 
@@ -100,18 +100,18 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   SMS bank (→ Shortcut iPhone), email bank (→ Gmail/Kotak Masuk), dan "Tempel teks notifikasi" →
   `/input-cepat?teks=`. Tanpa perubahan Worker/D1. Notifikasi otomatis Android = butuh plugin native
   (NotificationListenerService) — belum dibuat.
-- **Belum di-deploy** (akun B, `claude/nifty-cannon-y181p6`): resep **Notifikasi aplikasi bank** — Bos
+- Sudah live (run #50): resep **Notifikasi aplikasi bank** — Bos
   konfirmasi iPhone-nya punya Pintasan › Automasi › Aplikasi › "Saat saya menerima notifikasi". Resep baru
   `notif` di `ShortcutsView` (Enkode URL → Buka URL `/input-cepat?teks=`), kartu pertama di Pembaca Notifikasi
   membuka Shortcut iPhone dengan resep itu terbuka (`initialOpen`). Nama tindakan "Enkode URL" & variabel
   "Input Pintasan" belum dicocokkan dengan iPhone asli.
-  Juga belum di-deploy: **Impor mutasi jadi pop-up** di Pengaturan (view `impor`, `?pengaturan=impor`; grup
+  Juga live (run #50): **Impor mutasi jadi pop-up** di Pengaturan (view `impor`, `?pengaturan=impor`; grup
   baru "Impor & ekspor" + Ekspor CSV). Logika halaman Impor dipindah ke `src/components/impor/ImportMutasi.tsx`
   (`inPanel`), `/membership/impor` tetap ada. **PDF berkata sandi** (pdf.js di browser, sandi tidak dikirim).
   **Bug produksi diperbaiki**: semua impor PDF gagal di browser ('No "GlobalWorkerOptions.workerSrc"') sejak
   Impor live — `pdfText.ts` kini memuat `pdf.worker.mjs` ke `globalThis.pdfjsWorker`. Dibuktikan dengan build
   lama vs baru (static export lokal).
-  Juga belum di-deploy: **Kartu e-money (NFC)** — Pengaturan view `emoney` + `/app/emoney` (menu Lainnya HP),
+  Juga live di web (run #50): **Kartu e-money (NFC)** — bagian native BELUM dirilis (perlu build app) — Pengaturan view `emoney` + `/app/emoney` (menu Lainnya HP),
   komponen `src/components/emoney/EmoneyScanner.tsx`, jembatan `src/lib/emoney.ts`. Plugin native LOKAL
   "Emoney": iOS `ios/App/App/EmoneyPlugin.swift` (didaftarkan di `AppViewController`, dipakai SceneDelegate;
   entitlement NFC TAG + daftar AID di Info.plist), Android `EmoneyPlugin.java` (didaftarkan di MainActivity,
@@ -122,11 +122,12 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   transaksi. Swift belum pernah dikompilasi (tidak ada Xcode di container); Java dicek javac + stub & uji
   parsing. Butuh: kapabilitas "NFC Tag Reading" di App ID Apple, build & rilis ulang aplikasi iOS/Android.
   Aplikasi lama tanpa plugin → layar "Perbarui aplikasi".
-  Juga belum di-deploy: **Impor / ekspor CSV** (Pengaturan view `csv`, `CsvView.tsx`): ekspor per rentang tanggal —
+  Juga live (run #50): **Impor / ekspor CSV** (Pengaturan view `csv`, `CsvView.tsx`): ekspor per rentang tanggal —
   **Worker berubah**: `export.csv?from=&to=` (YYYY-MM-DD, inklusif, `substr(date,1,10)`, divalidasi; tanpa
   parameter = perilaku lama). Impor CSV kini mengenali kolom **Jenis/Type** (`kind` di ColumnMapping): sebelumnya
   CSV ekspor Leosiqra yang diimpor balik membuat semua pengeluaran jadi pemasukan; baris transfer/hutang dilewati.
   BELUM: pindahan multi-dompet dari app lain (Money Manager, Money Lover, …) — tunggu keputusan Bos.
+- **Belum di-deploy**: tidak ada. Branch kerja akun B: `claude/nifty-cannon-y181p6` (= main).
 
 ## Migrasi D1
 
@@ -160,7 +161,7 @@ Pola kerja dengan Bos (lanjutkan sama): Bos kirim screenshot Oyenza per menu Pen
 bikin versi Leosiqra yang **fiturnya nyata tapi desainnya beda** (jangan sama) → uji lokal
 (Playwright, ponsel/tablet/desktop) → commit+push branch → lapor ringkas → deploy hanya setelah
 Bos bilang **"gas"**. Menu Pengaturan yang sudah dibuat: Fitur, Target, Transaksi rutin, Awal
-periode anggaran, Tag, Cara catat utama, Keyboard nominal, Shortcut iPhone, Kategori & Anggaran, Pembaca Notifikasi.
+periode anggaran, Tag, Cara catat utama, Keyboard nominal, Shortcut iPhone, Kategori & Anggaran, Pembaca Notifikasi, Impor mutasi (pop-up), Kartu e-money, Impor/ekspor CSV.
 Kemungkinan berikutnya dari screenshot Oyenza: "Impor dari e-money (NFC)", "Impor/ekspor CSV",
 "Pembaca Notifikasi" (sudah, versi web).
 Mode HP: Bos minta tampilan HP **simpel** — jangan menambah kepadatan di <768px.
