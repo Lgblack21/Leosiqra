@@ -12,6 +12,7 @@ import {
 } from '@/lib/cf-firestore';
 import { db } from '../cf-client';
 import { cloudflareApi } from '../cloudflare-api';
+import { reloadCategoryPrefs } from '../categoryEmoji';
 
 export interface Category {
   id?: string;
@@ -71,6 +72,18 @@ export const categoryService = {
       json: { ids },
     });
     notifyCollectionChanged(COLLECTION_NAME);
+  },
+
+  // Ganti nama satu grup kategori di semua tempat sekaligus (server):
+  // subkategori, transaksi, anggaran, transaksi berulang, ikon & jenis.
+  async renameGroup(from: string, to: string) {
+    const res = await cloudflareApi<{ ok: boolean; name: string; transactions: number }>('/api/member/categories/rename', {
+      method: 'POST',
+      json: { from, to },
+    });
+    for (const c of [COLLECTION_NAME, 'transactions', 'budgets', 'recurring']) notifyCollectionChanged(c);
+    await reloadCategoryPrefs();
+    return res;
   }
 };
 

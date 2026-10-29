@@ -11802,6 +11802,66 @@ const applyCategoryTemplate = async (env: Env, userId: string, opts: { addGroups
   return { addedGroups };
 };
 
+// POST /api/member/categories/rename { from, to } — ganti nama kategori (grup)
+// di SEMUA data milik user dalam satu batch (atomik): transaksi, subkategori,
+// anggaran, transaksi berulang, plus ikon/warna & jenis di prefs. Hanya baris
+// user sendiri (user_id dari sesi). Nama baru yang sudah dipakai kategori lain
+// ditolak (menggabungkan kategori belum didukung). Kategori sistem dan nama
+// yang membuat belanja terhitung investasi ditolak.
+const RESERVED_CATEGORY_NAMES = new Set(["hutang", "piutang", "transfer", "top up", "topup", "tabungan", "investasi", "saham", "deposito"]);
+async function handleRenameCategoryGroup(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const payload = await parseJson<{ from?: unknown; to?: unknown }>(request);
+  const from = typeof payload.from === "string" ? payload.from.trim() : "";
+  const to = typeof payload.to === "string" ? payload.to.replace(/\s+/g, " ").trim() : "";
+  if (!from || !to) return json({ error: "Nama kategori lama dan baru wajib diisi." }, { status: 400 });
+  if (to.length > 40) return json({ error: "Nama kategori maksimal 40 karakter." }, { status: 400 });
+  if (from === to) return json({ ok: true, changed: 0 });
+  const lowFrom = from.toLowerCase();
+  const lowTo = to.toLowerCase();
+  if (RESERVED_CATEGORY_NAMES.has(lowFrom) || RESERVED_CATEGORY_NAMES.has(lowTo) || lowTo.includes("investasi")) {
+    return json({ error: "Kategori sistem (hutang, transfer, tabungan, investasi) tidak bisa diganti namanya atau dipakai sebagai nama baru." }, { status: 400 });
+  }
+
+  const exists = await env.DB.prepare(
+    `SELECT 1 AS ok FROM transactions WHERE user_id = ? AND category = ?
+     UNION SELECT 1 FROM categories WHERE user_id = ? AND category = ?
+     UNION SELECT 1 FROM budgets WHERE user_id = ? AND category = ? LIMIT 1`
+  ).bind(userId, from, userId, from, userId, from).first();
+  if (!exists) return json({ error: "Kategori tidak ditemukan." }, { status: 404 });
+
+  // Nama baru dipakai kategori LAIN (beda huruf besar/kecil dari nama lama sendiri boleh).
+  const taken = await env.DB.prepare(
+    `SELECT category FROM (
+       SELECT category FROM transactions WHERE user_id = ?
+       UNION SELECT category FROM categories WHERE user_id = ?
+       UNION SELECT category FROM budgets WHERE user_id = ?
+     ) WHERE lower(category) = ? AND category <> ? LIMIT 1`
+  ).bind(userId, userId, userId, lowTo, from).first<{ category: string }>();
+  if (taken) return json({ error: `Nama "${taken.category}" sudah dipakai kategori lain. Pilih nama lain.` }, { status: 409 });
+
+  const prefs = await readUserPrefs(env, userId);
+  const styles = { ...prefs.categoryStyles };
+  const kinds = { ...prefs.categoryKinds };
+  if (styles[from]) { styles[to] = styles[from]; delete styles[from]; }
+  if (kinds[from]) { kinds[to] = kinds[from]; delete kinds[from]; }
+  const now = nowIso();
+  const results = await env.DB.batch([
+    env.DB.prepare("UPDATE transactions SET category = ? WHERE user_id = ? AND category = ?").bind(to, userId, from),
+    env.DB.prepare("UPDATE categories SET category = ?, updated_at = ? WHERE user_id = ? AND category = ?").bind(to, now, userId, from),
+    env.DB.prepare("UPDATE budgets SET category = ?, updated_at = ? WHERE user_id = ? AND category = ?").bind(to, now, userId, from),
+    env.DB.prepare("UPDATE recurring SET category = ?, updated_at = ? WHERE user_id = ? AND category = ?").bind(to, now, userId, from),
+    env.DB.prepare(
+      `UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END,
+              '$.prefs.categoryStyles', json(?), '$.prefs.categoryKinds', json(?))
+        WHERE id = ?`
+    ).bind(JSON.stringify(styles), JSON.stringify(kinds), userId),
+  ]);
+  return json({ ok: true, name: to, transactions: results[0]?.meta?.changes ?? 0 });
+}
+
 // POST /api/member/categories/template — sinkron template untuk user yang
 // sudah selesai setup awal, sekali per versi template. Diklaim dulu secara
 // atomik (tab/perangkat bersamaan tidak menambah dua kali).
@@ -14885,6 +14945,10 @@ const worker = {
 
       if (url.pathname === "/api/member/categories" && request.method === "POST") {
         return await handleCreateCategory(request, env);
+      }
+
+      if (url.pathname === "/api/member/categories/rename" && request.method === "POST") {
+        return await handleRenameCategoryGroup(request, env);
       }
 
       if (url.pathname === "/api/member/categories/reorder" && request.method === "PUT") {

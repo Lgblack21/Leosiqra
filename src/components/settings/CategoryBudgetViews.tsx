@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, X, Trash2, CalendarDays, Coins, ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { Plus, X, Trash2, CalendarDays, Coins, ArrowDownRight, ArrowUpRight, Pencil, Check, Loader2 } from 'lucide-react';
 import { cn, formatIDR } from '@/lib/utils';
 import { categoryService, type Category } from '@/lib/services/categoryService';
 import { budgetService, type Budget } from '@/lib/services/budgetService';
@@ -270,7 +270,7 @@ export function KategoriListView({ rows, loading, onOpen, onAdd }: { rows: Categ
   );
 }
 
-export function KategoriDetailView({ row, onDone }: { row: CategoryRow; onDone: () => void }) {
+export function KategoriDetailView({ row, onDone, onRenamed }: { row: CategoryRow; onDone: () => void; onRenamed?: (name: string) => void }) {
   const { day: startDay } = useBudgetStartDay();
   const { toast, confirm } = useFeedback();
   const [amount, setAmount] = useState(row.budget ? String(Math.round(row.budget.amount)) : '');
@@ -278,6 +278,8 @@ export function KategoriDetailView({ row, onDone }: { row: CategoryRow; onDone: 
   const [newSub, setNewSub] = useState('');
   const [busy, setBusy] = useState(false);
   const [picking, setPicking] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(row.name);
   useCategoryStyles();
   const v = categoryVisual(row.name, row.kind);
   const pickStyle = (style: CategoryStyle) => {
@@ -331,6 +333,25 @@ export function KategoriDetailView({ row, onDone }: { row: CategoryRow; onDone: 
     try { await categoryService.deleteCategory(c.id); } catch (e) { console.error(e); toast.error('Gagal menghapus subkategori.'); }
   };
 
+  // Ganti nama → server memperbarui transaksi, anggaran, subkategori,
+  // transaksi berulang, ikon & jenis sekaligus.
+  const saveName = async () => {
+    const to = nameDraft.replace(/\s+/g, ' ').trim();
+    if (!to || to === row.name) { setEditingName(false); setNameDraft(row.name); return; }
+    setBusy(true);
+    try {
+      const res = await categoryService.renameGroup(row.name, to);
+      toast.success(res.transactions ? `Nama diganti. ${res.transactions} transaksi ikut diperbarui.` : 'Nama kategori diganti.');
+      setEditingName(false);
+      onRenamed?.(to);
+    } catch (e) {
+      console.error(e);
+      toast.error(e instanceof Error && e.message ? e.message : 'Gagal mengganti nama. Coba lagi.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const removeGroup = async () => {
     const ok = await confirm({
       title: `Hapus kategori "${row.name}"?`,
@@ -359,7 +380,34 @@ export function KategoriDetailView({ row, onDone }: { row: CategoryRow; onDone: 
       <div className="flex flex-col items-center gap-2 pt-1 text-center">
         <AvatarButton emoji={v.emoji} tile={v.tile} onClick={() => setPicking(true)} />
         {picking && <IconPicker value={defaultStyle(row.name, row.kind)} onPick={pickStyle} onClose={() => setPicking(false)} />}
-        <p className="text-[20px] font-bold text-slate-900">{row.name}</p>
+        {editingName ? (
+          <form
+            onSubmit={(e) => { e.preventDefault(); void saveName(); }}
+            className="flex w-full max-w-xs items-center gap-1.5 rounded-full bg-white p-1 pl-4 ring-2 ring-indigo-400"
+          >
+            <input
+              autoFocus
+              value={nameDraft}
+              maxLength={40}
+              onChange={(e) => setNameDraft(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Escape') { setEditingName(false); setNameDraft(row.name); } }}
+              aria-label="Nama kategori baru"
+              className="min-w-0 flex-1 bg-transparent py-1.5 text-[16px] font-bold text-slate-900 outline-none"
+            />
+            <button type="button" onClick={() => { setEditingName(false); setNameDraft(row.name); }} disabled={busy} aria-label="Batal ganti nama" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100">
+              <X size={16} />
+            </button>
+            <button type="submit" disabled={busy || !nameDraft.trim()} aria-label="Simpan nama" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white disabled:opacity-40">
+              {busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+            </button>
+          </form>
+        ) : (
+          <button type="button" onClick={() => { setNameDraft(row.name); setEditingName(true); }} className="group flex items-center gap-1.5 rounded-full px-2 py-0.5 hover:bg-slate-100" title="Ganti nama kategori">
+            <span className="text-[20px] font-bold text-slate-900">{row.name}</span>
+            <Pencil size={14} className="text-slate-400 group-hover:text-slate-600" />
+          </button>
+        )}
+        {editingName && <p className="text-[12px] text-slate-500">Semua transaksi, anggaran & subkategori ikut berganti nama.</p>}
         <p className="flex items-center gap-2 text-[14px] text-slate-500">
           <span className={cn('rounded-full px-2.5 py-0.5 text-[12px] font-semibold', row.kind === 'pemasukan' ? 'bg-emerald-50 text-emerald-700' : 'bg-indigo-50 text-indigo-700')}>{row.kind === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}</span>
           {formatIDR(row.spent)} {row.budget?.period === 'yearly' ? 'tahun ini' : startDay === 1 ? 'bulan ini' : 'periode ini'}
@@ -574,13 +622,18 @@ export function KategoriSection({ view, go }: { view: 'kategori' | 'kategori-det
   const { rows, loading } = useCategoryData();
   const [selected, setSelected] = useState<string | null>(null);
   const [newKind, setNewKind] = useState<Kind>('pengeluaran');
+  const [renamedTo, setRenamedTo] = useState<string | null>(null);
   const row = rows.find((r) => r.name === selected);
 
   if (view === 'kategori-baru') {
     return <KategoriBaruView initialKind={newKind} existing={rows.map((r) => r.name)} onDone={(name) => { setSelected(name); go('kategori-detail'); }} />;
   }
   if (view === 'kategori-detail' && row) {
-    return <KategoriDetailView key={`${row.name}-${row.budget?.id ?? ''}`} row={row} onDone={() => go('kategori')} />;
+    return <KategoriDetailView key={`${row.name}-${row.budget?.id ?? ''}`} row={row} onDone={() => go('kategori')} onRenamed={(n) => { setRenamedTo(n); setSelected(n); }} />;
+  }
+  // Baru ganti nama: tunggu data termuat ulang, jangan sempat balik ke daftar.
+  if (view === 'kategori-detail' && selected && renamedTo === selected) {
+    return <div className="flex justify-center py-16"><Loader2 className="animate-spin text-slate-300" /></div>;
   }
   return <KategoriListView rows={rows} loading={loading} onOpen={(name) => { setSelected(name); go('kategori-detail'); }} onAdd={(k) => { setNewKind(k); go('kategori-baru'); }} />;
 }
