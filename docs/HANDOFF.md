@@ -273,12 +273,12 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   PARSE_TRANSACTION_MODELS), kuota 20/hari/user (dikembalikan kalau AI gagal), foto tidak disimpan, server hanya
   kembalikan 4 digit terakhir, respons AI tidak di-log. **Belum teruji dgn AI sungguhan** (lokal tanpa API key; UI diuji
   dgn respons tiruan) — cek pindai di production.
-- **Belum di-deploy** (akun B, frontend saja): **pusat Kartu kredit dirombak** — tampilan utama = tumpukan kartu
+- **Live (run #72)** (akun B): **pusat Kartu kredit dirombak** — tampilan utama = tumpukan kartu
   (kartu belakang menyembul 58px, margin negatif berbasis `100cqw / 1.586`) + tips Leo + daftar tagihan 30 hari ke depan
   (tanggal, nominal, warna kartu). Ketuk kartu/tagihan → detail kartu itu: kartu terbang ke atas (framer `layoutId`),
   kartu lain mengintip di belakang, tiket tagihan + Sudah bayar/Ubah, belum ditagih/terpakai/limit, belanja siklus ini
   (animasi berurutan); "Semua kartu" kembali ke tumpukan. Logika angka tidak berubah.
-- **Belum di-deploy** (akun B, frontend saja): **Rekening & form kartu dirampingkan** — bagian Kartu kredit di
+- **Live (run #72)** (akun B): **Rekening & form kartu dirampingkan** — bagian Kartu kredit di
   Rekening jadi daftar ringkas (thumbnail kartu + 4 digit, status jatuh tempo, tagihan/terpakai, bar limit; ketuk →
   detail di pusat kartu), banner keamanan jadi catatan kecil di bawah halaman. CreditCardForm: pratinjau lebih kecil
   dengan tombol "Pindai" menempel, bagian digabung (kartu · tanggal+pengingat · tagihan · tampilan), input lebih padat.
