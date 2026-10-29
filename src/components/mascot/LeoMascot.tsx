@@ -408,15 +408,15 @@ export function LeoMascot({
 }
 
 // Digambar di atas wajah (di dalam grup "bernapas", jadi ikut bergerak).
+// Satu aksesoris per hari raya Indonesia (lib/season.ts).
 function SeasonAccessory({ season }: { season: Season }) {
-  if (season === "halloween") {
+  // Peci: Ramadan & Idul Fitri, Idul Adha, hari besar Islam.
+  if (season === "lebaran" || season === "iduladha" || season === "islami") {
     return (
       <g>
-        <path d="M80 42 Q97 4 126 -24 Q121 8 140 42 Z" fill="#4C1D95" />
-        <path d="M126 -24 Q134 -22 138 -14" stroke="#4C1D95" strokeWidth="6" strokeLinecap="round" fill="none" />
-        <ellipse cx="110" cy="44" rx="54" ry="10" fill="#3B0764" />
-        <path d="M84 36 Q110 42 136 36 L138 42 Q110 48 82 42 Z" fill="#F59E0B" />
-        <path d="M112 12 l3 6 6 1 -4.5 4 1 6 -5.5 -3 -5.5 3 1 -6 -4.5 -4 6 -1 Z" fill="#FDE047" />
+        <path d="M74 50 Q74 20 110 18 Q146 20 146 50 Z" fill="#1F2937" />
+        <path d="M76 42 Q110 36 144 42" stroke="#D4A017" strokeWidth="2.5" fill="none" />
+        <path d="M110 18 Q120 20 126 26" stroke="#374151" strokeWidth="2" fill="none" />
       </g>
     );
   }
@@ -430,25 +430,96 @@ function SeasonAccessory({ season }: { season: Season }) {
       </g>
     );
   }
-  if (season === "lebaran") {
+  if (season === "imlek") {
+    // Topi bundar merah dengan pita & kancing emas.
     return (
       <g>
-        <path d="M74 50 Q74 20 110 18 Q146 20 146 50 Z" fill="#1F2937" />
-        <path d="M76 42 Q110 36 144 42" stroke="#D4A017" strokeWidth="2.5" fill="none" />
-        <path d="M110 18 Q120 20 126 26" stroke="#374151" strokeWidth="2" fill="none" />
+        <path d="M72 52 Q72 16 110 14 Q148 16 148 52 Z" fill="#DC2626" />
+        <path d="M74 46 Q110 40 146 46 L146 53 Q110 47 74 53 Z" fill="#F59E0B" />
+        <path d="M92 18 Q110 30 128 18" stroke="#B91C1C" strokeWidth="2" fill="none" />
+        <circle cx="110" cy="13" r="6.5" fill="#F59E0B" stroke="#B45309" strokeWidth="1.5" />
+        <path d="M112 18 Q122 34 116 46" stroke="#DC2626" strokeWidth="2.5" fill="none" strokeLinecap="round" />
       </g>
     );
   }
-  // merdeka: ikat kepala merah-putih + bendera kecil
+  if (season === "nyepi") {
+    // Udeng Bali: ikat kepala putih dengan simpul tegak di depan.
+    return (
+      <g>
+        <path d="M62 72 Q110 50 158 72 L158 82 Q110 60 62 82 Z" fill="#F8FAFC" stroke="#CBD5E1" strokeWidth="1" />
+        <path d="M98 64 L110 30 L122 64 Z" fill="#F8FAFC" stroke="#CBD5E1" strokeWidth="1" />
+        <path d="M66 76 Q110 56 154 76" stroke="#D4A017" strokeWidth="1.5" fill="none" />
+      </g>
+    );
+  }
+  if (season === "waisak") {
+    // Bunga teratai di atas kepala.
+    return (
+      <g>
+        {[-26, -13, 0, 13, 26].map((dx, k) => (
+          <ellipse key={k} cx={110 + dx} cy={44 - (k === 2 ? 8 : k % 2 ? 4 : 0)} rx="8" ry="16" fill={k === 2 ? "#F9A8D4" : "#FBCFE8"} stroke="#EC4899" strokeWidth="1" transform={`rotate(${dx * 1.4} ${110 + dx} 52)`} />
+        ))}
+        <ellipse cx="110" cy="56" rx="30" ry="6" fill="#86EFAC" stroke="#22C55E" strokeWidth="1" />
+      </g>
+    );
+  }
+  if (season === "paskah") {
+    // Bando telinga kelinci.
+    return (
+      <g>
+        <ellipse cx="88" cy="18" rx="11" ry="32" fill="#FFFFFF" stroke="#E5E7EB" strokeWidth="1.5" transform="rotate(-14 88 18)" />
+        <ellipse cx="88" cy="20" rx="5.5" ry="22" fill="#FBCFE8" transform="rotate(-14 88 20)" />
+        <ellipse cx="132" cy="18" rx="11" ry="32" fill="#FFFFFF" stroke="#E5E7EB" strokeWidth="1.5" transform="rotate(14 132 18)" />
+        <ellipse cx="132" cy="20" rx="5.5" ry="22" fill="#FBCFE8" transform="rotate(14 132 20)" />
+        <path d="M70 56 Q110 34 150 56" stroke="#F472B6" strokeWidth="6" fill="none" strokeLinecap="round" />
+      </g>
+    );
+  }
+  if (season === "kenaikan") {
+    // Lingkar cahaya.
+    return (
+      <g>
+        <ellipse cx="110" cy="22" rx="32" ry="8" fill="none" stroke="#FDE68A" strokeWidth="6" opacity="0.9" />
+        <ellipse cx="110" cy="22" rx="32" ry="8" fill="none" stroke="#F59E0B" strokeWidth="1.5" />
+      </g>
+    );
+  }
+  if (season === "tahunbaru") {
+    // Topi pesta kerucut bergaris + pompom.
+    return (
+      <g>
+        <path d="M88 58 L116 -4 L136 54 Z" fill="#8B5CF6" />
+        <path d="M95 42 L128 30 M101 28 L124 19 M107 14 L120 9" stroke="#FDE047" strokeWidth="4" strokeLinecap="round" />
+        <circle cx="116" cy="-6" r="7" fill="#F472B6" />
+        <path d="M86 58 Q112 50 138 54" stroke="#6D28D9" strokeWidth="3" fill="none" strokeLinecap="round" />
+      </g>
+    );
+  }
+  if (season === "buruh") {
+    // Helm proyek kuning.
+    return (
+      <g>
+        <path d="M70 56 Q72 12 110 10 Q148 12 150 56 Z" fill="#FACC15" />
+        <path d="M104 12 h12 v40 h-12 Z" fill="#EAB308" />
+        <rect x="60" y="50" width="100" height="10" rx="5" fill="#EAB308" />
+        <path d="M80 30 Q90 20 100 18" stroke="#FEF9C3" strokeWidth="3" fill="none" strokeLinecap="round" />
+      </g>
+    );
+  }
+  // merdeka & pancasila: ikat kepala merah-putih (+ bendera kecil saat Agustus)
   return (
     <g>
       <path d="M58 80 Q110 60 162 80 L162 88 Q110 68 58 88 Z" fill="#DC2626" />
       <path d="M58 88 Q110 68 162 88 L162 95 Q110 75 58 95 Z" fill="#FFFFFF" />
       <path d="M160 84 L178 76 L176 90 Z" fill="#DC2626" />
       <path d="M160 88 L176 98 L170 104 Z" fill="#FFFFFF" />
-      <line x1="62" y1="88" x2="46" y2="34" stroke="#92400E" strokeWidth="3" strokeLinecap="round" />
-      <rect x="46" y="34" width="24" height="8" fill="#DC2626" />
-      <rect x="46" y="42" width="24" height="8" fill="#FFFFFF" stroke="#E5E7EB" strokeWidth="0.5" />
+      {season === "merdeka" && (
+        <>
+          <line x1="62" y1="88" x2="46" y2="34" stroke="#92400E" strokeWidth="3" strokeLinecap="round" />
+          <rect x="46" y="34" width="24" height="8" fill="#DC2626" />
+          <rect x="46" y="42" width="24" height="8" fill="#FFFFFF" stroke="#E5E7EB" strokeWidth="0.5" />
+        </>
+      )}
     </g>
   );
 }

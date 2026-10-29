@@ -30,7 +30,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { LogoImage } from '@/components/ui/LogoImage';
 import { AnimatedNumber } from '@/components/app/AnimatedNumber';
 import { useLeoPrefs } from '@/lib/useLeoPrefs';
-import { currentSeason, SEASON_INFO } from '@/lib/season';
+import { currentHoliday, SEASON_INFO } from '@/lib/season';
 import { useModal } from '@/context/ModalContext';
 import { openSettings } from '@/lib/settingsPanel';
 import { auth } from '@/lib/cf-client';
@@ -93,7 +93,8 @@ export default function MonthlyDashboard() {
   // Jam & tanggal dari perangkat, baru diketahui setelah hydrate (static export).
   const [now, setNow] = useState<Date | null>(null);
   const leo = useLeoPrefs();
-  const season = now && leo.seasonal ? currentSeason(now) : null;
+  const holiday = now && leo.seasonal ? currentHoliday(now) : null;
+  const season = holiday?.season ?? null;
   const { openModal } = useModal();
 
   useEffect(() => {
@@ -410,6 +411,8 @@ export default function MonthlyDashboard() {
   const tips: LeoTip[] = (() => {
     if (statsLoading) return [{ id: 'load', text: 'Bentar ya, aku hitung dulu keuanganmu…', mood: 'watch' }];
     const list: LeoTip[] = [];
+    // Hari H hari raya: Leo menyapa duluan.
+    if (holiday?.isDay) list.push({ id: `raya-${holiday.season}`, mood: 'happy', text: SEASON_INFO[holiday.season].greeting || `Selamat memperingati ${holiday.name} 🌙` });
     const over = categories.filter((c) => c.budget > 0 && c.spent > c.budget).sort((a, b) => b.spent - b.budget - (a.spent - a.budget));
     if (over[0]) list.push({ id: 'over', mood: 'sad', text: `Waduh, ${over[0].category} udah lewat anggaran ${short(over[0].spent - over[0].budget)} di ${monthLabel}. Rem dikit, yuk.`, action: { label: 'Lihat anggaran', href: '/membership/budget' } });
     const soon = upcoming.find((u) => u.days <= 7);

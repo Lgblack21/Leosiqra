@@ -714,7 +714,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                     <ToggleRow
                       icon={Palette}
                       title="Tema musiman"
-                      desc={season ? `Sekarang: ${SEASON_INFO[season].desc}` : 'Leo berganti gaya saat Ramadan & Lebaran, Agustus, Oktober, dan Desember.'}
+                      desc={season ? `Sekarang: ${SEASON_INFO[season].desc}` : 'Leo berganti gaya di hari raya & tanggal merah Indonesia: Imlek, Nyepi, Lebaran, Paskah, Waisak, Idul Adha, 17 Agustus, Natal, Tahun Baru, dan lainnya.'}
                       on={leo.seasonal}
                       onChange={(v) => void leo.save({ seasonal: v })}
                     />
