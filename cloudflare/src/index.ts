@@ -11943,10 +11943,16 @@ const parseReminderAmount = (raw: unknown): number | null | undefined => {
   const n = Number(raw);
   return Number.isFinite(n) && n > 0 && n <= 1e12 ? Math.round(n * 100) / 100 : undefined;
 };
+// Tahun dibatasi 2000–2100: tahun bertanda (+275760-…/-000001-…) lolos Date.parse,
+// tapi tersortir sebelum "2026-…" di cron (due_at dibanding sebagai teks) dan
+// nextReminderDue-nya melempar RangeError → baris tidak pernah diklaim dan
+// memenuhi LIMIT cron, pengingat user lain tidak terkirim.
+const REMINDER_MIN_MS = Date.UTC(2000, 0, 1);
+const REMINDER_MAX_MS = Date.UTC(2101, 0, 1);
 const parseReminderDue = (raw: unknown): string | null => {
   if (typeof raw !== "string" || raw.length > 40) return null;
   const ms = Date.parse(raw);
-  return Number.isNaN(ms) ? null : new Date(ms).toISOString();
+  return Number.isNaN(ms) || ms < REMINDER_MIN_MS || ms >= REMINDER_MAX_MS ? null : new Date(ms).toISOString();
 };
 // Tanggal (WIB) dari waktu UTC ISO — dipakai sebagai patokan ulang bulanan.
 const wibDayOf = (iso: string) => new Date(Date.parse(iso) + WIB_MS).getUTCDate();
@@ -12070,7 +12076,8 @@ const sendDueReminders = async (env: Env) => {
   let rows: ReminderRow[];
   try {
     const { results } = await env.DB.prepare(
-      "SELECT * FROM reminders WHERE active = 1 AND due_at <= ? ORDER BY due_at LIMIT ?"
+      // due_at >= '2000-…': baris lama bertahun bertanda (lihat parseReminderDue) dilewati.
+      "SELECT * FROM reminders WHERE active = 1 AND due_at >= '2000-01-01' AND due_at <= ? ORDER BY due_at LIMIT ?"
     )
       .bind(new Date(nowMs).toISOString(), REMINDERS_MAX_PER_RUN)
       .all<ReminderRow>();
