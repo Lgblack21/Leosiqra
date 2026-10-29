@@ -9,7 +9,6 @@ import {
   ChevronDown,
   ArrowUpDown,
   ShieldCheck,
-  X,
   Eye,
   EyeOff,
   CreditCard,
@@ -78,7 +77,6 @@ export default function RekeningPage() {
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [fxRates, setFxRates] = useState<ExchangeRates>({});
-  const [showSecurityBanner, setShowSecurityBanner] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [uid, setUid] = useState<string | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -92,7 +90,6 @@ export default function RekeningPage() {
 
   useEffect(() => {
     try {
-      setShowSecurityBanner(localStorage.getItem('rekening-security-banner-dismissed') !== '1');
       setHidden(localStorage.getItem(HIDE_KEY) === '1');
     } catch { /* storage diblokir: pakai bawaan */ }
     exchangeRateService.getLatestRates().then(setFxRates).catch(console.error);
@@ -124,10 +121,6 @@ export default function RekeningPage() {
     };
   }, []);
 
-  const dismissSecurityBanner = () => {
-    setShowSecurityBanner(false);
-    try { localStorage.setItem('rekening-security-banner-dismissed', '1'); } catch { /* abaikan */ }
-  };
   const toggleHidden = () => {
     setHidden((h) => {
       try { localStorage.setItem(HIDE_KEY, h ? '0' : '1'); } catch { /* abaikan */ }
@@ -304,18 +297,6 @@ export default function RekeningPage() {
         </section>
       )}
 
-      {showSecurityBanner && (
-        <div className="flex items-center gap-2.5 rounded-2xl bg-indigo-50/70 py-2 pl-3 pr-1.5 ring-1 ring-indigo-100">
-          <ShieldCheck size={16} className="shrink-0 text-indigo-600" />
-          <p className="min-w-0 flex-1 text-[12px] leading-snug text-slate-600">
-            <span className="font-semibold text-slate-800">Tanpa akses ke bank.</span> Saldo di sini murni dari catatan yang kamu input sendiri.
-          </p>
-          <button onClick={dismissSecurityBanner} aria-label="Tutup" className="shrink-0 rounded-lg p-1.5 text-slate-400 hover:bg-white">
-            <X size={14} />
-          </button>
-        </div>
-      )}
-
       {/* Rekening kas */}
       <section>
         <div className="mb-2 flex items-center justify-between">
@@ -389,69 +370,52 @@ export default function RekeningPage() {
         )}
       </section>
 
-      {/* Kartu kredit — kartu mini */}
+      {/* Kartu kredit — daftar ringkas; ketuk untuk membuka di pusat kartu */}
       {cardInfo.length > 0 && (
         <section>
-          <div className="mb-2 flex items-baseline justify-between gap-3">
+          <div className="mb-2 flex items-center justify-between gap-3">
             <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Kartu kredit</h2>
             <button type="button" onClick={() => openHub(null)} className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-bold text-indigo-600 hover:bg-indigo-50">
-              Tagihan {hidden ? '••••' : short(cardsUsedIdr)} · Kelola <ChevronRight size={14} />
+              Kelola <ChevronRight size={14} />
             </button>
           </div>
-          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 no-scrollbar md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 lg:grid-cols-3">
+          <ul className="divide-y divide-slate-100 overflow-hidden rounded-[20px] bg-white ring-1 ring-slate-100">
             {cardInfo.map(({ acc, usage, cycle }) => {
-              const chip = cycle && cycle.amountDue > 0
-                ? cycle.overdue
-                  ? `Lewat ${Math.abs(cycle.daysUntilDue)} hari`
-                  : `${dueText(cycle.dueDate)} · ${cycle.daysUntilDue === 0 ? 'hari ini' : `${cycle.daysUntilDue} hr lagi`}`
-                : usage.used > 0 ? 'Belum ditagih' : 'Lunas';
-              const urgent = cycle && cycle.amountDue > 0 && (cycle.overdue || cycle.daysUntilDue <= 5);
+              const due = cycle && cycle.amountDue > 0;
+              const urgent = due && (cycle.overdue || cycle.daysUntilDue <= 5);
               const pct = usage.limit > 0 ? Math.min(100, (usage.used / usage.limit) * 100) : 0;
               return (
-                <button
-                  key={acc.id}
-                  type="button"
-                  onClick={() => openHub(acc.id)}
-                  className={cn(
-                    'relative flex h-[136px] w-[78%] shrink-0 snap-start flex-col justify-between overflow-hidden rounded-[20px] p-4 text-left text-white shadow-[0_16px_30px_-18px_rgba(15,23,42,0.6)] transition-transform hover:-translate-y-0.5 sm:w-[300px] md:w-auto',
-                    getCardGradientClass(acc.cardColor, acc.type)
-                  )}
-                >
-                  <span aria-hidden className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/15" />
-                  <span aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/15" />
-                  <div className="relative flex items-center gap-2">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white/95">
-                      <LogoImage
-                        src={acc.logoUrl}
-                        alt={acc.name}
-                        fallbackText={acc.name.substring(0, 3).toUpperCase()}
-                        fallbackIcon={<CreditCard size={14} className="text-slate-700" />}
-                        className="h-full w-full object-cover"
-                      />
+                <li key={acc.id}>
+                  <button type="button" onClick={() => openHub(acc.id)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50">
+                    {/* Thumbnail kartu */}
+                    <span className={cn('relative flex h-[30px] w-[46px] shrink-0 flex-col justify-end overflow-hidden rounded-[7px] p-1 shadow-sm', getCardGradientClass(acc.cardColor, acc.type))}>
+                      <span aria-hidden className="absolute -right-2 -top-3 h-6 w-6 rounded-full bg-white/20" />
+                      <span aria-hidden className="absolute left-1 top-1 h-[7px] w-[9px] rounded-[2px] bg-amber-200/90" />
+                      <span className="relative text-right font-mono text-[8px] leading-none tracking-wider text-white/90">{acc.cardLast4 || '••••'}</span>
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-[14px] font-bold">{acc.name}</span>
-                    <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold', urgent ? 'bg-white text-rose-600' : 'bg-white/20')}>{chip}</span>
-                  </div>
-                  <div className="relative">
-                    <div className="flex items-end justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/70">Terpakai</p>
-                        <p className="truncate text-[18px] font-extrabold leading-tight tabular-nums">{money(usage.used, acc.currency)}</p>
-                      </div>
-                      {usage.limit > 0 && (
-                        <p className="shrink-0 text-right text-[11px] text-white/75">sisa <span className="font-bold text-white tabular-nums">{hidden ? '••••' : short(usage.remaining)}</span></p>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[14px] font-semibold text-slate-900">{acc.name}</p>
+                      <p className={cn('truncate text-[12px]', urgent ? 'font-semibold text-rose-600' : 'text-slate-500')}>
+                        {due
+                          ? cycle.overdue ? `Lewat jatuh tempo ${dueText(cycle.dueDate)}` : `Jatuh tempo ${dueText(cycle.dueDate)} · ${cycle.daysUntilDue === 0 ? 'hari ini' : `${cycle.daysUntilDue} hari`}`
+                          : usage.used > 0 ? 'Belum ditagih' : 'Lunas'}
+                      </p>
+                    </div>
+                    <div className="w-24 shrink-0 text-right">
+                      <p className="whitespace-nowrap text-[14px] font-bold text-slate-900 tabular-nums">{hidden ? '••••' : short(due ? cycle.amountDue : usage.used)}</p>
+                      {usage.limit > 0 && usage.used > 0 && (
+                        <div className="mt-1 ml-auto h-1 w-16 overflow-hidden rounded-full bg-slate-100" title={`Terpakai ${Math.round(pct)}% dari limit`}>
+                          <div className={cn('h-full rounded-full', pct >= 90 ? 'bg-rose-500' : 'bg-indigo-500')} style={{ width: `${Math.max(3, pct)}%` }} />
+                        </div>
                       )}
                     </div>
-                    {usage.limit > 0 && (
-                      <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/25">
-                        <div className={cn('h-full rounded-full', pct >= 90 ? 'bg-rose-300' : 'bg-white')} style={{ width: `${Math.max(2, pct)}%` }} />
-                      </div>
-                    )}
-                  </div>
-                </button>
+                    <ChevronRight size={16} className="shrink-0 text-slate-300" />
+                  </button>
+                </li>
               );
             })}
-          </div>
+          </ul>
+          <p className="mt-1.5 px-1 text-[12px] text-slate-500">Total tagihan <span className="font-bold text-slate-800 tabular-nums">{hidden ? '••••' : formatIDR(cardsUsedIdr)}</span></p>
         </section>
       )}
 
@@ -488,6 +452,10 @@ export default function RekeningPage() {
           </ul>
         </section>
       )}
+
+      <p className="flex items-center justify-center gap-1.5 px-2 text-center text-[11px] text-slate-400">
+        <ShieldCheck size={13} className="shrink-0" /> Leosiqra tidak pernah meminta akses ke bank — saldo murni dari catatanmu sendiri.
+      </p>
 
       {hub && (
         <CreditCardHub

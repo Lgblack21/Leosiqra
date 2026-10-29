@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-28 malam (akun B selesai; semua live, main = run #5
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Pusat kartu: tumpukan + detail |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Rekening & form kartu dirampingkan |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -278,6 +278,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   (tanggal, nominal, warna kartu). Ketuk kartu/tagihan → detail kartu itu: kartu terbang ke atas (framer `layoutId`),
   kartu lain mengintip di belakang, tiket tagihan + Sudah bayar/Ubah, belum ditagih/terpakai/limit, belanja siklus ini
   (animasi berurutan); "Semua kartu" kembali ke tumpukan. Logika angka tidak berubah.
+- **Belum di-deploy** (akun B, frontend saja): **Rekening & form kartu dirampingkan** — bagian Kartu kredit di
+  Rekening jadi daftar ringkas (thumbnail kartu + 4 digit, status jatuh tempo, tagihan/terpakai, bar limit; ketuk →
+  detail di pusat kartu), banner keamanan jadi catatan kecil di bawah halaman. CreditCardForm: pratinjau lebih kecil
+  dengan tombol "Pindai" menempel, bagian digabung (kartu · tanggal+pengingat · tagihan · tampilan), input lebih padat.
 
 ## Migrasi D1
 
