@@ -4538,6 +4538,91 @@ const applyCardCycleFields = (payload: Record<string, unknown>, target: Record<s
   }
 };
 
+// Identitas kartu kredit (4 digit terakhir & jaringan) — juga dititipkan di
+// payload_json. Nomor lengkap TIDAK pernah disimpan; hanya 4 digit terakhir.
+// "" / null = hapus. Nilai yang tidak valid ditolak (bukan diam-diam dibuang).
+const CARD_NETWORKS = new Set(["visa", "mastercard", "jcb", "amex", "gpn"]);
+const hasCardIdentityFields = (payload: Record<string, unknown>) =>
+  payload.card_last4 !== undefined || payload.card_network !== undefined;
+const applyCardIdentityFields = (payload: Record<string, unknown>, target: Record<string, unknown>): string | null => {
+  if (payload.card_last4 !== undefined) {
+    const v = payload.card_last4 === null ? "" : String(payload.card_last4).trim();
+    if (!v) delete target.cardLast4;
+    else if (/^\d{4}$/.test(v)) target.cardLast4 = v;
+    else return "4 digit terakhir kartu harus tepat 4 angka.";
+  }
+  if (payload.card_network !== undefined) {
+    const v = payload.card_network === null ? "" : String(payload.card_network).trim().toLowerCase();
+    if (!v) delete target.cardNetwork;
+    else if (CARD_NETWORKS.has(v)) target.cardNetwork = v;
+    else return "Jaringan kartu tidak dikenal.";
+  }
+  return null;
+};
+
+// POST /api/member/accounts/:cardId/pay { from_account_id, amount, date, ref }
+// "Sudah bayar" tagihan kartu kredit: dua baris transfer (Keluar dari rekening
+// kas, Masuk ke kartu — format sama dengan Transfer & Top Up, jadi hapus
+// transaksi tetap membalik saldo keduanya) + saldo kedua rekening dalam SATU
+// batch. `ref` dibuat klien sekali per pembayaran: baris hanya disisipkan
+// kalau ref itu belum tercatat dan UPDATE saldo disyaratkan barisnya ada,
+// jadi request yang terkirim dua kali tidak membayar dua kali.
+async function handlePayCreditCard(request: Request, env: Env, cardId: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const payload = await parseJson<Record<string, unknown>>(request);
+  const fromId = typeof payload.from_account_id === "string" ? payload.from_account_id.trim() : "";
+  const amount = Math.round(Number(payload.amount) * 100) / 100;
+  const date = typeof payload.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(payload.date) && !Number.isNaN(Date.parse(`${payload.date}T00:00:00Z`)) ? payload.date : "";
+  const ref = typeof payload.ref === "string" && /^[A-Za-z0-9_-]{8,64}$/.test(payload.ref) ? payload.ref : "";
+  if (!fromId || !cardId || fromId === cardId) return json({ error: "Pilih rekening sumber pembayaran." }, { status: 400 });
+  if (!Number.isFinite(amount) || amount <= 0 || amount > 1e12) return json({ error: "Nominal pembayaran tidak valid." }, { status: 400 });
+  if (!date) return json({ error: "Tanggal pembayaran tidak valid." }, { status: 400 });
+  if (!ref) return json({ error: "Permintaan tidak lengkap. Muat ulang halaman lalu coba lagi." }, { status: 400 });
+
+  const rows = await env.DB.prepare("SELECT id, name, type, currency FROM accounts WHERE user_id = ? AND id IN (?, ?)")
+    .bind(userId, cardId, fromId)
+    .all<{ id: string; name: string; type: string; currency: string | null }>();
+  const card = rows.results.find((r) => r.id === cardId);
+  const source = rows.results.find((r) => r.id === fromId);
+  const isCredit = (type: string) => type === "Credit Card" || type === "kartu";
+  if (!card || !isCredit(card.type)) return json({ error: "Kartu kredit tidak ditemukan." }, { status: 404 });
+  if (!source) return json({ error: "Rekening sumber tidak ditemukan." }, { status: 404 });
+  if (isCredit(source.type)) return json({ error: "Bayar tagihan dari rekening kas, bukan dari kartu kredit lain." }, { status: 400 });
+  const currency = card.currency || "IDR";
+  if ((source.currency || "IDR") !== currency) return json({ error: "Mata uang rekening sumber harus sama dengan mata uang kartu." }, { status: 400 });
+
+  const refTaken = `CASE WHEN json_valid(payload_json) THEN json_extract(payload_json, '$.payRef') END = ?`;
+  const already = await env.DB.prepare(`SELECT 1 AS ok FROM transactions WHERE user_id = ? AND ${refTaken} LIMIT 1`).bind(userId, ref).first();
+  if (already) return json({ ok: true, duplicate: true });
+
+  const amountIdr = await resolveIdrAmount(currency, amount, undefined);
+  const now = nowIso();
+  const iso = `${date}T00:00:00.000Z`;
+  const displayDate = new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(iso));
+  const note = `Bayar tagihan ${card.name}`;
+  const meta = JSON.stringify({ payRef: ref, cardPayment: true });
+  const outId = generateId();
+  const inId = generateId();
+  const insertRow = (id: string, accountId: string, targetId: string, side: "Keluar" | "Masuk", guard: string, guardArgs: unknown[]) =>
+    env.DB.prepare(
+      `INSERT INTO transactions (id, user_id, type, amount, amount_idr, category, sub_category, currency, account_id, target_account_id,
+                                 date, display_date, note, status, payload_json, created_at, updated_at)
+       SELECT ?, ?, 'transfer', ?, ?, 'Transfer', ?, ?, ?, ?, ?, ?, ?, 'VERIFIED', ?, ?, ?
+        WHERE ${guard}`
+    ).bind(id, userId, amount, amountIdr, `Transfer ${side}`, currency, accountId, targetId, iso, displayDate, `[Transfer ${side}] ${note}`, meta, now, now, ...guardArgs);
+  const exists = "EXISTS (SELECT 1 FROM transactions WHERE id = ? AND user_id = ?)";
+
+  await env.DB.batch([
+    insertRow(outId, fromId, cardId, "Keluar", `NOT EXISTS (SELECT 1 FROM transactions WHERE user_id = ? AND ${refTaken})`, [userId, ref]),
+    insertRow(inId, cardId, fromId, "Masuk", exists, [outId, userId]),
+    env.DB.prepare(`UPDATE accounts SET balance = balance - ? WHERE id = ? AND user_id = ? AND ${exists}`).bind(amount, fromId, userId, outId, userId),
+    env.DB.prepare(`UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ? AND ${exists}`).bind(amount, cardId, userId, inId, userId),
+  ]);
+  return json({ ok: true, id: outId }, { status: 201 });
+}
+
 async function handleCreateAccount(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) {
@@ -4552,6 +4637,8 @@ async function handleCreateAccount(request: Request, env: Env) {
   if (payload.card_color) extra.cardColor = payload.card_color;
   if (payload.credit_limit !== undefined) extra.creditLimit = Number(payload.credit_limit) || 0;
   applyCardCycleFields(payload, extra);
+  const identityError = applyCardIdentityFields(payload, extra);
+  if (identityError) return json({ error: identityError }, { status: 400 });
   const payloadJson = Object.keys(extra).length ? JSON.stringify(extra) : null;
 
   // Rekening baru selalu masuk paling akhir di daftar — ambil sort_order
@@ -4633,7 +4720,7 @@ async function handleUpdateAccount(request: Request, env: Env, accountId: string
   ]);
   const entries = Object.entries(payload).filter(([key]) => allowed.has(key));
 
-  if (payload.card_color !== undefined || payload.credit_limit !== undefined || hasCardCycleFields(payload)) {
+  if (payload.card_color !== undefined || payload.credit_limit !== undefined || hasCardCycleFields(payload) || hasCardIdentityFields(payload)) {
     const existing = await env.DB.prepare("SELECT payload_json FROM accounts WHERE id = ? AND user_id = ?")
       .bind(accountId, authResult.session.user.id)
       .first<{ payload_json: string | null }>();
@@ -4648,6 +4735,8 @@ async function handleUpdateAccount(request: Request, env: Env, accountId: string
     if (payload.card_color !== undefined) payloadObj.cardColor = payload.card_color;
     if (payload.credit_limit !== undefined) payloadObj.creditLimit = Number(payload.credit_limit) || 0;
     applyCardCycleFields(payload, payloadObj);
+    const identityError = applyCardIdentityFields(payload, payloadObj);
+    if (identityError) return json({ error: identityError }, { status: 400 });
     entries.push(["payload_json", JSON.stringify(payloadObj)]);
   }
 
@@ -14735,6 +14824,9 @@ const worker = {
 
       if (url.pathname.startsWith("/api/member/accounts/")) {
         const accountPath = url.pathname.slice("/api/member/accounts/".length);
+        if (accountPath.endsWith("/pay") && request.method === "POST") {
+          return await handlePayCreditCard(request, env, accountPath.slice(0, -"/pay".length));
+        }
         if (accountPath.endsWith("/balance") && request.method === "POST") {
           const accountId = accountPath.slice(0, -"/balance".length);
           return await handleAdjustAccountBalance(request, env, accountId);

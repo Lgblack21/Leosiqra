@@ -10,6 +10,15 @@ import { toLocalDateString } from '@/lib/utils';
 export const isCreditAccountType = (type: string | undefined) =>
   type === 'Credit Card' || type === 'kartu';
 
+// Jaringan kartu yang diterima Worker (CARD_NETWORKS di cloudflare/src/index.ts).
+export const CARD_NETWORK_OPTIONS = [
+  { key: 'visa', label: 'Visa' },
+  { key: 'mastercard', label: 'Mastercard' },
+  { key: 'jcb', label: 'JCB' },
+  { key: 'amex', label: 'Amex' },
+  { key: 'gpn', label: 'GPN' },
+] as const;
+
 export interface CreditUsage {
   limit: number;
   used: number;

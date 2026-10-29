@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-28 malam (akun B selesai; semua live, main = run #5
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Rekening dirampingkan |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Pusat kartu kredit |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -253,6 +253,16 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   kartu saldo gelap dengan bar komposisi kas (warna per rekening + legenda %, ketuk → detail) & chip tagihan kartu
   terdekat, banner keamanan satu baris, baris rekening ringkas (titik warna + % kas), kartu kredit jadi kartu mini
   (h-136, grid 2–3 kolom di desktop) dengan total tagihan di judul, Target pakai cincin progres 2 kolom.
+- **Belum di-deploy** (akun B, butuh deploy Worker, tanpa migrasi): **pusat Kartu kredit** di Rekening
+  (`CreditCardHub`, dibuka dari "Kelola"/kartu mini/chip tagihan): carousel kartu (•••• 4 digit + logo jaringan),
+  tiket tagihan tercetak + jatuh tempo + min. bayar, "Sudah bayar", "Ubah kartu", belum ditagih/terpakai/sisa limit,
+  belanja siklus ini, kartu paling longgar dipakai hari ini, timeline 30 hari (cetak/jatuh tempo).
+  Worker: `POST /api/member/accounts/:id/pay {from_account_id, amount, date, ref}` = dua baris transfer
+  (Keluar/Masuk, format sama dgn Transfer & Top Up, Masuk ikut punya target_account_id) + kedua saldo dalam satu
+  batch; `ref` (payRef di payload_json) bikin kirim ulang/paralel no-op. Akun kartu: `card_last4` (tepat 4 angka)
+  & `card_network` (visa/mastercard/jcb/amex/gpn) di payload_json, input salah → 400. AccountModal: field 4 digit &
+  jaringan. Diuji lokal: bayar 3,322 jt (saldo BCA & kartu pas), ref sama → duplicate, 3 paralel → 1 masuk, hapus
+  sisi Masuk/Keluar (reverse=1) → pasangan ikut terhapus & saldo pulih, validasi 400/404/401. Belum: pindai kartu (AI).
 
 ## Migrasi D1
 

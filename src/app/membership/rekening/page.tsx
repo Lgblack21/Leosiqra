@@ -32,6 +32,7 @@ import { cn, formatIDR, formatMoney } from '@/lib/utils';
 import { useFeedback } from '@/components/ui/Feedback';
 import { HeaderSlot } from '@/components/Header';
 import { AccountDetail } from '@/components/rekening/AccountDetail';
+import { CreditCardHub } from '@/components/rekening/CreditCardHub';
 
 // Rekening & dompet: total saldo, daftar rekening kas (bank, e-wallet,
 // tunai, investasi), tumpukan kartu kredit dengan jatuh tempo terdekat,
@@ -81,6 +82,9 @@ export default function RekeningPage() {
   const [uid, setUid] = useState<string | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [reordering, setReordering] = useState(false);
+  // Pusat kartu kredit: undefined = tertutup, string/null = terbuka (kartu awal).
+  const [hub, setHub] = useState<{ id: string | null; n: number } | undefined>(undefined);
+  const [createType, setCreateType] = useState<'Bank Account' | 'Credit Card'>('Bank Account');
 
   useEffect(() => onAuthStateChanged(auth, (u) => setUid(u?.uid ?? null)), []);
 
@@ -197,7 +201,8 @@ export default function RekeningPage() {
       accountService.getUserAccounts('session').then(setAccounts).catch(console.error);
     });
   };
-  const openCreate = () => { setEditingAccount(null); setIsModalOpen(true); };
+  const openCreate = () => { setCreateType('Bank Account'); setEditingAccount(null); setIsModalOpen(true); };
+  const openHub = (id: string | null | undefined) => setHub((h) => ({ id: id ?? null, n: (h?.n ?? 0) + 1 }));
 
   // Komposisi kas: porsi saldo positif tiap rekening (untuk bar di kartu atas).
   const positive = cashAccounts.map((a) => Math.max(0, toIDR(a.balance || 0, a.currency)));
@@ -280,7 +285,7 @@ export default function RekeningPage() {
           )}
 
           {nearest && (
-            <button type="button" onClick={() => setDetailId(nearest.acc.id ?? null)} className="relative mt-4 flex w-full items-center gap-2.5 rounded-2xl bg-white/10 px-3 py-2 text-left hover:bg-white/15">
+            <button type="button" onClick={() => openHub(nearest.acc.id)} className="relative mt-4 flex w-full items-center gap-2.5 rounded-2xl bg-white/10 px-3 py-2 text-left hover:bg-white/15">
               <CreditCard size={16} className="shrink-0 text-white/70" />
               <span className="min-w-0 flex-1 truncate text-[13px] text-white/85">
                 <span className="font-semibold text-white">{nearest.acc.name}</span> · {hidden ? '••••' : short(nearest.cycle!.amountDue)} {nearest.cycle!.overdue ? 'lewat jatuh tempo' : 'jatuh tempo'} {dueText(nearest.cycle!.dueDate)}
@@ -383,7 +388,9 @@ export default function RekeningPage() {
         <section>
           <div className="mb-2 flex items-baseline justify-between gap-3">
             <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Kartu kredit</h2>
-            <span className="text-[12px] text-slate-500 tabular-nums">Tagihan <span className="font-bold text-slate-900">{hidden ? '••••' : short(cardsUsedIdr)}</span></span>
+            <button type="button" onClick={() => openHub(null)} className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-bold text-indigo-600 hover:bg-indigo-50">
+              Tagihan {hidden ? '••••' : short(cardsUsedIdr)} · Kelola <ChevronRight size={14} />
+            </button>
           </div>
           <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 no-scrollbar md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 lg:grid-cols-3">
             {cardInfo.map(({ acc, usage, cycle }) => {
@@ -398,7 +405,7 @@ export default function RekeningPage() {
                 <button
                   key={acc.id}
                   type="button"
-                  onClick={() => setDetailId(acc.id ?? null)}
+                  onClick={() => openHub(acc.id)}
                   className={cn(
                     'relative flex h-[136px] w-[78%] shrink-0 snap-start flex-col justify-between overflow-hidden rounded-[20px] p-4 text-left text-white shadow-[0_16px_30px_-18px_rgba(15,23,42,0.6)] transition-transform hover:-translate-y-0.5 sm:w-[300px] md:w-auto',
                     getCardGradientClass(acc.cardColor, acc.type)
@@ -476,6 +483,21 @@ export default function RekeningPage() {
         </section>
       )}
 
+      {hub && (
+        <CreditCardHub
+          key={hub.n}
+          open
+          accounts={accounts}
+          transactions={transactions}
+          hidden={hidden}
+          totalIdr={cardsUsedIdr}
+          initialId={hub.id}
+          onClose={() => setHub(undefined)}
+          onEdit={(a) => { setHub(undefined); setEditingAccount(a); setIsModalOpen(true); }}
+          onAdd={() => { setHub(undefined); setCreateType('Credit Card'); setEditingAccount(null); setIsModalOpen(true); }}
+        />
+      )}
+
       <AccountDetail
         account={accounts.find((a) => a.id === detailId) ?? null}
         transactions={transactions}
@@ -492,6 +514,8 @@ export default function RekeningPage() {
           isOpen={isModalOpen}
           onClose={() => { setIsModalOpen(false); setEditingAccount(null); }}
           initialData={editingAccount}
+          initialType={createType}
+          title={createType === 'Credit Card' ? 'Tambah Kartu Baru' : undefined}
           existingTypes={Array.from(new Set(accounts.map((a) => a.type).filter(Boolean)))}
         />
       )}

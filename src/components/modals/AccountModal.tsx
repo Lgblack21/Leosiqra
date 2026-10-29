@@ -11,6 +11,7 @@ import { uploadToCloudinary } from '@/lib/cloudinary';
 import { CurrencySelect } from '@/components/CurrencySelect';
 import { NumberInput } from '@/components/ui/NumberInput';
 import { CARD_COLOR_OPTIONS } from '@/lib/cardColors';
+import { CARD_NETWORK_OPTIONS } from '@/lib/creditCard';
 import { matchIndonesianInstitutionLogo } from '@/lib/indonesianBanks';
 import { isCreditAccountType, computeCreditUsage, creditBalanceFromUsed } from '@/lib/creditCard';
 import { CardCycleFields, emptyCardCycleForm, cardCycleFromForm, cardCycleToForm } from './CardCycleFields';
@@ -42,7 +43,9 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
     initialBalance: '',
     baseValue: '',
     creditLimit: '',
-    cardColor: ''
+    cardColor: '',
+    cardLast4: '',
+    cardNetwork: ''
   });
   const [cycleForm, setCycleForm] = useState(emptyCardCycleForm);
   const [uploading, setUploading] = useState(false);
@@ -101,7 +104,9 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
         initialBalance: String(initialData.initialBalance ?? ''),
         baseValue: String(initialData.baseValue ?? ''),
         creditLimit: initialData.creditLimit ? String(initialData.creditLimit) : '',
-        cardColor: initialData.cardColor || ''
+        cardColor: initialData.cardColor || '',
+        cardLast4: initialData.cardLast4 || '',
+        cardNetwork: initialData.cardNetwork || ''
       });
       setCycleForm(cardCycleToForm(initialData));
     } else {
@@ -127,7 +132,13 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
         return;
       }
       // Field siklus cuma dikirim untuk kartu kredit.
-      const cycle = isCredit ? cardCycleFromForm(cycleForm) : {};
+      if (isCredit && formData.cardLast4 && !/^\d{4}$/.test(formData.cardLast4)) {
+        setError('4 digit terakhir kartu harus tepat 4 angka.');
+        setSaving(false);
+        return;
+      }
+      // Field siklus & identitas kartu cuma dikirim untuk kartu kredit.
+      const cycle = isCredit ? { ...cardCycleFromForm(cycleForm), cardLast4: formData.cardLast4, cardNetwork: formData.cardNetwork } : {};
       if (initialData?.id) {
         // initialBalance sengaja TIDAK dikirim saat edit — dulu tiap edit
         // (termasuk sekadar ganti nama/warna) menimpanya dengan saldo saat
@@ -161,7 +172,7 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
         });
       }
       onClose();
-      setFormData({ name: '', logoUrl: '', type: initialType, currency: 'IDR', balance: '', initialBalance: '', baseValue: '', creditLimit: '', cardColor: '' });
+      setFormData({ name: '', logoUrl: '', type: initialType, currency: 'IDR', balance: '', initialBalance: '', baseValue: '', creditLimit: '', cardColor: '', cardLast4: '', cardNetwork: '' });
       setIsCustomTypeMode(false);
     } catch (err) {
       console.error("Error saving account:", err);
@@ -312,6 +323,37 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
                 className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
               />
               <p className="text-[10px] font-medium text-slate-400 pl-1">Plafon maksimal dari aplikasi (Akulaku, ShopeePayLater, Paylater BCA, KK, dll).</p>
+            </div>
+          )}
+          {formData.type === 'Credit Card' && (
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">4 Digit Terakhir · Opsional</label>
+              <input
+                inputMode="numeric"
+                maxLength={4}
+                value={formData.cardLast4}
+                onChange={(e) => setFormData({ ...formData, cardLast4: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                placeholder="4821"
+                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-3 px-4 text-sm font-bold tracking-[0.3em] text-slate-700 transition-all"
+              />
+              <p className="text-[10px] font-medium text-slate-400 pl-1">Hanya 4 digit terakhir — nomor lengkap tidak pernah disimpan.</p>
+            </div>
+          )}
+          {formData.type === 'Credit Card' && (
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Jaringan</label>
+              <div className="flex flex-wrap gap-1.5">
+                {CARD_NETWORK_OPTIONS.map((n) => (
+                  <button
+                    key={n.key}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, cardNetwork: formData.cardNetwork === n.key ? '' : n.key })}
+                    className={cn('rounded-full px-3 py-1.5 text-xs font-bold transition-all', formData.cardNetwork === n.key ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100')}
+                  >
+                    {n.label}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           {formData.type === 'Credit Card' && <CardCycleFields value={cycleForm} onChange={setCycleForm} />}

@@ -19,6 +19,9 @@ export interface Account {
   dueDay?: number;
   minPaymentPercent?: number;
   minPaymentAmount?: number;
+  /** Kartu kredit: 4 digit terakhir & jaringan (visa/mastercard/jcb/amex/gpn). */
+  cardLast4?: string;
+  cardNetwork?: string;
   // Urutan tampil rekening (drag-to-reorder di Kartu Saya) — dipakai semua
   // halaman/dropdown yang menampilkan daftar rekening.
   sortOrder?: number;
@@ -27,6 +30,8 @@ export interface Account {
 
 export interface AccountPayloadFields {
   cardColor?: string;
+  cardLast4?: string;
+  cardNetwork?: string;
   creditLimit: number;
   statementDay?: number;
   dueDay?: number;
@@ -44,6 +49,8 @@ export const parseAccountPayload = (payloadJson: unknown): AccountPayloadFields 
     const num = (v: unknown) => (v === undefined || v === null || v === '' || !Number.isFinite(Number(v)) ? undefined : Number(v));
     return {
       cardColor: typeof p.cardColor === 'string' ? p.cardColor : undefined,
+      cardLast4: typeof p.cardLast4 === 'string' ? p.cardLast4 : undefined,
+      cardNetwork: typeof p.cardNetwork === 'string' ? p.cardNetwork : undefined,
       creditLimit: Number(p.creditLimit) || 0,
       statementDay: num(p.statementDay),
       dueDay: num(p.dueDay),
@@ -58,6 +65,8 @@ export const parseAccountPayload = (payloadJson: unknown): AccountPayloadFields 
 
 // Field siklus tagihan untuk dikirim ke API (null = hapus pengaturan).
 const cycleFieldsForApi = (data: Partial<Account>) => ({
+  ...('cardLast4' in data ? { card_last4: data.cardLast4 || null } : {}),
+  ...('cardNetwork' in data ? { card_network: data.cardNetwork || null } : {}),
   ...('statementDay' in data ? { statement_day: data.statementDay ?? null } : {}),
   ...('dueDay' in data ? { due_day: data.dueDay ?? null } : {}),
   ...('minPaymentPercent' in data ? { min_payment_percent: data.minPaymentPercent ?? null } : {}),
@@ -124,6 +133,18 @@ export const accountService = {
       },
     });
     notifyCollectionChanged('accounts');
+  },
+
+  // "Sudah bayar" tagihan kartu kredit — transfer rekening kas → kartu, dicatat
+  // atomik di server. `ref` sekali per pembayaran (kirim ulang = no-op).
+  async payCreditCard(cardId: string, data: { fromAccountId: string; amount: number; date: string; ref: string }) {
+    const result = await cloudflareApi<{ ok: boolean; duplicate?: boolean }>(`/api/member/accounts/${cardId}/pay`, {
+      method: 'POST',
+      json: { from_account_id: data.fromAccountId, amount: data.amount, date: data.date, ref: data.ref },
+    });
+    notifyCollectionChanged('accounts');
+    notifyCollectionChanged('transactions');
+    return result;
   },
 
   async deleteAccount(id: string) {
