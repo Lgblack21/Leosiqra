@@ -4733,6 +4733,144 @@ Aturan:
   return json({ ok: true, bank, network, last4 });
 }
 
+// GET /api/member/kabar — berita ekonomi/keuangan terbaru untuk Investasiku
+// (tab Kabar). Diambil dari RSS CNBC Indonesia, ditampilkan apa adanya
+// (judul + cuplikan asli + tautan sumber — TIDAK ditulis ulang AI supaya
+// angka tidak dikarang). Tidak asal ambil: tiap berita diberi skor relevansi
+// untuk keuangan pribadi (kata kunci berbobot), konten non-berita/hiburan/
+// promosi dibuang, judul yang hampir sama digabung, tiap topik dibatasi
+// supaya tidak satu isu menguasai daftar, lalu diurutkan skor × kesegaran.
+// Cache 30 menit di edge. Gagal ambil → daftar kosong.
+const KABAR_FEEDS = [
+  'https://www.cnbcindonesia.com/market/rss',
+  'https://www.cnbcindonesia.com/news/rss',
+  'https://www.cnbcindonesia.com/investment/rss',
+];
+const KABAR_TOPICS: Array<[string, RegExp]> = [
+  ['waspada', /pinjol|ilegal|penipuan|investasi bodong|scam|satgas pasti|modus/i],
+  ['bunga', /suku bunga|bi[- ]?rate|bunga acuan|\bbunga\b|deposito|\blps\b/i],
+  ['sbn', /\bsbn\b|\bori\d*\b|sukuk|obligasi|\bsbr\d*\b|savings bond|surat utang|\bst\d{3}\b/i],
+  ['emas', /\bemas\b|antam|\bgold\b/i],
+  ['rupiah', /rupiah|dolar|\bkurs\b|valas/i],
+  ['pajak', /pajak|\bppn\b|\bpph\b|coretax|\bspt\b/i],
+  ['saham', /\bihsg\b|saham|bursa|\bbei\b|dividen|reksa ?dana/i],
+  ['kripto', /kripto|bitcoin|crypto|\bbtc\b/i],
+];
+// Bobot relevansi ke dompet pengguna (dijumlah, judul dihitung 2×).
+const KABAR_SIGNALS: Array<[RegExp, number]> = [
+  [/suku bunga|bi[- ]?rate|bunga acuan|\blps\b|deposito/i, 4],
+  [/\bsbn\b|\bori\d*\b|sukuk|\bsbr\d*\b|obligasi ritel|savings bond/i, 4],
+  [/pinjol|investasi bodong|penipuan|satgas pasti|\bojk\b/i, 4],
+  [/inflasi|harga (bbm|pangan|beras|listrik)|tarif listrik|\bbbm\b|\bumr\b|\bump\b|gaji|thr\b|bpjs/i, 3],
+  [/\bkpr\b|cicilan|kredit|paylater|kartu kredit|tabungan|dana pensiun/i, 3],
+  [/pajak|\bppn\b|\bpph\b|coretax|\bspt\b/i, 3],
+  [/rupiah|dolar|\bkurs\b|\bemas\b|antam/i, 2],
+  [/\bihsg\b|reksa ?dana|dividen|kripto|bitcoin/i, 2],
+  [/saham|bursa|\bbei\b|ekonomi|harga/i, 1],
+];
+// Bukan berita yang berguna untuk keputusan keuangan: video/foto/live,
+// hiburan, olahraga, promosi.
+const KABAR_NOISE = /^(video|foto|infografis|live|breaking|podcast)\b|\b(sepak ?bola|liga|piala dunia|timnas|selebriti|artis|gosip|resep|zodiak|ramalan|lowongan|giveaway|undian)\b|\[(adv|promosi|advertorial)\]|\(adv\)|advertorial|sponsored|konten bersponsor/i;
+const KABAR_MAX_PER_TOPIC = 6;
+const KABAR_STOP = new Set(['dan', 'di', 'ke', 'dari', 'yang', 'ini', 'itu', 'untuk', 'dengan', 'akan', 'jadi', 'ada', 'pada', 'ri', 'bisa', 'makin', 'lagi', 'soal']);
+const kabarTokens = (t: string) => new Set(t.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, ' ').split(/\s+/).filter((w) => w.length > 2 && !KABAR_STOP.has(w)));
+const kabarSimilar = (a: Set<string>, b: Set<string>) => {
+  let both = 0;
+  for (const w of a) if (b.has(w)) both++;
+  return both / Math.max(1, Math.min(a.size, b.size));
+};
+function kabarScore(title: string, summary: string) {
+  let s = 0;
+  for (const [re, w] of KABAR_SIGNALS) {
+    if (re.test(title)) s += w * 2;
+    else if (re.test(summary)) s += w;
+  }
+  return s;
+}
+const decodeXml = (t: string) =>
+  t
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;|&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/\s+/g, ' ')
+    .trim();
+type KabarRow = { id: string; title: string; summary: string; url: string; source: string; date: string; topic: string; score: number; related: number };
+function kabarParse(xmls: string[], now = Date.now()) {
+  const raw: KabarRow[] = [];
+  const seen = new Set<string>();
+  const weekAgo = now - 7 * 86400000;
+  let scanned = 0;
+  for (const xml of xmls) {
+    for (const block of xml.match(/<item[\s>][\s\S]*?<\/item>/g) ?? []) {
+      scanned++;
+      const pick = (tag: string) => decodeXml(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\/${tag}>`).exec(block)?.[1] ?? '');
+      const title = pick('title');
+      const link = pick('link') || pick('guid');
+      const when = Date.parse(pick('pubDate'));
+      if (!title || !/^https:\/\//.test(link) || !Number.isFinite(when) || when < weekAgo || when > now + 3600000 || seen.has(link)) continue;
+      seen.add(link);
+      const summary = pick('description').slice(0, 320);
+      if (KABAR_NOISE.test(title) || /\/(video|foto|tv)\//i.test(link)) continue;
+      const score = kabarScore(title, summary);
+      if (score < 2) continue; // tidak menyentuh keuangan pribadi
+      const topic = KABAR_TOPICS.find(([, re]) => re.test(title))?.[0] ?? KABAR_TOPICS.find(([, re]) => re.test(summary))?.[0] ?? 'ekonomi';
+      let source = 'cnbcindonesia.com';
+      try { source = new URL(link).hostname.replace(/^www\./, ''); } catch { /* biarkan */ }
+      raw.push({ id: link, title: title.slice(0, 200), summary, url: link, source, date: new Date(when).toISOString(), topic, score, related: 0 });
+    }
+  }
+  // Skor × kesegaran (separuh tiap 2 hari): berita penting tetap naik, tapi
+  // yang basi pelan-pelan turun.
+  const rank = (r: KabarRow) => r.score * Math.pow(0.5, (now - Date.parse(r.date)) / (2 * 86400000));
+  raw.sort((a, b) => rank(b) - rank(a));
+  // Gabungkan judul yang hampir sama (isu sama dari beberapa kanal).
+  const kept: Array<KabarRow & { tokens: Set<string> }> = [];
+  for (const r of raw) {
+    const tokens = kabarTokens(r.title);
+    const dup = kept.find((k) => kabarSimilar(k.tokens, tokens) >= 0.6);
+    if (dup) { dup.related++; continue; }
+    kept.push({ ...r, tokens });
+  }
+  const perTopic: Record<string, number> = {};
+  const items = kept
+    .filter((k) => (perTopic[k.topic] = (perTopic[k.topic] ?? 0) + 1) <= KABAR_MAX_PER_TOPIC)
+    .slice(0, 24)
+    .map(({ tokens: _t, ...rest }) => rest);
+  return { items, scanned, relevant: raw.length };
+}
+async function handleKabar(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const cache = (caches as unknown as { default: Cache }).default;
+  const cacheKey = new Request('https://leosiqra.internal/kabar/v2');
+  const hit = await cache.match(cacheKey);
+  if (hit) return json(await hit.json());
+
+  const xmls = await Promise.all(
+    KABAR_FEEDS.map(async (feed) => {
+      try {
+        const res = await fetch(feed, { headers: { 'user-agent': 'Mozilla/5.0 (compatible; LeosiqraBot/1.0)' }, cf: { cacheTtl: 900 } } as RequestInit);
+        return res.ok ? await res.text() : '';
+      } catch (error) {
+        console.error('Kabar: gagal ambil', feed, error instanceof Error ? error.message : error);
+        return '';
+      }
+    })
+  );
+  const { items, scanned, relevant } = kabarParse(xmls);
+  const body = { items, scanned, relevant, fetchedAt: nowIso() };
+  if (items.length) {
+    await cache.put(cacheKey, new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json', 'cache-control': 'max-age=1800' } }));
+  }
+  return json(body);
+}
+
 async function handleCreateAccount(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) {
@@ -14933,6 +15071,10 @@ const worker = {
 
       if (url.pathname === "/api/member/accounts" && request.method === "POST") {
         return await handleCreateAccount(request, env);
+      }
+
+      if (url.pathname === "/api/member/kabar" && request.method === "GET") {
+        return await handleKabar(request, env);
       }
 
       if (url.pathname === "/api/member/cards/scan" && request.method === "POST") {

@@ -19,6 +19,8 @@ import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { isWebDarkReady } from '@/lib/webTheme';
 
 const ONBOARDING_PATH = '/membership/onboarding';
+// Halaman layar penuh: tanpa sidebar, header, dan tab bar HP (punya navigasi sendiri).
+const FULLSCREEN_PATHS = ['/membership/investment'];
 
 // Tema (Sistem/Terang/Gelap) disimpan per perangkat, sama dengan aplikasi HP.
 export default function MembershipLayout({ children }: { children: React.ReactNode }) {
@@ -105,6 +107,23 @@ function MembershipShell({
   // Pembungkus selalu dirender (display: contents) — hanya kelasnya yang
   // berubah, supaya Sidebar/Header/Panel tidak di-mount ulang.
   const frameClass = `contents${dark && !pageDark ? ' web-dark' : ''}`;
+  const fullscreen = FULLSCREEN_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+
+  if (fullscreen) {
+    return (
+      <FeedbackProvider>
+      <ModalProvider>
+        <div className={`web-page min-h-screen bg-[#f6f7fb]${pageDark ? ' web-dark' : ''}`}>
+          {children}
+          <div className={frameClass}>
+            <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} initialView={settingsView} />
+          </div>
+          <GlobalModalWrapper />
+        </div>
+      </ModalProvider>
+      </FeedbackProvider>
+    );
+  }
 
   return (
     <FeedbackProvider>

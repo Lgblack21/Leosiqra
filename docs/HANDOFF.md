@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-28 malam (akun B selesai; semua live, main = run #5
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Urutan menu fitur |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Investasiku layar penuh |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -320,6 +320,15 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   menu & label "Investasiku". Rumus total sama dengan versi lama (non-Planned, IDR).
 - **Live (run #79)** (akun B): **urutan menu fitur** — `featuresFromIds` kini mengurutkan sesuai FEATURES
   (bukan urutan saat dinyalakan); Investasiku nomor 2 di bawah AI Leo; label menu "AI Leosiqra" → "AI Leo".
+- **Belum di-deploy** (akun B, butuh deploy Worker, TANPA migrasi): **Investasiku layar penuh** — `/membership/investment`
+  tanpa sidebar (`FULLSCREEN_PATHS` di `membership/layout.tsx`), tombol kembali ke Ringkasan, dock melayang gelap
+  (`InvestShell`, tab di hash URL `#kabar/#sbn/#belajar`): Investasiku (`TabInvestasiku`, isi halaman lama + kartu Kabar),
+  Kabar "Radar Leo" (`TabKabar`, saring topik), SBN (`TabSbn`: tangga bunga LPS/BI/SBN, "sebulan dapat berapa", daftar seri),
+  Belajar (`TabBelajar`). Worker baru `GET /api/member/kabar`: RSS CNBC Indonesia (market/news/investment), skor relevansi
+  ke dompet (kata kunci berbobot), buang video/hiburan/promosi, gabung judul mirip, maks 6 per topik, urut skor × kesegaran,
+  cache edge 30 mnt (`kabar/v2`). **Belum terverifikasi**: fetch RSS CNBC sungguhan (sandbox diblok) — kalau kosong di prod,
+  cek log `Kabar: gagal ambil`. Angka BI-Rate/LPS/SBN = **data manual** `src/lib/sbnData.ts` per 2026-10-29, WAJIB
+  diperbarui saat berubah (halaman memperingatkan setelah 45 hari). Peta yield curve pasar belum dibuat (tak ada sumber data).
 
 ## Migrasi D1
 
