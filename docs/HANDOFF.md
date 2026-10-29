@@ -282,7 +282,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   Rekening jadi daftar ringkas (thumbnail kartu + 4 digit, status jatuh tempo, tagihan/terpakai, bar limit; ketuk →
   detail di pusat kartu), banner keamanan jadi catatan kecil di bawah halaman. CreditCardForm: pratinjau lebih kecil
   dengan tombol "Pindai" menempel, bagian digabung (kartu · tanggal+pengingat · tagihan · tampilan), input lebih padat.
-- **Belum di-deploy** (akun B, frontend saja): **form kartu: pilih bank** — kolom Bank membuka panel grid logo + cari
+- **Live (run #73)** (akun B): **form kartu: pilih bank** — kolom Bank membuka panel grid logo + cari
   (25 penerbit + "Bank lain"); nama kartu terisi otomatis "Kartu Kredit {bank}" dan tetap bisa diubah (nama yang
   diketik user tidak ditimpa saat ganti bank). Hasil pindai "PT Bank Negara Indonesia" dll. dicocokkan ke daftar.
   indonesianBanks: tambah BSI, Krom, blu.
