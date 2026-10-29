@@ -240,7 +240,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   sisa/lewat, "terlalu cepat"); "Belum ada anggaran"; **mode Ubah** = semua nominal bulanan diedit di tempat, simpan
   sekaligus (kosong = hapus). Periode ikut budgetStartDay. Pengaturan → Kategori & Anggaran: catatan periode kini
   ikut awal periode (bukan selalu "bulan kalender"), tautan ke halaman Anggaran, tombol tanpa backdrop-blur.
-- **Belum di-deploy** (akun B, butuh deploy Worker): **ganti nama kategori** — Pengaturan → Kategori → detail, ketuk
+- **Live (run #67)** (akun B): **ganti nama kategori** — Pengaturan → Kategori → detail, ketuk
   nama (ikon pensil). Endpoint baru `POST /api/member/categories/rename {from,to}`: satu `DB.batch` (atomik) mengganti
   `category` di transactions, categories, budgets, recurring + pindah kunci prefs categoryStyles/categoryKinds. Hanya
   baris user dari sesi. 409 kalau nama dipakai kategori lain (gabung kategori belum didukung), 400 untuk kategori
