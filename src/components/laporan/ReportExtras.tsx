@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
-import { ArrowRight, Check, Flame, Leaf } from 'lucide-react';
+import { Check, Flame, Leaf } from 'lucide-react';
 import type { Transaction } from '@/lib/services/transactionService';
+import { DayReview } from '@/components/laporan/DayReview';
 import { categoryVisual } from '@/lib/categoryEmoji';
 import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
 
@@ -40,18 +40,18 @@ export function BubbleCalendar({ spend, year, month, now }: { spend: Transaction
   const peakDay = past.length ? past.indexOf(Math.max(...past)) + 1 : 0;
 
   const [picked, setPicked] = useState<number | null>(null);
+  const [review, setReview] = useState<Date | null>(null);
+  const open = (d: number) => { setPicked(d); setReview(new Date(year, month, d)); };
   const sel = picked && picked <= lastDay ? picked : (isCurMonth ? lastDay : peakDay || null);
   const offset = dayIdx(new Date(year, month, 1));
   const cells = [...Array(offset).fill(null), ...Array.from({ length: days }, (_, i) => i + 1)];
-  const selList = sel ? [...byDay[sel]].sort((a, b) => idr(b) - idr(a)) : [];
-  const ymd = (d: number) => toLocalDateString(new Date(year, month, d));
 
   return (
     <section>
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h2 className="text-[22px] font-extrabold tracking-tight text-slate-900">Kalender belanja</h2>
-          <p className="text-[14px] text-slate-500">Makin besar gelembung, makin besar belanja hari itu. Ketuk untuk rinciannya.</p>
+          <p className="text-[14px] text-slate-500">Makin besar gelembung, makin besar belanja hari itu.</p>
         </div>
       </div>
       <div className="mt-3 flex flex-wrap gap-2 text-[12px] font-semibold">
@@ -59,7 +59,7 @@ export function BubbleCalendar({ spend, year, month, now }: { spend: Transaction
         <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-emerald-700"><Leaf size={12} /> {hemat} hari hemat</span>
         {hot > 0 && <span className="flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1 text-rose-700"><Flame size={12} /> {hot} hari boros</span>}
         {peakDay > 0 && totals[peakDay] > 0 && (
-          <button type="button" onClick={() => setPicked(peakDay)} className="rounded-full bg-indigo-50 px-3 py-1 text-indigo-700 hover:bg-indigo-100">
+          <button type="button" onClick={() => open(peakDay)} className="rounded-full bg-indigo-50 px-3 py-1 text-indigo-700 hover:bg-indigo-100">
             Tertinggi tgl {peakDay} · {rp(totals[peakDay])}
           </button>
         )}
@@ -82,7 +82,7 @@ export function BubbleCalendar({ spend, year, month, now }: { spend: Transaction
                 key={d}
                 type="button"
                 disabled={future}
-                onClick={() => setPicked(d)}
+                onClick={() => open(d)}
                 aria-label={`${d}: ${future ? 'belum lewat' : formatIDR(v)}`}
                 className={cn(
                   'relative flex aspect-square items-center justify-center rounded-2xl transition-colors md:aspect-[1.25/1]',
@@ -91,6 +91,11 @@ export function BubbleCalendar({ spend, year, month, now }: { spend: Transaction
                 )}
               >
                 <span className={cn('absolute left-1.5 top-1 text-[10px] font-bold md:left-2 md:text-[11px]', today ? 'text-indigo-600' : 'text-slate-400')}>{d}</span>
+                {!future && byDay[d].length > 0 && byDay[d].every((t) => t.reviewed) && (
+                  <span className="absolute bottom-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-white ring-2 ring-white" title="Sudah dicek">
+                    <Check size={9} strokeWidth={3.5} />
+                  </span>
+                )}
                 {future ? (
                   <span className="h-2 w-2 rounded-full border border-dashed border-slate-300" />
                 ) : v === 0 ? (
@@ -121,44 +126,9 @@ export function BubbleCalendar({ spend, year, month, now }: { spend: Transaction
           })}
         </div>
 
-        {/* Rincian hari terpilih */}
-        {sel && (
-          <div className="mt-4 rounded-[20px] bg-slate-50 p-4">
-            <div className="flex items-baseline justify-between gap-3">
-              <p className="text-[14px] font-bold text-slate-900">
-                {new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(year, month, sel))}
-              </p>
-              <p className={cn('text-[15px] font-extrabold tabular-nums', totals[sel] === 0 ? 'text-emerald-600' : 'text-slate-900')}>
-                {totals[sel] === 0 ? 'Hari hemat 🌿' : formatIDR(totals[sel])}
-              </p>
-            </div>
-            {avg > 0 && totals[sel] > 0 && (
-              <p className={cn('text-[12px] font-semibold', totals[sel] > avg ? 'text-rose-600' : 'text-emerald-600')}>
-                {totals[sel] > avg ? `${Math.round((totals[sel] / avg - 1) * 100)}% di atas rata-rata` : `${Math.round((1 - totals[sel] / avg) * 100)}% di bawah rata-rata`}
-              </p>
-            )}
-            {selList.length > 0 && (
-              <ul className="mt-2 space-y-1.5">
-                {selList.slice(0, 4).map((t) => {
-                  const v = categoryVisual(t.category, 'pengeluaran');
-                  return (
-                    <li key={t.id} className="flex items-center gap-2.5">
-                      <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[14px]', v.tile)} aria-hidden>{v.emoji}</span>
-                      <span className="min-w-0 flex-1 truncate text-[13px] text-slate-700">{t.note || t.category}</span>
-                      <span className="text-[13px] font-semibold tabular-nums text-slate-900">{formatIDR(idr(t))}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            {selList.length > 0 && (
-              <Link href={`/membership/transactions/daily?tanggal=${ymd(sel)}`} className="mt-3 inline-flex items-center gap-1 text-[13px] font-bold text-indigo-600 hover:underline">
-                {selList.length > 4 ? `Semua ${selList.length} transaksi` : 'Lihat di Transaksi'} <ArrowRight size={14} />
-              </Link>
-            )}
-          </div>
-        )}
+        <p className="mt-3 px-1 text-[12px] text-slate-400">Ketuk satu hari untuk <b className="text-slate-600">Cek hari</b>: centang transaksi yang kategorinya sudah benar. Lencana ✓ hijau = hari sudah dicek.</p>
       </div>
+      <DayReview date={review} onClose={() => setReview(null)} onDate={(d) => { setReview(d); if (d.getFullYear() === year && d.getMonth() === month) setPicked(d.getDate()); }} />
     </section>
   );
 }

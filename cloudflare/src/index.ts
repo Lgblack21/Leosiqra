@@ -4270,7 +4270,10 @@ async function handleUpdateTransaction(request: Request, env: Env, transactionId
   // tags → payload_json.tags (field lain di payload_json dipertahankan).
   const tags = payload.tags !== undefined ? sanitizeTxTags(payload.tags) : null;
   if (payload.tags !== undefined && tags === null) return json({ error: "Tag harus berupa daftar." }, { status: 400 });
-  if (entries.length === 0 && tags === null) {
+  // reviewed → payload_json.reviewed: tanda "sudah dicek" dari Cek hari (Laporan). Bukan data uang.
+  if (payload.reviewed !== undefined && typeof payload.reviewed !== "boolean") return json({ error: "reviewed harus true/false." }, { status: 400 });
+  const reviewed = typeof payload.reviewed === "boolean" ? payload.reviewed : null;
+  if (entries.length === 0 && tags === null && reviewed === null) {
     return json({ error: "Tidak ada field yang bisa diperbarui." }, { status: 400 });
   }
 
@@ -4292,9 +4295,17 @@ async function handleUpdateTransaction(request: Request, env: Env, transactionId
 
   const assignments = [
     ...entries.map(([key]) => `${key} = ?`),
-    ...(tags !== null ? ["payload_json = json_set(CASE WHEN json_valid(payload_json) THEN payload_json ELSE '{}' END, '$.tags', json(?))"] : []),
+    ...(tags !== null || reviewed !== null
+      ? [
+          `payload_json = json_set(CASE WHEN json_valid(payload_json) THEN payload_json ELSE '{}' END${tags !== null ? ", '$.tags', json(?)" : ""}${reviewed !== null ? ", '$.reviewed', json(?)" : ""})`,
+        ]
+      : []),
   ].join(", ");
-  const values = [...entries.map(([, value]) => value), ...(tags !== null ? [JSON.stringify(tags)] : [])];
+  const values = [
+    ...entries.map(([, value]) => value),
+    ...(tags !== null ? [JSON.stringify(tags)] : []),
+    ...(reviewed !== null ? [reviewed ? "true" : "false"] : []),
+  ];
 
   const result = await env.DB.prepare(
     `UPDATE transactions

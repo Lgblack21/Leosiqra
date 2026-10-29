@@ -30,8 +30,12 @@ export interface Transaction {
   applyBalance?: boolean;
   // Label bebas di luar kategori (payload_json.tags di server).
   tags?: string[];
+  // Sudah dicek user di "Cek hari" Laporan (payload_json.reviewed). Bukan data uang.
+  reviewed?: boolean;
   createdAt: Date;
 }
+
+const reviewedFromPayload = (raw: unknown): boolean => typeof raw === 'string' && /"reviewed"\s*:\s*true/.test(raw);
 
 const tagsFromPayload = (raw: unknown): string[] | undefined => {
   if (typeof raw !== 'string' || !raw.includes('"tags"')) return undefined;
@@ -115,6 +119,7 @@ export const transactionService = {
         relatedType: (data.related_type as 'investasi' | 'tabungan' | 'debt' | undefined) ?? undefined,
         note: (data.note as string | undefined) ?? undefined,
         tags: tagsFromPayload(data.payload_json),
+        reviewed: reviewedFromPayload(data.payload_json),
         currency: (data.currency as string | undefined) ?? 'IDR',
         date: data.date ? new Date(String(data.date)) : new Date(),
         createdAt: data.created_at ? new Date(String(data.created_at)) : new Date()
@@ -152,6 +157,7 @@ export const transactionService = {
         ...(data.displayDate ? { display_date: data.displayDate } : {}),
         ...(data.note !== undefined ? { note: data.note } : {}),
         ...(data.tags !== undefined ? { tags: data.tags } : {}),
+        ...(data.reviewed !== undefined ? { reviewed: data.reviewed } : {}),
       },
     });
     notifyCollectionChanged('transactions');
