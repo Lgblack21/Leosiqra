@@ -8,7 +8,6 @@ import { transactionService, Transaction } from '@/lib/services/transactionServi
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { categoryVisual, useCategoryStyles } from '@/lib/categoryEmoji';
 import { cn, formatIDR, isInvestmentFlow } from '@/lib/utils';
-import { openSettings } from '@/lib/settingsPanel';
 import { HeaderSlot } from '@/components/Header';
 import { BubbleCalendar, TopExpenses, WeekdayPattern, YearMonths } from '@/components/laporan/ReportExtras';
 
@@ -205,9 +204,9 @@ export default function LaporanPage() {
             <span className="min-w-[90px] text-center text-[13px] font-bold text-slate-900">{mode === 'tahunan' ? year : `${MONTHS[month]} ${year}`}</span>
             <button type="button" onClick={() => step(1)} disabled={atLatest} aria-label="Periode berikutnya" className="rounded-full p-1.5 text-slate-500 hover:bg-slate-50 disabled:opacity-30"><ChevronRight size={16} /></button>
           </div>
-          <button type="button" onClick={() => openSettings('kategori')} aria-label="Anggaran" className="ml-auto flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[13px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">
+          <Link href="/membership/budget" aria-label="Anggaran" className="ml-auto flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[13px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">
             <Gauge size={15} /> <span className="hidden sm:inline">Anggaran</span>
-          </button>
+          </Link>
         </div>
       </div>
 

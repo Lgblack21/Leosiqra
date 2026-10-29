@@ -411,12 +411,12 @@ export default function MonthlyDashboard() {
     if (statsLoading) return [{ id: 'load', text: 'Bentar ya, aku hitung dulu keuanganmu…', mood: 'watch' }];
     const list: LeoTip[] = [];
     const over = categories.filter((c) => c.budget > 0 && c.spent > c.budget).sort((a, b) => b.spent - b.budget - (a.spent - a.budget));
-    if (over[0]) list.push({ id: 'over', mood: 'sad', text: `Waduh, ${over[0].category} udah lewat anggaran ${short(over[0].spent - over[0].budget)} di ${monthLabel}. Rem dikit, yuk.`, action: { label: 'Atur anggaran', onClick: () => openSettings('kategori') } });
+    if (over[0]) list.push({ id: 'over', mood: 'sad', text: `Waduh, ${over[0].category} udah lewat anggaran ${short(over[0].spent - over[0].budget)} di ${monthLabel}. Rem dikit, yuk.`, action: { label: 'Lihat anggaran', href: '/membership/budget' } });
     const soon = upcoming.find((u) => u.days <= 7);
     if (soon) list.push({ id: `soon-${soon.id}`, mood: 'watch', text: `Jangan lupa: ${soon.title}${soon.amount ? ` ${short(soon.amount)}` : ''} — ${dueText(soon.days)}.`, action: soon.href ? { label: 'Lihat', href: soon.href } : { label: 'Pengingat', onClick: () => openSettings('pengingat') } });
     if (isCurrentMonth && now) {
       if (todaysSpend.length === 0 && now.getHours() >= 10) list.push({ id: 'today-empty', mood: 'watch', text: 'Hari ini belum ada catatan. Tadi bayar apa aja?', action: { label: 'Catat', onClick: () => openModal('harian') } });
-      else if (dailyAllowance === 0) list.push({ id: 'budget-gone', mood: 'sad', text: `Anggaran ${monthLabel} udah habis sebelum hari ini. Sisa ${pace.days - pace.lastDay + 1} hari — tahan dulu yang nggak penting, ya.`, action: { label: 'Atur anggaran', onClick: () => openSettings('kategori') } });
+      else if (dailyAllowance === 0) list.push({ id: 'budget-gone', mood: 'sad', text: `Anggaran ${monthLabel} udah habis sebelum hari ini. Sisa ${pace.days - pace.lastDay + 1} hari — tahan dulu yang nggak penting, ya.`, action: { label: 'Lihat anggaran', href: '/membership/budget' } });
       else if (dailyAllowance !== null && budgetedToday > dailyAllowance) list.push({ id: 'today-over', mood: 'sad', text: `Hari ini udah ${short(budgetedToday)} dari jatah harian ${short(dailyAllowance)}. Besok lebih hemat ya!` });
       else if (dailyAvg > 0 && spentToday > dailyAvg * 1.5) list.push({ id: 'today-high', mood: 'sad', text: `Hari ini ${short(spentToday)} — lebih tinggi dari rata-rata harianmu ${short(dailyAvg)}.` });
       else if (spentToday > 0) list.push({ id: 'today-ok', mood: 'happy', text: `Mantap! Hari ini ${short(spentToday)}, masih aman${dailyAllowance ? ` di bawah jatah ${short(dailyAllowance)}` : dailyAvg > 0 ? ` di bawah rata-rata ${short(dailyAvg)}` : ''}.` });
@@ -597,7 +597,7 @@ export default function MonthlyDashboard() {
           <div className={cn(card, 'p-5 md:p-6')}>
             <div className="flex items-baseline justify-between">
               <p className="text-[16px] font-bold text-slate-900">Ke mana uangmu</p>
-              <button type="button" onClick={() => openSettings('kategori')} className="text-[13px] font-bold text-indigo-600 hover:underline">Atur anggaran</button>
+              <Link href="/membership/budget" className="text-[13px] font-bold text-indigo-600 hover:underline">Anggaran</Link>
             </div>
             {statsLoading ? (
               <div className="mt-4 space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-10" />)}</div>

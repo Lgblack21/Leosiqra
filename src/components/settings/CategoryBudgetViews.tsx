@@ -209,7 +209,7 @@ export function KategoriListView({ rows, loading, onOpen, onAdd }: { rows: Categ
             <p className="mt-0.5 truncate text-[26px] font-extrabold tabular-nums">{formatIDR(total)}</p>
             <p className="text-[12px] text-white/75">{list.length} kategori{isOut && budgetTotal > 0 ? ` · anggaran ${formatIDR(budgetTotal)}` : ''}</p>
           </div>
-          <button type="button" onClick={() => onAdd(tab)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/20 px-3.5 py-2 text-[13px] font-bold backdrop-blur hover:bg-white/30">
+          <button type="button" onClick={() => onAdd(tab)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/20 px-3.5 py-2 text-[13px] font-bold hover:bg-white/30">
             <Plus size={15} strokeWidth={2.6} /> Kategori
           </button>
         </div>
@@ -256,8 +256,16 @@ export function KategoriListView({ rows, loading, onOpen, onAdd }: { rows: Categ
         </ul>
       )}
       <p className="flex items-center gap-2 px-1 text-[12px] text-slate-500">
-        <CalendarDays size={14} /> Anggaran bulanan dihitung per bulan kalender (tanggal 1 sampai akhir bulan).
+        <CalendarDays size={14} />
+        {startDay === 1
+          ? 'Anggaran bulanan dihitung per bulan kalender (tanggal 1 sampai akhir bulan).'
+          : `Anggaran bulanan dihitung mulai tanggal ${startDay} tiap bulan (periode sekarang ${formatBudgetPeriod(currentBudgetPeriod(startDay))}).`}
       </p>
+      {isOut && (
+        <a href="/membership/budget" className="flex items-center justify-between rounded-[18px] bg-indigo-50 px-4 py-3 text-[13px] font-semibold text-indigo-700 hover:bg-indigo-100">
+          Lihat halaman Anggaran — sisa, laju belanja & ubah semua sekaligus <span aria-hidden>→</span>
+        </a>
+      )}
     </div>
   );
 }

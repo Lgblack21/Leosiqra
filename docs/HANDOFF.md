@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-28 malam (akun B selesai; semua live, main = run #5
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Laporan dirampingkan |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Halaman Anggaran |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -234,6 +234,12 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   kecil, ringkasan jadi satu kartu tipis 3 kolom (HP format "jt", desktop lengkap — dicek tidak ada teks terpotong
   dengan angka ratusan juta), heading 17px, grafik/donat/podium/pola lebih kecil, gelembung kalender dibatasi px &
   % sel, 👑/🔥 kartu bulan pindah ke sebelah nama bulan, Anggaran ikon saja di HP.
+- **Belum di-deploy** (akun B): **halaman Anggaran** `/membership/budget` (dulu redirect ke Pengaturan; tidak di menu
+  samping — dibuka dari tombol Anggaran di Laporan/Ringkasan & kata Leo). Kartu sisa/lewat + bar dengan penanda hari
+  periode + status (Aman/Hampir habis/Terlalu cepat/Lewat) + perkiraan akhir periode; per kategori (bar + penanda,
+  sisa/lewat, "terlalu cepat"); "Belum ada anggaran"; **mode Ubah** = semua nominal bulanan diedit di tempat, simpan
+  sekaligus (kosong = hapus). Periode ikut budgetStartDay. Pengaturan → Kategori & Anggaran: catatan periode kini
+  ikut awal periode (bukan selalu "bulan kalender"), tautan ke halaman Anggaran, tombol tanpa backdrop-blur.
 
 ## Migrasi D1
 
