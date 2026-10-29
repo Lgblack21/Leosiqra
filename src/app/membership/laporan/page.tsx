@@ -10,6 +10,7 @@ import { categoryVisual, useCategoryStyles } from '@/lib/categoryEmoji';
 import { cn, formatIDR, isInvestmentFlow } from '@/lib/utils';
 import { openSettings } from '@/lib/settingsPanel';
 import { HeaderSlot } from '@/components/Header';
+import { BubbleCalendar, TopExpenses, WeekdayPattern } from '@/components/laporan/ReportExtras';
 
 // Laporan pengeluaran Bulanan / Tahunan: total vs pemasukan, tren per
 // bulan (atau per hari), perbandingan kumulatif dengan periode sebelumnya,
@@ -244,73 +245,80 @@ export default function LaporanPage() {
             </div>
           </section>
 
+          {/* Bulanan: kalender gelembung; Tahunan: batang per bulan */}
+          {mode === 'bulanan' ? (
+            <BubbleCalendar key={`${year}-${month}`} spend={spend} year={year} month={month} now={now} />
+          ) : (
+            <>
           {/* Tren batang */}
-          <section>
-            <h2 className="text-[22px] font-extrabold tracking-tight text-slate-900">{mode === 'tahunan' ? 'Tren bulanan' : 'Tren harian'}</h2>
-            <p className="text-[14px] text-slate-500">
-              {shownBar !== null
-                ? `${mode === 'tahunan' ? MONTHS_LONG[shownBar] : `${shownBar + 1} ${MONTHS[month]}`} · ${formatIDR(bars[shownBar]?.total ?? 0)}`
-                : 'Arahkan ke batang untuk lihat totalnya'}
-            </p>
-            <div className="mt-4 rounded-[24px] bg-white p-4 ring-1 ring-slate-100 md:p-6">
-              <div className="relative flex h-56 gap-3">
-                <div className="flex flex-col justify-between whitespace-nowrap pb-6 text-[11px] text-slate-400 tabular-nums">
-                  <span>{axis(barMax)}</span><span>{axis(barMax / 2)}</span><span>0</span>
-                </div>
-                <div className="relative flex-1">
-                  {avg > 0 && (
-                    <div className="pointer-events-none absolute inset-x-0 z-10 border-t border-dashed border-slate-400" style={{ bottom: `calc(24px + (100% - 24px) * ${avg / barMax})` }}>
-                      <span className="absolute -top-5 right-0 rounded bg-white/80 px-1 text-[11px] font-semibold text-slate-500">rata-rata {short(avg)}</span>
+            <section>
+              <h2 className="text-[22px] font-extrabold tracking-tight text-slate-900">{mode === 'tahunan' ? 'Tren bulanan' : 'Tren harian'}</h2>
+              <p className="text-[14px] text-slate-500">
+                {shownBar !== null
+                  ? `${mode === 'tahunan' ? MONTHS_LONG[shownBar] : `${shownBar + 1} ${MONTHS[month]}`} · ${formatIDR(bars[shownBar]?.total ?? 0)}`
+                  : 'Arahkan ke batang untuk lihat totalnya'}
+              </p>
+              <div className="mt-4 rounded-[24px] bg-white p-4 ring-1 ring-slate-100 md:p-6">
+                <div className="relative flex h-56 gap-3">
+                  <div className="flex flex-col justify-between whitespace-nowrap pb-6 text-[11px] text-slate-400 tabular-nums">
+                    <span>{axis(barMax)}</span><span>{axis(barMax / 2)}</span><span>0</span>
+                  </div>
+                  <div className="relative flex-1">
+                    {avg > 0 && (
+                      <div className="pointer-events-none absolute inset-x-0 z-10 border-t border-dashed border-slate-400" style={{ bottom: `calc(24px + (100% - 24px) * ${avg / barMax})` }}>
+                        <span className="absolute -top-5 right-0 rounded bg-white/80 px-1 text-[11px] font-semibold text-slate-500">rata-rata {short(avg)}</span>
+                      </div>
+                    )}
+                    <div className={cn('flex h-full items-end', mode === 'tahunan' ? 'gap-2 md:gap-3' : 'gap-[2px] md:gap-1')}>
+                      {bars.map((b, i) => {
+                        const future = i >= elapsed;
+                        const active = i === shownBar;
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            onMouseEnter={() => setHover(i)}
+                            onMouseLeave={() => setHover(null)}
+                            onFocus={() => setHover(i)}
+                            onClick={() => setHover(i)}
+                            aria-label={`${mode === 'tahunan' ? MONTHS_LONG[i] : `Tanggal ${i + 1}`}: ${formatIDR(b.total)}`}
+                            className={cn('group flex h-full flex-1 flex-col items-center justify-end rounded-xl pt-2', active && 'bg-slate-100/80')}
+                          >
+                            <div className="flex w-full max-w-[34px] flex-col-reverse overflow-hidden rounded-md" style={{ height: `calc((100% - 24px) * ${b.total / barMax})` }}>
+                              {[...stackCats, 'Lainnya'].map((name, k) => {
+                                const v = b.parts.get(name) ?? 0;
+                                if (!v) return null;
+                                return <div key={name} style={{ height: `${(v / b.total) * 100}%`, background: name === 'Lainnya' ? OTHER : COLORS[k % COLORS.length] }} />;
+                              })}
+                            </div>
+                            {b.total === 0 && <div className={cn('h-1 w-full max-w-[34px] rounded-full', future ? 'bg-slate-100' : 'bg-slate-200')} />}
+                            <span className={cn('mt-1.5 h-[18px] text-[11px] tabular-nums', active ? 'font-bold text-slate-900' : future ? 'text-slate-300' : 'text-slate-400')}>
+                              {mode === 'tahunan' ? MONTHS[i] : (i + 1) % 5 === 0 || i === 0 ? i + 1 : ''}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
-                  )}
-                  <div className={cn('flex h-full items-end', mode === 'tahunan' ? 'gap-2 md:gap-3' : 'gap-[2px] md:gap-1')}>
-                    {bars.map((b, i) => {
-                      const future = i >= elapsed;
-                      const active = i === shownBar;
-                      return (
-                        <button
-                          key={i}
-                          type="button"
-                          onMouseEnter={() => setHover(i)}
-                          onMouseLeave={() => setHover(null)}
-                          onFocus={() => setHover(i)}
-                          onClick={() => setHover(i)}
-                          aria-label={`${mode === 'tahunan' ? MONTHS_LONG[i] : `Tanggal ${i + 1}`}: ${formatIDR(b.total)}`}
-                          className={cn('group flex h-full flex-1 flex-col items-center justify-end rounded-xl pt-2', active && 'bg-slate-100/80')}
-                        >
-                          <div className="flex w-full max-w-[34px] flex-col-reverse overflow-hidden rounded-md" style={{ height: `calc((100% - 24px) * ${b.total / barMax})` }}>
-                            {[...stackCats, 'Lainnya'].map((name, k) => {
-                              const v = b.parts.get(name) ?? 0;
-                              if (!v) return null;
-                              return <div key={name} style={{ height: `${(v / b.total) * 100}%`, background: name === 'Lainnya' ? OTHER : COLORS[k % COLORS.length] }} />;
-                            })}
-                          </div>
-                          {b.total === 0 && <div className={cn('h-1 w-full max-w-[34px] rounded-full', future ? 'bg-slate-100' : 'bg-slate-200')} />}
-                          <span className={cn('mt-1.5 h-[18px] text-[11px] tabular-nums', active ? 'font-bold text-slate-900' : future ? 'text-slate-300' : 'text-slate-400')}>
-                            {mode === 'tahunan' ? MONTHS[i] : (i + 1) % 5 === 0 || i === 0 ? i + 1 : ''}
-                          </span>
-                        </button>
-                      );
-                    })}
                   </div>
                 </div>
+                {cats.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {stackCats.map((name, k) => (
+                      <span key={name} className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[13px] text-slate-600 ring-1 ring-slate-200">
+                        <span className="h-2.5 w-2.5 rounded-full" style={{ background: COLORS[k % COLORS.length] }} /> {name}
+                      </span>
+                    ))}
+                    {cats.length > STACK && (
+                      <span className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[13px] text-slate-600 ring-1 ring-slate-200">
+                        <span className="h-2.5 w-2.5 rounded-full" style={{ background: OTHER }} /> Lainnya
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
-              {cats.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {stackCats.map((name, k) => (
-                    <span key={name} className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[13px] text-slate-600 ring-1 ring-slate-200">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ background: COLORS[k % COLORS.length] }} /> {name}
-                    </span>
-                  ))}
-                  {cats.length > STACK && (
-                    <span className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[13px] text-slate-600 ring-1 ring-slate-200">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ background: OTHER }} /> Lainnya
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          </section>
+            </section>
+            </>
+          )}
 
           {/* Kumulatif vs periode sebelumnya */}
           <section>
@@ -461,6 +469,8 @@ export default function LaporanPage() {
             </section>
           )}
 
+          <WeekdayPattern spend={spend} />
+
           {/* Tempat teratas */}
           {places.length > 0 && (
             <section>
@@ -484,6 +494,8 @@ export default function LaporanPage() {
               </ul>
             </section>
           )}
+
+          <TopExpenses spend={spend} />
         </>
       )}
     </div>

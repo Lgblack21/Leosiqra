@@ -145,13 +145,21 @@ export default function DailyTransactionLogPage() {
     setShown(PAGE);
   }, [period, pickedDate, kind, category, accountId, tag, sort, searchQuery]);
 
-  // Tautan dari Laporan/Rekening: ?kategori=…&rekening=…&periode=bulan|tahun|semua
+  // Tautan dari Laporan/Rekening: ?kategori=…&rekening=…&periode=bulan|tahun|semua|tanggal=YYYY-MM-DD
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const kat = params.get('kategori');
     const per = params.get('periode');
     const rek = params.get('rekening');
     const tg = params.get('tag');
+    // Dari kalender Laporan: ?tanggal=YYYY-MM-DD → filter satu hari.
+    const tgl = params.get('tanggal');
+    if (tgl && /^\d{4}-\d{2}-\d{2}$/.test(tgl)) {
+      const [y, m, d] = tgl.split('-').map(Number);
+      setPickedDate(new Date(y, m - 1, d));
+      setPeriod('tanggal');
+      return;
+    }
     if (tg) {
       setTag(tg);
       if (!per) setPeriod('semua');
