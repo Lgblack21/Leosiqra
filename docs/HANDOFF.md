@@ -307,7 +307,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   dipakai web & /app/assistant/chat; saat mikir mata melirik + cincin berputar), layar sambutan pakai LeoMascot penuh +
   chip saran ringkas, judul halaman ramping (h1 26/30 + HeaderSlot), chat di kartu putih, panel kanan desktop: 2 fitur +
   daftar insight ringkas. AiChat dapat prop `layout` opsional; tidak lagi auto-scroll saat layar sambutan.
-- **Belum di-deploy** (akun B, frontend saja): **panel Fitur sinkron** — Bos lihat sidebar "12 aktif" tapi panel "5 aktif"
+- **Live (run #77)** (akun B): **panel Fitur sinkron** — Bos lihat sidebar "12 aktif" tapi panel "5 aktif"
   (fitur aktif tetap di "Fitur lainnya"). Tidak bisa direproduksi lokal; dugaan data basi (useFeatures dulu ambil prefs
   SEKALI per sesi). Kini `refresh()` saat panel Fitur dibuka & saat tab aktif lagi (dilewati saat ada simpan berjalan);
   tile terbang naik/turun antar "Fitur kamu" ⇄ "Fitur lainnya" (framer layoutId). Cek di production.
