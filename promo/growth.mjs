@@ -77,6 +77,8 @@ export async function audit() {
 const SEEDS = [
   "aplikasi catatan keuangan", "catatan keuangan pribadi", "catatan keuangan harian", "cara mengatur keuangan gaji", "cara menabung", "dana darurat",
   "aplikasi budgeting", "cara melunasi hutang", "aplikasi pencatat pengeluaran", "cara mencatat pengeluaran", "lapor spt tahunan", "aplikasi keuangan gratis",
+  // seed dari nama fitur produk (Tabungan, Hutang & Piutang, Investasi, Laporan) — gap 12 seed lama sudah hampir habis
+  "catatan tabungan", "catatan hutang piutang", "cara menghitung bunga deposito", "laporan keuangan pribadi",
 ];
 const MODIFIERS = ["", " cara", " contoh", " untuk", " gratis", " terbaik", " tips"];
 
