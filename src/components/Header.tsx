@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
+import { InboxButton } from '@/components/InboxButton';
 import { NotificationBell } from '@/components/NotificationBell';
 
 interface HeaderProps {
@@ -53,12 +54,15 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
     </button>
   );
 
-  if (slot) return createPortal(<><NotificationBell />{menu}</>, slot);
+  if (slot) return createPortal(<><InboxButton /><NotificationBell />{menu}</>, slot);
 
   return (
     <header className="flex items-center justify-between gap-3 px-4 pt-3 md:justify-end md:px-8 md:pt-4 print:hidden">
       {menu}
-      <NotificationBell />
+      <span className="flex items-center gap-1.5">
+        <InboxButton />
+        <NotificationBell />
+      </span>
     </header>
   );
 };

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Gauge, Printer } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Gauge } from 'lucide-react';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
@@ -180,9 +180,6 @@ export default function LaporanPage() {
             <p className="text-[13px] text-slate-500">{periodLabel}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/membership/annual" className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[13px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">
-              <Printer size={15} /> <span className="hidden sm:inline">Laporan tahunan lengkap</span><span className="sm:hidden">Tahunan</span>
-            </Link>
             <HeaderSlot />
           </div>
         </div>

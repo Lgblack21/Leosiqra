@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-30 (akun B; semua live, main = run #82)
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Halaman Kekayaan |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Rapikan menu samping |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -341,6 +341,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   − hutang sisa (hutang "Kartu Kredit" yg menempel ke rekening kartu tidak dobel). Grafik jejak = mundur dari angka hari ini
   pakai pemasukan/pengeluaran (tanpa investasi/transfer/cicilan hutang) — PERKIRAAN, tertulis di halaman. Fitur menu:
   id 'tabungan' = "Kekayaan"; 'hutang' dinormalisasi ke 'tabungan' (`normalizeFeatures`), Worker tidak diubah.
+- **Belum di-deploy** (akun B, frontend saja): **rapikan menu** — Laporan Tahunan DIHAPUS (`/membership/annual` →
+  redirect `/membership/laporan`, dobel dengan mode Tahunan; fitur cetak/PDF tahunan ikut hilang). Dompet Bersama, Impor &
+  Kotak Masuk keluar dari menu Fitur (halaman tetap; Dompet Bersama & Impor ada di Pengaturan / Catat Transaksi).
+  Kotak Masuk jadi ikon `InboxButton` di samping lonceng (Header), dengan angka usulan menunggu.
 
 ## Migrasi D1
 

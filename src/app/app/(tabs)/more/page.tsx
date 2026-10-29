@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {
   BarChart3, MessageCircle, ScanLine, Mic, UserCircle, HandCoins, PiggyBank, CreditCard, Target,
-  Repeat, TrendingUp, CalendarRange, ShieldCheck, Globe, ChevronRight, ExternalLink, Zap, PlayCircle, MessageSquareHeart, Users, Inbox, Nfc,
+  Repeat, TrendingUp, ShieldCheck, Globe, ChevronRight, ExternalLink, Zap, PlayCircle, MessageSquareHeart, Users, Inbox, Nfc,
 } from "lucide-react";
 import { lightTap } from "@/lib/haptics";
 import { FadeIn, StaggerList, StaggerItem } from "@/components/app/FadeIn";
@@ -31,7 +31,6 @@ const IN_APP: MenuItem[] = [
 // (tetap login dengan sesi yang sama). Pindahkan ke IN_APP begitu versi
 // mobile-nya selesai.
 const WEB_FEATURES: MenuItem[] = [
-  { label: "Laporan Tahunan", href: "/membership/annual", icon: CalendarRange, color: "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400" },
   { label: "Pajak Center", href: "/membership/pajak-center", icon: ShieldCheck, color: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400" },
   { label: "Data Pasar", href: "/membership/investment#pasar", icon: Globe, color: "bg-lime-50 text-lime-700 dark:bg-lime-500/10 dark:text-lime-400" },
 ];

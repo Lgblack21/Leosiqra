@@ -1,5 +1,5 @@
 import {
-  Bot, PieChart, TrendingUp, Repeat, Users, CalendarRange, ShieldCheck, UploadCloud, Inbox,
+  Bot, PieChart, TrendingUp, Repeat, ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -20,11 +20,7 @@ export const FEATURES: Feature[] = [
   // id 'tabungan' dipertahankan (preferensi tersimpan & validasi Worker); isinya kini halaman Kekayaan.
   { id: 'tabungan', label: 'Kekayaan', href: '/membership/kekayaan', icon: PieChart, tint: 'from-emerald-50 to-emerald-100 text-emerald-600' },
   { id: 'rutin', label: 'Transaksi Rutin', href: '/membership/recurring', icon: Repeat, tint: 'from-teal-50 to-teal-100 text-teal-600' },
-  { id: 'dompet_bersama', label: 'Dompet Bersama', href: '/membership/dompet-bersama', icon: Users, tint: 'from-violet-50 to-violet-100 text-violet-600' },
-  { id: 'tahunan', label: 'Laporan Tahunan', href: '/membership/annual', icon: CalendarRange, tint: 'from-amber-50 to-amber-100 text-amber-600' },
   { id: 'pajak', label: 'Pajak Center', href: '/membership/pajak-center', icon: ShieldCheck, tint: 'from-emerald-50 to-emerald-100 text-emerald-600' },
-  { id: 'impor', label: 'Impor', href: '/membership/impor', icon: UploadCloud, tint: 'from-sky-50 to-sky-100 text-sky-600' },
-  { id: 'kotak_masuk', label: 'Kotak Masuk', href: '/membership/kotak-masuk', icon: Inbox, tint: 'from-pink-50 to-pink-100 text-pink-500' },
 ];
 
 // Bawaan = isi menu samping sebelum fitur ini ada (perilaku lama tidak berubah).
@@ -32,7 +28,9 @@ export const FEATURES: Feature[] = [
 // Pasar) dihapus 2026-10-29 — dilebur ke Investasiku; 'transfer' (Transfer &
 // Top Up) dihapus 2026-10-29 — datanya di Riwayat Transaksi (filter Transfer);
 // 'hutang' (Hutang & Piutang) dilebur 2026-10-30 ke Kekayaan (= id 'tabungan'),
-// lihat normalizeFeatures. Id-nya tetap sah di tipe
+// lihat normalizeFeatures. 2026-10-30: 'tahunan' dihapus (dobel dengan Laporan →
+// Tahunan); 'dompet_bersama' & 'impor' keluar dari menu (ada di Pengaturan /
+// Catat Transaksi); 'kotak_masuk' pindah ke ikon di samping lonceng. Id-nya tetap sah di tipe
 // & Worker (preferensi lama), tapi tidak lagi ditampilkan.
 export const DEFAULT_FEATURES: FeatureId[] = ['ai', 'tabungan', 'investasi'];
 

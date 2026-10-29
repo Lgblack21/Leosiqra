@@ -13,12 +13,10 @@ import {
   Coins,
   Target,
   ShieldCheck,
-  CalendarRange,
   User,
   Compass,
   Headphones,
   MessageSquareHeart,
-  Users,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -81,7 +79,6 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: 'Rekening', href: '/membership/rekening', icon: Building2 },
       { label: 'Kekayaan', href: '/membership/kekayaan', icon: PieChart },
-      { label: 'Dompet Bersama', href: '/membership/dompet-bersama', icon: Users },
     ],
   },
   {
@@ -100,7 +97,6 @@ export const navGroups: NavGroup[] = [
     label: 'Perencanaan & Laporan',
     icon: Target,
     items: [
-      { label: 'Laporan Tahunan', href: '/membership/annual', icon: CalendarRange },
       { label: 'Pajak Center', href: '/membership/pajak-center', icon: ShieldCheck },
     ],
   },
@@ -123,6 +119,7 @@ const extraTitles: Record<string, string> = {
   '/membership/fitur': 'Semua fitur',
   '/membership/aplikasi': 'Aplikasi terhubung',
   '/membership/kotak-masuk': 'Kotak Masuk',
+  '/membership/dompet-bersama': 'Dompet Bersama',
   '/membership/impor': 'Impor',
   '/membership/laporan': 'Laporan',
   '/membership/budget': 'Kategori & Anggaran',
