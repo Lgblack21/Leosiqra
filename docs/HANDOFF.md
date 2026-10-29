@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-10-28 malam (akun B selesai; semua live, main = run #54)
+Terakhir diperbarui: 2026-10-29 (akun B; semua live, main = run #80)
 
 ## Siapa sedang kerja
 
@@ -320,7 +320,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   menu & label "Investasiku". Rumus total sama dengan versi lama (non-Planned, IDR).
 - **Live (run #79)** (akun B): **urutan menu fitur** — `featuresFromIds` kini mengurutkan sesuai FEATURES
   (bukan urutan saat dinyalakan); Investasiku nomor 2 di bawah AI Leo; label menu "AI Leosiqra" → "AI Leo".
-- **Belum di-deploy** (akun B, butuh deploy Worker, TANPA migrasi): **Investasiku layar penuh** — `/membership/investment`
+- **Live (run #80)** (akun B, tanpa migrasi): **Investasiku layar penuh** — `/membership/investment`
   tanpa sidebar (`FULLSCREEN_PATHS` di `membership/layout.tsx`), tombol kembali ke Ringkasan, dock melayang gelap
   (`InvestShell`, tab di hash URL `#kabar/#sbn/#belajar`): Investasiku (`TabInvestasiku`, isi halaman lama + kartu Kabar),
   Kabar "Radar Leo" (`TabKabar`, saring topik), SBN (`TabSbn`: tangga bunga LPS/BI/SBN, "sebulan dapat berapa", daftar seri),
