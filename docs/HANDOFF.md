@@ -318,7 +318,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   (emas/gram, USD/IDR, kripto watchlist, kurs) via hook baru `useMarketData` (logika dari halaman Data Pasar lama).
   `/membership/market-data` → redirect `/membership/investment#pasar`; fitur 'pasar' disembunyikan (id tetap sah);
   menu & label "Investasiku". Rumus total sama dengan versi lama (non-Planned, IDR).
-- **Belum di-deploy** (akun B, frontend saja): **urutan menu fitur** — `featuresFromIds` kini mengurutkan sesuai FEATURES
+- **Live (run #79)** (akun B): **urutan menu fitur** — `featuresFromIds` kini mengurutkan sesuai FEATURES
   (bukan urutan saat dinyalakan); Investasiku nomor 2 di bawah AI Leo; label menu "AI Leosiqra" → "AI Leo".
 
 ## Migrasi D1
