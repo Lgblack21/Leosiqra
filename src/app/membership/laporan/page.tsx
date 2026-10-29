@@ -173,37 +173,40 @@ export default function LaporanPage() {
   const focused = cats.find((c) => c.name === focus);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 pb-12">
+    <div className="mx-auto max-w-5xl space-y-7 pb-12">
       <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-[30px] font-extrabold tracking-tight text-slate-900 md:text-[40px]">Laporan</h1>
+          <div>
+            <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[30px]">Laporan</h1>
+            <p className="text-[13px] text-slate-500">{periodLabel}</p>
+          </div>
           <div className="flex items-center gap-2">
-            <Link href="/membership/annual" className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">
-              <Printer size={16} /> <span className="hidden sm:inline">Laporan tahunan lengkap</span><span className="sm:hidden">Tahunan</span>
+            <Link href="/membership/annual" className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[13px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">
+              <Printer size={15} /> <span className="hidden sm:inline">Laporan tahunan lengkap</span><span className="sm:hidden">Tahunan</span>
             </Link>
             <HeaderSlot />
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex rounded-full bg-slate-200/60 p-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-full bg-slate-200/60 p-0.5">
             {(['bulanan', 'tahunan'] as Mode[]).map((m) => (
               <button
                 key={m}
                 type="button"
                 onClick={() => { setMode(m); setFocus(null); }}
-                className={cn('rounded-full px-5 py-1.5 text-[14px] font-semibold capitalize transition-colors', mode === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700')}
+                className={cn('rounded-full px-4 py-1 text-[13px] font-semibold capitalize transition-colors', mode === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700')}
               >
                 {m}
               </button>
             ))}
           </div>
           <div className="flex items-center rounded-full bg-white ring-1 ring-slate-200">
-            <button type="button" onClick={() => step(-1)} aria-label="Periode sebelumnya" className="rounded-full p-2.5 text-slate-500 hover:bg-slate-50"><ChevronLeft size={17} /></button>
-            <span className="min-w-[110px] text-center text-[14px] font-bold text-slate-900">{mode === 'tahunan' ? year : `${MONTHS[month]} ${year}`}</span>
-            <button type="button" onClick={() => step(1)} disabled={atLatest} aria-label="Periode berikutnya" className="rounded-full p-2.5 text-slate-500 hover:bg-slate-50 disabled:opacity-30"><ChevronRight size={17} /></button>
+            <button type="button" onClick={() => step(-1)} aria-label="Periode sebelumnya" className="rounded-full p-1.5 text-slate-500 hover:bg-slate-50"><ChevronLeft size={16} /></button>
+            <span className="min-w-[90px] text-center text-[13px] font-bold text-slate-900">{mode === 'tahunan' ? year : `${MONTHS[month]} ${year}`}</span>
+            <button type="button" onClick={() => step(1)} disabled={atLatest} aria-label="Periode berikutnya" className="rounded-full p-1.5 text-slate-500 hover:bg-slate-50 disabled:opacity-30"><ChevronRight size={16} /></button>
           </div>
-          <button type="button" onClick={() => openSettings('kategori')} className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 sm:ml-auto">
-            <Gauge size={16} /> Anggaran
+          <button type="button" onClick={() => openSettings('kategori')} aria-label="Anggaran" className="ml-auto flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[13px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">
+            <Gauge size={15} /> <span className="hidden sm:inline">Anggaran</span>
           </button>
         </div>
       </div>
@@ -216,26 +219,31 @@ export default function LaporanPage() {
         </div>
       ) : (
         <>
-          {/* Total: keluar (vs periode lalu), masuk, sisa */}
-          <section className="grid grid-cols-2 gap-3 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)] md:gap-4">
-            <div className="col-span-2 rounded-[24px] bg-white p-5 ring-1 ring-slate-100 md:col-span-1 md:p-6">
-              <p className="text-[14px] font-semibold text-slate-500">Pengeluaran {periodLabel}</p>
-              <p className="mt-1 text-[38px] font-extrabold leading-none tracking-tight text-slate-900 tabular-nums md:text-[44px]">{formatIDR(total)}</p>
+          {/* Total: satu kartu tipis — keluar, masuk, sisa (ringkas di HP, lengkap di desktop) */}
+          <section>
+            <div className="grid grid-cols-3 divide-x divide-slate-100 rounded-[20px] bg-white py-3 ring-1 ring-slate-100">
+              {[
+                { label: 'Keluar', v: total, cls: 'text-slate-900' },
+                { label: 'Masuk', v: income, cls: 'text-emerald-600' },
+                { label: income - total >= 0 ? 'Sisa' : 'Minus', v: Math.abs(income - total), cls: income - total >= 0 ? 'text-slate-900' : 'text-rose-600' },
+              ].map((x) => (
+                <div key={x.label} className="min-w-0 px-3 md:px-5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{x.label}</p>
+                  <p className={cn('truncate text-[15px] font-bold tabular-nums md:text-[19px]', x.cls)} title={formatIDR(x.v)}>
+                    <span className="md:hidden">{short(x.v)}</span>
+                    <span className="hidden md:inline">{formatIDR(x.v)}</span>
+                  </p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-1.5 flex flex-wrap gap-x-3 px-1 text-[12px] text-slate-500">
               {prevTotal > 0 && (
-                <p className={cn('mt-2 text-[13px] font-semibold', total > prevTotal ? 'text-rose-600' : 'text-emerald-600')}>
-                  {total > prevTotal ? '▲' : '▼'} {short(Math.abs(total - prevTotal))} vs {mode === 'tahunan' ? year - 1 : MONTHS_LONG[prev.m ?? 0]} ({short(prevTotal)}{(mode === 'tahunan' ? isCurYear : isCurMonth) ? ', penuh' : ''})
-                </p>
+                <span className={cn('font-semibold', total > prevTotal ? 'text-rose-600' : 'text-emerald-600')}>
+                  {total > prevTotal ? '▲' : '▼'} {short(Math.abs(total - prevTotal))} vs {mode === 'tahunan' ? year - 1 : MONTHS_LONG[prev.m ?? 0]}
+                </span>
               )}
-            </div>
-            <div className="rounded-[24px] bg-white p-4 ring-1 ring-slate-100 md:p-6">
-              <p className="text-[13px] font-semibold text-slate-500 md:text-[14px]">Pemasukan</p>
-              <p className="mt-1 truncate text-[20px] font-extrabold tracking-tight text-emerald-600 tabular-nums md:text-[26px]">{formatIDR(income)}</p>
-            </div>
-            <div className="rounded-[24px] bg-white p-4 ring-1 ring-slate-100 md:p-6">
-              <p className="text-[13px] font-semibold text-slate-500 md:text-[14px]">{income - total >= 0 ? 'Sisa' : 'Minus'}</p>
-              <p className={cn('mt-1 truncate text-[20px] font-extrabold tracking-tight tabular-nums md:text-[26px]', income - total >= 0 ? 'text-slate-900' : 'text-rose-600')}>{formatIDR(Math.abs(income - total))}</p>
-              {income > 0 && <p className="text-[12px] text-slate-400">{Math.round((Math.max(0, income - total) / income) * 100)}% dari pemasukan</p>}
-            </div>
+              {income > 0 && <span>{Math.round((Math.max(0, income - total) / income) * 100)}% pemasukan tersisa</span>}
+            </p>
           </section>
 
           {/* Bulanan: kalender gelembung; Tahunan: 12 kartu bulan */}
@@ -258,13 +266,13 @@ export default function LaporanPage() {
 
           {/* Kumulatif vs periode sebelumnya */}
           <section>
-            <h2 className="text-[22px] font-extrabold tracking-tight text-slate-900">Tren pengeluaran</h2>
-            <p className="text-[14px] text-slate-500">
+            <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Tren pengeluaran</h2>
+            <p className="text-[12px] text-slate-500">
               Kumulatif, dibandingkan {mode === 'tahunan' ? `tahun ${year - 1}` : `${MONTHS_LONG[prev.m ?? 0]}`}
               {prevTotal > 0 && ` (total ${short(prevTotal)})`}
             </p>
-            <div className="mt-4 rounded-[24px] bg-white p-4 ring-1 ring-slate-100 md:p-6">
-              <svg viewBox="0 0 600 200" className="h-52 w-full" preserveAspectRatio="none" role="img" aria-label="Grafik pengeluaran kumulatif">
+            <div className="mt-4 rounded-[20px] bg-white p-4 ring-1 ring-slate-100 md:p-6">
+              <svg viewBox="0 0 600 200" className="h-40 w-full md:h-44" preserveAspectRatio="none" role="img" aria-label="Grafik pengeluaran kumulatif">
                 {[0.5, 1].map((f) => <line key={f} x1="0" x2="600" y1={190 - f * 175} y2={190 - f * 175} stroke="#f1f5f9" />)}
                 <line x1="0" x2="600" y1="190" y2="190" stroke="#e2e8f0" />
                 {(() => {
@@ -304,14 +312,14 @@ export default function LaporanPage() {
 
           {/* Donat + daftar kategori */}
           <section>
-            <h2 className="text-[22px] font-extrabold tracking-tight text-slate-900">Ke mana uangnya</h2>
-            <p className="text-[14px] text-slate-500">Ketuk kategori untuk lihat transaksinya</p>
+            <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Ke mana uangnya</h2>
+            <p className="text-[12px] text-slate-500">Ketuk kategori untuk lihat transaksinya</p>
             {cats.length === 0 ? (
-              <p className="mt-4 rounded-[24px] bg-white p-8 text-center text-[14px] text-slate-500 ring-1 ring-slate-100">Belum ada pengeluaran di periode ini.</p>
+              <p className="mt-4 rounded-[20px] bg-white p-8 text-center text-[14px] text-slate-500 ring-1 ring-slate-100">Belum ada pengeluaran di periode ini.</p>
             ) : (
-              <div className="mt-4 grid items-start gap-6 md:grid-cols-[240px_minmax(0,1fr)]">
+              <div className="mt-3 grid items-start gap-5 md:grid-cols-[190px_minmax(0,1fr)]">
                 <div className="flex justify-center md:sticky md:top-6">
-                  <div className="relative h-56 w-56">
+                  <div className="relative h-44 w-44">
                     <svg viewBox="0 0 180 180" className="h-full w-full -rotate-90">
                       {cats.map((c, i) => {
                         const len = (c.value / total) * C;
@@ -333,12 +341,12 @@ export default function LaporanPage() {
                     </svg>
                     <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
                       <span className="text-[13px] text-slate-500">{focused ? focused.name : 'Pengeluaran'}</span>
-                      <span className="text-[22px] font-extrabold tracking-tight text-slate-900">{short(focused ? focused.value : total)}</span>
+                      <span className="text-[17px] font-extrabold tracking-tight text-slate-900">{short(focused ? focused.value : total)}</span>
                       <span className="text-[13px] text-slate-500">{focused ? `${Math.round((focused.value / total) * 100)}%` : `${cats.length} kategori`}</span>
                     </div>
                   </div>
                 </div>
-                <ul className="divide-y divide-slate-100 overflow-hidden rounded-[24px] bg-white ring-1 ring-slate-100">
+                <ul className="divide-y divide-slate-100 overflow-hidden rounded-[20px] bg-white ring-1 ring-slate-100">
                   {cats.map((c) => {
                     const v = categoryVisual(c.name, 'pengeluaran');
                     return (
@@ -347,17 +355,17 @@ export default function LaporanPage() {
                           href={txLink(c.name)}
                           onMouseEnter={() => setFocus(c.name)}
                           onMouseLeave={() => setFocus(null)}
-                          className="flex items-center gap-3.5 px-4 py-3 hover:bg-slate-50 md:px-5"
+                          className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 md:px-5"
                         >
-                          <span className={cn('relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[20px]', v.tile)} aria-hidden>
+                          <span className={cn('relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[17px]', v.tile)} aria-hidden>
                             {v.emoji}
                             <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white" style={{ background: c.color }} />
                           </span>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-[15px] font-semibold text-slate-900">{c.name}</p>
-                            <p className="text-[13px] text-slate-500">{Math.round((c.value / total) * 100)}% · {short(c.value / Math.max(1, mode === 'tahunan' ? passed.length : elapsed))}{perUnit}</p>
+                            <p className="truncate text-[14px] font-semibold text-slate-900">{c.name}</p>
+                            <p className="text-[12px] text-slate-500">{Math.round((c.value / total) * 100)}% · {short(c.value / Math.max(1, mode === 'tahunan' ? passed.length : elapsed))}{perUnit}</p>
                           </div>
-                          <p className="text-[15px] font-bold tabular-nums text-slate-900">{formatIDR(c.value)}</p>
+                          <p className="text-[14px] font-bold tabular-nums text-slate-900">{formatIDR(c.value)}</p>
                           <ChevronRight size={17} className="text-slate-300" />
                         </Link>
                       </li>
@@ -371,9 +379,9 @@ export default function LaporanPage() {
           {/* Heatmap kategori × bulan */}
           {mode === 'tahunan' && heat.length > 0 && (
             <section>
-              <h2 className="text-[22px] font-extrabold tracking-tight text-slate-900">Kategori dari waktu ke waktu</h2>
-              <p className="text-[14px] text-slate-500">Makin besar gelembung, makin besar belanja kategori itu di bulan tersebut</p>
-              <div className="mt-4 rounded-[24px] bg-white p-4 ring-1 ring-slate-100 md:p-6">
+              <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Kategori dari waktu ke waktu</h2>
+              <p className="text-[12px] text-slate-500">Makin besar gelembung, makin besar belanja kategori itu di bulan tersebut</p>
+              <div className="mt-4 rounded-[20px] bg-white p-4 ring-1 ring-slate-100 md:p-6">
                 <div>
                   <div className="grid grid-cols-[104px_repeat(6,minmax(0,1fr))_64px] md:grid-cols-[170px_repeat(12,minmax(0,1fr))_120px] gap-1.5 pb-2 text-center text-[12px] text-slate-400">
                     <span />
@@ -386,7 +394,7 @@ export default function LaporanPage() {
                       <div key={row.name} className="grid grid-cols-[104px_repeat(6,minmax(0,1fr))_64px] md:grid-cols-[170px_repeat(12,minmax(0,1fr))_120px] items-center gap-1.5 py-1">
                         <span className="flex min-w-0 items-center gap-2">
                           <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[15px]', v.tile)} aria-hidden>{v.emoji}</span>
-                          <span className="truncate text-[14px] font-medium text-slate-700">{row.name}</span>
+                          <span className="truncate text-[13px] font-medium text-slate-700">{row.name}</span>
                         </span>
                         {row.per.map((val, i) => (
                           <span key={i} title={`${MONTHS_LONG[i]}: ${formatIDR(val)}`} className={heatCell(i)}>
@@ -416,20 +424,20 @@ export default function LaporanPage() {
           {/* Tempat teratas */}
           {places.length > 0 && (
             <section>
-              <h2 className="text-[22px] font-extrabold tracking-tight text-slate-900">Tempat teratas</h2>
-              <p className="text-[14px] text-slate-500">Total per tempat, menurut judul transaksi</p>
-              <ul className="mt-4 divide-y divide-slate-100 overflow-hidden rounded-[24px] bg-white ring-1 ring-slate-100">
+              <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Tempat teratas</h2>
+              <p className="text-[12px] text-slate-500">Total per tempat, menurut judul transaksi</p>
+              <ul className="mt-4 divide-y divide-slate-100 overflow-hidden rounded-[20px] bg-white ring-1 ring-slate-100">
                 {places.map(([name, p], i) => {
                   const v = categoryVisual(p.category, 'pengeluaran');
                   return (
-                    <li key={name} className="flex items-center gap-3.5 px-4 py-3 md:px-5">
+                    <li key={name} className="flex items-center gap-3 px-4 py-2.5 md:px-5">
                       <span className="w-5 text-center text-[13px] font-bold text-slate-400">{i + 1}</span>
-                      <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[18px]', v.tile)} aria-hidden>{v.emoji}</span>
+                      <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[16px]', v.tile)} aria-hidden>{v.emoji}</span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[15px] font-semibold text-slate-900">{name}</p>
-                        <p className="text-[13px] text-slate-500">{p.n}× · {p.category}</p>
+                        <p className="truncate text-[14px] font-semibold text-slate-900">{name}</p>
+                        <p className="text-[12px] text-slate-500">{p.n}× · {p.category}</p>
                       </div>
-                      <p className="text-[15px] font-bold tabular-nums text-slate-900">{formatIDR(p.total)}</p>
+                      <p className="text-[14px] font-bold tabular-nums text-slate-900">{formatIDR(p.total)}</p>
                     </li>
                   );
                 })}
