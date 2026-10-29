@@ -249,7 +249,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 - **Live (run #68)** (akun B): **ganti nama dari halaman Anggaran** — mode "Ubah" kini juga
   mengedit nama kategori (kolom nama), disimpan bersama nominal (nominal dulu, lalu rename via endpoint yang sama).
   Nama ganda antar isian ditolak di klien; sisanya divalidasi server. Tombol Ubah dapat aria-label (di HP cuma ikon).
-- **Belum di-deploy** (akun B, frontend saja): **Rekening dirampingkan** — header ramping (h1 26/30 + jumlah rekening),
+- **Live (run #69)** (akun B): **Rekening dirampingkan** — header ramping (h1 26/30 + jumlah rekening),
   kartu saldo gelap dengan bar komposisi kas (warna per rekening + legenda %, ketuk → detail) & chip tagihan kartu
   terdekat, banner keamanan satu baris, baris rekening ringkas (titik warna + % kas), kartu kredit jadi kartu mini
   (h-136, grid 2–3 kolom di desktop) dengan total tagihan di judul, Target pakai cincin progres 2 kolom.
