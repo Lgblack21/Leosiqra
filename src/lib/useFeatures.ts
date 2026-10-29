@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { cloudflareApi } from './cloudflare-api';
-import { DEFAULT_FEATURES, isShownFeature, type FeatureId } from './features';
+import { DEFAULT_FEATURES, normalizeFeatures, type FeatureId } from './features';
 
 // Fitur aktif user (urutan = urutan di menu samping). Disimpan di server
 // ($.prefs.features); satu salinan di memori dibagi Sidebar & panel Fitur
@@ -14,8 +14,8 @@ let loading: Promise<FeatureId[]> | null = null;
 
 const load = () => {
   loading ??= cloudflareApi<{ item?: { features?: FeatureId[] | null } }>('/api/member/preferences')
-    // Id fitur yang sudah dihapus (mis. 'kartu') dibuang supaya hitungan & menu pas.
-    .then((r) => (shared = (r.item?.features ?? DEFAULT_FEATURES).filter(isShownFeature)))
+    // Id fitur yang sudah dihapus (mis. 'kartu') dibuang & 'hutang' → Kekayaan, supaya hitungan & menu pas.
+    .then((r) => (shared = normalizeFeatures(r.item?.features ?? DEFAULT_FEATURES)))
     .catch(() => {
       loading = null;
       return DEFAULT_FEATURES;
@@ -32,7 +32,7 @@ const refresh = async () => {
   try {
     const r = await cloudflareApi<{ item?: { features?: FeatureId[] | null } }>('/api/member/preferences');
     if (saving) return;
-    const ids = (r.item?.features ?? DEFAULT_FEATURES).filter(isShownFeature);
+    const ids = normalizeFeatures(r.item?.features ?? DEFAULT_FEATURES);
     loading = Promise.resolve(ids);
     if (!shared || ids.join() !== shared.join()) publish(ids);
   } catch {

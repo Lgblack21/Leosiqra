@@ -6,13 +6,12 @@ import {
   ListOrdered,
   Repeat,
   Building2,
-  PiggyBank,
+  PieChart,
   TrendingUp,
   Briefcase,
   Landmark,
   Coins,
   Target,
-  HandCoins,
   ShieldCheck,
   CalendarRange,
   User,
@@ -56,8 +55,7 @@ export const keuanganNav: NavItem[] = [
 export const fiturNav: NavItem[] = [
   { label: 'AI Leo', href: '/membership/ai-leosiqra', icon: Bot },
   { label: 'Investasiku', href: '/membership/investment', icon: TrendingUp },
-  { label: 'Tabungan', href: '/membership/tabungan', icon: PiggyBank },
-  { label: 'Hutang & Piutang', href: '/membership/transactions/debt', icon: HandCoins },
+  { label: 'Kekayaan', href: '/membership/kekayaan', icon: PieChart },
 ];
 
 export const SEMUA_FITUR_HREF = '/membership/fitur';
@@ -82,7 +80,7 @@ export const navGroups: NavGroup[] = [
     icon: Building2,
     items: [
       { label: 'Rekening', href: '/membership/rekening', icon: Building2 },
-      { label: 'Tabungan', href: '/membership/tabungan', icon: PiggyBank },
+      { label: 'Kekayaan', href: '/membership/kekayaan', icon: PieChart },
       { label: 'Dompet Bersama', href: '/membership/dompet-bersama', icon: Users },
     ],
   },
@@ -102,7 +100,6 @@ export const navGroups: NavGroup[] = [
     label: 'Perencanaan & Laporan',
     icon: Target,
     items: [
-      { label: 'Hutang & Piutang', href: '/membership/transactions/debt', icon: HandCoins },
       { label: 'Laporan Tahunan', href: '/membership/annual', icon: CalendarRange },
       { label: 'Pajak Center', href: '/membership/pajak-center', icon: ShieldCheck },
     ],

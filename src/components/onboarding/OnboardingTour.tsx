@@ -77,10 +77,10 @@ const STOPS: TourStop[] = [
     how: ['Catat pembelian saham, emas, atau deposito', 'Nilai & keuntungan dihitung otomatis', 'Lihat alokasi portofolio per jenis aset'],
   },
   {
-    path: '/membership/tabungan',
+    path: '/membership/kekayaan',
     icon: PiggyBank,
-    title: 'Tabungan',
-    content: 'Buat target tabungan (mis. Dana Darurat, Liburan) dan pantau progresnya sampai tercapai.',
+    title: 'Kekayaan & Tabungan',
+    content: 'Lihat kekayaan bersihmu (aset − utang) di satu tempat, buat target tabungan, dan catat hutang & piutang.',
     demo: 'tabungan',
     how: ['Pilih tujuan: Dana Darurat, Liburan, dll', 'Catat setoran dari rekening mana saja', 'Pantau progres sampai target tercapai'],
   },

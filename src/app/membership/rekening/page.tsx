@@ -424,7 +424,7 @@ export default function RekeningPage() {
         <section>
           <div className="mb-2 flex items-baseline justify-between">
             <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Target</h2>
-            <Link href="/membership/tabungan" className="text-[12px] font-bold text-indigo-600 hover:underline">Lihat semua</Link>
+            <Link href="/membership/kekayaan#tabungan" className="text-[12px] font-bold text-indigo-600 hover:underline">Lihat semua</Link>
           </div>
           <ul className="grid gap-2 md:grid-cols-2">
             {goalsWithTarget.slice(0, 6).map((g, i) => {
@@ -432,7 +432,7 @@ export default function RekeningPage() {
               const color = SEG[i % SEG.length];
               return (
                 <li key={g.id}>
-                  <Link href="/membership/tabungan" className="flex items-center gap-3 rounded-[18px] bg-white px-3.5 py-2.5 ring-1 ring-slate-100 hover:bg-slate-50">
+                  <Link href="/membership/kekayaan#tabungan" className="flex items-center gap-3 rounded-[18px] bg-white px-3.5 py-2.5 ring-1 ring-slate-100 hover:bg-slate-50">
                     <span className="relative flex h-11 w-11 shrink-0 items-center justify-center">
                       <svg viewBox="0 0 44 44" className="absolute inset-0 -rotate-90" aria-hidden>
                         <circle cx="22" cy="22" r="19" fill="none" stroke="#f1f5f9" strokeWidth="4" />

@@ -245,7 +245,7 @@ export default function RecurringPage() {
                 </p>
                 <div className="mt-3 flex items-center gap-1 border-t border-slate-100 pt-3">
                   {saving ? (
-                    <Link href="/membership/tabungan" className="flex flex-1 items-center gap-1.5 text-[13px] font-semibold text-indigo-600 hover:text-indigo-700">
+                    <Link href="/membership/kekayaan#tabungan" className="flex flex-1 items-center gap-1.5 text-[13px] font-semibold text-indigo-600 hover:text-indigo-700">
                       <PiggyBank size={15} /> Atur di Tabungan <ArrowRight size={14} />
                     </Link>
                   ) : (
