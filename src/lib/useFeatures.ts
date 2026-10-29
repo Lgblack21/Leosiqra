@@ -23,6 +23,23 @@ const load = () => {
   return loading;
 };
 
+// Ambil ulang dari server (panel Fitur dibuka / tab aktif lagi) — perubahan
+// dari perangkat atau tab lain tidak tertinggal. Tidak menimpa saat ada simpan
+// yang sedang berjalan.
+let saving = 0;
+const refresh = async () => {
+  if (saving) return;
+  try {
+    const r = await cloudflareApi<{ item?: { features?: FeatureId[] | null } }>('/api/member/preferences');
+    if (saving) return;
+    const ids = (r.item?.features ?? DEFAULT_FEATURES).filter(isShownFeature);
+    loading = Promise.resolve(ids);
+    if (!shared || ids.join() !== shared.join()) publish(ids);
+  } catch {
+    /* offline — pakai yang ada */
+  }
+};
+
 const publish = (ids: FeatureId[]) => {
   shared = ids;
   window.dispatchEvent(new CustomEvent<FeatureId[]>(EVENT, { detail: ids }));
@@ -40,10 +57,13 @@ export function useFeatures() {
       setReady(true);
     });
     const onChange = (e: Event) => setActive((e as CustomEvent<FeatureId[]>).detail);
+    const onVisible = () => { if (document.visibilityState === 'visible') void refresh(); };
     window.addEventListener(EVENT, onChange);
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
       alive = false;
       window.removeEventListener(EVENT, onChange);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, []);
 
@@ -51,13 +71,16 @@ export function useFeatures() {
   const save = useCallback(async (next: FeatureId[]) => {
     const before = shared ?? DEFAULT_FEATURES;
     publish(next);
+    saving += 1;
     try {
       await cloudflareApi('/api/member/preferences', { method: 'PUT', json: { features: next } });
     } catch (e) {
       publish(before);
       throw e;
+    } finally {
+      saving -= 1;
     }
   }, []);
 
-  return { active, ready, save };
+  return { active, ready, save, refresh };
 }

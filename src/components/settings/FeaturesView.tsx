@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { LayoutGroup, motion, useReducedMotion } from 'framer-motion';
 import { Plus, X, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FEATURES, featuresFromIds, type Feature, type FeatureId } from '@/lib/features';
@@ -45,8 +46,17 @@ function FeatureTile({ f, mode, onToggle, onOpen }: { f: Feature; mode: 'on' | '
 
 export function FeaturesView({ editing, open }: { editing: boolean; open: (href: string) => void }) {
   const { toast } = useFeedback();
-  const { active, save } = useFeatures();
+  const { active, save, refresh } = useFeatures();
+  const reduce = useReducedMotion();
   const [busy, setBusy] = useState(false);
+  // Panel dibuka → ambil daftar terbaru dari server.
+  useEffect(() => { void refresh(); }, [refresh]);
+  // Tile terbang antara "Fitur kamu" ⇄ "Fitur lainnya" (layoutId sama).
+  const fly = (id: string, children: React.ReactNode) => (
+    <motion.div key={id} layoutId={reduce ? undefined : `feat-${id}`} layout={!reduce} transition={{ type: 'spring', stiffness: 420, damping: 34 }}>
+      {children}
+    </motion.div>
+  );
   const mine = featuresFromIds(active);
   const others = FEATURES.filter((f) => !active.includes(f.id));
 
@@ -66,6 +76,7 @@ export function FeaturesView({ editing, open }: { editing: boolean; open: (href:
   const turnOn = (f: Feature) => void apply([...active, f.id], `${f.label} aktif di menu.`);
 
   return (
+    <LayoutGroup>
     <div className="space-y-5">
       <p className="px-1 text-[14px] leading-relaxed text-slate-500">
         {editing
@@ -80,18 +91,18 @@ export function FeaturesView({ editing, open }: { editing: boolean; open: (href:
         </div>
         {mine.length ? (
           <div className="grid grid-cols-3 gap-x-2 gap-y-4 pt-2 sm:grid-cols-4">
-            {mine.map((f) =>
+            {mine.map((f) => fly(f.id,
               editing ? (
-                <FeatureTile key={f.id} f={f} mode="on" onToggle={() => turnOff(f)} onOpen={() => turnOff(f)} />
+                <FeatureTile f={f} mode="on" onToggle={() => turnOff(f)} onOpen={() => turnOff(f)} />
               ) : (
-                <div key={f.id} className="flex flex-col items-center gap-2 text-center">
+                <div className="flex flex-col items-center gap-2 text-center">
                   <button type="button" onClick={() => open(f.href)} className={cn('flex h-[68px] w-[68px] items-center justify-center rounded-[22px] bg-gradient-to-br shadow-[inset_0_-3px_0_rgba(15,23,42,0.06)] transition-transform hover:-translate-y-0.5 sm:h-[76px] sm:w-[76px]', f.tint)} aria-label={`Buka ${f.label}`}>
                     <f.icon size={30} strokeWidth={1.8} />
                   </button>
                   <span className="line-clamp-2 max-w-[92px] text-[13px] font-semibold leading-tight text-slate-800">{f.label}</span>
                 </div>
               )
-            )}
+            ))}
           </div>
         ) : (
           <p className="px-1 py-4 text-[14px] text-slate-500">Belum ada fitur aktif. Tambahkan dari daftar di bawah.</p>
@@ -102,14 +113,13 @@ export function FeaturesView({ editing, open }: { editing: boolean; open: (href:
         <h3 className="mb-3 text-[15px] font-bold text-slate-900">Fitur lainnya</h3>
         {others.length ? (
           <div className="grid grid-cols-3 gap-x-2 gap-y-4 pt-2 sm:grid-cols-4">
-            {others.map((f) => (
-              <FeatureTile key={f.id} f={f} mode="off" onToggle={() => turnOn(f)} onOpen={() => (editing ? turnOn(f) : open(f.href))} />
-            ))}
+            {others.map((f) => fly(f.id, <FeatureTile f={f} mode="off" onToggle={() => turnOn(f)} onOpen={() => (editing ? turnOn(f) : open(f.href))} />))}
           </div>
         ) : (
           <p className="py-2 text-[14px] text-slate-500">Semua fitur sudah aktif.</p>
         )}
       </section>
     </div>
+    </LayoutGroup>
   );
 }
