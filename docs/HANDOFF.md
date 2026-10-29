@@ -253,7 +253,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   kartu saldo gelap dengan bar komposisi kas (warna per rekening + legenda %, ketuk → detail) & chip tagihan kartu
   terdekat, banner keamanan satu baris, baris rekening ringkas (titik warna + % kas), kartu kredit jadi kartu mini
   (h-136, grid 2–3 kolom di desktop) dengan total tagihan di judul, Target pakai cincin progres 2 kolom.
-- **Belum di-deploy** (akun B, butuh deploy Worker, tanpa migrasi): **pusat Kartu kredit** di Rekening
+- **Live (run #70)** (akun B): **pusat Kartu kredit** di Rekening
   (`CreditCardHub`, dibuka dari "Kelola"/kartu mini/chip tagihan): carousel kartu (•••• 4 digit + logo jaringan),
   tiket tagihan tercetak + jatuh tempo + min. bayar, "Sudah bayar", "Ubah kartu", belum ditagih/terpakai/sisa limit,
   belanja siklus ini, kartu paling longgar dipakai hari ini, timeline 30 hari (cetak/jatuh tempo).
