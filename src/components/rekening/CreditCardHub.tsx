@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import { ArrowLeft, Check, ChevronRight, Loader2, Pencil, Plus, Sparkles } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { CardFace } from '@/components/rekening/CardFace';
@@ -12,10 +12,12 @@ import type { Transaction } from '@/lib/services/transactionService';
 import { cardFlowsFromTransactions, computeCreditUsage, getCardCycle, isCreditAccountType } from '@/lib/creditCard';
 import { clampCycleDay, daysBetween, dueDateFor, lastStatementDate } from '@/lib/creditCycle';
 import { categoryVisual } from '@/lib/categoryEmoji';
+import { getCardGradientClass } from '@/lib/cardColors';
 import { cn, formatMoney, toLocalDateString } from '@/lib/utils';
 
-// Pusat kartu kredit (dibuka dari Rekening): pilih kartu di carousel, lihat
-// tagihan tercetak + jatuh tempo, catat "Sudah bayar" (transfer atomik dari
+// Pusat kartu kredit (dibuka dari Rekening). Tampilan utama: tumpukan kartu +
+// tagihan 30 hari ke depan; ketuk kartu/tagihan → kartu terbuka (animasi
+// layoutId) dengan tagihan tercetak + jatuh tempo, catat "Sudah bayar" (transfer atomik dari
 // rekening kas lewat accountService.payCreditCard), belanja siklus berjalan,
 // jadwal cetak/jatuh tempo 30 hari ke depan, dan kartu paling longgar dipakai
 // hari ini. Semua angka siklus dari lib/creditCard.ts + lib/creditCycle.ts
@@ -37,6 +39,9 @@ const short = (n: number) =>
   : Math.abs(n) >= 1e3 ? `Rp${Math.round(n / 1e3)} rb` : formatMoney(n, 'IDR');
 const localYmd = (d: Date | string) => (d instanceof Date ? toLocalDateString(d) : toLocalDateString(new Date(d)));
 const newRef = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+
+// Tinggi bagian kartu yang menyembul di tumpukan (cukup untuk logo + nama + chip).
+const STRIP = 58;
 
 type Info = { acc: Account; usage: ReturnType<typeof computeCreditUsage>; cycle: ReturnType<typeof getCardCycle> };
 
@@ -84,7 +89,8 @@ export function CreditCardHub({
     [accounts, transactions, day]
   );
   const cash = accounts.filter((a) => !isCreditAccountType(a.type));
-  const sel = cards.find((c) => c.acc.id === selectedId) ?? cards[0];
+  // null = tampilan utama (tumpukan kartu); id = detail kartu itu.
+  const sel = cards.find((c) => c.acc.id === selectedId);
   const nearest = [...cards].filter((c) => c.cycle && c.cycle.amountDue > 0).sort((a, b) => a.cycle!.daysUntilDue - b.cycle!.daysUntilDue)[0];
 
   // Kartu paling longgar: belanja hari ini masuk tagihan yang dicetak
@@ -173,48 +179,43 @@ export function CreditCardHub({
       setSaving(false);
     }
   };
-  const select = (id: string | undefined) => {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const toTop = () => requestAnimationFrame(() => rootRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+  const openCard = (id: string | undefined) => {
     if (!id || saving) return;
     setSelectedId(id);
     setPaying(null);
+    toTop();
+  };
+  const closeCard = () => {
+    if (saving) return;
+    setSelectedId(null);
+    setPaying(null);
+    toTop();
   };
 
-  const card = (info: Info) => {
+  const faceProps = (info: Info) => {
     const { acc, usage, cycle } = info;
-    const active = info === sel;
     const chip = cycle && cycle.amountDue > 0
       ? cycle.overdue ? `Lewat ${Math.abs(cycle.daysUntilDue)} hari` : `${fmt(cycle.dueDate, { day: 'numeric', month: 'short' })} · ${cycle.daysUntilDue === 0 ? 'hari ini' : `${cycle.daysUntilDue} hr lagi`}`
       : usage.used > 0 ? 'Belum ditagih' : 'Lunas';
-    const urgent = cycle && cycle.amountDue > 0 && (cycle.overdue || cycle.daysUntilDue <= 5);
-    return (
-      <button
-        key={acc.id}
-        type="button"
-        onClick={() => select(acc.id)}
-        aria-pressed={active}
-        aria-label={`Kartu ${acc.name}`}
-        className={cn(
-          'w-[80%] shrink-0 snap-center rounded-[20px] transition-all duration-300 sm:w-[320px]',
-          active ? 'scale-100 shadow-[0_22px_40px_-18px_rgba(15,23,42,0.7)]' : 'scale-[0.92] opacity-55 hover:opacity-80'
-        )}
-      >
-        <CardFace
-          name={acc.name}
-          logoUrl={acc.logoUrl}
-          last4={acc.cardLast4}
-          network={acc.cardNetwork}
-          color={acc.cardColor}
-          chip={chip}
-          urgent={Boolean(urgent)}
-          amountLabel={cycle && cycle.amountDue > 0 ? `Tagihan ${fmt(cycle.statementDate, { month: 'short' })}` : 'Terpakai'}
-          amount={money(cycle && cycle.amountDue > 0 ? cycle.amountDue : usage.used, acc.currency)}
-        />
-      </button>
-    );
+    return {
+      name: acc.name,
+      logoUrl: acc.logoUrl,
+      last4: acc.cardLast4,
+      network: acc.cardNetwork,
+      color: acc.cardColor,
+      chip,
+      urgent: Boolean(cycle && cycle.amountDue > 0 && (cycle.overdue || cycle.daysUntilDue <= 5)),
+      amountLabel: cycle && cycle.amountDue > 0 ? `Tagihan ${fmt(cycle.statementDate, { month: 'short' })}` : 'Total terpakai',
+      amount: money(cycle && cycle.amountDue > 0 ? cycle.amountDue : usage.used, acc.currency),
+    };
   };
+  const spring = { type: 'spring' as const, stiffness: 320, damping: 32 };
 
   return (
     <Modal isOpen={open} onClose={onClose} title="Kartu kredit" maxWidth="max-w-2xl">
+      <div ref={rootRef} className="scroll-mt-24">
       {cards.length === 0 ? (
         <div className="py-8 text-center">
           <p className="text-[15px] font-semibold text-slate-900">Belum ada kartu kredit</p>
@@ -222,38 +223,144 @@ export function CreditCardHub({
           <button type="button" onClick={onAdd} className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2 text-[13px] font-bold text-white"><Plus size={15} /> Tambah kartu</button>
         </div>
       ) : (
-        <div className="space-y-5">
-          {/* Ringkasan */}
-          <div className="flex items-end justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[12px] font-semibold uppercase tracking-wide text-slate-500">Total tagihan kartu</p>
-              <p className="text-[26px] font-extrabold leading-tight tracking-tight text-slate-900 tabular-nums">{hidden ? 'Rp ••••••' : formatMoney(totalIdr, 'IDR')}</p>
-              {nearest && (
-                <p className="truncate text-[13px] text-slate-500">
-                  Terdekat: <span className="font-semibold text-slate-700">{nearest.acc.name}</span> · {fmt(nearest.cycle!.dueDate, { day: 'numeric', month: 'short' })}
-                  {nearest.cycle!.overdue ? ' (lewat)' : ` (${nearest.cycle!.daysUntilDue === 0 ? 'hari ini' : `${nearest.cycle!.daysUntilDue} hari lagi`})`}
-                </p>
-              )}
-            </div>
-            <button type="button" onClick={onAdd} aria-label="Tambah kartu" className="flex shrink-0 items-center gap-1.5 rounded-full bg-slate-100 px-3 py-2 text-[13px] font-bold text-slate-700 hover:bg-slate-200">
-              <Plus size={15} /> <span className="hidden sm:inline">Tambah kartu</span>
-            </button>
-          </div>
+        <LayoutGroup>
+          {!sel ? (
+            /* ===== Tampilan utama: tumpukan kartu + tagihan 30 hari ===== */
+            <div className="space-y-5">
+              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex items-end justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[12px] font-semibold uppercase tracking-wide text-slate-500">Total tagihan kartu</p>
+                  <p className="text-[26px] font-extrabold leading-tight tracking-tight text-slate-900 tabular-nums">{hidden ? 'Rp ••••••' : formatMoney(totalIdr, 'IDR')}</p>
+                  {nearest && (
+                    <p className="truncate text-[13px] text-slate-500">
+                      Terdekat: <span className="font-semibold text-slate-700">{nearest.acc.name}</span> · {fmt(nearest.cycle!.dueDate, { day: 'numeric', month: 'short' })}
+                      {nearest.cycle!.overdue ? ' (lewat)' : ` (${nearest.cycle!.daysUntilDue === 0 ? 'hari ini' : `${nearest.cycle!.daysUntilDue} hari lagi`})`}
+                    </p>
+                  )}
+                </div>
+                <button type="button" onClick={onAdd} aria-label="Tambah kartu" className="flex shrink-0 items-center gap-1.5 rounded-full bg-slate-100 px-3 py-2 text-[13px] font-bold text-slate-700 hover:bg-slate-200">
+                  <Plus size={15} /> <span className="hidden sm:inline">Tambah kartu</span>
+                </button>
+              </motion.div>
 
-          {/* Carousel kartu */}
-          <div>
-            <div className="-mx-6 flex snap-x snap-mandatory items-center gap-1 overflow-x-auto px-[10%] py-1 no-scrollbar sm:px-6">
-              {cards.map(card)}
+              {/* Tumpukan kartu: yang belakang menyembul, ketuk untuk membuka */}
+              <div className="mx-auto w-full max-w-[360px]">
+                {/* Tiap kartu ditarik ke atas sampai hanya STRIP px kartu sebelumnya
+                    yang terlihat; tinggi kartu = lebar wadah / 1.586 (cqw). */}
+                <div className="@container">
+                  {cards.map((info, i) => {
+                    const last = i === cards.length - 1;
+                    return (
+                      <motion.button
+                        key={info.acc.id}
+                        layoutId={`cc-${info.acc.id}`}
+                        type="button"
+                        onClick={() => openCard(info.acc.id)}
+                        aria-label={`Buka kartu ${info.acc.name}`}
+                        transition={spring}
+                        whileHover={last ? { y: -3 } : { y: -10 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="relative block w-full rounded-[20px] text-left shadow-[0_-10px_24px_-14px_rgba(15,23,42,0.55)]"
+                        style={i === 0 ? undefined : { marginTop: `calc(${STRIP}px - 100cqw / 1.586)` }}
+                      >
+                        <CardFace {...faceProps(info)} />
+                      </motion.button>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-center text-[12px] text-slate-400">Ketuk kartu untuk membukanya</p>
+              </div>
+
+          {/* Paling longgar */}
+          {roomiest && roomiest.days > 0 && (
+            <div className="flex items-start gap-3 rounded-[20px] bg-gradient-to-br from-indigo-50 to-violet-50 p-3.5 ring-1 ring-indigo-100">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[18px]" aria-hidden>🦁</span>
+              <div className="min-w-0">
+                <p className="flex items-center gap-1 text-[13px] font-bold text-indigo-900"><Sparkles size={13} /> Paling longgar dipakai hari ini</p>
+                <p className="text-[13px] text-slate-700">
+                  Belanja pakai <span className="font-semibold">{roomiest.acc.name}</span> hari ini, bayarnya {fmt(roomiest.due, { day: 'numeric', month: 'short' })} — <span className="font-semibold">{roomiest.days} hari lagi</span>.
+                </p>
+                <p className="text-[11px] text-slate-500">Kalau tagihan sebelumnya dibayar penuh.</p>
+              </div>
             </div>
-            {cards.length > 1 && (
-              <div className="mt-2 flex justify-center gap-1.5">
-                {cards.map((c) => (
-                  <button key={c.acc.id} type="button" onClick={() => select(c.acc.id)} aria-label={`Pilih ${c.acc.name}`} className={cn('h-1.5 rounded-full transition-all', c === sel ? 'w-5 bg-slate-900' : 'w-1.5 bg-slate-300')} />
+          )}
+
+
+              {/* Tagihan 30 hari ke depan */}
+              {upcoming.length > 0 && (
+                <section>
+                  <h3 className="mb-2 text-[15px] font-bold text-slate-900">30 hari ke depan</h3>
+                  <ul className="overflow-hidden rounded-[20px] bg-slate-50 ring-1 ring-slate-100">
+                    {upcoming.map((e, i) => (
+                      <motion.li
+                        key={`${e.info.acc.id}-${e.kind}-${e.date}-${i}`}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 + i * 0.05 }}
+                        className="border-b border-slate-100 last:border-b-0"
+                      >
+                        <button type="button" onClick={() => openCard(e.info.acc.id)} className="group flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-white">
+                          <span className={cn('flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-2xl bg-white ring-1', e.kind === 'lewat' ? 'ring-rose-200' : 'ring-slate-200')}>
+                            <span className={cn('text-[15px] font-extrabold leading-none', e.kind === 'lewat' ? 'text-rose-600' : 'text-slate-900')}>{Number(e.date.slice(8))}</span>
+                            <span className="text-[10px] font-semibold text-slate-400">{fmt(e.date, { month: 'short' })}</span>
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-[14px] font-semibold text-slate-900">
+                              {e.kind === 'cetak' ? `Tagihan ${e.info.acc.name} dicetak` : e.kind === 'lewat' ? `${e.info.acc.name} lewat jatuh tempo` : `${e.info.acc.name} jatuh tempo`}
+                            </span>
+                            <span className="block text-[12px] text-slate-500">{fmt(e.date, { weekday: 'long' })}{e.kind === 'tempo' && e.date === today ? ' · hari ini' : ''}</span>
+                          </span>
+                          {e.amount !== undefined && e.amount > 0 && <span className={cn('shrink-0 text-[14px] font-bold tabular-nums', e.kind === 'lewat' ? 'text-rose-600' : 'text-slate-900')}>{hidden ? '••••' : short(e.amount)}</span>}
+                          <span aria-hidden className={cn('h-8 w-1.5 shrink-0 rounded-full', getCardGradientClass(e.info.acc.cardColor, 'Credit Card'))} />
+                          <ChevronRight size={16} className="shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5" />
+                        </button>
+                      </motion.li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              <button type="button" onClick={onAdd} className="flex w-full items-center justify-center gap-1.5 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white">
+                <Plus size={16} /> Tambah kartu
+              </button>
+            </div>
+          ) : (
+            /* ===== Detail satu kartu ===== */
+            <div className="space-y-5">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center justify-between gap-2">
+                <button type="button" onClick={closeCard} disabled={saving} className="flex items-center gap-1.5 rounded-full bg-slate-100 py-1.5 pl-2 pr-3 text-[13px] font-bold text-slate-700 hover:bg-slate-200">
+                  <ArrowLeft size={16} /> Semua kartu
+                </button>
+                {cards.length > 1 && (
+                  <div className="flex gap-1.5">
+                    {cards.map((c) => (
+                      <button key={c.acc.id} type="button" onClick={() => openCard(c.acc.id)} aria-label={`Pilih ${c.acc.name}`} className={cn('h-2 rounded-full transition-all', c === sel ? 'w-6 bg-slate-900' : 'w-2 bg-slate-300 hover:bg-slate-400')} />
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+
+              <div className="mx-auto w-full max-w-[360px]">
+                <motion.div layoutId={`cc-${sel.acc.id}`} transition={spring} className="relative z-10 rounded-[20px] shadow-[0_24px_44px_-20px_rgba(15,23,42,0.7)]">
+                  <CardFace {...faceProps(sel)} />
+                </motion.div>
+                {/* Kartu lain mengintip di belakang */}
+                {cards.filter((c) => c !== sel).slice(0, 2).map((c, i) => (
+                  <motion.button
+                    key={c.acc.id}
+                    type="button"
+                    onClick={() => openCard(c.acc.id)}
+                    aria-label={`Pilih ${c.acc.name}`}
+                    initial={{ opacity: 0, y: -14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.15 + i * 0.06 }}
+                    className={cn('relative mx-auto -mt-3 block h-6 rounded-b-[18px] opacity-90', i === 0 ? 'w-[92%]' : 'w-[84%]', getCardGradientClass(c.acc.cardColor, 'Credit Card'))}
+                    style={{ zIndex: 5 - i }}
+                  />
                 ))}
               </div>
-            )}
-          </div>
 
+              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="space-y-5">
           {/* Tiket kartu terpilih */}
           {sel && (
             <section className="relative overflow-hidden rounded-[22px] bg-slate-50 ring-1 ring-slate-100">
@@ -391,19 +498,6 @@ export function CreditCardHub({
             </section>
           )}
 
-          {/* Paling longgar */}
-          {roomiest && roomiest.days > 0 && (
-            <div className="flex items-start gap-3 rounded-[20px] bg-gradient-to-br from-indigo-50 to-violet-50 p-3.5 ring-1 ring-indigo-100">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[18px]" aria-hidden>🦁</span>
-              <div className="min-w-0">
-                <p className="flex items-center gap-1 text-[13px] font-bold text-indigo-900"><Sparkles size={13} /> Paling longgar dipakai hari ini</p>
-                <p className="text-[13px] text-slate-700">
-                  Belanja pakai <span className="font-semibold">{roomiest.acc.name}</span> hari ini, bayarnya {fmt(roomiest.due, { day: 'numeric', month: 'short' })} — <span className="font-semibold">{roomiest.days} hari lagi</span>.
-                </p>
-                <p className="text-[11px] text-slate-500">Kalau tagihan sebelumnya dibayar penuh.</p>
-              </div>
-            </div>
-          )}
 
           {/* Belanja siklus ini */}
           {sel && (
@@ -418,53 +512,31 @@ export function CreditCardHub({
                 <p className="rounded-[18px] bg-slate-50 py-5 text-center text-[13px] text-slate-500">Belum ada belanja di kartu ini{sel.cycle ? ' sejak tanggal cetak' : ''}.</p>
               ) : (
                 <ul className="divide-y divide-slate-100 rounded-[18px] bg-white ring-1 ring-slate-100">
-                  {cycleSpend.slice(0, 8).map((t) => {
+                  {cycleSpend.slice(0, 12).map((t, i) => {
                     const v = categoryVisual(t.category, t.type);
                     return (
-                      <li key={t.id} className="flex items-center gap-3 px-3.5 py-2">
+                      <motion.li key={t.id} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 + i * 0.04 }} className="flex items-center gap-3 px-3.5 py-2">
                         <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[15px]', v.tile)} aria-hidden>{v.emoji}</span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-[13px] font-semibold text-slate-900">{t.note || t.subCategory || t.category}</span>
                           <span className="block truncate text-[11px] text-slate-500">{fmt(localYmd(t.date), { day: 'numeric', month: 'short' })} · {t.category}</span>
                         </span>
                         <span className="shrink-0 text-[13px] font-bold text-slate-900 tabular-nums">−{money(Number(t.amount) || 0, t.currency)}</span>
-                      </li>
+                      </motion.li>
                     );
                   })}
                 </ul>
               )}
-              {cycleSpend.length > 8 && <p className="mt-1 text-center text-[11px] text-slate-400">+{cycleSpend.length - 8} transaksi lain</p>}
+              {cycleSpend.length > 12 && <p className="mt-1 text-center text-[11px] text-slate-400">+{cycleSpend.length - 12} transaksi lain</p>}
             </section>
           )}
 
-          {/* 30 hari ke depan */}
-          {upcoming.length > 0 && (
-            <section>
-              <h3 className="mb-2 text-[15px] font-bold text-slate-900">30 hari ke depan</h3>
-              <ol className="relative space-y-3 pl-5 before:absolute before:bottom-2 before:left-[5px] before:top-2 before:w-0.5 before:rounded-full before:bg-slate-200">
-                {upcoming.map((e, i) => (
-                  <li key={`${e.info.acc.id}-${e.kind}-${e.date}-${i}`} className="relative">
-                    <span
-                      aria-hidden
-                      className={cn('absolute -left-5 top-1.5 h-3 w-3 rounded-full ring-4 ring-white', e.kind === 'cetak' ? 'bg-slate-300' : e.kind === 'lewat' ? 'bg-rose-500' : 'bg-amber-500')}
-                    />
-                    <button type="button" onClick={() => select(e.info.acc.id)} className="flex w-full items-center gap-3 text-left">
-                      <span className="w-14 shrink-0 text-[12px] font-bold text-slate-500">{fmt(e.date, { day: 'numeric', month: 'short' })}</span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[13px] font-semibold text-slate-900">
-                          {e.kind === 'cetak' ? `Tagihan ${e.info.acc.name} dicetak` : e.kind === 'lewat' ? `${e.info.acc.name} lewat jatuh tempo` : `${e.info.acc.name} jatuh tempo`}
-                        </span>
-                        <span className="block text-[11px] text-slate-400">{fmt(e.date, { weekday: 'long' })}</span>
-                      </span>
-                      {e.amount !== undefined && e.amount > 0 && <span className={cn('shrink-0 text-[13px] font-bold tabular-nums', e.kind === 'lewat' ? 'text-rose-600' : 'text-slate-900')}>{hidden ? '••••' : short(e.amount)}</span>}
-                    </button>
-                  </li>
-                ))}
-              </ol>
-            </section>
+              </motion.div>
+            </div>
           )}
-        </div>
+        </LayoutGroup>
       )}
+      </div>
     </Modal>
   );
 }

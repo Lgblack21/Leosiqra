@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-28 malam (akun B selesai; semua live, main = run #5
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Form kartu kredit khusus |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Pusat kartu: tumpukan + detail |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -273,6 +273,11 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   PARSE_TRANSACTION_MODELS), kuota 20/hari/user (dikembalikan kalau AI gagal), foto tidak disimpan, server hanya
   kembalikan 4 digit terakhir, respons AI tidak di-log. **Belum teruji dgn AI sungguhan** (lokal tanpa API key; UI diuji
   dgn respons tiruan) — cek pindai di production.
+- **Belum di-deploy** (akun B, frontend saja): **pusat Kartu kredit dirombak** — tampilan utama = tumpukan kartu
+  (kartu belakang menyembul 58px, margin negatif berbasis `100cqw / 1.586`) + tips Leo + daftar tagihan 30 hari ke depan
+  (tanggal, nominal, warna kartu). Ketuk kartu/tagihan → detail kartu itu: kartu terbang ke atas (framer `layoutId`),
+  kartu lain mengintip di belakang, tiket tagihan + Sudah bayar/Ubah, belum ditagih/terpakai/limit, belanja siklus ini
+  (animasi berurutan); "Semua kartu" kembali ke tumpukan. Logika angka tidak berubah.
 
 ## Migrasi D1
 
