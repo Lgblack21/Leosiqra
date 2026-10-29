@@ -230,7 +230,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   % ditabung ((masuk−keluar)/masuk), 👑 terhemat / 🔥 terboros, ketuk → Bulanan bulan itu; strip rekor (rata-rata,
   % ditabung, terhemat, terboros, kategori paling naik). "Kategori dari waktu ke waktu" jadi matriks gelembung
   berwarna kategori.
-- **Belum di-deploy** (akun B): **Laporan dirampingkan** (bulanan & tahunan): judul 30px + label periode, kontrol
+- **Live (run #65)** (akun B): **Laporan dirampingkan** (bulanan & tahunan): judul 30px + label periode, kontrol
   kecil, ringkasan jadi satu kartu tipis 3 kolom (HP format "jt", desktop lengkap — dicek tidak ada teks terpotong
   dengan angka ratusan juta), heading 17px, grafik/donat/podium/pola lebih kecil, gelembung kalender dibatasi px &
   % sel, 👑/🔥 kartu bulan pindah ke sebelah nama bulan, Anggaran ikon saja di HP.
