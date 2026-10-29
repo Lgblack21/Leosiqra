@@ -4542,8 +4542,11 @@ const applyCardCycleFields = (payload: Record<string, unknown>, target: Record<s
 // payload_json. Nomor lengkap TIDAK pernah disimpan; hanya 4 digit terakhir.
 // "" / null = hapus. Nilai yang tidak valid ditolak (bukan diam-diam dibuang).
 const CARD_NETWORKS = new Set(["visa", "mastercard", "jcb", "amex", "gpn"]);
+// Pengingat jatuh tempo per kartu: 0 = mati, n = mulai H-n (lalu H-1 & hari H).
+// Tidak diatur = bawaan H-3 (lihat cardReminderDays).
+const CARD_REMINDER_OPTIONS = new Set([0, 1, 3, 5, 7]);
 const hasCardIdentityFields = (payload: Record<string, unknown>) =>
-  payload.card_last4 !== undefined || payload.card_network !== undefined;
+  payload.card_last4 !== undefined || payload.card_network !== undefined || payload.reminder_days !== undefined;
 const applyCardIdentityFields = (payload: Record<string, unknown>, target: Record<string, unknown>): string | null => {
   if (payload.card_last4 !== undefined) {
     const v = payload.card_last4 === null ? "" : String(payload.card_last4).trim();
@@ -4556,6 +4559,11 @@ const applyCardIdentityFields = (payload: Record<string, unknown>, target: Recor
     if (!v) delete target.cardNetwork;
     else if (CARD_NETWORKS.has(v)) target.cardNetwork = v;
     else return "Jaringan kartu tidak dikenal.";
+  }
+  if (payload.reminder_days !== undefined) {
+    if (payload.reminder_days === null || payload.reminder_days === "") delete target.reminderDays;
+    else if (CARD_REMINDER_OPTIONS.has(Number(payload.reminder_days))) target.reminderDays = Number(payload.reminder_days);
+    else return "Pilihan pengingat tidak dikenal.";
   }
   return null;
 };
@@ -4621,6 +4629,108 @@ async function handlePayCreditCard(request: Request, env: Env, cardId: string) {
     env.DB.prepare(`UPDATE accounts SET balance = balance + ? WHERE id = ? AND user_id = ? AND ${exists}`).bind(amount, cardId, userId, inId, userId),
   ]);
   return json({ ok: true, id: outId }, { status: 201 });
+}
+
+// POST /api/member/cards/scan { imageBase64 } — baca foto DEPAN kartu kredit:
+// bank, jaringan, dan 4 digit terakhir. Hanya usulan untuk mengisi form.
+// Foto tidak disimpan; model diminta 4 digit terakhir saja dan server
+// memotong apa pun yang lebih panjang ke 4 angka terakhir (nomor lengkap tidak
+// pernah dikembalikan, disimpan, atau di-log). Kuota harian per user, atomik.
+const CARD_SCAN_DAILY_LIMIT = 20;
+async function handleScanCreditCard(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const payload = await parseJson<{ imageBase64?: unknown }>(request);
+  const imageBase64 = typeof payload.imageBase64 === "string" ? payload.imageBase64.replace(/^data:[^,]*,/, "") : "";
+  if (!imageBase64 || !/^[A-Za-z0-9+/=\s]+$/.test(imageBase64.slice(0, 200))) return json({ error: "Kirim foto kartu." }, { status: 400 });
+  if (imageBase64.length > 7_000_000) return json({ error: "Foto terlalu besar (maks. ±5 MB)." }, { status: 413 });
+
+  const today = todayWIB();
+  const quota = await env.DB.prepare(
+    `UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.cardScanAi',
+            json_object('day', ?, 'n', CASE WHEN json_valid(metadata_json) AND json_extract(metadata_json, '$.cardScanAi.day') = ?
+                                           THEN COALESCE(json_extract(metadata_json, '$.cardScanAi.n'), 0) + 1 ELSE 1 END))
+      WHERE id = ?
+        AND NOT (json_valid(metadata_json) AND json_extract(metadata_json, '$.cardScanAi.day') = ?
+                 AND COALESCE(json_extract(metadata_json, '$.cardScanAi.n'), 0) >= ?)`
+  )
+    .bind(today, today, userId, today, CARD_SCAN_DAILY_LIMIT)
+    .run();
+  if (!quota.meta.changes) return json({ error: `Batas pindai kartu hari ini (${CARD_SCAN_DAILY_LIMIT}x) sudah habis. Isi manual dulu ya.` }, { status: 429 });
+  const refund = () =>
+    env.DB.prepare(
+      `UPDATE users SET metadata_json = json_set(metadata_json, '$.cardScanAi.n', MAX(0, COALESCE(json_extract(metadata_json, '$.cardScanAi.n'), 1) - 1))
+        WHERE id = ? AND json_valid(metadata_json) AND json_extract(metadata_json, '$.cardScanAi.day') = ?`
+    ).bind(userId, today).run().catch(() => undefined);
+
+  const openRouter = await getOpenRouterKey(env);
+  if (!openRouter) {
+    await refund();
+    return json({ error: "AI belum dikonfigurasi." }, { status: 503 });
+  }
+  const systemPrompt = `Kamu membaca foto BAGIAN DEPAN kartu kredit/debit.
+Balas HANYA satu objek JSON valid: {"is_card": boolean, "bank": string | null, "network": "visa" | "mastercard" | "jcb" | "amex" | "gpn" | null, "last4": string | null}
+Aturan:
+- bank: nama bank penerbit singkat seperti tertulis/logo (mis. "BCA", "Mandiri", "BNI", "BRI", "CIMB Niaga", "UOB"), null kalau tidak terlihat.
+- network: dari logo jaringan di kartu, null kalau tidak terlihat.
+- last4: HANYA 4 digit TERAKHIR nomor kartu. JANGAN pernah menulis nomor kartu lengkap, nama pemilik, masa berlaku, atau CVV.
+- is_card false kalau gambar bukan kartu bank.`;
+  let raw = "";
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${openRouter.key}`,
+        "http-referer": env.APP_URL || "https://www.leosiqra.com",
+        "x-title": env.APP_NAME || "Leosiqra",
+      },
+      body: JSON.stringify({
+        models: PARSE_TRANSACTION_MODELS,
+        route: "fallback",
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Baca kartu ini." },
+              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
+            ],
+          },
+        ],
+        temperature: 0,
+        max_tokens: 200,
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!response.ok) throw new Error(`OpenRouter request gagal (${response.status})`);
+    const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    raw = data.choices?.[0]?.message?.content?.trim() ?? "";
+  } catch (error) {
+    await refund();
+    if (isAiQuotaError(error)) {
+      await notifyAiQuotaOnce(env);
+      return json({ error: AI_QUOTA_MESSAGE }, { status: 503 });
+    }
+    // Sengaja tanpa isi respons: bisa memuat data kartu.
+    console.error("Pindai kartu gagal:", error instanceof Error ? error.message.slice(0, 80) : "unknown");
+    return json({ error: "AI sedang gangguan. Coba lagi sebentar lagi, atau isi manual." }, { status: 503 });
+  }
+
+  let parsed: { is_card?: unknown; bank?: unknown; network?: unknown; last4?: unknown } = {};
+  try {
+    parsed = JSON.parse(stripJsonFences(raw));
+  } catch {
+    return json({ error: "Kartu tidak terbaca. Coba foto lebih terang dan lurus, atau isi manual." }, { status: 422 });
+  }
+  if (parsed.is_card === false) return json({ error: "Foto ini sepertinya bukan kartu. Coba foto bagian depan kartu." }, { status: 422 });
+  const digits = typeof parsed.last4 === "string" || typeof parsed.last4 === "number" ? String(parsed.last4).replace(/\D/g, "") : "";
+  const last4 = digits.length >= 4 ? digits.slice(-4) : null;
+  const network = typeof parsed.network === "string" && CARD_NETWORKS.has(parsed.network.toLowerCase()) ? parsed.network.toLowerCase() : null;
+  const bank = typeof parsed.bank === "string" ? parsed.bank.replace(/[^\p{L}\p{N} &.-]/gu, "").trim().slice(0, 40) || null : null;
+  if (!last4 && !network && !bank) return json({ error: "Kartu tidak terbaca. Coba foto lebih terang dan lurus, atau isi manual." }, { status: 422 });
+  return json({ ok: true, bank, network, last4 });
 }
 
 async function handleCreateAccount(request: Request, env: Env) {
@@ -12372,7 +12482,14 @@ const TAX_DEADLINE_REMINDERS: Record<string, string> = {
 // ===== Pengingat jatuh tempo kartu kredit (H-3, H-1, hari H), jam 10:00 WIB =====
 // Kalkulasi siklus memakai src/lib/creditCycle.ts yang sama dengan frontend
 // (Kartu Saya & Dashboard), jadi angka di notifikasi = angka di layar.
-const CARD_REMINDER_DAYS = new Set([3, 1, 0]);
+// Hari kirim pengingat untuk satu kartu (H-n): bawaan {3, 1, 0}; reminderDays
+// di payload_json mengganti titik awalnya (0 = mati).
+const cardReminderDays = (reminderDays: unknown): Set<number> => {
+  const n = Number(reminderDays);
+  if (reminderDays === undefined || reminderDays === null || !CARD_REMINDER_OPTIONS.has(n)) return new Set([3, 1, 0]);
+  if (n === 0) return new Set();
+  return new Set([n, 1, 0]);
+};
 
 const formatMoneyForPush = (amount: number, currency: string) => {
   try {
@@ -12392,9 +12509,9 @@ const sendCreditCardDueReminders = async (env: Env) => {
 
   for (const card of results ?? []) {
     try {
-      let settings: CardCycleSettings = {};
+      let settings: CardCycleSettings & { reminderDays?: unknown } = {};
       try {
-        settings = JSON.parse(card.payload_json || "{}") as CardCycleSettings;
+        settings = JSON.parse(card.payload_json || "{}") as CardCycleSettings & { reminderDays?: unknown };
       } catch {
         continue;
       }
@@ -12418,7 +12535,7 @@ const sendCreditCardDueReminders = async (env: Env) => {
       });
 
       const cycle = computeCardCycle(used, flows, settings, today);
-      if (!cycle || cycle.amountDue <= 0 || !CARD_REMINDER_DAYS.has(cycle.daysUntilDue)) continue;
+      if (!cycle || cycle.amountDue <= 0 || !cardReminderDays(settings.reminderDays).has(cycle.daysUntilDue)) continue;
 
       const currency = card.currency || "IDR";
       const when = cycle.daysUntilDue === 0 ? "hari ini" : cycle.daysUntilDue === 1 ? "besok" : `${cycle.daysUntilDue} hari lagi`;
@@ -14816,6 +14933,10 @@ const worker = {
 
       if (url.pathname === "/api/member/accounts" && request.method === "POST") {
         return await handleCreateAccount(request, env);
+      }
+
+      if (url.pathname === "/api/member/cards/scan" && request.method === "POST") {
+        return await handleScanCreditCard(request, env);
       }
 
       if (url.pathname === "/api/member/accounts/reorder" && request.method === "PUT") {

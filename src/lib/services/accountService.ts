@@ -22,6 +22,8 @@ export interface Account {
   /** Kartu kredit: 4 digit terakhir & jaringan (visa/mastercard/jcb/amex/gpn). */
   cardLast4?: string;
   cardNetwork?: string;
+  /** Pengingat jatuh tempo: 0 = mati, n = mulai H-n. Tidak diatur = H-3. */
+  reminderDays?: number;
   // Urutan tampil rekening (drag-to-reorder di Kartu Saya) — dipakai semua
   // halaman/dropdown yang menampilkan daftar rekening.
   sortOrder?: number;
@@ -32,6 +34,7 @@ export interface AccountPayloadFields {
   cardColor?: string;
   cardLast4?: string;
   cardNetwork?: string;
+  reminderDays?: number;
   creditLimit: number;
   statementDay?: number;
   dueDay?: number;
@@ -51,6 +54,7 @@ export const parseAccountPayload = (payloadJson: unknown): AccountPayloadFields 
       cardColor: typeof p.cardColor === 'string' ? p.cardColor : undefined,
       cardLast4: typeof p.cardLast4 === 'string' ? p.cardLast4 : undefined,
       cardNetwork: typeof p.cardNetwork === 'string' ? p.cardNetwork : undefined,
+      reminderDays: num(p.reminderDays),
       creditLimit: Number(p.creditLimit) || 0,
       statementDay: num(p.statementDay),
       dueDay: num(p.dueDay),
@@ -67,6 +71,7 @@ export const parseAccountPayload = (payloadJson: unknown): AccountPayloadFields 
 const cycleFieldsForApi = (data: Partial<Account>) => ({
   ...('cardLast4' in data ? { card_last4: data.cardLast4 || null } : {}),
   ...('cardNetwork' in data ? { card_network: data.cardNetwork || null } : {}),
+  ...('reminderDays' in data ? { reminder_days: data.reminderDays ?? null } : {}),
   ...('statementDay' in data ? { statement_day: data.statementDay ?? null } : {}),
   ...('dueDay' in data ? { due_day: data.dueDay ?? null } : {}),
   ...('minPaymentPercent' in data ? { min_payment_percent: data.minPaymentPercent ?? null } : {}),
@@ -145,6 +150,14 @@ export const accountService = {
     notifyCollectionChanged('accounts');
     notifyCollectionChanged('transactions');
     return result;
+  },
+
+  // Pindai foto depan kartu kredit → usulan bank, jaringan, 4 digit terakhir.
+  async scanCard(imageBase64: string) {
+    return cloudflareApi<{ ok: boolean; bank: string | null; network: string | null; last4: string | null }>('/api/member/cards/scan', {
+      method: 'POST',
+      json: { imageBase64 },
+    });
   },
 
   async deleteAccount(id: string) {

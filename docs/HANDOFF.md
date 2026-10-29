@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-28 malam (akun B selesai; semua live, main = run #5
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Pusat kartu kredit |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Form kartu kredit khusus |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -263,6 +263,16 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   & `card_network` (visa/mastercard/jcb/amex/gpn) di payload_json, input salah → 400. AccountModal: field 4 digit &
   jaringan. Diuji lokal: bayar 3,322 jt (saldo BCA & kartu pas), ref sama → duplicate, 3 paralel → 1 masuk, hapus
   sisi Masuk/Keluar (reverse=1) → pasangan ikut terhapus & saldo pulih, validasi 400/404/401. Belum: pindai kartu (AI).
+- **Belum di-deploy** (akun B, butuh deploy Worker, tanpa migrasi): **form kartu kredit khusus** (`CreditCardForm`)
+  menggantikan form rekening umum utk kartu (pusat kartu Tambah/Ubah, detail rekening, AccountModal pilih "Credit Card"
+  → pindah, modal global 'kartu'; `CardModal.tsx` lama yang tak terpakai dihapus). Pratinjau kartu live (`CardFace`,
+  dipakai juga carousel), pilih bank (logo otomatis), nama, 4 digit, tanggal cetak/jatuh tempo via grid 1–28, tagihan,
+  limit, minimum bayar, pengingat Mati/H-1/H-3/H-5/H-7, jaringan, warna, hapus kartu.
+  Worker: `reminder_days` (0/1/3/5/7) di payload_json, cron pengingat kartu pakai `cardReminderDays` (bawaan tetap
+  H-3/H-1/hari H). `POST /api/member/cards/scan {imageBase64}` → {bank, network, last4} via OpenRouter (model
+  PARSE_TRANSACTION_MODELS), kuota 20/hari/user (dikembalikan kalau AI gagal), foto tidak disimpan, server hanya
+  kembalikan 4 digit terakhir, respons AI tidak di-log. **Belum teruji dgn AI sungguhan** (lokal tanpa API key; UI diuji
+  dgn respons tiruan) — cek pindai di production.
 
 ## Migrasi D1
 

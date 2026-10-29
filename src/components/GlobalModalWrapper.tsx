@@ -16,13 +16,13 @@ import { RecurringModal } from '@/components/modals/RecurringModal';
 import { BudgetModal } from '@/components/modals/BudgetModal';
 import { LedgerModal } from '@/components/modals/LedgerModal';
 import { AccountModal } from '@/components/modals/AccountModal';
-import { CardModal } from '@/components/modals/CardModal';
+import { CreditCardForm } from '@/components/rekening/CreditCardForm';
 import { CurrencyModal } from '@/components/modals/CurrencyModal';
 import { accountService } from '@/lib/services/accountService';
 import type { Investment } from '@/lib/services/investmentService';
 
 export const GlobalModalWrapper = () => {
-  const { activeModal, modalData, closeModal } = useModal();
+  const { activeModal, modalData, openModal, closeModal } = useModal();
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [accountTypes, setAccountTypes] = useState<string[]>([]);
 
@@ -111,12 +111,13 @@ export const GlobalModalWrapper = () => {
         onClose={closeModal}
         userId={user.id}
         existingTypes={accountTypes}
+        onCreditCard={() => openModal('kartu')}
       />
 
-      <CardModal 
-        isOpen={activeModal === 'kartu'} 
-        onClose={closeModal} 
-        userId={user.id} 
+      <CreditCardForm
+        isOpen={activeModal === 'kartu'}
+        onClose={closeModal}
+        userId={user.id}
       />
       
       <CurrencyModal

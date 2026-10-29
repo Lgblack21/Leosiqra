@@ -33,6 +33,7 @@ import { useFeedback } from '@/components/ui/Feedback';
 import { HeaderSlot } from '@/components/Header';
 import { AccountDetail } from '@/components/rekening/AccountDetail';
 import { CreditCardHub } from '@/components/rekening/CreditCardHub';
+import { CreditCardForm } from '@/components/rekening/CreditCardForm';
 
 // Rekening & dompet: total saldo, daftar rekening kas (bank, e-wallet,
 // tunai, investasi), tumpukan kartu kredit dengan jatuh tempo terdekat,
@@ -84,7 +85,8 @@ export default function RekeningPage() {
   const [reordering, setReordering] = useState(false);
   // Pusat kartu kredit: undefined = tertutup, string/null = terbuka (kartu awal).
   const [hub, setHub] = useState<{ id: string | null; n: number } | undefined>(undefined);
-  const [createType, setCreateType] = useState<'Bank Account' | 'Credit Card'>('Bank Account');
+  // Form khusus kartu kredit: undefined = tertutup, null = kartu baru.
+  const [cardForm, setCardForm] = useState<Account | null | undefined>(undefined);
 
   useEffect(() => onAuthStateChanged(auth, (u) => setUid(u?.uid ?? null)), []);
 
@@ -201,7 +203,11 @@ export default function RekeningPage() {
       accountService.getUserAccounts('session').then(setAccounts).catch(console.error);
     });
   };
-  const openCreate = () => { setCreateType('Bank Account'); setEditingAccount(null); setIsModalOpen(true); };
+  const openCreate = () => { setEditingAccount(null); setIsModalOpen(true); };
+  const openEdit = (a: Account) => {
+    if (isCreditAccountType(a.type)) setCardForm(a);
+    else { setEditingAccount(a); setIsModalOpen(true); }
+  };
   const openHub = (id: string | null | undefined) => setHub((h) => ({ id: id ?? null, n: (h?.n ?? 0) + 1 }));
 
   // Komposisi kas: porsi saldo positif tiap rekening (untuk bar di kartu atas).
@@ -493,8 +499,8 @@ export default function RekeningPage() {
           totalIdr={cardsUsedIdr}
           initialId={hub.id}
           onClose={() => setHub(undefined)}
-          onEdit={(a) => { setHub(undefined); setEditingAccount(a); setIsModalOpen(true); }}
-          onAdd={() => { setHub(undefined); setCreateType('Credit Card'); setEditingAccount(null); setIsModalOpen(true); }}
+          onEdit={(a) => { setHub(undefined); setCardForm(a); }}
+          onAdd={() => { setHub(undefined); setCardForm(null); }}
         />
       )}
 
@@ -504,9 +510,18 @@ export default function RekeningPage() {
         hidden={hidden}
         deleting={deletingId === detailId}
         onClose={() => setDetailId(null)}
-        onEdit={(a) => { setDetailId(null); setEditingAccount(a); setIsModalOpen(true); }}
+        onEdit={(a) => { setDetailId(null); openEdit(a); }}
         onDelete={(a) => void handleDelete(a)}
       />
+
+      {uid && (
+        <CreditCardForm
+          isOpen={cardForm !== undefined}
+          onClose={() => setCardForm(undefined)}
+          userId={uid}
+          initialData={cardForm ?? null}
+        />
+      )}
 
       {uid && (
         <AccountModal
@@ -514,8 +529,7 @@ export default function RekeningPage() {
           isOpen={isModalOpen}
           onClose={() => { setIsModalOpen(false); setEditingAccount(null); }}
           initialData={editingAccount}
-          initialType={createType}
-          title={createType === 'Credit Card' ? 'Tambah Kartu Baru' : undefined}
+          onCreditCard={() => { setIsModalOpen(false); setCardForm(null); }}
           existingTypes={Array.from(new Set(accounts.map((a) => a.type).filter(Boolean)))}
         />
       )}

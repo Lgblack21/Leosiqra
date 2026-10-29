@@ -27,12 +27,15 @@ interface AccountModalProps {
   // Jenis rekening custom yang sudah pernah dipakai user (mis. "Reksadana",
   // "Emas Digital"), supaya bisa dipilih ulang tanpa mengetik lagi.
   existingTypes?: string[];
+  // Kartu kredit punya form khusus (CreditCardForm): kalau diisi, memilih
+  // jenis "Credit Card" saat menambah rekening baru pindah ke form itu.
+  onCreditCard?: () => void;
 }
 
 const BUILT_IN_TYPES = ['Bank Account', 'E-Wallet', 'Cash', 'Investment Account', 'Credit Card'];
 const CUSTOM_TYPE_VALUE = '__custom__';
 
-export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Account', title = 'Tambah Rekening Baru', initialData = null, existingTypes = [] }: AccountModalProps) => {
+export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Account', title = 'Tambah Rekening Baru', initialData = null, existingTypes = [], onCreditCard }: AccountModalProps) => {
   const { toast } = useFeedback();
   const [formData, setFormData] = useState({
     name: '',
@@ -287,6 +290,10 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
                       return;
                     }
                     const newType = e.target.value as Account['type'];
+                    if (newType === 'Credit Card' && !initialData && onCreditCard) {
+                      onCreditCard();
+                      return;
+                    }
                     const matched = !initialData ? matchIndonesianInstitutionLogo(formData.name, newType) : null;
                     if (matched && (logoIsAuto || !formData.logoUrl)) {
                       setFormData({ ...formData, type: newType, logoUrl: matched });
