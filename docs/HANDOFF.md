@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-10-29 (akun B; semua live, main = run #80)
+Terakhir diperbarui: 2026-10-29 (akun B; semua live, main = run #81)
 
 ## Siapa sedang kerja
 
@@ -329,7 +329,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   cache edge 30 mnt (`kabar/v2`). **Belum terverifikasi**: fetch RSS CNBC sungguhan (sandbox diblok) — kalau kosong di prod,
   cek log `Kabar: gagal ambil`. Angka BI-Rate/LPS/SBN = **data manual** `src/lib/sbnData.ts` per 2026-10-29, WAJIB
   diperbarui saat berubah (halaman memperingatkan setelah 45 hari). Peta yield curve pasar belum dibuat (tak ada sumber data).
-- **Belum di-deploy** (akun B, frontend saja, tanpa Worker/migrasi): **menu Transfer & Top Up dihapus** — fitur 'transfer'
+- **Live (run #81)** (akun B, frontend saja): **menu Transfer & Top Up dihapus** — fitur 'transfer'
   keluar dari FEATURES (id tetap sah di tipe & Worker) dan dari navGroups/halaman Fitur. `/membership/transactions/topup`
   → redirect `/membership/transactions/daily?jenis=transfer` (Riwayat dengan filter Transfer aktif). Datanya tidak
   berubah (memang baris transaksi type transfer/topup); mencatat tetap lewat Catat Transaksi → Transfer & Top Up.
