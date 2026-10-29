@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-28 malam (akun B selesai; semua live, main = run #5
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Kartu Saya → Rekening, rapikan Transaksi/Laporan |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Transaksi dipadatkan |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -204,6 +204,9 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   (perlu deploy Worker — ikut workflow). Transaksi: kartu Keluar/Masuk/Selisih, beli/jual investasi = pindah dana
   (`isInvestmentFlow`), PAGE 60. Laporan: 3 kartu ringkasan, kontrol satu baris, donat + daftar berdampingan,
   investasi dikecualikan. `Modal` bersama: tanpa backdrop-blur & tanpa `mt-16` sisa header lama.
+- **Belum di-deploy** (akun B): **Transaksi dipadatkan** — judul & nominal lebih kecil, Keluar/Masuk/Selisih jadi satu
+  kartu tipis 3 kolom, Periode jadi dropdown, Jenis jadi segmented kecil sebaris dengan pencarian, chip filter
+  ringkas (13px) + tombol Reset, baris transaksi lebih rapat (ikon 36px, teks 14px).
 
 ## Migrasi D1
 
