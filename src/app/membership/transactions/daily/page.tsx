@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Trash2, Download, Plus, ChevronDown, Tags, Wallet, CalendarDays, X, Paperclip, Hash, SlidersHorizontal } from 'lucide-react';
+import { Search, Trash2, Download, Plus, ChevronDown, Tags, Wallet, CalendarDays, X, Paperclip, Hash, SlidersHorizontal, Check, CircleCheck } from 'lucide-react';
 import { useTags } from '@/lib/useTags';
 import { TagPicker, TagChip } from '@/components/tags/TagPicker';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -9,13 +9,14 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { accountService, Account } from '@/lib/services/accountService';
-import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
+import { subscribeToCollectionChanges, notifyCollectionChanged } from '@/lib/cf-firestore';
 import { cn, isIncomingTransaction, isInvestmentFlow, formatIDR, formatMoney, toLocalDateString } from '@/lib/utils';
 import { categoryVisual, useCategoryStyles } from '@/lib/categoryEmoji';
 import { useFeedback } from '@/components/ui/Feedback';
 import { usePrimaryAdd } from '@/lib/useRecordingPrefs';
 import { attachmentService } from '@/lib/services/attachmentService';
 import { HeaderSlot } from '@/components/Header';
+import { BulkActionBar, BulkCategorySheet } from '@/components/transactions/BulkBar';
 
 // Riwayat transaksi: semua transaksi dikelompokkan per hari, dengan filter
 // periode, jenis, kategori, dompet, pencarian, dan ekspor CSV.
@@ -111,6 +112,11 @@ export default function DailyTransactionLogPage() {
   const [sort, setSort] = useState<Sort>('terbaru');
   const [shown, setShown] = useState(PAGE);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Mode Pilih: pilih banyak transaksi → pindah kategori / hapus sekaligus.
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState<string | null>(null);
+  const [catSheet, setCatSheet] = useState(false);
   const { toast, confirm } = useFeedback();
   const primaryAdd = usePrimaryAdd();
 
@@ -217,6 +223,103 @@ export default function DailyTransactionLogPage() {
   const totalIn = useMemo(() => filtered.filter(isEarn).reduce((s, t) => s + idr(t), 0), [filtered]);
   const totalMove = useMemo(() => filtered.filter(isMove).length, [filtered]);
 
+  // Pilihan hanya untuk yang sedang terlihat di filter — ganti filter = yang
+  // tersembunyi dilepas, supaya tidak ada yang ikut terhapus tanpa terlihat.
+  useEffect(() => {
+    setSelected((prev) => {
+      if (prev.size === 0) return prev;
+      const ids = new Set(filtered.map((t) => t.id));
+      const next = new Set([...prev].filter((id) => ids.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [filtered]);
+  useEffect(() => {
+    if (!selectMode) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !bulkBusy && !catSheet) exitSelect(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+  const exitSelect = () => { setSelectMode(false); setSelected(new Set()); };
+  const toggle = (id?: string) => {
+    if (!id) return;
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const toggleMany = (items: Transaction[]) => {
+    const ids = items.map((t) => t.id).filter((id): id is string => Boolean(id));
+    setSelected((prev) => {
+      const next = new Set(prev);
+      const all = ids.every((id) => next.has(id));
+      for (const id of ids) if (all) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const selectedTx = useMemo(() => filtered.filter((t) => t.id && selected.has(t.id)), [filtered, selected]);
+  const selOut = selectedTx.filter(isSpend).reduce((s, t) => s + idr(t), 0);
+  const selIn = selectedTx.filter(isEarn).reduce((s, t) => s + idr(t), 0);
+  const catKind: 'pengeluaran' | 'pemasukan' | null =
+    selectedTx.length > 0 && selectedTx.every(isSpend) ? 'pengeluaran' : selectedTx.length > 0 && selectedTx.every(isEarn) ? 'pemasukan' : null;
+  const catReason = selectedTx.length === 0 ? null : catKind ? null : 'Pilih hanya pengeluaran atau hanya pemasukan untuk pindah kategori (transfer & investasi tidak bisa).';
+
+  // Hapus satu per satu lewat endpoint yang sama dengan hapus biasa (saldo
+  // dibalik di server). Transfer ikut menghapus pasangannya — id yang sudah
+  // terhapus dilewati supaya saldo tidak dibalik dua kali.
+  const bulkDelete = async () => {
+    const list = selectedTx;
+    if (list.length === 0) return;
+    const transfers = list.filter((t) => t.type === 'transfer' || t.type === 'topup').length;
+    const ok = await confirm({
+      title: `Hapus ${list.length} transaksi?`,
+      message: `Saldo rekening terkait dikembalikan${transfers > 0 ? '; transfer ikut menghapus sisi pasangannya' : ''}. Tindakan ini tidak bisa dibatalkan.`,
+      confirmLabel: `Hapus ${list.length}`,
+      danger: true,
+    });
+    if (!ok) return;
+    const gone = new Set<string>();
+    let done = 0;
+    try {
+      for (const t of list) {
+        if (!t.id || gone.has(t.id)) continue;
+        setBulkBusy(`${done + 1}/${list.length}`);
+        const ids = await transactionService.deleteTransaction(t);
+        gone.add(t.id);
+        ids.forEach((id) => gone.add(id));
+        done++;
+      }
+      toast.success(`${gone.size} transaksi dihapus.`);
+      exitSelect();
+    } catch (e) {
+      console.error(e);
+      toast.error(`Berhenti setelah ${gone.size} transaksi terhapus — ${e instanceof Error && e.message ? e.message : 'coba lagi'}.`);
+      setSelected((prev) => new Set([...prev].filter((id) => !gone.has(id))));
+    } finally {
+      setBulkBusy(null);
+    }
+  };
+
+  const bulkCategory = async (category: string) => {
+    const list = selectedTx.filter((t) => t.id && t.category !== category);
+    let done = 0;
+    try {
+      for (const t of list) {
+        await transactionService.updateTransaction(t.id!, { category });
+        done++;
+        setTransactions((all) => all.map((x) => (x.id === t.id ? { ...x, category } : x)));
+      }
+      toast.success(`${selectedTx.length} transaksi dipindah ke ${category}.`);
+      setCatSheet(false);
+      exitSelect();
+    } catch (e) {
+      console.error(e);
+      toast.error(`Baru ${done} dari ${list.length} yang dipindah. Silakan coba lagi.`);
+    } finally {
+      notifyCollectionChanged('transactions');
+    }
+  };
+
   // Dikelompokkan per hari (urutan "terbesar" tidak dikelompokkan supaya urutannya tetap terlihat).
   const groups = useMemo(() => {
     const visible = filtered.slice(0, shown);
@@ -318,6 +421,16 @@ export default function DailyTransactionLogPage() {
           <p className="text-[13px] text-slate-500">{loading ? 'Memuat…' : `${filtered.length} transaksi · ${periodLabel.toLowerCase()}`}</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
+            disabled={filtered.length === 0}
+            aria-pressed={selectMode}
+            aria-label={selectMode ? 'Selesai memilih' : 'Pilih transaksi'}
+            className={cn('flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-semibold ring-1 transition-colors disabled:opacity-40 md:px-3.5', selectMode ? 'bg-indigo-600 text-white ring-indigo-600' : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50')}
+          >
+            {selectMode ? <Check size={15} /> : <CircleCheck size={15} />} <span className="hidden md:inline">{selectMode ? 'Selesai' : 'Pilih'}</span>
+          </button>
           <div className="hidden gap-2 md:flex">
             <button
               type="button"
@@ -485,11 +598,26 @@ export default function DailyTransactionLogPage() {
           )}
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className={cn('space-y-5', selectMode && 'pb-24')}>
           {groups.map((g) => (
             <section key={g.key}>
-              <div className="mb-1.5 flex items-baseline justify-between px-2">
-                <h2 className="text-[13px] font-semibold text-slate-500">{g.label}</h2>
+              <div className="mb-1.5 flex items-center justify-between px-2">
+                {selectMode ? (
+                  <button type="button" onClick={() => toggleMany(g.items)} className="flex items-center gap-2 text-[13px] font-semibold text-slate-500 hover:text-slate-800">
+                    {(() => {
+                      const n = g.items.filter((t) => t.id && selected.has(t.id)).length;
+                      return (
+                        <span className={cn('flex h-[18px] w-[18px] items-center justify-center rounded-full ring-2 transition-colors', n === g.items.length ? 'bg-indigo-600 text-white ring-indigo-600' : n > 0 ? 'bg-indigo-100 ring-indigo-400' : 'ring-slate-300')}>
+                          {n === g.items.length && <Check size={11} strokeWidth={3} />}
+                          {n > 0 && n < g.items.length && <span className="h-0.5 w-2 rounded bg-indigo-600" />}
+                        </span>
+                      );
+                    })()}
+                    {g.label}
+                  </button>
+                ) : (
+                  <h2 className="text-[13px] font-semibold text-slate-500">{g.label}</h2>
+                )}
                 {sort !== 'terbesar' && (
                   <p className="text-[12px] font-semibold tabular-nums text-slate-400">
                     {g.in > 0 && <span className="mr-3 text-emerald-600">+{formatIDR(g.in)}</span>}
@@ -502,13 +630,26 @@ export default function DailyTransactionLogPage() {
                   const incoming = isIncoming(t);
                   const move = isMove(t);
                   const v = categoryVisual(t.category, t.type);
+                  const isSel = Boolean(t.id && selected.has(t.id));
                   return (
                     <li
                       key={t.id}
-                      onClick={(e) => { if (!(e.target as HTMLElement).closest('button,a,input')) setActionId((v) => (v === t.id ? null : t.id ?? null)); }}
-                      className="group grid cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-3 px-3.5 py-2.5 md:cursor-default md:grid-cols-[auto_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto] md:gap-5 md:px-5"
+                      onClick={(e) => {
+                        if (selectMode) { if (!(e.target as HTMLElement).closest('a')) toggle(t.id); return; }
+                        if (!(e.target as HTMLElement).closest('button,a,input')) setActionId((v) => (v === t.id ? null : t.id ?? null));
+                      }}
+                      className={cn(
+                        'group grid cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-3 px-3.5 py-2.5 transition-colors md:grid-cols-[auto_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto] md:gap-5 md:px-5',
+                        selectMode ? (isSel ? 'bg-indigo-50/80' : 'hover:bg-slate-50') : 'md:cursor-default'
+                      )}
                     >
-                      <span className={cn('flex h-9 w-9 items-center justify-center rounded-full text-[17px]', v.tile)} aria-hidden>{v.emoji}</span>
+                      {selectMode ? (
+                        <span className={cn('relative flex h-9 w-9 items-center justify-center rounded-full text-[17px] transition-all duration-200', isSel ? 'scale-105 bg-indigo-600 text-white shadow-[0_6px_14px_-6px_rgba(79,70,229,0.8)]' : cn(v.tile, 'ring-2 ring-slate-200'))} aria-hidden>
+                          {isSel ? <Check size={18} strokeWidth={3} /> : <span className="opacity-60">{v.emoji}</span>}
+                        </span>
+                      ) : (
+                        <span className={cn('flex h-9 w-9 items-center justify-center rounded-full text-[17px]', v.tile)} aria-hidden>{v.emoji}</span>
+                      )}
                       <div className="min-w-0">
                         <p className="flex min-w-0 items-center gap-1.5 text-[14px] font-semibold text-slate-900">
                           <span className="truncate">{titleOf(t)}</span>
@@ -547,9 +688,9 @@ export default function DailyTransactionLogPage() {
                       <button
                         type="button"
                         onClick={() => handleDelete(t)}
-                        disabled={deletingId === t.id}
+                        disabled={deletingId === t.id || selectMode}
                         aria-label="Hapus transaksi"
-                        className="hidden rounded-lg p-2 text-slate-300 transition-colors hover:bg-rose-50 hover:text-rose-500 disabled:opacity-50 md:block md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
+                        className="hidden rounded-lg p-2 text-slate-300 disabled:invisible transition-colors hover:bg-rose-50 hover:text-rose-500 disabled:opacity-50 md:block md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
                       >
                         <Trash2 size={15} />
                       </button>
@@ -574,7 +715,7 @@ export default function DailyTransactionLogPage() {
                           )}
                         </div>
                       )}
-                      {actionId === t.id && tagEditId !== t.id && (
+                      {!selectMode && actionId === t.id && tagEditId !== t.id && (
                         <div className="col-span-full flex gap-2 pl-[48px] md:hidden">
                           {tagsPref.enabled && (
                             <button type="button" onClick={() => { setTagEditId(t.id!); setActionId(null); }} className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3.5 py-2 text-[13px] font-semibold text-slate-700">
@@ -602,6 +743,28 @@ export default function DailyTransactionLogPage() {
             </button>
           )}
         </div>
+      )}
+      <BulkActionBar
+        open={selectMode}
+        count={selectedTx.length}
+        total={filtered.length}
+        out={selOut}
+        inn={selIn}
+        busy={bulkBusy ? `Menghapus ${bulkBusy}` : null}
+        onSelectAll={() => setSelected(selectedTx.length === filtered.length ? new Set() : new Set(filtered.map((t) => t.id).filter((id): id is string => Boolean(id))))}
+        onCategory={() => setCatSheet(true)}
+        categoryDisabledReason={catReason}
+        onDelete={() => void bulkDelete()}
+        onClose={exitSelect}
+      />
+      {catSheet && catKind && (
+        <BulkCategorySheet
+          kind={catKind}
+          count={selectedTx.length}
+          current={selectedTx.every((t) => t.category === selectedTx[0]?.category) ? selectedTx[0]?.category ?? null : null}
+          onClose={() => setCatSheet(false)}
+          onPick={bulkCategory}
+        />
       )}
     </div>
   );

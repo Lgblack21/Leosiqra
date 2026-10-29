@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-28 malam (akun B selesai; semua live, main = run #5
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Transaksi dipadatkan |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Mode Pilih di Transaksi |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -207,6 +207,13 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 - **Live (run #61)** (akun B): **Transaksi dipadatkan** — judul & nominal lebih kecil, Keluar/Masuk/Selisih jadi satu
   kartu tipis 3 kolom, Periode jadi dropdown, Jenis jadi segmented kecil sebaris dengan pencarian, chip filter
   ringkas (13px) + tombol Reset, baris transaksi lebih rapat (ikon 36px, teks 14px).
+- **Belum di-deploy** (akun B): **mode Pilih di Transaksi** (`components/transactions/BulkBar.tsx`). Tombol Pilih →
+  ikon baris jadi centang, pilih sehari lewat lingkaran di judul tanggal, bar aksi melayang (z-60, di atas ajakan
+  pasang PWA): Semua, Kategori, Hapus. Pindah kategori hanya kalau semua pengeluaran atau semua pemasukan (bukan
+  transfer/investasi), kategori investasi disembunyikan; update kategori saja (saldo tak berubah). Hapus = loop
+  `deleteTransaction` (endpoint biasa, saldo dibalik server), id pasangan transfer yang sudah ikut terhapus dilewati;
+  berhenti & lapor kalau gagal di tengah. Pilihan disaring ke yang terlihat di filter. Diuji lokal: kategori di server
+  berubah, saldo BCA/Tunai kembali persis sebesar 3 transaksi yang dihapus.
 
 ## Migrasi D1
 
