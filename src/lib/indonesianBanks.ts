@@ -32,6 +32,9 @@ const BANK_ENTRIES: InstitutionEntry[] = [
   { domain: 'uob.co.id', aliases: ['uob'] },
   { domain: 'sc.com', aliases: ['standard chartered', 'stanchart'] },
   { domain: 'citibank.co.id', aliases: ['citibank', 'citi'] },
+  { domain: 'bankbsi.co.id', aliases: ['bsi', 'bank syariah indonesia'] },
+  { domain: 'krom.id', aliases: ['krom'] },
+  { domain: 'blubybcadigital.id', aliases: ['blu'] },
 ];
 
 const EWALLET_ENTRIES: InstitutionEntry[] = [

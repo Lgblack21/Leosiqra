@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bell, BellOff, ChevronDown, Loader2, ScanLine, Trash2 } from 'lucide-react';
+import { Bell, BellOff, Check, ChevronDown, Landmark, Loader2, Plus, ScanLine, Search, Trash2 } from 'lucide-react';
+import { LogoImage } from '@/components/ui/LogoImage';
 import { Modal } from '@/components/ui/Modal';
 import { NumberInput } from '@/components/ui/NumberInput';
 import { useFeedback } from '@/components/ui/Feedback';
@@ -22,7 +23,21 @@ import { cn, formatMoney } from '@/lib/utils';
 // balance negatif (creditBalanceFromUsed), siklus/identitas/pengingat di
 // payload_json lewat accountService.
 
-const BANKS = ['BCA', 'Mandiri', 'BNI', 'BRI', 'CIMB Niaga', 'Danamon', 'Permata', 'OCBC', 'Maybank', 'Mega', 'UOB', 'HSBC', 'Citibank', 'DBS', 'Panin', 'BTN', 'Sinarmas', 'Standard Chartered'];
+// Penerbit kartu kredit — label = nama tampil; logo dari matchIndonesianInstitutionLogo.
+const BANKS = [
+  'BCA', 'Bank Mandiri', 'BRI', 'BNI', 'BSI', 'BTN', 'CIMB Niaga', 'Permata', 'Danamon', 'OCBC', 'Bank Jago', 'Jenius',
+  'SeaBank', 'blu by BCA', 'Allo Bank', 'Krom', 'Maybank', 'DBS', 'UOB', 'HSBC', 'Citibank', 'Standard Chartered', 'Panin', 'Bank Mega', 'Sinarmas',
+];
+const OTHER_BANK = 'Bank lain';
+const BANK_LOGO: Record<string, string | null> = Object.fromEntries(BANKS.map((b) => [b, matchIndonesianInstitutionLogo(b, 'Credit Card')]));
+const normBank = (b: string) => b.toLowerCase().replace(/^(pt\.?\s+)?bank\s+/, '').replace(/\s+bank$/, '').trim();
+// Nama kartu otomatis dari bank (tetap bisa diubah): "BCA" → "Kartu Kredit BCA".
+const autoName = (bank: string) => (bank && bank !== OTHER_BANK ? `Kartu Kredit ${bank.replace(/^Bank\s+|\s+Bank$/g, '')}` : '');
+// Tebak bank dari nama kartu lama (yang paling panjang dulu: "blu by BCA" sebelum "BCA").
+const bankFromName = (name: string) => {
+  const n = name.toLowerCase();
+  return [...BANKS].sort((a, b) => b.length - a.length).find((b) => n.includes(b.toLowerCase()) || n.includes(normBank(b))) ?? '';
+};
 const REMINDERS: { v: number; label: string }[] = [
   { v: 0, label: 'Mati' },
   { v: 1, label: 'H-1' },
@@ -50,10 +65,13 @@ type Form = {
 
 const emptyForm: Form = { bank: '', name: '', logoUrl: '', last4: '', statementDay: null, dueDay: null, used: '', limit: '', minPct: '', minAmount: '', reminder: 3, network: '', color: 'slate' };
 
-const BANK_ALIASES: Record<string, string> = { 'central asia': 'BCA', 'negara indonesia': 'BNI', 'rakyat indonesia': 'BRI', 'cimb': 'CIMB Niaga', 'ocbc nisp': 'OCBC', 'bank mega': 'Mega' };
+const BANK_ALIASES: Record<string, string> = {
+  'central asia': 'BCA', 'negara indonesia': 'BNI', 'rakyat indonesia': 'BRI', 'syariah indonesia': 'BSI', 'tabungan negara': 'BTN',
+  cimb: 'CIMB Niaga', 'ocbc nisp': 'OCBC', mega: 'Bank Mega', mandiri: 'Bank Mandiri', jago: 'Bank Jago', allo: 'Allo Bank', blu: 'blu by BCA',
+};
 
 const fromAccount = (a: Account): Form => ({
-  bank: BANKS.find((b) => a.name.toLowerCase().startsWith(b.toLowerCase())) ?? '',
+  bank: bankFromName(a.name),
   name: a.name,
   logoUrl: a.logoUrl ?? '',
   last4: a.cardLast4 ?? '',
@@ -103,12 +121,27 @@ export function CreditCardForm({
   }, [isOpen, initialData]);
 
   const set = (patch: Partial<Form>) => setF((cur) => ({ ...cur, ...patch }));
-  // Pilih bank: logo ikut, nama terisi kalau masih kosong/nama bank sebelumnya.
-  const pickBank = (bank: string, cur: Form): Partial<Form> => ({
-    bank,
-    logoUrl: matchIndonesianInstitutionLogo(bank, 'Credit Card') ?? cur.logoUrl,
-    name: !cur.name || cur.name === cur.bank ? bank : cur.name,
-  });
+  // Pilih bank: logo ikut; nama kartu terisi otomatis kalau masih kosong atau
+  // masih nama otomatis dari bank sebelumnya (nama yang diketik user tidak ditimpa).
+  const pickBank = (bank: string, cur: Form): Partial<Form> => {
+    const wasAuto = !cur.name.trim() || cur.name === autoName(cur.bank) || cur.name === cur.bank;
+    const prevLogoAuto = !cur.logoUrl || cur.logoUrl === BANK_LOGO[cur.bank];
+    return {
+      bank,
+      logoUrl: bank === OTHER_BANK ? (prevLogoAuto ? '' : cur.logoUrl) : BANK_LOGO[bank] ?? cur.logoUrl,
+      name: wasAuto ? autoName(bank) : cur.name,
+    };
+  };
+  const [bankOpen, setBankOpen] = useState(false);
+  const [bankQuery, setBankQuery] = useState('');
+  const nameRef = useRef<HTMLInputElement>(null);
+  const shownBanks = BANKS.filter((b) => !bankQuery.trim() || b.toLowerCase().includes(bankQuery.trim().toLowerCase()));
+  const choose = (bank: string) => {
+    setF((cur) => ({ ...cur, ...pickBank(bank, cur) }));
+    setBankOpen(false);
+    setBankQuery('');
+    if (bank === OTHER_BANK) requestAnimationFrame(() => nameRef.current?.focus());
+  };
 
   const onScanFile = async (file: File | undefined) => {
     if (!file) return;
@@ -118,9 +151,9 @@ export function CreditCardForm({
       const base64 = await imageFileToBase64(file, 1280, 0.82);
       const res = await accountService.scanCard(base64);
       // "Bank Mandiri", "PT Bank Central Asia" → cocokkan tanpa awalan umum.
-      const bankText = (res.bank ?? '').toLowerCase().replace(/^(pt\.?\s+)?(bank\s+)/, '').trim();
+      const bankText = normBank(res.bank ?? '');
       const known = bankText
-        ? BANKS.find((b) => bankText.startsWith(b.toLowerCase()) || b.toLowerCase().startsWith(bankText)) ??
+        ? BANKS.find((b) => bankText === normBank(b) || bankText.startsWith(`${normBank(b)} `)) ??
           Object.entries(BANK_ALIASES).find(([alias]) => bankText.startsWith(alias))?.[1]
         : undefined;
       const found = [
@@ -264,17 +297,71 @@ export function CreditCardForm({
 
         {/* Kartu */}
         <div className={section}>
-          <div className="-mx-3.5 flex gap-1.5 overflow-x-auto px-3.5 no-scrollbar">
-            {BANKS.map((b) => (
-              <button key={b} type="button" onClick={() => setF((cur) => ({ ...cur, ...pickBank(b, cur) }))} className={chip(f.bank === b)}>
-                {b}
-              </button>
-            ))}
+          {/* Bank: kolom pilihan → panel grid logo + cari (di dalam form) */}
+          <div>
+            <span className={label}>Bank</span>
+            <button
+              type="button"
+              onClick={() => setBankOpen((o) => !o)}
+              aria-expanded={bankOpen}
+              aria-label={`Bank: ${f.bank || 'pilih bank penerbit'}`}
+              className={cn('mt-1 flex w-full items-center gap-2.5 rounded-xl bg-white px-2.5 py-1.5 text-left ring-1', bankOpen ? 'ring-2 ring-indigo-400' : 'ring-slate-200')}
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100">
+                {f.bank && f.bank !== OTHER_BANK ? (
+                  <LogoImage src={BANK_LOGO[f.bank] ?? undefined} alt={f.bank} fallbackText={normBank(f.bank).substring(0, 3).toUpperCase()} className="h-full w-full object-cover" />
+                ) : (
+                  <Landmark size={16} className="text-slate-400" />
+                )}
+              </span>
+              <span className={cn('min-w-0 flex-1 truncate text-[14px] font-semibold', f.bank ? 'text-slate-900' : 'font-normal text-slate-400')}>{f.bank || 'Pilih bank penerbit'}</span>
+              <ChevronDown size={16} className={cn('shrink-0 text-slate-400 transition-transform', bankOpen && 'rotate-180')} />
+            </button>
+            <AnimatePresence initial={false}>
+              {bankOpen && (
+                <motion.div key="bank-grid" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                  <div className="mt-2 rounded-xl bg-white p-2 ring-1 ring-slate-200">
+                    <label className="flex items-center gap-2 rounded-lg bg-slate-50 px-2.5">
+                      <Search size={14} className="shrink-0 text-slate-400" />
+                      <input value={bankQuery} onChange={(e) => setBankQuery(e.target.value)} placeholder="Cari bank…" aria-label="Cari bank" className="w-full bg-transparent py-1.5 text-[13px] outline-none" />
+                    </label>
+                    <div className="mt-2 grid max-h-60 grid-cols-4 gap-1 overflow-y-auto sm:grid-cols-5">
+                      {[...shownBanks, OTHER_BANK].map((b, i) => {
+                        const active = f.bank === b;
+                        return (
+                          <motion.button
+                            key={b}
+                            type="button"
+                            onClick={() => choose(b)}
+                            aria-label={b}
+                            aria-pressed={active}
+                            initial={{ opacity: 0, scale: 0.85 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: Math.min(i, 16) * 0.015 }}
+                            className={cn('relative flex flex-col items-center gap-1 rounded-xl px-1 py-2 transition-colors', active ? 'bg-indigo-50 ring-2 ring-indigo-500' : 'hover:bg-slate-50')}
+                          >
+                            <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-slate-100 shadow-sm">
+                              {b === OTHER_BANK ? (
+                                <Plus size={16} className="text-slate-500" />
+                              ) : (
+                                <LogoImage src={BANK_LOGO[b] ?? undefined} alt={b} fallbackText={normBank(b).substring(0, 3).toUpperCase()} className="h-full w-full object-cover" />
+                              )}
+                            </span>
+                            <span className="line-clamp-1 w-full text-center text-[10.5px] font-semibold text-slate-700">{b}</span>
+                            {active && <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-white"><Check size={10} strokeWidth={3} /></span>}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
           <div className="flex gap-2">
             <label className="block min-w-0 flex-1">
               <span className={label}>Nama kartu</span>
-              <input value={f.name} onChange={(e) => set({ name: e.target.value })} maxLength={60} placeholder="mis. BCA Visa" className={cn(input, 'mt-1')} />
+              <input ref={nameRef} value={f.name} onChange={(e) => set({ name: e.target.value })} maxLength={60} placeholder="mis. Kartu Kredit BCA" className={cn(input, 'mt-1')} />
             </label>
             <label className="block w-[92px] shrink-0">
               <span className={label}>4 digit</span>
@@ -288,6 +375,7 @@ export function CreditCardForm({
               />
             </label>
           </div>
+          {f.bank && f.name === autoName(f.bank) && <p className="-mt-1 text-[11px] text-slate-400">Nama terisi otomatis dari bank — boleh diubah.</p>}
         </div>
 
         {/* Tanggal & pengingat */}

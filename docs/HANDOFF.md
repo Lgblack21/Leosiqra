@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-28 malam (akun B selesai; semua live, main = run #5
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Rekening & form kartu dirampingkan |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Form kartu: pilih bank |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -282,6 +282,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   Rekening jadi daftar ringkas (thumbnail kartu + 4 digit, status jatuh tempo, tagihan/terpakai, bar limit; ketuk →
   detail di pusat kartu), banner keamanan jadi catatan kecil di bawah halaman. CreditCardForm: pratinjau lebih kecil
   dengan tombol "Pindai" menempel, bagian digabung (kartu · tanggal+pengingat · tagihan · tampilan), input lebih padat.
+- **Belum di-deploy** (akun B, frontend saja): **form kartu: pilih bank** — kolom Bank membuka panel grid logo + cari
+  (25 penerbit + "Bank lain"); nama kartu terisi otomatis "Kartu Kredit {bank}" dan tetap bisa diubah (nama yang
+  diketik user tidak ditimpa saat ganti bank). Hasil pindai "PT Bank Negara Indonesia" dll. dicocokkan ke daftar.
+  indonesianBanks: tambah BSI, Krom, blu.
 
 ## Migrasi D1
 
