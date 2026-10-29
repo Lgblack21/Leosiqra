@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { CalendarDays, Check, Loader2, PencilLine, Plus, X } from 'lucide-react';
 import { useCategoryData, type CategoryRow } from '@/components/settings/CategoryBudgetViews';
 import { budgetService } from '@/lib/services/budgetService';
+import { categoryService } from '@/lib/services/categoryService';
 import { useBudgetStartDay } from '@/lib/useBudgetStartDay';
 import { currentBudgetPeriod, formatBudgetPeriod } from '@/lib/budget';
 import { categoryVisual, useCategoryStyles } from '@/lib/categoryEmoji';
@@ -33,6 +34,7 @@ export default function BudgetPage() {
   const { toast } = useFeedback();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Record<string, string>>({});
+  const [names, setNames] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [now, setNow] = useState<Date | null>(null);
   // "Hari ini" mengikuti jam perangkat (static export: belum diketahui saat build).
@@ -65,17 +67,30 @@ export default function BudgetPage() {
 
   const startEdit = () => {
     setDraft(Object.fromEntries(expense.map((r) => [r.name, r.budget?.amount ? String(Math.round(r.budget.amount)) : ''])));
+    setNames(Object.fromEntries(expense.map((r) => [r.name, r.name])));
     setEditing(true);
   };
+  const cleanName = (s: string) => s.replace(/\s+/g, ' ').trim();
+  const renamed = expense.filter((r) => r.name in names && cleanName(names[r.name]) && cleanName(names[r.name]) !== r.name);
   const changed = expense.filter((r) => {
     if (!(r.name in draft)) return false;
     const next = Number(digits(draft[r.name]) || 0);
     return next !== Math.round(r.budget?.amount ?? 0);
   });
+  const changeCount = new Set([...changed, ...renamed].map((r) => r.name)).size;
   const saveAll = async () => {
+    // Cek bentrok antar nama baru di sini dulu; sisanya (nama dipakai kategori
+    // lain, kategori sistem) divalidasi server.
+    const finalNames = expense.map((r) => (renamed.includes(r) ? cleanName(names[r.name]) : r.name).toLowerCase());
+    const dup = finalNames.find((n, i) => finalNames.indexOf(n) !== i);
+    if (dup) { toast.error(`Ada dua kategori bernama "${dup}". Pakai nama yang berbeda.`); return; }
     setSaving(true);
     let done = 0;
+    let renamedCount = 0;
+    let renameError = '';
     try {
+      // Nominal dulu (masih memakai nama lama), lalu ganti nama — anggaran
+      // yang baru dibuat ikut terganti namanya di server.
       for (const r of changed) {
         const value = Number(digits(draft[r.name]) || 0);
         if (!value && r.budget?.id) await budgetService.deleteBudget(r.budget.id);
@@ -83,11 +98,26 @@ export default function BudgetPage() {
         else if (value) await budgetService.createBudget({ userId: auth.currentUser?.uid ?? 'session', type: 'pengeluaran', category: r.name, amount: value, period: 'monthly' });
         done++;
       }
-      toast.success(done ? `${done} anggaran disimpan.` : 'Tidak ada perubahan.');
+      for (const r of renamed) {
+        try {
+          await categoryService.renameGroup(r.name, cleanName(names[r.name]));
+          renamedCount++;
+        } catch (e) {
+          renameError = `${r.name}: ${e instanceof Error && e.message ? e.message : 'gagal ganti nama.'}`;
+          throw e;
+        }
+      }
+      toast.success(
+        done || renamedCount
+          ? [done && `${done} anggaran disimpan`, renamedCount && `${renamedCount} nama diganti`].filter(Boolean).join(' · ') + '.'
+          : 'Tidak ada perubahan.'
+      );
       setEditing(false);
     } catch (e) {
       console.error(e);
-      toast.error(`Baru ${done} dari ${changed.length} yang tersimpan. Coba lagi.`);
+      // Sebagian nama sudah berganti → isian lama tidak cocok lagi; keluar dari mode Ubah.
+      if (renamedCount) setEditing(false);
+      toast.error(renameError || `Baru ${done} dari ${changed.length} yang tersimpan. Coba lagi.`);
     } finally {
       setSaving(false);
     }
@@ -106,6 +136,22 @@ export default function BudgetPage() {
         className="w-full bg-transparent py-2 text-right text-[14px] font-semibold text-slate-900 outline-none placeholder:text-[12px] placeholder:font-normal placeholder:text-slate-400"
       />
     </label>
+  );
+
+  const nameInput = (r: CategoryRow, extra?: ReactNode) => (
+    <div className="flex min-w-0 items-center gap-1.5">
+      <input
+        value={names[r.name] ?? r.name}
+        maxLength={40}
+        onChange={(e) => setNames((d) => ({ ...d, [r.name]: e.target.value }))}
+        aria-label={`Nama kategori ${r.name}`}
+        className={cn(
+          'w-full min-w-0 rounded-lg bg-transparent px-1.5 py-1 -ml-1.5 text-[14px] font-semibold text-slate-900 outline-none ring-1 ring-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-400',
+          renamed.includes(r) && 'bg-indigo-50/60 ring-indigo-200'
+        )}
+      />
+      {extra}
+    </div>
   );
 
   const bar = (value: number, total: number, over: boolean) => (
@@ -127,8 +173,8 @@ export default function BudgetPage() {
             <CalendarDays size={15} /> <span className="hidden sm:inline">Awal periode</span>
           </button>
           {!editing && (
-            <button type="button" onClick={startEdit} disabled={loading} className="flex items-center gap-1.5 rounded-full bg-slate-900 px-3.5 py-2 text-[13px] font-bold text-white disabled:opacity-40">
-              <PencilLine size={15} /> <span className="hidden sm:inline">Ubah anggaran</span>
+            <button type="button" onClick={startEdit} disabled={loading} aria-label="Ubah anggaran & nama" className="flex items-center gap-1.5 rounded-full bg-slate-900 px-3.5 py-2 text-[13px] font-bold text-white disabled:opacity-40">
+              <PencilLine size={15} /> <span className="hidden sm:inline">Ubah</span>
             </button>
           )}
           <HeaderSlot />
@@ -192,9 +238,13 @@ export default function BudgetPage() {
                         <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[18px]', v.tile)} aria-hidden>{v.emoji}</span>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-baseline justify-between gap-2">
-                            <p className="truncate text-[14px] font-semibold text-slate-900">
-                              {r.name}{r.budget?.period === 'yearly' && <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">tahunan</span>}
-                            </p>
+                            {editing ? (
+                              nameInput(r, r.budget?.period === 'yearly' && <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">tahunan</span>)
+                            ) : (
+                              <p className="truncate text-[14px] font-semibold text-slate-900">
+                                {r.name}{r.budget?.period === 'yearly' && <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">tahunan</span>}
+                              </p>
+                            )}
                             {!editing && (
                               <span className={cn('shrink-0 text-[13px] font-bold', p === 'over' ? 'text-rose-600' : p === 'fast' ? 'text-amber-600' : 'text-slate-700')}>
                                 {p === 'over' ? `Lewat ${short(r.spent - amount)}` : `Sisa ${short(amount - r.spent)}`}
@@ -224,7 +274,7 @@ export default function BudgetPage() {
                   return (
                     <li key={r.name} className="flex items-center gap-3 px-4 py-2.5">
                       <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[16px]', v.tile)} aria-hidden>{v.emoji}</span>
-                      <p className="min-w-0 flex-1 truncate text-[14px] font-semibold text-slate-900">{r.name}</p>
+                      {editing ? <div className="min-w-0 flex-1">{nameInput(r)}</div> : <p className="min-w-0 flex-1 truncate text-[14px] font-semibold text-slate-900">{r.name}</p>}
                       {editing ? (
                         amountInput(r)
                       ) : (
@@ -251,9 +301,9 @@ export default function BudgetPage() {
       {editing && (
         <div className="fixed inset-x-0 bottom-24 z-[60] flex justify-center px-3 md:bottom-6 md:left-[84px] lg:left-72 print:hidden">
           <div className="flex w-full max-w-xl items-center gap-2 rounded-[22px] bg-[#0f172a] p-1.5 pl-4 text-white shadow-[0_24px_50px_-18px_rgba(15,23,42,0.75)]">
-            <p className="min-w-0 flex-1 text-[13px] font-semibold">{changed.length ? `${changed.length} anggaran diubah` : 'Ketik nominal; kosongkan untuk menghapus'}</p>
+            <p className="min-w-0 flex-1 text-[13px] font-semibold">{changeCount ? `${changeCount} kategori diubah` : 'Ubah nama atau nominal; nominal kosong = hapus anggaran'}</p>
             <button type="button" onClick={() => setEditing(false)} disabled={saving} className="flex items-center gap-1 rounded-full px-3 py-2 text-[13px] font-semibold text-white/80 hover:bg-white/10"><X size={15} /> Batal</button>
-            <button type="button" onClick={() => void saveAll()} disabled={saving || changed.length === 0} className="flex items-center gap-1.5 rounded-full bg-emerald-500 px-4 py-2 text-[13px] font-bold disabled:opacity-40">
+            <button type="button" onClick={() => void saveAll()} disabled={saving || changeCount === 0} className="flex items-center gap-1.5 rounded-full bg-emerald-500 px-4 py-2 text-[13px] font-bold disabled:opacity-40">
               {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} strokeWidth={3} />} Simpan
             </button>
           </div>

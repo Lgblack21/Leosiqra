@@ -246,6 +246,9 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   baris user dari sesi. 409 kalau nama dipakai kategori lain (gabung kategori belum didukung), 400 untuk kategori
   sistem (hutang/piutang/transfer/top up/tabungan/investasi/saham/deposito) & nama baru berisi "investasi". Diuji
   lokal (wrangler): 29 transaksi + anggaran + ikon/jenis pindah, prefs lain utuh, 409/400/404 benar. Tanpa migrasi.
+- **Belum di-deploy** (akun B, frontend saja): **ganti nama dari halaman Anggaran** — mode "Ubah" kini juga
+  mengedit nama kategori (kolom nama), disimpan bersama nominal (nominal dulu, lalu rename via endpoint yang sama).
+  Nama ganda antar isian ditolak di klien; sisanya divalidasi server. Tombol Ubah dapat aria-label (di HP cuma ikon).
 
 ## Migrasi D1
 
