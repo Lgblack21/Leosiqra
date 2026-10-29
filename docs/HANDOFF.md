@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-28 malam (akun B selesai; semua live, main = run #5
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Tema hari raya Indonesia |
+| akun B | aktif | claude/nifty-cannon-y181p6 | AI Leo dirapikan |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -292,17 +292,21 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   kalau ikon tak ada → fallback tampil) + ikon ≤16px dianggap gagal. Picker bank: fallback monogram warna merek per bank.
   OCBC domain → ocbc.id. **Belum terverifikasi** (gstatic diblok di sandbox): cek di production apakah logo yang tadinya
   tampil tetap tampil & yang globe jadi monogram. Logo asli lebih lengkap kalau Bos isi token logo.dev ke build env.
-- **Belum di-deploy** (akun B, frontend saja): **Leo beraktivitas di Ringkasan** — LeoMascot dapat prop `activity`
+- **Live (run #75)** (akun B): **Leo beraktivitas di Ringkasan** — LeoMascot dapat prop `activity`
   (eat: pegang paha ayam + mengunyah + remah; play: bola memantul, mata ikut, kaki menepuk; coins: lempar koin berputar +
   tumpukan koin; sleep: zzz + gelembung napas). LeoBuddy memilih aktivitas tiap 12 dtk ikut jam perangkat (22–05 tidur,
   11–14 & 18–20 makan, selain itu main bola/koin/makan/santai) + keterangan "Leo lagi …"; diketuk → berhenti 6,5 dtk untuk
   ngomong (mood pesan) lalu lanjut. prefers-reduced-motion: tanpa aktivitas.
-- **Belum di-deploy** (akun B, frontend saja): **tema musiman = hari raya/tanggal merah Indonesia** (`lib/season.ts`):
+- **Live (run #75)** (akun B): **tema musiman = hari raya/tanggal merah Indonesia** (`lib/season.ts`):
   Tahun Baru, Isra Mikraj/Tahun Baru Islam/Maulid (islami), Imlek, Nyepi, Ramadan & Idul Fitri, Jumat Agung & Paskah,
   Hari Buruh, Kenaikan, Waisak, Pancasila, Idul Adha, HUT RI (Agustus), Natal. Halloween dihapus. Aksesoris Leo per hari
   raya (LeoMascot SeasonAccessory) + hiasan kartu + ucapan Leo di hari H. Prioritas: hari H > hari raya terdekat dalam
   rentang > musim panjang (Ramadan, Agustus). Tanggal tetap & Paskah (rumus) pasti; **tabel LUNAR 2027–2029 perkiraan —
   perbarui dari SKB 3 Menteri tiap tahun.**
+- **Belum di-deploy** (akun B, frontend saja): **AI Leosiqra → "AI Leo"** — orb diganti wajah Leo (SVG ringan di AiOrb,
+  dipakai web & /app/assistant/chat; saat mikir mata melirik + cincin berputar), layar sambutan pakai LeoMascot penuh +
+  chip saran ringkas, judul halaman ramping (h1 26/30 + HeaderSlot), chat di kartu putih, panel kanan desktop: 2 fitur +
+  daftar insight ringkas. AiChat dapat prop `layout` opsional; tidak lagi auto-scroll saat layar sambutan.
 
 ## Migrasi D1
 

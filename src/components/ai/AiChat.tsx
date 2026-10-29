@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowUp, Check, Copy, Sparkles } from "lucide-react";
+import { ArrowUp, Check, Copy } from "lucide-react";
 import { cloudflareApi } from "@/lib/cloudflare-api";
 import { aiChatService } from "@/lib/services/aiChatService";
 import { AiMarkdown } from "@/components/ai/AiMarkdown";
+import { LeoMascot } from "@/components/mascot/LeoMascot";
 import { cn } from "@/lib/utils";
 
 type Msg = { role: "user" | "model"; text: string; at: Date; fresh?: boolean };
@@ -22,18 +23,49 @@ export const SUGGESTIONS: { emoji: string; label: string; prompt: string }[] = [
 const FOLLOW_UPS = ["Jelasin lebih detail dong", "Kasih 3 tips hemat buat aku", "Bandingin sama bulan lalu"];
 const MAX_CHARS = 2000;
 
-// Orb animasi — "wajah" AI Leosiqra.
+// "Wajah" AI Leosiqra = Leo si singa (versi kepala saja, ringan — tanpa
+// listener seperti LeoMascot, jadi aman dipakai di tiap gelembung pesan).
+// thinking → matanya melirik kiri-kanan & lingkaran berputar.
+const MANE = Array.from({ length: 12 }, (_, i) => {
+  const a = (i / 12) * Math.PI * 2;
+  return { cx: 60 + Math.cos(a) * 44, cy: 62 + Math.sin(a) * 44, fill: i % 2 ? "#F59E0B" : "#FBBF24" };
+});
 export function AiOrb({ size = 40, thinking = false }: { size?: number; thinking?: boolean }) {
   const reduce = useReducedMotion();
   return (
     <span className="relative inline-flex shrink-0 items-center justify-center" style={{ width: size, height: size }}>
-      <motion.span
-        className="absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,#6366f1,#a855f7,#ec4899,#22d3ee,#6366f1)] blur-[1px]"
-        animate={reduce ? undefined : { rotate: 360 }}
-        transition={{ duration: thinking ? 1.6 : 6, repeat: Infinity, ease: "linear" }}
-      />
-      <span className="absolute inset-[3px] rounded-full bg-gradient-to-br from-indigo-600 to-violet-700" />
-      <Sparkles size={size * 0.42} className="relative text-white" />
+      {thinking && (
+        <motion.span
+          aria-hidden
+          className="absolute -inset-[2px] rounded-full bg-[conic-gradient(from_0deg,#6366f1,#a855f7,#ec4899,#f59e0b,#6366f1)]"
+          animate={reduce ? undefined : { rotate: 360 }}
+          transition={{ duration: 1.4, repeat: Infinity, ease: "linear" }}
+        />
+      )}
+      <span className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-100 to-orange-200 ring-2 ring-white" />
+      <svg viewBox="0 0 120 120" width={size} height={size} className="relative" aria-hidden>
+        <circle cx="60" cy="62" r="44" fill="#E8590C" />
+        {MANE.map((m, i) => <circle key={i} cx={m.cx} cy={m.cy} r="15" fill={m.fill} />)}
+        <circle cx="34" cy="32" r="10" fill="#F8D29A" />
+        <circle cx="86" cy="32" r="10" fill="#F8D29A" />
+        <circle cx="60" cy="65" r="34" fill="#FCE3B8" />
+        <motion.g
+          className={reduce || thinking ? undefined : "leo-blink"}
+          animate={thinking && !reduce ? { x: [-3, 3, -3], y: -1.5 } : { x: 0, y: 0 }}
+          transition={thinking ? { duration: 1.6, repeat: Infinity, ease: "easeInOut" } : { duration: 0.2 }}
+        >
+          <ellipse cx="48" cy="60" rx="5" ry="6.5" fill="#3B1D0A" />
+          <ellipse cx="72" cy="60" rx="5" ry="6.5" fill="#3B1D0A" />
+          <circle cx="46.5" cy="57.5" r="1.8" fill="#fff" />
+          <circle cx="70.5" cy="57.5" r="1.8" fill="#fff" />
+        </motion.g>
+        <ellipse cx="38" cy="72" rx="6" ry="3.5" fill="#FB7185" opacity="0.35" />
+        <ellipse cx="82" cy="72" rx="6" ry="3.5" fill="#FB7185" opacity="0.35" />
+        <ellipse cx="54" cy="79" rx="8" ry="6.5" fill="#FFF6E6" />
+        <ellipse cx="66" cy="79" rx="8" ry="6.5" fill="#FFF6E6" />
+        <path d="M54 71 Q60 67 66 71 Q64 76 60 77 Q56 76 54 71 Z" fill="#6B2A12" />
+        <path d="M60 77 V81 M53 82 Q56.5 85.5 60 81.5 Q63.5 85.5 67 82" stroke="#6B2A12" strokeWidth="2" fill="none" strokeLinecap="round" />
+      </svg>
     </span>
   );
 }
@@ -43,7 +75,16 @@ const toMsg = (m: { role: string; text: string; timestamp: Date }): Msg => ({ ro
 // Panel chat AI Leosiqra — dipakai halaman web & aplikasi HP.
 export type AiChatHeaderCtx = { reset: () => void; hasMessages: boolean; thinking: boolean };
 
-export function AiChat({ variant, renderHeader }: { variant: "web" | "app"; renderHeader?: (ctx: AiChatHeaderCtx) => React.ReactNode }) {
+export function AiChat({
+  variant,
+  renderHeader,
+  layout,
+}: {
+  variant: "web" | "app";
+  renderHeader?: (ctx: AiChatHeaderCtx) => React.ReactNode;
+  // Opsional: susun header & isi chat sendiri (mis. halaman web dengan panel samping).
+  layout?: (header: React.ReactNode, chat: React.ReactNode) => React.ReactNode;
+}) {
   const reduce = useReducedMotion();
   const [messages, setMessages] = useState<Msg[] | null>(null);
   const [input, setInput] = useState("");
@@ -61,7 +102,8 @@ export function AiChat({ variant, renderHeader }: { variant: "web" | "app"; rend
 
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: reduce ? "auto" : "smooth" });
+    if (!el || !messages?.length) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: reduce ? "auto" : "smooth" });
   }, [messages, thinking, reduce]);
 
   // Tinggi kolom ketik mengikuti isi (maks ±5 baris).
@@ -117,20 +159,21 @@ export function AiChat({ variant, renderHeader }: { variant: "web" | "app"; rend
   const empty = messages !== null && messages.length === 0;
   const lastModelIdx = messages ? messages.map((m) => m.role).lastIndexOf("model") : -1;
 
-  return (
+  const header = renderHeader?.({ reset, hasMessages: Boolean(messages && messages.length), thinking });
+  const chat = (
     <div className="flex h-full min-h-0 flex-col">
-      {renderHeader?.({ reset, hasMessages: Boolean(messages && messages.length), thinking })}
+      {!layout && header}
       <div ref={scrollRef} className={cn("min-h-0 flex-1 overflow-y-auto", variant === "web" ? "px-5 py-6 md:px-8" : "px-4 py-5")}>
         {messages === null ? (
           <div className="flex h-full items-center justify-center"><AiOrb size={48} thinking /></div>
         ) : empty ? (
-          <motion.div initial={reduce ? false : { opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mx-auto flex max-w-xl flex-col items-center pt-4 text-center md:pt-10">
-            <AiOrb size={72} />
-            <h2 className="mt-5 text-2xl font-black text-slate-900 dark:text-white">Hai! Aku Leosiqra 👋</h2>
-            <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-              Aku udah nyambung ke catatan keuanganmu dan data pasar terbaru. Tanya aja santai — soal pengeluaran, budget, tabungan, investasi, atau apa pun.
+          <motion.div initial={reduce ? false : { opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mx-auto flex max-w-xl flex-col items-center pt-2 text-center md:pt-6">
+            <LeoMascot mood="happy" size={variant === "web" ? 128 : 112} interactive />
+            <h2 className="mt-3 text-[20px] font-extrabold tracking-tight text-slate-900 dark:text-white md:text-[22px]">Hai! Aku Leo 👋</h2>
+            <p className="mt-1 max-w-md text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
+              Aku nyambung ke catatan keuanganmu & data pasar terbaru. Tanya aja santai — pengeluaran, budget, tabungan, investasi.
             </p>
-            <div className="mt-7 grid w-full grid-cols-1 gap-2.5 sm:grid-cols-2">
+            <div className="mt-5 flex w-full flex-wrap justify-center gap-2">
               {SUGGESTIONS.map((s, i) => (
                 <motion.button
                   key={s.label}
@@ -139,9 +182,9 @@ export function AiChat({ variant, renderHeader }: { variant: "web" | "app"; rend
                   initial={reduce ? false : { opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 + i * 0.05 }}
-                  className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3 text-left text-sm font-bold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+                  className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[13px] font-semibold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-indigo-200 hover:text-indigo-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
                 >
-                  <span className="text-lg">{s.emoji}</span> {s.label}
+                  <span aria-hidden>{s.emoji}</span> {s.label}
                 </motion.button>
               ))}
             </div>
@@ -194,7 +237,7 @@ export function AiChat({ variant, renderHeader }: { variant: "web" | "app"; rend
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3">
                 <AiOrb size={32} thinking />
                 <div className="flex items-center gap-2 rounded-3xl rounded-tl-lg border border-slate-100 bg-white px-4 py-3 text-[13px] font-semibold text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                  Leosiqra lagi mikir
+                  Leo lagi mikir
                   <span className="flex gap-1">
                     {[0, 1, 2].map((d) => (
                       <motion.span key={d} className="h-1.5 w-1.5 rounded-full bg-indigo-400" animate={reduce ? undefined : { y: [0, -4, 0], opacity: [0.4, 1, 0.4] }} transition={{ duration: 0.9, repeat: Infinity, delay: d * 0.15 }} />
@@ -230,8 +273,8 @@ export function AiChat({ variant, renderHeader }: { variant: "web" | "app"; rend
                 }
               }}
               rows={1}
-              placeholder="Tanya apa aja soal keuanganmu…"
-              aria-label="Pesan untuk Leosiqra"
+              placeholder="Tanya Leo soal keuanganmu…"
+              aria-label="Pesan untuk Leo"
               className="max-h-[140px] min-h-[24px] flex-1 resize-none bg-transparent py-2.5 text-[15px] text-slate-800 outline-none placeholder:text-slate-400 dark:text-white"
             />
             <button
@@ -251,4 +294,5 @@ export function AiChat({ variant, renderHeader }: { variant: "web" | "app"; rend
       </div>
     </div>
   );
+  return layout ? <>{layout(header, chat)}</> : chat;
 }

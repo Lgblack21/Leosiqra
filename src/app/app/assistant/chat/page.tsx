@@ -18,7 +18,7 @@ export default function AssistantChatPage() {
             </button>
             <AiOrb size={36} thinking={thinking} />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-black text-slate-900 dark:text-white">AI Leosiqra</p>
+              <p className="text-sm font-black text-slate-900 dark:text-white">AI Leo</p>
               <p className="text-[11px] font-semibold text-slate-400">{thinking ? "lagi ngetik…" : "Online · terhubung ke datamu"}</p>
             </div>
             {hasMessages && (
