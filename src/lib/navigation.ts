@@ -4,7 +4,6 @@ import {
   Bot,
   PlusCircle,
   ListOrdered,
-  ArrowLeftRight,
   Repeat,
   Building2,
   PiggyBank,
@@ -74,7 +73,6 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: 'Catat Transaksi', href: '/membership/transactions/input', icon: PlusCircle },
       { label: 'Riwayat Transaksi', href: '/membership/transactions/daily', icon: ListOrdered },
-      { label: 'Transfer & Top Up', href: '/membership/transactions/topup', icon: ArrowLeftRight },
       { label: 'Transaksi Rutin', href: '/membership/recurring', icon: Repeat },
     ],
   },

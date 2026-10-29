@@ -1,5 +1,5 @@
 import {
-  Bot, PiggyBank, HandCoins, TrendingUp, ArrowLeftRight, Repeat, Users, CalendarRange, ShieldCheck, UploadCloud, Inbox,
+  Bot, PiggyBank, HandCoins, TrendingUp, Repeat, Users, CalendarRange, ShieldCheck, UploadCloud, Inbox,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -19,7 +19,6 @@ export const FEATURES: Feature[] = [
   { id: 'investasi', label: 'Investasiku', href: '/membership/investment', icon: TrendingUp, tint: 'from-blue-50 to-blue-100 text-blue-600' },
   { id: 'tabungan', label: 'Tabungan', href: '/membership/tabungan', icon: PiggyBank, tint: 'from-rose-50 to-rose-100 text-rose-500' },
   { id: 'hutang', label: 'Hutang & Piutang', href: '/membership/transactions/debt', icon: HandCoins, tint: 'from-orange-50 to-orange-100 text-orange-500' },
-  { id: 'transfer', label: 'Transfer & Top Up', href: '/membership/transactions/topup', icon: ArrowLeftRight, tint: 'from-cyan-50 to-cyan-100 text-cyan-600' },
   { id: 'rutin', label: 'Transaksi Rutin', href: '/membership/recurring', icon: Repeat, tint: 'from-teal-50 to-teal-100 text-teal-600' },
   { id: 'dompet_bersama', label: 'Dompet Bersama', href: '/membership/dompet-bersama', icon: Users, tint: 'from-violet-50 to-violet-100 text-violet-600' },
   { id: 'tahunan', label: 'Laporan Tahunan', href: '/membership/annual', icon: CalendarRange, tint: 'from-amber-50 to-amber-100 text-amber-600' },
@@ -30,7 +29,8 @@ export const FEATURES: Feature[] = [
 
 // Bawaan = isi menu samping sebelum fitur ini ada (perilaku lama tidak berubah).
 // 'kartu' (Kartu Saya) dihapus 2026-10-28 — dilebur ke Rekening; 'pasar' (Data
-// Pasar) dihapus 2026-10-29 — dilebur ke Investasiku. Id-nya tetap sah di tipe
+// Pasar) dihapus 2026-10-29 — dilebur ke Investasiku; 'transfer' (Transfer &
+// Top Up) dihapus 2026-10-29 — datanya di Riwayat Transaksi (filter Transfer). Id-nya tetap sah di tipe
 // & Worker (preferensi lama), tapi tidak lagi ditampilkan.
 export const DEFAULT_FEATURES: FeatureId[] = ['ai', 'tabungan', 'hutang', 'investasi'];
 

@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-29 (akun B; semua live, main = run #80)
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Investasiku layar penuh |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Hapus menu Transfer & Top Up |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -329,6 +329,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   cache edge 30 mnt (`kabar/v2`). **Belum terverifikasi**: fetch RSS CNBC sungguhan (sandbox diblok) — kalau kosong di prod,
   cek log `Kabar: gagal ambil`. Angka BI-Rate/LPS/SBN = **data manual** `src/lib/sbnData.ts` per 2026-10-29, WAJIB
   diperbarui saat berubah (halaman memperingatkan setelah 45 hari). Peta yield curve pasar belum dibuat (tak ada sumber data).
+- **Belum di-deploy** (akun B, frontend saja, tanpa Worker/migrasi): **menu Transfer & Top Up dihapus** — fitur 'transfer'
+  keluar dari FEATURES (id tetap sah di tipe & Worker) dan dari navGroups/halaman Fitur. `/membership/transactions/topup`
+  → redirect `/membership/transactions/daily?jenis=transfer` (Riwayat dengan filter Transfer aktif). Datanya tidak
+  berubah (memang baris transaksi type transfer/topup); mencatat tetap lewat Catat Transaksi → Transfer & Top Up.
 
 ## Migrasi D1
 
