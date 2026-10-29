@@ -25,6 +25,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/panduan/cara-mengatur-gaji-3-juta',
     '/panduan/cara-mencatat-keuangan-di-hp',
     '/panduan/catatan-hutang-piutang',
+    '/panduan/catatan-tabungan',
     '/panduan/mcp',
     '/panduan/cara-mencatat-uang-kas',
     '/panduan/bukti-lapor-spt-coretax',

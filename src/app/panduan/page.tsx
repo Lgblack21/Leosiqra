@@ -49,6 +49,7 @@ const GUIDES = [
   { href: '/panduan/cara-mengatur-gaji-3-juta', icon: Wallet, title: 'Cara Mengatur Gaji 3 Juta', desc: 'Contoh pembagian untuk anak kos, jatah makan per hari, tetap menabung walau kecil.' },
   { href: '/panduan/cara-mencatat-keuangan-di-hp', icon: Smartphone, title: 'Cara Mencatat Keuangan di HP', desc: 'Pilih alat, format catatan beberapa detik, contoh sehari, dan transfer yang bukan pengeluaran.' },
   { href: '/panduan/catatan-hutang-piutang', icon: HandCoins, title: 'Catatan Hutang Piutang', desc: 'Kolom wajib, contoh tabel, mencatat cicilan dan pelunasan, dan kesalahan yang membuat sisa salah.' },
+  { href: '/panduan/catatan-tabungan', icon: PiggyBank, title: 'Catatan Tabungan', desc: 'Kolom wajib, contoh catatan harian dan bulanan, dan cara menghitung setoran untuk mencapai target.' },
   { href: '/panduan/mcp', icon: Bot, title: 'Hubungkan ke Claude & ChatGPT', desc: 'Tanya saldo dan catat transaksi lewat AI (MCP), plus cara memutus akses kapan saja.' },
 ];
 
