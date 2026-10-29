@@ -55,10 +55,10 @@ export const keuanganNav: NavItem[] = [
 ];
 
 export const fiturNav: NavItem[] = [
-  { label: 'AI Leosiqra', href: '/membership/ai-leosiqra', icon: Bot },
+  { label: 'AI Leo', href: '/membership/ai-leosiqra', icon: Bot },
+  { label: 'Investasiku', href: '/membership/investment', icon: TrendingUp },
   { label: 'Tabungan', href: '/membership/tabungan', icon: PiggyBank },
   { label: 'Hutang & Piutang', href: '/membership/transactions/debt', icon: HandCoins },
-  { label: 'Investasiku', href: '/membership/investment', icon: TrendingUp },
 ];
 
 export const SEMUA_FITUR_HREF = '/membership/fitur';

@@ -15,10 +15,10 @@ export type FeatureId =
 export type Feature = { id: FeatureId; label: string; href: string; icon: LucideIcon; tint: string };
 
 export const FEATURES: Feature[] = [
-  { id: 'ai', label: 'AI Leosiqra', href: '/membership/ai-leosiqra', icon: Bot, tint: 'from-indigo-50 to-indigo-100 text-indigo-600' },
+  { id: 'ai', label: 'AI Leo', href: '/membership/ai-leosiqra', icon: Bot, tint: 'from-indigo-50 to-indigo-100 text-indigo-600' },
+  { id: 'investasi', label: 'Investasiku', href: '/membership/investment', icon: TrendingUp, tint: 'from-blue-50 to-blue-100 text-blue-600' },
   { id: 'tabungan', label: 'Tabungan', href: '/membership/tabungan', icon: PiggyBank, tint: 'from-rose-50 to-rose-100 text-rose-500' },
   { id: 'hutang', label: 'Hutang & Piutang', href: '/membership/transactions/debt', icon: HandCoins, tint: 'from-orange-50 to-orange-100 text-orange-500' },
-  { id: 'investasi', label: 'Investasiku', href: '/membership/investment', icon: TrendingUp, tint: 'from-blue-50 to-blue-100 text-blue-600' },
   { id: 'transfer', label: 'Transfer & Top Up', href: '/membership/transactions/topup', icon: ArrowLeftRight, tint: 'from-cyan-50 to-cyan-100 text-cyan-600' },
   { id: 'rutin', label: 'Transaksi Rutin', href: '/membership/recurring', icon: Repeat, tint: 'from-teal-50 to-teal-100 text-teal-600' },
   { id: 'dompet_bersama', label: 'Dompet Bersama', href: '/membership/dompet-bersama', icon: Users, tint: 'from-violet-50 to-violet-100 text-violet-600' },
@@ -36,4 +36,11 @@ export const DEFAULT_FEATURES: FeatureId[] = ['ai', 'tabungan', 'hutang', 'inves
 
 const BY_ID = new Map(FEATURES.map((f) => [f.id, f]));
 export const isShownFeature = (id: string) => BY_ID.has(id as FeatureId);
-export const featuresFromIds = (ids: readonly string[]) => ids.map((id) => BY_ID.get(id as FeatureId)).filter((f): f is Feature => Boolean(f));
+// Urutan tampil selalu mengikuti FEATURES (bukan urutan saat dinyalakan),
+// supaya menu konsisten: AI Leo, Investasiku, lalu yang lain.
+const ORDER = new Map(FEATURES.map((f, i) => [f.id, i]));
+export const featuresFromIds = (ids: readonly string[]) =>
+  ids
+    .map((id) => BY_ID.get(id as FeatureId))
+    .filter((f): f is Feature => Boolean(f))
+    .sort((a, b) => (ORDER.get(a.id) ?? 99) - (ORDER.get(b.id) ?? 99));
