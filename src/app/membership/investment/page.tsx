@@ -1,462 +1,399 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import {
-  CheckCircle2,
-  Clock,
-  ArrowUpRight,
-  ArrowDownRight,
-  Building2,
-  Wallet,
-  Landmark
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { motion, useReducedMotion } from 'framer-motion';
+import { ChevronRight, Minus, Plus, RefreshCw, Settings2, ShieldCheck, TrendingDown, TrendingUp } from 'lucide-react';
 import { Investment } from '@/lib/services/investmentService';
 import { auth, db } from '@/lib/cf-client';
 import { onAuthStateChanged } from '@/lib/cf-auth';
 import { collection, query, where, onSnapshot, orderBy } from '@/lib/cf-firestore';
-import { useCountUp } from '@/lib/hooks/useCountUp';
+import { useMarketData } from '@/lib/hooks/useMarketData';
+import { CryptoWatchlistModal } from '@/components/modals/CryptoWatchlistModal';
+import { CoinOption } from '@/lib/coingecko';
+import { LogoImage } from '@/components/ui/LogoImage';
+import { HeaderSlot } from '@/components/Header';
+import { useModal } from '@/context/ModalContext';
+import { cn, formatIDR } from '@/lib/utils';
 
-interface DoughnutProps {
-  pSaham: number;
-  pLainnya: number;
-}
+// Investasiku — portofolio (dulu "Investasi") + simulasi + harga pasar (dulu
+// halaman "Data Pasar") dalam satu halaman. Rumus total sama dengan versi lama:
+// semua posisi non-Planned, dihitung dalam IDR (amountIDR/currentValueIDR).
 
-const SimulatedDoughnut = ({ pSaham, pLainnya }: DoughnutProps) => {
-  const animatedSaham = useCountUp(pSaham);
-  const animatedLainnya = useCountUp(pLainnya);
-  const radius = 50;
-  const stroke = 10;
-  const normalizedRadius = radius - stroke * 1.5;
-  const circumference = normalizedRadius * 2 * Math.PI;
-
-  return (
-    <div className="relative flex items-center justify-center w-32 h-32">
-      <svg height={radius * 2} width={radius * 2} className="-rotate-90">
-        <circle
-          stroke="#e2e8f0"
-          strokeWidth={stroke}
-          fill="transparent"
-          r={normalizedRadius}
-          cx={radius}
-          cy={radius}
-        />
-        {animatedSaham > 0 && (
-          <circle
-            stroke="#064e3b"
-            strokeDasharray={circumference + ' ' + circumference}
-            style={{ strokeDashoffset: circumference - (animatedSaham / 100) * circumference }}
-            strokeWidth={stroke}
-            fill="transparent"
-            r={normalizedRadius}
-            cx={radius}
-            cy={radius}
-            strokeLinecap="round"
-          />
-        )}
-        {animatedLainnya > 0 && (
-          <circle
-            stroke="#94a3b8"
-            strokeDasharray={circumference + ' ' + circumference}
-            style={{
-              strokeDashoffset: circumference - (animatedLainnya / 100) * circumference,
-              rotate: `${(animatedSaham / 100) * 360}deg`,
-              transformOrigin: '50% 50%'
-            }}
-            strokeWidth={stroke}
-            fill="transparent"
-            r={normalizedRadius}
-            cx={radius}
-            cy={radius}
-            strokeLinecap="round"
-          />
-        )}
-      </svg>
-      <div className="absolute flex flex-col items-center">
-        <span className="text-xl font-black text-slate-900 tabular-nums">{Math.round(animatedSaham)}%</span>
-        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Saham</span>
-      </div>
-    </div>
-  );
+type Kind = 'Saham' | 'Deposito' | 'Lainnya';
+const KIND: Record<Kind, { label: string; color: string; href: string; modal: 'saham' | 'deposito' | 'investasi_lain'; emoji: string }> = {
+  Saham: { label: 'Saham', color: '#6366f1', href: '/membership/investasi/saham', modal: 'saham', emoji: '📈' },
+  Deposito: { label: 'Deposito', color: '#10b981', href: '/membership/investasi/deposito', modal: 'deposito', emoji: '🏦' },
+  Lainnya: { label: 'Lainnya', color: '#f59e0b', href: '/membership/investasi/lainnya', modal: 'investasi_lain', emoji: '🪙' },
 };
+const idrInvested = (i: Investment) => Number(i.amountIDR) || Number(i.amountInvested) || 0;
+const idrCurrent = (i: Investment) => Number(i.currentValueIDR) || Number(i.currentValue) || 0;
+const short = (n: number) =>
+  Math.abs(n) >= 1e9 ? `Rp${(n / 1e9).toLocaleString('id-ID', { maximumFractionDigits: 2 })} M`
+  : Math.abs(n) >= 1e6 ? `Rp${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 2 })} jt`
+  : Math.abs(n) >= 1e3 ? `Rp${Math.round(n / 1e3)} rb` : formatIDR(n);
 
-export default function InvestmentDashboard() {
+// Simulasi: bunga sederhana setelah pajak. Pilihan = deposito milik user +
+// contoh umum (PERKIRAAN — bunga bisa diubah).
+type Preset = { id: string; label: string; rate: number; tax: number; note: string };
+const GENERIC: Preset[] = [
+  { id: 'dep', label: 'Deposito', rate: 4.5, tax: 20, note: 'contoh bunga deposito bank' },
+  { id: 'sbn', label: 'SBN ritel', rate: 6.5, tax: 10, note: 'contoh kupon SBN (ORI/SR)' },
+  { id: 'rdpu', label: 'Reksa dana pasar uang', rate: 4.5, tax: 0, note: 'contoh imbal hasil, tanpa pajak' },
+];
+const PERIODS = [
+  { id: '1b', label: '1 bln', months: 1 },
+  { id: '3b', label: '3 bln', months: 3 },
+  { id: '6b', label: '6 bln', months: 6 },
+  { id: '1t', label: '1 thn', months: 12 },
+  { id: '5t', label: '5 thn', months: 60 },
+];
+const STEP = 1_000_000;
+
+export default function InvestasikuPage() {
+  const reduce = useReducedMotion();
+  const { openModal } = useModal();
   const [investments, setInvestments] = useState<Investment[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [tab, setTab] = useState<'Semua' | Kind>('Semua');
+  const market = useMarketData();
 
-  // Ringkasan portofolio bersifat all-time: total aset tidak boleh "hilang"
-  // hanya karena posisinya dibeli di bulan yang berbeda dari yang sedang dilihat.
   useEffect(() => {
     let unsubInv: (() => void) | null = null;
     const unsub = onAuthStateChanged(auth, (u) => {
-      if (u) {
-        const qInv = query(
-          collection(db, 'investments'),
-          where('userId', '==', u.uid),
-          orderBy('dateInvested', 'desc')
+      if (!u) { setInvestments([]); return; }
+      const q = query(collection(db, 'investments'), where('userId', '==', u.uid), orderBy('dateInvested', 'desc'));
+      unsubInv = onSnapshot(q, (snap) => {
+        setInvestments(
+          snap.docs
+            .map((doc) => {
+              const d = doc.data();
+              return {
+                ...d, id: doc.id,
+                amountInvested: Number(d.amountInvested) || 0,
+                currentValue: Number(d.currentValue) || 0,
+                returnPercentage: Number(d.returnPercentage) || 0,
+                dateInvested: d.dateInvested?.toDate?.() ?? new Date(),
+                createdAt: d.createdAt?.toDate?.() ?? new Date(),
+              } as Investment;
+            })
+            // Baris proyeksi "(Hasil Akhir)" deposito berstatus Planned — bukan posisi nyata.
+            .filter((inv) => inv.status !== 'Planned')
         );
-        unsubInv = onSnapshot(qInv, (snap) => {
-          setInvestments(
-            snap.docs
-              .map(doc => {
-                const d = doc.data();
-                return {
-                  ...d, id: doc.id,
-                  amountInvested: Number(d.amountInvested) || 0,
-                  currentValue: Number(d.currentValue) || 0,
-                  returnPercentage: Number(d.returnPercentage) || 0,
-                  dateInvested: d.dateInvested?.toDate?.() ?? new Date(),
-                  createdAt: d.createdAt?.toDate?.() ?? new Date()
-                } as Investment;
-              })
-              // Deposito "Penempatan" otomatis punya baris proyeksi "(Hasil Akhir)"
-              // berstatus Planned (dibuat DepositModal, lihat lib "Automated
-              // Projection") — bukan posisi nyata, jadi jangan ikut dihitung di
-              // ringkasan portofolio ini (dulu bikin modal/nilai dobel).
-              .filter(inv => inv.status !== 'Planned')
-          );
-        });
-      } else {
-        setInvestments([]);
-      }
+        setLoaded(true);
+      });
     });
     return () => { unsub(); if (unsubInv) unsubInv(); };
   }, []);
 
-  // Halaman ini menampilkan semuanya sebagai satu portofolio dalam IDR, jadi
-  // pakai amountIDR/currentValueIDR (dikonversi saat investasi disimpan)
-  // alih-alih amountInvested/currentValue mentah yang masih dalam mata uang
-  // asli tiap investasi.
-  const idrInvested = (i: Investment) => Number(i.amountIDR) || Number(i.amountInvested) || 0;
-  const idrCurrent = (i: Investment) => Number(i.currentValueIDR) || Number(i.currentValue) || 0;
+  const totalModal = investments.reduce((s, i) => s + idrInvested(i), 0);
+  const totalNilai = investments.reduce((s, i) => s + idrCurrent(i), 0);
+  const selisih = totalNilai - totalModal;
+  const roi = totalModal > 0 ? (selisih / totalModal) * 100 : 0;
+  const byKind = (k: Kind) => investments.filter((i) => (k === 'Lainnya' ? i.type !== 'Saham' && i.type !== 'Deposito' : i.type === k));
+  const alloc = (Object.keys(KIND) as Kind[]).map((k) => ({ k, value: byKind(k).reduce((s, i) => s + idrCurrent(i), 0) })).filter((a) => a.value > 0);
+  const shown = (tab === 'Semua' ? investments : byKind(tab)).slice().sort((a, b) => idrCurrent(b) - idrCurrent(a));
 
-  const totalModal = useMemo(() => investments.reduce((sum, i) => sum + idrInvested(i), 0), [investments]);
-  const totalAset = useMemo(() => investments.reduce((sum, i) => sum + idrCurrent(i), 0), [investments]);
-  const totalSelisih = totalAset - totalModal;
-  const roiTotal = totalModal > 0 ? (totalSelisih / totalModal) * 100 : 0;
-
-  // Additional aggregations
-  const allocationTypes = useMemo(() => {
-    let saham = 0, lainnya = 0, deposito = 0;
-    investments.forEach(i => {
-      if (i.type === 'Saham') saham += idrCurrent(i);
-      else if (i.type === 'Deposito') deposito += idrCurrent(i);
-      else lainnya += idrCurrent(i);
-    });
-    return { saham, deposito, lainnya };
+  // ---- Simulasi ----
+  const presets: Preset[] = useMemo(() => {
+    const mine = investments
+      .filter((i) => i.type === 'Deposito' && i.status === 'Active' && i.returnPercentage > 0)
+      .slice(0, 2)
+      .map((i) => ({ id: `my-${i.id}`, label: i.name.replace(/\s*\(.*\)$/, ''), rate: i.returnPercentage, tax: i.taxPercentage ?? 20, note: 'bunga depositomu' }));
+    return [...mine, ...GENERIC];
   }, [investments]);
+  const [amount, setAmount] = useState(10_000_000);
+  const [editing, setEditing] = useState(false);
+  const [presetId, setPresetId] = useState<string>('dep');
+  const [rateOverride, setRateOverride] = useState<Record<string, string>>({});
+  const [periodId, setPeriodId] = useState('1t');
+  const preset = presets.find((p) => p.id === presetId) ?? presets[0];
+  const rate = Number((rateOverride[preset.id] ?? String(preset.rate)).replace(',', '.')) || 0;
+  const period = PERIODS.find((p) => p.id === periodId) ?? PERIODS[3];
+  const netYear = (rate / 100) * (1 - preset.tax / 100);
+  const gain = Math.round(amount * netYear * (period.months / 12));
+  const bars = Array.from({ length: 12 }, (_, k) => Math.round(amount * netYear * ((period.months * (k + 1)) / 12 / 12)));
+  const maxBar = Math.max(1, ...bars);
+  const endDate = (() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + period.months);
+    return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(d);
+  })();
 
-  const percentageSaham = totalAset > 0 ? Math.round((allocationTypes.saham / totalAset) * 100) : 0;
-  const percentageLainnya = totalAset > 0 ? Math.round(((allocationTypes.deposito + allocationTypes.lainnya) / totalAset) * 100) : 0;
-
-  const topAssets = useMemo(() => {
-    return [...investments].sort((a,b) => idrCurrent(b) - idrCurrent(a)).slice(0, 3).map(i => ({
-      label: i.name.substring(0, 10),
-      value: totalAset > 0 ? Number(((idrCurrent(i) / totalAset) * 100).toFixed(1)) : 0
-    }));
-  }, [investments, totalAset]);
-
-  const topPlatforms = useMemo(() => {
-    const platMap: Record<string, number> = {};
-    investments.forEach(i => {
-      platMap[i.platform] = (platMap[i.platform] || 0) + idrCurrent(i);
-    });
-    const formatBillion = (n: number) => {
-      if (n >= 1_000_000_000) return `Rp ${(n/1_000_000_000).toFixed(1)}M`;
-      if (n >= 1_000_000) return `Rp ${(n/1_000_000).toFixed(1)}Jt`;
-      return 'Rp ' + new Intl.NumberFormat('id-ID').format(n);
-    };
-    return Object.entries(platMap).sort((a,b) => b[1] - a[1]).slice(0, 3).map(([p, v]) => ({
-      label: p, sub: 'Investasi', value: formatBillion(v)
-    }));
-  }, [investments]);
-
-  const highestReturns = useMemo(() => {
-    return [...investments].sort((a,b) => (b.returnPercentage||0) - (a.returnPercentage||0)).slice(0, 4);
-  }, [investments]);
-
-  const formatRpShort = (n: number) => {
-    if (Math.abs(n) >= 1_000_000_000) return `${(n/1_000_000_000).toFixed(2)}M`;
-    if (Math.abs(n) >= 1_000_000) return `${(n/1_000_000).toFixed(2)}Jt`;
-    return new Intl.NumberFormat('id-ID').format(n);
-  };
-
-  // Angka-angka kartu ringkasan dianimasikan naik/turun secara halus.
-  const animatedTotalAset = useCountUp(totalAset);
-  const animatedTotalModal = useCountUp(totalModal);
-  const animatedTotalSelisih = useCountUp(totalSelisih);
-  const animatedRoiTotal = useCountUp(roiTotal);
-  const animatedPercentageSaham = useCountUp(percentageSaham);
-  const animatedPercentageLainnya = useCountUp(percentageLainnya);
+  const m = market;
+  const goldGram = m.gold ? m.gold.price_idr / 31.1035 : 0;
 
   return (
-    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 max-w-[1400px]">
-
-      {/* 1. Header (Title & Controls) */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-br from-white to-indigo-50/40 p-6 rounded-[24px] border border-slate-100 shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white items-center justify-center shadow-lg shadow-emerald-600/20 shrink-0">
-            <Landmark size={22} />
-          </div>
-          <div>
-            <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Ringkasan Investasi</h1>
-            <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-              Seluruh portofolio · {investments.length} posisi aktif
-            </p>
-          </div>
+    <div className="mx-auto max-w-6xl space-y-5 pb-12">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[30px]">Investasiku</h1>
+          <p className="text-[13px] text-slate-500">{investments.length} posisi · harga pasar diperbarui tiap menit</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <HeaderSlot />
         </div>
       </div>
 
-      {/* 2. Top Summary Cards (4 Cards) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-
-        {/* Total Aset */}
-        <div className="bg-white rounded-[20px] md:rounded-[24px] p-4 md:p-6 border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group">
-          <div className="flex justify-between items-center mb-3 md:mb-6">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.1em]">Total Aset Investasi</p>
-            <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-              <Building2 size={16} />
-            </div>
-          </div>
-          <div>
-            <h3 className="text-[10px] md:text-[12px] font-bold text-slate-900">Rp</h3>
-            <p className="text-lg md:text-2xl font-black text-slate-900 tracking-tight mt-1 leading-none tabular-nums">{formatRpShort(animatedTotalAset)}</p>
-            <p className={cn("flex items-center gap-1 text-[9px] md:text-[10px] font-bold mt-2 md:mt-3 leading-none tabular-nums", roiTotal >= 0 ? "text-emerald-500" : "text-rose-500")}>
-              {roiTotal >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-              {animatedRoiTotal >= 0 ? '+' : ''}{animatedRoiTotal.toFixed(2)}% ROI
-            </p>
-          </div>
-        </div>
-
-        {/* Total Modal */}
-        <div className="bg-white rounded-[20px] md:rounded-[24px] p-4 md:p-6 border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group">
-          <div className="flex justify-between items-center mb-3 md:mb-6">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.1em]">Total Modal Investasi</p>
-            <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
-              <Wallet size={16} />
-            </div>
-          </div>
-          <div>
-            <h3 className="text-[10px] md:text-[12px] font-bold text-slate-900">Rp</h3>
-            <p className="text-lg md:text-2xl font-black text-slate-900 tracking-tight mt-1 leading-none tabular-nums">{formatRpShort(animatedTotalModal)}</p>
-            <p className="text-[9px] md:text-[10px] font-bold text-slate-400 mt-2 md:mt-3 leading-none tabular-nums">
-              Selisih: {totalSelisih >= 0 ? '+' : '-'}Rp {formatRpShort(Math.abs(animatedTotalSelisih))}
-            </p>
-          </div>
-        </div>
-
-        {/* Keuntungan Terrealisasi */}
-        <div className="bg-gradient-to-br from-[#023326] to-emerald-950 rounded-[20px] md:rounded-[24px] p-4 md:p-6 border border-emerald-950 shadow-sm relative overflow-hidden">
-          <div className="flex justify-between items-center mb-3 md:mb-6">
-            <p className="text-[8px] md:text-[9px] font-black text-emerald-100/50 uppercase tracking-[0.1em]">Keuntungan Terrealisasi</p>
-            <div className="w-8 h-8 rounded-full bg-emerald-900/50 flex items-center justify-center text-emerald-300">
-              <CheckCircle2 size={16} />
-            </div>
-          </div>
-          <div>
-            <h3 className="text-[10px] md:text-[12px] font-bold text-white">Rp</h3>
-            <p className="text-lg md:text-2xl font-black text-white tracking-tight mt-1 leading-none">0</p>
-            <p className="text-[9px] md:text-[10px] font-bold text-emerald-400 mt-2 md:mt-3 leading-none">
-               Segera hadir
-            </p>
-          </div>
-        </div>
-
-        {/* Keuntungan Belum Terrealisasi */}
-        <div className="bg-white rounded-[20px] md:rounded-[24px] p-4 md:p-6 border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group">
-          <div className="flex justify-between items-center mb-3 md:mb-6">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.1em]">Keuntungan Belum Terrealisasi</p>
-            <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-amber-50 group-hover:text-amber-600 transition-colors">
-              <Clock size={16} />
-            </div>
-          </div>
-          <div>
-            <h3 className="text-[10px] md:text-sm font-bold text-slate-900">Rp</h3>
-            <p className="text-xl md:text-2xl font-black text-slate-900 tracking-tight mt-1 tabular-nums">{formatRpShort(animatedTotalSelisih)}</p>
-            <p className={cn("flex items-center gap-1 text-[9px] md:text-[10px] font-bold mt-2 tabular-nums", roiTotal >= 0 ? "text-emerald-500" : "text-rose-500")}>
-              {animatedRoiTotal >= 0 ? '+' : ''}{animatedRoiTotal.toFixed(2)}% floating
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Middle Grid (Allocation Analysis) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Alokasi Portofolio Tipe */}
-        <div className="bg-white rounded-[20px] md:rounded-[24px] p-5 md:p-8 border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300">
-          <h3 className="text-[13px] md:text-sm font-bold text-slate-900 mb-4 md:mb-8 tracking-tight">Alokasi Portofolio Tipe</h3>
-          <div className="flex flex-col sm:flex-row items-center gap-4 md:gap-8">
-            <div className="shrink-0">
-              <SimulatedDoughnut pSaham={percentageSaham} pLainnya={percentageLainnya} />
-            </div>
-            <div className="space-y-3 md:space-y-4 w-full sm:w-auto">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-[#064e3b] shrink-0" />
-                <p className="text-[11px] font-bold text-slate-900 tabular-nums">Saham ({Math.round(animatedPercentageSaham)}%)</p>
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-5">
+          {/* Total portofolio */}
+          <section className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950 p-5 text-white md:p-6">
+            <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-emerald-500/20 blur-2xl" />
+            <div className="relative flex flex-wrap items-end justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-white/60">Nilai investasi</p>
+                <p className="text-[30px] font-extrabold leading-tight tracking-tight tabular-nums md:text-[34px]">{formatIDR(totalNilai)}</p>
+                <p className="text-[13px] text-white/70 tabular-nums">Modal {short(totalModal)}</p>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-slate-300 shrink-0" />
-                <p className="text-[11px] font-bold text-slate-400 tabular-nums">Deposito/Lainnya ({Math.round(animatedPercentageLainnya)}%)</p>
-              </div>
+              {totalModal > 0 && (
+                <span className={cn('flex items-center gap-1 rounded-full px-3 py-1 text-[13px] font-bold tabular-nums', selisih >= 0 ? 'bg-emerald-400/20 text-emerald-300' : 'bg-rose-400/20 text-rose-300')}>
+                  {selisih >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                  {selisih >= 0 ? '+' : '−'}{short(Math.abs(selisih))} · {roi >= 0 ? '+' : ''}{roi.toFixed(2)}%
+                </span>
+              )}
             </div>
-          </div>
-        </div>
-
-        {/* Alokasi Portofolio Aset */}
-        <div className="bg-white rounded-[20px] md:rounded-[24px] p-5 md:p-8 border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300">
-          <h3 className="text-[13px] md:text-sm font-bold text-slate-900 mb-4 md:mb-8 tracking-tight">Alokasi Portofolio Aset</h3>
-          <div className="space-y-6">
-            {topAssets.length === 0 && <p className="text-xs text-slate-400 font-bold">Belum ada portofolio</p>}
-            {topAssets.map((item) => (
-              <div key={item.label}>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-[10px] font-black text-slate-900 tracking-wider uppercase">{item.label}</span>
-                  <span className="text-[10px] font-bold text-slate-400 tabular-nums">{item.value}%</span>
+            {alloc.length > 0 && (
+              <div className="relative mt-4">
+                <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-full bg-white/10">
+                  {alloc.map((a) => (
+                    <motion.span key={a.k} initial={reduce ? false : { width: 0 }} animate={{ width: `${(a.value / totalNilai) * 100}%` }} transition={{ duration: 0.8, ease: 'easeOut' }} className="h-full" style={{ background: KIND[a.k].color }} />
+                  ))}
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-emerald-700 to-emerald-500 h-full rounded-full transition-all duration-1000 ease-out"
-                    style={{ width: `${item.value}%` }}
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                  {alloc.map((a) => (
+                    <button key={a.k} type="button" onClick={() => setTab(a.k)} className="flex items-center gap-1.5 text-[12px] text-white/75 hover:text-white">
+                      <span className="h-2 w-2 rounded-full" style={{ background: KIND[a.k].color }} />
+                      {KIND[a.k].label} <span className="font-semibold text-white tabular-nums">{Math.round((a.value / totalNilai) * 100)}%</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* Simulasi */}
+          <section className="overflow-hidden rounded-[24px] bg-white ring-1 ring-slate-100">
+            <div className="px-5 pt-5 text-center md:px-6">
+              <p className="text-[13px] text-slate-500">Mau taruh berapa?</p>
+              <div className="mt-1 flex items-center justify-center gap-3">
+                <button type="button" onClick={() => setAmount((a) => Math.max(STEP, a - STEP))} aria-label="Kurangi" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200"><Minus size={18} /></button>
+                {editing ? (
+                  <input
+                    autoFocus
+                    inputMode="numeric"
+                    value={amount ? amount.toLocaleString('id-ID') : ''}
+                    onChange={(e) => setAmount(Math.min(1e12, Number(e.target.value.replace(/\D/g, '')) || 0))}
+                    onBlur={() => setEditing(false)}
+                    onKeyDown={(e) => e.key === 'Enter' && setEditing(false)}
+                    aria-label="Nominal simulasi"
+                    className="w-full min-w-0 max-w-[260px] bg-transparent text-center text-[30px] font-extrabold tracking-tight text-slate-900 outline-none md:text-[36px]"
                   />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Platform Investasi Sidebar */}
-        <div className="bg-white rounded-[20px] md:rounded-[24px] p-5 md:p-8 border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col">
-          <div className="flex justify-between items-center mb-4 md:mb-8">
-            <h3 className="text-[13px] md:text-sm font-bold text-slate-900 tracking-tight">Platform Investasi</h3>
-          </div>
-          <div className="space-y-6 flex-1">
-            {topPlatforms.length === 0 && <p className="text-xs text-slate-400 font-bold">Belum ada data</p>}
-            {topPlatforms.map((p) => (
-              <div key={p.label} className="flex items-center justify-between group cursor-default overflow-hidden">
-                <div className="flex items-center gap-3 md:gap-4 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors shrink-0">
-                    <Building2 size={18} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-black text-slate-900 leading-tight truncate uppercase">{p.label}</p>
-                    <p className="text-[9px] font-medium text-slate-400 truncate">{p.sub}</p>
-                  </div>
-                </div>
-                <span className="text-[11px] font-black text-slate-900 shrink-0 ml-2">{p.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-      </div>
-
-      <div className="bg-white rounded-[20px] md:rounded-[24px] p-5 md:p-8 border border-slate-100 shadow-sm">
-        <h3 className="text-[13px] md:text-sm font-bold text-slate-900 mb-4 md:mb-6">Return Investasi Tertinggi</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          {highestReturns.length === 0 && <p className="text-xs text-slate-400 font-bold col-span-2">Belum ada portofolio</p>}
-          {highestReturns.map((r) => {
-            const isPositive = (r.returnPercentage ?? 0) >= 0;
-            return (
-              <div
-                key={r.id}
-                className={cn(
-                  "rounded-xl p-3 md:p-4 border transition-all duration-300 hover:-translate-y-0.5",
-                  isPositive ? "bg-emerald-50/40 border-emerald-100/60" : "bg-rose-50/40 border-rose-100/60"
+                ) : (
+                  <button type="button" onClick={() => setEditing(true)} className="min-w-0 truncate text-[30px] font-extrabold tracking-tight text-slate-900 tabular-nums md:text-[36px]">
+                    <span className="mr-1 text-[18px] font-semibold text-slate-400">Rp</span>{amount.toLocaleString('id-ID')}
+                  </button>
                 )}
-              >
-                <p className={cn("text-[8px] md:text-[9px] font-black uppercase tracking-widest mb-1 truncate", isPositive ? "text-emerald-400" : "text-rose-400")}>{r.name}</p>
-                <p className={cn("text-base md:text-lg font-black tracking-tight tabular-nums", isPositive ? "text-emerald-600" : "text-rose-500")}>{isPositive ? '+' : ''}{(r.returnPercentage??0).toFixed(2)}%</p>
+                <button type="button" onClick={() => setAmount((a) => Math.min(1e12, a + STEP))} aria-label="Tambah" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200"><Plus size={18} /></button>
               </div>
-            );
-          })}
-        </div>
-      </div>
+              <p className="text-[11px] text-slate-400">Ketuk angkanya untuk mengubah</p>
+            </div>
 
-      {/* 5. Portfolio Tables */}
-      <div className="space-y-6">
-        
-        {/* Table 1: Saham */}
-        <div className="bg-white rounded-[20px] md:rounded-[24px] shadow-sm border border-slate-100 overflow-hidden">
-          <div className="p-4 md:p-6 md:px-8 border-b border-slate-50 flex justify-between items-center">
-            <h3 className="text-[13px] md:text-[15px] font-bold text-slate-900">Ringkasan Portofolio Saham</h3>
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-full">{investments.filter(i => i.type === 'Saham').length} posisi</span>
-          </div>
-          <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left text-xs whitespace-nowrap min-w-[750px] md:min-w-0">
-              <thead className="bg-slate-50/50">
-                <tr>
-                  <th className="px-5 md:px-8 py-4 font-bold text-[9px] uppercase tracking-widest text-slate-400">Kode Saham</th>
-                  <th className="px-5 md:px-6 py-4 font-bold text-[9px] uppercase tracking-widest text-slate-400">Lembar</th>
-                  <th className="px-5 md:px-6 py-4 font-bold text-[9px] uppercase tracking-widest text-slate-400">Harga Rata-Rata</th>
-                  <th className="px-5 md:px-6 py-4 font-bold text-[9px] uppercase tracking-widest text-slate-400">Harga Saat Ini</th>
-                  <th className="px-5 md:px-6 py-4 font-bold text-[9px] uppercase tracking-widest text-slate-400">Total Nilai</th>
-                  <th className="px-5 md:px-8 py-4 font-bold text-[9px] uppercase tracking-widest text-slate-400 text-right">Return (%)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {investments.filter(i => i.type === 'Saham').length === 0 && (
-                   <tr><td colSpan={6} className="text-center py-6 text-xs text-slate-400 font-bold">Belum ada saham tersimpan</td></tr>
-                )}
-                {investments.filter(i => i.type === 'Saham').map((s) => (
-                  <tr key={s.id} className="hover:bg-slate-50/30 transition-colors">
-                    <td className="px-5 md:px-8 py-4 md:py-5">
-                      <div className="flex items-center gap-3">
-                        <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-white text-[10px] font-black", (s.returnPercentage??0) >= 0 ? 'bg-emerald-900' : 'bg-emerald-700')}>
-                          {s.name[0]}
+            <div className="mt-4 flex gap-1.5 overflow-x-auto px-5 pb-1 no-scrollbar md:px-6">
+              {presets.map((p) => (
+                <button key={p.id} type="button" onClick={() => setPresetId(p.id)} className={cn('shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold ring-1 transition-colors', p.id === preset.id ? 'bg-slate-900 text-white ring-slate-900' : 'bg-white text-slate-600 ring-slate-200 hover:bg-slate-50')}>
+                  {p.label} · {(Number((rateOverride[p.id] ?? String(p.rate)).replace(',', '.')) || 0).toLocaleString('id-ID')}%
+                </button>
+              ))}
+            </div>
+
+            <div className="px-5 pt-4 md:px-6">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="text-[12px] text-slate-500">Saldo kamu nanti</p>
+                  <p className="text-[24px] font-extrabold tracking-tight text-slate-900 tabular-nums md:text-[28px]">{formatIDR(amount + gain)}</p>
+                  <p className="text-[12px] text-slate-500">{endDate} · <span className="font-semibold text-emerald-600">+{formatIDR(gain)}</span> setelah pajak {preset.tax}%</p>
+                </div>
+                <label className="flex items-center gap-1.5 rounded-xl bg-slate-50 px-2.5 py-1.5 text-[12px] text-slate-500 ring-1 ring-slate-200">
+                  Bunga
+                  <input
+                    inputMode="decimal"
+                    value={rateOverride[preset.id] ?? String(preset.rate).replace('.', ',')}
+                    onChange={(e) => setRateOverride((o) => ({ ...o, [preset.id]: e.target.value.replace(/[^\d.,]/g, '').slice(0, 5) }))}
+                    aria-label="Bunga per tahun"
+                    className="w-12 bg-transparent text-right font-bold text-slate-900 outline-none"
+                  />
+                  % / thn
+                </label>
+              </div>
+              <div className="mt-4 flex h-32 items-end gap-1.5" aria-hidden>
+                {bars.map((b, k) => (
+                  <motion.span
+                    key={`${period.id}-${preset.id}-${k}`}
+                    initial={reduce ? false : { height: 0 }}
+                    animate={{ height: `${Math.max(4, (b / maxBar) * 100)}%` }}
+                    transition={{ duration: 0.5, delay: reduce ? 0 : k * 0.03, ease: 'easeOut' }}
+                    className={cn('flex-1 rounded-t-lg', k === bars.length - 1 ? 'bg-gradient-to-t from-emerald-700 to-emerald-500' : 'bg-gradient-to-t from-emerald-500 to-emerald-300')}
+                  />
+                ))}
+              </div>
+              <p className="mt-2 text-[11px] text-slate-400">Perkiraan: {preset.note}, bunga sederhana. Ubah bunganya sesuai produk yang kamu lihat.</p>
+            </div>
+
+            <div className="mt-3 flex border-t border-slate-100 bg-slate-50/60 p-1.5">
+              {PERIODS.map((p) => (
+                <button key={p.id} type="button" onClick={() => setPeriodId(p.id)} className={cn('flex-1 rounded-full py-2 text-[13px] font-semibold transition-colors', p.id === period.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800')}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* Portofolio */}
+          <section>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Portofolio</h2>
+              <div className="flex gap-1.5">
+                {(Object.keys(KIND) as Kind[]).map((k) => (
+                  <button key={k} type="button" onClick={() => openModal(KIND[k].modal)} aria-label={`Tambah ${KIND[k].label}`} className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[12px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">
+                    <Plus size={13} /> {KIND[k].label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mb-2 flex gap-1 rounded-full bg-slate-100 p-1">
+              {(['Semua', 'Saham', 'Deposito', 'Lainnya'] as const).map((t) => (
+                <button key={t} type="button" onClick={() => setTab(t)} className={cn('flex-1 rounded-full py-1.5 text-[13px] font-semibold', tab === t ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500')}>
+                  {t}
+                </button>
+              ))}
+            </div>
+            {!loaded ? (
+              <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-14 animate-pulse rounded-2xl bg-slate-100" />)}</div>
+            ) : shown.length === 0 ? (
+              <div className="rounded-[20px] bg-white p-6 text-center ring-1 ring-slate-100">
+                <p className="text-[15px] font-semibold text-slate-900">Belum ada {tab === 'Semua' ? 'investasi' : tab.toLowerCase()}</p>
+                <p className="mt-1 text-[13px] text-slate-500">Catat saham, deposito, emas, reksa dana, atau kripto yang kamu punya.</p>
+              </div>
+            ) : (
+              <ul className="divide-y divide-slate-100 overflow-hidden rounded-[20px] bg-white ring-1 ring-slate-100">
+                {shown.map((inv, i) => {
+                  const kind: Kind = inv.type === 'Saham' || inv.type === 'Deposito' ? inv.type : 'Lainnya';
+                  const diff = idrCurrent(inv) - idrInvested(inv);
+                  const pct = idrInvested(inv) > 0 ? (diff / idrInvested(inv)) * 100 : inv.returnPercentage || 0;
+                  return (
+                    <motion.li key={inv.id} initial={reduce ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 10) * 0.03 }}>
+                      <Link href={KIND[kind].href} className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl text-[18px]" style={{ background: `${KIND[kind].color}1a` }}>
+                          {inv.logoUrl ? <LogoImage src={inv.logoUrl} alt={inv.name} fallbackText={inv.name.slice(0, 3).toUpperCase()} className="h-full w-full object-cover" /> : KIND[kind].emoji}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[14px] font-semibold text-slate-900">{inv.name}</p>
+                          <p className="truncate text-[12px] text-slate-500">
+                            {KIND[kind].label}{inv.platform ? ` · ${inv.platform}` : ''}{kind === 'Saham' && inv.sharesCount ? ` · ${inv.sharesCount.toLocaleString('id-ID')} lembar` : ''}{kind === 'Deposito' && inv.returnPercentage ? ` · ${inv.returnPercentage}%/thn` : ''}
+                          </p>
                         </div>
-                        <span className="font-black text-slate-900">{s.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-5 md:px-6 py-4 md:py-5 font-bold text-slate-500">{s.sharesCount || 0}</td>
-                    <td className="px-5 md:px-6 py-4 md:py-5 font-bold text-slate-500">Rp {new Intl.NumberFormat('id-ID').format(s.pricePerShare || 0)}</td>
-                    <td className="px-5 md:px-6 py-4 md:py-5 font-black text-slate-900">Rp {new Intl.NumberFormat('id-ID').format(s.sharesCount ? Math.round(idrCurrent(s) / s.sharesCount) : 0)}</td>
-                    <td className="px-5 md:px-6 py-4 md:py-5 font-black text-slate-900">Rp {new Intl.NumberFormat('id-ID').format(idrCurrent(s))}</td>
-                    <td className={cn("px-5 md:px-8 py-4 md:py-5 text-right font-black", (s.returnPercentage??0) >= 0 ? 'text-emerald-500' : 'text-rose-500')}>{(s.returnPercentage??0) >= 0 ? '+' : ''}{(s.returnPercentage??0).toFixed(2)}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-[14px] font-bold text-slate-900 tabular-nums">{short(idrCurrent(inv))}</p>
+                          <p className={cn('text-[12px] font-semibold tabular-nums', diff >= 0 ? 'text-emerald-600' : 'text-rose-600')}>{diff >= 0 ? '+' : ''}{pct.toFixed(2)}%</p>
+                        </div>
+                        <ChevronRight size={16} className="shrink-0 text-slate-300" />
+                      </Link>
+                    </motion.li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
         </div>
 
-        {/* Table 2: Others */}
-        <div className="bg-white rounded-[20px] md:rounded-[24px] shadow-sm border border-slate-100 overflow-hidden mb-10">
-          <div className="p-4 md:px-8 border-b border-slate-50">
-            <h3 className="text-[13px] md:text-[15px] font-bold text-slate-900">Ringkasan Portofolio Investasi Lainnya</h3>
-          </div>
-          <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left text-xs whitespace-nowrap min-w-[750px] md:min-w-0">
-              <thead className="bg-slate-50/50">
-                <tr>
-                  <th className="px-5 md:px-8 py-4 font-bold text-[9px] uppercase tracking-widest text-slate-400 text-left">Jenis Aset</th>
-                  <th className="px-5 md:px-6 py-4 font-bold text-[9px] uppercase tracking-widest text-slate-400">Platform</th>
-                  <th className="px-5 md:px-6 py-4 font-bold text-[9px] uppercase tracking-widest text-slate-400">Modal Pokok</th>
-                  <th className="px-5 md:px-6 py-4 font-bold text-[9px] uppercase tracking-widest text-slate-400">Nilai Sekarang</th>
-                  <th className="px-5 md:px-8 py-4 font-bold text-[9px] uppercase tracking-widest text-slate-400 text-right">Keuntungan</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {investments.filter(i => i.type !== 'Saham').length === 0 && (
-                   <tr><td colSpan={5} className="text-center py-6 text-xs text-slate-400 font-bold">Belum ada investasi lain</td></tr>
-                )}
-                {investments.filter(i => i.type !== 'Saham').map((a) => (
-                  <tr key={a.id} className="hover:bg-slate-50/30 transition-colors">
-                    <td className="px-5 md:px-8 py-4 md:py-5 font-black text-slate-900">{a.name} ({a.type})</td>
-                    <td className="px-5 md:px-6 py-4 md:py-5 font-bold text-slate-400">{a.platform}</td>
-                    <td className="px-5 md:px-6 py-4 md:py-5 font-black text-slate-900">Rp {new Intl.NumberFormat('id-ID').format(idrInvested(a))}</td>
-                    <td className="px-5 md:px-6 py-4 md:py-5 font-black text-slate-900">Rp {new Intl.NumberFormat('id-ID').format(idrCurrent(a))}</td>
-                    <td className={cn("px-5 md:px-8 py-4 md:py-5 text-right font-black", ((idrCurrent(a) - idrInvested(a)) >= 0) ? 'text-emerald-600' : 'text-rose-500')}>
-                      Rp {new Intl.NumberFormat('id-ID').format(idrCurrent(a) - idrInvested(a))}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        {/* Harga pasar */}
+        <aside id="pasar" className="min-w-0 scroll-mt-20 space-y-4">
+          <section className="rounded-[24px] bg-white p-4 ring-1 ring-slate-100">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Harga pasar</h2>
+              <button type="button" onClick={() => void m.refresh()} disabled={m.loading} aria-label="Perbarui harga" className="flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold text-slate-500 hover:bg-slate-50 disabled:opacity-50">
+                <RefreshCw size={13} className={m.loading ? 'animate-spin' : ''} />
+                {m.lastUpdated ? m.lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '…'}
+              </button>
+            </div>
+            {m.error && <p className="mb-2 rounded-xl bg-rose-50 px-3 py-2 text-[12px] text-rose-600">{m.error}</p>}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100/60 p-3">
+                <p className="text-[11px] font-semibold text-amber-700">🥇 Emas / gram</p>
+                <p className="mt-0.5 text-[15px] font-extrabold text-slate-900 tabular-nums">{goldGram ? short(goldGram) : '—'}</p>
+                {m.gold && <p className={cn('text-[11px] font-semibold tabular-nums', m.gold.change_24h >= 0 ? 'text-emerald-600' : 'text-rose-600')}>{m.gold.change_24h >= 0 ? '+' : ''}{m.gold.change_24h.toFixed(2)}% 24j</p>}
+              </div>
+              <div className="rounded-2xl bg-gradient-to-br from-sky-50 to-sky-100/60 p-3">
+                <p className="text-[11px] font-semibold text-sky-700">💵 USD / IDR</p>
+                <p className="mt-0.5 text-[15px] font-extrabold text-slate-900 tabular-nums">{m.usdIdrRate ? Math.round(m.usdIdrRate).toLocaleString('id-ID') : '—'}</p>
+                <p className="text-[11px] text-slate-500">kurs tengah</p>
+              </div>
+            </div>
+          </section>
 
+          <section className="rounded-[24px] bg-white p-4 ring-1 ring-slate-100">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-[15px] font-bold text-slate-900">Kripto</h3>
+              <button type="button" onClick={() => m.setShowWatchlistModal(true)} className="flex items-center gap-1 text-[12px] font-semibold text-indigo-600 hover:underline">
+                <Settings2 size={13} /> Pilih koin
+              </button>
+            </div>
+            {m.loading && !m.lastUpdated ? (
+              <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-10 animate-pulse rounded-xl bg-slate-100" />)}</div>
+            ) : m.cryptoData.length === 0 ? (
+              <p className="py-4 text-center text-[13px] text-slate-500">Data kripto belum tersedia.</p>
+            ) : (
+              <ul className="space-y-1">
+                {m.cryptoData.map((c) => (
+                  <li key={c.id} className="flex items-center gap-2.5 rounded-xl px-1 py-1.5">
+                    <LogoImage src={c.logoUrl} alt={c.name} fallbackText={c.icon} className="h-8 w-8 shrink-0 rounded-full border border-slate-100 bg-white object-contain" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-semibold text-slate-900">{c.name}</p>
+                      <p className="text-[11px] text-slate-400">{c.symbol}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[13px] font-bold text-slate-900 tabular-nums">
+                        {m.usdIdrRate ? short(c.current_price * m.usdIdrRate) : `$${c.current_price.toLocaleString('en-US')}`}
+                      </p>
+                      <p className={cn('text-[11px] font-semibold tabular-nums', c.price_change_percentage_24h >= 0 ? 'text-emerald-600' : 'text-rose-600')}>
+                        {c.price_change_percentage_24h >= 0 ? '+' : ''}{c.price_change_percentage_24h.toFixed(2)}%
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="rounded-[24px] bg-white p-4 ring-1 ring-slate-100">
+            <h3 className="mb-2 text-[15px] font-bold text-slate-900">Kurs ke Rupiah</h3>
+            {m.exchangeRates.length === 0 ? (
+              <p className="py-3 text-center text-[13px] text-slate-500">{m.loading ? 'Memuat…' : 'Data kurs belum tersedia.'}</p>
+            ) : (
+              <ul className="divide-y divide-slate-100">
+                {m.exchangeRates.map((r) => {
+                  const code = /\(([A-Z]{3,5})\)/.exec(r.from)?.[1] ?? r.from;
+                  return (
+                    <li key={r.from} className="flex items-center justify-between py-2">
+                      <span className="text-[13px] text-slate-600"><span className="font-semibold text-slate-900">{code}</span> {r.from.replace(/\s*\([A-Z]+\)$/, '')}</span>
+                      <span className="text-[13px] font-bold text-slate-900 tabular-nums">{r.rate >= 100 ? Math.round(r.rate).toLocaleString('id-ID') : r.rate.toLocaleString('id-ID', { maximumFractionDigits: 2 })}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <p className="mt-2 flex items-center gap-1 text-[11px] text-slate-400"><ShieldCheck size={12} /> Sumber: CoinGecko & Open Exchange Rates · perbarui otomatis tiap menit</p>
+          </section>
+        </aside>
       </div>
+
+      <CryptoWatchlistModal
+        isOpen={m.showWatchlistModal}
+        onClose={() => m.setShowWatchlistModal(false)}
+        initialSelected={m.cryptoData.map((c): CoinOption => ({ id: c.id, name: c.name, symbol: c.symbol.split('/')[0], logoUrl: c.logoUrl }))}
+        onSave={m.handleSaveWatchlist}
+      />
     </div>
   );
 }
-

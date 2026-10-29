@@ -12,7 +12,6 @@ import {
   Briefcase,
   Landmark,
   Coins,
-  Globe,
   Target,
   HandCoins,
   ShieldCheck,
@@ -59,7 +58,7 @@ export const fiturNav: NavItem[] = [
   { label: 'AI Leosiqra', href: '/membership/ai-leosiqra', icon: Bot },
   { label: 'Tabungan', href: '/membership/tabungan', icon: PiggyBank },
   { label: 'Hutang & Piutang', href: '/membership/transactions/debt', icon: HandCoins },
-  { label: 'Investasi', href: '/membership/investment', icon: TrendingUp },
+  { label: 'Investasiku', href: '/membership/investment', icon: TrendingUp },
 ];
 
 export const SEMUA_FITUR_HREF = '/membership/fitur';
@@ -94,11 +93,10 @@ export const navGroups: NavGroup[] = [
     label: 'Investasi',
     icon: TrendingUp,
     items: [
-      { label: 'Ringkasan Portofolio', href: '/membership/investment', icon: TrendingUp },
+      { label: 'Investasiku', href: '/membership/investment', icon: TrendingUp },
       { label: 'Saham', href: '/membership/investasi/saham', icon: Briefcase },
       { label: 'Deposito', href: '/membership/investasi/deposito', icon: Landmark },
       { label: 'Investasi Lainnya', href: '/membership/investasi/lainnya', icon: Coins },
-      { label: 'Data Pasar', href: '/membership/market-data', icon: Globe },
     ],
   },
   {

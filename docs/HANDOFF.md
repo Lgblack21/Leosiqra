@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-28 malam (akun B selesai; semua live, main = run #5
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Panel Fitur sinkron |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Investasiku |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -311,6 +311,13 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   (fitur aktif tetap di "Fitur lainnya"). Tidak bisa direproduksi lokal; dugaan data basi (useFeatures dulu ambil prefs
   SEKALI per sesi). Kini `refresh()` saat panel Fitur dibuka & saat tab aktif lagi (dilewati saat ada simpan berjalan);
   tile terbang naik/turun antar "Fitur kamu" ⇄ "Fitur lainnya" (framer layoutId). Cek di production.
+- **Belum di-deploy** (akun B, frontend saja): **Investasiku** = Investasi + Data Pasar jadi satu (`/membership/investment`):
+  kartu nilai investasi + alokasi Saham/Deposito/Lainnya, simulasi "Mau taruh berapa?" (preset = deposito aktif user + contoh
+  Deposito 4,5%/20%, SBN 6,5%/10%, RDPU 4,5%/0% — PERKIRAAN, bunga bisa diubah, bunga sederhana), daftar portofolio (tab +
+  tombol tambah buka modal saham/deposito/investasi_lain, baris → halaman /membership/investasi/*), kolom kanan harga pasar
+  (emas/gram, USD/IDR, kripto watchlist, kurs) via hook baru `useMarketData` (logika dari halaman Data Pasar lama).
+  `/membership/market-data` → redirect `/membership/investment#pasar`; fitur 'pasar' disembunyikan (id tetap sah);
+  menu & label "Investasiku". Rumus total sama dengan versi lama (non-Planned, IDR).
 
 ## Migrasi D1
 

@@ -466,12 +466,12 @@ export default function MonthlyDashboard() {
   const features: { href?: string; onClick?: () => void; icon: React.ElementType; tile: string; label: string; value: string; caption: string }[] = [
     { onClick: () => setShowAccountsModal(true), icon: Wallet, tile: 'bg-indigo-600', label: 'Saldo bersih', value: accountsLoaded ? formatIDR(totalSaldoRekening) : '…', caption: `${accounts.length} rekening & dompet` },
     { href: '/membership/tabungan', icon: PiggyBank, tile: 'bg-pink-500', label: 'Tabungan', value: formatIDR(totalTabunganSaldo), caption: `${savings.length} catatan tabungan` },
-    { href: '/membership/investment', icon: Landmark, tile: 'bg-violet-500', label: 'Investasi', value: formatIDR(totalInvestasi), caption: `${investments.filter((i) => i.status === 'Active').length} investasi aktif` },
+    { href: '/membership/investment', icon: Landmark, tile: 'bg-violet-500', label: 'Investasiku', value: formatIDR(totalInvestasi), caption: `${investments.filter((i) => i.status === 'Active').length} investasi aktif` },
     { href: '/membership/rekening', icon: CreditCard, tile: 'bg-rose-500', label: 'Tagihan kartu', value: formatIDR(creditCardBills), caption: dueLabel ?? 'Tidak ada tagihan tercetak' },
     { href: '/membership/transactions/debt', icon: HandCoins, tile: 'bg-amber-500', label: 'Hutang lain', value: formatIDR(otherDebts), caption: otherDebts > 0 ? 'Belum lunas' : 'Tidak ada hutang' },
     { href: '/membership/pajak-center', icon: FileCheck, tile: 'bg-emerald-500', label: 'Pajak Center', value: 'SPT tahunan', caption: 'Harta, utang & penghasilan setahun' },
     { href: '/membership/laporan', icon: CalendarRange, tile: 'bg-sky-500', label: 'Laporan', value: String(selectedYear), caption: 'Tren, kategori & tempat teratas' },
-    { href: '/membership/market-data', icon: Globe, tile: 'bg-slate-700', label: 'Data pasar', value: 'Kurs & saham', caption: 'Pantau harga terbaru' },
+    { href: '/membership/investment#pasar', icon: Globe, tile: 'bg-slate-700', label: 'Data pasar', value: 'Kurs & saham', caption: 'Pantau harga terbaru' },
   ];
 
   return (

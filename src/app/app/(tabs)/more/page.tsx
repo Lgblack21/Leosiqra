@@ -33,7 +33,7 @@ const IN_APP: MenuItem[] = [
 const WEB_FEATURES: MenuItem[] = [
   { label: "Laporan Tahunan", href: "/membership/annual", icon: CalendarRange, color: "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400" },
   { label: "Pajak Center", href: "/membership/pajak-center", icon: ShieldCheck, color: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400" },
-  { label: "Data Pasar", href: "/membership/market-data", icon: Globe, color: "bg-lime-50 text-lime-700 dark:bg-lime-500/10 dark:text-lime-400" },
+  { label: "Data Pasar", href: "/membership/investment#pasar", icon: Globe, color: "bg-lime-50 text-lime-700 dark:bg-lime-500/10 dark:text-lime-400" },
 ];
 
 export default function AppMorePage() {
