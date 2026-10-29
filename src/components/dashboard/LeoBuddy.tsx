@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ChevronRight, Hand } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { LeoMascot, type LeoMood } from '@/components/mascot/LeoMascot';
+import { LeoMascot, type LeoActivity, type LeoMood } from '@/components/mascot/LeoMascot';
 import type { Season } from '@/lib/season';
 
 // Leo di Ringkasan: ngobrol soal keuanganmu hari ini. Setiap "kata" disusun
@@ -17,6 +17,24 @@ export type LeoTip = {
   mood: LeoMood;
   action?: { label: string; href?: string; onClick?: () => void };
 };
+
+// Kesibukan Leo saat tidak sedang ngomong — ikut jam perangkat: malam tidur,
+// jam makan makan, selebihnya gantian main bola, main koin, makan, santai.
+const ACT_LABEL: Record<LeoActivity, string> = {
+  eat: 'Leo lagi makan 🍗',
+  play: 'Leo lagi main bola ⚽',
+  coins: 'Leo lagi main koin 🪙',
+  sleep: 'Leo lagi tidur 😴',
+};
+const pickActivity = (n: number): LeoActivity | null => {
+  const h = new Date().getHours();
+  if (h >= 22 || h < 5) return 'sleep';
+  const meal = (h >= 11 && h < 14) || (h >= 18 && h < 20);
+  const cycle: (LeoActivity | null)[] = meal ? ['eat', 'eat', 'play', 'coins'] : ['play', 'coins', 'eat', null];
+  return cycle[n % cycle.length];
+};
+const ACT_EVERY = 12000;
+const TALK_FOR = 6500;
 
 export function LeoBuddy({ tips, season, size = 150, className }: { tips: LeoTip[]; season: Season | null; size?: number; className?: string }) {
   const reduce = useReducedMotion();
@@ -31,9 +49,33 @@ export function LeoBuddy({ tips, season, size = 150, className }: { tips: LeoTip
     setI(0);
   }, [key]);
 
+  // Aktivitas berganti tiap ACT_EVERY; diketuk → berhenti sebentar untuk ngomong.
+  const [activity, setActivity] = useState<LeoActivity | null>(null);
+  const [talking, setTalking] = useState(false);
+  useEffect(() => {
+    if (reduce) return;
+    let n = 0;
+    const first = setTimeout(() => setActivity(pickActivity(n)), 1800);
+    const every = setInterval(() => {
+      n += 1;
+      setActivity(pickActivity(n));
+    }, ACT_EVERY);
+    return () => {
+      clearTimeout(first);
+      clearInterval(every);
+    };
+  }, [reduce]);
+  useEffect(() => {
+    if (!talking) return;
+    const t = setTimeout(() => setTalking(false), TALK_FOR);
+    return () => clearTimeout(t);
+  }, [talking, pets]);
+  const busy = talking ? null : activity;
+
   const next = () => {
     setPets((p) => p + 1);
     setI((v) => v + 1);
+    setTalking(true);
   };
 
   const action = tip?.action;
@@ -71,7 +113,9 @@ export function LeoBuddy({ tips, season, size = 150, className }: { tips: LeoTip
               ))}
             </span>
           )}
-          <span className="flex items-center gap-1"><Hand size={12} /> {pets === 0 ? 'Ketuk Leo' : pets < 5 ? 'Ketuk lagi' : `Dielus ${pets}×`}</span>
+          <motion.span key={busy ?? 'hint'} initial={reduce ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-1">
+            {busy ? ACT_LABEL[busy] : <><Hand size={12} /> {pets === 0 ? 'Ketuk Leo' : pets < 5 ? 'Ketuk lagi' : `Dielus ${pets}×`}</>}
+          </motion.span>
         </div>
       </div>
       <button
@@ -80,7 +124,7 @@ export function LeoBuddy({ tips, season, size = 150, className }: { tips: LeoTip
         aria-label="Ketuk Leo untuk pesan berikutnya"
         className="relative -mb-2 shrink-0 rounded-full outline-none focus-visible:ring-4 focus-visible:ring-white/60"
       >
-        <LeoMascot mood={tip?.mood ?? 'idle'} size={size} season={season} interactive />
+        <LeoMascot mood={busy ? 'idle' : tip?.mood ?? 'idle'} activity={busy} size={size} season={season} interactive />
       </button>
     </div>
   );

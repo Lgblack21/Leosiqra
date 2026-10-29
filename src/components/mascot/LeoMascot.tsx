@@ -20,6 +20,12 @@ import type { Season } from "@/lib/season";
 //   - didiamkan 15 dtk → mengantuk, 22 dtk → tertidur (zzz); bangun saat ada aktivitas
 //   - di-tap / diklik → kaget lalu ketawa (pasang `interactive`)
 export type LeoMood = "idle" | "watch" | "hide" | "peek" | "happy" | "sad";
+// Aktivitas santai (hanya saat mood "idle", tidak sedang di-tap):
+//   eat   : pegang paha ayam, mengunyah, remah jatuh
+//   play  : bola memantul di atas kepala, mata mengikuti, kaki menepuk
+//   coins : lempar koin berputar, tumpukan koin di samping
+//   sleep : tidur (zzz + gelembung napas)
+export type LeoActivity = "eat" | "play" | "coins" | "sleep";
 
 const C = {
   maneBack: "#E8590C",
@@ -45,6 +51,7 @@ export function LeoMascot({
   className,
   interactive = false,
   season = null,
+  activity = null,
 }: {
   mood?: LeoMood;
   lookX?: number;
@@ -53,6 +60,7 @@ export function LeoMascot({
   interactive?: boolean;
   // Aksesoris musiman (lib/season.ts) — null = tanpa aksesoris.
   season?: Season | null;
+  activity?: LeoActivity | null;
 }) {
   const reduce = useReducedMotion();
   const ref = useRef<SVGSVGElement>(null);
@@ -110,8 +118,13 @@ export function LeoMascot({
     setTimeout(() => setBoop(false), 1300);
   };
 
-  const sleeping = idle && sleep === 2;
-  const drowsy = idle && sleep === 1;
+  const act = idle ? activity : null;
+  const sleeping = idle && (act === "sleep" || (!act && sleep === 2));
+  const drowsy = idle && !act && sleep === 1;
+  const eating = act === "eat";
+  const playing = act === "play";
+  const coins = act === "coins";
+  const loop = (duration: number) => (reduce ? { duration: 0 } : { duration, repeat: Infinity, ease: "easeInOut" as const });
   const watching = mood === "watch";
   // Pupil: ikut ketikan saat "watch", ikut kursor saat idle.
   const px = watching ? (Math.min(1, Math.max(0, lookX)) - 0.5) * 7 : idle ? gaze.x * 4.5 : 0;
@@ -120,9 +133,15 @@ export function LeoMascot({
   const sad = mood === "sad";
 
   // Posisi kaki: istirahat di bawah dagu, naik menutup mata, atau mengintip.
-  const pawL = mood === "hide" || mood === "peek" ? { x: 12, y: -76 } : { x: 0, y: 0 };
+  const pawL = mood === "hide" || mood === "peek" ? { x: 12, y: -76 } : playing && !reduce ? { x: 4, y: [0, -6, 0] } : { x: 0, y: 0 };
   const pawR =
-    mood === "hide"
+    eating
+      ? { x: -6, y: -22, rotate: reduce ? 0 : [0, -8, 0] }
+      : playing
+        ? { x: -8, y: reduce ? -30 : [-10, -58, -10], rotate: 0 }
+        : coins
+          ? { x: -4, y: reduce ? -34 : [-34, -44, -34], rotate: 0 }
+          : mood === "hide"
       ? { x: -12, y: -76 }
       : mood === "peek"
         ? { x: -6, y: -38 }
@@ -148,7 +167,7 @@ export function LeoMascot({
       height={(size * 230) / 220}
       className={className}
       role="img"
-      aria-label={`Leo si singa sedang ${happy ? "senang" : sad ? "sedih" : sleeping ? "tidur" : mood === "hide" ? "menutup mata" : mood === "peek" ? "mengintip" : "memperhatikan"}`}
+      aria-label={`Leo si singa sedang ${eating ? "makan" : playing ? "main bola" : coins ? "main koin" : happy ? "senang" : sad ? "sedih" : sleeping ? "tidur" : mood === "hide" ? "menutup mata" : mood === "peek" ? "mengintip" : "memperhatikan"}`}
       style={{ overflow: "visible", cursor: interactive ? "pointer" : undefined, pointerEvents: interactive ? "auto" : undefined }}
       onClick={interactive ? onBoop : undefined}
     >
@@ -197,8 +216,8 @@ export function LeoMascot({
             <path d="M142 95 L124 88" stroke={C.ink} strokeWidth="3" strokeLinecap="round" />
           </motion.g>
 
-          {/* Mata */}
-          {happy ? (
+          {/* Mata (^^ juga saat makan — keenakan) */}
+          {happy || eating ? (
             <g stroke={C.ink} strokeWidth="4" strokeLinecap="round" fill="none">
               <path d="M80 106 Q88 96 96 106" />
               <path d="M124 106 Q132 96 140 106" />
@@ -221,7 +240,11 @@ export function LeoMascot({
           ) : (
             <g className={reduce || mood === "hide" ? undefined : "leo-blink"}>
               {[88, 132].map((cx) => (
-                <motion.g key={cx} animate={{ x: px, y: py + (sad ? 3 : 0) }} transition={{ type: "spring", stiffness: 300, damping: 24 }}>
+                <motion.g
+                  key={cx}
+                  animate={playing || coins ? { x: playing ? 0 : 3, y: reduce ? -3 : playing ? [-1, -5, -1] : [-2, -5, -2] } : { x: px, y: py + (sad ? 3 : 0) }}
+                  transition={playing ? loop(1.4) : coins ? loop(1.8) : { type: "spring", stiffness: 300, damping: 24 }}
+                >
                   <ellipse cx={cx} cy="104" rx="7.5" ry={sad ? 7 : 9.5} fill={C.ink} />
                   <circle cx={cx - 2.4} cy="100" r="2.8" fill="#fff" />
                   <circle cx={cx + 2.6} cy="108" r="1.3" fill="#fff" />
@@ -237,7 +260,11 @@ export function LeoMascot({
             <circle key={i} cx={x} cy={i % 2 ? 134 : 131} r="1.2" fill="#D9A066" />
           ))}
           <path d="M102 120 Q110 115 118 120 Q115 127 110 128 Q105 127 102 120 Z" fill={C.nose} />
-          {happy ? (
+          {eating ? (
+            <motion.ellipse cx="104" cy="140" rx="6" fill={C.nose} animate={reduce ? { ry: 3 } : { ry: [1.5, 5, 1.5] }} transition={loop(0.45)} />
+          ) : coins ? (
+            <ellipse cx="110" cy="140" rx="4" ry="5" fill={C.nose} />
+          ) : happy || playing ? (
             <g>
               <path d="M98 136 Q110 154 122 136 Z" fill={C.nose} />
               <ellipse cx="110" cy="146" rx="6" ry="3.5" fill="#FB7185" />
@@ -253,6 +280,60 @@ export function LeoMascot({
           )}
         </g>
 
+        {/* Properti aktivitas (di bawah kaki supaya terlihat dipegang) */}
+        {eating && (
+          <motion.g animate={reduce ? undefined : { rotate: [0, -10, 0], y: [0, -3, 0] }} transition={loop(0.9)} style={{ transformBox: "fill-box", transformOrigin: "80% 90%" }}>
+            <path d="M142 162 L128 146" stroke="#FFF7ED" strokeWidth="7" strokeLinecap="round" />
+            <circle cx="143" cy="166" r="4.5" fill="#FFF7ED" />
+            <circle cx="147" cy="161" r="4.5" fill="#FFF7ED" />
+            <ellipse cx="124" cy="138" rx="15" ry="11" fill="#B45309" transform="rotate(-40 124 138)" />
+            <ellipse cx="120" cy="134" rx="6" ry="3.5" fill="#F59E0B" opacity="0.75" transform="rotate(-40 120 134)" />
+            <circle cx="112" cy="146" r="5" fill={C.face} />
+          </motion.g>
+        )}
+        {eating && !reduce &&
+          [0, 1, 2].map((i) => (
+            <motion.circle
+              key={`crumb${i}`}
+              cx={100 + i * 5}
+              cy={146}
+              r={1.8}
+              fill="#B45309"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 1, 0], y: [0, 22, 34], x: [0, (i - 1) * 6, (i - 1) * 9] }}
+              transition={{ duration: 1.3, delay: i * 0.4, repeat: Infinity, ease: "easeIn" }}
+            />
+          ))}
+        {playing && (
+          <motion.g animate={reduce ? { y: -30 } : { y: [0, -58, 0], x: [0, 4, 0] }} transition={reduce ? { duration: 0 } : { duration: 1.4, repeat: Infinity, ease: [0.33, 0, 0.67, 1] }}>
+            <motion.g animate={reduce ? undefined : { rotate: [0, 360] }} transition={reduce ? undefined : { duration: 1.4, repeat: Infinity, ease: "linear" }} style={{ transformBox: "fill-box", transformOrigin: "center" }}>
+              <circle cx="146" cy="2" r="14" fill="#F43F5E" />
+              <path d="M132 2 H160" stroke="#FFF" strokeWidth="3" />
+              <path d="M146 -12 Q155 2 146 16" stroke="#FFF" strokeWidth="3" fill="none" />
+              <circle cx="141" cy="-3" r="3" fill="#FFF" opacity="0.6" />
+            </motion.g>
+          </motion.g>
+        )}
+        {coins && (
+          <g>
+            {[0, 1, 2].map((i) => (
+              <g key={`stack${i}`}>
+                <ellipse cx="44" cy={196 - i * 6} rx="13" ry="5" fill="#D97706" />
+                <ellipse cx="44" cy={193 - i * 6} rx="13" ry="5" fill="#FBBF24" stroke="#D97706" strokeWidth="1" />
+              </g>
+            ))}
+            <motion.g animate={reduce ? { y: -40 } : { y: [-28, -96, -28] }} transition={loop(1.8)}>
+              <motion.g animate={reduce ? undefined : { scaleX: [1, 0.15, 1, 0.15, 1] }} transition={loop(0.9)} style={{ transformBox: "fill-box", transformOrigin: "center" }}>
+                <circle cx="146" cy="150" r="11" fill="#FBBF24" stroke="#D97706" strokeWidth="2" />
+                <text x="146" y="154.5" textAnchor="middle" fontSize="12" fontWeight="900" fill="#B45309" fontFamily="system-ui, sans-serif">Rp</text>
+              </motion.g>
+            </motion.g>
+          </g>
+        )}
+        {sleeping && !reduce && (
+          <motion.circle cx="121" cy="125" fill="#BAE6FD" stroke="#7DD3FC" strokeWidth="1" opacity={0.85} animate={{ r: [1.5, 8, 1.5] }} transition={loop(3.2)} />
+        )}
+
         {/* Kaki depan — di atas wajah supaya bisa menutup mata */}
         {[
           { cx: 76, pos: pawL },
@@ -261,7 +342,19 @@ export function LeoMascot({
           <motion.g
             key={cx}
             animate={pos}
-            transition={reduce ? { duration: 0 } : "rotate" in pos && Array.isArray(pos.rotate) ? { ...spring, rotate: { duration: 1.4, ease: "easeInOut" } } : spring}
+            transition={
+              reduce
+                ? { duration: 0 }
+                : eating && cx === 144
+                  ? { ...spring, rotate: loop(0.9) }
+                  : playing
+                    ? { x: spring, y: loop(1.4) }
+                    : coins && cx === 144
+                      ? { x: spring, y: loop(1.8) }
+                      : "rotate" in pos && Array.isArray(pos.rotate)
+                        ? { ...spring, rotate: { duration: 1.4, ease: "easeInOut" } }
+                        : spring
+            }
             style={{ transformBox: "fill-box", transformOrigin: "50% 80%" }}
           >
             <ellipse cx={cx} cy="182" rx="22" ry="17" fill={C.paw} stroke="#E4A95A" strokeWidth="1.5" />
