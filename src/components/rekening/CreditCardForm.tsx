@@ -29,6 +29,32 @@ const BANKS = [
   'SeaBank', 'blu by BCA', 'Allo Bank', 'Krom', 'Maybank', 'DBS', 'UOB', 'HSBC', 'Citibank', 'Standard Chartered', 'Panin', 'Bank Mega', 'Sinarmas',
 ];
 const OTHER_BANK = 'Bank lain';
+// Monogram warna merek — tampil kalau logo bank gagal dimuat (tanpa globe).
+const BANK_BRAND: Record<string, [bg: string, fg: string, mark: string]> = {
+  BCA: ['#005EB8', '#fff', 'BCA'], 'Bank Mandiri': ['#003D79', '#FFB700', 'mdr'], BRI: ['#00529C', '#fff', 'BRI'], BNI: ['#F15A23', '#fff', 'BNI'],
+  BSI: ['#00A39D', '#fff', 'BSI'], BTN: ['#0057A8', '#fff', 'BTN'], 'CIMB Niaga': ['#AD1F23', '#fff', 'CIMB'], Permata: ['#00877A', '#fff', 'PB'],
+  Danamon: ['#F7941D', '#fff', 'D'], OCBC: ['#E30613', '#fff', 'OCBC'], 'Bank Jago': ['#FDB813', '#1f2937', 'jago'], Jenius: ['#00A9E0', '#fff', 'J'],
+  SeaBank: ['#FF6A00', '#fff', 'Sea'], 'blu by BCA': ['#00B5E2', '#fff', 'blu'], 'Allo Bank': ['#FFCD00', '#111827', 'allo'], Krom: ['#6C2BD9', '#fff', 'K'],
+  Maybank: ['#FFC72C', '#111827', 'May'], DBS: ['#E00000', '#fff', 'DBS'], UOB: ['#0B3B8C', '#fff', 'UOB'], HSBC: ['#DB0011', '#fff', 'HSBC'],
+  Citibank: ['#056DAE', '#fff', 'citi'], 'Standard Chartered': ['#0473EA', '#fff', 'SC'], Panin: ['#003E7E', '#fff', 'PNB'], 'Bank Mega': ['#F58220', '#fff', 'MEGA'],
+  Sinarmas: ['#E2231A', '#fff', 'SMS'],
+};
+function BankMark({ bank }: { bank: string }) {
+  const [bg, fg, mark] = BANK_BRAND[bank] ?? ['#e2e8f0', '#475569', bank.slice(0, 3).toUpperCase()];
+  return (
+    <LogoImage
+      src={BANK_LOGO[bank] ?? undefined}
+      alt={bank}
+      fallbackText={mark}
+      className="h-full w-full object-cover"
+      fallbackIcon={
+        <span className="flex h-full w-full items-center justify-center font-black tracking-tight" style={{ background: bg, color: fg, fontSize: mark.length > 3 ? 10 : 12 }}>
+          {mark}
+        </span>
+      }
+    />
+  );
+}
 const BANK_LOGO: Record<string, string | null> = Object.fromEntries(BANKS.map((b) => [b, matchIndonesianInstitutionLogo(b, 'Credit Card')]));
 const normBank = (b: string) => b.toLowerCase().replace(/^(pt\.?\s+)?bank\s+/, '').replace(/\s+bank$/, '').trim();
 // Nama kartu otomatis dari bank (tetap bisa diubah): "BCA" → "Kartu Kredit BCA".
@@ -309,7 +335,7 @@ export function CreditCardForm({
             >
               <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100">
                 {f.bank && f.bank !== OTHER_BANK ? (
-                  <LogoImage src={BANK_LOGO[f.bank] ?? undefined} alt={f.bank} fallbackText={normBank(f.bank).substring(0, 3).toUpperCase()} className="h-full w-full object-cover" />
+                  <BankMark bank={f.bank} />
                 ) : (
                   <Landmark size={16} className="text-slate-400" />
                 )}
@@ -344,10 +370,10 @@ export function CreditCardForm({
                               {b === OTHER_BANK ? (
                                 <Plus size={16} className="text-slate-500" />
                               ) : (
-                                <LogoImage src={BANK_LOGO[b] ?? undefined} alt={b} fallbackText={normBank(b).substring(0, 3).toUpperCase()} className="h-full w-full object-cover" />
+                                <BankMark bank={b} />
                               )}
                             </span>
-                            <span className="line-clamp-1 w-full text-center text-[10.5px] font-semibold text-slate-700">{b}</span>
+                            <span className="line-clamp-1 w-full text-center text-[10.5px] font-semibold text-slate-700">{b.replace(/^Bank\s+/, '')}</span>
                             {active && <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-white"><Check size={10} strokeWidth={3} /></span>}
                           </motion.button>
                         );

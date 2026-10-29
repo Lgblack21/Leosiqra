@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-28 malam (akun B selesai; semua live, main = run #5
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Form kartu: pilih bank |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Logo bank tanpa globe |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -286,6 +286,12 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   (25 penerbit + "Bank lain"); nama kartu terisi otomatis "Kartu Kredit {bank}" dan tetap bisa diubah (nama yang
   diketik user tidak ditimpa saat ganti bank). Hasil pindai "PT Bank Negara Indonesia" dll. dicocokkan ke daftar.
   indonesianBanks: tambah BSI, Krom, blu.
+- **Belum di-deploy** (akun B, frontend saja): **logo bank tanpa globe** — build tidak punya NEXT_PUBLIC_LOGO_DEV_TOKEN,
+  jadi logo pakai favicon Google (s2) yang mengirim ikon globe kalau situs bank tak punya favicon. LogoImage kini
+  menulis ulang URL s2 (termasuk logo_url lama di DB) ke `t3.gstatic.com/faviconV2` TANPA fallback_opts (harusnya error
+  kalau ikon tak ada → fallback tampil) + ikon ≤16px dianggap gagal. Picker bank: fallback monogram warna merek per bank.
+  OCBC domain → ocbc.id. **Belum terverifikasi** (gstatic diblok di sandbox): cek di production apakah logo yang tadinya
+  tampil tetap tampil & yang globe jadi monogram. Logo asli lebih lengkap kalau Bos isi token logo.dev ke build env.
 
 ## Migrasi D1
 

@@ -16,7 +16,7 @@ const BANK_ENTRIES: InstitutionEntry[] = [
   { domain: 'permatabank.com', aliases: ['permata'] },
   { domain: 'btpn.com', aliases: ['btpn'] },
   { domain: 'jenius.com', aliases: ['jenius'] },
-  { domain: 'ocbcnisp.com', aliases: ['ocbc nisp', 'ocbc'] },
+  { domain: 'ocbc.id', aliases: ['ocbc nisp', 'ocbc'] },
   { domain: 'maybank.co.id', aliases: ['maybank'] },
   { domain: 'bankmega.com', aliases: ['bank mega', 'mega'] },
   { domain: 'sinarmas.co.id', aliases: ['sinarmas'] },

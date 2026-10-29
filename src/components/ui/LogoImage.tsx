@@ -30,6 +30,22 @@ export const LogoImage = ({ src, alt, fallbackText, className, fallbackIcon }: L
       }
     }
 
+    // Favicon Google (s2) mengirim ikon GLOBE pengganti kalau situsnya tidak
+    // punya favicon — gambarnya valid jadi onError tidak pernah jalan dan globe
+    // tampil sebagai "logo". Pakai endpoint faviconV2 TANPA fallback_opts: kalau
+    // tidak ada ikon, responsnya error → fallback kita yang tampil. Berlaku juga
+    // untuk logo_url lama yang tersimpan dengan alamat s2.
+    if (src.includes('google.com/s2/favicons')) {
+      try {
+        const u = new URL(src);
+        const domain = u.searchParams.get('domain');
+        const size = u.searchParams.get('sz') || '128';
+        if (domain) return `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&url=${encodeURIComponent(`https://${domain}`)}&size=${size}`;
+      } catch {
+        // URL tidak valid — pakai apa adanya.
+      }
+    }
+
     return src;
   }, [src]);
   const hasError = !!resolvedSrc && failedSrc === resolvedSrc;
@@ -50,6 +66,10 @@ export const LogoImage = ({ src, alt, fallbackText, className, fallbackIcon }: L
       height={96}
       unoptimized
       className={className}
+      onLoad={(e) => {
+        // Ikon 16px dari layanan favicon = ikon bawaan/terlalu kecil → anggap gagal.
+        if (resolvedSrc.includes('gstatic.com/faviconV2') && e.currentTarget.naturalWidth > 0 && e.currentTarget.naturalWidth <= 16) setFailedSrc(resolvedSrc);
+      }}
       onError={() => {
         console.warn(`Failed to load image: ${resolvedSrc}`);
         setFailedSrc(resolvedSrc);
