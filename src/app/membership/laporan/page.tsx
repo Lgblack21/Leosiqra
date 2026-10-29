@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Gauge } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Gauge, Printer } from 'lucide-react';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
@@ -17,6 +17,9 @@ import { BubbleCalendar, TopExpenses, WeekdayPattern, YearMonths } from '@/compo
 // Hanya pemasukan/pengeluaran (amountIDR) — transfer, tabungan, beli/jual
 // investasi (isInvestmentFlow, sama dengan Worker) dan catatan hutang bukan
 // pengeluaran.
+// Cetak / PDF (dulu di halaman Laporan Tahunan, dihapus 2026-10-30): tombol
+// memanggil dialog cetak browser ("Simpan sebagai PDF"); kop laporan & CSS
+// cetak di bawah hanya aktif saat print.
 
 type Mode = 'bulanan' | 'tahunan';
 
@@ -172,8 +175,16 @@ export default function LaporanPage() {
   const focused = cats.find((c) => c.name === focus);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-7 pb-12">
-      <div className="space-y-5">
+    <div className="laporan-print mx-auto max-w-5xl space-y-7 pb-12">
+      {/* Kop khusus cetak */}
+      <div className="hidden items-end justify-between border-b-2 border-slate-900 pb-4 print:flex">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Leosiqra</p>
+          <p className="text-[22px] font-extrabold text-slate-900">Laporan Keuangan {mode === 'tahunan' ? `Tahun ${year}` : `${MONTHS_LONG[month]} ${year}`}</p>
+        </div>
+        <p className="text-right text-[11px] text-slate-500">Dicetak {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+      </div>
+      <div className="space-y-5 print:hidden">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[30px]">Laporan</h1>
@@ -204,6 +215,9 @@ export default function LaporanPage() {
           <Link href="/membership/budget" aria-label="Anggaran" className="ml-auto flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[13px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">
             <Gauge size={15} /> <span className="hidden sm:inline">Anggaran</span>
           </Link>
+          <button type="button" onClick={() => window.print()} disabled={loading} aria-label="Cetak atau simpan PDF" className="flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-slate-800 disabled:opacity-40">
+            <Printer size={15} /> <span className="hidden sm:inline">Cetak / PDF</span>
+          </button>
         </div>
       </div>
 
@@ -444,6 +458,16 @@ export default function LaporanPage() {
           <TopExpenses spend={spend} />
         </>
       )}
+      <style>{`
+        @media print {
+          @page { size: A4 portrait; margin: 12mm; }
+          body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          aside, nav, header, [data-header-slot] { display: none !important; }
+          .web-page { background: #fff !important; }
+          .laporan-print { max-width: none !important; padding: 0 !important; }
+          .laporan-print section, .laporan-print .rounded-\\[24px\\], .laporan-print .rounded-\\[28px\\] { break-inside: avoid; }
+        }
+      `}</style>
     </div>
   );
 }

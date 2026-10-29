@@ -342,7 +342,8 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   pakai pemasukan/pengeluaran (tanpa investasi/transfer/cicilan hutang) — PERKIRAAN, tertulis di halaman. Fitur menu:
   id 'tabungan' = "Kekayaan"; 'hutang' dinormalisasi ke 'tabungan' (`normalizeFeatures`), Worker tidak diubah.
 - **Belum di-deploy** (akun B, frontend saja): **rapikan menu** — Laporan Tahunan DIHAPUS (`/membership/annual` →
-  redirect `/membership/laporan`, dobel dengan mode Tahunan; fitur cetak/PDF tahunan ikut hilang). Dompet Bersama, Impor &
+  redirect `/membership/laporan`, dobel dengan mode Tahunan). Cetak/PDF pindah ke Laporan: tombol "Cetak / PDF"
+  (window.print) + kop khusus cetak + CSS @media print di halaman itu (bulanan & tahunan). Dompet Bersama, Impor &
   Kotak Masuk keluar dari menu Fitur (halaman tetap; Dompet Bersama & Impor ada di Pengaturan / Catat Transaksi).
   Kotak Masuk jadi ikon `InboxButton` di samping lonceng (Header), dengan angka usulan menunggu.
 
