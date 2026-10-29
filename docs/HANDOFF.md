@@ -263,7 +263,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   & `card_network` (visa/mastercard/jcb/amex/gpn) di payload_json, input salah → 400. AccountModal: field 4 digit &
   jaringan. Diuji lokal: bayar 3,322 jt (saldo BCA & kartu pas), ref sama → duplicate, 3 paralel → 1 masuk, hapus
   sisi Masuk/Keluar (reverse=1) → pasangan ikut terhapus & saldo pulih, validasi 400/404/401. Belum: pindai kartu (AI).
-- **Belum di-deploy** (akun B, butuh deploy Worker, tanpa migrasi): **form kartu kredit khusus** (`CreditCardForm`)
+- **Live (run #71)** (akun B): **form kartu kredit khusus** (`CreditCardForm`)
   menggantikan form rekening umum utk kartu (pusat kartu Tambah/Ubah, detail rekening, AccountModal pilih "Credit Card"
   → pindah, modal global 'kartu'; `CardModal.tsx` lama yang tak terpakai dihapus). Pratinjau kartu live (`CardFace`,
   dipakai juga carousel), pilih bank (logo otomatis), nama, 4 digit, tanggal cetak/jatuh tempo via grid 1–28, tagihan,
