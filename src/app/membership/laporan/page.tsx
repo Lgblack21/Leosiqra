@@ -10,7 +10,7 @@ import { categoryVisual, useCategoryStyles } from '@/lib/categoryEmoji';
 import { cn, formatIDR, isInvestmentFlow } from '@/lib/utils';
 import { openSettings } from '@/lib/settingsPanel';
 import { HeaderSlot } from '@/components/Header';
-import { BubbleCalendar, TopExpenses, WeekdayPattern } from '@/components/laporan/ReportExtras';
+import { BubbleCalendar, TopExpenses, WeekdayPattern, YearMonths } from '@/components/laporan/ReportExtras';
 
 // Laporan pengeluaran Bulanan / Tahunan: total vs pemasukan, tren per
 // bulan (atau per hari), perbandingan kumulatif dengan periode sebelumnya,
@@ -24,7 +24,6 @@ type Mode = 'bulanan' | 'tahunan';
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
 const MONTHS_LONG = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 const COLORS = ['#4f46e5', '#ec4899', '#0ea5e9', '#f59e0b', '#10b981', '#8b5cf6', '#f97316', '#14b8a6'];
-const OTHER = '#cbd5e1';
 const STACK = 4; // kategori terbesar yang punya warna sendiri di grafik batang
 
 const inPeriod = (t: Transaction, y: number, m: number | null) => {
@@ -37,7 +36,6 @@ const short = (n: number) =>
   : n >= 1e6 ? `Rp${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 2 })} jt`
   : n >= 1e3 ? `Rp${(n / 1e3).toLocaleString('id-ID', { maximumFractionDigits: 1 })} rb`
   : formatIDR(n);
-const axis = (n: number) => (n >= 1e6 ? `${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 1 })} jt` : n >= 1e3 ? `${Math.round(n / 1e3)} rb` : '0');
 // Batas atas sumbu yang "bulat" (1/2/5 × 10^n).
 const niceMax = (v: number) => {
   if (v <= 0) return 1;
@@ -111,11 +109,6 @@ export default function LaporanPage() {
     : (isCurMonth && now ? now.getDate() : slots);
   // Tahunan: bulan tanpa catatan (mis. sebelum mulai pakai Leosiqra) tidak ikut dirata-rata.
   const passed = bars.slice(0, elapsed).filter((b) => mode === 'bulanan' || b.total > 0);
-  const avg = passed.length ? passed.reduce((s, b) => s + b.total, 0) / passed.length : 0;
-  const barMax = niceMax(Math.max(avg, ...bars.map((b) => b.total)));
-  const highlight = mode === 'tahunan' ? (isCurYear && now ? now.getMonth() : 11) : (isCurMonth && now ? now.getDate() - 1 : -1);
-  const [hover, setHover] = useState<number | null>(null);
-  const shownBar = hover ?? (highlight >= 0 ? highlight : null);
 
   // Kumulatif periode ini vs periode sebelumnya.
   const cumulative = (list: Transaction[], n: number, byMonth: boolean) => {
@@ -197,7 +190,7 @@ export default function LaporanPage() {
               <button
                 key={m}
                 type="button"
-                onClick={() => { setMode(m); setHover(null); setFocus(null); }}
+                onClick={() => { setMode(m); setFocus(null); }}
                 className={cn('rounded-full px-5 py-1.5 text-[14px] font-semibold capitalize transition-colors', mode === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700')}
               >
                 {m}
@@ -245,79 +238,22 @@ export default function LaporanPage() {
             </div>
           </section>
 
-          {/* Bulanan: kalender gelembung; Tahunan: batang per bulan */}
+          {/* Bulanan: kalender gelembung; Tahunan: 12 kartu bulan */}
           {mode === 'bulanan' ? (
             <BubbleCalendar key={`${year}-${month}`} spend={spend} year={year} month={month} now={now} />
           ) : (
-            <>
-          {/* Tren batang */}
-            <section>
-              <h2 className="text-[22px] font-extrabold tracking-tight text-slate-900">{mode === 'tahunan' ? 'Tren bulanan' : 'Tren harian'}</h2>
-              <p className="text-[14px] text-slate-500">
-                {shownBar !== null
-                  ? `${mode === 'tahunan' ? MONTHS_LONG[shownBar] : `${shownBar + 1} ${MONTHS[month]}`} · ${formatIDR(bars[shownBar]?.total ?? 0)}`
-                  : 'Arahkan ke batang untuk lihat totalnya'}
-              </p>
-              <div className="mt-4 rounded-[24px] bg-white p-4 ring-1 ring-slate-100 md:p-6">
-                <div className="relative flex h-56 gap-3">
-                  <div className="flex flex-col justify-between whitespace-nowrap pb-6 text-[11px] text-slate-400 tabular-nums">
-                    <span>{axis(barMax)}</span><span>{axis(barMax / 2)}</span><span>0</span>
-                  </div>
-                  <div className="relative flex-1">
-                    {avg > 0 && (
-                      <div className="pointer-events-none absolute inset-x-0 z-10 border-t border-dashed border-slate-400" style={{ bottom: `calc(24px + (100% - 24px) * ${avg / barMax})` }}>
-                        <span className="absolute -top-5 right-0 rounded bg-white/80 px-1 text-[11px] font-semibold text-slate-500">rata-rata {short(avg)}</span>
-                      </div>
-                    )}
-                    <div className={cn('flex h-full items-end', mode === 'tahunan' ? 'gap-2 md:gap-3' : 'gap-[2px] md:gap-1')}>
-                      {bars.map((b, i) => {
-                        const future = i >= elapsed;
-                        const active = i === shownBar;
-                        return (
-                          <button
-                            key={i}
-                            type="button"
-                            onMouseEnter={() => setHover(i)}
-                            onMouseLeave={() => setHover(null)}
-                            onFocus={() => setHover(i)}
-                            onClick={() => setHover(i)}
-                            aria-label={`${mode === 'tahunan' ? MONTHS_LONG[i] : `Tanggal ${i + 1}`}: ${formatIDR(b.total)}`}
-                            className={cn('group flex h-full flex-1 flex-col items-center justify-end rounded-xl pt-2', active && 'bg-slate-100/80')}
-                          >
-                            <div className="flex w-full max-w-[34px] flex-col-reverse overflow-hidden rounded-md" style={{ height: `calc((100% - 24px) * ${b.total / barMax})` }}>
-                              {[...stackCats, 'Lainnya'].map((name, k) => {
-                                const v = b.parts.get(name) ?? 0;
-                                if (!v) return null;
-                                return <div key={name} style={{ height: `${(v / b.total) * 100}%`, background: name === 'Lainnya' ? OTHER : COLORS[k % COLORS.length] }} />;
-                              })}
-                            </div>
-                            {b.total === 0 && <div className={cn('h-1 w-full max-w-[34px] rounded-full', future ? 'bg-slate-100' : 'bg-slate-200')} />}
-                            <span className={cn('mt-1.5 h-[18px] text-[11px] tabular-nums', active ? 'font-bold text-slate-900' : future ? 'text-slate-300' : 'text-slate-400')}>
-                              {mode === 'tahunan' ? MONTHS[i] : (i + 1) % 5 === 0 || i === 0 ? i + 1 : ''}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-                {cats.length > 0 && (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {stackCats.map((name, k) => (
-                      <span key={name} className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[13px] text-slate-600 ring-1 ring-slate-200">
-                        <span className="h-2.5 w-2.5 rounded-full" style={{ background: COLORS[k % COLORS.length] }} /> {name}
-                      </span>
-                    ))}
-                    {cats.length > STACK && (
-                      <span className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[13px] text-slate-600 ring-1 ring-slate-200">
-                        <span className="h-2.5 w-2.5 rounded-full" style={{ background: OTHER }} /> Lainnya
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </section>
-            </>
+            <YearMonths
+              all={all}
+              year={year}
+              now={now}
+              onPick={(m) => {
+                setMode('bulanan');
+                setMonth(m);
+               
+                setFocus(null);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
           )}
 
           {/* Kumulatif vs periode sebelumnya */}
@@ -436,7 +372,7 @@ export default function LaporanPage() {
           {mode === 'tahunan' && heat.length > 0 && (
             <section>
               <h2 className="text-[22px] font-extrabold tracking-tight text-slate-900">Kategori dari waktu ke waktu</h2>
-              <p className="text-[14px] text-slate-500">Makin gelap, makin besar porsi bulan itu untuk kategori tersebut</p>
+              <p className="text-[14px] text-slate-500">Makin besar gelembung, makin besar belanja kategori itu di bulan tersebut</p>
               <div className="mt-4 rounded-[24px] bg-white p-4 ring-1 ring-slate-100 md:p-6">
                 <div>
                   <div className="grid grid-cols-[104px_repeat(6,minmax(0,1fr))_64px] md:grid-cols-[170px_repeat(12,minmax(0,1fr))_120px] gap-1.5 pb-2 text-center text-[12px] text-slate-400">
@@ -453,12 +389,18 @@ export default function LaporanPage() {
                           <span className="truncate text-[14px] font-medium text-slate-700">{row.name}</span>
                         </span>
                         {row.per.map((val, i) => (
-                          <span
-                            key={i}
-                            title={`${MONTHS_LONG[i]}: ${formatIDR(val)}`}
-                            className={cn('h-9 rounded-lg', heatCell(i))}
-                            style={{ background: val > 0 ? `rgba(79, 70, 229, ${0.15 + 0.85 * (val / row.max)})` : '#f1f5f9' }}
-                          />
+                          <span key={i} title={`${MONTHS_LONG[i]}: ${formatIDR(val)}`} className={heatCell(i)}>
+                            <span className="flex h-10 items-center justify-center">
+                            <span
+                              className="rounded-full transition-transform hover:scale-110"
+                              style={
+                                val > 0
+                                  ? { width: 12 + 24 * Math.sqrt(val / row.max), height: 12 + 24 * Math.sqrt(val / row.max), background: row.color, opacity: 0.45 + 0.55 * (val / row.max) }
+                                  : { width: 6, height: 6, background: '#e2e8f0' }
+                              }
+                            />
+                            </span>
+                          </span>
                         ))}
                         <span className="whitespace-nowrap text-right text-[12px] font-bold tabular-nums text-slate-900 md:text-[14px]">{short(row.value)}</span>
                       </div>

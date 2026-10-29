@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-28 malam (akun B selesai; semua live, main = run #5
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Laporan bulanan + Cek hari |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Laporan tahunan |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -214,17 +214,22 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   `deleteTransaction` (endpoint biasa, saldo dibalik server), id pasangan transfer yang sudah ikut terhapus dilewati;
   berhenti & lapor kalau gagal di tengah. Pilihan disaring ke yang terlihat di filter. Diuji lokal: kategori di server
   berubah, saldo BCA/Tunai kembali persis sebesar 3 transaksi yang dihapus.
-- **Belum di-deploy** (akun B): **Laporan bulanan** (`components/laporan/ReportExtras.tsx`): mode Bulanan pakai
+- **Live (run #63)** (akun B): **Laporan bulanan** (`components/laporan/ReportExtras.tsx`): mode Bulanan pakai
   **kalender gelembung** (ukuran ∝ √belanja, merah > 1,5× rata-rata, centang hijau = hari hemat, hari ini bingkai +
   titik berdenyut; ketuk hari → rincian + link `Transaksi?tanggal=YYYY-MM-DD`), menggantikan batang harian (batang
   tetap di Tahunan). **Pola mingguan** (rata-rata per hari Sen–Min) dan **Pengeluaran terbesar** (podium 🥇🥈🥉 + 3
   berikutnya) di kedua mode. Transaksi menerima `?tanggal=`.
-- **Belum di-deploy** (akun B): **Cek hari** (`components/laporan/DayReview.tsx`) — ketuk hari di kalender Laporan →
+- **Live (run #63)** (akun B): **Cek hari** (`components/laporan/DayReview.tsx`) — ketuk hari di kalender Laporan →
   modal semua transaksi hari itu: cincin progres + Leo, centang per transaksi (letup + riak hijau, baris pindah ke
   "Sudah dicek"), "Semua sudah benar" → konfeti + Leo senang + "Hari berikutnya", ketuk baris → ganti kategori
   (pengeluaran/pemasukan saja, kategori investasi disembunyikan; ganti = otomatis dicek), panah ←/→ hari. Kalender
   memberi lencana ✓ untuk hari yang semua pengeluarannya sudah dicek. Worker: PUT transaksi menerima
   `reviewed: boolean` → `payload_json.reviewed` (tanpa migrasi; bukan data uang). Perlu deploy Worker.
+- **Belum di-deploy** (akun B): **Laporan tahunan** — batang bertumpuk diganti **"Bulan demi bulan"** (`YearMonths` di
+  ReportExtras): kartu per bulan mulai bulan pertama yang ada catatan, berisi keluar, batang vs rata-rata, cincin
+  % ditabung ((masuk−keluar)/masuk), 👑 terhemat / 🔥 terboros, ketuk → Bulanan bulan itu; strip rekor (rata-rata,
+  % ditabung, terhemat, terboros, kategori paling naik). "Kategori dari waktu ke waktu" jadi matriks gelembung
+  berwarna kategori.
 
 ## Migrasi D1
 

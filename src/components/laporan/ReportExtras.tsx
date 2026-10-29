@@ -235,3 +235,153 @@ export function TopExpenses({ spend }: { spend: Transaction[] }) {
     </section>
   );
 }
+
+// ===== Tahunan: 12 kartu bulan + rekor =====
+// Tiap bulan: total keluar, batang dibanding rata-rata, dan cincin "% ditabung"
+// ((masuk − keluar) / masuk). 👑 bulan terhemat, 🔥 bulan terboros. Ketuk →
+// Laporan bulanan bulan itu. `all` = pengeluaran & pemasukan (tanpa
+// transfer/investasi) dari halaman.
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+
+export function YearMonths({ all, year, now, onPick }: { all: Transaction[]; year: number; now: Date | null; onPick: (month: number) => void }) {
+  const months = useMemo(() => {
+    const out = Array.from({ length: 12 }, () => ({ spend: 0, income: 0, cats: new Map<string, number>() }));
+    for (const t of all) {
+      const d = new Date(t.date);
+      if (d.getFullYear() !== year) continue;
+      const m = out[d.getMonth()];
+      if (t.type === 'pengeluaran') {
+        m.spend += idr(t);
+        m.cats.set(t.category || 'Lainnya', (m.cats.get(t.category || 'Lainnya') ?? 0) + idr(t));
+      } else if (t.type === 'pemasukan') m.income += idr(t);
+    }
+    return out;
+  }, [all, year]);
+
+  const lastIdx = !now || year < now.getFullYear() ? 11 : year > now.getFullYear() ? -1 : now.getMonth();
+  const active = months.map((m, i) => ({ ...m, i })).filter((m) => m.i <= lastIdx && (m.spend > 0 || m.income > 0));
+  const withSpend = active.filter((m) => m.spend > 0);
+  const avg = withSpend.length ? withSpend.reduce((s, m) => s + m.spend, 0) / withSpend.length : 0;
+  const max = Math.max(1, ...months.map((m) => m.spend));
+  const best = withSpend.length > 1 ? withSpend.reduce((a, b) => (b.spend < a.spend ? b : a)) : null;
+  const worst = withSpend.length > 1 ? withSpend.reduce((a, b) => (b.spend > a.spend ? b : a)) : null;
+  const totalIn = active.reduce((s, m) => s + m.income, 0);
+  const totalOut = active.reduce((s, m) => s + m.spend, 0);
+  const savedPct = totalIn > 0 ? Math.round(((totalIn - totalOut) / totalIn) * 100) : null;
+
+  // Kategori yang paling naik: bulan terakhir vs bulan sebelumnya (yang ada datanya).
+  const riser = (() => {
+    if (withSpend.length < 2) return null;
+    const cur = withSpend[withSpend.length - 1];
+    const prev = withSpend[withSpend.length - 2];
+    let top: { name: string; diff: number } | null = null;
+    for (const [name, v] of cur.cats) {
+      const diff = v - (prev.cats.get(name) ?? 0);
+      if (diff > 0 && (!top || diff > top.diff)) top = { name, diff };
+    }
+    return top ? { ...top, month: cur.i } : null;
+  })();
+
+  if (active.length === 0) return null;
+  // Mulai dari bulan pertama yang ada catatannya (bulan sebelum pakai Leosiqra tidak ditampilkan).
+  const firstIdx = active[0].i;
+  const R = 15;
+  const C = 2 * Math.PI * R;
+
+  return (
+    <section>
+      <h2 className="text-[22px] font-extrabold tracking-tight text-slate-900">Bulan demi bulan</h2>
+      <p className="text-[14px] text-slate-500">
+        Cincin = bagian pemasukan yang tersisa (ditabung). Ketuk bulan untuk laporannya.{firstIdx > 0 ? ` Catatan mulai ${MONTHS_SHORT[firstIdx]} ${year}.` : ''}
+      </p>
+
+      {/* Rekor tahun ini */}
+      <div className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0">
+        <span className="shrink-0 rounded-2xl bg-white px-3.5 py-2 ring-1 ring-slate-200">
+          <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Rata-rata</span>
+          <span className="text-[14px] font-bold text-slate-900">{rp(avg)}/bln</span>
+        </span>
+        {savedPct !== null && (
+          <span className={cn('shrink-0 rounded-2xl px-3.5 py-2', savedPct >= 0 ? 'bg-emerald-50' : 'bg-rose-50')}>
+            <span className={cn('block text-[11px] font-semibold uppercase tracking-wide', savedPct >= 0 ? 'text-emerald-600' : 'text-rose-600')}>Ditabung</span>
+            <span className={cn('text-[14px] font-bold', savedPct >= 0 ? 'text-emerald-700' : 'text-rose-700')}>{savedPct}% pemasukan</span>
+          </span>
+        )}
+        {best && (
+          <button type="button" onClick={() => onPick(best.i)} className="shrink-0 rounded-2xl bg-amber-50 px-3.5 py-2 text-left hover:bg-amber-100">
+            <span className="block text-[11px] font-semibold uppercase tracking-wide text-amber-600">👑 Terhemat</span>
+            <span className="text-[14px] font-bold text-amber-800">{MONTHS_SHORT[best.i]} · {rp(best.spend)}</span>
+          </button>
+        )}
+        {worst && (
+          <button type="button" onClick={() => onPick(worst.i)} className="shrink-0 rounded-2xl bg-rose-50 px-3.5 py-2 text-left hover:bg-rose-100">
+            <span className="block text-[11px] font-semibold uppercase tracking-wide text-rose-600">🔥 Terboros</span>
+            <span className="text-[14px] font-bold text-rose-800">{MONTHS_SHORT[worst.i]} · {rp(worst.spend)}</span>
+          </button>
+        )}
+        {riser && (
+          <span className="shrink-0 rounded-2xl bg-indigo-50 px-3.5 py-2">
+            <span className="block text-[11px] font-semibold uppercase tracking-wide text-indigo-500">📈 Paling naik</span>
+            <span className="text-[14px] font-bold text-indigo-800">{riser.name} +{rp(riser.diff)} di {MONTHS_SHORT[riser.month]}</span>
+          </span>
+        )}
+      </div>
+
+      {/* 12 kartu bulan */}
+      <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6 md:gap-3">
+        {months.map((m, i) => {
+          if (i < firstIdx) return null;
+          const future = i > lastIdx;
+          const empty = !future && m.spend === 0 && m.income === 0;
+          const saved = m.income > 0 ? (m.income - m.spend) / m.income : null;
+          const isCur = !!now && now.getFullYear() === year && now.getMonth() === i;
+          const crown = best?.i === i;
+          const fire = worst?.i === i;
+          const pct = saved === null ? 0 : Math.max(0, Math.min(1, saved));
+          return (
+            <button
+              key={i}
+              type="button"
+              disabled={future}
+              onClick={() => onPick(i)}
+              className={cn(
+                'group relative overflow-hidden rounded-[20px] p-3 text-left ring-1 transition-all md:p-3.5',
+                future ? 'cursor-default border border-dashed border-slate-200 bg-transparent opacity-50 ring-0' : 'bg-white ring-slate-100 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-18px_rgba(49,46,129,0.45)]',
+                crown && 'bg-gradient-to-br from-amber-50 to-white ring-amber-200',
+                fire && 'bg-gradient-to-br from-rose-50 to-white ring-rose-200',
+                isCur && 'ring-2 ring-indigo-500'
+              )}
+            >
+              <div className="flex items-start justify-between gap-1">
+                <span className={cn('text-[13px] font-bold', isCur ? 'text-indigo-600' : 'text-slate-500')}>{MONTHS_SHORT[i]}</span>
+                {!future && !empty && (
+                  <span className="relative -mr-1 -mt-1 h-9 w-9 shrink-0" title={saved === null ? 'Tidak ada pemasukan' : `${Math.round(saved * 100)}% ditabung`}>
+                    <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90">
+                      <circle cx="18" cy="18" r={R} fill="none" stroke="#f1f5f9" strokeWidth="4" />
+                      {saved !== null && (
+                        <circle cx="18" cy="18" r={R} fill="none" stroke={saved >= 0.2 ? '#10b981' : saved >= 0 ? '#f59e0b' : '#f43f5e'} strokeWidth="4" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - (saved < 0 ? 1 : pct))} />
+                      )}
+                    </svg>
+                    <span className={cn('absolute inset-0 flex items-center justify-center text-[9px] font-extrabold tabular-nums', saved === null ? 'text-slate-300' : saved < 0 ? 'text-rose-600' : 'text-slate-700')}>
+                      {saved === null ? '—' : saved < 0 ? '−' : `${Math.round(saved * 100)}%`}
+                    </span>
+                  </span>
+                )}
+              </div>
+              <p className={cn('mt-1 truncate text-[16px] font-extrabold tracking-tight tabular-nums md:text-[18px]', future || empty ? 'text-slate-300' : 'text-slate-900')}>
+                {future ? '—' : empty ? 'Rp0' : rp(m.spend)}
+              </p>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div className={cn('h-full rounded-full', m.spend > avg * 1.2 ? 'bg-rose-400' : 'bg-indigo-500')} style={{ width: `${(m.spend / max) * 100}%` }} />
+              </div>
+              <p className="mt-1.5 truncate text-[11px] text-slate-400">
+                {future ? 'belum lewat' : m.income > 0 ? `masuk ${rp(m.income)}` : 'tanpa pemasukan'}
+              </p>
+              {(crown || fire) && <span className="absolute bottom-2 right-2 text-[16px]" aria-hidden>{crown ? '👑' : '🔥'}</span>}
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
