@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-10-30 (akun B; semua live, main = run #88)
+Terakhir diperbarui: 2026-10-30 (akun B; main = run #90, logo HD belum deploy)
 
 ## Siapa sedang kerja
 
@@ -389,7 +389,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   yang sudah dimiliki ("✓ Sudah ada") → layar "Tautkan <bank>": atur belanja/nabung per rekening (+ pasang logo kalau
   belum ada) atau "Tambah rekening <bank> lain". AccountModal punya pilihan "Dipakai untuk". Kekayaan menampilkan label.
   Catatan: purpose saat ini HANYA label/pengelompokan — tidak mengubah cara saldo dihitung.
-- **Belum di-deploy** (akun B, frontend saja): Tambah investasi → Deposito kini membuka form deposito DI ATAS popup
+- **Live (run #90)** (akun B, frontend saja): Tambah investasi → Deposito kini membuka form deposito DI ATAS popup
   (popup Tambah investasi tidak ditutup).
 - **Belum di-deploy** (akun B, butuh deploy Worker, tanpa migrasi): **logo bank HD dari ikon aplikasi App Store**.
   Bos lapor logo masih ada yang kosong & tidak HD setelah run #89. `/api/logo` kini PERTAMA mengambil ikon aplikasi
