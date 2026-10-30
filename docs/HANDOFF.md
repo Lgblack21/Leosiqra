@@ -378,7 +378,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   (clipPath), partikel mengalir (stroke-dash), node tumbuh; reduced-motion dihormati. Node punya tinggi minimum (MINH)
   → pita beda tebal di kedua ujung. Fitur baru id `jejak` (FEATURES, DEFAULT_FEATURES, navGroups, Worker PREF_FEATURES)
   — user yang sudah punya preferensi Fitur harus menyalakannya sendiri di Atur fitur.
-- **Belum di-deploy** (akun B, butuh deploy Worker, TANPA migrasi): **logo bank resolusi tinggi + tautkan akun**.
+- **Live (run #89)** (akun B, Worker ikut, tanpa migrasi): **logo bank resolusi tinggi + tautkan akun**.
   Bug: logo bank kosong (huruf) di pemilih akun — favicon Google cuma 16px untuk banyak situs bank & LogoImage
   menganggap ≤16px gagal. Kini Worker `GET /api/logo?d=<domain>` (sesi wajib, whitelist LOGO_DOMAINS = daftar di
   `src/lib/indonesianBanks.ts`, SVG ditolak, cache edge 7 hari / 404 1 hari): coba apple-touch-icon → `<link rel=icon>`
