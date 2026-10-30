@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-10-30 (akun B; semua live, main = run #82)
+Terakhir diperbarui: 2026-10-30 (akun B; semua live, main = run #83)
 
 ## Siapa sedang kerja
 
@@ -341,7 +341,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   − hutang sisa (hutang "Kartu Kredit" yg menempel ke rekening kartu tidak dobel). Grafik jejak = mundur dari angka hari ini
   pakai pemasukan/pengeluaran (tanpa investasi/transfer/cicilan hutang) — PERKIRAAN, tertulis di halaman. Fitur menu:
   id 'tabungan' = "Kekayaan"; 'hutang' dinormalisasi ke 'tabungan' (`normalizeFeatures`), Worker tidak diubah.
-- **Belum di-deploy** (akun B, frontend saja): **rapikan menu** — Laporan Tahunan DIHAPUS (`/membership/annual` →
+- **Live (run #83)** (akun B, frontend saja): **rapikan menu** — Laporan Tahunan DIHAPUS (`/membership/annual` →
   redirect `/membership/laporan`, dobel dengan mode Tahunan). Cetak/PDF pindah ke Laporan: tombol "Cetak / PDF"
   (window.print) + kop khusus cetak + CSS @media print di halaman itu (bulanan & tahunan). Dompet Bersama, Impor &
   Kotak Masuk keluar dari menu Fitur (halaman tetap; Dompet Bersama & Impor ada di Pengaturan / Catat Transaksi).
