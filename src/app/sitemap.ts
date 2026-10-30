@@ -15,6 +15,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/panduan/mengatur-gaji-mingguan',
     '/panduan/dana-darurat',
     '/panduan/cara-membuat-anggaran-bulanan',
+    '/panduan/laporan-keuangan-pribadi',
     '/panduan/cara-melunasi-utang',
     '/panduan/catat-keuangan-rumah-tangga',
     '/panduan/catat-pengeluaran-di-excel',

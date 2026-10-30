@@ -8,6 +8,7 @@ import { LandingFooter } from '@/components/LandingFooter';
 import { ClipboardList } from 'lucide-react';
 import { Target } from 'lucide-react';
 import { Bot } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Panduan Keuangan Pribadi | Leosiqra',
@@ -37,6 +38,7 @@ const GUIDES = [
   { href: '/panduan/mengatur-gaji-mingguan', icon: CalendarClock, title: 'Cara Mengatur Gaji Mingguan', desc: 'Tagihan bulanan jadi jatah mingguan, bulan 5 minggu, contoh 500 ribu per minggu.' },
   { href: '/panduan/dana-darurat', icon: LifeBuoy, title: 'Dana Darurat', desc: 'Berapa idealnya, disimpan di mana, dan cara mengumpulkannya.' },
   { href: '/panduan/cara-membuat-anggaran-bulanan', icon: ClipboardList, title: 'Cara Membuat Anggaran Bulanan', desc: 'Dari pengeluaran nyata ke batas per kategori, contoh gaji 4 juta, cek laju di tengah bulan.' },
+  { href: '/panduan/laporan-keuangan-pribadi', icon: BarChart3, title: 'Laporan Keuangan Pribadi', desc: 'Contoh laporan arus kas bulanan dan kekayaan bersih, cara membacanya, dan kesalahan yang sering terjadi.' },
   { href: '/panduan/cara-melunasi-utang', icon: HandCoins, title: 'Cara Melunasi Utang', desc: 'Metode snowball vs avalanche, lengkap dengan contoh urutan.' },
   { href: '/panduan/catat-keuangan-rumah-tangga', icon: Home, title: 'Catatan Keuangan Rumah Tangga', desc: 'Kategori yang dicatat, contoh tabel sebulan, dan cara mencatat berdua.' },
   { href: '/panduan/catat-pengeluaran-di-excel', icon: FileSpreadsheet, title: 'Catat Pengeluaran di Excel vs Aplikasi', desc: 'Template Excel sederhana, rumus SUMIF, dan kapan sebaiknya pindah ke aplikasi.' },
