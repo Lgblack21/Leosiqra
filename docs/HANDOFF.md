@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-30 (akun B; semua live, main = run #87)
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Kekayaan: Tambah investasi |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Jejak Uang |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -370,6 +370,14 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   **Bug lama (belum diperbaiki)**: Worker tidak mengonversi mata uang posisi ↔ rekening — posisi USD dari rekening
   IDR memotong angka USD mentah. Form baru MENCEGAH (saham USD wajib rekening USD); form saham/investasi lama masih
   bisa memicunya.
+- **Belum di-deploy** (akun B, butuh deploy Worker, TANPA migrasi): **Jejak Uang** `/membership/jejak-uang`
+  (`components/jejak/JejakUang.tsx`) — versi kita dari "Ikuti uangmu" Oyenza: diagram aliran (Sankey SVG buatan sendiri)
+  sumber pemasukan → total → kategori (top 6 + Lainnya) → tempat (judul transaksi, top 3 + "N tempat lain"); di HP 3 kolom
+  + rincian tempat saat kategori diketuk. Bulanan/Tahunan. Data = pemasukan/pengeluaran tanpa isInvestmentFlow (sama
+  Laporan). Pengeluaran > pemasukan → node "Dari simpanan" (penyeimbang, bukan data). Animasi: pita terbuka kiri→kanan
+  (clipPath), partikel mengalir (stroke-dash), node tumbuh; reduced-motion dihormati. Node punya tinggi minimum (MINH)
+  → pita beda tebal di kedua ujung. Fitur baru id `jejak` (FEATURES, DEFAULT_FEATURES, navGroups, Worker PREF_FEATURES)
+  — user yang sudah punya preferensi Fitur harus menyalakannya sendiri di Atur fitur.
 
 ## Migrasi D1
 

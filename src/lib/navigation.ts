@@ -7,6 +7,7 @@ import {
   Repeat,
   Building2,
   PieChart,
+  Footprints,
   TrendingUp,
   Briefcase,
   Landmark,
@@ -97,6 +98,7 @@ export const navGroups: NavGroup[] = [
     label: 'Perencanaan & Laporan',
     icon: Target,
     items: [
+      { label: 'Jejak Uang', href: '/membership/jejak-uang', icon: Footprints },
       { label: 'Pajak Center', href: '/membership/pajak-center', icon: ShieldCheck },
     ],
   },
