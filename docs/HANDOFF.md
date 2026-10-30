@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-10-30 (akun B; main = run #84, form Rekening baru belum deploy)
+Terakhir diperbarui: 2026-10-30 (akun B; semua live, main = run #85)
 
 ## Siapa sedang kerja
 
@@ -350,7 +350,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   kartu per catatan (sisa, progres pelunasan, sejak/rekening/cicilan/bunga), neraca hutang vs piutang + selisih, saring
   Semua/Hutang/Piutang, modal cicilan dengan tombol 25%/50%/semua sisa + pratinjau sisa. Fungsi uang (cicilan, lunas,
   hapus) TIDAK diubah — catatan: masih multi-request dari klien (bukan batch atomik), sama seperti sebelumnya.
-- **Belum di-deploy** (akun B, frontend saja): **form Tambah/Ubah Rekening** (`AccountModal`) — pratinjau kartu langsung,
+- **Live (run #85)** (akun B, frontend saja): **form Tambah/Ubah Rekening** (`AccountModal`) — pratinjau kartu langsung,
   jenis jadi tombol ikon (tanpa "Investasi" — rekening lama berjenis itu tetap bisa diedit), pilihan cepat bank/e-wallet
   berlogo, input saldo besar + mata uang ringkas. Logika simpan sama.
   `CurrencySelect` dapat prop `compact` & selalu memuat IDR + nilai terpilih (dulu daftar kosong → "-- Pilih --" walau IDR).
