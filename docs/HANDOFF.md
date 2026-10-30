@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-10-30 (akun B; semua live, main = run #86)
+Terakhir diperbarui: 2026-10-30 (akun B; semua live, main = run #87)
 
 ## Siapa sedang kerja
 
@@ -361,7 +361,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   26 bank + 9 e-wallet/pembayaran berlogo, Tunai, Kartu kredit, Isi manual) → `AccountModal` dengan prop `preset`
   (nama/jenis/logo terisi; dikirim lewat modalData 'rekening'). Investasi/kripto sengaja tidak jadi rekening.
   `indonesianBanks.ts`: + PayPal, Wise, Revolut.
-- **Belum di-deploy** (akun B, butuh deploy Worker, TANPA migrasi): **Kekayaan → Tambah → Investasi**
+- **Live (run #87)** (akun B, Worker ikut, tanpa migrasi): **Kekayaan → Tambah → Investasi**
   (`AddInvestmentModal`). Jenis: Saham Indonesia, Kripto, Saham AS & ETF (Harga otomatis: cari ticker →
   `/api/member/stock-search` / CoinGecko search, harga dari `/api/member/stock-price` / CoinGecko simple/price IDR),
   Emas, Reksa dana, Obligasi/SBN, Lainnya (manual), Deposito → modal deposito lama. Saham IDX bisa input lot/lembar.
