@@ -1,16 +1,16 @@
 "use client";
 
-import Image from 'next/image';
 import { useState, useEffect } from 'react';
-import { ChevronDown, Image as ImageIcon, Loader2, Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Camera, Check, Loader2 } from 'lucide-react';
+import { cn, formatMoney } from '@/lib/utils';
+import { LogoImage } from '@/components/ui/LogoImage';
 import { Modal } from '@/components/ui/Modal';
 import { useFeedback } from '@/components/ui/Feedback';
 import { accountService, Account } from '@/lib/services/accountService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { CurrencySelect } from '@/components/CurrencySelect';
 import { NumberInput } from '@/components/ui/NumberInput';
-import { CARD_COLOR_OPTIONS } from '@/lib/cardColors';
+import { CARD_COLOR_OPTIONS, getCardGradientClass } from '@/lib/cardColors';
 import { CARD_NETWORK_OPTIONS } from '@/lib/creditCard';
 import { matchIndonesianInstitutionLogo } from '@/lib/indonesianBanks';
 import { isCreditAccountType, computeCreditUsage, creditBalanceFromUsed } from '@/lib/creditCard';
@@ -34,6 +34,19 @@ interface AccountModalProps {
 
 const BUILT_IN_TYPES = ['Bank Account', 'E-Wallet', 'Cash', 'Investment Account', 'Credit Card'];
 const CUSTOM_TYPE_VALUE = '__custom__';
+// Tampilan form (2026-10-30): pratinjau kartu langsung, jenis sebagai tombol,
+// pilihan cepat bank/e-wallet berlogo. Logika simpan tidak berubah.
+const TYPE_META: Record<string, { emoji: string; label: string }> = {
+  'Bank Account': { emoji: '🏦', label: 'Bank' },
+  'E-Wallet': { emoji: '📱', label: 'E-wallet' },
+  Cash: { emoji: '💵', label: 'Tunai' },
+  'Investment Account': { emoji: '📈', label: 'Investasi' },
+  'Credit Card': { emoji: '💳', label: 'Kartu kredit' },
+};
+const QUICK_PICKS: Record<string, string[]> = {
+  'Bank Account': ['BCA', 'Mandiri', 'BRI', 'BNI', 'BSI', 'CIMB Niaga', 'Jago', 'SeaBank', 'blu', 'Jenius', 'Permata', 'Danamon'],
+  'E-Wallet': ['GoPay', 'OVO', 'DANA', 'ShopeePay', 'LinkAja', 'Flip'],
+};
 
 export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Account', title = 'Tambah Rekening Baru', initialData = null, existingTypes = [], onCreditCard }: AccountModalProps) => {
   const { toast } = useFeedback();
@@ -185,234 +198,165 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
     }
   };
 
+  const isCredit = formData.type === 'Credit Card';
+  const typeMeta = (t: string) => TYPE_META[t] ?? { emoji: '🗂️', label: t };
+  const picks = !initialData ? QUICK_PICKS[formData.type] ?? [] : [];
+  const pickName = (name: string) => {
+    const logo = matchIndonesianInstitutionLogo(name, formData.type);
+    setFormData({ ...formData, name, logoUrl: logo && (logoIsAuto || !formData.logoUrl) ? logo : formData.logoUrl });
+    if (logo && (logoIsAuto || !formData.logoUrl)) setLogoIsAuto(true);
+  };
+  const chooseType = (newType: string) => {
+    if (newType === CUSTOM_TYPE_VALUE) {
+      setIsCustomTypeMode(true);
+      setFormData({ ...formData, type: '' });
+      return;
+    }
+    setIsCustomTypeMode(false);
+    if (newType === 'Credit Card' && !initialData && onCreditCard) {
+      onCreditCard();
+      return;
+    }
+    const matched = !initialData ? matchIndonesianInstitutionLogo(formData.name, newType) : null;
+    if (matched && (logoIsAuto || !formData.logoUrl)) {
+      setFormData({ ...formData, type: newType, logoUrl: matched });
+      setLogoIsAuto(true);
+    } else {
+      setFormData({ ...formData, type: newType });
+    }
+  };
+  const balanceNum = parseFloat(formData.balance) || 0;
+  const label = 'pl-1 text-[12px] font-semibold text-slate-500';
+  const field = 'w-full rounded-2xl border-none bg-slate-50 px-4 py-3 text-[15px] font-semibold text-slate-800 ring-1 ring-transparent transition-all placeholder:font-normal placeholder:text-slate-400 focus:bg-white focus:ring-slate-300';
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={initialData ? 'Edit Rekening' : title}
-      maxWidth="max-w-xl"
+      title={initialData ? 'Ubah rekening' : title}
+      maxWidth="max-w-lg"
     >
-      <div className="space-y-6">
-        {error && (
-          <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-sm font-medium text-rose-600">
-            {error}
+      <div className="space-y-5">
+        {error && <div className="rounded-2xl border border-rose-100 bg-rose-50 p-3.5 text-sm font-medium text-rose-600">{error}</div>}
+
+        {/* Pratinjau */}
+        <div className={cn('relative overflow-hidden rounded-[24px] p-5 text-white shadow-[0_18px_40px_-20px_rgba(15,23,42,0.6)] transition-colors duration-300', getCardGradientClass(formData.cardColor, formData.type))}>
+          <span aria-hidden className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/10" />
+          <div className="relative flex items-center gap-3">
+            <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} aria-label={formData.logoUrl ? 'Ganti logo' : 'Unggah logo'} className="group relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white text-[22px] ring-2 ring-white/30">
+              {uploading ? <Loader2 className="animate-spin text-slate-400" size={18} /> : formData.logoUrl ? (
+                <LogoImage src={formData.logoUrl} alt={formData.name || 'Logo'} fallbackText={(formData.name || '?').slice(0, 3).toUpperCase()} className="h-full w-full object-contain p-1" />
+              ) : <span aria-hidden>{typeMeta(formData.type).emoji}</span>}
+              <span className="absolute inset-0 flex items-center justify-center bg-slate-900/50 opacity-0 transition-opacity group-hover:opacity-100"><Camera size={16} /></span>
+            </button>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[17px] font-bold">{formData.name || 'Nama rekening'}</p>
+              <p className="text-[12px] text-white/70">{typeMeta(formData.type).label || 'Jenis rekening'}{formData.currency !== 'IDR' ? ` · ${formData.currency}` : ''}</p>
+            </div>
+          </div>
+          <p className="relative mt-5 text-[11px] text-white/60">{isCredit ? 'Tagihan terpakai' : 'Saldo'}</p>
+          <p className="relative text-[26px] font-extrabold tabular-nums leading-tight">{formatMoney(isCredit ? -balanceNum : balanceNum, formData.currency)}</p>
+          <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
+        </div>
+
+        {/* Jenis */}
+        <div className="space-y-2">
+          <p className={label}>Jenis</p>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {[...typeOptions.filter((t) => t), CUSTOM_TYPE_VALUE].map((t) => {
+              const active = t === CUSTOM_TYPE_VALUE ? isCustomTypeMode : !isCustomTypeMode && formData.type === t;
+              const meta = t === CUSTOM_TYPE_VALUE ? { emoji: '➕', label: 'Lainnya' } : typeMeta(t);
+              return (
+                <button key={t} type="button" onClick={() => chooseType(t)} aria-pressed={active} className={cn('flex flex-col items-center gap-1 rounded-2xl px-2 py-2.5 text-center transition-all', active ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-50 text-slate-700 hover:bg-slate-100')}>
+                  <span aria-hidden className="text-[20px] leading-none">{meta.emoji}</span>
+                  <span className="line-clamp-1 text-[12px] font-semibold">{meta.label}</span>
+                </button>
+              );
+            })}
+          </div>
+          {isCustomTypeMode && (
+            <input autoFocus type="text" value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} placeholder="Nama jenis, mis. Reksadana atau Emas Digital" className={field} />
+          )}
+        </div>
+
+        {/* Nama */}
+        <div className="space-y-2">
+          <label htmlFor="acc-name" className={label}>Nama</label>
+          <input
+            id="acc-name"
+            type="text"
+            value={formData.name}
+            onChange={(e) => {
+              const newName = e.target.value;
+              const matched = !initialData ? matchIndonesianInstitutionLogo(newName, formData.type) : null;
+              if (matched && (logoIsAuto || !formData.logoUrl)) {
+                setFormData({ ...formData, name: newName, logoUrl: matched });
+                setLogoIsAuto(true);
+              } else {
+                setFormData({ ...formData, name: newName });
+              }
+            }}
+            placeholder={formData.type === 'E-Wallet' ? 'mis. GoPay' : formData.type === 'Cash' ? 'mis. Dompet' : 'mis. BCA Tabungan'}
+            className={field}
+          />
+          {picks.length > 0 && (
+            <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 no-scrollbar">
+              {picks.map((n) => (
+                <button key={n} type="button" onClick={() => pickName(n)} className={cn('flex shrink-0 items-center gap-1.5 rounded-full py-1 pl-1 pr-3 text-[12px] font-semibold ring-1 transition-colors', formData.name === n ? 'bg-slate-900 text-white ring-slate-900' : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50')}>
+                  <span className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full bg-white">
+                    <LogoImage src={matchIndonesianInstitutionLogo(n, formData.type) ?? undefined} alt={n} fallbackText={n.slice(0, 2).toUpperCase()} className="h-full w-full object-contain" />
+                  </span>
+                  {n}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Saldo */}
+        <div className="space-y-2">
+          <label className={label}>{isCredit ? 'Tagihan terpakai sekarang' : 'Saldo sekarang'}</label>
+          <div className="flex items-stretch gap-2">
+            <div className="relative flex-1">
+              <NumberInput value={formData.balance} onChange={(val) => setFormData({ ...formData, balance: val })} placeholder="0" className={cn(field, 'py-3.5 text-[22px] font-extrabold tabular-nums')} />
+            </div>
+            <CurrencySelect compact value={formData.currency} onChange={(val) => setFormData({ ...formData, currency: val })} className="w-[104px] shrink-0 [&>div]:h-full" />
+          </div>
+          <p className="pl-1 text-[12px] leading-relaxed text-slate-400">
+            {isCredit ? 'Isi 0 kalau belum ada. Belanja pakai kartu ini otomatis menambah tagihan.' : 'Samakan dengan saldo di aplikasi bank/dompet. Transaksi berikutnya mengubahnya otomatis.'}
+          </p>
+        </div>
+
+        {isCredit && (
+          <div className="space-y-4 rounded-[22px] bg-slate-50 p-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <label className={label}>Limit</label>
+                <NumberInput value={formData.creditLimit} onChange={(val) => setFormData({ ...formData, creditLimit: val })} placeholder="0" className={cn(field, 'bg-white')} />
+              </div>
+              <div className="space-y-2">
+                <label className={label}>4 digit terakhir</label>
+                <input inputMode="numeric" maxLength={4} value={formData.cardLast4} onChange={(e) => setFormData({ ...formData, cardLast4: e.target.value.replace(/\D/g, '').slice(0, 4) })} placeholder="4821" className={cn(field, 'bg-white tracking-[0.3em]')} />
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {CARD_NETWORK_OPTIONS.map((n) => (
+                <button key={n.key} type="button" onClick={() => setFormData({ ...formData, cardNetwork: formData.cardNetwork === n.key ? '' : n.key })} className={cn('rounded-full px-3 py-1.5 text-xs font-bold transition-all', formData.cardNetwork === n.key ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100')}>
+                  {n.label}
+                </button>
+              ))}
+            </div>
+            <CardCycleFields value={cycleForm} onChange={setCycleForm} />
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nama Rekening</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => {
-                const newName = e.target.value;
-                const matched = !initialData ? matchIndonesianInstitutionLogo(newName, formData.type) : null;
-                if (matched && (logoIsAuto || !formData.logoUrl)) {
-                  setFormData({ ...formData, name: newName, logoUrl: matched });
-                  setLogoIsAuto(true);
-                } else {
-                  setFormData({ ...formData, name: newName });
-                }
-              }}
-              placeholder="Contoh: BCA Personal"
-              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
-            />
-            {!initialData && (
-              <p className="text-[10px] font-medium text-slate-400 pl-1">Logo bank/e-wallet Indonesia terisi otomatis. Bank luar negeri tetap perlu upload logo manual.</p>
-            )}
-          </div>
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Logo Rekening</label>
-            <div className="flex items-center gap-4">
-              <div className="relative w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">
-                {formData.logoUrl ? (
-                  <Image src={formData.logoUrl} alt="Logo Preview" fill className="object-contain" />
-                ) : (
-                  <ImageIcon className="text-slate-300" size={20} />
-                )}
-              </div>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                className="hidden" 
-                accept="image/*" 
-                onChange={handleLogoUpload} 
-              />
-              <button 
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="flex-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-600 transition-all flex items-center justify-center gap-2"
-              >
-                {uploading ? (
-                  <>
-                    <Loader2 className="animate-spin" size={14} />
-                    Mengunggah...
-                  </>
-                ) : (
-                  <>
-                    <ImageIcon size={14} />
-                    {formData.logoUrl ? 'Ganti Logo' : 'Upload Logo'}
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Jenis Rekening</label>
-            {isCustomTypeMode ? (
-              <div className="flex items-center gap-2">
-                <input
-                  autoFocus
-                  type="text"
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  placeholder="mis. Reksadana, Emas Digital, Dompet Digital"
-                  className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => { setIsCustomTypeMode(false); setFormData({ ...formData, type: initialData?.type || initialType }); }}
-                  className="shrink-0 px-3 py-3 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all text-[10px] font-black uppercase tracking-widest"
-                >
-                  Batal
-                </button>
-              </div>
-            ) : (
-              <div className="relative">
-                <select
-                  value={formData.type}
-                  onChange={(e) => {
-                    if (e.target.value === CUSTOM_TYPE_VALUE) {
-                      setIsCustomTypeMode(true);
-                      setFormData({ ...formData, type: '' });
-                      return;
-                    }
-                    const newType = e.target.value as Account['type'];
-                    if (newType === 'Credit Card' && !initialData && onCreditCard) {
-                      onCreditCard();
-                      return;
-                    }
-                    const matched = !initialData ? matchIndonesianInstitutionLogo(formData.name, newType) : null;
-                    if (matched && (logoIsAuto || !formData.logoUrl)) {
-                      setFormData({ ...formData, type: newType, logoUrl: matched });
-                      setLogoIsAuto(true);
-                    } else {
-                      setFormData({ ...formData, type: newType });
-                    }
-                  }}
-                  className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer"
-                >
-                  {typeOptions.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                  <option value={CUSTOM_TYPE_VALUE}>+ Tambah Jenis Baru...</option>
-                </select>
-                <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-              </div>
-            )}
-          </div>
-
-          <CurrencySelect 
-            label="Mata Uang"
-            value={formData.currency}
-            onChange={(val) => setFormData({...formData, currency: val})}
-          />
-
-          {formData.type === 'Credit Card' && (
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 text-indigo-500">Limit Kredit</label>
-              <NumberInput
-                value={formData.creditLimit}
-                onChange={(val) => setFormData({...formData, creditLimit: val})}
-                placeholder="0"
-                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
-              />
-              <p className="text-[10px] font-medium text-slate-400 pl-1">Plafon maksimal dari aplikasi (Akulaku, ShopeePayLater, Paylater BCA, KK, dll).</p>
-            </div>
-          )}
-          {formData.type === 'Credit Card' && (
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">4 Digit Terakhir · Opsional</label>
-              <input
-                inputMode="numeric"
-                maxLength={4}
-                value={formData.cardLast4}
-                onChange={(e) => setFormData({ ...formData, cardLast4: e.target.value.replace(/\D/g, '').slice(0, 4) })}
-                placeholder="4821"
-                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-3 px-4 text-sm font-bold tracking-[0.3em] text-slate-700 transition-all"
-              />
-              <p className="text-[10px] font-medium text-slate-400 pl-1">Hanya 4 digit terakhir — nomor lengkap tidak pernah disimpan.</p>
-            </div>
-          )}
-          {formData.type === 'Credit Card' && (
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Jaringan</label>
-              <div className="flex flex-wrap gap-1.5">
-                {CARD_NETWORK_OPTIONS.map((n) => (
-                  <button
-                    key={n.key}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, cardNetwork: formData.cardNetwork === n.key ? '' : n.key })}
-                    className={cn('rounded-full px-3 py-1.5 text-xs font-bold transition-all', formData.cardNetwork === n.key ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100')}
-                  >
-                    {n.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {formData.type === 'Credit Card' && <CardCycleFields value={cycleForm} onChange={setCycleForm} />}
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-              {formData.type === 'Credit Card' ? 'Tagihan Terpakai Saat Ini' : 'Saldo Saat Ini'}
-            </label>
-            <NumberInput
-              value={formData.balance}
-              onChange={(val) => setFormData({...formData, balance: val})}
-              placeholder="0"
-              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
-            />
-            <p className="text-[10px] font-medium text-slate-400 pl-1 leading-relaxed">
-              {formData.type === 'Credit Card'
-                ? 'Tagihan yang SUDAH terpakai sekarang (isi 0 kalau belum ada). Tiap pengeluaran dari kartu ini otomatis menambah terpakai & mengurangi sisa limit.'
-                : 'Isi saldo rekening kamu sekarang (sesuai bank/dompet). Transaksi yang kamu catat berikutnya akan otomatis menambah/mengurangi saldo ini.'}
-            </p>
-          </div>
-          {/* Field "Saldo Awal (Initial)" & "Nilai Base" digabung/dihapus: satu
-              nilai "Saldo Saat Ini" mengisi balance sekaligus initialBalance (base
-              yang dipakai kartu), dan nilai IDR akun mata uang asing dihitung
-              otomatis via kurs live. */}
-        </div>
-
-        <div className="space-y-3">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Warna Kartu</label>
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => setFormData({ ...formData, cardColor: '' })}
-              title="Default sesuai jenis rekening"
-              className={cn(
-                "w-9 h-9 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 hover:border-slate-400 transition-all",
-                !formData.cardColor && "ring-2 ring-offset-2 ring-slate-400"
-              )}
-            >
-              <span className="text-[9px] font-black">A</span>
-            </button>
+        {/* Warna */}
+        <div className="space-y-2">
+          <p className={label}>Warna kartu</p>
+          <div className="flex flex-wrap gap-2.5">
+            <button type="button" onClick={() => setFormData({ ...formData, cardColor: '' })} title="Otomatis sesuai jenis" aria-label="Warna otomatis" className={cn('flex h-9 w-9 items-center justify-center rounded-full border-2 border-dashed border-slate-300 text-[10px] font-bold text-slate-400', !formData.cardColor && 'ring-2 ring-slate-900 ring-offset-2')}>A</button>
             {CARD_COLOR_OPTIONS.map((opt) => (
-              <button
-                key={opt.key}
-                type="button"
-                onClick={() => setFormData({ ...formData, cardColor: opt.key })}
-                title={opt.label}
-                className={cn(
-                  "w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-110",
-                  opt.swatch,
-                  formData.cardColor === opt.key && "ring-2 ring-offset-2 ring-slate-900"
-                )}
-              >
+              <button key={opt.key} type="button" onClick={() => setFormData({ ...formData, cardColor: opt.key })} title={opt.label} aria-label={`Warna ${opt.label}`} className={cn('flex h-9 w-9 items-center justify-center rounded-full transition-transform hover:scale-110', opt.swatch, formData.cardColor === opt.key && 'ring-2 ring-slate-900 ring-offset-2')}>
                 {formData.cardColor === opt.key && <Check size={14} className="text-white" />}
               </button>
             ))}
@@ -420,15 +364,13 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
         </div>
 
         <button
+          type="button"
           onClick={handleCreate}
           disabled={saving || !formData.name || !formData.type}
-          className="w-full bg-blue-600 disabled:bg-slate-300 text-white px-6 py-4 rounded-xl text-xs font-black shadow-lg shadow-blue-100 disabled:shadow-none transition-all mt-6"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-6 py-4 text-[15px] font-bold text-white transition-all hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400"
         >
-          {saving
-            ? 'Menyimpan...'
-            : initialData
-              ? 'Simpan Perubahan'
-              : title === 'Tambah Kartu Baru' ? 'Simpan Kartu Baru' : 'Simpan Rekening Baru'}
+          {saving && <Loader2 className="animate-spin" size={16} />}
+          {saving ? 'Menyimpan…' : initialData ? 'Simpan perubahan' : 'Simpan rekening'}
         </button>
       </div>
     </Modal>

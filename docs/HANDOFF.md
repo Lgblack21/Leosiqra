@@ -4,13 +4,13 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-10-30 (akun B; semua live, main = run #83)
+Terakhir diperbarui: 2026-10-30 (akun B; main = run #84, form Rekening baru belum deploy)
 
 ## Siapa sedang kerja
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Tampilan Hutang & Piutang |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Form lebih simpel (Rekening dulu) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -346,10 +346,14 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   (window.print) + kop khusus cetak + CSS @media print di halaman itu (bulanan & tahunan). Dompet Bersama, Impor &
   Kotak Masuk keluar dari menu Fitur (halaman tetap; Dompet Bersama & Impor ada di Pengaturan / Catat Transaksi).
   Kotak Masuk jadi ikon `InboxButton` di samping lonceng (Header), dengan angka usulan menunggu.
-- **Belum di-deploy** (akun B, frontend saja): **tampilan Hutang & Piutang** (`HutangPanel`) — tabel 15 kolom diganti
+- **Live (run #84)** (akun B, frontend saja): **tampilan Hutang & Piutang** (`HutangPanel`) — tabel 15 kolom diganti
   kartu per catatan (sisa, progres pelunasan, sejak/rekening/cicilan/bunga), neraca hutang vs piutang + selisih, saring
   Semua/Hutang/Piutang, modal cicilan dengan tombol 25%/50%/semua sisa + pratinjau sisa. Fungsi uang (cicilan, lunas,
   hapus) TIDAK diubah — catatan: masih multi-request dari klien (bukan batch atomik), sama seperti sebelumnya.
+- **Belum di-deploy** (akun B, frontend saja): **form Tambah/Ubah Rekening** (`AccountModal`) — pratinjau kartu langsung,
+  jenis jadi tombol ikon, pilihan cepat bank/e-wallet berlogo, input saldo besar + mata uang ringkas. Logika simpan sama.
+  `CurrencySelect` dapat prop `compact` & selalu memuat IDR + nilai terpilih (dulu daftar kosong → "-- Pilih --" walau IDR).
+  Rencana: form lain menyusul bertahap (Bos minta "semua form").
 
 ## Migrasi D1
 
