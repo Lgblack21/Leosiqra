@@ -5400,9 +5400,9 @@ async function handleStockPrice(request: Request, env: Env) {
 type StockSearchResult = { symbol: string; name: string; exchangeCode: string; logoUrl: string };
 
 async function fetchStockSearch(query: string, env: Env): Promise<StockSearchResult[]> {
-  // v2: cache key sengaja diganti supaya entri lama dengan logoUrl yang salah
+  // v3 (2026-10-30): ETF ikut dicari. v2: cache key sengaja diganti supaya entri lama dengan logoUrl yang salah
   // (simbol tanpa akhiran bursa, lihat catatan logoUrl di bawah) tidak kepakai lagi.
-  const cacheKey = new Request(`https://cache.internal.leosiqra.com/stock-search-v2/${encodeURIComponent(query.toLowerCase())}`);
+  const cacheKey = new Request(`https://cache.internal.leosiqra.com/stock-search-v3/${encodeURIComponent(query.toLowerCase())}`);
   const edgeCache = caches.default;
 
   const cached = await edgeCache.match(cacheKey);
@@ -5434,7 +5434,7 @@ async function fetchStockSearch(query: string, env: Env): Promise<StockSearchRes
   };
 
   const results: StockSearchResult[] = (data.quotes ?? [])
-    .filter((q) => q.quoteType === "EQUITY")
+    .filter((q) => q.quoteType === "EQUITY" || q.quoteType === "ETF")
     .slice(0, 8)
     .map((q) => {
       const isJakarta = q.symbol.endsWith(".JK");

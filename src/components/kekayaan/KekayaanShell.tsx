@@ -6,6 +6,7 @@ import { ArrowLeftRight, Car, CreditCard, HandCoins, Package, PieChart, PiggyBan
 import { Modal } from '@/components/ui/Modal';
 import { useModal } from '@/context/ModalContext';
 import { AddAccountPicker, type AccountPick } from '@/components/kekayaan/AddAccountPicker';
+import { AddInvestmentModal } from '@/components/kekayaan/AddInvestmentModal';
 import { HeaderSlot } from '@/components/Header';
 import { RingkasanKekayaan } from '@/components/kekayaan/RingkasanKekayaan';
 import TabunganPanel from '@/components/kekayaan/TabunganPanel';
@@ -33,6 +34,7 @@ export function KekayaanShell() {
   const { openModal } = useModal();
   const [menuOpen, setMenuOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [investOpen, setInvestOpen] = useState(false);
   const addAccount = () => { setMenuOpen(false); setPickerOpen(true); };
   const onPick = (p: AccountPick) => {
     setPickerOpen(false);
@@ -45,7 +47,7 @@ export function KekayaanShell() {
   const ADD: { label: string; desc: string; icon: typeof Plus; tone: string; on?: () => void }[] = [
     { label: 'Akun', desc: 'Bank, e-wallet, tunai', icon: Wallet, tone: 'bg-sky-50 text-sky-600', on: addAccount },
     { label: 'Kartu kredit', desc: 'Limit & jatuh tempo', icon: CreditCard, tone: 'bg-indigo-50 text-indigo-600', on: run(() => openModal('kartu')) },
-    { label: 'Investasi', desc: 'Emas, reksa dana, dll', icon: TrendingUp, tone: 'bg-violet-50 text-violet-600', on: run(() => openModal('investasi_lain')) },
+    { label: 'Investasi', desc: 'Saham, kripto, emas, dll', icon: TrendingUp, tone: 'bg-violet-50 text-violet-600', on: run(() => setInvestOpen(true)) },
     { label: 'Target tabungan', desc: 'Dana darurat, liburan', icon: PiggyBank, tone: 'bg-pink-50 text-pink-600', on: run(() => go('tabungan')) },
     { label: 'Piutang / utang', desc: 'Pinjam & meminjamkan', icon: HandCoins, tone: 'bg-emerald-50 text-emerald-600', on: run(() => openModal('hutang_piutang')) },
     { label: 'Transfer', desc: 'Pindah dana antar akun', icon: ArrowLeftRight, tone: 'bg-cyan-50 text-cyan-600', on: run(() => openModal('topup_transfer')) },
@@ -124,6 +126,7 @@ export function KekayaanShell() {
         </div>
       </Modal>
       <AddAccountPicker isOpen={pickerOpen} onClose={() => setPickerOpen(false)} onPick={onPick} />
+      <AddInvestmentModal isOpen={investOpen} onClose={() => setInvestOpen(false)} onDeposito={() => openModal('deposito')} />
 
       <AnimatePresence mode="wait" initial={false}>
         <motion.div key={tab} initial={reduce ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={reduce ? undefined : { opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>

@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-30 (akun B; semua live, main = run #86)
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Kekayaan: menu Tambah (bertahap) |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Kekayaan: Tambah investasi |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -361,6 +361,15 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   26 bank + 9 e-wallet/pembayaran berlogo, Tunai, Kartu kredit, Isi manual) → `AccountModal` dengan prop `preset`
   (nama/jenis/logo terisi; dikirim lewat modalData 'rekening'). Investasi/kripto sengaja tidak jadi rekening.
   `indonesianBanks.ts`: + PayPal, Wise, Revolut.
+- **Belum di-deploy** (akun B, butuh deploy Worker, TANPA migrasi): **Kekayaan → Tambah → Investasi**
+  (`AddInvestmentModal`). Jenis: Saham Indonesia, Kripto, Saham AS & ETF (Harga otomatis: cari ticker →
+  `/api/member/stock-search` / CoinGecko search, harga dari `/api/member/stock-price` / CoinGecko simple/price IDR),
+  Emas, Reksa dana, Obligasi/SBN, Lainnya (manual), Deposito → modal deposito lama. Saham IDX bisa input lot/lembar.
+  Sumber dana WAJIB (keputusan Bos) — simpan lewat `investmentService.entry` (batch atomik, saldo terpotong, transaksi
+  tertaut). Worker: pencarian saham kini ikut ETF (quoteType ETF), cache `stock-search-v3`.
+  **Bug lama (belum diperbaiki)**: Worker tidak mengonversi mata uang posisi ↔ rekening — posisi USD dari rekening
+  IDR memotong angka USD mentah. Form baru MENCEGAH (saham USD wajib rekening USD); form saham/investasi lama masih
+  bisa memicunya.
 
 ## Migrasi D1
 
