@@ -199,6 +199,15 @@ const pickBase = async () => {
   return bases[0];
 };
 
+// Buka halaman tanpa bergantung pada "networkidle": aplikasi /app/* kadang
+// punya koneksi yang tidak pernah diam 500 ms (goto networkidle timeout 30 dtk
+// padahal halaman sudah tampil). Tunggu "load", lalu networkidle maks 8 dtk;
+// kalau tidak tercapai cukup jeda 1,5 dtk — splash tetap ditunggu pemanggil.
+const gotoSettled = async (page, url) => {
+  await page.goto(url, { waitUntil: "load", timeout: 30000 });
+  await page.waitForLoadState("networkidle", { timeout: 8000 }).catch(() => pause(page, 1500));
+};
+
 export const recordClips = async (planPath, out, log = console.log) => {
   const plan = JSON.parse(readFileSync(planPath, "utf8"));
   const jobs = plan.scenes.map((s, i) => [i, s]).filter(([, s]) => s.type === "device" && ACTIONS[s.shot]);
@@ -220,43 +229,50 @@ export const recordClips = async (planPath, out, log = console.log) => {
   mkdirSync(dir, { recursive: true });
   const browser = await launchChromium();
   for (const [i, scene] of runnable) {
-    const pub = Boolean(SHOTS[scene.shot].public);
-    const ctx = await browser.newContext({
-      ...(pub ? {} : { storageState: state }),
-      viewport: pub ? { width: W, height: H } : { width: W * SCALE, height: H * SCALE },
-      deviceScaleFactor: 1,
-      isMobile: true,
-      hasTouch: true,
-      locale: "id-ID",
-      timezoneId: "Asia/Jakarta",
-      ignoreHTTPSErrors: true,
-      recordVideo: { dir, size: pub ? { width: W, height: H } : { width: W * SCALE, height: H * SCALE } },
-    });
-    await ctx.addInitScript(pub ? INIT_PUB : INIT);
-    const page = await ctx.newPage();
-    const t0 = Date.now();
-    const job = { cleanup: [] };
-    try {
-      await page.goto(`${base}${SHOTS[scene.shot].path}`, { waitUntil: "networkidle", timeout: 30000 });
-      if (!pub && /\/auth\/login|\/onboarding/.test(page.url())) throw new Error(`diarahkan ke ${page.url()}`);
-      // Klip mulai setelah splash "Memuat Leosiqra" hilang.
-      await page.getByLabel("Memuat Leosiqra").waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
-      await pause(page, 250);
-      const start = (Date.now() - t0) / 1000;
-      await ACTIONS[scene.shot](page, job);
-      const video = page.video();
-      await ctx.close();
-      const file = `${i}.webm`;
-      renameSync(await video.path(), join(dir, file));
-      result[i] = { file: `clips/${file}`, start: Math.max(0, start - 0.1) };
-      log(`rekam scene ${i} (${scene.shot}) ✓`);
-    } catch (error) {
-      log(`rekam scene ${i} (${scene.shot}) gagal: ${error.message.split("\n")[0]}`);
-      await ctx.close().catch(() => {});
-    }
-    for (const path of state ? job.cleanup : []) {
-      const r = await fetch(`${base}${path}`, { method: "DELETE", headers: { cookie: state.cookies.map((c) => `${c.name}=${c.value}`).join("; "), origin: base } }).catch(() => null);
-      if (!r || !r.ok) log(`bersih-bersih ${path} gagal (${r?.status})`);
+    // 2 percobaan per scene: kegagalan sesekali (timeout jaringan) tidak lagi
+    // membuat scene diam-diam jatuh ke ilustrasi (kesalahan rekam-networkidle-timeout).
+    for (let attempt = 1; attempt <= 2 && !result[i]; attempt++) {
+      const pub = Boolean(SHOTS[scene.shot].public);
+      const ctx = await browser.newContext({
+        ...(pub ? {} : { storageState: state }),
+        viewport: pub ? { width: W, height: H } : { width: W * SCALE, height: H * SCALE },
+        deviceScaleFactor: 1,
+        isMobile: true,
+        hasTouch: true,
+        locale: "id-ID",
+        timezoneId: "Asia/Jakarta",
+        ignoreHTTPSErrors: true,
+        recordVideo: { dir, size: pub ? { width: W, height: H } : { width: W * SCALE, height: H * SCALE } },
+      });
+      await ctx.addInitScript(pub ? INIT_PUB : INIT);
+      const page = await ctx.newPage();
+      const t0 = Date.now();
+      const job = { cleanup: [] };
+      try {
+        await gotoSettled(page, `${base}${SHOTS[scene.shot].path}`);
+        if (!pub && /\/auth\/login|\/onboarding/.test(page.url())) throw new Error(`diarahkan ke ${page.url()}`);
+        // Klip mulai setelah splash "Memuat Leosiqra" hilang.
+        await page.getByLabel("Memuat Leosiqra").waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
+        await pause(page, 250);
+        const start = (Date.now() - t0) / 1000;
+        await ACTIONS[scene.shot](page, job);
+        const video = page.video();
+        await ctx.close();
+        const file = `${i}.webm`;
+        renameSync(await video.path(), join(dir, file));
+        result[i] = { file: `clips/${file}`, start: Math.max(0, start - 0.1) };
+        log(`rekam scene ${i} (${scene.shot}) ✓${attempt > 1 ? ` (percobaan ${attempt})` : ""}`);
+      } catch (error) {
+        log(`rekam scene ${i} (${scene.shot}) gagal (percobaan ${attempt}/2): ${error.message.split("\n")[0]}`);
+        const video = page.video();
+        await ctx.close().catch(() => {});
+        // Video percobaan gagal jangan menumpuk di clips/.
+        await video?.delete().catch(() => {});
+      }
+      for (const path of state ? job.cleanup : []) {
+        const r = await fetch(`${base}${path}`, { method: "DELETE", headers: { cookie: state.cookies.map((c) => `${c.name}=${c.value}`).join("; "), origin: base } }).catch(() => null);
+        if (!r || !r.ok) log(`bersih-bersih ${path} gagal (${r?.status})`);
+      }
     }
   }
   await browser.close();
