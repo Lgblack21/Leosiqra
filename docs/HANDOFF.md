@@ -351,7 +351,8 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   Semua/Hutang/Piutang, modal cicilan dengan tombol 25%/50%/semua sisa + pratinjau sisa. Fungsi uang (cicilan, lunas,
   hapus) TIDAK diubah — catatan: masih multi-request dari klien (bukan batch atomik), sama seperti sebelumnya.
 - **Belum di-deploy** (akun B, frontend saja): **form Tambah/Ubah Rekening** (`AccountModal`) — pratinjau kartu langsung,
-  jenis jadi tombol ikon, pilihan cepat bank/e-wallet berlogo, input saldo besar + mata uang ringkas. Logika simpan sama.
+  jenis jadi tombol ikon (tanpa "Investasi" — rekening lama berjenis itu tetap bisa diedit), pilihan cepat bank/e-wallet
+  berlogo, input saldo besar + mata uang ringkas. Logika simpan sama.
   `CurrencySelect` dapat prop `compact` & selalu memuat IDR + nilai terpilih (dulu daftar kosong → "-- Pilih --" walau IDR).
   Rencana: form lain menyusul bertahap (Bos minta "semua form").
 

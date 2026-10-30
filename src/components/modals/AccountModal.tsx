@@ -32,7 +32,10 @@ interface AccountModalProps {
   onCreditCard?: () => void;
 }
 
-const BUILT_IN_TYPES = ['Bank Account', 'E-Wallet', 'Cash', 'Investment Account', 'Credit Card'];
+// 'Investment Account' tidak ditawarkan lagi (investasi dicatat di Investasiku);
+// rekening lama berjenis itu tetap tampil saat diedit.
+const BUILT_IN_TYPES = ['Bank Account', 'E-Wallet', 'Cash', 'Credit Card'];
+const HIDDEN_TYPES = new Set(['Investment Account']);
 const CUSTOM_TYPE_VALUE = '__custom__';
 // Tampilan form (2026-10-30): pratinjau kartu langsung, jenis sebagai tombol,
 // pilihan cepat bank/e-wallet berlogo. Logika simpan tidak berubah.
@@ -77,7 +80,7 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
   // yang sedang diedit (kalau custom), supaya semuanya tetap terpilih di dropdown.
   const typeOptions = (() => {
     const set = new Set<string>(BUILT_IN_TYPES);
-    existingTypes.forEach((t) => t && set.add(t));
+    existingTypes.forEach((t) => t && !HIDDEN_TYPES.has(t) && set.add(t));
     if (formData.type) set.add(formData.type);
     return Array.from(set);
   })();
