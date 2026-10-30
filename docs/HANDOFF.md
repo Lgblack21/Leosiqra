@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-10-30 (akun B selesai/jeda; semua live, main = run #91)
+Terakhir diperbarui: 2026-10-30 (akun B selesai/jeda; semua live, main = run #92)
 
 ## Siapa sedang kerja
 
@@ -401,7 +401,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   `src/components/DevNoticeBanner.tsx` — web (di bawah Header membership) & app HP (pil di atas tab bar `/app`), link ke
   Saran. Bisa ditutup; muncul lagi setelah 3 hari. **Matikan** dengan `ENABLED = false` di file itu setelah fase
   pengembangan selesai.
-- **Belum di-deploy** (akun B, frontend + workflow): **logo bank HD diunduh saat deploy**. Run #91 terbukti: ikon App
+- **Live (run #92)** (akun B, frontend + workflow): **logo bank HD diunduh saat deploy** — log: 36/37 OK (BCA mobile, Livin', OCTO, BRImo, wondr, dll via App Store; blu & Jago via Play). UOB gagal, Citibank salah ambil ikon "Citilink" (seller regex /citi/ terlalu longgar). Run #91 terbukti: ikon App
   Store dari Worker TIDAK muncul (BCA/Mandiri/CIMB masih favicon pecah, BRI dll huruf) — panggilan API Apple dari
   Worker gagal. Kini `scripts/fetch-logos.mjs` dijalankan GitHub Actions (step "Logo bank (HD)", continue-on-error)
   sebelum build: App Store (iTunes lookup/search) → cadangan Google Play og:image, cek nama penerbit, simpan
@@ -469,3 +469,4 @@ Workflow menjalankan tsc + build lalu deploy, dan memberi kabar ke Telegram.
 Pasang di **satu akun saja**. Akun cadangan menyimpan salinan dalam keadaan
 nonaktif dan hanya dinyalakan saat akun utama kena limit (lalu dimatikan lagi)
 — kalau aktif di dua akun, notifikasi & aksi terjadi dua kali.
+- **Belum di-deploy** (akun B): `fetch-logos.mjs` — `term` boleh array; UOB coba beberapa nama (UOB TMRW/UOB Indonesia, seller /uob|united overseas/); Citibank seller diperketat /citigroup|citibank/ (kalau tak ketemu → jatuh ke /api/logo, bukan ikon salah). Cek log step "Logo bank (HD)" setelah deploy.

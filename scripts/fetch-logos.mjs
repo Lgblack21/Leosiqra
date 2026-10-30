@@ -12,7 +12,7 @@ import path from 'node:path';
 const OUT = path.join(process.cwd(), 'public', 'logos');
 const UA = { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36', 'Accept-Language': 'id-ID,id;q=0.9,en;q=0.8' };
 
-// id = App Store ID (terverifikasi), term = nama aplikasi untuk pencarian,
+// id = App Store ID (terverifikasi), term = nama aplikasi (boleh array) untuk pencarian,
 // play = package Google Play (cadangan), seller = pola nama penerbit.
 const SOURCES = [
   { d: 'bca.co.id', term: 'BCA mobile', play: ['com.bca'], seller: /central asia/i },
@@ -34,9 +34,9 @@ const SOURCES = [
   { d: 'krom.id', term: 'Krom', play: ['id.krom.app'], seller: /krom|bisnis internasional/i },
   { d: 'maybank.co.id', term: 'M2U ID', play: ['com.maybank2u.m2umobile.id'], seller: /maybank/i },
   { d: 'dbs.com', term: 'digibank by DBS', play: ['com.dbs.id.digibank'], seller: /dbs/i },
-  { d: 'uob.co.id', term: 'TMRW Indonesia', play: ['com.uob.tmrw.id'], seller: /uob/i },
+  { d: 'uob.co.id', term: ['UOB TMRW', 'TMRW by UOB', 'UOB Indonesia', 'UOB'], play: ['com.uob.tmrw.id', 'com.uob.id.tmrw', 'com.uob.mightyid'], seller: /uob|united overseas/i },
   { d: 'hsbc.co.id', term: 'HSBC Indonesia', play: ['com.hsbc.hsbcindonesia'], seller: /hsbc/i },
-  { d: 'citibank.co.id', term: 'Citi Mobile Indonesia', play: [], seller: /citi/i },
+  { d: 'citibank.co.id', term: ['Citi Mobile', 'Citibank'], play: ['com.citibank.mobile.id'], seller: /citigroup|citibank/i },
   { d: 'sc.com', term: 'SC Mobile Indonesia', play: ['com.scb.breezebanking.id'], seller: /standard chartered/i },
   { d: 'bankmega.com', term: 'M-Smile', play: ['id.co.bankmega.msmile'], seller: /mega/i },
   { d: 'sinarmas.co.id', term: 'SimobiPlus', play: ['com.simas.mobile.SimobiPlus'], seller: /sinarmas/i },
@@ -63,7 +63,7 @@ const get = async (url, as = 'json') => {
 async function fromAppStore(s) {
   const urls = [
     ...(s.id ? [`https://itunes.apple.com/lookup?id=${s.id}&country=id`] : []),
-    `https://itunes.apple.com/search?term=${encodeURIComponent(s.term)}&country=id&entity=software&limit=10`,
+    ...[s.term].flat().map((t) => `https://itunes.apple.com/search?term=${encodeURIComponent(t)}&country=id&entity=software&limit=10`),
   ];
   for (const u of urls) {
     try {
