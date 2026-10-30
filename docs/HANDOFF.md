@@ -401,6 +401,12 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   `src/components/DevNoticeBanner.tsx` — web (di bawah Header membership) & app HP (pil di atas tab bar `/app`), link ke
   Saran. Bisa ditutup; muncul lagi setelah 3 hari. **Matikan** dengan `ENABLED = false` di file itu setelah fase
   pengembangan selesai.
+- **Belum di-deploy** (akun B, frontend + workflow): **logo bank HD diunduh saat deploy**. Run #91 terbukti: ikon App
+  Store dari Worker TIDAK muncul (BCA/Mandiri/CIMB masih favicon pecah, BRI dll huruf) — panggilan API Apple dari
+  Worker gagal. Kini `scripts/fetch-logos.mjs` dijalankan GitHub Actions (step "Logo bank (HD)", continue-on-error)
+  sebelum build: App Store (iTunes lookup/search) → cadangan Google Play og:image, cek nama penerbit, simpan
+  `public/logos/<domain>.png` (256px, di-.gitignore). LogoImage: `/logos/<domain>.png` → kalau 404 `/api/logo` → huruf.
+  **Cek laporan "Logo bank: N/37 berhasil" di log job deploy**; domain GAGAL → perbaiki term/id/play/seller di skrip.
 
 ## Migrasi D1
 

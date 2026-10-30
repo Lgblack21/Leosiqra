@@ -60,3 +60,6 @@ next-env.d.ts
 /ios/App/*.xcuserstate
 /ios/App/**/xcuserdata/
 resources/
+
+# Diunduh saat deploy oleh scripts/fetch-logos.mjs
+public/logos/

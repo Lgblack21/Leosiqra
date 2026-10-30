@@ -62,6 +62,10 @@ jobs:
 
       - run: npm ci
       - run: npx tsc --noEmit
+      # Ikon aplikasi bank/e-wallet HD → public/logos (lihat skripnya). Gagal tidak menghentikan deploy.
+      - name: Logo bank (HD)
+        continue-on-error: true
+        run: node scripts/fetch-logos.mjs
       - run: npm run build
 
       - name: Migrasi D1
