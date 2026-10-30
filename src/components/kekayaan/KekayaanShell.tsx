@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion';
-import { HandCoins, PieChart, PiggyBank } from 'lucide-react';
+import { ArrowLeftRight, Car, CreditCard, HandCoins, Package, PieChart, PiggyBank, Plus, TrendingUp, Wallet } from 'lucide-react';
+import { Modal } from '@/components/ui/Modal';
+import { useModal } from '@/context/ModalContext';
+import { AddAccountPicker, type AccountPick } from '@/components/kekayaan/AddAccountPicker';
 import { HeaderSlot } from '@/components/Header';
 import { RingkasanKekayaan } from '@/components/kekayaan/RingkasanKekayaan';
 import TabunganPanel from '@/components/kekayaan/TabunganPanel';
@@ -27,6 +30,28 @@ const fromHash = (): KekayaanTab => {
 export function KekayaanShell() {
   const reduce = useReducedMotion();
   const [tab, setTab] = useState<KekayaanTab>('ringkasan');
+  const { openModal } = useModal();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const addAccount = () => { setMenuOpen(false); setPickerOpen(true); };
+  const onPick = (p: AccountPick) => {
+    setPickerOpen(false);
+    if (p === 'kartu') openModal('kartu');
+    else if (p === 'manual') openModal('rekening');
+    else openModal('rekening', p);
+  };
+  const run = (f: () => void) => () => { setMenuOpen(false); f(); };
+  // Menu "Tambah" — dibangun bertahap; yang belum ada ditandai "Segera".
+  const ADD: { label: string; desc: string; icon: typeof Plus; tone: string; on?: () => void }[] = [
+    { label: 'Akun', desc: 'Bank, e-wallet, tunai', icon: Wallet, tone: 'bg-sky-50 text-sky-600', on: addAccount },
+    { label: 'Kartu kredit', desc: 'Limit & jatuh tempo', icon: CreditCard, tone: 'bg-indigo-50 text-indigo-600', on: run(() => openModal('kartu')) },
+    { label: 'Investasi', desc: 'Emas, reksa dana, dll', icon: TrendingUp, tone: 'bg-violet-50 text-violet-600', on: run(() => openModal('investasi_lain')) },
+    { label: 'Target tabungan', desc: 'Dana darurat, liburan', icon: PiggyBank, tone: 'bg-pink-50 text-pink-600', on: run(() => go('tabungan')) },
+    { label: 'Piutang / utang', desc: 'Pinjam & meminjamkan', icon: HandCoins, tone: 'bg-emerald-50 text-emerald-600', on: run(() => openModal('hutang_piutang')) },
+    { label: 'Transfer', desc: 'Pindah dana antar akun', icon: ArrowLeftRight, tone: 'bg-cyan-50 text-cyan-600', on: run(() => openModal('topup_transfer')) },
+    { label: 'Properti / kendaraan', desc: 'Rumah, tanah, motor', icon: Car, tone: 'bg-slate-100 text-slate-400' },
+    { label: 'Barang & koleksi', desc: 'HP, laptop, jam, kartu', icon: Package, tone: 'bg-slate-100 text-slate-400' },
+  ];
 
   useEffect(() => {
     const sync = () => setTab(fromHash());
@@ -67,13 +92,42 @@ export function KekayaanShell() {
               })}
             </div>
           </LayoutGroup>
+          <button type="button" onClick={() => setMenuOpen(true)} aria-label="Tambah" className="flex h-10 w-10 shrink-0 items-center justify-center gap-1.5 rounded-full bg-slate-900 text-[13px] font-bold text-white shadow-sm hover:bg-slate-800 sm:h-auto sm:w-auto sm:px-4 sm:py-2.5">
+            <Plus size={17} strokeWidth={2.6} /> <span className="hidden sm:inline">Tambah</span>
+          </button>
           <HeaderSlot className="hidden md:flex" />
         </div>
       </div>
 
+      <Modal isOpen={menuOpen} onClose={() => setMenuOpen(false)} title="Tambah ke kekayaan" maxWidth="max-w-lg">
+        <div className="grid grid-cols-2 gap-2">
+          {ADD.map((a, i) => (
+            <motion.button
+              key={a.label}
+              type="button"
+              onClick={a.on}
+              disabled={!a.on}
+              initial={reduce ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.03 }}
+              whileTap={reduce || !a.on ? undefined : { scale: 0.96 }}
+              className={cn('relative flex items-start gap-3 rounded-2xl p-3 text-left ring-1 transition-colors', a.on ? 'bg-white ring-slate-200 hover:bg-slate-50' : 'cursor-not-allowed bg-slate-50 ring-slate-100')}
+            >
+              <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', a.tone)}><a.icon size={19} /></span>
+              <span className="min-w-0">
+                <span className={cn('block text-[14px] font-bold', a.on ? 'text-slate-900' : 'text-slate-400')}>{a.label}</span>
+                <span className="block text-[11px] leading-snug text-slate-400">{a.desc}</span>
+              </span>
+              {!a.on && <span className="absolute right-2 top-2 rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-700">Segera</span>}
+            </motion.button>
+          ))}
+        </div>
+      </Modal>
+      <AddAccountPicker isOpen={pickerOpen} onClose={() => setPickerOpen(false)} onPick={onPick} />
+
       <AnimatePresence mode="wait" initial={false}>
         <motion.div key={tab} initial={reduce ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={reduce ? undefined : { opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
-          {tab === 'ringkasan' && <RingkasanKekayaan go={go} />}
+          {tab === 'ringkasan' && <RingkasanKekayaan go={go} onAddAccount={addAccount} />}
           {tab === 'tabungan' && <TabunganPanel />}
           {tab === 'hutang' && <HutangPanel />}
         </motion.div>

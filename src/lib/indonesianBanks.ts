@@ -44,6 +44,9 @@ const EWALLET_ENTRIES: InstitutionEntry[] = [
   { domain: 'shopeepay.co.id', aliases: ['shopeepay', 'shopee pay'] },
   { domain: 'linkaja.id', aliases: ['linkaja', 'link aja'] },
   { domain: 'flip.id', aliases: ['flip'] },
+  { domain: 'paypal.com', aliases: ['paypal'] },
+  { domain: 'wise.com', aliases: ['wise'] },
+  { domain: 'revolut.com', aliases: ['revolut'] },
 ];
 
 const matchDomain = (accountName: string, entries: InstitutionEntry[]): string | null => {

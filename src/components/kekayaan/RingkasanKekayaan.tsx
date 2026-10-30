@@ -54,7 +54,7 @@ const dueLabel = (iso: string, days: number) => {
   return days <= 0 ? `${date} · hari ini` : days === 1 ? `${date} · besok` : `${date} · ${days} hari lagi`;
 };
 
-export function RingkasanKekayaan({ go }: { go: (t: KekayaanTab) => void }) {
+export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) => void; onAddAccount: () => void }) {
   const reduce = useReducedMotion();
   const { openModal } = useModal();
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -177,7 +177,7 @@ export function RingkasanKekayaan({ go }: { go: (t: KekayaanTab) => void }) {
       <div className="grid gap-4 lg:grid-cols-[1fr_360px] lg:items-start">
         <div className="space-y-3">
           <Group icon={Wallet} tone="bg-sky-50 text-sky-600" title="Kas & rekening" total={money(t.cash)} count={nw.cash.length} action={<Link href="/membership/rekening" className="text-[12px] font-bold text-slate-500 hover:text-slate-900">Rekening</Link>}>
-            {nw.cash.length === 0 ? <Empty text="Belum ada rekening." onAdd={() => openModal('rekening')} label="Tambah rekening" /> : nw.cash.map(({ account, value }) => (
+            {nw.cash.length === 0 ? <Empty text="Belum ada rekening." onAdd={onAddAccount} label="Tambah akun" /> : nw.cash.map(({ account, value }) => (
               <Row key={account.id} href="/membership/rekening" icon={<LogoImage src={account.logoUrl} alt={account.name} fallbackText={account.name.slice(0, 3).toUpperCase()} fallbackIcon={<span aria-hidden className="text-[18px]">{TYPE_EMOJI[account.type] ?? '🏦'}</span>} className="h-full w-full object-cover" />} title={account.name} sub={`${TYPE_LABEL[account.type] ?? account.type}${account.currency && account.currency !== 'IDR' ? ` · ${account.currency}` : ''}`} value={money(value)} negative={value < 0} />
             ))}
           </Group>
@@ -272,7 +272,7 @@ export function RingkasanKekayaan({ go }: { go: (t: KekayaanTab) => void }) {
             <p className="text-[12px] text-white/60">Yang belum dicatat belum ikut terhitung.</p>
             <div className="mt-3 grid grid-cols-2 gap-2">
               {[
-                { label: 'Rekening', emoji: '🏦', on: () => openModal('rekening') },
+                { label: 'Akun', emoji: '🏦', on: onAddAccount },
                 { label: 'Target tabungan', emoji: '🐷', on: () => go('tabungan') },
                 { label: 'Investasi / emas', emoji: '🪙', on: () => openModal('investasi_lain') },
                 { label: 'Hutang / piutang', emoji: '🤝', on: () => openModal('hutang_piutang') },

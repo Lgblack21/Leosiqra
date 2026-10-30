@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-30 (akun B; semua live, main = run #85)
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Form lebih simpel (Rekening dulu) |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Kekayaan: menu Tambah (bertahap) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -355,6 +355,12 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   berlogo, input saldo besar + mata uang ringkas. Logika simpan sama.
   `CurrencySelect` dapat prop `compact` & selalu memuat IDR + nilai terpilih (dulu daftar kosong → "-- Pilih --" walau IDR).
   Rencana: form lain menyusul bertahap (Bos minta "semua form").
+- **Belum di-deploy** (akun B, frontend saja): **Kekayaan → tombol Tambah** (tahap 1). Menu "Tambah ke kekayaan":
+  Akun, Kartu kredit, Investasi, Target tabungan, Piutang/utang, Transfer (pakai modal yang sudah ada); Properti/kendaraan
+  & Barang/koleksi bertanda "Segera" (butuh tempat simpan baru = migrasi). "Akun" → `AddAccountPicker` (cari + saring,
+  26 bank + 9 e-wallet/pembayaran berlogo, Tunai, Kartu kredit, Isi manual) → `AccountModal` dengan prop `preset`
+  (nama/jenis/logo terisi; dikirim lewat modalData 'rekening'). Investasi/kripto sengaja tidak jadi rekening.
+  `indonesianBanks.ts`: + PayPal, Wise, Revolut.
 
 ## Migrasi D1
 

@@ -30,6 +30,8 @@ interface AccountModalProps {
   // Kartu kredit punya form khusus (CreditCardForm): kalau diisi, memilih
   // jenis "Credit Card" saat menambah rekening baru pindah ke form itu.
   onCreditCard?: () => void;
+  /** Isian awal untuk rekening BARU (mis. dari pemilih bank di Kekayaan). */
+  preset?: { name?: string; type?: string; logoUrl?: string } | null;
 }
 
 // 'Investment Account' tidak ditawarkan lagi (investasi dicatat di Investasiku);
@@ -51,7 +53,7 @@ const QUICK_PICKS: Record<string, string[]> = {
   'E-Wallet': ['GoPay', 'OVO', 'DANA', 'ShopeePay', 'LinkAja', 'Flip'],
 };
 
-export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Account', title = 'Tambah Rekening Baru', initialData = null, existingTypes = [], onCreditCard }: AccountModalProps) => {
+export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Account', title = 'Tambah Rekening Baru', initialData = null, existingTypes = [], onCreditCard, preset = null }: AccountModalProps) => {
   const { toast } = useFeedback();
   const [formData, setFormData] = useState({
     name: '',
@@ -128,6 +130,9 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
         cardNetwork: initialData.cardNetwork || ''
       });
       setCycleForm(cardCycleToForm(initialData));
+    } else if (preset) {
+      setCycleForm(emptyCardCycleForm);
+      setFormData({ name: preset.name ?? '', logoUrl: preset.logoUrl ?? '', type: preset.type || initialType, currency: 'IDR', balance: '', initialBalance: '', baseValue: '', creditLimit: '', cardColor: '', cardLast4: '', cardNetwork: '' });
     } else {
       setCycleForm(emptyCardCycleForm);
       setFormData(prev => ({
@@ -135,7 +140,7 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
         type: initialType
       }));
     }
-  }, [isOpen, initialType, initialData]);
+  }, [isOpen, initialType, initialData, preset]);
 
   const handleCreate = async () => {
     if (!userId || !formData.name) return;

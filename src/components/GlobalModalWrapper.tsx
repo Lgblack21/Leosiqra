@@ -112,6 +112,7 @@ export const GlobalModalWrapper = () => {
         userId={user.id}
         existingTypes={accountTypes}
         onCreditCard={() => openModal('kartu')}
+        preset={activeModal === 'rekening' ? (modalData as { name?: string; type?: string; logoUrl?: string } | null) : null}
       />
 
       <CreditCardForm
