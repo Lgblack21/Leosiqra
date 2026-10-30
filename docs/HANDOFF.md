@@ -389,6 +389,8 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   yang sudah dimiliki ("✓ Sudah ada") → layar "Tautkan <bank>": atur belanja/nabung per rekening (+ pasang logo kalau
   belum ada) atau "Tambah rekening <bank> lain". AccountModal punya pilihan "Dipakai untuk". Kekayaan menampilkan label.
   Catatan: purpose saat ini HANYA label/pengelompokan — tidak mengubah cara saldo dihitung.
+- **Belum di-deploy** (akun B, frontend saja): Tambah investasi → Deposito kini membuka form deposito DI ATAS popup
+  (popup Tambah investasi tidak ditutup).
 
 ## Migrasi D1
 

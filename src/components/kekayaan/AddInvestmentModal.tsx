@@ -189,7 +189,9 @@ export function AddInvestmentModal({ isOpen, onClose, onDeposito }: { isOpen: bo
   };
 
   const selectKind = (k: Kind) => {
-    if (k === 'deposito') { reset(); onClose(); onDeposito(); return; }
+    // Deposito pakai form-nya sendiri — dibuka DI ATAS popup ini (popup Tambah
+    // investasi tetap terbuka di belakang, tidak hilang).
+    if (k === 'deposito') { onDeposito(); return; }
     reset(k);
   };
   const field = 'w-full rounded-2xl border-none bg-slate-50 px-4 py-3 text-[15px] font-semibold text-slate-800 ring-1 ring-transparent placeholder:font-normal placeholder:text-slate-400 focus:bg-white focus:ring-slate-300';
