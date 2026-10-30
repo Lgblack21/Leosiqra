@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-30 (akun B; semua live, main = run #83)
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Rapikan menu samping |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Tampilan Hutang & Piutang |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -346,6 +346,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   (window.print) + kop khusus cetak + CSS @media print di halaman itu (bulanan & tahunan). Dompet Bersama, Impor &
   Kotak Masuk keluar dari menu Fitur (halaman tetap; Dompet Bersama & Impor ada di Pengaturan / Catat Transaksi).
   Kotak Masuk jadi ikon `InboxButton` di samping lonceng (Header), dengan angka usulan menunggu.
+- **Belum di-deploy** (akun B, frontend saja): **tampilan Hutang & Piutang** (`HutangPanel`) — tabel 15 kolom diganti
+  kartu per catatan (sisa, progres pelunasan, sejak/rekening/cicilan/bunga), neraca hutang vs piutang + selisih, saring
+  Semua/Hutang/Piutang, modal cicilan dengan tombol 25%/50%/semua sisa + pratinjau sisa. Fungsi uang (cicilan, lunas,
+  hapus) TIDAK diubah — catatan: masih multi-request dari klien (bukan batch atomik), sama seperti sebelumnya.
 
 ## Migrasi D1
 
