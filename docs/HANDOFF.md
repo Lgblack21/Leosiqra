@@ -391,6 +391,12 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   Catatan: purpose saat ini HANYA label/pengelompokan — tidak mengubah cara saldo dihitung.
 - **Belum di-deploy** (akun B, frontend saja): Tambah investasi → Deposito kini membuka form deposito DI ATAS popup
   (popup Tambah investasi tidak ditutup).
+- **Belum di-deploy** (akun B, butuh deploy Worker, tanpa migrasi): **logo bank HD dari ikon aplikasi App Store**.
+  Bos lapor logo masih ada yang kosong & tidak HD setelah run #89. `/api/logo` kini PERTAMA mengambil ikon aplikasi
+  resmi 512px lewat API iTunes (`APP_ICONS` di Worker: App Store ID terverifikasi untuk Livin'/BRImo/wondr/BSI/OCTO/bale,
+  sisanya cari nama aplikasi + cocokkan nama penerbit), baru apple-touch-icon / favicon. Cache dinaikkan ke `logo/v2`.
+  Belum terverifikasi di prod (sandbox tidak bisa akses Apple/Play Store). Kalau masih ada yang kosong: perbaiki
+  `term`/`seller` atau isi `id` (App Store ID) untuk domain itu di APP_ICONS.
 
 ## Migrasi D1
 

@@ -4578,7 +4578,7 @@ const applyCardIdentityFields = (payload: Record<string, unknown>, target: Recor
 
 // GET /api/logo?d=bca.co.id — logo bank/e-wallet resolusi tinggi. Layanan favicon
 // Google cuma memberi ikon 16px untuk banyak situs bank (tampil sebagai huruf),
-// jadi Worker mencoba apple-touch-icon (biasanya 180px) / <link rel=icon> terbesar
+// jadi Worker mencoba ikon aplikasi App Store 512px (APP_ICONS), lalu apple-touch-icon (biasanya 180px) / <link rel=icon> terbesar
 // di beranda, baru favicon Google. Hanya domain di LOGO_DOMAINS (bukan proxy
 // terbuka; daftar = src/lib/indonesianBanks.ts), SVG ditolak (bisa berisi skrip),
 // hasil (termasuk "tidak ada") di-cache di edge.
@@ -4590,6 +4590,66 @@ const LOGO_DOMAINS = new Set([
   "gojek.com", "ovo.id", "dana.id", "shopeepay.co.id", "linkaja.id", "flip.id", "paypal.com", "wise.com", "revolut.com",
 ]);
 const LOGO_UA = { "User-Agent": "Mozilla/5.0 (compatible; LeosiqraBot/1.0; +https://www.leosiqra.com)" };
+// Ikon aplikasi resmi 512px dari App Store (API iTunes, JSON resmi) — paling
+// tajam & sama dengan ikon yang dikenal user. `id` = App Store ID yang sudah
+// diverifikasi; tanpa id → cari nama aplikasinya, lalu terima hanya kalau nama
+// penerbit cocok `seller` (supaya tidak mengambil aplikasi orang lain).
+const APP_ICONS: Record<string, { id?: number; term?: string; seller: RegExp }> = {
+  "bca.co.id": { term: "BCA mobile", seller: /central asia/i },
+  "bankmandiri.co.id": { id: 1555414743, seller: /mandiri/i },
+  "bri.co.id": { id: 1439730817, seller: /rakyat indonesia/i },
+  "bni.co.id": { id: 6499518320, seller: /negara indonesia/i },
+  "bankbsi.co.id": { id: 1410072458, seller: /syariah indonesia/i },
+  "btn.co.id": { id: 6443466424, seller: /tabungan negara/i },
+  "cimbniaga.co.id": { id: 505917174, seller: /cimb/i },
+  "permatabank.com": { term: "PermataMobile X", seller: /permata/i },
+  "danamon.co.id": { term: "D-Bank PRO Danamon", seller: /danamon/i },
+  "ocbc.id": { term: "OCBC mobile Indonesia", seller: /ocbc/i },
+  "jago.com": { term: "Bank Jago", seller: /jago/i },
+  "jenius.com": { term: "Jenius", seller: /btpn|smbc/i },
+  "btpn.com": { term: "Jenius", seller: /btpn|smbc/i },
+  "seabank.co.id": { term: "SeaBank Indonesia", seller: /seabank|bke|sea/i },
+  "blubybcadigital.id": { term: "blu by BCA Digital", seller: /bca digital/i },
+  "allobank.com": { term: "Allo Bank", seller: /allo/i },
+  "krom.id": { term: "Krom Bank", seller: /krom|bisnis internasional/i },
+  "maybank.co.id": { term: "Maybank2u ID", seller: /maybank/i },
+  "dbs.com": { term: "digibank by DBS Indonesia", seller: /dbs/i },
+  "uob.co.id": { term: "TMRW Indonesia UOB", seller: /uob/i },
+  "hsbc.co.id": { term: "HSBC Indonesia", seller: /hsbc/i },
+  "citibank.co.id": { term: "Citibank Indonesia", seller: /citi/i },
+  "sc.com": { term: "SC Mobile Indonesia", seller: /standard chartered/i },
+  "bankmega.com": { term: "M-Smile Bank Mega", seller: /mega/i },
+  "sinarmas.co.id": { term: "SimobiPlus", seller: /sinarmas/i },
+  "panin.co.id": { term: "Panin Mobile", seller: /panin/i },
+  "bankbjb.co.id": { term: "DIGI by bjb", seller: /bjb|jawa barat/i },
+  "kbbukopin.co.id": { term: "KB Star", seller: /kb |bukopin/i },
+  "gojek.com": { term: "GoPay", seller: /gojek|gopay|goto/i },
+  "ovo.id": { term: "OVO", seller: /ovo|visionet/i },
+  "dana.id": { term: "DANA Dompet Digital", seller: /dana|espay/i },
+  "shopeepay.co.id": { term: "Shopee", seller: /shopee/i },
+  "linkaja.id": { term: "LinkAja", seller: /linkaja|fintek karya/i },
+  "flip.id": { term: "Flip transfer", seller: /flip/i },
+  "paypal.com": { term: "PayPal", seller: /paypal/i },
+  "wise.com": { term: "Wise", seller: /wise/i },
+  "revolut.com": { term: "Revolut", seller: /revolut/i },
+};
+const appStoreIcon = async (d: string) => {
+  const cfg = APP_ICONS[d];
+  if (!cfg) return null;
+  try {
+    const api = cfg.id
+      ? `https://itunes.apple.com/lookup?id=${cfg.id}&country=id`
+      : `https://itunes.apple.com/search?term=${encodeURIComponent(cfg.term ?? "")}&country=id&entity=software&limit=8`;
+    const res = await fetch(api, { headers: LOGO_UA, cf: { cacheTtl: 86400 } } as RequestInit);
+    if (!res.ok) return null;
+    const data = (await res.json()) as { results?: Array<{ artworkUrl512?: string; artworkUrl100?: string; sellerName?: string; artistName?: string }> };
+    const app = (data.results ?? []).find((a) => cfg.seller.test(`${a.sellerName ?? ""} ${a.artistName ?? ""}`));
+    const art = app?.artworkUrl512 ?? app?.artworkUrl100?.replace(/\/\d+x\d+bb\./, "/512x512bb.");
+    return art && art.startsWith("https://") ? await fetchLogoImage(art) : null;
+  } catch {
+    return null;
+  }
+};
 const fetchLogoImage = async (target: string) => {
   try {
     const res = await fetch(target, { headers: LOGO_UA, redirect: "follow", cf: { cacheTtl: 86400 } } as RequestInit);
@@ -4620,12 +4680,12 @@ async function handleLogo(request: Request, env: Env, url: URL) {
   const d = (url.searchParams.get("d") ?? "").trim().toLowerCase();
   if (!LOGO_DOMAINS.has(d)) return json({ error: "Not found" }, { status: 404 });
   const cache = (caches as unknown as { default: Cache }).default;
-  const cacheKey = new Request(`https://leosiqra.internal/logo/v1/${d}`);
+  const cacheKey = new Request(`https://leosiqra.internal/logo/v2/${d}`);
   const hit = await cache.match(cacheKey);
   if (hit) return hit;
 
-  let found: { body: ArrayBuffer; type: string } | null = null;
-  for (const host of [`www.${d}`, d]) {
+  let found: { body: ArrayBuffer; type: string } | null = await appStoreIcon(d);
+  for (const host of found ? [] : [`www.${d}`, d]) {
     found = (await fetchLogoImage(`https://${host}/apple-touch-icon.png`)) ?? (await fetchLogoImage(`https://${host}/apple-touch-icon-precomposed.png`));
     if (found) break;
   }
