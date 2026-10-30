@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-10-30 (akun B; semua live, main = run #88)
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| akun B | aktif | claude/nifty-cannon-y181p6 | Jejak Uang |
+| akun B | aktif | claude/nifty-cannon-y181p6 | Logo bank + tautkan akun |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -378,6 +378,17 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   (clipPath), partikel mengalir (stroke-dash), node tumbuh; reduced-motion dihormati. Node punya tinggi minimum (MINH)
   → pita beda tebal di kedua ujung. Fitur baru id `jejak` (FEATURES, DEFAULT_FEATURES, navGroups, Worker PREF_FEATURES)
   — user yang sudah punya preferensi Fitur harus menyalakannya sendiri di Atur fitur.
+- **Belum di-deploy** (akun B, butuh deploy Worker, TANPA migrasi): **logo bank resolusi tinggi + tautkan akun**.
+  Bug: logo bank kosong (huruf) di pemilih akun — favicon Google cuma 16px untuk banyak situs bank & LogoImage
+  menganggap ≤16px gagal. Kini Worker `GET /api/logo?d=<domain>` (sesi wajib, whitelist LOGO_DOMAINS = daftar di
+  `src/lib/indonesianBanks.ts`, SVG ditolak, cache edge 7 hari / 404 1 hari): coba apple-touch-icon → `<link rel=icon>`
+  terbesar di beranda → faviconV2. `LogoImage` mengarahkan URL favicon Google untuk domain itu ke /api/logo (berlaku
+  juga ke logo lama di DB). **Belum terverifikasi di prod** (sandbox tanpa internet) — kalau masih huruf, cek
+  `curl https://www.leosiqra.com/api/logo?d=bca.co.id` dengan cookie sesi.
+  Tautkan: rekening punya `purpose` 'belanja'|'nabung' di payload_json (Worker validasi). Pemilih akun menandai bank
+  yang sudah dimiliki ("✓ Sudah ada") → layar "Tautkan <bank>": atur belanja/nabung per rekening (+ pasang logo kalau
+  belum ada) atau "Tambah rekening <bank> lain". AccountModal punya pilihan "Dipakai untuk". Kekayaan menampilkan label.
+  Catatan: purpose saat ini HANYA label/pengelompokan — tidak mengubah cara saldo dihitung.
 
 ## Migrasi D1
 

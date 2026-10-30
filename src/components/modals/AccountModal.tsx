@@ -31,7 +31,7 @@ interface AccountModalProps {
   // jenis "Credit Card" saat menambah rekening baru pindah ke form itu.
   onCreditCard?: () => void;
   /** Isian awal untuk rekening BARU (mis. dari pemilih bank di Kekayaan). */
-  preset?: { name?: string; type?: string; logoUrl?: string } | null;
+  preset?: { name?: string; type?: string; logoUrl?: string; purpose?: 'belanja' | 'nabung' } | null;
 }
 
 // 'Investment Account' tidak ditawarkan lagi (investasi dicatat di Investasiku);
@@ -66,7 +66,8 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
     creditLimit: '',
     cardColor: '',
     cardLast4: '',
-    cardNetwork: ''
+    cardNetwork: '',
+    purpose: 'belanja' as 'belanja' | 'nabung'
   });
   const [cycleForm, setCycleForm] = useState(emptyCardCycleForm);
   const [uploading, setUploading] = useState(false);
@@ -127,12 +128,13 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
         creditLimit: initialData.creditLimit ? String(initialData.creditLimit) : '',
         cardColor: initialData.cardColor || '',
         cardLast4: initialData.cardLast4 || '',
-        cardNetwork: initialData.cardNetwork || ''
+        cardNetwork: initialData.cardNetwork || '',
+        purpose: initialData.purpose ?? 'belanja'
       });
       setCycleForm(cardCycleToForm(initialData));
     } else if (preset) {
       setCycleForm(emptyCardCycleForm);
-      setFormData({ name: preset.name ?? '', logoUrl: preset.logoUrl ?? '', type: preset.type || initialType, currency: 'IDR', balance: '', initialBalance: '', baseValue: '', creditLimit: '', cardColor: '', cardLast4: '', cardNetwork: '' });
+      setFormData({ name: preset.name ?? '', logoUrl: preset.logoUrl ?? '', type: preset.type || initialType, currency: 'IDR', balance: '', initialBalance: '', baseValue: '', creditLimit: '', cardColor: '', cardLast4: '', cardNetwork: '', purpose: preset.purpose ?? 'belanja' });
     } else {
       setCycleForm(emptyCardCycleForm);
       setFormData(prev => ({
@@ -177,6 +179,7 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
           baseValue: parseFloat(formData.baseValue) || 0,
           creditLimit: parseFloat(formData.creditLimit) || 0,
           cardColor: formData.cardColor,
+          purpose: isCredit ? undefined : formData.purpose,
           ...cycle,
         });
       } else {
@@ -192,11 +195,12 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
           baseValue: parseFloat(formData.baseValue) || 0,
           creditLimit: parseFloat(formData.creditLimit) || 0,
           cardColor: formData.cardColor,
+          purpose: isCredit ? undefined : formData.purpose,
           ...cycle,
         });
       }
       onClose();
-      setFormData({ name: '', logoUrl: '', type: initialType, currency: 'IDR', balance: '', initialBalance: '', baseValue: '', creditLimit: '', cardColor: '', cardLast4: '', cardNetwork: '' });
+      setFormData({ name: '', logoUrl: '', type: initialType, currency: 'IDR', balance: '', initialBalance: '', baseValue: '', creditLimit: '', cardColor: '', cardLast4: '', cardNetwork: '', purpose: 'belanja' });
       setIsCustomTypeMode(false);
     } catch (err) {
       console.error("Error saving account:", err);
@@ -320,6 +324,20 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
             </div>
           )}
         </div>
+
+        {!isCredit && (
+          <div className="space-y-2">
+            <p className={label}>Dipakai untuk</p>
+            <div className="grid grid-cols-2 gap-2">
+              {([['belanja', '🛒', 'Belanja harian', 'Dompet yang sering dipakai transaksi'], ['nabung', '🐷', 'Nabung', 'Simpanan, jarang dipakai belanja']] as const).map(([v, emoji, t, d]) => (
+                <button key={v} type="button" onClick={() => setFormData({ ...formData, purpose: v })} aria-pressed={formData.purpose === v} className={cn('flex items-start gap-2.5 rounded-2xl p-3 text-left ring-1 transition-colors', formData.purpose === v ? 'bg-slate-900 text-white ring-slate-900' : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50')}>
+                  <span aria-hidden className="text-[20px] leading-none">{emoji}</span>
+                  <span><span className="block text-[13px] font-bold">{t}</span><span className={cn('block text-[11px] leading-snug', formData.purpose === v ? 'text-white/60' : 'text-slate-400')}>{d}</span></span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Saldo */}
         <div className="space-y-2">

@@ -49,6 +49,10 @@ const EWALLET_ENTRIES: InstitutionEntry[] = [
   { domain: 'revolut.com', aliases: ['revolut'] },
 ];
 
+// Domain yang logonya dilayani Worker /api/logo (resolusi tinggi). WAJIB sama
+// dengan LOGO_DOMAINS di cloudflare/src/index.ts.
+export const LOGO_DOMAINS = new Set([...BANK_ENTRIES, ...EWALLET_ENTRIES].map((e) => e.domain));
+
 const matchDomain = (accountName: string, entries: InstitutionEntry[]): string | null => {
   const q = accountName.trim().toLowerCase();
   if (!q) return null;
@@ -59,6 +63,13 @@ const matchDomain = (accountName: string, entries: InstitutionEntry[]): string |
   }
   return null;
 };
+
+/** Domain lembaga dari nama rekening (null kalau tidak dikenal) — untuk mencocokkan
+ *  rekening yang sudah ada dengan pilihan di pemilih akun. */
+export function institutionDomain(accountName: string, accountType: string): string | null {
+  const entries = accountType === 'E-Wallet' ? EWALLET_ENTRIES : BANK_ENTRIES;
+  return matchDomain(accountName, entries) ?? (accountType === 'E-Wallet' ? null : matchDomain(accountName, EWALLET_ENTRIES));
+}
 
 // Bank/e-wallet luar Indonesia (mis. "ABA Khmer") sengaja tidak ada di daftar
 // ini — tetap jatuh ke upload logo manual seperti biasa.

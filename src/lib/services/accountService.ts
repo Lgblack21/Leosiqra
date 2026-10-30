@@ -24,6 +24,8 @@ export interface Account {
   cardNetwork?: string;
   /** Pengingat jatuh tempo: 0 = mati, n = mulai H-n. Tidak diatur = H-3. */
   reminderDays?: number;
+  /** Rekening non-kartu: 'belanja' (dompet harian) atau 'nabung' (simpanan). */
+  purpose?: 'belanja' | 'nabung';
   // Urutan tampil rekening (drag-to-reorder di Kartu Saya) — dipakai semua
   // halaman/dropdown yang menampilkan daftar rekening.
   sortOrder?: number;
@@ -35,6 +37,7 @@ export interface AccountPayloadFields {
   cardLast4?: string;
   cardNetwork?: string;
   reminderDays?: number;
+  purpose?: 'belanja' | 'nabung';
   creditLimit: number;
   statementDay?: number;
   dueDay?: number;
@@ -55,6 +58,7 @@ export const parseAccountPayload = (payloadJson: unknown): AccountPayloadFields 
       cardLast4: typeof p.cardLast4 === 'string' ? p.cardLast4 : undefined,
       cardNetwork: typeof p.cardNetwork === 'string' ? p.cardNetwork : undefined,
       reminderDays: num(p.reminderDays),
+      purpose: p.purpose === 'belanja' || p.purpose === 'nabung' ? p.purpose : undefined,
       creditLimit: Number(p.creditLimit) || 0,
       statementDay: num(p.statementDay),
       dueDay: num(p.dueDay),
@@ -72,6 +76,7 @@ const cycleFieldsForApi = (data: Partial<Account>) => ({
   ...('cardLast4' in data ? { card_last4: data.cardLast4 || null } : {}),
   ...('cardNetwork' in data ? { card_network: data.cardNetwork || null } : {}),
   ...('reminderDays' in data ? { reminder_days: data.reminderDays ?? null } : {}),
+  ...('purpose' in data ? { purpose: data.purpose || null } : {}),
   ...('statementDay' in data ? { statement_day: data.statementDay ?? null } : {}),
   ...('dueDay' in data ? { due_day: data.dueDay ?? null } : {}),
   ...('minPaymentPercent' in data ? { min_payment_percent: data.minPaymentPercent ?? null } : {}),

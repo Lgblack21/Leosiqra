@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
+import { LOGO_DOMAINS } from '@/lib/indonesianBanks';
 
 interface LogoImageProps {
   src: string | undefined | null;
@@ -40,6 +41,9 @@ export const LogoImage = ({ src, alt, fallbackText, className, fallbackIcon }: L
         const u = new URL(src);
         const domain = u.searchParams.get('domain');
         const size = u.searchParams.get('sz') || '128';
+        // Bank/e-wallet di daftar kita → logo resolusi tinggi lewat Worker
+        // (favicon Google sering cuma 16px untuk situs bank → tampil huruf).
+        if (domain && LOGO_DOMAINS.has(domain.toLowerCase())) return `/api/logo?d=${encodeURIComponent(domain.toLowerCase())}`;
         if (domain) return `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&url=${encodeURIComponent(`https://${domain}`)}&size=${size}`;
       } catch {
         // URL tidak valid — pakai apa adanya.

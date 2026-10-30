@@ -178,7 +178,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
         <div className="space-y-3">
           <Group icon={Wallet} tone="bg-sky-50 text-sky-600" title="Kas & rekening" total={money(t.cash)} count={nw.cash.length} action={<Link href="/membership/rekening" className="text-[12px] font-bold text-slate-500 hover:text-slate-900">Rekening</Link>}>
             {nw.cash.length === 0 ? <Empty text="Belum ada rekening." onAdd={onAddAccount} label="Tambah akun" /> : nw.cash.map(({ account, value }) => (
-              <Row key={account.id} href="/membership/rekening" icon={<LogoImage src={account.logoUrl} alt={account.name} fallbackText={account.name.slice(0, 3).toUpperCase()} fallbackIcon={<span aria-hidden className="text-[18px]">{TYPE_EMOJI[account.type] ?? '🏦'}</span>} className="h-full w-full object-cover" />} title={account.name} sub={`${TYPE_LABEL[account.type] ?? account.type}${account.currency && account.currency !== 'IDR' ? ` · ${account.currency}` : ''}`} value={money(value)} negative={value < 0} />
+              <Row key={account.id} href="/membership/rekening" icon={<LogoImage src={account.logoUrl} alt={account.name} fallbackText={account.name.slice(0, 3).toUpperCase()} fallbackIcon={<span aria-hidden className="text-[18px]">{TYPE_EMOJI[account.type] ?? '🏦'}</span>} className="h-full w-full object-cover" />} title={account.name} sub={`${TYPE_LABEL[account.type] ?? account.type}${account.purpose === 'nabung' ? ' · 🐷 Nabung' : account.purpose === 'belanja' ? ' · 🛒 Belanja' : ''}${account.currency && account.currency !== 'IDR' ? ` · ${account.currency}` : ''}`} value={money(value)} negative={value < 0} />
             ))}
           </Group>
 

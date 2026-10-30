@@ -4546,7 +4546,7 @@ const CARD_NETWORKS = new Set(["visa", "mastercard", "jcb", "amex", "gpn"]);
 // Tidak diatur = bawaan H-3 (lihat cardReminderDays).
 const CARD_REMINDER_OPTIONS = new Set([0, 1, 3, 5, 7]);
 const hasCardIdentityFields = (payload: Record<string, unknown>) =>
-  payload.card_last4 !== undefined || payload.card_network !== undefined || payload.reminder_days !== undefined;
+  payload.card_last4 !== undefined || payload.card_network !== undefined || payload.reminder_days !== undefined || payload.purpose !== undefined;
 const applyCardIdentityFields = (payload: Record<string, unknown>, target: Record<string, unknown>): string | null => {
   if (payload.card_last4 !== undefined) {
     const v = payload.card_last4 === null ? "" : String(payload.card_last4).trim();
@@ -4565,8 +4565,90 @@ const applyCardIdentityFields = (payload: Record<string, unknown>, target: Recor
     else if (CARD_REMINDER_OPTIONS.has(Number(payload.reminder_days))) target.reminderDays = Number(payload.reminder_days);
     else return "Pilihan pengingat tidak dikenal.";
   }
+  // Fungsi rekening (bukan kartu): 'belanja' = dompet harian, 'nabung' = simpanan
+  // yang saldonya diperbarui sesekali. Dipakai untuk pengelompokan di Kekayaan.
+  if (payload.purpose !== undefined) {
+    const v = payload.purpose === null ? "" : String(payload.purpose).trim();
+    if (!v) delete target.purpose;
+    else if (v === "belanja" || v === "nabung") target.purpose = v;
+    else return "Fungsi rekening tidak dikenal.";
+  }
   return null;
 };
+
+// GET /api/logo?d=bca.co.id — logo bank/e-wallet resolusi tinggi. Layanan favicon
+// Google cuma memberi ikon 16px untuk banyak situs bank (tampil sebagai huruf),
+// jadi Worker mencoba apple-touch-icon (biasanya 180px) / <link rel=icon> terbesar
+// di beranda, baru favicon Google. Hanya domain di LOGO_DOMAINS (bukan proxy
+// terbuka; daftar = src/lib/indonesianBanks.ts), SVG ditolak (bisa berisi skrip),
+// hasil (termasuk "tidak ada") di-cache di edge.
+const LOGO_DOMAINS = new Set([
+  "bca.co.id", "bankmandiri.co.id", "bri.co.id", "bni.co.id", "cimbniaga.co.id", "danamon.co.id", "permatabank.com",
+  "btpn.com", "jenius.com", "ocbc.id", "maybank.co.id", "bankmega.com", "sinarmas.co.id", "btn.co.id", "kbbukopin.co.id",
+  "panin.co.id", "bankbjb.co.id", "jago.com", "seabank.co.id", "allobank.com", "dbs.com", "hsbc.co.id", "uob.co.id",
+  "sc.com", "citibank.co.id", "bankbsi.co.id", "krom.id", "blubybcadigital.id",
+  "gojek.com", "ovo.id", "dana.id", "shopeepay.co.id", "linkaja.id", "flip.id", "paypal.com", "wise.com", "revolut.com",
+]);
+const LOGO_UA = { "User-Agent": "Mozilla/5.0 (compatible; LeosiqraBot/1.0; +https://www.leosiqra.com)" };
+const fetchLogoImage = async (target: string) => {
+  try {
+    const res = await fetch(target, { headers: LOGO_UA, redirect: "follow", cf: { cacheTtl: 86400 } } as RequestInit);
+    const type = (res.headers.get("content-type") ?? "").toLowerCase().split(";")[0].trim();
+    if (!res.ok || !/^image\/(png|jpeg|jpg|webp|gif|x-icon|vnd\.microsoft\.icon)$/.test(type)) return null;
+    const body = await res.arrayBuffer();
+    if (body.byteLength < 600 || body.byteLength > 500_000) return null; // ikon 16px / bukan logo
+    return { body, type };
+  } catch {
+    return null;
+  }
+};
+const pickLogoLinks = (html: string, base: string) => {
+  const out: { href: string; score: number }[] = [];
+  for (const tag of html.match(/<link\b[^>]*>/gi) ?? []) {
+    const rel = /\brel\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1]?.toLowerCase() ?? "";
+    const href = /\bhref\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1];
+    if (!href || !/(apple-touch-icon|\bicon\b)/.test(rel) || /\.svg(\?|$)/i.test(href)) continue;
+    const size = Number(/\bsizes\s*=\s*["'](\d+)x\d+/i.exec(tag)?.[1] ?? 0);
+    const score = (rel.includes("apple-touch-icon") ? 1000 : 0) + size;
+    try { out.push({ href: new URL(href, base).toString(), score }); } catch { /* href rusak */ }
+  }
+  return out.sort((a, b) => b.score - a.score).map((l) => l.href).filter((h) => h.startsWith("https://"));
+};
+async function handleLogo(request: Request, env: Env, url: URL) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const d = (url.searchParams.get("d") ?? "").trim().toLowerCase();
+  if (!LOGO_DOMAINS.has(d)) return json({ error: "Not found" }, { status: 404 });
+  const cache = (caches as unknown as { default: Cache }).default;
+  const cacheKey = new Request(`https://leosiqra.internal/logo/v1/${d}`);
+  const hit = await cache.match(cacheKey);
+  if (hit) return hit;
+
+  let found: { body: ArrayBuffer; type: string } | null = null;
+  for (const host of [`www.${d}`, d]) {
+    found = (await fetchLogoImage(`https://${host}/apple-touch-icon.png`)) ?? (await fetchLogoImage(`https://${host}/apple-touch-icon-precomposed.png`));
+    if (found) break;
+  }
+  if (!found) {
+    try {
+      const page = await fetch(`https://www.${d}/`, { headers: LOGO_UA, redirect: "follow" });
+      if (page.ok) {
+        const html = (await page.text()).slice(0, 300_000);
+        for (const href of pickLogoLinks(html, page.url || `https://www.${d}/`).slice(0, 4)) {
+          found = await fetchLogoImage(href);
+          if (found) break;
+        }
+      }
+    } catch { /* lanjut ke cadangan */ }
+  }
+  found ??= await fetchLogoImage(`https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&url=${encodeURIComponent(`https://${d}`)}&size=128`);
+
+  const response = found
+    ? new Response(found.body, { headers: { "content-type": found.type, "cache-control": "public, max-age=604800", "x-content-type-options": "nosniff" } })
+    : new Response("Not found", { status: 404, headers: { "cache-control": "public, max-age=86400" } });
+  await cache.put(cacheKey, response.clone());
+  return response;
+}
 
 // POST /api/member/accounts/:cardId/pay { from_account_id, amount, date, ref }
 // "Sudah bayar" tagihan kartu kredit: dua baris transfer (Keluar dari rekening
@@ -15159,6 +15241,9 @@ const worker = {
       }
       if (url.pathname.startsWith("/api/feed/") && request.method === "GET") {
         return await handlePublicFeed(request, env, url.pathname);
+      }
+      if (url.pathname === "/api/logo" && request.method === "GET") {
+        return await handleLogo(request, env, url);
       }
       if (url.pathname.startsWith("/api/market/coingecko/") && request.method === "GET") {
         return await handleCoinGeckoProxy(request, env, url.pathname.slice("/api/market/coingecko/".length));
