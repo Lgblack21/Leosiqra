@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { MobileTabBar } from '@/components/MobileTabBar';
+import DevNoticeBanner from '@/components/DevNoticeBanner';
 import { SettingsPanel, type View as SettingsView } from '@/components/settings/SettingsPanel';
 import { OPEN_SETTINGS_EVENT, SETTINGS_VIEWS_FROM_URL } from '@/lib/settingsPanel';
 import { ModalProvider } from '@/context/ModalContext';
@@ -146,6 +147,7 @@ function MembershipShell({
             ke halaman berikutnya. */}
         <main className="flex-1 md:ml-[84px] lg:ml-72 min-h-screen flex flex-col min-w-0 pb-24 md:pb-0 print:pb-0 print:block print:min-h-0 print:h-auto print:ml-0 print:pt-0">
           <div className={frameClass}><Header onMenuClick={() => setIsSidebarOpen(true)} /></div>
+          <DevNoticeBanner saranHref="/membership/saran" />
 
           {/* Page Content */}
           <div className="p-4 md:p-8 max-w-7xl mx-auto w-full flex-1 print:p-0 print:m-0 print:max-w-none">

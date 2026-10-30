@@ -397,6 +397,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   sisanya cari nama aplikasi + cocokkan nama penerbit), baru apple-touch-icon / favicon. Cache dinaikkan ke `logo/v2`.
   Belum terverifikasi di prod (sandbox tidak bisa akses Apple/Play Store). Kalau masih ada yang kosong: perbaiki
   `term`/`seller` atau isi `id` (App Store ID) untuk domain itu di APP_ICONS.
+- **Banner "Leosiqra sedang dalam pengembangan"** (akun B, 2026-10-30, permintaan Bos sebelum jeda limit mingguan):
+  `src/components/DevNoticeBanner.tsx` — web (di bawah Header membership) & app HP (pil di atas tab bar `/app`), link ke
+  Saran. Bisa ditutup; muncul lagi setelah 3 hari. **Matikan** dengan `ENABLED = false` di file itu setelah fase
+  pengembangan selesai.
 
 ## Migrasi D1
 
