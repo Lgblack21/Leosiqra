@@ -47,6 +47,7 @@ const GUIDES = [
   { href: '/panduan/cara-menabung-yang-benar', icon: PiggyBank, title: 'Cara Menabung yang Benar', desc: 'Sisihkan di awal, urutan dana darurat–utang–tujuan, contoh gaji 5 juta.' },
   { href: '/panduan/cara-menabung-10-juta', icon: Target, title: 'Cara Menabung 10 Juta dalam 3 Bulan', desc: 'Jatah per bulan, minggu, dan hari, cek realistis dari gaji, alternatif 6 atau 12 bulan.' },
   { href: '/panduan/cara-mengatur-gaji-3-juta', icon: Wallet, title: 'Cara Mengatur Gaji 3 Juta', desc: 'Contoh pembagian untuk anak kos, jatah makan per hari, tetap menabung walau kecil.' },
+  { href: '/panduan/cara-mengatur-gaji-2-juta', icon: Wallet, title: 'Cara Mengatur Gaji 2 Juta', desc: 'Contoh tinggal dengan orang tua dan anak kos, saat ada cicilan, dan kalau gaji 2,5 juta.' },
   { href: '/panduan/cara-mencatat-keuangan-di-hp', icon: Smartphone, title: 'Cara Mencatat Keuangan di HP', desc: 'Pilih alat, format catatan beberapa detik, contoh sehari, dan transfer yang bukan pengeluaran.' },
   { href: '/panduan/catatan-hutang-piutang', icon: HandCoins, title: 'Catatan Hutang Piutang', desc: 'Kolom wajib, contoh tabel, mencatat cicilan dan pelunasan, dan kesalahan yang membuat sisa salah.' },
   { href: '/panduan/mcp', icon: Bot, title: 'Hubungkan ke Claude & ChatGPT', desc: 'Tanya saldo dan catat transaksi lewat AI (MCP), plus cara memutus akses kapan saja.' },
