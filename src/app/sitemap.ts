@@ -22,6 +22,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/panduan/catat-keuangan-usaha-kecil',
     '/panduan/cara-menabung-yang-benar',
     '/panduan/cara-menabung-10-juta',
+    '/panduan/cara-mengatur-gaji-5-juta',
     '/panduan/cara-mengatur-gaji-3-juta',
     '/panduan/cara-mengatur-gaji-2-juta',
     '/panduan/cara-mencatat-keuangan-di-hp',

@@ -46,6 +46,7 @@ const GUIDES = [
   { href: '/panduan/cara-mencatat-uang-kas', icon: Users, title: 'Cara Mencatat Uang Kas', desc: 'Buku kas kelas, RT, arisan: kolom wajib, contoh tabel sebulan, cara melapor ke anggota.' },
   { href: '/panduan/cara-menabung-yang-benar', icon: PiggyBank, title: 'Cara Menabung yang Benar', desc: 'Sisihkan di awal, urutan dana darurat–utang–tujuan, contoh gaji 5 juta.' },
   { href: '/panduan/cara-menabung-10-juta', icon: Target, title: 'Cara Menabung 10 Juta dalam 3 Bulan', desc: 'Jatah per bulan, minggu, dan hari, cek realistis dari gaji, alternatif 6 atau 12 bulan.' },
+  { href: '/panduan/cara-mengatur-gaji-5-juta', icon: Wallet, title: 'Cara Mengatur Gaji 5 Juta', desc: 'Contoh lajang yang ngekos dan rumah tangga dengan satu anak, saat ada cicilan, dan kalau gaji 4 juta.' },
   { href: '/panduan/cara-mengatur-gaji-3-juta', icon: Wallet, title: 'Cara Mengatur Gaji 3 Juta', desc: 'Contoh pembagian untuk anak kos, jatah makan per hari, tetap menabung walau kecil.' },
   { href: '/panduan/cara-mengatur-gaji-2-juta', icon: Wallet, title: 'Cara Mengatur Gaji 2 Juta', desc: 'Contoh tinggal dengan orang tua dan anak kos, saat ada cicilan, dan kalau gaji 2,5 juta.' },
   { href: '/panduan/cara-mencatat-keuangan-di-hp', icon: Smartphone, title: 'Cara Mencatat Keuangan di HP', desc: 'Pilih alat, format catatan beberapa detik, contoh sehari, dan transfer yang bukan pengeluaran.' },
