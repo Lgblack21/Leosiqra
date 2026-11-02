@@ -213,6 +213,19 @@ const prepareClips = async (plan) => {
   });
 };
 
+// Bersihkan hasil render lama di out/, tapi JANGAN hapus catatan kerja routine
+// (log render `> out/render.log`, out/lessons.md, draft-raw, file Tower). Dulu
+// rmSync(out/) menghapusnya juga — log render yang sedang ditulis ikut hilang
+// (kesalahan/log-render-di-out-terhapus).
+const KEEP_IN_OUT = /\.(log|md)$|^(draft|tower|catatan|notes)[\w.-]*$/i;
+const cleanOut = () => {
+  mkdirSync(OUT, { recursive: true });
+  for (const name of readdirSync(OUT)) {
+    if (KEEP_IN_OUT.test(name)) continue;
+    rmSync(join(OUT, name), { recursive: true, force: true });
+  }
+};
+
 const main = async () => {
   // Naskah dari routine biasanya ada di out/script.json — amankan dulu ke
   // state/ sebelum out/ dibersihkan.
@@ -231,8 +244,7 @@ const main = async () => {
       throw new Error(`PROMO_SCRIPT_FILE=${process.env.PROMO_SCRIPT_FILE} tidak ditemukan (juga tidak ada ${keep}). Video TIDAK dibuat.`);
     }
   }
-  rmSync(OUT, { recursive: true, force: true });
-  mkdirSync(OUT, { recursive: true });
+  cleanOut();
   mkdirSync(STATE, { recursive: true });
 
   const history = await loadHistory();
