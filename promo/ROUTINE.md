@@ -157,6 +157,10 @@ F=${FFMPEG_PATH:-ffmpeg}
 $F -loglevel error -y -i out/leosiqra-promo.mp4 -vf "fps=1,scale=270:480,tile=8x4" -frames:v 1 out/sheet.jpg
 $F -i out/leosiqra-promo.mp4 -af ebur128=framelog=quiet -f null - 2>&1 | grep " I:"
 ```
+   `make.mjs` membersihkan `out/` di awal tiap render, **kecuali** `*.log`, `*.md`, dan file
+   berawalan `draft`/`tower`/`catatan`/`notes` — jadi log render simpan sebagai
+   `out/render.log` (`… make.mjs --no-send > out/render.log 2>&1`), draft mentah sebagai
+   `out/draft-raw.json`, file Tower sebagai `out/tower-*.json`. Nama lain di `out/` ikut terhapus.
 3. QA — **tiga lapis, semua wajib lulus**:
    - **Otomatis (gerbang keras)**: `make.mjs` sendiri menjalankan `qa.mjs`. Sebelum render ia mengecek
      teks keluar bingkai / saling tumpuk / gambar rusak di 3 titik tiap scene; sesudah render ia
