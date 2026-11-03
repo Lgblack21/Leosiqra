@@ -155,6 +155,15 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     Butuh: migrasi 0022, secret Worker `FCM_SERVICE_ACCOUNT` (JSON service account), `android/app/google-services.json`,
     build ulang APK. iOS BELUM: APNs wajib HTTP/2, subrequest Worker HTTP/1.1 → perlu Firebase Messaging di app iOS.
     Android: izin POST_NOTIFICATIONS, ikon status `ic_stat_leosiqra` (vector), warna `notification_accent`.
+    Status 2026-11-03 sore: `android/app/google-services.json` SUDAH di branch (248b402, project
+    `leosiqra-a02fe`). Review keamanan (sesi cloud): 🟠 token per user tidak dibatasi + token palsu (FCM 400
+    INVALID_ARGUMENT) tidak pernah dihapus → satu user bisa daftar ribuan token, tiap notifikasinya ribuan fetch →
+    cron pengingat/ringkasan habis jatah subrequest untuk user lain. **Wajib tambal sebelum deploy**: maks 5 token
+    per user (hapus tertua setelah INSERT) + hapus token saat FCM 400 INVALID_ARGUMENT. 🟡: flag `started` di
+    nativePush.ts → login akun lain tanpa tutup app tidak daftar ulang token; URL notif `/membership/*` membuka
+    UI web di app. Belum ada workflow build APK (Bos hanya punya Termux, tanpa PC) → usul `build-android.yml`
+    (assembleDebug, APK diunduh dari Actions); rilis Play Store butuh keystore lama (lokasi belum diketahui) +
+    naikkan `versionCode` (masih 1). Masih menunggu Bos: secret `FCM_SERVICE_ACCOUNT`, migrasi 0022, "gas".
   - Live (2026-11-03, deploy eb9effde) Aplikasi HP: `/app/notifikasi` (tab Notifikasi + Pengingat, `?tab=pengingat`),
     lonceng + angka belum dibaca di Beranda `/app`, menu "Pengingat" di Lainnya. Daftar notifikasi dipakai bersama
     (`src/components/notifications/NotificationList.tsx`) oleh lonceng web & HP. `RemindersView` punya varian dark:
