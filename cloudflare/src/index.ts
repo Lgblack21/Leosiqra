@@ -12662,20 +12662,22 @@ const sendDueReminders = async (env: Env) => {
   }
 };
 
-// Push wawasan mingguan (Senin 10:00 WIB) & bulanan (tanggal 1, 10:00 WIB) —
-// hanya untuk user yang punya langganan push & tidak mematikannya
-// ($.prefs.notify.weekly/monthly = false). Penanda $.prefs.weeklySent /
+// Wawasan mingguan (Senin 10:00 WIB) & bulanan (tanggal 1, 10:00 WIB) — untuk
+// semua user aktif yang punya transaksi sejak `since` & tidak mematikannya
+// ($.prefs.notify.weekly/monthly = false). Selalu masuk lonceng
+// (recordNotification); push hanya ke yang punya langganan (sendWebPushToUser). Penanda $.prefs.weeklySent /
 // monthlySent mencegah kirim dobel kalau cron terpicu lagi di hari yang sama.
 const INSIGHT_PUSH_MAX_PER_RUN = 300;
-const insightPushCandidates = async (env: Env, flag: "weekly" | "monthly", sentKey: string, marker: string) => {
+const insightPushCandidates = async (env: Env, flag: "weekly" | "monthly", sentKey: string, marker: string, since: string) => {
   const { results } = await env.DB.prepare(
-    `SELECT DISTINCT u.id FROM users u JOIN push_subscriptions p ON p.user_id = u.id
+    `SELECT u.id FROM users u
       WHERE COALESCE(u.status, '') <> 'NONAKTIF'
         AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.${flag}') END, 1) <> 0
         AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.${sentKey}') END, '') <> ?
+        AND EXISTS (SELECT 1 FROM transactions t WHERE t.user_id = u.id AND t.date >= ?)
       LIMIT ?`
   )
-    .bind(marker, INSIGHT_PUSH_MAX_PER_RUN)
+    .bind(marker, since, INSIGHT_PUSH_MAX_PER_RUN)
     .all<{ id: string }>();
   return (results ?? []).map((r) => r.id);
 };
@@ -12693,7 +12695,7 @@ const sendInsightPushes = async (env: Env) => {
   const today = todayWIB();
   const weekday = new Date(`${today}T00:00:00Z`).getUTCDay(); // 1 = Senin
   if (weekday === 1) {
-    for (const userId of await insightPushCandidates(env, "weekly", "weeklySent", today)) {
+    for (const userId of await insightPushCandidates(env, "weekly", "weeklySent", today, shiftDateStr(today, -8))) {
       try {
         if (!(await claimInsightPush(env, userId, "weeklySent", today))) continue;
         const { items } = await computeWeeklyInsights(env, userId);
@@ -12709,7 +12711,7 @@ const sendInsightPushes = async (env: Env) => {
     const [y, m] = today.slice(0, 7).split("-").map(Number);
     const period = new Date(Date.UTC(y, m - 2, 1)).toISOString().slice(0, 7);
     const monthName = new Intl.DateTimeFormat("id-ID", { month: "long", timeZone: "UTC" }).format(new Date(`${period}-01T00:00:00Z`));
-    for (const userId of await insightPushCandidates(env, "monthly", "monthlySent", period)) {
+    for (const userId of await insightPushCandidates(env, "monthly", "monthlySent", period, `${period}-01`)) {
       try {
         if (!(await claimInsightPush(env, userId, "monthlySent", period))) continue;
         const r = await buildMonthlyReport(env, userId, period);
