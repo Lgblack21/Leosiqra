@@ -63,12 +63,12 @@ export function useNotifications(pollMs = 0) {
 export function NotificationItems({
   state,
   onNavigate,
-  mapUrl,
+  openUrl,
 }: {
   state: ReturnType<typeof useNotifications>;
   onNavigate?: () => void;
-  // /app memetakan URL web (/membership/*) ke halaman versi app (toAppUrl).
-  mapUrl?: (url: string) => string;
+  // /app membuka URL dengan caranya sendiri (openAppNotificationUrl: versi app, sheet transaksi).
+  openUrl?: (url: string) => void;
 }) {
   const router = useRouter();
   const { items, markRead } = state;
@@ -77,7 +77,8 @@ export function NotificationItems({
     markRead(n);
     if (!n.url) return;
     onNavigate?.();
-    const url = mapUrl ? mapUrl(n.url) : n.url;
+    if (openUrl) return openUrl(n.url);
+    const url = n.url;
     // Input Cepat membaca ?teks= saat dimuat → navigasi penuh.
     if (url.startsWith('/input-cepat')) window.location.href = url;
     else router.push(url);

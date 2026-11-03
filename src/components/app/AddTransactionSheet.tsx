@@ -20,6 +20,7 @@ import { useQuickContext } from "@/lib/quick/useQuickContext";
 import type { QuickDraft } from "@/lib/quick/parse";
 import { SmartBar, type DraftSource } from "@/components/quick/SmartBar";
 import { UndoToast, type UndoItem } from "@/components/quick/UndoToast";
+import type { TxPrefill } from "@/lib/txPrefill";
 
 type SheetMode = TxType | "transfer";
 
@@ -61,6 +62,8 @@ function ModeToggle({ value, onChange }: { value: SheetMode; onChange: (m: Sheet
 interface AddTransactionSheetProps {
   isOpen: boolean;
   onClose: () => void;
+  // Dari notifikasi pengingat bernominal: isi nominal & catatan, kategori dipilih user.
+  prefill?: TxPrefill | null;
 }
 
 const toISODate = (d: Date) => {
@@ -76,7 +79,7 @@ const yesterdayISO = () => {
   return toISODate(d);
 };
 
-export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProps) {
+export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransactionSheetProps) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [hint, setHint] = useState<{ source: DraftSource; text?: string } | null>(null);
@@ -102,6 +105,26 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [fromReminder, setFromReminder] = useState<string | null>(null);
+
+  // Tiap ketukan notifikasi (key baru) mengisi ulang form; kategori sengaja
+  // dikosongkan supaya user memilih sendiri sebelum menyimpan.
+  useEffect(() => {
+    if (!prefill) return;
+    setIsTransfer(false);
+    setType("pengeluaran");
+    setAmount(String(prefill.amount));
+    setNote(prefill.note);
+    setCategory("");
+    setSubCategory("");
+    setDate(null);
+    setShowDatePicker(false);
+    setHint(null);
+    setAttachmentId(undefined);
+    setFeedback(null);
+    setFromReminder(prefill.note);
+  }, [prefill]);
+  useEffect(() => { if (!isOpen) setFromReminder(null); }, [isOpen]);
 
   useEffect(() => {
     const loadAccounts = () =>
@@ -165,6 +188,7 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
     setShowDatePicker(false);
     setHint(null);
     setAttachmentId(undefined);
+    setFromReminder(null);
   };
 
   // Isi form dari ketik pintar / suara / scan — hanya field yang terbaca,
@@ -255,6 +279,12 @@ export function AddTransactionSheet({ isOpen, onClose }: AddTransactionSheetProp
         )}
 
         <SmartBar ctx={ctx} onDraft={applyDraft} />
+        {fromReminder && !hint && (
+          <div className="flex items-start gap-2 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 px-3.5 py-2.5 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
+            <Sparkles size={13} className="mt-0.5 shrink-0" />
+            <span>Dari pengingat &ldquo;{fromReminder}&rdquo; — pilih kategori, cek rekening, lalu simpan.</span>
+          </div>
+        )}
         {hint && (
           <div className="flex items-start gap-2 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 px-3.5 py-2.5 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
             <Sparkles size={13} className="mt-0.5 shrink-0" />

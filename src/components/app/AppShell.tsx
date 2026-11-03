@@ -12,7 +12,7 @@ import { AppTour } from "@/components/app/AppTour";
 import { reportAppOpened } from "@/lib/appUsage";
 import { BrandSplash } from "@/components/app/BrandSplash";
 import { initNativePush } from "@/lib/nativePush";
-import { toAppUrl } from "@/lib/appUrl";
+import { openAppNotificationUrl } from "@/lib/txPrefill";
 
 // Native splash (drawable/splash.png) cuma nyala sekilas selama Android/iOS
 // nyiapin Activity — begitu WebView aktif dia langsung ilang, dan APK ini
@@ -87,14 +87,10 @@ export default function AppShell({
       }
       reportAppOpened("leosiqra");
       // Android: izin & token push (sekali per buka app). Ketuk notifikasi →
-      // /input-cepat butuh navigasi penuh (membaca ?teks= saat dimuat).
+      // halaman versi app; pengingat bernominal → sheet Tambah Transaksi.
       const forcePush = !pushBoundRef.current;
       pushBoundRef.current = true;
-      void initNativePush(user.uid, (url) => {
-        const target = toAppUrl(url);
-        if (target.startsWith("/input-cepat")) window.location.href = target;
-        else router.push(target);
-      }, forcePush);
+      void initNativePush(user.uid, (url) => openAppNotificationUrl(url, router.push), forcePush);
       setUserName(user.displayName ?? null);
       setLoading(false);
       hideSplash();

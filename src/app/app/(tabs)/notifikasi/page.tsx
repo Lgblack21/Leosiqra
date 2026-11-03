@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AlarmClock, BellRing } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { lightTap } from "@/lib/haptics";
@@ -8,7 +9,7 @@ import { FadeIn } from "@/components/app/FadeIn";
 import { FeedbackProvider } from "@/components/ui/Feedback";
 import { useNotifications, NotificationItems, ReadAllButton } from "@/components/notifications/NotificationList";
 import { RemindersView } from "@/components/settings/RemindersView";
-import { toAppUrl } from "@/lib/appUrl";
+import { openAppNotificationUrl } from "@/lib/txPrefill";
 
 // Notifikasi & Pengingat versi HP — sama dengan lonceng web (riwayat dari
 // /api/member/notifications + RemindersView). Di aplikasi native belum ada
@@ -17,6 +18,7 @@ import { toAppUrl } from "@/lib/appUrl";
 type Tab = "notif" | "pengingat";
 
 function AppNotifications() {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("notif");
   const notif = useNotifications();
 
@@ -59,7 +61,7 @@ function AppNotifications() {
       ) : (
         <div className="space-y-3">
           <div className="rounded-2xl bg-white p-2 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
-            <NotificationItems state={notif} mapUrl={toAppUrl} />
+            <NotificationItems state={notif} openUrl={(url) => openAppNotificationUrl(url, router.push)} />
           </div>
           {!!notif.items?.length && <ReadAllButton state={notif} />}
         </div>
