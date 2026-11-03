@@ -16,13 +16,12 @@ Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
-## Menunggu (belum di main)
+## Menunggu
 
-- Branch **`claude/push-fcm`** (2026-11-03, akun ini via Termux): push native Android lewat FCM — siap, BELUM
-  deploy & migrasi `0022_native_push_tokens.sql` BELUM jalan. Menunggu Bos: buat project Firebase (package
-  `com.leosiqra.app`), `android/app/google-services.json`, secret Worker `FCM_SERVICE_ACCOUNT`, lalu "gas".
-  Detail lengkap ada di HANDOFF versi branch itu. Jangan ubah `cloudflare/src/index.ts` bagian
-  `sendWebPushToUser`/`cleanupNotifications`, `AppShell.tsx`, `RemindersView.tsx` tanpa rebase ke branch itu.
+- **Push native Android (FCM)** sudah di main & ter-deploy 2026-11-03, TAPI belum aktif: migrasi
+  `0022_native_push_tokens.sql` BELUM jalan (eksekusi dari sesi Claude ditolak pengaman auto-mode → Bos jalankan
+  di Console D1 / `wrangler d1 execute --remote --file`), secret Worker `FCM_SERVICE_ACCOUNT` belum dipastikan,
+  APK debug dari workflow `build-android.yml` belum dicoba di HP. Detail di bagian Pengingat & Notifikasi.
 - Token D1 lokal (cek/migrasi dari HP) hanya ada di HP Termux: `/data/data/com.termux/files/home/.config/leosiqra/cloudflare.env`.
 
 ## Status produksi
@@ -147,7 +146,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     00:01 kini bisa dimatikan. BARU: push wawasan mingguan (Senin 10:00 WIB, `computeWeeklyInsights`) & bulanan
     (tgl 1, `buildMonthlyReport`), penanda `$.prefs.weeklySent/monthlySent`. Diuji lokal dengan wrangler dev + D1
     lokal (API, cron dobel, bulanan tgl 31, query kandidat) dan UI lewat Playwright → Worker lokal.
-  - (2026-11-03, branch claude/push-fcm, BELUM deploy) **Push native Android via FCM**: plugin
+  - (2026-11-03, live di main; menunggu migrasi 0022 + secret) **Push native Android via FCM**: plugin
     `@capacitor/push-notifications` (src/lib/nativePush.ts, dipanggil AppShell setelah login: izin → token →
     POST /api/member/native-push-token). Worker `sendNativePushToUser` dipanggil dari `sendWebPushToUser` (semua
     notifikasi lonceng ikut ke HP); OAuth service account RS256 via WebCrypto (diuji dengan kunci RSA nyata).
