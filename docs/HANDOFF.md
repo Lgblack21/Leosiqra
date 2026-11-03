@@ -435,6 +435,8 @@ membersite_leosiqra_db --remote --command "..."`. SELECT boleh langsung; tulis/u
   bulan), selalu masuk lonceng, push hanya pelanggan. **Cek lonceng Senin 9 Nov 10:00 WIB** (3 user: 7b434d,
   dd335d, 0e02e0) & rekap November 1 Des. Catatan: penanda dipasang sebelum hitung → kalau hitung error, user
   itu terlewat minggu itu (console.error saja).
+- User dd335d = akun demo `leowendry+demo@gmail.com` (routine Tim Konten): login harian 08.46 WIB (curl,
+  promo/demo-seed.mjs) & ±14.45 WIB (Chrome Linux, promo/record.mjs) itu NORMAL, bukan penyusup.
 - Resep Shortcut "Notifikasi aplikasi bank" (nama tindakan "Enkode URL"/variabel "Input Pintasan" di iPhone asli).
 - Kartu e-money NFC: perlu kapabilitas "NFC Tag Reading" di App ID Apple, build & rilis ulang iOS/Android, tes kartu
   asli (Swift belum pernah dikompilasi).
