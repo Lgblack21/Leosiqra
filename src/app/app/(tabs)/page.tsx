@@ -10,6 +10,7 @@ import { BalanceCard } from "@/components/app/home/BalanceCard";
 import { WalletList } from "@/components/app/home/WalletList";
 import { RecentTransactions } from "@/components/app/home/RecentTransactions";
 import { AssistantMenu } from "@/components/app/home/AssistantMenu";
+import { AppHealthScore } from "@/components/app/home/AppHealthScore";
 import { LevelBadge } from "@/components/app/home/LevelBadge";
 import { NotificationButton } from "@/components/app/home/NotificationButton";
 import { WeeklyInsights } from "@/components/WeeklyInsights";
@@ -94,6 +95,9 @@ export default function AppHomePage() {
         </StaggerItem>
         <StaggerItem className="empty:hidden">
           <WeeklyInsights target="app" />
+        </StaggerItem>
+        <StaggerItem className="empty:hidden">
+          <AppHealthScore accounts={accounts} transactions={transactions} />
         </StaggerItem>
         <StaggerItem>
           <AssistantMenu />

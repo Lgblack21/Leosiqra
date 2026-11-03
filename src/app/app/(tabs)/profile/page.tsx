@@ -34,6 +34,16 @@ export default function ProfilePage() {
     return () => unsub();
   }, [user?.uid]);
 
+  // Sisa masa aktif (PRO maupun masa coba gratis) — sama dengan Sidebar web.
+  const remainingDays = (() => {
+    if (profile?.status !== "AKTIF" || !profile.expiredAt) return null;
+    // Lewat lapisan cf-firestore, expiredAt jadi Timestamp (punya toDate), bukan string.
+    const raw = profile.expiredAt as unknown;
+    const end = raw && typeof (raw as { toDate?: unknown }).toDate === "function" ? (raw as { toDate: () => Date }).toDate() : new Date(raw as string);
+    const diff = Math.ceil((end.getTime() - Date.now()) / 86400e3);
+    return Number.isFinite(diff) && diff >= 0 ? diff : null;
+  })();
+
   const displayName = user?.displayName || profile?.name || "Pengguna";
   const initials = displayName
     .split(" ")
@@ -99,6 +109,11 @@ export default function ProfilePage() {
           <div className="flex items-center gap-1.5 bg-amber-50 text-amber-600 rounded-full px-3 py-1.5 text-[11px] font-black mt-3">
             <Star size={12} fill="currentColor" /> {profile.plan === "PRO" ? "Premium" : "Free"}
           </div>
+        )}
+        {remainingDays !== null && (
+          <p className={`mt-2 text-[12px] font-bold ${remainingDays <= 3 ? "text-rose-500" : "text-slate-400 dark:text-slate-500"}`}>
+            {remainingDays === 0 ? "Masa aktif berakhir hari ini" : `Masa aktif sisa ${remainingDays} hari`}
+          </p>
         )}
       </FadeIn>
 

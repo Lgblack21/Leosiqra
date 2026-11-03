@@ -69,7 +69,7 @@ export function computeHealthScore(input: {
       weight: 25,
       score: clamp((rate / 0.2) * 100),
       detail: rate >= 0 ? `Sisa ${pct(rate)} dari pemasukan per bulan` : `Pengeluaran lebih besar ${pct(-rate)} dari pemasukan`,
-      tip: rate < 0 ? 'Pengeluaran melebihi pemasukan — mulai dari kategori terbesar di "Ke mana uangmu".' : 'Coba sisihkan 10–20% pemasukan di awal bulan, sebelum belanja.',
+      tip: rate < 0 ? 'Pengeluaran melebihi pemasukan — mulai dari kategori pengeluaran terbesar.' : 'Coba sisihkan 10–20% pemasukan di awal bulan, sebelum belanja.',
     });
   }
 
@@ -97,7 +97,7 @@ export function computeHealthScore(input: {
       weight: 20,
       score: clamp((ok / monthly.length) * 100),
       detail: `${ok} dari ${monthly.length} anggaran aman bulan lalu`,
-      tip: 'Ada anggaran yang jebol bulan lalu — cek halaman Anggaran, mungkin batasnya perlu realistis.',
+      tip: 'Ada anggaran yang jebol bulan lalu — cek Anggaran, mungkin batasnya perlu realistis.',
     });
   }
 
@@ -121,7 +121,7 @@ export function computeHealthScore(input: {
     weight: 15,
     score: clamp((days.size / 20) * 100),
     detail: `Ada catatan di ${days.size} dari 30 hari terakhir`,
-    tip: 'Pasang pengingat malam di Pengaturan → Pengingat supaya tidak ada yang terlewat.',
+    tip: 'Nyalakan pengingat malam supaya tidak ada yang terlewat.',
   });
 
   const totalWeight = parts.reduce((s, p) => s + p.weight, 0);
