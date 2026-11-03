@@ -38,9 +38,12 @@ export function useNotifications(pollMs = 0) {
     const id = pollMs > 0 ? window.setInterval(load, pollMs) : 0;
     const onVisible = () => document.visibilityState === 'visible' && load();
     document.addEventListener('visibilitychange', onVisible);
+    // Push yang masuk saat aplikasi HP dibuka (lihat PUSH_EVENT di nativePush) → angka lonceng ikut naik.
+    window.addEventListener('leosiqra:push', load);
     return () => {
       if (id) window.clearInterval(id);
       document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('leosiqra:push', load);
     };
   }, [load, pollMs]);
 
