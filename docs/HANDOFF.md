@@ -18,6 +18,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **Input suara app Android** (ea3f686, live 2026-11-03): perekam WebView selalu "Izin mikrofon ditolak" karena
+  manifest tidak punya `MODIFY_AUDIO_SETTINGS` (BridgeWebChromeClient Capacitor meminta itu + RECORD_AUDIO).
+  Sementara: di native, NotAllowedError → pengenal suara bawaan HP (plugin speech-recognition). Permanen: izin
+  sudah ditambah di manifest → perlu build APK baru (`build-android.yml`) & pasang ulang. Belum dicoba Bos di HP.
 - **Push native Android (FCM) AKTIF** (2026-11-03): migrasi 0022 dijalankan via API D1 (sesi Termux, atas
   perintah Bos), secret `FCM_SERVICE_ACCOUNT` terpasang, APK debug (`leosiqra-debug-1`) dipasang di HP Bos →
   token terdaftar → pengingat tes MUNCUL sebagai notifikasi HP. Sisa: rilis Play Store (keystore lama belum
