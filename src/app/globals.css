@@ -603,7 +603,12 @@ html[data-daypart="sore"] .auth-greet[data-p="sore"], html[data-daypart="malam"]
   --color-slate-950: #020617;
   --color-indigo-900: #312e81;
   --color-indigo-950: #1e1b4b;
+  --color-emerald-900: #064e3b;
+  --color-emerald-950: #022c22;
 }
+/* Kartu .web-keep ber-bg-slate-900: teks tetap putih (aturan .web-dark
+   .bg-slate-900 di bawah menggelapkan teks untuk pil yang dibalik jadi terang). */
+.web-dark .web-keep.bg-slate-900, .web-dark .web-keep.bg-slate-950 { color: #fff; }
 @layer utilities {
   :where(.web-dark) .bg-white, :where(.web-dark) .hover\:bg-white:hover, :where(.web-dark) .focus\:bg-white:focus { background-color: var(--web-surface); }
   :where(.web-dark) .bg-white\/95 { background-color: rgb(20 26 42 / 0.95); }

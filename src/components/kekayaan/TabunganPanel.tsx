@@ -312,7 +312,7 @@ export default function TabunganPanel() {
       </div>
 
       {/* Ringkasan */}
-      <div className="relative overflow-hidden rounded-[28px] bg-slate-900 p-6 text-white md:p-8">
+      <div className="web-keep relative overflow-hidden rounded-[28px] bg-slate-900 p-6 text-white md:p-8">
         <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-indigo-500/40 blur-3xl" />
         <span aria-hidden className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-violet-500/30 blur-3xl" />
         <div className="relative grid gap-6 md:grid-cols-[1.4fr_1fr] md:items-end">
