@@ -11,6 +11,7 @@ import { WalletList } from "@/components/app/home/WalletList";
 import { RecentTransactions } from "@/components/app/home/RecentTransactions";
 import { AssistantMenu } from "@/components/app/home/AssistantMenu";
 import { LevelBadge } from "@/components/app/home/LevelBadge";
+import { NotificationButton } from "@/components/app/home/NotificationButton";
 import { WeeklyInsights } from "@/components/WeeklyInsights";
 import { SecurityNudge } from "@/components/SecurityNudge";
 import { InboxBanner } from "@/components/inbox/InboxBanner";
@@ -71,7 +72,10 @@ export default function AppHomePage() {
           <p className="text-xs font-bold text-slate-400 dark:text-slate-500">Hai,</p>
           <h1 className="text-lg font-black text-slate-900 dark:text-white">{auth.currentUser?.displayName || "Pengguna"}</h1>
         </div>
-        <LevelBadge />
+        <div className="flex items-center gap-2">
+          <LevelBadge />
+          <NotificationButton />
+        </div>
       </FadeIn>
 
       <StaggerList className="space-y-6">

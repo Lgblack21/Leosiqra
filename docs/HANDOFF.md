@@ -138,7 +138,11 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     00:01 kini bisa dimatikan. BARU: push wawasan mingguan (Senin 10:00 WIB, `computeWeeklyInsights`) & bulanan
     (tgl 1, `buildMonthlyReport`), penanda `$.prefs.weeklySent/monthlySent`. Diuji lokal dengan wrangler dev + D1
     lokal (API, cron dobel, bulanan tgl 31, query kandidat) dan UI lewat Playwright → Worker lokal.
-  - Belum: menu Pengingat di aplikasi HP (`/app`). Push sungguhan belum dicoba Bos.
+  - (2026-11-03, branch claude/app-pengingat) Aplikasi HP: `/app/notifikasi` (tab Notifikasi + Pengingat, `?tab=pengingat`),
+    lonceng + angka belum dibaca di Beranda `/app`, menu "Pengingat" di Lainnya. Daftar notifikasi dipakai bersama
+    (`src/components/notifications/NotificationList.tsx`) oleh lonceng web & HP. `RemindersView` punya varian dark:
+    (hanya aktif di /app). Native Capacitor TIDAK punya web push → banner "muncul di tab Notifikasi"; push native
+    (FCM/APNs, @capacitor/push-notifications) belum dibuat. Push sungguhan belum dicoba Bos.
 - Sudah live (run #52): **Tampilan**.
   - **Mode gelap web BERTAHAP** (keputusan Bos): Pengaturan → Mode gelap (`AppearanceView`, ThemeContext yang sama
     dengan /app, localStorage `leosiqra-theme`). Cara kerja: scope `.web-dark` di globals.css memetakan ulang
@@ -441,6 +445,9 @@ membersite_leosiqra_db --remote --command "..."`. SELECT boleh langsung; tulis/u
 - Kartu e-money NFC: perlu kapabilitas "NFC Tag Reading" di App ID Apple, build & rilis ulang iOS/Android, tes kartu
   asli (Swift belum pernah dikompilasi).
 - Tanya Leo dengan Ingatan asisten terisi (butuh OpenRouter produksi).
+- Uji UI di HP Termux ini: `workerd` (wrangler dev lokal) TIDAK bisa jalan (tcmalloc 48-bit VA). Pola yang jalan:
+  `npm run build` → `npx serve out -l 4173` → Playwright dengan API di-mock (`page.route`). Chromium dipasang manual
+  (unzip chromium-linux-arm64 build 1194 ke ~/.cache/ms-playwright/chromium-1194, executablePath eksplisit; lib via apt).
 - Mode gelap: halaman selain Ringkasan belum dicek → tambahkan ke WEB_DARK_READY satu per satu.
 
 ## Catatan Impor
@@ -471,7 +478,7 @@ Bos bilang **"gas"**. Menu Pengaturan yang sudah dibuat: Fitur, Target, Transaks
 periode anggaran, Tag, Cara catat utama, Keyboard nominal, Shortcut iPhone, Kategori & Anggaran, Pembaca Notifikasi, Impor mutasi (pop-up), Kartu e-money, Impor/ekspor CSV, Pengingat, Notifikasi.
 Semua menu Pengaturan dari screenshot Oyenza sudah dibuat (2026-10-28). Sisa: pindahan multi-dompet dari app
 lain (Money Manager dll — tunggu keputusan Bos soal saldo & pembuatan rekening), Bahasa English (dilewati),
-mode gelap halaman lain (bertahap), menu Pengingat di aplikasi HP.
+mode gelap halaman lain (bertahap), push native di aplikasi HP (FCM/APNs).
 Mode HP: Bos minta tampilan HP **simpel** — jangan menambah kepadatan di <768px.
 
 - Tunggu hasil tes Bos untuk poin di atas, perbaiki parser kalau perlu.

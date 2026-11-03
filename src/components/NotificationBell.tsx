@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bell, X, AlarmClock, CheckCheck, BellRing } from 'lucide-react';
+import { Bell, X, AlarmClock, BellRing } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { notificationService, type AppNotification } from '@/lib/services/notificationService';
+import { useNotifications, NotificationItems, ReadAllButton } from '@/components/notifications/NotificationList';
 import { RemindersView } from '@/components/settings/RemindersView';
 import { openSettings } from '@/lib/settingsPanel';
 import { useTheme } from '@/context/ThemeContext';
@@ -17,44 +16,15 @@ import { useTheme } from '@/context/ThemeContext';
 // menjadi kotak acuan elemen fixed di dalamnya (panel jadi terkurung di header).
 const POLL_MS = 120_000;
 
-const timeAgo = (iso: string) => {
-  const mins = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60000));
-  if (mins < 1) return 'baru saja';
-  if (mins < 60) return `${mins} mnt lalu`;
-  const h = Math.round(mins / 60);
-  if (h < 24) return `${h} jam lalu`;
-  const d = Math.round(h / 24);
-  return d < 7 ? `${d} hari lalu` : new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(iso));
-};
-
 export function NotificationBell() {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<'notif' | 'pengingat'>('notif');
-  const [items, setItems] = useState<AppNotification[] | null>(null);
-  const [unread, setUnread] = useState(0);
+  const notif = useNotifications(POLL_MS);
+  const { items, unread, load } = notif;
   const [mounted, setMounted] = useState(false);
   // Di luar scope .web-dark (portal) → pasang sendiri sesuai tema.
   const { resolvedTheme } = useTheme();
   useEffect(() => setMounted(true), []);
-
-  const load = useCallback(() => {
-    notificationService
-      .list()
-      .then((r) => { setItems(r.items); setUnread(r.unread); })
-      .catch(() => setItems((cur) => cur ?? []));
-  }, []);
-
-  useEffect(() => {
-    load();
-    const id = window.setInterval(load, POLL_MS);
-    const onVisible = () => document.visibilityState === 'visible' && load();
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      window.clearInterval(id);
-      document.removeEventListener('visibilitychange', onVisible);
-    };
-  }, [load]);
 
   useEffect(() => {
     if (!open) return;
@@ -63,25 +33,6 @@ export function NotificationBell() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, load]);
-
-  const openItem = async (n: AppNotification) => {
-    if (!n.read) {
-      setItems((cur) => cur?.map((x) => (x.id === n.id ? { ...x, read: true } : x)) ?? cur);
-      setUnread((u) => Math.max(0, u - 1));
-      void notificationService.markRead(n.id).catch(() => undefined);
-    }
-    if (n.url) {
-      setOpen(false);
-      // Input Cepat membaca ?teks= saat dimuat → navigasi penuh.
-      if (n.url.startsWith('/input-cepat')) window.location.href = n.url;
-      else router.push(n.url);
-    }
-  };
-  const readAll = async () => {
-    setItems((cur) => cur?.map((x) => ({ ...x, read: true })) ?? cur);
-    setUnread(0);
-    await notificationService.markAllRead().catch(() => load());
-  };
 
   return (
     <>
@@ -142,41 +93,14 @@ export function NotificationBell() {
               <div className="min-h-[240px] flex-1 overflow-y-auto px-4 pb-4 pt-2">
                 {tab === 'pengingat' ? (
                   <RemindersView openNotifications={() => { setOpen(false); openSettings('notifikasi'); }} />
-                ) : items === null ? (
-                  <p className="py-10 text-center text-[13px] text-slate-400">Memuat…</p>
-                ) : items.length === 0 ? (
-                  <div className="py-12 text-center">
-                    <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400"><Bell size={22} /></span>
-                    <p className="mt-3 text-[14px] font-semibold text-slate-800">Belum ada notifikasi</p>
-                    <p className="mx-auto mt-0.5 max-w-[260px] text-[12px] text-slate-500">Pengingat, ringkasan harian & wawasan dari Leosiqra akan muncul di sini.</p>
-                  </div>
                 ) : (
-                  <ul className="space-y-1">
-                    {items.map((n) => (
-                      <li key={n.id}>
-                        <button
-                          type="button"
-                          onClick={() => void openItem(n)}
-                          className={cn('flex w-full items-start gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-slate-50', !n.read && 'bg-indigo-50/60')}
-                        >
-                          <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', n.read ? 'bg-transparent' : 'bg-indigo-500')} />
-                          <span className="min-w-0 flex-1">
-                            <span className={cn('block text-[14px] leading-snug text-slate-900', !n.read && 'font-semibold')}>{n.title}</span>
-                            {n.body && <span className="mt-0.5 block text-[12px] leading-snug text-slate-500">{n.body}</span>}
-                            <span className="mt-1 block text-[11px] text-slate-400">{timeAgo(n.createdAt)}</span>
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
+                  <NotificationItems state={notif} onNavigate={() => setOpen(false)} />
                 )}
               </div>
 
               {tab === 'notif' && !!items?.length && (
                 <div className="border-t border-slate-100 p-3">
-                  <button type="button" onClick={() => void readAll()} disabled={!unread} className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-100 py-2.5 text-[13px] font-semibold text-slate-700 hover:bg-slate-200 disabled:opacity-40">
-                    <CheckCheck size={15} /> Tandai semua dibaca
-                  </button>
+                  <ReadAllButton state={notif} />
                 </div>
               )}
             </motion.div>
