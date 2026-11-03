@@ -18,6 +18,16 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-03 malam (live setelah deploy ini):**
+  - Sesi app native permanen seperti PWA: /masuk & /auth/login kirim `isPwa: true` juga untuk Capacitor
+    (`isNativeApp`). Dulu 30 hari & dihitung sesi web (bisa ditendang MAX_CONCURRENT_WEB_SESSIONS).
+  - Tag HP lengkap: `src/components/app/AppTagChips.tsx` (pilih + "Tag baru" → prefs.tags), dipakai form & detail
+    transaksi (detail: tiap ketuk PUT {tags}, juga untuk transfer/tertaut).
+  - Mode gelap web +6 halaman (lihat komentar `src/lib/webTheme.ts`); kelas `.web-keep` untuk kartu yang selalu
+    gelap. Belum: Investasiku (pakai .web-keep di kartu nilai + tombol kembali + bar bawah), Kekayaan, Kotak Masuk.
+  - Tower: ide Import mutasi → diterapkan; ide Pengingat pintar diberi `catatanDev` (yang sudah/belum ada).
+    Menunggu keputusan Bos: Pengingat pintar (sisa: anggaran 80/100%, H-3 hutang/cicilan/rutin), Skor kesehatan
+    finansial, Pengingat trial/PRO H-3/H-1.
 - **Cron pengingat per menit** (c15533c, live deploy #111): akun Cloudflare = **Workers Free, maks 5 cron per AKUN**
   (deploy 273a32e gagal saat menambah trigger ke-4 di worker ini). Trigger `*/10` diganti `* * * * *`: tiap menit
   `sendDueReminders`; menit kelipatan 10 (`event.scheduledTime`) tugas lama 10 menit (promo, pengingat harian, Gmail,
