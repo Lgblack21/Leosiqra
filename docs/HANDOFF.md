@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-10-30 (akun B selesai/jeda; semua live, main = run #92)
+Terakhir diperbarui: 2026-11-03 (logo HD dipulihkan; workflow artikel kini ikut unduh logo)
 
 ## Siapa sedang kerja
 
@@ -469,4 +469,7 @@ Workflow menjalankan tsc + build lalu deploy, dan memberi kabar ke Telegram.
 Pasang di **satu akun saja**. Akun cadangan menyimpan salinan dalam keadaan
 nonaktif dan hanya dinyalakan saat akun utama kena limit (lalu dimatikan lagi)
 — kalau aktif di dua akun, notifikasi & aksi terjadi dua kali.
-- **Belum di-deploy** (akun B): `fetch-logos.mjs` — `term` boleh array; UOB coba beberapa nama (UOB TMRW/UOB Indonesia, seller /uob|united overseas/); Citibank seller diperketat /citigroup|citibank/ (kalau tak ketemu → jatuh ke /api/logo, bukan ikon salah). Cek log step "Logo bank (HD)" setelah deploy.
+- (2026-11-03) Perbaikan UOB/Citibank di `fetch-logos.mjs` sudah ter-deploy 30 Okt. Tapi workflow `publish-article.yml`
+  (deploy artikel 31 Okt) build TANPA `fetch-logos.mjs` → `public/logos` kosong di produksi (logo HD 404, jatuh ke
+  /api/logo/huruf). Diperbaiki: step "Logo bank (HD)" ditambahkan ke `publish-article.yml`, lalu deploy-main ulang.
+  Setiap workflow yang deploy WAJIB menjalankan `fetch-logos.mjs` sebelum build.
