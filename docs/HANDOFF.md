@@ -429,7 +429,12 @@ membersite_leosiqra_db --remote --command "..."`. SELECT boleh langsung; tulis/u
 - Shortcut iPhone (Pintasan, Automasi SMS, tempel clipboard Safari) & mode "Ucapkan" (mic otomatis).
 - Asisten AI & MCP dengan awal periode anggaran ≠ 1.
 - (sesi akun B 2026-10-28) Impor PDF asli (BCA & PDF bersandi) setelah perbaikan pdf.js worker; impor balik CSV ekspor.
-- Pengingat: push sungguhan & ketuk → Input Cepat terisi; push wawasan mingguan pertama Senin 2 Nov 10:00 WIB.
+- Pengingat: push sungguhan & ketuk → Input Cepat terisi.
+- Wawasan mingguan: Senin 2 Nov jalan tapi 0 terkirim (2 pelanggan push tanpa transaksi; Bos tak punya langganan
+  push). Live 2026-11-03 (deploy 8996fe8c): kandidat = semua user aktif yg punya transaksi (8 hari / sejak awal
+  bulan), selalu masuk lonceng, push hanya pelanggan. **Cek lonceng Senin 9 Nov 10:00 WIB** (3 user: 7b434d,
+  dd335d, 0e02e0) & rekap November 1 Des. Catatan: penanda dipasang sebelum hitung → kalau hitung error, user
+  itu terlewat minggu itu (console.error saja).
 - Resep Shortcut "Notifikasi aplikasi bank" (nama tindakan "Enkode URL"/variabel "Input Pintasan" di iPhone asli).
 - Kartu e-money NFC: perlu kapabilitas "NFC Tag Reading" di App ID Apple, build & rilis ulang iOS/Android, tes kartu
   asli (Swift belum pernah dikompilasi).
