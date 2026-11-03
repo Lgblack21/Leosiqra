@@ -26,6 +26,7 @@ import {
   Moon,
   TrendingUp,
   CalendarDays,
+  Target, Repeat,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { auth, db } from '@/lib/cf-client';
@@ -335,7 +336,7 @@ function NotifikasiView() {
     cloudflareApi<{ item: { reminder: { on: boolean; time: string }; notify?: Record<NotifyKey, boolean> } }>('/api/member/preferences')
       .then((res) => {
         setReminder(res.item.reminder);
-        setNotify(res.item.notify ?? { reminders: true, summary: true, weekly: true, monthly: true });
+        setNotify({ reminders: true, summary: true, weekly: true, monthly: true, budget: true, bills: true, ...(res.item.notify ?? {}) });
       })
       .catch(() => setReminder(null));
     cloudflareApi<{ enabled: boolean; available: boolean }>('/api/member/email-report')
@@ -462,12 +463,14 @@ function NotifikasiView() {
   );
 }
 
-type NotifyKey = 'reminders' | 'summary' | 'weekly' | 'monthly';
+type NotifyKey = 'reminders' | 'summary' | 'weekly' | 'monthly' | 'budget' | 'bills';
 const NOTIFY_ROWS: { key: NotifyKey; icon: React.ElementType; title: string; desc: string }[] = [
   { key: 'reminders', icon: AlarmClock, title: 'Pengingat buatanmu', desc: 'Saat pengingat di menu Pengingat jatuh tempo.' },
   { key: 'summary', icon: Moon, title: 'Ringkasan harian', desc: 'Lewat tengah malam: total keluar & masuk kemarin (kalau ada catatan).' },
   { key: 'weekly', icon: TrendingUp, title: 'Wawasan mingguan', desc: 'Senin pagi: hal paling penting dari pengeluaran 7 hari terakhir.' },
   { key: 'monthly', icon: CalendarDays, title: 'Wawasan bulanan', desc: 'Tanggal 1: rekap masuk, keluar & kategori terbesar bulan lalu.' },
+  { key: 'budget', icon: Target, title: 'Peringatan anggaran', desc: 'Saat belanja satu kategori mencapai 80% dan 100% anggarannya.' },
+  { key: 'bills', icon: Repeat, title: 'Tagihan rutin', desc: '3 hari sebelum transaksi rutin tercatat otomatis — siapkan saldonya.' },
 ];
 
 function LainnyaView() {

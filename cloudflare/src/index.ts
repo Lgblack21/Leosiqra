@@ -12189,7 +12189,7 @@ const sanitizeAiMemory = (raw: unknown): AiMemory => {
   const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   return Object.fromEntries(AI_MEMORY_KEYS.map((k) => [k, cleanAiMemoryText(r[k])])) as AiMemory;
 };
-const NOTIFY_KEYS = ["reminders", "summary", "weekly", "monthly"] as const;
+const NOTIFY_KEYS = ["reminders", "summary", "weekly", "monthly", "budget", "bills"] as const;
 type NotifyPrefs = Record<(typeof NOTIFY_KEYS)[number], boolean>;
 const sanitizeNotify = (raw: unknown): NotifyPrefs => {
   const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
@@ -12841,6 +12841,134 @@ const sendDueReminders = async (env: Env) => {
       await sendWebPushToUser(env, r.user_id, `⏰ ${r.title}`, body, url);
     } catch (error) {
       console.error(`Gagal mengirim pengingat ${r.id}:`, error);
+    }
+  }
+};
+
+// Peringatan anggaran: saat belanja satu kategori melewati 80% lalu 100% dari
+// anggaran bulanannya (periode ikut budgetStartDay). Dicek tiap jam. Status
+// per periode di $.prefs.budgetAlert = { p: "<awal periode>", s: { kategori: 80|100 } };
+// ditulis dengan compare-and-set → tiap ambang terkirim sekali per periode.
+// Bisa dimatikan: $.prefs.notify.budget = false.
+const BUDGET_ALERT_MAX_ROWS = 3000;
+const sendBudgetAlerts = async (env: Env) => {
+  const { results } = await env.DB.prepare(
+    `SELECT b.user_id, b.category, b.amount FROM budgets b JOIN users u ON u.id = b.user_id
+      WHERE b.type = 'pengeluaran' AND b.period = 'monthly' AND b.amount > 0
+        AND COALESCE(u.status, '') <> 'NONAKTIF'
+        AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.budget') END, 1) <> 0
+      LIMIT ?`
+  )
+    .bind(BUDGET_ALERT_MAX_ROWS)
+    .all<{ user_id: string; category: string; amount: number }>();
+  const byUser = new Map<string, { category: string; amount: number }[]>();
+  for (const r of results ?? []) {
+    if (!r.category) continue;
+    const list = byUser.get(r.user_id) ?? [];
+    list.push({ category: r.category, amount: Number(r.amount) || 0 });
+    byUser.set(r.user_id, list);
+  }
+  const today = todayWIB();
+  for (const [userId, budgets] of byUser) {
+    try {
+      const prefs = await readUserPrefs(env, userId);
+      const period = budgetPeriodBounds(prefs.budgetStartDay, today);
+      const { results: spentRows } = await env.DB.prepare(
+        `SELECT category, SUM(COALESCE(NULLIF(amount_idr, 0), amount)) AS total
+           FROM transactions
+          WHERE user_id = ? AND type = 'pengeluaran' AND COALESCE(related_type, '') <> 'investasi'
+            AND substr(date, 1, 10) >= ? AND substr(date, 1, 10) < ?
+          GROUP BY category`
+      )
+        .bind(userId, period.from, period.to)
+        .all<{ category: string; total: number }>();
+      const spent = new Map((spentRows ?? []).map((r) => [r.category, Number(r.total) || 0]));
+      const row = await env.DB.prepare(
+        `SELECT CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.prefs.budgetAlert') END AS state FROM users WHERE id = ?`
+      )
+        .bind(userId)
+        .first<{ state: string | null }>();
+      const oldRaw = row?.state ?? null;
+      let state: { p: string; s: Record<string, number> } = { p: period.from, s: {} };
+      try {
+        const parsed = oldRaw ? (JSON.parse(oldRaw) as { p?: unknown; s?: unknown }) : null;
+        if (parsed && parsed.p === period.from && parsed.s && typeof parsed.s === "object") state = { p: period.from, s: { ...(parsed.s as Record<string, number>) } };
+      } catch { /* state rusak → mulai baru */ }
+      const crossed: { category: string; level: 80 | 100; used: number; limit: number }[] = [];
+      for (const b of budgets) {
+        const used = spent.get(b.category) ?? 0;
+        const pct = b.amount > 0 ? (used / b.amount) * 100 : 0;
+        const level = pct >= 100 ? 100 : pct >= 80 ? 80 : 0;
+        if (level && (Number(state.s[b.category]) || 0) < level) {
+          crossed.push({ category: b.category, level, used, limit: b.amount });
+          state.s[b.category] = level;
+        }
+      }
+      if (!crossed.length) continue;
+      const next = JSON.stringify(state);
+      const claim = await env.DB.prepare(
+        `UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.prefs.budgetAlert', json(?))
+          WHERE id = ? AND COALESCE(CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.prefs.budgetAlert') END, '') = ?`
+      )
+        .bind(next, userId, oldRaw ?? "")
+        .run();
+      if (!claim.meta.changes) continue; // run lain sudah menulis duluan
+      crossed.sort((a, b) => b.level - a.level || b.used / b.limit - a.used / a.limit);
+      const top = crossed[0];
+      const pctText = `${Math.round((top.used / top.limit) * 100)}%`;
+      const title = top.level === 100 ? `🚨 Anggaran ${top.category} sudah habis` : `⚠️ Anggaran ${top.category} sudah ${pctText}`;
+      const others = crossed.length > 1 ? ` · +${crossed.length - 1} kategori lain` : "";
+      const body =
+        top.level === 100
+          ? `Terpakai ${formatRupiahForPush(top.used)} dari ${formatRupiahForPush(top.limit)} (${pctText}).${others}`
+          : `Sisa ${formatRupiahForPush(Math.max(0, top.limit - top.used))} sampai ${period.last.split("-").reverse().slice(0, 2).join("/")}.${others}`;
+      await sendWebPushToUser(env, userId, title, body, "/membership/budget");
+    } catch (error) {
+      console.error(`Peringatan anggaran ${userId} gagal:`, error);
+    }
+  }
+};
+
+// Pengingat tagihan rutin: transaksi berulang (pengeluaran/tabungan) yang akan
+// tercatat otomatis 3 hari lagi — supaya saldo rekeningnya disiapkan. Harian
+// 10:00 WIB. Klaim payload_json.remindedFor = tanggal jadwal → sekali per jadwal.
+// Bisa dimatikan: $.prefs.notify.bills = false. (Hutang belum punya tanggal jatuh tempo.)
+const sendBillReminders = async (env: Env) => {
+  const today = todayWIB();
+  const target = shiftDateStr(today, 3);
+  const { results } = await env.DB.prepare(
+    `SELECT r.id, r.user_id, r.name, r.type, r.amount, r.account_id, substr(r.next_date, 1, 10) AS due, a.name AS account_name, a.currency
+       FROM recurring r JOIN users u ON u.id = r.user_id LEFT JOIN accounts a ON a.id = r.account_id AND a.user_id = r.user_id
+      WHERE r.status = 'ACTIVE' AND r.amount > 0 AND r.type IN ('Pengeluaran', 'Tabungan')
+        AND substr(r.next_date, 1, 10) = ?
+        AND COALESCE(CASE WHEN json_valid(r.payload_json) THEN json_extract(r.payload_json, '$.remindedFor') END, '') <> ?
+        AND COALESCE(u.status, '') <> 'NONAKTIF'
+        AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.bills') END, 1) <> 0
+      LIMIT 500`
+  )
+    .bind(target, target)
+    .all<{ id: string; user_id: string; name: string; type: string; amount: number; account_name: string | null; currency: string | null; due: string }>();
+  const dueLabel = target.split("-").reverse().slice(0, 2).join("/");
+  for (const r of results ?? []) {
+    try {
+      const claim = await env.DB.prepare(
+        `UPDATE recurring SET payload_json = json_set(CASE WHEN json_valid(payload_json) THEN payload_json ELSE '{}' END, '$.remindedFor', ?)
+          WHERE id = ? AND user_id = ? AND COALESCE(CASE WHEN json_valid(payload_json) THEN json_extract(payload_json, '$.remindedFor') END, '') <> ?`
+      )
+        .bind(target, r.id, r.user_id, target)
+        .run();
+      if (!claim.meta.changes) continue;
+      const amount = !r.currency || r.currency === "IDR" ? formatRupiahForPush(r.amount) : `${r.currency} ${r.amount}`;
+      const saving = r.type === "Tabungan";
+      await sendWebPushToUser(
+        env,
+        r.user_id,
+        `📅 ${r.name} ${amount} — 3 hari lagi (${dueLabel})`,
+        `${saving ? "Setoran tabungan" : "Tagihan"} ini tercatat otomatis${r.account_name ? ` dari ${r.account_name}` : ""}. Pastikan saldonya cukup.`,
+        "/membership/recurring"
+      );
+    } catch (error) {
+      console.error(`Pengingat tagihan ${r.id} gagal:`, error);
     }
   }
 };
@@ -15925,6 +16053,8 @@ const worker = {
       // Tugas lama "tiap 10 menit" hanya di menit kelipatan 10 (perilaku sama dengan
       // trigger */10 dulu). PROMO_QUEUE_CRON tetap diterima selama trigger lama masih ada.
       const minute = new Date(event.scheduledTime).getUTCMinutes();
+      // Tiap jam (menit ke-5): peringatan anggaran 80% / 100%.
+      if (minute === 5) ctx.waitUntil(sendBudgetAlerts(env).catch((error) => console.error("Peringatan anggaran:", error)));
       if (event.cron === PROMO_QUEUE_CRON || minute % 10 === 0) {
         // Posting video promo yang sudah waktunya + metrik harian.
         ctx.waitUntil(processPromoQueue(env));
@@ -15958,6 +16088,8 @@ const worker = {
     ctx.waitUntil(syncAllGoogleSheets(env));
     ctx.waitUntil(writeAllNotionReports(env));
     ctx.waitUntil(remindAppActivationExpiry(env).catch((error) => console.error("Pengingat aktivasi:", error)));
+    // Tagihan/setoran rutin yang tercatat otomatis 3 hari lagi.
+    ctx.waitUntil(sendBillReminders(env).catch((error) => console.error("Pengingat tagihan:", error)));
     ctx.waitUntil(cleanupNotifications(env).catch((error) => console.error("Bersihkan notifikasi:", error)));
     // Senin: wawasan mingguan; tanggal 1: rekap bulan lalu (push, bisa dimatikan user).
     ctx.waitUntil(sendInsightPushes(env).catch((error) => console.error("Wawasan push:", error)));
