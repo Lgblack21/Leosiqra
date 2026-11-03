@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Search, X, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Receipt } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, X, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Receipt, Hash } from "lucide-react";
 import { accountService, Account } from "@/lib/services/accountService";
 import { transactionService, Transaction } from "@/lib/services/transactionService";
 import { subscribeToCollectionChanges } from "@/lib/cf-firestore";
@@ -11,6 +11,7 @@ import { lightTap } from "@/lib/haptics";
 import { FadeIn } from "@/components/app/FadeIn";
 import { TransactionDetailSheet } from "@/components/app/transactions/TransactionDetailSheet";
 import { txKind, txTitle, toIdr } from "@/components/app/transactions/txDisplay";
+import { useTags, tagStyle } from "@/lib/useTags";
 
 const FILTERS = ["Semua", "Masuk", "Keluar", "Transfer"] as const;
 
@@ -26,6 +27,8 @@ export default function AppTransactionsPage() {
   const [year, setYear] = useState(now.getFullYear());
   const [filter, setFilter] = useState<Filter>("Semua");
   const [query, setQuery] = useState("");
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const { tags: tagPref, colorOf } = useTags();
   const [searchOpen, setSearchOpen] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -70,12 +73,13 @@ export default function AppTransactionsPage() {
         if (filter === "Masuk" && kind !== "in") return false;
         if (filter === "Keluar" && kind !== "out") return false;
         if (filter === "Transfer" && kind !== "transfer") return false;
+        if (tagFilter && !(t.tags ?? []).some((x) => x.toLowerCase() === tagFilter.toLowerCase())) return false;
         if (!q) return true;
-        return `${t.note ?? ""} ${t.category ?? ""} ${t.subCategory ?? ""} ${accountName(t.accountId)}`.toLowerCase().includes(q);
+        return `${t.note ?? ""} ${t.category ?? ""} ${t.subCategory ?? ""} ${accountName(t.accountId)} ${(t.tags ?? []).join(" ")}`.toLowerCase().includes(q);
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [monthTx, filter, query, accounts]);
+  }, [monthTx, filter, query, accounts, tagFilter]);
 
   const groups = useMemo(() => {
     const map = new Map<string, Transaction[]>();
@@ -173,6 +177,28 @@ export default function AppTransactionsPage() {
         ))}
       </div>
 
+      {tagPref.enabled && tagPref.list.length > 0 && (
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-5 px-5 -mt-2" aria-label="Filter tag">
+          {tagPref.list.map((tg) => {
+            const on = tagFilter?.toLowerCase() === tg.name.toLowerCase();
+            return (
+              <button
+                key={tg.name}
+                type="button"
+                aria-pressed={on}
+                onClick={() => { lightTap(); setTagFilter(on ? null : tg.name); }}
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-bold ring-1 transition-colors",
+                  on ? tagStyle(tg.color).chip : "bg-white text-slate-400 ring-slate-200 dark:bg-slate-900 dark:text-slate-500 dark:ring-slate-800"
+                )}
+              >
+                <Hash size={10} strokeWidth={3} /> {tg.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Daftar per hari */}
       {transactions === null ? (
         <div className="space-y-3 animate-pulse">
@@ -182,7 +208,7 @@ export default function AppTransactionsPage() {
         <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-10 text-center">
           <Receipt size={26} className="mx-auto text-slate-300 dark:text-slate-600" />
           <p className="mt-3 text-sm font-bold text-slate-600 dark:text-slate-300">
-            {query || filter !== "Semua" ? "Tidak ada yang cocok" : "Belum ada transaksi di bulan ini"}
+            {query || filter !== "Semua" || tagFilter ? "Tidak ada yang cocok" : "Belum ada transaksi di bulan ini"}
           </p>
           <p className="text-xs text-slate-400 mt-1">Tap tombol + untuk mencatat.</p>
         </div>
@@ -232,6 +258,15 @@ export default function AppTransactionsPage() {
                         <span className="min-w-0 flex-1">
                           <span className="block text-sm font-bold text-slate-900 dark:text-white truncate">{txTitle(t)}</span>
                           <span className="block text-[11px] font-medium text-slate-400 dark:text-slate-500 truncate">{subtitle}</span>
+                          {t.tags && t.tags.length > 0 && (
+                            <span className="mt-1 flex gap-1 overflow-hidden">
+                              {t.tags.slice(0, 3).map((n) => (
+                                <span key={n} className={cn("inline-flex max-w-[96px] items-center gap-0.5 rounded-full px-1.5 py-px text-[10px] font-bold ring-1", tagStyle(colorOf(n)).chip)}>
+                                  <Hash size={8} strokeWidth={3} className="shrink-0" /><span className="truncate">{n}</span>
+                                </span>
+                              ))}
+                            </span>
+                          )}
                         </span>
                         <span
                           className={cn(

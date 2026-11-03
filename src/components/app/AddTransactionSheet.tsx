@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CalendarDays, ArrowLeftRight, Sparkles, Calculator, ChevronDown, Check, PencilLine } from "lucide-react";
+import { CalendarDays, ArrowLeftRight, Sparkles, Calculator, ChevronDown, Check, PencilLine, Hash } from "lucide-react";
 import { LogoImage } from "@/components/ui/LogoImage";
 import { matchIndonesianInstitutionLogo } from "@/lib/indonesianBanks";
 import { useBalanceVisibility } from "@/lib/hooks/useBalanceVisibility";
+import { useTags, tagStyle, TAG_MAX_PER_TX } from "@/lib/useTags";
 import { categoryVisual } from "@/lib/categoryEmoji";
 import { accountService, Account } from "@/lib/services/accountService";
 import { auth } from "@/lib/cf-client";
@@ -185,6 +186,8 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
   // Bagian yang jarang dipakai disembunyikan sampai diminta.
   const [showSmart, setShowSmart] = useState(false);
   const [picker, setPicker] = useState<null | "acc" | "to" | "date">(null);
+  const { tags: tagPref } = useTags();
+  const [txTags, setTxTags] = useState<string[]>([]);
   const [catsOpen, setCatsOpen] = useState(false);
   const [calcOn, setCalcOn] = useState(false);
 
@@ -270,6 +273,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
     setFromReminder(null);
     setShowSmart(false);
     setPicker(null);
+    setTxTags([]);
     setCatsOpen(false);
     setCalcOn(false);
   };
@@ -316,6 +320,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
         note,
         ...(date ? { date } : {}),
         attachmentId,
+        tags: txTags,
       });
       setUndoItem({ id: res.id, label: `${subCategory || category} · ${res.currency} ${groupDigits(amount)} · ${res.matchedAccount}` });
       lightTap();
@@ -545,6 +550,32 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
             className="min-w-0 flex-1 bg-transparent text-[13px] font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none dark:text-white"
           />
         </label>
+      )}
+
+      {!catsOpen && !showSmart && !isTransfer && tagPref.enabled && tagPref.list.length > 0 && (
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar px-4 pt-1 pb-1" aria-label="Tag">
+          {tagPref.list.map((t) => {
+            const on = txTags.some((x) => x.toLowerCase() === t.name.toLowerCase());
+            const st = tagStyle(t.color);
+            return (
+              <button
+                key={t.name}
+                type="button"
+                aria-pressed={on}
+                onClick={() => {
+                  lightTap();
+                  setTxTags((cur) => (on ? cur.filter((x) => x.toLowerCase() !== t.name.toLowerCase()) : cur.length >= TAG_MAX_PER_TX ? cur : [...cur, t.name]));
+                }}
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-bold ring-1 transition-colors",
+                  on ? st.chip : "bg-white text-slate-400 ring-slate-200 dark:bg-slate-900 dark:text-slate-500 dark:ring-slate-700"
+                )}
+              >
+                <Hash size={11} strokeWidth={3} /> {t.name}
+              </button>
+            );
+          })}
+        </div>
       )}
 
       {/* Pop-up pilihan rekening / tanggal: satu ketukan memilih & langsung tertutup. */}
