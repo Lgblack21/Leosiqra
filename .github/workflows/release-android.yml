@@ -36,10 +36,19 @@ jobs:
       - name: Validasi versi & secret
         env:
           VERSI: ${{ inputs.versi }}
-          HAS_KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+          # Hanya "ada/kosong" per secret — nilainya tidak pernah dicetak.
+          S1: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+          S2: ${{ secrets.ANDROID_KEYSTORE_PASSWORD != '' }}
+          S3: ${{ secrets.ANDROID_KEY_ALIAS != '' }}
+          S4: ${{ secrets.ANDROID_KEY_PASSWORD != '' }}
         run: |
           [[ "$VERSI" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Versi harus format 1.2.3 (sekarang: $VERSI)"; exit 1; }
-          [ "$HAS_KS" = "true" ] || { echo "::error::Secret keystore belum lengkap (ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD)"; exit 1; }
+          missing=""
+          [ "$S1" = "true" ] || missing="$missing ANDROID_KEYSTORE_BASE64"
+          [ "$S2" = "true" ] || missing="$missing ANDROID_KEYSTORE_PASSWORD"
+          [ "$S3" = "true" ] || missing="$missing ANDROID_KEY_ALIAS"
+          [ "$S4" = "true" ] || missing="$missing ANDROID_KEY_PASSWORD"
+          [ -z "$missing" ] || { echo "::error::Secret kosong / belum ada:$missing"; exit 1; }
 
       - uses: actions/checkout@v4
         with:
