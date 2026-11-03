@@ -593,6 +593,17 @@ html[data-daypart="sore"] .auth-greet[data-p="sore"], html[data-daypart="malam"]
   --color-fuchsia-900: #f0abfc;
   --color-fuchsia-950: #f0abfc;
 }
+/* Kartu yang memang selalu gelap (mis. kartu saldo bergradien slate-900 →
+   indigo-950): kembalikan warna aslinya di dalam .web-dark supaya tidak ikut
+   dibalik jadi terang (teks putih di atas latar terang = tak terbaca). */
+.web-dark .web-keep {
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
+  --color-indigo-900: #312e81;
+  --color-indigo-950: #1e1b4b;
+}
 @layer utilities {
   :where(.web-dark) .bg-white, :where(.web-dark) .hover\:bg-white:hover, :where(.web-dark) .focus\:bg-white:focus { background-color: var(--web-surface); }
   :where(.web-dark) .bg-white\/95 { background-color: rgb(20 26 42 / 0.95); }
