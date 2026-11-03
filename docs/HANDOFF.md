@@ -138,7 +138,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     00:01 kini bisa dimatikan. BARU: push wawasan mingguan (Senin 10:00 WIB, `computeWeeklyInsights`) & bulanan
     (tgl 1, `buildMonthlyReport`), penanda `$.prefs.weeklySent/monthlySent`. Diuji lokal dengan wrangler dev + D1
     lokal (API, cron dobel, bulanan tgl 31, query kandidat) dan UI lewat Playwright → Worker lokal.
-  - (2026-11-03, branch claude/app-pengingat) Aplikasi HP: `/app/notifikasi` (tab Notifikasi + Pengingat, `?tab=pengingat`),
+  - Live (2026-11-03, deploy eb9effde) Aplikasi HP: `/app/notifikasi` (tab Notifikasi + Pengingat, `?tab=pengingat`),
     lonceng + angka belum dibaca di Beranda `/app`, menu "Pengingat" di Lainnya. Daftar notifikasi dipakai bersama
     (`src/components/notifications/NotificationList.tsx`) oleh lonceng web & HP. `RemindersView` punya varian dark:
     (hanya aktif di /app). Native Capacitor TIDAK punya web push → banner "muncul di tab Notifikasi"; push native
