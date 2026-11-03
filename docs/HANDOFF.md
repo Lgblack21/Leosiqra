@@ -411,11 +411,14 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 ## Migrasi D1
 
 Dijalankan manual oleh Bos lewat Console D1 (token GitHub belum punya izin D1).
+Cek/eksekusi dari HP (akun ini): token D1 lokal di `/data/data/com.termux/files/home/.config/leosiqra/cloudflare.env`
+(chmod 600, di luar repo, jangan dicetak). Pakai: `set -a; . <file>; set +a; cd cloudflare; npx wrangler d1 execute
+membersite_leosiqra_db --remote --command "..."`. SELECT boleh langsung; tulis/ubah skema → tanya Bos dulu.
 - `0017_coins.sql` — sudah (dikonfirmasi Bos).
-- `0018_transaction_attachments.sql` — diasumsikan sudah; cek sebelum mengandalkan.
+- `0018_transaction_attachments.sql` — sudah (dicek langsung ke D1 2026-11-03).
 - `0019_inbox.sql` — sudah (Kotak Masuk Gmail jalan di produksi).
 - `0020_reminders.sql` — sudah (Bos, 2026-10-28; Console D1 butuh SQL tanpa komentar `--` kalau ditempel satu baris).
-- `0021_notifications.sql` — **belum dikonfirmasi** Bos (riwayat lonceng; tanpa tabel lonceng kosong, bukan error).
+- `0021_notifications.sql` — sudah (dicek langsung ke D1 2026-11-03).
 
 ## Belum terverifikasi di produksi
 
