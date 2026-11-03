@@ -858,6 +858,8 @@ const buildUserContext = async (env: Env, userId: string) => {
          FROM transactions
         WHERE user_id = ? AND type IN ('pemasukan', 'pengeluaran')
           AND COALESCE(related_type, '') <> 'investasi'
+          -- catatan investasi lama tanpa tautan (sama dengan isInvestmentPurchaseRow)
+          AND NOT (type = 'pengeluaran' AND (lower(COALESCE(category, '')) LIKE '%investasi%' OR COALESCE(category, '') IN ('Saham', 'Deposito')))
           AND substr(COALESCE(NULLIF(display_date, ''), date), 1, 7) >= ?
         GROUP BY ym, type, category`
     )
@@ -11224,6 +11226,8 @@ const computeUserGamification = async (
        FROM transactions
       WHERE user_id = ? AND type IN ('pemasukan', 'pengeluaran') AND date >= ?
         AND COALESCE(related_type, '') <> 'investasi'
+        -- catatan investasi lama tanpa tautan (sama dengan isInvestmentPurchaseRow)
+        AND NOT (type = 'pengeluaran' AND (lower(COALESCE(category, '')) LIKE '%investasi%' OR COALESCE(category, '') IN ('Saham', 'Deposito')))
       GROUP BY ym, type`
   )
     .bind(userId, shiftYm(currentYm, -13))
