@@ -9,6 +9,7 @@ import { SplashScreen } from "@capacitor/splash-screen";
 import { AlertCircle, Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import { TwoFactorModal } from "@/components/auth/TwoFactorModal";
 import { cloudflareApi } from "@/lib/cloudflare-api";
+import { isNativeApp } from "@/lib/pwaInstall";
 import { isStandaloneDisplay } from "@/lib/pushNotifications";
 import { sanitizeNext, withNext } from "@/lib/authNext";
 
@@ -45,7 +46,7 @@ export default function AppLoginPage() {
     try {
       const r = await cloudflareApi<{ needsTwoFactor?: boolean; user?: { role?: string } }>("/api/auth/login", {
         method: "POST",
-        json: { email: email.trim().toLowerCase(), password, isPwa: isStandaloneDisplay() },
+        json: { email: email.trim().toLowerCase(), password, isPwa: isStandaloneDisplay() || isNativeApp() },
       });
       if (r.needsTwoFactor) setShow2FA(true);
       else go(r.user?.role);
@@ -59,7 +60,7 @@ export default function AppLoginPage() {
   const verify2FA = async (token: string) => {
     const r = await cloudflareApi<{ user?: { role?: string } }>("/api/auth/login", {
       method: "POST",
-      json: { email: email.trim().toLowerCase(), password, twoFactorToken: token, isPwa: isStandaloneDisplay() },
+      json: { email: email.trim().toLowerCase(), password, twoFactorToken: token, isPwa: isStandaloneDisplay() || isNativeApp() },
     });
     go(r.user?.role);
     return true;

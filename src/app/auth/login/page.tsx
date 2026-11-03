@@ -10,6 +10,7 @@ import type { LeoMood } from '@/components/mascot/LeoMascot';
 import { TwoFactorModal } from '@/components/auth/TwoFactorModal';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { isStandaloneDisplay } from '@/lib/pushNotifications';
+import { isNativeApp } from '@/lib/pwaInstall';
 import { resolveNext, withNext } from '@/lib/authNext';
 import { googleAuthHref, readSignupSource, type SignupSource } from '@/lib/signupSource';
 
@@ -101,7 +102,7 @@ export default function LoginPage() {
           password,
           // Sesi PWA ter-install dibuat permanen di backend (lihat handleLogin) —
           // tab browser biasa tetap pakai masa berlaku normal.
-          isPwa: isStandaloneDisplay(),
+          isPwa: isStandaloneDisplay() || isNativeApp(),
         },
       });
 
@@ -126,7 +127,7 @@ export default function LoginPage() {
     if (google2fa) {
       const result = await cloudflareApi<{ destination: string }>('/api/auth/google/2fa', {
         method: 'POST',
-        json: { twoFactorToken: enteredToken, isPwa: isStandaloneDisplay() },
+        json: { twoFactorToken: enteredToken, isPwa: isStandaloneDisplay() || isNativeApp() },
       });
       finish(result.destination);
       return true;
@@ -139,7 +140,7 @@ export default function LoginPage() {
         email: email.trim().toLowerCase(),
         password,
         twoFactorToken: enteredToken,
-        isPwa: isStandaloneDisplay(),
+        isPwa: isStandaloneDisplay() || isNativeApp(),
       },
     });
 
