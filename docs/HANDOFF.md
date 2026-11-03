@@ -138,6 +138,14 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     00:01 kini bisa dimatikan. BARU: push wawasan mingguan (Senin 10:00 WIB, `computeWeeklyInsights`) & bulanan
     (tgl 1, `buildMonthlyReport`), penanda `$.prefs.weeklySent/monthlySent`. Diuji lokal dengan wrangler dev + D1
     lokal (API, cron dobel, bulanan tgl 31, query kandidat) dan UI lewat Playwright → Worker lokal.
+  - (2026-11-03, branch claude/push-fcm, BELUM deploy) **Push native Android via FCM**: plugin
+    `@capacitor/push-notifications` (src/lib/nativePush.ts, dipanggil AppShell setelah login: izin → token →
+    POST /api/member/native-push-token). Worker `sendNativePushToUser` dipanggil dari `sendWebPushToUser` (semua
+    notifikasi lonceng ikut ke HP); OAuth service account RS256 via WebCrypto (diuji dengan kunci RSA nyata).
+    Token diikat ke SESI (JOIN sessions saat kirim; logout = berhenti; cron harian hapus token tanpa sesi).
+    Butuh: migrasi 0022, secret Worker `FCM_SERVICE_ACCOUNT` (JSON service account), `android/app/google-services.json`,
+    build ulang APK. iOS BELUM: APNs wajib HTTP/2, subrequest Worker HTTP/1.1 → perlu Firebase Messaging di app iOS.
+    Android: izin POST_NOTIFICATIONS, ikon status `ic_stat_leosiqra` (vector), warna `notification_accent`.
   - Live (2026-11-03, deploy eb9effde) Aplikasi HP: `/app/notifikasi` (tab Notifikasi + Pengingat, `?tab=pengingat`),
     lonceng + angka belum dibaca di Beranda `/app`, menu "Pengingat" di Lainnya. Daftar notifikasi dipakai bersama
     (`src/components/notifications/NotificationList.tsx`) oleh lonceng web & HP. `RemindersView` punya varian dark:
@@ -423,6 +431,7 @@ membersite_leosiqra_db --remote --command "..."`. SELECT boleh langsung; tulis/u
 - `0019_inbox.sql` — sudah (Kotak Masuk Gmail jalan di produksi).
 - `0020_reminders.sql` — sudah (Bos, 2026-10-28; Console D1 butuh SQL tanpa komentar `--` kalau ditempel satu baris).
 - `0021_notifications.sql` — sudah (dicek langsung ke D1 2026-11-03).
+- `0022_native_push_tokens.sql` — **BELUM** (token push Android/FCM; tanpa tabel: endpoint 503, kirim dilewati — aman).
 
 ## Belum terverifikasi di produksi
 
