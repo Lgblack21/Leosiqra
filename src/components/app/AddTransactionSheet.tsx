@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { CalendarDays, ArrowLeftRight, Sparkles, Calculator, ChevronDown, Check } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { CalendarDays, ArrowLeftRight, Sparkles, Calculator, ChevronDown, Check, PencilLine } from "lucide-react";
 import { LogoImage } from "@/components/ui/LogoImage";
 import { matchIndonesianInstitutionLogo } from "@/lib/indonesianBanks";
 import { useBalanceVisibility } from "@/lib/hooks/useBalanceVisibility";
@@ -66,11 +66,32 @@ function ModeToggle({ value, onChange }: { value: SheetMode; onChange: (m: Sheet
 const ACCOUNT_EMOJI: Record<string, string> = { "E-Wallet": "📱", Cash: "💵", "Credit Card": "💳", Investment: "📈" };
 const balanceText = (amount: number, currency: string) => {
   try {
-    return new Intl.NumberFormat("id-ID", { style: "currency", currency: currency || "IDR", minimumFractionDigits: 0, maximumFractionDigits: !currency || NO_CENTS.has(currency) ? 0 : 2 }).format(amount);
+    return new Intl.NumberFormat("id-ID", { style: "currency", currency: currency || "IDR", minimumFractionDigits: !currency || NO_CENTS.has(currency) ? 0 : 2, maximumFractionDigits: !currency || NO_CENTS.has(currency) ? 0 : 2 }).format(amount);
   } catch {
     return `${currency} ${amount}`;
   }
 };
+function AccountLogo({ account, className }: { account: Account; className?: string }) {
+  const external = account.id === EXTERNAL_WALLET_ID;
+  const emoji = external ? "👛" : ACCOUNT_EMOJI[account.type] ?? "🏦";
+  const logo = external ? undefined : account.logoUrl || matchIndonesianInstitutionLogo(account.name, account.type) || undefined;
+  return (
+    <span className={cn("flex shrink-0 items-center justify-center overflow-hidden bg-white text-[16px] dark:bg-slate-700", className)}>
+      {logo ? (
+        <LogoImage
+          src={logo}
+          alt={account.name}
+          fallbackText={account.name.slice(0, 3).toUpperCase()}
+          fallbackIcon={<span aria-hidden className="flex h-full w-full items-center justify-center bg-white dark:bg-slate-700">{emoji}</span>}
+          className="h-full w-full object-contain p-[12%]"
+        />
+      ) : (
+        <span aria-hidden>{emoji}</span>
+      )}
+    </span>
+  );
+}
+
 function AccountRow({ accounts, value, onChange }: { accounts: Account[]; value: string; onChange: (id: string) => void }) {
   const [hidden] = useBalanceVisibility();
   if (accounts.length === 0) return <p className="text-xs font-medium text-slate-400 dark:text-slate-500">Belum ada rekening.</p>;
@@ -79,8 +100,6 @@ function AccountRow({ accounts, value, onChange }: { accounts: Account[]; value:
       {accounts.map((a) => {
         const active = a.id === value;
         const external = a.id === EXTERNAL_WALLET_ID;
-        const logo = a.logoUrl || matchIndonesianInstitutionLogo(a.name, a.type) || undefined;
-        const emoji = external ? "👛" : ACCOUNT_EMOJI[a.type] ?? "🏦";
         return (
           <button
             key={a.id}
@@ -94,19 +113,7 @@ function AccountRow({ accounts, value, onChange }: { accounts: Account[]; value:
                 : "bg-slate-100 ring-1 ring-transparent dark:bg-slate-800/70"
             )}
           >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white text-[18px] shadow-sm dark:bg-slate-700">
-              {external ? (
-                <span aria-hidden>{emoji}</span>
-              ) : (
-                <LogoImage
-                  src={logo}
-                  alt={a.name}
-                  fallbackText={a.name.slice(0, 3).toUpperCase()}
-                  fallbackIcon={<span aria-hidden className="flex h-full w-full items-center justify-center bg-white text-[18px] dark:bg-slate-700">{emoji}</span>}
-                  className="h-full w-full object-contain p-1"
-                />
-              )}
-            </span>
+            <AccountLogo account={a} className="h-10 w-10 rounded-xl shadow-sm" />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[13px] font-bold text-slate-900 dark:text-white">{external ? "E-Wallet luar" : a.name}</span>
               <span className="block truncate text-[12px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">
@@ -177,7 +184,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
   const [fromReminder, setFromReminder] = useState<string | null>(null);
   // Bagian yang jarang dipakai disembunyikan sampai diminta.
   const [showSmart, setShowSmart] = useState(false);
-  const [detailOpen, setDetailOpen] = useState(false);
+  const [picker, setPicker] = useState<null | "acc" | "to" | "date">(null);
   const [catsOpen, setCatsOpen] = useState(false);
   const [calcOn, setCalcOn] = useState(false);
 
@@ -262,7 +269,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
     setAttachmentId(undefined);
     setFromReminder(null);
     setShowSmart(false);
-    setDetailOpen(false);
+    setPicker(null);
     setCatsOpen(false);
     setCalcOn(false);
   };
@@ -330,12 +337,13 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
   const toAccount = transferTargets.find((a) => a.id === toAccountId);
   const canSwap = isTransfer && Boolean(toAccountId) && toAccountId !== EXTERNAL_WALLET_ID;
   const heroChip = "inline-flex max-w-full items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[13px] font-bold text-white active:bg-white/30";
-  const label = "mb-2 text-[11px] font-black uppercase tracking-[0.08em] text-slate-400 dark:text-slate-500";
-  const dateChip = (active: boolean) =>
+  const openPicker = (p: "acc" | "to" | "date") => { lightTap(); setCatsOpen(false); setPicker(p); };
+  const dateOpt = (active: boolean) =>
     cn(
-      "shrink-0 rounded-2xl px-3.5 py-2.5 text-[13px] font-bold transition-colors",
-      active ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+      "flex w-full items-center justify-between rounded-2xl px-4 py-3.5 text-[15px] font-bold transition-colors",
+      active ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100"
     );
+  const shortDate = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" });
 
   return (
     <>
@@ -345,7 +353,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
       onClose={onClose}
       footer={
         <div className="pb-[env(safe-area-inset-bottom)]">
-          {!detailOpen && !catsOpen && <AmountKeypad
+          {!catsOpen && <AmountKeypad
             variant="flat"
             value={amount}
             onChange={setAmount}
@@ -404,7 +412,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
 
         <button
           type="button"
-          onClick={() => { if (!detailOpen && !catsOpen) return; lightTap(); setDetailOpen(false); setCatsOpen(false); }}
+          onClick={() => { if (!catsOpen) return; lightTap(); setCatsOpen(false); }}
           aria-label="Ketik nominal"
           className="relative mt-5 flex w-full items-baseline justify-center gap-1.5 min-w-0"
           aria-live="polite"
@@ -424,21 +432,27 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
             {shown}
           </motion.span>
         </button>
-        {(detailOpen || catsOpen) && (
+        {catsOpen && (
           <p className="relative -mt-0.5 text-center text-[11px] font-bold text-white/70">Ketuk nominal untuk mengetik</p>
         )}
 
         <div className="relative mt-3.5 flex flex-wrap justify-center gap-2">
           {!isTransfer && (
-            <button type="button" onClick={() => { lightTap(); setDetailOpen(false); setCatsOpen((v) => !v); }} className={heroChip}>
+            <button type="button" onClick={() => { lightTap(); setCatsOpen((v) => !v); }} className={heroChip}>
               <span className="truncate">{category ? `${catEmoji} ${subCategory || category}` : "Pilih kategori"}</span>
               <ChevronDown size={13} className="shrink-0 opacity-70" />
             </button>
           )}
-          <button type="button" onClick={() => { lightTap(); setDetailOpen((v) => !v); }} className={heroChip}>
-            <span className="truncate">
-              {isTransfer ? "" : `${selectedAccount?.name ?? "Rekening"} · `}{dateLabel}{note ? " · ✎" : ""}
-            </span>
+          {!isTransfer && (
+            <button type="button" onClick={() => openPicker("acc")} className={cn(heroChip, "pl-1.5")}>
+              {selectedAccount && <AccountLogo account={selectedAccount} className="h-5 w-5 rounded-full" />}
+              <span className="truncate max-w-[130px]">{selectedAccount?.name ?? "Rekening"}</span>
+              <ChevronDown size={13} className="shrink-0 opacity-70" />
+            </button>
+          )}
+          <button type="button" onClick={() => openPicker("date")} className={heroChip}>
+            <CalendarDays size={13} className="shrink-0 opacity-80" />
+            <span className="truncate">{dateLabel}</span>
             <ChevronDown size={13} className="shrink-0 opacity-70" />
           </button>
         </div>
@@ -470,61 +484,15 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
         </div>
       ) : null}
 
-      {detailOpen ? (
-        <div className="space-y-4 px-4 pt-4 pb-2">
-          <div>
-            <p className={label}>{isTransfer ? "Dari" : "Rekening"}</p>
-            <AccountRow accounts={accounts} value={accountId} onChange={setAccountId} />
-          </div>
-          {isTransfer && (
-            <div>
-              <p className={label}>Ke</p>
-              <AccountRow accounts={transferTargets} value={toAccountId} onChange={setToAccountId} />
-            </div>
-          )}
-          <div>
-            <p className={label}>Tanggal</p>
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-              <button type="button" onClick={() => { lightTap(); setDate(null); }} className={dateChip(date === null)}>Hari ini</button>
-              <button type="button" onClick={() => { lightTap(); setDate(yesterdayISO()); }} className={dateChip(date === yesterdayISO())}>Kemarin</button>
-              <label className={cn(dateChip(date !== null && date !== yesterdayISO()), "relative flex items-center gap-1.5")}>
-                <CalendarDays size={14} />
-                {date !== null && date !== yesterdayISO() ? dateLabel : "Lainnya"}
-                <input
-                  type="date"
-                  aria-label="Pilih tanggal lain"
-                  value={date ?? toISODate(new Date())}
-                  max={toISODate(new Date())}
-                  onChange={(e) => setDate(e.target.value || null)}
-                  className="absolute inset-0 opacity-0"
-                />
-              </label>
-            </div>
-          </div>
-          <div>
-            <p className={label}>Catatan</p>
-            <input
-              type="text"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Opsional, mis. kopi sama tim"
-              className="w-full rounded-2xl bg-slate-100 dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => { lightTap(); setDetailOpen(false); }}
-            className="w-full h-12 rounded-2xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-sm font-extrabold active:scale-[0.98] transition-transform"
-          >
-            Selesai
-          </button>
-        </div>
-      ) : isTransfer ? (
-        <div className="px-4 pt-4 pb-2">
-          <div className="flex items-center gap-2 rounded-[20px] bg-slate-100 dark:bg-slate-800 p-3">
-            <button type="button" onClick={() => { lightTap(); setDetailOpen(true); }} className="min-w-0 flex-1 text-left">
-              <span className="block text-[11px] font-bold text-slate-400 dark:text-slate-500">Dari</span>
-              <span className="block truncate text-[15px] font-extrabold text-slate-900 dark:text-white">{selectedAccount?.name ?? "—"}</span>
+      {isTransfer ? (
+        <div className="px-4 pt-4">
+          <div className="flex items-center gap-2 rounded-[20px] bg-slate-100 dark:bg-slate-800 p-2.5">
+            <button type="button" onClick={() => openPicker("acc")} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+              {selectedAccount && <AccountLogo account={selectedAccount} className="h-9 w-9 rounded-xl" />}
+              <span className="min-w-0">
+                <span className="block text-[11px] font-bold text-slate-400 dark:text-slate-500">Dari</span>
+                <span className="block truncate text-[14px] font-extrabold text-slate-900 dark:text-white">{selectedAccount?.name ?? "—"}</span>
+              </span>
             </button>
             <button
               type="button"
@@ -535,9 +503,12 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
             >
               <ArrowLeftRight size={16} />
             </button>
-            <button type="button" onClick={() => { lightTap(); setDetailOpen(true); }} className="min-w-0 flex-1 text-right">
-              <span className="block text-[11px] font-bold text-slate-400 dark:text-slate-500">Ke</span>
-              <span className="block truncate text-[15px] font-extrabold text-slate-900 dark:text-white">{toAccount?.name ?? "—"}</span>
+            <button type="button" onClick={() => openPicker("to")} className="flex min-w-0 flex-1 items-center justify-end gap-2 text-right">
+              <span className="min-w-0">
+                <span className="block text-[11px] font-bold text-slate-400 dark:text-slate-500">Ke</span>
+                <span className="block truncate text-[14px] font-extrabold text-slate-900 dark:text-white">{toAccount?.name ?? "—"}</span>
+              </span>
+              {toAccount && <AccountLogo account={toAccount} className="h-9 w-9 rounded-xl" />}
             </button>
           </div>
           {selectedAccount && toAccount && toAccount.currency !== selectedAccount.currency && toAccountId !== EXTERNAL_WALLET_ID && (
@@ -547,7 +518,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
           )}
         </div>
       ) : (
-        <div className="pt-4 pb-1">
+        <div className="pt-4">
           <CategoryGrid
             layout="row"
             activeRing={st.ring}
@@ -561,6 +532,83 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
           />
         </div>
       )}
+
+      {!catsOpen && (
+        <label className="mx-4 mt-2 mb-1 flex items-center gap-2 rounded-2xl bg-slate-100 px-3.5 py-2.5 dark:bg-slate-800">
+          <PencilLine size={14} className="shrink-0 text-slate-400" />
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Tambah catatan (opsional)"
+            aria-label="Catatan"
+            className="min-w-0 flex-1 bg-transparent text-[13px] font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none dark:text-white"
+          />
+        </label>
+      )}
+
+      {/* Pop-up pilihan rekening / tanggal: satu ketukan memilih & langsung tertutup. */}
+      <AnimatePresence>
+        {picker && (
+          <motion.div
+            key="picker"
+            className="absolute inset-0 z-20 flex items-end"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setPicker(null)}
+          >
+            <div className="absolute inset-0 bg-slate-900/45" />
+            <motion.div
+              initial={{ y: 40 }}
+              animate={{ y: 0 }}
+              exit={{ y: 40 }}
+              transition={{ type: "spring", stiffness: 420, damping: 34 }}
+              onClick={(e) => e.stopPropagation()}
+              onPointerDownCapture={(e) => e.stopPropagation()}
+              className="relative w-full max-h-[75%] overflow-y-auto rounded-t-[28px] bg-white px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+20px)] dark:bg-slate-900"
+            >
+              <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-slate-200 dark:bg-slate-700" />
+              {picker === "date" ? (
+                <>
+                  <p className="mb-3 px-1 text-[15px] font-extrabold text-slate-900 dark:text-white">Tanggal transaksi</p>
+                  <div className="space-y-2">
+                    <button type="button" onClick={() => { lightTap(); setDate(null); setPicker(null); }} className={dateOpt(date === null)}>
+                      Hari ini <span className="text-[13px] font-semibold opacity-60">{shortDate(toISODate(new Date()))}</span>
+                    </button>
+                    <button type="button" onClick={() => { lightTap(); setDate(yesterdayISO()); setPicker(null); }} className={dateOpt(date === yesterdayISO())}>
+                      Kemarin <span className="text-[13px] font-semibold opacity-60">{shortDate(yesterdayISO())}</span>
+                    </button>
+                    <label className={cn(dateOpt(date !== null && date !== yesterdayISO()), "relative cursor-pointer")}>
+                      <span className="flex items-center gap-2"><CalendarDays size={16} /> Tanggal lain</span>
+                      <span className="text-[13px] font-semibold opacity-60">{date !== null && date !== yesterdayISO() ? shortDate(date) : "Pilih"}</span>
+                      <input
+                        type="date"
+                        aria-label="Pilih tanggal lain"
+                        value={date ?? toISODate(new Date())}
+                        max={toISODate(new Date())}
+                        onChange={(e) => { setDate(e.target.value && e.target.value !== toISODate(new Date()) ? e.target.value : null); setPicker(null); }}
+                        className="absolute inset-0 opacity-0"
+                      />
+                    </label>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="mb-3 px-1 text-[15px] font-extrabold text-slate-900 dark:text-white">
+                    {picker === "to" ? "Transfer ke" : isTransfer ? "Transfer dari" : "Pakai rekening"}
+                  </p>
+                  <AccountRow
+                    accounts={picker === "to" ? transferTargets : accounts}
+                    value={picker === "to" ? toAccountId : accountId}
+                    onChange={(id) => { if (picker === "to") setToAccountId(id); else setAccountId(id); setPicker(null); }}
+                  />
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </BottomSheet>
     <UndoToast item={undoItem} onUndo={(item) => quickTxService.undo(item.id)} onDone={() => setUndoItem(null)} />
     </>

@@ -38,6 +38,9 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   kategori dipilih atau nominal diketuk — "Ketuk nominal untuk mengetik"); baris ringkas otomatis bergeser ke
   kategori terpilih; pilihan rekening = kartu 2 kolom dengan logo (logoUrl → matchIndonesianInstitutionLogo →
   emoji jenis) + saldo (ikut sembunyikan-saldo `useBalanceVisibility`; tanpa sen untuk IDR/KHR).
+  v4: lembar Detail + tombol Selesai DIHAPUS — semua satu halaman. Panel atas: pil kategori, pil rekening (logo
+  kecil), pil tanggal. Rekening & tanggal = pop-up di dalam sheet (`picker` "acc"/"to"/"date"), satu ketukan
+  memilih & menutup. Catatan = kolom tipis di bawah kategori. Transfer: Dari/Ke dengan logo, masing-masing pop-up.
 - Live (0b277e8, 2026-11-03): **form Tambah Transaksi app HP satu layar** (pilihan Bos) — `AddTransactionSheet` +
   `src/components/app/CategoryGrid.tsx` (petak ikon, urut paling sering dipakai, "Lainnya", pil sub-kategori),
   rekening jadi pil (`AccountPills`), tanggal+Catatan satu baris, SmartBar dilipat ke tombol ✨, keypad tombol `000`
