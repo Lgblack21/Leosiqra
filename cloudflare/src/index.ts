@@ -2138,7 +2138,7 @@ const PROMO_DEMO_EMAIL = "leowendry+demo@gmail.com";
 // (default 19:00 WIB). Instagram butuh URL video publik: dilayani Worker lewat
 // URL bertanda tangan (HMAC, kedaluwarsa 2 hari), bukan bucket publik.
 const PROMO_QUEUE_CRON = "*/10 * * * *";
-// Tiap menit: HANYA pengingat buatan user (tabel reminders) supaya tepat waktu.
+// Trigger tiap menit: pengingat user tiap menit + tugas "10 menit" di menit kelipatan 10.
 // Wajib punya cabang sendiri di scheduled() — cabang terakhir = tugas harian.
 const REMINDER_CRON = "* * * * *";
 const PROMO_QUEUE_KEY = "promo/queue.json";
@@ -15917,24 +15917,25 @@ const worker = {
   },
 
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
-    if (event.cron === REMINDER_CRON) {
-      // Klaim bersyarat di sendDueReminders → aman walau cabang 10 menit juga memanggilnya.
+    if (event.cron === REMINDER_CRON || event.cron === PROMO_QUEUE_CRON) {
+      // Satu trigger tiap menit (paket Workers Free: maks 5 cron per AKUN, jadi
+      // tidak bisa menambah trigger baru). Pengingat buatan user dicek tiap menit
+      // supaya tepat waktu; klaim bersyarat di sendDueReminders mencegah kirim dobel.
       ctx.waitUntil(sendDueReminders(env).catch((error) => console.error("Pengingat user:", error)));
-      return;
-    }
-    if (event.cron === PROMO_QUEUE_CRON) {
-      // Tiap 10 menit: posting video promo yang sudah waktunya + metrik harian.
-      // Cabang sendiri supaya TIDAK ikut menjalankan deposito/recurring di bawah.
-      ctx.waitUntil(processPromoQueue(env));
-      // Pengingat harian pilihan user (jam :00/:30 WIB) — cek jamnya di dalam.
-      ctx.waitUntil(sendDailyReminders(env).catch((error) => console.error("Pengingat harian:", error)));
-      // Pengingat buatan user: utamanya cron tiap menit (REMINDER_CRON); di sini cadangan
-      // kalau trigger menit belum aktif. Klaim bersyarat mencegah kirim dobel.
-      ctx.waitUntil(sendDueReminders(env).catch((error) => console.error("Pengingat user:", error)));
-      // Kotak Masuk: baca email pembayaran (yang menyalakan), maks sekali per ±jam per user.
-      ctx.waitUntil(processAllGmailInboxes(env));
-      // Kotak Masuk: pesan channel Slack pilihan user, maks sekali per ±10 menit.
-      ctx.waitUntil(processAllSlackInboxes(env));
+      // Tugas lama "tiap 10 menit" hanya di menit kelipatan 10 (perilaku sama dengan
+      // trigger */10 dulu). PROMO_QUEUE_CRON tetap diterima selama trigger lama masih ada.
+      const minute = new Date(event.scheduledTime).getUTCMinutes();
+      if (event.cron === PROMO_QUEUE_CRON || minute % 10 === 0) {
+        // Posting video promo yang sudah waktunya + metrik harian.
+        ctx.waitUntil(processPromoQueue(env));
+        // Pengingat harian pilihan user (jam :00/:30 WIB) — cek jamnya di dalam.
+        ctx.waitUntil(sendDailyReminders(env).catch((error) => console.error("Pengingat harian:", error)));
+        // Kotak Masuk: baca email pembayaran (yang menyalakan), maks sekali per ±jam per user.
+        ctx.waitUntil(processAllGmailInboxes(env));
+        // Kotak Masuk: pesan channel Slack pilihan user, maks sekali per ±10 menit.
+        ctx.waitUntil(processAllSlackInboxes(env));
+      }
+      // Cabang sendiri: TIDAK boleh jatuh ke tugas harian di bawah.
       return;
     }
     if (event.cron === "1 17 * * *") {

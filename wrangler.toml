@@ -70,9 +70,9 @@ new_sqlite_classes = ["RealtimeRoom"]
 [triggers]
 # 03:00 UTC = 10:00 WIB — deposito jatuh tempo + pengingat recurring hari ini.
 # 17:01 UTC = 00:01 WIB (hari berikutnya) — ringkasan pengeluaran/pemasukan kemarin.
-# */10 — antrean posting video promo (IG/YouTube) + metrik harian (cabang sendiri di scheduled()).
-# * * * * * — HANYA pengingat buatan user (REMINDER_CRON di scheduled(), cabang sendiri).
-crons = ["0 3 * * *", "1 17 * * *", "*/10 * * * *", "* * * * *"]
+# * * * * * — pengingat user tiap menit + tugas 10 menit di menit kelipatan 10 (REMINDER_CRON di scheduled()).
+# Paket Workers Free: maks 5 cron per AKUN — jangan menambah trigger baru, gabungkan ke yang ada.
+crons = ["0 3 * * *", "1 17 * * *", "* * * * *"]
 
 [vars]
 APP_NAME = "Leosiqra"
