@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Trash2, Pencil, Info } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Trash2, Pencil, Info, Loader2 } from "lucide-react";
+import { AppTagChips } from "@/components/app/AppTagChips";
+import { useTags } from "@/lib/useTags";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { CategorySelect } from "@/components/CategorySelect";
 import { cloudflareApi } from "@/lib/cloudflare-api";
@@ -30,6 +32,9 @@ export function TransactionDetailSheet({ tx, accounts, onClose }: Props) {
   const [subCategory, setSubCategory] = useState("");
   const [note, setNote] = useState("");
   const [date, setDate] = useState("");
+  const [txTags, setTxTags] = useState<string[]>([]);
+  const [tagSaving, setTagSaving] = useState(false);
+  const { tags: tagPref } = useTags();
 
   useEffect(() => {
     if (!tx) return;
@@ -40,6 +45,7 @@ export function TransactionDetailSheet({ tx, accounts, onClose }: Props) {
     setSubCategory(tx.subCategory || "");
     setNote(tx.note || "");
     setDate(toLocalDateString(new Date(tx.date)));
+    setTxTags(tx.tags ?? []);
   }, [tx]);
 
   if (!tx) return <BottomSheet isOpen={false} onClose={onClose}>{null}</BottomSheet>;
@@ -56,6 +62,25 @@ export function TransactionDetailSheet({ tx, accounts, onClose }: Props) {
   const isTransfer = tx.type === "transfer" || tx.type === "topup";
   const canEdit = !linked && !isTransfer;
   const canDelete = !linked;
+
+  // Tag disimpan langsung tiap diketuk (PUT hanya payload_json.tags — bukan
+  // nominal/saldo), jadi boleh juga untuk transfer & transaksi tertaut.
+  const saveTags = async (next: string[]) => {
+    if (!tx.id) return;
+    const before = txTags;
+    setTxTags(next);
+    setTagSaving(true);
+    setError("");
+    try {
+      await cloudflareApi(`/api/member/transactions/${tx.id}`, { method: "PUT", json: { tags: next } });
+      notifyCollectionChanged("transactions");
+    } catch (e) {
+      setTxTags(before);
+      setError(e instanceof Error && e.message ? e.message : "Gagal menyimpan tag.");
+    } finally {
+      setTagSaving(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!tx.id) return;
@@ -164,6 +189,15 @@ export function TransactionDetailSheet({ tx, accounts, onClose }: Props) {
                 </div>
               ))}
             </dl>
+
+            {(tagPref.enabled || txTags.length > 0) && (
+              <div className="space-y-1.5">
+                <p className="flex items-center gap-1.5 px-1 text-[11px] font-black uppercase tracking-wider text-slate-400">
+                  Tag {tagSaving && <Loader2 size={11} className="animate-spin" />}
+                </p>
+                <AppTagChips value={txTags} onChange={(next) => void saveTags(next)} />
+              </div>
+            )}
 
             {(linked || isTransfer) && (
               <p className="flex gap-2 text-[11px] text-slate-500 dark:text-slate-400 px-1">
