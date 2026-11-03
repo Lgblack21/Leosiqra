@@ -25,11 +25,27 @@ interface AmountKeypadProps {
   value: string;
   onChange: (value: string) => void;
   currencySymbol?: string;
+  /** "flat": tombol datar tanpa kotak & tanpa baris nominal (nominal tampil di
+   * panel atas AddTransactionSheet); baris kalkulator hanya saat mode kalkulator. */
+  variant?: "default" | "flat";
+  /** Mode kalkulator dikendalikan dari luar (tombol di panel atas). */
+  calculator?: boolean;
+  onCalculatorChange?: (on: boolean) => void;
+  /** Varian flat: tombol kiri bawah "000" (mata uang tanpa sen) atau "." */
+  thousandKey?: boolean;
 }
 
-export function AmountKeypad({ value, onChange, currencySymbol = "Rp" }: AmountKeypadProps) {
-  const [mode, setMode] = useState<"keypad" | "calculator">("keypad");
+export function AmountKeypad({ value, onChange, currencySymbol = "Rp", variant = "default", calculator, onCalculatorChange, thousandKey = true }: AmountKeypadProps) {
+  const [innerMode, setInnerMode] = useState<"keypad" | "calculator">("keypad");
+  const mode: "keypad" | "calculator" = calculator === undefined ? innerMode : calculator ? "calculator" : "keypad";
+  const setMode = (m: "keypad" | "calculator") => (onCalculatorChange ? onCalculatorChange(m === "calculator") : setInnerMode(m));
   const [tokens, setTokens] = useState<CalcToken[]>(() => [value || "0"]);
+  // Kalkulator ditutup dari luar saat masih ada operator → kembali ke angka terakhir.
+  const [syncedMode, setSyncedMode] = useState(mode);
+  if (mode !== syncedMode) {
+    setSyncedMode(mode);
+    if (mode === "keypad" && tokens.length > 1) setTokens([value || "0"]);
+  }
 
   const lastToken = tokens[tokens.length - 1];
   const lastIsOperator = isOperatorToken(lastToken);
@@ -128,6 +144,42 @@ export function AmountKeypad({ value, onChange, currencySymbol = "Rp" }: AmountK
   };
 
   const display = tokens.map((t) => (isOperatorToken(t) ? ` ${t} ` : groupDigits(t))).join("");
+
+  if (variant === "flat") {
+    const flatKey = "h-14 rounded-2xl text-[24px] font-semibold text-slate-900 dark:text-white tabular-nums flex items-center justify-center active:bg-slate-100 dark:active:bg-slate-800 transition-colors";
+    const dimKey = flatKey + " !text-[19px] !text-slate-400 dark:!text-slate-500";
+    if (mode === "calculator") {
+      return (
+        <div className="px-4 pt-2">
+          <p className="mb-1 truncate text-right text-sm font-bold text-slate-400 dark:text-slate-500 tabular-nums">{currencySymbol} {display}</p>
+          <div className="grid grid-cols-4">
+            {(["7", "8", "9"] as const).map((d) => <button key={d} type="button" onClick={() => pressDigit(d)} className={flatKey}>{d}</button>)}
+            <button type="button" onClick={() => pressOperator("÷")} className={dimKey}>÷</button>
+            {(["4", "5", "6"] as const).map((d) => <button key={d} type="button" onClick={() => pressDigit(d)} className={flatKey}>{d}</button>)}
+            <button type="button" onClick={() => pressOperator("×")} className={dimKey}>×</button>
+            {(["1", "2", "3"] as const).map((d) => <button key={d} type="button" onClick={() => pressDigit(d)} className={flatKey}>{d}</button>)}
+            <button type="button" onClick={() => pressOperator("-")} className={dimKey}>−</button>
+            <button type="button" onClick={() => pressDigit(".")} className={dimKey}>.</button>
+            <button type="button" onClick={() => pressDigit("0")} className={flatKey}>0</button>
+            <button type="button" onClick={pressEquals} className={dimKey + " !text-indigo-600 dark:!text-indigo-400"}>=</button>
+            <button type="button" onClick={() => pressOperator("+")} className={dimKey}>+</button>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="grid grid-cols-3 px-4 pt-1">
+        {(["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const).map((d) => (
+          <button key={d} type="button" onClick={() => pressDigit(d)} className={flatKey}>{d}</button>
+        ))}
+        {thousandKey
+          ? <button type="button" onClick={pressThousand} className={dimKey}>000</button>
+          : <button type="button" onClick={() => pressDigit(".")} className={dimKey}>.</button>}
+        <button type="button" onClick={() => pressDigit("0")} className={flatKey}>0</button>
+        <button type="button" onClick={pressBackspace} aria-label="Hapus" className={dimKey}><Delete size={22} /></button>
+      </div>
+    );
+  }
 
   return (
     <div className="border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 px-5 pt-4 pb-3">

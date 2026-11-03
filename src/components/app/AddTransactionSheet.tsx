@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { CalendarDays, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Sparkles, PencilLine, Wallet } from "lucide-react";
+import { CalendarDays, ArrowLeftRight, Sparkles, Calculator, ChevronDown } from "lucide-react";
+import { categoryVisual } from "@/lib/categoryEmoji";
 import { accountService, Account } from "@/lib/services/accountService";
 import { auth } from "@/lib/cf-client";
 import { subscribeToCollectionChanges } from "@/lib/cf-firestore";
@@ -23,69 +24,65 @@ import type { TxPrefill } from "@/lib/txPrefill";
 
 type SheetMode = TxType | "transfer";
 
-// Tiga mode dalam satu baris: Keluar / Masuk / Transfer. Transfer menukar isian
-// kategori dengan rekening "Dari" & "Ke" dan disimpan lewat endpoint transfer.
+// Warna panel atas per jenis — identitas utama form: merah keluar, hijau masuk, ungu transfer.
+const MODE_STYLE: Record<SheetMode, { hero: string; ring: string; text: string; save: string }> = {
+  pengeluaran: { hero: "from-[#ff5f6d] to-[#e5305a]", ring: "ring-rose-500", text: "text-rose-600", save: "from-[#ff5f6d] to-[#e5305a] shadow-rose-300/60" },
+  pemasukan: { hero: "from-[#22c488] to-[#0e9a6a]", ring: "ring-emerald-500", text: "text-emerald-600", save: "from-[#22c488] to-[#0e9a6a] shadow-emerald-300/60" },
+  transfer: { hero: "from-[#7c6cff] to-[#4f46e5]", ring: "ring-indigo-500", text: "text-indigo-600", save: "from-[#7c6cff] to-[#4f46e5] shadow-indigo-300/60" },
+};
+
+// Keluar / Masuk / Transfer — kapsul di atas panel berwarna; pil putih meluncur ke yang terpilih.
 function ModeToggle({ value, onChange }: { value: SheetMode; onChange: (m: SheetMode) => void }) {
-  const items: { mode: SheetMode; label: string; icon: React.ElementType; active: string }[] = [
-    { mode: "pengeluaran", label: "Keluar", icon: ArrowDownCircle, active: "bg-rose-500 border-rose-500 text-white shadow-lg shadow-rose-100 dark:shadow-none" },
-    { mode: "pemasukan", label: "Masuk", icon: ArrowUpCircle, active: "bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-100 dark:shadow-none" },
-    { mode: "transfer", label: "Transfer", icon: ArrowLeftRight, active: "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100 dark:shadow-none" },
+  const items: { mode: SheetMode; label: string }[] = [
+    { mode: "pengeluaran", label: "Keluar" },
+    { mode: "pemasukan", label: "Masuk" },
+    { mode: "transfer", label: "Transfer" },
   ];
   return (
-    <div className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800">
-      {items.map(({ mode, label, icon: Icon, active }) => (
+    <div className="flex rounded-full bg-black/15 p-[3px]">
+      {items.map(({ mode, label }) => (
         <button
           key={mode}
           type="button"
           onClick={() => { lightTap(); onChange(mode); }}
-          className={cn(
-            "relative flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[13px] font-black transition-colors duration-300",
-            value === mode ? "text-white" : "text-slate-400 dark:text-slate-500"
-          )}
+          aria-pressed={value === mode}
+          className={cn("relative rounded-full px-3.5 py-1.5 text-[13px] font-bold transition-colors duration-300", value === mode ? MODE_STYLE[mode].text : "text-white/80")}
         >
-          {/* Pil warna meluncur ke mode terpilih. */}
           {value === mode && (
-            <motion.span
-              layoutId="add-mode-pill"
-              className={cn("absolute inset-0 rounded-xl border-0", active)}
-              transition={{ type: "spring", stiffness: 480, damping: 36 }}
-            />
+            <motion.span layoutId="add-mode-pill" className="absolute inset-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 480, damping: 36 }} />
           )}
-          <span className="relative flex items-center gap-1.5"><Icon size={14} /> {label}</span>
+          <span className="relative">{label}</span>
         </button>
       ))}
     </div>
   );
 }
 
-// Rekening sebagai deretan pil yang bisa digeser — satu ketukan, tanpa dropdown.
-function AccountPills({ accounts, value, onChange, label }: { accounts: Account[]; value: string; onChange: (id: string) => void; label?: string }) {
+// Deretan pil rekening di lembar Detail — satu ketukan, bisa digeser.
+function AccountRow({ accounts, value, onChange }: { accounts: Account[]; value: string; onChange: (id: string) => void }) {
   if (accounts.length === 0) return <p className="text-xs font-medium text-slate-400 dark:text-slate-500">Belum ada rekening.</p>;
   return (
-    <div className="flex items-center gap-2">
-      <span className="shrink-0 flex items-center gap-1 text-[11px] font-black text-slate-400 dark:text-slate-500">
-        <Wallet size={13} /> {label}
-      </span>
-      <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-        {accounts.map((a) => (
-          <button
-            key={a.id}
-            type="button"
-            onClick={() => { lightTap(); onChange(a.id ?? ""); }}
-            className={cn(
-              "shrink-0 max-w-[160px] truncate rounded-full border px-3 py-1.5 text-[12px] font-bold transition-colors",
-              a.id === value
-                ? "border-indigo-600 bg-indigo-600 text-white"
-                : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
-            )}
-          >
-            {a.name}
-          </button>
-        ))}
-      </div>
+    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+      {accounts.map((a) => (
+        <button
+          key={a.id}
+          type="button"
+          onClick={() => { lightTap(); onChange(a.id ?? ""); }}
+          className={cn(
+            "shrink-0 max-w-[180px] truncate rounded-2xl px-3.5 py-2.5 text-[13px] font-bold transition-colors",
+            a.id === value ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          )}
+        >
+          {a.name}
+        </button>
+      ))}
     </div>
   );
 }
+
+// Simbol di depan nominal; mata uang tanpa sen (IDR/KHR/JPY…) memakai tombol 000.
+const currencyLabel = (code?: string) => (!code || code === "IDR" ? "Rp" : code);
+const NO_CENTS = new Set(["IDR", "KHR", "JPY", "KRW", "VND"]);
 
 interface AddTransactionSheetProps {
   isOpen: boolean;
@@ -130,13 +127,14 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
   // null = "hari ini" (default server-side, sengaja gak dikirim ke payload
   // supaya perilaku default gak berubah dari sebelumnya).
   const [date, setDate] = useState<string | null>(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
   const [fromReminder, setFromReminder] = useState<string | null>(null);
   // Bagian yang jarang dipakai disembunyikan sampai diminta.
   const [showSmart, setShowSmart] = useState(false);
-  const [noteOpen, setNoteOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [catsOpen, setCatsOpen] = useState(false);
+  const [calcOn, setCalcOn] = useState(false);
 
   // Tiap ketukan notifikasi (key baru) mengisi ulang form; kategori sengaja
   // dikosongkan supaya user memilih sendiri sebelum menyimpan.
@@ -149,7 +147,6 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
     setCategory("");
     setSubCategory("");
     setDate(null);
-    setShowDatePicker(false);
     setHint(null);
     setAttachmentId(undefined);
     setFeedback(null);
@@ -216,12 +213,13 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
     setAmount("");
     setNote("");
     setDate(null);
-    setShowDatePicker(false);
     setHint(null);
     setAttachmentId(undefined);
     setFromReminder(null);
     setShowSmart(false);
-    setNoteOpen(false);
+    setDetailOpen(false);
+    setCatsOpen(false);
+    setCalcOn(false);
   };
 
   // Isi form dari ketik pintar / suara / scan — hanya field yang terbaca,
@@ -232,7 +230,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
     if (draft.accountId && accounts.some((a) => a.id === draft.accountId)) setAccountId(draft.accountId);
     if (draft.category) { setCategory(draft.category); setSubCategory(draft.subCategory ?? ""); }
     if (draft.note) setNote(draft.note);
-    if (draft.date) { setDate(draft.date === toISODate(new Date()) ? null : draft.date); setShowDatePicker(false); }
+    if (draft.date) { setDate(draft.date === toISODate(new Date()) ? null : draft.date); }
     if (source === "scan") setAttachmentId(draft.attachmentId);
     setHint({ source, text: info });
   };
@@ -278,147 +276,237 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
     }
   };
 
-  const chip = (active: boolean) =>
+  const st = MODE_STYLE[mode];
+  const currencyCode = selectedAccount?.currency;
+  const cur = currencyLabel(currencyCode);
+  const shown = amountNumber > 0 ? groupDigits(amount) : "0";
+  const dateLabel = date === null ? "Hari ini" : date === yesterdayISO() ? "Kemarin" : date.split("-").reverse().slice(0, 2).join("/");
+  const catEmoji = category ? categoryVisual(category, type).emoji : "";
+  const toAccount = transferTargets.find((a) => a.id === toAccountId);
+  const canSwap = isTransfer && Boolean(toAccountId) && toAccountId !== EXTERNAL_WALLET_ID;
+  const heroChip = "inline-flex max-w-full items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[13px] font-bold text-white active:bg-white/30";
+  const label = "mb-2 text-[11px] font-black uppercase tracking-[0.08em] text-slate-400 dark:text-slate-500";
+  const dateChip = (active: boolean) =>
     cn(
-      "shrink-0 rounded-full border px-3 py-1.5 text-[12px] font-bold transition-colors",
-      active
-        ? "border-indigo-600 bg-indigo-600 text-white"
-        : "border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"
+      "shrink-0 rounded-2xl px-3.5 py-2.5 text-[13px] font-bold transition-colors",
+      active ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
     );
-  const otherDate = date !== null && date !== yesterdayISO();
 
   return (
     <>
     <BottomSheet
+      bare
       isOpen={isOpen}
       onClose={onClose}
       footer={
         <div className="pb-[env(safe-area-inset-bottom)]">
-          <AmountKeypad value={amount} onChange={setAmount} currencySymbol={selectedAccount?.currency ?? "Rp"} />
-          <div className="px-5 pb-4">
+          {!detailOpen && <AmountKeypad
+            variant="flat"
+            value={amount}
+            onChange={setAmount}
+            currencySymbol={cur}
+            calculator={calcOn}
+            onCalculatorChange={setCalcOn}
+            thousandKey={!currencyCode || NO_CENTS.has(currencyCode)}
+          />}
+          <div className="px-4 pt-2 pb-4">
             <button
               type="button"
               onClick={handleSubmit}
               disabled={!canSubmit}
-              className="w-full py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg shadow-indigo-200 dark:shadow-none disabled:opacity-40 disabled:shadow-none transition-all active:scale-[0.98]"
+              className={cn(
+                "w-full h-14 rounded-[20px] bg-gradient-to-br text-white font-extrabold text-base shadow-lg dark:shadow-none disabled:opacity-35 disabled:shadow-none transition-all active:scale-[0.98]",
+                st.save
+              )}
             >
               {submitting
                 ? "Menyimpan..."
-                : !isTransfer && amountNumber > 0 && !category
+                : amountNumber <= 0
+                ? "Simpan"
+                : !isTransfer && !category
                 ? "Pilih kategori dulu"
-                : `Simpan ${isTransfer ? "Transfer" : type === "pengeluaran" ? "Pengeluaran" : "Pemasukan"} ${
-                    amountNumber > 0 ? groupDigits(amount) : ""
-                  }`}
+                : `Simpan ${cur} ${groupDigits(amount)}`}
             </button>
           </div>
         </div>
       }
     >
-      <div className="space-y-3.5">
-        {feedback && !feedback.ok && (
-          <div className="rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 px-4 py-3 text-xs font-bold text-rose-600 dark:text-rose-400">
-            {feedback.msg}
+      <div className={cn("relative overflow-hidden bg-gradient-to-br px-4 pt-7 pb-5 text-white", st.hero)}>
+        <div aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-white/10" />
+        <div className="relative flex items-center justify-between gap-2">
+          <ModeToggle value={mode} onChange={setMode} />
+          <div className="flex gap-1.5">
+            <button
+              type="button"
+              onClick={() => { lightTap(); setCalcOn((v) => !v); }}
+              aria-label="Kalkulator"
+              aria-pressed={calcOn}
+              className={cn("w-9 h-9 rounded-full flex items-center justify-center transition-colors", calcOn ? "bg-white text-slate-900" : "bg-white/20 text-white")}
+            >
+              <Calculator size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => { lightTap(); setShowSmart((v) => !v); }}
+              aria-label="Isi lewat ketik, suara, atau foto struk"
+              aria-pressed={showSmart}
+              className={cn("w-9 h-9 rounded-full flex items-center justify-center transition-colors", showSmart ? "bg-white text-slate-900" : "bg-white/20 text-white")}
+            >
+              <Sparkles size={16} />
+            </button>
           </div>
-        )}
-
-        <div className="flex items-center gap-2">
-          <div className="flex-1 min-w-0">
-            <ModeToggle value={mode} onChange={setMode} />
-          </div>
-          <button
-            type="button"
-            onClick={() => { lightTap(); setShowSmart((v) => !v); }}
-            aria-label="Isi lewat ketik, suara, atau foto struk"
-            aria-pressed={showSmart}
-            className={cn(
-              "shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center transition-colors",
-              showSmart ? "bg-indigo-600 text-white" : "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400"
-            )}
-          >
-            <Sparkles size={18} />
-          </button>
         </div>
 
-        {showSmart && <SmartBar ctx={ctx} onDraft={applyDraft} />}
-        {fromReminder && !hint && (
-          <div className="flex items-start gap-2 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 px-3.5 py-2.5 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
-            <Sparkles size={13} className="mt-0.5 shrink-0" />
-            <span>Dari pengingat &ldquo;{fromReminder}&rdquo; — pilih kategori, cek rekening, lalu simpan.</span>
-          </div>
-        )}
-        {hint && (
-          <div className="flex items-start gap-2 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 px-3.5 py-2.5 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
-            <Sparkles size={13} className="mt-0.5 shrink-0" />
-            <span>
-              Terisi dari {hint.source === "voice" ? "suara" : hint.source === "scan" ? "foto struk" : "teks"} — cek lalu simpan.
-              {hint.text ? <span className="block font-medium text-amber-600 dark:text-amber-400">{hint.text}</span> : null}
-            </span>
-          </div>
-        )}
+        <div className="relative mt-5 flex items-baseline justify-center gap-1.5 min-w-0" aria-live="polite">
+          <span className="shrink-0 text-lg font-bold text-white/80">{cur}</span>
+          <motion.span
+            key={shown}
+            initial={{ scale: 1.05 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.16 }}
+            className={cn(
+              "truncate font-extrabold leading-none tracking-tight tabular-nums",
+              shown.length > 11 ? "text-[36px]" : "text-[50px]",
+              amountNumber <= 0 && "text-white/50"
+            )}
+          >
+            {shown}
+          </motion.span>
+        </div>
 
-        <div className="space-y-2">
-          <AccountPills accounts={accounts} value={accountId} onChange={setAccountId} label={isTransfer ? "Dari" : undefined} />
-          {isTransfer && <AccountPills accounts={transferTargets} value={toAccountId} onChange={setToAccountId} label="Ke" />}
-          {isTransfer && selectedAccount && transferTargets.find((a) => a.id === toAccountId)?.currency !== selectedAccount.currency && toAccountId !== EXTERNAL_WALLET_ID && (
-            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 px-1">
-              Nominal dalam {selectedAccount.currency}. Jumlah yang masuk dikonversi otomatis pakai kurs hari ini.
-            </p>
+        <div className="relative mt-3.5 flex flex-wrap justify-center gap-2">
+          {!isTransfer && (
+            <button type="button" onClick={() => { lightTap(); setDetailOpen(false); setCatsOpen((v) => !v); }} className={heroChip}>
+              <span className="truncate">{category ? `${catEmoji} ${subCategory || category}` : "Pilih kategori"}</span>
+              <ChevronDown size={13} className="shrink-0 opacity-70" />
+            </button>
           )}
-          <div className="flex items-center gap-1.5">
-            <button type="button" onClick={() => { lightTap(); setDate(null); setShowDatePicker(false); }} className={chip(date === null)}>
-              Hari ini
-            </button>
-            <button type="button" onClick={() => { lightTap(); setDate(yesterdayISO()); setShowDatePicker(false); }} className={chip(date === yesterdayISO())}>
-              Kemarin
-            </button>
-            <button
-              type="button"
-              onClick={() => { lightTap(); setShowDatePicker((v) => !v); }}
-              aria-label="Pilih tanggal lain"
-              className={cn(chip(showDatePicker || otherDate), "flex items-center gap-1")}
-            >
-              <CalendarDays size={13} />
-              {otherDate ? date.split("-").reverse().slice(0, 2).join("/") : null}
-            </button>
-            <button
-              type="button"
-              onClick={() => { lightTap(); setNoteOpen((v) => !v); }}
-              className={cn(chip(noteOpen || Boolean(note)), "ml-auto flex items-center gap-1")}
-            >
-              <PencilLine size={13} /> Catatan
-            </button>
+          <button type="button" onClick={() => { lightTap(); setDetailOpen((v) => !v); }} className={heroChip}>
+            <span className="truncate">
+              {isTransfer ? "" : `${selectedAccount?.name ?? "Rekening"} · `}{dateLabel}{note ? " · ✎" : ""}
+            </span>
+            <ChevronDown size={13} className="shrink-0 opacity-70" />
+          </button>
+        </div>
+      </div>
+
+      {(feedback && !feedback.ok) || showSmart || (fromReminder && !hint) || hint ? (
+        <div className="space-y-2 px-4 pt-3">
+          {feedback && !feedback.ok && (
+            <div className="rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 px-4 py-3 text-xs font-bold text-rose-600 dark:text-rose-400">
+              {feedback.msg}
+            </div>
+          )}
+          {showSmart && <SmartBar ctx={ctx} onDraft={applyDraft} />}
+          {fromReminder && !hint && (
+            <div className="flex items-start gap-2 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 px-3.5 py-2.5 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
+              <Sparkles size={13} className="mt-0.5 shrink-0" />
+              <span>Dari pengingat &ldquo;{fromReminder}&rdquo; — pilih kategori, cek rekening, lalu simpan.</span>
+            </div>
+          )}
+          {hint && (
+            <div className="flex items-start gap-2 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 px-3.5 py-2.5 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
+              <Sparkles size={13} className="mt-0.5 shrink-0" />
+              <span>
+                Terisi dari {hint.source === "voice" ? "suara" : hint.source === "scan" ? "foto struk" : "teks"} — cek lalu simpan.
+                {hint.text ? <span className="block font-medium text-amber-600 dark:text-amber-400">{hint.text}</span> : null}
+              </span>
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {detailOpen ? (
+        <div className="space-y-4 px-4 pt-4 pb-2">
+          <div>
+            <p className={label}>{isTransfer ? "Dari" : "Rekening"}</p>
+            <AccountRow accounts={accounts} value={accountId} onChange={setAccountId} />
           </div>
-          {showDatePicker && (
-            <input
-              type="date"
-              value={date ?? toISODate(new Date())}
-              max={toISODate(new Date())}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white"
-            />
+          {isTransfer && (
+            <div>
+              <p className={label}>Ke</p>
+              <AccountRow accounts={transferTargets} value={toAccountId} onChange={setToAccountId} />
+            </div>
           )}
-          {(noteOpen || note) && (
+          <div>
+            <p className={label}>Tanggal</p>
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+              <button type="button" onClick={() => { lightTap(); setDate(null); }} className={dateChip(date === null)}>Hari ini</button>
+              <button type="button" onClick={() => { lightTap(); setDate(yesterdayISO()); }} className={dateChip(date === yesterdayISO())}>Kemarin</button>
+              <label className={cn(dateChip(date !== null && date !== yesterdayISO()), "relative flex items-center gap-1.5")}>
+                <CalendarDays size={14} />
+                {date !== null && date !== yesterdayISO() ? dateLabel : "Lainnya"}
+                <input
+                  type="date"
+                  aria-label="Pilih tanggal lain"
+                  value={date ?? toISODate(new Date())}
+                  max={toISODate(new Date())}
+                  onChange={(e) => setDate(e.target.value || null)}
+                  className="absolute inset-0 opacity-0"
+                />
+              </label>
+            </div>
+          </div>
+          <div>
+            <p className={label}>Catatan</p>
             <input
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Catatan (opsional)"
-              autoFocus={noteOpen && !note}
-              className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
+              placeholder="Opsional, mis. kopi sama tim"
+              className="w-full rounded-2xl bg-slate-100 dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600"
             />
+          </div>
+          <button
+            type="button"
+            onClick={() => { lightTap(); setDetailOpen(false); }}
+            className="w-full h-12 rounded-2xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-sm font-extrabold active:scale-[0.98] transition-transform"
+          >
+            Selesai
+          </button>
+        </div>
+      ) : isTransfer ? (
+        <div className="px-4 pt-4 pb-2">
+          <div className="flex items-center gap-2 rounded-[20px] bg-slate-100 dark:bg-slate-800 p-3">
+            <button type="button" onClick={() => { lightTap(); setDetailOpen(true); }} className="min-w-0 flex-1 text-left">
+              <span className="block text-[11px] font-bold text-slate-400 dark:text-slate-500">Dari</span>
+              <span className="block truncate text-[15px] font-extrabold text-slate-900 dark:text-white">{selectedAccount?.name ?? "—"}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { if (!canSwap) return; lightTap(); const from = accountId; setAccountId(toAccountId); setToAccountId(from); }}
+              disabled={!canSwap}
+              aria-label="Tukar rekening"
+              className="shrink-0 w-9 h-9 rounded-full bg-white dark:bg-slate-900 flex items-center justify-center text-indigo-600 dark:text-indigo-400 disabled:opacity-40"
+            >
+              <ArrowLeftRight size={16} />
+            </button>
+            <button type="button" onClick={() => { lightTap(); setDetailOpen(true); }} className="min-w-0 flex-1 text-right">
+              <span className="block text-[11px] font-bold text-slate-400 dark:text-slate-500">Ke</span>
+              <span className="block truncate text-[15px] font-extrabold text-slate-900 dark:text-white">{toAccount?.name ?? "—"}</span>
+            </button>
+          </div>
+          {selectedAccount && toAccount && toAccount.currency !== selectedAccount.currency && toAccountId !== EXTERNAL_WALLET_ID && (
+            <p className="mt-2 px-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+              Nominal dalam {selectedAccount.currency}. Jumlah yang masuk dikonversi otomatis pakai kurs hari ini.
+            </p>
           )}
         </div>
-
-        {!isTransfer && (
+      ) : (
+        <div className="pt-4 pb-1">
           <CategoryGrid
+            layout="row"
+            activeRing={st.ring}
+            expanded={catsOpen}
+            onExpandedChange={setCatsOpen}
             type={type}
             value={category}
             subValue={subCategory}
             history={transactions}
             onChange={(c, sub) => { setCategory(c); setSubCategory(sub); }}
           />
-        )}
-      </div>
+        </div>
+      )}
     </BottomSheet>
     <UndoToast item={undoItem} onUndo={(item) => quickTxService.undo(item.id)} onDone={() => setUndoItem(null)} />
     </>

@@ -26,6 +26,14 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   sheet **Tambah Transaksi** terisi nominal+catatan, kategori dikosongkan (wajib pilih) — `src/lib/txPrefill.ts`
   (`openAppNotificationUrl`, antrean `pending` sampai layout tab terpasang). Web tetap ke Input Cepat. Belum dicoba
   Bos di HP setelah deploy.
+- Live (2026-11-03 sore, `claude/input-hp-v2`): **form Tambah Transaksi app HP v2** (permintaan Bos, contoh disetujui):
+  panel warna atas (merah Keluar / hijau Masuk / ungu Transfer) berisi kapsul jenis, tombol kalkulator & ✨, nominal
+  besar, pil kategori + pil "rekening · tanggal"; kategori satu baris ikon bulat (`CategoryGrid layout="row"`,
+  "Lainnya" = semua petak); pil kedua membuka Detail (rekening/Dari-Ke, tanggal, catatan; keypad disembunyikan);
+  transfer = kotak Dari ⇄ Ke; keypad datar `AmountKeypad variant="flat"` (000 untuk IDR/KHR, "." untuk USD dll.,
+  kalkulator lewat tombol panel); satu tombol Simpan bergradasi. `BottomSheet bare`. Logika simpan TIDAK berubah
+  (diuji Playwright + API tiruan: payload quick-transaction benar, Batalkan muncul). Sheet lain yang memakai
+  AmountKeypad/BottomSheet tidak berubah (prop baru opsional).
 - Live (0b277e8, 2026-11-03): **form Tambah Transaksi app HP satu layar** (pilihan Bos) — `AddTransactionSheet` +
   `src/components/app/CategoryGrid.tsx` (petak ikon, urut paling sering dipakai, "Lainnya", pil sub-kategori),
   rekening jadi pil (`AccountPills`), tanggal+Catatan satu baris, SmartBar dilipat ke tombol ✨, keypad tombol `000`

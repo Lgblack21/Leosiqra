@@ -12,6 +12,9 @@ interface BottomSheetProps {
    * numerik AddTransactionSheet yang harus tetap kelihatan sementara
    * kategori/rekening/catatan di atasnya bisa di-scroll. */
   footer?: React.ReactNode;
+  /** Tanpa padding & pegangan menimpa konten — untuk sheet yang punya panel
+   * berwarna sampai pinggir (AddTransactionSheet). */
+  bare?: boolean;
 }
 
 // Threshold buat swipe-to-dismiss: cukup salah satu terpenuhi (jarak geser
@@ -20,7 +23,7 @@ interface BottomSheetProps {
 const DISMISS_OFFSET = 120;
 const DISMISS_VELOCITY = 500;
 
-export function BottomSheet({ isOpen, onClose, title, children, footer }: BottomSheetProps) {
+export function BottomSheet({ isOpen, onClose, title, children, footer, bare }: BottomSheetProps) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -61,8 +64,8 @@ export function BottomSheet({ isOpen, onClose, title, children, footer }: Bottom
             onDragEnd={handleDragEnd}
             className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[28px] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
           >
-            <div className="shrink-0 flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing">
-              <div className="w-10 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700" />
+            <div className={bare ? "pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center pt-2.5" : "shrink-0 flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing"}>
+              <div className={bare ? "w-10 h-1.5 rounded-full bg-white/50" : "w-10 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700"} />
             </div>
 
             {title && (
@@ -71,7 +74,7 @@ export function BottomSheet({ isOpen, onClose, title, children, footer }: Bottom
               </div>
             )}
 
-            <div className="px-6 pb-6 overflow-y-auto custom-scrollbar flex-1">
+            <div className={bare ? "overflow-y-auto custom-scrollbar flex-1" : "px-6 pb-6 overflow-y-auto custom-scrollbar flex-1"}>
               {children}
             </div>
 

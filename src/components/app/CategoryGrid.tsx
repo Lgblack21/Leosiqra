@@ -16,6 +16,14 @@ interface CategoryGridProps {
   onChange: (category: string, subCategory: string) => void;
   // Riwayat transaksi untuk mengurutkan kategori yang paling sering dipakai.
   history: { type: string; category: string }[];
+  /** "row": satu baris ikon bulat yang bisa digeser (sheet Tambah Transaksi);
+   * "Lainnya" membuka semua kategori sebagai petak. */
+  layout?: "grid" | "row";
+  /** Warna cincin kategori terpilih (ikut jenis transaksi). */
+  activeRing?: string;
+  /** Opsional: buka/tutup daftar penuh dari luar (mis. pil kategori di panel atas). */
+  expanded?: boolean;
+  onExpandedChange?: (open: boolean) => void;
 }
 
 const COLLAPSED = 7; // 2 baris × 4, petak ke-8 = "Lainnya"
@@ -23,9 +31,15 @@ const COLLAPSED = 7; // 2 baris × 4, petak ke-8 = "Lainnya"
 // Pemilih kategori satu ketukan untuk sheet Tambah Transaksi di app HP: petak
 // ikon, yang paling sering dipakai di depan. Data & aturan jenis sama dengan
 // CategorySelect (nama kategori sebagai nilai, jenis berlawanan disembunyikan).
-export function CategoryGrid({ type, value, subValue, onChange, history }: CategoryGridProps) {
+export function CategoryGrid({ type, value, subValue, onChange, history, layout = "grid", activeRing = "ring-indigo-500", expanded: expandedProp, onExpandedChange }: CategoryGridProps) {
   const [rows, setRows] = useState<CategoryRow[]>([]);
-  const [expanded, setExpanded] = useState(false);
+  const [innerExpanded, setInnerExpanded] = useState(false);
+  const expanded = expandedProp ?? innerExpanded;
+  const setExpanded = (next: boolean | ((v: boolean) => boolean)) => {
+    const v = typeof next === "function" ? next(expanded) : next;
+    if (onExpandedChange) onExpandedChange(v);
+    else setInnerExpanded(v);
+  };
   const [subFor, setSubFor] = useState<string | null>(null);
   const subRef = useRef<HTMLDivElement>(null);
   const kinds = useCategoryKinds();
@@ -94,6 +108,84 @@ export function CategoryGrid({ type, value, subValue, onChange, history }: Categ
   }
 
   const subs = subFor ? subOptions(subFor) : [];
+  const subPills = (
+    <>
+      {subFor && subs.length > 0 && (
+        <div ref={subRef} className={cn("flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5 scroll-mb-4", layout === "row" && "px-4")}>
+          {subs.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => { lightTap(); onChange(subFor, s); setSubFor(null); setExpanded(false); }}
+              className={cn(
+                "shrink-0 rounded-full border px-3 py-1.5 text-[12px] font-bold",
+                value === subFor && subValue === s
+                  ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900"
+                  : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+              )}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+    </>
+  );
+
+  if (layout === "row") {
+    // Ringkas: satu baris geser, yang terpilih ditaruh paling depan kalau tidak kelihatan.
+    const ROW = 7;
+    let rowNames = names.slice(0, ROW);
+    if (value && names.includes(value) && !rowNames.includes(value)) rowNames = [value, ...rowNames.slice(0, ROW - 1)];
+    const list = expanded ? names : rowNames;
+    const tileBtn = (name: string) => {
+      const active = value === name;
+      const { emoji, tile } = categoryVisual(name, type);
+      return (
+        <button
+          key={name}
+          type="button"
+          onClick={() => pick(name)}
+          className={cn("flex flex-col items-center gap-1.5 active:scale-95 transition-transform", expanded ? "py-1" : "w-[68px] shrink-0 snap-start")}
+        >
+          <span
+            className={cn(
+              "flex h-[50px] w-[50px] items-center justify-center rounded-full text-[23px] transition-all duration-200 dark:bg-slate-800",
+              tile,
+              active && cn("ring-2 ring-offset-[3px] ring-offset-white dark:ring-offset-slate-900 scale-110", activeRing)
+            )}
+          >
+            {emoji}
+          </span>
+          <span className={cn("w-full truncate px-0.5 text-center text-[11.5px] leading-tight", active ? "font-black text-slate-900 dark:text-white" : "font-semibold text-slate-500 dark:text-slate-400")}>
+            {name}
+          </span>
+        </button>
+      );
+    };
+    const moreBtn = names.length > ROW && (
+      <button
+        type="button"
+        onClick={() => { lightTap(); setExpanded((v) => !v); }}
+        className={cn("flex flex-col items-center gap-1.5 active:scale-95 transition-transform", expanded ? "py-1" : "w-[68px] shrink-0 snap-start")}
+      >
+        <span className="flex h-[50px] w-[50px] items-center justify-center rounded-full bg-slate-100 text-lg font-black text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+          {expanded ? "−" : "•••"}
+        </span>
+        <span className="text-[11.5px] font-semibold text-slate-500 dark:text-slate-400">{expanded ? "Ringkas" : "Lainnya"}</span>
+      </button>
+    );
+    return (
+      <div className="space-y-2">
+        {expanded ? (
+          <div className="grid grid-cols-4 gap-x-1 gap-y-3 px-3 pt-1">{list.map(tileBtn)}{moreBtn}</div>
+        ) : (
+          <div className="flex gap-1 overflow-x-auto no-scrollbar snap-x px-3 pt-2 pb-1">{list.map(tileBtn)}{moreBtn}</div>
+        )}
+        {subPills}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">
