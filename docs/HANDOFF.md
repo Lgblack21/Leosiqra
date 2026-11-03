@@ -26,6 +26,11 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   sheet **Tambah Transaksi** terisi nominal+catatan, kategori dikosongkan (wajib pilih) — `src/lib/txPrefill.ts`
   (`openAppNotificationUrl`, antrean `pending` sampai layout tab terpasang). Web tetap ke Input Cepat. Belum dicoba
   Bos di HP setelah deploy.
+- Live (0b277e8, 2026-11-03): **form Tambah Transaksi app HP satu layar** (pilihan Bos) — `AddTransactionSheet` +
+  `src/components/app/CategoryGrid.tsx` (petak ikon, urut paling sering dipakai, "Lainnya", pil sub-kategori),
+  rekening jadi pil (`AccountPills`), tanggal+Catatan satu baris, SmartBar dilipat ke tombol ✨, keypad tombol `000`
+  (AmountKeypad dipakai sheet lain juga). Diuji Playwright + API tiruan (tanpa font emoji); simpan sungguhan & data
+  asli belum dicoba Bos. Usulan terbuka: tampilan nominal "IDR 25,000" → "Rp 25.000".
 - Token D1 lokal (cek/migrasi dari HP) hanya ada di HP Termux: `/data/data/com.termux/files/home/.config/leosiqra/cloudflare.env`.
 
 ## Status produksi
