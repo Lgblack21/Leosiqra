@@ -18,6 +18,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **App HP Tabungan** (`claude/app-target-tabungan`, 2026-11-03): kartu target di `/app/savings` kini ikon + warna
+  (`targetIcon`/`targetColor` dari lib/targets, sama dengan web), nama target, progres berwarna, "🎉 Tercapai",
+  "N bln lagi · Rp X/bln" (`neededPerMonth`). Target tanpa setoran tetap tampil; target di depan. Daftar
+  "Setoran otomatis" hanya target dengan nominal > 0 (dulu "Rp 0 tiap bulan").
 - **Rilis APK ke GitHub Releases** (c10aa1e, 2026-11-03): workflow manual `release-android.yml` (isi versi 1.2.3 →
   APK bertanda tangan kunci tetap → Release `v<versi>` + `leosiqra-<versi>.apk`). versionCode = 100 + nomor run.
   BELUM bisa jalan sampai Bos mengisi secret `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,

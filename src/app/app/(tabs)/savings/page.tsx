@@ -15,6 +15,7 @@ import { FadeIn } from "@/components/app/FadeIn";
 import { AnimatedNumber } from "@/components/app/AnimatedNumber";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { SavingsSheet, SavingsMode } from "@/components/app/savings/SavingsSheet";
+import { targetIcon, targetColor, monthsUntil, neededPerMonth } from "@/lib/targets";
 
 // Saldo tabungan = akumulasi semua setoran − penarikan (amountIDR), sama
 // dengan halaman web Tabungan & kartu Tabungan di Dashboard.
@@ -55,7 +56,17 @@ export default function AppSavingsPage() {
     }
     return map;
   }, [all]);
-  const pos = [...goalBalances.entries()].filter(([, v]) => Math.abs(v) >= 1).sort((a, b) => b[1] - a[1]);
+  // Pos = kategori bersaldo + target yang belum ada setorannya (sama dengan web).
+  // Target (ikon & warna) di depan, lalu pos lain menurut saldo.
+  const pos = useMemo(() => {
+    const keys = new Set<string>();
+    for (const [k, v] of goalBalances) if (Math.abs(v) >= 1) keys.add(k);
+    for (const g of goals) if (g.targetAmount) keys.add(g.category);
+    const isTarget = (k: string) => goals.some((g) => g.category === k && g.targetAmount);
+    return [...keys]
+      .map((k) => [k, goalBalances.get(k) ?? 0] as [string, number])
+      .sort((a, b) => Number(isTarget(b[0])) - Number(isTarget(a[0])) || b[1] - a[1]);
+  }, [goalBalances, goals]);
 
   const now = new Date();
   const thisMonth = all.filter((s) => s.date.getFullYear() === now.getFullYear() && s.date.getMonth() === now.getMonth());
@@ -63,6 +74,8 @@ export default function AppSavingsPage() {
   const monthOut = thisMonth.filter((s) => s.transactionType === "Penarikan").reduce((a, s) => a + toIdr(s), 0);
 
   const accountName = (id: string) => accounts.find((a) => a.id === id)?.name || (id && id !== "General" ? id : "—");
+  // Target tanpa setoran otomatis (nominal 0) tidak masuk daftar setoran otomatis.
+  const autoGoals = goals.filter((g) => g.monthlyAmount > 0);
   const targetFor = (category: string) => goals.find((g) => g.category === category && g.targetAmount);
 
   const openSheet = (mode: SavingsMode, category?: string) => { lightTap(); setSheet({ mode, category }); };
@@ -124,25 +137,53 @@ export default function AppSavingsPage() {
           <div className="grid grid-cols-2 gap-3">
             {pos.map(([category, balance]) => {
               const goal = targetFor(category);
-              const pct = goal?.targetAmount ? Math.min(100, Math.max(0, (balance / goal.targetAmount) * 100)) : null;
+              if (!goal?.targetAmount) {
+                return (
+                  <button
+                    key={category}
+                    type="button"
+                    onClick={() => openSheet("Setoran", category)}
+                    className="text-left rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 active:scale-[0.98] transition-transform"
+                  >
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 truncate">{category}</p>
+                    <p className={cn("mt-1 text-sm font-black tabular-nums truncate", balance < 0 ? "text-rose-500" : "text-slate-900 dark:text-white")}>{formatIDR(balance)}</p>
+                    <p className="mt-2 text-[10px] text-slate-400">Tap untuk setor</p>
+                  </button>
+                );
+              }
+              const color = targetColor(goal);
+              const pct = Math.min(100, Math.max(0, (balance / goal.targetAmount) * 100));
+              const done = balance >= goal.targetAmount;
+              const months = monthsUntil(goal.targetDate);
+              const need = neededPerMonth(goal.targetAmount, balance, goal.targetDate);
               return (
                 <button
                   key={category}
                   type="button"
                   onClick={() => openSheet("Setoran", category)}
-                  className="text-left rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 active:scale-[0.98] transition-transform"
+                  className="relative overflow-hidden text-left rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 active:scale-[0.98] transition-transform"
+                  style={{ backgroundImage: `linear-gradient(135deg, ${color}1f, ${color}05)` }}
                 >
-                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400 truncate">{category}</p>
-                  <p className={cn("mt-1 text-sm font-black tabular-nums truncate", balance < 0 ? "text-rose-500" : "text-slate-900 dark:text-white")}>{formatIDR(balance)}</p>
-                  {pct !== null && goal?.targetAmount ? (
-                    <>
-                      <div className="mt-2 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                        <div className="h-full rounded-full bg-rose-500 transition-all duration-500" style={{ width: `${pct}%` }} />
-                      </div>
-                      <p className="mt-1 text-[10px] text-slate-400 tabular-nums">{pct.toFixed(0)}% dari {formatIDR(goal.targetAmount)}</p>
-                    </>
-                  ) : (
-                    <p className="mt-2 text-[10px] text-slate-400">Tap untuk setor</p>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[18px]"
+                      style={{ background: color, boxShadow: `0 8px 18px -10px ${color}` }}
+                    >
+                      {targetIcon(goal)}
+                    </span>
+                    <p className="min-w-0 truncate text-xs font-black text-slate-700 dark:text-slate-200">{goal.name || category}</p>
+                  </div>
+                  <p className={cn("mt-2 text-sm font-black tabular-nums truncate", balance < 0 ? "text-rose-500" : "text-slate-900 dark:text-white")}>{formatIDR(balance)}</p>
+                  <div className="mt-2 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
+                  </div>
+                  <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400 tabular-nums truncate">
+                    {done ? "🎉 Tercapai" : `${pct.toFixed(0)}% dari ${formatIDR(goal.targetAmount)}`}
+                  </p>
+                  {!done && months !== null && (
+                    <p className="text-[10px] text-slate-400 tabular-nums truncate">
+                      {months === 0 ? "Lewat tanggal target" : need ? `${months} bln lagi · ${formatIDR(need)}/bln` : `${months} bln lagi`}
+                    </p>
                   )}
                 </button>
               );
@@ -151,11 +192,11 @@ export default function AppSavingsPage() {
         )}
       </section>
 
-      {goals.length > 0 && (
+      {autoGoals.length > 0 && (
         <section>
           <h2 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 px-1">Setoran otomatis</h2>
           <ul className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800">
-            {goals.map((g) => (
+            {autoGoals.map((g) => (
               <li key={g.id} className="flex items-center gap-3 px-4 py-3">
                 <span className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0"><Repeat size={16} /></span>
                 <span className="flex-1 min-w-0">
