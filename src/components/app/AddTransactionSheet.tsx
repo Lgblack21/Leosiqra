@@ -353,7 +353,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
       onClose={onClose}
       footer={
         <div className="pb-[env(safe-area-inset-bottom)]">
-          {!catsOpen && <AmountKeypad
+          {!catsOpen && !showSmart && <AmountKeypad
             variant="flat"
             value={amount}
             onChange={setAmount}
@@ -400,7 +400,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
             </button>
             <button
               type="button"
-              onClick={() => { lightTap(); setShowSmart((v) => !v); }}
+              onClick={() => { lightTap(); setCatsOpen(false); setShowSmart((v) => !v); }}
               aria-label="Isi lewat ketik, suara, atau foto struk"
               aria-pressed={showSmart}
               className={cn("w-9 h-9 rounded-full flex items-center justify-center transition-colors", showSmart ? "bg-white text-slate-900" : "bg-white/20 text-white")}
@@ -412,7 +412,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
 
         <button
           type="button"
-          onClick={() => { if (!catsOpen) return; lightTap(); setCatsOpen(false); }}
+          onClick={() => { if (!catsOpen && !showSmart) return; lightTap(); setCatsOpen(false); setShowSmart(false); }}
           aria-label="Ketik nominal"
           className="relative mt-5 flex w-full items-baseline justify-center gap-1.5 min-w-0"
           aria-live="polite"
@@ -432,13 +432,13 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
             {shown}
           </motion.span>
         </button>
-        {catsOpen && (
+        {(catsOpen || showSmart) && (
           <p className="relative -mt-0.5 text-center text-[11px] font-bold text-white/70">Ketuk nominal untuk mengetik</p>
         )}
 
         <div className="relative mt-3.5 flex flex-wrap justify-center gap-2">
           {!isTransfer && (
-            <button type="button" onClick={() => { lightTap(); setCatsOpen((v) => !v); }} className={heroChip}>
+            <button type="button" onClick={() => { lightTap(); setShowSmart(false); setCatsOpen((v) => !v); }} className={heroChip}>
               <span className="truncate">{category ? `${catEmoji} ${subCategory || category}` : "Pilih kategori"}</span>
               <ChevronDown size={13} className="shrink-0 opacity-70" />
             </button>
@@ -465,7 +465,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
               {feedback.msg}
             </div>
           )}
-          {showSmart && <SmartBar ctx={ctx} onDraft={applyDraft} />}
+          {showSmart && <SmartBar ctx={ctx} onDraft={(d, src, info) => { applyDraft(d, src, info); setShowSmart(false); }} layout="tiles" />}
           {fromReminder && !hint && (
             <div className="flex items-start gap-2 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 px-3.5 py-2.5 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
               <Sparkles size={13} className="mt-0.5 shrink-0" />
@@ -484,7 +484,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
         </div>
       ) : null}
 
-      {isTransfer ? (
+      {showSmart ? null : isTransfer ? (
         <div className="px-4 pt-4">
           <div className="flex items-center gap-2 rounded-[20px] bg-slate-100 dark:bg-slate-800 p-2.5">
             <button type="button" onClick={() => openPicker("acc")} className="flex min-w-0 flex-1 items-center gap-2 text-left">
@@ -533,7 +533,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
         </div>
       )}
 
-      {!catsOpen && (
+      {!catsOpen && !showSmart && (
         <label className="mx-4 mt-2 mb-1 flex items-center gap-2 rounded-2xl bg-slate-100 px-3.5 py-2.5 dark:bg-slate-800">
           <PencilLine size={14} className="shrink-0 text-slate-400" />
           <input

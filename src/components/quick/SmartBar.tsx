@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Mic, Camera, Sparkles, Loader2, Square, CornerDownLeft, ClipboardPaste } from "lucide-react";
+import { Mic, Camera, Sparkles, Loader2, Square, CornerDownLeft, ClipboardPaste, Keyboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { lightTap } from "@/lib/haptics";
 import { parseQuickText, type ParseContext, type QuickDraft } from "@/lib/quick/parse";
@@ -20,6 +20,9 @@ interface Props {
   // Teks dari Shortcut iPhone (?teks=, mis. hasil dikte atau isi SMS bank):
   // dibaca AI seperti ucapan, hasilnya tetap dicek user sebelum disimpan.
   initialText?: string;
+  /** "tiles": tiga tombol besar Suara / Foto struk / Ketik (sheet Tambah
+   * Transaksi app HP). Bawaan: satu bar ketik + ikon mic & kamera. */
+  layout?: "bar" | "tiles";
 }
 
 type Status = { kind: "idle" } | { kind: "listening" } | { kind: "thinking"; label: string } | { kind: "error"; msg: string };
@@ -30,8 +33,9 @@ const defined = <T extends object>(o: T) =>
 // Bar "ketik pintar" + mic + kamera. Semua jalur menghasilkan QuickDraft yang
 // diisi ke form oleh pemanggil — tidak ada yang langsung tersimpan, user
 // selalu melihat & mengonfirmasi dulu.
-export function SmartBar({ ctx, onDraft, className, autoStart, initialText }: Props) {
+export function SmartBar({ ctx, onDraft, className, autoStart, initialText, layout = "bar" }: Props) {
   const [text, setText] = useState("");
+  const [typing, setTyping] = useState(false);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [canSpeak, setCanSpeak] = useState(false);
   const sessionRef = useRef<SpeechSession | null>(null);
@@ -142,6 +146,89 @@ export function SmartBar({ ctx, onDraft, className, autoStart, initialText }: Pr
         preview.date ? (preview.date === ctx.today ? null : preview.date.split("-").reverse().slice(0, 2).join("/")) : null,
       ].filter(Boolean) as string[]
     : [];
+
+  if (layout === "tiles") {
+    const listening = status.kind === "listening";
+    const tile = "flex flex-col items-center justify-center gap-2 rounded-[22px] py-5 text-[14px] font-extrabold transition-transform active:scale-[0.97] disabled:opacity-40";
+    return (
+      <div className={cn("space-y-3", className)}>
+        <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => onPhoto(e.target.files?.[0])} />
+        {listening || status.kind === "thinking" ? (
+          <div className="flex flex-col items-center gap-3 rounded-[22px] bg-slate-50 px-4 py-6 text-center dark:bg-slate-800/60">
+            {listening ? (
+              <button
+                type="button"
+                onClick={toggleMic}
+                aria-label="Berhenti"
+                className="relative flex h-20 w-20 items-center justify-center rounded-full bg-rose-500 text-white shadow-lg shadow-rose-300/50"
+              >
+                <span aria-hidden className="absolute inset-0 rounded-full"><span className="mic-wave" /><span className="mic-wave" /></span>
+                <Square size={22} fill="currentColor" className="relative" />
+              </button>
+            ) : (
+              <span className="flex h-20 w-20 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
+                <Loader2 size={30} className="animate-spin" />
+              </span>
+            )}
+            <p className="text-[14px] font-extrabold text-slate-900 dark:text-white">
+              {listening ? "Mendengarkan… ketuk untuk selesai" : status.kind === "thinking" ? status.label : ""}
+            </p>
+            {text && <p className="max-w-full text-[13px] font-semibold text-slate-500 dark:text-slate-400">&ldquo;{text}&rdquo;</p>}
+          </div>
+        ) : typing ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white py-1.5 pl-4 pr-1.5 focus-within:border-indigo-400 dark:border-slate-700 dark:bg-slate-900">
+              <Sparkles size={16} className="shrink-0 text-indigo-500" />
+              <input
+                autoFocus
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyText(); } }}
+                placeholder="mis. 25rb kopi bca kemarin"
+                aria-label="Ketik pintar"
+                enterKeyHint="done"
+                className="min-w-0 flex-1 bg-transparent py-2 text-sm font-bold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400 dark:text-white"
+              />
+              <button type="button" onClick={applyText} disabled={!text.trim()} className="flex h-10 shrink-0 items-center gap-1 rounded-xl bg-indigo-600 px-3 text-xs font-black text-white disabled:opacity-40">
+                Isi <CornerDownLeft size={13} />
+              </button>
+            </div>
+            {chips.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 px-1">
+                {chips.map((c) => (
+                  <span key={c} className="rounded-full bg-indigo-50 px-2.5 py-1 text-[10px] font-black text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">{c}</span>
+                ))}
+              </div>
+            )}
+            <button type="button" onClick={() => { lightTap(); setTyping(false); setText(""); }} className="w-full py-2 text-[12px] font-bold text-slate-400">
+              Kembali ke pilihan
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-3 gap-2.5">
+              <button type="button" onClick={toggleMic} disabled={!canSpeak} className={cn(tile, "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300")}>
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-600 text-white"><Mic size={22} /></span>
+                Suara
+              </button>
+              <button type="button" onClick={() => { lightTap(); fileRef.current?.click(); }} className={cn(tile, "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300")}>
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500 text-white"><Camera size={22} /></span>
+                Foto struk
+              </button>
+              <button type="button" onClick={() => { lightTap(); setTyping(true); }} className={cn(tile, "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300")}>
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-white"><Keyboard size={22} /></span>
+                Ketik
+              </button>
+            </div>
+            <p className="px-2 text-center text-[12px] font-medium text-slate-400 dark:text-slate-500">
+              {canSpeak ? "Contoh: “makan siang 35 ribu pakai BCA”. Hasilnya dicek dulu sebelum disimpan." : "Suara tidak didukung di perangkat ini — pakai foto struk atau ketik."}
+            </p>
+          </>
+        )}
+        {status.kind === "error" && <p className="px-1 text-center text-[12px] font-bold text-rose-500">{status.msg}</p>}
+      </div>
+    );
+  }
 
   return (
     <div className={cn("space-y-2", className)}>

@@ -41,6 +41,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   v4: lembar Detail + tombol Selesai DIHAPUS — semua satu halaman. Panel atas: pil kategori, pil rekening (logo
   kecil), pil tanggal. Rekening & tanggal = pop-up di dalam sheet (`picker` "acc"/"to"/"date"), satu ketukan
   memilih & menutup. Catatan = kolom tipis di bawah kategori. Transfer: Dari/Ke dengan logo, masing-masing pop-up.
+  v5: tombol ✨ = mode AI — keypad, kategori & catatan disembunyikan, tampil 3 tombol besar Suara / Foto struk / Ketik
+  (`SmartBar layout="tiles"`; layout bawaan "bar" di /input-cepat tidak berubah). Setelah AI mengisi, mode AI
+  tertutup otomatis → form biasa + catatan "Terisi dari …". Suara & foto memakai AI sungguhan (belum dicoba di HP
+  setelah perubahan ini; di headless hanya jalur Ketik yang diuji).
 - Live (0b277e8, 2026-11-03): **form Tambah Transaksi app HP satu layar** (pilihan Bos) — `AddTransactionSheet` +
   `src/components/app/CategoryGrid.tsx` (petak ikon, urut paling sering dipakai, "Lainnya", pil sub-kategori),
   rekening jadi pil (`AccountPills`), tanggal+Catatan satu baris, SmartBar dilipat ke tombol ✨, keypad tombol `000`
