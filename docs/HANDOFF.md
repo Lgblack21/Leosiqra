@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-03 (push native Android FCM aktif & teruji di HP)
+Terakhir diperbarui: 2026-11-03 malam (deploy #114: mode gelap sisa, pengingat masa aktif, pengingat pintar, skor kesehatan)
 
 ## Siapa sedang kerja
 
@@ -18,6 +18,17 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-03 malam, deploy #114 (3 ide Tower di-ACC Bos):**
+  - Mode gelap web sisa: Investasiku, Kekayaan/Tabungan, Kotak Masuk (`.web-keep` di kartu yang selalu gelap).
+  - `sendPlanExpiryReminders` (cron harian): push H-3 & H-1 sebelum `expired_at` (trial/PRO), klaim
+    `$.prefs.planRemind`. Belum: email & "sisa N hari" di /app/profile.
+  - `sendBudgetAlerts` (cron menit, tiap jam menit ke-5): anggaran kategori 80% lalu 100%, state
+    `$.prefs.budgetAlert`, CAS. `sendBillReminders` (harian): transaksi rutin Pengeluaran/Tabungan H-3,
+    klaim `payload_json.remindedFor`. NOTIFY_KEYS + `budget`, `bills` (toggle di Pengaturan → Notifikasi).
+    Hutang/cicilan H-3 tidak bisa: tabel hutang tak punya tanggal jatuh tempo.
+  - Skor Kesehatan Finansial (`src/lib/healthScore.ts`, `HealthScoreCard`) di dashboard web saja, dihitung
+    di browser. Belum: versi HP, kartu bagikan.
+  - Belum terverifikasi di produksi: ketiga push baru (butuh kondisi data nyata).
 - **2026-11-03 malam (live setelah deploy ini):**
   - Sesi app native permanen seperti PWA: /masuk & /auth/login kirim `isPwa: true` juga untuk Capacitor
     (`isNativeApp`). Dulu 30 hari & dihitung sesi web (bisa ditendang MAX_CONCURRENT_WEB_SESSIONS).
@@ -26,8 +37,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   - Mode gelap web +6 halaman (lihat komentar `src/lib/webTheme.ts`); kelas `.web-keep` untuk kartu yang selalu
     gelap. Belum: Investasiku (pakai .web-keep di kartu nilai + tombol kembali + bar bawah), Kekayaan, Kotak Masuk.
   - Tower: ide Import mutasi → diterapkan; ide Pengingat pintar diberi `catatanDev` (yang sudah/belum ada).
-    Menunggu keputusan Bos: Pengingat pintar (sisa: anggaran 80/100%, H-3 hutang/cicilan/rutin), Skor kesehatan
-    finansial, Pengingat trial/PRO H-3/H-1.
+    (Ketiga ide itu sudah dikerjakan — lihat entri deploy #114 di atas.)
 - **Cron pengingat per menit** (c15533c, live deploy #111): akun Cloudflare = **Workers Free, maks 5 cron per AKUN**
   (deploy 273a32e gagal saat menambah trigger ke-4 di worker ini). Trigger `*/10` diganti `* * * * *`: tiap menit
   `sendDueReminders`; menit kelipatan 10 (`event.scheduledTime`) tugas lama 10 menit (promo, pengingat harian, Gmail,
