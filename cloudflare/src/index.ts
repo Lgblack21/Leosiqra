@@ -54,6 +54,9 @@ export interface Env {
   YT_REFRESH_TOKEN?: string;
   VAPID_PUBLIC_KEY?: string;
   VAPID_PRIVATE_KEY?: string;
+  // JSON service account Firebase (project → Service accounts → Generate key).
+  // Kosong = push aplikasi native (FCM) dilewati, web push & lonceng tetap jalan.
+  FCM_SERVICE_ACCOUNT?: string;
   VAPID_SUBJECT?: string;
   LOGO_DEV_TOKEN?: string;
   COINGECKO_API_KEY?: string;
@@ -10793,6 +10796,154 @@ const recordNotification = async (env: Env, userId: string, title: string, body:
   }
 };
 
+// ── Push aplikasi native (Android, Firebase Cloud Messaging HTTP v1) ────────
+// Token didaftarkan app (POST /api/member/native-push-token) dan diikat ke sesi
+// login: hanya token yang sesinya masih hidup yang dikirimi. Worker hanya
+// memakai FCM sebagai pengantar — data & jadwal tetap di D1/cron Cloudflare.
+// iOS belum: APNs wajib HTTP/2 (subrequest Worker HTTP/1.1) → nanti lewat FCM.
+type FcmServiceAccount = { project_id: string; client_email: string; private_key: string };
+let fcmAccessToken: { token: string; exp: number } | null = null;
+
+const b64urlBytes = (bytes: Uint8Array) => {
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+};
+const b64urlText = (text: string) => b64urlBytes(new TextEncoder().encode(text));
+const pemToPkcs8 = (pem: string) => {
+  const b64 = pem.replace(/-----[^-]+-----/g, "").replace(/\s+/g, "");
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+};
+
+const readFcmServiceAccount = (env: Env): FcmServiceAccount | null => {
+  if (!env.FCM_SERVICE_ACCOUNT) return null;
+  try {
+    const sa = JSON.parse(env.FCM_SERVICE_ACCOUNT) as Partial<FcmServiceAccount>;
+    return sa.project_id && sa.client_email && sa.private_key ? (sa as FcmServiceAccount) : null;
+  } catch {
+    console.error("FCM_SERVICE_ACCOUNT bukan JSON yang valid.");
+    return null;
+  }
+};
+
+// OAuth2 token Google (berlaku 1 jam) dari JWT RS256 yang ditandatangani
+// private key service account; disimpan di memori isolate sampai ±5 menit sebelum habis.
+const getFcmAccessToken = async (sa: FcmServiceAccount) => {
+  const now = Math.floor(Date.now() / 1000);
+  if (fcmAccessToken && fcmAccessToken.exp - 300 > now) return fcmAccessToken.token;
+  const header = b64urlText(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const claims = b64urlText(
+    JSON.stringify({
+      iss: sa.client_email,
+      scope: "https://www.googleapis.com/auth/firebase.messaging",
+      aud: "https://oauth2.googleapis.com/token",
+      iat: now,
+      exp: now + 3600,
+    })
+  );
+  const key = await crypto.subtle.importKey("pkcs8", pemToPkcs8(sa.private_key), { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+  const sig = new Uint8Array(await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(`${header}.${claims}`)));
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: `${header}.${claims}.${b64urlBytes(sig)}` }),
+  });
+  if (!res.ok) throw new Error(`Token OAuth FCM ditolak (${res.status}).`);
+  const data = (await res.json()) as { access_token: string; expires_in?: number };
+  fcmAccessToken = { token: data.access_token, exp: now + (data.expires_in ?? 3600) };
+  return data.access_token;
+};
+
+const isMissingNativePushTable = (error: unknown) => /no such table:\s*native_push_tokens/i.test(error instanceof Error ? error.message : String(error));
+
+const sendNativePushToUser = async (env: Env, userId: string, title: string, body: string, url: string) => {
+  const sa = readFcmServiceAccount(env);
+  if (!sa) return;
+  let rows: { token: string }[] = [];
+  try {
+    const { results } = await env.DB.prepare(
+      `SELECT t.token FROM native_push_tokens t JOIN sessions s ON s.id = t.session_id
+        WHERE t.user_id = ? AND s.user_id = t.user_id AND s.expires_at > ?`
+    )
+      .bind(userId, nowIso())
+      .all<{ token: string }>();
+    rows = results ?? [];
+  } catch (error) {
+    if (!isMissingNativePushTable(error)) console.error("Gagal membaca token push native:", error);
+    return;
+  }
+  if (!rows.length) return;
+  let accessToken: string;
+  try {
+    accessToken = await getFcmAccessToken(sa);
+  } catch (error) {
+    console.error("Push native dilewati:", error);
+    return;
+  }
+  for (const { token } of rows) {
+    try {
+      const res = await fetch(`https://fcm.googleapis.com/v1/projects/${encodeURIComponent(sa.project_id)}/messages:send`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          message: {
+            token,
+            notification: { title, body },
+            data: { url: url.startsWith("/") ? url : "/app/notifikasi" },
+            android: { priority: "HIGH" },
+          },
+        }),
+      });
+      if (res.ok) continue;
+      const detail = await res.text();
+      // Token dicabut (app dihapus / data dibersihkan) → hapus supaya tidak dicoba lagi.
+      if (res.status === 404 || /UNREGISTERED|registration-token-not-registered/.test(detail)) {
+        await env.DB.prepare("DELETE FROM native_push_tokens WHERE token = ?").bind(token).run();
+      } else {
+        console.error(`FCM menolak push (${res.status}): ${detail.slice(0, 300)}`);
+      }
+    } catch (error) {
+      console.error("Gagal mengirim push native:", error);
+    }
+  }
+};
+
+// POST   /api/member/native-push-token { token, platform } → daftarkan HP ini untuk sesi sekarang
+// DELETE /api/member/native-push-token { token }            → berhenti (mis. izin dicabut)
+async function handleNativePushToken(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const { session } = authResult;
+  const payload = await parseJson<{ token?: unknown; platform?: unknown }>(request);
+  const token = typeof payload.token === "string" ? payload.token.trim() : "";
+  if (token.length < 20 || token.length > 4096 || !/^[\w:.\-]+$/.test(token)) {
+    return json({ error: "Token perangkat tidak valid." }, { status: 400 });
+  }
+  try {
+    if (request.method === "DELETE") {
+      await env.DB.prepare("DELETE FROM native_push_tokens WHERE token = ? AND user_id = ?").bind(token, session.user.id).run();
+      return json({ ok: true });
+    }
+    const platform = payload.platform === "ios" ? "ios" : "android";
+    const now = nowIso();
+    await env.DB.prepare(
+      `INSERT INTO native_push_tokens (token, user_id, session_id, platform, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(token) DO UPDATE SET user_id = excluded.user_id, session_id = excluded.session_id,
+         platform = excluded.platform, updated_at = excluded.updated_at`
+    )
+      .bind(token, session.user.id, session.sessionId, platform, now, now)
+      .run();
+    return json({ ok: true });
+  } catch (error) {
+    if (isMissingNativePushTable(error)) return json({ error: "Notifikasi aplikasi belum aktif." }, { status: 503 });
+    throw error;
+  }
+}
+
 // Kirim ke SEMUA perangkat/subscription milik satu user (bisa lebih dari satu).
 const sendWebPushToUser = async (env: Env, userId: string, title: string, body: string, url: string) => {
   await recordNotification(env, userId, title, body, url);
@@ -10808,6 +10959,7 @@ const sendWebPushToUser = async (env: Env, userId: string, title: string, body: 
   for (const sub of results ?? []) {
     await sendWebPushToSubscription(env, sub, message);
   }
+  await sendNativePushToUser(env, userId, title, body, url);
 };
 
 // Broadcast satu kali ke SEMUA subscription semua user (bukan per-user) — untuk
@@ -12474,6 +12626,12 @@ const cleanupNotifications = async (env: Env) => {
     ]);
   } catch (error) {
     if (!/no such table:\s*notifications/i.test(error instanceof Error ? error.message : String(error))) throw error;
+  }
+  try {
+    // Token yang sesinya sudah tidak ada (logout / kedaluwarsa) tidak akan dikirimi lagi.
+    await env.DB.prepare("DELETE FROM native_push_tokens WHERE session_id NOT IN (SELECT id FROM sessions)").run();
+  } catch (error) {
+    if (!isMissingNativePushTable(error)) throw error;
   }
 };
 
@@ -15557,6 +15715,10 @@ const worker = {
 
       if (url.pathname === "/api/member/push-subscription" && request.method === "DELETE") {
         return await handleDeletePushSubscription(request, env);
+      }
+
+      if (url.pathname === "/api/member/native-push-token" && (request.method === "POST" || request.method === "DELETE")) {
+        return await handleNativePushToken(request, env);
       }
 
       if (url.pathname === "/api/member/payments" && request.method === "POST") {

@@ -6,6 +6,7 @@ import { cn, formatMoney } from '@/lib/utils';
 import { reminderService, type Reminder, type ReminderRepeat } from '@/lib/services/reminderService';
 import { getExistingSubscription, isPushSupported, subscribeToPush } from '@/lib/pushNotifications';
 import { isNativeApp } from '@/lib/pwaInstall';
+import { nativePushStatus } from '@/lib/nativePush';
 import { NumberInput } from '@/components/ui/NumberInput';
 import { useFeedback } from '@/components/ui/Feedback';
 
@@ -131,7 +132,8 @@ export function RemindersView({ openNotifications }: { openNotifications?: () =>
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState('');
   const [pushOn, setPushOn] = useState<boolean | null>(null);
-  const [native, setNative] = useState(false);
+  // Aplikasi native: status izin push FCM (null = bukan native / belum dicek).
+  const [native, setNative] = useState<Awaited<ReturnType<typeof nativePushStatus>> | null>(null);
   const [enabling, setEnabling] = useState(false);
 
   const load = useCallback(() => {
@@ -142,7 +144,7 @@ export function RemindersView({ openNotifications }: { openNotifications?: () =>
   }, []);
   useEffect(() => {
     load();
-    setNative(isNativeApp());
+    if (isNativeApp()) void nativePushStatus().then(setNative);
     if (!isPushSupported()) setPushOn(false);
     else getExistingSubscription().then((s) => setPushOn(Boolean(s))).catch(() => setPushOn(false));
   }, [load]);
@@ -190,11 +192,18 @@ export function RemindersView({ openNotifications }: { openNotifications?: () =>
 
   return (
     <div className="space-y-4">
-      {pushOn === false && native && !openNotifications ? (
-        <div className="flex items-start gap-3 rounded-2xl bg-indigo-50 p-3 ring-1 ring-indigo-100 dark:bg-indigo-500/10 dark:ring-indigo-500/20">
-          <BellRing size={18} className="mt-0.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
-          <span className="text-[13px] leading-snug text-indigo-900 dark:text-indigo-200">Saat waktunya, pengingat muncul di tab <b>Notifikasi</b> (lonceng di Beranda). Pemberitahuan pop-up di HP belum tersedia di aplikasi ini.</span>
-        </div>
+      {native && !openNotifications ? (
+        native === 'granted' ? null : (
+          <div className="flex items-start gap-3 rounded-2xl bg-indigo-50 p-3 ring-1 ring-indigo-100 dark:bg-indigo-500/10 dark:ring-indigo-500/20">
+            <BellRing size={18} className="mt-0.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
+            <span className="text-[13px] leading-snug text-indigo-900 dark:text-indigo-200">
+              Saat waktunya, pengingat muncul di tab <b>Notifikasi</b> (lonceng di Beranda).{' '}
+              {native === 'unavailable'
+                ? 'Pop-up di HP butuh versi aplikasi terbaru.'
+                : 'Supaya juga muncul sebagai pop-up, izinkan notifikasi Leosiqra di Pengaturan HP.'}
+            </span>
+          </div>
+        )
       ) : pushOn === false && (
         <button type="button" onClick={() => void enablePush()} disabled={enabling} className="flex w-full items-start gap-3 rounded-2xl bg-amber-50 p-3 text-left ring-1 ring-amber-200 disabled:opacity-60 dark:bg-amber-500/10 dark:ring-amber-500/30">
           {enabling ? <Loader2 size={18} className="mt-0.5 shrink-0 animate-spin text-amber-600" /> : <BellOff size={18} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />}

@@ -11,6 +11,7 @@ import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 import { AppTour } from "@/components/app/AppTour";
 import { reportAppOpened } from "@/lib/appUsage";
 import { BrandSplash } from "@/components/app/BrandSplash";
+import { initNativePush } from "@/lib/nativePush";
 
 // Native splash (drawable/splash.png) cuma nyala sekilas selama Android/iOS
 // nyiapin Activity — begitu WebView aktif dia langsung ilang, dan APK ini
@@ -81,6 +82,12 @@ export default function AppShell({
         return;
       }
       reportAppOpened("leosiqra");
+      // Android: izin & token push (sekali per buka app). Ketuk notifikasi →
+      // /input-cepat butuh navigasi penuh (membaca ?teks= saat dimuat).
+      void initNativePush((url) => {
+        if (url.startsWith("/input-cepat")) window.location.href = url;
+        else router.push(url);
+      });
       setUserName(user.displayName ?? null);
       setLoading(false);
       hideSplash();
