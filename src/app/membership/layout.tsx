@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
@@ -18,6 +18,9 @@ import { reportAppOpened } from '@/lib/appUsage';
 import { useCategoryTemplateSync } from '@/lib/categoryTemplateSync';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { isWebDarkReady } from '@/lib/webTheme';
+import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
+import { initNativePush } from '@/lib/nativePush';
 
 const ONBOARDING_PATH = '/membership/onboarding';
 // Halaman layar penuh: tanpa sidebar, header, dan tab bar HP (punya navigasi sendiri).
@@ -65,12 +68,22 @@ function MembershipShell({
   }, [pathname]);
 
   useEffect(() => {
-    cloudflareApi<{ user?: { onboarded?: boolean } | null }>('/api/auth/me')
+    // Aplikasi native (tablet memakai tampilan ini): halaman masuk versi aplikasi.
+    const loginPath = Capacitor.isNativePlatform() ? '/masuk?next=%2Fapp' : '/auth/login';
+    cloudflareApi<{ user?: { id?: string; onboarded?: boolean } | null }>('/api/auth/me')
       .then((result) => {
         if (!result.user) {
           setLoading(false);
-          router.replace('/auth/login');
+          router.replace(loginPath);
           return;
+        }
+        // Tablet (aplikasi native): daftarkan push di sini juga — AppShell /app
+        // tidak dipasang. Ketuk notifikasi membuka URL web apa adanya.
+        if (Capacitor.isNativePlatform() && result.user.id) {
+          void initNativePush(result.user.id, (url) => {
+            if (url.startsWith('/input-cepat')) window.location.href = url;
+            else router.push(url);
+          });
         }
         // Datang dari tautan "Ajak teman" (?ref=) → pakai kodenya sekali.
         // Ditolak server (kode sendiri/sudah pakai/akun >30 hari) = buang;
@@ -94,9 +107,21 @@ function MembershipShell({
       })
       .catch(() => {
         setLoading(false);
-        router.replace('/auth/login');
+        router.replace(loginPath);
       });
   }, [router, pathname]);
+
+  // Tombol back Android (aplikasi di tablet): mundur satu halaman; di Ringkasan → keluar ke layar utama.
+  const pathRef = useRef(pathname);
+  useEffect(() => { pathRef.current = pathname; }, [pathname]);
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const handle = CapacitorApp.addListener('backButton', () => {
+      if (pathRef.current === '/membership/dashboard') void CapacitorApp.minimizeApp();
+      else router.back();
+    });
+    return () => { void handle.then((h) => h.remove()); };
+  }, [router]);
 
   // Hapus spinner agar transisi dari tombol login terasa instan.
   if (loading) return null;

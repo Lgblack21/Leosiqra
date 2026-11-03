@@ -12,7 +12,7 @@ import { AppTour } from "@/components/app/AppTour";
 import { reportAppOpened } from "@/lib/appUsage";
 import { BrandSplash } from "@/components/app/BrandSplash";
 import { initNativePush } from "@/lib/nativePush";
-import { PushBanner } from "@/components/app/PushBanner";
+import { isNativeTablet } from "@/lib/device";
 import { openAppNotificationUrl } from "@/lib/txPrefill";
 
 // Native splash (drawable/splash.png) cuma nyala sekilas selama Android/iOS
@@ -82,8 +82,14 @@ export default function AppShell({
     const unsub = onAuthStateChanged(auth, (user) => {
       clearTimeout(safetyTimer);
       if (!user) {
-        router.replace(`/mulai?next=${encodeURIComponent(pathname)}`);
+        router.replace(`${Capacitor.isNativePlatform() ? "/masuk" : "/mulai"}?next=${encodeURIComponent(pathname)}`);
         hideSplash();
+        return;
+      }
+      // Tablet (aplikasi native, layar ≥ 600dp): pakai tampilan web lengkap
+      // /membership yang dirancang untuk layar lebar; HP tetap /app.
+      if (isNativeTablet()) {
+        window.location.replace("/membership/dashboard");
         return;
       }
       reportAppOpened("leosiqra");
@@ -123,7 +129,6 @@ function ThemedShell({ children }: { children: React.ReactNode }) {
     <div className={resolvedTheme === "dark" ? "dark" : ""}>
       {children}
       <AppTour />
-      <PushBanner />
     </div>
   );
 }

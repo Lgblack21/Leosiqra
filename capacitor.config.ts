@@ -19,6 +19,11 @@ const config: CapacitorConfig = {
     allowNavigation: ["accounts.google.com", "*.googleusercontent.com"],
   },
   plugins: {
+    // Android tidak menampilkan notifikasi FCM saat aplikasi sedang dibuka;
+    // "alert" membuat plugin tetap menampilkannya sebagai notifikasi sistem.
+    PushNotifications: {
+      presentationOptions: ["badge", "sound", "alert"],
+    },
     // launchAutoHide: false — splash TETAP nempel (bukan ilang otomatis
     // setelah durasi tetap) sampai src/app/app/layout.tsx manggil
     // SplashScreen.hide() persis pas sesi user siap & /app mau ditampilkan.

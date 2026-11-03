@@ -18,6 +18,16 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **App native: tablet, login app, notifikasi saat app dibuka** (`claude/app-tablet-login`, 2026-11-03):
+  - Tablet (Capacitor, sisi layar terpendek ≥ 600dp, `src/lib/device.ts` `isNativeTablet`) → AppShell mengalihkan ke
+    `/membership/dashboard` (tampilan web). Layout /membership di native: initNativePush + tombol back Android
+    (Ringkasan → minimize), belum login → `/masuk`. HP tetap /app.
+  - Halaman masuk app `/masuk` (email, sandi, Lupa sandi, "Belum punya akun? Daftar" → /auth/register): dipakai saat
+    belum login di native (AppShell, logout Profil /app, /membership). Web tetap /auth/login & /mulai. Tanpa Google
+    (OAuth Google diblokir di WebView).
+  - Push saat app di depan: Android tidak menampilkan notifikasi FCM; `capacitor.config.ts`
+    `PushNotifications.presentationOptions` ["badge","sound","alert"] → plugin menampilkan notifikasi sistem
+    (BUTUH APK BARU). Event `leosiqra:push` memuat ulang lonceng. Belum diuji di HP.
 - **Input suara app Android** (ea3f686, live 2026-11-03): perekam WebView selalu "Izin mikrofon ditolak" karena
   manifest tidak punya `MODIFY_AUDIO_SETTINGS` (BridgeWebChromeClient Capacitor meminta itu + RECORD_AUDIO).
   Sementara: di native, NotAllowedError → pengenal suara bawaan HP (plugin speech-recognition). Permanen: izin

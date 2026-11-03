@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { LogOut, Mail, Moon, Star, Sun, Smartphone } from "lucide-react";
@@ -74,7 +75,7 @@ export default function ProfilePage() {
     setLoggingOut(true);
     try {
       await cloudflareApi("/api/auth/logout", { method: "POST" });
-      router.push("/auth/login");
+      router.push(Capacitor.isNativePlatform() ? "/masuk" : "/auth/login");
     } catch {
       setLoggingOut(false);
     }

@@ -8,8 +8,9 @@ import { cloudflareApi } from "@/lib/cloudflare-api";
 // register() lagi supaya token pindah ke sesi baru. Ketuk notifikasi → openUrl.
 // iOS belum: butuh Firebase Messaging di app iOS (APNs wajib HTTP/2, Worker
 // tidak bisa kirim langsung) — dilewati di sini sampai itu dibuat.
-// Push yang masuk saat aplikasi sedang dibuka (Android tidak menampilkannya
-// sendiri) → event ini → PushBanner + daftar notifikasi dimuat ulang.
+// Push yang masuk saat aplikasi sedang dibuka: notifikasi sistem ditampilkan
+// plugin (presentationOptions di capacitor.config.ts, butuh APK baru); event ini
+// membuat daftar & angka lonceng ikut dimuat ulang.
 export const PUSH_EVENT = "leosiqra:push";
 export type ForegroundPush = { title: string; body: string; url: string | null };
 
