@@ -18,6 +18,12 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **Rilis APK ke GitHub Releases** (c10aa1e, 2026-11-03): workflow manual `release-android.yml` (isi versi 1.2.3 →
+  APK bertanda tangan kunci tetap → Release `v<versi>` + `leosiqra-<versi>.apk`). versionCode = 100 + nomor run.
+  BELUM bisa jalan sampai Bos mengisi secret `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
+  `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` (keystore dibuat Bos di Termux — bukan kunci Play Store). Pertama kali
+  pasang rilis: hapus APK debug dulu (beda kunci). Deploy #106 (tablet, /masuk, notifikasi) live; APK debug dengan
+  presentationOptions = run Build APK Android #3.
 - **App native: tablet, login app, notifikasi saat app dibuka** (`claude/app-tablet-login`, 2026-11-03):
   - Tablet (Capacitor, sisi layar terpendek ≥ 600dp, `src/lib/device.ts` `isNativeTablet`) → AppShell mengalihkan ke
     `/membership/dashboard` (tampilan web). Layout /membership di native: initNativePush + tombol back Android
