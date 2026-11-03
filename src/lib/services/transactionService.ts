@@ -1,3 +1,4 @@
+import { dueFromPayload, type DebtDue } from '@/lib/debtDue';
 import { cloudflareApi } from '../cloudflare-api';
 import { notifyCollectionChanged } from '../cf-firestore';
 
@@ -32,6 +33,8 @@ export interface Transaction {
   tags?: string[];
   // Sudah dicek user di "Cek hari" Laporan (payload_json.reviewed). Bukan data uang.
   reviewed?: boolean;
+  // Hutang/piutang: jatuh tempo opsional (payload_json.due). null saat update = hapus.
+  due?: DebtDue | null;
   createdAt: Date;
 }
 
@@ -83,6 +86,7 @@ export const transactionService = {
         status: data.status,
         ...(data.applyBalance ? { apply_balance: true } : {}),
         ...(data.tags?.length ? { tags: data.tags } : {}),
+        ...(data.type === 'debt' && data.due ? { due: data.due } : {}),
       },
     });
     notifyCollectionChanged('transactions');
@@ -120,6 +124,7 @@ export const transactionService = {
         note: (data.note as string | undefined) ?? undefined,
         tags: tagsFromPayload(data.payload_json),
         reviewed: reviewedFromPayload(data.payload_json),
+        due: dueFromPayload(data.payload_json),
         currency: (data.currency as string | undefined) ?? 'IDR',
         date: data.date ? new Date(String(data.date)) : new Date(),
         createdAt: data.created_at ? new Date(String(data.created_at)) : new Date()
@@ -158,6 +163,7 @@ export const transactionService = {
         ...(data.note !== undefined ? { note: data.note } : {}),
         ...(data.tags !== undefined ? { tags: data.tags } : {}),
         ...(data.reviewed !== undefined ? { reviewed: data.reviewed } : {}),
+        ...(data.due !== undefined ? { due: data.due } : {}),
       },
     });
     notifyCollectionChanged('transactions');

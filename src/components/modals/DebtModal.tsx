@@ -10,6 +10,8 @@ import { updateMemberTotals } from '@/lib/services/userService';
 import { CurrencySelect } from '@/components/CurrencySelect';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { formatCurrency, getCurrencySymbol, toLocalDateString } from '@/lib/utils';
+import { DueDateInput } from '@/components/debts/DueDateInput';
+import type { DebtDue } from '@/lib/debtDue';
 
 interface DebtModalProps {
   userId: string;
@@ -27,6 +29,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [rates, setRates] = useState<ExchangeRates | null>(null);
   const [convertedAmount, setConvertedAmount] = useState<number>(0);
+  const [due, setDue] = useState<DebtDue | null>(null);
   
   const [formData, setFormData] = useState({
     debtType: 'hutang' as 'hutang' | 'piutang',
@@ -120,6 +123,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
         // Saldo rekening terpilih langsung ikut berubah (piutang keluar,
         // hutang tunai masuk) — dihitung server dalam satu batch.
         applyBalance: true,
+        due: isLunas ? null : due,
       });
 
       // Sinkronisasi lanjutan (dampak keuangan saat langsung ditandai lunas)
@@ -152,6 +156,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
       }
 
       onClose();
+      setDue(null);
       setFormData({
         debtType: 'hutang', paymentStatus: 'belum', debtKind: 'Pinjol', amount: '', currency: 'IDR', lenderName: '', note: '', accountId: '',
         installmentTenor: '', interestPct: '',
@@ -339,6 +344,8 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
             </div>
           </div>
         )}
+
+        {formData.paymentStatus !== 'lunas' && <DueDateInput value={due} onChange={setDue} />}
 
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Deskripsi / Catatan</label>

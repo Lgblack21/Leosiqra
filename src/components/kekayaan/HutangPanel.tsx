@@ -18,6 +18,8 @@ import { useRef } from 'react';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { useFeedback } from '@/components/ui/Feedback';
+import { dueFromPayload, dueLabel, type DebtDue } from '@/lib/debtDue';
+import { DueDateInput } from '@/components/debts/DueDateInput';
 
 const STATUS_OPTIONS = ['Belum lunas', 'Lunas', 'Semua'] as const;
 type StatusFilter = typeof STATUS_OPTIONS[number];
@@ -53,6 +55,23 @@ export default function HutangPanel() {
   // pembayarannya terjadi di bulan yang berbeda dari saat hutang dicatat.
   const [debtPayments, setDebtPayments] = useState<Transaction[]>([]);
   const [payingDebt, setPayingDebt] = useState<Transaction | null>(null);
+  // Edit jatuh tempo (payload_json.due) — daftar di sini datang lewat onSnapshot (mentah), jadi dibaca dari payload_json.
+  const [dueEdit, setDueEdit] = useState<{ trx: Transaction; value: DebtDue | null } | null>(null);
+  const [dueSaving, setDueSaving] = useState(false);
+  const dueOf = (t: Transaction) => t.due ?? dueFromPayload((t as { payload_json?: unknown }).payload_json) ?? null;
+  const saveDue = async () => {
+    if (!dueEdit?.trx.id) return;
+    setDueSaving(true);
+    try {
+      await transactionService.updateTransaction(dueEdit.trx.id, { due: dueEdit.value });
+      toast.success(dueEdit.value ? 'Jatuh tempo disimpan. Pengingat dikirim H-3 & H-1.' : 'Jatuh tempo dihapus.');
+      setDueEdit(null);
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : 'Gagal menyimpan jatuh tempo.');
+    } finally {
+      setDueSaving(false);
+    }
+  };
   const [payAmount, setPayAmount] = useState('');
   const [payingLoading, setPayingLoading] = useState(false);
 
@@ -463,6 +482,16 @@ export default function HutangPanel() {
                     <div><dt className="text-slate-400">Rekening</dt><dd className="truncate font-semibold text-slate-700">{getAccountName(trx.accountId || '')}</dd></div>
                     {trx.installmentTenor ? <div><dt className="text-slate-400">Cicilan</dt><dd className="font-semibold text-slate-700">≈ {formatAmount((trx.totalDebt || trx.amount) / trx.installmentTenor, trx.currency)}/bln · {trx.installmentTenor} bln</dd></div> : null}
                     {trx.totalInterest ? <div><dt className="text-slate-400">Total bunga</dt><dd className="font-semibold text-slate-700">{formatAmount(trx.totalInterest, trx.currency)}</dd></div> : null}
+                    {!lunas && (() => {
+                      const d = dueOf(trx);
+                      const lbl = d ? dueLabel(d) : null;
+                      return (
+                        <div className="col-span-2 flex items-center justify-between gap-2">
+                          <div className="min-w-0"><dt className="text-slate-400">Jatuh tempo</dt><dd className={cn('truncate font-semibold', lbl?.urgent ? 'text-rose-600' : 'text-slate-700')}>{lbl ? lbl.text : 'Belum diatur'}</dd></div>
+                          <button type="button" onClick={() => setDueEdit({ trx, value: d })} className="shrink-0 rounded-full bg-white px-3 py-1 text-[11px] font-bold text-indigo-600 ring-1 ring-slate-200 hover:bg-indigo-50">{d ? 'Ubah' : 'Atur'}</button>
+                        </div>
+                      );
+                    })()}
                     {trx.lenderName && trx.note && trx.note !== trx.lenderName ? <div className="col-span-2"><dt className="text-slate-400">Catatan</dt><dd className="font-semibold text-slate-700">{trx.note}</dd></div> : null}
                   </dl>
 
@@ -485,6 +514,18 @@ export default function HutangPanel() {
         </div>
       )}
       {!loading && shown.length > 0 && <p className="px-1 text-[12px] text-slate-400">Menampilkan {shown.length} catatan · {statusFilter === 'Belum lunas' ? 'semua bulan' : periodLabel}</p>}
+
+      <Modal isOpen={!!dueEdit} onClose={() => setDueEdit(null)} title="Jatuh tempo" maxWidth="max-w-sm">
+        {dueEdit && (
+          <div className="space-y-4">
+            <p className="text-[13px] text-slate-600">{dueEdit.trx.category === 'Hutang' ? 'Hutang ke' : 'Piutang dari'} <b className="text-slate-900">{dueEdit.trx.lenderName || dueEdit.trx.note || dueEdit.trx.category}</b></p>
+            <DueDateInput value={dueEdit.value} onChange={(value) => setDueEdit((p) => (p ? { ...p, value } : p))} />
+            <button type="button" onClick={saveDue} disabled={dueSaving} className="w-full rounded-full bg-slate-900 py-3.5 text-sm font-bold text-white hover:bg-slate-800 disabled:bg-slate-300">
+              {dueSaving ? 'Menyimpan…' : 'Simpan'}
+            </button>
+          </div>
+        )}
+      </Modal>
 
       <Modal
         isOpen={!!payingDebt}

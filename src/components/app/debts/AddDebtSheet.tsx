@@ -8,6 +8,8 @@ import type { Account } from "@/lib/services/accountService";
 import { debtService, DEBT_KINDS } from "@/lib/services/debtService";
 import { cn, toLocalDateString } from "@/lib/utils";
 import { lightTap } from "@/lib/haptics";
+import type { DebtDue } from "@/lib/debtDue";
+import { DueDateField } from "@/components/app/debts/DueDateField";
 
 interface Props {
   isOpen: boolean;
@@ -28,6 +30,7 @@ export function AddDebtSheet({ isOpen, onClose, accounts }: Props) {
   const [accountId, setAccountId] = useState("");
   const [date, setDate] = useState(toLocalDateString());
   const [note, setNote] = useState("");
+  const [due, setDue] = useState<DebtDue | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -53,11 +56,13 @@ export function AddDebtSheet({ isOpen, onClose, accounts }: Props) {
         date,
         note: note.trim(),
         currency: account?.currency || "IDR",
+        due,
       });
       lightTap();
       setName("");
       setAmount("");
       setNote("");
+      setDue(null);
       setDate(toLocalDateString());
       onClose();
     } catch (e) {
@@ -132,6 +137,7 @@ export function AddDebtSheet({ isOpen, onClose, accounts }: Props) {
         <AccountPicker accounts={accounts} value={accountId} onChange={setAccountId} label={!isHutang ? "Uang dipinjamkan dari" : noCash ? "Nanti dibayar dari" : "Uang pinjaman masuk ke"} />
         <input type="date" value={date} max={toLocalDateString()} onChange={(e) => setDate(e.target.value)} className={inputClass} aria-label="Tanggal" />
         <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Catatan (opsional)" className={inputClass} aria-label="Catatan" />
+        <DueDateField value={due} onChange={setDue} />
         <p className="text-[11px] text-slate-400 px-1">
           {!isHutang
             ? "Saldo rekening langsung berkurang. Saat dibayar kembali, saldo bertambah lagi."

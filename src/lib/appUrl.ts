@@ -3,6 +3,8 @@
 // app-nya (mis. /membership/aplikasi) tetap dibuka versi web.
 const APP_EQUIVALENT: [prefix: string, app: string][] = [
   ["/membership/dashboard?pengaturan=pengingat", "/app/notifikasi?tab=pengingat"],
+  ["/membership/dashboard?pengaturan=paket", "/app/profile"],
+  ["/membership/kekayaan#hutang", "/app/debts"],
   ["/membership/transactions", "/app/transactions"],
   ["/membership/laporan", "/app/statistics"],
   ["/membership/profile", "/app/profile"],

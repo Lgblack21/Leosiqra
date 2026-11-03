@@ -1,6 +1,7 @@
 import { cloudflareApi } from '../cloudflare-api';
 import { notifyCollectionChanged } from '../cf-firestore';
 import type { Transaction } from './transactionService';
+import type { DebtDue } from '@/lib/debtDue';
 
 // Jenis hutang disimpan di sub_category — Dashboard memakai "Kartu Kredit"
 // untuk memisahkan tagihan kartu dari hutang lainnya (sama dengan DebtModal web).
@@ -55,6 +56,7 @@ export const debtService = {
     date: string; // YYYY-MM-DD
     note?: string;
     currency?: string;
+    due?: DebtDue | null;
   }) {
     const category = input.isHutang ? 'Hutang' : 'Piutang';
     const result = await cloudflareApi<{ id: string }>('/api/member/transactions', {
@@ -77,6 +79,7 @@ export const debtService = {
         status: 'PENDING',
         payment_status: 'belum',
         apply_balance: true,
+        ...(input.due ? { due: input.due } : {}),
       },
     });
     notifyCollectionChanged('transactions');

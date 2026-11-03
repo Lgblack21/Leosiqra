@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { HandCoins, Trash2, CheckCircle2 } from "lucide-react";
+import { HandCoins, Trash2, CheckCircle2, CalendarClock } from "lucide-react";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { AmountKeypad, groupDigits } from "@/components/app/AmountKeypad";
 import { AccountPicker } from "@/components/app/AccountPicker";
@@ -10,6 +10,8 @@ import type { Account } from "@/lib/services/accountService";
 import { debtService } from "@/lib/services/debtService";
 import { cn, formatMoney } from "@/lib/utils";
 import { lightTap } from "@/lib/haptics";
+import { dueLabel, type DebtDue } from "@/lib/debtDue";
+import { DueDateField } from "@/components/app/debts/DueDateField";
 
 interface Props {
   debt: Transaction | null;
@@ -31,6 +33,8 @@ export function DebtDetailSheet({ debt, remaining, payments, accounts, onClose }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState("");
+  const [editDue, setEditDue] = useState(false);
+  const [dueDraft, setDueDraft] = useState<DebtDue | null>(null);
 
   // Reset hanya saat catatan yang dibuka BERGANTI (id), bukan tiap objeknya
   // diperbarui — setelah bayar, daftar di-refresh otomatis dan pesan sukses
@@ -43,6 +47,7 @@ export function DebtDetailSheet({ debt, remaining, payments, accounts, onClose }
     setConfirmDelete(false);
     setError("");
     setDone("");
+    setEditDue(false);
   }, [debtId]);
   useEffect(() => {
     // Rekening catatan lama bisa tidak valid ("General") — minta pilih di depan.
@@ -83,6 +88,23 @@ export function DebtDetailSheet({ debt, remaining, payments, accounts, onClose }
       setBusy(false);
     }
   };
+
+  const saveDue = async () => {
+    if (!debt.id) return;
+    setBusy(true);
+    setError("");
+    try {
+      await transactionService.updateTransaction(debt.id, { due: dueDraft });
+      lightTap();
+      setEditDue(false);
+      setDone(dueDraft ? "Jatuh tempo disimpan." : "Jatuh tempo dihapus.");
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : "Gagal menyimpan jatuh tempo.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const due = debt.due ? dueLabel(debt.due) : null;
 
   const handleDelete = async () => {
     if (!confirmDelete) { lightTap(); setConfirmDelete(true); return; }
@@ -178,6 +200,33 @@ export function DebtDetailSheet({ debt, remaining, payments, accounts, onClose }
           </div>
         ) : (
           <>
+            {!lunas && (
+              <div className="rounded-2xl border border-slate-100 dark:border-slate-800 p-4">
+                {editDue ? (
+                  <div className="space-y-3">
+                    <DueDateField value={dueDraft} onChange={setDueDraft} />
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setEditDue(false)} className="flex-1 py-3 rounded-xl text-xs font-black bg-slate-100 dark:bg-slate-800 text-slate-500">Batal</button>
+                      <button type="button" onClick={saveDue} disabled={busy} className="flex-1 py-3 rounded-xl text-xs font-black bg-indigo-600 text-white disabled:opacity-40">{busy ? "Menyimpan..." : "Simpan"}</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { lightTap(); setDueDraft(debt.due ?? null); setEditDue(true); setDone(""); }}
+                    className="w-full flex items-center gap-3 text-left"
+                  >
+                    <CalendarClock size={18} className={cn("shrink-0", due?.urgent ? "text-rose-500" : "text-slate-400")} />
+                    <span className="min-w-0 flex-1">
+                      <span className={cn("block text-sm font-bold", due?.urgent ? "text-rose-600 dark:text-rose-400" : "text-slate-800 dark:text-slate-100")}>{due ? due.text : "Belum ada jatuh tempo"}</span>
+                      <span className="block text-[11px] text-slate-400">{due ? "Ketuk untuk ubah" : "Atur supaya diingatkan H-3 & H-1"}</span>
+                    </span>
+                    <span className="text-xs font-black text-indigo-600 dark:text-indigo-400">{due ? "Ubah" : "Atur"}</span>
+                  </button>
+                )}
+              </div>
+            )}
+
             {!lunas && (
               <button
                 type="button"

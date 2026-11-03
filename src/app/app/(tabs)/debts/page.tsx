@@ -10,6 +10,7 @@ import { subscribeToCollectionChanges } from "@/lib/cf-firestore";
 import { auth } from "@/lib/cf-client";
 import { cn, formatIDR, formatMoney } from "@/lib/utils";
 import { lightTap } from "@/lib/haptics";
+import { dueLabel } from "@/lib/debtDue";
 import { FadeIn } from "@/components/app/FadeIn";
 import { DebtDetailSheet } from "@/components/app/debts/DebtDetailSheet";
 import { AddDebtSheet } from "@/components/app/debts/AddDebtSheet";
@@ -150,6 +151,10 @@ export default function AppDebtsPage() {
                         <span className={isHutang ? "text-rose-500" : "text-emerald-600"}>{isHutang ? "Hutang" : "Piutang"}</span>
                         {isHutang && d.subCategory ? ` · ${d.subCategory}` : ""}
                       </p>
+                      {rem > 0 && d.due && (() => {
+                        const lbl = dueLabel(d.due);
+                        return <p className={cn("mt-0.5 text-[11px] font-bold truncate", lbl.urgent ? "text-rose-500" : "text-slate-500 dark:text-slate-400")}>{lbl.text}</p>;
+                      })()}
                     </div>
                     <div className="text-right shrink-0">
                       <p className={cn("text-sm font-black tabular-nums", rem <= 0 ? "text-emerald-600" : isHutang ? "text-rose-500" : "text-emerald-600")}>

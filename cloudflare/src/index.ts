@@ -3521,6 +3521,19 @@ const sanitizeTxTags = (raw: unknown): string[] | null => {
   }
   return out;
 };
+// Jatuh tempo hutang/piutang (opsional) — disimpan di payload_json.due:
+// { date: "YYYY-MM-DD" } sekali bayar, atau { day: 1–31 } tiap bulan (cicilan).
+// Dibaca sendDebtDueReminders (H-3 & H-1). undefined = tidak dikirim, null = hapus.
+type DebtDue = { date: string } | { day: number };
+const sanitizeDebtDue = (raw: unknown): DebtDue | null | undefined => {
+  if (raw === undefined) return undefined;
+  if (raw === null) return null;
+  if (typeof raw !== "object") return undefined;
+  const r = raw as { date?: unknown; day?: unknown };
+  if (typeof r.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(r.date) && !Number.isNaN(Date.parse(`${r.date}T00:00:00Z`))) return { date: r.date };
+  if (typeof r.day === "number" && Number.isInteger(r.day) && r.day >= 1 && r.day <= 31) return { day: r.day };
+  return undefined;
+};
 const assertOwnAccounts = async (env: Env, userId: string, ids: unknown[]): Promise<Response | null> => {
   const toCheck = [
     ...new Set(ids.filter((v): v is string => typeof v === "string" && !NON_ACCOUNT_IDS.has(v))),
@@ -3565,6 +3578,7 @@ async function handleCreateTransaction(request: Request, env: Env) {
     related_type?: string;
     apply_balance?: boolean;
     tags?: unknown;
+    due?: unknown;
   }>(request);
   const accountError = await assertOwnAccounts(env, authResult.session.user.id, [payload.account_id, payload.target_account_id]);
   if (accountError) return accountError;
@@ -3572,6 +3586,10 @@ async function handleCreateTransaction(request: Request, env: Env) {
   if (!payload.type || !payload.amount || !payload.date) {
     return json({ error: "type, amount, dan date wajib diisi." }, { status: 400 });
   }
+  const due = payload.type === "debt" ? sanitizeDebtDue(payload.due) : undefined;
+  if (payload.type === "debt" && payload.due != null && !due) return json({ error: "Jatuh tempo tidak valid." }, { status: 400 });
+  const tagList = sanitizeTxTags(payload.tags);
+  const extra: Record<string, unknown> = { ...(tagList?.length ? { tags: tagList } : {}), ...(due ? { due } : {}) };
 
   const { id, balanceApplied } = await insertTransactionRecord(env, authResult.session.user.id, {
     type: payload.type,
@@ -3595,7 +3613,7 @@ async function handleCreateTransaction(request: Request, env: Env) {
     relatedType: payload.related_type,
     note: payload.note,
     applyDebtBalance: payload.apply_balance === true,
-    ...(sanitizeTxTags(payload.tags)?.length ? { payload: { tags: sanitizeTxTags(payload.tags) } } : {}),
+    ...(Object.keys(extra).length ? { payload: extra } : {}),
   });
 
   return json({ ok: true, id, balance_applied: balanceApplied }, { status: 201 });
@@ -4281,7 +4299,18 @@ async function handleUpdateTransaction(request: Request, env: Env, transactionId
   // reviewed → payload_json.reviewed: tanda "sudah dicek" dari Cek hari (Laporan). Bukan data uang.
   if (payload.reviewed !== undefined && typeof payload.reviewed !== "boolean") return json({ error: "reviewed harus true/false." }, { status: 400 });
   const reviewed = typeof payload.reviewed === "boolean" ? payload.reviewed : null;
-  if (entries.length === 0 && tags === null && reviewed === null) {
+  // due → payload_json.due (hanya baris debt; null = hapus jatuh tempo). Ganti due juga menghapus
+  // penanda pengingat supaya tanggal baru diingatkan lagi.
+  const due = sanitizeDebtDue(payload.due);
+  if (payload.due !== undefined && due === undefined) return json({ error: "Jatuh tempo tidak valid." }, { status: 400 });
+  if (due !== undefined) {
+    const row = await env.DB.prepare("SELECT type FROM transactions WHERE id = ? AND user_id = ?")
+      .bind(transactionId, authResult.session.user.id)
+      .first<{ type: string | null }>();
+    if (!row) return json({ error: "Transaksi tidak ditemukan." }, { status: 404 });
+    if (row.type !== "debt") return json({ error: "Jatuh tempo hanya untuk hutang/piutang." }, { status: 400 });
+  }
+  if (entries.length === 0 && tags === null && reviewed === null && due === undefined) {
     return json({ error: "Tidak ada field yang bisa diperbarui." }, { status: 400 });
   }
 
@@ -4303,9 +4332,9 @@ async function handleUpdateTransaction(request: Request, env: Env, transactionId
 
   const assignments = [
     ...entries.map(([key]) => `${key} = ?`),
-    ...(tags !== null || reviewed !== null
+    ...(tags !== null || reviewed !== null || due !== undefined
       ? [
-          `payload_json = json_set(CASE WHEN json_valid(payload_json) THEN payload_json ELSE '{}' END${tags !== null ? ", '$.tags', json(?)" : ""}${reviewed !== null ? ", '$.reviewed', json(?)" : ""})`,
+          `payload_json = ${due !== undefined ? "json_remove(" : ""}json_set(CASE WHEN json_valid(payload_json) THEN payload_json ELSE '{}' END${tags !== null ? ", '$.tags', json(?)" : ""}${reviewed !== null ? ", '$.reviewed', json(?)" : ""}${due ? ", '$.due', json(?)" : ""})${due !== undefined ? `, '$.dueRemindedFor'${due === null ? ", '$.due'" : ""})` : ""}`,
         ]
       : []),
   ].join(", ");
@@ -4313,6 +4342,7 @@ async function handleUpdateTransaction(request: Request, env: Env, transactionId
     ...entries.map(([, value]) => value),
     ...(tags !== null ? [JSON.stringify(tags)] : []),
     ...(reviewed !== null ? [reviewed ? "true" : "false"] : []),
+    ...(due ? [JSON.stringify(due)] : []),
   ];
 
   const result = await env.DB.prepare(
@@ -12977,7 +13007,7 @@ const sendBudgetAlerts = async (env: Env) => {
 // Pengingat tagihan rutin: transaksi berulang (pengeluaran/tabungan) yang akan
 // tercatat otomatis 3 hari lagi — supaya saldo rekeningnya disiapkan. Harian
 // 10:00 WIB. Klaim payload_json.remindedFor = tanggal jadwal → sekali per jadwal.
-// Bisa dimatikan: $.prefs.notify.bills = false. (Hutang belum punya tanggal jatuh tempo.)
+// Bisa dimatikan: $.prefs.notify.bills = false. Hutang/piutang: sendDebtDueReminders.
 const sendBillReminders = async (env: Env) => {
   const today = todayWIB();
   const target = shiftDateStr(today, 3);
@@ -13014,6 +13044,82 @@ const sendBillReminders = async (env: Env) => {
       );
     } catch (error) {
       console.error(`Pengingat tagihan ${r.id} gagal:`, error);
+    }
+  }
+};
+
+// Jatuh tempo hutang/piutang berikutnya (YYYY-MM-DD) dari payload_json.due, atau null
+// kalau sudah lewat (sekali bayar). Tiap bulan: tanggal 31 di bulan pendek → hari terakhir.
+const nextDebtDue = (due: DebtDue, today: string): string | null => {
+  if ("date" in due) return due.date >= today ? due.date : null;
+  const [y, m] = today.split("-").map(Number);
+  const at = (yy: number, mm: number) => {
+    const last = new Date(Date.UTC(yy, mm, 0)).getUTCDate();
+    return `${yy}-${String(mm).padStart(2, "0")}-${String(Math.min(due.day, last)).padStart(2, "0")}`;
+  };
+  const thisMonth = at(y, m);
+  return thisMonth >= today ? thisMonth : m === 12 ? at(y + 1, 1) : at(y, m + 1);
+};
+
+// Pengingat jatuh tempo hutang/piutang yang belum lunas: H-3 & H-1 (harian 10:00 WIB).
+// Klaim payload_json.dueRemindedFor = "<tanggal>|<tahap>" → tiap tahap sekali, aman
+// kalau cron terpicu dua kali. Ikut toggle $.prefs.notify.bills.
+const sendDebtDueReminders = async (env: Env) => {
+  const today = todayWIB();
+  const { results } = await env.DB.prepare(
+    `SELECT t.id, t.user_id, t.category, t.lender_name, t.amount, t.currency,
+            json_extract(t.payload_json, '$.due') AS due,
+            COALESCE(json_extract(t.payload_json, '$.dueRemindedFor'), '') AS reminded,
+            COALESCE((SELECT SUM(p.amount) FROM transactions p WHERE p.user_id = t.user_id AND p.related_type = 'debt' AND p.related_id = t.id), 0) AS paid
+       FROM transactions t JOIN users u ON u.id = t.user_id
+      WHERE t.type = 'debt' AND COALESCE(t.payment_status, '') <> 'lunas'
+        AND json_valid(t.payload_json) AND json_extract(t.payload_json, '$.due') IS NOT NULL
+        AND COALESCE(u.status, '') <> 'NONAKTIF'
+        AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.bills') END, 1) <> 0
+      LIMIT 1000`
+  )
+    .all<{ id: string; user_id: string; category: string | null; lender_name: string | null; amount: number; currency: string | null; due: string; reminded: string; paid: number }>();
+  for (const r of results ?? []) {
+    try {
+      let due: DebtDue | null | undefined;
+      try {
+        due = sanitizeDebtDue(JSON.parse(r.due));
+      } catch {
+        due = undefined;
+      }
+      if (!due) continue;
+      const next = nextDebtDue(due, today);
+      if (!next) continue;
+      const stage = next === shiftDateStr(today, 3) ? "h3" : next === shiftDateStr(today, 1) ? "h1" : null;
+      if (!stage) continue;
+      const marker = `${next}|${stage}`;
+      if (r.reminded === marker) continue;
+      const remaining = Math.max(0, (Number(r.amount) || 0) - (Number(r.paid) || 0));
+      if (remaining <= 0) continue;
+      const claim = await env.DB.prepare(
+        `UPDATE transactions SET payload_json = json_set(payload_json, '$.dueRemindedFor', ?)
+          WHERE id = ? AND user_id = ? AND json_valid(payload_json)
+            AND COALESCE(json_extract(payload_json, '$.dueRemindedFor'), '') <> ?`
+      )
+        .bind(marker, r.id, r.user_id, marker)
+        .run();
+      if (!claim.meta.changes) continue;
+      const amount = !r.currency || r.currency === "IDR" ? formatRupiahForPush(remaining) : `${r.currency} ${remaining}`;
+      const when = stage === "h1" ? "besok" : "3 hari lagi";
+      const dateLabel = next.split("-").reverse().slice(0, 2).join("/");
+      const piutang = r.category === "Piutang";
+      const who = r.lender_name?.trim() || (piutang ? "peminjam" : "pemberi pinjaman");
+      await sendWebPushToUser(
+        env,
+        r.user_id,
+        piutang ? `💸 Piutang ${who} jatuh tempo ${when}` : `⏰ Hutang ke ${who} jatuh tempo ${when}`,
+        piutang
+          ? `Sisa ${amount} — waktunya ditagih (${dateLabel}).`
+          : `Sisa ${amount}, jatuh tempo ${dateLabel}. Siapkan pembayarannya, lalu catat di Hutang & Piutang.`,
+        "/membership/kekayaan#hutang"
+      );
+    } catch (error) {
+      console.error(`Pengingat jatuh tempo hutang ${r.id} gagal:`, error);
     }
   }
 };
@@ -16137,6 +16243,7 @@ const worker = {
     ctx.waitUntil(sendPlanExpiryReminders(env).catch((error) => console.error("Pengingat masa aktif:", error)));
     // Tagihan/setoran rutin yang tercatat otomatis 3 hari lagi.
     ctx.waitUntil(sendBillReminders(env).catch((error) => console.error("Pengingat tagihan:", error)));
+    ctx.waitUntil(sendDebtDueReminders(env).catch((error) => console.error("Pengingat jatuh tempo hutang:", error)));
     ctx.waitUntil(cleanupNotifications(env).catch((error) => console.error("Bersihkan notifikasi:", error)));
     // Senin: wawasan mingguan; tanggal 1: rekap bulan lalu (push, bisa dimatikan user).
     ctx.waitUntil(sendInsightPushes(env).catch((error) => console.error("Wawasan push:", error)));

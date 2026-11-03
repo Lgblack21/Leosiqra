@@ -18,6 +18,15 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-04 (branch claude/app-skor-sisa):**
+  - Live #115: Skor Kesehatan di Beranda app HP (`AppHealthScore`), "Masa aktif sisa N hari" di /app/profile.
+  - Menunggu deploy: **jatuh tempo hutang/piutang** di `payload_json.due` (`{date}` sekali / `{day}` tiap bulan,
+    tanpa migrasi). POST/PUT `/api/member/transactions` terima `due` (hanya type debt; PUT `due:null` = hapus,
+    ganti due menghapus `dueRemindedFor`). `sendDebtDueReminders` (cron harian): H-3 & H-1, sisa = pokok − bayaran
+    tertaut, klaim `payload_json.dueRemindedFor`, ikut toggle `bills`. UI: DebtModal & HutangPanel web
+    (`DueDateInput`), AddDebtSheet/DebtDetailSheet/daftar app (`DueDateField`), helper `src/lib/debtDue.ts`.
+    appUrl: `/membership/kekayaan#hutang` → `/app/debts`, `?pengaturan=paket` → `/app/profile`.
+    Teruji: wrangler dev lokal (cron 2× tanpa dobel, validasi API) + Playwright mock. Belum: push sungguhan.
 - **2026-11-03 malam, deploy #114 (3 ide Tower di-ACC Bos):**
   - Mode gelap web sisa: Investasiku, Kekayaan/Tabungan, Kotak Masuk (`.web-keep` di kartu yang selalu gelap).
   - `sendPlanExpiryReminders` (cron harian): push H-3 & H-1 sebelum `expired_at` (trial/PRO), klaim
