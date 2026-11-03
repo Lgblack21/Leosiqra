@@ -12,6 +12,7 @@ import { AppTour } from "@/components/app/AppTour";
 import { reportAppOpened } from "@/lib/appUsage";
 import { BrandSplash } from "@/components/app/BrandSplash";
 import { initNativePush } from "@/lib/nativePush";
+import { PushBanner } from "@/components/app/PushBanner";
 import { openAppNotificationUrl } from "@/lib/txPrefill";
 
 // Native splash (drawable/splash.png) cuma nyala sekilas selama Android/iOS
@@ -122,6 +123,7 @@ function ThemedShell({ children }: { children: React.ReactNode }) {
     <div className={resolvedTheme === "dark" ? "dark" : ""}>
       {children}
       <AppTour />
+      <PushBanner />
     </div>
   );
 }
