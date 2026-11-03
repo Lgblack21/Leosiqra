@@ -22,6 +22,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   perintah Bos), secret `FCM_SERVICE_ACCOUNT` terpasang, APK debug (`leosiqra-debug-1`) dipasang di HP Bos →
   token terdaftar → pengingat tes MUNCUL sebagai notifikasi HP. Sisa: rilis Play Store (keystore lama belum
   ketemu, `versionCode` masih 1), iOS belum (perlu Firebase Messaging di app iOS).
+  Live juga (d28645a): di app HP, ketuk pengingat bernominal (push native & daftar Notifikasi /app) membuka
+  sheet **Tambah Transaksi** terisi nominal+catatan, kategori dikosongkan (wajib pilih) — `src/lib/txPrefill.ts`
+  (`openAppNotificationUrl`, antrean `pending` sampai layout tab terpasang). Web tetap ke Input Cepat. Belum dicoba
+  Bos di HP setelah deploy.
 - Token D1 lokal (cek/migrasi dari HP) hanya ada di HP Termux: `/data/data/com.termux/files/home/.config/leosiqra/cloudflare.env`.
 
 ## Status produksi
