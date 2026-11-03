@@ -446,7 +446,12 @@ membersite_leosiqra_db --remote --command "..."`. SELECT boleh langsung; tulis/u
   mungkin sudah bergeser (tidak bisa dideteksi otomatis).
   Dicek ke D1 2026-11-03: 0 baris impor, 0 user pernah pakai kuota AI impor, 0 payload importName
   → tidak ada bukti user terdampak (23 user). Rekonsiliasi saldo: 26/33 rekening cocok
-  (initial_balance + transaksi = balance); 7 selisih belum ditelusuri, bukan dari impor.
+  (initial_balance + transaksi = balance); 7 selisih bukan dari impor. Ditelusuri: BCA Platinum user 7b434d
+  = pengeluaran "Investasi" 280 jt bertanggal mundur (tak menggerakkan saldo) − piutang 5 jt; sisa ~14,8 jt
+  belum terjelaskan (dugaan edit saldo manual). Cash KHR = baris Transfer Masuk lama tersimpan 32,50 USD
+  (tak dikonversi) + Top Up tanpa baris Masuk; saldo kemungkinan benar. Data TIDAK diubah.
+- Live (2026-11-03, deploy 353a2725): streak bulan surplus & konteks kategori AI kini juga mengecualikan
+  catatan investasi lama tanpa tautan (kategori Investasi/Saham/Deposito, sama dengan isInvestmentPurchaseRow).
 - Impor belum ada di aplikasi HP (`/app/*`) — baru versi web.
 
 ## Langkah berikutnya / ide
