@@ -444,6 +444,9 @@ membersite_leosiqra_db --remote --command "..."`. SELECT boleh langsung; tulis/u
 - Sebelum perbaikan, menghapus satu transaksi impor dari halaman Transaksi web
   ikut membalik saldo & total → saldo rekening user yang pernah melakukannya
   mungkin sudah bergeser (tidak bisa dideteksi otomatis).
+  Dicek ke D1 2026-11-03: 0 baris impor, 0 user pernah pakai kuota AI impor, 0 payload importName
+  → tidak ada bukti user terdampak (23 user). Rekonsiliasi saldo: 26/33 rekening cocok
+  (initial_balance + transaksi = balance); 7 selisih belum ditelusuri, bukan dari impor.
 - Impor belum ada di aplikasi HP (`/app/*`) — baru versi web.
 
 ## Langkah berikutnya / ide
