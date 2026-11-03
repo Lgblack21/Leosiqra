@@ -243,7 +243,15 @@ const startRecorder = async (cb: SpeechCallbacks): Promise<SpeechSession | null>
   } catch (e) {
     void ac.close().catch(() => {});
     const name = e instanceof DOMException ? e.name : '';
-    if (name === 'NotAllowedError' || name === 'SecurityError') { cb.onError('Izin mikrofon ditolak. Aktifkan izin mikrofon untuk Leosiqra di pengaturan HP.'); return null; }
+    if (name === 'NotAllowedError' || name === 'SecurityError') {
+      // Aplikasi Android: WebView Capacitor menolak getUserMedia kalau izin
+      // MODIFY_AUDIO_SETTINGS tidak ada di manifest APK (APK lama) walau izin
+      // mikrofon sudah diberikan → pakai pengenal suara bawaan HP (plugin native,
+      // cukup izin mikrofon). Di browser tetap tampilkan pesan izin.
+      if (Capacitor.isNativePlatform()) { recorderBroken = true; return startSpeech(cb); }
+      cb.onError('Izin mikrofon ditolak. Aktifkan izin mikrofon untuk Leosiqra di pengaturan HP.');
+      return null;
+    }
     // Perangkat/WebView tidak mendukung perekaman langsung → pakai mesin suara bawaan.
     recorderBroken = true;
     return startSpeech(cb);
