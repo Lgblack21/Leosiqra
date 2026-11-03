@@ -12,6 +12,7 @@ import { AppTour } from "@/components/app/AppTour";
 import { reportAppOpened } from "@/lib/appUsage";
 import { BrandSplash } from "@/components/app/BrandSplash";
 import { initNativePush } from "@/lib/nativePush";
+import { toAppUrl } from "@/lib/appUrl";
 
 // Native splash (drawable/splash.png) cuma nyala sekilas selama Android/iOS
 // nyiapin Activity — begitu WebView aktif dia langsung ilang, dan APK ini
@@ -36,6 +37,9 @@ export default function AppShell({
   const router = useRouter();
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
+  // Sekali per pemasangan AppShell: daftar ulang token push walau user sama
+  // (logout → /mulai → login lagi = sesi baru).
+  const pushBoundRef = useRef(false);
   pathnameRef.current = pathname;
 
   // Tanpa ini, tombol back hardware Android langsung nutup app (keluar ke
@@ -84,10 +88,13 @@ export default function AppShell({
       reportAppOpened("leosiqra");
       // Android: izin & token push (sekali per buka app). Ketuk notifikasi →
       // /input-cepat butuh navigasi penuh (membaca ?teks= saat dimuat).
-      void initNativePush((url) => {
-        if (url.startsWith("/input-cepat")) window.location.href = url;
-        else router.push(url);
-      });
+      const forcePush = !pushBoundRef.current;
+      pushBoundRef.current = true;
+      void initNativePush(user.uid, (url) => {
+        const target = toAppUrl(url);
+        if (target.startsWith("/input-cepat")) window.location.href = target;
+        else router.push(target);
+      }, forcePush);
       setUserName(user.displayName ?? null);
       setLoading(false);
       hideSplash();

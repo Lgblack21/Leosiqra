@@ -10803,6 +10803,9 @@ const recordNotification = async (env: Env, userId: string, title: string, body:
 // iOS belum: APNs wajib HTTP/2 (subrequest Worker HTTP/1.1) → nanti lewat FCM.
 type FcmServiceAccount = { project_id: string; client_email: string; private_key: string };
 let fcmAccessToken: { token: string; exp: number } | null = null;
+// Batas token per user: mencegah satu akun mendaftarkan ribuan token (tiap
+// notifikasinya = ribuan subrequest → cron kehabisan jatah untuk user lain).
+const NATIVE_PUSH_MAX_TOKENS = 5;
 
 const b64urlBytes = (bytes: Uint8Array) => {
   let bin = "";
@@ -10866,9 +10869,10 @@ const sendNativePushToUser = async (env: Env, userId: string, title: string, bod
   try {
     const { results } = await env.DB.prepare(
       `SELECT t.token FROM native_push_tokens t JOIN sessions s ON s.id = t.session_id
-        WHERE t.user_id = ? AND s.user_id = t.user_id AND s.expires_at > ?`
+        WHERE t.user_id = ? AND s.user_id = t.user_id AND s.expires_at > ?
+        ORDER BY t.updated_at DESC LIMIT ?`
     )
-      .bind(userId, nowIso())
+      .bind(userId, nowIso(), NATIVE_PUSH_MAX_TOKENS)
       .all<{ token: string }>();
     rows = results ?? [];
   } catch (error) {
@@ -10899,8 +10903,14 @@ const sendNativePushToUser = async (env: Env, userId: string, title: string, bod
       });
       if (res.ok) continue;
       const detail = await res.text();
-      // Token dicabut (app dihapus / data dibersihkan) → hapus supaya tidak dicoba lagi.
-      if (res.status === 404 || /UNREGISTERED|registration-token-not-registered/.test(detail)) {
+      // Token dicabut (app dihapus / data dibersihkan) atau memang bukan token FCM
+      // (400 INVALID_ARGUMENT soal registration token) → hapus supaya tidak dicoba lagi.
+      // 400 lain (mis. payload kita salah) TIDAK menghapus token.
+      if (
+        res.status === 404 ||
+        /UNREGISTERED|registration-token-not-registered/.test(detail) ||
+        (res.status === 400 && /registration token/i.test(detail))
+      ) {
         await env.DB.prepare("DELETE FROM native_push_tokens WHERE token = ?").bind(token).run();
       } else {
         console.error(`FCM menolak push (${res.status}): ${detail.slice(0, 300)}`);
@@ -10929,14 +10939,19 @@ async function handleNativePushToken(request: Request, env: Env) {
     }
     const platform = payload.platform === "ios" ? "ios" : "android";
     const now = nowIso();
-    await env.DB.prepare(
-      `INSERT INTO native_push_tokens (token, user_id, session_id, platform, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?)
-       ON CONFLICT(token) DO UPDATE SET user_id = excluded.user_id, session_id = excluded.session_id,
-         platform = excluded.platform, updated_at = excluded.updated_at`
-    )
-      .bind(token, session.user.id, session.sessionId, platform, now, now)
-      .run();
+    await env.DB.batch([
+      env.DB.prepare(
+        `INSERT INTO native_push_tokens (token, user_id, session_id, platform, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(token) DO UPDATE SET user_id = excluded.user_id, session_id = excluded.session_id,
+           platform = excluded.platform, updated_at = excluded.updated_at`
+      ).bind(token, session.user.id, session.sessionId, platform, now, now),
+      // Simpan hanya NATIVE_PUSH_MAX_TOKENS perangkat terbaru per user.
+      env.DB.prepare(
+        `DELETE FROM native_push_tokens WHERE user_id = ? AND token NOT IN (
+           SELECT token FROM native_push_tokens WHERE user_id = ? ORDER BY updated_at DESC, created_at DESC LIMIT ?)`
+      ).bind(session.user.id, session.user.id, NATIVE_PUSH_MAX_TOKENS),
+    ]);
     return json({ ok: true });
   } catch (error) {
     if (isMissingNativePushTable(error)) return json({ error: "Notifikasi aplikasi belum aktif." }, { status: 503 });
