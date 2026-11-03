@@ -1,0 +1,95 @@
+# Build APK Android (debug) di GitHub Actions — untuk Bos yang hanya punya HP
+# (Termux, tanpa PC/Android Studio). Jalankan manual dari tab Actions →
+# "Build APK Android" → Run workflow, lalu unduh APK dari bagian Artifacts.
+#
+# APK debug ditandatangani kunci debug sementara (bukan kunci upload Play
+# Store): cocok untuk tes di HP sendiri. Kalau di HP sudah terpasang versi
+# Play Store / bertanda tangan lain, hapus dulu (tanda tangan berbeda = tidak
+# bisa menimpa). Rilis Play Store butuh kunci upload lama (lihat
+# android/app/build.gradle → keystore.properties) — belum di workflow ini.
+#
+# App memuat /app dari server (capacitor.config.ts server.url), jadi isi web
+# tidak perlu di-build di sini; cukup kerangka native + plugin.
+name: Build APK Android
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch / tag yang di-build"
+        default: main
+        required: true
+  # Branch kerja yang mengubah bagian native → APK otomatis ter-build (bisa
+  # dites sebelum digabung ke main).
+  push:
+    branches: ["claude/**"]
+    paths:
+      - "android/**"
+      - "capacitor.config.ts"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/build-android.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-android
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - run: npm ci
+
+      # cap sync menyalin webDir (out/) — app memuat server.url, jadi cukup
+      # halaman pengganti; yang penting plugin native ikut terdaftar.
+      - name: Capacitor sync
+        run: |
+          mkdir -p out
+          [ -f out/index.html ] || echo '<!doctype html><title>Leosiqra</title>' > out/index.html
+          npx cap sync android
+
+      - name: Cek google-services.json (push FCM)
+        run: |
+          test -f android/app/google-services.json || { echo "::error::android/app/google-services.json tidak ada — push tidak akan jalan"; exit 1; }
+
+      - name: Build APK debug
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug
+
+      - name: Info APK
+        env:
+          BUILD_REF: ${{ inputs.ref || github.ref_name }}
+        run: |
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          ls -la "$APK"
+          echo "### APK siap diunduh dari bagian Artifacts di bawah" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ref: \`$BUILD_REF\` ($(git rev-parse --short HEAD))" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ukuran: $(du -h "$APK" | cut -f1)" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: leosiqra-debug-${{ github.run_number }}
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14

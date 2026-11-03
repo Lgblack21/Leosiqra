@@ -164,6 +164,14 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     UI web di app. Belum ada workflow build APK (Bos hanya punya Termux, tanpa PC) → usul `build-android.yml`
     (assembleDebug, APK diunduh dari Actions); rilis Play Store butuh keystore lama (lokasi belum diketahui) +
     naikkan `versionCode` (masih 1). Masih menunggu Bos: secret `FCM_SERVICE_ACCOUNT`, migrasi 0022, "gas".
+    **Ditambal (2026-11-03 malam, Termux)**: 🟠 maks 5 token/user (`NATIVE_PUSH_MAX_TOKENS`, batch upsert+prune;
+    kirim juga LIMIT 5) + hapus token saat FCM 400 soal "registration token" (400 lain, mis. payload salah, TIDAK
+    menghapus) — diuji SQLite (1000 token palsu → 5) & klasifikasi error. 🟡 `initNativePush(userId, openUrl, force)`
+    daftar ulang saat user berganti / AppShell dipasang ulang (logout→login sesi baru); `toAppUrl`
+    (src/lib/appUrl.ts) memetakan URL /membership/* ke /app/* untuk ketuk push & daftar lonceng app.
+    Workflow **`build-android.yml`**: APK debug (Actions → Artifacts), manual atau otomatis saat push branch
+    `claude/**` yang mengubah android/, package*.json, capacitor.config.ts. Keystore upload Play Store TIDAK ada
+    di HP Termux (cek ~/.config/leosiqra-android) — APK debug harus menggantikan versi Play Store (hapus dulu).
   - Live (2026-11-03, deploy eb9effde) Aplikasi HP: `/app/notifikasi` (tab Notifikasi + Pengingat, `?tab=pengingat`),
     lonceng + angka belum dibaca di Beranda `/app`, menu "Pengingat" di Lainnya. Daftar notifikasi dipakai bersama
     (`src/components/notifications/NotificationList.tsx`) oleh lonceng web & HP. `RemindersView` punya varian dark:

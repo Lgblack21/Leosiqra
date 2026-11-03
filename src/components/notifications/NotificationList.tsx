@@ -63,9 +63,12 @@ export function useNotifications(pollMs = 0) {
 export function NotificationItems({
   state,
   onNavigate,
+  mapUrl,
 }: {
   state: ReturnType<typeof useNotifications>;
   onNavigate?: () => void;
+  // /app memetakan URL web (/membership/*) ke halaman versi app (toAppUrl).
+  mapUrl?: (url: string) => string;
 }) {
   const router = useRouter();
   const { items, markRead } = state;
@@ -74,9 +77,10 @@ export function NotificationItems({
     markRead(n);
     if (!n.url) return;
     onNavigate?.();
+    const url = mapUrl ? mapUrl(n.url) : n.url;
     // Input Cepat membaca ?teks= saat dimuat → navigasi penuh.
-    if (n.url.startsWith('/input-cepat')) window.location.href = n.url;
-    else router.push(n.url);
+    if (url.startsWith('/input-cepat')) window.location.href = url;
+    else router.push(url);
   };
 
   if (items === null) return <p className="py-10 text-center text-[13px] text-slate-400">Memuat…</p>;

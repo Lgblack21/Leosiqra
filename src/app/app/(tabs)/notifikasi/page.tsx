@@ -8,6 +8,7 @@ import { FadeIn } from "@/components/app/FadeIn";
 import { FeedbackProvider } from "@/components/ui/Feedback";
 import { useNotifications, NotificationItems, ReadAllButton } from "@/components/notifications/NotificationList";
 import { RemindersView } from "@/components/settings/RemindersView";
+import { toAppUrl } from "@/lib/appUrl";
 
 // Notifikasi & Pengingat versi HP — sama dengan lonceng web (riwayat dari
 // /api/member/notifications + RemindersView). Di aplikasi native belum ada
@@ -58,7 +59,7 @@ function AppNotifications() {
       ) : (
         <div className="space-y-3">
           <div className="rounded-2xl bg-white p-2 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
-            <NotificationItems state={notif} />
+            <NotificationItems state={notif} mapUrl={toAppUrl} />
           </div>
           {!!notif.items?.length && <ReadAllButton state={notif} />}
         </div>
