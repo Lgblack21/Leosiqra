@@ -51,7 +51,9 @@ export function TransactionDetailSheet({ tx, accounts, onClose }: Props) {
   // setoran tabungan) dikelola dari halaman asalnya — mengubah/menghapusnya di
   // sini bisa membuat data fitur itu tidak sinkron.
   const linked = Boolean(tx.relatedType);
-  const isTransfer = kind === "transfer";
+  // Kunci edit hanya untuk transfer sungguhan — catatan beli investasi lama
+  // (netral di ringkasan) tetap bisa diubah kategorinya.
+  const isTransfer = tx.type === "transfer" || tx.type === "topup";
   const canEdit = !linked && !isTransfer;
   const canDelete = !linked;
 

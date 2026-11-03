@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, PieChart } from "lucide-react";
 import { transactionService, Transaction } from "@/lib/services/transactionService";
 import { subscribeToCollectionChanges } from "@/lib/cf-firestore";
 import { auth } from "@/lib/cf-client";
+import { isInvestmentFlow } from "@/lib/utils";
 import { TxTypeToggle, TxType } from "@/components/app/TxTypeToggle";
 import { CategoryBreakdownChart, CategorySlice } from "@/components/app/statistics/CategoryBreakdownChart";
 import { FadeIn } from "@/components/app/FadeIn";
@@ -37,6 +38,7 @@ export default function StatisticsPage() {
       const d = new Date(t.date);
       return (
         t.type === type &&
+        !isInvestmentFlow(t) && // beli/jual investasi = pindah dana, bukan belanja/penghasilan
         d.getFullYear() === selectedMonth.getFullYear() &&
         d.getMonth() === selectedMonth.getMonth()
       );

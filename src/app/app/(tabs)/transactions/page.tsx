@@ -60,8 +60,9 @@ export default function AppTransactionsPage() {
   );
 
   const summary = useMemo(() => {
-    const masuk = monthTx.filter((t) => t.type === "pemasukan").reduce((s, t) => s + toIdr(t), 0);
-    const keluar = monthTx.filter((t) => t.type === "pengeluaran").reduce((s, t) => s + toIdr(t), 0);
+    // Sama dengan txKind: transfer & beli/jual investasi netral.
+    const masuk = monthTx.filter((t) => txKind(t) === "in").reduce((s, t) => s + toIdr(t), 0);
+    const keluar = monthTx.filter((t) => txKind(t) === "out").reduce((s, t) => s + toIdr(t), 0);
     return { masuk, keluar, net: masuk - keluar };
   }, [monthTx]);
 

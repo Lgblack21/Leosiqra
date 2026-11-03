@@ -5,7 +5,7 @@ import { ArrowDownCircle, ArrowUpCircle, Eye, EyeOff } from "lucide-react";
 import { Account } from "@/lib/services/accountService";
 import { Transaction } from "@/lib/services/transactionService";
 import { exchangeRateService, ExchangeRates } from "@/lib/services/exchangeRateService";
-import { isIncomingTransaction } from "@/lib/utils";
+import { isInvestmentFlow } from "@/lib/utils";
 import { AnimatedNumber } from "@/components/app/AnimatedNumber";
 import { useBalanceVisibility } from "@/lib/hooks/useBalanceVisibility";
 import { lightTap } from "@/lib/haptics";
@@ -37,11 +37,13 @@ export function BalanceCard({ accounts, transactions }: BalanceCardProps) {
     const d = new Date(t.date);
     return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
   });
+  // Pemasukan/pengeluaran riil (sama dengan dashboard web): transfer antar
+  // rekening sendiri & beli/jual investasi tidak dihitung.
   const income = monthTx
-    .filter((t) => isIncomingTransaction(t))
+    .filter((t) => t.type === "pemasukan" && !isInvestmentFlow(t))
     .reduce((s, t) => s + (Number(t.amountIDR) || Number(t.amount) || 0), 0);
   const expense = monthTx
-    .filter((t) => t.type === "pengeluaran")
+    .filter((t) => t.type === "pengeluaran" && !isInvestmentFlow(t))
     .reduce((s, t) => s + (Number(t.amountIDR) || Number(t.amount) || 0), 0);
 
   return (

@@ -1,4 +1,5 @@
 import type { Transaction } from "@/lib/services/transactionService";
+import { isInvestmentFlow } from "@/lib/utils";
 
 export type TxKind = "in" | "out" | "transfer";
 
@@ -6,8 +7,10 @@ export type TxKind = "in" | "out" | "transfer";
 // "transfer"/"topup" (sisi Keluar & Masuk) — dianggap netral, tidak dihitung
 // sebagai pemasukan/pengeluaran. Top up ke e-wallet luar bertipe
 // "pengeluaran" dan memang dihitung keluar.
+// Beli/jual investasi juga netral (pindah dana ke/dari aset) — sama dengan web
+// (isInvestmentFlow di dashboard, Laporan & Transaksi).
 export const txKind = (tx: Transaction): TxKind => {
-  if (tx.type === "transfer" || tx.type === "topup") return "transfer";
+  if (tx.type === "transfer" || tx.type === "topup" || isInvestmentFlow(tx)) return "transfer";
   if (tx.type === "pemasukan") return "in";
   return "out";
 };
