@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { CalendarDays, ArrowLeftRight, Sparkles, Calculator, ChevronDown } from "lucide-react";
+import { CalendarDays, ArrowLeftRight, Sparkles, Calculator, ChevronDown, Check } from "lucide-react";
+import { LogoImage } from "@/components/ui/LogoImage";
+import { matchIndonesianInstitutionLogo } from "@/lib/indonesianBanks";
+import { useBalanceVisibility } from "@/lib/hooks/useBalanceVisibility";
 import { categoryVisual } from "@/lib/categoryEmoji";
 import { accountService, Account } from "@/lib/services/accountService";
 import { auth } from "@/lib/cf-client";
@@ -58,24 +61,66 @@ function ModeToggle({ value, onChange }: { value: SheetMode; onChange: (m: Sheet
   );
 }
 
-// Deretan pil rekening di lembar Detail — satu ketukan, bisa digeser.
+// Pilihan rekening di lembar Detail: kartu dengan logo bank + saldo (ikut
+// sembunyikan-saldo di Beranda). Dua kolom supaya semua rekening terlihat sekaligus.
+const ACCOUNT_EMOJI: Record<string, string> = { "E-Wallet": "📱", Cash: "💵", "Credit Card": "💳", Investment: "📈" };
+const balanceText = (amount: number, currency: string) => {
+  try {
+    return new Intl.NumberFormat("id-ID", { style: "currency", currency: currency || "IDR", minimumFractionDigits: 0, maximumFractionDigits: !currency || NO_CENTS.has(currency) ? 0 : 2 }).format(amount);
+  } catch {
+    return `${currency} ${amount}`;
+  }
+};
 function AccountRow({ accounts, value, onChange }: { accounts: Account[]; value: string; onChange: (id: string) => void }) {
+  const [hidden] = useBalanceVisibility();
   if (accounts.length === 0) return <p className="text-xs font-medium text-slate-400 dark:text-slate-500">Belum ada rekening.</p>;
   return (
-    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-      {accounts.map((a) => (
-        <button
-          key={a.id}
-          type="button"
-          onClick={() => { lightTap(); onChange(a.id ?? ""); }}
-          className={cn(
-            "shrink-0 max-w-[180px] truncate rounded-2xl px-3.5 py-2.5 text-[13px] font-bold transition-colors",
-            a.id === value ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
-          )}
-        >
-          {a.name}
-        </button>
-      ))}
+    <div className="grid grid-cols-2 gap-2">
+      {accounts.map((a) => {
+        const active = a.id === value;
+        const external = a.id === EXTERNAL_WALLET_ID;
+        const logo = a.logoUrl || matchIndonesianInstitutionLogo(a.name, a.type) || undefined;
+        const emoji = external ? "👛" : ACCOUNT_EMOJI[a.type] ?? "🏦";
+        return (
+          <button
+            key={a.id}
+            type="button"
+            onClick={() => { lightTap(); onChange(a.id ?? ""); }}
+            aria-pressed={active}
+            className={cn(
+              "relative flex min-w-0 items-center gap-2.5 rounded-2xl p-2.5 text-left transition-all active:scale-[0.98]",
+              active
+                ? "bg-white ring-2 ring-slate-900 shadow-md dark:bg-slate-800 dark:ring-white"
+                : "bg-slate-100 ring-1 ring-transparent dark:bg-slate-800/70"
+            )}
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white text-[18px] shadow-sm dark:bg-slate-700">
+              {external ? (
+                <span aria-hidden>{emoji}</span>
+              ) : (
+                <LogoImage
+                  src={logo}
+                  alt={a.name}
+                  fallbackText={a.name.slice(0, 3).toUpperCase()}
+                  fallbackIcon={<span aria-hidden className="flex h-full w-full items-center justify-center bg-white text-[18px] dark:bg-slate-700">{emoji}</span>}
+                  className="h-full w-full object-contain p-1"
+                />
+              )}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[13px] font-bold text-slate-900 dark:text-white">{external ? "E-Wallet luar" : a.name}</span>
+              <span className="block truncate text-[12px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">
+                {external ? "OVO/GoPay/DANA" : hidden ? `${a.currency} ••••` : balanceText(a.balance || 0, a.currency)}
+              </span>
+            </span>
+            {active && (
+              <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900">
+                <Check size={12} strokeWidth={3} />
+              </span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -300,7 +345,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
       onClose={onClose}
       footer={
         <div className="pb-[env(safe-area-inset-bottom)]">
-          {!detailOpen && <AmountKeypad
+          {!detailOpen && !catsOpen && <AmountKeypad
             variant="flat"
             value={amount}
             onChange={setAmount}
@@ -357,7 +402,13 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
           </div>
         </div>
 
-        <div className="relative mt-5 flex items-baseline justify-center gap-1.5 min-w-0" aria-live="polite">
+        <button
+          type="button"
+          onClick={() => { if (!detailOpen && !catsOpen) return; lightTap(); setDetailOpen(false); setCatsOpen(false); }}
+          aria-label="Ketik nominal"
+          className="relative mt-5 flex w-full items-baseline justify-center gap-1.5 min-w-0"
+          aria-live="polite"
+        >
           <span className="shrink-0 text-lg font-bold text-white/80">{cur}</span>
           <motion.span
             key={shown}
@@ -372,7 +423,10 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
           >
             {shown}
           </motion.span>
-        </div>
+        </button>
+        {(detailOpen || catsOpen) && (
+          <p className="relative -mt-0.5 text-center text-[11px] font-bold text-white/70">Ketuk nominal untuk mengetik</p>
+        )}
 
         <div className="relative mt-3.5 flex flex-wrap justify-center gap-2">
           {!isTransfer && (

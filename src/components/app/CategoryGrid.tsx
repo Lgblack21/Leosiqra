@@ -42,6 +42,7 @@ export function CategoryGrid({ type, value, subValue, onChange, history, layout 
   };
   const [subFor, setSubFor] = useState<string | null>(null);
   const subRef = useRef<HTMLDivElement>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
   const kinds = useCategoryKinds();
   useCategoryStyles(); // gambar ulang saat ikon pilihan user dimuat
 
@@ -75,6 +76,13 @@ export function CategoryGrid({ type, value, subValue, onChange, history, layout 
     return shown.sort((a, b) => (freq.get(b) ?? 0) - (freq.get(a) ?? 0) || a.localeCompare(b, "id"));
   }, [rows, kinds, type, history, value]);
 
+  // Baris ringkas: geser sampai kategori terpilih terlihat (mis. baru dipilih dari "Lainnya").
+  useEffect(() => {
+    if (layout !== "row" || expanded) return;
+    const row = rowRef.current;
+    const el = row?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (row && el) row.scrollTo({ left: Math.max(0, el.offsetLeft - 12), behavior: "smooth" });
+  }, [value, expanded, layout]);
   // Ganti jenis Keluar/Masuk → tutup pilihan sub yang terbuka.
   useEffect(() => setSubFor(null), [type]);
   // Pilihan sub bisa jatuh di bawah keypad — gulir sampai terlihat.
@@ -146,6 +154,7 @@ export function CategoryGrid({ type, value, subValue, onChange, history, layout 
           key={name}
           type="button"
           onClick={() => pick(name)}
+          aria-pressed={active}
           className={cn("flex flex-col items-center gap-1.5 active:scale-95 transition-transform", expanded ? "py-1" : "w-[68px] shrink-0 snap-start")}
         >
           <span
@@ -180,7 +189,7 @@ export function CategoryGrid({ type, value, subValue, onChange, history, layout 
         {expanded ? (
           <div className="grid grid-cols-4 gap-x-1 gap-y-3 px-3 pt-1">{list.map(tileBtn)}{moreBtn}</div>
         ) : (
-          <div className="flex gap-1 overflow-x-auto no-scrollbar snap-x px-3 pt-2 pb-1">{list.map(tileBtn)}{moreBtn}</div>
+          <div ref={rowRef} className="relative flex gap-1 overflow-x-auto no-scrollbar snap-x px-3 pt-2 pb-1">{list.map(tileBtn)}{moreBtn}</div>
         )}
         {subPills}
       </div>
