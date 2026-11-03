@@ -49,6 +49,9 @@ import { SecurityNudge } from '@/components/SecurityNudge';
 import { LeoBuddy, type LeoTip } from '@/components/dashboard/LeoBuddy';
 import { SkyScene, skyPeriod } from '@/components/dashboard/SkyScene';
 import { SpendPaceChart, type PacePoint } from '@/components/dashboard/SpendPaceChart';
+import { HealthScoreCard } from '@/components/dashboard/HealthScoreCard';
+import { computeHealthScore } from '@/lib/healthScore';
+import { computeNetWorth } from '@/lib/netWorth';
 import { reminderService, type Reminder } from '@/lib/services/reminderService';
 import { HeaderSlot } from '@/components/Header';
 
@@ -320,6 +323,24 @@ export default function MonthlyDashboard() {
 
   const firstName = auth.currentUser?.displayName?.split(' ')[0];
   const statsLoading = loading && allTransactions.length === 0;
+
+  // Skor kesehatan finansial: kas + tabungan vs pengeluaran, hutang & kartu, kebiasaan mencatat.
+  const health = useMemo(() => {
+    const nw = computeNetWorth({
+      accounts,
+      transactions: allTransactions,
+      investments,
+      savings,
+      toIdr: (amount, currency) => exchangeRateService.convert(amount, currency || 'IDR', 'IDR', fxRates),
+    });
+    return computeHealthScore({
+      transactions: allTransactions,
+      budgets,
+      liquid: nw.totals.cash + nw.totals.savings,
+      liabilities: nw.totals.liabilities,
+      today: now ?? undefined,
+    });
+  }, [accounts, allTransactions, investments, savings, budgets, fxRates, now]);
 
   // ===== Tambahan Ringkasan v2: ritme, jatah harian, "Segera", kata-kata Leo =====
   const budgetedCats = useMemo(
@@ -656,6 +677,8 @@ export default function MonthlyDashboard() {
           </div>
         </div>
       </section>
+
+      {!statsLoading && <HealthScoreCard result={health} />}
 
       {/* Catatan terbaru (dikelompokkan per hari) + Segera */}
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
