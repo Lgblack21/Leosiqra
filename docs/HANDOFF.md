@@ -18,6 +18,13 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **Cron pengingat per menit** (c15533c, live deploy #111): akun Cloudflare = **Workers Free, maks 5 cron per AKUN**
+  (deploy 273a32e gagal saat menambah trigger ke-4 di worker ini). Trigger `*/10` diganti `* * * * *`: tiap menit
+  `sendDueReminders`; menit kelipatan 10 (`event.scheduledTime`) tugas lama 10 menit (promo, pengingat harian, Gmail,
+  Slack). JANGAN menambah trigger baru — gabungkan ke cabang yang ada. Belum dipantau di produksi (cek pengingat ±1
+  menit & video promo/Gmail tetap jalan).
+- **Angka app HP = web** (6a54e55): beli/jual investasi netral (`txKind`), Beranda Pemasukan tanpa transfer masuk,
+  Statistik tanpa investasi, ringkasan /app/transactions via txKind.
 - **Tag di app HP** (`claude/app-tag`, 2026-11-03): sheet Tambah Transaksi menampilkan chip tag (prefs.tags, hanya
   kalau Tag nyala & ada daftar; bukan transfer), maks 5; quickTxService kirim tag lewat PUT /transactions/:id setelah
   quick-transaction (tanpa ubah Worker; gagal tag ≠ gagal transaksi). /app/transactions: chip tag per baris, filter
