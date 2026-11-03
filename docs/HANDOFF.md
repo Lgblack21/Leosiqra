@@ -16,6 +16,15 @@ Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
+## Menunggu (belum di main)
+
+- Branch **`claude/push-fcm`** (2026-11-03, akun ini via Termux): push native Android lewat FCM — siap, BELUM
+  deploy & migrasi `0022_native_push_tokens.sql` BELUM jalan. Menunggu Bos: buat project Firebase (package
+  `com.leosiqra.app`), `android/app/google-services.json`, secret Worker `FCM_SERVICE_ACCOUNT`, lalu "gas".
+  Detail lengkap ada di HANDOFF versi branch itu. Jangan ubah `cloudflare/src/index.ts` bagian
+  `sendWebPushToUser`/`cleanupNotifications`, `AppShell.tsx`, `RemindersView.tsx` tanpa rebase ke branch itu.
+- Token D1 lokal (cek/migrasi dari HP) hanya ada di HP Termux: `/data/data/com.termux/files/home/.config/leosiqra/cloudflare.env`.
+
 ## Status produksi
 
 - **Live (main = produksi)**: Koin & Referral (Kawananmu), lampiran struk (R2),
