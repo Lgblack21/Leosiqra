@@ -12886,6 +12886,10 @@ const sendPlanExpiryReminders = async (env: Env) => {
       );
     } catch (error) {
       console.error(`Pengingat masa aktif ${u.id} gagal:`, error);
+    }
+  }
+};
+
 // Peringatan anggaran: saat belanja satu kategori melewati 80% lalu 100% dari
 // anggaran bulanannya (periode ikut budgetStartDay). Dicek tiap jam. Status
 // per periode di $.prefs.budgetAlert = { p: "<awal periode>", s: { kategori: 80|100 } };
