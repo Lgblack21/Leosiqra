@@ -94,9 +94,10 @@ jobs:
         working-directory: android
         env:
           LEOSIQRA_VERSION_NAME: ${{ inputs.versi }}
-          # Naik setiap rilis (APK debug lama = 1) → Android mau menimpa versi sebelumnya.
-          LEOSIQRA_VERSION_CODE: ${{ 100 + github.run_number }}
+          RUN_NUMBER: ${{ github.run_number }}
         run: |
+          # Naik setiap rilis (APK debug lama = 1) → Android mau menimpa versi sebelumnya.
+          export LEOSIQRA_VERSION_CODE=$((100 + RUN_NUMBER))
           chmod +x gradlew
           ./gradlew --no-daemon assembleRelease
 
