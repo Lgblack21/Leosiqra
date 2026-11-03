@@ -245,7 +245,7 @@ export default function RekeningPage() {
       {loading ? (
         <Skeleton className="h-44 rounded-[24px]" />
       ) : (
-        <section className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 p-5 text-white md:p-6">
+        <section className="web-keep relative overflow-hidden rounded-[24px] bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 p-5 text-white md:p-6">
           <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-indigo-500/20 blur-2xl" />
           <span aria-hidden className="pointer-events-none absolute -bottom-24 left-1/3 h-48 w-48 rounded-full bg-teal-400/10 blur-2xl" />
           <div className="relative flex items-start justify-between gap-3">
