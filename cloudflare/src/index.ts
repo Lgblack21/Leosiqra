@@ -12845,6 +12845,51 @@ const sendDueReminders = async (env: Env) => {
   }
 };
 
+// Pengingat masa aktif (masa coba gratis / PRO) sebelum habis: H-3 & H-1,
+// dari cron harian 10:00 WIB. Klaim bersyarat $.prefs.planRemind =
+// "<expired_at>|<tahap>" → tiap tahap terkirim sekali per masa aktif (cron
+// dobel aman; diperpanjang = expired_at baru = boleh diingatkan lagi).
+const PLAN_REMIND_MAX_PER_RUN = 500;
+const sendPlanExpiryReminders = async (env: Env) => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const nowMs = Date.now();
+  const { results } = await env.DB.prepare(
+    `SELECT id, plan, expired_at FROM users
+      WHERE status = 'AKTIF' AND expired_at IS NOT NULL AND expired_at > ? AND expired_at <= ?
+      LIMIT ?`
+  )
+    .bind(new Date(nowMs).toISOString(), new Date(nowMs + 3 * DAY + 60 * 60 * 1000).toISOString(), PLAN_REMIND_MAX_PER_RUN)
+    .all<{ id: string; plan: string | null; expired_at: string }>();
+  for (const u of results ?? []) {
+    try {
+      const left = Date.parse(u.expired_at) - nowMs;
+      if (!Number.isFinite(left) || left <= 0) continue;
+      const stage = left <= 1.5 * DAY ? "h1" : "h3";
+      const marker = `${u.expired_at}|${stage}`;
+      const claim = await env.DB.prepare(
+        `UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.prefs.planRemind', ?)
+          WHERE id = ? AND COALESCE(CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.prefs.planRemind') END, '') <> ?`
+      )
+        .bind(marker, u.id, marker)
+        .run();
+      if (!claim.meta.changes) continue;
+      const pro = u.plan === "PRO";
+      const when = stage === "h1" ? "besok" : `${Math.max(2, Math.round(left / DAY))} hari lagi`;
+      await sendWebPushToUser(
+        env,
+        u.id,
+        pro ? `⏳ PRO kamu habis ${when}` : `⏳ Masa coba gratis habis ${when}`,
+        pro
+          ? "Perpanjang atau tukar Koin Leo supaya fitur PRO tetap jalan."
+          : "Lanjutkan ke PRO atau tukar Koin Leo supaya catatanmu tetap lengkap.",
+        "/membership/dashboard?pengaturan=paket"
+      );
+    } catch (error) {
+      console.error(`Pengingat masa aktif ${u.id} gagal:`, error);
+    }
+  }
+};
+
 // Wawasan mingguan (Senin 10:00 WIB) & bulanan (tanggal 1, 10:00 WIB) — untuk
 // semua user aktif yang punya transaksi sejak `since` & tidak mematikannya
 // ($.prefs.notify.weekly/monthly = false). Selalu masuk lonceng
@@ -15958,6 +16003,8 @@ const worker = {
     ctx.waitUntil(syncAllGoogleSheets(env));
     ctx.waitUntil(writeAllNotionReports(env));
     ctx.waitUntil(remindAppActivationExpiry(env).catch((error) => console.error("Pengingat aktivasi:", error)));
+    // Masa coba gratis / PRO habis H-3 & H-1 (push + lonceng).
+    ctx.waitUntil(sendPlanExpiryReminders(env).catch((error) => console.error("Pengingat masa aktif:", error)));
     ctx.waitUntil(cleanupNotifications(env).catch((error) => console.error("Bersihkan notifikasi:", error)));
     // Senin: wawasan mingguan; tanggal 1: rekap bulan lalu (push, bisa dimatikan user).
     ctx.waitUntil(sendInsightPushes(env).catch((error) => console.error("Wawasan push:", error)));
