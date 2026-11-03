@@ -448,7 +448,8 @@ membersite_leosiqra_db --remote --command "..."`. SELECT boleh langsung; tulis/u
   → tidak ada bukti user terdampak (23 user). Rekonsiliasi saldo: 26/33 rekening cocok
   (initial_balance + transaksi = balance); 7 selisih bukan dari impor. Ditelusuri: BCA Platinum user 7b434d
   = pengeluaran "Investasi" 280 jt bertanggal mundur (tak menggerakkan saldo) − piutang 5 jt; sisa ~14,8 jt
-  belum terjelaskan (dugaan edit saldo manual). Cash KHR = baris Transfer Masuk lama tersimpan 32,50 USD
+  tak terlacak (dugaan: hapus transfer/piutang sebelum 27 Sep tidak membalik saldo). User 7b434d = akun Bos
+  (leo.wendry@gmail.com); Bos konfirmasi 2026-11-03 saldo BCA Platinum = saldo bank asli → tidak perlu tindakan. Cash KHR = baris Transfer Masuk lama tersimpan 32,50 USD
   (tak dikonversi) + Top Up tanpa baris Masuk; saldo kemungkinan benar. Data TIDAK diubah.
 - Live (2026-11-03, deploy 353a2725): streak bulan surplus & konteks kategori AI kini juga mengecualikan
   catatan investasi lama tanpa tautan (kategori Investasi/Saham/Deposito, sama dengan isInvestmentPurchaseRow).
