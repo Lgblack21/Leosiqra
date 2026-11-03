@@ -90,6 +90,10 @@ cd promo && npm ci --no-audit --no-fund && PROMO_SECRET=$PROMO_SECRET node lesso
    target views/rating) → simpan di draft `campaign` dan pakai sepanjang minggu
    (hari lain: baca `campaign` dari draft Senin, `draft-<tanggal Senin>`).
 6. Simpan draft `{stage: "ide", ideas, concept, shots, campaign?}`.
+   Sebelum menyimpan, tulis shot list ide terpilih ke file (array scene
+   `{type, text, say}`) lalu jalankan `node promo/cek-kata.mjs <file>` — jangan
+   menaksir jumlah kata manual. Exit ≠ 0 = revisi dulu (hook ≤ 6 kata, ≤ 25
+   kata/scene, total ≤ 75; `--total N` kalau playbook memakai batas lebih ketat).
 7. **Tower**: tulis `status/hari-ini` (stage 0), `metrik/ringkas`, dan
    `konten/<id>` (7 video terakhir, sudah termasuk rating & views kemarin);
    perbarui `otak/analisis` (+ `otak/promosi` hari Senin) — lihat TEAMS.md.
@@ -102,7 +106,8 @@ cd promo && npm ci --no-audit --no-fund && PROMO_SECRET=$PROMO_SECRET node lesso
    hashtag.
 2. Review kritis sebagai Tim Analisis: klaim hanya dari `content.mjs`,
    matematika benar, tanpa merek lain, `say` enak diucapkan (angka pakai kata),
-   hook ≤ 6 kata, total narasi ≤ 75 kata. Revisi sampai lolos.
+   hook ≤ 6 kata, total narasi ≤ 75 kata — dicek dengan
+   `node promo/cek-kata.mjs script.json` (bukan ditaksir). Revisi sampai lolos.
 3. Simpan draft `{stage: "naskah", …, script}`.
 4. **Tower**: `status/hari-ini` (stage 1) + perbarui `otak/konten` (pelajaran
    dari review: klaim/angka/hook yang diperbaiki).
