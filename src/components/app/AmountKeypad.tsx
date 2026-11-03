@@ -64,6 +64,16 @@ export function AmountKeypad({ value, onChange, currencySymbol = "Rp" }: AmountK
     commit(next);
   };
 
+  // "000" — nominal rupiah hampir selalu ribuan. Tidak berlaku untuk 0 atau angka desimal.
+  const pressThousand = () => {
+    const current = lastIsOperator ? "" : (tokens[tokens.length - 1] ?? "");
+    if (!current || current === "0" || current.includes(".") || current.length > 12) return;
+    lightTap();
+    const next = [...tokens];
+    next[next.length - 1] = current + "000";
+    commit(next);
+  };
+
   const pressBackspace = () => {
     lightTap();
     const next = [...tokens];
@@ -203,7 +213,8 @@ export function AmountKeypad({ value, onChange, currencySymbol = "Rp" }: AmountK
 
             <KeyButton onClick={() => pressDigit(".")}>.</KeyButton>
             <KeyButton onClick={() => pressDigit("0")}>0</KeyButton>
-            <div className="col-span-2" />
+            <KeyButton onClick={pressThousand}>000</KeyButton>
+            <div />
           </>
         )}
       </div>

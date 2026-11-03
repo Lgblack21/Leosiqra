@@ -2,16 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { CalendarDays, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Sparkles } from "lucide-react";
+import { CalendarDays, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Sparkles, PencilLine, Wallet } from "lucide-react";
 import { accountService, Account } from "@/lib/services/accountService";
 import { auth } from "@/lib/cf-client";
 import { subscribeToCollectionChanges } from "@/lib/cf-firestore";
-import { CategorySelect } from "@/components/CategorySelect";
+import { CategoryGrid } from "@/components/app/CategoryGrid";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import type { TxType } from "@/components/app/TxTypeToggle";
 import { transferService, EXTERNAL_WALLET_ID } from "@/lib/services/transferService";
 import { cn } from "@/lib/utils";
-import { AccountPicker } from "@/components/app/AccountPicker";
 import { AmountKeypad, groupDigits } from "@/components/app/AmountKeypad";
 import { lightTap } from "@/lib/haptics";
 import { transactionService, Transaction } from "@/lib/services/transactionService";
@@ -40,7 +39,7 @@ function ModeToggle({ value, onChange }: { value: SheetMode; onChange: (m: Sheet
           type="button"
           onClick={() => { lightTap(); onChange(mode); }}
           className={cn(
-            "relative flex items-center justify-center gap-1.5 py-3 rounded-xl text-[13px] font-black transition-colors duration-300",
+            "relative flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[13px] font-black transition-colors duration-300",
             value === mode ? "text-white" : "text-slate-400 dark:text-slate-500"
           )}
         >
@@ -52,9 +51,38 @@ function ModeToggle({ value, onChange }: { value: SheetMode; onChange: (m: Sheet
               transition={{ type: "spring", stiffness: 480, damping: 36 }}
             />
           )}
-          <span className="relative flex items-center gap-1.5"><Icon size={15} /> {label}</span>
+          <span className="relative flex items-center gap-1.5"><Icon size={14} /> {label}</span>
         </button>
       ))}
+    </div>
+  );
+}
+
+// Rekening sebagai deretan pil yang bisa digeser — satu ketukan, tanpa dropdown.
+function AccountPills({ accounts, value, onChange, label }: { accounts: Account[]; value: string; onChange: (id: string) => void; label?: string }) {
+  if (accounts.length === 0) return <p className="text-xs font-medium text-slate-400 dark:text-slate-500">Belum ada rekening.</p>;
+  return (
+    <div className="flex items-center gap-2">
+      <span className="shrink-0 flex items-center gap-1 text-[11px] font-black text-slate-400 dark:text-slate-500">
+        <Wallet size={13} /> {label}
+      </span>
+      <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+        {accounts.map((a) => (
+          <button
+            key={a.id}
+            type="button"
+            onClick={() => { lightTap(); onChange(a.id ?? ""); }}
+            className={cn(
+              "shrink-0 max-w-[160px] truncate rounded-full border px-3 py-1.5 text-[12px] font-bold transition-colors",
+              a.id === value
+                ? "border-indigo-600 bg-indigo-600 text-white"
+                : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+            )}
+          >
+            {a.name}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -106,6 +134,9 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
   const [fromReminder, setFromReminder] = useState<string | null>(null);
+  // Bagian yang jarang dipakai disembunyikan sampai diminta.
+  const [showSmart, setShowSmart] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
 
   // Tiap ketukan notifikasi (key baru) mengisi ulang form; kategori sengaja
   // dikosongkan supaya user memilih sendiri sebelum menyimpan.
@@ -189,6 +220,8 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
     setHint(null);
     setAttachmentId(undefined);
     setFromReminder(null);
+    setShowSmart(false);
+    setNoteOpen(false);
   };
 
   // Isi form dari ketik pintar / suara / scan — hanya field yang terbaca,
@@ -245,12 +278,20 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
     }
   };
 
+  const chip = (active: boolean) =>
+    cn(
+      "shrink-0 rounded-full border px-3 py-1.5 text-[12px] font-bold transition-colors",
+      active
+        ? "border-indigo-600 bg-indigo-600 text-white"
+        : "border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"
+    );
+  const otherDate = date !== null && date !== yesterdayISO();
+
   return (
     <>
     <BottomSheet
       isOpen={isOpen}
       onClose={onClose}
-      title="Tambah Transaksi"
       footer={
         <div className="pb-[env(safe-area-inset-bottom)]">
           <AmountKeypad value={amount} onChange={setAmount} currencySymbol={selectedAccount?.currency ?? "Rp"} />
@@ -259,10 +300,12 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
               type="button"
               onClick={handleSubmit}
               disabled={!canSubmit}
-              className="w-full py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg shadow-indigo-200 disabled:opacity-40 disabled:shadow-none transition-all active:scale-[0.98]"
+              className="w-full py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg shadow-indigo-200 dark:shadow-none disabled:opacity-40 disabled:shadow-none transition-all active:scale-[0.98]"
             >
               {submitting
                 ? "Menyimpan..."
+                : !isTransfer && amountNumber > 0 && !category
+                ? "Pilih kategori dulu"
                 : `Simpan ${isTransfer ? "Transfer" : type === "pengeluaran" ? "Pengeluaran" : "Pemasukan"} ${
                     amountNumber > 0 ? groupDigits(amount) : ""
                   }`}
@@ -271,14 +314,32 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
         </div>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-3.5">
         {feedback && !feedback.ok && (
           <div className="rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 px-4 py-3 text-xs font-bold text-rose-600 dark:text-rose-400">
             {feedback.msg}
           </div>
         )}
 
-        <SmartBar ctx={ctx} onDraft={applyDraft} />
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <ModeToggle value={mode} onChange={setMode} />
+          </div>
+          <button
+            type="button"
+            onClick={() => { lightTap(); setShowSmart((v) => !v); }}
+            aria-label="Isi lewat ketik, suara, atau foto struk"
+            aria-pressed={showSmart}
+            className={cn(
+              "shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center transition-colors",
+              showSmart ? "bg-indigo-600 text-white" : "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400"
+            )}
+          >
+            <Sparkles size={18} />
+          </button>
+        </div>
+
+        {showSmart && <SmartBar ctx={ctx} onDraft={applyDraft} />}
         {fromReminder && !hint && (
           <div className="flex items-start gap-2 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 px-3.5 py-2.5 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
             <Sparkles size={13} className="mt-0.5 shrink-0" />
@@ -294,95 +355,69 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
             </span>
           </div>
         )}
-        <ModeToggle value={mode} onChange={setMode} />
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              lightTap();
-              setDate(null);
-              setShowDatePicker(false);
-            }}
-            className={`px-3.5 py-2 rounded-full text-xs font-bold border ${
-              date === null
-                ? "bg-indigo-600 border-indigo-600 text-white"
-                : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400"
-            }`}
-          >
-            Hari ini
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              lightTap();
-              setDate(yesterdayISO());
-              setShowDatePicker(false);
-            }}
-            className={`px-3.5 py-2 rounded-full text-xs font-bold border ${
-              date === yesterdayISO()
-                ? "bg-indigo-600 border-indigo-600 text-white"
-                : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400"
-            }`}
-          >
-            Kemarin
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              lightTap();
-              setShowDatePicker((v) => !v);
-            }}
-            className={`w-9 h-9 shrink-0 rounded-full border flex items-center justify-center ${
-              showDatePicker || (date !== null && date !== yesterdayISO())
-                ? "bg-indigo-600 border-indigo-600 text-white"
-                : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400"
-            }`}
-            aria-label="Pilih tanggal lain"
-          >
-            <CalendarDays size={15} />
-          </button>
+        <div className="space-y-2">
+          <AccountPills accounts={accounts} value={accountId} onChange={setAccountId} label={isTransfer ? "Dari" : undefined} />
+          {isTransfer && <AccountPills accounts={transferTargets} value={toAccountId} onChange={setToAccountId} label="Ke" />}
+          {isTransfer && selectedAccount && transferTargets.find((a) => a.id === toAccountId)?.currency !== selectedAccount.currency && toAccountId !== EXTERNAL_WALLET_ID && (
+            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 px-1">
+              Nominal dalam {selectedAccount.currency}. Jumlah yang masuk dikonversi otomatis pakai kurs hari ini.
+            </p>
+          )}
+          <div className="flex items-center gap-1.5">
+            <button type="button" onClick={() => { lightTap(); setDate(null); setShowDatePicker(false); }} className={chip(date === null)}>
+              Hari ini
+            </button>
+            <button type="button" onClick={() => { lightTap(); setDate(yesterdayISO()); setShowDatePicker(false); }} className={chip(date === yesterdayISO())}>
+              Kemarin
+            </button>
+            <button
+              type="button"
+              onClick={() => { lightTap(); setShowDatePicker((v) => !v); }}
+              aria-label="Pilih tanggal lain"
+              className={cn(chip(showDatePicker || otherDate), "flex items-center gap-1")}
+            >
+              <CalendarDays size={13} />
+              {otherDate ? date.split("-").reverse().slice(0, 2).join("/") : null}
+            </button>
+            <button
+              type="button"
+              onClick={() => { lightTap(); setNoteOpen((v) => !v); }}
+              className={cn(chip(noteOpen || Boolean(note)), "ml-auto flex items-center gap-1")}
+            >
+              <PencilLine size={13} /> Catatan
+            </button>
+          </div>
+          {showDatePicker && (
+            <input
+              type="date"
+              value={date ?? toISODate(new Date())}
+              max={toISODate(new Date())}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white"
+            />
+          )}
+          {(noteOpen || note) && (
+            <input
+              type="text"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Catatan (opsional)"
+              autoFocus={noteOpen && !note}
+              className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
+            />
+          )}
         </div>
-        {showDatePicker && (
-          <input
-            type="date"
-            value={date ?? toISODate(new Date())}
-            max={toISODate(new Date())}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3 text-sm font-bold text-slate-900 dark:text-white"
-          />
-        )}
 
-        <AccountPicker accounts={accounts} value={accountId} onChange={setAccountId} label={isTransfer ? "Dari rekening" : "Akun / Rekening"} />
-
-        {isTransfer ? (
-          <>
-            <AccountPicker accounts={transferTargets} value={toAccountId} onChange={setToAccountId} label="Ke" />
-            {selectedAccount && transferTargets.find((a) => a.id === toAccountId)?.currency !== selectedAccount.currency && toAccountId !== EXTERNAL_WALLET_ID && (
-              <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 px-1">
-                Nominal dalam {selectedAccount.currency}. Jumlah yang masuk dikonversi otomatis pakai kurs hari ini.
-              </p>
-            )}
-          </>
-        ) : (
-          <CategorySelect
-            label="Kategori"
+        {!isTransfer && (
+          <CategoryGrid
+            type={type}
             value={category}
-            type={type === "pengeluaran" ? "expense" : "income"}
-            onChange={setCategory}
-            onSubCategoryChange={setSubCategory}
             subValue={subCategory}
-            showBadge={false}
+            history={transactions}
+            onChange={(c, sub) => { setCategory(c); setSubCategory(sub); }}
           />
         )}
-
-        <input
-          type="text"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="Catatan (opsional)"
-          className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-5 py-4 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-indigo-500/5"
-        />
       </div>
     </BottomSheet>
     <UndoToast item={undoItem} onUndo={(item) => quickTxService.undo(item.id)} onDone={() => setUndoItem(null)} />
