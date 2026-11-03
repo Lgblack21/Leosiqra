@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-03 (logo HD dipulihkan; workflow artikel kini ikut unduh logo)
+Terakhir diperbarui: 2026-11-03 (push native Android FCM aktif & teruji di HP)
 
 ## Siapa sedang kerja
 
@@ -18,10 +18,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **Push native Android (FCM)** sudah di main & ter-deploy 2026-11-03, TAPI belum aktif: migrasi
-  `0022_native_push_tokens.sql` BELUM jalan (eksekusi dari sesi Claude ditolak pengaman auto-mode → Bos jalankan
-  di Console D1 / `wrangler d1 execute --remote --file`), secret Worker `FCM_SERVICE_ACCOUNT` belum dipastikan,
-  APK debug dari workflow `build-android.yml` belum dicoba di HP. Detail di bagian Pengingat & Notifikasi.
+- **Push native Android (FCM) AKTIF** (2026-11-03): migrasi 0022 dijalankan via API D1 (sesi Termux, atas
+  perintah Bos), secret `FCM_SERVICE_ACCOUNT` terpasang, APK debug (`leosiqra-debug-1`) dipasang di HP Bos →
+  token terdaftar → pengingat tes MUNCUL sebagai notifikasi HP. Sisa: rilis Play Store (keystore lama belum
+  ketemu, `versionCode` masih 1), iOS belum (perlu Firebase Messaging di app iOS).
 - Token D1 lokal (cek/migrasi dari HP) hanya ada di HP Termux: `/data/data/com.termux/files/home/.config/leosiqra/cloudflare.env`.
 
 ## Status produksi
@@ -146,7 +146,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     00:01 kini bisa dimatikan. BARU: push wawasan mingguan (Senin 10:00 WIB, `computeWeeklyInsights`) & bulanan
     (tgl 1, `buildMonthlyReport`), penanda `$.prefs.weeklySent/monthlySent`. Diuji lokal dengan wrangler dev + D1
     lokal (API, cron dobel, bulanan tgl 31, query kandidat) dan UI lewat Playwright → Worker lokal.
-  - (2026-11-03, live di main; menunggu migrasi 0022 + secret) **Push native Android via FCM**: plugin
+  - (2026-11-03, AKTIF & teruji di HP Bos — migrasi 0022 + secret sudah) **Push native Android via FCM**: plugin
     `@capacitor/push-notifications` (src/lib/nativePush.ts, dipanggil AppShell setelah login: izin → token →
     POST /api/member/native-push-token). Worker `sendNativePushToUser` dipanggil dari `sendWebPushToUser` (semua
     notifikasi lonceng ikut ke HP); OAuth service account RS256 via WebCrypto (diuji dengan kunci RSA nyata).
