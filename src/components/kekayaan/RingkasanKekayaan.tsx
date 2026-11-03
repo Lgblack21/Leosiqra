@@ -267,7 +267,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
             </section>
           )}
 
-          <section className="rounded-[26px] bg-slate-900 p-5 text-white">
+          <section className="web-keep rounded-[26px] bg-slate-900 p-5 text-white">
             <h3 className="text-[16px] font-bold">Tambah ke kekayaan</h3>
             <p className="text-[12px] text-white/60">Yang belum dicatat belum ikut terhitung.</p>
             <div className="mt-3 grid grid-cols-2 gap-2">

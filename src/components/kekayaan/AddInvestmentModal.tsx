@@ -233,7 +233,7 @@ export function AddInvestmentModal({ isOpen, onClose, onDeposito }: { isOpen: bo
         {/* Aset */}
         {isAuto ? (
           picked ? (
-            <div className="flex items-center gap-3 rounded-[22px] bg-gradient-to-br from-slate-900 to-indigo-950 p-4 text-white">
+            <div className="web-keep flex items-center gap-3 rounded-[22px] bg-gradient-to-br from-slate-900 to-indigo-950 p-4 text-white">
               <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white">
                 <LogoImage src={picked.logoUrl} alt={picked.symbol} fallbackText={picked.symbol.slice(0, 4)} className="h-full w-full object-contain p-1" />
               </span>

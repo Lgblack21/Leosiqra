@@ -61,7 +61,7 @@ export function InvestShell() {
   return (
     <div className="mx-auto min-h-screen max-w-6xl px-4 pb-32 pt-4 md:px-8 md:pt-6">
       <header className="mb-5 grid grid-cols-[auto_1fr_auto] items-center gap-3">
-        <Link href="/membership/dashboard" aria-label="Kembali ke Ringkasan" className="group flex h-11 items-center gap-1.5 rounded-full bg-slate-950 pl-2 pr-4 text-[13px] font-semibold text-white shadow-sm hover:bg-slate-800">
+        <Link href="/membership/dashboard" aria-label="Kembali ke Ringkasan" className="web-keep group flex h-11 items-center gap-1.5 rounded-full bg-slate-950 pl-2 pr-4 text-[13px] font-semibold text-white shadow-sm hover:bg-slate-800">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 transition-transform group-hover:-translate-x-0.5"><ArrowLeft size={16} /></span> <span className="hidden sm:inline">Ringkasan</span>
         </Link>
         <AnimatePresence mode="wait" initial={false}>
@@ -86,7 +86,7 @@ export function InvestShell() {
 
       {/* Dock melayang: gelap transparan, tab aktif melebar menampilkan label. */}
       <nav aria-label="Menu Investasiku" className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+16px)] z-40 flex justify-center px-4 print:hidden">
-        <div className="flex items-center gap-1 rounded-full bg-slate-950/85 p-1.5 shadow-[0_20px_50px_-12px_rgba(2,6,23,0.6)] ring-1 ring-white/10 backdrop-blur-xl">
+        <div className="web-keep flex items-center gap-1 rounded-full bg-slate-950/85 p-1.5 shadow-[0_20px_50px_-12px_rgba(2,6,23,0.6)] ring-1 ring-white/10 backdrop-blur-xl">
           {TABS.map((t) => {
             const active = t.id === tab;
             return (
