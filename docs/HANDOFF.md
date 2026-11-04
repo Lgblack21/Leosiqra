@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-04 (Ladangku di branch claude/ladangku, belum deploy)
+Terakhir diperbarui: 2026-11-04 (Ladangku Tagih & Target di branch claude/ladangku-2, belum deploy)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,20 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-04 (branch claude/ladangku) — Ladangku (jual barang nganggur), BELUM deploy (tunggu "gas"). Tanpa migrasi.**
+- **2026-11-04 (branch claude/ladangku-2) — Ladangku tab Tagih & Target, BELUM deploy (tunggu "gas"). Tanpa migrasi.**
+  - Ladangku jadi 3 tab (hash `#jual` / `#tagih` / `#target`) di `src/components/ladang/LadangView.tsx`.
+  - **Tagih** (`TagihView.tsx`): piutang belum lunas (`paidByDebt`/`debtRemaining`, hanya IDR), "Ingatkan" = `wa.me/?text=`
+    (3 nada, kontak dipilih user — tanpa API WA), "Sudah bayar" = `debtService.pay` lunas penuh.
+  - **Patungan** `POST /api/member/debts/split` (`handleSplitDebt`): bagi rata rupiah bulat (sisa ke orang pertama, jumlah =
+    total persis), maks 20 nama (dobel beda huruf besar dibuang), rekening IDR WAJIB (kolom account_id NOT NULL + FK —
+    'General' gagal FK). `apply_balance` (default true): saldo −(total−bagianku) untuk piutang (`balanceApplied`) +
+    pengeluaran bagianku (kategori pilihan) lewat `quickTxBalanceStatements`. Anti dobel: `request_id` UUID klien →
+    `payload_json.splitId`; baris berikutnya bersyarat EXISTS baris pertama. Diuji: 3× paralel → 1×201 + 2×409, saldo −350rb
+    sekali; 100rb/3 = 33.334+33.333+33.333; tanpa potong saldo → saldo tetap.
+  - **Target** (`TargetView.tsx`): cuan = pemasukan bulan ini selain Gaji/Hasil Investasi/kategori investasi, tanpa
+    related_type debt/transfer/investasi. Target per bulan di `prefs.cuanTarget` (PUT /api/member/preferences, 0–1e11).
+  - Buka toko (website publik) sengaja TIDAK dibuat (risiko hosting konten user/penipuan) — tunggu keputusan Bos.
+- **2026-11-04 (branch claude/ladangku) — Ladangku (jual barang nganggur), live #124. Tanpa migrasi.**
   - Halaman `/membership/ladang` + `/app/ladang` (`src/components/ladang/*`), fitur `ladang` (menu Fitur, default nyala untuk
     user tanpa preferensi; `PREF_FEATURES` Worker ikut). Tombol "Jual di Ladangku" di editor Barangku (`?item=<id>`).
   - `POST /api/member/items/appraise`: AI (gemini-2.5-flash, fallback lite) + **plugin web OpenRouter (BERBAYAR per request,

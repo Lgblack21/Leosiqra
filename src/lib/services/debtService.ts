@@ -23,7 +23,23 @@ export const debtRemaining = (debt: Transaction, paid: Map<string, number>) => {
   return Math.max(0, (Number(debt.amount) || 0) - (paid.get(debt.id) || 0));
 };
 
+export type SplitResult = { ids: string[]; shares: { name: string; amount: number }[]; myShare: number };
+
 export const debtService = {
+  /** Patungan: satu tagihan → piutang per orang (+ bagianku), atomik di server. */
+  async split(input: { requestId: string; total: number; note: string; names: string[]; includeMe: boolean; accountId: string; applyBalance: boolean; myCategory?: string; date?: string; due?: DebtDue | null }): Promise<SplitResult> {
+    const res = await cloudflareApi<SplitResult>('/api/member/debts/split', {
+      method: 'POST',
+      json: {
+        request_id: input.requestId, total: input.total, note: input.note, names: input.names, include_me: input.includeMe,
+        account_id: input.accountId, apply_balance: input.applyBalance, my_category: input.myCategory, date: input.date, ...(input.due ? { due: input.due } : {}),
+      },
+    });
+    notifyCollectionChanged('transactions');
+    if (input.applyBalance) notifyCollectionChanged('accounts');
+    return res;
+  },
+
   // Bayar cicilan / lunasi lewat endpoint server (atomik; server menghitung
   // sisa & memotong nominal yang melebihi sisa). accountId hanya wajib untuk
   // catatan lama yang tidak punya rekening valid (server membalas needAccount).

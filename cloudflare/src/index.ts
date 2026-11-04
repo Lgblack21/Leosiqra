@@ -3950,6 +3950,94 @@ async function handleExportTransactionsCsv(request: Request, env: Env) {
 // findTransferPair di hapus-transaksi tetap bisa memasangkan kedua sisi.
 // Bedanya: semua (dua baris + saldo kedua rekening + total) dalam SATU batch
 // D1, dan konversi kurs dikerjakan server kalau mata uang rekening berbeda.
+// POST /api/member/debts/split — Patungan (Ladangku › Tagih): satu tagihan dibagi
+// rata ke beberapa orang → satu piutang per orang (+ bagianku sebagai pengeluaran
+// kalau "termasuk aku"). Pembagian dalam rupiah bulat; sisa pembulatan dibebankan
+// ke orang pertama supaya jumlah bagian = total persis. Mode "bayar dari rekening":
+// saldo berkurang sebesar total (piutang balanceApplied + pengeluaran bagianku);
+// apply_balance false = cuma catat siapa berutang (tagihan sudah dicatat sendiri).
+// Semua dalam SATU batch; request_id (UUID klien) mencegah dobel kirim.
+const SPLIT_MAX_PEOPLE = 20;
+async function handleSplitDebt(request: Request, env: Env) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const raw = await parseJson<Record<string, unknown>>(request);
+  const text = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/[\u0000-\u001f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, max) : "");
+  const total = typeof raw.total === "number" && Number.isFinite(raw.total) ? Math.round(raw.total) : 0;
+  if (total < 1 || total > 1e12) return json({ error: "Isi total tagihannya." }, { status: 400 });
+  const note = text(raw.note, 120);
+  const myCategory = text(raw.my_category, 60) || "Lainnya";
+  const seenNames = new Set<string>();
+  const names = (Array.isArray(raw.names) ? raw.names : []).map((n) => text(n, 60)).filter((n) => n && !seenNames.has(n.toLowerCase()) && seenNames.add(n.toLowerCase()));
+  if (!names.length) return json({ error: "Isi minimal satu nama yang ikut patungan." }, { status: 400 });
+  if (names.length > SPLIT_MAX_PEOPLE) return json({ error: `Maksimal ${SPLIT_MAX_PEOPLE} orang.` }, { status: 400 });
+  const includeMe = raw.include_me !== false;
+  const requestId = typeof raw.request_id === "string" && /^[0-9a-f-]{36}$/i.test(raw.request_id) ? raw.request_id : null;
+  if (!requestId) return json({ error: "Permintaan tidak valid. Muat ulang halaman." }, { status: 400 });
+  const date = isRealDateStr(raw.date) && raw.date <= todayWIB() && raw.date >= "2000-01-01" ? raw.date : todayWIB();
+  const due = sanitizeDebtDue(raw.due);
+  // Rekening wajib (kolom account_id NOT NULL + FK); saldo hanya berubah kalau apply_balance.
+  const accountRow = typeof raw.account_id === "string" && raw.account_id
+    ? await env.DB.prepare("SELECT id FROM accounts WHERE id = ? AND user_id = ? AND COALESCE(currency, 'IDR') = 'IDR'").bind(raw.account_id, userId).first<{ id: string }>()
+    : null;
+  if (!accountRow) return json({ error: "Pilih rekening Rupiah." }, { status: 400 });
+  const applyBalance = raw.apply_balance !== false;
+  const account = applyBalance ? accountRow : null;
+  const parts = names.length + (includeMe ? 1 : 0);
+  const base = Math.floor(total / parts);
+  const shares = names.map((_, i) => base + (i === 0 ? total - base * parts : 0));
+  const myShare = includeMe ? base : 0;
+  const now = nowIso();
+  const anchorId = generateId();
+  const label = note || "Patungan";
+  const anchorExists = "EXISTS (SELECT 1 FROM transactions WHERE id = ? AND user_id = ?)";
+  const stmts: D1PreparedStatement[] = [];
+  const debtIds: string[] = [];
+  names.forEach((name, i) => {
+    const id = i === 0 ? anchorId : generateId();
+    debtIds.push(id);
+    const payload = JSON.stringify({ splitId: requestId, split: { total, people: parts }, ...(account ? { balanceApplied: true } : {}), ...(due ? { due } : {}) });
+    const values = [id, userId, shares[i], shares[i], accountRow.id, name, shares[i], date, date, `[Patungan] ${label}`, payload, now, now];
+    stmts.push(
+      i === 0
+        ? env.DB.prepare(
+            `INSERT INTO transactions (id, user_id, type, amount, amount_idr, category, sub_category, currency, account_id, lender_name, total_debt, installment_tenor,
+               monthly_interest, total_interest, date, display_date, note, status, payment_status, payload_json, created_at, updated_at)
+             SELECT ?, ?, 'debt', ?, ?, 'Piutang', 'Piutang', 'IDR', ?, ?, ?, 0, 0, 0, ?, ?, ?, 'PENDING', 'belum', ?, ?, ?
+              WHERE NOT EXISTS (SELECT 1 FROM transactions WHERE user_id = ? AND type = 'debt' AND json_valid(payload_json) AND json_extract(payload_json, '$.splitId') = ?)`
+          ).bind(...values, userId, requestId)
+        : env.DB.prepare(
+            `INSERT INTO transactions (id, user_id, type, amount, amount_idr, category, sub_category, currency, account_id, lender_name, total_debt, installment_tenor,
+               monthly_interest, total_interest, date, display_date, note, status, payment_status, payload_json, created_at, updated_at)
+             SELECT ?, ?, 'debt', ?, ?, 'Piutang', 'Piutang', 'IDR', ?, ?, ?, 0, 0, 0, ?, ?, ?, 'PENDING', 'belum', ?, ?, ?
+              WHERE ${anchorExists}`
+          ).bind(...values, anchorId, userId)
+    );
+  });
+  if (account) {
+    // Piutang = uang keluar dari rekening (sama dengan debtBalanceDelta "Piutang").
+    stmts.push(env.DB.prepare(`UPDATE accounts SET balance = balance - ? WHERE id = ? AND user_id = ? AND ${anchorExists}`).bind(total - myShare, account.id, userId, anchorId, userId));
+    if (myShare > 0) {
+      const myId = generateId();
+      stmts.push(
+        env.DB.prepare(
+          `INSERT INTO transactions (id, user_id, type, amount, amount_idr, category, sub_category, currency, account_id, date, display_date, note, status, payload_json, created_at, updated_at)
+           SELECT ?, ?, 'pengeluaran', ?, ?, ?, NULL, 'IDR', ?, ?, ?, ?, 'VERIFIED', ?, ?, ? WHERE ${anchorExists}`
+        ).bind(myId, userId, myShare, myShare, myCategory, account.id, date, date, `Bagianku — ${label}`, JSON.stringify({ splitId: requestId }), now, now, anchorId, userId),
+        ...quickTxBalanceStatements(env, userId, myId, account.id, "pengeluaran", myShare)
+      );
+    }
+  }
+  const results = await env.DB.batch(stmts);
+  if (!results[0]?.meta.changes) return json({ error: "Patungan ini sudah tercatat." }, { status: 409 });
+  try {
+    const durableId = env.REALTIME_ROOM.idFromName(`member:${userId}`);
+    await env.REALTIME_ROOM.get(durableId).fetch("https://realtime.internal/publish", { method: "POST", body: JSON.stringify({ event: "transaction.created", payload: { id: anchorId, userId } }) });
+  } catch { /* realtime opsional */ }
+  return json({ ok: true, ids: debtIds, shares: names.map((name, i) => ({ name, amount: shares[i] })), myShare }, { status: 201 });
+}
+
 // POST /api/member/debts/:id/pay — bayar cicilan / lunasi hutang atau piutang.
 // Format baris pembayaran SAMA dengan halaman web Hutang & Piutang (type
 // pengeluaran untuk Hutang / pemasukan untuk Piutang, related_type 'debt',
@@ -13617,6 +13705,8 @@ type UserPrefs = {
   // Ingatan asisten (Pengaturan → Ingatan asisten): teks bebas milik user,
   // disisipkan ke prompt Tanya Leo sebagai catatan (bukan aturan sistem).
   aiMemory: AiMemory;
+  // Ladangku: target cuan sampingan per bulan (Rupiah; 0 = belum diatur).
+  cuanTarget: number;
 };
 const AI_MEMORY_KEYS = ["style", "learned", "about"] as const;
 const AI_MEMORY_MAX = 600;
@@ -13633,7 +13723,7 @@ const sanitizeNotify = (raw: unknown): NotifyPrefs => {
   const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   return Object.fromEntries(NOTIFY_KEYS.map((k) => [k, r[k] !== false])) as NotifyPrefs;
 };
-const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" }, categoryStyles: {}, avatar: null, saveAttachments: true, features: null, categoryKinds: {}, budgetStartDay: 1, tags: { enabled: false, list: [] }, amountKeypad: "standar", notify: sanitizeNotify(null), showMascot: true, seasonal: true, aiMemory: sanitizeAiMemory(null) };
+const DEFAULT_PREFS: UserPrefs = { goals: [], inputMode: null, reminder: { on: false, time: "20:00" }, categoryStyles: {}, avatar: null, saveAttachments: true, features: null, categoryKinds: {}, budgetStartDay: 1, tags: { enabled: false, list: [] }, amountKeypad: "standar", notify: sanitizeNotify(null), showMascot: true, seasonal: true, aiMemory: sanitizeAiMemory(null), cuanTarget: 0 };
 const TAGS_MAX = 40;
 const sanitizeTagsPref = (raw: unknown): UserPrefs["tags"] => {
   const r = raw && typeof raw === "object" ? (raw as { enabled?: unknown; list?: unknown }) : {};
@@ -13648,6 +13738,7 @@ const sanitizeTagsPref = (raw: unknown): UserPrefs["tags"] => {
   }
   return { enabled: r.enabled === true, list };
 };
+const sanitizeCuanTarget = (raw: unknown) => (Number.isInteger(raw) && (raw as number) >= 0 && (raw as number) <= 1e11 ? (raw as number) : 0);
 const sanitizeBudgetStartDay = (raw: unknown) => (Number.isInteger(raw) && (raw as number) >= 1 && (raw as number) <= 28 ? (raw as number) : 1);
 // Periode anggaran bulanan yang memuat `today` (YYYY-MM-DD, WIB): [from, to) —
 // mis. mulai tanggal 25 & hari ini 10 Nov → 2026-10-25 s/d sebelum 2026-11-25.
@@ -13712,6 +13803,7 @@ const readUserPrefs = async (env: Env, userId: string): Promise<UserPrefs> => {
     showMascot: raw.showMascot !== false,
     seasonal: raw.seasonal !== false,
     aiMemory: sanitizeAiMemory(raw.aiMemory),
+    cuanTarget: sanitizeCuanTarget(raw.cuanTarget),
   };
 };
 
@@ -13728,7 +13820,7 @@ async function handleUserPreferences(request: Request, env: Env) {
   const current = await readUserPrefs(env, userId);
   if (request.method === "GET") return json({ item: current });
 
-  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown; categoryStyle?: unknown; avatar?: unknown; saveAttachments?: unknown; features?: unknown; categoryKind?: unknown; categoryKindsMerge?: unknown; budgetStartDay?: unknown; tags?: unknown; amountKeypad?: unknown; notify?: unknown; showMascot?: unknown; seasonal?: unknown; aiMemory?: unknown }>(request);
+  const payload = await parseJson<{ goals?: unknown; inputMode?: unknown; reminder?: unknown; categoryStyle?: unknown; avatar?: unknown; saveAttachments?: unknown; features?: unknown; categoryKind?: unknown; categoryKindsMerge?: unknown; budgetStartDay?: unknown; tags?: unknown; amountKeypad?: unknown; notify?: unknown; showMascot?: unknown; seasonal?: unknown; aiMemory?: unknown; cuanTarget?: unknown }>(request);
   const next: UserPrefs = { ...current, reminder: { ...current.reminder }, categoryStyles: { ...current.categoryStyles }, categoryKinds: { ...current.categoryKinds } };
   if (payload.goals !== undefined) {
     if (!Array.isArray(payload.goals) || payload.goals.length > PREF_GOALS.length || payload.goals.some((g) => !(PREF_GOALS as readonly unknown[]).includes(g))) {
@@ -13813,6 +13905,10 @@ async function handleUserPreferences(request: Request, env: Env) {
     }
     next.notify = { ...current.notify, ...(n as Partial<NotifyPrefs>) };
   }
+  if (payload.cuanTarget !== undefined) {
+    if (!Number.isInteger(payload.cuanTarget) || (payload.cuanTarget as number) < 0 || (payload.cuanTarget as number) > 1e11) return json({ error: "Target cuan tidak valid." }, { status: 400 });
+    next.cuanTarget = payload.cuanTarget as number;
+  }
   if (payload.amountKeypad !== undefined) {
     if (payload.amountKeypad !== "standar" && payload.amountKeypad !== "kalkulator") return json({ error: "Pilihan keyboard nominal tidak valid." }, { status: 400 });
     next.amountKeypad = payload.amountKeypad;
@@ -13841,10 +13937,10 @@ async function handleUserPreferences(request: Request, env: Env) {
         SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END,
               '$.prefs.goals', json(?), '$.prefs.inputMode', ?, '$.prefs.reminder', json(?), '$.prefs.categoryStyles', json(?),
               '$.prefs.avatar', json(?), '$.prefs.saveAttachments', json(?), '$.prefs.features', json(?), '$.prefs.categoryKinds', json(?),
-              '$.prefs.budgetStartDay', ?, '$.prefs.tags', json(?), '$.prefs.amountKeypad', ?, '$.prefs.notify', json(?), '$.prefs.showMascot', json(?), '$.prefs.seasonal', json(?), '$.prefs.aiMemory', json(?))
+              '$.prefs.budgetStartDay', ?, '$.prefs.tags', json(?), '$.prefs.amountKeypad', ?, '$.prefs.notify', json(?), '$.prefs.showMascot', json(?), '$.prefs.seasonal', json(?), '$.prefs.aiMemory', json(?), '$.prefs.cuanTarget', ?)
       WHERE id = ?`
   )
-    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), JSON.stringify(next.categoryStyles), JSON.stringify(next.avatar), JSON.stringify(next.saveAttachments), JSON.stringify(next.features), JSON.stringify(next.categoryKinds), next.budgetStartDay, JSON.stringify(next.tags), next.amountKeypad, JSON.stringify(next.notify), JSON.stringify(next.showMascot), JSON.stringify(next.seasonal), JSON.stringify(next.aiMemory), userId)
+    .bind(JSON.stringify(next.goals), next.inputMode, JSON.stringify(next.reminder), JSON.stringify(next.categoryStyles), JSON.stringify(next.avatar), JSON.stringify(next.saveAttachments), JSON.stringify(next.features), JSON.stringify(next.categoryKinds), next.budgetStartDay, JSON.stringify(next.tags), next.amountKeypad, JSON.stringify(next.notify), JSON.stringify(next.showMascot), JSON.stringify(next.seasonal), JSON.stringify(next.aiMemory), next.cuanTarget, userId)
     .run();
   return json({ ok: true, item: next });
 }
@@ -17296,6 +17392,10 @@ const worker = {
 
       if (url.pathname === "/api/member/transactions" && request.method === "POST") {
         return await handleCreateTransaction(request, env);
+      }
+
+      if (url.pathname === "/api/member/debts/split" && request.method === "POST") {
+        return await handleSplitDebt(request, env);
       }
 
       if (url.pathname.startsWith("/api/member/debts/") && url.pathname.endsWith("/pay") && request.method === "POST") {

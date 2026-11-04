@@ -1,25 +1,70 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronRight, PenLine, Sprout } from 'lucide-react';
+import { ChevronRight, HandCoins, PenLine, Sprout, Tag, Target } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { SellFlow } from '@/components/ladang/SellFlow';
+import { TagihView } from '@/components/ladang/TagihView';
+import { TargetView } from '@/components/ladang/TargetView';
 import { itemService } from '@/lib/services/itemService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { categoryMeta, itemCurrentValue, type Item } from '@/lib/itemValue';
 import { cn, formatIDR } from '@/lib/utils';
 
-// Ladangku: barang nganggur jadi uang. Pilih barang dari Barangku (atau ketik
-// barang lain) → AI menaksir harga dari iklan asli + menulis iklan → catat hasil
-// jual. Dipakai web (/membership/ladang) & app HP (/app/ladang). ?item=<id>
-// langsung membuka barang itu (tombol "Jual" di Barangku).
+// Ladangku: cuan sampingan. Tab (hash): #jual — barang nganggur jadi uang (AI
+// menaksir dari iklan asli + menulis iklan), #tagih — piutang + ingatkan via WA +
+// Patungan, #target — target cuan bulanan. Dipakai web (/membership/ladang) & app
+// HP (/app/ladang). ?item=<id> langsung membuka barang itu (tombol di Barangku).
+
+const TABS = [
+  { id: 'jual', label: 'Jual', icon: Tag },
+  { id: 'tagih', label: 'Tagih', icon: HandCoins },
+  { id: 'target', label: 'Target', icon: Target },
+] as const;
+type TabId = (typeof TABS)[number]['id'];
 
 export function LadangView({ variant, toast }: { variant: 'web' | 'app'; toast?: (m: string) => void }) {
+  const [tab, setTab] = useState<TabId>('jual');
+  const [flash, setFlash] = useState('');
+  useEffect(() => {
+    const read = () => { const h = window.location.hash.slice(1); if (TABS.some((t) => t.id === h)) setTab(h as TabId); };
+    read(); // hash baru terbaca di klien (static export)
+    window.addEventListener('hashchange', read);
+    return () => window.removeEventListener('hashchange', read);
+  }, []);
+  const go = (t: TabId) => {
+    setTab(t);
+    try { window.history.replaceState(null, '', `${window.location.pathname}#${t}`); } catch { /* abaikan */ }
+  };
+  const say = (m: string) => {
+    if (toast) toast(m);
+    else { setFlash(m); window.setTimeout(() => setFlash(''), 3500); }
+  };
+  return (
+    <div className="space-y-4">
+      <div role="tablist" aria-label="Ladangku" className="flex gap-1 rounded-full bg-slate-100 p-1 dark:bg-slate-800">
+        {TABS.map((t) => {
+          const Icon = t.icon;
+          return (
+            <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => go(t.id)} className={cn('flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[13px] font-bold transition-colors', tab === t.id ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400')}>
+              <Icon size={15} /> {t.label}
+            </button>
+          );
+        })}
+      </div>
+      {flash && <div role="status" className="rounded-2xl bg-emerald-50 px-4 py-3 text-[13px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">{flash}</div>}
+      {tab === 'jual' && <JualView variant={variant} onToast={say} />}
+      {tab === 'tagih' && <TagihView variant={variant} onToast={say} />}
+      {tab === 'target' && <TargetView variant={variant} onToast={say} />}
+    </div>
+  );
+}
+
+function JualView({ variant, onToast }: { variant: 'web' | 'app'; onToast: (m: string) => void }) {
   const [items, setItems] = useState<Item[] | null>(null);
   const [error, setError] = useState('');
   const [flow, setFlow] = useState<{ item?: Item } | null>(null);
-  const [flash, setFlash] = useState('');
 
   useEffect(() => {
     let alive = true;
@@ -54,8 +99,7 @@ export function LadangView({ variant, toast }: { variant: 'web' | 'app'; toast?:
 
   const done = (msg: string) => {
     setFlow(null);
-    if (toast) toast(msg);
-    else { setFlash(msg); window.setTimeout(() => setFlash(''), 3500); }
+    onToast(msg);
   };
   const app = variant === 'app';
   const card = app ? 'rounded-3xl bg-white ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800' : 'rounded-[26px] bg-white ring-1 ring-slate-100';
@@ -66,7 +110,6 @@ export function LadangView({ variant, toast }: { variant: 'web' | 'app'; toast?:
 
   return (
     <div className="space-y-4">
-      {flash && <div role="status" className="rounded-2xl bg-emerald-50 px-4 py-3 text-[13px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">{flash}</div>}
       {error && <div role="alert" className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">{error}</div>}
 
       <section className="web-keep relative overflow-hidden rounded-[28px] bg-[radial-gradient(120%_140%_at_100%_0%,#047857_0%,#064e3b_35%,#0b1220_80%)] p-5 text-white md:p-6">
