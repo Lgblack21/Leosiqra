@@ -20,6 +20,14 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 - **2026-11-04 (branch claude/usahaku) — Usahaku + tab Ringkas di Ladangku, BELUM deploy (tunggu "gas").**
   - **Migrasi `cloudflare/migrations/0027_shops.sql` WAJIB dijalankan Bos di D1 Console sebelum deploy** (tabel `shops`).
+  - **+ Migrasi `cloudflare/migrations/0028_listings.sql` (tabel `listings`, "Sedang dijual") juga WAJIB sebelum deploy.**
+  - **Jual pakai foto**: `SellFlow` punya Foto/Galeri → `itemService.scan` mengisi nama/varian, foto ikut ke
+    `POST /items/appraise` (`image_base64`, ≤2 MB, magic bytes) → AI menilai kondisi (`appraisal.seen`). Setiap taksir
+    sukses OTOMATIS membuat/memperbarui baris `listings` (per `listing_id`, atau iklan aktif untuk `item_id` yang sama;
+    maks 50 aktif) + foto ke R2 `listings/<user>/…`. Ubah harga/judul/deskripsi → `PUT /api/member/listings/:id` (jeda
+    800 ms). `POST /listings/:id/sold` = satu batch: pemasukan (Pemasukan › Jual Barang, related_type 'item') opsional +
+    barang Barangku terjual + iklan terjual, bersyarat `status='dijual'` (diuji 3× paralel → 1×201 + 2×409). Tab Jual:
+    "Sedang dijual" + badge di daftar Barangku; "Sudah terjual" gabungan iklan & barang (tanpa dobel).
   - Ladangku jadi 4 tab: `#ringkas` (default) / `#usaha` / `#jual` / `#tagih`.
   - **Ringkas** (`RingkasView.tsx`): "Cuan bulan ini" HANYA dari hasil Ladangku — pemasukan `related_type` 'shop' / 'item'
     atau sub 'Jual Barang' (gaji tidak ikut — alasan tab Target lama dihapus). Target opsional `prefs.cuanTarget`.

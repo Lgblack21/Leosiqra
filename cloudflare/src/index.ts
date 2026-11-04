@@ -6801,6 +6801,7 @@ async function handleResetMemberData(request: Request, env: Env) {
   await env.DB.prepare("DELETE FROM subscriptions WHERE user_id = ?").bind(user.id).run().catch(() => undefined);
   // Usahaku (migrasi 0027) — best effort.
   await env.DB.prepare("DELETE FROM shops WHERE user_id = ?").bind(user.id).run().catch(() => undefined);
+  await deleteAllListingsForUser(env, user.id);
   // Kotak Masuk (migrasi 0019) — best effort, tabelnya bisa belum ada.
   await env.DB.prepare("DELETE FROM inbox_items WHERE user_id = ?").bind(user.id).run().catch(() => undefined);
 
@@ -8301,6 +8302,7 @@ async function handleAdminUserById(request: Request, env: Env, userId: string) {
     await deleteAllItemsForUser(env, userId); // foto R2 tidak ikut FK cascade
     await deleteAllCollectiblesForUser(env, userId);
     await env.DB.prepare("DELETE FROM shops WHERE user_id = ?").bind(userId).run().catch(() => undefined);
+    await deleteAllListingsForUser(env, userId);
     await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
     await insertAdminLog(
       env,
@@ -9340,6 +9342,8 @@ Kalau struk berisi banyak barang, pilih barang termahal yang tahan lama. Hari in
 // HANYA yang benar-benar ada di kutipan hasil pencarian (annotations url_citation) —
 // tautan karangan model dibuang. Matikan pencarian: env OPENROUTER_APPRAISE_WEB=false.
 const APPRAISE_DAILY_LIMIT = 5;
+const LISTINGS_MAX_ACTIVE = 50;
+const listingsTableMissing = (error: unknown) => error instanceof Error && /no such table: listings/.test(error.message);
 const APPRAISE_CONDITIONS = ["Seperti baru", "Bagus", "Ada pemakaian", "Perlu servis"] as const;
 const APPRAISE_MODELS = ["google/gemini-2.5-flash", "google/gemini-2.5-flash-lite"];
 const appraiseQuota = async (env: Env, userId: string, delta: 1 | -1) => {
@@ -9373,10 +9377,28 @@ async function handleItemAppraise(request: Request, env: Env, userId: string) {
   const completeness = text(raw.completeness, 200);
   const minus = text(raw.minus, 200);
   const area = text(raw.area, 60);
+  // Foto (opsional): dipakai AI untuk mengenali barang & menilai kondisi, lalu disimpan sebagai foto iklan.
+  let photo: { bytes: Uint8Array; type: string; b64: string } | null = null;
+  if (typeof raw.image_base64 === "string" && raw.image_base64) {
+    const b64 = raw.image_base64.replace(/^data:[^,]*,/, "").replace(/\s/g, "");
+    if (b64.length > Math.ceil((ITEM_PHOTO_MAX_BYTES * 4) / 3) + 100) return json({ error: "Foto terlalu besar (maks 2 MB)." }, { status: 413 });
+    let bytes: Uint8Array;
+    try { bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)); } catch { return json({ error: "Foto tidak terbaca." }, { status: 400 }); }
+    const type = sniffImageType(bytes);
+    if (!type) return json({ error: "Format foto harus JPG, PNG, atau WebP." }, { status: 400 });
+    photo = { bytes, type, b64 };
+  }
+  const itemId = typeof raw.item_id === "string" && /^[0-9a-f-]{36}$/i.test(raw.item_id) ? raw.item_id : null;
+  let listing: { id: string; photo_key: string | null } | null = null;
+  if (typeof raw.listing_id === "string" && /^[0-9a-f-]{36}$/i.test(raw.listing_id)) {
+    listing = await env.DB.prepare("SELECT id, photo_key FROM listings WHERE id = ? AND user_id = ? AND status = 'dijual'").bind(raw.listing_id, userId).first<{ id: string; photo_key: string | null }>().catch(() => null);
+  } else if (itemId) {
+    listing = await env.DB.prepare("SELECT id, photo_key FROM listings WHERE item_id = ? AND user_id = ? AND status = 'dijual' ORDER BY updated_at DESC LIMIT 1").bind(itemId, userId).first<{ id: string; photo_key: string | null }>().catch(() => null);
+  }
   let bought = "";
-  if (typeof raw.item_id === "string" && /^[0-9a-f-]{36}$/i.test(raw.item_id)) {
+  if (itemId) {
     const it = await env.DB.prepare("SELECT purchase_price, currency, purchase_date FROM items WHERE id = ? AND user_id = ?")
-      .bind(raw.item_id, userId)
+      .bind(itemId, userId)
       .first<{ purchase_price: number; currency: string | null; purchase_date: string | null }>()
       .catch(() => null);
     if (it && Number(it.purchase_price) > 0) bought = `Dibeli ${it.currency || "IDR"} ${Math.round(Number(it.purchase_price))}${it.purchase_date ? ` pada ${it.purchase_date}` : ""}.`;
@@ -9387,9 +9409,10 @@ async function handleItemAppraise(request: Request, env: Env, userId: string) {
   const useWeb = env.OPENROUTER_APPRAISE_WEB !== "false";
   const systemPrompt = `Kamu penaksir harga barang BEKAS di Indonesia dan penulis iklan jual yang jujur.
 ${useWeb ? "Gunakan hasil pencarian web: iklan/listing barang yang SAMA (OLX, Tokopedia, Shopee, Facebook Marketplace, Carousell, Bukalapak, forum jual-beli) dalam Rupiah. Utamakan barang bekas, bukan harga baru." : "Tidak ada hasil pencarian web — taksir dari pengetahuanmu dan sebutkan bahwa ini perkiraan kasar."}
-Sesuaikan dengan kondisi, kelengkapan, dan minus. Jangan melebih-lebihkan.
+Sesuaikan dengan kondisi, kelengkapan, dan minus. Jangan melebih-lebihkan.${photo ? "\nAda FOTO barang: pastikan barangnya sesuai nama (kalau beda, pakai yang terlihat di foto), nilai kondisinya dari foto (lecet, kusam, retak), dan sebut temuan itu di deskripsi dengan jujur." : ""}
 Balas HANYA satu objek JSON valid:
 {
+  "seen": <kalau ada foto: 1 kalimat apa yang terlihat & kondisinya; selain itu null>,
   "price_low": <angka Rupiah, harga bawah pasaran bekas>,
   "price_fair": <angka Rupiah, harga wajar untuk kondisi ini>,
   "price_high": <angka Rupiah, harga atas / kalau sabar>,
@@ -9420,7 +9443,12 @@ Angka tanpa titik/koma. comparables maks 6, HANYA dari hasil pencarian (kosongka
         max_tokens: 1400,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `${userPrompt}\n\nCari harga bekasnya lalu tulis iklannya.` },
+          {
+            role: "user",
+            content: photo
+              ? [{ type: "text", text: `${userPrompt}\n\nCari harga bekasnya lalu tulis iklannya.` }, { type: "image_url", image_url: { url: `data:${photo.type};base64,${photo.b64}` } }]
+              : `${userPrompt}\n\nCari harga bekasnya lalu tulis iklannya.`,
+          },
         ],
         ...(useWeb ? { plugins: [{ id: "web", max_results: 6, search_prompt: `Hasil pencarian iklan jual "${name}${variant ? ` ${variant}` : ""}" bekas di Indonesia:` }] } : {}),
       }),
@@ -9476,21 +9504,53 @@ Angka tanpa titik/koma. comparables maks 6, HANYA dari hasil pencarian (kosongka
     .bind(todayWIB(), userId)
     .first<{ n: number | null }>();
   const sources = citations.filter((c) => !seen.has(c.url)).slice(0, 6 - comparables.length).map((c) => ({ title: c.title || new URL(c.url).hostname, price: null, url: c.url }));
+  const appraisal = {
+    price_low: low,
+    price_fair: Math.min(Math.max(fairV, low), highV),
+    price_high: highV,
+    quick_sale: quick && quick <= highV ? quick : Math.round(low * 0.95),
+    basis: text(p.basis, 300) || null,
+    seen: photo ? text(p.seen, 240) || null : null,
+    comparables: [...comparables, ...sources],
+    tips: text(p.tips, 200) || null,
+    web: useWeb,
+  };
+  const title = text(p.title, 90) || name;
+  const description = typeof p.description === "string" ? p.description.replace(/[\u0000-\u0008\u000b-\u001f<>]/g, "").replace(/\n{3,}/g, "\n\n").trim().slice(0, 1500) : "";
+  // Otomatis masuk "Sedang dijual" (buat baru / perbarui). Gagal simpan ≠ gagal taksir.
+  let listingId: string | null = null;
+  try {
+    const now = nowIso();
+    let photoKey: string | null = listing?.photo_key ?? null;
+    if (photo && env.FILES_BUCKET) {
+      const key = `listings/${userId}/${listing?.id ?? "baru"}-${generateId().slice(0, 8)}`;
+      await env.FILES_BUCKET.put(key, photo.bytes, { httpMetadata: { contentType: photo.type } });
+      if (listing?.photo_key) await deleteItemPhotos(env, [listing.photo_key]);
+      photoKey = key;
+    }
+    const fields = [name, variant || null, condition, completeness || null, minus || null, area || null, photoKey, JSON.stringify(appraisal), appraisal.price_fair, title, description];
+    if (listing) {
+      await env.DB.prepare(
+        `UPDATE listings SET name = ?, variant = ?, condition = ?, completeness = ?, minus = ?, area = ?, photo_key = ?, appraisal_json = ?, price = ?, title = ?, description = ?, updated_at = ?
+          WHERE id = ? AND user_id = ? AND status = 'dijual'`
+      ).bind(...fields, now, listing.id, userId).run();
+      listingId = listing.id;
+    } else {
+      const id = generateId();
+      const res = await env.DB.prepare(
+        `INSERT INTO listings (id, user_id, item_id, name, variant, condition, completeness, minus, area, photo_key, appraisal_json, price, title, description, status, created_at, updated_at)
+         SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'dijual', ?, ? WHERE (SELECT COUNT(*) FROM listings WHERE user_id = ? AND status = 'dijual') < ?`
+      ).bind(id, userId, itemId, ...fields, now, now, userId, LISTINGS_MAX_ACTIVE).run();
+      if (res.meta.changes) listingId = id;
+      else if (photoKey) await deleteItemPhotos(env, [photoKey]);
+    }
+  } catch (error) {
+    if (!listingsTableMissing(error)) console.error("Simpan iklan gagal:", error instanceof Error ? error.message : error);
+  }
   return json({
     ok: true,
-    appraisal: {
-      price_low: low,
-      price_fair: Math.min(Math.max(fairV, low), highV),
-      price_high: highV,
-      quick_sale: quick && quick <= highV ? quick : Math.round(low * 0.95),
-      basis: text(p.basis, 300) || null,
-      comparables: [...comparables, ...sources],
-      title: text(p.title, 90) || name,
-      description: typeof p.description === "string" ? p.description.replace(/[\u0000-\u0008\u000b-\u001f<>]/g, "").replace(/\n{3,}/g, "\n\n").trim().slice(0, 1500) : "",
-      tips: text(p.tips, 200) || null,
-      web: useWeb,
-      remaining: Math.max(0, APPRAISE_DAILY_LIMIT - Number(used?.n ?? 0)),
-    },
+    listingId,
+    appraisal: { ...appraisal, title, description, remaining: Math.max(0, APPRAISE_DAILY_LIMIT - Number(used?.n ?? 0)) },
   });
 }
 
@@ -9824,6 +9884,126 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
     if (shopsTableMissing(error)) {
       console.error("Usahaku: tabel belum ada (migrasi 0027 belum diterapkan)");
       return json({ error: "Fitur Usahaku belum aktif. Coba lagi nanti." }, { status: 503 });
+    }
+    if (error instanceof Error && error.message === "Payload JSON tidak valid.") return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    throw error;
+  }
+}
+
+// ── Ladangku › Sedang dijual (migrasi 0028) ─────────────────────────────────
+const deleteAllListingsForUser = async (env: Env, userId: string) => {
+  try {
+    const rows = await env.DB.prepare("SELECT photo_key FROM listings WHERE user_id = ? AND photo_key IS NOT NULL").bind(userId).all<{ photo_key: string }>();
+    await deleteItemPhotos(env, (rows.results ?? []).map((r) => r.photo_key));
+    await env.DB.prepare("DELETE FROM listings WHERE user_id = ?").bind(userId).run();
+  } catch (error) {
+    if (!listingsTableMissing(error)) console.error("Hapus semua iklan gagal:", error instanceof Error ? error.message : error);
+  }
+};
+const LISTING_COLUMNS =
+  "l.id, l.item_id, l.name, l.variant, l.condition, l.completeness, l.minus, l.area, CASE WHEN l.photo_key IS NULL THEN 0 ELSE 1 END AS has_photo, l.appraisal_json, l.price, l.title, l.description, l.status, l.sold_price, l.sold_at, l.created_at, l.updated_at, i.status AS item_status, CASE WHEN i.photo_key IS NULL THEN 0 ELSE 1 END AS item_has_photo, i.updated_at AS item_updated_at";
+async function handleListingRoutes(request: Request, env: Env, pathname: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  try {
+    if (pathname === "/api/member/listings") {
+      if (request.method !== "GET") return json({ error: "Method not allowed" }, { status: 405 });
+      // Yang dijual + yang laku/batal 90 hari terakhir.
+      const since = new Date(Date.now() - 90 * 864e5).toISOString();
+      const rows = await env.DB.prepare(
+        `SELECT ${LISTING_COLUMNS} FROM listings l LEFT JOIN items i ON i.id = l.item_id AND i.user_id = l.user_id
+          WHERE l.user_id = ? AND (l.status = 'dijual' OR l.updated_at >= ?) ORDER BY l.updated_at DESC LIMIT 200`
+      ).bind(userId, since).all();
+      return json({ items: rows.results ?? [] });
+    }
+    const rest = pathname.slice("/api/member/listings/".length);
+    const [id, action, extra] = rest.split("/");
+    if (!id || extra !== undefined || !/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "Not found" }, { status: 404 });
+    const row = await env.DB.prepare("SELECT id, item_id, name, status, photo_key FROM listings WHERE id = ? AND user_id = ?")
+      .bind(id, userId)
+      .first<{ id: string; item_id: string | null; name: string; status: string; photo_key: string | null }>();
+    if (!row) return json({ error: "Iklan tidak ditemukan." }, { status: 404 });
+
+    if (!action && request.method === "PUT") {
+      const raw = await parseJson<Record<string, unknown>>(request);
+      const sets: string[] = [];
+      const vals: (string | number | null)[] = [];
+      if (raw.price !== undefined) {
+        if (typeof raw.price !== "number" || !Number.isFinite(raw.price) || raw.price <= 0 || raw.price > 1e11) return json({ error: "Harga tidak valid." }, { status: 400 });
+        sets.push("price = ?"); vals.push(Math.round(raw.price));
+      }
+      if (raw.title !== undefined) { sets.push("title = ?"); vals.push(shopText(raw.title, 90) || row.name); }
+      if (raw.description !== undefined) {
+        sets.push("description = ?");
+        vals.push(typeof raw.description === "string" ? raw.description.replace(/[\u0000-\u0008\u000b-\u001f<>]/g, "").replace(/\n{3,}/g, "\n\n").trim().slice(0, 1500) : "");
+      }
+      if (raw.status !== undefined) {
+        if (raw.status !== "batal" && raw.status !== "dijual") return json({ error: "Status tidak dikenal." }, { status: 400 });
+        if (row.status === "terjual") return json({ error: "Barang ini sudah laku." }, { status: 409 });
+        sets.push("status = ?"); vals.push(raw.status);
+      }
+      if (!sets.length) return json({ error: "Tidak ada yang diubah." }, { status: 400 });
+      await env.DB.prepare(`UPDATE listings SET ${sets.join(", ")}, updated_at = ? WHERE id = ? AND user_id = ?`).bind(...vals, nowIso(), id, userId).run();
+      return json({ ok: true });
+    }
+    if (!action && request.method === "DELETE") {
+      await env.DB.prepare("DELETE FROM listings WHERE id = ? AND user_id = ?").bind(id, userId).run();
+      await deleteItemPhotos(env, [row.photo_key]);
+      return json({ ok: true });
+    }
+    if (action === "photo" && request.method === "GET") {
+      if (!row.photo_key) return json({ error: "Belum ada foto." }, { status: 404 });
+      const obj = await env.FILES_BUCKET?.get(row.photo_key);
+      if (!obj) return json({ error: "Foto tidak ada." }, { status: 404 });
+      return new Response(obj.body, { headers: { "content-type": obj.httpMetadata?.contentType || "image/jpeg", "cache-control": "private, max-age=86400", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'; sandbox" } });
+    }
+    // Laku: iklan → terjual (+ barang Barangku → terjual) + pemasukan opsional, satu batch,
+    // bersyarat status 'dijual' → kirim dobel tidak mencatat dua kali.
+    if (action === "sold" && request.method === "POST") {
+      const raw = await parseJson<Record<string, unknown>>(request);
+      const price = typeof raw.price === "number" && Number.isFinite(raw.price) && raw.price > 0 && raw.price <= ITEM_MAX_PRICE ? Math.round(raw.price) : null;
+      if (!price) return json({ error: "Isi harga lakunya." }, { status: 400 });
+      if (row.status !== "dijual") return json({ error: "Iklan ini sudah tidak aktif." }, { status: 409 });
+      const date = isRealDateStr(raw.date) && raw.date <= todayWIB() && raw.date >= "2000-01-01" ? raw.date : todayWIB();
+      const now = nowIso();
+      const stmts: D1PreparedStatement[] = [];
+      const listingOpen = "EXISTS (SELECT 1 FROM listings WHERE id = ? AND user_id = ? AND status = 'dijual')";
+      let txId: string | null = null;
+      if (raw.account_id) {
+        const account = typeof raw.account_id === "string"
+          ? await env.DB.prepare("SELECT id FROM accounts WHERE id = ? AND user_id = ? AND COALESCE(currency, 'IDR') = 'IDR'").bind(raw.account_id, userId).first<{ id: string }>()
+          : null;
+        if (!account) return json({ error: "Pilih rekening Rupiah." }, { status: 400 });
+        txId = generateId();
+        stmts.push(
+          env.DB.prepare(
+            `INSERT INTO transactions (id, user_id, type, amount, amount_idr, category, sub_category, currency, account_id, date, display_date, note, status, related_id, related_type, payload_json, created_at, updated_at)
+             SELECT ?, ?, 'pemasukan', ?, ?, 'Pemasukan', 'Jual Barang', 'IDR', ?, ?, ?, ?, 'VERIFIED', ?, 'item', ?, ?, ? WHERE ${listingOpen}`
+          ).bind(txId, userId, price, price, account.id, date, date, `Jual ${row.name}`.slice(0, 200), row.item_id ?? row.id, JSON.stringify({ listingId: row.id }), now, now, id, userId),
+          ...quickTxBalanceStatements(env, userId, txId, account.id, "pemasukan", price)
+        );
+      }
+      // Barang Barangku ikut terjual (nilai = harga laku) — sebelum iklan ditutup (syarat masih 'dijual').
+      if (row.item_id) {
+        stmts.push(env.DB.prepare(`UPDATE items SET status = 'terjual', manual_value = ?, value_mode = 'manual', updated_at = ? WHERE id = ? AND user_id = ? AND status = 'aktif' AND ${listingOpen}`).bind(price, now, row.item_id, userId, id, userId));
+      }
+      stmts.push(env.DB.prepare("UPDATE listings SET status = 'terjual', sold_price = ?, sold_at = ?, updated_at = ? WHERE id = ? AND user_id = ? AND status = 'dijual'").bind(price, date, now, id, userId));
+      const results = await env.DB.batch(stmts);
+      if (!results[results.length - 1]?.meta.changes) return json({ error: "Iklan ini baru saja berubah. Muat ulang lalu coba lagi." }, { status: 409 });
+      if (txId) {
+        try {
+          const durableId = env.REALTIME_ROOM.idFromName(`member:${userId}`);
+          await env.REALTIME_ROOM.get(durableId).fetch("https://realtime.internal/publish", { method: "POST", body: JSON.stringify({ event: "transaction.created", payload: { id: txId, userId } }) });
+        } catch { /* realtime opsional */ }
+      }
+      return json({ ok: true, transactionId: txId }, { status: 201 });
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (error) {
+    if (listingsTableMissing(error)) {
+      console.error("Ladangku: tabel listings belum ada (migrasi 0028 belum diterapkan)");
+      return json({ error: "Daftar jualan belum aktif. Coba lagi nanti." }, { status: 503 });
     }
     if (error instanceof Error && error.message === "Payload JSON tidak valid.") return json({ error: "Payload JSON tidak valid." }, { status: 400 });
     throw error;
@@ -18064,6 +18244,10 @@ const worker = {
 
       if (url.pathname === "/api/member/attachments" || url.pathname.startsWith("/api/member/attachments/")) {
         return await handleAttachmentRoutes(request, env, url.pathname);
+      }
+
+      if (url.pathname === "/api/member/listings" || url.pathname.startsWith("/api/member/listings/")) {
+        return await handleListingRoutes(request, env, url.pathname);
       }
 
       if (url.pathname === "/api/member/shops" || url.pathname.startsWith("/api/member/shops/")) {

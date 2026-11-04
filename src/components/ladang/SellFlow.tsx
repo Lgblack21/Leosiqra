@@ -1,17 +1,19 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { ArrowLeft, Check, Copy, ExternalLink, Loader2, Search, Share2, Sparkles, Wallet } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, Camera, Check, CloudCheck, Copy, ExternalLink, ImagePlus, Loader2, Search, Share2, Sparkles, Wallet, X } from 'lucide-react';
 import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
-import { itemService, type ItemAppraisal } from '@/lib/services/itemService';
+import { itemService, listingService, type ItemAppraisal, type Listing } from '@/lib/services/itemService';
+import { imageFileToBase64 } from '@/lib/quick/ai';
 import { accountService } from '@/lib/services/accountService';
 import { addTransaction } from '@/lib/services/transactionService';
 import { isCreditAccountType } from '@/lib/creditCard';
 import type { Item } from '@/lib/itemValue';
 
-// Ladangku: jual satu barang — isi detail → AI menaksir harga dari iklan barang
-// yang sama di web + menulis iklan → salin/bagikan → "Sudah laku" (barang
-// Barangku: status terjual + pemasukan atomik di server).
+// Ladangku: jual satu barang — foto (opsional; AI mengenali barang & menilai
+// kondisi) + detail → AI menaksir harga dari iklan barang yang sama di web +
+// menulis iklan → OTOMATIS tersimpan di "Sedang dijual" (listings) → salin/
+// bagikan → "Sudah laku" (iklan & barang Barangku terjual + pemasukan, atomik).
 
 const CONDITIONS = ['Seperti baru', 'Bagus', 'Ada pemakaian', 'Perlu servis'] as const;
 const SOURCES = ['OLX', 'Tokopedia', 'Shopee', 'Facebook Marketplace', 'Carousell', 'Bukalapak'];
@@ -25,20 +27,57 @@ const PRICE_OPTS: { key: PriceKey; label: string; hint: string }[] = [
 ];
 const host = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
 
-export function SellFlow({ item, onDone }: { item?: Item | null; onDone: (msg: string) => void }) {
-  const [step, setStep] = useState<'form' | 'search' | 'result' | 'sold'>('form');
-  const [name, setName] = useState(item ? [item.brand, item.name].filter(Boolean).join(' ') : '');
-  const [variant, setVariant] = useState(item?.variant ?? '');
-  const [condition, setCondition] = useState<(typeof CONDITIONS)[number]>('Bagus');
-  const [completeness, setCompleteness] = useState('');
-  const [minus, setMinus] = useState('');
-  const [area, setArea] = useState(() => { try { return localStorage.getItem('leosiqra-ladang-area') ?? ''; } catch { return ''; } });
+const pickFor = (a: ItemAppraisal, price?: number): PriceKey => (PRICE_OPTS.find((o) => a[o.key] === price)?.key ?? 'price_fair');
+
+export function SellFlow({ item, listing, onDone }: { item?: Item | null; listing?: Listing | null; onDone: (msg: string) => void }) {
+  const saved = listing?.appraisal;
+  const [step, setStep] = useState<'form' | 'search' | 'result' | 'sold'>(saved ? 'result' : 'form');
+  const [name, setName] = useState(listing?.name ?? (item ? [item.brand, item.name].filter(Boolean).join(' ') : ''));
+  const [variant, setVariant] = useState(listing?.variant ?? item?.variant ?? '');
+  const [condition, setCondition] = useState<(typeof CONDITIONS)[number]>(((CONDITIONS as readonly string[]).includes(listing?.condition ?? '') ? listing!.condition : 'Bagus') as (typeof CONDITIONS)[number]);
+  const [completeness, setCompleteness] = useState(listing?.completeness ?? '');
+  const [minus, setMinus] = useState(listing?.minus ?? '');
+  const [area, setArea] = useState(() => { if (listing?.area) return listing.area; try { return localStorage.getItem('leosiqra-ladang-area') ?? ''; } catch { return ''; } });
   const [error, setError] = useState('');
-  const [result, setResult] = useState<ItemAppraisal | null>(null);
-  const [pick, setPick] = useState<PriceKey>('price_fair');
-  const [title, setTitle] = useState('');
-  const [desc, setDesc] = useState('');
+  const [result, setResult] = useState<ItemAppraisal | null>(saved ?? null);
+  const [pick, setPick] = useState<PriceKey>(saved ? pickFor(saved, listing?.price) : 'price_fair');
+  const [title, setTitle] = useState(listing?.title ?? '');
+  const [desc, setDesc] = useState(listing?.description ?? '');
   const [copied, setCopied] = useState(false);
+  const [listingId, setListingId] = useState<string | null>(listing?.id ?? null);
+  const [photo, setPhoto] = useState<{ base64: string; preview: string } | null>(null);
+  const [scanNote, setScanNote] = useState('');
+  const [scanning, setScanning] = useState(false);
+  const camRef = useRef<HTMLInputElement>(null);
+  const galRef = useRef<HTMLInputElement>(null);
+  const existingPhoto = listing ? listingService.photoUrl(listing) : item?.hasPhoto ? itemService.photoUrl(item) : null;
+
+  // Foto → AI mengenali barang (isi nama/varian yang masih kosong). Foto yang sama ikut ke taksiran.
+  const pickFile = async (file?: File) => {
+    if (!file) return;
+    let base64: string;
+    try { base64 = await imageFileToBase64(file, 1280, 0.8); } catch { setError('Foto tidak bisa dibaca.'); return; }
+    setPhoto({ base64, preview: `data:image/jpeg;base64,${base64}` });
+    setError('');
+    setScanning(true);
+    setScanNote('');
+    try {
+      const s = await itemService.scan(base64);
+      const full = [s.brand, s.name].filter(Boolean).join(' ');
+      if (!name.trim() && full) setName(full);
+      if (!variant.trim() && s.variant) setVariant(s.variant);
+      setScanNote(full ? `AI mengenali: ${full}${s.variant ? ` · ${s.variant}` : ''}` : '');
+    } catch { /* nama bisa diketik manual */ } finally { setScanning(false); }
+  };
+
+  // Ubah harga/judul/deskripsi → tersimpan otomatis ke iklan (jeda 800 ms).
+  const firstSave = useRef(true);
+  useEffect(() => {
+    if (!listingId || !result || step !== 'result') return;
+    if (firstSave.current) { firstSave.current = false; return; }
+    const t = window.setTimeout(() => { void listingService.update(listingId, { price: result[pick], title, description: desc }).catch(() => undefined); }, 800);
+    return () => window.clearTimeout(t);
+  }, [listingId, result, pick, title, desc, step]);
 
   const run = async () => {
     if (name.trim().length < 2) { setError('Isi nama barangnya dulu.'); return; }
@@ -46,11 +85,13 @@ export function SellFlow({ item, onDone }: { item?: Item | null; onDone: (msg: s
     setStep('search');
     try { localStorage.setItem('leosiqra-ladang-area', area.trim()); } catch { /* abaikan */ }
     try {
-      const r = await itemService.appraise({ itemId: item?.id, name: name.trim(), variant: variant.trim(), condition, completeness: completeness.trim(), minus: minus.trim(), area: area.trim() });
+      const { appraisal: r, listingId: lid } = await itemService.appraise({ itemId: item?.id ?? listing?.itemId, listingId: listingId ?? undefined, imageBase64: photo?.base64, name: name.trim(), variant: variant.trim(), condition, completeness: completeness.trim(), minus: minus.trim(), area: area.trim() });
+      firstSave.current = true;
       setResult(r);
       setTitle(r.title);
       setDesc(r.description);
       setPick('price_fair');
+      if (lid) setListingId(lid);
       setStep('result');
     } catch (e) {
       setError(e instanceof Error && e.message ? e.message : 'Taksir harga gagal. Coba lagi sebentar.');
@@ -72,7 +113,7 @@ export function SellFlow({ item, onDone }: { item?: Item | null; onDone: (msg: s
   const chip = (on: boolean) => cn('rounded-full px-3 py-1.5 text-[12px] font-bold transition-colors', on ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700');
 
   if (step === 'search') return <Searching name={name.trim()} />;
-  if (step === 'sold' && result) return <SoldForm item={item} name={name.trim()} defaultPrice={price} onBack={() => setStep('result')} onDone={onDone} />;
+  if (step === 'sold' && result) return <SoldForm item={item} listingId={listingId} name={name.trim()} defaultPrice={price} onBack={() => setStep('result')} onDone={onDone} />;
 
   if (step === 'result' && result) {
     const span = Math.max(1, result.price_high - result.price_low);
@@ -81,6 +122,7 @@ export function SellFlow({ item, onDone }: { item?: Item | null; onDone: (msg: s
       <div className="space-y-4">
         <button type="button" onClick={() => setStep('form')} className="flex items-center gap-1 text-[13px] font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400"><ArrowLeft size={15} /> Ubah detail</button>
         {error && <div role="alert" className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">{error}</div>}
+        {listingId && <p className="flex items-center gap-1.5 rounded-2xl bg-emerald-50 px-3 py-2 text-[12px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"><CloudCheck size={15} /> Tersimpan di &ldquo;Sedang dijual&rdquo; — perubahan harga & iklan ikut tersimpan.</p>}
 
         <section className="web-keep relative overflow-hidden rounded-3xl bg-[radial-gradient(120%_140%_at_0%_0%,#065f46_0%,#0b1220_65%)] p-5 text-white">
           <p className="text-[12px] font-semibold text-white/60">Pasaran bekas {name.trim()}</p>
@@ -92,6 +134,7 @@ export function SellFlow({ item, onDone }: { item?: Item | null; onDone: (msg: s
             ))}
           </div>
           {result.basis && <p className="mt-4 text-[12px] leading-relaxed text-white/70">{result.basis}</p>}
+          {result.seen && <p className="mt-2 flex gap-1.5 text-[12px] leading-relaxed text-emerald-200"><Camera size={13} className="mt-0.5 shrink-0" />{result.seen}</p>}
           {!result.web && <p className="mt-2 text-[11px] text-amber-300">Pencarian iklan sedang mati — ini perkiraan kasar AI.</p>}
         </section>
 
@@ -146,7 +189,7 @@ export function SellFlow({ item, onDone }: { item?: Item | null; onDone: (msg: s
         <button type="button" onClick={() => setStep('sold')} className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-50 py-3.5 text-[14px] font-bold text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300">
           <Wallet size={16} /> Sudah laku? Catat hasilnya
         </button>
-        <p className="text-center text-[11px] text-slate-400">Taksiran AI dari iklan publik — bukan jaminan laku. Sisa taksir hari ini: {result.remaining}×</p>
+        <p className="text-center text-[11px] text-slate-400">Taksiran AI dari iklan publik — bukan jaminan laku.{result.remaining != null ? ` Sisa taksir hari ini: ${result.remaining}×` : ''}</p>
       </div>
     );
   }
@@ -154,6 +197,25 @@ export function SellFlow({ item, onDone }: { item?: Item | null; onDone: (msg: s
   return (
     <div className="space-y-4">
       {error && <div role="alert" className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">{error}</div>}
+      <div className="flex items-center gap-3 rounded-3xl bg-slate-50 p-3 dark:bg-slate-800/60">
+        <span className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white text-slate-300 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
+          {photo || existingPhoto ? (
+            // eslint-disable-next-line @next/next/no-img-element -- pratinjau lokal / foto privat dari API
+            <img src={photo?.preview ?? existingPhoto ?? ''} alt="Foto barang" className="h-full w-full object-cover" />
+          ) : <Camera size={26} />}
+          {scanning && <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-white"><Loader2 size={20} className="animate-spin" /></span>}
+          {photo && !scanning && <button type="button" onClick={() => { setPhoto(null); setScanNote(''); }} aria-label="Hapus foto" className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white"><X size={12} /></button>}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[13px] font-bold text-slate-900 dark:text-white">{scanning ? 'AI melihat fotomu…' : scanNote || 'Foto barangnya biar AI menilai kondisinya'}</span>
+          <span className="mt-1.5 flex gap-1.5">
+            <button type="button" onClick={() => camRef.current?.click()} className="flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1.5 text-[12px] font-bold text-white dark:bg-emerald-600"><Camera size={13} /> Foto</button>
+            <button type="button" onClick={() => galRef.current?.click()} className="flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-slate-700 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700"><ImagePlus size={13} /> Galeri</button>
+          </span>
+        </span>
+        <input ref={camRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { void pickFile(e.target.files?.[0]); e.target.value = ''; }} />
+        <input ref={galRef} type="file" accept="image/*" hidden onChange={(e) => { void pickFile(e.target.files?.[0]); e.target.value = ''; }} />
+      </div>
       <label className="block"><span className={label}>Nama barang</span><input value={name} onChange={(e) => setName(e.target.value)} placeholder="mis. Sony A6000, iPhone 12, Vario 125" maxLength={100} className={cn(input, 'font-bold')} autoFocus={!item} /></label>
       <label className="block"><span className={label}>Varian / tipe</span><input value={variant} onChange={(e) => setVariant(e.target.value)} placeholder="Lensa kit 16-50mm, 128 GB, 2021…" maxLength={100} className={input} /></label>
       <div>
@@ -163,7 +225,7 @@ export function SellFlow({ item, onDone }: { item?: Item | null; onDone: (msg: s
       <label className="block"><span className={label}>Kelengkapan</span><input value={completeness} onChange={(e) => setCompleteness(e.target.value)} placeholder="Dus, charger, nota, 2 baterai…" maxLength={200} className={input} /></label>
       <label className="block"><span className={label}>Minus (jujur bikin cepat laku)</span><input value={minus} onChange={(e) => setMinus(e.target.value)} placeholder="Lecet tipis di layar, baterai 80%…" maxLength={200} className={input} /></label>
       <label className="block"><span className={label}>Kota / area COD</span><input value={area} onChange={(e) => setArea(e.target.value)} placeholder="Jakarta Selatan" maxLength={60} className={input} /></label>
-      <button type="button" onClick={run} disabled={name.trim().length < 2} className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 py-3.5 text-[15px] font-bold text-white hover:bg-emerald-700 disabled:opacity-40">
+      <button type="button" onClick={run} disabled={name.trim().length < 2 || scanning} className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 py-3.5 text-[15px] font-bold text-white hover:bg-emerald-700 disabled:opacity-40">
         <Search size={17} /> Taksir harga & tulis iklan
       </button>
       <p className="text-center text-[11px] text-slate-400">AI mencari iklan barang yang sama di OLX, Tokopedia, Shopee, dll. Maks 5× per hari.</p>
@@ -195,7 +257,7 @@ function Searching({ name }: { name: string }) {
   );
 }
 
-function SoldForm({ item, name, defaultPrice, onBack, onDone }: { item?: Item | null; name: string; defaultPrice: number; onBack: () => void; onDone: (msg: string) => void }) {
+function SoldForm({ item, listingId, name, defaultPrice, onBack, onDone }: { item?: Item | null; listingId: string | null; name: string; defaultPrice: number; onBack: () => void; onDone: (msg: string) => void }) {
   const [price, setPrice] = useState(String(Math.round(defaultPrice)));
   const [accounts, setAccounts] = useState<{ id: string; name: string }[] | null>(null);
   const [accountId, setAccountId] = useState<string>('');
@@ -216,7 +278,9 @@ function SoldForm({ item, name, defaultPrice, onBack, onDone }: { item?: Item | 
     setBusy(true);
     setError('');
     try {
-      if (item) {
+      if (listingId) {
+        await listingService.sold(listingId, n, accountId || null, date);
+      } else if (item) {
         await itemService.sell(item.id, n, accountId || null, date);
       } else if (accountId) {
         const [y, m, d] = date.split('-').map(Number);
@@ -246,11 +310,11 @@ function SoldForm({ item, name, defaultPrice, onBack, onDone }: { item?: Item | 
         <span className={label}>Uangnya masuk ke</span>
         <select value={accountId} onChange={(e) => setAccountId(e.target.value)} disabled={accounts === null} className={input}>
           {(accounts ?? []).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-          <option value="">{item ? 'Jangan catat pemasukan (cuma tandai terjual)' : 'Jangan catat pemasukan'}</option>
+          <option value="">{item || listingId ? 'Jangan catat pemasukan (cuma tandai terjual)' : 'Jangan catat pemasukan'}</option>
         </select>
       </label>
       <label className="block"><span className={label}>Tanggal laku</span><input type="date" value={date} max={toLocalDateString()} onChange={(e) => setDate(e.target.value)} className={input} /></label>
-      <button type="button" onClick={save} disabled={busy || (!item && !accountId)} className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 py-3.5 text-[15px] font-bold text-white hover:bg-emerald-700 disabled:opacity-40">
+      <button type="button" onClick={save} disabled={busy || (!item && !listingId && !accountId)} className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 py-3.5 text-[15px] font-bold text-white hover:bg-emerald-700 disabled:opacity-40">
         {busy ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />} Catat hasil jual
       </button>
       <p className="text-center text-[11px] text-slate-400">{item ? 'Barang pindah ke "terjual" di Barangku (tidak dihitung lagi di kekayaan).' : 'Tercatat sebagai pemasukan kategori Pemasukan › Jual Barang.'}</p>
