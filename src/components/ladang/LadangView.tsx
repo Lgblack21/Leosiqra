@@ -1,32 +1,41 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronRight, HandCoins, PenLine, Sprout, Tag } from 'lucide-react';
+import { ChevronRight, HandCoins, LayoutGrid, PenLine, Sprout, Store, Tag } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { SellFlow } from '@/components/ladang/SellFlow';
 import { TagihView } from '@/components/ladang/TagihView';
+import { UsahaView } from '@/components/ladang/UsahaView';
+import { RingkasView } from '@/components/ladang/RingkasView';
 import { itemService } from '@/lib/services/itemService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { categoryMeta, itemCurrentValue, type Item } from '@/lib/itemValue';
 import { cn, formatIDR } from '@/lib/utils';
 
-// Ladangku: cuan sampingan. Tab (hash): #jual — barang nganggur jadi uang (AI
-// menaksir dari iklan asli + menulis iklan), #tagih — piutang + ingatkan via WA +
-// Patungan. (Tab Target dihapus 2026-11-04 atas permintaan Bos: ikut menghitung gaji.) Dipakai web (/membership/ladang) & app
+// Ladangku: cuan sampingan. Tab (hash): #ringkas — cuan bulan ini (hanya hasil
+// Ladangku), #usaha — Usahaku (rencana AI + katalog + catat penjualan), #jual —
+// barang nganggur jadi uang (AI menaksir dari iklan asli), #tagih — piutang + WA +
+// Patungan. (Tab Target lama dihapus: ikut menghitung gaji.) Dipakai web (/membership/ladang) & app
 // HP (/app/ladang). ?item=<id> langsung membuka barang itu (tombol di Barangku).
 
 const TABS = [
+  { id: 'ringkas', label: 'Ringkas', icon: LayoutGrid },
+  { id: 'usaha', label: 'Usaha', icon: Store },
   { id: 'jual', label: 'Jual', icon: Tag },
   { id: 'tagih', label: 'Tagih', icon: HandCoins },
 ] as const;
 type TabId = (typeof TABS)[number]['id'];
 
 export function LadangView({ variant, toast }: { variant: 'web' | 'app'; toast?: (m: string) => void }) {
-  const [tab, setTab] = useState<TabId>('jual');
+  const [tab, setTab] = useState<TabId>('ringkas');
   const [flash, setFlash] = useState('');
   useEffect(() => {
-    const read = () => { const h = window.location.hash.slice(1); if (TABS.some((t) => t.id === h)) setTab(h as TabId); };
+    const read = () => {
+      const h = window.location.hash.slice(1);
+      if (TABS.some((t) => t.id === h)) setTab(h as TabId);
+      else if (new URLSearchParams(window.location.search).has('item')) setTab('jual'); // tombol "Jual" di Barangku
+    };
     read(); // hash baru terbaca di klien (static export)
     window.addEventListener('hashchange', read);
     return () => window.removeEventListener('hashchange', read);
@@ -46,12 +55,14 @@ export function LadangView({ variant, toast }: { variant: 'web' | 'app'; toast?:
           const Icon = t.icon;
           return (
             <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => go(t.id)} className={cn('flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[13px] font-bold transition-colors', tab === t.id ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400')}>
-              <Icon size={15} /> {t.label}
+              <Icon size={15} className="hidden sm:block" /> {t.label}
             </button>
           );
         })}
       </div>
       {flash && <div role="status" className="rounded-2xl bg-emerald-50 px-4 py-3 text-[13px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">{flash}</div>}
+      {tab === 'ringkas' && <RingkasView variant={variant} go={go} onToast={say} />}
+      {tab === 'usaha' && <UsahaView variant={variant} onToast={say} />}
       {tab === 'jual' && <JualView variant={variant} onToast={say} />}
       {tab === 'tagih' && <TagihView variant={variant} onToast={say} />}
     </div>

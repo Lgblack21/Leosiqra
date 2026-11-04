@@ -6799,6 +6799,8 @@ async function handleResetMemberData(request: Request, env: Env) {
   await deleteAllCollectiblesForUser(env, user.id);
   // Langgananku (migrasi 0024) — best effort, tabelnya bisa belum ada.
   await env.DB.prepare("DELETE FROM subscriptions WHERE user_id = ?").bind(user.id).run().catch(() => undefined);
+  // Usahaku (migrasi 0027) — best effort.
+  await env.DB.prepare("DELETE FROM shops WHERE user_id = ?").bind(user.id).run().catch(() => undefined);
   // Kotak Masuk (migrasi 0019) — best effort, tabelnya bisa belum ada.
   await env.DB.prepare("DELETE FROM inbox_items WHERE user_id = ?").bind(user.id).run().catch(() => undefined);
 
@@ -8298,6 +8300,7 @@ async function handleAdminUserById(request: Request, env: Env, userId: string) {
 
     await deleteAllItemsForUser(env, userId); // foto R2 tidak ikut FK cascade
     await deleteAllCollectiblesForUser(env, userId);
+    await env.DB.prepare("DELETE FROM shops WHERE user_id = ?").bind(userId).run().catch(() => undefined);
     await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
     await insertAdminLog(
       env,
@@ -9533,6 +9536,298 @@ async function handleItemSell(request: Request, env: Env, userId: string, itemId
     await env.REALTIME_ROOM.get(durableId).fetch("https://realtime.internal/publish", { method: "POST", body: JSON.stringify({ event: "transaction.created", payload: { id: txId, userId } }) });
   } catch { /* realtime opsional */ }
   return json({ ok: true, transactionId: txId }, { status: 201 });
+}
+
+// ── Usahaku (migrasi 0027) ──────────────────────────────────────────────────
+// Rencana usaha sampingan: AI menyusun 3 ide dari "aku bisa …" (Rupiah, konteks
+// Indonesia, kuota SHOP_IDEA_DAILY_LIMIT/hari), user menyimpan satu jadi usaha
+// (maks SHOPS_MAX_PER_USER), mengedit produk & kontak, lalu mencatat penjualan
+// sebagai pemasukan biasa (related_type 'shop'). Tidak ada halaman publik.
+const SHOPS_MAX_PER_USER = 5;
+const SHOP_IDEA_DAILY_LIMIT = 5;
+const SHOP_PRODUCTS_MAX = 20;
+const shopsTableMissing = (error: unknown) => error instanceof Error && /no such table: shops/.test(error.message);
+const SHOP_COLUMNS = "id, name, tagline, description, emoji, products_json, plan_json, contact_wa, payment_note, area, link_url, promoted_at, created_at, updated_at";
+const shopText = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/[\u0000-\u001f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, max) : "");
+const shopMoney = (v: unknown) => {
+  const n = Math.round(Number(typeof v === "string" ? v.replace(/\D/g, "") : v));
+  return Number.isFinite(n) && n >= 0 && n <= 1e10 ? n : null;
+};
+type ShopProduct = { name: string; price: number; unit: string };
+const sanitizeShopProducts = (raw: unknown): ShopProduct[] =>
+  (Array.isArray(raw) ? raw : [])
+    .map((p) => (p && typeof p === "object" ? (p as Record<string, unknown>) : {}))
+    .map((p) => ({ name: shopText(p.name, 80), price: shopMoney(p.price) ?? 0, unit: shopText(p.unit, 24) }))
+    .filter((p) => p.name)
+    .slice(0, SHOP_PRODUCTS_MAX);
+type ShopPlan = { modal: number | null; waktu: string; perBulan: [number, number] | null; alasan: string[]; langkah: string[]; pembeli: string; cariDi: string };
+const sanitizeShopPlan = (raw: unknown): ShopPlan => {
+  const p = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const list = (v: unknown) => (Array.isArray(v) ? v.map((x) => shopText(x, 200)).filter(Boolean).slice(0, 5) : []);
+  const pb = Array.isArray(p.perBulan) ? p.perBulan.map(shopMoney) : [];
+  return {
+    modal: shopMoney(p.modal),
+    waktu: shopText(p.waktu, 40),
+    perBulan: pb.length === 2 && pb[0] !== null && pb[1] !== null ? ([Math.min(pb[0], pb[1]), Math.max(pb[0], pb[1])] as [number, number]) : null,
+    alasan: list(p.alasan),
+    langkah: list(p.langkah),
+    pembeli: shopText(p.pembeli, 200),
+    cariDi: shopText(p.cariDi, 200),
+  };
+};
+// Nomor WA → format internasional 62… (08xx / +62 / 62). null kalau tidak masuk akal.
+const normalizeWa = (v: unknown) => {
+  if (typeof v !== "string") return null;
+  let d = v.replace(/\D/g, "");
+  if (d.startsWith("0")) d = `62${d.slice(1)}`;
+  else if (d.startsWith("8")) d = `62${d}`;
+  return /^\d{9,15}$/.test(d) ? d : null;
+};
+// Tautan toko online milik user: https saja; tolak tautan editor/studio (pembeli tidak bisa membukanya).
+const sanitizeShopLink = (v: unknown): { ok: true; url: string | null } | { ok: false; error: string } => {
+  if (v === null || v === "") return { ok: true, url: null };
+  if (typeof v !== "string") return { ok: false, error: "Tautan tidak valid." };
+  let u: URL;
+  try { u = new URL(v.trim()); } catch { return { ok: false, error: "Tautan tidak valid. Contoh: https://shopee.co.id/tokomu" }; }
+  if (u.protocol !== "https:" || u.username || u.password || u.href.length > 300) return { ok: false, error: "Tautan harus diawali https:// (maks 300 karakter)." };
+  if (/\/(studio|editor|admin|dashboard)(\/|$)/i.test(u.pathname) || /[?&](sessionId|session|token|key)=/i.test(u.search)) {
+    return { ok: false, error: "Ini sepertinya tautan editor/admin — pembeli tidak bisa membukanya. Pakai tautan publik tokomu." };
+  }
+  return { ok: true, url: u.href };
+};
+const shopIdeaQuota = async (env: Env, userId: string, delta: 1 | -1) => {
+  const today = todayWIB();
+  if (delta === -1) {
+    await env.DB.prepare(
+      `UPDATE users SET metadata_json = json_set(metadata_json, '$.shopIdeaAi.n', MAX(0, COALESCE(json_extract(metadata_json, '$.shopIdeaAi.n'), 1) - 1))
+        WHERE id = ? AND json_valid(metadata_json) AND json_extract(metadata_json, '$.shopIdeaAi.day') = ?`
+    ).bind(userId, today).run();
+    return true;
+  }
+  const res = await env.DB.prepare(
+    `UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.shopIdeaAi',
+            json_object('day', ?, 'n', CASE WHEN json_valid(metadata_json) AND json_extract(metadata_json, '$.shopIdeaAi.day') = ?
+                                           THEN COALESCE(json_extract(metadata_json, '$.shopIdeaAi.n'), 0) + 1 ELSE 1 END))
+      WHERE id = ?
+        AND NOT (json_valid(metadata_json) AND json_extract(metadata_json, '$.shopIdeaAi.day') = ?
+                 AND COALESCE(json_extract(metadata_json, '$.shopIdeaAi.n'), 0) >= ?)`
+  ).bind(today, today, userId, today, SHOP_IDEA_DAILY_LIMIT).run();
+  return res.meta.changes > 0;
+};
+
+async function handleShopIdeas(request: Request, env: Env, userId: string) {
+  if (!(await checkAiParseRateLimit(env, userId))) return json({ error: "Terlalu banyak permintaan AI. Coba lagi dalam beberapa saat." }, { status: 429 });
+  const raw = await parseJson<{ text?: unknown; exclude?: unknown }>(request);
+  const text = shopText(raw.text, 300);
+  if (text.length < 4) return json({ error: "Ceritakan dulu apa yang bisa kamu kerjakan, buat, atau jual." }, { status: 400 });
+  const exclude = (Array.isArray(raw.exclude) ? raw.exclude : []).map((x) => shopText(x, 60)).filter(Boolean).slice(0, 9);
+  const openRouter = await getOpenRouterKey(env);
+  if (!openRouter) return json({ error: "AI belum dikonfigurasi. Coba lagi nanti." }, { status: 503 });
+  if (!(await shopIdeaQuota(env, userId, 1))) return json({ error: `Batas ide usaha hari ini (${SHOP_IDEA_DAILY_LIMIT}×) sudah habis. Coba lagi besok.` }, { status: 429 });
+  const systemPrompt = `Kamu mentor usaha sampingan untuk orang Indonesia biasa (karyawan, mahasiswa, ibu rumah tangga). Dari cerita pengguna, susun TIGA rencana usaha kecil yang realistis, legal, dan bisa dimulai minggu ini dengan modal kecil. Semua uang dalam RUPIAH (angka bulat tanpa titik). Harga produk wajar untuk pasar Indonesia. Jangan janji muluk; perkiraan pendapatan per bulan konservatif. Tolak ide ilegal/berbahaya (judi, pinjol ilegal, skema piramida, barang terlarang) — ganti dengan alternatif yang aman.
+Balas HANYA JSON valid:
+{ "ideas": [ {
+  "name": <nama usaha singkat & catchy, maks 30 karakter>,
+  "emoji": <1 emoji>,
+  "tagline": <maks 60 karakter>,
+  "description": <1 kalimat apa yang dijual & ke siapa>,
+  "products": [ { "name": <produk/paket>, "price": <Rupiah>, "unit": <mis. "per toples", "per jam", "per paket"> } ] (3 item),
+  "modal": <modal awal Rupiah>,
+  "waktu": <mis. "8 jam/minggu">,
+  "perBulan": [<min Rupiah>, <max Rupiah>],
+  "alasan": [<3 alasan cocok untuk pengguna, merujuk ceritanya>],
+  "langkah": [<3 langkah konkret MINGGU INI>],
+  "pembeli": <siapa pembelinya>,
+  "cariDi": <di mana mencari pembeli, mis. grup WA kompleks, status WA, TikTok, marketplace>
+} ] }${exclude.length ? `\nJangan ulangi ide bernama: ${exclude.join(", ")}.` : ""}`;
+  let content = "";
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${openRouter.key}`, "http-referer": env.APP_URL || "https://www.leosiqra.com", "x-title": env.APP_NAME || "Leosiqra" },
+      body: JSON.stringify({
+        models: APPRAISE_MODELS,
+        route: "fallback",
+        temperature: 0.8,
+        max_tokens: 2200,
+        response_format: { type: "json_object" },
+        messages: [{ role: "system", content: systemPrompt }, { role: "user", content: `Ceritaku: "${text}"` }],
+      }),
+    });
+    if (!response.ok) throw new Error(`OpenRouter request gagal (${response.status}): ${(await response.text()).slice(0, 300)}`);
+    const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    content = data.choices?.[0]?.message?.content?.trim() ?? "";
+  } catch (error) {
+    await shopIdeaQuota(env, userId, -1).catch(() => undefined);
+    if (isAiQuotaError(error)) {
+      await notifyAiQuotaOnce(env);
+      return json({ error: AI_QUOTA_MESSAGE, code: "ai_quota" }, { status: 503 });
+    }
+    console.error("AI ide usaha gagal:", error instanceof Error ? error.message : error);
+    return json({ error: "AI sedang gangguan. Coba lagi sebentar lagi." }, { status: 502 });
+  }
+  let ideas: Record<string, unknown>[] = [];
+  try {
+    const p = JSON.parse(stripJsonFences(content.slice(content.indexOf("{"), content.lastIndexOf("}") + 1))) as { ideas?: unknown };
+    ideas = (Array.isArray(p.ideas) ? p.ideas : []).filter((x): x is Record<string, unknown> => !!x && typeof x === "object");
+  } catch { ideas = []; }
+  const out = ideas
+    .map((i) => ({
+      name: shopText(i.name, 40),
+      emoji: shopText(i.emoji, 8) || "🌱",
+      tagline: shopText(i.tagline, 80),
+      description: shopText(i.description, 240),
+      products: sanitizeShopProducts(i.products).slice(0, 6),
+      plan: sanitizeShopPlan(i),
+    }))
+    .filter((i) => i.name && i.products.length)
+    .slice(0, 3);
+  if (!out.length) {
+    await shopIdeaQuota(env, userId, -1).catch(() => undefined);
+    return json({ error: "AI belum bisa menyusun ide dari cerita ini. Coba ceritakan lebih spesifik." }, { status: 422 });
+  }
+  const used = await env.DB.prepare("SELECT CASE WHEN json_valid(metadata_json) AND json_extract(metadata_json, '$.shopIdeaAi.day') = ? THEN json_extract(metadata_json, '$.shopIdeaAi.n') END AS n FROM users WHERE id = ?")
+    .bind(todayWIB(), userId)
+    .first<{ n: number | null }>();
+  return json({ ideas: out, remaining: Math.max(0, SHOP_IDEA_DAILY_LIMIT - Number(used?.n ?? 0)) });
+}
+
+type ShopFields = Partial<{ name: string; tagline: string | null; description: string | null; emoji: string | null; products_json: string; plan_json: string | null; contact_wa: string | null; payment_note: string | null; area: string | null; link_url: string | null }>;
+const sanitizeShopFields = (raw: Record<string, unknown>, creating: boolean): { ok: true; fields: ShopFields } | { ok: false; error: string } => {
+  const f: ShopFields = {};
+  if (raw.name !== undefined || creating) {
+    const n = shopText(raw.name, 40);
+    if (!n) return { ok: false, error: "Nama usaha wajib diisi." };
+    f.name = n;
+  }
+  if (raw.tagline !== undefined) f.tagline = shopText(raw.tagline, 80) || null;
+  if (raw.description !== undefined) f.description = shopText(raw.description, 300) || null;
+  if (raw.emoji !== undefined) f.emoji = shopText(raw.emoji, 8) || null;
+  if (raw.products !== undefined) {
+    if (!Array.isArray(raw.products) || raw.products.length > SHOP_PRODUCTS_MAX) return { ok: false, error: `Produk maksimal ${SHOP_PRODUCTS_MAX}.` };
+    f.products_json = JSON.stringify(sanitizeShopProducts(raw.products));
+  }
+  if (raw.plan !== undefined) f.plan_json = raw.plan === null ? null : JSON.stringify(sanitizeShopPlan(raw.plan));
+  if (raw.contact_wa !== undefined) {
+    if (raw.contact_wa === null || raw.contact_wa === "") f.contact_wa = null;
+    else {
+      const wa = normalizeWa(raw.contact_wa);
+      if (!wa) return { ok: false, error: "Nomor WhatsApp tidak valid. Contoh: 0812-3456-7890" };
+      f.contact_wa = wa;
+    }
+  }
+  if (raw.payment_note !== undefined) {
+    const n = shopText(raw.payment_note, 120);
+    if (/\b(pin|password|kata sandi|otp|cvv)\b/i.test(n)) return { ok: false, error: "Jangan tulis PIN, password, OTP, atau CVV di sini." };
+    f.payment_note = n || null;
+  }
+  if (raw.area !== undefined) f.area = shopText(raw.area, 60) || null;
+  if (raw.link_url !== undefined) {
+    const l = sanitizeShopLink(raw.link_url);
+    if (!l.ok) return l;
+    f.link_url = l.url;
+  }
+  if (creating && f.products_json === undefined) f.products_json = "[]";
+  return { ok: true, fields: f };
+};
+
+async function handleShopRoutes(request: Request, env: Env, pathname: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  try {
+    if (pathname === "/api/member/shops/ideas") {
+      if (request.method !== "POST") return json({ error: "Method not allowed" }, { status: 405 });
+      return await handleShopIdeas(request, env, userId);
+    }
+    if (pathname === "/api/member/shops") {
+      if (request.method === "GET") {
+        const rows = await env.DB.prepare(`SELECT ${SHOP_COLUMNS} FROM shops WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`).bind(userId, SHOPS_MAX_PER_USER).all();
+        return json({ items: rows.results ?? [] });
+      }
+      if (request.method === "POST") {
+        const parsed = sanitizeShopFields(await parseJson<Record<string, unknown>>(request), true);
+        if (!parsed.ok) return json({ error: parsed.error }, { status: 400 });
+        const f = parsed.fields;
+        const id = generateId();
+        const now = nowIso();
+        const res = await env.DB.prepare(
+          `INSERT INTO shops (id, user_id, name, tagline, description, emoji, products_json, plan_json, contact_wa, payment_note, area, link_url, created_at, updated_at)
+           SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM shops WHERE user_id = ?) < ?`
+        )
+          .bind(id, userId, f.name!, f.tagline ?? null, f.description ?? null, f.emoji ?? null, f.products_json!, f.plan_json ?? null, f.contact_wa ?? null, f.payment_note ?? null, f.area ?? null, f.link_url ?? null, now, now, userId, SHOPS_MAX_PER_USER)
+          .run();
+        if (!res.meta.changes) return json({ error: `Maksimal ${SHOPS_MAX_PER_USER} usaha.` }, { status: 409 });
+        return json({ ok: true, id }, { status: 201 });
+      }
+      return json({ error: "Method not allowed" }, { status: 405 });
+    }
+    const rest = pathname.slice("/api/member/shops/".length);
+    const [id, action, extra] = rest.split("/");
+    if (!id || extra !== undefined || !/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "Not found" }, { status: 404 });
+    const shop = await env.DB.prepare("SELECT id, name FROM shops WHERE id = ? AND user_id = ?").bind(id, userId).first<{ id: string; name: string }>();
+    if (!shop) return json({ error: "Usaha tidak ditemukan." }, { status: 404 });
+
+    if (!action && request.method === "PUT") {
+      const raw = await parseJson<Record<string, unknown>>(request);
+      const parsed = sanitizeShopFields(raw, false);
+      if (!parsed.ok) return json({ error: parsed.error }, { status: 400 });
+      const entries = Object.entries(parsed.fields);
+      const promote = raw.promoted === true;
+      if (!entries.length && !promote) return json({ error: "Tidak ada yang diubah." }, { status: 400 });
+      await env.DB.prepare(
+        `UPDATE shops SET ${[...entries.map(([k]) => `${k} = ?`), ...(promote ? ["promoted_at = COALESCE(promoted_at, ?)"] : [])].join(", ")}, updated_at = ? WHERE id = ? AND user_id = ?`
+      )
+        .bind(...entries.map(([, v]) => v), ...(promote ? [nowIso()] : []), nowIso(), id, userId)
+        .run();
+      return json({ ok: true });
+    }
+    if (!action && request.method === "DELETE") {
+      // Penjualan yang sudah tercatat tetap ada sebagai pemasukan biasa.
+      await env.DB.prepare("DELETE FROM shops WHERE id = ? AND user_id = ?").bind(id, userId).run();
+      return json({ ok: true });
+    }
+    // Catat penjualan: pemasukan + saldo dalam satu batch; request_id anti dobel.
+    if (action === "sale" && request.method === "POST") {
+      const raw = await parseJson<Record<string, unknown>>(request);
+      const amount = typeof raw.amount === "number" && Number.isFinite(raw.amount) ? Math.round(raw.amount) : 0;
+      if (amount < 1 || amount > 1e11) return json({ error: "Isi nominal penjualannya." }, { status: 400 });
+      const qty = Number.isInteger(raw.qty) && (raw.qty as number) >= 1 && (raw.qty as number) <= 9999 ? (raw.qty as number) : 1;
+      const product = shopText(raw.product, 80);
+      const requestId = typeof raw.request_id === "string" && /^[0-9a-f-]{36}$/i.test(raw.request_id) ? raw.request_id : null;
+      if (!requestId) return json({ error: "Permintaan tidak valid. Muat ulang halaman." }, { status: 400 });
+      const date = isRealDateStr(raw.date) && raw.date <= todayWIB() && raw.date >= "2000-01-01" ? raw.date : todayWIB();
+      const account = typeof raw.account_id === "string" && raw.account_id
+        ? await env.DB.prepare("SELECT id FROM accounts WHERE id = ? AND user_id = ? AND COALESCE(currency, 'IDR') = 'IDR'").bind(raw.account_id, userId).first<{ id: string }>()
+        : null;
+      if (!account) return json({ error: "Pilih rekening Rupiah." }, { status: 400 });
+      const txId = generateId();
+      const now = nowIso();
+      const note = `[${shop.name}] ${product ? `${product}${qty > 1 ? ` ×${qty}` : ""}` : "Penjualan"}`.slice(0, 200);
+      const results = await env.DB.batch([
+        env.DB.prepare(
+          `INSERT INTO transactions (id, user_id, type, amount, amount_idr, category, sub_category, currency, account_id, date, display_date, note, status, related_id, related_type, payload_json, created_at, updated_at)
+           SELECT ?, ?, 'pemasukan', ?, ?, 'Usaha & Freelance', 'Penjualan', 'IDR', ?, ?, ?, ?, 'VERIFIED', ?, 'shop', ?, ?, ?
+            WHERE NOT EXISTS (SELECT 1 FROM transactions WHERE user_id = ? AND related_type = 'shop' AND json_valid(payload_json) AND json_extract(payload_json, '$.saleId') = ?)`
+        ).bind(txId, userId, amount, amount, account.id, date, date, note, id, JSON.stringify({ saleId: requestId, product: product || null, qty }), now, now, userId, requestId),
+        ...quickTxBalanceStatements(env, userId, txId, account.id, "pemasukan", amount),
+      ]);
+      if (!results[0]?.meta.changes) return json({ error: "Penjualan ini sudah tercatat." }, { status: 409 });
+      try {
+        const durableId = env.REALTIME_ROOM.idFromName(`member:${userId}`);
+        await env.REALTIME_ROOM.get(durableId).fetch("https://realtime.internal/publish", { method: "POST", body: JSON.stringify({ event: "transaction.created", payload: { id: txId, userId } }) });
+      } catch { /* realtime opsional */ }
+      return json({ ok: true, id: txId }, { status: 201 });
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (error) {
+    if (shopsTableMissing(error)) {
+      console.error("Usahaku: tabel belum ada (migrasi 0027 belum diterapkan)");
+      return json({ error: "Fitur Usahaku belum aktif. Coba lagi nanti." }, { status: 503 });
+    }
+    if (error instanceof Error && error.message === "Payload JSON tidak valid.") return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    throw error;
+  }
 }
 
 async function handleItemRoutes(request: Request, env: Env, pathname: string) {
@@ -17769,6 +18064,10 @@ const worker = {
 
       if (url.pathname === "/api/member/attachments" || url.pathname.startsWith("/api/member/attachments/")) {
         return await handleAttachmentRoutes(request, env, url.pathname);
+      }
+
+      if (url.pathname === "/api/member/shops" || url.pathname.startsWith("/api/member/shops/")) {
+        return await handleShopRoutes(request, env, url.pathname);
       }
 
       if (url.pathname === "/api/member/items" || url.pathname.startsWith("/api/member/items/")) {

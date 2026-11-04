@@ -12,7 +12,7 @@ export default function LadangPage() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[30px]">Ladangku</h1>
-          <p className="text-[14px] text-slate-500">Cuan sampingan: jual barang nganggur dan tagih piutang.</p>
+          <p className="text-[14px] text-slate-500">Cuan sampingan: buka usaha, jual barang nganggur, dan tagih piutang.</p>
         </div>
         <HeaderSlot />
       </div>

@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-04 (live #126: Ladangku Jual + Tagih; berikutnya: Bos cek fitur Toko Oyenza)
+Terakhir diperbarui: 2026-11-04 (Usahaku di branch claude/usahaku, belum deploy — migrasi 0027)
 
 ## Siapa sedang kerja
 
@@ -18,6 +18,21 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-04 (branch claude/usahaku) — Usahaku + tab Ringkas di Ladangku, BELUM deploy (tunggu "gas").**
+  - **Migrasi `cloudflare/migrations/0027_shops.sql` WAJIB dijalankan Bos di D1 Console sebelum deploy** (tabel `shops`).
+  - Ladangku jadi 4 tab: `#ringkas` (default) / `#usaha` / `#jual` / `#tagih`.
+  - **Ringkas** (`RingkasView.tsx`): "Cuan bulan ini" HANYA dari hasil Ladangku — pemasukan `related_type` 'shop' / 'item'
+    atau sub 'Jual Barang' (gaji tidak ikut — alasan tab Target lama dihapus). Target opsional `prefs.cuanTarget`.
+    Kartu ke Usahaku / Jual / Tagih + "Uang masuk bulan ini".
+  - **Usahaku** (`UsahaView.tsx`, `shopService.ts`): `POST /api/member/shops/ideas` (AI, 3 rencana Rupiah, kuota 5/hari
+    `$.shopIdeaAi`, dikembalikan kalau gagal, tanpa web search), CRUD `/api/member/shops` (maks 5/user), `POST /:id/sale`
+    (pemasukan Usaha & Freelance › Penjualan + saldo, `request_id` → `payload_json.saleId` anti dobel). Tahap: Rencana →
+    Katalog (WA + produk) → Promosi (`promoted_at`, saat salin/bagikan katalog) → Jualan (≥1 penjualan).
+  - Katalog: teks WA, gambar PNG 1080×1350 (canvas di klien), tautan `wa.me/<62…>?text=`. TIDAK ada halaman publik.
+    Tautan toko online opsional: https saja, tautan editor (`/studio`, `sessionId=` dll) ditolak. Catatan bayar yang
+    memuat PIN/password/OTP/CVV ditolak. Nomor WA dinormalisasi ke 62….
+  - Diuji lokal (D1 + mock AI): ide (sanitasi `<script>`, rentang dibalik → diurutkan, ide kosong dibuang), validasi tautan
+    & PIN, penjualan 3× paralel → 1×201 + 2×409, saldo +44rb sekali, user lain → 404. **Belum**: respons AI asli.
 - **2026-11-04 (branch claude/ladangku-3) — tab Target Ladangku DIHAPUS (permintaan Bos: ikut menghitung gaji yang
   kategorinya bukan "Gaji"), live #126.** `TargetView.tsx` dihapus; `#target` jatuh ke tab Jual. `prefs.cuanTarget`
   di Worker dibiarkan (tidak dipakai UI, tidak berbahaya).

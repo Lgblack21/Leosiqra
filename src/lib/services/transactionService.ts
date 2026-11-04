@@ -26,7 +26,7 @@ export interface Transaction {
   status: 'PENDING' | 'VERIFIED' | 'FAILED';
   paymentStatus?: 'lunas' | 'belum';
   relatedId?: string; // ID of the related entity (e.g., investmentId)
-  relatedType?: 'investasi' | 'tabungan' | 'debt';
+  relatedType?: 'investasi' | 'tabungan' | 'debt' | 'item' | 'shop' | 'import';
   // Hutang/piutang: saldo rekening langsung ikut berubah saat dicatat (server).
   applyBalance?: boolean;
   // Label bebas di luar kategori (payload_json.tags di server).
