@@ -21,11 +21,12 @@ import { cn } from '@/lib/utils';
 // #barangku = Barangku (barang milik user, migrasi 0023).
 
 export type KekayaanTab = 'ringkasan' | 'tabungan' | 'hutang' | 'barangku';
-const TABS: { id: KekayaanTab; label: string; icon: typeof PieChart }[] = [
-  { id: 'ringkasan', label: 'Ringkasan', icon: PieChart },
-  { id: 'tabungan', label: 'Tabungan', icon: PiggyBank },
-  { id: 'hutang', label: 'Hutang & Piutang', icon: HandCoins },
-  { id: 'barangku', label: 'Barangku', icon: Package },
+// `short` = label di HP (4 tab harus muat tanpa digeser).
+const TABS: { id: KekayaanTab; label: string; short: string; icon: typeof PieChart }[] = [
+  { id: 'ringkasan', label: 'Ringkasan', short: 'Ringkasan', icon: PieChart },
+  { id: 'tabungan', label: 'Tabungan', short: 'Tabungan', icon: PiggyBank },
+  { id: 'hutang', label: 'Hutang & Piutang', short: 'Hutang', icon: HandCoins },
+  { id: 'barangku', label: 'Barangku', short: 'Barang', icon: Package },
 ];
 const fromHash = (): KekayaanTab => {
   const h = window.location.hash.slice(1) as KekayaanTab;
@@ -78,34 +79,35 @@ export function KekayaanShell() {
 
   return (
     <div className="mx-auto mb-12 max-w-[1400px] space-y-5">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      {/* Judul + Tambah satu baris, tab di baris sendiri (dulu semua satu baris → deskripsi terjepit). */}
+      <div className="space-y-4">
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[30px]">Kekayaan</h1>
             <p className="text-[14px] text-slate-500">Semua yang kamu punya dan yang masih harus dibayar, di satu tempat.</p>
           </div>
-          <HeaderSlot className="md:hidden" />
+          <div className="flex shrink-0 items-center gap-2">
+            <button type="button" onClick={() => setMenuOpen(true)} aria-label="Tambah" className="flex h-10 w-10 items-center justify-center gap-1.5 rounded-full bg-slate-900 text-[13px] font-bold text-white shadow-sm hover:bg-slate-800 sm:h-auto sm:w-auto sm:px-4 sm:py-2.5">
+              <Plus size={17} strokeWidth={2.6} /> <span className="hidden sm:inline">Tambah</span>
+            </button>
+            <HeaderSlot />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <LayoutGroup id="kekayaan-tabs">
-            <div role="tablist" aria-label="Bagian kekayaan" className="no-scrollbar flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-full bg-slate-100 p-1 md:flex-none">
-              {TABS.map((t) => {
-                const active = t.id === tab;
-                return (
-                  <button key={t.id} type="button" role="tab" aria-selected={active} onClick={() => go(t.id)} className={cn('relative flex shrink-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 py-2 text-[13px] font-semibold md:flex-none md:px-4', active ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700')}>
-                    {active && <motion.span layoutId={reduce ? undefined : 'kekayaan-tab'} className="absolute inset-0 rounded-full bg-white shadow-sm" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
-                    <t.icon size={15} className="relative hidden sm:block" />
-                    <span className="relative">{t.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </LayoutGroup>
-          <button type="button" onClick={() => setMenuOpen(true)} aria-label="Tambah" className="flex h-10 w-10 shrink-0 items-center justify-center gap-1.5 rounded-full bg-slate-900 text-[13px] font-bold text-white shadow-sm hover:bg-slate-800 sm:h-auto sm:w-auto sm:px-4 sm:py-2.5">
-            <Plus size={17} strokeWidth={2.6} /> <span className="hidden sm:inline">Tambah</span>
-          </button>
-          <HeaderSlot className="hidden md:flex" />
-        </div>
+        <LayoutGroup id="kekayaan-tabs">
+          <div role="tablist" aria-label="Bagian kekayaan" className="no-scrollbar grid grid-cols-4 gap-1 overflow-x-auto rounded-full bg-slate-100 p-1 md:inline-grid md:w-auto md:grid-flow-col md:auto-cols-max">
+            {TABS.map((t) => {
+              const active = t.id === tab;
+              return (
+                <button key={t.id} type="button" role="tab" aria-selected={active} onClick={() => go(t.id)} className={cn('relative flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2 py-2 text-[13px] font-semibold md:px-4', active ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700')}>
+                  {active && <motion.span layoutId={reduce ? undefined : 'kekayaan-tab'} className="absolute inset-0 rounded-full bg-white shadow-sm" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
+                  <t.icon size={15} className="relative hidden sm:block" />
+                  <span className="relative sm:hidden">{t.short}</span>
+                  <span className="relative hidden sm:inline">{t.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </LayoutGroup>
       </div>
 
       <Modal isOpen={menuOpen} onClose={() => setMenuOpen(false)} title="Tambah ke kekayaan" maxWidth="max-w-lg">

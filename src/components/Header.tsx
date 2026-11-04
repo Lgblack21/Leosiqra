@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
 import { InboxButton } from '@/components/InboxButton';
 import { NotificationBell } from '@/components/NotificationBell';
+import { keuanganNav } from '@/lib/navigation';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -24,6 +25,13 @@ export const HeaderSlot = ({ className }: { className?: string }) => (
 // dipindah ke sana lewat portal supaya satu baris dengan judul; kalau tidak,
 // tampil sebagai baris tipis di atas konten. Dropdown "Tambah Cepat" sudah
 // dihapus — mencatat lewat "Tambah transaksi" di menu samping / tombol +.
+// Kotak Masuk + lonceng hanya di halaman kelompok Keuangan (Ringkasan, Transaksi,
+// Laporan, Rekening — permintaan Bos 2026-11-04); halaman Fitur (Kekayaan,
+// Investasiku, Langgananku, …) cukup tombol menu di HP. Prefix diambil dari
+// keuanganNav (/membership/transactions/daily → /membership/transactions).
+const KEUANGAN_PREFIXES = keuanganNav.map((n) => n.href.split('/').slice(0, 3).join('/'));
+const isKeuanganPage = (path: string | null) => !!path && KEUANGAN_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
+
 export const Header = ({ onMenuClick }: HeaderProps) => {
   const pathname = usePathname();
   const [slot, setSlot] = useState<HTMLElement | null>(null);
@@ -54,15 +62,18 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
     </button>
   );
 
-  if (slot) return createPortal(<><InboxButton /><NotificationBell />{menu}</>, slot);
+  const icons = isKeuanganPage(pathname);
+  if (slot) return createPortal(<>{icons && <><InboxButton /><NotificationBell /></>}{menu}</>, slot);
 
   return (
-    <header className="flex items-center justify-between gap-3 px-4 pt-3 md:justify-end md:px-8 md:pt-4 print:hidden">
+    <header className={`flex items-center justify-between gap-3 px-4 pt-3 md:justify-end md:px-8 md:pt-4 print:hidden ${icons ? '' : 'md:hidden'}`}>
       {menu}
-      <span className="flex items-center gap-1.5">
-        <InboxButton />
-        <NotificationBell />
-      </span>
+      {icons && (
+        <span className="flex items-center gap-1.5">
+          <InboxButton />
+          <NotificationBell />
+        </span>
+      )}
     </header>
   );
 };

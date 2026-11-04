@@ -28,6 +28,9 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   - Katalog 47 layanan `src/lib/subscriptionCatalog.ts` (harga = PERKIRAAN); domain logo ditambahkan ke `LOGO_DOMAINS`
     + `APP_ICONS` Worker (ikon App Store). Radar: `radarScan` lokal (tanpa AI) atas pengeluaran **30 hari** (keputusan Bos):
     cocok katalog = "pasti", nama sama ≥2× nominal ±15% jarak teratur = "mungkin". Animasi `RadarScan.tsx`.
+  - Juga di branch ini: Kotak Masuk + lonceng hanya di halaman Keuangan (`Header.tsx`, prefix dari `keuanganNav`);
+    Kekayaan dirapikan (judul+Tambah satu baris, tab baris sendiri & label pendek di HP, grup kosong → baris
+    "Belum dicatat", urutan Kas→Tabungan→Investasi→Barangku→Piutang→Kewajiban, komposisi "<1%", grafik HP 110px).
   - Menu: fitur `langganan` (features.ts + PREF_FEATURES Worker, bawaan ON untuk user baru), navGroups Transaksi,
     app Lainnya → Langgananku. Tahap 2 (belum): deteksi harga naik, cek dobel, status sudah dibayar.
 - **2026-11-04 security check (branch claude/security-cron-flood):** 🟠 cron pengingat bisa dibanjiri satu akun

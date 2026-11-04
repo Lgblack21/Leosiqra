@@ -193,6 +193,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
             ))}
           </Group>
 
+          {!(goals.length === 0 && t.savings <= 0) && (
           <Group icon={PiggyBank} tone="bg-pink-50 text-pink-600" title="Tabungan" total={money(t.savings)} count={goals.length} action={<button type="button" onClick={() => go('tabungan')} className="text-[12px] font-bold text-slate-500 hover:text-slate-900">Kelola</button>}>
             {goals.length === 0 ? <Empty text={t.savings > 0 ? 'Tabungan tanpa target.' : 'Belum ada tabungan.'} onAdd={() => go('tabungan')} label="Buat target" /> : goals.slice(0, 5).map((g) => {
               const pct = g.targetAmount ? Math.min(100, (g.currentTotal / g.targetAmount) * 100) : null;
@@ -215,7 +216,9 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
               );
             })}
           </Group>
+          )}
 
+          {nw.investments.length > 0 && (
           <Group icon={TrendingUp} tone="bg-indigo-50 text-indigo-600" title="Investasi" total={money(t.investments)} count={nw.investments.length} action={<Link href="/membership/investment" className="text-[12px] font-bold text-slate-500 hover:text-slate-900">Investasiku</Link>}>
             {nw.investments.length === 0 ? <Empty text="Belum ada investasi." onAdd={() => openModal('investasi_lain')} label="Tambah investasi" /> : nw.investments.slice().sort((a, b) => b.value - a.value).slice(0, 6).map(({ inv, value, cost }) => {
               const gain = value - cost;
@@ -224,19 +227,24 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
               );
             })}
           </Group>
+          )}
 
-          <Group icon={HandCoins} tone="bg-emerald-50 text-emerald-600" title="Piutang" total={money(t.piutang)} count={nw.piutang.length} action={<button type="button" onClick={() => go('hutang')} className="text-[12px] font-bold text-slate-500 hover:text-slate-900">Kelola</button>}>
-            {nw.piutang.length === 0 ? <Empty text="Tidak ada uang yang dipinjam orang." onAdd={() => openModal('hutang_piutang')} label="Catat piutang" /> : nw.piutang.slice(0, 5).map((p) => (
-              <Row key={p.id} onClick={() => go('hutang')} icon={<span aria-hidden className="text-[18px]">🤝</span>} title={p.name} sub={`Sejak ${fmtDay(p.date)}${p.remaining < p.total - 0.5 ? ` · sisa dari ${shortM(p.total)}` : ''}`} value={money(p.remaining)} />
-            ))}
-          </Group>
-
+          {activeItems.length > 0 && (
           <Group icon={Package} tone="bg-amber-50 text-amber-600" title="Barangku" total={money(t.items)} count={activeItems.length} action={<button type="button" onClick={() => go('barangku')} className="text-[12px] font-bold text-slate-500 hover:text-slate-900">Kelola</button>}>
             {activeItems.length === 0 ? <Empty text="HP, motor, laptop yang kamu punya belum dicatat." onAdd={() => go('barangku')} label="Catat barang" /> : activeItems.slice(0, 5).map(({ it, value }) => {
               const M = categoryMeta(it.category);
               return <Row key={it.id} onClick={() => go('barangku')} icon={<M.icon size={18} className="text-amber-600" />} title={it.name} sub={[it.brand, it.category].filter(Boolean).join(' · ')} value={money(value)} />;
             })}
           </Group>
+          )}
+
+          {nw.piutang.length > 0 && (
+          <Group icon={HandCoins} tone="bg-emerald-50 text-emerald-600" title="Piutang" total={money(t.piutang)} count={nw.piutang.length} action={<button type="button" onClick={() => go('hutang')} className="text-[12px] font-bold text-slate-500 hover:text-slate-900">Kelola</button>}>
+            {nw.piutang.length === 0 ? <Empty text="Tidak ada uang yang dipinjam orang." onAdd={() => openModal('hutang_piutang')} label="Catat piutang" /> : nw.piutang.slice(0, 5).map((p) => (
+              <Row key={p.id} onClick={() => go('hutang')} icon={<span aria-hidden className="text-[18px]">🤝</span>} title={p.name} sub={`Sejak ${fmtDay(p.date)}${p.remaining < p.total - 0.5 ? ` · sisa dari ${shortM(p.total)}` : ''}`} value={money(p.remaining)} />
+            ))}
+          </Group>
+          )}
 
           <Group icon={Landmark} tone="bg-rose-50 text-rose-600" title="Kewajiban" total={t.liabilities > 0 ? `−${money(t.liabilities)}` : money(0)} count={cycles.length + nw.hutang.length} action={<button type="button" onClick={() => go('hutang')} className="text-[12px] font-bold text-slate-500 hover:text-slate-900">Kelola</button>}>
             {cycles.length + nw.hutang.length === 0 ? <Empty text="Tidak ada utang. 🎉" onAdd={() => openModal('hutang_piutang')} label="Catat hutang" /> : (
@@ -250,6 +258,29 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
               </>
             )}
           </Group>
+
+          {/* Kelompok yang masih kosong: satu baris ajakan, bukan kartu penuh berisi "belum ada". */}
+          {(() => {
+            const empties = [
+              goals.length === 0 && t.savings <= 0 && { label: 'Tabungan', icon: PiggyBank, tone: 'bg-pink-50 text-pink-600', on: () => go('tabungan') },
+              nw.investments.length === 0 && { label: 'Investasi', icon: TrendingUp, tone: 'bg-indigo-50 text-indigo-600', on: () => openModal('investasi_lain') },
+              activeItems.length === 0 && { label: 'Barang', icon: Package, tone: 'bg-amber-50 text-amber-600', on: () => go('barangku') },
+              nw.piutang.length === 0 && { label: 'Piutang', icon: HandCoins, tone: 'bg-emerald-50 text-emerald-600', on: () => openModal('hutang_piutang') },
+            ].filter(Boolean) as { label: string; icon: typeof Wallet; tone: string; on: () => void }[];
+            if (!empties.length) return null;
+            return (
+              <section className="rounded-[26px] bg-white p-4 ring-1 ring-slate-100">
+                <p className="text-[13px] font-semibold text-slate-500">Belum dicatat — tambahkan supaya kekayaanmu lengkap</p>
+                <div className="mt-2.5 flex flex-wrap gap-2">
+                  {empties.map((e) => (
+                    <button key={e.label} type="button" onClick={e.on} className="flex items-center gap-2 rounded-full bg-slate-50 py-1.5 pl-1.5 pr-3.5 text-[13px] font-bold text-slate-700 ring-1 ring-slate-100 hover:bg-slate-100">
+                      <span className={cn('flex h-7 w-7 items-center justify-center rounded-full', e.tone)}><e.icon size={14} /></span>{e.label}<Plus size={13} className="text-slate-400" />
+                    </button>
+                  ))}
+                </div>
+              </section>
+            );
+          })()}
         </div>
 
         <aside className="space-y-3 lg:sticky lg:top-4">
@@ -263,7 +294,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
                     <li key={g.id} className="flex items-center gap-2 text-[13px]">
                       <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: g.color }} />
                       <span className="min-w-0 flex-1 truncate text-slate-700">{g.label}</span>
-                      <span className="font-bold tabular-nums text-slate-900">{Math.round((g.value / compTotal) * 100)}%</span>
+                      <span className="font-bold tabular-nums text-slate-900">{((p) => (p > 0 && p < 1 ? '<1' : Math.round(p)))((g.value / compTotal) * 100)}%</span>
                     </li>
                   ))}
                 </ul>
@@ -294,9 +325,9 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
                 { label: 'Target tabungan', emoji: '🐷', on: () => go('tabungan') },
                 { label: 'Investasi / emas', emoji: '🪙', on: () => openModal('investasi_lain') },
                 { label: 'Hutang / piutang', emoji: '🤝', on: () => openModal('hutang_piutang') },
-                { label: 'Barang (HP, motor…)', emoji: '📦', on: () => go('barangku') },
+                { label: 'Barang (HP, motor, laptop)', emoji: '📦', on: () => go('barangku') },
               ].map((a) => (
-                <button key={a.label} type="button" onClick={a.on} className="flex items-center gap-2 rounded-2xl bg-white/10 px-3 py-2.5 text-left text-[12px] font-semibold hover:bg-white/15">
+                <button key={a.label} type="button" onClick={a.on} className="flex items-center gap-2 rounded-2xl bg-white/10 px-3 py-2.5 text-left text-[12px] font-semibold hover:bg-white/15 last:odd:col-span-2">
                   <span aria-hidden className="text-[16px]">{a.emoji}</span><span className="min-w-0 flex-1 leading-tight">{a.label}</span><Plus size={14} className="shrink-0 text-white/60" />
                 </button>
               ))}
@@ -397,7 +428,7 @@ function TrailChart({ points, up, hidden, reduce }: { points: { date: Date; valu
       <svg
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="none"
-        className="h-[150px] w-full touch-pan-y md:h-[180px]"
+        className="h-[110px] w-full touch-pan-y sm:h-[150px] md:h-[180px]"
         onPointerMove={(e) => {
           const r = e.currentTarget.getBoundingClientRect();
           setHover(Math.max(0, Math.min(points.length - 1, Math.round(((e.clientX - r.left) / r.width) * (points.length - 1)))));
