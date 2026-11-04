@@ -18,7 +18,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-04 (branch claude/ladangku-2) — Ladangku tab Tagih & Target, BELUM deploy (tunggu "gas"). Tanpa migrasi.**
+- **2026-11-04 (branch claude/ladangku-3) — tab Target Ladangku DIHAPUS (permintaan Bos: ikut menghitung gaji yang
+  kategorinya bukan "Gaji"), BELUM deploy.** `TargetView.tsx` dihapus; `#target` jatuh ke tab Jual. `prefs.cuanTarget`
+  di Worker dibiarkan (tidak dipakai UI, tidak berbahaya).
+- **2026-11-04 (branch claude/ladangku-2) — Ladangku tab Tagih & Target, live #125. Tanpa migrasi.**
   - Ladangku jadi 3 tab (hash `#jual` / `#tagih` / `#target`) di `src/components/ladang/LadangView.tsx`.
   - **Tagih** (`TagihView.tsx`): piutang belum lunas (`paidByDebt`/`debtRemaining`, hanya IDR), "Ingatkan" = `wa.me/?text=`
     (3 nada, kontak dipilih user — tanpa API WA), "Sudah bayar" = `debtService.pay` lunas penuh.

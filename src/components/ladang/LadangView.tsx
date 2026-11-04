@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronRight, HandCoins, PenLine, Sprout, Tag, Target } from 'lucide-react';
+import { ChevronRight, HandCoins, PenLine, Sprout, Tag } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { SellFlow } from '@/components/ladang/SellFlow';
 import { TagihView } from '@/components/ladang/TagihView';
-import { TargetView } from '@/components/ladang/TargetView';
 import { itemService } from '@/lib/services/itemService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { categoryMeta, itemCurrentValue, type Item } from '@/lib/itemValue';
@@ -14,13 +13,12 @@ import { cn, formatIDR } from '@/lib/utils';
 
 // Ladangku: cuan sampingan. Tab (hash): #jual — barang nganggur jadi uang (AI
 // menaksir dari iklan asli + menulis iklan), #tagih — piutang + ingatkan via WA +
-// Patungan, #target — target cuan bulanan. Dipakai web (/membership/ladang) & app
+// Patungan. (Tab Target dihapus 2026-11-04 atas permintaan Bos: ikut menghitung gaji.) Dipakai web (/membership/ladang) & app
 // HP (/app/ladang). ?item=<id> langsung membuka barang itu (tombol di Barangku).
 
 const TABS = [
   { id: 'jual', label: 'Jual', icon: Tag },
   { id: 'tagih', label: 'Tagih', icon: HandCoins },
-  { id: 'target', label: 'Target', icon: Target },
 ] as const;
 type TabId = (typeof TABS)[number]['id'];
 
@@ -56,7 +54,6 @@ export function LadangView({ variant, toast }: { variant: 'web' | 'app'; toast?:
       {flash && <div role="status" className="rounded-2xl bg-emerald-50 px-4 py-3 text-[13px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">{flash}</div>}
       {tab === 'jual' && <JualView variant={variant} onToast={say} />}
       {tab === 'tagih' && <TagihView variant={variant} onToast={say} />}
-      {tab === 'target' && <TargetView variant={variant} onToast={say} />}
     </div>
   );
 }
