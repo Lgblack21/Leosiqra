@@ -18,6 +18,7 @@ export const WEB_DARK_READY = [
   '/membership/tabungan',
   '/membership/kotak-masuk',
   '/membership/langganan',
+  '/membership/ladang',
 ];
 
 export const isWebDarkReady = (pathname: string | null) =>

@@ -8,6 +8,7 @@ const APP_EQUIVALENT: [prefix: string, app: string][] = [
   ["/membership/kekayaan#barangku", "/app/barangku"],
   ["/membership/kekayaan#koleksi", "/app/koleksi"],
   ["/membership/langganan", "/app/langganan"],
+  ["/membership/ladang", "/app/ladang"],
   ["/membership/transactions", "/app/transactions"],
   ["/membership/laporan", "/app/statistics"],
   ["/membership/profile", "/app/profile"],

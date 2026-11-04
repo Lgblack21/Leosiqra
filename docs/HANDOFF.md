@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-04 (Koleksiku tahap 2 di branch claude/koleksiku-2, belum deploy)
+Terakhir diperbarui: 2026-11-04 (Ladangku di branch claude/ladangku, belum deploy)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,20 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-04 (branch claude/koleksiku-2) — Koleksiku tahap 2, BELUM deploy (tunggu "gas"):**
+- **2026-11-04 (branch claude/ladangku) — Ladangku (jual barang nganggur), BELUM deploy (tunggu "gas"). Tanpa migrasi.**
+  - Halaman `/membership/ladang` + `/app/ladang` (`src/components/ladang/*`), fitur `ladang` (menu Fitur, default nyala untuk
+    user tanpa preferensi; `PREF_FEATURES` Worker ikut). Tombol "Jual di Ladangku" di editor Barangku (`?item=<id>`).
+  - `POST /api/member/items/appraise`: AI (gemini-2.5-flash, fallback lite) + **plugin web OpenRouter (BERBAYAR per request,
+    disetujui Bos)** → harga bawah/wajar/atas/cepat laku + judul & deskripsi iklan. Kuota **5×/user/hari** (`metadata_json
+    $.appraiseAi`, atomik, dikembalikan kalau AI gagal) + `AI_PARSE_RATE_LIMITER`. Tautan iklan HANYA dari `annotations`
+    url_citation (tautan karangan model dibuang — diuji). Kill switch: var `OPENROUTER_APPRAISE_WEB=false`.
+  - `POST /api/member/items/:id/sell {price, account_id|null, date}`: satu batch — INSERT pemasukan (Pemasukan › Jual Barang,
+    related_type 'item') bersyarat `status='aktif'` + saldo/total via `quickTxBalanceStatements` + item `terjual`
+    (manual_value = harga laku). Diuji 3× paralel → 1×201 + 2×409, saldo naik sekali. Rekening wajib IDR.
+  - Barang di luar Barangku: "Sudah laku" = `addTransaction` pemasukan biasa (applyBalance).
+  - **Belum terverifikasi**: respons asli OpenRouter + plugin web (format `annotations`, kualitas harga) — lokal pakai mock.
+    Cek setelah deploy dengan 1–2 taksiran sungguhan.
+- **2026-11-04 (branch claude/koleksiku-2) — Koleksiku tahap 2, live #123:**
   - **Migrasi `cloudflare/migrations/0026_collectible_alerts.sql` (ALTER TABLE collectibles ADD COLUMN alert_price REAL)
     dijalankan Bos di D1 Console.** Tanpa kolom ini cron :45 diam (return), PUT cetakan tetap jalan (`.catch`).
   - **Steam (CS2)**: `POST /api/member/collectibles/steam/import {profile?}` (URL /id/, /profiles/, steamID64; kosong = profil

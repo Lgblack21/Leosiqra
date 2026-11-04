@@ -1,5 +1,6 @@
 import {
   Radar,
+  Sprout,
   LayoutDashboard,
   BarChart3,
   Bot,
@@ -82,6 +83,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: 'Rekening', href: '/membership/rekening', icon: Building2 },
       { label: 'Kekayaan', href: '/membership/kekayaan', icon: PieChart },
+      { label: 'Ladangku', href: '/membership/ladang', icon: Sprout },
     ],
   },
   {

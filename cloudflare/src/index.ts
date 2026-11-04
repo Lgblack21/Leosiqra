@@ -61,6 +61,7 @@ export interface Env {
   LOGO_DEV_TOKEN?: string;
   COINGECKO_API_KEY?: string;
   OPENROUTER_WEB_SEARCH?: string;
+  OPENROUTER_APPRAISE_WEB?: string;
   OPENROUTER_CHAT_MODEL?: string;
   // Email transaksional (reset password) lewat Resend. Tanpa RESEND_API_KEY
   // fitur Lupa Password menjawab 503 "belum aktif" alih-alih diam-diam gagal.
@@ -9241,6 +9242,211 @@ Kalau struk berisi banyak barang, pilih barang termahal yang tahan lama. Hari in
   });
 }
 
+// ── Ladangku: taksir harga jual barang bekas + tulis iklan (AI + web search) ──
+// Web search = plugin "web" OpenRouter (biaya tambahan per request, disetujui Bos
+// 2026-11-04) → dibatasi APPRAISE_DAILY_LIMIT per user per hari (kuota atomik di
+// metadata_json $.appraiseAi, dikembalikan kalau AI gagal). Tautan iklan pembanding
+// HANYA yang benar-benar ada di kutipan hasil pencarian (annotations url_citation) —
+// tautan karangan model dibuang. Matikan pencarian: env OPENROUTER_APPRAISE_WEB=false.
+const APPRAISE_DAILY_LIMIT = 5;
+const APPRAISE_CONDITIONS = ["Seperti baru", "Bagus", "Ada pemakaian", "Perlu servis"] as const;
+const APPRAISE_MODELS = ["google/gemini-2.5-flash", "google/gemini-2.5-flash-lite"];
+const appraiseQuota = async (env: Env, userId: string, delta: 1 | -1) => {
+  const today = todayWIB();
+  if (delta === -1) {
+    await env.DB.prepare(
+      `UPDATE users SET metadata_json = json_set(metadata_json, '$.appraiseAi.n', MAX(0, COALESCE(json_extract(metadata_json, '$.appraiseAi.n'), 1) - 1))
+        WHERE id = ? AND json_valid(metadata_json) AND json_extract(metadata_json, '$.appraiseAi.day') = ?`
+    ).bind(userId, today).run();
+    return true;
+  }
+  const res = await env.DB.prepare(
+    `UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.appraiseAi',
+            json_object('day', ?, 'n', CASE WHEN json_valid(metadata_json) AND json_extract(metadata_json, '$.appraiseAi.day') = ?
+                                           THEN COALESCE(json_extract(metadata_json, '$.appraiseAi.n'), 0) + 1 ELSE 1 END))
+      WHERE id = ?
+        AND NOT (json_valid(metadata_json) AND json_extract(metadata_json, '$.appraiseAi.day') = ?
+                 AND COALESCE(json_extract(metadata_json, '$.appraiseAi.n'), 0) >= ?)`
+  ).bind(today, today, userId, today, APPRAISE_DAILY_LIMIT).run();
+  return res.meta.changes > 0;
+};
+
+async function handleItemAppraise(request: Request, env: Env, userId: string) {
+  if (!(await checkAiParseRateLimit(env, userId))) return json({ error: "Terlalu banyak permintaan AI. Coba lagi dalam beberapa saat." }, { status: 429 });
+  const raw = await parseJson<Record<string, unknown>>(request);
+  const text = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/[\u0000-\u001f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, max) : "");
+  const name = text(raw.name, 100);
+  if (name.length < 2) return json({ error: "Isi nama barangnya dulu." }, { status: 400 });
+  const condition = typeof raw.condition === "string" && (APPRAISE_CONDITIONS as readonly string[]).includes(raw.condition) ? raw.condition : "Bagus";
+  const variant = text(raw.variant, 100);
+  const completeness = text(raw.completeness, 200);
+  const minus = text(raw.minus, 200);
+  const area = text(raw.area, 60);
+  let bought = "";
+  if (typeof raw.item_id === "string" && /^[0-9a-f-]{36}$/i.test(raw.item_id)) {
+    const it = await env.DB.prepare("SELECT purchase_price, currency, purchase_date FROM items WHERE id = ? AND user_id = ?")
+      .bind(raw.item_id, userId)
+      .first<{ purchase_price: number; currency: string | null; purchase_date: string | null }>()
+      .catch(() => null);
+    if (it && Number(it.purchase_price) > 0) bought = `Dibeli ${it.currency || "IDR"} ${Math.round(Number(it.purchase_price))}${it.purchase_date ? ` pada ${it.purchase_date}` : ""}.`;
+  }
+  const openRouter = await getOpenRouterKey(env);
+  if (!openRouter) return json({ error: "AI belum dikonfigurasi. Coba lagi nanti." }, { status: 503 });
+  if (!(await appraiseQuota(env, userId, 1))) return json({ error: `Batas taksir harga hari ini (${APPRAISE_DAILY_LIMIT}×) sudah habis. Coba lagi besok.` }, { status: 429 });
+  const useWeb = env.OPENROUTER_APPRAISE_WEB !== "false";
+  const systemPrompt = `Kamu penaksir harga barang BEKAS di Indonesia dan penulis iklan jual yang jujur.
+${useWeb ? "Gunakan hasil pencarian web: iklan/listing barang yang SAMA (OLX, Tokopedia, Shopee, Facebook Marketplace, Carousell, Bukalapak, forum jual-beli) dalam Rupiah. Utamakan barang bekas, bukan harga baru." : "Tidak ada hasil pencarian web — taksir dari pengetahuanmu dan sebutkan bahwa ini perkiraan kasar."}
+Sesuaikan dengan kondisi, kelengkapan, dan minus. Jangan melebih-lebihkan.
+Balas HANYA satu objek JSON valid:
+{
+  "price_low": <angka Rupiah, harga bawah pasaran bekas>,
+  "price_fair": <angka Rupiah, harga wajar untuk kondisi ini>,
+  "price_high": <angka Rupiah, harga atas / kalau sabar>,
+  "quick_sale": <angka Rupiah, harga supaya cepat laku 1–3 hari>,
+  "basis": <1–2 kalimat: dasar taksiran, mis. "5 iklan Sony A6000 kit bekas Rp4,5–6 jt">,
+  "comparables": [ { "title": <judul iklan>, "price": <angka Rupiah>, "url": <URL iklan dari hasil pencarian> } ],
+  "title": <judul iklan maks 70 karakter, menarik tapi jujur>,
+  "description": <deskripsi iklan 4–8 baris bahasa Indonesia santai-sopan: kondisi, kelengkapan, minus apa adanya, alasan jual opsional, lokasi COD kalau ada; tanpa emoji berlebihan; tanpa nomor HP>,
+  "tips": <1 kalimat tips supaya cepat laku>
+}
+Angka tanpa titik/koma. comparables maks 6, HANYA dari hasil pencarian (kosongkan kalau tidak ada).`;
+  const userPrompt = [`Barang: ${name}`, variant && `Varian: ${variant}`, `Kondisi: ${condition}`, completeness && `Kelengkapan: ${completeness}`, minus && `Minus: ${minus}`, area && `Lokasi: ${area}`, bought].filter(Boolean).join("\n");
+  let content = "";
+  let citations: { url: string; title: string }[] = [];
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${openRouter.key}`,
+        "http-referer": env.APP_URL || "https://www.leosiqra.com",
+        "x-title": env.APP_NAME || "Leosiqra",
+      },
+      body: JSON.stringify({
+        models: APPRAISE_MODELS,
+        route: "fallback",
+        temperature: 0.3,
+        max_tokens: 1400,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `${userPrompt}\n\nCari harga bekasnya lalu tulis iklannya.` },
+        ],
+        ...(useWeb ? { plugins: [{ id: "web", max_results: 6, search_prompt: `Hasil pencarian iklan jual "${name}${variant ? ` ${variant}` : ""}" bekas di Indonesia:` }] } : {}),
+      }),
+    });
+    if (!response.ok) throw new Error(`OpenRouter request gagal (${response.status}): ${(await response.text()).slice(0, 300)}`);
+    const data = (await response.json()) as { choices?: Array<{ message?: { content?: string; annotations?: Array<{ type?: string; url_citation?: { url?: string; title?: string } }> } }> };
+    const msg = data.choices?.[0]?.message;
+    content = msg?.content?.trim() ?? "";
+    citations = (msg?.annotations ?? [])
+      .filter((a) => a?.type === "url_citation" && typeof a.url_citation?.url === "string" && /^https:\/\//.test(a.url_citation.url))
+      .map((a) => ({ url: a.url_citation!.url!.slice(0, 500), title: text(a.url_citation!.title, 120) }));
+  } catch (error) {
+    await appraiseQuota(env, userId, -1).catch(() => undefined);
+    if (isAiQuotaError(error)) {
+      await notifyAiQuotaOnce(env);
+      return json({ error: AI_QUOTA_MESSAGE, code: "ai_quota" }, { status: 503 });
+    }
+    console.error("AI taksir barang gagal:", error instanceof Error ? error.message : error);
+    return json({ error: "AI sedang gangguan. Coba lagi sebentar lagi." }, { status: 502 });
+  }
+  let p: Record<string, unknown>;
+  try {
+    p = JSON.parse(stripJsonFences(content.slice(content.indexOf("{"), content.lastIndexOf("}") + 1)));
+  } catch {
+    await appraiseQuota(env, userId, -1).catch(() => undefined);
+    return json({ error: "AI belum bisa menaksir barang ini. Coba tulis nama/tipe lebih lengkap." }, { status: 422 });
+  }
+  const money = (v: unknown) => {
+    // Rupiah tanpa desimal: "4.500.000" / "Rp4,5jt"? → hanya digit (string berformat titik ribuan).
+    const n = Math.round(Number(typeof v === "string" ? v.replace(/\D/g, "") : v));
+    return Number.isFinite(n) && n > 0 && n <= 1e11 ? n : null;
+  };
+  const [low, fair, high] = [money(p.price_low), money(p.price_fair), money(p.price_high)].filter((n): n is number => n !== null).sort((a, b) => a - b).concat([NaN, NaN, NaN]).slice(0, 3) as number[];
+  if (!Number.isFinite(low)) {
+    await appraiseQuota(env, userId, -1).catch(() => undefined);
+    return json({ error: "AI belum menemukan harga untuk barang ini. Coba tulis merek & tipenya." }, { status: 422 });
+  }
+  const fairV = Number.isFinite(fair) ? fair : low;
+  const highV = Number.isFinite(high) ? high : fairV;
+  const quick = money(p.quick_sale);
+  // Tautan pembanding hanya yang ada di kutipan pencarian (normalisasi tanpa query/slash).
+  const norm = (u: string) => u.replace(/[?#].*$/, "").replace(/\/+$/, "").toLowerCase();
+  const cited = new Map(citations.map((c) => [norm(c.url), c]));
+  const seen = new Set<string>();
+  const comparables = (Array.isArray(p.comparables) ? p.comparables : [])
+    .map((c) => (c && typeof c === "object" ? (c as Record<string, unknown>) : {}))
+    .filter((c) => typeof c.url === "string" && cited.has(norm(c.url)))
+    .map((c) => ({ title: text(c.title, 120) || cited.get(norm(String(c.url)))!.title || "Iklan", price: money(c.price), url: cited.get(norm(String(c.url)))!.url }))
+    .filter((c) => !seen.has(c.url) && seen.add(c.url))
+    .slice(0, 6);
+  // Kutipan yang tidak dirujuk model tetap ditampilkan sebagai "sumber" (tanpa harga).
+  const used = await env.DB.prepare("SELECT CASE WHEN json_valid(metadata_json) AND json_extract(metadata_json, '$.appraiseAi.day') = ? THEN json_extract(metadata_json, '$.appraiseAi.n') END AS n FROM users WHERE id = ?")
+    .bind(todayWIB(), userId)
+    .first<{ n: number | null }>();
+  const sources = citations.filter((c) => !seen.has(c.url)).slice(0, 6 - comparables.length).map((c) => ({ title: c.title || new URL(c.url).hostname, price: null, url: c.url }));
+  return json({
+    ok: true,
+    appraisal: {
+      price_low: low,
+      price_fair: Math.min(Math.max(fairV, low), highV),
+      price_high: highV,
+      quick_sale: quick && quick <= highV ? quick : Math.round(low * 0.95),
+      basis: text(p.basis, 300) || null,
+      comparables: [...comparables, ...sources],
+      title: text(p.title, 90) || name,
+      description: typeof p.description === "string" ? p.description.replace(/[\u0000-\u0008\u000b-\u001f<>]/g, "").replace(/\n{3,}/g, "\n\n").trim().slice(0, 1500) : "",
+      tips: text(p.tips, 200) || null,
+      web: useWeb,
+      remaining: Math.max(0, APPRAISE_DAILY_LIMIT - Number(used?.n ?? 0)),
+    },
+  });
+}
+
+// Barang laku: status → terjual + pemasukan ke rekening dalam SATU batch. INSERT
+// bersyarat status = 'aktif' → kirim dobel / dua tab tidak mencatat dua kali.
+async function handleItemSell(request: Request, env: Env, userId: string, itemId: string) {
+  const raw = await parseJson<Record<string, unknown>>(request);
+  const price = typeof raw.price === "number" && Number.isFinite(raw.price) && raw.price > 0 && raw.price <= ITEM_MAX_PRICE ? Math.round(raw.price * 100) / 100 : null;
+  if (!price) return json({ error: "Isi harga lakunya." }, { status: 400 });
+  const date = isRealDateStr(raw.date) && raw.date <= todayWIB() && raw.date >= "2000-01-01" ? raw.date : todayWIB();
+  const record = raw.account_id !== null && raw.account_id !== undefined && raw.account_id !== "";
+  const item = await env.DB.prepare("SELECT name, brand, status FROM items WHERE id = ? AND user_id = ?").bind(itemId, userId).first<{ name: string; brand: string | null; status: string }>();
+  if (!item) return json({ error: "Barang tidak ditemukan." }, { status: 404 });
+  if (item.status !== "aktif") return json({ error: "Barang ini sudah tidak aktif (terjual/hilang)." }, { status: 409 });
+  const now = nowIso();
+  const label = [item.brand, item.name].filter(Boolean).join(" ").slice(0, 120);
+  if (!record) {
+    const res = await env.DB.prepare("UPDATE items SET status = 'terjual', manual_value = ?, value_mode = 'manual', updated_at = ? WHERE id = ? AND user_id = ? AND status = 'aktif'").bind(price, now, itemId, userId).run();
+    if (!res.meta.changes) return json({ error: "Barang ini baru saja berubah. Muat ulang lalu coba lagi." }, { status: 409 });
+    return json({ ok: true, transactionId: null });
+  }
+  const account = typeof raw.account_id === "string"
+    ? await env.DB.prepare("SELECT id, currency FROM accounts WHERE id = ? AND user_id = ?").bind(raw.account_id, userId).first<{ id: string; currency: string | null }>()
+    : null;
+  if (!account) return json({ error: "Rekening tidak ditemukan." }, { status: 404 });
+  if ((account.currency || "IDR") !== "IDR") return json({ error: "Pilih rekening Rupiah untuk hasil jual ini." }, { status: 400 });
+  const txId = generateId();
+  const results = await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO transactions (id, user_id, type, amount, amount_idr, category, sub_category, currency, account_id, date, display_date, note, status, related_id, related_type, created_at, updated_at)
+       SELECT ?, ?, 'pemasukan', ?, ?, 'Pemasukan', 'Jual Barang', 'IDR', ?, ?, ?, ?, 'VERIFIED', ?, 'item', ?, ?
+        WHERE EXISTS (SELECT 1 FROM items WHERE id = ? AND user_id = ? AND status = 'aktif')`
+    ).bind(txId, userId, price, price, account.id, date, date, `Jual ${label}`, itemId, now, now, itemId, userId),
+    ...quickTxBalanceStatements(env, userId, txId, account.id, "pemasukan", price),
+    env.DB.prepare(
+      `UPDATE items SET status = 'terjual', manual_value = ?, value_mode = 'manual', updated_at = ?
+        WHERE id = ? AND user_id = ? AND EXISTS (SELECT 1 FROM transactions WHERE id = ? AND user_id = ?)`
+    ).bind(price, now, itemId, userId, txId, userId),
+  ]);
+  if (!results[0]?.meta.changes) return json({ error: "Barang ini baru saja berubah. Muat ulang lalu coba lagi." }, { status: 409 });
+  try {
+    const durableId = env.REALTIME_ROOM.idFromName(`member:${userId}`);
+    await env.REALTIME_ROOM.get(durableId).fetch("https://realtime.internal/publish", { method: "POST", body: JSON.stringify({ event: "transaction.created", payload: { id: txId, userId } }) });
+  } catch { /* realtime opsional */ }
+  return json({ ok: true, transactionId: txId }, { status: 201 });
+}
+
 async function handleItemRoutes(request: Request, env: Env, pathname: string) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -9281,6 +9487,10 @@ async function handleItemRoutes(request: Request, env: Env, pathname: string) {
       if (request.method !== "POST") return json({ error: "Method not allowed" }, { status: 405 });
       return await handleItemScan(request, env, userId);
     }
+    if (pathname === "/api/member/items/appraise") {
+      if (request.method !== "POST") return json({ error: "Method not allowed" }, { status: 405 });
+      return await handleItemAppraise(request, env, userId);
+    }
 
     const rest = pathname.slice("/api/member/items/".length);
     const [id, action, extra] = rest.split("/");
@@ -9290,6 +9500,7 @@ async function handleItemRoutes(request: Request, env: Env, pathname: string) {
       .first<{ id: string; photo_key: string | null; updated_at: string }>();
     if (!row) return json({ error: "Barang tidak ditemukan." }, { status: 404 });
 
+    if (action === "sell" && request.method === "POST") return await handleItemSell(request, env, userId, id);
     if (!action && request.method === "PUT") {
       const parsed = sanitizeItemFields(await parseJson<Record<string, unknown>>(request), true);
       if (!parsed.ok) return json({ error: parsed.error }, { status: 400 });
@@ -13337,7 +13548,7 @@ const PREF_INPUT_MODES = ["ketik", "suara", "foto"] as const;
 // Fitur yang tampil di menu samping (panel Pengaturan → Fitur). Hanya
 // visibilitas menu — mematikan fitur tidak menyentuh datanya. Sama dengan
 // FeatureId di src/lib/features.ts. null = bawaan (5 fitur lama).
-const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk", "jejak", "langganan"] as const;
+const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk", "jejak", "langganan", "ladang"] as const;
 // Jam pengingat per 30 menit (cron tiap 10 menit, lihat sendDailyReminders).
 const PREF_TIME_RE = /^([01]\d|2[0-3]):(00|30)$/;
 // Ikon & warna pilihan user per nama kategori (panel Kategori & Anggaran).

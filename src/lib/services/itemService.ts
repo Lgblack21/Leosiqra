@@ -67,7 +67,37 @@ const toBody = (i: Partial<ItemInput> & { status?: ItemStatus }) => ({
   ...(i.status !== undefined ? { status: i.status } : {}),
 });
 
+export type ItemAppraisal = {
+  price_low: number;
+  price_fair: number;
+  price_high: number;
+  quick_sale: number;
+  basis: string | null;
+  comparables: { title: string; price: number | null; url: string }[];
+  title: string;
+  description: string;
+  tips: string | null;
+  web: boolean;
+  remaining: number;
+};
+export type AppraiseInput = { itemId?: string; name: string; variant?: string; condition: string; completeness?: string; minus?: string; area?: string };
+
 export const itemService = {
+  /** Ladangku: taksir harga bekas (AI + iklan dari web) & tulis iklan. Kuota 5×/hari. */
+  async appraise(i: AppraiseInput): Promise<ItemAppraisal> {
+    const res = await cloudflareApi<{ appraisal: ItemAppraisal }>('/api/member/items/appraise', {
+      method: 'POST',
+      json: { item_id: i.itemId, name: i.name, variant: i.variant, condition: i.condition, completeness: i.completeness, minus: i.minus, area: i.area },
+    });
+    return res.appraisal;
+  },
+  /** Barang laku: status terjual + (opsional) pemasukan ke rekening — atomik di server. */
+  async sell(id: string, price: number, accountId: string | null, date?: string) {
+    const res = await cloudflareApi<{ transactionId: string | null }>(`/api/member/items/${id}/sell`, { method: 'POST', json: { price, account_id: accountId, date } });
+    notifyCollectionChanged('items');
+    if (res.transactionId) { notifyCollectionChanged('transactions'); notifyCollectionChanged('accounts'); }
+    return res.transactionId;
+  },
   async list(): Promise<Item[]> {
     const res = await cloudflareApi<{ items: Row[] }>('/api/member/items');
     return (res.items ?? []).map(fromRow);

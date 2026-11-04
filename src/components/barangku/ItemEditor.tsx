@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useRef, useState } from 'react';
-import { Camera, Check, ImagePlus, Loader2, Sparkles, Trash2, X } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Camera, Check, ImagePlus, Loader2, Sparkles, Sprout, Trash2, X } from 'lucide-react';
 import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
 import { imageFileToBase64 } from '@/lib/quick/ai';
 import { itemService } from '@/lib/services/itemService';
@@ -23,6 +25,7 @@ const VALUE_MODES: { id: ItemValueMode; label: string; desc: string }[] = [
 export type EditorPreset = { name?: string; category?: ItemCategory; price?: number; purchaseDate?: string; note?: string };
 
 export function ItemEditor({ item, preset, onDone, onCancel }: { item?: Item | null; preset?: EditorPreset | null; onDone: (msg: string) => void; onCancel?: () => void }) {
+  const pathname = usePathname() ?? '';
   const today = toLocalDateString();
   const [name, setName] = useState(item?.name ?? preset?.name ?? '');
   const [brand, setBrand] = useState(item?.brand ?? '');
@@ -312,6 +315,7 @@ export function ItemEditor({ item, preset, onDone, onCancel }: { item?: Item | n
           <div className="flex flex-wrap gap-2">
             {item.status === 'aktif' ? (
               <>
+                <Link href={`${pathname.startsWith('/app') ? '/app/ladang' : '/membership/ladang'}?item=${item.id}`} className="flex items-center gap-1 rounded-full bg-emerald-600 px-3 py-1.5 text-[12px] font-bold text-white hover:bg-emerald-700"><Sprout size={13} /> Jual di Ladangku</Link>
                 <button type="button" onClick={() => setStatus('terjual')} disabled={busy} className={chip(false)}>Tandai terjual</button>
                 <button type="button" onClick={() => setStatus('hilang')} disabled={busy} className={chip(false)}>Tandai hilang / rusak</button>
               </>
