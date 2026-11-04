@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-04 (branch claude/koleksiku) — Koleksiku tahap 1, BELUM deploy:**
+- **2026-11-04 (branch claude/koleksiku) — Koleksiku tahap 1, live #122:**
   - **Migrasi `cloudflare/migrations/0025_collectibles.sql` WAJIB dijalankan Bos di D1 Console sebelum deploy** (2 tabel:
     `collectibles`, `collectible_value_history`).
   - Tab Kekayaan `#koleksi` + `/app/koleksi` (`src/components/koleksi/*`). Jenis: `pokemon` (data & harga dari **TCGdex**
