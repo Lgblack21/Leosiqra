@@ -5,7 +5,7 @@
 // Google Play (og:image). Nama penerbit WAJIB cocok `seller` supaya tidak
 // mengambil aplikasi orang lain. Tidak pernah menggagalkan build: domain yang
 // gagal dilewati (LogoImage lalu jatuh ke /api/logo / huruf).
-// Daftar domain = src/lib/indonesianBanks.ts (LOGO_DOMAINS).
+// Daftar domain = src/lib/indonesianBanks.ts (LOGO_DOMAINS) + src/lib/subscriptionCatalog.ts (Langgananku).
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -13,7 +13,8 @@ const OUT = path.join(process.cwd(), 'public', 'logos');
 const UA = { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36', 'Accept-Language': 'id-ID,id;q=0.9,en;q=0.8' };
 
 // id = App Store ID (terverifikasi), term = nama aplikasi (boleh array) untuk pencarian,
-// play = package Google Play (cadangan), seller = pola nama penerbit.
+// play = package Google Play (cadangan), seller = pola nama penerbit, app (opsional) =
+// pola nama aplikasi — wajib cocok juga (penerbit sama bisa punya banyak aplikasi).
 const SOURCES = [
   { d: 'bca.co.id', term: 'BCA mobile', play: ['com.bca'], seller: /central asia/i },
   { d: 'bankmandiri.co.id', id: 1555414743, term: "Livin' by Mandiri", play: ['id.bmri.livin'], seller: /mandiri/i },
@@ -52,6 +53,51 @@ const SOURCES = [
   { d: 'paypal.com', term: 'PayPal', play: ['com.paypal.android.p2pmobile'], seller: /paypal/i },
   { d: 'wise.com', term: 'Wise', play: ['com.transferwise.android'], seller: /wise/i },
   { d: 'revolut.com', term: 'Revolut', play: ['com.revolut.revolut'], seller: /revolut/i },
+  // Langgananku — WAJIB sama dengan domain di src/lib/subscriptionCatalog.ts
+  { d: 'netflix.com', term: 'Netflix', play: ['com.netflix.mediaclient'], seller: /netflix/i },
+  { d: 'disneyplus.com', term: ['Disney+ Hotstar', 'Disney+'], play: ['in.startv.hotstar.dplus'], seller: /disney|novi digital|star/i },
+  { d: 'primevideo.com', term: 'Amazon Prime Video', play: ['com.amazon.avod.thirdpartyclient'], seller: /amazon/i },
+  { d: 'max.com', term: ['HBO Max', 'Max: Stream HBO'], play: ['com.wbd.stream'], seller: /warner|wbd|hbo/i },
+  { d: 'vidio.com', term: 'Vidio', play: ['com.vidio.android'], seller: /vidio|kmk|emtek/i },
+  { d: 'viu.com', term: 'Viu', play: ['com.vuclip.viu'], seller: /viu|vuclip|pccw/i },
+  { d: 'wetv.vip', term: 'WeTV', play: ['com.tencent.qqlivei18n'], seller: /tencent|image future/i },
+  { d: 'iq.com', term: 'iQIYI', play: ['com.iqiyi.i18n'], seller: /iqiyi/i },
+  { d: 'youtube.com', term: 'YouTube', play: ['com.google.android.youtube'], seller: /google/i },
+  { d: 'spotify.com', term: 'Spotify', play: ['com.spotify.music'], seller: /spotify/i },
+  { d: 'music.apple.com', term: 'Apple Music', play: ['com.apple.android.music'], seller: /apple/i },
+  { d: 'joox.com', term: 'JOOX', play: ['com.tencent.ibg.joox'], seller: /tencent|joox/i },
+  { d: 'one.google.com', term: 'Google One', play: ['com.google.android.apps.subscriptions.red'], seller: /google/i },
+  { d: 'dropbox.com', term: 'Dropbox', play: ['com.dropbox.android'], seller: /dropbox/i },
+  { d: 'openai.com', term: 'ChatGPT', play: ['com.openai.chatgpt'], seller: /openai/i },
+  { d: 'claude.ai', term: 'Claude by Anthropic', play: ['com.anthropic.claude'], seller: /anthropic/i },
+  { d: 'gemini.google.com', term: 'Google Gemini', play: ['com.google.android.apps.bard'], seller: /google/i },
+  { d: 'canva.com', term: 'Canva', play: ['com.canva.editor'], seller: /canva/i },
+  { d: 'microsoft.com', term: ['Microsoft 365 Copilot', 'Microsoft 365', 'Microsoft Office'], play: ['com.microsoft.office.officehubrow'], seller: /microsoft/i, app: /365|office/i },
+  { d: 'adobe.com', term: ['Adobe Creative Cloud', 'Adobe Express'], play: ['com.adobe.creativeapps.gallery'], seller: /adobe/i, app: /creative cloud|express/i },
+  { d: 'notion.so', term: 'Notion', play: ['notion.id'], seller: /notion/i },
+  { d: 'zoom.us', term: 'Zoom Workplace', play: ['us.zoom.videomeetings'], seller: /zoom/i },
+  { d: 'playstation.com', term: 'PlayStation App', play: ['com.scee.psxandroid'], seller: /sony|playstation/i },
+  { d: 'xbox.com', term: 'Xbox', play: ['com.microsoft.xboxone.smartglass'], seller: /microsoft/i },
+  { d: 'nintendo.com', term: 'Nintendo Switch Online', play: ['com.nintendo.znca'], seller: /nintendo/i, app: /switch online/i },
+  { d: 'indihome.co.id', term: ['IndiHome', 'myIndiHome'], play: ['com.telkom.indihome.external'], seller: /telkom/i, app: /indihome/i },
+  { d: 'biznethome.net', term: ['Biznet Home', 'MyBiznet'], play: [], seller: /biznet|supra/i },
+  { d: 'firstmedia.com', term: ['MyFirstMedia', 'First Media'], play: [], seller: /link net|first media|linknet/i },
+  { d: 'myrepublic.co.id', term: ['MyRepublic Indonesia', 'MyRepublic'], play: [], seller: /myrepublic|eka mas/i },
+  { d: 'iconnet.id', term: ['ICONNET', 'iconnet PLN'], play: [], seller: /icon|pln/i, app: /iconnet/i },
+  { d: 'telkomsel.com', term: 'MyTelkomsel', play: ['com.telkomsel.telkomselcm'], seller: /telkomsel/i },
+  { d: 'xl.co.id', term: 'myXL', play: ['com.apps.MyXL'], seller: /xl/i },
+  { d: 'im3.id', term: 'myIM3', play: ['com.pure.indosat.care'], seller: /indosat/i },
+  { d: 'smartfren.com', term: ['MySF', 'mySmartfren'], play: [], seller: /smartfren/i },
+  { d: 'tri.co.id', term: 'bima+', play: ['com.hutchison3g.bima'], seller: /hutchison|indosat|tri/i },
+  { d: 'byu.id', term: ['by.U Telkomsel', 'byU', 'by.U'], play: ['com.telkomsel.byu', 'id.byu.android'], seller: /telkomsel/i, app: /by\.?u/i },
+  { d: 'pln.co.id', term: 'PLN Mobile', play: ['com.icon.pln123'], seller: /pln|perusahaan listrik|icon/i },
+  { d: 'bpjs-kesehatan.go.id', term: 'Mobile JKN', play: ['app.bpjs.mobile'], seller: /bpjs/i },
+  { d: 'grab.com', term: 'Grab', play: ['com.grabtaxi.passenger'], seller: /grab/i },
+  { d: 'shopee.co.id', term: 'Shopee', play: ['com.shopee.id'], seller: /shopee/i },
+  { d: 'tokopedia.com', term: 'Tokopedia', play: ['com.tokopedia.tkpd'], seller: /tokopedia/i },
+  { d: 'duolingo.com', term: 'Duolingo', play: ['com.duolingo'], seller: /duolingo/i },
+  { d: 'gramedia.com', term: ['Gramedia Digital', 'Gramedia'], play: [], seller: /gramedia/i, app: /gramedia digital/i },
+  { d: 'ruangguru.com', term: 'Ruangguru', play: ['com.ruangguru.livestudents'], seller: /ruang ?guru/i },
 ];
 
 const get = async (url, as = 'json') => {
@@ -68,7 +114,7 @@ async function fromAppStore(s) {
   for (const u of urls) {
     try {
       const data = await get(u);
-      const app = (data.results ?? []).find((a) => s.seller.test(`${a.sellerName ?? ''} ${a.artistName ?? ''}`));
+      const app = (data.results ?? []).find((a) => s.seller.test(`${a.sellerName ?? ''} ${a.artistName ?? ''}`) && (!s.app || s.app.test(a.trackName ?? '')));
       const art = app?.artworkUrl512 ?? app?.artworkUrl100;
       if (art) return { url: art.replace(/\/\d+x\d+bb\.(jpg|png)$/, '/256x256bb.png'), via: `appstore ${app.trackName}` };
     } catch { /* coba berikutnya */ }
@@ -102,5 +148,5 @@ await Promise.all(SOURCES.map(async (s) => {
   }
 }));
 report.sort();
-console.log(`Logo bank: ${report.filter((r) => r.startsWith('OK')).length}/${SOURCES.length} berhasil`);
+console.log(`Logo bank & langganan: ${report.filter((r) => r.startsWith('OK')).length}/${SOURCES.length} berhasil`);
 console.log(report.join('\n'));

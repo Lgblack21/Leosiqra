@@ -73,7 +73,6 @@ export function chargesBetween(anchor: string, cycle: SubCycle, from: string, to
 export const monthlyEquivalent = (amount: number, cycle: SubCycle) =>
   cycle === 'mingguan' ? (amount * 52) / 12 : cycle === '3bulan' ? amount / 3 : cycle === 'tahunan' ? amount / 12 : amount;
 
-export const subLogoUrl = (domain?: string) => (domain ? `/api/logo?d=${encodeURIComponent(domain)}` : null);
 
 // ── Radar ───────────────────────────────────────────────────────────────────
 // Deterministik (tanpa AI, tanpa kirim data ke luar): pengeluaran 30 hari
