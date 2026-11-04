@@ -107,7 +107,10 @@ cd promo && npm ci --no-audit --no-fund && PROMO_SECRET=$PROMO_SECRET node lesso
 2. Review kritis sebagai Tim Analisis: klaim hanya dari `content.mjs`,
    matematika benar, tanpa merek lain, `say` enak diucapkan (angka pakai kata),
    hook ≤ 6 kata, total narasi ≤ 75 kata — dicek dengan
-   `node promo/cek-kata.mjs script.json` (bukan ditaksir). Revisi sampai lolos.
+   `node promo/cek-kata.mjs script.json` (bukan ditaksir). Skrip yang sama
+   mengecek `hashtags`: huruf kecil, tanpa dobel, dan typo dari daftar baku
+   (`HASHTAG_BAKU`, mis. #atururang → ❌). Peringatan "di luar daftar baku" =
+   baca ulang ejaannya. Revisi sampai lolos.
 3. Simpan draft `{stage: "naskah", …, script}`.
 4. **Tower**: `status/hari-ini` (stage 1) + perbarui `otak/konten` (pelajaran
    dari review: klaim/angka/hook yang diperbaiki).
