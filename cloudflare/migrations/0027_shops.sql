@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS shops (
   tagline TEXT,
   description TEXT,
   emoji TEXT,
-  products_json TEXT NOT NULL DEFAULT '[]',
+  products_json TEXT NOT NULL, -- selalu diisi Worker (tanpa DEFAULT: kutip sering rusak saat ditempel di D1 Console)
   plan_json TEXT,
   contact_wa TEXT,
   payment_note TEXT,

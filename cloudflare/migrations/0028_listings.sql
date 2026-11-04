@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS listings (
   price REAL,
   title TEXT,
   description TEXT,
-  status TEXT NOT NULL DEFAULT 'dijual',
+  status TEXT NOT NULL, -- dijual | terjual | batal (selalu diisi Worker)
   sold_price REAL,
   sold_at TEXT,
   created_at TEXT NOT NULL,
