@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-04 (Usahaku di branch claude/usahaku, belum deploy — migrasi 0027)
+Terakhir diperbarui: 2026-11-04 (live #127: Ladangku Ringkas/Usaha/Jual+foto/Tagih)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-04 (branch claude/usahaku) — Usahaku + tab Ringkas di Ladangku, BELUM deploy (tunggu "gas").**
+- **2026-11-04 (branch claude/usahaku) — Usahaku + tab Ringkas + Jual pakai foto & Sedang dijual, live #127.**
+  - Tabel `shops` & `listings` dibuat Bos di D1 Console pakai versi PENDEK (CREATE minimal + ALTER ADD COLUMN, tanpa
+    FK/DEFAULT — baris panjang & tanda kutip rusak saat ditempel). Isinya setara file 0027/0028; hapus user/reset tetap
+    menghapus manual. Kalau perlu cek: `PRAGMA table_info(shops)` / `(listings)`.
   - **Migrasi `cloudflare/migrations/0027_shops.sql` WAJIB dijalankan Bos di D1 Console sebelum deploy** (tabel `shops`).
   - **+ Migrasi `cloudflare/migrations/0028_listings.sql` (tabel `listings`, "Sedang dijual") juga WAJIB sebelum deploy.**
   - **Jual pakai foto**: `SellFlow` punya Foto/Galeri → `itemService.scan` mengisi nama/varian, foto ikut ke
