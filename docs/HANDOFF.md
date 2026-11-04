@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-04 (Ladangku Tagih & Target di branch claude/ladangku-2, belum deploy)
+Terakhir diperbarui: 2026-11-04 (live #126: Ladangku Jual + Tagih; berikutnya: Bos cek fitur Toko Oyenza)
 
 ## Siapa sedang kerja
 
@@ -19,7 +19,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 ## Menunggu
 
 - **2026-11-04 (branch claude/ladangku-3) — tab Target Ladangku DIHAPUS (permintaan Bos: ikut menghitung gaji yang
-  kategorinya bukan "Gaji"), BELUM deploy.** `TargetView.tsx` dihapus; `#target` jatuh ke tab Jual. `prefs.cuanTarget`
+  kategorinya bukan "Gaji"), live #126.** `TargetView.tsx` dihapus; `#target` jatuh ke tab Jual. `prefs.cuanTarget`
   di Worker dibiarkan (tidak dipakai UI, tidak berbahaya).
 - **2026-11-04 (branch claude/ladangku-2) — Ladangku tab Tagih & Target, live #125. Tanpa migrasi.**
   - Ladangku jadi 3 tab (hash `#jual` / `#tagih` / `#target`) di `src/components/ladang/LadangView.tsx`.
