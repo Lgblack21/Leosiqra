@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-03 malam (deploy #114: mode gelap sisa, pengingat masa aktif, pengingat pintar, skor kesehatan)
+Terakhir diperbarui: 2026-11-04 (Koleksiku tahap 2 di branch claude/koleksiku-2, belum deploy)
 
 ## Siapa sedang kerja
 
@@ -18,6 +18,27 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-04 (branch claude/koleksiku-2) — Koleksiku tahap 2, BELUM deploy (tunggu "gas"):**
+  - **Migrasi `cloudflare/migrations/0026_collectible_alerts.sql` (ALTER TABLE collectibles ADD COLUMN alert_price REAL)
+    dijalankan Bos di D1 Console.** Tanpa kolom ini cron :45 diam (return), PUT cetakan tetap jalan (`.catch`).
+  - **Steam (CS2)**: `POST /api/member/collectibles/steam/import {profile?}` (URL /id/, /profiles/, steamID64; kosong = profil
+    tersimpan `users.metadata_json $.steam {id,syncedAt}`), jeda 2 menit/user. Inventaris publik
+    `steamcommunity.com/inventory/<id64>/730/2` (maks 2 halaman × 2000), hanya `marketable = 1`, dikelompokkan per
+    `market_hash_name` (= `ref_id`, kind `steam`). Sinkron ulang: jumlah diperbarui, yang hilang DIHAPUS (hanya kalau
+    inventaris lengkap & tidak terpotong batas 2000). `DELETE /steam` = putuskan + hapus semua item Steam.
+  - Harga Steam: Skinport `sales/history` (median 7 hari, 50 nama/panggilan). **Dari wrangler dev lokal Skinport selalu 406**
+    (header `Accept-Encoding: br` jadi `identity` di proxy sandbox — terlihat di httpbin) → cadangan **Steam Market
+    priceoverview** (USD, maks 15 nama/panggilan; harga Steam lebih tinggi dari Skinport). Di produksi BELUM terverifikasi
+    apakah Skinport lolos (flag `brotli_content_encoding` aktif via compat date) — cek log setelah deploy.
+  - **Progres set**: `GET /pokemon/sets` → kartu unik per set (`ref_id` sampai '-' terakhir) vs `cardCount.official` TCGdex
+    (`/v2/en/sets/:id`, cache 24 jam), maks 20 set.
+  - **Cron** (trigger tiap menit): menit :25 `refreshStaleCollectiblePrices` (8 kartu + 50 nama Steam paling basi lintas
+    user), menit :45 `sendCollectiblePriceAlerts` (selisih ≥20% DAN ≥Rp50.000 × jumlah vs `alert_price` → 1 push/user,
+    maks 12 user/jalan, klaim bersyarat `alert_price = old`; NULL = isi diam-diam). Toggle notifikasi `collectibles`.
+  - Diuji lokal (D1 lokal + mock inventaris): import, privat → pesan jelas, sinkron ulang (hapus 4 tambah 1), POST
+    kind steam ditolak, PUT nama/manual_value item steam diabaikan, sets, cron :25 update harga, cron :45 baseline lalu
+    1 push (gabung nama sama), jalan ulang tidak dobel, +5% tidak dikirim. **Belum**: inventaris CS2 publik asli (yang
+    dicoba semua privat/kosong), Skinport dari Cloudflare produksi.
 - **2026-11-04 (branch claude/koleksiku) — Koleksiku tahap 1, live #122:**
   - **Migrasi `cloudflare/migrations/0025_collectibles.sql` WAJIB dijalankan Bos di D1 Console sebelum deploy** (2 tabel:
     `collectibles`, `collectible_value_history`).

@@ -1,6 +1,6 @@
 import { cloudflareApi } from '../cloudflare-api';
 import { notifyCollectionChanged } from '../cf-firestore';
-import type { Collectible, CollectibleCondition, CollectibleKind, HistoryPoint, TcgCard } from '@/lib/collectibles';
+import type { Collectible, CollectibleCondition, CollectibleKind, CollectibleSet, HistoryPoint, SteamLink, TcgCard } from '@/lib/collectibles';
 
 // Koleksiku — /api/member/collectibles (Worker, migrasi 0025).
 type Row = Record<string, unknown>;
@@ -50,9 +50,10 @@ const toBody = (i: CollectibleInput) => ({
 });
 
 export const collectibleService = {
-  async list(): Promise<{ items: Collectible[]; history: HistoryPoint[] }> {
-    const res = await cloudflareApi<{ items: Row[]; history: Row[] }>('/api/member/collectibles');
+  async list(): Promise<{ items: Collectible[]; history: HistoryPoint[]; steam: SteamLink | null }> {
+    const res = await cloudflareApi<{ items: Row[]; history: Row[]; steam?: SteamLink | null }>('/api/member/collectibles');
     return {
+      steam: res.steam?.id ? { id: String(res.steam.id), syncedAt: res.steam.syncedAt ?? null } : null,
       items: (res.items ?? []).map(fromRow),
       history: (res.history ?? []).map((h) => ({ day: String(h.day), value: Number(h.value_idr) || 0, cost: Number(h.cost_idr) || 0 })),
     };
@@ -64,6 +65,21 @@ export const collectibleService = {
   },
   async searchPokemon(q: string): Promise<TcgCard[]> {
     const res = await cloudflareApi<{ items: TcgCard[] }>(`/api/member/collectibles/pokemon/search?q=${encodeURIComponent(q)}`);
+    return res.items ?? [];
+  },
+  /** Impor / sinkron ulang inventaris CS2 publik (tanpa profil = pakai yang tersimpan). */
+  async steamImport(profile?: string): Promise<{ total: number; added: number; updated: number; removed: number; priced: number; truncated: boolean }> {
+    const res = await cloudflareApi<{ total: number; added: number; updated: number; removed: number; priced: number; truncated: boolean }>('/api/member/collectibles/steam/import', { method: 'POST', json: profile ? { profile } : {} });
+    notifyCollectionChanged('collectibles');
+    return res;
+  },
+  /** Putuskan Steam: hapus semua item Steam. */
+  async steamUnlink() {
+    await cloudflareApi('/api/member/collectibles/steam', { method: 'DELETE' });
+    notifyCollectionChanged('collectibles');
+  },
+  async pokemonSets(): Promise<CollectibleSet[]> {
+    const res = await cloudflareApi<{ items: CollectibleSet[] }>('/api/member/collectibles/pokemon/sets');
     return res.items ?? [];
   },
   async create(input: CollectibleInput): Promise<string> {

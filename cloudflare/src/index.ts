@@ -9530,7 +9530,8 @@ async function handleSubscriptionRoutes(request: Request, env: Env, pathname: st
 // TCGdex (nama/set/gambar dari klien tidak dipercaya). Lainnya: nilai diisi user.
 // Harga diperbarui saat Koleksiku dibuka (POST /refresh) — bukan cron, karena
 // cron gratis dibatasi 50 subrequest per jalan.
-const COLLECTIBLE_KINDS = ["pokemon", "lainnya"] as const;
+const COLLECTIBLE_KINDS = ["pokemon", "steam", "lainnya"] as const;
+const MARKET_KINDS_SQL = "('pokemon', 'steam')";
 const COLLECTIBLE_CONDITIONS = ["Segel", "Mint", "Near Mint", "Bagus", "Bekas", "Rusak"] as const;
 const COLLECTIBLES_MAX_PER_USER = 2000;
 const TCGDEX_ID_RE = /^[a-z0-9][a-z0-9.\-_]{0,39}$/i;
@@ -9601,6 +9602,162 @@ const cachedIdrRate = async (currency: string) => {
   const rate = await fetchIdrConversionRate(currency);
   if (rate) await cache.put(key, new Response(String(rate), { headers: { "cache-control": "public, max-age=21600" } }));
   return rate;
+};
+
+// ── Koleksiku tahap 2: Steam (CS2) ──────────────────────────────────────────
+// Impor inventaris CS2 PUBLIK (steamcommunity.com, tanpa kunci API) → item
+// "steam" dengan ref_id = market_hash_name. Harga: median penjualan 7 hari
+// Skinport (USD, publik; wajib Accept-Encoding: br; batas ±8 req / 5 menit
+// per IP → dibatch 50 nama per panggilan + jeda global saat gagal). Kalau
+// Skinport gagal: median Steam Market (USD) maks 15 nama per panggilan; sisanya
+// menyusul di refresh berikutnya / cron menit :25.
+const STEAM_NAME_RE = /^[^\u0000-\u001f<>]{1,200}$/;
+const STEAM_ICON_RE = /^[A-Za-z0-9_-]{20,600}$/;
+const STEAM_SYNC_COOLDOWN_MS = 2 * 60e3;
+const STEAM_PRICE_BATCH = 50;
+const STEAM_PRICE_MAX_BATCHES = 4;
+const STEAM_MARKET_MAX_PER_CALL = 15;
+const steamIconUrl = (icon: string) => `https://community.cloudflare.steamstatic.com/economy/image/${icon}/256fx256f`;
+
+// Harga Skinport (USD) per market_hash_name. Nama yang tidak dikenal Skinport
+// tidak ada di hasil. Nama berkoma tidak bisa dibatch (pemisahnya koma) → dilewati.
+const skinportPrices = async (names: string[]): Promise<{ prices: Map<string, number>; checked: Set<string> }> => {
+  const prices = new Map<string, number>();
+  const checked = new Set<string>();
+  const cache = (caches as unknown as { default: Cache }).default;
+  const coolKey = new Request("https://leosiqra.internal/skinport/v1/cooldown");
+  const usable = [...new Set(names)].filter((n) => STEAM_NAME_RE.test(n) && !n.includes(","));
+  for (const n of names) if (n.includes(",")) checked.add(n);
+  if (!usable.length) return { prices, checked };
+  let skinportDown = !!(await cache.match(coolKey));
+  for (let i = 0; !skinportDown && i < usable.length && i / STEAM_PRICE_BATCH < STEAM_PRICE_MAX_BATCHES; i += STEAM_PRICE_BATCH) {
+    const batch = usable.slice(i, i + STEAM_PRICE_BATCH);
+    const qs = new URLSearchParams({ app_id: "730", currency: "USD", market_hash_name: batch.join(",") });
+    try {
+      const res = await fetch(`https://api.skinport.com/v1/sales/history?${qs}`, { headers: { accept: "application/json", "accept-encoding": "br" } });
+      if (!res.ok) {
+        // 429 = batas Skinport; 406 = Accept-Encoding br tidak tersampaikan. Jeda 5 menit, pakai Steam Market.
+        await cache.put(coolKey, new Response("1", { headers: { "cache-control": "public, max-age=300" } }));
+        skinportDown = true;
+        break;
+      }
+      const list = (await res.json()) as Array<{ market_hash_name?: string; last_7_days?: { median?: number | null }; last_30_days?: { median?: number | null }; last_90_days?: { median?: number | null } }>;
+      for (const n of batch) checked.add(n);
+      for (const it of Array.isArray(list) ? list : []) {
+        const p = Number(it?.last_7_days?.median ?? it?.last_30_days?.median ?? it?.last_90_days?.median);
+        if (it?.market_hash_name && Number.isFinite(p) && p > 0) prices.set(it.market_hash_name, Math.round(p * 100) / 100);
+      }
+    } catch {
+      skinportDown = true;
+      break;
+    }
+  }
+  // Cadangan: harga median Steam Market (per nama; dibatasi supaya tidak kena limit Steam).
+  if (skinportDown) {
+    for (const n of usable.filter((x) => !checked.has(x)).slice(0, STEAM_MARKET_MAX_PER_CALL)) {
+      try {
+        const res = await fetch(`https://steamcommunity.com/market/priceoverview/?appid=730&currency=1&market_hash_name=${encodeURIComponent(n)}`, { headers: { accept: "application/json" } });
+        if (res.status === 429) break;
+        if (!res.ok) continue;
+        const d = (await res.json()) as { success?: boolean; median_price?: string; lowest_price?: string };
+        checked.add(n);
+        const p = Number(String(d?.median_price ?? d?.lowest_price ?? "").replace(/[^0-9.]/g, ""));
+        if (d?.success && Number.isFinite(p) && p > 0) prices.set(n, Math.round(p * 100) / 100);
+      } catch {
+        break;
+      }
+    }
+  }
+  return { prices, checked };
+};
+
+// "https://steamcommunity.com/id/nama", ".../profiles/7656…", steamID64, atau nama vanity.
+const resolveSteamId64 = async (input: string): Promise<string | null> => {
+  const s = input.trim().replace(/\/+$/, "");
+  const id64 = /(?:^|\/profiles\/)(7656119\d{10})$/.exec(s);
+  if (id64) return id64[1];
+  const vanity = /(?:^|steamcommunity\.com\/id\/)([A-Za-z0-9_-]{2,32})$/.exec(s);
+  if (!vanity) return null;
+  try {
+    const res = await fetch(`https://steamcommunity.com/id/${vanity[1]}?xml=1`, { headers: { accept: "text/xml" }, redirect: "manual" });
+    if (!res.ok) return null;
+    const m = /<steamID64>(7656119\d{10})<\/steamID64>/.exec((await res.text()).slice(0, 20000));
+    return m ? m[1] : null;
+  } catch {
+    return null;
+  }
+};
+
+type SteamInvItem = { name: string; count: number; icon: string | null; type: string | null };
+const fetchSteamInventory = async (id64: string): Promise<{ ok: true; items: SteamInvItem[]; complete: boolean } | { ok: false; error: string; status: number }> => {
+  const byName = new Map<string, SteamInvItem>();
+  let start: string | null = null;
+  let complete = false;
+  for (let page = 0; page < 2; page++) {
+    let res: Response;
+    try {
+      res = await fetch(`https://steamcommunity.com/inventory/${id64}/730/2?l=english&count=2000${start ? `&start_assetid=${start}` : ""}`, { headers: { accept: "application/json" } });
+    } catch {
+      return { ok: false, error: "Steam tidak bisa dihubungi. Coba lagi sebentar.", status: 502 };
+    }
+    if (res.status === 401 || res.status === 403) return { ok: false, error: "Inventaris Steam ini privat. Ubah Privasi → Inventaris jadi Publik, lalu coba lagi.", status: 400 };
+    if (res.status === 429) return { ok: false, error: "Steam sedang membatasi permintaan. Coba lagi beberapa menit lagi.", status: 429 };
+    if (!res.ok) return { ok: false, error: "Inventaris tidak bisa diambil dari Steam. Coba lagi sebentar.", status: 502 };
+    const d = (await res.json().catch(() => null)) as null | {
+      assets?: Array<{ classid?: string; instanceid?: string; amount?: string }>;
+      descriptions?: Array<{ classid?: string; instanceid?: string; market_hash_name?: string; marketable?: number; icon_url?: string; type?: string }>;
+      more_items?: number; last_assetid?: string;
+    };
+    if (!d) return { ok: false, error: "Inventaris tidak bisa dibaca. Coba lagi sebentar.", status: 502 };
+    const desc = new Map((d.descriptions ?? []).map((x) => [`${x.classid}_${x.instanceid}`, x]));
+    for (const a of d.assets ?? []) {
+      const x = desc.get(`${a.classid}_${a.instanceid}`);
+      const name = x?.market_hash_name;
+      if (!x || x.marketable !== 1 || !name || !STEAM_NAME_RE.test(name)) continue;
+      const cur = byName.get(name) ?? { name, count: 0, icon: x.icon_url && STEAM_ICON_RE.test(x.icon_url) ? x.icon_url : null, type: x.type ? String(x.type).replace(/[\u0000-\u001f<>]/g, " ").slice(0, 60) : null };
+      cur.count += Math.max(1, Math.min(9999, Number(a.amount) || 1));
+      byName.set(name, cur);
+    }
+    if (d.more_items && d.last_assetid && /^\d{1,24}$/.test(d.last_assetid)) start = d.last_assetid;
+    else { complete = true; break; }
+  }
+  return { ok: true, items: [...byName.values()].map((i) => ({ ...i, count: Math.min(9999, i.count) })), complete };
+};
+
+// ── Progres set Pokémon (TCGdex /sets/{id}, cache 24 jam) ───────────────────
+type TcgSet = { id: string; name: string; logo: string | null; symbol: string | null; official: number; total: number };
+const tcgdexSet = async (id: string): Promise<TcgSet | null> => {
+  if (!TCGDEX_ID_RE.test(id)) return null;
+  const cache = (caches as unknown as { default: Cache }).default;
+  const key = new Request(`https://leosiqra.internal/tcgdex-set/v1/${id}`);
+  let res = await cache.match(key);
+  if (!res) {
+    try {
+      const live = await fetch(`https://api.tcgdex.net/v2/en/sets/${encodeURIComponent(id)}`, { headers: { accept: "application/json" } });
+      if (!live.ok) return null;
+      const s = (await live.json()) as { id?: string; name?: string; logo?: string; symbol?: string; cardCount?: { official?: number; total?: number } };
+      if (!s?.id || !s.name) return null;
+      const slim = {
+        id: s.id, name: String(s.name).slice(0, 80),
+        logo: typeof s.logo === "string" && s.logo.startsWith("https://assets.tcgdex.net/") ? s.logo : null,
+        symbol: typeof s.symbol === "string" && s.symbol.startsWith("https://assets.tcgdex.net/") ? s.symbol : null,
+        official: Math.max(0, Number(s.cardCount?.official) || 0), total: Math.max(0, Number(s.cardCount?.total) || 0),
+      };
+      res = new Response(JSON.stringify(slim), { headers: { "content-type": "application/json", "cache-control": "public, max-age=86400" } });
+      await cache.put(key, res.clone());
+    } catch {
+      return null;
+    }
+  }
+  try {
+    return (await res.json()) as TcgSet;
+  } catch {
+    return null;
+  }
+};
+const tcgSetIdOf = (refId: string) => {
+  const i = refId.lastIndexOf("-");
+  return i > 0 ? refId.slice(0, i) : null;
 };
 
 const checkCollectibleRateLimit = async (env: Env, userId: string): Promise<boolean> => {
@@ -9686,7 +9843,7 @@ const snapshotCollectibleValue = async (env: Env, userId: string) => {
     const qty = Number(r.quantity) || 1;
     cost += (Number(r.purchase_price) || 0) * qty;
     const rate = r.market_currency ? rates.get(r.market_currency) : null;
-    const unit = r.kind === "pokemon" && r.market_price != null && rate ? Number(r.market_price) * rate : r.manual_value != null ? Number(r.manual_value) : Number(r.purchase_price) || 0;
+    const unit = (r.kind === "pokemon" || r.kind === "steam") && r.market_price != null && rate ? Number(r.market_price) * rate : r.manual_value != null ? Number(r.manual_value) : Number(r.purchase_price) || 0;
     value += unit * qty;
   }
   if (!rows.length) return;
@@ -9729,6 +9886,103 @@ async function handleCollectibleRoutes(request: Request, env: Env, pathname: str
       return json({ item: card });
     }
 
+    // Progres set Pokémon: kartu unik yang dimiliki per set vs jumlah resmi set.
+    if (pathname === "/api/member/collectibles/pokemon/sets" && request.method === "GET") {
+      const { results } = await env.DB.prepare("SELECT DISTINCT ref_id FROM collectibles WHERE user_id = ? AND kind = 'pokemon' AND ref_id IS NOT NULL")
+        .bind(userId)
+        .all<{ ref_id: string }>();
+      const owned = new Map<string, number>();
+      for (const { ref_id } of results ?? []) {
+        const sid = tcgSetIdOf(ref_id);
+        if (sid) owned.set(sid, (owned.get(sid) ?? 0) + 1);
+      }
+      const top = [...owned.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20);
+      const sets = await Promise.all(top.map(async ([sid, n]) => {
+        const s = await tcgdexSet(sid);
+        return s && s.official > 0 ? { ...s, owned: n } : null;
+      }));
+      return json({ items: sets.filter(Boolean) });
+    }
+
+    // Impor / sinkron ulang inventaris CS2 publik.
+    if (pathname === "/api/member/collectibles/steam/import" && request.method === "POST") {
+      if (!(await checkCollectibleRateLimit(env, userId))) return json({ error: "Terlalu cepat. Coba lagi sebentar." }, { status: 429 });
+      const raw = await parseJson<{ profile?: unknown }>(request);
+      const meta = await env.DB.prepare("SELECT CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.steam') END AS steam FROM users WHERE id = ?")
+        .bind(userId)
+        .first<{ steam: string | null }>();
+      let linked: { id?: string; syncedAt?: string } = {};
+      try { linked = meta?.steam ? JSON.parse(meta.steam) : {}; } catch { linked = {}; }
+      if (linked.syncedAt && Date.now() - Date.parse(linked.syncedAt) < STEAM_SYNC_COOLDOWN_MS) return json({ error: "Baru saja disinkron. Coba lagi 2 menit lagi." }, { status: 429 });
+      const input = typeof raw.profile === "string" ? raw.profile.slice(0, 200) : linked.id ?? "";
+      if (!input.trim()) return json({ error: "Tempel tautan profil Steam atau Steam ID kamu." }, { status: 400 });
+      const id64 = await resolveSteamId64(input);
+      if (!id64) return json({ error: "Profil Steam tidak ditemukan. Cek lagi tautannya." }, { status: 400 });
+      const inv = await fetchSteamInventory(id64);
+      if (!inv.ok) return json({ error: inv.error }, { status: inv.status });
+      const existing = await env.DB.prepare("SELECT id, ref_id FROM collectibles WHERE user_id = ? AND kind = 'steam'").bind(userId).all<{ id: string; ref_id: string }>();
+      const have = new Map((existing.results ?? []).map((r) => [r.ref_id, r.id]));
+      const others = await env.DB.prepare("SELECT COUNT(*) AS n FROM collectibles WHERE user_id = ? AND kind <> 'steam'").bind(userId).first<{ n: number }>();
+      const room = Math.max(0, COLLECTIBLES_MAX_PER_USER - Number(others?.n ?? 0));
+      // Paling banyak dulu (jumlah), supaya yang terpotong batas adalah yang kecil.
+      const items = inv.items.sort((a, b) => b.count - a.count).slice(0, room);
+      const { prices } = await skinportPrices(items.map((i) => i.name));
+      const now = nowIso();
+      const stmts: D1PreparedStatement[] = [];
+      let added = 0;
+      let updated = 0;
+      const keep = new Set<string>();
+      for (const it of items) {
+        keep.add(it.name);
+        const price = prices.get(it.name);
+        const img = it.icon ? steamIconUrl(it.icon) : null;
+        const oldId = have.get(it.name);
+        if (oldId) {
+          updated++;
+          stmts.push(
+            env.DB.prepare(
+              `UPDATE collectibles SET quantity = ?, set_name = ?, image_url = COALESCE(?, image_url),
+                 market_price = COALESCE(?, market_price), market_currency = 'USD', market_updated_at = CASE WHEN ? IS NULL THEN market_updated_at ELSE ? END, updated_at = ?
+               WHERE id = ? AND user_id = ?`
+            ).bind(it.count, it.type, img, price ?? null, price ?? null, now, now, oldId, userId)
+          );
+        } else {
+          added++;
+          stmts.push(
+            env.DB.prepare(
+              `INSERT INTO collectibles (id, user_id, kind, ref_id, name, set_name, image_url, quantity, purchase_price, market_price, market_currency, market_updated_at, created_at, updated_at)
+               VALUES (?, ?, 'steam', ?, ?, ?, ?, ?, 0, ?, 'USD', ?, ?, ?)`
+            ).bind(generateId(), userId, it.name, it.name.slice(0, 80), it.type, img, it.count, price ?? null, price != null ? now : null, now, now)
+          );
+        }
+      }
+      // Item yang sudah tidak ada di inventaris (terjual/ditukar) dihapus — hanya
+      // kalau inventaris terbaca lengkap dan tidak terpotong batas.
+      let removed = 0;
+      if (inv.complete && items.length === inv.items.length) {
+        for (const [name, id] of have) {
+          if (keep.has(name)) continue;
+          removed++;
+          stmts.push(env.DB.prepare("DELETE FROM collectibles WHERE id = ? AND user_id = ? AND kind = 'steam'").bind(id, userId));
+        }
+      }
+      for (let i = 0; i < stmts.length; i += 100) await env.DB.batch(stmts.slice(i, i + 100));
+      await env.DB.prepare(`UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.steam', json(?)) WHERE id = ?`)
+        .bind(JSON.stringify({ id: id64, syncedAt: now }), userId)
+        .run();
+      await snapshotCollectibleValue(env, userId).catch(() => undefined);
+      return json({ ok: true, steamId: id64, total: items.length, added, updated, removed, priced: items.filter((i) => prices.has(i.name)).length, truncated: items.length < inv.items.length });
+    }
+    // Putuskan Steam: hapus semua item steam + tautan profil.
+    if (pathname === "/api/member/collectibles/steam" && request.method === "DELETE") {
+      await env.DB.batch([
+        env.DB.prepare("DELETE FROM collectibles WHERE user_id = ? AND kind = 'steam'").bind(userId),
+        env.DB.prepare("UPDATE users SET metadata_json = json_remove(metadata_json, '$.steam') WHERE id = ? AND json_valid(metadata_json)").bind(userId),
+      ]);
+      await snapshotCollectibleValue(env, userId).catch(() => undefined);
+      return json({ ok: true });
+    }
+
     // Perbarui harga kartu yang sudah > COLLECTIBLE_REFRESH_HOURS jam + catat jejak hari ini.
     if (pathname === "/api/member/collectibles/refresh" && request.method === "POST") {
       if (!(await checkCollectibleRateLimit(env, userId))) return json({ ok: true, updated: 0 });
@@ -9754,6 +10008,26 @@ async function handleCollectibleRoutes(request: Request, env: Env, pathname: str
           updated += stmts.length;
         }
       }
+      // Item Steam: satu panggilan Skinport per 50 nama.
+      const steamRows = await env.DB.prepare(
+        `SELECT DISTINCT ref_id FROM collectibles WHERE user_id = ? AND kind = 'steam' AND ref_id IS NOT NULL
+           AND (market_updated_at IS NULL OR market_updated_at < ?) LIMIT 100`
+      )
+        .bind(userId, cutoff)
+        .all<{ ref_id: string }>();
+      const names = (steamRows.results ?? []).map((r) => r.ref_id);
+      if (names.length) {
+        const { prices, checked } = await skinportPrices(names);
+        const stmts = [...checked].map((n) =>
+          env.DB.prepare(
+            "UPDATE collectibles SET market_price = COALESCE(?, market_price), market_currency = 'USD', market_updated_at = ? WHERE user_id = ? AND kind = 'steam' AND ref_id = ?"
+          ).bind(prices.get(n) ?? null, now, userId, n)
+        );
+        if (stmts.length) {
+          await env.DB.batch(stmts);
+          updated += prices.size;
+        }
+      }
       await snapshotCollectibleValue(env, userId);
       return json({ ok: true, updated });
     }
@@ -9762,12 +10036,18 @@ async function handleCollectibleRoutes(request: Request, env: Env, pathname: str
       if (request.method === "GET") {
         const rows = await env.DB.prepare(`SELECT ${COLLECTIBLE_COLUMNS} FROM collectibles WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`).bind(userId, COLLECTIBLES_MAX_PER_USER).all();
         const hist = await env.DB.prepare("SELECT day, value_idr, cost_idr FROM collectible_value_history WHERE user_id = ? ORDER BY day DESC LIMIT 366").bind(userId).all();
-        return json({ items: rows.results ?? [], history: (hist.results ?? []).reverse() });
+        const meta = await env.DB.prepare("SELECT CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.steam') END AS steam FROM users WHERE id = ?")
+          .bind(userId)
+          .first<{ steam: string | null }>();
+        let steam: { id?: string; syncedAt?: string } | null = null;
+        try { steam = meta?.steam ? JSON.parse(meta.steam) : null; } catch { steam = null; }
+        return json({ items: rows.results ?? [], history: (hist.results ?? []).reverse(), steam: steam?.id ? { id: steam.id, syncedAt: steam.syncedAt ?? null } : null });
       }
       if (request.method === "POST") {
         const raw = await parseJson<Record<string, unknown>>(request);
         const kind = typeof raw.kind === "string" && (COLLECTIBLE_KINDS as readonly string[]).includes(raw.kind) ? raw.kind : null;
         if (!kind) return json({ error: "Jenis koleksi tidak dikenal." }, { status: 400 });
+        if (kind === "steam") return json({ error: "Item Steam ditambahkan lewat Impor Steam." }, { status: 400 });
         const parsed = sanitizeCollectibleFields(raw);
         if (!parsed.ok) return json({ error: parsed.error }, { status: 400 });
         const f = parsed.fields;
@@ -9815,8 +10095,9 @@ async function handleCollectibleRoutes(request: Request, env: Env, pathname: str
       const parsed = sanitizeCollectibleFields(await parseJson<Record<string, unknown>>(request));
       if (!parsed.ok) return json({ error: parsed.error }, { status: 400 });
       const f = parsed.fields;
-      if (row.kind === "pokemon") delete f.name; // nama kartu dari TCGdex
-      if (row.kind === "pokemon") delete f.manual_value;
+      if (row.kind !== "lainnya") delete f.name; // nama dari TCGdex / Steam
+      if (row.kind !== "lainnya") delete f.manual_value;
+      if (row.kind === "steam") delete f.variant;
       const extraSet: string[] = [];
       const extraVals: (string | number | null)[] = [];
       if (row.kind === "pokemon" && f.variant !== undefined && row.ref_id) {
@@ -9831,6 +10112,8 @@ async function handleCollectibleRoutes(request: Request, env: Env, pathname: str
       await env.DB.prepare(`UPDATE collectibles SET ${[...entries.map(([k]) => `${k} = ?`), ...extraSet].join(", ")}, updated_at = ? WHERE id = ? AND user_id = ?`)
         .bind(...entries.map(([, v]) => v), ...extraVals, nowIso(), id, userId)
         .run();
+      // Cetakan berganti → harga dasar peringatan diulang (kolom 0026; abaikan kalau belum ada).
+      if (extraSet.length) await env.DB.prepare("UPDATE collectibles SET alert_price = NULL WHERE id = ? AND user_id = ?").bind(id, userId).run().catch(() => undefined);
       await snapshotCollectibleValue(env, userId).catch(() => undefined);
       return json({ ok: true });
     }
@@ -9851,7 +10134,7 @@ async function handleCollectibleRoutes(request: Request, env: Env, pathname: str
         });
       }
       if (request.method === "PUT") {
-        if (row.kind === "pokemon") return json({ error: "Kartu Pokémon memakai gambar resmi." }, { status: 400 });
+        if (row.kind !== "lainnya") return json({ error: "Kartu Pokémon & item Steam memakai gambar resmi." }, { status: 400 });
         if (!env.FILES_BUCKET) return json({ error: "Penyimpanan foto belum aktif." }, { status: 503 });
         if (!(await checkItemPhotoRateLimit(env, userId))) return json({ error: "Terlalu sering mengunggah foto. Coba lagi sebentar lagi." }, { status: 429 });
         const payload = await parseJson<{ imageBase64?: unknown }>(request);
@@ -13133,7 +13416,7 @@ const sanitizeAiMemory = (raw: unknown): AiMemory => {
   const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   return Object.fromEntries(AI_MEMORY_KEYS.map((k) => [k, cleanAiMemoryText(r[k])])) as AiMemory;
 };
-const NOTIFY_KEYS = ["reminders", "summary", "weekly", "monthly", "budget", "bills", "warranty", "subscriptions"] as const;
+const NOTIFY_KEYS = ["reminders", "summary", "weekly", "monthly", "budget", "bills", "warranty", "subscriptions", "collectibles"] as const;
 type NotifyPrefs = Record<(typeof NOTIFY_KEYS)[number], boolean>;
 const sanitizeNotify = (raw: unknown): NotifyPrefs => {
   const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
@@ -14115,6 +14398,120 @@ const sendWarrantyReminders = async (env: Env) => {
       );
     } catch (error) {
       console.error(`Pengingat garansi ${r.id} gagal:`, error);
+    }
+  }
+};
+
+// ── Koleksiku: harga harian + push kalau harga melonjak/anjlok ───────────────
+// Dua jalan terpisah dari trigger tiap menit (masing-masing punya jatah 50
+// subrequest sendiri): menit :25 memperbarui harga kartu/item paling basi lintas
+// user; menit :45 membandingkan harga pasar dengan alert_price (harga dasar
+// terakhir, migrasi 0026). Selisih ≥ 20% DAN ≥ Rp50.000 (× jumlah) → satu push
+// per user, lalu alert_price = harga sekarang (klaim bersyarat: tidak dobel).
+const COLLECTIBLE_ALERT_PCT = 0.2;
+const COLLECTIBLE_ALERT_MIN_IDR = 50000;
+const CRON_COLLECTIBLE_CARDS = 8;
+const CRON_COLLECTIBLE_ALERT_USERS = 12;
+const refreshStaleCollectiblePrices = async (env: Env) => {
+  const cutoff = new Date(Date.now() - COLLECTIBLE_REFRESH_HOURS * 3600e3).toISOString();
+  const now = nowIso();
+  try {
+    const cards = await env.DB.prepare(
+      `SELECT ref_id FROM collectibles WHERE kind = 'pokemon' AND ref_id IS NOT NULL AND (market_updated_at IS NULL OR market_updated_at < ?)
+        GROUP BY ref_id ORDER BY MIN(COALESCE(market_updated_at, '')) LIMIT ?`
+    )
+      .bind(cutoff, CRON_COLLECTIBLE_CARDS)
+      .all<{ ref_id: string }>();
+    for (const { ref_id } of cards.results ?? []) {
+      const card = await tcgdexCard(ref_id);
+      if (!card) continue;
+      const variants = await env.DB.prepare("SELECT DISTINCT variant FROM collectibles WHERE kind = 'pokemon' AND ref_id = ?").bind(ref_id).all<{ variant: string | null }>();
+      const stmts = (variants.results ?? []).map(({ variant }) => {
+        const p = (variant && card.prices[variant]) || Object.values(card.prices)[0];
+        return env.DB.prepare(
+          `UPDATE collectibles SET market_price = ?, market_currency = ?, market_updated_at = ? WHERE kind = 'pokemon' AND ref_id = ? AND ${variant === null ? "variant IS NULL" : "variant = ?"}`
+        ).bind(...([p ? p.price : null, p ? p.currency : null, now, ref_id, ...(variant === null ? [] : [variant])] as (string | number | null)[]));
+      });
+      if (stmts.length) await env.DB.batch(stmts);
+    }
+    const items = await env.DB.prepare(
+      `SELECT ref_id FROM collectibles WHERE kind = 'steam' AND ref_id IS NOT NULL AND (market_updated_at IS NULL OR market_updated_at < ?)
+        GROUP BY ref_id ORDER BY MIN(COALESCE(market_updated_at, '')) LIMIT ?`
+    )
+      .bind(cutoff, STEAM_PRICE_BATCH)
+      .all<{ ref_id: string }>();
+    const names = (items.results ?? []).map((r) => r.ref_id);
+    if (names.length) {
+      const { prices, checked } = await skinportPrices(names);
+      const stmts = [...checked].map((n) =>
+        env.DB.prepare("UPDATE collectibles SET market_price = COALESCE(?, market_price), market_currency = 'USD', market_updated_at = ? WHERE kind = 'steam' AND ref_id = ?").bind(prices.get(n) ?? null, now, n)
+      );
+      if (stmts.length) await env.DB.batch(stmts);
+    }
+  } catch (error) {
+    if (collectiblesTableMissing(error)) return;
+    throw error;
+  }
+};
+
+const sendCollectiblePriceAlerts = async (env: Env) => {
+  const [usd, eur] = await Promise.all([cachedIdrRate("USD"), cachedIdrRate("EUR")]);
+  if (!usd || !eur) return;
+  type Row = { id: string; user_id: string; name: string; quantity: number; market_price: number; alert_price: number; market_currency: string };
+  let rows: Row[];
+  try {
+    // Harga dasar pertama untuk item baru (tanpa push).
+    await env.DB.prepare(`UPDATE collectibles SET alert_price = market_price WHERE alert_price IS NULL AND market_price > 0 AND kind IN ${MARKET_KINDS_SQL}`).run();
+    const res = await env.DB.prepare(
+      `SELECT id, user_id, name, quantity, market_price, alert_price, market_currency FROM (
+         SELECT c.id, c.user_id, c.name, c.quantity, c.market_price, c.alert_price, c.market_currency,
+                DENSE_RANK() OVER (ORDER BY c.user_id) AS ur,
+                ROW_NUMBER() OVER (PARTITION BY c.user_id ORDER BY ABS(c.market_price - c.alert_price) * c.quantity DESC, c.id) AS rn
+           FROM collectibles c JOIN users u ON u.id = c.user_id
+          WHERE c.kind IN ${MARKET_KINDS_SQL} AND c.market_price > 0 AND c.alert_price > 0
+            AND (c.market_price >= c.alert_price * ? OR c.market_price <= c.alert_price * ?)
+            AND ABS(c.market_price - c.alert_price) * c.quantity * CASE c.market_currency WHEN 'USD' THEN ? WHEN 'EUR' THEN ? ELSE 0 END >= ?
+            AND COALESCE(u.status, '') <> 'NONAKTIF'
+            AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.collectibles') END, 1) <> 0
+       ) WHERE rn <= 10 AND ur <= ?`
+    )
+      .bind(1 + COLLECTIBLE_ALERT_PCT, 1 - COLLECTIBLE_ALERT_PCT, usd, eur, COLLECTIBLE_ALERT_MIN_IDR, CRON_COLLECTIBLE_ALERT_USERS)
+      .all<Row>();
+    rows = res.results ?? [];
+  } catch (error) {
+    if (collectiblesTableMissing(error) || (error instanceof Error && /no such column: alert_price/.test(error.message))) return;
+    throw error;
+  }
+  const byUser = new Map<string, Row[]>();
+  for (const r of rows) byUser.set(r.user_id, [...(byUser.get(r.user_id) ?? []), r]);
+  for (const [userId, list] of byUser) {
+    try {
+      const claimed: (Row & { pct: number; idr: number })[] = [];
+      for (const r of list) {
+        const claim = await env.DB.prepare("UPDATE collectibles SET alert_price = ? WHERE id = ? AND user_id = ? AND alert_price = ?")
+          .bind(r.market_price, r.id, userId, r.alert_price)
+          .run();
+        if (!claim.meta.changes) continue;
+        const rate = r.market_currency === "EUR" ? eur : usd;
+        claimed.push({ ...r, pct: (r.market_price - r.alert_price) / r.alert_price, idr: (r.market_price - r.alert_price) * rate * (Number(r.quantity) || 1) });
+      }
+      if (!claimed.length) continue;
+      // Kartu yang sama di beberapa baris (cetakan/kondisi beda) → satu entri.
+      const merged = new Map<string, (typeof claimed)[number]>();
+      for (const c of claimed) {
+        const k = `${c.name}|${Math.round(c.pct * 100)}`;
+        const m = merged.get(k);
+        if (m) m.idr += c.idr;
+        else merged.set(k, { ...c });
+      }
+      claimed.splice(0, claimed.length, ...[...merged.values()].sort((a, b) => Math.abs(b.idr) - Math.abs(a.idr)));
+      const up = claimed.filter((c) => c.pct > 0).length;
+      const title = up === claimed.length ? "📈 Harga koleksimu melonjak" : up === 0 ? "📉 Harga koleksimu turun" : "📊 Harga koleksimu bergerak";
+      const fmt = (c: (typeof claimed)[number]) => `${c.name.slice(0, 40)} ${c.pct > 0 ? "+" : "−"}${Math.round(Math.abs(c.pct) * 100)}% (${c.idr > 0 ? "+" : "−"}Rp${Math.round(Math.abs(c.idr)).toLocaleString("id-ID")})`;
+      const body = claimed.slice(0, 3).map(fmt).join(", ") + (claimed.length > 3 ? `, dan ${claimed.length - 3} lainnya.` : ".");
+      await sendWebPushToUser(env, userId, title, body, "/membership/kekayaan#koleksi");
+    } catch (error) {
+      console.error(`Peringatan harga koleksi ${userId} gagal:`, error);
     }
   }
 };
@@ -17276,6 +17673,10 @@ const worker = {
       const minute = new Date(event.scheduledTime).getUTCMinutes();
       // Tiap jam (menit ke-5): peringatan anggaran 80% / 100%.
       if (minute === 5) ctx.waitUntil(sendBudgetAlerts(env).catch((error) => console.error("Peringatan anggaran:", error)));
+      // Koleksiku (tiap jam, jalan terpisah supaya jatah subrequest tidak berebut):
+      // :25 perbarui harga paling basi, :45 push kalau harga melonjak/anjlok.
+      if (minute === 25) ctx.waitUntil(refreshStaleCollectiblePrices(env).catch((error) => console.error("Harga koleksi:", error)));
+      if (minute === 45) ctx.waitUntil(sendCollectiblePriceAlerts(env).catch((error) => console.error("Peringatan harga koleksi:", error)));
       if (event.cron === PROMO_QUEUE_CRON || minute % 10 === 0) {
         // Posting video promo yang sudah waktunya + metrik harian.
         ctx.waitUntil(processPromoQueue(env));

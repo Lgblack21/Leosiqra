@@ -28,7 +28,7 @@ import {
   Moon,
   TrendingUp,
   CalendarDays,
-  Target, Repeat,
+  Target, Repeat, Layers,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { auth, db } from '@/lib/cf-client';
@@ -338,7 +338,7 @@ function NotifikasiView() {
     cloudflareApi<{ item: { reminder: { on: boolean; time: string }; notify?: Record<NotifyKey, boolean> } }>('/api/member/preferences')
       .then((res) => {
         setReminder(res.item.reminder);
-        setNotify({ reminders: true, summary: true, weekly: true, monthly: true, budget: true, bills: true, warranty: true, subscriptions: true, ...(res.item.notify ?? {}) });
+        setNotify({ reminders: true, summary: true, weekly: true, monthly: true, budget: true, bills: true, warranty: true, subscriptions: true, collectibles: true, ...(res.item.notify ?? {}) });
       })
       .catch(() => setReminder(null));
     cloudflareApi<{ enabled: boolean; available: boolean }>('/api/member/email-report')
@@ -465,7 +465,7 @@ function NotifikasiView() {
   );
 }
 
-type NotifyKey = 'reminders' | 'summary' | 'weekly' | 'monthly' | 'budget' | 'bills' | 'warranty' | 'subscriptions';
+type NotifyKey = 'reminders' | 'summary' | 'weekly' | 'monthly' | 'budget' | 'bills' | 'warranty' | 'subscriptions' | 'collectibles';
 const NOTIFY_ROWS: { key: NotifyKey; icon: React.ElementType; title: string; desc: string }[] = [
   { key: 'reminders', icon: AlarmClock, title: 'Pengingat buatanmu', desc: 'Saat pengingat di menu Pengingat jatuh tempo.' },
   { key: 'summary', icon: Moon, title: 'Ringkasan harian', desc: 'Lewat tengah malam: total keluar & masuk kemarin (kalau ada catatan).' },
@@ -475,6 +475,7 @@ const NOTIFY_ROWS: { key: NotifyKey; icon: React.ElementType; title: string; des
   { key: 'bills', icon: Repeat, title: 'Tagihan & jatuh tempo', desc: '3 hari sebelum transaksi rutin tercatat, dan H-3/H-1 jatuh tempo hutang/piutang.' },
   { key: 'subscriptions', icon: RadarNotify, title: 'Langganan', desc: 'Sehari sebelum langganan ditagih, dan 2 hari sebelum masa coba gratis habis.' },
   { key: 'warranty', icon: ShieldWarranty, title: 'Garansi barang', desc: '30 & 7 hari sebelum garansi barang di Barangku habis.' },
+  { key: 'collectibles', icon: Layers, title: 'Harga koleksi', desc: 'Saat harga kartu Pokémon / item Steam di Koleksiku naik atau turun ≥ 20%.' },
 ];
 
 function LainnyaView() {

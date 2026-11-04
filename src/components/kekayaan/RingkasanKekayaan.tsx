@@ -13,7 +13,7 @@ import { exchangeRateService, type ExchangeRates } from '@/lib/services/exchange
 import { itemService } from '@/lib/services/itemService';
 import { categoryMeta, itemCurrentValue, type Item } from '@/lib/itemValue';
 import { collectibleService } from '@/lib/services/collectibleService';
-import { tcgImage, unitValueIdr, type Collectible } from '@/lib/collectibles';
+import { marketImage, unitValueIdr, type Collectible } from '@/lib/collectibles';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { getCardCycle } from '@/lib/creditCard';
 import { computeNetWorth, netWorthTrail } from '@/lib/netWorth';
@@ -249,7 +249,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
           <Group icon={Layers} tone="bg-violet-50 text-violet-600" title="Koleksiku" total={money(t.collectibles)} count={colRows.length} action={<button type="button" onClick={() => go('koleksi')} className="text-[12px] font-bold text-slate-500 hover:text-slate-900">Kelola</button>}>
             {colRows.slice(0, 5).map(({ c, value }) => (
               // eslint-disable-next-line @next/next/no-img-element -- kartu TCGdex
-              <Row key={c.id} onClick={() => go('koleksi')} icon={c.kind === 'pokemon' && c.imageUrl ? <img src={tcgImage(c.imageUrl) ?? ''} alt="" className="h-full w-auto rounded-sm object-contain" /> : <Layers size={18} className="text-violet-600" />} title={c.quantity > 1 ? `${c.name} ×${c.quantity}` : c.name} sub={[c.setName, c.number && `#${c.number}`].filter(Boolean).join(' · ') || 'Koleksi'} value={money(value)} />
+              <Row key={c.id} onClick={() => go('koleksi')} icon={marketImage(c) ? <img src={marketImage(c) ?? ''} alt="" className="h-full w-auto rounded-sm object-contain" /> : <Layers size={18} className="text-violet-600" />} title={c.quantity > 1 ? `${c.name} ×${c.quantity}` : c.name} sub={[c.setName, c.number && `#${c.number}`].filter(Boolean).join(' · ') || 'Koleksi'} value={money(value)} />
             ))}
           </Group>
           )}

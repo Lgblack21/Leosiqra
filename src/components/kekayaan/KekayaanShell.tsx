@@ -62,7 +62,7 @@ export function KekayaanShell() {
     { label: 'Piutang / utang', desc: 'Pinjam & meminjamkan', icon: HandCoins, tone: 'bg-emerald-50 text-emerald-600', on: run(() => openModal('hutang_piutang')) },
     { label: 'Transfer', desc: 'Pindah dana antar akun', icon: ArrowLeftRight, tone: 'bg-cyan-50 text-cyan-600', on: run(() => openModal('topup_transfer')) },
     { label: 'Barangku', desc: 'HP, laptop, motor, jam', icon: Package, tone: 'bg-amber-50 text-amber-600', on: run(() => { go('barangku'); setAddItem((n) => n + 1); }) },
-    { label: 'Koleksiku', desc: 'Kartu Pokémon, sneakers, figur', icon: Layers, tone: 'bg-violet-50 text-violet-600', on: run(() => { go('koleksi'); setAddKoleksi((n) => n + 1); }) },
+    { label: 'Koleksiku', desc: 'Kartu Pokémon, item Steam, sneakers', icon: Layers, tone: 'bg-violet-50 text-violet-600', on: run(() => { go('koleksi'); setAddKoleksi((n) => n + 1); }) },
     { label: 'Properti', desc: 'Rumah, tanah, ruko', icon: Car, tone: 'bg-slate-100 text-slate-400' },
   ];
 

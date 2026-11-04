@@ -8,10 +8,11 @@ import { CollectibleEditor } from '@/components/koleksi/CollectibleEditor';
 import { collectibleService } from '@/lib/services/collectibleService';
 import { exchangeRateService, type ExchangeRates } from '@/lib/services/exchangeRateService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
-import { tcgImage, unitValueIdr, variantLabel, type Collectible, type HistoryPoint } from '@/lib/collectibles';
+import { marketImage, unitValueIdr, variantLabel, type Collectible, type CollectibleSet, type HistoryPoint, type SteamLink } from '@/lib/collectibles';
 import { cn, formatIDR } from '@/lib/utils';
 
-// Koleksiku: koleksi bernilai pasar (kartu Pokémon via TCGdex, lainnya manual).
+// Koleksiku: koleksi bernilai pasar (kartu Pokémon via TCGdex, item Steam CS2
+// via Skinport/Steam Market, lainnya manual).
 // Dipakai tab Kekayaan web (variant "web") & /app/koleksi (variant "app").
 
 const HIDE_KEY = 'leosiqra-hide-balance';
@@ -25,6 +26,7 @@ type SortId = (typeof SORTS)[number]['id'];
 const KINDS = [
   { id: 'semua', label: 'Semua' },
   { id: 'pokemon', label: 'Pokémon' },
+  { id: 'steam', label: 'Steam' },
   { id: 'lainnya', label: 'Lainnya' },
 ] as const;
 const short = (n: number) => {
@@ -38,13 +40,15 @@ const short = (n: number) => {
 export function KoleksiView({ variant, addSignal = 0, toast }: { variant: 'web' | 'app'; addSignal?: number; toast?: (m: string) => void }) {
   const [items, setItems] = useState<Collectible[] | null>(null);
   const [history, setHistory] = useState<HistoryPoint[]>([]);
+  const [steam, setSteam] = useState<SteamLink | null>(null);
+  const [sets, setSets] = useState<CollectibleSet[]>([]);
   const [rates, setRates] = useState<ExchangeRates>({});
   const [error, setError] = useState('');
   const [hidden, setHidden] = useState(false);
   const [kind, setKind] = useState<(typeof KINDS)[number]['id']>('semua');
   const [sort, setSort] = useState<SortId>('nilai');
   const [q, setQ] = useState('');
-  const [editor, setEditor] = useState<{ item?: Collectible } | null>(null);
+  const [editor, setEditor] = useState<{ item?: Collectible; steam?: boolean } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [flash, setFlash] = useState('');
 
@@ -52,7 +56,16 @@ export function KoleksiView({ variant, addSignal = 0, toast }: { variant: 'web' 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- preferensi lokal baru terbaca setelah hydrate (static export)
     try { setHidden(localStorage.getItem(HIDE_KEY) === '1'); } catch { /* diblokir */ }
     let alive = true;
-    const load = () => collectibleService.list().then((r) => { if (alive) { setItems(r.items); setHistory(r.history); setError(''); } }).catch((e) => { if (alive) { setItems((p) => p ?? []); setError(e instanceof Error ? e.message : 'Gagal memuat koleksi.'); } });
+    const load = () => collectibleService.list().then((r) => {
+      if (!alive) return;
+      setItems(r.items);
+      setHistory(r.history);
+      setSteam(r.steam);
+      setError('');
+      // Progres set Pokémon (kartu unik dimiliki vs jumlah resmi set).
+      if (r.items.some((i) => i.kind === 'pokemon')) collectibleService.pokemonSets().then((s) => alive && setSets(s)).catch(() => undefined);
+      else setSets([]);
+    }).catch((e) => { if (alive) { setItems((p) => p ?? []); setError(e instanceof Error ? e.message : 'Gagal memuat koleksi.'); } });
     exchangeRateService.getLatestRates().then((r) => alive && setRates(r)).catch(() => undefined);
     load().then(() => {
       // Perbarui harga kartu yang sudah lama + catat titik grafik hari ini.
@@ -100,8 +113,9 @@ export function KoleksiView({ variant, addSignal = 0, toast }: { variant: 'web' 
   };
   const app = variant === 'app';
   const card = app ? 'rounded-3xl bg-white ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800' : 'rounded-[26px] bg-white ring-1 ring-slate-100';
-  const editorBody = editor && <CollectibleEditor key={editor.item?.id ?? 'baru'} item={editor.item} rates={rates} onDone={done} />;
-  const editorTitle = editor?.item ? 'Ubah koleksi' : 'Tambah koleksi';
+  const editorBody = editor && <CollectibleEditor key={editor.item?.id ?? (editor.steam ? 'steam' : 'baru')} item={editor.item} rates={rates} steam={steam} startSteam={editor.steam} onDone={done} />;
+  const editorTitle = editor?.item ? 'Ubah koleksi' : editor?.steam ? 'Steam' : 'Tambah koleksi';
+  const kinds = KINDS.filter((k) => k.id === 'semua' || enriched.some((e) => e.it.kind === k.id));
 
   if (items === null) {
     return <div className="space-y-3"><div className="h-48 animate-pulse rounded-[28px] bg-slate-200/70 dark:bg-slate-800" /><div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[1, 2, 3, 4].map((i) => <div key={i} className="aspect-[3/4] animate-pulse rounded-3xl bg-white dark:bg-slate-900" />)}</div></div>;
@@ -136,16 +150,32 @@ export function KoleksiView({ variant, addSignal = 0, toast }: { variant: 'web' 
         <Spark history={history} hidden={hidden} />
         <p className="relative mt-2 flex items-center gap-1.5 text-[11px] text-white/45">
           <RefreshCw size={11} className={refreshing ? 'animate-spin' : ''} />
-          {refreshing ? 'Memperbarui harga pasar…' : lastUpdate ? `Harga kartu diperbarui ${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(lastUpdate))} · TCGplayer/Cardmarket` : 'Harga kartu Pokémon diperbarui otomatis tiap hari'}
+          {refreshing ? 'Memperbarui harga pasar…' : lastUpdate ? `Harga pasar diperbarui ${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(lastUpdate))}` : 'Harga kartu Pokémon & item Steam diperbarui otomatis tiap hari'}
         </p>
       </section>
+
+      {steam && (
+        <button type="button" onClick={() => setEditor({ steam: true })} className={cn(card, 'flex w-full items-center gap-3 px-4 py-3 text-left')}>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-[18px] dark:bg-slate-800">🎮</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14px] font-bold text-slate-900 dark:text-white">Steam terhubung</span>
+            <span className="block truncate text-[12px] text-slate-500 dark:text-slate-400">{enriched.filter((e) => e.it.kind === 'steam').length} item CS2{steam.syncedAt ? ` · sinkron ${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(steam.syncedAt))}` : ''}</span>
+          </span>
+          <span className="flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-[12px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"><RefreshCw size={13} /> Sinkron</span>
+        </button>
+      )}
+
+      {sets.length > 0 && <SetProgress sets={sets} className={card} />}
 
       {enriched.length === 0 ? (
         <section className={cn(card, 'px-5 py-8 text-center')}>
           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300"><Layers size={26} /></span>
           <h3 className="mt-4 text-[18px] font-extrabold text-slate-900 dark:text-white">Mulai Koleksiku</h3>
-          <p className="mx-auto mt-1 max-w-sm text-[13px] text-slate-500 dark:text-slate-400">Kartu Pokémon mengikuti harga pasar otomatis (dalam Rupiah). Sneakers, figur, LEGO, koin — nilainya kamu isi sendiri. Semuanya ikut dihitung di kekayaan bersih.</p>
-          <button type="button" onClick={() => setEditor({})} className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-violet-600 px-5 py-2.5 text-[13px] font-bold text-white hover:bg-violet-700"><Plus size={15} /> Tambah koleksi pertama</button>
+          <p className="mx-auto mt-1 max-w-sm text-[13px] text-slate-500 dark:text-slate-400">Kartu Pokémon & item Steam mengikuti harga pasar otomatis (dalam Rupiah). Sneakers, figur, LEGO, koin — nilainya kamu isi sendiri. Semuanya ikut dihitung di kekayaan bersih.</p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            <button type="button" onClick={() => setEditor({})} className="inline-flex items-center gap-1.5 rounded-full bg-violet-600 px-5 py-2.5 text-[13px] font-bold text-white hover:bg-violet-700"><Plus size={15} /> Tambah koleksi pertama</button>
+            {!steam && <button type="button" onClick={() => setEditor({ steam: true })} className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-5 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">🎮 Impor dari Steam</button>}
+          </div>
         </section>
       ) : (
         <>
@@ -154,11 +184,11 @@ export function KoleksiView({ variant, addSignal = 0, toast }: { variant: 'web' 
               <Search size={16} className="shrink-0 text-slate-400" />
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama, set, nomor…" aria-label="Cari koleksi" className="min-w-0 flex-1 bg-transparent text-[14px] font-medium text-slate-900 outline-none placeholder:text-slate-400 dark:text-white" />
             </label>
-            <div className="flex items-center gap-2">
-              <div className="flex gap-1 rounded-full bg-slate-100 p-1 dark:bg-slate-800">
-                {KINDS.map((k) => <button key={k.id} type="button" onClick={() => setKind(k.id)} className={cn('rounded-full px-3 py-1.5 text-[12px] font-bold', kind === k.id ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400')}>{k.label}</button>)}
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-full bg-slate-100 p-1 [scrollbar-width:none] md:flex-none dark:bg-slate-800">
+                {kinds.map((k) => <button key={k.id} type="button" onClick={() => setKind(k.id)} className={cn('shrink-0 rounded-full px-3 py-1.5 text-[12px] font-bold', kind === k.id ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400')}>{k.label}</button>)}
               </div>
-              <label className="relative">
+              <label className="relative shrink-0">
                 <select value={sort} onChange={(e) => setSort(e.target.value as SortId)} aria-label="Urutkan" className="appearance-none rounded-full bg-white py-2.5 pl-4 pr-9 text-[13px] font-bold text-slate-700 ring-1 ring-slate-100 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-800">
                   {SORTS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
                 </select>
@@ -173,7 +203,7 @@ export function KoleksiView({ variant, addSignal = 0, toast }: { variant: 'web' 
               {shown.map((e) => <li key={e.it.id}><CollectibleCard e={e} money={money} hidden={hidden} className={card} onOpen={() => setEditor({ item: e.it })} /></li>)}
             </ul>
           )}
-          <p className="px-1 text-[11px] text-slate-400">Harga Pokémon: TCGplayer (USD) / Cardmarket (EUR) lewat TCGdex, dikonversi ke Rupiah — perkiraan, bukan tawaran jual. Koleksi lain memakai nilai yang kamu isi.</p>
+          <p className="px-1 text-[11px] text-slate-400">Harga Pokémon: TCGplayer (USD) / Cardmarket (EUR) lewat TCGdex. Item Steam: median penjualan Skinport / Steam Market (USD). Dikonversi ke Rupiah — perkiraan, bukan tawaran jual. Koleksi lain memakai nilai yang kamu isi.</p>
         </>
       )}
 
@@ -189,14 +219,14 @@ export function KoleksiView({ variant, addSignal = 0, toast }: { variant: 'web' 
 function CollectibleCard({ e, money, hidden, className, onOpen }: { e: { it: Collectible; value: number; cost: number; gain: number }; money: (n: number) => string; hidden: boolean; className: string; onOpen: () => void }) {
   const { it, value, cost, gain } = e;
   const [broken, setBroken] = useState(false);
-  const img = it.kind === 'pokemon' ? tcgImage(it.imageUrl) : it.hasPhoto ? collectibleService.photoUrl(it) : null;
+  const img = it.kind === 'lainnya' ? (it.hasPhoto ? collectibleService.photoUrl(it) : null) : marketImage(it);
   const pct = cost > 0 ? (gain / cost) * 100 : null;
   return (
     <button type="button" onClick={onOpen} className={cn(className, 'group flex w-full flex-col overflow-hidden text-left transition-transform active:scale-[0.98]')}>
-      <span className={cn('relative flex w-full items-center justify-center overflow-hidden', it.kind === 'pokemon' ? 'aspect-[3/4] bg-gradient-to-b from-slate-100 to-slate-200 p-3 dark:from-slate-800 dark:to-slate-900' : 'aspect-square bg-slate-50 dark:bg-slate-800')}>
+      <span className={cn('relative flex w-full items-center justify-center overflow-hidden', it.kind === 'pokemon' ? 'aspect-[3/4] bg-gradient-to-b from-slate-100 to-slate-200 p-3 dark:from-slate-800 dark:to-slate-900' : it.kind === 'steam' ? 'web-keep aspect-square bg-[radial-gradient(circle_at_50%_40%,#334155_0%,#0f172a_75%)] p-4' : 'aspect-square bg-slate-50 dark:bg-slate-800')}>
         {img && !broken ? (
           // eslint-disable-next-line @next/next/no-img-element -- kartu TCGdex / foto privat
-          <img src={img} alt={it.name} loading="lazy" onError={() => setBroken(true)} className={cn('transition-transform duration-300 group-hover:scale-[1.04]', it.kind === 'pokemon' ? 'h-full w-auto rounded-lg object-contain shadow-lg' : 'h-full w-full object-cover')} />
+          <img src={img} alt={it.name} loading="lazy" onError={() => setBroken(true)} className={cn('transition-transform duration-300 group-hover:scale-[1.04]', it.kind === 'pokemon' ? 'h-full w-auto rounded-lg object-contain shadow-lg' : it.kind === 'steam' ? 'h-full w-full object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.5)]' : 'h-full w-full object-cover')} />
         ) : (
           <Gem size={40} strokeWidth={1.4} className="text-violet-400" />
         )}
@@ -205,13 +235,53 @@ function CollectibleCard({ e, money, hidden, className, onOpen }: { e: { it: Col
       </span>
       <span className="block p-3">
         <span className="block truncate text-[14px] font-bold text-slate-900 dark:text-white">{it.name}</span>
-        <span className="block truncate text-[11px] text-slate-500 dark:text-slate-400">{it.kind === 'pokemon' ? [it.setName, it.number && `#${it.number}`, variantLabel(it.variant)].filter(Boolean).join(' · ') : it.condition ?? 'Koleksi'}</span>
+        <span className="block truncate text-[11px] text-slate-500 dark:text-slate-400">{it.kind === 'pokemon' ? [it.setName, it.number && `#${it.number}`, variantLabel(it.variant)].filter(Boolean).join(' · ') : it.kind === 'steam' ? it.setName ?? 'Item CS2' : it.condition ?? 'Koleksi'}</span>
         <span className="mt-1.5 flex flex-wrap items-baseline justify-between gap-x-2">
-          <span className="text-[14px] font-extrabold tabular-nums text-slate-900 dark:text-white">{money(value)}</span>
+          {it.kind === 'steam' && it.marketPrice == null && !it.purchasePrice ? (
+            <span className="text-[12px] font-semibold text-slate-400">Harga menyusul</span>
+          ) : (
+            <span className="text-[14px] font-extrabold tabular-nums text-slate-900 dark:text-white">{money(value)}</span>
+          )}
           {pct != null && !hidden && <span className={cn('shrink-0 text-[11px] font-bold tabular-nums', gain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>{gain >= 0 ? '+' : '−'}{Math.abs(pct).toLocaleString('id-ID', { maximumFractionDigits: 0 })}%</span>}
         </span>
       </span>
     </button>
+  );
+}
+
+// Progres set Pokémon: kartu unik yang kamu punya vs jumlah resmi set (TCGdex).
+function SetProgress({ sets, className }: { sets: CollectibleSet[]; className: string }) {
+  return (
+    <section className={cn(className, 'p-4')}>
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="text-[15px] font-extrabold text-slate-900 dark:text-white">Progres set</h3>
+        <span className="text-[11px] text-slate-400">kartu unik / jumlah resmi</span>
+      </div>
+      <ul className="-mx-4 mt-3 flex snap-x gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+        {sets.map((s) => {
+          const pct = Math.min(100, (s.owned / s.official) * 100);
+          const full = s.owned >= s.official;
+          return (
+            <li key={s.id} className="w-[168px] shrink-0 snap-start rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
+              <span className="flex h-10 items-center">
+                {s.logo ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- logo set dari CDN TCGdex
+                  <img src={`${s.logo}.webp`} alt="" loading="lazy" className="max-h-10 max-w-[120px] object-contain" />
+                ) : <span className="text-[20px]">⚡</span>}
+              </span>
+              <span className="mt-2 block truncate text-[13px] font-bold text-slate-900 dark:text-white">{s.name}</span>
+              <span className="mt-0.5 flex items-baseline justify-between text-[12px] tabular-nums">
+                <span className="font-extrabold text-slate-900 dark:text-white">{s.owned}<span className="font-semibold text-slate-400">/{s.official}</span></span>
+                <span className={cn('font-bold', full ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400')}>{full ? 'Lengkap 🎉' : `${pct < 1 ? '<1' : Math.round(pct)}%`}</span>
+              </span>
+              <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700" role="progressbar" aria-valuemin={0} aria-valuemax={s.official} aria-valuenow={Math.min(s.owned, s.official)} aria-label={`Progres ${s.name}`}>
+                <span className={cn('block h-full rounded-full', full ? 'bg-emerald-500' : 'bg-gradient-to-r from-amber-400 to-fuchsia-500')} style={{ width: `${Math.max(pct, 3)}%` }} />
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
