@@ -18,6 +18,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-04 security check (branch claude/security-cron-flood):** 🟠 cron pengingat bisa dibanjiri satu akun
+  (LIMIT global) → diperbaiki dengan batas per user `ROW_NUMBER() OVER (PARTITION BY user_id)` di 4 cron + hutang
+  disaring H-3/H-1 di SQL; foto barang ≤2 MB + 12/menit; tanggal 2026-02-31 ditolak. Rincian & bukti:
+  `.claude/skills/security-check/references/triaged.md`.
 - **2026-11-04 (branch claude/fitur-barang) — Barangku, live #117 (migrasi 0023 dijalankan Bos? cek "Fitur Barangku belum aktif"):**
   - **Migrasi `cloudflare/migrations/0023_items.sql` WAJIB dijalankan Bos di D1 Console sebelum deploy**
     (tanpa tabel: API balas 503 "belum aktif", Ringkasan Kekayaan tetap jalan, cron garansi dilewati).

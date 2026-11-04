@@ -3530,7 +3530,7 @@ const sanitizeDebtDue = (raw: unknown): DebtDue | null | undefined => {
   if (raw === null) return null;
   if (typeof raw !== "object") return undefined;
   const r = raw as { date?: unknown; day?: unknown };
-  if (typeof r.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(r.date) && !Number.isNaN(Date.parse(`${r.date}T00:00:00Z`))) return { date: r.date };
+  if (isRealDateStr(r.date)) return { date: r.date };
   if (typeof r.day === "number" && Number.isInteger(r.day) && r.day >= 1 && r.day <= 31) return { day: r.day };
   return undefined;
 };
@@ -8986,6 +8986,20 @@ const ITEM_VALUE_MODES = ["auto", "tetap", "manual"] as const;
 const ITEM_STATUSES = ["aktif", "terjual", "hilang"] as const;
 const ITEMS_MAX_PER_USER = 500;
 const ITEM_MAX_PRICE = 1e13;
+// Foto dari app sudah dikompres ke ±1280 px (±300 KB); 2 MB = cukup longgar.
+const ITEM_PHOTO_MAX_BYTES = 2 * 1024 * 1024;
+// Upload foto: 12/menit per user (binding AI_PARSE_RATE_LIMITER, kunci terpisah dari AI).
+const checkItemPhotoRateLimit = async (env: Env, userId: string): Promise<boolean> => {
+  if (!env.AI_PARSE_RATE_LIMITER) return rateLimiterMissing(env, "AI_PARSE_RATE_LIMITER");
+  const { success } = await env.AI_PARSE_RATE_LIMITER.limit({ key: `item-photo:user:${userId}` });
+  return success;
+};
+// Tanggal YYYY-MM-DD yang benar-benar ada (Date.parse menerima 2026-02-31 → 3 Maret).
+const isRealDateStr = (v: unknown): v is string => {
+  if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const t = Date.parse(`${v}T00:00:00Z`);
+  return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === v;
+};
 const itemsTableMissing = (error: unknown) => error instanceof Error && /no such table: items/.test(error.message);
 const ITEM_COLUMNS =
   "id, name, brand, variant, category, purchase_price, currency, purchase_date, warranty_until, value_mode, manual_value, note, status, CASE WHEN photo_key IS NULL THEN 0 ELSE 1 END AS has_photo, created_at, updated_at";
@@ -9011,8 +9025,7 @@ const sanitizeItemFields = (raw: Record<string, unknown>, partial: boolean): { o
   const text = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/[\u0000-\u001f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, max) : "");
   const dateOrNull = (v: unknown): string | null | undefined => {
     if (v === null || v === "") return null;
-    if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v) || Number.isNaN(Date.parse(`${v}T00:00:00Z`))) return undefined;
-    return v;
+    return isRealDateStr(v) ? v : undefined;
   };
   const money = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= ITEM_MAX_PRICE ? Math.round(v * 100) / 100 : undefined);
 
@@ -9166,7 +9179,7 @@ Kalau struk berisi banyak barang, pilih barang termahal yang tahan lama. Hari in
       variant: text(p.variant, 60),
       category,
       price: Number.isFinite(price) && price > 0 && price <= ITEM_MAX_PRICE ? Math.round(price) : null,
-      purchase_date: /^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(Date.parse(`${date}T00:00:00Z`)) && date <= today ? date : null,
+      purchase_date: isRealDateStr(date) && date <= today ? date : null,
       warranty_months: Number.isInteger(months) && months > 0 && months <= 120 ? months : null,
       confidence: p.confidence === "high" || p.confidence === "medium" ? p.confidence : "low",
     },
@@ -9261,7 +9274,8 @@ async function handleItemRoutes(request: Request, env: Env, pathname: string) {
         if (!env.FILES_BUCKET) return json({ error: "Penyimpanan foto belum aktif." }, { status: 503 });
         const payload = await parseJson<{ imageBase64?: unknown }>(request);
         if (typeof payload.imageBase64 !== "string" || !payload.imageBase64) return json({ error: "Foto wajib dikirim." }, { status: 400 });
-        if (payload.imageBase64.length > 7_000_000) return json({ error: "Foto terlalu besar (maks 5 MB)." }, { status: 413 });
+        if (!(await checkItemPhotoRateLimit(env, userId))) return json({ error: "Terlalu sering mengunggah foto. Coba lagi sebentar lagi." }, { status: 429 });
+        if (payload.imageBase64.length > Math.ceil((ITEM_PHOTO_MAX_BYTES * 4) / 3) + 100) return json({ error: "Foto terlalu besar (maks 2 MB)." }, { status: 413 });
         let bytes: Uint8Array;
         try {
           const binary = atob(payload.imageBase64.replace(/^data:[^,]*,/, "").replace(/\s/g, ""));
@@ -9269,7 +9283,7 @@ async function handleItemRoutes(request: Request, env: Env, pathname: string) {
         } catch {
           return json({ error: "Foto tidak terbaca." }, { status: 400 });
         }
-        if (bytes.length > ATTACHMENT_MAX_BYTES) return json({ error: "Foto terlalu besar (maks 5 MB)." }, { status: 413 });
+        if (bytes.length > ITEM_PHOTO_MAX_BYTES) return json({ error: "Foto terlalu besar (maks 2 MB)." }, { status: 413 });
         const type = sniffImageType(bytes);
         if (!type) return json({ error: "Format foto harus JPG, PNG, atau WebP." }, { status: 400 });
         // Key baru tiap unggah (cache browser tidak menampilkan foto lama); yang lama dihapus.
@@ -13254,13 +13268,15 @@ const sendPlanExpiryReminders = async (env: Env) => {
 const BUDGET_ALERT_MAX_ROWS = 3000;
 const sendBudgetAlerts = async (env: Env) => {
   const { results } = await env.DB.prepare(
-    `SELECT b.user_id, b.category, b.amount FROM budgets b JOIN users u ON u.id = b.user_id
-      WHERE b.type = 'pengeluaran' AND b.period = 'monthly' AND b.amount > 0
-        AND COALESCE(u.status, '') <> 'NONAKTIF'
-        AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.budget') END, 1) <> 0
-      LIMIT ?`
+    `SELECT user_id, category, amount FROM (
+       SELECT b.user_id, b.category, b.amount, ROW_NUMBER() OVER (PARTITION BY b.user_id ORDER BY b.amount DESC, b.id) AS rn
+         FROM budgets b JOIN users u ON u.id = b.user_id
+        WHERE b.type = 'pengeluaran' AND b.period = 'monthly' AND b.amount > 0
+          AND COALESCE(u.status, '') <> 'NONAKTIF'
+          AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.budget') END, 1) <> 0
+     ) WHERE rn <= ? LIMIT ?`
   )
-    .bind(BUDGET_ALERT_MAX_ROWS)
+    .bind(CRON_PER_USER_BUDGETS, BUDGET_ALERT_MAX_ROWS)
     .all<{ user_id: string; category: string; amount: number }>();
   const byUser = new Map<string, { category: string; amount: number }[]>();
   for (const r of results ?? []) {
@@ -13338,16 +13354,18 @@ const sendBillReminders = async (env: Env) => {
   const today = todayWIB();
   const target = shiftDateStr(today, 3);
   const { results } = await env.DB.prepare(
-    `SELECT r.id, r.user_id, r.name, r.type, r.amount, r.account_id, substr(r.next_date, 1, 10) AS due, a.name AS account_name, a.currency
-       FROM recurring r JOIN users u ON u.id = r.user_id LEFT JOIN accounts a ON a.id = r.account_id AND a.user_id = r.user_id
-      WHERE r.status = 'ACTIVE' AND r.amount > 0 AND r.type IN ('Pengeluaran', 'Tabungan')
-        AND substr(r.next_date, 1, 10) = ?
-        AND COALESCE(CASE WHEN json_valid(r.payload_json) THEN json_extract(r.payload_json, '$.remindedFor') END, '') <> ?
-        AND COALESCE(u.status, '') <> 'NONAKTIF'
-        AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.bills') END, 1) <> 0
-      LIMIT 500`
+    `SELECT * FROM (
+       SELECT r.id, r.user_id, r.name, r.type, r.amount, r.account_id, substr(r.next_date, 1, 10) AS due, a.name AS account_name, a.currency,
+              ROW_NUMBER() OVER (PARTITION BY r.user_id ORDER BY r.amount DESC, r.id) AS rn
+         FROM recurring r JOIN users u ON u.id = r.user_id LEFT JOIN accounts a ON a.id = r.account_id AND a.user_id = r.user_id
+        WHERE r.status = 'ACTIVE' AND r.amount > 0 AND r.type IN ('Pengeluaran', 'Tabungan')
+          AND substr(r.next_date, 1, 10) = ?
+          AND COALESCE(CASE WHEN json_valid(r.payload_json) THEN json_extract(r.payload_json, '$.remindedFor') END, '') <> ?
+          AND COALESCE(u.status, '') <> 'NONAKTIF'
+          AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.bills') END, 1) <> 0
+     ) WHERE rn <= ? LIMIT 2000`
   )
-    .bind(target, target)
+    .bind(target, target, CRON_PER_USER_BILLS)
     .all<{ id: string; user_id: string; name: string; type: string; amount: number; account_name: string | null; currency: string | null; due: string }>();
   const dueLabel = target.split("-").reverse().slice(0, 2).join("/");
   for (const r of results ?? []) {
@@ -13390,20 +13408,45 @@ const nextDebtDue = (due: DebtDue, today: string): string | null => {
 // Pengingat jatuh tempo hutang/piutang yang belum lunas: H-3 & H-1 (harian 10:00 WIB).
 // Klaim payload_json.dueRemindedFor = "<tanggal>|<tahap>" → tiap tahap sekali, aman
 // kalau cron terpicu dua kali. Ikut toggle $.prefs.notify.bills.
+// Batas baris per user di cron pengingat: satu akun yang membuat ribuan baris
+// tidak boleh menghabiskan LIMIT global sehingga user lain tidak diingatkan
+// (pola insiden 2026-10-29 & audit 2026-11-04).
+const CRON_PER_USER_DEBTS = 20;
+const CRON_PER_USER_BILLS = 20;
+const CRON_PER_USER_WARRANTY = 30;
+const CRON_PER_USER_BUDGETS = 50;
+// Hari & "tanggal terakhir bulan?" untuk mencocokkan due.day (tiap bulan) di SQL.
+const dayParts = (dateStr: string) => {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return { day: d, isLast: new Date(Date.UTC(y, m, 0)).getUTCDate() === d ? 1 : 0 };
+};
+
 const sendDebtDueReminders = async (env: Env) => {
   const today = todayWIB();
+  // Hanya kandidat yang jatuh tempo tepat H-3 / H-1 (sekali: tanggal persis; tiap bulan:
+  // tanggal sama, atau tanggal lebih besar dari hari terakhir bulan pendek).
+  const t3 = shiftDateStr(today, 3);
+  const t1 = shiftDateStr(today, 1);
+  const p3 = dayParts(t3);
+  const p1 = dayParts(t1);
   const { results } = await env.DB.prepare(
-    `SELECT t.id, t.user_id, t.category, t.lender_name, t.amount, t.currency,
-            json_extract(t.payload_json, '$.due') AS due,
-            COALESCE(json_extract(t.payload_json, '$.dueRemindedFor'), '') AS reminded,
-            COALESCE((SELECT SUM(p.amount) FROM transactions p WHERE p.user_id = t.user_id AND p.related_type = 'debt' AND p.related_id = t.id), 0) AS paid
-       FROM transactions t JOIN users u ON u.id = t.user_id
-      WHERE t.type = 'debt' AND COALESCE(t.payment_status, '') <> 'lunas'
-        AND json_valid(t.payload_json) AND json_extract(t.payload_json, '$.due') IS NOT NULL
-        AND COALESCE(u.status, '') <> 'NONAKTIF'
-        AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.bills') END, 1) <> 0
-      LIMIT 1000`
+    `SELECT * FROM (
+       SELECT t.id, t.user_id, t.category, t.lender_name, t.amount, t.currency,
+              json_extract(t.payload_json, '$.due') AS due,
+              COALESCE(json_extract(t.payload_json, '$.dueRemindedFor'), '') AS reminded,
+              COALESCE((SELECT SUM(p.amount) FROM transactions p WHERE p.user_id = t.user_id AND p.related_type = 'debt' AND p.related_id = t.id), 0) AS paid,
+              ROW_NUMBER() OVER (PARTITION BY t.user_id ORDER BY t.id) AS rn
+         FROM transactions t JOIN users u ON u.id = t.user_id
+        WHERE t.type = 'debt' AND COALESCE(t.payment_status, '') <> 'lunas'
+          AND json_valid(t.payload_json)
+          AND (json_extract(t.payload_json, '$.due.date') IN (?, ?)
+               OR json_extract(t.payload_json, '$.due.day') = ? OR (? = 1 AND json_extract(t.payload_json, '$.due.day') > ?)
+               OR json_extract(t.payload_json, '$.due.day') = ? OR (? = 1 AND json_extract(t.payload_json, '$.due.day') > ?))
+          AND COALESCE(u.status, '') <> 'NONAKTIF'
+          AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.bills') END, 1) <> 0
+     ) WHERE rn <= ? LIMIT 2000`
   )
+    .bind(t3, t1, p3.day, p3.isLast, p3.day, p1.day, p1.isLast, p1.day, CRON_PER_USER_DEBTS)
     .all<{ id: string; user_id: string; category: string | null; lender_name: string | null; amount: number; currency: string | null; due: string; reminded: string; paid: number }>();
   for (const r of results ?? []) {
     try {
@@ -13460,15 +13503,17 @@ const sendWarrantyReminders = async (env: Env) => {
   let rows: { id: string; user_id: string; name: string; brand: string | null; warranty_until: string }[];
   try {
     const res = await env.DB.prepare(
-      `SELECT i.id, i.user_id, i.name, i.brand, i.warranty_until
-         FROM items i JOIN users u ON u.id = i.user_id
-        WHERE i.status = 'aktif' AND i.warranty_until IN (?, ?)
-          AND COALESCE(i.warranty_reminded_for, '') <> i.warranty_until || '|' || CASE WHEN i.warranty_until = ? THEN 'h30' ELSE 'h7' END
-          AND COALESCE(u.status, '') <> 'NONAKTIF'
-          AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.warranty') END, 1) <> 0
-        LIMIT 1000`
+      `SELECT * FROM (
+         SELECT i.id, i.user_id, i.name, i.brand, i.warranty_until,
+                ROW_NUMBER() OVER (PARTITION BY i.user_id ORDER BY i.purchase_price DESC, i.id) AS rn
+           FROM items i JOIN users u ON u.id = i.user_id
+          WHERE i.status = 'aktif' AND i.warranty_until IN (?, ?)
+            AND COALESCE(i.warranty_reminded_for, '') <> i.warranty_until || '|' || CASE WHEN i.warranty_until = ? THEN 'h30' ELSE 'h7' END
+            AND COALESCE(u.status, '') <> 'NONAKTIF'
+            AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.warranty') END, 1) <> 0
+       ) WHERE rn <= ? LIMIT 2000`
     )
-      .bind(d30, d7, d30)
+      .bind(d30, d7, d30, CRON_PER_USER_WARRANTY)
       .all<{ id: string; user_id: string; name: string; brand: string | null; warranty_until: string }>();
     rows = res.results ?? [];
   } catch (error) {
