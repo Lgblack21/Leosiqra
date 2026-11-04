@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-04 (branch claude/fitur-barang) — Barangku, BELUM deploy:**
+- **2026-11-04 (branch claude/fitur-barang) — Barangku, live #117 (migrasi 0023 dijalankan Bos? cek "Fitur Barangku belum aktif"):**
   - **Migrasi `cloudflare/migrations/0023_items.sql` WAJIB dijalankan Bos di D1 Console sebelum deploy**
     (tanpa tabel: API balas 503 "belum aktif", Ringkasan Kekayaan tetap jalan, cron garansi dilewati).
   - API `/api/member/items` (GET/POST), `/:id` (PUT/DELETE), `/:id/photo` (GET/PUT/DELETE, R2 `items/<user>/<id>-<acak>`,
