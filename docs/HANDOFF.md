@@ -27,7 +27,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   - UI: tab Kekayaan `#barangku` + `/app/barangku` (komponen sama `src/components/barangku/*`), nilai sekarang
     `src/lib/itemValue.ts` (susut per kategori, mode auto/tetap/manual), masuk Kekayaan bersih (`computeNetWorth.itemsValueIdr`).
   - Teruji: wrangler dev lokal (CRUD, validasi, akses user lain 404, foto, cron 2× tanpa dobel, reset hapus foto) + Playwright mock.
-  - Tahap 2 (branch claude/fitur-barang): `POST /api/member/items/scan` (AI OpenRouter baca foto barang/struk → saran,
+  - Tahap 2 live #118: `POST /api/member/items/scan` (AI OpenRouter baca foto barang/struk → saran,
     tidak menyimpan; rate limit AI parse; harga/tanggal/garansi hanya kalau tercetak). Form: pilih foto barang baru → AI
     otomatis, isi kolom kosong saja, foto struk tidak dipakai sebagai foto barang. "Jadikan barang": daftar transaksi web
     (ikon 📦 saat hover / tombol di HP web) & detail transaksi app → `?dari=<id>` → form terisi nama, harga IDR, tanggal.
