@@ -21,25 +21,30 @@ ada dulu — tapi tetap maksimal 1 video terkirim per hari: kalau draft sudah
 sinkronisasi ke LGBLACK Tower (kantor 3D Bos). Setiap sesi WAJIB: baca otak
 tim → kerja → tulis pelajaran + status ke Tower.
 
-## Prinsip konten — KENALKAN FITUR (perintah Bos 2026-11-04)
+## Prinsip konten — FITUR + KONTEN MENARIK (arahan Bos 2026-11-04)
 
 Bos: "Masa videonya semua hitung-hitungan mulu, gak ada promosi app dan semua
-fitur." Aturan lama "NILAI DULU" (±2 dari 3 video tanpa fitur) DICABUT.
-- **Setiap video = kenalkan SATU fitur nyata** dari `FEATURES` di content.mjs.
-  `"format": "fitur"`, `"promo": true`. Fitur bergiliran — jangan ulang fitur
-  dari 5 video terakhir; semua fitur di `FEATURES` harus kebagian.
-- Struktur: hook masalah sehari-hari (1 scene) → **demo fitur 2–3 scene**
-  (scene `device` rekaman asli untuk fitur yang punya shot di `record.mjs`:
-  quick, ai, budget, savings, stats, recurring, transactions, wallet; scene
-  `phone` ilustrasi untuk scan, voice, debt, level, market, tax) → CTA
-  "Coba gratis 14 hari" (+ `landing`/`install` sesekali supaya penonton tahu
-  ke mana harus pergi).
-- **Bukan video hitung-hitungan**: maksimal 1 angka sederhana per video,
-  tanpa scene `number` rumus / kuis hitungan / studi kasus gaji. Penonton harus
-  selesai menonton tahu "app ini bisa apa dan cara pakainya".
-- Hook tetap spesifik & manusiawi ("Struk numpuk di dompet?", "Catat jajan
-  sambil antre kopi"), bukan klise. Cek 15 hook terakhir — jangan mirip.
-- Istilah gamer di hook boleh (terbukti menaikkan views), tapi isinya fitur.
+fitur" → lalu: "hitungan boleh, terus buat juga konten-konten bagus yang
+menarik juga". Aturan lama "NILAI DULU" (±2 dari 3 video tanpa fitur) DICABUT.
+- **SETIAP video menampilkan app** (`"promo": true`, minimal 1 scene `device`/`phone`).
+  Tidak ada lagi video tanpa fitur.
+- **Pola tiap 3 video** (cek riwayat; `format` di history):
+  - **≥2 video FITUR** (`"format": "fitur"`): kenalkan SATU fitur dari `FEATURES`
+    content.mjs (atau tur 2–3 fitur), demo 2–3 scene. Fitur bergiliran —
+    jangan ulang fitur dari 5 video terakhir; semua fitur harus kebagian.
+  - **≤1 video KONTEN MENARIK bebas format**: hitung-hitungan, studi kasus,
+    mitos vs fakta, kuis, POV, challenge, tren/momen (gajian, tanggal tua,
+    akhir tahun). Hitungan BOLEH, tapi jangan 2 video hitungan berturut, dan
+    tutup dengan 1–2 scene fitur yang relevan ("catat ini otomatis di …").
+- Demo fitur: scene `device` rekaman asli untuk fitur yang punya shot di
+  `record.mjs` (quick, ai, budget, savings, stats, recurring, transactions,
+  wallet); scene `phone` ilustrasi untuk scan, voice, debt, level, market, tax.
+  CTA "Coba gratis 14 hari" (+ `landing`/`install` sesekali).
+- **Menarik = bikin berhenti scroll**: hook 2 detik pertama situasi/emosi
+  spesifik ("Struk numpuk di dompet?", "Catat jajan sambil antre kopi"),
+  variasi gaya/palet/kamera, istilah gamer boleh (terbukti menaikkan views).
+  Cek 15 hook terakhir — jangan mirip. Penonton selesai menonton harus tahu
+  "app ini bisa apa dan cara pakainya".
 
 ## Aturan keras (jangan dilanggar)
 
@@ -87,9 +92,9 @@ cd promo && npm ci --no-audit --no-fund && PROMO_SECRET=$PROMO_SECRET node lesso
 3. Pakai topi **Tim Analisis**: beri skor 1–10 untuk tiap ide (kekuatan hook,
    relevansi buat anak muda Indonesia, beda dari 3 video terakhir, cocok
    dengan pelajaran rating). Pilih 1, tulis alasannya.
-4. Tentukan fitur yang dikenalkan (lihat Prinsip konten). Semua video PROMO
-   (`promo: true`) dengan 2–3 scene demo fitur; `plan.mjs` memaksa minimal 1
-   `device` kalau naskah tidak punya.
+4. Tentukan jenis video sesuai pola tiap 3 video (FITUR vs KONTEN MENARIK,
+   lihat Prinsip konten) dan fitur yang ditampilkan. Semua video `promo: true`;
+   `plan.mjs` memaksa minimal 1 `device` kalau naskah tidak punya.
 5. **Senin saja — Tim Promosi**: kampanye minggu ini (tema, seri 5 video,
    target views/rating) → simpan di draft `campaign` dan pakai sepanjang minggu
    (hari lain: baca `campaign` dari draft Senin, `draft-<tanggal Senin>`).
