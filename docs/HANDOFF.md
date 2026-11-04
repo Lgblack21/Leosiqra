@@ -25,8 +25,9 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     tgl 31 → hari terakhir bulan) — `src/lib/subscriptions.ts nextCharge` = SQL cron (diuji 0 beda).
   - Cron harian `sendSubscriptionReminders`: H-1 sebelum ditagih (aktif), H-2 sebelum masa coba habis (coba), maks 30/user,
     toggle notifikasi `subscriptions`. Push → `/membership/langganan` (app: `/app/langganan`).
-  - Katalog 47 layanan `src/lib/subscriptionCatalog.ts` (harga = PERKIRAAN); domain logo ditambahkan ke `LOGO_DOMAINS`
-    + `APP_ICONS` Worker (ikon App Store). Radar: `radarScan` lokal (tanpa AI) atas pengeluaran **30 hari** (keputusan Bos):
+  - Katalog 47 layanan `src/lib/subscriptionCatalog.ts` (harga = PERKIRAAN). Logo (live #121): ikon HD diunduh SAAT DEPLOY
+    oleh `scripts/fetch-logos.mjs` ke `/logos/<domain>.png` (cek nama aplikasi `app:`), `SubLogo` tidak memakai /api/logo
+    (Worker gagal ke API Apple → favicon pecah & lambat); tanpa file → huruf warna merek. Radar: `radarScan` lokal (tanpa AI) atas pengeluaran **30 hari** (keputusan Bos):
     cocok katalog = "pasti", nama sama ≥2× nominal ±15% jarak teratur = "mungkin". Animasi `RadarScan.tsx`.
   - Juga di branch ini: Kotak Masuk + lonceng hanya di halaman Keuangan (`Header.tsx`, prefix dari `keuanganNav`);
     Kekayaan dirapikan (judul+Tambah satu baris, tab baris sendiri & label pendek di HP, grup kosong → baris
