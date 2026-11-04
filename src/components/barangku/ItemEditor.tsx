@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from 'react';
-import { Camera, Check, ImagePlus, Loader2, Trash2, X } from 'lucide-react';
+import { Camera, Check, ImagePlus, Loader2, Sparkles, Trash2, X } from 'lucide-react';
 import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
 import { imageFileToBase64 } from '@/lib/quick/ai';
 import { itemService } from '@/lib/services/itemService';
@@ -19,7 +19,8 @@ const VALUE_MODES: { id: ItemValueMode; label: string; desc: string }[] = [
   { id: 'manual', label: 'Isi sendiri', desc: 'Harga pasaran menurutmu' },
 ];
 
-export type EditorPreset = { name?: string; category?: ItemCategory };
+// Preset: dari tombol cepat (nama+kategori) atau "Jadikan barang" dari transaksi (+harga, tanggal, catatan).
+export type EditorPreset = { name?: string; category?: ItemCategory; price?: number; purchaseDate?: string; note?: string };
 
 export function ItemEditor({ item, preset, onDone, onCancel }: { item?: Item | null; preset?: EditorPreset | null; onDone: (msg: string) => void; onCancel?: () => void }) {
   const today = toLocalDateString();
@@ -27,12 +28,12 @@ export function ItemEditor({ item, preset, onDone, onCancel }: { item?: Item | n
   const [brand, setBrand] = useState(item?.brand ?? '');
   const [variant, setVariant] = useState(item?.variant ?? '');
   const [category, setCategory] = useState<ItemCategory>(item?.category ?? preset?.category ?? 'Elektronik');
-  const [price, setPrice] = useState(item ? String(Math.round(item.purchasePrice)) : '');
-  const [purchaseDate, setPurchaseDate] = useState(item?.purchaseDate ?? today);
+  const [price, setPrice] = useState(item ? String(Math.round(item.purchasePrice)) : preset?.price ? String(Math.round(preset.price)) : '');
+  const [purchaseDate, setPurchaseDate] = useState(item?.purchaseDate ?? preset?.purchaseDate ?? today);
   const [warranty, setWarranty] = useState(item?.warrantyUntil ?? '');
   const [mode, setMode] = useState<ItemValueMode>(item?.valueMode ?? (preset?.category === 'Jam & perhiasan' ? 'tetap' : 'auto'));
   const [manual, setManual] = useState(item?.manualValue != null ? String(Math.round(item.manualValue)) : '');
-  const [note, setNote] = useState(item?.note ?? '');
+  const [note, setNote] = useState(item?.note ?? preset?.note ?? '');
   const [photo, setPhoto] = useState<{ base64: string; preview: string } | null>(null);
   const [photoRemoved, setPhotoRemoved] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -41,9 +42,13 @@ export function ItemEditor({ item, preset, onDone, onCancel }: { item?: Item | n
   const camRef = useRef<HTMLInputElement>(null);
   const galRef = useRef<HTMLInputElement>(null);
   const userTouchedMode = useRef(Boolean(item));
+  const userTouchedCategory = useRef(Boolean(item) || Boolean(preset?.category));
+  const [scanning, setScanning] = useState(false);
+  const [aiNote, setAiNote] = useState('');
 
   // Jam & perhiasan biasanya tidak turun nilainya → default "Tetap" (kecuali user sudah memilih sendiri).
-  const chooseCategory = (c: ItemCategory) => {
+  const chooseCategory = (c: ItemCategory, byUser = true) => {
+    if (byUser) userTouchedCategory.current = true;
     setCategory(c);
     if (!userTouchedMode.current) setMode(CATEGORY_META[c].rate > 0 ? 'auto' : 'tetap');
   };
@@ -58,16 +63,49 @@ export function ItemEditor({ item, preset, onDone, onCancel }: { item?: Item | n
   const existingPhoto = item?.hasPhoto && !photoRemoved ? itemService.photoUrl(item) : null;
   const shownPhoto = photo?.preview ?? existingPhoto;
 
+  // AI isi otomatis: hanya mengisi kolom yang masih kosong / belum diubah user.
+  const runScan = async (base64: string) => {
+    setScanning(true);
+    setError('');
+    setAiNote('');
+    try {
+      const s = await itemService.scan(base64);
+      const filled: string[] = [];
+      if (!name.trim() && s.name) { setName(s.name); filled.push('nama'); }
+      if (!brand.trim() && s.brand) { setBrand(s.brand); filled.push('merek'); }
+      if (!variant.trim() && s.variant) { setVariant(s.variant); filled.push('varian'); }
+      if (!userTouchedCategory.current && s.category) { chooseCategory(s.category, false); filled.push('kategori'); }
+      if (!price && s.price) { setPrice(String(s.price)); filled.push('harga'); }
+      const date = s.purchase_date ?? purchaseDate;
+      if (s.purchase_date) { setPurchaseDate(s.purchase_date); filled.push('tanggal beli'); }
+      if (!warranty && s.warranty_months) { setWarranty(addMonths(date || today, s.warranty_months)); filled.push('garansi'); }
+      if (s.photo_kind === 'struk') setPhoto(null); // foto struk bukan foto barang
+      setAiNote(
+        filled.length === 0
+          ? 'AI tidak menemukan info baru dari foto ini.'
+          : `AI mengisi ${filled.join(', ')}${s.confidence === 'low' ? ' (kurang yakin)' : ''} — cek lagi sebelum simpan.${s.photo_kind === 'struk' ? ' Foto struk tidak dipakai sebagai foto barang.' : ''}`
+      );
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : 'AI gagal membaca foto. Isi manual dulu ya.');
+    } finally {
+      setScanning(false);
+    }
+  };
+
   const pickFile = async (file: File | undefined) => {
     if (!file) return;
     setError('');
+    let base64 = '';
     try {
-      const base64 = await imageFileToBase64(file, 1280, 0.82);
+      base64 = await imageFileToBase64(file, 1280, 0.82);
       setPhoto({ base64, preview: `data:image/jpeg;base64,${base64}` });
       setPhotoRemoved(false);
     } catch {
       setError('Foto tidak bisa dibaca. Coba foto lain.');
+      return;
     }
+    // Barang baru tanpa nama → langsung coba kenali dari foto.
+    if (!item && !name.trim()) void runScan(base64);
   };
 
   const save = async () => {
@@ -173,6 +211,18 @@ export function ItemEditor({ item, preset, onDone, onCancel }: { item?: Item | n
           <input ref={galRef} type="file" accept="image/*" hidden onChange={(e) => { void pickFile(e.target.files?.[0]); e.target.value = ''; }} />
         </div>
       </div>
+
+      {(scanning || aiNote || photo) && (
+        <div className="flex items-center gap-2 rounded-2xl bg-violet-50 px-3 py-2.5 text-[12px] font-semibold text-violet-700 dark:bg-violet-500/10 dark:text-violet-300">
+          {scanning ? <Loader2 size={15} className="shrink-0 animate-spin" /> : <Sparkles size={15} className="shrink-0" />}
+          <span className="min-w-0 flex-1">{scanning ? 'AI sedang mengenali barang…' : aiNote || 'Foto barang atau struknya bisa dibaca AI untuk mengisi form.'}</span>
+          {!scanning && photo && (
+            <button type="button" onClick={() => void runScan(photo.base64)} className="shrink-0 rounded-full bg-violet-600 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-violet-700">
+              {aiNote ? 'Ulangi' : 'Isi otomatis'}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Kategori */}
       <div>

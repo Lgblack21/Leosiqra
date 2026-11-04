@@ -9078,6 +9078,101 @@ const deleteAllItemsForUser = async (env: Env, userId: string) => {
   }
 };
 
+// AI baca foto barang ATAU struk/nota/kotak → saran isian Barangku. Tidak
+// menyimpan apa pun (foto barang diunggah terpisah lewat /:id/photo). Semua
+// keluaran AI divalidasi ulang; yang meragukan dibuang, bukan ditebak.
+async function handleItemScan(request: Request, env: Env, userId: string) {
+  if (!(await checkAiParseRateLimit(env, userId))) {
+    return json({ error: "Terlalu banyak permintaan AI. Coba lagi dalam beberapa saat." }, { status: 429 });
+  }
+  const payload = await parseJson<{ imageBase64?: unknown }>(request);
+  if (typeof payload.imageBase64 !== "string" || !payload.imageBase64.trim()) return json({ error: "Foto wajib dikirim." }, { status: 400 });
+  if (payload.imageBase64.length > 7_000_000) return json({ error: "Foto terlalu besar. Coba resolusi lebih kecil." }, { status: 413 });
+  const openRouter = await getOpenRouterKey(env);
+  if (!openRouter) return json({ error: "AI belum dikonfigurasi. Isi manual dulu ya." }, { status: 503 });
+  const today = todayWIB();
+  const systemPrompt = `Kamu membantu mencatat BARANG milik pengguna (bukan transaksi) dari satu foto. Foto bisa berupa: barangnya langsung (HP, motor, jam, laptop, kulkas…), kotak/label kemasan, atau struk/nota/invoice pembelian.
+Balas HANYA satu objek JSON valid tanpa teks lain:
+{
+  "photo_kind": "barang" | "struk" | "lain",
+  "name": <nama produk singkat & umum, mis. "iPhone 15 Pro", "Vario 160", "Kulkas 2 Pintu"; null kalau tidak jelas>,
+  "brand": <merek, mis. "Apple", "Honda"; null kalau tidak terlihat/ragu>,
+  "variant": <kapasitas/ukuran/tahun/warna kalau TERLIHAT, mis. "256 GB", "ABS 2023"; null kalau tidak>,
+  "category": "Elektronik" | "Kendaraan" | "Rumah tangga" | "Perabot" | "Fashion" | "Jam & perhiasan" | "Hobi & olahraga" | "Lainnya",
+  "price": <harga beli dalam Rupiah HANYA kalau tercetak di struk/label harga; angka tanpa titik; null kalau tidak ada — JANGAN menebak harga pasar>,
+  "purchase_date": <"YYYY-MM-DD" HANYA kalau tercetak di struk; null kalau tidak>,
+  "warranty_months": <lama garansi dalam bulan HANYA kalau tertulis di struk/kartu garansi; null kalau tidak>,
+  "confidence": "high" | "medium" | "low"
+}
+Kalau struk berisi banyak barang, pilih barang termahal yang tahan lama. Hari ini: ${today}.`;
+  let raw = "";
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${openRouter.key}`,
+        "http-referer": env.APP_URL || "https://www.leosiqra.com",
+        "x-title": env.APP_NAME || "Leosiqra",
+      },
+      body: JSON.stringify({
+        models: PARSE_TRANSACTION_MODELS,
+        route: "fallback",
+        temperature: 0.1,
+        max_tokens: 500,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Kenali barang di foto ini untuk dicatat." },
+              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${payload.imageBase64.replace(/^data:[^,]*,/, "")}` } },
+            ],
+          },
+        ],
+      }),
+    });
+    if (!response.ok) throw new Error(`OpenRouter request gagal (${response.status}): ${(await response.text()).slice(0, 300)}`);
+    const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    raw = data.choices?.[0]?.message?.content?.trim() ?? "";
+  } catch (error) {
+    if (isAiQuotaError(error)) {
+      await notifyAiQuotaOnce(env);
+      return json({ error: AI_QUOTA_MESSAGE, code: "ai_quota" }, { status: 503 });
+    }
+    console.error("AI scan barang gagal:", error instanceof Error ? error.message : error);
+    return json({ error: "AI sedang gangguan. Coba lagi sebentar lagi, atau isi manual." }, { status: 502 });
+  }
+  let p: Record<string, unknown>;
+  try {
+    p = JSON.parse(stripJsonFences(raw));
+  } catch {
+    return json({ error: "AI tidak mengenali barang di foto ini. Coba foto lebih dekat & terang, atau isi manual." }, { status: 422 });
+  }
+  const text = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/[\u0000-\u001f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, max) : "") || null;
+  const name = text(p.name, 80);
+  if (!name) return json({ error: "AI tidak mengenali barang di foto ini. Coba foto lebih dekat & terang, atau isi manual." }, { status: 422 });
+  const category = typeof p.category === "string" && (ITEM_CATEGORIES as readonly string[]).includes(p.category) ? p.category : "Lainnya";
+  const price = Number(p.price);
+  const date = String(p.purchase_date ?? "").slice(0, 10);
+  const months = Number(p.warranty_months);
+  return json({
+    ok: true,
+    suggestion: {
+      photo_kind: p.photo_kind === "struk" || p.photo_kind === "lain" ? p.photo_kind : "barang",
+      name,
+      brand: text(p.brand, 60),
+      variant: text(p.variant, 60),
+      category,
+      price: Number.isFinite(price) && price > 0 && price <= ITEM_MAX_PRICE ? Math.round(price) : null,
+      purchase_date: /^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(Date.parse(`${date}T00:00:00Z`)) && date <= today ? date : null,
+      warranty_months: Number.isInteger(months) && months > 0 && months <= 120 ? months : null,
+      confidence: p.confidence === "high" || p.confidence === "medium" ? p.confidence : "low",
+    },
+  });
+}
+
 async function handleItemRoutes(request: Request, env: Env, pathname: string) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -9112,6 +9207,11 @@ async function handleItemRoutes(request: Request, env: Env, pathname: string) {
         return json({ ok: true, id }, { status: 201 });
       }
       return json({ error: "Method not allowed" }, { status: 405 });
+    }
+
+    if (pathname === "/api/member/items/scan") {
+      if (request.method !== "POST") return json({ error: "Method not allowed" }, { status: 405 });
+      return await handleItemScan(request, env, userId);
     }
 
     const rest = pathname.slice("/api/member/items/".length);

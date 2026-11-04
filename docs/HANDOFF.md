@@ -27,7 +27,11 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   - UI: tab Kekayaan `#barangku` + `/app/barangku` (komponen sama `src/components/barangku/*`), nilai sekarang
     `src/lib/itemValue.ts` (susut per kategori, mode auto/tetap/manual), masuk Kekayaan bersih (`computeNetWorth.itemsValueIdr`).
   - Teruji: wrangler dev lokal (CRUD, validasi, akses user lain 404, foto, cron 2× tanpa dobel, reset hapus foto) + Playwright mock.
-  - Tahap 2 (belum): AI isi otomatis dari foto, "Jadikan barang" dari transaksi. Fitur Koleksi terpisah (nanti).
+  - Tahap 2 (branch claude/fitur-barang): `POST /api/member/items/scan` (AI OpenRouter baca foto barang/struk → saran,
+    tidak menyimpan; rate limit AI parse; harga/tanggal/garansi hanya kalau tercetak). Form: pilih foto barang baru → AI
+    otomatis, isi kolom kosong saja, foto struk tidak dipakai sebagai foto barang. "Jadikan barang": daftar transaksi web
+    (ikon 📦 saat hover / tombol di HP web) & detail transaksi app → `?dari=<id>` → form terisi nama, harga IDR, tanggal.
+    Fitur Koleksi terpisah (nanti).
 - **2026-11-04 (branch claude/app-skor-sisa):**
   - Live #115: Skor Kesehatan di Beranda app HP (`AppHealthScore`), "Masa aktif sisa N hari" di /app/profile.
   - Live #116: **jatuh tempo hutang/piutang** di `payload_json.due` (`{date}` sekali / `{day}` tiap bulan,

@@ -7,8 +7,9 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { ItemEditor, type EditorPreset } from '@/components/barangku/ItemEditor';
 import { itemService } from '@/lib/services/itemService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
-import { categoryMeta, itemAgeLabel, itemCurrentValue, ITEM_CATEGORIES, warrantyStatus, type Item, type ItemCategory } from '@/lib/itemValue';
-import { cn, formatIDR } from '@/lib/utils';
+import { categoryMeta, guessItemCategory, itemAgeLabel, itemCurrentValue, ITEM_CATEGORIES, warrantyStatus, type Item, type ItemCategory } from '@/lib/itemValue';
+import { transactionService } from '@/lib/services/transactionService';
+import { cn, formatIDR, isInvestmentFlow, toLocalDateString } from '@/lib/utils';
 
 // Barangku: daftar barang milik user + perkiraan nilai sekarang. Dipakai tab
 // Kekayaan (web, variant "web") dan /app/barangku (variant "app").
@@ -56,6 +57,34 @@ export function BarangkuView({ variant, addSignal = 0, toast }: { variant: 'web'
     load();
     const unsub = subscribeToCollectionChanges('items', load);
     return () => { alive = false; unsub(); };
+  }, []);
+
+  // "Jadikan barang" dari transaksi: ?dari=<id transaksi> → form terisi nama,
+  // harga (IDR) & tanggal belanjanya. Parameter dibuang setelah dibaca.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const txId = params.get('dari');
+    if (!txId) return;
+    params.delete('dari');
+    const qs = params.toString();
+    window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`);
+    transactionService
+      .getUserTransactions('session')
+      .then((list) => {
+        const t = list.find((x) => x.id === txId);
+        if (!t || t.type !== 'pengeluaran' || isInvestmentFlow(t)) { setFlash('Transaksi tidak ditemukan atau bukan belanja barang.'); return; }
+        const label = (t.note || t.subCategory || t.category || '').replace(/^\[[^\]]*\]\s*/, '').trim().slice(0, 80);
+        setEditor({
+          preset: {
+            name: label,
+            // Tebakan "Lainnya" tidak dikirim supaya AI (kalau user menambah foto) masih boleh memilihkan kategori.
+            category: ((g) => (g === 'Lainnya' ? undefined : g))(guessItemCategory(`${t.note ?? ''} ${t.category ?? ''} ${t.subCategory ?? ''}`)),
+            price: Number(t.amountIDR) || Number(t.amount) || 0,
+            purchaseDate: toLocalDateString(new Date(t.date)),
+          },
+        });
+      })
+      .catch(() => setFlash('Gagal membaca transaksinya. Tambah barang manual dulu ya.'));
   }, []);
 
   // Tombol "Tambah" dari luar (menu Kekayaan) membuka form baru.

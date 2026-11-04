@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Trash2, Download, Plus, ChevronDown, Tags, Wallet, CalendarDays, X, Paperclip, Hash, SlidersHorizontal, Check, CircleCheck } from 'lucide-react';
+import { Search, Trash2, Download, Plus, ChevronDown, Tags, Wallet, CalendarDays, X, Paperclip, Hash, SlidersHorizontal, Check, CircleCheck, Package } from 'lucide-react';
+import Link from 'next/link';
 import { useTags } from '@/lib/useTags';
 import { TagPicker, TagChip } from '@/components/tags/TagPicker';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -695,15 +696,28 @@ export default function DailyTransactionLogPage() {
                         </p>
                         {t.currency && t.currency !== 'IDR' && <p className="text-[12px] text-slate-400 tabular-nums">≈ {formatIDR(idr(t))}</p>}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(t)}
-                        disabled={deletingId === t.id || selectMode}
-                        aria-label="Hapus transaksi"
-                        className="hidden rounded-lg p-2 text-slate-300 disabled:invisible transition-colors hover:bg-rose-50 hover:text-rose-500 disabled:opacity-50 md:block md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      <div className="hidden items-center md:flex">
+                        {t.type === 'pengeluaran' && !t.relatedType && !isInvestmentFlow(t) && t.id && !selectMode && (
+                          <Link
+                            href={`/membership/kekayaan?dari=${encodeURIComponent(t.id)}#barangku`}
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label="Jadikan barang di Barangku"
+                            title="Jadikan barang di Barangku"
+                            className="rounded-lg p-2 text-slate-300 opacity-0 transition-colors hover:bg-amber-50 hover:text-amber-600 group-hover:opacity-100 focus:opacity-100"
+                          >
+                            <Package size={15} />
+                          </Link>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(t)}
+                          disabled={deletingId === t.id || selectMode}
+                          aria-label="Hapus transaksi"
+                          className="rounded-lg p-2 text-slate-300 disabled:invisible transition-colors hover:bg-rose-50 hover:text-rose-500 disabled:opacity-50 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                       {((t.tags?.length ?? 0) > 0 || tagEditId === t.id) && (
                         <div className="col-span-full -mt-1 flex flex-wrap items-center gap-1.5 pl-[48px] md:pl-[56px]">
                           {tagEditId === t.id ? (
@@ -731,6 +745,11 @@ export default function DailyTransactionLogPage() {
                             <button type="button" onClick={() => { setTagEditId(t.id!); setActionId(null); }} className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3.5 py-2 text-[13px] font-semibold text-slate-700">
                               <Hash size={14} /> Tag
                             </button>
+                          )}
+                          {t.type === 'pengeluaran' && !t.relatedType && !isInvestmentFlow(t) && t.id && (
+                            <Link href={`/membership/kekayaan?dari=${encodeURIComponent(t.id)}#barangku`} className="flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-2 text-[13px] font-semibold text-amber-700">
+                              <Package size={14} /> Jadikan barang
+                            </Link>
                           )}
                           <button type="button" onClick={() => handleDelete(t)} disabled={deletingId === t.id} className="flex items-center gap-1.5 rounded-full bg-rose-50 px-3.5 py-2 text-[13px] font-semibold text-rose-600 disabled:opacity-50">
                             <Trash2 size={14} /> Hapus

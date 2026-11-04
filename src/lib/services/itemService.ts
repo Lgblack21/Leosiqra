@@ -26,6 +26,18 @@ const fromRow = (r: Row): Item => ({
   updatedAt: String(r.updated_at ?? ''),
 });
 
+export type ItemScan = {
+  photo_kind: 'barang' | 'struk' | 'lain';
+  name: string;
+  brand: string | null;
+  variant: string | null;
+  category: ItemCategory;
+  price: number | null;
+  purchase_date: string | null;
+  warranty_months: number | null;
+  confidence: 'high' | 'medium' | 'low';
+};
+
 export type ItemInput = {
   name: string;
   brand?: string;
@@ -80,6 +92,11 @@ export const itemService = {
   async removePhoto(id: string) {
     await cloudflareApi(`/api/member/items/${id}/photo`, { method: 'DELETE' });
     notifyCollectionChanged('items');
+  },
+  /** AI kenali barang dari foto barang/struk — hanya saran, tidak menyimpan apa pun. */
+  async scan(imageBase64: string): Promise<ItemScan> {
+    const res = await cloudflareApi<{ suggestion: ItemScan }>('/api/member/items/scan', { method: 'POST', json: { imageBase64 } });
+    return res.suggestion;
   },
   photoUrl: (item: Pick<Item, 'id' | 'updatedAt'>) => `/api/member/items/${item.id}/photo?v=${encodeURIComponent(item.updatedAt)}`,
 };

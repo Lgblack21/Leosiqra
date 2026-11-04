@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Trash2, Pencil, Info, Loader2 } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Trash2, Pencil, Info, Loader2, Package } from "lucide-react";
+import Link from "next/link";
 import { AppTagChips } from "@/components/app/AppTagChips";
 import { useTags } from "@/lib/useTags";
 import { BottomSheet } from "@/components/ui/BottomSheet";
@@ -10,7 +11,7 @@ import { cloudflareApi } from "@/lib/cloudflare-api";
 import { notifyCollectionChanged } from "@/lib/cf-firestore";
 import { transactionService, Transaction } from "@/lib/services/transactionService";
 import type { Account } from "@/lib/services/accountService";
-import { cn, formatMoney, formatIDR, toLocalDateString } from "@/lib/utils";
+import { cn, formatMoney, formatIDR, isInvestmentFlow, toLocalDateString } from "@/lib/utils";
 import { lightTap } from "@/lib/haptics";
 import { txKind, txTitle } from "./txDisplay";
 
@@ -229,6 +230,15 @@ export function TransactionDetailSheet({ tx, accounts, onClose }: Props) {
                 <Trash2 size={15} /> {busy ? "Menghapus..." : confirmDelete ? "Yakin hapus?" : "Hapus"}
               </button>
             </div>
+            {tx.type === "pengeluaran" && !linked && !isInvestmentFlow(tx) && tx.id && (
+              <Link
+                href={`/app/barangku?dari=${encodeURIComponent(tx.id)}`}
+                onClick={() => lightTap()}
+                className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-amber-50 dark:bg-amber-500/10 text-sm font-black text-amber-700 dark:text-amber-300"
+              >
+                <Package size={15} /> Jadikan barang di Barangku
+              </Link>
+            )}
             {confirmDelete && (
               <p className="text-[11px] text-center text-slate-500 dark:text-slate-400">
                 {isTransfer ? "Kedua sisi transfer dihapus & saldo kedua rekening dikembalikan." : "Saldo rekening akan dikembalikan."} Tap lagi untuk menghapus.

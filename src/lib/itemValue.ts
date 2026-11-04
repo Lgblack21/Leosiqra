@@ -80,6 +80,18 @@ export function warrantyStatus(until: string | undefined, today = toLocalDateStr
   return { label: `Garansi s/d ${short}`, tone: 'ok' };
 }
 
+// Tebak kategori dari teks bebas (catatan transaksi "Jadikan barang"). Kasar — user bisa ganti.
+const GUESS: [ItemCategory, RegExp][] = [
+  ['Kendaraan', /\b(motor|mobil|sepeda motor|vario|beat|nmax|pcx|scoopy|avanza|brio|xpander|helm)\b/i],
+  ['Elektronik', /\b(hp|handphone|iphone|samsung|xiaomi|oppo|vivo|laptop|macbook|ipad|tablet|tv|televisi|kamera|monitor|earbuds|airpods|headphone|speaker|printer|smartwatch)\b/i],
+  ['Rumah tangga', /\b(kulkas|mesin cuci|ac|kompor|rice cooker|magic com|blender|dispenser|vacuum|setrika|microwave|oven|kipas)\b/i],
+  ['Perabot', /\b(sofa|kasur|springbed|lemari|meja|kursi|rak|ranjang)\b/i],
+  ['Jam & perhiasan', /\b(jam tangan|rolex|seiko|casio|cincin|kalung|gelang|anting|emas|perhiasan)\b/i],
+  ['Fashion', /\b(tas|sepatu|sneakers|jaket|dompet kulit|kacamata)\b/i],
+  ['Hobi & olahraga', /\b(sepeda|gitar|ps5|playstation|nintendo|switch|xbox|raket|treadmill|dumbbell|drone)\b/i],
+];
+export const guessItemCategory = (text: string): ItemCategory => GUESS.find(([, re]) => re.test(text))?.[0] ?? 'Lainnya';
+
 /** Tanggal + N bulan (untuk tombol cepat garansi 1/2 tahun). */
 export const addMonths = (dateStr: string, months: number) => {
   const d = new Date(`${dateStr}T00:00:00Z`);
