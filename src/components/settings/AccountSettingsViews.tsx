@@ -23,6 +23,7 @@ import {
   RefreshCw,
   Paperclip,
   AlarmClock,
+  ShieldCheck as ShieldWarranty,
   Moon,
   TrendingUp,
   CalendarDays,
@@ -336,7 +337,7 @@ function NotifikasiView() {
     cloudflareApi<{ item: { reminder: { on: boolean; time: string }; notify?: Record<NotifyKey, boolean> } }>('/api/member/preferences')
       .then((res) => {
         setReminder(res.item.reminder);
-        setNotify({ reminders: true, summary: true, weekly: true, monthly: true, budget: true, bills: true, ...(res.item.notify ?? {}) });
+        setNotify({ reminders: true, summary: true, weekly: true, monthly: true, budget: true, bills: true, warranty: true, ...(res.item.notify ?? {}) });
       })
       .catch(() => setReminder(null));
     cloudflareApi<{ enabled: boolean; available: boolean }>('/api/member/email-report')
@@ -463,14 +464,15 @@ function NotifikasiView() {
   );
 }
 
-type NotifyKey = 'reminders' | 'summary' | 'weekly' | 'monthly' | 'budget' | 'bills';
+type NotifyKey = 'reminders' | 'summary' | 'weekly' | 'monthly' | 'budget' | 'bills' | 'warranty';
 const NOTIFY_ROWS: { key: NotifyKey; icon: React.ElementType; title: string; desc: string }[] = [
   { key: 'reminders', icon: AlarmClock, title: 'Pengingat buatanmu', desc: 'Saat pengingat di menu Pengingat jatuh tempo.' },
   { key: 'summary', icon: Moon, title: 'Ringkasan harian', desc: 'Lewat tengah malam: total keluar & masuk kemarin (kalau ada catatan).' },
   { key: 'weekly', icon: TrendingUp, title: 'Wawasan mingguan', desc: 'Senin pagi: hal paling penting dari pengeluaran 7 hari terakhir.' },
   { key: 'monthly', icon: CalendarDays, title: 'Wawasan bulanan', desc: 'Tanggal 1: rekap masuk, keluar & kategori terbesar bulan lalu.' },
   { key: 'budget', icon: Target, title: 'Peringatan anggaran', desc: 'Saat belanja satu kategori mencapai 80% dan 100% anggarannya.' },
-  { key: 'bills', icon: Repeat, title: 'Tagihan rutin', desc: '3 hari sebelum transaksi rutin tercatat otomatis — siapkan saldonya.' },
+  { key: 'bills', icon: Repeat, title: 'Tagihan & jatuh tempo', desc: '3 hari sebelum transaksi rutin tercatat, dan H-3/H-1 jatuh tempo hutang/piutang.' },
+  { key: 'warranty', icon: ShieldWarranty, title: 'Garansi barang', desc: '30 & 7 hari sebelum garansi barang di Barangku habis.' },
 ];
 
 function LainnyaView() {

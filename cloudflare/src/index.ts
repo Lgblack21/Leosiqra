@@ -6655,6 +6655,7 @@ async function handleResetMemberData(request: Request, env: Env) {
 
   await env.DB.batch(statements);
   await deleteAllAttachmentsForUser(env, user.id);
+  await deleteAllItemsForUser(env, user.id);
   // Kotak Masuk (migrasi 0019) — best effort, tabelnya bisa belum ada.
   await env.DB.prepare("DELETE FROM inbox_items WHERE user_id = ?").bind(user.id).run().catch(() => undefined);
 
@@ -8152,6 +8153,7 @@ async function handleAdminUserById(request: Request, env: Env, userId: string) {
       );
     }
 
+    await deleteAllItemsForUser(env, userId); // foto R2 tidak ikut FK cascade
     await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
     await insertAdminLog(
       env,
@@ -8968,6 +8970,230 @@ async function handleAttachmentRoutes(request: Request, env: Env, pathname: stri
     if (attachmentTableMissing(error)) {
       console.error("Lampiran: tabel transaction_attachments belum ada (migrasi 0018 belum diterapkan)");
       return json({ error: "Fitur lampiran belum aktif. Coba lagi nanti." }, { status: 503 });
+    }
+    if (error instanceof Error && error.message === "Payload JSON tidak valid.") {
+      return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    }
+    throw error;
+  }
+}
+
+// ── Barangku (migrasi 0023) ─────────────────────────────────────────────────
+// Barang milik user + foto di R2 (items/<user>/<id>). Semua query ber-user_id;
+// foto hanya bisa dibuka pemiliknya. Nilai sekarang dihitung klien.
+const ITEM_CATEGORIES = ["Elektronik", "Kendaraan", "Rumah tangga", "Perabot", "Fashion", "Jam & perhiasan", "Hobi & olahraga", "Lainnya"] as const;
+const ITEM_VALUE_MODES = ["auto", "tetap", "manual"] as const;
+const ITEM_STATUSES = ["aktif", "terjual", "hilang"] as const;
+const ITEMS_MAX_PER_USER = 500;
+const ITEM_MAX_PRICE = 1e13;
+const itemsTableMissing = (error: unknown) => error instanceof Error && /no such table: items/.test(error.message);
+const ITEM_COLUMNS =
+  "id, name, brand, variant, category, purchase_price, currency, purchase_date, warranty_until, value_mode, manual_value, note, status, CASE WHEN photo_key IS NULL THEN 0 ELSE 1 END AS has_photo, created_at, updated_at";
+
+type ItemFields = Partial<{
+  name: string;
+  brand: string | null;
+  variant: string | null;
+  category: string;
+  purchase_price: number;
+  currency: string;
+  purchase_date: string | null;
+  warranty_until: string | null;
+  value_mode: string;
+  manual_value: number | null;
+  note: string | null;
+  status: string;
+}>;
+
+// Validasi field barang dari klien (klien bukan batas kepercayaan). `partial` untuk PUT.
+const sanitizeItemFields = (raw: Record<string, unknown>, partial: boolean): { ok: true; fields: ItemFields } | { ok: false; error: string } => {
+  const f: ItemFields = {};
+  const text = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/[\u0000-\u001f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, max) : "");
+  const dateOrNull = (v: unknown): string | null | undefined => {
+    if (v === null || v === "") return null;
+    if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v) || Number.isNaN(Date.parse(`${v}T00:00:00Z`))) return undefined;
+    return v;
+  };
+  const money = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= ITEM_MAX_PRICE ? Math.round(v * 100) / 100 : undefined);
+
+  if (raw.name !== undefined || !partial) {
+    const name = text(raw.name, 80);
+    if (!name) return { ok: false, error: "Nama barang wajib diisi." };
+    f.name = name;
+  }
+  for (const key of ["brand", "variant"] as const) if (raw[key] !== undefined) f[key] = text(raw[key], 60) || null;
+  if (raw.note !== undefined) f.note = text(raw.note, 500) || null;
+  if (raw.category !== undefined || !partial) {
+    // Tidak dikirim saat membuat → "Lainnya"; dikirim tapi tidak dikenal → ditolak.
+    const c = raw.category === undefined ? "Lainnya" : typeof raw.category === "string" && (ITEM_CATEGORIES as readonly string[]).includes(raw.category) ? raw.category : undefined;
+    if (!c) return { ok: false, error: "Kategori tidak dikenal." };
+    f.category = c;
+  }
+  if (raw.purchase_price !== undefined || !partial) {
+    const p = money(raw.purchase_price ?? 0);
+    if (p === undefined) return { ok: false, error: "Harga beli tidak valid." };
+    f.purchase_price = p;
+  }
+  if (raw.currency !== undefined) {
+    if (typeof raw.currency !== "string" || !/^[A-Z]{3}$/.test(raw.currency)) return { ok: false, error: "Mata uang tidak valid." };
+    f.currency = raw.currency;
+  }
+  for (const key of ["purchase_date", "warranty_until"] as const) {
+    if (raw[key] === undefined) continue;
+    const d = dateOrNull(raw[key]);
+    if (d === undefined) return { ok: false, error: "Tanggal tidak valid." };
+    f[key] = d;
+  }
+  if (raw.value_mode !== undefined) {
+    if (typeof raw.value_mode !== "string" || !(ITEM_VALUE_MODES as readonly string[]).includes(raw.value_mode)) return { ok: false, error: "Cara hitung nilai tidak dikenal." };
+    f.value_mode = raw.value_mode;
+  }
+  if (raw.manual_value !== undefined) {
+    if (raw.manual_value === null) f.manual_value = null;
+    else {
+      const m = money(raw.manual_value);
+      if (m === undefined) return { ok: false, error: "Nilai sekarang tidak valid." };
+      f.manual_value = m;
+    }
+  }
+  if (raw.status !== undefined) {
+    if (typeof raw.status !== "string" || !(ITEM_STATUSES as readonly string[]).includes(raw.status)) return { ok: false, error: "Status tidak dikenal." };
+    f.status = raw.status;
+  }
+  return { ok: true, fields: f };
+};
+
+const deleteItemPhotos = async (env: Env, keys: (string | null)[]) => {
+  const list = keys.filter((k): k is string => Boolean(k));
+  if (list.length && env.FILES_BUCKET) await env.FILES_BUCKET.delete(list).catch((e) => console.error("Hapus foto barang gagal:", e));
+};
+
+const deleteAllItemsForUser = async (env: Env, userId: string) => {
+  try {
+    const rows = await env.DB.prepare("SELECT photo_key FROM items WHERE user_id = ? AND photo_key IS NOT NULL").bind(userId).all<{ photo_key: string }>();
+    await deleteItemPhotos(env, (rows.results ?? []).map((r) => r.photo_key));
+    await env.DB.prepare("DELETE FROM items WHERE user_id = ?").bind(userId).run();
+  } catch (error) {
+    if (!itemsTableMissing(error)) console.error("Hapus semua barang gagal:", error instanceof Error ? error.message : error);
+  }
+};
+
+async function handleItemRoutes(request: Request, env: Env, pathname: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  try {
+    if (pathname === "/api/member/items") {
+      if (request.method === "GET") {
+        const rows = await env.DB.prepare(`SELECT ${ITEM_COLUMNS} FROM items WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`)
+          .bind(userId, ITEMS_MAX_PER_USER)
+          .all();
+        return json({ items: rows.results ?? [] });
+      }
+      if (request.method === "POST") {
+        const parsed = sanitizeItemFields(await parseJson<Record<string, unknown>>(request), false);
+        if (!parsed.ok) return json({ error: parsed.error }, { status: 400 });
+        const f = parsed.fields;
+        const id = generateId();
+        const now = nowIso();
+        // Batas jumlah dicek di statement yang sama (aman dari kirim ganda paralel).
+        const result = await env.DB.prepare(
+          `INSERT INTO items (id, user_id, name, brand, variant, category, purchase_price, currency, purchase_date, warranty_until, value_mode, manual_value, note, status, created_at, updated_at)
+           SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'aktif', ?, ?
+            WHERE (SELECT COUNT(*) FROM items WHERE user_id = ?) < ?`
+        )
+          .bind(
+            id, userId, f.name!, f.brand ?? null, f.variant ?? null, f.category!, f.purchase_price ?? 0, f.currency ?? "IDR",
+            f.purchase_date ?? null, f.warranty_until ?? null, f.value_mode ?? "auto", f.manual_value ?? null, f.note ?? null,
+            now, now, userId, ITEMS_MAX_PER_USER
+          )
+          .run();
+        if (!result.meta.changes) return json({ error: `Maksimal ${ITEMS_MAX_PER_USER} barang.` }, { status: 409 });
+        return json({ ok: true, id }, { status: 201 });
+      }
+      return json({ error: "Method not allowed" }, { status: 405 });
+    }
+
+    const rest = pathname.slice("/api/member/items/".length);
+    const [id, action, extra] = rest.split("/");
+    if (!id || extra !== undefined || !/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "Not found" }, { status: 404 });
+    const row = await env.DB.prepare("SELECT id, photo_key, updated_at FROM items WHERE id = ? AND user_id = ?")
+      .bind(id, userId)
+      .first<{ id: string; photo_key: string | null; updated_at: string }>();
+    if (!row) return json({ error: "Barang tidak ditemukan." }, { status: 404 });
+
+    if (!action && request.method === "PUT") {
+      const parsed = sanitizeItemFields(await parseJson<Record<string, unknown>>(request), true);
+      if (!parsed.ok) return json({ error: parsed.error }, { status: 400 });
+      const entries = Object.entries(parsed.fields);
+      if (!entries.length) return json({ error: "Tidak ada yang diubah." }, { status: 400 });
+      // Garansi berubah → penanda pengingat dihapus supaya tanggal baru diingatkan lagi.
+      const resetReminder = parsed.fields.warranty_until !== undefined;
+      await env.DB.prepare(
+        `UPDATE items SET ${entries.map(([k]) => `${k} = ?`).join(", ")}${resetReminder ? ", warranty_reminded_for = NULL" : ""}, updated_at = ? WHERE id = ? AND user_id = ?`
+      )
+        .bind(...entries.map(([, v]) => v), nowIso(), id, userId)
+        .run();
+      return json({ ok: true });
+    }
+
+    if (!action && request.method === "DELETE") {
+      await env.DB.prepare("DELETE FROM items WHERE id = ? AND user_id = ?").bind(id, userId).run();
+      await deleteItemPhotos(env, [row.photo_key]);
+      return json({ ok: true });
+    }
+
+    if (action === "photo") {
+      if (request.method === "GET") {
+        if (!row.photo_key) return json({ error: "Barang ini belum punya foto." }, { status: 404 });
+        const obj = await env.FILES_BUCKET?.get(row.photo_key);
+        if (!obj) return json({ error: "Foto tidak ada." }, { status: 404 });
+        return new Response(obj.body, {
+          headers: {
+            "content-type": obj.httpMetadata?.contentType || "image/jpeg",
+            "cache-control": "private, max-age=86400",
+            "x-content-type-options": "nosniff",
+            "content-security-policy": "default-src 'none'; sandbox",
+          },
+        });
+      }
+      if (request.method === "PUT") {
+        if (!env.FILES_BUCKET) return json({ error: "Penyimpanan foto belum aktif." }, { status: 503 });
+        const payload = await parseJson<{ imageBase64?: unknown }>(request);
+        if (typeof payload.imageBase64 !== "string" || !payload.imageBase64) return json({ error: "Foto wajib dikirim." }, { status: 400 });
+        if (payload.imageBase64.length > 7_000_000) return json({ error: "Foto terlalu besar (maks 5 MB)." }, { status: 413 });
+        let bytes: Uint8Array;
+        try {
+          const binary = atob(payload.imageBase64.replace(/^data:[^,]*,/, "").replace(/\s/g, ""));
+          bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+        } catch {
+          return json({ error: "Foto tidak terbaca." }, { status: 400 });
+        }
+        if (bytes.length > ATTACHMENT_MAX_BYTES) return json({ error: "Foto terlalu besar (maks 5 MB)." }, { status: 413 });
+        const type = sniffImageType(bytes);
+        if (!type) return json({ error: "Format foto harus JPG, PNG, atau WebP." }, { status: 400 });
+        // Key baru tiap unggah (cache browser tidak menampilkan foto lama); yang lama dihapus.
+        const key = `items/${userId}/${id}-${generateId().slice(0, 8)}`;
+        await env.FILES_BUCKET.put(key, bytes, { httpMetadata: { contentType: type } });
+        const res = await env.DB.prepare("UPDATE items SET photo_key = ?, updated_at = ? WHERE id = ? AND user_id = ?").bind(key, nowIso(), id, userId).run();
+        if (!res.meta.changes) {
+          await deleteItemPhotos(env, [key]);
+          return json({ error: "Barang tidak ditemukan." }, { status: 404 });
+        }
+        await deleteItemPhotos(env, [row.photo_key]);
+        return json({ ok: true });
+      }
+      if (request.method === "DELETE") {
+        await env.DB.prepare("UPDATE items SET photo_key = NULL, updated_at = ? WHERE id = ? AND user_id = ?").bind(nowIso(), id, userId).run();
+        await deleteItemPhotos(env, [row.photo_key]);
+        return json({ ok: true });
+      }
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (error) {
+    if (itemsTableMissing(error)) {
+      console.error("Barangku: tabel items belum ada (migrasi 0023 belum diterapkan)");
+      return json({ error: "Fitur Barangku belum aktif. Coba lagi nanti." }, { status: 503 });
     }
     if (error instanceof Error && error.message === "Payload JSON tidak valid.") {
       return json({ error: "Payload JSON tidak valid." }, { status: 400 });
@@ -12219,7 +12445,7 @@ const sanitizeAiMemory = (raw: unknown): AiMemory => {
   const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   return Object.fromEntries(AI_MEMORY_KEYS.map((k) => [k, cleanAiMemoryText(r[k])])) as AiMemory;
 };
-const NOTIFY_KEYS = ["reminders", "summary", "weekly", "monthly", "budget", "bills"] as const;
+const NOTIFY_KEYS = ["reminders", "summary", "weekly", "monthly", "budget", "bills", "warranty"] as const;
 type NotifyPrefs = Record<(typeof NOTIFY_KEYS)[number], boolean>;
 const sanitizeNotify = (raw: unknown): NotifyPrefs => {
   const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
@@ -13120,6 +13346,56 @@ const sendDebtDueReminders = async (env: Env) => {
       );
     } catch (error) {
       console.error(`Pengingat jatuh tempo hutang ${r.id} gagal:`, error);
+    }
+  }
+};
+
+// Pengingat garansi Barangku: H-30 & H-7 sebelum warranty_until (harian 10:00 WIB),
+// supaya sempat klaim/servis. Klaim warranty_reminded_for = "<tanggal>|<tahap>" →
+// sekali per tahap. Toggle $.prefs.notify.warranty. Tabel belum ada → dilewati.
+const sendWarrantyReminders = async (env: Env) => {
+  const today = todayWIB();
+  const d30 = shiftDateStr(today, 30);
+  const d7 = shiftDateStr(today, 7);
+  let rows: { id: string; user_id: string; name: string; brand: string | null; warranty_until: string }[];
+  try {
+    const res = await env.DB.prepare(
+      `SELECT i.id, i.user_id, i.name, i.brand, i.warranty_until
+         FROM items i JOIN users u ON u.id = i.user_id
+        WHERE i.status = 'aktif' AND i.warranty_until IN (?, ?)
+          AND COALESCE(i.warranty_reminded_for, '') <> i.warranty_until || '|' || CASE WHEN i.warranty_until = ? THEN 'h30' ELSE 'h7' END
+          AND COALESCE(u.status, '') <> 'NONAKTIF'
+          AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.warranty') END, 1) <> 0
+        LIMIT 1000`
+    )
+      .bind(d30, d7, d30)
+      .all<{ id: string; user_id: string; name: string; brand: string | null; warranty_until: string }>();
+    rows = res.results ?? [];
+  } catch (error) {
+    if (itemsTableMissing(error)) return;
+    throw error;
+  }
+  for (const r of rows) {
+    try {
+      const stage = r.warranty_until === d30 ? "h30" : "h7";
+      const marker = `${r.warranty_until}|${stage}`;
+      const claim = await env.DB.prepare(
+        "UPDATE items SET warranty_reminded_for = ? WHERE id = ? AND user_id = ? AND COALESCE(warranty_reminded_for, '') <> ?"
+      )
+        .bind(marker, r.id, r.user_id, marker)
+        .run();
+      if (!claim.meta.changes) continue;
+      const label = [r.brand, r.name].filter(Boolean).join(" ");
+      const dateLabel = r.warranty_until.split("-").reverse().join("/");
+      await sendWebPushToUser(
+        env,
+        r.user_id,
+        `🛡️ Garansi ${label} habis ${stage === "h30" ? "30 hari" : "7 hari"} lagi`,
+        `Berlaku sampai ${dateLabel}. Ada yang rusak atau perlu servis? Klaim sebelum lewat.`,
+        "/membership/kekayaan#barangku"
+      );
+    } catch (error) {
+      console.error(`Pengingat garansi ${r.id} gagal:`, error);
     }
   }
 };
@@ -16005,6 +16281,10 @@ const worker = {
         return await handleAttachmentRoutes(request, env, url.pathname);
       }
 
+      if (url.pathname === "/api/member/items" || url.pathname.startsWith("/api/member/items/")) {
+        return await handleItemRoutes(request, env, url.pathname);
+      }
+
       if (url.pathname === "/api/member/coins" || url.pathname.startsWith("/api/member/coins/") || url.pathname === "/api/admin/coin-withdrawals" || url.pathname.startsWith("/api/admin/coin-withdrawals/")) {
         return await handleCoinRoutes(request, env, url.pathname);
       }
@@ -16244,6 +16524,7 @@ const worker = {
     // Tagihan/setoran rutin yang tercatat otomatis 3 hari lagi.
     ctx.waitUntil(sendBillReminders(env).catch((error) => console.error("Pengingat tagihan:", error)));
     ctx.waitUntil(sendDebtDueReminders(env).catch((error) => console.error("Pengingat jatuh tempo hutang:", error)));
+    ctx.waitUntil(sendWarrantyReminders(env).catch((error) => console.error("Pengingat garansi:", error)));
     ctx.waitUntil(cleanupNotifications(env).catch((error) => console.error("Bersihkan notifikasi:", error)));
     // Senin: wawasan mingguan; tanggal 1: rekap bulan lalu (push, bisa dimatikan user).
     ctx.waitUntil(sendInsightPushes(env).catch((error) => console.error("Wawasan push:", error)));

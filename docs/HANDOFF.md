@@ -18,6 +18,16 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-04 (branch claude/fitur-barang) — Barangku, BELUM deploy:**
+  - **Migrasi `cloudflare/migrations/0023_items.sql` WAJIB dijalankan Bos di D1 Console sebelum deploy**
+    (tanpa tabel: API balas 503 "belum aktif", Ringkasan Kekayaan tetap jalan, cron garansi dilewati).
+  - API `/api/member/items` (GET/POST), `/:id` (PUT/DELETE), `/:id/photo` (GET/PUT/DELETE, R2 `items/<user>/<id>-<acak>`,
+    JPG/PNG/WebP ≤5 MB, hanya pemilik). Maks 500 barang/user. Reset data & hapus user (admin) ikut hapus foto.
+  - Cron harian `sendWarrantyReminders`: H-30 & H-7 sebelum `warranty_until`, klaim `warranty_reminded_for`, toggle `warranty`.
+  - UI: tab Kekayaan `#barangku` + `/app/barangku` (komponen sama `src/components/barangku/*`), nilai sekarang
+    `src/lib/itemValue.ts` (susut per kategori, mode auto/tetap/manual), masuk Kekayaan bersih (`computeNetWorth.itemsValueIdr`).
+  - Teruji: wrangler dev lokal (CRUD, validasi, akses user lain 404, foto, cron 2× tanpa dobel, reset hapus foto) + Playwright mock.
+  - Tahap 2 (belum): AI isi otomatis dari foto, "Jadikan barang" dari transaksi. Fitur Koleksi terpisah (nanti).
 - **2026-11-04 (branch claude/app-skor-sisa):**
   - Live #115: Skor Kesehatan di Beranda app HP (`AppHealthScore`), "Masa aktif sisa N hari" di /app/profile.
   - Live #116: **jatuh tempo hutang/piutang** di `payload_json.due` (`{date}` sekali / `{day}` tiap bulan,

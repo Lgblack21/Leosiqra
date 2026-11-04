@@ -14,6 +14,7 @@ import { isInvestmentFlow } from '@/lib/utils';
 // - Piutang/Hutang: SISA setelah cicilan (relatedId), seperti panel Hutang.
 // - Kartu kredit: terpakai (lib/creditCard). Hutang lama "Kartu Kredit" yang
 //   menempel ke rekening kartu tidak dihitung lagi (sudah ada di kartu).
+// - Barang (Barangku, opsional): perkiraan nilai sekarang barang aktif (lib/itemValue).
 
 export type ToIdr = (amount: number, currency?: string) => number;
 
@@ -25,12 +26,12 @@ export type NetWorth = {
   investments: { inv: Investment; value: number; cost: number }[];
   piutang: DebtRow[];
   hutang: DebtRow[];
-  totals: { cash: number; savings: number; investments: number; piutang: number; cards: number; hutang: number; assets: number; liabilities: number; net: number };
+  totals: { cash: number; savings: number; investments: number; piutang: number; items: number; cards: number; hutang: number; assets: number; liabilities: number; net: number };
 };
 
 const idrOf = (t: { amount: number; amountIDR?: number }) => Number(t.amountIDR) || Number(t.amount) || 0;
 
-export function computeNetWorth(input: { accounts: Account[]; transactions: Transaction[]; investments: Investment[]; savings: Saving[]; toIdr: ToIdr }): NetWorth {
+export function computeNetWorth(input: { accounts: Account[]; transactions: Transaction[]; investments: Investment[]; savings: Saving[]; toIdr: ToIdr; itemsValueIdr?: number }): NetWorth {
   const { accounts, transactions, investments, savings, toIdr } = input;
   const creditIds = new Set(accounts.filter((a) => isCreditAccountType(a.type)).map((a) => a.id));
 
@@ -74,10 +75,11 @@ export function computeNetWorth(input: { accounts: Account[]; transactions: Tran
     savings: savingsTotal,
     investments: sum(inv, (i) => i.value),
     piutang: sum(piutang, (p) => p.remaining),
+    items: Math.max(0, input.itemsValueIdr ?? 0),
     cards: sum(cards, (c) => c.used),
     hutang: sum(hutang, (h) => h.remaining),
   };
-  const assets = totals.cash + totals.savings + totals.investments + totals.piutang;
+  const assets = totals.cash + totals.savings + totals.investments + totals.piutang + totals.items;
   const liabilities = totals.cards + totals.hutang;
   return { cash, cards, savingsTotal, investments: inv, piutang, hutang, totals: { ...totals, assets, liabilities, net: assets - liabilities } };
 }

@@ -11,17 +11,21 @@ import { HeaderSlot } from '@/components/Header';
 import { RingkasanKekayaan } from '@/components/kekayaan/RingkasanKekayaan';
 import TabunganPanel from '@/components/kekayaan/TabunganPanel';
 import HutangPanel from '@/components/kekayaan/HutangPanel';
+import { BarangkuView } from '@/components/barangku/BarangkuView';
+import { useFeedback } from '@/components/ui/Feedback';
 import { cn } from '@/lib/utils';
 
 // Halaman Kekayaan: Tabungan + Hutang & Piutang + ringkasan kekayaan bersih
 // jadi satu (2026-10-30). Tab di hash URL (#tabungan, #hutang) supaya tautan
 // lama (/membership/tabungan, /transactions/debt) bisa diarahkan ke sini.
+// #barangku = Barangku (barang milik user, migrasi 0023).
 
-export type KekayaanTab = 'ringkasan' | 'tabungan' | 'hutang';
+export type KekayaanTab = 'ringkasan' | 'tabungan' | 'hutang' | 'barangku';
 const TABS: { id: KekayaanTab; label: string; icon: typeof PieChart }[] = [
   { id: 'ringkasan', label: 'Ringkasan', icon: PieChart },
   { id: 'tabungan', label: 'Tabungan', icon: PiggyBank },
   { id: 'hutang', label: 'Hutang & Piutang', icon: HandCoins },
+  { id: 'barangku', label: 'Barangku', icon: Package },
 ];
 const fromHash = (): KekayaanTab => {
   const h = window.location.hash.slice(1) as KekayaanTab;
@@ -35,6 +39,8 @@ export function KekayaanShell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [investOpen, setInvestOpen] = useState(false);
+  const [addItem, setAddItem] = useState(0);
+  const { toast } = useFeedback();
   const addAccount = () => { setMenuOpen(false); setPickerOpen(true); };
   const onPick = (p: AccountPick) => {
     setPickerOpen(false);
@@ -51,8 +57,8 @@ export function KekayaanShell() {
     { label: 'Target tabungan', desc: 'Dana darurat, liburan', icon: PiggyBank, tone: 'bg-pink-50 text-pink-600', on: run(() => go('tabungan')) },
     { label: 'Piutang / utang', desc: 'Pinjam & meminjamkan', icon: HandCoins, tone: 'bg-emerald-50 text-emerald-600', on: run(() => openModal('hutang_piutang')) },
     { label: 'Transfer', desc: 'Pindah dana antar akun', icon: ArrowLeftRight, tone: 'bg-cyan-50 text-cyan-600', on: run(() => openModal('topup_transfer')) },
-    { label: 'Properti / kendaraan', desc: 'Rumah, tanah, motor', icon: Car, tone: 'bg-slate-100 text-slate-400' },
-    { label: 'Barang & koleksi', desc: 'HP, laptop, jam, kartu', icon: Package, tone: 'bg-slate-100 text-slate-400' },
+    { label: 'Barangku', desc: 'HP, laptop, motor, jam', icon: Package, tone: 'bg-amber-50 text-amber-600', on: run(() => { go('barangku'); setAddItem((n) => n + 1); }) },
+    { label: 'Properti', desc: 'Rumah, tanah, ruko', icon: Car, tone: 'bg-slate-100 text-slate-400' },
   ];
 
   useEffect(() => {
@@ -63,6 +69,7 @@ export function KekayaanShell() {
   }, []);
 
   const go = (t: KekayaanTab) => {
+    if (t !== 'barangku') setAddItem(0); // sinyal "tambah barang" jangan terpicu lagi saat tab dibuka ulang
     if (t === tab) return;
     window.history.pushState(null, '', t === 'ringkasan' ? window.location.pathname : `#${t}`);
     setTab(t);
@@ -81,11 +88,11 @@ export function KekayaanShell() {
         </div>
         <div className="flex items-center gap-2">
           <LayoutGroup id="kekayaan-tabs">
-            <div role="tablist" aria-label="Bagian kekayaan" className="flex flex-1 gap-1 rounded-full bg-slate-100 p-1 md:flex-none">
+            <div role="tablist" aria-label="Bagian kekayaan" className="no-scrollbar flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-full bg-slate-100 p-1 md:flex-none">
               {TABS.map((t) => {
                 const active = t.id === tab;
                 return (
-                  <button key={t.id} type="button" role="tab" aria-selected={active} onClick={() => go(t.id)} className={cn('relative flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 py-2 text-[13px] font-semibold md:flex-none md:px-4', active ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700')}>
+                  <button key={t.id} type="button" role="tab" aria-selected={active} onClick={() => go(t.id)} className={cn('relative flex shrink-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 py-2 text-[13px] font-semibold md:flex-none md:px-4', active ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700')}>
                     {active && <motion.span layoutId={reduce ? undefined : 'kekayaan-tab'} className="absolute inset-0 rounded-full bg-white shadow-sm" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
                     <t.icon size={15} className="relative hidden sm:block" />
                     <span className="relative">{t.label}</span>
@@ -133,6 +140,7 @@ export function KekayaanShell() {
           {tab === 'ringkasan' && <RingkasanKekayaan go={go} onAddAccount={addAccount} />}
           {tab === 'tabungan' && <TabunganPanel />}
           {tab === 'hutang' && <HutangPanel />}
+          {tab === 'barangku' && <BarangkuView variant="web" addSignal={addItem} toast={(m) => toast.success(m)} />}
         </motion.div>
       </AnimatePresence>
     </div>

@@ -3,13 +3,15 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ArrowDownRight, ArrowUpRight, ChevronDown, ChevronRight, CreditCard, Eye, EyeOff, HandCoins, Landmark, PiggyBank, Plus, Scale, TrendingUp, Wallet } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, ChevronDown, ChevronRight, CreditCard, Eye, EyeOff, HandCoins, Landmark, Package, PiggyBank, Plus, Scale, TrendingUp, Wallet } from 'lucide-react';
 import { accountService, type Account } from '@/lib/services/accountService';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
 import { investmentService, type Investment } from '@/lib/services/investmentService';
 import { savingsService, type Saving } from '@/lib/services/savingsService';
 import { savingsGoalService, type SavingsGoal } from '@/lib/services/savingsGoalService';
 import { exchangeRateService, type ExchangeRates } from '@/lib/services/exchangeRateService';
+import { itemService } from '@/lib/services/itemService';
+import { categoryMeta, itemCurrentValue, type Item } from '@/lib/itemValue';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { getCardCycle } from '@/lib/creditCard';
 import { computeNetWorth, netWorthTrail } from '@/lib/netWorth';
@@ -34,6 +36,7 @@ const GROUP = {
   savings: { label: 'Tabungan', color: '#f472b6', icon: PiggyBank },
   investments: { label: 'Investasi', color: '#818cf8', icon: TrendingUp },
   piutang: { label: 'Piutang', color: '#34d399', icon: HandCoins },
+  items: { label: 'Barang', color: '#f59e0b', icon: Package },
 } as const;
 type GroupId = keyof typeof GROUP;
 const TYPE_EMOJI: Record<string, string> = { 'Bank Account': '🏦', 'E-Wallet': '📱', Cash: '💵', 'Investment Account': '📈' };
@@ -62,6 +65,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [savings, setSavings] = useState<Saving[]>([]);
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const [fx, setFx] = useState<ExchangeRates>({});
   const [loaded, setLoaded] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -79,12 +83,15 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
       savingsService.getUserSavings('session').then((v) => alive && setSavings(v)).catch(console.error);
       savingsGoalService.getUserSavingsGoals().then((v) => alive && setGoals(v)).catch(() => alive && setGoals([]));
     };
-    Promise.allSettled([loadAccounts(), loadTrx(), loadInv(), loadSav()]).then(() => alive && setLoaded(true));
+    // Barangku (migrasi 0023) — gagal/tabel belum ada = dianggap kosong, ringkasan tetap tampil.
+    const loadItems = () => itemService.list().then((v) => alive && setItems(v)).catch(() => alive && setItems([]));
+    Promise.allSettled([loadAccounts(), loadTrx(), loadInv(), loadSav(), loadItems()]).then(() => alive && setLoaded(true));
     const unsubs = [
       subscribeToCollectionChanges('accounts', loadAccounts),
       subscribeToCollectionChanges('transactions', () => { loadTrx(); loadAccounts(); }),
       subscribeToCollectionChanges('investments', loadInv),
       subscribeToCollectionChanges('savings', () => { loadSav(); loadAccounts(); }),
+      subscribeToCollectionChanges('items', loadItems),
     ];
     return () => { alive = false; unsubs.forEach((u) => u()); };
   }, []);
@@ -96,9 +103,13 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
   const money = (n: number) => (hidden ? 'Rp ••••••' : formatIDR(Math.round(n)));
   const shortM = (n: number) => (hidden ? '••••' : short(n));
 
+  const activeItems = useMemo(
+    () => items.filter((i) => i.status === 'aktif').map((it) => ({ it, value: exchangeRateService.convert(itemCurrentValue(it), it.currency || 'IDR', 'IDR', fx) })).sort((a, b) => b.value - a.value),
+    [items, fx]
+  );
   const nw = useMemo(
-    () => computeNetWorth({ accounts, transactions, investments, savings, toIdr: (n, c) => exchangeRateService.convert(n, c || 'IDR', 'IDR', fx) }),
-    [accounts, transactions, investments, savings, fx]
+    () => computeNetWorth({ accounts, transactions, investments, savings, toIdr: (n, c) => exchangeRateService.convert(n, c || 'IDR', 'IDR', fx), itemsValueIdr: activeItems.reduce((s, x) => s + x.value, 0) }),
+    [accounts, transactions, investments, savings, fx, activeItems]
   );
   const t = nw.totals;
   const trail = useMemo(() => netWorthTrail(t.net, transactions, range), [t.net, transactions, range]);
@@ -220,6 +231,13 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
             ))}
           </Group>
 
+          <Group icon={Package} tone="bg-amber-50 text-amber-600" title="Barangku" total={money(t.items)} count={activeItems.length} action={<button type="button" onClick={() => go('barangku')} className="text-[12px] font-bold text-slate-500 hover:text-slate-900">Kelola</button>}>
+            {activeItems.length === 0 ? <Empty text="HP, motor, laptop yang kamu punya belum dicatat." onAdd={() => go('barangku')} label="Catat barang" /> : activeItems.slice(0, 5).map(({ it, value }) => {
+              const M = categoryMeta(it.category);
+              return <Row key={it.id} onClick={() => go('barangku')} icon={<M.icon size={18} className="text-amber-600" />} title={it.name} sub={[it.brand, it.category].filter(Boolean).join(' · ')} value={money(value)} />;
+            })}
+          </Group>
+
           <Group icon={Landmark} tone="bg-rose-50 text-rose-600" title="Kewajiban" total={t.liabilities > 0 ? `−${money(t.liabilities)}` : money(0)} count={cycles.length + nw.hutang.length} action={<button type="button" onClick={() => go('hutang')} className="text-[12px] font-bold text-slate-500 hover:text-slate-900">Kelola</button>}>
             {cycles.length + nw.hutang.length === 0 ? <Empty text="Tidak ada utang. 🎉" onAdd={() => openModal('hutang_piutang')} label="Catat hutang" /> : (
               <>
@@ -276,6 +294,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
                 { label: 'Target tabungan', emoji: '🐷', on: () => go('tabungan') },
                 { label: 'Investasi / emas', emoji: '🪙', on: () => openModal('investasi_lain') },
                 { label: 'Hutang / piutang', emoji: '🤝', on: () => openModal('hutang_piutang') },
+                { label: 'Barang (HP, motor…)', emoji: '📦', on: () => go('barangku') },
               ].map((a) => (
                 <button key={a.label} type="button" onClick={a.on} className="flex items-center gap-2 rounded-2xl bg-white/10 px-3 py-2.5 text-left text-[12px] font-semibold hover:bg-white/15">
                   <span aria-hidden className="text-[16px]">{a.emoji}</span><span className="min-w-0 flex-1 leading-tight">{a.label}</span><Plus size={14} className="shrink-0 text-white/60" />
