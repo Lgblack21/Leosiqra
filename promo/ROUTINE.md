@@ -21,21 +21,25 @@ ada dulu — tapi tetap maksimal 1 video terkirim per hari: kalau draft sudah
 sinkronisasi ke LGBLACK Tower (kantor 3D Bos). Setiap sesi WAJIB: baca otak
 tim → kerja → tulis pelajaran + status ke Tower.
 
-## Prinsip konten — NILAI DULU (sejak 2026-10-23)
+## Prinsip konten — KENALKAN FITUR (perintah Bos 2026-11-04)
 
-Engagement lama ±0 karena semua video terasa iklan. Mulai sekarang:
-- Video harus berguna walaupun nama Leosiqra dihapus: penonton dapat angka,
-  cara, atau pemahaman baru dan pengin **menyimpan/membagikan**-nya.
-- **Mode NILAI (±2 dari 3 video):** tanpa scene `device`/`phone`, tanpa fitur,
-  harga, atau "coba gratis". CTA = simpan/komentar/follow, `button` mis.
-  "Simpan video ini". Set `"promo": false` di script.json.
-- **Mode PROMO (±1 dari 3, atau format `fitur`):** tetap mulai dari nilai,
-  maks 1–2 scene aplikasi, CTA boleh "Coba gratis 14 hari". `"promo": true`.
-  `plan.mjs` memilih slot otomatis dari riwayat (`promo` di history).
-- Hook = situasi/angka spesifik ("Gaji 5,4 juta, ngekos di Jakarta"), bukan
-  pertanyaan klise ("Uangmu habis ke mana?"). Cek 15 hook terakhir — jangan mirip.
-- Pilar topik bergiliran: hitung-hitungan, studi kasus gaji, cara praktis,
-  salah kaprah, mitos vs fakta, kuis, POV (lihat `FORMATS` di content.mjs).
+Bos: "Masa videonya semua hitung-hitungan mulu, gak ada promosi app dan semua
+fitur." Aturan lama "NILAI DULU" (±2 dari 3 video tanpa fitur) DICABUT.
+- **Setiap video = kenalkan SATU fitur nyata** dari `FEATURES` di content.mjs.
+  `"format": "fitur"`, `"promo": true`. Fitur bergiliran — jangan ulang fitur
+  dari 5 video terakhir; semua fitur di `FEATURES` harus kebagian.
+- Struktur: hook masalah sehari-hari (1 scene) → **demo fitur 2–3 scene**
+  (scene `device` rekaman asli untuk fitur yang punya shot di `record.mjs`:
+  quick, ai, budget, savings, stats, recurring, transactions, wallet; scene
+  `phone` ilustrasi untuk scan, voice, debt, level, market, tax) → CTA
+  "Coba gratis 14 hari" (+ `landing`/`install` sesekali supaya penonton tahu
+  ke mana harus pergi).
+- **Bukan video hitung-hitungan**: maksimal 1 angka sederhana per video,
+  tanpa scene `number` rumus / kuis hitungan / studi kasus gaji. Penonton harus
+  selesai menonton tahu "app ini bisa apa dan cara pakainya".
+- Hook tetap spesifik & manusiawi ("Struk numpuk di dompet?", "Catat jajan
+  sambil antre kopi"), bukan klise. Cek 15 hook terakhir — jangan mirip.
+- Istilah gamer di hook boleh (terbukti menaikkan views), tapi isinya fitur.
 
 ## Aturan keras (jangan dilanggar)
 
@@ -83,9 +87,9 @@ cd promo && npm ci --no-audit --no-fund && PROMO_SECRET=$PROMO_SECRET node lesso
 3. Pakai topi **Tim Analisis**: beri skor 1–10 untuk tiap ide (kekuatan hook,
    relevansi buat anak muda Indonesia, beda dari 3 video terakhir, cocok
    dengan pelajaran rating). Pilih 1, tulis alasannya.
-4. Tentukan mode (NILAI/PROMO, lihat Prinsip konten). Hanya video PROMO yang
-   memakai rekaman aplikasi asli (scene `device`, 1–2) — `plan.mjs` memaksa
-   minimal 1 `device` hanya di mode PROMO.
+4. Tentukan fitur yang dikenalkan (lihat Prinsip konten). Semua video PROMO
+   (`promo: true`) dengan 2–3 scene demo fitur; `plan.mjs` memaksa minimal 1
+   `device` kalau naskah tidak punya.
 5. **Senin saja — Tim Promosi**: kampanye minggu ini (tema, seri 5 video,
    target views/rating) → simpan di draft `campaign` dan pakai sepanjang minggu
    (hari lain: baca `campaign` dari draft Senin, `draft-<tanggal Senin>`).
@@ -207,7 +211,7 @@ curl -s -H "$H" --form-string "text=⚠️ Video promo hari ini gagal: <alasan s
 
 ```json
 {
-  "format": "pov", "topic": "…", "promo": false,
+  "format": "fitur", "topic": "…", "promo": true,
   "style": { "palette": "sunset", "background": "studio", "transition": "flip", "subtitle": "karaoke", "font": "Poppins",
              "music": { "bpm": 110 } },
   "scenes": [
