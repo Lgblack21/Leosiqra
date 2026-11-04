@@ -20,7 +20,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 - **2026-11-04 (branch claude/app-skor-sisa):**
   - Live #115: Skor Kesehatan di Beranda app HP (`AppHealthScore`), "Masa aktif sisa N hari" di /app/profile.
-  - Menunggu deploy: **jatuh tempo hutang/piutang** di `payload_json.due` (`{date}` sekali / `{day}` tiap bulan,
+  - Live #116: **jatuh tempo hutang/piutang** di `payload_json.due` (`{date}` sekali / `{day}` tiap bulan,
     tanpa migrasi). POST/PUT `/api/member/transactions` terima `due` (hanya type debt; PUT `due:null` = hapus,
     ganti due menghapus `dueRemindedFor`). `sendDebtDueReminders` (cron harian): H-3 & H-1, sisa = pokok − bayaran
     tertaut, klaim `payload_json.dueRemindedFor`, ikut toggle `bills`. UI: DebtModal & HutangPanel web
