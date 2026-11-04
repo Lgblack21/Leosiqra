@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ArrowDownRight, ArrowUpRight, ChevronDown, ChevronRight, CreditCard, Eye, EyeOff, HandCoins, Landmark, Package, PiggyBank, Plus, Scale, TrendingUp, Wallet } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, ChevronDown, ChevronRight, CreditCard, Eye, EyeOff, HandCoins, Landmark, Layers, Package, PiggyBank, Plus, Scale, TrendingUp, Wallet } from 'lucide-react';
 import { accountService, type Account } from '@/lib/services/accountService';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
 import { investmentService, type Investment } from '@/lib/services/investmentService';
@@ -12,6 +12,8 @@ import { savingsGoalService, type SavingsGoal } from '@/lib/services/savingsGoal
 import { exchangeRateService, type ExchangeRates } from '@/lib/services/exchangeRateService';
 import { itemService } from '@/lib/services/itemService';
 import { categoryMeta, itemCurrentValue, type Item } from '@/lib/itemValue';
+import { collectibleService } from '@/lib/services/collectibleService';
+import { tcgImage, unitValueIdr, type Collectible } from '@/lib/collectibles';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { getCardCycle } from '@/lib/creditCard';
 import { computeNetWorth, netWorthTrail } from '@/lib/netWorth';
@@ -37,6 +39,7 @@ const GROUP = {
   investments: { label: 'Investasi', color: '#818cf8', icon: TrendingUp },
   piutang: { label: 'Piutang', color: '#34d399', icon: HandCoins },
   items: { label: 'Barang', color: '#f59e0b', icon: Package },
+  collectibles: { label: 'Koleksi', color: '#a855f7', icon: Layers },
 } as const;
 type GroupId = keyof typeof GROUP;
 const TYPE_EMOJI: Record<string, string> = { 'Bank Account': '🏦', 'E-Wallet': '📱', Cash: '💵', 'Investment Account': '📈' };
@@ -66,6 +69,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
   const [savings, setSavings] = useState<Saving[]>([]);
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [items, setItems] = useState<Item[]>([]);
+  const [collectibles, setCollectibles] = useState<Collectible[]>([]);
   const [fx, setFx] = useState<ExchangeRates>({});
   const [loaded, setLoaded] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -85,13 +89,15 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
     };
     // Barangku (migrasi 0023) — gagal/tabel belum ada = dianggap kosong, ringkasan tetap tampil.
     const loadItems = () => itemService.list().then((v) => alive && setItems(v)).catch(() => alive && setItems([]));
-    Promise.allSettled([loadAccounts(), loadTrx(), loadInv(), loadSav(), loadItems()]).then(() => alive && setLoaded(true));
+    const loadCol = () => collectibleService.list().then((v) => alive && setCollectibles(v.items)).catch(() => alive && setCollectibles([]));
+    Promise.allSettled([loadAccounts(), loadTrx(), loadInv(), loadSav(), loadItems(), loadCol()]).then(() => alive && setLoaded(true));
     const unsubs = [
       subscribeToCollectionChanges('accounts', loadAccounts),
       subscribeToCollectionChanges('transactions', () => { loadTrx(); loadAccounts(); }),
       subscribeToCollectionChanges('investments', loadInv),
       subscribeToCollectionChanges('savings', () => { loadSav(); loadAccounts(); }),
       subscribeToCollectionChanges('items', loadItems),
+      subscribeToCollectionChanges('collectibles', loadCol),
     ];
     return () => { alive = false; unsubs.forEach((u) => u()); };
   }, []);
@@ -107,9 +113,10 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
     () => items.filter((i) => i.status === 'aktif').map((it) => ({ it, value: exchangeRateService.convert(itemCurrentValue(it), it.currency || 'IDR', 'IDR', fx) })).sort((a, b) => b.value - a.value),
     [items, fx]
   );
+  const colRows = useMemo(() => collectibles.map((c) => ({ c, value: unitValueIdr(c, fx) * c.quantity })).sort((a, b) => b.value - a.value), [collectibles, fx]);
   const nw = useMemo(
-    () => computeNetWorth({ accounts, transactions, investments, savings, toIdr: (n, c) => exchangeRateService.convert(n, c || 'IDR', 'IDR', fx), itemsValueIdr: activeItems.reduce((s, x) => s + x.value, 0) }),
-    [accounts, transactions, investments, savings, fx, activeItems]
+    () => computeNetWorth({ accounts, transactions, investments, savings, toIdr: (n, c) => exchangeRateService.convert(n, c || 'IDR', 'IDR', fx), itemsValueIdr: activeItems.reduce((s, x) => s + x.value, 0), collectiblesValueIdr: colRows.reduce((s, x) => s + x.value, 0) }),
+    [accounts, transactions, investments, savings, fx, activeItems, colRows]
   );
   const t = nw.totals;
   const trail = useMemo(() => netWorthTrail(t.net, transactions, range), [t.net, transactions, range]);
@@ -238,6 +245,15 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
           </Group>
           )}
 
+          {colRows.length > 0 && (
+          <Group icon={Layers} tone="bg-violet-50 text-violet-600" title="Koleksiku" total={money(t.collectibles)} count={colRows.length} action={<button type="button" onClick={() => go('koleksi')} className="text-[12px] font-bold text-slate-500 hover:text-slate-900">Kelola</button>}>
+            {colRows.slice(0, 5).map(({ c, value }) => (
+              // eslint-disable-next-line @next/next/no-img-element -- kartu TCGdex
+              <Row key={c.id} onClick={() => go('koleksi')} icon={c.kind === 'pokemon' && c.imageUrl ? <img src={tcgImage(c.imageUrl) ?? ''} alt="" className="h-full w-auto rounded-sm object-contain" /> : <Layers size={18} className="text-violet-600" />} title={c.quantity > 1 ? `${c.name} ×${c.quantity}` : c.name} sub={[c.setName, c.number && `#${c.number}`].filter(Boolean).join(' · ') || 'Koleksi'} value={money(value)} />
+            ))}
+          </Group>
+          )}
+
           {nw.piutang.length > 0 && (
           <Group icon={HandCoins} tone="bg-emerald-50 text-emerald-600" title="Piutang" total={money(t.piutang)} count={nw.piutang.length} action={<button type="button" onClick={() => go('hutang')} className="text-[12px] font-bold text-slate-500 hover:text-slate-900">Kelola</button>}>
             {nw.piutang.length === 0 ? <Empty text="Tidak ada uang yang dipinjam orang." onAdd={() => openModal('hutang_piutang')} label="Catat piutang" /> : nw.piutang.slice(0, 5).map((p) => (
@@ -265,6 +281,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
               goals.length === 0 && t.savings <= 0 && { label: 'Tabungan', icon: PiggyBank, tone: 'bg-pink-50 text-pink-600', on: () => go('tabungan') },
               nw.investments.length === 0 && { label: 'Investasi', icon: TrendingUp, tone: 'bg-indigo-50 text-indigo-600', on: () => openModal('investasi_lain') },
               activeItems.length === 0 && { label: 'Barang', icon: Package, tone: 'bg-amber-50 text-amber-600', on: () => go('barangku') },
+              colRows.length === 0 && { label: 'Koleksi', icon: Layers, tone: 'bg-violet-50 text-violet-600', on: () => go('koleksi') },
               nw.piutang.length === 0 && { label: 'Piutang', icon: HandCoins, tone: 'bg-emerald-50 text-emerald-600', on: () => openModal('hutang_piutang') },
             ].filter(Boolean) as { label: string; icon: typeof Wallet; tone: string; on: () => void }[];
             if (!empties.length) return null;

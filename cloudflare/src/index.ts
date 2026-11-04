@@ -6707,6 +6707,7 @@ async function handleResetMemberData(request: Request, env: Env) {
   await env.DB.batch(statements);
   await deleteAllAttachmentsForUser(env, user.id);
   await deleteAllItemsForUser(env, user.id);
+  await deleteAllCollectiblesForUser(env, user.id);
   // Langgananku (migrasi 0024) — best effort, tabelnya bisa belum ada.
   await env.DB.prepare("DELETE FROM subscriptions WHERE user_id = ?").bind(user.id).run().catch(() => undefined);
   // Kotak Masuk (migrasi 0019) — best effort, tabelnya bisa belum ada.
@@ -8207,6 +8208,7 @@ async function handleAdminUserById(request: Request, env: Env, userId: string) {
     }
 
     await deleteAllItemsForUser(env, userId); // foto R2 tidak ikut FK cascade
+    await deleteAllCollectiblesForUser(env, userId);
     await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
     await insertAdminLog(
       env,
@@ -9515,6 +9517,373 @@ async function handleSubscriptionRoutes(request: Request, env: Env, pathname: st
     if (subsTableMissing(error)) {
       console.error("Langgananku: tabel subscriptions belum ada (migrasi 0024 belum diterapkan)");
       return json({ error: "Fitur Langgananku belum aktif. Coba lagi nanti." }, { status: 503 });
+    }
+    if (error instanceof Error && error.message === "Payload JSON tidak valid.") return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    throw error;
+  }
+}
+
+// ── Koleksiku (migrasi 0025) ────────────────────────────────────────────────
+// Koleksi yang nilainya mengikuti pasar. Kartu Pokémon: data & harga dari
+// TCGdex (api.tcgdex.net, publik tanpa kunci; harga TCGplayer USD/Cardmarket
+// EUR, diperbarui harian oleh mereka). Data kartu SELALU diambil server dari
+// TCGdex (nama/set/gambar dari klien tidak dipercaya). Lainnya: nilai diisi user.
+// Harga diperbarui saat Koleksiku dibuka (POST /refresh) — bukan cron, karena
+// cron gratis dibatasi 50 subrequest per jalan.
+const COLLECTIBLE_KINDS = ["pokemon", "lainnya"] as const;
+const COLLECTIBLE_CONDITIONS = ["Segel", "Mint", "Near Mint", "Bagus", "Bekas", "Rusak"] as const;
+const COLLECTIBLES_MAX_PER_USER = 2000;
+const TCGDEX_ID_RE = /^[a-z0-9][a-z0-9.\-_]{0,39}$/i;
+const COLLECTIBLE_REFRESH_HOURS = 20;
+const collectiblesTableMissing = (error: unknown) => error instanceof Error && /no such table: (collectibles|collectible_value_history)/.test(error.message);
+const COLLECTIBLE_COLUMNS =
+  "id, kind, ref_id, name, set_name, number, rarity, variant, image_url, CASE WHEN photo_key IS NULL THEN 0 ELSE 1 END AS has_photo, quantity, purchase_price, manual_value, market_price, market_currency, market_updated_at, condition, grade, acquired_date, note, created_at, updated_at";
+
+type TcgCard = { id: string; name: string; set: string; number: string; rarity: string | null; image: string | null; prices: Record<string, { price: number; currency: "USD" | "EUR" }> };
+
+// Detail kartu TCGdex (cache Cloudflare 12 jam per kartu).
+const tcgdexCard = async (id: string): Promise<TcgCard | null> => {
+  if (!TCGDEX_ID_RE.test(id)) return null;
+  const cache = (caches as unknown as { default: Cache }).default;
+  const key = new Request(`https://leosiqra.internal/tcgdex/v1/${id}`);
+  let res = await cache.match(key);
+  if (!res) {
+    try {
+      const live = await fetch(`https://api.tcgdex.net/v2/en/cards/${encodeURIComponent(id)}`, { headers: { accept: "application/json" } });
+      if (!live.ok) return null;
+      res = new Response(await live.text(), { headers: { "content-type": "application/json", "cache-control": "public, max-age=43200" } });
+      await cache.put(key, res.clone());
+    } catch {
+      return null;
+    }
+  }
+  try {
+    const c = (await res.json()) as {
+      id?: string; name?: string; localId?: string; rarity?: string; image?: string; set?: { name?: string };
+      pricing?: { tcgplayer?: Record<string, unknown> | null; cardmarket?: Record<string, unknown> | null } | null;
+    };
+    if (!c?.id || !c.name) return null;
+    const prices: TcgCard["prices"] = {};
+    const tp = c.pricing?.tcgplayer;
+    if (tp && typeof tp === "object") {
+      for (const [k, v] of Object.entries(tp)) {
+        if (k === "unit" || k === "updated" || !v || typeof v !== "object") continue;
+        const o = v as { marketPrice?: unknown; midPrice?: unknown };
+        const price = Number(o.marketPrice ?? o.midPrice);
+        if (Number.isFinite(price) && price > 0 && /^[a-z0-9-]{1,40}$/.test(k)) prices[k] = { price, currency: "USD" };
+      }
+    }
+    const cm = c.pricing?.cardmarket;
+    if (!Object.keys(prices).length && cm && typeof cm === "object") {
+      const o = cm as Record<string, unknown>;
+      const n = Number(o.trend ?? o.avg);
+      const h = Number(o["trend-holo"] ?? o["avg-holo"]);
+      if (Number.isFinite(n) && n > 0) prices["cardmarket"] = { price: n, currency: "EUR" };
+      if (Number.isFinite(h) && h > 0) prices["cardmarket-holo"] = { price: h, currency: "EUR" };
+    }
+    const image = typeof c.image === "string" && c.image.startsWith("https://assets.tcgdex.net/") ? c.image : null;
+    return { id: c.id, name: String(c.name).slice(0, 80), set: String(c.set?.name ?? "").slice(0, 80), number: String(c.localId ?? "").slice(0, 20), rarity: c.rarity ? String(c.rarity).slice(0, 40) : null, image, prices };
+  } catch {
+    return null;
+  }
+};
+
+// Kurs ke IDR dengan cache 6 jam (USD/EUR untuk jejak nilai).
+const cachedIdrRate = async (currency: string) => {
+  if (currency === "IDR") return 1;
+  const cache = (caches as unknown as { default: Cache }).default;
+  const key = new Request(`https://leosiqra.internal/fx/v1/${currency}`);
+  const hit = await cache.match(key);
+  if (hit) {
+    const n = Number(await hit.text());
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  const rate = await fetchIdrConversionRate(currency);
+  if (rate) await cache.put(key, new Response(String(rate), { headers: { "cache-control": "public, max-age=21600" } }));
+  return rate;
+};
+
+const checkCollectibleRateLimit = async (env: Env, userId: string): Promise<boolean> => {
+  if (!env.MCP_RATE_LIMITER) return rateLimiterMissing(env, "MCP_RATE_LIMITER");
+  const { success } = await env.MCP_RATE_LIMITER.limit({ key: `koleksi:user:${userId}` });
+  return success;
+};
+
+type CollectibleFields = Partial<{
+  quantity: number; purchase_price: number; manual_value: number | null; variant: string | null; name: string;
+  condition: string | null; grade: string | null; acquired_date: string | null; note: string | null;
+}>;
+const sanitizeCollectibleFields = (raw: Record<string, unknown>): { ok: true; fields: CollectibleFields } | { ok: false; error: string } => {
+  const f: CollectibleFields = {};
+  const text = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/[\u0000-\u001f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, max) : "");
+  const money = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1e13 ? Math.round(v * 100) / 100 : undefined);
+  if (raw.name !== undefined) {
+    const n = text(raw.name, 80);
+    if (!n) return { ok: false, error: "Nama koleksi wajib diisi." };
+    f.name = n;
+  }
+  if (raw.quantity !== undefined) {
+    if (typeof raw.quantity !== "number" || !Number.isInteger(raw.quantity) || raw.quantity < 1 || raw.quantity > 9999) return { ok: false, error: "Jumlah 1–9999." };
+    f.quantity = raw.quantity;
+  }
+  if (raw.purchase_price !== undefined) {
+    const m = money(raw.purchase_price);
+    if (m === undefined) return { ok: false, error: "Harga beli tidak valid." };
+    f.purchase_price = m;
+  }
+  if (raw.manual_value !== undefined) {
+    if (raw.manual_value === null) f.manual_value = null;
+    else {
+      const m = money(raw.manual_value);
+      if (m === undefined) return { ok: false, error: "Nilai tidak valid." };
+      f.manual_value = m;
+    }
+  }
+  if (raw.variant !== undefined) {
+    if (raw.variant === null || raw.variant === "") f.variant = null;
+    else if (typeof raw.variant === "string" && /^[a-z0-9-]{1,40}$/.test(raw.variant)) f.variant = raw.variant;
+    else return { ok: false, error: "Cetakan tidak dikenal." };
+  }
+  if (raw.condition !== undefined) {
+    if (raw.condition === null || raw.condition === "") f.condition = null;
+    else if (typeof raw.condition === "string" && (COLLECTIBLE_CONDITIONS as readonly string[]).includes(raw.condition)) f.condition = raw.condition;
+    else return { ok: false, error: "Kondisi tidak dikenal." };
+  }
+  if (raw.grade !== undefined) f.grade = text(raw.grade, 30) || null;
+  if (raw.note !== undefined) f.note = text(raw.note, 500) || null;
+  if (raw.acquired_date !== undefined) {
+    if (raw.acquired_date === null || raw.acquired_date === "") f.acquired_date = null;
+    else if (isRealDateStr(raw.acquired_date) && raw.acquired_date >= "1950-01-01" && raw.acquired_date <= todayWIB()) f.acquired_date = raw.acquired_date;
+    else return { ok: false, error: "Tanggal didapat tidak valid." };
+  }
+  return { ok: true, fields: f };
+};
+
+const deleteAllCollectiblesForUser = async (env: Env, userId: string) => {
+  try {
+    const rows = await env.DB.prepare("SELECT photo_key FROM collectibles WHERE user_id = ? AND photo_key IS NOT NULL").bind(userId).all<{ photo_key: string }>();
+    await deleteItemPhotos(env, (rows.results ?? []).map((r) => r.photo_key));
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM collectibles WHERE user_id = ?").bind(userId),
+      env.DB.prepare("DELETE FROM collectible_value_history WHERE user_id = ?").bind(userId),
+    ]);
+  } catch (error) {
+    if (!collectiblesTableMissing(error)) console.error("Hapus semua koleksi gagal:", error instanceof Error ? error.message : error);
+  }
+};
+
+// Nilai total (IDR) koleksi user + catat titik jejak hari ini (UPSERT).
+const snapshotCollectibleValue = async (env: Env, userId: string) => {
+  const { results } = await env.DB.prepare("SELECT kind, quantity, purchase_price, manual_value, market_price, market_currency FROM collectibles WHERE user_id = ?")
+    .bind(userId)
+    .all<{ kind: string; quantity: number; purchase_price: number; manual_value: number | null; market_price: number | null; market_currency: string | null }>();
+  const rows = results ?? [];
+  const rates = new Map<string, number | null>();
+  for (const cur of new Set(rows.map((r) => r.market_currency).filter((c): c is string => !!c && c !== "IDR"))) rates.set(cur, await cachedIdrRate(cur));
+  let value = 0;
+  let cost = 0;
+  for (const r of rows) {
+    const qty = Number(r.quantity) || 1;
+    cost += (Number(r.purchase_price) || 0) * qty;
+    const rate = r.market_currency ? rates.get(r.market_currency) : null;
+    const unit = r.kind === "pokemon" && r.market_price != null && rate ? Number(r.market_price) * rate : r.manual_value != null ? Number(r.manual_value) : Number(r.purchase_price) || 0;
+    value += unit * qty;
+  }
+  if (!rows.length) return;
+  await env.DB.prepare(
+    `INSERT INTO collectible_value_history (user_id, day, value_idr, cost_idr) VALUES (?, ?, ?, ?)
+     ON CONFLICT (user_id, day) DO UPDATE SET value_idr = excluded.value_idr, cost_idr = excluded.cost_idr`
+  )
+    .bind(userId, todayWIB(), Math.round(value), Math.round(cost))
+    .run();
+};
+
+async function handleCollectibleRoutes(request: Request, env: Env, pathname: string, url: URL) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  try {
+    // Cari kartu Pokémon (TCGdex). "Pikachu 58/102" → nama + nomor.
+    if (pathname === "/api/member/collectibles/pokemon/search" && request.method === "GET") {
+      if (!(await checkCollectibleRateLimit(env, userId))) return json({ error: "Terlalu cepat. Coba lagi sebentar." }, { status: 429 });
+      const q = (url.searchParams.get("q") ?? "").replace(/[\u0000-\u001f<>]/g, " ").trim().slice(0, 60);
+      const m = /^(.*?)(?:\s+#?(\d{1,4}[a-z]?)(?:\s*\/\s*\d{1,4})?)?$/i.exec(q);
+      const name = (m?.[1] ?? q).trim();
+      const number = m?.[2]?.replace(/^0+(?=\d)/, "");
+      if (name.length < 2) return json({ items: [] });
+      const list = await fetch(`https://api.tcgdex.net/v2/en/cards?name=${encodeURIComponent(name)}&pagination:itemsPerPage=60`, { headers: { accept: "application/json" } })
+        .then((r) => (r.ok ? (r.json() as Promise<Array<{ id: string; localId: string; name: string; image?: string }>>) : []))
+        .catch(() => []);
+      const picked = (Array.isArray(list) ? list : [])
+        .filter((c) => c?.id && c.image && (!number || String(c.localId).replace(/^0+(?=\d)/, "").toLowerCase() === number.toLowerCase()))
+        .slice(0, 12);
+      const cards = (await Promise.all(picked.map((c) => tcgdexCard(c.id)))).filter((c): c is TcgCard => !!c);
+      const best = (c: TcgCard) => Math.max(0, ...Object.values(c.prices).map((p) => (p.currency === "USD" ? p.price : p.price * 1.08)));
+      cards.sort((a, b) => best(b) - best(a));
+      return json({ items: cards });
+    }
+    const cardMatch = /^\/api\/member\/collectibles\/pokemon\/card\/([^/]+)$/.exec(pathname);
+    if (cardMatch && request.method === "GET") {
+      const card = await tcgdexCard(decodeURIComponent(cardMatch[1]));
+      if (!card) return json({ error: "Kartu tidak ditemukan." }, { status: 404 });
+      return json({ item: card });
+    }
+
+    // Perbarui harga kartu yang sudah > COLLECTIBLE_REFRESH_HOURS jam + catat jejak hari ini.
+    if (pathname === "/api/member/collectibles/refresh" && request.method === "POST") {
+      if (!(await checkCollectibleRateLimit(env, userId))) return json({ ok: true, updated: 0 });
+      const cutoff = new Date(Date.now() - COLLECTIBLE_REFRESH_HOURS * 3600e3).toISOString();
+      const { results } = await env.DB.prepare(
+        `SELECT DISTINCT ref_id FROM collectibles WHERE user_id = ? AND kind = 'pokemon' AND ref_id IS NOT NULL
+           AND (market_updated_at IS NULL OR market_updated_at < ?) LIMIT 25`
+      )
+        .bind(userId, cutoff)
+        .all<{ ref_id: string }>();
+      let updated = 0;
+      const now = nowIso();
+      for (const { ref_id } of results ?? []) {
+        const card = await tcgdexCard(ref_id);
+        if (!card) continue;
+        const rows = await env.DB.prepare("SELECT id, variant FROM collectibles WHERE user_id = ? AND kind = 'pokemon' AND ref_id = ?").bind(userId, ref_id).all<{ id: string; variant: string | null }>();
+        const stmts = (rows.results ?? []).map((r) => {
+          const p = (r.variant && card.prices[r.variant]) || Object.values(card.prices)[0];
+          return env.DB.prepare("UPDATE collectibles SET market_price = ?, market_currency = ?, market_updated_at = ? WHERE id = ? AND user_id = ?").bind(p ? p.price : null, p ? p.currency : null, now, r.id, userId);
+        });
+        if (stmts.length) {
+          await env.DB.batch(stmts);
+          updated += stmts.length;
+        }
+      }
+      await snapshotCollectibleValue(env, userId);
+      return json({ ok: true, updated });
+    }
+
+    if (pathname === "/api/member/collectibles") {
+      if (request.method === "GET") {
+        const rows = await env.DB.prepare(`SELECT ${COLLECTIBLE_COLUMNS} FROM collectibles WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`).bind(userId, COLLECTIBLES_MAX_PER_USER).all();
+        const hist = await env.DB.prepare("SELECT day, value_idr, cost_idr FROM collectible_value_history WHERE user_id = ? ORDER BY day DESC LIMIT 366").bind(userId).all();
+        return json({ items: rows.results ?? [], history: (hist.results ?? []).reverse() });
+      }
+      if (request.method === "POST") {
+        const raw = await parseJson<Record<string, unknown>>(request);
+        const kind = typeof raw.kind === "string" && (COLLECTIBLE_KINDS as readonly string[]).includes(raw.kind) ? raw.kind : null;
+        if (!kind) return json({ error: "Jenis koleksi tidak dikenal." }, { status: 400 });
+        const parsed = sanitizeCollectibleFields(raw);
+        if (!parsed.ok) return json({ error: parsed.error }, { status: 400 });
+        const f = parsed.fields;
+        let card: TcgCard | null = null;
+        if (kind === "pokemon") {
+          if (typeof raw.ref_id !== "string" || !TCGDEX_ID_RE.test(raw.ref_id)) return json({ error: "Kartu tidak dikenal." }, { status: 400 });
+          card = await tcgdexCard(raw.ref_id);
+          if (!card) return json({ error: "Data kartu tidak bisa diambil. Coba lagi sebentar." }, { status: 502 });
+          if (f.variant && !card.prices[f.variant]) f.variant = null;
+        } else if (!f.name) {
+          return json({ error: "Nama koleksi wajib diisi." }, { status: 400 });
+        }
+        const price = card ? (f.variant && card.prices[f.variant]) || Object.values(card.prices)[0] : undefined;
+        const id = generateId();
+        const now = nowIso();
+        const res = await env.DB.prepare(
+          `INSERT INTO collectibles (id, user_id, kind, ref_id, name, set_name, number, rarity, variant, image_url, quantity, purchase_price, manual_value,
+             market_price, market_currency, market_updated_at, condition, grade, acquired_date, note, created_at, updated_at)
+           SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            WHERE (SELECT COUNT(*) FROM collectibles WHERE user_id = ?) < ?`
+        )
+          .bind(
+            id, userId, kind, card?.id ?? null, card ? card.name : f.name!, card?.set ?? null, card?.number ?? null, card?.rarity ?? null,
+            card ? f.variant ?? (Object.keys(card.prices)[0] ?? null) : null, card?.image ?? null, f.quantity ?? 1, f.purchase_price ?? 0,
+            kind === "lainnya" ? f.manual_value ?? null : null, price ? price.price : null, price ? price.currency : null, card ? now : null,
+            f.condition ?? null, f.grade ?? null, f.acquired_date ?? null, f.note ?? null, now, now, userId, COLLECTIBLES_MAX_PER_USER
+          )
+          .run();
+        if (!res.meta.changes) return json({ error: `Maksimal ${COLLECTIBLES_MAX_PER_USER} koleksi.` }, { status: 409 });
+        await snapshotCollectibleValue(env, userId).catch(() => undefined);
+        return json({ ok: true, id }, { status: 201 });
+      }
+      return json({ error: "Method not allowed" }, { status: 405 });
+    }
+
+    const rest = pathname.slice("/api/member/collectibles/".length);
+    const [id, action, extra] = rest.split("/");
+    if (!id || extra !== undefined || !/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "Not found" }, { status: 404 });
+    const row = await env.DB.prepare("SELECT id, kind, ref_id, photo_key FROM collectibles WHERE id = ? AND user_id = ?")
+      .bind(id, userId)
+      .first<{ id: string; kind: string; ref_id: string | null; photo_key: string | null }>();
+    if (!row) return json({ error: "Koleksi tidak ditemukan." }, { status: 404 });
+
+    if (!action && request.method === "PUT") {
+      const parsed = sanitizeCollectibleFields(await parseJson<Record<string, unknown>>(request));
+      if (!parsed.ok) return json({ error: parsed.error }, { status: 400 });
+      const f = parsed.fields;
+      if (row.kind === "pokemon") delete f.name; // nama kartu dari TCGdex
+      if (row.kind === "pokemon") delete f.manual_value;
+      const extraSet: string[] = [];
+      const extraVals: (string | number | null)[] = [];
+      if (row.kind === "pokemon" && f.variant !== undefined && row.ref_id) {
+        const card = await tcgdexCard(row.ref_id);
+        const p = card && f.variant ? card.prices[f.variant] : undefined;
+        if (!p) return json({ error: "Cetakan tidak tersedia untuk kartu ini." }, { status: 400 });
+        extraSet.push("market_price = ?", "market_currency = ?", "market_updated_at = ?");
+        extraVals.push(p.price, p.currency, nowIso());
+      } else if (row.kind !== "pokemon") delete f.variant;
+      const entries = Object.entries(f);
+      if (!entries.length && !extraSet.length) return json({ error: "Tidak ada yang diubah." }, { status: 400 });
+      await env.DB.prepare(`UPDATE collectibles SET ${[...entries.map(([k]) => `${k} = ?`), ...extraSet].join(", ")}, updated_at = ? WHERE id = ? AND user_id = ?`)
+        .bind(...entries.map(([, v]) => v), ...extraVals, nowIso(), id, userId)
+        .run();
+      await snapshotCollectibleValue(env, userId).catch(() => undefined);
+      return json({ ok: true });
+    }
+    if (!action && request.method === "DELETE") {
+      await env.DB.prepare("DELETE FROM collectibles WHERE id = ? AND user_id = ?").bind(id, userId).run();
+      await deleteItemPhotos(env, [row.photo_key]);
+      await snapshotCollectibleValue(env, userId).catch(() => undefined);
+      return json({ ok: true });
+    }
+    // Foto (hanya koleksi "lainnya"; kartu Pokémon memakai gambar TCGdex).
+    if (action === "photo") {
+      if (request.method === "GET") {
+        if (!row.photo_key) return json({ error: "Belum ada foto." }, { status: 404 });
+        const obj = await env.FILES_BUCKET?.get(row.photo_key);
+        if (!obj) return json({ error: "Foto tidak ada." }, { status: 404 });
+        return new Response(obj.body, {
+          headers: { "content-type": obj.httpMetadata?.contentType || "image/jpeg", "cache-control": "private, max-age=86400", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'; sandbox" },
+        });
+      }
+      if (request.method === "PUT") {
+        if (row.kind === "pokemon") return json({ error: "Kartu Pokémon memakai gambar resmi." }, { status: 400 });
+        if (!env.FILES_BUCKET) return json({ error: "Penyimpanan foto belum aktif." }, { status: 503 });
+        if (!(await checkItemPhotoRateLimit(env, userId))) return json({ error: "Terlalu sering mengunggah foto. Coba lagi sebentar lagi." }, { status: 429 });
+        const payload = await parseJson<{ imageBase64?: unknown }>(request);
+        if (typeof payload.imageBase64 !== "string" || !payload.imageBase64) return json({ error: "Foto wajib dikirim." }, { status: 400 });
+        if (payload.imageBase64.length > Math.ceil((ITEM_PHOTO_MAX_BYTES * 4) / 3) + 100) return json({ error: "Foto terlalu besar (maks 2 MB)." }, { status: 413 });
+        let bytes: Uint8Array;
+        try {
+          bytes = Uint8Array.from(atob(payload.imageBase64.replace(/^data:[^,]*,/, "").replace(/\s/g, "")), (c) => c.charCodeAt(0));
+        } catch {
+          return json({ error: "Foto tidak terbaca." }, { status: 400 });
+        }
+        if (bytes.length > ITEM_PHOTO_MAX_BYTES) return json({ error: "Foto terlalu besar (maks 2 MB)." }, { status: 413 });
+        const type = sniffImageType(bytes);
+        if (!type) return json({ error: "Format foto harus JPG, PNG, atau WebP." }, { status: 400 });
+        const key = `collectibles/${userId}/${id}-${generateId().slice(0, 8)}`;
+        await env.FILES_BUCKET.put(key, bytes, { httpMetadata: { contentType: type } });
+        const res = await env.DB.prepare("UPDATE collectibles SET photo_key = ?, updated_at = ? WHERE id = ? AND user_id = ?").bind(key, nowIso(), id, userId).run();
+        if (!res.meta.changes) { await deleteItemPhotos(env, [key]); return json({ error: "Koleksi tidak ditemukan." }, { status: 404 }); }
+        await deleteItemPhotos(env, [row.photo_key]);
+        return json({ ok: true });
+      }
+      if (request.method === "DELETE") {
+        await env.DB.prepare("UPDATE collectibles SET photo_key = NULL, updated_at = ? WHERE id = ? AND user_id = ?").bind(nowIso(), id, userId).run();
+        await deleteItemPhotos(env, [row.photo_key]);
+        return json({ ok: true });
+      }
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (error) {
+    if (collectiblesTableMissing(error)) {
+      console.error("Koleksiku: tabel belum ada (migrasi 0025 belum diterapkan)");
+      return json({ error: "Fitur Koleksiku belum aktif. Coba lagi nanti." }, { status: 503 });
     }
     if (error instanceof Error && error.message === "Payload JSON tidak valid.") return json({ error: "Payload JSON tidak valid." }, { status: 400 });
     throw error;
@@ -16696,6 +17065,10 @@ const worker = {
 
       if (url.pathname === "/api/member/items" || url.pathname.startsWith("/api/member/items/")) {
         return await handleItemRoutes(request, env, url.pathname);
+      }
+
+      if (url.pathname === "/api/member/collectibles" || url.pathname.startsWith("/api/member/collectibles/")) {
+        return await handleCollectibleRoutes(request, env, url.pathname, url);
       }
 
       if (url.pathname === "/api/member/subscriptions" || url.pathname.startsWith("/api/member/subscriptions/")) {

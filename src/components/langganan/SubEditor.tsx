@@ -142,7 +142,7 @@ function SubForm({ sub, entry, customName, accounts, onBack, onDone }: { sub?: S
 
   const label = 'mb-1.5 block text-[12px] font-semibold text-slate-500 dark:text-slate-400';
   const input = 'w-full rounded-2xl bg-slate-100 px-4 py-3 text-[15px] font-semibold text-slate-900 outline-none ring-2 ring-transparent placeholder:font-medium placeholder:text-slate-400 focus:bg-white focus:ring-indigo-500 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900';
-  const chip = (on: boolean) => cn('rounded-full px-3 py-1.5 text-[12px] font-bold transition-colors', on ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300');
+  const chip = (on: boolean) => cn('rounded-full px-3 py-1.5 text-[12px] font-bold transition-colors', on ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700');
 
   return (
     <div className="space-y-4">

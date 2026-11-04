@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion';
-import { ArrowLeftRight, Car, CreditCard, HandCoins, Package, PieChart, PiggyBank, Plus, TrendingUp, Wallet } from 'lucide-react';
+import { ArrowLeftRight, Car, CreditCard, HandCoins, Layers, Package, PieChart, PiggyBank, Plus, TrendingUp, Wallet } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { useModal } from '@/context/ModalContext';
 import { AddAccountPicker, type AccountPick } from '@/components/kekayaan/AddAccountPicker';
@@ -12,6 +12,7 @@ import { RingkasanKekayaan } from '@/components/kekayaan/RingkasanKekayaan';
 import TabunganPanel from '@/components/kekayaan/TabunganPanel';
 import HutangPanel from '@/components/kekayaan/HutangPanel';
 import { BarangkuView } from '@/components/barangku/BarangkuView';
+import { KoleksiView } from '@/components/koleksi/KoleksiView';
 import { useFeedback } from '@/components/ui/Feedback';
 import { cn } from '@/lib/utils';
 
@@ -20,13 +21,14 @@ import { cn } from '@/lib/utils';
 // lama (/membership/tabungan, /transactions/debt) bisa diarahkan ke sini.
 // #barangku = Barangku (barang milik user, migrasi 0023).
 
-export type KekayaanTab = 'ringkasan' | 'tabungan' | 'hutang' | 'barangku';
+export type KekayaanTab = 'ringkasan' | 'tabungan' | 'hutang' | 'barangku' | 'koleksi';
 // `short` = label di HP (4 tab harus muat tanpa digeser).
 const TABS: { id: KekayaanTab; label: string; short: string; icon: typeof PieChart }[] = [
   { id: 'ringkasan', label: 'Ringkasan', short: 'Ringkasan', icon: PieChart },
   { id: 'tabungan', label: 'Tabungan', short: 'Tabungan', icon: PiggyBank },
   { id: 'hutang', label: 'Hutang & Piutang', short: 'Hutang', icon: HandCoins },
   { id: 'barangku', label: 'Barangku', short: 'Barang', icon: Package },
+  { id: 'koleksi', label: 'Koleksiku', short: 'Koleksi', icon: Layers },
 ];
 const fromHash = (): KekayaanTab => {
   const h = window.location.hash.slice(1) as KekayaanTab;
@@ -41,6 +43,7 @@ export function KekayaanShell() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [investOpen, setInvestOpen] = useState(false);
   const [addItem, setAddItem] = useState(0);
+  const [addKoleksi, setAddKoleksi] = useState(0);
   const { toast } = useFeedback();
   const addAccount = () => { setMenuOpen(false); setPickerOpen(true); };
   const onPick = (p: AccountPick) => {
@@ -59,6 +62,7 @@ export function KekayaanShell() {
     { label: 'Piutang / utang', desc: 'Pinjam & meminjamkan', icon: HandCoins, tone: 'bg-emerald-50 text-emerald-600', on: run(() => openModal('hutang_piutang')) },
     { label: 'Transfer', desc: 'Pindah dana antar akun', icon: ArrowLeftRight, tone: 'bg-cyan-50 text-cyan-600', on: run(() => openModal('topup_transfer')) },
     { label: 'Barangku', desc: 'HP, laptop, motor, jam', icon: Package, tone: 'bg-amber-50 text-amber-600', on: run(() => { go('barangku'); setAddItem((n) => n + 1); }) },
+    { label: 'Koleksiku', desc: 'Kartu Pokémon, sneakers, figur', icon: Layers, tone: 'bg-violet-50 text-violet-600', on: run(() => { go('koleksi'); setAddKoleksi((n) => n + 1); }) },
     { label: 'Properti', desc: 'Rumah, tanah, ruko', icon: Car, tone: 'bg-slate-100 text-slate-400' },
   ];
 
@@ -70,7 +74,8 @@ export function KekayaanShell() {
   }, []);
 
   const go = (t: KekayaanTab) => {
-    if (t !== 'barangku') setAddItem(0); // sinyal "tambah barang" jangan terpicu lagi saat tab dibuka ulang
+    if (t !== 'barangku') setAddItem(0);
+    if (t !== 'koleksi') setAddKoleksi(0); // sinyal "tambah barang" jangan terpicu lagi saat tab dibuka ulang
     if (t === tab) return;
     window.history.pushState(null, '', t === 'ringkasan' ? window.location.pathname : `#${t}`);
     setTab(t);
@@ -94,11 +99,11 @@ export function KekayaanShell() {
           </div>
         </div>
         <LayoutGroup id="kekayaan-tabs">
-          <div role="tablist" aria-label="Bagian kekayaan" className="no-scrollbar grid grid-cols-4 gap-1 overflow-x-auto rounded-full bg-slate-100 p-1 md:inline-grid md:w-auto md:grid-flow-col md:auto-cols-max">
+          <div role="tablist" aria-label="Bagian kekayaan" className="no-scrollbar flex gap-0.5 overflow-x-auto rounded-full bg-slate-100 p-1 md:inline-flex md:gap-1">
             {TABS.map((t) => {
               const active = t.id === tab;
               return (
-                <button key={t.id} type="button" role="tab" aria-selected={active} onClick={() => go(t.id)} className={cn('relative flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2 py-2 text-[13px] font-semibold md:px-4', active ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700')}>
+                <button key={t.id} type="button" role="tab" aria-selected={active} onClick={() => go(t.id)} className={cn('relative flex flex-auto items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2 py-2 text-[12.5px] font-semibold md:flex-none md:px-4 md:text-[13px]', active ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700')}>
                   {active && <motion.span layoutId={reduce ? undefined : 'kekayaan-tab'} className="absolute inset-0 rounded-full bg-white shadow-sm" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
                   <t.icon size={15} className="relative hidden sm:block" />
                   <span className="relative sm:hidden">{t.short}</span>
@@ -143,6 +148,7 @@ export function KekayaanShell() {
           {tab === 'tabungan' && <TabunganPanel />}
           {tab === 'hutang' && <HutangPanel />}
           {tab === 'barangku' && <BarangkuView variant="web" addSignal={addItem} toast={(m) => toast.success(m)} />}
+          {tab === 'koleksi' && <KoleksiView variant="web" addSignal={addKoleksi} toast={(m) => toast.success(m)} />}
         </motion.div>
       </AnimatePresence>
     </div>

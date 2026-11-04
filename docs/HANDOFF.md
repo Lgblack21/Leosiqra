@@ -18,6 +18,17 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-04 (branch claude/koleksiku) — Koleksiku tahap 1, BELUM deploy:**
+  - **Migrasi `cloudflare/migrations/0025_collectibles.sql` WAJIB dijalankan Bos di D1 Console sebelum deploy** (2 tabel:
+    `collectibles`, `collectible_value_history`).
+  - Tab Kekayaan `#koleksi` + `/app/koleksi` (`src/components/koleksi/*`). Jenis: `pokemon` (data & harga dari **TCGdex**
+    api.tcgdex.net — publik, tanpa kunci; pokemontcg.io ditolak karena 5/8 percobaan 500/502) dan `lainnya` (nilai manual).
+    Steam = tahap 2 (Skinport API butuh header `Accept-Encoding: br`; inventaris Steam publik bisa dibaca).
+  - API `/api/member/collectibles` (+ `/pokemon/search`, `/pokemon/card/:id`, `/refresh`, `/:id`, `/:id/photo`), maks 2000/user.
+    Harga diperbarui saat Koleksiku dibuka (`POST /refresh`, kartu > 20 jam, cache 12 jam) — BUKAN cron (cron gratis 50
+    subrequest/jalan). Tiap refresh/perubahan → titik `collectible_value_history` hari itu (grafik).
+  - Nilai IDR: `src/lib/collectibles.ts unitValueIdr` (cek kurs ada — `convert()` mengembalikan angka mentah kalau kurs
+    kosong) = `snapshotCollectibleValue` Worker. Masuk Kekayaan bersih (`computeNetWorth.collectiblesValueIdr`).
 - **2026-11-04 (branch claude/langgananku) — Langgananku + Radar, live #120:**
   - **Migrasi `cloudflare/migrations/0024_subscriptions.sql` WAJIB dijalankan Bos di D1 Console sebelum deploy.**
   - Memantau langganan (BUKAN Transaksi Rutin; tidak mencatat transaksi). API `/api/member/subscriptions` (GET/POST,
