@@ -4626,6 +4626,13 @@ const LOGO_DOMAINS = new Set([
   "panin.co.id", "bankbjb.co.id", "jago.com", "seabank.co.id", "allobank.com", "dbs.com", "hsbc.co.id", "uob.co.id",
   "sc.com", "citibank.co.id", "bankbsi.co.id", "krom.id", "blubybcadigital.id",
   "gojek.com", "ovo.id", "dana.id", "shopeepay.co.id", "linkaja.id", "flip.id", "paypal.com", "wise.com", "revolut.com",
+  // Langgananku — WAJIB sama dengan domain di src/lib/subscriptionCatalog.ts
+  "netflix.com", "disneyplus.com", "primevideo.com", "max.com", "vidio.com", "viu.com", "wetv.vip", "iq.com", "youtube.com",
+  "spotify.com", "music.apple.com", "joox.com", "icloud.com", "one.google.com", "dropbox.com", "openai.com", "claude.ai",
+  "gemini.google.com", "canva.com", "microsoft.com", "adobe.com", "notion.so", "zoom.us", "playstation.com", "xbox.com",
+  "nintendo.com", "indihome.co.id", "biznethome.net", "firstmedia.com", "myrepublic.co.id", "iconnet.id", "telkomsel.com",
+  "xl.co.id", "im3.id", "smartfren.com", "tri.co.id", "byu.id", "pln.co.id", "bpjs-kesehatan.go.id", "grab.com",
+  "shopee.co.id", "tokopedia.com", "duolingo.com", "gramedia.com", "ruangguru.com",
 ]);
 const LOGO_UA = { "User-Agent": "Mozilla/5.0 (compatible; LeosiqraBot/1.0; +https://www.leosiqra.com)" };
 // Ikon aplikasi resmi 512px dari App Store (API iTunes, JSON resmi) — paling
@@ -4633,6 +4640,50 @@ const LOGO_UA = { "User-Agent": "Mozilla/5.0 (compatible; LeosiqraBot/1.0; +http
 // diverifikasi; tanpa id → cari nama aplikasinya, lalu terima hanya kalau nama
 // penerbit cocok `seller` (supaya tidak mengambil aplikasi orang lain).
 const APP_ICONS: Record<string, { id?: number; term?: string; seller: RegExp }> = {
+  // Langgananku (ikon aplikasi resmi; dicari per nama + penerbit harus cocok)
+  "netflix.com": { term: "Netflix", seller: /netflix/i },
+  "spotify.com": { term: "Spotify", seller: /spotify/i },
+  "youtube.com": { term: "YouTube", seller: /google/i },
+  "disneyplus.com": { term: "Disney+ Hotstar", seller: /disney|novi digital|star/i },
+  "primevideo.com": { term: "Prime Video", seller: /amazon/i },
+  "max.com": { term: "Max HBO", seller: /warner|wbd|max/i },
+  "vidio.com": { term: "Vidio", seller: /vidio|emtek|kmk/i },
+  "viu.com": { term: "Viu", seller: /viu|pccw/i },
+  "wetv.vip": { term: "WeTV", seller: /tencent|image future|wetv/i },
+  "iq.com": { term: "iQIYI", seller: /iqiyi/i },
+  "music.apple.com": { term: "Apple Music", seller: /apple/i },
+  "joox.com": { term: "JOOX", seller: /tencent|joox/i },
+  "dropbox.com": { term: "Dropbox", seller: /dropbox/i },
+  "openai.com": { term: "ChatGPT", seller: /openai/i },
+  "claude.ai": { term: "Claude by Anthropic", seller: /anthropic/i },
+  "gemini.google.com": { term: "Google Gemini", seller: /google/i },
+  "one.google.com": { term: "Google One", seller: /google/i },
+  "canva.com": { term: "Canva", seller: /canva/i },
+  "microsoft.com": { term: "Microsoft 365 Copilot", seller: /microsoft/i },
+  "adobe.com": { term: "Adobe Lightroom", seller: /adobe/i },
+  "notion.so": { term: "Notion", seller: /notion/i },
+  "zoom.us": { term: "Zoom Workplace", seller: /zoom/i },
+  "playstation.com": { term: "PlayStation App", seller: /sony|playstation/i },
+  "xbox.com": { term: "Xbox", seller: /microsoft/i },
+  "nintendo.com": { term: "Nintendo Switch App", seller: /nintendo/i },
+  "indihome.co.id": { term: "myIndiHome", seller: /telkom/i },
+  "biznethome.net": { term: "Biznet Home", seller: /biznet|supra/i },
+  "firstmedia.com": { term: "First Media", seller: /link net|first media/i },
+  "myrepublic.co.id": { term: "MyRepublic Indonesia", seller: /myrepublic|eka mas/i },
+  "telkomsel.com": { term: "MyTelkomsel", seller: /telkomsel/i },
+  "xl.co.id": { term: "myXL", seller: /xl/i },
+  "im3.id": { term: "myIM3", seller: /indosat/i },
+  "smartfren.com": { term: "MySF", seller: /smartfren/i },
+  "tri.co.id": { term: "bima+", seller: /hutchison|indosat|tri/i },
+  "byu.id": { term: "by.U", seller: /telkomsel/i },
+  "pln.co.id": { term: "PLN Mobile", seller: /pln|perusahaan listrik/i },
+  "bpjs-kesehatan.go.id": { term: "Mobile JKN", seller: /bpjs/i },
+  "grab.com": { term: "Grab", seller: /grab/i },
+  "shopee.co.id": { term: "Shopee", seller: /shopee/i },
+  "tokopedia.com": { term: "Tokopedia", seller: /tokopedia/i },
+  "duolingo.com": { term: "Duolingo", seller: /duolingo/i },
+  "gramedia.com": { term: "Gramedia Digital", seller: /gramedia/i },
+  "ruangguru.com": { term: "Ruangguru", seller: /ruang ?guru/i },
   "bca.co.id": { term: "BCA mobile", seller: /central asia/i },
   "bankmandiri.co.id": { id: 1555414743, seller: /mandiri/i },
   "bri.co.id": { id: 1439730817, seller: /rakyat indonesia/i },
@@ -6656,6 +6707,8 @@ async function handleResetMemberData(request: Request, env: Env) {
   await env.DB.batch(statements);
   await deleteAllAttachmentsForUser(env, user.id);
   await deleteAllItemsForUser(env, user.id);
+  // Langgananku (migrasi 0024) — best effort, tabelnya bisa belum ada.
+  await env.DB.prepare("DELETE FROM subscriptions WHERE user_id = ?").bind(user.id).run().catch(() => undefined);
   // Kotak Masuk (migrasi 0019) — best effort, tabelnya bisa belum ada.
   await env.DB.prepare("DELETE FROM inbox_items WHERE user_id = ?").bind(user.id).run().catch(() => undefined);
 
@@ -9312,6 +9365,158 @@ async function handleItemRoutes(request: Request, env: Env, pathname: string) {
     if (error instanceof Error && error.message === "Payload JSON tidak valid.") {
       return json({ error: "Payload JSON tidak valid." }, { status: 400 });
     }
+    throw error;
+  }
+}
+
+// ── Langgananku (migrasi 0024) ──────────────────────────────────────────────
+// Langganan yang DIPANTAU user (bukan Transaksi Rutin: tidak mencatat transaksi).
+// Semua query ber-user_id sesi; rekening dicek assertOwnAccounts; domain logo
+// hanya dari LOGO_DOMAINS (allowlist /api/logo).
+const SUB_CATEGORIES = ["Streaming", "Musik", "Cloud", "AI", "Produktivitas", "Game", "Internet & TV", "Pulsa & data", "Tagihan rumah", "Belanja & antar", "Belajar", "Lainnya"] as const;
+const SUB_CYCLES = ["mingguan", "bulanan", "3bulan", "tahunan"] as const;
+const SUB_STATUSES = ["aktif", "coba", "batal"] as const;
+const SUBS_MAX_PER_USER = 200;
+const subsTableMissing = (error: unknown) => error instanceof Error && /no such table: subscriptions/.test(error.message);
+const SUB_COLUMNS = "id, name, service_key, domain, category, amount, currency, cycle, anchor_date, account_id, status, trial_end, note, created_at, updated_at";
+
+type SubFields = Partial<{
+  name: string; service_key: string | null; domain: string | null; category: string; amount: number; currency: string;
+  cycle: string; anchor_date: string; account_id: string | null; status: string; trial_end: string | null; note: string | null;
+}>;
+
+const sanitizeSubFields = (raw: Record<string, unknown>, partial: boolean): { ok: true; fields: SubFields } | { ok: false; error: string } => {
+  const f: SubFields = {};
+  const text = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/[\u0000-\u001f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, max) : "");
+  const oneOf = <T extends readonly string[]>(list: T, v: unknown) => (typeof v === "string" && (list as readonly string[]).includes(v) ? v : undefined);
+  if (raw.name !== undefined || !partial) {
+    const name = text(raw.name, 60);
+    if (!name) return { ok: false, error: "Nama langganan wajib diisi." };
+    f.name = name;
+  }
+  if (raw.service_key !== undefined) {
+    if (raw.service_key === null || raw.service_key === "") f.service_key = null;
+    else if (typeof raw.service_key === "string" && /^[a-z0-9-]{1,40}$/.test(raw.service_key)) f.service_key = raw.service_key;
+    else return { ok: false, error: "Layanan tidak dikenal." };
+  }
+  if (raw.domain !== undefined) {
+    if (raw.domain === null || raw.domain === "") f.domain = null;
+    else if (typeof raw.domain === "string" && LOGO_DOMAINS.has(raw.domain)) f.domain = raw.domain;
+    else return { ok: false, error: "Logo layanan tidak dikenal." };
+  }
+  if (raw.category !== undefined || !partial) {
+    const c = raw.category === undefined ? "Lainnya" : oneOf(SUB_CATEGORIES, raw.category);
+    if (!c) return { ok: false, error: "Kategori tidak dikenal." };
+    f.category = c;
+  }
+  if (raw.amount !== undefined || !partial) {
+    const a = raw.amount ?? 0;
+    if (typeof a !== "number" || !Number.isFinite(a) || a < 0 || a > 1e13) return { ok: false, error: "Harga tidak valid." };
+    f.amount = Math.round(a * 100) / 100;
+  }
+  if (raw.currency !== undefined) {
+    if (typeof raw.currency !== "string" || !/^[A-Z]{3}$/.test(raw.currency)) return { ok: false, error: "Mata uang tidak valid." };
+    f.currency = raw.currency;
+  }
+  if (raw.cycle !== undefined || !partial) {
+    const c = raw.cycle === undefined ? "bulanan" : oneOf(SUB_CYCLES, raw.cycle);
+    if (!c) return { ok: false, error: "Siklus tidak dikenal." };
+    f.cycle = c;
+  }
+  if (raw.anchor_date !== undefined || !partial) {
+    if (!isRealDateStr(raw.anchor_date) || raw.anchor_date < "2000-01-01" || raw.anchor_date > "2100-12-31") return { ok: false, error: "Tanggal tagih tidak valid." };
+    f.anchor_date = raw.anchor_date;
+  }
+  if (raw.trial_end !== undefined) {
+    if (raw.trial_end === null || raw.trial_end === "") f.trial_end = null;
+    else if (isRealDateStr(raw.trial_end) && raw.trial_end >= "2000-01-01" && raw.trial_end <= "2100-12-31") f.trial_end = raw.trial_end;
+    else return { ok: false, error: "Tanggal masa coba tidak valid." };
+  }
+  if (raw.status !== undefined) {
+    const st = oneOf(SUB_STATUSES, raw.status);
+    if (!st) return { ok: false, error: "Status tidak dikenal." };
+    f.status = st;
+  }
+  if (raw.account_id !== undefined) f.account_id = typeof raw.account_id === "string" && raw.account_id && !NON_ACCOUNT_IDS.has(raw.account_id) ? raw.account_id : null;
+  if (raw.note !== undefined) f.note = text(raw.note, 300) || null;
+  return { ok: true, fields: f };
+};
+
+async function handleSubscriptionRoutes(request: Request, env: Env, pathname: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  try {
+    if (pathname === "/api/member/subscriptions") {
+      if (request.method === "GET") {
+        const rows = await env.DB.prepare(`SELECT ${SUB_COLUMNS} FROM subscriptions WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`)
+          .bind(userId, SUBS_MAX_PER_USER)
+          .all();
+        return json({ items: rows.results ?? [] });
+      }
+      if (request.method === "POST") {
+        const raw = await parseJson<Record<string, unknown>>(request);
+        const parsed = sanitizeSubFields(raw, false);
+        if (!parsed.ok) return json({ error: parsed.error }, { status: 400 });
+        const f = parsed.fields;
+        if (f.account_id) {
+          const bad = await assertOwnAccounts(env, userId, [f.account_id]);
+          if (bad) return bad;
+        }
+        const id = generateId();
+        const now = nowIso();
+        // Batas jumlah di statement yang sama (aman dari kirim ganda paralel).
+        const result = await env.DB.prepare(
+          `INSERT INTO subscriptions (id, user_id, name, service_key, domain, category, amount, currency, cycle, anchor_date, account_id, status, trial_end, note, created_at, updated_at)
+           SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            WHERE (SELECT COUNT(*) FROM subscriptions WHERE user_id = ?) < ?`
+        )
+          .bind(
+            id, userId, f.name!, f.service_key ?? null, f.domain ?? null, f.category!, f.amount ?? 0, f.currency ?? "IDR", f.cycle!, f.anchor_date!,
+            f.account_id ?? null, f.status ?? "aktif", f.trial_end ?? null, f.note ?? null, now, now, userId, SUBS_MAX_PER_USER
+          )
+          .run();
+        if (!result.meta.changes) return json({ error: `Maksimal ${SUBS_MAX_PER_USER} langganan.` }, { status: 409 });
+        return json({ ok: true, id }, { status: 201 });
+      }
+      return json({ error: "Method not allowed" }, { status: 405 });
+    }
+
+    const id = pathname.slice("/api/member/subscriptions/".length);
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "Not found" }, { status: 404 });
+    if (request.method === "PUT") {
+      const parsed = sanitizeSubFields(await parseJson<Record<string, unknown>>(request), true);
+      if (!parsed.ok) return json({ error: parsed.error }, { status: 400 });
+      const entries = Object.entries(parsed.fields);
+      if (!entries.length) return json({ error: "Tidak ada yang diubah." }, { status: 400 });
+      if (parsed.fields.account_id) {
+        const bad = await assertOwnAccounts(env, userId, [parsed.fields.account_id]);
+        if (bad) return bad;
+      }
+      // Jadwal tagih / masa coba berubah → penanda pengingat dihapus supaya jadwal baru diingatkan.
+      const resetCharge = parsed.fields.anchor_date !== undefined || parsed.fields.cycle !== undefined;
+      const resetTrial = parsed.fields.trial_end !== undefined;
+      const res = await env.DB.prepare(
+        `UPDATE subscriptions SET ${entries.map(([k]) => `${k} = ?`).join(", ")}${resetCharge ? ", charge_reminded_for = NULL" : ""}${resetTrial ? ", trial_reminded_for = NULL" : ""}, updated_at = ?
+          WHERE id = ? AND user_id = ?`
+      )
+        .bind(...entries.map(([, v]) => v), nowIso(), id, userId)
+        .run();
+      if (!res.meta.changes) return json({ error: "Langganan tidak ditemukan." }, { status: 404 });
+      return json({ ok: true });
+    }
+    if (request.method === "DELETE") {
+      const res = await env.DB.prepare("DELETE FROM subscriptions WHERE id = ? AND user_id = ?").bind(id, userId).run();
+      if (!res.meta.changes) return json({ error: "Langganan tidak ditemukan." }, { status: 404 });
+      return json({ ok: true });
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (error) {
+    if (subsTableMissing(error)) {
+      console.error("Langgananku: tabel subscriptions belum ada (migrasi 0024 belum diterapkan)");
+      return json({ error: "Fitur Langgananku belum aktif. Coba lagi nanti." }, { status: 503 });
+    }
+    if (error instanceof Error && error.message === "Payload JSON tidak valid.") return json({ error: "Payload JSON tidak valid." }, { status: 400 });
     throw error;
   }
 }
@@ -12480,7 +12685,7 @@ const PREF_INPUT_MODES = ["ketik", "suara", "foto"] as const;
 // Fitur yang tampil di menu samping (panel Pengaturan → Fitur). Hanya
 // visibilitas menu — mematikan fitur tidak menyentuh datanya. Sama dengan
 // FeatureId di src/lib/features.ts. null = bawaan (5 fitur lama).
-const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk", "jejak"] as const;
+const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk", "jejak", "langganan"] as const;
 // Jam pengingat per 30 menit (cron tiap 10 menit, lihat sendDailyReminders).
 const PREF_TIME_RE = /^([01]\d|2[0-3]):(00|30)$/;
 // Ikon & warna pilihan user per nama kategori (panel Kategori & Anggaran).
@@ -12559,7 +12764,7 @@ const sanitizeAiMemory = (raw: unknown): AiMemory => {
   const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   return Object.fromEntries(AI_MEMORY_KEYS.map((k) => [k, cleanAiMemoryText(r[k])])) as AiMemory;
 };
-const NOTIFY_KEYS = ["reminders", "summary", "weekly", "monthly", "budget", "bills", "warranty"] as const;
+const NOTIFY_KEYS = ["reminders", "summary", "weekly", "monthly", "budget", "bills", "warranty", "subscriptions"] as const;
 type NotifyPrefs = Record<(typeof NOTIFY_KEYS)[number], boolean>;
 const sanitizeNotify = (raw: unknown): NotifyPrefs => {
   const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
@@ -13541,6 +13746,69 @@ const sendWarrantyReminders = async (env: Env) => {
       );
     } catch (error) {
       console.error(`Pengingat garansi ${r.id} gagal:`, error);
+    }
+  }
+};
+
+// Pengingat Langgananku (harian 10:00 WIB): H-1 sebelum ditagih (status aktif) dan
+// H-2 sebelum masa coba gratis habis (status coba). Tagihan berikutnya =
+// anchor_date + kelipatan siklus (tanggal 31 di bulan pendek → hari terakhir),
+// dihitung di SQL supaya hanya kandidat besok yang terambil; maks
+// CRON_PER_USER_SUBS per user per jalan (anti banjir). Klaim *_reminded_for.
+const CRON_PER_USER_SUBS = 30;
+const sendSubscriptionReminders = async (env: Env) => {
+  const today = todayWIB();
+  const tomorrow = shiftDateStr(today, 1);
+  const trialDay = shiftDateStr(today, 2);
+  const [ty, tm] = tomorrow.split("-").map(Number);
+  const tp = dayParts(tomorrow);
+  type Row = { id: string; user_id: string; name: string; amount: number; currency: string | null; kind: string; account_name: string | null; target: string };
+  let rows: Row[];
+  try {
+    const res = await env.DB.prepare(
+      `SELECT * FROM (
+         SELECT s.id, s.user_id, s.name, s.amount, s.currency, a.name AS account_name,
+                CASE WHEN s.status = 'coba' THEN 'trial' ELSE 'charge' END AS kind,
+                CASE WHEN s.status = 'coba' THEN s.trial_end ELSE ? END AS target,
+                ROW_NUMBER() OVER (PARTITION BY s.user_id ORDER BY s.amount DESC, s.id) AS rn
+           FROM subscriptions s JOIN users u ON u.id = s.user_id
+           LEFT JOIN accounts a ON a.id = s.account_id AND a.user_id = s.user_id
+          WHERE COALESCE(u.status, '') <> 'NONAKTIF'
+            AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.subscriptions') END, 1) <> 0
+            AND (
+              (s.status = 'coba' AND s.trial_end = ? AND COALESCE(s.trial_reminded_for, '') <> s.trial_end)
+              OR (s.status = 'aktif' AND s.anchor_date <= ? AND COALESCE(s.charge_reminded_for, '') <> ?
+                  AND (
+                    (s.cycle = 'mingguan' AND CAST(julianday(?) - julianday(s.anchor_date) AS INTEGER) % 7 = 0)
+                    OR (s.cycle IN ('bulanan', '3bulan', 'tahunan')
+                        AND (CAST(strftime('%d', s.anchor_date) AS INTEGER) = ? OR (? = 1 AND CAST(strftime('%d', s.anchor_date) AS INTEGER) > ?))
+                        AND (s.cycle = 'bulanan'
+                             OR (s.cycle = '3bulan' AND ((? * 12 + ?) - (CAST(strftime('%Y', s.anchor_date) AS INTEGER) * 12 + CAST(strftime('%m', s.anchor_date) AS INTEGER))) % 3 = 0)
+                             OR (s.cycle = 'tahunan' AND CAST(strftime('%m', s.anchor_date) AS INTEGER) = ?))))))
+       ) WHERE rn <= ? LIMIT 3000`
+    )
+      .bind(tomorrow, trialDay, tomorrow, tomorrow, tomorrow, tp.day, tp.isLast, tp.day, ty, tm, tm, CRON_PER_USER_SUBS)
+      .all<Row>();
+    rows = res.results ?? [];
+  } catch (error) {
+    if (subsTableMissing(error)) return;
+    throw error;
+  }
+  for (const r of rows) {
+    try {
+      const col = r.kind === "trial" ? "trial_reminded_for" : "charge_reminded_for";
+      const claim = await env.DB.prepare(`UPDATE subscriptions SET ${col} = ? WHERE id = ? AND user_id = ? AND COALESCE(${col}, '') <> ?`)
+        .bind(r.target, r.id, r.user_id, r.target)
+        .run();
+      if (!claim.meta.changes) continue;
+      const amount = !r.currency || r.currency === "IDR" ? formatRupiahForPush(r.amount) : `${r.currency} ${r.amount}`;
+      if (r.kind === "trial") {
+        await sendWebPushToUser(env, r.user_id, `⏳ Masa coba ${r.name} habis lusa`, `Setelah itu mulai ditagih ${amount}. Batalkan sekarang kalau tidak mau lanjut.`, "/membership/langganan");
+      } else {
+        await sendWebPushToUser(env, r.user_id, `💳 ${r.name} ${amount} ditagih besok`, `${r.account_name ? `Dari ${r.account_name}. ` : ""}Masih dipakai? Kalau tidak, batalkan sebelum tanggal tagih.`, "/membership/langganan");
+      }
+    } catch (error) {
+      console.error(`Pengingat langganan ${r.id} gagal:`, error);
     }
   }
 };
@@ -16430,6 +16698,10 @@ const worker = {
         return await handleItemRoutes(request, env, url.pathname);
       }
 
+      if (url.pathname === "/api/member/subscriptions" || url.pathname.startsWith("/api/member/subscriptions/")) {
+        return await handleSubscriptionRoutes(request, env, url.pathname);
+      }
+
       if (url.pathname === "/api/member/coins" || url.pathname.startsWith("/api/member/coins/") || url.pathname === "/api/admin/coin-withdrawals" || url.pathname.startsWith("/api/admin/coin-withdrawals/")) {
         return await handleCoinRoutes(request, env, url.pathname);
       }
@@ -16670,6 +16942,7 @@ const worker = {
     ctx.waitUntil(sendBillReminders(env).catch((error) => console.error("Pengingat tagihan:", error)));
     ctx.waitUntil(sendDebtDueReminders(env).catch((error) => console.error("Pengingat jatuh tempo hutang:", error)));
     ctx.waitUntil(sendWarrantyReminders(env).catch((error) => console.error("Pengingat garansi:", error)));
+    ctx.waitUntil(sendSubscriptionReminders(env).catch((error) => console.error("Pengingat langganan:", error)));
     ctx.waitUntil(cleanupNotifications(env).catch((error) => console.error("Bersihkan notifikasi:", error)));
     // Senin: wawasan mingguan; tanggal 1: rekap bulan lalu (push, bisa dimatikan user).
     ctx.waitUntil(sendInsightPushes(env).catch((error) => console.error("Wawasan push:", error)));

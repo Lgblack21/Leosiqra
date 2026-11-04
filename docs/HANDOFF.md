@@ -18,6 +18,18 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-04 (branch claude/langgananku) — Langgananku + Radar, BELUM deploy:**
+  - **Migrasi `cloudflare/migrations/0024_subscriptions.sql` WAJIB dijalankan Bos di D1 Console sebelum deploy.**
+  - Memantau langganan (BUKAN Transaksi Rutin; tidak mencatat transaksi). API `/api/member/subscriptions` (GET/POST,
+    `/:id` PUT/DELETE), maks 200/user. Jadwal = `anchor_date` + kelipatan siklus (mingguan/bulanan/3bulan/tahunan,
+    tgl 31 → hari terakhir bulan) — `src/lib/subscriptions.ts nextCharge` = SQL cron (diuji 0 beda).
+  - Cron harian `sendSubscriptionReminders`: H-1 sebelum ditagih (aktif), H-2 sebelum masa coba habis (coba), maks 30/user,
+    toggle notifikasi `subscriptions`. Push → `/membership/langganan` (app: `/app/langganan`).
+  - Katalog 47 layanan `src/lib/subscriptionCatalog.ts` (harga = PERKIRAAN); domain logo ditambahkan ke `LOGO_DOMAINS`
+    + `APP_ICONS` Worker (ikon App Store). Radar: `radarScan` lokal (tanpa AI) atas pengeluaran **30 hari** (keputusan Bos):
+    cocok katalog = "pasti", nama sama ≥2× nominal ±15% jarak teratur = "mungkin". Animasi `RadarScan.tsx`.
+  - Menu: fitur `langganan` (features.ts + PREF_FEATURES Worker, bawaan ON untuk user baru), navGroups Transaksi,
+    app Lainnya → Langgananku. Tahap 2 (belum): deteksi harga naik, cek dobel, status sudah dibayar.
 - **2026-11-04 security check (branch claude/security-cron-flood):** 🟠 cron pengingat bisa dibanjiri satu akun
   (LIMIT global) → diperbaiki dengan batas per user `ROW_NUMBER() OVER (PARTITION BY user_id)` di 4 cron + hutang
   disaring H-3/H-1 di SQL; foto barang ≤2 MB + 12/menit; tanggal 2026-02-31 ditolak. Rincian & bukti:

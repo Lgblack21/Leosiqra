@@ -1,4 +1,5 @@
 import {
+  Radar,
   LayoutDashboard,
   BarChart3,
   Bot,
@@ -71,6 +72,7 @@ export const navGroups: NavGroup[] = [
       { label: 'Catat Transaksi', href: '/membership/transactions/input', icon: PlusCircle },
       { label: 'Riwayat Transaksi', href: '/membership/transactions/daily', icon: ListOrdered },
       { label: 'Transaksi Rutin', href: '/membership/recurring', icon: Repeat },
+      { label: 'Langgananku', href: '/membership/langganan', icon: Radar },
     ],
   },
   {

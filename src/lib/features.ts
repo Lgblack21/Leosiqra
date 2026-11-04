@@ -1,5 +1,5 @@
 import {
-  Bot, Footprints, PieChart, TrendingUp, Repeat, ShieldCheck,
+  Bot, Footprints, PieChart, TrendingUp, Repeat, ShieldCheck, Radar,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -10,7 +10,7 @@ import {
 
 export type FeatureId =
   | 'ai' | 'kartu' | 'tabungan' | 'hutang' | 'investasi' | 'transfer' | 'rutin'
-  | 'dompet_bersama' | 'pasar' | 'tahunan' | 'pajak' | 'impor' | 'kotak_masuk' | 'jejak';
+  | 'dompet_bersama' | 'pasar' | 'tahunan' | 'pajak' | 'impor' | 'kotak_masuk' | 'jejak' | 'langganan';
 
 export type Feature = { id: FeatureId; label: string; href: string; icon: LucideIcon; tint: string };
 
@@ -20,6 +20,7 @@ export const FEATURES: Feature[] = [
   // id 'tabungan' dipertahankan (preferensi tersimpan & validasi Worker); isinya kini halaman Kekayaan.
   { id: 'tabungan', label: 'Kekayaan', href: '/membership/kekayaan', icon: PieChart, tint: 'from-emerald-50 to-emerald-100 text-emerald-600' },
   { id: 'jejak', label: 'Jejak Uang', href: '/membership/jejak-uang', icon: Footprints, tint: 'from-lime-50 to-lime-100 text-lime-600' },
+  { id: 'langganan', label: 'Langgananku', href: '/membership/langganan', icon: Radar, tint: 'from-violet-50 to-violet-100 text-violet-600' },
   { id: 'rutin', label: 'Transaksi Rutin', href: '/membership/recurring', icon: Repeat, tint: 'from-teal-50 to-teal-100 text-teal-600' },
   { id: 'pajak', label: 'Pajak Center', href: '/membership/pajak-center', icon: ShieldCheck, tint: 'from-emerald-50 to-emerald-100 text-emerald-600' },
 ];
@@ -33,7 +34,7 @@ export const FEATURES: Feature[] = [
 // Tahunan); 'dompet_bersama' & 'impor' keluar dari menu (ada di Pengaturan /
 // Catat Transaksi); 'kotak_masuk' pindah ke ikon di samping lonceng. Id-nya tetap sah di tipe
 // & Worker (preferensi lama), tapi tidak lagi ditampilkan.
-export const DEFAULT_FEATURES: FeatureId[] = ['ai', 'tabungan', 'investasi', 'jejak'];
+export const DEFAULT_FEATURES: FeatureId[] = ['ai', 'tabungan', 'investasi', 'jejak', 'langganan'];
 
 const BY_ID = new Map(FEATURES.map((f) => [f.id, f]));
 export const isShownFeature = (id: string) => BY_ID.has(id as FeatureId);

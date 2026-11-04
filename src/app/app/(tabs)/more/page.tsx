@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {
   BarChart3, MessageCircle, ScanLine, Mic, UserCircle, HandCoins, PiggyBank, CreditCard, Target,
-  Repeat, TrendingUp, ShieldCheck, Globe, ChevronRight, ExternalLink, Zap, PlayCircle, MessageSquareHeart, Users, Inbox, Nfc, AlarmClock, Package,
+  Repeat, TrendingUp, ShieldCheck, Globe, ChevronRight, ExternalLink, Zap, PlayCircle, MessageSquareHeart, Users, Inbox, Nfc, AlarmClock, Package, Radar,
 } from "lucide-react";
 import { lightTap } from "@/lib/haptics";
 import { FadeIn, StaggerList, StaggerItem } from "@/components/app/FadeIn";
@@ -19,6 +19,7 @@ const IN_APP: MenuItem[] = [
   { label: "Hutang & Piutang", href: "/app/debts", icon: HandCoins, color: "bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400" },
   { label: "Dompet Bersama", href: "/app/dompet-bersama", icon: Users, color: "bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400" },
   { label: "Tabungan", href: "/app/savings", icon: PiggyBank, color: "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400" },
+  { label: "Langgananku", href: "/app/langganan", icon: Radar, color: "bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400" },
   { label: "Barangku", href: "/app/barangku", icon: Package, color: "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400" },
   { label: "Kartu Kredit", href: "/app/cards", icon: CreditCard, color: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
   { label: "Budget", href: "/app/budget", icon: Target, color: "bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-400" },
