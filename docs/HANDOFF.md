@@ -4,13 +4,13 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-05 (live #135: kasir mode bebas + katalog kategori; migrasi 0029 & 0030 sudah dijalankan Bos)
+Terakhir diperbarui: 2026-11-05 (live #136: logo & gambar katalog + simpan tampilan merge; migrasi 0029 & 0030 sudah dijalankan Bos)
 
 ## Siapa sedang kerja
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | Logo & gambar katalog (MCP) |
+| — | — | — | (akun B selesai; main = live #136) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-05 (branch claude/usahaku-web) — Logo toko & gambar per kategori, BELUM deploy. Tanpa SQL.**
+- **2026-11-05 (branch claude/usahaku-web) — Logo toko & gambar per kategori, **live #136**. Tanpa SQL.**
   - `style_json.logoUrl` + `categoryImages {group: url}` (maks 60). `safeImageUrl` = https saja (bukan http/data:/
     javascript:, tanpa IP/localhost/.internal, ≤500 karakter). Tampil lewat `CatalogImage` (`<img>` lazy,
     referrer dimatikan, gagal muat → inisial/emoji). Dipakai di header kasir, kotak katalog, chip, judul kategori, kartu
