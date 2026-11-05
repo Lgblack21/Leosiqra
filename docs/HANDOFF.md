@@ -4,13 +4,13 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-05 (live #134: webhook website Usahaku + tampilan kasir + MCP Usahaku FREE; migrasi 0029 & 0030 sudah dijalankan Bos)
+Terakhir diperbarui: 2026-11-05 (live #135: kasir mode bebas + katalog kategori; migrasi 0029 & 0030 sudah dijalankan Bos)
 
 ## Siapa sedang kerja
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | Kasir mode bebas (iframe sandbox) |
+| — | — | — | (akun B selesai; main = live #135) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,14 +18,14 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-05 (branch claude/usahaku-web) — Kasir "Katalog kategori", BELUM deploy. Tanpa SQL.**
+- **2026-11-05 (branch claude/usahaku-web) — Kasir "Katalog kategori", **live #135**. Tanpa SQL.**
   - `style_json.browse` = 'katalog' (DEFAULT baru) | 'gulir'. Katalog: grid kotak per kategori/game (ikon inisial, jumlah
     pilihan, "mulai Rp…", badge ×n kalau ada di struk) → ketuk = halaman daftar harga kategori itu + tombol "Kembali ke
     katalog" (gulir ke atas). Chip geser disembunyikan; pencarian tetap lintas kategori. 'gulir' = tampilan lama (chip +
     semua produk). Pilihan "Cara jelajah" di editor & `browse` di MCP set_kasir_style.
   - Dites lokal web+HP: 4 kotak, buka Free Fire → 3 produk saja, tambah → Kembali → badge ×1, cari "uc" → 2 produk,
     0 error JS.
-- **2026-11-05 (branch claude/usahaku-web) — Kasir mode BEBAS (desain HTML/CSS/JS sendiri), BELUM deploy. Tanpa SQL.**
+- **2026-11-05 (branch claude/usahaku-web) — Kasir mode BEBAS (desain HTML/CSS/JS sendiri), **live #135**. Tanpa SQL.**
   - `style_json.mode` = 'bawaan' | 'bebas' + `customHtml` (maks 60 rb karakter). Desain TIDAK pernah dijalankan di
     halaman Leosiqra: `CustomKasirFrame.tsx` → `<iframe sandbox="allow-scripts">` tanpa allow-same-origin (origin
     kosong: tanpa cookie/localStorage/API sesi/halaman induk; tanpa forms/popup/top-navigation) + CSP di awal dokumen
