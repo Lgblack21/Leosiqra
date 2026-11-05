@@ -4,13 +4,13 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-05 (live #129: Tagih nyicil, Kekayaan lunas, Usahaku AI/daftar langsung)
+Terakhir diperbarui: 2026-11-05 (live #130: Usahaku kasir + baca semua halaman game)
 
 ## Siapa sedang kerja
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | Usahaku: baca semua halaman + kasir |
+| — | — | — | (akun B selesai; main = live #130) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-05 (branch claude/usahaku-web) — Halaman KASIR per usaha, BELUM deploy (tunggu "gas"). Tanpa SQL.**
+- **2026-11-05 (branch claude/usahaku-web) — Halaman KASIR per usaha, **live #130**. Tanpa SQL.**
   - Route baru `/membership/ladang/kasir?id=<usaha>` & `/app/ladang/kasir?id=` (`KasirView.tsx`). Klik usaha di Usahaku →
     kasir (bukan popup lagi). Header: omzet hari ini / jumlah transaksi / bulan ini + "Kelola" (= `ShopDetail` lama:
     kontak, produk, katalog, website — tanpa ringkasan jualan). Katalog: cari + chip kategori + kartu produk (ketuk = +1,
@@ -31,7 +31,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     `role="dialog"` + `aria-label` judul. Tombol Kelola di HP punya aria-label.
   - Diuji lokal web + HP: 4 item (70rb) dipotong jadi 60rb, tanpa ID ditolak, catatan "[CXA Store] 70 Diamond ×2,
     140 Diamond, 86 Diamond · 112233 (2001) · Rudi", items tersimpan, saldo +60rb per transaksi, struk tersalin, 0 error JS.
-- **2026-11-05 (branch claude/usahaku-web) — Baca SEMUA halaman game dari website toko, BELUM deploy (tunggu "gas"). Tanpa SQL.**
+- **2026-11-05 (branch claude/usahaku-web) — Baca SEMUA halaman game dari website toko, **live #130**. Tanpa SQL.**
   - Permintaan Bos: toko top up (mis. https://cxastore.id/) punya halaman per game (`/id/mobile-legends`) — AI harus
     membuka semuanya. **cxastore.id TIDAK bisa dibuka dari sandbox** — strukturnya asumsi, perlu dicek di produksi.
   - Worker baru `POST /api/member/shops/:id/import-pages {url}` (tanpa AI, tanpa kuota, rate-limit biasa): ambil
