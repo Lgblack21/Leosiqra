@@ -9611,17 +9611,32 @@ const shopsTableMissing = (error: unknown) => error instanceof Error && /no such
 const SHOP_COLUMNS = "id, name, tagline, description, emoji, products_json, plan_json, contact_wa, payment_note, area, link_url, promoted_at, created_at, updated_at";
 // style_json datang dari migrasi 0029 — sebelum Bos menjalankannya, baca tanpa kolom itu.
 const styleColumnMissing = (error: unknown) => error instanceof Error && /no such column: style_json/.test(error.message);
+const hookColumnMissing = (error: unknown) => error instanceof Error && /no such column: hook_/.test(error.message);
+// Kolom dari migrasi 0029 (style_json) & 0030 (hook_*) — sebelum Bos menjalankannya,
+// baca dengan kolom yang ada. hook_hash TIDAK pernah dikirim ke klien (hanya hook_on).
+const SHOP_COLUMN_SETS = [
+  `${SHOP_COLUMNS}, style_json, hook_account_id, hook_last_at, CASE WHEN hook_hash IS NULL THEN 0 ELSE 1 END AS hook_on`,
+  `${SHOP_COLUMNS}, style_json`,
+  SHOP_COLUMNS,
+];
 const selectShops = async (env: Env, userId: string, where = "", binds: unknown[] = []) => {
-  const run = (cols: string) => env.DB.prepare(`SELECT ${cols} FROM shops WHERE user_id = ?${where} ORDER BY created_at DESC LIMIT ?`).bind(userId, ...binds, SHOPS_MAX_PER_USER).all<Record<string, unknown>>();
-  try { return (await run(`${SHOP_COLUMNS}, style_json`)).results ?? []; } catch (e) { if (!styleColumnMissing(e)) throw e; return (await run(SHOP_COLUMNS)).results ?? []; }
+  for (const [k, cols] of SHOP_COLUMN_SETS.entries()) {
+    try {
+      return (await env.DB.prepare(`SELECT ${cols} FROM shops WHERE user_id = ?${where} ORDER BY created_at DESC LIMIT ?`).bind(userId, ...binds, SHOPS_MAX_PER_USER).all<Record<string, unknown>>()).results ?? [];
+    } catch (e) {
+      if (k === SHOP_COLUMN_SETS.length - 1 || !(isMissingColumn(e))) throw e;
+    }
+  }
+  return [];
 };
+const isMissingColumn = (e: unknown) => e instanceof Error && /no such column/.test(e.message);
 // Tampilan kasir: HANYA pilihan dari daftar ini (bukan HTML/CSS bebas) — aman
 // diisi AI milik pengguna lewat MCP maupun dari layar Tampilan kasir.
 const KASIR_THEMES = ["ungu", "hijau", "biru", "oranye", "merah", "pink", "gelap", "emas"] as const;
 const KASIR_LAYOUTS = ["grid", "list", "compact"] as const;
 const KASIR_CARDS = ["soft", "outline", "solid"] as const;
-type KasirStyle = { theme: string; layout: string; columns: number; card: string; showUnit: boolean; greeting: string; receiptFooter: string; categoryOrder: string[] };
-const KASIR_DEFAULT: KasirStyle = { theme: "ungu", layout: "grid", columns: 3, card: "soft", showUnit: true, greeting: "", receiptFooter: "", categoryOrder: [] };
+type KasirStyle = { theme: string; layout: string; columns: number; card: string; showUnit: boolean; greeting: string; receiptFooter: string; categoryOrder: string[]; header: string; strukSide: string; size: string; showStats: boolean; showSearch: boolean; showRecent: boolean };
+const KASIR_DEFAULT: KasirStyle = { theme: "ungu", layout: "grid", columns: 3, card: "soft", showUnit: true, greeting: "", receiptFooter: "", categoryOrder: [], header: "besar", strukSide: "kanan", size: "normal", showStats: true, showSearch: true, showRecent: true };
 const sanitizeKasirStyle = (raw: unknown, base: KasirStyle = KASIR_DEFAULT): KasirStyle => {
   const r = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
   const pick = <T extends readonly string[]>(v: unknown, list: T, fb: string) => (typeof v === "string" && (list as readonly string[]).includes(v) ? v : fb);
@@ -9634,6 +9649,12 @@ const sanitizeKasirStyle = (raw: unknown, base: KasirStyle = KASIR_DEFAULT): Kas
     greeting: r.greeting !== undefined ? shopText(r.greeting, 80) : base.greeting,
     receiptFooter: r.receiptFooter !== undefined ? shopText(r.receiptFooter, 120) : base.receiptFooter,
     categoryOrder: Array.isArray(r.categoryOrder) ? [...new Set(r.categoryOrder.map((x) => shopText(x, 40)).filter(Boolean))].slice(0, 40) : base.categoryOrder,
+    header: pick(r.header, ["besar", "ringkas"] as const, base.header),
+    strukSide: pick(r.strukSide, ["kanan", "kiri"] as const, base.strukSide),
+    size: pick(r.size, ["normal", "besar"] as const, base.size),
+    showStats: typeof r.showStats === "boolean" ? r.showStats : base.showStats,
+    showSearch: typeof r.showSearch === "boolean" ? r.showSearch : base.showSearch,
+    showRecent: typeof r.showRecent === "boolean" ? r.showRecent : base.showRecent,
   };
 };
 const parseKasirStyle = (v: unknown): KasirStyle => { try { return sanitizeKasirStyle(typeof v === "string" ? JSON.parse(v) : null); } catch { return { ...KASIR_DEFAULT }; } };
@@ -9728,6 +9749,70 @@ const sanitizeShopFields = (raw: Record<string, unknown>, creating: boolean): { 
   return { ok: true, fields: f };
 };
 
+// Catat satu penjualan usaha: pemasukan Usaha & Freelance › Penjualan + saldo rekening
+// dalam SATU batch; saleKey (payload_json.saleId) mencegah dobel. Dipakai kasir
+// (request_id UUID) & webhook website (saleKey "web:<order_id>").
+const recordShopSale = async (env: Env, userId: string, shop: { id: string; name: string }, input: { saleKey: string; amount: number; qty: number; product: string; buyer: string; items?: { name: string; price: number; qty: number }[]; accountId: string; date: string; source?: "website" }) => {
+  const txId = generateId();
+  const now = nowIso();
+  const note = `[${shop.name}] ${input.product ? `${input.product}${input.qty > 1 ? ` ×${input.qty}` : ""}` : "Penjualan"}${input.buyer ? ` · ${input.buyer}` : ""}${input.source === "website" ? " · via website" : ""}`.slice(0, 200);
+  const payload = { saleId: input.saleKey, product: input.product || null, qty: input.qty, ...(input.buyer ? { buyer: input.buyer } : {}), ...(input.items?.length ? { items: input.items } : {}), ...(input.source ? { source: input.source } : {}) };
+  const results = await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO transactions (id, user_id, type, amount, amount_idr, category, sub_category, currency, account_id, date, display_date, note, status, related_id, related_type, payload_json, created_at, updated_at)
+       SELECT ?, ?, 'pemasukan', ?, ?, 'Usaha & Freelance', 'Penjualan', 'IDR', ?, ?, ?, ?, 'VERIFIED', ?, 'shop', ?, ?, ?
+        WHERE NOT EXISTS (SELECT 1 FROM transactions WHERE user_id = ? AND related_type = 'shop' AND json_valid(payload_json) AND json_extract(payload_json, '$.saleId') = ?)`
+    ).bind(txId, userId, input.amount, input.amount, input.accountId, input.date, input.date, note, shop.id, JSON.stringify(payload), now, now, userId, input.saleKey),
+    ...quickTxBalanceStatements(env, userId, txId, input.accountId, "pemasukan", input.amount),
+  ]);
+  if (!results[0]?.meta.changes) return { ok: false as const };
+  try {
+    const durableId = env.REALTIME_ROOM.idFromName(`member:${userId}`);
+    await env.REALTIME_ROOM.get(durableId).fetch("https://realtime.internal/publish", { method: "POST", body: JSON.stringify({ event: "transaction.created", payload: { id: txId, userId } }) });
+  } catch { /* realtime opsional */ }
+  return { ok: true as const, id: txId };
+};
+const shopSaleBuyerBad = (buyer: string) => /\b(pin|password|kata sandi|otp|cvv)\b/i.test(buyer);
+
+// ── Webhook website → Leosiqra: POST /api/hooks/shop/<id>, Authorization: Bearer lsq_shk_…
+// Server website pengguna yang memanggil (bukan browser — preflight tidak mengizinkan
+// header authorization). order_id wajib & unik per usaha (kirim ulang = tidak dobel).
+const SHOP_HOOK_RE = /^lsq_shk_[A-Za-z0-9_-]{43}$/;
+const SHOP_ORDER_RE = /^[A-Za-z0-9_.:#/-]{1,100}$/;
+async function handleShopHook(request: Request, env: Env, shopId: string) {
+  const hookErr = (status: number, error: string) => json({ ok: false, error }, { status });
+  if (!/^[0-9a-f-]{36}$/i.test(shopId)) return hookErr(404, "Usaha tidak ditemukan.");
+  const key = /^Bearer\s+(\S+)$/i.exec((request.headers.get("authorization") ?? "").trim())?.[1] ?? "";
+  if (!SHOP_HOOK_RE.test(key)) return hookErr(401, "Kunci tidak valid. Pakai header Authorization: Bearer <kunci dari Leosiqra>.");
+  if (env.MCP_RATE_LIMITER && !(await env.MCP_RATE_LIMITER.limit({ key: `shop-hook:${shopId}` })).success) return hookErr(429, "Terlalu banyak penjualan dalam semenit. Kirim ulang sebentar lagi (order_id yang sama aman).");
+  let row: { id: string; user_id: string; name: string; hook_hash: string | null; hook_account_id: string | null } | null;
+  try {
+    row = await env.DB.prepare("SELECT id, user_id, name, hook_hash, hook_account_id FROM shops WHERE id = ?").bind(shopId).first();
+  } catch (e) {
+    if (isMissingColumn(e) || shopsTableMissing(e)) return hookErr(503, "Sambungan website belum aktif di Leosiqra.");
+    throw e;
+  }
+  if (!row || !row.hook_hash || row.hook_hash !== (await sha256Hex(key))) return hookErr(401, "Kunci tidak cocok atau sambungan sudah diputus.");
+  const raw = await parseJson<Record<string, unknown>>(request).catch(() => null);
+  if (!raw) return hookErr(400, "Body harus JSON.");
+  const orderId = typeof raw.order_id === "string" || typeof raw.order_id === "number" ? String(raw.order_id).trim() : "";
+  if (!SHOP_ORDER_RE.test(orderId)) return hookErr(400, "order_id wajib (huruf/angka, maks 100) & unik per order.");
+  const amount = typeof raw.amount === "number" && Number.isFinite(raw.amount) ? Math.round(raw.amount) : shopMoney(raw.amount) ?? 0;
+  if (amount < 1 || amount > 1e11) return hookErr(400, "amount wajib: nominal Rupiah yang diterima (> 0).");
+  const qty = Number.isInteger(raw.qty) && (raw.qty as number) >= 1 && (raw.qty as number) <= 9999 ? (raw.qty as number) : 1;
+  const buyer = shopText(raw.buyer, 60);
+  if (shopSaleBuyerBad(buyer)) return hookErr(400, "Jangan kirim PIN/password/OTP.");
+  const date = isRealDateStr(raw.date) && raw.date <= todayWIB() && raw.date >= "2000-01-01" ? raw.date : todayWIB();
+  const account = row.hook_account_id
+    ? await env.DB.prepare("SELECT id FROM accounts WHERE id = ? AND user_id = ? AND COALESCE(currency, 'IDR') = 'IDR'").bind(row.hook_account_id, row.user_id).first<{ id: string }>()
+    : null;
+  if (!account) return hookErr(409, "Rekening tujuan sudah tidak ada. Pilih ulang di Leosiqra › Kelola usaha › Sambungkan website.");
+  const res = await recordShopSale(env, row.user_id, row, { saleKey: `web:${orderId}`, amount, qty, product: shopText(raw.product, 80), buyer, accountId: account.id, date, source: "website" });
+  await env.DB.prepare("UPDATE shops SET hook_last_at = ? WHERE id = ?").bind(nowIso(), row.id).run().catch(() => undefined);
+  if (!res.ok) return json({ ok: true, duplicate: true, order_id: orderId });
+  return json({ ok: true, id: res.id, order_id: orderId }, { status: 201 });
+}
+
 async function handleShopRoutes(request: Request, env: Env, pathname: string) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -9788,6 +9873,26 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
       return json({ ok: true });
     }
     // Catat penjualan: pemasukan + saldo dalam satu batch; request_id anti dobel.
+    // Sambungan website: buat/ganti kunci (ditampilkan SEKALI) atau putuskan.
+    if (action === "hook" && (request.method === "POST" || request.method === "DELETE")) {
+      try {
+        if (request.method === "DELETE") {
+          await env.DB.prepare("UPDATE shops SET hook_hash = NULL, updated_at = ? WHERE id = ? AND user_id = ?").bind(nowIso(), id, userId).run();
+          return json({ ok: true });
+        }
+        const raw = await parseJson<{ account_id?: unknown }>(request);
+        const account = typeof raw.account_id === "string" && raw.account_id
+          ? await env.DB.prepare("SELECT id FROM accounts WHERE id = ? AND user_id = ? AND COALESCE(currency, 'IDR') = 'IDR'").bind(raw.account_id, userId).first<{ id: string }>()
+          : null;
+        if (!account) return json({ error: "Pilih rekening Rupiah tujuan penjualan." }, { status: 400 });
+        const secret = mcpRandomSecret("lsq_shk_");
+        await env.DB.prepare("UPDATE shops SET hook_hash = ?, hook_account_id = ?, updated_at = ? WHERE id = ? AND user_id = ?").bind(await sha256Hex(secret), account.id, nowIso(), id, userId).run();
+        return json({ ok: true, key: secret, url: `${new URL(request.url).origin}/api/hooks/shop/${id}` }, { status: 201 });
+      } catch (e) {
+        if (isMissingColumn(e)) return json({ error: "Sambungan website belum aktif (menunggu pembaruan database). Coba lagi nanti." }, { status: 503 });
+        throw e;
+      }
+    }
     if (action === "import-prices" || action === "import-pages") return json({ error: USAHA_AI_MOVED, code: "use_mcp" }, { status: 410 });
     if (action === "sale" && request.method === "POST") {
       const raw = await parseJson<Record<string, unknown>>(request);
@@ -9801,7 +9906,7 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
         .map((x) => (x && typeof x === "object" ? (x as Record<string, unknown>) : {}))
         .map((x) => ({ name: shopText(x.name, 80), price: shopMoney(x.price) ?? 0, qty: Number.isInteger(x.qty) && (x.qty as number) >= 1 && (x.qty as number) <= 9999 ? (x.qty as number) : 1 }))
         .filter((x) => x.name);
-      if (/\b(pin|password|kata sandi|otp|cvv)\b/i.test(buyer)) return json({ error: "Jangan tulis PIN, password, atau OTP di sini." }, { status: 400 });
+      if (shopSaleBuyerBad(buyer)) return json({ error: "Jangan tulis PIN, password, atau OTP di sini." }, { status: 400 });
       const requestId = typeof raw.request_id === "string" && /^[0-9a-f-]{36}$/i.test(raw.request_id) ? raw.request_id : null;
       if (!requestId) return json({ error: "Permintaan tidak valid. Muat ulang halaman." }, { status: 400 });
       const date = isRealDateStr(raw.date) && raw.date <= todayWIB() && raw.date >= "2000-01-01" ? raw.date : todayWIB();
@@ -9809,23 +9914,9 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
         ? await env.DB.prepare("SELECT id FROM accounts WHERE id = ? AND user_id = ? AND COALESCE(currency, 'IDR') = 'IDR'").bind(raw.account_id, userId).first<{ id: string }>()
         : null;
       if (!account) return json({ error: "Pilih rekening Rupiah." }, { status: 400 });
-      const txId = generateId();
-      const now = nowIso();
-      const note = `[${shop.name}] ${product ? `${product}${qty > 1 ? ` ×${qty}` : ""}` : "Penjualan"}${buyer ? ` · ${buyer}` : ""}`.slice(0, 200);
-      const results = await env.DB.batch([
-        env.DB.prepare(
-          `INSERT INTO transactions (id, user_id, type, amount, amount_idr, category, sub_category, currency, account_id, date, display_date, note, status, related_id, related_type, payload_json, created_at, updated_at)
-           SELECT ?, ?, 'pemasukan', ?, ?, 'Usaha & Freelance', 'Penjualan', 'IDR', ?, ?, ?, ?, 'VERIFIED', ?, 'shop', ?, ?, ?
-            WHERE NOT EXISTS (SELECT 1 FROM transactions WHERE user_id = ? AND related_type = 'shop' AND json_valid(payload_json) AND json_extract(payload_json, '$.saleId') = ?)`
-        ).bind(txId, userId, amount, amount, account.id, date, date, note, id, JSON.stringify({ saleId: requestId, product: product || null, qty, ...(buyer ? { buyer } : {}), ...(items.length ? { items } : {}) }), now, now, userId, requestId),
-        ...quickTxBalanceStatements(env, userId, txId, account.id, "pemasukan", amount),
-      ]);
-      if (!results[0]?.meta.changes) return json({ error: "Penjualan ini sudah tercatat." }, { status: 409 });
-      try {
-        const durableId = env.REALTIME_ROOM.idFromName(`member:${userId}`);
-        await env.REALTIME_ROOM.get(durableId).fetch("https://realtime.internal/publish", { method: "POST", body: JSON.stringify({ event: "transaction.created", payload: { id: txId, userId } }) });
-      } catch { /* realtime opsional */ }
-      return json({ ok: true, id: txId }, { status: 201 });
+      const res = await recordShopSale(env, userId, shop, { saleKey: requestId, amount, qty, product, buyer, items, accountId: account.id, date });
+      if (!res.ok) return json({ error: "Penjualan ini sudah tercatat." }, { status: 409 });
+      return json({ ok: true, id: res.id }, { status: 201 });
     }
     return json({ error: "Not found" }, { status: 404 });
   } catch (error) {
@@ -16877,6 +16968,12 @@ const KASIR_STYLE_SCHEMA = {
   greeting: { type: "string", maxLength: 80, description: "Teks kecil di header kasir" },
   receiptFooter: { type: "string", maxLength: 120, description: "Penutup struk WA (mis. ucapan terima kasih)" },
   categoryOrder: { type: "array", items: { type: "string" }, maxItems: 40, description: "Urutan kategori (nama persis dari get_shop)" },
+  header: { type: "string", enum: ["besar", "ringkas"], description: "Header kasir besar (dengan statistik) atau ringkas" },
+  strukSide: { type: "string", enum: ["kanan", "kiri"], description: "Posisi panel struk di layar lebar" },
+  size: { type: "string", enum: ["normal", "besar"], description: "besar = tombol & teks lebih besar (tablet kasir)" },
+  showStats: { type: "boolean", description: "Tampilkan omzet hari ini/bulan ini di header" },
+  showSearch: { type: "boolean", description: "Tampilkan kolom cari" },
+  showRecent: { type: "boolean", description: "Tampilkan daftar penjualan hari ini" },
 };
 
 const MCP_TOOLS: McpToolDef[] = [
@@ -18369,6 +18466,10 @@ const worker = {
 
       if (url.pathname === "/api/member/listings" || url.pathname.startsWith("/api/member/listings/")) {
         return await handleListingRoutes(request, env, url.pathname);
+      }
+
+      if (url.pathname.startsWith("/api/hooks/shop/") && request.method === "POST") {
+        return await handleShopHook(request, env, url.pathname.slice("/api/hooks/shop/".length));
       }
 
       if (url.pathname === "/api/member/shops" || url.pathname.startsWith("/api/member/shops/")) {

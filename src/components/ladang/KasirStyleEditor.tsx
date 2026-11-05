@@ -34,7 +34,7 @@ export function KasirStyleEditor({ shop, onDone, onToast, onLeave }: { shop: Sho
   const move = (i: number, d: -1 | 1) => { const o = [...order]; [o[i], o[i + d]] = [o[i + d], o[i]]; set('categoryOrder', o); };
   const seg = (on: boolean) => cn('flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[12px] font-bold transition-colors', on ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400');
 
-  const prompt = `Pakai Leosiqra (MCP): ubah tampilan kasir usahaku "${shop.name}" (shop_id ${shop.id}) lewat set_kasir_style. Aku mau: [tulis keinginanmu, mis. tema gelap, kartu ringkas 4 kolom, sambutan "Top up kilat 24 jam", urutkan Mobile Legends paling atas].`;
+  const prompt = `Pakai Leosiqra (MCP): ubah tampilan kasir usahaku "${shop.name}" (shop_id ${shop.id}) lewat set_kasir_style. Aku mau: [tulis keinginanmu, mis. tema gelap, header ringkas, tombol besar untuk tablet, struk di kiri, kartu ringkas 4 kolom, sambutan "Top up kilat 24 jam", Mobile Legends paling atas].`;
   const save = async () => {
     setBusy(true);
     setError('');
@@ -74,10 +74,22 @@ export function KasirStyleEditor({ shop, onDone, onToast, onLeave }: { shop: Sho
           <div><span className={labelCls}>Gaya kartu</span><div className="flex gap-1 rounded-full bg-slate-100 p-1 dark:bg-slate-800">{CARDS.map((c) => <button key={c.id} type="button" onClick={() => set('card', c.id)} aria-pressed={st.card === c.id} className={seg(st.card === c.id)}>{c.label}</button>)}</div></div>
         </div>
       )}
-      <label className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-800/60">
-        <span className="text-[13px] font-bold text-slate-700 dark:text-slate-200">Tampilkan satuan (per pcs, dll)</span>
-        <input type="checkbox" checked={st.showUnit} onChange={(e) => set('showUnit', e.target.checked)} className="h-5 w-5 accent-violet-600" />
-      </label>
+      <div className="grid grid-cols-2 gap-3">
+        <div><span className={labelCls}>Header</span><div className="flex gap-1 rounded-full bg-slate-100 p-1 dark:bg-slate-800">{([['besar', 'Besar'], ['ringkas', 'Ringkas']] as const).map(([v, l]) => <button key={v} type="button" onClick={() => set('header', v)} aria-pressed={st.header === v} className={seg(st.header === v)}>{l}</button>)}</div></div>
+        <div><span className={labelCls}>Ukuran tombol</span><div className="flex gap-1 rounded-full bg-slate-100 p-1 dark:bg-slate-800">{([['normal', 'Normal'], ['besar', 'Besar']] as const).map(([v, l]) => <button key={v} type="button" onClick={() => set('size', v)} aria-pressed={st.size === v} className={seg(st.size === v)}>{l}</button>)}</div></div>
+      </div>
+      <div><span className={labelCls}>Posisi struk (layar lebar)</span><div className="flex gap-1 rounded-full bg-slate-100 p-1 dark:bg-slate-800">{([['kiri', 'Kiri'], ['kanan', 'Kanan']] as const).map(([v, l]) => <button key={v} type="button" onClick={() => set('strukSide', v)} aria-pressed={st.strukSide === v} className={seg(st.strukSide === v)}>{l}</button>)}</div></div>
+      <div>
+        <span className={labelCls}>Tampilkan</span>
+        <div className="divide-y divide-slate-100 rounded-2xl bg-slate-50 dark:divide-slate-800 dark:bg-slate-800/60">
+          {([['showStats', 'Omzet hari ini & bulan ini'], ['showSearch', 'Kolom cari'], ['showRecent', 'Penjualan hari ini'], ['showUnit', 'Satuan produk (per pcs, dll)']] as const).map(([k, l]) => (
+            <label key={k} className="flex items-center justify-between gap-3 px-4 py-3">
+              <span className="text-[13px] font-bold text-slate-700 dark:text-slate-200">{l}</span>
+              <input type="checkbox" checked={st[k]} onChange={(e) => set(k, e.target.checked)} className="h-5 w-5 accent-violet-600" />
+            </label>
+          ))}
+        </div>
+      </div>
       <label className="block"><span className={labelCls}>Teks sambutan di header</span><input value={st.greeting} onChange={(e) => set('greeting', e.target.value)} maxLength={80} placeholder="mis. Top up kilat, buka 24 jam" className={fieldCls} /></label>
       <label className="block"><span className={labelCls}>Penutup struk WA</span><input value={st.receiptFooter} onChange={(e) => set('receiptFooter', e.target.value)} maxLength={120} placeholder="Terima kasih sudah belanja! 🙏" className={fieldCls} /></label>
 

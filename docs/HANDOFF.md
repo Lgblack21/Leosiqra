@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-11-05 (live #131: Ladangku fullscreen, tampilan kasir 
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | MCP Usahaku gratis untuk FREE |
+| Akun B | selesai, tunggu "gas" + migrasi 0030 (2026-11-05) | claude/usahaku-web | MCP FREE, webhook website, tampilan kasir |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,6 +18,26 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-05 (branch claude/usahaku-web) — Sambungkan website (webhook) + rombak tampilan kasir, BELUM deploy.**
+  - **MIGRASI WAJIB di D1 Console** (file 0030_shop_hook.sql, boleh sebelum/sesudah deploy — Worker tahan kolom belum
+    ada: kasir jalan, "Sambungkan website" & webhook membalas 503):
+    `ALTER TABLE shops ADD COLUMN hook_hash TEXT;` / `ALTER TABLE shops ADD COLUMN hook_account_id TEXT;` /
+    `ALTER TABLE shops ADD COLUMN hook_last_at TEXT;`
+  - Webhook publik `POST /api/hooks/shop/<shopId>` (`handleShopHook`), header `Authorization: Bearer lsq_shk_…`. Kunci =
+    `mcpRandomSecret`, disimpan SHA-256 (`hook_hash`) — tidak pernah dikirim ke klien (GET hanya `hook_on`). Body:
+    `order_id` (wajib, unik → `payload_json.saleId = "web:<order_id>"`), `amount` (wajib, Rupiah), opsional product,
+    buyer (PIN/OTP ditolak), qty, date. Rekening tujuan = `hook_account_id` (dipilih user, IDR). Rate limit
+    MCP_RATE_LIMITER per usaha. Preflight browser tidak mengizinkan header authorization → hanya server-ke-server.
+    Catatan transaksi berakhiran " · via website" + `payload.source = 'website'` (badge 🌐 di kasir).
+  - Pencatatan kasir & webhook kini satu fungsi `recordShopSale` (batch atomik yang sama, saleKey anti dobel).
+  - Member: `POST /api/member/shops/:id/hook {account_id}` → kunci (SEKALI) + url; ganti = kunci lama mati;
+    `DELETE` = putus. UI `HookSection.tsx` di Kelola: status (Tersambung → rekening · terakhir masuk), contoh kode
+    Node/PHP/cURL, kartu AI-mu (perintah TANPA kunci).
+  - Tampilan kasir tambahan (style_json, tanpa migrasi baru): header besar/ringkas, posisi struk kiri/kanan, ukuran
+    tombol normal/besar, tampilkan omzet/cari/penjualan hari ini. Juga di MCP set_kasir_style.
+  - Dites lokal: sebelum migrasi (GET jalan, 503), tanpa/salah kunci 401, order_id/amount/PIN 400, sah 201 saldo +19.500,
+    kirim ulang = duplicate, 3× paralel → 1 tercatat (saldo +29.500 total), ganti kunci → lama 401, kunci toko lain 401,
+    putus → 401, tanpa sesi tidak bisa buat kunci; Playwright web+HP 0 error JS.
 - **2026-11-05 (branch claude/usahaku-web) — MCP Usahaku GRATIS untuk FREE, BELUM deploy (tunggu "gas"). Tanpa SQL.**
   - Keputusan Bos: tool tulis Usahaku (`create_shop`, `update_shop`, `set_shop_products`, `set_kasir_style`) boleh untuk
     member FREE. Izin tulis (scope `write`) kini bisa dibuat semua member (token manual & OAuth); tool uang

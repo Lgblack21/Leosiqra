@@ -8,8 +8,8 @@ export type ShopProduct = { name: string; price: number; unit: string; group?: s
 export type ShopPlan = { modal: number | null; waktu: string; perBulan: [number, number] | null; alasan: string[]; langkah: string[]; pembeli: string; cariDi: string };
 export type ShopIdea = { name: string; emoji: string; tagline: string; description: string; products: ShopProduct[]; plan: ShopPlan };
 /** Tampilan kasir — pilihan terbatas (lihat sanitizeKasirStyle di Worker). */
-export type KasirStyle = { theme: string; layout: 'grid' | 'list' | 'compact'; columns: 2 | 3 | 4; card: 'soft' | 'outline' | 'solid'; showUnit: boolean; greeting: string; receiptFooter: string; categoryOrder: string[] };
-export const KASIR_DEFAULT: KasirStyle = { theme: 'ungu', layout: 'grid', columns: 3, card: 'soft', showUnit: true, greeting: '', receiptFooter: '', categoryOrder: [] };
+export type KasirStyle = { theme: string; layout: 'grid' | 'list' | 'compact'; columns: 2 | 3 | 4; card: 'soft' | 'outline' | 'solid'; showUnit: boolean; greeting: string; receiptFooter: string; categoryOrder: string[]; header: 'besar' | 'ringkas'; strukSide: 'kanan' | 'kiri'; size: 'normal' | 'besar'; showStats: boolean; showSearch: boolean; showRecent: boolean };
+export const KASIR_DEFAULT: KasirStyle = { theme: 'ungu', layout: 'grid', columns: 3, card: 'soft', showUnit: true, greeting: '', receiptFooter: '', categoryOrder: [], header: 'besar', strukSide: 'kanan', size: 'normal', showStats: true, showSearch: true, showRecent: true };
 export type Shop = {
   id: string;
   name: string;
@@ -26,6 +26,12 @@ export type Shop = {
   style: KasirStyle;
   /** false = kolom style_json belum ada di server (migrasi 0029 belum jalan). */
   styleReady: boolean;
+  /** Sambungan website (webhook): aktif? rekening tujuan, penjualan terakhir masuk. */
+  hookOn: boolean;
+  hookAccountId?: string;
+  hookLastAt?: string;
+  /** false = kolom hook_* belum ada di server (migrasi 0030 belum jalan). */
+  hookReady: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -49,6 +55,10 @@ const fromRow = (r: Row): Shop => ({
   promotedAt: str(r.promoted_at),
   style: { ...KASIR_DEFAULT, ...parse<Partial<KasirStyle>>(r.style_json, {}) },
   styleReady: 'style_json' in r,
+  hookOn: Number(r.hook_on) === 1,
+  hookAccountId: str(r.hook_account_id),
+  hookLastAt: str(r.hook_last_at),
+  hookReady: 'hook_on' in r,
   createdAt: String(r.created_at ?? ''),
   updatedAt: String(r.updated_at ?? ''),
 });
@@ -83,6 +93,16 @@ export const shopService = {
   },
   async remove(id: string) {
     await cloudflareApi(`/api/member/shops/${id}`, { method: 'DELETE' });
+    notifyCollectionChanged('shops');
+  },
+  /** Buat/ganti kunci sambungan website — kunci hanya dikembalikan SEKALI ini. */
+  async createHook(id: string, accountId: string): Promise<{ key: string; url: string }> {
+    const r = await cloudflareApi<{ key: string; url: string }>(`/api/member/shops/${id}/hook`, { method: 'POST', json: { account_id: accountId } });
+    notifyCollectionChanged('shops');
+    return r;
+  },
+  async removeHook(id: string) {
+    await cloudflareApi(`/api/member/shops/${id}/hook`, { method: 'DELETE' });
     notifyCollectionChanged('shops');
   },
   async sale(id: string, input: { requestId: string; amount: number; qty: number; product?: string; buyer?: string; items?: { name: string; price: number; qty: number }[]; accountId: string; date?: string }) {

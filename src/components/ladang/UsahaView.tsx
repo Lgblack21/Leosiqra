@@ -11,6 +11,7 @@ import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
 import { KASIR_THEME } from './kasirTheme';
 import { AiMcpCard } from './AiMcpCard';
+import { HookSection } from './HookSection';
 
 // Ladangku › Usaha (Usahaku): AI menyusun 3 rencana usaha dari "aku bisa …" →
 // simpan jadi usaha → produk & kontak → katalog siap sebar (teks WA, gambar PNG,
@@ -335,6 +336,7 @@ export function ShopDetail({ shop, sales, kasirLink, onToast, onDeleted, onLeave
       </section>
 
       <WebsiteSection shop={shop} editing={section === 'web'} setEditing={(v) => setSection(v ? 'web' : '')} onToast={onToast} onLeave={onLeave} />
+      <HookSection shop={shop} onToast={onToast} onLeave={onLeave} />
 
       <details className="rounded-3xl ring-1 ring-slate-100 p-4 dark:ring-slate-800">
         <summary className="cursor-pointer text-[14px] font-extrabold text-slate-900 dark:text-white">Rencananya</summary>

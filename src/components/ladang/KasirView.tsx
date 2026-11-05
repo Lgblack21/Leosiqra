@@ -85,6 +85,9 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
   }
 
   // inSheet: di dalam sheet/modal (judul dari sheet, tanpa kartu) — "Transaksi baru" menutup sheet.
+  const compactHead = shop.style.header === 'ringkas';
+  const todayTotal = Math.round(todaySales.reduce((x, t) => x + amt(t), 0));
+  const strukLeft = shop.style.strukSide === 'kiri';
   const strukFor = (inSheet: boolean) => <Struk key={`${shop.id}-${inSheet}`} shop={shop} lines={lines} sum={sum} onAdd={add} setQty={setQty} clear={() => setLines([])} onDone={say} inSheet={inSheet} onNew={() => setSheet(false)} />;
 
   return (
@@ -92,23 +95,23 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
       {flash && <div role="status" className="fixed inset-x-4 top-4 z-[95] mx-auto max-w-sm rounded-2xl bg-slate-900 px-4 py-3 text-center text-[13px] font-semibold text-white shadow-lg">{flash}</div>}
 
       {/* Header toko */}
-      <section className={cn('web-keep relative overflow-hidden rounded-[28px] p-4 text-white md:p-5', themeOf(shop.style).header)}>
+      <section className={cn('web-keep relative overflow-hidden text-white', compactHead ? 'rounded-[22px] px-3 py-2.5' : 'rounded-[28px] p-4 md:p-5', themeOf(shop.style).header)}>
         <div className="flex items-center gap-3">
           <Link href={back} aria-label="Kembali ke Usahaku" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"><ArrowLeft size={17} /></Link>
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-[26px]">{shop.emoji || '🏪'}</span>
+          {!compactHead && <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-[26px]">{shop.emoji || '🏪'}</span>}
           <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-white/50"><Store size={12} /> Kasir</p>
-            <h1 className="truncate text-[20px] font-extrabold leading-tight md:text-[24px]">{shop.name}</h1>
-            {shop.style.greeting && <p className="truncate text-[12px] text-white/70">{shop.style.greeting}</p>}
+            {!compactHead && <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-white/50"><Store size={12} /> Kasir</p>}
+            <h1 className={cn('truncate font-extrabold leading-tight', compactHead ? 'text-[16px]' : 'text-[20px] md:text-[24px]')}>{compactHead && `${shop.emoji || '🏪'} `}{shop.name}</h1>
+            {compactHead && shop.style.showStats ? <p className="truncate text-[11px] text-white/70">Hari ini {short(todayTotal)} · {todaySales.length} transaksi</p> : shop.style.greeting && <p className="truncate text-[12px] text-white/70">{shop.style.greeting}</p>}
           </div>
           <button type="button" onClick={() => setStyling(true)} aria-label="Tampilan kasir" className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-[12px] font-bold hover:bg-white/20"><Palette size={14} /> <span className="hidden sm:inline">Tampilan</span></button>
           <button type="button" onClick={() => setManage(true)} aria-label="Kelola usaha" className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-[12px] font-bold hover:bg-white/20"><Settings2 size={14} /> <span className="hidden sm:inline">Kelola</span></button>
         </div>
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          {[['Hari ini', short(Math.round(todaySales.reduce((x, t) => x + amt(t), 0)))], ['Transaksi', String(todaySales.length)], ['Bulan ini', short(Math.round(monthSales.reduce((x, t) => x + amt(t), 0)))]].map(([k, v]) => (
+        {!compactHead && shop.style.showStats && <div className="mt-4 grid grid-cols-3 gap-2">
+          {[['Hari ini', short(todayTotal)], ['Transaksi', String(todaySales.length)], ['Bulan ini', short(Math.round(monthSales.reduce((x, t) => x + amt(t), 0)))]].map(([k, v]) => (
             <div key={k} className="rounded-2xl bg-white/[0.07] px-3 py-2.5 ring-1 ring-white/10"><p className="text-[11px] text-white/55">{k}</p><p className="truncate text-[16px] font-extrabold tabular-nums md:text-[18px]">{v}</p></div>
           ))}
-        </div>
+        </div>}
       </section>
 
       {shop.products.length === 0 ? (
@@ -119,9 +122,9 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
           <button type="button" onClick={() => setManage(true)} className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-violet-600 px-5 py-2.5 text-[13px] font-bold text-white hover:bg-violet-700"><Settings2 size={15} /> Isi katalog</button>
         </section>
       ) : (
-        <div className="grid items-start gap-4 lg:grid-cols-[1fr_360px]">
+        <div className={cn('grid items-start gap-4', strukLeft ? 'lg:grid-cols-[360px_1fr]' : 'lg:grid-cols-[1fr_360px]')}>
           <Catalog products={shop.products} style={shop.style} lines={lines} onAdd={add} />
-          {!app && <aside aria-label="Struk" className="hidden lg:sticky lg:top-4 lg:block">{strukFor(false)}</aside>}
+          {!app && <aside aria-label="Struk" className={cn('hidden lg:sticky lg:top-4 lg:block', strukLeft && 'lg:order-first')}>{strukFor(false)}</aside>}
         </div>
       )}
 
@@ -150,7 +153,7 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
         </>
       )}
 
-      <RecentSales sales={todaySales} />
+      {shop.style.showRecent && <RecentSales sales={todaySales} />}
     </div>
   );
 }
@@ -181,11 +184,11 @@ function Catalog({ products, style, lines, onAdd }: { products: ShopProduct[]; s
 
   return (
     <section className="min-w-0 space-y-3">
-      <div className="flex items-center gap-2 rounded-2xl bg-white px-3.5 py-2.5 ring-1 ring-slate-100 focus-within:ring-2 focus-within:ring-violet-500 dark:bg-slate-900 dark:ring-slate-800">
+      {style.showSearch && <div className="flex items-center gap-2 rounded-2xl bg-white px-3.5 py-2.5 ring-1 ring-slate-100 focus-within:ring-2 focus-within:ring-violet-500 dark:bg-slate-900 dark:ring-slate-800">
         <Search size={16} className="shrink-0 text-slate-400" />
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={named ? 'Cari game atau nominal…' : 'Cari produk…'} aria-label="Cari produk" className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400 dark:text-white" />
         {query && <button type="button" onClick={() => setQuery('')} aria-label="Hapus pencarian" className="text-slate-400"><X size={15} /></button>}
-      </div>
+      </div>}
 
       {named && (
         <div role="tablist" aria-label="Kategori" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
@@ -218,7 +221,7 @@ function Catalog({ products, style, lines, onAdd }: { products: ShopProduct[]; s
                 const n = qtyOf(p);
                 return (
                   <li key={i}>
-                    <button type="button" onClick={() => onAdd(p)} aria-label={`Tambah ${productLabel(p)} ke struk`} className={cn('flex w-full items-center gap-3 rounded-xl px-2 py-3 text-left transition-colors', n ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60')}>
+                    <button type="button" onClick={() => onAdd(p)} aria-label={`Tambah ${productLabel(p)} ke struk`} className={cn('flex w-full items-center gap-3 rounded-xl px-2 text-left transition-colors', style.size === 'besar' ? 'py-4 text-[16px]' : 'py-3', n ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60')}>
                       <span className="min-w-0 flex-1"><span className="block truncate text-[14px] font-bold text-slate-900 dark:text-white">{p.name}</span>{style.showUnit && p.unit && <span className="block text-[11px] text-slate-500 dark:text-slate-400">{p.unit}</span>}</span>
                       <span className="shrink-0 text-[14px] font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">{formatIDR(p.price)}</span>
                       <span className={cn('flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-extrabold', n ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 dark:bg-slate-800')}>{n ? `×${n}` : <Plus size={14} />}</span>
@@ -232,13 +235,14 @@ function Catalog({ products, style, lines, onAdd }: { products: ShopProduct[]; s
               {items.map(({ p, i }) => {
                 const n = qtyOf(p);
                 const compact = style.layout === 'compact';
+                const big = style.size === 'besar' && !compact;
                 return (
                   <li key={i}>
-                    <button type="button" onClick={() => onAdd(p)} aria-label={`Tambah ${productLabel(p)} ke struk`} className={cn('relative flex h-full w-full flex-col items-start rounded-2xl text-left transition-all active:scale-[0.97]', compact ? 'p-2' : 'p-3', n ? 'bg-emerald-50 ring-2 ring-emerald-500 dark:bg-emerald-500/10' : CARD[style.card] ?? CARD.soft)}>
+                    <button type="button" onClick={() => onAdd(p)} aria-label={`Tambah ${productLabel(p)} ke struk`} className={cn('relative flex h-full w-full flex-col items-start rounded-2xl text-left transition-all active:scale-[0.97]', compact ? 'p-2' : big ? 'min-h-[104px] p-4' : 'p-3', n ? 'bg-emerald-50 ring-2 ring-emerald-500 dark:bg-emerald-500/10' : CARD[style.card] ?? CARD.soft)}>
                       {n > 0 && <span className={cn('absolute flex min-w-6 items-center justify-center rounded-full bg-emerald-600 px-1.5 font-extrabold text-white', compact ? 'right-1 top-1 h-5 text-[10px]' : 'right-2 top-2 h-6 text-[11px]')}>×{n}</span>}
-                      <span className={cn('line-clamp-2 font-bold leading-snug text-slate-900 dark:text-white', compact ? 'pr-5 text-[12px]' : 'pr-6 text-[14px]')}>{p.name}</span>
+                      <span className={cn('line-clamp-2 font-bold leading-snug text-slate-900 dark:text-white', compact ? 'pr-5 text-[12px]' : big ? 'pr-7 text-[17px]' : 'pr-6 text-[14px]')}>{p.name}</span>
                       {style.showUnit && p.unit && !compact && <span className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">{p.unit}</span>}
-                      <span className={cn('mt-auto font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300', compact ? 'pt-1 text-[12px]' : 'pt-2 text-[15px]')}>{formatIDR(p.price)}</span>
+                      <span className={cn('mt-auto font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300', compact ? 'pt-1 text-[12px]' : big ? 'pt-3 text-[19px]' : 'pt-2 text-[15px]')}>{formatIDR(p.price)}</span>
                     </button>
                   </li>
                 );
@@ -395,7 +399,10 @@ function RecentSales({ sales }: { sales: Transaction[] }) {
       <ul className="mt-2 divide-y divide-slate-100 dark:divide-slate-800">
         {list.map((t) => (
           <li key={t.id} className="flex items-center justify-between gap-3 py-2.5">
-            <span className="min-w-0 truncate text-[13px] text-slate-700 dark:text-slate-200">{(t.note ?? '').replace(/^\[[^\]]*\]\s*/, '') || 'Penjualan'}</span>
+            <span className="flex min-w-0 items-center gap-1.5 text-[13px] text-slate-700 dark:text-slate-200">
+              {(t.note ?? '').endsWith(' · via website') && <span className="shrink-0 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">🌐 Website</span>}
+              <span className="truncate">{(t.note ?? '').replace(/^\[[^\]]*\]\s*/, '').replace(/ · via website$/, '') || 'Penjualan'}</span>
+            </span>
             <span className="shrink-0 text-[13px] font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">+{formatIDR(Math.round(amt(t)))}</span>
           </li>
         ))}
