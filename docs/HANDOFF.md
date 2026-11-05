@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-11-05 (live #131: Ladangku fullscreen, tampilan kasir 
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | perbaikan Hubungkan AI & nama kategori |
+| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | Usahaku tanpa AI Leosiqra (MCP) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,7 +18,24 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-05 (branch claude/usahaku-web) — perbaikan kecil, BELUM deploy (tunggu "gas"). Tanpa SQL.**
+- **2026-11-05 (branch claude/usahaku-web) — Usahaku TANPA AI Leosiqra (keputusan Bos: semua lewat AI/MCP milik
+  pengguna), BELUM deploy (tunggu "gas"). Tanpa SQL.**
+  - DIHAPUS dari Worker: `handleShopIdeas` (ide usaha), `handleShopImportPrices` + `handleShopImportPages` + semua
+    pengambil halaman (fetchDirectHtml/reader r.jina.ai/pickShopPages), kuota `shopIdeaAi`/`shopImportAi`, env
+    `SHOP_IMPORT_READER`. Rute lama (`/shops/ideas`, `/:id/import-prices`, `/:id/import-pages`) membalas **410**
+    `code: use_mcp` + pesan. Riwayat kode ada di git (commit sebelum ini) kalau perlu dikembalikan.
+  - MCP baru: `create_shop` (simpan ide usaha pilihan pengguna, + products & plan, maks 5 usaha) dan `update_shop`
+    (nama/tagline/deskripsi/emoji/WA/cara bayar/area/website/rencana) — pakai `sanitizeShopFields` yang sama dengan
+    aplikasi (PIN/OTP & tautan editor ditolak, WA → 62…). Instruksi server MCP: ambil harga website dengan alat web
+    milik AI-nya lalu `set_shop_products`.
+  - UI: komponen bersama `AiMcpCard` (1 Hubungkan · 2 Salin perintah · 3 Muat ulang + Buka Claude/ChatGPT) dipakai di
+    Usaha baru (ide), Kelola › Website (ambil harga), Tampilan kasir. Usahaku & Kasir memuat ulang otomatis saat tab
+    kembali aktif (`visibilitychange`). `shopService.ideas/importPrices/importPages` dihapus.
+  - **Akibat yang perlu Bos tahu**: menyimpan lewat AI = tool tulis MCP = **khusus PRO**. Member FREE masih bisa
+    daftar usaha & isi katalog manual, dan AI-nya bisa membaca, tapi tidak bisa menyimpan lewat AI.
+  - Dites lokal: 410 untuk 3 rute lama; create_shop/update_shop + validasi; Playwright web+HP 0 error JS.
+    **Belum**: dipanggil dari Claude/ChatGPT asli (termasuk apakah AI-nya mampu membuka semua halaman cxastore.id).
+- **2026-11-05 (branch claude/usahaku-web) — perbaikan kecil, **live #132**. Tanpa SQL.**
   - Bug "Hubungkan AI macet" di Tampilan kasir (web): panel Pengaturan (z-80) terbuka DI BELAKANG Modal (z-88). Sekarang
     popup ditutup dulu lalu `openSettings('app-mcp')` (langsung kartu Claude & ChatGPT). HP: tautan /app/profile + tutup.
   - Nama kategori dari penemu halaman: teks link gabungan ("MOBILE LEGENDS Moonton MOBILE LEGENDS") → potongan yang

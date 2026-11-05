@@ -72,9 +72,6 @@ export const shopService = {
     const res = await cloudflareApi<{ items: Row[] }>('/api/member/shops');
     return (res.items ?? []).map(fromRow);
   },
-  async ideas(text: string, exclude: string[] = []): Promise<{ ideas: ShopIdea[]; remaining: number }> {
-    return cloudflareApi<{ ideas: ShopIdea[]; remaining: number }>('/api/member/shops/ideas', { method: 'POST', json: { text, exclude } });
-  },
   async create(i: ShopInput): Promise<string> {
     const res = await cloudflareApi<{ id: string }>('/api/member/shops', { method: 'POST', json: toBody(i) });
     notifyCollectionChanged('shops');
@@ -87,14 +84,6 @@ export const shopService = {
   async remove(id: string) {
     await cloudflareApi(`/api/member/shops/${id}`, { method: 'DELETE' });
     notifyCollectionChanged('shops');
-  },
-  /** AI membaca daftar harga di website (USULAN — belum disimpan). */
-  async importPrices(id: string, url?: string, group?: string): Promise<{ products: ShopProduct[]; source: string; via: 'langsung' | 'pembaca'; shopName: string | null }> {
-    return cloudflareApi(`/api/member/shops/${id}/import-prices`, { method: 'POST', json: { ...(url ? { url } : {}), ...(group ? { group } : {}) } });
-  },
-  /** Daftar halaman produk/game di website yang sama (tanpa AI) — dibaca satu per satu lewat importPrices. */
-  async importPages(id: string, url?: string): Promise<{ pages: { url: string; title: string }[]; source: string }> {
-    return cloudflareApi(`/api/member/shops/${id}/import-pages`, { method: 'POST', json: url ? { url } : {} });
   },
   async sale(id: string, input: { requestId: string; amount: number; qty: number; product?: string; buyer?: string; items?: { name: string; price: number; qty: number }[]; accountId: string; date?: string }) {
     await cloudflareApi(`/api/member/shops/${id}/sale`, { method: 'POST', json: { request_id: input.requestId, amount: input.amount, qty: input.qty, product: input.product, buyer: input.buyer, items: input.items, account_id: input.accountId, date: input.date } });

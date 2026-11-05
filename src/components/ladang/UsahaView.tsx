@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Check, Copy, Download, ExternalLink, Globe, Link2, Loader2, MessageCircle, Plus, Shuffle, Sparkles, Store, Trash2, Wand2, X } from 'lucide-react';
+import { ArrowLeft, Check, Copy, Download, ExternalLink, Globe, Link2, Loader2, MessageCircle, Plus, Sparkles, Store, Trash2, Wand2, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { shopService, catalogText, groupProducts, prettyWa, websiteBrief, PABRIK_AI_URL, type Shop, type ShopIdea, type ShopProduct } from '@/lib/services/shopService';
@@ -10,6 +10,7 @@ import { transactionService, type Transaction } from '@/lib/services/transaction
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
 import { KASIR_THEME } from './kasirTheme';
+import { AiMcpCard } from './AiMcpCard';
 
 // Ladangku › Usaha (Usahaku): AI menyusun 3 rencana usaha dari "aku bisa …" →
 // simpan jadi usaha → produk & kontak → katalog siap sebar (teks WA, gambar PNG,
@@ -39,7 +40,10 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
     void load(); void loadTx();
     const u1 = subscribeToCollectionChanges('shops', load);
     const u2 = subscribeToCollectionChanges('transactions', loadTx);
-    return () => { alive = false; u1(); u2(); };
+    // AI-mu menyimpan lewat MCP di tab lain → muat ulang saat kembali ke tab ini.
+    const onFocus = () => { if (document.visibilityState === 'visible') void load(); };
+    document.addEventListener('visibilitychange', onFocus);
+    return () => { alive = false; u1(); u2(); document.removeEventListener('visibilitychange', onFocus); };
   }, []);
 
   const now = toLocalDateString().slice(0, 7);
@@ -53,8 +57,8 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
   const card = app ? 'rounded-3xl bg-white ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800' : 'rounded-[26px] bg-white ring-1 ring-slate-100';
   const current = sheet?.k === 'shop' ? shops?.find((s) => s.id === sheet.id) : undefined;
   const body = sheet?.k === 'ideas'
-    ? <IdeaFlow onSaved={(id, name) => { setSheet({ k: 'shop', id }); onToast(`${name} tersimpan. Lengkapi kontak supaya katalognya siap.`); }} />
-    : current ? <ShopDetail shop={current} sales={salesBy.get(current.id) ?? []} kasirLink={kasirHref(variant, current.id)} onToast={onToast} onDeleted={() => { setSheet(null); onToast('Usaha dihapus. Penjualan yang tercatat tetap ada di transaksi.'); }} /> : null;
+    ? <IdeaFlow onSaved={(id, name) => { setSheet({ k: 'shop', id }); onToast(`${name} tersimpan. Lengkapi kontak supaya katalognya siap.`); }} onToast={onToast} onLeave={() => setSheet(null)} />
+    : current ? <ShopDetail shop={current} sales={salesBy.get(current.id) ?? []} kasirLink={kasirHref(variant, current.id)} onToast={onToast} onLeave={() => setSheet(null)} onDeleted={() => { setSheet(null); onToast('Usaha dihapus. Penjualan yang tercatat tetap ada di transaksi.'); }} /> : null;
   const title = sheet?.k === 'ideas' ? 'Usaha baru' : current?.name ?? '';
 
   if (shops === null) return <div className="h-48 animate-pulse rounded-[28px] bg-slate-200/70 dark:bg-slate-800" />;
@@ -67,7 +71,7 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
           <Store aria-hidden size={150} strokeWidth={1} className="pointer-events-none absolute -bottom-8 -right-6 text-violet-300/10" />
           <p className="text-[13px] font-semibold text-white/60">Usahaku</p>
           <p className="mt-1 text-[24px] font-extrabold leading-tight md:text-[28px]">Punya keahlian? Jadikan usaha sampingan.</p>
-          <p className="mt-2 max-w-md text-[13px] text-white/70">Ceritakan apa yang bisa kamu kerjakan — AI menyusun 3 rencana lengkap: produk & harga, modal, langkah minggu ini, dan di mana cari pembeli.</p>
+          <p className="mt-2 max-w-md text-[13px] text-white/70">Ceritakan apa yang bisa kamu kerjakan — AI-mu sendiri (Claude/ChatGPT) menyusun rencana lengkap: produk & harga, modal, langkah minggu ini, dan di mana cari pembeli.</p>
           <button type="button" onClick={() => setSheet({ k: 'ideas' })} className="relative mt-4 flex items-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-[13px] font-bold text-slate-900 hover:bg-white/90"><Sparkles size={15} /> Cari ide usaha</button>
         </section>
       ) : (
@@ -153,64 +157,14 @@ function StageBar({ stage, className }: { stage: number; className?: string }) {
   );
 }
 
-// ── Ide usaha (AI) ───────────────────────────────────────────────────────────
-function IdeaFlow({ onSaved }: { onSaved: (id: string, name: string) => void }) {
+// ── Ide usaha: disusun AI MILIK PENGGUNA (MCP create_shop), bukan AI Leosiqra ──
+function IdeaFlow({ onSaved, onToast, onLeave }: { onSaved: (id: string, name: string) => void; onToast: (m: string) => void; onLeave: () => void }) {
   const [text, setText] = useState('');
-  const [ideas, setIdeas] = useState<ShopIdea[] | null>(null);
-  const [seen, setSeen] = useState<string[]>([]);
-  const [pick, setPick] = useState(0);
-  const [busy, setBusy] = useState<'' | 'ai' | 'save'>('');
-  const [error, setError] = useState('');
-  const [remaining, setRemaining] = useState<number | null>(null);
   const [direct, setDirect] = useState(false);
-
-  const run = async (more = false) => {
-    if (text.trim().length < 4 || busy) return;
-    setBusy('ai');
-    setError('');
-    try {
-      const r = await shopService.ideas(text.trim(), more ? seen : []);
-      setIdeas(r.ideas);
-      setSeen((p) => [...new Set([...(more ? p : []), ...r.ideas.map((i) => i.name)])].slice(-9));
-      setPick(0);
-      setRemaining(r.remaining);
-    } catch (e) {
-      setError(e instanceof Error && e.message ? e.message : 'Gagal menyusun ide.');
-    } finally {
-      setBusy('');
-    }
-  };
-  const save = async (idea: ShopIdea) => {
-    setBusy('save');
-    try {
-      const id = await shopService.create({ name: idea.name, emoji: idea.emoji, tagline: idea.tagline, description: idea.description, products: idea.products, plan: idea.plan });
-      onSaved(id, idea.name);
-    } catch (e) {
-      setError(e instanceof Error && e.message ? e.message : 'Gagal menyimpan.');
-      setBusy('');
-    }
-  };
-
   if (direct) return <DirectShopForm onBack={() => setDirect(false)} onSaved={onSaved} />;
-  if (busy === 'ai') return <Thinking text={text.trim()} />;
-  if (ideas) {
-    const idea = ideas[pick];
-    return (
-      <div className="space-y-4">
-        <button type="button" onClick={() => setIdeas(null)} className="flex items-center gap-1 text-[13px] font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400"><ArrowLeft size={15} /> Ubah cerita</button>
-        {error && <div role="alert" className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">{error}</div>}
-        <div role="tablist" aria-label="Pilihan ide" className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
-          {ideas.map((i, k) => <button key={i.name} type="button" role="tab" aria-selected={k === pick} onClick={() => setPick(k)} className={cn('shrink-0 rounded-full px-3 py-1.5 text-[12px] font-bold', k === pick ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300')}>{i.emoji} {i.name}</button>)}
-        </div>
-        <PlanCard idea={idea} />
-        <button type="button" onClick={() => save(idea)} disabled={Boolean(busy)} className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 text-[15px] font-bold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-violet-600">
-          {busy === 'save' ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />} Pakai rencana ini
-        </button>
-        <button type="button" onClick={() => run(true)} disabled={Boolean(busy) || remaining === 0} className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-100 py-3 text-[14px] font-bold text-slate-700 disabled:opacity-40 dark:bg-slate-800 dark:text-slate-200"><Shuffle size={16} /> Ide lain {remaining !== null && <span className="text-[11px] font-semibold text-slate-400">(sisa {remaining}× hari ini)</span>}</button>
-        <p className="text-center text-[11px] text-slate-400">Produk, harga & kontak bisa diubah setelah disimpan. Angka = perkiraan, bukan janji.</p>
-      </div>
-    );
-  }
+  const story = text.trim();
+  const prompt = `Pakai Leosiqra (MCP). Aku mau mulai usaha sampingan. Ceritaku: "${story || '[tulis keahlian / barang yang bisa kamu jual]'}".
+Susun 3 rencana usaha kecil yang realistis & legal di Indonesia, SEMUA di bidang yang aku sebut: nama usaha, produk + harga Rupiah, modal awal, perkiraan pendapatan per bulan, 3 langkah minggu ini, siapa pembelinya & di mana mencarinya. Setelah aku memilih satu, simpan dengan create_shop (sertakan products dan plan).`;
   return (
     <div className="space-y-4">
       <div className="flex gap-3">
@@ -220,13 +174,11 @@ function IdeaFlow({ onSaved }: { onSaved: (id: string, name: string) => void }) 
           <p className="text-[12px] text-slate-500 dark:text-slate-400">Pakai kata-katamu sendiri: &ldquo;aku jago bikin kue kering&rdquo;, &ldquo;bisa desain di Canva&rdquo;.</p>
         </div>
       </div>
-      {error && <div role="alert" className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">{error}</div>}
       <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} maxLength={300} autoFocus placeholder="Aku bisa…" className="w-full resize-none rounded-2xl bg-slate-100 px-4 py-3 text-[15px] font-semibold text-slate-900 outline-none ring-2 ring-transparent placeholder:font-medium placeholder:text-slate-400 focus:bg-white focus:ring-violet-500 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900" />
       <div className="flex flex-wrap gap-1.5">{STARTERS.map((s) => <button key={s} type="button" onClick={() => setText((t) => (t.trim() ? `${t.trim()}, ${s.toLowerCase()}` : `Aku bisa ${s.toLowerCase()}`))} className="rounded-full bg-slate-100 px-3 py-1.5 text-[12px] font-bold text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">{s}</button>)}</div>
-      <button type="button" onClick={() => run(false)} disabled={text.trim().length < 4} className="flex w-full items-center justify-center gap-2 rounded-full bg-violet-600 py-3.5 text-[15px] font-bold text-white hover:bg-violet-700 disabled:opacity-40"><Sparkles size={17} /> Susun 3 rencana</button>
-      <p className="text-center text-[11px] text-slate-400">Maks 5× per hari. Data keuanganmu tidak dikirim ke AI — hanya ceritamu.</p>
+      <AiMcpCard title="Minta ide ke AI-mu" desc="AI-mu menyusun 3 rencana usaha dari ceritamu, lalu menyimpannya ke Usahaku setelah kamu pilih." prompt={prompt} onLeave={onLeave} onToast={onToast} />
       <button type="button" onClick={() => setDirect(true)} className="flex w-full items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-left ring-1 ring-slate-100 hover:bg-slate-100 dark:bg-slate-800/60 dark:ring-slate-800">
-        <span><span className="block text-[14px] font-extrabold text-slate-900 dark:text-white">Sudah punya usaha?</span><span className="block text-[12px] text-slate-500 dark:text-slate-400">Daftarkan langsung tanpa AI — produk bisa diambil dari websitemu.</span></span>
+        <span><span className="block text-[14px] font-extrabold text-slate-900 dark:text-white">Sudah punya usaha?</span><span className="block text-[12px] text-slate-500 dark:text-slate-400">Daftarkan langsung — tanpa AI.</span></span>
         <Store size={20} className="shrink-0 text-violet-500" />
       </button>
     </div>
@@ -250,32 +202,14 @@ function DirectShopForm({ onBack, onSaved }: { onBack: () => void; onSaved: (id:
   };
   return (
     <div className="space-y-4">
-      <button type="button" onClick={onBack} className="flex items-center gap-1 text-[13px] font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400"><ArrowLeft size={15} /> Cari ide pakai AI</button>
+      <button type="button" onClick={onBack} className="flex items-center gap-1 text-[13px] font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400"><ArrowLeft size={15} /> Minta ide ke AI-mu</button>
       <p className="text-[16px] font-extrabold text-slate-900 dark:text-white">Daftarkan usahamu</p>
       {error && <p role="alert" className="text-[12px] font-semibold text-rose-600">{error}</p>}
       <label className="block"><span className={labelCls}>Nama usaha</span><input value={name} onChange={(e) => { setName(e.target.value); setError(''); }} maxLength={40} autoFocus placeholder="mis. Toko Kue Leosiqra" className={fieldCls} /></label>
       <div><span className={labelCls}>Ikon</span><div className="flex flex-wrap gap-1.5">{SHOP_EMOJIS.map((e) => <button key={e} type="button" onClick={() => setEmoji(e)} aria-pressed={emoji === e} className={cn('flex h-10 w-10 items-center justify-center rounded-xl text-[20px]', emoji === e ? 'bg-violet-600 ring-2 ring-violet-300' : 'bg-slate-100 dark:bg-slate-800')}>{e}</button>)}</div></div>
       <label className="block"><span className={labelCls}>Jualan apa? (opsional)</span><input value={tagline} onChange={(e) => setTagline(e.target.value)} maxLength={80} placeholder="mis. Kue kering & bolu rumahan" className={fieldCls} /></label>
       <FormButtons busy={busy} onSave={save} label="Simpan usaha" />
-      <p className="text-center text-[11px] text-slate-400">Setelah disimpan: isi WhatsApp, lalu tempel link websitemu untuk ambil daftar harga otomatis.</p>
-    </div>
-  );
-}
-
-function Thinking({ text }: { text: string }) {
-  const steps = ['Membaca ceritamu', 'Mengecek harga pasaran', 'Menyusun tiga rencana'];
-  const [i, setI] = useState(0);
-  useEffect(() => { const t = window.setInterval(() => setI((n) => Math.min(n + 1, steps.length - 1)), 2500); return () => window.clearInterval(t); }, [steps.length]);
-  return (
-    <div className="space-y-4 py-4" role="status" aria-live="polite">
-      <p className="rounded-2xl bg-slate-100 px-4 py-3 text-[14px] italic text-slate-600 dark:bg-slate-800 dark:text-slate-300">&ldquo;{text}&rdquo;</p>
-      <ul className="space-y-3 px-2">
-        {steps.map((s, k) => (
-          <li key={s} className={cn('flex items-center gap-3 text-[15px] font-bold transition-colors', k < i ? 'text-emerald-600 dark:text-emerald-400' : k === i ? 'text-slate-900 dark:text-white' : 'text-slate-300 dark:text-slate-600')}>
-            {k < i ? <Check size={18} /> : k === i ? <Loader2 size={18} className="animate-spin" /> : <span className="h-[18px] w-[18px] rounded-full border-2 border-current" />} {s}
-          </li>
-        ))}
-      </ul>
+      <p className="text-center text-[11px] text-slate-400">Setelah disimpan: isi WhatsApp & katalog — atau minta AI-mu mengambil harga dari websitemu.</p>
     </div>
   );
 }
@@ -318,7 +252,7 @@ function PlanCard({ idea }: { idea: { name: string; emoji?: string; tagline?: st
 // ── Detail usaha ─────────────────────────────────────────────────────────────
 // Kelola usaha (kontak, produk, katalog, website). kasirLink = tombol ke halaman kasir;
 // tanpa kasirLink (dibuka DARI kasir) ringkasan penjualan disembunyikan.
-export function ShopDetail({ shop, sales, kasirLink, onToast, onDeleted }: { shop: Shop; sales: Transaction[]; kasirLink?: string; onToast: (m: string) => void; onDeleted: () => void }) {
+export function ShopDetail({ shop, sales, kasirLink, onToast, onDeleted, onLeave }: { shop: Shop; sales: Transaction[]; kasirLink?: string; onToast: (m: string) => void; onDeleted: () => void; onLeave?: () => void }) {
   const [section, setSection] = useState<'' | 'kontak' | 'produk' | 'web'>(shop.contactWa ? '' : 'kontak');
   const [confirmDel, setConfirmDel] = useState(false);
   const now = toLocalDateString().slice(0, 7);
@@ -400,7 +334,7 @@ export function ShopDetail({ shop, sales, kasirLink, onToast, onDeleted }: { sho
         )}
       </section>
 
-      <WebsiteSection shop={shop} editing={section === 'web'} setEditing={(v) => setSection(v ? 'web' : '')} onToast={onToast} />
+      <WebsiteSection shop={shop} editing={section === 'web'} setEditing={(v) => setSection(v ? 'web' : '')} onToast={onToast} onLeave={onLeave} />
 
       <details className="rounded-3xl ring-1 ring-slate-100 p-4 dark:ring-slate-800">
         <summary className="cursor-pointer text-[14px] font-extrabold text-slate-900 dark:text-white">Rencananya</summary>
@@ -447,103 +381,27 @@ function ContactForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: strin
 }
 
 // ── Website: bikin sendiri di Pabrik.AI (brief dari Usahaku) atau tempel situs yang
-// sudah ada → Leosiqra mencari halaman game/produk di domain itu (tanpa AI) → user
-// memilih halaman → AI membaca harga per halaman (nama halaman = kategori) → user
-// memilih Ganti semua / Tambahkan.
-type ScanPage = { url: string; title: string };
-type ScanReport = { title: string; n: number; error?: string };
-const pathOf = (u: string) => { try { return new URL(u).pathname; } catch { return u; } };
-const hostOf = (u: string) => { try { return new URL(u).hostname; } catch { return ''; } };
-function WebsiteSection({ shop, editing, setEditing, onToast }: { shop: Shop; editing: boolean; setEditing: (v: boolean) => void; onToast: (m: string) => void }) {
+// sudah ada → AI MILIK PENGGUNA membaca semua halaman produk/game & menyimpan
+// katalog lewat MCP set_shop_products (tidak memakai AI Leosiqra).
+function WebsiteSection({ shop, editing, setEditing, onToast, onLeave }: { shop: Shop; editing: boolean; setEditing: (v: boolean) => void; onToast: (m: string) => void; onLeave?: () => void }) {
   const [link, setLink] = useState(shop.linkUrl ?? '');
-  const [busy, setBusy] = useState<'' | 'save' | 'read' | 'apply'>('');
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [found, setFound] = useState<{ products: ShopProduct[]; source: string; report: ScanReport[]; cut: number } | null>(null);
-  const [scan, setScan] = useState<{ source: string; pages: ScanPage[]; picked: string[] } | null>(null);
-  const [progress, setProgress] = useState<{ done: number; total: number; title: string; count: number } | null>(null);
-  const stopRef = useRef(false);
   const [showBrief, setShowBrief] = useState(false);
   const brief = websiteBrief(shop, formatIDR);
   const btn = 'flex items-center justify-center gap-1.5 rounded-full bg-slate-100 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700';
+  const url = (shop.linkUrl && !editing ? shop.linkUrl : link).trim();
 
   const copyBrief = async () => {
     try { await navigator.clipboard.writeText(brief); onToast('Brief tersalin — tempel di Pabrik.AI.'); } catch { setShowBrief(true); onToast('Tidak bisa menyalin otomatis — salin manual dari kotak brief.'); }
   };
   const saveLink = async () => {
-    setBusy('save');
+    setBusy(true);
     setError('');
     try { await shopService.update(shop.id, { linkUrl: link.trim() }); setEditing(false); onToast(link.trim() ? 'Tautan website disimpan.' : 'Tautan website dihapus.'); } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal menyimpan.'); }
-    setBusy('');
+    setBusy(false);
   };
-  const read = async () => {
-    const url = (shop.linkUrl && !editing ? shop.linkUrl : link).trim(); // kolom tampil = pakai isinya
-    if (!url) { setEditing(true); setError('Tempel dulu tautan website tokomu.'); return; }
-    setBusy('read');
-    setError('');
-    setFound(null);
-    setScan(null);
-    try {
-      const r = await shopService.importPages(shop.id, url);
-      if (r.pages.length) setScan({ source: r.source, pages: r.pages, picked: r.pages.map((p) => p.url) });
-      else {
-        // Tidak ada sub-halaman → baca halaman ini saja.
-        const one = await shopService.importPrices(shop.id, url);
-        setFound({ products: one.products, source: one.source, report: [{ title: pathOf(one.source), n: one.products.length }], cut: 0 });
-      }
-    } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal membaca website.'); }
-    setBusy('');
-  };
-  // Baca halaman terpilih satu per satu (rate limit AI ditunggu & diulang, kuota habis = berhenti).
-  const crawl = async () => {
-    if (!scan) return;
-    const pages = scan.pages.filter((p) => scan.picked.includes(p.url));
-    if (!pages.length) return;
-    setBusy('read');
-    setError('');
-    stopRef.current = false;
-    const all: ShopProduct[] = [];
-    const report: ScanReport[] = [];
-    let stopMsg = '';
-    for (let k = 0; k < pages.length && !stopRef.current && !stopMsg; k++) {
-      const pg = pages[k];
-      setProgress({ done: k, total: pages.length, title: pg.title, count: all.length });
-      for (let tries = 0; ; tries++) {
-        try {
-          const r = await shopService.importPrices(shop.id, pg.url, pg.title);
-          all.push(...r.products);
-          report.push({ title: pg.title, n: r.products.length });
-        } catch (e) {
-          const m = e instanceof Error && e.message ? e.message : 'Gagal dibaca.';
-          if (/Terlalu banyak permintaan/i.test(m) && tries < 3) { await new Promise((ok) => window.setTimeout(ok, 12000)); continue; }
-          if (/Batas baca website/i.test(m)) stopMsg = m;
-          report.push({ title: pg.title, n: 0, error: m });
-        }
-        break;
-      }
-    }
-    const seen = new Set<string>();
-    const unique = all.filter((p) => { const k = `${p.group ?? ''}|${p.name}`.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
-    setProgress(null);
-    setScan(null);
-    setBusy('');
-    if (stopMsg) setError(`${stopMsg} Hasil yang sudah terbaca tetap bisa dipakai.`);
-    if (unique.length) setFound({ products: unique.slice(0, PRODUCTS_MAX), source: scan.source, report, cut: Math.max(0, unique.length - PRODUCTS_MAX) });
-    else if (!stopMsg) setError('Tidak ada harga yang terbaca dari halaman-halaman itu. Coba pilih halaman lain, atau ketik manual.');
-  };
-  const apply = async (mode: 'ganti' | 'tambah') => {
-    if (!found) return;
-    const key = (p: ShopProduct) => `${p.group ?? ''}|${p.name}`.trim().toLowerCase();
-    const incoming = new Map(found.products.map((p) => [key(p), p]));
-    // Tambahkan: produk lama dengan kategori+nama sama ikut harga website; sisanya ditambah di belakang.
-    const products = mode === 'ganti' ? found.products : [...shop.products.map((p) => incoming.get(key(p)) ?? p), ...found.products.filter((p) => !shop.products.some((x) => key(x) === key(p)))].slice(0, PRODUCTS_MAX);
-    setBusy('apply');
-    try {
-      await shopService.update(shop.id, { products, ...(!shop.linkUrl && link.trim() ? { linkUrl: link.trim() } : {}) });
-      setFound(null);
-      onToast(mode === 'ganti' ? `${products.length} produk dari website dipakai.` : `Daftar produk diperbarui (${products.length}).`);
-    } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal menyimpan produk.'); }
-    setBusy('');
-  };
+  const prompt = `Pakai Leosiqra (MCP) dan alat baca web-mu. Buka ${url || '[tautan website tokoku]'} beserta SEMUA halaman produk/game di domain itu. Kumpulkan setiap produk/nominal dan harganya (Rupiah), kelompokkan per kategori (mis. nama game). Tunjukkan ringkasannya ke aku dulu. Setelah aku setuju, simpan dengan set_shop_products untuk shop_id ${shop.id} (mode replace, group = nama kategori, maks 120 produk).`;
 
   return (
     <section className="rounded-3xl ring-1 ring-slate-100 p-4 dark:ring-slate-800">
@@ -553,9 +411,7 @@ function WebsiteSection({ shop, editing, setEditing, onToast }: { shop: Shop; ed
       </div>
       {error && <p role="alert" className="mt-2 text-[12px] font-semibold text-rose-600">{error}</p>}
 
-      {(scan || progress || found) && !shop.linkUrl ? (
-        <p className="mt-2 flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-[13px] font-bold text-slate-700 dark:bg-slate-800/60 dark:text-slate-200"><Globe size={14} className="shrink-0 text-violet-500" /><span className="min-w-0 flex-1 truncate">{link.trim().replace(/^https:\/\//, '')}</span></p>
-      ) : shop.linkUrl && !editing ? (
+      {shop.linkUrl && !editing ? (
         <a href={shop.linkUrl} target="_blank" rel="noopener noreferrer nofollow" className="mt-2 flex items-center gap-2 rounded-2xl bg-emerald-50 px-3 py-2.5 text-[13px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
           <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" /><span className="min-w-0 flex-1 truncate">{shop.linkUrl.replace(/^https:\/\//, '')}</span><ExternalLink size={14} className="shrink-0" />
         </a>
@@ -574,66 +430,11 @@ function WebsiteSection({ shop, editing, setEditing, onToast }: { shop: Shop; ed
             </div>
           )}
           <label className="mt-3 block"><span className={labelCls}>{shop.linkUrl ? 'Tautan website' : 'Sudah punya? Tempel tautannya'}</span><input value={link} onChange={(e) => setLink(e.target.value)} inputMode="url" placeholder="https://tokomu.vantis.app" className={fieldCls} /><span className="mt-1 block px-1 text-[11px] text-slate-400">Website, Shopee, Tokopedia, atau Linktree — tautan publik, bukan tautan editor.</span></label>
-          <div className="mt-2"><FormButtons busy={busy === 'save'} onSave={saveLink} onCancel={shop.linkUrl ? () => { setEditing(false); setError(''); } : undefined} label="Simpan tautan" /></div>
+          <div className="mt-2"><FormButtons busy={busy} onSave={saveLink} onCancel={shop.linkUrl ? () => { setEditing(false); setError(''); } : undefined} label="Simpan tautan" /></div>
         </>
       )}
 
-      {progress ? (
-        <div className="mt-3 rounded-2xl bg-violet-50 p-3 dark:bg-violet-500/10" role="status" aria-live="polite">
-          <p className="flex items-center gap-2 text-[13px] font-bold text-violet-800 dark:text-violet-200"><Loader2 size={14} className="shrink-0 animate-spin" /><span className="min-w-0 flex-1 truncate">Membaca {progress.title}</span><span className="shrink-0 tabular-nums">{progress.done + 1}/{progress.total}</span></p>
-          <span className="mt-2 block h-2 overflow-hidden rounded-full bg-white dark:bg-slate-900"><span className="block h-full rounded-full bg-violet-500 transition-all" style={{ width: `${((progress.done + 0.5) / progress.total) * 100}%` }} /></span>
-          <p className="mt-1.5 flex items-center justify-between text-[11px] text-violet-800/70 dark:text-violet-200/70"><span>{progress.count} produk terkumpul</span><button type="button" onClick={() => { stopRef.current = true; }} className="font-bold text-violet-700 underline dark:text-violet-300">Berhenti & pakai hasil</button></p>
-        </div>
-      ) : scan ? (
-        <div className="mt-3 rounded-2xl ring-1 ring-violet-200 dark:ring-violet-500/30">
-          <div className="flex items-center justify-between gap-2 px-3 pt-3">
-            <p className="text-[13px] font-extrabold text-slate-900 dark:text-white">{scan.pages.length} halaman ketemu <span className="font-semibold text-slate-400">· {hostOf(scan.source)}</span></p>
-            <button type="button" onClick={() => setScan({ ...scan, picked: scan.picked.length === scan.pages.length ? [] : scan.pages.map((p) => p.url) })} className="shrink-0 text-[12px] font-bold text-violet-600 dark:text-violet-300">{scan.picked.length === scan.pages.length ? 'Kosongkan' : 'Pilih semua'}</button>
-          </div>
-          <p className="px-3 text-[11px] text-slate-500 dark:text-slate-400">Centang game/produk yang mau diambil harganya.</p>
-          <ul className="mt-2 max-h-72 space-y-1 overflow-y-auto px-2">
-            {scan.pages.map((pg) => {
-              const on = scan.picked.includes(pg.url);
-              return (
-                <li key={pg.url}>
-                  <label className={cn('flex cursor-pointer items-center gap-2.5 rounded-xl px-2 py-2', on ? 'bg-violet-50 dark:bg-violet-500/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50')}>
-                    <input type="checkbox" checked={on} onChange={() => setScan({ ...scan, picked: on ? scan.picked.filter((u) => u !== pg.url) : [...scan.picked, pg.url] })} className="h-4 w-4 shrink-0 accent-violet-600" />
-                    <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[11px] font-extrabold', toneOf(pg.title))}>{initials(pg.title)}</span>
-                    <span className="min-w-0 flex-1"><span className="block truncate text-[13px] font-bold text-slate-900 dark:text-white">{pg.title}</span><span className="block truncate text-[11px] text-slate-400">{pathOf(pg.url)}</span></span>
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
-          <div className="grid grid-cols-[auto_1fr] gap-2 p-3">
-            <button type="button" onClick={() => setScan(null)} aria-label="Batal" className="rounded-full bg-slate-100 px-3.5 text-slate-600 dark:bg-slate-800 dark:text-slate-300"><X size={15} /></button>
-            <button type="button" onClick={crawl} disabled={!scan.picked.length} className="flex items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 text-[13px] font-bold text-white hover:bg-violet-700 disabled:opacity-40"><Sparkles size={14} /> Ambil harga {scan.picked.length} halaman</button>
-          </div>
-          <p className="px-3 pb-3 text-[11px] text-slate-400">1 halaman = 1 dari kuota 60 per hari. Butuh ±5–10 detik per halaman.</p>
-        </div>
-      ) : found ? (
-        <div className="mt-3 rounded-2xl ring-1 ring-violet-200 dark:ring-violet-500/30">
-          <p className="px-3 pt-3 text-[13px] font-extrabold text-slate-900 dark:text-white">{found.products.length} produk dari {found.report.filter((r) => r.n > 0).length} halaman</p>
-          <p className="px-3 text-[11px] text-slate-500 dark:text-slate-400">Cek dulu harganya sebelum dipakai.{found.cut > 0 && ` ${found.cut} produk tidak muat (maks ${PRODUCTS_MAX}).`}</p>
-          {found.report.some((r) => !r.n) && (
-            <details className="mx-3 mt-2 rounded-xl bg-amber-50 px-3 py-2 text-[11px] text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
-              <summary className="cursor-pointer font-bold">{found.report.filter((r) => !r.n).length} halaman tanpa harga</summary>
-              <ul className="mt-1 space-y-0.5">{found.report.filter((r) => !r.n).map((r) => <li key={r.title}><b>{r.title}</b>{r.error ? ` — ${r.error}` : ''}</li>)}</ul>
-            </details>
-          )}
-          <div className="px-3"><ProductList products={found.products} /></div>
-          <div className="grid grid-cols-[auto_1fr_1fr] gap-2 p-3">
-            <button type="button" onClick={() => setFound(null)} disabled={Boolean(busy)} aria-label="Batal" className="rounded-full bg-slate-100 px-3.5 text-slate-600 dark:bg-slate-800 dark:text-slate-300"><X size={15} /></button>
-            <button type="button" onClick={() => apply('tambah')} disabled={Boolean(busy)} className={btn}>{busy === 'apply' ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Tambahkan</button>
-            <button type="button" onClick={() => apply('ganti')} disabled={Boolean(busy)} className="flex items-center justify-center gap-1.5 rounded-full bg-slate-900 py-2.5 text-[13px] font-bold text-white disabled:opacity-40 dark:bg-violet-600"><Check size={14} /> Ganti semua</button>
-          </div>
-          <p className="px-3 pb-3 text-[11px] text-slate-400">Tambahkan: produk dengan kategori & nama sama ikut harga website, sisanya ditambah. Ganti semua: daftar lama diganti ({shop.products.length} → {found.products.length}).</p>
-        </div>
-      ) : (
-        <button type="button" onClick={read} disabled={Boolean(busy)} className={cn(btn, 'mt-3 w-full')}>
-          {busy === 'read' ? <><Loader2 size={14} className="animate-spin" /> Mencari halaman produk…</> : <><Sparkles size={14} /> Ambil daftar harga dari website</>}
-        </button>
-      )}
+      {url && <AiMcpCard className="mt-3" title="Ambil daftar harga pakai AI-mu" desc="AI-mu membuka website ini & semua halaman game/produknya, lalu mengisi katalog kasir per kategori." prompt={prompt} onLeave={onLeave} onToast={onToast} />}
     </section>
   );
 }

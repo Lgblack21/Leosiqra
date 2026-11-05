@@ -1,13 +1,11 @@
 "use client";
 
 import { useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { ArrowDown, ArrowUp, Bot, Check, Copy, LayoutGrid, Loader2, Rows3, Grid3x3 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, LayoutGrid, Loader2, Rows3, Grid3x3 } from 'lucide-react';
 import { shopService, groupProducts, KASIR_DEFAULT, type KasirStyle, type Shop } from '@/lib/services/shopService';
-import { openSettings } from '@/lib/settingsPanel';
 import { cn } from '@/lib/utils';
 import { KASIR_THEME } from './kasirTheme';
+import { AiMcpCard } from './AiMcpCard';
 import { fieldCls, labelCls } from './UsahaView';
 
 // Tampilan kasir per usaha: pilihan terbatas (tema, tata letak, kolom, kartu, teks,
@@ -26,11 +24,10 @@ const CARDS: { id: KasirStyle['card']; label: string }[] = [
 ];
 
 // onLeave: tutup popup ini dulu — panel Pengaturan (z-80) ada DI BAWAH Modal (z-88).
-export function KasirStyleEditor({ shop, onDone, onLeave }: { shop: Shop; onDone: (m: string) => void; onLeave: () => void }) {
+export function KasirStyleEditor({ shop, onDone, onToast, onLeave }: { shop: Shop; onDone: (m: string) => void; onToast: (m: string) => void; onLeave: () => void }) {
   const [st, setSt] = useState<KasirStyle>({ ...KASIR_DEFAULT, ...shop.style });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const app = (usePathname() ?? '').startsWith('/app');
   const set = <K extends keyof KasirStyle>(k: K, v: KasirStyle[K]) => setSt((p) => ({ ...p, [k]: v }));
   const groups = groupProducts(shop.products).map((g) => g.group).filter(Boolean);
   const order = [...groups].sort((a, b) => { const r = (x: string) => { const k = st.categoryOrder.indexOf(x); return k < 0 ? 1000 + groups.indexOf(x) : k; }; return r(a) - r(b); });
@@ -102,17 +99,7 @@ export function KasirStyleEditor({ shop, onDone, onLeave }: { shop: Shop; onDone
 
       <button type="button" onClick={save} disabled={busy || !shop.styleReady} className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-violet-600">{busy ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Simpan tampilan</button>
 
-      {/* Atur lewat AI milik pengguna (MCP) */}
-      <div className="rounded-2xl bg-gradient-to-br from-violet-50 to-sky-50 p-3.5 dark:from-violet-500/10 dark:to-sky-500/10">
-        <p className="flex items-center gap-1.5 text-[13px] font-extrabold text-slate-900 dark:text-white"><Bot size={15} className="text-violet-600" /> Atur pakai AI-mu sendiri</p>
-        <p className="mt-1 text-[12px] text-slate-600 dark:text-slate-300">Hubungkan Claude atau ChatGPT-mu ke Leosiqra, lalu minta dengan bahasa biasa — AI-mu yang mengubah tampilan & katalog kasir. Tidak memakai kuota AI Leosiqra. Mengubah lewat AI khusus akun PRO.</p>
-        <div className="mt-2.5 grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => { navigator.clipboard.writeText(prompt).then(() => onDone('Perintah tersalin — tempel di Claude/ChatGPT yang sudah terhubung.'), () => onDone('Tidak bisa menyalin otomatis.')); }} className="flex items-center justify-center gap-1.5 rounded-full bg-white py-2.5 text-[12px] font-bold text-slate-700 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200"><Copy size={13} /> Salin perintah</button>
-          {app
-            ? <Link href="/app/profile" onClick={onLeave} className="flex items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 text-[12px] font-bold text-white hover:bg-violet-700"><Bot size={13} /> Hubungkan AI</Link>
-            : <button type="button" onClick={() => { onLeave(); window.setTimeout(() => openSettings('app-mcp'), 150); }} className="flex items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 text-[12px] font-bold text-white hover:bg-violet-700"><Bot size={13} /> Hubungkan AI</button>}
-        </div>
-      </div>
+      <AiMcpCard title="Atur pakai AI-mu sendiri" desc="Minta dengan bahasa biasa — AI-mu yang mengubah tampilan & katalog kasir." prompt={prompt} onLeave={onLeave} onToast={onToast} />
     </div>
   );
 }
