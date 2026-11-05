@@ -12,6 +12,7 @@ import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
 import { KASIR_THEME } from './kasirTheme';
 import { AiMcpCard } from './AiMcpCard';
 import { HookSection } from './HookSection';
+import { CatalogImage } from './CatalogImage';
 
 // Ladangku › Usaha (Usahaku): AI menyusun 3 rencana usaha dari "aku bisa …" →
 // simpan jadi usaha → produk & kontak → katalog siap sebar (teks WA, gambar PNG,
@@ -111,7 +112,7 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                 <li key={s.id} className={cn(card, 'overflow-hidden')}>
                   <Link href={kasirHref(variant, s.id)} className="group block">
                     <div className={cn('web-keep flex items-center gap-3 px-4 py-3.5 text-white', (KASIR_THEME[s.style.theme] ?? KASIR_THEME.ungu).header)}>
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-[22px]">{s.emoji || '🌱'}</span>
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/15 text-[22px]"><CatalogImage src={s.style.logoUrl} alt={`Logo ${s.name}`} fallback={s.emoji || '🌱'} className="h-full w-full bg-white p-1" /></span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[16px] font-extrabold">{s.name}</span>
                         <span className="block truncate text-[12px] text-white/65">{s.tagline || `${s.products.length} produk${cats ? ` · ${cats} kategori` : ''}`}</span>

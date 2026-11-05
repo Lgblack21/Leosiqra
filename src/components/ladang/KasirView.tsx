@@ -10,6 +10,7 @@ import { shopService, groupProducts, type KasirStyle, type Shop, type ShopProduc
 import { KasirStyleEditor } from './KasirStyleEditor';
 import { KASIR_THEME } from './kasirTheme';
 import { CustomKasirFrame } from './CustomKasirFrame';
+import { CatalogImage } from './CatalogImage';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
 import { accountService } from '@/lib/services/accountService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
@@ -108,7 +109,7 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
       <section className={cn('web-keep relative overflow-hidden text-white', compactHead ? 'rounded-[22px] px-3 py-2.5' : 'rounded-[28px] p-4 md:p-5', themeOf(shop.style).header)}>
         <div className="flex items-center gap-3">
           <Link href={back} aria-label="Kembali ke Usahaku" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"><ArrowLeft size={17} /></Link>
-          {!compactHead && <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-[26px]">{shop.emoji || '🏪'}</span>}
+          {!compactHead && <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10 text-[26px]"><CatalogImage src={shop.style.logoUrl} alt={`Logo ${shop.name}`} fallback={shop.emoji || '🏪'} className="h-full w-full bg-white p-1" /></span>}
           <div className="min-w-0 flex-1">
             {!compactHead && <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-white/50"><Store size={12} /> Kasir</p>}
             <h1 className={cn('truncate font-extrabold leading-tight', compactHead ? 'text-[16px]' : 'text-[20px] md:text-[24px]')}>{compactHead && `${shop.emoji || '🏪'} `}{shop.name}</h1>
@@ -201,6 +202,12 @@ function Catalog({ products, style, lines, onAdd }: { products: ShopProduct[]; s
   const top = useRef<HTMLElement>(null);
   const open = (g: string | null) => { setActive(g); window.setTimeout(() => top.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0); };
   const big = style.size === 'besar';
+  // Avatar kategori: gambar dari pengguna (categoryImages) atau inisial berwarna.
+  const avatar = (g: string, cls: string, text: string) => (
+    <span className={cn('flex shrink-0 items-center justify-center overflow-hidden font-extrabold', cls, toneOf(g || 'Lainnya'))}>
+      <CatalogImage src={style.categoryImages[g]} alt={g || 'Lainnya'} fallback={<span className={text}>{initials(g || 'Lainnya')}</span>} className="h-full w-full bg-white" />
+    </span>
+  );
   const TILE_COLS: Record<number, string> = { 2: 'grid-cols-2', 3: 'grid-cols-2 sm:grid-cols-3', 4: 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-4' };
 
   return (
@@ -214,7 +221,7 @@ function Catalog({ products, style, lines, onAdd }: { products: ShopProduct[]; s
       {folder && active !== null && !q && (
         <div className="flex items-center gap-3 rounded-2xl bg-white p-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
           <button type="button" onClick={() => open(null)} className={cn('flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-bold', themeOf(style).chip)}><ArrowLeft size={15} /> Kembali ke katalog</button>
-          <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[12px] font-extrabold', toneOf(active || 'Lainnya'))}>{initials(active || 'Lainnya')}</span>
+          {avatar(active, 'h-9 w-9 rounded-xl', 'text-[12px]')}
           <span className="min-w-0 truncate text-[16px] font-extrabold text-slate-900 dark:text-white">{active || 'Lainnya'}</span>
         </div>
       )}
@@ -228,7 +235,7 @@ function Catalog({ products, style, lines, onAdd }: { products: ShopProduct[]; s
               <li key={group || 'lain'}>
                 <button type="button" onClick={() => open(group)} aria-label={`Buka daftar harga ${group || 'Lainnya'}`} className={cn('relative flex h-full w-full flex-col items-start rounded-[22px] bg-white text-left ring-1 ring-slate-100 transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98] dark:bg-slate-900 dark:ring-slate-800', big ? 'gap-3 p-5' : 'gap-2.5 p-4')}>
                   {inCart > 0 && <span className="absolute right-3 top-3 flex h-6 min-w-6 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[11px] font-extrabold text-white">×{inCart}</span>}
-                  <span className={cn('flex items-center justify-center rounded-2xl font-extrabold', toneOf(group || 'Lainnya'), big ? 'h-16 w-16 text-[20px]' : 'h-12 w-12 text-[15px]')}>{initials(group || 'Lainnya')}</span>
+                  {avatar(group, cn('rounded-2xl', big ? 'h-16 w-16' : 'h-12 w-12'), big ? 'text-[20px]' : 'text-[15px]')}
                   <span className="w-full min-w-0">
                     <span className={cn('line-clamp-2 font-extrabold leading-snug text-slate-900 dark:text-white', big ? 'text-[18px]' : 'text-[15px]')}>{group || 'Lainnya'}</span>
                     <span className="mt-0.5 block text-[12px] text-slate-500 dark:text-slate-400">{items.length} pilihan · mulai <b className="text-emerald-700 dark:text-emerald-300">{short(min)}</b></span>
@@ -246,7 +253,7 @@ function Catalog({ products, style, lines, onAdd }: { products: ShopProduct[]; s
             const label = group === null ? 'Semua' : group || 'Lainnya';
             return (
               <button key={label} type="button" role="tab" aria-selected={on} onClick={() => setActive(group)} className={cn('flex shrink-0 items-center gap-2 rounded-2xl py-1.5 pl-1.5 pr-3 text-[13px] font-bold transition-colors', on ? themeOf(style).chip : 'bg-white text-slate-700 ring-1 ring-slate-100 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-800')}>
-                <span className={cn('flex h-7 w-7 items-center justify-center rounded-xl text-[10px] font-extrabold', group === null ? 'bg-white/15 text-current' : toneOf(group || 'Lainnya'), group === null && !on && 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300')}>{group === null ? '✦' : initials(group || 'Lainnya')}</span>
+                {group === null ? <span className={cn('flex h-7 w-7 items-center justify-center rounded-xl text-[10px] font-extrabold', on ? 'bg-white/15 text-current' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300')}>✦</span> : avatar(group, 'h-7 w-7 rounded-xl', 'text-[10px]')}
                 {label}<span className={cn('text-[11px] font-semibold', on ? 'text-white/60' : 'text-slate-400')}>{n}</span>
               </button>
             );
@@ -259,7 +266,7 @@ function Catalog({ products, style, lines, onAdd }: { products: ShopProduct[]; s
         <div key={group || 'lain'} className="rounded-[26px] bg-white p-3 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800 md:p-4">
           {named && !(folder && active !== null && !q) && (
             <p className="mb-2.5 flex items-center gap-2 px-1">
-              <span className={cn('flex h-8 w-8 items-center justify-center rounded-xl text-[11px] font-extrabold', toneOf(group || 'Lainnya'))}>{initials(group || 'Lainnya')}</span>
+              {avatar(group, 'h-8 w-8 rounded-xl', 'text-[11px]')}
               <span className="text-[15px] font-extrabold text-slate-900 dark:text-white">{group || 'Lainnya'}</span>
               <span className="text-[12px] font-semibold text-slate-400">{items.length} pilihan</span>
             </p>

@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-11-05 (live #135: kasir mode bebas + katalog kategori;
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| — | — | — | (akun B selesai; main = live #135) |
+| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | Logo & gambar katalog (MCP) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,6 +18,19 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-05 (branch claude/usahaku-web) — Logo toko & gambar per kategori, BELUM deploy. Tanpa SQL.**
+  - `style_json.logoUrl` + `categoryImages {group: url}` (maks 60). `safeImageUrl` = https saja (bukan http/data:/
+    javascript:, tanpa IP/localhost/.internal, ≤500 karakter). Tampil lewat `CatalogImage` (`<img>` lazy,
+    referrer dimatikan, gagal muat → inisial/emoji). Dipakai di header kasir, kotak katalog, chip, judul kategori, kartu
+    toko di Usahaku; juga dikirim ke desain bebas (`shop.logoUrl`, `shop.categoryImages`).
+  - MCP baru `set_catalog_images` (tulis, gratis FREE): merge per kategori, image_url kosong = hapus, melaporkan
+    `rejected_not_https` & `warning_unknown_categories`. Editor Tampilan: bagian "Logo & gambar kategori" (tautan
+    manual + kartu "Minta AI-mu memasang gambar"). Catatan: Simpan di editor menyimpan SELURUH tampilan — kalau AI
+    mengubah gambar saat editor terbuka, simpan dari editor akan menimpanya (muat ulang dulu).
+  - **Akun Bos SENGAJA belum diisi gambar** (Bos mau tes sendiri lewat MCP).
+  - Dites lokal (gambar disimulasikan): MCP pasang logo + 2 kategori, http/data:/IP ditolak, kategori tak dikenal
+    diperingatkan, hapus per kategori; PUT javascript: dibuang; web+HP: 3 gambar tampil, gambar 404 & tanpa gambar →
+    inisial berwarna; 0 error JS.
 - **2026-11-05 (branch claude/usahaku-web) — Kasir "Katalog kategori", **live #135**. Tanpa SQL.**
   - `style_json.browse` = 'katalog' (DEFAULT baru) | 'gulir'. Katalog: grid kotak per kategori/game (ikon inisial, jumlah
     pilihan, "mulai Rp…", badge ×n kalau ada di struk) → ketuk = halaman daftar harga kategori itu + tombol "Kembali ke

@@ -43,7 +43,7 @@ export function CustomKasirFrame({ shop, products, cart, onAdd, onRemove, onChec
     const count = Object.values(cart).reduce((a, b) => a + b, 0);
     const total = Object.entries(cart).reduce((a, [i, q]) => a + (products[Number(i)]?.price ?? 0) * q, 0);
     return {
-      shop: { name: shop.name, emoji: shop.emoji ?? '', tagline: shop.tagline ?? '', greeting: shop.style.greeting },
+      shop: { name: shop.name, emoji: shop.emoji ?? '', tagline: shop.tagline ?? '', greeting: shop.style.greeting, logoUrl: shop.style.logoUrl, categoryImages: shop.style.categoryImages },
       products: products.map((p, i) => ({ i, name: p.name, price: p.price, unit: p.unit, group: p.group ?? '' })),
       cart, count, total, theme: shop.style.theme,
     };

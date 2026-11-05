@@ -9635,13 +9635,31 @@ const isMissingColumn = (e: unknown) => e instanceof Error && /no such column/.t
 const KASIR_THEMES = ["ungu", "hijau", "biru", "oranye", "merah", "pink", "gelap", "emas"] as const;
 const KASIR_LAYOUTS = ["grid", "list", "compact"] as const;
 const KASIR_CARDS = ["soft", "outline", "solid"] as const;
-type KasirStyle = { theme: string; layout: string; columns: number; card: string; showUnit: boolean; greeting: string; receiptFooter: string; categoryOrder: string[]; header: string; strukSide: string; size: string; showStats: boolean; showSearch: boolean; showRecent: boolean; mode: string; customHtml: string; browse: string };
+type KasirStyle = { theme: string; layout: string; columns: number; card: string; showUnit: boolean; greeting: string; receiptFooter: string; categoryOrder: string[]; header: string; strukSide: string; size: string; showStats: boolean; showSearch: boolean; showRecent: boolean; mode: string; customHtml: string; browse: string; logoUrl: string; categoryImages: Record<string, string> };
 // Mode "bebas": desain HTML/CSS/JS buatan pengguna/AI-nya. TIDAK pernah dijalankan di
 // halaman Leosiqra — klien merendernya di <iframe sandbox="allow-scripts"> (origin
 // kosong, tanpa cookie/API, CSP tanpa koneksi) dan hanya bertukar data katalog lewat
 // postMessage; struk & pencatatan uang tetap komponen asli.
 const KASIR_HTML_MAX = 60_000;
-const KASIR_DEFAULT: KasirStyle = { theme: "ungu", layout: "grid", columns: 3, card: "soft", showUnit: true, greeting: "", receiptFooter: "", categoryOrder: [], header: "besar", strukSide: "kanan", size: "normal", showStats: true, showSearch: true, showRecent: true, mode: "bawaan", customHtml: "", browse: "katalog" };
+const KASIR_DEFAULT: KasirStyle = { theme: "ungu", layout: "grid", columns: 3, card: "soft", showUnit: true, greeting: "", receiptFooter: "", categoryOrder: [], header: "besar", strukSide: "kanan", size: "normal", showStats: true, showSearch: true, showRecent: true, mode: "bawaan", customHtml: "", browse: "katalog", logoUrl: "", categoryImages: {} };
+// Gambar katalog: HANYA tautan https publik (bukan data:/javascript:, maks 500 karakter) —
+// ditampilkan lewat <img> (tanpa skrip) dengan referrer dimatikan.
+const KASIR_IMAGES_MAX = 60;
+const safeImageUrl = (v: unknown) => {
+  if (typeof v !== "string" || !v.trim() || v.length > 500) return "";
+  try { const u = new URL(v.trim()); return u.protocol === "https:" && !u.username && !u.password && !isBlockedImageHost(u.hostname) ? u.href : ""; } catch { return ""; }
+};
+const isBlockedImageHost = (host: string) => { const h = host.toLowerCase(); return h === "localhost" || /\.(local|internal|localhost)$/.test(h) || /^\d{1,3}(\.\d{1,3}){3}$/.test(h) || h.includes(":"); };
+const sanitizeCategoryImages = (v: unknown, base: Record<string, string>) => {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return base;
+  const out: Record<string, string> = {};
+  for (const [k, url] of Object.entries(v as Record<string, unknown>).slice(0, KASIR_IMAGES_MAX)) {
+    const key = shopText(k, 40);
+    const u = safeImageUrl(url);
+    if (key && u) out[key] = u;
+  }
+  return out;
+};
 const sanitizeKasirStyle = (raw: unknown, base: KasirStyle = KASIR_DEFAULT): KasirStyle => {
   const r = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
   const pick = <T extends readonly string[]>(v: unknown, list: T, fb: string) => (typeof v === "string" && (list as readonly string[]).includes(v) ? v : fb);
@@ -9662,6 +9680,8 @@ const sanitizeKasirStyle = (raw: unknown, base: KasirStyle = KASIR_DEFAULT): Kas
     showRecent: typeof r.showRecent === "boolean" ? r.showRecent : base.showRecent,
     mode: pick(r.mode, ["bawaan", "bebas"] as const, base.mode),
     browse: pick(r.browse, ["katalog", "gulir"] as const, base.browse),
+    logoUrl: r.logoUrl !== undefined ? safeImageUrl(r.logoUrl) : base.logoUrl,
+    categoryImages: r.categoryImages !== undefined ? sanitizeCategoryImages(r.categoryImages, base.categoryImages) : base.categoryImages,
     customHtml: typeof r.customHtml === "string" ? r.customHtml.replace(/\u0000/g, "").slice(0, KASIR_HTML_MAX) : base.customHtml,
   };
 };
@@ -16977,10 +16997,39 @@ const mcpSetKasirTemplate: McpToolDef["run"] = async (env, auth, args) => {
   await env.DB.prepare("UPDATE shops SET style_json = ?, updated_at = ? WHERE id = ? AND user_id = ?").bind(JSON.stringify(next), nowIso(), r.id, auth.userId).run();
   return { data: { ok: true, shop_id: r.id, mode: "bebas", length: next.customHtml.length }, summary: `desain kasir bebas ${String(r.name).slice(0, 30)} (${next.customHtml.length} karakter)` };
 };
+const mcpSetCatalogImages: McpToolDef["run"] = async (env, auth, args) => {
+  const r = await mcpShopRow(env, auth, args.shop_id);
+  if (!("style_json" in r)) throw new McpToolError("Tampilan kasir belum aktif di server.");
+  const cur = parseKasirStyle(r.style_json);
+  const images = { ...cur.categoryImages };
+  const rejected: string[] = [];
+  for (const c of Array.isArray(args.categories) ? args.categories.slice(0, KASIR_IMAGES_MAX) : []) {
+    const o = c && typeof c === "object" ? (c as Record<string, unknown>) : {};
+    const group = shopText(o.group, 40);
+    if (!group) continue;
+    if (o.image_url === "" || o.image_url === null) { delete images[group]; continue; } // kosong = hapus
+    const u = safeImageUrl(o.image_url);
+    if (u) images[group] = u; else rejected.push(group);
+  }
+  let logoUrl = cur.logoUrl;
+  if (args.logo_url !== undefined) {
+    logoUrl = args.logo_url === "" || args.logo_url === null ? "" : safeImageUrl(args.logo_url);
+    if (args.logo_url && !logoUrl) rejected.push("logo");
+  }
+  const next = sanitizeKasirStyle({ logoUrl, categoryImages: images }, cur);
+  await env.DB.prepare("UPDATE shops SET style_json = ?, updated_at = ? WHERE id = ? AND user_id = ?").bind(JSON.stringify(next), nowIso(), r.id, auth.userId).run();
+  const groups = new Set(mcpShopProducts(r).map((p) => p.group).filter(Boolean));
+  const unknown = Object.keys(next.categoryImages).filter((g) => !groups.has(g));
+  return {
+    data: { ok: true, shop_id: r.id, logo_url: next.logoUrl || null, category_images: next.categoryImages, ...(rejected.length ? { rejected_not_https: rejected } : {}), ...(unknown.length ? { warning_unknown_categories: unknown } : {}) },
+    summary: `gambar katalog ${String(r.name).slice(0, 30)}: ${Object.keys(next.categoryImages).length} kategori${next.logoUrl ? " + logo" : ""}`,
+  };
+};
+
 const KASIR_TEMPLATE_DOC =
   "Desain kasir BEBAS satu file HTML (CSS & JS inline). Berjalan di iframe sandbox: TIDAK ada akses jaringan (fetch/XHR diblokir), " +
   "cookie, atau halaman induk; gambar hanya https:/data:; Google Fonts boleh. Data & aksi lewat objek global window.Leosiqra: " +
-  "Leosiqra.onData(cb) → cb({ shop:{name,emoji,tagline,greeting}, products:[{i,name,price,unit,group}], cart:{[i]:qty}, count, total, theme }) " +
+  "Leosiqra.onData(cb) → cb({ shop:{name,emoji,tagline,greeting,logoUrl,categoryImages}, products:[{i,name,price,unit,group}], cart:{[i]:qty}, count, total, theme }) " +
   "dipanggil saat awal & setiap struk berubah; Leosiqra.add(i) / Leosiqra.remove(i) menambah/mengurangi produk ke-i di struk; " +
   "Leosiqra.checkout() membuka struk (nama/ID pembeli & pembayaran diisi di struk Leosiqra, BUKAN di desain); Leosiqra.rupiah(n) format harga. " +
   "Tinggi iframe menyesuaikan isi otomatis. Jangan meminta PIN/password/OTP di desain.";
@@ -17060,6 +17109,23 @@ const MCP_TOOLS: McpToolDef[] = [
     write: true,
     inputSchema: { type: "object", properties: { shop_id: { type: "string" }, html: { type: "string", maxLength: 60000, description: "Dokumen HTML lengkap (boleh tanpa <html>)" } }, required: ["shop_id", "html"], additionalProperties: false },
     run: mcpSetKasirTemplate,
+  },
+  {
+    name: "set_catalog_images",
+    title: "Pasang logo & gambar katalog",
+    description: "Memasang logo toko (header kasir) dan gambar per kategori/game (kotak katalog). HANYA tautan gambar https publik (png/jpg/webp/svg dari website toko atau CDN), bukan data:. Nama group harus PERSIS sama dengan kategori produk (lihat get_shop). Entri lain tetap; image_url kosong = hapus gambar kategori itu; logo_url kosong = hapus logo.",
+    write: true,
+    inputSchema: {
+      type: "object",
+      properties: {
+        shop_id: { type: "string" },
+        logo_url: { type: "string", maxLength: 500 },
+        categories: { type: "array", maxItems: 60, items: { type: "object", properties: { group: { type: "string", maxLength: 40 }, image_url: { type: "string", maxLength: 500 } }, required: ["group", "image_url"], additionalProperties: false } },
+      },
+      required: ["shop_id"],
+      additionalProperties: false,
+    },
+    run: mcpSetCatalogImages,
   },
   {
     name: "set_shop_products",
