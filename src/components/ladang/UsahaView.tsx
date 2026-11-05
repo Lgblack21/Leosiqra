@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Check, Copy, Download, ExternalLink, Globe, Link2, Loader2, MessageCircle, Plus, Shuffle, Sparkles, Store, Trash2, Wand2, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { shopService, catalogText, prettyWa, websiteBrief, PABRIK_AI_URL, type Shop, type ShopIdea, type ShopProduct } from '@/lib/services/shopService';
+import { shopService, catalogText, groupProducts, prettyWa, websiteBrief, PABRIK_AI_URL, type Shop, type ShopIdea, type ShopProduct } from '@/lib/services/shopService';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
 import { accountService } from '@/lib/services/accountService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
@@ -19,6 +19,7 @@ import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
 
 const STARTERS = ['Masakan rumahan', 'Desain', 'Les privat', 'Preloved', 'Kerajinan', 'Foto', 'Top up game'];
 const STAGES = ['Rencana', 'Katalog', 'Online', 'Jualan'] as const;
+const PRODUCTS_MAX = 120; // = SHOP_PRODUCTS_MAX di Worker
 const monthKey = (d: Date | string) => toLocalDateString(new Date(d)).slice(0, 7);
 const amt = (t: Transaction) => Number(t.amountIDR) || Number(t.amount) || 0;
 const short = (n: number) => (n >= 1e6 ? `Rp${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 1 })} jt` : n >= 1e3 ? `Rp${Math.round(n / 1e3)} rb` : formatIDR(n));
@@ -289,7 +290,7 @@ function ShopDetail({ shop, sales, onToast, onDeleted }: { shop: Shop; sales: Tr
           <p className="text-[12px] font-semibold text-emerald-800/70 dark:text-emerald-300/70">{month.length} penjualan · total {sales.length}</p>
         </div>
         {section === 'jual' ? <SaleForm shop={shop} onDone={(m) => { setSection(''); onToast(m); }} onCancel={() => setSection('')} /> : (
-          <button type="button" onClick={() => setSection('jual')} className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-emerald-600 py-3 text-[14px] font-bold text-white hover:bg-emerald-700"><Plus size={16} /> Catat penjualan</button>
+          <button type="button" onClick={() => setSection('jual')} className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-emerald-600 py-3 text-[14px] font-bold text-white hover:bg-emerald-700"><Plus size={16} /> {shop.products.some((p) => p.group) ? 'Buka kasir' : 'Catat penjualan'}</button>
         )}
       </section>
 
@@ -313,7 +314,7 @@ function ShopDetail({ shop, sales, onToast, onDeleted }: { shop: Shop; sales: Tr
           {section !== 'produk' && <button type="button" onClick={() => setSection('produk')} className="text-[12px] font-bold text-violet-600 dark:text-violet-300">Ubah</button>}
         </div>
         {section === 'produk' ? <ProductsForm shop={shop} onDone={(m) => { setSection(''); onToast(m); }} onCancel={() => setSection('')} /> : (
-          <ul className="mt-1.5 space-y-1">{shop.products.map((p) => <li key={p.name} className="flex justify-between gap-3 text-[13px]"><span className="min-w-0 truncate text-slate-700 dark:text-slate-200">{p.name}{p.unit && <span className="text-slate-400"> · {p.unit}</span>}</span><span className="shrink-0 font-bold tabular-nums text-slate-900 dark:text-white">{formatIDR(p.price)}</span></li>)}</ul>
+          <ProductList products={shop.products} />
         )}
       </section>
 
@@ -409,10 +410,10 @@ function WebsiteSection({ shop, editing, setEditing, onToast }: { shop: Shop; ed
   };
   const apply = async (mode: 'ganti' | 'tambah') => {
     if (!found) return;
-    const key = (n: string) => n.trim().toLowerCase();
-    const incoming = new Map(found.products.map((p) => [key(p.name), p]));
-    // Tambahkan: produk lama yang namanya sama ikut harga website; sisanya ditambah di belakang (maks 20).
-    const products = mode === 'ganti' ? found.products : [...shop.products.map((p) => incoming.get(key(p.name)) ?? p), ...found.products.filter((p) => !shop.products.some((x) => key(x.name) === key(p.name)))].slice(0, 20);
+    const key = (p: ShopProduct) => `${p.group ?? ''}|${p.name}`.trim().toLowerCase();
+    const incoming = new Map(found.products.map((p) => [key(p), p]));
+    // Tambahkan: produk lama dengan kategori+nama sama ikut harga website; sisanya ditambah di belakang.
+    const products = mode === 'ganti' ? found.products : [...shop.products.map((p) => incoming.get(key(p)) ?? p), ...found.products.filter((p) => !shop.products.some((x) => key(x) === key(p)))].slice(0, PRODUCTS_MAX);
     setBusy('apply');
     try {
       await shopService.update(shop.id, { products, ...(!shop.linkUrl && link.trim() ? { linkUrl: link.trim() } : {}) });
@@ -456,15 +457,13 @@ function WebsiteSection({ shop, editing, setEditing, onToast }: { shop: Shop; ed
       {found ? (
         <div className="mt-3 rounded-2xl ring-1 ring-violet-200 dark:ring-violet-500/30">
           <p className="px-3 pt-3 text-[12px] font-bold text-violet-700 dark:text-violet-300">{found.products.length} produk ditemukan — cek dulu sebelum dipakai</p>
-          <ul className="mt-1 max-h-56 divide-y divide-slate-100 overflow-y-auto px-3 dark:divide-slate-800">
-            {found.products.map((p) => <li key={p.name} className="flex justify-between gap-3 py-2 text-[13px]"><span className="min-w-0 truncate text-slate-700 dark:text-slate-200">{p.name}{p.unit && <span className="text-slate-400"> · {p.unit}</span>}</span><span className="shrink-0 font-bold tabular-nums text-slate-900 dark:text-white">{formatIDR(p.price)}</span></li>)}
-          </ul>
+          <div className="px-3"><ProductList products={found.products} /></div>
           <div className="grid grid-cols-[auto_1fr_1fr] gap-2 p-3">
             <button type="button" onClick={() => setFound(null)} disabled={Boolean(busy)} aria-label="Batal" className="rounded-full bg-slate-100 px-3.5 text-slate-600 dark:bg-slate-800 dark:text-slate-300"><X size={15} /></button>
             <button type="button" onClick={() => apply('tambah')} disabled={Boolean(busy)} className={btn}>{busy === 'apply' ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Tambahkan</button>
             <button type="button" onClick={() => apply('ganti')} disabled={Boolean(busy)} className="flex items-center justify-center gap-1.5 rounded-full bg-slate-900 py-2.5 text-[13px] font-bold text-white disabled:opacity-40 dark:bg-violet-600"><Check size={14} /> Ganti semua</button>
           </div>
-          <p className="px-3 pb-3 text-[11px] text-slate-400">Tambahkan: produk bernama sama ikut harga website, sisanya ditambah. Ganti semua: daftar lama diganti ({shop.products.length} → {found.products.length}).</p>
+          <p className="px-3 pb-3 text-[11px] text-slate-400">Tambahkan: produk dengan kategori & nama sama ikut harga website, sisanya ditambah. Ganti semua: daftar lama diganti ({shop.products.length} → {found.products.length}).</p>
         </div>
       ) : (
         <button type="button" onClick={read} disabled={Boolean(busy)} className={cn(btn, 'mt-3 w-full')}>
@@ -475,38 +474,76 @@ function WebsiteSection({ shop, editing, setEditing, onToast }: { shop: Shop; ed
   );
 }
 
+// Daftar produk berkelompok per kategori (header + jumlah); tinggi dibatasi untuk katalog besar.
+function ProductList({ products }: { products: ShopProduct[] }) {
+  const groups = groupProducts(products);
+  const headed = groups.length > 1 || Boolean(groups[0]?.group);
+  return (
+    <div className="mt-1.5 max-h-72 space-y-2 overflow-y-auto">
+      {groups.map(({ group, items }) => (
+        <div key={group || 'lain'}>
+          {headed && <p className="sticky top-0 flex items-center gap-1.5 bg-white py-1 dark:bg-slate-900 text-[11px] font-bold uppercase tracking-wide text-slate-400"><span className={cn('flex h-5 w-5 items-center justify-center rounded-md text-[9px] normal-case', toneOf(group || 'Lainnya'))}>{initials(group || 'Lainnya')}</span>{group || 'Lainnya'} <span className="font-semibold normal-case">· {items.length}</span></p>}
+          <ul className="space-y-1">{items.map(({ p, i }) => <li key={i} className="flex justify-between gap-3 text-[13px]"><span className="min-w-0 truncate text-slate-700 dark:text-slate-200">{p.name}{p.unit && <span className="text-slate-400"> · {p.unit}</span>}</span><span className="shrink-0 font-bold tabular-nums text-slate-900 dark:text-white">{formatIDR(p.price)}</span></li>)}</ul>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ProductsForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: string) => void; onCancel: () => void }) {
-  const [list, setList] = useState(shop.products.map((p) => ({ ...p, price: String(p.price) })));
+  const [list, setList] = useState(shop.products.map((p) => ({ ...p, price: String(p.price), group: p.group ?? '' })));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const set = (i: number, k: 'name' | 'price' | 'unit', v: string) => setList((l) => l.map((p, j) => (j === i ? { ...p, [k]: k === 'price' ? v.replace(/\D/g, '').slice(0, 10) : v } : p)));
+  const set = (i: number, k: 'name' | 'price' | 'unit' | 'group', v: string) => setList((l) => l.map((p, j) => (j === i ? { ...p, [k]: k === 'price' ? v.replace(/\D/g, '').slice(0, 10) : v } : p)));
+  const groups = [...new Set(list.map((p) => p.group.trim()).filter(Boolean))];
   const save = async () => {
-    const products = list.map((p) => ({ name: p.name.trim(), price: Number(p.price || '0'), unit: p.unit.trim() })).filter((p) => p.name);
+    const products = list.map((p) => ({ name: p.name.trim(), price: Number(p.price || '0'), unit: p.unit.trim(), ...(p.group.trim() ? { group: p.group.trim() } : {}) })).filter((p) => p.name);
     setBusy(true);
     try { await shopService.update(shop.id, { products }); onDone('Produk disimpan.'); } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal menyimpan.'); setBusy(false); }
   };
   return (
     <div className="mt-3 space-y-2">
       {error && <p role="alert" className="text-[12px] font-semibold text-rose-600">{error}</p>}
-      {list.map((p, i) => (
-        <div key={i} className="grid grid-cols-[1fr_96px_28px] gap-1.5 sm:grid-cols-[1fr_110px_100px_28px]">
-          <input value={p.name} onChange={(e) => set(i, 'name', e.target.value)} maxLength={80} placeholder="Nama produk" aria-label="Nama produk" className={cn(fieldCls, 'px-3 py-2')} />
-          <input value={p.price ? Number(p.price).toLocaleString('id-ID') : ''} onChange={(e) => set(i, 'price', e.target.value)} inputMode="numeric" placeholder="Harga" aria-label="Harga" className={cn(fieldCls, 'px-3 py-2 tabular-nums')} />
-          <input value={p.unit} onChange={(e) => set(i, 'unit', e.target.value)} maxLength={24} placeholder="per …" aria-label="Satuan" className={cn(fieldCls, 'hidden px-3 py-2 sm:block')} />
-          <button type="button" onClick={() => setList((l) => l.filter((_, j) => j !== i))} aria-label="Hapus produk" className="flex items-center justify-center text-slate-400 hover:text-rose-500"><X size={16} /></button>
-        </div>
-      ))}
-      {list.length < 20 && <button type="button" onClick={() => setList((l) => [...l, { name: '', price: '', unit: '' }])} className="flex items-center gap-1 text-[12px] font-bold text-violet-600 dark:text-violet-300"><Plus size={14} /> Tambah produk</button>}
+      <datalist id={`grp-${shop.id}`}>{groups.map((g) => <option key={g} value={g} />)}</datalist>
+      <div className="max-h-[60vh] space-y-2 overflow-y-auto">
+        {list.map((p, i) => (
+          <div key={i} className="space-y-1.5 rounded-2xl bg-slate-50 p-2 dark:bg-slate-800/50">
+            <div className="grid grid-cols-[1fr_96px_28px] gap-1.5 sm:grid-cols-[1fr_110px_28px]">
+              <input value={p.name} onChange={(e) => set(i, 'name', e.target.value)} maxLength={80} placeholder="Nama produk" aria-label="Nama produk" className={cn(fieldCls, 'px-3 py-2')} />
+              <input value={p.price ? Number(p.price).toLocaleString('id-ID') : ''} onChange={(e) => set(i, 'price', e.target.value)} inputMode="numeric" placeholder="Harga" aria-label="Harga" className={cn(fieldCls, 'px-3 py-2 tabular-nums')} />
+              <button type="button" onClick={() => setList((l) => l.filter((_, j) => j !== i))} aria-label="Hapus produk" className="flex items-center justify-center text-slate-400 hover:text-rose-500"><X size={16} /></button>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5 pr-[34px]">
+              <input value={p.group} onChange={(e) => set(i, 'group', e.target.value)} list={`grp-${shop.id}`} maxLength={40} placeholder="Kategori, mis. Free Fire" aria-label="Kategori" className={cn(fieldCls, 'px-3 py-1.5 text-[12px]')} />
+              <input value={p.unit} onChange={(e) => set(i, 'unit', e.target.value)} maxLength={24} placeholder="Satuan (opsional)" aria-label="Satuan" className={cn(fieldCls, 'px-3 py-1.5 text-[12px]')} />
+            </div>
+          </div>
+        ))}
+      </div>
+      {list.length < PRODUCTS_MAX && <button type="button" onClick={() => setList((l) => [...l, { name: '', price: '', unit: '', group: l[l.length - 1]?.group ?? '' }])} className="flex items-center gap-1 text-[12px] font-bold text-violet-600 dark:text-violet-300"><Plus size={14} /> Tambah produk</button>}
       <FormButtons busy={busy} onSave={save} onCancel={onCancel} />
     </div>
   );
 }
 
+// Warna avatar kategori (kelas literal untuk Tailwind).
+const GROUP_TONES = ['bg-orange-100 text-orange-700', 'bg-sky-100 text-sky-700', 'bg-amber-100 text-amber-700', 'bg-violet-100 text-violet-700', 'bg-rose-100 text-rose-700', 'bg-teal-100 text-teal-700', 'bg-lime-100 text-lime-700', 'bg-indigo-100 text-indigo-700'];
+const toneOf = (g: string) => GROUP_TONES[[...g].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % GROUP_TONES.length];
+const initials = (g: string) => g.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '•';
+const productLabel = (p: ShopProduct) => (p.group ? `${p.group} · ${p.name}` : p.name).slice(0, 80);
+
+// Catat penjualan. Kalau produk berkategori (mis. katalog top up FF/MLBB/PUBG) → mode
+// kasir: pilih kategori → pilih nominal → isi nama/ID pembeli → simpan.
 function SaleForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: string) => void; onCancel: () => void }) {
-  const [product, setProduct] = useState(shop.products[0]?.name ?? '');
+  const kasir = shop.products.some((p) => p.group);
+  const groups = useMemo(() => groupProducts(shop.products), [shop.products]);
+  const [group, setGroup] = useState<string | null>(null); // kasir: null = layar pilih kategori
+  const [pick, setPick] = useState<number | null>(kasir ? null : shop.products.length ? 0 : null);
+  const [manual, setManual] = useState(!shop.products.length);
+  const [query, setQuery] = useState('');
+  const [buyer, setBuyer] = useState('');
   const [qty, setQty] = useState(1);
-  const unitPrice = shop.products.find((p) => p.name === product)?.price ?? 0;
-  const [amount, setAmount] = useState(String(unitPrice));
+  const [amount, setAmount] = useState(String(pick !== null ? shop.products[pick]?.price ?? '' : ''));
   const [accounts, setAccounts] = useState<{ id: string; name: string }[] | null>(null);
   const [accountId, setAccountId] = useState('');
   const [date, setDate] = useState(toLocalDateString());
@@ -520,27 +557,82 @@ function SaleForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: string) 
       if (ok[0]) setAccountId(ok[0].id);
     }).catch(() => setAccounts([]));
   }, []);
-  const choose = (name: string, q = qty) => {
-    setProduct(name);
-    const p = shop.products.find((x) => x.name === name)?.price ?? 0;
+  const choose = (i: number | null, q = qty) => {
+    setPick(i);
+    setManual(i === null);
+    const p = i !== null ? shop.products[i]?.price ?? 0 : 0;
     if (p) setAmount(String(p * q));
+    else if (i === null) setAmount('');
   };
+  const selected = pick !== null ? shop.products[pick] : undefined;
   const save = async () => {
     const n = Number(amount || '0');
     if (n < 1) { setError('Isi nominalnya.'); return; }
+    if (kasir && !buyer.trim()) { setError('Isi nama / ID pembeli dulu.'); return; }
     if (!accountId) { setError('Pilih rekening.'); return; }
     setBusy(true);
     setError('');
-    try { await shopService.sale(shop.id, { requestId, amount: n, qty, product, accountId, date }); onDone(`Penjualan ${formatIDR(n)} tercatat & masuk rekening.`); } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal mencatat.'); setBusy(false); }
+    try { await shopService.sale(shop.id, { requestId, amount: n, qty, product: selected ? productLabel(selected) : '', buyer: buyer.trim(), accountId, date }); onDone(`Penjualan ${formatIDR(n)}${buyer.trim() ? ` · ${buyer.trim()}` : ''} tercatat & masuk rekening.`); } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal mencatat.'); setBusy(false); }
   };
+  const tile = 'flex w-full items-center gap-3 rounded-2xl bg-white p-3 text-left ring-1 ring-emerald-100 transition-transform active:scale-[0.98] hover:ring-emerald-300 dark:bg-slate-900 dark:ring-slate-800';
+
+  // ── Kasir: pilih kategori / nominal ──
+  if (kasir && !selected && !manual) {
+    const q = query.trim().toLowerCase();
+    const hits = q ? shop.products.map((p, i) => ({ p, i })).filter(({ p }) => `${p.group ?? ''} ${p.name}`.toLowerCase().includes(q)).slice(0, 30) : [];
+    const items = group !== null ? groups.find((g) => g.group === group)?.items ?? [] : [];
+    const itemBtn = ({ p, i }: { p: ShopProduct; i: number }) => (
+      <li key={i}><button type="button" onClick={() => choose(i)} className={cn(tile, 'justify-between')}>
+        <span className="min-w-0"><span className="block truncate text-[14px] font-bold text-slate-900 dark:text-white">{p.name}</span>{(q ? p.group : p.unit) && <span className="block truncate text-[11px] text-slate-500 dark:text-slate-400">{q ? p.group : p.unit}</span>}</span>
+        <span className="shrink-0 text-[14px] font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">{formatIDR(p.price)}</span>
+      </button></li>
+    );
+    return (
+      <div className="mt-3 space-y-3">
+        {group === null ? (
+          <>
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari game / produk…" aria-label="Cari produk" className={cn(fieldCls, 'bg-white dark:bg-slate-900')} />
+            {q ? (
+              hits.length ? <ul className="max-h-[50vh] space-y-1.5 overflow-y-auto">{hits.map(itemBtn)}</ul> : <p className="py-3 text-center text-[12px] text-slate-500">Tidak ada yang cocok.</p>
+            ) : (
+              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {groups.map(({ group: g, items: its }) => (
+                  <li key={g || 'lain'}><button type="button" onClick={() => setGroup(g)} className={cn(tile, 'flex-col items-start gap-2')}>
+                    <span className={cn('flex h-10 w-10 items-center justify-center rounded-xl text-[14px] font-extrabold', toneOf(g || 'Lainnya'))}>{initials(g || 'Lainnya')}</span>
+                    <span className="w-full min-w-0"><span className="block truncate text-[13px] font-extrabold text-slate-900 dark:text-white">{g || 'Lainnya'}</span><span className="block text-[11px] text-slate-500 dark:text-slate-400">{its.length} pilihan · mulai {short(Math.min(...its.map((x) => x.p.price)))}</span></span>
+                  </button></li>
+                ))}
+              </ul>
+            )}
+            <button type="button" onClick={() => choose(null)} className="w-full text-center text-[12px] font-bold text-emerald-700 dark:text-emerald-300">Nominal lain (ketik manual)</button>
+          </>
+        ) : (
+          <>
+            <button type="button" onClick={() => setGroup(null)} className="flex items-center gap-1 text-[13px] font-bold text-slate-600 dark:text-slate-300"><ArrowLeft size={15} /> Semua kategori</button>
+            <p className="flex items-center gap-2 text-[16px] font-extrabold text-slate-900 dark:text-white"><span className={cn('flex h-8 w-8 items-center justify-center rounded-lg text-[12px]', toneOf(group || 'Lainnya'))}>{initials(group || 'Lainnya')}</span>{group || 'Lainnya'}</p>
+            <ul className="max-h-[50vh] space-y-1.5 overflow-y-auto">{items.map(itemBtn)}</ul>
+          </>
+        )}
+        <button type="button" onClick={onCancel} className="w-full rounded-full bg-white/70 py-2.5 text-[13px] font-bold text-slate-600 dark:bg-slate-900 dark:text-slate-300">Batal</button>
+      </div>
+    );
+  }
+
   return (
     <div className="mt-3 space-y-3">
       {error && <p role="alert" className="text-[12px] font-semibold text-rose-600">{error}</p>}
-      {shop.products.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">{[...shop.products.map((p) => p.name), ''].map((n) => <button key={n || 'lain'} type="button" onClick={() => (n ? choose(n) : setProduct(''))} className={cn('rounded-full px-3 py-1.5 text-[12px] font-bold', product === n ? 'bg-emerald-700 text-white' : 'bg-white text-slate-600 dark:bg-slate-900 dark:text-slate-300')}>{n || 'Lainnya'}</button>)}</div>
+      {kasir ? (
+        <div className="flex items-center gap-3 rounded-2xl bg-white p-3 ring-1 ring-emerald-200 dark:bg-slate-900 dark:ring-emerald-500/30">
+          {selected?.group && <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[13px] font-extrabold', toneOf(selected.group))}>{initials(selected.group)}</span>}
+          <span className="min-w-0 flex-1"><span className="block truncate text-[11px] font-semibold text-slate-500 dark:text-slate-400">{selected?.group || 'Manual'}</span><span className="block truncate text-[15px] font-extrabold text-slate-900 dark:text-white">{selected ? selected.name : 'Nominal lain'}</span></span>
+          <button type="button" onClick={() => { setPick(null); setManual(false); }} className="shrink-0 rounded-full bg-emerald-50 px-3 py-1.5 text-[12px] font-bold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">Ganti</button>
+        </div>
+      ) : shop.products.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">{[...shop.products.map((p, i) => ({ n: p.name, i: i as number | null })), { n: 'Lainnya', i: null }].map(({ n, i }) => <button key={i ?? 'lain'} type="button" onClick={() => choose(i)} className={cn('rounded-full px-3 py-1.5 text-[12px] font-bold', pick === i ? 'bg-emerald-700 text-white' : 'bg-white text-slate-600 dark:bg-slate-900 dark:text-slate-300')}>{n}</button>)}</div>
       )}
+      <label className="block"><span className={labelCls}>{kasir ? 'Nama / ID pembeli' : 'Pembeli (opsional)'}</span><input value={buyer} onChange={(e) => { setBuyer(e.target.value); setError(''); }} maxLength={60} autoFocus={kasir} placeholder={kasir ? 'mis. 123456789 (2001) · Budi' : 'Nama pembeli'} className={cn(fieldCls, 'bg-white dark:bg-slate-900')} /></label>
       <div className="grid grid-cols-[88px_1fr] gap-2">
-        <label className="block"><span className={labelCls}>Jumlah</span><input type="number" min={1} max={9999} value={qty} onChange={(e) => { const q = Math.max(1, Math.min(9999, Number(e.target.value) || 1)); setQty(q); if (product) choose(product, q); }} className={cn(fieldCls, 'bg-white dark:bg-slate-900')} /></label>
+        <label className="block"><span className={labelCls}>Jumlah</span><input type="number" min={1} max={9999} value={qty} onChange={(e) => { const q = Math.max(1, Math.min(9999, Number(e.target.value) || 1)); setQty(q); if (pick !== null) choose(pick, q); }} className={cn(fieldCls, 'bg-white dark:bg-slate-900')} /></label>
         <label className="block"><span className={labelCls}>Total diterima</span><span className={cn(fieldCls, 'flex items-center gap-1.5 bg-white dark:bg-slate-900')}><span className="text-slate-400">Rp</span><input value={amount ? Number(amount).toLocaleString('id-ID') : ''} onChange={(e) => setAmount(e.target.value.replace(/\D/g, '').slice(0, 11))} inputMode="numeric" aria-label="Total diterima" className="min-w-0 flex-1 bg-transparent tabular-nums outline-none" /></span></label>
       </div>
       <div className="grid grid-cols-2 gap-2">

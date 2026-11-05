@@ -34,6 +34,15 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     salin brief, tautan editor ditolak, Tambahkan & Ganti semua tersimpan, tahap jadi Online, 0 error JS.
   - **Belum**: AI & situs ASLI (r.jina.ai dan Pabrik.AI tidak bisa dijangkau dari sandbox). Rate-limit AI (12/menit)
     ikut terpakai oleh permintaan yang ditolak validasi — sengaja dibiarkan (murah, mencegah spam).
+  - **+ Kasir & katalog berkategori (permintaan Bos: katalog top up FF/MLBB/PUBG).** Produk punya `group` opsional
+    (kategori, ≤40 karakter, di `products_json` — tanpa migrasi). `SHOP_PRODUCTS_MAX` 20 → **120** (frontend
+    `PRODUCTS_MAX` sama). AI import mengisi `group`, teks halaman ≤30 rb karakter, `max_tokens` 9000. "Catat penjualan"
+    jadi **"Buka kasir"** kalau ada kategori: pilih kategori (kotak + cari) → pilih nominal → **Nama / ID pembeli WAJIB**
+    → jumlah/total/rekening → simpan. Sale menerima `buyer` (≤60, PIN/OTP ditolak) → catatan transaksi
+    "[Usaha] Free Fire · 140 Diamond ×2 · 5550001 (2101) · Sari" + `payload_json.buyer`. Tambahkan saat import
+    mencocokkan kategori+nama. Katalog WA & brief dikelompokkan per kategori. Dites lokal (mock): import 8 produk
+    3 kategori, kasir web+HP, total 2×19.500 = 39.000, tanpa ID ditolak, saldo +10.000 sekali (kirim ulang 409),
+    0 error JS. Gambar katalog PNG tetap 7 produk pertama.
 - **2026-11-04 (branch claude/usahaku) — Usahaku + tab Ringkas + Jual pakai foto & Sedang dijual, live #127.**
   - Tabel `shops` & `listings` dibuat Bos di D1 Console pakai versi PENDEK (CREATE minimal + ALTER ADD COLUMN, tanpa
     FK/DEFAULT — baris panjang & tanda kutip rusak saat ditempel). Isinya setara file 0027/0028; hapus user/reset tetap
