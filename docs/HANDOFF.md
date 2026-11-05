@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-11-05 (live #127; WIP claude/usahaku-web: import harga
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| — | — | — | (akun B jeda: limit mingguan) |
+| Akun A | jeda (limit mingguan, 2026-11-05) | claude/usahaku-web | Usahaku › website (WIP) — **akun berikutnya silakan lanjut** |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
