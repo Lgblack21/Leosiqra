@@ -4,13 +4,13 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-05 (live #137: update harga + status AI + skema gambar MCP; 0029/0030 dijalankan, 0031 menunggu konfirmasi)
+Terakhir diperbarui: 2026-11-05 (live #137: update harga + status AI + skema gambar MCP; migrasi 0029/0030/0031 sudah dijalankan Bos)
 
 ## Siapa sedang kerja
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| — | — | — | (akun B selesai; main = live #137; migrasi 0031 menunggu konfirmasi Bos) |
+| — | — | — | (akun B selesai; main = live #137) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-05 (branch claude/usahaku-web) — Update harga manual & otomatis, **live #137** (migrasi 0031: konfirmasi Bos).**
+- **2026-11-05 (branch claude/usahaku-web) — Update harga manual & otomatis, **live #137**; migrasi 0031 SUDAH dijalankan Bos (jalan kedua kali → "duplicate column" = wajar, kolom sudah ada).**
   - **MIGRASI di D1 Console** (0031_shop_catalog_sync.sql; boleh sebelum/sesudah deploy — tanpa kolom, sinkron tetap
     jalan, cuma waktu "terakhir diperbarui" tidak tercatat): `ALTER TABLE shops ADD COLUMN catalog_synced_at TEXT;`
   - Otomatis: `POST /api/hooks/shop/<id>/products` (kunci webhook yang sama, `authShopHook` dipakai bersama dengan
