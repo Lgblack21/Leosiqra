@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-05 (live #134: webhook website Usahaku + tampilan kasir + MCP Usahaku FREE; migrasi 0030 dijalankan, 0029 belum dikonfirmasi)
+Terakhir diperbarui: 2026-11-05 (live #134: webhook website Usahaku + tampilan kasir + MCP Usahaku FREE; migrasi 0029 & 0030 sudah dijalankan Bos)
 
 ## Siapa sedang kerja
 
@@ -71,7 +71,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     cocok dengan nama dari URL ("MOBILE LEGENDS"). Berlaku untuk impor BARU — kategori lama di katalog Bos tetap sampai
     diambil ulang (Ganti semua).
   - Placeholder Daftarkan usaha: "mis. Toko Kue Leosiqra" / "mis. Kue kering & bolu rumahan".
-- **2026-11-05 (branch claude/usahaku-web) — Ladangku layar penuh + tampilan kasir (manual & AI pengguna via MCP), **live #131** (migrasi 0029: cek sudah dijalankan Bos).**
+- **2026-11-05 (branch claude/usahaku-web) — Ladangku layar penuh + tampilan kasir (manual & AI pengguna via MCP), **live #131** (migrasi 0029 SUDAH dijalankan Bos).**
   - **MIGRASI WAJIB di D1 Console** (boleh sebelum/sesudah deploy — Worker tahan kolom belum ada: baca tanpa kolom,
     simpan tampilan → 503 "belum aktif"): `ALTER TABLE shops ADD COLUMN style_json TEXT;` (file 0029_shop_style.sql).
   - Web `/membership/ladang` (+ `/ladang/kasir`) masuk `FULLSCREEN_PATHS`: tanpa sidebar, header (Ringkasan · judul tab
