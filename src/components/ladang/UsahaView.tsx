@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { ArrowLeft, Check, Copy, Download, ExternalLink, Globe, Link2, Loader2, MessageCircle, Plus, Shuffle, Sparkles, Store, Trash2, Wand2, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { shopService, catalogText, groupProducts, prettyWa, websiteBrief, PABRIK_AI_URL, type Shop, type ShopIdea, type ShopProduct } from '@/lib/services/shopService';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
-import { accountService } from '@/lib/services/accountService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
-import { isCreditAccountType } from '@/lib/creditCard';
 import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
 
 // Ladangku › Usaha (Usahaku): AI menyusun 3 rencana usaha dari "aku bisa …" →
@@ -20,9 +19,10 @@ import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
 const STARTERS = ['Masakan rumahan', 'Desain', 'Les privat', 'Preloved', 'Kerajinan', 'Foto', 'Top up game'];
 const STAGES = ['Rencana', 'Katalog', 'Online', 'Jualan'] as const;
 const PRODUCTS_MAX = 120; // = SHOP_PRODUCTS_MAX di Worker
-const monthKey = (d: Date | string) => toLocalDateString(new Date(d)).slice(0, 7);
-const amt = (t: Transaction) => Number(t.amountIDR) || Number(t.amount) || 0;
-const short = (n: number) => (n >= 1e6 ? `Rp${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 1 })} jt` : n >= 1e3 ? `Rp${Math.round(n / 1e3)} rb` : formatIDR(n));
+export const kasirHref = (variant: 'web' | 'app', id: string) => `${variant === 'app' ? '/app' : '/membership'}/ladang/kasir?id=${encodeURIComponent(id)}`;
+export const monthKey = (d: Date | string) => toLocalDateString(new Date(d)).slice(0, 7);
+export const amt = (t: Transaction) => Number(t.amountIDR) || Number(t.amount) || 0;
+export const short = (n: number) => (n >= 1e6 ? `Rp${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 1 })} jt` : n >= 1e3 ? `Rp${Math.round(n / 1e3)} rb` : formatIDR(n));
 export const stageOf = (s: Shop, sales: number) => (sales > 0 ? 3 : s.promotedAt || s.linkUrl ? 2 : s.contactWa && s.products.length ? 1 : 0);
 
 export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToast: (m: string) => void }) {
@@ -53,7 +53,7 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
   const current = sheet?.k === 'shop' ? shops?.find((s) => s.id === sheet.id) : undefined;
   const body = sheet?.k === 'ideas'
     ? <IdeaFlow onSaved={(id, name) => { setSheet({ k: 'shop', id }); onToast(`${name} tersimpan. Lengkapi kontak supaya katalognya siap.`); }} />
-    : current ? <ShopDetail shop={current} sales={salesBy.get(current.id) ?? []} onToast={onToast} onDeleted={() => { setSheet(null); onToast('Usaha dihapus. Penjualan yang tercatat tetap ada di transaksi.'); }} /> : null;
+    : current ? <ShopDetail shop={current} sales={salesBy.get(current.id) ?? []} kasirLink={kasirHref(variant, current.id)} onToast={onToast} onDeleted={() => { setSheet(null); onToast('Usaha dihapus. Penjualan yang tercatat tetap ada di transaksi.'); }} /> : null;
   const title = sheet?.k === 'ideas' ? 'Usaha baru' : current?.name ?? '';
 
   if (shops === null) return <div className="h-48 animate-pulse rounded-[28px] bg-slate-200/70 dark:bg-slate-800" />;
@@ -78,7 +78,7 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
               const st = stageOf(s, sales.length);
               return (
                 <li key={s.id}>
-                  <button type="button" onClick={() => setSheet({ k: 'shop', id: s.id })} className={cn(card, 'block w-full p-4 text-left transition-transform active:scale-[0.99]')}>
+                  <Link href={kasirHref(variant, s.id)} className={cn(card, 'block w-full p-4 text-left transition-transform active:scale-[0.99]')}>
                     <span className="flex items-center gap-3">
                       <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-[24px] dark:bg-violet-500/15">{s.emoji || '🌱'}</span>
                       <span className="min-w-0 flex-1">
@@ -91,7 +91,7 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                       </span>
                     </span>
                     <StageBar stage={st} className="mt-3" />
-                  </button>
+                  </Link>
                 </li>
               );
             })}
@@ -284,8 +284,10 @@ function PlanCard({ idea }: { idea: { name: string; emoji?: string; tagline?: st
 }
 
 // ── Detail usaha ─────────────────────────────────────────────────────────────
-function ShopDetail({ shop, sales, onToast, onDeleted }: { shop: Shop; sales: Transaction[]; onToast: (m: string) => void; onDeleted: () => void }) {
-  const [section, setSection] = useState<'' | 'kontak' | 'produk' | 'jual' | 'web'>(shop.contactWa ? '' : 'kontak');
+// Kelola usaha (kontak, produk, katalog, website). kasirLink = tombol ke halaman kasir;
+// tanpa kasirLink (dibuka DARI kasir) ringkasan penjualan disembunyikan.
+export function ShopDetail({ shop, sales, kasirLink, onToast, onDeleted }: { shop: Shop; sales: Transaction[]; kasirLink?: string; onToast: (m: string) => void; onDeleted: () => void }) {
+  const [section, setSection] = useState<'' | 'kontak' | 'produk' | 'web'>(shop.contactWa ? '' : 'kontak');
   const [confirmDel, setConfirmDel] = useState(false);
   const now = toLocalDateString().slice(0, 7);
   const month = sales.filter((t) => monthKey(t.date) === now);
@@ -319,15 +321,13 @@ function ShopDetail({ shop, sales, onToast, onDeleted }: { shop: Shop; sales: Tr
     <div className="space-y-4">
       <StageBar stage={stage} />
 
-      <section className="rounded-3xl bg-emerald-50 p-4 dark:bg-emerald-500/10">
+      {kasirLink && <section className="rounded-3xl bg-emerald-50 p-4 dark:bg-emerald-500/10">
         <div className="flex items-baseline justify-between gap-2">
           <div><p className="text-[12px] font-semibold text-emerald-800/70 dark:text-emerald-300/70">Bulan ini</p><p className="text-[26px] font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">{formatIDR(Math.round(monthTotal))}</p></div>
           <p className="text-[12px] font-semibold text-emerald-800/70 dark:text-emerald-300/70">{month.length} penjualan · total {sales.length}</p>
         </div>
-        {section === 'jual' ? <SaleForm shop={shop} onDone={(m) => { setSection(''); onToast(m); }} onCancel={() => setSection('')} /> : (
-          <button type="button" onClick={() => setSection('jual')} className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-emerald-600 py-3 text-[14px] font-bold text-white hover:bg-emerald-700"><Plus size={16} /> {shop.products.some((p) => p.group) ? 'Buka kasir' : 'Catat penjualan'}</button>
-        )}
-      </section>
+        <Link href={kasirLink} className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-emerald-600 py-3 text-[14px] font-bold text-white hover:bg-emerald-700"><Store size={16} /> Buka kasir</Link>
+      </section>}
 
       <section className="rounded-3xl ring-1 ring-slate-100 p-4 dark:ring-slate-800">
         <div className="flex items-center justify-between gap-2">
@@ -380,10 +380,10 @@ function ShopDetail({ shop, sales, onToast, onDeleted }: { shop: Shop; sales: Tr
   );
 }
 
-const fieldCls = 'w-full rounded-2xl bg-slate-100 px-4 py-3 text-[14px] font-semibold text-slate-900 outline-none ring-2 ring-transparent placeholder:font-medium placeholder:text-slate-400 focus:bg-white focus:ring-violet-500 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900';
-const labelCls = 'mb-1 block text-[12px] font-semibold text-slate-500 dark:text-slate-400';
+export const fieldCls = 'w-full rounded-2xl bg-slate-100 px-4 py-3 text-[14px] font-semibold text-slate-900 outline-none ring-2 ring-transparent placeholder:font-medium placeholder:text-slate-400 focus:bg-white focus:ring-violet-500 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900';
+export const labelCls = 'mb-1 block text-[12px] font-semibold text-slate-500 dark:text-slate-400';
 
-function FormButtons({ busy, onSave, onCancel, label = 'Simpan' }: { busy: boolean; onSave: () => void; onCancel?: () => void; label?: string }) {
+export function FormButtons({ busy, onSave, onCancel, label = 'Simpan' }: { busy: boolean; onSave: () => void; onCancel?: () => void; label?: string }) {
   return (
     <div className="flex gap-2">
       {onCancel && <button type="button" onClick={onCancel} className="rounded-full bg-slate-100 px-4 py-2.5 text-[13px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"><X size={15} /></button>}
@@ -660,122 +660,9 @@ function ProductsForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: stri
 
 // Warna avatar kategori (kelas literal untuk Tailwind).
 const GROUP_TONES = ['bg-orange-100 text-orange-700', 'bg-sky-100 text-sky-700', 'bg-amber-100 text-amber-700', 'bg-violet-100 text-violet-700', 'bg-rose-100 text-rose-700', 'bg-teal-100 text-teal-700', 'bg-lime-100 text-lime-700', 'bg-indigo-100 text-indigo-700'];
-const toneOf = (g: string) => GROUP_TONES[[...g].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % GROUP_TONES.length];
-const initials = (g: string) => g.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '•';
-const productLabel = (p: ShopProduct) => (p.group ? `${p.group} · ${p.name}` : p.name).slice(0, 80);
-
-// Catat penjualan. Kalau produk berkategori (mis. katalog top up FF/MLBB/PUBG) → mode
-// kasir: pilih kategori → pilih nominal → isi nama/ID pembeli → simpan.
-function SaleForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: string) => void; onCancel: () => void }) {
-  const kasir = shop.products.some((p) => p.group);
-  const groups = useMemo(() => groupProducts(shop.products), [shop.products]);
-  const [group, setGroup] = useState<string | null>(null); // kasir: null = layar pilih kategori
-  const [pick, setPick] = useState<number | null>(kasir ? null : shop.products.length ? 0 : null);
-  const [manual, setManual] = useState(!shop.products.length);
-  const [query, setQuery] = useState('');
-  const [buyer, setBuyer] = useState('');
-  const [qty, setQty] = useState(1);
-  const [amount, setAmount] = useState(String(pick !== null ? shop.products[pick]?.price ?? '' : ''));
-  const [accounts, setAccounts] = useState<{ id: string; name: string }[] | null>(null);
-  const [accountId, setAccountId] = useState('');
-  const [date, setDate] = useState(toLocalDateString());
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [requestId] = useState(() => crypto.randomUUID());
-  useEffect(() => {
-    accountService.getUserAccounts('').then((list) => {
-      const ok = list.filter((a) => a.id && !isCreditAccountType(a.type) && (a.currency || 'IDR') === 'IDR').map((a) => ({ id: String(a.id), name: a.name }));
-      setAccounts(ok);
-      if (ok[0]) setAccountId(ok[0].id);
-    }).catch(() => setAccounts([]));
-  }, []);
-  const choose = (i: number | null, q = qty) => {
-    setPick(i);
-    setManual(i === null);
-    const p = i !== null ? shop.products[i]?.price ?? 0 : 0;
-    if (p) setAmount(String(p * q));
-    else if (i === null) setAmount('');
-  };
-  const selected = pick !== null ? shop.products[pick] : undefined;
-  const save = async () => {
-    const n = Number(amount || '0');
-    if (n < 1) { setError('Isi nominalnya.'); return; }
-    if (kasir && !buyer.trim()) { setError('Isi nama / ID pembeli dulu.'); return; }
-    if (!accountId) { setError('Pilih rekening.'); return; }
-    setBusy(true);
-    setError('');
-    try { await shopService.sale(shop.id, { requestId, amount: n, qty, product: selected ? productLabel(selected) : '', buyer: buyer.trim(), accountId, date }); onDone(`Penjualan ${formatIDR(n)}${buyer.trim() ? ` · ${buyer.trim()}` : ''} tercatat & masuk rekening.`); } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal mencatat.'); setBusy(false); }
-  };
-  const tile = 'flex w-full items-center gap-3 rounded-2xl bg-white p-3 text-left ring-1 ring-emerald-100 transition-transform active:scale-[0.98] hover:ring-emerald-300 dark:bg-slate-900 dark:ring-slate-800';
-
-  // ── Kasir: pilih kategori / nominal ──
-  if (kasir && !selected && !manual) {
-    const q = query.trim().toLowerCase();
-    const hits = q ? shop.products.map((p, i) => ({ p, i })).filter(({ p }) => `${p.group ?? ''} ${p.name}`.toLowerCase().includes(q)).slice(0, 30) : [];
-    const items = group !== null ? groups.find((g) => g.group === group)?.items ?? [] : [];
-    const itemBtn = ({ p, i }: { p: ShopProduct; i: number }) => (
-      <li key={i}><button type="button" onClick={() => choose(i)} className={cn(tile, 'justify-between')}>
-        <span className="min-w-0"><span className="block truncate text-[14px] font-bold text-slate-900 dark:text-white">{p.name}</span>{(q ? p.group : p.unit) && <span className="block truncate text-[11px] text-slate-500 dark:text-slate-400">{q ? p.group : p.unit}</span>}</span>
-        <span className="shrink-0 text-[14px] font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">{formatIDR(p.price)}</span>
-      </button></li>
-    );
-    return (
-      <div className="mt-3 space-y-3">
-        {group === null ? (
-          <>
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari game / produk…" aria-label="Cari produk" className={cn(fieldCls, 'bg-white dark:bg-slate-900')} />
-            {q ? (
-              hits.length ? <ul className="max-h-[50vh] space-y-1.5 overflow-y-auto">{hits.map(itemBtn)}</ul> : <p className="py-3 text-center text-[12px] text-slate-500">Tidak ada yang cocok.</p>
-            ) : (
-              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {groups.map(({ group: g, items: its }) => (
-                  <li key={g || 'lain'}><button type="button" onClick={() => setGroup(g)} className={cn(tile, 'flex-col items-start gap-2')}>
-                    <span className={cn('flex h-10 w-10 items-center justify-center rounded-xl text-[14px] font-extrabold', toneOf(g || 'Lainnya'))}>{initials(g || 'Lainnya')}</span>
-                    <span className="w-full min-w-0"><span className="block truncate text-[13px] font-extrabold text-slate-900 dark:text-white">{g || 'Lainnya'}</span><span className="block text-[11px] text-slate-500 dark:text-slate-400">{its.length} pilihan · mulai {short(Math.min(...its.map((x) => x.p.price)))}</span></span>
-                  </button></li>
-                ))}
-              </ul>
-            )}
-            <button type="button" onClick={() => choose(null)} className="w-full text-center text-[12px] font-bold text-emerald-700 dark:text-emerald-300">Nominal lain (ketik manual)</button>
-          </>
-        ) : (
-          <>
-            <button type="button" onClick={() => setGroup(null)} className="flex items-center gap-1 text-[13px] font-bold text-slate-600 dark:text-slate-300"><ArrowLeft size={15} /> Semua kategori</button>
-            <p className="flex items-center gap-2 text-[16px] font-extrabold text-slate-900 dark:text-white"><span className={cn('flex h-8 w-8 items-center justify-center rounded-lg text-[12px]', toneOf(group || 'Lainnya'))}>{initials(group || 'Lainnya')}</span>{group || 'Lainnya'}</p>
-            <ul className="max-h-[50vh] space-y-1.5 overflow-y-auto">{items.map(itemBtn)}</ul>
-          </>
-        )}
-        <button type="button" onClick={onCancel} className="w-full rounded-full bg-white/70 py-2.5 text-[13px] font-bold text-slate-600 dark:bg-slate-900 dark:text-slate-300">Batal</button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-3 space-y-3">
-      {error && <p role="alert" className="text-[12px] font-semibold text-rose-600">{error}</p>}
-      {kasir ? (
-        <div className="flex items-center gap-3 rounded-2xl bg-white p-3 ring-1 ring-emerald-200 dark:bg-slate-900 dark:ring-emerald-500/30">
-          {selected?.group && <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[13px] font-extrabold', toneOf(selected.group))}>{initials(selected.group)}</span>}
-          <span className="min-w-0 flex-1"><span className="block truncate text-[11px] font-semibold text-slate-500 dark:text-slate-400">{selected?.group || 'Manual'}</span><span className="block truncate text-[15px] font-extrabold text-slate-900 dark:text-white">{selected ? selected.name : 'Nominal lain'}</span></span>
-          <button type="button" onClick={() => { setPick(null); setManual(false); }} className="shrink-0 rounded-full bg-emerald-50 px-3 py-1.5 text-[12px] font-bold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">Ganti</button>
-        </div>
-      ) : shop.products.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">{[...shop.products.map((p, i) => ({ n: p.name, i: i as number | null })), { n: 'Lainnya', i: null }].map(({ n, i }) => <button key={i ?? 'lain'} type="button" onClick={() => choose(i)} className={cn('rounded-full px-3 py-1.5 text-[12px] font-bold', pick === i ? 'bg-emerald-700 text-white' : 'bg-white text-slate-600 dark:bg-slate-900 dark:text-slate-300')}>{n}</button>)}</div>
-      )}
-      <label className="block"><span className={labelCls}>{kasir ? 'Nama / ID pembeli' : 'Pembeli (opsional)'}</span><input value={buyer} onChange={(e) => { setBuyer(e.target.value); setError(''); }} maxLength={60} autoFocus={kasir} placeholder={kasir ? 'mis. 123456789 (2001) · Budi' : 'Nama pembeli'} className={cn(fieldCls, 'bg-white dark:bg-slate-900')} /></label>
-      <div className="grid grid-cols-[88px_1fr] gap-2">
-        <label className="block"><span className={labelCls}>Jumlah</span><input type="number" min={1} max={9999} value={qty} onChange={(e) => { const q = Math.max(1, Math.min(9999, Number(e.target.value) || 1)); setQty(q); if (pick !== null) choose(pick, q); }} className={cn(fieldCls, 'bg-white dark:bg-slate-900')} /></label>
-        <label className="block"><span className={labelCls}>Total diterima</span><span className={cn(fieldCls, 'flex items-center gap-1.5 bg-white dark:bg-slate-900')}><span className="text-slate-400">Rp</span><input value={amount ? Number(amount).toLocaleString('id-ID') : ''} onChange={(e) => setAmount(e.target.value.replace(/\D/g, '').slice(0, 11))} inputMode="numeric" aria-label="Total diterima" className="min-w-0 flex-1 bg-transparent tabular-nums outline-none" /></span></label>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <label className="block"><span className={labelCls}>Masuk ke</span><select value={accountId} onChange={(e) => setAccountId(e.target.value)} disabled={accounts === null} className={cn(fieldCls, 'bg-white dark:bg-slate-900')}>{(accounts ?? []).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
-        <label className="block"><span className={labelCls}>Tanggal</span><input type="date" value={date} max={toLocalDateString()} onChange={(e) => setDate(e.target.value)} className={cn(fieldCls, 'bg-white dark:bg-slate-900')} /></label>
-      </div>
-      <FormButtons busy={busy} onSave={save} onCancel={onCancel} label="Catat penjualan" />
-      <p className="text-center text-[11px] text-emerald-800/60 dark:text-emerald-300/60">Masuk sebagai pemasukan Usaha & Freelance › Penjualan.</p>
-    </div>
-  );
-}
+export const toneOf = (g: string) => GROUP_TONES[[...g].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % GROUP_TONES.length];
+export const initials = (g: string) => g.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '•';
+export const productLabel = (p: ShopProduct) => (p.group ? `${p.group} · ${p.name}` : p.name).slice(0, 80);
 
 // Gambar katalog 1080×1350 (canvas di HP — tanpa server, tanpa halaman publik).
 async function catalogImage(s: Shop): Promise<Blob> {

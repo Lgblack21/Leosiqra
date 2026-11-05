@@ -10074,6 +10074,11 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
       const qty = Number.isInteger(raw.qty) && (raw.qty as number) >= 1 && (raw.qty as number) <= 9999 ? (raw.qty as number) : 1;
       const product = shopText(raw.product, 80);
       const buyer = shopText(raw.buyer, 60); // nama / ID game pembeli (kasir top up)
+      // Isi struk kasir (opsional, hanya catatan — nominal yang dipakai tetap `amount`).
+      const items = (Array.isArray(raw.items) ? raw.items : []).slice(0, 30)
+        .map((x) => (x && typeof x === "object" ? (x as Record<string, unknown>) : {}))
+        .map((x) => ({ name: shopText(x.name, 80), price: shopMoney(x.price) ?? 0, qty: Number.isInteger(x.qty) && (x.qty as number) >= 1 && (x.qty as number) <= 9999 ? (x.qty as number) : 1 }))
+        .filter((x) => x.name);
       if (/\b(pin|password|kata sandi|otp|cvv)\b/i.test(buyer)) return json({ error: "Jangan tulis PIN, password, atau OTP di sini." }, { status: 400 });
       const requestId = typeof raw.request_id === "string" && /^[0-9a-f-]{36}$/i.test(raw.request_id) ? raw.request_id : null;
       if (!requestId) return json({ error: "Permintaan tidak valid. Muat ulang halaman." }, { status: 400 });
@@ -10090,7 +10095,7 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
           `INSERT INTO transactions (id, user_id, type, amount, amount_idr, category, sub_category, currency, account_id, date, display_date, note, status, related_id, related_type, payload_json, created_at, updated_at)
            SELECT ?, ?, 'pemasukan', ?, ?, 'Usaha & Freelance', 'Penjualan', 'IDR', ?, ?, ?, ?, 'VERIFIED', ?, 'shop', ?, ?, ?
             WHERE NOT EXISTS (SELECT 1 FROM transactions WHERE user_id = ? AND related_type = 'shop' AND json_valid(payload_json) AND json_extract(payload_json, '$.saleId') = ?)`
-        ).bind(txId, userId, amount, amount, account.id, date, date, note, id, JSON.stringify({ saleId: requestId, product: product || null, qty, ...(buyer ? { buyer } : {}) }), now, now, userId, requestId),
+        ).bind(txId, userId, amount, amount, account.id, date, date, note, id, JSON.stringify({ saleId: requestId, product: product || null, qty, ...(buyer ? { buyer } : {}), ...(items.length ? { items } : {}) }), now, now, userId, requestId),
         ...quickTxBalanceStatements(env, userId, txId, account.id, "pemasukan", amount),
       ]);
       if (!results[0]?.meta.changes) return json({ error: "Penjualan ini sudah tercatat." }, { status: 409 });

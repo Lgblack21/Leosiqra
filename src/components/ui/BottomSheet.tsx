@@ -62,6 +62,9 @@ export function BottomSheet({ isOpen, onClose, title, children, footer, bare }: 
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.4 }}
             onDragEnd={handleDragEnd}
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
             className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[28px] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
           >
             <div className={bare ? "pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center pt-2.5" : "shrink-0 flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing"}>

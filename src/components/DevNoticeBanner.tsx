@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Hammer, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,7 +30,9 @@ export default function DevNoticeBanner({ variant = "web", saranHref }: { varian
     () => false
   );
   const [closed, setClosed] = useState(false);
-  if (!eligible || closed) return null;
+  const pathname = usePathname() ?? "";
+  // Kasir punya bar struk di posisi yang sama — banner disembunyikan di sana.
+  if (!eligible || closed || pathname.startsWith("/app/ladang/kasir")) return null;
 
   const close = () => {
     try { localStorage.setItem(KEY, String(Date.now())); } catch { /* abaikan */ }

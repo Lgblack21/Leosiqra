@@ -87,8 +87,8 @@ export const shopService = {
   async importPages(id: string, url?: string): Promise<{ pages: { url: string; title: string }[]; source: string }> {
     return cloudflareApi(`/api/member/shops/${id}/import-pages`, { method: 'POST', json: url ? { url } : {} });
   },
-  async sale(id: string, input: { requestId: string; amount: number; qty: number; product?: string; buyer?: string; accountId: string; date?: string }) {
-    await cloudflareApi(`/api/member/shops/${id}/sale`, { method: 'POST', json: { request_id: input.requestId, amount: input.amount, qty: input.qty, product: input.product, buyer: input.buyer, account_id: input.accountId, date: input.date } });
+  async sale(id: string, input: { requestId: string; amount: number; qty: number; product?: string; buyer?: string; items?: { name: string; price: number; qty: number }[]; accountId: string; date?: string }) {
+    await cloudflareApi(`/api/member/shops/${id}/sale`, { method: 'POST', json: { request_id: input.requestId, amount: input.amount, qty: input.qty, product: input.product, buyer: input.buyer, items: input.items, account_id: input.accountId, date: input.date } });
     notifyCollectionChanged('transactions');
     notifyCollectionChanged('accounts');
   },

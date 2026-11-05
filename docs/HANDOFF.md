@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-11-05 (live #129: Tagih nyicil, Kekayaan lunas, Usahak
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | Usahaku: baca semua halaman game |
+| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | Usahaku: baca semua halaman + kasir |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,6 +18,19 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-05 (branch claude/usahaku-web) — Halaman KASIR per usaha, BELUM deploy (tunggu "gas"). Tanpa SQL.**
+  - Route baru `/membership/ladang/kasir?id=<usaha>` & `/app/ladang/kasir?id=` (`KasirView.tsx`). Klik usaha di Usahaku →
+    kasir (bukan popup lagi). Header: omzet hari ini / jumlah transaksi / bulan ini + "Kelola" (= `ShopDetail` lama:
+    kontak, produk, katalog, website — tanpa ringkasan jualan). Katalog: cari + chip kategori + kartu produk (ketuk = +1,
+    badge ×n). Struk (web ≥lg panel kanan; HP & web sempit bar bawah → sheet): item ±, "Item di luar katalog", Nama/ID
+    pembeli (wajib kalau produk berkategori), rekening (diingat per usaha di localStorage), tanggal, Total diterima bisa
+    diubah (potongan ditampilkan) → `POST /shops/:id/sale` (satu transaksi, request_id) → layar selesai + "Salin struk"
+    (teks WA) + "Transaksi baru". Daftar "Penjualan hari ini".
+  - Worker: sale menerima `items` (≤30, hanya catatan di `payload_json.items`; nominal tetap `amount`). `SaleForm` lama
+    di UsahaView dihapus. DevNoticeBanner disembunyikan di `/app/ladang/kasir` (menimpa bar struk). `BottomSheet` kini
+    `role="dialog"` + `aria-label` judul. Tombol Kelola di HP punya aria-label.
+  - Diuji lokal web + HP: 4 item (70rb) dipotong jadi 60rb, tanpa ID ditolak, catatan "[CXA Store] 70 Diamond ×2,
+    140 Diamond, 86 Diamond · 112233 (2001) · Rudi", items tersimpan, saldo +60rb per transaksi, struk tersalin, 0 error JS.
 - **2026-11-05 (branch claude/usahaku-web) — Baca SEMUA halaman game dari website toko, BELUM deploy (tunggu "gas"). Tanpa SQL.**
   - Permintaan Bos: toko top up (mis. https://cxastore.id/) punya halaman per game (`/id/mobile-legends`) — AI harus
     membuka semuanya. **cxastore.id TIDAK bisa dibuka dari sandbox** — strukturnya asumsi, perlu dicek di produksi.
