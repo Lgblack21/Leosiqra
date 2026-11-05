@@ -4,13 +4,13 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-05 (live #131: Ladangku fullscreen, tampilan kasir + MCP Usahaku; migrasi 0029)
+Terakhir diperbarui: 2026-11-05 (live #134: webhook website Usahaku + tampilan kasir + MCP Usahaku FREE; migrasi 0029 & 0030 dijalankan)
 
 ## Siapa sedang kerja
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| Akun B | selesai, tunggu "gas" + migrasi 0030 (2026-11-05) | claude/usahaku-web | MCP FREE, webhook website, tampilan kasir |
+| — | — | — | (akun B selesai; main = live #134) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-05 (branch claude/usahaku-web) — Sambungkan website (webhook) + rombak tampilan kasir, BELUM deploy.**
+- **2026-11-05 (branch claude/usahaku-web) — Sambungkan website (webhook) + rombak tampilan kasir, **live #134**; migrasi 0030 SUDAH dijalankan Bos.**
   - **MIGRASI WAJIB di D1 Console** (file 0030_shop_hook.sql, boleh sebelum/sesudah deploy — Worker tahan kolom belum
     ada: kasir jalan, "Sambungkan website" & webhook membalas 503):
     `ALTER TABLE shops ADD COLUMN hook_hash TEXT;` / `ALTER TABLE shops ADD COLUMN hook_account_id TEXT;` /
@@ -38,7 +38,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   - Dites lokal: sebelum migrasi (GET jalan, 503), tanpa/salah kunci 401, order_id/amount/PIN 400, sah 201 saldo +19.500,
     kirim ulang = duplicate, 3× paralel → 1 tercatat (saldo +29.500 total), ganti kunci → lama 401, kunci toko lain 401,
     putus → 401, tanpa sesi tidak bisa buat kunci; Playwright web+HP 0 error JS.
-- **2026-11-05 (branch claude/usahaku-web) — MCP Usahaku GRATIS untuk FREE, BELUM deploy (tunggu "gas"). Tanpa SQL.**
+- **2026-11-05 (branch claude/usahaku-web) — MCP Usahaku GRATIS untuk FREE, **live #134**. Tanpa SQL.**
   - Keputusan Bos: tool tulis Usahaku (`create_shop`, `update_shop`, `set_shop_products`, `set_kasir_style`) boleh untuk
     member FREE. Izin tulis (scope `write`) kini bisa dibuat semua member (token manual & OAuth); tool uang
     `add_transaction` & `set_budget` ditandai `pro: true` dan tetap khusus PRO (`mcpCanUse` di tools/list + cek per
