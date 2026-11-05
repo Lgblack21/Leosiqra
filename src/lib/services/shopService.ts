@@ -8,8 +8,8 @@ export type ShopProduct = { name: string; price: number; unit: string; group?: s
 export type ShopPlan = { modal: number | null; waktu: string; perBulan: [number, number] | null; alasan: string[]; langkah: string[]; pembeli: string; cariDi: string };
 export type ShopIdea = { name: string; emoji: string; tagline: string; description: string; products: ShopProduct[]; plan: ShopPlan };
 /** Tampilan kasir — pilihan terbatas (lihat sanitizeKasirStyle di Worker). */
-export type KasirStyle = { theme: string; layout: 'grid' | 'list' | 'compact'; columns: 2 | 3 | 4; card: 'soft' | 'outline' | 'solid'; showUnit: boolean; greeting: string; receiptFooter: string; categoryOrder: string[]; header: 'besar' | 'ringkas'; strukSide: 'kanan' | 'kiri'; size: 'normal' | 'besar'; showStats: boolean; showSearch: boolean; showRecent: boolean };
-export const KASIR_DEFAULT: KasirStyle = { theme: 'ungu', layout: 'grid', columns: 3, card: 'soft', showUnit: true, greeting: '', receiptFooter: '', categoryOrder: [], header: 'besar', strukSide: 'kanan', size: 'normal', showStats: true, showSearch: true, showRecent: true };
+export type KasirStyle = { theme: string; layout: 'grid' | 'list' | 'compact'; columns: 2 | 3 | 4; card: 'soft' | 'outline' | 'solid'; showUnit: boolean; greeting: string; receiptFooter: string; categoryOrder: string[]; header: 'besar' | 'ringkas'; strukSide: 'kanan' | 'kiri'; size: 'normal' | 'besar'; showStats: boolean; showSearch: boolean; showRecent: boolean; mode: 'bawaan' | 'bebas'; customHtml: string };
+export const KASIR_DEFAULT: KasirStyle = { theme: 'ungu', layout: 'grid', columns: 3, card: 'soft', showUnit: true, greeting: '', receiptFooter: '', categoryOrder: [], header: 'besar', strukSide: 'kanan', size: 'normal', showStats: true, showSearch: true, showRecent: true, mode: 'bawaan', customHtml: '' };
 export type Shop = {
   id: string;
   name: string;

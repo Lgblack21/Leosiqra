@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-11-05 (live #134: webhook website Usahaku + tampilan k
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| — | — | — | (akun B selesai; main = live #134) |
+| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | Kasir mode bebas (iframe sandbox) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,6 +18,23 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-05 (branch claude/usahaku-web) — Kasir mode BEBAS (desain HTML/CSS/JS sendiri), BELUM deploy. Tanpa SQL.**
+  - `style_json.mode` = 'bawaan' | 'bebas' + `customHtml` (maks 60 rb karakter). Desain TIDAK pernah dijalankan di
+    halaman Leosiqra: `CustomKasirFrame.tsx` → `<iframe sandbox="allow-scripts">` tanpa allow-same-origin (origin
+    kosong: tanpa cookie/localStorage/API sesi/halaman induk; tanpa forms/popup/top-navigation) + CSP di awal dokumen
+    (default-src 'none', tanpa koneksi; img https:/data:; Google Fonts). Jembatan `window.Leosiqra`: onData (katalog +
+    isi struk), add(i)/remove(i), checkout(), rupiah(n). Pesan dari iframe divalidasi (sumber, jenis, indeks) dan dibatasi
+    15/detik. Struk, ID pembeli & pencatatan uang tetap komponen Leosiqra.
+  - Editor Tampilan: "Gaya kasir: Bawaan / Bebas" — textarea kode, "Pakai contoh" (`KASIR_SAMPLE_HTML`), pratinjau
+    interaktif, kartu "Minta AI-mu mendesain". MCP baru `set_kasir_template` (tulis, gratis FREE) + `mode` di
+    set_kasir_style; list_shops tidak mengirim HTML (has_custom_html), get_shop mengirim.
+  - Dites lokal: desain contoh → klik produk masuk struk Leosiqra (70 Diamond ×2 + 86 Diamond = Rp40.000), Bayar di
+    desain membuka struk (web: panel samping, HP: sheet); desain JAHAT (cookie, localStorage, parent.document, fetch &
+    XHR ke /api/member/accounts, top.location, window.open) → semua diblokir, halaman induk tetap; set_kasir_template
+    via MCP akun FREE → tampil di HP. 0 error JS.
+  - Catatan risiko yang diterima: desain bisa menampilkan gambar https (bisa dipakai mengirim data yang DIKETIK DI
+    DALAM desain ke luar). Data yang diterima desain hanya katalog publik; teks peringatan "jangan ketik PIN/password
+    di dalam desain" tampil di kasir.
 - **2026-11-05 (branch claude/usahaku-web) — Sambungkan website (webhook) + rombak tampilan kasir, **live #134**; migrasi 0030 SUDAH dijalankan Bos.**
   - **MIGRASI WAJIB di D1 Console** (file 0030_shop_hook.sql, boleh sebelum/sesudah deploy — Worker tahan kolom belum
     ada: kasir jalan, "Sambungkan website" & webhook membalas 503):

@@ -9635,8 +9635,13 @@ const isMissingColumn = (e: unknown) => e instanceof Error && /no such column/.t
 const KASIR_THEMES = ["ungu", "hijau", "biru", "oranye", "merah", "pink", "gelap", "emas"] as const;
 const KASIR_LAYOUTS = ["grid", "list", "compact"] as const;
 const KASIR_CARDS = ["soft", "outline", "solid"] as const;
-type KasirStyle = { theme: string; layout: string; columns: number; card: string; showUnit: boolean; greeting: string; receiptFooter: string; categoryOrder: string[]; header: string; strukSide: string; size: string; showStats: boolean; showSearch: boolean; showRecent: boolean };
-const KASIR_DEFAULT: KasirStyle = { theme: "ungu", layout: "grid", columns: 3, card: "soft", showUnit: true, greeting: "", receiptFooter: "", categoryOrder: [], header: "besar", strukSide: "kanan", size: "normal", showStats: true, showSearch: true, showRecent: true };
+type KasirStyle = { theme: string; layout: string; columns: number; card: string; showUnit: boolean; greeting: string; receiptFooter: string; categoryOrder: string[]; header: string; strukSide: string; size: string; showStats: boolean; showSearch: boolean; showRecent: boolean; mode: string; customHtml: string };
+// Mode "bebas": desain HTML/CSS/JS buatan pengguna/AI-nya. TIDAK pernah dijalankan di
+// halaman Leosiqra — klien merendernya di <iframe sandbox="allow-scripts"> (origin
+// kosong, tanpa cookie/API, CSP tanpa koneksi) dan hanya bertukar data katalog lewat
+// postMessage; struk & pencatatan uang tetap komponen asli.
+const KASIR_HTML_MAX = 60_000;
+const KASIR_DEFAULT: KasirStyle = { theme: "ungu", layout: "grid", columns: 3, card: "soft", showUnit: true, greeting: "", receiptFooter: "", categoryOrder: [], header: "besar", strukSide: "kanan", size: "normal", showStats: true, showSearch: true, showRecent: true, mode: "bawaan", customHtml: "" };
 const sanitizeKasirStyle = (raw: unknown, base: KasirStyle = KASIR_DEFAULT): KasirStyle => {
   const r = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
   const pick = <T extends readonly string[]>(v: unknown, list: T, fb: string) => (typeof v === "string" && (list as readonly string[]).includes(v) ? v : fb);
@@ -9655,6 +9660,8 @@ const sanitizeKasirStyle = (raw: unknown, base: KasirStyle = KASIR_DEFAULT): Kas
     showStats: typeof r.showStats === "boolean" ? r.showStats : base.showStats,
     showSearch: typeof r.showSearch === "boolean" ? r.showSearch : base.showSearch,
     showRecent: typeof r.showRecent === "boolean" ? r.showRecent : base.showRecent,
+    mode: pick(r.mode, ["bawaan", "bebas"] as const, base.mode),
+    customHtml: typeof r.customHtml === "string" ? r.customHtml.replace(/\u0000/g, "").slice(0, KASIR_HTML_MAX) : base.customHtml,
   };
 };
 const parseKasirStyle = (v: unknown): KasirStyle => { try { return sanitizeKasirStyle(typeof v === "string" ? JSON.parse(v) : null); } catch { return { ...KASIR_DEFAULT }; } };
@@ -16880,7 +16887,8 @@ const mcpListShops: McpToolDef["run"] = async (env, auth) => {
   const rows = await selectShops(env, auth.userId);
   const data = rows.map((r) => {
     const products = mcpShopProducts(r);
-    return { shop_id: r.id, name: r.name, tagline: r.tagline ?? null, products: products.length, categories: [...new Set(products.map((p) => p.group).filter(Boolean))], website: r.link_url ?? null, kasir_style: parseKasirStyle(r.style_json) };
+    const { customHtml, ...style } = parseKasirStyle(r.style_json);
+    return { shop_id: r.id, name: r.name, tagline: r.tagline ?? null, products: products.length, categories: [...new Set(products.map((p) => p.group).filter(Boolean))], website: r.link_url ?? null, kasir_style: { ...style, has_custom_html: customHtml.length > 0 } };
   });
   return { data: { shops: data, kasir_style_options: { theme: KASIR_THEMES, layout: KASIR_LAYOUTS, columns: [2, 3, 4], card: KASIR_CARDS } }, summary: `${data.length} usaha` };
 };
@@ -16959,6 +16967,23 @@ const MCP_SHOP_INFO_SCHEMA = {
 };
 const MCP_PRODUCT_ITEM = { type: "object", properties: { name: { type: "string", maxLength: 80 }, price: { type: "number", exclusiveMinimum: 0 }, unit: { type: "string", maxLength: 24 }, group: { type: "string", maxLength: 40 } }, required: ["name", "price"], additionalProperties: false };
 
+const mcpSetKasirTemplate: McpToolDef["run"] = async (env, auth, args) => {
+  const r = await mcpShopRow(env, auth, args.shop_id);
+  if (!("style_json" in r)) throw new McpToolError("Tampilan kasir belum aktif di server.");
+  if (typeof args.html !== "string" || !args.html.trim()) throw new McpToolError("html wajib diisi.");
+  if (args.html.length > KASIR_HTML_MAX) throw new McpToolError(`html maksimal ${KASIR_HTML_MAX} karakter.`);
+  const next = sanitizeKasirStyle({ mode: "bebas", customHtml: args.html }, parseKasirStyle(r.style_json));
+  await env.DB.prepare("UPDATE shops SET style_json = ?, updated_at = ? WHERE id = ? AND user_id = ?").bind(JSON.stringify(next), nowIso(), r.id, auth.userId).run();
+  return { data: { ok: true, shop_id: r.id, mode: "bebas", length: next.customHtml.length }, summary: `desain kasir bebas ${String(r.name).slice(0, 30)} (${next.customHtml.length} karakter)` };
+};
+const KASIR_TEMPLATE_DOC =
+  "Desain kasir BEBAS satu file HTML (CSS & JS inline). Berjalan di iframe sandbox: TIDAK ada akses jaringan (fetch/XHR diblokir), " +
+  "cookie, atau halaman induk; gambar hanya https:/data:; Google Fonts boleh. Data & aksi lewat objek global window.Leosiqra: " +
+  "Leosiqra.onData(cb) → cb({ shop:{name,emoji,tagline,greeting}, products:[{i,name,price,unit,group}], cart:{[i]:qty}, count, total, theme }) " +
+  "dipanggil saat awal & setiap struk berubah; Leosiqra.add(i) / Leosiqra.remove(i) menambah/mengurangi produk ke-i di struk; " +
+  "Leosiqra.checkout() membuka struk (nama/ID pembeli & pembayaran diisi di struk Leosiqra, BUKAN di desain); Leosiqra.rupiah(n) format harga. " +
+  "Tinggi iframe menyesuaikan isi otomatis. Jangan meminta PIN/password/OTP di desain.";
+
 const KASIR_STYLE_SCHEMA = {
   theme: { type: "string", enum: [...KASIR_THEMES], description: "Warna header & aksen kasir" },
   layout: { type: "string", enum: [...KASIR_LAYOUTS], description: "grid = kartu, list = baris, compact = kartu kecil padat" },
@@ -16974,6 +16999,7 @@ const KASIR_STYLE_SCHEMA = {
   showStats: { type: "boolean", description: "Tampilkan omzet hari ini/bulan ini di header" },
   showSearch: { type: "boolean", description: "Tampilkan kolom cari" },
   showRecent: { type: "boolean", description: "Tampilkan daftar penjualan hari ini" },
+  mode: { type: "string", enum: ["bawaan", "bebas"], description: "bawaan = katalog Leosiqra; bebas = desain HTML dari set_kasir_template" },
 };
 
 const MCP_TOOLS: McpToolDef[] = [
@@ -17024,6 +17050,14 @@ const MCP_TOOLS: McpToolDef[] = [
     write: true,
     inputSchema: { type: "object", properties: { shop_id: { type: "string" }, ...KASIR_STYLE_SCHEMA }, required: ["shop_id"], additionalProperties: false },
     run: mcpSetKasirStyle,
+  },
+  {
+    name: "set_kasir_template",
+    title: "Desain kasir bebas (HTML)",
+    description: `Memasang desain kasir buatanmu untuk satu usaha (mode bebas). ${KASIR_TEMPLATE_DOC} Ambil produk lewat get_shop untuk merancang. Kembali ke tampilan bawaan: set_kasir_style mode "bawaan".`,
+    write: true,
+    inputSchema: { type: "object", properties: { shop_id: { type: "string" }, html: { type: "string", maxLength: 60000, description: "Dokumen HTML lengkap (boleh tanpa <html>)" } }, required: ["shop_id", "html"], additionalProperties: false },
+    run: mcpSetKasirTemplate,
   },
   {
     name: "set_shop_products",

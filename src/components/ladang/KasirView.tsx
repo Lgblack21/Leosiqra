@@ -9,6 +9,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { shopService, groupProducts, type KasirStyle, type Shop, type ShopProduct } from '@/lib/services/shopService';
 import { KasirStyleEditor } from './KasirStyleEditor';
 import { KASIR_THEME } from './kasirTheme';
+import { CustomKasirFrame } from './CustomKasirFrame';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
 import { accountService } from '@/lib/services/accountService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
@@ -86,6 +87,15 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
 
   // inSheet: di dalam sheet/modal (judul dari sheet, tanpa kartu) — "Transaksi baru" menutup sheet.
   const compactHead = shop.style.header === 'ringkas';
+  const custom = shop.style.mode === 'bebas' && shop.style.customHtml.trim().length > 0;
+  const cartByIndex: Record<number, number> = {};
+  shop.products.forEach((p, i) => { const q = lines.find((l) => l.key === lineKey(p))?.qty; if (q) cartByIndex[i] = q; });
+  // Desain bebas menekan "Bayar": layar lebar → panel struk di samping; selain itu → sheet struk.
+  const openStruk = () => {
+    const aside = !app && window.matchMedia('(min-width: 1024px)').matches ? document.querySelector('aside[aria-label="Struk"]') : null;
+    if (aside) aside.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else setSheet(true);
+  };
   const todayTotal = Math.round(todaySales.reduce((x, t) => x + amt(t), 0));
   const strukLeft = shop.style.strukSide === 'kiri';
   const strukFor = (inSheet: boolean) => <Struk key={`${shop.id}-${inSheet}`} shop={shop} lines={lines} sum={sum} onAdd={add} setQty={setQty} clear={() => setLines([])} onDone={say} inSheet={inSheet} onNew={() => setSheet(false)} />;
@@ -123,7 +133,12 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
         </section>
       ) : (
         <div className={cn('grid items-start gap-4', strukLeft ? 'lg:grid-cols-[360px_1fr]' : 'lg:grid-cols-[1fr_360px]')}>
-          <Catalog products={shop.products} style={shop.style} lines={lines} onAdd={add} />
+          {custom ? (
+            <div className="min-w-0 space-y-1.5">
+              <CustomKasirFrame shop={shop} products={shop.products} cart={cartByIndex} onAdd={(i) => add(shop.products[i])} onRemove={(i) => { const k = lineKey(shop.products[i]); const q = lines.find((l) => l.key === k)?.qty ?? 0; if (q) setQty(k, q - 1); }} onCheckout={openStruk} />
+              <p className="px-2 text-[11px] text-slate-400">Desain buatanmu (mode bebas) · data uang & pembeli tetap diisi di struk Leosiqra — jangan ketik PIN/password di dalam desain.</p>
+            </div>
+          ) : <Catalog products={shop.products} style={shop.style} lines={lines} onAdd={add} />}
           {!app && <aside aria-label="Struk" className={cn('hidden lg:sticky lg:top-4 lg:block', strukLeft && 'lg:order-first')}>{strukFor(false)}</aside>}
         </div>
       )}
