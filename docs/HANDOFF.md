@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-11-05 (live #136: logo & gambar katalog + simpan tampi
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| — | — | — | (akun B selesai; main = live #136) |
+| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | skema MCP gambar + ikon data:image |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,6 +18,16 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-05 (branch claude/usahaku-web) — Gambar katalog: skema MCP lengkap + ikon data:image, BELUM deploy.**
+  - Laporan Bos (balasan Claude-nya): `set_kasir_style` belum mencantumkan `logoUrl`/`categoryImages`, `list_shops`
+    belum memuat semua pilihan. Kini skema set_kasir_style punya logoUrl, categoryImages (DIGABUNG, "" = hapus),
+    browse, mode; `kasir_style_options` memuat semua pilihan + aturan gambar.
+  - Gambar boleh `data:image/(png|jpeg|webp|gif|svg+xml)` ≤8.000 karakter (ikon SVG orisinal buatan AI pengguna),
+    total ≤150.000; `data:text/html` dll ditolak. set_catalog_images melaporkan `rejected_invalid` + `dropped_total_limit`.
+  - Klien MCP (Claude/ChatGPT) memuat daftar alat saat chat dimulai → setelah deploy pengguna perlu chat BARU
+    (atau sambung ulang konektor) supaya skema baru terbaca.
+  - Dites lokal: skema 19 field, ikon SVG ML/PUBG + logo terpasang & Free Fire lama tetap, data:text/html dibuang,
+    data 9.000 karakter ditolak & dilaporkan, kasir web+HP menampilkan ikon, 0 error JS.
 - **2026-11-05 (branch claude/usahaku-web) — Logo toko & gambar per kategori, **live #136**. Tanpa SQL.**
   - `style_json.logoUrl` + `categoryImages {group: url}` (maks 60). `safeImageUrl` = https saja (bukan http/data:/
     javascript:, tanpa IP/localhost/.internal, ≤500 karakter). Tampil lewat `CatalogImage` (`<img>` lazy,

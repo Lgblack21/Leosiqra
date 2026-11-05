@@ -40,7 +40,7 @@ export function KasirStyleEditor({ shop, onDone, onToast, onLeave }: { shop: Sho
   const move = (i: number, d: -1 | 1) => { const o = [...order]; [o[i], o[i + d]] = [o[i + d], o[i]]; set('categoryOrder', o); };
   const seg = (on: boolean) => cn('flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[12px] font-bold transition-colors', on ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400');
 
-  const imagePrompt = `Pakai Leosiqra (MCP): pasang logo toko & gambar tiap kategori untuk usahaku "${shop.name}" (shop_id ${shop.id}) lewat set_catalog_images. Cari gambar resmi (https publik, png/jpg/webp/svg) — utamakan dari website tokoku${shop.linkUrl ? ` (${shop.linkUrl})` : ''}. Nama kategori harus PERSIS: ${groups.length ? groups.join(', ') : '(lihat get_shop)'}. Tunjukkan daftar gambarnya dulu sebelum menyimpan.`;
+  const imagePrompt = `Pakai Leosiqra (MCP): pasang logo toko & gambar tiap kategori untuk usahaku "${shop.name}" (shop_id ${shop.id}) lewat set_catalog_images. Pakai gambar yang memang boleh kupakai (mis. dari website tokoku${shop.linkUrl ? ` ${shop.linkUrl}` : ''}, tautan https); kalau tidak ada, buatkan ikon SVG orisinal per kategori yang serasi (data:image/svg+xml, ≤8.000 karakter). Nama kategori harus PERSIS: ${groups.length ? groups.join(', ') : '(lihat get_shop)'}. Tunjukkan daftar gambarnya dulu sebelum menyimpan.`;
   const setImage = (g: string, url: string) => setSt((p) => { const m = { ...p.categoryImages }; if (url.trim()) m[g] = url.trim(); else delete m[g]; return { ...p, categoryImages: m }; });
   const templatePrompt = `Pakai Leosiqra (MCP): rancang desain kasir BEBAS untuk usahaku "${shop.name}" (shop_id ${shop.id}). Ambil dulu katalognya dengan get_shop, lalu pasang lewat set_kasir_template (baca aturan di deskripsi tool itu: satu file HTML, data & aksi lewat window.Leosiqra, tanpa akses jaringan). Gaya yang aku mau: [tulis bebas, mis. nuansa neon gaming, kartu besar bergambar ikon game, tab per game di atas, tombol Bayar melayang].`;
   const prompt = `Pakai Leosiqra (MCP): ubah tampilan kasir usahaku "${shop.name}" (shop_id ${shop.id}) lewat set_kasir_style. Aku mau: [tulis keinginanmu, mis. tema gelap, katalog kategori (grid kotak game), header ringkas, tombol besar untuk tablet, struk di kiri, kartu ringkas 4 kolom, sambutan "Top up kilat 24 jam", Mobile Legends paling atas].`;
@@ -106,7 +106,7 @@ export function KasirStyleEditor({ shop, onDone, onToast, onLeave }: { shop: Sho
 
       <details className="rounded-2xl ring-1 ring-slate-100 p-3 dark:ring-slate-800" open={Boolean(st.logoUrl || Object.keys(st.categoryImages).length)}>
         <summary className="cursor-pointer text-[13px] font-extrabold text-slate-900 dark:text-white">Logo & gambar kategori</summary>
-        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">Tempel tautan gambar https (dari website tokomu/CDN). Kosongkan untuk kembali ke inisial.</p>
+        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">Tempel tautan gambar https atau gambar data:image (mis. ikon SVG buatan AI-mu). Kosongkan untuk kembali ke inisial.</p>
         <label className="mt-2 flex items-center gap-2">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 text-[20px] dark:bg-slate-800"><CatalogImage src={st.logoUrl} alt="Logo" fallback={shop.emoji || '🏪'} className="h-full w-full bg-white p-0.5" /></span>
           <input value={st.logoUrl} onChange={(e) => set('logoUrl', e.target.value.trim())} inputMode="url" placeholder="Logo toko — https://…/logo.png" aria-label="Tautan logo toko" className={cn(fieldCls, 'py-2 text-[12px]')} />
@@ -119,7 +119,7 @@ export function KasirStyleEditor({ shop, onDone, onToast, onLeave }: { shop: Sho
             </li>
           ))}
         </ul>}
-        <AiMcpCard className="mt-3" title="Minta AI-mu memasang gambar" desc="AI-mu mencari logo tiap game/kategori lalu memasangnya." prompt={imagePrompt} onLeave={onLeave} onToast={onToast} />
+        <AiMcpCard className="mt-3" title="Minta AI-mu memasang gambar" desc="AI-mu memasang gambar yang boleh dipakai, atau membuatkan ikon orisinal per kategori." prompt={imagePrompt} onLeave={onLeave} onToast={onToast} />
       </details>
 
       {/* Pratinjau header */}

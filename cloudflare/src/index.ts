@@ -9642,10 +9642,19 @@ type KasirStyle = { theme: string; layout: string; columns: number; card: string
 // postMessage; struk & pencatatan uang tetap komponen asli.
 const KASIR_HTML_MAX = 60_000;
 const KASIR_DEFAULT: KasirStyle = { theme: "ungu", layout: "grid", columns: 3, card: "soft", showUnit: true, greeting: "", receiptFooter: "", categoryOrder: [], header: "besar", strukSide: "kanan", size: "normal", showStats: true, showSearch: true, showRecent: true, mode: "bawaan", customHtml: "", browse: "katalog", logoUrl: "", categoryImages: {} };
-// Gambar katalog: HANYA tautan https publik (bukan data:/javascript:, maks 500 karakter) —
-// ditampilkan lewat <img> (tanpa skrip) dengan referrer dimatikan.
+// Gambar katalog: tautan https publik (≤500 karakter) ATAU gambar langsung data:image
+// (png/jpeg/webp/gif/svg+xml, ≤8.000 karakter — mis. ikon SVG orisinal buatan AI pengguna,
+// karena logo resmi milik penerbit). Ditampilkan lewat <img> (SVG di <img> tidak bisa
+// menjalankan skrip / memuat sumber luar), referrer dimatikan. Total semua gambar ≤150 rb.
 const KASIR_IMAGES_MAX = 60;
+const KASIR_DATA_IMAGE_MAX = 8000;
+const KASIR_IMAGES_TOTAL_MAX = 150_000;
+const DATA_IMAGE_RE = /^data:image\/(png|jpeg|webp|gif|svg\+xml)(;charset=[\w-]+)?(;base64)?,/i;
 const safeImageUrl = (v: unknown) => {
+  if (typeof v === "string" && DATA_IMAGE_RE.test(v.trim())) {
+    const d = v.trim();
+    return d.length <= KASIR_DATA_IMAGE_MAX && !/[\u0000-\u001f]/.test(d) ? d : "";
+  }
   if (typeof v !== "string" || !v.trim() || v.length > 500) return "";
   try { const u = new URL(v.trim()); return u.protocol === "https:" && !u.username && !u.password && !isBlockedImageHost(u.hostname) ? u.href : ""; } catch { return ""; }
 };
@@ -9653,10 +9662,13 @@ const isBlockedImageHost = (host: string) => { const h = host.toLowerCase(); ret
 const sanitizeCategoryImages = (v: unknown, base: Record<string, string>) => {
   if (!v || typeof v !== "object" || Array.isArray(v)) return base;
   const out: Record<string, string> = {};
+  let total = 0;
   for (const [k, url] of Object.entries(v as Record<string, unknown>).slice(0, KASIR_IMAGES_MAX)) {
     const key = shopText(k, 40);
     const u = safeImageUrl(url);
-    if (key && u) out[key] = u;
+    if (!key || !u || total + u.length > KASIR_IMAGES_TOTAL_MAX) continue;
+    out[key] = u;
+    total += u.length;
   }
   return out;
 };
@@ -16563,7 +16575,9 @@ const MCP_SERVER_INSTRUCTIONS =
   "untuk mendapatkan account_id, dan pakai idempotency_key yang sama kalau mengulang panggilan yang sama. " +
   "Usahaku (toko pengguna): list_shops → get_shop untuk katalog; create_shop/update_shop untuk usaha & info toko; " +
   "untuk mengambil harga dari website toko, baca halamannya dengan alat web-mu sendiri lalu simpan lewat set_shop_products " +
-  "(group = nama kategori/game, harga Rupiah). set_kasir_style hanya menerima pilihan tampilan yang terdaftar " +
+  "(group = nama kategori/game, harga Rupiah). Gambar katalog (set_catalog_images / set_kasir_style categoryImages): https publik " +
+  "atau data:image ≤8.000 karakter — jangan memakai logo/artwork resmi pihak lain tanpa hak; buat ikon SVG orisinal bila perlu. " +
+  "set_kasir_style hanya menerima pilihan tampilan yang terdaftar " +
   "(bukan HTML/CSS); set_shop_products mode replace mengganti seluruh katalog — konfirmasi dulu ke pengguna.";
 
 type McpAuth = { tokenId: string; userId: string; scopes: Set<string>; plan: "FREE" | "PRO" };
@@ -16917,7 +16931,18 @@ const mcpListShops: McpToolDef["run"] = async (env, auth) => {
     const { customHtml, ...style } = parseKasirStyle(r.style_json);
     return { shop_id: r.id, name: r.name, tagline: r.tagline ?? null, products: products.length, categories: [...new Set(products.map((p) => p.group).filter(Boolean))], website: r.link_url ?? null, kasir_style: { ...style, has_custom_html: customHtml.length > 0 } };
   });
-  return { data: { shops: data, kasir_style_options: { theme: KASIR_THEMES, layout: KASIR_LAYOUTS, columns: [2, 3, 4], card: KASIR_CARDS } }, summary: `${data.length} usaha` };
+  return {
+    data: {
+      shops: data,
+      kasir_style_options: {
+        theme: KASIR_THEMES, layout: KASIR_LAYOUTS, columns: [2, 3, 4], card: KASIR_CARDS, header: ["besar", "ringkas"], strukSide: ["kanan", "kiri"],
+        size: ["normal", "besar"], browse: ["katalog", "gulir"], mode: ["bawaan", "bebas"],
+        booleans: ["showUnit", "showStats", "showSearch", "showRecent"], text: ["greeting (≤80)", "receiptFooter (≤120)"],
+        images: "logoUrl & categoryImages: https atau data:image (≤8.000 karakter/gambar, total ≤150.000) — lewat set_kasir_style atau set_catalog_images",
+      },
+    },
+    summary: `${data.length} usaha`,
+  };
 };
 const mcpGetShop: McpToolDef["run"] = async (env, auth, args) => {
   const r = await mcpShopRow(env, auth, args.shop_id);
@@ -16926,9 +16951,17 @@ const mcpGetShop: McpToolDef["run"] = async (env, auth, args) => {
 const mcpSetKasirStyle: McpToolDef["run"] = async (env, auth, args) => {
   const r = await mcpShopRow(env, auth, args.shop_id);
   if (!("style_json" in r)) throw new McpToolError("Tampilan kasir belum aktif di server (pembaruan database belum dijalankan).");
-  const next = sanitizeKasirStyle(args, parseKasirStyle(r.style_json)); // hanya field yang dikirim yang berubah
+  const cur = parseKasirStyle(r.style_json);
+  const input: Record<string, unknown> = { ...args };
+  if (args.categoryImages && typeof args.categoryImages === "object" && !Array.isArray(args.categoryImages)) {
+    const merged: Record<string, unknown> = { ...cur.categoryImages };
+    for (const [k, v] of Object.entries(args.categoryImages as Record<string, unknown>)) { if (v === "" || v === null) delete merged[k]; else merged[k] = v; }
+    input.categoryImages = merged;
+  }
+  const next = sanitizeKasirStyle(input, cur); // hanya field yang dikirim yang berubah
   await env.DB.prepare("UPDATE shops SET style_json = ?, updated_at = ? WHERE id = ? AND user_id = ?").bind(JSON.stringify(next), nowIso(), r.id, auth.userId).run();
-  return { data: { ok: true, shop_id: r.id, kasir_style: next }, summary: `tampilan kasir ${String(r.name).slice(0, 30)}: ${next.theme}/${next.layout}` };
+  const { customHtml, ...shown } = next;
+  return { data: { ok: true, shop_id: r.id, kasir_style: { ...shown, has_custom_html: customHtml.length > 0 } }, summary: `tampilan kasir ${String(r.name).slice(0, 30)}: ${next.theme}/${next.layout}` };
 };
 const mcpSetShopProducts: McpToolDef["run"] = async (env, auth, args) => {
   const r = await mcpShopRow(env, auth, args.shop_id);
@@ -17024,10 +17057,11 @@ const mcpSetCatalogImages: McpToolDef["run"] = async (env, auth, args) => {
   }
   const next = sanitizeKasirStyle({ logoUrl, categoryImages: images }, cur);
   await env.DB.prepare("UPDATE shops SET style_json = ?, updated_at = ? WHERE id = ? AND user_id = ?").bind(JSON.stringify(next), nowIso(), r.id, auth.userId).run();
+  const dropped = Object.keys(images).filter((g) => !(g in next.categoryImages) && !rejected.includes(g)); // melebihi batas total
   const groups = new Set(mcpShopProducts(r).map((p) => p.group).filter(Boolean));
   const unknown = Object.keys(next.categoryImages).filter((g) => !groups.has(g));
   return {
-    data: { ok: true, shop_id: r.id, logo_url: next.logoUrl || null, category_images: next.categoryImages, ...(rejected.length ? { rejected_not_https: rejected } : {}), ...(unknown.length ? { warning_unknown_categories: unknown } : {}) },
+    data: { ok: true, shop_id: r.id, logo_url: next.logoUrl || null, category_images: next.categoryImages, ...(rejected.length ? { rejected_invalid: rejected, rule: "https publik atau data:image ≤8.000 karakter" } : {}), ...(dropped.length ? { dropped_total_limit: dropped } : {}), ...(unknown.length ? { warning_unknown_categories: unknown } : {}) },
     summary: `gambar katalog ${String(r.name).slice(0, 30)}: ${Object.keys(next.categoryImages).length} kategori${next.logoUrl ? " + logo" : ""}`,
   };
 };
@@ -17057,6 +17091,12 @@ const KASIR_STYLE_SCHEMA = {
   showRecent: { type: "boolean", description: "Tampilkan daftar penjualan hari ini" },
   browse: { type: "string", enum: ["katalog", "gulir"], description: "katalog = grid kotak kategori → ketuk masuk daftar harga (+ Kembali ke katalog); gulir = semua produk dalam satu halaman" },
   mode: { type: "string", enum: ["bawaan", "bebas"], description: "bawaan = katalog Leosiqra; bebas = desain HTML dari set_kasir_template" },
+  logoUrl: { type: "string", maxLength: 8000, description: "Logo toko: tautan https ATAU data:image (svg/png/webp, ≤8.000 karakter). \"\" = hapus" },
+  categoryImages: {
+    type: "object",
+    additionalProperties: { type: "string", maxLength: 8000 },
+    description: "Gambar per kategori {\"<nama group persis>\": \"https://… atau data:image/svg+xml;base64,…\"} — DIGABUNG dengan yang ada; nilai \"\" = hapus kategori itu. Pakai ikon orisinal kalau tidak berhak atas logo resmi.",
+  },
 };
 
 const MCP_TOOLS: McpToolDef[] = [
@@ -17119,14 +17159,14 @@ const MCP_TOOLS: McpToolDef[] = [
   {
     name: "set_catalog_images",
     title: "Pasang logo & gambar katalog",
-    description: "Memasang logo toko (header kasir) dan gambar per kategori/game (kotak katalog). HANYA tautan gambar https publik (png/jpg/webp/svg dari website toko atau CDN), bukan data:. Nama group harus PERSIS sama dengan kategori produk (lihat get_shop). Entri lain tetap; image_url kosong = hapus gambar kategori itu; logo_url kosong = hapus logo.",
+    description: "Memasang logo toko (header kasir) dan gambar per kategori/game (kotak katalog). Nilai: tautan https publik ATAU gambar langsung data:image (svg+xml/png/webp, ≤8.000 karakter — cocok untuk ikon SVG orisinal buatanmu; jangan memakai logo/artwork resmi pihak lain tanpa hak). Nama group harus PERSIS sama dengan kategori produk (lihat get_shop). Entri lain tetap; image_url kosong = hapus gambar kategori itu; logo_url kosong = hapus logo.",
     write: true,
     inputSchema: {
       type: "object",
       properties: {
         shop_id: { type: "string" },
-        logo_url: { type: "string", maxLength: 500 },
-        categories: { type: "array", maxItems: 60, items: { type: "object", properties: { group: { type: "string", maxLength: 40 }, image_url: { type: "string", maxLength: 500 } }, required: ["group", "image_url"], additionalProperties: false } },
+        logo_url: { type: "string", maxLength: 8000 },
+        categories: { type: "array", maxItems: 60, items: { type: "object", properties: { group: { type: "string", maxLength: 40 }, image_url: { type: "string", maxLength: 8000 } }, required: ["group", "image_url"], additionalProperties: false } },
       },
       required: ["shop_id"],
       additionalProperties: false,
