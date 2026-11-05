@@ -58,13 +58,14 @@ export function HookSection({ shop, onToast, onLeave }: { shop: Shop; onToast: (
     node: `// Jalankan di SERVER (mis. setelah pembayaran sukses), bukan di halaman.\nawait fetch("${url}", {\n  method: "POST",\n  headers: {\n    Authorization: \`Bearer \${process.env.LEOSIQRA_KEY}\`,\n    "Content-Type": "application/json",\n  },\n  body: JSON.stringify({\n    order_id: order.id,        // wajib & unik\n    amount: order.total,       // Rupiah yang diterima\n    product: order.productName,\n    buyer: order.gameId,\n    qty: order.qty,\n  }),\n});`,
     php: `<?php // di server, setelah pembayaran sukses\n$ch = curl_init("${url}");\ncurl_setopt_array($ch, [\n  CURLOPT_POST => true,\n  CURLOPT_RETURNTRANSFER => true,\n  CURLOPT_HTTPHEADER => [\n    "Authorization: Bearer " . getenv("LEOSIQRA_KEY"),\n    "Content-Type: application/json",\n  ],\n  CURLOPT_POSTFIELDS => json_encode([\n    "order_id" => $order["id"],\n    "amount" => $order["total"],\n    "product" => $order["product"],\n    "buyer" => $order["game_id"],\n  ]),\n]);\ncurl_exec($ch);`,
   }[tab];
-  const prompt = `Bantu aku menyambungkan website tokoku ke Leosiqra supaya setiap order yang SUDAH DIBAYAR otomatis tercatat. Di kode SERVER (bukan di halaman/JavaScript browser), setelah pembayaran sukses kirim POST ke ${url} dengan header "Authorization: Bearer <isi dari environment variable LEOSIQRA_KEY>" dan body JSON: order_id (wajib, unik per order), amount (Rupiah yang diterima, angka bulat), product, buyer (nama/ID pembeli), qty. Kalau gagal jaringan, kirim ulang dengan order_id yang sama (tidak akan dobel). Tunjukkan di file mana kodenya harus ditaruh.`;
+  const prompt = `Bantu aku menyambungkan website tokoku ke Leosiqra supaya setiap order yang SUDAH DIBAYAR otomatis tercatat. Di kode SERVER (bukan di halaman/JavaScript browser), setelah pembayaran sukses kirim POST ke ${url} dengan header "Authorization: Bearer <isi dari environment variable LEOSIQRA_KEY>" dan body JSON: order_id (wajib, unik per order), amount (Rupiah yang diterima, angka bulat), product, buyer (nama/ID pembeli), qty. Kalau gagal jaringan, kirim ulang dengan order_id yang sama (tidak akan dobel). Lalu supaya harga di kasir selalu sama dengan website: setiap kali harga berubah (atau terjadwal tiap jam), kirim POST ke ${url}/products dengan header yang sama dan body { "mode": "update", "products": [{ "name": "70 Diamond", "price": 10000, "group": "Free Fire" }, …] } (maks 120 produk, group = nama game). Tunjukkan di file mana kodenya harus ditaruh.`;
+  const priceCode = `// Kirim daftar harga terbaru (mis. setiap harga berubah / cron tiap jam)\nawait fetch("${url}/products", {\n  method: "POST",\n  headers: {\n    Authorization: \`Bearer \${process.env.LEOSIQRA_KEY}\`,\n    "Content-Type": "application/json",\n  },\n  body: JSON.stringify({\n    mode: "update", // "replace" = ganti seluruh katalog\n    products: products.map((p) => ({\n      name: p.name,       // mis. "70 Diamond"\n      price: p.price,     // Rupiah\n      group: p.game,      // mis. "Free Fire"\n    })),\n  }),\n});\n// Balasan: { ok, total, updated, added, unchanged }`;
   const accName = accounts?.find((a) => a.id === shop.hookAccountId)?.name;
 
   return (
     <section className="rounded-3xl ring-1 ring-slate-100 p-4 dark:ring-slate-800">
       <p className="flex items-center gap-1.5 text-[14px] font-extrabold text-slate-900 dark:text-white"><PlugZap size={16} className="text-emerald-500" /> Sambungkan website (otomatis)</p>
-      <p className="mt-0.5 text-[12px] text-slate-500 dark:text-slate-400">Setiap order yang dibayar di websitemu langsung masuk ke kasir & saldo — tanpa input manual.</p>
+      <p className="mt-0.5 text-[12px] text-slate-500 dark:text-slate-400">Setiap order yang dibayar di websitemu langsung masuk ke kasir & saldo, dan harga kasir bisa ikut harga website — tanpa input manual.</p>
       {error && <p role="alert" className="mt-2 text-[12px] font-semibold text-rose-600">{error}</p>}
       {!shop.hookReady ? (
         <p className="mt-3 rounded-2xl bg-amber-50 px-3 py-2.5 text-[12px] font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">Fitur ini sedang disiapkan di server — sebentar lagi bisa dipakai.</p>
@@ -113,6 +114,18 @@ export function HookSection({ shop, onToast, onLeave }: { shop: Shop; onToast: (
               <div className="mt-2 flex gap-1 rounded-full bg-white p-1 dark:bg-slate-900">{(['node', 'php', 'curl'] as const).map((t) => <button key={t} type="button" onClick={() => setTab(t)} aria-pressed={tab === t} className={cn('flex-1 rounded-full py-1.5 text-[11px] font-bold', tab === t ? 'bg-slate-900 text-white dark:bg-violet-600' : 'text-slate-500')}>{t === 'node' ? 'Node.js' : t === 'php' ? 'PHP' : 'cURL'}</button>)}</div>
               <pre className="mt-2 max-h-56 overflow-auto rounded-xl bg-slate-950 p-3 text-[11px] leading-relaxed text-emerald-200">{code}</pre>
               <button type="button" onClick={() => copy(code, 'Contoh kode tersalin.')} className="mt-2 flex items-center gap-1 text-[11px] font-bold text-violet-600 dark:text-violet-300"><Copy size={12} /> Salin contoh kode</button>
+            </details>
+          )}
+          {(shop.hookOn || made) && (
+            <details className="mt-3 rounded-2xl bg-sky-50 p-3 dark:bg-sky-500/10">
+              <summary className="cursor-pointer text-[12px] font-bold text-sky-900 dark:text-sky-200">Perbarui harga otomatis dari website{shop.catalogSyncedAt ? ` · terakhir ${ago(shop.catalogSyncedAt)}` : ''}</summary>
+              <ul className="mt-2 space-y-1 text-[11px] text-sky-900/80 dark:text-sky-100/80">
+                <li><b>POST</b> ke <code>…/{'{'}id{'}'}/products</code> dengan kunci yang sama, body <code>{'{'} mode, products {'}'}</code>.</li>
+                <li><code>mode: &quot;update&quot;</code> (bawaan): produk dengan group + nama sama ikut harga baru, produk baru ditambah, lainnya tetap. <code>&quot;replace&quot;</code> = ganti semua.</li>
+                <li>Kirim setiap harga berubah, atau jadwalkan (cron) tiap jam. Maks 120 produk.</li>
+              </ul>
+              <pre className="mt-2 max-h-56 overflow-auto rounded-xl bg-slate-950 p-3 text-[11px] leading-relaxed text-emerald-200">{priceCode}</pre>
+              <button type="button" onClick={() => copy(priceCode, 'Contoh kode harga tersalin.')} className="mt-2 flex items-center gap-1 text-[11px] font-bold text-violet-600 dark:text-violet-300"><Copy size={12} /> Salin contoh kode</button>
             </details>
           )}
           {(shop.hookOn || made) && <AiMcpCard className="mt-3" title="Minta AI-mu memasangkannya" desc="AI-mu menunjukkan di mana kode ini ditaruh di websitemu. Kunci TIDAK ikut di perintah — isi sendiri di server." prompt={prompt} onLeave={onLeave} onToast={onToast} />}

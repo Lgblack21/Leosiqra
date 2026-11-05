@@ -1,0 +1,99 @@
+"use client";
+
+import { useMemo, useState } from 'react';
+import { Check, Loader2, Minus, Plus, Search, X } from 'lucide-react';
+import { shopService, groupProducts, type Shop } from '@/lib/services/shopService';
+import { cn, formatIDR } from '@/lib/utils';
+import { fieldCls, labelCls } from './UsahaView';
+
+// Perbarui harga manual: semua produk per kategori dengan kolom harga, cari, dan
+// naik/turun massal X% (dibulatkan ke Rp100 terdekat, opsional). Simpan sekali.
+const ago = (iso?: string) => {
+  if (!iso) return '';
+  const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  return m < 1 ? 'baru saja' : m < 60 ? `${m} menit lalu` : m < 1440 ? `${Math.round(m / 60)} jam lalu` : new Date(iso).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
+};
+
+export function PriceEditor({ shop, onDone }: { shop: Shop; onDone: (m: string) => void }) {
+  const [prices, setPrices] = useState<number[]>(() => shop.products.map((p) => p.price));
+  const [query, setQuery] = useState('');
+  const [pct, setPct] = useState('5');
+  const [round, setRound] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const q = query.trim().toLowerCase();
+  const groups = useMemo(() => groupProducts(shop.products), [shop.products]);
+  const visible = (i: number) => !q || `${shop.products[i].group ?? ''} ${shop.products[i].name}`.toLowerCase().includes(q);
+  const changed = prices.filter((v, i) => v !== shop.products[i].price).length;
+
+  const bulk = (dir: 1 | -1) => {
+    const f = Number(pct.replace(',', '.'));
+    if (!Number.isFinite(f) || f <= 0 || f > 90) { setError('Isi persen 0,1–90.'); return; }
+    setError('');
+    setPrices((ps) => ps.map((v, i) => {
+      if (!visible(i)) return v;
+      const n = v * (1 + (dir * f) / 100);
+      return Math.max(1, round ? Math.round(n / 100) * 100 : Math.round(n));
+    }));
+  };
+  const save = async () => {
+    if (prices.some((v) => !v || v < 1)) { setError('Ada harga yang kosong.'); return; }
+    if (!changed) { onDone('Tidak ada harga yang diubah.'); return; }
+    setBusy(true);
+    setError('');
+    try {
+      await shopService.update(shop.id, { products: shop.products.map((p, i) => ({ ...p, price: prices[i] })) });
+      onDone(`${changed} harga diperbarui.`);
+    } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal menyimpan.'); setBusy(false); }
+  };
+
+  return (
+    <div className="space-y-3">
+      {shop.catalogSyncedAt && <p className="rounded-2xl bg-sky-50 px-3 py-2 text-[12px] font-semibold text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">🌐 Harga diperbarui otomatis dari website: {ago(shop.catalogSyncedAt)}</p>}
+      {error && <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-[12px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">{error}</p>}
+      <div className="flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2 dark:bg-slate-800">
+        <Search size={15} className="shrink-0 text-slate-400" />
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari game atau nominal…" aria-label="Cari produk" className="min-w-0 flex-1 bg-transparent text-[13px] font-semibold text-slate-900 outline-none dark:text-white" />
+        {query && <button type="button" onClick={() => setQuery('')} aria-label="Hapus pencarian" className="text-slate-400"><X size={14} /></button>}
+      </div>
+      <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
+        <span className={labelCls}>Ubah massal {q ? '(hasil pencarian)' : '(semua produk)'}</span>
+        <div className="flex items-center gap-2">
+          <span className="flex w-24 items-center gap-1 rounded-xl bg-white px-2.5 py-2 dark:bg-slate-900"><input value={pct} onChange={(e) => setPct(e.target.value.replace(/[^\d.,]/g, '').slice(0, 5))} inputMode="decimal" aria-label="Persen" className="w-full min-w-0 bg-transparent text-[13px] font-bold tabular-nums outline-none dark:text-white" />%</span>
+          <button type="button" onClick={() => bulk(1)} className="flex flex-1 items-center justify-center gap-1 rounded-full bg-rose-50 py-2 text-[12px] font-bold text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"><Plus size={13} /> Naikkan</button>
+          <button type="button" onClick={() => bulk(-1)} className="flex flex-1 items-center justify-center gap-1 rounded-full bg-emerald-50 py-2 text-[12px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"><Minus size={13} /> Turunkan</button>
+        </div>
+        <label className="mt-2 flex items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400"><input type="checkbox" checked={round} onChange={(e) => setRound(e.target.checked)} className="accent-violet-600" /> Bulatkan ke Rp100 terdekat</label>
+      </div>
+      <div className="max-h-[50vh] space-y-3 overflow-y-auto pr-1">
+        {groups.map(({ group, items }) => {
+          const shown = items.filter(({ i }) => visible(i));
+          if (!shown.length) return null;
+          return (
+            <div key={group || 'lain'}>
+              {(groups.length > 1 || group) && <p className="mb-1 px-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">{group || 'Lainnya'}</p>}
+              <ul className="space-y-1">
+                {shown.map(({ p, i }) => {
+                  const diff = prices[i] - p.price;
+                  return (
+                    <li key={i} className="flex items-center gap-2 rounded-xl px-1 py-1">
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[13px] font-bold text-slate-800 dark:text-slate-100">{p.name}</span>
+                        {diff !== 0 && <span className={cn('block text-[11px] font-semibold', diff > 0 ? 'text-rose-600' : 'text-emerald-600')}>{formatIDR(p.price)} → {diff > 0 ? '+' : ''}{formatIDR(diff)}</span>}
+                      </span>
+                      <span className={cn(fieldCls, 'flex w-32 shrink-0 items-center gap-1 px-2.5 py-2', diff !== 0 && 'ring-amber-400')}>
+                        <span className="text-[11px] text-slate-400">Rp</span>
+                        <input value={prices[i] ? prices[i].toLocaleString('id-ID') : ''} onChange={(e) => { const v = Number(e.target.value.replace(/\D/g, '').slice(0, 10)); setPrices((ps) => ps.map((x, j) => (j === i ? v : x))); }} inputMode="numeric" aria-label={`Harga ${p.name}`} className="w-full min-w-0 bg-transparent text-right text-[13px] font-bold tabular-nums outline-none" />
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
+      <button type="button" onClick={save} disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-violet-600">{busy ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Simpan{changed ? ` ${changed} perubahan` : ''}</button>
+    </div>
+  );
+}

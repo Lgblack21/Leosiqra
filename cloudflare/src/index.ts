@@ -9615,6 +9615,7 @@ const hookColumnMissing = (error: unknown) => error instanceof Error && /no such
 // Kolom dari migrasi 0029 (style_json) & 0030 (hook_*) — sebelum Bos menjalankannya,
 // baca dengan kolom yang ada. hook_hash TIDAK pernah dikirim ke klien (hanya hook_on).
 const SHOP_COLUMN_SETS = [
+  `${SHOP_COLUMNS}, style_json, hook_account_id, hook_last_at, CASE WHEN hook_hash IS NULL THEN 0 ELSE 1 END AS hook_on, catalog_synced_at`,
   `${SHOP_COLUMNS}, style_json, hook_account_id, hook_last_at, CASE WHEN hook_hash IS NULL THEN 0 ELSE 1 END AS hook_on`,
   `${SHOP_COLUMNS}, style_json`,
   SHOP_COLUMNS,
@@ -9819,20 +9820,64 @@ const shopSaleBuyerBad = (buyer: string) => /\b(pin|password|kata sandi|otp|cvv)
 // header authorization). order_id wajib & unik per usaha (kirim ulang = tidak dobel).
 const SHOP_HOOK_RE = /^lsq_shk_[A-Za-z0-9_-]{43}$/;
 const SHOP_ORDER_RE = /^[A-Za-z0-9_.:#/-]{1,100}$/;
-async function handleShopHook(request: Request, env: Env, shopId: string) {
-  const hookErr = (status: number, error: string) => json({ ok: false, error }, { status });
+const hookErr = (status: number, error: string) => json({ ok: false, error }, { status });
+type HookShopRow = { id: string; user_id: string; name: string; hook_hash: string | null; hook_account_id: string | null; products_json: string | null };
+// Kunci webhook (Bearer lsq_shk_…) → baris usaha, atau Response galat.
+const authShopHook = async (request: Request, env: Env, shopId: string, what: string): Promise<HookShopRow | Response> => {
   if (!/^[0-9a-f-]{36}$/i.test(shopId)) return hookErr(404, "Usaha tidak ditemukan.");
   const key = /^Bearer\s+(\S+)$/i.exec((request.headers.get("authorization") ?? "").trim())?.[1] ?? "";
   if (!SHOP_HOOK_RE.test(key)) return hookErr(401, "Kunci tidak valid. Pakai header Authorization: Bearer <kunci dari Leosiqra>.");
-  if (env.MCP_RATE_LIMITER && !(await env.MCP_RATE_LIMITER.limit({ key: `shop-hook:${shopId}` })).success) return hookErr(429, "Terlalu banyak penjualan dalam semenit. Kirim ulang sebentar lagi (order_id yang sama aman).");
-  let row: { id: string; user_id: string; name: string; hook_hash: string | null; hook_account_id: string | null } | null;
+  if (env.MCP_RATE_LIMITER && !(await env.MCP_RATE_LIMITER.limit({ key: `shop-hook:${shopId}` })).success) return hookErr(429, `Terlalu banyak ${what} dalam semenit. Kirim ulang sebentar lagi.`);
+  let row: HookShopRow | null;
   try {
-    row = await env.DB.prepare("SELECT id, user_id, name, hook_hash, hook_account_id FROM shops WHERE id = ?").bind(shopId).first();
+    row = await env.DB.prepare("SELECT id, user_id, name, hook_hash, hook_account_id, products_json FROM shops WHERE id = ?").bind(shopId).first<HookShopRow>();
   } catch (e) {
     if (isMissingColumn(e) || shopsTableMissing(e)) return hookErr(503, "Sambungan website belum aktif di Leosiqra.");
     throw e;
   }
   if (!row || !row.hook_hash || row.hook_hash !== (await sha256Hex(key))) return hookErr(401, "Kunci tidak cocok atau sambungan sudah diputus.");
+  return row;
+};
+
+// Daftar harga dari website → katalog: POST /api/hooks/shop/<id>/products
+// { products: [{ name, price, group?, unit? }], mode?: "update" | "replace" }.
+// update (default) = produk group+nama sama ikut harga baru, produk baru ditambah, lainnya tetap.
+async function handleShopHookProducts(request: Request, env: Env, shopId: string) {
+  const row = await authShopHook(request, env, shopId, "pembaruan harga");
+  if (row instanceof Response) return row;
+  const raw = await parseJson<Record<string, unknown>>(request).catch(() => null);
+  if (!raw || !Array.isArray(raw.products) || !raw.products.length) return hookErr(400, "products wajib: [{ name, price, group?, unit? }].");
+  if (raw.products.length > SHOP_PRODUCTS_MAX) return hookErr(400, `Maksimal ${SHOP_PRODUCTS_MAX} produk.`);
+  const incoming = sanitizeShopProducts(raw.products).filter((p) => p.price > 0);
+  if (!incoming.length) return hookErr(400, "Tidak ada produk valid (name & price Rupiah > 0).");
+  const mode = raw.mode === "replace" ? "replace" : "update";
+  let old: ShopProduct[] = [];
+  try { old = sanitizeShopProducts(JSON.parse(row.products_json ?? "[]")); } catch { old = []; }
+  const key = (p: ShopProduct) => `${p.group ?? ""}|${p.name}`.toLowerCase();
+  const byKey = new Map(incoming.map((p) => [key(p), p]));
+  let updated = 0, unchanged = 0;
+  const kept = old.map((p) => {
+    const n = byKey.get(key(p));
+    if (!n) return p;
+    if (n.price === p.price && (n.unit || "") === (p.unit || "")) { unchanged++; return p; }
+    updated++;
+    return { ...p, price: n.price, ...(n.unit ? { unit: n.unit } : {}) };
+  });
+  const added = incoming.filter((p) => !old.some((o) => key(o) === key(p)));
+  const products = (mode === "replace" ? incoming : [...kept, ...added]).slice(0, SHOP_PRODUCTS_MAX);
+  const now = nowIso();
+  try {
+    await env.DB.prepare("UPDATE shops SET products_json = ?, catalog_synced_at = ?, updated_at = ? WHERE id = ?").bind(JSON.stringify(products), now, now, row.id).run();
+  } catch (e) {
+    if (!isMissingColumn(e)) throw e;
+    await env.DB.prepare("UPDATE shops SET products_json = ?, updated_at = ? WHERE id = ?").bind(JSON.stringify(products), now, row.id).run();
+  }
+  return json({ ok: true, mode, total: products.length, ...(mode === "replace" ? { replaced: true } : { updated, added: added.length, unchanged }) });
+}
+
+async function handleShopHook(request: Request, env: Env, shopId: string) {
+  const row = await authShopHook(request, env, shopId, "penjualan");
+  if (row instanceof Response) return row;
   const raw = await parseJson<Record<string, unknown>>(request).catch(() => null);
   if (!raw) return hookErr(400, "Body harus JSON.");
   const orderId = typeof raw.order_id === "string" || typeof raw.order_id === "number" ? String(raw.order_id).trim() : "";
@@ -18617,7 +18662,9 @@ const worker = {
       }
 
       if (url.pathname.startsWith("/api/hooks/shop/") && request.method === "POST") {
-        return await handleShopHook(request, env, url.pathname.slice("/api/hooks/shop/".length));
+        const rest = url.pathname.slice("/api/hooks/shop/".length);
+        if (rest.endsWith("/products")) return await handleShopHookProducts(request, env, rest.slice(0, -"/products".length));
+        return await handleShopHook(request, env, rest);
       }
 
       if (url.pathname === "/api/member/shops" || url.pathname.startsWith("/api/member/shops/")) {

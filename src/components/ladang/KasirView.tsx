@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Check, Copy, Loader2, Minus, Palette, Plus, ReceiptText, Search, Settings2, ShoppingBag, Store, Trash2, X } from 'lucide-react';
+import { ArrowLeft, BadgeDollarSign, Check, Copy, Loader2, Minus, Palette, Plus, ReceiptText, Search, Settings2, ShoppingBag, Store, Trash2, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { shopService, groupProducts, type KasirStyle, type Shop, type ShopProduct } from '@/lib/services/shopService';
@@ -11,6 +11,7 @@ import { KasirStyleEditor } from './KasirStyleEditor';
 import { KASIR_THEME } from './kasirTheme';
 import { CustomKasirFrame } from './CustomKasirFrame';
 import { CatalogImage } from './CatalogImage';
+import { PriceEditor } from './PriceEditor';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
 import { accountService } from '@/lib/services/accountService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
@@ -40,6 +41,7 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
   const [error, setError] = useState('');
   const [manage, setManage] = useState(false);
   const [styling, setStyling] = useState(false);
+  const [pricing, setPricing] = useState(false);
   const [sheet, setSheet] = useState(false); // HP: struk
   const [flash, setFlash] = useState('');
   const say = (m: string) => { if (onToast) onToast(m); else { setFlash(m); window.setTimeout(() => setFlash(''), 3500); } };
@@ -115,6 +117,7 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
             <h1 className={cn('truncate font-extrabold leading-tight', compactHead ? 'text-[16px]' : 'text-[20px] md:text-[24px]')}>{compactHead && `${shop.emoji || '🏪'} `}{shop.name}</h1>
             {compactHead && shop.style.showStats ? <p className="truncate text-[11px] text-white/70">Hari ini {short(todayTotal)} · {todaySales.length} transaksi</p> : shop.style.greeting && <p className="truncate text-[12px] text-white/70">{shop.style.greeting}</p>}
           </div>
+          {shop.products.length > 0 && <button type="button" onClick={() => setPricing(true)} aria-label="Perbarui harga" className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-[12px] font-bold hover:bg-white/20"><BadgeDollarSign size={14} /> <span className="hidden sm:inline">Harga</span></button>}
           <button type="button" onClick={() => setStyling(true)} aria-label="Tampilan kasir" className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-[12px] font-bold hover:bg-white/20"><Palette size={14} /> <span className="hidden sm:inline">Tampilan</span></button>
           <button type="button" onClick={() => setManage(true)} aria-label="Kelola usaha" className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-[12px] font-bold hover:bg-white/20"><Settings2 size={14} /> <span className="hidden sm:inline">Kelola</span></button>
         </div>
@@ -158,12 +161,14 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
       {app ? (
         <>
           <BottomSheet isOpen={sheet} onClose={() => setSheet(false)} title="Struk"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">{strukFor(true)}</div></BottomSheet>
+          <BottomSheet isOpen={pricing} onClose={() => setPricing(false)} title="Perbarui harga"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><PriceEditor key={shop.updatedAt} shop={shop} onDone={(m) => { setPricing(false); say(m); }} /></div></BottomSheet>
           <BottomSheet isOpen={styling} onClose={() => setStyling(false)} title="Tampilan kasir"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><KasirStyleEditor shop={shop} onDone={(m) => { setStyling(false); say(m); }} onToast={say} onLeave={() => setStyling(false)} /></div></BottomSheet>
           <BottomSheet isOpen={manage} onClose={() => setManage(false)} title={`Kelola ${shop.name}`}><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><ShopDetail shop={shop} sales={sales} onToast={say} onLeave={() => setManage(false)} onDeleted={() => router.replace(back)} /></div></BottomSheet>
         </>
       ) : (
         <>
           <Modal isOpen={sheet} onClose={() => setSheet(false)} title="Struk" maxWidth="max-w-md">{strukFor(true)}</Modal>
+          <Modal isOpen={pricing} onClose={() => setPricing(false)} title="Perbarui harga" maxWidth="max-w-lg"><PriceEditor key={shop.updatedAt} shop={shop} onDone={(m) => { setPricing(false); say(m); }} /></Modal>
           <Modal isOpen={styling} onClose={() => setStyling(false)} title="Tampilan kasir" maxWidth="max-w-lg"><KasirStyleEditor shop={shop} onDone={(m) => { setStyling(false); say(m); }} onToast={say} onLeave={() => setStyling(false)} /></Modal>
           <Modal isOpen={manage} onClose={() => setManage(false)} title={`Kelola ${shop.name}`} maxWidth="max-w-xl"><ShopDetail shop={shop} sales={sales} onToast={say} onLeave={() => setManage(false)} onDeleted={() => router.replace(back)} /></Modal>
         </>

@@ -32,6 +32,8 @@ export type Shop = {
   hookLastAt?: string;
   /** false = kolom hook_* belum ada di server (migrasi 0030 belum jalan). */
   hookReady: boolean;
+  /** Daftar harga terakhir diperbarui otomatis dari website (webhook /products). */
+  catalogSyncedAt?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -59,6 +61,7 @@ const fromRow = (r: Row): Shop => ({
   hookAccountId: str(r.hook_account_id),
   hookLastAt: str(r.hook_last_at),
   hookReady: 'hook_on' in r,
+  catalogSyncedAt: str(r.catalog_synced_at),
   createdAt: String(r.created_at ?? ''),
   updatedAt: String(r.updated_at ?? ''),
 });

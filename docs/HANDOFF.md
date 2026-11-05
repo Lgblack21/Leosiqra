@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-11-05 (live #136: logo & gambar katalog + simpan tampi
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | skema MCP gambar + status AI tersambung |
+| Akun B | selesai, tunggu "gas" + migrasi 0031 (2026-11-05) | claude/usahaku-web | gambar MCP, status AI, update harga |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,6 +18,17 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-05 (branch claude/usahaku-web) — Update harga manual & otomatis, BELUM deploy.**
+  - **MIGRASI di D1 Console** (0031_shop_catalog_sync.sql; boleh sebelum/sesudah deploy — tanpa kolom, sinkron tetap
+    jalan, cuma waktu "terakhir diperbarui" tidak tercatat): `ALTER TABLE shops ADD COLUMN catalog_synced_at TEXT;`
+  - Otomatis: `POST /api/hooks/shop/<id>/products` (kunci webhook yang sama, `authShopHook` dipakai bersama dengan
+    webhook penjualan) body `{ mode: "update"|"replace", products: [{ name, price, group?, unit? }] }` — update =
+    group+nama sama ikut harga, baru ditambah, lainnya tetap; balasan updated/added/unchanged; maks 120; harga 0 dibuang.
+  - Manual: tombol "Harga" di header kasir → `PriceEditor.tsx` (cari, naik/turun X% untuk hasil cari/semua, bulatkan
+    Rp100, edit per produk, selisih tampil, simpan sekali). HookSection: bagian "Perbarui harga otomatis" + contoh kode;
+    perintah AI ikut mencakup sinkron harga. Banner "Harga diperbarui otomatis dari website: …" di editor harga.
+  - Dites lokal: sebelum migrasi update jalan & GET tetap; setelah migrasi waktu tercatat; kunci salah 401, kosong/121
+    produk/harga 0 → 400, replace; editor web+HP: +5% bulat Rp100 hanya hasil cari "Diamond" + 60 UC manual → tersimpan.
 - **2026-11-05 (branch claude/usahaku-web) — Status "AI tersambung" di Ladangku & Pengaturan, BELUM deploy. Tanpa SQL.**
   - `src/lib/mcpStatus.ts` (`useMcpStatus`, cache 30 dtk, muat ulang saat tab aktif, `refreshMcpStatus` dipanggil
     McpConnectCard setelah load) dari `/api/member/mcp/tokens`: none / read / write + nama AI.
