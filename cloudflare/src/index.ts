@@ -9690,7 +9690,8 @@ async function handleShopIdeas(request: Request, env: Env, userId: string) {
   const openRouter = await getOpenRouterKey(env);
   if (!openRouter) return json({ error: "AI belum dikonfigurasi. Coba lagi nanti." }, { status: 503 });
   if (!(await shopIdeaQuota(env, userId, 1))) return json({ error: `Batas ide usaha hari ini (${SHOP_IDEA_DAILY_LIMIT}×) sudah habis. Coba lagi besok.` }, { status: 429 });
-  const systemPrompt = `Kamu mentor usaha sampingan untuk orang Indonesia biasa (karyawan, mahasiswa, ibu rumah tangga). Dari cerita pengguna, susun TIGA rencana usaha kecil yang realistis, legal, dan bisa dimulai minggu ini dengan modal kecil. Semua uang dalam RUPIAH (angka bulat tanpa titik). Harga produk wajar untuk pasar Indonesia. Jangan janji muluk; perkiraan pendapatan per bulan konservatif. Tolak ide ilegal/berbahaya (judi, pinjol ilegal, skema piramida, barang terlarang) — ganti dengan alternatif yang aman.
+  const systemPrompt = `Kamu mentor usaha sampingan untuk orang Indonesia biasa (karyawan, mahasiswa, ibu rumah tangga). Dari cerita pengguna, susun TIGA rencana usaha kecil yang realistis, legal, dan bisa dimulai minggu ini dengan modal kecil. Semua uang dalam RUPIAH (angka bulat tanpa titik). Harga produk wajar untuk pasar Indonesia. Jangan janji muluk; perkiraan pendapatan per bulan konservatif. Tolak ide ilegal/berbahaya (judi, pinjol ilegal, skema piramida, barang terlarang) — ganti dengan alternatif yang aman. Jualan top up/voucher game, pulsa, dan akun premium resmi itu LEGAL (bukan judi).
+ATURAN PALING PENTING: semua ide WAJIB di bidang yang pengguna sebutkan — jangan pernah pindah ke bidang lain (cerita "top up game" → semua ide soal top up/voucher/joki/akun game, BUKAN makanan atau jastip). Kalau pengguna menyebut usaha yang SUDAH ia jalankan (mis. "aku punya toko X"), ide pertama = usaha itu sendiri memakai nama aslinya, dua ide lain = cara mengembangkannya (paket/layanan tambahan) di bidang yang sama. Produk & harga harus khas bidang itu (mis. top up: "70 Diamond Free Fire", "86 Diamond MLBB").
 Balas HANYA JSON valid:
 { "ideas": [ {
   "name": <nama usaha singkat & catchy, maks 30 karakter>,
@@ -9714,7 +9715,7 @@ Balas HANYA JSON valid:
       body: JSON.stringify({
         models: APPRAISE_MODELS,
         route: "fallback",
-        temperature: 0.8,
+        temperature: 0.5,
         max_tokens: 2200,
         response_format: { type: "json_object" },
         messages: [{ role: "system", content: systemPrompt }, { role: "user", content: `Ceritaku: "${text}"` }],

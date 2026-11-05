@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Check, Loader2, MessageCircle, Plus, Share2, Users } from 'lucide-react';
+import { Check, Coins, Loader2, MessageCircle, Plus, Share2, Users } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
@@ -44,6 +44,7 @@ export function TagihView({ variant, onToast }: { variant: 'web' | 'app'; onToas
   const [tone, setTone] = useState<Tone>('sopan');
   const [split, setSplit] = useState(false);
   const [busyId, setBusyId] = useState('');
+  const [cicil, setCicil] = useState<{ id: string; value: string } | null>(null); // form nyicil yang terbuka
   const pathname = usePathname() ?? '';
   const isApp = pathname.startsWith('/app');
 
@@ -67,12 +68,16 @@ export function TagihView({ variant, onToast }: { variant: 'web' | 'app'; onToas
   const total = open.reduce((s, x) => s + x.left, 0);
   const people = new Set(open.map((x) => (x.t.lenderName || '').toLowerCase())).size;
 
-  const settle = async (t: Transaction, left: number) => {
-    if (!t.id || busyId) return;
+  // amount < left = cicilan; server memotong nominal yang melebihi sisa & menandai lunas kalau habis.
+  const settle = async (t: Transaction, left: number, amount = left) => {
+    if (!t.id || busyId || amount <= 0) return;
     setBusyId(t.id);
     try {
-      await debtService.pay(t.id, { amount: left, date: toLocalDateString() });
-      onToast(`${t.lenderName || 'Piutang'} lunas — ${formatIDR(Math.round(left))} masuk ke rekening.`);
+      const r = await debtService.pay(t.id, { amount, date: toLocalDateString() });
+      setCicil(null);
+      onToast(r.settled
+        ? `${t.lenderName || 'Piutang'} lunas — ${formatIDR(Math.round(r.paid))} masuk ke rekening.`
+        : `Cicilan ${formatIDR(Math.round(r.paid))} dari ${t.lenderName || 'piutang'} tercatat. Sisa ${formatIDR(Math.round(r.remaining))}.`);
     } catch (e) {
       onToast(e instanceof Error && e.message ? e.message : 'Gagal menandai lunas.');
     } finally {
@@ -126,13 +131,21 @@ export function TagihView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                   <span className="shrink-0 text-[14px] font-extrabold tabular-nums text-slate-900 dark:text-white">{formatIDR(Math.round(left))}</span>
                   <span className="flex w-full gap-2 sm:w-auto">
                     <a href={waUrl(reminderText(tone, t.lenderName || '', left, t.note))} target="_blank" rel="noopener noreferrer" className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-emerald-600 px-3 py-2 text-[12px] font-bold text-white hover:bg-emerald-700 sm:flex-none"><MessageCircle size={14} /> Ingatkan</a>
-                    <button type="button" onClick={() => settle(t, left)} disabled={busyId === t.id} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-slate-100 px-3 py-2 text-[12px] font-bold text-slate-700 hover:bg-slate-200 disabled:opacity-50 sm:flex-none dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">{busyId === t.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Sudah bayar</button>
+                    <button type="button" onClick={() => setCicil(cicil?.id === t.id ? null : { id: t.id!, value: '' })} aria-expanded={cicil?.id === t.id} className={cn('flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-[12px] font-bold sm:flex-none', cicil?.id === t.id ? 'bg-cyan-600 text-white' : 'bg-cyan-50 text-cyan-700 hover:bg-cyan-100 dark:bg-cyan-500/15 dark:text-cyan-300')}><Coins size={14} /> Nyicil</button>
+                    <button type="button" onClick={() => settle(t, left)} disabled={busyId === t.id} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-slate-100 px-3 py-2 text-[12px] font-bold text-slate-700 hover:bg-slate-200 disabled:opacity-50 sm:flex-none dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">{busyId === t.id && !cicil ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Sudah bayar</button>
                   </span>
+                  {t.amount - left > 0.5 && (
+                    <span className="block w-full">
+                      <span className="block h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><span className="block h-full rounded-full bg-cyan-500" style={{ width: `${Math.min(100, ((t.amount - left) / t.amount) * 100)}%` }} /></span>
+                      <span className="mt-1 block text-[11px] text-slate-500 dark:text-slate-400">Sudah kembali {formatIDR(Math.round(t.amount - left))} dari {formatIDR(Math.round(t.amount))}</span>
+                    </span>
+                  )}
+                  {cicil && cicil.id === t.id && <CicilForm left={left} value={cicil.value} busy={busyId === t.id} onChange={(v) => setCicil({ id: t.id!, value: v })} onSave={(n) => settle(t, left, n)} />}
                 </li>
               );
             })}
           </ul>
-          <p className="mt-2 text-[11px] text-slate-400">WhatsApp terbuka dengan pesan siap kirim — kamu pilih kontaknya sendiri. &ldquo;Sudah bayar&rdquo; = lunas penuh, uang masuk ke rekening asal piutang.</p>
+          <p className="mt-2 text-[11px] text-slate-400">WhatsApp terbuka dengan pesan siap kirim — kamu pilih kontaknya sendiri. &ldquo;Nyicil&rdquo; = bayar sebagian, &ldquo;Sudah bayar&rdquo; = lunas penuh — uang masuk ke rekening asal piutang & tercatat di Kekayaan.</p>
         </section>
       )}
 
@@ -276,3 +289,23 @@ function SplitForm({ onDone }: { onDone: (msg: string) => void }) {
   );
 }
 
+// Bayar sebagian (cicilan) — nominal di atas sisa dipotong server jadi pelunasan.
+function CicilForm({ left, value, busy, onChange, onSave }: { left: number; value: string; busy: boolean; onChange: (v: string) => void; onSave: (n: number) => void }) {
+  const n = Number(value || '0');
+  return (
+                      <span className="block w-full rounded-2xl bg-cyan-50/70 p-3 dark:bg-cyan-500/10">
+                        <span className="mb-1.5 block text-[12px] font-semibold text-cyan-900/70 dark:text-cyan-200/70">Berapa yang dibayar sekarang?</span>
+                        <span className="flex gap-2">
+                          <span className="flex min-w-0 flex-1 items-center gap-1.5 rounded-2xl bg-white px-3 py-2.5 ring-2 ring-transparent focus-within:ring-cyan-500 dark:bg-slate-900">
+                            <span className="text-[13px] text-slate-400">Rp</span>
+                            <input value={n ? n.toLocaleString('id-ID') : ''} onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 11))} inputMode="numeric" autoFocus aria-label="Nominal cicilan" placeholder="0" className="min-w-0 flex-1 bg-transparent text-[15px] font-bold tabular-nums text-slate-900 outline-none dark:text-white" />
+                          </span>
+                          <button type="button" onClick={() => onSave(n)} disabled={!n || busy} className="flex shrink-0 items-center gap-1.5 rounded-full bg-cyan-600 px-4 text-[13px] font-bold text-white hover:bg-cyan-700 disabled:opacity-40">{busy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Catat</button>
+                        </span>
+                        <span className="mt-2 flex flex-wrap gap-1.5">
+                          {[0.25, 0.5].map((f) => <button key={f} type="button" onClick={() => onChange(String(Math.round(left * f)))} className="rounded-full bg-white px-3 py-1 text-[11px] font-bold text-cyan-700 dark:bg-slate-900 dark:text-cyan-300">{f * 100}% · {formatIDR(Math.round(left * f))}</button>)}
+                        </span>
+                        {n > left && <span className="mt-1.5 block text-[11px] font-semibold text-amber-700 dark:text-amber-300">Lebih dari sisa — yang dicatat cukup {formatIDR(Math.round(left))} (lunas).</span>}
+                      </span>
+                    );
+}

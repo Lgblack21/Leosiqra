@@ -130,6 +130,7 @@ function IdeaFlow({ onSaved }: { onSaved: (id: string, name: string) => void }) 
   const [busy, setBusy] = useState<'' | 'ai' | 'save'>('');
   const [error, setError] = useState('');
   const [remaining, setRemaining] = useState<number | null>(null);
+  const [direct, setDirect] = useState(false);
 
   const run = async (more = false) => {
     if (text.trim().length < 4 || busy) return;
@@ -158,6 +159,7 @@ function IdeaFlow({ onSaved }: { onSaved: (id: string, name: string) => void }) 
     }
   };
 
+  if (direct) return <DirectShopForm onBack={() => setDirect(false)} onSaved={onSaved} />;
   if (busy === 'ai') return <Thinking text={text.trim()} />;
   if (ideas) {
     const idea = ideas[pick];
@@ -191,6 +193,39 @@ function IdeaFlow({ onSaved }: { onSaved: (id: string, name: string) => void }) 
       <div className="flex flex-wrap gap-1.5">{STARTERS.map((s) => <button key={s} type="button" onClick={() => setText((t) => (t.trim() ? `${t.trim()}, ${s.toLowerCase()}` : `Aku bisa ${s.toLowerCase()}`))} className="rounded-full bg-slate-100 px-3 py-1.5 text-[12px] font-bold text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">{s}</button>)}</div>
       <button type="button" onClick={() => run(false)} disabled={text.trim().length < 4} className="flex w-full items-center justify-center gap-2 rounded-full bg-violet-600 py-3.5 text-[15px] font-bold text-white hover:bg-violet-700 disabled:opacity-40"><Sparkles size={17} /> Susun 3 rencana</button>
       <p className="text-center text-[11px] text-slate-400">Maks 5× per hari. Data keuanganmu tidak dikirim ke AI — hanya ceritamu.</p>
+      <button type="button" onClick={() => setDirect(true)} className="flex w-full items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-left ring-1 ring-slate-100 hover:bg-slate-100 dark:bg-slate-800/60 dark:ring-slate-800">
+        <span><span className="block text-[14px] font-extrabold text-slate-900 dark:text-white">Sudah punya usaha?</span><span className="block text-[12px] text-slate-500 dark:text-slate-400">Daftarkan langsung tanpa AI — produk bisa diambil dari websitemu.</span></span>
+        <Store size={20} className="shrink-0 text-violet-500" />
+      </button>
+    </div>
+  );
+}
+
+// Usaha yang sudah berjalan (mis. "CXA Store") — tanpa ide AI; produk diisi manual
+// atau dibaca dari website di detail usaha.
+const SHOP_EMOJIS = ['🏪', '🎮', '💎', '🍰', '👕', '📱', '🎨', '📚', '🛠️', '🌿'];
+function DirectShopForm({ onBack, onSaved }: { onBack: () => void; onSaved: (id: string, name: string) => void }) {
+  const [name, setName] = useState('');
+  const [emoji, setEmoji] = useState('🏪');
+  const [tagline, setTagline] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const save = async () => {
+    if (!name.trim()) { setError('Isi nama usahamu.'); return; }
+    setBusy(true);
+    setError('');
+    try { onSaved(await shopService.create({ name: name.trim(), emoji, tagline: tagline.trim(), products: [] }), name.trim()); } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal menyimpan.'); setBusy(false); }
+  };
+  return (
+    <div className="space-y-4">
+      <button type="button" onClick={onBack} className="flex items-center gap-1 text-[13px] font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400"><ArrowLeft size={15} /> Cari ide pakai AI</button>
+      <p className="text-[16px] font-extrabold text-slate-900 dark:text-white">Daftarkan usahamu</p>
+      {error && <p role="alert" className="text-[12px] font-semibold text-rose-600">{error}</p>}
+      <label className="block"><span className={labelCls}>Nama usaha</span><input value={name} onChange={(e) => { setName(e.target.value); setError(''); }} maxLength={40} autoFocus placeholder="mis. CXA Store" className={fieldCls} /></label>
+      <div><span className={labelCls}>Ikon</span><div className="flex flex-wrap gap-1.5">{SHOP_EMOJIS.map((e) => <button key={e} type="button" onClick={() => setEmoji(e)} aria-pressed={emoji === e} className={cn('flex h-10 w-10 items-center justify-center rounded-xl text-[20px]', emoji === e ? 'bg-violet-600 ring-2 ring-violet-300' : 'bg-slate-100 dark:bg-slate-800')}>{e}</button>)}</div></div>
+      <label className="block"><span className={labelCls}>Jualan apa? (opsional)</span><input value={tagline} onChange={(e) => setTagline(e.target.value)} maxLength={80} placeholder="mis. Top up game murah & cepat" className={fieldCls} /></label>
+      <FormButtons busy={busy} onSave={save} label="Simpan usaha" />
+      <p className="text-center text-[11px] text-slate-400">Setelah disimpan: isi WhatsApp, lalu tempel link websitemu untuk ambil daftar harga otomatis.</p>
     </div>
   );
 }

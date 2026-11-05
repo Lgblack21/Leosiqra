@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-11-05 (live #128: Usahaku › Website + kasir top up)
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| — | — | — | (akun B selesai; main = live #128) |
+| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | Tagih nyicil, Kekayaan lunas, Usahaku AI |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,6 +18,17 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-05 (branch claude/usahaku-web) — BELUM deploy (tunggu "gas"). Tanpa SQL.**
+  - **Tagih › Nyicil**: tombol Nyicil per piutang → nominal (+ chip 25%/50%) → `debtService.pay` (endpoint lama,
+    atomik, server memotong kelebihan jadi pelunasan). Progres "Sudah kembali X dari Y". Diuji: 25rb + 30rb + Sudah
+    bayar 45rb = 100rb, status lunas, saldo +100rb persis.
+  - **Bug Kekayaan (laporan Bos)**: filter "Lunas" hanya menampilkan catatan yang DIBUAT di bulan terpilih → piutang
+    Oktober yang dilunasi November tidak muncul di mana pun. Sekarang ikut tampil kalau ada pembayaran di bulan itu
+    (`paidMonthsByDebtId`, HutangPanel). Diuji: sebelum fix hanya 1 dari 2, sesudah 2 dari 2.
+  - **Usahaku — AI ide ngaco** (Bos: "CXA Store, top up games" → keluar jastip makanan): prompt ide sekarang WAJIB di
+    bidang yang disebut user, usaha yang sudah ada = ide pertama pakai nama aslinya, top up/voucher game dinyatakan legal;
+    temperature 0.8 → 0.5. **Belum dites dengan AI asli.** + jalur **"Sudah punya usaha? Daftarkan langsung"**
+    (`DirectShopForm`: nama, ikon, jualan apa — tanpa AI, tanpa kuota) → detail usaha (isi WA, tempel website).
 - **2026-11-05 (branch claude/usahaku-web) — Usahaku › Website + kasir top up, **live #128**. Tanpa SQL baru.**
   - Bagian "Website" di ShopDetail (`WebsiteSection`, `UsahaView.tsx`): belum ada link → kotak "Belum punya website?"
     (Salin brief markdown `websiteBrief()` di `shopService.ts` + Buka Pabrik.AI `https://app.vantis.sh` + Lihat isi brief),

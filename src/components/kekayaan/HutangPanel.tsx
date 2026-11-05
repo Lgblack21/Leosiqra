@@ -147,6 +147,19 @@ export default function HutangPanel() {
     }
     return map;
   }, [debtPayments]);
+  // Bulan-bulan ada pembayaran per catatan ("YYYY-M") — filter "Lunas" ikut
+  // menampilkan yang DILUNASI/dicicil di bulan terpilih, bukan cuma yang dicatat
+  // di bulan itu (piutang Oktober yang lunas November harus muncul di November).
+  const paidMonthsByDebtId = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const p of debtPayments) {
+      if (!p.relatedId) continue;
+      const set = map.get(p.relatedId) ?? new Set<string>();
+      set.add(`${p.date.getFullYear()}-${p.date.getMonth()}`);
+      map.set(p.relatedId, set);
+    }
+    return map;
+  }, [debtPayments]);
 
   const getRemaining = (trx: Transaction) => {
     if (trx.paymentStatus === 'lunas' || !trx.id) return 0;
@@ -165,7 +178,7 @@ export default function HutangPanel() {
   const filtered = useMemo(() => {
     const byStatus = transactions.filter((t) => {
       if (statusFilter === 'Belum lunas') return getRemaining(t) > 0;
-      if (statusFilter === 'Lunas') return getRemaining(t) <= 0 && inSelectedMonth(t);
+      if (statusFilter === 'Lunas') return getRemaining(t) <= 0 && (inSelectedMonth(t) || Boolean(t.id && paidMonthsByDebtId.get(t.id)?.has(`${selectedYear}-${selectedMonth}`)));
       return inSelectedMonth(t);
     });
     const q = searchQuery.trim().toLowerCase();
@@ -176,7 +189,7 @@ export default function HutangPanel() {
       t.category.toLowerCase().includes(q)
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transactions, searchQuery, statusFilter, selectedMonth, selectedYear, paidByDebtId]);
+  }, [transactions, searchQuery, statusFilter, selectedMonth, selectedYear, paidByDebtId, paidMonthsByDebtId]);
 
   // Ringkasan digabung lintas rekening, jadi pakai amountIDR (sudah
   // dikonversi saat transaksi disimpan), bukan .amount mentah.
