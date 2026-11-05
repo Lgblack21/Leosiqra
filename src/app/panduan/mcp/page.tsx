@@ -43,7 +43,7 @@ const faq: GuideFaq[] = [
   },
   {
     q: 'Apakah fitur ini gratis?',
-    a: 'Menghubungkan AI dan membaca data (saldo, transaksi, laporan, budget, kategori) bisa dipakai semua member. Izin mencatat transaksi dan mengatur budget lewat AI khusus member PRO. Biaya langganan Claude atau ChatGPT mengikuti aturan masing-masing penyedia.',
+    a: 'Menghubungkan AI dan membaca data (saldo, transaksi, laporan, budget, kategori) bisa dipakai semua member. Mengatur Usahaku lewat AI (membuat usaha, mengisi katalog dari website, mengubah tampilan kasir) gratis untuk semua member dengan izin mengubah. Mencatat transaksi dan mengatur budget lewat AI khusus member PRO. Biaya langganan Claude atau ChatGPT mengikuti aturan masing-masing penyedia.',
   },
   {
     q: 'Bagaimana cara memutus akses AI?',
@@ -89,6 +89,7 @@ export default function PanduanMcpPage() {
           </thead>
           <tbody>
             <tr><td>Membaca</td><td>Rekening &amp; saldo, transaksi per bulan, laporan bulanan, budget, kategori</td><td>Semua member</td></tr>
+            <tr><td>Usahaku</td><td>Membuat usaha, mengubah info toko, mengisi katalog, mengubah tampilan kasir</td><td>Semua member, dicentang sendiri</td></tr>
             <tr><td>Mencatat</td><td>Menambah transaksi pemasukan/pengeluaran, membuat atau mengubah budget bulanan</td><td>Member PRO, dicentang sendiri</td></tr>
             <tr><td>Tidak pernah</td><td>Menghapus data, transfer, mengubah password atau data akun</td><td>—</td></tr>
           </tbody>

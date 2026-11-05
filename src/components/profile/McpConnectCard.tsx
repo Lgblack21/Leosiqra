@@ -41,6 +41,7 @@ export function McpConnectCard() {
   const [tokens, setTokens] = useState<McpToken[]>([]);
   const [activity, setActivity] = useState<McpActivity[]>([]);
   const [canWrite, setCanWrite] = useState(false);
+  const [canWriteMoney, setCanWriteMoney] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -55,11 +56,12 @@ export function McpConnectCard() {
   const load = useCallback(async () => {
     try {
       const [t, a] = await Promise.all([
-        cloudflareApi<{ items: McpToken[]; canWrite: boolean }>('/api/member/mcp/tokens'),
+        cloudflareApi<{ items: McpToken[]; canWrite: boolean; canWriteMoney?: boolean }>('/api/member/mcp/tokens'),
         cloudflareApi<{ items: McpActivity[] }>('/api/member/mcp/activity'),
       ]);
       setTokens(t.items);
       setCanWrite(t.canWrite);
+      setCanWriteMoney(Boolean(t.canWriteMoney));
       setActivity(a.items);
       setError('');
     } catch (e) {
@@ -192,7 +194,7 @@ export function McpConnectCard() {
               className="mt-0.5"
             />
             <span>
-              Izinkan AI <b>mencatat</b> transaksi &amp; mengatur budget{canWrite ? '' : ' (khusus PRO)'}. Tanpa ini AI hanya bisa membaca.
+              Izinkan AI <b>mengubah</b>: Usahaku (usaha, katalog, tampilan kasir){canWriteMoney ? ', mencatat transaksi & mengatur budget' : ' — mencatat transaksi & budget khusus PRO'}. Tanpa ini AI hanya bisa membaca.
               AI tidak pernah bisa menghapus data.
             </span>
           </label>

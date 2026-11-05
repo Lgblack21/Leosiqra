@@ -242,7 +242,8 @@ const PLAN_TABLE: { section: string; rows: { label: string; free: string | boole
     section: 'Hubungkan ke AI (Claude, ChatGPT)',
     rows: [
       { label: 'Baca data keuangan', free: true, pro: true },
-      { label: 'Mencatat lewat AI', free: false, pro: true },
+      { label: 'Usahaku lewat AI (usaha, katalog, kasir)', free: true, pro: true },
+      { label: 'Mencatat transaksi & budget lewat AI', free: false, pro: true },
     ],
   },
 ];

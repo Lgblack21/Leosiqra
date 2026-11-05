@@ -16499,7 +16499,9 @@ const requireMcpToken = async (env: Env, request: Request): Promise<McpAuth | nu
   };
 };
 
-const mcpCanWrite = (auth: McpAuth) => auth.scopes.has("write") && auth.plan === "PRO";
+// Izin tulis untuk semua akun (keputusan Bos 2026-11-05: Usahaku gratis lewat AI);
+// tool bertanda `pro` (uang: transaksi, budget) tetap khusus PRO, dicek per tool.
+const mcpCanUse = (auth: McpAuth, t: McpToolDef) => !t.write || (auth.scopes.has("write") && (!t.pro || auth.plan === "PRO"));
 
 const mcpRateLimit = async (env: Env, auth: McpAuth, write: boolean): Promise<boolean> => {
   if (!env.MCP_RATE_LIMITER) return rateLimiterMissing(env, "MCP_RATE_LIMITER");
@@ -16516,6 +16518,8 @@ type McpToolDef = {
   title: string;
   description: string;
   write: boolean;
+  /** true = khusus akun PRO (tool yang mengubah uang). */
+  pro?: boolean;
   inputSchema: Record<string, unknown>;
   run: (env: Env, auth: McpAuth, args: Record<string, unknown>) => Promise<{ data: unknown; summary: string }>;
 };
@@ -16997,6 +17001,7 @@ const MCP_TOOLS: McpToolDef[] = [
       "Mencatat SATU pemasukan atau pengeluaran ke rekening pengguna dan langsung mengubah saldo rekening. Konfirmasi ke pengguna dulu. " +
       "Nominal dalam mata uang rekening. idempotency_key wajib unik per transaksi; kirim ulang dengan kunci yang sama TIDAK akan mencatat dua kali.",
     write: true,
+    pro: true,
     inputSchema: {
       type: "object",
       properties: {
@@ -17019,6 +17024,7 @@ const MCP_TOOLS: McpToolDef[] = [
     title: "Atur budget bulanan",
     description: "Membuat atau mengubah budget BULANAN untuk satu kategori (IDR). Konfirmasi ke pengguna dulu.",
     write: true,
+    pro: true,
     inputSchema: {
       type: "object",
       properties: {
@@ -17111,7 +17117,7 @@ async function handleMcp(request: Request, env: Env) {
   if (method === "ping") return mcpRpcResult(id, {});
   if (method === "tools/list") {
     // Tool tulis hanya ditawarkan kalau token ber-izin tulis DAN akun PRO.
-    const tools = MCP_TOOLS.filter((t) => !t.write || mcpCanWrite(auth)).map((t) => ({
+    const tools = MCP_TOOLS.filter((t) => mcpCanUse(auth, t)).map((t) => ({
       name: t.name,
       title: t.title,
       description: t.description,
@@ -17130,7 +17136,7 @@ async function handleMcp(request: Request, env: Env) {
     const toolError = (text: string) => mcpRpcResult(id, { content: [{ type: "text", text }], isError: true });
     if (tool.write) {
       if (!auth.scopes.has("write")) return toolError("Token ini hanya izin baca. Buat token dengan izin tulis di Profil → Hubungkan ke AI.");
-      if (auth.plan !== "PRO") return toolError("Mencatat lewat AI khusus akun PRO. Membaca data tetap bisa.");
+      if (tool.pro && auth.plan !== "PRO") return toolError("Mencatat transaksi & budget lewat AI khusus akun PRO. Membaca data & Usahaku tetap bisa.");
       if (!(await mcpRateLimit(env, auth, true))) return toolError("Terlalu banyak pencatatan dalam semenit. Tunggu sebentar.");
     }
     try {
@@ -17196,7 +17202,8 @@ async function handleListMcpTokens(env: Env, user: AppUser) {
       lastUsedAt: t.last_used_at,
       createdAt: t.created_at,
     })),
-    canWrite: user.plan === "PRO",
+    canWrite: true,
+    canWriteMoney: user.plan === "PRO",
   });
 }
 
@@ -17210,8 +17217,7 @@ async function handleCreateMcpToken(request: Request, env: Env, user: AppUser) {
   const days = Number(payload.expiresDays);
   if (!MCP_TOKEN_DAYS.has(days)) return json({ error: "Masa berlaku token harus 30, 90, atau 365 hari." }, { status: 400 });
   const write = payload.write === true;
-  // Keputusan Bos #3: baca untuk semua member, tulis khusus PRO (dicek lagi tiap panggilan).
-  if (write && user.plan !== "PRO") return json({ error: "Izin mencatat lewat AI khusus akun PRO." }, { status: 403 });
+  // Izin tulis untuk semua member; tool uang tetap khusus PRO (dicek tiap panggilan, lihat mcpCanUse).
 
   const now = nowIso();
   const active = await env.DB.prepare(
@@ -17587,7 +17593,8 @@ async function handleMcpAuthorizeInfo(env: Env, user: AppUser, url: URL) {
     redirectHost: host,
     verified: mcpIsVerifiedHost(host),
     writeRequested: parsed.writeRequested,
-    canWrite: user.plan === "PRO",
+    canWrite: true,
+    canWriteMoney: user.plan === "PRO",
     userName: user.name,
     userEmail: user.email,
   });
@@ -17623,8 +17630,8 @@ async function handleMcpAuthorizeDecision(request: Request, env: Env, user: AppU
   if ((connections?.n ?? 0) >= MCP_MAX_OAUTH_CONNECTIONS) {
     return json({ error: `Maksimal ${MCP_MAX_OAUTH_CONNECTIONS} aplikasi AI terhubung. Putuskan yang lama di Profil → Hubungkan ke AI.` }, { status: 400 });
   }
-  // Keputusan Bos #3: tulis khusus PRO; izin tulis juga harus diminta klien.
-  const write = payload.write === true && parsed.writeRequested && user.plan === "PRO";
+  // Izin tulis harus diminta klien & disetujui user; tool uang tetap khusus PRO per panggilan.
+  const write = payload.write === true && parsed.writeRequested;
   const code = mcpRandomSecret("lsq_mcc_");
   await env.DB.batch([
     // Bersihkan kode lama milik user ini (kedaluwarsa > 1 hari).

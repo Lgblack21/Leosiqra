@@ -42,7 +42,7 @@ export function AiMcpCard({ title, desc, prompt, onLeave, onToast, className }: 
         <a href="https://claude.ai/new" target="_blank" rel="noopener noreferrer" className={cn(btn, 'bg-white text-slate-700 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200')}><ExternalLink size={13} /> Buka Claude</a>
         <a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer" className={cn(btn, 'bg-white text-slate-700 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200')}><ExternalLink size={13} /> Buka ChatGPT</a>
       </div>
-      <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">Tidak memakai kuota AI Leosiqra. Menyimpan lewat AI khusus akun PRO.</p>
+      <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">Gratis — tidak memakai kuota AI Leosiqra. Saat menghubungkan, centang izin mengubah.</p>
     </div>
   );
 }

@@ -17,6 +17,7 @@ interface AuthorizeInfo {
   verified: boolean;
   writeRequested: boolean;
   canWrite: boolean;
+  canWriteMoney?: boolean;
   userName: string;
   userEmail: string;
 }
@@ -147,8 +148,8 @@ export default function IzinkanAiPage() {
                   />
                   <PenLine size={15} className="mt-0.5 shrink-0" />
                   <span>
-                    <b>Mencatat</b> transaksi &amp; mengatur budget
-                    {!info.canWrite ? ' (khusus PRO)' : !info.writeRequested ? ' (tidak diminta aplikasi ini)' : ''}.
+                    <b>Mengubah</b> Usahaku (usaha, katalog, tampilan kasir){info.canWriteMoney ? ', mencatat transaksi & mengatur budget' : ' — transaksi & budget khusus PRO'}
+                    {!info.canWrite ? ' (tidak tersedia)' : !info.writeRequested ? ' (tidak diminta aplikasi ini)' : ''}.
                   </span>
                 </label>
               </li>

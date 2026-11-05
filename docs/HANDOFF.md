@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-11-05 (live #131: Ladangku fullscreen, tampilan kasir 
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | Usahaku tanpa AI Leosiqra (MCP) |
+| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | MCP Usahaku gratis untuk FREE |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,8 +18,17 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-05 (branch claude/usahaku-web) — MCP Usahaku GRATIS untuk FREE, BELUM deploy (tunggu "gas"). Tanpa SQL.**
+  - Keputusan Bos: tool tulis Usahaku (`create_shop`, `update_shop`, `set_shop_products`, `set_kasir_style`) boleh untuk
+    member FREE. Izin tulis (scope `write`) kini bisa dibuat semua member (token manual & OAuth); tool uang
+    `add_transaction` & `set_budget` ditandai `pro: true` dan tetap khusus PRO (`mcpCanUse` di tools/list + cek per
+    panggilan). Token baca-saja tetap tidak bisa menulis apa pun. Respons token/izin: `canWrite: true` +
+    `canWriteMoney` (= PRO). Teks layar izin (McpConnectCard, /izinkan-ai), tabel paket, dan /panduan/mcp diperbarui.
+  - Member FREE yang SUDAH terhubung dengan token/izin baca perlu menghubungkan ulang & mencentang izin mengubah.
+  - Dites lokal: FREE+tulis → tool Usahaku ada & set_kasir_style jalan, add_transaction ditolak (0 transaksi);
+    FREE+baca → tool tulis tidak ditawarkan, panggilan ditolak; PRO → semua tool.
 - **2026-11-05 (branch claude/usahaku-web) — Usahaku TANPA AI Leosiqra (keputusan Bos: semua lewat AI/MCP milik
-  pengguna), BELUM deploy (tunggu "gas"). Tanpa SQL.**
+  pengguna), **live #133**. Tanpa SQL.**
   - DIHAPUS dari Worker: `handleShopIdeas` (ide usaha), `handleShopImportPrices` + `handleShopImportPages` + semua
     pengambil halaman (fetchDirectHtml/reader r.jina.ai/pickShopPages), kuota `shopIdeaAi`/`shopImportAi`, env
     `SHOP_IMPORT_READER`. Rute lama (`/shops/ideas`, `/:id/import-prices`, `/:id/import-pages`) membalas **410**
