@@ -4,13 +4,13 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-05 (live #136: logo & gambar katalog + simpan tampilan merge; migrasi 0029 & 0030 sudah dijalankan Bos)
+Terakhir diperbarui: 2026-11-05 (live #137: update harga + status AI + skema gambar MCP; 0029/0030 dijalankan, 0031 menunggu konfirmasi)
 
 ## Siapa sedang kerja
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| Akun B | selesai, tunggu "gas" + migrasi 0031 (2026-11-05) | claude/usahaku-web | gambar MCP, status AI, update harga |
+| — | — | — | (akun B selesai; main = live #137; migrasi 0031 menunggu konfirmasi Bos) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-05 (branch claude/usahaku-web) — Update harga manual & otomatis, BELUM deploy.**
+- **2026-11-05 (branch claude/usahaku-web) — Update harga manual & otomatis, **live #137** (migrasi 0031: konfirmasi Bos).**
   - **MIGRASI di D1 Console** (0031_shop_catalog_sync.sql; boleh sebelum/sesudah deploy — tanpa kolom, sinkron tetap
     jalan, cuma waktu "terakhir diperbarui" tidak tercatat): `ALTER TABLE shops ADD COLUMN catalog_synced_at TEXT;`
   - Otomatis: `POST /api/hooks/shop/<id>/products` (kunci webhook yang sama, `authShopHook` dipakai bersama dengan
@@ -29,7 +29,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     perintah AI ikut mencakup sinkron harga. Banner "Harga diperbarui otomatis dari website: …" di editor harga.
   - Dites lokal: sebelum migrasi update jalan & GET tetap; setelah migrasi waktu tercatat; kunci salah 401, kosong/121
     produk/harga 0 → 400, replace; editor web+HP: +5% bulat Rp100 hanya hasil cari "Diamond" + 60 UC manual → tersimpan.
-- **2026-11-05 (branch claude/usahaku-web) — Status "AI tersambung" di Ladangku & Pengaturan, BELUM deploy. Tanpa SQL.**
+- **2026-11-05 (branch claude/usahaku-web) — Status "AI tersambung" di Ladangku & Pengaturan, **live #137**. Tanpa SQL.**
   - `src/lib/mcpStatus.ts` (`useMcpStatus`, cache 30 dtk, muat ulang saat tab aktif, `refreshMcpStatus` dipanggil
     McpConnectCard setelah load) dari `/api/member/mcp/tokens`: none / read / write + nama AI.
   - `AiMcpCard` langkah 1: write → "✓ AI tersambung: Claude · izin mengubah aktif" + Atur; read → peringatan
@@ -37,7 +37,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   - Pengaturan › Aplikasi terhubung: kartu Claude & ChatGPT badge "Terhubung" + "Tersambung: <nama> — Atur untuk
     menambah AI lain", tombol Atur TETAP. McpConnectCard: baris status "N AI tersambung …" + cara menambah AI lain.
   - Dites lokal (Playwright): tiga keadaan write/read/none di kasir › Tampilan, kartu Pengaturan & kartu MCP, 0 error JS.
-- **2026-11-05 (branch claude/usahaku-web) — Gambar katalog: skema MCP lengkap + ikon data:image, BELUM deploy.**
+- **2026-11-05 (branch claude/usahaku-web) — Gambar katalog: skema MCP lengkap + ikon data:image, **live #137**.**
   - Laporan Bos (balasan Claude-nya): `set_kasir_style` belum mencantumkan `logoUrl`/`categoryImages`, `list_shops`
     belum memuat semua pilihan. Kini skema set_kasir_style punya logoUrl, categoryImages (DIGABUNG, "" = hapus),
     browse, mode; `kasir_style_options` memuat semua pilihan + aturan gambar.
