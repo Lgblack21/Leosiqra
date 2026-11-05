@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Check, Copy, Loader2, Minus, Palette, Plus, ReceiptText, Search, Settings2, ShoppingBag, Store, Trash2, X } from 'lucide-react';
@@ -196,16 +196,50 @@ function Catalog({ products, style, lines, onAdd }: { products: ShopProduct[]; s
     .filter((g) => active === null || g.group === active)
     .map((g) => ({ ...g, items: q ? g.items.filter(({ p }) => `${g.group} ${p.name}`.toLowerCase().includes(q)) : g.items }))
     .filter((g) => g.items.length);
+  // Mode katalog: kotak kategori dulu → ketuk = halaman daftar harga (+ Kembali ke katalog).
+  const folder = named && style.browse === 'katalog';
+  const top = useRef<HTMLElement>(null);
+  const open = (g: string | null) => { setActive(g); window.setTimeout(() => top.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0); };
+  const big = style.size === 'besar';
+  const TILE_COLS: Record<number, string> = { 2: 'grid-cols-2', 3: 'grid-cols-2 sm:grid-cols-3', 4: 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-4' };
 
   return (
-    <section className="min-w-0 space-y-3">
+    <section ref={top} className="min-w-0 scroll-mt-4 space-y-3">
       {style.showSearch && <div className="flex items-center gap-2 rounded-2xl bg-white px-3.5 py-2.5 ring-1 ring-slate-100 focus-within:ring-2 focus-within:ring-violet-500 dark:bg-slate-900 dark:ring-slate-800">
         <Search size={16} className="shrink-0 text-slate-400" />
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={named ? 'Cari game atau nominal…' : 'Cari produk…'} aria-label="Cari produk" className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400 dark:text-white" />
         {query && <button type="button" onClick={() => setQuery('')} aria-label="Hapus pencarian" className="text-slate-400"><X size={15} /></button>}
       </div>}
 
-      {named && (
+      {folder && active !== null && !q && (
+        <div className="flex items-center gap-3 rounded-2xl bg-white p-2 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
+          <button type="button" onClick={() => open(null)} className={cn('flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-bold', themeOf(style).chip)}><ArrowLeft size={15} /> Kembali ke katalog</button>
+          <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[12px] font-extrabold', toneOf(active || 'Lainnya'))}>{initials(active || 'Lainnya')}</span>
+          <span className="min-w-0 truncate text-[16px] font-extrabold text-slate-900 dark:text-white">{active || 'Lainnya'}</span>
+        </div>
+      )}
+
+      {folder && active === null && !q ? (
+        <ul className={cn('grid gap-2.5', TILE_COLS[style.columns] ?? TILE_COLS[3])}>
+          {groups.map(({ group, items }) => {
+            const inCart = items.reduce((a, { p }) => a + qtyOf(p), 0);
+            const min = Math.min(...items.map(({ p }) => p.price));
+            return (
+              <li key={group || 'lain'}>
+                <button type="button" onClick={() => open(group)} aria-label={`Buka daftar harga ${group || 'Lainnya'}`} className={cn('relative flex h-full w-full flex-col items-start rounded-[22px] bg-white text-left ring-1 ring-slate-100 transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98] dark:bg-slate-900 dark:ring-slate-800', big ? 'gap-3 p-5' : 'gap-2.5 p-4')}>
+                  {inCart > 0 && <span className="absolute right-3 top-3 flex h-6 min-w-6 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[11px] font-extrabold text-white">×{inCart}</span>}
+                  <span className={cn('flex items-center justify-center rounded-2xl font-extrabold', toneOf(group || 'Lainnya'), big ? 'h-16 w-16 text-[20px]' : 'h-12 w-12 text-[15px]')}>{initials(group || 'Lainnya')}</span>
+                  <span className="w-full min-w-0">
+                    <span className={cn('line-clamp-2 font-extrabold leading-snug text-slate-900 dark:text-white', big ? 'text-[18px]' : 'text-[15px]')}>{group || 'Lainnya'}</span>
+                    <span className="mt-0.5 block text-[12px] text-slate-500 dark:text-slate-400">{items.length} pilihan · mulai <b className="text-emerald-700 dark:text-emerald-300">{short(min)}</b></span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : <>
+      {named && !folder && (
         <div role="tablist" aria-label="Kategori" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
           {[{ group: null as string | null, n: products.length }, ...groups.map((g) => ({ group: g.group as string | null, n: g.items.length }))].map(({ group, n }) => {
             const on = active === group;
@@ -223,7 +257,7 @@ function Catalog({ products, style, lines, onAdd }: { products: ShopProduct[]; s
       {shown.length === 0 && <p className="rounded-2xl bg-white py-8 text-center text-[13px] text-slate-500 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">Tidak ada yang cocok dengan &ldquo;{query}&rdquo;.</p>}
       {shown.map(({ group, items }) => (
         <div key={group || 'lain'} className="rounded-[26px] bg-white p-3 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800 md:p-4">
-          {named && (
+          {named && !(folder && active !== null && !q) && (
             <p className="mb-2.5 flex items-center gap-2 px-1">
               <span className={cn('flex h-8 w-8 items-center justify-center rounded-xl text-[11px] font-extrabold', toneOf(group || 'Lainnya'))}>{initials(group || 'Lainnya')}</span>
               <span className="text-[15px] font-extrabold text-slate-900 dark:text-white">{group || 'Lainnya'}</span>
@@ -266,6 +300,7 @@ function Catalog({ products, style, lines, onAdd }: { products: ShopProduct[]; s
           )}
         </div>
       ))}
+      </>}
     </section>
   );
 }

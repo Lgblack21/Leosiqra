@@ -39,7 +39,7 @@ export function KasirStyleEditor({ shop, onDone, onToast, onLeave }: { shop: Sho
   const seg = (on: boolean) => cn('flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[12px] font-bold transition-colors', on ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400');
 
   const templatePrompt = `Pakai Leosiqra (MCP): rancang desain kasir BEBAS untuk usahaku "${shop.name}" (shop_id ${shop.id}). Ambil dulu katalognya dengan get_shop, lalu pasang lewat set_kasir_template (baca aturan di deskripsi tool itu: satu file HTML, data & aksi lewat window.Leosiqra, tanpa akses jaringan). Gaya yang aku mau: [tulis bebas, mis. nuansa neon gaming, kartu besar bergambar ikon game, tab per game di atas, tombol Bayar melayang].`;
-  const prompt = `Pakai Leosiqra (MCP): ubah tampilan kasir usahaku "${shop.name}" (shop_id ${shop.id}) lewat set_kasir_style. Aku mau: [tulis keinginanmu, mis. tema gelap, header ringkas, tombol besar untuk tablet, struk di kiri, kartu ringkas 4 kolom, sambutan "Top up kilat 24 jam", Mobile Legends paling atas].`;
+  const prompt = `Pakai Leosiqra (MCP): ubah tampilan kasir usahaku "${shop.name}" (shop_id ${shop.id}) lewat set_kasir_style. Aku mau: [tulis keinginanmu, mis. tema gelap, katalog kategori (grid kotak game), header ringkas, tombol besar untuk tablet, struk di kiri, kartu ringkas 4 kolom, sambutan "Top up kilat 24 jam", Mobile Legends paling atas].`;
   const save = async () => {
     if (bebas && !st.customHtml.trim()) { setError('Isi kode desain dulu, pakai contoh, atau minta AI-mu mendesain.'); return; }
     setBusy(true);
@@ -114,6 +114,16 @@ export function KasirStyleEditor({ shop, onDone, onToast, onLeave }: { shop: Sho
       </div>
 
       {!bebas && <>
+      {groups.length > 0 && (
+        <div>
+          <span className={labelCls}>Cara jelajah</span>
+          <div className="flex gap-1 rounded-full bg-slate-100 p-1 dark:bg-slate-800">
+            <button type="button" onClick={() => set('browse', 'katalog')} aria-pressed={st.browse === 'katalog'} className={seg(st.browse === 'katalog')}><Grid3x3 size={14} /> Katalog kategori</button>
+            <button type="button" onClick={() => set('browse', 'gulir')} aria-pressed={st.browse === 'gulir'} className={seg(st.browse === 'gulir')}><Rows3 size={14} /> Semua produk</button>
+          </div>
+          <p className="mt-1 px-1 text-[11px] text-slate-400">{st.browse === 'katalog' ? 'Kotak per kategori/game → ketuk masuk daftar harga, ada tombol Kembali ke katalog.' : 'Semua produk dalam satu halaman, pilih kategori lewat chip.'}</p>
+        </div>
+      )}
       <div>
         <span className={labelCls}>Tata letak produk</span>
         <div className="flex gap-1 rounded-full bg-slate-100 p-1 dark:bg-slate-800">{LAYOUTS.map((l) => <button key={l.id} type="button" onClick={() => set('layout', l.id)} aria-pressed={st.layout === l.id} className={seg(st.layout === l.id)}><l.icon size={14} /> {l.label}</button>)}</div>

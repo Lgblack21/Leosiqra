@@ -18,6 +18,13 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-05 (branch claude/usahaku-web) — Kasir "Katalog kategori", BELUM deploy. Tanpa SQL.**
+  - `style_json.browse` = 'katalog' (DEFAULT baru) | 'gulir'. Katalog: grid kotak per kategori/game (ikon inisial, jumlah
+    pilihan, "mulai Rp…", badge ×n kalau ada di struk) → ketuk = halaman daftar harga kategori itu + tombol "Kembali ke
+    katalog" (gulir ke atas). Chip geser disembunyikan; pencarian tetap lintas kategori. 'gulir' = tampilan lama (chip +
+    semua produk). Pilihan "Cara jelajah" di editor & `browse` di MCP set_kasir_style.
+  - Dites lokal web+HP: 4 kotak, buka Free Fire → 3 produk saja, tambah → Kembali → badge ×1, cari "uc" → 2 produk,
+    0 error JS.
 - **2026-11-05 (branch claude/usahaku-web) — Kasir mode BEBAS (desain HTML/CSS/JS sendiri), BELUM deploy. Tanpa SQL.**
   - `style_json.mode` = 'bawaan' | 'bebas' + `customHtml` (maks 60 rb karakter). Desain TIDAK pernah dijalankan di
     halaman Leosiqra: `CustomKasirFrame.tsx` → `<iframe sandbox="allow-scripts">` tanpa allow-same-origin (origin

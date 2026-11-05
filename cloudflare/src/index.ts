@@ -9635,13 +9635,13 @@ const isMissingColumn = (e: unknown) => e instanceof Error && /no such column/.t
 const KASIR_THEMES = ["ungu", "hijau", "biru", "oranye", "merah", "pink", "gelap", "emas"] as const;
 const KASIR_LAYOUTS = ["grid", "list", "compact"] as const;
 const KASIR_CARDS = ["soft", "outline", "solid"] as const;
-type KasirStyle = { theme: string; layout: string; columns: number; card: string; showUnit: boolean; greeting: string; receiptFooter: string; categoryOrder: string[]; header: string; strukSide: string; size: string; showStats: boolean; showSearch: boolean; showRecent: boolean; mode: string; customHtml: string };
+type KasirStyle = { theme: string; layout: string; columns: number; card: string; showUnit: boolean; greeting: string; receiptFooter: string; categoryOrder: string[]; header: string; strukSide: string; size: string; showStats: boolean; showSearch: boolean; showRecent: boolean; mode: string; customHtml: string; browse: string };
 // Mode "bebas": desain HTML/CSS/JS buatan pengguna/AI-nya. TIDAK pernah dijalankan di
 // halaman Leosiqra — klien merendernya di <iframe sandbox="allow-scripts"> (origin
 // kosong, tanpa cookie/API, CSP tanpa koneksi) dan hanya bertukar data katalog lewat
 // postMessage; struk & pencatatan uang tetap komponen asli.
 const KASIR_HTML_MAX = 60_000;
-const KASIR_DEFAULT: KasirStyle = { theme: "ungu", layout: "grid", columns: 3, card: "soft", showUnit: true, greeting: "", receiptFooter: "", categoryOrder: [], header: "besar", strukSide: "kanan", size: "normal", showStats: true, showSearch: true, showRecent: true, mode: "bawaan", customHtml: "" };
+const KASIR_DEFAULT: KasirStyle = { theme: "ungu", layout: "grid", columns: 3, card: "soft", showUnit: true, greeting: "", receiptFooter: "", categoryOrder: [], header: "besar", strukSide: "kanan", size: "normal", showStats: true, showSearch: true, showRecent: true, mode: "bawaan", customHtml: "", browse: "katalog" };
 const sanitizeKasirStyle = (raw: unknown, base: KasirStyle = KASIR_DEFAULT): KasirStyle => {
   const r = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
   const pick = <T extends readonly string[]>(v: unknown, list: T, fb: string) => (typeof v === "string" && (list as readonly string[]).includes(v) ? v : fb);
@@ -9661,6 +9661,7 @@ const sanitizeKasirStyle = (raw: unknown, base: KasirStyle = KASIR_DEFAULT): Kas
     showSearch: typeof r.showSearch === "boolean" ? r.showSearch : base.showSearch,
     showRecent: typeof r.showRecent === "boolean" ? r.showRecent : base.showRecent,
     mode: pick(r.mode, ["bawaan", "bebas"] as const, base.mode),
+    browse: pick(r.browse, ["katalog", "gulir"] as const, base.browse),
     customHtml: typeof r.customHtml === "string" ? r.customHtml.replace(/\u0000/g, "").slice(0, KASIR_HTML_MAX) : base.customHtml,
   };
 };
@@ -16999,6 +17000,7 @@ const KASIR_STYLE_SCHEMA = {
   showStats: { type: "boolean", description: "Tampilkan omzet hari ini/bulan ini di header" },
   showSearch: { type: "boolean", description: "Tampilkan kolom cari" },
   showRecent: { type: "boolean", description: "Tampilkan daftar penjualan hari ini" },
+  browse: { type: "string", enum: ["katalog", "gulir"], description: "katalog = grid kotak kategori → ketuk masuk daftar harga (+ Kembali ke katalog); gulir = semua produk dalam satu halaman" },
   mode: { type: "string", enum: ["bawaan", "bebas"], description: "bawaan = katalog Leosiqra; bebas = desain HTML dari set_kasir_template" },
 };
 
