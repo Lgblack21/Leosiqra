@@ -121,7 +121,7 @@ export function HookSection({ shop, onToast, onLeave }: { shop: Shop; onToast: (
               <summary className="cursor-pointer text-[12px] font-bold text-sky-900 dark:text-sky-200">Perbarui harga otomatis dari website{shop.catalogSyncedAt ? ` · terakhir ${ago(shop.catalogSyncedAt)}` : ''}</summary>
               <ul className="mt-2 space-y-1 text-[11px] text-sky-900/80 dark:text-sky-100/80">
                 <li><b>POST</b> ke <code>…/{'{'}id{'}'}/products</code> dengan kunci yang sama, body <code>{'{'} mode, products {'}'}</code>.</li>
-                <li><code>mode: &quot;update&quot;</code> (bawaan): produk dengan group + nama sama ikut harga baru, produk baru ditambah, lainnya tetap. <code>&quot;replace&quot;</code> = ganti semua.</li>
+                <li><code>mode: &quot;update&quot;</code> (bawaan): produk dengan group + nama sama ikut harga baru, produk baru ditambah, lainnya tetap. <code>&quot;prices&quot;</code> = HANYA ubah harga produk yang sudah ada (tidak menambah; yang tidak cocok dilaporkan di <code>not_found</code>). <code>&quot;replace&quot;</code> = ganti semua.</li>
                 <li>Kirim setiap harga berubah, atau jadwalkan (cron) tiap jam. Maks 120 produk.</li>
               </ul>
               <pre className="mt-2 max-h-56 overflow-auto rounded-xl bg-slate-950 p-3 text-[11px] leading-relaxed text-emerald-200">{priceCode}</pre>

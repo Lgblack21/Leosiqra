@@ -9850,9 +9850,19 @@ async function handleShopHookProducts(request: Request, env: Env, shopId: string
   if (raw.products.length > SHOP_PRODUCTS_MAX) return hookErr(400, `Maksimal ${SHOP_PRODUCTS_MAX} produk.`);
   const incoming = sanitizeShopProducts(raw.products).filter((p) => p.price > 0);
   if (!incoming.length) return hookErr(400, "Tidak ada produk valid (name & price Rupiah > 0).");
-  const mode = raw.mode === "replace" ? "replace" : "update";
+  const mode = raw.mode === "replace" ? "replace" : raw.mode === "prices" ? "prices" : "update";
   let old: ShopProduct[] = [];
   try { old = sanitizeShopProducts(JSON.parse(row.products_json ?? "[]")); } catch { old = []; }
+  if (mode === "prices") {
+    // Harga saja: produk yang tidak ada di katalog dilaporkan, tidak ditambahkan.
+    const res = applyPriceUpdates(old, incoming.map((p) => ({ name: p.name, ...(p.group ? { group: p.group } : {}), price: p.price })));
+    if (res.updated) {
+      const at = nowIso();
+      try { await env.DB.prepare("UPDATE shops SET products_json = ?, catalog_synced_at = ?, updated_at = ? WHERE id = ?").bind(JSON.stringify(res.next), at, at, row.id).run(); }
+      catch (e) { if (!isMissingColumn(e)) throw e; await env.DB.prepare("UPDATE shops SET products_json = ?, updated_at = ? WHERE id = ?").bind(JSON.stringify(res.next), at, row.id).run(); }
+    }
+    return json({ ok: true, mode, total: res.next.length, updated: res.updated, unchanged: res.unchanged, ...(res.notFound.length ? { not_found: res.notFound } : {}), ...(res.ambiguous.length ? { ambiguous: res.ambiguous } : {}) });
+  }
   const key = (p: ShopProduct) => `${p.group ?? ""}|${p.name}`.toLowerCase();
   const byKey = new Map(incoming.map((p) => [key(p), p]));
   let updated = 0, unchanged = 0;
@@ -16620,7 +16630,8 @@ const MCP_SERVER_INSTRUCTIONS =
   "untuk mendapatkan account_id, dan pakai idempotency_key yang sama kalau mengulang panggilan yang sama. " +
   "Usahaku (toko pengguna): list_shops → get_shop untuk katalog; create_shop/update_shop untuk usaha & info toko; " +
   "untuk mengambil harga dari website toko, baca halamannya dengan alat web-mu sendiri lalu simpan lewat set_shop_products " +
-  "(group = nama kategori/game, harga Rupiah). Gambar katalog (set_catalog_images / set_kasir_style categoryImages): https publik " +
+  "(group = nama kategori/game, harga Rupiah). Untuk memperbarui harga produk yang sudah ada TANPA menambah produk, " +
+  "pakai update_shop_prices (get_shop dulu untuk i). Gambar katalog (set_catalog_images / set_kasir_style categoryImages): https publik " +
   "atau data:image ≤8.000 karakter — jangan memakai logo/artwork resmi pihak lain tanpa hak; buat ikon SVG orisinal bila perlu. " +
   "set_kasir_style hanya menerima pilihan tampilan yang terdaftar " +
   "(bukan HTML/CSS); set_shop_products mode replace mengganti seluruh katalog — konfirmasi dulu ke pengguna.";
@@ -16991,7 +17002,53 @@ const mcpListShops: McpToolDef["run"] = async (env, auth) => {
 };
 const mcpGetShop: McpToolDef["run"] = async (env, auth, args) => {
   const r = await mcpShopRow(env, auth, args.shop_id);
-  return { data: { shop_id: r.id, name: r.name, tagline: r.tagline ?? null, products: mcpShopProducts(r), kasir_style: parseKasirStyle(r.style_json) }, summary: `usaha ${String(r.name).slice(0, 40)}` };
+  return { data: { shop_id: r.id, name: r.name, tagline: r.tagline ?? null, website: r.link_url ?? null, products: mcpShopProducts(r).map((p, i) => ({ i, ...p })), kasir_style: parseKasirStyle(r.style_json) }, summary: `usaha ${String(r.name).slice(0, 40)}` };
+};
+// Perbarui HARGA produk yang SUDAH ADA (tidak pernah menambah/menghapus produk) —
+// dipakai AI pengguna & webhook mode "prices". Cocok lewat i (indeks dari get_shop,
+// nama dicek kalau dikirim) atau group+nama persis (tanpa beda huruf besar).
+type PriceUpdate = { i?: unknown; name?: unknown; group?: unknown; price?: unknown };
+const applyPriceUpdates = (old: ShopProduct[], updates: PriceUpdate[]) => {
+  const norm = (v: unknown) => (typeof v === "string" ? shopText(v, 80).toLowerCase() : "");
+  const next = old.map((p) => ({ ...p }));
+  let updated = 0, unchanged = 0;
+  const notFound: string[] = [], invalid: string[] = [], ambiguous: string[] = [];
+  for (const u of updates.slice(0, SHOP_PRODUCTS_MAX * 2)) {
+    const label = `${typeof u.group === "string" ? `${u.group} · ` : ""}${typeof u.name === "string" ? u.name : `#${String(u.i)}`}`.slice(0, 80);
+    const price = shopMoney(u.price);
+    if (!price || price < 1) { invalid.push(label); continue; }
+    let idx = Number.isInteger(u.i) && (u.i as number) >= 0 && (u.i as number) < next.length ? (u.i as number) : -1;
+    if (idx >= 0 && u.name !== undefined && norm(u.name) !== next[idx].name.toLowerCase()) idx = -1; // indeks & nama tidak cocok
+    if (idx < 0 && u.name !== undefined) {
+      const hasGroup = typeof u.group === "string" && u.group.trim() !== "";
+      const hits = next.map((p, k) => ({ p, k })).filter(({ p }) => p.name.toLowerCase() === norm(u.name) && (!hasGroup || (p.group ?? "").toLowerCase() === norm(u.group)));
+      if (hits.length > 1) { ambiguous.push(label); continue; } // nama sama di beberapa kategori → wajib sebut group / i
+      idx = hits[0]?.k ?? -1;
+    }
+    if (idx < 0) { notFound.push(label); continue; }
+    if (next[idx].price === price) { unchanged++; continue; }
+    next[idx].price = price;
+    updated++;
+  }
+  return { next, updated, unchanged, notFound: notFound.slice(0, 50), invalid: invalid.slice(0, 50), ambiguous: ambiguous.slice(0, 50) };
+};
+const mcpUpdateShopPrices: McpToolDef["run"] = async (env, auth, args) => {
+  const r = await mcpShopRow(env, auth, args.shop_id);
+  if (!Array.isArray(args.prices) || !args.prices.length) throw new McpToolError("prices wajib: [{ i, price }] atau [{ name, group, price }] — ambil i dari get_shop.");
+  const res = applyPriceUpdates(mcpShopProducts(r), args.prices as PriceUpdate[]);
+  if (res.updated) {
+    const now = nowIso();
+    try {
+      await env.DB.prepare("UPDATE shops SET products_json = ?, catalog_synced_at = ?, updated_at = ? WHERE id = ? AND user_id = ?").bind(JSON.stringify(res.next), now, now, r.id, auth.userId).run();
+    } catch (e) {
+      if (!isMissingColumn(e)) throw e;
+      await env.DB.prepare("UPDATE shops SET products_json = ?, updated_at = ? WHERE id = ? AND user_id = ?").bind(JSON.stringify(res.next), now, r.id, auth.userId).run();
+    }
+  }
+  return {
+    data: { ok: true, shop_id: r.id, updated: res.updated, unchanged: res.unchanged, ...(res.notFound.length ? { not_found: res.notFound, note: "Produk ini tidak ada di katalog — TIDAK ditambahkan. Pakai set_shop_products kalau memang mau menambah." } : {}), ...(res.invalid.length ? { invalid_price: res.invalid } : {}), ...(res.ambiguous.length ? { ambiguous: res.ambiguous, ambiguous_note: "Nama ada di beberapa kategori — kirim ulang dengan group atau i." } : {}) },
+    summary: `harga ${String(r.name).slice(0, 30)}: ${res.updated} diubah, ${res.notFound.length} tidak ketemu`,
+  };
 };
 const mcpSetKasirStyle: McpToolDef["run"] = async (env, auth, args) => {
   const r = await mcpShopRow(env, auth, args.shop_id);
@@ -17176,6 +17233,22 @@ const MCP_TOOLS: McpToolDef[] = [
     write: true,
     inputSchema: { type: "object", properties: { shop_id: { type: "string" }, ...MCP_SHOP_INFO_SCHEMA }, required: ["shop_id"], additionalProperties: false },
     run: mcpUpdateShop,
+  },
+  {
+    name: "update_shop_prices",
+    title: "Perbarui harga katalog",
+    description: "Memperbarui HARGA produk yang SUDAH ADA di katalog usaha — tidak pernah menambah atau menghapus produk. Ambil daftar produk (beserta i) lewat get_shop dulu, bandingkan dengan harga di website toko, lalu kirim hanya yang berubah: [{ i, price }] (paling akurat) atau [{ name, group, price }] (nama & group persis). Produk yang tidak ketemu dilaporkan di not_found. Harga Rupiah bulat.",
+    write: true,
+    inputSchema: {
+      type: "object",
+      properties: {
+        shop_id: { type: "string" },
+        prices: { type: "array", minItems: 1, maxItems: 240, items: { type: "object", properties: { i: { type: "integer", minimum: 0 }, name: { type: "string" }, group: { type: "string" }, price: { type: "number", exclusiveMinimum: 0 } }, required: ["price"], additionalProperties: false } },
+      },
+      required: ["shop_id", "prices"],
+      additionalProperties: false,
+    },
+    run: mcpUpdateShopPrices,
   },
   {
     name: "get_shop",

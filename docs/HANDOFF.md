@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-11-05 (live #137: update harga + status AI + skema gam
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| — | — | — | (akun B selesai; main = live #137) |
+| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | update_shop_prices (harga saja via AI) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,6 +18,17 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-05 (branch claude/usahaku-web) — Update harga "hanya yang sudah ada" lewat AI-mu, BELUM deploy. Tanpa SQL.**
+  - MCP baru `update_shop_prices` (tulis, gratis FREE): HANYA mengubah harga produk yang sudah ada, tidak pernah
+    menambah/menghapus. Cocok lewat `i` (get_shop kini mengirim `i` + `website`; kalau `name` ikut dikirim & tidak
+    cocok dengan i → tidak diubah) atau name+group persis; nama sama di beberapa kategori tanpa group → `ambiguous`
+    (tidak diubah). Laporan updated/unchanged/not_found/invalid_price/ambiguous; mengisi catalog_synced_at.
+  - Webhook `/products` mode baru `"prices"` (logika sama, `applyPriceUpdates`).
+  - Layar 💲 Harga: tab "Ubah manual" / "Dari website (AI-mu)" — kartu AiMcpCard dengan perintah langkah demi
+    langkah (get_shop → baca website → cocokkan yang ada → update_shop_prices → laporan). Catatan: Leosiqra tidak bisa
+    menjalankan AI pengguna terjadwal; sarankan fitur tugas terjadwal di aplikasi AI-nya atau webhook.
+  - Dites lokal: i, i+nama salah (tidak diubah), ambigu, dengan group, tidak ketemu, harga 0; webhook prices: 2 diubah,
+    1 not_found, jumlah produk tetap 5; UI HP 0 error JS.
 - **2026-11-05 (branch claude/usahaku-web) — Update harga manual & otomatis, **live #137**; migrasi 0031 SUDAH dijalankan Bos (jalan kedua kali → "duplicate column" = wajar, kolom sudah ada).**
   - **MIGRASI di D1 Console** (0031_shop_catalog_sync.sql; boleh sebelum/sesudah deploy — tanpa kolom, sinkron tetap
     jalan, cuma waktu "terakhir diperbarui" tidak tercatat): `ALTER TABLE shops ADD COLUMN catalog_synced_at TEXT;`

@@ -5,6 +5,7 @@ import { Check, Loader2, Minus, Plus, Search, X } from 'lucide-react';
 import { shopService, groupProducts, type Shop } from '@/lib/services/shopService';
 import { cn, formatIDR } from '@/lib/utils';
 import { fieldCls, labelCls } from './UsahaView';
+import { AiMcpCard } from './AiMcpCard';
 
 // Perbarui harga manual: semua produk per kategori dengan kolom harga, cari, dan
 // naik/turun massal X% (dibulatkan ke Rp100 terdekat, opsional). Simpan sekali.
@@ -14,7 +15,7 @@ const ago = (iso?: string) => {
   return m < 1 ? 'baru saja' : m < 60 ? `${m} menit lalu` : m < 1440 ? `${Math.round(m / 60)} jam lalu` : new Date(iso).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
 };
 
-export function PriceEditor({ shop, onDone }: { shop: Shop; onDone: (m: string) => void }) {
+export function PriceEditor({ shop, onDone, onToast, onLeave }: { shop: Shop; onDone: (m: string) => void; onToast: (m: string) => void; onLeave: () => void }) {
   const [prices, setPrices] = useState<number[]>(() => shop.products.map((p) => p.price));
   const [query, setQuery] = useState('');
   const [pct, setPct] = useState('5');
@@ -25,6 +26,13 @@ export function PriceEditor({ shop, onDone }: { shop: Shop; onDone: (m: string) 
   const groups = useMemo(() => groupProducts(shop.products), [shop.products]);
   const visible = (i: number) => !q || `${shop.products[i].group ?? ''} ${shop.products[i].name}`.toLowerCase().includes(q);
   const changed = prices.filter((v, i) => v !== shop.products[i].price).length;
+  const [via, setVia] = useState<'manual' | 'ai'>('manual');
+  const aiPrompt = `Pakai Leosiqra (MCP): perbarui HARGA katalog usahaku "${shop.name}" (shop_id ${shop.id}) sesuai website tokoku${shop.linkUrl ? ` ${shop.linkUrl}` : ' [tautan website]'}.
+1) Panggil get_shop untuk daftar produk yang sudah ada (i, group, name, price).
+2) Buka website itu & semua halaman game/produknya, baca harga terbaru.
+3) Cocokkan HANYA dengan produk yang sudah ada — JANGAN menambah produk baru.
+4) Panggil update_shop_prices dengan [{ i, price }] untuk yang harganya berubah saja.
+5) Laporkan ringkas: berapa yang naik/turun dan produk yang tidak ketemu.`;
 
   const bulk = (dir: 1 | -1) => {
     const f = Number(pct.replace(',', '.'));
@@ -47,8 +55,20 @@ export function PriceEditor({ shop, onDone }: { shop: Shop; onDone: (m: string) 
     } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal menyimpan.'); setBusy(false); }
   };
 
+  const seg = (on: boolean) => cn('flex-1 rounded-full py-2 text-[12px] font-bold transition-colors', on ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400');
   return (
     <div className="space-y-3">
+      <div className="flex gap-1 rounded-full bg-slate-100 p-1 dark:bg-slate-800">
+        <button type="button" onClick={() => setVia('manual')} aria-pressed={via === 'manual'} className={seg(via === 'manual')}>Ubah manual</button>
+        <button type="button" onClick={() => setVia('ai')} aria-pressed={via === 'ai'} className={seg(via === 'ai')}>Dari website (AI-mu)</button>
+      </div>
+      {via === 'ai' ? (
+        <>
+          <AiMcpCard title="Perbarui harga dari website" desc="AI-mu membaca harga terbaru di websitemu, lalu HANYA mengubah harga produk yang sudah ada di katalog — tidak menambah produk baru." prompt={aiPrompt} onLeave={onLeave} onToast={onToast} />
+          <p className="px-1 text-[11px] text-slate-500 dark:text-slate-400">Mau berjalan sendiri tiap hari? Jadwalkan perintah ini di fitur tugas terjadwal aplikasi AI-mu (kalau tersedia), atau pakai sambungan website otomatis di Kelola › Sambungkan website.</p>
+          {shop.catalogSyncedAt && <p className="rounded-2xl bg-sky-50 px-3 py-2 text-[12px] font-semibold text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">Terakhir diperbarui otomatis: {ago(shop.catalogSyncedAt)}</p>}
+        </>
+      ) : <>
       {shop.catalogSyncedAt && <p className="rounded-2xl bg-sky-50 px-3 py-2 text-[12px] font-semibold text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">🌐 Harga diperbarui otomatis dari website: {ago(shop.catalogSyncedAt)}</p>}
       {error && <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-[12px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">{error}</p>}
       <div className="flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2 dark:bg-slate-800">
@@ -94,6 +114,7 @@ export function PriceEditor({ shop, onDone }: { shop: Shop; onDone: (m: string) 
         })}
       </div>
       <button type="button" onClick={save} disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-violet-600">{busy ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Simpan{changed ? ` ${changed} perubahan` : ''}</button>
+      </>}
     </div>
   );
 }

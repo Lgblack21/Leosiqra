@@ -161,14 +161,14 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
       {app ? (
         <>
           <BottomSheet isOpen={sheet} onClose={() => setSheet(false)} title="Struk"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">{strukFor(true)}</div></BottomSheet>
-          <BottomSheet isOpen={pricing} onClose={() => setPricing(false)} title="Perbarui harga"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><PriceEditor key={shop.updatedAt} shop={shop} onDone={(m) => { setPricing(false); say(m); }} /></div></BottomSheet>
+          <BottomSheet isOpen={pricing} onClose={() => setPricing(false)} title="Perbarui harga"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><PriceEditor key={shop.updatedAt} shop={shop} onDone={(m) => { setPricing(false); say(m); }} onToast={say} onLeave={() => setPricing(false)} /></div></BottomSheet>
           <BottomSheet isOpen={styling} onClose={() => setStyling(false)} title="Tampilan kasir"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><KasirStyleEditor shop={shop} onDone={(m) => { setStyling(false); say(m); }} onToast={say} onLeave={() => setStyling(false)} /></div></BottomSheet>
           <BottomSheet isOpen={manage} onClose={() => setManage(false)} title={`Kelola ${shop.name}`}><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><ShopDetail shop={shop} sales={sales} onToast={say} onLeave={() => setManage(false)} onDeleted={() => router.replace(back)} /></div></BottomSheet>
         </>
       ) : (
         <>
           <Modal isOpen={sheet} onClose={() => setSheet(false)} title="Struk" maxWidth="max-w-md">{strukFor(true)}</Modal>
-          <Modal isOpen={pricing} onClose={() => setPricing(false)} title="Perbarui harga" maxWidth="max-w-lg"><PriceEditor key={shop.updatedAt} shop={shop} onDone={(m) => { setPricing(false); say(m); }} /></Modal>
+          <Modal isOpen={pricing} onClose={() => setPricing(false)} title="Perbarui harga" maxWidth="max-w-lg"><PriceEditor key={shop.updatedAt} shop={shop} onDone={(m) => { setPricing(false); say(m); }} onToast={say} onLeave={() => setPricing(false)} /></Modal>
           <Modal isOpen={styling} onClose={() => setStyling(false)} title="Tampilan kasir" maxWidth="max-w-lg"><KasirStyleEditor shop={shop} onDone={(m) => { setStyling(false); say(m); }} onToast={say} onLeave={() => setStyling(false)} /></Modal>
           <Modal isOpen={manage} onClose={() => setManage(false)} title={`Kelola ${shop.name}`} maxWidth="max-w-xl"><ShopDetail shop={shop} sales={sales} onToast={say} onLeave={() => setManage(false)} onDeleted={() => router.replace(back)} /></Modal>
         </>
