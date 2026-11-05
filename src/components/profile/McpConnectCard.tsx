@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { BookOpen, Bot, Check, Copy, KeyRound, Loader2, Plus, Trash2 } from 'lucide-react';
 import { cloudflareApi } from '@/lib/cloudflare-api';
+import { refreshMcpStatus } from '@/lib/mcpStatus';
 import { cn } from '@/lib/utils';
 
 // Hubungkan akun ke AI agent — Leosiqra MCP (docs/rancangan/mcp.md): token
@@ -60,6 +61,7 @@ export function McpConnectCard() {
         cloudflareApi<{ items: McpActivity[] }>('/api/member/mcp/activity'),
       ]);
       setTokens(t.items);
+      refreshMcpStatus(); // kartu AI di Ladangku & daftar aplikasi ikut diperbarui
       setCanWrite(t.canWrite);
       setCanWriteMoney(Boolean(t.canWriteMoney));
       setActivity(a.items);
@@ -143,6 +145,20 @@ export function McpConnectCard() {
           </button>
         )}
       </div>
+
+      {!loading && tokens.length > 0 && (() => {
+        const writers = tokens.filter((t) => t.scopes.includes('write'));
+        return (
+          <div className={`flex items-start gap-2.5 rounded-2xl px-3.5 py-3 text-[12px] ${writers.length ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-200' : 'bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200'}`}>
+            <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${writers.length ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+            <span className="min-w-0 flex-1">
+              <b>{tokens.length} AI tersambung</b>: {[...new Set(tokens.map((t) => t.name))].join(', ')}.
+              {writers.length ? ' Izin mengubah aktif (Usahaku bisa diatur AI).' : ' Semua izin baca saja — sambungkan ulang & centang izin mengubah supaya AI bisa menyimpan.'}
+              <span className="block opacity-80">Mau tambah AI lain? Tambahkan connector di aplikasinya (URL di bawah) atau tekan + Token.</span>
+            </span>
+          </div>
+        );
+      })()}
 
       <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
         Data yang dibaca AI dikirim ke penyedia AI pilihan Anda. Token bisa dicabut kapan saja dan otomatis dicabut saat

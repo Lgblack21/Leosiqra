@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { useFeedback } from '@/components/ui/Feedback';
 import { McpConnectCard } from '@/components/profile/McpConnectCard';
+import { useMcpStatus } from '@/lib/mcpStatus';
 
 // Aplikasi terhubung (panel Pengaturan). Hanya integrasi yang benar-benar
 // jalan: MCP untuk Claude/ChatGPT, tautan rahasia Google Sheets (CSV untuk
@@ -85,6 +86,7 @@ export function useComposioApps() {
 export function AppsHub({ go }: { go: (v: AppsView) => void }) {
   const { feeds } = useFeeds();
   const { apps } = useComposioApps();
+  const mcp = useMcpStatus();
   // Kembali dari halaman login (callbackUrl ?terhubung=<toolkit>) → langsung ke layar aplikasinya.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -122,7 +124,9 @@ export function AppsHub({ go }: { go: (v: AppsView) => void }) {
           onClick={() => go('app-gcal')}
         />
       )}
-      <AppCard icon={Bot} tile="bg-indigo-50 text-indigo-600" title="Claude & ChatGPT" desc="Tanya & catat keuangan dari asisten AI lewat MCP." action="Atur" onClick={() => go('app-mcp')} />
+      <AppCard icon={Bot} tile="bg-indigo-50 text-indigo-600" title="Claude & ChatGPT" connected={mcp.state === 'write' || mcp.state === 'read'}
+        desc={mcp.state === 'write' || mcp.state === 'read' ? `Tersambung: ${mcp.names.join(', ') || 'AI'}${mcp.state === 'read' ? ' (izin baca saja)' : ''} — Atur untuk menambah AI lain.` : 'Tanya & catat keuangan dari asisten AI lewat MCP.'}
+        action="Atur" onClick={() => go('app-mcp')} />
       {/* Cara lama (tautan rahasia IMPORTDATA/iCal) disimpan sebagai cadangan
           kalau Composio bermasalah; kartunya hanya muncul untuk yang sudah
           terlanjur memakainya, supaya tidak dobel dengan versi Composio. */}

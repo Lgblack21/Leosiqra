@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-11-05 (live #136: logo & gambar katalog + simpan tampi
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | skema MCP gambar + ikon data:image |
+| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | skema MCP gambar + status AI tersambung |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,6 +18,14 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-05 (branch claude/usahaku-web) — Status "AI tersambung" di Ladangku & Pengaturan, BELUM deploy. Tanpa SQL.**
+  - `src/lib/mcpStatus.ts` (`useMcpStatus`, cache 30 dtk, muat ulang saat tab aktif, `refreshMcpStatus` dipanggil
+    McpConnectCard setelah load) dari `/api/member/mcp/tokens`: none / read / write + nama AI.
+  - `AiMcpCard` langkah 1: write → "✓ AI tersambung: Claude · izin mengubah aktif" + Atur; read → peringatan
+    "izin baca saja — sambungkan ulang & centang izin mengubah" + Atur; none → Hubungkan (seperti dulu).
+  - Pengaturan › Aplikasi terhubung: kartu Claude & ChatGPT badge "Terhubung" + "Tersambung: <nama> — Atur untuk
+    menambah AI lain", tombol Atur TETAP. McpConnectCard: baris status "N AI tersambung …" + cara menambah AI lain.
+  - Dites lokal (Playwright): tiga keadaan write/read/none di kasir › Tampilan, kartu Pengaturan & kartu MCP, 0 error JS.
 - **2026-11-05 (branch claude/usahaku-web) — Gambar katalog: skema MCP lengkap + ikon data:image, BELUM deploy.**
   - Laporan Bos (balasan Claude-nya): `set_kasir_style` belum mencantumkan `logoUrl`/`categoryImages`, `list_shops`
     belum memuat semua pilihan. Kini skema set_kasir_style punya logoUrl, categoryImages (DIGABUNG, "" = hapus),
