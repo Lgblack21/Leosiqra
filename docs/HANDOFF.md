@@ -4,13 +4,13 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-05 (live #127; claude/usahaku-web: Usahaku › Website siap deploy, tunggu "gas")
+Terakhir diperbarui: 2026-11-05 (live #128: Usahaku › Website + kasir top up)
 
 ## Siapa sedang kerja
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | Usahaku › website — siap deploy |
+| — | — | — | (akun B selesai; main = live #128) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-05 (branch claude/usahaku-web) — Usahaku › Website SELESAI & dites lokal, BELUM deploy (tunggu "gas"). Tanpa SQL baru.**
+- **2026-11-05 (branch claude/usahaku-web) — Usahaku › Website + kasir top up, **live #128**. Tanpa SQL baru.**
   - Bagian "Website" di ShopDetail (`WebsiteSection`, `UsahaView.tsx`): belum ada link → kotak "Belum punya website?"
     (Salin brief markdown `websiteBrief()` di `shopService.ts` + Buka Pabrik.AI `https://app.vantis.sh` + Lihat isi brief),
     kolom tautan (DIPINDAH dari ContactForm), "Ambil daftar harga dari website" → pratinjau → Tambahkan (nama sama =
@@ -32,7 +32,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     redirect ke halaman toko OK; halaman JS → `via: pembaca`; "Rp22.000" → 22000, harga 0 dibuang, `<script>` dinetralkan;
     tanpa sesi 401; kuota 5/hari menolak ke-6. UI Playwright web + HP (`/membership/ladang#usaha`, `/app/ladang#usaha`):
     salin brief, tautan editor ditolak, Tambahkan & Ganti semua tersimpan, tahap jadi Online, 0 error JS.
-  - **Belum**: AI & situs ASLI (r.jina.ai dan Pabrik.AI tidak bisa dijangkau dari sandbox). Rate-limit AI (12/menit)
+  - **Belum diverifikasi di produksi**: AI & situs ASLI (r.jina.ai dan Pabrik.AI tidak bisa dijangkau dari sandbox). Rate-limit AI (12/menit)
     ikut terpakai oleh permintaan yang ditolak validasi — sengaja dibiarkan (murah, mencegah spam).
   - **+ Kasir & katalog berkategori (permintaan Bos: katalog top up FF/MLBB/PUBG).** Produk punya `group` opsional
     (kategori, ≤40 karakter, di `products_json` — tanpa migrasi). `SHOP_PRODUCTS_MAX` 20 → **120** (frontend
