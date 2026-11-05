@@ -9940,8 +9940,13 @@ const pickShopPages = (base: URL, links: { href: string; text: string }[]) => {
     const key = `${u.hostname}${path}`.toLowerCase();
     if (seen.has(key) || `${base.hostname}${base.pathname.replace(/\/+$/, "")}`.toLowerCase() === key) continue;
     seen.add(key);
-    const text = shopText(l.text.replace(/!\[[^\]]*\]\([^)]*\)/g, " ").replace(/[*_#`]/g, ""), 40);
-    out.push({ url: `https://${u.hostname}${path}`, title: text.length >= 2 && !/^(beli|top ?up|lihat|detail|selengkapnya|klik|lagi|more|semua|all|lainnya|order|pesan)( sekarang| semua)?$/i.test(text) ? text : titleFromPath(path) });
+    const text = shopText(l.text.replace(/!\[[^\]]*\]\([^)]*\)/g, " ").replace(/[*_#`]/g, ""), 120);
+    const fromPath = titleFromPath(path);
+    // Teks link sering gabungan "MOBILE LEGENDS Moonton MOBILE LEGENDS" (nama + penerbit + alt gambar):
+    // kalau nama dari URL ada di teks, ambil potongan itu saja (huruf asli dipertahankan).
+    const at = fromPath.length >= 3 ? text.toLowerCase().indexOf(fromPath.toLowerCase()) : -1;
+    const clean = at >= 0 ? text.slice(at, at + fromPath.length) : text.slice(0, 40);
+    out.push({ url: `https://${u.hostname}${path}`, title: clean.length >= 2 && !/^(beli|top ?up|lihat|detail|selengkapnya|klik|lagi|more|semua|all|lainnya|order|pesan)( sekarang| semua)?$/i.test(clean) ? clean : fromPath });
     if (out.length >= SHOP_PAGES_MAX) break;
   }
   return out;

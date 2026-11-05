@@ -253,9 +253,9 @@ function DirectShopForm({ onBack, onSaved }: { onBack: () => void; onSaved: (id:
       <button type="button" onClick={onBack} className="flex items-center gap-1 text-[13px] font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400"><ArrowLeft size={15} /> Cari ide pakai AI</button>
       <p className="text-[16px] font-extrabold text-slate-900 dark:text-white">Daftarkan usahamu</p>
       {error && <p role="alert" className="text-[12px] font-semibold text-rose-600">{error}</p>}
-      <label className="block"><span className={labelCls}>Nama usaha</span><input value={name} onChange={(e) => { setName(e.target.value); setError(''); }} maxLength={40} autoFocus placeholder="mis. CXA Store" className={fieldCls} /></label>
+      <label className="block"><span className={labelCls}>Nama usaha</span><input value={name} onChange={(e) => { setName(e.target.value); setError(''); }} maxLength={40} autoFocus placeholder="mis. Toko Kue Leosiqra" className={fieldCls} /></label>
       <div><span className={labelCls}>Ikon</span><div className="flex flex-wrap gap-1.5">{SHOP_EMOJIS.map((e) => <button key={e} type="button" onClick={() => setEmoji(e)} aria-pressed={emoji === e} className={cn('flex h-10 w-10 items-center justify-center rounded-xl text-[20px]', emoji === e ? 'bg-violet-600 ring-2 ring-violet-300' : 'bg-slate-100 dark:bg-slate-800')}>{e}</button>)}</div></div>
-      <label className="block"><span className={labelCls}>Jualan apa? (opsional)</span><input value={tagline} onChange={(e) => setTagline(e.target.value)} maxLength={80} placeholder="mis. Top up game murah & cepat" className={fieldCls} /></label>
+      <label className="block"><span className={labelCls}>Jualan apa? (opsional)</span><input value={tagline} onChange={(e) => setTagline(e.target.value)} maxLength={80} placeholder="mis. Kue kering & bolu rumahan" className={fieldCls} /></label>
       <FormButtons busy={busy} onSave={save} label="Simpan usaha" />
       <p className="text-center text-[11px] text-slate-400">Setelah disimpan: isi WhatsApp, lalu tempel link websitemu untuk ambil daftar harga otomatis.</p>
     </div>

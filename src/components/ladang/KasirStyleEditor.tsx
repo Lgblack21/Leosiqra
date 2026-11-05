@@ -25,7 +25,8 @@ const CARDS: { id: KasirStyle['card']; label: string }[] = [
   { id: 'solid', label: 'Timbul' },
 ];
 
-export function KasirStyleEditor({ shop, onDone }: { shop: Shop; onDone: (m: string) => void }) {
+// onLeave: tutup popup ini dulu — panel Pengaturan (z-80) ada DI BAWAH Modal (z-88).
+export function KasirStyleEditor({ shop, onDone, onLeave }: { shop: Shop; onDone: (m: string) => void; onLeave: () => void }) {
   const [st, setSt] = useState<KasirStyle>({ ...KASIR_DEFAULT, ...shop.style });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -108,8 +109,8 @@ export function KasirStyleEditor({ shop, onDone }: { shop: Shop; onDone: (m: str
         <div className="mt-2.5 grid grid-cols-2 gap-2">
           <button type="button" onClick={() => { navigator.clipboard.writeText(prompt).then(() => onDone('Perintah tersalin — tempel di Claude/ChatGPT yang sudah terhubung.'), () => onDone('Tidak bisa menyalin otomatis.')); }} className="flex items-center justify-center gap-1.5 rounded-full bg-white py-2.5 text-[12px] font-bold text-slate-700 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200"><Copy size={13} /> Salin perintah</button>
           {app
-            ? <Link href="/app/profile" className="flex items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 text-[12px] font-bold text-white hover:bg-violet-700"><Bot size={13} /> Hubungkan AI</Link>
-            : <button type="button" onClick={() => openSettings('ai')} className="flex items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 text-[12px] font-bold text-white hover:bg-violet-700"><Bot size={13} /> Hubungkan AI</button>}
+            ? <Link href="/app/profile" onClick={onLeave} className="flex items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 text-[12px] font-bold text-white hover:bg-violet-700"><Bot size={13} /> Hubungkan AI</Link>
+            : <button type="button" onClick={() => { onLeave(); window.setTimeout(() => openSettings('app-mcp'), 150); }} className="flex items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 text-[12px] font-bold text-white hover:bg-violet-700"><Bot size={13} /> Hubungkan AI</button>}
         </div>
       </div>
     </div>

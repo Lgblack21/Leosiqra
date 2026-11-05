@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-11-05 (live #131: Ladangku fullscreen, tampilan kasir 
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| — | — | — | (akun B selesai; main = live #131; migrasi 0029 perlu dikonfirmasi) |
+| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | perbaikan Hubungkan AI & nama kategori |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,6 +18,13 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-05 (branch claude/usahaku-web) — perbaikan kecil, BELUM deploy (tunggu "gas"). Tanpa SQL.**
+  - Bug "Hubungkan AI macet" di Tampilan kasir (web): panel Pengaturan (z-80) terbuka DI BELAKANG Modal (z-88). Sekarang
+    popup ditutup dulu lalu `openSettings('app-mcp')` (langsung kartu Claude & ChatGPT). HP: tautan /app/profile + tutup.
+  - Nama kategori dari penemu halaman: teks link gabungan ("MOBILE LEGENDS Moonton MOBILE LEGENDS") → potongan yang
+    cocok dengan nama dari URL ("MOBILE LEGENDS"). Berlaku untuk impor BARU — kategori lama di katalog Bos tetap sampai
+    diambil ulang (Ganti semua).
+  - Placeholder Daftarkan usaha: "mis. Toko Kue Leosiqra" / "mis. Kue kering & bolu rumahan".
 - **2026-11-05 (branch claude/usahaku-web) — Ladangku layar penuh + tampilan kasir (manual & AI pengguna via MCP), **live #131** (migrasi 0029: cek sudah dijalankan Bos).**
   - **MIGRASI WAJIB di D1 Console** (boleh sebelum/sesudah deploy — Worker tahan kolom belum ada: baca tanpa kolom,
     simpan tampilan → 503 "belum aktif"): `ALTER TABLE shops ADD COLUMN style_json TEXT;` (file 0029_shop_style.sql).
