@@ -53,6 +53,9 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = "max-w-md" 
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: "spring", duration: 0.5, bounce: 0.3 }}
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
             className={`relative w-full ${maxWidth} bg-white rounded-[24px] md:rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]`}
           >
             {/* Header */}

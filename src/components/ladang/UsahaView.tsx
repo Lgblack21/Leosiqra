@@ -9,6 +9,7 @@ import { shopService, catalogText, groupProducts, prettyWa, websiteBrief, PABRIK
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
+import { KASIR_THEME } from './kasirTheme';
 
 // Ladangku › Usaha (Usahaku): AI menyusun 3 rencana usaha dari "aku bisa …" →
 // simpan jadi usaha → produk & kontak → katalog siap sebar (teks WA, gambar PNG,
@@ -71,32 +72,63 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
         </section>
       ) : (
         <>
+          {(() => {
+            const all = shops.flatMap((x) => salesBy.get(x.id) ?? []);
+            const mon = all.filter((t) => monthKey(t.date) === now);
+            const day = all.filter((t) => toLocalDateString(new Date(t.date)) === toLocalDateString());
+            return (
+              <section className="web-keep relative overflow-hidden rounded-[28px] bg-[radial-gradient(120%_140%_at_100%_0%,#7c3aed_0%,#4c1d95_35%,#0b1220_80%)] p-5 text-white md:p-6">
+                <Store aria-hidden size={150} strokeWidth={1} className="pointer-events-none absolute -bottom-8 -right-6 text-violet-300/10" />
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[13px] font-semibold text-white/60">Omzet usaha bulan ini</p>
+                    <p className="mt-1 text-[30px] font-extrabold leading-none tabular-nums md:text-[36px]">{formatIDR(Math.round(mon.reduce((x, t) => x + amt(t), 0)))}</p>
+                  </div>
+                  {shops.length < 5 && <button type="button" onClick={() => setSheet({ k: 'ideas' })} className="relative flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[12px] font-bold text-slate-900 hover:bg-white/90"><Plus size={14} /> Usaha baru</button>}
+                </div>
+                <div className="relative mt-4 grid grid-cols-3 gap-2">
+                  {[['Hari ini', short(Math.round(day.reduce((x, t) => x + amt(t), 0)))], ['Transaksi bulan ini', String(mon.length)], ['Usaha', `${shops.length}/5`]].map(([k, v]) => (
+                    <div key={k} className="rounded-2xl bg-white/[0.07] px-3 py-2.5 ring-1 ring-white/10"><p className="truncate text-[11px] text-white/55">{k}</p><p className="text-[16px] font-extrabold tabular-nums">{v}</p></div>
+                  ))}
+                </div>
+              </section>
+            );
+          })()}
           <ul className="grid gap-3 md:grid-cols-2">
             {shops.map((s) => {
               const sales = salesBy.get(s.id) ?? [];
               const month = sales.filter((t) => monthKey(t.date) === now);
+              const day = sales.filter((t) => toLocalDateString(new Date(t.date)) === toLocalDateString());
               const st = stageOf(s, sales.length);
+              const cats = new Set(s.products.map((p) => p.group).filter(Boolean)).size;
+              const nextStep = !s.contactWa ? 'Isi nomor WhatsApp' : !s.products.length ? 'Isi katalog produk' : st < 2 ? 'Tempel website atau sebar katalog' : 'Catat penjualan pertama';
               return (
-                <li key={s.id}>
-                  <Link href={kasirHref(variant, s.id)} className={cn(card, 'block w-full p-4 text-left transition-transform active:scale-[0.99]')}>
-                    <span className="flex items-center gap-3">
-                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-[24px] dark:bg-violet-500/15">{s.emoji || '🌱'}</span>
+                <li key={s.id} className={cn(card, 'overflow-hidden')}>
+                  <Link href={kasirHref(variant, s.id)} className="group block">
+                    <div className={cn('web-keep flex items-center gap-3 px-4 py-3.5 text-white', (KASIR_THEME[s.style.theme] ?? KASIR_THEME.ungu).header)}>
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-[22px]">{s.emoji || '🌱'}</span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[15px] font-extrabold text-slate-900 dark:text-white">{s.name}</span>
-                        <span className="block truncate text-[12px] text-slate-500 dark:text-slate-400">{s.tagline || `${s.products.length} produk`}</span>
+                        <span className="block truncate text-[16px] font-extrabold">{s.name}</span>
+                        <span className="block truncate text-[12px] text-white/65">{s.tagline || `${s.products.length} produk${cats ? ` · ${cats} kategori` : ''}`}</span>
                       </span>
-                      <span className="shrink-0 text-right">
-                        <span className="block text-[14px] font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400">{short(month.reduce((x, t) => x + amt(t), 0))}</span>
-                        <span className="block text-[11px] text-slate-400">{month.length} jualan bulan ini</span>
-                      </span>
-                    </span>
-                    <StageBar stage={st} className="mt-3" />
+                      <span className="flex shrink-0 items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-bold transition-colors group-hover:bg-white/25"><Store size={13} /> Kasir</span>
+                    </div>
+                    <div className="grid grid-cols-3 divide-x divide-slate-100 px-1 py-3 dark:divide-slate-800">
+                      {[['Hari ini', short(Math.round(day.reduce((x, t) => x + amt(t), 0)))], ['Bulan ini', short(Math.round(month.reduce((x, t) => x + amt(t), 0)))], ['Produk', String(s.products.length)]].map(([k, v]) => (
+                        <span key={k} className="px-3 text-center"><span className="block text-[11px] text-slate-400">{k}</span><span className="block text-[15px] font-extrabold tabular-nums text-slate-900 dark:text-white">{v}</span></span>
+                      ))}
+                    </div>
                   </Link>
+                  {st < 3 && (
+                    <button type="button" onClick={() => setSheet({ k: 'shop', id: s.id })} className="flex w-full items-center gap-3 border-t border-slate-100 px-4 py-3 text-left hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50">
+                      <StageBar stage={st} className="flex-1" />
+                      <span className="shrink-0 text-[11px] font-bold text-violet-600 dark:text-violet-300">{nextStep} →</span>
+                    </button>
+                  )}
                 </li>
               );
             })}
           </ul>
-          {shops.length < 5 && <button type="button" onClick={() => setSheet({ k: 'ideas' })} className="flex w-full items-center justify-center gap-1.5 rounded-full bg-violet-50 py-3 text-[13px] font-bold text-violet-700 hover:bg-violet-100 dark:bg-violet-500/10 dark:text-violet-300"><Plus size={15} /> Usaha baru</button>}
         </>
       )}
       {app ? (

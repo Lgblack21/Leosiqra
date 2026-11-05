@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-11-05 (live #130: Usahaku kasir + baca semua halaman g
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| — | — | — | (akun B selesai; main = live #130) |
+| Akun B | selesai, tunggu "gas" + migrasi 0029 (2026-11-05) | claude/usahaku-web | Ladangku fullscreen, tampilan kasir, MCP Usahaku |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,6 +18,23 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-05 (branch claude/usahaku-web) — Ladangku layar penuh + tampilan kasir (manual & AI pengguna via MCP), BELUM deploy.**
+  - **MIGRASI WAJIB di D1 Console** (boleh sebelum/sesudah deploy — Worker tahan kolom belum ada: baca tanpa kolom,
+    simpan tampilan → 503 "belum aktif"): `ALTER TABLE shops ADD COLUMN style_json TEXT;` (file 0029_shop_style.sql).
+  - Web `/membership/ladang` (+ `/ladang/kasir`) masuk `FULLSCREEN_PATHS`: tanpa sidebar, header (Ringkasan · judul tab
+    · orb AI) + dock melayang seperti Investasiku. HP tetap tab pil.
+  - Halaman Usaha dirapikan: hero omzet bulan ini / hari ini / transaksi / jumlah usaha; kartu toko berwarna tema
+    kasirnya + Hari ini / Bulan ini / Produk; baris "langkah berikut" hanya kalau belum tahap Jualan.
+  - **Tampilan kasir** (`KasirStyleEditor.tsx`, tema di `kasirTheme.ts`): tema 8 warna, tata letak Kartu/Daftar/Ringkas,
+    kolom 2/3/4, gaya kartu, satuan, teks sambutan, penutup struk, urutan kategori. Worker `sanitizeKasirStyle` =
+    whitelist (tema/tata letak tak dikenal → nilai lama, teks tanpa `<>`, field lain dibuang). BUKAN HTML/CSS bebas.
+  - **MCP** (AI milik pengguna, tidak memakai kuota AI Leosiqra): `list_shops`, `get_shop` (baca), `set_kasir_style`,
+    `set_shop_products` (tulis — PRO + token izin tulis, sama dengan tool tulis lain; mode append cocok per group+nama,
+    harga 0 dibuang, maks 120). Instruksi server MCP ditambah. Editor punya "Salin perintah" + "Hubungkan AI".
+  - `Modal` & `BottomSheet` kini `role="dialog"` + `aria-label`.
+  - Dites lokal: tanpa kolom (GET jalan, simpan 503), sanitasi style nakal, MCP tools/list (FREE: tool tulis hilang,
+    panggil → ditolak), set_kasir_style/append/usaha orang lain → ditolak; Playwright web+HP 0 error JS.
+    **Belum**: dipanggil dari Claude/ChatGPT asli.
 - **2026-11-05 (branch claude/usahaku-web) — Halaman KASIR per usaha, **live #130**. Tanpa SQL.**
   - Route baru `/membership/ladang/kasir?id=<usaha>` & `/app/ladang/kasir?id=` (`KasirView.tsx`). Klik usaha di Usahaku →
     kasir (bukan popup lagi). Header: omzet hari ini / jumlah transaksi / bulan ini + "Kelola" (= `ShopDetail` lama:

@@ -7,6 +7,9 @@ import { notifyCollectionChanged } from '../cf-firestore';
 export type ShopProduct = { name: string; price: number; unit: string; group?: string }; // group = kategori, mis. "Free Fire"
 export type ShopPlan = { modal: number | null; waktu: string; perBulan: [number, number] | null; alasan: string[]; langkah: string[]; pembeli: string; cariDi: string };
 export type ShopIdea = { name: string; emoji: string; tagline: string; description: string; products: ShopProduct[]; plan: ShopPlan };
+/** Tampilan kasir — pilihan terbatas (lihat sanitizeKasirStyle di Worker). */
+export type KasirStyle = { theme: string; layout: 'grid' | 'list' | 'compact'; columns: 2 | 3 | 4; card: 'soft' | 'outline' | 'solid'; showUnit: boolean; greeting: string; receiptFooter: string; categoryOrder: string[] };
+export const KASIR_DEFAULT: KasirStyle = { theme: 'ungu', layout: 'grid', columns: 3, card: 'soft', showUnit: true, greeting: '', receiptFooter: '', categoryOrder: [] };
 export type Shop = {
   id: string;
   name: string;
@@ -20,10 +23,13 @@ export type Shop = {
   area?: string;
   linkUrl?: string;
   promotedAt?: string;
+  style: KasirStyle;
+  /** false = kolom style_json belum ada di server (migrasi 0029 belum jalan). */
+  styleReady: boolean;
   createdAt: string;
   updatedAt: string;
 };
-export type ShopInput = Partial<{ name: string; tagline: string; description: string; emoji: string; products: ShopProduct[]; plan: ShopPlan | null; contactWa: string; paymentNote: string; area: string; linkUrl: string; promoted: boolean }>;
+export type ShopInput = Partial<{ name: string; tagline: string; description: string; emoji: string; products: ShopProduct[]; plan: ShopPlan | null; contactWa: string; paymentNote: string; area: string; linkUrl: string; promoted: boolean; style: KasirStyle }>;
 
 type Row = Record<string, unknown>;
 const str = (v: unknown) => (typeof v === 'string' && v ? v : undefined);
@@ -41,6 +47,8 @@ const fromRow = (r: Row): Shop => ({
   area: str(r.area),
   linkUrl: str(r.link_url),
   promotedAt: str(r.promoted_at),
+  style: { ...KASIR_DEFAULT, ...parse<Partial<KasirStyle>>(r.style_json, {}) },
+  styleReady: 'style_json' in r,
   createdAt: String(r.created_at ?? ''),
   updatedAt: String(r.updated_at ?? ''),
 });
@@ -56,6 +64,7 @@ const toBody = (i: ShopInput) => ({
   ...(i.area !== undefined ? { area: i.area } : {}),
   ...(i.linkUrl !== undefined ? { link_url: i.linkUrl } : {}),
   ...(i.promoted ? { promoted: true } : {}),
+  ...(i.style !== undefined ? { style: i.style } : {}),
 });
 
 export const shopService = {

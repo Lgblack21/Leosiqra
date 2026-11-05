@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { Camera, ChevronRight, HandCoins, LayoutGrid, Sprout, Store, Tag } from 'lucide-react';
+import Link from 'next/link';
+import { AiOrb } from '@/components/ai/AiChat';
+import { ArrowLeft, Camera, ChevronRight, HandCoins, LayoutGrid, Sprout, Store, Tag } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { SellFlow } from '@/components/ladang/SellFlow';
@@ -20,10 +22,10 @@ import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
 // HP (/app/ladang). ?item=<id> langsung membuka barang itu (tombol di Barangku).
 
 const TABS = [
-  { id: 'ringkas', label: 'Ringkas', icon: LayoutGrid },
-  { id: 'usaha', label: 'Usaha', icon: Store },
-  { id: 'jual', label: 'Jual', icon: Tag },
-  { id: 'tagih', label: 'Tagih', icon: HandCoins },
+  { id: 'ringkas', label: 'Ringkas', icon: LayoutGrid, title: 'Ladangku', sub: 'Cuan sampingan bulan ini' },
+  { id: 'usaha', label: 'Usaha', icon: Store, title: 'Usahaku', sub: 'Kasir, katalog & website toko' },
+  { id: 'jual', label: 'Jual', icon: Tag, title: 'Jual barang', sub: 'Barang nganggur jadi uang' },
+  { id: 'tagih', label: 'Tagih', icon: HandCoins, title: 'Tagih', sub: 'Piutang, cicilan & patungan' },
 ] as const;
 type TabId = (typeof TABS)[number]['id'];
 
@@ -48,6 +50,50 @@ export function LadangView({ variant, toast }: { variant: 'web' | 'app'; toast?:
     if (toast) toast(m);
     else { setFlash(m); window.setTimeout(() => setFlash(''), 3500); }
   };
+  const content = (
+    <>
+      {flash && <div role="status" className="rounded-2xl bg-emerald-50 px-4 py-3 text-[13px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">{flash}</div>}
+      {tab === 'ringkas' && <RingkasView variant={variant} go={go} onToast={say} />}
+      {tab === 'usaha' && <UsahaView variant={variant} onToast={say} />}
+      {tab === 'jual' && <JualView variant={variant} onToast={say} />}
+      {tab === 'tagih' && <TagihView variant={variant} onToast={say} />}
+    </>
+  );
+
+  // Web: layar penuh seperti Investasiku (tanpa sidebar — FULLSCREEN_PATHS di
+  // app/membership/layout.tsx): bar atas + dock melayang di bawah.
+  if (variant === 'web') {
+    const current = TABS.find((t) => t.id === tab) ?? TABS[0];
+    return (
+      <div className="mx-auto min-h-screen max-w-6xl px-4 pb-32 pt-4 md:px-8 md:pt-6">
+        <header className="mb-5 grid grid-cols-[auto_1fr_auto] items-center gap-3">
+          <Link href="/membership/dashboard" aria-label="Kembali ke Ringkasan" className="web-keep group flex h-11 items-center gap-1.5 rounded-full bg-slate-950 pl-2 pr-4 text-[13px] font-semibold text-white shadow-sm hover:bg-slate-800">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 transition-transform group-hover:-translate-x-0.5"><ArrowLeft size={16} /></span> <span className="hidden sm:inline">Ringkasan</span>
+          </Link>
+          <div className="min-w-0 text-center">
+            <h1 className="truncate text-[20px] font-extrabold tracking-tight text-slate-900 md:text-[24px]">{current.title}</h1>
+            <p className="truncate text-[12px] text-slate-500">{current.sub}</p>
+          </div>
+          <Link href="/membership/ai-leosiqra" aria-label="Tanya Leo" className="rounded-full ring-2 ring-white transition-transform hover:scale-105"><AiOrb size={44} /></Link>
+        </header>
+        <main className="space-y-4">{content}</main>
+        <nav aria-label="Menu Ladangku" className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+16px)] z-40 flex justify-center px-4 print:hidden">
+          <div className="web-keep flex items-center gap-1 rounded-full bg-slate-950/85 p-1.5 shadow-[0_20px_50px_-12px_rgba(2,6,23,0.6)] ring-1 ring-white/10 backdrop-blur-xl">
+            {TABS.map((t) => {
+              const active = t.id === tab;
+              return (
+                <button key={t.id} type="button" onClick={() => go(t.id)} aria-current={active ? 'page' : undefined} aria-label={t.label} className={cn('relative flex h-12 items-center justify-center gap-2 rounded-full text-[13px] font-bold transition-all', active ? 'bg-gradient-to-r from-emerald-400 to-teal-300 px-4 text-slate-950' : 'w-12 text-white/70 hover:bg-white/10')}>
+                  <t.icon size={20} className="shrink-0" strokeWidth={active ? 2.4 : 1.9} />
+                  {active && <span className="whitespace-nowrap">{t.label}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div role="tablist" aria-label="Ladangku" className="flex gap-1 rounded-full bg-slate-100 p-1 dark:bg-slate-800">
@@ -60,11 +106,7 @@ export function LadangView({ variant, toast }: { variant: 'web' | 'app'; toast?:
           );
         })}
       </div>
-      {flash && <div role="status" className="rounded-2xl bg-emerald-50 px-4 py-3 text-[13px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">{flash}</div>}
-      {tab === 'ringkas' && <RingkasView variant={variant} go={go} onToast={say} />}
-      {tab === 'usaha' && <UsahaView variant={variant} onToast={say} />}
-      {tab === 'jual' && <JualView variant={variant} onToast={say} />}
-      {tab === 'tagih' && <TagihView variant={variant} onToast={say} />}
+      {content}
     </div>
   );
 }

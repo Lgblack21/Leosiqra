@@ -3,10 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Check, Copy, Loader2, Minus, Plus, ReceiptText, Search, Settings2, ShoppingBag, Store, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Check, Copy, Loader2, Minus, Palette, Plus, ReceiptText, Search, Settings2, ShoppingBag, Store, Trash2, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { shopService, groupProducts, type Shop, type ShopProduct } from '@/lib/services/shopService';
+import { shopService, groupProducts, type KasirStyle, type Shop, type ShopProduct } from '@/lib/services/shopService';
+import { KasirStyleEditor } from './KasirStyleEditor';
+import { KASIR_THEME } from './kasirTheme';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
 import { accountService } from '@/lib/services/accountService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
@@ -24,6 +26,8 @@ type Line = { key: string; name: string; group?: string; price: number; qty: num
 const lineKey = (p: ShopProduct) => `${p.group ?? ''}|${p.name}`;
 const ACC_KEY = 'leosiqra-kasir-acc-v1';
 
+const themeOf = (s: KasirStyle) => KASIR_THEME[s.theme] ?? KASIR_THEME.ungu;
+
 export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToast?: (m: string) => void }) {
   const app = variant === 'app';
   const router = useRouter();
@@ -33,6 +37,7 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
   const [tx, setTx] = useState<Transaction[]>([]);
   const [error, setError] = useState('');
   const [manage, setManage] = useState(false);
+  const [styling, setStyling] = useState(false);
   const [sheet, setSheet] = useState(false); // HP: struk
   const [flash, setFlash] = useState('');
   const say = (m: string) => { if (onToast) onToast(m); else { setFlash(m); window.setTimeout(() => setFlash(''), 3500); } };
@@ -84,14 +89,16 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
       {flash && <div role="status" className="fixed inset-x-4 top-4 z-[95] mx-auto max-w-sm rounded-2xl bg-slate-900 px-4 py-3 text-center text-[13px] font-semibold text-white shadow-lg">{flash}</div>}
 
       {/* Header toko */}
-      <section className="web-keep relative overflow-hidden rounded-[28px] bg-[radial-gradient(120%_140%_at_100%_0%,#7c3aed_0%,#4c1d95_38%,#0b1220_82%)] p-4 text-white md:p-5">
+      <section className={cn('web-keep relative overflow-hidden rounded-[28px] p-4 text-white md:p-5', themeOf(shop.style).header)}>
         <div className="flex items-center gap-3">
           <Link href={back} aria-label="Kembali ke Usahaku" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"><ArrowLeft size={17} /></Link>
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-[26px]">{shop.emoji || '🏪'}</span>
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-white/50"><Store size={12} /> Kasir</p>
             <h1 className="truncate text-[20px] font-extrabold leading-tight md:text-[24px]">{shop.name}</h1>
+            {shop.style.greeting && <p className="truncate text-[12px] text-white/70">{shop.style.greeting}</p>}
           </div>
+          <button type="button" onClick={() => setStyling(true)} aria-label="Tampilan kasir" className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-[12px] font-bold hover:bg-white/20"><Palette size={14} /> <span className="hidden sm:inline">Tampilan</span></button>
           <button type="button" onClick={() => setManage(true)} aria-label="Kelola usaha" className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-[12px] font-bold hover:bg-white/20"><Settings2 size={14} /> <span className="hidden sm:inline">Kelola</span></button>
         </div>
         <div className="mt-4 grid grid-cols-3 gap-2">
@@ -110,7 +117,7 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
         </section>
       ) : (
         <div className="grid items-start gap-4 lg:grid-cols-[1fr_360px]">
-          <Catalog products={shop.products} lines={lines} onAdd={add} />
+          <Catalog products={shop.products} style={shop.style} lines={lines} onAdd={add} />
           {!app && <aside aria-label="Struk" className="hidden lg:sticky lg:top-4 lg:block">{strukFor(false)}</aside>}
         </div>
       )}
@@ -129,11 +136,13 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
       {app ? (
         <>
           <BottomSheet isOpen={sheet} onClose={() => setSheet(false)} title="Struk"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">{strukFor(true)}</div></BottomSheet>
+          <BottomSheet isOpen={styling} onClose={() => setStyling(false)} title="Tampilan kasir"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><KasirStyleEditor shop={shop} onDone={(m) => { setStyling(false); say(m); }} /></div></BottomSheet>
           <BottomSheet isOpen={manage} onClose={() => setManage(false)} title={`Kelola ${shop.name}`}><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><ShopDetail shop={shop} sales={sales} onToast={say} onDeleted={() => router.replace(back)} /></div></BottomSheet>
         </>
       ) : (
         <>
           <Modal isOpen={sheet} onClose={() => setSheet(false)} title="Struk" maxWidth="max-w-md">{strukFor(true)}</Modal>
+          <Modal isOpen={styling} onClose={() => setStyling(false)} title="Tampilan kasir" maxWidth="max-w-lg"><KasirStyleEditor shop={shop} onDone={(m) => { setStyling(false); say(m); }} /></Modal>
           <Modal isOpen={manage} onClose={() => setManage(false)} title={`Kelola ${shop.name}`} maxWidth="max-w-xl"><ShopDetail shop={shop} sales={sales} onToast={say} onDeleted={() => router.replace(back)} /></Modal>
         </>
       )}
@@ -144,8 +153,19 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
 }
 
 // ── Katalog: chip kategori + cari + kartu produk (ketuk = +1 di struk) ─────────
-function Catalog({ products, lines, onAdd }: { products: ShopProduct[]; lines: Line[]; onAdd: (p: ShopProduct) => void }) {
-  const groups = useMemo(() => groupProducts(products), [products]);
+const COLS: Record<number, string> = { 2: 'sm:grid-cols-2', 3: 'sm:grid-cols-3', 4: 'sm:grid-cols-3 xl:grid-cols-4' };
+const COLS_COMPACT: Record<number, string> = { 2: 'grid-cols-2 sm:grid-cols-3', 3: 'grid-cols-3 sm:grid-cols-4', 4: 'grid-cols-3 sm:grid-cols-4 xl:grid-cols-5' };
+const CARD: Record<string, string> = {
+  soft: 'bg-slate-50 ring-1 ring-slate-100 hover:bg-white hover:ring-violet-300 dark:bg-slate-800/60 dark:ring-slate-800 dark:hover:bg-slate-800',
+  outline: 'bg-white ring-2 ring-slate-200 hover:ring-slate-400 dark:bg-slate-900 dark:ring-slate-700',
+  solid: 'bg-white shadow-md shadow-slate-200/70 ring-1 ring-slate-100 hover:shadow-lg dark:bg-slate-800 dark:shadow-none dark:ring-slate-700',
+};
+function Catalog({ products, style, lines, onAdd }: { products: ShopProduct[]; style: KasirStyle; lines: Line[]; onAdd: (p: ShopProduct) => void }) {
+  const groups = useMemo(() => {
+    const g = groupProducts(products);
+    const rank = (name: string) => { const k = style.categoryOrder.indexOf(name); return k < 0 ? 1000 : k; };
+    return g.map((x, k) => ({ x, k })).sort((a, b) => rank(a.x.group) - rank(b.x.group) || a.k - b.k).map(({ x }) => x);
+  }, [products, style.categoryOrder]);
   const named = groups.length > 1 || Boolean(groups[0]?.group);
   const [active, setActive] = useState<string | null>(null); // null = semua
   const [query, setQuery] = useState('');
@@ -170,7 +190,7 @@ function Catalog({ products, lines, onAdd }: { products: ShopProduct[]; lines: L
             const on = active === group;
             const label = group === null ? 'Semua' : group || 'Lainnya';
             return (
-              <button key={label} type="button" role="tab" aria-selected={on} onClick={() => setActive(group)} className={cn('flex shrink-0 items-center gap-2 rounded-2xl py-1.5 pl-1.5 pr-3 text-[13px] font-bold transition-colors', on ? 'bg-slate-900 text-white dark:bg-violet-600' : 'bg-white text-slate-700 ring-1 ring-slate-100 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-800')}>
+              <button key={label} type="button" role="tab" aria-selected={on} onClick={() => setActive(group)} className={cn('flex shrink-0 items-center gap-2 rounded-2xl py-1.5 pl-1.5 pr-3 text-[13px] font-bold transition-colors', on ? themeOf(style).chip : 'bg-white text-slate-700 ring-1 ring-slate-100 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-800')}>
                 <span className={cn('flex h-7 w-7 items-center justify-center rounded-xl text-[10px] font-extrabold', group === null ? 'bg-white/15 text-current' : toneOf(group || 'Lainnya'), group === null && !on && 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300')}>{group === null ? '✦' : initials(group || 'Lainnya')}</span>
                 {label}<span className={cn('text-[11px] font-semibold', on ? 'text-white/60' : 'text-slate-400')}>{n}</span>
               </button>
@@ -189,21 +209,39 @@ function Catalog({ products, lines, onAdd }: { products: ShopProduct[]; lines: L
               <span className="text-[12px] font-semibold text-slate-400">{items.length} pilihan</span>
             </p>
           )}
-          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {items.map(({ p, i }) => {
-              const n = qtyOf(p);
-              return (
-                <li key={i}>
-                  <button type="button" onClick={() => onAdd(p)} aria-label={`Tambah ${productLabel(p)} ke struk`} className={cn('relative flex h-full w-full flex-col items-start rounded-2xl p-3 text-left ring-1 transition-all active:scale-[0.97]', n ? 'bg-emerald-50 ring-2 ring-emerald-500 dark:bg-emerald-500/10' : 'bg-slate-50 ring-slate-100 hover:bg-white hover:ring-violet-300 dark:bg-slate-800/60 dark:ring-slate-800 dark:hover:bg-slate-800')}>
-                    {n > 0 && <span className="absolute right-2 top-2 flex h-6 min-w-6 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[11px] font-extrabold text-white">×{n}</span>}
-                    <span className="line-clamp-2 pr-6 text-[14px] font-bold leading-snug text-slate-900 dark:text-white">{p.name}</span>
-                    {p.unit && <span className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">{p.unit}</span>}
-                    <span className="mt-auto pt-2 text-[15px] font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">{formatIDR(p.price)}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          {style.layout === 'list' ? (
+            <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+              {items.map(({ p, i }) => {
+                const n = qtyOf(p);
+                return (
+                  <li key={i}>
+                    <button type="button" onClick={() => onAdd(p)} aria-label={`Tambah ${productLabel(p)} ke struk`} className={cn('flex w-full items-center gap-3 rounded-xl px-2 py-3 text-left transition-colors', n ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60')}>
+                      <span className="min-w-0 flex-1"><span className="block truncate text-[14px] font-bold text-slate-900 dark:text-white">{p.name}</span>{style.showUnit && p.unit && <span className="block text-[11px] text-slate-500 dark:text-slate-400">{p.unit}</span>}</span>
+                      <span className="shrink-0 text-[14px] font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">{formatIDR(p.price)}</span>
+                      <span className={cn('flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-extrabold', n ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 dark:bg-slate-800')}>{n ? `×${n}` : <Plus size={14} />}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <ul className={cn('grid gap-2', style.layout === 'compact' ? COLS_COMPACT[style.columns] : cn('grid-cols-2', COLS[style.columns]))}>
+              {items.map(({ p, i }) => {
+                const n = qtyOf(p);
+                const compact = style.layout === 'compact';
+                return (
+                  <li key={i}>
+                    <button type="button" onClick={() => onAdd(p)} aria-label={`Tambah ${productLabel(p)} ke struk`} className={cn('relative flex h-full w-full flex-col items-start rounded-2xl text-left transition-all active:scale-[0.97]', compact ? 'p-2' : 'p-3', n ? 'bg-emerald-50 ring-2 ring-emerald-500 dark:bg-emerald-500/10' : CARD[style.card] ?? CARD.soft)}>
+                      {n > 0 && <span className={cn('absolute flex min-w-6 items-center justify-center rounded-full bg-emerald-600 px-1.5 font-extrabold text-white', compact ? 'right-1 top-1 h-5 text-[10px]' : 'right-2 top-2 h-6 text-[11px]')}>×{n}</span>}
+                      <span className={cn('line-clamp-2 font-bold leading-snug text-slate-900 dark:text-white', compact ? 'pr-5 text-[12px]' : 'pr-6 text-[14px]')}>{p.name}</span>
+                      {style.showUnit && p.unit && !compact && <span className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">{p.unit}</span>}
+                      <span className={cn('mt-auto font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300', compact ? 'pt-1 text-[12px]' : 'pt-2 text-[15px]')}>{formatIDR(p.price)}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
       ))}
     </section>
@@ -262,7 +300,7 @@ function Struk({ shop, lines, sum, onAdd, setQty, clear, onDone, inSheet, onNew 
         ...(total !== sum ? [`Potongan: −${formatIDR(Math.max(0, sum - total))}`] : []),
         `*Total: ${formatIDR(total)}*`,
         '',
-        'Terima kasih sudah belanja! 🙏',
+        shop.style.receiptFooter || 'Terima kasih sudah belanja! 🙏',
       ].join('\n');
       setDone({ text, amount: total, buyer: buyer.trim() });
       onDone(`Penjualan ${formatIDR(total)} tercatat & masuk rekening.`);
