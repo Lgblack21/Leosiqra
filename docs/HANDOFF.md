@@ -4,13 +4,13 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-05 (live #127; WIP claude/usahaku-web: import harga dari website, belum dites)
+Terakhir diperbarui: 2026-11-05 (live #127; claude/usahaku-web: Usahaku › Website siap deploy, tunggu "gas")
 
 ## Siapa sedang kerja
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| Akun A | jeda (limit mingguan, 2026-11-05) | claude/usahaku-web | Usahaku › website (WIP) — **akun berikutnya silakan lanjut** |
+| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | Usahaku › website — siap deploy |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,24 +18,22 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-05 (branch claude/usahaku-web) — WIP, BELUM dites & BELUM deploy (sesi berhenti karena limit mingguan).**
-  - Permintaan Bos: (1) Opsi A — user bikin tampilan website SENDIRI di Pabrik.AI (app.vantis.sh): Usahaku menyediakan
-    "Salin brief" + "Buka Pabrik.AI" + tempel tautan hasil; (2) kalau sudah punya situs: tempel tautan → AI kita membaca
-    daftar harga di website itu → usulan produk (user konfirmasi Ganti/Tambah).
-  - SUDAH ditulis (Worker, tsc bersih, BELUM dites): `POST /api/member/shops/:id/import-prices {url?}` →
-    `fetchPublicPage` (https saja, tolak IP/host internal/leosiqra.com/workers.dev, redirect manual dicek tiap lompatan
-    maks 4, ≤400 KB, timeout 8 dtk) → `pageHtmlToText` (+ JSON-LD/meta) → kalau teks < 300 karakter (situs dirender JS,
-    mis. buatan AI builder) cadangan `https://r.jina.ai/<url>` (env `SHOP_IMPORT_READER=false` mematikan) → AI ekstrak
-    produk Rupiah (teks halaman = data, bukan instruksi) → `sanitizeShopProducts`. Kuota = `shopIdeaQuota` (5/hari,
-    dikembalikan kalau gagal). Belum ada UI.
-  - BELUM: UI di `UsahaView.tsx` ShopDetail — bagian "Website": brief markdown (nama, tagline, produk+harga, tombol
-    `wa.me/<62…>?text=`, cara bayar, area, mobile-first, tanpa login/payment gateway, minta tautan PUBLIK bukan editor),
-    tombol Salin brief / Buka Pabrik.AI (https://app.vantis.sh), kolom tautan (pindahkan dari ContactForm), tombol
-    "Ambil daftar harga dari website" → pratinjau produk → Ganti semua / Tambahkan. Tahap "Promosi" → "Online"
-    (link_url ada ATAU katalog dibagikan). `shopService.importPrices(id, url)`.
-  - Tes lokal yang perlu: kasus tautan diblokir (http, localhost, 127.0.0.1, leosiqra.com, *.internal, tautan editor
-    `/studio?sessionId=`), halaman publik biasa, halaman JS → pembaca cadangan, mock AI (harga "Rp22.000" → 22000,
-    harga 0 dibuang). Tanpa migrasi.
+- **2026-11-05 (branch claude/usahaku-web) — Usahaku › Website SELESAI & dites lokal, BELUM deploy (tunggu "gas"). Tanpa SQL baru.**
+  - Bagian "Website" di ShopDetail (`WebsiteSection`, `UsahaView.tsx`): belum ada link → kotak "Belum punya website?"
+    (Salin brief markdown `websiteBrief()` di `shopService.ts` + Buka Pabrik.AI `https://app.vantis.sh` + Lihat isi brief),
+    kolom tautan (DIPINDAH dari ContactForm), "Ambil daftar harga dari website" → pratinjau → Tambahkan (nama sama =
+    harga ikut website, sisanya ditambah, maks 20) / Ganti semua / batal. Tahap "Promosi" → "Online" (`promotedAt` ATAU
+    `linkUrl`).
+  - Worker `POST /api/member/shops/:id/import-prices` (lihat kode: `fetchPublicPage`, `pageHtmlToText`, cadangan
+    r.jina.ai, env `SHOP_IMPORT_READER=false` mematikan). Tambahan sesi ini: usaha bukan milik user → 404 sebelum fetch;
+    `shopMoney` membuang sen ",00"/".00" dulu ("Rp1.500.000,00" → 1.500.000, dulu jadi 150 juta).
+  - Dites lokal (wrangler + mock halaman/jina/AI): ditolak → http, localhost, 127.0.0.1, [::1], 2130706433,
+    leosiqra.com, *.internal, redirect ke 127.0.0.1, `/studio?sessionId=`, 403, bukan HTML — kuota TIDAK terpotong;
+    redirect ke halaman toko OK; halaman JS → `via: pembaca`; "Rp22.000" → 22000, harga 0 dibuang, `<script>` dinetralkan;
+    tanpa sesi 401; kuota 5/hari menolak ke-6. UI Playwright web + HP (`/membership/ladang#usaha`, `/app/ladang#usaha`):
+    salin brief, tautan editor ditolak, Tambahkan & Ganti semua tersimpan, tahap jadi Online, 0 error JS.
+  - **Belum**: AI & situs ASLI (r.jina.ai dan Pabrik.AI tidak bisa dijangkau dari sandbox). Rate-limit AI (12/menit)
+    ikut terpakai oleh permintaan yang ditolak validasi — sengaja dibiarkan (murah, mencegah spam).
 - **2026-11-04 (branch claude/usahaku) — Usahaku + tab Ringkas + Jual pakai foto & Sedang dijual, live #127.**
   - Tabel `shops` & `listings` dibuat Bos di D1 Console pakai versi PENDEK (CREATE minimal + ALTER ADD COLUMN, tanpa
     FK/DEFAULT — baris panjang & tanda kutip rusak saat ditempel). Isinya setara file 0027/0028; hapus user/reset tetap

@@ -9479,7 +9479,8 @@ Angka tanpa titik/koma. comparables maks 6, HANYA dari hasil pencarian (kosongka
   }
   const money = (v: unknown) => {
     // Rupiah tanpa desimal: "4.500.000" / "Rp4,5jt"? → hanya digit (string berformat titik ribuan).
-    const n = Math.round(Number(typeof v === "string" ? v.replace(/\D/g, "") : v));
+    // "Rp1.500.000,00" → 1500000 (sen ",00"/".00" dibuang dulu, baru titik ribuan).
+  const n = Math.round(Number(typeof v === "string" ? v.trim().replace(/[.,]\d{1,2}$/, "").replace(/\D/g, "") : v));
     return Number.isFinite(n) && n > 0 && n <= 1e11 ? n : null;
   };
   const [low, fair, high] = [money(p.price_low), money(p.price_fair), money(p.price_high)].filter((n): n is number => n !== null).sort((a, b) => a - b).concat([NaN, NaN, NaN]).slice(0, 3) as number[];
@@ -9611,7 +9612,8 @@ const shopsTableMissing = (error: unknown) => error instanceof Error && /no such
 const SHOP_COLUMNS = "id, name, tagline, description, emoji, products_json, plan_json, contact_wa, payment_note, area, link_url, promoted_at, created_at, updated_at";
 const shopText = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/[\u0000-\u001f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, max) : "");
 const shopMoney = (v: unknown) => {
-  const n = Math.round(Number(typeof v === "string" ? v.replace(/\D/g, "") : v));
+  // "Rp1.500.000,00" → 1500000 (sen ",00"/".00" dibuang dulu, baru titik ribuan).
+  const n = Math.round(Number(typeof v === "string" ? v.trim().replace(/[.,]\d{1,2}$/, "").replace(/\D/g, "") : v));
   return Number.isFinite(n) && n >= 0 && n <= 1e10 ? n : null;
 };
 type ShopProduct = { name: string; price: number; unit: string };
@@ -9873,6 +9875,7 @@ async function handleShopImportPrices(request: Request, env: Env, userId: string
   if (!(await checkAiParseRateLimit(env, userId))) return json({ error: "Terlalu banyak permintaan AI. Coba lagi dalam beberapa saat." }, { status: 429 });
   const raw = await parseJson<{ url?: unknown }>(request);
   const row = await env.DB.prepare("SELECT link_url FROM shops WHERE id = ? AND user_id = ?").bind(shopId, userId).first<{ link_url: string | null }>();
+  if (!row) return json({ error: "Usaha tidak ditemukan." }, { status: 404 });
   const link = sanitizeShopLink(typeof raw.url === "string" && raw.url.trim() ? raw.url : row?.link_url ?? "");
   if (!link.ok) return json({ error: link.error }, { status: 400 });
   if (!link.url) return json({ error: "Tempel dulu tautan website tokomu." }, { status: 400 });

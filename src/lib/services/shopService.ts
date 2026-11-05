@@ -79,6 +79,10 @@ export const shopService = {
     await cloudflareApi(`/api/member/shops/${id}`, { method: 'DELETE' });
     notifyCollectionChanged('shops');
   },
+  /** AI membaca daftar harga di website (USULAN — belum disimpan). */
+  async importPrices(id: string, url?: string): Promise<{ products: ShopProduct[]; source: string; via: 'langsung' | 'pembaca'; shopName: string | null }> {
+    return cloudflareApi(`/api/member/shops/${id}/import-prices`, { method: 'POST', json: url ? { url } : {} });
+  },
   async sale(id: string, input: { requestId: string; amount: number; qty: number; product?: string; accountId: string; date?: string }) {
     await cloudflareApi(`/api/member/shops/${id}/sale`, { method: 'POST', json: { request_id: input.requestId, amount: input.amount, qty: input.qty, product: input.product, account_id: input.accountId, date: input.date } });
     notifyCollectionChanged('transactions');
@@ -99,4 +103,29 @@ export const catalogText = (s: Shop, fmt: (n: number) => string) => {
   if (s.contactWa) lines.push('', `Pesan: https://wa.me/${s.contactWa}?text=${encodeURIComponent(`Halo ${s.name}, mau pesan`)}`);
   if (s.linkUrl) lines.push(`Toko: ${s.linkUrl}`);
   return lines.filter((l) => l !== undefined).join('\n').replace(/\n{3,}/g, '\n\n');
+};
+
+export const PABRIK_AI_URL = 'https://app.vantis.sh';
+/** Brief untuk dibuatkan website oleh AI builder (Pabrik.AI) — tanpa data keuangan. */
+export const websiteBrief = (s: Shop, fmt: (n: number) => string) => {
+  const order = s.contactWa ? `https://wa.me/${s.contactWa}?text=${encodeURIComponent(`Halo ${s.name}, mau pesan`)}` : '';
+  return [
+    `# Buatkan website toko: ${s.name}`,
+    s.tagline && `Tagline: ${s.tagline}`,
+    s.description && `Tentang: ${s.description}`,
+    '',
+    '## Produk & harga',
+    ...(s.products.length ? s.products.map((p) => `- ${p.name} — ${fmt(p.price)}${p.unit ? ` ${p.unit}` : ''}`) : ['- (isi produk di sini)']),
+    '',
+    '## Cara pesan & bayar',
+    order ? `- Semua tombol "Pesan" membuka WhatsApp: ${order}` : '- Tombol "Pesan" membuka WhatsApp penjual',
+    s.paymentNote && `- Cara bayar: ${s.paymentNote}`,
+    s.area && `- Area layanan: ${s.area}`,
+    '',
+    '## Ketentuan',
+    '- Satu halaman, mobile-first (kebanyakan pembeli buka dari HP), bahasa Indonesia, cepat dimuat.',
+    '- Tampilkan daftar produk dengan harga dalam Rupiah sebagai teks biasa (bukan gambar).',
+    '- Tanpa login, tanpa keranjang/payment gateway — pemesanan cukup lewat WhatsApp.',
+    '- Setelah jadi, berikan tautan PUBLIK yang bisa dibuka pembeli (bukan tautan editor).',
+  ].filter((l) => typeof l === 'string').join('\n').replace(/\n{3,}/g, '\n\n').trim();
 };

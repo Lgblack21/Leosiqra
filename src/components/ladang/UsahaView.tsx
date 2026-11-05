@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Check, Copy, Download, Link2, Loader2, MessageCircle, Plus, Shuffle, Sparkles, Store, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Check, Copy, Download, ExternalLink, Globe, Link2, Loader2, MessageCircle, Plus, Shuffle, Sparkles, Store, Trash2, Wand2, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { shopService, catalogText, prettyWa, type Shop, type ShopIdea, type ShopProduct } from '@/lib/services/shopService';
+import { shopService, catalogText, prettyWa, websiteBrief, PABRIK_AI_URL, type Shop, type ShopIdea, type ShopProduct } from '@/lib/services/shopService';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
 import { accountService } from '@/lib/services/accountService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
@@ -14,14 +14,15 @@ import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
 // Ladangku › Usaha (Usahaku): AI menyusun 3 rencana usaha dari "aku bisa …" →
 // simpan jadi usaha → produk & kontak → katalog siap sebar (teks WA, gambar PNG,
 // tautan pesan wa.me) → catat penjualan (pemasukan + saldo, atomik di server).
-// Tahap: Rencana → Katalog → Promosi → Jualan. Tidak ada halaman publik.
+// Tahap: Rencana → Katalog → Online → Jualan. Leosiqra tidak meng-host halaman publik;
+// website dibuat user sendiri (brief → Pabrik.AI), lalu AI bisa membaca daftar harganya.
 
 const STARTERS = ['Masakan rumahan', 'Desain', 'Les privat', 'Preloved', 'Kerajinan', 'Foto', 'Top up game'];
-const STAGES = ['Rencana', 'Katalog', 'Promosi', 'Jualan'] as const;
+const STAGES = ['Rencana', 'Katalog', 'Online', 'Jualan'] as const;
 const monthKey = (d: Date | string) => toLocalDateString(new Date(d)).slice(0, 7);
 const amt = (t: Transaction) => Number(t.amountIDR) || Number(t.amount) || 0;
 const short = (n: number) => (n >= 1e6 ? `Rp${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 1 })} jt` : n >= 1e3 ? `Rp${Math.round(n / 1e3)} rb` : formatIDR(n));
-export const stageOf = (s: Shop, sales: number) => (sales > 0 ? 3 : s.promotedAt ? 2 : s.contactWa && s.products.length ? 1 : 0);
+export const stageOf = (s: Shop, sales: number) => (sales > 0 ? 3 : s.promotedAt || s.linkUrl ? 2 : s.contactWa && s.products.length ? 1 : 0);
 
 export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToast: (m: string) => void }) {
   const [shops, setShops] = useState<Shop[] | null>(null);
@@ -248,7 +249,7 @@ function PlanCard({ idea }: { idea: { name: string; emoji?: string; tagline?: st
 
 // ── Detail usaha ─────────────────────────────────────────────────────────────
 function ShopDetail({ shop, sales, onToast, onDeleted }: { shop: Shop; sales: Transaction[]; onToast: (m: string) => void; onDeleted: () => void }) {
-  const [section, setSection] = useState<'' | 'kontak' | 'produk' | 'jual'>(shop.contactWa ? '' : 'kontak');
+  const [section, setSection] = useState<'' | 'kontak' | 'produk' | 'jual' | 'web'>(shop.contactWa ? '' : 'kontak');
   const [confirmDel, setConfirmDel] = useState(false);
   const now = toLocalDateString().slice(0, 7);
   const month = sales.filter((t) => monthKey(t.date) === now);
@@ -302,7 +303,6 @@ function ShopDetail({ shop, sales, onToast, onDeleted }: { shop: Shop; sales: Tr
             <p>WhatsApp {prettyWa(shop.contactWa)}</p>
             {shop.paymentNote && <p className="text-slate-500 dark:text-slate-400">Bayar: {shop.paymentNote}</p>}
             {shop.area && <p className="text-slate-500 dark:text-slate-400">Area: {shop.area}</p>}
-            {shop.linkUrl && <a href={shop.linkUrl} target="_blank" rel="noopener noreferrer nofollow" className="mt-1 inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400"><Link2 size={13} /> {shop.linkUrl.replace(/^https:\/\//, '').slice(0, 50)}</a>}
           </div>
         )}
       </section>
@@ -332,6 +332,8 @@ function ShopDetail({ shop, sales, onToast, onDeleted }: { shop: Shop; sales: Tr
         )}
       </section>
 
+      <WebsiteSection shop={shop} editing={section === 'web'} setEditing={(v) => setSection(v ? 'web' : '')} onToast={onToast} />
+
       <details className="rounded-3xl ring-1 ring-slate-100 p-4 dark:ring-slate-800">
         <summary className="cursor-pointer text-[14px] font-extrabold text-slate-900 dark:text-white">Rencananya</summary>
         <div className="mt-3"><PlanCard idea={shop} /></div>
@@ -358,13 +360,12 @@ function ContactForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: strin
   const [wa, setWa] = useState(prettyWa(shop.contactWa));
   const [pay, setPay] = useState(shop.paymentNote ?? '');
   const [area, setArea] = useState(shop.area ?? '');
-  const [link, setLink] = useState(shop.linkUrl ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const save = async () => {
     setBusy(true);
     setError('');
-    try { await shopService.update(shop.id, { contactWa: wa.trim(), paymentNote: pay.trim(), area: area.trim(), linkUrl: link.trim() }); onDone('Kontak disimpan.'); } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal menyimpan.'); setBusy(false); }
+    try { await shopService.update(shop.id, { contactWa: wa.trim(), paymentNote: pay.trim(), area: area.trim() }); onDone('Kontak disimpan.'); } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal menyimpan.'); setBusy(false); }
   };
   return (
     <div className="mt-3 space-y-3">
@@ -372,9 +373,105 @@ function ContactForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: strin
       <label className="block"><span className={labelCls}>Nomor WhatsApp (untuk pembeli)</span><input value={wa} onChange={(e) => setWa(e.target.value)} inputMode="tel" placeholder="0812-3456-7890" className={fieldCls} /></label>
       <label className="block"><span className={labelCls}>Cara bayar</span><input value={pay} onChange={(e) => setPay(e.target.value)} maxLength={120} placeholder="QRIS / transfer BCA" className={fieldCls} /><span className="mt-1 block px-1 text-[11px] text-slate-400">Jangan pernah tulis PIN, password, atau OTP.</span></label>
       <label className="block"><span className={labelCls}>Area layanan</span><input value={area} onChange={(e) => setArea(e.target.value)} maxLength={60} placeholder="Jakarta Selatan / online" className={fieldCls} /></label>
-      <label className="block"><span className={labelCls}>Toko online (opsional)</span><input value={link} onChange={(e) => setLink(e.target.value)} inputMode="url" placeholder="https://shopee.co.id/tokomu" className={fieldCls} /><span className="mt-1 block px-1 text-[11px] text-slate-400">Shopee, Tokopedia, Linktree, atau websitemu — tautan publik, bukan tautan editor.</span></label>
       <FormButtons busy={busy} onSave={save} onCancel={onCancel} />
     </div>
+  );
+}
+
+// ── Website: bikin sendiri di Pabrik.AI (brief dari Usahaku) atau tempel situs yang
+// sudah ada → AI membaca daftar harganya → user memilih Ganti semua / Tambahkan.
+function WebsiteSection({ shop, editing, setEditing, onToast }: { shop: Shop; editing: boolean; setEditing: (v: boolean) => void; onToast: (m: string) => void }) {
+  const [link, setLink] = useState(shop.linkUrl ?? '');
+  const [busy, setBusy] = useState<'' | 'save' | 'read' | 'apply'>('');
+  const [error, setError] = useState('');
+  const [found, setFound] = useState<{ products: ShopProduct[]; source: string } | null>(null);
+  const [showBrief, setShowBrief] = useState(false);
+  const brief = websiteBrief(shop, formatIDR);
+  const btn = 'flex items-center justify-center gap-1.5 rounded-full bg-slate-100 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700';
+
+  const copyBrief = async () => {
+    try { await navigator.clipboard.writeText(brief); onToast('Brief tersalin — tempel di Pabrik.AI.'); } catch { setShowBrief(true); onToast('Tidak bisa menyalin otomatis — salin manual dari kotak brief.'); }
+  };
+  const saveLink = async () => {
+    setBusy('save');
+    setError('');
+    try { await shopService.update(shop.id, { linkUrl: link.trim() }); setEditing(false); onToast(link.trim() ? 'Tautan website disimpan.' : 'Tautan website dihapus.'); } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal menyimpan.'); }
+    setBusy('');
+  };
+  const read = async () => {
+    const url = (shop.linkUrl && !editing ? shop.linkUrl : link).trim(); // kolom tampil = pakai isinya
+    if (!url) { setEditing(true); setError('Tempel dulu tautan website tokomu.'); return; }
+    setBusy('read');
+    setError('');
+    setFound(null);
+    try { const r = await shopService.importPrices(shop.id, url); setFound({ products: r.products, source: r.source }); } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal membaca website.'); }
+    setBusy('');
+  };
+  const apply = async (mode: 'ganti' | 'tambah') => {
+    if (!found) return;
+    const key = (n: string) => n.trim().toLowerCase();
+    const incoming = new Map(found.products.map((p) => [key(p.name), p]));
+    // Tambahkan: produk lama yang namanya sama ikut harga website; sisanya ditambah di belakang (maks 20).
+    const products = mode === 'ganti' ? found.products : [...shop.products.map((p) => incoming.get(key(p.name)) ?? p), ...found.products.filter((p) => !shop.products.some((x) => key(x.name) === key(p.name)))].slice(0, 20);
+    setBusy('apply');
+    try {
+      await shopService.update(shop.id, { products, ...(!shop.linkUrl && link.trim() ? { linkUrl: link.trim() } : {}) });
+      setFound(null);
+      onToast(mode === 'ganti' ? `${products.length} produk dari website dipakai.` : `Daftar produk diperbarui (${products.length}).`);
+    } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal menyimpan produk.'); }
+    setBusy('');
+  };
+
+  return (
+    <section className="rounded-3xl ring-1 ring-slate-100 p-4 dark:ring-slate-800">
+      <div className="flex items-center justify-between gap-2">
+        <p className="flex items-center gap-1.5 text-[14px] font-extrabold text-slate-900 dark:text-white"><Globe size={16} className="text-violet-500" /> Website</p>
+        {shop.linkUrl && !editing && <button type="button" onClick={() => { setLink(shop.linkUrl ?? ''); setEditing(true); }} className="text-[12px] font-bold text-violet-600 dark:text-violet-300">Ubah</button>}
+      </div>
+      {error && <p role="alert" className="mt-2 text-[12px] font-semibold text-rose-600">{error}</p>}
+
+      {shop.linkUrl && !editing ? (
+        <a href={shop.linkUrl} target="_blank" rel="noopener noreferrer nofollow" className="mt-2 flex items-center gap-2 rounded-2xl bg-emerald-50 px-3 py-2.5 text-[13px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+          <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" /><span className="min-w-0 flex-1 truncate">{shop.linkUrl.replace(/^https:\/\//, '')}</span><ExternalLink size={14} className="shrink-0" />
+        </a>
+      ) : (
+        <>
+          {!shop.linkUrl && (
+            <div className="mt-2 rounded-2xl bg-gradient-to-br from-violet-50 to-fuchsia-50 p-3 dark:from-violet-500/10 dark:to-fuchsia-500/10">
+              <p className="text-[13px] font-bold text-slate-900 dark:text-white">Belum punya website?</p>
+              <p className="mt-0.5 text-[12px] text-slate-600 dark:text-slate-300">Salin brief tokomu, tempel di Pabrik.AI, dan website jadi dalam beberapa menit. Leosiqra tidak ikut mengelola situsnya.</p>
+              <div className="mt-2.5 grid grid-cols-2 gap-2">
+                <button type="button" onClick={copyBrief} className={cn(btn, 'bg-white dark:bg-slate-900')}><Copy size={14} /> Salin brief</button>
+                <a href={PABRIK_AI_URL} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 text-[13px] font-bold text-white hover:bg-violet-700"><Wand2 size={14} /> Buka Pabrik.AI</a>
+              </div>
+              <button type="button" onClick={() => setShowBrief((v) => !v)} className="mt-2 text-[11px] font-bold text-violet-600 dark:text-violet-300">{showBrief ? 'Sembunyikan brief' : 'Lihat isi brief'}</button>
+              {showBrief && <pre className="mt-1.5 max-h-48 select-all overflow-y-auto whitespace-pre-wrap rounded-xl bg-white/80 [overflow-wrap:anywhere] p-2.5 font-sans text-[11px] leading-relaxed text-slate-700 dark:bg-slate-900/60 dark:text-slate-200">{brief}</pre>}
+            </div>
+          )}
+          <label className="mt-3 block"><span className={labelCls}>{shop.linkUrl ? 'Tautan website' : 'Sudah punya? Tempel tautannya'}</span><input value={link} onChange={(e) => setLink(e.target.value)} inputMode="url" placeholder="https://tokomu.vantis.app" className={fieldCls} /><span className="mt-1 block px-1 text-[11px] text-slate-400">Website, Shopee, Tokopedia, atau Linktree — tautan publik, bukan tautan editor.</span></label>
+          <div className="mt-2"><FormButtons busy={busy === 'save'} onSave={saveLink} onCancel={shop.linkUrl ? () => { setEditing(false); setError(''); } : undefined} label="Simpan tautan" /></div>
+        </>
+      )}
+
+      {found ? (
+        <div className="mt-3 rounded-2xl ring-1 ring-violet-200 dark:ring-violet-500/30">
+          <p className="px-3 pt-3 text-[12px] font-bold text-violet-700 dark:text-violet-300">{found.products.length} produk ditemukan — cek dulu sebelum dipakai</p>
+          <ul className="mt-1 max-h-56 divide-y divide-slate-100 overflow-y-auto px-3 dark:divide-slate-800">
+            {found.products.map((p) => <li key={p.name} className="flex justify-between gap-3 py-2 text-[13px]"><span className="min-w-0 truncate text-slate-700 dark:text-slate-200">{p.name}{p.unit && <span className="text-slate-400"> · {p.unit}</span>}</span><span className="shrink-0 font-bold tabular-nums text-slate-900 dark:text-white">{formatIDR(p.price)}</span></li>)}
+          </ul>
+          <div className="grid grid-cols-[auto_1fr_1fr] gap-2 p-3">
+            <button type="button" onClick={() => setFound(null)} disabled={Boolean(busy)} aria-label="Batal" className="rounded-full bg-slate-100 px-3.5 text-slate-600 dark:bg-slate-800 dark:text-slate-300"><X size={15} /></button>
+            <button type="button" onClick={() => apply('tambah')} disabled={Boolean(busy)} className={btn}>{busy === 'apply' ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Tambahkan</button>
+            <button type="button" onClick={() => apply('ganti')} disabled={Boolean(busy)} className="flex items-center justify-center gap-1.5 rounded-full bg-slate-900 py-2.5 text-[13px] font-bold text-white disabled:opacity-40 dark:bg-violet-600"><Check size={14} /> Ganti semua</button>
+          </div>
+          <p className="px-3 pb-3 text-[11px] text-slate-400">Tambahkan: produk bernama sama ikut harga website, sisanya ditambah. Ganti semua: daftar lama diganti ({shop.products.length} → {found.products.length}).</p>
+        </div>
+      ) : (
+        <button type="button" onClick={read} disabled={Boolean(busy)} className={cn(btn, 'mt-3 w-full')}>
+          {busy === 'read' ? <><Loader2 size={14} className="animate-spin" /> Membaca website…</> : <><Sparkles size={14} /> Ambil daftar harga dari website</>}
+        </button>
+      )}
+    </section>
   );
 }
 
