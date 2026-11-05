@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-05 (live #134: webhook website Usahaku + tampilan kasir + MCP Usahaku FREE; migrasi 0029 & 0030 dijalankan)
+Terakhir diperbarui: 2026-11-05 (live #134: webhook website Usahaku + tampilan kasir + MCP Usahaku FREE; migrasi 0030 dijalankan, 0029 belum dikonfirmasi)
 
 ## Siapa sedang kerja
 
