@@ -25,8 +25,9 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     toko di Usahaku; juga dikirim ke desain bebas (`shop.logoUrl`, `shop.categoryImages`).
   - MCP baru `set_catalog_images` (tulis, gratis FREE): merge per kategori, image_url kosong = hapus, melaporkan
     `rejected_not_https` & `warning_unknown_categories`. Editor Tampilan: bagian "Logo & gambar kategori" (tautan
-    manual + kartu "Minta AI-mu memasang gambar"). Catatan: Simpan di editor menyimpan SELURUH tampilan — kalau AI
-    mengubah gambar saat editor terbuka, simpan dari editor akan menimpanya (muat ulang dulu).
+    manual + kartu "Minta AI-mu memasang gambar"). Editor hanya mengirim field yang DIUBAH dan Worker
+    MENGGABUNGKAN dengan style tersimpan (PUT shops/:id style = merge) — perubahan AI via MCP saat editor terbuka
+    tidak tertimpa (dites: AI pasang logo+gambar, editor ganti tema → ketiganya tersimpan).
   - **Akun Bos SENGAJA belum diisi gambar** (Bos mau tes sendiri lewat MCP).
   - Dites lokal (gambar disimulasikan): MCP pasang logo + 2 kategori, http/data:/IP ditolak, kategori tak dikenal
     diperingatkan, hapus per kategori; PUT javascript: dibuang; web+HP: 3 gambar tampil, gambar 404 & tanpa gambar →

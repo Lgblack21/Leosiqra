@@ -9878,6 +9878,12 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
 
     if (!action && request.method === "PUT") {
       const raw = await parseJson<Record<string, unknown>>(request);
+      // Tampilan kasir = GABUNG dengan yang tersimpan (hanya field yang dikirim berubah) —
+      // perubahan AI lewat MCP di field lain tidak tertimpa editor yang dibuka sebelumnya.
+      if (raw.style && typeof raw.style === "object") {
+        const cur = await env.DB.prepare("SELECT style_json FROM shops WHERE id = ? AND user_id = ?").bind(id, userId).first<{ style_json: string | null }>().catch(() => null);
+        if (cur) raw.style = sanitizeKasirStyle(raw.style, parseKasirStyle(cur.style_json));
+      }
       const parsed = sanitizeShopFields(raw, false);
       if (!parsed.ok) return json({ error: parsed.error }, { status: 400 });
       const entries = Object.entries(parsed.fields);

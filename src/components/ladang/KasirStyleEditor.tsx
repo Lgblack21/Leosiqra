@@ -28,7 +28,8 @@ const CARDS: { id: KasirStyle['card']; label: string }[] = [
 
 // onLeave: tutup popup ini dulu — panel Pengaturan (z-80) ada DI BAWAH Modal (z-88).
 export function KasirStyleEditor({ shop, onDone, onToast, onLeave }: { shop: Shop; onDone: (m: string) => void; onToast: (m: string) => void; onLeave: () => void }) {
-  const [st, setSt] = useState<KasirStyle>({ ...KASIR_DEFAULT, ...shop.style });
+  const [initial] = useState<KasirStyle>(() => ({ ...KASIR_DEFAULT, ...shop.style }));
+  const [st, setSt] = useState<KasirStyle>(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [previewCart, setPreviewCart] = useState<Record<number, number>>({});
@@ -45,9 +46,14 @@ export function KasirStyleEditor({ shop, onDone, onToast, onLeave }: { shop: Sho
   const prompt = `Pakai Leosiqra (MCP): ubah tampilan kasir usahaku "${shop.name}" (shop_id ${shop.id}) lewat set_kasir_style. Aku mau: [tulis keinginanmu, mis. tema gelap, katalog kategori (grid kotak game), header ringkas, tombol besar untuk tablet, struk di kiri, kartu ringkas 4 kolom, sambutan "Top up kilat 24 jam", Mobile Legends paling atas].`;
   const save = async () => {
     if (bebas && !st.customHtml.trim()) { setError('Isi kode desain dulu, pakai contoh, atau minta AI-mu mendesain.'); return; }
+    // Kirim HANYA yang diubah di editor ini (server menggabungkan) — supaya perubahan AI-mu
+    // lewat MCP saat editor terbuka tidak tertimpa.
+    const changed = (Object.keys(st) as (keyof KasirStyle)[]).filter((k) => JSON.stringify(st[k]) !== JSON.stringify(initial[k]));
+    if (!changed.length) { onDone('Tidak ada yang diubah.'); return; }
+    const diff = Object.fromEntries(changed.map((k) => [k, st[k]])) as Partial<KasirStyle>;
     setBusy(true);
     setError('');
-    try { await shopService.update(shop.id, { style: st }); onDone('Tampilan kasir disimpan.'); } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal menyimpan.'); setBusy(false); }
+    try { await shopService.update(shop.id, { style: diff as KasirStyle }); onDone('Tampilan kasir disimpan.'); } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal menyimpan.'); setBusy(false); }
   };
 
   return (
