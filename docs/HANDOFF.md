@@ -4,13 +4,13 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-05 (live #128: Usahaku › Website + kasir top up)
+Terakhir diperbarui: 2026-11-05 (live #129: Tagih nyicil, Kekayaan lunas, Usahaku AI/daftar langsung)
 
 ## Siapa sedang kerja
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | Tagih nyicil, Kekayaan lunas, Usahaku AI |
+| — | — | — | (akun B selesai; main = live #129) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-05 (branch claude/usahaku-web) — BELUM deploy (tunggu "gas"). Tanpa SQL.**
+- **2026-11-05 (branch claude/usahaku-web) — **live #129**. Tanpa SQL.**
   - **Tagih › Nyicil**: tombol Nyicil per piutang → nominal (+ chip 25%/50%) → `debtService.pay` (endpoint lama,
     atomik, server memotong kelebihan jadi pelunasan). Progres "Sudah kembali X dari Y". Diuji: 25rb + 30rb + Sudah
     bayar 45rb = 100rb, status lunas, saldo +100rb persis.
