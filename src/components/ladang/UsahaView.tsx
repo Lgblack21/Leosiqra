@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Check, Copy, Download, ExternalLink, Globe, Link2, Loader2, MessageCircle, Plus, Shuffle, Sparkles, Store, Trash2, Wand2, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -415,12 +415,21 @@ function ContactForm({ shop, onDone, onCancel }: { shop: Shop; onDone: (m: strin
 }
 
 // ── Website: bikin sendiri di Pabrik.AI (brief dari Usahaku) atau tempel situs yang
-// sudah ada → AI membaca daftar harganya → user memilih Ganti semua / Tambahkan.
+// sudah ada → Leosiqra mencari halaman game/produk di domain itu (tanpa AI) → user
+// memilih halaman → AI membaca harga per halaman (nama halaman = kategori) → user
+// memilih Ganti semua / Tambahkan.
+type ScanPage = { url: string; title: string };
+type ScanReport = { title: string; n: number; error?: string };
+const pathOf = (u: string) => { try { return new URL(u).pathname; } catch { return u; } };
+const hostOf = (u: string) => { try { return new URL(u).hostname; } catch { return ''; } };
 function WebsiteSection({ shop, editing, setEditing, onToast }: { shop: Shop; editing: boolean; setEditing: (v: boolean) => void; onToast: (m: string) => void }) {
   const [link, setLink] = useState(shop.linkUrl ?? '');
   const [busy, setBusy] = useState<'' | 'save' | 'read' | 'apply'>('');
   const [error, setError] = useState('');
-  const [found, setFound] = useState<{ products: ShopProduct[]; source: string } | null>(null);
+  const [found, setFound] = useState<{ products: ShopProduct[]; source: string; report: ScanReport[]; cut: number } | null>(null);
+  const [scan, setScan] = useState<{ source: string; pages: ScanPage[]; picked: string[] } | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number; title: string; count: number } | null>(null);
+  const stopRef = useRef(false);
   const [showBrief, setShowBrief] = useState(false);
   const brief = websiteBrief(shop, formatIDR);
   const btn = 'flex items-center justify-center gap-1.5 rounded-full bg-slate-100 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700';
@@ -440,8 +449,54 @@ function WebsiteSection({ shop, editing, setEditing, onToast }: { shop: Shop; ed
     setBusy('read');
     setError('');
     setFound(null);
-    try { const r = await shopService.importPrices(shop.id, url); setFound({ products: r.products, source: r.source }); } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal membaca website.'); }
+    setScan(null);
+    try {
+      const r = await shopService.importPages(shop.id, url);
+      if (r.pages.length) setScan({ source: r.source, pages: r.pages, picked: r.pages.map((p) => p.url) });
+      else {
+        // Tidak ada sub-halaman → baca halaman ini saja.
+        const one = await shopService.importPrices(shop.id, url);
+        setFound({ products: one.products, source: one.source, report: [{ title: pathOf(one.source), n: one.products.length }], cut: 0 });
+      }
+    } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal membaca website.'); }
     setBusy('');
+  };
+  // Baca halaman terpilih satu per satu (rate limit AI ditunggu & diulang, kuota habis = berhenti).
+  const crawl = async () => {
+    if (!scan) return;
+    const pages = scan.pages.filter((p) => scan.picked.includes(p.url));
+    if (!pages.length) return;
+    setBusy('read');
+    setError('');
+    stopRef.current = false;
+    const all: ShopProduct[] = [];
+    const report: ScanReport[] = [];
+    let stopMsg = '';
+    for (let k = 0; k < pages.length && !stopRef.current && !stopMsg; k++) {
+      const pg = pages[k];
+      setProgress({ done: k, total: pages.length, title: pg.title, count: all.length });
+      for (let tries = 0; ; tries++) {
+        try {
+          const r = await shopService.importPrices(shop.id, pg.url, pg.title);
+          all.push(...r.products);
+          report.push({ title: pg.title, n: r.products.length });
+        } catch (e) {
+          const m = e instanceof Error && e.message ? e.message : 'Gagal dibaca.';
+          if (/Terlalu banyak permintaan/i.test(m) && tries < 3) { await new Promise((ok) => window.setTimeout(ok, 12000)); continue; }
+          if (/Batas baca website/i.test(m)) stopMsg = m;
+          report.push({ title: pg.title, n: 0, error: m });
+        }
+        break;
+      }
+    }
+    const seen = new Set<string>();
+    const unique = all.filter((p) => { const k = `${p.group ?? ''}|${p.name}`.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+    setProgress(null);
+    setScan(null);
+    setBusy('');
+    if (stopMsg) setError(`${stopMsg} Hasil yang sudah terbaca tetap bisa dipakai.`);
+    if (unique.length) setFound({ products: unique.slice(0, PRODUCTS_MAX), source: scan.source, report, cut: Math.max(0, unique.length - PRODUCTS_MAX) });
+    else if (!stopMsg) setError('Tidak ada harga yang terbaca dari halaman-halaman itu. Coba pilih halaman lain, atau ketik manual.');
   };
   const apply = async (mode: 'ganti' | 'tambah') => {
     if (!found) return;
@@ -466,7 +521,9 @@ function WebsiteSection({ shop, editing, setEditing, onToast }: { shop: Shop; ed
       </div>
       {error && <p role="alert" className="mt-2 text-[12px] font-semibold text-rose-600">{error}</p>}
 
-      {shop.linkUrl && !editing ? (
+      {(scan || progress || found) && !shop.linkUrl ? (
+        <p className="mt-2 flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-[13px] font-bold text-slate-700 dark:bg-slate-800/60 dark:text-slate-200"><Globe size={14} className="shrink-0 text-violet-500" /><span className="min-w-0 flex-1 truncate">{link.trim().replace(/^https:\/\//, '')}</span></p>
+      ) : shop.linkUrl && !editing ? (
         <a href={shop.linkUrl} target="_blank" rel="noopener noreferrer nofollow" className="mt-2 flex items-center gap-2 rounded-2xl bg-emerald-50 px-3 py-2.5 text-[13px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
           <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" /><span className="min-w-0 flex-1 truncate">{shop.linkUrl.replace(/^https:\/\//, '')}</span><ExternalLink size={14} className="shrink-0" />
         </a>
@@ -489,9 +546,49 @@ function WebsiteSection({ shop, editing, setEditing, onToast }: { shop: Shop; ed
         </>
       )}
 
-      {found ? (
+      {progress ? (
+        <div className="mt-3 rounded-2xl bg-violet-50 p-3 dark:bg-violet-500/10" role="status" aria-live="polite">
+          <p className="flex items-center gap-2 text-[13px] font-bold text-violet-800 dark:text-violet-200"><Loader2 size={14} className="shrink-0 animate-spin" /><span className="min-w-0 flex-1 truncate">Membaca {progress.title}</span><span className="shrink-0 tabular-nums">{progress.done + 1}/{progress.total}</span></p>
+          <span className="mt-2 block h-2 overflow-hidden rounded-full bg-white dark:bg-slate-900"><span className="block h-full rounded-full bg-violet-500 transition-all" style={{ width: `${((progress.done + 0.5) / progress.total) * 100}%` }} /></span>
+          <p className="mt-1.5 flex items-center justify-between text-[11px] text-violet-800/70 dark:text-violet-200/70"><span>{progress.count} produk terkumpul</span><button type="button" onClick={() => { stopRef.current = true; }} className="font-bold text-violet-700 underline dark:text-violet-300">Berhenti & pakai hasil</button></p>
+        </div>
+      ) : scan ? (
         <div className="mt-3 rounded-2xl ring-1 ring-violet-200 dark:ring-violet-500/30">
-          <p className="px-3 pt-3 text-[12px] font-bold text-violet-700 dark:text-violet-300">{found.products.length} produk ditemukan — cek dulu sebelum dipakai</p>
+          <div className="flex items-center justify-between gap-2 px-3 pt-3">
+            <p className="text-[13px] font-extrabold text-slate-900 dark:text-white">{scan.pages.length} halaman ketemu <span className="font-semibold text-slate-400">· {hostOf(scan.source)}</span></p>
+            <button type="button" onClick={() => setScan({ ...scan, picked: scan.picked.length === scan.pages.length ? [] : scan.pages.map((p) => p.url) })} className="shrink-0 text-[12px] font-bold text-violet-600 dark:text-violet-300">{scan.picked.length === scan.pages.length ? 'Kosongkan' : 'Pilih semua'}</button>
+          </div>
+          <p className="px-3 text-[11px] text-slate-500 dark:text-slate-400">Centang game/produk yang mau diambil harganya.</p>
+          <ul className="mt-2 max-h-72 space-y-1 overflow-y-auto px-2">
+            {scan.pages.map((pg) => {
+              const on = scan.picked.includes(pg.url);
+              return (
+                <li key={pg.url}>
+                  <label className={cn('flex cursor-pointer items-center gap-2.5 rounded-xl px-2 py-2', on ? 'bg-violet-50 dark:bg-violet-500/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50')}>
+                    <input type="checkbox" checked={on} onChange={() => setScan({ ...scan, picked: on ? scan.picked.filter((u) => u !== pg.url) : [...scan.picked, pg.url] })} className="h-4 w-4 shrink-0 accent-violet-600" />
+                    <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[11px] font-extrabold', toneOf(pg.title))}>{initials(pg.title)}</span>
+                    <span className="min-w-0 flex-1"><span className="block truncate text-[13px] font-bold text-slate-900 dark:text-white">{pg.title}</span><span className="block truncate text-[11px] text-slate-400">{pathOf(pg.url)}</span></span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="grid grid-cols-[auto_1fr] gap-2 p-3">
+            <button type="button" onClick={() => setScan(null)} aria-label="Batal" className="rounded-full bg-slate-100 px-3.5 text-slate-600 dark:bg-slate-800 dark:text-slate-300"><X size={15} /></button>
+            <button type="button" onClick={crawl} disabled={!scan.picked.length} className="flex items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 text-[13px] font-bold text-white hover:bg-violet-700 disabled:opacity-40"><Sparkles size={14} /> Ambil harga {scan.picked.length} halaman</button>
+          </div>
+          <p className="px-3 pb-3 text-[11px] text-slate-400">1 halaman = 1 dari kuota 60 per hari. Butuh ±5–10 detik per halaman.</p>
+        </div>
+      ) : found ? (
+        <div className="mt-3 rounded-2xl ring-1 ring-violet-200 dark:ring-violet-500/30">
+          <p className="px-3 pt-3 text-[13px] font-extrabold text-slate-900 dark:text-white">{found.products.length} produk dari {found.report.filter((r) => r.n > 0).length} halaman</p>
+          <p className="px-3 text-[11px] text-slate-500 dark:text-slate-400">Cek dulu harganya sebelum dipakai.{found.cut > 0 && ` ${found.cut} produk tidak muat (maks ${PRODUCTS_MAX}).`}</p>
+          {found.report.some((r) => !r.n) && (
+            <details className="mx-3 mt-2 rounded-xl bg-amber-50 px-3 py-2 text-[11px] text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+              <summary className="cursor-pointer font-bold">{found.report.filter((r) => !r.n).length} halaman tanpa harga</summary>
+              <ul className="mt-1 space-y-0.5">{found.report.filter((r) => !r.n).map((r) => <li key={r.title}><b>{r.title}</b>{r.error ? ` — ${r.error}` : ''}</li>)}</ul>
+            </details>
+          )}
           <div className="px-3"><ProductList products={found.products} /></div>
           <div className="grid grid-cols-[auto_1fr_1fr] gap-2 p-3">
             <button type="button" onClick={() => setFound(null)} disabled={Boolean(busy)} aria-label="Batal" className="rounded-full bg-slate-100 px-3.5 text-slate-600 dark:bg-slate-800 dark:text-slate-300"><X size={15} /></button>
@@ -502,7 +599,7 @@ function WebsiteSection({ shop, editing, setEditing, onToast }: { shop: Shop; ed
         </div>
       ) : (
         <button type="button" onClick={read} disabled={Boolean(busy)} className={cn(btn, 'mt-3 w-full')}>
-          {busy === 'read' ? <><Loader2 size={14} className="animate-spin" /> Membaca website…</> : <><Sparkles size={14} /> Ambil daftar harga dari website</>}
+          {busy === 'read' ? <><Loader2 size={14} className="animate-spin" /> Mencari halaman produk…</> : <><Sparkles size={14} /> Ambil daftar harga dari website</>}
         </button>
       )}
     </section>

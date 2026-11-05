@@ -10,7 +10,7 @@ Terakhir diperbarui: 2026-11-05 (live #129: Tagih nyicil, Kekayaan lunas, Usahak
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| — | — | — | (akun B selesai; main = live #129) |
+| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | Usahaku: baca semua halaman game |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,6 +18,22 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-05 (branch claude/usahaku-web) — Baca SEMUA halaman game dari website toko, BELUM deploy (tunggu "gas"). Tanpa SQL.**
+  - Permintaan Bos: toko top up (mis. https://cxastore.id/) punya halaman per game (`/id/mobile-legends`) — AI harus
+    membuka semuanya. **cxastore.id TIDAK bisa dibuka dari sandbox** — strukturnya asumsi, perlu dicek di produksi.
+  - Worker baru `POST /api/member/shops/:id/import-pages {url}` (tanpa AI, tanpa kuota, rate-limit biasa): ambil
+    beranda (`fetchDirectHtml`, pengaman SSRF sama) → link `<a href>` (+ alt gambar) → kalau < 3, pembaca r.jina.ai
+    dengan `x-with-links-summary` (markdown, termasuk link bergambar) → `pickShopPages`: domain sama saja, maks 60,
+    buang beranda/`/id`, login/cek transaksi/blog/kebijakan/akun/aset, query & hash dibuang; judul = teks link
+    (kata generik "Beli/Top up/Lagi" → dari URL).
+  - `import-prices` menerima `group` (nama halaman → kategori produk), teks per halaman ≤20 rb karakter, kuota baru
+    terpisah `$.shopImportAi` **60 halaman/hari** (dulu ikut kuota ide 5/hari). `shopQuota()` generik.
+  - UI Website: Ambil daftar harga → daftar halaman (centang, Pilih semua/Kosongkan) → baca satu per satu dengan
+    progres + "Berhenti & pakai hasil" (rate-limit ditunggu 12 dtk, ulang ≤3×; kuota habis = berhenti) → "N produk
+    dari M halaman" + daftar halaman tanpa harga → Ganti semua/Tambahkan. Tanpa sub-halaman → baca halaman itu saja.
+    Selama proses, kotak brief & kolom link disembunyikan (cuma baris alamat).
+  - Dites lokal (mock): 4 halaman ketemu dari beranda berisi login/cek-transaksi/blog/IG/logo/`/id`; halaman tanpa harga
+    → kuota dikembalikan (3 terpakai); situs JS → via pembaca, link bergambar ketemu; web + HP → kasir 3 kategori.
 - **2026-11-05 (branch claude/usahaku-web) — **live #129**. Tanpa SQL.**
   - **Tagih › Nyicil**: tombol Nyicil per piutang → nominal (+ chip 25%/50%) → `debtService.pay` (endpoint lama,
     atomik, server memotong kelebihan jadi pelunasan). Progres "Sudah kembali X dari Y". Diuji: 25rb + 30rb + Sudah

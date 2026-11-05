@@ -9607,6 +9607,7 @@ async function handleItemSell(request: Request, env: Env, userId: string, itemId
 // sebagai pemasukan biasa (related_type 'shop'). Tidak ada halaman publik.
 const SHOPS_MAX_PER_USER = 5;
 const SHOP_IDEA_DAILY_LIMIT = 5;
+const SHOP_IMPORT_DAILY_LIMIT = 60; // halaman website yang dibaca AI per hari (1 halaman game = 1)
 const SHOP_PRODUCTS_MAX = 120; // katalog top up (FF/MLBB/PUBG × nominal) bisa ratusan baris
 const shopsTableMissing = (error: unknown) => error instanceof Error && /no such table: shops/.test(error.message);
 const SHOP_COLUMNS = "id, name, tagline, description, emoji, products_json, plan_json, contact_wa, payment_note, area, link_url, promoted_at, created_at, updated_at";
@@ -9661,25 +9662,29 @@ const sanitizeShopLink = (v: unknown): { ok: true; url: string | null } | { ok: 
   }
   return { ok: true, url: u.href };
 };
-const shopIdeaQuota = async (env: Env, userId: string, delta: 1 | -1) => {
+// key = konstanta di kode (bukan input user) — aman disisipkan ke path JSON.
+const shopQuota = async (env: Env, userId: string, delta: 1 | -1, key: "shopIdeaAi" | "shopImportAi", limit: number) => {
   const today = todayWIB();
   if (delta === -1) {
     await env.DB.prepare(
-      `UPDATE users SET metadata_json = json_set(metadata_json, '$.shopIdeaAi.n', MAX(0, COALESCE(json_extract(metadata_json, '$.shopIdeaAi.n'), 1) - 1))
-        WHERE id = ? AND json_valid(metadata_json) AND json_extract(metadata_json, '$.shopIdeaAi.day') = ?`
+      `UPDATE users SET metadata_json = json_set(metadata_json, '$.${key}.n', MAX(0, COALESCE(json_extract(metadata_json, '$.${key}.n'), 1) - 1))
+        WHERE id = ? AND json_valid(metadata_json) AND json_extract(metadata_json, '$.${key}.day') = ?`
     ).bind(userId, today).run();
     return true;
   }
   const res = await env.DB.prepare(
-    `UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.shopIdeaAi',
-            json_object('day', ?, 'n', CASE WHEN json_valid(metadata_json) AND json_extract(metadata_json, '$.shopIdeaAi.day') = ?
-                                           THEN COALESCE(json_extract(metadata_json, '$.shopIdeaAi.n'), 0) + 1 ELSE 1 END))
+    `UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.${key}',
+            json_object('day', ?, 'n', CASE WHEN json_valid(metadata_json) AND json_extract(metadata_json, '$.${key}.day') = ?
+                                           THEN COALESCE(json_extract(metadata_json, '$.${key}.n'), 0) + 1 ELSE 1 END))
       WHERE id = ?
-        AND NOT (json_valid(metadata_json) AND json_extract(metadata_json, '$.shopIdeaAi.day') = ?
-                 AND COALESCE(json_extract(metadata_json, '$.shopIdeaAi.n'), 0) >= ?)`
-  ).bind(today, today, userId, today, SHOP_IDEA_DAILY_LIMIT).run();
+        AND NOT (json_valid(metadata_json) AND json_extract(metadata_json, '$.${key}.day') = ?
+                 AND COALESCE(json_extract(metadata_json, '$.${key}.n'), 0) >= ?)`
+  ).bind(today, today, userId, today, limit).run();
   return res.meta.changes > 0;
 };
+
+const shopIdeaQuota = (env: Env, userId: string, delta: 1 | -1) => shopQuota(env, userId, delta, "shopIdeaAi", SHOP_IDEA_DAILY_LIMIT);
+const shopImportQuota = (env: Env, userId: string, delta: 1 | -1) => shopQuota(env, userId, delta, "shopImportAi", SHOP_IMPORT_DAILY_LIMIT);
 
 async function handleShopIdeas(request: Request, env: Env, userId: string) {
   if (!(await checkAiParseRateLimit(env, userId))) return json({ error: "Terlalu banyak permintaan AI. Coba lagi dalam beberapa saat." }, { status: 429 });
@@ -9841,43 +9846,110 @@ const pageHtmlToText = (html: string) => {
     .replace(/[ \t\r\f\v]+/g, " ").replace(/\n\s*\n+/g, "\n").trim();
   return { text: [meta, body].filter(Boolean).join("\n").slice(0, 30000), jsonLd };
 };
-const fetchPublicPage = async (env: Env, start: string): Promise<{ ok: true; text: string; finalUrl: string; via: "langsung" | "pembaca" } | { ok: false; error: string }> => {
+const BOT_UA = "Mozilla/5.0 (compatible; LeosiqraBot/1.0; +https://www.leosiqra.com)";
+const fetchDirectHtml = async (start: string): Promise<{ ok: true; html: string; finalUrl: string } | { ok: false; error: string }> => {
   let url = start;
-  let html = "";
   try {
     for (let hop = 0; hop < 4; hop++) {
       const u = new URL(url);
       if (u.protocol !== "https:" || u.username || u.password || (u.port && u.port !== "443") || isBlockedHost(u.hostname)) return { ok: false, error: "Tautan ini tidak bisa dibaca. Pakai alamat https publik tokomu." };
-      const res = await fetch(u.href, { redirect: "manual", headers: { accept: "text/html,application/xhtml+xml", "user-agent": "Mozilla/5.0 (compatible; LeosiqraBot/1.0; +https://www.leosiqra.com)" }, signal: AbortSignal.timeout(8000) });
+      const res = await fetch(u.href, { redirect: "manual", headers: { accept: "text/html,application/xhtml+xml", "user-agent": BOT_UA }, signal: AbortSignal.timeout(8000) });
       if (res.status >= 300 && res.status < 400 && res.headers.get("location")) { url = new URL(res.headers.get("location")!, u).href; continue; }
       if (res.status === 401 || res.status === 403) return { ok: false, error: "Website ini menolak dibaca (perlu login atau memblokir bot). Pastikan tautannya halaman publik." };
       if (!res.ok) return { ok: false, error: `Website tidak bisa dibuka (kode ${res.status}). Cek lagi tautannya.` };
       const type = res.headers.get("content-type") ?? "";
       if (!/html|text\/plain/i.test(type)) return { ok: false, error: "Tautan ini bukan halaman website." };
-      html = await readCapped(res, PAGE_MAX_BYTES);
-      break;
+      return { ok: true, html: await readCapped(res, PAGE_MAX_BYTES), finalUrl: url };
     }
+    return { ok: false, error: "Tautan ini dialihkan terlalu banyak kali." };
   } catch {
     return { ok: false, error: "Website tidak merespons. Coba lagi sebentar." };
   }
-  const { text, jsonLd } = pageHtmlToText(html);
-  if (text.replace(/\s/g, "").length >= 300 || jsonLd) return { ok: true, text: `${jsonLd ? `JSON-LD:\n${jsonLd}\n\n` : ""}${text}`, finalUrl: url, via: "langsung" };
+};
+// Pembaca cadangan untuk situs yang dirender JavaScript (hanya URL publik yang dikirim).
+const fetchViaReader = async (url: string, withLinks: boolean) => {
+  const res = await fetch(`https://r.jina.ai/${url}`, { headers: { accept: "text/plain", ...(withLinks ? { "x-with-links-summary": "true" } : { "x-return-format": "text" }) }, signal: AbortSignal.timeout(20000) });
+  if (!res.ok) return null;
+  return (await readCapped(res, 200_000)).replace(/[ \t]+/g, " ").replace(/\n\s*\n+/g, "\n").trim();
+};
+const fetchPublicPage = async (env: Env, start: string): Promise<{ ok: true; text: string; finalUrl: string; via: "langsung" | "pembaca" } | { ok: false; error: string }> => {
+  const direct = await fetchDirectHtml(start);
+  if (!direct.ok) return direct;
+  const { text, jsonLd } = pageHtmlToText(direct.html);
+  if (text.replace(/\s/g, "").length >= 300 || jsonLd) return { ok: true, text: `${jsonLd ? `JSON-LD:\n${jsonLd}\n\n` : ""}${text}`.slice(0, 20000), finalUrl: direct.finalUrl, via: "langsung" };
   // Halaman dirender JavaScript → pembaca cadangan.
   if (env.SHOP_IMPORT_READER === "false") return { ok: false, error: "Isi website ini dimuat lewat JavaScript, jadi belum bisa dibaca. Ketik produknya manual dulu ya." };
   try {
-    const res = await fetch(`https://r.jina.ai/${url}`, { headers: { accept: "text/plain", "x-return-format": "text" }, signal: AbortSignal.timeout(20000) });
-    if (!res.ok) return { ok: false, error: "Isi website ini belum bisa dibaca. Ketik produknya manual dulu ya." };
-    const t = (await readCapped(res, 200_000)).replace(/[ \t]+/g, " ").replace(/\n\s*\n+/g, "\n").trim().slice(0, 30000);
+    const t = await fetchViaReader(direct.finalUrl, false);
+    if (t === null) return { ok: false, error: "Isi website ini belum bisa dibaca. Ketik produknya manual dulu ya." };
     if (t.replace(/\s/g, "").length < 80) return { ok: false, error: "Website ini hampir kosong saat dibaca. Pastikan tautannya halaman toko yang sudah online." };
-    return { ok: true, text: t, finalUrl: url, via: "pembaca" };
+    return { ok: true, text: t.slice(0, 20000), finalUrl: direct.finalUrl, via: "pembaca" };
   } catch {
     return { ok: false, error: "Isi website ini belum bisa dibaca. Ketik produknya manual dulu ya." };
   }
 };
 
+// ── Penemu halaman produk (mis. toko top up: beranda → /id/mobile-legends, /id/free-fire …)
+// Hanya link di domain yang sama; halaman akun/transaksi/artikel/kebijakan dibuang.
+const SHOP_PAGES_MAX = 60;
+const NON_PRODUCT_PATH = /(^|\/)(login|masuk|register|daftar|signup|sign-in|logout|cart|keranjang|checkout|invoice|cek-?transaksi|cek-?pesanan|lacak|track(ing)?|riwayat|history|blog|artikel|article|news|berita|faq|bantuan|help|syarat|ketentuan|terms|privacy|privasi|kebijakan|policy|about|tentang|contact|kontak|hubungi|leaderboard|kalkulator|calculator|akun|account|profile|profil|dashboard|member|reseller|api|sitemap|feed|wp-|admin)(\/|$|[.?#-])/i;
+const ASSET_PATH = /\.(png|jpe?g|gif|webp|svg|ico|css|js|json|xml|pdf|zip|mp4|woff2?)$/i;
+const titleFromPath = (path: string) => decodeURIComponent(path.split("/").filter(Boolean).pop() ?? "").replace(/[-_]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()).trim();
+const pickShopPages = (base: URL, links: { href: string; text: string }[]) => {
+  const host = base.hostname.replace(/^www\./, "");
+  const seen = new Set<string>();
+  const out: { url: string; title: string }[] = [];
+  for (const l of links) {
+    let u: URL;
+    try { u = new URL(l.href, base); } catch { continue; }
+    if (u.protocol !== "https:" || u.hostname.replace(/^www\./, "") !== host || u.username || u.password) continue;
+    const path = u.pathname.replace(/\/+$/, "");
+    const segs = path.split("/").filter(Boolean);
+    // Beranda / pilihan bahasa saja (/id, /en) bukan halaman produk.
+    if (!segs.length || (segs.length === 1 && /^[a-z]{2}(-[a-z]{2})?$/i.test(segs[0])) || segs.length > 4) continue;
+    if (ASSET_PATH.test(path) || NON_PRODUCT_PATH.test(path)) continue;
+    const key = `${u.hostname}${path}`.toLowerCase();
+    if (seen.has(key) || `${base.hostname}${base.pathname.replace(/\/+$/, "")}`.toLowerCase() === key) continue;
+    seen.add(key);
+    const text = shopText(l.text.replace(/!\[[^\]]*\]\([^)]*\)/g, " ").replace(/[*_#`]/g, ""), 40);
+    out.push({ url: `https://${u.hostname}${path}`, title: text.length >= 2 && !/^(beli|top ?up|lihat|detail|selengkapnya|klik|lagi|more|semua|all|lainnya|order|pesan)( sekarang| semua)?$/i.test(text) ? text : titleFromPath(path) });
+    if (out.length >= SHOP_PAGES_MAX) break;
+  }
+  return out;
+};
+const htmlLinks = (html: string) =>
+  [...html.matchAll(/<a\b[^>]*\bhref=["']([^"'#][^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi)].map((m) => {
+    const alt = /\balt=["']([^"']+)["']/i.exec(m[2])?.[1] ?? "";
+    return { href: m[1].replace(/&amp;/g, "&"), text: `${m[2].replace(/<[^>]+>/g, " ")} ${alt}`.replace(/\s+/g, " ").trim() };
+  });
+
+async function handleShopImportPages(request: Request, env: Env, userId: string, shopId: string) {
+  if (!(await checkAiParseRateLimit(env, userId))) return json({ error: "Terlalu banyak permintaan. Coba lagi dalam beberapa saat." }, { status: 429 });
+  const raw = await parseJson<{ url?: unknown }>(request);
+  const row = await env.DB.prepare("SELECT link_url FROM shops WHERE id = ? AND user_id = ?").bind(shopId, userId).first<{ link_url: string | null }>();
+  if (!row) return json({ error: "Usaha tidak ditemukan." }, { status: 404 });
+  const link = sanitizeShopLink(typeof raw.url === "string" && raw.url.trim() ? raw.url : row.link_url ?? "");
+  if (!link.ok) return json({ error: link.error }, { status: 400 });
+  if (!link.url) return json({ error: "Tempel dulu tautan website tokomu." }, { status: 400 });
+  const direct = await fetchDirectHtml(link.url);
+  if (!direct.ok) return json({ error: direct.error }, { status: 422 });
+  const base = new URL(direct.finalUrl);
+  let pages = pickShopPages(base, htmlLinks(direct.html));
+  let via: "langsung" | "pembaca" = "langsung";
+  if (pages.length < 3 && env.SHOP_IMPORT_READER !== "false") {
+    const md = await fetchViaReader(direct.finalUrl, true).catch(() => null);
+    if (md) {
+      const more = pickShopPages(base, [...md.matchAll(/\[((?:!\[[^\]]*\]\([^)]*\)|[^\]])*)\]\((https?:\/\/[^)\s]+)\)/g)].map((m) => ({ href: m[2], text: m[1] })));
+      if (more.length > pages.length) { pages = more; via = "pembaca"; }
+    }
+  }
+  return json({ ok: true, source: direct.finalUrl, via, pages });
+}
+
 async function handleShopImportPrices(request: Request, env: Env, userId: string, shopId: string) {
   if (!(await checkAiParseRateLimit(env, userId))) return json({ error: "Terlalu banyak permintaan AI. Coba lagi dalam beberapa saat." }, { status: 429 });
-  const raw = await parseJson<{ url?: unknown }>(request);
+  const raw = await parseJson<{ url?: unknown; group?: unknown }>(request);
+  const groupHint = shopText(raw.group, 40); // nama game/kategori dari penemu halaman
   const row = await env.DB.prepare("SELECT link_url FROM shops WHERE id = ? AND user_id = ?").bind(shopId, userId).first<{ link_url: string | null }>();
   if (!row) return json({ error: "Usaha tidak ditemukan." }, { status: 404 });
   const link = sanitizeShopLink(typeof raw.url === "string" && raw.url.trim() ? raw.url : row?.link_url ?? "");
@@ -9887,7 +9959,7 @@ async function handleShopImportPrices(request: Request, env: Env, userId: string
   if (!openRouter) return json({ error: "AI belum dikonfigurasi. Coba lagi nanti." }, { status: 503 });
   const page = await fetchPublicPage(env, link.url);
   if (!page.ok) return json({ error: page.error }, { status: 422 });
-  if (!(await shopIdeaQuota(env, userId, 1))) return json({ error: `Batas AI Usahaku hari ini (${SHOP_IDEA_DAILY_LIMIT}×) sudah habis. Coba lagi besok.` }, { status: 429 });
+  if (!(await shopImportQuota(env, userId, 1))) return json({ error: `Batas baca website hari ini (${SHOP_IMPORT_DAILY_LIMIT} halaman) sudah habis. Coba lagi besok.`, code: "quota" }, { status: 429 });
   let content = "";
   try {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -9906,7 +9978,7 @@ async function handleShopImportPrices(request: Request, env: Env, userId: string
 Balas HANYA JSON: { "products": [ { "name": <nama produk/paket, maks 80 karakter>, "price": <harga Rupiah angka bulat; kalau rentang ambil yang terendah>, "unit": <satuan singkat kalau ada, mis. "per pcs", "per jam"; selain itu "">, "group": <kategori/judul bagian tempat produk ini berada, mis. nama game "Free Fire", "Mobile Legends", "PUBG Mobile", atau "Kue Kering"; "" kalau halaman tidak berkategori> } ], "currency": "IDR" | "lain", "shop_name": <nama toko kalau terlihat, selain itu null> }
 Aturan: HANYA yang benar-benar tertulis di halaman — jangan menebak/mengarang. Abaikan ongkir, diskon tanpa produk, menu navigasi. Pakai nama kategori yang SAMA persis untuk produk sekategori. Nama produk tanpa mengulang nama kategori (mis. \"70 Diamond\", bukan \"Free Fire 70 Diamond\"). Maks 120 produk. Kalau harga dalam mata uang selain Rupiah, isi currency "lain" dan products kosong.`,
           },
-          { role: "user", content: `Alamat: ${page.finalUrl}\n\nIsi halaman:\n${page.text}` },
+          { role: "user", content: `Alamat: ${page.finalUrl}${groupHint ? `\nKategori halaman ini (dari menu toko): ${groupHint} — pakai sebagai "group" untuk produk di halaman ini.` : ""}\n\nIsi halaman:\n${page.text}` },
         ],
       }),
     });
@@ -9914,7 +9986,7 @@ Aturan: HANYA yang benar-benar tertulis di halaman — jangan menebak/mengarang.
     const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
     content = data.choices?.[0]?.message?.content?.trim() ?? "";
   } catch (error) {
-    await shopIdeaQuota(env, userId, -1).catch(() => undefined);
+    await shopImportQuota(env, userId, -1).catch(() => undefined);
     if (isAiQuotaError(error)) {
       await notifyAiQuotaOnce(env);
       return json({ error: AI_QUOTA_MESSAGE, code: "ai_quota" }, { status: 503 });
@@ -9925,12 +9997,12 @@ Aturan: HANYA yang benar-benar tertulis di halaman — jangan menebak/mengarang.
   let p: { products?: unknown; currency?: unknown; shop_name?: unknown } = {};
   try { p = JSON.parse(stripJsonFences(content.slice(content.indexOf("{"), content.lastIndexOf("}") + 1))); } catch { p = {}; }
   if (p.currency === "lain") {
-    await shopIdeaQuota(env, userId, -1).catch(() => undefined);
+    await shopImportQuota(env, userId, -1).catch(() => undefined);
     return json({ error: "Harga di website ini bukan Rupiah — belum bisa diambil otomatis." }, { status: 422 });
   }
-  const products = sanitizeShopProducts(p.products).filter((x) => x.price > 0);
+  const products = sanitizeShopProducts(p.products).filter((x) => x.price > 0).map((x) => (groupHint && !x.group ? { ...x, group: groupHint } : x));
   if (!products.length) {
-    await shopIdeaQuota(env, userId, -1).catch(() => undefined);
+    await shopImportQuota(env, userId, -1).catch(() => undefined);
     return json({ error: "AI tidak menemukan daftar harga di halaman ini. Coba tautan halaman produk/menu, atau ketik manual." }, { status: 422 });
   }
   return json({ ok: true, products, source: page.finalUrl, via: page.via, shopName: shopText(p.shop_name, 40) || null });
@@ -9994,6 +10066,7 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
     }
     // Catat penjualan: pemasukan + saldo dalam satu batch; request_id anti dobel.
     if (action === "import-prices" && request.method === "POST") return await handleShopImportPrices(request, env, userId, id);
+    if (action === "import-pages" && request.method === "POST") return await handleShopImportPages(request, env, userId, id);
     if (action === "sale" && request.method === "POST") {
       const raw = await parseJson<Record<string, unknown>>(request);
       const amount = typeof raw.amount === "number" && Number.isFinite(raw.amount) ? Math.round(raw.amount) : 0;
