@@ -34,6 +34,8 @@ export type Shop = {
   hookReady: boolean;
   /** Daftar harga terakhir diperbarui otomatis dari website (webhook /products). */
   catalogSyncedAt?: string;
+  /** Jumlah bahan stok hampir habis (Usahaku › Stok). */
+  lowStock: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -62,6 +64,7 @@ export const shopFromRow = (r: Row): Shop => ({
   hookLastAt: str(r.hook_last_at),
   hookReady: 'hook_on' in r,
   catalogSyncedAt: str(r.catalog_synced_at),
+  lowStock: Number(r.low_stock) || 0,
   createdAt: String(r.created_at ?? ''),
   updatedAt: String(r.updated_at ?? ''),
 });
@@ -82,7 +85,7 @@ const toBody = (i: ShopInput) => ({
 
 /** Jenis pengeluaran usaha (sama dengan SHOP_EXPENSE_KINDS di Worker → sub kategori "Biaya Usaha"). */
 export const SHOP_EXPENSE_KINDS = ['Bahan & Stok', 'Kemasan', 'Operasional', 'Lainnya'] as const;
-export type ShopExpenseInput = { requestId: string; amount: number; item: string; kind: string };
+export type ShopExpenseInput = { requestId: string; amount: number; item: string; kind: string; stock?: { materialId: string; qty: number } | null };
 
 export const shopService = {
   async list(): Promise<Shop[]> {
@@ -113,11 +116,12 @@ export const shopService = {
     notifyCollectionChanged('shops');
   },
   async expense(id: string, input: ShopExpenseInput & { accountId: string; date?: string }) {
-    await cloudflareApi(`/api/member/shops/${id}/expense`, { method: 'POST', json: { request_id: input.requestId, amount: input.amount, item: input.item, kind: input.kind, account_id: input.accountId, date: input.date } });
+    await cloudflareApi(`/api/member/shops/${id}/expense`, { method: 'POST', json: { request_id: input.requestId, amount: input.amount, item: input.item, kind: input.kind, account_id: input.accountId, date: input.date, ...(input.stock ? { stock: { material_id: input.stock.materialId, qty: input.stock.qty } } : {}) } });
+    notifyCollectionChanged('shop_stock');
     notifyCollectionChanged('transactions');
     notifyCollectionChanged('accounts');
   },
-  async sale(id: string, input: { requestId: string; amount: number; qty: number; product?: string; buyer?: string; items?: { name: string; price: number; qty: number }[]; accountId: string; date?: string }) {
+  async sale(id: string, input: { requestId: string; amount: number; qty: number; product?: string; buyer?: string; items?: { name: string; price: number; qty: number; key?: string }[]; accountId: string; date?: string }) {
     await cloudflareApi(`/api/member/shops/${id}/sale`, { method: 'POST', json: { request_id: input.requestId, amount: input.amount, qty: input.qty, product: input.product, buyer: input.buyer, items: input.items, account_id: input.accountId, date: input.date } });
     notifyCollectionChanged('transactions');
     notifyCollectionChanged('accounts');

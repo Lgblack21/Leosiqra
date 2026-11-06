@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, BadgeDollarSign, Check, Copy, Loader2, Minus, Palette, Plus, ReceiptText, Search, Settings2, ShoppingBag, Store, Trash2, Wallet, X } from 'lucide-react';
+import { ArrowLeft, BadgeDollarSign, Check, Copy, Loader2, Minus, Palette, Plus, ReceiptText, Search, Settings2, Package, ShoppingBag, Store, Trash2, Wallet, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { shopService, groupProducts, type KasirStyle, type Shop, type ShopExpenseInput, type ShopProduct } from '@/lib/services/shopService';
@@ -13,6 +13,8 @@ import { CustomKasirFrame } from './CustomKasirFrame';
 import { CatalogImage } from './CatalogImage';
 import { PriceEditor } from './PriceEditor';
 import { ExpenseForm } from './ExpenseForm';
+import { StockView } from './StockView';
+import { isLow, stockService, type StockData } from '@/lib/services/stockService';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
 import { accountService } from '@/lib/services/accountService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
@@ -44,6 +46,8 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
   const [styling, setStyling] = useState(false);
   const [pricing, setPricing] = useState(false);
   const [spending, setSpending] = useState(false); // catat pengeluaran usaha
+  const [stocking, setStocking] = useState(false); // stok bahan
+  const [stock, setStock] = useState<StockData | null>(null);
   const [sheet, setSheet] = useState(false); // HP: struk
   const [flash, setFlash] = useState('');
   const say = (m: string) => { if (onToast) onToast(m); else { setFlash(m); window.setTimeout(() => setFlash(''), 3500); } };
@@ -66,6 +70,20 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
   }, []);
 
   const shop = shops?.find((s) => s.id === id);
+  // Stok bahan usaha ini (kosong kalau belum dipakai / migrasi belum jalan).
+  const loadStock = useCallback(async () => {
+    if (!id) return;
+    try { setStock(await stockService.get(id)); } catch { setStock((p) => p ?? { materials: [], recipes: [], moves: [] }); }
+  }, [id]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- muat stok saat usaha dibuka
+    void loadStock();
+    const u1 = subscribeToCollectionChanges('shop_stock', loadStock);
+    const u2 = subscribeToCollectionChanges('transactions', loadStock); // penjualan → stok berkurang (resep)
+    return () => { u1(); u2(); };
+  }, [loadStock]);
+  const activeMaterials = (stock?.materials ?? []).filter((m) => !m.archived_at);
+  const lowCount = activeMaterials.filter(isLow).length;
   const shopTx = useMemo(() => tx.filter((t) => t.relatedType === 'shop' && t.relatedId === id), [tx, id]);
   const sales = useMemo(() => shopTx.filter((t) => t.type === 'pemasukan'), [shopTx]);
   const today = toLocalDateString();
@@ -107,13 +125,15 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
   };
   const todayTotal = Math.round(todaySales.reduce((x, t) => x + amt(t), 0));
   const todayCost = Math.round(todayCosts.reduce((x, t) => x + amt(t), 0));
-  const actBtn = 'flex min-w-0 items-center justify-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-[12px] font-bold hover:bg-white/20';
+  // HP: ikon di atas label (5 tombol muat satu baris); layar lebar: pil sebaris.
+  const actBtn = 'relative flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl bg-white/10 px-1.5 py-2 text-[11px] font-bold hover:bg-white/20 sm:flex-row sm:gap-1.5 sm:rounded-full sm:px-3 sm:text-[12px]';
   const actions = (
     <>
-      <button type="button" onClick={() => setSpending(true)} aria-label="Catat pengeluaran usaha" className={actBtn}><Wallet size={14} className="shrink-0" /> <span className="truncate">Biaya</span></button>
-      {shop.products.length > 0 && <button type="button" onClick={() => setPricing(true)} aria-label="Perbarui harga" className={actBtn}><BadgeDollarSign size={14} className="shrink-0" /> <span className="truncate">Harga</span></button>}
-      <button type="button" onClick={() => setStyling(true)} aria-label="Tampilan kasir" className={actBtn}><Palette size={14} className="shrink-0" /> <span className="truncate sm:hidden">Tema</span><span className="hidden truncate sm:inline">Tampilan</span></button>
-      <button type="button" onClick={() => setManage(true)} aria-label="Kelola usaha" className={actBtn}><Settings2 size={14} className="shrink-0" /> <span className="truncate">Kelola</span></button>
+      <button type="button" onClick={() => setSpending(true)} aria-label="Catat pengeluaran usaha" className={actBtn}><Wallet size={15} className="shrink-0" /> <span className="truncate">Biaya</span></button>
+      <button type="button" onClick={() => setStocking(true)} aria-label={lowCount ? `Stok bahan, ${lowCount} hampir habis` : 'Stok bahan'} className={actBtn}><Package size={15} className="shrink-0" /> <span className="truncate">Stok</span>{lowCount > 0 && <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 text-[10px] font-extrabold text-slate-900 sm:static">{lowCount}</span>}</button>
+      {shop.products.length > 0 && <button type="button" onClick={() => setPricing(true)} aria-label="Perbarui harga" className={actBtn}><BadgeDollarSign size={15} className="shrink-0" /> <span className="truncate">Harga</span></button>}
+      <button type="button" onClick={() => setStyling(true)} aria-label="Tampilan kasir" className={actBtn}><Palette size={15} className="shrink-0" /> <span className="truncate sm:hidden">Tema</span><span className="hidden truncate sm:inline">Tampilan</span></button>
+      <button type="button" onClick={() => setManage(true)} aria-label="Kelola usaha" className={actBtn}><Settings2 size={15} className="shrink-0" /> <span className="truncate">Kelola</span></button>
     </>
   );
   const saveExpense = (input: ShopExpenseInput & { accountId?: string; date?: string }) => shopService.expense(shop.id, { ...input, accountId: input.accountId ?? '' });
@@ -137,7 +157,7 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
           <div className="hidden shrink-0 items-center gap-1.5 sm:flex">{actions}</div>
         </div>
         {/* HP: tombol aksi di baris sendiri supaya nama toko tidak terpotong */}
-        <div className={cn('mt-3 grid gap-1.5 sm:hidden', shop.products.length > 0 ? 'grid-cols-4' : 'grid-cols-3')}>{actions}</div>
+        <div className={cn('mt-3 grid gap-1.5 sm:hidden', shop.products.length > 0 ? 'grid-cols-5' : 'grid-cols-4')}>{actions}</div>
         {!compactHead && shop.style.showStats && <div className="mt-4 grid grid-cols-3 gap-2">
           {[['Omzet hari ini', short(todayTotal)], ['Biaya hari ini', todayCost ? `−${short(todayCost).replace('Rp', '')}` : short(0)], ['Bersih bulan ini', short(monthNet)]].map(([k, v]) => (
             <div key={k} className="min-w-0 rounded-2xl bg-white/[0.07] px-3 py-2.5 ring-1 ring-white/10"><p className="truncate text-[11px] text-white/55">{k}</p><p className="truncate text-[16px] font-extrabold tabular-nums md:text-[18px]">{v}</p></div>
@@ -179,7 +199,8 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
         <>
           <BottomSheet isOpen={sheet} onClose={() => setSheet(false)} title="Struk"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">{strukFor(true)}</div></BottomSheet>
           <BottomSheet isOpen={pricing} onClose={() => setPricing(false)} title="Perbarui harga"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><PriceEditor key={shop.updatedAt} shop={shop} onDone={(m) => { setPricing(false); say(m); }} onToast={say} onLeave={() => setPricing(false)} /></div></BottomSheet>
-          <BottomSheet isOpen={spending} onClose={() => setSpending(false)} title="Catat pengeluaran"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><ExpenseForm shop={shop} onSave={saveExpense} onDone={(m) => { setSpending(false); say(m); }} onCancel={() => setSpending(false)} /></div></BottomSheet>
+          <BottomSheet isOpen={spending} onClose={() => setSpending(false)} title="Catat pengeluaran"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><ExpenseForm shop={shop} materials={activeMaterials} onSave={saveExpense} onDone={(m) => { setSpending(false); say(m); void loadStock(); }} onCancel={() => setSpending(false)} /></div></BottomSheet>
+          <BottomSheet isOpen={stocking} onClose={() => setStocking(false)} title="Stok bahan"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><StockView shop={shop} data={stock} reload={loadStock} onToast={say} /></div></BottomSheet>
           <BottomSheet isOpen={styling} onClose={() => setStyling(false)} title="Tampilan kasir"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><KasirStyleEditor shop={shop} onDone={(m) => { setStyling(false); say(m); }} onToast={say} onLeave={() => setStyling(false)} /></div></BottomSheet>
           <BottomSheet isOpen={manage} onClose={() => setManage(false)} title={`Kelola ${shop.name}`}><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><ShopDetail shop={shop} sales={sales} onToast={say} onLeave={() => setManage(false)} onDeleted={() => router.replace(back)} /></div></BottomSheet>
         </>
@@ -187,7 +208,8 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
         <>
           <Modal isOpen={sheet} onClose={() => setSheet(false)} title="Struk" maxWidth="max-w-md">{strukFor(true)}</Modal>
           <Modal isOpen={pricing} onClose={() => setPricing(false)} title="Perbarui harga" maxWidth="max-w-lg"><PriceEditor key={shop.updatedAt} shop={shop} onDone={(m) => { setPricing(false); say(m); }} onToast={say} onLeave={() => setPricing(false)} /></Modal>
-          <Modal isOpen={spending} onClose={() => setSpending(false)} title="Catat pengeluaran" maxWidth="max-w-md"><ExpenseForm shop={shop} onSave={saveExpense} onDone={(m) => { setSpending(false); say(m); }} onCancel={() => setSpending(false)} /></Modal>
+          <Modal isOpen={spending} onClose={() => setSpending(false)} title="Catat pengeluaran" maxWidth="max-w-md"><ExpenseForm shop={shop} materials={activeMaterials} onSave={saveExpense} onDone={(m) => { setSpending(false); say(m); void loadStock(); }} onCancel={() => setSpending(false)} /></Modal>
+          <Modal isOpen={stocking} onClose={() => setStocking(false)} title="Stok bahan" maxWidth="max-w-xl"><StockView shop={shop} data={stock} reload={loadStock} onToast={say} /></Modal>
           <Modal isOpen={styling} onClose={() => setStyling(false)} title="Tampilan kasir" maxWidth="max-w-lg"><KasirStyleEditor shop={shop} onDone={(m) => { setStyling(false); say(m); }} onToast={say} onLeave={() => setStyling(false)} /></Modal>
           <Modal isOpen={manage} onClose={() => setManage(false)} title={`Kelola ${shop.name}`} maxWidth="max-w-xl"><ShopDetail shop={shop} sales={sales} onToast={say} onLeave={() => setManage(false)} onDeleted={() => router.replace(back)} /></Modal>
         </>
@@ -379,7 +401,7 @@ export function Struk({ shop, lines, sum, onAdd, setQty, clear, onDone, inSheet,
     setBusy(true);
     setError('');
     try {
-      const base = { requestId, amount: total, qty: allLines.length === 1 ? allLines[0].qty : 1, product: label.slice(0, 80), buyer: buyer.trim(), items: allLines.map((l) => ({ name: l.group ? `${l.group} · ${l.name}` : l.name, price: l.price, qty: l.qty })) };
+      const base = { requestId, amount: total, qty: allLines.length === 1 ? allLines[0].qty : 1, product: label.slice(0, 80), buyer: buyer.trim(), items: allLines.map((l) => ({ name: l.group ? `${l.group} · ${l.name}` : l.name, price: l.price, qty: l.qty, key: l.key })) };
       if (staff) await staff.sell(base);
       else {
         await shopService.sale(shop.id, { ...base, accountId, date });

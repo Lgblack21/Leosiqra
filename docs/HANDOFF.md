@@ -4,13 +4,13 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-06 (live #141: Usahaku › Tim Tahap 1 + @ di username dibuang otomatis; 0032 dijalankan Bos)
+Terakhir diperbarui: 2026-11-06 (live #142: pengeluaran usaha; Stok bahan siap di claude/usahaku-web, menunggu 0033 + "gas")
 
 ## Siapa sedang kerja
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| — | — | — | (akun B selesai; main = live #141) |
+| — | — | — | (akun B selesai; main = live #142) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,7 +18,21 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-06 (branch claude/usahaku-web) — Pengeluaran usaha + rapikan HP. BELUM deploy. Tanpa SQL.**
+- **2026-11-06 (branch claude/usahaku-web) — Usahaku › Stok bahan + Resep produk. BELUM deploy. WAJIB migrasi `0033_shop_stock.sql`.**
+  - Tabel: `shop_materials` (stok sekarang), `shop_stock_moves` (buku stok: awal/beli/masuk/pakai/jual/opname,
+    qty bertanda, ref_tx_id, ref_key unik = anti dobel, reverted_at), `shop_recipes` (bahan per 1 produk, key "kategori|nama").
+  - Kasir tombol **Stok** (badge hampir habis): tab Bahan (tambah, pakai/masuk/hitung fisik, ubah, arsip), Resep
+    (bahan per produk + modal & untung per produk dari harga beli rata-rata), Riwayat. Kartu Usahaku: "N bahan hampir habis".
+  - Biaya bisa "Masuk ke stok" (kind beli, cost = nominal → harga rata-rata). Penjualan kasir (pemilik & tim) mengurangi
+    stok sesuai resep dalam batch yang sama dengan transaksi (dobel request_id → stok tidak terpotong lagi).
+    Webhook website BELUM mengurangi stok (tidak ada kunci produk).
+  - Hapus transaksi (kedua jalur DELETE) → stok dikembalikan, KECUALI bahan yang sudah di-hitung fisik (opname) sesudahnya.
+  - Tim: `/api/staff/me` kirim `materials` (baca saja), Catat biaya + masuk stok boleh; ubah bahan/resep/opname hanya pemilik.
+  - Tanpa tabel 0033: semua alur lama jalan (stok dilewati), endpoint stok 503.
+  - Dites lokal: tambah bahan (dup 409, negatif 400), resep abaikan bahan asing, jual 2 → −2 botol −60,5 ml, dobel 409 stok
+    tetap, jual tim −1/−30,25 "oleh Rina", beli via biaya +100 (avg Rp2.500/pcs), bahan asing 400, opname delta & dobel 409,
+    hapus jual/biaya mengembalikan (yang ter-opname tidak), arsip → tidak dipotong, cookie tim → stok pemilik 401. UI HP+web 0 error JS.
+- **2026-11-06 — Pengeluaran usaha + rapikan HP: live #142.**
   - Kasir (pemilik & tim) tombol **Biaya** → catat beli botol/dus/bahan: transaksi `pengeluaran` kategori
     **"Biaya Usaha"** (sub: Bahan & Stok / Kemasan / Operasional / Lainnya), related_type 'shop', request_id
     anti dobel (payload_json.expenseId), saldo rekening berkurang dalam satu batch. Tim: rekening kunci + hari ini.
@@ -917,6 +931,7 @@ membersite_leosiqra_db --remote --command "..."`. SELECT boleh langsung; tulis/u
 - `0019_inbox.sql` — sudah (Kotak Masuk Gmail jalan di produksi).
 - `0020_reminders.sql` — sudah (Bos, 2026-10-28; Console D1 butuh SQL tanpa komentar `--` kalau ditempel satu baris).
 - `0021_notifications.sql` — sudah (dicek langsung ke D1 2026-11-03).
+- `0033_shop_stock.sql` — **BELUM** (Usahaku › Stok bahan & resep).
 - `0032_shop_staff.sql` — sudah (Bos membuat akun tim di produksi 2026-11-06).
 - `0022_native_push_tokens.sql` — **BELUM** (token push Android/FCM; tanpa tabel: endpoint 503, kirim dilewati — aman).
 

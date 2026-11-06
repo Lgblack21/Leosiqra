@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 import { Check, Loader2 } from 'lucide-react';
 import { accountService } from '@/lib/services/accountService';
 import { SHOP_EXPENSE_KINDS, type Shop, type ShopExpenseInput } from '@/lib/services/shopService';
+import { fmtQty, type StockMaterial } from '@/lib/services/stockService';
 import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
+import { parseQty } from './StockView';
 import { fieldCls, labelCls } from './UsahaView';
 
 // Catat pengeluaran usaha (beli botol, dus, bahan…) dari kasir. Masuk sebagai
@@ -22,8 +24,10 @@ const QUICK: { label: string; kind: (typeof SHOP_EXPENSE_KINDS)[number] }[] = [
 ];
 const ACC_KEY = 'leosiqra-usaha-biaya-acc';
 
-export function ExpenseForm({ shop, onSave, locked, onDone, onCancel }: {
+export function ExpenseForm({ shop, onSave, locked, onDone, onCancel, materials = [] }: {
   shop: Shop;
+  /** Bahan stok usaha ini — pembelian bisa langsung menambah stok. */
+  materials?: StockMaterial[];
   onSave: (input: ShopExpenseInput & { accountId?: string; date?: string }) => Promise<void>;
   /** Akun tim: rekening dikunci pemilik, tanggal hari ini. */
   locked?: { accountName: string | null };
@@ -39,6 +43,9 @@ export function ExpenseForm({ shop, onSave, locked, onDone, onCancel }: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
+  const [stockId, setStockId] = useState('');
+  const [stockQty, setStockQty] = useState('');
+  const mat = materials.find((m) => m.id === stockId);
 
   useEffect(() => {
     if (locked) return;
@@ -57,13 +64,15 @@ export function ExpenseForm({ shop, onSave, locked, onDone, onCancel }: {
     if (value < 1) { setError('Isi nominalnya.'); return; }
     if (locked && !locked.accountName) { setError('Pemilik usaha belum menentukan rekening untuk akunmu.'); return; }
     if (!locked && !accountId) { setError('Pilih rekening yang dipakai bayar.'); return; }
+    const sq = parseQty(stockQty);
+    if (mat && (!Number.isFinite(sq) || sq <= 0)) { setError(`Isi jumlah ${mat.name} yang dibeli.`); return; }
     setBusy(true);
     setError('');
     try {
-      await onSave({ requestId, amount: value, item: item.trim(), kind, ...(locked ? {} : { accountId, date }) });
+      await onSave({ requestId, amount: value, item: item.trim(), kind, stock: mat ? { materialId: mat.id, qty: sq } : null, ...(locked ? {} : { accountId, date }) });
       if (!locked) { try { localStorage.setItem(`${ACC_KEY}:${shop.id}`, accountId); } catch { /* abaikan */ } }
-      onDone(`Pengeluaran ${formatIDR(value)} (${item.trim()}) tercatat.`);
-      setItem(''); setAmount(''); setRequestId(crypto.randomUUID());
+      onDone(`Pengeluaran ${formatIDR(value)} (${item.trim()}) tercatat${mat ? ` · stok ${mat.name} +${fmtQty(sq)} ${mat.unit}` : ''}.`);
+      setItem(''); setAmount(''); setStockId(''); setStockQty(''); setRequestId(crypto.randomUUID());
     } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal mencatat.'); }
     setBusy(false);
   };
@@ -90,6 +99,19 @@ export function ExpenseForm({ shop, onSave, locked, onDone, onCancel }: {
           {SHOP_EXPENSE_KINDS.map((k) => <button key={k} type="button" onClick={() => setKind(k)} aria-pressed={kind === k} className={cn('rounded-xl px-2 py-2 text-[12px] font-bold', kind === k ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300')}>{k}</button>)}
         </div>
       </div>
+      {materials.length > 0 && (
+        <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/50">
+          <span className={labelCls}>Masuk ke stok bahan (opsional)</span>
+          <div className="flex gap-2">
+            <select value={stockId} onChange={(e) => { setStockId(e.target.value); const m = materials.find((x) => x.id === e.target.value); if (m && !item.trim()) setItem(m.name); if (m && kind === 'Lainnya') setKind('Bahan & Stok'); }} aria-label="Bahan stok" className={cn(fieldCls, 'min-w-0 flex-1 bg-white py-2.5 text-[13px] dark:bg-slate-900')}>
+              <option value="">Tidak menambah stok</option>
+              {materials.map((m) => <option key={m.id} value={m.id}>{m.name} (sisa {fmtQty(m.stock)} {m.unit})</option>)}
+            </select>
+            {mat && <span className="relative w-28 shrink-0"><input value={stockQty} onChange={(e) => setStockQty(e.target.value.replace(/[^\d.,]/g, ''))} inputMode="decimal" placeholder="Jumlah" aria-label="Jumlah masuk stok" className={cn(fieldCls, 'bg-white py-2.5 pr-10 text-[13px] tabular-nums dark:bg-slate-900')} /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">{mat.unit}</span></span>}
+          </div>
+          {mat && value > 0 && Number(parseQty(stockQty)) > 0 && <p className="mt-1.5 text-[11px] text-slate-500">≈ {formatIDR(Math.round((value / parseQty(stockQty)) * 100) / 100)} per {mat.unit} — dipakai menghitung modal per produk.</p>}
+        </div>
+      )}
       {locked ? (
         <p className="rounded-2xl bg-slate-50 px-4 py-3 text-[13px] text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">Dibayar dari <b>{locked.accountName ?? '—'}</b> · hari ini</p>
       ) : (

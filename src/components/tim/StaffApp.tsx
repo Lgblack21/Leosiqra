@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, KeyRound, LayoutGrid, Loader2, LogOut, ReceiptText, Store, Wallet } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, KeyRound, LayoutGrid, Loader2, LogOut, Package, ReceiptText, Store, Wallet } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { staffService, type StaffMe, type StaffSale } from '@/lib/services/staffService';
 import { ExpenseForm } from '@/components/ladang/ExpenseForm';
+import { fmtQty, isLow, type StockMaterial } from '@/lib/services/stockService';
 import type { Shop, ShopProduct } from '@/lib/services/shopService';
 import { Catalog, Struk, lineKey, type Line } from '@/components/ladang/KasirView';
 import { CustomKasirFrame } from '@/components/ladang/CustomKasirFrame';
@@ -22,6 +23,26 @@ import { cn, formatIDR } from '@/lib/utils';
 const noteText = (n: string | null) => (n ?? '').replace(/^\[[^\]]*\]\s*/, '') || 'Penjualan';
 const isCost = (t: StaffSale) => t.type === 'pengeluaran';
 const sumOf = (list: StaffSale[]) => list.reduce((a, t) => a + Number(t.amount || 0), 0);
+
+function StockList({ list }: { list: StockMaterial[] }) {
+  const [all, setAll] = useState(false);
+  if (!list.length) return null;
+  const sorted = [...list].sort((a, b) => Number(isLow(b)) - Number(isLow(a)));
+  const shown = all ? sorted : sorted.slice(0, 6);
+  return (
+    <div className="rounded-[22px] bg-white p-4 ring-1 ring-slate-100">
+      <p className="flex items-center gap-1.5 text-[14px] font-extrabold text-slate-900"><Package size={15} /> Stok bahan</p>
+      <ul className="mt-2 divide-y divide-slate-100">{shown.map((m) => (
+        <li key={m.id} className="flex items-center justify-between gap-3 py-2">
+          <span className="flex min-w-0 items-center gap-1.5 text-[13px] text-slate-700">{isLow(m) && <AlertTriangle size={13} className="shrink-0 text-amber-500" />}<span className="truncate">{m.name}</span></span>
+          <span className={cn('shrink-0 text-[13px] font-extrabold tabular-nums', m.stock <= 0 ? 'text-rose-600' : isLow(m) ? 'text-amber-600' : 'text-slate-900')}>{fmtQty(m.stock)} <span className="text-[11px] text-slate-400">{m.unit}</span></span>
+        </li>
+      ))}</ul>
+      {sorted.length > 6 && <button type="button" onClick={() => setAll((v) => !v)} className="mt-1 text-[12px] font-bold text-violet-600">{all ? 'Ringkas' : `Lihat semua (${sorted.length})`}</button>}
+      <p className="mt-2 text-[11px] text-slate-400">Stok berkurang otomatis saat produk terjual. Beli bahan → Catat pengeluaran & pilih &ldquo;Masuk ke stok&rdquo;.</p>
+    </div>
+  );
+}
 
 function TodayList({ list, title }: { list: StaffSale[]; title: string }) {
   if (!list.length) return null;
@@ -182,6 +203,9 @@ function StaffRingkas({ me, open }: { me: StaffMe; open: (id: string) => void })
           );
         })}
       </ul>
+      {(me.materials ?? []).some(isLow) && (
+        <p className="flex items-center gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-[13px] font-semibold text-amber-800"><AlertTriangle size={16} className="shrink-0" /> <span>Hampir habis: {(me.materials ?? []).filter(isLow).map((m) => `${m.name} (${fmtQty(m.stock)} ${m.unit})`).join(', ')}. Kabari pemilik usaha.</span></p>
+      )}
       <TodayList list={me.today} title="Transaksi hari ini" />
     </section>
   );
@@ -197,6 +221,7 @@ function StaffKasir({ shop, me, back, onSold, say }: { shop: Shop; me: StaffMe; 
   const count = lines.reduce((s, x) => s + x.qty, 0);
   const todayShop = me.today.filter((t) => t.shop_id === shop.id);
   const todaySales = sumOf(todayShop.filter((t) => !isCost(t)));
+  const materials = (me.materials ?? []).filter((m) => m.shop_id === shop.id);
   const custom = shop.style.mode === 'bebas' && shop.style.customHtml.trim().length > 0;
   const cart: Record<number, number> = {};
   shop.products.forEach((p, i) => { const q = lines.find((l) => l.key === lineKey(p))?.qty; if (q) cart[i] = q; });
@@ -228,8 +253,9 @@ function StaffKasir({ shop, me, back, onSold, say }: { shop: Shop; me: StaffMe; 
         </button>
       </div>
       <BottomSheet isOpen={sheet} onClose={() => setSheet(false)} title="Struk"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">{struk(true)}</div></BottomSheet>
-      <BottomSheet isOpen={spending} onClose={() => setSpending(false)} title="Catat pengeluaran"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><ExpenseForm shop={shop} locked={{ accountName: me.account }} onSave={(input) => staffService.expense(shop.id, input)} onDone={(m) => { setSpending(false); onSold(m); }} onCancel={() => setSpending(false)} /></div></BottomSheet>
+      <BottomSheet isOpen={spending} onClose={() => setSpending(false)} title="Catat pengeluaran"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><ExpenseForm shop={shop} materials={materials} locked={{ accountName: me.account }} onSave={(input) => staffService.expense(shop.id, input)} onDone={(m) => { setSpending(false); onSold(m); }} onCancel={() => setSpending(false)} /></div></BottomSheet>
       <TodayList list={todayShop} title="Hari ini" />
+      <StockList list={materials} />
     </div>
   );
 }
