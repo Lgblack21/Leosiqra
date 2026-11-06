@@ -42,8 +42,8 @@ export function KasirStyleEditor({ shop, onDone, onToast, onLeave }: { shop: Sho
 
   const imagePrompt = `Pakai Leosiqra (MCP): pasang logo toko & gambar tiap kategori untuk usahaku "${shop.name}" (shop_id ${shop.id}) lewat set_catalog_images. Pakai gambar yang memang boleh kupakai (mis. dari website tokoku${shop.linkUrl ? ` ${shop.linkUrl}` : ''}, tautan https); kalau tidak ada, buatkan ikon SVG orisinal per kategori yang serasi (data:image/svg+xml, ≤8.000 karakter). Nama kategori harus PERSIS: ${groups.length ? groups.join(', ') : '(lihat get_shop)'}. Tunjukkan daftar gambarnya dulu sebelum menyimpan.`;
   const setImage = (g: string, url: string) => setSt((p) => { const m = { ...p.categoryImages }; if (url.trim()) m[g] = url.trim(); else delete m[g]; return { ...p, categoryImages: m }; });
-  const templatePrompt = `Pakai Leosiqra (MCP): rancang desain kasir BEBAS untuk usahaku "${shop.name}" (shop_id ${shop.id}). Ambil dulu katalognya dengan get_shop, lalu pasang lewat set_kasir_template (baca aturan di deskripsi tool itu: satu file HTML, data & aksi lewat window.Leosiqra, tanpa akses jaringan). Gaya yang aku mau: [tulis bebas, mis. nuansa neon gaming, kartu besar bergambar ikon game, tab per game di atas, tombol Bayar melayang].`;
-  const prompt = `Pakai Leosiqra (MCP): ubah tampilan kasir usahaku "${shop.name}" (shop_id ${shop.id}) lewat set_kasir_style. Aku mau: [tulis keinginanmu, mis. tema gelap, katalog kategori (grid kotak game), header ringkas, tombol besar untuk tablet, struk di kiri, kartu ringkas 4 kolom, sambutan "Top up kilat 24 jam", Mobile Legends paling atas].`;
+  const templatePrompt = `Pakai Leosiqra (MCP): rancang desain kasir BEBAS untuk usahaku "${shop.name}" (shop_id ${shop.id}). Ambil dulu katalognya dengan get_shop, lalu pasang lewat set_kasir_template (baca aturan di deskripsi tool itu: satu file HTML, data & aksi lewat window.Leosiqra, tanpa akses jaringan). Gaya yang aku mau: [tulis bebas, mis. nuansa hangat & bersih, kartu besar bergambar, tab kategori di atas, tombol Bayar melayang].`;
+  const prompt = `Pakai Leosiqra (MCP): ubah tampilan kasir usahaku "${shop.name}" (shop_id ${shop.id}) lewat set_kasir_style. Aku mau: [tulis keinginanmu, mis. tema gelap, katalog kategori (grid kotak), header ringkas, tombol besar untuk tablet, struk di kiri, kartu ringkas 4 kolom, sambutan "Buka setiap hari", kategori terlaris paling atas].`;
   const save = async () => {
     if (bebas && !st.customHtml.trim()) { setError('Isi kode desain dulu, pakai contoh, atau minta AI-mu mendesain.'); return; }
     // Kirim HANYA yang diubah di editor ini (server menggabungkan) — supaya perubahan AI-mu
@@ -140,6 +140,15 @@ export function KasirStyleEditor({ shop, onDone, onToast, onLeave }: { shop: Sho
         </div>
       </div>
 
+      <div>
+        <span className={labelCls}>Data pembeli di struk</span>
+        <div className="flex gap-1 rounded-full bg-slate-100 p-1 dark:bg-slate-800">
+          <button type="button" onClick={() => set('buyer', 'opsional')} aria-pressed={st.buyer !== 'wajib'} className={seg(st.buyer !== 'wajib')}>Opsional</button>
+          <button type="button" onClick={() => set('buyer', 'wajib')} aria-pressed={st.buyer === 'wajib'} className={seg(st.buyer === 'wajib')}>Wajib diisi</button>
+        </div>
+        <p className="mt-1 px-1 text-[11px] text-slate-400">{st.buyer === 'wajib' ? 'Kasir harus mengisi nama / no. HP / ID pelanggan (mis. ID game untuk top up) sebelum bayar.' : 'Boleh dikosongkan — cocok untuk toko, warung, atau jualan langsung.'}</p>
+      </div>
+
       {!bebas && <>
       {groups.length > 0 && (
         <div>
@@ -148,7 +157,7 @@ export function KasirStyleEditor({ shop, onDone, onToast, onLeave }: { shop: Sho
             <button type="button" onClick={() => set('browse', 'katalog')} aria-pressed={st.browse === 'katalog'} className={seg(st.browse === 'katalog')}><Grid3x3 size={14} /> Katalog kategori</button>
             <button type="button" onClick={() => set('browse', 'gulir')} aria-pressed={st.browse === 'gulir'} className={seg(st.browse === 'gulir')}><Rows3 size={14} /> Semua produk</button>
           </div>
-          <p className="mt-1 px-1 text-[11px] text-slate-400">{st.browse === 'katalog' ? 'Kotak per kategori/game → ketuk masuk daftar harga, ada tombol Kembali ke katalog.' : 'Semua produk dalam satu halaman, pilih kategori lewat chip.'}</p>
+          <p className="mt-1 px-1 text-[11px] text-slate-400">{st.browse === 'katalog' ? 'Kotak per kategori → ketuk masuk daftar produk, ada tombol Kembali ke katalog.' : 'Semua produk dalam satu halaman, pilih kategori lewat chip.'}</p>
         </div>
       )}
       <div>
@@ -178,7 +187,7 @@ export function KasirStyleEditor({ shop, onDone, onToast, onLeave }: { shop: Sho
           ))}
         </div>
       </div>
-      <label className="block"><span className={labelCls}>Teks sambutan di header</span><input value={st.greeting} onChange={(e) => set('greeting', e.target.value)} maxLength={80} placeholder="mis. Top up kilat, buka 24 jam" className={fieldCls} /></label>
+      <label className="block"><span className={labelCls}>Teks sambutan di header</span><input value={st.greeting} onChange={(e) => set('greeting', e.target.value)} maxLength={80} placeholder="mis. Buka setiap hari, 08.00–21.00" className={fieldCls} /></label>
       <label className="block"><span className={labelCls}>Penutup struk WA</span><input value={st.receiptFooter} onChange={(e) => set('receiptFooter', e.target.value)} maxLength={120} placeholder="Terima kasih sudah belanja! 🙏" className={fieldCls} /></label>
 
       {!bebas && order.length > 1 && (

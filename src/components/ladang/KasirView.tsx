@@ -169,7 +169,7 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
         <section className="rounded-[26px] bg-white p-8 text-center ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300"><ShoppingBag size={26} /></span>
           <p className="mt-3 text-[16px] font-extrabold text-slate-900 dark:text-white">Katalog masih kosong</p>
-          <p className="mx-auto mt-1 max-w-sm text-[13px] text-slate-500 dark:text-slate-400">Tambahkan produk & harga, atau ambil otomatis dari website tokomu — semua game langsung jadi kategori kasir.</p>
+          <p className="mx-auto mt-1 max-w-sm text-[13px] text-slate-500 dark:text-slate-400">Tambahkan produk & harga, atau ambil otomatis dari website tokomu — kategorinya langsung jadi kategori kasir.</p>
           <button type="button" onClick={() => setManage(true)} className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-violet-600 px-5 py-2.5 text-[13px] font-bold text-white hover:bg-violet-700"><Settings2 size={15} /> Isi katalog</button>
         </section>
       ) : (
@@ -260,7 +260,7 @@ export function Catalog({ products, style, lines, onAdd }: { products: ShopProdu
     <section ref={top} className="min-w-0 scroll-mt-4 space-y-3">
       {style.showSearch && <div className="flex items-center gap-2 rounded-2xl bg-white px-3.5 py-2.5 ring-1 ring-slate-100 focus-within:ring-2 focus-within:ring-violet-500 dark:bg-slate-900 dark:ring-slate-800">
         <Search size={16} className="shrink-0 text-slate-400" />
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={named ? 'Cari game atau nominal…' : 'Cari produk…'} aria-label="Cari produk" className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400 dark:text-white" />
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari produk…" aria-label="Cari produk" className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400 dark:text-white" />
         {query && <button type="button" onClick={() => setQuery('')} aria-label="Hapus pencarian" className="text-slate-400"><X size={15} /></button>}
       </div>}
 
@@ -363,7 +363,7 @@ export function Catalog({ products, style, lines, onAdd }: { products: ShopProdu
 // penyimpanan lewat /api/staff/shops/:id/sale.
 export type StaffSell = (input: { requestId: string; amount: number; qty: number; product: string; buyer: string; items: { name: string; price: number; qty: number }[] }) => Promise<void>;
 export function Struk({ shop, lines, sum, onAdd, setQty, clear, onDone, inSheet, onNew, staff }: { shop: Shop; lines: Line[]; sum: number; onAdd: (p: ShopProduct) => void; setQty: (k: string, q: number) => void; clear: () => void; onDone: (m: string) => void; inSheet: boolean; onNew: () => void; staff?: { accountName: string | null; sell: StaffSell } }) {
-  const needBuyer = shop.products.some((p) => p.group);
+  const needBuyer = shop.style.buyer === 'wajib'; // Tampilan › Data pembeli (mis. ID game / no. HP)
   const [buyer, setBuyer] = useState('');
   const [override, setOverride] = useState<string | null>(null); // total diketik manual (diskon)
   const [accounts, setAccounts] = useState<{ id: string; name: string }[] | null>(null);
@@ -395,7 +395,7 @@ export function Struk({ shop, lines, sum, onAdd, setQty, clear, onDone, inSheet,
   const save = async () => {
     if (!allLines.length) { setError('Pilih produk dulu.'); return; }
     if (total < 1) { setError('Total belum diisi.'); return; }
-    if (needBuyer && !buyer.trim()) { setError('Isi nama / ID pembeli dulu.'); return; }
+    if (needBuyer && !buyer.trim()) { setError('Isi data pembeli dulu.'); return; }
     if (!staff && !accountId) { setError('Pilih rekening tujuan.'); return; }
     if (staff && !staff.accountName) { setError('Pemilik usaha belum menentukan rekening tujuan untuk akunmu.'); return; }
     setBusy(true);
@@ -412,7 +412,7 @@ export function Struk({ shop, lines, sum, onAdd, setQty, clear, onDone, inSheet,
         new Date().toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }),
         ...(buyer.trim() ? [`Pembeli: ${buyer.trim()}`] : []),
         '',
-        ...allLines.map((l) => `• ${l.group ? `${l.group} ` : ''}${l.name}${l.qty > 1 ? ` ×${l.qty}` : ''} — ${formatIDR(l.price * l.qty)}`),
+        ...allLines.map((l) => `• ${l.group && !l.name.toLowerCase().includes(l.group.toLowerCase()) ? `${l.group} ` : ''}${l.name}${l.qty > 1 ? ` ×${l.qty}` : ''} — ${formatIDR(l.price * l.qty)}`),
         ...(total !== sum ? [`Potongan: −${formatIDR(Math.max(0, sum - total))}`] : []),
         `*Total: ${formatIDR(total)}*`,
         '',
@@ -478,7 +478,7 @@ export function Struk({ shop, lines, sum, onAdd, setQty, clear, onDone, inSheet,
         <button type="button" onClick={() => setManual({ name: '', price: '' })} className="flex items-center gap-1 text-[12px] font-bold text-violet-600 dark:text-violet-300"><Plus size={13} /> Item di luar katalog</button>
       )}
 
-      <label className="block"><span className={labelCls}>{needBuyer ? 'Nama / ID pembeli' : 'Pembeli (opsional)'}</span><input value={buyer} onChange={(e) => { setBuyer(e.target.value); setError(''); }} maxLength={60} placeholder={needBuyer ? 'mis. 123456789 (2001) · Budi' : 'Nama pembeli'} className={fieldCls} /></label>
+      <label className="block"><span className={labelCls}>{needBuyer ? 'Data pembeli' : 'Pembeli (opsional)'}</span><input value={buyer} onChange={(e) => { setBuyer(e.target.value); setError(''); }} maxLength={60} placeholder={needBuyer ? 'mis. nama, no. HP, atau ID pelanggan' : 'Nama / no. HP pembeli'} className={fieldCls} /></label>
       {staff ? (
         <p className="rounded-2xl bg-slate-50 px-3 py-2.5 text-[12px] text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">Masuk ke <b>{staff.accountName ?? '— belum ditentukan pemilik'}</b> · hari ini</p>
       ) : <div className="grid grid-cols-2 gap-2">

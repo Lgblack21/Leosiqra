@@ -4,13 +4,13 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-06 (live #142: pengeluaran usaha; Stok bahan siap di claude/usahaku-web, menunggu 0033 + "gas")
+Terakhir diperbarui: 2026-11-06 (live #143: stok bahan & resep; MCP stok + kasir umum siap di claude/usahaku-web, menunggu "gas")
 
 ## Siapa sedang kerja
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| — | — | — | (akun B selesai; main = live #142) |
+| — | — | — | (akun B selesai; main = live #143) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,7 +18,12 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-06 (branch claude/usahaku-web) — Usahaku › Stok bahan + Resep produk. BELUM deploy. WAJIB migrasi `0033_shop_stock.sql`.**
+- **2026-11-06 (branch claude/usahaku-web) — BELUM deploy, tanpa SQL baru:** MCP stok (get_shop_stock / set_shop_stock /
+  set_shop_recipes — lihat entri Stok di bawah) + **kasir umum, bukan khusus top up**: "Cari produk…", contoh teks/prompt
+  netral, dan **kolom pembeli tidak lagi wajib otomatis untuk toko berkategori** — kini gaya kasir `buyer: opsional|wajib`
+  (Tampilan › Data pembeli; bawaan opsional; MCP set_kasir_style ikut). CXA Store perlu disetel "Wajib" oleh Bos.
+  Dites lokal: Toko Kue (berkategori) bayar tanpa pembeli OK + stok resep berkurang.
+- **2026-11-06 — Usahaku › Stok bahan + Resep produk: live #143** (run pertama gagal: Cloudflare API 503 "no healthy upstream", re-run sukses). Migrasi 0033 belum dikonfirmasi Bos.
   - Tabel: `shop_materials` (stok sekarang), `shop_stock_moves` (buku stok: awal/beli/masuk/pakai/jual/opname,
     qty bertanda, ref_tx_id, ref_key unik = anti dobel, reverted_at), `shop_recipes` (bahan per 1 produk, key "kategori|nama").
   - Kasir tombol **Stok** (badge hampir habis): tab Bahan (tambah, pakai/masuk/hitung fisik, ubah, arsip), Resep

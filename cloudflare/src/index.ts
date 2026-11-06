@@ -9637,13 +9637,13 @@ const isMissingColumn = (e: unknown) => e instanceof Error && /no such column/.t
 const KASIR_THEMES = ["ungu", "hijau", "biru", "oranye", "merah", "pink", "gelap", "emas"] as const;
 const KASIR_LAYOUTS = ["grid", "list", "compact"] as const;
 const KASIR_CARDS = ["soft", "outline", "solid"] as const;
-type KasirStyle = { theme: string; layout: string; columns: number; card: string; showUnit: boolean; greeting: string; receiptFooter: string; categoryOrder: string[]; header: string; strukSide: string; size: string; showStats: boolean; showSearch: boolean; showRecent: boolean; mode: string; customHtml: string; browse: string; logoUrl: string; categoryImages: Record<string, string> };
+type KasirStyle = { theme: string; layout: string; columns: number; card: string; showUnit: boolean; greeting: string; receiptFooter: string; categoryOrder: string[]; header: string; strukSide: string; size: string; showStats: boolean; showSearch: boolean; showRecent: boolean; mode: string; customHtml: string; browse: string; buyer: string; logoUrl: string; categoryImages: Record<string, string> };
 // Mode "bebas": desain HTML/CSS/JS buatan pengguna/AI-nya. TIDAK pernah dijalankan di
 // halaman Leosiqra — klien merendernya di <iframe sandbox="allow-scripts"> (origin
 // kosong, tanpa cookie/API, CSP tanpa koneksi) dan hanya bertukar data katalog lewat
 // postMessage; struk & pencatatan uang tetap komponen asli.
 const KASIR_HTML_MAX = 60_000;
-const KASIR_DEFAULT: KasirStyle = { theme: "ungu", layout: "grid", columns: 3, card: "soft", showUnit: true, greeting: "", receiptFooter: "", categoryOrder: [], header: "besar", strukSide: "kanan", size: "normal", showStats: true, showSearch: true, showRecent: true, mode: "bawaan", customHtml: "", browse: "katalog", logoUrl: "", categoryImages: {} };
+const KASIR_DEFAULT: KasirStyle = { theme: "ungu", layout: "grid", columns: 3, card: "soft", showUnit: true, greeting: "", receiptFooter: "", categoryOrder: [], header: "besar", strukSide: "kanan", size: "normal", showStats: true, showSearch: true, showRecent: true, mode: "bawaan", customHtml: "", browse: "katalog", buyer: "opsional", logoUrl: "", categoryImages: {} };
 // Gambar katalog: tautan https publik (≤500 karakter) ATAU gambar langsung data:image
 // (png/jpeg/webp/gif/svg+xml, ≤8.000 karakter — mis. ikon SVG orisinal buatan AI pengguna,
 // karena logo resmi milik penerbit). Ditampilkan lewat <img> (SVG di <img> tidak bisa
@@ -9694,6 +9694,7 @@ const sanitizeKasirStyle = (raw: unknown, base: KasirStyle = KASIR_DEFAULT): Kas
     showRecent: typeof r.showRecent === "boolean" ? r.showRecent : base.showRecent,
     mode: pick(r.mode, ["bawaan", "bebas"] as const, base.mode),
     browse: pick(r.browse, ["katalog", "gulir"] as const, base.browse),
+    buyer: pick(r.buyer, ["opsional", "wajib"] as const, base.buyer ?? "opsional"),
     logoUrl: r.logoUrl !== undefined ? safeImageUrl(r.logoUrl) : base.logoUrl,
     categoryImages: r.categoryImages !== undefined ? sanitizeCategoryImages(r.categoryImages, base.categoryImages) : base.categoryImages,
     customHtml: typeof r.customHtml === "string" ? r.customHtml.replace(/\u0000/g, "").slice(0, KASIR_HTML_MAX) : base.customHtml,
@@ -17489,7 +17490,7 @@ const mcpListShops: McpToolDef["run"] = async (env, auth) => {
       shops: data,
       kasir_style_options: {
         theme: KASIR_THEMES, layout: KASIR_LAYOUTS, columns: [2, 3, 4], card: KASIR_CARDS, header: ["besar", "ringkas"], strukSide: ["kanan", "kiri"],
-        size: ["normal", "besar"], browse: ["katalog", "gulir"], mode: ["bawaan", "bebas"],
+        size: ["normal", "besar"], browse: ["katalog", "gulir"], buyer: ["opsional", "wajib"], mode: ["bawaan", "bebas"],
         booleans: ["showUnit", "showStats", "showSearch", "showRecent"], text: ["greeting (≤80)", "receiptFooter (≤120)"],
         images: "logoUrl & categoryImages: https atau data:image (≤8.000 karakter/gambar, total ≤150.000) — lewat set_kasir_style atau set_catalog_images",
       },
@@ -17861,6 +17862,7 @@ const KASIR_STYLE_SCHEMA = {
   showStats: { type: "boolean", description: "Tampilkan omzet hari ini/bulan ini di header" },
   showSearch: { type: "boolean", description: "Tampilkan kolom cari" },
   showRecent: { type: "boolean", description: "Tampilkan daftar penjualan hari ini" },
+  buyer: { type: "string", enum: ["opsional", "wajib"], description: "Kolom pembeli di struk: wajib = harus diisi (mis. ID game / no. HP pelanggan), opsional = boleh kosong" },
   browse: { type: "string", enum: ["katalog", "gulir"], description: "katalog = grid kotak kategori → ketuk masuk daftar harga (+ Kembali ke katalog); gulir = semua produk dalam satu halaman" },
   mode: { type: "string", enum: ["bawaan", "bebas"], description: "bawaan = katalog Leosiqra; bebas = desain HTML dari set_kasir_template" },
   logoUrl: { type: "string", maxLength: 8000, description: "Logo toko: tautan https ATAU data:image (svg/png/webp, ≤8.000 karakter). \"\" = hapus" },

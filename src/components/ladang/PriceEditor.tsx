@@ -31,13 +31,13 @@ export function PriceEditor({ shop, onDone, onToast, onLeave }: { shop: Shop; on
   const site = shop.linkUrl ? ` ${shop.linkUrl}` : ' [tautan website]';
   const catalogPrompt = `Pakai Leosiqra (MCP): baca ulang website tokoku${site} dan samakan katalog usahaku "${shop.name}" (shop_id ${shop.id}).
 1) Panggil get_shop untuk katalog yang sekarang.
-2) Buka website itu & SEMUA halaman game/produknya, kumpulkan seluruh produk + harga Rupiah per kategori (nama game).
+2) Buka website itu & SEMUA halaman produk/kategorinya, kumpulkan seluruh produk + harga Rupiah per kategori.
 3) Panggil sync_shop_catalog dengan seluruh daftar itu (apply: false) untuk PRATINJAU.
 4) Tunjukkan ke aku: produk yang akan DITAMBAH, DIHAPUS, dan harga yang berubah.
 5) Setelah aku setuju, panggil sync_shop_catalog lagi dengan apply: true.`;
   const aiPrompt = `Pakai Leosiqra (MCP): perbarui HARGA katalog usahaku "${shop.name}" (shop_id ${shop.id}) sesuai website tokoku${shop.linkUrl ? ` ${shop.linkUrl}` : ' [tautan website]'}.
 1) Panggil get_shop untuk daftar produk yang sudah ada (i, group, name, price).
-2) Buka website itu & semua halaman game/produknya, baca harga terbaru.
+2) Buka website itu & semua halaman produk/kategorinya, baca harga terbaru.
 3) Cocokkan HANYA dengan produk yang sudah ada — JANGAN menambah produk baru.
 4) Panggil update_shop_prices dengan [{ i, price }] untuk yang harganya berubah saja.
 5) Laporkan ringkas: berapa yang naik/turun dan produk yang tidak ketemu.`;
@@ -91,7 +91,7 @@ export function PriceEditor({ shop, onDone, onToast, onLeave }: { shop: Shop; on
       {error && <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-[12px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">{error}</p>}
       <div className="flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2 dark:bg-slate-800">
         <Search size={15} className="shrink-0 text-slate-400" />
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari game atau nominal…" aria-label="Cari produk" className="min-w-0 flex-1 bg-transparent text-[13px] font-semibold text-slate-900 outline-none dark:text-white" />
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari produk…" aria-label="Cari produk" className="min-w-0 flex-1 bg-transparent text-[13px] font-semibold text-slate-900 outline-none dark:text-white" />
         {query && <button type="button" onClick={() => setQuery('')} aria-label="Hapus pencarian" className="text-slate-400"><X size={14} /></button>}
       </div>
       <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
