@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live: Fokus bareng Leo, run 42260880305; migrasi 0034 menunggu)
+Terakhir diperbarui: 2026-11-07 (live: Fokus satu layar + Leo bernapas, run 42263962169; migrasi 0034 menunggu)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-07 (branch claude/fokus-satu-layar) — Fokus bareng Leo: satu layar penuh + Leo bernapas. BELUM deploy (tunggu "gas"). Tanpa SQL.**
+- **2026-11-07 — Fokus bareng Leo: satu layar penuh + Leo bernapas: LIVE (run 42263962169, commit 5e1a06b). Tanpa SQL.**
   - Satu layar (HP/tablet/web): `useFitHeight` di FocusApp mengukur ruang (top elemen → atas tab bawah `[data-bottom-bar]`
     + 34px tombol +), mengunci gulir html/body; < 420px (HP landscape) tidak dikunci. Strip "Hari ini belum ada sesi" dihapus.
     Pengaturan sesi + volume pindah ke tombol ⚙️ (lembar bawah HP / modal web). HP: musik jadi baris chip ringkas.
