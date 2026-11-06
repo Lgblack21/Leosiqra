@@ -29,8 +29,8 @@ export const AdminHeader = ({ onMenuClick }: AdminHeaderProps) => {
             {{
               '/admin/dashboard': 'Admin Dashboard Overview',
               '/admin/user': 'User Management',
-              '/admin/pembayaran': 'Payment Confirmations',
-              '/admin/koin': 'Koin & Tarik Tunai',
+              '/admin/pembayaran': 'Pembayaran',
+              '/admin/koin': 'Koin',
               '/admin/laporan': 'Executive Reports',
               '/admin/saran': 'Saran & Kritik',
               '/admin/ai': 'AI & Saldo',

@@ -33,7 +33,7 @@ const adminMenuGroups = [
       { icon: LayoutDashboard, label: 'Dashboard', href: '/admin/dashboard' },
       { icon: Users, label: 'User', href: '/admin/user' },
       { icon: CreditCard, label: 'Pembayaran', href: '/admin/pembayaran' },
-      { icon: Coins, label: 'Koin & Tarik Tunai', href: '/admin/koin' },
+      { icon: Coins, label: 'Koin', href: '/admin/koin' },
       { icon: FileText, label: 'Laporan', href: '/admin/laporan' },
       { icon: MessageSquareHeart, label: 'Saran & Kritik', href: '/admin/saran' },
     ]

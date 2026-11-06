@@ -1,501 +1,296 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
-import { 
-  Check, 
-  Copy, 
-  Mail, 
-  Phone, 
-  ArrowRight, 
-  ChevronDown,
-  CreditCard,
-  QrCode,
-  X,
-  ImageIcon
-} from 'lucide-react';
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { getMemberPaymentInfo, AppSettings } from '@/lib/services/adminService';
+import { motion, useReducedMotion } from 'framer-motion';
+import { Bot, Building2, Check, CheckCircle2, Clock3, Coins, Copy, Crown, ImageIcon, Loader2, MessageCircle, QrCode, ScanLine, Sparkles, Users, X, XCircle } from 'lucide-react';
+import { getMemberPaymentInfo, type AppSettings, type ProPackage } from '@/lib/services/adminService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
-import { auth, db } from '@/lib/cf-client';
-import { collection, addDoc, serverTimestamp } from '@/lib/cf-firestore';
-import { onAuthStateChanged } from '@/lib/cf-auth';
+import { cloudflareApi } from '@/lib/cloudflare-api';
 import { cn } from '@/lib/utils';
 
-export default function ContactPage() {
-  const [copied, setCopied] = useState(false);
+// Pembayaran: Langganan PRO & Top up koin (2026-11-07). Paket & harga dari server
+// (/api/member/payment-info: paket PRO pengaturan admin + paket koin "koin-N").
+// Bayar manual (transfer / QRIS) → kirim bukti → admin memverifikasi.
+// ?package=koin-10 / ?tab=koin membuka tab & paket itu langsung.
+type Tab = 'pro' | 'koin';
+type MyPayment = { id: string; amount: number; package_json: string | null; status: 'MENUNGGU' | 'DISETUJUI' | 'DITOLAK' | 'GAGAL'; created_at: string; approved_at: string | null };
+const rp = (n: number) => `Rp${Math.round(n).toLocaleString('id-ID')}`;
+const nf = (n: number) => Math.round(n).toLocaleString('id-ID');
+const isCoin = (p: { id: string }) => String(p.id).startsWith('koin-');
+const PRO_PERKS = [
+  { icon: Bot, text: 'Chat Leo 50×/hari, scan struk 30×, catat suara 40×' },
+  { icon: Sparkles, text: '10 ilustrasi AI gratis tiap bulan di Cerita Hari Ini' },
+  { icon: Users, text: 'Sampai 5 akun tim kasir & dompet bersama lebih banyak' },
+  { icon: ScanLine, text: 'Aplikasi terhubung & catat lewat Claude/ChatGPT' },
+];
+
+export default function PembayaranPage() {
+  const reduce = useReducedMotion();
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [uploadingProof, setUploadingProof] = useState(false);
-  const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('pro');
+  const [pkgId, setPkgId] = useState('');
+  const [method, setMethod] = useState<'transfer' | 'qris'>('transfer');
+  const [ref, setRef] = useState('');
+  const [note, setNote] = useState('');
   const [proofUrl, setProofUrl] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+  const [done, setDone] = useState<string | null>(null);
+  const [copied, setCopied] = useState('');
+  const [me, setMe] = useState<{ name?: string; email?: string; plan?: string; expiredAt?: string | null } | null>(null);
+  const [balance, setBalance] = useState<number | null>(null);
+  const [history, setHistory] = useState<MyPayment[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    method: 'Bank Transfer',
-    ref: '',
-    package: '1 Bulan - Pro Solo',
-    amount: '',
-    note: ''
-  });
-
-  const activePackages = useMemo(() => {
-    return settings?.proPackages || [];
-  }, [settings?.proPackages]);
-
+  const loadHistory = () => cloudflareApi<{ items: MyPayment[] }>('/api/member/payments', { cache: 'no-store' }).then((r) => setHistory(r.items ?? [])).catch(() => undefined);
   useEffect(() => {
-    getMemberPaymentInfo()
-      .then(setSettings)
-      .finally(() => setLoading(false));
-    const unsubAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setForm(prev => ({ ...prev, email: user.email || '', name: user.displayName || '' }));
-      }
-    });
-    return () => { unsubAuth(); };
+    getMemberPaymentInfo().then(setSettings).catch(() => setSettings(null)).finally(() => setLoading(false));
+    cloudflareApi<{ user?: { name?: string; email?: string; plan?: string; expiredAt?: string | null } }>('/api/auth/me').then((r) => setMe(r.user ?? null)).catch(() => undefined);
+    cloudflareApi<{ balance?: number }>('/api/member/coins').then((r) => setBalance(r.balance ?? 0)).catch(() => undefined);
+    void loadHistory();
   }, []);
 
-  useEffect(() => {
-    if (activePackages.length > 0 && !activePackages.find(p => p.id === form.package)) {
-      // ?package=koin-10 (dari Profil › Koin › Top up) memilih paket itu langsung.
-      const wanted = new URLSearchParams(window.location.search).get('package');
-      const pick = activePackages.find(p => p.id === wanted) ?? activePackages[0];
-      setForm(prev => ({ ...prev, package: pick.id }));
-    }
-  }, [activePackages, form.package]);
+  const all = useMemo(() => (settings?.proPackages ?? []) as (ProPackage & { coins?: number })[], [settings]);
+  const proPkgs = all.filter((p) => !isCoin(p));
+  const coinPkgs = all.filter(isCoin);
+  const list = tab === 'pro' ? proPkgs : coinPkgs;
 
-  // Sync amount saat paket berubah
+  // Paket awal: ?package= / ?tab=, lalu paket pertama tab aktif.
   useEffect(() => {
-    const pkg = activePackages.find(p => p.id === form.package);
-    if (pkg) {
-      setForm(prev => ({ ...prev, amount: pkg.price.toString() }));
-    }
-  }, [form.package, activePackages]);
-
-  const copyToClipboard = async () => {
-    if (!settings?.bankNumber) return;
-    try {
-      await navigator.clipboard.writeText(settings.bankNumber);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Gagal menyalin nomor rekening:', err);
-      alert('Gagal menyalin. Silakan salin nomor rekening secara manual.');
-    }
+    if (!all.length || pkgId) return;
+    const qs = new URLSearchParams(window.location.search);
+    const wanted = all.find((p) => p.id === qs.get('package'));
+    const t: Tab = wanted ? (isCoin(wanted) ? 'koin' : 'pro') : qs.get('tab') === 'koin' ? 'koin' : 'pro';
+    setTab(t);
+    setPkgId(wanted?.id ?? (t === 'koin' ? coinPkgs[0]?.id : proPkgs.find((p) => p.isPopular)?.id ?? proPkgs[0]?.id) ?? '');
+  }, [all, pkgId, coinPkgs, proPkgs]);
+  const switchTab = (t: Tab) => {
+    setTab(t);
+    const l = t === 'pro' ? proPkgs : coinPkgs;
+    setPkgId((t === 'pro' ? l.find((p) => p.isPopular)?.id : undefined) ?? l[0]?.id ?? '');
   };
-
-  // Normalisasi nomor WhatsApp jadi format internasional tanpa "+"/spasi/strip
-  // (dibutuhkan wa.me) — anggap nomor lokal Indonesia kalau diawali "0".
-  const normalizedWhatsApp = useMemo(() => {
-    const raw = settings?.whatsapp;
-    if (!raw) return null;
-    let digits = raw.replace(/\D/g, '');
-    if (!digits) return null;
-    if (digits.startsWith('0')) digits = '62' + digits.slice(1);
-    else if (!digits.startsWith('62')) digits = '62' + digits;
-    return digits;
+  const pkg = all.find((p) => p.id === pkgId) ?? null;
+  const hasBank = Boolean(settings?.bankNumber);
+  const hasQris = Boolean(settings?.qrisURL);
+  const wa = useMemo(() => {
+    let d = (settings?.whatsapp ?? '').replace(/\D/g, '');
+    if (!d) return null;
+    if (d.startsWith('0')) d = `62${d.slice(1)}`;
+    else if (!d.startsWith('62')) d = `62${d}`;
+    return d;
   }, [settings?.whatsapp]);
+  const isPro = me?.plan === 'PRO' && (!me.expiredAt || new Date(me.expiredAt).getTime() > Date.now());
 
-  const handleProofUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const preview = URL.createObjectURL(file);
-    setProofPreview(preview);
-    setUploadingProof(true);
-    try {
-      const url = await uploadToCloudinary(file);
-      setProofUrl(url);
-    } catch {
-      alert('Gagal mengupload gambar. Coba lagi.');
-      setProofPreview(null);
-    } finally {
-      setUploadingProof(false);
-    }
+  const copy = async (text: string, key: string) => {
+    try { await navigator.clipboard.writeText(text); setCopied(key); window.setTimeout(() => setCopied(''), 1600); } catch { /* tidak didukung */ }
   };
-
-  const resetForm = () => {
-    setForm(prev => ({
-      ...prev,
-      method: 'Bank Transfer',
-      ref: '',
-      package: activePackages.length > 0 ? activePackages[0].id : '',
-      amount: activePackages.length > 0 ? activePackages[0].price.toString() : '0',
-      note: ''
-    }));
-    setProofPreview(null);
-    setProofUrl(null);
-    setSubmitted(false);
+  const onProof = async (f: File | undefined) => {
+    if (!f) return;
+    setError(''); setProofPreview(URL.createObjectURL(f)); setUploading(true);
+    try { setProofUrl(await uploadToCloudinary(f)); }
+    catch (e) { setProofPreview(null); setProofUrl(null); setError(e instanceof Error ? e.message : 'Gagal mengunggah bukti.'); }
+    finally { setUploading(false); }
   };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.name || !form.email || !form.ref) {
-      alert('Lengkapi Nama, Email, dan ID Referensi terlebih dahulu.');
-      return;
-    }
-    setSubmitting(true);
+  const submit = async () => {
+    if (!pkg) return;
+    if (!proofUrl && !ref.trim()) { setError('Unggah bukti transfer atau isi nomor referensinya.'); return; }
+    setSending(true); setError('');
     try {
-      const user = auth.currentUser;
-      await addDoc(collection(db, 'payments'), {
-        userId: user?.uid || null,
-        userEmail: form.email,
-        userName: form.name,
-        userPhotoURL: user?.photoURL || null,
-        method: form.method,
-        ref: form.ref,
-        package: { 
-          id: form.package,
-          name: activePackages.find(p => p.id === form.package)?.name || 'Custom Package',
-          durationMonths: activePackages.find(p => p.id === form.package)?.durationMonths || 1
-        },
-        amount: parseInt(form.amount.replace(/\D/g, '')) || 0,
-        note: form.note,
-        proofImageUrl: proofUrl || null,
-        status: 'MENUNGGU',
-        createdAt: serverTimestamp()
+      await cloudflareApi('/api/member/payments', {
+        method: 'POST',
+        json: { package: { id: pkg.id }, amount: pkg.price, method: method === 'qris' ? 'QRIS' : `Transfer ${settings?.bankName ?? 'Bank'}`, ref: ref.trim() || null, note: note.trim() || null, proof_image_url: proofUrl },
       });
-      setSubmitted(true);
-    } catch (err) {
-      console.error(err);
-      alert('Gagal mengirim konfirmasi. Coba lagi.');
-    } finally {
-      setSubmitting(false);
-    }
+      setDone(pkg.name);
+      setRef(''); setNote(''); setProofUrl(null); setProofPreview(null);
+      void loadHistory();
+    } catch (e) { setError(e instanceof Error ? e.message : 'Gagal mengirim konfirmasi.'); }
+    finally { setSending(false); }
   };
 
+  const card = 'rounded-[28px] bg-white ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800';
   return (
-    <div className="space-y-10 animate-in fade-in duration-700 max-w-[1200px] mb-12">
-      
-      {/* 1. Header Section */}
-      <div className="max-w-2xl">
-        <h1 className="text-4xl font-black text-slate-900 tracking-tight">Konfirmasi Pembayaran Pro</h1>
-        <p className="text-sm font-medium text-slate-500 mt-2 leading-relaxed">
-          Selesaikan transaksi Anda untuk membuka fitur eksklusif dan layanan prioritas di platform kami.
-        </p>
+    <div className="mx-auto max-w-6xl space-y-5 pb-12">
+      {/* Kepala: status akun & saldo koin */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 dark:text-white md:text-[30px]">Upgrade & Top up</h1>
+          <p className="text-[14px] text-slate-500">Langganan PRO atau isi koin — bayar transfer / QRIS, admin verifikasi maks. 1×24 jam.</p>
+        </div>
+        <div className="flex gap-2">
+          <span className={cn('inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-bold', isPro ? 'bg-gradient-to-r from-amber-300 to-yellow-200 text-amber-950' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300')}>
+            <Crown size={15} /> {isPro ? `PRO s.d. ${me?.expiredAt ? new Date(me.expiredAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}` : 'Paket FREE'}
+          </span>
+          {balance !== null && <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-2 text-[13px] font-bold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"><Coins size={15} /> {nf(balance)} koin</span>}
+        </div>
       </div>
 
-      {loading ? (
-        <div className="py-20 flex flex-col items-center justify-center gap-4">
-          <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Memuat instruksi pembayaran...</p>
-        </div>
-      ) : submitted ? (
-        <div className="py-20 flex flex-col items-center justify-center gap-8 text-center animate-in zoom-in duration-500">
-          <div className="w-24 h-24 rounded-full bg-emerald-100 flex items-center justify-center shadow-2xl shadow-emerald-200/50 relative">
-            <Check size={48} className="text-emerald-600 relative z-10" />
-            <div className="absolute inset-0 rounded-full bg-emerald-400/20 animate-ping" />
+      {done && (
+        <motion.div initial={reduce ? false : { opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="flex items-start gap-3 rounded-[24px] bg-emerald-50 p-4 ring-1 ring-emerald-100 dark:bg-emerald-500/10 dark:ring-emerald-500/20">
+          <CheckCircle2 size={22} className="mt-0.5 shrink-0 text-emerald-600" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[15px] font-bold text-emerald-900 dark:text-emerald-200">Konfirmasi {done} terkirim</p>
+            <p className="text-[13px] text-emerald-800/80 dark:text-emerald-300/80">Admin memverifikasi maks. 1×24 jam. Status bisa dilihat di Riwayat di bawah.</p>
+            {wa && <a href={`https://wa.me/${wa}?text=${encodeURIComponent(`Halo admin Leosiqra, saya sudah kirim konfirmasi pembayaran ${done} (${me?.email ?? ''}).`)}`} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 py-1.5 text-[12px] font-bold text-white"><MessageCircle size={14} /> Kabari admin via WhatsApp</a>}
           </div>
-          <div className="space-y-3">
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Konfirmasi Terkirim!</h2>
-            <p className="text-[13px] font-bold text-slate-500 max-w-xs mx-auto leading-relaxed">Tim kami akan memverifikasi pembayaran Anda dalam maksimal 1x24 jam. Cek email atau WhatsApp Anda secara berkala.</p>
-          </div>
-          <button 
-            onClick={resetForm}
-            className="px-12 py-5 bg-slate-900 text-white text-[13px] font-black rounded-2xl hover:bg-slate-800 hover:-translate-y-1 transition-all shadow-2xl shadow-slate-300"
-          >
-            Oke, Mengerti
-          </button>
-        </div>
-      ) : (
-        <>
-          {/* 2. Steps Section */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              { step: 1, title: 'Bayar sesuai paket', desc: 'Transfer dana sesuai dengan nominal paket Pro yang Anda pilih.', active: true },
-              { step: 2, title: 'Isi referensi pembayaran', desc: 'Lengkapi formulir konfirmasi dengan detail bukti transaksi Anda.', active: false },
-              { step: 3, title: 'Tunggu aktivasi admin', desc: 'Tim kami akan memverifikasi dalam waktu maksimal 1x24 jam.', active: false },
-            ].map((item, i) => (
-              <div key={i} className="bg-white p-6 md:p-8 rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm text-center space-y-4">
-                <div className={`w-10 h-10 rounded-full mx-auto flex items-center justify-center text-sm font-black ${item.active ? 'bg-indigo-600 text-white' : 'bg-slate-500 text-white opacity-60'}`}>
-                  {item.step}
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-sm font-black text-slate-900 tracking-tight">{item.title}</h3>
-                  <p className="text-[10px] font-bold text-slate-400 leading-relaxed px-4">{item.desc}</p>
-                </div>
-              </div>
+          <button type="button" onClick={() => setDone(null)} aria-label="Tutup" className="rounded-full p-1 text-emerald-700/70 hover:bg-emerald-100"><X size={16} /></button>
+        </motion.div>
+      )}
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+        {/* 1. Pilih paket */}
+        <section className="space-y-4">
+          <div className="flex rounded-full bg-slate-100 p-1 dark:bg-slate-800">
+            {([['pro', 'Langganan PRO', Crown], ['koin', 'Top up koin', Coins]] as const).map(([k, label, Icon]) => (
+              <button key={k} type="button" onClick={() => switchTab(k)} aria-pressed={tab === k} className={cn('flex flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 text-[14px] font-bold transition-colors', tab === k ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500')}>
+                <Icon size={16} /> {label}
+              </button>
             ))}
           </div>
 
-          {/* 3. Main Detail Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-            
-            {/* LEFT COLUMN: Informasi Pembayaran */}
-            <div className="lg:col-span-2 space-y-8">
-              <div className="bg-[#f0f5fa] p-6 md:p-8 rounded-[20px] md:rounded-[40px] border border-white shadow-sm space-y-8 relative overflow-hidden">
-                <div className="absolute top-8 right-8 text-slate-200">
-                  <CreditCard size={48} />
-                </div>
-
-                <div>
-                  <h2 className="text-lg font-black text-indigo-600 tracking-tight mb-6">Informasi Pembayaran</h2>
-                  
-                  <div className="space-y-6">
-                    <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Pembayaran</p>
-                      <p className="text-3xl font-black text-indigo-600 tracking-tight">Rp {parseInt(form.amount.replace(/\D/g, '') || '0').toLocaleString('id-ID')}</p>
-                      <p className="text-[11px] font-bold text-slate-500 mt-1">{activePackages.find(p => p.id === form.package)?.name || 'Silakan pilih paket Anda'}</p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Bank Tujuan</p>
-                        <p className="text-[13px] font-black text-slate-900 tracking-tight">{settings?.bankName || '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nama Rekening</p>
-                        <p className="text-[13px] font-black text-slate-900 tracking-tight leading-snug">{settings?.bankAccountName || '-'}</p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nomor Rekening</p>
-                      <div className="flex items-center gap-3">
-                        <p className="text-lg font-black text-indigo-600 tracking-tight">{settings?.bankNumber || '-'}</p>
-                        {settings?.bankNumber && (
-                          <button 
-                            onClick={copyToClipboard}
-                            className="text-slate-400 hover:text-indigo-600 transition-colors"
-                          >
-                            {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="space-y-4 pt-4 border-t border-slate-200">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{settings?.qrisText || 'Pembayaran QRIS'}</p>
-                      <div className="relative w-48 h-48 flex items-center justify-center overflow-hidden">
-                        {settings?.qrisURL ? (
-                          <Image src={settings.qrisURL} alt="QRIS" fill className="object-contain" />
-                        ) : (
-                          <div className="w-full h-full bg-slate-50 rounded-3xl flex items-center justify-center border-2 border-dashed border-slate-200">
-                            <QrCode size={80} className="text-slate-300" />
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-[9px] font-bold text-slate-400 italic">Scan QRIS di atas melalui aplikasi bank atau e-wallet Anda.</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-8 border-t border-slate-200 space-y-3">
-                  {settings?.billingEmail ? (
-                    <a
-                      href={`mailto:${settings.billingEmail}`}
-                      className="flex items-center gap-3 text-slate-600 hover:text-indigo-600 transition-colors"
-                    >
-                      <Mail size={16} />
-                      <span className="text-[11px] font-bold">{settings.billingEmail}</span>
-                    </a>
-                  ) : (
-                    <div className="flex items-center gap-3 text-slate-400">
-                      <Mail size={16} />
-                      <span className="text-[11px] font-bold">Email belum diatur</span>
-                    </div>
-                  )}
-                  {normalizedWhatsApp ? (
-                    <a
-                      href={`https://wa.me/${normalizedWhatsApp}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 text-slate-600 hover:text-indigo-600 transition-colors"
-                    >
-                      <Phone size={16} />
-                      <span className="text-[11px] font-bold">+{normalizedWhatsApp} (WhatsApp)</span>
-                    </a>
-                  ) : (
-                    <div className="flex items-center gap-3 text-slate-400">
-                      <Phone size={16} />
-                      <span className="text-[11px] font-bold">WhatsApp belum diatur</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* RIGHT COLUMN: Form Card */}
-            <div className="lg:col-span-3">
-              <form onSubmit={handleSubmit} className="bg-white p-6 md:p-10 rounded-[20px] md:rounded-[40px] border border-slate-50 shadow-sm space-y-10">
-                <h2 className="text-xl font-black text-slate-900 tracking-tight">Kirim Konfirmasi Pembayaran</h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nama Lengkap</label>
-                    <input 
-                      type="text" 
-                      placeholder="Sesuai bukti transfer"
-                      value={form.name}
-                      onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                      className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-4 px-6 text-sm font-bold text-slate-600 placeholder:text-slate-300 transition-all"
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Alamat Email</label>
-                    <input 
-                      type="email" 
-                      placeholder="user@example.com"
-                      value={form.email}
-                      onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-                      className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-4 px-6 text-sm font-bold text-slate-600 placeholder:text-slate-300 transition-all"
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Metode Bayar</label>
-                    <div className="relative">
-                      <select 
-                        value={form.method}
-                        onChange={e => setForm(p => ({ ...p, method: e.target.value }))}
-                        className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-4 px-6 text-sm font-bold text-slate-600 transition-all cursor-pointer"
-                      >
-                        <option>Bank Transfer</option>
-                        <option>QRIS / E-Wallet</option>
-                      </select>
-                      <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">ID Ref Pembayaran</label>
-                    <input 
-                      type="text" 
-                      placeholder="Contoh: REF-98210"
-                      value={form.ref}
-                      onChange={e => setForm(p => ({ ...p, ref: e.target.value }))}
-                      className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-4 px-6 text-sm font-bold text-slate-600 placeholder:text-slate-300 transition-all"
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Paket PRO / Top up koin</label>
-                    <div className="relative">
-                      <select 
-                        value={form.package}
-                        onChange={e => setForm(p => ({ ...p, package: e.target.value }))}
-                        disabled={activePackages.length === 0}
-                        className={cn(
-                          "w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-4 px-6 text-sm font-bold text-slate-600 transition-all cursor-pointer",
-                          activePackages.length === 0 && "opacity-50 cursor-not-allowed"
-                        )}
-                      >
-                        {activePackages.length === 0 ? (
-                          <option value="">Belum ada paket tersedia</option>
-                        ) : (
-                          activePackages.map(pkg => (
-                            <option key={pkg.id} value={pkg.id}>
-                              {pkg.name} {pkg.isPopular ? '(* Populer)' : ''}
-                            </option>
-                          ))
-                        )}
-                      </select>
-                      <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Total Dibayar (IDR)</label>
-                    <input 
-                      type="text" 
-                      placeholder="149000"
-                      value={form.amount}
-                      onChange={e => setForm(p => ({ ...p, amount: e.target.value }))}
-                      className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-4 px-6 text-sm font-bold text-slate-600 placeholder:text-slate-300 transition-all"
-                    />
-                  </div>
-
-                  {/* UPLOAD BUKTI PEMBAYARAN */}
-                  <div className="md:col-span-2 space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Bukti Pembayaran</label>
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleProofUpload}
-                    />
-                    {proofPreview ? (
-                      <div className="relative w-full rounded-2xl overflow-hidden border-2 border-indigo-100">
-                        <Image
-                          src={proofPreview}
-                          alt="Bukti Pembayaran"
-                          width={1200}
-                          height={800}
-                          className="w-full max-h-64 h-auto object-contain bg-slate-50"
-                        />
-                        {uploadingProof && (
-                          <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
-                            <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                          </div>
-                        )}
-                        {!uploadingProof && proofUrl && (
-                          <div className="absolute top-3 right-3 px-3 py-1 bg-emerald-500 text-white text-[10px] font-black rounded-full">
-                            OK Terupload
-                          </div>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => { setProofPreview(null); setProofUrl(null); }}
-                          className="absolute top-3 left-3 p-1 bg-white/80 rounded-full text-slate-600 hover:text-red-500"
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="w-full py-8 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center gap-3 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all group"
-                      >
-                        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
-                          <ImageIcon size={22} className="text-slate-400 group-hover:text-indigo-500 transition-colors" />
-                        </div>
-                        <div className="text-center">
-                          <p className="text-[11px] font-black text-slate-600 group-hover:text-indigo-600">Klik untuk upload bukti transfer</p>
-                          <p className="text-[9px] font-bold text-slate-400 mt-1">JPG, PNG, WEBP - Maks 5MB</p>
-                        </div>
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="md:col-span-2 space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Catatan Tambahan</label>
-                    <textarea 
-                      rows={4}
-                      placeholder="Informasi tambahan jika diperlukan..."
-                      value={form.note}
-                      onChange={e => setForm(p => ({ ...p, note: e.target.value }))}
-                      className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-2xl py-5 px-6 text-sm font-bold text-slate-600 placeholder:text-slate-300 transition-all resize-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  <button 
-                    type="submit"
-                    disabled={submitting || uploadingProof}
-                    className={cn(
-                      "w-full bg-[#3b82f6] flex items-center justify-center gap-3 py-5 rounded-2xl text-[13px] font-black text-white hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 group",
-                      (submitting || uploadingProof) && "opacity-60 cursor-not-allowed"
-                    )}
-                  >
-                    {submitting ? 'Mengirim...' : 'Kirim Konfirmasi Aktivasi Pro'}
-                    {!submitting && <ArrowRight size={20} className="transition-transform group-hover:translate-x-1" />}
+          {loading ? (
+            <div className="grid grid-cols-2 gap-3">{[0, 1, 2, 3].map((i) => <div key={i} className="h-32 animate-pulse rounded-[24px] bg-slate-100 dark:bg-slate-800" />)}</div>
+          ) : !list.length ? (
+            <p className={cn(card, 'p-6 text-center text-[14px] text-slate-500')}>{tab === 'pro' ? 'Paket PRO belum diatur admin.' : 'Paket koin belum tersedia.'}</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {list.map((p) => {
+                const on = p.id === pkgId;
+                const months = Number(p.durationMonths) || 1;
+                return (
+                  <button key={p.id} type="button" onClick={() => setPkgId(p.id)} aria-pressed={on}
+                    className={cn('relative flex flex-col items-start rounded-[24px] p-4 text-left transition-all', on ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/20 ring-2 ring-slate-900 dark:bg-white dark:text-slate-900 dark:ring-white' : 'bg-white ring-1 ring-slate-200 hover:ring-slate-300 dark:bg-slate-900 dark:ring-slate-700')}>
+                    {p.isPopular && <span className="absolute -top-2 right-3 rounded-full bg-gradient-to-r from-amber-400 to-pink-400 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-white shadow">Populer</span>}
+                    <span className={cn('flex h-9 w-9 items-center justify-center rounded-xl', on ? 'bg-white/15' : tab === 'pro' ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15' : 'bg-amber-50 text-amber-600 dark:bg-amber-500/15')}>
+                      {tab === 'pro' ? <Crown size={18} /> : <Coins size={18} />}
+                    </span>
+                    <span className="mt-3 text-[15px] font-bold leading-tight">{tab === 'pro' ? p.name : `${nf(p.coins ?? p.price)} koin`}</span>
+                    <span className="mt-1 text-[22px] font-black tracking-tight">{rp(p.price)}</span>
+                    <span className={cn('text-[12px]', on ? 'text-white/70 dark:text-slate-500' : 'text-slate-500')}>
+                      {tab === 'pro' ? (months > 1 ? `${rp(p.price / months)}/bulan · ${months} bulan` : '1 bulan') : '1 koin = Rp1'}
+                    </span>
+                    {on && <span className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-400 text-slate-900"><Check size={14} strokeWidth={3} /></span>}
                   </button>
-                  <p className="text-[10px] font-bold text-slate-400 text-center px-4">
-                    Dengan mengklik tombol di atas, Anda menyetujui Syarat & Ketentuan kami.
-                  </p>
-                </div>
-              </form>
+                );
+              })}
             </div>
+          )}
+
+          <div className={cn(card, 'p-4 md:p-5')}>
+            {tab === 'pro' ? (
+              <>
+                <p className="flex items-center gap-2 text-[14px] font-bold text-slate-900 dark:text-white"><Crown size={16} className="text-amber-500" /> Yang kamu dapat dengan PRO</p>
+                <ul className="mt-3 space-y-2.5">
+                  {PRO_PERKS.map(({ icon: Icon, text }) => (
+                    <li key={text} className="flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300"><span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15"><Icon size={14} /></span>{text}</li>
+                  ))}
+                </ul>
+                <p className="mt-3 text-[12px] text-slate-400">FREE tetap bisa mencatat tanpa batas; AI dibatasi 5 chat, 3 scan & 5 catat suara per hari.</p>
+              </>
+            ) : (
+              <>
+                <p className="flex items-center gap-2 text-[14px] font-bold text-slate-900 dark:text-white"><Coins size={16} className="text-amber-500" /> Koin dipakai untuk</p>
+                <ul className="mt-3 space-y-2 text-[13px] text-slate-600 dark:text-slate-300">
+                  <li>✨ Ilustrasi AI Cerita Hari Ini — 1.000 koin / gambar</li>
+                  <li>👑 Tukar PRO — 15.000 koin / bulan</li>
+                  <li>🔌 Aktivasi aplikasi terhubung</li>
+                </ul>
+                <p className="mt-3 text-[12px] text-slate-400">Koin tidak bisa dicairkan jadi uang & tidak bisa dipindah ke akun lain.</p>
+              </>
+            )}
           </div>
-        </>
+        </section>
+
+        {/* 2. Bayar & 3. Konfirmasi */}
+        <section className={cn(card, 'h-fit space-y-4 p-4 md:p-5 lg:sticky lg:top-6')}>
+          <div className="flex items-center justify-between rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 p-4 text-white">
+            <div className="min-w-0">
+              <p className="text-[12px] text-white/70">Total bayar</p>
+              <p className="text-[28px] font-black leading-tight tracking-tight">{pkg ? rp(pkg.price) : '—'}</p>
+              <p className="truncate text-[12px] text-white/80">{pkg ? (isCoin(pkg) ? `${nf(pkg.coins ?? pkg.price)} koin` : pkg.name) : 'Pilih paket'}</p>
+            </div>
+            {pkg && <button type="button" onClick={() => copy(String(Math.round(pkg.price)), 'amount')} className="flex items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-bold hover:bg-white/25">{copied === 'amount' ? <Check size={13} /> : <Copy size={13} />} {copied === 'amount' ? 'Disalin' : 'Salin'}</button>}
+          </div>
+
+          <div>
+            <p className="mb-2 text-[13px] font-bold text-slate-800 dark:text-slate-100">1. Bayar ke</p>
+            <div className="mb-2 flex rounded-full bg-slate-100 p-1 dark:bg-slate-800">
+              {([['transfer', 'Transfer bank', Building2], ['qris', 'QRIS', QrCode]] as const).map(([k, label, Icon]) => (
+                <button key={k} type="button" onClick={() => setMethod(k)} className={cn('flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[13px] font-bold', method === k ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500')}><Icon size={15} /> {label}</button>
+              ))}
+            </div>
+            {method === 'transfer' ? (
+              hasBank ? (
+                <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3.5 dark:bg-slate-800/60">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-indigo-600 shadow-sm dark:bg-slate-900"><Building2 size={18} /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[12px] font-semibold text-slate-500">{settings?.bankName}</p>
+                    <p className="text-[18px] font-black tabular-nums tracking-wide text-slate-900 dark:text-white">{settings?.bankNumber}</p>
+                    <p className="truncate text-[12px] text-slate-500">a.n. {settings?.bankAccountName}</p>
+                  </div>
+                  <button type="button" onClick={() => copy(settings!.bankNumber!, 'bank')} className="flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200">{copied === 'bank' ? <Check size={13} /> : <Copy size={13} />} {copied === 'bank' ? 'Disalin' : 'Salin'}</button>
+                </div>
+              ) : <p className="rounded-2xl bg-amber-50 p-3 text-[13px] text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">Rekening tujuan belum diatur admin. Pakai QRIS atau hubungi admin.</p>
+            ) : hasQris ? (
+              <div className="flex flex-col items-center gap-2 rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/60">
+                <div className="relative h-52 w-52 overflow-hidden rounded-2xl bg-white p-2 shadow-sm"><Image src={settings!.qrisURL!} alt="QRIS Leosiqra" fill sizes="208px" className="object-contain" unoptimized /></div>
+                <p className="text-center text-[12px] text-slate-500">{settings?.qrisText || 'Scan dengan aplikasi bank / e-wallet, bayar sesuai total.'}</p>
+              </div>
+            ) : <p className="rounded-2xl bg-amber-50 p-3 text-[13px] text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">QRIS belum diatur admin. Pakai transfer bank.</p>}
+          </div>
+
+          <div className="space-y-2.5">
+            <p className="text-[13px] font-bold text-slate-800 dark:text-slate-100">2. Kirim bukti</p>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => onProof(e.target.files?.[0])} />
+            <button type="button" onClick={() => fileRef.current?.click()} className={cn('relative flex w-full items-center gap-3 overflow-hidden rounded-2xl p-3 text-left ring-1 transition-colors', proofPreview ? 'bg-white ring-emerald-200 dark:bg-slate-900' : 'border-2 border-dashed border-slate-200 bg-slate-50 ring-transparent hover:border-indigo-300 dark:border-slate-700 dark:bg-slate-800/60')}>
+              {proofPreview ? (
+                // eslint-disable-next-line @next/next/no-img-element -- pratinjau file lokal (blob)
+                <img src={proofPreview} alt="Bukti transfer" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
+              ) : <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white text-slate-400 shadow-sm dark:bg-slate-900"><ImageIcon size={22} /></span>}
+              <span className="min-w-0 flex-1">
+                <span className="block text-[14px] font-bold text-slate-800 dark:text-slate-100">{uploading ? 'Mengunggah…' : proofUrl ? 'Bukti terunggah' : 'Unggah screenshot bukti bayar'}</span>
+                <span className="block text-[12px] text-slate-500">{proofUrl ? 'Ketuk untuk mengganti' : 'JPG / PNG, maks. 5 MB'}</span>
+              </span>
+              {uploading ? <Loader2 size={18} className="animate-spin text-indigo-500" /> : proofUrl ? <CheckCircle2 size={20} className="text-emerald-500" /> : null}
+            </button>
+            <input value={ref} onChange={(e) => setRef(e.target.value.slice(0, 80))} placeholder="No. referensi transaksi (opsional jika ada bukti)" className="w-full rounded-2xl bg-slate-50 px-4 py-3 text-[14px] outline-none ring-1 ring-slate-100 placeholder:text-slate-400 focus:bg-white focus:ring-indigo-200 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700" />
+            <input value={note} onChange={(e) => setNote(e.target.value.slice(0, 300))} placeholder="Catatan untuk admin (opsional)" className="w-full rounded-2xl bg-slate-50 px-4 py-3 text-[14px] outline-none ring-1 ring-slate-100 placeholder:text-slate-400 focus:bg-white focus:ring-indigo-200 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700" />
+          </div>
+
+          {error && <p role="alert" className="text-[13px] font-semibold text-rose-600">{error}</p>}
+          <button type="button" onClick={submit} disabled={!pkg || sending || uploading} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 py-4 text-[15px] font-bold text-white shadow-lg shadow-slate-900/15 transition-transform active:scale-[0.98] disabled:opacity-50 dark:bg-white dark:text-slate-900">
+            {sending ? <Loader2 size={17} className="animate-spin" /> : <Check size={17} />} Kirim konfirmasi pembayaran
+          </button>
+          <p className="text-center text-[11px] text-slate-400">Atas nama akun {me?.name || me?.email || 'kamu'}{me?.email && me?.name ? ` · ${me.email}` : ''}. {settings?.billingEmail ? `Kendala? ${settings.billingEmail}` : ''}</p>
+        </section>
+      </div>
+
+      {/* Riwayat */}
+      {history.length > 0 && (
+        <section className={cn(card, 'p-4 md:p-5')}>
+          <p className="mb-2 text-[15px] font-bold text-slate-900 dark:text-white">Riwayat pembayaranku</p>
+          <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+            {history.map((h) => {
+              let info: { name?: string; kind?: string } = {};
+              try { info = JSON.parse(h.package_json ?? '{}'); } catch { info = {}; }
+              const st = h.status === 'DISETUJUI' ? { label: 'Disetujui', cls: 'bg-emerald-50 text-emerald-700', Icon: CheckCircle2 } : h.status === 'MENUNGGU' ? { label: 'Menunggu', cls: 'bg-amber-50 text-amber-700', Icon: Clock3 } : { label: 'Ditolak', cls: 'bg-rose-50 text-rose-700', Icon: XCircle };
+              return (
+                <li key={h.id} className="flex items-center gap-3 py-2.5">
+                  <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', info.kind === 'coin' ? 'bg-amber-50 text-amber-600' : 'bg-indigo-50 text-indigo-600')}>{info.kind === 'coin' ? <Coins size={16} /> : <Crown size={16} />}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[14px] font-semibold text-slate-800 dark:text-slate-100">{info.name ?? 'Pembayaran'}</span>
+                    <span className="block text-[12px] text-slate-400">{new Date(h.created_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · {rp(h.amount)}</span>
+                  </span>
+                  <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-bold', st.cls)}><st.Icon size={13} /> {st.label}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       )}
     </div>
   );
 }
-

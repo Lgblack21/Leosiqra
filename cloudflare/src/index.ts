@@ -8248,11 +8248,106 @@ async function handleAdminCoinWithdrawalById(request: Request, env: Env, id: str
   return json({ ok: true });
 }
 
+// ── Admin › Koin (2026-11-07) ────────────────────────────────────────────────
+// GET  /api/admin/coins/summary        → ringkasan ekonomi koin
+// GET  /api/admin/coins/users?q=       → pengguna + saldo (cari nama/email)
+// GET  /api/admin/coins/ledger?kind=&user= → riwayat (maks 300)
+// POST /api/admin/coins/adjust { user_id, amount, note, request_id } → tambah/kurangi (kind admin_adjust)
+const COIN_KIND_GROUP: Record<string, "beli" | "hadiah" | "pakai" | "tarik" | "admin"> = {
+  topup: "beli",
+  signup: "hadiah", ref_active: "hadiah", ref_active_referee: "hadiah", ref_pro: "hadiah", streak: "hadiah",
+  redeem_pro: "pakai", story_ai: "pakai", story_ai_refund: "pakai", app_activation: "pakai",
+  withdraw: "tarik", withdraw_refund: "tarik",
+  admin_adjust: "admin",
+};
+async function handleAdminCoins(request: Request, env: Env, pathname: string, url: URL) {
+  const auth = await requireSession(env, request, "admin");
+  if (auth.error) return auth.error;
+  if (pathname === "/api/admin/coins/summary" && request.method === "GET") {
+    const byKind = (await env.DB.prepare("SELECT kind, COUNT(*) AS n, COALESCE(SUM(amount), 0) AS total FROM coin_ledger GROUP BY kind").all<{ kind: string; n: number; total: number }>()).results ?? [];
+    const holders = await env.DB.prepare("SELECT COUNT(*) AS n FROM (SELECT user_id FROM coin_ledger GROUP BY user_id HAVING SUM(amount) > 0)").first<{ n: number }>();
+    const month = todayWIB().slice(0, 7);
+    const monthKind = (await env.DB.prepare("SELECT kind, COALESCE(SUM(amount), 0) AS total FROM coin_ledger WHERE substr(created_at, 1, 7) = ? GROUP BY kind").bind(month).all<{ kind: string; total: number }>()).results ?? [];
+    const sumGroup = (rows: { kind: string; total: number }[], g: string) => rows.filter((r) => COIN_KIND_GROUP[r.kind] === g).reduce((a, r) => a + Number(r.total || 0), 0);
+    const pending = await env.DB.prepare("SELECT COUNT(*) AS n FROM coin_withdrawals WHERE status = 'MENUNGGU'").first<{ n: number }>().catch(() => ({ n: 0 }));
+    const pendingTopup = await env.DB.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(amount), 0) AS s FROM payments WHERE status = 'MENUNGGU' AND json_valid(package_json) AND json_extract(package_json, '$.kind') = 'coin'").first<{ n: number; s: number }>().catch(() => ({ n: 0, s: 0 }));
+    return json({
+      circulating: byKind.reduce((a, r) => a + Number(r.total || 0), 0),
+      holders: Number(holders?.n) || 0,
+      bought: sumGroup(byKind, "beli"),
+      rewards: sumGroup(byKind, "hadiah"),
+      spent: -sumGroup(byKind, "pakai"),
+      adjusted: sumGroup(byKind, "admin"),
+      month: { key: month, bought: sumGroup(monthKind, "beli"), rewards: sumGroup(monthKind, "hadiah"), spent: -sumGroup(monthKind, "pakai") },
+      byKind,
+      pendingWithdrawals: Number(pending?.n) || 0,
+      pendingTopups: { count: Number(pendingTopup?.n) || 0, amount: Number(pendingTopup?.s) || 0 },
+      rules: { ...COIN_RULES, storyAiPrice: STORY_AI_PRICE, storyAiFreePro: STORY_AI_FREE_PRO },
+      packages: COIN_PACKAGES,
+      aiLimits: AI_LIMITS,
+    });
+  }
+  if (pathname === "/api/admin/coins/users" && request.method === "GET") {
+    const q = (url.searchParams.get("q") ?? "").trim().toLowerCase().slice(0, 80);
+    const like = `%${q.replace(/[%_]/g, "")}%`;
+    const rows = await env.DB.prepare(
+      `SELECT u.id, u.name, u.email, u.plan, u.expired_at,
+              COALESCE((SELECT SUM(amount) FROM coin_ledger l WHERE l.user_id = u.id), 0) AS balance,
+              (SELECT MAX(created_at) FROM coin_ledger l WHERE l.user_id = u.id) AS last_at
+         FROM users u
+        WHERE (? = '' OR lower(u.email) LIKE ? OR lower(COALESCE(u.name, '')) LIKE ?)
+        ORDER BY balance DESC, last_at DESC
+        LIMIT 50`
+    ).bind(q, like, like).all();
+    return json({ items: rows.results ?? [] });
+  }
+  if (pathname === "/api/admin/coins/ledger" && request.method === "GET") {
+    const kind = url.searchParams.get("kind") ?? "";
+    const user = url.searchParams.get("user") ?? "";
+    const group = url.searchParams.get("group") ?? "";
+    const kinds = group ? Object.entries(COIN_KIND_GROUP).filter(([, g]) => g === group).map(([k]) => k) : [];
+    const where: string[] = [];
+    const args: unknown[] = [];
+    if (/^[a-z_]{2,40}$/.test(kind)) { where.push("l.kind = ?"); args.push(kind); }
+    if (kinds.length) { where.push(`l.kind IN (${kinds.map(() => "?").join(",")})`); args.push(...kinds); }
+    if (/^[A-Za-z0-9_-]{6,64}$/.test(user)) { where.push("l.user_id = ?"); args.push(user); }
+    const rows = await env.DB.prepare(
+      `SELECT l.id, l.user_id, u.name AS user_name, u.email AS user_email, l.amount, l.kind, l.note, l.created_at
+         FROM coin_ledger l LEFT JOIN users u ON u.id = l.user_id
+        ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+        ORDER BY l.created_at DESC LIMIT 300`
+    ).bind(...args).all();
+    return json({ items: rows.results ?? [] });
+  }
+  if (pathname === "/api/admin/coins/adjust" && request.method === "POST") {
+    const raw = await parseJson<Record<string, unknown>>(request);
+    const userId = typeof raw.user_id === "string" && /^[A-Za-z0-9_-]{6,64}$/.test(raw.user_id) ? raw.user_id : null;
+    const amount = Number.isInteger(raw.amount) ? (raw.amount as number) : NaN;
+    const note = typeof raw.note === "string" ? raw.note.trim().slice(0, 120) : "";
+    const requestId = typeof raw.request_id === "string" && /^[0-9a-f-]{36}$/i.test(raw.request_id) ? raw.request_id : null;
+    if (!userId || !Number.isFinite(amount) || amount === 0 || Math.abs(amount) > 10_000_000) return json({ error: "Isi jumlah koin (bukan 0, maks 10 juta)." }, { status: 400 });
+    if (note.length < 3) return json({ error: "Tulis alasannya (mis. kompensasi gangguan, koreksi top up)." }, { status: 400 });
+    if (!requestId) return json({ error: "Permintaan tidak valid. Muat ulang halaman." }, { status: 400 });
+    const target = await env.DB.prepare("SELECT email FROM users WHERE id = ?").bind(userId).first<{ email: string }>();
+    if (!target) return json({ error: "Pengguna tidak ditemukan." }, { status: 404 });
+    // Pengurangan tidak boleh membuat saldo minus.
+    const res = await env.DB.prepare(
+      `INSERT OR IGNORE INTO coin_ledger (id, user_id, amount, kind, cashable, idem_key, note, created_at)
+       SELECT ?, ?, ?, 'admin_adjust', 0, ?, ?, ? WHERE ? > 0 OR (SELECT COALESCE(SUM(amount), 0) FROM coin_ledger WHERE user_id = ?) + ? >= 0`
+    ).bind(generateId(), userId, amount, `admin_adjust:${requestId}`, `Admin: ${note}`, nowIso(), amount, userId, amount).run();
+    if (!res.meta.changes) return json({ error: amount < 0 ? "Saldo pengguna tidak cukup untuk dikurangi sebanyak itu." : "Penyesuaian ini sudah tercatat." }, { status: 409 });
+    await insertAdminLog(env, auth.session.user.email, "COIN_ADJUST", target.email, `${amount > 0 ? "+" : ""}${amount} koin — ${note}`, amount > 0 ? "emerald" : "rose");
+    return json({ ok: true, balance: (await coinBalances(env, userId)).balance }, { status: 201 });
+  }
+  return json({ error: "Not found" }, { status: 404 });
+}
+
 // Semua rute koin lewat sini: tabel belum ada (migrasi 0017 belum diterapkan)
 // → jawab jujur 503, jangan bocorkan pesan D1.
 async function handleCoinRoutes(request: Request, env: Env, pathname: string) {
   try {
     const method = request.method;
+    if (pathname.startsWith("/api/admin/coins/")) return await handleAdminCoins(request, env, pathname, new URL(request.url));
     if (pathname === "/api/member/coins" && method === "GET") return await handleMemberCoins(request, env);
     if (pathname === "/api/member/coins/team" && method === "GET") return await handleCoinTeam(request, env);
     if (pathname === "/api/member/coins/apply-code" && method === "POST") return await handleApplyReferralCode(request, env);
@@ -20076,7 +20171,7 @@ const worker = {
         return await handleSubscriptionRoutes(request, env, url.pathname);
       }
 
-      if (url.pathname === "/api/member/coins" || url.pathname.startsWith("/api/member/coins/") || url.pathname === "/api/admin/coin-withdrawals" || url.pathname.startsWith("/api/admin/coin-withdrawals/")) {
+      if (url.pathname === "/api/member/coins" || url.pathname.startsWith("/api/member/coins/") || url.pathname === "/api/admin/coin-withdrawals" || url.pathname.startsWith("/api/admin/coin-withdrawals/") || url.pathname.startsWith("/api/admin/coins/")) {
         return await handleCoinRoutes(request, env, url.pathname);
       }
 
@@ -20098,6 +20193,13 @@ const worker = {
 
       if (url.pathname === "/api/member/payments" && request.method === "POST") {
         return await handleCreateMemberPayment(request, env);
+      }
+
+      if (url.pathname === "/api/member/payments" && request.method === "GET") {
+        const auth = await requireSession(env, request);
+        if (auth.error) return auth.error;
+        const rows = await env.DB.prepare("SELECT id, amount, package_json, status, created_at, approved_at FROM payments WHERE user_id = ? ORDER BY created_at DESC LIMIT 20").bind(auth.session.user.id).all();
+        return json({ items: rows.results ?? [] });
       }
 
       if (url.pathname === "/api/member/payment-info" && request.method === "GET") {

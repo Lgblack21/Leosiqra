@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live: koin satu jenis + kuota AI, run 42300089133)
+Terakhir diperbarui: 2026-11-07 (branch claude/pembayaran-admin-koin menunggu "gas")
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,19 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-07 — Halaman pembayaran rapi + Admin › Koin lengkap: BRANCH claude/pembayaran-admin-koin, BELUM LIVE (tunggu "gas"). Tanpa SQL.**
+  - /membership/contact ditulis ulang jadi "Upgrade & Top up": tab PRO / Top up koin, kartu paket, kartu checkout (total + salin,
+    transfer/QRIS, unggah bukti, ref, catatan), riwayat pembayaranku. Baru di Worker: GET /api/member/payments (20 terakhir milik user).
+  - Admin › Koin (src/app/admin/koin): tab Ringkasan (beredar, bulan ini, asal koin, per jenis, antrean top up), Pengguna
+    (cari, saldo, riwayat, tambah/kurangi), Riwayat (filter grup), Aturan (read-only), Tarik tunai lama (hanya muncul kalau ada data).
+    Worker handleAdminCoins: GET /api/admin/coins/{summary,users,ledger}, POST /api/admin/coins/adjust (kind admin_adjust,
+    idem admin_adjust:<request_id>, tolak kalau saldo jadi minus → 409, |jumlah| ≤ 10 jt, alasan wajib, log COIN_ADJUST).
+    story_ai_refund dihitung di grup "pakai" (bersih dengan story_ai), bukan hadiah.
+  - Admin › Pembayaran: kartu per tiket, badge KOIN/PRO, filter jenis, konfirmasi spesifik ("Tambahkan N koin?"), toast (bukan alert),
+    catatan member + link WhatsApp, pendapatan PRO vs koin dipisah.
+  - Dites lokal: adjust +2500 → 201; request_id sama → 409; −999999 → 409 saldo kurang; alasan pendek/desimal → 400; tanpa login → 401.
+    Screenshot HP + web tanpa page error. Belum dites: data produksi asli (banyak user/tiket), QRIS/rekening asli (lokal kosong).
 
 - **2026-11-07 — Sistem koin baru + kuota AI FREE vs PRO: LIVE (run 42300089133, commit 73296e1). Tanpa SQL.**
   - Keputusan Bos: satu jenis koin, 1 koin = Rp1, bisa dibeli; hadiah TIDAK lagi bisa dicairkan.
