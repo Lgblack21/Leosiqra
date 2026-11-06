@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (branch claude/pembayaran-admin-koin menunggu "gas")
+Terakhir diperbarui: 2026-11-07 (live: pembayaran rapi + admin Koin, run 42303011955)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-07 — Halaman pembayaran rapi + Admin › Koin lengkap: BRANCH claude/pembayaran-admin-koin, BELUM LIVE (tunggu "gas"). Tanpa SQL.**
+- **2026-11-07 — Halaman pembayaran rapi + Admin › Koin lengkap: LIVE (run 42303011955, commit d5eae38). Tanpa SQL.**
   - /membership/contact ditulis ulang jadi "Upgrade & Top up": tab PRO / Top up koin, kartu paket, kartu checkout (total + salin,
     transfer/QRIS, unggah bukti, ref, catatan), riwayat pembayaranku. Baru di Worker: GET /api/member/payments (20 terakhir milik user).
   - Admin › Koin (src/app/admin/koin): tab Ringkasan (beredar, bulan ini, asal koin, per jenis, antrean top up), Pengguna
