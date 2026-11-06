@@ -31,6 +31,7 @@ export function MobileTabBar() {
 
   return (
     <nav
+      data-bottom-bar
       aria-label="Navigasi bawah"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-100 bg-white/95 pb-[env(safe-area-inset-bottom)] md:hidden print:hidden"
     >

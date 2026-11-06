@@ -18,6 +18,19 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-07 (branch claude/fokus-satu-layar) — Fokus bareng Leo: satu layar penuh + Leo bernapas. BELUM deploy (tunggu "gas"). Tanpa SQL.**
+  - Satu layar (HP/tablet/web): `useFitHeight` di FocusApp mengukur ruang (top elemen → atas tab bawah `[data-bottom-bar]`
+    + 34px tombol +), mengunci gulir html/body; < 420px (HP landscape) tidak dikunci. Strip "Hari ini belum ada sesi" dihapus.
+    Pengaturan sesi + volume pindah ke tombol ⚙️ (lembar bawah HP / modal web). HP: musik jadi baris chip ringkas.
+    App HP: header = tombol kembali + tab + ⚙️ satu baris. Adegan `FocusScene fill` (container query, 16:10 tidak gepeng).
+    Tenang: lingkaran mengisi ruang; di HP pilihan disembunyikan selama latihan. Rekap gulir di dalam kartunya.
+  - Bug: Leo tertidur saat Tenang (timer kantuk 15/22 dtk tanpa sentuhan) → prop `stayAwake` (Fokus & Tenang).
+  - LeoMascot prop `breathing` + `breathAmt`: dada & surai mengembang ikut napas, mata terpejam, pipi menggembung saat
+    tahan, mulut "o" + embusan saat hembus.
+  - Catatan: offsetParent selalu null untuk position:fixed → deteksi tab bawah pakai ukuran + display.
+  - Dites lokal Playwright: iPhone 13 (/app & /membership), iPhone SE, tablet 1000×668, web 1366×860 — tidak bisa digulir,
+    tombol terbawah di atas tombol + (app 534 < 586), Leo tidak tidur setelah 30 dtk, 0 error JS.
+
 - **2026-11-07 — Fitur baru "Fokus bareng Leo": LIVE (run 42260880305, commit e28af25). Migrasi 0034 menunggu Bos.**
   - **MIGRASI di D1 Console** (0034_focus_sessions.sql; boleh sebelum/sesudah deploy — tanpa tabel, fitur tetap jalan,
     rekap disimpan di perangkat lalu otomatis terkirim setelah tabel ada).

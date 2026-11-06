@@ -55,6 +55,9 @@ export function LeoMascot({
   ledge = false,
   headphones = false,
   music = false,
+  stayAwake = false,
+  breathing = null,
+  breathAmt = 0,
 }: {
   mood?: LeoMood;
   lookX?: number;
@@ -69,6 +72,12 @@ export function LeoMascot({
   // Headphone (Fokus bareng Leo); music = not musik melayang keluar.
   headphones?: boolean;
   music?: boolean;
+  // true = tidak mengantuk/tertidur sendiri walau lama tidak disentuh (Fokus, Tenang).
+  stayAwake?: boolean;
+  // Latihan napas (Tenang): langkah sekarang + isi paru 0..1 → dada & surai mengembang,
+  // pipi menggembung saat tahan, mulut "o" + embusan saat hembus.
+  breathing?: "tarik" | "tahan" | "hembus" | null;
+  breathAmt?: number;
 }) {
   const reduce = useReducedMotion();
   const ref = useRef<SVGSVGElement>(null);
@@ -93,7 +102,7 @@ export function LeoMascot({
       clearTimeout(drowsy);
       clearTimeout(asleep);
       setSleep(0);
-      if (reduce) return;
+      if (reduce || stayAwake) return;
       drowsy = setTimeout(() => setSleep(1), 15000);
       asleep = setTimeout(() => setSleep(2), 22000);
     };
@@ -118,7 +127,7 @@ export function LeoMascot({
       window.removeEventListener("keydown", arm);
       window.removeEventListener("scroll", arm);
     };
-  }, [reduce]);
+  }, [reduce, stayAwake]);
 
   const boopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (boopTimer.current) clearTimeout(boopTimer.current); }, []);
@@ -128,9 +137,11 @@ export function LeoMascot({
     boopTimer.current = setTimeout(() => setBoop(false), 1300);
   };
 
-  const act = idle ? activity : null;
-  const sleeping = idle && (act === "sleep" || (!act && sleep === 2));
-  const drowsy = idle && !act && sleep === 1;
+  const br = breathing;
+  const amt = Math.max(0, Math.min(1, breathAmt));
+  const act = idle && !br ? activity : null;
+  const sleeping = idle && !br && (act === "sleep" || (!act && sleep === 2 && !stayAwake));
+  const drowsy = idle && !br && !act && sleep === 1 && !stayAwake;
   const eating = act === "eat";
   const playing = act === "play";
   const coins = act === "coins";
@@ -193,9 +204,12 @@ export function LeoMascot({
         </g>
       )}
       <motion.g animate={body} style={{ originX: "50%", originY: "90%" }}>
-        <g className={reduce ? undefined : "leo-breathe"}>
+        <g
+          className={reduce || br ? undefined : "leo-breathe"}
+          style={br ? { transform: `translateY(${-4 * amt}px) scale(${1 + 0.06 * amt})`, transformBox: "fill-box", transformOrigin: "50% 92%" } : undefined}
+        >
           {/* Surai */}
-          <g className={reduce ? undefined : "leo-mane"}>
+          <g className={reduce || br ? undefined : "leo-mane"} style={br ? { transform: `scale(${1 + 0.05 * amt})`, transformBox: "fill-box", transformOrigin: "50% 50%" } : undefined}>
             <circle cx="110" cy="108" r="74" fill={C.maneBack} />
             {Array.from({ length: 14 }, (_, i) => {
               const a = (i / 14) * Math.PI * 2;
@@ -241,9 +255,16 @@ export function LeoMascot({
             </g>
           )}
 
+          {/* Pipi menggembung saat menahan napas */}
+          {br && (
+            <g>
+              <motion.circle cx="82" cy="132" fill={C.face} animate={{ r: br === "tahan" ? 15 : 0 }} transition={{ duration: 0.4 }} />
+              <motion.circle cx="138" cy="132" fill={C.face} animate={{ r: br === "tahan" ? 15 : 0 }} transition={{ duration: 0.4 }} />
+            </g>
+          )}
           {/* Pipi merona */}
-          <motion.ellipse cx="76" cy="128" rx="9" ry="5.5" fill={C.blush} animate={{ opacity: happy ? 0.55 : 0.28 }} />
-          <motion.ellipse cx="144" cy="128" rx="9" ry="5.5" fill={C.blush} animate={{ opacity: happy ? 0.55 : 0.28 }} />
+          <motion.ellipse cx="76" cy="128" fill={C.blush} animate={{ opacity: happy || br === "tahan" ? 0.55 : 0.28, rx: br === "tahan" ? 12 : 9, ry: br === "tahan" ? 7.5 : 5.5 }} />
+          <motion.ellipse cx="144" cy="128" fill={C.blush} animate={{ opacity: happy || br === "tahan" ? 0.55 : 0.28, rx: br === "tahan" ? 12 : 9, ry: br === "tahan" ? 7.5 : 5.5 }} />
 
           {/* Alis (muncul saat sedih) */}
           <motion.g animate={{ opacity: sad ? 1 : 0 }}>
@@ -252,7 +273,12 @@ export function LeoMascot({
           </motion.g>
 
           {/* Mata (^^ juga saat makan — keenakan) */}
-          {happy || eating ? (
+          {br ? (
+            <g stroke={C.ink} strokeWidth="3.5" strokeLinecap="round" fill="none">
+              <path d="M80 105 Q88 111 96 105" />
+              <path d="M124 105 Q132 111 140 105" />
+            </g>
+          ) : happy || eating ? (
             <g stroke={C.ink} strokeWidth="4" strokeLinecap="round" fill="none">
               <path d="M80 106 Q88 96 96 106" />
               <path d="M124 106 Q132 96 140 106" />
@@ -295,7 +321,13 @@ export function LeoMascot({
             <circle key={i} cx={x} cy={i % 2 ? 134 : 131} r="1.2" fill="#D9A066" />
           ))}
           <path d="M102 120 Q110 115 118 120 Q115 127 110 128 Q105 127 102 120 Z" fill={C.nose} />
-          {eating ? (
+          {br === "hembus" ? (
+            <motion.ellipse cx="110" cy="142" fill={C.nose} initial={{ rx: 2, ry: 2 }} animate={{ rx: 4.5, ry: 6 }} transition={{ duration: 0.4 }} />
+          ) : br === "tahan" ? (
+            <path d="M105 140 Q110 142 115 140" stroke={C.nose} strokeWidth="2.6" fill="none" strokeLinecap="round" />
+          ) : br === "tarik" ? (
+            <path d="M110 128 V134 M102 137 Q106 140 110 136 Q114 140 118 137" stroke={C.nose} strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          ) : eating ? (
             <motion.ellipse cx="104" cy="140" rx="6" fill={C.nose} animate={reduce ? { ry: 3 } : { ry: [1.5, 5, 1.5] }} transition={loop(0.45)} />
           ) : coins ? (
             <ellipse cx="110" cy="140" rx="4" ry="5" fill={C.nose} />
@@ -377,6 +409,21 @@ export function LeoMascot({
                 <text x="172" y="154.5" textAnchor="middle" fontSize="12" fontWeight="900" fill="#B45309" fontFamily="system-ui, sans-serif">Rp</text>
               </motion.g>
             </motion.g>
+          </g>
+        )}
+        {/* Embusan napas */}
+        {br === "hembus" && !reduce && (
+          <g fill="#E0E7FF">
+            {[0, 1, 2].map((i) => (
+              <motion.circle
+                key={`air${i}`}
+                cx={116}
+                cy={144}
+                initial={{ opacity: 0, x: 0, y: 0, r: 2 }}
+                animate={{ opacity: [0, 0.9, 0], x: [0, 22 + i * 6, 44 + i * 8], y: [0, 6 - i * 6, 10 - i * 10], r: [2, 4.5, 6.5] }}
+                transition={{ duration: 1.6, delay: i * 0.35, repeat: Infinity, ease: "easeOut" }}
+              />
+            ))}
           </g>
         )}
         {sleeping && !reduce && (

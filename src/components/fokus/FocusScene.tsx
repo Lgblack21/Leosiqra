@@ -17,7 +17,9 @@ const SKY: Record<Sky, [string, string]> = {
   malam: ['#1E1B4B', '#4338CA'],
 };
 
-export function FocusScene({ now, kind, mood, activity, lookX, music, focusing, className }: {
+// fill = isi tinggi induk (layar penuh): bidang 16:10 diletakkan di tengah ruang yang ada
+// (container query) supaya Leo & meja tidak gepeng di ukuran layar apa pun.
+export function FocusScene({ now, kind, mood, activity, lookX, music, focusing, className, fill = false }: {
   now: Date;
   kind: FocusKind;
   mood: LeoMood;
@@ -26,6 +28,7 @@ export function FocusScene({ now, kind, mood, activity, lookX, music, focusing, 
   music: boolean;
   focusing: boolean;
   className?: string;
+  fill?: boolean;
 }) {
   const reduce = useReducedMotion();
   const sky = skyOf(now.getHours());
@@ -34,8 +37,18 @@ export function FocusScene({ now, kind, mood, activity, lookX, music, focusing, 
   const minDeg = now.getMinutes() * 6 + now.getSeconds() * 0.1;
   const hourDeg = (now.getHours() % 12) * 30 + now.getMinutes() * 0.5;
 
+  const bg = night ? 'bg-gradient-to-b from-[#232046] to-[#2e2a5c]' : 'bg-gradient-to-b from-[#F1EEFF] to-[#E9E4FF]';
+  if (fill) {
+    return (
+      <div className={cn('relative h-full w-full overflow-hidden [container-type:size]', bg, className)}>
+        <div className="absolute left-1/2 top-1/2 aspect-[16/10] -translate-x-1/2 -translate-y-1/2" style={{ width: 'min(100cqw, 160cqh)' }}>
+          <FocusScene now={now} kind={kind} mood={mood} activity={activity} lookX={lookX} music={music} focusing={focusing} className="!bg-none !bg-transparent" />
+        </div>
+      </div>
+    );
+  }
   return (
-    <div className={cn('relative aspect-[16/10] w-full overflow-hidden', night ? 'bg-gradient-to-b from-[#232046] to-[#2e2a5c]' : 'bg-gradient-to-b from-[#F1EEFF] to-[#E9E4FF]', className)}>
+    <div className={cn('relative aspect-[16/10] w-full overflow-hidden', bg, className)}>
       {/* Ruangan */}
       <svg viewBox="0 0 400 250" className="absolute inset-0 h-full w-full" aria-hidden preserveAspectRatio="xMidYMid slice">
         <defs>
@@ -96,7 +109,7 @@ export function FocusScene({ now, kind, mood, activity, lookX, music, focusing, 
 
       {/* Leo — kaki bertumpu di tepi meja */}
       <div className="absolute left-1/2 top-[27%] w-[33%] -translate-x-1/2">
-        <LeoMascot mood={mood} activity={activity} lookX={lookX} size={140} headphones music={music} className="h-auto w-full" />
+        <LeoMascot mood={mood} activity={activity} lookX={lookX} size={140} headphones music={music} stayAwake className="h-auto w-full" />
       </div>
 
       {/* Meja & barang (depan Leo) */}

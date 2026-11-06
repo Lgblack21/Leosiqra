@@ -68,7 +68,7 @@ function Tab({ tab, pathname }: { tab: TabItem; pathname: string }) {
 export function BottomTabBar() {
   const pathname = usePathname();
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-100 dark:border-slate-800 pb-[env(safe-area-inset-bottom)]">
+    <nav data-bottom-bar className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-100 dark:border-slate-800 pb-[env(safe-area-inset-bottom)]">
       <div className="max-w-md mx-auto grid grid-cols-5">
         {LEFT.map((t) => <Tab key={t.key} tab={t} pathname={pathname} />)}
         <span aria-hidden />

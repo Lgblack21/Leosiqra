@@ -115,19 +115,30 @@ export function BreathView() {
   const stop = () => { setStartedAt(null); releaseSound(); lightTap(); };
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] md:items-start lg:gap-5">
-      <section className="relative flex flex-col items-center justify-center overflow-hidden rounded-[28px] bg-gradient-to-b from-[#F5F3FF] to-[#EEF2FF] px-4 py-8 ring-1 ring-slate-100 dark:from-[#1e1b4b] dark:to-[#0f172a] dark:ring-slate-800 md:py-10">
-        <div className="relative flex h-[260px] w-[260px] items-center justify-center md:h-[320px] md:w-[320px]">
+    <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1fr)_auto] gap-3 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] md:grid-rows-1 md:gap-4">
+      <section className="relative flex min-h-0 flex-col items-center overflow-hidden rounded-[28px] bg-gradient-to-b from-[#F5F3FF] to-[#EEF2FF] px-4 py-4 ring-1 ring-slate-100 dark:from-[#1e1b4b] dark:to-[#0f172a] dark:ring-slate-800 md:py-6">
+        {/* Lingkaran mengisi ruang yang ada (container query) → pas di semua tinggi layar. */}
+        <div className="relative flex min-h-0 w-full flex-1 items-center justify-center [container-type:size]">
+        <div className="relative flex aspect-square items-center justify-center" style={{ width: 'min(100cqw, 100cqh, 340px)' }}>
           <div className="absolute inset-0 rounded-full border-2 border-dashed border-indigo-200/70 dark:border-indigo-400/20" />
           <motion.div
             className="absolute inset-[6%] rounded-full bg-gradient-to-br from-indigo-200/80 via-violet-200/70 to-sky-200/70 shadow-[0_0_60px_rgba(129,140,248,0.45)] dark:from-indigo-500/40 dark:via-violet-500/30 dark:to-sky-500/30"
             style={{ scale: reduce ? 0.85 : scale }}
           />
-          <motion.div style={{ scale: reduce ? 1 : 0.9 + (scale - MIN_SCALE) * 0.3 }} className="relative w-[46%]">
-            <LeoMascot mood={running && step.name === 'tahan' ? 'watch' : finished ? 'happy' : 'idle'} size={140} className="h-auto w-full" />
-          </motion.div>
+          <div className="relative w-[46%]">
+            {/* Leo ikut bernapas (dada mengembang, pipi menggembung saat tahan, embusan saat hembus) & tidak tertidur. */}
+            <LeoMascot
+              mood={finished ? 'happy' : 'idle'}
+              size={140}
+              stayAwake
+              breathing={running ? step.name : null}
+              breathAmt={running ? (scale - MIN_SCALE) / (1 - MIN_SCALE) : 0}
+              className="h-auto w-full"
+            />
+          </div>
         </div>
-        <div className="mt-4 h-[60px] text-center">
+        </div>
+        <div className="mt-2 h-[56px] shrink-0 text-center md:mt-3">
           {running ? (
             <>
               <p className="text-[22px] font-extrabold tracking-tight text-slate-900 dark:text-white md:text-[26px]">{step.text}</p>
@@ -147,16 +158,17 @@ export function BreathView() {
         </div>
       </section>
 
-      <section className="flex flex-col gap-4">
-        <div className="rounded-[28px] bg-white p-4 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800 md:p-5">
-          <p className="text-[13px] font-semibold text-slate-500">Cara</p>
+      <section className="flex min-h-0 flex-col gap-3 md:gap-4">
+        {/* HP: pilihan disembunyikan selama latihan (tidak bisa diubah) → lingkaran & Leo tampil besar. */}
+        <div className={cn(running && 'hidden md:block', 'rounded-[28px] bg-white p-3.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800 md:p-5')}>
+          <p className="text-[12px] font-semibold text-slate-500 md:text-[13px]">Cara</p>
           <div className="mt-2 grid grid-cols-3 gap-1.5">
             {PATTERNS.map((x) => (
               <button key={x.id} type="button" disabled={running} onClick={() => setPattern(x.id)}
                 className={cn('rounded-2xl px-2 py-2.5 text-[12px] font-bold transition-colors disabled:opacity-50 md:text-[13px]', pattern === x.id ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300')}>{x.label}</button>
             ))}
           </div>
-          <p className="mt-4 text-[13px] font-semibold text-slate-500">Lama</p>
+          <p className="mt-3 text-[12px] font-semibold text-slate-500 md:mt-4 md:text-[13px]">Lama</p>
           <div className="mt-2 grid grid-cols-3 gap-1.5">
             {LENGTHS.map((m) => (
               <button key={m} type="button" disabled={running} onClick={() => setMinutes(m)}
@@ -164,7 +176,7 @@ export function BreathView() {
             ))}
           </div>
           <button type="button" role="switch" aria-checked={sound} onClick={() => { const v = !sound; setSound(v); if (running) { if (v) { focusAudio.play('ombak', 0.45); ownSound.current = true; } else releaseSound(); } }}
-            className="mt-4 flex w-full items-center justify-between rounded-2xl bg-slate-50 px-3.5 py-3 text-left dark:bg-slate-800">
+            className="mt-3 flex w-full items-center justify-between rounded-2xl bg-slate-50 px-3.5 py-2.5 text-left dark:bg-slate-800 md:mt-4 md:py-3">
             <span className="flex items-center gap-2 text-[13px] font-semibold text-slate-700 dark:text-slate-200"><Waves size={16} className="text-sky-500" /> Suara ombak pelan</span>
             <span className={cn('relative h-6 w-10 rounded-full transition-colors', sound ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700')}>
               <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-[left]', sound ? 'left-[18px]' : 'left-0.5')} />
@@ -172,9 +184,9 @@ export function BreathView() {
           </button>
         </div>
         {running ? (
-          <button type="button" onClick={stop} className="flex items-center justify-center gap-2 rounded-2xl bg-slate-100 py-4 text-[15px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"><Square size={16} /> Berhenti</button>
+          <button type="button" onClick={stop} className="flex items-center justify-center gap-2 rounded-2xl bg-slate-100 py-3.5 text-[15px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"><Square size={16} /> Berhenti</button>
         ) : (
-          <button type="button" onClick={start} className="flex items-center justify-center gap-2 rounded-2xl bg-slate-900 py-4 text-[16px] font-bold text-white shadow-lg shadow-slate-900/15 active:scale-[0.98] dark:bg-white dark:text-slate-900">
+          <button type="button" onClick={start} className="flex items-center justify-center gap-2 rounded-2xl bg-slate-900 py-3.5 text-[16px] font-bold text-white shadow-lg shadow-slate-900/15 active:scale-[0.98] dark:bg-white dark:text-slate-900">
             {finished ? <><RotateCcw size={17} /> Ulangi</> : <><Play size={18} fill="currentColor" /> Mulai · {minutes}:00</>}
           </button>
         )}
