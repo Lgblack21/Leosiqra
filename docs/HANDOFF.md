@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-06 (live: Ringkasan bersih + badge Kotak Masuk, run 42252405367)
+Terakhir diperbarui: 2026-11-06 (live: hero ringkas + animasi Leo, run 42254697995)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-06 (branch claude/hero-maskot) — Kartu sapaan Ringkasan lebih ringkas + animasi Leo dirapikan. BELUM deploy (tunggu "gas"). Tanpa SQL.**
+- **2026-11-06 — Kartu sapaan Ringkasan lebih ringkas + animasi Leo dirapikan: LIVE (run 42254697995, commit 4d769bb). Tanpa SQL.**
   - Hero: padding/huruf lebih kecil (tablet 321→274px, HP 447→389px), kolom Tanya Leo lebih ramping.
   - Gelembung LeoBuddy: maks 290px, teks 13–14px, kata ber-tanda-hubung ("rata-rata") tidak dipotong.
   - LeoBuddy dulu dirender DUA kali (HP & desktop, timer/listener dobel) → satu instans, ukuran lewat mascotClassName.
