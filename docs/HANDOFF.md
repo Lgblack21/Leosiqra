@@ -18,6 +18,28 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-07 (branch claude/fokus-bareng-leo) — Fitur baru "Fokus bareng Leo". BELUM deploy (tunggu "gas").**
+  - **MIGRASI di D1 Console** (0034_focus_sessions.sql; boleh sebelum/sesudah deploy — tanpa tabel, fitur tetap jalan,
+    rekap disimpan di perangkat lalu otomatis terkirim setelah tabel ada).
+  - Halaman: `/membership/fokus` (web, menu "Fokus bareng Leo", id fitur `fokus` — masuk DEFAULT_FEATURES; user yang sudah
+    pernah mengatur menu perlu nyalakan di Atur fitur) & `/app/fokus` (grid Lainnya).
+  - Tab Fokus: pomodoro 15/25/50/90/atur (5–180), jenis Belajar/Kerja/Baca/Usaha/Lainnya + catatan, istirahat pendek/panjang
+    tiap N sesi, auto istirahat/lanjut, jeda/+5/lewati/berhenti (≥1 mnt tetap tercatat), judul tab = sisa waktu, Wake Lock,
+    notifikasi + getar saat selesai, lonceng dijadwalkan di AudioContext (tepat walau tab di belakang). Timer dari endsAt
+    (localStorage `leosiqra:focus:run`, tahan refresh & sinkron antar tab).
+  - Musik: `src/lib/focus/audio.ts` — DISINTESIS Web Audio (lo-fi akor jazz + beat + vinyl, hujan, ombak, brown noise),
+    tanpa file lagu → bebas royalti. Otomatis menyala saat fokus mulai (dari klik). Setelah refresh perlu ketuk "Putar musik".
+  - Tab Tenang: napas lega / kotak 4×4 / 4-7-8, 1/3/5 mnt, lingkaran + Leo bernapas, getar per langkah, suara ombak opsional
+    (hanya mematikan suara miliknya sendiri). Tab Rekap: hari ini / 7 hari / beruntun (≥10 mnt/hari), grafik 7 hari, per jenis, riwayat + hapus.
+  - API `/api/member/focus` GET (90 hari) / POST (id UUID klien, ulang = 200 duplicate) / DELETE; validasi waktu, jam HP
+    kecepatan ≤2 hari digeser ke jam server; reset data & hapus user ikut menghapus focus_sessions.
+  - LeoMascot: prop `headphones` + `music` (not melayang). Adegan kamar SVG orisinal (`FocusScene`): langit jendela & lampu ikut jam,
+    jam dinding sungguhan, barang meja per jenis.
+  - Dites lokal: API (503 sebelum migrasi, 201/200 dobel, 400 data aneh, 401, delete 200/404); Playwright web 1366 + tablet 1000×668
+    + iPhone 13 (jam dipercepat): mulai → judul "24:56 · Fokus", musik jalan, jeda 1 mnt tidak mengurangi, selesai → "Mantap!"
+    → istirahat otomatis → selesai, sesi tersimpan 1500 dtk; Tenang selesai; Rekap tampil; 0 error JS. Suara asli belum didengar
+    di perangkat sungguhan (headless tanpa speaker).
+
 - **2026-11-06 — Kartu sapaan Ringkasan lebih ringkas + animasi Leo dirapikan: LIVE (run 42254697995, commit 4d769bb). Tanpa SQL.**
   - Hero: padding/huruf lebih kecil (tablet 321→274px, HP 447→389px), kolom Tanya Leo lebih ramping.
   - Gelembung LeoBuddy: maks 290px, teks 13–14px, kata ber-tanda-hubung ("rata-rata") tidak dipotong.

@@ -53,6 +53,8 @@ export function LeoMascot({
   season = null,
   activity = null,
   ledge = false,
+  headphones = false,
+  music = false,
 }: {
   mood?: LeoMood;
   lookX?: number;
@@ -64,6 +66,9 @@ export function LeoMascot({
   activity?: LeoActivity | null;
   // Ambang kaca tempat Leo duduk (kartu sapaan Ringkasan) — kaki tidak mengambang.
   ledge?: boolean;
+  // Headphone (Fokus bareng Leo); music = not musik melayang keluar.
+  headphones?: boolean;
+  music?: boolean;
 }) {
   const reduce = useReducedMotion();
   const ref = useRef<SVGSVGElement>(null);
@@ -220,7 +225,21 @@ export function LeoMascot({
           <circle cx="110" cy="114" r="52" fill={C.face} />
           <ellipse cx="110" cy="152" rx="34" ry="12" fill="#F6D29F" opacity="0.45" />
 
-          {season && <SeasonAccessory season={season} />}
+          {season && !headphones && <SeasonAccessory season={season} />}
+
+          {headphones && (
+            <g aria-hidden>
+              <path d="M44 104 Q42 24 110 22 Q178 24 176 104" stroke="#4338CA" strokeWidth="10" fill="none" strokeLinecap="round" />
+              <path d="M52 92 Q52 34 110 32 Q168 34 168 92" stroke="#818CF8" strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.8" />
+              {[30, 164].map((x) => (
+                <g key={x}>
+                  <rect x={x} y="82" width="26" height="42" rx="12" fill="#4F46E5" />
+                  <rect x={x + 5} y="88" width="16" height="30" rx="8" fill="#6366F1" />
+                  <circle cx={x + 13} cy="103" r="3.2" fill="#C7D2FE" />
+                </g>
+              ))}
+            </g>
+          )}
 
           {/* Pipi merona */}
           <motion.ellipse cx="76" cy="128" rx="9" ry="5.5" fill={C.blush} animate={{ opacity: happy ? 0.55 : 0.28 }} />
@@ -391,6 +410,25 @@ export function LeoMascot({
             <path d={`M${cx - 8} 174 v8 M${cx} 172 v10 M${cx + 8} 174 v8`} stroke={C.pawLine} strokeWidth="2.2" strokeLinecap="round" />
           </motion.g>
         ))}
+
+        {/* Not musik dari headphone */}
+        {headphones && music && !reduce && (
+          <g fill="#A5B4FC" fontFamily="system-ui, sans-serif" fontWeight="900">
+            {[0, 1, 2].map((i) => (
+              <motion.text
+                key={`note${i}`}
+                x={186}
+                y={86}
+                fontSize={16 + (i % 2) * 5}
+                initial={{ opacity: 0, x: 186, y: 86 }}
+                animate={{ opacity: [0, 1, 0], x: [186, 198 + i * 4, 206 + i * 6], y: [86, 62 - i * 4, 34 - i * 8], rotate: [0, 12, -8] }}
+                transition={{ duration: 2.8, delay: i * 0.95, repeat: Infinity, ease: "easeOut" }}
+              >
+                {i % 2 ? "♫" : "♪"}
+              </motion.text>
+            ))}
+          </g>
+        )}
 
         {/* Zzz saat tidur */}
         {sleeping && !reduce && (

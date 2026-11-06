@@ -6825,6 +6825,7 @@ async function handleResetMemberData(request: Request, env: Env) {
   // Usahaku (migrasi 0027) — best effort.
   await env.DB.prepare("DELETE FROM shops WHERE user_id = ?").bind(user.id).run().catch(() => undefined);
   await deleteShopExtrasForUser(env, user.id);
+  await env.DB.prepare("DELETE FROM focus_sessions WHERE user_id = ?").bind(user.id).run().catch(() => undefined);
   await deleteAllListingsForUser(env, user.id);
   // Kotak Masuk (migrasi 0019) — best effort, tabelnya bisa belum ada.
   await env.DB.prepare("DELETE FROM inbox_items WHERE user_id = ?").bind(user.id).run().catch(() => undefined);
@@ -8327,6 +8328,7 @@ async function handleAdminUserById(request: Request, env: Env, userId: string) {
     await deleteAllCollectiblesForUser(env, userId);
     await env.DB.prepare("DELETE FROM shops WHERE user_id = ?").bind(userId).run().catch(() => undefined);
     await deleteShopExtrasForUser(env, userId);
+    await env.DB.prepare("DELETE FROM focus_sessions WHERE user_id = ?").bind(userId).run().catch(() => undefined);
     await deleteAllListingsForUser(env, userId);
     await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
     await insertAdminLog(
@@ -12826,6 +12828,68 @@ const processAllSlackInboxes = async (env: Env) => {
 // POST /api/member/inbox/:id/link        → { transactionId } setelah transaksi dibuat
 // POST /api/member/inbox/:id/release     → batal simpan (gagal membuat transaksi)
 // POST /api/member/inbox/:id/ignore      → abaikan
+// ── Fokus bareng Leo (migrasi 0034) ─────────────────────────────────────────
+// GET  /api/member/focus            → sesi 90 hari terakhir (maks 1000)
+// POST /api/member/focus            → simpan satu sesi selesai/berhenti; id UUID klien (ulang = 200, tidak dobel)
+// DELETE /api/member/focus/:id      → hapus sesi
+// Tabel belum ada: GET { items: [], ready: false }, POST/DELETE 503 → klien menyimpan di perangkat dulu.
+const FOCUS_KINDS = ["belajar", "kerja", "baca", "usaha", "lainnya"] as const;
+const focusTableMissing = (e: unknown) => e instanceof Error && /no such table: focus_sessions/i.test(e.message);
+const isIsoTime = (v: unknown): v is string => typeof v === "string" && v.length <= 40 && !Number.isNaN(Date.parse(v));
+async function handleMemberFocus(request: Request, env: Env, pathname: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  try {
+    if (pathname === "/api/member/focus" && request.method === "GET") {
+      const since = new Date(Date.now() + 7 * 3600_000 - 90 * 86400_000).toISOString().slice(0, 10);
+      const rows = await env.DB.prepare(
+        "SELECT id, kind, label, planned_min, focus_sec, completed, started_at, ended_at, date FROM focus_sessions WHERE user_id = ? AND date >= ? ORDER BY started_at DESC LIMIT 1000"
+      ).bind(userId, since).all();
+      return json({ items: rows.results ?? [], ready: true });
+    }
+    if (pathname === "/api/member/focus" && request.method === "POST") {
+      const raw = await parseJson<Record<string, unknown>>(request);
+      const id = typeof raw.id === "string" && /^[0-9a-f-]{36}$/i.test(raw.id) ? raw.id : null;
+      if (!id) return json({ error: "Sesi tidak valid." }, { status: 400 });
+      const kind = (FOCUS_KINDS as readonly unknown[]).includes(raw.kind) ? (raw.kind as string) : "lainnya";
+      const label = typeof raw.label === "string" ? raw.label.trim().slice(0, 80) || null : null;
+      const planned = Number.isInteger(raw.planned_min) && (raw.planned_min as number) >= 1 && (raw.planned_min as number) <= 240 ? (raw.planned_min as number) : null;
+      const focusSec = Number.isInteger(raw.focus_sec) && (raw.focus_sec as number) >= 0 && (raw.focus_sec as number) <= 4 * 3600 ? (raw.focus_sec as number) : null;
+      if (!planned || focusSec === null || !isIsoTime(raw.started_at) || !isIsoTime(raw.ended_at)) return json({ error: "Data sesi tidak lengkap." }, { status: 400 });
+      let start = Date.parse(raw.started_at);
+      let end = Date.parse(raw.ended_at);
+      // Jam HP kecepatan (≤ 2 hari) → geser ke jam server, jangan ditolak (sesi tidak hilang).
+      const skew = end - Date.now();
+      if (skew > 0 && skew <= 2 * 86400_000) { start -= skew; end -= skew; }
+      // Tidak boleh dari masa depan / lebih dari 90 hari lalu / durasi melebihi rentang waktunya.
+      if (end < start || end > Date.now() + 60_000 || start < Date.now() - 90 * 86400_000 || focusSec > Math.ceil((end - start) / 1000) + 5) {
+        return json({ error: "Waktu sesi tidak masuk akal." }, { status: 400 });
+      }
+      const date = new Date(start + 7 * 3600_000).toISOString().slice(0, 10);
+      const res = await env.DB.prepare(
+        `INSERT OR IGNORE INTO focus_sessions (id, user_id, kind, label, planned_min, focus_sec, completed, started_at, ended_at, date, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(id, userId, kind, label, planned, focusSec, raw.completed === true ? 1 : 0, new Date(start).toISOString(), new Date(end).toISOString(), date, nowIso()).run();
+      return json({ ok: true, duplicate: !res.meta.changes }, { status: res.meta.changes ? 201 : 200 });
+    }
+    const m = /^\/api\/member\/focus\/([0-9a-f-]{36})$/i.exec(pathname);
+    if (m && request.method === "DELETE") {
+      const res = await env.DB.prepare("DELETE FROM focus_sessions WHERE id = ? AND user_id = ?").bind(m[1], userId).run();
+      if (!res.meta.changes) return json({ error: "Sesi tidak ditemukan." }, { status: 404 });
+      return json({ ok: true });
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (e) {
+    if (focusTableMissing(e)) {
+      if (request.method === "GET") return json({ items: [], ready: false });
+      return json({ error: "Rekap fokus belum aktif (menunggu pembaruan database). Sesi disimpan di perangkat dulu." }, { status: 503 });
+    }
+    if (e instanceof Error && e.message === "Payload JSON tidak valid.") return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    throw e;
+  }
+}
+
 async function handleMemberInbox(request: Request, env: Env, pathname: string) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -14843,7 +14907,7 @@ const PREF_INPUT_MODES = ["ketik", "suara", "foto"] as const;
 // Fitur yang tampil di menu samping (panel Pengaturan → Fitur). Hanya
 // visibilitas menu — mematikan fitur tidak menyentuh datanya. Sama dengan
 // FeatureId di src/lib/features.ts. null = bawaan (5 fitur lama).
-const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk", "jejak", "langganan", "ladang"] as const;
+const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk", "jejak", "langganan", "ladang", "fokus"] as const;
 // Jam pengingat per 30 menit (cron tiap 10 menit, lihat sendDailyReminders).
 const PREF_TIME_RE = /^([01]\d|2[0-3]):(00|30)$/;
 // Ikon & warna pilihan user per nama kategori (panel Kategori & Anggaran).
@@ -19545,6 +19609,10 @@ const worker = {
 
       if (url.pathname === "/api/member/inbox" || url.pathname.startsWith("/api/member/inbox/")) {
         return await handleMemberInbox(request, env, url.pathname);
+      }
+
+      if (url.pathname === "/api/member/focus" || url.pathname.startsWith("/api/member/focus/")) {
+        return await handleMemberFocus(request, env, url.pathname);
       }
 
       if (url.pathname === "/api/member/apps" || url.pathname.startsWith("/api/member/apps/")) {
