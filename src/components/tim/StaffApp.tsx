@@ -332,7 +332,7 @@ function StaffStock({ shop, me, say, onChanged }: { shop: Shop; me: StaffMe; say
       {loadError && <p role="alert" className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600">{loadError}</p>}
       <p className="px-1 text-[12px] text-slate-500">Catat bahan yang <b>dipakai</b>, <b>masuk</b>, atau <b>hitung fisik</b>. Beli pakai uang toko → tombol <b>Beli</b> di tiap bahan (pengeluaran & stok tercatat sekaligus). Semua tercatat atas namamu.</p>
       <div className={cn(card, 'p-3 md:p-4')}>
-        <StockView shop={shop} data={data} reload={refresh} onToast={say} api={staffStockService} staff onBuy={(m) => setBuy(m)} />
+        <StockView shop={shop} data={data} reload={refresh} onToast={say} api={staffStockService} staff actor={me.staff.name} onBuy={(m) => setBuy(m)} />
       </div>
       <BottomSheet isOpen={Boolean(buy)} onClose={() => setBuy(null)} title="Catat pengeluaran"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">{buy && <ExpenseForm key={buy.id} shop={shop} materials={mats} initialMaterialId={buy.id} locked={{ accountName: me.account }} onSave={(input) => staffService.expense(shop.id, input)} onDone={(m) => { setBuy(null); say(m); void refresh(); }} onCancel={() => setBuy(null)} />}</div></BottomSheet>
     </section>

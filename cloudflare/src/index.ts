@@ -9957,14 +9957,32 @@ const expenseStockInput = async (env: Env, ownerId: string, shopId: string, raw:
 // (cost/avg_cost) tidak dikirim ke tim.
 async function handleShopStock(request: Request, env: Env, userId: string, shop: { id: string; name: string }, sub: string[], staff?: { name: string }) {
   try {
-    const [what, mid] = sub;
+    const [what, mid, act] = sub;
     const byName = staff?.name ?? null;
+    // Salah input → batalkan satu catatan manual (stok dikembalikan, baris dicoret di Riwayat).
+    // Yang terkait transaksi (jual/beli) dibatalkan dengan menghapus transaksinya.
+    if (what === "moves" && mid && act === "revert" && request.method === "POST") {
+      const mv = await env.DB.prepare("SELECT id, material_id, kind, qty, ref_tx_id, by_name, date, reverted_at FROM shop_stock_moves WHERE id = ? AND owner_id = ? AND shop_id = ?").bind(mid, userId, shop.id).first<{ id: string; material_id: string; kind: string; qty: number; ref_tx_id: string | null; by_name: string | null; date: string; reverted_at: string | null }>();
+      if (!mv) return json({ error: "Catatan stok tidak ditemukan." }, { status: 404 });
+      if (mv.reverted_at) return json({ error: "Catatan ini sudah dibatalkan." }, { status: 409 });
+      if (mv.ref_tx_id) return json({ error: "Catatan ini dari penjualan/biaya — batalkan dengan menghapus transaksinya (stok ikut kembali)." }, { status: 400 });
+      if (staff && (mv.by_name !== staff.name || mv.date !== todayWIB())) return json({ error: "Akun tim hanya bisa membatalkan catatannya sendiri hari ini." }, { status: 403 });
+      const later = await env.DB.prepare("SELECT 1 FROM shop_stock_moves WHERE material_id = ? AND owner_id = ? AND kind = 'opname' AND reverted_at IS NULL AND id != ? AND created_at > (SELECT created_at FROM shop_stock_moves WHERE id = ?) LIMIT 1").bind(mv.material_id, userId, mv.id, mv.id).first();
+      if (later) return json({ error: "Sudah ada hitung fisik sesudah catatan ini — betulkan angkanya lewat Ubah › Stok sekarang." }, { status: 409 });
+      const now = nowIso();
+      const res = await env.DB.batch([
+        env.DB.prepare("UPDATE shop_stock_moves SET reverted_at = ? WHERE id = ? AND owner_id = ? AND reverted_at IS NULL").bind(now, mv.id, userId),
+        env.DB.prepare("UPDATE shop_materials SET stock = ROUND(stock - ?, 3), updated_at = ? WHERE id = ? AND owner_id = ? AND EXISTS (SELECT 1 FROM shop_stock_moves WHERE id = ? AND reverted_at = ?)").bind(mv.qty, now, mv.material_id, userId, mv.id, now),
+      ]);
+      if (!res[0]?.meta.changes) return json({ error: "Catatan ini sudah dibatalkan." }, { status: 409 });
+      return json({ ok: true, qty: -mv.qty });
+    }
     if (staff && ((what === "materials" && mid) || what === "recipes")) return json({ error: "Hanya pemilik usaha yang bisa mengubah ini." }, { status: 403 });
     if (!what && request.method === "GET") {
       const materials = await listMaterials(env, userId, [shop.id], true);
       const recipes = (await env.DB.prepare("SELECT product_key, items_json FROM shop_recipes WHERE shop_id = ? AND owner_id = ?").bind(shop.id, userId).all<{ product_key: string; items_json: string }>()).results ?? [];
       const moves = (await env.DB.prepare(
-        `SELECT id, material_id, kind, qty, cost, note, by_name, date, created_at, reverted_at FROM shop_stock_moves WHERE owner_id = ? AND shop_id = ? ORDER BY created_at DESC LIMIT 200`
+        `SELECT id, material_id, kind, qty, cost, note, by_name, date, created_at, reverted_at, CASE WHEN ref_tx_id IS NULL THEN 0 ELSE 1 END AS linked FROM shop_stock_moves WHERE owner_id = ? AND shop_id = ? ORDER BY created_at DESC LIMIT 200`
       ).bind(userId, shop.id).all()).results ?? [];
       // Harga rata-rata per satuan dari pembelian (biaya + stok masuk) → HPP resep.
       const costs = (await env.DB.prepare(
@@ -10263,7 +10281,7 @@ async function handleStaffRoutes(request: Request, env: Env, pathname: string) {
       ]);
       return json({ ok: true });
     }
-    const sm = /^\/api\/staff\/shops\/([0-9a-f-]{36})\/stock((?:\/[A-Za-z0-9-]+){0,2})$/i.exec(pathname);
+    const sm = /^\/api\/staff\/shops\/([0-9a-f-]{36})\/stock((?:\/[A-Za-z0-9-]+){0,3})$/i.exec(pathname);
     if (sm) {
       if (!ids.includes(sm[1])) return json({ error: "Usaha ini tidak diberikan untuk akunmu." }, { status: 403 });
       const stockShop = await env.DB.prepare("SELECT id, name FROM shops WHERE id = ? AND user_id = ?").bind(sm[1], staff.owner_id).first<{ id: string; name: string }>();

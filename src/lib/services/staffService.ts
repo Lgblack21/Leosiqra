@@ -46,6 +46,9 @@ export const staffStockService = {
   async addMaterial(shopId: string, input: { name: string; unit: string; stock: number; min: number | null }) {
     return cloudflareApi<{ id: string }>(`/api/staff/shops/${shopId}/stock/materials`, { method: 'POST', json: input });
   },
+  async revert(shopId: string, moveId: string) {
+    await cloudflareApi(`/api/staff/shops/${shopId}/stock/moves/${moveId}/revert`, { method: 'POST', json: {} });
+  },
   async move(shopId: string, input: { requestId: string; materialId: string; kind: 'masuk' | 'pakai' | 'opname'; qty: number; note?: string }) {
     await cloudflareApi(`/api/staff/shops/${shopId}/stock/moves`, { method: 'POST', json: { request_id: input.requestId, material_id: input.materialId, kind: input.kind, qty: input.qty, note: input.note } });
   },

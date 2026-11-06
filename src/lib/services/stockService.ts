@@ -5,7 +5,7 @@ import { notifyCollectionChanged } from '../cf-firestore';
 // riwayat (masuk/pakai/opname manual, beli via catat biaya, jual via resep produk).
 
 export type StockMaterial = { id: string; shop_id: string; name: string; unit: string; stock: number; min_stock: number | null; archived_at?: string | null; avg_cost?: number | null };
-export type StockMove = { id: string; material_id: string; kind: 'awal' | 'beli' | 'masuk' | 'pakai' | 'jual' | 'opname'; qty: number; cost: number | null; note: string | null; by_name: string | null; date: string; created_at: string; reverted_at: string | null };
+export type StockMove = { id: string; material_id: string; kind: 'awal' | 'beli' | 'masuk' | 'pakai' | 'jual' | 'opname'; qty: number; cost: number | null; note: string | null; by_name: string | null; date: string; created_at: string; reverted_at: string | null; linked?: number };
 export type StockRecipe = { product_key: string; items: { m: string; q: number }[] };
 export type StockData = { materials: StockMaterial[]; recipes: StockRecipe[]; moves: StockMove[] };
 
@@ -34,6 +34,10 @@ export const stockService = {
   },
   async move(shopId: string, input: { requestId: string; materialId: string; kind: 'masuk' | 'pakai' | 'opname'; qty: number; note?: string }) {
     await cloudflareApi(`${base(shopId)}/moves`, { method: 'POST', json: { request_id: input.requestId, material_id: input.materialId, kind: input.kind, qty: input.qty, note: input.note } });
+    changed();
+  },
+  async revert(shopId: string, moveId: string) {
+    await cloudflareApi(`${base(shopId)}/moves/${moveId}/revert`, { method: 'POST', json: {} });
     changed();
   },
   async setRecipe(shopId: string, productKey: string, items: { materialId: string; qty: number }[]) {

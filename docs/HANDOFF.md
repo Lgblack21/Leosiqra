@@ -18,6 +18,14 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-06 (branch claude/usahaku-web) — Koreksi stok salah input. BELUM deploy, tanpa SQL baru.**
+  - Stok › Ubah: nama, satuan, batas minimum **+ stok sekarang** (perubahan stok = move opname "Diubah manual", selisih tercatat).
+  - Riwayat › **Batalkan** satu catatan manual (awal/masuk/pakai/opname): `POST …/stock/moves/:id/revert` (pemilik
+    `/api/member/shops/:id/stock/…`, tim `/api/staff/shops/:id/stock/…`). Stok −qty, reverted_at diisi, atomik & anti dobel.
+    Ditolak: catatan dari transaksi (hapus transaksinya), sudah ada opname sesudahnya (pakai Ubah), tim selain miliknya hari ini.
+    GET stok kini kirim `linked` (0/1) per move.
+  - Dites lokal: salah pakai 100 → batalkan → kembali; ulang 409; linked 400; sebelum opname 409; opname terakhir bisa;
+    tim batalkan miliknya 200, punya pemilik 403; UI HP Ubah 93→90 lalu batalkan → 93, 0 error JS.
 - **2026-11-06 — Stok oleh tim + mode tim dirapikan: live #145.**
   - Worker: `/api/staff/shops/:id/stock[/materials|/moves]` → handleShopStock(..., { name }) — tim boleh lihat, tambah bahan,
     pakai/masuk/hitung fisik (by_name = nama tim, tanggal dipaksa hari ini); ubah/arsip bahan & aturan per produk → 403;

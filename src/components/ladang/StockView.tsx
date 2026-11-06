@@ -24,15 +24,15 @@ export const parseQty = (v: string) => {
 const qtyCls = cn(fieldCls, 'tabular-nums');
 
 /** Jalur API stok: pemilik (/api/member/…) atau akun tim (/api/staff/…, terbatas). */
-export type StockApi = Pick<typeof stockService, 'get' | 'addMaterial' | 'move'> & Partial<Pick<typeof stockService, 'updateMaterial' | 'setRecipe'>>;
-const StockCtx = createContext<{ api: StockApi; staff: boolean; onBuy?: (m: StockMaterial) => void }>({ api: stockService, staff: false });
+export type StockApi = Pick<typeof stockService, 'get' | 'addMaterial' | 'move' | 'revert'> & Partial<Pick<typeof stockService, 'updateMaterial' | 'setRecipe'>>;
+const StockCtx = createContext<{ api: StockApi; staff: boolean; actor?: string; onBuy?: (m: StockMaterial) => void }>({ api: stockService, staff: false });
 const useStock = () => useContext(StockCtx);
 const ownerOnly = () => { throw new Error('Hanya pemilik usaha yang bisa mengubah ini.'); };
 const tabCls = (on: boolean) => cn('flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-[12px] font-bold transition-colors', on ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 dark:text-slate-400');
 
 /** onBuy: "Beli" di tiap bahan → buka Catat pengeluaran dengan bahan itu terpilih (uang & stok sejalan). */
-export function StockView({ shop, data, reload, onToast, api = stockService, staff = false, onBuy }: { shop: Shop; data: StockData | null; reload: () => Promise<void>; onToast: (m: string) => void; api?: StockApi; staff?: boolean; onBuy?: (m: StockMaterial) => void }) {
-  const ctx = useMemo(() => ({ api, staff, onBuy }), [api, staff, onBuy]);
+export function StockView({ shop, data, reload, onToast, api = stockService, staff = false, actor, onBuy }: { shop: Shop; data: StockData | null; reload: () => Promise<void>; onToast: (m: string) => void; api?: StockApi; staff?: boolean; actor?: string; onBuy?: (m: StockMaterial) => void }) {
+  const ctx = useMemo(() => ({ api, staff, actor, onBuy }), [api, staff, actor, onBuy]);
   return <StockCtx.Provider value={ctx}><StockTabs shop={shop} data={data} reload={reload} onToast={onToast} /></StockCtx.Provider>;
 }
 
@@ -50,7 +50,7 @@ function StockTabs({ shop, data, reload, onToast }: { shop: Shop; data: StockDat
       </div>
       {tab === 'bahan' && <MaterialsTab shop={shop} data={data} reload={reload} onToast={onToast} />}
       {tab === 'resep' && <RecipesTab shop={shop} data={data} reload={reload} onToast={onToast} />}
-      {tab === 'riwayat' && <HistoryTab data={data} />}
+      {tab === 'riwayat' && <HistoryTab shop={shop} data={data} reload={reload} onToast={onToast} />}
     </div>
   );
 }
@@ -217,6 +217,8 @@ function EditMaterial({ shop, m, onDone }: { shop: Shop; m: StockMaterial; onDon
   const [name, setName] = useState(m.name);
   const [unit, setUnit] = useState(m.unit);
   const [min, setMin] = useState(m.min_stock != null ? String(m.min_stock).replace('.', ',') : '');
+  const [stock, setStock] = useState(String(m.stock).replace('.', ','));
+  const [requestId] = useState(() => crypto.randomUUID());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const run = async (input: Parameters<typeof stockService.updateMaterial>[2], msg: string) => {
@@ -224,15 +226,34 @@ function EditMaterial({ shop, m, onDone }: { shop: Shop; m: StockMaterial; onDon
     try { await (api.updateMaterial ?? ownerOnly)(shop.id, m.id, input); await onDone(msg); } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal.'); setBusy(false); }
   };
   const mn = min ? parseQty(min) : null;
+  const st = parseQty(stock);
+  const stockChanged = Number.isFinite(st) && Math.abs(st - m.stock) > 1e-9;
+  const infoChanged = name.trim() !== m.name || unit !== m.unit || mn !== m.min_stock;
+  // Stok diubah manual = dicatat sebagai hitung fisik (selisih tercatat di Riwayat), bukan ditimpa diam-diam.
+  const save = async () => {
+    if (!Number.isFinite(st) || st < 0) { setError('Jumlah stok tidak valid.'); return; }
+    setBusy(true); setError('');
+    try {
+      if (infoChanged) await (api.updateMaterial ?? ownerOnly)(shop.id, m.id, { name: name.trim(), unit, min: mn });
+      if (stockChanged) await api.move(shop.id, { requestId, materialId: m.id, kind: 'opname', qty: st, note: 'Diubah manual' });
+      await onDone(stockChanged ? `Stok ${name.trim()} jadi ${fmtQty(st)} ${unit} (selisih ${st - m.stock >= 0 ? '+' : '−'}${fmtQty(Math.abs(st - m.stock))}).` : 'Bahan disimpan.');
+    } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal.'); setBusy(false); }
+  };
   return (
     <div className="space-y-2.5">
       {error && <p role="alert" className="text-[12px] font-semibold text-rose-600">{error}</p>}
-      <input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} aria-label="Nama bahan" className={fieldCls} />
-      <UnitPicker value={unit} onChange={setUnit} />
-      <label className="block"><span className={labelCls}>Ingatkan kalau stok di bawah</span><input value={min} onChange={(e) => setMin(e.target.value.replace(/[^\d.,]/g, ''))} inputMode="decimal" placeholder="kosong = tanpa batas" className={qtyCls} /></label>
+      <label className="block"><span className={labelCls}>Nama</span><input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} aria-label="Nama bahan" className={fieldCls} /></label>
+      <div><span className={labelCls}>Satuan</span><UnitPicker value={unit} onChange={setUnit} /></div>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="block"><span className={labelCls}>Stok sekarang</span>
+          <span className="relative block"><input value={stock} onChange={(e) => setStock(e.target.value.replace(/[^\d.,]/g, '').slice(0, 14))} inputMode="decimal" aria-label="Stok sekarang" className={cn(qtyCls, 'pr-12', stockChanged && 'ring-amber-400')} /><span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-bold text-slate-400">{unit}</span></span>
+        </label>
+        <label className="block"><span className={labelCls}>Ingatkan di bawah</span><input value={min} onChange={(e) => setMin(e.target.value.replace(/[^\d.,]/g, ''))} inputMode="decimal" placeholder="tanpa batas" aria-label="Batas minimum" className={qtyCls} /></label>
+      </div>
+      {stockChanged && <p className="rounded-xl bg-amber-50 px-3 py-2 text-[12px] font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">Stok {fmtQty(m.stock)} → {fmtQty(st)} {unit} (selisih <span className={st - m.stock < 0 ? 'text-rose-600' : 'text-emerald-700'}>{st - m.stock >= 0 ? '+' : '−'}{fmtQty(Math.abs(st - m.stock))}</span>). Tercatat di Riwayat sebagai &ldquo;Diubah manual&rdquo;.</p>}
       <div className="flex gap-2">
         <button type="button" disabled={busy} onClick={() => run({ archived: true }, `${m.name} diarsipkan (riwayat tetap ada).`)} className="flex items-center gap-1.5 rounded-full bg-slate-100 px-4 py-2.5 text-[12px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"><Archive size={14} /> Arsipkan</button>
-        <button type="button" disabled={busy || !name.trim() || (mn !== null && (!Number.isFinite(mn) || mn < 0))} onClick={() => run({ name: name.trim(), unit, min: mn }, 'Bahan disimpan.')} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 text-[13px] font-bold text-white disabled:opacity-40">{busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Simpan</button>
+        <button type="button" disabled={busy || !name.trim() || !stock || (!infoChanged && !stockChanged) || (mn !== null && (!Number.isFinite(mn) || mn < 0))} onClick={save} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 text-[13px] font-bold text-white disabled:opacity-40">{busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Simpan</button>
       </div>
     </div>
   );
@@ -361,9 +382,24 @@ function RecipeEditor({ shop, productKey, initial, materials, onDone }: { shop: 
 }
 
 // ── Riwayat ───────────────────────────────────────────────────────────────────
-function HistoryTab({ data }: { data: StockData }) {
+const MANUAL_KINDS = new Set(['awal', 'masuk', 'pakai', 'opname']);
+function HistoryTab({ shop, data, reload, onToast }: { shop: Shop; data: StockData; reload: () => Promise<void>; onToast: (m: string) => void }) {
+  const { api, staff, actor } = useStock();
   const byId = new Map(data.materials.map((m) => [m.id, m]));
   const [filter, setFilter] = useState('');
+  const [ask, setAsk] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' });
+  // Catatan manual yang belum dibatalkan; tim hanya miliknya sendiri hari ini (server juga memeriksa).
+  // Sudah ada hitung fisik sesudahnya → tidak bisa dibatalkan (betulkan lewat Ubah), sama dengan aturan server.
+  const coveredByOpname = (x: StockData['moves'][number]) => data.moves.some((o) => o.id !== x.id && o.material_id === x.material_id && o.kind === 'opname' && !o.reverted_at && o.created_at > x.created_at);
+  const canUndo = (x: StockData['moves'][number]) => !x.reverted_at && !x.linked && MANUAL_KINDS.has(x.kind) && !coveredByOpname(x) && (!staff || (x.by_name === actor && x.date === today));
+  const undo = async (x: StockData['moves'][number]) => {
+    setBusy(true);
+    try { await api.revert(shop.id, x.id); await reload(); onToast(`Dibatalkan — stok ${byId.get(x.material_id)?.name ?? ''} kembali ${x.qty < 0 ? '+' : '−'}${fmtQty(Math.abs(x.qty))}.`); }
+    catch (e) { onToast(e instanceof Error && e.message ? e.message : 'Gagal membatalkan.'); }
+    setBusy(false); setAsk(null);
+  };
   const list = data.moves.filter((x) => !filter || x.material_id === filter);
   if (!data.moves.length) return <p className="rounded-2xl bg-slate-50 p-5 text-center text-[13px] text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">Belum ada riwayat stok.</p>;
   return (
@@ -382,7 +418,12 @@ function HistoryTab({ data }: { data: StockData }) {
                 <span className="block truncate text-[13px] font-semibold text-slate-800 dark:text-slate-100">{m?.name ?? 'Bahan'} · <span className="text-slate-500">{MOVE_LABEL[x.kind] ?? x.kind}</span></span>
                 <span className="block truncate text-[11px] text-slate-400">{new Date(x.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}{x.by_name ? ` · oleh ${x.by_name}` : ''}{x.note ? ` · ${x.note}` : ''}{x.cost ? ` · ${formatIDR(x.cost)}` : ''}{x.reverted_at ? ' · dibatalkan' : ''}</span>
               </span>
-              <span className={cn('shrink-0 text-[13px] font-extrabold tabular-nums', x.reverted_at ? 'text-slate-400 line-through' : out ? 'text-rose-600' : 'text-emerald-600')}>{out ? '−' : '+'}{fmtQty(Math.abs(x.qty))} {m?.unit ?? ''}</span>
+              <span className="flex shrink-0 flex-col items-end gap-1">
+                <span className={cn('text-[13px] font-extrabold tabular-nums', x.reverted_at ? 'text-slate-400 line-through' : out ? 'text-rose-600' : 'text-emerald-600')}>{out ? '−' : '+'}{fmtQty(Math.abs(x.qty))} {m?.unit ?? ''}</span>
+                {canUndo(x) && (ask === x.id
+                  ? <span className="flex gap-1"><button type="button" disabled={busy} onClick={() => setAsk(null)} className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">Tidak</button><button type="button" disabled={busy} onClick={() => undo(x)} className="flex items-center gap-1 rounded-full bg-rose-600 px-2.5 py-1 text-[11px] font-bold text-white">{busy && <Loader2 size={11} className="animate-spin" />} Ya, batalkan</button></span>
+                  : <button type="button" onClick={() => setAsk(x.id)} className="text-[11px] font-bold text-slate-400 hover:text-rose-600">Batalkan</button>)}
+              </span>
             </li>
           );
         })}
