@@ -18,6 +18,13 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-06 (branch claude/rapih-frontend-20261106) — Rapikan komentar frontend (Tahap 1), BELUM merge. Tanpa SQL, tanpa perubahan perilaku.**
+  - 159 file di `src/`: ~780 baris komentar "keterangan" dihapus (label seksi JSX, komentar yang mengulang kode,
+    pembatas, catatan riwayat). Komentar KENAPA (keamanan, uang, drift D1, workaround native) + eslint-disable tetap.
+  - Bukti tidak ada kode berubah: pengecek token TypeScript vs origin/main → 0 beda di 159 file; tsc 0, build lolos,
+    ESLint sama dengan main. Merge sesudah branch claude/usahaku-web (Akun B) supaya konflik minimal.
+  - Belum: Worker `cloudflare/src/index.ts` (Tahap 3) dan Prettier (Tahap 2, tunggu branch lain masuk main).
+
 - **2026-11-07 — Halaman pembayaran rapi + Admin › Koin lengkap: LIVE (run 42303011955, commit d5eae38). Tanpa SQL.**
   - /membership/contact ditulis ulang jadi "Upgrade & Top up": tab PRO / Top up koin, kartu paket, kartu checkout (total + salin,
     transfer/QRIS, unggah bukti, ref, catatan), riwayat pembayaranku. Baru di Worker: GET /api/member/payments (20 terakhir milik user).
