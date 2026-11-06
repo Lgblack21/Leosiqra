@@ -4,13 +4,13 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-06 (live #144: MCP stok + kasir umum; stok oleh tim + mode tim baru siap di claude/usahaku-web, menunggu "gas")
+Terakhir diperbarui: 2026-11-06 (live #145: stok oleh tim + mode tim baru; migrasi 0033 belum dikonfirmasi Bos; stok Cruiser dari sheet belum diisi — Bos lewat AI-nya)
 
 ## Siapa sedang kerja
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| — | — | — | (akun B selesai; main = live #144) |
+| — | — | — | (akun B selesai; main = live #145) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-06 (branch claude/usahaku-web) — Stok oleh tim + mode tim dirapikan. BELUM deploy, tanpa SQL baru.**
+- **2026-11-06 — Stok oleh tim + mode tim dirapikan: live #145.**
   - Worker: `/api/staff/shops/:id/stock[/materials|/moves]` → handleShopStock(..., { name }) — tim boleh lihat, tambah bahan,
     pakai/masuk/hitung fisik (by_name = nama tim, tanggal dipaksa hari ini); ubah/arsip bahan & aturan per produk → 403;
     respons tim tanpa cost/avg_cost & tanpa bahan arsip. Usaha tak diberikan → 403.
