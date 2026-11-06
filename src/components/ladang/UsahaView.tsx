@@ -128,7 +128,7 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[16px] font-extrabold">{s.name}</span>
                         <span className="block truncate text-[12px] text-white/65">{s.tagline || `${s.products.length} produk${cats ? ` · ${cats} kategori` : ''}`}</span>
-                        {s.lowStock > 0 && <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-extrabold text-slate-900">{s.lowStock} bahan hampir habis</span>}
+                        {s.lowStock > 0 && <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-extrabold text-slate-900">{s.lowStock} stok hampir habis</span>}
                       </span>
                       <span className="flex shrink-0 items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-bold transition-colors group-hover:bg-white/25"><Store size={13} /> Kasir</span>
                     </div>

@@ -26,6 +26,9 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   - Biaya bisa "Masuk ke stok" (kind beli, cost = nominal → harga rata-rata). Penjualan kasir (pemilik & tim) mengurangi
     stok sesuai resep dalam batch yang sama dengan transaksi (dobel request_id → stok tidak terpotong lagi).
     Webhook website BELUM mengurangi stok (tidak ada kunci produk).
+  - Umum untuk semua jenis usaha (bukan parfum saja): istilah "bahan / barang", tab Daftar / Per produk / Riwayat,
+    satuan bebas, tombol **"Jadikan stok 1:1"** (toko barang jadi: tiap produk = 1 barang stok, batch dari klien,
+    maks 100 bahan/usaha). Pilihan cepat Biaya: bahan/barang toko itu dulu, lalu umum (bahan baku, kemasan, ongkir, sewa, gaji…).
   - Hapus transaksi (kedua jalur DELETE) → stok dikembalikan, KECUALI bahan yang sudah di-hitung fisik (opname) sesudahnya.
   - Tim: `/api/staff/me` kirim `materials` (baca saja), Catat biaya + masuk stok boleh; ubah bahan/resep/opname hanya pemilik.
   - Tanpa tabel 0033: semua alur lama jalan (stok dilewati), endpoint stok 503.

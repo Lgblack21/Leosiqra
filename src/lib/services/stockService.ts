@@ -9,7 +9,7 @@ export type StockMove = { id: string; material_id: string; kind: 'awal' | 'beli'
 export type StockRecipe = { product_key: string; items: { m: string; q: number }[] };
 export type StockData = { materials: StockMaterial[]; recipes: StockRecipe[]; moves: StockMove[] };
 
-export const STOCK_UNITS = ['pcs', 'ml', 'liter', 'gram', 'kg', 'lembar', 'pak', 'meter'] as const;
+export const STOCK_UNITS = ['pcs', 'gram', 'kg', 'ml', 'liter', 'porsi', 'pak', 'lusin', 'lembar', 'meter', 'pasang'] as const;
 export const MOVE_LABEL: Record<StockMove['kind'], string> = { awal: 'Stok awal', beli: 'Beli', masuk: 'Masuk', pakai: 'Pakai', jual: 'Terjual', opname: 'Hitung fisik' };
 
 /** Angka stok tampil rapi: 1.910,5 — maksimal 3 desimal. */

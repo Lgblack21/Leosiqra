@@ -8,7 +8,9 @@ import { cn, formatIDR } from '@/lib/utils';
 import { fieldCls, labelCls } from './UsahaView';
 import { lineKey } from './KasirView';
 
-// Usahaku › Stok bahan: daftar bahan (stok sekarang, batas minimum, harga rata-rata
+// Usahaku › Stok — untuk semua jenis usaha: bahan baku (kue, kopi, laundry, parfum…)
+// ATAU barang dagangan (kelontong, baju, aksesoris: 1 produk = 1 barang, lihat
+// "Jadikan stok 1:1"). Daftar bahan/barang (stok sekarang, batas minimum, harga rata-rata
 // dari pembelian), ubah stok (masuk / pakai / hitung fisik), resep produk (bahan per
 // 1 produk → stok berkurang otomatis saat terjual di kasir, + HPP & untung per produk),
 // dan riwayat (buku stok). Pembelian dicatat lewat "Biaya" supaya uang & stok sejalan.
@@ -30,8 +32,8 @@ export function StockView({ shop, data, reload, onToast }: { shop: Shop; data: S
   return (
     <div className="space-y-3">
       <div className="flex gap-1 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800">
-        <button type="button" onClick={() => setTab('bahan')} className={tabCls(tab === 'bahan')}><Package size={14} /> Bahan{low.length > 0 && <span className="rounded-full bg-rose-500 px-1.5 text-[10px] text-white">{low.length}</span>}</button>
-        <button type="button" onClick={() => setTab('resep')} className={tabCls(tab === 'resep')}><FlaskConical size={14} /> Resep</button>
+        <button type="button" onClick={() => setTab('bahan')} className={tabCls(tab === 'bahan')}><Package size={14} /> Daftar{low.length > 0 && <span className="rounded-full bg-rose-500 px-1.5 text-[10px] text-white">{low.length}</span>}</button>
+        <button type="button" onClick={() => setTab('resep')} className={tabCls(tab === 'resep')}><FlaskConical size={14} /> Per produk</button>
         <button type="button" onClick={() => setTab('riwayat')} className={tabCls(tab === 'riwayat')}><History size={14} /> Riwayat</button>
       </div>
       {tab === 'bahan' && <MaterialsTab shop={shop} data={data} reload={reload} onToast={onToast} />}
@@ -52,11 +54,11 @@ function MaterialsTab({ shop, data, reload, onToast }: { shop: Shop; data: Stock
   return (
     <div className="space-y-2.5">
       {active.length > 0 && active.some(isLow) && (
-        <p className="flex items-center gap-2 rounded-2xl bg-amber-50 px-3.5 py-2.5 text-[12px] font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300"><AlertTriangle size={15} className="shrink-0" /> <span>{active.filter(isLow).length} bahan hampir habis — catat pembelian lewat tombol <b>Biaya</b> supaya uang & stok sejalan.</span></p>
+        <p className="flex items-center gap-2 rounded-2xl bg-amber-50 px-3.5 py-2.5 text-[12px] font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300"><AlertTriangle size={15} className="shrink-0" /> <span>{active.filter(isLow).length} stok hampir habis — catat pembelian lewat tombol <b>Biaya</b> supaya uang & stok sejalan.</span></p>
       )}
       {sorted.map((m) => <MaterialCard key={m.id} shop={shop} m={m} open={open === m.id} toggle={() => setOpen(open === m.id ? null : m.id)} reload={reload} onToast={onToast} />)}
       {adding ? <AddMaterial shop={shop} onDone={async (msg) => { setAdding(false); await reload(); onToast(msg); }} onCancel={active.length ? () => setAdding(false) : undefined} /> : (
-        <button type="button" onClick={() => setAdding(true)} className="flex w-full items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-slate-200 py-3 text-[13px] font-bold text-slate-500 hover:border-violet-300 hover:text-violet-600 dark:border-slate-700 dark:text-slate-400"><Plus size={15} /> Tambah bahan</button>
+        <button type="button" onClick={() => setAdding(true)} className="flex w-full items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-slate-200 py-3 text-[13px] font-bold text-slate-500 hover:border-violet-300 hover:text-violet-600 dark:border-slate-700 dark:text-slate-400"><Plus size={15} /> Tambah bahan / barang</button>
       )}
       {archived.length > 0 && (
         <div>
@@ -149,9 +151,11 @@ function MoveForm({ shop, m, kind, onDone }: { shop: Shop; m: StockMaterial; kin
 }
 
 function UnitPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const custom = !(STOCK_UNITS as readonly string[]).includes(value);
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap items-center gap-1.5">
       {STOCK_UNITS.map((u) => <button key={u} type="button" onClick={() => onChange(u)} aria-pressed={value === u} className={cn('rounded-full px-3 py-1.5 text-[12px] font-bold', value === u ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300')}>{u}</button>)}
+      <input value={custom ? value : ''} onChange={(e) => onChange(e.target.value.replace(/\s+/g, ' ').slice(0, 12))} placeholder="lainnya…" aria-label="Satuan lain" className={cn('w-24 rounded-full px-3 py-1.5 text-[12px] font-bold outline-none ring-2', custom && value ? 'bg-slate-900 text-white ring-slate-900 dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 ring-transparent focus:ring-violet-500 dark:bg-slate-800 dark:text-slate-300')} />
     </div>
   );
 }
@@ -174,9 +178,10 @@ function AddMaterial({ shop, onDone, onCancel }: { shop: Shop; onDone: (msg: str
   };
   return (
     <div className="space-y-3 rounded-2xl bg-violet-50/60 p-3.5 ring-1 ring-violet-100 dark:bg-violet-500/5 dark:ring-violet-500/20">
-      <p className="text-[13px] font-extrabold text-slate-900 dark:text-white">Bahan baru</p>
+      <p className="text-[13px] font-extrabold text-slate-900 dark:text-white">Bahan / barang baru</p>
+      <p className="-mt-2 text-[11px] text-slate-500 dark:text-slate-400">Bahan baku yang diolah (tepung, kopi, kain) atau barang yang dijual apa adanya (mi instan, kaos).</p>
       {error && <p role="alert" className="text-[12px] font-semibold text-rose-600">{error}</p>}
-      <label className="block"><span className={labelCls}>Nama bahan</span><input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="mis. Botol Eternity, Bibit Afnan Rebel, Ethanol" className={fieldCls} /></label>
+      <label className="block"><span className={labelCls}>Nama</span><input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="mis. Tepung terigu, Kopi bubuk, Kaos hitam L, Kemasan" className={fieldCls} /></label>
       <div><span className={labelCls}>Satuan</span><UnitPicker value={unit} onChange={setUnit} /></div>
       <div className="grid grid-cols-2 gap-2">
         <label className="block"><span className={labelCls}>Stok sekarang</span><input value={stock} onChange={(e) => setStock(e.target.value.replace(/[^\d.,]/g, ''))} inputMode="decimal" placeholder="0" className={qtyCls} /></label>
@@ -184,7 +189,7 @@ function AddMaterial({ shop, onDone, onCancel }: { shop: Shop; onDone: (msg: str
       </div>
       <div className="flex gap-2">
         {onCancel && <button type="button" onClick={onCancel} className="rounded-full bg-white px-5 py-2.5 text-[13px] font-bold text-slate-600 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">Batal</button>}
-        <button type="button" onClick={save} disabled={busy} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 text-[13px] font-bold text-white disabled:opacity-50">{busy ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />} Tambah bahan</button>
+        <button type="button" onClick={save} disabled={busy} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 text-[13px] font-bold text-white disabled:opacity-50">{busy ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />} Tambah</button>
       </div>
     </div>
   );
@@ -223,10 +228,16 @@ function RecipesTab({ shop, data, reload, onToast }: { shop: Shop; data: StockDa
   const recipeOf = useMemo(() => new Map(data.recipes.map((r) => [r.product_key, r.items])), [data.recipes]);
   const groups = groupProducts(shop.products);
   if (!shop.products.length) return <p className="rounded-2xl bg-slate-50 p-5 text-center text-[13px] text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">Isi katalog produk dulu, lalu atur bahan per produk di sini.</p>;
-  if (!active.length) return <p className="rounded-2xl bg-slate-50 p-5 text-center text-[13px] text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">Tambahkan bahan dulu di tab <b>Bahan</b> (mis. botol, box, bibit, ethanol).</p>;
+  if (!active.length) return (
+    <div className="space-y-3">
+      <p className="rounded-2xl bg-slate-50 p-5 text-center text-[13px] text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">Tambahkan bahan atau barang dulu di tab <b>Daftar</b> — atau pakai tombol di bawah untuk toko barang jadi.</p>
+      <OneToOne shop={shop} data={data} reload={reload} onToast={onToast} />
+    </div>
+  );
   return (
     <div className="space-y-3">
-      <p className="text-[12px] text-slate-500 dark:text-slate-400">Isi bahan untuk <b>1 produk</b>. Setiap terjual di kasir (kamu atau tim), stok bahan berkurang otomatis. Modal per produk dihitung dari harga beli rata-rata bahan.</p>
+      <p className="text-[12px] text-slate-500 dark:text-slate-400">Isi apa yang terpakai untuk <b>1 produk</b> — mis. 1 Nasi goreng = 200 gram beras + 1 telur, atau 1 Kaos L = 1 pcs Kaos L. Setiap terjual di kasir (kamu atau tim), stoknya berkurang otomatis; modal & untung per produk dihitung dari harga beli rata-rata.</p>
+      <OneToOne shop={shop} data={data} reload={reload} onToast={onToast} />
       {groups.map((g) => (
         <div key={g.group || '_'} className="space-y-1.5">
           {g.group && <p className="px-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">{g.group}</p>}
@@ -240,7 +251,7 @@ function RecipesTab({ shop, data, reload, onToast }: { shop: Shop; data: StockDa
                 <button type="button" onClick={() => setEdit(open ? null : key)} aria-expanded={open} className="flex w-full items-center gap-3 px-3.5 py-3 text-left">
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2"><span className="truncate text-[14px] font-bold text-slate-900 dark:text-white">{p.name}</span><span className="shrink-0 text-[13px] font-extrabold tabular-nums text-slate-700 dark:text-slate-200">{formatIDR(p.price)}</span></span>
-                    <span className="mt-0.5 block truncate text-[12px] text-slate-500 dark:text-slate-400">{items.length ? items.map((i) => `${byId.get(i.m)?.name ?? '?'} ${fmtQty(i.q)}${byId.get(i.m)?.unit ?? ''}`).join(' · ') : <span className="text-amber-600">Belum ada resep — stok tidak berkurang saat terjual</span>}</span>
+                    <span className="mt-0.5 block truncate text-[12px] text-slate-500 dark:text-slate-400">{items.length ? items.map((i) => `${byId.get(i.m)?.name ?? '?'} ${fmtQty(i.q)}${byId.get(i.m)?.unit ?? ''}`).join(' · ') : <span className="text-amber-600">Belum diatur — stok tidak berkurang saat terjual</span>}</span>
                     {items.length > 0 && cost != null && <span className="mt-0.5 block text-[11px] font-semibold text-slate-400">Modal ≈ {formatIDR(Math.round(cost))} · untung ≈ <span className={p.price - cost >= 0 ? 'text-emerald-600' : 'text-rose-600'}>{formatIDR(Math.round(p.price - cost))}</span></span>}
                   </span>
                   <ChevronRight size={16} className={cn('shrink-0 text-slate-300 transition-transform', open && 'rotate-90')} />
@@ -255,6 +266,45 @@ function RecipesTab({ shop, data, reload, onToast }: { shop: Shop; data: StockDa
   );
 }
 
+// Toko barang jadi (kelontong, baju, aksesoris): tiap produk katalog = 1 barang stok.
+function OneToOne({ shop, data, reload, onToast }: { shop: Shop; data: StockData; reload: () => Promise<void>; onToast: (m: string) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [ask, setAsk] = useState(false);
+  const has = new Set(data.recipes.map((r) => r.product_key));
+  const todo = shop.products.filter((p) => !has.has(lineKey(p)));
+  const room = 100 - data.materials.length;
+  if (!todo.length) return null;
+  const run = async () => {
+    setBusy(true);
+    let done = 0;
+    const byName = new Map(data.materials.filter((m) => !m.archived_at).map((m) => [m.name.toLowerCase(), m.id]));
+    try {
+      for (const p of todo.slice(0, Math.max(0, room))) {
+        const name = (p.group && !p.name.toLowerCase().includes(p.group.toLowerCase()) ? `${p.group} ${p.name}` : p.name).slice(0, 60);
+        let id = byName.get(name.toLowerCase());
+        if (!id) { id = (await stockService.addMaterial(shop.id, { name, unit: 'pcs', stock: 0, min: null })).id; byName.set(name.toLowerCase(), id); }
+        await stockService.setRecipe(shop.id, lineKey(p), [{ materialId: id, qty: 1 }]);
+        done += 1;
+      }
+      onToast(`${done} produk jadi barang stok. Isi jumlahnya lewat Daftar › Hitung.`);
+    } catch (e) { onToast(e instanceof Error && e.message ? `${done} selesai, lalu gagal: ${e.message}` : 'Gagal.'); }
+    await reload();
+    setBusy(false); setAsk(false);
+  };
+  return (
+    <div className="rounded-2xl bg-sky-50 p-3.5 ring-1 ring-sky-100 dark:bg-sky-500/10 dark:ring-sky-500/20">
+      <p className="text-[13px] font-extrabold text-slate-900 dark:text-white">Jual barang jadi?</p>
+      <p className="mt-0.5 text-[12px] text-slate-600 dark:text-slate-300">Untuk toko kelontong, baju, aksesoris, dll: tiap produk dijadikan 1 barang stok (1 terjual = stok −1). {todo.length} produk belum punya aturan stok{todo.length > room ? ` — maksimal ${Math.max(0, room)} sekaligus` : ''}.</p>
+      {ask ? (
+        <div className="mt-2.5 flex gap-2">
+          <button type="button" onClick={() => setAsk(false)} disabled={busy} className="rounded-full bg-white px-4 py-2 text-[12px] font-bold text-slate-600 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">Batal</button>
+          <button type="button" onClick={run} disabled={busy || room <= 0} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-sky-600 py-2 text-[12px] font-bold text-white disabled:opacity-50">{busy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Ya, buat {Math.min(todo.length, Math.max(0, room))} barang stok</button>
+        </div>
+      ) : <button type="button" onClick={() => setAsk(true)} className="mt-2.5 rounded-full bg-sky-600 px-4 py-2 text-[12px] font-bold text-white">Jadikan stok 1:1</button>}
+    </div>
+  );
+}
+
 function RecipeEditor({ shop, productKey, initial, materials, onDone }: { shop: Shop; productKey: string; initial: { m: string; q: number }[]; materials: StockMaterial[]; onDone: (msg: string) => Promise<void> }) {
   const [rows, setRows] = useState<{ m: string; q: string }[]>(() => (initial.length ? initial.map((i) => ({ m: i.m, q: String(i.q).replace('.', ',') })) : [{ m: materials[0]?.id ?? '', q: '1' }]));
   const [busy, setBusy] = useState(false);
@@ -265,7 +315,7 @@ function RecipeEditor({ shop, productKey, initial, materials, onDone }: { shop: 
     if (items.some((i) => !Number.isFinite(i.qty) || i.qty <= 0)) { setError('Isi jumlah tiap bahan (lebih dari 0).'); return; }
     if (new Set(items.map((i) => i.materialId)).size !== items.length) { setError('Ada bahan yang dipilih dua kali.'); return; }
     setBusy(true); setError('');
-    try { await stockService.setRecipe(shop.id, productKey, items); await onDone(clear || !items.length ? 'Resep dihapus.' : 'Resep disimpan.'); }
+    try { await stockService.setRecipe(shop.id, productKey, items); await onDone(clear || !items.length ? 'Aturan stok dihapus.' : 'Tersimpan — stok berkurang otomatis saat terjual.'); }
     catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal.'); setBusy(false); }
   };
   return (
@@ -283,7 +333,7 @@ function RecipeEditor({ shop, productKey, initial, materials, onDone }: { shop: 
       {rows.length < 15 && <button type="button" onClick={() => setRows([...rows, { m: materials.find((m) => !rows.some((r) => r.m === m.id))?.id ?? materials[0]?.id ?? '', q: '1' }])} className="flex items-center gap-1 text-[12px] font-bold text-violet-600 dark:text-violet-300"><Plus size={14} /> Bahan lain</button>}
       <div className="flex gap-2 pt-1">
         {initial.length > 0 && <button type="button" disabled={busy} onClick={() => save(true)} className="flex items-center gap-1.5 rounded-full bg-slate-100 px-4 py-2.5 text-[12px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"><Trash2 size={14} /> Hapus</button>}
-        <button type="button" disabled={busy} onClick={() => save()} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 text-[13px] font-bold text-white disabled:opacity-50">{busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Simpan resep</button>
+        <button type="button" disabled={busy} onClick={() => save()} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-violet-600 py-2.5 text-[13px] font-bold text-white disabled:opacity-50">{busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Simpan</button>
       </div>
     </div>
   );

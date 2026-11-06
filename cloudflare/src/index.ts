@@ -9847,7 +9847,7 @@ const parseShopExpense = (raw: Record<string, unknown>) => {
   const amount = typeof raw.amount === "number" && Number.isFinite(raw.amount) ? Math.round(raw.amount) : 0;
   if (amount < 1 || amount > 1e11) return "Isi nominal pengeluarannya.";
   const item = shopText(raw.item, 80);
-  if (!item) return "Tulis beli apa, mis. botol 50 pcs.";
+  if (!item) return "Tulis untuk apa, mis. tepung 5 kg atau ongkir.";
   const requestId = typeof raw.request_id === "string" && /^[0-9a-f-]{36}$/i.test(raw.request_id) ? raw.request_id : null;
   if (!requestId) return "Permintaan tidak valid. Muat ulang halaman.";
   return { amount, item, kind: shopExpenseKind(raw.kind), requestId };
@@ -10260,7 +10260,7 @@ async function handleStaffRoutes(request: Request, env: Env, pathname: string) {
       if (!account) return json({ error: "Pemilik usaha belum menentukan rekening tujuan untuk akunmu." }, { status: 409 });
       const raw = await parseJson<Record<string, unknown>>(request);
       if (m[2].toLowerCase() === "expense") {
-        // Beli botol/dus/bahan dari uang kasir: rekening kunci yang sama, tanggal hari ini.
+        // Beli bahan/kemasan/ongkos dari uang kasir: rekening kunci yang sama, tanggal hari ini.
         const e = parseShopExpense(raw);
         if (typeof e === "string") return json({ error: e }, { status: 400 });
         const st = await expenseStockInput(env, staff.owner_id, shop.id, raw.stock);

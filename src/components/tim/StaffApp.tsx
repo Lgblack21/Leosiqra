@@ -31,7 +31,7 @@ function StockList({ list }: { list: StockMaterial[] }) {
   const shown = all ? sorted : sorted.slice(0, 6);
   return (
     <div className="rounded-[22px] bg-white p-4 ring-1 ring-slate-100">
-      <p className="flex items-center gap-1.5 text-[14px] font-extrabold text-slate-900"><Package size={15} /> Stok bahan</p>
+      <p className="flex items-center gap-1.5 text-[14px] font-extrabold text-slate-900"><Package size={15} /> Stok</p>
       <ul className="mt-2 divide-y divide-slate-100">{shown.map((m) => (
         <li key={m.id} className="flex items-center justify-between gap-3 py-2">
           <span className="flex min-w-0 items-center gap-1.5 text-[13px] text-slate-700">{isLow(m) && <AlertTriangle size={13} className="shrink-0 text-amber-500" />}<span className="truncate">{m.name}</span></span>
@@ -237,7 +237,7 @@ function StaffKasir({ shop, me, back, onSold, say }: { shop: Shop; me: StaffMe; 
           <div className="min-w-0 flex-1"><p className="text-[11px] font-bold uppercase tracking-wider text-white/50">Kasir</p><h1 className="truncate text-[20px] font-extrabold md:text-[24px]">{shop.name}</h1>{shop.style.greeting && <p className="truncate text-[12px] text-white/70">{shop.style.greeting}</p>}</div>
           <div className="shrink-0 text-right"><p className="text-[11px] text-white/55">Hari ini</p><p className="text-[18px] font-extrabold tabular-nums">{short(todaySales)}</p></div>
         </div>
-        <button type="button" onClick={() => setSpending(true)} className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-white/10 py-2 text-[12px] font-bold hover:bg-white/20 sm:w-auto sm:px-4"><Wallet size={14} /> Catat pengeluaran (beli botol, dus…)</button>
+        <button type="button" onClick={() => setSpending(true)} className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-white/10 py-2 text-[12px] font-bold hover:bg-white/20 sm:w-auto sm:px-4"><Wallet size={14} /> Catat pengeluaran (beli bahan, kemasan…)</button>
       </section>
       <div className="grid items-start gap-4 lg:grid-cols-[1fr_360px]">
         {custom
