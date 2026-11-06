@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-06 (branch claude/bersih-data-tim-stok — siap deploy, menunggu "gas"; main = live #146)
+Terakhir diperbarui: 2026-11-06 (live: bersihkan data tim/stok + rapikan angka kasir, run 42243711843)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-06 (branch claude/bersih-data-tim-stok) — Bersihkan data tim/stok + rapikan angka kasir. BELUM deploy (tunggu "gas"). Tanpa SQL.**
+- **2026-11-06 — Bersihkan data tim/stok + rapikan angka kasir: LIVE (run 42243711843, commit 198e387). Tanpa SQL.**
   - Bug: Hapus semua data / admin hapus user TIDAK menghapus shop_staff, staff_sessions, shop_materials,
     shop_stock_moves, shop_recipes (tanpa FK) → akun tim pemilik yang sudah reset MASIH BISA LOGIN.
     Kini `deleteShopExtrasForUser` (best effort per tabel). Hapus satu usaha → `deleteShopExtras`: stok & resep usaha
