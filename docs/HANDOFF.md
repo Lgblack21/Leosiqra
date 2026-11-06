@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live: Fokus layar penuh + Cerita Hari Ini; migrasi 0034 & 0035 sudah dijalankan Bos)
+Terakhir diperbarui: 2026-11-07 (live: Cerita AI dari foto + Kalender berfoto, run 42296259066)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-07 (branch claude/cerita-kalender) — Cerita: AI dari foto (anime/kartun) + Kalender bulan berfoto. BELUM deploy (tunggu "gas"). Tanpa SQL.**
+- **2026-11-07 — Cerita: AI dari foto (anime/kartun) + Kalender bulan berfoto: LIVE (run 42296259066, commit 1c5582a). Tanpa SQL.**
   - Laporan Bos: AI tidak bisa dipakai → penyebab: tombol AI mati kalau tulisan < 8 huruf (Bos punya foto tanpa tulisan).
     Kini ada foto → foto DIUBAH jadi ilustrasi (image-to-image: foto dikirim sebagai image_url ke model gambar);
     tanpa foto → dari tulisan. Gaya: Anime / Kartun 3D / Chibi / Cat air (generik, tanpa nama studio). Model cadangan
