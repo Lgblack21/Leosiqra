@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { looksLikeStaffUsername, staffService } from '@/lib/services/staffService';
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -44,6 +45,12 @@ export default function AppLoginPage() {
     setLoading(true);
     setError("");
     try {
+      // Username "toko-nama" = akun tim Usahaku → login tim & ke /tim.
+      if (looksLikeStaffUsername(email)) {
+        await staffService.login(email, password);
+        router.replace("/tim");
+        return;
+      }
       const r = await cloudflareApi<{ needsTwoFactor?: boolean; user?: { role?: string } }>("/api/auth/login", {
         method: "POST",
         json: { email: email.trim().toLowerCase(), password, isPwa: isStandaloneDisplay() || isNativeApp() },

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Check, Copy, Download, ExternalLink, Globe, Link2, Loader2, MessageCircle, Plus, Sparkles, Store, Trash2, Wand2, X } from 'lucide-react';
+import { ArrowLeft, Check, Copy, Download, ExternalLink, Globe, Link2, Loader2, MessageCircle, Plus, Sparkles, Store, Trash2, Users, Wand2, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { shopService, catalogText, groupProducts, prettyWa, websiteBrief, PABRIK_AI_URL, type Shop, type ShopIdea, type ShopProduct } from '@/lib/services/shopService';
@@ -13,6 +13,7 @@ import { KASIR_THEME } from './kasirTheme';
 import { AiMcpCard } from './AiMcpCard';
 import { HookSection } from './HookSection';
 import { CatalogImage } from './CatalogImage';
+import { TeamManager } from './TeamManager';
 
 // Ladangku › Usaha (Usahaku): AI menyusun 3 rencana usaha dari "aku bisa …" →
 // simpan jadi usaha → produk & kontak → katalog siap sebar (teks WA, gambar PNG,
@@ -33,7 +34,7 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
   const [shops, setShops] = useState<Shop[] | null>(null);
   const [tx, setTx] = useState<Transaction[]>([]);
   const [error, setError] = useState('');
-  const [sheet, setSheet] = useState<{ k: 'ideas' } | { k: 'shop'; id: string } | null>(null);
+  const [sheet, setSheet] = useState<{ k: 'ideas' } | { k: 'tim' } | { k: 'shop'; id: string } | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -58,10 +59,11 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
   const app = variant === 'app';
   const card = app ? 'rounded-3xl bg-white ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800' : 'rounded-[26px] bg-white ring-1 ring-slate-100';
   const current = sheet?.k === 'shop' ? shops?.find((s) => s.id === sheet.id) : undefined;
-  const body = sheet?.k === 'ideas'
+  const body = sheet?.k === 'tim' ? <TeamManager shops={shops ?? []} onToast={onToast} />
+    : sheet?.k === 'ideas'
     ? <IdeaFlow onSaved={(id, name) => { setSheet({ k: 'shop', id }); onToast(`${name} tersimpan. Lengkapi kontak supaya katalognya siap.`); }} onToast={onToast} onLeave={() => setSheet(null)} />
     : current ? <ShopDetail shop={current} sales={salesBy.get(current.id) ?? []} kasirLink={kasirHref(variant, current.id)} onToast={onToast} onLeave={() => setSheet(null)} onDeleted={() => { setSheet(null); onToast('Usaha dihapus. Penjualan yang tercatat tetap ada di transaksi.'); }} /> : null;
-  const title = sheet?.k === 'ideas' ? 'Usaha baru' : current?.name ?? '';
+  const title = sheet?.k === 'tim' ? 'Tim' : sheet?.k === 'ideas' ? 'Usaha baru' : current?.name ?? '';
 
   if (shops === null) return <div className="h-48 animate-pulse rounded-[28px] bg-slate-200/70 dark:bg-slate-800" />;
 
@@ -90,7 +92,10 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                     <p className="text-[13px] font-semibold text-white/60">Omzet usaha bulan ini</p>
                     <p className="mt-1 text-[30px] font-extrabold leading-none tabular-nums md:text-[36px]">{formatIDR(Math.round(mon.reduce((x, t) => x + amt(t), 0)))}</p>
                   </div>
-                  {shops.length < 5 && <button type="button" onClick={() => setSheet({ k: 'ideas' })} className="relative flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[12px] font-bold text-slate-900 hover:bg-white/90"><Plus size={14} /> Usaha baru</button>}
+                  <div className="relative flex shrink-0 flex-wrap justify-end gap-2">
+                    <button type="button" onClick={() => setSheet({ k: 'tim' })} className="flex items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-2 text-[12px] font-bold text-white ring-1 ring-white/20 hover:bg-white/15"><Users size={14} /> Tim</button>
+                    {shops.length < 5 && <button type="button" onClick={() => setSheet({ k: 'ideas' })} className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[12px] font-bold text-slate-900 hover:bg-white/90"><Plus size={14} /> Usaha baru</button>}
+                  </div>
                 </div>
                 <div className="relative mt-4 grid grid-cols-3 gap-2">
                   {[['Hari ini', short(Math.round(day.reduce((x, t) => x + amt(t), 0)))], ['Transaksi bulan ini', String(mon.length)], ['Usaha', `${shops.length}/5`]].map(([k, v]) => (

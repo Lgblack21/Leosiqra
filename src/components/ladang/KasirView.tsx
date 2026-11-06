@@ -25,8 +25,8 @@ import { ShopDetail, amt, fieldCls, initials, labelCls, monthKey, productLabel, 
 // transaksi pemasukan atomik di server (request_id anti dobel). "Kelola" membuka
 // pengaturan usaha (kontak, produk, website).
 
-type Line = { key: string; name: string; group?: string; price: number; qty: number };
-const lineKey = (p: ShopProduct) => `${p.group ?? ''}|${p.name}`;
+export type Line = { key: string; name: string; group?: string; price: number; qty: number };
+export const lineKey = (p: ShopProduct) => `${p.group ?? ''}|${p.name}`;
 const ACC_KEY = 'leosiqra-kasir-acc-v1';
 
 const themeOf = (s: KasirStyle) => KASIR_THEME[s.theme] ?? KASIR_THEME.ungu;
@@ -187,7 +187,7 @@ const CARD: Record<string, string> = {
   outline: 'bg-white ring-2 ring-slate-200 hover:ring-slate-400 dark:bg-slate-900 dark:ring-slate-700',
   solid: 'bg-white shadow-md shadow-slate-200/70 ring-1 ring-slate-100 hover:shadow-lg dark:bg-slate-800 dark:shadow-none dark:ring-slate-700',
 };
-function Catalog({ products, style, lines, onAdd }: { products: ShopProduct[]; style: KasirStyle; lines: Line[]; onAdd: (p: ShopProduct) => void }) {
+export function Catalog({ products, style, lines, onAdd }: { products: ShopProduct[]; style: KasirStyle; lines: Line[]; onAdd: (p: ShopProduct) => void }) {
   const groups = useMemo(() => {
     const g = groupProducts(products);
     const rank = (name: string) => { const k = style.categoryOrder.indexOf(name); return k < 0 ? 1000 : k; };
@@ -318,7 +318,10 @@ function Catalog({ products, style, lines, onAdd }: { products: ShopProduct[]; s
 }
 
 // ── Struk: item, pembeli, total, rekening → catat; lalu tampil struk siap salin ──
-function Struk({ shop, lines, sum, onAdd, setQty, clear, onDone, inSheet, onNew }: { shop: Shop; lines: Line[]; sum: number; onAdd: (p: ShopProduct) => void; setQty: (k: string, q: number) => void; clear: () => void; onDone: (m: string) => void; inSheet: boolean; onNew: () => void }) {
+// staff = mode akun tim: rekening dikunci pemilik (hanya nama), tanggal selalu hari ini,
+// penyimpanan lewat /api/staff/shops/:id/sale.
+export type StaffSell = (input: { requestId: string; amount: number; qty: number; product: string; buyer: string; items: { name: string; price: number; qty: number }[] }) => Promise<void>;
+export function Struk({ shop, lines, sum, onAdd, setQty, clear, onDone, inSheet, onNew, staff }: { shop: Shop; lines: Line[]; sum: number; onAdd: (p: ShopProduct) => void; setQty: (k: string, q: number) => void; clear: () => void; onDone: (m: string) => void; inSheet: boolean; onNew: () => void; staff?: { accountName: string | null; sell: StaffSell } }) {
   const needBuyer = shop.products.some((p) => p.group);
   const [buyer, setBuyer] = useState('');
   const [override, setOverride] = useState<string | null>(null); // total diketik manual (diskon)
@@ -332,6 +335,7 @@ function Struk({ shop, lines, sum, onAdd, setQty, clear, onDone, inSheet, onNew 
   const [manual, setManual] = useState<{ name: string; price: string } | null>(null);
 
   useEffect(() => {
+    if (staff) return; // akun tim tidak memilih rekening
     accountService.getUserAccounts('').then((list) => {
       const ok = list.filter((a) => a.id && !isCreditAccountType(a.type) && (a.currency || 'IDR') === 'IDR').map((a) => ({ id: String(a.id), name: a.name }));
       setAccounts(ok);
@@ -339,7 +343,7 @@ function Struk({ shop, lines, sum, onAdd, setQty, clear, onDone, inSheet, onNew 
       try { saved = localStorage.getItem(`${ACC_KEY}:${shop.id}`) ?? ''; } catch { /* abaikan */ }
       setAccountId(ok.some((a) => a.id === saved) ? saved : ok[0]?.id ?? '');
     }).catch(() => setAccounts([]));
-  }, [shop.id]);
+  }, [shop.id, staff]);
 
   const total = override !== null ? Number(override || '0') : sum;
   const allLines = lines;
@@ -351,15 +355,17 @@ function Struk({ shop, lines, sum, onAdd, setQty, clear, onDone, inSheet, onNew 
     if (!allLines.length) { setError('Pilih produk dulu.'); return; }
     if (total < 1) { setError('Total belum diisi.'); return; }
     if (needBuyer && !buyer.trim()) { setError('Isi nama / ID pembeli dulu.'); return; }
-    if (!accountId) { setError('Pilih rekening tujuan.'); return; }
+    if (!staff && !accountId) { setError('Pilih rekening tujuan.'); return; }
+    if (staff && !staff.accountName) { setError('Pemilik usaha belum menentukan rekening tujuan untuk akunmu.'); return; }
     setBusy(true);
     setError('');
     try {
-      await shopService.sale(shop.id, {
-        requestId, amount: total, qty: allLines.length === 1 ? allLines[0].qty : 1, product: label.slice(0, 80), buyer: buyer.trim(),
-        items: allLines.map((l) => ({ name: l.group ? `${l.group} · ${l.name}` : l.name, price: l.price, qty: l.qty })), accountId, date,
-      });
-      try { localStorage.setItem(`${ACC_KEY}:${shop.id}`, accountId); } catch { /* abaikan */ }
+      const base = { requestId, amount: total, qty: allLines.length === 1 ? allLines[0].qty : 1, product: label.slice(0, 80), buyer: buyer.trim(), items: allLines.map((l) => ({ name: l.group ? `${l.group} · ${l.name}` : l.name, price: l.price, qty: l.qty })) };
+      if (staff) await staff.sell(base);
+      else {
+        await shopService.sale(shop.id, { ...base, accountId, date });
+        try { localStorage.setItem(`${ACC_KEY}:${shop.id}`, accountId); } catch { /* abaikan */ }
+      }
       const text = [
         `🧾 *${shop.name}*`,
         new Date().toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }),
@@ -432,10 +438,12 @@ function Struk({ shop, lines, sum, onAdd, setQty, clear, onDone, inSheet, onNew 
       )}
 
       <label className="block"><span className={labelCls}>{needBuyer ? 'Nama / ID pembeli' : 'Pembeli (opsional)'}</span><input value={buyer} onChange={(e) => { setBuyer(e.target.value); setError(''); }} maxLength={60} placeholder={needBuyer ? 'mis. 123456789 (2001) · Budi' : 'Nama pembeli'} className={fieldCls} /></label>
-      <div className="grid grid-cols-2 gap-2">
+      {staff ? (
+        <p className="rounded-2xl bg-slate-50 px-3 py-2.5 text-[12px] text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">Masuk ke <b>{staff.accountName ?? '— belum ditentukan pemilik'}</b> · hari ini</p>
+      ) : <div className="grid grid-cols-2 gap-2">
         <label className="block"><span className={labelCls}>Masuk ke</span><select value={accountId} onChange={(e) => setAccountId(e.target.value)} disabled={accounts === null} className={fieldCls}>{(accounts ?? []).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
         <label className="block"><span className={labelCls}>Tanggal</span><input type="date" value={date} max={toLocalDateString()} onChange={(e) => setDate(e.target.value)} className={fieldCls} /></label>
-      </div>
+      </div>}
       <div className="rounded-2xl bg-emerald-50 p-3 dark:bg-emerald-500/10">
         <label className="flex items-center justify-between gap-3">
           <span className="text-[13px] font-bold text-emerald-900 dark:text-emerald-200">Total diterima</span>

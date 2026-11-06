@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-06 (live #139: sync_shop_catalog + update_shop_prices; migrasi 0029/0030/0031 sudah dijalankan Bos)
+Terakhir diperbarui: 2026-11-06 (live #139; Tim Tahap 1 siap di claude/usahaku-web, menunggu migrasi 0032 + "gas")
 
 ## Siapa sedang kerja
 
@@ -18,6 +18,19 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-06 (branch claude/usahaku-web) — Usahaku › Tim (akun kasir) Tahap 1. BELUM deploy. WAJIB migrasi `0032_shop_staff.sql` dulu.**
+  - Pemilik: tombol **Tim** di hero Usahaku → buat anggota (nama, username `toko-nama` — tanda hubung = penanda akun tim,
+    sandi awal, usaha yang boleh dibuka, rekening Rupiah non-kartu-kredit yang DIKUNCI). Batas FREE 1 / PRO 5.
+    Atur: ganti usaha/rekening, reset sandi, nonaktifkan, hapus (semua mencabut sesi).
+  - Anggota login di `/tim` (atau login biasa — username ber-tanda-hubung dialihkan ke `/tim`). Sesi terpisah
+    (cookie `<SESSION_COOKIE_NAME>_tim`, tabel staff_sessions) — tidak pernah lolos requireSession → /api/member/* 401.
+    Hanya Ringkas (omzet hari ini) + kasir usaha yang diberikan. Penjualan: rekening & tanggal dipaksa server
+    (rekening kunci, hari ini WIB), catatan "· oleh <nama>", request_id idempoten.
+  - Endpoint: `/api/staff/{login,logout,me,password,shops/:id/sale}`, `/api/member/staff[/:id]`.
+  - Dites lokal (wrangler dev): validasi (username/sandi/usaha asing/kartu kredit ditolak), limit FREE 409, dup 409,
+    cookie staff → member 401, cookie pemilik → /api/staff/me 401, /me tanpa link_url/hook/kontak, jual masuk Tunai +15.000,
+    ulang 409, usaha tak diberikan 403, reset sandi & nonaktifkan mencabut sesi, login nonaktif 403, logout. UI web + HP 0 error JS.
+  - Belum: Tahap 2 (peran Pengelola). Belum dicoba di HP asli / app Capacitor.
 - **2026-11-06 (branch claude/usahaku-web) — "Baca ulang website": cek katalog (tambah & hapus) via AI-mu, **live #139**. Tanpa SQL.**
   - MCP baru `sync_shop_catalog` (tulis, gratis FREE): kirim SELURUH produk dari website → produk baru ditambah
     (disisipkan setelah produk terakhir di kategori yang sama), yang tidak ada lagi DIHAPUS, harga diperbarui.
@@ -893,6 +906,7 @@ membersite_leosiqra_db --remote --command "..."`. SELECT boleh langsung; tulis/u
 - `0019_inbox.sql` — sudah (Kotak Masuk Gmail jalan di produksi).
 - `0020_reminders.sql` — sudah (Bos, 2026-10-28; Console D1 butuh SQL tanpa komentar `--` kalau ditempel satu baris).
 - `0021_notifications.sql` — sudah (dicek langsung ke D1 2026-11-03).
+- `0032_shop_staff.sql` — **BELUM** (Usahaku › Tim; tanpa tabel endpoint tim 503 — aman, tapi fitur mati).
 - `0022_native_push_tokens.sql` — **BELUM** (token push Android/FCM; tanpa tabel: endpoint 503, kirim dilewati — aman).
 
 ## Belum terverifikasi di produksi

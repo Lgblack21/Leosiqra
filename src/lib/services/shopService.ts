@@ -42,7 +42,7 @@ export type ShopInput = Partial<{ name: string; tagline: string; description: st
 type Row = Record<string, unknown>;
 const str = (v: unknown) => (typeof v === 'string' && v ? v : undefined);
 const parse = <T,>(v: unknown, fallback: T): T => { try { return typeof v === 'string' ? (JSON.parse(v) as T) : fallback; } catch { return fallback; } };
-const fromRow = (r: Row): Shop => ({
+export const shopFromRow = (r: Row): Shop => ({
   id: String(r.id),
   name: String(r.name ?? ''),
   tagline: str(r.tagline),
@@ -83,7 +83,7 @@ const toBody = (i: ShopInput) => ({
 export const shopService = {
   async list(): Promise<Shop[]> {
     const res = await cloudflareApi<{ items: Row[] }>('/api/member/shops');
-    return (res.items ?? []).map(fromRow);
+    return (res.items ?? []).map(shopFromRow);
   },
   async create(i: ShopInput): Promise<string> {
     const res = await cloudflareApi<{ id: string }>('/api/member/shops', { method: 'POST', json: toBody(i) });

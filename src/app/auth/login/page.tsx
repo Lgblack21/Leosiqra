@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { looksLikeStaffUsername, staffService } from '@/lib/services/staffService';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, useAnimationControls, useReducedMotion } from 'framer-motion';
@@ -92,6 +93,12 @@ export default function LoginPage() {
     setError('');
 
     try {
+      // Username "toko-nama" (pakai tanda hubung) = akun tim Usahaku → login tim & ke /tim.
+      if (looksLikeStaffUsername(email)) {
+        await staffService.login(email, password);
+        router.replace('/tim');
+        return;
+      }
       const result = await cloudflareApi<{
         needsTwoFactor?: boolean;
         user?: { role: 'admin' | 'user' };

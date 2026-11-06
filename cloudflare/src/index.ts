@@ -9793,11 +9793,11 @@ const sanitizeShopFields = (raw: Record<string, unknown>, creating: boolean): { 
 // Catat satu penjualan usaha: pemasukan Usaha & Freelance › Penjualan + saldo rekening
 // dalam SATU batch; saleKey (payload_json.saleId) mencegah dobel. Dipakai kasir
 // (request_id UUID) & webhook website (saleKey "web:<order_id>").
-const recordShopSale = async (env: Env, userId: string, shop: { id: string; name: string }, input: { saleKey: string; amount: number; qty: number; product: string; buyer: string; items?: { name: string; price: number; qty: number }[]; accountId: string; date: string; source?: "website" }) => {
+const recordShopSale = async (env: Env, userId: string, shop: { id: string; name: string }, input: { saleKey: string; amount: number; qty: number; product: string; buyer: string; items?: { name: string; price: number; qty: number }[]; accountId: string; date: string; source?: "website"; by?: { id: string; name: string } }) => {
   const txId = generateId();
   const now = nowIso();
-  const note = `[${shop.name}] ${input.product ? `${input.product}${input.qty > 1 ? ` ×${input.qty}` : ""}` : "Penjualan"}${input.buyer ? ` · ${input.buyer}` : ""}${input.source === "website" ? " · via website" : ""}`.slice(0, 200);
-  const payload = { saleId: input.saleKey, product: input.product || null, qty: input.qty, ...(input.buyer ? { buyer: input.buyer } : {}), ...(input.items?.length ? { items: input.items } : {}), ...(input.source ? { source: input.source } : {}) };
+  const note = `[${shop.name}] ${input.product ? `${input.product}${input.qty > 1 ? ` ×${input.qty}` : ""}` : "Penjualan"}${input.buyer ? ` · ${input.buyer}` : ""}${input.source === "website" ? " · via website" : ""}${input.by ? ` · oleh ${input.by.name}` : ""}`.slice(0, 200);
+  const payload = { saleId: input.saleKey, product: input.product || null, qty: input.qty, ...(input.buyer ? { buyer: input.buyer } : {}), ...(input.items?.length ? { items: input.items } : {}), ...(input.source ? { source: input.source } : {}), ...(input.by ? { staffId: input.by.id, staffName: input.by.name } : {}) };
   const results = await env.DB.batch([
     env.DB.prepare(
       `INSERT INTO transactions (id, user_id, type, amount, amount_idr, category, sub_category, currency, account_id, date, display_date, note, status, related_id, related_type, payload_json, created_at, updated_at)
@@ -9906,6 +9906,217 @@ async function handleShopHook(request: Request, env: Env, shopId: string) {
   await env.DB.prepare("UPDATE shops SET hook_last_at = ? WHERE id = ?").bind(nowIso(), row.id).run().catch(() => undefined);
   if (!res.ok) return json({ ok: true, duplicate: true, order_id: orderId });
   return json({ ok: true, id: res.id, order_id: orderId }, { status: 201 });
+}
+
+// ── Usahaku › Tim (akun kasir) ───────────────────────────────────────────────
+// Pemilik membuat akun tim (username "toko-nama" — tanda hubung TIDAK boleh di username
+// pengguna biasa, jadi tidak pernah bentrok). Sesi & cookie TERPISAH (staff_sessions,
+// cookie <SESSION_COOKIE_NAME>_tim, tanda tangan HMAC atas "staff:<id>"): requireSession
+// pemilik tidak pernah menerima akun tim, dan akun tim hanya punya /api/staff/* di bawah
+// ini — lihat katalog usaha yang diberikan, catat penjualan ke rekening yang DIKUNCI
+// pemilik (tanggal hari ini), lihat penjualan hari ini. Tidak ada saldo/transaksi lain.
+const STAFF_USERNAME_RE = /^[a-z0-9_.]{2,15}-[a-z0-9_.]{2,15}$/;
+const STAFF_LIMIT = { FREE: 1, PRO: 5 } as const;
+const STAFF_SESSION_DAYS = 30;
+const staffCookieName = (env: Env) => `${env.SESSION_COOKIE_NAME}_tim`;
+const staffTableMissing = (e: unknown) => e instanceof Error && /no such table: (shop_staff|staff_sessions)/.test(e.message);
+const STAFF_NOT_READY = "Fitur akun tim belum aktif (menunggu pembaruan database). Coba lagi nanti.";
+type StaffRow = { id: string; owner_id: string; username: string; name: string; password_hash: string; role: string; shop_ids: string; account_id: string | null; disabled_at: string | null; last_login_at: string | null; created_at: string };
+const staffShopIds = (row: Pick<StaffRow, "shop_ids">): string[] => { try { const v = JSON.parse(row.shop_ids); return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string").slice(0, SHOPS_MAX_PER_USER) : []; } catch { return []; } };
+
+const readStaff = async (env: Env, request: Request): Promise<{ staff: StaffRow; sessionId: string } | null> => {
+  const token = getCookieValue(request, staffCookieName(env));
+  if (!token) return null;
+  const dot = token.lastIndexOf(".");
+  if (dot < 1) return null;
+  const id = token.slice(0, dot);
+  if (!/^[0-9a-f-]{36}$/i.test(id) || !constantTimeEqual(token.slice(dot + 1), await signSession(env, `staff:${id}`))) return null;
+  const row = await env.DB.prepare(
+    `SELECT s.id, s.owner_id, s.username, s.name, s.password_hash, s.role, s.shop_ids, s.account_id, s.disabled_at, s.last_login_at, s.created_at
+       FROM staff_sessions t JOIN shop_staff s ON s.id = t.staff_id
+      WHERE t.id = ? AND t.revoked_at IS NULL AND t.expires_at > ? AND s.disabled_at IS NULL`
+  ).bind(id, nowIso()).first<StaffRow>();
+  return row ? { staff: row, sessionId: id } : null;
+};
+const staffCookie = (env: Env, token: string, maxAge: number) => `${staffCookieName(env)}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
+
+async function handleStaffRoutes(request: Request, env: Env, pathname: string) {
+  try {
+    if (pathname === "/api/staff/login" && request.method === "POST") {
+      const raw = await parseJson<{ username?: unknown; password?: unknown }>(request);
+      const username = typeof raw.username === "string" ? raw.username.trim().toLowerCase() : "";
+      const password = typeof raw.password === "string" ? raw.password : "";
+      if (!username || !password) return json({ error: "Username dan sandi wajib diisi." }, { status: 400 });
+      if (!(await checkRateLimit(env, [`login:ip:${clientIpOf(request)}`, `login:identifier:${username}`]))) return json({ error: "Terlalu banyak percobaan. Coba lagi dalam beberapa saat." }, { status: 429 });
+      const row = STAFF_USERNAME_RE.test(username) ? await env.DB.prepare("SELECT id, name, password_hash, disabled_at FROM shop_staff WHERE username = ?").bind(username).first<{ id: string; name: string; password_hash: string; disabled_at: string | null }>() : null;
+      const ok = row ? (await verifyPassword(env, password, row.password_hash)).ok : (await verifyPassword(env, password, DUMMY_PASSWORD_HASH), false);
+      if (!row || !ok) return json({ error: "Username atau sandi salah." }, { status: 401 });
+      if (row.disabled_at) return json({ error: "Akun tim ini dinonaktifkan pemilik usaha." }, { status: 403 });
+      const sid = generateId();
+      const now = nowIso();
+      await env.DB.batch([
+        env.DB.prepare("INSERT INTO staff_sessions (id, staff_id, expires_at, created_at) VALUES (?, ?, ?, ?)").bind(sid, row.id, new Date(Date.now() + STAFF_SESSION_DAYS * 86400000).toISOString(), now),
+        env.DB.prepare("UPDATE shop_staff SET last_login_at = ? WHERE id = ?").bind(now, row.id),
+      ]);
+      return json({ ok: true, name: row.name }, { headers: { "set-cookie": staffCookie(env, `${sid}.${await signSession(env, `staff:${sid}`)}`, STAFF_SESSION_DAYS * 86400) } });
+    }
+    if (pathname === "/api/staff/logout" && request.method === "POST") {
+      const cur = await readStaff(env, request).catch(() => null);
+      if (cur) await env.DB.prepare("UPDATE staff_sessions SET revoked_at = ? WHERE id = ?").bind(nowIso(), cur.sessionId).run();
+      return json({ ok: true }, { headers: { "set-cookie": staffCookie(env, "", 0) } });
+    }
+    const cur = await readStaff(env, request);
+    if (!cur) return json({ error: "Unauthorized" }, { status: 401 });
+    const { staff } = cur;
+    const ids = staffShopIds(staff);
+    const ownShops = async () => {
+      if (!ids.length) return [] as Record<string, unknown>[];
+      const rows = await selectShops(env, staff.owner_id, ` AND id IN (${ids.map(() => "?").join(",")})`, ids);
+      // Akun tim tidak perlu (dan tidak boleh melihat) tautan website/kunci sambungan.
+      return rows.map(({ link_url: _l, hook_account_id: _h, hook_last_at: _hl, hook_on: _ho, contact_wa: _c, payment_note: _pn, plan_json: _pj, ...r }) => r);
+    };
+    if (pathname === "/api/staff/me" && request.method === "GET") {
+      const owner = await env.DB.prepare("SELECT name FROM users WHERE id = ?").bind(staff.owner_id).first<{ name: string }>();
+      const account = staff.account_id ? await env.DB.prepare("SELECT name FROM accounts WHERE id = ? AND user_id = ?").bind(staff.account_id, staff.owner_id).first<{ name: string }>() : null;
+      const shops = await ownShops();
+      const shopIds = shops.map((r) => String(r.id));
+      const sales = shopIds.length
+        ? (await env.DB.prepare(
+            `SELECT id, related_id AS shop_id, amount, note, created_at FROM transactions
+              WHERE user_id = ? AND related_type = 'shop' AND related_id IN (${shopIds.map(() => "?").join(",")}) AND date = ?
+              ORDER BY created_at DESC LIMIT 100`
+          ).bind(staff.owner_id, ...shopIds, todayWIB()).all()).results ?? []
+        : [];
+      return json({ staff: { id: staff.id, name: staff.name, username: staff.username, role: staff.role }, owner: owner?.name ?? "", account: account?.name ?? null, shops, today: sales, date: todayWIB() });
+    }
+    if (pathname === "/api/staff/password" && request.method === "POST") {
+      const raw = await parseJson<{ current?: unknown; next?: unknown }>(request);
+      if (typeof raw.current !== "string" || typeof raw.next !== "string") return json({ error: "Isi sandi lama dan sandi baru." }, { status: 400 });
+      if (raw.next.length < 8 || raw.next.length > 100) return json({ error: "Sandi baru minimal 8 karakter." }, { status: 400 });
+      if (!(await verifyPassword(env, raw.current, staff.password_hash)).ok) return json({ error: "Sandi lama salah." }, { status: 400 });
+      await env.DB.batch([
+        env.DB.prepare("UPDATE shop_staff SET password_hash = ?, updated_at = ? WHERE id = ?").bind(await hashPassword(env, raw.next), nowIso(), staff.id),
+        env.DB.prepare("UPDATE staff_sessions SET revoked_at = ? WHERE staff_id = ? AND id != ? AND revoked_at IS NULL").bind(nowIso(), staff.id, cur.sessionId),
+      ]);
+      return json({ ok: true });
+    }
+    const m = /^\/api\/staff\/shops\/([0-9a-f-]{36})\/sale$/i.exec(pathname);
+    if (m && request.method === "POST") {
+      const shopId = m[1];
+      if (!ids.includes(shopId)) return json({ error: "Usaha ini tidak diberikan untuk akunmu." }, { status: 403 });
+      const shop = await env.DB.prepare("SELECT id, name FROM shops WHERE id = ? AND user_id = ?").bind(shopId, staff.owner_id).first<{ id: string; name: string }>();
+      if (!shop) return json({ error: "Usaha tidak ditemukan." }, { status: 404 });
+      const account = staff.account_id ? await env.DB.prepare("SELECT id FROM accounts WHERE id = ? AND user_id = ? AND COALESCE(currency, 'IDR') = 'IDR'").bind(staff.account_id, staff.owner_id).first<{ id: string }>() : null;
+      if (!account) return json({ error: "Pemilik usaha belum menentukan rekening tujuan untuk akunmu." }, { status: 409 });
+      const raw = await parseJson<Record<string, unknown>>(request);
+      const amount = typeof raw.amount === "number" && Number.isFinite(raw.amount) ? Math.round(raw.amount) : 0;
+      if (amount < 1 || amount > 1e11) return json({ error: "Isi nominal penjualannya." }, { status: 400 });
+      const qty = Number.isInteger(raw.qty) && (raw.qty as number) >= 1 && (raw.qty as number) <= 9999 ? (raw.qty as number) : 1;
+      const buyer = shopText(raw.buyer, 60);
+      if (shopSaleBuyerBad(buyer)) return json({ error: "Jangan tulis PIN, password, atau OTP di sini." }, { status: 400 });
+      const requestId = typeof raw.request_id === "string" && /^[0-9a-f-]{36}$/i.test(raw.request_id) ? raw.request_id : null;
+      if (!requestId) return json({ error: "Permintaan tidak valid. Muat ulang halaman." }, { status: 400 });
+      const items = (Array.isArray(raw.items) ? raw.items : []).slice(0, 30)
+        .map((x) => (x && typeof x === "object" ? (x as Record<string, unknown>) : {}))
+        .map((x) => ({ name: shopText(x.name, 80), price: shopMoney(x.price) ?? 0, qty: Number.isInteger(x.qty) && (x.qty as number) >= 1 && (x.qty as number) <= 9999 ? (x.qty as number) : 1 }))
+        .filter((x) => x.name);
+      // Tanggal selalu hari ini (akun tim tidak bisa mencatat mundur).
+      const res = await recordShopSale(env, staff.owner_id, shop, { saleKey: requestId, amount, qty, product: shopText(raw.product, 80), buyer, items, accountId: account.id, date: todayWIB(), by: { id: staff.id, name: staff.name } });
+      if (!res.ok) return json({ error: "Penjualan ini sudah tercatat." }, { status: 409 });
+      return json({ ok: true, id: res.id }, { status: 201 });
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (e) {
+    if (staffTableMissing(e)) return json({ error: STAFF_NOT_READY }, { status: 503 });
+    if (e instanceof Error && e.message === "Payload JSON tidak valid.") return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    throw e;
+  }
+}
+
+// Pemilik mengelola akun tim: GET/POST /api/member/staff, PUT/DELETE /api/member/staff/:id
+async function handleMemberStaff(request: Request, env: Env, pathname: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const owner = authResult.session.user;
+  const out = (r: StaffRow) => ({ id: r.id, username: r.username, name: r.name, role: r.role, shop_ids: staffShopIds(r), account_id: r.account_id, disabled: Boolean(r.disabled_at), last_login_at: r.last_login_at, created_at: r.created_at });
+  const ownShopIds = async () => new Set(((await env.DB.prepare("SELECT id FROM shops WHERE user_id = ?").bind(owner.id).all<{ id: string }>()).results ?? []).map((r) => r.id));
+  const checkAccount = async (v: unknown) => (typeof v === "string" && v ? await env.DB.prepare("SELECT id FROM accounts WHERE id = ? AND user_id = ? AND COALESCE(currency, 'IDR') = 'IDR' AND COALESCE(type, '') NOT IN ('Credit Card', 'kartu')").bind(v, owner.id).first<{ id: string }>() : null);
+  const limit = STAFF_LIMIT[owner.plan === "PRO" ? "PRO" : "FREE"];
+  try {
+    if (pathname === "/api/member/staff") {
+      if (request.method === "GET") {
+        const rows = (await env.DB.prepare("SELECT * FROM shop_staff WHERE owner_id = ? ORDER BY created_at").bind(owner.id).all<StaffRow>()).results ?? [];
+        return json({ items: rows.map(out), limit, plan: owner.plan });
+      }
+      if (request.method === "POST") {
+        const raw = await parseJson<Record<string, unknown>>(request);
+        const name = shopText(raw.name, 40);
+        const username = typeof raw.username === "string" ? raw.username.trim().toLowerCase() : "";
+        const password = typeof raw.password === "string" ? raw.password : "";
+        if (!name) return json({ error: "Isi nama anggota tim." }, { status: 400 });
+        if (!STAFF_USERNAME_RE.test(username)) return json({ error: "Username harus berbentuk toko-nama, mis. cxa-rina (huruf kecil/angka/titik/garis bawah, satu tanda hubung)." }, { status: 400 });
+        if (password.length < 8 || password.length > 100) return json({ error: "Sandi minimal 8 karakter." }, { status: 400 });
+        const mine = await ownShopIds();
+        const shopIds = (Array.isArray(raw.shop_ids) ? raw.shop_ids : []).filter((x): x is string => typeof x === "string" && mine.has(x)).slice(0, SHOPS_MAX_PER_USER);
+        if (!shopIds.length) return json({ error: "Pilih minimal satu usaha untuk anggota ini." }, { status: 400 });
+        const account = await checkAccount(raw.account_id);
+        if (!account) return json({ error: "Pilih rekening Rupiah tempat penjualan anggota ini masuk." }, { status: 400 });
+        const id = generateId();
+        const now = nowIso();
+        const res = await env.DB.prepare(
+          `INSERT INTO shop_staff (id, owner_id, username, name, password_hash, role, shop_ids, account_id, created_at, updated_at)
+           SELECT ?, ?, ?, ?, ?, 'kasir', ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM shop_staff WHERE owner_id = ?) < ?
+             AND NOT EXISTS (SELECT 1 FROM shop_staff WHERE username = ?)`
+        ).bind(id, owner.id, username, name, await hashPassword(env, password), JSON.stringify(shopIds), account.id, now, now, owner.id, limit, username).run();
+        if (!res.meta.changes) {
+          const taken = await env.DB.prepare("SELECT 1 FROM shop_staff WHERE username = ?").bind(username).first();
+          return json({ error: taken ? "Username itu sudah dipakai, coba yang lain." : `Batas akun tim paket ${owner.plan === "PRO" ? "PRO" : "FREE"}: ${limit}.` }, { status: 409 });
+        }
+        return json({ ok: true, id }, { status: 201 });
+      }
+      return json({ error: "Method not allowed" }, { status: 405 });
+    }
+    const id = pathname.slice("/api/member/staff/".length);
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "Not found" }, { status: 404 });
+    const row = await env.DB.prepare("SELECT * FROM shop_staff WHERE id = ? AND owner_id = ?").bind(id, owner.id).first<StaffRow>();
+    if (!row) return json({ error: "Akun tim tidak ditemukan." }, { status: 404 });
+    const now = nowIso();
+    const revoke = env.DB.prepare("UPDATE staff_sessions SET revoked_at = ? WHERE staff_id = ? AND revoked_at IS NULL").bind(now, id);
+    if (request.method === "DELETE") {
+      await env.DB.batch([revoke, env.DB.prepare("DELETE FROM shop_staff WHERE id = ? AND owner_id = ?").bind(id, owner.id)]);
+      return json({ ok: true });
+    }
+    if (request.method === "PUT") {
+      const raw = await parseJson<Record<string, unknown>>(request);
+      const sets: string[] = [];
+      const vals: unknown[] = [];
+      let kick = false;
+      if (raw.name !== undefined) { const n = shopText(raw.name, 40); if (!n) return json({ error: "Isi nama anggota tim." }, { status: 400 }); sets.push("name = ?"); vals.push(n); }
+      if (raw.password !== undefined) {
+        if (typeof raw.password !== "string" || raw.password.length < 8 || raw.password.length > 100) return json({ error: "Sandi minimal 8 karakter." }, { status: 400 });
+        sets.push("password_hash = ?"); vals.push(await hashPassword(env, raw.password)); kick = true;
+      }
+      if (raw.shop_ids !== undefined) {
+        const mine = await ownShopIds();
+        const shopIds = (Array.isArray(raw.shop_ids) ? raw.shop_ids : []).filter((x): x is string => typeof x === "string" && mine.has(x)).slice(0, SHOPS_MAX_PER_USER);
+        if (!shopIds.length) return json({ error: "Pilih minimal satu usaha." }, { status: 400 });
+        sets.push("shop_ids = ?"); vals.push(JSON.stringify(shopIds));
+      }
+      if (raw.account_id !== undefined) { const a = await checkAccount(raw.account_id); if (!a) return json({ error: "Pilih rekening Rupiah." }, { status: 400 }); sets.push("account_id = ?"); vals.push(a.id); }
+      if (raw.disabled !== undefined) { sets.push("disabled_at = ?"); vals.push(raw.disabled === true ? now : null); if (raw.disabled === true) kick = true; }
+      if (!sets.length) return json({ error: "Tidak ada yang diubah." }, { status: 400 });
+      await env.DB.batch([
+        env.DB.prepare(`UPDATE shop_staff SET ${sets.join(", ")}, updated_at = ? WHERE id = ? AND owner_id = ?`).bind(...vals, now, id, owner.id),
+        ...(kick ? [revoke] : []), // sandi direset / dinonaktifkan → semua sesi tim itu keluar
+      ]);
+      return json({ ok: true });
+    }
+    return json({ error: "Method not allowed" }, { status: 405 });
+  } catch (e) {
+    if (staffTableMissing(e)) return json({ error: STAFF_NOT_READY }, { status: 503 });
+    if (e instanceof Error && e.message === "Payload JSON tidak valid.") return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    throw e;
+  }
 }
 
 async function handleShopRoutes(request: Request, env: Env, pathname: string) {
@@ -18796,6 +19007,13 @@ const worker = {
 
       if (url.pathname === "/api/member/listings" || url.pathname.startsWith("/api/member/listings/")) {
         return await handleListingRoutes(request, env, url.pathname);
+      }
+
+      if (url.pathname.startsWith("/api/staff/")) {
+        return await handleStaffRoutes(request, env, url.pathname);
+      }
+      if (url.pathname === "/api/member/staff" || url.pathname.startsWith("/api/member/staff/")) {
+        return await handleMemberStaff(request, env, url.pathname);
       }
 
       if (url.pathname.startsWith("/api/hooks/shop/") && request.method === "POST") {
