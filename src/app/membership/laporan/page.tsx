@@ -327,7 +327,7 @@ export default function LaporanPage() {
             {cats.length === 0 ? (
               <p className="mt-4 rounded-[20px] bg-white p-8 text-center text-[14px] text-slate-500 ring-1 ring-slate-100">Belum ada pengeluaran di periode ini.</p>
             ) : (
-              <div className="mt-3 grid items-start gap-5 md:grid-cols-[190px_minmax(0,1fr)]">
+              <div className="mt-3 grid grid-cols-1 items-start gap-5 md:grid-cols-[190px_minmax(0,1fr)]">
                 <div className="flex justify-center md:sticky md:top-6">
                   <div className="relative h-44 w-44">
                     <svg viewBox="0 0 180 180" className="h-full w-full -rotate-90">

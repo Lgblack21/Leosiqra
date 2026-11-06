@@ -432,7 +432,7 @@ export default function HutangPanel() {
 
       {/* Daftar */}
       {loading ? (
-        <div className="grid gap-3 md:grid-cols-2">{[1, 2, 3, 4].map((i) => <div key={i} className="h-48 animate-pulse rounded-[26px] bg-white" />)}</div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">{[1, 2, 3, 4].map((i) => <div key={i} className="h-48 animate-pulse rounded-[26px] bg-white" />)}</div>
       ) : shown.length === 0 ? (
         <div className="rounded-[26px] bg-white p-8 ring-1 ring-slate-100">
           <EmptyState
@@ -442,7 +442,7 @@ export default function HutangPanel() {
           />
         </div>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <AnimatePresence initial={false}>
             {shown.map((trx, i) => {
               const isHutang = trx.category === 'Hutang';

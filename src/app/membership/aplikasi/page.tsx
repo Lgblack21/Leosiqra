@@ -195,7 +195,7 @@ function Hub({ open }: { open: (id: AppId) => void }) {
       <section>
         <h2 className="mb-1 text-[18px] font-bold text-slate-900">Otomatis dari aplikasimu</h2>
         <p className="mb-4 text-[14px] text-slate-500">Lewat mitra koneksi Composio — kamu masuk di situs Google, Notion atau Slack langsung, Leosiqra tidak pernah melihat kata sandimu.</p>
-        <div className="grid gap-3 sm:gap-4 md:grid-cols-2 md:[&>*:last-child:nth-child(odd)]:col-span-2">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 md:[&>*:last-child:nth-child(odd)]:col-span-2">
           <AppCard app={APPS.googlecalendar} connected={apps.items.googlecalendar?.connected} onOpen={() => open('googlecalendar')} disabledNote={composioNote} price={priceLabel(apps.access?.googlecalendar)} />
           <AppCard app={APPS.gmail} connected={apps.items.gmail?.connected} onOpen={() => open('gmail')} disabledNote={composioNote} price={priceLabel(apps.access?.gmail)} />
           <AppCard app={APPS.googlesheets} connected={apps.items.googlesheets?.connected} onOpen={() => open('googlesheets')} disabledNote={composioNote} price={priceLabel(apps.access?.googlesheets)} />
@@ -206,14 +206,14 @@ function Hub({ open }: { open: (id: AppId) => void }) {
 
       <section>
         <h2 className="mb-4 text-[18px] font-bold text-slate-900">Asisten AI</h2>
-        <div className="grid gap-3 sm:gap-4 md:grid-cols-2 md:[&>*:last-child:nth-child(odd)]:col-span-2">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 md:[&>*:last-child:nth-child(odd)]:col-span-2">
           <AppCard app={APPS.mcp} onOpen={() => open('mcp')} />
         </div>
       </section>
 
       <section>
         <h2 className="mb-4 text-[18px] font-bold text-slate-900">Catat lebih cepat</h2>
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <LinkCard href="/input-cepat" icon={Zap} tile="bg-amber-50 text-amber-600" title="Input Cepat" desc="Catat dari layar utama HP — ketik, suara, atau foto struk." action="Buka" />
           <LinkCard href="/install" icon={MonitorSmartphone} tile="bg-slate-100 text-slate-700" title="Leosiqra di HP, Mac & PC" desc="Pasang sebagai aplikasi, buka dari layar utama atau taskbar." action="Pasang" />
         </div>
@@ -248,7 +248,7 @@ function Detail({ id, back }: { id: AppId; back: () => void }) {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="min-w-0 rounded-[24px] bg-white p-4 ring-1 ring-slate-100 md:p-6">
           {id === 'mcp' ? <McpConnectCard /> : id === 'slack' ? (
             <ComposioAppView toolkit="slack"><SlackInboxCard /></ComposioAppView>

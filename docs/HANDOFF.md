@@ -18,6 +18,17 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-06 (branch claude/rapikan-popup-tampilan) — Popup tidak mengganggu + grid HP. BELUM deploy (tunggu "gas"). Tanpa SQL.**
+  - InstallBanner: hanya di beranda (/, /membership, /membership/dashboard, /app) + artikel publik, maksimal SEKALI per
+    sesi tab (sessionStorage `leosiqra:install-ad-shown`; useRef supaya yang sedang tampil tidak ikut hilang), ikon tidak
+    bergoyang terus, tablet: "Pasang Leosiqra di perangkat ini".
+  - DevNoticeBanner: satu baris tipis tanpa animasi ping, tutup = 14 hari (dulu 3), versi app HP hanya di Beranda /app.
+  - 46 grid responsif tanpa kolom dasar → `grid-cols-1` (minmax(0,1fr)). Bug nyata: Ringkasan HP kartu
+    "Catatan terbaru"/"Segera" 473px di layar 390px → nominal terpotong. Kini 358px.
+  - Transaksi HP: ringkasan "Rp 7,5 jt" (spasi sama dengan "Rp 819.000").
+  - Dites lokal Playwright: 34 halaman /membership × HP/tablet/web + 23 /app HP, 0 error JS, 0 scroll samping.
+  - Belum diubah (keamanan > UX): notif "Login Baru Terdeteksi" dikirim di SETIAP login, termasuk perangkat sama.
+
 - **2026-11-06 — Bersihkan data tim/stok + rapikan angka kasir: LIVE (run 42243711843, commit 198e387). Tanpa SQL.**
   - Bug: Hapus semua data / admin hapus user TIDAK menghapus shop_staff, staff_sessions, shop_materials,
     shop_stock_moves, shop_recipes (tanpa FK) → akun tim pemilik yang sudah reset MASIH BISA LOGIN.

@@ -140,7 +140,7 @@ export function TabBelajar() {
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       {cards.map((c, i) => (
         <motion.section
           key={c.title}

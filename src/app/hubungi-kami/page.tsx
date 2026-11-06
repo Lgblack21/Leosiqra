@@ -123,11 +123,11 @@ export default function PublicHubungiKamiPage() {
       <main className="relative flex-1 px-5 pb-24 sm:px-6">
         <div className="mx-auto max-w-4xl">
           {loading ? (
-            <div className="grid gap-5 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               {[0, 1].map((i) => <div key={i} className="h-60 animate-pulse rounded-[28px] bg-white/70" />)}
             </div>
           ) : (
-            <div className="grid gap-5 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               {/* WhatsApp */}
               <Reveal className="lp-card lift flex flex-col rounded-[28px] p-7 sm:p-8">
                 <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100"><MessageCircle size={22} /></span>

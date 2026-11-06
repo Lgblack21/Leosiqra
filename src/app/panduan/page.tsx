@@ -69,7 +69,7 @@ export default function PanduanIndexPage() {
         </div>
       </header>
       <main className="relative flex-1 px-5 pb-24 sm:px-6">
-        <div className="mx-auto grid max-w-4xl gap-5 sm:grid-cols-2">
+        <div className="mx-auto grid grid-cols-1 max-w-4xl gap-5 sm:grid-cols-2">
           {GUIDES.map((g) => (
             <Link key={g.href} href={g.href} className="lp-card lift group flex h-full flex-col rounded-[28px] p-7">
               <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100">

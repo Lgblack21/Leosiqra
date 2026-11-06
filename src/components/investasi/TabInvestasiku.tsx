@@ -128,7 +128,7 @@ export function TabInvestasiku({ market, kabar, go }: { market: ReturnType<typeo
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-5">
           {/* Total portofolio */}
           <section className="web-keep relative overflow-hidden rounded-[24px] bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950 p-5 text-white md:p-6">

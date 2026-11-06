@@ -529,7 +529,7 @@ export default function MonthlyDashboard() {
             ))}
           </div>
         )}
-        <div className="relative grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,400px)] md:items-end md:gap-8">
+        <div className="relative grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,400px)] md:items-end md:gap-8">
           <div className="min-w-0">
             <p className="text-[26px] font-extrabold tracking-tight md:text-[32px]">
               {now ? greeting(now.getHours()) : 'Halo'}{firstName ? `, ${firstName}` : ''}.
@@ -617,7 +617,7 @@ export default function MonthlyDashboard() {
             }}
           />
         </div>
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className={cn(card, 'p-5 md:p-6')}>
             <div className="flex items-baseline justify-between">
               <p className="text-[16px] font-bold text-slate-900">Ke mana uangmu</p>
@@ -681,7 +681,7 @@ export default function MonthlyDashboard() {
       {!statsLoading && <HealthScoreCard result={health} />}
 
       {/* Catatan terbaru (dikelompokkan per hari) + Segera */}
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <div className={cn(card, 'p-5 md:p-6')}>
           <div className="flex items-baseline justify-between">
             <p className="text-[16px] font-bold text-slate-900">Catatan terbaru</p>

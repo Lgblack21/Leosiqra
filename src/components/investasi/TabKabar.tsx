@@ -146,7 +146,7 @@ export function TabKabar({ kabar, market, go }: { kabar: KabarState; market: Ret
       </section>
 
       {kabar.items === null ? (
-        <div className="grid gap-3 md:grid-cols-2">{[1, 2, 3, 4].map((i) => <div key={i} className="h-44 animate-pulse rounded-[24px] bg-white" />)}</div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">{[1, 2, 3, 4].map((i) => <div key={i} className="h-44 animate-pulse rounded-[24px] bg-white" />)}</div>
       ) : all.length === 0 ? (
         <div className="rounded-[24px] bg-white p-8 text-center ring-1 ring-slate-100">
           <Newspaper className="mx-auto text-slate-300" />
@@ -177,7 +177,7 @@ export function TabKabar({ kabar, market, go }: { kabar: KabarState; market: Ret
           <AnimatePresence mode="wait" initial={false}>
             <motion.div key={filter} initial={reduce ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={reduce ? undefined : { opacity: 0, y: -6 }} transition={{ duration: 0.2 }} className="space-y-3">
               {lead && <Story k={lead} lead forYou={forYou} go={go} />}
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {rest.map((k, i) => (
                   <motion.div key={k.id} initial={reduce ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 8) * 0.04 }}>
                     <Story k={k} forYou={forYou} go={go} />

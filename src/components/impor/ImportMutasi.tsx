@@ -73,7 +73,7 @@ function DraftRow({ draft, currency, onChange }: { draft: Draft; currency?: stri
       {open && (
         <div className="space-y-3 border-t border-slate-100 p-3">
           <TxTypeToggle value={draft.type} onChange={(type) => onChange({ type, category: null, sub_category: null })} />
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block rounded-2xl bg-slate-50 px-4 py-2">
               <span className="text-[12px] font-semibold text-slate-500">Nominal{currency ? ` (${currency})` : ''}</span>
               <NumberInput value={String(draft.amount)} onChange={(v) => onChange({ amount: Number(v || '0') })} className="w-full bg-transparent text-[18px] font-bold tabular-nums text-slate-900 outline-none" />
@@ -112,7 +112,7 @@ function MappingPanel({ table, mapping, onChange }: { table: Table; mapping: Col
   return (
     <div className="space-y-3 rounded-[20px] bg-slate-50 p-4">
       <p className="text-[13px] text-slate-600">Cocokkan kolom file dengan data transaksi. Contoh baris pertama: <span className="font-mono text-[12px]">{(table.rows[0] ?? []).slice(0, 5).join(' | ')}</span></p>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {select('Tanggal', 'date')}
         {select('Keterangan', 'note')}
       </div>
@@ -123,7 +123,7 @@ function MappingPanel({ table, mapping, onChange }: { table: Table; mapping: Col
           </button>
         ))}
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {mapping.mode === 'single' ? (<>{select('Nominal', 'amount')}{select('Jenis (opsional: masuk/keluar)', 'kind')}</>) : (<>{select('Debit (keluar)', 'debit')}{select('Kredit (masuk)', 'credit')}</>)}
       </div>
     </div>

@@ -426,7 +426,7 @@ export default function RekeningPage() {
             <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Target</h2>
             <Link href="/membership/kekayaan#tabungan" className="text-[12px] font-bold text-indigo-600 hover:underline">Lihat semua</Link>
           </div>
-          <ul className="grid gap-2 md:grid-cols-2">
+          <ul className="grid grid-cols-1 gap-2 md:grid-cols-2">
             {goalsWithTarget.slice(0, 6).map((g, i) => {
               const pct = Math.max(0, Math.min(100, g.progressPercent ?? (g.currentTotal / (g.targetAmount || 1)) * 100));
               const color = SEG[i % SEG.length];

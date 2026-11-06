@@ -51,7 +51,7 @@ export function TabSbn() {
         </p>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Tangga bunga */}
         <section className="rounded-[28px] bg-white p-5 ring-1 ring-slate-100">
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Tangga bunga</p>

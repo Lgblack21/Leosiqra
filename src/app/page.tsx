@@ -215,7 +215,7 @@ export default function LandingPage() {
             <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">Semua yang Anda miliki, dalam satu pandangan.</h2>
           </Reveal>
 
-          <div className="mt-14 grid gap-4 md:grid-cols-6">
+          <div className="mt-14 grid grid-cols-1 gap-4 md:grid-cols-6">
             <Reveal className="lp-card lift group rounded-[28px] p-7 md:col-span-4">
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Alokasi aset</p>
               <h3 className="mt-2 font-serif text-2xl sm:text-3xl">Tahu persis ke mana uang Anda bekerja.</h3>
@@ -294,7 +294,7 @@ export default function LandingPage() {
       {/* ============ INPUT CEPAT ============ */}
       <section id="input-cepat" className="relative scroll-mt-24 overflow-hidden px-5 py-24 sm:px-6 sm:py-32">
         <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-        <div className="mx-auto grid max-w-7xl items-center gap-16 lg:grid-cols-2">
+        <div className="mx-auto grid grid-cols-1 max-w-7xl items-center gap-16 lg:grid-cols-2">
           <Reveal>
             <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Input Cepat</p>
             <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">Catat dalam hitungan detik. Dengan cara Anda.</h2>
@@ -348,7 +348,7 @@ export default function LandingPage() {
 
       {/* ============ PAJAK ============ */}
       <section id="pajak" className="relative scroll-mt-24 px-5 py-24 sm:px-6 sm:py-32">
-        <Reveal className="lp-card relative mx-auto grid max-w-7xl items-center gap-12 overflow-hidden rounded-[36px] p-8 sm:p-14 lg:grid-cols-2">
+        <Reveal className="lp-card relative mx-auto grid grid-cols-1 max-w-7xl items-center gap-12 overflow-hidden rounded-[36px] p-8 sm:p-14 lg:grid-cols-2">
           <div aria-hidden className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(closest-side,rgba(99,102,241,0.12),transparent)]" />
           <div className="relative">
             <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Pajak Center</p>
@@ -386,7 +386,7 @@ export default function LandingPage() {
             <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Prinsip kami</p>
             <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">Dibangun untuk dipercaya.</h2>
           </Reveal>
-          <div className="mt-14 grid gap-4 md:grid-cols-3">
+          <div className="mt-14 grid grid-cols-1 gap-4 md:grid-cols-3">
             {PRINCIPLES.map((p, i) => (
               <Reveal key={p.title} delay={i * 0.1} className="lp-card lift rounded-[28px] p-8">
                 <IconChip icon={p.icon} tone={p.tone} size="lg" />
@@ -405,7 +405,7 @@ export default function LandingPage() {
             <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Cara mulai</p>
             <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">Tiga langkah menuju keuangan yang tenang.</h2>
           </Reveal>
-          <div className="relative mt-16 grid gap-10 md:grid-cols-3">
+          <div className="relative mt-16 grid grid-cols-1 gap-10 md:grid-cols-3">
             <motion.div
               aria-hidden
               className="absolute left-[16%] right-[16%] top-8 hidden h-px origin-left bg-gradient-to-r from-indigo-300/0 via-indigo-300 to-indigo-300/0 md:block"
@@ -432,7 +432,7 @@ export default function LandingPage() {
             <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Harga</p>
             <h2 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">Coba dulu. Lanjutkan kalau cocok.</h2>
           </Reveal>
-          <div className="mt-14 grid gap-4 md:grid-cols-2">
+          <div className="mt-14 grid grid-cols-1 gap-4 md:grid-cols-2">
             <Reveal className="lp-card flex flex-col rounded-[32px] p-9">
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Masa coba</p>
               <p className="mt-4 font-serif text-5xl">Rp 0</p>

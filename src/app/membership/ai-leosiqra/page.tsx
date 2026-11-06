@@ -55,7 +55,7 @@ export default function AILeosiqraPage() {
         layout={(header, chat) => (
           <div className="flex h-[calc(100dvh-148px)] min-h-[520px] flex-col md:h-[calc(100dvh-96px)]">
             {header}
-            <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+            <div className="grid grid-cols-1 min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
               <section className="flex min-h-0 flex-col overflow-hidden rounded-[24px] bg-white ring-1 ring-slate-100">{chat}</section>
               <aside className="hidden min-h-0 flex-col gap-3 overflow-y-auto lg:flex">
                 <div className="space-y-2 rounded-[20px] bg-white p-3.5 ring-1 ring-slate-100">

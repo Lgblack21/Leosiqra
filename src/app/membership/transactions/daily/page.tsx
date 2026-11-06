@@ -48,7 +48,7 @@ const idr = (t: Transaction) => Number(t.amountIDR) || Number(t.amount) || 0;
 // Nominal kartu ringkasan: ringkas di HP (kartu sempit), lengkap di desktop.
 const Amount = ({ value }: { value: number }) => (
   <>
-    <span className="md:hidden">{Math.abs(value) >= 1e6 ? `Rp${(Math.abs(value) / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 2 })} jt` : formatIDR(Math.abs(value))}</span>
+    <span className="md:hidden">{Math.abs(value) >= 1e6 ? `Rp ${(Math.abs(value) / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 2 })} jt` : formatIDR(Math.abs(value))}</span>
     <span className="hidden md:inline">{formatIDR(Math.abs(value))}</span>
   </>
 );

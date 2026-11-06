@@ -110,7 +110,7 @@ export default function AdminAiPage() {
 
       {loadError && <p className="rounded-2xl bg-rose-50 p-4 text-sm font-semibold text-rose-700">{loadError}</p>}
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className={cn('rounded-3xl border p-6 shadow-sm md:col-span-2', low ? 'border-rose-200 bg-rose-50' : 'border-slate-100 bg-white')}>
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
             <Wallet size={14} /> Sisa saldo OpenRouter
@@ -224,7 +224,7 @@ export default function AdminAiPage() {
             )}
           </p>
         </div>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <label className="block">
             <span className="text-xs font-bold text-slate-500">{kind === 'api' ? 'API key baru' : 'Management key'}</span>
             <input

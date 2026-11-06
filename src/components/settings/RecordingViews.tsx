@@ -12,7 +12,7 @@ type Option<T> = { id: T; title: string; desc: string; icon: React.ElementType; 
 
 function OptionCards<T extends string>({ options, value, onPick }: { options: Option<T>[]; value: T; onPick: (v: T) => void }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {options.map((o) => {
         const on = o.id === value;
         return (

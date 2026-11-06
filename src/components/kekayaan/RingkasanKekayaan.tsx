@@ -133,7 +133,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
     return (
       <div className="space-y-4">
         <div className="h-[340px] animate-pulse rounded-[32px] bg-slate-200/70" />
-        <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
           <div className="space-y-3">{[1, 2, 3].map((i) => <div key={i} className="h-40 animate-pulse rounded-[26px] bg-white" />)}</div>
           <div className="h-80 animate-pulse rounded-[26px] bg-white" />
         </div>
@@ -171,7 +171,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
       </section>
 
       {/* Aset vs kewajiban */}
-      <section className="grid gap-3 rounded-[26px] bg-white p-4 ring-1 ring-slate-100 md:grid-cols-[1fr_1fr_1.3fr] md:items-center md:p-5">
+      <section className="grid grid-cols-1 gap-3 rounded-[26px] bg-white p-4 ring-1 ring-slate-100 md:grid-cols-[1fr_1fr_1.3fr] md:items-center md:p-5">
         <div className="flex items-center gap-3">
           <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600"><ArrowUpRight size={20} /></span>
           <div><p className="text-[12px] text-slate-500">Aset</p><p className="text-[19px] font-extrabold tabular-nums text-slate-900">{money(t.assets)}</p></div>
@@ -192,7 +192,7 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
         </div>
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_360px] lg:items-start">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px] lg:items-start">
         <div className="space-y-3">
           <Group icon={Wallet} tone="bg-sky-50 text-sky-600" title="Kas & rekening" total={money(t.cash)} count={nw.cash.length} action={<Link href="/membership/rekening" className="text-[12px] font-bold text-slate-500 hover:text-slate-900">Rekening</Link>}>
             {nw.cash.length === 0 ? <Empty text="Belum ada rekening." onAdd={onAddAccount} label="Tambah akun" /> : nw.cash.map(({ account, value }) => (

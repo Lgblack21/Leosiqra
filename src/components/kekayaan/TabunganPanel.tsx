@@ -315,7 +315,7 @@ export default function TabunganPanel() {
       <div className="web-keep relative overflow-hidden rounded-[28px] bg-slate-900 p-6 text-white md:p-8">
         <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-indigo-500/40 blur-3xl" />
         <span aria-hidden className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-violet-500/30 blur-3xl" />
-        <div className="relative grid gap-6 md:grid-cols-[1.4fr_1fr] md:items-end">
+        <div className="relative grid grid-cols-1 gap-6 md:grid-cols-[1.4fr_1fr] md:items-end">
           <div>
             <p className="flex items-center gap-2 text-[14px] text-white/70"><PiggyBank size={16} /> Total tabungan</p>
             <p className={cn('mt-1 text-[34px] font-extrabold tabular-nums leading-tight md:text-[42px]', totalSaldo < 0 && 'text-rose-300')}>{formatIDR(totalSaldo)}</p>

@@ -218,7 +218,7 @@ function StaffRingkas({ me, lowBy, go }: { me: StaffMe; lowBy: Record<string, nu
         </button>
       )}
 
-      <ul className="grid gap-3 sm:grid-cols-2">
+      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {me.shops.map((s) => {
           const list = sales.filter((t) => t.shop_id === s.id);
           const c = sumOf(costs.filter((t) => t.shop_id === s.id));
@@ -289,7 +289,7 @@ function StaffKasir({ shop, me, low, onStock, onSold, say }: { shop: Shop; me: S
           ))}
         </div>
       </section>
-      <div className="grid items-start gap-4 lg:grid-cols-[1fr_360px]">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_360px]">
         {custom
           ? <CustomKasirFrame shop={shop} products={shop.products} cart={cart} onAdd={(i) => add(shop.products[i])} onRemove={(i) => { const k = lineKey(shop.products[i]); const q = lines.find((l) => l.key === k)?.qty ?? 0; if (q) setQty(k, q - 1); }} onCheckout={() => setSheet(true)} />
           : <Catalog products={shop.products} style={shop.style} lines={lines} onAdd={add} />}

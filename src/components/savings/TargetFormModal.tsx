@@ -319,7 +319,7 @@ function TargetForm({ onClose, goal, preset, onSaved }: Props) {
                       <span className="block text-[12px] text-slate-500">Langsung dipindah dari rekening ke target ini</span>
                     </span>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <Field label="Dari rekening" hint={initAcc ? `Tersedia ${formatCurrency(initAcc.balance, initAcc.currency || 'IDR')}` : undefined}>
                       <select value={initAccount} onChange={(e) => setInitAccount(e.target.value)} className={inputCls}>
                         {accounts.length === 0 && <option value="">Belum ada rekening</option>}

@@ -116,7 +116,7 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
               </section>
             );
           })()}
-          <ul className="grid gap-3 md:grid-cols-2">
+          <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {shops.map((s) => {
               const sales = salesBy.get(s.id) ?? [];
               const month = sales.filter((t) => monthKey(t.date) === now);

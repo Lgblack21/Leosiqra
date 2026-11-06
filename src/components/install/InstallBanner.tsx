@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 // - Muncul lagi kalau aplikasinya dihapus: Chrome kembali menawarkan install,
 //   atau (iPhone) aplikasinya tidak dibuka lagi selama 14 hari.
 // - Tombol X menyembunyikannya 30 hari di perangkat ini.
+// - Supaya tidak mengganggu: hanya di halaman beranda (bukan kasir/input/laporan),
+//   dan paling banyak SEKALI per sesi browser — pindah halaman tidak memunculkannya lagi.
 type Variant = "leosiqra" | "input-cepat";
 
 const FRESH_MS = 14 * 24 * 60 * 60 * 1000;
@@ -26,14 +28,25 @@ const dismissKey = (v: Variant) => `leosiqra:install-ad-dismissed:${v}`;
 const PUBLIC_PREFIXES = ["/panduan", "/catatan-keuangan", "/hubungi-kami", "/privacy", "/terms"];
 
 type Area = "public" | "member" | "app";
-function areaFor(path: string): Area | null {
+// Halaman member/app tempat iklan boleh tampil — beranda saja, bukan halaman kerja.
+const MEMBER_HOMES = new Set(["/membership", "/membership/dashboard", "/app"]);
+function areaFor(rawPath: string): Area | null {
+  const path = rawPath.length > 1 ? rawPath.replace(/\/+$/, "") : rawPath;
   if (path === "/") return "public";
   if (path.startsWith("/panduan/shortcut-ios")) return null;
   if (PUBLIC_PREFIXES.some((p) => path === p || path.startsWith(p + "/") || (p === "/catatan-keuangan" && path.startsWith(p)))) return "public";
-  if (path.startsWith("/membership") && !path.startsWith("/membership/onboarding")) return "member";
-  if ((path === "/app" || path.startsWith("/app/")) && !path.startsWith("/app/onboarding")) return "app";
+  if (MEMBER_HOMES.has(path)) return path === "/app" ? "app" : "member";
   return null; // /install, /input-cepat, /auth, /admin, dll.
 }
+
+// Sudah tampil di sesi browser ini → jangan muncul lagi di halaman berikutnya.
+const SESSION_KEY = "leosiqra:install-ad-shown";
+const shownThisSession = () => {
+  try { return sessionStorage.getItem(SESSION_KEY) === "1"; } catch { return false; }
+};
+const markShown = () => {
+  try { sessionStorage.setItem(SESSION_KEY, "1"); } catch { /* abaikan */ }
+};
 
 const recent = (iso?: string) => Boolean(iso && Date.now() - Date.parse(iso) < FRESH_MS);
 
@@ -70,6 +83,8 @@ export function InstallBanner() {
     ready: false,
   });
   const [closed, setClosed] = useState(false);
+  // true = iklan sudah diputuskan tampil di halaman ini (penanda sesi tidak boleh menyembunyikannya lagi).
+  const shownHere = useRef(false);
 
   // Kumpulkan sinyal "sudah terpasang" sekali: laporan Chrome + catatan akun.
   useEffect(() => {
@@ -103,7 +118,8 @@ export function InstallBanner() {
     if (promptState === "installed") leosiqraInstalled = true;
     const inputCepatInstalled = recent(signals.opened.inputCepat);
     let next: Variant | null = leosiqraInstalled ? (inputCepatInstalled ? null : "input-cepat") : "leosiqra";
-    if (next && (readDismissed(next) || tourRunning(area))) next = null;
+    if (next && (readDismissed(next) || tourRunning(area) || (!shownHere.current && shownThisSession()))) next = null;
+    if (next && !shownHere.current) { shownHere.current = true; markShown(); }
     // Nilai-nilai ini bergantung pada localStorage & API browser — hanya bisa
     // dihitung setelah hydrate.
     // eslint-disable-next-line react-hooks/set-state-in-effect -- keputusan tampil berdasarkan sinyal browser
@@ -128,7 +144,9 @@ export function InstallBanner() {
   };
 
   const show = Boolean(area && variant && !closed);
-  const isPhone = typeof navigator !== "undefined" && detectPlatform() !== "desktop";
+  const platform = typeof navigator !== "undefined" ? detectPlatform() : "desktop";
+  const isTablet = platform !== "desktop" && typeof screen !== "undefined" && Math.min(screen.width, screen.height) >= 600;
+  const isPhone = platform !== "desktop" && !isTablet;
   const ad =
     variant === "input-cepat"
       ? {
@@ -140,7 +158,7 @@ export function InstallBanner() {
         }
       : {
           icons: ["/images/Logo-new.png", "/images/input-cepat-192.png"],
-          title: isPhone ? "Pasang Leosiqra di HP ini" : "Pasang Leosiqra di HP kamu",
+          title: isPhone ? "Pasang Leosiqra di HP ini" : isTablet ? "Pasang Leosiqra di perangkat ini" : "Pasang Leosiqra di HP kamu",
           text: "Buka langsung dari layar utama seperti aplikasi — gratis, tanpa Play Store, selalu versi terbaru.",
           cta: "Pasang sekarang",
           href: "/install",
@@ -180,8 +198,8 @@ export function InstallBanner() {
                 <motion.span
                   key={src}
                   initial={{ scale: 0, rotate: -12 }}
-                  animate={{ scale: 1, rotate: 0, y: [0, -4, 0] }}
-                  transition={{ scale: { type: "spring", stiffness: 300, damping: 14, delay: 0.25 + i * 0.15 }, rotate: { delay: 0.25 + i * 0.15 }, y: { duration: 2.4, repeat: Infinity, delay: 1 + i * 0.4 } }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ scale: { type: "spring", stiffness: 300, damping: 14, delay: 0.25 + i * 0.15 }, rotate: { delay: 0.25 + i * 0.15 } }}
                   className={cn("relative block overflow-hidden rounded-[14px] bg-white shadow-lg ring-2 ring-white", i === 0 ? "h-12 w-12" : "-ml-4 h-10 w-10")}
                 >
                   <Image src={src} alt="" fill sizes="48px" className="object-cover" />

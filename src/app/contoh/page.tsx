@@ -301,7 +301,7 @@ function Ringkasan({ now, txs, ask, go, open }: { now: Date; txs: DemoTx[]; ask:
         </div>
       </section>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <button type="button" onClick={() => go('dompet')} className={cn(card, 'text-left hover:ring-indigo-200')}>
           <p className="text-[13px] font-semibold text-slate-500">Total saldo</p>
           <p className="mt-1 text-[24px] font-extrabold tracking-tight">{short(total)}</p>
@@ -478,7 +478,7 @@ function Laporan({ now, txs }: { now: Date; txs: DemoTx[] }) {
         <div className="mt-1.5 flex justify-between text-[11px] text-slate-400"><span>1</span><span>{Math.ceil(daysInMonth / 2)}</span><span>{daysInMonth}</span></div>
       </section>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <section className={card}>
           <p className="text-[15px] font-bold">Ke mana uangnya?</p>
           <div className="mt-4 flex h-3 overflow-hidden rounded-full">
@@ -531,7 +531,7 @@ function Dompet({ txs }: { txs: DemoTx[] }) {
         <p className="mt-1 text-[40px] font-extrabold leading-none tracking-tight sm:text-[52px]">{formatIDR(total)}</p>
         <p className="mt-3 text-[13px] text-white/60">Pindah uang antar rekening sendiri dicatat sebagai transfer — tidak dihitung pengeluaran.</p>
       </section>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {DEMO_ACCOUNTS.map((a) => (
           <div key={a.id} className={cn(card, 'flex items-center gap-4')}>
             <span className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white', a.tile)}><Wallet size={20} /></span>
