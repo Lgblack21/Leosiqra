@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-06 (live #146: koreksi stok — Ubah stok manual & Batalkan di Riwayat; migrasi 0033 belum dikonfirmasi Bos)
+Terakhir diperbarui: 2026-11-06 (live #146: koreksi stok — Ubah stok manual & Batalkan di Riwayat)
 
 ## Siapa sedang kerja
 
@@ -41,7 +41,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   netral, dan **kolom pembeli tidak lagi wajib otomatis untuk toko berkategori** — kini gaya kasir `buyer: opsional|wajib`
   (Tampilan › Data pembeli; bawaan opsional; MCP set_kasir_style ikut). CXA Store perlu disetel "Wajib" oleh Bos.
   Dites lokal: Toko Kue (berkategori) bayar tanpa pembeli OK + stok resep berkurang.
-- **2026-11-06 — Usahaku › Stok bahan + Resep produk: live #143** (run pertama gagal: Cloudflare API 503 "no healthy upstream", re-run sukses). Migrasi 0033 belum dikonfirmasi Bos.
+- **2026-11-06 — Usahaku › Stok bahan + Resep produk: live #143** (run pertama gagal: Cloudflare API 503 "no healthy upstream", re-run sukses). Migrasi 0033 sudah dijalankan Bos.
   - Tabel: `shop_materials` (stok sekarang), `shop_stock_moves` (buku stok: awal/beli/masuk/pakai/jual/opname,
     qty bertanda, ref_tx_id, ref_key unik = anti dobel, reverted_at), `shop_recipes` (bahan per 1 produk, key "kategori|nama").
   - Kasir tombol **Stok** (badge hampir habis): tab Bahan (tambah, pakai/masuk/hitung fisik, ubah, arsip), Resep
@@ -961,7 +961,7 @@ membersite_leosiqra_db --remote --command "..."`. SELECT boleh langsung; tulis/u
 - `0019_inbox.sql` — sudah (Kotak Masuk Gmail jalan di produksi).
 - `0020_reminders.sql` — sudah (Bos, 2026-10-28; Console D1 butuh SQL tanpa komentar `--` kalau ditempel satu baris).
 - `0021_notifications.sql` — sudah (dicek langsung ke D1 2026-11-03).
-- `0033_shop_stock.sql` — **BELUM** (Usahaku › Stok bahan & resep).
+- `0033_shop_stock.sql` — sudah (dikonfirmasi Bos 2026-11-06, 3 tabel ada).
 - `0032_shop_staff.sql` — sudah (Bos membuat akun tim di produksi 2026-11-06).
 - `0022_native_push_tokens.sql` — **BELUM** (token push Android/FCM; tanpa tabel: endpoint 503, kirim dilewati — aman).
 
