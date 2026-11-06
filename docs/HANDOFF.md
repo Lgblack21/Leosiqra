@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-06 (branch claude/rapikan-popup-tampilan) — Popup tidak mengganggu + grid HP. BELUM deploy (tunggu "gas"). Tanpa SQL.**
+- **2026-11-06 (branch claude/rapikan-popup-tampilan) — Popup tidak mengganggu + grid HP + notif login tidak spam. BELUM deploy (tunggu "gas"). Tanpa SQL.**
   - InstallBanner: hanya di beranda (/, /membership, /membership/dashboard, /app) + artikel publik, maksimal SEKALI per
     sesi tab (sessionStorage `leosiqra:install-ad-shown`; useRef supaya yang sedang tampil tidak ikut hilang), ikon tidak
     bergoyang terus, tablet: "Pasang Leosiqra di perangkat ini".
@@ -27,7 +27,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     "Catatan terbaru"/"Segera" 473px di layar 390px → nominal terpotong. Kini 358px.
   - Transaksi HP: ringkasan "Rp 7,5 jt" (spasi sama dengan "Rp 819.000").
   - Dites lokal Playwright: 34 halaman /membership × HP/tablet/web + 23 /app HP, 0 error JS, 0 scroll samping.
-  - Belum diubah (keamanan > UX): notif "Login Baru Terdeteksi" dikirim di SETIAP login, termasuk perangkat sama.
+  - Notif "Login Baru Terdeteksi": login ulang dari perangkat yang SAMA tidak dikirim lagi. Penanda = cookie
+    `<SESSION_COOKIE_NAME>_dev` (1 tahun, HttpOnly, id acak + HMAC SESSION_SECRET terikat user; tidak dihapus saat
+    logout). Browser/perangkat lain & cookie palsu tetap dikabari. Hanya login sandi (Google login memang tidak kirim notif).
+    Dites lokal: A pertama +1, A logout→login 0, B baru +1, B cookie palsu +1.
 
 - **2026-11-06 — Bersihkan data tim/stok + rapikan angka kasir: LIVE (run 42243711843, commit 198e387). Tanpa SQL.**
   - Bug: Hapus semua data / admin hapus user TIDAK menghapus shop_staff, staff_sessions, shop_materials,

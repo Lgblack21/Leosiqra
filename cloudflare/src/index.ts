@@ -309,6 +309,25 @@ const sessionCookie = (env: Env, token: string, maxAgeSeconds: number) =>
 const roleCookie = (env: Env, role: AppUser["role"], maxAgeSeconds: number) =>
   `${env.SESSION_COOKIE_NAME}_role=${role}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAgeSeconds}`;
 
+// Penanda perangkat untuk notifikasi "Login Baru Terdeteksi": cookie 1 tahun berisi id acak +
+// tanda tangan HMAC (SESSION_SECRET) yang terikat ke user. Login ulang dari perangkat yang sama
+// (habis logout) tidak memicu notifikasi; perangkat/browser lain tetap dikabari. Tidak bisa
+// dipalsukan tanpa secret, dan tidak ikut dihapus saat logout.
+const DEVICE_COOKIE_MAX_AGE = 365 * 86400;
+const deviceCookieName = (env: Env) => `${env.SESSION_COOKIE_NAME}_dev`;
+const deviceSig = (env: Env, userId: string, id: string) => signSession(env, `device:${userId}:${id}`);
+const isKnownDevice = async (env: Env, request: Request, userId: string) => {
+  const t = getCookieValue(request, deviceCookieName(env));
+  const dot = t ? t.lastIndexOf(".") : -1;
+  if (!t || dot < 1) return false;
+  const id = t.slice(0, dot);
+  return /^[0-9a-f-]{36}$/i.test(id) && constantTimeEqual(t.slice(dot + 1), await deviceSig(env, userId, id));
+};
+const deviceCookie = async (env: Env, userId: string) => {
+  const id = generateId();
+  return `${deviceCookieName(env)}=${id}.${await deviceSig(env, userId, id)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${DEVICE_COOKIE_MAX_AGE}`;
+};
+
 const clearSessionCookie = (env: Env) =>
   `${env.SESSION_COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
 
@@ -2927,7 +2946,9 @@ async function handleLogin(request: Request, env: Env) {
   } catch (error) {
     console.error("Gagal enforce session cap:", error);
   }
-  try {
+  const sameDevice = await isKnownDevice(env, request, user.id).catch(() => false);
+  // Perangkat yang sama (login ulang habis logout) → tanpa notifikasi.
+  if (!sameDevice) try {
     const deviceLabel = describeUserAgent(request.headers.get("user-agent"));
     const when = new Date().toLocaleString("id-ID", {
       dateStyle: "medium",
@@ -2960,6 +2981,7 @@ async function handleLogin(request: Request, env: Env) {
     [
       sessionCookie(env, session.token, session.maxAgeSeconds),
       roleCookie(env, user.role, session.maxAgeSeconds),
+      ...(sameDevice ? [] : [await deviceCookie(env, user.id)]),
     ]
   );
 }
