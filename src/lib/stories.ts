@@ -20,6 +20,14 @@ export const MOODS: { id: StoryMood; label: string; emoji: string; color: string
   { id: 4, label: 'Cerah', emoji: '☀️', color: '#FBBF24', soft: 'from-amber-100 to-yellow-100' },
   { id: 5, label: 'Pelangi', emoji: '🌈', color: '#F472B6', soft: 'from-pink-100 via-violet-100 to-sky-100' },
 ];
+// Gaya ilustrasi AI (foto → ilustrasi, atau dari tulisan).
+export type StoryStyle = 'anime' | 'kartun' | 'chibi' | 'catair';
+export const STYLES: { id: StoryStyle; label: string; emoji: string }[] = [
+  { id: 'anime', label: 'Anime', emoji: '🌸' },
+  { id: 'kartun', label: 'Kartun 3D', emoji: '🧸' },
+  { id: 'chibi', label: 'Chibi', emoji: '🍡' },
+  { id: 'catair', label: 'Cat air', emoji: '🎨' },
+];
 export const moodOf = (m: number | null | undefined) => MOODS.find((x) => x.id === m) ?? null;
 
 export const wibToday = () => new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
@@ -40,5 +48,5 @@ export const storyService = {
   remove: (date: string) => cloudflareApi<{ ok: true }>(`/api/member/stories/${date}`, { method: 'DELETE' }),
   setPhoto: (date: string, imageBase64: string) => cloudflareApi<{ ok: true }>(`/api/member/stories/${date}/photo`, { method: 'PUT', json: { imageBase64 } }),
   removeImage: (date: string, kind: 'photo' | 'ai') => cloudflareApi<{ ok: true }>(`/api/member/stories/${date}/${kind}`, { method: 'DELETE' }),
-  makeAi: (date: string) => cloudflareApi<{ ok: true; charged: 'free' | 'coin'; ai: StoryDay['ai'] }>(`/api/member/stories/${date}/ai`, { method: 'POST' }),
+  makeAi: (date: string, style: StoryStyle) => cloudflareApi<{ ok: true; charged: 'free' | 'coin'; ai: StoryDay['ai'] }>(`/api/member/stories/${date}/ai`, { method: 'POST', json: { style } }),
 };

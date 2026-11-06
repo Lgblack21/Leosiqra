@@ -18,6 +18,20 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-07 (branch claude/cerita-kalender) — Cerita: AI dari foto (anime/kartun) + Kalender bulan berfoto. BELUM deploy (tunggu "gas"). Tanpa SQL.**
+  - Laporan Bos: AI tidak bisa dipakai → penyebab: tombol AI mati kalau tulisan < 8 huruf (Bos punya foto tanpa tulisan).
+    Kini ada foto → foto DIUBAH jadi ilustrasi (image-to-image: foto dikirim sebagai image_url ke model gambar);
+    tanpa foto → dari tulisan. Gaya: Anime / Kartun 3D / Chibi / Cat air (generik, tanpa nama studio). Model cadangan
+    `google/gemini-2.5-flash-image-preview`; parsing gambar lebih longgar (images[]/content[], image_url/imageUrl);
+    pesan galat jelas (402 saldo OpenRouter admin habis, 429 ramai, filter keamanan). Ada foto + ilustrasi → toggle Ilustrasi/Asli.
+  - Bug: tab Setahun memakai scrollIntoView → ikut menggulir halaman yang dikunci → judul atas terpotong di semua tab.
+    Kini gulir kotak `[data-scroll]` saja + window.scrollTo(0,0) saat ganti tab.
+  - Tab "Kalender" (ganti "Setahun"): tampilan Bulan = tiap tanggal kartu berisi foto/ilustrasi hari itu, kalau tidak ada
+    = wajah Leo sesuai mood (`LeoFace`, SVG statis ringan), nomor tanggal + emoji cuaca, ringkasan bulan (jumlah hari,
+    sebaran mood, pengeluaran). Tampilan Tahun = 12 bulan mini (mood/uang), ketuk → buka bulan.
+  - Dites lokal: AI dari foto tanpa tulisan diterima (gagal hanya karena tanpa key), tanpa foto & tulisan 400; UI HP/tablet/web
+    0 error JS, scrollY halaman 0. **Ilustrasi asli belum dicoba** (tanpa API key di lokal).
+
 - **2026-11-07 — Fitur baru "Cerita Hari Ini" (jurnal harian): LIVE (run 42272516574, commit fae04cb). Migrasi 0035 SUDAH dijalankan Bos (2026-11-07).**
   - **MIGRASI di D1 Console**: 0035_stories.sql (tabel `stories`, PK user_id+date). Tanpa tabel: GET → ready:false, simpan 503.
   - Halaman layar penuh: `/membership/cerita` (FULLSCREEN_PATHS, fitur id `cerita`) & `/app/cerita` (grid Lainnya). Menu:

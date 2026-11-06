@@ -12951,46 +12951,72 @@ const storyAiQuota = async (env: Env, userId: string, plan: string) => {
 };
 
 // Minta satu gambar ke OpenRouter (model gambar, modalities image+text). Mengembalikan byte gambar.
-const generateStoryImage = async (env: Env, prompt: string) => {
+// photo (opsional) = foto pengguna yang diubah jadi ilustrasi (image-to-image). Model cadangan
+// dicoba kalau yang pertama menolak / tidak tersedia di akun OpenRouter.
+const STORY_IMAGE_MODELS = ["google/gemini-2.5-flash-image", "google/gemini-2.5-flash-image-preview"];
+const generateStoryImage = async (env: Env, prompt: string, photo?: { bytes: Uint8Array; type: string } | null) => {
   const openRouter = await getOpenRouterKey(env);
-  if (!openRouter) throw new Error("AI belum aktif (API key OpenRouter belum dipasang).");
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${openRouter.key}`,
-      "http-referer": env.APP_URL || "https://www.leosiqra.com",
-      "x-title": env.APP_NAME || "Leosiqra",
-    },
-    body: JSON.stringify({
-      model: env.OPENROUTER_IMAGE_MODEL || "google/gemini-2.5-flash-image",
-      modalities: ["image", "text"],
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-  if (!response.ok) {
-    console.error("Ilustrasi cerita: OpenRouter", response.status, (await response.text().catch(() => "")).slice(0, 300));
-    throw new Error("Gagal membuat ilustrasi. Coba lagi sebentar lagi.");
+  if (!openRouter) throw new Error("AI belum aktif (API key OpenRouter belum dipasang admin).");
+  const models = env.OPENROUTER_IMAGE_MODEL ? [env.OPENROUTER_IMAGE_MODEL, ...STORY_IMAGE_MODELS.filter((m) => m !== env.OPENROUTER_IMAGE_MODEL)] : STORY_IMAGE_MODELS;
+  const content = photo
+    ? [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: `data:${photo.type};base64,${bytesToBase64(photo.bytes)}` } }]
+    : prompt;
+  let lastError = "Gagal membuat ilustrasi. Coba lagi sebentar lagi.";
+  for (const model of models) {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${openRouter.key}`,
+        "http-referer": env.APP_URL || "https://www.leosiqra.com",
+        "x-title": env.APP_NAME || "Leosiqra",
+      },
+      body: JSON.stringify({ model, modalities: ["image", "text"], messages: [{ role: "user", content }] }),
+    });
+    if (!response.ok) {
+      const body = (await response.text().catch(() => "")).slice(0, 400);
+      console.error("Ilustrasi cerita: OpenRouter", model, response.status, body);
+      lastError = response.status === 402 ? "Saldo AI (OpenRouter) admin habis — hubungi admin." : response.status === 429 ? "AI sedang ramai. Coba lagi sebentar lagi." : `AI menolak membuat gambar (kode ${response.status}).`;
+      if (response.status === 402) break;
+      continue;
+    }
+    type Img = { image_url?: { url?: string }; imageUrl?: { url?: string }; url?: string };
+    const data = (await response.json().catch(() => ({}))) as { choices?: { message?: { images?: Img[]; content?: unknown } }[] };
+    const msg = data.choices?.[0]?.message;
+    const parts = Array.isArray(msg?.content) ? (msg!.content as Img[]) : [];
+    const url = [...(msg?.images ?? []), ...parts].map((i) => i?.image_url?.url ?? i?.imageUrl?.url ?? i?.url ?? "").find((u) => u.startsWith("data:image/")) ?? "";
+    const m = /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/s.exec(url);
+    if (!m) {
+      console.error("Ilustrasi cerita: tanpa gambar", model, JSON.stringify(data).slice(0, 300));
+      lastError = "AI tidak mengirim gambar (mungkin foto/cerita ditolak filter keamanan). Coba foto atau kalimat lain.";
+      continue;
+    }
+    const binary = atob(m[2].replace(/\s/g, ""));
+    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+    const type = sniffImageType(bytes);
+    if (!type || bytes.length > 8 * 1024 * 1024) { lastError = "Gambar dari AI tidak valid."; continue; }
+    return { bytes, type };
   }
-  const data = (await response.json()) as { choices?: { message?: { images?: { image_url?: { url?: string } }[] } }[] };
-  const url = data.choices?.[0]?.message?.images?.[0]?.image_url?.url ?? "";
-  const m = /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/s.exec(url);
-  if (!m) throw new Error("AI tidak mengirim gambar. Coba ubah ceritamu sedikit lalu ulangi.");
-  const binary = atob(m[2].replace(/\s/g, ""));
-  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
-  const type = sniffImageType(bytes);
-  if (!type || bytes.length > 6 * 1024 * 1024) throw new Error("Gambar dari AI tidak valid.");
-  return { bytes, type };
+  throw new Error(lastError);
+};
+
+// Gaya ilustrasi (generik — tanpa nama studio/merek).
+const STORY_STYLES: Record<string, string> = {
+  anime: "gaya anime: garis bersih, mata ekspresif, warna cerah lembut, shading cel",
+  kartun: "gaya kartun 3D yang lucu dan lembut, bentuk membulat, pencahayaan studio hangat",
+  chibi: "gaya chibi imut: kepala besar, badan kecil, ekspresi menggemaskan, warna pastel",
+  catair: "gaya lukisan cat air lembut, sapuan kuas tipis, warna pastel transparan",
 };
 
 const STORY_MOOD_WORD = ["", "sedih", "capek", "biasa saja", "senang", "luar biasa senang"];
-const storyImagePrompt = (text: string, mood: number | null) =>
+const storyImagePrompt = (text: string, mood: number | null, style: string, fromPhoto: boolean) =>
   [
-    "Buat SATU ilustrasi buku harian yang hangat bergaya flat illustration lembut, warna pastel, garis bersih, latar sederhana.",
-    "Tokoh: sosok orang biasa (bukan orang terkenal, bukan tokoh kartun bermerek) atau benda/suasana dari cerita.",
-    "JANGAN ada teks, huruf, angka, logo, watermark, atau tanda tangan di gambar. Aman untuk semua umur.",
-    mood ? `Suasana hati penulis hari ini: ${STORY_MOOD_WORD[mood]}.` : "",
-    `Cerita hari ini (Bahasa Indonesia): """${text.slice(0, STORY_TEXT_MAX)}"""`,
+    fromPhoto
+      ? `Ubah FOTO yang dilampirkan menjadi SATU ilustrasi ${STORY_STYLES[style] ?? STORY_STYLES.anime}. Pertahankan komposisi, pose, pakaian, rambut, dan suasana foto; orang di foto tetap dikenali sebagai dirinya sendiri tapi digambar ulang sebagai ilustrasi.`
+      : `Buat SATU ilustrasi buku harian ${STORY_STYLES[style] ?? STORY_STYLES.anime}, latar sederhana, tokoh orang biasa (bukan orang terkenal) atau benda/suasana dari cerita.`,
+    "JANGAN tambahkan teks, huruf, angka, logo, watermark, atau tanda tangan. Aman untuk semua umur.",
+    mood ? `Suasana hati hari ini: ${STORY_MOOD_WORD[mood]}.` : "",
+    text ? `Cerita hari ini (Bahasa Indonesia), pakai untuk suasana/latar: """${text.slice(0, STORY_TEXT_MAX)}"""` : "",
   ].filter(Boolean).join("\n");
 
 async function handleMemberStories(request: Request, env: Env, url: URL) {
@@ -13097,7 +13123,19 @@ async function handleMemberStories(request: Request, env: Env, url: URL) {
     if (sub === "ai" && request.method === "POST") {
       if (!env.FILES_BUCKET) return json({ error: "Penyimpanan gambar belum aktif." }, { status: 503 });
       const text = (row?.text ?? "").trim();
-      if (text.length < 8) return json({ error: "Tulis ceritanya dulu (minimal satu kalimat), lalu simpan." }, { status: 400 });
+      const aiRaw = await parseJson<Record<string, unknown>>(request).catch(() => ({} as Record<string, unknown>));
+      const style = typeof aiRaw.style === "string" && STORY_STYLES[aiRaw.style] ? aiRaw.style : "anime";
+      // Ada foto → foto diubah jadi ilustrasi; tanpa foto → butuh tulisan.
+      let photo: { bytes: Uint8Array; type: string } | null = null;
+      if (row?.photo_key) {
+        const obj = await env.FILES_BUCKET.get(row.photo_key);
+        if (obj) {
+          const bytes = new Uint8Array(await obj.arrayBuffer());
+          const type = sniffImageType(bytes);
+          if (type) photo = { bytes, type };
+        }
+      }
+      if (!photo && text.length < 8) return json({ error: "Tambahkan foto atau tulis ceritanya dulu (minimal satu kalimat)." }, { status: 400 });
       if (!(await checkAiParseRateLimit(env, userId))) return json({ error: "Terlalu sering. Coba lagi sebentar lagi." }, { status: 429 });
       // 1) Pakai jatah gratis hari ini (atomik) ATAU potong koin (atomik, bersyarat saldo cukup).
       const today = todayWIB();
@@ -13126,7 +13164,7 @@ async function handleMemberStories(request: Request, env: Env, url: URL) {
       if (!charged) return json({ error: `Jatah gratis hari ini habis. Ilustrasi berikutnya ${STORY_AI_PRICE.toLocaleString("id-ID")} koin — koinmu belum cukup.`, code: "no_coins" }, { status: 402 });
       // 2) Buat gambar. Gagal → kembalikan jatah/koin.
       try {
-        const img = await generateStoryImage(env, storyImagePrompt(text, row?.mood ?? null));
+        const img = await generateStoryImage(env, storyImagePrompt(text, row?.mood ?? null, style, Boolean(photo)), photo);
         const key = `stories/${userId}/${date}-ai-${generateId().slice(0, 8)}`;
         await env.FILES_BUCKET.put(key, img.bytes, { httpMetadata: { contentType: img.type } });
         await env.DB.prepare("UPDATE stories SET ai_key = ?, updated_at = ? WHERE user_id = ? AND date = ?").bind(key, nowIso(), userId, date).run();

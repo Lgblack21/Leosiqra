@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, BookOpen, CalendarDays, PenLine } from 'lucide-react';
 import { AiOrb } from '@/components/ai/AiChat';
 import { TulisView } from './TulisView';
-import { SetahunView } from './SetahunView';
+import { KalenderView } from './KalenderView';
 import { KumpulanView } from './KumpulanView';
 import { storyService, wibToday, type StoryYear } from '@/lib/stories';
 import { useFitHeight } from '@/lib/useFitHeight';
@@ -13,10 +13,10 @@ import { cn } from '@/lib/utils';
 
 // Cerita Hari Ini — layar penuh seperti Fokus/Ladangku: bar atas (kembali · judul · Leo AI)
 // + menu melayang (Tulis · Setahun · Kumpulan). Dipakai web (/membership/cerita) & app (/app/cerita).
-type Tab = 'tulis' | 'setahun' | 'kumpulan';
+type Tab = 'tulis' | 'kalender' | 'kumpulan';
 const TABS: { id: Tab; label: string; icon: typeof PenLine; title: string; sub: string }[] = [
   { id: 'tulis', label: 'Tulis', icon: PenLine, title: 'Cerita Hari Ini', sub: 'Satu halaman untuk hari ini' },
-  { id: 'setahun', label: 'Setahun', icon: CalendarDays, title: 'Setahun bercerita', sub: 'Tiap hari jadi satu kotak warna' },
+  { id: 'kalender', label: 'Kalender', icon: CalendarDays, title: 'Kalender cerita', sub: 'Foto & mood di tiap tanggal' },
   { id: 'kumpulan', label: 'Kumpulan', icon: BookOpen, title: 'Kumpulan cerita', sub: 'Cari & baca lagi ceritamu' },
 ];
 const noop = () => () => {};
@@ -41,7 +41,9 @@ export function CeritaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- ambil data setahun dari server saat tahun berganti
   useEffect(() => { void refresh(); }, [refresh]);
 
-  const open = (d: string) => { setDate(d); setTab('tulis'); };
+  // Halaman dikunci (satu layar) — pastikan tidak pernah tergulir (judul atas terpotong).
+  const switchTab = (t: Tab) => { setTab(t); window.scrollTo(0, 0); };
+  const open = (d: string) => { setDate(d); switchTab('tulis'); };
   const current = TABS.find((t) => t.id === tab) ?? TABS[0];
   const fit = height !== null;
 
@@ -62,9 +64,9 @@ export function CeritaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
       {notReady && <p className="mb-3 rounded-2xl bg-amber-50 px-4 py-2.5 text-[12px] font-semibold text-amber-800">Cerita Hari Ini sedang disiapkan di server — sebentar lagi bisa dipakai.</p>}
 
       <div ref={body} className={cn('min-h-0', !fit && 'pb-28')} style={fit ? { height } : undefined}>
-        {client && tab === 'tulis' && <div className="h-full overflow-y-auto overscroll-contain"><TulisView date={date} onDate={setDate} onChanged={refresh} /></div>}
-        {client && tab === 'setahun' && <div className="h-full overflow-y-auto overscroll-contain"><SetahunView year={year} data={data} onYear={setYear} onOpen={open} /></div>}
-        {client && tab === 'kumpulan' && <div className="h-full overflow-y-auto overscroll-contain"><KumpulanView data={data} onOpen={open} onWrite={() => open(wibToday())} /></div>}
+        {client && tab === 'tulis' && <div data-scroll className="h-full overflow-y-auto overscroll-contain"><TulisView date={date} onDate={setDate} onChanged={refresh} /></div>}
+        {client && tab === 'kalender' && <div data-scroll className="h-full overflow-y-auto overscroll-contain"><KalenderView year={year} data={data} onYear={setYear} onOpen={open} /></div>}
+        {client && tab === 'kumpulan' && <div data-scroll className="h-full overflow-y-auto overscroll-contain"><KumpulanView data={data} onOpen={open} onWrite={() => open(wibToday())} /></div>}
         {!client && <div className="h-full min-h-[420px] animate-pulse rounded-[28px] bg-slate-100 dark:bg-slate-800" />}
       </div>
 
@@ -73,7 +75,7 @@ export function CeritaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
           {TABS.map((t) => {
             const active = t.id === tab;
             return (
-              <button key={t.id} type="button" onClick={() => setTab(t.id)} aria-current={active ? 'page' : undefined} aria-label={t.label}
+              <button key={t.id} type="button" onClick={() => switchTab(t.id)} aria-current={active ? 'page' : undefined} aria-label={t.label}
                 className={cn('relative flex h-12 items-center justify-center gap-2 rounded-full text-[13px] font-bold transition-all', active ? 'bg-gradient-to-r from-amber-300 to-pink-300 px-4 text-slate-950' : 'w-12 text-white/70 hover:bg-white/10')}>
                 <t.icon size={20} className="shrink-0" strokeWidth={active ? 2.4 : 1.9} />
                 {active && <span className="whitespace-nowrap">{t.label}</span>}

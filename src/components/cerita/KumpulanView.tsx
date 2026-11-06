@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { BookOpen, Flame, Search } from 'lucide-react';
 import { MoodLeo } from './MoodLeo';
+import { LeoFace } from './LeoFace';
 import { longDate, moodOf, storyImageUrl, type StoryYear } from '@/lib/stories';
 
 // Kumpulan: hari beruntun, jumlah halaman, cari, daftar per bulan (gambar kecil + potongan tulisan).
@@ -44,7 +45,7 @@ export function KumpulanView({ data, onOpen, onWrite }: { data: StoryYear | null
                     <button type="button" onClick={() => onOpen(i.date)} className="flex w-full items-center gap-3 rounded-[22px] bg-white p-2.5 text-left ring-1 ring-slate-100 transition-shadow hover:shadow-md dark:bg-slate-900 dark:ring-slate-800">
                       <span className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-50 dark:bg-slate-800">
                         {/* eslint-disable-next-line @next/next/no-img-element -- gambar privat dari API */}
-                        {img ? <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" /> : <MoodLeo mood={i.mood} size={48} />}
+                        {img ? <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" /> : <LeoFace mood={i.mood} className="h-12 w-12" />}
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-[14px] font-bold text-slate-900 dark:text-white">{longDate(i.date)}</span>

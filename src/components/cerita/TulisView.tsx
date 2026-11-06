@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Camera, Check, ChevronLeft, ChevronRight, Loader2, Share2, Sparkles, Trash2, Wallet, Timer } from 'lucide-react';
 import { MoodLeo } from './MoodLeo';
-import { MOODS, longDate, moodOf, shiftDate, storyImageUrl, storyService, wibToday, type StoryDay, type StoryMood } from '@/lib/stories';
+import { MOODS, STYLES, longDate, moodOf, shiftDate, storyImageUrl, storyService, wibToday, type StoryDay, type StoryMood, type StoryStyle } from '@/lib/stories';
 import { imageFileToBase64 } from '@/lib/quick/ai';
 import { lightTap } from '@/lib/haptics';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,9 @@ export function TulisView({ date, onDate, onChanged }: { date: string; onDate: (
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
   const [askDelete, setAskDelete] = useState(false);
+  const [style, setStyle] = useState<StoryStyle>('anime');
+  // Ada foto & ilustrasi → bisa bergantian lihat Asli / Kartun.
+  const [showOriginal, setShowOriginal] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const savedText = useRef('');
   const today = wibToday();
@@ -48,6 +51,7 @@ export function TulisView({ date, onDate, onChanged }: { date: string; onDate: (
     // Kosongkan saat tanggal berganti, lalu muat.
     setDay(null);
     setAskDelete(false);
+    setShowOriginal(false);
     void load();
   }, [load]);
 
@@ -85,12 +89,13 @@ export function TulisView({ date, onDate, onChanged }: { date: string; onDate: (
   const makeAi = async () => {
     if (!(await saveText())) return;
     setBusy('ai'); setError('');
-    try { await storyService.makeAi(date); onChanged(); await load(); }
+    try { await storyService.makeAi(date, style); setShowOriginal(false); onChanged(); await load(); }
     catch (e) { setError(e instanceof Error ? e.message : 'Gagal membuat ilustrasi.'); }
     finally { setBusy(''); }
   };
   const removeImage = async () => {
-    const kind = day?.story?.has_ai ? 'ai' : day?.story?.has_photo ? 'photo' : null;
+    const st = day?.story;
+    const kind = st?.has_ai && !(st.has_photo && showOriginal) ? 'ai' : st?.has_photo ? 'photo' : null;
     if (!kind) return;
     setBusy('del');
     try { await storyService.removeImage(date, kind); onChanged(); await load(); }
@@ -114,9 +119,13 @@ export function TulisView({ date, onDate, onChanged }: { date: string; onDate: (
 
   const s = day?.story;
   const m = moodOf(mood);
-  const img = s?.has_ai ? storyImageUrl(date, 'ai', s.updated_at) : s?.has_photo ? storyImageUrl(date, 'photo', s.updated_at) : null;
+  const both = Boolean(s?.has_ai && s?.has_photo);
+  const img = s?.has_ai && !(both && showOriginal) ? storyImageUrl(date, 'ai', s.updated_at) : s?.has_photo ? storyImageUrl(date, 'photo', s.updated_at) : null;
+  // AI: ada foto → foto diubah jadi ilustrasi; tanpa foto → dari tulisan (minimal 8 huruf).
+  const canAi = Boolean(s?.has_photo) || text.trim().length >= 8;
   const ai = day?.ai;
-  const aiLabel = !ai ? 'Ilustrasi AI' : ai.freeLeft > 0 ? 'Ilustrasi AI · gratis' : `Ilustrasi AI · ${ai.price.toLocaleString('id-ID')} koin`;
+  const aiCost = !ai ? '' : ai.freeLeft > 0 ? 'gratis' : `${ai.price.toLocaleString('id-ID')} koin`;
+  const aiLabel = `${s?.has_photo ? 'Jadikan ilustrasi' : 'Ilustrasi AI'}${aiCost ? ` · ${aiCost}` : ''}`;
 
   return (
     // HP: alur biasa (digulir di dalam area isi), tablet/desktop: dua kolom setinggi layar.
@@ -144,15 +153,33 @@ export function TulisView({ date, onDate, onChanged }: { date: string; onDate: (
           )}
           {(busy === 'ai' || busy === 'photo') && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/70 text-[13px] font-semibold text-indigo-700 backdrop-blur-sm dark:bg-slate-900/70 dark:text-indigo-200">
-              <Loader2 size={22} className="animate-spin" /> {busy === 'ai' ? 'Leo sedang melukis ceritamu…' : 'Mengunggah foto…'}
+              <Loader2 size={22} className="animate-spin" /> {busy === 'ai' ? (s?.has_photo ? 'Leo sedang menggambar ulang fotomu…' : 'Leo sedang melukis ceritamu…') : 'Mengunggah foto…'}
             </div>
           )}
           {m && <span className="absolute left-3 top-3 rounded-full bg-white/85 px-3 py-1 text-[12px] font-bold text-slate-700 backdrop-blur">{m.emoji} {m.label}</span>}
+          {both && (
+            <span className="absolute right-3 top-3 flex rounded-full bg-black/45 p-0.5 text-[11px] font-bold backdrop-blur">
+              {[['Ilustrasi', false], ['Asli', true]].map(([lbl, orig]) => (
+                <button key={String(lbl)} type="button" onClick={() => setShowOriginal(orig as boolean)} className={cn('rounded-full px-2.5 py-1', showOriginal === orig ? 'bg-white text-slate-900' : 'text-white/85')}>{lbl as string}</button>
+              ))}
+            </span>
+          )}
         </div>
+        {/* Gaya ilustrasi */}
+        {canAi && (
+          <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]" role="radiogroup" aria-label="Gaya ilustrasi">
+            {STYLES.map((x) => (
+              <button key={x.id} type="button" role="radio" aria-checked={style === x.id} onClick={() => setStyle(x.id)}
+                className={cn('flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-bold transition-colors', style === x.id ? 'bg-violet-600 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700')}>
+                <span aria-hidden>{x.emoji}</span>{x.label}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex gap-2">
           <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => onPhoto(e.target.files?.[0])} />
           <button type="button" disabled={Boolean(busy) || !day} onClick={() => fileRef.current?.click()} className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-white py-2.5 text-[13px] font-bold text-slate-700 ring-1 ring-slate-200 disabled:opacity-50 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700"><Camera size={15} /> Foto</button>
-          <button type="button" disabled={Boolean(busy) || !day || text.trim().length < 8} onClick={makeAi} title={text.trim().length < 8 ? 'Tulis ceritanya dulu' : undefined} className="flex flex-[1.6] items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-500 py-2.5 text-[13px] font-bold text-white shadow-md shadow-violet-600/25 disabled:opacity-50"><Sparkles size={15} /> {aiLabel}</button>
+          <button type="button" disabled={Boolean(busy) || !day || !canAi} onClick={makeAi} title={!canAi ? 'Tambahkan foto atau tulis ceritanya dulu' : undefined} className="flex flex-[1.6] items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-500 py-2.5 text-[13px] font-bold text-white shadow-md shadow-violet-600/25 disabled:opacity-50"><Sparkles size={15} /> {aiLabel}</button>
           {img && <button type="button" disabled={Boolean(busy)} onClick={removeImage} className="flex items-center justify-center rounded-2xl bg-white px-3 text-slate-500 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700" aria-label="Hapus gambar"><Trash2 size={15} /></button>}
         </div>
       </section>
