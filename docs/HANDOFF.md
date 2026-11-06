@@ -4,13 +4,13 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-06 (live #138: update_shop_prices; branch: sync_shop_catalog belum deploy; migrasi 0029/0030/0031 sudah dijalankan Bos)
+Terakhir diperbarui: 2026-11-06 (live #139: sync_shop_catalog + update_shop_prices; migrasi 0029/0030/0031 sudah dijalankan Bos)
 
 ## Siapa sedang kerja
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| Akun B | selesai, tunggu "gas" (2026-11-06) | claude/usahaku-web | sync_shop_catalog (baca ulang website) |
+| — | — | — | (akun B selesai; main = live #139) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-06 (branch claude/usahaku-web) — "Baca ulang website": cek katalog (tambah & hapus) via AI-mu, BELUM deploy. Tanpa SQL.**
+- **2026-11-06 (branch claude/usahaku-web) — "Baca ulang website": cek katalog (tambah & hapus) via AI-mu, **live #139**. Tanpa SQL.**
   - MCP baru `sync_shop_catalog` (tulis, gratis FREE): kirim SELURUH produk dari website → produk baru ditambah
     (disisipkan setelah produk terakhir di kategori yang sama), yang tidak ada lagi DIHAPUS, harga diperbarui.
     Bawaan `apply: false` = PRATINJAU (tambah/hapus/harga_berubah, total sebelum/sesudah), simpan dengan `apply: true`.
