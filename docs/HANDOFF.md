@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-06 (live: bersihkan data tim/stok + rapikan angka kasir, run 42243711843)
+Terakhir diperbarui: 2026-11-06 (live: rapikan popup/tampilan + notif login, run 42250941798)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-06 (branch claude/rapikan-popup-tampilan) — Popup tidak mengganggu + grid HP + notif login tidak spam. BELUM deploy (tunggu "gas"). Tanpa SQL.**
+- **2026-11-06 — Popup tidak mengganggu + grid HP + notif login tidak spam: LIVE (run 42250941798, commit fdc7de3). Tanpa SQL.**
   - InstallBanner: hanya di beranda (/, /membership, /membership/dashboard, /app) + artikel publik, maksimal SEKALI per
     sesi tab (sessionStorage `leosiqra:install-ad-shown`; useRef supaya yang sedang tampil tidak ikut hilang), ikon tidak
     bergoyang terus, tablet: "Pasang Leosiqra di perangkat ini".
