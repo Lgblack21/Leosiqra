@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live: Fokus satu layar + Leo bernapas, run 42263962169; migrasi 0034 menunggu)
+Terakhir diperbarui: 2026-11-07 (live: Fokus layar penuh + Cerita Hari Ini, run 42272516574; migrasi 0034 & 0035 menunggu)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-07 (branch claude/cerita-hari-ini, di atas claude/fokus-layar-penuh) — Fitur baru "Cerita Hari Ini" (jurnal harian). BELUM deploy (tunggu "gas").**
+- **2026-11-07 — Fitur baru "Cerita Hari Ini" (jurnal harian): LIVE (run 42272516574, commit fae04cb). Migrasi 0035 menunggu Bos.**
   - **MIGRASI di D1 Console**: 0035_stories.sql (tabel `stories`, PK user_id+date). Tanpa tabel: GET → ready:false, simpan 503.
   - Halaman layar penuh: `/membership/cerita` (FULLSCREEN_PATHS, fitur id `cerita`) & `/app/cerita` (grid Lainnya). Menu:
     Tulis · Setahun · Kumpulan. Mood bertema cuaca (Badai/Mendung/Berawan/Cerah/Pelangi) + stiker Leo per mood (gratis),
@@ -36,7 +36,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     kembali & koin FREE −1000/+1000, koin kurang 402); UI HP/tablet/web 0 error JS, halaman terkunci. **Ilustrasi AI asli
     belum dicoba** (tidak ada API key di lokal) — cek di produksi setelah deploy.
 
-- **2026-11-07 (branch claude/fokus-layar-penuh) — Fokus bareng Leo: layar penuh ala Ladangku + tampilan baru "Bukit Fokus". BELUM deploy (tunggu "gas"). Tanpa SQL.**
+- **2026-11-07 — Fokus bareng Leo: layar penuh ala Ladangku + tampilan baru "Bukit Fokus": LIVE (run 42272516574). Tanpa SQL.**
   - Web `/membership/fokus` masuk FULLSCREEN_PATHS (tanpa sidebar/tab bawah); app pindah ke `/app/fokus` (di luar grup tab,
     tanpa tab bawah & tombol +). Bar atas: tombol kembali (pil gelap) · judul per tab · ⚙️ (Fokus) / Leo AI; menu melayang
     di bawah `[data-focus-dock]` (Fokus · Tenang · Rekap). Tinggi diukur sampai atas menu; diukur ulang setelah animasi masuk
