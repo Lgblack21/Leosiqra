@@ -4,13 +4,13 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-05 (live #137: update harga + status AI + skema gambar MCP; migrasi 0029/0030/0031 sudah dijalankan Bos)
+Terakhir diperbarui: 2026-11-06 (live #138: update_shop_prices; branch: sync_shop_catalog belum deploy; migrasi 0029/0030/0031 sudah dijalankan Bos)
 
 ## Siapa sedang kerja
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| Akun B | selesai, tunggu "gas" (2026-11-05) | claude/usahaku-web | update_shop_prices (harga saja via AI) |
+| Akun B | selesai, tunggu "gas" (2026-11-06) | claude/usahaku-web | sync_shop_catalog (baca ulang website) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,7 +18,17 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-05 (branch claude/usahaku-web) — Update harga "hanya yang sudah ada" lewat AI-mu, BELUM deploy. Tanpa SQL.**
+- **2026-11-06 (branch claude/usahaku-web) — "Baca ulang website": cek katalog (tambah & hapus) via AI-mu, BELUM deploy. Tanpa SQL.**
+  - MCP baru `sync_shop_catalog` (tulis, gratis FREE): kirim SELURUH produk dari website → produk baru ditambah
+    (disisipkan setelah produk terakhir di kategori yang sama), yang tidak ada lagi DIHAPUS, harga diperbarui.
+    Bawaan `apply: false` = PRATINJAU (tambah/hapus/harga_berubah, total sebelum/sesudah), simpan dengan `apply: true`.
+    Penghapusan besar (>5 & >30% katalog) ditolak kecuali `allow_large_removal: true`. Penjualan lama tidak terpengaruh.
+  - Layar 💲 Harga: tab "Baca ulang website" dengan 2 pilihan — **Cek katalog** (sync_shop_catalog, pratinjau dulu) dan
+    **Cek harga** (update_shop_prices). Kelola › Website: kalau katalog sudah terisi, perintah AI memakai sync_shop_catalog
+    (pratinjau) — bukan set_shop_products replace.
+  - Dites lokal: pratinjau tidak mengubah DB; apply: +344 Diamond (di grup ML), −86 Diamond FF, 1 harga berubah; hapus 8/10
+    → pratinjau memperingatkan, apply tanpa izin ditolak, dengan izin tersimpan; UI HP 0 error JS.
+- **2026-11-05 (branch claude/usahaku-web) — Update harga "hanya yang sudah ada" lewat AI-mu, **live #138**. Tanpa SQL.**
   - MCP baru `update_shop_prices` (tulis, gratis FREE): HANYA mengubah harga produk yang sudah ada, tidak pernah
     menambah/menghapus. Cocok lewat `i` (get_shop kini mengirim `i` + `website`; kalau `name` ikut dikirim & tidak
     cocok dengan i → tidak diubah) atau name+group persis; nama sama di beberapa kategori tanpa group → `ambiguous`

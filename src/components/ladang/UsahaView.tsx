@@ -404,7 +404,9 @@ function WebsiteSection({ shop, editing, setEditing, onToast, onLeave }: { shop:
     try { await shopService.update(shop.id, { linkUrl: link.trim() }); setEditing(false); onToast(link.trim() ? 'Tautan website disimpan.' : 'Tautan website dihapus.'); } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal menyimpan.'); }
     setBusy(false);
   };
-  const prompt = `Pakai Leosiqra (MCP) dan alat baca web-mu. Buka ${url || '[tautan website tokoku]'} beserta SEMUA halaman produk/game di domain itu. Kumpulkan setiap produk/nominal dan harganya (Rupiah), kelompokkan per kategori (mis. nama game). Tunjukkan ringkasannya ke aku dulu. Setelah aku setuju, simpan dengan set_shop_products untuk shop_id ${shop.id} (mode replace, group = nama kategori, maks 120 produk).`;
+  const prompt = `Pakai Leosiqra (MCP) dan alat baca web-mu. Buka ${url || '[tautan website tokoku]'} beserta SEMUA halaman produk/game di domain itu. Kumpulkan setiap produk/nominal dan harganya (Rupiah), kelompokkan per kategori (mis. nama game). Tunjukkan ringkasannya ke aku dulu. ${shop.products.length
+    ? `Katalogku sudah berisi ${shop.products.length} produk: panggil sync_shop_catalog untuk shop_id ${shop.id} dengan seluruh daftar itu (apply: false) untuk pratinjau tambah/hapus/harga, tunjukkan ke aku, lalu apply: true setelah aku setuju.`
+    : `Setelah aku setuju, simpan dengan set_shop_products untuk shop_id ${shop.id} (mode replace, group = nama kategori, maks 120 produk).`}`;
 
   return (
     <section className="rounded-3xl ring-1 ring-slate-100 p-4 dark:ring-slate-800">
@@ -437,7 +439,7 @@ function WebsiteSection({ shop, editing, setEditing, onToast, onLeave }: { shop:
         </>
       )}
 
-      {url && <AiMcpCard className="mt-3" title="Ambil daftar harga pakai AI-mu" desc="AI-mu membuka website ini & semua halaman game/produknya, lalu mengisi katalog kasir per kategori." prompt={prompt} onLeave={onLeave} onToast={onToast} />}
+      {url && <AiMcpCard className="mt-3" title={shop.products.length ? 'Baca ulang website pakai AI-mu' : 'Ambil daftar harga pakai AI-mu'} desc={shop.products.length ? 'AI-mu membaca ulang website ini, menunjukkan produk baru/terhapus & harga berubah, lalu menyamakan katalog setelah kamu setuju.' : 'AI-mu membuka website ini & semua halaman game/produknya, lalu mengisi katalog kasir per kategori.'} prompt={prompt} onLeave={onLeave} onToast={onToast} />}
     </section>
   );
 }

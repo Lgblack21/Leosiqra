@@ -27,6 +27,14 @@ export function PriceEditor({ shop, onDone, onToast, onLeave }: { shop: Shop; on
   const visible = (i: number) => !q || `${shop.products[i].group ?? ''} ${shop.products[i].name}`.toLowerCase().includes(q);
   const changed = prices.filter((v, i) => v !== shop.products[i].price).length;
   const [via, setVia] = useState<'manual' | 'ai'>('manual');
+  const [aiMode, setAiMode] = useState<'katalog' | 'harga'>('katalog');
+  const site = shop.linkUrl ? ` ${shop.linkUrl}` : ' [tautan website]';
+  const catalogPrompt = `Pakai Leosiqra (MCP): baca ulang website tokoku${site} dan samakan katalog usahaku "${shop.name}" (shop_id ${shop.id}).
+1) Panggil get_shop untuk katalog yang sekarang.
+2) Buka website itu & SEMUA halaman game/produknya, kumpulkan seluruh produk + harga Rupiah per kategori (nama game).
+3) Panggil sync_shop_catalog dengan seluruh daftar itu (apply: false) untuk PRATINJAU.
+4) Tunjukkan ke aku: produk yang akan DITAMBAH, DIHAPUS, dan harga yang berubah.
+5) Setelah aku setuju, panggil sync_shop_catalog lagi dengan apply: true.`;
   const aiPrompt = `Pakai Leosiqra (MCP): perbarui HARGA katalog usahaku "${shop.name}" (shop_id ${shop.id}) sesuai website tokoku${shop.linkUrl ? ` ${shop.linkUrl}` : ' [tautan website]'}.
 1) Panggil get_shop untuk daftar produk yang sudah ada (i, group, name, price).
 2) Buka website itu & semua halaman game/produknya, baca harga terbaru.
@@ -60,11 +68,21 @@ export function PriceEditor({ shop, onDone, onToast, onLeave }: { shop: Shop; on
     <div className="space-y-3">
       <div className="flex gap-1 rounded-full bg-slate-100 p-1 dark:bg-slate-800">
         <button type="button" onClick={() => setVia('manual')} aria-pressed={via === 'manual'} className={seg(via === 'manual')}>Ubah manual</button>
-        <button type="button" onClick={() => setVia('ai')} aria-pressed={via === 'ai'} className={seg(via === 'ai')}>Dari website (AI-mu)</button>
+        <button type="button" onClick={() => setVia('ai')} aria-pressed={via === 'ai'} className={seg(via === 'ai')}>Baca ulang website</button>
       </div>
       {via === 'ai' ? (
         <>
-          <AiMcpCard title="Perbarui harga dari website" desc="AI-mu membaca harga terbaru di websitemu, lalu HANYA mengubah harga produk yang sudah ada di katalog — tidak menambah produk baru." prompt={aiPrompt} onLeave={onLeave} onToast={onToast} />
+          <div className="grid grid-cols-2 gap-2">
+            {([['katalog', 'Cek katalog', 'Tambah produk baru, hapus yang sudah tidak ada, update harga'], ['harga', 'Cek harga', 'Hanya update harga produk yang sudah ada']] as const).map(([id, t, d]) => (
+              <button key={id} type="button" onClick={() => setAiMode(id)} aria-pressed={aiMode === id} className={cn('rounded-2xl p-3 text-left ring-1 transition', aiMode === id ? 'bg-violet-50 ring-2 ring-violet-500 dark:bg-violet-500/10' : 'bg-white ring-slate-100 hover:ring-slate-300 dark:bg-slate-900 dark:ring-slate-800')}>
+                <span className="block text-[13px] font-extrabold text-slate-900 dark:text-white">{t}</span>
+                <span className="mt-0.5 block text-[11px] leading-snug text-slate-500 dark:text-slate-400">{d}</span>
+              </button>
+            ))}
+          </div>
+          {aiMode === 'katalog'
+            ? <AiMcpCard key="katalog" title="Baca ulang website & samakan katalog" desc="AI-mu membaca ulang seluruh website, menunjukkan produk yang akan ditambah/dihapus & harga yang berubah, lalu menyimpan setelah kamu setuju. Penjualan lama tidak terpengaruh." prompt={catalogPrompt} onLeave={onLeave} onToast={onToast} />
+            : <AiMcpCard key="harga" title="Perbarui harga dari website" desc="AI-mu membaca harga terbaru di websitemu, lalu HANYA mengubah harga produk yang sudah ada di katalog — tidak menambah produk baru." prompt={aiPrompt} onLeave={onLeave} onToast={onToast} />}
           <p className="px-1 text-[11px] text-slate-500 dark:text-slate-400">Mau berjalan sendiri tiap hari? Jadwalkan perintah ini di fitur tugas terjadwal aplikasi AI-mu (kalau tersedia), atau pakai sambungan website otomatis di Kelola › Sambungkan website.</p>
           {shop.catalogSyncedAt && <p className="rounded-2xl bg-sky-50 px-3 py-2 text-[12px] font-semibold text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">Terakhir diperbarui otomatis: {ago(shop.catalogSyncedAt)}</p>}
         </>

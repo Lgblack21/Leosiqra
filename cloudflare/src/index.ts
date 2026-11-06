@@ -16631,7 +16631,8 @@ const MCP_SERVER_INSTRUCTIONS =
   "Usahaku (toko pengguna): list_shops → get_shop untuk katalog; create_shop/update_shop untuk usaha & info toko; " +
   "untuk mengambil harga dari website toko, baca halamannya dengan alat web-mu sendiri lalu simpan lewat set_shop_products " +
   "(group = nama kategori/game, harga Rupiah). Untuk memperbarui harga produk yang sudah ada TANPA menambah produk, " +
-  "pakai update_shop_prices (get_shop dulu untuk i). Gambar katalog (set_catalog_images / set_kasir_style categoryImages): https publik " +
+  "pakai update_shop_prices (get_shop dulu untuk i); untuk menyamakan katalog (tambah & hapus) pakai sync_shop_catalog — " +
+  "pratinjau dulu, simpan (apply: true) setelah pengguna setuju. Gambar katalog (set_catalog_images / set_kasir_style categoryImages): https publik " +
   "atau data:image ≤8.000 karakter — jangan memakai logo/artwork resmi pihak lain tanpa hak; buat ikon SVG orisinal bila perlu. " +
   "set_kasir_style hanya menerima pilihan tampilan yang terdaftar " +
   "(bukan HTML/CSS); set_shop_products mode replace mengganti seluruh katalog — konfirmasi dulu ke pengguna.";
@@ -17032,6 +17033,51 @@ const applyPriceUpdates = (old: ShopProduct[], updates: PriceUpdate[]) => {
   }
   return { next, updated, unchanged, notFound: notFound.slice(0, 50), invalid: invalid.slice(0, 50), ambiguous: ambiguous.slice(0, 50) };
 };
+// Sinkron katalog penuh dengan website: tambah produk baru, hapus yang tidak ada lagi,
+// perbarui harga. apply=false (bawaan) = PRATINJAU saja. Penghapusan besar (>5 & >30%)
+// butuh allow_large_removal — mencegah AI yang baru membaca sebagian situs menghapus banyak.
+const mcpSyncShopCatalog: McpToolDef["run"] = async (env, auth, args) => {
+  const r = await mcpShopRow(env, auth, args.shop_id);
+  if (!Array.isArray(args.products) || !args.products.length) throw new McpToolError("products wajib: SELURUH daftar produk dari website [{ name, price, group, unit? }].");
+  if (args.products.length > SHOP_PRODUCTS_MAX) throw new McpToolError(`Maksimal ${SHOP_PRODUCTS_MAX} produk — pilih kategori yang paling penting.`);
+  const incoming = sanitizeShopProducts(args.products).filter((p) => p.price > 0);
+  if (!incoming.length) throw new McpToolError("Tidak ada produk valid (name & price Rupiah > 0).");
+  const old = mcpShopProducts(r);
+  const key = (p: ShopProduct) => `${p.group ?? ""}|${p.name}`.toLowerCase();
+  const inMap = new Map(incoming.map((p) => [key(p), p]));
+  const oldKeys = new Set(old.map(key));
+  const label = (p: ShopProduct) => `${p.group ? `${p.group} · ` : ""}${p.name}`;
+  const changes: { produk: string; dari: number; jadi: number }[] = [];
+  const removed: string[] = [];
+  const next: ShopProduct[] = [];
+  for (const p of old) {
+    const n = inMap.get(key(p));
+    if (!n) { removed.push(label(p)); continue; }
+    if (n.price !== p.price) changes.push({ produk: label(p), dari: p.price, jadi: n.price });
+    next.push({ ...p, price: n.price, ...(n.unit ? { unit: n.unit } : {}) });
+  }
+  const added = incoming.filter((p) => !oldKeys.has(key(p)));
+  for (const a of added) {
+    // Taruh setelah produk terakhir di kategori yang sama (urutan katalog tetap rapi).
+    const at = a.group ? next.map((p) => p.group ?? "").lastIndexOf(a.group) : -1;
+    if (at >= 0) next.splice(at + 1, 0, a); else next.push(a);
+  }
+  const preview = { tambah: added.map(label).slice(0, 60), hapus: removed.slice(0, 60), harga_berubah: changes.slice(0, 60), total_sebelum: old.length, total_sesudah: Math.min(next.length, SHOP_PRODUCTS_MAX) };
+  const large = removed.length > 5 && removed.length > old.length * 0.3;
+  if (args.apply !== true) {
+    return {
+      data: { ok: true, applied: false, ...preview, ...(large ? { peringatan: `Akan menghapus ${removed.length} dari ${old.length} produk — pastikan SEMUA halaman website sudah terbaca; untuk tetap menyimpan kirim allow_large_removal: true.` } : {}), langkah: "Tunjukkan ringkasan ini ke pengguna. Kalau setuju, panggil lagi dengan apply: true." },
+      summary: `pratinjau sinkron ${String(r.name).slice(0, 30)}: +${added.length} -${removed.length} ~${changes.length}`,
+    };
+  }
+  if (large && args.allow_large_removal !== true) throw new McpToolError(`Ditahan: akan menghapus ${removed.length} dari ${old.length} produk. Pastikan semua halaman website terbaca, lalu kirim ulang dengan allow_large_removal: true kalau pengguna setuju.`);
+  const now = nowIso();
+  const body = JSON.stringify(next.slice(0, SHOP_PRODUCTS_MAX));
+  try { await env.DB.prepare("UPDATE shops SET products_json = ?, catalog_synced_at = ?, updated_at = ? WHERE id = ? AND user_id = ?").bind(body, now, now, r.id, auth.userId).run(); }
+  catch (e) { if (!isMissingColumn(e)) throw e; await env.DB.prepare("UPDATE shops SET products_json = ?, updated_at = ? WHERE id = ? AND user_id = ?").bind(body, now, r.id, auth.userId).run(); }
+  return { data: { ok: true, applied: true, ...preview, catatan: "Penjualan yang sudah tercatat tidak terpengaruh." }, summary: `sinkron katalog ${String(r.name).slice(0, 30)}: +${added.length} -${removed.length} ~${changes.length}` };
+};
+
 const mcpUpdateShopPrices: McpToolDef["run"] = async (env, auth, args) => {
   const r = await mcpShopRow(env, auth, args.shop_id);
   if (!Array.isArray(args.prices) || !args.prices.length) throw new McpToolError("prices wajib: [{ i, price }] atau [{ name, group, price }] — ambil i dari get_shop.");
@@ -17233,6 +17279,24 @@ const MCP_TOOLS: McpToolDef[] = [
     write: true,
     inputSchema: { type: "object", properties: { shop_id: { type: "string" }, ...MCP_SHOP_INFO_SCHEMA }, required: ["shop_id"], additionalProperties: false },
     run: mcpUpdateShop,
+  },
+  {
+    name: "sync_shop_catalog",
+    title: "Sinkron katalog dengan website",
+    description: "Menyamakan katalog usaha dengan website toko: produk baru DITAMBAH, produk yang sudah tidak ada di website DIHAPUS, harga diperbarui. Kirim SELURUH daftar produk dari website (semua halaman/game) [{ name, price, group, unit? }]. Bawaan = PRATINJAU (apply false): tunjukkan tambah/hapus/harga_berubah ke pengguna, lalu panggil ulang dengan apply: true setelah disetujui. Penghapusan besar butuh allow_large_removal: true. Kalau hanya mau update harga tanpa tambah/hapus, pakai update_shop_prices.",
+    write: true,
+    inputSchema: {
+      type: "object",
+      properties: {
+        shop_id: { type: "string" },
+        products: { type: "array", minItems: 1, maxItems: 120, items: MCP_PRODUCT_ITEM },
+        apply: { type: "boolean", default: false, description: "false = pratinjau saja; true = simpan" },
+        allow_large_removal: { type: "boolean", default: false },
+      },
+      required: ["shop_id", "products"],
+      additionalProperties: false,
+    },
+    run: mcpSyncShopCatalog,
   },
   {
     name: "update_shop_prices",
