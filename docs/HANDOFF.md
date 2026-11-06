@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live: Cerita AI dari foto + Kalender berfoto, run 42296259066)
+Terakhir diperbarui: 2026-11-07 (live: koin satu jenis + kuota AI, run 42300089133)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-07 (branch claude/koin-kuota-ai) — Sistem koin baru + kuota AI FREE vs PRO. BELUM deploy (tunggu "gas"). Tanpa SQL.**
+- **2026-11-07 — Sistem koin baru + kuota AI FREE vs PRO: LIVE (run 42300089133, commit 73296e1). Tanpa SQL.**
   - Keputusan Bos: satu jenis koin, 1 koin = Rp1, bisa dibeli; hadiah TIDAK lagi bisa dicairkan.
     COIN_RULES: proMonthCost 2.000 → **15.000** (= harga PRO, beli koin tidak bisa jadi PRO lebih murah), refActiveReferrer
     300→500, refActiveReferee 100→200, refPro 1.000→1.500 (tidak cashable), streak 50→100. POST /coins/withdraw → 410;
