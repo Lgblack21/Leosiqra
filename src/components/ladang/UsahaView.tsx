@@ -50,10 +50,16 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
   }, []);
 
   const now = toLocalDateString().slice(0, 7);
-  const salesBy = useMemo(() => {
+  // Penjualan (pemasukan) & biaya usaha (pengeluaran "Biaya Usaha") per usaha — omzet hanya dari penjualan.
+  const [salesBy, costBy] = useMemo(() => {
     const m = new Map<string, Transaction[]>();
-    for (const t of tx) if (t.relatedType === 'shop' && t.relatedId) m.set(t.relatedId, [...(m.get(t.relatedId) ?? []), t]);
-    return m;
+    const c = new Map<string, Transaction[]>();
+    for (const t of tx) {
+      if (t.relatedType !== 'shop' || !t.relatedId) continue;
+      const into = t.type === 'pemasukan' ? m : t.type === 'pengeluaran' ? c : null;
+      if (into) into.set(t.relatedId, [...(into.get(t.relatedId) ?? []), t]);
+    }
+    return [m, c];
   }, [tx]);
 
   const app = variant === 'app';
@@ -84,22 +90,22 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
             const all = shops.flatMap((x) => salesBy.get(x.id) ?? []);
             const mon = all.filter((t) => monthKey(t.date) === now);
             const day = all.filter((t) => toLocalDateString(new Date(t.date)) === toLocalDateString());
+            const monOmzet = Math.round(mon.reduce((x, t) => x + amt(t), 0));
+            const monCost = Math.round(shops.flatMap((x) => costBy.get(x.id) ?? []).filter((t) => monthKey(t.date) === now).reduce((x, t) => x + amt(t), 0));
             return (
               <section className="web-keep relative overflow-hidden rounded-[28px] bg-[radial-gradient(120%_140%_at_100%_0%,#7c3aed_0%,#4c1d95_35%,#0b1220_80%)] p-5 text-white md:p-6">
                 <Store aria-hidden size={150} strokeWidth={1} className="pointer-events-none absolute -bottom-8 -right-6 text-violet-300/10" />
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[13px] font-semibold text-white/60">Omzet usaha bulan ini</p>
-                    <p className="mt-1 text-[30px] font-extrabold leading-none tabular-nums md:text-[36px]">{formatIDR(Math.round(mon.reduce((x, t) => x + amt(t), 0)))}</p>
-                  </div>
-                  <div className="relative flex shrink-0 flex-wrap justify-end gap-2">
-                    <button type="button" onClick={() => setSheet({ k: 'tim' })} className="flex items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-2 text-[12px] font-bold text-white ring-1 ring-white/20 hover:bg-white/15"><Users size={14} /> Tim</button>
-                    {shops.length < 5 && <button type="button" onClick={() => setSheet({ k: 'ideas' })} className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[12px] font-bold text-slate-900 hover:bg-white/90"><Plus size={14} /> Usaha baru</button>}
+                <div className="flex items-center justify-between gap-3">
+                  <p className="min-w-0 truncate text-[13px] font-semibold text-white/60">Omzet usaha bulan ini</p>
+                  <div className="relative flex shrink-0 gap-2">
+                    <button type="button" onClick={() => setSheet({ k: 'tim' })} aria-label="Tim" className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-[12px] font-bold text-white ring-1 ring-white/20 hover:bg-white/15"><Users size={14} /> Tim</button>
+                    {shops.length < 5 && <button type="button" onClick={() => setSheet({ k: 'ideas' })} aria-label="Usaha baru" className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-slate-900 hover:bg-white/90"><Plus size={14} /> <span className="sm:hidden">Baru</span><span className="hidden sm:inline">Usaha baru</span></button>}
                   </div>
                 </div>
+                <p className="mt-1 text-[30px] font-extrabold leading-none tabular-nums md:text-[36px]">{formatIDR(monOmzet)}</p>
                 <div className="relative mt-4 grid grid-cols-3 gap-2">
-                  {[['Hari ini', short(Math.round(day.reduce((x, t) => x + amt(t), 0)))], ['Transaksi bulan ini', String(mon.length)], ['Usaha', `${shops.length}/5`]].map(([k, v]) => (
-                    <div key={k} className="rounded-2xl bg-white/[0.07] px-3 py-2.5 ring-1 ring-white/10"><p className="truncate text-[11px] text-white/55">{k}</p><p className="text-[16px] font-extrabold tabular-nums">{v}</p></div>
+                  {[['Hari ini', short(Math.round(day.reduce((x, t) => x + amt(t), 0)))], ['Biaya', monCost ? `−${short(monCost).replace('Rp', '')}` : short(0)], ['Bersih', short(monOmzet - monCost)]].map(([k, v]) => (
+                    <div key={k} className="min-w-0 rounded-2xl bg-white/[0.07] px-3 py-2.5 ring-1 ring-white/10"><p className="truncate text-[11px] text-white/55">{k}</p><p className="truncate text-[16px] font-extrabold tabular-nums">{v}</p></div>
                   ))}
                 </div>
               </section>
@@ -110,6 +116,7 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
               const sales = salesBy.get(s.id) ?? [];
               const month = sales.filter((t) => monthKey(t.date) === now);
               const day = sales.filter((t) => toLocalDateString(new Date(t.date)) === toLocalDateString());
+              const monthCost = Math.round((costBy.get(s.id) ?? []).filter((t) => monthKey(t.date) === now).reduce((x, t) => x + amt(t), 0));
               const st = stageOf(s, sales.length);
               const cats = new Set(s.products.map((p) => p.group).filter(Boolean)).size;
               const nextStep = !s.contactWa ? 'Isi nomor WhatsApp' : !s.products.length ? 'Isi katalog produk' : st < 2 ? 'Tempel website atau sebar katalog' : 'Catat penjualan pertama';
@@ -125,14 +132,14 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                       <span className="flex shrink-0 items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-bold transition-colors group-hover:bg-white/25"><Store size={13} /> Kasir</span>
                     </div>
                     <div className="grid grid-cols-3 divide-x divide-slate-100 px-1 py-3 dark:divide-slate-800">
-                      {[['Hari ini', short(Math.round(day.reduce((x, t) => x + amt(t), 0)))], ['Bulan ini', short(Math.round(month.reduce((x, t) => x + amt(t), 0)))], ['Produk', String(s.products.length)]].map(([k, v]) => (
-                        <span key={k} className="px-3 text-center"><span className="block text-[11px] text-slate-400">{k}</span><span className="block text-[15px] font-extrabold tabular-nums text-slate-900 dark:text-white">{v}</span></span>
+                      {[['Hari ini', short(Math.round(day.reduce((x, t) => x + amt(t), 0))), ''], ['Bulan ini', short(Math.round(month.reduce((x, t) => x + amt(t), 0))), ''], ['Biaya bulan ini', monthCost ? `−${short(monthCost).replace('Rp', '')}` : short(0), monthCost ? 'text-rose-600 dark:text-rose-400' : '']].map(([k, v, c]) => (
+                        <span key={k} className="min-w-0 px-2 text-center"><span className="block truncate text-[11px] text-slate-400">{k}</span><span className={cn('block truncate text-[15px] font-extrabold tabular-nums text-slate-900 dark:text-white', c)}>{v}</span></span>
                       ))}
                     </div>
                   </Link>
                   {st < 3 && (
-                    <button type="button" onClick={() => setSheet({ k: 'shop', id: s.id })} className="flex w-full items-center gap-3 border-t border-slate-100 px-4 py-3 text-left hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50">
-                      <StageBar stage={st} className="flex-1" />
+                    <button type="button" onClick={() => setSheet({ k: 'shop', id: s.id })} className="flex w-full flex-col gap-2 border-t border-slate-100 px-4 py-3 text-left hover:bg-slate-50 sm:flex-row sm:items-center sm:gap-3 dark:border-slate-800 dark:hover:bg-slate-800/50">
+                      <StageBar stage={st} className="w-full sm:flex-1" />
                       <span className="shrink-0 text-[11px] font-bold text-violet-600 dark:text-violet-300">{nextStep} →</span>
                     </button>
                   )}
@@ -157,7 +164,7 @@ function StageBar({ stage, className }: { stage: number; className?: string }) {
       {STAGES.map((s, i) => (
         <span key={s}>
           <span className={cn('block h-1.5 rounded-full', i <= stage ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700')} />
-          <span className={cn('mt-1 block text-[10px] font-semibold', i <= stage ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400')}>{s}</span>
+          <span className={cn('mt-1 block truncate text-[10px] font-semibold', i <= stage ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400')}>{s}</span>
         </span>
       ))}
     </span>

@@ -3,15 +3,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, BadgeDollarSign, Check, Copy, Loader2, Minus, Palette, Plus, ReceiptText, Search, Settings2, ShoppingBag, Store, Trash2, X } from 'lucide-react';
+import { ArrowLeft, BadgeDollarSign, Check, Copy, Loader2, Minus, Palette, Plus, ReceiptText, Search, Settings2, ShoppingBag, Store, Trash2, Wallet, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { shopService, groupProducts, type KasirStyle, type Shop, type ShopProduct } from '@/lib/services/shopService';
+import { shopService, groupProducts, type KasirStyle, type Shop, type ShopExpenseInput, type ShopProduct } from '@/lib/services/shopService';
 import { KasirStyleEditor } from './KasirStyleEditor';
 import { KASIR_THEME } from './kasirTheme';
 import { CustomKasirFrame } from './CustomKasirFrame';
 import { CatalogImage } from './CatalogImage';
 import { PriceEditor } from './PriceEditor';
+import { ExpenseForm } from './ExpenseForm';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
 import { accountService } from '@/lib/services/accountService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
@@ -42,6 +43,7 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
   const [manage, setManage] = useState(false);
   const [styling, setStyling] = useState(false);
   const [pricing, setPricing] = useState(false);
+  const [spending, setSpending] = useState(false); // catat pengeluaran usaha
   const [sheet, setSheet] = useState(false); // HP: struk
   const [flash, setFlash] = useState('');
   const say = (m: string) => { if (onToast) onToast(m); else { setFlash(m); window.setTimeout(() => setFlash(''), 3500); } };
@@ -64,10 +66,14 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
   }, []);
 
   const shop = shops?.find((s) => s.id === id);
-  const sales = useMemo(() => tx.filter((t) => t.relatedType === 'shop' && t.relatedId === id), [tx, id]);
+  const shopTx = useMemo(() => tx.filter((t) => t.relatedType === 'shop' && t.relatedId === id), [tx, id]);
+  const sales = useMemo(() => shopTx.filter((t) => t.type === 'pemasukan'), [shopTx]);
   const today = toLocalDateString();
-  const todaySales = sales.filter((t) => toLocalDateString(new Date(t.date)) === today);
-  const monthSales = sales.filter((t) => monthKey(t.date) === today.slice(0, 7));
+  const isToday = (t: Transaction) => toLocalDateString(new Date(t.date)) === today;
+  const todaySales = sales.filter(isToday);
+  const todayCosts = shopTx.filter((t) => t.type === 'pengeluaran' && isToday(t));
+  const monthTx = shopTx.filter((t) => monthKey(t.date) === today.slice(0, 7));
+  const monthNet = Math.round(monthTx.reduce((x, t) => x + (t.type === 'pengeluaran' ? -amt(t) : amt(t)), 0));
 
   const [lines, setLines] = useState<Line[]>([]);
   const add = (p: ShopProduct) => setLines((l) => {
@@ -100,11 +106,22 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
     else setSheet(true);
   };
   const todayTotal = Math.round(todaySales.reduce((x, t) => x + amt(t), 0));
+  const todayCost = Math.round(todayCosts.reduce((x, t) => x + amt(t), 0));
+  const actBtn = 'flex min-w-0 items-center justify-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-[12px] font-bold hover:bg-white/20';
+  const actions = (
+    <>
+      <button type="button" onClick={() => setSpending(true)} aria-label="Catat pengeluaran usaha" className={actBtn}><Wallet size={14} className="shrink-0" /> <span className="truncate">Biaya</span></button>
+      {shop.products.length > 0 && <button type="button" onClick={() => setPricing(true)} aria-label="Perbarui harga" className={actBtn}><BadgeDollarSign size={14} className="shrink-0" /> <span className="truncate">Harga</span></button>}
+      <button type="button" onClick={() => setStyling(true)} aria-label="Tampilan kasir" className={actBtn}><Palette size={14} className="shrink-0" /> <span className="truncate sm:hidden">Tema</span><span className="hidden truncate sm:inline">Tampilan</span></button>
+      <button type="button" onClick={() => setManage(true)} aria-label="Kelola usaha" className={actBtn}><Settings2 size={14} className="shrink-0" /> <span className="truncate">Kelola</span></button>
+    </>
+  );
+  const saveExpense = (input: ShopExpenseInput & { accountId?: string; date?: string }) => shopService.expense(shop.id, { ...input, accountId: input.accountId ?? '' });
   const strukLeft = shop.style.strukSide === 'kiri';
   const strukFor = (inSheet: boolean) => <Struk key={`${shop.id}-${inSheet}`} shop={shop} lines={lines} sum={sum} onAdd={add} setQty={setQty} clear={() => setLines([])} onDone={say} inSheet={inSheet} onNew={() => setSheet(false)} />;
 
   return (
-    <div className={cn('space-y-4', app && 'pb-24')}>
+    <div className={cn('space-y-4', app ? 'pb-44' : 'pb-28 lg:pb-0')}>
       {flash && <div role="status" className="fixed inset-x-4 top-4 z-[95] mx-auto max-w-sm rounded-2xl bg-slate-900 px-4 py-3 text-center text-[13px] font-semibold text-white shadow-lg">{flash}</div>}
 
       {/* Header toko */}
@@ -115,15 +132,15 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
           <div className="min-w-0 flex-1">
             {!compactHead && <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-white/50"><Store size={12} /> Kasir</p>}
             <h1 className={cn('truncate font-extrabold leading-tight', compactHead ? 'text-[16px]' : 'text-[20px] md:text-[24px]')}>{compactHead && `${shop.emoji || '🏪'} `}{shop.name}</h1>
-            {compactHead && shop.style.showStats ? <p className="truncate text-[11px] text-white/70">Hari ini {short(todayTotal)} · {todaySales.length} transaksi</p> : shop.style.greeting && <p className="truncate text-[12px] text-white/70">{shop.style.greeting}</p>}
+            {compactHead && shop.style.showStats ? <p className="truncate text-[11px] text-white/70">Hari ini {short(todayTotal)} · {todaySales.length} transaksi{todayCost ? ` · biaya ${short(todayCost)}` : ''}</p> : shop.style.greeting && <p className="truncate text-[12px] text-white/70">{shop.style.greeting}</p>}
           </div>
-          {shop.products.length > 0 && <button type="button" onClick={() => setPricing(true)} aria-label="Perbarui harga" className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-[12px] font-bold hover:bg-white/20"><BadgeDollarSign size={14} /> <span className="hidden sm:inline">Harga</span></button>}
-          <button type="button" onClick={() => setStyling(true)} aria-label="Tampilan kasir" className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-[12px] font-bold hover:bg-white/20"><Palette size={14} /> <span className="hidden sm:inline">Tampilan</span></button>
-          <button type="button" onClick={() => setManage(true)} aria-label="Kelola usaha" className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-[12px] font-bold hover:bg-white/20"><Settings2 size={14} /> <span className="hidden sm:inline">Kelola</span></button>
+          <div className="hidden shrink-0 items-center gap-1.5 sm:flex">{actions}</div>
         </div>
+        {/* HP: tombol aksi di baris sendiri supaya nama toko tidak terpotong */}
+        <div className={cn('mt-3 grid gap-1.5 sm:hidden', shop.products.length > 0 ? 'grid-cols-4' : 'grid-cols-3')}>{actions}</div>
         {!compactHead && shop.style.showStats && <div className="mt-4 grid grid-cols-3 gap-2">
-          {[['Hari ini', short(todayTotal)], ['Transaksi', String(todaySales.length)], ['Bulan ini', short(Math.round(monthSales.reduce((x, t) => x + amt(t), 0)))]].map(([k, v]) => (
-            <div key={k} className="rounded-2xl bg-white/[0.07] px-3 py-2.5 ring-1 ring-white/10"><p className="text-[11px] text-white/55">{k}</p><p className="truncate text-[16px] font-extrabold tabular-nums md:text-[18px]">{v}</p></div>
+          {[['Omzet hari ini', short(todayTotal)], ['Biaya hari ini', todayCost ? `−${short(todayCost).replace('Rp', '')}` : short(0)], ['Bersih bulan ini', short(monthNet)]].map(([k, v]) => (
+            <div key={k} className="min-w-0 rounded-2xl bg-white/[0.07] px-3 py-2.5 ring-1 ring-white/10"><p className="truncate text-[11px] text-white/55">{k}</p><p className="truncate text-[16px] font-extrabold tabular-nums md:text-[18px]">{v}</p></div>
           ))}
         </div>}
       </section>
@@ -162,6 +179,7 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
         <>
           <BottomSheet isOpen={sheet} onClose={() => setSheet(false)} title="Struk"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">{strukFor(true)}</div></BottomSheet>
           <BottomSheet isOpen={pricing} onClose={() => setPricing(false)} title="Perbarui harga"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><PriceEditor key={shop.updatedAt} shop={shop} onDone={(m) => { setPricing(false); say(m); }} onToast={say} onLeave={() => setPricing(false)} /></div></BottomSheet>
+          <BottomSheet isOpen={spending} onClose={() => setSpending(false)} title="Catat pengeluaran"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><ExpenseForm shop={shop} onSave={saveExpense} onDone={(m) => { setSpending(false); say(m); }} onCancel={() => setSpending(false)} /></div></BottomSheet>
           <BottomSheet isOpen={styling} onClose={() => setStyling(false)} title="Tampilan kasir"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><KasirStyleEditor shop={shop} onDone={(m) => { setStyling(false); say(m); }} onToast={say} onLeave={() => setStyling(false)} /></div></BottomSheet>
           <BottomSheet isOpen={manage} onClose={() => setManage(false)} title={`Kelola ${shop.name}`}><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><ShopDetail shop={shop} sales={sales} onToast={say} onLeave={() => setManage(false)} onDeleted={() => router.replace(back)} /></div></BottomSheet>
         </>
@@ -169,12 +187,13 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
         <>
           <Modal isOpen={sheet} onClose={() => setSheet(false)} title="Struk" maxWidth="max-w-md">{strukFor(true)}</Modal>
           <Modal isOpen={pricing} onClose={() => setPricing(false)} title="Perbarui harga" maxWidth="max-w-lg"><PriceEditor key={shop.updatedAt} shop={shop} onDone={(m) => { setPricing(false); say(m); }} onToast={say} onLeave={() => setPricing(false)} /></Modal>
+          <Modal isOpen={spending} onClose={() => setSpending(false)} title="Catat pengeluaran" maxWidth="max-w-md"><ExpenseForm shop={shop} onSave={saveExpense} onDone={(m) => { setSpending(false); say(m); }} onCancel={() => setSpending(false)} /></Modal>
           <Modal isOpen={styling} onClose={() => setStyling(false)} title="Tampilan kasir" maxWidth="max-w-lg"><KasirStyleEditor shop={shop} onDone={(m) => { setStyling(false); say(m); }} onToast={say} onLeave={() => setStyling(false)} /></Modal>
           <Modal isOpen={manage} onClose={() => setManage(false)} title={`Kelola ${shop.name}`} maxWidth="max-w-xl"><ShopDetail shop={shop} sales={sales} onToast={say} onLeave={() => setManage(false)} onDeleted={() => router.replace(back)} /></Modal>
         </>
       )}
 
-      {shop.style.showRecent && <RecentSales sales={todaySales} />}
+      {shop.style.showRecent && <RecentSales sales={[...todaySales, ...todayCosts]} />}
     </div>
   );
 }
@@ -465,17 +484,18 @@ function RecentSales({ sales }: { sales: Transaction[] }) {
   const list = [...sales].sort((a, b) => new Date(b.createdAt ?? b.date).getTime() - new Date(a.createdAt ?? a.date).getTime()).slice(0, 10);
   return (
     <section className="rounded-[26px] bg-white p-4 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
-      <p className="text-[14px] font-extrabold text-slate-900 dark:text-white">Penjualan hari ini</p>
+      <p className="text-[14px] font-extrabold text-slate-900 dark:text-white">Hari ini</p>
       <ul className="mt-2 divide-y divide-slate-100 dark:divide-slate-800">
-        {list.map((t) => (
+        {list.map((t) => { const out = t.type === 'pengeluaran'; return (
           <li key={t.id} className="flex items-center justify-between gap-3 py-2.5">
             <span className="flex min-w-0 items-center gap-1.5 text-[13px] text-slate-700 dark:text-slate-200">
+              {out && <span className="shrink-0 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">Biaya</span>}
               {(t.note ?? '').endsWith(' · via website') && <span className="shrink-0 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">🌐 Website</span>}
               <span className="truncate">{(t.note ?? '').replace(/^\[[^\]]*\]\s*/, '').replace(/ · via website$/, '') || 'Penjualan'}</span>
             </span>
-            <span className="shrink-0 text-[13px] font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">+{formatIDR(Math.round(amt(t)))}</span>
+            <span className={cn('shrink-0 text-[13px] font-extrabold tabular-nums', out ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-300')}>{out ? '−' : '+'}{formatIDR(Math.round(amt(t)))}</span>
           </li>
-        ))}
+        ); })}
       </ul>
     </section>
   );

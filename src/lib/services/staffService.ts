@@ -1,5 +1,5 @@
 import { cloudflareApi } from '../cloudflare-api';
-import { shopFromRow, type Shop } from './shopService';
+import { shopFromRow, type Shop, type ShopExpenseInput } from './shopService';
 
 // Usahaku › Tim. Anggota tim (kasir) login dengan username "toko-nama" ke /tim —
 // sesi terpisah dari akun pemilik (/api/staff/*). Pemilik mengelola akun lewat
@@ -12,7 +12,7 @@ export const STAFF_USERNAME_RE = /^[a-z0-9_.]{2,15}-[a-z0-9_.]{2,15}$/;
 /** Tanda hubung tidak boleh di username pengguna biasa → identitas akun tim. */
 export const looksLikeStaffUsername = (v: string) => STAFF_USERNAME_RE.test(normStaffUsername(v));
 
-export type StaffSale = { id: string; shop_id: string; amount: number; note: string | null; created_at: string };
+export type StaffSale = { id: string; shop_id: string; type: 'pemasukan' | 'pengeluaran'; amount: number; note: string | null; created_at: string };
 export type StaffMe = { staff: { id: string; name: string; username: string; role: string }; owner: string; account: string | null; shops: Shop[]; today: StaffSale[]; date: string };
 
 export const staffService = {
@@ -28,6 +28,9 @@ export const staffService = {
   },
   async sale(shopId: string, input: { requestId: string; amount: number; qty: number; product: string; buyer: string; items: { name: string; price: number; qty: number }[] }) {
     await cloudflareApi(`/api/staff/shops/${shopId}/sale`, { method: 'POST', json: { request_id: input.requestId, amount: input.amount, qty: input.qty, product: input.product, buyer: input.buyer, items: input.items } });
+  },
+  async expense(shopId: string, input: ShopExpenseInput) {
+    await cloudflareApi(`/api/staff/shops/${shopId}/expense`, { method: 'POST', json: { request_id: input.requestId, amount: input.amount, item: input.item, kind: input.kind } });
   },
   async changePassword(current: string, next: string) {
     await cloudflareApi('/api/staff/password', { method: 'POST', json: { current, next } });

@@ -9813,6 +9813,41 @@ const recordShopSale = async (env: Env, userId: string, shop: { id: string; name
   } catch { /* realtime opsional */ }
   return { ok: true as const, id: txId };
 };
+// Pengeluaran usaha (beli botol, dus, bahan…): pengeluaran "Biaya Usaha" + saldo
+// rekening dalam SATU batch, related_type 'shop' agar terhitung per usaha (omzet
+// tetap hanya dari pemasukan). expenseKey (payload_json.expenseId) mencegah dobel.
+const SHOP_EXPENSE_KINDS = ["Bahan & Stok", "Kemasan", "Operasional", "Lainnya"] as const;
+const shopExpenseKind = (v: unknown) => (SHOP_EXPENSE_KINDS as readonly string[]).includes(v as string) ? (v as string) : "Lainnya";
+const recordShopExpense = async (env: Env, userId: string, shop: { id: string; name: string }, input: { expenseKey: string; amount: number; item: string; kind: string; accountId: string; date: string; by?: { id: string; name: string } }) => {
+  const txId = generateId();
+  const now = nowIso();
+  const note = `[${shop.name}] ${input.item || input.kind}${input.by ? ` · oleh ${input.by.name}` : ""}`.slice(0, 200);
+  const payload = { expenseId: input.expenseKey, item: input.item || null, ...(input.by ? { staffId: input.by.id, staffName: input.by.name } : {}) };
+  const results = await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO transactions (id, user_id, type, amount, amount_idr, category, sub_category, currency, account_id, date, display_date, note, status, related_id, related_type, payload_json, created_at, updated_at)
+       SELECT ?, ?, 'pengeluaran', ?, ?, 'Biaya Usaha', ?, 'IDR', ?, ?, ?, ?, 'VERIFIED', ?, 'shop', ?, ?, ?
+        WHERE NOT EXISTS (SELECT 1 FROM transactions WHERE user_id = ? AND related_type = 'shop' AND json_valid(payload_json) AND json_extract(payload_json, '$.expenseId') = ?)`
+    ).bind(txId, userId, input.amount, input.amount, input.kind, input.accountId, input.date, input.date, note, shop.id, JSON.stringify(payload), now, now, userId, input.expenseKey),
+    ...quickTxBalanceStatements(env, userId, txId, input.accountId, "pengeluaran", input.amount),
+  ]);
+  if (!results[0]?.meta.changes) return { ok: false as const };
+  try {
+    const durableId = env.REALTIME_ROOM.idFromName(`member:${userId}`);
+    await env.REALTIME_ROOM.get(durableId).fetch("https://realtime.internal/publish", { method: "POST", body: JSON.stringify({ event: "transaction.created", payload: { id: txId, userId } }) });
+  } catch { /* realtime opsional */ }
+  return { ok: true as const, id: txId };
+};
+// Validasi bersama kasir pemilik & tim. Galat → string pesan.
+const parseShopExpense = (raw: Record<string, unknown>) => {
+  const amount = typeof raw.amount === "number" && Number.isFinite(raw.amount) ? Math.round(raw.amount) : 0;
+  if (amount < 1 || amount > 1e11) return "Isi nominal pengeluarannya.";
+  const item = shopText(raw.item, 80);
+  if (!item) return "Tulis beli apa, mis. botol 50 pcs.";
+  const requestId = typeof raw.request_id === "string" && /^[0-9a-f-]{36}$/i.test(raw.request_id) ? raw.request_id : null;
+  if (!requestId) return "Permintaan tidak valid. Muat ulang halaman.";
+  return { amount, item, kind: shopExpenseKind(raw.kind), requestId };
+};
 const shopSaleBuyerBad = (buyer: string) => /\b(pin|password|kata sandi|otp|cvv)\b/i.test(buyer);
 
 // ── Webhook website → Leosiqra: POST /api/hooks/shop/<id>, Authorization: Bearer lsq_shk_…
@@ -9982,7 +10017,7 @@ async function handleStaffRoutes(request: Request, env: Env, pathname: string) {
       const shopIds = shops.map((r) => String(r.id));
       const sales = shopIds.length
         ? (await env.DB.prepare(
-            `SELECT id, related_id AS shop_id, amount, note, created_at FROM transactions
+            `SELECT id, related_id AS shop_id, type, amount, note, created_at FROM transactions
               WHERE user_id = ? AND related_type = 'shop' AND related_id IN (${shopIds.map(() => "?").join(",")}) AND date = ?
               ORDER BY created_at DESC LIMIT 100`
           ).bind(staff.owner_id, ...shopIds, todayWIB()).all()).results ?? []
@@ -10000,7 +10035,7 @@ async function handleStaffRoutes(request: Request, env: Env, pathname: string) {
       ]);
       return json({ ok: true });
     }
-    const m = /^\/api\/staff\/shops\/([0-9a-f-]{36})\/sale$/i.exec(pathname);
+    const m = /^\/api\/staff\/shops\/([0-9a-f-]{36})\/(sale|expense)$/i.exec(pathname);
     if (m && request.method === "POST") {
       const shopId = m[1];
       if (!ids.includes(shopId)) return json({ error: "Usaha ini tidak diberikan untuk akunmu." }, { status: 403 });
@@ -10009,6 +10044,14 @@ async function handleStaffRoutes(request: Request, env: Env, pathname: string) {
       const account = staff.account_id ? await env.DB.prepare("SELECT id FROM accounts WHERE id = ? AND user_id = ? AND COALESCE(currency, 'IDR') = 'IDR'").bind(staff.account_id, staff.owner_id).first<{ id: string }>() : null;
       if (!account) return json({ error: "Pemilik usaha belum menentukan rekening tujuan untuk akunmu." }, { status: 409 });
       const raw = await parseJson<Record<string, unknown>>(request);
+      if (m[2].toLowerCase() === "expense") {
+        // Beli botol/dus/bahan dari uang kasir: rekening kunci yang sama, tanggal hari ini.
+        const e = parseShopExpense(raw);
+        if (typeof e === "string") return json({ error: e }, { status: 400 });
+        const res = await recordShopExpense(env, staff.owner_id, shop, { expenseKey: e.requestId, amount: e.amount, item: e.item, kind: e.kind, accountId: account.id, date: todayWIB(), by: { id: staff.id, name: staff.name } });
+        if (!res.ok) return json({ error: "Pengeluaran ini sudah tercatat." }, { status: 409 });
+        return json({ ok: true, id: res.id }, { status: 201 });
+      }
       const amount = typeof raw.amount === "number" && Number.isFinite(raw.amount) ? Math.round(raw.amount) : 0;
       if (amount < 1 || amount > 1e11) return json({ error: "Isi nominal penjualannya." }, { status: 400 });
       const qty = Number.isInteger(raw.qty) && (raw.qty as number) >= 1 && (raw.qty as number) <= 9999 ? (raw.qty as number) : 1;
@@ -10228,6 +10271,19 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
       if (!account) return json({ error: "Pilih rekening Rupiah." }, { status: 400 });
       const res = await recordShopSale(env, userId, shop, { saleKey: requestId, amount, qty, product, buyer, items, accountId: account.id, date });
       if (!res.ok) return json({ error: "Penjualan ini sudah tercatat." }, { status: 409 });
+      return json({ ok: true, id: res.id }, { status: 201 });
+    }
+    if (action === "expense" && request.method === "POST") {
+      const raw = await parseJson<Record<string, unknown>>(request);
+      const e = parseShopExpense(raw);
+      if (typeof e === "string") return json({ error: e }, { status: 400 });
+      const date = isRealDateStr(raw.date) && raw.date <= todayWIB() && raw.date >= "2000-01-01" ? raw.date : todayWIB();
+      const account = typeof raw.account_id === "string" && raw.account_id
+        ? await env.DB.prepare("SELECT id FROM accounts WHERE id = ? AND user_id = ? AND COALESCE(currency, 'IDR') = 'IDR'").bind(raw.account_id, userId).first<{ id: string }>()
+        : null;
+      if (!account) return json({ error: "Pilih rekening Rupiah." }, { status: 400 });
+      const res = await recordShopExpense(env, userId, shop, { expenseKey: e.requestId, amount: e.amount, item: e.item, kind: e.kind, accountId: account.id, date });
+      if (!res.ok) return json({ error: "Pengeluaran ini sudah tercatat." }, { status: 409 });
       return json({ ok: true, id: res.id }, { status: 201 });
     }
     return json({ error: "Not found" }, { status: 404 });

@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, KeyRound, LayoutGrid, Loader2, LogOut, ReceiptText, Store } from 'lucide-react';
+import { ArrowLeft, KeyRound, LayoutGrid, Loader2, LogOut, ReceiptText, Store, Wallet } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { staffService, type StaffMe } from '@/lib/services/staffService';
+import { staffService, type StaffMe, type StaffSale } from '@/lib/services/staffService';
+import { ExpenseForm } from '@/components/ladang/ExpenseForm';
 import type { Shop, ShopProduct } from '@/lib/services/shopService';
 import { Catalog, Struk, lineKey, type Line } from '@/components/ladang/KasirView';
 import { CustomKasirFrame } from '@/components/ladang/CustomKasirFrame';
@@ -19,6 +20,23 @@ import { cn, formatIDR } from '@/lib/utils';
 // transaksi lain, Tagih, atau Jual barang.
 
 const noteText = (n: string | null) => (n ?? '').replace(/^\[[^\]]*\]\s*/, '') || 'Penjualan';
+const isCost = (t: StaffSale) => t.type === 'pengeluaran';
+const sumOf = (list: StaffSale[]) => list.reduce((a, t) => a + Number(t.amount || 0), 0);
+
+function TodayList({ list, title }: { list: StaffSale[]; title: string }) {
+  if (!list.length) return null;
+  return (
+    <div className="rounded-[22px] bg-white p-4 ring-1 ring-slate-100">
+      <p className="text-[14px] font-extrabold text-slate-900">{title}</p>
+      <ul className="mt-2 divide-y divide-slate-100">{list.slice(0, 30).map((t) => (
+        <li key={t.id} className="flex items-center justify-between gap-3 py-2.5">
+          <span className="flex min-w-0 items-center gap-1.5 text-[13px] text-slate-700">{isCost(t) && <span className="shrink-0 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700">Biaya</span>}<span className="truncate">{noteText(t.note)}</span></span>
+          <span className={cn('shrink-0 text-[13px] font-extrabold tabular-nums', isCost(t) ? 'text-rose-600' : 'text-emerald-700')}>{isCost(t) ? '−' : '+'}{formatIDR(Number(t.amount || 0))}</span>
+        </li>
+      ))}</ul>
+    </div>
+  );
+}
 
 export function StaffApp() {
   const [me, setMe] = useState<StaffMe | null>(null);
@@ -53,7 +71,7 @@ export function StaffApp() {
   const logout = async () => { await staffService.logout().catch(() => undefined); setMe(null); setShopId(null); setState('login'); };
 
   return (
-    <div className="mx-auto min-h-screen max-w-6xl px-4 pb-28 pt-4 md:px-8">
+    <div className="mx-auto min-h-screen max-w-6xl px-4 pb-48 pt-4 md:px-8 lg:pb-28">
       {flash && <div role="status" className="fixed inset-x-4 top-4 z-[95] mx-auto max-w-sm rounded-2xl bg-slate-900 px-4 py-3 text-center text-[13px] font-semibold text-white shadow-lg">{flash}</div>}
       <header className="mb-4 flex items-center gap-3">
         <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white"><Store size={18} /></span>
@@ -62,7 +80,7 @@ export function StaffApp() {
           <p className="truncate text-[12px] text-slate-500">Kasir{me.owner ? ` · tim ${me.owner}` : ''} · {me.staff.username}</p>
         </div>
         <button type="button" onClick={() => setPw(true)} aria-label="Ganti sandi" className="rounded-full bg-white p-2.5 text-slate-600 ring-1 ring-slate-100 hover:bg-slate-50"><KeyRound size={16} /></button>
-        <button type="button" onClick={logout} aria-label="Keluar" className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-[12px] font-bold text-slate-600 ring-1 ring-slate-100 hover:bg-slate-50"><LogOut size={14} /> Keluar</button>
+        <button type="button" onClick={logout} aria-label="Keluar" className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-[12px] font-bold text-slate-600 ring-1 ring-slate-100 hover:bg-slate-50"><LogOut size={14} /> <span className="hidden sm:inline">Keluar</span></button>
       </header>
 
       {tab === 'ringkas' ? <StaffRingkas me={me} open={(id) => { setShopId(id); setTab('usaha'); }} /> : shop ? (
@@ -142,32 +160,29 @@ function ChangePassword({ onDone }: { onDone: (m: string) => void }) {
 }
 
 function StaffRingkas({ me, open }: { me: StaffMe; open: (id: string) => void }) {
-  const total = me.today.reduce((a, t) => a + Number(t.amount || 0), 0);
-  const mine = me.today.filter((t) => (t.note ?? '').endsWith(` · oleh ${me.staff.name}`));
+  const sales = me.today.filter((t) => !isCost(t));
+  const total = sumOf(sales);
+  const cost = sumOf(me.today.filter(isCost));
+  const mine = sales.filter((t) => (t.note ?? '').endsWith(` · oleh ${me.staff.name}`));
   return (
     <section className="space-y-4">
       <div className="web-keep rounded-[28px] bg-[radial-gradient(120%_140%_at_100%_0%,#10b981_0%,#065f46_38%,#03140f_82%)] p-5 text-white">
         <p className="text-[13px] text-white/60">Penjualan hari ini · semua kasir</p>
         <p className="mt-1 text-[32px] font-extrabold tabular-nums">{formatIDR(total)}</p>
-        <p className="mt-1 text-[12px] text-white/60">{me.today.length} transaksi · {mine.length} oleh kamu ({short(mine.reduce((a, t) => a + Number(t.amount || 0), 0))})</p>
+        <p className="mt-1 text-[12px] text-white/60">{sales.length} transaksi · {mine.length} oleh kamu ({short(sumOf(mine))}){cost ? ` · biaya −${short(cost).replace('Rp', '')}` : ''}</p>
       </div>
       <ul className="grid gap-3 sm:grid-cols-2">
         {me.shops.map((s) => {
-          const list = me.today.filter((t) => t.shop_id === s.id);
+          const list = sales.filter((t) => t.shop_id === s.id);
           return (
             <li key={s.id}><button type="button" onClick={() => open(s.id)} className="flex w-full items-center justify-between gap-3 rounded-[22px] bg-white p-4 text-left ring-1 ring-slate-100">
               <span className="min-w-0"><span className="block truncate text-[15px] font-extrabold text-slate-900">{s.emoji || '🏪'} {s.name}</span><span className="text-[12px] text-slate-500">{list.length} transaksi hari ini</span></span>
-              <span className="shrink-0 text-[16px] font-extrabold tabular-nums text-emerald-700">{short(list.reduce((a, t) => a + Number(t.amount || 0), 0))}</span>
+              <span className="shrink-0 text-[16px] font-extrabold tabular-nums text-emerald-700">{short(sumOf(list))}</span>
             </button></li>
           );
         })}
       </ul>
-      {me.today.length > 0 && (
-        <div className="rounded-[22px] bg-white p-4 ring-1 ring-slate-100">
-          <p className="text-[14px] font-extrabold text-slate-900">Transaksi hari ini</p>
-          <ul className="mt-2 divide-y divide-slate-100">{me.today.slice(0, 30).map((t) => <li key={t.id} className="flex items-center justify-between gap-3 py-2.5"><span className="min-w-0 truncate text-[13px] text-slate-700">{noteText(t.note)}</span><span className="shrink-0 text-[13px] font-extrabold tabular-nums text-emerald-700">+{formatIDR(Number(t.amount || 0))}</span></li>)}</ul>
-        </div>
-      )}
+      <TodayList list={me.today} title="Transaksi hari ini" />
     </section>
   );
 }
@@ -175,11 +190,13 @@ function StaffRingkas({ me, open }: { me: StaffMe; open: (id: string) => void })
 function StaffKasir({ shop, me, back, onSold, say }: { shop: Shop; me: StaffMe; back?: () => void; onSold: (m: string) => void; say: (m: string) => void }) {
   const [lines, setLines] = useState<Line[]>([]);
   const [sheet, setSheet] = useState(false);
+  const [spending, setSpending] = useState(false);
   const add = (p: ShopProduct) => setLines((l) => { const k = lineKey(p); return l.some((x) => x.key === k) ? l.map((x) => (x.key === k ? { ...x, qty: Math.min(9999, x.qty + 1) } : x)) : [...l, { key: k, name: p.name, group: p.group, price: p.price, qty: 1 }]; });
   const setQty = (k: string, q: number) => setLines((l) => (q < 1 ? l.filter((x) => x.key !== k) : l.map((x) => (x.key === k ? { ...x, qty: Math.min(9999, q) } : x))));
   const sum = lines.reduce((s, x) => s + x.price * x.qty, 0);
   const count = lines.reduce((s, x) => s + x.qty, 0);
   const todayShop = me.today.filter((t) => t.shop_id === shop.id);
+  const todaySales = sumOf(todayShop.filter((t) => !isCost(t)));
   const custom = shop.style.mode === 'bebas' && shop.style.customHtml.trim().length > 0;
   const cart: Record<number, number> = {};
   shop.products.forEach((p, i) => { const q = lines.find((l) => l.key === lineKey(p))?.qty; if (q) cart[i] = q; });
@@ -193,8 +210,9 @@ function StaffKasir({ shop, me, back, onSold, say }: { shop: Shop; me: StaffMe; 
           {back && <button type="button" onClick={back} aria-label="Pilih usaha lain" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"><ArrowLeft size={17} /></button>}
           <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10 text-[26px]"><CatalogImage src={shop.style.logoUrl} alt={`Logo ${shop.name}`} fallback={shop.emoji || '🏪'} className="h-full w-full bg-white p-1" /></span>
           <div className="min-w-0 flex-1"><p className="text-[11px] font-bold uppercase tracking-wider text-white/50">Kasir</p><h1 className="truncate text-[20px] font-extrabold md:text-[24px]">{shop.name}</h1>{shop.style.greeting && <p className="truncate text-[12px] text-white/70">{shop.style.greeting}</p>}</div>
-          <div className="shrink-0 text-right"><p className="text-[11px] text-white/55">Hari ini</p><p className="text-[18px] font-extrabold tabular-nums">{short(todayShop.reduce((a, t) => a + Number(t.amount || 0), 0))}</p></div>
+          <div className="shrink-0 text-right"><p className="text-[11px] text-white/55">Hari ini</p><p className="text-[18px] font-extrabold tabular-nums">{short(todaySales)}</p></div>
         </div>
+        <button type="button" onClick={() => setSpending(true)} className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-white/10 py-2 text-[12px] font-bold hover:bg-white/20 sm:w-auto sm:px-4"><Wallet size={14} /> Catat pengeluaran (beli botol, dus…)</button>
       </section>
       <div className="grid items-start gap-4 lg:grid-cols-[1fr_360px]">
         {custom
@@ -210,12 +228,8 @@ function StaffKasir({ shop, me, back, onSold, say }: { shop: Shop; me: StaffMe; 
         </button>
       </div>
       <BottomSheet isOpen={sheet} onClose={() => setSheet(false)} title="Struk"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">{struk(true)}</div></BottomSheet>
-      {todayShop.length > 0 && (
-        <div className="rounded-[22px] bg-white p-4 ring-1 ring-slate-100">
-          <p className="text-[14px] font-extrabold text-slate-900">Penjualan hari ini</p>
-          <ul className="mt-2 divide-y divide-slate-100">{todayShop.slice(0, 15).map((t) => <li key={t.id} className="flex items-center justify-between gap-3 py-2.5"><span className="min-w-0 truncate text-[13px] text-slate-700">{noteText(t.note)}</span><span className="shrink-0 text-[13px] font-extrabold tabular-nums text-emerald-700">+{formatIDR(Number(t.amount || 0))}</span></li>)}</ul>
-        </div>
-      )}
+      <BottomSheet isOpen={spending} onClose={() => setSpending(false)} title="Catat pengeluaran"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><ExpenseForm shop={shop} locked={{ accountName: me.account }} onSave={(input) => staffService.expense(shop.id, input)} onDone={(m) => { setSpending(false); onSold(m); }} onCancel={() => setSpending(false)} /></div></BottomSheet>
+      <TodayList list={todayShop} title="Hari ini" />
     </div>
   );
 }

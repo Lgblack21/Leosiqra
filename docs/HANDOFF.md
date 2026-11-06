@@ -18,6 +18,17 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-06 (branch claude/usahaku-web) — Pengeluaran usaha + rapikan HP. BELUM deploy. Tanpa SQL.**
+  - Kasir (pemilik & tim) tombol **Biaya** → catat beli botol/dus/bahan: transaksi `pengeluaran` kategori
+    **"Biaya Usaha"** (sub: Bahan & Stok / Kemasan / Operasional / Lainnya), related_type 'shop', request_id
+    anti dobel (payload_json.expenseId), saldo rekening berkurang dalam satu batch. Tim: rekening kunci + hari ini.
+  - Endpoint: `POST /api/member/shops/:id/expense`, `POST /api/staff/shops/:id/expense`; `/api/staff/me` kini kirim `type`.
+  - Semua hitungan omzet kini HANYA pemasukan (sebelumnya semua tx related_type 'shop'); Usahaku menampilkan
+    Biaya & Bersih (omzet − biaya), kasir: Omzet hari ini / Biaya hari ini / Bersih bulan ini; daftar "Hari ini" campur (biaya merah).
+  - HP: tombol hero tidak terpotong, label tahap tidak numpuk, aksi kasir di baris sendiri, bar struk tidak menutupi daftar.
+  - Catatan: "Biaya Usaha" belum ada di daftar kategori bawaan (tidak diubah supaya user lama aman) — tampil sebagai
+    teks kategori di Transaksi/Rekap. Dites lokal: pemilik a2 −45.000, dobel 409, tim a3 −12.000 "· oleh Rina", usaha lain 403,
+    cookie silang 401; UI HP 0 error JS.
 - **2026-11-06 (branch claude/usahaku-web) — Usahaku › Tim (akun kasir) Tahap 1, **live #140/#141**. Migrasi 0032 sudah (Bos sempat buat & coba login akun tim). #141: "@" di depan username dibuang otomatis (login/buat), tampilan tanpa @.**
   - Pemilik: tombol **Tim** di hero Usahaku → buat anggota (nama, username `toko-nama` — tanda hubung = penanda akun tim,
     sandi awal, usaha yang boleh dibuka, rekening Rupiah non-kartu-kredit yang DIKUNCI). Batas FREE 1 / PRO 5.
