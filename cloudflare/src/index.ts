@@ -6802,6 +6802,7 @@ async function handleResetMemberData(request: Request, env: Env) {
   await env.DB.prepare("DELETE FROM subscriptions WHERE user_id = ?").bind(user.id).run().catch(() => undefined);
   // Usahaku (migrasi 0027) — best effort.
   await env.DB.prepare("DELETE FROM shops WHERE user_id = ?").bind(user.id).run().catch(() => undefined);
+  await deleteShopExtrasForUser(env, user.id);
   await deleteAllListingsForUser(env, user.id);
   // Kotak Masuk (migrasi 0019) — best effort, tabelnya bisa belum ada.
   await env.DB.prepare("DELETE FROM inbox_items WHERE user_id = ?").bind(user.id).run().catch(() => undefined);
@@ -8303,6 +8304,7 @@ async function handleAdminUserById(request: Request, env: Env, userId: string) {
     await deleteAllItemsForUser(env, userId); // foto R2 tidak ikut FK cascade
     await deleteAllCollectiblesForUser(env, userId);
     await env.DB.prepare("DELETE FROM shops WHERE user_id = ?").bind(userId).run().catch(() => undefined);
+    await deleteShopExtrasForUser(env, userId);
     await deleteAllListingsForUser(env, userId);
     await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
     await insertAdminLog(
@@ -10489,7 +10491,8 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
     }
     if (!action && request.method === "DELETE") {
       // Penjualan yang sudah tercatat tetap ada sebagai pemasukan biasa.
-      await env.DB.prepare("DELETE FROM shops WHERE id = ? AND user_id = ?").bind(id, userId).run();
+      const del = await env.DB.prepare("DELETE FROM shops WHERE id = ? AND user_id = ?").bind(id, userId).run();
+      if (del.meta.changes) await deleteShopExtras(env, userId, id);
       return json({ ok: true });
     }
     // Catat penjualan: pemasukan + saldo dalam satu batch; request_id anti dobel.
@@ -10563,6 +10566,41 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
 }
 
 // ── Ladangku › Sedang dijual (migrasi 0028) ─────────────────────────────────
+// Usahaku › Tim & Stok (migrasi 0032/0033, tanpa FK → tidak ikut cascade). Dipanggil saat
+// pemilik me-reset data / dihapus admin: akun tim (+ sesinya) dan stok ikut dibersihkan.
+// Satu-satu & best effort — tabel bisa belum ada.
+const deleteShopExtrasForUser = async (env: Env, userId: string) => {
+  for (const sql of [
+    "DELETE FROM staff_sessions WHERE staff_id IN (SELECT id FROM shop_staff WHERE owner_id = ?)",
+    "DELETE FROM shop_staff WHERE owner_id = ?",
+    "DELETE FROM shop_recipes WHERE owner_id = ?",
+    "DELETE FROM shop_stock_moves WHERE owner_id = ?",
+    "DELETE FROM shop_materials WHERE owner_id = ?",
+  ]) {
+    try { await env.DB.prepare(sql).bind(userId).run(); } catch (e) {
+      if (!staffTableMissing(e) && !stockTableMissing(e)) console.error("Hapus data tim/stok gagal:", e instanceof Error ? e.message : e);
+    }
+  }
+};
+// Satu usaha dihapus: stok & resepnya ikut dihapus, dan usaha itu dicabut dari akses akun tim.
+// Transaksi penjualan/biaya lama TETAP ada (pemasukan/pengeluaran biasa).
+const deleteShopExtras = async (env: Env, userId: string, shopId: string) => {
+  const stmts: [string, unknown[]][] = [
+    ["DELETE FROM shop_recipes WHERE owner_id = ? AND shop_id = ?", [userId, shopId]],
+    ["DELETE FROM shop_stock_moves WHERE owner_id = ? AND shop_id = ?", [userId, shopId]],
+    ["DELETE FROM shop_materials WHERE owner_id = ? AND shop_id = ?", [userId, shopId]],
+    [
+      `UPDATE shop_staff SET shop_ids = (SELECT json_group_array(value) FROM json_each(shop_staff.shop_ids) WHERE value != ?), updated_at = ?
+        WHERE owner_id = ? AND json_valid(shop_ids) AND EXISTS (SELECT 1 FROM json_each(shop_staff.shop_ids) WHERE value = ?)`,
+      [shopId, nowIso(), userId, shopId],
+    ],
+  ];
+  for (const [sql, args] of stmts) {
+    try { await env.DB.prepare(sql).bind(...args).run(); } catch (e) {
+      if (!staffTableMissing(e) && !stockTableMissing(e)) console.error("Hapus data usaha gagal:", e instanceof Error ? e.message : e);
+    }
+  }
+};
 const deleteAllListingsForUser = async (env: Env, userId: string) => {
   try {
     const rows = await env.DB.prepare("SELECT photo_key FROM listings WHERE user_id = ? AND photo_key IS NOT NULL").bind(userId).all<{ photo_key: string }>();

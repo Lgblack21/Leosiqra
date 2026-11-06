@@ -160,9 +160,9 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
         </div>
         {/* HP: tombol aksi di baris sendiri supaya nama toko tidak terpotong */}
         <div className={cn('mt-3 grid gap-1.5 sm:hidden', shop.products.length > 0 ? 'grid-cols-5' : 'grid-cols-4')}>{actions}</div>
-        {!compactHead && shop.style.showStats && <div className="mt-4 grid grid-cols-3 gap-2">
-          {[['Omzet hari ini', short(todayTotal)], ['Biaya hari ini', todayCost ? `−${short(todayCost).replace('Rp', '')}` : short(0)], ['Bersih bulan ini', short(monthNet)]].map(([k, v]) => (
-            <div key={k} className="min-w-0 rounded-2xl bg-white/[0.07] px-3 py-2.5 ring-1 ring-white/10"><p className="truncate text-[11px] text-white/55">{k}</p><p className="truncate text-[16px] font-extrabold tabular-nums md:text-[18px]">{v}</p></div>
+        {!compactHead && shop.style.showStats && <div className="mt-4 grid grid-cols-2 gap-2 min-[380px]:grid-cols-3">
+          {[['Omzet hari ini', short(todayTotal)], ['Biaya hari ini', short(-todayCost)], ['Bersih bulan ini', short(monthNet)]].map(([k, v]) => (
+            <div key={k} className="min-w-0 rounded-2xl last:col-span-2 min-[380px]:last:col-span-1 bg-white/[0.07] px-2.5 py-2.5 ring-1 ring-white/10 min-[380px]:px-3"><p className="truncate text-[10px] text-white/55 min-[380px]:text-[11px]">{k}</p><p className="truncate text-[14px] font-extrabold tabular-nums tracking-tight min-[380px]:text-[16px] md:text-[18px]">{v}</p></div>
           ))}
         </div>}
       </section>
@@ -286,7 +286,7 @@ export function Catalog({ products, style, lines, onAdd }: { products: ShopProdu
                   {avatar(group, cn('rounded-2xl', big ? 'h-16 w-16' : 'h-12 w-12'), big ? 'text-[20px]' : 'text-[15px]')}
                   <span className="w-full min-w-0">
                     <span className={cn('line-clamp-2 font-extrabold leading-snug text-slate-900 dark:text-white', big ? 'text-[18px]' : 'text-[15px]')}>{group || 'Lainnya'}</span>
-                    <span className="mt-0.5 block text-[12px] text-slate-500 dark:text-slate-400">{items.length} pilihan · mulai <b className="text-emerald-700 dark:text-emerald-300">{short(min)}</b></span>
+                    <span className="mt-0.5 block text-[12px] text-slate-500 dark:text-slate-400">{items.length} pilihan · mulai <b className="whitespace-nowrap text-emerald-700 dark:text-emerald-300">{short(min)}</b></span>
                   </span>
                 </button>
               </li>

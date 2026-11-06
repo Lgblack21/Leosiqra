@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-06 (live #146: koreksi stok — Ubah stok manual & Batalkan di Riwayat)
+Terakhir diperbarui: 2026-11-06 (branch claude/bersih-data-tim-stok — siap deploy, menunggu "gas"; main = live #146)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,23 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-06 (branch claude/bersih-data-tim-stok) — Bersihkan data tim/stok + rapikan angka kasir. BELUM deploy (tunggu "gas"). Tanpa SQL.**
+  - Bug: Hapus semua data / admin hapus user TIDAK menghapus shop_staff, staff_sessions, shop_materials,
+    shop_stock_moves, shop_recipes (tanpa FK) → akun tim pemilik yang sudah reset MASIH BISA LOGIN.
+    Kini `deleteShopExtrasForUser` (best effort per tabel). Hapus satu usaha → `deleteShopExtras`: stok & resep usaha
+    itu dihapus + id usaha dicabut dari shop_staff.shop_ids (json_each). Transaksi lama tetap. Hapus akun tim: tidak berubah
+    (sesi dicabut + baris dihapus; transaksi & riwayat stok "oleh <nama>" tetap).
+  - `parseQty`: "1.500" dulu terbaca 1,5 → kini 1500 (titik + kelompok 3 angka = ribuan; "2.5"/"0.250" tetap desimal).
+  - `short` (UsahaView) menangani minus: "−Rp125 rb" (dulu formatIDR penuh → terpotong "−Rp 125…"). Kartu Biaya di
+    kasir/Usahaku/tim pakai short(-x). Kartu statistik: <380px jadi 2 kolom (yang ke-3 lebar penuh), font sedikit kecil.
+    "mulai Rp5 rb" tidak patah baris.
+  - Dites lokal (wrangler dev, D1 lokal): hapus Toko A → bahan/riwayat A 0, tim tinggal akses Toko B; reset data →
+    staff/sesi/bahan/riwayat/resep 0, login tim ditolak; UI iPhone SE/13 + web 0 error JS.
+  - Catatan (belum diubah): batalkan catatan stok oleh tim mencocokkan by_name, bukan id akun — tim baru bernama sama
+    di hari yang sama bisa membatalkan catatan tim lama. Perlu kolom staff id (migrasi) kalau mau dirapikan.
+  - Catatan: cloudflare/schema-production.sql (dump Juli) sudah usang (accounts/categories kurang sort_order,
+    transaction_type) — untuk tes lokal tambah kolom manual.
 
 - **2026-11-06 — Koreksi stok salah input: live #146.**
   - Stok › Ubah: nama, satuan, batas minimum **+ stok sekarang** (perubahan stok = move opname "Diubah manual", selisih tercatat).

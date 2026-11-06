@@ -27,7 +27,12 @@ const PRODUCTS_MAX = 120; // = SHOP_PRODUCTS_MAX di Worker
 export const kasirHref = (variant: 'web' | 'app', id: string) => `${variant === 'app' ? '/app' : '/membership'}/ladang/kasir?id=${encodeURIComponent(id)}`;
 export const monthKey = (d: Date | string) => toLocalDateString(new Date(d)).slice(0, 7);
 export const amt = (t: Transaction) => Number(t.amountIDR) || Number(t.amount) || 0;
-export const short = (n: number) => (n >= 1e6 ? `Rp${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 1 })} jt` : n >= 1e3 ? `Rp${Math.round(n / 1e3)} rb` : formatIDR(n));
+/** Ringkas: Rp45 rb, Rp1,2 jt, −Rp125 rb (minus ikut diringkas supaya tidak terpotong). */
+export const short = (n: number): string => {
+  if (n < 0) return `−${short(-n)}`;
+  if (n >= 999_500) return `Rp${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 1 })} jt`;
+  return n >= 1e3 ? `Rp${Math.round(n / 1e3)} rb` : formatIDR(n);
+};
 export const stageOf = (s: Shop, sales: number) => (sales > 0 ? 3 : s.promotedAt || s.linkUrl ? 2 : s.contactWa && s.products.length ? 1 : 0);
 
 export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToast: (m: string) => void }) {
@@ -103,9 +108,9 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                   </div>
                 </div>
                 <p className="mt-1 text-[30px] font-extrabold leading-none tabular-nums md:text-[36px]">{formatIDR(monOmzet)}</p>
-                <div className="relative mt-4 grid grid-cols-3 gap-2">
-                  {[['Hari ini', short(Math.round(day.reduce((x, t) => x + amt(t), 0)))], ['Biaya', monCost ? `−${short(monCost).replace('Rp', '')}` : short(0)], ['Bersih', short(monOmzet - monCost)]].map(([k, v]) => (
-                    <div key={k} className="min-w-0 rounded-2xl bg-white/[0.07] px-3 py-2.5 ring-1 ring-white/10"><p className="truncate text-[11px] text-white/55">{k}</p><p className="truncate text-[16px] font-extrabold tabular-nums">{v}</p></div>
+                <div className="relative mt-4 grid grid-cols-2 gap-2 min-[380px]:grid-cols-3">
+                  {[['Hari ini', short(Math.round(day.reduce((x, t) => x + amt(t), 0)))], ['Biaya', short(-monCost)], ['Bersih', short(monOmzet - monCost)]].map(([k, v]) => (
+                    <div key={k} className="min-w-0 rounded-2xl last:col-span-2 min-[380px]:last:col-span-1 bg-white/[0.07] px-2.5 py-2.5 ring-1 ring-white/10 min-[380px]:px-3"><p className="truncate text-[10px] text-white/55 min-[380px]:text-[11px]">{k}</p><p className="truncate text-[14px] font-extrabold tabular-nums tracking-tight min-[380px]:text-[16px]">{v}</p></div>
                   ))}
                 </div>
               </section>
@@ -133,7 +138,7 @@ export function UsahaView({ variant, onToast }: { variant: 'web' | 'app'; onToas
                       <span className="flex shrink-0 items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-bold transition-colors group-hover:bg-white/25"><Store size={13} /> Kasir</span>
                     </div>
                     <div className="grid grid-cols-3 divide-x divide-slate-100 px-1 py-3 dark:divide-slate-800">
-                      {[['Hari ini', short(Math.round(day.reduce((x, t) => x + amt(t), 0))), ''], ['Bulan ini', short(Math.round(month.reduce((x, t) => x + amt(t), 0))), ''], ['Biaya bulan ini', monthCost ? `−${short(monthCost).replace('Rp', '')}` : short(0), monthCost ? 'text-rose-600 dark:text-rose-400' : '']].map(([k, v, c]) => (
+                      {[['Hari ini', short(Math.round(day.reduce((x, t) => x + amt(t), 0))), ''], ['Bulan ini', short(Math.round(month.reduce((x, t) => x + amt(t), 0))), ''], ['Biaya bulan ini', short(-monthCost), monthCost ? 'text-rose-600 dark:text-rose-400' : '']].map(([k, v, c]) => (
                         <span key={k} className="min-w-0 px-2 text-center"><span className="block truncate text-[11px] text-slate-400">{k}</span><span className={cn('block truncate text-[15px] font-extrabold tabular-nums text-slate-900 dark:text-white', c)}>{v}</span></span>
                       ))}
                     </div>

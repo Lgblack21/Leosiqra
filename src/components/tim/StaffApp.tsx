@@ -203,9 +203,9 @@ function StaffRingkas({ me, lowBy, go }: { me: StaffMe; lowBy: Record<string, nu
       <div className="web-keep relative overflow-hidden rounded-[28px] bg-[radial-gradient(120%_140%_at_100%_0%,#10b981_0%,#065f46_38%,#03140f_82%)] p-5 text-white md:p-6">
         <p className="text-[13px] font-semibold text-white/60">Penjualan hari ini · semua kasir</p>
         <p className="mt-1 text-[32px] font-extrabold leading-none tabular-nums md:text-[38px]">{formatIDR(sumOf(sales))}</p>
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          {[['Transaksi', String(sales.length)], ['Oleh kamu', short(sumOf(mine))], ['Biaya', costs.length ? `−${short(sumOf(costs)).replace('Rp', '')}` : short(0)]].map(([k, v]) => (
-            <div key={k} className="min-w-0 rounded-2xl bg-white/[0.08] px-3 py-2.5 ring-1 ring-white/10"><p className="truncate text-[11px] text-white/55">{k}</p><p className="truncate text-[16px] font-extrabold tabular-nums">{v}</p></div>
+        <div className="mt-4 grid grid-cols-2 gap-2 min-[380px]:grid-cols-3">
+          {[['Transaksi', String(sales.length)], ['Oleh kamu', short(sumOf(mine))], ['Biaya', short(-sumOf(costs))]].map(([k, v]) => (
+            <div key={k} className="min-w-0 rounded-2xl last:col-span-2 min-[380px]:last:col-span-1 bg-white/[0.08] px-2.5 py-2.5 ring-1 ring-white/10 min-[380px]:px-3"><p className="truncate text-[10px] text-white/55 min-[380px]:text-[11px]">{k}</p><p className="truncate text-[14px] font-extrabold tabular-nums tracking-tight min-[380px]:text-[16px]">{v}</p></div>
           ))}
         </div>
       </div>
@@ -230,7 +230,7 @@ function StaffRingkas({ me, lowBy, go }: { me: StaffMe; lowBy: Record<string, nu
                 <span className="flex shrink-0 items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-bold"><Store size={13} /> Kasir</span>
               </button>
               <div className="grid grid-cols-3 divide-x divide-slate-100 py-3">
-                {[['Hari ini', short(sumOf(list)), ''], ['Transaksi', String(list.length), ''], ['Biaya', c ? `−${short(c).replace('Rp', '')}` : short(0), c ? 'text-rose-600' : '']].map(([k, v, cls]) => (
+                {[['Hari ini', short(sumOf(list)), ''], ['Transaksi', String(list.length), ''], ['Biaya', short(-c), c ? 'text-rose-600' : '']].map(([k, v, cls]) => (
                   <span key={k} className="min-w-0 px-2 text-center"><span className="block truncate text-[11px] text-slate-400">{k}</span><span className={cn('block truncate text-[15px] font-extrabold tabular-nums text-slate-900', cls)}>{v}</span></span>
                 ))}
               </div>
@@ -283,9 +283,9 @@ function StaffKasir({ shop, me, low, onStock, onSold, say }: { shop: Shop; me: S
           <button type="button" onClick={() => setSpending(true)} className={cn(actBtn, 'rounded-2xl py-2.5')}><Wallet size={15} /> Catat biaya</button>
           <button type="button" onClick={onStock} className={cn(actBtn, 'rounded-2xl py-2.5')}><Package size={15} /> Stok{low > 0 && <span className="rounded-full bg-amber-400 px-1.5 text-[10px] font-extrabold text-slate-900">{low}</span>}</button>
         </div>
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {[['Omzet hari ini', short(sumOf(todaySales))], ['Oleh kamu', short(sumOf(mine))], ['Biaya hari ini', todayCost ? `−${short(todayCost).replace('Rp', '')}` : short(0)]].map(([k, v]) => (
-            <div key={k} className="min-w-0 rounded-2xl bg-white/[0.07] px-3 py-2.5 ring-1 ring-white/10"><p className="truncate text-[11px] text-white/55">{k}</p><p className="truncate text-[16px] font-extrabold tabular-nums">{v}</p></div>
+        <div className="mt-3 grid grid-cols-2 gap-2 min-[380px]:grid-cols-3">
+          {[['Omzet hari ini', short(sumOf(todaySales))], ['Oleh kamu', short(sumOf(mine))], ['Biaya hari ini', short(-todayCost)]].map(([k, v]) => (
+            <div key={k} className="min-w-0 rounded-2xl last:col-span-2 min-[380px]:last:col-span-1 bg-white/[0.07] px-2.5 py-2.5 ring-1 ring-white/10 min-[380px]:px-3"><p className="truncate text-[10px] text-white/55 min-[380px]:text-[11px]">{k}</p><p className="truncate text-[14px] font-extrabold tabular-nums tracking-tight min-[380px]:text-[16px]">{v}</p></div>
           ))}
         </div>
       </section>

@@ -15,11 +15,14 @@ import { lineKey } from './KasirView';
 // 1 produk → stok berkurang otomatis saat terjual di kasir, + HPP & untung per produk),
 // dan riwayat (buku stok). Pembelian dicatat lewat "Biaya" supaya uang & stok sejalan.
 
-/** "30,25" / "30.25" / "1.910,5" → angka. */
+/** "30,25" / "30.25" / "1.910,5" / "1.500" (ribuan) / "1.000.000" → angka. */
 export const parseQty = (v: string) => {
   const t = v.trim();
   if (!t) return NaN;
-  return Number(t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t);
+  if (t.includes(',')) return Number(t.replace(/\./g, '').replace(',', '.'));
+  // Tanpa koma: titik dengan kelompok 3 angka = pemisah ribuan (gaya Indonesia), selain itu desimal.
+  if (/^[1-9]\d{0,2}(\.\d{3})+$/.test(t)) return Number(t.replace(/\./g, ''));
+  return Number(t);
 };
 const qtyCls = cn(fieldCls, 'tabular-nums');
 
