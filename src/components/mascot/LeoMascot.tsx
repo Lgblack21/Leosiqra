@@ -258,13 +258,13 @@ export function LeoMascot({
           {/* Pipi menggembung saat menahan napas */}
           {br && (
             <g>
-              <motion.circle cx="82" cy="132" fill={C.face} animate={{ r: br === "tahan" ? 15 : 0 }} transition={{ duration: 0.4 }} />
-              <motion.circle cx="138" cy="132" fill={C.face} animate={{ r: br === "tahan" ? 15 : 0 }} transition={{ duration: 0.4 }} />
+              <motion.circle cx="82" cy="132" r="15" fill={C.face} initial={{ scale: 0 }} animate={{ scale: br === "tahan" ? 1 : 0 }} transition={{ duration: 0.4 }} style={{ transformBox: "fill-box", transformOrigin: "50% 50%" }} />
+              <motion.circle cx="138" cy="132" r="15" fill={C.face} initial={{ scale: 0 }} animate={{ scale: br === "tahan" ? 1 : 0 }} transition={{ duration: 0.4 }} style={{ transformBox: "fill-box", transformOrigin: "50% 50%" }} />
             </g>
           )}
           {/* Pipi merona */}
-          <motion.ellipse cx="76" cy="128" fill={C.blush} animate={{ opacity: happy || br === "tahan" ? 0.55 : 0.28, rx: br === "tahan" ? 12 : 9, ry: br === "tahan" ? 7.5 : 5.5 }} />
-          <motion.ellipse cx="144" cy="128" fill={C.blush} animate={{ opacity: happy || br === "tahan" ? 0.55 : 0.28, rx: br === "tahan" ? 12 : 9, ry: br === "tahan" ? 7.5 : 5.5 }} />
+          <motion.ellipse cx="76" cy="128" rx="9" ry="5.5" fill={C.blush} animate={{ opacity: happy || br === "tahan" ? 0.55 : 0.28, scale: br === "tahan" ? 1.35 : 1 }} style={{ transformBox: "fill-box", transformOrigin: "50% 50%" }} />
+          <motion.ellipse cx="144" cy="128" rx="9" ry="5.5" fill={C.blush} animate={{ opacity: happy || br === "tahan" ? 0.55 : 0.28, scale: br === "tahan" ? 1.35 : 1 }} style={{ transformBox: "fill-box", transformOrigin: "50% 50%" }} />
 
           {/* Alis (muncul saat sedih) */}
           <motion.g animate={{ opacity: sad ? 1 : 0 }}>
@@ -322,13 +322,13 @@ export function LeoMascot({
           ))}
           <path d="M102 120 Q110 115 118 120 Q115 127 110 128 Q105 127 102 120 Z" fill={C.nose} />
           {br === "hembus" ? (
-            <motion.ellipse cx="110" cy="142" fill={C.nose} initial={{ rx: 2, ry: 2 }} animate={{ rx: 4.5, ry: 6 }} transition={{ duration: 0.4 }} />
+            <motion.ellipse cx="110" cy="142" rx="4.5" ry="6" fill={C.nose} initial={{ scale: 0.4 }} animate={{ scale: 1 }} transition={{ duration: 0.4 }} style={{ transformBox: "fill-box", transformOrigin: "50% 50%" }} />
           ) : br === "tahan" ? (
             <path d="M105 140 Q110 142 115 140" stroke={C.nose} strokeWidth="2.6" fill="none" strokeLinecap="round" />
           ) : br === "tarik" ? (
             <path d="M110 128 V134 M102 137 Q106 140 110 136 Q114 140 118 137" stroke={C.nose} strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
           ) : eating ? (
-            <motion.ellipse cx="104" cy="140" rx="6" fill={C.nose} animate={reduce ? { ry: 3 } : { ry: [1.5, 5, 1.5] }} transition={loop(0.45)} />
+            <motion.ellipse cx="104" cy="140" rx="6" ry="5" fill={C.nose} initial={{ scaleY: 0.6 }} animate={reduce ? { scaleY: 0.6 } : { scaleY: [0.3, 1, 0.3] }} transition={loop(0.45)} style={{ transformBox: "fill-box", transformOrigin: "50% 50%" }} />
           ) : coins ? (
             <ellipse cx="110" cy="140" rx="4" ry="5" fill={C.nose} />
           ) : happy || playing ? (
@@ -339,7 +339,7 @@ export function LeoMascot({
           ) : sleeping ? (
             <ellipse cx="110" cy="139" rx="3.5" ry="3" fill={C.nose} />
           ) : drowsy ? (
-            <motion.ellipse cx="110" cy="140" rx="5" fill={C.nose} animate={{ ry: [2, 7, 7, 2] }} transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 1.5 }} />
+            <motion.ellipse cx="110" cy="140" rx="5" ry="7" fill={C.nose} initial={{ scaleY: 0.3 }} animate={{ scaleY: [0.3, 1, 1, 0.3] }} transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 1.5 }} style={{ transformBox: "fill-box", transformOrigin: "50% 50%" }} />
           ) : sad ? (
             <path d="M100 142 Q110 135 120 142" stroke={C.nose} strokeWidth="2.8" fill="none" strokeLinecap="round" />
           ) : (
@@ -392,7 +392,7 @@ export function LeoMascot({
           </motion.g>
         )}
         {playing && !reduce && (
-          <motion.ellipse cx="110" cy="22" rx="12" ry="2.5" fill="#000" animate={{ opacity: [0.18, 0.18, 0.05, 0.18, 0.18], rx: [12, 12, 7, 12, 12] }} transition={bounceT} />
+          <motion.ellipse cx="110" cy="22" rx="12" ry="2.5" fill="#000" animate={{ opacity: [0.18, 0.18, 0.05, 0.18, 0.18], scaleX: [1, 1, 0.58, 1, 1] }} transition={bounceT} style={{ transformBox: "fill-box", transformOrigin: "50% 50%" }} />
         )}
         {coins && (
           <g>
@@ -419,15 +419,17 @@ export function LeoMascot({
                 key={`air${i}`}
                 cx={116}
                 cy={144}
-                initial={{ opacity: 0, x: 0, y: 0, r: 2 }}
-                animate={{ opacity: [0, 0.9, 0], x: [0, 22 + i * 6, 44 + i * 8], y: [0, 6 - i * 6, 10 - i * 10], r: [2, 4.5, 6.5] }}
+                r={4}
+                initial={{ opacity: 0, x: 0, y: 0, scale: 0.5 }}
+                animate={{ opacity: [0, 0.9, 0], x: [0, 22 + i * 6, 44 + i * 8], y: [0, 6 - i * 6, 10 - i * 10], scale: [0.5, 1.1, 1.6] }}
+                style={{ transformBox: "fill-box", transformOrigin: "50% 50%" }}
                 transition={{ duration: 1.6, delay: i * 0.35, repeat: Infinity, ease: "easeOut" }}
               />
             ))}
           </g>
         )}
         {sleeping && !reduce && (
-          <motion.circle cx="121" cy="125" fill="#BAE6FD" stroke="#7DD3FC" strokeWidth="1" opacity={0.85} animate={{ r: [1.5, 8, 1.5] }} transition={loop(3.2)} />
+          <motion.circle cx="121" cy="125" r="8" fill="#BAE6FD" stroke="#7DD3FC" strokeWidth="1" opacity={0.85} initial={{ scale: 0.2 }} animate={{ scale: [0.2, 1, 0.2] }} transition={loop(3.2)} style={{ transformBox: "fill-box", transformOrigin: "50% 50%" }} />
         )}
 
         {/* Kaki depan — di atas wajah supaya bisa menutup mata */}

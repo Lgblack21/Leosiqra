@@ -40,6 +40,8 @@ export interface Env {
   CLOUDINARY_API_KEY?: string;
   CLOUDINARY_API_SECRET?: string;
   OPENROUTER_MODEL?: string;
+  // Model gambar untuk ilustrasi Cerita Hari Ini (opsional; bawaan google/gemini-2.5-flash-image).
+  OPENROUTER_IMAGE_MODEL?: string;
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;
   PROMO_SECRET?: string;
@@ -6826,6 +6828,7 @@ async function handleResetMemberData(request: Request, env: Env) {
   await env.DB.prepare("DELETE FROM shops WHERE user_id = ?").bind(user.id).run().catch(() => undefined);
   await deleteShopExtrasForUser(env, user.id);
   await env.DB.prepare("DELETE FROM focus_sessions WHERE user_id = ?").bind(user.id).run().catch(() => undefined);
+  await deleteAllStoriesForUser(env, user.id);
   await deleteAllListingsForUser(env, user.id);
   // Kotak Masuk (migrasi 0019) — best effort, tabelnya bisa belum ada.
   await env.DB.prepare("DELETE FROM inbox_items WHERE user_id = ?").bind(user.id).run().catch(() => undefined);
@@ -8329,6 +8332,7 @@ async function handleAdminUserById(request: Request, env: Env, userId: string) {
     await env.DB.prepare("DELETE FROM shops WHERE user_id = ?").bind(userId).run().catch(() => undefined);
     await deleteShopExtrasForUser(env, userId);
     await env.DB.prepare("DELETE FROM focus_sessions WHERE user_id = ?").bind(userId).run().catch(() => undefined);
+    await deleteAllStoriesForUser(env, userId);
     await deleteAllListingsForUser(env, userId);
     await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
     await insertAdminLog(
@@ -12890,6 +12894,266 @@ async function handleMemberFocus(request: Request, env: Env, pathname: string) {
   }
 }
 
+// ── Cerita Hari Ini (migrasi 0035) ──────────────────────────────────────────
+// Satu halaman per hari: mood 1–5, tulisan ≤ 500, foto (unggah) dan/atau ilustrasi AI.
+// GET    /api/member/stories?year=YYYY      → daftar setahun + pengeluaran per hari (warna kalender)
+// GET    /api/member/stories/:date          → cerita + ringkasan uang & fokus hari itu + jatah AI
+// PUT    /api/member/stories/:date          → simpan { mood?, text? } (buat kalau belum ada)
+// DELETE /api/member/stories/:date          → hapus cerita (+ gambar di R2)
+// PUT/DELETE/GET .../:date/photo            → foto unggahan (JPG/PNG/WebP ≤ 2 MB)
+// POST   .../:date/ai, GET .../:date/ai     → buat / ambil ilustrasi AI
+// Ilustrasi AI: PRO dapat STORY_AI_FREE_PRO gratis per hari (FREE: STORY_AI_FREE_FREE),
+// selebihnya STORY_AI_PRICE koin. Koin dipotong DULU (atomik, bersyarat saldo cukup), lalu
+// dikembalikan otomatis kalau pembuatan gambar gagal — tidak pernah terpotong tanpa hasil.
+const STORY_AI_FREE_PRO = 1;
+const STORY_AI_FREE_FREE = 0;
+const STORY_AI_PRICE = 1000; // koin (1 koin = Rp1); biaya API gambar ±Rp650 per gambar
+const STORY_TEXT_MAX = 500;
+const STORY_PHOTO_MAX_BYTES = 2 * 1024 * 1024;
+const storiesTableMissing = (e: unknown) => e instanceof Error && /no such table: stories/i.test(e.message);
+const STORY_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+const deleteAllStoriesForUser = async (env: Env, userId: string) => {
+  try {
+    const rows = await env.DB.prepare("SELECT photo_key, ai_key FROM stories WHERE user_id = ?").bind(userId).all<{ photo_key: string | null; ai_key: string | null }>();
+    const keys = (rows.results ?? []).flatMap((r) => [r.photo_key, r.ai_key]).filter((k): k is string => Boolean(k));
+    if (keys.length && env.FILES_BUCKET) for (let i = 0; i < keys.length; i += 900) await env.FILES_BUCKET.delete(keys.slice(i, i + 900));
+    await env.DB.prepare("DELETE FROM stories WHERE user_id = ?").bind(userId).run();
+  } catch (e) {
+    if (!storiesTableMissing(e)) console.error("Hapus cerita gagal:", e instanceof Error ? e.message : e);
+  }
+};
+
+// Ringkasan hari itu (sentuhan Leosiqra): uang keluar/masuk & menit fokus.
+const storyDaySummary = async (env: Env, userId: string, date: string) => {
+  const tx = await env.DB.prepare(
+    `SELECT COALESCE(SUM(CASE WHEN type = 'pengeluaran' THEN COALESCE(amount_idr, amount) ELSE 0 END), 0) AS out_total,
+            COALESCE(SUM(CASE WHEN type = 'pemasukan' THEN COALESCE(amount_idr, amount) ELSE 0 END), 0) AS in_total,
+            COUNT(CASE WHEN type IN ('pengeluaran', 'pemasukan') THEN 1 END) AS n
+       FROM transactions WHERE user_id = ? AND substr(date, 1, 10) = ?`
+  ).bind(userId, date).first<{ out_total: number; in_total: number; n: number }>();
+  let focusSec = 0;
+  try {
+    const f = await env.DB.prepare("SELECT COALESCE(SUM(focus_sec), 0) AS s FROM focus_sessions WHERE user_id = ? AND date = ?").bind(userId, date).first<{ s: number }>();
+    focusSec = Number(f?.s) || 0;
+  } catch { /* tabel fokus belum ada */ }
+  return { out: Math.round(Number(tx?.out_total) || 0), in: Math.round(Number(tx?.in_total) || 0), count: Number(tx?.n) || 0, focusSec };
+};
+
+const storyAiQuota = async (env: Env, userId: string, plan: string) => {
+  const free = plan === "PRO" ? STORY_AI_FREE_PRO : STORY_AI_FREE_FREE;
+  const row = await env.DB.prepare(
+    "SELECT CASE WHEN json_valid(metadata_json) AND json_extract(metadata_json, '$.storyAi.day') = ? THEN json_extract(metadata_json, '$.storyAi.n') END AS n FROM users WHERE id = ?"
+  ).bind(todayWIB(), userId).first<{ n: number | null }>();
+  let coins = 0;
+  try { coins = (await coinBalances(env, userId)).balance; } catch { /* tabel koin belum ada */ }
+  return { freeLeft: Math.max(0, free - (Number(row?.n) || 0)), freePerDay: free, price: STORY_AI_PRICE, coins };
+};
+
+// Minta satu gambar ke OpenRouter (model gambar, modalities image+text). Mengembalikan byte gambar.
+const generateStoryImage = async (env: Env, prompt: string) => {
+  const openRouter = await getOpenRouterKey(env);
+  if (!openRouter) throw new Error("AI belum aktif (API key OpenRouter belum dipasang).");
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${openRouter.key}`,
+      "http-referer": env.APP_URL || "https://www.leosiqra.com",
+      "x-title": env.APP_NAME || "Leosiqra",
+    },
+    body: JSON.stringify({
+      model: env.OPENROUTER_IMAGE_MODEL || "google/gemini-2.5-flash-image",
+      modalities: ["image", "text"],
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+  if (!response.ok) {
+    console.error("Ilustrasi cerita: OpenRouter", response.status, (await response.text().catch(() => "")).slice(0, 300));
+    throw new Error("Gagal membuat ilustrasi. Coba lagi sebentar lagi.");
+  }
+  const data = (await response.json()) as { choices?: { message?: { images?: { image_url?: { url?: string } }[] } }[] };
+  const url = data.choices?.[0]?.message?.images?.[0]?.image_url?.url ?? "";
+  const m = /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/s.exec(url);
+  if (!m) throw new Error("AI tidak mengirim gambar. Coba ubah ceritamu sedikit lalu ulangi.");
+  const binary = atob(m[2].replace(/\s/g, ""));
+  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+  const type = sniffImageType(bytes);
+  if (!type || bytes.length > 6 * 1024 * 1024) throw new Error("Gambar dari AI tidak valid.");
+  return { bytes, type };
+};
+
+const STORY_MOOD_WORD = ["", "sedih", "capek", "biasa saja", "senang", "luar biasa senang"];
+const storyImagePrompt = (text: string, mood: number | null) =>
+  [
+    "Buat SATU ilustrasi buku harian yang hangat bergaya flat illustration lembut, warna pastel, garis bersih, latar sederhana.",
+    "Tokoh: sosok orang biasa (bukan orang terkenal, bukan tokoh kartun bermerek) atau benda/suasana dari cerita.",
+    "JANGAN ada teks, huruf, angka, logo, watermark, atau tanda tangan di gambar. Aman untuk semua umur.",
+    mood ? `Suasana hati penulis hari ini: ${STORY_MOOD_WORD[mood]}.` : "",
+    `Cerita hari ini (Bahasa Indonesia): """${text.slice(0, STORY_TEXT_MAX)}"""`,
+  ].filter(Boolean).join("\n");
+
+async function handleMemberStories(request: Request, env: Env, url: URL) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const user = authResult.session.user;
+  const userId = user.id;
+  const parts = url.pathname.split("/").filter(Boolean); // api, member, stories, [date], [photo|ai]
+  const date = parts[3];
+  const sub = parts[4];
+  const imgResponse = (obj: R2ObjectBody) =>
+    new Response(obj.body, { headers: { "content-type": obj.httpMetadata?.contentType || "image/jpeg", "cache-control": "private, max-age=86400", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'; sandbox" } });
+  try {
+    if (!date && request.method === "GET") {
+      const year = /^\d{4}$/.test(url.searchParams.get("year") ?? "") ? url.searchParams.get("year")! : todayWIB().slice(0, 4);
+      const rows = await env.DB.prepare(
+        "SELECT date, mood, text, CASE WHEN photo_key IS NULL THEN 0 ELSE 1 END AS has_photo, CASE WHEN ai_key IS NULL THEN 0 ELSE 1 END AS has_ai, updated_at FROM stories WHERE user_id = ? AND substr(date, 1, 4) = ? ORDER BY date DESC"
+      ).bind(userId, year).all();
+      const spend = await env.DB.prepare(
+        "SELECT substr(date, 1, 10) AS d, ROUND(SUM(COALESCE(amount_idr, amount))) AS s FROM transactions WHERE user_id = ? AND type = 'pengeluaran' AND substr(date, 1, 4) = ? GROUP BY d"
+      ).bind(userId, year).all<{ d: string; s: number }>();
+      // Hari beruntun menulis (sampai hari ini / kemarin), lintas tahun.
+      const recent = await env.DB.prepare("SELECT date FROM stories WHERE user_id = ? AND date <= ? ORDER BY date DESC LIMIT 400").bind(userId, todayWIB()).all<{ date: string }>();
+      const set = new Set((recent.results ?? []).map((r) => r.date));
+      let streak = 0;
+      for (let d = 0; d < 400; d++) {
+        const key = new Date(Date.now() + 7 * 3600_000 - d * 86400_000).toISOString().slice(0, 10);
+        if (set.has(key)) streak += 1;
+        else if (d > 0) break;
+      }
+      return json({ items: rows.results ?? [], spend: Object.fromEntries((spend.results ?? []).map((r) => [r.d, r.s])), streak, total: set.size, ready: true });
+    }
+    if (!date || !STORY_DATE_RE.test(date) || !isRealDateStr(date) || date > todayWIB() || date < "2000-01-01") return json({ error: "Tanggal tidak valid." }, { status: 400 });
+    const row = await env.DB.prepare("SELECT date, mood, text, photo_key, ai_key, updated_at FROM stories WHERE user_id = ? AND date = ?").bind(userId, date).first<{ date: string; mood: number | null; text: string | null; photo_key: string | null; ai_key: string | null; updated_at: string }>();
+    const ensureRow = () => env.DB.prepare("INSERT OR IGNORE INTO stories (user_id, date, created_at, updated_at) VALUES (?, ?, ?, ?)").bind(userId, date, nowIso(), nowIso()).run();
+
+    if (!sub && request.method === "GET") {
+      return json({
+        story: row ? { date: row.date, mood: row.mood, text: row.text, has_photo: Boolean(row.photo_key), has_ai: Boolean(row.ai_key), updated_at: row.updated_at } : null,
+        summary: await storyDaySummary(env, userId, date),
+        ai: await storyAiQuota(env, userId, user.plan),
+      });
+    }
+    if (!sub && request.method === "PUT") {
+      const raw = await parseJson<Record<string, unknown>>(request);
+      const mood = raw.mood === null ? null : Number.isInteger(raw.mood) && (raw.mood as number) >= 1 && (raw.mood as number) <= 5 ? (raw.mood as number) : undefined;
+      const text = typeof raw.text === "string" ? raw.text.replace(/[\u0000-\u0008\u000b-\u001f]/g, "").trim().slice(0, STORY_TEXT_MAX) : undefined;
+      if (raw.mood !== undefined && mood === undefined) return json({ error: "Mood tidak valid." }, { status: 400 });
+      if (mood === undefined && text === undefined) return json({ error: "Tidak ada yang disimpan." }, { status: 400 });
+      const now = nowIso();
+      await env.DB.prepare(
+        `INSERT INTO stories (user_id, date, mood, text, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(user_id, date) DO UPDATE SET mood = CASE WHEN ? THEN excluded.mood ELSE stories.mood END,
+           text = CASE WHEN ? THEN excluded.text ELSE stories.text END, updated_at = excluded.updated_at`
+      ).bind(userId, date, mood ?? null, text ?? null, now, now, mood !== undefined ? 1 : 0, text !== undefined ? 1 : 0).run();
+      return json({ ok: true });
+    }
+    if (!sub && request.method === "DELETE") {
+      if (!row) return json({ error: "Cerita tidak ditemukan." }, { status: 404 });
+      await env.DB.prepare("DELETE FROM stories WHERE user_id = ? AND date = ?").bind(userId, date).run();
+      const keys = [row.photo_key, row.ai_key].filter((k): k is string => Boolean(k));
+      if (keys.length && env.FILES_BUCKET) await env.FILES_BUCKET.delete(keys).catch(() => undefined);
+      return json({ ok: true });
+    }
+
+    if (sub === "photo" || sub === "ai") {
+      const col = sub === "photo" ? "photo_key" : "ai_key";
+      const current = sub === "photo" ? row?.photo_key : row?.ai_key;
+      if (request.method === "GET") {
+        if (!current) return json({ error: "Belum ada gambar." }, { status: 404 });
+        const obj = await env.FILES_BUCKET?.get(current);
+        if (!obj) return json({ error: "Gambar tidak ada." }, { status: 404 });
+        return imgResponse(obj);
+      }
+      if (request.method === "DELETE") {
+        if (!current) return json({ ok: true });
+        await env.DB.prepare(`UPDATE stories SET ${col} = NULL, updated_at = ? WHERE user_id = ? AND date = ?`).bind(nowIso(), userId, date).run();
+        await env.FILES_BUCKET?.delete(current).catch(() => undefined);
+        return json({ ok: true });
+      }
+    }
+    if (sub === "photo" && request.method === "PUT") {
+      if (!env.FILES_BUCKET) return json({ error: "Penyimpanan foto belum aktif." }, { status: 503 });
+      const payload = await parseJson<{ imageBase64?: unknown }>(request);
+      if (typeof payload.imageBase64 !== "string" || !payload.imageBase64) return json({ error: "Foto wajib dikirim." }, { status: 400 });
+      if (payload.imageBase64.length > Math.ceil((STORY_PHOTO_MAX_BYTES * 4) / 3) + 100) return json({ error: "Foto terlalu besar (maks 2 MB)." }, { status: 413 });
+      let bytes: Uint8Array;
+      try {
+        const binary = atob(payload.imageBase64.replace(/^data:[^,]*,/, "").replace(/\s/g, ""));
+        bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+      } catch {
+        return json({ error: "Foto tidak terbaca." }, { status: 400 });
+      }
+      if (bytes.length > STORY_PHOTO_MAX_BYTES) return json({ error: "Foto terlalu besar (maks 2 MB)." }, { status: 413 });
+      const type = sniffImageType(bytes);
+      if (!type) return json({ error: "Format foto harus JPG, PNG, atau WebP." }, { status: 400 });
+      const key = `stories/${userId}/${date}-p-${generateId().slice(0, 8)}`;
+      await ensureRow();
+      await env.FILES_BUCKET.put(key, bytes, { httpMetadata: { contentType: type } });
+      await env.DB.prepare("UPDATE stories SET photo_key = ?, updated_at = ? WHERE user_id = ? AND date = ?").bind(key, nowIso(), userId, date).run();
+      if (row?.photo_key) await env.FILES_BUCKET.delete(row.photo_key).catch(() => undefined);
+      return json({ ok: true });
+    }
+    if (sub === "ai" && request.method === "POST") {
+      if (!env.FILES_BUCKET) return json({ error: "Penyimpanan gambar belum aktif." }, { status: 503 });
+      const text = (row?.text ?? "").trim();
+      if (text.length < 8) return json({ error: "Tulis ceritanya dulu (minimal satu kalimat), lalu simpan." }, { status: 400 });
+      if (!(await checkAiParseRateLimit(env, userId))) return json({ error: "Terlalu sering. Coba lagi sebentar lagi." }, { status: 429 });
+      // 1) Pakai jatah gratis hari ini (atomik) ATAU potong koin (atomik, bersyarat saldo cukup).
+      const today = todayWIB();
+      const free = user.plan === "PRO" ? STORY_AI_FREE_PRO : STORY_AI_FREE_FREE;
+      let charged: "free" | "coin" | null = null;
+      const chargeKey = `story_ai:${userId}:${generateId()}`;
+      if (free > 0) {
+        const res = await env.DB.prepare(
+          `UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.storyAi',
+              json_object('day', ?, 'n', CASE WHEN json_valid(metadata_json) AND json_extract(metadata_json, '$.storyAi.day') = ? THEN COALESCE(json_extract(metadata_json, '$.storyAi.n'), 0) + 1 ELSE 1 END))
+            WHERE id = ? AND COALESCE(CASE WHEN json_valid(metadata_json) AND json_extract(metadata_json, '$.storyAi.day') = ? THEN json_extract(metadata_json, '$.storyAi.n') END, 0) < ?`
+        ).bind(today, today, userId, today, free).run();
+        if (res.meta.changes) charged = "free";
+      }
+      if (!charged) {
+        try {
+          const debit = await env.DB.prepare(
+            `INSERT INTO coin_ledger (id, user_id, amount, kind, cashable, idem_key, note, created_at)
+             SELECT ?, ?, ?, 'story_ai', 0, ?, ?, ? WHERE (SELECT COALESCE(SUM(amount), 0) FROM coin_ledger WHERE user_id = ?) >= ?`
+          ).bind(generateId(), userId, -STORY_AI_PRICE, chargeKey, `Ilustrasi Cerita ${date}`, nowIso(), userId, STORY_AI_PRICE).run();
+          if (debit.meta.changes) charged = "coin";
+        } catch (e) {
+          if (!coinTableMissing(e)) throw e;
+        }
+      }
+      if (!charged) return json({ error: `Jatah gratis hari ini habis. Ilustrasi berikutnya ${STORY_AI_PRICE.toLocaleString("id-ID")} koin — koinmu belum cukup.`, code: "no_coins" }, { status: 402 });
+      // 2) Buat gambar. Gagal → kembalikan jatah/koin.
+      try {
+        const img = await generateStoryImage(env, storyImagePrompt(text, row?.mood ?? null));
+        const key = `stories/${userId}/${date}-ai-${generateId().slice(0, 8)}`;
+        await env.FILES_BUCKET.put(key, img.bytes, { httpMetadata: { contentType: img.type } });
+        await env.DB.prepare("UPDATE stories SET ai_key = ?, updated_at = ? WHERE user_id = ? AND date = ?").bind(key, nowIso(), userId, date).run();
+        if (row?.ai_key) await env.FILES_BUCKET.delete(row.ai_key).catch(() => undefined);
+        return json({ ok: true, charged, ai: await storyAiQuota(env, userId, user.plan) });
+      } catch (e) {
+        if (charged === "free") {
+          await env.DB.prepare(
+            "UPDATE users SET metadata_json = json_set(metadata_json, '$.storyAi.n', MAX(0, COALESCE(json_extract(metadata_json, '$.storyAi.n'), 1) - 1)) WHERE id = ? AND json_valid(metadata_json) AND json_extract(metadata_json, '$.storyAi.day') = ?"
+          ).bind(userId, today).run().catch(() => undefined);
+        } else {
+          await grantCoins(env, userId, STORY_AI_PRICE, "story_ai_refund", `refund:${chargeKey}`, `Pengembalian ilustrasi ${date}`).catch(() => undefined);
+        }
+        return json({ error: e instanceof Error ? e.message : "Gagal membuat ilustrasi." }, { status: 502 });
+      }
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (e) {
+    if (storiesTableMissing(e)) {
+      if (request.method === "GET" && !date) return json({ items: [], spend: {}, streak: 0, total: 0, ready: false });
+      return json({ error: "Cerita Hari Ini belum aktif (menunggu pembaruan database). Coba lagi nanti." }, { status: 503 });
+    }
+    if (e instanceof Error && e.message === "Payload JSON tidak valid.") return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    throw e;
+  }
+}
+
 async function handleMemberInbox(request: Request, env: Env, pathname: string) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -14907,7 +15171,7 @@ const PREF_INPUT_MODES = ["ketik", "suara", "foto"] as const;
 // Fitur yang tampil di menu samping (panel Pengaturan → Fitur). Hanya
 // visibilitas menu — mematikan fitur tidak menyentuh datanya. Sama dengan
 // FeatureId di src/lib/features.ts. null = bawaan (5 fitur lama).
-const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk", "jejak", "langganan", "ladang", "fokus"] as const;
+const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk", "jejak", "langganan", "ladang", "fokus", "cerita"] as const;
 // Jam pengingat per 30 menit (cron tiap 10 menit, lihat sendDailyReminders).
 const PREF_TIME_RE = /^([01]\d|2[0-3]):(00|30)$/;
 // Ikon & warna pilihan user per nama kategori (panel Kategori & Anggaran).
@@ -19613,6 +19877,10 @@ const worker = {
 
       if (url.pathname === "/api/member/focus" || url.pathname.startsWith("/api/member/focus/")) {
         return await handleMemberFocus(request, env, url.pathname);
+      }
+
+      if (url.pathname === "/api/member/stories" || url.pathname.startsWith("/api/member/stories/")) {
+        return await handleMemberStories(request, env, url);
       }
 
       if (url.pathname === "/api/member/apps" || url.pathname.startsWith("/api/member/apps/")) {

@@ -18,6 +18,24 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-07 (branch claude/cerita-hari-ini, di atas claude/fokus-layar-penuh) — Fitur baru "Cerita Hari Ini" (jurnal harian). BELUM deploy (tunggu "gas").**
+  - **MIGRASI di D1 Console**: 0035_stories.sql (tabel `stories`, PK user_id+date). Tanpa tabel: GET → ready:false, simpan 503.
+  - Halaman layar penuh: `/membership/cerita` (FULLSCREEN_PATHS, fitur id `cerita`) & `/app/cerita` (grid Lainnya). Menu:
+    Tulis · Setahun · Kumpulan. Mood bertema cuaca (Badai/Mendung/Berawan/Cerah/Pelangi) + stiker Leo per mood (gratis),
+    foto (R2, ≤2 MB, JPG/PNG/WebP), ilustrasi AI (OpenRouter `google/gemini-2.5-flash-image`, bisa ditimpa var
+    OPENROUTER_IMAGE_MODEL; modalities image+text). Jatah: PRO 1 gratis/hari, FREE 0; selebihnya 1.000 koin
+    (STORY_AI_PRICE). Koin dipotong dulu (bersyarat saldo), gagal → dikembalikan (story_ai_refund); jatah gratis via
+    users.metadata_json $.storyAi {day,n}, dikembalikan saat gagal.
+  - Ringkasan hari otomatis: keluar/masuk/jumlah transaksi + menit fokus. Setahun = 12 kalender bulan, warna mood atau
+    intensitas pengeluaran (kuartil). Kumpulan: hari beruntun, total halaman, cari, daftar per bulan.
+  - `useFitHeight` dipindah ke src/lib (dipakai Fokus & Cerita).
+  - LeoMascot: animasi rx/ry/r (framer) memunculkan error konsol "Expected length, undefined" (termasuk yang lama: menguap,
+    bayangan bola, gelembung tidur, mengunyah) → semua diganti scale.
+  - Dites lokal: API (sebelum migrasi 503/ready:false, simpan & simpan mood saja, ringkasan Rp160.000/2 tx/fokus 50 mnt,
+    tanggal masa depan/ngawur 400, mood ngawur 400, foto 200 + GET image/png, foto palsu 400, AI tanpa key → jatah PRO
+    kembali & koin FREE −1000/+1000, koin kurang 402); UI HP/tablet/web 0 error JS, halaman terkunci. **Ilustrasi AI asli
+    belum dicoba** (tidak ada API key di lokal) — cek di produksi setelah deploy.
+
 - **2026-11-07 (branch claude/fokus-layar-penuh) — Fokus bareng Leo: layar penuh ala Ladangku + tampilan baru "Bukit Fokus". BELUM deploy (tunggu "gas"). Tanpa SQL.**
   - Web `/membership/fokus` masuk FULLSCREEN_PATHS (tanpa sidebar/tab bawah); app pindah ke `/app/fokus` (di luar grup tab,
     tanpa tab bawah & tombol +). Bar atas: tombol kembali (pil gelap) · judul per tab · ⚙️ (Fokus) / Leo AI; menu melayang
