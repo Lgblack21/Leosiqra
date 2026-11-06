@@ -27,17 +27,20 @@ const QUICK: { label: string; kind: (typeof SHOP_EXPENSE_KINDS)[number] }[] = [
 ];
 const ACC_KEY = 'leosiqra-usaha-biaya-acc';
 
-export function ExpenseForm({ shop, onSave, locked, onDone, onCancel, materials = [] }: {
+export function ExpenseForm({ shop, onSave, locked, onDone, onCancel, materials = [], initialMaterialId }: {
   shop: Shop;
   /** Bahan stok usaha ini — pembelian bisa langsung menambah stok. */
   materials?: StockMaterial[];
+  /** Buka dari Stok › Beli: bahan ini langsung dipilih. */
+  initialMaterialId?: string;
   onSave: (input: ShopExpenseInput & { accountId?: string; date?: string }) => Promise<void>;
   /** Akun tim: rekening dikunci pemilik, tanggal hari ini. */
   locked?: { accountName: string | null };
   onDone: (m: string) => void;
   onCancel?: () => void;
 }) {
-  const [item, setItem] = useState('');
+  const initialMat = materials.find((m) => m.id === initialMaterialId);
+  const [item, setItem] = useState(initialMat?.name ?? '');
   const [amount, setAmount] = useState('');
   const [kind, setKind] = useState<string>('Bahan & Stok');
   const [accounts, setAccounts] = useState<{ id: string; name: string }[] | null>(null);
@@ -46,7 +49,7 @@ export function ExpenseForm({ shop, onSave, locked, onDone, onCancel, materials 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
-  const [stockId, setStockId] = useState('');
+  const [stockId, setStockId] = useState(initialMat?.id ?? '');
   const [stockQty, setStockQty] = useState('');
   const mat = materials.find((m) => m.id === stockId);
 

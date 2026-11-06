@@ -46,6 +46,7 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
   const [styling, setStyling] = useState(false);
   const [pricing, setPricing] = useState(false);
   const [spending, setSpending] = useState(false); // catat pengeluaran usaha
+  const [buyMat, setBuyMat] = useState<string | undefined>(undefined); // Stok › Beli → bahan terpilih
   const [stocking, setStocking] = useState(false); // stok bahan
   const [stock, setStock] = useState<StockData | null>(null);
   const [sheet, setSheet] = useState(false); // HP: struk
@@ -129,13 +130,14 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
   const actBtn = 'relative flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl bg-white/10 px-1.5 py-2 text-[11px] font-bold hover:bg-white/20 sm:flex-row sm:gap-1.5 sm:rounded-full sm:px-3 sm:text-[12px]';
   const actions = (
     <>
-      <button type="button" onClick={() => setSpending(true)} aria-label="Catat pengeluaran usaha" className={actBtn}><Wallet size={15} className="shrink-0" /> <span className="truncate">Biaya</span></button>
+      <button type="button" onClick={() => { setBuyMat(undefined); setSpending(true); }} aria-label="Catat pengeluaran usaha" className={actBtn}><Wallet size={15} className="shrink-0" /> <span className="truncate">Biaya</span></button>
       <button type="button" onClick={() => setStocking(true)} aria-label={lowCount ? `Stok, ${lowCount} hampir habis` : 'Stok'} className={actBtn}><Package size={15} className="shrink-0" /> <span className="truncate">Stok</span>{lowCount > 0 && <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 text-[10px] font-extrabold text-slate-900 sm:static">{lowCount}</span>}</button>
       {shop.products.length > 0 && <button type="button" onClick={() => setPricing(true)} aria-label="Perbarui harga" className={actBtn}><BadgeDollarSign size={15} className="shrink-0" /> <span className="truncate">Harga</span></button>}
       <button type="button" onClick={() => setStyling(true)} aria-label="Tampilan kasir" className={actBtn}><Palette size={15} className="shrink-0" /> <span className="truncate sm:hidden">Tema</span><span className="hidden truncate sm:inline">Tampilan</span></button>
       <button type="button" onClick={() => setManage(true)} aria-label="Kelola usaha" className={actBtn}><Settings2 size={15} className="shrink-0" /> <span className="truncate">Kelola</span></button>
     </>
   );
+  const openBuy = (m: { id: string }) => { setStocking(false); setBuyMat(m.id); setSpending(true); };
   const saveExpense = (input: ShopExpenseInput & { accountId?: string; date?: string }) => shopService.expense(shop.id, { ...input, accountId: input.accountId ?? '' });
   const strukLeft = shop.style.strukSide === 'kiri';
   const strukFor = (inSheet: boolean) => <Struk key={`${shop.id}-${inSheet}`} shop={shop} lines={lines} sum={sum} onAdd={add} setQty={setQty} clear={() => setLines([])} onDone={say} inSheet={inSheet} onNew={() => setSheet(false)} />;
@@ -199,8 +201,8 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
         <>
           <BottomSheet isOpen={sheet} onClose={() => setSheet(false)} title="Struk"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">{strukFor(true)}</div></BottomSheet>
           <BottomSheet isOpen={pricing} onClose={() => setPricing(false)} title="Perbarui harga"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><PriceEditor key={shop.updatedAt} shop={shop} onDone={(m) => { setPricing(false); say(m); }} onToast={say} onLeave={() => setPricing(false)} /></div></BottomSheet>
-          <BottomSheet isOpen={spending} onClose={() => setSpending(false)} title="Catat pengeluaran"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><ExpenseForm shop={shop} materials={activeMaterials} onSave={saveExpense} onDone={(m) => { setSpending(false); say(m); void loadStock(); }} onCancel={() => setSpending(false)} /></div></BottomSheet>
-          <BottomSheet isOpen={stocking} onClose={() => setStocking(false)} title="Stok"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><StockView shop={shop} data={stock} reload={loadStock} onToast={say} /></div></BottomSheet>
+          <BottomSheet isOpen={spending} onClose={() => setSpending(false)} title="Catat pengeluaran"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><ExpenseForm key={`exp-${buyMat ?? ''}-${spending}`} shop={shop} materials={activeMaterials} initialMaterialId={buyMat} onSave={saveExpense} onDone={(m) => { setSpending(false); say(m); void loadStock(); }} onCancel={() => setSpending(false)} /></div></BottomSheet>
+          <BottomSheet isOpen={stocking} onClose={() => setStocking(false)} title="Stok"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><StockView shop={shop} data={stock} reload={loadStock} onToast={say} onBuy={openBuy} /></div></BottomSheet>
           <BottomSheet isOpen={styling} onClose={() => setStyling(false)} title="Tampilan kasir"><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><KasirStyleEditor shop={shop} onDone={(m) => { setStyling(false); say(m); }} onToast={say} onLeave={() => setStyling(false)} /></div></BottomSheet>
           <BottomSheet isOpen={manage} onClose={() => setManage(false)} title={`Kelola ${shop.name}`}><div className="pb-[calc(env(safe-area-inset-bottom)+16px)]"><ShopDetail shop={shop} sales={sales} onToast={say} onLeave={() => setManage(false)} onDeleted={() => router.replace(back)} /></div></BottomSheet>
         </>
@@ -208,8 +210,8 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
         <>
           <Modal isOpen={sheet} onClose={() => setSheet(false)} title="Struk" maxWidth="max-w-md">{strukFor(true)}</Modal>
           <Modal isOpen={pricing} onClose={() => setPricing(false)} title="Perbarui harga" maxWidth="max-w-lg"><PriceEditor key={shop.updatedAt} shop={shop} onDone={(m) => { setPricing(false); say(m); }} onToast={say} onLeave={() => setPricing(false)} /></Modal>
-          <Modal isOpen={spending} onClose={() => setSpending(false)} title="Catat pengeluaran" maxWidth="max-w-md"><ExpenseForm shop={shop} materials={activeMaterials} onSave={saveExpense} onDone={(m) => { setSpending(false); say(m); void loadStock(); }} onCancel={() => setSpending(false)} /></Modal>
-          <Modal isOpen={stocking} onClose={() => setStocking(false)} title="Stok" maxWidth="max-w-xl"><StockView shop={shop} data={stock} reload={loadStock} onToast={say} /></Modal>
+          <Modal isOpen={spending} onClose={() => setSpending(false)} title="Catat pengeluaran" maxWidth="max-w-md"><ExpenseForm key={`exp-${buyMat ?? ''}-${spending}`} shop={shop} materials={activeMaterials} initialMaterialId={buyMat} onSave={saveExpense} onDone={(m) => { setSpending(false); say(m); void loadStock(); }} onCancel={() => setSpending(false)} /></Modal>
+          <Modal isOpen={stocking} onClose={() => setStocking(false)} title="Stok" maxWidth="max-w-xl"><StockView shop={shop} data={stock} reload={loadStock} onToast={say} onBuy={openBuy} /></Modal>
           <Modal isOpen={styling} onClose={() => setStyling(false)} title="Tampilan kasir" maxWidth="max-w-lg"><KasirStyleEditor shop={shop} onDone={(m) => { setStyling(false); say(m); }} onToast={say} onLeave={() => setStyling(false)} /></Modal>
           <Modal isOpen={manage} onClose={() => setManage(false)} title={`Kelola ${shop.name}`} maxWidth="max-w-xl"><ShopDetail shop={shop} sales={sales} onToast={say} onLeave={() => setManage(false)} onDeleted={() => router.replace(back)} /></Modal>
         </>

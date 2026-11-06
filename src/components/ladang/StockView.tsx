@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from 'react';
-import { AlertTriangle, Archive, ArchiveRestore, Check, ChevronRight, ClipboardCheck, FlaskConical, History, Loader2, Minus, Package, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { createContext, useContext, useMemo, useState } from 'react';
+import { AlertTriangle, Wallet, Archive, ArchiveRestore, Check, ChevronRight, ClipboardCheck, FlaskConical, History, Loader2, Minus, Package, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { groupProducts, type Shop } from '@/lib/services/shopService';
 import { MOVE_LABEL, STOCK_UNITS, fmtQty, isLow, stockService, type StockData, type StockMaterial } from '@/lib/services/stockService';
 import { cn, formatIDR } from '@/lib/utils';
@@ -22,9 +22,21 @@ export const parseQty = (v: string) => {
   return Number(t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t);
 };
 const qtyCls = cn(fieldCls, 'tabular-nums');
+
+/** Jalur API stok: pemilik (/api/member/…) atau akun tim (/api/staff/…, terbatas). */
+export type StockApi = Pick<typeof stockService, 'get' | 'addMaterial' | 'move'> & Partial<Pick<typeof stockService, 'updateMaterial' | 'setRecipe'>>;
+const StockCtx = createContext<{ api: StockApi; staff: boolean; onBuy?: (m: StockMaterial) => void }>({ api: stockService, staff: false });
+const useStock = () => useContext(StockCtx);
+const ownerOnly = () => { throw new Error('Hanya pemilik usaha yang bisa mengubah ini.'); };
 const tabCls = (on: boolean) => cn('flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-[12px] font-bold transition-colors', on ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 dark:text-slate-400');
 
-export function StockView({ shop, data, reload, onToast }: { shop: Shop; data: StockData | null; reload: () => Promise<void>; onToast: (m: string) => void }) {
+/** onBuy: "Beli" di tiap bahan → buka Catat pengeluaran dengan bahan itu terpilih (uang & stok sejalan). */
+export function StockView({ shop, data, reload, onToast, api = stockService, staff = false, onBuy }: { shop: Shop; data: StockData | null; reload: () => Promise<void>; onToast: (m: string) => void; api?: StockApi; staff?: boolean; onBuy?: (m: StockMaterial) => void }) {
+  const ctx = useMemo(() => ({ api, staff, onBuy }), [api, staff, onBuy]);
+  return <StockCtx.Provider value={ctx}><StockTabs shop={shop} data={data} reload={reload} onToast={onToast} /></StockCtx.Provider>;
+}
+
+function StockTabs({ shop, data, reload, onToast }: { shop: Shop; data: StockData | null; reload: () => Promise<void>; onToast: (m: string) => void }) {
   const [tab, setTab] = useState<'bahan' | 'resep' | 'riwayat'>('bahan');
   if (!data) return <div className="flex h-40 items-center justify-center"><Loader2 className="animate-spin text-slate-400" /></div>;
   const active = data.materials.filter((m) => !m.archived_at);
@@ -45,6 +57,7 @@ export function StockView({ shop, data, reload, onToast }: { shop: Shop; data: S
 
 // ── Bahan ─────────────────────────────────────────────────────────────────────
 function MaterialsTab({ shop, data, reload, onToast }: { shop: Shop; data: StockData; reload: () => Promise<void>; onToast: (m: string) => void }) {
+  const { api, staff } = useStock();
   const [adding, setAdding] = useState(data.materials.length === 0);
   const [open, setOpen] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
@@ -54,19 +67,19 @@ function MaterialsTab({ shop, data, reload, onToast }: { shop: Shop; data: Stock
   return (
     <div className="space-y-2.5">
       {active.length > 0 && active.some(isLow) && (
-        <p className="flex items-center gap-2 rounded-2xl bg-amber-50 px-3.5 py-2.5 text-[12px] font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300"><AlertTriangle size={15} className="shrink-0" /> <span>{active.filter(isLow).length} stok hampir habis — catat pembelian lewat tombol <b>Biaya</b> supaya uang & stok sejalan.</span></p>
+        <p className="flex items-center gap-2 rounded-2xl bg-amber-50 px-3.5 py-2.5 text-[12px] font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300"><AlertTriangle size={15} className="shrink-0" /> <span>{active.filter(isLow).length} stok hampir habis — {staff ? <>kabari pemilik, atau catat pembelian lewat <b>Catat pengeluaran</b>.</> : <>catat pembelian lewat tombol <b>Biaya</b> supaya uang & stok sejalan.</>}</span></p>
       )}
       {sorted.map((m) => <MaterialCard key={m.id} shop={shop} m={m} open={open === m.id} toggle={() => setOpen(open === m.id ? null : m.id)} reload={reload} onToast={onToast} />)}
       {adding ? <AddMaterial shop={shop} onDone={async (msg) => { setAdding(false); await reload(); onToast(msg); }} onCancel={active.length ? () => setAdding(false) : undefined} /> : (
         <button type="button" onClick={() => setAdding(true)} className="flex w-full items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-slate-200 py-3 text-[13px] font-bold text-slate-500 hover:border-violet-300 hover:text-violet-600 dark:border-slate-700 dark:text-slate-400"><Plus size={15} /> Tambah bahan / barang</button>
       )}
-      {archived.length > 0 && (
+      {!staff && archived.length > 0 && (
         <div>
           <button type="button" onClick={() => setShowArchived((v) => !v)} className="text-[12px] font-bold text-slate-400 hover:text-slate-600">{showArchived ? 'Sembunyikan' : 'Lihat'} arsip ({archived.length})</button>
           {showArchived && <ul className="mt-2 space-y-1.5">{archived.map((m) => (
             <li key={m.id} className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2 text-[13px] text-slate-500 dark:bg-slate-800/50">
               <span className="truncate">{m.name} · {fmtQty(m.stock)} {m.unit}</span>
-              <button type="button" onClick={async () => { try { await stockService.updateMaterial(shop.id, m.id, { archived: false }); await reload(); onToast(`${m.name} aktif lagi.`); } catch (e) { onToast(e instanceof Error ? e.message : 'Gagal.'); } }} className="flex shrink-0 items-center gap-1 text-[12px] font-bold text-violet-600"><ArchiveRestore size={13} /> Aktifkan</button>
+              <button type="button" onClick={async () => { try { await (api.updateMaterial ?? ownerOnly)(shop.id, m.id, { archived: false }); await reload(); onToast(`${m.name} aktif lagi.`); } catch (e) { onToast(e instanceof Error ? e.message : 'Gagal.'); } }} className="flex shrink-0 items-center gap-1 text-[12px] font-bold text-violet-600"><ArchiveRestore size={13} /> Aktifkan</button>
             </li>
           ))}</ul>}
         </div>
@@ -84,6 +97,7 @@ function StockBar({ m }: { m: StockMaterial }) {
 }
 
 function MaterialCard({ shop, m, open, toggle, reload, onToast }: { shop: Shop; m: StockMaterial; open: boolean; toggle: () => void; reload: () => Promise<void>; onToast: (msg: string) => void }) {
+  const { staff, onBuy } = useStock();
   const [mode, setMode] = useState<'masuk' | 'pakai' | 'opname' | 'edit'>('pakai');
   const low = isLow(m);
   return (
@@ -104,8 +118,9 @@ function MaterialCard({ shop, m, open, toggle, reload, onToast }: { shop: Shop; 
       </button>
       {open && (
         <div className="space-y-2.5 border-t border-slate-100 px-3.5 pb-3.5 pt-3 dark:border-slate-800">
-          <div className="grid grid-cols-4 gap-1.5">
-            {([['pakai', 'Pakai', Minus], ['masuk', 'Masuk', Plus], ['opname', 'Hitung', ClipboardCheck], ['edit', 'Ubah', Pencil]] as const).map(([k, label, Icon]) => (
+          {onBuy && <button type="button" onClick={() => onBuy(m)} className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-rose-50 py-2.5 text-[12px] font-bold text-rose-700 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-300"><Wallet size={14} /> Beli {m.name} — catat pengeluaran & stok masuk</button>}
+          <div className={cn('grid gap-1.5', staff ? 'grid-cols-3' : 'grid-cols-4')}>
+            {([['pakai', 'Pakai', Minus], ['masuk', 'Masuk', Plus], ['opname', 'Hitung', ClipboardCheck], ['edit', 'Ubah', Pencil]] as const).filter(([k]) => !staff || k !== 'edit').map(([k, label, Icon]) => (
               <button key={k} type="button" onClick={() => setMode(k)} aria-pressed={mode === k} className={cn('flex flex-col items-center gap-0.5 rounded-xl py-2 text-[11px] font-bold', mode === k ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300')}><Icon size={15} /> {label}</button>
             ))}
           </div>
@@ -119,18 +134,19 @@ function MaterialCard({ shop, m, open, toggle, reload, onToast }: { shop: Shop; 
 }
 
 function MoveForm({ shop, m, kind, onDone }: { shop: Shop; m: StockMaterial; kind: 'masuk' | 'pakai' | 'opname'; onDone: (msg: string) => Promise<void> }) {
+  const { api, staff } = useStock();
   const [qty, setQty] = useState('');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const n = parseQty(qty);
-  const hint = kind === 'opname' ? 'Isi jumlah hasil hitung fisik — stok diganti ke angka ini, selisihnya tercatat.' : kind === 'masuk' ? 'Stok masuk tanpa uang keluar (mis. sisa, retur, hadiah). Beli pakai uang → catat lewat Biaya.' : 'Bahan terpakai di luar penjualan (uji coba, rusak, tumpah, sampel).';
+  const hint = kind === 'opname' ? 'Isi jumlah hasil hitung fisik — stok diganti ke angka ini, selisihnya tercatat.' : kind === 'masuk' ? `Stok masuk tanpa uang keluar (mis. sisa, retur, hadiah). Beli pakai uang → catat lewat ${staff ? 'Catat pengeluaran' : 'Biaya'}.` : 'Bahan terpakai di luar penjualan (uji coba, rusak, tumpah, sampel).';
   const save = async () => {
     if (!Number.isFinite(n) || n < 0 || (kind !== 'opname' && n === 0)) { setError('Isi jumlahnya.'); return; }
     setBusy(true); setError('');
     try {
-      await stockService.move(shop.id, { requestId, materialId: m.id, kind, qty: n, note: note.trim() || undefined });
+      await api.move(shop.id, { requestId, materialId: m.id, kind, qty: n, note: note.trim() || undefined });
       setRequestId(crypto.randomUUID()); setQty(''); setNote('');
       await onDone(kind === 'opname' ? `Stok ${m.name} disetel ke ${fmtQty(n)} ${m.unit} (selisih ${n - m.stock >= 0 ? '+' : '−'}${fmtQty(Math.abs(n - m.stock))}).` : `${m.name} ${kind === 'masuk' ? '+' : '−'}${fmtQty(n)} ${m.unit}.`);
     } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal.'); }
@@ -161,6 +177,7 @@ function UnitPicker({ value, onChange }: { value: string; onChange: (v: string) 
 }
 
 function AddMaterial({ shop, onDone, onCancel }: { shop: Shop; onDone: (msg: string) => Promise<void>; onCancel?: () => void }) {
+  const { api } = useStock();
   const [name, setName] = useState('');
   const [unit, setUnit] = useState('pcs');
   const [stock, setStock] = useState('');
@@ -173,7 +190,7 @@ function AddMaterial({ shop, onDone, onCancel }: { shop: Shop; onDone: (msg: str
     if (!name.trim()) { setError('Isi nama bahan.'); return; }
     if (!Number.isFinite(s) || s < 0 || (mn !== null && (!Number.isFinite(mn) || mn < 0))) { setError('Angka stok tidak valid.'); return; }
     setBusy(true); setError('');
-    try { await stockService.addMaterial(shop.id, { name: name.trim(), unit, stock: s, min: mn }); await onDone(`${name.trim()} ditambahkan.`); }
+    try { await api.addMaterial(shop.id, { name: name.trim(), unit, stock: s, min: mn }); await onDone(`${name.trim()} ditambahkan.`); }
     catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal.'); setBusy(false); }
   };
   return (
@@ -196,6 +213,7 @@ function AddMaterial({ shop, onDone, onCancel }: { shop: Shop; onDone: (msg: str
 }
 
 function EditMaterial({ shop, m, onDone }: { shop: Shop; m: StockMaterial; onDone: (msg: string) => Promise<void> }) {
+  const { api } = useStock();
   const [name, setName] = useState(m.name);
   const [unit, setUnit] = useState(m.unit);
   const [min, setMin] = useState(m.min_stock != null ? String(m.min_stock).replace('.', ',') : '');
@@ -203,7 +221,7 @@ function EditMaterial({ shop, m, onDone }: { shop: Shop; m: StockMaterial; onDon
   const [error, setError] = useState('');
   const run = async (input: Parameters<typeof stockService.updateMaterial>[2], msg: string) => {
     setBusy(true); setError('');
-    try { await stockService.updateMaterial(shop.id, m.id, input); await onDone(msg); } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal.'); setBusy(false); }
+    try { await (api.updateMaterial ?? ownerOnly)(shop.id, m.id, input); await onDone(msg); } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal.'); setBusy(false); }
   };
   const mn = min ? parseQty(min) : null;
   return (
@@ -222,6 +240,7 @@ function EditMaterial({ shop, m, onDone }: { shop: Shop; m: StockMaterial; onDon
 
 // ── Resep produk ──────────────────────────────────────────────────────────────
 function RecipesTab({ shop, data, reload, onToast }: { shop: Shop; data: StockData; reload: () => Promise<void>; onToast: (m: string) => void }) {
+  const { staff } = useStock();
   const [edit, setEdit] = useState<string | null>(null);
   const active = data.materials.filter((m) => !m.archived_at);
   const byId = useMemo(() => new Map(data.materials.map((m) => [m.id, m])), [data.materials]);
@@ -231,13 +250,13 @@ function RecipesTab({ shop, data, reload, onToast }: { shop: Shop; data: StockDa
   if (!active.length) return (
     <div className="space-y-3">
       <p className="rounded-2xl bg-slate-50 p-5 text-center text-[13px] text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">Tambahkan bahan atau barang dulu di tab <b>Daftar</b> — atau pakai tombol di bawah untuk toko barang jadi.</p>
-      <OneToOne shop={shop} data={data} reload={reload} onToast={onToast} />
+      {!staff && <OneToOne shop={shop} data={data} reload={reload} onToast={onToast} />}
     </div>
   );
   return (
     <div className="space-y-3">
       <p className="text-[12px] text-slate-500 dark:text-slate-400">Isi apa yang terpakai untuk <b>1 produk</b> — mis. 1 Nasi goreng = 200 gram beras + 1 telur, atau 1 Kaos L = 1 pcs Kaos L. Setiap terjual di kasir (kamu atau tim), stoknya berkurang otomatis; modal & untung per produk dihitung dari harga beli rata-rata.</p>
-      <OneToOne shop={shop} data={data} reload={reload} onToast={onToast} />
+      {staff ? <p className="rounded-xl bg-slate-50 px-3 py-2 text-[11px] font-semibold text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">Diatur oleh pemilik usaha — kamu bisa melihat saja.</p> : <OneToOne shop={shop} data={data} reload={reload} onToast={onToast} />}
       {groups.map((g) => (
         <div key={g.group || '_'} className="space-y-1.5">
           {g.group && <p className="px-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">{g.group}</p>}
@@ -248,15 +267,15 @@ function RecipesTab({ shop, data, reload, onToast }: { shop: Shop; data: StockDa
             const open = edit === key;
             return (
               <div key={key} className="rounded-2xl bg-white ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
-                <button type="button" onClick={() => setEdit(open ? null : key)} aria-expanded={open} className="flex w-full items-center gap-3 px-3.5 py-3 text-left">
+                <button type="button" disabled={staff} onClick={() => setEdit(open ? null : key)} aria-expanded={open} className="flex w-full items-center gap-3 px-3.5 py-3 text-left disabled:cursor-default">
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2"><span className="truncate text-[14px] font-bold text-slate-900 dark:text-white">{p.name}</span><span className="shrink-0 text-[13px] font-extrabold tabular-nums text-slate-700 dark:text-slate-200">{formatIDR(p.price)}</span></span>
                     <span className="mt-0.5 block truncate text-[12px] text-slate-500 dark:text-slate-400">{items.length ? items.map((i) => `${byId.get(i.m)?.name ?? '?'} ${fmtQty(i.q)}${byId.get(i.m)?.unit ?? ''}`).join(' · ') : <span className="text-amber-600">Belum diatur — stok tidak berkurang saat terjual</span>}</span>
                     {items.length > 0 && cost != null && <span className="mt-0.5 block text-[11px] font-semibold text-slate-400">Modal ≈ {formatIDR(Math.round(cost))} · untung ≈ <span className={p.price - cost >= 0 ? 'text-emerald-600' : 'text-rose-600'}>{formatIDR(Math.round(p.price - cost))}</span></span>}
                   </span>
-                  <ChevronRight size={16} className={cn('shrink-0 text-slate-300 transition-transform', open && 'rotate-90')} />
+                  {!staff && <ChevronRight size={16} className={cn('shrink-0 text-slate-300 transition-transform', open && 'rotate-90')} />}
                 </button>
-                {open && <RecipeEditor shop={shop} productKey={key} initial={items} materials={active} onDone={async (msg) => { await reload(); setEdit(null); onToast(msg); }} />}
+                {open && !staff && <RecipeEditor shop={shop} productKey={key} initial={items} materials={active} onDone={async (msg) => { await reload(); setEdit(null); onToast(msg); }} />}
               </div>
             );
           })}
@@ -268,6 +287,7 @@ function RecipesTab({ shop, data, reload, onToast }: { shop: Shop; data: StockDa
 
 // Toko barang jadi (kelontong, baju, aksesoris): tiap produk katalog = 1 barang stok.
 function OneToOne({ shop, data, reload, onToast }: { shop: Shop; data: StockData; reload: () => Promise<void>; onToast: (m: string) => void }) {
+  const { api } = useStock();
   const [busy, setBusy] = useState(false);
   const [ask, setAsk] = useState(false);
   const has = new Set(data.recipes.map((r) => r.product_key));
@@ -282,8 +302,8 @@ function OneToOne({ shop, data, reload, onToast }: { shop: Shop; data: StockData
       for (const p of todo.slice(0, Math.max(0, room))) {
         const name = (p.group && !p.name.toLowerCase().includes(p.group.toLowerCase()) ? `${p.group} ${p.name}` : p.name).slice(0, 60);
         let id = byName.get(name.toLowerCase());
-        if (!id) { id = (await stockService.addMaterial(shop.id, { name, unit: 'pcs', stock: 0, min: null })).id; byName.set(name.toLowerCase(), id); }
-        await stockService.setRecipe(shop.id, lineKey(p), [{ materialId: id, qty: 1 }]);
+        if (!id) { id = (await api.addMaterial(shop.id, { name, unit: 'pcs', stock: 0, min: null })).id; byName.set(name.toLowerCase(), id); }
+        await (api.setRecipe ?? ownerOnly)(shop.id, lineKey(p), [{ materialId: id, qty: 1 }]);
         done += 1;
       }
       onToast(`${done} produk jadi barang stok. Isi jumlahnya lewat Daftar › Hitung.`);
@@ -306,6 +326,7 @@ function OneToOne({ shop, data, reload, onToast }: { shop: Shop; data: StockData
 }
 
 function RecipeEditor({ shop, productKey, initial, materials, onDone }: { shop: Shop; productKey: string; initial: { m: string; q: number }[]; materials: StockMaterial[]; onDone: (msg: string) => Promise<void> }) {
+  const { api } = useStock();
   const [rows, setRows] = useState<{ m: string; q: string }[]>(() => (initial.length ? initial.map((i) => ({ m: i.m, q: String(i.q).replace('.', ',') })) : [{ m: materials[0]?.id ?? '', q: '1' }]));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -315,7 +336,7 @@ function RecipeEditor({ shop, productKey, initial, materials, onDone }: { shop: 
     if (items.some((i) => !Number.isFinite(i.qty) || i.qty <= 0)) { setError('Isi jumlah tiap bahan (lebih dari 0).'); return; }
     if (new Set(items.map((i) => i.materialId)).size !== items.length) { setError('Ada bahan yang dipilih dua kali.'); return; }
     setBusy(true); setError('');
-    try { await stockService.setRecipe(shop.id, productKey, items); await onDone(clear || !items.length ? 'Aturan stok dihapus.' : 'Tersimpan — stok berkurang otomatis saat terjual.'); }
+    try { await (api.setRecipe ?? ownerOnly)(shop.id, productKey, items); await onDone(clear || !items.length ? 'Aturan stok dihapus.' : 'Tersimpan — stok berkurang otomatis saat terjual.'); }
     catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal.'); setBusy(false); }
   };
   return (

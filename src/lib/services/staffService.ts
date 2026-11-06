@@ -1,6 +1,6 @@
 import { cloudflareApi } from '../cloudflare-api';
 import { shopFromRow, type Shop, type ShopExpenseInput } from './shopService';
-import type { StockMaterial } from './stockService';
+import type { StockData, StockMaterial } from './stockService';
 
 // Usahaku › Tim. Anggota tim (kasir) login dengan username "toko-nama" ke /tim —
 // sesi terpisah dari akun pemilik (/api/staff/*). Pemilik mengelola akun lewat
@@ -35,6 +35,19 @@ export const staffService = {
   },
   async changePassword(current: string, next: string) {
     await cloudflareApi('/api/staff/password', { method: 'POST', json: { current, next } });
+  },
+};
+
+// Stok usaha untuk akun tim: lihat, tambah bahan, pakai/masuk/hitung fisik (tanpa harga beli).
+export const staffStockService = {
+  async get(shopId: string) {
+    return cloudflareApi<StockData>(`/api/staff/shops/${shopId}/stock?t=${Date.now()}`);
+  },
+  async addMaterial(shopId: string, input: { name: string; unit: string; stock: number; min: number | null }) {
+    return cloudflareApi<{ id: string }>(`/api/staff/shops/${shopId}/stock/materials`, { method: 'POST', json: input });
+  },
+  async move(shopId: string, input: { requestId: string; materialId: string; kind: 'masuk' | 'pakai' | 'opname'; qty: number; note?: string }) {
+    await cloudflareApi(`/api/staff/shops/${shopId}/stock/moves`, { method: 'POST', json: { request_id: input.requestId, material_id: input.materialId, kind: input.kind, qty: input.qty, note: input.note } });
   },
 };
 

@@ -4,13 +4,13 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-06 (live #143: stok bahan & resep; MCP stok + kasir umum siap di claude/usahaku-web, menunggu "gas")
+Terakhir diperbarui: 2026-11-06 (live #144: MCP stok + kasir umum; stok oleh tim + mode tim baru siap di claude/usahaku-web, menunggu "gas")
 
 ## Siapa sedang kerja
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| — | — | — | (akun B selesai; main = live #143) |
+| — | — | — | (akun B selesai; main = live #144) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,7 +18,17 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-06 (branch claude/usahaku-web) — BELUM deploy, tanpa SQL baru:** MCP stok (get_shop_stock / set_shop_stock /
+- **2026-11-06 (branch claude/usahaku-web) — Stok oleh tim + mode tim dirapikan. BELUM deploy, tanpa SQL baru.**
+  - Worker: `/api/staff/shops/:id/stock[/materials|/moves]` → handleShopStock(..., { name }) — tim boleh lihat, tambah bahan,
+    pakai/masuk/hitung fisik (by_name = nama tim, tanggal dipaksa hari ini); ubah/arsip bahan & aturan per produk → 403;
+    respons tim tanpa cost/avg_cost & tanpa bahan arsip. Usaha tak diberikan → 403.
+  - StockView: context { api, staff, onBuy } (pemilik pakai stockService, tim staffStockService). Tombol **Beli <bahan>** di
+    tiap bahan → Catat pengeluaran dengan bahan terpilih (uang keluar + stok masuk sekaligus) — pemilik & tim.
+  - /tim ditulis ulang: header sapaan, menu bawah Ringkas / Kasir / Stok (badge hampir habis), pilihan usaha berupa chip,
+    kasir dengan Catat biaya & Stok + statistik (omzet, oleh kamu, biaya), Ringkas dengan kartu per usaha & peringatan stok.
+  - Dites lokal: API tim (pakai/opname/tambah 201 "Rina", ubah/arsip/aturan 403, usaha lain 403, cost disembunyikan);
+    Playwright HP+web: Beli Botol 50 pcs Rp125.000 → stok 198→248, biaya dari rekening kunci "oleh Rina"; 0 error JS, tanpa loop muat.
+- **2026-11-06 — live #144:** MCP stok (get_shop_stock / set_shop_stock /
   set_shop_recipes — lihat entri Stok di bawah) + **kasir umum, bukan khusus top up**: "Cari produk…", contoh teks/prompt
   netral, dan **kolom pembeli tidak lagi wajib otomatis untuk toko berkategori** — kini gaya kasir `buyer: opsional|wajib`
   (Tampilan › Data pembeli; bawaan opsional; MCP set_kasir_style ikut). CXA Store perlu disetel "Wajib" oleh Bos.
