@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-06 (live: rapikan popup/tampilan + notif login, run 42250941798)
+Terakhir diperbarui: 2026-11-06 (live: Ringkasan bersih + badge Kotak Masuk, run 42252405367)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-06 (branch claude/ringkasan-bersih) — Ringkasan/Beranda bersih: kartu "N usulan transaksi menunggu" dihapus. BELUM deploy (tunggu "gas"). Tanpa SQL.**
+- **2026-11-06 — Ringkasan/Beranda bersih: kartu "N usulan transaksi menunggu" dihapus: LIVE (run 42252405367, commit f83ebd5). Tanpa SQL.**
   - InboxBanner dihapus (web Ringkasan & app Beranda). Penanda tinggal badge di ikon Kotak Masuk: web sudah ada di header;
     app HP kini punya `InboxButton variant="app"` di samping lonceng (→ /app/inbox).
   - Bug lama InboxButton: badge sering kosong di pemuatan pertama (effect jalan ulang → hasil fetch dibuang, fetch kedua
