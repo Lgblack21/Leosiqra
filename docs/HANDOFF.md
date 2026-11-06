@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live: Fokus layar penuh + Cerita Hari Ini, run 42272516574; migrasi 0034 & 0035 menunggu)
+Terakhir diperbarui: 2026-11-07 (live: Fokus layar penuh + Cerita Hari Ini; migrasi 0034 & 0035 sudah dijalankan Bos)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-07 — Fitur baru "Cerita Hari Ini" (jurnal harian): LIVE (run 42272516574, commit fae04cb). Migrasi 0035 menunggu Bos.**
+- **2026-11-07 — Fitur baru "Cerita Hari Ini" (jurnal harian): LIVE (run 42272516574, commit fae04cb). Migrasi 0035 SUDAH dijalankan Bos (2026-11-07).**
   - **MIGRASI di D1 Console**: 0035_stories.sql (tabel `stories`, PK user_id+date). Tanpa tabel: GET → ready:false, simpan 503.
   - Halaman layar penuh: `/membership/cerita` (FULLSCREEN_PATHS, fitur id `cerita`) & `/app/cerita` (grid Lainnya). Menu:
     Tulis · Setahun · Kumpulan. Mood bertema cuaca (Badai/Mendung/Berawan/Cerah/Pelangi) + stiker Leo per mood (gratis),
@@ -64,7 +64,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     tombol terbawah di atas tombol + (app 534 < 586), Leo tidak tidur setelah 30 dtk, 0 error JS.
 
 - **2026-11-07 — Fitur baru "Fokus bareng Leo": LIVE (run 42260880305, commit e28af25). Migrasi 0034 menunggu Bos.**
-  - **MIGRASI di D1 Console** (0034_focus_sessions.sql; boleh sebelum/sesudah deploy — tanpa tabel, fitur tetap jalan,
+  - **MIGRASI 0034 SUDAH dijalankan Bos (2026-11-07).** (0034_focus_sessions.sql; boleh sebelum/sesudah deploy — tanpa tabel, fitur tetap jalan,
     rekap disimpan di perangkat lalu otomatis terkirim setelah tabel ada).
   - Halaman: `/membership/fokus` (web, menu "Fokus bareng Leo", id fitur `fokus` — masuk DEFAULT_FEATURES; user yang sudah
     pernah mengatur menu perlu nyalakan di Atur fitur) & `/app/fokus` (grid Lainnya).
