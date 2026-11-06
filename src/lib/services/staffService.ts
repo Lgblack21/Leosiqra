@@ -5,16 +5,19 @@ import { shopFromRow, type Shop } from './shopService';
 // sesi terpisah dari akun pemilik (/api/staff/*). Pemilik mengelola akun lewat
 // /api/member/staff.
 
+/** "@cxa-rina", " CXA-Rina " → "cxa-rina" — @ di depan dibuang otomatis. */
+export const normStaffUsername = (v: string) => v.trim().toLowerCase().replace(/^@+/, '');
+
 export const STAFF_USERNAME_RE = /^[a-z0-9_.]{2,15}-[a-z0-9_.]{2,15}$/;
 /** Tanda hubung tidak boleh di username pengguna biasa → identitas akun tim. */
-export const looksLikeStaffUsername = (v: string) => STAFF_USERNAME_RE.test(v.trim().toLowerCase());
+export const looksLikeStaffUsername = (v: string) => STAFF_USERNAME_RE.test(normStaffUsername(v));
 
 export type StaffSale = { id: string; shop_id: string; amount: number; note: string | null; created_at: string };
 export type StaffMe = { staff: { id: string; name: string; username: string; role: string }; owner: string; account: string | null; shops: Shop[]; today: StaffSale[]; date: string };
 
 export const staffService = {
   async login(username: string, password: string) {
-    return cloudflareApi<{ ok: boolean; name: string }>('/api/staff/login', { method: 'POST', json: { username: username.trim().toLowerCase(), password } });
+    return cloudflareApi<{ ok: boolean; name: string }>('/api/staff/login', { method: 'POST', json: { username: normStaffUsername(username), password } });
   },
   async logout() {
     await cloudflareApi('/api/staff/logout', { method: 'POST', json: {} });
@@ -38,7 +41,7 @@ export const teamService = {
     return cloudflareApi<{ items: TeamMember[]; limit: number; plan: string }>('/api/member/staff');
   },
   async create(input: { name: string; username: string; password: string; shopIds: string[]; accountId: string }) {
-    return cloudflareApi<{ id: string }>('/api/member/staff', { method: 'POST', json: { name: input.name, username: input.username.trim().toLowerCase(), password: input.password, shop_ids: input.shopIds, account_id: input.accountId } });
+    return cloudflareApi<{ id: string }>('/api/member/staff', { method: 'POST', json: { name: input.name, username: normStaffUsername(input.username), password: input.password, shop_ids: input.shopIds, account_id: input.accountId } });
   },
   async update(id: string, input: Partial<{ name: string; password: string; shopIds: string[]; accountId: string; disabled: boolean }>) {
     await cloudflareApi(`/api/member/staff/${id}`, {

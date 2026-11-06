@@ -9944,7 +9944,7 @@ async function handleStaffRoutes(request: Request, env: Env, pathname: string) {
   try {
     if (pathname === "/api/staff/login" && request.method === "POST") {
       const raw = await parseJson<{ username?: unknown; password?: unknown }>(request);
-      const username = typeof raw.username === "string" ? raw.username.trim().toLowerCase() : "";
+      const username = typeof raw.username === "string" ? raw.username.trim().toLowerCase().replace(/^@+/, "") : "";
       const password = typeof raw.password === "string" ? raw.password : "";
       if (!username || !password) return json({ error: "Username dan sandi wajib diisi." }, { status: 400 });
       if (!(await checkRateLimit(env, [`login:ip:${clientIpOf(request)}`, `login:identifier:${username}`]))) return json({ error: "Terlalu banyak percobaan. Coba lagi dalam beberapa saat." }, { status: 429 });
@@ -10051,7 +10051,7 @@ async function handleMemberStaff(request: Request, env: Env, pathname: string) {
       if (request.method === "POST") {
         const raw = await parseJson<Record<string, unknown>>(request);
         const name = shopText(raw.name, 40);
-        const username = typeof raw.username === "string" ? raw.username.trim().toLowerCase() : "";
+        const username = typeof raw.username === "string" ? raw.username.trim().toLowerCase().replace(/^@+/, "") : "";
         const password = typeof raw.password === "string" ? raw.password : "";
         if (!name) return json({ error: "Isi nama anggota tim." }, { status: 400 });
         if (!STAFF_USERNAME_RE.test(username)) return json({ error: "Username harus berbentuk toko-nama, mis. cxa-rina (huruf kecil/angka/titik/garis bawah, satu tanda hubung)." }, { status: 400 });

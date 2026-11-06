@@ -59,7 +59,7 @@ export function StaffApp() {
         <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white"><Store size={18} /></span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-extrabold text-slate-900">{me.staff.name}</p>
-          <p className="truncate text-[12px] text-slate-500">Kasir{me.owner ? ` · tim ${me.owner}` : ''} · @{me.staff.username}</p>
+          <p className="truncate text-[12px] text-slate-500">Kasir{me.owner ? ` · tim ${me.owner}` : ''} · {me.staff.username}</p>
         </div>
         <button type="button" onClick={() => setPw(true)} aria-label="Ganti sandi" className="rounded-full bg-white p-2.5 text-slate-600 ring-1 ring-slate-100 hover:bg-slate-50"><KeyRound size={16} /></button>
         <button type="button" onClick={logout} aria-label="Keluar" className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-[12px] font-bold text-slate-600 ring-1 ring-slate-100 hover:bg-slate-50"><LogOut size={14} /> Keluar</button>

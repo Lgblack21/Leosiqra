@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Check, Copy, KeyRound, Loader2, Plus, Power, Trash2, UserRound, Wand2 } from 'lucide-react';
-import { teamService, type TeamMember, STAFF_USERNAME_RE } from '@/lib/services/staffService';
+import { teamService, type TeamMember, STAFF_USERNAME_RE, normStaffUsername } from '@/lib/services/staffService';
 import { accountService } from '@/lib/services/accountService';
 import { isCreditAccountType } from '@/lib/creditCard';
 import type { Shop } from '@/lib/services/shopService';
@@ -56,7 +56,7 @@ export function TeamManager({ shops, onToast }: { shops: Shop[]; onToast: (m: st
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-50 text-violet-600 dark:bg-violet-500/15"><UserRound size={18} /></span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[14px] font-extrabold text-slate-900 dark:text-white">{m.name} {m.disabled && <span className="ml-1 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-600">nonaktif</span>}</span>
-                <span className="block truncate text-[12px] text-slate-500 dark:text-slate-400">@{m.username} · Kasir · {ago(m.last_login_at)}</span>
+                <span className="block truncate text-[12px] text-slate-500 dark:text-slate-400">{m.username} · Kasir · {ago(m.last_login_at)}</span>
                 <span className="block truncate text-[11px] text-slate-400">{m.shop_ids.map(shopName).join(', ')} → {accName(m.account_id)}</span>
               </span>
               <button type="button" onClick={() => setEditing(editing === m.id ? null : m.id)} className="shrink-0 text-[12px] font-bold text-violet-600 dark:text-violet-300">{editing === m.id ? 'Tutup' : 'Atur'}</button>
@@ -93,7 +93,7 @@ function MemberForm({ shops, accounts, loginUrl, onToast, onDone, onCancel }: { 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [made, setMade] = useState<string | null>(null);
-  const validUser = STAFF_USERNAME_RE.test(username.trim().toLowerCase());
+  const validUser = STAFF_USERNAME_RE.test(normStaffUsername(username));
 
   const save = async () => {
     if (!name.trim()) { setError('Isi nama anggota.'); return; }
@@ -105,7 +105,7 @@ function MemberForm({ shops, accounts, loginUrl, onToast, onDone, onCancel }: { 
     setError('');
     try {
       await teamService.create({ name: name.trim(), username, password, shopIds, accountId: accountId || accounts[0].id });
-      setMade(`Login Leosiqra Tim\n${loginUrl}\nUsername: ${username.trim().toLowerCase()}\nSandi: ${password}\n\nSetelah masuk, ganti sandi lewat ikon kunci.`);
+      setMade(`Login Leosiqra Tim\n${loginUrl}\nUsername: ${normStaffUsername(username)}\nSandi: ${password}\n\nSetelah masuk, ganti sandi lewat ikon kunci.`);
     } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Gagal membuat akun.'); }
     setBusy(false);
   };
@@ -128,7 +128,7 @@ function MemberForm({ shops, accounts, loginUrl, onToast, onDone, onCancel }: { 
       <p className="text-[14px] font-extrabold text-slate-900 dark:text-white">Anggota tim baru</p>
       {error && <p role="alert" className="text-[12px] font-semibold text-rose-600">{error}</p>}
       <label className="block"><span className={labelCls}>Nama</span><input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} placeholder="mis. Rina" className={fieldCls} /></label>
-      <label className="block"><span className={labelCls}>Username (toko-nama)</span><input value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))} maxLength={31} autoCapitalize="none" placeholder="cxa-rina" className={cn(fieldCls, username.length > 3 && !validUser && 'ring-rose-300')} /></label>
+      <label className="block"><span className={labelCls}>Username (toko-nama)</span><input value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[\s@]/g, ''))} maxLength={31} autoCapitalize="none" placeholder="cxa-rina" className={cn(fieldCls, username.length > 3 && !validUser && 'ring-rose-300')} /></label>
       <label className="block"><span className={labelCls}>Sandi awal</span>
         <span className="flex gap-2"><input value={password} onChange={(e) => setPassword(e.target.value)} maxLength={100} className={cn(fieldCls, 'font-mono')} /><button type="button" onClick={() => setPassword(genPassword())} aria-label="Buat sandi acak" className="shrink-0 rounded-2xl bg-slate-100 px-3 text-slate-600 dark:bg-slate-800 dark:text-slate-300"><Wand2 size={15} /></button></span>
       </label>
