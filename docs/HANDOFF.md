@@ -18,6 +18,12 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-06 (branch claude/ringkasan-bersih) — Ringkasan/Beranda bersih: kartu "N usulan transaksi menunggu" dihapus. BELUM deploy (tunggu "gas"). Tanpa SQL.**
+  - InboxBanner dihapus (web Ringkasan & app Beranda). Penanda tinggal badge di ikon Kotak Masuk: web sudah ada di header;
+    app HP kini punya `InboxButton variant="app"` di samping lonceng (→ /app/inbox).
+  - Bug lama InboxButton: badge sering kosong di pemuatan pertama (effect jalan ulang → hasil fetch dibuang, fetch kedua
+    dilewati jeda 60 dtk). Kini angka disebar ke semua tombol yang tampil (listeners). Dites lokal: web & app "3 usulan", 0 error JS.
+
 - **2026-11-06 — Popup tidak mengganggu + grid HP + notif login tidak spam: LIVE (run 42250941798, commit fdc7de3). Tanpa SQL.**
   - InstallBanner: hanya di beranda (/, /membership, /membership/dashboard, /app) + artikel publik, maksimal SEKALI per
     sesi tab (sessionStorage `leosiqra:install-ad-shown`; useRef supaya yang sedang tampil tidak ikut hilang), ikon tidak

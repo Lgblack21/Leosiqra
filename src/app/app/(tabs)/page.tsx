@@ -15,7 +15,7 @@ import { LevelBadge } from "@/components/app/home/LevelBadge";
 import { NotificationButton } from "@/components/app/home/NotificationButton";
 import { WeeklyInsights } from "@/components/WeeklyInsights";
 import { SecurityNudge } from "@/components/SecurityNudge";
-import { InboxBanner } from "@/components/inbox/InboxBanner";
+import { InboxButton } from "@/components/InboxButton";
 import { FadeIn, StaggerList, StaggerItem } from "@/components/app/FadeIn";
 
 export default function AppHomePage() {
@@ -75,6 +75,7 @@ export default function AppHomePage() {
         </div>
         <div className="flex items-center gap-2">
           <LevelBadge />
+          <InboxButton variant="app" />
           <NotificationButton />
         </div>
       </FadeIn>
@@ -87,9 +88,6 @@ export default function AppHomePage() {
           <WalletList accounts={accounts} />
         </StaggerItem>
         {/* empty:hidden — kartu tidak tampil (belum ada insight) tidak menyisakan jarak kosong */}
-        <StaggerItem className="empty:hidden">
-          <InboxBanner href="/app/inbox" />
-        </StaggerItem>
         <StaggerItem className="empty:hidden">
           <SecurityNudge />
         </StaggerItem>
