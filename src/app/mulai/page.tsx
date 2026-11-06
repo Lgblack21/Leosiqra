@@ -153,7 +153,6 @@ export default function MulaiPage() {
 
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
-      {/* Kiri: teks & pilihan */}
       <section className="flex min-h-[60vh] flex-col px-6 pb-10 pt-6 sm:px-12 lg:min-h-screen lg:px-16 lg:py-10 xl:px-20">
         <header className="flex h-12 items-center justify-between">
           {step === 0 ? (
@@ -400,7 +399,6 @@ export default function MulaiPage() {
         </div>
       </section>
 
-      {/* Kanan: latar indigo + HP berisi aplikasi Leosiqra yang ikut terbentuk */}
       <aside className="relative mx-4 mb-4 min-h-[540px] overflow-hidden rounded-[32px] lg:m-4 lg:min-h-0">
         <BrandBackdrop />
         {step === 0 ? (

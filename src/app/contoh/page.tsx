@@ -94,7 +94,6 @@ export default function ContohPage() {
 
   return (
     <div className="min-h-screen bg-[#f6f7fb] font-sans text-slate-900 lg:flex">
-      {/* Menu samping (desktop) */}
       <aside className="sticky top-0 hidden h-screen w-[264px] shrink-0 flex-col border-r border-slate-200/70 bg-white px-4 py-6 lg:flex">
         <Link href="/" className="flex items-center gap-2.5 px-2">
           <Image src="/images/Logo-new.png" alt="Leosiqra" width={30} height={30} />
@@ -141,7 +140,6 @@ export default function ContohPage() {
       </aside>
 
       <main className="min-w-0 flex-1 pb-28 lg:pb-12">
-        {/* Pita mode contoh */}
         <div className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-slate-900 px-4 py-2.5 text-white sm:px-8">
           <p className="truncate text-[13px] font-medium">
             <span className="mr-1.5 rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-bold text-slate-900">CONTOH</span>
@@ -171,7 +169,6 @@ export default function ContohPage() {
         </div>
       </main>
 
-      {/* Tab bawah (HP) */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
         <div className="mx-auto grid max-w-md grid-cols-5 items-end px-2">
           {TABS.slice(0, 2).map((t) => <TabButton key={t.id} t={t} active={tab === t.id} onClick={() => go(t.id)} />)}

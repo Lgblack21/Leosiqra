@@ -9,9 +9,7 @@ import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
 import { parseQty } from './StockView';
 import { fieldCls, labelCls } from './UsahaView';
 
-// Catat pengeluaran usaha (beli botol, dus, bahan…) dari kasir. Masuk sebagai
-// pengeluaran "Biaya Usaha" yang ditautkan ke usaha ini — omzet tidak berkurang,
-// tapi Usahaku menampilkan biaya & laba bersih. Akun tim: rekening & tanggal dikunci.
+// Masuk sebagai pengeluaran "Biaya Usaha" tertaut ke usaha — omzet tidak berkurang. Akun tim: rekening & tanggal dikunci.
 
 // Pilihan umum untuk semua jenis usaha; bahan/barang stok toko ini tampil lebih dulu.
 const QUICK: { label: string; kind: (typeof SHOP_EXPENSE_KINDS)[number] }[] = [

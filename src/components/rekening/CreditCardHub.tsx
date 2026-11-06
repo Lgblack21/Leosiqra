@@ -225,7 +225,6 @@ export function CreditCardHub({
       ) : (
         <LayoutGroup>
           {!sel ? (
-            /* ===== Tampilan utama: tumpukan kartu + tagihan 30 hari ===== */
             <div className="space-y-5">
               <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex items-end justify-between gap-3">
                 <div className="min-w-0">
@@ -243,7 +242,6 @@ export function CreditCardHub({
                 </button>
               </motion.div>
 
-              {/* Tumpukan kartu: yang belakang menyembul, ketuk untuk membuka */}
               <div className="mx-auto w-full max-w-[360px]">
                 {/* Tiap kartu ditarik ke atas sampai hanya STRIP px kartu sebelumnya
                     yang terlihat; tinggi kartu = lebar wadah / 1.586 (cqw). */}
@@ -271,7 +269,6 @@ export function CreditCardHub({
                 <p className="mt-2 text-center text-[12px] text-slate-400">Ketuk kartu untuk membukanya</p>
               </div>
 
-          {/* Paling longgar */}
           {roomiest && roomiest.days > 0 && (
             <div className="flex items-start gap-3 rounded-[20px] bg-gradient-to-br from-indigo-50 to-violet-50 p-3.5 ring-1 ring-indigo-100">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[18px]" aria-hidden>🦁</span>
@@ -285,8 +282,6 @@ export function CreditCardHub({
             </div>
           )}
 
-
-              {/* Tagihan 30 hari ke depan */}
               {upcoming.length > 0 && (
                 <section>
                   <h3 className="mb-2 text-[15px] font-bold text-slate-900">30 hari ke depan</h3>
@@ -325,7 +320,6 @@ export function CreditCardHub({
               </button>
             </div>
           ) : (
-            /* ===== Detail satu kartu ===== */
             <div className="space-y-5">
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center justify-between gap-2">
                 <button type="button" onClick={closeCard} disabled={saving} className="flex items-center gap-1.5 rounded-full bg-slate-100 py-1.5 pl-2 pr-3 text-[13px] font-bold text-slate-700 hover:bg-slate-200">
@@ -344,7 +338,6 @@ export function CreditCardHub({
                 <motion.div layoutId={`cc-${sel.acc.id}`} transition={spring} className="relative z-10 rounded-[20px] shadow-[0_24px_44px_-20px_rgba(15,23,42,0.7)]">
                   <CardFace {...faceProps(sel)} />
                 </motion.div>
-                {/* Kartu lain mengintip di belakang */}
                 {cards.filter((c) => c !== sel).slice(0, 2).map((c, i) => (
                   <motion.button
                     key={c.acc.id}
@@ -361,7 +354,6 @@ export function CreditCardHub({
               </div>
 
               <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="space-y-5">
-          {/* Tiket kartu terpilih */}
           {sel && (
             <section className="relative overflow-hidden rounded-[22px] bg-slate-50 ring-1 ring-slate-100">
               <AnimatePresence mode="wait" initial={false}>
@@ -466,7 +458,6 @@ export function CreditCardHub({
                         </button>
                       </div>
                     </div>
-                    {/* Garis sobek tiket */}
                     <div aria-hidden className="relative h-4">
                       <span className="absolute -left-2 top-0 h-4 w-4 rounded-full bg-white" />
                       <span className="absolute -right-2 top-0 h-4 w-4 rounded-full bg-white" />
@@ -498,8 +489,6 @@ export function CreditCardHub({
             </section>
           )}
 
-
-          {/* Belanja siklus ini */}
           {sel && (
             <section>
               <div className="mb-1.5 flex items-baseline justify-between">

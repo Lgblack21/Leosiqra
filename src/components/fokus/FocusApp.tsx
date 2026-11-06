@@ -11,10 +11,6 @@ import { RecapView } from './RecapView';
 import { localSessions, subscribeSessions, syncSessions, type FocusSession } from '@/lib/focus/store';
 import { cn } from '@/lib/utils';
 
-// Fokus bareng Leo — layar penuh seperti Ladangku/Investasiku (tanpa sidebar & tab bawah):
-// bar atas (kembali · judul · ⚙️/Leo) + menu melayang di bawah. Tinggi diukur dari ruang
-// yang ada sehingga SATU LAYAR tanpa gulir; Rekap menggulir di dalam kartunya sendiri.
-// Dipakai web (/membership/fokus, FULLSCREEN_PATHS) & app HP (/app/fokus, di luar grup tab).
 type Tab = 'fokus' | 'tenang' | 'rekap';
 const TABS: { id: Tab; label: string; icon: typeof Timer; title: string; sub: string }[] = [
   { id: 'fokus', label: 'Fokus', icon: Timer, title: 'Fokus bareng Leo', sub: 'Timer fokus & musik bebas royalti' },

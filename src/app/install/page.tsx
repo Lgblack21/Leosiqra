@@ -93,7 +93,6 @@ export default function InstallPage() {
 
       <main className="relative flex-1 px-5 pb-24 sm:px-6">
         <div className="mx-auto max-w-5xl space-y-6">
-          {/* Peringatan kondisi khusus */}
           {env.native && (
             <Callout tone="emerald" icon={Check}>
               Kamu sedang memakai aplikasi Leosiqra — tidak perlu dipasang lagi. Input Cepat tetap bisa dipasang dari
@@ -130,7 +129,6 @@ export default function InstallPage() {
             </Callout>
           )}
 
-          {/* Dua pilihan aplikasi */}
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             {(['leosiqra', 'input-cepat'] as InstallApp[]).map((app, i) => {
               const info = APP_INFO[app];
@@ -193,7 +191,6 @@ export default function InstallPage() {
             })}
           </div>
 
-          {/* Berdampingan */}
           <div className="lp-card flex flex-col items-center gap-6 rounded-[28px] p-7 sm:flex-row sm:p-8">
             <div className="flex shrink-0 items-end gap-4 rounded-3xl bg-gradient-to-b from-indigo-300 via-violet-300 to-rose-200 px-6 pb-4 pt-6">
               {(['leosiqra', 'input-cepat'] as InstallApp[]).map((app, i) => (
@@ -222,7 +219,6 @@ export default function InstallPage() {
             </div>
           </div>
 
-          {/* Tutorial beranimasi */}
           <section id="cara-pasang" className="lp-card scroll-mt-28 rounded-[28px] p-6 sm:p-9">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="font-serif text-3xl">Cara memasang</h2>
@@ -250,7 +246,6 @@ export default function InstallPage() {
             </div>
           </section>
 
-          {/* Tanya-jawab */}
           <section className="lp-card rounded-[28px] p-6 sm:p-9">
             <h2 className="font-serif text-3xl">Kalau ada kendala</h2>
             <div className="mt-5 divide-y divide-slate-100">

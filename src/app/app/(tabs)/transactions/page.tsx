@@ -134,7 +134,6 @@ export default function AppTransactionsPage() {
         />
       )}
 
-      {/* Bulan + ringkasan */}
       <div className="rounded-3xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white p-5 shadow-lg shadow-indigo-200/50 dark:shadow-none">
         <div className="flex items-center justify-between">
           <button type="button" onClick={() => shiftMonth(-1)} aria-label="Bulan sebelumnya" className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center">
@@ -159,7 +158,6 @@ export default function AppTransactionsPage() {
         </div>
       </div>
 
-      {/* Filter */}
       <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-5 px-5">
         {FILTERS.map((f) => (
           <button
@@ -200,7 +198,6 @@ export default function AppTransactionsPage() {
         </div>
       )}
 
-      {/* Daftar per hari */}
       {transactions === null ? (
         <div className="space-y-3 animate-pulse">
           {[1, 2, 3, 4].map((i) => <div key={i} className="h-16 rounded-2xl bg-slate-100 dark:bg-slate-800" />)}

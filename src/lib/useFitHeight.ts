@@ -5,7 +5,6 @@ import { useEffect, useLayoutEffect, useState } from 'react';
 // Halaman layar penuh (Fokus, Cerita): tinggi area isi = dari atas elemen sampai atas menu
 // melayang [data-focus-dock] − 12px; gulir halaman dikunci selama muat. Lebih pendek dari
 // MIN_FIT (HP landscape) → tidak dikunci. Diukur ulang saat ukuran/animasi berubah.
-// Lebih pendek dari ini (HP landscape dsb.) → tidak dikunci; halaman boleh digulir.
 const MIN_FIT = 340;
 
 export function useFitHeight(ref: React.RefObject<HTMLDivElement | null>) {

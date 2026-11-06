@@ -334,7 +334,6 @@ export default function InputCepatPage() {
       <SplashScreen ready userName={profile?.name} userPhoto={profile?.photoURL} />
       <div className="min-h-screen bg-slate-50 flex flex-col">
       <div className="stagger-in w-full max-w-md mx-auto px-5 pt-[calc(env(safe-area-inset-top)+20px)] pb-36 flex-1">
-        {/* Header ringkas: profil + total hari ini (tap = rincian). */}
         <div className="flex items-center gap-3">
           <Link href="/membership/dashboard?pengaturan=profil" className="flex items-center gap-3 min-w-0 flex-1">
             <div className="w-10 h-10 rounded-full bg-indigo-600 shrink-0 overflow-hidden">
@@ -368,7 +367,6 @@ export default function InputCepatPage() {
           </button>
         </div>
 
-        {/* Ketik pintar / suara / foto struk — mengisi form di bawah. */}
         <SmartBar ctx={ctx} onDraft={applyDraft} className="mt-5" autoStart={autoStart} initialText={initialText} />
         {hint && (
           <div className="flex items-start gap-2 rounded-2xl bg-indigo-50 px-3.5 py-2.5 mt-2 text-[11px] font-bold text-indigo-700">
@@ -380,7 +378,6 @@ export default function InputCepatPage() {
           </div>
         )}
 
-        {/* Kartu utama: jenis, nominal, tanggal */}
         <div className="mt-4 bg-white rounded-3xl border border-slate-100 shadow-sm p-4">
           <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-slate-100">
             {([["pengeluaran", "Pengeluaran", ArrowDownCircle, "bg-rose-500"], ["pemasukan", "Pemasukan", ArrowUpCircle, "bg-emerald-500"]] as const).map(
@@ -394,7 +391,6 @@ export default function InputCepatPage() {
                     type === value ? "text-white" : "text-slate-500"
                   )}
                 >
-                  {/* Pil warna meluncur ke jenis terpilih. */}
                   {type === value && (
                     <motion.span
                       layoutId="qc-type-pill"
@@ -429,7 +425,6 @@ export default function InputCepatPage() {
             </motion.div>
           </div>
 
-          {/* Tanggal — default hari ini; kemarin/tanggal lain untuk yang lupa dicatat. */}
           <div className="flex items-center justify-center gap-2">
             {([[null, "Hari ini"], [yesterday, "Kemarin"]] as const).map(([value, label]) => (
               <button
@@ -469,9 +464,7 @@ export default function InputCepatPage() {
           )}
         </div>
 
-        {/* Kartu detail: rekening, kategori, catatan dalam satu daftar. */}
         <div className="mt-3 bg-white rounded-3xl border border-slate-100 shadow-sm divide-y divide-slate-100">
-          {/* Akun — dropdown: cuma rekening terpilih yang tampil, tap untuk buka pilihan lain. */}
           <div className="p-4 relative" ref={accountPickerRef}>
             <p className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
               <Wallet size={12} /> {type === "pengeluaran" ? "Dari rekening" : "Masuk ke rekening"}
@@ -597,7 +590,6 @@ export default function InputCepatPage() {
         <InputCepatInstall />
       </div>
 
-      {/* Tombol simpan — sticky di bawah, warna mengikuti jenis transaksi. */}
       <div className="fixed bottom-0 inset-x-0 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent pt-6 pb-[calc(env(safe-area-inset-bottom)+20px)] px-5">
         <div className="max-w-md mx-auto">
           <button

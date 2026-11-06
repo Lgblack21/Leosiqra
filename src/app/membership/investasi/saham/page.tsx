@@ -168,7 +168,6 @@ export default function SahamPage() {
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
       
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-br from-white to-indigo-50/40 p-6 rounded-[24px] border border-slate-100 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white items-center justify-center shadow-lg shadow-emerald-600/20 shrink-0">
@@ -201,7 +200,6 @@ export default function SahamPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col gap-4 relative overflow-hidden group">
           <div className="flex items-center gap-3">
@@ -233,7 +231,6 @@ export default function SahamPage() {
         </div>
       </div>
 
-      {/* Filter Bar */}
       <div className="flex flex-wrap items-center gap-4 bg-white p-3 md:p-2 rounded-[24px] md:rounded-3xl border border-slate-50 shadow-sm">
         <div className="flex-1 min-w-[200px] relative group">
           <Search size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
@@ -243,7 +240,6 @@ export default function SahamPage() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="bg-white rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-sm font-medium text-slate-400">Memuat portofolio...</div>

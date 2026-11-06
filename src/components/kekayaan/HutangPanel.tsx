@@ -24,9 +24,6 @@ import { DueDateInput } from '@/components/debts/DueDateInput';
 const STATUS_OPTIONS = ['Belum lunas', 'Lunas', 'Semua'] as const;
 type StatusFilter = typeof STATUS_OPTIONS[number];
 
-// Panel Hutang & Piutang di halaman Kekayaan (#hutang; dulu /membership/transactions/debt).
-// Tampilan kartu (2026-10-30): neraca hutang vs piutang + progres pelunasan.
-// Logika uang (cicilan, lunas, hapus) tidak berubah.
 export default function HutangPanel() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -39,20 +36,14 @@ export default function HutangPanel() {
   const [error, setError] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [settlingId, setSettlingId] = useState<string | null>(null);
-  // Default "Belum lunas" = semua catatan yang masih punya sisa, dari bulan
-  // mana pun. Dulu halaman ini cuma memuat catatan yang DIBUAT di bulan
-  // terpilih, jadi hutang bulan lalu yang belum lunas tidak kelihatan dan
-  // user harus mundur bulan dulu untuk membayarnya.
+  // Default "Belum lunas" = semua catatan yang masih punya sisa, dari bulan mana pun.
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('Belum lunas');
   const { confirm, toast } = useFeedback();
   const { openModal } = useModal();
   const reduce = useReducedMotion();
   const [typeFilter, setTypeFilter] = useState<'Semua' | 'Hutang' | 'Piutang'>('Semua');
 
-  // Cicilan/pelunasan (transaksi pemasukan/pengeluaran yang terhubung ke
-  // catatan hutang/piutang via relatedId) — diambil all-time (bukan per bulan
-  // seperti `transactions` di atas) supaya sisa tagihan tetap akurat walau
-  // pembayarannya terjadi di bulan yang berbeda dari saat hutang dicatat.
+  // Cicilan/pelunasan (via relatedId) diambil all-time supaya sisa tagihan akurat walau dibayar di bulan lain.
   const [debtPayments, setDebtPayments] = useState<Transaction[]>([]);
   const [payingDebt, setPayingDebt] = useState<Transaction | null>(null);
   // Edit jatuh tempo (payload_json.due) — daftar di sini datang lewat onSnapshot (mentah), jadi dibaca dari payload_json.
@@ -83,7 +74,6 @@ export default function HutangPanel() {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
-        // Fetch accounts for lookup
         const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
         if (unsubAccRef.current) unsubAccRef.current();
         unsubAccRef.current = onSnapshot(qAcc, (snap) => {
@@ -235,10 +225,8 @@ export default function HutangPanel() {
       const isHutang = trx.category === 'Hutang';
       const financeType = isHutang ? 'pengeluaran' : 'pemasukan';
 
-      // 1. Update debt record to lunas
       await transactionService.updateTransaction(trx.id, { status: 'VERIFIED', paymentStatus: 'lunas' });
 
-      // 2. Create financial transaction entry
       await transactionService.createTransaction({
         userId: trx.userId,
         type: financeType,
@@ -255,7 +243,6 @@ export default function HutangPanel() {
         relatedType: 'debt'
       });
 
-      // 3. Sync balance
       await updateMemberTotals(user.uid, financeType, remaining);
       if (trx.accountId && trx.accountId !== 'General') {
         const balanceChange = financeType === 'pemasukan' ? remaining : -remaining;
@@ -366,7 +353,6 @@ export default function HutangPanel() {
 
   return (
     <div className="mb-12 max-w-[1400px] space-y-5">
-      {/* Neraca hutang vs piutang */}
       <section className="relative overflow-hidden rounded-[32px] bg-[#0b1220] p-5 text-white md:p-7">
         <span aria-hidden className="pointer-events-none absolute -left-16 -top-24 h-64 w-64 rounded-full bg-rose-500/20 blur-3xl" />
         <span aria-hidden className="pointer-events-none absolute -bottom-24 -right-10 h-64 w-64 rounded-full bg-emerald-400/20 blur-3xl" />
@@ -407,7 +393,6 @@ export default function HutangPanel() {
 
       {error && <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm font-medium text-rose-600">{error}</div>}
 
-      {/* Saring */}
       <div className="flex flex-col gap-2 md:flex-row md:items-center">
         <LayoutGroup id="debt-type">
           <div role="tablist" aria-label="Jenis" className="flex shrink-0 gap-1 rounded-full bg-slate-100 p-1">
@@ -430,7 +415,6 @@ export default function HutangPanel() {
       </div>
       <p className="px-1 text-[12px] text-slate-500">{statusFilter === 'Belum lunas' ? 'Semua yang belum lunas, dari bulan mana pun' : `Periode ${periodLabel}`}</p>
 
-      {/* Daftar */}
       {loading ? (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">{[1, 2, 3, 4].map((i) => <div key={i} className="h-48 animate-pulse rounded-[26px] bg-white" />)}</div>
       ) : shown.length === 0 ? (

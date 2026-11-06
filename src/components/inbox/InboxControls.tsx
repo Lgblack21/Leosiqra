@@ -6,10 +6,6 @@ import { cn } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { useFeedback } from '@/components/ui/Feedback';
 
-// Kontrol Kotak Masuk (halaman Kotak Masuk web & HP, layar Gmail): hanya
-// sumber yang dipakai user yang tampil (Gmail dan/atau Slack), masing-masing
-// dengan saklar baca otomatis; "Periksa sekarang" memeriksa semuanya.
-
 export type InboxSuggestion = {
   type: 'pengeluaran' | 'pemasukan';
   amount: number;

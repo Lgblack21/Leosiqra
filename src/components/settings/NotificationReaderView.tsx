@@ -76,7 +76,6 @@ export function NotificationReaderView({ openShortcut, openHref }: { openShortcu
 
   return (
     <div className="space-y-5">
-      {/* Alur: notifikasi → dibaca → kamu cek */}
       <div className="rounded-[24px] bg-gradient-to-br from-amber-50 via-white to-indigo-50 p-4 ring-1 ring-amber-100">
         <div className="flex items-center gap-2 text-[13px] font-semibold text-amber-700">
           <BellRing size={15} /> Cara kerjanya
@@ -96,7 +95,6 @@ export function NotificationReaderView({ openShortcut, openHref }: { openShortcu
         </div>
       </div>
 
-      {/* Jalur yang tersedia */}
       <div className="space-y-3">
         <p className="px-1 text-[14px] text-slate-500">Jalur yang bisa dipakai</p>
         {ways.map((w) => (
@@ -116,7 +114,6 @@ export function NotificationReaderView({ openShortcut, openHref }: { openShortcu
         ))}
       </div>
 
-      {/* Tempel teks notifikasi — jalur manual untuk notifikasi aplikasi */}
       <div className="rounded-[22px] bg-slate-50 p-4 ring-1 ring-slate-200">
         <p className="text-[15px] font-bold text-slate-900">Tempel teks notifikasi</p>
         <p className="mt-0.5 text-[13px] leading-snug text-slate-500">Belum pasang otomasi, atau pakai Android? Salin teks notifikasinya, tempel di sini, lalu Leosiqra mengisi formnya.</p>
@@ -148,7 +145,6 @@ export function NotificationReaderView({ openShortcut, openHref }: { openShortcu
         </div>
       </div>
 
-      {/* Batasan yang jujur */}
       <div className="flex gap-2.5 px-1 text-[12px] leading-relaxed text-slate-500">
         <Info size={15} className="mt-0.5 shrink-0 text-slate-400" />
         <p>

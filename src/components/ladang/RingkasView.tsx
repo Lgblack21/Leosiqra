@@ -8,10 +8,8 @@ import { debtRemaining, paidByDebt } from '@/lib/services/debtService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
 
-// Ladangku › Ringkas: "Cuan bulan ini" HANYA dari hasil Ladangku — penjualan
-// Usahaku (related_type 'shop') + barang laku (related_type 'item' atau sub
-// kategori 'Jual Barang'). Gaji & pemasukan lain TIDAK ikut (alasan tab Target
-// lama dihapus). Target opsional di prefs.cuanTarget.
+// "Cuan bulan ini" HANYA dari hasil Ladangku: penjualan Usahaku (related_type 'shop') + barang laku
+// (related_type 'item' atau sub kategori 'Jual Barang'). Gaji & pemasukan lain sengaja TIDAK ikut.
 
 export const isLadangCuan = (t: Transaction) => t.type === 'pemasukan' && (t.relatedType === 'shop' || t.relatedType === 'item' || t.subCategory === 'Jual Barang');
 const monthKey = (d: Date | string) => toLocalDateString(new Date(d)).slice(0, 7);

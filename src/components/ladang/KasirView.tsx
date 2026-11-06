@@ -22,11 +22,7 @@ import { isCreditAccountType } from '@/lib/creditCard';
 import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
 import { ShopDetail, amt, fieldCls, initials, labelCls, monthKey, productLabel, short, toneOf } from './UsahaView';
 
-// Ladangku › Usahaku › Kasir: halaman penuh per usaha. Kiri = katalog toko (per
-// kategori, cari, ketuk = masuk struk); kanan (HP: bar bawah → sheet) = struk:
-// item, nama/ID pembeli, total (bisa diubah untuk diskon), rekening → satu
-// transaksi pemasukan atomik di server (request_id anti dobel). "Kelola" membuka
-// pengaturan usaha (kontak, produk, website).
+// Struk → satu transaksi pemasukan atomik di server (request_id anti dobel).
 
 export type Line = { key: string; name: string; group?: string; price: number; qty: number };
 export const lineKey = (p: ShopProduct) => `${p.group ?? ''}|${p.name}`;
@@ -45,9 +41,9 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
   const [manage, setManage] = useState(false);
   const [styling, setStyling] = useState(false);
   const [pricing, setPricing] = useState(false);
-  const [spending, setSpending] = useState(false); // catat pengeluaran usaha
+  const [spending, setSpending] = useState(false);
   const [buyMat, setBuyMat] = useState<string | undefined>(undefined); // Stok › Beli → bahan terpilih
-  const [stocking, setStocking] = useState(false); // stok bahan
+  const [stocking, setStocking] = useState(false);
   const [stock, setStock] = useState<StockData | null>(null);
   const [sheet, setSheet] = useState(false); // HP: struk
   const [flash, setFlash] = useState('');
@@ -146,7 +142,6 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
     <div className={cn('space-y-4', app ? 'pb-44' : 'pb-28 lg:pb-0')}>
       {flash && <div role="status" className="fixed inset-x-4 top-4 z-[95] mx-auto max-w-sm rounded-2xl bg-slate-900 px-4 py-3 text-center text-[13px] font-semibold text-white shadow-lg">{flash}</div>}
 
-      {/* Header toko */}
       <section className={cn('web-keep relative overflow-hidden text-white', compactHead ? 'rounded-[22px] px-3 py-2.5' : 'rounded-[28px] p-4 md:p-5', themeOf(shop.style).header)}>
         <div className="flex items-center gap-3">
           <Link href={back} aria-label="Kembali ke Usahaku" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"><ArrowLeft size={17} /></Link>
@@ -186,7 +181,6 @@ export function KasirView({ variant, onToast }: { variant: 'web' | 'app'; onToas
         </div>
       )}
 
-      {/* Web sempit (< lg) & HP: struk lewat bar bawah */}
       {shop.products.length > 0 && (
         <div className={cn('fixed inset-x-3 z-40 mx-auto max-w-md', app ? 'bottom-[calc(env(safe-area-inset-bottom)+88px)]' : 'bottom-4 lg:hidden')}>
           <button type="button" onClick={() => setSheet(true)} className={cn('flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left shadow-xl transition-transform active:scale-[0.99]', count ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-white dark:bg-slate-800')}>
@@ -250,7 +244,6 @@ export function Catalog({ products, style, lines, onAdd }: { products: ShopProdu
   const top = useRef<HTMLElement>(null);
   const open = (g: string | null) => { setActive(g); window.setTimeout(() => top.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0); };
   const big = style.size === 'besar';
-  // Avatar kategori: gambar dari pengguna (categoryImages) atau inisial berwarna.
   const avatar = (g: string, cls: string, text: string) => (
     <span className={cn('flex shrink-0 items-center justify-center overflow-hidden font-extrabold', cls, toneOf(g || 'Lainnya'))}>
       <CatalogImage src={style.categoryImages[g]} alt={g || 'Lainnya'} fallback={<span className={text}>{initials(g || 'Lainnya')}</span>} className="h-full w-full bg-white" />

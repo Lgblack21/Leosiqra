@@ -172,7 +172,6 @@ export default function PanduanPage() {
     <div className="space-y-8 animate-in fade-in duration-700 max-w-[1400px] mb-12">
       <ProductTour steps={tourSteps} isActive={tourActive} onFinish={() => setTourActive(false)} />
 
-      {/* Hero */}
       <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-[24px] md:rounded-[32px] p-8 md:p-12 text-white relative overflow-hidden shadow-xl shadow-emerald-600/20">
         <div className="absolute -right-10 -top-10 w-56 h-56 bg-white/10 rounded-full blur-3xl" />
         <div className="relative z-10 max-w-2xl space-y-4">
@@ -198,7 +197,6 @@ export default function PanduanPage() {
         </div>
       </div>
 
-      {/* Sections */}
       <div className="space-y-6">
         {allSections.map((section) => {
           const Icon = section.icon;

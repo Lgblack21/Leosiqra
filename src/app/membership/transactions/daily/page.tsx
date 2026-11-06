@@ -69,7 +69,6 @@ const csvCell = (v: string | number) => {
   return `"${safe.replace(/"/g, '""')}"`;
 };
 
-// Chip filter ringkas (permintaan Bos: filter jangan makan ruang).
 const chip = (active: boolean) =>
   cn(
     'shrink-0 rounded-full px-3 py-1.5 text-[13px] font-semibold transition-colors whitespace-nowrap',
@@ -77,7 +76,6 @@ const chip = (active: boolean) =>
   );
 
 export default function DailyTransactionLogPage() {
-  // Ikon/warna kategori pilihan user (Pengaturan → Kategori & Anggaran).
   useCategoryStyles();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -425,7 +423,6 @@ export default function DailyTransactionLogPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-4 pb-12">
-      {/* Judul + aksi */}
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[30px]">Transaksi</h1>
@@ -463,7 +460,6 @@ export default function DailyTransactionLogPage() {
         </div>
       </div>
 
-      {/* Ringkasan: satu kartu tipis tiga kolom */}
       {!loading && (
         <div className="grid grid-cols-3 divide-x divide-slate-100 rounded-[18px] bg-white py-2.5 ring-1 ring-slate-100">
           {[
@@ -597,7 +593,6 @@ export default function DailyTransactionLogPage() {
         </div>
       </div>
 
-      {/* Daftar per hari */}
       {loading ? (
         <div className="space-y-3">{[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>
       ) : filtered.length === 0 ? (

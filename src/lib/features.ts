@@ -29,14 +29,9 @@ export const FEATURES: Feature[] = [
 ];
 
 // Bawaan = isi menu samping sebelum fitur ini ada (perilaku lama tidak berubah).
-// 'kartu' (Kartu Saya) dihapus 2026-10-28 — dilebur ke Rekening; 'pasar' (Data
-// Pasar) dihapus 2026-10-29 — dilebur ke Investasiku; 'transfer' (Transfer &
-// Top Up) dihapus 2026-10-29 — datanya di Riwayat Transaksi (filter Transfer);
-// 'hutang' (Hutang & Piutang) dilebur 2026-10-30 ke Kekayaan (= id 'tabungan'),
-// lihat normalizeFeatures. 2026-10-30: 'tahunan' dihapus (dobel dengan Laporan →
-// Tahunan); 'dompet_bersama' & 'impor' keluar dari menu (ada di Pengaturan /
-// Catat Transaksi); 'kotak_masuk' pindah ke ikon di samping lonceng. Id-nya tetap sah di tipe
-// & Worker (preferensi lama), tapi tidak lagi ditampilkan.
+// Id yang sudah dilebur/keluar menu (kartu, pasar, transfer, hutang, tahunan,
+// dompet_bersama, impor, kotak_masuk) tetap sah di tipe & Worker untuk
+// preferensi lama, tapi tidak lagi ditampilkan — lihat normalizeFeatures.
 export const DEFAULT_FEATURES: FeatureId[] = ['ai', 'tabungan', 'investasi', 'jejak', 'langganan', 'ladang', 'fokus', 'cerita'];
 
 const BY_ID = new Map(FEATURES.map((f) => [f.id, f]));

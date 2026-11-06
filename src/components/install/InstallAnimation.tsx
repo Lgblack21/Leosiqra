@@ -35,9 +35,6 @@ export const installSteps = (platform: Platform, app: InstallApp) => STEPS[platf
 
 const STEP_MS = 2400;
 
-// Peraga cara memasang aplikasi: layar HP yang memutar tiap langkah secara
-// berulang, dengan daftar langkah di sampingnya yang ikut menyala. Langkah
-// bisa diketuk untuk dilihat lebih lama.
 export function InstallAnimation({ platform, app, compact = false }: { platform: Platform; app: InstallApp; compact?: boolean }) {
   const reduce = useReducedMotion();
   const os: "ios" | "android" = platform === "ios" ? "ios" : "android";
@@ -122,8 +119,6 @@ function Phone({ os, app, step }: { os: "ios" | "android"; app: InstallApp; step
 }
 
 function PageContent({ app }: { app: InstallApp }) {
-  // Tampilan halaman yang sedang dibuka (ringkas) — beda antara aplikasi
-  // utama dan Input Cepat supaya jelas halaman mana yang dipasang.
   if (app === "input-cepat") {
     return (
       <div className="space-y-2 px-3 pt-3">

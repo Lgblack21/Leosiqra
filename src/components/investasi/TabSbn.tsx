@@ -7,9 +7,7 @@ import { LeoMascot } from '@/components/mascot/LeoMascot';
 import { AS_OF, BI_RATE, LPS, SBN_KIND_INFO, SBN_RETAIL, SBN_SOURCES, TAX_DEPOSITO, TAX_SBN, isStale, monthlyNet } from '@/lib/sbnData';
 import { cn, formatIDR } from '@/lib/utils';
 
-// Tab SBN: tangga bunga (LPS → BI-Rate → SBN ritel tertinggi), "Sebulan dapat
-// berapa?", dan semua seri ritel. Semua angka dari lib/sbnData.ts (resmi,
-// diperbarui manual, bertanggal AS_OF).
+// Semua angka dari lib/sbnData.ts (resmi, diperbarui manual, bertanggal AS_OF).
 
 const fmtDate = (ymd: string) => new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(`${ymd}T00:00:00`));
 const pct = (n: number) => `${n.toLocaleString('id-ID', { maximumFractionDigits: 2 })}%`;
@@ -52,7 +50,6 @@ export function TabSbn() {
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Tangga bunga */}
         <section className="rounded-[28px] bg-white p-5 ring-1 ring-slate-100">
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Tangga bunga</p>
           <h2 className="text-[20px] font-extrabold tracking-tight text-slate-900">SBN ritel sampai {top ? pct(top.coupon) : '—'} setahun</h2>
@@ -96,7 +93,6 @@ export function TabSbn() {
           </div>
         </section>
 
-        {/* Sebulan dapat berapa */}
         <section className="rounded-[28px] bg-white p-5 ring-1 ring-slate-100">
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Sebulan dapat berapa?</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -124,7 +120,6 @@ export function TabSbn() {
         </section>
       </div>
 
-      {/* Semua seri */}
       <section className="rounded-[28px] bg-white p-5 ring-1 ring-slate-100">
         <div className="flex items-baseline justify-between">
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Seri ritel</p>

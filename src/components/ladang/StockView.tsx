@@ -8,12 +8,7 @@ import { cn, formatIDR } from '@/lib/utils';
 import { fieldCls, labelCls } from './UsahaView';
 import { lineKey } from './KasirView';
 
-// Usahaku › Stok — untuk semua jenis usaha: bahan baku (kue, kopi, laundry, parfum…)
-// ATAU barang dagangan (kelontong, baju, aksesoris: 1 produk = 1 barang, lihat
-// "Jadikan stok 1:1"). Daftar bahan/barang (stok sekarang, batas minimum, harga rata-rata
-// dari pembelian), ubah stok (masuk / pakai / hitung fisik), resep produk (bahan per
-// 1 produk → stok berkurang otomatis saat terjual di kasir, + HPP & untung per produk),
-// dan riwayat (buku stok). Pembelian dicatat lewat "Biaya" supaya uang & stok sejalan.
+// Pembelian dicatat lewat "Biaya" supaya uang & stok sejalan; resep produk mengurangi stok otomatis saat terjual di kasir.
 
 /** "30,25" / "30.25" / "1.910,5" / "1.500" (ribuan) / "1.000.000" → angka. */
 export const parseQty = (v: string) => {

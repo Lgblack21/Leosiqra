@@ -104,7 +104,6 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
         "fixed top-0 left-0 h-full w-72 bg-slate-900 border-r border-slate-800 flex flex-col z-50 transition-transform duration-300 ease-in-out lg:translate-x-0 overflow-y-auto",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-        {/* Header / Logo Section */}
         <div className="p-4 flex items-center justify-between shrink-0">
           <Link href="/admin/dashboard" className="block group flex-1" onClick={() => { if (window.innerWidth < 1024) onClose?.(); }}>
             <div className="bg-slate-800 rounded-[20px] p-3 border border-slate-700 shadow-sm flex items-center gap-3 transition-all">
@@ -132,7 +131,6 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
           </button>
         </div>
 
-        {/* Navigation */}
         <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-6 custom-scrollbar mt-4">
           {adminMenuGroups.map((group) => {
             const isOpenGroup = openGroups.includes(group.label);
@@ -177,9 +175,7 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
           })}
         </div>
 
-        {/* Footer */}
         <div className="p-4 mt-auto border-t border-slate-800 bg-slate-900/50 shrink-0 space-y-4">
-          {/* Profile Card */}
           <div className="p-3 bg-slate-800 border border-slate-700 rounded-2xl shadow-sm group">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-xs font-black text-white shadow-lg shadow-indigo-900/20 transform group-hover:scale-110 transition-transform">

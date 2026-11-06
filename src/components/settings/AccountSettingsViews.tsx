@@ -49,10 +49,8 @@ import {
   unsubscribeFromPush,
 } from '@/lib/pushNotifications';
 
-// Bagian akun di panel Pengaturan (dulu halaman /membership/profile):
-// Kontak, Keamanan (password, 2FA, perangkat), Notifikasi, Aplikasi
-// terhubung (MCP), dan Input Cepat & reset data. Logika & endpoint sama
-// persis dengan halaman lama — hanya dipindah tempat & tampilannya.
+// Bagian akun di panel Pengaturan: Kontak, Keamanan (password, 2FA, perangkat),
+// Notifikasi, Aplikasi terhubung (MCP), dan Input Cepat & reset data.
 
 export type AccountView = 'kontak' | 'keamanan' | 'notifikasi' | 'ai' | 'lainnya';
 

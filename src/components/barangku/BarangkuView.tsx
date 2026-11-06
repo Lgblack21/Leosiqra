@@ -144,7 +144,6 @@ export function BarangkuView({ variant, addSignal = 0, toast }: { variant: 'web'
       {flash && <div role="status" className="rounded-2xl bg-emerald-50 px-4 py-3 text-[13px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">{flash}</div>}
       {error && <div role="alert" className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">{error}</div>}
 
-      {/* Ringkasan nilai */}
       <section className="web-keep relative overflow-hidden rounded-[28px] bg-[radial-gradient(120%_120%_at_100%_0%,#3b2a10_0%,#111827_55%,#0b1220_100%)] p-5 text-white md:p-6">
         <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-60 w-60 rounded-full bg-amber-400/15 blur-3xl" />
         <div className="relative flex flex-wrap items-start justify-between gap-4">
@@ -201,7 +200,6 @@ export function BarangkuView({ variant, addSignal = 0, toast }: { variant: 'web'
         </section>
       ) : (
         <>
-          {/* Filter */}
           <div className="flex flex-col gap-2 md:flex-row md:items-center">
             <label className="flex min-w-0 flex-1 items-center gap-2 rounded-full bg-white px-4 py-2.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
               <Search size={16} className="shrink-0 text-slate-400" />

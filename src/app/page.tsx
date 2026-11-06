@@ -51,7 +51,6 @@ const PRINCIPLES = [
   { icon: ShieldCheck, title: 'Jujur, tanpa janji', desc: 'Leosiqra membantu Anda melihat dengan jernih. Bukan saran investasi, dan bukan janji keuntungan.', tone: 'amber' as Tone },
 ];
 
-// Chip ikon berwarna — variasi warna senada dengan aplikasi (indigo, hijau, amber, dst).
 const TONES = {
   indigo: 'bg-indigo-50 text-indigo-600 ring-indigo-100',
   emerald: 'bg-emerald-50 text-emerald-600 ring-emerald-100',
@@ -119,7 +118,6 @@ export default function LandingPage() {
     <div id="beranda" className="min-h-screen overflow-x-clip scroll-mt-20 bg-[#f7f8fb] text-slate-900">
       <Navbar />
 
-      {/* ============ HERO ============ */}
       <section className="relative overflow-hidden px-5 pb-20 pt-36 sm:px-6 sm:pb-28 sm:pt-44">
         <div aria-hidden className="hero-aurora" />
         <div aria-hidden className="dot-grid" />
@@ -147,7 +145,6 @@ export default function LandingPage() {
           <motion.p {...heroItem(4)} className="mt-6 text-xs text-slate-400">Tanpa kartu kredit · Android, iPhone & web · Bahasa Indonesia · <Link href="/install" className="font-bold text-indigo-600 hover:underline">Pasang di HP →</Link></motion.p>
         </div>
 
-        {/* Tur animasi mode desktop */}
         <motion.div
           className="relative mx-auto mt-16 max-w-6xl sm:mt-20"
           initial={reduce ? false : { opacity: 0, y: 60, scale: 0.97 }}
@@ -158,7 +155,6 @@ export default function LandingPage() {
           <ScrollTilt>
             <AppShowcase />
           </ScrollTilt>
-          {/* Notifikasi melayang di sisi jendela (layar lebar saja) */}
           <motion.div
             initial={reduce ? false : { opacity: 0, x: -24 }}
             animate={{ opacity: 1, x: 0 }}
@@ -185,7 +181,6 @@ export default function LandingPage() {
           </motion.div>
         </motion.div>
 
-        {/* Fakta singkat */}
         <div className="relative mx-auto mt-16 grid max-w-5xl grid-cols-2 gap-px overflow-hidden rounded-3xl border border-slate-200/80 bg-slate-200/70 lg:grid-cols-4">
           {FACTS.map(([big, small], i) => (
             <Reveal key={big} delay={i * 0.08} y={14} className="bg-white/90 px-5 py-6 text-center backdrop-blur">
@@ -196,7 +191,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ MARQUEE ============ */}
       <div className="relative border-y border-slate-200/70 bg-white/60 py-5 [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
         <div className="marquee-x flex w-max gap-10 whitespace-nowrap">
           {[...MARQUEE, ...MARQUEE].map((m, i) => (
@@ -207,7 +201,6 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* ============ PRODUK (BENTO) ============ */}
       <section id="produk" className="relative scroll-mt-24 px-5 py-24 sm:px-6 sm:py-32">
         <div className="mx-auto max-w-7xl">
           <Reveal className="max-w-2xl">
@@ -291,7 +284,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ INPUT CEPAT ============ */}
       <section id="input-cepat" className="relative scroll-mt-24 overflow-hidden px-5 py-24 sm:px-6 sm:py-32">
         <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
         <div className="mx-auto grid grid-cols-1 max-w-7xl items-center gap-16 lg:grid-cols-2">
@@ -327,7 +319,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ FITUR ============ */}
       <section id="fitur" className="relative scroll-mt-24 border-y border-slate-200/70 bg-white px-5 py-24 sm:px-6 sm:py-32">
         <div className="mx-auto max-w-7xl">
           <Reveal className="mx-auto max-w-2xl text-center">
@@ -346,7 +337,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ PAJAK ============ */}
       <section id="pajak" className="relative scroll-mt-24 px-5 py-24 sm:px-6 sm:py-32">
         <Reveal className="lp-card relative mx-auto grid grid-cols-1 max-w-7xl items-center gap-12 overflow-hidden rounded-[36px] p-8 sm:p-14 lg:grid-cols-2">
           <div aria-hidden className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(closest-side,rgba(99,102,241,0.12),transparent)]" />
@@ -379,7 +369,6 @@ export default function LandingPage() {
         </Reveal>
       </section>
 
-      {/* ============ PRINSIP ============ */}
       <section className="relative px-5 py-24 sm:px-6 sm:py-32">
         <div className="mx-auto max-w-7xl">
           <Reveal className="max-w-2xl">
@@ -398,7 +387,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ CARA KERJA ============ */}
       <section id="cara-kerja" className="relative scroll-mt-24 px-5 py-24 sm:px-6 sm:py-32">
         <div className="mx-auto max-w-7xl">
           <Reveal className="mx-auto max-w-2xl text-center">
@@ -425,7 +413,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ HARGA ============ */}
       <section id="harga" className="relative scroll-mt-24 px-5 py-24 sm:px-6 sm:py-32">
         <div className="mx-auto max-w-5xl">
           <Reveal className="mx-auto max-w-2xl text-center">
@@ -459,7 +446,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ DEVELOPER ============ */}
       {developer?.photoUrl && (
         <section className="px-5 pb-8 sm:px-6">
           <Reveal className="mx-auto max-w-2xl text-center">
@@ -473,7 +459,6 @@ export default function LandingPage() {
         </section>
       )}
 
-      {/* ============ CTA AKHIR ============ */}
       <section className="relative px-5 py-20 sm:px-6 sm:py-28">
         <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[40px] bg-gradient-to-br from-[#0f172a] via-indigo-700 to-violet-600 px-6 py-16 text-center text-white shadow-[0_40px_100px_-40px_rgba(79,70,229,0.7)] sm:px-12 sm:py-24">
           <div aria-hidden className="absolute -left-20 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />

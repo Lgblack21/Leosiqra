@@ -122,7 +122,6 @@ export default function InputTransactionPage() {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        {/* Aksi utama */}
         <div className="lg:col-span-2 space-y-4 md:space-y-6">
           <button
             type="button"
@@ -161,7 +160,6 @@ export default function InputTransactionPage() {
           </div>
         </div>
 
-        {/* Ringkasan hari ini */}
         <Card className="p-5 md:p-6 h-fit">
           <CardHeader title="Hari ini" />
           <div className="grid grid-cols-2 gap-3">

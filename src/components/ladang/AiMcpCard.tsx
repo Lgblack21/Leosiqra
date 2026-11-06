@@ -9,9 +9,7 @@ import { openSettings } from '@/lib/settingsPanel';
 import { useMcpStatus } from '@/lib/mcpStatus';
 import { cn } from '@/lib/utils';
 
-// Usahaku memakai AI MILIK PENGGUNA (Claude/ChatGPT lewat MCP Leosiqra), bukan AI
-// Leosiqra: kartu ini memberi langkahnya — hubungkan AI, salin perintah, buka AI,
-// lalu muat ulang data setelah AI-nya menyimpan lewat tool MCP.
+// Memakai AI MILIK PENGGUNA (Claude/ChatGPT lewat MCP Leosiqra), bukan AI Leosiqra.
 
 export function AiMcpCard({ title, desc, prompt, onLeave, onToast, className }: { title: string; desc: string; prompt: string; onLeave?: () => void; onToast: (m: string) => void; className?: string }) {
   const app = (usePathname() ?? '').startsWith('/app');

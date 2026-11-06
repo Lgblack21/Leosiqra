@@ -28,10 +28,7 @@ import { useFeedback } from '@/components/ui/Feedback';
 import { INTERVAL_LABEL } from '@/lib/recurringIntervals';
 import { cn, formatIDR } from '@/lib/utils';
 
-// Panel Tabungan di halaman Kekayaan (#tabungan; dulu halaman /membership/tabungan): saldo total, target (kartu berwarna, setor langsung), pos
-// tabungan lain, lalu riwayat per bulan. Logika uang tidak berubah — setor/
-// tarik lewat SavingsModal (saldo rekening diubah atomik di server), target
-// lewat TargetFormModal.
+// Setor/tarik lewat SavingsModal (saldo rekening diubah atomik di server), target lewat TargetFormModal.
 
 function TargetCard({ goal, onDeposit, onEdit, onDelete }: { goal: SavingsGoal; onDeposit: () => void; onEdit: () => void; onDelete: () => void }) {
   const color = targetColor(goal);
@@ -134,7 +131,6 @@ export default function TabunganPanel() {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUserId(u?.uid || '');
       if (u) {
-        // Fetch accounts for lookup
         const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
         if (unsubAccRef.current) unsubAccRef.current();
         unsubAccRef.current = onSnapshot(qAcc, (snap) => {
@@ -204,11 +200,7 @@ export default function TabunganPanel() {
   // Total gabungan lintas rekening harus pakai amountIDR (sudah dikonversi
   // saat setoran disimpan), bukan .amount mentah — setoran bisa dalam
   // mata uang berbeda-beda. Penarikan mengurangi total, Setoran menambah.
-  //
-  // Dulu totalSaldo dihitung dari `savings` (cuma bulan terpilih), jadi bulan
-  // yang isinya hanya penarikan tampil minus walau setoran bulan-bulan
-  // sebelumnya masih ada. Sekarang saldo = akumulasi semua bulan (sama seperti
-  // kartu Tabungan di Dashboard); arus bulan ini ditampilkan terpisah.
+  // Saldo = akumulasi semua bulan (sama dengan kartu Tabungan di Dashboard); arus bulan ini ditampilkan terpisah.
   const toIdr = (item: Saving) => Number(item.amountIDR) || item.amount;
   const totalSaldo = useMemo(() => allSavings.reduce((s, item) => {
     const amt = toIdr(item);
@@ -293,7 +285,6 @@ export default function TabunganPanel() {
 
   return (
     <div className="mx-auto mb-12 max-w-[1400px] space-y-6">
-      {/* Judul + aksi */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -311,7 +302,6 @@ export default function TabunganPanel() {
         </div>
       </div>
 
-      {/* Ringkasan */}
       <div className="web-keep relative overflow-hidden rounded-[28px] bg-slate-900 p-6 text-white md:p-8">
         <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-indigo-500/40 blur-3xl" />
         <span aria-hidden className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-violet-500/30 blur-3xl" />
@@ -337,7 +327,6 @@ export default function TabunganPanel() {
         </div>
       </div>
 
-      {/* Target */}
       <section className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <h2 className="text-[18px] font-bold text-slate-900">Target</h2>
@@ -379,7 +368,6 @@ export default function TabunganPanel() {
         )}
       </section>
 
-      {/* Pos lain (kategori tanpa target) */}
       {otherPots.length > 0 && (
         <section className="space-y-3">
           <h2 className="px-1 text-[18px] font-bold text-slate-900">Pos tabungan lain</h2>
@@ -396,7 +384,6 @@ export default function TabunganPanel() {
 
       {error && <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-[14px] text-rose-700">{error}</div>}
 
-      {/* Riwayat */}
       <section className="overflow-hidden rounded-[28px] bg-white ring-1 ring-slate-200/70">
         <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between md:px-6">
           <div>

@@ -37,7 +37,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
     category: '',
     accountId: '',
     dateInvested: toLocalDateString(),
-    targetDate: toLocalDateString(new Date(Date.now() + 24 * 60 * 60 * 1000)), // Default tomorrow
+    targetDate: toLocalDateString(new Date(Date.now() + 24 * 60 * 60 * 1000)),
     maturityAction: 'cairkan' as 'cairkan' | 'aro_bunga' | 'aro_full'
   });
 
@@ -53,7 +53,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
           platform: editData.platform || '',
           currency: editData.currency || 'IDR',
           amountInvested: editData.amountInvested.toString(),
-          durationMonths: '', // irrelevant now
+          durationMonths: '',
           returnPercentage: editData.returnPercentage.toString(),
           taxPercentage: editData.taxPercentage?.toString() || '',
           transactionType: editData.transactionType || 'Penempatan',
@@ -64,7 +64,6 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
           maturityAction: (editData.maturityAction as 'cairkan' | 'aro_bunga' | 'aro_full') || 'cairkan'
         });
       } else {
-        // Reset to initial
         setFormData({
           name: '', platform: '', currency: 'IDR', amountInvested: '', durationMonths: '', returnPercentage: '', taxPercentage: '', transactionType: 'Penempatan', category: '', accountId: '', dateInvested: toLocalDateString(),
           targetDate: toLocalDateString(new Date(Date.now() + 24 * 60 * 60 * 1000)),
@@ -179,7 +178,6 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
           />
         </div>
 
-        {/* Conversion Display */}
         {formData.currency !== 'IDR' && formData.amountInvested && (
           <div className="bg-emerald-50/50 border border-emerald-100/50 rounded-2xl p-4 flex items-center justify-between animate-in slide-in-from-top-2">
             <div className="flex items-center gap-3">
@@ -230,7 +228,6 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
               className="w-full bg-indigo-50/50 border-indigo-100 border focus:ring-2 focus:ring-indigo-100 rounded-xl py-3 px-4 text-sm font-bold text-indigo-700 transition-all" />
           </div>
         </div>
-        {/* Rekening & Tipe Transaksi */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Rekening / Sumber</label>
@@ -242,7 +239,6 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
                   setFormData(p => ({
                     ...p,
                     accountId: e.target.value,
-                    // Ikuti mata uang rekening yang dipilih.
                     currency: selectedAccount?.currency || p.currency,
                   }));
                 }}

@@ -64,7 +64,6 @@ export const Navbar = ({ variant = 'light' }: { variant?: 'light' | 'dark' }) =>
           <span className={`font-serif font-black text-xl sm:text-2xl tracking-tight ${dark ? 'text-[#f4efe6]' : 'text-[#1E293B]'}`}>Leosiqra</span>
         </Link>
 
-        {/* Desktop Menu */}
         <div className="hidden lg:flex items-center gap-8 mx-4">
           <div className={`flex items-center gap-7 text-[13px] font-bold tracking-wide uppercase ${dark ? 'text-[#9a958c]' : 'text-slate-500/80'}`}>
             {SECTIONS.map((s) => (
@@ -92,7 +91,6 @@ export const Navbar = ({ variant = 'light' }: { variant?: 'light' | 'dark' }) =>
             Daftar Gratis
           </Link>
 
-          {/* Mobile Menu Button */}
           <button
             onClick={() => setIsOpen(!isOpen)}
             aria-label={isOpen ? 'Tutup menu' : 'Buka menu'}
@@ -102,7 +100,6 @@ export const Navbar = ({ variant = 'light' }: { variant?: 'light' | 'dark' }) =>
           </button>
         </div>
 
-        {/* Mobile Dropdown */}
         {isOpen && (
           <div className={`absolute top-[calc(100%+12px)] left-0 right-0 backdrop-blur-xl border shadow-2xl rounded-[32px] p-6 flex flex-col gap-4 lg:hidden animate-in outline-none slide-in-from-top-4 duration-300 ${dark ? 'bg-[#0b0d12]/95 border-white/10' : 'bg-white/95 border-white/40'}`}>
             <div className={`flex flex-col gap-4 text-xs font-black uppercase tracking-widest px-2 ${dark ? 'text-[#9a958c]' : 'text-slate-500'}`}>

@@ -82,7 +82,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
           category: editData.category || '',
           accountId: editData.accountId || '',
           platform: editData.platform || '',
-          assetType: 'Emas', // default or custom
+          assetType: 'Emas',
           dateInvested: toLocalDateString(editData.dateInvested)
         });
       } else if (initialData) {
@@ -98,7 +98,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
           category: initialData.category || '',
           accountId: initialData.accountId || '',
           platform: initialData.platform || '',
-          assetType: 'Emas', // default or custom
+          assetType: 'Emas',
           dateInvested: toLocalDateString()
         });
       } else {
@@ -258,7 +258,6 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
           </div>
         </div>
 
-        {/* Conversion Display */}
         {formData.currency !== 'IDR' && formData.quantity && formData.pricePerUnit && (
           <div className="bg-emerald-50/50 border border-emerald-100/50 rounded-2xl p-4 flex items-center justify-between animate-in slide-in-from-top-2">
             <div className="flex items-center gap-3">
@@ -287,7 +286,6 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
                   setFormData(p => ({
                     ...p,
                     accountId: e.target.value,
-                    // Ikuti mata uang rekening yang dipilih.
                     currency: selectedAccount?.currency || p.currency,
                   }));
                 }}
@@ -324,7 +322,6 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
            </div>
         </div>
 
-        {/* Tipe Transaksi & Kategori */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe Transaksi</label>

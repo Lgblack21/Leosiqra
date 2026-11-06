@@ -179,7 +179,6 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
           </div>
         )}
 
-        {/* Tipe */}
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe</label>
           <div className="grid grid-cols-2 gap-3">
@@ -195,7 +194,6 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
           </div>
         </div>
 
-        {/* Jenis hutang (untuk pemilahan di Dashboard) */}
         {formData.debtType === 'hutang' && (
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Jenis Hutang</label>
@@ -211,7 +209,6 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
           </div>
         )}
 
-        {/* Status Pembayaran */}
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Status Pembayaran</label>
           <div className="grid grid-cols-2 gap-3">
@@ -250,7 +247,6 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
           />
         </div>
 
-        {/* Conversion Display */}
         {formData.currency !== 'IDR' && formData.amount && (
           <div className="bg-emerald-50/50 border border-emerald-100/50 rounded-2xl p-4 flex items-center justify-between animate-in slide-in-from-top-2">
             <div className="flex items-center gap-3">
@@ -284,7 +280,6 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
                   setFormData(p => ({
                     ...p,
                     accountId: e.target.value,
-                    // Ikuti mata uang rekening yang dipilih.
                     currency: selectedAccount?.currency || p.currency,
                   }));
                 }}
@@ -327,7 +322,6 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
           </div>
         </div>
 
-        {/* Ringkasan bunga & cicilan — dihitung otomatis dari pokok, tenor, & %bunga. */}
         {(calc.tenor > 0 || calc.totalBunga > 0) && (
           <div className="bg-slate-900 rounded-2xl p-4 grid grid-cols-3 gap-3 text-center">
             <div>

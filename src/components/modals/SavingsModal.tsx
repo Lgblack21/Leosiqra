@@ -171,7 +171,6 @@ export const SavingsModal = ({ userId, isOpen, onClose, initialTransactionType =
           />
         </div>
 
-        {/* Conversion Display */}
         {formData.currency !== 'IDR' && formData.amount && (
           <div className="bg-emerald-50/50 border border-emerald-100/50 rounded-2xl p-4 flex items-center justify-between animate-in slide-in-from-top-2">
             <div className="flex items-center gap-3">
@@ -202,7 +201,6 @@ export const SavingsModal = ({ userId, isOpen, onClose, initialTransactionType =
                   setFormData(p => ({
                     ...p,
                     fromAccount: e.target.value,
-                    // Ikuti mata uang rekening yang dipilih.
                     currency: selectedAccount?.currency || p.currency,
                   }));
                 }}

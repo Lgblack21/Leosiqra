@@ -185,7 +185,6 @@ export default function BudgetPage() {
         <div className="space-y-3"><Skeleton className="h-36 rounded-[24px]" /><Skeleton className="h-64 rounded-[24px]" /></div>
       ) : (
         <>
-          {/* Kartu utama */}
           {budgetTotal > 0 ? (
             <section className={cn('relative overflow-hidden rounded-[24px] p-5 text-white md:p-6', status === 'over' ? 'bg-gradient-to-br from-rose-500 to-pink-600' : status === 'fast' ? 'bg-gradient-to-br from-amber-500 to-orange-600' : 'bg-gradient-to-br from-indigo-600 to-violet-600')}>
               <span aria-hidden className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-white/10" />
@@ -221,7 +220,6 @@ export default function BudgetPage() {
             </section>
           )}
 
-          {/* Per kategori */}
           {(monthly.length > 0 || yearly.length > 0) && (
             <section>
               <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Per kategori</h2>
@@ -263,7 +261,6 @@ export default function BudgetPage() {
             </section>
           )}
 
-          {/* Belum ada anggaran */}
           {unbudgeted.length > 0 && (
             <section>
               <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Belum ada anggaran</h2>
@@ -297,7 +294,6 @@ export default function BudgetPage() {
         </>
       )}
 
-      {/* Bar simpan mode Ubah */}
       {editing && (
         <div className="fixed inset-x-0 bottom-24 z-[60] flex justify-center px-3 md:bottom-6 md:left-[84px] lg:left-72 print:hidden">
           <div className="flex w-full max-w-xl items-center gap-2 rounded-[22px] bg-[#0f172a] p-1.5 pl-4 text-white shadow-[0_24px_50px_-18px_rgba(15,23,42,0.75)]">

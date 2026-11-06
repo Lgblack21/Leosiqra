@@ -49,7 +49,6 @@ export function BrandSplash({ ready, badge, greetingName }: BrandSplashProps) {
           aria-label="Memuat Leosiqra"
           role="status"
         >
-          {/* Aksen warna merek: biru logo & emas */}
           <div
             className="pointer-events-none absolute inset-0"
             style={{

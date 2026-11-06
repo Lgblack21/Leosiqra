@@ -130,7 +130,6 @@ export function TulisView({ date, onDate, onChanged }: { date: string; onDate: (
   return (
     // HP: alur biasa (digulir di dalam area isi), tablet/desktop: dua kolom setinggi layar.
     <div className="grid grid-cols-1 gap-3 pb-2 md:h-full md:min-h-0 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:gap-4 md:pb-0">
-      {/* Kiri: tanggal + gambar */}
       <section className="flex flex-col gap-3 md:min-h-0">
         <div className="flex items-center justify-between gap-2 rounded-full bg-white p-1.5 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800">
           <button type="button" onClick={() => go(shiftDate(date, -1))} className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300" aria-label="Hari sebelumnya"><ChevronLeft size={18} /></button>
@@ -165,7 +164,6 @@ export function TulisView({ date, onDate, onChanged }: { date: string; onDate: (
             </span>
           )}
         </div>
-        {/* Gaya ilustrasi */}
         {canAi && (
           <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]" role="radiogroup" aria-label="Gaya ilustrasi">
             {STYLES.map((x) => (
@@ -184,7 +182,6 @@ export function TulisView({ date, onDate, onChanged }: { date: string; onDate: (
         </div>
       </section>
 
-      {/* Kanan: mood + tulisan + ringkasan hari */}
       <section className="flex flex-col gap-3 rounded-[28px] bg-white p-3.5 md:min-h-0 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800 md:p-5">
         <div>
           <p className="text-[13px] font-bold text-slate-800 dark:text-slate-100">Cuaca hatimu hari ini?</p>
@@ -204,7 +201,6 @@ export function TulisView({ date, onDate, onChanged }: { date: string; onDate: (
             className="h-full min-h-[90px] w-full flex-1 resize-none rounded-2xl bg-slate-50 p-3.5 text-[14px] leading-relaxed text-slate-800 outline-none ring-1 ring-slate-100 placeholder:text-slate-400 focus:bg-white focus:ring-indigo-200 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700" />
           <span className="mt-1 self-end text-[11px] tabular-nums text-slate-400">{text.length}/500</span>
         </label>
-        {/* Ringkasan uang & fokus hari ini (otomatis dari Leosiqra) */}
         {day && (
           <div className="flex flex-wrap gap-1.5 text-[12px] font-semibold">
             <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"><Wallet size={12} /> Keluar {rb(day.summary.out)}</span>

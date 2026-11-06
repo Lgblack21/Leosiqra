@@ -18,7 +18,7 @@ interface StockInvestmentModalProps {
   userId: string;
   isOpen: boolean;
   onClose: () => void;
-  editData?: Investment; // Use this for editing
+  editData?: Investment;
   initialData?: Investment; // Keep this for selling mode
 }
 
@@ -138,8 +138,7 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
 
     try {
       // Semua jalur disimpan server dalam satu batch atomik (posisi + transaksi
-      // tertaut + saldo + ringkasan) — dulu 4–6 request terpisah dari browser,
-      // dan edit memotong saldo lagi tanpa mengembalikan potongan lama.
+      // tertaut + saldo + ringkasan); edit membalikkan potongan saldo lama.
       if (initialData?.id && formData.transactionType === 'Jual') {
         await investmentService.sell(initialData.id, {
           quantity: shares,
@@ -194,7 +193,6 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
           </div>
         )}
 
-        {/* Tipe Transaksi Dropdown */}
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe Transaksi</label>
           <div className="relative">
@@ -285,7 +283,6 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
           />
         </div>
 
-        {/* Conversion Display */}
         {formData.currency !== 'IDR' && formData.sharesCount && formData.pricePerShare && (
           <div className="bg-emerald-50/50 border border-emerald-100/50 rounded-2xl p-4 flex items-center justify-between animate-in slide-in-from-top-2">
             <div className="flex items-center gap-3">
@@ -329,7 +326,6 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
                   setFormData(p => ({
                     ...p,
                     accountId: e.target.value,
-                    // Ikuti mata uang rekening yang dipilih.
                     currency: selectedAccount?.currency || p.currency,
                   }));
                 }}

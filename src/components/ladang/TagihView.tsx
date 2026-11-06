@@ -15,9 +15,7 @@ import { CATEGORY_TEMPLATE } from '@/lib/defaultCategories';
 import { dueLabel } from '@/lib/debtDue';
 import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
 
-// Ladangku › Tagih: piutang yang belum kembali + "Ingatkan via WA" (pesan sopan,
-// dibuka di WhatsApp lewat wa.me — tanpa API berbayar, kontak dipilih user) +
-// Patungan (satu tagihan → piutang per orang, atomik di server).
+// "Ingatkan via WA" lewat wa.me (tanpa API berbayar); Patungan = satu tagihan → piutang per orang, atomik di server.
 
 const TONES = [
   { id: 'santai', label: 'Santai' },

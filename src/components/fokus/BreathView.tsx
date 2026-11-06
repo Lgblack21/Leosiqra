@@ -8,8 +8,6 @@ import { focusAudio } from '@/lib/focus/audio';
 import { lightTap } from '@/lib/haptics';
 import { cn } from '@/lib/utils';
 
-// Tenang — latihan napas terpandu. Lingkaran membesar saat tarik napas, diam saat
-// tahan, mengecil saat hembus; Leo di tengah ikut bernapas.
 type Step = { name: 'tarik' | 'tahan' | 'hembus'; sec: number; text: string };
 const PATTERNS: { id: string; label: string; hint: string; steps: Step[] }[] = [
   { id: 'lega', label: 'Napas lega', hint: 'Dua tarikan lewat hidung, satu hembusan panjang — cepat menurunkan tegang.', steps: [
@@ -72,7 +70,6 @@ export function BreathView() {
   // Pindah tab saat masih berjalan → matikan suara yang dinyalakan Tenang.
   useEffect(() => () => releaseSound(), []);
 
-  // Posisi dalam siklus → langkah & skala lingkaran.
   const elapsed = running ? (now - startedAt) / 1000 : 0;
   let inCycle = elapsed % cycleSec;
   let idx = 0;
@@ -94,7 +91,6 @@ export function BreathView() {
   const scale = running ? before + (target - before) * ease(frac) : 0.78;
   const left = running ? Math.max(0, totalSec - elapsed) : totalSec;
 
-  // Getar halus tiap ganti langkah.
   const stepKey = running ? Math.floor(elapsed / cycleSec) * 10 + idx : -1;
   useEffect(() => {
     if (stepKey < 0 || stepKey === lastStep.current) return;
@@ -115,15 +111,12 @@ export function BreathView() {
   const stop = () => { setStartedAt(null); releaseSound(); lightTap(); };
 
   return (
-    // Satu bidang malam: bola cahaya bernapas + Leo di tengah, kontrol kaca di bawah.
     <section className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[32px] bg-[radial-gradient(120%_80%_at_50%_0%,#3b2f86_0%,#1b1847_55%,#0c0b26_100%)] p-3 text-white shadow-[0_24px_60px_-34px_rgba(49,46,129,0.8)] md:p-5">
-      {/* Bintang samar */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         {[[8, 12], [22, 30], [80, 10], [90, 34], [64, 22], [36, 8], [14, 52], [86, 60]].map(([x, y], i) => (
           <span key={i} className="focus-twinkle absolute h-1 w-1 rounded-full bg-white/70" style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${i * 0.5}s` }} />
         ))}
       </div>
-      {/* Bola napas mengisi ruang (container query) */}
       <div className="relative flex min-h-0 w-full flex-1 items-center justify-center [container-type:size]">
         <div className="relative flex aspect-square items-center justify-center" style={{ width: 'min(92cqw, 92cqh, 380px)' }}>
           {[0, 1, 2].map((i) => (
@@ -136,7 +129,6 @@ export function BreathView() {
             style={{ scale: reduce ? 0.85 : scale, opacity: 0.55 + (scale - MIN_SCALE) }}
           />
           <div className="relative w-[44%]">
-            {/* Leo ikut bernapas (dada mengembang, pipi menggembung saat tahan, embusan saat hembus) & tidak tertidur. */}
             <LeoMascot
               mood={finished ? 'happy' : 'idle'}
               size={140}
@@ -167,7 +159,6 @@ export function BreathView() {
         )}
       </div>
 
-      {/* Kontrol kaca */}
       <div className="relative shrink-0 rounded-[24px] bg-white/10 p-2.5 ring-1 ring-white/10 backdrop-blur-md md:mx-auto md:w-full md:max-w-2xl md:p-3">
         {running ? (
           <button type="button" onClick={stop} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white/15 py-3.5 text-[15px] font-bold text-white hover:bg-white/20"><Square size={16} /> Berhenti</button>

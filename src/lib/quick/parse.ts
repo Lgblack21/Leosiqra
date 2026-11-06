@@ -33,7 +33,7 @@ const MULTIPLIERS: Record<string, number> = {
   m: 1e9, miliar: 1e9, milyar: 1e9, M: 1e9,
 };
 
-// ---- Angka dalam kata ("lima puluh ribu", "seratus dua puluh lima ribu") ----
+// Angka dalam kata ("lima puluh ribu", "seratus dua puluh lima ribu").
 const UNITS: Record<string, number> = {
   satu: 1, dua: 2, tiga: 3, empat: 4, lima: 5, enam: 6, tujuh: 7, delapan: 8, sembilan: 9,
 };

@@ -15,11 +15,7 @@ import { HookSection } from './HookSection';
 import { CatalogImage } from './CatalogImage';
 import { TeamManager } from './TeamManager';
 
-// Ladangku › Usaha (Usahaku): AI menyusun 3 rencana usaha dari "aku bisa …" →
-// simpan jadi usaha → produk & kontak → katalog siap sebar (teks WA, gambar PNG,
-// tautan pesan wa.me) → catat penjualan (pemasukan + saldo, atomik di server).
-// Tahap: Rencana → Katalog → Online → Jualan. Leosiqra tidak meng-host halaman publik;
-// website dibuat user sendiri (brief → Pabrik.AI), lalu AI bisa membaca daftar harganya.
+// Leosiqra tidak meng-host halaman publik; website dibuat user sendiri, lalu AI bisa membaca daftar harganya.
 
 const STARTERS = ['Masakan rumahan', 'Desain', 'Les privat', 'Preloved', 'Kerajinan', 'Foto', 'Top up game'];
 const STAGES = ['Rencana', 'Katalog', 'Online', 'Jualan'] as const;
@@ -462,7 +458,6 @@ function WebsiteSection({ shop, editing, setEditing, onToast, onLeave }: { shop:
   );
 }
 
-// Daftar produk berkelompok per kategori (header + jumlah); tinggi dibatasi untuk katalog besar.
 function ProductList({ products }: { products: ShopProduct[] }) {
   const groups = groupProducts(products);
   const headed = groups.length > 1 || Boolean(groups[0]?.group);

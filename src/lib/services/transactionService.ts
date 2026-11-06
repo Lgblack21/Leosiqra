@@ -51,19 +51,15 @@ const tagsFromPayload = (raw: unknown): string[] | undefined => {
 };
 
 export const transactionService = {
-  // Create
   async createTransaction(data: Omit<Transaction, 'id' | 'createdAt'>) {
     const result = await cloudflareApi<{ id: string }>('/api/member/transactions', {
       method: 'POST',
       json: {
         type: data.type,
         amount: Number(data.amount) || 0,
-        // Kalau amountIDR tidak dikirim (klien gagal konversi kurs, mis. API
-        // kurs kena blok firewall), biarkan field ini kosong — backend punya
-        // fallback konversi sendiri (fetchIdrConversionRate) yang jauh lebih
-        // andal karena jalan server-to-server tanpa hambatan CORS/firewall.
-        // Kalau di sini kita paksa isi dengan `data.amount` mentah, backend
-        // menganggap itu nilai IDR final dan tidak akan pernah mengoreksinya.
+        // amountIDR gagal dihitung klien → biarkan kosong supaya backend konversi
+        // sendiri (fetchIdrConversionRate). Jangan isi `data.amount` mentah: backend
+        // akan menganggapnya IDR final dan tidak pernah mengoreksinya.
         ...(typeof data.amountIDR === 'number' && Number.isFinite(data.amountIDR)
           ? { amount_idr: data.amountIDR }
           : {}),
@@ -94,7 +90,6 @@ export const transactionService = {
     return result.id;
   },
 
-  // Read all for user
   async getUserTransactions(_userId: string) {
     void _userId;
     // limit tinggi agar laporan bulanan/tahunan tidak kehilangan transaksi lama.
@@ -132,13 +127,11 @@ export const transactionService = {
     });
   },
 
-  // Read by type
   async getTransactionsByType(userId: string, type: string) {
     const items = await this.getUserTransactions(userId);
     return items.filter((item) => item.type === type);
   },
 
-  // Update
   async updateTransaction(id: string, data: Partial<Omit<Transaction, 'id' | 'createdAt'>>) {
     await cloudflareApi(`/api/member/transactions/${id}`, {
       method: 'PUT',

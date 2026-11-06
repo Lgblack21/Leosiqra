@@ -18,9 +18,7 @@ import type { InvestTab } from '@/components/investasi/InvestShell';
 import { useModal } from '@/context/ModalContext';
 import { cn, formatIDR } from '@/lib/utils';
 
-// Tab utama Investasiku: nilai portofolio, simulasi "Mau taruh berapa?", kabar
-// minggu ini (cuplikan), daftar portofolio, dan harga pasar. Rumus total sama
-// dengan versi lama: semua posisi non-Planned, dalam IDR (amountIDR/currentValueIDR).
+// Total portofolio = semua posisi non-Planned, dalam IDR (amountIDR/currentValueIDR).
 
 type Kind = 'Saham' | 'Deposito' | 'Lainnya';
 const KIND: Record<Kind, { label: string; color: string; href: string; modal: 'saham' | 'deposito' | 'investasi_lain'; emoji: string }> = {
@@ -97,7 +95,6 @@ export function TabInvestasiku({ market, kabar, go }: { market: ReturnType<typeo
   const alloc = (Object.keys(KIND) as Kind[]).map((k) => ({ k, value: byKind(k).reduce((s, i) => s + idrCurrent(i), 0) })).filter((a) => a.value > 0);
   const shown = (tab === 'Semua' ? investments : byKind(tab)).slice().sort((a, b) => idrCurrent(b) - idrCurrent(a));
 
-  // ---- Simulasi ----
   const presets: Preset[] = useMemo(() => {
     const mine = investments
       .filter((i) => i.type === 'Deposito' && i.status === 'Active' && i.returnPercentage > 0)
@@ -130,7 +127,6 @@ export function TabInvestasiku({ market, kabar, go }: { market: ReturnType<typeo
     <div className="space-y-5">
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-5">
-          {/* Total portofolio */}
           <section className="web-keep relative overflow-hidden rounded-[24px] bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950 p-5 text-white md:p-6">
             <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-emerald-500/20 blur-2xl" />
             <div className="relative flex flex-wrap items-end justify-between gap-3">
@@ -165,7 +161,6 @@ export function TabInvestasiku({ market, kabar, go }: { market: ReturnType<typeo
             )}
           </section>
 
-          {/* Simulasi */}
           <section className="overflow-hidden rounded-[24px] bg-white ring-1 ring-slate-100">
             <div className="px-5 pt-5 text-center md:px-6">
               <p className="text-[13px] text-slate-500">Mau taruh berapa?</p>
@@ -248,7 +243,6 @@ export function TabInvestasiku({ market, kabar, go }: { market: ReturnType<typeo
             </div>
           </section>
 
-          {/* Portofolio */}
           <section>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Portofolio</h2>
@@ -306,7 +300,6 @@ export function TabInvestasiku({ market, kabar, go }: { market: ReturnType<typeo
           </section>
         </div>
 
-        {/* Harga pasar */}
         <aside className="min-w-0 space-y-4">
           <section className="rounded-[24px] bg-white p-4 ring-1 ring-slate-100">
             <div className="mb-1 flex items-center justify-between">

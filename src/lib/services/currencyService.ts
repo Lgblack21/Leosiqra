@@ -13,20 +13,18 @@ import { db } from '../cf-client';
 export interface Currency {
   id?: string;
   userId: string;
-  code: string; // e.g. USD
-  name: string; // e.g. US Dollar
-  symbol: string; // e.g. $
+  code: string;
+  name: string;
+  symbol: string;
   isDefault?: boolean;
   createdAt: Date;
 }
 
 export const currencyService = {
-  // Get all currencies for a user
   getUserCurrencies: (userId: string, callback: (currencies: Currency[]) => void) => {
     const q = query(
-      collection(db, 'currencies'), 
+      collection(db, 'currencies'),
       where('userId', '==', userId),
-      // orderBy('code', 'asc') // Might need index
     );
     
     return onSnapshot(q, (snapshot) => {
@@ -38,7 +36,6 @@ export const currencyService = {
     });
   },
 
-  // Create or add currency
   addCurrency: async (currency: Omit<Currency, 'id' | 'createdAt'>) => {
     return await addDoc(collection(db, 'currencies'), {
       ...currency,
@@ -46,17 +43,15 @@ export const currencyService = {
     });
   },
 
-  // Delete currency
   deleteCurrency: async (id: string) => {
     const docRef = doc(db, 'currencies', id);
     await deleteDoc(docRef);
   },
 
-  // Get all unique currencies across all users (for admin use)
+  // Admin use: all currencies across users, deduplicated by code (first wins).
   getAllUniqueCurrencies: async (): Promise<Currency[]> => {
     const snap = await getDocs(collection(db, 'currencies'));
     const all = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Currency[];
-    // Deduplicate by code, keeping first occurrence
     const seen = new Set<string>();
     return all.filter(c => {
       if (seen.has(c.code)) return false;
@@ -65,7 +60,6 @@ export const currencyService = {
     });
   },
 
-  // Initialize defaults if empty
   initializeDefaults: async (userId: string) => {
     const curRef = collection(db, 'currencies');
     const q = query(curRef, where('userId', '==', userId));

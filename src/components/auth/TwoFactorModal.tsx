@@ -129,7 +129,6 @@ export function TwoFactorModal({ isOpen, onClose, mode, email, onVerify, secret:
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -138,14 +137,12 @@ export function TwoFactorModal({ isOpen, onClose, mode, email, onVerify, secret:
           className="fixed inset-0 bg-slate-900/60 backdrop-blur-md"
         />
 
-        {/* Modal Container */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           className="relative w-full max-w-[500px] bg-white rounded-[40px] shadow-2xl overflow-hidden overflow-y-auto max-h-[95vh] custom-scrollbar"
         >
-          {/* Header */}
           <div className="p-8 pb-0 flex flex-col items-center text-center space-y-6 relative">
             <button 
               onClick={onClose}
@@ -167,7 +164,6 @@ export function TwoFactorModal({ isOpen, onClose, mode, email, onVerify, secret:
               </p>
             </div>
 
-            {/* OTP Input Boxes */}
             <div className="flex gap-2.5 pt-4">
               {token.map((digit, i) => (
                 <input
@@ -196,7 +192,6 @@ export function TwoFactorModal({ isOpen, onClose, mode, email, onVerify, secret:
           <div className="p-8 space-y-6">
             {mode === 'setup' && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                {/* QR Section */}
                 <div className="p-6 rounded-[32px] bg-indigo-50/30 border border-indigo-50/50 flex flex-col items-center space-y-6">
                   <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] self-start">Barcode Authenticator</p>
                   
@@ -213,7 +208,6 @@ export function TwoFactorModal({ isOpen, onClose, mode, email, onVerify, secret:
                   </p>
                 </div>
 
-                {/* Manual Details */}
                 <div className="space-y-4">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Secret Manual</label>
@@ -241,7 +235,6 @@ export function TwoFactorModal({ isOpen, onClose, mode, email, onVerify, secret:
                     </div>
                   </div>
 
-                  {/* Open App Button */}
                   <div className="grid grid-cols-3 gap-3">
                     <button 
                       onClick={() => copyToClipboard(internalSecret, 'secret')}
@@ -266,7 +259,6 @@ export function TwoFactorModal({ isOpen, onClose, mode, email, onVerify, secret:
               </div>
             )}
 
-            {/* Footer Note */}
             <div className="pt-6 border-t border-slate-50 flex items-start gap-3">
               <div className="w-5 h-5 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 shrink-0">
                 <Info size={12} />

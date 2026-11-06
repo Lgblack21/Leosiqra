@@ -155,7 +155,6 @@ function RecurringForm({ onClose, item, onSaved }: Props) {
         </div>
 
         <div className="flex-1 space-y-5 overflow-y-auto px-5 pb-5 pt-2">
-          {/* Jenis: dua kartu, bukan pil. */}
           <div className="grid grid-cols-2 gap-2">
             {(['Pengeluaran', 'Pemasukan'] as Kind[]).map((k) => {
               const on = type === k;
@@ -177,7 +176,6 @@ function RecurringForm({ onClose, item, onSaved }: Props) {
             })}
           </div>
 
-          {/* Nominal besar. */}
           <div className={cn('rounded-[24px] px-4 py-5 text-center', tone.soft)}>
             <div className="flex items-baseline justify-center gap-2">
               <span className={cn('text-[22px] font-semibold', tone.text)}>{type === 'Pemasukan' ? '+' : '−'}{getCurrencySymbol(currency)}</span>
@@ -231,7 +229,6 @@ function RecurringForm({ onClose, item, onSaved }: Props) {
             </select>
           </label>
 
-          {/* Jadwal. */}
           <div className="space-y-3 rounded-[24px] bg-slate-50 p-4">
             <div className="flex flex-wrap gap-2">
               {RECURRING_INTERVALS.map((i) => (

@@ -177,8 +177,8 @@ export const investmentService = {
   // Hapus + balikkan efek saldo/total secara atomik di server (?reverse=1) —
   // kebalikan dari efek saat posisi dibuat (Penempatan/Beli/Pembelian menarik
   // saldo keluar & catat investasi; Penarikan/Jual/Penjualan/Bunga
-  // mengembalikan saldo & catat pemasukan). Dulu 3–4 request terpisah dari
-  // browser: kalau satu gagal, saldo & catatan bisa setengah jadi.
+  // mengembalikan saldo & catat pemasukan). Harus satu request: kalau dipecah,
+  // satu yang gagal meninggalkan saldo & catatan setengah jadi.
   async hardDeleteInvestment(inv: Investment) {
     if (!inv.id) return;
     await cloudflareApi(`/api/member/investments/${inv.id}?reverse=1`, { method: 'DELETE' });
@@ -186,7 +186,7 @@ export const investmentService = {
     notifyCollectionChanged('users');
   },
 
-  // ---- Jalur atomik (server menghitung nilai & efek uang dalam satu batch) ----
+  // Jalur atomik: server menghitung nilai & efek uang dalam satu batch.
 
   // Catat posisi baru: Saham (Beli), Lainnya (Pembelian), Deposito
   // (Penempatan/Bunga/Penarikan). id dibuat di sini per percobaan simpan —

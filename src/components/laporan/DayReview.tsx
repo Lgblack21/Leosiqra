@@ -249,7 +249,6 @@ export function DayReview({ date, onClose, onDate }: { date: Date | null; onClos
           >
             {celebrate > 0 && <Confetti key={celebrate} />}
 
-            {/* Kepala: tanggal + navigasi */}
             <div className="flex items-center gap-2 px-5 pb-2 pt-4">
               <div className="min-w-0 flex-1">
                 <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-400">Cek hari</p>
@@ -262,7 +261,6 @@ export function DayReview({ date, onClose, onDate }: { date: Date | null; onClos
               <button type="button" onClick={onClose} aria-label="Tutup" className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100"><X size={18} /></button>
             </div>
 
-            {/* Progres + Leo */}
             <div className="mx-5 flex items-center gap-4 rounded-[22px] bg-gradient-to-br from-indigo-50 via-violet-50 to-pink-50 p-3.5">
               <div className="relative h-14 w-14 shrink-0">
                 <svg viewBox="0 0 56 56" className="h-full w-full -rotate-90">
@@ -292,7 +290,6 @@ export function DayReview({ date, onClose, onDate }: { date: Date | null; onClos
               </div>
             </div>
 
-            {/* Daftar */}
             <div className="min-h-[160px] flex-1 overflow-y-auto px-3 pb-3 pt-3">
               {loading ? (
                 <div className="flex justify-center py-10"><Loader2 className="animate-spin text-slate-300" /></div>
@@ -320,7 +317,6 @@ export function DayReview({ date, onClose, onDate }: { date: Date | null; onClos
               )}
             </div>
 
-            {/* Aksi */}
             <div className="border-t border-slate-100 p-4">
               {allDone || dayTx.length === 0 ? (
                 <div className="flex gap-2">

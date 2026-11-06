@@ -185,7 +185,6 @@ export function ItemEditor({ item, preset, onDone, onCancel }: { item?: Item | n
     <div className="space-y-5">
       {error && <div role="alert" className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">{error}</div>}
 
-      {/* Foto + nama */}
       <div className="flex gap-4">
         <div className="relative h-[112px] w-[112px] shrink-0 overflow-hidden rounded-3xl bg-slate-100 dark:bg-slate-800">
           {shownPhoto ? (
@@ -227,7 +226,6 @@ export function ItemEditor({ item, preset, onDone, onCancel }: { item?: Item | n
         </div>
       )}
 
-      {/* Kategori */}
       <div>
         <span className={label}>Kategori</span>
         <div className="grid grid-cols-4 gap-2">
@@ -250,7 +248,6 @@ export function ItemEditor({ item, preset, onDone, onCancel }: { item?: Item | n
         <label className="block"><span className={label}>Varian</span><input value={variant} onChange={(e) => setVariant(e.target.value)} placeholder="128 GB, 2024…" maxLength={60} className={input} /></label>
       </div>
 
-      {/* Harga & tanggal */}
       <div className="grid grid-cols-2 gap-3">
         <label className="block">
           <span className={label}>Harga beli</span>
@@ -262,7 +259,6 @@ export function ItemEditor({ item, preset, onDone, onCancel }: { item?: Item | n
         <label className="block"><span className={label}>Dibeli</span><input type="date" value={purchaseDate} max={today} onChange={(e) => setPurchaseDate(e.target.value)} className={input} /></label>
       </div>
 
-      {/* Garansi */}
       <div>
         <span className={label}>Garansi sampai</span>
         <div className="flex flex-wrap items-center gap-2">
@@ -276,7 +272,6 @@ export function ItemEditor({ item, preset, onDone, onCancel }: { item?: Item | n
         {warranty && <p className="mt-1.5 px-1 text-[11px] text-slate-400">Diingatkan 30 & 7 hari sebelum garansi habis.</p>}
       </div>
 
-      {/* Nilai sekarang */}
       <div className="rounded-3xl bg-slate-50 p-4 dark:bg-slate-800/60">
         <div className="flex items-baseline justify-between gap-3">
           <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400">Nilai sekarang</span>

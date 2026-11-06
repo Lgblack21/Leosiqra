@@ -14,9 +14,7 @@ import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { chargesBetween, catalogFor, CYCLE_LABEL, CYCLE_SHORT, daysBetween, addDaysStr, monthlyEquivalent, nextCharge, radarScan, type Subscription } from '@/lib/subscriptions';
 import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
 
-// Langgananku: memantau langganan (bukan Transaksi Rutin — tidak mencatat
-// transaksi). Dipakai /membership/langganan (variant "web") & /app/langganan
-// (variant "app").
+// Hanya memantau langganan — bukan Transaksi Rutin, tidak mencatat transaksi.
 
 const HIDE_KEY = 'leosiqra-hide-balance';
 const fmtDay = (d: string) => new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${d}T00:00:00Z`));
@@ -65,7 +63,6 @@ export function LanggananView({ variant, toast }: { variant: 'web' | 'app'; toas
   // Radar diam-diam: berapa kandidat baru menunggu (untuk ajakan).
   const pending = useMemo(() => (subs ? radarScan(transactions, subs, today) : []), [transactions, subs, today]);
 
-  // Linimasa 30 hari ke depan.
   const horizon = addDaysStr(today, 29);
   const upcoming = paying.flatMap((x) => chargesBetween(x.s.anchorDate, x.s.cycle, today, horizon).map((d) => ({ d, x }))).sort((a, b) => a.d.localeCompare(b.d));
   const upcomingTotal = upcoming.reduce((s, u) => s + u.x.s.amount, 0);
@@ -92,7 +89,6 @@ export function LanggananView({ variant, toast }: { variant: 'web' | 'app'; toas
       {flash && <div role="status" className="rounded-2xl bg-emerald-50 px-4 py-3 text-[13px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">{flash}</div>}
       {error && <div role="alert" className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">{error}</div>}
 
-      {/* Ringkasan */}
       <section className="web-keep relative overflow-hidden rounded-[28px] bg-[radial-gradient(120%_130%_at_100%_0%,#1e1b4b_0%,#0b1220_60%)] p-5 text-white md:p-6">
         <span aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full border border-white/10" />
         <span aria-hidden className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full border border-white/5" />
@@ -118,7 +114,6 @@ export function LanggananView({ variant, toast }: { variant: 'web' | 'app'; toas
         )}
       </section>
 
-      {/* Ajakan radar */}
       <button type="button" onClick={() => setSheet({ kind: 'radar' })} className={cn(card, 'group flex w-full items-center gap-3 p-4 text-left')}>
         <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300">
           <RadarIcon size={22} />
@@ -137,7 +132,6 @@ export function LanggananView({ variant, toast }: { variant: 'web' | 'app'; toas
         )}
       </button>
 
-      {/* Linimasa 30 hari */}
       {upcoming.length > 0 && (
         <section className={cn(card, 'p-4')}>
           <div className="flex items-baseline justify-between gap-2">
@@ -160,7 +154,6 @@ export function LanggananView({ variant, toast }: { variant: 'web' | 'app'; toas
         </section>
       )}
 
-      {/* Daftar */}
       {running.length === 0 && stopped.length === 0 ? (
         <section className={cn(card, 'px-5 py-10 text-center')}>
           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300"><Repeat size={26} /></span>

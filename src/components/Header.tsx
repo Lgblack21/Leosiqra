@@ -20,15 +20,10 @@ export const HeaderSlot = ({ className }: { className?: string }) => (
   <span data-header-slot className={`flex shrink-0 items-center gap-1.5 print:hidden ${className ?? ''}`} />
 );
 
-// Header tanpa judul kecil (judul cukup satu, di halaman — permintaan Bos
-// 2026-10-28). Kalau halaman punya <HeaderSlot />, lonceng + tombol menu
-// dipindah ke sana lewat portal supaya satu baris dengan judul; kalau tidak,
-// tampil sebagai baris tipis di atas konten. Dropdown "Tambah Cepat" sudah
-// dihapus — mencatat lewat "Tambah transaksi" di menu samping / tombol +.
-// Kotak Masuk + lonceng hanya di halaman kelompok Keuangan (Ringkasan, Transaksi,
-// Laporan, Rekening — permintaan Bos 2026-11-04); halaman Fitur (Kekayaan,
-// Investasiku, Langgananku, …) cukup tombol menu di HP. Prefix diambil dari
-// keuanganNav (/membership/transactions/daily → /membership/transactions).
+// Kalau halaman punya <HeaderSlot />, lonceng + tombol menu dipindah ke sana lewat
+// portal supaya satu baris dengan judul; kalau tidak, tampil sebagai baris tipis.
+// Kotak Masuk + lonceng hanya di halaman kelompok Keuangan; halaman Fitur cukup
+// tombol menu di HP. Prefix diambil dari keuanganNav (…/transactions/daily → …/transactions).
 const KEUANGAN_PREFIXES = keuanganNav.map((n) => n.href.split('/').slice(0, 3).join('/'));
 const isKeuanganPage = (path: string | null) => !!path && KEUANGAN_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
 

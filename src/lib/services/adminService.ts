@@ -14,7 +14,6 @@ import {
 import { db } from '../cf-client';
 import { cloudflareApi } from '../cloudflare-api';
 
-// TYPES
 export interface ProPackage {
   id: string;
   name: string;
@@ -150,7 +149,6 @@ const mapAppSettingsToPayload = (data: Partial<AppSettings>): Record<string, unk
   return payload;
 };
 
-// 1. APP SETTINGS SERVICE
 export const getAppSettings = async () => {
   const docRef = doc(db, SETTINGS_COLLECTION, 'global_config');
   const docSnap = await getDoc(docRef);
@@ -191,7 +189,6 @@ export const saveAppSettings = async (data: Partial<AppSettings>) => {
   return await setDoc(docRef, mapAppSettingsToPayload(data), { merge: true });
 };
 
-// 2. LOGGING SERVICE
 export const addAdminLog = async (log: Omit<AdminLog, 'timestamp' | 'id'>) => {
   const colRef = collection(db, LOGS_COLLECTION);
   return await addDoc(colRef, {
@@ -219,7 +216,6 @@ export const subscribeAdminLogs = (limitCount: number = 20, callback: (logs: Adm
   );
 };
 
-// 3. USER MANAGEMENT (FETCHING)
 export const subscribeAllUsers = (callback: (users: Record<string, unknown>[]) => void) => {
   const colRef = collection(db, USERS_COLLECTION);
   const q = query(colRef, orderBy('createdAt', 'desc'));
@@ -239,7 +235,6 @@ export const subscribeAllUsers = (callback: (users: Record<string, unknown>[]) =
   );
 };
 
-// 4. PAYMENT QUEUE (FETCHING)
 export const subscribeAllPayments = (callback: (payments: Record<string, unknown>[]) => void) => {
   const colRef = collection(db, PAYMENTS_COLLECTION);
   const q = query(colRef, orderBy('createdAt', 'desc'));
@@ -259,7 +254,6 @@ export const subscribeAllPayments = (callback: (payments: Record<string, unknown
   );
 };
 
-// 5. ADMIN PROFILE MANAGEMENT
 export const updateAdminProfile = async (uid: string, data: Record<string, unknown>) => {
   const docRef = doc(db, USERS_COLLECTION, uid);
   return await updateDoc(docRef, data);

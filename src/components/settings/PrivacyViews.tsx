@@ -6,7 +6,6 @@ import { cn } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { isPushSupported } from '@/lib/pushNotifications';
 
-// ===== Izin =====
 // Status izin browser untuk perangkat ini (Permissions API). Mengizinkan
 // kamera/mikrofon memicu dialog browser; notifikasi diarahkan ke Notifikasi
 // supaya langganan push ikut dibuat. "Diblokir" hanya bisa dibuka dari
@@ -105,7 +104,6 @@ export function PermissionsView({ openNotifications }: { openNotifications: () =
   );
 }
 
-// ===== Ingatan asisten =====
 // $.prefs.aiMemory — dibaca Tanya Leo di setiap obrolan (lihat aiMemoryBlock
 // di Worker). Maks 600 karakter per kolom.
 type Memory = { style: string; learned: string; about: string };

@@ -86,7 +86,6 @@ export const CurrencyModal = ({ isOpen, onClose }: CurrencyModalProps) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Tambah Mata Uang Dunia">
       <div className="space-y-4">
-        {/* Search */}
         <div className="relative">
           <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           <input
@@ -99,7 +98,6 @@ export const CurrencyModal = ({ isOpen, onClose }: CurrencyModalProps) => {
           />
         </div>
 
-        {/* Daftar mata uang */}
         <div className="max-h-[46vh] overflow-y-auto -mx-1 px-1 space-y-1.5">
           {filtered.length === 0 ? (
             <div className="text-center py-8">
@@ -150,7 +148,6 @@ export const CurrencyModal = ({ isOpen, onClose }: CurrencyModalProps) => {
           )}
         </div>
 
-        {/* Fallback manual */}
         {!showManual ? (
           <button
             onClick={() => setShowManual(true)}

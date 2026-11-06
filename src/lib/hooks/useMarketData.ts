@@ -116,7 +116,7 @@ export function useMarketData() {
     setLoading(true);
     setError(null);
     try {
-      // 0. Get User Currencies (dibatasi waktu — lihat catatan withTimeout di atas)
+      // Dibatasi waktu — lihat catatan withTimeout di atas.
       const currentUser = auth.currentUser;
       let currentCurs: Currency[] = [];
       if (currentUser) {
@@ -132,13 +132,11 @@ export function useMarketData() {
         );
       }
 
-      // 1. Fetch Exchange Rates using our new service
       const rates = await exchangeRateService.getLatestRates();
 
       if (Object.keys(rates).length > 0) {
         const idrRate = rates.IDR || 1;
 
-        // --- DINAMISASI EXCHANGE RATE TABLE ---
         const mappedExchange: ExchangeRate[] = currentCurs
           .filter(c => c.code !== 'IDR')
           .map(c => ({
@@ -157,8 +155,7 @@ export function useMarketData() {
         setExchangeRates(mappedExchange);
         setUsdIdrRate(idrRate);
 
-        // --- DINAMISASI FOREIGN EXCHANGE CARD ---
-        // Filter: exclude IDR (base currency) dan exclude USD (karena semua pair vs USD)
+        // Exclude IDR (base currency) dan exclude USD (karena semua pair vs USD)
         const mappedForex: ForexRate[] = currentCurs
           .filter(c => c.code !== 'IDR' && c.code !== 'USD')
           .slice(0, 5)
@@ -175,12 +172,10 @@ export function useMarketData() {
             { pair: 'AUD/USD', label: 'Aussie / US Dollar', rate: 1 / (rates.AUD || 1) },
           );
         }
-        // Always add USD/IDR as a reference
         mappedForex.push({ pair: 'USD/IDR', label: 'US Dollar / Rupiah', rate: idrRate });
         setForexRates(mappedForex);
 
-        // --- DINAMISASI CRYPTOCURRENCY CARD ---
-        // Prioritas: watchlist custom user (maks 10, dipilih manual) > mata uang
+        // Prioritas kripto: watchlist custom user (maks 10, dipilih manual) > mata uang
         // crypto yang sudah ada di daftar mata uangnya > default top crypto.
         const userCryptos = currentCurs.filter(c => CRYPTO_ID_MAP[c.code.toUpperCase()]);
 
@@ -248,7 +243,6 @@ export function useMarketData() {
 
   useEffect(() => {
     fetchMarketData();
-    // Auto-refresh setiap 60 detik
     const interval = setInterval(fetchMarketData, 60000);
     return () => clearInterval(interval);
   }, [fetchMarketData]);

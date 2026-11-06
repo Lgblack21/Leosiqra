@@ -194,7 +194,6 @@ function TargetForm({ onClose, goal, preset, onSaved }: Props) {
             </div>
 
             <div className="flex-1 space-y-4 overflow-y-auto px-5 pb-5 pt-4">
-              {/* Kartu identitas: ikon + warna, pratinjau langsung. */}
               <section className="overflow-hidden rounded-[24px] bg-white">
                 <div className="relative flex items-center gap-4 p-4" style={{ background: `linear-gradient(135deg, ${color}1f, ${color}05)` }}>
                   <button
@@ -267,7 +266,6 @@ function TargetForm({ onClose, goal, preset, onSaved }: Props) {
                 </div>
               </section>
 
-              {/* Setoran otomatis (opsional). */}
               <section className="rounded-[24px] bg-white p-4">
                 <button type="button" onClick={() => { setAuto((v) => !v); if (!autoAmount && need) setAutoAmount(String(need)); }} className="flex w-full items-center gap-3 text-left" aria-pressed={auto}>
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600"><Repeat size={18} /></span>
@@ -309,7 +307,6 @@ function TargetForm({ onClose, goal, preset, onSaved }: Props) {
                 )}
               </section>
 
-              {/* Dana awal (hanya saat membuat). */}
               {!editing && (
                 <section className="rounded-[24px] bg-white p-4">
                   <div className="mb-3 flex items-center gap-3">

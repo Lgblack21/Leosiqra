@@ -21,12 +21,7 @@ import { NumberInput } from '@/components/ui/NumberInput';
 import { CategorySelect } from '@/components/CategorySelect';
 import { useFeedback } from '@/components/ui/Feedback';
 
-// Impor mutasi bank/e-wallet. CSV & Excel dibaca di browser, PDF BCA dengan
-// parser sendiri, PDF lain & tangkapan layar dibaca AI (kuota harian). Semua
-// baris DITINJAU dulu; yang tersimpan hanya yang dicentang. Impor = riwayat:
-// saldo rekening tidak berubah. Tiap impor bisa dibatalkan dari Riwayat.
-// Dipakai halaman /membership/impor dan pop-up Pengaturan → Impor mutasi
-// (`inPanel`: tanpa judul halaman, satu kolom, bar Simpan menempel di panel).
+// Impor = riwayat: saldo rekening tidak berubah. Semua baris ditinjau dulu; hanya yang dicentang tersimpan.
 
 type Template = 'auto' | 'bca' | 'ai';
 type Draft = ImportRow & { key: number; include: boolean; duplicate: boolean };

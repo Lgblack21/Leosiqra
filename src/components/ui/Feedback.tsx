@@ -90,7 +90,6 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
     <FeedbackContext.Provider value={api}>
       {children}
 
-      {/* Toasts */}
       <div aria-live="polite" className="fixed z-[96] bottom-24 left-4 right-4 sm:left-auto sm:right-6 md:bottom-6 flex flex-col gap-2 sm:w-96 pointer-events-none print:hidden">
         {toasts.map((t) => {
           const { icon: Icon, className } = toneStyles[t.tone];
@@ -110,7 +109,6 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
         })}
       </div>
 
-      {/* Dialog konfirmasi */}
       {pending && (
         <div className="fixed inset-0 z-[95] flex items-center justify-center p-4 print:hidden">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in" onClick={() => settle(false)} />

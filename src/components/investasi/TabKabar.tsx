@@ -9,11 +9,8 @@ import { BI_RATE, LPS, SBN_RETAIL, TAX_DEPOSITO, TAX_SBN, monthlyNet } from '@/l
 import { cn, formatIDR } from '@/lib/utils';
 import type { InvestTab } from '@/components/investasi/InvestShell';
 
-// Tab Kabar ("Radar Leo"): berita keuangan minggu ini dari RSS CNBC Indonesia
-// lewat Worker (/api/member/kabar). Worker sudah menyaring: skor relevansi ke
-// dompet, buang hiburan/promosi/duplikat, batas per topik. Judul & cuplikan
-// asli + tautan sumber, tanpa ditulis ulang. "Buat kamu" dihitung dari
-// lib/sbnData (angka resmi), bukan dari berita.
+// Berita dari RSS lewat Worker (/api/member/kabar, sudah disaring); judul & cuplikan asli, tidak ditulis ulang.
+// "Buat kamu" dihitung dari lib/sbnData (angka resmi), bukan dari berita.
 
 export type KabarItem = { id: string; title: string; summary: string; url: string; source: string; date: string; topic: string; score?: number; related?: number };
 export type KabarState = { items: KabarItem[] | null; error: boolean; scanned?: number; relevant?: number };
@@ -105,7 +102,6 @@ export function TabKabar({ kabar, market, go }: { kabar: KabarState; market: Ret
 
   return (
     <div className="space-y-4">
-      {/* Radar Leo */}
       <section className="relative overflow-hidden rounded-[32px] bg-[#0b1220] p-5 text-white md:p-7">
         <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-[420px] w-[420px] md:right-0">
           {[1, 0.72, 0.46].map((s) => <span key={s} className="absolute inset-0 m-auto rounded-full border border-emerald-400/15" style={{ width: `${s * 100}%`, height: `${s * 100}%` }} />)}

@@ -3,9 +3,8 @@ import type { Transaction } from '@/lib/services/transactionService';
 
 // Realisasi budget = jumlah transaksi BERTIPE SAMA (pemasukan/pengeluaran) dan
 // berkategori sama di periode yang dioper pemanggil, dalam IDR (amountIDR) —
-// target budget selalu IDR. Dulu tipe tidak dicek, jadi mis. pemasukan refund
-// berkategori "Makanan" ikut menambah realisasi budget pengeluaran Makanan.
-// Dipakai bersama halaman web Budget & versi mobile.
+// target budget selalu IDR. Tipe wajib dicek: pemasukan refund berkategori
+// "Makanan" tidak boleh menambah realisasi budget pengeluaran Makanan. Dipakai bersama halaman web Budget & versi mobile.
 export const budgetRealization = (budget: Budget, periodTransactions: Transaction[]) => {
   const category = budget.category.toLowerCase();
   const total = periodTransactions
@@ -15,8 +14,7 @@ export const budgetRealization = (budget: Budget, periodTransactions: Transactio
   return { total, percentage, isOver: percentage > 100 };
 };
 
-// ---- Periode anggaran bulanan ------------------------------------------------
-// Bisa mulai selain tanggal 1 (prefs.budgetStartDay, 1–28 — mis. tanggal
+// Periode anggaran bulanan bisa mulai selain tanggal 1 (prefs.budgetStartDay, 1–28 — mis. tanggal
 // gajian). Periode dinamai menurut bulan MULAINYA: mulai 25 → "periode
 // Oktober" = 25 Okt s/d 24 Nov. Sama dengan budgetPeriodBounds di Worker.
 export type BudgetPeriod = { start: Date; end: Date }; // end eksklusif

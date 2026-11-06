@@ -146,7 +146,6 @@ export default function RecurringPage() {
         </div>
       </div>
 
-      {/* Ringkasan per bulan */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
           { label: 'Masuk / bulan', value: inM, sign: '+', cls: 'text-emerald-700', bg: 'bg-emerald-50' },
@@ -164,7 +163,6 @@ export default function RecurringPage() {
       </div>
       {hasForeign && <p className="-mt-3 px-1 text-[12px] text-slate-500">Jadwal di rekening non-IDR tidak dijumlahkan di ringkasan.</p>}
 
-      {/* 7 hari ke depan */}
       {soon.length > 0 && (
         <section className="space-y-3">
           <h2 className="flex items-center gap-2 px-1 text-[16px] font-bold text-slate-900"><CalendarClock size={18} className="text-indigo-600" /> 7 hari ke depan</h2>
@@ -190,7 +188,6 @@ export default function RecurringPage() {
         </section>
       )}
 
-      {/* Filter */}
       {all.length > 0 && <div className="flex gap-2 overflow-x-auto pb-1">
         {FILTERS.filter((f) => f.id === 'semua' || counts[f.id] > 0).map((f) => (
           <button key={f.id} type="button" onClick={() => setFilter(f.id)} aria-pressed={filter === f.id} className={cn('flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[14px] transition', filter === f.id ? 'bg-slate-900 font-semibold text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50')}>

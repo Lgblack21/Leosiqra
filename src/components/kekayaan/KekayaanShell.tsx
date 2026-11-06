@@ -16,10 +16,8 @@ import { KoleksiView } from '@/components/koleksi/KoleksiView';
 import { useFeedback } from '@/components/ui/Feedback';
 import { cn } from '@/lib/utils';
 
-// Halaman Kekayaan: Tabungan + Hutang & Piutang + ringkasan kekayaan bersih
-// jadi satu (2026-10-30). Tab di hash URL (#tabungan, #hutang) supaya tautan
-// lama (/membership/tabungan, /transactions/debt) bisa diarahkan ke sini.
-// #barangku = Barangku (barang milik user, migrasi 0023).
+// Tab di hash URL (#tabungan, #hutang, #barangku) supaya tautan lama (/membership/tabungan, /transactions/debt)
+// bisa diarahkan ke sini.
 
 export type KekayaanTab = 'ringkasan' | 'tabungan' | 'hutang' | 'barangku' | 'koleksi';
 // `short` = label di HP (4 tab harus muat tanpa digeser).
@@ -53,7 +51,6 @@ export function KekayaanShell() {
     else openModal('rekening', p);
   };
   const run = (f: () => void) => () => { setMenuOpen(false); f(); };
-  // Menu "Tambah" — dibangun bertahap; yang belum ada ditandai "Segera".
   const ADD: { label: string; desc: string; icon: typeof Plus; tone: string; on?: () => void }[] = [
     { label: 'Akun', desc: 'Bank, e-wallet, tunai', icon: Wallet, tone: 'bg-sky-50 text-sky-600', on: addAccount },
     { label: 'Kartu kredit', desc: 'Limit & jatuh tempo', icon: CreditCard, tone: 'bg-indigo-50 text-indigo-600', on: run(() => openModal('kartu')) },
@@ -84,7 +81,6 @@ export function KekayaanShell() {
 
   return (
     <div className="mx-auto mb-12 max-w-[1400px] space-y-5">
-      {/* Judul + Tambah satu baris, tab di baris sendiri (dulu semua satu baris → deskripsi terjepit). */}
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">

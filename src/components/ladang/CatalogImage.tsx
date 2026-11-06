@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 
-// Gambar katalog (logo toko / gambar kategori) dari tautan https pengguna. Gagal
-// dimuat → kembali ke isi cadangan (inisial/emoji). Referrer dimatikan.
+// Gambar dari tautan https pengguna: referrer dimatikan; gagal dimuat → isi cadangan (inisial/emoji).
 export function CatalogImage({ src, alt, fallback, className }: { src?: string; alt: string; fallback: React.ReactNode; className?: string }) {
   const [failed, setFailed] = useState<string | null>(null);
   if (!src || failed === src) return <>{fallback}</>;

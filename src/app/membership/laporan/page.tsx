@@ -17,7 +17,7 @@ import { BubbleCalendar, TopExpenses, WeekdayPattern, YearMonths } from '@/compo
 // Hanya pemasukan/pengeluaran (amountIDR) — transfer, tabungan, beli/jual
 // investasi (isInvestmentFlow, sama dengan Worker) dan catatan hutang bukan
 // pengeluaran.
-// Cetak / PDF (dulu di halaman Laporan Tahunan, dihapus 2026-10-30): tombol
+// Cetak / PDF: tombol
 // memanggil dialog cetak browser ("Simpan sebagai PDF"); kop laporan & CSS
 // cetak di bawah hanya aktif saat print.
 
@@ -168,7 +168,6 @@ export default function LaporanPage() {
   const perUnit = mode === 'tahunan' ? '/bln' : '/hari';
   const txLink = (category: string) => `/membership/transactions/daily?kategori=${encodeURIComponent(category)}&periode=${mode === 'tahunan' && isCurYear ? 'tahun' : mode === 'bulanan' && isCurMonth ? 'bulan' : 'semua'}`;
 
-  // Donat
   const R = 70;
   const C = 2 * Math.PI * R;
   const offsets = cats.reduce<number[]>((acc, c, i) => [...acc, i === 0 ? 0 : acc[i - 1] + (cats[i - 1].value / total) * C], []);
@@ -176,7 +175,6 @@ export default function LaporanPage() {
 
   return (
     <div className="laporan-print mx-auto max-w-5xl space-y-7 pb-12">
-      {/* Kop khusus cetak */}
       <div className="hidden items-end justify-between border-b-2 border-slate-900 pb-4 print:flex">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Leosiqra</p>
@@ -274,7 +272,6 @@ export default function LaporanPage() {
             />
           )}
 
-          {/* Kumulatif vs periode sebelumnya */}
           <section>
             <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Tren pengeluaran</h2>
             <p className="text-[12px] text-slate-500">
@@ -320,7 +317,6 @@ export default function LaporanPage() {
             </div>
           </section>
 
-          {/* Donat + daftar kategori */}
           <section>
             <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Ke mana uangnya</h2>
             <p className="text-[12px] text-slate-500">Ketuk kategori untuk lihat transaksinya</p>
@@ -386,7 +382,6 @@ export default function LaporanPage() {
             )}
           </section>
 
-          {/* Heatmap kategori × bulan */}
           {mode === 'tahunan' && heat.length > 0 && (
             <section>
               <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Kategori dari waktu ke waktu</h2>
@@ -431,7 +426,6 @@ export default function LaporanPage() {
 
           <WeekdayPattern spend={spend} />
 
-          {/* Tempat teratas */}
           {places.length > 0 && (
             <section>
               <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Tempat teratas</h2>

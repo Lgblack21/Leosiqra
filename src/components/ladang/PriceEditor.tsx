@@ -7,8 +7,7 @@ import { cn, formatIDR } from '@/lib/utils';
 import { fieldCls, labelCls } from './UsahaView';
 import { AiMcpCard } from './AiMcpCard';
 
-// Perbarui harga manual: semua produk per kategori dengan kolom harga, cari, dan
-// naik/turun massal X% (dibulatkan ke Rp100 terdekat, opsional). Simpan sekali.
+// Naik/turun massal X% dibulatkan ke Rp100 terdekat (opsional). Simpan sekali.
 const ago = (iso?: string) => {
   if (!iso) return '';
   const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);

@@ -74,9 +74,8 @@ export const monthlyEquivalent = (amount: number, cycle: SubCycle) =>
   cycle === 'mingguan' ? (amount * 52) / 12 : cycle === '3bulan' ? amount / 3 : cycle === 'tahunan' ? amount / 12 : amount;
 
 
-// ── Radar ───────────────────────────────────────────────────────────────────
-// Deterministik (tanpa AI, tanpa kirim data ke luar): pengeluaran 30 hari
-// terakhir (keputusan Bos 2026-11-04) → (1) cocok katalog = "pasti", (2) nama sama yang muncul ≥2× dengan
+// Radar — deterministik (tanpa AI, tanpa kirim data ke luar): pengeluaran 30 hari
+// terakhir → (1) cocok katalog = "pasti", (2) nama sama yang muncul ≥2× dengan
 // nominal mirip (±15%) & jarak teratur (mingguan/bulanan) = "mungkin".
 
 export type RadarHit = {

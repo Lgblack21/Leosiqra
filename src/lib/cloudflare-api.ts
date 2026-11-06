@@ -7,9 +7,8 @@ const defaultBaseUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
   "";
 
-// Pindah halaman dulu memanggil ulang endpoint yang sama berkali-kali (mis.
-// /api/auth/me 6× sekali buka, 2.000 transaksi tiap halaman). GET yang sama
-// sekarang: (1) digabung kalau sedang berjalan, (2) dipakai ulang maks
+// Pindah halaman memanggil endpoint yang sama berkali-kali (mis. /api/auth/me),
+// jadi GET yang sama (1) digabung kalau sedang berjalan, (2) dipakai ulang maks
 // GET_CACHE_TTL_MS. Cache dibuang total pada SETIAP request non-GET, setiap
 // sinyal perubahan data (notifyCollectionChanged, juga dari tab lain), dan
 // saat aplikasi aktif lagi — jadi data tidak basi setelah ada perubahan.

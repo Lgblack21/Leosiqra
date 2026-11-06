@@ -5,13 +5,6 @@ import { LeoMascot, type LeoActivity, type LeoMood } from '@/components/mascot/L
 import type { FocusKind } from '@/lib/focus/store';
 import { cn } from '@/lib/utils';
 
-// "Bukit Fokus" — Leo duduk di puncak bukit, di bawah langit yang ikut jam perangkat.
-// Matahari/bulan berjalan di lengkung langit mengikuti progres sesi (0 → 1), jadi waktu
-// fokus terlihat dari langit. Tiga lapis:
-//   1. langit (CSS gradien seluruh bidang) + lengkung & bintang (SVG "meet", selalu utuh)
-//   2. bukit belakang (SVG "slice", menempel bawah & memenuhi lebar)
-//   3. Leo (diletakkan dengan container query, cocok dengan skala "slice") + bukit depan,
-//      rumput, barang sesuai jenis fokus, kunang-kunang (malam) / kupu-kupu (siang).
 type Sky = 'pagi' | 'siang' | 'sore' | 'malam';
 const skyOf = (h: number): Sky => (h >= 5 && h < 10 ? 'pagi' : h >= 10 && h < 15 ? 'siang' : h >= 15 && h < 18 ? 'sore' : 'malam');
 const SKY_BG: Record<Sky, string> = {
@@ -59,7 +52,6 @@ export function FocusScene({ now, kind, mood, activity, lookX, music, focusing, 
 
   return (
     <div className={cn('relative h-full w-full overflow-hidden [container-type:size]', className)} style={{ background: SKY_BG[sky] }}>
-      {/* 1. Langit: bintang + lengkung perjalanan matahari/bulan */}
       <svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMin meet" className="absolute inset-x-0 top-0 h-[78%] w-full" aria-hidden>
         <defs>
           <radialGradient id="fs-glow" cx="0.5" cy="0.5" r="0.5">
@@ -86,13 +78,11 @@ export function FocusScene({ now, kind, mood, activity, lookX, music, focusing, 
         )}
       </svg>
 
-      {/* 2. Bukit belakang */}
       <svg viewBox={VB} preserveAspectRatio="xMidYMax slice" className="absolute inset-0 h-full w-full" aria-hidden>
         <path d="M-800 200 Q-640 168 -480 196 T-160 188 T60 186 Q110 150 160 196 T400 178 T720 190 T1040 182 T1200 194 L1200 260 L-800 260 Z" fill={hill.back} />
         <path d="M-800 222 Q-600 196 -400 214 T0 210 Q90 186 200 204 T440 198 T800 212 T1200 206 L1200 260 L-800 260 Z" fill={hill.mid} />
       </svg>
 
-      {/* 3. Leo di puncak bukit depan */}
       {/* Ukuran Leo hanya ikut TINGGI (0.4cqh/satuan) supaya di layar lebar tidak raksasa & menabrak timer;
           posisi kaki tetap di puncak bukit depan (y≈196 pada skala slice S). */}
       <div className="absolute" style={{ left: '50cqw', top: `calc(100cqh - 54 * ${S} - 34.4cqh)`, width: '41.6cqh', transform: 'translateX(-50%)' }}>
@@ -101,7 +91,6 @@ export function FocusScene({ now, kind, mood, activity, lookX, music, focusing, 
       <svg viewBox={VB} preserveAspectRatio="xMidYMax slice" className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden>
         <path d="M-800 236 Q-400 226 -40 232 Q80 210 200 196 Q320 210 440 232 Q800 226 1200 236 L1200 260 L-800 260 Z" fill={hill.front} />
         <ellipse cx="200" cy="200" rx="56" ry="6" fill="#FFFFFF" opacity={night ? 0.08 : 0.25} />
-        {/* Rumput & bunga */}
         {[[120, 214], [146, 207], [262, 208], [292, 215], [330, 224], [80, 226]].map(([x, y], i) => (
           <path key={i} d={`M${x} ${y} q-2 -7 -5 -9 M${x} ${y} q1 -8 0 -11 M${x} ${y} q3 -6 6 -8`} stroke={hill.grass} strokeWidth="1.8" fill="none" strokeLinecap="round" />
         ))}
@@ -109,7 +98,6 @@ export function FocusScene({ now, kind, mood, activity, lookX, music, focusing, 
           <g key={`f${i}`}><circle cx={x as number} cy={y as number} r="2.6" fill={c as string} /><circle cx={x as number} cy={y as number} r="1" fill="#F59E0B" /></g>
         ))}
         <KindProp kind={kind} night={night} />
-        {/* Kunang-kunang (malam, lebih ramai saat fokus) / kupu-kupu (siang) */}
         {!reduce && night && [[90, 170], [130, 150], [270, 160], [320, 140], [350, 182], [56, 150], ...(focusing ? [[230, 130], [170, 120]] : [])].map(([x, y], i) => (
           <circle key={`ff${i}`} cx={x} cy={y} r="1.8" fill="#FDE68A" className="focus-firefly" style={{ animationDelay: `${i * 0.7}s` }} />
         ))}
@@ -126,7 +114,6 @@ export function FocusScene({ now, kind, mood, activity, lookX, music, focusing, 
 function KindProp({ kind, night }: { kind: FocusKind; night: boolean }) {
   const shade = night ? 0.85 : 1;
   if (kind === 'kerja') {
-    // Laptop terbuka di samping Leo.
     return (
       <g opacity={shade}>
         <path d="M128 192 h34 l-3 -22 h-28 Z" fill="#CBD5E1" />
@@ -136,7 +123,6 @@ function KindProp({ kind, night }: { kind: FocusKind; night: boolean }) {
     );
   }
   if (kind === 'baca') {
-    // Tumpukan buku + satu terbuka.
     return (
       <g opacity={shade}>
         <rect x="124" y="190" width="34" height="7" rx="1.5" fill="#F472B6" />
@@ -147,7 +133,6 @@ function KindProp({ kind, night }: { kind: FocusKind; night: boolean }) {
     );
   }
   if (kind === 'usaha') {
-    // Kalkulator + koin (sentuhan Leosiqra).
     return (
       <g opacity={shade}>
         <rect x="128" y="180" width="24" height="18" rx="3" fill="#334155" />
@@ -157,7 +142,6 @@ function KindProp({ kind, night }: { kind: FocusKind; night: boolean }) {
       </g>
     );
   }
-  // belajar / lainnya: buku tulis + pensil
   return (
     <g opacity={shade}>
       <path d="M122 196 l8 -12 h30 l-6 12 Z" fill="#FFFFFF" stroke="#C7D2FE" strokeWidth="1" />

@@ -13,7 +13,6 @@ const GRADE_STYLE: Record<string, { ring: string; chip: string }> = {
 };
 const barColor = (s: number) => (s >= 80 ? 'bg-emerald-500' : s >= 60 ? 'bg-indigo-500' : s >= 40 ? 'bg-amber-500' : 'bg-rose-500');
 
-// Kartu Skor Kesehatan Finansial (dashboard web). Angka dari lib/healthScore.
 export function HealthScoreCard({ result, className, compact }: { result: HealthResult; className?: string; compact?: boolean }) {
   const [open, setOpen] = useState(false);
   if (!result.ready) {

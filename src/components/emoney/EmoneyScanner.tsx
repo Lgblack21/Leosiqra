@@ -8,10 +8,7 @@ import { subscribeToCollectionChanges } from "@/lib/cf-firestore";
 import { emoneySupport, scanEmoney, cancelEmoneyScan, maskCardNumber, EMONEY_CARDS, type EmoneyResult, type EmoneySupport } from "@/lib/emoney";
 import { lightTap } from "@/lib/haptics";
 
-// Baca saldo kartu e-money lewat NFC (plugin native), lalu SAMAKAN saldo
-// rekening e-wallet di Leosiqra dengan saldo kartu. Disimpan sebagai nilai
-// absolut (PUT balance), bukan selisih — memindai kartu yang sama dua kali
-// tidak menggandakan apa pun. Dipakai Pengaturan (web) & /app/emoney (HP).
+// Saldo disimpan absolut (PUT balance), bukan selisih — memindai kartu yang sama dua kali tidak menggandakan apa pun.
 
 const NEW = "__baru__";
 

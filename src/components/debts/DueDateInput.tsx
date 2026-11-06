@@ -3,8 +3,7 @@
 import { toLocalDateString } from '@/lib/utils';
 import type { DebtDue } from '@/lib/debtDue';
 
-// Jatuh tempo hutang/piutang untuk form web (DebtModal, panel Hutang): tanpa,
-// sekali (tanggal), atau tiap bulan (tanggal 1–31). Versi app: components/app/debts/DueDateField.
+// Versi app: components/app/debts/DueDateField.
 const field = 'w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-4 text-sm font-bold text-slate-700 transition-all';
 
 export function DueDateInput({ value, onChange }: { value: DebtDue | null; onChange: (v: DebtDue | null) => void }) {

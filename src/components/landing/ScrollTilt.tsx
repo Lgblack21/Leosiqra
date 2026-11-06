@@ -3,8 +3,6 @@
 import { useRef } from "react";
 import { motion, useReducedMotion, useScroll, useSpring, useTransform } from "framer-motion";
 
-// Konten miring ke belakang (perspektif 3D) lalu perlahan tegak saat di-scroll
-// masuk layar — efek "layar diangkat" ala halaman produk premium.
 export function ScrollTilt({ children, className }: { children: React.ReactNode; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();

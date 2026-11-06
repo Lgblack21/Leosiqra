@@ -341,7 +341,6 @@ export default function MonthlyDashboard() {
     });
   }, [accounts, allTransactions, investments, savings, budgets, fxRates, now]);
 
-  // ===== Tambahan Ringkasan v2: ritme, jatah harian, "Segera", kata-kata Leo =====
   const budgetedCats = useMemo(
     () => new Set(budgets.filter((b) => b.type === 'pengeluaran' && b.period === 'monthly' && Number(b.amount) > 0).map((b) => b.category)),
     [budgets]
@@ -496,7 +495,6 @@ export default function MonthlyDashboard() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 pb-12 md:space-y-8">
-      {/* Judul + aksi cepat */}
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-[28px] font-extrabold tracking-tight text-slate-900 md:text-[36px]">Ringkasan</h1>
@@ -516,7 +514,6 @@ export default function MonthlyDashboard() {
       </div>
 
 
-      {/* Kartu sapaan: langit ikut jam + Leo yang bisa diajak ngobrol */}
       <section className={cn('relative overflow-hidden rounded-[28px] bg-gradient-to-b p-5 pb-6 text-white shadow-[0_24px_50px_-30px_rgba(79,70,229,0.8)] md:rounded-[32px] md:p-7 md:pb-7', sky)}>
         {/* Matahari/bulan, awan, kota & hutan — tanpa blur (lihat SkyScene). */}
         <SkyScene now={now} />
@@ -573,7 +570,6 @@ export default function MonthlyDashboard() {
 
       <SecurityNudge />
 
-      {/* Denyut: saldo, keluar & masuk bulan terpilih */}
       <section className="grid grid-cols-3 gap-2.5 md:gap-4">
         <button type="button" onClick={() => setShowAccountsModal(true)} className={cn(card, 'min-w-0 p-3.5 text-left transition-shadow hover:shadow-md md:p-5')}>
           <span className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-500 md:text-[13px]"><Wallet size={14} className="text-indigo-500" /> Saldo bersih</span>
@@ -600,7 +596,6 @@ export default function MonthlyDashboard() {
         </Link>
       </section>
 
-      {/* Bulan terpilih: ke mana uangmu + ritme */}
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-3 px-1">
           <h2 className="text-[20px] font-extrabold tracking-tight text-slate-900 md:text-[22px]">
@@ -677,7 +672,6 @@ export default function MonthlyDashboard() {
 
       {!statsLoading && <HealthScoreCard result={health} />}
 
-      {/* Catatan terbaru (dikelompokkan per hari) + Segera */}
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <div className={cn(card, 'p-5 md:p-6')}>
           <div className="flex items-baseline justify-between">

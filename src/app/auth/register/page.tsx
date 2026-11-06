@@ -198,7 +198,6 @@ export default function RegisterPage() {
                       </button>
                     </span>
                   </label>
-                  {/* Meter kekuatan 4 segmen + syarat yang tercentang */}
                   <div className="mt-2.5 grid grid-cols-4 gap-1.5 px-1">
                     {[0, 1, 2, 3].map((k) => (
                       <span key={k} className="h-1.5 overflow-hidden rounded-full bg-slate-100">

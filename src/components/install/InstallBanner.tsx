@@ -10,15 +10,8 @@ import { cloudflareApi } from "@/lib/cloudflare-api";
 import { useInstallPrompt, detectPlatform, isNativeApp, isStandaloneDisplay } from "@/lib/pwaInstall";
 import { cn } from "@/lib/utils";
 
-// Iklan "pasang aplikasi" yang tampil sebelum & sesudah login.
-// - Tidak tampil kalau aplikasinya sudah terpasang: dibuka sebagai aplikasi,
-//   Chrome melaporkannya terpasang (getInstalledRelatedApps), atau akun ini
-//   membuka aplikasinya dalam 14 hari terakhir (dicatat server).
-// - Muncul lagi kalau aplikasinya dihapus: Chrome kembali menawarkan install,
-//   atau (iPhone) aplikasinya tidak dibuka lagi selama 14 hari.
-// - Tombol X menyembunyikannya 30 hari di perangkat ini.
-// - Supaya tidak mengganggu: hanya di halaman beranda (bukan kasir/input/laporan),
-//   dan paling banyak SEKALI per sesi browser — pindah halaman tidak memunculkannya lagi.
+// Disembunyikan kalau aplikasi sudah terpasang (standalone, getInstalledRelatedApps, atau dibuka akun ini ≤14 hari);
+// X = sembunyi 30 hari di perangkat ini. Hanya di halaman beranda, paling banyak sekali per sesi browser.
 type Variant = "leosiqra" | "input-cepat";
 
 const FRESH_MS = 14 * 24 * 60 * 60 * 1000;
@@ -28,7 +21,6 @@ const dismissKey = (v: Variant) => `leosiqra:install-ad-dismissed:${v}`;
 const PUBLIC_PREFIXES = ["/panduan", "/catatan-keuangan", "/hubungi-kami", "/privacy", "/terms"];
 
 type Area = "public" | "member" | "app";
-// Halaman member/app tempat iklan boleh tampil — beranda saja, bukan halaman kerja.
 const MEMBER_HOMES = new Set(["/membership", "/membership/dashboard", "/app"]);
 function areaFor(rawPath: string): Area | null {
   const path = rawPath.length > 1 ? rawPath.replace(/\/+$/, "") : rawPath;
@@ -39,7 +31,6 @@ function areaFor(rawPath: string): Area | null {
   return null; // /install, /input-cepat, /auth, /admin, dll.
 }
 
-// Sudah tampil di sesi browser ini → jangan muncul lagi di halaman berikutnya.
 const SESSION_KEY = "leosiqra:install-ad-shown";
 const shownThisSession = () => {
   try { return sessionStorage.getItem(SESSION_KEY) === "1"; } catch { return false; }
@@ -86,7 +77,6 @@ export function InstallBanner() {
   // true = iklan sudah diputuskan tampil di halaman ini (penanda sesi tidak boleh menyembunyikannya lagi).
   const shownHere = useRef(false);
 
-  // Kumpulkan sinyal "sudah terpasang" sekali: laporan Chrome + catatan akun.
   useEffect(() => {
     if (!area || isStandaloneDisplay() || isNativeApp()) return;
     let alive = true;
@@ -108,7 +98,6 @@ export function InstallBanner() {
     };
   }, [area]);
 
-  // Tentukan iklan mana yang tampil (atau tidak sama sekali).
   useEffect(() => {
     if (!area || !signals.ready) return;
     let leosiqraInstalled = signals.related || recent(signals.opened.leosiqra);

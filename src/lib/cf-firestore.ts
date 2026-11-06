@@ -164,8 +164,7 @@ const isDateKey = (key: string) =>
     "updatedAt",
     "expiredAt",
     "nextDate",
-    // Dulu hilang dari daftar ini, jadi dateInvested/targetDate tampil salah
-    // (fallback ke hari ini / kosong) di halaman yang baca lewat onSnapshot.
+    // Tanpa dua ini, dateInvested/targetDate tampil salah di halaman yang baca lewat onSnapshot.
     "date_invested",
     "target_date",
     "dateInvested",

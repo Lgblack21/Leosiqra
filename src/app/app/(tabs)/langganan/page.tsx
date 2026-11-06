@@ -5,7 +5,6 @@ import { ChevronLeft } from "lucide-react";
 import { FadeIn } from "@/components/app/FadeIn";
 import { LanggananView } from "@/components/langganan/LanggananView";
 
-// Langgananku versi app HP — komponen sama dengan web (LanggananView).
 export default function AppLanggananPage() {
   return (
     <div className="max-w-md mx-auto px-5 pt-8 pb-8 space-y-5">

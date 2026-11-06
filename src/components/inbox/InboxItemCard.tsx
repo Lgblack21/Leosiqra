@@ -13,10 +13,8 @@ import { AccountPicker } from '@/components/app/AccountPicker';
 import { useFeedback } from '@/components/ui/Feedback';
 import type { InboxItem } from '@/components/inbox/InboxControls';
 
-// Satu usulan di Kotak Masuk (web & HP). Tidak ada yang tercatat sebelum
-// user menekan Simpan — mencegah transaksi dobel dengan catatan manual.
-// Simpan = kunci usulan di server dulu (sekali saja), baru buat transaksi;
-// gagal membuat → kunci dilepas lagi.
+// Tidak ada yang tercatat sebelum Simpan (cegah dobel dengan catatan manual). Simpan = kunci usulan di server
+// dulu (sekali saja), baru buat transaksi; gagal membuat → kunci dilepas lagi.
 
 const shortDate = (iso: string) => new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
 const senderName = (s: string | null) => (s ?? '').replace(/<[^>]*>/g, '').replace(/"/g, '').trim() || 'Email';

@@ -8,9 +8,6 @@ import { cn } from '@/lib/utils';
 import { LeoMascot, type LeoActivity, type LeoMood } from '@/components/mascot/LeoMascot';
 import type { Season } from '@/lib/season';
 
-// Leo di Ringkasan: ngobrol soal keuanganmu hari ini. Setiap "kata" disusun
-// halaman dari data asli (budget, hari ini, pengingat, kebiasaan). Ketuk Leo →
-// kaget-ketawa lalu pindah ke kata berikutnya; ekspresinya ikut isi pesan.
 export type LeoTip = {
   id: string;
   text: string;
@@ -18,8 +15,6 @@ export type LeoTip = {
   action?: { label: string; href?: string; onClick?: () => void };
 };
 
-// Kesibukan Leo saat tidak sedang ngomong — ikut jam perangkat: malam tidur,
-// jam makan makan, selebihnya gantian main bola, main koin, makan, santai.
 const ACT_LABEL: Record<LeoActivity, string> = {
   eat: 'Leo lagi makan 🍗',
   play: 'Leo lagi main bola ⚽',
@@ -40,8 +35,7 @@ const TALK_FOR = 6500;
 const keepHyphenated = (text: string) =>
   text.split(/(\S+-\S+)/).map((part, k) => (k % 2 ? <span key={k} className="whitespace-nowrap">{part}</span> : part));
 
-// Satu instans untuk semua layar (dulu dua: HP & desktop, timer & listener ikut dobel);
-// ukuran maskot diatur CSS lewat mascotClassName.
+// Satu instans untuk semua layar (timer & listener tidak dobel); ukuran maskot lewat mascotClassName.
 export function LeoBuddy({ tips, season, size = 150, className, mascotClassName }: { tips: LeoTip[]; season: Season | null; size?: number; className?: string; mascotClassName?: string }) {
   const reduce = useReducedMotion();
   const [i, setI] = useState(0);
@@ -55,7 +49,6 @@ export function LeoBuddy({ tips, season, size = 150, className, mascotClassName 
     setI(0);
   }, [key]);
 
-  // Aktivitas berganti tiap ACT_EVERY; diketuk → berhenti sebentar untuk ngomong.
   const [activity, setActivity] = useState<LeoActivity | null>(null);
   const [talking, setTalking] = useState(false);
   useEffect(() => {

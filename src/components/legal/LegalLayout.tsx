@@ -89,7 +89,6 @@ export function LegalLayout({
 
       <main className="relative flex-1 px-5 pb-24 sm:px-6">
         <div className="mx-auto grid grid-cols-1 max-w-5xl gap-10 lg:grid-cols-[240px_1fr]">
-          {/* Daftar isi: menempel di desktop, lipatan di HP */}
           <aside className="lg:sticky lg:top-28 lg:self-start">
             <details className="lp-card rounded-2xl p-2 lg:hidden">
               <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-sm font-bold text-slate-700">

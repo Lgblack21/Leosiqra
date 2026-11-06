@@ -9,10 +9,7 @@ export interface GuideFaq {
   a: string;
 }
 
-// Kerangka halaman panduan publik (target pencarian Google): satu H1 berisi
-// kata kunci, artikel yang benar-benar menjawab, FAQ + JSON-LD FAQPage, dan
-// ajakan mencoba aplikasi. Server component — isinya ikut ter-render di HTML
-// statis supaya bisa dibaca crawler tanpa menjalankan JavaScript.
+// Server component: isinya ter-render di HTML statis supaya terbaca crawler tanpa menjalankan JavaScript.
 export function GuideLayout({
   eyebrow,
   title,

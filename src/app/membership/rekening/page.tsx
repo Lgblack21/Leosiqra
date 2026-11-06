@@ -38,7 +38,7 @@ import { CreditCardForm } from '@/components/rekening/CreditCardForm';
 // tunai, investasi), tumpukan kartu kredit dengan jatuh tempo terdekat,
 // dan target tabungan. Ketuk rekening/kartu → detail (AccountDetail);
 // "Atur urutan" mengganti urutan yang dipakai semua daftar rekening. Halaman
-// Kartu Saya dilebur ke sini (2026-10-28). Rumus saldo & tagihan sama dengan Ringkasan
+// Kartu Saya dilebur ke sini. Rumus saldo & tagihan sama dengan Ringkasan
 // (balance dikonversi ke IDR; kartu kredit lewat lib/creditCard.ts).
 
 const TYPE_LABEL: Record<string, string> = {
@@ -211,7 +211,6 @@ export default function RekeningPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 pb-12">
-      {/* Judul + aksi */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[30px]">Rekening</h1>
@@ -241,7 +240,6 @@ export default function RekeningPage() {
         </div>
       </div>
 
-      {/* Kartu saldo + komposisi kas */}
       {loading ? (
         <Skeleton className="h-44 rounded-[24px]" />
       ) : (
@@ -297,7 +295,6 @@ export default function RekeningPage() {
         </section>
       )}
 
-      {/* Rekening kas */}
       <section>
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Rekeningmu</h2>
@@ -387,7 +384,6 @@ export default function RekeningPage() {
               return (
                 <li key={acc.id}>
                   <button type="button" onClick={() => openHub(acc.id)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50">
-                    {/* Thumbnail kartu */}
                     <span className={cn('relative flex h-[30px] w-[46px] shrink-0 flex-col justify-end overflow-hidden rounded-[7px] p-1 shadow-sm', getCardGradientClass(acc.cardColor, acc.type))}>
                       <span aria-hidden className="absolute -right-2 -top-3 h-6 w-6 rounded-full bg-white/20" />
                       <span aria-hidden className="absolute left-1 top-1 h-[7px] w-[9px] rounded-[2px] bg-amber-200/90" />
@@ -419,7 +415,6 @@ export default function RekeningPage() {
         </section>
       )}
 
-      {/* Target tabungan — cincin progres */}
       {goalsWithTarget.length > 0 && (
         <section>
           <div className="mb-2 flex items-baseline justify-between">

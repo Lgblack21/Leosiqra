@@ -2,8 +2,7 @@
 
 import { Area, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
-// Ritme pengeluaran: total kumulatif per tanggal bulan terpilih vs bulan
-// sebelumnya, plus garis total anggaran bulanan (kalau ada). Nilai dalam IDR.
+// Kumulatif bulan terpilih vs bulan sebelumnya; semua nilai dalam IDR.
 export type PacePoint = { day: number; now: number | null; prev: number | null };
 
 const short = (n: number) => (n >= 1e6 ? `${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 1 })} jt` : n >= 1e3 ? `${Math.round(n / 1e3)} rb` : String(Math.round(n)));

@@ -2,8 +2,7 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 
-// Muncul saat masuk layar: naik sedikit + buram → tajam. Hormati "kurangi
-// gerakan" di pengaturan perangkat (langsung tampil tanpa animasi).
+// Hormati "kurangi gerakan" di pengaturan perangkat: langsung tampil tanpa animasi.
 export function Reveal({
   children,
   delay = 0,

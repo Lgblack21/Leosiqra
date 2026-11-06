@@ -28,16 +28,10 @@ export interface CreditUsage {
 // Konvensi: saldo (`balance`) kartu kredit = −tagihan terpakai. Semua alur
 // yang menggerakkan uang sudah memperbarui `balance` (belanja −, pembayaran +,
 // transfer/top up masuk +/keluar −, setoran tabungan & penempatan investasi −,
-// pelunasan hutang ±), jadi terpakai diturunkan langsung dari saldo.
-//
-// Dulu terpakai direkonstruksi dari daftar transaksi (initialBalance +
-// pengeluaran − pemasukan). Itu melewatkan pembayaran lewat Transfer & Top Up
-// (tipe `transfer`), pemakaian lewat top up dari kartu, setoran tabungan &
-// investasi dari kartu, dan menghitung catatan Hutang di kartu dengan arah
-// terbalik — sehingga sisa limit makin lama makin salah.
-//
-// Parameter `transactions` dipertahankan supaya pemanggil lama tidak perlu
-// diubah; tidak dipakai lagi.
+// pelunasan hutang ±), jadi terpakai diturunkan langsung dari saldo — jangan
+// direkonstruksi dari daftar transaksi (transfer, top up, setoran tabungan/
+// investasi dari kartu, dan arah catatan Hutang bikin sisa limit makin salah).
+// Parameter `transactions` cuma dipertahankan untuk pemanggil lama; tidak dipakai.
 export const computeCreditUsage = (account: Account, transactions?: Transaction[]): CreditUsage => {
   void transactions;
   const limit = account.creditLimit || 0;
@@ -48,8 +42,6 @@ export const computeCreditUsage = (account: Account, transactions?: Transaction[
 // Kebalikan konvensi di atas: tagihan terpakai (angka positif yang user isi di
 // form) → nilai `balance` yang disimpan.
 export const creditBalanceFromUsed = (used: number) => -Math.max(0, used || 0);
-
-// ---- Siklus tagihan (Tahap 3) ----------------------------------------------
 
 // Arus uang rekening kartu dari daftar transaksi: belanja/top up keluar
 // menambah terpakai (+), pembayaran/transfer masuk mengurangi (−). Catatan

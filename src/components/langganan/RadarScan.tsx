@@ -10,11 +10,7 @@ import { subscriptionService } from '@/lib/services/subscriptionService';
 import { addDaysStr, CYCLE_SHORT, daysBetween, monthlyEquivalent, nextCharge, radarScan, RADAR_DAYS, type RadarHit, type Subscription } from '@/lib/subscriptions';
 import { SubLogo } from '@/components/langganan/SubLogo';
 
-// Radar Langgananku: grid 30 hari (kolom = minggu, baris = Sen–Min) disapu
-// sinar radar kolom demi kolom; tanggal pembayaran langganan menyala dengan
-// logonya, temuan masuk "baki" dengan total per bulan yang naik. Lalu daftar
-// hasil untuk dicentang & disimpan. Deteksi = lib/subscriptions radarScan
-// (lokal, tanpa AI). Kelas dark: untuk /app; web memakai .web-dark.
+// Deteksi = lib/subscriptions radarScan (lokal, tanpa AI). Kelas dark: untuk /app; web memakai .web-dark.
 
 const STEP_MS = 85;
 const CELL = 38; // px per sel
@@ -73,7 +69,6 @@ export function RadarScan({ transactions, subs, onDone }: { transactions: Transa
           </div>
         </div>
 
-        {/* Peta 30 hari */}
         <div className="mt-4 overflow-x-auto no-scrollbar">
           <div className="relative mx-auto grid w-max" style={{ gridTemplateColumns: `repeat(${columns}, ${CELL}px)`, gridTemplateRows: `repeat(7, ${CELL}px)`, gridAutoFlow: 'column', gap: GAP }}>
             {cells.map(({ col, row, idx, day }) => {
@@ -109,7 +104,6 @@ export function RadarScan({ transactions, subs, onDone }: { transactions: Transa
           </div>
         </div>
 
-        {/* Baki temuan */}
         <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white/[0.06] px-3 py-2.5">
           <div className="flex min-w-0 flex-1 -space-x-2">
             <AnimatePresence initial={false}>

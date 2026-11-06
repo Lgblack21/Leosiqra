@@ -5,7 +5,6 @@ import { AddTransactionModal } from '@/components/AddTransactionModal';
 import { useEffect, useState } from 'react';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 
-// Extracted Modals
 import { StockInvestmentModal } from '@/components/modals/StockInvestmentModal';
 import { DepositModal } from '@/components/modals/DepositModal';
 import { OtherInvestmentModal } from '@/components/modals/OtherInvestmentModal';

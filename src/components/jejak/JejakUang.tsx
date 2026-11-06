@@ -8,11 +8,8 @@ import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { HeaderSlot } from '@/components/Header';
 import { cn, formatIDR, isInvestmentFlow } from '@/lib/utils';
 
-// Jejak Uang: dari mana uang datang & ke mana perginya, sebagai diagram aliran
-// (Sankey) sumber pemasukan → total → kategori → tempat. Data = pemasukan &
-// pengeluaran tercatat, aturan sama dengan Laporan (beli/jual investasi bukan
-// pengeluaran). "Tempat" = judul/catatan transaksi. Kalau pengeluaran > pemasukan,
-// selisihnya digambar sebagai "Dari simpanan" (bukan data — hanya penyeimbang).
+// Aturan sama dengan Laporan (beli/jual investasi bukan pengeluaran). Kalau pengeluaran > pemasukan,
+// selisihnya digambar sebagai "Dari simpanan" (hanya penyeimbang, bukan data).
 
 type Mode = 'bulanan' | 'tahunan';
 type NodeKind = 'in' | 'deficit' | 'mid' | 'sisa' | 'cat' | 'place';
@@ -100,7 +97,6 @@ export function JejakUang() {
   const totalOut = spendList.reduce((s, t) => s + idr(t), 0);
   const net = totalIn - totalOut;
 
-  // Kategori pengeluaran (top 6 + Lainnya) & tempat per kategori.
   const spendCats = useMemo(() => {
     const g = group(spendList, (t) => t.category || 'Lainnya');
     const top = g.slice(0, 6);
@@ -121,7 +117,6 @@ export function JejakUang() {
     return top;
   }, [incomeList]);
 
-  // Tata letak diagram.
   const cols = narrow ? 3 : 4;
   const W = narrow ? 420 : 1000;
   const XS = narrow ? [96, 196, 300] : [170, 400, 630, 850];
@@ -223,7 +218,6 @@ export function JejakUang() {
         </div>
       </div>
 
-      {/* Ringkasan */}
       <div className="grid grid-cols-3 gap-2 md:gap-3">
         {[
           { label: 'Masuk', value: totalIn, tone: 'text-emerald-600', bar: 'bg-emerald-400' },
@@ -238,7 +232,6 @@ export function JejakUang() {
         ))}
       </div>
 
-      {/* Diagram */}
       <section className="relative overflow-hidden rounded-[28px] bg-white p-3 ring-1 ring-slate-100 md:p-6">
         {loading ? (
           <div className="h-[380px] animate-pulse rounded-2xl bg-slate-50" />
@@ -307,7 +300,6 @@ export function JejakUang() {
         )}
       </section>
 
-      {/* Ikuti satu kategori */}
       <AnimatePresence>
         {focused && (
           <motion.section key={focused.name} initial={reduce ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} className="rounded-[26px] bg-white p-4 ring-1 ring-slate-100 md:p-5">

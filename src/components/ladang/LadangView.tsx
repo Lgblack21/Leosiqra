@@ -15,11 +15,8 @@ import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { categoryMeta, itemCurrentValue, type Item } from '@/lib/itemValue';
 import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
 
-// Ladangku: cuan sampingan. Tab (hash): #ringkas — cuan bulan ini (hanya hasil
-// Ladangku), #usaha — Usahaku (rencana AI + katalog + catat penjualan), #jual —
-// barang nganggur jadi uang (AI menaksir dari iklan asli), #tagih — piutang + WA +
-// Patungan. (Tab Target lama dihapus: ikut menghitung gaji.) Dipakai web (/membership/ladang) & app
-// HP (/app/ladang). ?item=<id> langsung membuka barang itu (tombol di Barangku).
+// Tab di hash (#ringkas, #usaha, #jual, #tagih). Tab Target lama dihapus karena ikut menghitung gaji.
+// ?item=<id> langsung membuka barang itu (tombol di Barangku).
 
 const TABS = [
   { id: 'ringkas', label: 'Ringkas', icon: LayoutGrid, title: 'Ladangku', sub: 'Cuan sampingan bulan ini' },

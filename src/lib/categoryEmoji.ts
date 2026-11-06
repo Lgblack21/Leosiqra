@@ -37,7 +37,7 @@ export function categoryVisual(category?: string, type?: string): { emoji: strin
   return { emoji: '🧾', tile: 'bg-slate-100' };
 }
 
-// ---- Ikon & warna pilihan user (disimpan di preferensi akun) ----------------
+// Ikon & warna pilihan user (disimpan di preferensi akun).
 // Komponen yang memakai categoryVisual memanggil useCategoryStyles() supaya
 // ikut tergambar ulang begitu gaya dimuat/diubah.
 

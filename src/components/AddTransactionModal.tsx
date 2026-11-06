@@ -32,7 +32,6 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
   const { tags: tagsPref } = useTags();
   const [tags, setTags] = useState<string[]>([]);
   
-  // Form State
   const [formData, setFormData] = useState({
     date: toLocalDateString(),
     note: '',
@@ -131,7 +130,6 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
 
       onClose();
 
-      // Reset form
       setTags([]);
       setFormData({
         date: toLocalDateString(),
@@ -177,7 +175,6 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
             </div>
           )}
 
-          {/* Type Selector */}
           <div className="grid grid-cols-2 gap-3">
             {types.map((t) => {
               const Icon = t.icon;
@@ -251,7 +248,6 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
             </div>
           </div>
           
-          {/* Conversion Display */}
           {formData.currency !== 'IDR' && formData.amount && (
             <div className="bg-emerald-50/50 border border-emerald-100/50 rounded-2xl p-4 flex items-center justify-between animate-in slide-in-from-top-2">
               <div className="flex items-center gap-3">
@@ -356,4 +352,3 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
     </div>
   );
 };
-

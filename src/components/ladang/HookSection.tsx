@@ -9,8 +9,6 @@ import { cn } from '@/lib/utils';
 import { AiMcpCard } from './AiMcpCard';
 import { fieldCls, labelCls } from './UsahaView';
 
-// Sambungkan website → Leosiqra: server website pengguna mengirim POST per order
-// (webhook) dan penjualan langsung tercatat di kasir + saldo rekening tujuan.
 // Kunci rahasia hanya ditampilkan sekali; Worker menyimpan hash-nya saja.
 
 const ago = (iso?: string) => {

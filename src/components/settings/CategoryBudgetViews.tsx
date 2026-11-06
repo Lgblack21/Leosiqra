@@ -19,8 +19,7 @@ import { onAuthStateChanged } from '@/lib/cf-auth';
 // Query kategori/mata uang disaring di klien berdasarkan userId — wajib uid asli.
 const uid = () => auth.currentUser?.uid ?? '';
 
-// Kategori & Anggaran + Mata uang, ditampilkan di dalam panel Pengaturan
-// (menggantikan halaman /membership/nama-akun & /membership/budget).
+// Kategori & Anggaran + Mata uang, ditampilkan di dalam panel Pengaturan.
 // Model data tetap sama: kategori = grup `category` dengan baris-baris
 // `subCategory` (tabel categories), anggaran = tabel budgets per kategori.
 // Jenis kategori (Pengeluaran/Pemasukan) disimpan di akun ($.prefs.categoryKinds);

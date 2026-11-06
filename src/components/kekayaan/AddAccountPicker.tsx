@@ -11,12 +11,7 @@ import { isCreditAccountType } from '@/lib/creditCard';
 import { institutionDomain, matchIndonesianInstitutionLogo } from '@/lib/indonesianBanks';
 import { cn, formatMoney } from '@/lib/utils';
 
-// Pemilih "Tambah akun" di halaman Kekayaan: cari / saring, ketuk satu →
-// form Rekening (AccountModal) terbuka dengan nama, jenis & logo terisi.
-// Investasi & kripto sengaja tidak di sini — dicatat di Investasiku, bukan
-// sebagai rekening. Kalau bank itu SUDAH ada di rekening user: layar "tautkan"
-// (atur fungsi belanja/nabung + pasang logo) atau tetap tambah rekening lain
-// di bank yang sama.
+// Investasi & kripto sengaja tidak di sini — dicatat di Investasiku, bukan sebagai rekening.
 
 export type AccountPick = { name: string; type: string; logoUrl?: string; purpose?: Purpose } | 'kartu' | 'manual';
 type Purpose = 'belanja' | 'nabung';
@@ -156,7 +151,6 @@ export function AddAccountPicker({ isOpen, onClose, onPick }: { isOpen: boolean;
           </div>
         </LayoutGroup>
 
-        {/* Pintasan khusus */}
         {!q && filter === 'semua' && (
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => pick('kartu')} className="group flex items-center gap-3 rounded-2xl bg-gradient-to-br from-slate-900 to-indigo-900 p-3 text-left text-white">

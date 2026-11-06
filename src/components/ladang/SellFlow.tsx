@@ -10,10 +10,7 @@ import { addTransaction } from '@/lib/services/transactionService';
 import { isCreditAccountType } from '@/lib/creditCard';
 import type { Item } from '@/lib/itemValue';
 
-// Ladangku: jual satu barang — foto (opsional; AI mengenali barang & menilai
-// kondisi) + detail → AI menaksir harga dari iklan barang yang sama di web +
-// menulis iklan → OTOMATIS tersimpan di "Sedang dijual" (listings) → salin/
-// bagikan → "Sudah laku" (iklan & barang Barangku terjual + pemasukan, atomik).
+// "Sudah laku" = iklan & barang Barangku terjual + pemasukan, atomik di server.
 
 const CONDITIONS = ['Seperti baru', 'Bagus', 'Ada pemakaian', 'Perlu servis'] as const;
 const SOURCES = ['OLX', 'Tokopedia', 'Shopee', 'Facebook Marketplace', 'Carousell', 'Bukalapak'];
@@ -233,7 +230,6 @@ export function SellFlow({ item, listing, onDone }: { item?: Item | null; listin
   );
 }
 
-// Animasi menunggu: kaca pembesar menyapu nama-nama marketplace.
 function Searching({ name }: { name: string }) {
   const [i, setI] = useState(0);
   useEffect(() => {

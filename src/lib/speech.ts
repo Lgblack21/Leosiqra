@@ -203,7 +203,7 @@ export const startSpeech = async (cb: SpeechCallbacks, lang = 'id-ID'): Promise<
   return { stop: () => { stoppedByUs = true; try { rec.stop(); } catch { /* sudah berhenti */ } } };
 };
 
-// ---- Perekam sendiri: rekam PCM lewat Web Audio, berhenti otomatis saat diam, kirim WAV ke server.
+// Perekam sendiri: rekam PCM lewat Web Audio, berhenti otomatis saat diam, kirim WAV ke server.
 const API_BASE = process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? '';
 const REC_RATE = 16000;
 const VOICE_RMS = 0.018;        // ambang "ada suara"

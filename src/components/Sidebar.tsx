@@ -139,7 +139,6 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
         isOpen ? 'translate-x-0' : '-translate-x-full'
       )}
     >
-      {/* Logo + pengaturan */}
       <div className="flex shrink-0 items-center justify-between px-5 pb-3 pt-5 md:max-lg:justify-center md:max-lg:px-0">
         <Link href="/membership/dashboard" onClick={closeOnMobile} className="flex select-none items-center gap-2.5" title="Ringkasan">
           <Image src="/images/Logo-new.png" alt="" width={34} height={34} className="object-contain" />
@@ -220,7 +219,6 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
               <p className={cn('px-3 pb-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400', fullOnly)}>Fitur</p>
               <div className="space-y-0.5">
                 {featuresFromIds(features.active).map((f) => renderItem({ label: f.label, href: f.href, icon: f.icon }))}
-                {/* Atur fitur = pop-up Fitur di panel Pengaturan (× matikan, + aktifkan). */}
                 <button
                   type="button"
                   onClick={() => { openSettings('fitur'); closeOnMobile(); }}
@@ -237,7 +235,6 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
         )}
       </nav>
 
-      {/* Tambah transaksi + profil */}
       <div className="shrink-0 space-y-2 border-t border-slate-100 p-3">
         {profile && !restricted && (
           <button

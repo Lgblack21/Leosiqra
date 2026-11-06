@@ -5,9 +5,8 @@ import { Delete, Divide, X as ClearIcon, Calculator } from "lucide-react";
 import { lightTap } from "@/lib/haptics";
 import { evaluateExpression, CalcToken, CalcOperator } from "@/lib/calc/safeEval";
 
-// Sama seperti formatter lama di AddTransactionSheet — "50000.5" -> "50,000.5".
-// Sekarang jadi satu-satunya sumber format tampilan (dipakai keypad ini +
-// preview label tombol submit di AddTransactionSheet), gak diduplikasi lagi.
+// Satu-satunya formatter tampilan nominal ("50000.5" -> "50,000.5"): dipakai keypad
+// ini + label tombol submit di AddTransactionSheet.
 export const groupDigits = (raw: string) => {
   if (!raw) return raw;
   const [intPart, decPart] = raw.split(".");

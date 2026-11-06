@@ -21,8 +21,7 @@ const formatBalance = (amount: number, currency: string) => {
   }
 };
 
-// Kartu wallet statis (belum bisa di-tap ke detail) — konsisten dengan
-// keputusan bottom-nav: fitur Wallet-detail baru masuk di fase berikutnya.
+// Kartu wallet statis — belum ada halaman detail wallet.
 export function WalletList({ accounts }: WalletListProps) {
   const [hidden] = useBalanceVisibility();
   return (

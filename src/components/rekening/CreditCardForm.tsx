@@ -281,7 +281,6 @@ export function CreditCardForm({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={editing ? 'Ubah kartu kredit' : 'Kartu kredit baru'} maxWidth="max-w-md">
       <div className="space-y-3">
-        {/* Pratinjau + pindai */}
         <div className="relative mx-auto w-full max-w-[290px]">
           <CardFace
             name={f.name}
@@ -321,9 +320,7 @@ export function CreditCardForm({
 
         {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-[13px] font-medium text-rose-600 ring-1 ring-rose-100">{error}</p>}
 
-        {/* Kartu */}
         <div className={section}>
-          {/* Bank: kolom pilihan → panel grid logo + cari (di dalam form) */}
           <div>
             <span className={label}>Bank</span>
             <button
@@ -404,7 +401,6 @@ export function CreditCardForm({
           {f.bank && f.name === autoName(f.bank) && <p className="-mt-1 text-[11px] text-slate-400">Nama terisi otomatis dari bank — boleh diubah.</p>}
         </div>
 
-        {/* Tanggal & pengingat */}
         <div className={section}>
           <div className="grid grid-cols-2 gap-2">
             {([['statement', 'Tgl cetak', f.statementDay], ['due', 'Jatuh tempo', f.dueDay]] as const).map(([key, text, value]) => (
@@ -456,7 +452,6 @@ export function CreditCardForm({
           </div>
         </div>
 
-        {/* Tagihan & limit */}
         <div className={section}>
           <div className="grid grid-cols-2 gap-2">
             <label className="block min-w-0">
@@ -488,7 +483,6 @@ export function CreditCardForm({
           )}
         </div>
 
-        {/* Tampilan */}
         <div className={section}>
           <div className="-mx-3.5 flex gap-1.5 overflow-x-auto px-3.5 no-scrollbar">
             {CARD_NETWORK_OPTIONS.map((n) => (

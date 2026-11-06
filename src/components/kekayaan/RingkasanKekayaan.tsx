@@ -23,9 +23,7 @@ import { LogoImage } from '@/components/ui/LogoImage';
 import { cn, formatIDR } from '@/lib/utils';
 import type { KekayaanTab } from '@/components/kekayaan/KekayaanShell';
 
-// Tab Ringkasan di halaman Kekayaan: kekayaan bersih + jejaknya, aset vs
-// kewajiban, komposisi, lalu rincian per kelompok. Semua angka dari
-// lib/netWorth (rumus sama dengan Rekening, Investasiku & panel Hutang).
+// Semua angka dari lib/netWorth (rumus sama dengan Rekening, Investasiku & panel Hutang).
 
 const HIDE_KEY = 'leosiqra-hide-balance'; // sama dengan halaman Rekening
 const RANGES = [
@@ -143,7 +141,6 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
 
   return (
     <div className="space-y-4">
-      {/* Kekayaan bersih */}
       <section className="relative overflow-hidden rounded-[32px] bg-[radial-gradient(120%_120%_at_0%_0%,#0f3d38_0%,#0b1220_55%,#0b1220_100%)] p-5 text-white md:p-7">
         <span aria-hidden className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-emerald-400/10 blur-3xl" />
         <div className="relative flex flex-wrap items-start justify-between gap-3">
@@ -170,7 +167,6 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
         <p className="relative mt-1 text-[11px] text-white/40">Garis = perkiraan dari pemasukan & pengeluaran yang tercatat. Naik-turun harga investasi & saldo yang diubah manual tidak ikut.</p>
       </section>
 
-      {/* Aset vs kewajiban */}
       <section className="grid grid-cols-1 gap-3 rounded-[26px] bg-white p-4 ring-1 ring-slate-100 md:grid-cols-[1fr_1fr_1.3fr] md:items-center md:p-5">
         <div className="flex items-center gap-3">
           <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600"><ArrowUpRight size={20} /></span>
@@ -275,7 +271,6 @@ export function RingkasanKekayaan({ go, onAddAccount }: { go: (t: KekayaanTab) =
             )}
           </Group>
 
-          {/* Kelompok yang masih kosong: satu baris ajakan, bukan kartu penuh berisi "belum ada". */}
           {(() => {
             const empties = [
               goals.length === 0 && t.savings <= 0 && { label: 'Tabungan', icon: PiggyBank, tone: 'bg-pink-50 text-pink-600', on: () => go('tabungan') },

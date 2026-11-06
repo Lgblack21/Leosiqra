@@ -16,7 +16,6 @@ import type { LeoActivity, LeoMood } from '@/components/mascot/LeoMascot';
 const DURATIONS = [15, 25, 50, 90];
 const iso = (ms: number) => new Date(ms).toISOString();
 
-// Status musik dari mesin audio (satu untuk seluruh aplikasi).
 const useAudio = () => {
   const track = useSyncExternalStore((fn) => focusAudio.subscribe(fn), () => focusAudio.track, () => null);
   const volume = useSyncExternalStore((fn) => focusAudio.subscribe(fn), () => focusAudio.volume, () => DEFAULT_SETTINGS.volume);
@@ -155,7 +154,6 @@ export function FocusTimer({ settingsOpen, onOpenSettings, onCloseSettings }: { 
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  // Judul tab = sisa waktu.
   useEffect(() => {
     if (!run) return;
     const prev = document.title;
@@ -163,7 +161,6 @@ export function FocusTimer({ settingsOpen, onOpenSettings, onCloseSettings }: { 
     return () => { document.title = prev; };
   }, [run, now]);
 
-  // Layar tetap menyala selama berjalan (kalau browser mendukung).
   useEffect(() => {
     if (!ticking || !settings.keepAwake) return;
     type WakeLock = { release: () => Promise<void> };
@@ -182,7 +179,7 @@ export function FocusTimer({ settingsOpen, onOpenSettings, onCloseSettings }: { 
 
   useEffect(() => () => { if (doneTimer.current) clearTimeout(doneTimer.current); cancelChime(); }, []);
 
-  // ── Aksi (semua dari sentuhan pengguna → boleh memutar suara) ─────────────
+  // Aksi: semua dari sentuhan pengguna → boleh memutar suara (kebijakan autoplay).
   const start = () => {
     lightTap();
     const s = settingsRef.current;
@@ -258,14 +255,12 @@ export function FocusTimer({ settingsOpen, onOpenSettings, onCloseSettings }: { 
   };
   const setVolume = (v: number) => { focusAudio.setVolume(v); setSettings({ volume: v }); };
 
-  // ── Tampilan ──────────────────────────────────────────────────────────────
   const remaining = run ? remainingMs(run, now) : settings.minutes * 60_000;
   const total = run ? run.minutes * 60_000 : settings.minutes * 60_000;
   const progress = run ? 1 - remaining / total : 0;
   const focusing = run?.phase === 'focus' && !run.pausedAt;
   const kind = run?.kind ?? settings.kind;
   const t = new Date(now);
-  // Mata Leo: membaca kiri→kanan / melirik layar saat fokus.
   const lookX = focusing ? 0.5 + Math.sin(now / (kind === 'baca' ? 1400 : 2200)) * (kind === 'baca' ? 0.45 : 0.25) : 0.5;
   const mood: LeoMood = done ? 'happy' : focusing ? 'watch' : 'idle';
   const activity: LeoActivity | null = run?.phase === 'break' && !run.pausedAt ? (run.long ? 'play' : 'eat') : null;
@@ -313,14 +308,11 @@ export function FocusTimer({ settingsOpen, onOpenSettings, onCloseSettings }: { 
   const night = t.getHours() >= 18 || t.getHours() < 5;
 
   return (
-    // Satu layar: langit Leo mengisi sisa tinggi (timer besar di dalam lengkung matahari),
-    // kontrol ringkas di bawahnya. Musik & pengaturan di lembar ⚙️.
     <div className="flex h-full min-h-0 flex-col gap-3 md:gap-4">
       <section className="relative min-h-[170px] flex-1 overflow-hidden rounded-[32px] [container-type:size] shadow-[0_24px_60px_-34px_rgba(49,46,129,0.7)]">
         <div className="absolute inset-0">
           <FocusScene now={t} kind={kind} mood={mood} activity={activity} lookX={lookX} music={Boolean(audio.track)} focusing={focusing} progress={progress} />
         </div>
-        {/* Timer di tengah lengkung langit */}
         {/* Ukuran ikut tinggi adegan (cqh) → selalu muat di langit, di atas Leo (kepala Leo ±44cqh dari atas). */}
         <div className={cn('pointer-events-none absolute inset-x-0 top-[6cqh] flex flex-col items-center text-center', night ? 'text-white' : 'text-slate-900')}>
           <span className={cn('rounded-full px-3 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] backdrop-blur md:text-[11px]', night ? 'bg-white/10 text-white/80' : 'bg-white/55 text-slate-600')}>
@@ -333,7 +325,6 @@ export function FocusTimer({ settingsOpen, onOpenSettings, onCloseSettings }: { 
             ))}
           </div>
         </div>
-        {/* Musik (kanan atas) */}
         <button type="button" onClick={onOpenSettings} className={cn('absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-bold backdrop-blur transition-colors md:right-4 md:top-4', night ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-white/70 text-slate-700 hover:bg-white')} aria-label="Musik & pengaturan">
           <span aria-hidden>{trackInfo?.emoji ?? '🤫'}</span> {trackInfo?.label ?? 'Hening'}
           {audio.track && <span className="ml-0.5 flex h-3 items-end gap-[2px]" aria-hidden>{[0, 1, 2].map((i) => <span key={i} className={cn('focus-eq w-[2px] rounded-full', night ? 'bg-amber-300' : 'bg-indigo-500')} style={{ animationDelay: `${i * 0.15}s` }} />)}</span>}
@@ -358,7 +349,6 @@ export function FocusTimer({ settingsOpen, onOpenSettings, onCloseSettings }: { 
         </div>
       </section>
 
-      {/* Kontrol */}
       <div className="shrink-0 rounded-[28px] bg-white p-3 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800 md:p-4">
         {run ? (
           <div className="space-y-2">
@@ -429,7 +419,6 @@ export function FocusTimer({ settingsOpen, onOpenSettings, onCloseSettings }: { 
         )}
       </div>
 
-      {/* Musik & pengaturan (⚙️ / chip musik): lembar bawah di HP, kotak tengah di tablet/desktop */}
       <AnimatePresence>
         {settingsOpen && (
           <motion.div className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-900/40 backdrop-blur-[2px] md:items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onCloseSettings}>

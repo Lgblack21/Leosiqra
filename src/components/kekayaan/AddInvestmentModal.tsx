@@ -13,13 +13,9 @@ import { isCreditAccountType } from '@/lib/creditCard';
 import { loadPopularCoins, searchCoins } from '@/lib/coingecko';
 import { cn, formatMoney, toLocalDateString } from '@/lib/utils';
 
-// "Tambah investasi" dari halaman Kekayaan. Saham (IDX, AS/ETF) & kripto bisa
-// "Harga otomatis": cari ticker → harga terbaru dari Worker (Yahoo/CoinGecko).
-// Jenis lain manual (belum ada sumber harga resmi). Penyimpanan TETAP lewat
-// investmentService.entry — satu batch atomik di server yang memotong saldo
-// rekening sumber (wajib dipilih) & mencatat transaksi tertaut.
-// Catatan: Worker belum mengonversi mata uang posisi ↔ rekening, jadi saham
-// berharga USD hanya boleh dibayar dari rekening USD.
+// Simpan TETAP lewat investmentService.entry: satu batch atomik di server yang memotong saldo rekening
+// sumber & mencatat transaksi tertaut. Worker belum mengonversi mata uang posisi ↔ rekening, jadi
+// saham berharga USD hanya boleh dibayar dari rekening USD.
 
 type Kind = 'idx' | 'us' | 'crypto' | 'emas' | 'reksadana' | 'obligasi' | 'lainnya' | 'deposito';
 type Pick = { symbol: string; name: string; logoUrl?: string; exchangeCode?: string; coinId?: string };
@@ -204,7 +200,6 @@ export function AddInvestmentModal({ isOpen, onClose, onDeposito }: { isOpen: bo
       <div className="space-y-5">
         {error && <div className="rounded-2xl border border-rose-100 bg-rose-50 p-3.5 text-sm font-medium text-rose-600">{error}</div>}
 
-        {/* Jenis */}
         <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 no-scrollbar sm:grid sm:grid-cols-4 sm:overflow-visible">
           {KINDS.map((k) => (
             <button key={k.id} type="button" onClick={() => selectKind(k.id)} aria-pressed={kind === k.id} className={cn('flex w-[92px] shrink-0 flex-col items-center gap-1 rounded-2xl px-2 py-2.5 text-center transition-all sm:w-auto', kind === k.id ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-50 text-slate-700 hover:bg-slate-100')}>
@@ -214,7 +209,6 @@ export function AddInvestmentModal({ isOpen, onClose, onDeposito }: { isOpen: bo
           ))}
         </div>
 
-        {/* Mode harga */}
         {meta.auto ? (
           <LayoutGroup id="inv-mode">
             <div className="flex w-fit gap-1 rounded-full bg-slate-100 p-1">
@@ -230,7 +224,6 @@ export function AddInvestmentModal({ isOpen, onClose, onDeposito }: { isOpen: bo
           <p className="rounded-2xl bg-amber-50 px-3.5 py-2.5 text-[12px] text-amber-800">Harga {meta.label.toLowerCase()} diisi manual — belum ada sumber harga resmi yang bisa diambil otomatis.</p>
         )}
 
-        {/* Aset */}
         {isAuto ? (
           picked ? (
             <div className="web-keep flex items-center gap-3 rounded-[22px] bg-gradient-to-br from-slate-900 to-indigo-950 p-4 text-white">
@@ -283,7 +276,6 @@ export function AddInvestmentModal({ isOpen, onClose, onDeposito }: { isOpen: bo
           </div>
         )}
 
-        {/* Jumlah & harga */}
         {(!isAuto || picked) && (
           <motion.div initial={reduce ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
@@ -309,7 +301,6 @@ export function AddInvestmentModal({ isOpen, onClose, onDeposito }: { isOpen: bo
               )}
             </div>
 
-            {/* Ringkasan */}
             {cost > 0 && (
               <div className="grid grid-cols-3 gap-2 rounded-[22px] bg-slate-50 p-3 text-center">
                 <div><p className="text-[11px] text-slate-500">Modal</p><p className="text-[14px] font-extrabold tabular-nums text-slate-900">{formatMoney(cost, currency)}</p></div>
@@ -318,7 +309,6 @@ export function AddInvestmentModal({ isOpen, onClose, onDeposito }: { isOpen: bo
               </div>
             )}
 
-            {/* Sumber dana (wajib) */}
             <div className="space-y-2">
               <p className={lbl}>Bayar dari rekening</p>
               {accounts.length === 0 ? (

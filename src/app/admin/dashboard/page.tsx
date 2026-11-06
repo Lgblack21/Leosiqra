@@ -162,7 +162,6 @@ export default function AdminDashboard() {
         }
       />
 
-      {/* Core metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <AdminStatCard label="Total Pendapatan" value={`Rp ${totalRevenue.toLocaleString()}`} note="Akumulasi global" icon={TrendingUp} color="text-emerald-600" bg="bg-emerald-50" />
         <AdminStatCard label="Bulan Ini" value={`Rp ${revenueThisMonth.toLocaleString()}`} note="Periode berjalan" icon={Activity} color="text-blue-600" bg="bg-blue-50" />
@@ -171,7 +170,6 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: signals + weekly chart */}
         <div className="lg:col-span-2 space-y-6">
           <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-5">
             <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Sinyal Prioritas</h3>
@@ -251,7 +249,6 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Right: quick actions + latest members */}
         <div className="space-y-6">
           <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-3">
             <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-2">Akses Cepat</h3>

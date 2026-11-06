@@ -61,7 +61,6 @@ export default function HubungiKamiPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* WhatsApp */}
           <div className="bg-white p-6 md:p-8 rounded-[28px] border border-slate-50 shadow-sm space-y-6 flex flex-col">
             <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <MessageCircle size={22} />
@@ -87,7 +86,6 @@ export default function HubungiKamiPage() {
             )}
           </div>
 
-          {/* Email */}
           <div className="bg-white p-6 md:p-8 rounded-[28px] border border-slate-50 shadow-sm space-y-6 flex flex-col">
             <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
               <Mail size={22} />

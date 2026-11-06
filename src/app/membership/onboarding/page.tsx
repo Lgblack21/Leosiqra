@@ -29,8 +29,6 @@ import { DEFAULT_CATEGORY_GROUPS } from '@/lib/defaultCategories';
 import { loadGuest } from '@/lib/guestOnboarding';
 import { GuestCarryOver } from '@/components/onboarding/GuestCarryOver';
 
-// —— Data pilihan ————————————————————————————————————————————————
-
 interface CurrencyOption { code: string; name: string; symbol: string; }
 const CURRENCY_OPTIONS: CurrencyOption[] = [
   { code: 'IDR', name: 'Rupiah Indonesia', symbol: 'Rp' },
@@ -90,24 +88,19 @@ export default function OnboardingPage() {
   // Datang dari /mulai (onboarding tanpa akun) → satu layar tambahan setelah setup.
   const [carry, setCarry] = useState(false);
 
-  // Step 1 — Profil
   const [name, setName] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
 
-  // Step 2 — Mata Uang
   const [currency, setCurrency] = useState('IDR');
 
-  // Step 3 — Kategori (set nama kategori yang dipilih)
   const [selectedGroups, setSelectedGroups] = useState<string[]>(
     DEFAULT_CATEGORY_GROUPS.map((g) => g.category)
   );
 
-  // Step 4 — Rekening (opsional)
   const [bankName, setBankName] = useState('');
   const [bankType, setBankType] = useState<'Bank Account' | 'E-Wallet' | 'Cash'>('Bank Account');
   const [bankBalance, setBankBalance] = useState('');
 
-  // Ambil uid + prefill nama/WA dari profil.
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => setUid(u?.uid ?? null));
     cloudflareApi<{ item?: { name?: string; whatsapp?: string } }>('/api/member/profile')
@@ -203,7 +196,6 @@ export default function OnboardingPage() {
   return (
     <div className="fixed inset-0 z-[60] bg-[#f5f5f7] overflow-y-auto">
       <div className="min-h-full lg:grid lg:grid-cols-[288px_minmax(0,1fr)]">
-        {/* Menu langkah (desktop) — gaya daftar pengaturan: ikon berwarna, langkah aktif disorot */}
         <aside className="hidden lg:flex flex-col sticky top-0 h-screen border-r border-slate-200/70 bg-[#efeff2]/80 backdrop-blur px-4 py-6">
           <div className="flex items-center gap-2.5 px-2">
             <Image src="/images/Logo-new.png" alt="Leosiqra" width={28} height={28} />
@@ -244,7 +236,6 @@ export default function OnboardingPage() {
         </aside>
 
         <main className="min-h-screen flex flex-col">
-          {/* Bar atas (HP & tablet): logo + progres per langkah */}
           <header className="lg:hidden sticky top-0 z-10 bg-[#f5f5f7]/85 backdrop-blur border-b border-slate-200/60 px-5 py-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -277,7 +268,6 @@ export default function OnboardingPage() {
               </div>
             ) : (
             <div key={step} className="animate-in fade-in slide-in-from-bottom-3 duration-500">
-              {/* ————— STEP 0: Welcome ————— */}
               {step === 0 && (
                 <>
                   <p className="text-[15px] font-semibold text-indigo-600">Selamat datang{name ? `, ${name.split(' ')[0]}` : ''}</p>
@@ -304,7 +294,6 @@ export default function OnboardingPage() {
 
               {step > 0 && <StepHead eyebrow={`Langkah ${step} · ${meta.title}`} tile={meta.tile} icon={meta.icon} title={meta.headline} subtitle={meta.subtitle} />}
 
-              {/* ————— STEP 1: Profil ————— */}
               {step === 1 && (
                 <div className="bg-white rounded-[22px] p-5 sm:p-6 space-y-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                   <div>
@@ -334,7 +323,6 @@ export default function OnboardingPage() {
                 </div>
               )}
 
-              {/* ————— STEP 2: Mata Uang ————— */}
               {step === 2 && (
                 <div className="grid grid-cols-2 gap-2.5">
                   {CURRENCY_OPTIONS.map((c) => {
@@ -371,7 +359,6 @@ export default function OnboardingPage() {
                 </div>
               )}
 
-              {/* ————— STEP 3: Kategori ————— */}
               {step === 3 && (
                 <div className="bg-white rounded-[22px] divide-y divide-slate-100 overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                   {DEFAULT_CATEGORY_GROUPS.map((g) => {
@@ -396,7 +383,6 @@ export default function OnboardingPage() {
                 </div>
               )}
 
-              {/* ————— STEP 4: Rekening ————— */}
               {step === 4 && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">

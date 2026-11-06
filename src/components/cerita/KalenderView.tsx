@@ -50,7 +50,6 @@ export function KalenderView({ year, data, onYear, onOpen }: { year: number; dat
   const cuts = [q(0.25), q(0.5), q(0.75)];
   const spendColor = (v: number) => (v <= 0 ? null : SPEND[v <= cuts[0] ? 0 : v <= cuts[1] ? 1 : v <= cuts[2] ? 2 : 3]);
 
-  // Ringkasan bulan
   const key = `${year}-${pad(month + 1)}`;
   const monthItems = (data?.items ?? []).filter((i) => i.date.startsWith(key));
   const monthSpend = Object.entries(data?.spend ?? {}).filter(([d]) => d.startsWith(key)).reduce((a, [, v]) => a + v, 0);
@@ -112,7 +111,6 @@ export function KalenderView({ year, data, onYear, onOpen }: { year: number; dat
     );
   }
 
-  // ── Bulan ────────────────────────────────────────────────────────────────
   const lead = (new Date(Date.UTC(year, month, 1)).getUTCDay() + 6) % 7;
   const len = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
   return (
@@ -150,7 +148,6 @@ export function KalenderView({ year, data, onYear, onOpen }: { year: number; dat
         </div>
       </div>
 
-      {/* Ringkasan bulan */}
       <aside className="space-y-3">
         <div className="rounded-[24px] bg-gradient-to-br from-amber-100 via-pink-100 to-violet-100 p-4 dark:from-amber-500/15 dark:via-pink-500/15 dark:to-violet-500/15">
           <p className="text-[12px] font-semibold text-slate-600 dark:text-slate-300">{MONTHS[month]} {year}</p>

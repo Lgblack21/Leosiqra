@@ -120,7 +120,6 @@ export const ProductTour = ({ steps, isActive, onFinish }: ProductTourProps) => 
 
   return (
     <>
-      {/* Backdrop + spotlight cutout */}
       <div className="fixed inset-0 z-[9998] transition-all duration-300" aria-hidden>
         {rect ? (
           <div
@@ -138,7 +137,6 @@ export const ProductTour = ({ steps, isActive, onFinish }: ProductTourProps) => 
         )}
       </div>
 
-      {/* Ring sorotan */}
       {rect && (
         <div
           className="fixed z-[9999] rounded-2xl border-2 border-indigo-400 pointer-events-none transition-all duration-300"
@@ -146,7 +144,6 @@ export const ProductTour = ({ steps, isActive, onFinish }: ProductTourProps) => 
         />
       )}
 
-      {/* Kartu penjelasan */}
       <div
         style={cardStyle}
         className="w-[calc(100vw-32px)] max-w-[360px] max-h-[min(520px,calc(100vh-32px))] overflow-y-auto bg-white rounded-2xl shadow-2xl border border-slate-100 p-5 animate-in fade-in zoom-in-95 duration-200"

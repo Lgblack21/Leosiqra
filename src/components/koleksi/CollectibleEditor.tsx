@@ -8,10 +8,6 @@ import type { ExchangeRates } from '@/lib/services/exchangeRateService';
 import { collectibleService } from '@/lib/services/collectibleService';
 import { COLLECTIBLE_CONDITIONS, fmtForeign, marketImage, priceIdr, tcgImage, variantLabel, type Collectible, type CollectibleCondition, type SteamLink, type TcgCard } from '@/lib/collectibles';
 
-// Tambah/ubah koleksi (Koleksiku). Baru: pilih jenis → (Pokémon) cari kartu di
-// TCGdex → detail, (Steam) impor inventaris CS2 publik. Dipakai web (Modal) &
-// app HP (BottomSheet).
-
 const digits = (s: string) => s.replace(/\D/g, '').slice(0, 13);
 const group = (s: string) => (s ? Number(s).toLocaleString('id-ID') : '');
 type Step = { k: 'pick' } | { k: 'search' } | { k: 'steam' } | { k: 'form'; card?: TcgCard };

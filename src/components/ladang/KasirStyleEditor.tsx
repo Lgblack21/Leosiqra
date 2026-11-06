@@ -10,10 +10,7 @@ import { fieldCls, initials, labelCls, toneOf } from './UsahaView';
 import { CustomKasirFrame, KASIR_SAMPLE_HTML } from './CustomKasirFrame';
 import { CatalogImage } from './CatalogImage';
 
-// Tampilan kasir per usaha: Bawaan (pilihan tema, tata letak, kolom, kartu, teks,
-// urutan kategori) atau Bebas (HTML/CSS/JS sendiri di iframe sandbox, lihat
-// CustomKasirFrame) — disimpan di shops.style_json. Bisa juga diubah AI milik
-// pengguna lewat MCP (tool set_kasir_style) tanpa memakai kuota AI Leosiqra.
+// Disimpan di shops.style_json; bisa juga diubah AI milik pengguna lewat MCP (set_kasir_style) tanpa kuota AI Leosiqra.
 
 const LAYOUTS: { id: KasirStyle['layout']; label: string; icon: typeof LayoutGrid }[] = [
   { id: 'grid', label: 'Kartu', icon: LayoutGrid },
@@ -122,7 +119,6 @@ export function KasirStyleEditor({ shop, onDone, onToast, onLeave }: { shop: Sho
         <AiMcpCard className="mt-3" title="Minta AI-mu memasang gambar" desc="AI-mu memasang gambar yang boleh dipakai, atau membuatkan ikon orisinal per kategori." prompt={imagePrompt} onLeave={onLeave} onToast={onToast} />
       </details>
 
-      {/* Pratinjau header */}
       <div className={cn('web-keep rounded-2xl p-3 text-white', (KASIR_THEME[st.theme] ?? KASIR_THEME.ungu).header)}>
         <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">Kasir</p>
         <p className="text-[16px] font-extrabold">{shop.emoji || '🏪'} {shop.name}</p>

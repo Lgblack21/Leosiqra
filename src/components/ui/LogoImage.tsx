@@ -19,8 +19,7 @@ export const LogoImage = ({ src, alt, fallbackText, className, fallbackIcon }: L
   const resolvedSrc = useMemo(() => {
     if (!src) return null;
 
-    // Smart Resolver for Google Image Search Links
-    // Example: https://www.google.com/imgres?q=logo%20bca&imgurl=https%3A%2F%2Fwww.bca.co.id%2F-...
+    // Link Google Image Search (google.com/imgres?imgurl=...) → pakai URL gambar aslinya.
     if (src.includes('google.com/imgres') || src.includes('imgurl=')) {
       try {
         const urlObj = new URL(src);

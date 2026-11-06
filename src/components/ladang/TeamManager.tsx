@@ -9,9 +9,7 @@ import type { Shop } from '@/lib/services/shopService';
 import { cn } from '@/lib/utils';
 import { fieldCls, labelCls } from './UsahaView';
 
-// Usahaku › Tim (pemilik): buat akun kasir (username "toko-nama" + sandi), pilih usaha
-// yang boleh diakses & rekening tujuan penjualan (dikunci), reset sandi, nonaktifkan,
-// hapus. Anggota login di /tim (atau halaman login biasa) — tanpa akses keuangan lain.
+// Akun tim hanya membuka kasir usaha terpilih; rekening tujuan dikunci, tanpa akses keuangan lain.
 
 const slug = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '').slice(0, 12) || 'toko';
 const genPassword = () => { const a = 'abcdefghjkmnpqrstuvwxyz23456789'; return Array.from(crypto.getRandomValues(new Uint8Array(10)), (b) => a[b % a.length]).join(''); };

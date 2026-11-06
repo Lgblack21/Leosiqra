@@ -62,7 +62,6 @@ export function AccountDetail({
     <Modal isOpen={Boolean(acc)} onClose={onClose} title={acc?.name ?? 'Rekening'} maxWidth="max-w-lg">
       {acc && (
         <div className="space-y-5">
-          {/* Saldo / limit */}
           {usage ? (
             <div className="grid grid-cols-3 gap-2 rounded-[20px] bg-slate-50 p-4 text-center">
               <div>
@@ -85,7 +84,6 @@ export function AccountDetail({
             </div>
           )}
 
-          {/* Siklus tagihan kartu */}
           {credit && (
             cycle ? (
               <div className={cn('rounded-[20px] p-4 ring-1', cycle.overdue ? 'bg-rose-50 ring-rose-100' : 'bg-white ring-slate-200')}>
@@ -119,7 +117,6 @@ export function AccountDetail({
             )
           )}
 
-          {/* Arus bulan ini */}
           <div className="grid grid-cols-2 gap-2">
             <div className="rounded-[18px] bg-emerald-50/70 p-3.5">
               <p className="flex items-center gap-1.5 text-[12px] font-semibold text-emerald-700"><ArrowDownLeft size={14} /> Masuk {monthName}</p>
@@ -131,7 +128,6 @@ export function AccountDetail({
             </div>
           </div>
 
-          {/* Transaksi terakhir */}
           <div>
             <p className="mb-1 text-[13px] font-bold uppercase tracking-[0.1em] text-slate-400">Transaksi terakhir</p>
             {recent.length === 0 ? (

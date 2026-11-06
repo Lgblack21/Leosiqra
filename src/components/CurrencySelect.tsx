@@ -37,8 +37,8 @@ export const CurrencySelect = ({ value, onChange, className, label, compact }: C
     return () => unsubAuth();
   }, []);
 
-  // IDR & nilai yang sedang dipilih selalu ada di pilihan — dulu kalau daftar
-  // mata uang user kosong, select menampilkan "-- Pilih --" walau nilainya IDR.
+  // IDR & nilai terpilih selalu ada di pilihan — kalau daftar mata uang user
+  // kosong, select bisa menampilkan "-- Pilih --" walau nilainya IDR.
   const options = [...currencies.map((c) => ({ code: c.code, name: c.name }))];
   for (const code of ['IDR', value]) {
     if (code && !options.some((o) => o.code === code)) options.unshift({ code, name: code === 'IDR' ? 'Rupiah' : code });

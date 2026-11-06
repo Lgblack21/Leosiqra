@@ -5,8 +5,7 @@ import { ArrowLeftRight, Award, ExternalLink, LineChart, Receipt, ShieldAlert, S
 import { BI_RATE, LPS, SBN_RETAIL, TAX_DEPOSITO, TAX_SBN, monthlyNet } from '@/lib/sbnData';
 import { formatIDR } from '@/lib/utils';
 
-// Tab Belajar: materi singkat & stabil (aturan, bukan harga). Contoh angka
-// diambil dari lib/sbnData supaya ikut terbarui bersama tab SBN.
+// Contoh angka diambil dari lib/sbnData supaya ikut terbarui bersama tab SBN.
 
 const pct = (n: number) => `${n.toLocaleString('id-ID', { maximumFractionDigits: 2 })}%`;
 // Kelas ditulis utuh supaya terbaca Tailwind (bukan dirakit dari string).

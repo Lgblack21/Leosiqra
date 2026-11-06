@@ -7,7 +7,7 @@ import { Inbox } from 'lucide-react';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { cn } from '@/lib/utils';
 
-// Pintasan Kotak Masuk di samping lonceng (dulu menu Fitur). Angka = usulan
+// Pintasan Kotak Masuk di samping lonceng. Angka = usulan
 // transaksi yang menunggu ditinjau; diambil ulang saat pindah halaman (paling
 // sering tiap 60 dtk) & saat tab aktif lagi. Gagal = tanpa angka.
 let lastFetch = 0;

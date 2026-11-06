@@ -11,10 +11,6 @@ import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { marketImage, unitValueIdr, variantLabel, type Collectible, type CollectibleSet, type HistoryPoint, type SteamLink } from '@/lib/collectibles';
 import { cn, formatIDR } from '@/lib/utils';
 
-// Koleksiku: koleksi bernilai pasar (kartu Pokémon via TCGdex, item Steam CS2
-// via Skinport/Steam Market, lainnya manual).
-// Dipakai tab Kekayaan web (variant "web") & /app/koleksi (variant "app").
-
 const HIDE_KEY = 'leosiqra-hide-balance';
 const SORTS = [
   { id: 'nilai', label: 'Nilai tertinggi' },
@@ -126,7 +122,6 @@ export function KoleksiView({ variant, addSignal = 0, toast }: { variant: 'web' 
       {flash && <div role="status" className="rounded-2xl bg-emerald-50 px-4 py-3 text-[13px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">{flash}</div>}
       {error && <div role="alert" className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">{error}</div>}
 
-      {/* Ringkasan nilai */}
       <section className="web-keep relative overflow-hidden rounded-[28px] bg-[radial-gradient(120%_130%_at_0%_0%,#3b0764_0%,#0b1220_60%)] p-5 text-white md:p-6">
         <span aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-fuchsia-400/10 blur-3xl" />
         <div className="relative flex flex-wrap items-start justify-between gap-4">
@@ -249,7 +244,6 @@ function CollectibleCard({ e, money, hidden, className, onOpen }: { e: { it: Col
   );
 }
 
-// Progres set Pokémon: kartu unik yang kamu punya vs jumlah resmi set (TCGdex).
 function SetProgress({ sets, className }: { sets: CollectibleSet[]; className: string }) {
   return (
     <section className={cn(className, 'p-4')}>
@@ -285,7 +279,6 @@ function SetProgress({ sets, className }: { sets: CollectibleSet[]; className: s
   );
 }
 
-// Jejak nilai koleksi (titik per hari Koleksiku dibuka).
 function Spark({ history, hidden }: { history: HistoryPoint[]; hidden: boolean }) {
   if (history.length < 2) {
     return <p className="relative mt-4 rounded-2xl bg-white/[0.06] px-3 py-2.5 text-[12px] text-white/55">Grafik nilai muncul setelah beberapa hari — tiap kali Koleksiku dibuka, nilainya dicatat.</p>;

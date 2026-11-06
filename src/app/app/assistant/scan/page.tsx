@@ -77,7 +77,6 @@ export default function AssistantScanPage() {
         {state === "idle" && (
           <div className="flex-1 flex flex-col items-center justify-center text-center">
             <div className="relative w-48 h-48 flex items-center justify-center">
-              {/* Bingkai sudut dekoratif — kesan "arahkan ke sini" */}
               {[
                 "top-0 left-0 border-t-2 border-l-2 rounded-tl-2xl",
                 "top-0 right-0 border-t-2 border-r-2 rounded-tr-2xl",

@@ -123,7 +123,6 @@ function MembershipShell({
     return () => { void handle.then((h) => h.remove()); };
   }, [router]);
 
-  // Hapus spinner agar transisi dari tombol login terasa instan.
   if (loading) return null;
 
   // Mode gelap bertahap: kerangka selalu ikut tema, isi halaman hanya untuk
@@ -155,7 +154,6 @@ function MembershipShell({
     <FeedbackProvider>
     <ModalProvider>
       <div className={`web-page flex min-h-screen bg-[#f6f7fb] relative overflow-x-hidden print:block print:min-h-0 print:h-auto${pageDark ? ' web-dark' : ''}`}>
-        {/* Mobile Backdrop */}
         {isSidebarOpen && (
           <div
             className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 md:hidden"
@@ -165,7 +163,6 @@ function MembershipShell({
 
         <div className={frameClass}><Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onOpenSettings={() => { setSettingsView('menu'); setSettingsOpen(true); }} /></div>
 
-        {/* Main Content */}
         {/* print:block+print:h-auto: tanpa ini, konten cetak yang bersarang di
             dalam ancestor flex/min-h-screen kepotong di batas tinggi layar
             (bug pagination flexbox saat print di Chrome) alih-alih mengalir
@@ -174,7 +171,6 @@ function MembershipShell({
           <div className={frameClass}><Header onMenuClick={() => setIsSidebarOpen(true)} /></div>
           <DevNoticeBanner saranHref="/membership/saran" />
 
-          {/* Page Content */}
           <div className="p-4 md:p-8 max-w-7xl mx-auto w-full flex-1 print:p-0 print:m-0 print:max-w-none">
             {children}
           </div>

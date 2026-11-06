@@ -12,8 +12,7 @@ const DEMOS = [
   { text: "bensin 50rb pakai cash", amount: "50.000", cat: "Transport › Bensin", acc: "Cash", date: "Hari ini", type: "Pengeluaran" },
 ];
 
-// Mockup HP yang "mengetik" sendiri lalu mengisi form — memperlihatkan fitur
-// khas Input Cepat tanpa video. Berhenti di demo pertama kalau "kurangi gerakan".
+// Berhenti di demo pertama kalau "kurangi gerakan".
 export function QuickInputShowcase() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { margin: "-120px" });

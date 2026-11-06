@@ -13,10 +13,7 @@ import { TabSbn } from '@/components/investasi/TabSbn';
 import { TabBelajar } from '@/components/investasi/TabBelajar';
 import { cn } from '@/lib/utils';
 
-// Investasiku layar penuh (tanpa sidebar — lihat FULLSCREEN_PATHS di
-// app/membership/layout.tsx): bar atas dengan tombol kembali ke Ringkasan,
-// isi per tab, tab bar melayang di bawah. Tab disimpan di hash URL (#kabar)
-// supaya tombol kembali browser & tautan langsung bekerja.
+// Tab disimpan di hash URL (#kabar) supaya tombol kembali browser & tautan langsung bekerja.
 
 export type InvestTab = 'investasiku' | 'kabar' | 'sbn' | 'belajar';
 const TABS: { id: InvestTab; label: string; title: string; icon: typeof Sparkles }[] = [
@@ -84,7 +81,6 @@ export function InvestShell() {
         </motion.main>
       </AnimatePresence>
 
-      {/* Dock melayang: gelap transparan, tab aktif melebar menampilkan label. */}
       <nav aria-label="Menu Investasiku" className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+16px)] z-40 flex justify-center px-4 print:hidden">
         <div className="web-keep flex items-center gap-1 rounded-full bg-slate-950/85 p-1.5 shadow-[0_20px_50px_-12px_rgba(2,6,23,0.6)] ring-1 ring-white/10 backdrop-blur-xl">
           {TABS.map((t) => {

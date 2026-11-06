@@ -60,7 +60,6 @@ export default function AdminPengaturanPage() {
   const [liveTimestamp, setLiveTimestamp] = useState<string>('-');
   const [allCurrencies, setAllCurrencies] = useState<Currency[]>([]);
 
-  // FETCH MARKET DATA
   const fetchMarketData = useCallback(async () => {
     setIsRefreshingMarket(true);
     try {
@@ -93,7 +92,6 @@ export default function AdminPengaturanPage() {
       const rates = await exchangeRateService.getLatestRates();
       setLiveFxRates(rates);
 
-      // Filter: Hanya hitung role 'user' dan status bukan 'GUEST'
       const filteredUsers = usersSnap.docs.filter(doc => {
         const data = doc.data();
         return data.role === 'user' && data.status !== 'GUEST';
@@ -295,7 +293,6 @@ export default function AdminPengaturanPage() {
       setIsUploadingProfile(true);
       const url = await uploadToCloudinary(file);
 
-      // Update Firestore
       await updateAdminProfile(user.uid, { photoURL: url });
 
       // Update Auth Profile for fallback/consistency
@@ -412,7 +409,6 @@ export default function AdminPengaturanPage() {
         description="Atur pembayaran, akun, member, maintenance, dan sumber data pasar."
       />
 
-      {/* TAB SWITCHER */}
       <div className="flex overflow-x-auto no-scrollbar gap-2 p-1.5 bg-slate-50 border border-slate-100 rounded-2xl w-full max-w-full">
         {tabs.map((tab) => (
           <button
@@ -1071,7 +1067,6 @@ export default function AdminPengaturanPage() {
         </div>
       )}
 
-      {/* Live Preview Modal */}
       {showPreviewModal && (
         <div className="fixed inset-0 z-[100] bg-slate-900 flex flex-col animate-in fade-in duration-300">
           <div className="h-14 border-b border-white/10 flex items-center justify-between px-6 bg-slate-900/50 backdrop-blur-md">
@@ -1133,7 +1128,6 @@ export default function AdminPengaturanPage() {
             <AdminStatCardLocal label="Update Terakhir" value={settings?.marketData?.lastUpdate || '-'} small />
           </div>
 
-          {/* FX Table */}
           <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-4">
             <h4 className="text-[12px] font-black text-slate-900 uppercase tracking-widest">Kurs Mata Uang</h4>
             <div className="overflow-x-auto">
@@ -1181,7 +1175,6 @@ export default function AdminPengaturanPage() {
             </div>
           </div>
 
-          {/* Crypto Feed */}
           <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-4">
             <h4 className="text-[12px] font-black text-slate-900 uppercase tracking-widest">Crypto Feed</h4>
             <div className="overflow-x-auto">

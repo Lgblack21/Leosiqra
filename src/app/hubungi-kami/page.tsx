@@ -9,7 +9,6 @@ import { Navbar } from '@/components/Navbar';
 import { LandingFooter } from '@/components/LandingFooter';
 import { getPublicContact, PublicContact } from '@/lib/services/publicContactService';
 
-// Jawaban singkat untuk pertanyaan yang paling sering — merujuk ke fitur yang ada.
 const FAQ: Array<{ q: string; a: React.ReactNode }> = [
   {
     q: 'Saya lupa password',
@@ -128,7 +127,6 @@ export default function PublicHubungiKamiPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-              {/* WhatsApp */}
               <Reveal className="lp-card lift flex flex-col rounded-[28px] p-7 sm:p-8">
                 <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100"><MessageCircle size={22} /></span>
                 <h2 className="mt-6 font-serif text-2xl">WhatsApp</h2>
@@ -147,7 +145,6 @@ export default function PublicHubungiKamiPage() {
                 )}
               </Reveal>
 
-              {/* Email */}
               <Reveal delay={0.08} className="lp-card lift flex flex-col rounded-[28px] p-7 sm:p-8">
                 <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100"><Mail size={22} /></span>
                 <h2 className="mt-6 font-serif text-2xl">Email</h2>
@@ -177,7 +174,6 @@ export default function PublicHubungiKamiPage() {
             </div>
           )}
 
-          {/* FAQ */}
           <Reveal className="mt-16">
             <p className="text-center text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Pertanyaan umum</p>
             <h2 className="mt-3 text-center font-serif text-3xl sm:text-4xl">Mungkin jawabannya sudah ada di sini</h2>

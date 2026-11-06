@@ -67,23 +67,18 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
     return digits;
   }, [whatsapp]);
 
-  // LOGIKA BYPASS & BLOKIR
-
-  // 1. Jika rute ADMIN, langsung berikan akses (AdminLayout akan handle selebihnya)
-  // Ini untuk menghindari flicker atau double loading di level global.
+  // Rute admin langsung lolos (AdminLayout yang menangani) — hindari flicker/double loading di level global.
   if (isAdminPage) return <>{children}</>;
 
   if (isChecking && settings?.maintenance?.isActive) return null;
 
-  // 2. Admin (setelah terdeteksi) SELALU bisa melihat semua halaman
   if (profile?.role === 'admin') return <>{children}</>;
 
-  // 2. Halaman Login SELALU terbuka agar Admin bisa masuk
+  // Halaman login selalu terbuka agar admin bisa masuk.
   if (isLoginPage) return <>{children}</>;
 
-  // 3. Jika maintenance aktif dan BUKAN Admin, blokir SEMUA halaman (termasuk landing & register).
-  // Admin tetap bisa masuk lewat /auth/login secara langsung (dibebaskan di atas) —
-  // sengaja tidak ada tombol/link menuju login di layar publik ini.
+  // Maintenance aktif & bukan admin: blokir semua halaman (termasuk landing & register).
+  // Sengaja tanpa tombol/link ke login di layar publik — admin masuk langsung lewat /auth/login.
   if (settings?.maintenance?.isActive) {
     if (settings.maintenance.type === 'code' && settings.maintenance.code) {
       return (
@@ -105,8 +100,6 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
         </div>
       );
     } else {
-      // Fallback — halaman maintenance default, dirancang tetap terasa premium
-      // dan konsisten dengan identitas visual Leosiqra (serif display + indigo/slate).
       return (
         <div className="fixed inset-0 z-[9999] bg-slate-950 overflow-y-auto overflow-x-hidden">
           <div

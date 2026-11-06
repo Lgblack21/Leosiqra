@@ -6,10 +6,8 @@ import { usePathname } from "next/navigation";
 import { Hammer, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Pemberitahuan "Leosiqra sedang dikembangkan" untuk member (permintaan Bos
-// 2026-10-30): tampilan & fitur sedang sering berubah. Bisa ditutup; muncul lagi
-// setelah HIDE_DAYS selama pengembangan masih berjalan. Matikan dengan ENABLED.
-// Dibuat ringkas (satu baris, tanpa animasi) supaya tidak mengganggu; di app HP hanya di Beranda.
+// Pemberitahuan "Leosiqra sedang dikembangkan" untuk member. Bisa ditutup; muncul
+// lagi setelah HIDE_DAYS selama pengembangan berjalan. Matikan dengan ENABLED.
 const ENABLED = true;
 const KEY = "leosiqra-dev-notice-v1";
 const HIDE_DAYS = 14;

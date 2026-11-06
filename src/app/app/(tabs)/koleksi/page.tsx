@@ -5,7 +5,6 @@ import { ChevronLeft } from "lucide-react";
 import { FadeIn } from "@/components/app/FadeIn";
 import { KoleksiView } from "@/components/koleksi/KoleksiView";
 
-// Koleksiku versi app HP — komponen sama dengan tab Kekayaan web (KoleksiView).
 export default function AppKoleksiPage() {
   return (
     <div className="max-w-md mx-auto px-5 pt-8 pb-8 space-y-5">

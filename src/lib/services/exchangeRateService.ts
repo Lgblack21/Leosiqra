@@ -15,14 +15,13 @@ interface CacheData {
 }
 
 let ratesCache: CacheData | null = null;
-const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+const CACHE_DURATION = 15 * 60 * 1000;
 
 export const exchangeRateService = {
   /**
    * Fetch latest rates from USD base
    */
   getLatestRates: async (base = 'USD'): Promise<ExchangeRates> => {
-    // Return cache if it's still fresh
     if (ratesCache && (Date.now() - ratesCache.timestamp < CACHE_DURATION)) {
       return ratesCache.rates;
     }
@@ -34,7 +33,6 @@ export const exchangeRateService = {
       const data = await response.json();
       const rates = data.rates;
       
-      // Update cache
       ratesCache = {
         rates,
         timestamp: Date.now()
@@ -43,7 +41,7 @@ export const exchangeRateService = {
       return rates;
     } catch (error) {
       console.error('Error fetching rates:', error);
-      // Return empty or previous cache if failed
+      // On failure fall back to the stale cache (or {} if none yet).
       return ratesCache?.rates || {};
     }
   },
@@ -55,8 +53,7 @@ export const exchangeRateService = {
     if (from === to) return amount;
     if (!rates[from] || !rates[to]) return amount;
 
-    // Standard formula: (Amount / Rate_From_to_USD) * Rate_To_to_USD
-    // This assumes Rates are relative to USD
+    // Assumes USD-based rates: (amount / rate_from) * rate_to.
     const amountInUSD = amount / rates[from];
     const convertedAmount = amountInUSD * rates[to];
     

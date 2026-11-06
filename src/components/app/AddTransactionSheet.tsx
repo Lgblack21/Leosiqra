@@ -36,7 +36,6 @@ const MODE_STYLE: Record<SheetMode, { hero: string; ring: string; text: string; 
   transfer: { hero: "from-[#7c6cff] to-[#4f46e5]", ring: "ring-indigo-500", text: "text-indigo-600", save: "from-[#7c6cff] to-[#4f46e5] shadow-indigo-300/60" },
 };
 
-// Keluar / Masuk / Transfer — kapsul di atas panel berwarna; pil putih meluncur ke yang terpilih.
 function ModeToggle({ value, onChange }: { value: SheetMode; onChange: (m: SheetMode) => void }) {
   const items: { mode: SheetMode; label: string }[] = [
     { mode: "pengeluaran", label: "Keluar" },

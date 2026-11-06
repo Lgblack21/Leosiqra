@@ -10,8 +10,6 @@ import {
   type GamificationData,
 } from "@/lib/services/gamificationService";
 
-// Isi panel Challenge (dipakai BottomSheet mobile & Modal web): kartu level +
-// progres XP, lalu daftar challenge — yang hampir selesai paling atas.
 export function ChallengeList({ data }: { data: GamificationData }) {
   const reduce = useReducedMotion();
   if (!data.level || !data.challenges) return null;

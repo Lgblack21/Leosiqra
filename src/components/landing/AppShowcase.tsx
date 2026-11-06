@@ -8,11 +8,6 @@ import {
 } from "lucide-react";
 import { CountUp } from "./CountUp";
 
-// Tur animasi "mode desktop": jendela aplikasi yang berpindah sendiri antar
-// layar utama, dengan kursor yang bergerak & meng-klik menu sidebar. Semua
-// tampilan dibangun dari kode (bukan screenshot) memakai warna & komponen
-// yang sama dengan dashboard asli, jadi tajam di semua ukuran dan konsisten.
-
 const W = 1120; // ukuran desain jendela; diskalakan mengikuti lebar container
 const H = 680;
 const SIDEBAR_W = 216;
@@ -379,7 +374,6 @@ export function AppShowcase() {
 
   const go = useCallback((i: number) => { setActive(i); setRunId((r) => r + 1); }, []);
 
-  // Otomatis pindah layar: kursor meluncur ke menu berikutnya, "klik", lalu layar berganti.
   useEffect(() => {
     if (!inView || paused || reduce) return;
     const t1 = setTimeout(() => setClicking(true), DURATION - 700);
@@ -424,7 +418,6 @@ export function AppShowcase() {
           className="absolute left-1/2 top-0 origin-top overflow-hidden rounded-[22px] border border-slate-200/80 bg-white shadow-[0_50px_120px_-40px_rgba(30,41,59,0.45),0_0_0_1px_rgba(255,255,255,0.6)_inset]"
           style={{ width: winW, height: winH, transform: `translateX(-50%) scale(${scale})` }}
         >
-          {/* Bilah jendela */}
           <div className="flex h-11 items-center gap-3 border-b border-slate-100 bg-slate-50/80 px-4">
             <span className="flex gap-1.5"><i className="h-3 w-3 rounded-full bg-[#ff5f57]" /><i className="h-3 w-3 rounded-full bg-[#febc2e]" /><i className="h-3 w-3 rounded-full bg-[#28c840]" /></span>
             <span className={`mx-auto flex items-center justify-center gap-1.5 rounded-lg bg-white px-3 py-1 text-[11px] font-semibold text-slate-500 shadow-sm ${compact ? "w-56" : "w-80"}`}>
@@ -457,7 +450,6 @@ export function AppShowcase() {
             </div>
           ) : (
             <div className="flex" style={{ height: winH - 44 }}>
-              {/* Sidebar */}
               <aside className="flex flex-col border-r border-slate-100 bg-slate-50/60 p-3" style={{ width: SIDEBAR_W }}>
                 <div className="flex items-center gap-2 px-2 py-2">
                   <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 to-violet-600 text-[11px] font-black text-white">L</span>
@@ -487,7 +479,6 @@ export function AppShowcase() {
                 </div>
               </aside>
 
-              {/* Konten */}
               <div className="relative flex-1 overflow-hidden bg-[#fafbfc]">
                 <div className="flex items-center justify-between border-b border-slate-100 bg-white/80 px-6 py-3.5">
                   <AnimatePresence mode="wait">
@@ -505,7 +496,6 @@ export function AppShowcase() {
             </div>
           )}
 
-          {/* Kursor animasi — meluncur ke menu yang akan dibuka lalu "klik" (desktop). */}
           {!reduce && !compact && (
             <motion.div
               aria-hidden

@@ -19,7 +19,6 @@ const DOW = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 const DOW_LONG = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 const dayIdx = (d: Date) => (d.getDay() + 6) % 7; // Senin = 0
 
-// ===== Kalender gelembung =====
 export function BubbleCalendar({ spend, year, month, now }: { spend: Transaction[]; year: number; month: number; now: Date | null }) {
   const days = new Date(year, month + 1, 0).getDate();
   const isCurMonth = !!now && now.getFullYear() === year && now.getMonth() === month;
@@ -133,7 +132,6 @@ export function BubbleCalendar({ spend, year, month, now }: { spend: Transaction
   );
 }
 
-// ===== Pola mingguan =====
 export function WeekdayPattern({ spend }: { spend: Transaction[] }) {
   const data = useMemo(() => {
     const sum = Array(7).fill(0) as number[];
@@ -177,7 +175,6 @@ export function WeekdayPattern({ spend }: { spend: Transaction[] }) {
   );
 }
 
-// ===== Podium pengeluaran terbesar =====
 export function TopExpenses({ spend }: { spend: Transaction[] }) {
   const top = useMemo(() => [...spend].sort((a, b) => idr(b) - idr(a)).slice(0, 6), [spend]);
   if (top.length === 0) return null;
@@ -236,7 +233,6 @@ export function TopExpenses({ spend }: { spend: Transaction[] }) {
   );
 }
 
-// ===== Tahunan: 12 kartu bulan + rekor =====
 // Tiap bulan: total keluar, batang dibanding rata-rata, dan cincin "% ditabung"
 // ((masuk − keluar) / masuk). 👑 bulan terhemat, 🔥 bulan terboros. Ketuk →
 // Laporan bulanan bulan itu. `all` = pengeluaran & pemasukan (tanpa
@@ -295,7 +291,6 @@ export function YearMonths({ all, year, now, onPick }: { all: Transaction[]; yea
         Cincin = bagian pemasukan yang tersisa (ditabung). Ketuk bulan untuk laporannya.{firstIdx > 0 ? ` Catatan mulai ${MONTHS_SHORT[firstIdx]} ${year}.` : ''}
       </p>
 
-      {/* Rekor tahun ini */}
       <div className="no-scrollbar -mx-4 mt-2 flex gap-1.5 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0">
         <span className="shrink-0 rounded-2xl bg-white px-3 py-1.5 ring-1 ring-slate-200">
           <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Rata-rata</span>
@@ -327,7 +322,6 @@ export function YearMonths({ all, year, now, onPick }: { all: Transaction[]; yea
         )}
       </div>
 
-      {/* 12 kartu bulan */}
       <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
         {months.map((m, i) => {
           if (i < firstIdx) return null;

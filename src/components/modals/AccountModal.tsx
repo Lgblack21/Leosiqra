@@ -39,8 +39,6 @@ interface AccountModalProps {
 const BUILT_IN_TYPES = ['Bank Account', 'E-Wallet', 'Cash', 'Credit Card'];
 const HIDDEN_TYPES = new Set(['Investment Account']);
 const CUSTOM_TYPE_VALUE = '__custom__';
-// Tampilan form (2026-10-30): pratinjau kartu langsung, jenis sebagai tombol,
-// pilihan cepat bank/e-wallet berlogo. Logika simpan tidak berubah.
 const TYPE_META: Record<string, { emoji: string; label: string }> = {
   'Bank Account': { emoji: '🏦', label: 'Bank' },
   'E-Wallet': { emoji: '📱', label: 'E-wallet' },
@@ -157,7 +155,6 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
         setSaving(false);
         return;
       }
-      // Field siklus cuma dikirim untuk kartu kredit.
       if (isCredit && formData.cardLast4 && !/^\d{4}$/.test(formData.cardLast4)) {
         setError('4 digit terakhir kartu harus tepat 4 angka.');
         setSaving(false);
@@ -166,10 +163,8 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
       // Field siklus & identitas kartu cuma dikirim untuk kartu kredit.
       const cycle = isCredit ? { ...cardCycleFromForm(cycleForm), cardLast4: formData.cardLast4, cardNetwork: formData.cardNetwork } : {};
       if (initialData?.id) {
-        // initialBalance sengaja TIDAK dikirim saat edit — dulu tiap edit
-        // (termasuk sekadar ganti nama/warna) menimpanya dengan saldo saat
-        // ini, sehingga nilai awal rekening hilang dan tagihan kartu kredit
-        // ikut bergeser.
+        // initialBalance sengaja TIDAK dikirim saat edit — menimpanya dengan saldo saat ini
+        // menghapus nilai awal rekening & menggeser tagihan kartu kredit.
         await accountService.updateAccount(initialData.id, {
           name: formData.name,
           logoUrl: formData.logoUrl,
@@ -251,7 +246,6 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
       <div className="space-y-5">
         {error && <div className="rounded-2xl border border-rose-100 bg-rose-50 p-3.5 text-sm font-medium text-rose-600">{error}</div>}
 
-        {/* Pratinjau */}
         <div className={cn('relative overflow-hidden rounded-[24px] p-5 text-white shadow-[0_18px_40px_-20px_rgba(15,23,42,0.6)] transition-colors duration-300', getCardGradientClass(formData.cardColor, formData.type))}>
           <span aria-hidden className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/10" />
           <div className="relative flex items-center gap-3">
@@ -271,7 +265,6 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
           <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
         </div>
 
-        {/* Jenis */}
         <div className="space-y-2">
           <p className={label}>Jenis</p>
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -291,7 +284,6 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
           )}
         </div>
 
-        {/* Nama */}
         <div className="space-y-2">
           <label htmlFor="acc-name" className={label}>Nama</label>
           <input
@@ -339,7 +331,6 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
           </div>
         )}
 
-        {/* Saldo */}
         <div className="space-y-2">
           <label className={label}>{isCredit ? 'Tagihan terpakai sekarang' : 'Saldo sekarang'}</label>
           <div className="flex items-stretch gap-2">
@@ -376,7 +367,6 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
           </div>
         )}
 
-        {/* Warna */}
         <div className="space-y-2">
           <p className={label}>Warna kartu</p>
           <div className="flex flex-wrap gap-2.5">

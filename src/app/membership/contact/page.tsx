@@ -9,7 +9,7 @@ import { uploadToCloudinary } from '@/lib/cloudinary';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { cn } from '@/lib/utils';
 
-// Pembayaran: Langganan PRO & Top up koin (2026-11-07). Paket & harga dari server
+// Pembayaran: Langganan PRO & Top up koin. Paket & harga dari server
 // (/api/member/payment-info: paket PRO pengaturan admin + paket koin "koin-N").
 // Bayar manual (transfer / QRIS) → kirim bukti → admin memverifikasi.
 // ?package=koin-10 / ?tab=koin membuka tab & paket itu langsung.
@@ -114,7 +114,6 @@ export default function PembayaranPage() {
   const card = 'rounded-[28px] bg-white ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800';
   return (
     <div className="mx-auto max-w-6xl space-y-5 pb-12">
-      {/* Kepala: status akun & saldo koin */}
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 dark:text-white md:text-[30px]">Upgrade & Top up</h1>
@@ -141,7 +140,6 @@ export default function PembayaranPage() {
       )}
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
-        {/* 1. Pilih paket */}
         <section className="space-y-4">
           <div className="flex rounded-full bg-slate-100 p-1 dark:bg-slate-800">
             {([['pro', 'Langganan PRO', Crown], ['koin', 'Top up koin', Coins]] as const).map(([k, label, Icon]) => (
@@ -204,7 +202,6 @@ export default function PembayaranPage() {
           </div>
         </section>
 
-        {/* 2. Bayar & 3. Konfirmasi */}
         <section className={cn(card, 'h-fit space-y-4 p-4 md:p-5 lg:sticky lg:top-6')}>
           <div className="flex items-center justify-between rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 p-4 text-white">
             <div className="min-w-0">
@@ -268,7 +265,6 @@ export default function PembayaranPage() {
         </section>
       </div>
 
-      {/* Riwayat */}
       {history.length > 0 && (
         <section className={cn(card, 'p-4 md:p-5')}>
           <p className="mb-2 text-[15px] font-bold text-slate-900 dark:text-white">Riwayat pembayaranku</p>

@@ -40,8 +40,6 @@ const sameOriginReferrerPath = () => {
 const fmtDate = (iso: string) =>
   new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" }).format(new Date(iso));
 
-// Formulir saran & kritik + riwayat masukan (dengan balasan admin).
-// Dipakai halaman web (/membership/saran) dan aplikasi HP (/app/saran).
 export function FeedbackPanel({ platform }: { platform: "web" | "app" }) {
   const reduce = useReducedMotion();
   const [category, setCategory] = useState<FeedbackCategory>("saran");

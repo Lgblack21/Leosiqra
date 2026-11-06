@@ -1,11 +1,7 @@
 "use client";
 
-// Pemandangan kartu sapaan Ringkasan: langit ikut jam perangkat — matahari
-// melintas dari pagi ke sore, bulan & bintang di malam hari, awan dan burung
-// di siang hari, siluet kota (jendela menyala saat malam) dengan hutan di
-// depannya. Semua SVG/CSS tanpa gambar dan tanpa filter blur (blur di bawah
-// overlay bikin kedipan hitam di Chrome Android). Animasi mati kalau
-// prefers-reduced-motion (lihat .sky-* di globals.css).
+// Tanpa filter blur: blur di bawah overlay bikin kedipan hitam di Chrome Android.
+// Animasi mati saat prefers-reduced-motion (lihat .sky-* di globals.css).
 export type SkyPeriod = 'morning' | 'day' | 'evening' | 'night';
 
 export const skyPeriod = (hour: number): SkyPeriod =>
@@ -51,10 +47,7 @@ export function SkyScene({ now }: { now: Date | null }) {
   const pal = PALETTE[period];
   const night = period === 'night';
 
-  // Matahari 05.00–19.00, bulan 19.00–05.00, melintas busur. Desktop: di
-  // tengah kartu (antara angka besar di kiri dan Leo di kanan). HP (kartu
-  // tinggi, teks lebar): busur kecil di pojok kanan atas supaya tidak di
-  // belakang angka.
+  // Matahari 05.00–19.00, bulan 19.00–05.00. HP: busur kecil di pojok kanan atas supaya tidak di belakang angka.
   const sunP = Math.min(1, Math.max(0, (h - 5) / 14));
   const moonP = Math.min(1, Math.max(0, ((h - 19 + 24) % 24) / 10));
   const p = night ? moonP : sunP;
@@ -69,7 +62,6 @@ export function SkyScene({ now }: { now: Date | null }) {
 
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      {/* Bintang & bintang jatuh */}
       {night && (
         <>
           {STARS.map((st, i) => (
@@ -79,7 +71,6 @@ export function SkyScene({ now }: { now: Date | null }) {
         </>
       )}
 
-      {/* Matahari / bulan */}
       <div className="absolute left-[var(--lm)] top-[var(--tm)] -translate-x-1/2 -translate-y-1/2 scale-75 md:left-[var(--l)] md:top-[var(--t)] md:scale-100" style={pos}>
         {night ? (
           <div className="sky-float relative h-16 w-16 md:h-20 md:w-20">
@@ -109,7 +100,6 @@ export function SkyScene({ now }: { now: Date | null }) {
         )}
       </div>
 
-      {/* Awan & burung (siang) */}
       {!night && (
         <>
           {[{ t: 34, s: 1, d: 0, dur: 70 }, { t: 92, s: 0.7, d: -28, dur: 90 }, { t: 10, s: 0.55, d: -55, dur: 110 }].map((c, i) => (
@@ -135,7 +125,6 @@ export function SkyScene({ now }: { now: Date | null }) {
         </>
       )}
 
-      {/* Bukit jauh, kota, hutan */}
       <svg viewBox="0 0 1200 400" preserveAspectRatio="xMidYMax slice" className="absolute inset-x-0 bottom-0 h-[58%] w-full md:h-[70%]">
         <path d={`M0 ${GROUND - 40} C 180 ${GROUND - 110}, 330 ${GROUND - 40}, 520 ${GROUND - 90} S 860 ${GROUND - 30}, 1020 ${GROUND - 95} S 1160 ${GROUND - 60}, 1200 ${GROUND - 70} V400 H0 Z`} fill={pal.hills} opacity={night ? 0.7 : 0.45} />
         <g fill={pal.city} opacity={night ? 1 : 0.75}>

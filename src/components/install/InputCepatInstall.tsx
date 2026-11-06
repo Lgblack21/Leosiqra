@@ -63,9 +63,6 @@ function InstallBody({ platform }: { platform: Platform }) {
   );
 }
 
-// Tampil sebagai tombol kecil; dibuka otomatis sebagai lembar bawah kalau
-// datang dari /install (?install=1). Tidak tampil kalau sudah dibuka sebagai
-// aplikasi terpasang.
 export function InputCepatInstall() {
   const [platform, setPlatform] = useState<Platform>("android");
   const [hidden, setHidden] = useState(true);

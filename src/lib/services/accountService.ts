@@ -180,9 +180,7 @@ export const accountService = {
     notifyCollectionChanged('accounts');
   },
 
-  // Simpan urutan baru hasil drag-and-drop sekaligus — index tiap id di array
-  // jadi sort_order barunya. Order ini dipakai di semua halaman/dropdown yang
-  // menampilkan daftar rekening (bukan cuma di Kartu Saya).
+  // Index tiap id di array jadi sort_order barunya (berlaku di semua daftar rekening).
   async reorderAccounts(ids: string[]) {
     await cloudflareApi('/api/member/accounts/reorder', {
       method: 'PUT',

@@ -179,7 +179,6 @@ export const OnboardingTour = () => {
         onClick={() => { /* sengaja tidak menutup — biar tidak ke-skip nggak sengaja */ }}
       />
 
-      {/* Kartu: bottom-sheet di mobile, kartu mengambang di kanan-bawah desktop */}
       <div
         role="dialog"
         aria-modal="true"
@@ -223,7 +222,6 @@ export const OnboardingTour = () => {
           </Link>
         )}
 
-        {/* Progress bar */}
         <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden my-4">
           <div
             className="h-full bg-indigo-600 rounded-full transition-all duration-500"
