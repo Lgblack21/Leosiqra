@@ -32,6 +32,10 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   - Hapus transaksi (kedua jalur DELETE) → stok dikembalikan, KECUALI bahan yang sudah di-hitung fisik (opname) sesudahnya.
   - Tim: `/api/staff/me` kirim `materials` (baca saja), Catat biaya + masuk stok boleh; ubah bahan/resep/opname hanya pemilik.
   - Tanpa tabel 0033: semua alur lama jalan (stok dilewati), endpoint stok 503.
+  - MCP (gratis FREE, tulis butuh scope write): `get_shop_stock`, `set_shop_stock` (isi dari Excel/sheet: buat baru /
+    setel stok sisa sebagai opname, bawaan PRATINJAU, apply: true; idempotency_key), `set_shop_recipes` (bahan per produk
+    by i / name+group, bahan by nama). Dites lokal lewat /mcp: pratinjau tidak menulis, apply buat 2 + setel 1, tidak valid
+    dilaporkan, produk/bahan tak ketemu dilaporkan.
   - Dites lokal: tambah bahan (dup 409, negatif 400), resep abaikan bahan asing, jual 2 → −2 botol −60,5 ml, dobel 409 stok
     tetap, jual tim −1/−30,25 "oleh Rina", beli via biaya +100 (avg Rp2.500/pcs), bahan asing 400, opname delta & dobel 409,
     hapus jual/biaya mengembalikan (yang ter-opname tidak), arsip → tidak dipotong, cookie tim → stok pemilik 401. UI HP+web 0 error JS.

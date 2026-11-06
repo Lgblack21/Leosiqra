@@ -17128,6 +17128,8 @@ const MCP_SERVER_INSTRUCTIONS =
   "pakai update_shop_prices (get_shop dulu untuk i); untuk menyamakan katalog (tambah & hapus) pakai sync_shop_catalog — " +
   "pratinjau dulu, simpan (apply: true) setelah pengguna setuju. Gambar katalog (set_catalog_images / set_kasir_style categoryImages): https publik " +
   "atau data:image ≤8.000 karakter — jangan memakai logo/artwork resmi pihak lain tanpa hak; buat ikon SVG orisinal bila perlu. " +
+  "Stok usaha: get_shop_stock untuk melihat; set_shop_stock untuk mengisi dari Excel/sheet pengguna (stok sisa/akhir, pratinjau dulu, apply: true setelah setuju); " +
+  "set_shop_recipes untuk bahan per 1 produk (stok berkurang otomatis saat terjual). " +
   "set_kasir_style hanya menerima pilihan tampilan yang terdaftar " +
   "(bukan HTML/CSS); set_shop_products mode replace mengganti seluruh katalog — konfirmasi dulu ke pengguna.";
 
@@ -17590,6 +17592,134 @@ const mcpUpdateShopPrices: McpToolDef["run"] = async (env, auth, args) => {
     summary: `harga ${String(r.name).slice(0, 30)}: ${res.updated} diubah, ${res.notFound.length} tidak ketemu`,
   };
 };
+// ── MCP › Stok usaha (migrasi 0033): baca, isi dari Excel/sheet pengguna, aturan per produk ──
+const mcpStockGuard = async <T>(fn: () => Promise<T>) => {
+  try { return await fn(); } catch (e) { if (stockTableMissing(e)) throw new McpToolError("Stok usaha belum aktif di server (pembaruan database belum dijalankan)."); throw e; }
+};
+const mcpProductKey = (p: { name: string; group?: string }) => `${p.group ?? ""}|${p.name}`;
+const mcpGetShopStock: McpToolDef["run"] = async (env, auth, args) => {
+  const r = await mcpShopRow(env, auth, args.shop_id);
+  return mcpStockGuard(async () => {
+    const mats = await listMaterials(env, auth.userId, [String(r.id)], false);
+    const byId = new Map(mats.map((m) => [m.id, m]));
+    const recipes = (await env.DB.prepare("SELECT product_key, items_json FROM shop_recipes WHERE shop_id = ? AND owner_id = ?").bind(r.id, auth.userId).all<{ product_key: string; items_json: string }>()).results ?? [];
+    const rec = new Map(recipes.map((x) => [x.product_key, parseRecipe(x.items_json)]));
+    const products = mcpShopProducts(r);
+    return {
+      data: {
+        shop_id: r.id,
+        materials: mats.map((m) => ({ name: m.name, unit: m.unit, stock: m.stock, min_stock: m.min_stock, low: m.stock <= 0 || (m.min_stock != null && m.stock <= m.min_stock) })),
+        products: products.map((p, i) => ({ i, name: p.name, group: p.group ?? null, uses: (rec.get(mcpProductKey(p)) ?? []).map((it) => ({ material: byId.get(it.m)?.name ?? "(diarsip)", qty: it.q, unit: byId.get(it.m)?.unit ?? "" })) })),
+      },
+      summary: `stok ${String(r.name).slice(0, 30)}: ${mats.length} bahan/barang`,
+    };
+  });
+};
+const mcpSetShopStock: McpToolDef["run"] = async (env, auth, args) => {
+  const r = await mcpShopRow(env, auth, args.shop_id);
+  if (!Array.isArray(args.items) || !args.items.length) throw new McpToolError("items wajib: [{ name, unit, stock, min_stock? }].");
+  const apply = args.apply === true;
+  return mcpStockGuard(async () => {
+    const shopId = String(r.id);
+    const mats = await listMaterials(env, auth.userId, [shopId], false);
+    const byName = new Map(mats.map((m) => [m.name.toLowerCase(), m]));
+    const create: { name: string; unit: string; stock: number; min: number | null }[] = [];
+    const update: { id: string; name: string; unit: string; from: number; to: number; min?: number | null }[] = [];
+    const invalid: string[] = [];
+    const seen = new Set<string>();
+    for (const raw of (args.items as unknown[]).slice(0, STOCK_MAX_MATERIALS)) {
+      const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+      const name = shopText(o.name, 60);
+      const stock = stockNum(o.stock);
+      const min = o.min_stock === undefined || o.min_stock === null ? undefined : stockNum(o.min_stock);
+      if (!name || stock === null || stock < 0 || (min !== undefined && (min === null || min < 0))) { invalid.push(name || "(tanpa nama)"); continue; }
+      if (seen.has(name.toLowerCase())) continue;
+      seen.add(name.toLowerCase());
+      const cur = byName.get(name.toLowerCase());
+      if (cur) update.push({ id: cur.id, name: cur.name, unit: cur.unit, from: cur.stock, to: stock, ...(min !== undefined ? { min } : {}) });
+      else create.push({ name, unit: shopText(o.unit, 12) || "pcs", stock, min: min ?? null });
+    }
+    if (mats.length + create.length > STOCK_MAX_MATERIALS) throw new McpToolError(`Maksimal ${STOCK_MAX_MATERIALS} bahan/barang per usaha (sekarang ${mats.length}).`);
+    const preview = {
+      baru: create.map((c) => ({ name: c.name, unit: c.unit, stock: c.stock, min_stock: c.min })),
+      disetel: update.filter((u) => u.from !== u.to || u.min !== undefined).map((u) => ({ name: u.name, unit: u.unit, sebelum: u.from, sesudah: u.to, selisih: r3(u.to - u.from) })),
+      sama: update.filter((u) => u.from === u.to && u.min === undefined).length,
+      ...(invalid.length ? { tidak_valid: invalid } : {}),
+    };
+    if (!apply) return { data: { ok: true, preview: true, shop_id: shopId, ...preview, note: "PRATINJAU — belum disimpan. Tunjukkan ke pengguna; panggil ulang dengan apply: true setelah setuju. Stok yang sudah ada disetel ke angka baru (tercatat sebagai hitung fisik)." }, summary: `pratinjau stok: ${create.length} baru, ${preview.disetel.length} berubah` };
+    const key = typeof args.idempotency_key === "string" && args.idempotency_key ? args.idempotency_key.slice(0, 60) : generateId();
+    const now = nowIso();
+    const today = todayWIB();
+    const stmts: D1PreparedStatement[] = [];
+    for (const c of create) {
+      const id = generateId();
+      stmts.push(env.DB.prepare(
+        `INSERT INTO shop_materials (id, owner_id, shop_id, name, unit, stock, min_stock, created_at, updated_at)
+         SELECT ?, ?, ?, ?, ?, 0, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM shop_materials WHERE owner_id = ? AND shop_id = ? AND archived_at IS NULL AND name = ? COLLATE NOCASE)`
+      ).bind(id, auth.userId, shopId, c.name, c.unit, c.min, now, now, auth.userId, shopId, c.name));
+      if (c.stock > 0) stmts.push(...stockMoveStatements(env, auth.userId, shopId, { materialId: id, qty: c.stock, kind: "awal", key: `mcp:${key}:${c.name.toLowerCase()}`, note: "Diisi lewat AI (MCP)" }, today));
+    }
+    for (const u of update) {
+      if (u.min !== undefined) stmts.push(env.DB.prepare("UPDATE shop_materials SET min_stock = ?, updated_at = ? WHERE id = ? AND owner_id = ?").bind(u.min, now, u.id, auth.userId));
+      if (u.from === u.to) continue;
+      const mid = generateId();
+      stmts.push(
+        env.DB.prepare(
+          `INSERT OR IGNORE INTO shop_stock_moves (id, owner_id, shop_id, material_id, kind, qty, note, ref_key, date, created_at)
+           SELECT ?, ?, ?, id, 'opname', ROUND(? - stock, 3), 'Disetel lewat AI (MCP)', ?, ?, ? FROM shop_materials WHERE id = ? AND owner_id = ? AND shop_id = ?`
+        ).bind(mid, auth.userId, shopId, u.to, `mcp:${key}:${u.id}`, today, now, u.id, auth.userId, shopId),
+        env.DB.prepare("UPDATE shop_materials SET stock = ?, updated_at = ? WHERE id = ? AND owner_id = ? AND EXISTS (SELECT 1 FROM shop_stock_moves WHERE id = ?)").bind(u.to, now, u.id, auth.userId, mid),
+      );
+    }
+    if (stmts.length) await env.DB.batch(stmts);
+    return { data: { ok: true, saved: true, shop_id: shopId, ...preview }, summary: `stok ${String(r.name).slice(0, 30)}: ${create.length} baru, ${preview.disetel.length} disetel` };
+  });
+};
+const mcpSetShopRecipes: McpToolDef["run"] = async (env, auth, args) => {
+  const r = await mcpShopRow(env, auth, args.shop_id);
+  if (!Array.isArray(args.recipes) || !args.recipes.length) throw new McpToolError("recipes wajib: [{ i | name+group, uses: [{ material, qty }] }].");
+  return mcpStockGuard(async () => {
+    const shopId = String(r.id);
+    const products = mcpShopProducts(r);
+    const mats = await listMaterials(env, auth.userId, [shopId], false);
+    const matByName = new Map(mats.map((m) => [m.name.toLowerCase(), m]));
+    const saved: string[] = [];
+    const cleared: string[] = [];
+    const notFound: string[] = [];
+    const missingMaterial = new Set<string>();
+    const stmts: D1PreparedStatement[] = [];
+    const now = nowIso();
+    for (const raw of (args.recipes as unknown[]).slice(0, 240)) {
+      const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+      const p = typeof o.i === "number" && Number.isInteger(o.i) ? products[o.i] : products.find((x) => x.name === o.name && (o.group === undefined || (x.group ?? "") === (o.group ?? "")));
+      if (!p) { notFound.push(String(o.name ?? o.i ?? "?")); continue; }
+      const items: { m: string; q: number }[] = [];
+      for (const u of (Array.isArray(o.uses) ? o.uses : []).slice(0, 15)) {
+        const x = u && typeof u === "object" ? (u as Record<string, unknown>) : {};
+        const m = matByName.get(String(x.material ?? "").trim().toLowerCase());
+        const q = stockNum(x.qty);
+        if (!m) { missingMaterial.add(String(x.material ?? "?")); continue; }
+        if (!q || q <= 0 || items.some((it) => it.m === m.id)) continue;
+        items.push({ m: m.id, q });
+      }
+      const key = mcpProductKey(p);
+      if (!items.length) {
+        if (Array.isArray(o.uses) && o.uses.length === 0) { stmts.push(env.DB.prepare("DELETE FROM shop_recipes WHERE shop_id = ? AND owner_id = ? AND product_key = ?").bind(shopId, auth.userId, key)); cleared.push(p.name); }
+        continue;
+      }
+      stmts.push(env.DB.prepare(
+        `INSERT INTO shop_recipes (shop_id, product_key, owner_id, items_json, updated_at) VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(shop_id, product_key) DO UPDATE SET items_json = excluded.items_json, updated_at = excluded.updated_at WHERE shop_recipes.owner_id = excluded.owner_id`
+      ).bind(shopId, key, auth.userId, JSON.stringify(items), now));
+      saved.push(p.group ? `${p.group} · ${p.name}` : p.name);
+    }
+    if (stmts.length) await env.DB.batch(stmts);
+    return {
+      data: { ok: true, shop_id: shopId, saved: saved.length, cleared: cleared.length, ...(notFound.length ? { product_not_found: notFound } : {}), ...(missingMaterial.size ? { material_not_found: [...missingMaterial], note: "Bahan ini belum ada — buat dulu lewat set_shop_stock, lalu ulangi." } : {}) },
+      summary: `aturan stok ${String(r.name).slice(0, 30)}: ${saved.length} produk`,
+    };
+  });
+};
 const mcpSetKasirStyle: McpToolDef["run"] = async (env, auth, args) => {
   const r = await mcpShopRow(env, auth, args.shop_id);
   if (!("style_json" in r)) throw new McpToolError("Tampilan kasir belum aktif di server (pembaruan database belum dijalankan).");
@@ -17807,6 +17937,48 @@ const MCP_TOOLS: McpToolDef[] = [
       additionalProperties: false,
     },
     run: mcpUpdateShopPrices,
+  },
+  {
+    name: "get_shop_stock",
+    title: "Stok usaha",
+    description: "Stok bahan/barang satu usaha (nama, satuan, stok sekarang, batas minimum, hampir habis) dan aturan per produk (bahan/barang yang terpakai tiap 1 produk terjual).",
+    write: false,
+    inputSchema: { type: "object", properties: { shop_id: { type: "string" } }, required: ["shop_id"], additionalProperties: false },
+    run: mcpGetShopStock,
+  },
+  {
+    name: "set_shop_stock",
+    title: "Isi stok usaha",
+    description: "Mengisi stok bahan/barang satu usaha, mis. dari Excel/Google Sheet stok opname pengguna: [{ name, unit, stock, min_stock? }]. Nama yang belum ada DIBUAT; yang sudah ada (nama sama, tanpa beda besar-kecil huruf) stoknya DISETEL ke angka baru (tercatat sebagai hitung fisik). Pakai stok AKHIR/sisa sekarang, bukan stok awal. unit: pcs, gram, kg, ml, liter, porsi, pak, lusin, lembar, meter, pasang, atau satuan lain ≤12 huruf. Bawaan = PRATINJAU (apply false): tunjukkan baru/disetel ke pengguna, lalu panggil ulang dengan apply: true setelah disetujui. Tidak mengubah uang/saldo.",
+    write: true,
+    inputSchema: {
+      type: "object",
+      properties: {
+        shop_id: { type: "string" },
+        items: { type: "array", minItems: 1, maxItems: 100, items: { type: "object", properties: { name: { type: "string" }, unit: { type: "string" }, stock: { type: "number", minimum: 0 }, min_stock: { type: "number", minimum: 0 } }, required: ["name", "stock"], additionalProperties: false } },
+        apply: { type: "boolean" },
+        idempotency_key: { type: "string" },
+      },
+      required: ["shop_id", "items"],
+      additionalProperties: false,
+    },
+    run: mcpSetShopStock,
+  },
+  {
+    name: "set_shop_recipes",
+    title: "Atur stok per produk",
+    description: "Mengatur bahan/barang yang terpakai tiap 1 produk terjual, supaya stok berkurang otomatis di kasir. Produk lewat i (dari get_shop/get_shop_stock) atau name+group; uses: [{ material (nama persis dari get_shop_stock), qty }]. Toko barang jadi: 1 produk = 1 barang (qty 1). uses: [] menghapus aturan. Bahan yang belum ada buat dulu lewat set_shop_stock.",
+    write: true,
+    inputSchema: {
+      type: "object",
+      properties: {
+        shop_id: { type: "string" },
+        recipes: { type: "array", minItems: 1, maxItems: 240, items: { type: "object", properties: { i: { type: "integer", minimum: 0 }, name: { type: "string" }, group: { type: "string" }, uses: { type: "array", maxItems: 15, items: { type: "object", properties: { material: { type: "string" }, qty: { type: "number", exclusiveMinimum: 0 } }, required: ["material", "qty"], additionalProperties: false } } }, required: ["uses"], additionalProperties: false } },
+      },
+      required: ["shop_id", "recipes"],
+      additionalProperties: false,
+    },
+    run: mcpSetShopRecipes,
   },
   {
     name: "get_shop",
