@@ -15,7 +15,6 @@ import type { LeoActivity, LeoMood } from '@/components/mascot/LeoMascot';
 
 const DURATIONS = [15, 25, 50, 90];
 const iso = (ms: number) => new Date(ms).toISOString();
-const card = 'rounded-[28px] bg-white ring-1 ring-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:bg-slate-900 dark:ring-slate-800';
 
 // Status musik dari mesin audio (satu untuk seluruh aplikasi).
 const useAudio = () => {
@@ -35,7 +34,7 @@ async function notify(title: string, body: string) {
   } catch { /* notifikasi tidak tersedia */ }
 }
 
-export function FocusTimer({ settingsOpen, onCloseSettings }: { settingsOpen: boolean; onCloseSettings: () => void }) {
+export function FocusTimer({ settingsOpen, onOpenSettings, onCloseSettings }: { settingsOpen: boolean; onOpenSettings: () => void; onCloseSettings: () => void }) {
   const reduce = useReducedMotion();
   // Dipanggil hanya di browser (FocusApp merender ini setelah hydrate) → aman baca localStorage.
   const [settings, setSettingsState] = useState<FocusSettings>(() => loadSettings());
@@ -279,8 +278,6 @@ export function FocusTimer({ settingsOpen, onCloseSettings }: { settingsOpen: bo
           : run.label ? `Fokus: ${run.label}` : `Fokus ${kindLabel.toLowerCase()} bareng Leo`;
   const longEvery = settings.longEvery;
   const dotsDone = run?.phase === 'break' ? run.cycle % longEvery || (run.long ? longEvery : 0) : cycle % longEvery;
-  const R = 54;
-  const C = 2 * Math.PI * R;
   const musicOff = !audio.track;
   const needMusicTap = Boolean(run && focusing && settings.track && musicOff);
 
@@ -312,119 +309,107 @@ export function FocusTimer({ settingsOpen, onCloseSettings }: { settingsOpen: bo
     </div>
   );
 
+  const trackInfo = FOCUS_TRACKS.find((x) => x.id === settings.track);
+  const night = t.getHours() >= 18 || t.getHours() < 5;
+
   return (
-    // Satu layar: kamar Leo mengisi sisa tinggi, kontrol selalu terlihat (tanpa scroll halaman).
-    <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1fr)_auto] gap-3 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] md:grid-rows-1 md:gap-4">
-      {/* Kiri: kamar Leo + musik (tablet/desktop) */}
-      <div className="flex min-h-0 flex-col gap-3 md:gap-4">
-        <section className={cn(card, 'relative min-h-[140px] flex-1 overflow-hidden')}>
-          <div className="absolute inset-0">
-            <FocusScene fill now={t} kind={kind} mood={mood} activity={activity} lookX={lookX} music={Boolean(audio.track)} focusing={focusing} />
-          </div>
-          <div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-2 md:inset-x-4 md:bottom-4">
-            {/* Tanpa AnimatePresence "wait": ganti teks cepat (fase habis + rayakan) bisa membuatnya macet. */}
-            <motion.span
-              key={status}
-              initial={reduce ? false : { opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25 }}
-              className="inline-flex min-w-0 items-center gap-2 rounded-full bg-white/90 px-3 py-1.5 text-[12px] font-semibold text-slate-700 shadow-sm backdrop-blur dark:bg-slate-900/85 dark:text-slate-200 md:text-[13px]"
-            >
-              <span className={cn('h-2 w-2 shrink-0 rounded-full', focusing ? 'bg-emerald-500' : run?.phase === 'break' ? 'bg-amber-400' : 'bg-slate-300')} />
-              <span className="truncate">{status}</span>
-            </motion.span>
-            {needMusicTap && (
-              <button type="button" onClick={() => settings.track && focusAudio.play(settings.track, settings.volume)} className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-indigo-600 px-3 py-1.5 text-[12px] font-bold text-white shadow-md">
-                <Music2 size={13} /> Putar musik
-              </button>
-            )}
-          </div>
-        </section>
-        <div className={cn(card, 'hidden shrink-0 space-y-3 p-4 md:block lg:p-5')}>
-          <div className="flex items-center justify-between">
-            <p className="flex items-center gap-2 text-[14px] font-bold text-slate-900 dark:text-white"><Music2 size={16} className="text-indigo-500" /> Musik fokus</p>
-            <span className="text-[11px] font-semibold text-slate-400">dibuat langsung · bebas royalti</span>
-          </div>
-          {musicChips}
-          {volumeRow}
+    // Satu layar: langit Leo mengisi sisa tinggi (timer besar di dalam lengkung matahari),
+    // kontrol ringkas di bawahnya. Musik & pengaturan di lembar ⚙️.
+    <div className="flex h-full min-h-0 flex-col gap-3 md:gap-4">
+      <section className="relative min-h-[170px] flex-1 overflow-hidden rounded-[32px] [container-type:size] shadow-[0_24px_60px_-34px_rgba(49,46,129,0.7)]">
+        <div className="absolute inset-0">
+          <FocusScene now={t} kind={kind} mood={mood} activity={activity} lookX={lookX} music={Boolean(audio.track)} focusing={focusing} progress={progress} />
         </div>
-      </div>
-
-      {/* Kanan: timer & kontrol */}
-      <div className="flex min-h-0 flex-col gap-3 md:gap-4">
-        <div className={cn(card, 'p-3.5 md:p-5')}>
-          {/* HP saat belum mulai: cincin timer disembunyikan (durasi sudah tampil di tombol Mulai) */}
-          <div className={cn('flex items-center gap-4', !run && 'hidden md:flex')}>
-            <div className="relative h-[96px] w-[96px] shrink-0 md:h-[124px] md:w-[124px]">
-              <svg viewBox="0 0 124 124" className="h-full w-full -rotate-90">
-                <circle cx="62" cy="62" r={R} fill="none" strokeWidth="9" className="stroke-slate-100 dark:stroke-slate-800" />
-                <circle
-                  cx="62" cy="62" r={R} fill="none" strokeWidth="9" strokeLinecap="round"
-                  strokeDasharray={C} strokeDashoffset={C * (1 - progress)}
-                  className={cn('transition-[stroke-dashoffset] duration-300 ease-linear', run?.phase === 'break' ? 'stroke-amber-400' : 'stroke-indigo-600')}
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-[21px] font-extrabold tabular-nums tracking-tight text-slate-900 dark:text-white md:text-[26px]">{fmtClock(remaining)}</span>
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 md:text-[11px]">{run ? (run.phase === 'focus' ? 'Fokus' : run.long ? 'Istirahat+' : 'Istirahat') : 'Siap'}</span>
-              </div>
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[15px] font-bold text-slate-900 dark:text-white">{run ? (run.label || kindLabel) : 'Mau fokus apa?'}</p>
-              <p className="mt-0.5 text-[12px] text-slate-500 dark:text-slate-400">
-                {run ? (run.phase === 'focus' ? `Istirahat ${(run.cycle + 1) % longEvery === 0 ? settings.longBreakMin : settings.breakMin} mnt setelah ini` : `Lalu fokus ${settings.minutes} mnt`) : `Istirahat ${settings.breakMin} mnt · panjang ${settings.longBreakMin} mnt tiap ${longEvery} sesi`}
-              </p>
-              <div className="mt-2.5 flex gap-1.5" aria-label={`${dotsDone} dari ${longEvery} sesi`}>
-                {Array.from({ length: longEvery }, (_, i) => (
-                  <span key={i} className={cn('h-2 flex-1 rounded-full transition-colors', i < dotsDone ? 'bg-indigo-500' : i === dotsDone && run?.phase === 'focus' ? 'bg-indigo-200 dark:bg-indigo-500/40' : 'bg-slate-100 dark:bg-slate-800')} />
-                ))}
-              </div>
-            </div>
+        {/* Timer di tengah lengkung langit */}
+        {/* Ukuran ikut tinggi adegan (cqh) → selalu muat di langit, di atas Leo (kepala Leo ±44cqh dari atas). */}
+        <div className={cn('pointer-events-none absolute inset-x-0 top-[6cqh] flex flex-col items-center text-center', night ? 'text-white' : 'text-slate-900')}>
+          <span className={cn('rounded-full px-3 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] backdrop-blur md:text-[11px]', night ? 'bg-white/10 text-white/80' : 'bg-white/55 text-slate-600')}>
+            {run ? (run.pausedAt ? 'Dijeda' : run.phase === 'focus' ? kindLabel : run.long ? 'Istirahat panjang' : 'Istirahat') : 'Siap fokus'}
+          </span>
+          <span className="mt-[1cqh] font-black leading-none tabular-nums tracking-tight drop-shadow-sm" style={{ fontSize: 'clamp(28px, 20cqh, 88px)' }}>{fmtClock(remaining)}</span>
+          <div className="mt-[1.5cqh] flex gap-1.5" aria-label={`${dotsDone} dari ${longEvery} sesi`}>
+            {Array.from({ length: longEvery }, (_, i) => (
+              <span key={i} className={cn('h-1.5 w-6 rounded-full transition-colors md:w-8', i < dotsDone ? (night ? 'bg-amber-300' : 'bg-indigo-600') : i === dotsDone && run?.phase === 'focus' ? (night ? 'bg-white/50' : 'bg-indigo-300') : night ? 'bg-white/15' : 'bg-white/60')} />
+            ))}
           </div>
+        </div>
+        {/* Musik (kanan atas) */}
+        <button type="button" onClick={onOpenSettings} className={cn('absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-bold backdrop-blur transition-colors md:right-4 md:top-4', night ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-white/70 text-slate-700 hover:bg-white')} aria-label="Musik & pengaturan">
+          <span aria-hidden>{trackInfo?.emoji ?? '🤫'}</span> {trackInfo?.label ?? 'Hening'}
+          {audio.track && <span className="ml-0.5 flex h-3 items-end gap-[2px]" aria-hidden>{[0, 1, 2].map((i) => <span key={i} className={cn('focus-eq w-[2px] rounded-full', night ? 'bg-amber-300' : 'bg-indigo-500')} style={{ animationDelay: `${i * 0.15}s` }} />)}</span>}
+        </button>
+        <div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-2 md:inset-x-4 md:bottom-4">
+          {/* Tanpa AnimatePresence "wait": ganti teks cepat (fase habis + rayakan) bisa membuatnya macet. */}
+          <motion.span
+            key={status}
+            initial={reduce ? false : { opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25 }}
+            className="inline-flex min-w-0 items-center gap-2 rounded-full bg-white/90 px-3 py-1.5 text-[12px] font-semibold text-slate-700 shadow-sm backdrop-blur dark:bg-slate-900/85 dark:text-slate-200 md:text-[13px]"
+          >
+            <span className={cn('h-2 w-2 shrink-0 rounded-full', focusing ? 'bg-emerald-500' : run?.phase === 'break' ? 'bg-amber-400' : 'bg-slate-300')} />
+            <span className="truncate">{status}</span>
+          </motion.span>
+          {needMusicTap && (
+            <button type="button" onClick={() => settings.track && focusAudio.play(settings.track, settings.volume)} className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-indigo-600 px-3 py-1.5 text-[12px] font-bold text-white shadow-md">
+              <Music2 size={13} /> Putar musik
+            </button>
+          )}
+        </div>
+      </section>
 
-          {run ? (
-            <div className="mt-3 space-y-2 md:mt-4">
-              <div className="flex gap-2">
-                {run.pausedAt ? (
-                  <button type="button" onClick={resume} className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-indigo-600 py-3 text-[15px] font-bold text-white shadow-lg shadow-indigo-600/25 active:scale-[0.98] md:py-3.5"><Play size={17} fill="currentColor" /> Lanjut</button>
-                ) : (
-                  <button type="button" onClick={pause} className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-900 py-3 text-[15px] font-bold text-white active:scale-[0.98] dark:bg-white dark:text-slate-900 md:py-3.5"><Pause size={17} fill="currentColor" /> Jeda</button>
-                )}
-                <button type="button" onClick={() => extend(5)} className="rounded-2xl bg-slate-100 px-4 text-[14px] font-bold text-slate-700 active:scale-[0.98] dark:bg-slate-800 dark:text-slate-200" aria-label="Tambah 5 menit">+5</button>
-                {run.phase === 'break' ? (
-                  <button type="button" onClick={skipBreak} className="rounded-2xl bg-slate-100 px-4 text-[13px] font-bold text-slate-700 active:scale-[0.98] dark:bg-slate-800 dark:text-slate-200">Lewati</button>
-                ) : (
-                  <button type="button" onClick={() => setConfirmStop(true)} className="rounded-2xl bg-slate-100 px-4 text-slate-600 active:scale-[0.98] dark:bg-slate-800 dark:text-slate-300" aria-label="Hentikan"><Square size={16} /></button>
-                )}
+      {/* Kontrol */}
+      <div className="shrink-0 rounded-[28px] bg-white p-3 ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800 md:p-4">
+        {run ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="hidden min-w-0 flex-1 md:block">
+                <p className="truncate text-[15px] font-bold text-slate-900 dark:text-white">{run.label || kindLabel}</p>
+                <p className="text-[12px] text-slate-500">{run.phase === 'focus' ? `Istirahat ${(run.cycle + 1) % longEvery === 0 ? settings.longBreakMin : settings.breakMin} mnt setelah ini` : `Lalu fokus ${settings.minutes} mnt`}</p>
               </div>
-              <AnimatePresence>
-                {confirmStop && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-                    <div className="flex items-center gap-2 rounded-2xl bg-rose-50 p-2.5 dark:bg-rose-500/10">
-                      <p className="min-w-0 flex-1 text-[12px] text-rose-700 dark:text-rose-300">{elapsedSec(run, now) >= 60 ? `Berhenti? ${Math.floor(elapsedSec(run, now) / 60)} menit tetap tercatat di Rekap.` : 'Berhenti? Kurang dari 1 menit — tidak dicatat.'}</p>
-                      <button type="button" onClick={() => setConfirmStop(false)} className="rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">Lanjut</button>
-                      <button type="button" onClick={stop} className="rounded-full bg-rose-600 px-3 py-1.5 text-[12px] font-bold text-white">Berhenti</button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {run.pausedAt ? (
+                <button type="button" onClick={resume} className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-indigo-600 py-3.5 text-[15px] font-bold text-white shadow-lg shadow-indigo-600/25 active:scale-[0.98] md:w-56 md:flex-none"><Play size={17} fill="currentColor" /> Lanjut</button>
+              ) : (
+                <button type="button" onClick={pause} className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-900 py-3.5 text-[15px] font-bold text-white active:scale-[0.98] dark:bg-white dark:text-slate-900 md:w-56 md:flex-none"><Pause size={17} fill="currentColor" /> Jeda</button>
+              )}
+              <button type="button" onClick={() => extend(5)} className="h-[52px] rounded-2xl bg-slate-100 px-4 text-[14px] font-bold text-slate-700 active:scale-[0.98] dark:bg-slate-800 dark:text-slate-200" aria-label="Tambah 5 menit">+5</button>
+              {run.phase === 'break' ? (
+                <button type="button" onClick={skipBreak} className="h-[52px] rounded-2xl bg-slate-100 px-4 text-[13px] font-bold text-slate-700 active:scale-[0.98] dark:bg-slate-800 dark:text-slate-200">Lewati</button>
+              ) : (
+                <button type="button" onClick={() => setConfirmStop(true)} className="flex h-[52px] items-center rounded-2xl bg-slate-100 px-4 text-slate-600 active:scale-[0.98] dark:bg-slate-800 dark:text-slate-300" aria-label="Hentikan"><Square size={16} /></button>
+              )}
             </div>
-          ) : (
-            <div className="space-y-2.5 md:mt-4 md:space-y-3">
-              <div className="grid grid-cols-5 gap-1.5">
+            <AnimatePresence>
+              {confirmStop && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                  <div className="flex items-center gap-2 rounded-2xl bg-rose-50 p-2.5 dark:bg-rose-500/10">
+                    <p className="min-w-0 flex-1 text-[12px] text-rose-700 dark:text-rose-300">{elapsedSec(run, now) >= 60 ? `Berhenti? ${Math.floor(elapsedSec(run, now) / 60)} menit tetap tercatat di Rekap.` : 'Berhenti? Kurang dari 1 menit — tidak dicatat.'}</p>
+                    <button type="button" onClick={() => setConfirmStop(false)} className="rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">Lanjut</button>
+                    <button type="button" onClick={stop} className="rounded-full bg-rose-600 px-3 py-1.5 text-[12px] font-bold text-white">Berhenti</button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-2.5 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] md:gap-3">
+            <div className="space-y-2.5">
+              <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
                 {FOCUS_KINDS.map((k) => (
-                  <button key={k.id} type="button" onClick={() => { lightTap(); setSettings({ kind: k.id }); }}
-                    className={cn(chipBase, settings.kind === k.id ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300')}>
-                    <span className="text-[14px] leading-none md:text-[18px]" aria-hidden>{k.emoji}</span><span className="truncate">{k.label}</span>
+                  <button key={k.id} type="button" onClick={() => { lightTap(); setSettings({ kind: k.id }); }} aria-pressed={settings.kind === k.id}
+                    className={cn('flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[12px] font-bold transition-colors md:text-[13px]', settings.kind === k.id ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300')}>
+                    <span aria-hidden>{k.emoji}</span>{k.label}
                   </button>
                 ))}
               </div>
               <input value={label} onChange={(e) => setLabel(e.target.value)} maxLength={80} placeholder="Lagi ngerjain apa? (boleh kosong)" aria-label="Lagi ngerjain apa"
-                className="w-full rounded-2xl bg-slate-50 px-4 py-2.5 text-[14px] text-slate-800 outline-none ring-1 ring-transparent placeholder:text-slate-400 focus:bg-white focus:ring-indigo-200 dark:bg-slate-800 dark:text-slate-100 md:py-3" />
+                className="w-full rounded-2xl bg-slate-50 px-4 py-2.5 text-[14px] text-slate-800 outline-none ring-1 ring-slate-100 placeholder:text-slate-400 focus:bg-white focus:ring-indigo-200 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700" />
+            </div>
+            <div className="space-y-2.5">
               <div className="flex items-center gap-1.5">
                 {DURATIONS.map((m) => (
                   <button key={m} type="button" onClick={() => { lightTap(); setCustomOpen(false); setSettings({ minutes: m }); }}
-                    className={cn('min-w-0 flex-1 rounded-full py-2 text-[13px] font-bold tabular-nums transition-colors', settings.minutes === m && !customOpen ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300')}>{m}</button>
+                    className={cn('min-w-0 flex-1 rounded-full py-2 text-[13px] font-bold tabular-nums transition-colors', settings.minutes === m && !customOpen ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300')}>{m}</button>
                 ))}
                 {customOpen ? (
                   <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-indigo-600 p-1 text-white">
@@ -433,38 +418,40 @@ export function FocusTimer({ settingsOpen, onCloseSettings }: { settingsOpen: bo
                     <button type="button" onClick={() => setSettings({ minutes: clampInt(settings.minutes + 5, 5, 180, 25) })} className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15" aria-label="Tambah 5 menit"><Plus size={13} /></button>
                   </span>
                 ) : (
-                  <button type="button" onClick={() => setCustomOpen(true)} className="min-w-0 flex-1 rounded-full bg-slate-50 py-2 text-[13px] font-bold text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300">Atur</button>
+                  <button type="button" onClick={() => setCustomOpen(true)} className="min-w-0 flex-1 rounded-full bg-slate-100 py-2 text-[13px] font-bold text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300">Atur</button>
                 )}
               </div>
-              <button type="button" onClick={start} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 py-3.5 text-[16px] font-bold text-white shadow-lg shadow-slate-900/15 transition-transform active:scale-[0.98] dark:bg-white dark:text-slate-900 md:py-4">
-                <Play size={18} fill="currentColor" /> Mulai · {fmtClock(settings.minutes * 60_000)}
+              <button type="button" onClick={start} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 py-3.5 text-[16px] font-bold text-white shadow-lg shadow-indigo-600/30 transition-transform active:scale-[0.98]">
+                <Play size={18} fill="currentColor" /> Mulai fokus {settings.minutes} menit
               </button>
             </div>
-          )}
-
-          {/* HP: pilihan musik ringkas (volume & lainnya di ⚙️) */}
-          <div className="mt-2.5 md:hidden">{musicChips}</div>
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* Pengaturan sesi (⚙️): lembar bawah di HP, kotak di tengah di tablet/desktop */}
+      {/* Musik & pengaturan (⚙️ / chip musik): lembar bawah di HP, kotak tengah di tablet/desktop */}
       <AnimatePresence>
         {settingsOpen && (
           <motion.div className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-900/40 backdrop-blur-[2px] md:items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onCloseSettings}>
             <motion.div
-              role="dialog" aria-modal="true" aria-label="Pengaturan sesi"
+              role="dialog" aria-modal="true" aria-label="Musik & pengaturan"
               initial={reduce ? false : { y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={reduce ? undefined : { y: 40, opacity: 0 }} transition={{ type: 'spring', stiffness: 380, damping: 32 }}
               onClick={(e) => e.stopPropagation()}
               className="max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-t-[28px] bg-white p-5 pb-[calc(env(safe-area-inset-bottom)+20px)] shadow-2xl dark:bg-slate-900 md:rounded-[28px] md:pb-5"
             >
               <div className="mb-3 flex items-center justify-between">
-                <p className="flex items-center gap-2 text-[16px] font-bold text-slate-900 dark:text-white"><Settings2 size={17} className="text-slate-400" /> Pengaturan sesi</p>
+                <p className="flex items-center gap-2 text-[16px] font-bold text-slate-900 dark:text-white"><Settings2 size={17} className="text-slate-400" /> Musik & pengaturan</p>
                 <button type="button" onClick={onCloseSettings} className="rounded-full bg-slate-100 px-3 py-1.5 text-[12px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">Selesai</button>
               </div>
               <div className="space-y-3">
-                <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
-                  <p className="mb-2 text-[12px] font-semibold text-slate-500">Volume musik</p>
+                <div className="space-y-3 rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
+                  <div className="flex items-center justify-between">
+                    <p className="flex items-center gap-1.5 text-[13px] font-bold text-slate-800 dark:text-slate-100"><Music2 size={15} className="text-indigo-500" /> Musik fokus</p>
+                    <span className="text-[11px] font-semibold text-slate-400">dibuat langsung · bebas royalti</span>
+                  </div>
+                  {musicChips}
                   {volumeRow}
+                  <p className="text-[11px] text-slate-400">{settings.track ? 'Musik otomatis menyala saat fokus dimulai.' : 'Tanpa musik.'}</p>
                 </div>
                 <Stepper label="Istirahat pendek" value={settings.breakMin} unit="mnt" min={1} max={30} step={1} onChange={(v) => setSettings({ breakMin: v })} />
                 <Stepper label="Istirahat panjang" value={settings.longBreakMin} unit="mnt" min={5} max={60} step={5} onChange={(v) => setSettings({ longBreakMin: v })} />

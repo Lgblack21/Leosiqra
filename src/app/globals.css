@@ -641,6 +641,12 @@ html[data-daypart="sore"] .auth-greet[data-p="sore"], html[data-daypart="malam"]
 .focus-steam path { animation: focus-steam 2.6s ease-out infinite; }
 @keyframes focus-lamp { 0%, 100% { opacity: 0.85; } 50% { opacity: 1; } }
 .focus-lamp { animation: focus-lamp 5s ease-in-out infinite; }
+@keyframes focus-firefly { 0%, 100% { opacity: 0.15; transform: translate(0, 0); } 50% { opacity: 1; transform: translate(4px, -6px); } }
+.focus-firefly { animation: focus-firefly 4.2s ease-in-out infinite; filter: drop-shadow(0 0 2px #FDE68A); }
+@keyframes focus-butterfly { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(14px, -8px); } 50% { transform: translate(26px, 2px); } 75% { transform: translate(10px, 8px); } }
+.focus-butterfly { animation: focus-butterfly 9s ease-in-out infinite; }
+@keyframes focus-wing { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(0.35); } }
+.focus-wing { animation: focus-wing 0.35s ease-in-out infinite; }
 @keyframes focus-eq { 0%, 100% { height: 3px; } 50% { height: 10px; } }
 .focus-eq { height: 3px; animation: focus-eq 0.9s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) { .focus-twinkle, .focus-cloud, .focus-steam path, .focus-lamp, .focus-eq { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .focus-twinkle, .focus-cloud, .focus-steam path, .focus-lamp, .focus-eq, .focus-firefly, .focus-butterfly, .focus-wing { animation: none !important; } }

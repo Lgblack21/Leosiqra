@@ -18,6 +18,20 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-07 (branch claude/fokus-layar-penuh) — Fokus bareng Leo: layar penuh ala Ladangku + tampilan baru "Bukit Fokus". BELUM deploy (tunggu "gas"). Tanpa SQL.**
+  - Web `/membership/fokus` masuk FULLSCREEN_PATHS (tanpa sidebar/tab bawah); app pindah ke `/app/fokus` (di luar grup tab,
+    tanpa tab bawah & tombol +). Bar atas: tombol kembali (pil gelap) · judul per tab · ⚙️ (Fokus) / Leo AI; menu melayang
+    di bawah `[data-focus-dock]` (Fokus · Tenang · Rekap). Tinggi diukur sampai atas menu; diukur ulang setelah animasi masuk
+    halaman (transform induk sempat menggeser menu → ukuran pertama salah 468 vs 680 px). MIN_FIT 340 (iPhone SE muat).
+  - Tampilan baru (beda dari Oyenza — tanpa kamar/meja/lampu/jendela): `FocusScene` = Leo di puncak bukit, langit ikut jam,
+    matahari/bulan berjalan di lengkung langit sesuai progres sesi, timer besar di tengah lengkung (ukuran cqh), kunang-kunang
+    (malam) / kupu-kupu (siang), barang per jenis di rumput. Bukit viewBox -800…1200 → skala menurut tinggi (tidak naik di
+    layar lebar); Leo ukuran 0.4cqh. Musik & semua pengaturan di lembar ⚙️ / chip musik di langit.
+  - Tenang: bidang malam dengan bola cahaya + cincin bernapas, kontrol kaca di bawah.
+  - Dites lokal: iPhone 13 (/app & /membership), iPhone SE, tablet 1000×668, web 1366×860 — tidak bisa digulir, tombol
+    terbawah di atas menu, Leo tidak tidur 30 dtk, 0 error JS.
+  - Berikutnya (permintaan Bos): fitur jurnal harian ala Oyenza (nama & tampilan beda) — belum dimulai, perlu keputusan.
+
 - **2026-11-07 — Fokus bareng Leo: satu layar penuh + Leo bernapas: LIVE (run 42263962169, commit 5e1a06b). Tanpa SQL.**
   - Satu layar (HP/tablet/web): `useFitHeight` di FocusApp mengukur ruang (top elemen → atas tab bawah `[data-bottom-bar]`
     + 34px tombol +), mengunci gulir html/body; < 420px (HP landscape) tidak dikunci. Strip "Hari ini belum ada sesi" dihapus.

@@ -5,21 +5,37 @@ import { LeoMascot, type LeoActivity, type LeoMood } from '@/components/mascot/L
 import type { FocusKind } from '@/lib/focus/store';
 import { cn } from '@/lib/utils';
 
-// Kamar belajar Leo (SVG orisinal). Tiga lapis: ruangan (belakang) → Leo → meja & barang
-// (depan) — kaki Leo bertumpu di tepi meja. Langit jendela & lampu ikut jam perangkat,
-// jam dinding menunjukkan jam sungguhan, barang di meja ikut jenis fokus.
+// "Bukit Fokus" — Leo duduk di puncak bukit, di bawah langit yang ikut jam perangkat.
+// Matahari/bulan berjalan di lengkung langit mengikuti progres sesi (0 → 1), jadi waktu
+// fokus terlihat dari langit. Tiga lapis:
+//   1. langit (CSS gradien seluruh bidang) + lengkung & bintang (SVG "meet", selalu utuh)
+//   2. bukit belakang (SVG "slice", menempel bawah & memenuhi lebar)
+//   3. Leo (diletakkan dengan container query, cocok dengan skala "slice") + bukit depan,
+//      rumput, barang sesuai jenis fokus, kunang-kunang (malam) / kupu-kupu (siang).
 type Sky = 'pagi' | 'siang' | 'sore' | 'malam';
 const skyOf = (h: number): Sky => (h >= 5 && h < 10 ? 'pagi' : h >= 10 && h < 15 ? 'siang' : h >= 15 && h < 18 ? 'sore' : 'malam');
-const SKY: Record<Sky, [string, string]> = {
-  pagi: ['#BAE6FD', '#FDE68A'],
-  siang: ['#7DD3FC', '#E0F2FE'],
-  sore: ['#FB923C', '#FDE68A'],
-  malam: ['#1E1B4B', '#4338CA'],
+const SKY_BG: Record<Sky, string> = {
+  pagi: 'linear-gradient(180deg,#FFE4D1 0%,#FBD3E9 45%,#CFE6FF 100%)',
+  siang: 'linear-gradient(180deg,#9BD3FF 0%,#C9E8FF 55%,#EAF6FF 100%)',
+  sore: 'linear-gradient(180deg,#FFB38A 0%,#F7A1C4 45%,#B9A6FF 100%)',
+  malam: 'linear-gradient(180deg,#0F1235 0%,#211C55 50%,#3A2C7A 100%)',
 };
+const HILL: Record<Sky, { back: string; mid: string; front: string; grass: string }> = {
+  pagi: { back: '#BFE6C7', mid: '#93D7A6', front: '#6CC488', grass: '#4FAE6F' },
+  siang: { back: '#B6E7BE', mid: '#86D39B', front: '#5DBF7E', grass: '#43A866' },
+  sore: { back: '#D7B9E6', mid: '#A9C98E', front: '#86B874', grass: '#6A9E5C' },
+  malam: { back: '#2A2F66', mid: '#232A5A', front: '#1B224C', grass: '#2C3A78' },
+};
+// Bintang tetap (tidak acak per render → tidak berkedip saat render ulang).
+const STARS = [[30, 30], [62, 70], [96, 22], [140, 52], [178, 18], [226, 40], [262, 16], [300, 58], [334, 26], [370, 64], [20, 104], [388, 112], [118, 96], [286, 98]];
 
-// fill = isi tinggi induk (layar penuh): bidang 16:10 diletakkan di tengah ruang yang ada
-// (container query) supaya Leo & meja tidak gepeng di ukuran layar apa pun.
-export function FocusScene({ now, kind, mood, activity, lookX, music, focusing, className, fill = false }: {
+// Lapis bukit: viewBox sangat lebar (-800…1200 × 250, "slice" menempel bawah) → praktis selalu
+// diskalakan menurut TINGGI (H/250 per satuan), jadi di layar lebar bukit tidak naik menutupi langit.
+// Bagian tengah (0…400) = komposisi utama. S = skala yang sama dalam satuan container query.
+const S = 'max(0.05cqw, 0.4cqh)';
+const VB = '-800 0 2000 250';
+
+export function FocusScene({ now, kind, mood, activity, lookX, music, focusing, progress = 0, className }: {
   now: Date;
   kind: FocusKind;
   mood: LeoMood;
@@ -27,167 +43,127 @@ export function FocusScene({ now, kind, mood, activity, lookX, music, focusing, 
   lookX: number;
   music: boolean;
   focusing: boolean;
+  progress?: number;
   className?: string;
   fill?: boolean;
 }) {
   const reduce = useReducedMotion();
   const sky = skyOf(now.getHours());
   const night = sky === 'malam';
-  const [top, bottom] = SKY[sky];
-  const minDeg = now.getMinutes() * 6 + now.getSeconds() * 0.1;
-  const hourDeg = (now.getHours() % 12) * 30 + now.getMinutes() * 0.5;
+  const hill = HILL[sky];
+  // Lengkung matahari: setengah lingkaran pusat (200,190) jari-jari 150 (viewBox 400×200).
+  const p = Math.min(1, Math.max(0, progress));
+  const ang = Math.PI * (1 - p);
+  const sx = 200 + 150 * Math.cos(ang);
+  const sy = 190 - 150 * Math.sin(ang);
 
-  const bg = night ? 'bg-gradient-to-b from-[#232046] to-[#2e2a5c]' : 'bg-gradient-to-b from-[#F1EEFF] to-[#E9E4FF]';
-  if (fill) {
-    return (
-      <div className={cn('relative h-full w-full overflow-hidden [container-type:size]', bg, className)}>
-        <div className="absolute left-1/2 top-1/2 aspect-[16/10] -translate-x-1/2 -translate-y-1/2" style={{ width: 'min(100cqw, 160cqh)' }}>
-          <FocusScene now={now} kind={kind} mood={mood} activity={activity} lookX={lookX} music={music} focusing={focusing} className="!bg-none !bg-transparent" />
-        </div>
-      </div>
-    );
-  }
   return (
-    <div className={cn('relative aspect-[16/10] w-full overflow-hidden', bg, className)}>
-      {/* Ruangan */}
-      <svg viewBox="0 0 400 250" className="absolute inset-0 h-full w-full" aria-hidden preserveAspectRatio="xMidYMid slice">
+    <div className={cn('relative h-full w-full overflow-hidden [container-type:size]', className)} style={{ background: SKY_BG[sky] }}>
+      {/* 1. Langit: bintang + lengkung perjalanan matahari/bulan */}
+      <svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMin meet" className="absolute inset-x-0 top-0 h-[78%] w-full" aria-hidden>
         <defs>
-          <linearGradient id="fs-sky" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor={top} />
-            <stop offset="1" stopColor={bottom} />
-          </linearGradient>
-          <radialGradient id="fs-lamp" cx="0.5" cy="0" r="1">
-            <stop offset="0" stopColor="#FEF3C7" stopOpacity="0.85" />
-            <stop offset="1" stopColor="#FEF3C7" stopOpacity="0" />
+          <radialGradient id="fs-glow" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stopColor={night ? '#FEF3C7' : '#FFF7AE'} stopOpacity="0.75" />
+            <stop offset="1" stopColor={night ? '#FEF3C7' : '#FFF7AE'} stopOpacity="0" />
           </radialGradient>
         </defs>
-        {/* Jendela */}
-        <rect x="34" y="28" width="104" height="92" rx="10" fill={night ? '#3B3768' : '#FFFFFF'} />
-        <rect x="40" y="34" width="92" height="80" rx="6" fill="url(#fs-sky)" />
-        {night ? (
-          <g>
-            <path d="M112 50 a12 12 0 1 0 8 20 a10 10 0 1 1 -8 -20 Z" fill="#FEF3C7" />
-            {[[54, 46], [70, 62], [96, 44], [60, 96], [104, 92], [84, 80]].map(([x, y], i) => (
-              <circle key={i} cx={x} cy={y} r={i % 2 ? 1.2 : 1.7} fill="#FFFFFF" className={reduce ? undefined : 'focus-twinkle'} style={{ animationDelay: `${i * 0.7}s` }} />
-            ))}
-          </g>
-        ) : (
-          <g>
-            <circle cx={sky === 'sore' ? 104 : 110} cy={sky === 'sore' ? 86 : 54} r="11" fill={sky === 'sore' ? '#FDBA74' : '#FDE047'} />
-            <g className={reduce ? undefined : 'focus-cloud'}>
-              <ellipse cx="66" cy="74" rx="16" ry="7" fill="#FFFFFF" opacity="0.9" />
-              <ellipse cx="78" cy="70" rx="11" ry="8" fill="#FFFFFF" opacity="0.9" />
-            </g>
+        {night && STARS.map(([x, y], i) => (
+          <circle key={i} cx={x} cy={y} r={i % 3 ? 1.1 : 1.7} fill="#FFFFFF" className={reduce ? undefined : 'focus-twinkle'} style={{ animationDelay: `${(i % 5) * 0.6}s` }} />
+        ))}
+        {!night && (
+          <g className={reduce ? undefined : 'focus-cloud'} fill="#FFFFFF" opacity="0.85">
+            <ellipse cx="70" cy="60" rx="26" ry="9" /><ellipse cx="86" cy="54" rx="16" ry="10" />
+            <ellipse cx="320" cy="44" rx="22" ry="8" /><ellipse cx="334" cy="39" rx="13" ry="8" />
           </g>
         )}
-        <path d="M86 34 V114 M40 74 H132" stroke={night ? '#3B3768' : '#FFFFFF'} strokeWidth="5" />
-        <rect x="28" y="118" width="116" height="6" rx="3" fill={night ? '#3B3768' : '#DDD6FE'} />
-        {/* Tanaman di ambang jendela */}
-        <path d="M54 118 q-4 -14 4 -24 M56 118 q6 -12 -2 -22 M58 118 q10 -10 14 -20" stroke="#16A34A" strokeWidth="3" fill="none" strokeLinecap="round" />
-        <rect x="48" y="108" width="20" height="12" rx="3" fill="#F8FAFC" />
-
-        {/* Jam dinding (jam sungguhan) */}
-        <circle cx="206" cy="48" r="20" fill="#FFFFFF" stroke={night ? '#4C4884' : '#DDD6FE'} strokeWidth="3" />
-        {[0, 90, 180, 270].map((d) => (
-          <circle key={d} cx={206 + 14 * Math.sin((d * Math.PI) / 180)} cy={48 - 14 * Math.cos((d * Math.PI) / 180)} r="1.3" fill="#94A3B8" />
-        ))}
-        <line x1="206" y1="48" x2="206" y2="37" stroke="#1E293B" strokeWidth="2.6" strokeLinecap="round" transform={`rotate(${hourDeg} 206 48)`} />
-        <line x1="206" y1="48" x2="206" y2="32" stroke="#475569" strokeWidth="1.6" strokeLinecap="round" transform={`rotate(${minDeg} 206 48)`} />
-        <circle cx="206" cy="48" r="2" fill="#F43F5E" />
-
-        {/* Rak buku */}
-        <rect x="282" y="78" width="96" height="5" rx="2.5" fill={night ? '#4C4884' : '#C4B5FD'} />
-        {[['#F472B6', 288, 22], ['#60A5FA', 297, 26], ['#FBBF24', 306, 20], ['#34D399', 314, 24]].map(([c, x, h], i) => (
-          <rect key={i} x={x as number} y={78 - (h as number)} width="8" height={h as number} rx="1.5" fill={c as string} opacity={night ? 0.8 : 1} />
-        ))}
-        <path d="M352 78 q-2 -14 6 -20 q8 6 6 20 Z" fill="#22C55E" opacity={night ? 0.8 : 1} />
-        <rect x="348" y="68" width="16" height="10" rx="2" fill="#F8FAFC" />
-
-        {/* Cahaya lampu meja (malam / sedang fokus) */}
-        {(night || focusing) && <path d="M302 112 L250 190 L352 190 Z" fill="url(#fs-lamp)" opacity={night ? 0.9 : 0.45} className={reduce ? undefined : 'focus-lamp'} />}
+        <path d="M50 190 A150 150 0 0 1 350 190" fill="none" stroke={night ? '#FFFFFF' : '#FFFFFF'} strokeOpacity={night ? 0.22 : 0.55} strokeWidth="2" strokeDasharray="2 7" strokeLinecap="round" />
+        {p > 0 && <path d="M50 190 A150 150 0 0 1 350 190" pathLength={1} fill="none" stroke={night ? '#FDE68A' : '#FFFFFF'} strokeOpacity="0.9" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${p} 1`} />}
+        <circle cx={sx} cy={sy} r="30" fill="url(#fs-glow)" />
+        {night ? (
+          <path d={`M${sx + 4} ${sy - 13} a13 13 0 1 0 9 22 a11 11 0 1 1 -9 -22 Z`} fill="#FEF3C7" />
+        ) : (
+          <circle cx={sx} cy={sy} r="12" fill={sky === 'sore' ? '#FFD19A' : '#FFE066'} />
+        )}
       </svg>
 
-      {/* Leo — kaki bertumpu di tepi meja */}
-      <div className="absolute left-1/2 top-[27%] w-[33%] -translate-x-1/2">
+      {/* 2. Bukit belakang */}
+      <svg viewBox={VB} preserveAspectRatio="xMidYMax slice" className="absolute inset-0 h-full w-full" aria-hidden>
+        <path d="M-800 200 Q-640 168 -480 196 T-160 188 T60 186 Q110 150 160 196 T400 178 T720 190 T1040 182 T1200 194 L1200 260 L-800 260 Z" fill={hill.back} />
+        <path d="M-800 222 Q-600 196 -400 214 T0 210 Q90 186 200 204 T440 198 T800 212 T1200 206 L1200 260 L-800 260 Z" fill={hill.mid} />
+      </svg>
+
+      {/* 3. Leo di puncak bukit depan */}
+      {/* Ukuran Leo hanya ikut TINGGI (0.4cqh/satuan) supaya di layar lebar tidak raksasa & menabrak timer;
+          posisi kaki tetap di puncak bukit depan (y≈196 pada skala slice S). */}
+      <div className="absolute" style={{ left: '50cqw', top: `calc(100cqh - 54 * ${S} - 34.4cqh)`, width: '41.6cqh', transform: 'translateX(-50%)' }}>
         <LeoMascot mood={mood} activity={activity} lookX={lookX} size={140} headphones music={music} stayAwake className="h-auto w-full" />
       </div>
-
-      {/* Meja & barang (depan Leo) */}
-      <svg viewBox="0 0 400 250" className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden preserveAspectRatio="xMidYMid slice">
-        <path d="M34 190 H366 L378 210 H22 Z" fill={night ? '#5B5694' : '#DCD6FA'} />
-        <rect x="22" y="210" width="356" height="9" rx="2" fill={night ? '#4C4884' : '#C9C1F5'} />
-        <rect x="44" y="219" width="10" height="40" fill={night ? '#423E78' : '#C9C1F5'} />
-        <rect x="346" y="219" width="10" height="40" fill={night ? '#423E78' : '#C9C1F5'} />
-
-        {/* Gelas + uap */}
-        <rect x="70" y="174" width="22" height="24" rx="5" fill="#FFFFFF" />
-        <rect x="70" y="182" width="22" height="5" fill="#A5B4FC" />
-        <path d="M92 180 q8 0 8 7 q0 7 -8 7" stroke="#FFFFFF" strokeWidth="3" fill="none" />
-        {!reduce && (
-          <g className="focus-steam" stroke={night ? '#C7D2FE' : '#A5B4FC'} strokeWidth="2" fill="none" strokeLinecap="round">
-            <path d="M77 168 q-4 -6 0 -12 q4 -6 0 -12" />
-            <path d="M85 168 q-4 -6 0 -12 q4 -6 0 -12" style={{ animationDelay: '0.9s' }} />
+      <svg viewBox={VB} preserveAspectRatio="xMidYMax slice" className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden>
+        <path d="M-800 236 Q-400 226 -40 232 Q80 210 200 196 Q320 210 440 232 Q800 226 1200 236 L1200 260 L-800 260 Z" fill={hill.front} />
+        <ellipse cx="200" cy="200" rx="56" ry="6" fill="#FFFFFF" opacity={night ? 0.08 : 0.25} />
+        {/* Rumput & bunga */}
+        {[[120, 214], [146, 207], [262, 208], [292, 215], [330, 224], [80, 226]].map(([x, y], i) => (
+          <path key={i} d={`M${x} ${y} q-2 -7 -5 -9 M${x} ${y} q1 -8 0 -11 M${x} ${y} q3 -6 6 -8`} stroke={hill.grass} strokeWidth="1.8" fill="none" strokeLinecap="round" />
+        ))}
+        {!night && [[108, 220, '#F472B6'], [300, 218, '#FDE047'], [276, 226, '#FFFFFF']].map(([x, y, c], i) => (
+          <g key={`f${i}`}><circle cx={x as number} cy={y as number} r="2.6" fill={c as string} /><circle cx={x as number} cy={y as number} r="1" fill="#F59E0B" /></g>
+        ))}
+        <KindProp kind={kind} night={night} />
+        {/* Kunang-kunang (malam, lebih ramai saat fokus) / kupu-kupu (siang) */}
+        {!reduce && night && [[90, 170], [130, 150], [270, 160], [320, 140], [350, 182], [56, 150], ...(focusing ? [[230, 130], [170, 120]] : [])].map(([x, y], i) => (
+          <circle key={`ff${i}`} cx={x} cy={y} r="1.8" fill="#FDE68A" className="focus-firefly" style={{ animationDelay: `${i * 0.7}s` }} />
+        ))}
+        {!reduce && !night && [[96, 150, '#F472B6'], [312, 132, '#A78BFA']].map(([x, y, c], i) => (
+          <g key={`b${i}`} className="focus-butterfly" style={{ animationDelay: `${i * 1.6}s`, transformOrigin: `${x}px ${y}px` }}>
+            <path d={`M${x} ${y} q-6 -6 -8 0 q2 5 8 0 q6 -6 8 0 q-2 5 -8 0`} fill={c as string} className="focus-wing" style={{ transformOrigin: `${x}px ${y}px` }} />
           </g>
-        )}
-
-        {/* Lampu meja */}
-        <path d="M318 196 h28" stroke="#1E293B" strokeWidth="6" strokeLinecap="round" />
-        <path d="M332 196 L326 140 L304 118" stroke="#1E293B" strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M290 104 q14 -8 26 8 l-18 14 q-12 -6 -8 -22 Z" fill="#1E293B" />
-        <circle cx="302" cy="120" r="3" fill={night || focusing ? '#FEF3C7' : '#64748B'} />
-
-        {/* Barang di meja sesuai jenis fokus */}
-        <KindProp kind={kind} />
+        ))}
       </svg>
     </div>
   );
 }
 
-function KindProp({ kind }: { kind: FocusKind }) {
+function KindProp({ kind, night }: { kind: FocusKind; night: boolean }) {
+  const shade = night ? 0.85 : 1;
   if (kind === 'kerja') {
-    // Laptop menghadap Leo (punggung layar terlihat).
+    // Laptop terbuka di samping Leo.
     return (
-      <g>
-        <path d="M166 164 H234 L238 198 H162 Z" fill="#CBD5E1" />
-        <path d="M170 168 H230 L233 194 H167 Z" fill="#E2E8F0" />
-        <path d="M200 176 a6 6 0 1 1 -0.1 0" fill="#A5B4FC" />
-        <rect x="150" y="196" width="100" height="6" rx="3" fill="#94A3B8" />
+      <g opacity={shade}>
+        <path d="M128 192 h34 l-3 -22 h-28 Z" fill="#CBD5E1" />
+        <path d="M133 188 h24 l-2 -15 h-20 Z" fill={night ? '#818CF8' : '#E0E7FF'} />
+        <path d="M122 194 h46 l-4 5 h-38 Z" fill="#94A3B8" />
       </g>
     );
   }
   if (kind === 'baca') {
+    // Tumpukan buku + satu terbuka.
     return (
-      <g>
-        <path d="M156 200 Q178 186 200 196 Q222 186 244 200 L240 208 Q220 196 200 206 Q180 196 160 208 Z" fill="#7C3AED" />
-        <path d="M160 198 Q180 184 200 194 V204 Q180 194 162 205 Z" fill="#FFFFFF" />
-        <path d="M240 198 Q220 184 200 194 V204 Q220 194 238 205 Z" fill="#F8FAFC" />
-        {[0, 1, 2].map((i) => <path key={i} d={`M${170 + i} ${195 - i * 3} q12 -6 24 -1`} stroke="#CBD5E1" strokeWidth="1.4" fill="none" />)}
-        {[0, 1, 2].map((i) => <path key={`r${i}`} d={`M${206} ${194 - i * 3} q12 -5 24 1`} stroke="#CBD5E1" strokeWidth="1.4" fill="none" />)}
+      <g opacity={shade}>
+        <rect x="124" y="190" width="34" height="7" rx="1.5" fill="#F472B6" />
+        <rect x="127" y="183" width="30" height="7" rx="1.5" fill="#60A5FA" />
+        <path d="M262 196 q10 -6 20 0 q10 -6 20 0 l-2 4 q-9 -5 -18 0 q-9 -5 -18 0 Z" fill="#7C3AED" />
+        <path d="M264 195 q9 -6 18 -1 v4 q-9 -4 -17 1 Z M300 195 q-9 -6 -18 -1 v4 q9 -4 17 1 Z" fill="#FFFFFF" />
       </g>
     );
   }
   if (kind === 'usaha') {
-    // Kalkulator + nota (Leosiqra banget).
+    // Kalkulator + koin (sentuhan Leosiqra).
     return (
-      <g>
-        <rect x="150" y="186" width="34" height="22" rx="4" fill="#334155" />
-        <rect x="154" y="189" width="26" height="6" rx="1.5" fill="#A7F3D0" />
-        {[0, 1, 2].map((c) => [0, 1].map((r) => <rect key={`${c}${r}`} x={155 + c * 9} y={198 + r * 5} width="6" height="3" rx="1" fill="#94A3B8" />))}
-        <path d="M206 184 h40 v26 l-5 -3 l-5 3 l-5 -3 l-5 3 l-5 -3 l-5 3 l-5 -3 l-5 3 Z" fill="#FFFFFF" />
-        {[0, 1, 2].map((i) => <rect key={i} x="212" y={190 + i * 5} width={i === 2 ? 18 : 28} height="2" rx="1" fill={i === 2 ? '#10B981' : '#CBD5E1'} />)}
+      <g opacity={shade}>
+        <rect x="128" y="180" width="24" height="18" rx="3" fill="#334155" />
+        <rect x="131" y="183" width="18" height="4" rx="1" fill="#A7F3D0" />
+        {[0, 1, 2].map((c) => [0, 1].map((r) => <rect key={`${c}${r}`} x={132 + c * 6} y={190 + r * 4} width="4" height="2.4" rx="0.8" fill="#94A3B8" />))}
+        {[0, 1, 2].map((i) => <ellipse key={i} cx="276" cy={198 - i * 3.5} rx="8" ry="3" fill={i === 2 ? '#FBBF24' : '#F59E0B'} stroke="#B45309" strokeWidth="0.8" />)}
       </g>
     );
   }
-  // belajar / lainnya: buku tulis terbuka + pensil
+  // belajar / lainnya: buku tulis + pensil
   return (
-    <g>
-      <path d="M150 192 H250 L256 210 H144 Z" fill="#6366F1" />
-      <path d="M154 190 H198 L200 207 H150 Z" fill="#FFFFFF" />
-      <path d="M202 190 H246 L250 207 H200 Z" fill="#FFFFFF" />
-      {[0, 1, 2].map((i) => <path key={i} d={`M${158 - i} ${195 + i * 4} h36`} stroke="#C7D2FE" strokeWidth="1.3" />)}
-      {[0, 1, 2].map((i) => <path key={`b${i}`} d={`M${206} ${195 + i * 4} h${i === 2 ? 22 : 36}`} stroke="#C7D2FE" strokeWidth="1.3" />)}
-      <path d="M222 206 L252 186" stroke="#F59E0B" strokeWidth="4" strokeLinecap="round" />
-      <path d="M252 186 l4 -3" stroke="#334155" strokeWidth="2" strokeLinecap="round" />
+    <g opacity={shade}>
+      <path d="M122 196 l8 -12 h30 l-6 12 Z" fill="#FFFFFF" stroke="#C7D2FE" strokeWidth="1" />
+      {[0, 1, 2].map((i) => <path key={i} d={`M${130 - i} ${188 + i * 3} h22`} stroke="#C7D2FE" strokeWidth="1" />)}
+      <path d="M150 198 L168 186" stroke="#F59E0B" strokeWidth="3" strokeLinecap="round" />
+      <path d="M168 186 l3 -2" stroke="#334155" strokeWidth="1.6" strokeLinecap="round" />
     </g>
   );
 }

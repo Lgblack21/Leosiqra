@@ -24,7 +24,7 @@ import { initNativePush } from '@/lib/nativePush';
 
 const ONBOARDING_PATH = '/membership/onboarding';
 // Halaman layar penuh: tanpa sidebar, header, dan tab bar HP (punya navigasi sendiri).
-const FULLSCREEN_PATHS = ['/membership/investment', '/membership/ladang']; // + /ladang/kasir
+const FULLSCREEN_PATHS = ['/membership/investment', '/membership/ladang', '/membership/fokus']; // + /ladang/kasir
 
 // Tema (Sistem/Terang/Gelap) disimpan per perangkat, sama dengan aplikasi HP.
 export default function MembershipLayout({ children }: { children: React.ReactNode }) {
