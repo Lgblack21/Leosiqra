@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-06 (live: hero ringkas + animasi Leo, run 42254697995)
+Terakhir diperbarui: 2026-11-07 (live: Fokus bareng Leo, run 42260880305; migrasi 0034 menunggu)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-07 (branch claude/fokus-bareng-leo) — Fitur baru "Fokus bareng Leo". BELUM deploy (tunggu "gas").**
+- **2026-11-07 — Fitur baru "Fokus bareng Leo": LIVE (run 42260880305, commit e28af25). Migrasi 0034 menunggu Bos.**
   - **MIGRASI di D1 Console** (0034_focus_sessions.sql; boleh sebelum/sesudah deploy — tanpa tabel, fitur tetap jalan,
     rekap disimpan di perangkat lalu otomatis terkirim setelah tabel ada).
   - Halaman: `/membership/fokus` (web, menu "Fokus bareng Leo", id fitur `fokus` — masuk DEFAULT_FEATURES; user yang sudah
