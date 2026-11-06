@@ -4,13 +4,13 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-06 (live #140: Usahaku › Tim Tahap 1; migrasi 0032 belum dikonfirmasi Bos)
+Terakhir diperbarui: 2026-11-06 (live #141: Usahaku › Tim Tahap 1 + @ di username dibuang otomatis; 0032 dijalankan Bos)
 
 ## Siapa sedang kerja
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| — | — | — | (akun B selesai; main = live #140) |
+| — | — | — | (akun B selesai; main = live #141) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-06 (branch claude/usahaku-web) — Usahaku › Tim (akun kasir) Tahap 1, **live #140**. Migrasi `0032_shop_staff.sql` belum dikonfirmasi — tanpa itu endpoint tim 503.**
+- **2026-11-06 (branch claude/usahaku-web) — Usahaku › Tim (akun kasir) Tahap 1, **live #140/#141**. Migrasi 0032 sudah (Bos sempat buat & coba login akun tim). #141: "@" di depan username dibuang otomatis (login/buat), tampilan tanpa @.**
   - Pemilik: tombol **Tim** di hero Usahaku → buat anggota (nama, username `toko-nama` — tanda hubung = penanda akun tim,
     sandi awal, usaha yang boleh dibuka, rekening Rupiah non-kartu-kredit yang DIKUNCI). Batas FREE 1 / PRO 5.
     Atur: ganti usaha/rekening, reset sandi, nonaktifkan, hapus (semua mencabut sesi).
@@ -906,7 +906,7 @@ membersite_leosiqra_db --remote --command "..."`. SELECT boleh langsung; tulis/u
 - `0019_inbox.sql` — sudah (Kotak Masuk Gmail jalan di produksi).
 - `0020_reminders.sql` — sudah (Bos, 2026-10-28; Console D1 butuh SQL tanpa komentar `--` kalau ditempel satu baris).
 - `0021_notifications.sql` — sudah (dicek langsung ke D1 2026-11-03).
-- `0032_shop_staff.sql` — **BELUM** (Usahaku › Tim; tanpa tabel endpoint tim 503 — aman, tapi fitur mati).
+- `0032_shop_staff.sql` — sudah (Bos membuat akun tim di produksi 2026-11-06).
 - `0022_native_push_tokens.sql` — **BELUM** (token push Android/FCM; tanpa tabel: endpoint 503, kirim dilewati — aman).
 
 ## Belum terverifikasi di produksi
