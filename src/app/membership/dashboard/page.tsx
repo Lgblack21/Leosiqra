@@ -517,7 +517,7 @@ export default function MonthlyDashboard() {
 
 
       {/* Kartu sapaan: langit ikut jam + Leo yang bisa diajak ngobrol */}
-      <section className={cn('relative overflow-hidden rounded-[32px] bg-gradient-to-b p-5 pb-8 text-white shadow-[0_28px_60px_-30px_rgba(79,70,229,0.85)] md:p-8 md:pb-10', sky)}>
+      <section className={cn('relative overflow-hidden rounded-[28px] bg-gradient-to-b p-5 pb-6 text-white shadow-[0_24px_50px_-30px_rgba(79,70,229,0.8)] md:rounded-[32px] md:p-7 md:pb-7', sky)}>
         {/* Matahari/bulan, awan, kota & hutan — tanpa blur (lihat SkyScene). */}
         <SkyScene now={now} />
         {season && (
@@ -527,16 +527,16 @@ export default function MonthlyDashboard() {
             ))}
           </div>
         )}
-        <div className="relative grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,400px)] md:items-end md:gap-8">
+        <div className="relative grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,410px)] md:items-end md:gap-6">
           <div className="min-w-0">
-            <p className="text-[26px] font-extrabold tracking-tight md:text-[32px]">
+            <p className="text-[24px] font-extrabold leading-tight tracking-tight md:text-[28px]">
               {now ? greeting(now.getHours()) : 'Halo'}{firstName ? `, ${firstName}` : ''}.
             </p>
-            <p className="mt-4 text-[13px] font-semibold uppercase tracking-[0.14em] text-white/70">Keluar hari ini</p>
+            <p className="mt-3 text-[12px] font-semibold uppercase tracking-[0.14em] text-white/70 md:mt-4">Keluar hari ini</p>
             {statsLoading ? (
               <div className="mt-2 h-14 w-56 animate-pulse rounded-2xl bg-white/20" />
             ) : (
-              <p className="mt-1 text-[44px] font-extrabold leading-none tracking-tight tabular-nums md:text-[56px]">
+              <p className="mt-1 text-[40px] font-extrabold leading-none tracking-tight tabular-nums md:text-[48px]">
                 <AnimatedNumber value={spentToday} format={formatIDR} />
               </p>
             )}
@@ -557,16 +557,15 @@ export default function MonthlyDashboard() {
                 </div>
               </div>
             )}
-            <Link href="/membership/ai-leosiqra" className="mt-5 flex w-full max-w-lg items-center gap-3 rounded-full bg-white/95 py-2 pl-5 pr-2 text-slate-400 shadow-lg transition-colors hover:bg-white">
-              <Sparkles size={17} className="text-indigo-500" />
-              <span className="flex-1 truncate text-[15px]">Tanya Leo apa aja soal uangmu…</span>
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-white"><Send size={16} /></span>
+            <Link href="/membership/ai-leosiqra" className="mt-4 flex w-full max-w-md items-center gap-3 rounded-full bg-white/95 py-1.5 pl-4 pr-1.5 text-slate-400 shadow-lg transition-colors hover:bg-white md:mt-5">
+              <Sparkles size={16} className="text-indigo-500" />
+              <span className="flex-1 truncate text-[14px]">Tanya Leo apa aja soal uangmu…</span>
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 text-white"><Send size={15} /></span>
             </Link>
           </div>
           {leo.showMascot && (
             <>
-              <LeoBuddy tips={tips} season={season} size={150} className="hidden md:flex" />
-              <LeoBuddy tips={tips} season={season} size={104} className="md:hidden" />
+              <LeoBuddy tips={tips} season={season} size={124} mascotClassName="h-auto w-[96px] md:w-[124px]" />
             </>
           )}
         </div>

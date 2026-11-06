@@ -18,6 +18,16 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-06 (branch claude/hero-maskot) — Kartu sapaan Ringkasan lebih ringkas + animasi Leo dirapikan. BELUM deploy (tunggu "gas"). Tanpa SQL.**
+  - Hero: padding/huruf lebih kecil (tablet 321→274px, HP 447→389px), kolom Tanya Leo lebih ramping.
+  - Gelembung LeoBuddy: maks 290px, teks 13–14px, kata ber-tanda-hubung ("rata-rata") tidak dipotong.
+  - LeoBuddy dulu dirender DUA kali (HP & desktop, timer/listener dobel) → satu instans, ukuran lewat mascotClassName.
+  - LeoMascot: prop `ledge` (ambang kaca, kaki tidak mengambang); bola memantul di atas kepala (irama 1,1 dtk, gepeng
+    saat kena, kepala mengangguk, bayangan) — dulu melayang jauh & kaki naik ke muka; koin dilempar di samping wajah,
+    tumpukan di ambang; timer boop dibersihkan saat unmount.
+  - Dites lokal: rekaman frame 21:30 & 23:30, tablet 1000×668 + iPhone 13, tap Leo, 0 error JS
+    (sisa peringatan recharts "width(-1)" sudah ada sebelumnya).
+
 - **2026-11-06 — Ringkasan/Beranda bersih: kartu "N usulan transaksi menunggu" dihapus: LIVE (run 42252405367, commit f83ebd5). Tanpa SQL.**
   - InboxBanner dihapus (web Ringkasan & app Beranda). Penanda tinggal badge di ikon Kotak Masuk: web sudah ada di header;
     app HP kini punya `InboxButton variant="app"` di samping lonceng (→ /app/inbox).

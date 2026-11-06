@@ -52,6 +52,7 @@ export function LeoMascot({
   interactive = false,
   season = null,
   activity = null,
+  ledge = false,
 }: {
   mood?: LeoMood;
   lookX?: number;
@@ -61,6 +62,8 @@ export function LeoMascot({
   // Aksesoris musiman (lib/season.ts) — null = tanpa aksesoris.
   season?: Season | null;
   activity?: LeoActivity | null;
+  // Ambang kaca tempat Leo duduk (kartu sapaan Ringkasan) — kaki tidak mengambang.
+  ledge?: boolean;
 }) {
   const reduce = useReducedMotion();
   const ref = useRef<SVGSVGElement>(null);
@@ -112,10 +115,12 @@ export function LeoMascot({
     };
   }, [reduce]);
 
+  const boopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (boopTimer.current) clearTimeout(boopTimer.current); }, []);
   const onBoop = () => {
     if (boop) return;
     setBoop(true);
-    setTimeout(() => setBoop(false), 1300);
+    boopTimer.current = setTimeout(() => setBoop(false), 1300);
   };
 
   const act = idle ? activity : null;
@@ -125,6 +130,9 @@ export function LeoMascot({
   const playing = act === "play";
   const coins = act === "coins";
   const loop = (duration: number) => (reduce ? { duration: 0 } : { duration, repeat: Infinity, ease: "easeInOut" as const });
+  // Satu pantulan bola (detik) — kepala, mata, kaki & bola memakai irama yang sama.
+  const BOUNCE = 1.1;
+  const bounceT = { duration: BOUNCE, repeat: Infinity, times: [0, 0.12, 0.5, 0.88, 1] };
   const watching = mood === "watch";
   // Pupil: ikut ketikan saat "watch", ikut kursor saat idle.
   const px = watching ? (Math.min(1, Math.max(0, lookX)) - 0.5) * 7 : idle ? gaze.x * 4.5 : 0;
@@ -133,14 +141,14 @@ export function LeoMascot({
   const sad = mood === "sad";
 
   // Posisi kaki: istirahat di bawah dagu, naik menutup mata, atau mengintip.
-  const pawL = mood === "hide" || mood === "peek" ? { x: 12, y: -76 } : playing && !reduce ? { x: 4, y: [0, -6, 0] } : { x: 0, y: 0 };
+  const pawL = mood === "hide" || mood === "peek" ? { x: 12, y: -76 } : playing && !reduce ? { x: 2, y: [0, -5, 0, -5, 0] } : { x: 0, y: 0 };
   const pawR =
     eating
       ? { x: -6, y: -22, rotate: reduce ? 0 : [0, -8, 0] }
       : playing
-        ? { x: -8, y: reduce ? -30 : [-10, -58, -10], rotate: 0 }
+        ? { x: -2, y: reduce ? 0 : [0, -5, 0, -5, 0], rotate: 0 }
         : coins
-          ? { x: -4, y: reduce ? -34 : [-34, -44, -34], rotate: 0 }
+          ? { x: 12, y: reduce ? -30 : [-30, -40, -30], rotate: 0 }
           : mood === "hide"
       ? { x: -12, y: -76 }
       : mood === "peek"
@@ -157,6 +165,8 @@ export function LeoMascot({
       ? { y: 5, rotate: 6, transition: { duration: 1.6, ease: "easeInOut" as const } }
     : sad
       ? { y: 4, rotate: -7, transition: spring }
+    : playing && !reduce
+      ? { y: [3, 0, 0, 0, 3], rotate: 0, transition: bounceT }
       : { y: 0, rotate: 0, transition: spring };
 
   return (
@@ -171,6 +181,12 @@ export function LeoMascot({
       style={{ overflow: "visible", cursor: interactive ? "pointer" : undefined, pointerEvents: interactive ? "auto" : undefined }}
       onClick={interactive ? onBoop : undefined}
     >
+      {ledge && (
+        <g aria-hidden>
+          <rect x="26" y="190" width="168" height="22" rx="11" fill="#FFFFFF" opacity="0.14" />
+          <rect x="34" y="190" width="152" height="4" rx="2" fill="#FFFFFF" opacity="0.32" />
+        </g>
+      )}
       <motion.g animate={body} style={{ originX: "50%", originY: "90%" }}>
         <g className={reduce ? undefined : "leo-breathe"}>
           {/* Surai */}
@@ -242,8 +258,8 @@ export function LeoMascot({
               {[88, 132].map((cx) => (
                 <motion.g
                   key={cx}
-                  animate={playing || coins ? { x: playing ? 0 : 3, y: reduce ? -3 : playing ? [-1, -5, -1] : [-2, -5, -2] } : { x: px, y: py + (sad ? 3 : 0) }}
-                  transition={playing ? loop(1.4) : coins ? loop(1.8) : { type: "spring", stiffness: 300, damping: 24 }}
+                  animate={playing || coins ? { x: playing ? 0 : 4.5, y: reduce ? -3 : playing ? [-2, -3, -6, -3, -2] : [-2, -5, -2] } : { x: px, y: py + (sad ? 3 : 0) }}
+                  transition={playing ? (reduce ? { duration: 0 } : bounceT) : coins ? loop(1.8) : { type: "spring", stiffness: 300, damping: 24 }}
                 >
                   <ellipse cx={cx} cy="104" rx="7.5" ry={sad ? 7 : 9.5} fill={C.ink} />
                   <circle cx={cx - 2.4} cy="100" r="2.8" fill="#fff" />
@@ -304,28 +320,42 @@ export function LeoMascot({
               transition={{ duration: 1.3, delay: i * 0.4, repeat: Infinity, ease: "easeIn" }}
             />
           ))}
+        {/* Bola memantul di atas kepala: naik melambat, turun makin cepat, gepeng saat kena kepala. */}
         {playing && (
-          <motion.g animate={reduce ? { y: -30 } : { y: [0, -58, 0], x: [0, 4, 0] }} transition={reduce ? { duration: 0 } : { duration: 1.4, repeat: Infinity, ease: [0.33, 0, 0.67, 1] }}>
-            <motion.g animate={reduce ? undefined : { rotate: [0, 360] }} transition={reduce ? undefined : { duration: 1.4, repeat: Infinity, ease: "linear" }} style={{ transformBox: "fill-box", transformOrigin: "center" }}>
-              <circle cx="146" cy="2" r="14" fill="#F43F5E" />
-              <path d="M132 2 H160" stroke="#FFF" strokeWidth="3" />
-              <path d="M146 -12 Q155 2 146 16" stroke="#FFF" strokeWidth="3" fill="none" />
-              <circle cx="141" cy="-3" r="3" fill="#FFF" opacity="0.6" />
+          <motion.g
+            animate={reduce ? { y: -18 } : { y: [0, 0, -36, 0, 0] }}
+            transition={reduce ? { duration: 0 } : { ...bounceT, ease: ["linear", "easeOut", "easeIn", "linear"] }}
+          >
+            <motion.g
+              animate={reduce ? undefined : { scaleY: [0.8, 1, 1, 1, 0.8], scaleX: [1.16, 1, 1, 1, 1.16] }}
+              transition={reduce ? undefined : bounceT}
+              style={{ transformBox: "fill-box", transformOrigin: "50% 100%" }}
+            >
+              <motion.g animate={reduce ? undefined : { rotate: [0, 360] }} transition={reduce ? undefined : { duration: BOUNCE * 2, repeat: Infinity, ease: "linear" }} style={{ transformBox: "fill-box", transformOrigin: "center" }}>
+                <circle cx="110" cy="8" r="13" fill="#F43F5E" />
+                <path d="M97 8 H123" stroke="#FFF" strokeWidth="2.6" />
+                <path d="M110 -5 Q118 8 110 21" stroke="#FFF" strokeWidth="2.6" fill="none" />
+                <circle cx="105" cy="3" r="2.8" fill="#FFF" opacity="0.6" />
+              </motion.g>
             </motion.g>
           </motion.g>
+        )}
+        {playing && !reduce && (
+          <motion.ellipse cx="110" cy="22" rx="12" ry="2.5" fill="#000" animate={{ opacity: [0.18, 0.18, 0.05, 0.18, 0.18], rx: [12, 12, 7, 12, 12] }} transition={bounceT} />
         )}
         {coins && (
           <g>
             {[0, 1, 2].map((i) => (
               <g key={`stack${i}`}>
-                <ellipse cx="44" cy={196 - i * 6} rx="13" ry="5" fill="#D97706" />
-                <ellipse cx="44" cy={193 - i * 6} rx="13" ry="5" fill="#FBBF24" stroke="#D97706" strokeWidth="1" />
+                <ellipse cx="38" cy={186 - i * 6} rx="12" ry="4.5" fill="#D97706" />
+                <ellipse cx="38" cy={183 - i * 6} rx="12" ry="4.5" fill="#FBBF24" stroke="#D97706" strokeWidth="1" />
               </g>
             ))}
-            <motion.g animate={reduce ? { y: -40 } : { y: [-28, -96, -28] }} transition={loop(1.8)}>
+            {/* Koin dilempar dari kaki kanan, melambung di samping wajah (tidak menutupi muka). */}
+            <motion.g animate={reduce ? { y: -40 } : { y: [-28, -84, -28] }} transition={reduce ? { duration: 0 } : { duration: 1.8, repeat: Infinity, ease: ["easeOut", "easeIn"] }}>
               <motion.g animate={reduce ? undefined : { scaleX: [1, 0.15, 1, 0.15, 1] }} transition={loop(0.9)} style={{ transformBox: "fill-box", transformOrigin: "center" }}>
-                <circle cx="146" cy="150" r="11" fill="#FBBF24" stroke="#D97706" strokeWidth="2" />
-                <text x="146" y="154.5" textAnchor="middle" fontSize="12" fontWeight="900" fill="#B45309" fontFamily="system-ui, sans-serif">Rp</text>
+                <circle cx="172" cy="150" r="11" fill="#FBBF24" stroke="#D97706" strokeWidth="2" />
+                <text x="172" y="154.5" textAnchor="middle" fontSize="12" fontWeight="900" fill="#B45309" fontFamily="system-ui, sans-serif">Rp</text>
               </motion.g>
             </motion.g>
           </g>
@@ -348,7 +378,7 @@ export function LeoMascot({
                 : eating && cx === 144
                   ? { ...spring, rotate: loop(0.9) }
                   : playing
-                    ? { x: spring, y: loop(1.4) }
+                    ? { x: spring, y: bounceT }
                     : coins && cx === 144
                       ? { x: spring, y: loop(1.8) }
                       : "rotate" in pos && Array.isArray(pos.rotate)
