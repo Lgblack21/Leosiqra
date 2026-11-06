@@ -4,13 +4,13 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-06 (live #145: stok oleh tim + mode tim baru; migrasi 0033 belum dikonfirmasi Bos; stok Cruiser dari sheet belum diisi — Bos lewat AI-nya)
+Terakhir diperbarui: 2026-11-06 (live #146: koreksi stok — Ubah stok manual & Batalkan di Riwayat; migrasi 0033 belum dikonfirmasi Bos)
 
 ## Siapa sedang kerja
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| — | — | — | (akun B selesai; main = live #145) |
+| — | — | — | (akun B selesai; main = live #146) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-06 (branch claude/usahaku-web) — Koreksi stok salah input. BELUM deploy, tanpa SQL baru.**
+- **2026-11-06 — Koreksi stok salah input: live #146.**
   - Stok › Ubah: nama, satuan, batas minimum **+ stok sekarang** (perubahan stok = move opname "Diubah manual", selisih tercatat).
   - Riwayat › **Batalkan** satu catatan manual (awal/masuk/pakai/opname): `POST …/stock/moves/:id/revert` (pemilik
     `/api/member/shops/:id/stock/…`, tim `/api/staff/shops/:id/stock/…`). Stok −qty, reverted_at diisi, atomik & anti dobel.
