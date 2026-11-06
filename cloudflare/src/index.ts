@@ -7469,6 +7469,9 @@ async function handleDeleteSaving(request: Request, env: Env, savingId: string) 
 }
 
 type ProPackageRow = { id?: unknown; name?: unknown; durationMonths?: unknown; price?: unknown };
+// Top up koin (1 koin = Rp1, TANPA bonus — bonus membuat tukar PRO lebih murah dari langganan).
+// Lewat jalur pembayaran manual yang sama dengan PRO; admin menyetujui → koin masuk (sekali).
+const COIN_PACKAGES = [10_000, 25_000, 50_000, 100_000].map((n) => ({ id: `koin-${n / 1000}`, name: `Top up ${n.toLocaleString("id-ID")} koin`, price: n, coins: n, durationMonths: 0, kind: "coin" as const }));
 
 async function handleCreateMemberPayment(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
@@ -7489,11 +7492,12 @@ async function handleCreateMemberPayment(request: Request, env: Env) {
   } catch {
     packages = [];
   }
-  const pkg = packages.find((p) => String(p.id) === packageId);
+  const coinPkg = COIN_PACKAGES.find((p) => p.id === packageId);
+  const pkg = coinPkg ?? packages.find((p) => String(p.id) === packageId);
   if (!pkg) {
     return json({ error: "Paket tidak ditemukan. Muat ulang halaman lalu pilih paket lagi." }, { status: 400 });
   }
-  const durationMonths = Math.max(1, Math.min(120, Math.round(Number(pkg.durationMonths) || 1)));
+  const durationMonths = coinPkg ? 0 : Math.max(1, Math.min(120, Math.round(Number(pkg.durationMonths) || 1)));
   const packageName = String(pkg.name ?? "Paket PRO").slice(0, 80);
   const expectedPrice = Number(pkg.price) || 0;
 
@@ -7529,6 +7533,7 @@ async function handleCreateMemberPayment(request: Request, env: Env) {
     id: packageId,
     name: packageName,
     durationMonths,
+    ...(coinPkg ? { kind: "coin", coins: coinPkg.coins } : {}),
     expectedPrice,
     method: String(payload.method ?? "Bank Transfer").slice(0, 40),
     ref: payload.ref ? String(payload.ref).slice(0, 80) : null,
@@ -7553,7 +7558,7 @@ async function handleCreateMemberPayment(request: Request, env: Env) {
     `💰 <b>Pembayaran Baru</b>\n` +
       `Nama: ${escapeHtml(userName)}\n` +
       `Email: ${escapeHtml(userEmail)}\n` +
-      `Paket: ${escapeHtml(packageName)} (${durationMonths} bulan)\n` +
+      `Paket: ${escapeHtml(packageName)}${coinPkg ? "" : ` (${durationMonths} bulan)`}\n` +
       `Jumlah: Rp ${amount.toLocaleString("id-ID")}` +
       (mismatch ? ` ⚠️ harga paket Rp ${expectedPrice.toLocaleString("id-ID")}` : "") +
       `\n\nVerifikasi di Admin &gt; Pembayaran.`
@@ -7824,9 +7829,9 @@ async function handleMemberPaymentInfo(request: Request, env: Env) {
           qris_text: settings.qris_text,
           qris_url: settings.qris_url,
           free_plan_days: settings.free_plan_days,
-          pro_packages: proPackages,
+          pro_packages: [...proPackages, ...COIN_PACKAGES],
         }
-      : null,
+      : { pro_packages: COIN_PACKAGES },
   });
 }
 
@@ -7853,13 +7858,17 @@ async function handleAdminUsers(request: Request, env: Env) {
 // statement (D1 menjalankan tulis berurutan), lalu efeknya (PRO / pengajuan
 // tarik) di-batch dengan syarat baris ledger-nya ada — tidak ada celah
 // "saldo dicek, lalu dipotong" yang bisa diserbu request paralel.
+// 2026-11-07 (keputusan Bos): satu jenis koin, 1 koin = Rp1, bisa DIBELI (top up) → koin tidak
+// boleh lebih murah dari langganan: tukar PRO = 15.000 koin/bulan (= harga PRO Rp15.000).
+// Hadiah (referral, streak) TIDAK lagi bisa dicairkan jadi uang; penarikan baru ditutup
+// (pengajuan lama tetap diproses admin). withdrawMin/idrPerCoin dipertahankan untuk riwayat.
 const COIN_RULES = {
   signup: 100,
-  refActiveReferrer: 300,
-  refActiveReferee: 100,
-  refPro: 1000,
-  streak: 50,
-  proMonthCost: 2000,
+  refActiveReferrer: 500,
+  refActiveReferee: 200,
+  refPro: 1500,
+  streak: 100,
+  proMonthCost: 15000,
   withdrawMin: 50_000,
   idrPerCoin: 1,
   refWindowDays: 30,
@@ -7980,7 +7989,7 @@ const rewardReferralPurchase = async (env: Env, friendId: string, amount: number
     .bind(friendId)
     .first<{ referred_by: string | null }>();
   if (!me?.referred_by) return;
-  await grantCoins(env, me.referred_by, COIN_RULES.refPro, "ref_pro", `ref_pro:${friendId}`, "Teman berlangganan PRO", 1);
+  await grantCoins(env, me.referred_by, COIN_RULES.refPro, "ref_pro", `ref_pro:${friendId}`, "Teman berlangganan PRO");
 };
 
 async function handleMemberCoins(request: Request, env: Env) {
@@ -8248,7 +8257,8 @@ async function handleCoinRoutes(request: Request, env: Env, pathname: string) {
     if (pathname === "/api/member/coins/team" && method === "GET") return await handleCoinTeam(request, env);
     if (pathname === "/api/member/coins/apply-code" && method === "POST") return await handleApplyReferralCode(request, env);
     if (pathname === "/api/member/coins/redeem-pro" && method === "POST") return await handleRedeemCoinsForPro(request, env);
-    if (pathname === "/api/member/coins/withdraw" && method === "POST") return await handleCoinWithdraw(request, env);
+    // Penarikan koin ditutup 2026-11-07 (koin kini bisa dibeli; hadiah bukan uang).
+    if (pathname === "/api/member/coins/withdraw" && method === "POST") return json({ error: "Penarikan koin sudah ditutup. Koin bisa dipakai untuk PRO & fitur AI." }, { status: 410 });
     if (pathname === "/api/admin/coin-withdrawals" && method === "GET") return await handleAdminCoinWithdrawals(request, env);
     if (pathname.startsWith("/api/admin/coin-withdrawals/") && method === "PATCH") {
       return await handleAdminCoinWithdrawalById(request, env, pathname.slice("/api/admin/coin-withdrawals/".length));
@@ -8476,9 +8486,20 @@ async function handleAdminPaymentById(request: Request, env: Env, paymentId: str
   }
 
   if (nextStatus === "DISETUJUI") {
-    await env.DB.prepare("UPDATE payments SET status = ?, approved_at = ? WHERE id = ?")
+    // Bersyarat belum disetujui → klik ganda / dua admin tidak menambah PRO/koin dua kali.
+    const approved = await env.DB.prepare("UPDATE payments SET status = ?, approved_at = ? WHERE id = ? AND COALESCE(status, '') <> 'DISETUJUI'")
       .bind(nextStatus, nowIso(), paymentId)
       .run();
+    if (!approved.meta.changes) return json({ ok: true, already: true });
+
+    let pkgInfo: { kind?: string; coins?: number } = {};
+    try { pkgInfo = JSON.parse(payment.package_json ?? "{}"); } catch { pkgInfo = {}; }
+    if (pkgInfo.kind === "coin") {
+      const coins = Math.max(0, Math.min(10_000_000, Math.round(Number(pkgInfo.coins) || 0)));
+      await grantCoins(env, payment.user_id, coins, "topup", `topup:${payment.id}`, `Top up ${coins.toLocaleString("id-ID")} koin`);
+      await insertAdminLog(env, authResult.session.user.email, "APPROVE_PAYMENT", payment.user_email, `Menyetujui top up ${coins} koin (tiket ${payment.id})`, "emerald");
+      return json({ ok: true });
+    }
 
     const currentUser = await env.DB.prepare("SELECT expired_at FROM users WHERE id = ?")
       .bind(payment.user_id)
@@ -8582,6 +8603,94 @@ async function handleAdminLogs(request: Request, env: Env) {
     .all();
 
   return json({ items: rows.results });
+}
+
+// ── Kuota AI harian FREE vs PRO (2026-11-07) ───────────────────────────────
+// Fitur AI memanggil model berbayar → dibatasi per hari (tanggal WIB). Disimpan di
+// users.metadata_json "$.aiq_<jenis>" = { day, n }, diambil atomik (UPDATE bersyarat) SEBELUM
+// handler jalan; dikembalikan kalau permintaan gagal (status bukan 2xx / error). Teks biasa (parse
+// "makan 20rb") tidak dihitung — murah & inti pencatatan.
+const AI_LIMITS = { chat: { FREE: 5, PRO: 50 }, scan: { FREE: 3, PRO: 30 }, voice: { FREE: 5, PRO: 40 } } as const;
+type AiKind = keyof typeof AI_LIMITS;
+const AI_KIND_LABEL: Record<AiKind, string> = { chat: "chat Leo", scan: "scan struk", voice: "catat lewat suara" };
+const isProUser = async (env: Env, userId: string) => {
+  const row = await env.DB.prepare("SELECT plan, expired_at FROM users WHERE id = ?").bind(userId).first<{ plan: string | null; expired_at: string | null }>();
+  return row?.plan === "PRO" && (!row.expired_at || row.expired_at > nowIso());
+};
+const aiQuotaUsed = async (env: Env, userId: string) => {
+  const day = todayWIB();
+  const row = await env.DB.prepare(
+    `SELECT ${(Object.keys(AI_LIMITS) as AiKind[]).map((k) => `CASE WHEN json_valid(metadata_json) AND json_extract(metadata_json, '$.aiq_${k}.day') = ? THEN json_extract(metadata_json, '$.aiq_${k}.n') END AS ${k}`).join(", ")} FROM users WHERE id = ?`
+  ).bind(...(Object.keys(AI_LIMITS) as AiKind[]).map(() => day), userId).first<Record<AiKind, number | null>>();
+  return Object.fromEntries((Object.keys(AI_LIMITS) as AiKind[]).map((k) => [k, Number(row?.[k]) || 0])) as Record<AiKind, number>;
+};
+const takeAiQuota = async (env: Env, userId: string, kind: AiKind) => {
+  const pro = await isProUser(env, userId);
+  const limit = AI_LIMITS[kind][pro ? "PRO" : "FREE"];
+  const day = todayWIB();
+  const path = `$.aiq_${kind}`;
+  const res = await env.DB.prepare(
+    `UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, ?,
+        json_object('day', ?, 'n', CASE WHEN json_valid(metadata_json) AND json_extract(metadata_json, ? || '.day') = ? THEN COALESCE(json_extract(metadata_json, ? || '.n'), 0) + 1 ELSE 1 END))
+      WHERE id = ? AND COALESCE(CASE WHEN json_valid(metadata_json) AND json_extract(metadata_json, ? || '.day') = ? THEN json_extract(metadata_json, ? || '.n') END, 0) < ?`
+  ).bind(path, day, path, day, path, userId, path, day, path, limit).run();
+  return { ok: Boolean(res.meta.changes), pro, limit };
+};
+const releaseAiQuota = (env: Env, userId: string, kind: AiKind) => {
+  const path = `$.aiq_${kind}`;
+  return env.DB.prepare(
+    `UPDATE users SET metadata_json = json_set(metadata_json, ? || '.n', MAX(0, COALESCE(json_extract(metadata_json, ? || '.n'), 1) - 1))
+      WHERE id = ? AND json_valid(metadata_json) AND json_extract(metadata_json, ? || '.day') = ?`
+  ).bind(path, path, userId, path, todayWIB()).run().catch(() => undefined);
+};
+// Pembungkus rute AI: ambil kuota → jalankan handler → kembalikan kuota kalau gagal.
+// kind "scan-if-image": dihitung hanya kalau ada gambar (teks biasa tidak dibatasi).
+const withAiQuota = async (request: Request, env: Env, kind: AiKind | "scan-if-image", run: () => Promise<Response>) => {
+  const auth = await requireSession(env, request);
+  if (auth.error) return auth.error;
+  let k: AiKind | null = kind === "scan-if-image" ? null : kind;
+  if (kind === "scan-if-image") {
+    const body = (await request.clone().json().catch(() => ({}))) as { imageBase64?: unknown };
+    k = typeof body.imageBase64 === "string" && body.imageBase64.trim() ? "scan" : null;
+  }
+  if (!k) return run();
+  const userId = auth.session.user.id;
+  const q = await takeAiQuota(env, userId, k);
+  if (!q.ok) {
+    const label = AI_KIND_LABEL[k];
+    return json({
+      error: q.pro ? `Batas ${label} hari ini (${q.limit}×) sudah habis. Coba lagi besok ya.` : `Batas ${label} gratis hari ini (${q.limit}×) sudah habis. PRO bisa ${AI_LIMITS[k].PRO}× per hari.`,
+      code: "ai_limit", kind: k, limit: q.limit, pro: q.pro,
+    }, { status: 429 });
+  }
+  // Gagal apa pun (validasi, AI belum aktif, gangguan, atau handler melempar error) → jatah kembali.
+  let res: Response;
+  try {
+    res = await run();
+  } catch (e) {
+    await releaseAiQuota(env, userId, k);
+    throw e;
+  }
+  if (!res.ok) await releaseAiQuota(env, userId, k);
+  return res;
+};
+
+async function handleAiQuota(request: Request, env: Env) {
+  const auth = await requireSession(env, request);
+  if (auth.error) return auth.error;
+  const userId = auth.session.user.id;
+  const pro = await isProUser(env, userId);
+  const used = await aiQuotaUsed(env, userId);
+  let story = { used: 0, limit: pro ? STORY_AI_FREE_PRO : STORY_AI_FREE_FREE };
+  try {
+    const q = await storyAiQuota(env, userId, pro ? "PRO" : "FREE");
+    story = { used: q.freePerDay - q.freeLeft, limit: q.freePerDay };
+  } catch { /* abaikan */ }
+  return json({
+    pro,
+    ...Object.fromEntries((Object.keys(AI_LIMITS) as AiKind[]).map((k) => [k, { used: used[k], limit: AI_LIMITS[k][pro ? "PRO" : "FREE"], pro: AI_LIMITS[k].PRO }])),
+    story: { ...story, period: "bulan", price: STORY_AI_PRICE },
+  });
 }
 
 async function handleAiChat(request: Request, env: Env) {
@@ -12902,10 +13011,10 @@ async function handleMemberFocus(request: Request, env: Env, pathname: string) {
 // DELETE /api/member/stories/:date          → hapus cerita (+ gambar di R2)
 // PUT/DELETE/GET .../:date/photo            → foto unggahan (JPG/PNG/WebP ≤ 2 MB)
 // POST   .../:date/ai, GET .../:date/ai     → buat / ambil ilustrasi AI
-// Ilustrasi AI: PRO dapat STORY_AI_FREE_PRO gratis per hari (FREE: STORY_AI_FREE_FREE),
+// Ilustrasi AI: PRO dapat STORY_AI_FREE_PRO gratis per BULAN (FREE: STORY_AI_FREE_FREE),
 // selebihnya STORY_AI_PRICE koin. Koin dipotong DULU (atomik, bersyarat saldo cukup), lalu
 // dikembalikan otomatis kalau pembuatan gambar gagal — tidak pernah terpotong tanpa hasil.
-const STORY_AI_FREE_PRO = 1;
+const STORY_AI_FREE_PRO = 10; // per BULAN (dulu 1/hari — bisa ±Rp19.500/bulan biaya gambar per user)
 const STORY_AI_FREE_FREE = 0;
 const STORY_AI_PRICE = 1000; // koin (1 koin = Rp1); biaya API gambar ±Rp650 per gambar
 const STORY_TEXT_MAX = 500;
@@ -12944,7 +13053,7 @@ const storyAiQuota = async (env: Env, userId: string, plan: string) => {
   const free = plan === "PRO" ? STORY_AI_FREE_PRO : STORY_AI_FREE_FREE;
   const row = await env.DB.prepare(
     "SELECT CASE WHEN json_valid(metadata_json) AND json_extract(metadata_json, '$.storyAi.day') = ? THEN json_extract(metadata_json, '$.storyAi.n') END AS n FROM users WHERE id = ?"
-  ).bind(todayWIB(), userId).first<{ n: number | null }>();
+  ).bind(todayWIB().slice(0, 7), userId).first<{ n: number | null }>();
   let coins = 0;
   try { coins = (await coinBalances(env, userId)).balance; } catch { /* tabel koin belum ada */ }
   return { freeLeft: Math.max(0, free - (Number(row?.n) || 0)), freePerDay: free, price: STORY_AI_PRICE, coins };
@@ -13137,8 +13246,9 @@ async function handleMemberStories(request: Request, env: Env, url: URL) {
       }
       if (!photo && text.length < 8) return json({ error: "Tambahkan foto atau tulis ceritanya dulu (minimal satu kalimat)." }, { status: 400 });
       if (!(await checkAiParseRateLimit(env, userId))) return json({ error: "Terlalu sering. Coba lagi sebentar lagi." }, { status: 429 });
-      // 1) Pakai jatah gratis hari ini (atomik) ATAU potong koin (atomik, bersyarat saldo cukup).
-      const today = todayWIB();
+      // 1) Pakai jatah gratis bulan ini (atomik) ATAU potong koin (atomik, bersyarat saldo cukup).
+      // Kunci "day" berisi bulan (YYYY-MM) — nama kolom lama dipertahankan.
+      const today = todayWIB().slice(0, 7);
       const free = user.plan === "PRO" ? STORY_AI_FREE_PRO : STORY_AI_FREE_FREE;
       let charged: "free" | "coin" | null = null;
       const chargeKey = `story_ai:${userId}:${generateId()}`;
@@ -13161,7 +13271,7 @@ async function handleMemberStories(request: Request, env: Env, url: URL) {
           if (!coinTableMissing(e)) throw e;
         }
       }
-      if (!charged) return json({ error: `Jatah gratis hari ini habis. Ilustrasi berikutnya ${STORY_AI_PRICE.toLocaleString("id-ID")} koin — koinmu belum cukup.`, code: "no_coins" }, { status: 402 });
+      if (!charged) return json({ error: `${free > 0 ? "Jatah gratis bulan ini habis. " : ""}Ilustrasi ${STORY_AI_PRICE.toLocaleString("id-ID")} koin — koinmu belum cukup. Top up koin di Profil › Koin.`, code: "no_coins" }, { status: 402 });
       // 2) Buat gambar. Gagal → kembalikan jatah/koin.
       try {
         const img = await generateStoryImage(env, storyImagePrompt(text, row?.mood ?? null, style, Boolean(photo)), photo);
@@ -20006,16 +20116,20 @@ const worker = {
         return await handleDeleteAiChatHistory(request, env);
       }
 
+      if (url.pathname === "/api/member/ai/quota" && request.method === "GET") {
+        return await handleAiQuota(request, env);
+      }
+
       if (url.pathname === "/api/member/ai/chat" && request.method === "POST") {
-        return await handleAiChat(request, env);
+        return await withAiQuota(request, env, "chat", () => handleAiChat(request, env));
       }
 
       if (url.pathname === "/api/member/ai/transcribe" && request.method === "POST") {
-        return await handleTranscribe(request, env);
+        return await withAiQuota(request, env, "voice", () => handleTranscribe(request, env));
       }
 
       if (url.pathname === "/api/member/ai/parse-transaction" && request.method === "POST") {
-        return await handleParseTransaction(request, env);
+        return await withAiQuota(request, env, "scan-if-image", () => handleParseTransaction(request, env));
       }
 
       if (url.pathname === "/api/member/uploads/sign" && request.method === "POST") {

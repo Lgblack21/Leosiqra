@@ -92,6 +92,14 @@ export function AiChat({
   const [copied, setCopied] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // Sisa jatah chat hari ini (FREE vs PRO) — ditampilkan halus di bawah kolom ketik.
+  const [quota, setQuota] = useState<{ used: number; limit: number; pro: number; isPro: boolean } | null>(null);
+  const loadQuota = useCallback(() => {
+    cloudflareApi<{ pro: boolean; chat?: { used: number; limit: number; pro: number } }>("/api/member/ai/quota", { cache: "no-store" })
+      .then((q) => { if (q.chat) setQuota({ ...q.chat, isPro: q.pro }); })
+      .catch(() => undefined);
+  }, []);
+  useEffect(() => { loadQuota(); }, [loadQuota]);
 
   useEffect(() => {
     aiChatService
@@ -129,15 +137,16 @@ export function AiChat({
         const raw = e instanceof Error ? e.message : "";
         const msg = /terlalu banyak/i.test(raw)
           ? "Pelan-pelan dulu ya 😅 kamu kirim banyak pesan barusan. Coba lagi sebentar lagi."
-          : /kuota|AI Leosiqra|gangguan/i.test(raw)
+          : /batas|kuota|AI Leosiqra|gangguan/i.test(raw)
             ? raw
             : "Waduh, aku lagi ada kendala nih. Coba kirim ulang sebentar lagi ya.";
         setMessages((cur) => [...(cur ?? []), { role: "model", text: msg, at: new Date(), fresh: true }]);
       } finally {
         setThinking(false);
+        loadQuota();
       }
     },
-    [thinking]
+    [thinking, loadQuota]
   );
 
   const reset = useCallback(async () => {
@@ -288,6 +297,11 @@ export function AiChat({
             </button>
           </div>
           <p className="mt-2 text-center text-[10px] font-medium text-slate-400">
+            {quota && (
+              <span className={quota.used >= quota.limit ? "font-bold text-rose-500" : "font-semibold text-slate-500 dark:text-slate-400"}>
+                Sisa {Math.max(0, quota.limit - quota.used)}/{quota.limit} chat hari ini{!quota.isPro ? ` · PRO ${quota.pro}×/hari` : ""} ·{" "}
+              </span>
+            )}
             {variant === "web" ? "Enter untuk kirim · Shift+Enter baris baru · " : ""}AI bisa keliru — cek lagi sebelum ambil keputusan penting.
           </p>
         </div>

@@ -60,7 +60,10 @@ export default function ContactPage() {
 
   useEffect(() => {
     if (activePackages.length > 0 && !activePackages.find(p => p.id === form.package)) {
-      setForm(prev => ({ ...prev, package: activePackages[0].id }));
+      // ?package=koin-10 (dari Profil › Koin › Top up) memilih paket itu langsung.
+      const wanted = new URLSearchParams(window.location.search).get('package');
+      const pick = activePackages.find(p => p.id === wanted) ?? activePackages[0];
+      setForm(prev => ({ ...prev, package: pick.id }));
     }
   }, [activePackages, form.package]);
 
@@ -369,7 +372,7 @@ export default function ContactPage() {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Paket Pro</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Paket PRO / Top up koin</label>
                     <div className="relative">
                       <select 
                         value={form.package}

@@ -241,7 +241,7 @@ function ReferralView({ coins, go, openPaket }: { coins: ReturnType<typeof useCo
       <Group>
         {[
           ['Teman pakai kodemu & aktif mencatat', `+${nf(r.refActiveReferrer)}`, `Aktif = ${r.activeMinTx} transaksi di ${r.activeMinDays} hari berbeda. Temanmu dapat +${nf(r.refActiveReferee)}.`],
-          ['Teman berlangganan PRO', `+${nf(r.refPro)}`, 'Bisa ditarik tunai. Sekali per teman.'],
+          ['Teman berlangganan PRO', `+${nf(r.refPro)}`, 'Sekali per teman.'],
           ['Mencatat 30 hari berturut-turut', `+${nf(r.streak)}`, 'Maksimal sekali per bulan.'],
         ].map(([t, v, d]) => (
           <div key={t} className="flex items-center gap-4 px-5 py-3.5">
@@ -393,12 +393,9 @@ function KelolaKoinView({ coins }: { coins: ReturnType<typeof useCoins> }) {
   const { data, error, reload } = coins;
   const [months, setMonths] = useState(1);
   const [busy, setBusy] = useState(false);
-  const [form, setForm] = useState({ coins: '', method: '', accountName: '', accountNumber: '' });
-  const [wErr, setWErr] = useState('');
   if (!data) return error ? <Unavailable error={error} onRetry={reload} /> : <p className="py-10 text-center text-[14px] text-slate-400">Memuat…</p>;
   const r = data.rules;
   const cost = r.proMonthCost * months;
-  const pending = data.withdrawals.some((w) => w.status === 'MENUNGGU');
 
   const redeem = async () => {
     const ok = await confirm({ title: `Tukar ${nf(cost)} koin?`, message: `PRO ${months} bulan langsung aktif (ditambahkan ke masa aktif sekarang).`, confirmLabel: 'Tukar' });
@@ -416,27 +413,6 @@ function KelolaKoinView({ coins }: { coins: ReturnType<typeof useCoins> }) {
     }
   };
 
-  const withdraw = async () => {
-    setWErr('');
-    const n = Math.floor(Number(form.coins.replace(/\D/g, '')));
-    if (!n || n < r.withdrawMin) { setWErr(`Minimal ${nf(r.withdrawMin)} koin.`); return; }
-    if (n > data.cashable) { setWErr(`Koin yang bisa ditarik: ${nf(data.cashable)}.`); return; }
-    const ok = await confirm({ title: `Tarik ${rp(n * r.idrPerCoin)}?`, message: `Ke ${form.method} ${form.accountNumber} a.n. ${form.accountName}. Koin dikunci sampai admin memproses (biasanya 1–3 hari kerja).`, confirmLabel: 'Ajukan' });
-    if (!ok) return;
-    setBusy(true);
-    try {
-      await cloudflareApi('/api/member/coins/withdraw', { method: 'POST', json: { ...form, coins: n } });
-      toast.success('Pengajuan tarik tunai terkirim.');
-      setForm({ coins: '', method: '', accountName: '', accountNumber: '' });
-      await reload();
-    } catch (e) {
-      setWErr(e instanceof Error ? e.message : 'Gagal mengajukan.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const input = 'w-full rounded-2xl bg-white px-4 py-3 text-[15px] ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400';
   const STATUS = { MENUNGGU: 'bg-amber-100 text-amber-700', DIBAYAR: 'bg-emerald-100 text-emerald-700', DITOLAK: 'bg-rose-100 text-rose-700' } as const;
 
   return (
@@ -447,8 +423,8 @@ function KelolaKoinView({ coins }: { coins: ReturnType<typeof useCoins> }) {
           <p className="mt-1 flex items-center gap-2 text-[24px] font-bold text-slate-900">{nf(data.balance)} <CoinIcon size={20} /></p>
         </div>
         <div className="rounded-[22px] bg-slate-50 p-4">
-          <p className="text-[13px] text-slate-500">Bisa ditarik</p>
-          <p className="mt-1 text-[24px] font-bold text-slate-900">{rp(data.cashable * r.idrPerCoin)}</p>
+          <p className="text-[13px] text-slate-500">Tukar PRO</p>
+          <p className="mt-1 flex items-center gap-1.5 text-[24px] font-bold text-slate-900">{nf(r.proMonthCost)} <CoinIcon size={18} /><span className="text-[13px] font-semibold text-slate-400">/bln</span></p>
         </div>
       </div>
 
@@ -468,32 +444,26 @@ function KelolaKoinView({ coins }: { coins: ReturnType<typeof useCoins> }) {
         </button>
       </div>
 
-      <Label>Tarik tunai</Label>
+      <Label>Top up koin</Label>
       <div className="space-y-3 rounded-[22px] bg-slate-50 p-4">
         <p className="text-[13px] leading-snug text-slate-500">
-          1 koin = Rp {nf(r.idrPerCoin)}, minimal {nf(r.withdrawMin)} koin. Hanya koin dari teman yang berlangganan PRO yang bisa ditarik; koin bonus lain bisa ditukar PRO. Ditransfer manual oleh admin.
+          1 koin = Rp1. Koin dipakai untuk ilustrasi AI di Cerita Hari Ini (1.000 koin) dan tukar PRO ({nf(r.proMonthCost)} koin/bulan). Koin tidak bisa dicairkan jadi uang.
         </p>
-        {pending ? (
-          <p className="rounded-2xl bg-amber-50 p-3 text-[14px] text-amber-800">Ada penarikan yang sedang diproses. Ajukan lagi setelah selesai.</p>
-        ) : data.cashable < r.withdrawMin ? (
-          <p className="rounded-2xl bg-white p-3 text-[14px] text-slate-500 ring-1 ring-slate-200">
-            Kumpulkan {nf(r.withdrawMin - data.cashable)} koin tunai lagi untuk bisa menarik.
-          </p>
-        ) : (
-          <>
-            <input value={form.coins} onChange={(e) => setForm((f) => ({ ...f, coins: e.target.value }))} inputMode="numeric" placeholder={`Jumlah koin (maks ${nf(data.cashable)})`} className={input} />
-            <input value={form.method} onChange={(e) => setForm((f) => ({ ...f, method: e.target.value }))} placeholder="Bank / e-wallet (mis. BCA, DANA)" className={input} />
-            <input value={form.accountNumber} onChange={(e) => setForm((f) => ({ ...f, accountNumber: e.target.value }))} inputMode="numeric" placeholder="Nomor rekening / HP e-wallet" className={input} />
-            <input value={form.accountName} onChange={(e) => setForm((f) => ({ ...f, accountName: e.target.value }))} placeholder="Nama pemilik" className={input} />
-            {wErr && <p className="text-[13px] text-rose-600">{wErr}</p>}
-            <button type="button" onClick={withdraw} disabled={busy} className="w-full rounded-full bg-slate-900 py-3.5 text-[15px] font-bold text-white disabled:opacity-60">Ajukan tarik tunai</button>
-          </>
-        )}
+        <div className="grid grid-cols-2 gap-2">
+          {[10, 25, 50, 100].map((k) => (
+            <a key={k} href={`/membership/contact?package=koin-${k}`} className="rounded-2xl bg-white px-3 py-3 text-center ring-1 ring-slate-200 transition-shadow hover:shadow-md">
+              <span className="flex items-center justify-center gap-1 text-[16px] font-bold text-slate-900">{nf(k * 1000)} <CoinIcon size={15} /></span>
+              <span className="mt-0.5 block text-[13px] text-slate-500">{rp(k * 1000)}</span>
+            </a>
+          ))}
+        </div>
+        <p className="text-[12px] text-slate-400">Bayar lewat transfer / QRIS, koin masuk setelah admin memverifikasi.</p>
       </div>
 
       {data.withdrawals.length > 0 && (
         <>
-          <Label>Riwayat tarik tunai</Label>
+          <Label>Riwayat tarik tunai (lama)</Label>
+          <p className="-mt-1 px-1 text-[12px] text-slate-400">Penarikan koin sudah ditutup; pengajuan lama tetap diproses admin.</p>
           <Group>
             {data.withdrawals.map((w) => (
               <div key={w.id} className="flex items-center gap-4 px-5 py-3.5">

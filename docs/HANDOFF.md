@@ -18,6 +18,23 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-07 (branch claude/koin-kuota-ai) — Sistem koin baru + kuota AI FREE vs PRO. BELUM deploy (tunggu "gas"). Tanpa SQL.**
+  - Keputusan Bos: satu jenis koin, 1 koin = Rp1, bisa dibeli; hadiah TIDAK lagi bisa dicairkan.
+    COIN_RULES: proMonthCost 2.000 → **15.000** (= harga PRO, beli koin tidak bisa jadi PRO lebih murah), refActiveReferrer
+    300→500, refActiveReferee 100→200, refPro 1.000→1.500 (tidak cashable), streak 50→100. POST /coins/withdraw → 410;
+    endpoint admin penarikan tetap ada untuk pengajuan lama.
+  - Top up koin: COIN_PACKAGES koin-10/25/50/100 (Rp10–100 rb, 1:1, TANPA bonus) lewat jalur pembayaran manual yang sama
+    (payment-info menambah paket koin ke pro_packages; package_json kind "coin"). Admin setuju → grantCoins topup:<id>.
+  - Bug lama diperbaiki: persetujuan pembayaran tidak idempoten (klik dobel = PRO dobel) → UPDATE bersyarat status.
+  - Kuota AI harian (withAiQuota di router; metadata $.aiq_<jenis>; gagal apa pun → jatah kembali):
+    chat FREE 5 / PRO 50, scan struk (parse dengan gambar) FREE 3 / PRO 30, suara FREE 5 / PRO 40; teks biasa tidak
+    dihitung. GET /api/member/ai/quota. Chat Leo menampilkan "Sisa x/y chat hari ini · PRO 50×/hari".
+  - Ilustrasi Cerita: PRO 10 gratis/BULAN (dulu 1/hari ≈ Rp19.500 biaya/bulan/user), FREE 0; selebihnya 1.000 koin.
+  - UI Koin: kartu "Bisa ditarik" → "Tukar PRO 15.000/bln", formulir tarik tunai diganti "Top up koin" (→ /membership/contact?package=koin-N).
+  - Dites lokal: FREE chat 6 → 429 pesan jelas; gagal → kuota kembali (0/5); teks tidak dihitung; top up koin-10 → +10.000,
+    setuju ganda → already; durationMonths palsu diabaikan; tukar PRO 10.600 koin → ditolak (butuh 15.000); tarik → 410.
+  - Catatan: pengguna lama yang punya koin kehilangan hak tarik & nilai tukar PRO naik — sudah disetujui Bos ("belum banyak yang pakai").
+
 - **2026-11-07 — Cerita: AI dari foto (anime/kartun) + Kalender bulan berfoto: LIVE (run 42296259066, commit 1c5582a). Tanpa SQL.**
   - Laporan Bos: AI tidak bisa dipakai → penyebab: tombol AI mati kalau tulisan < 8 huruf (Bos punya foto tanpa tulisan).
     Kini ada foto → foto DIUBAH jadi ilustrasi (image-to-image: foto dikirim sebagai image_url ke model gambar);
