@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live 3.4.0; 3.5.0 menunggu "gas"; migrasi 0036, 0037, 0038 menunggu Bos)
+Terakhir diperbarui: 2026-11-07 (live: rilis 3.5.0, run 42369027648; migrasi 0036, 0037, 0038 menunggu Bos)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-07 — RILIS 3.5.0 (branch `claude/sehat-asuransi-20261107`): Sehatku › Asuransi. MIGRASI 0038 menunggu Bos.**
+- **2026-11-07 — RILIS 3.5.0: LIVE (run 42369027648, commit 5a5afd4, Release v3.5.0): Sehatku › Asuransi. MIGRASI 0038 menunggu Bos.**
   - **MIGRASI di D1 Console** (0038_health.sql, boleh sebelum/sesudah deploy): tabel `health_policies` + `health_claims`
     (+ 3 index). Tanpa tabel: biaya kesehatan & direktori tetap jalan, Polisku/Klaim → ready:false / 503.
   - Worker `handleMemberHealth` (/api/member/health/*): summary (biaya per bulan & sub dari kategori Kesehatan, polis,
