@@ -18,6 +18,12 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-08 — 3.6.2 SIAP (branch claude/form-transaksi-20261108), menunggu "gas". Tanpa SQL.**
+  - `Sidebar.tsx`: tombol "Catat transaksi" (slate-950 + tile oranye, Plus berputar saat hover, kbd N, fullOnly).
+  - `AddTransactionModal.tsx`: hanya JSX diganti (header gradien per tipe, nominal besar, chip tanggal & rekening,
+    "Tanpa rekening" = '' → 'General', cicilan di <details>, footer sticky "Simpan Rp…"). handleSubmit/logika kurs TIDAK diubah.
+  - Dicek: tsc, eslint, build, screenshot lokal web 1366 + iPhone 13. Belum: simpan transaksi nyata di prod.
+
 - **2026-11-08 — RILIS 3.6.1: LIVE (run 42397920483, commit ace0f1e, Release v3.6.1): wordmark Leosiqra beranimasi. Tanpa SQL.**
   - `src/components/brand/Wordmark.tsx` + CSS `.wm-*` di globals.css (rise per huruf, sheen mask berkala, wave saat
     hover, logo `.wm-logo` miring); prefers-reduced-motion mematikan. Dipakai di Sidebar web.

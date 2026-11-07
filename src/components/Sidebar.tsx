@@ -295,12 +295,21 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
               primaryAdd();
               closeOnMobile();
             }}
-            title="Tambah transaksi (N)"
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 py-3.5 text-[15px] font-bold text-white shadow-[0_12px_24px_-12px_rgba(79,70,229,0.7)] transition hover:brightness-110"
+            title="Catat transaksi (N)"
+            className="group relative flex w-full items-center gap-3 overflow-hidden rounded-[20px] bg-slate-950 p-2 text-left text-white shadow-[0_14px_30px_-14px_rgba(2,6,23,0.75)] ring-1 ring-white/10 transition hover:-translate-y-0.5 hover:shadow-[0_18px_34px_-14px_rgba(249,115,22,0.55)] active:translate-y-0 md:max-lg:justify-center lg:pr-3"
           >
-            <Plus size={19} strokeWidth={2.6} />
-            <span className={fullOnly}>Tambah transaksi</span>
-            <kbd className="ml-1 hidden h-5 min-w-5 items-center justify-center rounded-md bg-white/20 px-1.5 text-[11px] font-bold lg:inline-flex">
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-[320%]"
+            />
+            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-gradient-to-br from-amber-300 via-orange-400 to-rose-500 text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]">
+              <Plus size={20} strokeWidth={2.8} className="transition-transform duration-300 group-hover:rotate-90" />
+            </span>
+            <span className={cn('relative min-w-0 flex-1 leading-tight', fullOnly)}>
+              <span className="block text-[14px] font-extrabold tracking-tight">Catat transaksi</span>
+              <span className="block text-[11px] font-medium text-white/55">Masuk / keluar, 10 detik</span>
+            </span>
+            <kbd className="relative hidden h-6 min-w-6 items-center justify-center rounded-lg border border-white/15 bg-white/10 px-1.5 text-[11px] font-bold text-white/80 lg:inline-flex">
               N
             </kbd>
           </button>

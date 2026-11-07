@@ -57,6 +57,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.5.1 | 7 Nov 2026 | Leo beda di tiap tab Sehatku |
 | 3.6.0 | 7 Nov 2026 | Sehatku › Cek |
 | 3.6.1 | 8 Nov 2026 | Nama Leosiqra beranimasi |
+| 3.6.2 | 8 Nov 2026 | Tombol & form catat transaksi baru |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -70,6 +71,13 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.6.2 — 2026-11-08 — Tombol & form catat transaksi baru
+
+- Tombol **Catat transaksi** di menu samping tampil baru: gelap dengan ikon oranye khas Leo (shortcut **N** tetap jalan).
+- Form transaksi dirombak: nominal besar di atas, pilih Pemasukan/Pengeluaran sekali ketuk, tanggal cepat
+  **Hari ini / Kemarin**, rekening tinggal pilih kartunya, dan tombol simpan langsung menampilkan jumlahnya.
+  Detail cicilan dilipat supaya form lebih ringkas. Di HP, form muncul dari bawah.
 
 ## 3.6.1 — 2026-11-08 — Nama Leosiqra beranimasi
 
