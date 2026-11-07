@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live: rilis 3.6.0, run 42396910024; migrasi 0039 menunggu Bos)
+Terakhir diperbarui: 2026-11-08 (live 3.6.0; 3.6.1 menunggu "gas"; migrasi 0039 menunggu Bos)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,10 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-08 — RILIS 3.6.1 (branch `claude/wordmark-anim-20261108`): wordmark Leosiqra beranimasi. Tanpa SQL.**
+  - `src/components/brand/Wordmark.tsx` + CSS `.wm-*` di globals.css (rise per huruf, sheen mask berkala, wave saat
+    hover, logo `.wm-logo` miring); prefers-reduced-motion mematikan. Dipakai di Sidebar web.
 
 - **2026-11-07 — RILIS 3.6.0: LIVE (run 42396910024, commit 923789c, Release v3.6.0): Sehatku › Cek. MIGRASI 0039 menunggu Bos.**
   - **MIGRASI di D1 Console** (0039_health_checks.sql): tabel `health_checks` + 2 index. Tanpa tabel: info CKG tampil,

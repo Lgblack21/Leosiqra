@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import { Wordmark } from '@/components/brand/Wordmark';
 import { usePathname } from 'next/navigation';
 import { ChevronRight, X, ShieldCheck, Plus, Settings, Sparkles, LayoutGrid } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -152,8 +153,8 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
           className="flex select-none items-center gap-2.5"
           title="Ringkasan"
         >
-          <Image src="/images/Logo-new.png" alt="" width={34} height={34} className="object-contain" />
-          <span className={cn('text-[19px] font-extrabold tracking-tight text-slate-900', fullOnly)}>Leosiqra</span>
+          <Image src="/images/Logo-new.png" alt="" width={34} height={34} className="wm-logo object-contain" />
+          <Wordmark className={cn('text-[19px] font-extrabold tracking-tight text-slate-900', fullOnly)} />
         </Link>
         <div className={cn('flex items-center gap-1', fullOnly)}>
           <button
