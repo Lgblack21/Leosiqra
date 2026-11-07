@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live 3.1.2; 3.1.3 + migrasi 0036 menunggu)
+Terakhir diperbarui: 2026-11-07 (live: rilis 3.1.3, run 42360670539; migrasi 0036 menunggu Bos)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-07 — RILIS 3.1.3 siap di branch `claude/stok-staff-id-20261107`, BELUM live (tunggu "gas"). MIGRASI 0036 menunggu Bos.**
+- **2026-11-07 — RILIS 3.1.3: LIVE (run 42360670539, commit e3b1651, Release v3.1.3). MIGRASI 0036 menunggu Bos.**
   - **MIGRASI di D1 Console** (0036_stock_staff_id.sql, boleh sebelum/sesudah deploy):
     `ALTER TABLE shop_stock_moves ADD COLUMN by_staff_id TEXT;` Tanpa kolom: Worker tidak menulisnya (perilaku = 3.1.2).
     Cek kolom di-cache per isolate (ada → permanen, belum ada → dicek ulang tiap 60 dtk).
