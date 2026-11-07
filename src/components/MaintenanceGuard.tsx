@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
@@ -33,14 +33,21 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
       .then((data) => {
         setProfile(data.user ?? null);
         setWhatsapp(data.maintenance?.whatsapp ?? null);
-        setSettings(data.maintenance ? {
-          maintenance: {
-            isActive: data.maintenance.isActive,
-            type: data.maintenance.type === 'code' || data.maintenance.type === 'image' ? data.maintenance.type : undefined,
-            code: data.maintenance.code ?? undefined,
-            imageUrl: data.maintenance.imageUrl ?? undefined,
-          }
-        } : null);
+        setSettings(
+          data.maintenance
+            ? {
+                maintenance: {
+                  isActive: data.maintenance.isActive,
+                  type:
+                    data.maintenance.type === 'code' || data.maintenance.type === 'image'
+                      ? data.maintenance.type
+                      : undefined,
+                  code: data.maintenance.code ?? undefined,
+                  imageUrl: data.maintenance.imageUrl ?? undefined,
+                },
+              }
+            : null,
+        );
       })
       .catch(() => {
         setProfile(null);
@@ -91,12 +98,7 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
     } else if (settings.maintenance.type === 'image' && settings.maintenance.imageUrl) {
       return (
         <div className="fixed inset-0 z-[9999] bg-black relative">
-          <Image
-            src={settings.maintenance.imageUrl}
-            alt="Maintenance"
-            fill
-            className="object-contain"
-          />
+          <Image src={settings.maintenance.imageUrl} alt="Maintenance" fill className="object-contain" />
         </div>
       );
     } else {
@@ -139,8 +141,8 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
                 Leosiqra Sedang Ditingkatkan
               </h1>
               <p className="text-slate-400 font-medium leading-relaxed text-[15px] [text-wrap:balance] mb-8">
-                Kami sedang melakukan pemeliharaan sistem untuk pengalaman yang lebih baik.
-                Mohon maaf atas ketidaknyamanannya — layanan akan segera aktif kembali.
+                Kami sedang melakukan pemeliharaan sistem untuk pengalaman yang lebih baik. Mohon maaf atas
+                ketidaknyamanannya — layanan akan segera aktif kembali.
               </p>
 
               {normalizedWhatsApp && (

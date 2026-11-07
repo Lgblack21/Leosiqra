@@ -22,22 +22,22 @@ export const exchangeRateService = {
    * Fetch latest rates from USD base
    */
   getLatestRates: async (base = 'USD'): Promise<ExchangeRates> => {
-    if (ratesCache && (Date.now() - ratesCache.timestamp < CACHE_DURATION)) {
+    if (ratesCache && Date.now() - ratesCache.timestamp < CACHE_DURATION) {
       return ratesCache.rates;
     }
 
     try {
       const response = await fetch(`${BASE_URL}/${base}`);
       if (!response.ok) throw new Error('Failed to fetch exchange rates');
-      
+
       const data = await response.json();
       const rates = data.rates;
-      
+
       ratesCache = {
         rates,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
-      
+
       return rates;
     } catch (error) {
       console.error('Error fetching rates:', error);
@@ -56,7 +56,7 @@ export const exchangeRateService = {
     // Assumes USD-based rates: (amount / rate_from) * rate_to.
     const amountInUSD = amount / rates[from];
     const convertedAmount = amountInUSD * rates[to];
-    
+
     return convertedAmount;
   },
 
@@ -65,8 +65,8 @@ export const exchangeRateService = {
    */
   convertToIDR: async (amount: number, from: string): Promise<number> => {
     if (from === 'IDR') return amount;
-    
+
     const rates = await exchangeRateService.getLatestRates();
     return exchangeRateService.convert(amount, from, 'IDR', rates);
-  }
+  },
 };

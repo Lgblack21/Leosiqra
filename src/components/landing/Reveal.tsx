@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from 'framer-motion';
 
 // Hormati "kurangi gerakan" di pengaturan perangkat: langsung tampil tanpa animasi.
 export function Reveal({
@@ -8,13 +8,13 @@ export function Reveal({
   delay = 0,
   y = 28,
   className,
-  as = "div",
+  as = 'div',
 }: {
   children: React.ReactNode;
   delay?: number;
   y?: number;
   className?: string;
-  as?: "div" | "section" | "li";
+  as?: 'div' | 'section' | 'li';
 }) {
   const reduce = useReducedMotion();
   const Comp = motion[as];
@@ -22,9 +22,9 @@ export function Reveal({
   return (
     <Comp
       className={className}
-      initial={{ opacity: 0, y, filter: "blur(8px)" }}
-      whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-      viewport={{ once: true, margin: "-80px" }}
+      initial={{ opacity: 0, y, filter: 'blur(8px)' }}
+      whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+      viewport={{ once: true, margin: '-80px' }}
       transition={{ duration: 0.9, delay, ease: [0.16, 1, 0.3, 1] }}
     >
       {children}

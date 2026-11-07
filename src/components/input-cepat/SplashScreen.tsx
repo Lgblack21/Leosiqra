@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { BrandSplash } from "@/components/app/BrandSplash";
+import { BrandSplash } from '@/components/app/BrandSplash';
 
 interface SplashScreenProps {
   ready: boolean;

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, ExternalLink, KeyRound, Loader2, RefreshCw, Wallet } from 'lucide-react';
@@ -15,7 +15,13 @@ type AiStatus = {
   models: { chat: string; parse: string };
   managementKeyHint: string | null;
   keyValid: boolean;
-  keyInfo: { label: string | null; usage: number; limit: number | null; limitRemaining: number | null; isFreeTier: boolean } | null;
+  keyInfo: {
+    label: string | null;
+    usage: number;
+    limit: number | null;
+    limitRemaining: number | null;
+    isFreeTier: boolean;
+  } | null;
   credits: { total: number; used: number; remaining: number } | null;
 };
 
@@ -26,7 +32,13 @@ const LOW_BALANCE_USD = 1;
 
 const usd = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmt = (iso: string) =>
-  new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
+  new Intl.DateTimeFormat('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso));
 const SOURCE_LABEL: Record<AiStatus['source'], string> = {
   admin: 'Dipasang dari panel admin',
   cloudflare: 'Secret Cloudflare',
@@ -60,9 +72,10 @@ export default function AdminAiPage() {
   }, [load]);
 
   const submit = async (mode: 'save' | 'reset') => {
-    const resetQuestion = kind === 'management'
-      ? 'Hapus Management key? Saldo tidak akan tampil lagi di sini.'
-      : 'Hapus key dari panel admin dan kembali pakai secret Cloudflare?';
+    const resetQuestion =
+      kind === 'management'
+        ? 'Hapus Management key? Saldo tidak akan tampil lagi di sini.'
+        : 'Hapus key dari panel admin dan kembali pakai secret Cloudflare?';
     if (mode === 'reset' && !confirm(resetQuestion)) return;
     setBusy(mode);
     setMessage(null);
@@ -77,8 +90,12 @@ export default function AdminAiPage() {
         tone: 'ok',
         text:
           kind === 'management'
-            ? mode === 'save' ? 'Management key tersimpan — saldo akun sekarang tampil.' : 'Management key dihapus.'
-            : mode === 'save' ? 'Key baru aktif. Server lain ikut pakai key ini paling lambat 1 menit.' : 'Kembali memakai secret Cloudflare.',
+            ? mode === 'save'
+              ? 'Management key tersimpan — saldo akun sekarang tampil.'
+              : 'Management key dihapus.'
+            : mode === 'save'
+              ? 'Key baru aktif. Server lain ikut pakai key ini paling lambat 1 menit.'
+              : 'Kembali memakai secret Cloudflare.',
       });
       await load();
     } catch (e) {
@@ -111,7 +128,12 @@ export default function AdminAiPage() {
       {loadError && <p className="rounded-2xl bg-rose-50 p-4 text-sm font-semibold text-rose-700">{loadError}</p>}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className={cn('rounded-3xl border p-6 shadow-sm md:col-span-2', low ? 'border-rose-200 bg-rose-50' : 'border-slate-100 bg-white')}>
+        <div
+          className={cn(
+            'rounded-3xl border p-6 shadow-sm md:col-span-2',
+            low ? 'border-rose-200 bg-rose-50' : 'border-slate-100 bg-white',
+          )}
+        >
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
             <Wallet size={14} /> Sisa saldo OpenRouter
           </div>
@@ -119,7 +141,9 @@ export default function AdminAiPage() {
             <Loader2 className="mt-4 animate-spin text-slate-300" />
           ) : remaining !== null ? (
             <>
-              <p className={cn('mt-2 text-4xl font-black tracking-tight', low ? 'text-rose-600' : 'text-slate-900')}>{usd(remaining)}</p>
+              <p className={cn('mt-2 text-4xl font-black tracking-tight', low ? 'text-rose-600' : 'text-slate-900')}>
+                {usd(remaining)}
+              </p>
               <p className="mt-1 text-sm font-semibold text-slate-500">
                 ± {Math.floor(remaining / USD_PER_MESSAGE).toLocaleString('id-ID')} pesan chat lagi (perkiraan)
               </p>
@@ -141,7 +165,11 @@ export default function AdminAiPage() {
                   ? 'Management key ditolak OpenRouter — pasang ulang di bawah.'
                   : 'OpenRouter hanya memberi info saldo akun lewat Management key. Pasang Management key di bawah (sekali saja) supaya saldo tampil di sini.'}
               </p>
-              {status?.keyValid && <p className="text-xs text-slate-400">Terpakai lewat API key aktif: {usd(status.keyInfo?.usage ?? 0)}</p>}
+              {status?.keyValid && (
+                <p className="text-xs text-slate-400">
+                  Terpakai lewat API key aktif: {usd(status.keyInfo?.usage ?? 0)}
+                </p>
+              )}
             </div>
           )}
           <a
@@ -161,7 +189,11 @@ export default function AdminAiPage() {
           {status ? (
             <div className="mt-3 space-y-2 text-sm">
               <p className="flex items-center gap-2 font-bold text-slate-900">
-                {status.keyValid ? <CheckCircle2 size={16} className="text-emerald-500" /> : <AlertTriangle size={16} className="text-rose-500" />}
+                {status.keyValid ? (
+                  <CheckCircle2 size={16} className="text-emerald-500" />
+                ) : (
+                  <AlertTriangle size={16} className="text-rose-500" />
+                )}
                 {status.keyValid ? 'Valid' : 'Tidak valid'}
               </p>
               <p className="font-mono text-xs text-slate-500">{status.keyHint ?? '–'}</p>
@@ -173,8 +205,12 @@ export default function AdminAiPage() {
                 </p>
               )}
               <div className="border-t border-slate-100 pt-2 text-xs text-slate-400">
-                <p>Chat: <span className="font-mono">{status.models.chat}</span></p>
-                <p>Scan & voice: <span className="font-mono">{status.models.parse}</span></p>
+                <p>
+                  Chat: <span className="font-mono">{status.models.chat}</span>
+                </p>
+                <p>
+                  Scan & voice: <span className="font-mono">{status.models.parse}</span>
+                </p>
               </div>
             </div>
           ) : (
@@ -193,12 +229,23 @@ export default function AdminAiPage() {
         <div>
           <h2 className="text-lg font-black text-slate-900">Ganti key OpenRouter</h2>
           <div className="mt-3 inline-flex rounded-xl bg-slate-100 p-1">
-            {([['api', 'API key (untuk AI)'], ['management', 'Management key (cek saldo)']] as const).map(([id, label]) => (
+            {(
+              [
+                ['api', 'API key (untuk AI)'],
+                ['management', 'Management key (cek saldo)'],
+              ] as const
+            ).map(([id, label]) => (
               <button
                 key={id}
                 type="button"
-                onClick={() => { setKind(id); setMessage(null); }}
-                className={cn('rounded-lg px-4 py-2 text-xs font-bold', kind === id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500')}
+                onClick={() => {
+                  setKind(id);
+                  setMessage(null);
+                }}
+                className={cn(
+                  'rounded-lg px-4 py-2 text-xs font-bold',
+                  kind === id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500',
+                )}
               >
                 {label}
               </button>
@@ -207,7 +254,11 @@ export default function AdminAiPage() {
           <p className="mt-3 text-sm text-slate-500">
             Buat key di{' '}
             <a
-              href={kind === 'api' ? 'https://openrouter.ai/settings/keys' : 'https://openrouter.ai/settings/management-keys'}
+              href={
+                kind === 'api'
+                  ? 'https://openrouter.ai/settings/keys'
+                  : 'https://openrouter.ai/settings/management-keys'
+              }
               target="_blank"
               rel="noopener noreferrer"
               className="font-bold text-indigo-600 underline"
@@ -226,7 +277,9 @@ export default function AdminAiPage() {
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <label className="block">
-            <span className="text-xs font-bold text-slate-500">{kind === 'api' ? 'API key baru' : 'Management key'}</span>
+            <span className="text-xs font-bold text-slate-500">
+              {kind === 'api' ? 'API key baru' : 'Management key'}
+            </span>
             <input
               type="password"
               autoComplete="off"
@@ -248,7 +301,12 @@ export default function AdminAiPage() {
           </label>
         </div>
         {message && (
-          <p className={cn('rounded-xl p-3 text-sm font-semibold', message.tone === 'ok' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700')}>
+          <p
+            className={cn(
+              'rounded-xl p-3 text-sm font-semibold',
+              message.tone === 'ok' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700',
+            )}
+          >
             {message.text}
           </p>
         )}
@@ -260,7 +318,9 @@ export default function AdminAiPage() {
           >
             {busy === 'save' && <Loader2 size={16} className="animate-spin" />} Tes & simpan key
           </button>
-          {(kind === 'api' ? status?.source === 'admin' && status.hasCloudflareSecret : Boolean(status?.managementKeyHint)) && (
+          {(kind === 'api'
+            ? status?.source === 'admin' && status.hasCloudflareSecret
+            : Boolean(status?.managementKeyHint)) && (
             <button
               type="button"
               onClick={() => submit('reset')}

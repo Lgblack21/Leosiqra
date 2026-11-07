@@ -1,13 +1,5 @@
 import { useState, useEffect } from 'react';
-import { 
-  collection, 
-  query, 
-  where, 
-  orderBy, 
-  onSnapshot, 
-  QueryConstraint,
-  DocumentData
-} from '@/lib/cf-firestore';
+import { collection, query, where, orderBy, onSnapshot, QueryConstraint, DocumentData } from '@/lib/cf-firestore';
 import { db } from '../cf-client';
 
 /**
@@ -25,7 +17,7 @@ export function useRealtimeCollection<T>(
   extraConstraints: QueryConstraint[] = [],
   transform?: (data: DocumentData, id: string) => T,
   orderField: string = 'createdAt',
-  orderDirection: 'asc' | 'desc' = 'desc'
+  orderDirection: 'asc' | 'desc' = 'desc',
 ) {
   const [state, setState] = useState<{
     data: T[];
@@ -45,7 +37,7 @@ export function useRealtimeCollection<T>(
     const constraints: QueryConstraint[] = [
       where('userId', '==', userId),
       ...extraConstraints,
-      orderBy(orderField, orderDirection)
+      orderBy(orderField, orderDirection),
     ];
 
     const q = query(collection(db, collectionName), ...constraints);
@@ -53,7 +45,7 @@ export function useRealtimeCollection<T>(
     const unsub = onSnapshot(
       q,
       (snap) => {
-        const items = snap.docs.map(doc => {
+        const items = snap.docs.map((doc) => {
           const raw = doc.data();
           if (transform) return transform(raw, doc.id);
           return { ...raw, id: doc.id } as T;
@@ -74,7 +66,7 @@ export function useRealtimeCollection<T>(
           loading: false,
           ownerUserId: userId,
         }));
-      }
+      },
     );
 
     return () => unsub();
@@ -84,4 +76,3 @@ export function useRealtimeCollection<T>(
   const loading = userId ? state.ownerUserId !== userId || state.loading : false;
   return { data, loading };
 }
-

@@ -96,7 +96,9 @@ export default function IzinkanAiPage() {
             <p className="text-sm font-black text-rose-700 flex items-center gap-2">
               <AlertTriangle size={16} /> Permintaan tidak bisa diproses
             </p>
-            <p className="text-xs font-medium text-rose-700 leading-relaxed">{error || 'Permintaan izin tidak valid.'}</p>
+            <p className="text-xs font-medium text-rose-700 leading-relaxed">
+              {error || 'Permintaan izin tidak valid.'}
+            </p>
             <p className="text-[11px] font-medium text-rose-600 leading-relaxed">
               Tutup halaman ini lalu ulangi pemasangan connector dari aplikasi AI-nya.
             </p>
@@ -110,7 +112,7 @@ export default function IzinkanAiPage() {
               <div
                 className={cn(
                   'p-4 rounded-2xl border',
-                  info.verified ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-200'
+                  info.verified ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-200',
                 )}
               >
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Akan kembali ke</p>
@@ -138,7 +140,12 @@ export default function IzinkanAiPage() {
                 </span>
               </li>
               <li>
-                <label className={cn('flex items-start gap-2.5 text-xs font-medium', writeAvailable ? 'text-slate-600' : 'text-slate-400')}>
+                <label
+                  className={cn(
+                    'flex items-start gap-2.5 text-xs font-medium',
+                    writeAvailable ? 'text-slate-600' : 'text-slate-400',
+                  )}
+                >
                   <input
                     type="checkbox"
                     checked={writeAvailable && write}
@@ -148,8 +155,10 @@ export default function IzinkanAiPage() {
                   />
                   <PenLine size={15} className="mt-0.5 shrink-0" />
                   <span>
-                    <b>Mengubah</b> Usahaku (usaha, katalog, tampilan kasir){info.canWriteMoney ? ', mencatat transaksi & mengatur budget' : ' — transaksi & budget khusus PRO'}
-                    {!info.canWrite ? ' (tidak tersedia)' : !info.writeRequested ? ' (tidak diminta aplikasi ini)' : ''}.
+                    <b>Mengubah</b> Usahaku (usaha, katalog, tampilan kasir)
+                    {info.canWriteMoney ? ', mencatat transaksi & mengatur budget' : ' — transaksi & budget khusus PRO'}
+                    {!info.canWrite ? ' (tidak tersedia)' : !info.writeRequested ? ' (tidak diminta aplikasi ini)' : ''}
+                    .
                   </span>
                 </label>
               </li>

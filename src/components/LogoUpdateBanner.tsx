@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useState, useSyncExternalStore } from "react";
-import { X, Sparkles } from "lucide-react";
-import { isStandaloneDisplay } from "@/lib/pushNotifications";
+import { useState, useSyncExternalStore } from 'react';
+import { X, Sparkles } from 'lucide-react';
+import { isStandaloneDisplay } from '@/lib/pushNotifications';
 
-const DISMISS_KEY = "leosiqra_logo_update_banner_dismissed_v1";
+const DISMISS_KEY = 'leosiqra_logo_update_banner_dismissed_v1';
 
 // iOS & Android sama-sama "membekukan" ikon Home Screen pas pertama kali
 // di-install — gak ada API buat web app maksa refresh ikon yang sudah
@@ -23,19 +23,19 @@ export default function LogoUpdateBanner() {
     noopSubscribe,
     () => {
       try {
-        return isStandaloneDisplay() && localStorage.getItem(DISMISS_KEY) !== "1";
+        return isStandaloneDisplay() && localStorage.getItem(DISMISS_KEY) !== '1';
       } catch {
         return false;
       }
     },
-    () => false
+    () => false,
   );
   const [dismissed, setDismissed] = useState(false);
 
   const dismiss = () => {
     setDismissed(true);
     try {
-      localStorage.setItem(DISMISS_KEY, "1");
+      localStorage.setItem(DISMISS_KEY, '1');
     } catch {
       /* tidak tersimpan — tetap ditutup untuk sesi ini */
     }
@@ -60,8 +60,8 @@ export default function LogoUpdateBanner() {
           <div className="space-y-1.5">
             <h3 className="text-sm font-black">Logo Leosiqra baru!</h3>
             <p className="text-[11px] font-medium text-indigo-100 leading-relaxed">
-              Ikon di Home Screen kamu masih versi lama. Hapus ikonnya, lalu buka web ini lagi dan
-              &quot;Add to Home Screen&quot; ulang untuk dapat logo terbaru.
+              Ikon di Home Screen kamu masih versi lama. Hapus ikonnya, lalu buka web ini lagi dan &quot;Add to Home
+              Screen&quot; ulang untuk dapat logo terbaru.
             </p>
           </div>
         </div>

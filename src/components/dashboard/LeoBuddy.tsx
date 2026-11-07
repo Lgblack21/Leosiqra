@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -33,10 +33,30 @@ const TALK_FOR = 6500;
 
 // "rata-rata", "Rp1,2 jt-an" dst. tidak dipotong di tanda hubung saat teks turun baris.
 const keepHyphenated = (text: string) =>
-  text.split(/(\S+-\S+)/).map((part, k) => (k % 2 ? <span key={k} className="whitespace-nowrap">{part}</span> : part));
+  text.split(/(\S+-\S+)/).map((part, k) =>
+    k % 2 ? (
+      <span key={k} className="whitespace-nowrap">
+        {part}
+      </span>
+    ) : (
+      part
+    ),
+  );
 
 // Satu instans untuk semua layar (timer & listener tidak dobel); ukuran maskot lewat mascotClassName.
-export function LeoBuddy({ tips, season, size = 150, className, mascotClassName }: { tips: LeoTip[]; season: Season | null; size?: number; className?: string; mascotClassName?: string }) {
+export function LeoBuddy({
+  tips,
+  season,
+  size = 150,
+  className,
+  mascotClassName,
+}: {
+  tips: LeoTip[];
+  season: Season | null;
+  size?: number;
+  className?: string;
+  mascotClassName?: string;
+}) {
   const reduce = useReducedMotion();
   const [i, setI] = useState(0);
   const [pets, setPets] = useState(0);
@@ -78,7 +98,8 @@ export function LeoBuddy({ tips, season, size = 150, className, mascotClassName 
   };
 
   const action = tip?.action;
-  const actionCls = 'mt-2 inline-flex items-center gap-1 rounded-full bg-indigo-600 px-3 py-1 text-[12px] font-bold text-white transition-colors hover:bg-indigo-700 md:text-[13px]';
+  const actionCls =
+    'mt-2 inline-flex items-center gap-1 rounded-full bg-indigo-600 px-3 py-1 text-[12px] font-bold text-white transition-colors hover:bg-indigo-700 md:text-[13px]';
 
   return (
     <div className={cn('flex items-end gap-2', className)}>
@@ -95,11 +116,16 @@ export function LeoBuddy({ tips, season, size = 150, className, mascotClassName 
               aria-live="polite"
             >
               <p className="text-[13px] font-semibold leading-snug md:text-[14px]">{keepHyphenated(tip.text)}</p>
-              {action && (action.href ? (
-                <Link href={action.href} className={actionCls}>{action.label} <ChevronRight size={14} /></Link>
-              ) : (
-                <button type="button" onClick={action.onClick} className={actionCls}>{action.label} <ChevronRight size={14} /></button>
-              ))}
+              {action &&
+                (action.href ? (
+                  <Link href={action.href} className={actionCls}>
+                    {action.label} <ChevronRight size={14} />
+                  </Link>
+                ) : (
+                  <button type="button" onClick={action.onClick} className={actionCls}>
+                    {action.label} <ChevronRight size={14} />
+                  </button>
+                ))}
               <span aria-hidden className="absolute -right-1 bottom-2.5 h-3 w-3 rotate-45 rounded-[3px] bg-white/95" />
             </motion.div>
           )}
@@ -108,12 +134,29 @@ export function LeoBuddy({ tips, season, size = 150, className, mascotClassName 
           {tips.length > 1 && (
             <span className="flex gap-1" aria-hidden>
               {tips.map((t, k) => (
-                <span key={t.id} className={cn('h-1.5 rounded-full transition-all', k === i % tips.length ? 'w-4 bg-white' : 'w-1.5 bg-white/45')} />
+                <span
+                  key={t.id}
+                  className={cn(
+                    'h-1.5 rounded-full transition-all',
+                    k === i % tips.length ? 'w-4 bg-white' : 'w-1.5 bg-white/45',
+                  )}
+                />
               ))}
             </span>
           )}
-          <motion.span key={busy ?? 'hint'} initial={reduce ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-1">
-            {busy ? ACT_LABEL[busy] : <><Hand size={12} /> {pets === 0 ? 'Ketuk Leo' : pets < 5 ? 'Ketuk lagi' : `Dielus ${pets}×`}</>}
+          <motion.span
+            key={busy ?? 'hint'}
+            initial={reduce ? false : { opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-1"
+          >
+            {busy ? (
+              ACT_LABEL[busy]
+            ) : (
+              <>
+                <Hand size={12} /> {pets === 0 ? 'Ketuk Leo' : pets < 5 ? 'Ketuk lagi' : `Dielus ${pets}×`}
+              </>
+            )}
           </motion.span>
         </div>
       </div>
@@ -123,7 +166,15 @@ export function LeoBuddy({ tips, season, size = 150, className, mascotClassName 
         aria-label="Ketuk Leo untuk pesan berikutnya"
         className="relative -mb-2 shrink-0 rounded-full outline-none focus-visible:ring-4 focus-visible:ring-white/60"
       >
-        <LeoMascot mood={busy ? 'idle' : tip?.mood ?? 'idle'} activity={busy} size={size} season={season} interactive ledge className={mascotClassName} />
+        <LeoMascot
+          mood={busy ? 'idle' : (tip?.mood ?? 'idle')}
+          activity={busy}
+          size={size}
+          season={season}
+          interactive
+          ledge
+          className={mascotClassName}
+        />
       </button>
     </div>
   );

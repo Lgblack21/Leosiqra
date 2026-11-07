@@ -1,5 +1,5 @@
-import { Capacitor } from "@capacitor/core";
-import { cloudflareApi } from "@/lib/cloudflare-api";
+import { Capacitor } from '@capacitor/core';
+import { cloudflareApi } from '@/lib/cloudflare-api';
 
 // Push aplikasi native (Android, via Firebase Cloud Messaging). Dipanggil
 // AppShell setiap sesi login terdeteksi: minta izin sekali (kalau ditolak tidak
@@ -11,7 +11,7 @@ import { cloudflareApi } from "@/lib/cloudflare-api";
 // Push yang masuk saat aplikasi sedang dibuka: notifikasi sistem ditampilkan
 // plugin (presentationOptions di capacitor.config.ts, butuh APK baru); event ini
 // membuat daftar & angka lonceng ikut dimuat ulang.
-export const PUSH_EVENT = "leosiqra:push";
+export const PUSH_EVENT = 'leosiqra:push';
 export type ForegroundPush = { title: string; body: string; url: string | null };
 
 let listeners: Promise<void> | null = null;
@@ -19,32 +19,34 @@ let registeredFor: string | null = null;
 let openUrlHandler: (url: string) => void = () => undefined;
 
 const pushAvailable = () =>
-  Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android" && Capacitor.isPluginAvailable("PushNotifications");
+  Capacitor.isNativePlatform() &&
+  Capacitor.getPlatform() === 'android' &&
+  Capacitor.isPluginAvailable('PushNotifications');
 
 const addListenersOnce = () => {
   listeners ??= (async () => {
-    const { PushNotifications } = await import("@capacitor/push-notifications");
-    await PushNotifications.addListener("registration", ({ value }) => {
-      void cloudflareApi("/api/member/native-push-token", {
-        method: "POST",
+    const { PushNotifications } = await import('@capacitor/push-notifications');
+    await PushNotifications.addListener('registration', ({ value }) => {
+      void cloudflareApi('/api/member/native-push-token', {
+        method: 'POST',
         json: { token: value, platform: Capacitor.getPlatform() },
-      }).catch((error) => console.warn("Gagal mendaftarkan token push:", error));
+      }).catch((error) => console.warn('Gagal mendaftarkan token push:', error));
     });
-    await PushNotifications.addListener("registrationError", (error) => {
-      console.warn("Pendaftaran push native gagal:", error);
+    await PushNotifications.addListener('registrationError', (error) => {
+      console.warn('Pendaftaran push native gagal:', error);
     });
-    await PushNotifications.addListener("pushNotificationReceived", (n) => {
+    await PushNotifications.addListener('pushNotificationReceived', (n) => {
       const url = (n.data as { url?: unknown } | undefined)?.url;
       const detail: ForegroundPush = {
-        title: n.title || "Leosiqra",
-        body: n.body || "",
-        url: typeof url === "string" && url.startsWith("/") ? url : null,
+        title: n.title || 'Leosiqra',
+        body: n.body || '',
+        url: typeof url === 'string' && url.startsWith('/') ? url : null,
       };
       window.dispatchEvent(new CustomEvent<ForegroundPush>(PUSH_EVENT, { detail }));
     });
-    await PushNotifications.addListener("pushNotificationActionPerformed", ({ notification }) => {
+    await PushNotifications.addListener('pushNotificationActionPerformed', ({ notification }) => {
       const url = (notification.data as { url?: unknown } | undefined)?.url;
-      if (typeof url === "string" && url.startsWith("/")) openUrlHandler(url);
+      if (typeof url === 'string' && url.startsWith('/')) openUrlHandler(url);
     });
   })();
   return listeners;
@@ -58,27 +60,27 @@ export async function initNativePush(userId: string, openUrl: (url: string) => v
   registeredFor = userId;
   try {
     await addListenersOnce();
-    const { PushNotifications } = await import("@capacitor/push-notifications");
+    const { PushNotifications } = await import('@capacitor/push-notifications');
     let permission = await PushNotifications.checkPermissions();
-    if (permission.receive === "prompt" || permission.receive === "prompt-with-rationale") {
+    if (permission.receive === 'prompt' || permission.receive === 'prompt-with-rationale') {
       permission = await PushNotifications.requestPermissions();
     }
-    if (permission.receive !== "granted") return;
+    if (permission.receive !== 'granted') return;
     await PushNotifications.register();
   } catch (error) {
     registeredFor = null; // coba lagi di pembukaan berikutnya
-    console.warn("Push native tidak aktif:", error);
+    console.warn('Push native tidak aktif:', error);
   }
 }
 
 // Status untuk teks di layar Pengingat: "unavailable" = iOS / APK lama tanpa plugin.
-export async function nativePushStatus(): Promise<"granted" | "denied" | "prompt" | "unavailable"> {
-  if (!pushAvailable()) return "unavailable";
+export async function nativePushStatus(): Promise<'granted' | 'denied' | 'prompt' | 'unavailable'> {
+  if (!pushAvailable()) return 'unavailable';
   try {
-    const { PushNotifications } = await import("@capacitor/push-notifications");
+    const { PushNotifications } = await import('@capacitor/push-notifications');
     const { receive } = await PushNotifications.checkPermissions();
-    return receive === "granted" ? "granted" : receive === "denied" ? "denied" : "prompt";
+    return receive === 'granted' ? 'granted' : receive === 'denied' ? 'denied' : 'prompt';
   } catch {
-    return "unavailable";
+    return 'unavailable';
   }
 }

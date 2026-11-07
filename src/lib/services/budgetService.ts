@@ -55,5 +55,5 @@ export const budgetService = {
   async deleteBudget(id: string) {
     await cloudflareApi(`/api/member/budgets/${id}`, { method: 'DELETE' });
     notifyCollectionChanged('budgets');
-  }
+  },
 };

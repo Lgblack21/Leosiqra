@@ -18,7 +18,13 @@ export type HealthPart = {
 };
 export type HealthResult =
   | { ready: false; reason: string }
-  | { ready: true; score: number; grade: 'Sehat' | 'Cukup' | 'Perlu perhatian' | 'Rawan'; parts: HealthPart[]; weakest: HealthPart };
+  | {
+      ready: true;
+      score: number;
+      grade: 'Sehat' | 'Cukup' | 'Perlu perhatian' | 'Rawan';
+      parts: HealthPart[];
+      weakest: HealthPart;
+    };
 
 const DAY = 24 * 60 * 60 * 1000;
 const clamp = (n: number) => Math.max(0, Math.min(100, n));
@@ -43,7 +49,8 @@ export function computeHealthScore(input: {
 }): HealthResult {
   const today = input.today ?? new Date();
   const tx = input.transactions;
-  if (tx.length === 0) return { ready: false, reason: 'Belum ada catatan. Mulai catat beberapa hari, skornya muncul otomatis.' };
+  if (tx.length === 0)
+    return { ready: false, reason: 'Belum ada catatan. Mulai catat beberapa hari, skornya muncul otomatis.' };
   const first = Math.min(...tx.map((t) => new Date(t.date).getTime()).filter(Number.isFinite));
   if (!Number.isFinite(first) || today.getTime() - first < 14 * DAY) {
     return { ready: false, reason: 'Catat paling tidak 2 minggu dulu supaya skornya akurat.' };
@@ -68,8 +75,14 @@ export function computeHealthScore(input: {
       label: 'Menabung',
       weight: 25,
       score: clamp((rate / 0.2) * 100),
-      detail: rate >= 0 ? `Sisa ${pct(rate)} dari pemasukan per bulan` : `Pengeluaran lebih besar ${pct(-rate)} dari pemasukan`,
-      tip: rate < 0 ? 'Pengeluaran melebihi pemasukan — mulai dari kategori pengeluaran terbesar.' : 'Coba sisihkan 10–20% pemasukan di awal bulan, sebelum belanja.',
+      detail:
+        rate >= 0
+          ? `Sisa ${pct(rate)} dari pemasukan per bulan`
+          : `Pengeluaran lebih besar ${pct(-rate)} dari pemasukan`,
+      tip:
+        rate < 0
+          ? 'Pengeluaran melebihi pemasukan — mulai dari kategori pengeluaran terbesar.'
+          : 'Coba sisihkan 10–20% pemasukan di awal bulan, sebelum belanja.',
     });
   }
 
@@ -86,10 +99,14 @@ export function computeHealthScore(input: {
   }
 
   const lastMonth = ym(new Date(today.getFullYear(), today.getMonth() - 1, 1));
-  const monthly = input.budgets.filter((b) => b.type === 'pengeluaran' && b.period === 'monthly' && Number(b.amount) > 0);
+  const monthly = input.budgets.filter(
+    (b) => b.type === 'pengeluaran' && b.period === 'monthly' && Number(b.amount) > 0,
+  );
   if (monthly.length > 0 && lastMonth >= firstYm) {
     const spentLast = new Map<string, number>();
-    for (const t of tx) if (isRealSpend(t) && ym(new Date(t.date)) === lastMonth) spentLast.set(t.category, (spentLast.get(t.category) ?? 0) + idr(t));
+    for (const t of tx)
+      if (isRealSpend(t) && ym(new Date(t.date)) === lastMonth)
+        spentLast.set(t.category, (spentLast.get(t.category) ?? 0) + idr(t));
     const ok = monthly.filter((b) => (spentLast.get(b.category) ?? 0) <= Number(b.amount)).length;
     parts.push({
       key: 'anggaran',
@@ -108,13 +125,18 @@ export function computeHealthScore(input: {
       label: 'Hutang',
       weight: 15,
       score: clamp((1 - Math.min(ratio / 1.5, 1)) * 100),
-      detail: input.liabilities > 0 ? `Hutang & tagihan ${rupiahShort(input.liabilities)} (${ratio >= 10 ? '>10' : ratio.toFixed(1).replace('.', ',')}× pemasukan bulanan)` : 'Tidak ada hutang tercatat',
+      detail:
+        input.liabilities > 0
+          ? `Hutang & tagihan ${rupiahShort(input.liabilities)} (${ratio >= 10 ? '>10' : ratio.toFixed(1).replace('.', ',')}× pemasukan bulanan)`
+          : 'Tidak ada hutang tercatat',
       tip: 'Lunasi hutang/tagihan kartu dengan bunga tertinggi lebih dulu.',
     });
   }
 
   const start = today.getTime() - 30 * DAY;
-  const days = new Set(tx.filter((t) => new Date(t.date).getTime() >= start).map((t) => new Date(t.date).toDateString()));
+  const days = new Set(
+    tx.filter((t) => new Date(t.date).getTime() >= start).map((t) => new Date(t.date).toDateString()),
+  );
   parts.push({
     key: 'konsisten',
     label: 'Rajin mencatat',

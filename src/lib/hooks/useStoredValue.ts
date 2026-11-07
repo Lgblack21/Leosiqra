@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from 'react';
 
 // Nilai string di localStorage yang dibaca lewat useSyncExternalStore (pola
 // sama dengan useBalanceVisibility): saat prerender statis nilainya null, di
@@ -25,7 +25,7 @@ export function useStoredValue(key: string) {
   const value = useSyncExternalStore(
     subscribe,
     () => read(key),
-    () => null
+    () => null,
   );
 
   const setValue = useCallback(
@@ -37,7 +37,7 @@ export function useStoredValue(key: string) {
       }
       listeners.forEach((listener) => listener());
     },
-    [key]
+    [key],
   );
 
   return [value, setValue] as const;

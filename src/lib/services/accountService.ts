@@ -52,7 +52,8 @@ export const parseAccountPayload = (payloadJson: unknown): AccountPayloadFields 
   if (typeof payloadJson !== 'string' || !payloadJson) return { creditLimit: 0 };
   try {
     const p = JSON.parse(payloadJson) as Record<string, unknown>;
-    const num = (v: unknown) => (v === undefined || v === null || v === '' || !Number.isFinite(Number(v)) ? undefined : Number(v));
+    const num = (v: unknown) =>
+      v === undefined || v === null || v === '' || !Number.isFinite(Number(v)) ? undefined : Number(v);
     return {
       cardColor: typeof p.cardColor === 'string' ? p.cardColor : undefined,
       cardLast4: typeof p.cardLast4 === 'string' ? p.cardLast4 : undefined,
@@ -159,10 +160,13 @@ export const accountService = {
 
   // Pindai foto depan kartu kredit → usulan bank, jaringan, 4 digit terakhir.
   async scanCard(imageBase64: string) {
-    return cloudflareApi<{ ok: boolean; bank: string | null; network: string | null; last4: string | null }>('/api/member/cards/scan', {
-      method: 'POST',
-      json: { imageBase64 },
-    });
+    return cloudflareApi<{ ok: boolean; bank: string | null; network: string | null; last4: string | null }>(
+      '/api/member/cards/scan',
+      {
+        method: 'POST',
+        json: { imageBase64 },
+      },
+    );
   },
 
   async deleteAccount(id: string) {
@@ -187,5 +191,5 @@ export const accountService = {
       json: { ids },
     });
     notifyCollectionChanged('accounts');
-  }
+  },
 };

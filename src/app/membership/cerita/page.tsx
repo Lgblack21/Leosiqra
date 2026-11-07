@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { CeritaApp } from '@/components/cerita/CeritaApp';
 

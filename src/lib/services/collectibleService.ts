@@ -1,6 +1,14 @@
 import { cloudflareApi } from '../cloudflare-api';
 import { notifyCollectionChanged } from '../cf-firestore';
-import type { Collectible, CollectibleCondition, CollectibleKind, CollectibleSet, HistoryPoint, SteamLink, TcgCard } from '@/lib/collectibles';
+import type {
+  Collectible,
+  CollectibleCondition,
+  CollectibleKind,
+  CollectibleSet,
+  HistoryPoint,
+  SteamLink,
+  TcgCard,
+} from '@/lib/collectibles';
 
 // Koleksiku — /api/member/collectibles (Worker, migrasi 0025).
 type Row = Record<string, unknown>;
@@ -32,8 +40,17 @@ const fromRow = (r: Row): Collectible => ({
 });
 
 export type CollectibleInput = Partial<{
-  kind: CollectibleKind; refId: string; name: string; variant: string | null; quantity: number; purchasePrice: number; manualValue: number | null;
-  condition: CollectibleCondition | null; grade: string; acquiredDate: string | null; note: string;
+  kind: CollectibleKind;
+  refId: string;
+  name: string;
+  variant: string | null;
+  quantity: number;
+  purchasePrice: number;
+  manualValue: number | null;
+  condition: CollectibleCondition | null;
+  grade: string;
+  acquiredDate: string | null;
+  note: string;
 }>;
 const toBody = (i: CollectibleInput) => ({
   ...(i.kind !== undefined ? { kind: i.kind } : {}),
@@ -51,25 +68,45 @@ const toBody = (i: CollectibleInput) => ({
 
 export const collectibleService = {
   async list(): Promise<{ items: Collectible[]; history: HistoryPoint[]; steam: SteamLink | null }> {
-    const res = await cloudflareApi<{ items: Row[]; history: Row[]; steam?: SteamLink | null }>('/api/member/collectibles');
+    const res = await cloudflareApi<{ items: Row[]; history: Row[]; steam?: SteamLink | null }>(
+      '/api/member/collectibles',
+    );
     return {
       steam: res.steam?.id ? { id: String(res.steam.id), syncedAt: res.steam.syncedAt ?? null } : null,
       items: (res.items ?? []).map(fromRow),
-      history: (res.history ?? []).map((h) => ({ day: String(h.day), value: Number(h.value_idr) || 0, cost: Number(h.cost_idr) || 0 })),
+      history: (res.history ?? []).map((h) => ({
+        day: String(h.day),
+        value: Number(h.value_idr) || 0,
+        cost: Number(h.cost_idr) || 0,
+      })),
     };
   },
   /** Perbarui harga kartu yang sudah lama + catat titik grafik hari ini. */
   async refresh(): Promise<number> {
-    const res = await cloudflareApi<{ updated?: number }>('/api/member/collectibles/refresh', { method: 'POST', json: {} });
+    const res = await cloudflareApi<{ updated?: number }>('/api/member/collectibles/refresh', {
+      method: 'POST',
+      json: {},
+    });
     return Number(res.updated) || 0;
   },
   async searchPokemon(q: string): Promise<TcgCard[]> {
-    const res = await cloudflareApi<{ items: TcgCard[] }>(`/api/member/collectibles/pokemon/search?q=${encodeURIComponent(q)}`);
+    const res = await cloudflareApi<{ items: TcgCard[] }>(
+      `/api/member/collectibles/pokemon/search?q=${encodeURIComponent(q)}`,
+    );
     return res.items ?? [];
   },
   /** Impor / sinkron ulang inventaris CS2 publik (tanpa profil = pakai yang tersimpan). */
-  async steamImport(profile?: string): Promise<{ total: number; added: number; updated: number; removed: number; priced: number; truncated: boolean }> {
-    const res = await cloudflareApi<{ total: number; added: number; updated: number; removed: number; priced: number; truncated: boolean }>('/api/member/collectibles/steam/import', { method: 'POST', json: profile ? { profile } : {} });
+  async steamImport(
+    profile?: string,
+  ): Promise<{ total: number; added: number; updated: number; removed: number; priced: number; truncated: boolean }> {
+    const res = await cloudflareApi<{
+      total: number;
+      added: number;
+      updated: number;
+      removed: number;
+      priced: number;
+      truncated: boolean;
+    }>('/api/member/collectibles/steam/import', { method: 'POST', json: profile ? { profile } : {} });
     notifyCollectionChanged('collectibles');
     return res;
   },
@@ -83,7 +120,10 @@ export const collectibleService = {
     return res.items ?? [];
   },
   async create(input: CollectibleInput): Promise<string> {
-    const res = await cloudflareApi<{ id: string }>('/api/member/collectibles', { method: 'POST', json: toBody(input) });
+    const res = await cloudflareApi<{ id: string }>('/api/member/collectibles', {
+      method: 'POST',
+      json: toBody(input),
+    });
     notifyCollectionChanged('collectibles');
     return res.id;
   },
@@ -99,5 +139,6 @@ export const collectibleService = {
     await cloudflareApi(`/api/member/collectibles/${id}/photo`, { method: 'PUT', json: { imageBase64 } });
     notifyCollectionChanged('collectibles');
   },
-  photoUrl: (c: Pick<Collectible, 'id' | 'updatedAt'>) => `/api/member/collectibles/${c.id}/photo?v=${encodeURIComponent(c.updatedAt)}`,
+  photoUrl: (c: Pick<Collectible, 'id' | 'updatedAt'>) =>
+    `/api/member/collectibles/${c.id}/photo?v=${encodeURIComponent(c.updatedAt)}`,
 };

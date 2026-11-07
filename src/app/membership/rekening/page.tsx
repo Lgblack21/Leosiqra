@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
@@ -59,8 +59,11 @@ const HIDE_KEY = 'leosiqra-hide-balance';
 // Warna segmen komposisi kas (urutan = urutan rekening).
 const SEG = ['#818cf8', '#2dd4bf', '#fbbf24', '#f472b6', '#38bdf8', '#a78bfa', '#a3e635', '#fb923c'];
 const short = (n: number) =>
-  Math.abs(n) >= 1e6 ? `Rp${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 2 })} jt`
-  : Math.abs(n) >= 1e3 ? `Rp${Math.round(n / 1e3)} rb` : formatIDR(n);
+  Math.abs(n) >= 1e6
+    ? `Rp${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 2 })} jt`
+    : Math.abs(n) >= 1e3
+      ? `Rp${Math.round(n / 1e3)} rb`
+      : formatIDR(n);
 const dueText = (dueDate: string) => {
   const [y, m, d] = dueDate.split('-').map(Number);
   return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(y, m - 1, d));
@@ -91,7 +94,9 @@ export default function RekeningPage() {
   useEffect(() => {
     try {
       setHidden(localStorage.getItem(HIDE_KEY) === '1');
-    } catch { /* storage diblokir: pakai bawaan */ }
+    } catch {
+      /* storage diblokir: pakai bawaan */
+    }
     exchangeRateService.getLatestRates().then(setFxRates).catch(console.error);
   }, []);
 
@@ -105,14 +110,25 @@ export default function RekeningPage() {
         .then((a) => active && setAccounts(a))
         .catch(console.error)
         .finally(() => active && setLoading(false));
-    const loadTrx = () => transactionService.getUserTransactions('session').then((t) => active && setTransactions(t)).catch(console.error);
-    const loadGoals = () => savingsGoalService.getUserSavingsGoals().then((g) => active && setGoals(g)).catch(() => active && setGoals([]));
+    const loadTrx = () =>
+      transactionService
+        .getUserTransactions('session')
+        .then((t) => active && setTransactions(t))
+        .catch(console.error);
+    const loadGoals = () =>
+      savingsGoalService
+        .getUserSavingsGoals()
+        .then((g) => active && setGoals(g))
+        .catch(() => active && setGoals([]));
     loadAccounts();
     loadTrx();
     loadGoals();
     const unsubs = [
       subscribeToCollectionChanges('accounts', loadAccounts),
-      subscribeToCollectionChanges('transactions', () => { loadTrx(); loadAccounts(); }),
+      subscribeToCollectionChanges('transactions', () => {
+        loadTrx();
+        loadAccounts();
+      }),
       subscribeToCollectionChanges('savings', loadGoals),
     ];
     return () => {
@@ -123,7 +139,11 @@ export default function RekeningPage() {
 
   const toggleHidden = () => {
     setHidden((h) => {
-      try { localStorage.setItem(HIDE_KEY, h ? '0' : '1'); } catch { /* abaikan */ }
+      try {
+        localStorage.setItem(HIDE_KEY, h ? '0' : '1');
+      } catch {
+        /* abaikan */
+      }
       return !h;
     });
   };
@@ -155,7 +175,8 @@ export default function RekeningPage() {
     }
   };
 
-  const toIDR = (amount: number, currency: string | undefined) => exchangeRateService.convert(amount, currency || 'IDR', 'IDR', fxRates);
+  const toIDR = (amount: number, currency: string | undefined) =>
+    exchangeRateService.convert(amount, currency || 'IDR', 'IDR', fxRates);
   const sorted = useMemo(() => [...accounts].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)), [accounts]);
   const cashAccounts = sorted.filter((a) => !isCreditAccountType(a.type));
   const cards = sorted.filter((a) => isCreditAccountType(a.type));
@@ -172,12 +193,12 @@ export default function RekeningPage() {
         usage: computeCreditUsage(acc, transactions),
         cycle: getCardCycle(acc, transactions),
       })),
-    [cards, transactions]
+    [cards, transactions],
   );
   const cardsUsedIdr = cardInfo.reduce((s, c) => s + toIDR(c.usage.used, c.acc.currency), 0);
   const nearest = [...cardInfo]
     .filter((c) => c.cycle && c.cycle.amountDue > 0)
-    .sort((a, b) => (a.cycle!.daysUntilDue) - (b.cycle!.daysUntilDue))[0];
+    .sort((a, b) => a.cycle!.daysUntilDue - b.cycle!.daysUntilDue)[0];
 
   const goalsWithTarget = goals.filter((g) => g.targetAmount && g.targetAmount > 0);
 
@@ -196,10 +217,16 @@ export default function RekeningPage() {
       accountService.getUserAccounts('session').then(setAccounts).catch(console.error);
     });
   };
-  const openCreate = () => { setEditingAccount(null); setIsModalOpen(true); };
+  const openCreate = () => {
+    setEditingAccount(null);
+    setIsModalOpen(true);
+  };
   const openEdit = (a: Account) => {
     if (isCreditAccountType(a.type)) setCardForm(a);
-    else { setEditingAccount(a); setIsModalOpen(true); }
+    else {
+      setEditingAccount(a);
+      setIsModalOpen(true);
+    }
   };
   const openHub = (id: string | null | undefined) => setHub((h) => ({ id: id ?? null, n: (h?.n ?? 0) + 1 }));
 
@@ -216,7 +243,9 @@ export default function RekeningPage() {
           <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[30px]">Rekening</h1>
           <p className="text-[13px] text-slate-500">
             {cashAccounts.length} rekening{cards.length > 0 && ` · ${cards.length} kartu kredit`}
-            {Object.keys(fxRates).length > 0 && accounts.some((a) => a.currency && a.currency !== 'IDR') && ' · dikonversi ke IDR'}
+            {Object.keys(fxRates).length > 0 &&
+              accounts.some((a) => a.currency && a.currency !== 'IDR') &&
+              ' · dikonversi ke IDR'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -244,12 +273,26 @@ export default function RekeningPage() {
         <Skeleton className="h-44 rounded-[24px]" />
       ) : (
         <section className="web-keep relative overflow-hidden rounded-[24px] bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 p-5 text-white md:p-6">
-          <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-indigo-500/20 blur-2xl" />
-          <span aria-hidden className="pointer-events-none absolute -bottom-24 left-1/3 h-48 w-48 rounded-full bg-teal-400/10 blur-2xl" />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-indigo-500/20 blur-2xl"
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -bottom-24 left-1/3 h-48 w-48 rounded-full bg-teal-400/10 blur-2xl"
+          />
           <div className="relative flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[12px] font-semibold uppercase tracking-wide text-white/60">{cards.length > 0 ? 'Saldo bersih' : 'Total saldo'}</p>
-              <p className={cn('mt-0.5 truncate text-[30px] font-extrabold leading-tight tracking-tight tabular-nums md:text-[34px]', totalSaldo < 0 && 'text-rose-300')} title={formatIDR(totalSaldo)}>
+              <p className="text-[12px] font-semibold uppercase tracking-wide text-white/60">
+                {cards.length > 0 ? 'Saldo bersih' : 'Total saldo'}
+              </p>
+              <p
+                className={cn(
+                  'mt-0.5 truncate text-[30px] font-extrabold leading-tight tracking-tight tabular-nums md:text-[34px]',
+                  totalSaldo < 0 && 'text-rose-300',
+                )}
+                title={formatIDR(totalSaldo)}
+              >
                 {hidden ? 'Rp ••••••' : formatIDR(totalSaldo)}
               </p>
               {cards.length > 0 && (
@@ -258,7 +301,12 @@ export default function RekeningPage() {
                 </p>
               )}
             </div>
-            <button type="button" onClick={toggleHidden} aria-label={hidden ? 'Tampilkan saldo' : 'Sembunyikan saldo'} className="shrink-0 rounded-full bg-white/10 p-2 text-white/80 hover:bg-white/15">
+            <button
+              type="button"
+              onClick={toggleHidden}
+              aria-label={hidden ? 'Tampilkan saldo' : 'Sembunyikan saldo'}
+              className="shrink-0 rounded-full bg-white/10 p-2 text-white/80 hover:bg-white/15"
+            >
               {hidden ? <EyeOff size={17} /> : <Eye size={17} />}
             </button>
           </div>
@@ -266,29 +314,63 @@ export default function RekeningPage() {
           {positiveTotal > 0 && (
             <div className="relative mt-4">
               <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-full bg-white/10">
-                {cashAccounts.map((a, i) => share(i) > 0 && (
-                  <span key={a.id} className="h-full first:rounded-l-full last:rounded-r-full" style={{ width: `${share(i) * 100}%`, background: SEG[i % SEG.length] }} title={`${a.name} ${pctText(share(i))}`} />
-                ))}
+                {cashAccounts.map(
+                  (a, i) =>
+                    share(i) > 0 && (
+                      <span
+                        key={a.id}
+                        className="h-full first:rounded-l-full last:rounded-r-full"
+                        style={{ width: `${share(i) * 100}%`, background: SEG[i % SEG.length] }}
+                        title={`${a.name} ${pctText(share(i))}`}
+                      />
+                    ),
+                )}
               </div>
               <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1">
-                {cashAccounts.map((a, i) => share(i) > 0 && (
-                  <button key={a.id} type="button" onClick={() => setDetailId(a.id ?? null)} className="flex items-center gap-1.5 text-[12px] text-white/75 hover:text-white">
-                    <span className="h-2 w-2 rounded-full" style={{ background: SEG[i % SEG.length] }} />
-                    {a.name}{!hidden && <span className="font-semibold text-white tabular-nums">{pctText(share(i))}</span>}
-                  </button>
-                ))}
+                {cashAccounts.map(
+                  (a, i) =>
+                    share(i) > 0 && (
+                      <button
+                        key={a.id}
+                        type="button"
+                        onClick={() => setDetailId(a.id ?? null)}
+                        className="flex items-center gap-1.5 text-[12px] text-white/75 hover:text-white"
+                      >
+                        <span className="h-2 w-2 rounded-full" style={{ background: SEG[i % SEG.length] }} />
+                        {a.name}
+                        {!hidden && <span className="font-semibold text-white tabular-nums">{pctText(share(i))}</span>}
+                      </button>
+                    ),
+                )}
               </div>
             </div>
           )}
 
           {nearest && (
-            <button type="button" onClick={() => openHub(nearest.acc.id)} className="relative mt-4 flex w-full items-center gap-2.5 rounded-2xl bg-white/10 px-3 py-2 text-left hover:bg-white/15">
+            <button
+              type="button"
+              onClick={() => openHub(nearest.acc.id)}
+              className="relative mt-4 flex w-full items-center gap-2.5 rounded-2xl bg-white/10 px-3 py-2 text-left hover:bg-white/15"
+            >
               <CreditCard size={16} className="shrink-0 text-white/70" />
               <span className="min-w-0 flex-1 truncate text-[13px] text-white/85">
-                <span className="font-semibold text-white">{nearest.acc.name}</span> · {hidden ? '••••' : short(nearest.cycle!.amountDue)} {nearest.cycle!.overdue ? 'lewat jatuh tempo' : 'jatuh tempo'} {dueText(nearest.cycle!.dueDate)}
+                <span className="font-semibold text-white">{nearest.acc.name}</span> ·{' '}
+                {hidden ? '••••' : short(nearest.cycle!.amountDue)}{' '}
+                {nearest.cycle!.overdue ? 'lewat jatuh tempo' : 'jatuh tempo'} {dueText(nearest.cycle!.dueDate)}
               </span>
-              <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold', nearest.cycle!.overdue || nearest.cycle!.daysUntilDue <= 5 ? 'bg-rose-500 text-white' : 'bg-white/15 text-white')}>
-                {nearest.cycle!.overdue ? `lewat ${Math.abs(nearest.cycle!.daysUntilDue)} hr` : nearest.cycle!.daysUntilDue === 0 ? 'hari ini' : `${nearest.cycle!.daysUntilDue} hari`}
+              <span
+                className={cn(
+                  'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold',
+                  nearest.cycle!.overdue || nearest.cycle!.daysUntilDue <= 5
+                    ? 'bg-rose-500 text-white'
+                    : 'bg-white/15 text-white',
+                )}
+              >
+                {nearest.cycle!.overdue
+                  ? `lewat ${Math.abs(nearest.cycle!.daysUntilDue)} hr`
+                  : nearest.cycle!.daysUntilDue === 0
+                    ? 'hari ini'
+                    : `${nearest.cycle!.daysUntilDue} hari`}
               </span>
             </button>
           )}
@@ -299,18 +381,34 @@ export default function RekeningPage() {
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Rekeningmu</h2>
           {cashAccounts.length > 1 && (
-            <button type="button" onClick={() => setReordering((r) => !r)} className={cn('flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-bold', reordering ? 'bg-slate-900 text-white' : 'text-indigo-600 hover:bg-indigo-50')}>
+            <button
+              type="button"
+              onClick={() => setReordering((r) => !r)}
+              className={cn(
+                'flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-bold',
+                reordering ? 'bg-slate-900 text-white' : 'text-indigo-600 hover:bg-indigo-50',
+              )}
+            >
               <ArrowUpDown size={13} /> {reordering ? 'Selesai' : 'Atur urutan'}
             </button>
           )}
         </div>
         {loading ? (
-          <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-14 rounded-2xl" />)}</div>
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-14 rounded-2xl" />
+            ))}
+          </div>
         ) : cashAccounts.length === 0 ? (
           <div className="rounded-[20px] bg-white p-6 text-center ring-1 ring-slate-100">
             <p className="text-[15px] font-semibold text-slate-900">Belum ada rekening</p>
-            <p className="mt-1 text-[13px] text-slate-500">Tambahkan bank, e-wallet, atau uang tunai pertamamu untuk mulai mencatat.</p>
-            <button onClick={openCreate} className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2 text-[13px] font-bold text-white">
+            <p className="mt-1 text-[13px] text-slate-500">
+              Tambahkan bank, e-wallet, atau uang tunai pertamamu untuk mulai mencatat.
+            </p>
+            <button
+              onClick={openCreate}
+              className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2 text-[13px] font-bold text-white"
+            >
               <Plus size={15} /> Tambah rekening
             </button>
           </div>
@@ -321,26 +419,54 @@ export default function RekeningPage() {
               const bal = acc.balance || 0;
               const body = (
                 <>
-                  <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl text-[18px]', v.tile)}>
+                  <span
+                    className={cn(
+                      'flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl text-[18px]',
+                      v.tile,
+                    )}
+                  >
                     <LogoImage
                       src={acc.logoUrl}
                       alt={acc.name}
                       fallbackText={acc.name.substring(0, 3).toUpperCase()}
-                      fallbackIcon={<span aria-hidden className={cn('flex h-full w-full items-center justify-center text-[18px]', v.tile)}>{v.emoji}</span>}
+                      fallbackIcon={
+                        <span
+                          aria-hidden
+                          className={cn('flex h-full w-full items-center justify-center text-[18px]', v.tile)}
+                        >
+                          {v.emoji}
+                        </span>
+                      }
                       className="h-full w-full object-cover"
                     />
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[14px] font-semibold text-slate-900">{acc.name}</p>
                     <p className="flex items-center gap-1.5 truncate text-[12px] text-slate-500">
-                      {share(i) > 0 && <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: SEG[i % SEG.length] }} />}
-                      {TYPE_LABEL[acc.type] ?? acc.type}{acc.currency && acc.currency !== 'IDR' ? ` · ${acc.currency}` : ''}
+                      {share(i) > 0 && (
+                        <span
+                          aria-hidden
+                          className="h-1.5 w-1.5 shrink-0 rounded-full"
+                          style={{ background: SEG[i % SEG.length] }}
+                        />
+                      )}
+                      {TYPE_LABEL[acc.type] ?? acc.type}
+                      {acc.currency && acc.currency !== 'IDR' ? ` · ${acc.currency}` : ''}
                       {share(i) > 0 && !hidden && ` · ${pctText(share(i))} kas`}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className={cn('whitespace-nowrap text-[14px] font-bold tabular-nums', bal < 0 ? 'text-rose-600' : 'text-slate-900')}>{money(bal, acc.currency)}</p>
-                    {acc.currency && acc.currency !== 'IDR' && !hidden && <p className="text-[11px] text-slate-400 tabular-nums">≈ {formatIDR(toIDR(bal, acc.currency))}</p>}
+                    <p
+                      className={cn(
+                        'whitespace-nowrap text-[14px] font-bold tabular-nums',
+                        bal < 0 ? 'text-rose-600' : 'text-slate-900',
+                      )}
+                    >
+                      {money(bal, acc.currency)}
+                    </p>
+                    {acc.currency && acc.currency !== 'IDR' && !hidden && (
+                      <p className="text-[11px] text-slate-400 tabular-nums">≈ {formatIDR(toIDR(bal, acc.currency))}</p>
+                    )}
                   </div>
                 </>
               );
@@ -350,12 +476,32 @@ export default function RekeningPage() {
                     <div className="flex items-center gap-3 px-4 py-2.5">
                       {body}
                       <div className="flex flex-col">
-                        <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Naikkan ${acc.name}`} className="rounded-lg p-0.5 text-slate-500 hover:bg-slate-100 disabled:opacity-25"><ChevronUp size={17} /></button>
-                        <button type="button" onClick={() => move(i, 1)} disabled={i === cashAccounts.length - 1} aria-label={`Turunkan ${acc.name}`} className="rounded-lg p-0.5 text-slate-500 hover:bg-slate-100 disabled:opacity-25"><ChevronDown size={17} /></button>
+                        <button
+                          type="button"
+                          onClick={() => move(i, -1)}
+                          disabled={i === 0}
+                          aria-label={`Naikkan ${acc.name}`}
+                          className="rounded-lg p-0.5 text-slate-500 hover:bg-slate-100 disabled:opacity-25"
+                        >
+                          <ChevronUp size={17} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => move(i, 1)}
+                          disabled={i === cashAccounts.length - 1}
+                          aria-label={`Turunkan ${acc.name}`}
+                          className="rounded-lg p-0.5 text-slate-500 hover:bg-slate-100 disabled:opacity-25"
+                        >
+                          <ChevronDown size={17} />
+                        </button>
                       </div>
                     </div>
                   ) : (
-                    <button type="button" onClick={() => setDetailId(acc.id ?? null)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50">
+                    <button
+                      type="button"
+                      onClick={() => setDetailId(acc.id ?? null)}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50"
+                    >
                       {body}
                       <ChevronRight size={16} className="shrink-0 text-slate-300" />
                     </button>
@@ -372,7 +518,11 @@ export default function RekeningPage() {
         <section>
           <div className="mb-2 flex items-center justify-between gap-3">
             <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Kartu kredit</h2>
-            <button type="button" onClick={() => openHub(null)} className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-bold text-indigo-600 hover:bg-indigo-50">
+            <button
+              type="button"
+              onClick={() => openHub(null)}
+              className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-bold text-indigo-600 hover:bg-indigo-50"
+            >
               Kelola <ChevronRight size={14} />
             </button>
           </div>
@@ -383,25 +533,56 @@ export default function RekeningPage() {
               const pct = usage.limit > 0 ? Math.min(100, (usage.used / usage.limit) * 100) : 0;
               return (
                 <li key={acc.id}>
-                  <button type="button" onClick={() => openHub(acc.id)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50">
-                    <span className={cn('relative flex h-[30px] w-[46px] shrink-0 flex-col justify-end overflow-hidden rounded-[7px] p-1 shadow-sm', getCardGradientClass(acc.cardColor, acc.type))}>
+                  <button
+                    type="button"
+                    onClick={() => openHub(acc.id)}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50"
+                  >
+                    <span
+                      className={cn(
+                        'relative flex h-[30px] w-[46px] shrink-0 flex-col justify-end overflow-hidden rounded-[7px] p-1 shadow-sm',
+                        getCardGradientClass(acc.cardColor, acc.type),
+                      )}
+                    >
                       <span aria-hidden className="absolute -right-2 -top-3 h-6 w-6 rounded-full bg-white/20" />
-                      <span aria-hidden className="absolute left-1 top-1 h-[7px] w-[9px] rounded-[2px] bg-amber-200/90" />
-                      <span className="relative text-right font-mono text-[8px] leading-none tracking-wider text-white/90">{acc.cardLast4 || '••••'}</span>
+                      <span
+                        aria-hidden
+                        className="absolute left-1 top-1 h-[7px] w-[9px] rounded-[2px] bg-amber-200/90"
+                      />
+                      <span className="relative text-right font-mono text-[8px] leading-none tracking-wider text-white/90">
+                        {acc.cardLast4 || '••••'}
+                      </span>
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[14px] font-semibold text-slate-900">{acc.name}</p>
-                      <p className={cn('truncate text-[12px]', urgent ? 'font-semibold text-rose-600' : 'text-slate-500')}>
+                      <p
+                        className={cn(
+                          'truncate text-[12px]',
+                          urgent ? 'font-semibold text-rose-600' : 'text-slate-500',
+                        )}
+                      >
                         {due
-                          ? cycle.overdue ? `Lewat jatuh tempo ${dueText(cycle.dueDate)}` : `Jatuh tempo ${dueText(cycle.dueDate)} · ${cycle.daysUntilDue === 0 ? 'hari ini' : `${cycle.daysUntilDue} hari`}`
-                          : usage.used > 0 ? 'Belum ditagih' : 'Lunas'}
+                          ? cycle.overdue
+                            ? `Lewat jatuh tempo ${dueText(cycle.dueDate)}`
+                            : `Jatuh tempo ${dueText(cycle.dueDate)} · ${cycle.daysUntilDue === 0 ? 'hari ini' : `${cycle.daysUntilDue} hari`}`
+                          : usage.used > 0
+                            ? 'Belum ditagih'
+                            : 'Lunas'}
                       </p>
                     </div>
                     <div className="w-24 shrink-0 text-right">
-                      <p className="whitespace-nowrap text-[14px] font-bold text-slate-900 tabular-nums">{hidden ? '••••' : short(due ? cycle.amountDue : usage.used)}</p>
+                      <p className="whitespace-nowrap text-[14px] font-bold text-slate-900 tabular-nums">
+                        {hidden ? '••••' : short(due ? cycle.amountDue : usage.used)}
+                      </p>
                       {usage.limit > 0 && usage.used > 0 && (
-                        <div className="mt-1 ml-auto h-1 w-16 overflow-hidden rounded-full bg-slate-100" title={`Terpakai ${Math.round(pct)}% dari limit`}>
-                          <div className={cn('h-full rounded-full', pct >= 90 ? 'bg-rose-500' : 'bg-indigo-500')} style={{ width: `${Math.max(3, pct)}%` }} />
+                        <div
+                          className="mt-1 ml-auto h-1 w-16 overflow-hidden rounded-full bg-slate-100"
+                          title={`Terpakai ${Math.round(pct)}% dari limit`}
+                        >
+                          <div
+                            className={cn('h-full rounded-full', pct >= 90 ? 'bg-rose-500' : 'bg-indigo-500')}
+                            style={{ width: `${Math.max(3, pct)}%` }}
+                          />
                         </div>
                       )}
                     </div>
@@ -411,7 +592,10 @@ export default function RekeningPage() {
               );
             })}
           </ul>
-          <p className="mt-1.5 px-1 text-[12px] text-slate-500">Total tagihan <span className="font-bold text-slate-800 tabular-nums">{hidden ? '••••' : formatIDR(cardsUsedIdr)}</span></p>
+          <p className="mt-1.5 px-1 text-[12px] text-slate-500">
+            Total tagihan{' '}
+            <span className="font-bold text-slate-800 tabular-nums">{hidden ? '••••' : formatIDR(cardsUsedIdr)}</span>
+          </p>
         </section>
       )}
 
@@ -419,25 +603,47 @@ export default function RekeningPage() {
         <section>
           <div className="mb-2 flex items-baseline justify-between">
             <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Target</h2>
-            <Link href="/membership/kekayaan#tabungan" className="text-[12px] font-bold text-indigo-600 hover:underline">Lihat semua</Link>
+            <Link
+              href="/membership/kekayaan#tabungan"
+              className="text-[12px] font-bold text-indigo-600 hover:underline"
+            >
+              Lihat semua
+            </Link>
           </div>
           <ul className="grid grid-cols-1 gap-2 md:grid-cols-2">
             {goalsWithTarget.slice(0, 6).map((g, i) => {
-              const pct = Math.max(0, Math.min(100, g.progressPercent ?? (g.currentTotal / (g.targetAmount || 1)) * 100));
+              const pct = Math.max(
+                0,
+                Math.min(100, g.progressPercent ?? (g.currentTotal / (g.targetAmount || 1)) * 100),
+              );
               const color = SEG[i % SEG.length];
               return (
                 <li key={g.id}>
-                  <Link href="/membership/kekayaan#tabungan" className="flex items-center gap-3 rounded-[18px] bg-white px-3.5 py-2.5 ring-1 ring-slate-100 hover:bg-slate-50">
+                  <Link
+                    href="/membership/kekayaan#tabungan"
+                    className="flex items-center gap-3 rounded-[18px] bg-white px-3.5 py-2.5 ring-1 ring-slate-100 hover:bg-slate-50"
+                  >
                     <span className="relative flex h-11 w-11 shrink-0 items-center justify-center">
                       <svg viewBox="0 0 44 44" className="absolute inset-0 -rotate-90" aria-hidden>
                         <circle cx="22" cy="22" r="19" fill="none" stroke="#f1f5f9" strokeWidth="4" />
-                        <circle cx="22" cy="22" r="19" fill="none" stroke={color} strokeWidth="4" strokeLinecap="round" strokeDasharray={`${(pct / 100) * 119.4} 119.4`} />
+                        <circle
+                          cx="22"
+                          cy="22"
+                          r="19"
+                          fill="none"
+                          stroke={color}
+                          strokeWidth="4"
+                          strokeLinecap="round"
+                          strokeDasharray={`${(pct / 100) * 119.4} 119.4`}
+                        />
                       </svg>
                       <span className="text-[11px] font-bold tabular-nums text-slate-700">{Math.round(pct)}%</span>
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[14px] font-semibold text-slate-900">{g.name}</p>
-                      <p className="text-[12px] text-slate-500 tabular-nums">{hidden ? '••••' : `${short(g.currentTotal)} dari ${short(g.targetAmount || 0)}`}</p>
+                      <p className="text-[12px] text-slate-500 tabular-nums">
+                        {hidden ? '••••' : `${short(g.currentTotal)} dari ${short(g.targetAmount || 0)}`}
+                      </p>
                     </div>
                     <ChevronRight size={16} className="shrink-0 text-slate-300" />
                   </Link>
@@ -449,7 +655,8 @@ export default function RekeningPage() {
       )}
 
       <p className="flex items-center justify-center gap-1.5 px-2 text-center text-[11px] text-slate-400">
-        <ShieldCheck size={13} className="shrink-0" /> Leosiqra tidak pernah meminta akses ke bank — saldo murni dari catatanmu sendiri.
+        <ShieldCheck size={13} className="shrink-0" /> Leosiqra tidak pernah meminta akses ke bank — saldo murni dari
+        catatanmu sendiri.
       </p>
 
       {hub && (
@@ -462,8 +669,14 @@ export default function RekeningPage() {
           totalIdr={cardsUsedIdr}
           initialId={hub.id}
           onClose={() => setHub(undefined)}
-          onEdit={(a) => { setHub(undefined); setCardForm(a); }}
-          onAdd={() => { setHub(undefined); setCardForm(null); }}
+          onEdit={(a) => {
+            setHub(undefined);
+            setCardForm(a);
+          }}
+          onAdd={() => {
+            setHub(undefined);
+            setCardForm(null);
+          }}
         />
       )}
 
@@ -473,7 +686,10 @@ export default function RekeningPage() {
         hidden={hidden}
         deleting={deletingId === detailId}
         onClose={() => setDetailId(null)}
-        onEdit={(a) => { setDetailId(null); openEdit(a); }}
+        onEdit={(a) => {
+          setDetailId(null);
+          openEdit(a);
+        }}
         onDelete={(a) => void handleDelete(a)}
       />
 
@@ -490,9 +706,15 @@ export default function RekeningPage() {
         <AccountModal
           userId={uid}
           isOpen={isModalOpen}
-          onClose={() => { setIsModalOpen(false); setEditingAccount(null); }}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingAccount(null);
+          }}
           initialData={editingAccount}
-          onCreditCard={() => { setIsModalOpen(false); setCardForm(null); }}
+          onCreditCard={() => {
+            setIsModalOpen(false);
+            setCardForm(null);
+          }}
           existingTypes={Array.from(new Set(accounts.map((a) => a.type).filter(Boolean)))}
         />
       )}

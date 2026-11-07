@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { Users } from 'lucide-react';
 import { SharedWalletPanel } from '@/components/shared-wallet/SharedWalletPanel';
@@ -15,8 +15,8 @@ export default function DompetBersamaPage() {
           <div>
             <h1 className="text-2xl font-black md:text-3xl">Dompet Bersama</h1>
             <p className="mt-1.5 max-w-lg text-sm leading-relaxed text-indigo-100">
-              Kelola uang keluarga, kas kos, atau patungan bareng. Buku kas terpisah dari keuangan pribadimu — anggota hanya
-              melihat isi dompet bersama, tidak pernah rekening atau transaksi pribadimu.
+              Kelola uang keluarga, kas kos, atau patungan bareng. Buku kas terpisah dari keuangan pribadimu — anggota
+              hanya melihat isi dompet bersama, tidak pernah rekening atau transaksi pribadimu.
             </p>
           </div>
         </div>

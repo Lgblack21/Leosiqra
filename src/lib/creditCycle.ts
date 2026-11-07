@@ -80,7 +80,7 @@ export const computeCardCycle = (
   usedNow: number,
   flows: CardFlow[],
   settings: CardCycleSettings | undefined,
-  today: string
+  today: string,
 ): CardCycle | null => {
   const statementDay = clampCycleDay(settings?.statementDay);
   const dueDay = clampCycleDay(settings?.dueDay);

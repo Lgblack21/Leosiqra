@@ -1,42 +1,55 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
-import { Download, X } from "lucide-react";
-import { cloudflareApi } from "@/lib/cloudflare-api";
-import { useInstallPrompt, detectPlatform, isNativeApp, isStandaloneDisplay } from "@/lib/pwaInstall";
-import { cn } from "@/lib/utils";
+import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Download, X } from 'lucide-react';
+import { cloudflareApi } from '@/lib/cloudflare-api';
+import { useInstallPrompt, detectPlatform, isNativeApp, isStandaloneDisplay } from '@/lib/pwaInstall';
+import { cn } from '@/lib/utils';
 
 // Disembunyikan kalau aplikasi sudah terpasang (standalone, getInstalledRelatedApps, atau dibuka akun ini ≤14 hari);
 // X = sembunyi 30 hari di perangkat ini. Hanya di halaman beranda, paling banyak sekali per sesi browser.
-type Variant = "leosiqra" | "input-cepat";
+type Variant = 'leosiqra' | 'input-cepat';
 
 const FRESH_MS = 14 * 24 * 60 * 60 * 1000;
 const SNOOZE_MS = 30 * 24 * 60 * 60 * 1000;
 const dismissKey = (v: Variant) => `leosiqra:install-ad-dismissed:${v}`;
 
-const PUBLIC_PREFIXES = ["/panduan", "/catatan-keuangan", "/hubungi-kami", "/privacy", "/terms"];
+const PUBLIC_PREFIXES = ['/panduan', '/catatan-keuangan', '/hubungi-kami', '/privacy', '/terms'];
 
-type Area = "public" | "member" | "app";
-const MEMBER_HOMES = new Set(["/membership", "/membership/dashboard", "/app"]);
+type Area = 'public' | 'member' | 'app';
+const MEMBER_HOMES = new Set(['/membership', '/membership/dashboard', '/app']);
 function areaFor(rawPath: string): Area | null {
-  const path = rawPath.length > 1 ? rawPath.replace(/\/+$/, "") : rawPath;
-  if (path === "/") return "public";
-  if (path.startsWith("/panduan/shortcut-ios")) return null;
-  if (PUBLIC_PREFIXES.some((p) => path === p || path.startsWith(p + "/") || (p === "/catatan-keuangan" && path.startsWith(p)))) return "public";
-  if (MEMBER_HOMES.has(path)) return path === "/app" ? "app" : "member";
+  const path = rawPath.length > 1 ? rawPath.replace(/\/+$/, '') : rawPath;
+  if (path === '/') return 'public';
+  if (path.startsWith('/panduan/shortcut-ios')) return null;
+  if (
+    PUBLIC_PREFIXES.some(
+      (p) => path === p || path.startsWith(p + '/') || (p === '/catatan-keuangan' && path.startsWith(p)),
+    )
+  )
+    return 'public';
+  if (MEMBER_HOMES.has(path)) return path === '/app' ? 'app' : 'member';
   return null; // /install, /input-cepat, /auth, /admin, dll.
 }
 
-const SESSION_KEY = "leosiqra:install-ad-shown";
+const SESSION_KEY = 'leosiqra:install-ad-shown';
 const shownThisSession = () => {
-  try { return sessionStorage.getItem(SESSION_KEY) === "1"; } catch { return false; }
+  try {
+    return sessionStorage.getItem(SESSION_KEY) === '1';
+  } catch {
+    return false;
+  }
 };
 const markShown = () => {
-  try { sessionStorage.setItem(SESSION_KEY, "1"); } catch { /* abaikan */ }
+  try {
+    sessionStorage.setItem(SESSION_KEY, '1');
+  } catch {
+    /* abaikan */
+  }
 };
 
 const recent = (iso?: string) => Boolean(iso && Date.now() - Date.parse(iso) < FRESH_MS);
@@ -51,9 +64,9 @@ const readDismissed = (v: Variant) => {
 
 const tourRunning = (area: Area) => {
   try {
-    if (localStorage.getItem("leosiqra_onboarding_tour") === "1") return true;
+    if (localStorage.getItem('leosiqra_onboarding_tour') === '1') return true;
     // Tur aplikasi HP muncul sendiri di kunjungan pertama — jangan bertumpuk.
-    if (area === "app" && localStorage.getItem("leosiqra_app_tour_done") !== "1") return true;
+    if (area === 'app' && localStorage.getItem('leosiqra_app_tour_done') !== '1') return true;
   } catch {
     /* abaikan */
   }
@@ -63,12 +76,16 @@ const tourRunning = (area: Area) => {
 type RelatedApp = { platform: string; url?: string; id?: string };
 
 export function InstallBanner() {
-  const pathname = usePathname() || "/";
+  const pathname = usePathname() || '/';
   const router = useRouter();
   const area = areaFor(pathname);
   const { state: promptState, promptInstall } = useInstallPrompt();
   const [variant, setVariant] = useState<Variant | null>(null);
-  const [signals, setSignals] = useState<{ related: boolean; opened: { leosiqra?: string; inputCepat?: string }; ready: boolean }>({
+  const [signals, setSignals] = useState<{
+    related: boolean;
+    opened: { leosiqra?: string; inputCepat?: string };
+    ready: boolean;
+  }>({
     related: false,
     opened: {},
     ready: false,
@@ -82,16 +99,22 @@ export function InstallBanner() {
     let alive = true;
     const nav = navigator as Navigator & { getInstalledRelatedApps?: () => Promise<RelatedApp[]> };
     const related = nav.getInstalledRelatedApps
-      ? nav.getInstalledRelatedApps().then((apps) => apps.some((a) => a.platform === "webapp")).catch(() => false)
+      ? nav
+          .getInstalledRelatedApps()
+          .then((apps) => apps.some((a) => a.platform === 'webapp'))
+          .catch(() => false)
       : Promise.resolve(false);
-    const opened = cloudflareApi<{ user?: { appsOpened?: { leosiqra?: string; inputCepat?: string } } | null }>("/api/auth/me")
+    const opened = cloudflareApi<{ user?: { appsOpened?: { leosiqra?: string; inputCepat?: string } } | null }>(
+      '/api/auth/me',
+    )
       .then((r) => r.user?.appsOpened ?? {})
       .catch(() => ({}));
     // Beri waktu sebentar supaya event install dari Chrome sempat masuk, dan
     // iklan tidak langsung menutupi halaman begitu dibuka.
     const wait = new Promise((r) => setTimeout(r, 2500));
     Promise.all([related, opened, wait]).then(([rel, op]) => {
-      if (alive) setSignals({ related: rel as boolean, opened: op as { leosiqra?: string; inputCepat?: string }, ready: true });
+      if (alive)
+        setSignals({ related: rel as boolean, opened: op as { leosiqra?: string; inputCepat?: string }, ready: true });
     });
     return () => {
       alive = false;
@@ -103,12 +126,15 @@ export function InstallBanner() {
     let leosiqraInstalled = signals.related || recent(signals.opened.leosiqra);
     // Chrome hanya menawarkan install kalau aplikasinya BELUM terpasang di
     // perangkat ini — sinyal paling pasti, termasuk setelah aplikasinya dihapus.
-    if (promptState === "available") leosiqraInstalled = false;
-    if (promptState === "installed") leosiqraInstalled = true;
+    if (promptState === 'available') leosiqraInstalled = false;
+    if (promptState === 'installed') leosiqraInstalled = true;
     const inputCepatInstalled = recent(signals.opened.inputCepat);
-    let next: Variant | null = leosiqraInstalled ? (inputCepatInstalled ? null : "input-cepat") : "leosiqra";
+    let next: Variant | null = leosiqraInstalled ? (inputCepatInstalled ? null : 'input-cepat') : 'leosiqra';
     if (next && (readDismissed(next) || tourRunning(area) || (!shownHere.current && shownThisSession()))) next = null;
-    if (next && !shownHere.current) { shownHere.current = true; markShown(); }
+    if (next && !shownHere.current) {
+      shownHere.current = true;
+      markShown();
+    }
     // Nilai-nilai ini bergantung pada localStorage & API browser — hanya bisa
     // dihitung setelah hydrate.
     // eslint-disable-next-line react-hooks/set-state-in-effect -- keputusan tampil berdasarkan sinyal browser
@@ -128,29 +154,34 @@ export function InstallBanner() {
 
   const install = async () => {
     const result = await promptInstall();
-    if (result === "accepted") setClosed(true);
-    else if (result === "unavailable") router.push("/install");
+    if (result === 'accepted') setClosed(true);
+    else if (result === 'unavailable') router.push('/install');
   };
 
   const show = Boolean(area && variant && !closed);
-  const platform = typeof navigator !== "undefined" ? detectPlatform() : "desktop";
-  const isTablet = platform !== "desktop" && typeof screen !== "undefined" && Math.min(screen.width, screen.height) >= 600;
-  const isPhone = platform !== "desktop" && !isTablet;
+  const platform = typeof navigator !== 'undefined' ? detectPlatform() : 'desktop';
+  const isTablet =
+    platform !== 'desktop' && typeof screen !== 'undefined' && Math.min(screen.width, screen.height) >= 600;
+  const isPhone = platform !== 'desktop' && !isTablet;
   const ad =
-    variant === "input-cepat"
+    variant === 'input-cepat'
       ? {
-          icons: ["/images/input-cepat-192.png"],
-          title: "Pasang juga Input Cepat",
-          text: "Catat transaksi dalam hitungan detik langsung dari layar utama — ikonnya beda, tidak tertukar.",
-          cta: "Pasang Input Cepat",
-          href: "/input-cepat?install=1",
+          icons: ['/images/input-cepat-192.png'],
+          title: 'Pasang juga Input Cepat',
+          text: 'Catat transaksi dalam hitungan detik langsung dari layar utama — ikonnya beda, tidak tertukar.',
+          cta: 'Pasang Input Cepat',
+          href: '/input-cepat?install=1',
         }
       : {
-          icons: ["/images/Logo-new.png", "/images/input-cepat-192.png"],
-          title: isPhone ? "Pasang Leosiqra di HP ini" : isTablet ? "Pasang Leosiqra di perangkat ini" : "Pasang Leosiqra di HP kamu",
-          text: "Buka langsung dari layar utama seperti aplikasi — gratis, tanpa Play Store, selalu versi terbaru.",
-          cta: "Pasang sekarang",
-          href: "/install",
+          icons: ['/images/Logo-new.png', '/images/input-cepat-192.png'],
+          title: isPhone
+            ? 'Pasang Leosiqra di HP ini'
+            : isTablet
+              ? 'Pasang Leosiqra di perangkat ini'
+              : 'Pasang Leosiqra di HP kamu',
+          text: 'Buka langsung dari layar utama seperti aplikasi — gratis, tanpa Play Store, selalu versi terbaru.',
+          cta: 'Pasang sekarang',
+          href: '/install',
         };
 
   return (
@@ -162,15 +193,15 @@ export function InstallBanner() {
           initial={{ opacity: 0, y: 40, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 30, scale: 0.97 }}
-          transition={{ type: "spring", stiffness: 260, damping: 24 }}
+          transition={{ type: 'spring', stiffness: 260, damping: 24 }}
           className={cn(
-            "fixed z-[45] mx-auto rounded-[24px] bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 p-[1.5px] shadow-2xl shadow-indigo-900/25",
-            area === "app"
-              ? "inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+92px)] max-w-md"
-              : pathname.startsWith("/membership")
-                // HP di /membership punya tab bawah (MobileTabBar) — banner naik di atasnya.
-                ? "inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+84px)] max-w-md sm:inset-x-auto sm:right-6 sm:w-[380px] md:bottom-6"
-                : "inset-x-3 bottom-3 max-w-md sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-[380px]"
+            'fixed z-[45] mx-auto rounded-[24px] bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 p-[1.5px] shadow-2xl shadow-indigo-900/25',
+            area === 'app'
+              ? 'inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+92px)] max-w-md'
+              : pathname.startsWith('/membership')
+                ? // HP di /membership punya tab bawah (MobileTabBar) — banner naik di atasnya.
+                  'inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+84px)] max-w-md sm:inset-x-auto sm:right-6 sm:w-[380px] md:bottom-6'
+                : 'inset-x-3 bottom-3 max-w-md sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-[380px]',
           )}
         >
           <div className="relative flex items-center gap-3.5 rounded-[22px] bg-white p-4 dark:bg-slate-900">
@@ -188,8 +219,14 @@ export function InstallBanner() {
                   key={src}
                   initial={{ scale: 0, rotate: -12 }}
                   animate={{ scale: 1, rotate: 0 }}
-                  transition={{ scale: { type: "spring", stiffness: 300, damping: 14, delay: 0.25 + i * 0.15 }, rotate: { delay: 0.25 + i * 0.15 } }}
-                  className={cn("relative block overflow-hidden rounded-[14px] bg-white shadow-lg ring-2 ring-white", i === 0 ? "h-12 w-12" : "-ml-4 h-10 w-10")}
+                  transition={{
+                    scale: { type: 'spring', stiffness: 300, damping: 14, delay: 0.25 + i * 0.15 },
+                    rotate: { delay: 0.25 + i * 0.15 },
+                  }}
+                  className={cn(
+                    'relative block overflow-hidden rounded-[14px] bg-white shadow-lg ring-2 ring-white',
+                    i === 0 ? 'h-12 w-12' : '-ml-4 h-10 w-10',
+                  )}
                 >
                   <Image src={src} alt="" fill sizes="48px" className="object-cover" />
                 </motion.span>
@@ -199,16 +236,28 @@ export function InstallBanner() {
               <p className="text-sm font-black text-slate-900 dark:text-white">{ad.title}</p>
               <p className="mt-0.5 text-[12px] leading-snug text-slate-500 dark:text-slate-400">{ad.text}</p>
               <div className="mt-2.5 flex items-center gap-3">
-                {variant === "leosiqra" && promptState === "available" ? (
-                  <button type="button" onClick={install} className="inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2 text-[12px] font-black text-white shadow-md shadow-indigo-600/30 active:scale-95">
+                {variant === 'leosiqra' && promptState === 'available' ? (
+                  <button
+                    type="button"
+                    onClick={install}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2 text-[12px] font-black text-white shadow-md shadow-indigo-600/30 active:scale-95"
+                  >
                     <Download size={13} /> {ad.cta}
                   </button>
                 ) : (
-                  <Link href={ad.href} onClick={() => setClosed(true)} className="inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2 text-[12px] font-black text-white shadow-md shadow-indigo-600/30 active:scale-95">
+                  <Link
+                    href={ad.href}
+                    onClick={() => setClosed(true)}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2 text-[12px] font-black text-white shadow-md shadow-indigo-600/30 active:scale-95"
+                  >
                     <Download size={13} /> {ad.cta}
                   </Link>
                 )}
-                <button type="button" onClick={dismiss} className="text-[12px] font-bold text-slate-400 hover:text-slate-600">
+                <button
+                  type="button"
+                  onClick={dismiss}
+                  className="text-[12px] font-bold text-slate-400 hover:text-slate-600"
+                >
                   Nanti saja
                 </button>
               </div>

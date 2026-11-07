@@ -17,7 +17,8 @@ export const metadata: Metadata = {
   alternates: { canonical: '/panduan/cara-mencatat-uang-kas' },
   openGraph: {
     title: 'Cara Mencatat Uang Kas (Kelas, RT, Arisan, Komunitas) + Contoh Tabel',
-    description: 'Kolom buku kas yang wajib ada, contoh tabel sebulan, dan cara melapor ke anggota supaya kas tetap dipercaya.',
+    description:
+      'Kolom buku kas yang wajib ada, contoh tabel sebulan, dan cara melapor ke anggota supaya kas tetap dipercaya.',
     url: 'https://www.leosiqra.com/panduan/cara-mencatat-uang-kas',
     type: 'article',
     locale: 'id_ID',
@@ -26,7 +27,8 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary',
     title: 'Cara Mencatat Uang Kas (Kelas, RT, Arisan, Komunitas) + Contoh Tabel',
-    description: 'Kolom buku kas yang wajib ada, contoh tabel sebulan, dan cara melapor ke anggota supaya kas tetap dipercaya.',
+    description:
+      'Kolom buku kas yang wajib ada, contoh tabel sebulan, dan cara melapor ke anggota supaya kas tetap dipercaya.',
     images: ['/images/Logo-new.png'],
   },
 };
@@ -63,16 +65,29 @@ export default function CaraMencatatUangKasPage() {
       <h2>1. Kolom yang wajib ada di buku kas</h2>
       <p>Buku kas yang baik cukup punya enam kolom. Setiap baris adalah satu kejadian uang masuk atau keluar:</p>
       <ul>
-        <li><strong>Tanggal</strong> — kapan uang diterima atau dibayarkan.</li>
-        <li><strong>Keterangan</strong> — jelas dan spesifik: &ldquo;Iuran Mei, 25 siswa&rdquo;, bukan sekadar &ldquo;iuran&rdquo;.</li>
-        <li><strong>Masuk</strong> — nominal uang yang diterima.</li>
-        <li><strong>Keluar</strong> — nominal uang yang dibayarkan.</li>
-        <li><strong>Saldo</strong> — saldo sebelumnya + masuk − keluar.</li>
-        <li><strong>Bukti</strong> — nomor atau kode foto nota/kuitansi.</li>
+        <li>
+          <strong>Tanggal</strong> — kapan uang diterima atau dibayarkan.
+        </li>
+        <li>
+          <strong>Keterangan</strong> — jelas dan spesifik: &ldquo;Iuran Mei, 25 siswa&rdquo;, bukan sekadar
+          &ldquo;iuran&rdquo;.
+        </li>
+        <li>
+          <strong>Masuk</strong> — nominal uang yang diterima.
+        </li>
+        <li>
+          <strong>Keluar</strong> — nominal uang yang dibayarkan.
+        </li>
+        <li>
+          <strong>Saldo</strong> — saldo sebelumnya + masuk − keluar.
+        </li>
+        <li>
+          <strong>Bukti</strong> — nomor atau kode foto nota/kuitansi.
+        </li>
       </ul>
       <p>
-        Isi buku kas <strong>di hari yang sama</strong> dengan transaksinya. Menunda sampai akhir bulan adalah penyebab paling
-        umum saldo buku tidak cocok dengan uang yang ada.
+        Isi buku kas <strong>di hari yang sama</strong> dengan transaksinya. Menunda sampai akhir bulan adalah penyebab
+        paling umum saldo buku tidak cocok dengan uang yang ada.
       </p>
 
       <h2>2. Contoh buku kas kelas selama sebulan</h2>
@@ -83,16 +98,82 @@ export default function CaraMencatatUangKasPage() {
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Tanggal</th><th>Keterangan</th><th className="num">Masuk</th><th className="num">Keluar</th><th className="num">Saldo</th><th>Bukti</th></tr>
+            <tr>
+              <th>Tanggal</th>
+              <th>Keterangan</th>
+              <th className="num">Masuk</th>
+              <th className="num">Keluar</th>
+              <th className="num">Saldo</th>
+              <th>Bukti</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td>01/05</td><td>Saldo awal (sisa April)</td><td className="num"></td><td className="num"></td><td className="num">150.000</td><td>—</td></tr>
-            <tr><td>06/05</td><td>Iuran Mei, 25 siswa × 10.000</td><td className="num">250.000</td><td className="num"></td><td className="num">400.000</td><td>Daftar iuran</td></tr>
-            <tr><td>10/05</td><td>Fotokopi materi ujian</td><td className="num"></td><td className="num">45.000</td><td className="num">355.000</td><td>N-01</td></tr>
-            <tr><td>15/05</td><td>Sapu &amp; alat kebersihan kelas</td><td className="num"></td><td className="num">60.000</td><td className="num">295.000</td><td>N-02</td></tr>
-            <tr><td>22/05</td><td>Hadiah ulang tahun wali kelas</td><td className="num"></td><td className="num">120.000</td><td className="num">175.000</td><td>N-03</td></tr>
-            <tr><td>28/05</td><td>Sumbangan sisa bazar</td><td className="num">40.000</td><td className="num"></td><td className="num">215.000</td><td>Catatan panitia</td></tr>
-            <tr><td><strong>31/05</strong></td><td><strong>Total Mei</strong></td><td className="num"><strong>290.000</strong></td><td className="num"><strong>225.000</strong></td><td className="num"><strong>215.000</strong></td><td></td></tr>
+            <tr>
+              <td>01/05</td>
+              <td>Saldo awal (sisa April)</td>
+              <td className="num"></td>
+              <td className="num"></td>
+              <td className="num">150.000</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>06/05</td>
+              <td>Iuran Mei, 25 siswa × 10.000</td>
+              <td className="num">250.000</td>
+              <td className="num"></td>
+              <td className="num">400.000</td>
+              <td>Daftar iuran</td>
+            </tr>
+            <tr>
+              <td>10/05</td>
+              <td>Fotokopi materi ujian</td>
+              <td className="num"></td>
+              <td className="num">45.000</td>
+              <td className="num">355.000</td>
+              <td>N-01</td>
+            </tr>
+            <tr>
+              <td>15/05</td>
+              <td>Sapu &amp; alat kebersihan kelas</td>
+              <td className="num"></td>
+              <td className="num">60.000</td>
+              <td className="num">295.000</td>
+              <td>N-02</td>
+            </tr>
+            <tr>
+              <td>22/05</td>
+              <td>Hadiah ulang tahun wali kelas</td>
+              <td className="num"></td>
+              <td className="num">120.000</td>
+              <td className="num">175.000</td>
+              <td>N-03</td>
+            </tr>
+            <tr>
+              <td>28/05</td>
+              <td>Sumbangan sisa bazar</td>
+              <td className="num">40.000</td>
+              <td className="num"></td>
+              <td className="num">215.000</td>
+              <td>Catatan panitia</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>31/05</strong>
+              </td>
+              <td>
+                <strong>Total Mei</strong>
+              </td>
+              <td className="num">
+                <strong>290.000</strong>
+              </td>
+              <td className="num">
+                <strong>225.000</strong>
+              </td>
+              <td className="num">
+                <strong>215.000</strong>
+              </td>
+              <td></td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -103,15 +184,19 @@ export default function CaraMencatatUangKasPage() {
 
       <h2>3. Pisahkan daftar iuran dari buku kas</h2>
       <p>
-        Siapa yang sudah dan belum bayar sebaiknya dicatat di tabel tersendiri: satu baris per anggota, satu kolom per bulan,
-        diberi tanda centang saat iuran diterima. Buku kas cukup mencatat total uang yang benar-benar masuk hari itu.
-        Dengan dua catatan terpisah, buku kas tetap ringkas dan tunggakan tetap terpantau.
+        Siapa yang sudah dan belum bayar sebaiknya dicatat di tabel tersendiri: satu baris per anggota, satu kolom per
+        bulan, diberi tanda centang saat iuran diterima. Buku kas cukup mencatat total uang yang benar-benar masuk hari
+        itu. Dengan dua catatan terpisah, buku kas tetap ringkas dan tunggakan tetap terpantau.
       </p>
 
       <h2>4. Simpan bukti setiap pengeluaran</h2>
       <ul>
-        <li>Foto nota atau kuitansi langsung setelah belanja, lalu beri kode berurutan (N-01, N-02, dan seterusnya).</li>
-        <li>Kalau tidak ada nota (misalnya ongkos ojek), tulis keterangan lengkap dan minta satu pengurus lain mengetahui.</li>
+        <li>
+          Foto nota atau kuitansi langsung setelah belanja, lalu beri kode berurutan (N-01, N-02, dan seterusnya).
+        </li>
+        <li>
+          Kalau tidak ada nota (misalnya ongkos ojek), tulis keterangan lengkap dan minta satu pengurus lain mengetahui.
+        </li>
         <li>Pengeluaran besar sebaiknya disetujui ketua atau disepakati di grup sebelum uangnya keluar.</li>
       </ul>
 
@@ -131,17 +216,24 @@ export default function CaraMencatatUangKasPage() {
 
       <h2>6. Kebiasaan bendahara yang membuat kas dipercaya</h2>
       <ul>
-        <li><strong>Jangan campur dengan uang pribadi</strong>, walau hanya &ldquo;meminjam sebentar&rdquo;.</li>
-        <li><strong>Hitung uang fisik seminggu sekali</strong> dan cocokkan dengan saldo buku.</li>
-        <li><strong>Serah terima tertulis</strong> saat ganti bendahara: saldo, buku kas, dan semua bukti.</li>
+        <li>
+          <strong>Jangan campur dengan uang pribadi</strong>, walau hanya &ldquo;meminjam sebentar&rdquo;.
+        </li>
+        <li>
+          <strong>Hitung uang fisik seminggu sekali</strong> dan cocokkan dengan saldo buku.
+        </li>
+        <li>
+          <strong>Serah terima tertulis</strong> saat ganti bendahara: saldo, buku kas, dan semua bukti.
+        </li>
       </ul>
 
       <h2>Mencatat uang kas dengan Leosiqra</h2>
       <p>
-        Di <strong>Leosiqra</strong>, uang kas bisa dibuat sebagai dompet tersendiri sehingga tidak tercampur dengan uang
-        pribadi. Setiap pemasukan dan pengeluaran dicatat dengan mengetik singkat, suara, atau foto nota, diberi kategori,
-        dan saldo dompet kas berubah otomatis. Rekap bulanan per kategori bisa dipakai sebagai bahan laporan ke anggota.
-        Untuk dasar-dasar pencatatan, lihat juga <Link href="/catatan-keuangan-harian">contoh catatan keuangan harian</Link>.
+        Di <strong>Leosiqra</strong>, uang kas bisa dibuat sebagai dompet tersendiri sehingga tidak tercampur dengan
+        uang pribadi. Setiap pemasukan dan pengeluaran dicatat dengan mengetik singkat, suara, atau foto nota, diberi
+        kategori, dan saldo dompet kas berubah otomatis. Rekap bulanan per kategori bisa dipakai sebagai bahan laporan
+        ke anggota. Untuk dasar-dasar pencatatan, lihat juga{' '}
+        <Link href="/catatan-keuangan-harian">contoh catatan keuangan harian</Link>.
       </p>
       <p>
         <em>Panduan ini bersifat edukasi umum. Sesuaikan aturan kas dengan kesepakatan kelompok Anda.</em>

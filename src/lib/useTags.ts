@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useCallback, useEffect, useState } from 'react';
 import { cloudflareApi } from './cloudflare-api';
@@ -64,13 +64,19 @@ export function useTags() {
     const before = shared ?? EMPTY;
     publish(next);
     try {
-      const r = await cloudflareApi<{ item?: { tags?: TagsPref } }>('/api/member/preferences', { method: 'PUT', json: { tags: next } });
+      const r = await cloudflareApi<{ item?: { tags?: TagsPref } }>('/api/member/preferences', {
+        method: 'PUT',
+        json: { tags: next },
+      });
       if (r.item?.tags) publish(r.item.tags);
     } catch (e) {
       publish(before);
       throw e;
     }
   }, []);
-  const colorOf = useCallback((name: string) => (shared ?? tags).list.find((t) => t.name.toLowerCase() === name.toLowerCase())?.color, [tags]);
+  const colorOf = useCallback(
+    (name: string) => (shared ?? tags).list.find((t) => t.name.toLowerCase() === name.toLowerCase())?.color,
+    [tags],
+  );
   return { tags, save, colorOf };
 }

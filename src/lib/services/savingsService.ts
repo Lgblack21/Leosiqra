@@ -1,6 +1,4 @@
-import {
-  collection, getDocs, query, orderBy, notifyCollectionChanged
-} from '@/lib/cf-firestore';
+import { collection, getDocs, query, orderBy, notifyCollectionChanged } from '@/lib/cf-firestore';
 import { db } from '../cf-client';
 import { cloudflareApi } from '../cloudflare-api';
 
@@ -11,7 +9,7 @@ export interface Saving {
   amount: number;
   amountIDR?: number;
   currency: string;
-  category: string;  // 'Dana Darurat', 'Liburan', dll
+  category: string; // 'Dana Darurat', 'Liburan', dll
   subCategory?: string;
   fromAccount: string;
   toGoal: string;
@@ -60,18 +58,15 @@ export const savingsService = {
     // Sengaja tanpa where('userId'): /api/member/savings sudah di-scope ke sesi di
     // backend, dan caller sering mengoper placeholder 'session' (bukan UID asli)
     // yang akan membuat filter klien diam-diam mengembalikan array kosong.
-    const q = query(
-      collection(db, COLLECTION_NAME),
-      orderBy('date', 'desc')
-    );
+    const q = query(collection(db, COLLECTION_NAME), orderBy('date', 'desc'));
     const snap = await getDocs(q);
-    return snap.docs.map(doc => {
+    return snap.docs.map((doc) => {
       const data = doc.data();
       return {
         ...data,
         id: doc.id,
         date: data.date?.toDate?.() ?? new Date(),
-        createdAt: data.createdAt?.toDate?.() ?? new Date()
+        createdAt: data.createdAt?.toDate?.() ?? new Date(),
       } as Saving;
     });
   },
@@ -82,6 +77,5 @@ export const savingsService = {
     await cloudflareApi(`/api/member/savings/${saving.id}?reverse=1`, { method: 'DELETE' });
     notifyCollectionChanged('savings');
     notifyCollectionChanged('accounts');
-  }
+  },
 };
-

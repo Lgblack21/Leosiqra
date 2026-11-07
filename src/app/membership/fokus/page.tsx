@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { FocusApp } from '@/components/fokus/FocusApp';
 

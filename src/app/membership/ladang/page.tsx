@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { LadangView } from '@/components/ladang/LadangView';
 import { useFeedback } from '@/components/ui/Feedback';

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -17,7 +17,9 @@ const timeAgo = (iso: string) => {
   const h = Math.round(mins / 60);
   if (h < 24) return `${h} jam lalu`;
   const d = Math.round(h / 24);
-  return d < 7 ? `${d} hari lalu` : new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(iso));
+  return d < 7
+    ? `${d} hari lalu`
+    : new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(iso));
 };
 
 // pollMs: muat ulang berkala (lonceng di header); 0 = hanya saat dipasang &
@@ -29,7 +31,10 @@ export function useNotifications(pollMs = 0) {
   const load = useCallback(() => {
     notificationService
       .list()
-      .then((r) => { setItems(r.items); setUnread(r.unread); })
+      .then((r) => {
+        setItems(r.items);
+        setUnread(r.unread);
+      })
       .catch(() => setItems((cur) => cur ?? []));
   }, []);
 
@@ -91,9 +96,13 @@ export function NotificationItems({
   if (items.length === 0) {
     return (
       <div className="py-12 text-center">
-        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"><Bell size={22} /></span>
+        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+          <Bell size={22} />
+        </span>
         <p className="mt-3 text-[14px] font-semibold text-slate-800 dark:text-slate-100">Belum ada notifikasi</p>
-        <p className="mx-auto mt-0.5 max-w-[260px] text-[12px] text-slate-500 dark:text-slate-400">Pengingat, ringkasan harian & wawasan dari Leosiqra akan muncul di sini.</p>
+        <p className="mx-auto mt-0.5 max-w-[260px] text-[12px] text-slate-500 dark:text-slate-400">
+          Pengingat, ringkasan harian & wawasan dari Leosiqra akan muncul di sini.
+        </p>
       </div>
     );
   }
@@ -106,13 +115,24 @@ export function NotificationItems({
             onClick={() => openItem(n)}
             className={cn(
               'flex w-full items-start gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-slate-50 dark:hover:bg-slate-800/60',
-              !n.read && 'bg-indigo-50/60 dark:bg-indigo-500/10'
+              !n.read && 'bg-indigo-50/60 dark:bg-indigo-500/10',
             )}
           >
             <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', n.read ? 'bg-transparent' : 'bg-indigo-500')} />
             <span className="min-w-0 flex-1">
-              <span className={cn('block text-[14px] leading-snug text-slate-900 dark:text-slate-100', !n.read && 'font-semibold')}>{n.title}</span>
-              {n.body && <span className="mt-0.5 block text-[12px] leading-snug text-slate-500 dark:text-slate-400">{n.body}</span>}
+              <span
+                className={cn(
+                  'block text-[14px] leading-snug text-slate-900 dark:text-slate-100',
+                  !n.read && 'font-semibold',
+                )}
+              >
+                {n.title}
+              </span>
+              {n.body && (
+                <span className="mt-0.5 block text-[12px] leading-snug text-slate-500 dark:text-slate-400">
+                  {n.body}
+                </span>
+              )}
               <span className="mt-1 block text-[11px] text-slate-400 dark:text-slate-500">{timeAgo(n.createdAt)}</span>
             </span>
           </button>

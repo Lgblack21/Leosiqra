@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import type { Account } from "@/lib/services/accountService";
-import type { Transaction } from "@/lib/services/transactionService";
-import { budgetService, Budget } from "@/lib/services/budgetService";
-import { investmentService, Investment } from "@/lib/services/investmentService";
-import { savingsService, Saving } from "@/lib/services/savingsService";
-import { exchangeRateService, ExchangeRates } from "@/lib/services/exchangeRateService";
-import { subscribeToCollectionChanges } from "@/lib/cf-firestore";
-import { computeHealthScore } from "@/lib/healthScore";
-import { computeNetWorth } from "@/lib/netWorth";
-import { HealthScoreCard } from "@/components/dashboard/HealthScoreCard";
+import { useEffect, useMemo, useState } from 'react';
+import type { Account } from '@/lib/services/accountService';
+import type { Transaction } from '@/lib/services/transactionService';
+import { budgetService, Budget } from '@/lib/services/budgetService';
+import { investmentService, Investment } from '@/lib/services/investmentService';
+import { savingsService, Saving } from '@/lib/services/savingsService';
+import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
+import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
+import { computeHealthScore } from '@/lib/healthScore';
+import { computeNetWorth } from '@/lib/netWorth';
+import { HealthScoreCard } from '@/components/dashboard/HealthScoreCard';
 
 // Skor Kesehatan Finansial di Beranda app HP — rumus & data sama dengan
 // dashboard web (lib/healthScore + computeNetWorth), jadi angkanya sama.
@@ -25,9 +25,9 @@ export function AppHealthScore({ accounts, transactions }: { accounts: Account[]
     let active = true;
     const load = () =>
       Promise.all([
-        budgetService.getUserBudgets("session").catch(() => [] as Budget[]),
-        investmentService.getUserInvestments("session").catch(() => [] as Investment[]),
-        savingsService.getUserSavings("session").catch(() => [] as Saving[]),
+        budgetService.getUserBudgets('session').catch(() => [] as Budget[]),
+        investmentService.getUserInvestments('session').catch(() => [] as Investment[]),
+        savingsService.getUserSavings('session').catch(() => [] as Saving[]),
       ]).then(([b, i, s]) => {
         if (!active) return;
         setBudgets(b);
@@ -36,8 +36,11 @@ export function AppHealthScore({ accounts, transactions }: { accounts: Account[]
         setReady(true);
       });
     load();
-    exchangeRateService.getLatestRates().then((r) => active && setFxRates(r)).catch(() => undefined);
-    const unsubs = ["budgets", "investments", "savings"].map((c) => subscribeToCollectionChanges(c, load));
+    exchangeRateService
+      .getLatestRates()
+      .then((r) => active && setFxRates(r))
+      .catch(() => undefined);
+    const unsubs = ['budgets', 'investments', 'savings'].map((c) => subscribeToCollectionChanges(c, load));
     return () => {
       active = false;
       unsubs.forEach((u) => u());
@@ -50,7 +53,7 @@ export function AppHealthScore({ accounts, transactions }: { accounts: Account[]
       transactions,
       investments,
       savings,
-      toIdr: (amount, currency) => exchangeRateService.convert(amount, currency || "IDR", "IDR", fxRates),
+      toIdr: (amount, currency) => exchangeRateService.convert(amount, currency || 'IDR', 'IDR', fxRates),
     });
     return computeHealthScore({
       transactions,

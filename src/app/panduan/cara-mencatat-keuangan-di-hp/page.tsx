@@ -16,7 +16,8 @@ export const metadata: Metadata = {
   alternates: { canonical: '/panduan/cara-mencatat-keuangan-di-hp' },
   openGraph: {
     title: 'Cara Mencatat Pengeluaran dan Pemasukan di HP',
-    description: 'Tiga cara mencatat keuangan di HP, format catatan singkat, contoh sehari, dan kebiasaan agar tidak lupa.',
+    description:
+      'Tiga cara mencatat keuangan di HP, format catatan singkat, contoh sehari, dan kebiasaan agar tidak lupa.',
     url: 'https://www.leosiqra.com/panduan/cara-mencatat-keuangan-di-hp',
     type: 'article',
     locale: 'id_ID',
@@ -25,7 +26,8 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary',
     title: 'Cara Mencatat Pengeluaran dan Pemasukan di HP',
-    description: 'Tiga cara mencatat keuangan di HP, format catatan singkat, contoh sehari, dan kebiasaan agar tidak lupa.',
+    description:
+      'Tiga cara mencatat keuangan di HP, format catatan singkat, contoh sehari, dan kebiasaan agar tidak lupa.',
     images: ['/images/Logo-new.png'],
   },
 };
@@ -60,18 +62,32 @@ export default function CaraMencatatKeuanganDiHpPage() {
       related={{ href: '/catatan-keuangan-harian', label: 'Catatan keuangan harian: contoh format dan tips konsisten' }}
     >
       <h2>1. Tiga pilihan alat untuk mencatat di HP</h2>
-      <p>
-        Tidak ada alat yang paling benar. Pilih yang sesuai dengan seberapa detail laporan yang Anda butuhkan:
-      </p>
+      <p>Tidak ada alat yang paling benar. Pilih yang sesuai dengan seberapa detail laporan yang Anda butuhkan:</p>
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Alat</th><th>Kelebihan</th><th>Kekurangan</th></tr>
+            <tr>
+              <th>Alat</th>
+              <th>Kelebihan</th>
+              <th>Kekurangan</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td>Aplikasi catatan bawaan HP</td><td>Sudah ada, tanpa belajar apa pun</td><td>Total dan rekap dihitung manual</td></tr>
-            <tr><td>Spreadsheet di HP</td><td>Bisa dijumlahkan per kategori dengan rumus</td><td>Mengetik di sel kecil terasa lambat</td></tr>
-            <tr><td>Aplikasi pencatat keuangan</td><td>Total, saldo per rekening, dan grafik otomatis</td><td>Perlu memilih aplikasi yang cocok</td></tr>
+            <tr>
+              <td>Aplikasi catatan bawaan HP</td>
+              <td>Sudah ada, tanpa belajar apa pun</td>
+              <td>Total dan rekap dihitung manual</td>
+            </tr>
+            <tr>
+              <td>Spreadsheet di HP</td>
+              <td>Bisa dijumlahkan per kategori dengan rumus</td>
+              <td>Mengetik di sel kecil terasa lambat</td>
+            </tr>
+            <tr>
+              <td>Aplikasi pencatat keuangan</td>
+              <td>Total, saldo per rekening, dan grafik otomatis</td>
+              <td>Perlu memilih aplikasi yang cocok</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -85,12 +101,12 @@ export default function CaraMencatatKeuanganDiHpPage() {
       <h2>2. Siapkan dua hal sebelum mulai</h2>
       <ol>
         <li>
-          <strong>Daftar &ldquo;dompet&rdquo;</strong> — semua tempat uang Anda berada: rekening bank, e-wallet, dan uang
-          tunai. Tulis saldo masing-masing hari ini sebagai titik awal.
+          <strong>Daftar &ldquo;dompet&rdquo;</strong> — semua tempat uang Anda berada: rekening bank, e-wallet, dan
+          uang tunai. Tulis saldo masing-masing hari ini sebagai titik awal.
         </li>
         <li>
-          <strong>6–8 kategori</strong> — misalnya makan, transportasi, tagihan, belanja, hiburan, keluarga, dan lain-lain.
-          Terlalu banyak kategori membuat Anda ragu setiap kali mencatat.
+          <strong>6–8 kategori</strong> — misalnya makan, transportasi, tagihan, belanja, hiburan, keluarga, dan
+          lain-lain. Terlalu banyak kategori membuat Anda ragu setiap kali mencatat.
         </li>
       </ol>
 
@@ -104,28 +120,77 @@ export default function CaraMencatatKeuanganDiHpPage() {
       </p>
       <p>Tiga aturan yang mencegah catatan berantakan:</p>
       <ul>
-        <li><strong>Catat saat itu juga</strong>, sebelum HP masuk saku. Menunda sampai malam membuat transaksi kecil terlupa.</li>
-        <li><strong>Pemasukan ikut dicatat</strong> — gaji, bonus, hasil jualan, uang kembalian pinjaman.</li>
         <li>
-          <strong>Transfer antar dompet sendiri bukan pengeluaran</strong>. Isi saldo e-wallet dari rekening bank dicatat
-          sebagai pindah dompet, bukan belanja.
+          <strong>Catat saat itu juga</strong>, sebelum HP masuk saku. Menunda sampai malam membuat transaksi kecil
+          terlupa.
+        </li>
+        <li>
+          <strong>Pemasukan ikut dicatat</strong> — gaji, bonus, hasil jualan, uang kembalian pinjaman.
+        </li>
+        <li>
+          <strong>Transfer antar dompet sendiri bukan pengeluaran</strong>. Isi saldo e-wallet dari rekening bank
+          dicatat sebagai pindah dompet, bukan belanja.
         </li>
       </ul>
 
       <h2>4. Contoh catatan satu hari</h2>
-      <p>Contoh <em>ilustrasi</em> catatan seorang karyawan pada hari gajian:</p>
+      <p>
+        Contoh <em>ilustrasi</em> catatan seorang karyawan pada hari gajian:
+      </p>
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Jenis</th><th>Keterangan</th><th>Kategori</th><th>Dompet</th><th className="num">Jumlah (Rp)</th></tr>
+            <tr>
+              <th>Jenis</th>
+              <th>Keterangan</th>
+              <th>Kategori</th>
+              <th>Dompet</th>
+              <th className="num">Jumlah (Rp)</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td>Pemasukan</td><td>Gaji</td><td>Gaji</td><td>Bank</td><td className="num">4.000.000</td></tr>
-            <tr><td>Transfer</td><td>Isi saldo e-wallet</td><td>—</td><td>Bank → e-wallet</td><td className="num">200.000</td></tr>
-            <tr><td>Pengeluaran</td><td>Kopi</td><td>Makan</td><td>E-wallet</td><td className="num">25.000</td></tr>
-            <tr><td>Pengeluaran</td><td>Ojek ke kantor</td><td>Transportasi</td><td>E-wallet</td><td className="num">18.000</td></tr>
-            <tr><td>Pengeluaran</td><td>Makan siang</td><td>Makan</td><td>Tunai</td><td className="num">22.000</td></tr>
-            <tr><td>Pengeluaran</td><td>Bayar kos</td><td>Tagihan</td><td>Bank</td><td className="num">1.000.000</td></tr>
+            <tr>
+              <td>Pemasukan</td>
+              <td>Gaji</td>
+              <td>Gaji</td>
+              <td>Bank</td>
+              <td className="num">4.000.000</td>
+            </tr>
+            <tr>
+              <td>Transfer</td>
+              <td>Isi saldo e-wallet</td>
+              <td>—</td>
+              <td>Bank → e-wallet</td>
+              <td className="num">200.000</td>
+            </tr>
+            <tr>
+              <td>Pengeluaran</td>
+              <td>Kopi</td>
+              <td>Makan</td>
+              <td>E-wallet</td>
+              <td className="num">25.000</td>
+            </tr>
+            <tr>
+              <td>Pengeluaran</td>
+              <td>Ojek ke kantor</td>
+              <td>Transportasi</td>
+              <td>E-wallet</td>
+              <td className="num">18.000</td>
+            </tr>
+            <tr>
+              <td>Pengeluaran</td>
+              <td>Makan siang</td>
+              <td>Makan</td>
+              <td>Tunai</td>
+              <td className="num">22.000</td>
+            </tr>
+            <tr>
+              <td>Pengeluaran</td>
+              <td>Bayar kos</td>
+              <td>Tagihan</td>
+              <td>Bank</td>
+              <td className="num">1.000.000</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -137,8 +202,12 @@ export default function CaraMencatatKeuanganDiHpPage() {
 
       <h2>5. Kebiasaan kecil supaya tidak lupa</h2>
       <ul>
-        <li><strong>Taruh alat pencatat di layar utama HP</strong>, di posisi yang paling mudah dijangkau jempol.</li>
-        <li><strong>Foto struk</strong> kalau sedang tidak sempat mengetik, lalu catat saat ada waktu.</li>
+        <li>
+          <strong>Taruh alat pencatat di layar utama HP</strong>, di posisi yang paling mudah dijangkau jempol.
+        </li>
+        <li>
+          <strong>Foto struk</strong> kalau sedang tidak sempat mengetik, lalu catat saat ada waktu.
+        </li>
         <li>
           <strong>Cek 2 menit sebelum tidur</strong>: bandingkan saldo di catatan dengan saldo di aplikasi bank dan
           e-wallet. Selisih berarti ada transaksi yang terlewat.
@@ -151,10 +220,10 @@ export default function CaraMencatatKeuanganDiHpPage() {
 
       <h2>6. Rekap seminggu sekali</h2>
       <p>
-        Catatan baru berguna kalau dibaca. Seminggu sekali, jumlahkan pengeluaran per kategori dan lihat mana yang paling
-        besar. Dari situ Anda bisa menentukan batas per kategori untuk bulan berikutnya — langkahnya dijelaskan di{' '}
-        <Link href="/panduan/cara-membuat-anggaran-bulanan">cara membuat anggaran bulanan</Link>. Kalau gaji Anda sekitar
-        3 juta, contoh pembagiannya ada di{' '}
+        Catatan baru berguna kalau dibaca. Seminggu sekali, jumlahkan pengeluaran per kategori dan lihat mana yang
+        paling besar. Dari situ Anda bisa menentukan batas per kategori untuk bulan berikutnya — langkahnya dijelaskan
+        di <Link href="/panduan/cara-membuat-anggaran-bulanan">cara membuat anggaran bulanan</Link>. Kalau gaji Anda
+        sekitar 3 juta, contoh pembagiannya ada di{' '}
         <Link href="/panduan/cara-mengatur-gaji-3-juta">cara mengatur gaji 3 juta</Link>.
       </p>
 
@@ -163,12 +232,15 @@ export default function CaraMencatatKeuanganDiHpPage() {
         <strong>Leosiqra</strong> bisa dipasang di layar utama HP Android dan iPhone tanpa Play Store atau App Store —
         caranya ada di halaman <Link href="/install">pasang aplikasi</Link>. Selain aplikasi lengkap, ada{' '}
         <Link href="/input-cepat">Input Cepat</Link> yang langsung terbuka di form catat: ketik &ldquo;25rb kopi&rdquo;,
-        ucapkan, atau foto struk. Rekening, e-wallet, dan uang tunai dicatat terpisah, dan transfer antar rekening sendiri
-        punya jenis transaksi tersendiri, terpisah dari pengeluaran. Semua fitur bisa dicoba gratis selama 14 hari tanpa kartu kredit.
+        ucapkan, atau foto struk. Rekening, e-wallet, dan uang tunai dicatat terpisah, dan transfer antar rekening
+        sendiri punya jenis transaksi tersendiri, terpisah dari pengeluaran. Semua fitur bisa dicoba gratis selama 14
+        hari tanpa kartu kredit.
       </p>
       <p>
-        <em>Angka di panduan ini adalah ilustrasi. Panduan ini bersifat edukasi umum, bukan nasihat keuangan. Sesuaikan
-        dengan kondisi dan tujuan Anda.</em>
+        <em>
+          Angka di panduan ini adalah ilustrasi. Panduan ini bersifat edukasi umum, bukan nasihat keuangan. Sesuaikan
+          dengan kondisi dan tujuan Anda.
+        </em>
       </p>
     </GuideLayout>
   );

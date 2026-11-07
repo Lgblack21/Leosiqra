@@ -1,7 +1,24 @@
-"use client";
+'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Bot, Sheet, CalendarDays, Zap, MonitorSmartphone, ShieldCheck, Copy, ExternalLink, RefreshCw, Unlink, ChevronRight, Loader2, Mail, NotebookText, Hash, Lock } from 'lucide-react';
+import {
+  Bot,
+  Sheet,
+  CalendarDays,
+  Zap,
+  MonitorSmartphone,
+  ShieldCheck,
+  Copy,
+  ExternalLink,
+  RefreshCw,
+  Unlink,
+  ChevronRight,
+  Loader2,
+  Mail,
+  NotebookText,
+  Hash,
+  Lock,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { useFeedback } from '@/components/ui/Feedback';
@@ -38,8 +55,24 @@ function useFeeds() {
   return { feeds, reload: load };
 }
 
-function AppCard({ icon, tile, title, desc, connected, action, onClick, href }: {
-  icon: React.ElementType; tile: string; title: string; desc: string; connected?: boolean; action: string; onClick?: () => void; href?: string;
+function AppCard({
+  icon,
+  tile,
+  title,
+  desc,
+  connected,
+  action,
+  onClick,
+  href,
+}: {
+  icon: React.ElementType;
+  tile: string;
+  title: string;
+  desc: string;
+  connected?: boolean;
+  action: string;
+  onClick?: () => void;
+  href?: string;
 }) {
   const inner = (
     <>
@@ -47,28 +80,58 @@ function AppCard({ icon, tile, title, desc, connected, action, onClick, href }: 
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2 text-[17px] font-semibold text-slate-900">
           {title}
-          {connected && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">Terhubung</span>}
+          {connected && (
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+              Terhubung
+            </span>
+          )}
         </span>
         <span className="mt-0.5 block text-[14px] leading-snug text-slate-500">{desc}</span>
       </span>
-      <span className="hidden shrink-0 rounded-full bg-white px-4 py-2 text-[14px] font-semibold text-slate-800 ring-1 ring-slate-200 sm:block">{action}</span>
+      <span className="hidden shrink-0 rounded-full bg-white px-4 py-2 text-[14px] font-semibold text-slate-800 ring-1 ring-slate-200 sm:block">
+        {action}
+      </span>
       <ChevronRight size={18} className="shrink-0 text-slate-400 sm:hidden" />
     </>
   );
-  const cls = 'flex w-full items-center gap-4 rounded-[22px] bg-slate-50 p-4 text-left transition-colors hover:bg-slate-100';
-  return href ? <a href={href} className={cls}>{inner}</a> : <button type="button" onClick={onClick} className={cls}>{inner}</button>;
+  const cls =
+    'flex w-full items-center gap-4 rounded-[22px] bg-slate-50 p-4 text-left transition-colors hover:bg-slate-100';
+  return href ? (
+    <a href={href} className={cls}>
+      {inner}
+    </a>
+  ) : (
+    <button type="button" onClick={onClick} className={cls}>
+      {inner}
+    </button>
+  );
 }
 
 // Status koneksi Composio. 401/403 = sesi habis / tidak diizinkan →
 // kartunya disembunyikan; error lain ditampilkan apa adanya di kartunya.
-export type AppAccess = { active: boolean; reason: 'pro' | 'beta' | 'coins' | null; until: string | null; price: number; days: number };
-type ComposioApps = { state: 'loading' | 'hidden' | 'ready' | 'error'; items: Record<string, { connected: boolean }>; access?: Record<string, AppAccess>; error?: string };
+export type AppAccess = {
+  active: boolean;
+  reason: 'pro' | 'beta' | 'coins' | null;
+  until: string | null;
+  price: number;
+  days: number;
+};
+type ComposioApps = {
+  state: 'loading' | 'hidden' | 'ready' | 'error';
+  items: Record<string, { connected: boolean }>;
+  access?: Record<string, AppAccess>;
+  error?: string;
+};
 export function useComposioApps() {
   const [apps, setApps] = useState<ComposioApps>({ state: 'loading', items: {} });
   const load = useCallback(async () => {
     try {
       const res = await fetch('/api/member/apps', { credentials: 'include' });
-      const body = (await res.json().catch(() => ({}))) as { items?: ComposioApps['items']; access?: ComposioApps['access']; error?: string };
+      const body = (await res.json().catch(() => ({}))) as {
+        items?: ComposioApps['items'];
+        access?: ComposioApps['access'];
+        error?: string;
+      };
       if (res.status === 403 || res.status === 401) setApps({ state: 'hidden', items: {} });
       else if (!res.ok) setApps({ state: 'error', items: {}, error: body.error || 'Belum tersedia.' });
       else setApps({ state: 'ready', items: body.items ?? {}, access: body.access });
@@ -100,14 +163,19 @@ export function AppsHub({ go }: { go: (v: AppsView) => void }) {
   return (
     <div className="space-y-3">
       <p className="px-1 pb-1 text-[15px] leading-relaxed text-slate-500">
-        Hubungkan aplikasi yang sudah kamu pakai — asisten AI, pencatatan cepat dari HP, dan aplikasi lain yang menyusul.
+        Hubungkan aplikasi yang sudah kamu pakai — asisten AI, pencatatan cepat dari HP, dan aplikasi lain yang
+        menyusul.
       </p>
       {apps.state !== 'hidden' && apps.state !== 'loading' && (
         <AppCard
           icon={Mail}
           tile="bg-rose-50 text-rose-600"
           title="Gmail"
-          desc={apps.state === 'error' ? apps.error ?? 'Belum tersedia.' : 'Hubungkan akun Gmail lewat mitra koneksi Composio. Pencatatan otomatis dari email menyusul.'}
+          desc={
+            apps.state === 'error'
+              ? (apps.error ?? 'Belum tersedia.')
+              : 'Hubungkan akun Gmail lewat mitra koneksi Composio. Pencatatan otomatis dari email menyusul.'
+          }
           connected={Boolean(apps.items.gmail?.connected)}
           action={apps.items.gmail?.connected ? 'Atur' : 'Hubungkan'}
           onClick={() => go('app-gmail')}
@@ -124,16 +192,60 @@ export function AppsHub({ go }: { go: (v: AppsView) => void }) {
           onClick={() => go('app-gcal')}
         />
       )}
-      <AppCard icon={Bot} tile="bg-indigo-50 text-indigo-600" title="Claude & ChatGPT" connected={mcp.state === 'write' || mcp.state === 'read'}
-        desc={mcp.state === 'write' || mcp.state === 'read' ? `Tersambung: ${mcp.names.join(', ') || 'AI'}${mcp.state === 'read' ? ' (izin baca saja)' : ''} — Atur untuk menambah AI lain.` : 'Tanya & catat keuangan dari asisten AI lewat MCP.'}
-        action="Atur" onClick={() => go('app-mcp')} />
+      <AppCard
+        icon={Bot}
+        tile="bg-indigo-50 text-indigo-600"
+        title="Claude & ChatGPT"
+        connected={mcp.state === 'write' || mcp.state === 'read'}
+        desc={
+          mcp.state === 'write' || mcp.state === 'read'
+            ? `Tersambung: ${mcp.names.join(', ') || 'AI'}${mcp.state === 'read' ? ' (izin baca saja)' : ''} — Atur untuk menambah AI lain.`
+            : 'Tanya & catat keuangan dari asisten AI lewat MCP.'
+        }
+        action="Atur"
+        onClick={() => go('app-mcp')}
+      />
       {/* Cara lama (tautan rahasia IMPORTDATA/iCal) disimpan sebagai cadangan
           kalau Composio bermasalah; kartunya hanya muncul untuk yang sudah
           terlanjur memakainya, supaya tidak dobel dengan versi Composio. */}
-      {LEGACY_FEEDS_VISIBLE || feeds?.sheets ? <AppCard icon={Sheet} tile="bg-emerald-50 text-emerald-600" title="Google Sheets" desc="Salinan transaksimu di spreadsheet, ikut ter-update otomatis." connected={Boolean(feeds?.sheets)} action={feeds?.sheets ? 'Atur' : 'Hubungkan'} onClick={() => go('app-sheets')} /> : null}
-      {LEGACY_FEEDS_VISIBLE || feeds?.calendar ? <AppCard icon={CalendarDays} tile="bg-sky-50 text-sky-600" title="Google Calendar" desc="Transaksi rutin & jatuh tempo kartu kredit muncul di kalendermu." connected={Boolean(feeds?.calendar)} action={feeds?.calendar ? 'Atur' : 'Hubungkan'} onClick={() => go('app-calendar')} /> : null}
-      <AppCard icon={Zap} tile="bg-amber-50 text-amber-600" title="Input Cepat" desc="Catat dari layar utama HP — ketik, suara, atau foto struk." action="Buka" href="/input-cepat" />
-      <AppCard icon={MonitorSmartphone} tile="bg-slate-100 text-slate-700" title="Leosiqra di HP, Mac & PC" desc="Pasang sebagai aplikasi, buka langsung dari layar utama atau taskbar." action="Pasang" href="/install" />
+      {LEGACY_FEEDS_VISIBLE || feeds?.sheets ? (
+        <AppCard
+          icon={Sheet}
+          tile="bg-emerald-50 text-emerald-600"
+          title="Google Sheets"
+          desc="Salinan transaksimu di spreadsheet, ikut ter-update otomatis."
+          connected={Boolean(feeds?.sheets)}
+          action={feeds?.sheets ? 'Atur' : 'Hubungkan'}
+          onClick={() => go('app-sheets')}
+        />
+      ) : null}
+      {LEGACY_FEEDS_VISIBLE || feeds?.calendar ? (
+        <AppCard
+          icon={CalendarDays}
+          tile="bg-sky-50 text-sky-600"
+          title="Google Calendar"
+          desc="Transaksi rutin & jatuh tempo kartu kredit muncul di kalendermu."
+          connected={Boolean(feeds?.calendar)}
+          action={feeds?.calendar ? 'Atur' : 'Hubungkan'}
+          onClick={() => go('app-calendar')}
+        />
+      ) : null}
+      <AppCard
+        icon={Zap}
+        tile="bg-amber-50 text-amber-600"
+        title="Input Cepat"
+        desc="Catat dari layar utama HP — ketik, suara, atau foto struk."
+        action="Buka"
+        href="/input-cepat"
+      />
+      <AppCard
+        icon={MonitorSmartphone}
+        tile="bg-slate-100 text-slate-700"
+        title="Leosiqra di HP, Mac & PC"
+        desc="Pasang sebagai aplikasi, buka langsung dari layar utama atau taskbar."
+        action="Pasang"
+        href="/install"
+      />
       <p className="px-1 pt-2 text-[13px] leading-relaxed text-slate-400">
         Leosiqra tidak pernah melihat kata sandi Google-mu. Memutuskan koneksi langsung mematikan tautannya.
       </p>
@@ -144,15 +256,25 @@ export function AppsHub({ go }: { go: (v: AppsView) => void }) {
 const FEED_COPY = {
   sheets: {
     title: 'Hubungkan Google Sheets',
-    intro: 'Leosiqra membuat tautan rahasia berisi transaksimu (maks. 5.000 terbaru). Tempel di Google Sheets, dan isinya ikut ter-update sendiri — Google mengambil ulang tiap ±1 jam.',
-    steps: ['Salin rumus di bawah.', 'Buka Google Sheets baru, klik sel A1, lalu tempel.', 'Selesai — transaksimu muncul dan ikut ter-update.'],
+    intro:
+      'Leosiqra membuat tautan rahasia berisi transaksimu (maks. 5.000 terbaru). Tempel di Google Sheets, dan isinya ikut ter-update sendiri — Google mengambil ulang tiap ±1 jam.',
+    steps: [
+      'Salin rumus di bawah.',
+      'Buka Google Sheets baru, klik sel A1, lalu tempel.',
+      'Selesai — transaksimu muncul dan ikut ter-update.',
+    ],
     open: { href: 'https://sheets.new', label: 'Buka Google Sheets baru' },
     copyLabel: 'Rumus untuk sel A1',
   },
   calendar: {
     title: 'Hubungkan Google Calendar',
-    intro: 'Leosiqra membuat tautan kalender rahasia berisi transaksi rutin aktif dan jatuh tempo kartu kredit (dengan pengingat 2 hari sebelumnya). Juga bisa dipakai di Kalender iPhone & Outlook.',
-    steps: ['Salin tautan di bawah.', 'Di Google Calendar (komputer): Setelan → Tambahkan kalender → Dari URL.', 'Tempel tautan, lalu Tambahkan kalender.'],
+    intro:
+      'Leosiqra membuat tautan kalender rahasia berisi transaksi rutin aktif dan jatuh tempo kartu kredit (dengan pengingat 2 hari sebelumnya). Juga bisa dipakai di Kalender iPhone & Outlook.',
+    steps: [
+      'Salin tautan di bawah.',
+      'Di Google Calendar (komputer): Setelan → Tambahkan kalender → Dari URL.',
+      'Tempel tautan, lalu Tambahkan kalender.',
+    ],
     open: { href: 'https://calendar.google.com/calendar/r/settings/addbyurl', label: 'Buka Google Calendar' },
     copyLabel: 'Tautan kalender',
   },
@@ -168,7 +290,12 @@ function FeedView({ kind }: { kind: 'sheets' | 'calendar' }) {
 
   const create = async (again: boolean) => {
     if (again) {
-      const ok = await confirm({ title: 'Buat tautan baru?', message: 'Tautan lama langsung mati — spreadsheet/kalender yang memakainya harus diganti ke tautan baru.', confirmLabel: 'Buat ulang', danger: true });
+      const ok = await confirm({
+        title: 'Buat tautan baru?',
+        message: 'Tautan lama langsung mati — spreadsheet/kalender yang memakainya harus diganti ke tautan baru.',
+        confirmLabel: 'Buat ulang',
+        danger: true,
+      });
       if (!ok) return;
     }
     setBusy(true);
@@ -183,7 +310,12 @@ function FeedView({ kind }: { kind: 'sheets' | 'calendar' }) {
   };
 
   const disconnect = async () => {
-    const ok = await confirm({ title: 'Putuskan koneksi?', message: 'Tautan langsung mati. Data yang sudah tersalin di Google tidak ikut terhapus.', confirmLabel: 'Putuskan', danger: true });
+    const ok = await confirm({
+      title: 'Putuskan koneksi?',
+      message: 'Tautan langsung mati. Data yang sudah tersalin di Google tidak ikut terhapus.',
+      confirmLabel: 'Putuskan',
+      danger: true,
+    });
     if (!ok) return;
     setBusy(true);
     try {
@@ -217,12 +349,18 @@ function FeedView({ kind }: { kind: 'sheets' | 'calendar' }) {
         <p className="text-[19px] font-semibold text-slate-900">{c.title}</p>
         <p className="text-[14px] leading-relaxed text-slate-600">{c.intro}</p>
         <p className="text-[14px] leading-relaxed text-slate-600">
-          Siapa pun yang memegang tautan ini bisa membaca isinya — jangan dibagikan. Kamu bisa membuat ulang atau memutusnya kapan saja.
+          Siapa pun yang memegang tautan ini bisa membaca isinya — jangan dibagikan. Kamu bisa membuat ulang atau
+          memutusnya kapan saja.
         </p>
       </div>
 
       {!url ? (
-        <button type="button" onClick={() => create(false)} disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 text-[16px] font-bold text-white disabled:opacity-60">
+        <button
+          type="button"
+          onClick={() => create(false)}
+          disabled={busy}
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 text-[16px] font-bold text-white disabled:opacity-60"
+        >
           {busy && <Loader2 size={16} className="animate-spin" />} Buat tautan
         </button>
       ) : (
@@ -230,7 +368,9 @@ function FeedView({ kind }: { kind: 'sheets' | 'calendar' }) {
           <ol className="space-y-2 rounded-[22px] bg-slate-50 p-5">
             {c.steps.map((s, i) => (
               <li key={s} className="flex gap-3 text-[14px] leading-snug text-slate-700">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-[12px] font-bold text-slate-900 ring-1 ring-slate-200">{i + 1}</span>
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-[12px] font-bold text-slate-900 ring-1 ring-slate-200">
+                  {i + 1}
+                </span>
                 {s}
               </li>
             ))}
@@ -239,19 +379,38 @@ function FeedView({ kind }: { kind: 'sheets' | 'calendar' }) {
             <p className="px-1 text-[14px] text-slate-500">{c.copyLabel}</p>
             <div className="flex items-center gap-2 rounded-2xl bg-white p-2 pl-4 ring-1 ring-slate-200">
               <code className="min-w-0 flex-1 truncate text-[13px] text-slate-700">{value}</code>
-              <button type="button" onClick={copy} className="flex shrink-0 items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-[13px] font-semibold text-white">
+              <button
+                type="button"
+                onClick={copy}
+                className="flex shrink-0 items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-[13px] font-semibold text-white"
+              >
                 <Copy size={14} /> Salin
               </button>
             </div>
           </div>
-          <a href={c.open.href} target="_blank" rel="noopener noreferrer" className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 text-[16px] font-bold text-white">
+          <a
+            href={c.open.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 text-[16px] font-bold text-white"
+          >
             {c.open.label} <ExternalLink size={16} />
           </a>
           <div className="grid grid-cols-2 gap-3">
-            <button type="button" onClick={() => create(true)} disabled={busy} className="flex items-center justify-center gap-2 rounded-full bg-slate-100 py-3 text-[14px] font-semibold text-slate-800 hover:bg-slate-200 disabled:opacity-60">
+            <button
+              type="button"
+              onClick={() => create(true)}
+              disabled={busy}
+              className="flex items-center justify-center gap-2 rounded-full bg-slate-100 py-3 text-[14px] font-semibold text-slate-800 hover:bg-slate-200 disabled:opacity-60"
+            >
               <RefreshCw size={15} /> Buat ulang
             </button>
-            <button type="button" onClick={disconnect} disabled={busy} className="flex items-center justify-center gap-2 rounded-full bg-rose-50 py-3 text-[14px] font-semibold text-rose-600 hover:bg-rose-100 disabled:opacity-60">
+            <button
+              type="button"
+              onClick={disconnect}
+              disabled={busy}
+              className="flex items-center justify-center gap-2 rounded-full bg-rose-50 py-3 text-[14px] font-semibold text-rose-600 hover:bg-rose-100 disabled:opacity-60"
+            >
               <Unlink size={15} /> Putuskan
             </button>
           </div>
@@ -268,27 +427,32 @@ const COMPOSIO_COPY: Record<ComposioToolkit, { name: string; provider: string; a
   gmail: {
     name: 'Gmail',
     provider: 'Google',
-    about: 'Leosiqra membaca email pembayaran (bank, e-wallet, toko) dari 3 hari terakhir, lalu AI mengusulkannya sebagai transaksi di Kotak Masuk — tidak ada yang tercatat sebelum kamu menekan Simpan. Isi email tidak disimpan; yang tersimpan hanya subjek, pengirim & usulannya.',
+    about:
+      'Leosiqra membaca email pembayaran (bank, e-wallet, toko) dari 3 hari terakhir, lalu AI mengusulkannya sebagai transaksi di Kotak Masuk — tidak ada yang tercatat sebelum kamu menekan Simpan. Isi email tidak disimpan; yang tersimpan hanya subjek, pengirim & usulannya.',
   },
   slack: {
     name: 'Slack',
     provider: 'Slack',
-    about: 'Leosiqra membaca pesan baru di SATU channel pilihanmu (mis. #catatan-keuangan), lalu AI mengusulkannya sebagai transaksi di Kotak Masuk — tidak ada yang tercatat sebelum kamu menekan Simpan. Pesan lama & channel lain tidak dibaca; pesan yang jadi usulan diberi reaksi ✅.',
+    about:
+      'Leosiqra membaca pesan baru di SATU channel pilihanmu (mis. #catatan-keuangan), lalu AI mengusulkannya sebagai transaksi di Kotak Masuk — tidak ada yang tercatat sebelum kamu menekan Simpan. Pesan lama & channel lain tidak dibaca; pesan yang jadi usulan diberi reaksi ✅.',
   },
   notion: {
     name: 'Notion',
     provider: 'Notion',
-    about: 'Leosiqra menulis laporan keuangan bulanan (pemasukan, pengeluaran, kategori terbesar, anggaran) sebagai halaman baru di bawah halaman Notion pilihanmu. Saat login Notion, bagikan halaman tujuan ke Leosiqra — halaman lain tidak bisa dibaca.',
+    about:
+      'Leosiqra menulis laporan keuangan bulanan (pemasukan, pengeluaran, kategori terbesar, anggaran) sebagai halaman baru di bawah halaman Notion pilihanmu. Saat login Notion, bagikan halaman tujuan ke Leosiqra — halaman lain tidak bisa dibaca.',
   },
   googlesheets: {
     name: 'Google Sheets',
     provider: 'Google',
-    about: 'Leosiqra membuat spreadsheet "Leosiqra — Transaksi" di Google Drive-mu dan menyalin transaksimu ke sana (maks. 5.000 terbaru), lalu memperbaruinya tiap hari — termasuk transaksi yang kamu ubah atau hapus. Leosiqra tidak membaca file lain di Drive-mu.',
+    about:
+      'Leosiqra membuat spreadsheet "Leosiqra — Transaksi" di Google Drive-mu dan menyalin transaksimu ke sana (maks. 5.000 terbaru), lalu memperbaruinya tiap hari — termasuk transaksi yang kamu ubah atau hapus. Leosiqra tidak membaca file lain di Drive-mu.',
   },
   googlecalendar: {
     name: 'Google Calendar',
     provider: 'Google',
-    about: 'Leosiqra menyalin jadwal transaksi berulang (pemasukan, pengeluaran, tabungan) dan jatuh tempo kartu kredit ke kalender utamamu sebagai pengingat, lalu memperbaruinya tiap hari. Pencatatannya tetap otomatis di Leosiqra — kalender hanya pengingat. Leosiqra tidak membaca acara lain di kalendermu.',
+    about:
+      'Leosiqra menyalin jadwal transaksi berulang (pemasukan, pengeluaran, tabungan) dan jatuh tempo kartu kredit ke kalender utamamu sebagai pengingat, lalu memperbaruinya tiap hari. Pencatatannya tetap otomatis di Leosiqra — kalender hanya pengingat. Leosiqra tidak membaca acara lain di kalendermu.',
   },
 };
 
@@ -304,8 +468,17 @@ export function ComposioAppView({ toolkit, children }: { toolkit: ComposioToolki
     setBusy(true);
     try {
       const res = await fetch(`/api/member/apps/${toolkit}/check`, { method: 'POST', credentials: 'include' });
-      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; summary?: string; error?: string; logId?: string };
-      setCheck({ ok: Boolean(body.ok), text: body.summary || body.error || 'Gagal memeriksa koneksi.', logId: body.logId });
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        summary?: string;
+        error?: string;
+        logId?: string;
+      };
+      setCheck({
+        ok: Boolean(body.ok),
+        text: body.summary || body.error || 'Gagal memeriksa koneksi.',
+        logId: body.logId,
+      });
     } catch {
       setCheck({ ok: false, text: 'Gagal memeriksa koneksi.' });
     } finally {
@@ -324,7 +497,9 @@ export function ComposioAppView({ toolkit, children }: { toolkit: ComposioToolki
   const connect = async () => {
     setBusy(true);
     try {
-      const res = await cloudflareApi<{ redirectUrl: string }>(`/api/member/apps/${toolkit}/connect`, { method: 'POST' });
+      const res = await cloudflareApi<{ redirectUrl: string }>(`/api/member/apps/${toolkit}/connect`, {
+        method: 'POST',
+      });
       window.location.href = res.redirectUrl;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : `Gagal membuka halaman ${copy.provider}.`);
@@ -335,9 +510,10 @@ export function ComposioAppView({ toolkit, children }: { toolkit: ComposioToolki
   const disconnect = async () => {
     const ok = await confirm({
       title: `Putuskan ${copy.name}?`,
-      message: toolkit === 'googlecalendar'
-        ? 'Acara jadwal buatan Leosiqra dihapus dari kalendermu, lalu aksesnya dicabut. Transaksi berulangmu di Leosiqra tidak berubah.'
-        : `Akses Leosiqra ke ${copy.name}-mu dicabut. Transaksi yang sudah tercatat tidak terhapus.`,
+      message:
+        toolkit === 'googlecalendar'
+          ? 'Acara jadwal buatan Leosiqra dihapus dari kalendermu, lalu aksesnya dicabut. Transaksi berulangmu di Leosiqra tidak berubah.'
+          : `Akses Leosiqra ke ${copy.name}-mu dicabut. Transaksi yang sudah tercatat tidak terhapus.`,
       confirmLabel: 'Putuskan',
       danger: true,
     });
@@ -357,7 +533,10 @@ export function ComposioAppView({ toolkit, children }: { toolkit: ComposioToolki
   };
 
   if (apps.state === 'loading') return <p className="py-10 text-center text-[14px] text-slate-400">Memuat…</p>;
-  if (apps.state !== 'ready') return <p className="rounded-[22px] bg-slate-50 p-5 text-[14px] text-slate-600">{apps.error ?? 'Belum tersedia.'}</p>;
+  if (apps.state !== 'ready')
+    return (
+      <p className="rounded-[22px] bg-slate-50 p-5 text-[14px] text-slate-600">{apps.error ?? 'Belum tersedia.'}</p>
+    );
 
   return (
     <div className="space-y-4">
@@ -367,7 +546,8 @@ export function ComposioAppView({ toolkit, children }: { toolkit: ComposioToolki
         </span>
         <p className="text-[19px] font-semibold text-slate-900">Hubungkan {copy.name}</p>
         <p className="text-[14px] leading-relaxed text-slate-600">
-          Setelah ini kamu akan melihat nama mitra koneksi kami, <b>Composio</b>, layanan bersertifikat SOC 2 Type II yang menjaga koneksi ini tetap aman. Leosiqra tidak pernah melihat kata sandi {copy.provider}-mu.
+          Setelah ini kamu akan melihat nama mitra koneksi kami, <b>Composio</b>, layanan bersertifikat SOC 2 Type II
+          yang menjaga koneksi ini tetap aman. Leosiqra tidak pernah melihat kata sandi {copy.provider}-mu.
         </p>
         <p className="text-[14px] leading-relaxed text-slate-600">{copy.about}</p>
       </div>
@@ -376,22 +556,42 @@ export function ComposioAppView({ toolkit, children }: { toolkit: ComposioToolki
 
       {connected ? (
         <>
-          <div className={cn('rounded-[22px] p-4 text-[15px]', check?.ok === false ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-800')}>
-            {busy && !check ? 'Memeriksa koneksi…' : check?.text ?? 'Terhubung'}
+          <div
+            className={cn(
+              'rounded-[22px] p-4 text-[15px]',
+              check?.ok === false ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-800',
+            )}
+          >
+            {busy && !check ? 'Memeriksa koneksi…' : (check?.text ?? 'Terhubung')}
             {check?.logId && <span className="mt-1 block font-mono text-[11px] opacity-60">log {check.logId}</span>}
           </div>
           {children}
           <div className="grid grid-cols-2 gap-3">
-            <button type="button" onClick={() => void runCheck()} disabled={busy} className="flex items-center justify-center gap-2 rounded-full bg-slate-100 py-3 text-[14px] font-semibold text-slate-800 hover:bg-slate-200 disabled:opacity-60">
+            <button
+              type="button"
+              onClick={() => void runCheck()}
+              disabled={busy}
+              className="flex items-center justify-center gap-2 rounded-full bg-slate-100 py-3 text-[14px] font-semibold text-slate-800 hover:bg-slate-200 disabled:opacity-60"
+            >
               <RefreshCw size={15} className={cn(busy && 'animate-spin')} /> Periksa
             </button>
-            <button type="button" onClick={disconnect} disabled={busy} className="flex items-center justify-center gap-2 rounded-full bg-rose-50 py-3 text-[14px] font-semibold text-rose-600 hover:bg-rose-100 disabled:opacity-60">
+            <button
+              type="button"
+              onClick={disconnect}
+              disabled={busy}
+              className="flex items-center justify-center gap-2 rounded-full bg-rose-50 py-3 text-[14px] font-semibold text-rose-600 hover:bg-rose-100 disabled:opacity-60"
+            >
               <Unlink size={15} /> Putuskan
             </button>
           </div>
         </>
       ) : apps.access?.[toolkit] && !apps.access[toolkit].active ? null : (
-        <button type="button" onClick={connect} disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 text-[16px] font-bold text-white disabled:opacity-60">
+        <button
+          type="button"
+          onClick={connect}
+          disabled={busy}
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3.5 text-[16px] font-bold text-white disabled:opacity-60"
+        >
           {busy && <Loader2 size={16} className="animate-spin" />} Lanjutkan ke {copy.provider}
         </button>
       )}
@@ -401,18 +601,32 @@ export function ComposioAppView({ toolkit, children }: { toolkit: ComposioToolki
 
 // Status aktivasi: gratis (PRO/beta), aktif sampai tanggal X (koin), atau
 // belum aktif → tombol aktifkan pakai koin. Tidak ada potong otomatis.
-function ActivationCard({ toolkit, access, onChange }: { toolkit: ComposioToolkit; access?: AppAccess; onChange: () => Promise<void> }) {
+function ActivationCard({
+  toolkit,
+  access,
+  onChange,
+}: {
+  toolkit: ComposioToolkit;
+  access?: AppAccess;
+  onChange: () => Promise<void>;
+}) {
   const { toast, confirm } = useFeedback();
   const [busy, setBusy] = useState(false);
   if (!access) return null;
   const name = COMPOSIO_COPY[toolkit].name;
-  const until = access.until ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(access.until)) : null;
+  const until = access.until
+    ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(
+        new Date(access.until),
+      )
+    : null;
 
   if (access.reason === 'pro' || access.reason === 'beta') {
     return (
       <div className="flex items-center gap-3 rounded-[22px] bg-indigo-50 px-4 py-3 text-[14px] text-indigo-900">
         <ShieldCheck size={18} className="shrink-0 text-indigo-600" />
-        {access.reason === 'pro' ? 'Gratis untuk member PRO.' : `Gratis selama beta. Nanti ${access.price.toLocaleString('id-ID')} koin / ${access.days} hari.`}
+        {access.reason === 'pro'
+          ? 'Gratis untuk member PRO.'
+          : `Gratis selama beta. Nanti ${access.price.toLocaleString('id-ID')} koin / ${access.days} hari.`}
       </div>
     );
   }
@@ -439,15 +653,36 @@ function ActivationCard({ toolkit, access, onChange }: { toolkit: ComposioToolki
   return (
     <div className="space-y-3 rounded-[22px] bg-amber-50 p-4">
       <p className="text-[14px] leading-relaxed text-amber-900">
-        {access.active && until
-          ? <>Aktif sampai <b>{until}</b>. Perpanjang kapan saja — sisa harinya tidak hilang.</>
-          : <>{name} butuh aktivasi: <b>{access.price.toLocaleString('id-ID')} koin / {access.days} hari</b>. Gratis untuk member PRO.</>}
+        {access.active && until ? (
+          <>
+            Aktif sampai <b>{until}</b>. Perpanjang kapan saja — sisa harinya tidak hilang.
+          </>
+        ) : (
+          <>
+            {name} butuh aktivasi:{' '}
+            <b>
+              {access.price.toLocaleString('id-ID')} koin / {access.days} hari
+            </b>
+            . Gratis untuk member PRO.
+          </>
+        )}
       </p>
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={activate} disabled={busy} className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-[14px] font-bold text-white disabled:opacity-60">
-          {busy && <Loader2 size={15} className="animate-spin" />} {access.active ? 'Perpanjang' : 'Aktifkan'} · {access.price.toLocaleString('id-ID')} koin
+        <button
+          type="button"
+          onClick={activate}
+          disabled={busy}
+          className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-[14px] font-bold text-white disabled:opacity-60"
+        >
+          {busy && <Loader2 size={15} className="animate-spin" />} {access.active ? 'Perpanjang' : 'Aktifkan'} ·{' '}
+          {access.price.toLocaleString('id-ID')} koin
         </button>
-        <a href="/membership/dashboard?pengaturan=koin" className="inline-flex items-center rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-amber-200">Lihat koin</a>
+        <a
+          href="/membership/dashboard?pengaturan=koin"
+          className="inline-flex items-center rounded-full bg-white px-4 py-2.5 text-[14px] font-semibold text-slate-700 ring-1 ring-amber-200"
+        >
+          Lihat koin
+        </a>
       </div>
     </div>
   );
@@ -455,7 +690,13 @@ function ActivationCard({ toolkit, access, onChange }: { toolkit: ComposioToolki
 
 // Laporan bulanan ke Notion (tampil setelah terhubung): pilih halaman induk,
 // otomatis tiap awal bulan, atau tulis laporan bulan lalu sekarang.
-type NotionState = { enabled: boolean; parentId: string | null; parentTitle: string | null; lastPeriod: string | null; lastPageUrl: string | null };
+type NotionState = {
+  enabled: boolean;
+  parentId: string | null;
+  parentTitle: string | null;
+  lastPeriod: string | null;
+  lastPageUrl: string | null;
+};
 export function NotionReportCard() {
   const { toast, confirm } = useFeedback();
   const [state, setState] = useState<NotionState | null>(null);
@@ -502,7 +743,11 @@ export function NotionReportCard() {
       const last = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const lastKey = `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}`;
       if (state.lastPeriod === lastKey) {
-        const ok = await confirm({ title: 'Tulis ulang laporan?', message: 'Laporan bulan lalu sudah ada di Notion. Tulis lagi akan membuat halaman baru.', confirmLabel: 'Tulis lagi' });
+        const ok = await confirm({
+          title: 'Tulis ulang laporan?',
+          message: 'Laporan bulan lalu sudah ada di Notion. Tulis lagi akan membuat halaman baru.',
+          confirmLabel: 'Tulis lagi',
+        });
         if (!ok) return;
         force = true;
       }
@@ -510,8 +755,15 @@ export function NotionReportCard() {
     setBusy(true);
     setResult(null);
     try {
-      const r = await cloudflareApi<{ already: boolean; empty: boolean; url: string | null }>('/api/member/apps/notion/report', { method: 'POST', json: { force } });
-      setResult(r.empty ? { text: 'Bulan lalu belum ada transaksi — tidak ada yang ditulis.' } : { text: 'Laporan bulan lalu sudah ditulis ke Notion.', url: r.url });
+      const r = await cloudflareApi<{ already: boolean; empty: boolean; url: string | null }>(
+        '/api/member/apps/notion/report',
+        { method: 'POST', json: { force } },
+      );
+      setResult(
+        r.empty
+          ? { text: 'Bulan lalu belum ada transaksi — tidak ada yang ditulis.' }
+          : { text: 'Laporan bulan lalu sudah ditulis ke Notion.', url: r.url },
+      );
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Gagal menulis laporan.');
@@ -527,7 +779,9 @@ export function NotionReportCard() {
         <NotebookText size={20} className="shrink-0 text-slate-700" />
         <span className="min-w-0 flex-1">
           <span className="block text-[15px] font-semibold text-slate-900">Laporan bulanan</span>
-          <span className="block truncate text-[13px] text-slate-500">{state.parentId ? `Ditulis di bawah “${state.parentTitle}”` : 'Pilih halaman Notion tujuan dulu.'}</span>
+          <span className="block truncate text-[13px] text-slate-500">
+            {state.parentId ? `Ditulis di bawah “${state.parentTitle}”` : 'Pilih halaman Notion tujuan dulu.'}
+          </span>
         </span>
         {state.parentId && (
           <button
@@ -536,27 +790,51 @@ export function NotionReportCard() {
             disabled={busy}
             aria-label="Tulis otomatis tiap awal bulan"
             aria-pressed={state.enabled}
-            className={cn('relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-60', state.enabled ? 'bg-emerald-500' : 'bg-slate-300')}
+            className={cn(
+              'relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-60',
+              state.enabled ? 'bg-emerald-500' : 'bg-slate-300',
+            )}
           >
-            <span className={cn('absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all', state.enabled ? 'right-1' : 'left-1')} />
+            <span
+              className={cn(
+                'absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all',
+                state.enabled ? 'right-1' : 'left-1',
+              )}
+            />
           </button>
         )}
       </div>
-      {state.parentId && <p className="px-1 text-[12px] text-slate-500">{state.enabled ? 'Otomatis tiap tanggal 1–7 untuk bulan sebelumnya.' : 'Nyalakan untuk menulis otomatis tiap awal bulan.'}</p>}
+      {state.parentId && (
+        <p className="px-1 text-[12px] text-slate-500">
+          {state.enabled
+            ? 'Otomatis tiap tanggal 1–7 untuk bulan sebelumnya.'
+            : 'Nyalakan untuk menulis otomatis tiap awal bulan.'}
+        </p>
+      )}
 
       {pages && (
         <div className="max-h-64 space-y-1 overflow-y-auto rounded-2xl bg-white p-2 ring-1 ring-slate-200">
           {pages.length === 0 ? (
-            <p className="p-3 text-[13px] text-slate-500">Belum ada halaman yang dibagikan. Putuskan lalu hubungkan lagi, dan pilih halaman tujuan saat login Notion.</p>
+            <p className="p-3 text-[13px] text-slate-500">
+              Belum ada halaman yang dibagikan. Putuskan lalu hubungkan lagi, dan pilih halaman tujuan saat login
+              Notion.
+            </p>
           ) : (
             pages.map((p) => (
               <button
                 key={p.id}
                 type="button"
-                onClick={() => { void save({ parentId: p.id, parentTitle: p.title }); setPages(null); }}
-                className={cn('flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[14px] hover:bg-slate-100', state.parentId === p.id && 'bg-indigo-50 font-semibold text-indigo-700')}
+                onClick={() => {
+                  void save({ parentId: p.id, parentTitle: p.title });
+                  setPages(null);
+                }}
+                className={cn(
+                  'flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[14px] hover:bg-slate-100',
+                  state.parentId === p.id && 'bg-indigo-50 font-semibold text-indigo-700',
+                )}
               >
-                <NotebookText size={15} className="shrink-0 text-slate-400" /> <span className="truncate">{p.title}</span>
+                <NotebookText size={15} className="shrink-0 text-slate-400" />{' '}
+                <span className="truncate">{p.title}</span>
               </button>
             ))
           )}
@@ -566,22 +844,47 @@ export function NotionReportCard() {
       {result && (
         <p className="rounded-2xl bg-white px-4 py-2.5 text-[13px] text-slate-600 ring-1 ring-slate-200">
           {result.text}{' '}
-          {result.url && <a href={result.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-indigo-600">Buka di Notion</a>}
+          {result.url && (
+            <a href={result.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-indigo-600">
+              Buka di Notion
+            </a>
+          )}
         </p>
       )}
 
       <div className={cn('grid gap-2', state.parentId && 'sm:grid-cols-2')}>
-        <button type="button" onClick={() => void loadPages()} disabled={busy} className={cn('flex items-center justify-center gap-2 rounded-full py-3 text-[14px] font-bold disabled:opacity-60', state.parentId ? 'bg-white text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100' : 'bg-slate-900 text-white')}>
-          {busy && !state.parentId ? <Loader2 size={15} className="animate-spin" /> : null} {state.parentId ? 'Ganti halaman' : 'Pilih halaman Notion'}
+        <button
+          type="button"
+          onClick={() => void loadPages()}
+          disabled={busy}
+          className={cn(
+            'flex items-center justify-center gap-2 rounded-full py-3 text-[14px] font-bold disabled:opacity-60',
+            state.parentId
+              ? 'bg-white text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100'
+              : 'bg-slate-900 text-white',
+          )}
+        >
+          {busy && !state.parentId ? <Loader2 size={15} className="animate-spin" /> : null}{' '}
+          {state.parentId ? 'Ganti halaman' : 'Pilih halaman Notion'}
         </button>
         {state.parentId && (
-          <button type="button" onClick={() => void write()} disabled={busy} className="flex items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white disabled:opacity-60">
+          <button
+            type="button"
+            onClick={() => void write()}
+            disabled={busy}
+            className="flex items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white disabled:opacity-60"
+          >
             {busy ? <Loader2 size={15} className="animate-spin" /> : null} Tulis laporan bulan lalu
           </button>
         )}
       </div>
       {state.lastPageUrl && !result && (
-        <a href={state.lastPageUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 text-[13px] font-semibold text-indigo-600">
+        <a
+          href={state.lastPageUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-1.5 text-[13px] font-semibold text-indigo-600"
+        >
           Buka laporan terakhir <ExternalLink size={13} />
         </a>
       )}
@@ -590,7 +893,12 @@ export function NotionReportCard() {
 }
 
 // Slack → Kotak Masuk: pilih satu channel, baca pesan baru tiap ±10 menit.
-type SlackState = { enabled: boolean; channelId: string | null; channelName: string | null; lastCheckAt: string | null };
+type SlackState = {
+  enabled: boolean;
+  channelId: string | null;
+  channelName: string | null;
+  lastCheckAt: string | null;
+};
 type SlackChannel = { id: string; name: string; isPrivate: boolean; isMember: boolean };
 type SlackCheck = { fetched: number; suggested: number; notTransaction: number; skipped: number; aiStopped: boolean };
 export function SlackInboxCard() {
@@ -614,7 +922,9 @@ export function SlackInboxCard() {
   const loadChannels = async (q = query) => {
     setBusy(true);
     try {
-      const r = await cloudflareApi<{ channels: SlackChannel[] }>(`/api/member/apps/slack/channels${q.trim() ? `?q=${encodeURIComponent(q.trim())}` : ''}`);
+      const r = await cloudflareApi<{ channels: SlackChannel[] }>(
+        `/api/member/apps/slack/channels${q.trim() ? `?q=${encodeURIComponent(q.trim())}` : ''}`,
+      );
       setChannels(r.channels);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Gagal membaca channel Slack.');
@@ -638,13 +948,17 @@ export function SlackInboxCard() {
     setResult('');
     try {
       const s = await cloudflareApi<SlackCheck>('/api/member/apps/slack/inbox', { method: 'POST' });
-      setResult([
-        s.fetched ? `${s.fetched} pesan baru` : 'Tidak ada pesan baru',
-        s.suggested ? `${s.suggested} jadi usulan` : null,
-        s.notTransaction ? `${s.notTransaction} bukan transaksi` : null,
-        s.skipped ? `${s.skipped} dilewati (bot/tanpa angka)` : null,
-        s.aiStopped ? 'AI sedang tidak tersedia, sisanya dicoba lagi nanti' : null,
-      ].filter(Boolean).join(' · '));
+      setResult(
+        [
+          s.fetched ? `${s.fetched} pesan baru` : 'Tidak ada pesan baru',
+          s.suggested ? `${s.suggested} jadi usulan` : null,
+          s.notTransaction ? `${s.notTransaction} bukan transaksi` : null,
+          s.skipped ? `${s.skipped} dilewati (bot/tanpa angka)` : null,
+          s.aiStopped ? 'AI sedang tidak tersedia, sisanya dicoba lagi nanti' : null,
+        ]
+          .filter(Boolean)
+          .join(' · '),
+      );
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Gagal memeriksa Slack.');
@@ -654,15 +968,23 @@ export function SlackInboxCard() {
   };
 
   if (!state) return null;
-  const when = state.lastCheckAt ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(state.lastCheckAt)) : null;
+  const when = state.lastCheckAt
+    ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(
+        new Date(state.lastCheckAt),
+      )
+    : null;
   return (
     <div className="space-y-3 rounded-[22px] bg-slate-50 p-4">
       <div className="flex items-center gap-3">
         <Hash size={20} className="shrink-0 text-violet-600" />
         <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-semibold text-slate-900">{state.channelId ? `#${state.channelName}` : 'Catat dari pesan channel'}</span>
+          <span className="block text-[15px] font-semibold text-slate-900">
+            {state.channelId ? `#${state.channelName}` : 'Catat dari pesan channel'}
+          </span>
           <span className="block truncate text-[13px] text-slate-500">
-            {state.channelId ? `Tiap ±10 menit${when ? ` · terakhir ${when}` : ''}. Hasilnya masuk Kotak Masuk.` : 'Pilih channel yang kamu pakai untuk catatan keuangan.'}
+            {state.channelId
+              ? `Tiap ±10 menit${when ? ` · terakhir ${when}` : ''}. Hasilnya masuk Kotak Masuk.`
+              : 'Pilih channel yang kamu pakai untuk catatan keuangan.'}
           </span>
         </span>
         {state.channelId && (
@@ -672,19 +994,49 @@ export function SlackInboxCard() {
             disabled={busy}
             aria-label="Baca pesan channel otomatis"
             aria-pressed={state.enabled}
-            className={cn('relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-60', state.enabled ? 'bg-emerald-500' : 'bg-slate-300')}
+            className={cn(
+              'relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-60',
+              state.enabled ? 'bg-emerald-500' : 'bg-slate-300',
+            )}
           >
-            <span className={cn('absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all', state.enabled ? 'right-1' : 'left-1')} />
+            <span
+              className={cn(
+                'absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all',
+                state.enabled ? 'right-1' : 'left-1',
+              )}
+            />
           </button>
         )}
       </div>
-      {state.channelId && <p className="px-1 text-[12px] text-slate-500">Contoh pesan: “makan siang 45rb pakai BCA” atau “gaji masuk 8jt”. Hanya pesan setelah channel dipilih yang dibaca.</p>}
+      {state.channelId && (
+        <p className="px-1 text-[12px] text-slate-500">
+          Contoh pesan: “makan siang 45rb pakai BCA” atau “gaji masuk 8jt”. Hanya pesan setelah channel dipilih yang
+          dibaca.
+        </p>
+      )}
 
       {channels && (
         <div className="space-y-2 rounded-2xl bg-white p-2 ring-1 ring-slate-200">
-          <form onSubmit={(e) => { e.preventDefault(); void loadChannels(); }} className="flex gap-2 p-1">
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari nama channel" className="min-w-0 flex-1 rounded-xl bg-slate-50 px-3 py-2 text-[14px] ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400" />
-            <button type="submit" disabled={busy} className="rounded-xl bg-slate-900 px-3 text-[13px] font-bold text-white disabled:opacity-60">Cari</button>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void loadChannels();
+            }}
+            className="flex gap-2 p-1"
+          >
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Cari nama channel"
+              className="min-w-0 flex-1 rounded-xl bg-slate-50 px-3 py-2 text-[14px] ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+            <button
+              type="submit"
+              disabled={busy}
+              className="rounded-xl bg-slate-900 px-3 text-[13px] font-bold text-white disabled:opacity-60"
+            >
+              Cari
+            </button>
           </form>
           <div className="max-h-64 space-y-1 overflow-y-auto">
             {channels.length === 0 ? (
@@ -694,10 +1046,20 @@ export function SlackInboxCard() {
                 <button
                   key={c.id}
                   type="button"
-                  onClick={() => { void save({ channelId: c.id, channelName: c.name, ...(state.channelId ? {} : { enabled: true }) }); setChannels(null); }}
-                  className={cn('flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[14px] hover:bg-slate-100', state.channelId === c.id && 'bg-indigo-50 font-semibold text-indigo-700')}
+                  onClick={() => {
+                    void save({ channelId: c.id, channelName: c.name, ...(state.channelId ? {} : { enabled: true }) });
+                    setChannels(null);
+                  }}
+                  className={cn(
+                    'flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[14px] hover:bg-slate-100',
+                    state.channelId === c.id && 'bg-indigo-50 font-semibold text-indigo-700',
+                  )}
                 >
-                  {c.isPrivate ? <Lock size={14} className="shrink-0 text-slate-400" /> : <Hash size={14} className="shrink-0 text-slate-400" />}
+                  {c.isPrivate ? (
+                    <Lock size={14} className="shrink-0 text-slate-400" />
+                  ) : (
+                    <Hash size={14} className="shrink-0 text-slate-400" />
+                  )}
                   <span className="truncate">{c.name}</span>
                   {!c.isMember && <span className="ml-auto shrink-0 text-[11px] text-slate-400">belum bergabung</span>}
                 </button>
@@ -707,20 +1069,41 @@ export function SlackInboxCard() {
         </div>
       )}
 
-      {result && <p className="rounded-2xl bg-white px-4 py-2.5 text-[13px] text-slate-600 ring-1 ring-slate-200">{result}</p>}
+      {result && (
+        <p className="rounded-2xl bg-white px-4 py-2.5 text-[13px] text-slate-600 ring-1 ring-slate-200">{result}</p>
+      )}
 
       <div className={cn('grid gap-2', state.channelId && 'sm:grid-cols-2')}>
-        <button type="button" onClick={() => (channels ? setChannels(null) : void loadChannels(''))} disabled={busy} className={cn('flex items-center justify-center gap-2 rounded-full py-3 text-[14px] font-bold disabled:opacity-60', state.channelId ? 'bg-white text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100' : 'bg-slate-900 text-white')}>
-          {busy && !state.channelId ? <Loader2 size={15} className="animate-spin" /> : null} {channels ? 'Tutup daftar' : state.channelId ? 'Ganti channel' : 'Pilih channel'}
+        <button
+          type="button"
+          onClick={() => (channels ? setChannels(null) : void loadChannels(''))}
+          disabled={busy}
+          className={cn(
+            'flex items-center justify-center gap-2 rounded-full py-3 text-[14px] font-bold disabled:opacity-60',
+            state.channelId
+              ? 'bg-white text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100'
+              : 'bg-slate-900 text-white',
+          )}
+        >
+          {busy && !state.channelId ? <Loader2 size={15} className="animate-spin" /> : null}{' '}
+          {channels ? 'Tutup daftar' : state.channelId ? 'Ganti channel' : 'Pilih channel'}
         </button>
         {state.channelId && (
-          <button type="button" onClick={() => void check()} disabled={busy} className="flex items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white disabled:opacity-60">
+          <button
+            type="button"
+            onClick={() => void check()}
+            disabled={busy}
+            className="flex items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white disabled:opacity-60"
+          >
             {busy ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />} Periksa sekarang
           </button>
         )}
       </div>
       {state.channelId && (
-        <a href="/membership/kotak-masuk" className="flex items-center justify-center gap-1.5 text-[13px] font-semibold text-indigo-600">
+        <a
+          href="/membership/kotak-masuk"
+          className="flex items-center justify-center gap-1.5 text-[13px] font-semibold text-indigo-600"
+        >
           Buka Kotak Masuk <ChevronRight size={13} />
         </a>
       )}
@@ -731,12 +1114,21 @@ export function SlackInboxCard() {
 // Salinan transaksi ke Google Sheets (tampil setelah terhubung).
 export function SheetsSyncCard() {
   const { toast } = useFeedback();
-  const [state, setState] = useState<{ enabled: boolean; lastSyncAt: string | null; rows: number; url: string | null } | null>(null);
+  const [state, setState] = useState<{
+    enabled: boolean;
+    lastSyncAt: string | null;
+    rows: number;
+    url: string | null;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState('');
   const load = useCallback(async () => {
     try {
-      setState(await cloudflareApi<{ enabled: boolean; lastSyncAt: string | null; rows: number; url: string | null }>('/api/member/apps/googlesheets/sync'));
+      setState(
+        await cloudflareApi<{ enabled: boolean; lastSyncAt: string | null; rows: number; url: string | null }>(
+          '/api/member/apps/googlesheets/sync',
+        ),
+      );
     } catch {
       setState(null);
     }
@@ -749,8 +1141,15 @@ export function SheetsSyncCard() {
     setBusy(true);
     setResult('');
     try {
-      const r = await cloudflareApi<{ unchanged: boolean; rows: number; created: boolean }>('/api/member/apps/googlesheets/sync', { method: 'POST' });
-      setResult(r.unchanged ? `Sudah sama — ${r.rows} transaksi.` : `${r.created ? 'Spreadsheet dibuat · ' : ''}${r.rows} transaksi disalin.`);
+      const r = await cloudflareApi<{ unchanged: boolean; rows: number; created: boolean }>(
+        '/api/member/apps/googlesheets/sync',
+        { method: 'POST' },
+      );
+      setResult(
+        r.unchanged
+          ? `Sudah sama — ${r.rows} transaksi.`
+          : `${r.created ? 'Spreadsheet dibuat · ' : ''}${r.rows} transaksi disalin.`,
+      );
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Gagal menyalin.');
@@ -759,7 +1158,11 @@ export function SheetsSyncCard() {
     }
   };
 
-  const when = state?.lastSyncAt ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(state.lastSyncAt)) : null;
+  const when = state?.lastSyncAt
+    ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(
+        new Date(state.lastSyncAt),
+      )
+    : null;
   return (
     <div className="space-y-3 rounded-[22px] bg-slate-50 p-4">
       <div className="flex items-center gap-3">
@@ -767,17 +1170,32 @@ export function SheetsSyncCard() {
         <span className="min-w-0 flex-1">
           <span className="block text-[15px] font-semibold text-slate-900">Salinan transaksi</span>
           <span className="block text-[13px] text-slate-500">
-            {state?.enabled ? `${state.rows} transaksi · diperbarui otomatis tiap hari${when ? ` · terakhir ${when}` : ''}` : 'Belum ada spreadsheet — dibuat saat pertama kali disalin.'}
+            {state?.enabled
+              ? `${state.rows} transaksi · diperbarui otomatis tiap hari${when ? ` · terakhir ${when}` : ''}`
+              : 'Belum ada spreadsheet — dibuat saat pertama kali disalin.'}
           </span>
         </span>
       </div>
-      {result && <p className="rounded-2xl bg-white px-4 py-2.5 text-[13px] text-slate-600 ring-1 ring-slate-200">{result}</p>}
+      {result && (
+        <p className="rounded-2xl bg-white px-4 py-2.5 text-[13px] text-slate-600 ring-1 ring-slate-200">{result}</p>
+      )}
       <div className={cn('grid gap-2', state?.url && 'sm:grid-cols-2')}>
-        <button type="button" onClick={sync} disabled={busy} className="flex items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white disabled:opacity-60">
-          {busy ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />} {state?.enabled ? 'Sinkronkan sekarang' : 'Buat spreadsheet & salin'}
+        <button
+          type="button"
+          onClick={sync}
+          disabled={busy}
+          className="flex items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white disabled:opacity-60"
+        >
+          {busy ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}{' '}
+          {state?.enabled ? 'Sinkronkan sekarang' : 'Buat spreadsheet & salin'}
         </button>
         {state?.url && (
-          <a href={state.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 rounded-full bg-white py-3 text-[14px] font-bold text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100">
+          <a
+            href={state.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-1.5 rounded-full bg-white py-3 text-[14px] font-bold text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100"
+          >
             Buka spreadsheet <ExternalLink size={14} />
           </a>
         )}
@@ -789,7 +1207,12 @@ export function SheetsSyncCard() {
 // Salin jadwal (transaksi berulang & jatuh tempo kartu) ke Google Calendar.
 type SyncEvent = { summary: string | null; start: string | null; freq: string | null; link: string | null };
 type SyncState = { enabled: boolean; lastSyncAt: string | null; count: number; events?: SyncEvent[] };
-const FREQ_LABEL: Record<string, string> = { DAILY: 'tiap hari', WEEKLY: 'tiap minggu', MONTHLY: 'tiap bulan', YEARLY: 'tiap tahun' };
+const FREQ_LABEL: Record<string, string> = {
+  DAILY: 'tiap hari',
+  WEEKLY: 'tiap minggu',
+  MONTHLY: 'tiap bulan',
+  YEARLY: 'tiap tahun',
+};
 
 export function CalendarSyncCard() {
   const { toast } = useFeedback();
@@ -811,9 +1234,25 @@ export function CalendarSyncCard() {
     setBusy(true);
     setResult('');
     try {
-      const r = await cloudflareApi<{ created: number; updated: number; deleted: number; unchanged: number; failed: number; total: number }>('/api/member/apps/googlecalendar/sync', { method: 'POST' });
-      const parts = [r.created && `${r.created} dibuat`, r.updated && `${r.updated} diperbarui`, r.deleted && `${r.deleted} dihapus`, r.unchanged && `${r.unchanged} tetap`].filter(Boolean);
-      setResult(r.total === 0 && !r.deleted ? 'Belum ada transaksi rutin atau kartu kredit dengan tanggal jatuh tempo.' : `${parts.join(' · ') || 'Selesai'}${r.failed ? ` · ${r.failed} gagal, dicoba lagi besok` : ''}`);
+      const r = await cloudflareApi<{
+        created: number;
+        updated: number;
+        deleted: number;
+        unchanged: number;
+        failed: number;
+        total: number;
+      }>('/api/member/apps/googlecalendar/sync', { method: 'POST' });
+      const parts = [
+        r.created && `${r.created} dibuat`,
+        r.updated && `${r.updated} diperbarui`,
+        r.deleted && `${r.deleted} dihapus`,
+        r.unchanged && `${r.unchanged} tetap`,
+      ].filter(Boolean);
+      setResult(
+        r.total === 0 && !r.deleted
+          ? 'Belum ada transaksi rutin atau kartu kredit dengan tanggal jatuh tempo.'
+          : `${parts.join(' · ') || 'Selesai'}${r.failed ? ` · ${r.failed} gagal, dicoba lagi besok` : ''}`,
+      );
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Gagal menyinkronkan.');
@@ -822,7 +1261,11 @@ export function CalendarSyncCard() {
     }
   };
 
-  const when = state?.lastSyncAt ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(state.lastSyncAt)) : null;
+  const when = state?.lastSyncAt
+    ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(
+        new Date(state.lastSyncAt),
+      )
+    : null;
   return (
     <div className="space-y-3 rounded-[22px] bg-slate-50 p-4">
       <div className="flex items-center gap-3">
@@ -830,30 +1273,47 @@ export function CalendarSyncCard() {
         <span className="min-w-0 flex-1">
           <span className="block text-[15px] font-semibold text-slate-900">Jadwal di kalender</span>
           <span className="block text-[13px] text-slate-500">
-            {state?.enabled ? `${state.count} acara · sinkron otomatis tiap hari${when ? ` · terakhir ${when}` : ''}` : 'Transaksi rutin & jatuh tempo kartu kredit.'}
+            {state?.enabled
+              ? `${state.count} acara · sinkron otomatis tiap hari${when ? ` · terakhir ${when}` : ''}`
+              : 'Transaksi rutin & jatuh tempo kartu kredit.'}
           </span>
         </span>
       </div>
-      {result && <p className="rounded-2xl bg-white px-4 py-2.5 text-[13px] text-slate-600 ring-1 ring-slate-200">{result}</p>}
+      {result && (
+        <p className="rounded-2xl bg-white px-4 py-2.5 text-[13px] text-slate-600 ring-1 ring-slate-200">{result}</p>
+      )}
       {Boolean(state?.events?.length) && (
         <ul className="divide-y divide-slate-100 overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200">
           {state!.events!.map((e, i) => {
             const start = e.start ? new Date(`${e.start}T00:00:00`) : null;
-            const dayUrl = start ? `https://calendar.google.com/calendar/r/day/${start.getFullYear()}/${start.getMonth() + 1}/${start.getDate()}` : 'https://calendar.google.com/calendar/r';
+            const dayUrl = start
+              ? `https://calendar.google.com/calendar/r/day/${start.getFullYear()}/${start.getMonth() + 1}/${start.getDate()}`
+              : 'https://calendar.google.com/calendar/r';
             return (
               <li key={`${e.summary}-${i}`} className="flex items-center gap-3 px-4 py-3">
                 <span className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl bg-sky-50 text-sky-700">
-                  <span className="text-[10px] font-semibold uppercase leading-none">{start ? new Intl.DateTimeFormat('id-ID', { month: 'short' }).format(start) : '—'}</span>
+                  <span className="text-[10px] font-semibold uppercase leading-none">
+                    {start ? new Intl.DateTimeFormat('id-ID', { month: 'short' }).format(start) : '—'}
+                  </span>
                   <span className="text-[15px] font-bold leading-tight">{start ? start.getDate() : ''}</span>
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[14px] font-medium text-slate-900">{e.summary ?? 'Acara jadwal'}</span>
+                  <span className="block truncate text-[14px] font-medium text-slate-900">
+                    {e.summary ?? 'Acara jadwal'}
+                  </span>
                   <span className="block text-[12px] text-slate-500">
-                    {start ? `Mulai ${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(start)}` : 'Tanggal belum terbaca — sinkronkan ulang'}
+                    {start
+                      ? `Mulai ${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(start)}`
+                      : 'Tanggal belum terbaca — sinkronkan ulang'}
                     {e.freq ? ` · ${FREQ_LABEL[e.freq] ?? ''}` : ''}
                   </span>
                 </span>
-                <a href={e.link ?? dayUrl} target="_blank" rel="noopener noreferrer" className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-200">
+                <a
+                  href={e.link ?? dayUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-200"
+                >
                   Lihat <ExternalLink size={12} />
                 </a>
               </li>
@@ -861,8 +1321,14 @@ export function CalendarSyncCard() {
           })}
         </ul>
       )}
-      <button type="button" onClick={sync} disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[15px] font-bold text-white disabled:opacity-60">
-        {busy ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />} {state?.enabled ? 'Sinkronkan sekarang' : 'Salin jadwal ke kalender'}
+      <button
+        type="button"
+        onClick={sync}
+        disabled={busy}
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[15px] font-bold text-white disabled:opacity-60"
+      >
+        {busy ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}{' '}
+        {state?.enabled ? 'Sinkronkan sekarang' : 'Salin jadwal ke kalender'}
       </button>
     </div>
   );
@@ -870,7 +1336,12 @@ export function CalendarSyncCard() {
 
 export function AppsSection({ view, go }: { view: AppsView; go: (v: AppsView) => void }) {
   if (view === 'app-gmail') return <ComposioAppView toolkit="gmail" />;
-  if (view === 'app-gcal') return <ComposioAppView toolkit="googlecalendar"><CalendarSyncCard /></ComposioAppView>;
+  if (view === 'app-gcal')
+    return (
+      <ComposioAppView toolkit="googlecalendar">
+        <CalendarSyncCard />
+      </ComposioAppView>
+    );
   if (view === 'app-mcp') return <McpConnectCard />;
   if (view === 'app-sheets') return <FeedView kind="sheets" />;
   if (view === 'app-calendar') return <FeedView kind="calendar" />;

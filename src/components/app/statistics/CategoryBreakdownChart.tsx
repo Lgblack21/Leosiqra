@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { useTheme } from "@/context/ThemeContext";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { useTheme } from '@/context/ThemeContext';
 
 export interface CategorySlice {
   category: string;
@@ -16,14 +16,14 @@ interface CategoryBreakdownChartProps {
 // jangan diacak/di-cycle) — dipakai sama di light & dark, cukup kontras di
 // keduanya (dicek manual, bukan cuma diasumsikan).
 const CATEGORY_COLORS = [
-  "#2a78d6", // blue
-  "#eb6834", // orange
-  "#1baf7a", // aqua
-  "#eda100", // yellow
-  "#e87ba4", // magenta
-  "#008300", // green
-  "#4a3aa7", // violet
-  "#e34948", // red (dipakai buat slot "Lainnya" kalau ada)
+  '#2a78d6', // blue
+  '#eb6834', // orange
+  '#1baf7a', // aqua
+  '#eda100', // yellow
+  '#e87ba4', // magenta
+  '#008300', // green
+  '#4a3aa7', // violet
+  '#e34948', // red (dipakai buat slot "Lainnya" kalau ada)
 ];
 
 const formatCompactIDR = (n: number) => {
@@ -33,7 +33,7 @@ const formatCompactIDR = (n: number) => {
 };
 
 const formatFullIDR = (n: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
 
 interface TooltipPayloadItem {
   payload: CategorySlice;
@@ -45,7 +45,9 @@ function ChartTooltip({ active, payload }: { active?: boolean; payload?: Tooltip
   return (
     <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-lg px-3 py-2">
       <p className="text-[11px] font-black text-slate-900 dark:text-white">{item.category}</p>
-      <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 tabular-nums">{formatFullIDR(item.amount)}</p>
+      <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 tabular-nums">
+        {formatFullIDR(item.amount)}
+      </p>
     </div>
   );
 }
@@ -56,7 +58,7 @@ function ChartTooltip({ active, payload }: { active?: boolean; payload?: Tooltip
 export function CategoryBreakdownChart({ data }: CategoryBreakdownChartProps) {
   const height = Math.max(data.length * 44, 120);
   const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
+  const isDark = resolvedTheme === 'dark';
 
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -68,18 +70,18 @@ export function CategoryBreakdownChart({ data }: CategoryBreakdownChartProps) {
           width={92}
           tickLine={false}
           axisLine={false}
-          tick={{ fontSize: 11, fontWeight: 700, fill: isDark ? "#cbd5e1" : "#52514e" }}
+          tick={{ fontSize: 11, fontWeight: 700, fill: isDark ? '#cbd5e1' : '#52514e' }}
         />
-        <Tooltip content={<ChartTooltip />} cursor={{ fill: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)" }} />
+        <Tooltip content={<ChartTooltip />} cursor={{ fill: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)' }} />
         <Bar
           dataKey="amount"
           radius={[0, 4, 4, 0]}
           maxBarSize={22}
           label={{
-            position: "right",
+            position: 'right',
             fontSize: 11,
             fontWeight: 700,
-            fill: isDark ? "#f1f5f9" : "#0b0b0b",
+            fill: isDark ? '#f1f5f9' : '#0b0b0b',
             formatter: (value: unknown) => formatCompactIDR(Number(value) || 0),
           }}
         >

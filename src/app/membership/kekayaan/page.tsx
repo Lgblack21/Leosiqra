@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { KekayaanShell } from '@/components/kekayaan/KekayaanShell';
 

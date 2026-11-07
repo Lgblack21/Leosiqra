@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useCallback, useEffect, useState } from 'react';
 import { exchangeRateService } from '@/lib/services/exchangeRateService';
@@ -20,7 +20,9 @@ const loadStoredWatchlist = (): string[] => {
     const raw = window.localStorage.getItem(WATCHLIST_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string').slice(0, MAX_WATCHLIST_COINS) : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((id): id is string => typeof id === 'string').slice(0, MAX_WATCHLIST_COINS)
+      : [];
   } catch {
     return [];
   }
@@ -69,26 +71,44 @@ const CRYPTO_ID_MAP: Record<string, string> = {
   HOT: 'holotoken',
 };
 const CRYPTO_NAME_MAP: Record<string, string> = {
-  bitcoin: 'Bitcoin', ethereum: 'Ethereum', solana: 'Solana', binancecoin: 'BNB',
-  cardano: 'Cardano', ripple: 'XRP', polkadot: 'Polkadot', dogecoin: 'Dogecoin', holotoken: 'Holochain',
+  bitcoin: 'Bitcoin',
+  ethereum: 'Ethereum',
+  solana: 'Solana',
+  binancecoin: 'BNB',
+  cardano: 'Cardano',
+  ripple: 'XRP',
+  polkadot: 'Polkadot',
+  dogecoin: 'Dogecoin',
+  holotoken: 'Holochain',
 };
 const CRYPTO_SYMBOL_MAP: Record<string, string> = {
-  bitcoin: 'BTC/USD', ethereum: 'ETH/USD', solana: 'SOL/USD', binancecoin: 'BNB/USD',
-  cardano: 'ADA/USD', ripple: 'XRP/USD', polkadot: 'DOT/USD', dogecoin: 'DOGE/USD', holotoken: 'HOT/USD',
+  bitcoin: 'BTC/USD',
+  ethereum: 'ETH/USD',
+  solana: 'SOL/USD',
+  binancecoin: 'BNB/USD',
+  cardano: 'ADA/USD',
+  ripple: 'XRP/USD',
+  polkadot: 'DOT/USD',
+  dogecoin: 'DOGE/USD',
+  holotoken: 'HOT/USD',
 };
 const CRYPTO_ICON_MAP: Record<string, string> = {
-  bitcoin: 'BTC', ethereum: 'ETH', solana: 'SOL', binancecoin: 'BNB',
-  cardano: 'ADA', ripple: 'XRP', polkadot: 'DOT', dogecoin: 'DOGE', holotoken: 'HOT',
+  bitcoin: 'BTC',
+  ethereum: 'ETH',
+  solana: 'SOL',
+  binancecoin: 'BNB',
+  cardano: 'ADA',
+  ripple: 'XRP',
+  polkadot: 'DOT',
+  dogecoin: 'DOGE',
+  holotoken: 'HOT',
 };
 
 // currencyService.getUserCurrencies tidak selalu memanggil balik saat gagal (shim
 // menelan error jika tidak ada onError), jadi promise pembungkusnya bisa
 // menggantung selamanya. Beri batas waktu agar halaman tidak macet loading.
-const withTimeout = <T,>(promise: Promise<T>, ms: number, fallback: T): Promise<T> =>
-  Promise.race([
-    promise,
-    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
-  ]);
+const withTimeout = <T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> =>
+  Promise.race([promise, new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))]);
 
 export function useMarketData() {
   const [cryptoData, setCryptoData] = useState<CryptoData[]>([]);
@@ -103,7 +123,7 @@ export function useMarketData() {
   const [showWatchlistModal, setShowWatchlistModal] = useState(false);
 
   const handleSaveWatchlist = (coins: CoinOption[]) => {
-    const ids = coins.map(c => c.id);
+    const ids = coins.map((c) => c.id);
     setWatchlistIds(ids);
     try {
       window.localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(ids));
@@ -128,7 +148,7 @@ export function useMarketData() {
             });
           }),
           6000,
-          []
+          [],
         );
       }
 
@@ -138,18 +158,18 @@ export function useMarketData() {
         const idrRate = rates.IDR || 1;
 
         const mappedExchange: ExchangeRate[] = currentCurs
-          .filter(c => c.code !== 'IDR')
-          .map(c => ({
+          .filter((c) => c.code !== 'IDR')
+          .map((c) => ({
             from: `${c.name} (${c.code})`,
             to: 'Indonesian Rupiah (IDR)',
-            rate: idrRate / (rates[c.code] || 1)
+            rate: idrRate / (rates[c.code] || 1),
           }));
 
         if (mappedExchange.length === 0) {
           mappedExchange.push(
             { from: 'United States Dollar (USD)', to: 'Indonesian Rupiah (IDR)', rate: idrRate },
             { from: 'Euro (EUR)', to: 'Indonesian Rupiah (IDR)', rate: idrRate / (rates.EUR || 1) },
-            { from: 'Singapore Dollar (SGD)', to: 'Indonesian Rupiah (IDR)', rate: idrRate / (rates.SGD || 1) }
+            { from: 'Singapore Dollar (SGD)', to: 'Indonesian Rupiah (IDR)', rate: idrRate / (rates.SGD || 1) },
           );
         }
         setExchangeRates(mappedExchange);
@@ -157,12 +177,12 @@ export function useMarketData() {
 
         // Exclude IDR (base currency) dan exclude USD (karena semua pair vs USD)
         const mappedForex: ForexRate[] = currentCurs
-          .filter(c => c.code !== 'IDR' && c.code !== 'USD')
+          .filter((c) => c.code !== 'IDR' && c.code !== 'USD')
           .slice(0, 5)
-          .map(c => ({
+          .map((c) => ({
             pair: `${c.code}/USD`,
             label: `${c.name} / US Dollar`,
-            rate: 1 / (rates[c.code] || 1)
+            rate: 1 / (rates[c.code] || 1),
           }));
 
         if (mappedForex.length === 0) {
@@ -177,19 +197,20 @@ export function useMarketData() {
 
         // Prioritas kripto: watchlist custom user (maks 10, dipilih manual) > mata uang
         // crypto yang sudah ada di daftar mata uangnya > default top crypto.
-        const userCryptos = currentCurs.filter(c => CRYPTO_ID_MAP[c.code.toUpperCase()]);
+        const userCryptos = currentCurs.filter((c) => CRYPTO_ID_MAP[c.code.toUpperCase()]);
 
-        const targetIds = watchlistIds.length > 0
-          ? watchlistIds
-          : userCryptos.length > 0
-            ? userCryptos.map(c => CRYPTO_ID_MAP[c.code.toUpperCase()])
-            : ['bitcoin', 'ethereum', 'solana', 'holotoken'];
+        const targetIds =
+          watchlistIds.length > 0
+            ? watchlistIds
+            : userCryptos.length > 0
+              ? userCryptos.map((c) => CRYPTO_ID_MAP[c.code.toUpperCase()])
+              : ['bitcoin', 'ethereum', 'solana', 'holotoken'];
 
         // 2. Fetch crypto + emas (PAX Gold, dipatok 1:1 ke harga emas spot) sekaligus,
         // termasuk logo resmi tiap koin (endpoint /coins/markets menyertakan `image`).
         const marketIds = [...targetIds, 'pax-gold'];
         const cryptoRes = await fetch(
-          `/api/market/coingecko/coins/markets?vs_currency=usd&ids=${marketIds.join(',')}&price_change_percentage=24h`
+          `/api/market/coingecko/coins/markets?vs_currency=usd&ids=${marketIds.join(',')}&price_change_percentage=24h`,
         );
         if (cryptoRes.ok) {
           const rows = (await cryptoRes.json()) as Array<{
@@ -205,7 +226,7 @@ export function useMarketData() {
           // Koin dari watchlist custom mungkin tidak ada di peta statis di atas
           // (yang cuma mencakup beberapa koin populer) — pakai nama/simbol asli
           // dari respons API sebagai fallback supaya tetap tampil benar.
-          const mappedCrypto: CryptoData[] = targetIds.map(id => {
+          const mappedCrypto: CryptoData[] = targetIds.map((id) => {
             const row = byId.get(id);
             return {
               id,
@@ -247,5 +268,18 @@ export function useMarketData() {
     return () => clearInterval(interval);
   }, [fetchMarketData]);
 
-  return { cryptoData, exchangeRates, forexRates, usdIdrRate, gold, loading, lastUpdated, error, refresh: fetchMarketData, showWatchlistModal, setShowWatchlistModal, handleSaveWatchlist };
+  return {
+    cryptoData,
+    exchangeRates,
+    forexRates,
+    usdIdrRate,
+    gold,
+    loading,
+    lastUpdated,
+    error,
+    refresh: fetchMarketData,
+    showWatchlistModal,
+    setShowWatchlistModal,
+    handleSaveWatchlist,
+  };
 }

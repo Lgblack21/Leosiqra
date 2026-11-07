@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import { Search, Check, Plus, Loader2 } from 'lucide-react';
@@ -45,9 +45,7 @@ export const CurrencyModal = ({ isOpen, onClose }: CurrencyModalProps) => {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return ALL_PICKABLE_CURRENCIES;
-    return ALL_PICKABLE_CURRENCIES.filter(
-      (c) => c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)
-    );
+    return ALL_PICKABLE_CURRENCIES.filter((c) => c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q));
   }, [search]);
 
   const handleAdd = async (code: string, name: string, symbol: string) => {
@@ -103,7 +101,10 @@ export const CurrencyModal = ({ isOpen, onClose }: CurrencyModalProps) => {
             <div className="text-center py-8">
               <p className="text-sm font-bold text-slate-400">Tidak ada hasil untuk &quot;{search}&quot;</p>
               <button
-                onClick={() => { setShowManual(true); setManual((m) => ({ ...m, code: search.toUpperCase().slice(0, 5) })); }}
+                onClick={() => {
+                  setShowManual(true);
+                  setManual((m) => ({ ...m, code: search.toUpperCase().slice(0, 5) }));
+                }}
                 className="mt-2 text-xs font-black text-emerald-600 hover:underline"
               >
                 Tambah manual
@@ -135,11 +136,15 @@ export const CurrencyModal = ({ isOpen, onClose }: CurrencyModalProps) => {
                     }
                   >
                     {added ? (
-                      <><Check size={13} /> Ditambahkan</>
+                      <>
+                        <Check size={13} /> Ditambahkan
+                      </>
                     ) : busy ? (
                       <Loader2 size={13} className="animate-spin" />
                     ) : (
-                      <><Plus size={13} /> Tambah</>
+                      <>
+                        <Plus size={13} /> Tambah
+                      </>
                     )}
                   </button>
                 </div>

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState } from 'react';
 import {
@@ -40,8 +40,14 @@ const sections: GuideSection[] = [
     title: 'Menu Utama',
     subtitle: 'Selalu ada di paling atas sidebar',
     items: [
-      { name: 'Ringkasan', desc: 'Pengeluaran hari ini, catatan hari ini, ke mana uangmu bulan ini (per kategori + budget), transaksi terbaru, dan kartu fitur: saldo bersih, tabungan, investasi, tagihan kartu, hutang, pajak. Ganti bulan lewat kalender di bagian Pengeluaran.' },
-      { name: 'AI Leosiqra', desc: 'Asisten AI yang sudah tahu seluruh data keuanganmu (transaksi, rekening, investasi, hutang) — tanya apa saja soal kondisi finansialmu, atau soal harga pasar terkini, dalam Bahasa Indonesia.' },
+      {
+        name: 'Ringkasan',
+        desc: 'Pengeluaran hari ini, catatan hari ini, ke mana uangmu bulan ini (per kategori + budget), transaksi terbaru, dan kartu fitur: saldo bersih, tabungan, investasi, tagihan kartu, hutang, pajak. Ganti bulan lewat kalender di bagian Pengeluaran.',
+      },
+      {
+        name: 'AI Leosiqra',
+        desc: 'Asisten AI yang sudah tahu seluruh data keuanganmu (transaksi, rekening, investasi, hutang) — tanya apa saja soal kondisi finansialmu, atau soal harga pasar terkini, dalam Bahasa Indonesia.',
+      },
     ],
   },
   {
@@ -51,10 +57,22 @@ const sections: GuideSection[] = [
     title: 'Transaksi',
     subtitle: 'Catat setiap uang masuk & keluar',
     items: [
-      { name: 'Catat Transaksi', desc: 'Form input transaksi harian versi lengkap: pilih jenis (pemasukan/pengeluaran), rekening, kategori, mata uang, dan catatan.' },
-      { name: 'Riwayat Transaksi', desc: 'Riwayat semua transaksi dalam satu bulan, bisa dicari & difilter per periode. Ringkasan atas menampilkan total pemasukan, pengeluaran, dan Saldo Bersih (total saldo semua rekening saat ini).' },
-      { name: 'Transfer & Top Up', desc: 'Catat perpindahan dana antar rekening kamu sendiri (top up e-wallet dari rekening bank, transfer antar rekening) — otomatis tercatat sebagai pengeluaran di sumber dan pemasukan di tujuan.' },
-      { name: 'Transaksi Rutin', desc: 'Jadwalkan transaksi yang berulang otomatis (langganan bulanan, gaji rutin, cicilan) — cukup diatur sekali, sistem yang catat setiap periodenya.' },
+      {
+        name: 'Catat Transaksi',
+        desc: 'Form input transaksi harian versi lengkap: pilih jenis (pemasukan/pengeluaran), rekening, kategori, mata uang, dan catatan.',
+      },
+      {
+        name: 'Riwayat Transaksi',
+        desc: 'Riwayat semua transaksi dalam satu bulan, bisa dicari & difilter per periode. Ringkasan atas menampilkan total pemasukan, pengeluaran, dan Saldo Bersih (total saldo semua rekening saat ini).',
+      },
+      {
+        name: 'Transfer & Top Up',
+        desc: 'Catat perpindahan dana antar rekening kamu sendiri (top up e-wallet dari rekening bank, transfer antar rekening) — otomatis tercatat sebagai pengeluaran di sumber dan pemasukan di tujuan.',
+      },
+      {
+        name: 'Transaksi Rutin',
+        desc: 'Jadwalkan transaksi yang berulang otomatis (langganan bulanan, gaji rutin, cicilan) — cukup diatur sekali, sistem yang catat setiap periodenya.',
+      },
     ],
   },
   {
@@ -64,8 +82,14 @@ const sections: GuideSection[] = [
     title: 'Rekening & Aset',
     subtitle: 'Tempat uangmu disimpan',
     items: [
-      { name: 'Rekening', desc: 'Daftar semua akun keuangan kamu (bank, e-wallet, cash, kartu kredit) beserta saldo & mata uang masing-masing. Ketuk satu rekening untuk lihat uang masuk/keluar bulan ini dan transaksi terakhirnya; untuk kartu kredit & paylater ada limit, terpakai, sisa limit, dan tagihan + jatuh tempo. Urutan rekening bisa diatur lewat tombol Atur urutan.' },
-      { name: 'Tabungan', desc: 'Catat setoran ke tujuan tabungan tertentu (dana darurat, liburan, dll) dari rekening manapun — total tersimpan otomatis dijumlah lintas rekening/mata uang.' },
+      {
+        name: 'Rekening',
+        desc: 'Daftar semua akun keuangan kamu (bank, e-wallet, cash, kartu kredit) beserta saldo & mata uang masing-masing. Ketuk satu rekening untuk lihat uang masuk/keluar bulan ini dan transaksi terakhirnya; untuk kartu kredit & paylater ada limit, terpakai, sisa limit, dan tagihan + jatuh tempo. Urutan rekening bisa diatur lewat tombol Atur urutan.',
+      },
+      {
+        name: 'Tabungan',
+        desc: 'Catat setoran ke tujuan tabungan tertentu (dana darurat, liburan, dll) dari rekening manapun — total tersimpan otomatis dijumlah lintas rekening/mata uang.',
+      },
     ],
   },
   {
@@ -75,11 +99,26 @@ const sections: GuideSection[] = [
     title: 'Investasi',
     subtitle: 'Kelola posisi investasi per jenis aset',
     items: [
-      { name: 'Ringkasan Portofolio', desc: 'Ringkasan portofolio investasi lintas jenis (saham, deposito, lainnya) dalam satu halaman — total dana yang ditanam, nilai saat ini, dan estimasi keuntungan.' },
-      { name: 'Saham', desc: 'Catat pembelian/penjualan saham: kode saham, bursa, jumlah lembar, harga per lembar. Sistem hitung otomatis untung/rugi dan nilai portofolio saat ini.' },
-      { name: 'Deposito', desc: 'Catat penempatan deposito dengan bunga & tenor — sistem otomatis proyeksikan hasil akhir jatuh tempo dan mencatatnya sebagai baris terpisah agar mudah dipantau.' },
-      { name: 'Investasi Lainnya', desc: 'Untuk aset di luar saham/deposito: emas, kripto, reksadana, dll. Catat kuantitas dan harga per satuan, bisa juga catat mode "Jual" untuk melepas sebagian/seluruh posisi.' },
-      { name: 'Data Pasar', desc: 'Pantau harga live kripto (BTC, ETH, SOL, dll), emas, dan kurs mata uang dunia — sumber data yang sama dipakai asisten AI Leosiqra saat kamu bertanya soal harga pasar.' },
+      {
+        name: 'Ringkasan Portofolio',
+        desc: 'Ringkasan portofolio investasi lintas jenis (saham, deposito, lainnya) dalam satu halaman — total dana yang ditanam, nilai saat ini, dan estimasi keuntungan.',
+      },
+      {
+        name: 'Saham',
+        desc: 'Catat pembelian/penjualan saham: kode saham, bursa, jumlah lembar, harga per lembar. Sistem hitung otomatis untung/rugi dan nilai portofolio saat ini.',
+      },
+      {
+        name: 'Deposito',
+        desc: 'Catat penempatan deposito dengan bunga & tenor — sistem otomatis proyeksikan hasil akhir jatuh tempo dan mencatatnya sebagai baris terpisah agar mudah dipantau.',
+      },
+      {
+        name: 'Investasi Lainnya',
+        desc: 'Untuk aset di luar saham/deposito: emas, kripto, reksadana, dll. Catat kuantitas dan harga per satuan, bisa juga catat mode "Jual" untuk melepas sebagian/seluruh posisi.',
+      },
+      {
+        name: 'Data Pasar',
+        desc: 'Pantau harga live kripto (BTC, ETH, SOL, dll), emas, dan kurs mata uang dunia — sumber data yang sama dipakai asisten AI Leosiqra saat kamu bertanya soal harga pasar.',
+      },
     ],
   },
   {
@@ -89,10 +128,22 @@ const sections: GuideSection[] = [
     title: 'Perencanaan & Laporan',
     subtitle: 'Atur target, pantau kewajiban, dan siapkan laporan',
     items: [
-      { name: 'Kategori & Anggaran', desc: 'Di Pengaturan → Kategori & Anggaran: tetapkan anggaran per kategori (bulanan atau tahunan). Leosiqra membandingkannya otomatis dengan transaksi riil supaya kamu tahu kapan mendekati/melewati batas.' },
-      { name: 'Hutang & Piutang', desc: 'Catat siapa berutang ke kamu (Piutang) dan ke siapa kamu berutang (Hutang) — termasuk kartu kredit/paylater. Bisa hitung otomatis bunga & cicilan per bulan, dan tandai lunas begitu selesai.' },
-      { name: 'Laporan Tahunan', desc: 'Laporan tahunan resmi: perbandingan pemasukan-pengeluaran per bulan dalam satu tahun, dan rincian anggaran tahunan. Cocok untuk evaluasi akhir tahun.' },
-      { name: 'Pajak Center', desc: 'Bantu siapkan data untuk SPT Tahunan: daftar harta (saldo rekening + investasi), daftar utang/piutang, dan penghasilan neto setahun — semua dihitung otomatis dari transaksi yang sudah kamu catat.' },
+      {
+        name: 'Kategori & Anggaran',
+        desc: 'Di Pengaturan → Kategori & Anggaran: tetapkan anggaran per kategori (bulanan atau tahunan). Leosiqra membandingkannya otomatis dengan transaksi riil supaya kamu tahu kapan mendekati/melewati batas.',
+      },
+      {
+        name: 'Hutang & Piutang',
+        desc: 'Catat siapa berutang ke kamu (Piutang) dan ke siapa kamu berutang (Hutang) — termasuk kartu kredit/paylater. Bisa hitung otomatis bunga & cicilan per bulan, dan tandai lunas begitu selesai.',
+      },
+      {
+        name: 'Laporan Tahunan',
+        desc: 'Laporan tahunan resmi: perbandingan pemasukan-pengeluaran per bulan dalam satu tahun, dan rincian anggaran tahunan. Cocok untuk evaluasi akhir tahun.',
+      },
+      {
+        name: 'Pajak Center',
+        desc: 'Bantu siapkan data untuk SPT Tahunan: daftar harta (saldo rekening + investasi), daftar utang/piutang, dan penghasilan neto setahun — semua dihitung otomatis dari transaksi yang sudah kamu catat.',
+      },
     ],
   },
   {
@@ -102,11 +153,26 @@ const sections: GuideSection[] = [
     title: 'Akun & Bantuan',
     subtitle: 'Profil, pengaturan data, dan bantuan',
     items: [
-      { name: 'Profil & Keamanan', desc: 'Data pribadi (nama, foto, WhatsApp), keamanan (ganti password, 2FA), dan ringkasan saldo semua rekening ("Active Banks").' },
-      { name: 'Pengaturan', desc: 'Ikon ⚙️ atau foto profil di menu kiri: kategori & subkategori, anggaran, mata uang, notifikasi, keamanan, paket, dan aplikasi terhubung.' },
-      { name: 'Panduan', desc: 'Halaman yang sedang kamu baca ini — penjelasan lengkap semua fitur, plus tombol tur interaktif di bawah.' },
-      { name: 'Saran & Kritik', desc: 'Kirim saran, kritik, laporan masalah, atau pujian langsung ke tim Leosiqra — lengkap dengan riwayat dan balasan dari kami.' },
-      { name: 'Hubungi Kami', desc: 'Ajukan upgrade ke paket PRO, lihat instruksi pembayaran (transfer bank/QRIS), dan konfirmasi pembayaran yang sudah dilakukan.' },
+      {
+        name: 'Profil & Keamanan',
+        desc: 'Data pribadi (nama, foto, WhatsApp), keamanan (ganti password, 2FA), dan ringkasan saldo semua rekening ("Active Banks").',
+      },
+      {
+        name: 'Pengaturan',
+        desc: 'Ikon ⚙️ atau foto profil di menu kiri: kategori & subkategori, anggaran, mata uang, notifikasi, keamanan, paket, dan aplikasi terhubung.',
+      },
+      {
+        name: 'Panduan',
+        desc: 'Halaman yang sedang kamu baca ini — penjelasan lengkap semua fitur, plus tombol tur interaktif di bawah.',
+      },
+      {
+        name: 'Saran & Kritik',
+        desc: 'Kirim saran, kritik, laporan masalah, atau pujian langsung ke tim Leosiqra — lengkap dengan riwayat dan balasan dari kami.',
+      },
+      {
+        name: 'Hubungi Kami',
+        desc: 'Ajukan upgrade ke paket PRO, lihat instruksi pembayaran (transfer bank/QRIS), dan konfirmasi pembayaran yang sudah dilakukan.',
+      },
     ],
   },
 ];
@@ -118,7 +184,10 @@ const extras: GuideSection[] = [
     title: 'Input Cepat',
     subtitle: 'Halaman ringan untuk dipasang di layar utama HP',
     items: [
-      { name: 'Input Cepat (/input-cepat)', desc: 'Halaman terpisah yang ringan, dirancang untuk di-"Add to Home Screen" di HP — buka, pilih rekening (lengkap dengan saldo & logo), isi nominal, simpan. Cocok untuk catat pengeluaran on-the-go tanpa buka aplikasi penuh.' },
+      {
+        name: 'Input Cepat (/input-cepat)',
+        desc: 'Halaman terpisah yang ringan, dirancang untuk di-"Add to Home Screen" di HP — buka, pilih rekening (lengkap dengan saldo & logo), isi nominal, simpan. Cocok untuk catat pengeluaran on-the-go tanpa buka aplikasi penuh.',
+      },
     ],
   },
 ];
@@ -127,21 +196,68 @@ const allSections = [...sections, ...extras];
 
 // Peraga & langkah cara pakai per grup menu sidebar (id = GuideSection.id).
 const SECTION_DEMO: Record<string, { demo: DemoKind; how: string[] }> = {
-  primary: { demo: 'dashboard', how: ['Buka Dashboard untuk ringkasan bulan ini', 'Ganti bulan lewat kalender di kanan atas', 'Tanya apa saja di AI Leosiqra'] },
-  transaksi: { demo: 'input', how: ['Buka Catat Transaksi atau tombol Tambah transaksi di menu samping', 'Pilih rekening, kategori & isi nominal', 'Simpan — saldo rekening ter-update otomatis'] },
-  aset: { demo: 'rekening', how: ['Tambah rekening bank, e-wallet, tunai, atau kartu', 'Isi saldo saat ini sekali saja', 'Saldo berubah sendiri setiap kamu mencatat'] },
-  investasi: { demo: 'investasi', how: ['Pilih jenis: Saham, Deposito, atau Lainnya', 'Catat jumlah & harga beli', 'Nilai & keuntungan dihitung otomatis'] },
-  perencanaan: { demo: 'budget', how: ['Pasang anggaran per kategori di Pengaturan → Kategori & Anggaran', 'Catat utang/piutang & cicilannya', 'Lihat Laporan Tahunan & Pajak Center'] },
-  akun: { demo: 'profil', how: ['Lengkapi profil & foto', 'Aktifkan verifikasi 2 langkah', 'Atur kategori, anggaran & mata uang di Pengaturan'] },
+  primary: {
+    demo: 'dashboard',
+    how: [
+      'Buka Dashboard untuk ringkasan bulan ini',
+      'Ganti bulan lewat kalender di kanan atas',
+      'Tanya apa saja di AI Leosiqra',
+    ],
+  },
+  transaksi: {
+    demo: 'input',
+    how: [
+      'Buka Catat Transaksi atau tombol Tambah transaksi di menu samping',
+      'Pilih rekening, kategori & isi nominal',
+      'Simpan — saldo rekening ter-update otomatis',
+    ],
+  },
+  aset: {
+    demo: 'rekening',
+    how: [
+      'Tambah rekening bank, e-wallet, tunai, atau kartu',
+      'Isi saldo saat ini sekali saja',
+      'Saldo berubah sendiri setiap kamu mencatat',
+    ],
+  },
+  investasi: {
+    demo: 'investasi',
+    how: [
+      'Pilih jenis: Saham, Deposito, atau Lainnya',
+      'Catat jumlah & harga beli',
+      'Nilai & keuntungan dihitung otomatis',
+    ],
+  },
+  perencanaan: {
+    demo: 'budget',
+    how: [
+      'Pasang anggaran per kategori di Pengaturan → Kategori & Anggaran',
+      'Catat utang/piutang & cicilannya',
+      'Lihat Laporan Tahunan & Pajak Center',
+    ],
+  },
+  akun: {
+    demo: 'profil',
+    how: [
+      'Lengkapi profil & foto',
+      'Aktifkan verifikasi 2 langkah',
+      'Atur kategori, anggaran & mata uang di Pengaturan',
+    ],
+  },
 };
 
 const buildTourSteps = (): TourStep[] => {
   const steps: TourStep[] = [
     {
       title: 'Selamat Datang di Leosiqra 👋',
-      content: 'Ini tur singkat mengenalkan navigasi utama aplikasi. Klik "Lanjut" untuk mulai, atau "Lewati Tur" kapan saja.',
+      content:
+        'Ini tur singkat mengenalkan navigasi utama aplikasi. Klik "Lanjut" untuk mulai, atau "Lewati Tur" kapan saja.',
       demo: 'menu',
-      how: ['Menu kiri: Keuangan (Ringkasan, Transaksi, Laporan, Rekening) & Fitur', '"Semua fitur" membuka daftar lengkap', 'Tombol "Tambah transaksi" (atau tekan N) selalu siap'],
+      how: [
+        'Menu kiri: Keuangan (Ringkasan, Transaksi, Laporan, Rekening) & Fitur',
+        '"Semua fitur" membuka daftar lengkap',
+        'Tombol "Tambah transaksi" (atau tekan N) selalu siap',
+      ],
     },
   ];
   for (const section of sections) {
@@ -156,9 +272,14 @@ const buildTourSteps = (): TourStep[] => {
   }
   steps.push({
     title: 'Selesai! 🎉',
-    content: 'Sekarang kamu sudah kenal semua bagian utama Leosiqra. Pasang juga aplikasinya di HP supaya mencatat bisa dari mana saja.',
+    content:
+      'Sekarang kamu sudah kenal semua bagian utama Leosiqra. Pasang juga aplikasinya di HP supaya mencatat bisa dari mana saja.',
     demo: 'install',
-    how: ['Leosiqra — aplikasi lengkap di HP', 'Input Cepat — khusus catat kilat dari layar utama', 'Ulangi tur ini kapan saja lewat tombol "Mulai Tur"'],
+    how: [
+      'Leosiqra — aplikasi lengkap di HP',
+      'Input Cepat — khusus catat kilat dari layar utama',
+      'Ulangi tur ini kapan saja lewat tombol "Mulai Tur"',
+    ],
     link: { href: '/install', label: '📱 Pasang di HP' },
   });
   return steps;
@@ -178,15 +299,12 @@ export default function PanduanPage() {
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 text-[10px] font-black uppercase tracking-widest">
             <Compass size={14} /> Panduan Leosiqra
           </div>
-          <h1 className="text-2xl md:text-4xl font-black tracking-tight leading-tight">
-            Apa itu Leosiqra?
-          </h1>
+          <h1 className="text-2xl md:text-4xl font-black tracking-tight leading-tight">Apa itu Leosiqra?</h1>
           <p className="text-sm md:text-base font-medium text-indigo-100 leading-relaxed">
-            Leosiqra adalah dashboard keuangan pribadi: satu tempat untuk mencatat transaksi harian,
-            memantau saldo semua rekening (bank, e-wallet, kartu kredit) lintas mata uang, mengelola
-            investasi & tabungan, menyiapkan data pajak tahunan, dan bertanya ke asisten AI yang sudah
-            paham kondisi keuanganmu. Halaman ini menjelaskan setiap fitur secara detail — atau kalau
-            mau langsung praktik, klik tombol tur di bawah.
+            Leosiqra adalah dashboard keuangan pribadi: satu tempat untuk mencatat transaksi harian, memantau saldo
+            semua rekening (bank, e-wallet, kartu kredit) lintas mata uang, mengelola investasi & tabungan, menyiapkan
+            data pajak tahunan, dan bertanya ke asisten AI yang sudah paham kondisi keuanganmu. Halaman ini menjelaskan
+            setiap fitur secara detail — atau kalau mau langsung praktik, klik tombol tur di bawah.
           </p>
           <button
             onClick={() => setTourActive(true)}
@@ -206,7 +324,9 @@ export default function PanduanPage() {
               className="bg-white rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm overflow-hidden"
             >
               <div className="p-6 md:p-8 flex items-center gap-4 border-b border-slate-50 bg-slate-50/30">
-                <div className={`w-11 h-11 rounded-xl ${section.color} text-white flex items-center justify-center shrink-0`}>
+                <div
+                  className={`w-11 h-11 rounded-xl ${section.color} text-white flex items-center justify-center shrink-0`}
+                >
                   <Icon size={20} />
                 </div>
                 <div>

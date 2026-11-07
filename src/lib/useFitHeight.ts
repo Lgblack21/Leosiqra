@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useLayoutEffect, useState } from 'react';
 
@@ -17,7 +17,8 @@ export function useFitHeight(ref: React.RefObject<HTMLDivElement | null>) {
       // Menu melayang di bawah (offsetParent selalu null untuk position:fixed → cek ukuran & display).
       const dock = document.querySelector<HTMLElement>('[data-focus-dock]');
       const r = dock?.getBoundingClientRect();
-      const dockTop = dock && r && r.height > 0 && getComputedStyle(dock).display !== 'none' ? r.top : window.innerHeight;
+      const dockTop =
+        dock && r && r.height > 0 && getComputedStyle(dock).display !== 'none' ? r.top : window.innerHeight;
       const h = Math.floor(dockTop - top - 12);
       setHeight(h >= MIN_FIT ? h : null);
     };
@@ -48,7 +49,10 @@ export function useFitHeight(ref: React.RefObject<HTMLDivElement | null>) {
     const prev = [html.style.overflow, document.body.style.overflow];
     html.style.overflow = 'hidden';
     document.body.style.overflow = 'hidden';
-    return () => { html.style.overflow = prev[0]; document.body.style.overflow = prev[1]; };
+    return () => {
+      html.style.overflow = prev[0];
+      document.body.style.overflow = prev[1];
+    };
   }, [height]);
   return height;
 }

@@ -34,14 +34,24 @@ export const daysUntil = (dateStr: string, today = toLocalDateString()) =>
   Math.round((Date.parse(`${dateStr}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / DAY);
 
 const short = (dateStr: string) =>
-  new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${dateStr}T00:00:00Z`));
+  new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(
+    new Date(`${dateStr}T00:00:00Z`),
+  );
 
 /** Teks singkat untuk daftar/detail, mis. "Jatuh tempo besok (5 Des)". */
-export const dueLabel = (due: DebtDue, today = toLocalDateString()): { text: string; urgent: boolean; overdue: boolean } => {
+export const dueLabel = (
+  due: DebtDue,
+  today = toLocalDateString(),
+): { text: string; urgent: boolean; overdue: boolean } => {
   const next = nextDueDate(due, today);
-  if (!next) return { text: `Lewat jatuh tempo (${short((due as { date: string }).date)})`, urgent: true, overdue: true };
+  if (!next)
+    return { text: `Lewat jatuh tempo (${short((due as { date: string }).date)})`, urgent: true, overdue: true };
   const n = daysUntil(next, today);
   const when = n === 0 ? 'hari ini' : n === 1 ? 'besok' : n <= 7 ? `${n} hari lagi` : short(next);
   const prefix = 'day' in due ? `Tiap tgl ${due.day} · ` : '';
-  return { text: `${prefix}Jatuh tempo ${when}${n >= 1 && n <= 7 ? ` (${short(next)})` : ''}`, urgent: n <= 3, overdue: false };
+  return {
+    text: `${prefix}Jatuh tempo ${when}${n >= 1 && n <= 7 ? ` (${short(next)})` : ''}`,
+    urgent: n <= 3,
+    overdue: false,
+  };
 };

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 // Musik & suasana untuk "Fokus bareng Leo" — DIBUAT LANGSUNG di browser (Web Audio),
 // bukan file lagu: 100% bebas royalti, tanpa unduhan, tanpa server.
@@ -8,12 +8,12 @@
 //   noise : brown noise lembut (penutup suara sekitar)
 // Browser hanya mengizinkan suara setelah ada sentuhan/klik → play() dipanggil dari tombol.
 
-export type FocusTrack = "lofi" | "hujan" | "ombak" | "noise";
+export type FocusTrack = 'lofi' | 'hujan' | 'ombak' | 'noise';
 export const FOCUS_TRACKS: { id: FocusTrack; label: string; desc: string; emoji: string }[] = [
-  { id: "lofi", label: "Lo-fi", desc: "Piano santai & beat pelan", emoji: "🎹" },
-  { id: "hujan", label: "Hujan", desc: "Rintik hujan di jendela", emoji: "🌧️" },
-  { id: "ombak", label: "Ombak", desc: "Deburan pantai pelan", emoji: "🌊" },
-  { id: "noise", label: "Noise", desc: "Brown noise penutup bising", emoji: "🌫️" },
+  { id: 'lofi', label: 'Lo-fi', desc: 'Piano santai & beat pelan', emoji: '🎹' },
+  { id: 'hujan', label: 'Hujan', desc: 'Rintik hujan di jendela', emoji: '🌧️' },
+  { id: 'ombak', label: 'Ombak', desc: 'Deburan pantai pelan', emoji: '🌊' },
+  { id: 'noise', label: 'Noise', desc: 'Brown noise penutup bising', emoji: '🌫️' },
 ];
 
 type Stopper = () => void;
@@ -45,17 +45,31 @@ class FocusAudioEngine {
   private _track: FocusTrack | null = null;
   private _volume = 0.6;
 
-  get track() { return this._track; }
-  get playing() { return this._track !== null; }
-  get volume() { return this._volume; }
+  get track() {
+    return this._track;
+  }
+  get playing() {
+    return this._track !== null;
+  }
+  get volume() {
+    return this._volume;
+  }
 
-  subscribe(fn: Listener) { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; }
-  private emit() { this.listeners.forEach((fn) => fn()); }
+  subscribe(fn: Listener) {
+    this.listeners.add(fn);
+    return () => {
+      this.listeners.delete(fn);
+    };
+  }
+  private emit() {
+    this.listeners.forEach((fn) => fn());
+  }
 
   private ensure() {
-    if (typeof window === "undefined") return null;
+    if (typeof window === 'undefined') return null;
     if (!this.ctx) {
-      const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      const AC =
+        window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!AC) return null;
       const ctx = new AC();
       const comp = ctx.createDynamicsCompressor();
@@ -67,7 +81,7 @@ class FocusAudioEngine {
       this.ctx = ctx;
       this.master = master;
     }
-    if (this.ctx.state === "suspended") void this.ctx.resume().catch(() => undefined);
+    if (this.ctx.state === 'suspended') void this.ctx.resume().catch(() => undefined);
     return this.ctx;
   }
 
@@ -116,13 +130,23 @@ class FocusAudioEngine {
     bus.gain.value = 0;
     bus.connect(this.master);
     bus.gain.setTargetAtTime(1, ctx.currentTime, 0.6);
-    const stop = track === "lofi" ? this.lofi(ctx, bus) : track === "hujan" ? this.rain(ctx, bus) : track === "ombak" ? this.waves(ctx, bus) : this.brownNoise(ctx, bus);
+    const stop =
+      track === 'lofi'
+        ? this.lofi(ctx, bus)
+        : track === 'hujan'
+          ? this.rain(ctx, bus)
+          : track === 'ombak'
+            ? this.waves(ctx, bus)
+            : this.brownNoise(ctx, bus);
     this.stopTrack = () => {
       const t = ctx.currentTime;
       bus.gain.cancelScheduledValues(t);
       bus.gain.setValueAtTime(bus.gain.value, t);
       bus.gain.linearRampToValueAtTime(0, t + 0.8);
-      setTimeout(() => { stop(); bus.disconnect(); }, 900);
+      setTimeout(() => {
+        stop();
+        bus.disconnect();
+      }, 900);
     };
     this._track = track;
     this.master.gain.cancelScheduledValues(ctx.currentTime);
@@ -146,7 +170,8 @@ class FocusAudioEngine {
   private curve = (v: number) => Math.pow(v, 1.6) * 0.9;
   setVolume(v: number) {
     this._volume = Math.max(0, Math.min(1, v));
-    if (this.ctx && this.master && this._track) this.master.gain.setTargetAtTime(this.curve(this._volume), this.ctx.currentTime, 0.15);
+    if (this.ctx && this.master && this._track)
+      this.master.gain.setTargetAtTime(this.curve(this._volume), this.ctx.currentTime, 0.15);
     this.emit();
   }
 
@@ -158,11 +183,15 @@ class FocusAudioEngine {
     out.gain.value = 0.32;
     out.connect(ctx.destination);
     const t0 = ctx.currentTime + Math.max(0, delaySec);
-    [[76, 0], [83, 0.32], [88, 0.64]].forEach(([n, d]) => {
+    [
+      [76, 0],
+      [83, 0.32],
+      [88, 0.64],
+    ].forEach(([n, d]) => {
       [1, 2.76, 5.4].forEach((ratio, k) => {
         const o = ctx.createOscillator();
         const g = ctx.createGain();
-        o.type = "sine";
+        o.type = 'sine';
         o.frequency.value = midi(n) * ratio;
         g.gain.setValueAtTime(0, t0 + d);
         g.gain.linearRampToValueAtTime(0.35 / (k + 1), t0 + d + 0.01);
@@ -172,9 +201,19 @@ class FocusAudioEngine {
         o.stop(t0 + d + 2.6);
       });
     });
-    const timer = setTimeout(() => { out.disconnect(); this.chimeTimers.delete(timer); }, (delaySec + 4) * 1000);
+    const timer = setTimeout(
+      () => {
+        out.disconnect();
+        this.chimeTimers.delete(timer);
+      },
+      (delaySec + 4) * 1000,
+    );
     this.chimeTimers.add(timer);
-    return () => { clearTimeout(timer); this.chimeTimers.delete(timer); out.disconnect(); };
+    return () => {
+      clearTimeout(timer);
+      this.chimeTimers.delete(timer);
+      out.disconnect();
+    };
   }
 
   // ── Lo-fi ────────────────────────────────────────────────────────────────
@@ -182,7 +221,7 @@ class FocusAudioEngine {
     const bpm = 72;
     const beat = 60 / bpm;
     const tone = ctx.createBiquadFilter();
-    tone.type = "lowpass";
+    tone.type = 'lowpass';
     tone.frequency.value = 2600;
     tone.Q.value = 0.4;
     tone.connect(bus);
@@ -197,7 +236,7 @@ class FocusAudioEngine {
     // Desis & klik piringan hitam.
     const hiss = this.loopSource(ctx, this.noise(ctx));
     const hissF = ctx.createBiquadFilter();
-    hissF.type = "bandpass";
+    hissF.type = 'bandpass';
     hissF.frequency.value = 5000;
     hissF.Q.value = 0.6;
     const hissG = ctx.createGain();
@@ -214,17 +253,27 @@ class FocusAudioEngine {
       const b = ctx.createOscillator();
       const c = ctx.createOscillator();
       const cg = ctx.createGain();
-      a.type = "sine"; a.frequency.value = freq;
-      b.type = "triangle"; b.frequency.value = freq; b.detune.value = 6;
-      c.type = "sine"; c.frequency.value = freq * 2; cg.gain.value = 0.18;
-      a.connect(g); b.connect(g); c.connect(cg).connect(g);
+      a.type = 'sine';
+      a.frequency.value = freq;
+      b.type = 'triangle';
+      b.frequency.value = freq;
+      b.detune.value = 6;
+      c.type = 'sine';
+      c.frequency.value = freq * 2;
+      cg.gain.value = 0.18;
+      a.connect(g);
+      b.connect(g);
+      c.connect(cg).connect(g);
       g.connect(tone);
-      [a, b, c].forEach((o) => { o.start(t); o.stop(t + dur + 0.05); });
+      [a, b, c].forEach((o) => {
+        o.start(t);
+        o.stop(t + dur + 0.05);
+      });
     };
     const bass = (freq: number, t: number, dur: number) => {
       const o = ctx.createOscillator();
       const g = ctx.createGain();
-      o.type = "sine";
+      o.type = 'sine';
       o.frequency.value = freq;
       g.gain.setValueAtTime(0, t);
       g.gain.linearRampToValueAtTime(0.32, t + 0.02);
@@ -270,24 +319,27 @@ class FocusAudioEngine {
       // Melodi tipis, tidak selalu ada.
       if (bar % 2 === 1 && Math.random() < 0.7) {
         const steps = [0.5, 1.5, 2, 3].filter(() => Math.random() < 0.55);
-        steps.forEach((s) => ep(midi(PENTA[Math.floor(Math.random() * PENTA.length)]), t + s * beat, beat * 1.2, 0.035));
+        steps.forEach((s) =>
+          ep(midi(PENTA[Math.floor(Math.random() * PENTA.length)]), t + s * beat, beat * 1.2, 0.035),
+        );
       }
       // Drum: kick 1 & 3 (kadang 3+), snare/clap 2 & 4, hat 8-an ber-swing.
       kick(t);
       kick(t + beat * 2.5 * (Math.random() < 0.35 ? 1 : 0.8));
-      noiseHit(t + beat, 1800, 0.18, 0.12, "bandpass");
-      noiseHit(t + beat * 3, 1800, 0.18, 0.12, "bandpass");
+      noiseHit(t + beat, 1800, 0.18, 0.12, 'bandpass');
+      noiseHit(t + beat * 3, 1800, 0.18, 0.12, 'bandpass');
       for (let i = 0; i < 8; i++) {
         const swing = i % 2 ? beat * 0.08 : 0;
-        noiseHit(t + i * (beat / 2) + swing, 8000, 0.035, i % 2 ? 0.025 : 0.04, "highpass");
+        noiseHit(t + i * (beat / 2) + swing, 8000, 0.035, i % 2 ? 0.025 : 0.04, 'highpass');
       }
       // Klik piringan hitam sesekali.
-      for (let i = 0; i < 3; i++) if (Math.random() < 0.6) noiseHit(t + Math.random() * beat * 4, 3000, 0.006, 0.06, "highpass");
+      for (let i = 0; i < 3; i++)
+        if (Math.random() < 0.6) noiseHit(t + Math.random() * beat * 4, 3000, 0.006, 0.06, 'highpass');
       bar += 1;
     };
     const tick = () => {
       // Tab di belakang: setInterval diperlambat browser → jadwalkan lebih jauh ke depan.
-      const ahead = typeof document !== "undefined" && document.hidden ? 3 : 0.4;
+      const ahead = typeof document !== 'undefined' && document.hidden ? 3 : 0.4;
       while (next < ctx.currentTime + ahead) {
         scheduleBar(next);
         next += beat * 4;
@@ -297,7 +349,12 @@ class FocusAudioEngine {
     const iv = setInterval(tick, 100);
     return () => {
       clearInterval(iv);
-      try { wobble.stop(); hiss.stop(); } catch { /* sudah berhenti */ }
+      try {
+        wobble.stop();
+        hiss.stop();
+      } catch {
+        /* sudah berhenti */
+      }
       tone.disconnect();
       hissG.disconnect();
     };
@@ -307,10 +364,10 @@ class FocusAudioEngine {
   private rain(ctx: AudioContext, bus: GainNode): Stopper {
     const src = this.loopSource(ctx, this.noise(ctx));
     const hp = ctx.createBiquadFilter();
-    hp.type = "highpass";
+    hp.type = 'highpass';
     hp.frequency.value = 500;
     const lp = ctx.createBiquadFilter();
-    lp.type = "lowpass";
+    lp.type = 'lowpass';
     lp.frequency.value = 7000;
     const g = ctx.createGain();
     g.gain.value = 0.16;
@@ -318,7 +375,7 @@ class FocusAudioEngine {
     // Gemuruh rendah.
     const rumble = this.loopSource(ctx, this.brown(ctx));
     const rl = ctx.createBiquadFilter();
-    rl.type = "lowpass";
+    rl.type = 'lowpass';
     rl.frequency.value = 180;
     const rg = ctx.createGain();
     rg.gain.value = 0.35;
@@ -336,7 +393,7 @@ class FocusAudioEngine {
       const s = ctx.createBufferSource();
       s.buffer = this.noise(ctx);
       const f = ctx.createBiquadFilter();
-      f.type = "bandpass";
+      f.type = 'bandpass';
       f.frequency.value = 1800 + Math.random() * 3500;
       f.Q.value = 8;
       const dg = ctx.createGain();
@@ -348,7 +405,7 @@ class FocusAudioEngine {
       s.stop(t + 0.15);
     };
     const tick = () => {
-      const ahead = typeof document !== "undefined" && document.hidden ? 3 : 0.4;
+      const ahead = typeof document !== 'undefined' && document.hidden ? 3 : 0.4;
       while (next < ctx.currentTime + ahead) {
         drop(next);
         next += -Math.log(1 - Math.random()) / 9; // ~9 tetes/detik, acak (Poisson)
@@ -358,7 +415,13 @@ class FocusAudioEngine {
     const iv = setInterval(tick, 100);
     return () => {
       clearInterval(iv);
-      try { src.stop(); rumble.stop(); lfo.stop(); } catch { /* sudah berhenti */ }
+      try {
+        src.stop();
+        rumble.stop();
+        lfo.stop();
+      } catch {
+        /* sudah berhenti */
+      }
       g.disconnect();
       rg.disconnect();
     };
@@ -369,13 +432,13 @@ class FocusAudioEngine {
     const src = this.loopSource(ctx, this.brown(ctx));
     const spray = this.loopSource(ctx, this.noise(ctx));
     const lp = ctx.createBiquadFilter();
-    lp.type = "lowpass";
+    lp.type = 'lowpass';
     lp.frequency.value = 700;
     const g = ctx.createGain();
     g.gain.value = 0.34;
     src.connect(lp).connect(g).connect(bus);
     const sf = ctx.createBiquadFilter();
-    sf.type = "bandpass";
+    sf.type = 'bandpass';
     sf.frequency.value = 2500;
     sf.Q.value = 0.5;
     const sg = ctx.createGain();
@@ -396,7 +459,13 @@ class FocusAudioEngine {
     const l3 = mk(0.075, 500, lp.frequency);
     const l4 = mk(0.075, 0.025, sg.gain);
     return () => {
-      [src, spray, l1, l2, l3, l4].forEach((n) => { try { n.stop(); } catch { /* sudah berhenti */ } });
+      [src, spray, l1, l2, l3, l4].forEach((n) => {
+        try {
+          n.stop();
+        } catch {
+          /* sudah berhenti */
+        }
+      });
       g.disconnect();
       sg.disconnect();
     };
@@ -406,13 +475,17 @@ class FocusAudioEngine {
   private brownNoise(ctx: AudioContext, bus: GainNode): Stopper {
     const src = this.loopSource(ctx, this.brown(ctx));
     const lp = ctx.createBiquadFilter();
-    lp.type = "lowpass";
+    lp.type = 'lowpass';
     lp.frequency.value = 900;
     const g = ctx.createGain();
     g.gain.value = 0.55;
     src.connect(lp).connect(g).connect(bus);
     return () => {
-      try { src.stop(); } catch { /* sudah berhenti */ }
+      try {
+        src.stop();
+      } catch {
+        /* sudah berhenti */
+      }
       g.disconnect();
     };
   }

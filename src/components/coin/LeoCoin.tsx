@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useId } from 'react';
 
@@ -67,14 +67,30 @@ export function LeoCoin({ size = 20, className }: { size?: number; className?: s
       )}
       <circle cx="50" cy="50" r={small ? 43 : 40.5} fill={`url(#${g('bevel')})`} />
       <circle cx="50" cy="50" r={small ? 40 : 37.5} fill={`url(#${g('field')})`} />
-      {!small && <circle cx="50" cy="50" r="35" fill="none" stroke="#c7d2fe" strokeOpacity="0.45" strokeWidth="0.8" strokeDasharray="0.1 2.6" strokeLinecap="round" />}
+      {!small && (
+        <circle
+          cx="50"
+          cy="50"
+          r="35"
+          fill="none"
+          stroke="#c7d2fe"
+          strokeOpacity="0.45"
+          strokeWidth="0.8"
+          strokeDasharray="0.1 2.6"
+          strokeLinecap="round"
+        />
+      )}
 
       <g transform="translate(0 0.6)" opacity="0.35">
-        {MANE.map(([x, y], i) => <circle key={i} cx={x} cy={y + 1.4} r="8" fill="#1e1b4b" />)}
+        {MANE.map(([x, y], i) => (
+          <circle key={i} cx={x} cy={y + 1.4} r="8" fill="#1e1b4b" />
+        ))}
         <circle cx="50" cy="53.4" r="16.5" fill="#1e1b4b" />
       </g>
       <g fill={`url(#${g('relief')})`}>
-        {MANE.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="8" />)}
+        {MANE.map(([x, y], i) => (
+          <circle key={i} cx={x} cy={y} r="8" />
+        ))}
       </g>
       <g fill="#eef2ff">
         <circle cx="38" cy="37" r="5" />
@@ -87,7 +103,13 @@ export function LeoCoin({ size = 20, className }: { size?: number; className?: s
         <circle cx="56.4" cy="50" r={small ? 2.8 : 2.2} />
         <path d={small ? 'M46.6 55 h6.8 l-3.4 3.4 Z' : 'M47.2 55.2 h5.6 l-2.8 2.9 Z'} />
       </g>
-      <path d="M50 58.2 q-2.2 3 -4.4 1.5 M50 58.2 q2.2 3 4.4 1.5" fill="none" stroke="#312e81" strokeWidth={small ? 1.8 : 1.2} strokeLinecap="round" />
+      <path
+        d="M50 58.2 q-2.2 3 -4.4 1.5 M50 58.2 q2.2 3 4.4 1.5"
+        fill="none"
+        stroke="#312e81"
+        strokeWidth={small ? 1.8 : 1.2}
+        strokeLinecap="round"
+      />
 
       <g clipPath={`url(#${g('clip')})`}>
         <path d="M-10 30 L35 -10 L58 -10 L-10 52 Z" fill={`url(#${g('shine')})`} />

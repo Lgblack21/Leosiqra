@@ -1,18 +1,14 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { BottomTabBar } from "@/components/app/BottomTabBar";
-import { Fab } from "@/components/app/Fab";
-import { AddTransactionSheet } from "@/components/app/AddTransactionSheet";
-import { useCategoryTemplateSync } from "@/lib/categoryTemplateSync";
-import DevNoticeBanner from "@/components/DevNoticeBanner";
-import { bindTxPrefillHost, takeTxPrefill, type TxPrefill } from "@/lib/txPrefill";
+import { useEffect, useState } from 'react';
+import { BottomTabBar } from '@/components/app/BottomTabBar';
+import { Fab } from '@/components/app/Fab';
+import { AddTransactionSheet } from '@/components/app/AddTransactionSheet';
+import { useCategoryTemplateSync } from '@/lib/categoryTemplateSync';
+import DevNoticeBanner from '@/components/DevNoticeBanner';
+import { bindTxPrefillHost, takeTxPrefill, type TxPrefill } from '@/lib/txPrefill';
 
-export default function TabsLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function TabsLayout({ children }: { children: React.ReactNode }) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [prefill, setPrefill] = useState<TxPrefill | null>(null);
   useCategoryTemplateSync();

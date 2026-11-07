@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import type { FocusTrack } from "./audio";
+import type { FocusTrack } from './audio';
 
 // Fokus bareng Leo — keadaan timer, pengaturan & riwayat sesi.
 // Timer dihitung dari waktu selesai (endsAt), BUKAN hitung mundur per detik: tetap tepat
@@ -8,13 +8,13 @@ import type { FocusTrack } from "./audio";
 // (event "storage" menyamakan tab lain). Riwayat → server (/api/member/focus); kalau
 // server belum siap / offline, sesi antre di perangkat lalu dikirim ulang.
 
-export type FocusKind = "belajar" | "kerja" | "baca" | "usaha" | "lainnya";
+export type FocusKind = 'belajar' | 'kerja' | 'baca' | 'usaha' | 'lainnya';
 export const FOCUS_KINDS: { id: FocusKind; label: string; emoji: string }[] = [
-  { id: "belajar", label: "Belajar", emoji: "✏️" },
-  { id: "kerja", label: "Kerja", emoji: "💻" },
-  { id: "baca", label: "Baca", emoji: "📖" },
-  { id: "usaha", label: "Usaha", emoji: "🧾" },
-  { id: "lainnya", label: "Lainnya", emoji: "✨" },
+  { id: 'belajar', label: 'Belajar', emoji: '✏️' },
+  { id: 'kerja', label: 'Kerja', emoji: '💻' },
+  { id: 'baca', label: 'Baca', emoji: '📖' },
+  { id: 'usaha', label: 'Usaha', emoji: '🧾' },
+  { id: 'lainnya', label: 'Lainnya', emoji: '✨' },
 ];
 
 export type FocusSettings = {
@@ -32,14 +32,14 @@ export type FocusSettings = {
   notify: boolean;
 };
 export const DEFAULT_SETTINGS: FocusSettings = {
-  kind: "kerja",
+  kind: 'kerja',
   minutes: 25,
   breakMin: 5,
   longBreakMin: 15,
   longEvery: 4,
   autoBreak: true,
   autoNext: false,
-  track: "lofi",
+  track: 'lofi',
   volume: 0.55,
   musicInBreak: false,
   keepAwake: true,
@@ -47,7 +47,7 @@ export const DEFAULT_SETTINGS: FocusSettings = {
 };
 
 export type FocusRun = {
-  phase: "focus" | "break";
+  phase: 'focus' | 'break';
   long: boolean;
   sessionId: string;
   kind: FocusKind;
@@ -72,12 +72,12 @@ export type FocusSession = {
   date: string;
 };
 
-const K_SETTINGS = "leosiqra:focus:settings";
-const K_RUN = "leosiqra:focus:run";
-const K_SESSIONS = "leosiqra:focus:sessions";
-const K_PENDING = "leosiqra:focus:pending";
+const K_SETTINGS = 'leosiqra:focus:settings';
+const K_RUN = 'leosiqra:focus:run';
+const K_SESSIONS = 'leosiqra:focus:sessions';
+const K_PENDING = 'leosiqra:focus:pending';
 
-const read = <T,>(key: string, fallback: T): T => {
+const read = <T>(key: string, fallback: T): T => {
   try {
     const raw = localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as T) : fallback;
@@ -95,34 +95,34 @@ const write = (key: string, value: unknown) => {
 };
 
 export const clampInt = (v: unknown, min: number, max: number, fallback: number) =>
-  typeof v === "number" && Number.isFinite(v) ? Math.min(max, Math.max(min, Math.round(v))) : fallback;
+  typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, Math.round(v))) : fallback;
 
 export const loadSettings = (): FocusSettings => {
   const s = { ...DEFAULT_SETTINGS, ...read<Partial<FocusSettings>>(K_SETTINGS, {}) };
   return {
     ...s,
-    kind: FOCUS_KINDS.some((k) => k.id === s.kind) ? s.kind : "kerja",
+    kind: FOCUS_KINDS.some((k) => k.id === s.kind) ? s.kind : 'kerja',
     minutes: clampInt(s.minutes, 5, 180, 25),
     breakMin: clampInt(s.breakMin, 1, 30, 5),
     longBreakMin: clampInt(s.longBreakMin, 5, 60, 15),
     longEvery: clampInt(s.longEvery, 2, 8, 4),
-    volume: typeof s.volume === "number" ? Math.min(1, Math.max(0, s.volume)) : 0.55,
+    volume: typeof s.volume === 'number' ? Math.min(1, Math.max(0, s.volume)) : 0.55,
   };
 };
 export const saveSettings = (s: FocusSettings) => write(K_SETTINGS, s);
 
 export const loadRun = (): FocusRun | null => {
   const r = read<FocusRun | null>(K_RUN, null);
-  if (!r || (r.phase !== "focus" && r.phase !== "break") || typeof r.endsAt !== "number") return null;
+  if (!r || (r.phase !== 'focus' && r.phase !== 'break') || typeof r.endsAt !== 'number') return null;
   return r;
 };
 export const saveRun = (r: FocusRun | null) => write(K_RUN, r);
 export const RUN_STORAGE_KEY = K_RUN;
 
 export const uuid = () =>
-  typeof crypto !== "undefined" && "randomUUID" in crypto
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto
     ? crypto.randomUUID()
-    : "xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx".replace(/x/g, () => Math.floor(Math.random() * 16).toString(16));
+    : 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16));
 
 /** Sisa waktu fase (ms), memperhitungkan jeda. */
 export const remainingMs = (r: FocusRun, now = Date.now()) => Math.max(0, r.endsAt - (r.pausedAt ?? now));
@@ -140,7 +140,9 @@ type Listener = () => void;
 const listeners = new Set<Listener>();
 export const subscribeSessions = (fn: Listener) => {
   listeners.add(fn);
-  return () => { listeners.delete(fn); };
+  return () => {
+    listeners.delete(fn);
+  };
 };
 const emit = () => listeners.forEach((fn) => fn());
 
@@ -156,11 +158,20 @@ export const localSessions = (): FocusSession[] => read<FocusSession[]>(K_SESSIO
 const pendingIds = () => new Set(read<string[]>(K_PENDING, []));
 
 async function post(s: FocusSession) {
-  const res = await fetch("/api/member/focus", {
-    method: "POST",
-    credentials: "include",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ id: s.id, kind: s.kind, label: s.label, planned_min: s.planned_min, focus_sec: s.focus_sec, completed: s.completed === 1, started_at: s.started_at, ended_at: s.ended_at }),
+  const res = await fetch('/api/member/focus', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      id: s.id,
+      kind: s.kind,
+      label: s.label,
+      planned_min: s.planned_min,
+      focus_sec: s.focus_sec,
+      completed: s.completed === 1,
+      started_at: s.started_at,
+      ended_at: s.ended_at,
+    }),
   });
   return res.status;
 }
@@ -175,19 +186,30 @@ export const flushPending = () => {
     const all = localSessions();
     for (const id of [...pending]) {
       const s = all.find((x) => x.id === id);
-      if (!s) { pending.delete(id); continue; }
+      if (!s) {
+        pending.delete(id);
+        continue;
+      }
       try {
         const status = await post(s);
-        if (status === 200 || status === 201) { pending.delete(id); serverReady = true; }
-        else if (status === 400) pending.delete(id); // data tidak valid → jangan diulang terus
-        else if (status === 503) { serverReady = false; break; }
-        else break; // offline / sesi habis → coba lagi nanti
+        if (status === 200 || status === 201) {
+          pending.delete(id);
+          serverReady = true;
+        } else if (status === 400)
+          pending.delete(id); // data tidak valid → jangan diulang terus
+        else if (status === 503) {
+          serverReady = false;
+          break;
+        } else break; // offline / sesi habis → coba lagi nanti
       } catch {
         break;
       }
     }
     write(K_PENDING, [...pending]);
-  })().finally(() => { flushing = null; emit(); });
+  })().finally(() => {
+    flushing = null;
+    emit();
+  });
   return flushing;
 };
 
@@ -195,11 +217,14 @@ export const flushPending = () => {
 export const syncSessions = async () => {
   await flushPending();
   try {
-    const res = await fetch("/api/member/focus", { credentials: "include", cache: "no-store" });
+    const res = await fetch('/api/member/focus', { credentials: 'include', cache: 'no-store' });
     if (!res.ok) return localSessions();
     const data = (await res.json()) as { items?: FocusSession[]; ready?: boolean };
     serverReady = data.ready !== false;
-    if (!serverReady) { emit(); return localSessions(); }
+    if (!serverReady) {
+      emit();
+      return localSessions();
+    }
     const pending = pendingIds();
     const stillPending = localSessions().filter((s) => pending.has(s.id));
     const merged = keep90(sortSessions([...(data.items ?? []).filter((s) => !pending.has(s.id)), ...stillPending]));
@@ -226,13 +251,17 @@ export const recordSession = (s: FocusSession) => {
 export const deleteSession = async (id: string) => {
   const pending = pendingIds();
   if (!pending.has(id)) {
-    const res = await fetch(`/api/member/focus/${id}`, { method: "DELETE", credentials: "include" });
-    if (!res.ok && res.status !== 404) throw new Error(res.status === 503 ? "Rekap belum aktif di server." : "Gagal menghapus sesi.");
+    const res = await fetch(`/api/member/focus/${id}`, { method: 'DELETE', credentials: 'include' });
+    if (!res.ok && res.status !== 404)
+      throw new Error(res.status === 503 ? 'Rekap belum aktif di server.' : 'Gagal menghapus sesi.');
   } else {
     pending.delete(id);
     write(K_PENDING, [...pending]);
   }
-  write(K_SESSIONS, localSessions().filter((s) => s.id !== id));
+  write(
+    K_SESSIONS,
+    localSessions().filter((s) => s.id !== id),
+  );
   emit();
 };
 
@@ -252,7 +281,11 @@ export const summarize = (list: FocusSession[]) => {
   const week = Array.from({ length: 7 }, (_, i) => {
     const ms = Date.now() - (6 - i) * 86400_000;
     const key = wibDate(ms);
-    return { date: key, label: new Date(ms + 7 * 3600_000).toLocaleDateString("id-ID", { weekday: "short", timeZone: "UTC" }), sec: byDate.get(key) ?? 0 };
+    return {
+      date: key,
+      label: new Date(ms + 7 * 3600_000).toLocaleDateString('id-ID', { weekday: 'short', timeZone: 'UTC' }),
+      sec: byDate.get(key) ?? 0,
+    };
   });
   const weekSet = new Set(week.map((w) => w.date));
   const byKind = new Map<FocusKind, number>();
@@ -271,12 +304,12 @@ export const fmtMin = (sec: number) => {
   const m = Math.round(sec / 60);
   if (m < 60) return `${m} mnt`;
   const h = Math.floor(m / 60);
-  return `${h} j${m % 60 ? ` ${m % 60} mnt` : ""}`;
+  return `${h} j${m % 60 ? ` ${m % 60} mnt` : ''}`;
 };
 export const fmtClock = (ms: number) => {
   const total = Math.ceil(ms / 1000);
   const h = Math.floor(total / 3600);
   const m = Math.floor((total % 3600) / 60);
   const s = total % 60;
-  return `${h ? `${h}:${String(m).padStart(2, "0")}` : String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${h ? `${h}:${String(m).padStart(2, '0')}` : String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 };

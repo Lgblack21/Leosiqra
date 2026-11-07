@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
@@ -24,7 +24,15 @@ interface CategorySelectProps {
   subValue?: string;
 }
 
-export const CategorySelect = ({ label, value, type, onChange, onSubCategoryChange, showBadge = true, subValue }: CategorySelectProps) => {
+export const CategorySelect = ({
+  label,
+  value,
+  type,
+  onChange,
+  onSubCategoryChange,
+  showBadge = true,
+  subValue,
+}: CategorySelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [categories, setCategories] = useState<CategoryData[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -34,18 +42,24 @@ export const CategorySelect = ({ label, value, type, onChange, onSubCategoryChan
     if (!user) return;
 
     const q = query(collection(db, 'categories'), where('userId', '==', user.uid));
-    const unsub = onSnapshot(q, 
+    const unsub = onSnapshot(
+      q,
       (snap) => {
-        setCategories(snap.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as CategoryData)));
+        setCategories(
+          snap.docs.map(
+            (doc) =>
+              ({
+                id: doc.id,
+                ...doc.data(),
+              }) as CategoryData,
+          ),
+        );
       },
       (err) => {
         if (err.code !== 'permission-denied') {
-          console.warn("[CategorySelect] Error listening to categories:", err);
+          console.warn('[CategorySelect] Error listening to categories:', err);
         }
-      }
+      },
     );
 
     return () => unsub();
@@ -56,18 +70,18 @@ export const CategorySelect = ({ label, value, type, onChange, onSubCategoryChan
   // jenis atau sedang terpilih tetap tampil.
   const kinds = useCategoryKinds();
   const wantKind = type === 'income' ? 'pemasukan' : 'pengeluaran';
-  const uniqueMainCategories = Array.from(
-    new Map(categories.map(c => [c.category, c])).values()
-  ).filter((c) => c.category === value || !kinds[c.category] || kinds[c.category] === wantKind);
+  const uniqueMainCategories = Array.from(new Map(categories.map((c) => [c.category, c])).values()).filter(
+    (c) => c.category === value || !kinds[c.category] || kinds[c.category] === wantKind,
+  );
 
   // Sub-kategori bisa berasal dari beberapa baris kategori dengan nama yang sama,
   // atau (data lama) satu baris dengan sub-kategori digabung tanda koma. Kumpulkan
   // semua opsi unik supaya user bisa MEMILIH satu, bukan menerima gabungan mentah.
   const getSubCategoryOptions = (categoryName: string) => {
     const options = categories
-      .filter(c => c.category === categoryName)
-      .flatMap(c => c.subCategory.split(','))
-      .map(s => s.trim())
+      .filter((c) => c.category === categoryName)
+      .flatMap((c) => c.subCategory.split(','))
+      .map((s) => s.trim())
       .filter(Boolean);
     return Array.from(new Set(options));
   };
@@ -76,7 +90,7 @@ export const CategorySelect = ({ label, value, type, onChange, onSubCategoryChan
 
   // `value` menyimpan NAMA kategori (bukan id) agar konsisten dengan data yang
   // dikirim ke transaksi/laporan lain, yang membandingkan berdasarkan nama.
-  const selectedCategory = categories.find(c => c.category === value);
+  const selectedCategory = categories.find((c) => c.category === value);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -124,19 +138,19 @@ export const CategorySelect = ({ label, value, type, onChange, onSubCategoryChan
             setExpandedCategory(null);
           }}
           className={cn(
-            "w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-slate-900 flex items-center justify-between transition-all hover:border-slate-300",
-            isOpen && "border-indigo-600 bg-white ring-4 ring-indigo-500/5 shadow-lg"
+            'w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-slate-900 flex items-center justify-between transition-all hover:border-slate-300',
+            isOpen && 'border-indigo-600 bg-white ring-4 ring-indigo-500/5 shadow-lg',
           )}
         >
-          <span className={cn("text-sm font-bold", !selectedCategory && "text-slate-400")}>
+          <span className={cn('text-sm font-bold', !selectedCategory && 'text-slate-400')}>
             {selectedCategory ? selectedCategory.category : 'Pilih Kategori'}
             {selectedCategory && subValue && subValue !== selectedCategory.category && (
               <span className="font-medium text-slate-400"> · {subValue}</span>
             )}
           </span>
-          <ChevronDown 
-            size={18} 
-            className={cn("text-slate-400 transition-transform duration-300", isOpen && "rotate-180 text-indigo-600")} 
+          <ChevronDown
+            size={18}
+            className={cn('text-slate-400 transition-transform duration-300', isOpen && 'rotate-180 text-indigo-600')}
           />
         </button>
 
@@ -175,10 +189,10 @@ export const CategorySelect = ({ label, value, type, onChange, onSubCategoryChan
                       type="button"
                       onClick={() => handleSelectCategory(cat)}
                       className={cn(
-                        "w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm transition-all text-left group",
+                        'w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm transition-all text-left group',
                         value === cat.category
-                          ? "bg-indigo-50 text-indigo-600 font-black"
-                          : "text-slate-600 hover:bg-slate-50 hover:text-indigo-600 font-medium"
+                          ? 'bg-indigo-50 text-indigo-600 font-black'
+                          : 'text-slate-600 hover:bg-slate-50 hover:text-indigo-600 font-medium',
                       )}
                     >
                       <div>
@@ -191,9 +205,12 @@ export const CategorySelect = ({ label, value, type, onChange, onSubCategoryChan
                         )}
                       </div>
                       {subOptions.length > 1 ? (
-                        <ChevronDown size={16} className="-rotate-90 text-slate-300 group-hover:text-indigo-600 shrink-0" />
-                      ) : value === cat.category && (
-                        <Check size={16} className="text-indigo-600 shrink-0" />
+                        <ChevronDown
+                          size={16}
+                          className="-rotate-90 text-slate-300 group-hover:text-indigo-600 shrink-0"
+                        />
+                      ) : (
+                        value === cat.category && <Check size={16} className="text-indigo-600 shrink-0" />
                       )}
                     </button>
                   );
@@ -206,10 +223,12 @@ export const CategorySelect = ({ label, value, type, onChange, onSubCategoryChan
 
       {showBadge && (
         <div className="flex gap-2 p-1">
-          <span className={cn(
-            "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
-            type === 'income' ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
-          )}>
+          <span
+            className={cn(
+              'px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest',
+              type === 'income' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600',
+            )}
+          >
             {type}
           </span>
         </div>
@@ -217,4 +236,3 @@ export const CategorySelect = ({ label, value, type, onChange, onSubCategoryChan
     </div>
   );
 };
-

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
@@ -28,7 +28,7 @@ export const LogoImage = ({ src, alt, fallbackText, className, fallbackIcon }: L
           return decodeURIComponent(imgUrl);
         }
       } catch (e) {
-        console.error("Failed to parse Google Image URL:", e);
+        console.error('Failed to parse Google Image URL:', e);
       }
     }
 
@@ -46,7 +46,8 @@ export const LogoImage = ({ src, alt, fallbackText, className, fallbackIcon }: L
         // deploy (public/logos, scripts/fetch-logos.mjs); kalau tidak ada,
         // cadangannya logo lewat Worker /api/logo (lihat onError).
         if (domain && LOGO_DOMAINS.has(domain.toLowerCase())) return `/logos/${domain.toLowerCase()}.png`;
-        if (domain) return `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&url=${encodeURIComponent(`https://${domain}`)}&size=${size}`;
+        if (domain)
+          return `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&url=${encodeURIComponent(`https://${domain}`)}&size=${size}`;
       } catch {
         // URL tidak valid — pakai apa adanya.
       }
@@ -60,28 +61,38 @@ export const LogoImage = ({ src, alt, fallbackText, className, fallbackIcon }: L
 
   if (!resolvedSrc || hasError) {
     return (
-      <div className={`${className} bg-slate-50 text-slate-400 flex items-center justify-center text-[8px] font-black overflow-hidden`}>
+      <div
+        className={`${className} bg-slate-50 text-slate-400 flex items-center justify-center text-[8px] font-black overflow-hidden`}
+      >
         {fallbackIcon || fallbackText}
       </div>
     );
   }
 
   return (
-    <Image 
-      src={shownSrc ?? ''} 
-      alt={alt} 
+    <Image
+      src={shownSrc ?? ''}
+      alt={alt}
       width={96}
       height={96}
       unoptimized
       className={className}
       onLoad={(e) => {
         // Ikon 16px dari layanan favicon = ikon bawaan/terlalu kecil → anggap gagal.
-        if (resolvedSrc.includes('gstatic.com/faviconV2') && e.currentTarget.naturalWidth > 0 && e.currentTarget.naturalWidth <= 16) setFailedSrc(resolvedSrc);
+        if (
+          resolvedSrc.includes('gstatic.com/faviconV2') &&
+          e.currentTarget.naturalWidth > 0 &&
+          e.currentTarget.naturalWidth <= 16
+        )
+          setFailedSrc(resolvedSrc);
       }}
       onError={() => {
         // /logos/<domain>.png belum ada → coba Worker /api/logo dulu sebelum huruf.
         const local = /^\/logos\/([a-z0-9.-]+)\.png$/.exec(resolvedSrc);
-        if (local && fallbackSrc !== `/api/logo?d=${local[1]}`) { setFallback({ of: resolvedSrc, src: `/api/logo?d=${local[1]}` }); return; }
+        if (local && fallbackSrc !== `/api/logo?d=${local[1]}`) {
+          setFallback({ of: resolvedSrc, src: `/api/logo?d=${local[1]}` });
+          return;
+        }
         console.warn(`Failed to load image: ${shownSrc}`);
         setFailedSrc(resolvedSrc);
       }}

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -25,7 +25,8 @@ export const HeaderSlot = ({ className }: { className?: string }) => (
 // Kotak Masuk + lonceng hanya di halaman kelompok Keuangan; halaman Fitur cukup
 // tombol menu di HP. Prefix diambil dari keuanganNav (…/transactions/daily → …/transactions).
 const KEUANGAN_PREFIXES = keuanganNav.map((n) => n.href.split('/').slice(0, 3).join('/'));
-const isKeuanganPage = (path: string | null) => !!path && KEUANGAN_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
+const isKeuanganPage = (path: string | null) =>
+  !!path && KEUANGAN_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
 
 export const Header = ({ onMenuClick }: HeaderProps) => {
   const pathname = usePathname();
@@ -35,7 +36,11 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
   // dicari ulang tiap ada elemen yang ditambah/dihapus.
   useEffect(() => {
     const find = () =>
-      setSlot([...document.querySelectorAll<HTMLElement>('[data-header-slot]')].find((el) => el.getClientRects().length > 0) ?? null);
+      setSlot(
+        [...document.querySelectorAll<HTMLElement>('[data-header-slot]')].find(
+          (el) => el.getClientRects().length > 0,
+        ) ?? null,
+      );
     find();
     const mo = new MutationObserver(find);
     mo.observe(document.body, { childList: true, subtree: true });
@@ -58,10 +63,24 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
   );
 
   const icons = isKeuanganPage(pathname);
-  if (slot) return createPortal(<>{icons && <><InboxButton /><NotificationBell /></>}{menu}</>, slot);
+  if (slot)
+    return createPortal(
+      <>
+        {icons && (
+          <>
+            <InboxButton />
+            <NotificationBell />
+          </>
+        )}
+        {menu}
+      </>,
+      slot,
+    );
 
   return (
-    <header className={`flex items-center justify-between gap-3 px-4 pt-3 md:justify-end md:px-8 md:pt-4 print:hidden ${icons ? '' : 'md:hidden'}`}>
+    <header
+      className={`flex items-center justify-between gap-3 px-4 pt-3 md:justify-end md:px-8 md:pt-4 print:hidden ${icons ? '' : 'md:hidden'}`}
+    >
       {menu}
       {icons && (
         <span className="flex items-center gap-1.5">

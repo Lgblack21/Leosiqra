@@ -107,10 +107,12 @@ export const transactionService = {
         accountId: (data.account_id as string | undefined) ?? '',
         targetAccountId: (data.target_account_id as string | undefined) ?? undefined,
         lenderName: (data.lender_name as string | undefined) ?? undefined,
-        totalDebt: typeof data.total_debt === 'number' ? data.total_debt : (Number(data.total_debt) || 0),
-        installmentTenor: typeof data.installment_tenor === 'number' ? data.installment_tenor : (Number(data.installment_tenor) || 0),
-        monthlyInterest: typeof data.monthly_interest === 'number' ? data.monthly_interest : (Number(data.monthly_interest) || 0),
-        totalInterest: typeof data.total_interest === 'number' ? data.total_interest : (Number(data.total_interest) || 0),
+        totalDebt: typeof data.total_debt === 'number' ? data.total_debt : Number(data.total_debt) || 0,
+        installmentTenor:
+          typeof data.installment_tenor === 'number' ? data.installment_tenor : Number(data.installment_tenor) || 0,
+        monthlyInterest:
+          typeof data.monthly_interest === 'number' ? data.monthly_interest : Number(data.monthly_interest) || 0,
+        totalInterest: typeof data.total_interest === 'number' ? data.total_interest : Number(data.total_interest) || 0,
         status: (data.status as Transaction['status']) ?? 'VERIFIED',
         paymentStatus: (data.payment_status as 'lunas' | 'belum' | undefined) ?? undefined,
         displayDate: (data.display_date as string | undefined) ?? undefined,
@@ -122,7 +124,7 @@ export const transactionService = {
         due: dueFromPayload(data.payload_json),
         currency: (data.currency as string | undefined) ?? 'IDR',
         date: data.date ? new Date(String(data.date)) : new Date(),
-        createdAt: data.created_at ? new Date(String(data.created_at)) : new Date()
+        createdAt: data.created_at ? new Date(String(data.created_at)) : new Date(),
       } as Transaction;
     });
   },
@@ -171,12 +173,12 @@ export const transactionService = {
   async deleteTransaction(tx: Transaction) {
     const result = await cloudflareApi<{ ok: boolean; deletedIds?: string[] }>(
       `/api/member/transactions/${tx.id}?reverse=1`,
-      { method: 'DELETE' }
+      { method: 'DELETE' },
     );
     notifyCollectionChanged('accounts');
     notifyCollectionChanged('transactions');
     return result.deletedIds ?? [];
-  }
+  },
 };
 
 type AddTransactionInput = {
@@ -201,9 +203,7 @@ type AddTransactionInput = {
 export const addTransaction = (data: AddTransactionInput) => {
   const normalizedType = data.type === 'pemasukkan' ? 'pemasukan' : data.type;
   const normalizedStatus: Transaction['status'] =
-    data.status === 'PENDING' || data.status === 'FAILED' || data.status === 'VERIFIED'
-      ? data.status
-      : 'VERIFIED';
+    data.status === 'PENDING' || data.status === 'FAILED' || data.status === 'VERIFIED' ? data.status : 'VERIFIED';
   const mappedData: Omit<Transaction, 'id' | 'createdAt'> = {
     ...data,
     userId: data.userId || '',
@@ -221,7 +221,7 @@ export const addTransaction = (data: AddTransactionInput) => {
     targetAccountId: data.targetAccountId,
     displayDate: data.displayDate,
     note: data.note || data.item || '',
-    status: normalizedStatus
+    status: normalizedStatus,
   };
   return transactionService.createTransaction(mappedData);
 };

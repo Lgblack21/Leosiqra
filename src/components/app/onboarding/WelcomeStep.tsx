@@ -1,21 +1,36 @@
-"use client";
+'use client';
 
-import Image from "next/image";
-import { FileCheck, Wallet, Zap } from "lucide-react";
-import { auth } from "@/lib/cf-client";
+import Image from 'next/image';
+import { FileCheck, Wallet, Zap } from 'lucide-react';
+import { auth } from '@/lib/cf-client';
 
 interface WelcomeStepProps {
   onNext: () => void;
 }
 
 const TILES = [
-  { title: "Catat dalam hitungan detik", desc: "Ketik “25rb kopi”, ucapkan, atau foto struk.", icon: Zap, tile: "bg-orange-500" },
-  { title: "Semua rekening, satu layar", desc: "Bank, e-wallet, tunai, dan kartu kredit.", icon: Wallet, tile: "bg-indigo-600" },
-  { title: "Siap lapor pajak", desc: "Ringkasan harta & penghasilan untuk SPT.", icon: FileCheck, tile: "bg-emerald-500" },
+  {
+    title: 'Catat dalam hitungan detik',
+    desc: 'Ketik “25rb kopi”, ucapkan, atau foto struk.',
+    icon: Zap,
+    tile: 'bg-orange-500',
+  },
+  {
+    title: 'Semua rekening, satu layar',
+    desc: 'Bank, e-wallet, tunai, dan kartu kredit.',
+    icon: Wallet,
+    tile: 'bg-indigo-600',
+  },
+  {
+    title: 'Siap lapor pajak',
+    desc: 'Ringkasan harta & penghasilan untuk SPT.',
+    icon: FileCheck,
+    tile: 'bg-emerald-500',
+  },
 ];
 
 export function WelcomeStep({ onNext }: WelcomeStepProps) {
-  const name = auth.currentUser?.displayName?.split(" ")[0] || "";
+  const name = auth.currentUser?.displayName?.split(' ')[0] || '';
 
   return (
     <div className="flex flex-col px-6 pt-12">
@@ -23,7 +38,7 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
         <Image src="/images/Logo-new.png" alt="Leosiqra" width={34} height={34} className="object-contain" />
       </span>
       <p className="mt-8 text-[15px] font-semibold text-indigo-600 dark:text-indigo-400">
-        {name ? `Halo, ${name}` : "Selamat datang"}
+        {name ? `Halo, ${name}` : 'Selamat datang'}
       </p>
       <h1 className="mt-1.5 text-[38px] leading-[1.03] font-black tracking-[-0.03em] text-slate-900 dark:text-white">
         Keuangan rapi,

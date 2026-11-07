@@ -1,22 +1,22 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { accountService, Account } from "@/lib/services/accountService";
-import { transactionService, Transaction } from "@/lib/services/transactionService";
-import { subscribeToCollectionChanges } from "@/lib/cf-firestore";
-import { auth } from "@/lib/cf-client";
-import { BalanceCard } from "@/components/app/home/BalanceCard";
-import { WalletList } from "@/components/app/home/WalletList";
-import { RecentTransactions } from "@/components/app/home/RecentTransactions";
-import { AssistantMenu } from "@/components/app/home/AssistantMenu";
-import { AppHealthScore } from "@/components/app/home/AppHealthScore";
-import { LevelBadge } from "@/components/app/home/LevelBadge";
-import { NotificationButton } from "@/components/app/home/NotificationButton";
-import { WeeklyInsights } from "@/components/WeeklyInsights";
-import { SecurityNudge } from "@/components/SecurityNudge";
-import { InboxButton } from "@/components/InboxButton";
-import { FadeIn, StaggerList, StaggerItem } from "@/components/app/FadeIn";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { accountService, Account } from '@/lib/services/accountService';
+import { transactionService, Transaction } from '@/lib/services/transactionService';
+import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
+import { auth } from '@/lib/cf-client';
+import { BalanceCard } from '@/components/app/home/BalanceCard';
+import { WalletList } from '@/components/app/home/WalletList';
+import { RecentTransactions } from '@/components/app/home/RecentTransactions';
+import { AssistantMenu } from '@/components/app/home/AssistantMenu';
+import { AppHealthScore } from '@/components/app/home/AppHealthScore';
+import { LevelBadge } from '@/components/app/home/LevelBadge';
+import { NotificationButton } from '@/components/app/home/NotificationButton';
+import { WeeklyInsights } from '@/components/WeeklyInsights';
+import { SecurityNudge } from '@/components/SecurityNudge';
+import { InboxButton } from '@/components/InboxButton';
+import { FadeIn, StaggerList, StaggerItem } from '@/components/app/FadeIn';
 
 export default function AppHomePage() {
   const router = useRouter();
@@ -24,18 +24,24 @@ export default function AppHomePage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
-    const uid = auth.currentUser?.uid ?? "";
+    const uid = auth.currentUser?.uid ?? '';
 
     const loadAccounts = () =>
-      accountService.getUserAccounts(uid).then(setAccounts).catch(() => setAccounts([]));
+      accountService
+        .getUserAccounts(uid)
+        .then(setAccounts)
+        .catch(() => setAccounts([]));
     const loadTransactions = () =>
-      transactionService.getUserTransactions(uid).then(setTransactions).catch(() => setTransactions([]));
+      transactionService
+        .getUserTransactions(uid)
+        .then(setTransactions)
+        .catch(() => setTransactions([]));
 
     loadAccounts();
     loadTransactions();
 
-    const unsubAcc = subscribeToCollectionChanges("accounts", loadAccounts);
-    const unsubTrx = subscribeToCollectionChanges("transactions", loadTransactions);
+    const unsubAcc = subscribeToCollectionChanges('accounts', loadAccounts);
+    const unsubTrx = subscribeToCollectionChanges('transactions', loadTransactions);
     return () => {
       unsubAcc();
       unsubTrx();
@@ -44,7 +50,7 @@ export default function AppHomePage() {
 
   useEffect(() => {
     if (accounts !== null && accounts.length === 0) {
-      router.replace("/app/onboarding");
+      router.replace('/app/onboarding');
     }
   }, [accounts, router]);
 
@@ -71,7 +77,9 @@ export default function AppHomePage() {
       <FadeIn className="flex items-center justify-between">
         <div>
           <p className="text-xs font-bold text-slate-400 dark:text-slate-500">Hai,</p>
-          <h1 className="text-lg font-black text-slate-900 dark:text-white">{auth.currentUser?.displayName || "Pengguna"}</h1>
+          <h1 className="text-lg font-black text-slate-900 dark:text-white">
+            {auth.currentUser?.displayName || 'Pengguna'}
+          </h1>
         </div>
         <div className="flex items-center gap-2">
           <LevelBadge />

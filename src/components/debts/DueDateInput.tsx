@@ -1,17 +1,20 @@
-"use client";
+'use client';
 
 import { toLocalDateString } from '@/lib/utils';
 import type { DebtDue } from '@/lib/debtDue';
 
 // Versi app: components/app/debts/DueDateField.
-const field = 'w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-4 text-sm font-bold text-slate-700 transition-all';
+const field =
+  'w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-4 text-sm font-bold text-slate-700 transition-all';
 
 export function DueDateInput({ value, onChange }: { value: DebtDue | null; onChange: (v: DebtDue | null) => void }) {
   const today = toLocalDateString();
   const mode = !value ? 'none' : 'date' in value ? 'once' : 'monthly';
   return (
     <div className="space-y-2">
-      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Jatuh tempo (opsional)</label>
+      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+        Jatuh tempo (opsional)
+      </label>
       <div className="grid grid-cols-2 gap-3">
         <select
           value={mode}
@@ -29,12 +32,26 @@ export function DueDateInput({ value, onChange }: { value: DebtDue | null; onCha
           <option value="monthly">Tiap bulan</option>
         </select>
         {value && 'date' in value && (
-          <input type="date" value={value.date} min={today} onChange={(e) => e.target.value && onChange({ date: e.target.value })} className={field} aria-label="Tanggal jatuh tempo" />
+          <input
+            type="date"
+            value={value.date}
+            min={today}
+            onChange={(e) => e.target.value && onChange({ date: e.target.value })}
+            className={field}
+            aria-label="Tanggal jatuh tempo"
+          />
         )}
         {value && 'day' in value && (
-          <select value={value.day} onChange={(e) => onChange({ day: Number(e.target.value) })} className={field} aria-label="Tanggal tiap bulan">
+          <select
+            value={value.day}
+            onChange={(e) => onChange({ day: Number(e.target.value) })}
+            className={field}
+            aria-label="Tanggal tiap bulan"
+          >
             {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-              <option key={d} value={d}>Tanggal {d}</option>
+              <option key={d} value={d}>
+                Tanggal {d}
+              </option>
             ))}
           </select>
         )}

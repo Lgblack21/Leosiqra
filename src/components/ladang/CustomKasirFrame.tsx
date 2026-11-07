@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Shop, ShopProduct } from '@/lib/services/shopService';
@@ -12,7 +12,8 @@ import type { Shop, ShopProduct } from '@/lib/services/shopService';
 //   (sumber = iframe ini, jenis & indeks produk). Struk, ID pembeli & pencatatan
 //   uang tetap di komponen Leosiqra.
 
-const CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src https: data: blob:; media-src data: blob:; form-action 'none'; base-uri 'none'";
+const CSP =
+  "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src https: data: blob:; media-src data: blob:; form-action 'none'; base-uri 'none'";
 const BRIDGE = `(function(){var cbs=[],data=null;function send(m){parent.postMessage(m,'*')}
 window.Leosiqra={onData:function(cb){cbs.push(cb);if(data){try{cb(data)}catch(e){console.error(e)}}},
 add:function(i){send({type:'leosiqra:add',i:i})},remove:function(i){send({type:'leosiqra:remove',i:i})},
@@ -26,7 +27,16 @@ window.addEventListener('load',h);send({type:'leosiqra:ready'})})();`;
 export const buildKasirDoc = (html: string) =>
   `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${CSP}"><meta name="viewport" content="width=device-width,initial-scale=1"><script>${BRIDGE}</script><style>html,body{margin:0}</style></head><body>${html}</body></html>`;
 
-export function CustomKasirFrame({ shop, products, cart, onAdd, onRemove, onCheckout, minHeight = 320, title = 'Desain kasir' }: {
+export function CustomKasirFrame({
+  shop,
+  products,
+  cart,
+  onAdd,
+  onRemove,
+  onCheckout,
+  minHeight = 320,
+  title = 'Desain kasir',
+}: {
   shop: Shop;
   products: ShopProduct[];
   cart: Record<number, number>;
@@ -43,30 +53,49 @@ export function CustomKasirFrame({ shop, products, cart, onAdd, onRemove, onChec
     const count = Object.values(cart).reduce((a, b) => a + b, 0);
     const total = Object.entries(cart).reduce((a, [i, q]) => a + (products[Number(i)]?.price ?? 0) * q, 0);
     return {
-      shop: { name: shop.name, emoji: shop.emoji ?? '', tagline: shop.tagline ?? '', greeting: shop.style.greeting, logoUrl: shop.style.logoUrl, categoryImages: shop.style.categoryImages },
+      shop: {
+        name: shop.name,
+        emoji: shop.emoji ?? '',
+        tagline: shop.tagline ?? '',
+        greeting: shop.style.greeting,
+        logoUrl: shop.style.logoUrl,
+        categoryImages: shop.style.categoryImages,
+      },
       products: products.map((p, i) => ({ i, name: p.name, price: p.price, unit: p.unit, group: p.group ?? '' })),
-      cart, count, total, theme: shop.style.theme,
+      cart,
+      count,
+      total,
+      theme: shop.style.theme,
     };
   }, [shop, products, cart]);
   const latest = useRef(payload);
   const handlers = useRef({ onAdd, onRemove, onCheckout });
-  useEffect(() => { handlers.current = { onAdd, onRemove, onCheckout }; }, [onAdd, onRemove, onCheckout]);
+  useEffect(() => {
+    handlers.current = { onAdd, onRemove, onCheckout };
+  }, [onAdd, onRemove, onCheckout]);
   useEffect(() => {
     latest.current = payload;
     ref.current?.contentWindow?.postMessage({ type: 'leosiqra:data', payload }, '*');
   }, [payload]);
   useEffect(() => {
-    let windowStart = 0, inWindow = 0;
+    let windowStart = 0,
+      inWindow = 0;
     const onMsg = (e: MessageEvent) => {
       if (!ref.current || e.source !== ref.current.contentWindow) return; // hanya iframe ini
       const d = e.data as { type?: unknown; i?: unknown; h?: unknown };
       if (!d || typeof d.type !== 'string') return;
-      const ok = (i: unknown): i is number => Number.isInteger(i) && (i as number) >= 0 && (i as number) < latest.current.products.length;
-      if (d.type === 'leosiqra:ready') ref.current.contentWindow?.postMessage({ type: 'leosiqra:data', payload: latest.current }, '*');
-      else if (d.type === 'leosiqra:height' && typeof d.h === 'number') setHeight(Math.min(8000, Math.max(minHeight, Math.round(d.h))));
+      const ok = (i: unknown): i is number =>
+        Number.isInteger(i) && (i as number) >= 0 && (i as number) < latest.current.products.length;
+      if (d.type === 'leosiqra:ready')
+        ref.current.contentWindow?.postMessage({ type: 'leosiqra:data', payload: latest.current }, '*');
+      else if (d.type === 'leosiqra:height' && typeof d.h === 'number')
+        setHeight(Math.min(8000, Math.max(minHeight, Math.round(d.h))));
       else {
         const now = Date.now();
-        if (now - windowStart > 1000) { windowStart = now; inWindow = 0; }
+        if (now - windowStart > 1000) {
+          windowStart = now;
+          inWindow = 0;
+        }
         if (++inWindow > 15) return; // redam banjir aksi dari skrip (maks 15/detik)
         if (d.type === 'leosiqra:add' && ok(d.i)) handlers.current.onAdd?.(d.i);
         else if (d.type === 'leosiqra:remove' && ok(d.i)) handlers.current.onRemove?.(d.i);
@@ -77,7 +106,17 @@ export function CustomKasirFrame({ shop, products, cart, onAdd, onRemove, onChec
     return () => window.removeEventListener('message', onMsg);
   }, [minHeight]);
 
-  return <iframe ref={ref} title={title} sandbox="allow-scripts" srcDoc={doc} referrerPolicy="no-referrer" style={{ height }} className="block w-full rounded-[26px] border-0 bg-white ring-1 ring-slate-100 dark:ring-slate-800" />;
+  return (
+    <iframe
+      ref={ref}
+      title={title}
+      sandbox="allow-scripts"
+      srcDoc={doc}
+      referrerPolicy="no-referrer"
+      style={{ height }}
+      className="block w-full rounded-[26px] border-0 bg-white ring-1 ring-slate-100 dark:ring-slate-800"
+    />
+  );
 }
 
 // Contoh awal desain bebas — memakai window.Leosiqra (lihat KASIR_TEMPLATE_DOC di Worker).

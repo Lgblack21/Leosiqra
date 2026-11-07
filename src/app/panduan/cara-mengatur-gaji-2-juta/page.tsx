@@ -62,8 +62,8 @@ export default function CaraMengaturGaji2JutaPage() {
       <h2>1. Mulai dari biaya tempat tinggal</h2>
       <p>
         Rumus umum seperti 50/30/20 (50% kebutuhan, 30% keinginan, 20% tabungan) bisa dipakai kalau Anda tinggal bersama
-        orang tua. Tapi kalau harus membayar kos, 50% dari Rp2.000.000 hanya Rp1.000.000 untuk semua kebutuhan pokok, dan
-        sewa saja sering sudah memakan lebih dari separuhnya. Penjelasan metodenya ada di panduan{' '}
+        orang tua. Tapi kalau harus membayar kos, 50% dari Rp2.000.000 hanya Rp1.000.000 untuk semua kebutuhan pokok,
+        dan sewa saja sering sudah memakan lebih dari separuhnya. Penjelasan metodenya ada di panduan{' '}
         <Link href="/panduan/cara-mengatur-gaji">cara mengatur gaji</Link>.
       </p>
       <p>
@@ -75,18 +75,70 @@ export default function CaraMengaturGaji2JutaPage() {
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Pos</th><th className="num">Jumlah (Rp)</th><th className="num">Porsi</th></tr>
+            <tr>
+              <th>Pos</th>
+              <th className="num">Jumlah (Rp)</th>
+              <th className="num">Porsi</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td>Kontribusi untuk rumah / orang tua</td><td className="num">400.000</td><td className="num">20%</td></tr>
-            <tr><td>Makan siang &amp; jajan kerja</td><td className="num">500.000</td><td className="num">25%</td></tr>
-            <tr><td>Transportasi</td><td className="num">300.000</td><td className="num">15%</td></tr>
-            <tr><td>Pulsa &amp; internet</td><td className="num">100.000</td><td className="num">5%</td></tr>
-            <tr><td><strong>Subtotal kebutuhan pokok</strong></td><td className="num"><strong>1.300.000</strong></td><td className="num"><strong>65%</strong></td></tr>
-            <tr><td>Tabungan &amp; dana darurat</td><td className="num">400.000</td><td className="num">20%</td></tr>
-            <tr><td>Keinginan (hiburan, nongkrong)</td><td className="num">200.000</td><td className="num">10%</td></tr>
-            <tr><td>Cadangan tak terduga</td><td className="num">100.000</td><td className="num">5%</td></tr>
-            <tr><td><strong>Total</strong></td><td className="num"><strong>2.000.000</strong></td><td className="num"><strong>100%</strong></td></tr>
+            <tr>
+              <td>Kontribusi untuk rumah / orang tua</td>
+              <td className="num">400.000</td>
+              <td className="num">20%</td>
+            </tr>
+            <tr>
+              <td>Makan siang &amp; jajan kerja</td>
+              <td className="num">500.000</td>
+              <td className="num">25%</td>
+            </tr>
+            <tr>
+              <td>Transportasi</td>
+              <td className="num">300.000</td>
+              <td className="num">15%</td>
+            </tr>
+            <tr>
+              <td>Pulsa &amp; internet</td>
+              <td className="num">100.000</td>
+              <td className="num">5%</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Subtotal kebutuhan pokok</strong>
+              </td>
+              <td className="num">
+                <strong>1.300.000</strong>
+              </td>
+              <td className="num">
+                <strong>65%</strong>
+              </td>
+            </tr>
+            <tr>
+              <td>Tabungan &amp; dana darurat</td>
+              <td className="num">400.000</td>
+              <td className="num">20%</td>
+            </tr>
+            <tr>
+              <td>Keinginan (hiburan, nongkrong)</td>
+              <td className="num">200.000</td>
+              <td className="num">10%</td>
+            </tr>
+            <tr>
+              <td>Cadangan tak terduga</td>
+              <td className="num">100.000</td>
+              <td className="num">5%</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Total</strong>
+              </td>
+              <td className="num">
+                <strong>2.000.000</strong>
+              </td>
+              <td className="num">
+                <strong>100%</strong>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -99,34 +151,95 @@ export default function CaraMengaturGaji2JutaPage() {
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Pos</th><th className="num">Jumlah (Rp)</th><th className="num">Porsi</th></tr>
+            <tr>
+              <th>Pos</th>
+              <th className="num">Jumlah (Rp)</th>
+              <th className="num">Porsi</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td>Kos / tempat tinggal</td><td className="num">600.000</td><td className="num">30%</td></tr>
-            <tr><td>Makan &amp; belanja dapur</td><td className="num">750.000</td><td className="num">37,5%</td></tr>
-            <tr><td>Transportasi</td><td className="num">200.000</td><td className="num">10%</td></tr>
-            <tr><td>Pulsa, internet, listrik</td><td className="num">100.000</td><td className="num">5%</td></tr>
-            <tr><td><strong>Subtotal kebutuhan pokok</strong></td><td className="num"><strong>1.650.000</strong></td><td className="num"><strong>82,5%</strong></td></tr>
-            <tr><td>Tabungan &amp; dana darurat</td><td className="num">200.000</td><td className="num">10%</td></tr>
-            <tr><td>Keinginan</td><td className="num">100.000</td><td className="num">5%</td></tr>
-            <tr><td>Cadangan tak terduga</td><td className="num">50.000</td><td className="num">2,5%</td></tr>
-            <tr><td><strong>Total</strong></td><td className="num"><strong>2.000.000</strong></td><td className="num"><strong>100%</strong></td></tr>
+            <tr>
+              <td>Kos / tempat tinggal</td>
+              <td className="num">600.000</td>
+              <td className="num">30%</td>
+            </tr>
+            <tr>
+              <td>Makan &amp; belanja dapur</td>
+              <td className="num">750.000</td>
+              <td className="num">37,5%</td>
+            </tr>
+            <tr>
+              <td>Transportasi</td>
+              <td className="num">200.000</td>
+              <td className="num">10%</td>
+            </tr>
+            <tr>
+              <td>Pulsa, internet, listrik</td>
+              <td className="num">100.000</td>
+              <td className="num">5%</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Subtotal kebutuhan pokok</strong>
+              </td>
+              <td className="num">
+                <strong>1.650.000</strong>
+              </td>
+              <td className="num">
+                <strong>82,5%</strong>
+              </td>
+            </tr>
+            <tr>
+              <td>Tabungan &amp; dana darurat</td>
+              <td className="num">200.000</td>
+              <td className="num">10%</td>
+            </tr>
+            <tr>
+              <td>Keinginan</td>
+              <td className="num">100.000</td>
+              <td className="num">5%</td>
+            </tr>
+            <tr>
+              <td>Cadangan tak terduga</td>
+              <td className="num">50.000</td>
+              <td className="num">2,5%</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Total</strong>
+              </td>
+              <td className="num">
+                <strong>2.000.000</strong>
+              </td>
+              <td className="num">
+                <strong>100%</strong>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
       <p>
         Di sini kebutuhan pokok memakan lebih dari 80%, jadi ruangnya sempit. Jatah makan Rp750.000 berarti sekitar{' '}
-        <strong>Rp25.000 per hari</strong>. Pecah jatah bulanan menjadi angka harian seperti ini supaya batasnya terasa; sisa
-        hari ini bisa menutup hari lain yang lebih mahal. Kalau gaji Anda dibayar per minggu, caranya ada di panduan{' '}
-        <Link href="/panduan/mengatur-gaji-mingguan">mengatur gaji mingguan</Link>.
+        <strong>Rp25.000 per hari</strong>. Pecah jatah bulanan menjadi angka harian seperti ini supaya batasnya terasa;
+        sisa hari ini bisa menutup hari lain yang lebih mahal. Kalau gaji Anda dibayar per minggu, caranya ada di
+        panduan <Link href="/panduan/mengatur-gaji-mingguan">mengatur gaji mingguan</Link>.
       </p>
 
       <h2>4. Urutan saat gajian</h2>
       <ol>
-        <li><strong>Bayar yang wajib dulu</strong> — kos atau kontribusi rumah, cicilan (kalau ada), tagihan.</li>
-        <li><strong>Sisihkan tabungan di hari yang sama</strong> — pindahkan ke rekening atau kantong terpisah sebelum terpakai.</li>
-        <li><strong>Tentukan jatah variabel</strong> — makan, transportasi, dan jajan diberi batas untuk sebulan.</li>
-        <li><strong>Baru sisanya</strong> untuk keinginan.</li>
+        <li>
+          <strong>Bayar yang wajib dulu</strong> — kos atau kontribusi rumah, cicilan (kalau ada), tagihan.
+        </li>
+        <li>
+          <strong>Sisihkan tabungan di hari yang sama</strong> — pindahkan ke rekening atau kantong terpisah sebelum
+          terpakai.
+        </li>
+        <li>
+          <strong>Tentukan jatah variabel</strong> — makan, transportasi, dan jajan diberi batas untuk sebulan.
+        </li>
+        <li>
+          <strong>Baru sisanya</strong> untuk keinginan.
+        </li>
       </ol>
       <p>
         Menabung dari sisa akhir bulan hampir selalu gagal di gaji berapa pun; alasannya dibahas di{' '}
@@ -136,9 +249,9 @@ export default function CaraMengaturGaji2JutaPage() {
       <h2>5. Kalau ada cicilan</h2>
       <p>
         Cicilan dibayar paling awal, bersama kebutuhan pokok. Ruang untuk menampungnya diambil dari pos yang paling
-        lentur lebih dulu: keinginan, lalu sebagian tabungan — jatah makan sebaiknya tidak dipotong. Pada contoh anak kos di
-        atas, pos keinginan dan cadangan hanya Rp150.000, jadi cicilan yang lebih besar dari itu sudah mulai memakan
-        tabungan.
+        lentur lebih dulu: keinginan, lalu sebagian tabungan — jatah makan sebaiknya tidak dipotong. Pada contoh anak
+        kos di atas, pos keinginan dan cadangan hanya Rp150.000, jadi cicilan yang lebih besar dari itu sudah mulai
+        memakan tabungan.
       </p>
       <p>
         Kalau setelah cicilan dan kebutuhan pokok tidak ada sisa sama sekali, itu tanda untuk menyusun rencana pelunasan
@@ -148,54 +261,101 @@ export default function CaraMengaturGaji2JutaPage() {
 
       <h2>6. Kalau gajinya 2,5 juta</h2>
       <p>
-        Tambahan Rp500.000 paling sering habis tanpa terasa. Tentukan tujuannya sejak awal. Sebagai <em>ilustrasi</em> pada
-        contoh anak kos:
+        Tambahan Rp500.000 paling sering habis tanpa terasa. Tentukan tujuannya sejak awal. Sebagai <em>ilustrasi</em>{' '}
+        pada contoh anak kos:
       </p>
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Pos</th><th className="num">Gaji 2 juta (Rp)</th><th className="num">Gaji 2,5 juta (Rp)</th></tr>
+            <tr>
+              <th>Pos</th>
+              <th className="num">Gaji 2 juta (Rp)</th>
+              <th className="num">Gaji 2,5 juta (Rp)</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td>Kebutuhan pokok</td><td className="num">1.650.000</td><td className="num">1.800.000</td></tr>
-            <tr><td>Tabungan &amp; dana darurat</td><td className="num">200.000</td><td className="num">450.000</td></tr>
-            <tr><td>Keinginan</td><td className="num">100.000</td><td className="num">200.000</td></tr>
-            <tr><td>Cadangan tak terduga</td><td className="num">50.000</td><td className="num">50.000</td></tr>
-            <tr><td><strong>Total</strong></td><td className="num"><strong>2.000.000</strong></td><td className="num"><strong>2.500.000</strong></td></tr>
+            <tr>
+              <td>Kebutuhan pokok</td>
+              <td className="num">1.650.000</td>
+              <td className="num">1.800.000</td>
+            </tr>
+            <tr>
+              <td>Tabungan &amp; dana darurat</td>
+              <td className="num">200.000</td>
+              <td className="num">450.000</td>
+            </tr>
+            <tr>
+              <td>Keinginan</td>
+              <td className="num">100.000</td>
+              <td className="num">200.000</td>
+            </tr>
+            <tr>
+              <td>Cadangan tak terduga</td>
+              <td className="num">50.000</td>
+              <td className="num">50.000</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Total</strong>
+              </td>
+              <td className="num">
+                <strong>2.000.000</strong>
+              </td>
+              <td className="num">
+                <strong>2.500.000</strong>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
       <p>
         Separuh tambahan (Rp250.000) masuk tabungan, sehingga porsi tabungan naik dari 10% menjadi 18%. Untuk contoh
-        pembagian gaji yang lebih besar, lihat <Link href="/panduan/cara-mengatur-gaji-3-juta">cara mengatur gaji 3 juta</Link>.
+        pembagian gaji yang lebih besar, lihat{' '}
+        <Link href="/panduan/cara-mengatur-gaji-3-juta">cara mengatur gaji 3 juta</Link>.
       </p>
 
       <h2>7. Dana darurat dari gaji 2 juta</h2>
       <p>
-        Mulailah dengan target kecil: satu kali pengeluaran pokok sebulan. Sebagai <em>ilustrasi</em> dari kedua contoh di atas:
+        Mulailah dengan target kecil: satu kali pengeluaran pokok sebulan. Sebagai <em>ilustrasi</em> dari kedua contoh
+        di atas:
       </p>
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Kondisi</th><th className="num">1× pengeluaran pokok (Rp)</th><th className="num">Setoran/bulan (Rp)</th><th className="num">Waktu</th></tr>
+            <tr>
+              <th>Kondisi</th>
+              <th className="num">1× pengeluaran pokok (Rp)</th>
+              <th className="num">Setoran/bulan (Rp)</th>
+              <th className="num">Waktu</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td>Tinggal dengan orang tua</td><td className="num">1.300.000</td><td className="num">400.000</td><td className="num">±4 bulan</td></tr>
-            <tr><td>Anak kos</td><td className="num">1.650.000</td><td className="num">200.000</td><td className="num">±9 bulan</td></tr>
+            <tr>
+              <td>Tinggal dengan orang tua</td>
+              <td className="num">1.300.000</td>
+              <td className="num">400.000</td>
+              <td className="num">±4 bulan</td>
+            </tr>
+            <tr>
+              <td>Anak kos</td>
+              <td className="num">1.650.000</td>
+              <td className="num">200.000</td>
+              <td className="num">±9 bulan</td>
+            </tr>
           </tbody>
         </table>
       </div>
       <p>
-        Setelah target pertama tercapai, lanjutkan ke tiga kali pengeluaran pokok. Kenapa dana darurat didahulukan dibahas
-        di <Link href="/panduan/dana-darurat">panduan dana darurat</Link>.
+        Setelah target pertama tercapai, lanjutkan ke tiga kali pengeluaran pokok. Kenapa dana darurat didahulukan
+        dibahas di <Link href="/panduan/dana-darurat">panduan dana darurat</Link>.
       </p>
 
       <h2>8. Catat dua minggu, lalu sesuaikan</h2>
       <p>
-        Pembagian di atas hanya titik awal. Catat semua pengeluaran selama dua minggu, lalu bandingkan dengan jatahnya. Pos
-        yang selalu lewat batas perlu dinaikkan dengan mengurangi pos lain, bukan dibiarkan. Cara menyusun batas per
-        kategori dijelaskan di <Link href="/panduan/cara-membuat-anggaran-bulanan">cara membuat anggaran bulanan</Link>. Kalau
-        gaji 2 juta ini untuk kebutuhan keluarga, cara mencatatnya ada di{' '}
+        Pembagian di atas hanya titik awal. Catat semua pengeluaran selama dua minggu, lalu bandingkan dengan jatahnya.
+        Pos yang selalu lewat batas perlu dinaikkan dengan mengurangi pos lain, bukan dibiarkan. Cara menyusun batas per
+        kategori dijelaskan di <Link href="/panduan/cara-membuat-anggaran-bulanan">cara membuat anggaran bulanan</Link>.
+        Kalau gaji 2 juta ini untuk kebutuhan keluarga, cara mencatatnya ada di{' '}
         <Link href="/panduan/catat-keuangan-rumah-tangga">catatan keuangan rumah tangga</Link>.
       </p>
 
@@ -206,8 +366,10 @@ export default function CaraMengaturGaji2JutaPage() {
         nominal target dan progres dalam persen. Semua fitur bisa dicoba gratis selama 14 hari tanpa kartu kredit.
       </p>
       <p>
-        <em>Angka di panduan ini adalah ilustrasi. Panduan ini bersifat edukasi umum, bukan nasihat keuangan. Sesuaikan
-        dengan kondisi dan tujuan Anda.</em>
+        <em>
+          Angka di panduan ini adalah ilustrasi. Panduan ini bersifat edukasi umum, bukan nasihat keuangan. Sesuaikan
+          dengan kondisi dan tujuan Anda.
+        </em>
       </p>
     </GuideLayout>
   );

@@ -27,12 +27,31 @@ export type SplitResult = { ids: string[]; shares: { name: string; amount: numbe
 
 export const debtService = {
   /** Patungan: satu tagihan → piutang per orang (+ bagianku), atomik di server. */
-  async split(input: { requestId: string; total: number; note: string; names: string[]; includeMe: boolean; accountId: string; applyBalance: boolean; myCategory?: string; date?: string; due?: DebtDue | null }): Promise<SplitResult> {
+  async split(input: {
+    requestId: string;
+    total: number;
+    note: string;
+    names: string[];
+    includeMe: boolean;
+    accountId: string;
+    applyBalance: boolean;
+    myCategory?: string;
+    date?: string;
+    due?: DebtDue | null;
+  }): Promise<SplitResult> {
     const res = await cloudflareApi<SplitResult>('/api/member/debts/split', {
       method: 'POST',
       json: {
-        request_id: input.requestId, total: input.total, note: input.note, names: input.names, include_me: input.includeMe,
-        account_id: input.accountId, apply_balance: input.applyBalance, my_category: input.myCategory, date: input.date, ...(input.due ? { due: input.due } : {}),
+        request_id: input.requestId,
+        total: input.total,
+        note: input.note,
+        names: input.names,
+        include_me: input.includeMe,
+        account_id: input.accountId,
+        apply_balance: input.applyBalance,
+        my_category: input.myCategory,
+        date: input.date,
+        ...(input.due ? { due: input.due } : {}),
       },
     });
     notifyCollectionChanged('transactions');
@@ -53,7 +72,7 @@ export const debtService = {
           ...(input.accountId ? { account_id: input.accountId } : {}),
           ...(input.date ? { date: input.date } : {}),
         },
-      }
+      },
     );
     notifyCollectionChanged('transactions');
     notifyCollectionChanged('accounts');

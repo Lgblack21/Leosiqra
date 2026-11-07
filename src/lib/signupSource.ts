@@ -5,7 +5,7 @@
 // Worker menyaring ulang semua nilai (cloudflare/src/index.ts,
 // sanitizeSignupSource) — ini bukan batas kepercayaan.
 
-const KEY = "leosiqra_signup_source";
+const KEY = 'leosiqra_signup_source';
 const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 export type SignupSource = {
@@ -17,7 +17,7 @@ export type SignupSource = {
 };
 
 const clip = (value: string | null | undefined) => {
-  const v = (value ?? "").trim().slice(0, 64);
+  const v = (value ?? '').trim().slice(0, 64);
   return v || undefined;
 };
 
@@ -43,20 +43,20 @@ export const captureSignupSource = () => {
   try {
     if (readSignupSource()) return;
     const params = new URLSearchParams(window.location.search);
-    let source = clip(params.get("utm_source"));
-    let medium = clip(params.get("utm_medium"));
-    const campaign = clip(params.get("utm_campaign"));
+    let source = clip(params.get('utm_source'));
+    let medium = clip(params.get('utm_medium'));
+    const campaign = clip(params.get('utm_campaign'));
     if (!source && !medium && !campaign) {
       // Tanpa UTM: pakai host referrer kalau dari situs lain (mis. google.com).
-      let refHost = "";
+      let refHost = '';
       try {
-        refHost = document.referrer ? new URL(document.referrer).hostname : "";
+        refHost = document.referrer ? new URL(document.referrer).hostname : '';
       } catch {
-        refHost = "";
+        refHost = '';
       }
       if (!refHost || refHost === window.location.hostname) return;
-      source = clip(refHost.replace(/^www\./, ""));
-      medium = "referral";
+      source = clip(refHost.replace(/^www\./, ''));
+      medium = 'referral';
     }
     const entry: SignupSource = {
       source,
@@ -74,11 +74,11 @@ export const captureSignupSource = () => {
 // Kode referral dari tautan "Ajak teman" (?ref=KODE). Disimpan sampai user
 // masuk, lalu layout membership memakainya sekali (server tetap memvalidasi:
 // akun ≤30 hari, belum pernah pakai kode, bukan kode sendiri).
-const REF_KEY = "leosiqra_ref_code";
+const REF_KEY = 'leosiqra_ref_code';
 
 export const captureReferralCode = () => {
   try {
-    const code = (new URLSearchParams(window.location.search).get("ref") ?? "").trim().toUpperCase();
+    const code = (new URLSearchParams(window.location.search).get('ref') ?? '').trim().toUpperCase();
     if (/^[A-Z0-9]{6}$/.test(code)) window.localStorage.setItem(REF_KEY, code);
   } catch {
     // abaikan — kode tetap bisa diketik manual di Pengaturan → Referral.
@@ -106,8 +106,8 @@ export const clearReferralCode = () => {
 // static export dan render pertama di browser tetap sama.
 export const googleAuthHref = (next: string | null, src: SignupSource | null) => {
   const params = new URLSearchParams();
-  if (next) params.set("next", next);
-  if (src) params.set("src", JSON.stringify(src));
+  if (next) params.set('next', next);
+  if (src) params.set('src', JSON.stringify(src));
   const query = params.toString();
-  return query ? `/api/auth/google?${query}` : "/api/auth/google";
+  return query ? `/api/auth/google?${query}` : '/api/auth/google';
 };

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { HeaderSlot } from '@/components/Header';
 import { LanggananView } from '@/components/langganan/LanggananView';
@@ -12,7 +12,9 @@ export default function LanggananPage() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-[26px] font-extrabold tracking-tight text-slate-900 md:text-[30px]">Langgananku</h1>
-          <p className="text-[14px] text-slate-500">Semua langganan di satu tempat — total per bulan, tagihan berikutnya, dan radar pemindai.</p>
+          <p className="text-[14px] text-slate-500">
+            Semua langganan di satu tempat — total per bulan, tagihan berikutnya, dan radar pemindai.
+          </p>
         </div>
         <HeaderSlot />
       </div>

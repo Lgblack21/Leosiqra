@@ -5,11 +5,68 @@ import { notifyCollectionChanged } from '../cf-firestore';
 // Penjualan = transaksi pemasukan (related_type 'shop', related_id = id usaha).
 
 export type ShopProduct = { name: string; price: number; unit: string; group?: string }; // group = kategori, mis. "Free Fire"
-export type ShopPlan = { modal: number | null; waktu: string; perBulan: [number, number] | null; alasan: string[]; langkah: string[]; pembeli: string; cariDi: string };
-export type ShopIdea = { name: string; emoji: string; tagline: string; description: string; products: ShopProduct[]; plan: ShopPlan };
+export type ShopPlan = {
+  modal: number | null;
+  waktu: string;
+  perBulan: [number, number] | null;
+  alasan: string[];
+  langkah: string[];
+  pembeli: string;
+  cariDi: string;
+};
+export type ShopIdea = {
+  name: string;
+  emoji: string;
+  tagline: string;
+  description: string;
+  products: ShopProduct[];
+  plan: ShopPlan;
+};
 /** Tampilan kasir — pilihan terbatas (lihat sanitizeKasirStyle di Worker). */
-export type KasirStyle = { theme: string; layout: 'grid' | 'list' | 'compact'; columns: 2 | 3 | 4; card: 'soft' | 'outline' | 'solid'; showUnit: boolean; greeting: string; receiptFooter: string; categoryOrder: string[]; header: 'besar' | 'ringkas'; strukSide: 'kanan' | 'kiri'; size: 'normal' | 'besar'; showStats: boolean; showSearch: boolean; showRecent: boolean; mode: 'bawaan' | 'bebas'; customHtml: string; browse: 'katalog' | 'gulir'; buyer: 'opsional' | 'wajib'; logoUrl: string; categoryImages: Record<string, string> };
-export const KASIR_DEFAULT: KasirStyle = { theme: 'ungu', layout: 'grid', columns: 3, card: 'soft', showUnit: true, greeting: '', receiptFooter: '', categoryOrder: [], header: 'besar', strukSide: 'kanan', size: 'normal', showStats: true, showSearch: true, showRecent: true, mode: 'bawaan', customHtml: '', browse: 'katalog', buyer: 'opsional', logoUrl: '', categoryImages: {} };
+export type KasirStyle = {
+  theme: string;
+  layout: 'grid' | 'list' | 'compact';
+  columns: 2 | 3 | 4;
+  card: 'soft' | 'outline' | 'solid';
+  showUnit: boolean;
+  greeting: string;
+  receiptFooter: string;
+  categoryOrder: string[];
+  header: 'besar' | 'ringkas';
+  strukSide: 'kanan' | 'kiri';
+  size: 'normal' | 'besar';
+  showStats: boolean;
+  showSearch: boolean;
+  showRecent: boolean;
+  mode: 'bawaan' | 'bebas';
+  customHtml: string;
+  browse: 'katalog' | 'gulir';
+  buyer: 'opsional' | 'wajib';
+  logoUrl: string;
+  categoryImages: Record<string, string>;
+};
+export const KASIR_DEFAULT: KasirStyle = {
+  theme: 'ungu',
+  layout: 'grid',
+  columns: 3,
+  card: 'soft',
+  showUnit: true,
+  greeting: '',
+  receiptFooter: '',
+  categoryOrder: [],
+  header: 'besar',
+  strukSide: 'kanan',
+  size: 'normal',
+  showStats: true,
+  showSearch: true,
+  showRecent: true,
+  mode: 'bawaan',
+  customHtml: '',
+  browse: 'katalog',
+  buyer: 'opsional',
+  logoUrl: '',
+  categoryImages: {},
+};
 export type Shop = {
   id: string;
   name: string;
@@ -39,11 +96,30 @@ export type Shop = {
   createdAt: string;
   updatedAt: string;
 };
-export type ShopInput = Partial<{ name: string; tagline: string; description: string; emoji: string; products: ShopProduct[]; plan: ShopPlan | null; contactWa: string; paymentNote: string; area: string; linkUrl: string; promoted: boolean; style: KasirStyle }>;
+export type ShopInput = Partial<{
+  name: string;
+  tagline: string;
+  description: string;
+  emoji: string;
+  products: ShopProduct[];
+  plan: ShopPlan | null;
+  contactWa: string;
+  paymentNote: string;
+  area: string;
+  linkUrl: string;
+  promoted: boolean;
+  style: KasirStyle;
+}>;
 
 type Row = Record<string, unknown>;
 const str = (v: unknown) => (typeof v === 'string' && v ? v : undefined);
-const parse = <T,>(v: unknown, fallback: T): T => { try { return typeof v === 'string' ? (JSON.parse(v) as T) : fallback; } catch { return fallback; } };
+const parse = <T>(v: unknown, fallback: T): T => {
+  try {
+    return typeof v === 'string' ? (JSON.parse(v) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+};
 export const shopFromRow = (r: Row): Shop => ({
   id: String(r.id),
   name: String(r.name ?? ''),
@@ -85,7 +161,13 @@ const toBody = (i: ShopInput) => ({
 
 /** Jenis pengeluaran usaha (sama dengan SHOP_EXPENSE_KINDS di Worker → sub kategori "Biaya Usaha"). */
 export const SHOP_EXPENSE_KINDS = ['Bahan & Stok', 'Kemasan', 'Operasional', 'Lainnya'] as const;
-export type ShopExpenseInput = { requestId: string; amount: number; item: string; kind: string; stock?: { materialId: string; qty: number } | null };
+export type ShopExpenseInput = {
+  requestId: string;
+  amount: number;
+  item: string;
+  kind: string;
+  stock?: { materialId: string; qty: number } | null;
+};
 
 export const shopService = {
   async list(): Promise<Shop[]> {
@@ -107,7 +189,10 @@ export const shopService = {
   },
   /** Buat/ganti kunci sambungan website — kunci hanya dikembalikan SEKALI ini. */
   async createHook(id: string, accountId: string): Promise<{ key: string; url: string }> {
-    const r = await cloudflareApi<{ key: string; url: string }>(`/api/member/shops/${id}/hook`, { method: 'POST', json: { account_id: accountId } });
+    const r = await cloudflareApi<{ key: string; url: string }>(`/api/member/shops/${id}/hook`, {
+      method: 'POST',
+      json: { account_id: accountId },
+    });
     notifyCollectionChanged('shops');
     return r;
   },
@@ -116,13 +201,48 @@ export const shopService = {
     notifyCollectionChanged('shops');
   },
   async expense(id: string, input: ShopExpenseInput & { accountId: string; date?: string }) {
-    await cloudflareApi(`/api/member/shops/${id}/expense`, { method: 'POST', json: { request_id: input.requestId, amount: input.amount, item: input.item, kind: input.kind, account_id: input.accountId, date: input.date, ...(input.stock ? { stock: { material_id: input.stock.materialId, qty: input.stock.qty } } : {}) } });
+    await cloudflareApi(`/api/member/shops/${id}/expense`, {
+      method: 'POST',
+      json: {
+        request_id: input.requestId,
+        amount: input.amount,
+        item: input.item,
+        kind: input.kind,
+        account_id: input.accountId,
+        date: input.date,
+        ...(input.stock ? { stock: { material_id: input.stock.materialId, qty: input.stock.qty } } : {}),
+      },
+    });
     notifyCollectionChanged('shop_stock');
     notifyCollectionChanged('transactions');
     notifyCollectionChanged('accounts');
   },
-  async sale(id: string, input: { requestId: string; amount: number; qty: number; product?: string; buyer?: string; items?: { name: string; price: number; qty: number; key?: string }[]; accountId: string; date?: string }) {
-    await cloudflareApi(`/api/member/shops/${id}/sale`, { method: 'POST', json: { request_id: input.requestId, amount: input.amount, qty: input.qty, product: input.product, buyer: input.buyer, items: input.items, account_id: input.accountId, date: input.date } });
+  async sale(
+    id: string,
+    input: {
+      requestId: string;
+      amount: number;
+      qty: number;
+      product?: string;
+      buyer?: string;
+      items?: { name: string; price: number; qty: number; key?: string }[];
+      accountId: string;
+      date?: string;
+    },
+  ) {
+    await cloudflareApi(`/api/member/shops/${id}/sale`, {
+      method: 'POST',
+      json: {
+        request_id: input.requestId,
+        amount: input.amount,
+        qty: input.qty,
+        product: input.product,
+        buyer: input.buyer,
+        items: input.items,
+        account_id: input.accountId,
+        date: input.date,
+      },
+    });
     notifyCollectionChanged('transactions');
     notifyCollectionChanged('accounts');
   },
@@ -137,27 +257,46 @@ export const prettyWa = (wa?: string) => {
 /** Kelompokkan produk per kategori (urutan muncul pertama dipertahankan); `i` = indeks asli. */
 export const groupProducts = (list: ShopProduct[]) => {
   const m = new Map<string, { p: ShopProduct; i: number }[]>();
-  list.forEach((p, i) => { const g = p.group?.trim() || ''; m.set(g, [...(m.get(g) ?? []), { p, i }]); });
+  list.forEach((p, i) => {
+    const g = p.group?.trim() || '';
+    m.set(g, [...(m.get(g) ?? []), { p, i }]);
+  });
   return [...m].map(([group, items]) => ({ group, items }));
 };
-const productLines = (list: ShopProduct[], fmt: (n: number) => string, bullet: string, heading: (g: string) => string) =>
+const productLines = (
+  list: ShopProduct[],
+  fmt: (n: number) => string,
+  bullet: string,
+  heading: (g: string) => string,
+) =>
   groupProducts(list).flatMap(({ group, items }, k, all) => [
     ...(all.length > 1 || group ? [...(k ? [''] : []), heading(group || 'Lainnya')] : []),
     ...items.map(({ p }) => `${bullet} ${p.name} — ${fmt(p.price)}${p.unit ? ` ${p.unit}` : ''}`),
   ]);
 export const catalogText = (s: Shop, fmt: (n: number) => string) => {
-  const lines = [`${s.emoji ? `${s.emoji} ` : ''}*${s.name}*`, s.tagline, '', ...productLines(s.products, fmt, '•', (g) => `*${g}*`)];
+  const lines = [
+    `${s.emoji ? `${s.emoji} ` : ''}*${s.name}*`,
+    s.tagline,
+    '',
+    ...productLines(s.products, fmt, '•', (g) => `*${g}*`),
+  ];
   if (s.paymentNote) lines.push('', `Bayar: ${s.paymentNote}`);
   if (s.area) lines.push(`Area: ${s.area}`);
-  if (s.contactWa) lines.push('', `Pesan: https://wa.me/${s.contactWa}?text=${encodeURIComponent(`Halo ${s.name}, mau pesan`)}`);
+  if (s.contactWa)
+    lines.push('', `Pesan: https://wa.me/${s.contactWa}?text=${encodeURIComponent(`Halo ${s.name}, mau pesan`)}`);
   if (s.linkUrl) lines.push(`Toko: ${s.linkUrl}`);
-  return lines.filter((l) => l !== undefined).join('\n').replace(/\n{3,}/g, '\n\n');
+  return lines
+    .filter((l) => l !== undefined)
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n');
 };
 
 export const PABRIK_AI_URL = 'https://app.vantis.sh';
 /** Brief untuk dibuatkan website oleh AI builder (Pabrik.AI) — tanpa data keuangan. */
 export const websiteBrief = (s: Shop, fmt: (n: number) => string) => {
-  const order = s.contactWa ? `https://wa.me/${s.contactWa}?text=${encodeURIComponent(`Halo ${s.name}, mau pesan`)}` : '';
+  const order = s.contactWa
+    ? `https://wa.me/${s.contactWa}?text=${encodeURIComponent(`Halo ${s.name}, mau pesan`)}`
+    : '';
   return [
     `# Buatkan website toko: ${s.name}`,
     s.tagline && `Tagline: ${s.tagline}`,
@@ -165,7 +304,12 @@ export const websiteBrief = (s: Shop, fmt: (n: number) => string) => {
     '',
     '## Produk & harga',
     ...(s.products.length ? productLines(s.products, fmt, '-', (g) => `### ${g}`) : ['- (isi produk di sini)']),
-    ...(s.products.some((p) => p.group) ? ['', 'Kelompokkan produk per kategori di atas (mis. per jenis/merek) — pembeli pilih kategori dulu, lalu produknya.'] : []),
+    ...(s.products.some((p) => p.group)
+      ? [
+          '',
+          'Kelompokkan produk per kategori di atas (mis. per jenis/merek) — pembeli pilih kategori dulu, lalu produknya.',
+        ]
+      : []),
     '',
     '## Cara pesan & bayar',
     order ? `- Semua tombol "Pesan" membuka WhatsApp: ${order}` : '- Tombol "Pesan" membuka WhatsApp penjual',
@@ -177,5 +321,9 @@ export const websiteBrief = (s: Shop, fmt: (n: number) => string) => {
     '- Tampilkan daftar produk dengan harga dalam Rupiah sebagai teks biasa (bukan gambar).',
     '- Tanpa login, tanpa keranjang/payment gateway — pemesanan cukup lewat WhatsApp.',
     '- Setelah jadi, berikan tautan PUBLIK yang bisa dibuka pembeli (bukan tautan editor).',
-  ].filter((l) => typeof l === 'string').join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  ]
+    .filter((l) => typeof l === 'string')
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 };

@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Check, Wallet } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Account } from "@/lib/services/accountService";
+import { useEffect, useRef, useState } from 'react';
+import { ChevronDown, Check, Wallet } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Account } from '@/lib/services/accountService';
 
 interface AccountPickerProps {
   accounts: Account[];
@@ -12,7 +12,7 @@ interface AccountPickerProps {
   label?: string;
 }
 
-export function AccountPicker({ accounts, value, onChange, label = "Akun / Rekening" }: AccountPickerProps) {
+export function AccountPicker({ accounts, value, onChange, label = 'Akun / Rekening' }: AccountPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const selected = accounts.find((a) => a.id === value);
@@ -21,12 +21,15 @@ export function AccountPicker({ accounts, value, onChange, label = "Akun / Reken
     const handleClickOutside = (event: MouseEvent) => {
       if (ref.current && !ref.current.contains(event.target as Node)) setIsOpen(false);
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 relative" ref={ref}>
+    <div
+      className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 relative"
+      ref={ref}
+    >
       <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">
         <Wallet size={12} /> {label}
       </label>
@@ -38,8 +41,11 @@ export function AccountPicker({ accounts, value, onChange, label = "Akun / Reken
           onClick={() => setIsOpen((prev) => !prev)}
           className="w-full flex items-center justify-between text-left"
         >
-          <span className="text-sm font-bold text-slate-900 dark:text-white">{selected?.name ?? "Pilih akun"}</span>
-          <ChevronDown size={16} className={cn("text-slate-400 dark:text-slate-500 transition-transform", isOpen && "rotate-180")} />
+          <span className="text-sm font-bold text-slate-900 dark:text-white">{selected?.name ?? 'Pilih akun'}</span>
+          <ChevronDown
+            size={16}
+            className={cn('text-slate-400 dark:text-slate-500 transition-transform', isOpen && 'rotate-180')}
+          />
         </button>
       )}
       {isOpen && (
@@ -49,14 +55,14 @@ export function AccountPicker({ accounts, value, onChange, label = "Akun / Reken
               key={acc.id}
               type="button"
               onClick={() => {
-                onChange(acc.id ?? "");
+                onChange(acc.id ?? '');
                 setIsOpen(false);
               }}
               className={cn(
-                "w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm transition-all text-left",
+                'w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm transition-all text-left',
                 acc.id === value
-                  ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-black"
-                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium"
+                  ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-black'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium',
               )}
             >
               {acc.name}

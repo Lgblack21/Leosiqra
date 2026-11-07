@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
@@ -106,7 +106,9 @@ export const ProductTour = ({ steps, isActive, onFinish }: ProductTourProps) => 
   const cardStyle: React.CSSProperties = rect
     ? {
         position: 'fixed',
-        top: fitsRight ? Math.min(Math.max(rect.top - 24, 16), vh - cardH - 16) : Math.min(rect.bottom + 16, vh - cardH - 16),
+        top: fitsRight
+          ? Math.min(Math.max(rect.top - 24, 16), vh - cardH - 16)
+          : Math.min(rect.bottom + 16, vh - cardH - 16),
         left: fitsRight ? rect.right + 24 : Math.min(Math.max(rect.left, 16), vw - CARD_W - 16),
         zIndex: 10000,
       }
@@ -195,7 +197,7 @@ export const ProductTour = ({ steps, isActive, onFinish }: ProductTourProps) => 
               onClick={() => (isLast ? onFinish() : setStepIndex((i) => i + 1))}
               className={cn(
                 'px-4 py-2 rounded-lg text-[11px] font-black text-white flex items-center gap-1.5 transition-colors',
-                'bg-indigo-600 hover:bg-indigo-700'
+                'bg-indigo-600 hover:bg-indigo-700',
               )}
             >
               {isLast ? 'Selesai' : 'Lanjut'}

@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { ShieldCheck, X } from "lucide-react";
-import { cloudflareApi } from "@/lib/cloudflare-api";
-import { cn } from "@/lib/utils";
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { ShieldCheck, X } from 'lucide-react';
+import { cloudflareApi } from '@/lib/cloudflare-api';
+import { cn } from '@/lib/utils';
 
 // Tawaran verifikasi 2 langkah. Daftar tidak lagi memaksa 2FA, jadi kartu ini
 // muncul di Beranda/Dashboard mulai 3 hari setelah user pertama terlihat di
@@ -34,7 +34,7 @@ export function SecurityNudge({ className }: { className?: string }) {
 
   useEffect(() => {
     let active = true;
-    cloudflareApi<{ user?: { id?: string; twoFactorEnabled?: boolean; hasPassword?: boolean } | null }>("/api/auth/me")
+    cloudflareApi<{ user?: { id?: string; twoFactorEnabled?: boolean; hasPassword?: boolean } | null }>('/api/auth/me')
       .then(({ user }) => {
         // Akun Google tanpa password lokal: 2FA tidak melindungi apa pun di sini.
         if (!active || !user?.id || user.twoFactorEnabled || user.hasPassword === false) return;
@@ -64,7 +64,12 @@ export function SecurityNudge({ className }: { className?: string }) {
   };
 
   return (
-    <div className={cn("relative flex gap-3 rounded-3xl border border-indigo-100 dark:border-indigo-500/20 bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-500/10 dark:to-violet-500/10 p-4 pr-10", className)}>
+    <div
+      className={cn(
+        'relative flex gap-3 rounded-3xl border border-indigo-100 dark:border-indigo-500/20 bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-500/10 dark:to-violet-500/10 p-4 pr-10',
+        className,
+      )}
+    >
       <div className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 shadow-sm">
         <ShieldCheck size={20} />
       </div>
@@ -80,12 +85,21 @@ export function SecurityNudge({ className }: { className?: string }) {
           >
             Aktifkan sekarang
           </Link>
-          <button type="button" onClick={snooze} className="text-xs font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400">
+          <button
+            type="button"
+            onClick={snooze}
+            className="text-xs font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400"
+          >
             Nanti saja
           </button>
         </div>
       </div>
-      <button type="button" onClick={snooze} aria-label="Tutup" className="absolute right-3 top-3 rounded-lg p-1 text-slate-400 hover:text-slate-600">
+      <button
+        type="button"
+        onClick={snooze}
+        aria-label="Tutup"
+        className="absolute right-3 top-3 rounded-lg p-1 text-slate-400 hover:text-slate-600"
+      >
         <X size={16} />
       </button>
     </div>

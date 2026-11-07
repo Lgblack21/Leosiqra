@@ -57,7 +57,10 @@ export const subscriptionService = {
     return (res.items ?? []).map(fromRow);
   },
   async create(input: SubInput): Promise<string> {
-    const res = await cloudflareApi<{ id: string }>('/api/member/subscriptions', { method: 'POST', json: toBody(input) });
+    const res = await cloudflareApi<{ id: string }>('/api/member/subscriptions', {
+      method: 'POST',
+      json: toBody(input),
+    });
     notifyCollectionChanged('subscriptions');
     return res.id;
   },

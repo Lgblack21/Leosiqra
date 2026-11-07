@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useState } from 'react';
 import { cloudflareApi } from './cloudflare-api';
@@ -20,13 +20,18 @@ const fetchStatus = (force = false): Promise<McpStatus> => {
     .then((r) => {
       const items = r.items ?? [];
       const writers = items.filter((t) => t.scopes.includes('write'));
-      const value: McpStatus = { state: writers.length ? 'write' : items.length ? 'read' : 'none', names: [...new Set((writers.length ? writers : items).map((t) => t.name))].slice(0, 3) };
+      const value: McpStatus = {
+        state: writers.length ? 'write' : items.length ? 'read' : 'none',
+        names: [...new Set((writers.length ? writers : items).map((t) => t.name))].slice(0, 3),
+      };
       cache = { at: Date.now(), value };
       listeners.forEach((l) => l(value));
       return value;
     })
     .catch(() => ({ state: 'error' as const, names: [] }))
-    .finally(() => { inflight = null; });
+    .finally(() => {
+      inflight = null;
+    });
   return inflight;
 };
 
@@ -34,15 +39,25 @@ export function useMcpStatus(): McpStatus {
   const [s, setS] = useState<McpStatus>(cache?.value ?? { state: 'loading', names: [] });
   useEffect(() => {
     let alive = true;
-    const set = (v: McpStatus) => { if (alive) setS(v); };
+    const set = (v: McpStatus) => {
+      if (alive) setS(v);
+    };
     listeners.add(set);
     void fetchStatus().then(set);
-    const onVis = () => { if (document.visibilityState === 'visible') void fetchStatus(true); };
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void fetchStatus(true);
+    };
     document.addEventListener('visibilitychange', onVis);
-    return () => { alive = false; listeners.delete(set); document.removeEventListener('visibilitychange', onVis); };
+    return () => {
+      alive = false;
+      listeners.delete(set);
+      document.removeEventListener('visibilitychange', onVis);
+    };
   }, []);
   return s;
 }
 
 /** Panggil setelah token dibuat/dicabut supaya kartu lain ikut berubah. */
-export const refreshMcpStatus = () => { void fetchStatus(true); };
+export const refreshMcpStatus = () => {
+  void fetchStatus(true);
+};

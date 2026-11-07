@@ -1,10 +1,10 @@
-import { cookies } from "next/headers";
+import { cookies } from 'next/headers';
 
-export type SessionRole = "admin" | "user";
+export type SessionRole = 'admin' | 'user';
 
 export async function getCloudflareSessionSnapshot() {
   const cookieStore = await cookies();
-  const sessionCookieName = process.env.SESSION_COOKIE_NAME ?? "leosiqra_session";
+  const sessionCookieName = process.env.SESSION_COOKIE_NAME ?? 'leosiqra_session';
   const roleCookieName = `${sessionCookieName}_role`;
 
   return {

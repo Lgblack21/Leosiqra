@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -16,7 +16,7 @@ import {
   ChevronDown,
   MessageSquareHeart,
   Bot,
-  Coins
+  Coins,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
@@ -36,15 +36,15 @@ const adminMenuGroups = [
       { icon: Coins, label: 'Koin', href: '/admin/koin' },
       { icon: FileText, label: 'Laporan', href: '/admin/laporan' },
       { icon: MessageSquareHeart, label: 'Saran & Kritik', href: '/admin/saran' },
-    ]
+    ],
   },
   {
     label: 'Sistem',
     items: [
       { icon: Settings, label: 'Pengaturan', href: '/admin/pengaturan' },
       { icon: Bot, label: 'AI & Saldo', href: '/admin/ai' },
-    ]
-  }
+    ],
+  },
 ];
 
 export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
@@ -53,7 +53,9 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
   // Grup yang berisi halaman aktif ikut terbuka (mis. buka /admin/ai langsung).
   const [openGroups, setOpenGroups] = useState<string[]>(() => [
     'Manajemen',
-    ...adminMenuGroups.filter((g) => g.label !== 'Manajemen' && g.items.some((i) => pathname?.startsWith(i.href))).map((g) => g.label),
+    ...adminMenuGroups
+      .filter((g) => g.label !== 'Manajemen' && g.items.some((i) => pathname?.startsWith(i.href)))
+      .map((g) => g.label),
   ]);
   const [profile, setProfile] = useState<{
     id: string;
@@ -63,30 +65,33 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
   } | null>(null);
 
   useEffect(() => {
-    cloudflareApi<{ user?: {
-      id: string;
-      name: string;
-      email: string;
-      role: 'admin' | 'user';
-    } | null }>('/api/auth/me')
+    cloudflareApi<{
+      user?: {
+        id: string;
+        name: string;
+        email: string;
+        role: 'admin' | 'user';
+      } | null;
+    }>('/api/auth/me')
       .then((result) => setProfile(result.user ?? null))
       .catch(() => setProfile(null));
   }, []);
 
   const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
-  }
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
 
   const isItemActive = (item: { label: string; href: string }) => {
     return pathname === item.href;
   };
 
   const toggleGroup = (label: string) => {
-    setOpenGroups(prev =>
-      prev.includes(label)
-        ? prev.filter(g => g !== label)
-        : [...prev, label]
-    );
+    setOpenGroups((prev) => (prev.includes(label) ? prev.filter((g) => g !== label) : [...prev, label]));
   };
 
   const handleLogout = async () => {
@@ -100,25 +105,29 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
 
   return (
     <>
-      <aside className={cn(
-        "fixed top-0 left-0 h-full w-72 bg-slate-900 border-r border-slate-800 flex flex-col z-50 transition-transform duration-300 ease-in-out lg:translate-x-0 overflow-y-auto",
-        isOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
+      <aside
+        className={cn(
+          'fixed top-0 left-0 h-full w-72 bg-slate-900 border-r border-slate-800 flex flex-col z-50 transition-transform duration-300 ease-in-out lg:translate-x-0 overflow-y-auto',
+          isOpen ? 'translate-x-0' : '-translate-x-full',
+        )}
+      >
         <div className="p-4 flex items-center justify-between shrink-0">
-          <Link href="/admin/dashboard" className="block group flex-1" onClick={() => { if (window.innerWidth < 1024) onClose?.(); }}>
+          <Link
+            href="/admin/dashboard"
+            className="block group flex-1"
+            onClick={() => {
+              if (window.innerWidth < 1024) onClose?.();
+            }}
+          >
             <div className="bg-slate-800 rounded-[20px] p-3 border border-slate-700 shadow-sm flex items-center gap-3 transition-all">
               <div className="w-10 h-10 flex items-center justify-center shrink-0 overflow-hidden bg-white rounded-lg">
-                <Image
-                  src="/images/Logo-new.png"
-                  alt="Leosiqra"
-                  width={34}
-                  height={34}
-                  className="object-contain"
-                />
+                <Image src="/images/Logo-new.png" alt="Leosiqra" width={34} height={34} className="object-contain" />
               </div>
               <div className="flex flex-col">
                 <span className="font-black text-lg text-white tracking-tight leading-none mb-1">Leosiqra</span>
-                <span className="text-[8px] font-black text-indigo-400 uppercase tracking-[0.1em] leading-none">ADMIN PANEL</span>
+                <span className="text-[8px] font-black text-indigo-400 uppercase tracking-[0.1em] leading-none">
+                  ADMIN PANEL
+                </span>
               </div>
             </div>
           </Link>
@@ -150,22 +159,25 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
                       <Link
                         key={item.label + item.href}
                         href={item.href}
-                        onClick={() => { if (window.innerWidth < 1024) onClose?.(); }}
+                        onClick={() => {
+                          if (window.innerWidth < 1024) onClose?.();
+                        }}
                         className={cn(
-                          "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group relative",
+                          'flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group relative',
                           isItemActive(item)
-                            ? "text-indigo-400 font-bold bg-indigo-500/10"
-                            : "text-slate-400 hover:text-white hover:bg-slate-800"
+                            ? 'text-indigo-400 font-bold bg-indigo-500/10'
+                            : 'text-slate-400 hover:text-white hover:bg-slate-800',
                         )}
                       >
-                        <item.icon size={18} className={cn(
-                          "transition-colors",
-                          isItemActive(item) ? "text-indigo-400" : "group-hover:text-white"
-                        )} />
+                        <item.icon
+                          size={18}
+                          className={cn(
+                            'transition-colors',
+                            isItemActive(item) ? 'text-indigo-400' : 'group-hover:text-white',
+                          )}
+                        />
                         <span className="text-[13px]">{item.label}</span>
-                        {isItemActive(item) && (
-                          <div className="absolute left-0 w-1 h-4 bg-indigo-400 rounded-r-full" />
-                        )}
+                        {isItemActive(item) && <div className="absolute left-0 w-1 h-4 bg-indigo-400 rounded-r-full" />}
                       </Link>
                     ))}
                   </div>
@@ -182,12 +194,8 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
                 {profile ? getInitials(profile.name) : '??'}
               </div>
               <div className="flex flex-col min-w-0">
-                <span className="text-[13px] font-black text-white truncate pr-2">
-                  {profile?.name || 'Loading...'}
-                </span>
-                <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">
-                  Administrator
-                </span>
+                <span className="text-[13px] font-black text-white truncate pr-2">{profile?.name || 'Loading...'}</span>
+                <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Administrator</span>
               </div>
             </div>
           </div>
@@ -202,8 +210,14 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
         </div>
 
         <style jsx global>{`
-          .custom-scrollbar::-webkit-scrollbar { width: 0px; background: transparent; }
-          .custom-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+          .custom-scrollbar::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+          }
+          .custom-scrollbar {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+          }
         `}</style>
       </aside>
     </>

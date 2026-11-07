@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useRef, useEffect } from 'react';
 import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -12,7 +12,7 @@ interface MonthPickerProps {
 }
 
 const MONTH_LABELS = Array.from({ length: 12 }, (_, i) =>
-  new Intl.DateTimeFormat('id-ID', { month: 'short' }).format(new Date(2000, i, 1))
+  new Intl.DateTimeFormat('id-ID', { month: 'short' }).format(new Date(2000, i, 1)),
 );
 
 // Dropdown kustom (bukan <input type="month"> native) supaya tampilannya konsisten
@@ -25,7 +25,7 @@ export const MonthPicker = ({ value, onChange, className }: MonthPickerProps) =>
 
   const handleToggle = () => {
     if (!isOpen) setDisplayYear(value.year);
-    setIsOpen(o => !o);
+    setIsOpen((o) => !o);
   };
 
   useEffect(() => {
@@ -52,9 +52,14 @@ export const MonthPicker = ({ value, onChange, className }: MonthPickerProps) =>
       >
         <Calendar size={14} className="text-slate-500 group-hover:text-indigo-600 transition-colors" />
         <span className="text-xs font-black text-slate-700">
-          {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(value.year, value.month))}
+          {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(
+            new Date(value.year, value.month),
+          )}
         </span>
-        <ChevronDown size={12} className={`text-slate-400 transition-transform duration-300 ml-auto ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown
+          size={12}
+          className={`text-slate-400 transition-transform duration-300 ml-auto ${isOpen ? 'rotate-180' : ''}`}
+        />
       </button>
 
       <AnimatePresence>
@@ -67,14 +72,14 @@ export const MonthPicker = ({ value, onChange, className }: MonthPickerProps) =>
           >
             <div className="flex items-center justify-between mb-3 px-1">
               <button
-                onClick={() => setDisplayYear(y => y - 1)}
+                onClick={() => setDisplayYear((y) => y - 1)}
                 className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
               >
                 <ChevronLeft size={16} />
               </button>
               <span className="text-xs font-black text-slate-900">{displayYear}</span>
               <button
-                onClick={() => setDisplayYear(y => y + 1)}
+                onClick={() => setDisplayYear((y) => y + 1)}
                 className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
               >
                 <ChevronRight size={16} />

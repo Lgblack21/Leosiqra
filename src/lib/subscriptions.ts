@@ -1,6 +1,12 @@
 import type { Transaction } from '@/lib/services/transactionService';
 import { isInvestmentFlow, toLocalDateString } from '@/lib/utils';
-import { matchCatalog, SUB_CATALOG_BY_KEY, type CatalogEntry, type SubCategory, type SubCycle } from '@/lib/subscriptionCatalog';
+import {
+  matchCatalog,
+  SUB_CATALOG_BY_KEY,
+  type CatalogEntry,
+  type SubCategory,
+  type SubCycle,
+} from '@/lib/subscriptionCatalog';
 
 // Langgananku: tipe, jadwal tagihan, dan Radar (deteksi langganan dari
 // transaksi). Jadwal = anchor + kelipatan siklus; tanggal 31 di bulan pendek →
@@ -25,15 +31,26 @@ export type Subscription = {
   createdAt: string;
 };
 
-export const CYCLE_LABEL: Record<SubCycle, string> = { mingguan: 'Mingguan', bulanan: 'Bulanan', '3bulan': 'Tiap 3 bulan', tahunan: 'Tahunan' };
-export const CYCLE_SHORT: Record<SubCycle, string> = { mingguan: '/mgg', bulanan: '/bln', '3bulan': '/3 bln', tahunan: '/thn' };
+export const CYCLE_LABEL: Record<SubCycle, string> = {
+  mingguan: 'Mingguan',
+  bulanan: 'Bulanan',
+  '3bulan': 'Tiap 3 bulan',
+  tahunan: 'Tahunan',
+};
+export const CYCLE_SHORT: Record<SubCycle, string> = {
+  mingguan: '/mgg',
+  bulanan: '/bln',
+  '3bulan': '/3 bln',
+  tahunan: '/thn',
+};
 
 const DAY = 86400e3;
 const lastDay = (y: number, m: number) => new Date(Date.UTC(y, m, 0)).getUTCDate();
 const iso = (y: number, m: number, d: number) => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 const toDays = (s: string) => Date.parse(`${s}T00:00:00Z`) / DAY;
 export const daysBetween = (from: string, to: string) => Math.round(toDays(to) - toDays(from));
-export const addDaysStr = (s: string, n: number) => new Date(Date.parse(`${s}T00:00:00Z`) + n * DAY).toISOString().slice(0, 10);
+export const addDaysStr = (s: string, n: number) =>
+  new Date(Date.parse(`${s}T00:00:00Z`) + n * DAY).toISOString().slice(0, 10);
 
 /** Tanggal tagih ke-k dari anchor (k ≥ 0). */
 const occurrence = (anchor: string, cycle: SubCycle, k: number) => {
@@ -71,8 +88,13 @@ export function chargesBetween(anchor: string, cycle: SubCycle, from: string, to
 
 /** Setara per bulan (untuk total & perbandingan). */
 export const monthlyEquivalent = (amount: number, cycle: SubCycle) =>
-  cycle === 'mingguan' ? (amount * 52) / 12 : cycle === '3bulan' ? amount / 3 : cycle === 'tahunan' ? amount / 12 : amount;
-
+  cycle === 'mingguan'
+    ? (amount * 52) / 12
+    : cycle === '3bulan'
+      ? amount / 3
+      : cycle === 'tahunan'
+        ? amount / 12
+        : amount;
 
 // Radar — deterministik (tanpa AI, tanpa kirim data ke luar): pengeluaran 30 hari
 // terakhir → (1) cocok katalog = "pasti", (2) nama sama yang muncul ≥2× dengan
@@ -96,16 +118,35 @@ export type RadarHit = {
 export const RADAR_DAYS = 30;
 const idr = (t: Transaction) => Number(t.amountIDR) || Number(t.amount) || 0;
 const normName = (s: string) =>
-  s.toLowerCase().replace(/\[[^\]]*\]/g, ' ').replace(/[0-9#*.,:/\\-]+/g, ' ').replace(/\b(bayar|pembayaran|langganan|tagihan|payment|subscription|via|ke|dari)\b/g, ' ').replace(/\s+/g, ' ').trim();
+  s
+    .toLowerCase()
+    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/[0-9#*.,:/\\-]+/g, ' ')
+    .replace(/\b(bayar|pembayaran|langganan|tagihan|payment|subscription|via|ke|dari)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 
-export function radarScan(transactions: Transaction[], existing: Subscription[], today = toLocalDateString()): RadarHit[] {
+export function radarScan(
+  transactions: Transaction[],
+  existing: Subscription[],
+  today = toLocalDateString(),
+): RadarHit[] {
   const from = addDaysStr(today, -(RADAR_DAYS - 1));
   const spend = transactions
     .filter((t) => t.type === 'pengeluaran' && !isInvestmentFlow(t) && !t.relatedType)
-    .map((t) => ({ t, day: toLocalDateString(new Date(t.date)), text: `${t.note ?? ''} ${t.subCategory ?? ''} ${t.category ?? ''}` }))
+    .map((t) => ({
+      t,
+      day: toLocalDateString(new Date(t.date)),
+      text: `${t.note ?? ''} ${t.subCategory ?? ''} ${t.category ?? ''}`,
+    }))
     .filter((x) => x.day >= from && x.day <= today && idr(x.t) > 0)
     .sort((a, b) => a.day.localeCompare(b.day));
-  const haveKeys = new Set(existing.filter((s) => s.status !== 'batal').map((s) => s.serviceKey).filter(Boolean));
+  const haveKeys = new Set(
+    existing
+      .filter((s) => s.status !== 'batal')
+      .map((s) => s.serviceKey)
+      .filter(Boolean),
+  );
   const haveNames = new Set(existing.filter((s) => s.status !== 'batal').map((s) => normName(s.name)));
 
   const hits: RadarHit[] = [];
@@ -172,7 +213,13 @@ export function radarScan(transactions: Transaction[], existing: Subscription[],
     });
   }
 
-  return hits.sort((a, b) => (a.confidence === b.confidence ? monthlyEquivalent(b.amount, b.cycle) - monthlyEquivalent(a.amount, a.cycle) : a.confidence === 'pasti' ? -1 : 1));
+  return hits.sort((a, b) =>
+    a.confidence === b.confidence
+      ? monthlyEquivalent(b.amount, b.cycle) - monthlyEquivalent(a.amount, a.cycle)
+      : a.confidence === 'pasti'
+        ? -1
+        : 1,
+  );
 }
 
 /** Tebak siklus dari jarak antar tanggal bayar (null kalau tidak teratur). */
@@ -185,4 +232,5 @@ function guessCycle(days: string[]): SubCycle | null {
   return null;
 }
 
-export const catalogFor = (s: Pick<Subscription, 'serviceKey'>) => (s.serviceKey ? SUB_CATALOG_BY_KEY.get(s.serviceKey) : undefined);
+export const catalogFor = (s: Pick<Subscription, 'serviceKey'>) =>
+  s.serviceKey ? SUB_CATALOG_BY_KEY.get(s.serviceKey) : undefined;

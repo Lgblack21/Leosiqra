@@ -2,7 +2,13 @@ import { cn } from '@/lib/utils';
 
 // Judul halaman standar /membership: ikon + judul + subjudul di kiri,
 // aksi (picker, tombol) di kanan; menumpuk vertikal di mobile.
-export function PageHeader({ icon, title, subtitle, actions, className }: {
+export function PageHeader({
+  icon,
+  title,
+  subtitle,
+  actions,
+  className,
+}: {
   icon?: React.ReactNode;
   title: string;
   subtitle?: React.ReactNode;

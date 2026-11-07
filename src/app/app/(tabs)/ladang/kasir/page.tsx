@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { KasirView } from "@/components/ladang/KasirView";
+import { KasirView } from '@/components/ladang/KasirView';
 
 export default function AppKasirPage() {
   return (

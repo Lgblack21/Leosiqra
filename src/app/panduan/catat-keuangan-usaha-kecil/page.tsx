@@ -16,7 +16,8 @@ export const metadata: Metadata = {
   alternates: { canonical: '/panduan/catat-keuangan-usaha-kecil' },
   openGraph: {
     title: 'Cara Mencatat Pemasukan & Pengeluaran Jualan (UMKM)',
-    description: 'Pisahkan uang usaha, catat modal, omzet, biaya, dan stok, lalu hitung untung bersih dengan contoh sederhana.',
+    description:
+      'Pisahkan uang usaha, catat modal, omzet, biaya, dan stok, lalu hitung untung bersih dengan contoh sederhana.',
     url: 'https://www.leosiqra.com/panduan/catat-keuangan-usaha-kecil',
     type: 'article',
     locale: 'id_ID',
@@ -25,7 +26,8 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary',
     title: 'Cara Mencatat Pemasukan & Pengeluaran Jualan (UMKM)',
-    description: 'Pisahkan uang usaha, catat modal, omzet, biaya, dan stok, lalu hitung untung bersih dengan contoh sederhana.',
+    description:
+      'Pisahkan uang usaha, catat modal, omzet, biaya, dan stok, lalu hitung untung bersih dengan contoh sederhana.',
     images: ['/images/Logo-new.png'],
   },
 };
@@ -63,36 +65,81 @@ export default function CatatKeuanganUsahaKecilPage() {
       <p>
         Ini langkah paling penting dan paling sering dilewati. Pakai rekening, e-wallet, atau minimal dompet terpisah
         khusus usaha. Semua uang hasil jualan masuk ke sana, dan semua belanja usaha keluar dari sana. Kalau Anda
-        mengambil uang usaha untuk keperluan pribadi, catat sebagai <strong>pengambilan pribadi (prive)</strong> —
-        bukan biaya usaha.
+        mengambil uang usaha untuk keperluan pribadi, catat sebagai <strong>pengambilan pribadi (prive)</strong> — bukan
+        biaya usaha.
       </p>
       <p>
         Cara yang lebih rapi: tetapkan <strong>gaji untuk diri sendiri</strong> dengan jumlah tetap setiap bulan. Untuk
-        mengatur gaji itu di sisi pribadi, lihat panduan <Link href="/panduan/cara-mengatur-gaji">mengatur gaji bulanan</Link>.
+        mengatur gaji itu di sisi pribadi, lihat panduan{' '}
+        <Link href="/panduan/cara-mengatur-gaji">mengatur gaji bulanan</Link>.
       </p>
 
       <h2>2. Yang perlu dicatat: modal, omzet, biaya, stok</h2>
       <ul>
-        <li><strong>Modal</strong> — uang awal yang dimasukkan ke usaha, termasuk tambahan modal di tengah jalan.</li>
-        <li><strong>Omzet (pemasukan penjualan)</strong> — setiap penjualan: tanggal, barang, jumlah, harga, dan cara bayar (tunai/transfer/e-wallet).</li>
-        <li><strong>Harga pokok penjualan (HPP)</strong> — biaya bahan atau harga beli barang yang benar-benar terjual.</li>
-        <li><strong>Biaya operasional</strong> — kemasan, ongkir yang Anda tanggung, iklan, potongan marketplace, listrik dan internet bagian usaha, upah pegawai.</li>
-        <li><strong>Stok</strong> — jumlah barang masuk, keluar, dan sisa, supaya HPP bisa dihitung dan barang tidak kosong mendadak.</li>
+        <li>
+          <strong>Modal</strong> — uang awal yang dimasukkan ke usaha, termasuk tambahan modal di tengah jalan.
+        </li>
+        <li>
+          <strong>Omzet (pemasukan penjualan)</strong> — setiap penjualan: tanggal, barang, jumlah, harga, dan cara
+          bayar (tunai/transfer/e-wallet).
+        </li>
+        <li>
+          <strong>Harga pokok penjualan (HPP)</strong> — biaya bahan atau harga beli barang yang benar-benar terjual.
+        </li>
+        <li>
+          <strong>Biaya operasional</strong> — kemasan, ongkir yang Anda tanggung, iklan, potongan marketplace, listrik
+          dan internet bagian usaha, upah pegawai.
+        </li>
+        <li>
+          <strong>Stok</strong> — jumlah barang masuk, keluar, dan sisa, supaya HPP bisa dihitung dan barang tidak
+          kosong mendadak.
+        </li>
       </ul>
 
       <h2>3. Contoh catatan harian jualan</h2>
-      <p>Contoh satu hari penjual keripik online dengan harga jual Rp15.000 dan HPP Rp8.000 per bungkus (angka ilustrasi):</p>
+      <p>
+        Contoh satu hari penjual keripik online dengan harga jual Rp15.000 dan HPP Rp8.000 per bungkus (angka
+        ilustrasi):
+      </p>
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Keterangan</th><th className="num">Masuk</th><th className="num">Keluar</th></tr>
+            <tr>
+              <th>Keterangan</th>
+              <th className="num">Masuk</th>
+              <th className="num">Keluar</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td>Penjualan 20 bungkus</td><td className="num">300.000</td><td className="num"></td></tr>
-            <tr><td>HPP 20 bungkus × 8.000</td><td className="num"></td><td className="num">160.000</td></tr>
-            <tr><td>Plastik &amp; stiker kemasan</td><td className="num"></td><td className="num">20.000</td></tr>
-            <tr><td>Iklan media sosial</td><td className="num"></td><td className="num">25.000</td></tr>
-            <tr><td><strong>Untung bersih hari ini</strong></td><td className="num"><strong>95.000</strong></td><td className="num"></td></tr>
+            <tr>
+              <td>Penjualan 20 bungkus</td>
+              <td className="num">300.000</td>
+              <td className="num"></td>
+            </tr>
+            <tr>
+              <td>HPP 20 bungkus × 8.000</td>
+              <td className="num"></td>
+              <td className="num">160.000</td>
+            </tr>
+            <tr>
+              <td>Plastik &amp; stiker kemasan</td>
+              <td className="num"></td>
+              <td className="num">20.000</td>
+            </tr>
+            <tr>
+              <td>Iklan media sosial</td>
+              <td className="num"></td>
+              <td className="num">25.000</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Untung bersih hari ini</strong>
+              </td>
+              <td className="num">
+                <strong>95.000</strong>
+              </td>
+              <td className="num"></td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -104,41 +151,98 @@ export default function CatatKeuanganUsahaKecilPage() {
       <h2>4. Hitung untung bersih sederhana</h2>
       <p>Rumus dasarnya:</p>
       <ol>
-        <li><strong>Laba kotor</strong> = omzet − HPP</li>
-        <li><strong>Laba bersih</strong> = laba kotor − biaya operasional</li>
+        <li>
+          <strong>Laba kotor</strong> = omzet − HPP
+        </li>
+        <li>
+          <strong>Laba bersih</strong> = laba kotor − biaya operasional
+        </li>
       </ol>
       <p>Contoh rekap satu bulan dari usaha yang sama, 500 bungkus terjual (angka ilustrasi):</p>
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Pos</th><th className="num">Jumlah (Rp)</th></tr>
+            <tr>
+              <th>Pos</th>
+              <th className="num">Jumlah (Rp)</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td>Omzet (500 × 15.000)</td><td className="num">7.500.000</td></tr>
-            <tr><td>HPP (500 × 8.000)</td><td className="num">−4.000.000</td></tr>
-            <tr><td><strong>Laba kotor</strong></td><td className="num"><strong>3.500.000</strong></td></tr>
-            <tr><td>Kemasan</td><td className="num">−500.000</td></tr>
-            <tr><td>Subsidi ongkir</td><td className="num">−300.000</td></tr>
-            <tr><td>Iklan</td><td className="num">−600.000</td></tr>
-            <tr><td>Listrik &amp; internet (bagian usaha)</td><td className="num">−200.000</td></tr>
-            <tr><td><strong>Laba bersih</strong></td><td className="num"><strong>1.900.000</strong></td></tr>
-            <tr><td>Gaji pemilik (prive)</td><td className="num">−1.500.000</td></tr>
-            <tr><td><strong>Sisa untuk kas usaha</strong></td><td className="num"><strong>400.000</strong></td></tr>
+            <tr>
+              <td>Omzet (500 × 15.000)</td>
+              <td className="num">7.500.000</td>
+            </tr>
+            <tr>
+              <td>HPP (500 × 8.000)</td>
+              <td className="num">−4.000.000</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Laba kotor</strong>
+              </td>
+              <td className="num">
+                <strong>3.500.000</strong>
+              </td>
+            </tr>
+            <tr>
+              <td>Kemasan</td>
+              <td className="num">−500.000</td>
+            </tr>
+            <tr>
+              <td>Subsidi ongkir</td>
+              <td className="num">−300.000</td>
+            </tr>
+            <tr>
+              <td>Iklan</td>
+              <td className="num">−600.000</td>
+            </tr>
+            <tr>
+              <td>Listrik &amp; internet (bagian usaha)</td>
+              <td className="num">−200.000</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Laba bersih</strong>
+              </td>
+              <td className="num">
+                <strong>1.900.000</strong>
+              </td>
+            </tr>
+            <tr>
+              <td>Gaji pemilik (prive)</td>
+              <td className="num">−1.500.000</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Sisa untuk kas usaha</strong>
+              </td>
+              <td className="num">
+                <strong>400.000</strong>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
       <p>
         Dengan rekap seperti ini Anda tahu pos mana yang paling besar menggerus untung — misalnya iklan — dan bisa
-        menyisihkan sebagian sisa kas usaha sebagai cadangan, mirip <Link href="/panduan/dana-darurat">dana darurat</Link>{' '}
-        untuk usaha.
+        menyisihkan sebagian sisa kas usaha sebagai cadangan, mirip{' '}
+        <Link href="/panduan/dana-darurat">dana darurat</Link> untuk usaha.
       </p>
 
       <h2>5. Tips mencatat cepat supaya tidak bolong</h2>
       <ul>
-        <li><strong>Catat saat transaksi terjadi</strong>, bukan malam hari dari ingatan.</li>
-        <li><strong>Simpan foto struk belanja bahan</strong> — lebih cepat daripada mengetik ulang semua angka.</li>
-        <li><strong>Pakai kategori yang sama setiap hari</strong> supaya rekap bulanan bisa dibandingkan.</li>
-        <li><strong>Cocokkan saldo</strong> kas/rekening usaha dengan catatan setiap akhir minggu.</li>
+        <li>
+          <strong>Catat saat transaksi terjadi</strong>, bukan malam hari dari ingatan.
+        </li>
+        <li>
+          <strong>Simpan foto struk belanja bahan</strong> — lebih cepat daripada mengetik ulang semua angka.
+        </li>
+        <li>
+          <strong>Pakai kategori yang sama setiap hari</strong> supaya rekap bulanan bisa dibandingkan.
+        </li>
+        <li>
+          <strong>Cocokkan saldo</strong> kas/rekening usaha dengan catatan setiap akhir minggu.
+        </li>
       </ul>
       <p>
         Kalau masih ragu memilih alat, bandingkan dulu di panduan{' '}
@@ -153,7 +257,10 @@ export default function CatatKeuanganUsahaKecilPage() {
         <Link href="/catatan-keuangan-harian">contoh catatan keuangan harian</Link>.
       </p>
       <p>
-        <em>Panduan ini bersifat edukasi umum, bukan nasihat keuangan, akuntansi, atau pajak. Sesuaikan dengan kondisi usaha Anda.</em>
+        <em>
+          Panduan ini bersifat edukasi umum, bukan nasihat keuangan, akuntansi, atau pajak. Sesuaikan dengan kondisi
+          usaha Anda.
+        </em>
       </p>
     </GuideLayout>
   );

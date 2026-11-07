@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import { X } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect } from 'react';
+import { X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ModalProps {
   isOpen: boolean;
@@ -12,24 +12,24 @@ interface ModalProps {
   maxWidth?: string;
 }
 
-export function Modal({ isOpen, onClose, title, children, maxWidth = "max-w-md" }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-md' }: ModalProps) {
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = "hidden";
+      document.body.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = "unset";
+      document.body.style.overflow = 'unset';
     }
     return () => {
-      document.body.style.overflow = "unset";
+      document.body.style.overflow = 'unset';
     };
   }, [isOpen]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === 'Escape') onClose();
     };
-    window.addEventListener("keydown", handleEscape);
-    return () => window.removeEventListener("keydown", handleEscape);
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
   }, [onClose]);
 
   return (
@@ -48,7 +48,7 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = "max-w-md" 
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: "spring", duration: 0.5, bounce: 0.3 }}
+            transition={{ type: 'spring', duration: 0.5, bounce: 0.3 }}
             role="dialog"
             aria-modal="true"
             aria-label={title}
@@ -65,9 +65,7 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = "max-w-md" 
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 relative">
-              {children}
-            </div>
+            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 relative">{children}</div>
           </motion.div>
         </div>
       )}

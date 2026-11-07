@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useState } from 'react';
 import { looksLikeStaffUsername, staffService } from '@/lib/services/staffService';
@@ -6,7 +6,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, useAnimationControls, useReducedMotion } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Check, AlertCircle } from 'lucide-react';
-import { AuthLayout, GoogleIcon, authInput, authInputWrap, authLabel, authPrimaryBtn } from '@/components/auth/AuthLayout';
+import {
+  AuthLayout,
+  GoogleIcon,
+  authInput,
+  authInputWrap,
+  authLabel,
+  authPrimaryBtn,
+} from '@/components/auth/AuthLayout';
 import type { LeoMood } from '@/components/mascot/LeoMascot';
 import { TwoFactorModal } from '@/components/auth/TwoFactorModal';
 import { cloudflareApi } from '@/lib/cloudflare-api';
@@ -42,7 +49,9 @@ export default function LoginPage() {
     : Date.now() < sadUntil
       ? 'sad'
       : focused === 'password'
-        ? (showPassword ? 'peek' : 'hide')
+        ? showPassword
+          ? 'peek'
+          : 'hide'
         : focused === 'email'
           ? 'watch'
           : 'idle';
@@ -119,11 +128,7 @@ export default function LoginPage() {
         finish(resolveDestination(result.user?.role));
       }
     } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : 'Gagal login. Periksa kembali email dan password Anda.'
-      );
+      setError(error instanceof Error ? error.message : 'Gagal login. Periksa kembali email dan password Anda.');
       shake();
     } finally {
       setLoading(false);
@@ -157,117 +162,143 @@ export default function LoginPage() {
 
   return (
     <>
-    <AuthLayout
-      headline="Uangmu lebih tenang, bareng Leo."
-      sub="Catat dalam hitungan detik, lihat ke mana uangmu pergi, dan biarkan AI Leosiqra yang merangkum semuanya."
-      mood={leoMood}
-      lookX={Math.min(1, email.length / 28)}
-      footer="Dilindungi password terenkripsi, cookie aman, dan verifikasi 2 langkah bila diaktifkan."
-    >
-      <motion.div animate={card}>
-        <h2 className="text-[26px] font-extrabold tracking-tight text-slate-900">Masuk</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Belum punya akun?{' '}
-          <Link href={withNext('/auth/register', next)} className="font-bold text-indigo-600 hover:underline">Daftar gratis 14 hari</Link>
-        </p>
+      <AuthLayout
+        headline="Uangmu lebih tenang, bareng Leo."
+        sub="Catat dalam hitungan detik, lihat ke mana uangmu pergi, dan biarkan AI Leosiqra yang merangkum semuanya."
+        mood={leoMood}
+        lookX={Math.min(1, email.length / 28)}
+        footer="Dilindungi password terenkripsi, cookie aman, dan verifikasi 2 langkah bila diaktifkan."
+      >
+        <motion.div animate={card}>
+          <h2 className="text-[26px] font-extrabold tracking-tight text-slate-900">Masuk</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Belum punya akun?{' '}
+            <Link href={withNext('/auth/register', next)} className="font-bold text-indigo-600 hover:underline">
+              Daftar gratis 14 hari
+            </Link>
+          </p>
 
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            className="mt-5 flex items-start gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600"
-            role="alert"
-          >
-            <AlertCircle size={16} className="mt-px shrink-0" /> {error}
-          </motion.div>
-        )}
-
-        <a
-          href={googleHref}
-          className="mt-6 flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white py-3.5 text-[15px] font-bold text-slate-700 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md active:scale-[0.99]"
-        >
-          <GoogleIcon size={19} />
-          Lanjutkan dengan Google
-        </a>
-
-        <div className="my-5 flex items-center gap-3">
-          <span className="h-px flex-1 bg-slate-100" />
-          <span className="text-xs font-medium text-slate-400">atau pakai email</span>
-          <span className="h-px flex-1 bg-slate-100" />
-        </div>
-
-        <form onSubmit={handleLogin} className="space-y-4">
-          <label className="block">
-            <span className={authLabel}>Email atau username</span>
-            <span className={authInputWrap}>
-              <Mail size={18} className="shrink-0 text-slate-400 transition-colors group-focus-within:text-indigo-500" />
-              <input
-                type="text"
-                autoCapitalize="none"
-                autoComplete="username"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onFocus={() => setFocused('email')}
-                onBlur={() => setFocused(null)}
-                placeholder="nama@email.com"
-                className={authInput}
-              />
-            </span>
-          </label>
-
-          <label className="block">
-            <span className="mb-1.5 flex items-center justify-between pl-1 text-[13px] font-semibold text-slate-600">
-              Password
-              <Link href="/auth/forgot-password" className="text-[13px] font-bold text-indigo-600 hover:text-indigo-700">Lupa password?</Link>
-            </span>
-            <span className={authInputWrap}>
-              <Lock size={18} className="shrink-0 text-slate-400 transition-colors group-focus-within:text-indigo-500" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onFocus={() => setFocused('password')}
-                onBlur={() => setFocused(null)}
-                placeholder="Masukkan password"
-                className={authInput}
-              />
-              <button
-                type="button"
-                // Tetap fokus di kolom password saat tombol mata ditekan (Leo mengintip, bukan berhenti menutup mata).
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
-                className="shrink-0 rounded-lg p-1 text-slate-400 transition-colors hover:text-indigo-600"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </span>
-          </label>
-
-          <div className="pt-1.5">
-            <motion.button
-              type="submit"
-              disabled={loading || done}
-              whileTap={{ scale: 0.98 }}
-              className={done ? 'flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 py-4 text-[15px] font-bold text-white shadow-lg shadow-emerald-500/30' : authPrimaryBtn}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="mt-5 flex items-start gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-600"
+              role="alert"
             >
-              {done ? (
-                <motion.span initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex items-center gap-2">
-                  <Check size={18} /> Berhasil masuk
-                </motion.span>
-              ) : loading ? (
-                <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> Memeriksa…</>
-              ) : (
-                <>Masuk <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" /></>
-              )}
-            </motion.button>
+              <AlertCircle size={16} className="mt-px shrink-0" /> {error}
+            </motion.div>
+          )}
+
+          <a
+            href={googleHref}
+            className="mt-6 flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white py-3.5 text-[15px] font-bold text-slate-700 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md active:scale-[0.99]"
+          >
+            <GoogleIcon size={19} />
+            Lanjutkan dengan Google
+          </a>
+
+          <div className="my-5 flex items-center gap-3">
+            <span className="h-px flex-1 bg-slate-100" />
+            <span className="text-xs font-medium text-slate-400">atau pakai email</span>
+            <span className="h-px flex-1 bg-slate-100" />
           </div>
-        </form>
-      </motion.div>
-    </AuthLayout>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <label className="block">
+              <span className={authLabel}>Email atau username</span>
+              <span className={authInputWrap}>
+                <Mail
+                  size={18}
+                  className="shrink-0 text-slate-400 transition-colors group-focus-within:text-indigo-500"
+                />
+                <input
+                  type="text"
+                  autoCapitalize="none"
+                  autoComplete="username"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onFocus={() => setFocused('email')}
+                  onBlur={() => setFocused(null)}
+                  placeholder="nama@email.com"
+                  className={authInput}
+                />
+              </span>
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 flex items-center justify-between pl-1 text-[13px] font-semibold text-slate-600">
+                Password
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-[13px] font-bold text-indigo-600 hover:text-indigo-700"
+                >
+                  Lupa password?
+                </Link>
+              </span>
+              <span className={authInputWrap}>
+                <Lock
+                  size={18}
+                  className="shrink-0 text-slate-400 transition-colors group-focus-within:text-indigo-500"
+                />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onFocus={() => setFocused('password')}
+                  onBlur={() => setFocused(null)}
+                  placeholder="Masukkan password"
+                  className={authInput}
+                />
+                <button
+                  type="button"
+                  // Tetap fokus di kolom password saat tombol mata ditekan (Leo mengintip, bukan berhenti menutup mata).
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                  className="shrink-0 rounded-lg p-1 text-slate-400 transition-colors hover:text-indigo-600"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </span>
+            </label>
+
+            <div className="pt-1.5">
+              <motion.button
+                type="submit"
+                disabled={loading || done}
+                whileTap={{ scale: 0.98 }}
+                className={
+                  done
+                    ? 'flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 py-4 text-[15px] font-bold text-white shadow-lg shadow-emerald-500/30'
+                    : authPrimaryBtn
+                }
+              >
+                {done ? (
+                  <motion.span
+                    initial={{ scale: 0.4, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="flex items-center gap-2"
+                  >
+                    <Check size={18} /> Berhasil masuk
+                  </motion.span>
+                ) : loading ? (
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />{' '}
+                    Memeriksa…
+                  </>
+                ) : (
+                  <>
+                    Masuk <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
+                  </>
+                )}
+              </motion.button>
+            </div>
+          </form>
+        </motion.div>
+      </AuthLayout>
 
       <TwoFactorModal
         isOpen={show2FA}

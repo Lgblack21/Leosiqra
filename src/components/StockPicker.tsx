@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
@@ -33,12 +33,13 @@ export const StockCombobox = ({ value, onChange, onSelect, disabled, placeholder
     const seq = ++requestSeq.current;
     setLoading(true);
     const timer = setTimeout(() => {
-      investmentService.searchStocks(q)
-        .then(items => {
+      investmentService
+        .searchStocks(q)
+        .then((items) => {
           if (requestSeq.current !== seq) return; // hasil basi, sudah ada ketikan baru
           setResults(items);
         })
-        .catch(err => {
+        .catch((err) => {
           console.error('Gagal mencari saham:', err);
           if (requestSeq.current === seq) setResults([]);
         })
@@ -69,7 +70,10 @@ export const StockCombobox = ({ value, onChange, onSelect, disabled, placeholder
           type="text"
           value={value}
           disabled={disabled}
-          onChange={e => { onChange(e.target.value.toUpperCase()); setOpen(true); }}
+          onChange={(e) => {
+            onChange(e.target.value.toUpperCase());
+            setOpen(true);
+          }}
           onFocus={() => setOpen(true)}
           placeholder={placeholder}
           className={className}
@@ -77,7 +81,7 @@ export const StockCombobox = ({ value, onChange, onSelect, disabled, placeholder
         <button
           type="button"
           disabled={disabled}
-          onClick={() => setOpen(o => !o)}
+          onClick={() => setOpen((o) => !o)}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 disabled:opacity-40 transition-colors"
         >
           <ChevronDown size={15} className={open ? 'rotate-180 transition-transform' : 'transition-transform'} />
@@ -90,23 +94,34 @@ export const StockCombobox = ({ value, onChange, onSelect, disabled, placeholder
             <p className="text-[10px] text-slate-400 text-center py-4 font-bold">Mencari &quot;{q}&quot;...</p>
           )}
 
-          {!loading && results.length > 0 && results.map(stock => (
-            <button
-              key={`${stock.symbol}-${stock.exchangeCode}`}
-              type="button"
-              onClick={() => handlePick(stock)}
-              className="w-full flex items-center gap-2 px-2 py-2 rounded-xl hover:bg-slate-50 transition-colors text-left"
-            >
-              <LogoImage src={stock.logoUrl} alt={stock.name} fallbackText={stock.symbol.slice(0, 2)} className="w-7 h-7 rounded-full object-contain shrink-0" />
-              <div className="min-w-0">
-                <p className="text-xs font-black text-slate-700">{stock.symbol} <span className="text-slate-400 font-bold">· {stock.exchangeCode}</span></p>
-                <p className="text-[10px] font-medium text-slate-400 truncate">{stock.name}</p>
-              </div>
-            </button>
-          ))}
+          {!loading &&
+            results.length > 0 &&
+            results.map((stock) => (
+              <button
+                key={`${stock.symbol}-${stock.exchangeCode}`}
+                type="button"
+                onClick={() => handlePick(stock)}
+                className="w-full flex items-center gap-2 px-2 py-2 rounded-xl hover:bg-slate-50 transition-colors text-left"
+              >
+                <LogoImage
+                  src={stock.logoUrl}
+                  alt={stock.name}
+                  fallbackText={stock.symbol.slice(0, 2)}
+                  className="w-7 h-7 rounded-full object-contain shrink-0"
+                />
+                <div className="min-w-0">
+                  <p className="text-xs font-black text-slate-700">
+                    {stock.symbol} <span className="text-slate-400 font-bold">· {stock.exchangeCode}</span>
+                  </p>
+                  <p className="text-[10px] font-medium text-slate-400 truncate">{stock.name}</p>
+                </div>
+              </button>
+            ))}
 
           {!loading && results.length === 0 && (
-            <p className="text-[10px] text-slate-400 text-center py-4 font-bold">Tidak ditemukan — kode ini akan dipakai sebagai input manual.</p>
+            <p className="text-[10px] text-slate-400 text-center py-4 font-bold">
+              Tidak ditemukan — kode ini akan dipakai sebagai input manual.
+            </p>
           )}
         </div>
       )}

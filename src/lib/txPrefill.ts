@@ -1,4 +1,4 @@
-import { toAppUrl } from "@/lib/appUrl";
+import { toAppUrl } from '@/lib/appUrl';
 
 // Aplikasi HP: notifikasi pengingat bernominal (URL Worker `/input-cepat?teks=<judul> <nominal>`)
 // dibuka sebagai sheet Tambah Transaksi di /app — bukan halaman web Input Cepat.
@@ -6,13 +6,13 @@ import { toAppUrl } from "@/lib/appUrl";
 // ketukan notifikasi saat app baru dibuka bisa datang sebelum layout terpasang.
 export type TxPrefill = { amount: number; note: string; key: number };
 
-const EVENT = "leosiqra:tx-prefill";
+const EVENT = 'leosiqra:tx-prefill';
 let pending: TxPrefill | null = null;
 let hostMounted = false;
 
 export function parseQuickInputUrl(url: string): { amount: number; note: string } | null {
-  if (!url.startsWith("/input-cepat")) return null;
-  const teks = new URLSearchParams(url.split("?")[1] ?? "").get("teks")?.trim() ?? "";
+  if (!url.startsWith('/input-cepat')) return null;
+  const teks = new URLSearchParams(url.split('?')[1] ?? '').get('teks')?.trim() ?? '';
   const m = /^(.*\S)\s+(\d{1,15})$/.exec(teks);
   const amount = m ? Number(m[2]) : 0;
   if (!m || !Number.isSafeInteger(amount) || amount <= 0) return null;
@@ -42,10 +42,10 @@ export function openAppNotificationUrl(url: string, push: (href: string) => void
   if (prefill) {
     pending = { ...prefill, key: Date.now() };
     if (hostMounted) window.dispatchEvent(new Event(EVENT));
-    else push("/app"); // mis. sedang di Asisten — layout tab mengambil `pending` saat terpasang
+    else push('/app'); // mis. sedang di Asisten — layout tab mengambil `pending` saat terpasang
     return;
   }
   // Input Cepat tanpa nominal terbaca membaca ?teks= saat dimuat → navigasi penuh.
-  if (target.startsWith("/input-cepat")) window.location.href = target;
+  if (target.startsWith('/input-cepat')) window.location.href = target;
   else push(target);
 }

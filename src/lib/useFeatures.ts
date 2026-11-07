@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useCallback, useEffect, useState } from 'react';
 import { cloudflareApi } from './cloudflare-api';
@@ -57,7 +57,9 @@ export function useFeatures() {
       setReady(true);
     });
     const onChange = (e: Event) => setActive((e as CustomEvent<FeatureId[]>).detail);
-    const onVisible = () => { if (document.visibilityState === 'visible') void refresh(); };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void refresh();
+    };
     window.addEventListener(EVENT, onChange);
     document.addEventListener('visibilitychange', onVisible);
     return () => {

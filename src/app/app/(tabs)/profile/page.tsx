@@ -1,23 +1,23 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { Capacitor } from "@capacitor/core";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
-import { LogOut, Mail, Moon, Star, Sun, Smartphone } from "lucide-react";
-import { auth } from "@/lib/cf-client";
-import { cloudflareApi } from "@/lib/cloudflare-api";
-import { subscribeUserProfile, UserProfile } from "@/lib/services/userService";
-import { FadeIn } from "@/components/app/FadeIn";
-import { useTheme, ThemeMode } from "@/context/ThemeContext";
-import { lightTap } from "@/lib/haptics";
-import { McpConnectCard } from "@/components/profile/McpConnectCard";
-import { APP_VERSION } from "@/lib/version";
+import { useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import { LogOut, Mail, Moon, Star, Sun, Smartphone } from 'lucide-react';
+import { auth } from '@/lib/cf-client';
+import { cloudflareApi } from '@/lib/cloudflare-api';
+import { subscribeUserProfile, UserProfile } from '@/lib/services/userService';
+import { FadeIn } from '@/components/app/FadeIn';
+import { useTheme, ThemeMode } from '@/context/ThemeContext';
+import { lightTap } from '@/lib/haptics';
+import { McpConnectCard } from '@/components/profile/McpConnectCard';
+import { APP_VERSION } from '@/lib/version';
 
 const THEME_OPTIONS: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
-  { value: "light", label: "Terang", icon: Sun },
-  { value: "dark", label: "Gelap", icon: Moon },
-  { value: "system", label: "Sistem", icon: Smartphone },
+  { value: 'light', label: 'Terang', icon: Sun },
+  { value: 'dark', label: 'Gelap', icon: Moon },
+  { value: 'system', label: 'Sistem', icon: Smartphone },
 ];
 
 export default function ProfilePage() {
@@ -36,29 +36,32 @@ export default function ProfilePage() {
 
   // Sisa masa aktif (PRO maupun masa coba gratis) — sama dengan Sidebar web.
   const remainingDays = (() => {
-    if (profile?.status !== "AKTIF" || !profile.expiredAt) return null;
+    if (profile?.status !== 'AKTIF' || !profile.expiredAt) return null;
     // Lewat lapisan cf-firestore, expiredAt jadi Timestamp (punya toDate), bukan string.
     const raw = profile.expiredAt as unknown;
-    const end = raw && typeof (raw as { toDate?: unknown }).toDate === "function" ? (raw as { toDate: () => Date }).toDate() : new Date(raw as string);
+    const end =
+      raw && typeof (raw as { toDate?: unknown }).toDate === 'function'
+        ? (raw as { toDate: () => Date }).toDate()
+        : new Date(raw as string);
     const diff = Math.ceil((end.getTime() - Date.now()) / 86400e3);
     return Number.isFinite(diff) && diff >= 0 ? diff : null;
   })();
 
-  const displayName = user?.displayName || profile?.name || "Pengguna";
+  const displayName = user?.displayName || profile?.name || 'Pengguna';
   const initials = displayName
-    .split(" ")
+    .split(' ')
     .map((w) => w[0])
-    .join("")
+    .join('')
     .slice(0, 2)
     .toUpperCase();
 
   // Laporan keuangan bulanan via email (opt-in, default mati).
   const [report, setReport] = useState<{ enabled: boolean; available: boolean } | null>(null);
   const [reportSaving, setReportSaving] = useState(false);
-  const [reportError, setReportError] = useState("");
+  const [reportError, setReportError] = useState('');
 
   useEffect(() => {
-    cloudflareApi<{ enabled: boolean; available: boolean }>("/api/member/email-report")
+    cloudflareApi<{ enabled: boolean; available: boolean }>('/api/member/email-report')
       .then(setReport)
       .catch(() => setReport({ enabled: false, available: false }));
   }, []);
@@ -66,16 +69,16 @@ export default function ProfilePage() {
   const toggleReport = async () => {
     if (!report) return;
     lightTap();
-    setReportError("");
+    setReportError('');
     setReportSaving(true);
     try {
-      const res = await cloudflareApi<{ enabled: boolean }>("/api/member/email-report", {
-        method: "PUT",
+      const res = await cloudflareApi<{ enabled: boolean }>('/api/member/email-report', {
+        method: 'PUT',
         json: { enabled: !report.enabled },
       });
       setReport({ ...report, enabled: res.enabled });
     } catch (e) {
-      setReportError(e instanceof Error ? e.message : "Gagal mengubah pengaturan.");
+      setReportError(e instanceof Error ? e.message : 'Gagal mengubah pengaturan.');
     } finally {
       setReportSaving(false);
     }
@@ -84,8 +87,8 @@ export default function ProfilePage() {
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
-      await cloudflareApi("/api/auth/logout", { method: "POST" });
-      router.push(Capacitor.isNativePlatform() ? "/masuk" : "/auth/login");
+      await cloudflareApi('/api/auth/logout', { method: 'POST' });
+      router.push(Capacitor.isNativePlatform() ? '/masuk' : '/auth/login');
     } catch {
       setLoggingOut(false);
     }
@@ -99,7 +102,7 @@ export default function ProfilePage() {
             {user?.photoURL ? (
               <Image src={user.photoURL} alt={displayName} fill className="object-cover" sizes="80px" />
             ) : (
-              initials || "U"
+              initials || 'U'
             )}
           </div>
         </div>
@@ -107,18 +110,22 @@ export default function ProfilePage() {
         <p className="text-xs font-medium text-slate-400 dark:text-slate-500">{user?.email}</p>
         {profile?.plan && (
           <div className="flex items-center gap-1.5 bg-amber-50 text-amber-600 rounded-full px-3 py-1.5 text-[11px] font-black mt-3">
-            <Star size={12} fill="currentColor" /> {profile.plan === "PRO" ? "Premium" : "Free"}
+            <Star size={12} fill="currentColor" /> {profile.plan === 'PRO' ? 'Premium' : 'Free'}
           </div>
         )}
         {remainingDays !== null && (
-          <p className={`mt-2 text-[12px] font-bold ${remainingDays <= 3 ? "text-rose-500" : "text-slate-400 dark:text-slate-500"}`}>
-            {remainingDays === 0 ? "Masa aktif berakhir hari ini" : `Masa aktif sisa ${remainingDays} hari`}
+          <p
+            className={`mt-2 text-[12px] font-bold ${remainingDays <= 3 ? 'text-rose-500' : 'text-slate-400 dark:text-slate-500'}`}
+          >
+            {remainingDays === 0 ? 'Masa aktif berakhir hari ini' : `Masa aktif sisa ${remainingDays} hari`}
           </p>
         )}
       </FadeIn>
 
       <FadeIn delay={0.05}>
-        <h2 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1 mb-2">Preferensi</h2>
+        <h2 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1 mb-2">
+          Preferensi
+        </h2>
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 space-y-3">
           <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Tema</span>
           <div className="grid grid-cols-3 gap-2">
@@ -134,8 +141,8 @@ export default function ProfilePage() {
                   }}
                   className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border text-[11px] font-bold transition-colors ${
                     active
-                      ? "bg-indigo-600 border-indigo-600 text-white"
-                      : "bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400"
+                      ? 'bg-indigo-600 border-indigo-600 text-white'
+                      : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400'
                   }`}
                 >
                   <Icon size={16} />
@@ -151,8 +158,12 @@ export default function ProfilePage() {
               <div className="flex items-center gap-3 min-w-0">
                 <Mail size={16} className="text-indigo-600 shrink-0" />
                 <div className="min-w-0">
-                  <span className="text-sm font-bold text-slate-700 dark:text-slate-300 block">Laporan bulanan via email</span>
-                  <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 block">Ringkasan keuangan tiap awal bulan</span>
+                  <span className="text-sm font-bold text-slate-700 dark:text-slate-300 block">
+                    Laporan bulanan via email
+                  </span>
+                  <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 block">
+                    Ringkasan keuangan tiap awal bulan
+                  </span>
                 </div>
               </div>
               <button
@@ -162,10 +173,12 @@ export default function ProfilePage() {
                 aria-label="Laporan bulanan via email"
                 aria-pressed={report.enabled}
                 className={`w-11 h-6 rounded-full relative shrink-0 transition-colors disabled:opacity-50 ${
-                  report.enabled ? "bg-indigo-600" : "bg-slate-200 dark:bg-slate-700"
+                  report.enabled ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700'
                 }`}
               >
-                <span className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${report.enabled ? "right-1" : "left-1"}`} />
+                <span
+                  className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${report.enabled ? 'right-1' : 'left-1'}`}
+                />
               </button>
             </div>
             {reportError && <p className="text-[11px] font-bold text-rose-500 mt-2">{reportError}</p>}
@@ -174,7 +187,9 @@ export default function ProfilePage() {
       </FadeIn>
 
       <FadeIn delay={0.08}>
-        <h2 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1 mb-2">AI agent</h2>
+        <h2 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1 mb-2">
+          AI agent
+        </h2>
         <McpConnectCard />
       </FadeIn>
 
@@ -186,10 +201,12 @@ export default function ProfilePage() {
           className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-white dark:bg-slate-900 border border-rose-100 dark:border-rose-500/20 text-rose-500 font-bold text-sm disabled:opacity-50 active:scale-[0.98] transition-transform"
         >
           <LogOut size={16} />
-          {loggingOut ? "Keluar..." : "Keluar"}
+          {loggingOut ? 'Keluar...' : 'Keluar'}
         </button>
       </FadeIn>
-      <p className="pb-2 text-center text-[11px] font-bold text-slate-400 dark:text-slate-500">Leosiqra v{APP_VERSION}</p>
+      <p className="pb-2 text-center text-[11px] font-bold text-slate-400 dark:text-slate-500">
+        Leosiqra v{APP_VERSION}
+      </p>
     </div>
   );
 }

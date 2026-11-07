@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -35,10 +35,16 @@ const toDate = (ymd: string) => {
 };
 const fmt = (ymd: string, opt: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('id-ID', opt).format(toDate(ymd));
 const short = (n: number) =>
-  Math.abs(n) >= 1e6 ? `Rp${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 2 })} jt`
-  : Math.abs(n) >= 1e3 ? `Rp${Math.round(n / 1e3)} rb` : formatMoney(n, 'IDR');
+  Math.abs(n) >= 1e6
+    ? `Rp${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 2 })} jt`
+    : Math.abs(n) >= 1e3
+      ? `Rp${Math.round(n / 1e3)} rb`
+      : formatMoney(n, 'IDR');
 const localYmd = (d: Date | string) => (d instanceof Date ? toLocalDateString(d) : toLocalDateString(new Date(d)));
-const newRef = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+const newRef = () =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 // Tinggi bagian kartu yang menyembul di tumpukan (cukup untuk logo + nama + chip).
 const STRIP = 58;
@@ -86,12 +92,14 @@ export function CreditCardHub({
         .filter((a) => isCreditAccountType(a.type))
         .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
         .map((acc) => ({ acc, usage: computeCreditUsage(acc), cycle: getCardCycle(acc, transactions, day) })),
-    [accounts, transactions, day]
+    [accounts, transactions, day],
   );
   const cash = accounts.filter((a) => !isCreditAccountType(a.type));
   // null = tampilan utama (tumpukan kartu); id = detail kartu itu.
   const sel = cards.find((c) => c.acc.id === selectedId);
-  const nearest = [...cards].filter((c) => c.cycle && c.cycle.amountDue > 0).sort((a, b) => a.cycle!.daysUntilDue - b.cycle!.daysUntilDue)[0];
+  const nearest = [...cards]
+    .filter((c) => c.cycle && c.cycle.amountDue > 0)
+    .sort((a, b) => a.cycle!.daysUntilDue - b.cycle!.daysUntilDue)[0];
 
   // Kartu paling longgar: belanja hari ini masuk tagihan yang dicetak
   // berikutnya (atau hari ini kalau hari ini tanggal cetak), lalu dibayar di
@@ -141,7 +149,11 @@ export function CreditCardHub({
     const from = sel.cycle?.statementDate ?? ymdAdd(today, 0, Number(today.slice(8)) - 30);
     return transactions
       .filter((t) => t.accountId === sel.acc.id && t.type === 'pengeluaran' && localYmd(t.date) > from)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      .sort(
+        (a, b) =>
+          new Date(b.date).getTime() - new Date(a.date).getTime() ||
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
   }, [sel, transactions, today]);
   const unbilled = useMemo(() => {
     if (!sel?.acc.id || !sel.cycle) return null;
@@ -166,7 +178,12 @@ export function CreditCardHub({
     if (!amount || !payFrom || !payDate) return;
     setSaving(true);
     try {
-      await accountService.payCreditCard(sel.acc.id, { fromAccountId: payFrom, amount, date: payDate, ref: paying.ref });
+      await accountService.payCreditCard(sel.acc.id, {
+        fromAccountId: payFrom,
+        amount,
+        date: payDate,
+        ref: paying.ref,
+      });
       setPaying(null);
       setPaidPop(true);
       setTimeout(() => setPaidPop(false), 1600);
@@ -180,7 +197,8 @@ export function CreditCardHub({
     }
   };
   const rootRef = useRef<HTMLDivElement>(null);
-  const toTop = () => requestAnimationFrame(() => rootRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+  const toTop = () =>
+    requestAnimationFrame(() => rootRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
   const openCard = (id: string | undefined) => {
     if (!id || saving) return;
     setSelectedId(id);
@@ -196,9 +214,14 @@ export function CreditCardHub({
 
   const faceProps = (info: Info) => {
     const { acc, usage, cycle } = info;
-    const chip = cycle && cycle.amountDue > 0
-      ? cycle.overdue ? `Lewat ${Math.abs(cycle.daysUntilDue)} hari` : `${fmt(cycle.dueDate, { day: 'numeric', month: 'short' })} · ${cycle.daysUntilDue === 0 ? 'hari ini' : `${cycle.daysUntilDue} hr lagi`}`
-      : usage.used > 0 ? 'Belum ditagih' : 'Lunas';
+    const chip =
+      cycle && cycle.amountDue > 0
+        ? cycle.overdue
+          ? `Lewat ${Math.abs(cycle.daysUntilDue)} hari`
+          : `${fmt(cycle.dueDate, { day: 'numeric', month: 'short' })} · ${cycle.daysUntilDue === 0 ? 'hari ini' : `${cycle.daysUntilDue} hr lagi`}`
+        : usage.used > 0
+          ? 'Belum ditagih'
+          : 'Lunas';
     return {
       name: acc.name,
       logoUrl: acc.logoUrl,
@@ -207,7 +230,8 @@ export function CreditCardHub({
       color: acc.cardColor,
       chip,
       urgent: Boolean(cycle && cycle.amountDue > 0 && (cycle.overdue || cycle.daysUntilDue <= 5)),
-      amountLabel: cycle && cycle.amountDue > 0 ? `Tagihan ${fmt(cycle.statementDate, { month: 'short' })}` : 'Total terpakai',
+      amountLabel:
+        cycle && cycle.amountDue > 0 ? `Tagihan ${fmt(cycle.statementDate, { month: 'short' })}` : 'Total terpakai',
       amount: money(cycle && cycle.amountDue > 0 ? cycle.amountDue : usage.used, acc.currency),
     };
   };
@@ -216,315 +240,599 @@ export function CreditCardHub({
   return (
     <Modal isOpen={open} onClose={onClose} title="Kartu kredit" maxWidth="max-w-2xl">
       <div ref={rootRef} className="scroll-mt-24">
-      {cards.length === 0 ? (
-        <div className="py-8 text-center">
-          <p className="text-[15px] font-semibold text-slate-900">Belum ada kartu kredit</p>
-          <p className="mt-1 text-[13px] text-slate-500">Tambahkan kartu supaya tagihan & jatuh temponya terpantau.</p>
-          <button type="button" onClick={onAdd} className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2 text-[13px] font-bold text-white"><Plus size={15} /> Tambah kartu</button>
-        </div>
-      ) : (
-        <LayoutGroup>
-          {!sel ? (
-            <div className="space-y-5">
-              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex items-end justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[12px] font-semibold uppercase tracking-wide text-slate-500">Total tagihan kartu</p>
-                  <p className="text-[26px] font-extrabold leading-tight tracking-tight text-slate-900 tabular-nums">{hidden ? 'Rp ••••••' : formatMoney(totalIdr, 'IDR')}</p>
-                  {nearest && (
-                    <p className="truncate text-[13px] text-slate-500">
-                      Terdekat: <span className="font-semibold text-slate-700">{nearest.acc.name}</span> · {fmt(nearest.cycle!.dueDate, { day: 'numeric', month: 'short' })}
-                      {nearest.cycle!.overdue ? ' (lewat)' : ` (${nearest.cycle!.daysUntilDue === 0 ? 'hari ini' : `${nearest.cycle!.daysUntilDue} hari lagi`})`}
+        {cards.length === 0 ? (
+          <div className="py-8 text-center">
+            <p className="text-[15px] font-semibold text-slate-900">Belum ada kartu kredit</p>
+            <p className="mt-1 text-[13px] text-slate-500">
+              Tambahkan kartu supaya tagihan & jatuh temponya terpantau.
+            </p>
+            <button
+              type="button"
+              onClick={onAdd}
+              className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2 text-[13px] font-bold text-white"
+            >
+              <Plus size={15} /> Tambah kartu
+            </button>
+          </div>
+        ) : (
+          <LayoutGroup>
+            {!sel ? (
+              <div className="space-y-5">
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-end justify-between gap-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-[12px] font-semibold uppercase tracking-wide text-slate-500">
+                      Total tagihan kartu
                     </p>
-                  )}
-                </div>
-                <button type="button" onClick={onAdd} aria-label="Tambah kartu" className="flex shrink-0 items-center gap-1.5 rounded-full bg-slate-100 px-3 py-2 text-[13px] font-bold text-slate-700 hover:bg-slate-200">
-                  <Plus size={15} /> <span className="hidden sm:inline">Tambah kartu</span>
-                </button>
-              </motion.div>
+                    <p className="text-[26px] font-extrabold leading-tight tracking-tight text-slate-900 tabular-nums">
+                      {hidden ? 'Rp ••••••' : formatMoney(totalIdr, 'IDR')}
+                    </p>
+                    {nearest && (
+                      <p className="truncate text-[13px] text-slate-500">
+                        Terdekat: <span className="font-semibold text-slate-700">{nearest.acc.name}</span> ·{' '}
+                        {fmt(nearest.cycle!.dueDate, { day: 'numeric', month: 'short' })}
+                        {nearest.cycle!.overdue
+                          ? ' (lewat)'
+                          : ` (${nearest.cycle!.daysUntilDue === 0 ? 'hari ini' : `${nearest.cycle!.daysUntilDue} hari lagi`})`}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onAdd}
+                    aria-label="Tambah kartu"
+                    className="flex shrink-0 items-center gap-1.5 rounded-full bg-slate-100 px-3 py-2 text-[13px] font-bold text-slate-700 hover:bg-slate-200"
+                  >
+                    <Plus size={15} /> <span className="hidden sm:inline">Tambah kartu</span>
+                  </button>
+                </motion.div>
 
-              <div className="mx-auto w-full max-w-[360px]">
-                {/* Tiap kartu ditarik ke atas sampai hanya STRIP px kartu sebelumnya
+                <div className="mx-auto w-full max-w-[360px]">
+                  {/* Tiap kartu ditarik ke atas sampai hanya STRIP px kartu sebelumnya
                     yang terlihat; tinggi kartu = lebar wadah / 1.586 (cqw). */}
-                <div className="@container">
-                  {cards.map((info, i) => {
-                    const last = i === cards.length - 1;
-                    return (
-                      <motion.button
-                        key={info.acc.id}
-                        layoutId={`cc-${info.acc.id}`}
-                        type="button"
-                        onClick={() => openCard(info.acc.id)}
-                        aria-label={`Buka kartu ${info.acc.name}`}
-                        transition={spring}
-                        whileHover={last ? { y: -3 } : { y: -10 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="relative block w-full rounded-[20px] text-left shadow-[0_-10px_24px_-14px_rgba(15,23,42,0.55)]"
-                        style={i === 0 ? undefined : { marginTop: `calc(${STRIP}px - 100cqw / 1.586)` }}
-                      >
-                        <CardFace {...faceProps(info)} />
-                      </motion.button>
-                    );
-                  })}
+                  <div className="@container">
+                    {cards.map((info, i) => {
+                      const last = i === cards.length - 1;
+                      return (
+                        <motion.button
+                          key={info.acc.id}
+                          layoutId={`cc-${info.acc.id}`}
+                          type="button"
+                          onClick={() => openCard(info.acc.id)}
+                          aria-label={`Buka kartu ${info.acc.name}`}
+                          transition={spring}
+                          whileHover={last ? { y: -3 } : { y: -10 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="relative block w-full rounded-[20px] text-left shadow-[0_-10px_24px_-14px_rgba(15,23,42,0.55)]"
+                          style={i === 0 ? undefined : { marginTop: `calc(${STRIP}px - 100cqw / 1.586)` }}
+                        >
+                          <CardFace {...faceProps(info)} />
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-2 text-center text-[12px] text-slate-400">Ketuk kartu untuk membukanya</p>
                 </div>
-                <p className="mt-2 text-center text-[12px] text-slate-400">Ketuk kartu untuk membukanya</p>
-              </div>
 
-          {roomiest && roomiest.days > 0 && (
-            <div className="flex items-start gap-3 rounded-[20px] bg-gradient-to-br from-indigo-50 to-violet-50 p-3.5 ring-1 ring-indigo-100">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[18px]" aria-hidden>🦁</span>
-              <div className="min-w-0">
-                <p className="flex items-center gap-1 text-[13px] font-bold text-indigo-900"><Sparkles size={13} /> Paling longgar dipakai hari ini</p>
-                <p className="text-[13px] text-slate-700">
-                  Belanja pakai <span className="font-semibold">{roomiest.acc.name}</span> hari ini, bayarnya {fmt(roomiest.due, { day: 'numeric', month: 'short' })} — <span className="font-semibold">{roomiest.days} hari lagi</span>.
-                </p>
-                <p className="text-[11px] text-slate-500">Kalau tagihan sebelumnya dibayar penuh.</p>
-              </div>
-            </div>
-          )}
-
-              {upcoming.length > 0 && (
-                <section>
-                  <h3 className="mb-2 text-[15px] font-bold text-slate-900">30 hari ke depan</h3>
-                  <ul className="overflow-hidden rounded-[20px] bg-slate-50 ring-1 ring-slate-100">
-                    {upcoming.map((e, i) => (
-                      <motion.li
-                        key={`${e.info.acc.id}-${e.kind}-${e.date}-${i}`}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 + i * 0.05 }}
-                        className="border-b border-slate-100 last:border-b-0"
-                      >
-                        <button type="button" onClick={() => openCard(e.info.acc.id)} className="group flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-white">
-                          <span className={cn('flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-2xl bg-white ring-1', e.kind === 'lewat' ? 'ring-rose-200' : 'ring-slate-200')}>
-                            <span className={cn('text-[15px] font-extrabold leading-none', e.kind === 'lewat' ? 'text-rose-600' : 'text-slate-900')}>{Number(e.date.slice(8))}</span>
-                            <span className="text-[10px] font-semibold text-slate-400">{fmt(e.date, { month: 'short' })}</span>
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[14px] font-semibold text-slate-900">
-                              {e.kind === 'cetak' ? `Tagihan ${e.info.acc.name} dicetak` : e.kind === 'lewat' ? `${e.info.acc.name} lewat jatuh tempo` : `${e.info.acc.name} jatuh tempo`}
-                            </span>
-                            <span className="block text-[12px] text-slate-500">{fmt(e.date, { weekday: 'long' })}{e.kind === 'tempo' && e.date === today ? ' · hari ini' : ''}</span>
-                          </span>
-                          {e.amount !== undefined && e.amount > 0 && <span className={cn('shrink-0 text-[14px] font-bold tabular-nums', e.kind === 'lewat' ? 'text-rose-600' : 'text-slate-900')}>{hidden ? '••••' : short(e.amount)}</span>}
-                          <span aria-hidden className={cn('h-8 w-1.5 shrink-0 rounded-full', getCardGradientClass(e.info.acc.cardColor, 'Credit Card'))} />
-                          <ChevronRight size={16} className="shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5" />
-                        </button>
-                      </motion.li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-
-              <button type="button" onClick={onAdd} className="flex w-full items-center justify-center gap-1.5 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white">
-                <Plus size={16} /> Tambah kartu
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-5">
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center justify-between gap-2">
-                <button type="button" onClick={closeCard} disabled={saving} className="flex items-center gap-1.5 rounded-full bg-slate-100 py-1.5 pl-2 pr-3 text-[13px] font-bold text-slate-700 hover:bg-slate-200">
-                  <ArrowLeft size={16} /> Semua kartu
-                </button>
-                {cards.length > 1 && (
-                  <div className="flex gap-1.5">
-                    {cards.map((c) => (
-                      <button key={c.acc.id} type="button" onClick={() => openCard(c.acc.id)} aria-label={`Pilih ${c.acc.name}`} className={cn('h-2 rounded-full transition-all', c === sel ? 'w-6 bg-slate-900' : 'w-2 bg-slate-300 hover:bg-slate-400')} />
-                    ))}
+                {roomiest && roomiest.days > 0 && (
+                  <div className="flex items-start gap-3 rounded-[20px] bg-gradient-to-br from-indigo-50 to-violet-50 p-3.5 ring-1 ring-indigo-100">
+                    <span
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[18px]"
+                      aria-hidden
+                    >
+                      🦁
+                    </span>
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-1 text-[13px] font-bold text-indigo-900">
+                        <Sparkles size={13} /> Paling longgar dipakai hari ini
+                      </p>
+                      <p className="text-[13px] text-slate-700">
+                        Belanja pakai <span className="font-semibold">{roomiest.acc.name}</span> hari ini, bayarnya{' '}
+                        {fmt(roomiest.due, { day: 'numeric', month: 'short' })} —{' '}
+                        <span className="font-semibold">{roomiest.days} hari lagi</span>.
+                      </p>
+                      <p className="text-[11px] text-slate-500">Kalau tagihan sebelumnya dibayar penuh.</p>
+                    </div>
                   </div>
                 )}
-              </motion.div>
 
-              <div className="mx-auto w-full max-w-[360px]">
-                <motion.div layoutId={`cc-${sel.acc.id}`} transition={spring} className="relative z-10 rounded-[20px] shadow-[0_24px_44px_-20px_rgba(15,23,42,0.7)]">
-                  <CardFace {...faceProps(sel)} />
-                </motion.div>
-                {cards.filter((c) => c !== sel).slice(0, 2).map((c, i) => (
-                  <motion.button
-                    key={c.acc.id}
-                    type="button"
-                    onClick={() => openCard(c.acc.id)}
-                    aria-label={`Pilih ${c.acc.name}`}
-                    initial={{ opacity: 0, y: -14 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15 + i * 0.06 }}
-                    className={cn('relative mx-auto -mt-3 block h-6 rounded-b-[18px] opacity-90', i === 0 ? 'w-[92%]' : 'w-[84%]', getCardGradientClass(c.acc.cardColor, 'Credit Card'))}
-                    style={{ zIndex: 5 - i }}
-                  />
-                ))}
-              </div>
-
-              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="space-y-5">
-          {sel && (
-            <section className="relative overflow-hidden rounded-[22px] bg-slate-50 ring-1 ring-slate-100">
-              <AnimatePresence mode="wait" initial={false}>
-                {paying ? (
-                  <motion.div key="pay" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} className="space-y-4 p-4">
-                    <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => setPaying(null)} disabled={saving} aria-label="Kembali" className="rounded-full p-1.5 text-slate-500 hover:bg-white"><ArrowLeft size={17} /></button>
-                      <p className="text-[15px] font-bold text-slate-900">Bayar tagihan {sel.acc.name}</p>
-                    </div>
-                    <div>
-                      <p className="mb-1.5 text-[12px] font-semibold text-slate-500">Nominal</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {[
-                          sel.cycle && sel.cycle.amountDue > 0 ? { label: 'Tagihan', v: sel.cycle.amountDue } : null,
-                          sel.cycle && sel.cycle.minPayment > 0 && sel.cycle.minPayment < sel.cycle.amountDue ? { label: 'Minimum', v: sel.cycle.minPayment } : null,
-                          sel.usage.used > 0 && (!sel.cycle || Math.round(sel.usage.used) !== Math.round(sel.cycle.amountDue)) ? { label: 'Semua terpakai', v: sel.usage.used } : null,
-                        ].filter((x): x is { label: string; v: number } => Boolean(x)).map((o) => (
-                          <button key={o.label} type="button" onClick={() => setPayAmount(String(Math.round(o.v)))} className={cn('rounded-full px-3 py-1.5 text-[12px] font-semibold ring-1', Number(payAmount) === Math.round(o.v) ? 'bg-slate-900 text-white ring-slate-900' : 'bg-white text-slate-700 ring-slate-200')}>
-                            {o.label} · {short(o.v)}
-                          </button>
-                        ))}
-                      </div>
-                      <label className="mt-2 flex items-center gap-2 rounded-2xl bg-white px-4 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-indigo-400">
-                        <span className="text-[14px] text-slate-400">Rp</span>
-                        <input
-                          inputMode="numeric"
-                          value={payAmount ? Number(payAmount).toLocaleString('id-ID') : ''}
-                          onChange={(e) => setPayAmount(e.target.value.replace(/[^\d]/g, ''))}
-                          placeholder="0"
-                          aria-label="Nominal pembayaran"
-                          className="w-full bg-transparent py-2.5 text-[17px] font-bold text-slate-900 outline-none"
-                        />
-                      </label>
-                    </div>
-                    <div>
-                      <p className="mb-1.5 text-[12px] font-semibold text-slate-500">Dibayar dari</p>
-                      {cash.filter((a) => (a.currency || 'IDR') === (sel.acc.currency || 'IDR')).length === 0 ? (
-                        <p className="rounded-2xl bg-amber-50 p-3 text-[13px] text-amber-800">Belum ada rekening kas dengan mata uang {sel.acc.currency || 'IDR'}.</p>
-                      ) : (
-                        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-                          {cash.filter((a) => (a.currency || 'IDR') === (sel.acc.currency || 'IDR')).map((a) => (
-                            <button key={a.id} type="button" onClick={() => setPayFrom(a.id ?? '')} className={cn('rounded-2xl px-3 py-2 text-left ring-1', payFrom === a.id ? 'bg-indigo-50 ring-2 ring-indigo-500' : 'bg-white ring-slate-200')}>
-                              <span className="block truncate text-[13px] font-semibold text-slate-900">{a.name}</span>
-                              <span className={cn('block truncate text-[11px] tabular-nums', (a.balance || 0) < Number(payAmount || 0) ? 'text-rose-500' : 'text-slate-500')}>{money(a.balance || 0, a.currency)}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <label className="flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-2 ring-1 ring-slate-200">
-                      <span className="text-[13px] font-semibold text-slate-500">Tanggal bayar</span>
-                      <input type="date" value={payDate} max={today ?? undefined} onChange={(e) => setPayDate(e.target.value)} className="bg-transparent text-[14px] font-semibold text-slate-900 outline-none" />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => void submitPay()}
-                      disabled={saving || !Number(payAmount) || !payFrom || !payDate}
-                      className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white disabled:opacity-40"
-                    >
-                      {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} strokeWidth={3} />}
-                      {Number(payAmount) ? `Bayar ${formatMoney(Number(payAmount), sel.acc.currency || 'IDR')}` : 'Isi nominal'}
-                    </button>
-                    <p className="text-center text-[11px] text-slate-400">Dicatat sebagai transfer: saldo rekening berkurang, tagihan kartu berkurang. Bukan pengeluaran baru.</p>
-                  </motion.div>
-                ) : (
-                  <motion.div key={`info-${sel.acc.id}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 24 }}>
-                    <div className="p-4">
-                      {sel.cycle ? (
-                        <>
-                          <p className="text-[12px] font-semibold text-slate-500">Tagihan {fmt(sel.cycle.statementDate, { month: 'long' })} · dicetak {fmt(sel.cycle.statementDate, { day: 'numeric', month: 'short' })}</p>
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                            <p className="text-[26px] font-extrabold tracking-tight text-slate-900 tabular-nums">{sel.cycle.amountDue > 0 ? money(sel.cycle.amountDue, sel.acc.currency) : 'Lunas'}</p>
-                            <AnimatePresence>
-                              {paidPop && (
-                                <motion.span initial={{ scale: 0, rotate: -30 }} animate={{ scale: 1, rotate: 0 }} exit={{ opacity: 0 }} transition={{ type: 'spring', stiffness: 500, damping: 18 }} className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-white">
-                                  <Check size={16} strokeWidth={3} />
-                                </motion.span>
+                {upcoming.length > 0 && (
+                  <section>
+                    <h3 className="mb-2 text-[15px] font-bold text-slate-900">30 hari ke depan</h3>
+                    <ul className="overflow-hidden rounded-[20px] bg-slate-50 ring-1 ring-slate-100">
+                      {upcoming.map((e, i) => (
+                        <motion.li
+                          key={`${e.info.acc.id}-${e.kind}-${e.date}-${i}`}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.1 + i * 0.05 }}
+                          className="border-b border-slate-100 last:border-b-0"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => openCard(e.info.acc.id)}
+                            className="group flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-white"
+                          >
+                            <span
+                              className={cn(
+                                'flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-2xl bg-white ring-1',
+                                e.kind === 'lewat' ? 'ring-rose-200' : 'ring-slate-200',
                               )}
-                            </AnimatePresence>
-                          </div>
-                          <p className="mt-0.5 flex flex-wrap items-center gap-2 text-[13px] text-slate-500">
-                            Jatuh tempo {fmt(sel.cycle.dueDate, { weekday: 'short', day: 'numeric', month: 'short' })}
-                            {sel.cycle.amountDue > 0 && (
-                              <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-bold', sel.cycle.overdue ? 'bg-rose-100 text-rose-700' : sel.cycle.daysUntilDue <= 5 ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-600')}>
-                                {sel.cycle.overdue ? `lewat ${Math.abs(sel.cycle.daysUntilDue)} hari` : sel.cycle.daysUntilDue === 0 ? 'hari ini' : `${sel.cycle.daysUntilDue} hari lagi`}
+                            >
+                              <span
+                                className={cn(
+                                  'text-[15px] font-extrabold leading-none',
+                                  e.kind === 'lewat' ? 'text-rose-600' : 'text-slate-900',
+                                )}
+                              >
+                                {Number(e.date.slice(8))}
+                              </span>
+                              <span className="text-[10px] font-semibold text-slate-400">
+                                {fmt(e.date, { month: 'short' })}
+                              </span>
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-[14px] font-semibold text-slate-900">
+                                {e.kind === 'cetak'
+                                  ? `Tagihan ${e.info.acc.name} dicetak`
+                                  : e.kind === 'lewat'
+                                    ? `${e.info.acc.name} lewat jatuh tempo`
+                                    : `${e.info.acc.name} jatuh tempo`}
+                              </span>
+                              <span className="block text-[12px] text-slate-500">
+                                {fmt(e.date, { weekday: 'long' })}
+                                {e.kind === 'tempo' && e.date === today ? ' · hari ini' : ''}
+                              </span>
+                            </span>
+                            {e.amount !== undefined && e.amount > 0 && (
+                              <span
+                                className={cn(
+                                  'shrink-0 text-[14px] font-bold tabular-nums',
+                                  e.kind === 'lewat' ? 'text-rose-600' : 'text-slate-900',
+                                )}
+                              >
+                                {hidden ? '••••' : short(e.amount)}
                               </span>
                             )}
-                            {sel.cycle.amountDue > 0 && sel.cycle.minPayment > 0 && <span className="text-[12px]">min. {hidden ? '••••' : short(sel.cycle.minPayment)}</span>}
-                          </p>
-                        </>
-                      ) : (
-                        <button type="button" onClick={() => onEdit(sel.acc)} className="w-full rounded-2xl bg-amber-50 p-3 text-left text-[13px] text-amber-900 ring-1 ring-amber-100">
-                          Atur tanggal cetak & jatuh tempo supaya tagihan dan pengingatnya jalan. <span className="font-bold">Atur →</span>
-                        </button>
-                      )}
-                      <div className="mt-3 flex gap-2">
-                        <button type="button" onClick={startPay} disabled={cash.length === 0} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-slate-900 py-2.5 text-[13px] font-bold text-white disabled:opacity-40">
-                          <Check size={15} strokeWidth={3} /> Sudah bayar
-                        </button>
-                        <button type="button" onClick={() => onEdit(sel.acc)} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-white py-2.5 text-[13px] font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">
-                          <Pencil size={14} /> Ubah kartu
-                        </button>
-                      </div>
-                    </div>
-                    <div aria-hidden className="relative h-4">
-                      <span className="absolute -left-2 top-0 h-4 w-4 rounded-full bg-white" />
-                      <span className="absolute -right-2 top-0 h-4 w-4 rounded-full bg-white" />
-                      <span className="absolute inset-x-4 top-2 border-t-2 border-dashed border-slate-200" />
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 px-4 pb-4 pt-1">
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-semibold text-slate-500">Belum ditagih</p>
-                        <p className="truncate text-[14px] font-bold text-slate-900 tabular-nums">{unbilled === null ? '—' : hidden ? '••••' : short(unbilled)}</p>
-                        {sel.cycle && <p className="text-[11px] text-slate-400">cetak {fmt(sel.cycle.nextStatementDate, { day: 'numeric', month: 'short' })}</p>}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-semibold text-slate-500">Total terpakai</p>
-                        <p className="truncate text-[14px] font-bold text-slate-900 tabular-nums">{hidden ? '••••' : short(sel.usage.used)}</p>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-semibold text-slate-500">Sisa limit</p>
-                        <p className="truncate text-[14px] font-bold text-emerald-600 tabular-nums">{sel.usage.limit > 0 ? (hidden ? '••••' : short(sel.usage.remaining)) : '—'}</p>
-                      </div>
-                      {sel.usage.limit > 0 && (
-                        <div className="col-span-3 mt-1 h-1.5 overflow-hidden rounded-full bg-slate-200">
-                          <div className={cn('h-full rounded-full', sel.usage.used / sel.usage.limit >= 0.9 ? 'bg-rose-500' : 'bg-indigo-500')} style={{ width: `${Math.max(2, Math.min(100, (sel.usage.used / sel.usage.limit) * 100))}%` }} />
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
+                            <span
+                              aria-hidden
+                              className={cn(
+                                'h-8 w-1.5 shrink-0 rounded-full',
+                                getCardGradientClass(e.info.acc.cardColor, 'Credit Card'),
+                              )}
+                            />
+                            <ChevronRight
+                              size={16}
+                              className="shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5"
+                            />
+                          </button>
+                        </motion.li>
+                      ))}
+                    </ul>
+                  </section>
                 )}
-              </AnimatePresence>
-            </section>
-          )}
 
-          {sel && (
-            <section>
-              <div className="mb-1.5 flex items-baseline justify-between">
-                <h3 className="text-[15px] font-bold text-slate-900">Belanja {sel.cycle ? 'siklus ini' : '30 hari terakhir'}</h3>
-                <Link href={`/membership/transactions/daily?rekening=${encodeURIComponent(sel.acc.id ?? '')}&periode=semua`} className="flex items-center gap-0.5 text-[12px] font-bold text-indigo-600 hover:underline">
-                  Semua <ChevronRight size={14} />
-                </Link>
+                <button
+                  type="button"
+                  onClick={onAdd}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white"
+                >
+                  <Plus size={16} /> Tambah kartu
+                </button>
               </div>
-              {cycleSpend.length === 0 ? (
-                <p className="rounded-[18px] bg-slate-50 py-5 text-center text-[13px] text-slate-500">Belum ada belanja di kartu ini{sel.cycle ? ' sejak tanggal cetak' : ''}.</p>
-              ) : (
-                <ul className="divide-y divide-slate-100 rounded-[18px] bg-white ring-1 ring-slate-100">
-                  {cycleSpend.slice(0, 12).map((t, i) => {
-                    const v = categoryVisual(t.category, t.type);
-                    return (
-                      <motion.li key={t.id} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 + i * 0.04 }} className="flex items-center gap-3 px-3.5 py-2">
-                        <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[15px]', v.tile)} aria-hidden>{v.emoji}</span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[13px] font-semibold text-slate-900">{t.note || t.subCategory || t.category}</span>
-                          <span className="block truncate text-[11px] text-slate-500">{fmt(localYmd(t.date), { day: 'numeric', month: 'short' })} · {t.category}</span>
-                        </span>
-                        <span className="shrink-0 text-[13px] font-bold text-slate-900 tabular-nums">−{money(Number(t.amount) || 0, t.currency)}</span>
-                      </motion.li>
-                    );
-                  })}
-                </ul>
-              )}
-              {cycleSpend.length > 12 && <p className="mt-1 text-center text-[11px] text-slate-400">+{cycleSpend.length - 12} transaksi lain</p>}
-            </section>
-          )}
+            ) : (
+              <div className="space-y-5">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <button
+                    type="button"
+                    onClick={closeCard}
+                    disabled={saving}
+                    className="flex items-center gap-1.5 rounded-full bg-slate-100 py-1.5 pl-2 pr-3 text-[13px] font-bold text-slate-700 hover:bg-slate-200"
+                  >
+                    <ArrowLeft size={16} /> Semua kartu
+                  </button>
+                  {cards.length > 1 && (
+                    <div className="flex gap-1.5">
+                      {cards.map((c) => (
+                        <button
+                          key={c.acc.id}
+                          type="button"
+                          onClick={() => openCard(c.acc.id)}
+                          aria-label={`Pilih ${c.acc.name}`}
+                          className={cn(
+                            'h-2 rounded-full transition-all',
+                            c === sel ? 'w-6 bg-slate-900' : 'w-2 bg-slate-300 hover:bg-slate-400',
+                          )}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
 
-              </motion.div>
-            </div>
-          )}
-        </LayoutGroup>
-      )}
+                <div className="mx-auto w-full max-w-[360px]">
+                  <motion.div
+                    layoutId={`cc-${sel.acc.id}`}
+                    transition={spring}
+                    className="relative z-10 rounded-[20px] shadow-[0_24px_44px_-20px_rgba(15,23,42,0.7)]"
+                  >
+                    <CardFace {...faceProps(sel)} />
+                  </motion.div>
+                  {cards
+                    .filter((c) => c !== sel)
+                    .slice(0, 2)
+                    .map((c, i) => (
+                      <motion.button
+                        key={c.acc.id}
+                        type="button"
+                        onClick={() => openCard(c.acc.id)}
+                        aria-label={`Pilih ${c.acc.name}`}
+                        initial={{ opacity: 0, y: -14 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.15 + i * 0.06 }}
+                        className={cn(
+                          'relative mx-auto -mt-3 block h-6 rounded-b-[18px] opacity-90',
+                          i === 0 ? 'w-[92%]' : 'w-[84%]',
+                          getCardGradientClass(c.acc.cardColor, 'Credit Card'),
+                        )}
+                        style={{ zIndex: 5 - i }}
+                      />
+                    ))}
+                </div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.12 }}
+                  className="space-y-5"
+                >
+                  {sel && (
+                    <section className="relative overflow-hidden rounded-[22px] bg-slate-50 ring-1 ring-slate-100">
+                      <AnimatePresence mode="wait" initial={false}>
+                        {paying ? (
+                          <motion.div
+                            key="pay"
+                            initial={{ opacity: 0, x: 24 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -24 }}
+                            className="space-y-4 p-4"
+                          >
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setPaying(null)}
+                                disabled={saving}
+                                aria-label="Kembali"
+                                className="rounded-full p-1.5 text-slate-500 hover:bg-white"
+                              >
+                                <ArrowLeft size={17} />
+                              </button>
+                              <p className="text-[15px] font-bold text-slate-900">Bayar tagihan {sel.acc.name}</p>
+                            </div>
+                            <div>
+                              <p className="mb-1.5 text-[12px] font-semibold text-slate-500">Nominal</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {[
+                                  sel.cycle && sel.cycle.amountDue > 0
+                                    ? { label: 'Tagihan', v: sel.cycle.amountDue }
+                                    : null,
+                                  sel.cycle && sel.cycle.minPayment > 0 && sel.cycle.minPayment < sel.cycle.amountDue
+                                    ? { label: 'Minimum', v: sel.cycle.minPayment }
+                                    : null,
+                                  sel.usage.used > 0 &&
+                                  (!sel.cycle || Math.round(sel.usage.used) !== Math.round(sel.cycle.amountDue))
+                                    ? { label: 'Semua terpakai', v: sel.usage.used }
+                                    : null,
+                                ]
+                                  .filter((x): x is { label: string; v: number } => Boolean(x))
+                                  .map((o) => (
+                                    <button
+                                      key={o.label}
+                                      type="button"
+                                      onClick={() => setPayAmount(String(Math.round(o.v)))}
+                                      className={cn(
+                                        'rounded-full px-3 py-1.5 text-[12px] font-semibold ring-1',
+                                        Number(payAmount) === Math.round(o.v)
+                                          ? 'bg-slate-900 text-white ring-slate-900'
+                                          : 'bg-white text-slate-700 ring-slate-200',
+                                      )}
+                                    >
+                                      {o.label} · {short(o.v)}
+                                    </button>
+                                  ))}
+                              </div>
+                              <label className="mt-2 flex items-center gap-2 rounded-2xl bg-white px-4 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-indigo-400">
+                                <span className="text-[14px] text-slate-400">Rp</span>
+                                <input
+                                  inputMode="numeric"
+                                  value={payAmount ? Number(payAmount).toLocaleString('id-ID') : ''}
+                                  onChange={(e) => setPayAmount(e.target.value.replace(/[^\d]/g, ''))}
+                                  placeholder="0"
+                                  aria-label="Nominal pembayaran"
+                                  className="w-full bg-transparent py-2.5 text-[17px] font-bold text-slate-900 outline-none"
+                                />
+                              </label>
+                            </div>
+                            <div>
+                              <p className="mb-1.5 text-[12px] font-semibold text-slate-500">Dibayar dari</p>
+                              {cash.filter((a) => (a.currency || 'IDR') === (sel.acc.currency || 'IDR')).length ===
+                              0 ? (
+                                <p className="rounded-2xl bg-amber-50 p-3 text-[13px] text-amber-800">
+                                  Belum ada rekening kas dengan mata uang {sel.acc.currency || 'IDR'}.
+                                </p>
+                              ) : (
+                                <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                                  {cash
+                                    .filter((a) => (a.currency || 'IDR') === (sel.acc.currency || 'IDR'))
+                                    .map((a) => (
+                                      <button
+                                        key={a.id}
+                                        type="button"
+                                        onClick={() => setPayFrom(a.id ?? '')}
+                                        className={cn(
+                                          'rounded-2xl px-3 py-2 text-left ring-1',
+                                          payFrom === a.id
+                                            ? 'bg-indigo-50 ring-2 ring-indigo-500'
+                                            : 'bg-white ring-slate-200',
+                                        )}
+                                      >
+                                        <span className="block truncate text-[13px] font-semibold text-slate-900">
+                                          {a.name}
+                                        </span>
+                                        <span
+                                          className={cn(
+                                            'block truncate text-[11px] tabular-nums',
+                                            (a.balance || 0) < Number(payAmount || 0)
+                                              ? 'text-rose-500'
+                                              : 'text-slate-500',
+                                          )}
+                                        >
+                                          {money(a.balance || 0, a.currency)}
+                                        </span>
+                                      </button>
+                                    ))}
+                                </div>
+                              )}
+                            </div>
+                            <label className="flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-2 ring-1 ring-slate-200">
+                              <span className="text-[13px] font-semibold text-slate-500">Tanggal bayar</span>
+                              <input
+                                type="date"
+                                value={payDate}
+                                max={today ?? undefined}
+                                onChange={(e) => setPayDate(e.target.value)}
+                                className="bg-transparent text-[14px] font-semibold text-slate-900 outline-none"
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => void submitPay()}
+                              disabled={saving || !Number(payAmount) || !payFrom || !payDate}
+                              className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-3 text-[14px] font-bold text-white disabled:opacity-40"
+                            >
+                              {saving ? (
+                                <Loader2 size={16} className="animate-spin" />
+                              ) : (
+                                <Check size={16} strokeWidth={3} />
+                              )}
+                              {Number(payAmount)
+                                ? `Bayar ${formatMoney(Number(payAmount), sel.acc.currency || 'IDR')}`
+                                : 'Isi nominal'}
+                            </button>
+                            <p className="text-center text-[11px] text-slate-400">
+                              Dicatat sebagai transfer: saldo rekening berkurang, tagihan kartu berkurang. Bukan
+                              pengeluaran baru.
+                            </p>
+                          </motion.div>
+                        ) : (
+                          <motion.div
+                            key={`info-${sel.acc.id}`}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, x: 24 }}
+                          >
+                            <div className="p-4">
+                              {sel.cycle ? (
+                                <>
+                                  <p className="text-[12px] font-semibold text-slate-500">
+                                    Tagihan {fmt(sel.cycle.statementDate, { month: 'long' })} · dicetak{' '}
+                                    {fmt(sel.cycle.statementDate, { day: 'numeric', month: 'short' })}
+                                  </p>
+                                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                    <p className="text-[26px] font-extrabold tracking-tight text-slate-900 tabular-nums">
+                                      {sel.cycle.amountDue > 0 ? money(sel.cycle.amountDue, sel.acc.currency) : 'Lunas'}
+                                    </p>
+                                    <AnimatePresence>
+                                      {paidPop && (
+                                        <motion.span
+                                          initial={{ scale: 0, rotate: -30 }}
+                                          animate={{ scale: 1, rotate: 0 }}
+                                          exit={{ opacity: 0 }}
+                                          transition={{ type: 'spring', stiffness: 500, damping: 18 }}
+                                          className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-white"
+                                        >
+                                          <Check size={16} strokeWidth={3} />
+                                        </motion.span>
+                                      )}
+                                    </AnimatePresence>
+                                  </div>
+                                  <p className="mt-0.5 flex flex-wrap items-center gap-2 text-[13px] text-slate-500">
+                                    Jatuh tempo{' '}
+                                    {fmt(sel.cycle.dueDate, { weekday: 'short', day: 'numeric', month: 'short' })}
+                                    {sel.cycle.amountDue > 0 && (
+                                      <span
+                                        className={cn(
+                                          'rounded-full px-2 py-0.5 text-[11px] font-bold',
+                                          sel.cycle.overdue
+                                            ? 'bg-rose-100 text-rose-700'
+                                            : sel.cycle.daysUntilDue <= 5
+                                              ? 'bg-amber-100 text-amber-700'
+                                              : 'bg-slate-200 text-slate-600',
+                                        )}
+                                      >
+                                        {sel.cycle.overdue
+                                          ? `lewat ${Math.abs(sel.cycle.daysUntilDue)} hari`
+                                          : sel.cycle.daysUntilDue === 0
+                                            ? 'hari ini'
+                                            : `${sel.cycle.daysUntilDue} hari lagi`}
+                                      </span>
+                                    )}
+                                    {sel.cycle.amountDue > 0 && sel.cycle.minPayment > 0 && (
+                                      <span className="text-[12px]">
+                                        min. {hidden ? '••••' : short(sel.cycle.minPayment)}
+                                      </span>
+                                    )}
+                                  </p>
+                                </>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => onEdit(sel.acc)}
+                                  className="w-full rounded-2xl bg-amber-50 p-3 text-left text-[13px] text-amber-900 ring-1 ring-amber-100"
+                                >
+                                  Atur tanggal cetak & jatuh tempo supaya tagihan dan pengingatnya jalan.{' '}
+                                  <span className="font-bold">Atur →</span>
+                                </button>
+                              )}
+                              <div className="mt-3 flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={startPay}
+                                  disabled={cash.length === 0}
+                                  className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-slate-900 py-2.5 text-[13px] font-bold text-white disabled:opacity-40"
+                                >
+                                  <Check size={15} strokeWidth={3} /> Sudah bayar
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => onEdit(sel.acc)}
+                                  className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-white py-2.5 text-[13px] font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+                                >
+                                  <Pencil size={14} /> Ubah kartu
+                                </button>
+                              </div>
+                            </div>
+                            <div aria-hidden className="relative h-4">
+                              <span className="absolute -left-2 top-0 h-4 w-4 rounded-full bg-white" />
+                              <span className="absolute -right-2 top-0 h-4 w-4 rounded-full bg-white" />
+                              <span className="absolute inset-x-4 top-2 border-t-2 border-dashed border-slate-200" />
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 px-4 pb-4 pt-1">
+                              <div className="min-w-0">
+                                <p className="text-[11px] font-semibold text-slate-500">Belum ditagih</p>
+                                <p className="truncate text-[14px] font-bold text-slate-900 tabular-nums">
+                                  {unbilled === null ? '—' : hidden ? '••••' : short(unbilled)}
+                                </p>
+                                {sel.cycle && (
+                                  <p className="text-[11px] text-slate-400">
+                                    cetak {fmt(sel.cycle.nextStatementDate, { day: 'numeric', month: 'short' })}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-[11px] font-semibold text-slate-500">Total terpakai</p>
+                                <p className="truncate text-[14px] font-bold text-slate-900 tabular-nums">
+                                  {hidden ? '••••' : short(sel.usage.used)}
+                                </p>
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-[11px] font-semibold text-slate-500">Sisa limit</p>
+                                <p className="truncate text-[14px] font-bold text-emerald-600 tabular-nums">
+                                  {sel.usage.limit > 0 ? (hidden ? '••••' : short(sel.usage.remaining)) : '—'}
+                                </p>
+                              </div>
+                              {sel.usage.limit > 0 && (
+                                <div className="col-span-3 mt-1 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                                  <div
+                                    className={cn(
+                                      'h-full rounded-full',
+                                      sel.usage.used / sel.usage.limit >= 0.9 ? 'bg-rose-500' : 'bg-indigo-500',
+                                    )}
+                                    style={{
+                                      width: `${Math.max(2, Math.min(100, (sel.usage.used / sel.usage.limit) * 100))}%`,
+                                    }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </section>
+                  )}
+
+                  {sel && (
+                    <section>
+                      <div className="mb-1.5 flex items-baseline justify-between">
+                        <h3 className="text-[15px] font-bold text-slate-900">
+                          Belanja {sel.cycle ? 'siklus ini' : '30 hari terakhir'}
+                        </h3>
+                        <Link
+                          href={`/membership/transactions/daily?rekening=${encodeURIComponent(sel.acc.id ?? '')}&periode=semua`}
+                          className="flex items-center gap-0.5 text-[12px] font-bold text-indigo-600 hover:underline"
+                        >
+                          Semua <ChevronRight size={14} />
+                        </Link>
+                      </div>
+                      {cycleSpend.length === 0 ? (
+                        <p className="rounded-[18px] bg-slate-50 py-5 text-center text-[13px] text-slate-500">
+                          Belum ada belanja di kartu ini{sel.cycle ? ' sejak tanggal cetak' : ''}.
+                        </p>
+                      ) : (
+                        <ul className="divide-y divide-slate-100 rounded-[18px] bg-white ring-1 ring-slate-100">
+                          {cycleSpend.slice(0, 12).map((t, i) => {
+                            const v = categoryVisual(t.category, t.type);
+                            return (
+                              <motion.li
+                                key={t.id}
+                                initial={{ opacity: 0, x: -12 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.15 + i * 0.04 }}
+                                className="flex items-center gap-3 px-3.5 py-2"
+                              >
+                                <span
+                                  className={cn(
+                                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[15px]',
+                                    v.tile,
+                                  )}
+                                  aria-hidden
+                                >
+                                  {v.emoji}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-[13px] font-semibold text-slate-900">
+                                    {t.note || t.subCategory || t.category}
+                                  </span>
+                                  <span className="block truncate text-[11px] text-slate-500">
+                                    {fmt(localYmd(t.date), { day: 'numeric', month: 'short' })} · {t.category}
+                                  </span>
+                                </span>
+                                <span className="shrink-0 text-[13px] font-bold text-slate-900 tabular-nums">
+                                  −{money(Number(t.amount) || 0, t.currency)}
+                                </span>
+                              </motion.li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                      {cycleSpend.length > 12 && (
+                        <p className="mt-1 text-center text-[11px] text-slate-400">
+                          +{cycleSpend.length - 12} transaksi lain
+                        </p>
+                      )}
+                    </section>
+                  )}
+                </motion.div>
+              </div>
+            )}
+          </LayoutGroup>
+        )}
       </div>
     </Modal>
   );

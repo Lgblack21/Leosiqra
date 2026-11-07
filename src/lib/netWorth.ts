@@ -27,21 +27,46 @@ export type NetWorth = {
   investments: { inv: Investment; value: number; cost: number }[];
   piutang: DebtRow[];
   hutang: DebtRow[];
-  totals: { cash: number; savings: number; investments: number; piutang: number; items: number; collectibles: number; cards: number; hutang: number; assets: number; liabilities: number; net: number };
+  totals: {
+    cash: number;
+    savings: number;
+    investments: number;
+    piutang: number;
+    items: number;
+    collectibles: number;
+    cards: number;
+    hutang: number;
+    assets: number;
+    liabilities: number;
+    net: number;
+  };
 };
 
 const idrOf = (t: { amount: number; amountIDR?: number }) => Number(t.amountIDR) || Number(t.amount) || 0;
 
-export function computeNetWorth(input: { accounts: Account[]; transactions: Transaction[]; investments: Investment[]; savings: Saving[]; toIdr: ToIdr; itemsValueIdr?: number; collectiblesValueIdr?: number }): NetWorth {
+export function computeNetWorth(input: {
+  accounts: Account[];
+  transactions: Transaction[];
+  investments: Investment[];
+  savings: Saving[];
+  toIdr: ToIdr;
+  itemsValueIdr?: number;
+  collectiblesValueIdr?: number;
+}): NetWorth {
   const { accounts, transactions, investments, savings, toIdr } = input;
   const creditIds = new Set(accounts.filter((a) => isCreditAccountType(a.type)).map((a) => a.id));
 
-  const cash = accounts.filter((a) => !isCreditAccountType(a.type)).map((account) => ({ account, value: toIdr(Number(account.balance) || 0, account.currency) }));
+  const cash = accounts
+    .filter((a) => !isCreditAccountType(a.type))
+    .map((account) => ({ account, value: toIdr(Number(account.balance) || 0, account.currency) }));
   const cards = accounts
     .filter((a) => isCreditAccountType(a.type))
     .map((account) => ({ account, used: toIdr(computeCreditUsage(account).used, account.currency) }));
 
-  const savingsTotal = savings.reduce((s, item) => (item.transactionType === 'Penarikan' ? s - idrOf(item) : s + idrOf(item)), 0);
+  const savingsTotal = savings.reduce(
+    (s, item) => (item.transactionType === 'Penarikan' ? s - idrOf(item) : s + idrOf(item)),
+    0,
+  );
 
   const inv = investments
     .filter((i) => i.status !== 'Planned')
@@ -59,18 +84,28 @@ export function computeNetWorth(input: { accounts: Account[]; transactions: Tran
   const debtRows = (category: 'Hutang' | 'Piutang') =>
     transactions
       .filter((t) => t.type === 'debt' && t.category === category && t.id)
-      .filter((t) => !(category === 'Hutang' && t.subCategory === 'Kartu Kredit' && t.accountId && creditIds.has(t.accountId)))
+      .filter(
+        (t) =>
+          !(category === 'Hutang' && t.subCategory === 'Kartu Kredit' && t.accountId && creditIds.has(t.accountId)),
+      )
       .map((t) => {
         const remainingOrig = t.paymentStatus === 'lunas' ? 0 : Math.max(0, t.amount - (paid.get(t.id as string) ?? 0));
         const ratio = t.amount > 0 && Number(t.amountIDR) > 0 ? Number(t.amountIDR) / t.amount : 1;
-        return { id: t.id as string, name: t.lenderName || t.note || category, note: t.subCategory && t.subCategory !== category ? t.subCategory : undefined, remaining: remainingOrig * ratio, total: idrOf(t), date: new Date(t.date) };
+        return {
+          id: t.id as string,
+          name: t.lenderName || t.note || category,
+          note: t.subCategory && t.subCategory !== category ? t.subCategory : undefined,
+          remaining: remainingOrig * ratio,
+          total: idrOf(t),
+          date: new Date(t.date),
+        };
       })
       .filter((r) => r.remaining > 0.5)
       .sort((a, b) => b.remaining - a.remaining);
   const piutang = debtRows('Piutang');
   const hutang = debtRows('Hutang');
 
-  const sum = <T,>(list: T[], f: (x: T) => number) => list.reduce((s, x) => s + f(x), 0);
+  const sum = <T>(list: T[], f: (x: T) => number) => list.reduce((s, x) => s + f(x), 0);
   const totals = {
     cash: sum(cash, (c) => c.value),
     savings: savingsTotal,
@@ -81,9 +116,18 @@ export function computeNetWorth(input: { accounts: Account[]; transactions: Tran
     cards: sum(cards, (c) => c.used),
     hutang: sum(hutang, (h) => h.remaining),
   };
-  const assets = totals.cash + totals.savings + totals.investments + totals.piutang + totals.items + totals.collectibles;
+  const assets =
+    totals.cash + totals.savings + totals.investments + totals.piutang + totals.items + totals.collectibles;
   const liabilities = totals.cards + totals.hutang;
-  return { cash, cards, savingsTotal, investments: inv, piutang, hutang, totals: { ...totals, assets, liabilities, net: assets - liabilities } };
+  return {
+    cash,
+    cards,
+    savingsTotal,
+    investments: inv,
+    piutang,
+    hutang,
+    totals: { ...totals, assets, liabilities, net: assets - liabilities },
+  };
 }
 
 /**
@@ -95,7 +139,9 @@ export function computeNetWorth(input: { accounts: Account[]; transactions: Tran
  */
 export function netWorthTrail(net: number, transactions: Transaction[], days: number, today = new Date()) {
   const flows = transactions
-    .filter((t) => (t.type === 'pemasukan' || t.type === 'pengeluaran') && !isInvestmentFlow(t) && t.relatedType !== 'debt')
+    .filter(
+      (t) => (t.type === 'pemasukan' || t.type === 'pengeluaran') && !isInvestmentFlow(t) && t.relatedType !== 'debt',
+    )
     .map((t) => ({ at: new Date(t.date).getTime(), delta: t.type === 'pemasukan' ? idrOf(t) : -idrOf(t) }))
     .sort((a, b) => b.at - a.at);
   const points: { date: Date; value: number }[] = [];

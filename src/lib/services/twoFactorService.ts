@@ -22,7 +22,7 @@ export const twoFactorService = {
     return generateURI({
       label: userEmail,
       secret,
-      issuer
+      issuer,
     });
   },
 
@@ -45,12 +45,12 @@ export const twoFactorService = {
     try {
       const result = verifySync({
         token,
-        secret
+        secret,
       });
       return result.valid;
     } catch (err) {
       console.error('TOTP verification error:', err);
       return false;
     }
-  }
+  },
 };

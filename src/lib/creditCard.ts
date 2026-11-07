@@ -7,8 +7,7 @@ import { toLocalDateString } from '@/lib/utils';
 // dimodelkan sebagai limit, bukan saldo kas. Fungsi di file ini adalah
 // SATU-SATUNYA sumber perhitungan terpakai/sisa limit — dipakai bersama oleh
 // Dashboard, Rekening, Kartu Saya, Profil, dan Input Cepat.
-export const isCreditAccountType = (type: string | undefined) =>
-  type === 'Credit Card' || type === 'kartu';
+export const isCreditAccountType = (type: string | undefined) => type === 'Credit Card' || type === 'kartu';
 
 // Jaringan kartu yang diterima Worker (CARD_NETWORKS di cloudflare/src/index.ts).
 export const CARD_NETWORK_OPTIONS = [
@@ -53,11 +52,21 @@ export const cardFlowsFromTransactions = (accountId: string, transactions: Trans
       const amount = Number(t.amount) || 0;
       const date = t.date instanceof Date ? toLocalDateString(t.date) : String(t.date).slice(0, 10);
       const isIncoming =
-        t.type === 'pemasukan' || ((t.type === 'transfer' || t.type === 'topup') && Boolean(t.subCategory?.includes('Masuk')));
+        t.type === 'pemasukan' ||
+        ((t.type === 'transfer' || t.type === 'topup') && Boolean(t.subCategory?.includes('Masuk')));
       return { date, delta: isIncoming ? -amount : amount };
     });
 
-export const getCardCycle = (account: Account, transactions: Transaction[], today: string = toLocalDateString()): CardCycle | null =>
+export const getCardCycle = (
+  account: Account,
+  transactions: Transaction[],
+  today: string = toLocalDateString(),
+): CardCycle | null =>
   account.id
-    ? computeCardCycle(computeCreditUsage(account).used, cardFlowsFromTransactions(account.id, transactions), account, today)
+    ? computeCardCycle(
+        computeCreditUsage(account).used,
+        cardFlowsFromTransactions(account.id, transactions),
+        account,
+        today,
+      )
     : null;

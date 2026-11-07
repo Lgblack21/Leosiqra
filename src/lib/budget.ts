@@ -37,12 +37,18 @@ export const currentBudgetPeriod = (startDay: number, ref = new Date()): BudgetP
 
 // Tanggal transaksi disimpan "YYYY-MM-DD…" — bandingkan per hari lokal.
 export const inBudgetPeriod = (date: string | Date, p: BudgetPeriod) => {
-  const d = typeof date === 'string' ? new Date(`${date.slice(0, 10)}T00:00:00`) : new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const d =
+    typeof date === 'string'
+      ? new Date(`${date.slice(0, 10)}T00:00:00`)
+      : new Date(date.getFullYear(), date.getMonth(), date.getDate());
   return d >= p.start && d < p.end;
 };
 
 export const formatBudgetPeriod = (p: BudgetPeriod) => {
   const last = new Date(p.end.getFullYear(), p.end.getMonth(), p.end.getDate() - 1);
-  const f = (d: Date, year: boolean) => new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', ...(year ? { year: 'numeric' } : {}) }).format(d);
+  const f = (d: Date, year: boolean) =>
+    new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', ...(year ? { year: 'numeric' } : {}) }).format(
+      d,
+    );
   return `${f(p.start, p.start.getFullYear() !== last.getFullYear())} – ${f(last, true)}`;
 };

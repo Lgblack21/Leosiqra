@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -35,11 +35,7 @@ export default function MembershipLayout({ children }: { children: React.ReactNo
   );
 }
 
-function MembershipShell({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function MembershipShell({ children }: { children: React.ReactNode }) {
   useCategoryTemplateSync();
   const { resolvedTheme } = useTheme();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -53,7 +49,10 @@ function MembershipShell({
   // openSettings(view) dari halaman mana pun, atau ?pengaturan=<view> di URL
   // (dipakai pengalihan halaman lama Kategori/Budget & tautan dari luar layout).
   useEffect(() => {
-    const open = (view: SettingsView) => { setSettingsView(view); setSettingsOpen(true); };
+    const open = (view: SettingsView) => {
+      setSettingsView(view);
+      setSettingsOpen(true);
+    };
     const onEvent = (e: Event) => open((e as CustomEvent<SettingsView>).detail ?? 'menu');
     window.addEventListener(OPEN_SETTINGS_EVENT, onEvent);
     const params = new URLSearchParams(window.location.search);
@@ -92,7 +91,9 @@ function MembershipShell({
         if (refCode) {
           cloudflareApi('/api/member/coins/apply-code', { method: 'POST', json: { code: refCode } })
             .then(clearReferralCode)
-            .catch((e) => { if (!(e instanceof TypeError)) clearReferralCode(); });
+            .catch((e) => {
+              if (!(e instanceof TypeError)) clearReferralCode();
+            });
         }
         // User baru yang belum menyelesaikan setup awal dipaksa ke wizard
         // onboarding dulu — kecuali memang sedang berada di halamannya, supaya
@@ -113,14 +114,18 @@ function MembershipShell({
 
   // Tombol back Android (aplikasi di tablet): mundur satu halaman; di Ringkasan → keluar ke layar utama.
   const pathRef = useRef(pathname);
-  useEffect(() => { pathRef.current = pathname; }, [pathname]);
+  useEffect(() => {
+    pathRef.current = pathname;
+  }, [pathname]);
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     const handle = CapacitorApp.addListener('backButton', () => {
       if (pathRef.current === '/membership/dashboard') void CapacitorApp.minimizeApp();
       else router.back();
     });
-    return () => { void handle.then((h) => h.remove()); };
+    return () => {
+      void handle.then((h) => h.remove());
+    };
   }, [router]);
 
   if (loading) return null;
@@ -137,53 +142,66 @@ function MembershipShell({
   if (fullscreen) {
     return (
       <FeedbackProvider>
-      <ModalProvider>
-        <div className={`web-page min-h-screen bg-[#f6f7fb]${pageDark ? ' web-dark' : ''}`}>
-          {children}
-          <div className={frameClass}>
-            <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} initialView={settingsView} />
+        <ModalProvider>
+          <div className={`web-page min-h-screen bg-[#f6f7fb]${pageDark ? ' web-dark' : ''}`}>
+            {children}
+            <div className={frameClass}>
+              <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} initialView={settingsView} />
+            </div>
+            <GlobalModalWrapper />
           </div>
-          <GlobalModalWrapper />
-        </div>
-      </ModalProvider>
+        </ModalProvider>
       </FeedbackProvider>
     );
   }
 
   return (
     <FeedbackProvider>
-    <ModalProvider>
-      <div className={`web-page flex min-h-screen bg-[#f6f7fb] relative overflow-x-hidden print:block print:min-h-0 print:h-auto${pageDark ? ' web-dark' : ''}`}>
-        {isSidebarOpen && (
-          <div
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 md:hidden"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-        )}
+      <ModalProvider>
+        <div
+          className={`web-page flex min-h-screen bg-[#f6f7fb] relative overflow-x-hidden print:block print:min-h-0 print:h-auto${pageDark ? ' web-dark' : ''}`}
+        >
+          {isSidebarOpen && (
+            <div
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 md:hidden"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          )}
 
-        <div className={frameClass}><Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onOpenSettings={() => { setSettingsView('menu'); setSettingsOpen(true); }} /></div>
+          <div className={frameClass}>
+            <Sidebar
+              isOpen={isSidebarOpen}
+              onClose={() => setIsSidebarOpen(false)}
+              onOpenSettings={() => {
+                setSettingsView('menu');
+                setSettingsOpen(true);
+              }}
+            />
+          </div>
 
-        {/* print:block+print:h-auto: tanpa ini, konten cetak yang bersarang di
+          {/* print:block+print:h-auto: tanpa ini, konten cetak yang bersarang di
             dalam ancestor flex/min-h-screen kepotong di batas tinggi layar
             (bug pagination flexbox saat print di Chrome) alih-alih mengalir
             ke halaman berikutnya. */}
-        <main className="flex-1 md:ml-[84px] lg:ml-72 min-h-screen flex flex-col min-w-0 pb-24 md:pb-0 print:pb-0 print:block print:min-h-0 print:h-auto print:ml-0 print:pt-0">
-          <div className={frameClass}><Header onMenuClick={() => setIsSidebarOpen(true)} /></div>
-          <DevNoticeBanner saranHref="/membership/saran" />
+          <main className="flex-1 md:ml-[84px] lg:ml-72 min-h-screen flex flex-col min-w-0 pb-24 md:pb-0 print:pb-0 print:block print:min-h-0 print:h-auto print:ml-0 print:pt-0">
+            <div className={frameClass}>
+              <Header onMenuClick={() => setIsSidebarOpen(true)} />
+            </div>
+            <DevNoticeBanner saranHref="/membership/saran" />
 
-          <div className="p-4 md:p-8 max-w-7xl mx-auto w-full flex-1 print:p-0 print:m-0 print:max-w-none">
-            {children}
+            <div className="p-4 md:p-8 max-w-7xl mx-auto w-full flex-1 print:p-0 print:m-0 print:max-w-none">
+              {children}
+            </div>
+          </main>
+
+          <div className={frameClass}>
+            <MobileTabBar />
+            <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} initialView={settingsView} />
           </div>
-        </main>
-
-        <div className={frameClass}>
-          <MobileTabBar />
-          <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} initialView={settingsView} />
+          <GlobalModalWrapper />
+          <OnboardingTour />
         </div>
-        <GlobalModalWrapper />
-        <OnboardingTour />
-      </div>
-    </ModalProvider>
+      </ModalProvider>
     </FeedbackProvider>
   );
 }

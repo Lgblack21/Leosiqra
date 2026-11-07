@@ -30,14 +30,14 @@ export const quickTxService = {
           note: input.note?.trim() ?? '',
           ...(input.date ? { date: input.date } : {}),
         },
-      }
+      },
     );
     await attachmentService.link(input.attachmentId, res.id);
     // Tag disimpan setelah transaksi tercatat (PUT hanya menyentuh payload_json.tags,
     // bukan nominal/saldo). Gagal di sini tidak membatalkan transaksinya.
     if (input.tags?.length) {
-      await cloudflareApi(`/api/member/transactions/${res.id}`, { method: 'PUT', json: { tags: input.tags } }).catch((e) =>
-        console.warn('Tag gagal disimpan:', e)
+      await cloudflareApi(`/api/member/transactions/${res.id}`, { method: 'PUT', json: { tags: input.tags } }).catch(
+        (e) => console.warn('Tag gagal disimpan:', e),
       );
     }
     notifyCollectionChanged('transactions');

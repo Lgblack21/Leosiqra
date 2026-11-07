@@ -81,7 +81,17 @@ export type ItemAppraisal = {
   web: boolean;
   remaining?: number;
 };
-export type AppraiseInput = { itemId?: string; listingId?: string; imageBase64?: string; name: string; variant?: string; condition: string; completeness?: string; minus?: string; area?: string };
+export type AppraiseInput = {
+  itemId?: string;
+  listingId?: string;
+  imageBase64?: string;
+  name: string;
+  variant?: string;
+  condition: string;
+  completeness?: string;
+  minus?: string;
+  area?: string;
+};
 
 // Ladangku › Sedang dijual — /api/member/listings (Worker, migrasi 0028). Dibuat
 // otomatis tiap kali AI selesai menaksir.
@@ -110,7 +120,11 @@ export type Listing = {
 };
 const listingFromRow = (r: Row): Listing => {
   let appraisal: ItemAppraisal | undefined;
-  try { appraisal = typeof r.appraisal_json === 'string' ? (JSON.parse(r.appraisal_json) as ItemAppraisal) : undefined; } catch { appraisal = undefined; }
+  try {
+    appraisal = typeof r.appraisal_json === 'string' ? (JSON.parse(r.appraisal_json) as ItemAppraisal) : undefined;
+  } catch {
+    appraisal = undefined;
+  }
   return {
     id: String(r.id),
     itemId: str(r.item_id),
@@ -124,7 +138,9 @@ const listingFromRow = (r: Row): Listing => {
     itemHasPhoto: Number(r.item_has_photo) === 1,
     itemStatus: str(r.item_status),
     itemUpdatedAt: str(r.item_updated_at),
-    appraisal: appraisal ? { ...appraisal, title: str(r.title) ?? '', description: str(r.description) ?? '' } : undefined,
+    appraisal: appraisal
+      ? { ...appraisal, title: str(r.title) ?? '', description: str(r.description) ?? '' }
+      : undefined,
     price: r.price == null ? undefined : Number(r.price),
     title: str(r.title),
     description: str(r.description),
@@ -140,7 +156,10 @@ export const listingService = {
     const res = await cloudflareApi<{ items: Row[] }>('/api/member/listings');
     return (res.items ?? []).map(listingFromRow);
   },
-  async update(id: string, input: Partial<{ price: number; title: string; description: string; status: 'dijual' | 'batal' }>) {
+  async update(
+    id: string,
+    input: Partial<{ price: number; title: string; description: string; status: 'dijual' | 'batal' }>,
+  ) {
     await cloudflareApi(`/api/member/listings/${id}`, { method: 'PUT', json: input });
     notifyCollectionChanged('listings');
   },
@@ -149,31 +168,61 @@ export const listingService = {
     notifyCollectionChanged('listings');
   },
   async sold(id: string, price: number, accountId: string | null, date?: string) {
-    const res = await cloudflareApi<{ transactionId: string | null }>(`/api/member/listings/${id}/sold`, { method: 'POST', json: { price, account_id: accountId, date } });
+    const res = await cloudflareApi<{ transactionId: string | null }>(`/api/member/listings/${id}/sold`, {
+      method: 'POST',
+      json: { price, account_id: accountId, date },
+    });
     notifyCollectionChanged('listings');
     notifyCollectionChanged('items');
-    if (res.transactionId) { notifyCollectionChanged('transactions'); notifyCollectionChanged('accounts'); }
+    if (res.transactionId) {
+      notifyCollectionChanged('transactions');
+      notifyCollectionChanged('accounts');
+    }
     return res.transactionId;
   },
   /** Foto iklan; tanpa foto sendiri → foto barang Barangku (kalau ada). */
-  photoUrl: (l: Listing) => (l.hasPhoto ? `/api/member/listings/${l.id}/photo?v=${encodeURIComponent(l.updatedAt)}` : l.itemHasPhoto && l.itemId ? `/api/member/items/${l.itemId}/photo?v=${encodeURIComponent(l.itemUpdatedAt ?? '')}` : null),
+  photoUrl: (l: Listing) =>
+    l.hasPhoto
+      ? `/api/member/listings/${l.id}/photo?v=${encodeURIComponent(l.updatedAt)}`
+      : l.itemHasPhoto && l.itemId
+        ? `/api/member/items/${l.itemId}/photo?v=${encodeURIComponent(l.itemUpdatedAt ?? '')}`
+        : null,
 };
 
 export const itemService = {
   /** Ladangku: taksir harga bekas (AI + iklan dari web) & tulis iklan. Kuota 5×/hari. */
   async appraise(i: AppraiseInput): Promise<{ appraisal: ItemAppraisal; listingId: string | null }> {
-    const res = await cloudflareApi<{ appraisal: ItemAppraisal; listingId?: string | null }>('/api/member/items/appraise', {
-      method: 'POST',
-      json: { item_id: i.itemId, listing_id: i.listingId, image_base64: i.imageBase64, name: i.name, variant: i.variant, condition: i.condition, completeness: i.completeness, minus: i.minus, area: i.area },
-    });
+    const res = await cloudflareApi<{ appraisal: ItemAppraisal; listingId?: string | null }>(
+      '/api/member/items/appraise',
+      {
+        method: 'POST',
+        json: {
+          item_id: i.itemId,
+          listing_id: i.listingId,
+          image_base64: i.imageBase64,
+          name: i.name,
+          variant: i.variant,
+          condition: i.condition,
+          completeness: i.completeness,
+          minus: i.minus,
+          area: i.area,
+        },
+      },
+    );
     if (res.listingId) notifyCollectionChanged('listings');
     return { appraisal: res.appraisal, listingId: res.listingId ?? null };
   },
   /** Barang laku: status terjual + (opsional) pemasukan ke rekening — atomik di server. */
   async sell(id: string, price: number, accountId: string | null, date?: string) {
-    const res = await cloudflareApi<{ transactionId: string | null }>(`/api/member/items/${id}/sell`, { method: 'POST', json: { price, account_id: accountId, date } });
+    const res = await cloudflareApi<{ transactionId: string | null }>(`/api/member/items/${id}/sell`, {
+      method: 'POST',
+      json: { price, account_id: accountId, date },
+    });
     notifyCollectionChanged('items');
-    if (res.transactionId) { notifyCollectionChanged('transactions'); notifyCollectionChanged('accounts'); }
+    if (res.transactionId) {
+      notifyCollectionChanged('transactions');
+      notifyCollectionChanged('accounts');
+    }
     return res.transactionId;
   },
   async list(): Promise<Item[]> {
@@ -203,8 +252,12 @@ export const itemService = {
   },
   /** AI kenali barang dari foto barang/struk — hanya saran, tidak menyimpan apa pun. */
   async scan(imageBase64: string): Promise<ItemScan> {
-    const res = await cloudflareApi<{ suggestion: ItemScan }>('/api/member/items/scan', { method: 'POST', json: { imageBase64 } });
+    const res = await cloudflareApi<{ suggestion: ItemScan }>('/api/member/items/scan', {
+      method: 'POST',
+      json: { imageBase64 },
+    });
     return res.suggestion;
   },
-  photoUrl: (item: Pick<Item, 'id' | 'updatedAt'>) => `/api/member/items/${item.id}/photo?v=${encodeURIComponent(item.updatedAt)}`,
+  photoUrl: (item: Pick<Item, 'id' | 'updatedAt'>) =>
+    `/api/member/items/${item.id}/photo?v=${encodeURIComponent(item.updatedAt)}`,
 };

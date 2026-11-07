@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
@@ -10,7 +10,7 @@ import {
   BarChart3,
   TrendingDown,
   Pencil,
-  RefreshCw
+  RefreshCw,
 } from 'lucide-react';
 import { useModal } from '@/context/ModalContext';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -50,27 +50,43 @@ export default function SahamPage() {
           collection(db, 'investments'),
           where('userId', '==', u.uid),
           where('type', '==', 'Saham'),
-          orderBy('dateInvested', 'desc')
+          orderBy('dateInvested', 'desc'),
         );
         if (unsubRef.current) unsubRef.current();
-        unsubRef.current = onSnapshot(q, (snap) => {
-          setInvestments(snap.docs.map(doc => {
-            const d = doc.data();
-            return {
-              ...d, id: doc.id,
-              amountInvested: Number(d.amountInvested) || 0,
-              currentValue: Number(d.currentValue) || 0,
-              dateInvested: d.dateInvested?.toDate?.() ?? new Date(),
-              createdAt: d.createdAt?.toDate?.() ?? new Date()
-            } as Investment;
-          }));
-          setLoading(false);
-        }, (err) => { console.error(err); setLoading(false); });
+        unsubRef.current = onSnapshot(
+          q,
+          (snap) => {
+            setInvestments(
+              snap.docs.map((doc) => {
+                const d = doc.data();
+                return {
+                  ...d,
+                  id: doc.id,
+                  amountInvested: Number(d.amountInvested) || 0,
+                  currentValue: Number(d.currentValue) || 0,
+                  dateInvested: d.dateInvested?.toDate?.() ?? new Date(),
+                  createdAt: d.createdAt?.toDate?.() ?? new Date(),
+                } as Investment;
+              }),
+            );
+            setLoading(false);
+          },
+          (err) => {
+            console.error(err);
+            setLoading(false);
+          },
+        );
 
         accountService.getUserAccounts(u.uid).then(setAccounts).catch(console.error);
-      } else { setInvestments([]); setLoading(false); }
+      } else {
+        setInvestments([]);
+        setLoading(false);
+      }
     });
-    return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
+    return () => {
+      unsub();
+      if (unsubRef.current) unsubRef.current();
+    };
   }, []);
 
   // Harga live (Yahoo Finance, via backend) untuk tiap kode saham+bursa unik
@@ -82,14 +98,17 @@ export default function SahamPage() {
 
     const uniquePairs = Array.from(
       new Map(
-        activeStocks.map(i => {
+        activeStocks.map((i) => {
           const code = (i.stockCode || i.name || '').toUpperCase();
           const exchange = (i.exchangeCode || 'IDX').toUpperCase();
           return [`${code}|${exchange}`, { stockCode: code, exchangeCode: exchange }];
-        })
-      ).values()
+        }),
+      ).values(),
     );
-    const symbolsKey = uniquePairs.map(p => `${p.stockCode}|${p.exchangeCode}`).sort().join(',');
+    const symbolsKey = uniquePairs
+      .map((p) => `${p.stockCode}|${p.exchangeCode}`)
+      .sort()
+      .join(',');
     if (!force && symbolsKey === syncedKeyRef.current) return;
     syncedKeyRef.current = symbolsKey;
 
@@ -98,14 +117,16 @@ export default function SahamPage() {
       const rates: ExchangeRates | null = await exchangeRateService.getLatestRates().catch(() => null);
       const priceMap = new Map<string, LivePrice>();
 
-      await Promise.all(uniquePairs.map(async ({ stockCode, exchangeCode }) => {
-        try {
-          const data = await investmentService.getStockPrice(stockCode, exchangeCode);
-          priceMap.set(`${stockCode}|${exchangeCode}`, data);
-        } catch (e) {
-          console.error(`Gagal ambil harga live ${stockCode}.${exchangeCode}:`, e);
-        }
-      }));
+      await Promise.all(
+        uniquePairs.map(async ({ stockCode, exchangeCode }) => {
+          try {
+            const data = await investmentService.getStockPrice(stockCode, exchangeCode);
+            priceMap.set(`${stockCode}|${exchangeCode}`, data);
+          } catch (e) {
+            console.error(`Gagal ambil harga live ${stockCode}.${exchangeCode}:`, e);
+          }
+        }),
+      );
 
       setLivePrices(priceMap);
 
@@ -116,18 +137,20 @@ export default function SahamPage() {
         if (!live || !inv.id) continue;
 
         const newCurrentValue = (inv.sharesCount || 0) * live.price;
-        const newCurrentValueIdr = live.currency === 'IDR' || !rates
-          ? newCurrentValue
-          : exchangeRateService.convert(newCurrentValue, live.currency, 'IDR', rates);
-        const newReturnPct = inv.amountInvested > 0
-          ? ((newCurrentValue - inv.amountInvested) / inv.amountInvested) * 100
-          : 0;
+        const newCurrentValueIdr =
+          live.currency === 'IDR' || !rates
+            ? newCurrentValue
+            : exchangeRateService.convert(newCurrentValue, live.currency, 'IDR', rates);
+        const newReturnPct =
+          inv.amountInvested > 0 ? ((newCurrentValue - inv.amountInvested) / inv.amountInvested) * 100 : 0;
 
-        await investmentService.updateInvestment(inv.id, {
-          currentValue: newCurrentValue,
-          currentValueIDR: newCurrentValueIdr,
-          returnPercentage: newReturnPct,
-        }).catch(e => console.error(`Gagal sync harga live ke posisi ${inv.id}:`, e));
+        await investmentService
+          .updateInvestment(inv.id, {
+            currentValue: newCurrentValue,
+            currentValueIDR: newCurrentValueIdr,
+            returnPercentage: newReturnPct,
+          })
+          .catch((e) => console.error(`Gagal sync harga live ke posisi ${inv.id}:`, e));
       }
     } finally {
       setSyncingPrices(false);
@@ -135,46 +158,61 @@ export default function SahamPage() {
   }, []);
 
   useEffect(() => {
-    const activeStocks = investments.filter(i => i.status === 'Active' && (i.stockCode || i.name));
+    const activeStocks = investments.filter((i) => i.status === 'Active' && (i.stockCode || i.name));
     syncLivePrices(activeStocks);
   }, [investments, syncLivePrices]);
 
   // Total portofolio digabung lintas saham yang bisa berbeda mata uang, jadi
   // pakai amountIDR/currentValueIDR (sudah dikonversi saat disimpan).
-  const totalInvested = useMemo(() => investments.reduce((s, i) => s + (Number(i.amountIDR) || i.amountInvested), 0), [investments]);
-  const totalCurrent = useMemo(() => investments.reduce((s, i) => s + (Number(i.currentValueIDR) || i.currentValue), 0), [investments]);
+  const totalInvested = useMemo(
+    () => investments.reduce((s, i) => s + (Number(i.amountIDR) || i.amountInvested), 0),
+    [investments],
+  );
+  const totalCurrent = useMemo(
+    () => investments.reduce((s, i) => s + (Number(i.currentValueIDR) || i.currentValue), 0),
+    [investments],
+  );
   const totalReturn = totalInvested > 0 ? ((totalCurrent - totalInvested) / totalInvested) * 100 : 0;
 
   const animatedTotalCurrent = useCountUp(totalCurrent);
   const animatedTotalInvested = useCountUp(totalInvested);
   const animatedTotalReturn = useCountUp(totalReturn);
 
-  const filtered = useMemo(() =>
-    searchQuery ? investments.filter(s => (s.stockCode || s.name || '').toLowerCase().includes(searchQuery.toLowerCase())) : investments,
-    [investments, searchQuery]
+  const filtered = useMemo(
+    () =>
+      searchQuery
+        ? investments.filter((s) => (s.stockCode || s.name || '').toLowerCase().includes(searchQuery.toLowerCase()))
+        : investments,
+    [investments, searchQuery],
   );
 
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0 }).format(n);
   const formatAmount = (n: number, currency: string | undefined) => {
     try {
-      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: currency || 'IDR', minimumFractionDigits: 0 }).format(n);
+      return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: currency || 'IDR',
+        minimumFractionDigits: 0,
+      }).format(n);
     } catch {
       return `${currency || ''} ${formatRp(n)}`.trim();
     }
   };
-  const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
+  const formatDate = (d: Date) =>
+    new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
   const formatTime = (d: Date) => new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' }).format(d);
 
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
-      
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-br from-white to-indigo-50/40 p-6 rounded-[24px] border border-slate-100 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white items-center justify-center shadow-lg shadow-emerald-600/20 shrink-0">
             <BarChart3 size={22} />
           </div>
           <div className="flex flex-col">
-            <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Portofolio Saham</h1>
+            <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">
+              Portofolio Saham
+            </h1>
             <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
               Seluruh posisi · {investments.length} aktif
             </p>
@@ -183,7 +221,12 @@ export default function SahamPage() {
 
         <div className="flex flex-wrap items-center gap-3">
           <button
-            onClick={() => syncLivePrices(investments.filter(i => i.status === 'Active' && (i.stockCode || i.name)), true)}
+            onClick={() =>
+              syncLivePrices(
+                investments.filter((i) => i.status === 'Active' && (i.stockCode || i.name)),
+                true,
+              )
+            }
             disabled={syncingPrices}
             className="px-4 py-3 bg-white border border-slate-100 rounded-xl text-[11px] font-black text-slate-600 hover:bg-slate-50 hover:shadow-sm transition-all shadow-sm active:scale-95 disabled:opacity-50 flex items-center gap-2"
           >
@@ -191,7 +234,10 @@ export default function SahamPage() {
             <span className="hidden md:inline">Refresh Harga</span>
           </button>
           <button
-            onClick={() => { setEditingInvestment(undefined); setShowModal(true); }}
+            onClick={() => {
+              setEditingInvestment(undefined);
+              setShowModal(true);
+            }}
             className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
           >
             <PlusCircle size={18} />
@@ -209,12 +255,20 @@ export default function SahamPage() {
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nilai Portofolio</p>
           </div>
           <div>
-            <h3 className="text-3xl font-black text-slate-900 leading-tight tabular-nums">Rp {formatRp(Math.round(animatedTotalCurrent))}</h3>
-            <p className={`text-[10px] font-bold mt-1 uppercase tracking-wider tabular-nums ${totalReturn >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-              {animatedTotalReturn >= 0 ? '+' : ''}{animatedTotalReturn.toFixed(2)}% Unrealized {totalReturn >= 0 ? 'Profit' : 'Loss'}
+            <h3 className="text-3xl font-black text-slate-900 leading-tight tabular-nums">
+              Rp {formatRp(Math.round(animatedTotalCurrent))}
+            </h3>
+            <p
+              className={`text-[10px] font-bold mt-1 uppercase tracking-wider tabular-nums ${totalReturn >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}
+            >
+              {animatedTotalReturn >= 0 ? '+' : ''}
+              {animatedTotalReturn.toFixed(2)}% Unrealized {totalReturn >= 0 ? 'Profit' : 'Loss'}
             </p>
           </div>
-          <TrendingUp size={48} className="absolute -right-2 -bottom-2 text-emerald-50/50 group-hover:scale-110 transition-transform -rotate-12" />
+          <TrendingUp
+            size={48}
+            className="absolute -right-2 -bottom-2 text-emerald-50/50 group-hover:scale-110 transition-transform -rotate-12"
+          />
         </div>
 
         <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col gap-4 relative overflow-hidden group">
@@ -225,18 +279,29 @@ export default function SahamPage() {
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estimasi Modal</p>
           </div>
           <div>
-            <h3 className="text-3xl font-black text-slate-900 leading-tight tabular-nums">Rp {formatRp(Math.round(animatedTotalInvested))}</h3>
-            <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">{investments.length} posisi aktif</p>
+            <h3 className="text-3xl font-black text-slate-900 leading-tight tabular-nums">
+              Rp {formatRp(Math.round(animatedTotalInvested))}
+            </h3>
+            <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">
+              {investments.length} posisi aktif
+            </p>
           </div>
         </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-4 bg-white p-3 md:p-2 rounded-[24px] md:rounded-3xl border border-slate-50 shadow-sm">
         <div className="flex-1 min-w-[200px] relative group">
-          <Search size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
-          <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+          <Search
+            size={16}
+            className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors"
+          />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Cari kode saham..."
-            className="w-full bg-slate-50/50 border-transparent rounded-xl md:rounded-2xl py-3 md:py-4 pl-12 pr-6 text-sm font-medium focus:ring-0 outline-none transition-all" />
+            className="w-full bg-slate-50/50 border-transparent rounded-xl md:rounded-2xl py-3 md:py-4 pl-12 pr-6 text-sm font-medium focus:ring-0 outline-none transition-all"
+          />
         </div>
       </div>
 
@@ -245,88 +310,168 @@ export default function SahamPage() {
           <div className="p-12 text-center text-sm font-medium text-slate-400">Memuat portofolio...</div>
         ) : filtered.length === 0 ? (
           <div className="p-10">
-            <EmptyState title="Portofolio Saham Kosong" description="Tambahkan posisi saham pertama Anda untuk mulai tracking kinerja portofolio." icon={<BarChart3 size={24} />} />
+            <EmptyState
+              title="Portofolio Saham Kosong"
+              description="Tambahkan posisi saham pertama Anda untuk mulai tracking kinerja portofolio."
+              icon={<BarChart3 size={24} />}
+            />
           </div>
         ) : (
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left border-collapse min-w-[1000px] xl:min-w-0">
               <thead>
                 <tr className="border-b border-slate-50">
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">No</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Jam</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Kode Saham</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Icon/Logo</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Kode Bursa</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Mata Uang</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Jumlah Lembar</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Harga / Lembar</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-indigo-400 uppercase tracking-widest text-right whitespace-nowrap">Nilai Sekarang (Live)</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tipe Transaksi</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Kategori</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Rekening</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Platform</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Aksi</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">
+                    No
+                  </th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                    Jam
+                  </th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                    Tanggal
+                  </th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                    Kode Saham
+                  </th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
+                    Icon/Logo
+                  </th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                    Kode Bursa
+                  </th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
+                    Mata Uang
+                  </th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">
+                    Jumlah Lembar
+                  </th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">
+                    Harga / Lembar
+                  </th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-indigo-400 uppercase tracking-widest text-right whitespace-nowrap">
+                    Nilai Sekarang (Live)
+                  </th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                    Tipe Transaksi
+                  </th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                    Kategori
+                  </th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                    Rekening
+                  </th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                    Platform
+                  </th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
+                    Aksi
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((inv, i) => (
-                  <tr key={inv.id} className="group hover:bg-indigo-50/30 transition-colors border-b border-slate-50 last:border-b-0">
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center text-xs font-bold text-slate-400">{i + 1}</td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-500">{formatTime(inv.createdAt)}</td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-500">{formatDate(inv.dateInvested)}</td>
+                  <tr
+                    key={inv.id}
+                    className="group hover:bg-indigo-50/30 transition-colors border-b border-slate-50 last:border-b-0"
+                  >
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center text-xs font-bold text-slate-400">
+                      {i + 1}
+                    </td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-500">
+                      {formatTime(inv.createdAt)}
+                    </td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-500">
+                      {formatDate(inv.dateInvested)}
+                    </td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap">
                       <p className="text-sm font-black text-slate-900">{inv.stockCode || inv.name}</p>
                     </td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center">
-                      <LogoImage 
-                        src={inv.logoUrl} 
-                        alt={inv.name} 
-                        fallbackText="STK" 
-                        className="w-6 h-6 object-cover mx-auto" 
+                      <LogoImage
+                        src={inv.logoUrl}
+                        alt={inv.name}
+                        fallbackText="STK"
+                        className="w-6 h-6 object-cover mx-auto"
                       />
                     </td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-600 uppercase tracking-tighter">{inv.exchangeCode || 'IDX'}</td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center"><span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{inv.currency || 'IDR'}</span></td>
-                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-bold text-slate-700">{inv.sharesCount || 0}</td>
-                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatAmount(inv.pricePerShare || 0, inv.currency)}</td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-600 uppercase tracking-tighter">
+                      {inv.exchangeCode || 'IDX'}
+                    </td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center">
+                      <span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                        {inv.currency || 'IDR'}
+                      </span>
+                    </td>
+                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-bold text-slate-700">
+                      {inv.sharesCount || 0}
+                    </td>
+                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">
+                      {formatAmount(inv.pricePerShare || 0, inv.currency)}
+                    </td>
                     <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap">
-                      <p className="font-black text-slate-900 text-sm">{formatAmount(inv.currentValue || 0, inv.currency)}</p>
-                      <p className={`text-[10px] font-bold ${inv.returnPercentage >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                        {inv.returnPercentage >= 0 ? '+' : ''}{inv.returnPercentage.toFixed(2)}%
+                      <p className="font-black text-slate-900 text-sm">
+                        {formatAmount(inv.currentValue || 0, inv.currency)}
+                      </p>
+                      <p
+                        className={`text-[10px] font-bold ${inv.returnPercentage >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}
+                      >
+                        {inv.returnPercentage >= 0 ? '+' : ''}
+                        {inv.returnPercentage.toFixed(2)}%
                         {(() => {
-                          const live = livePrices.get(`${(inv.stockCode || inv.name || '').toUpperCase()}|${(inv.exchangeCode || 'IDX').toUpperCase()}`);
-                          return live ? <span className="text-slate-400 font-medium"> · Live {live.changePercent >= 0 ? '+' : ''}{live.changePercent.toFixed(2)}%</span> : null;
+                          const live = livePrices.get(
+                            `${(inv.stockCode || inv.name || '').toUpperCase()}|${(inv.exchangeCode || 'IDX').toUpperCase()}`,
+                          );
+                          return live ? (
+                            <span className="text-slate-400 font-medium">
+                              {' '}
+                              · Live {live.changePercent >= 0 ? '+' : ''}
+                              {live.changePercent.toFixed(2)}%
+                            </span>
+                          ) : null;
                         })()}
                       </p>
                     </td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.transactionType || 'Beli'}</span></td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.category || 'Saham'}</span></td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap">
+                      <span className="text-xs font-bold text-slate-600">{inv.transactionType || 'Beli'}</span>
+                    </td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap">
+                      <span className="text-xs font-bold text-slate-600">{inv.category || 'Saham'}</span>
+                    </td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap">
                       <span className="text-xs font-bold text-slate-600">
-                        {accounts.find(a => a.id === inv.accountId)?.name || inv.accountId || '-'}
+                        {accounts.find((a) => a.id === inv.accountId)?.name || inv.accountId || '-'}
                       </span>
                     </td>
                     <td className="px-4 md:px-6 py-5 text-center">
                       <div className="flex items-center justify-center gap-2">
-                        <button 
-                          onClick={() => { setEditingInvestment(inv); setShowModal(true); }}
-                          className="p-2 rounded-lg bg-blue-50 text-blue-400 hover:bg-blue-500 hover:text-white transition-all">
+                        <button
+                          onClick={() => {
+                            setEditingInvestment(inv);
+                            setShowModal(true);
+                          }}
+                          className="p-2 rounded-lg bg-blue-50 text-blue-400 hover:bg-blue-500 hover:text-white transition-all"
+                        >
                           <Pencil size={14} />
                         </button>
-                        <button onClick={() => openModal('saham', inv as unknown as Record<string, unknown>)}
-                          className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all group/sell relative">
+                        <button
+                          onClick={() => openModal('saham', inv as unknown as Record<string, unknown>)}
+                          className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all group/sell relative"
+                        >
                           <TrendingDown size={14} />
-                          <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] px-2 py-1 rounded opacity-0 group-hover/sell:opacity-100 transition-opacity whitespace-nowrap">Jual Saham</span>
+                          <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] px-2 py-1 rounded opacity-0 group-hover/sell:opacity-100 transition-opacity whitespace-nowrap">
+                            Jual Saham
+                          </span>
                         </button>
-                        <button onClick={async () => {
-                          if (inv.id && user?.uid) {
-                            if (confirm(`Hapus investasi ${inv.name}? Semua total saldo akan dikembalikan.`)) {
-                              await investmentService.hardDeleteInvestment(inv);
+                        <button
+                          onClick={async () => {
+                            if (inv.id && user?.uid) {
+                              if (confirm(`Hapus investasi ${inv.name}? Semua total saldo akan dikembalikan.`)) {
+                                await investmentService.hardDeleteInvestment(inv);
+                              }
                             }
-                          }
-                        }}
-                          className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all">
+                          }}
+                          className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all"
+                        >
                           <Trash2 size={14} />
                         </button>
                       </div>
@@ -339,13 +484,15 @@ export default function SahamPage() {
         )}
       </div>
 
-      <StockInvestmentModal 
-        userId={user?.uid || ''} 
-        isOpen={showModal} 
-        onClose={() => { setShowModal(false); setEditingInvestment(undefined); }} 
+      <StockInvestmentModal
+        userId={user?.uid || ''}
+        isOpen={showModal}
+        onClose={() => {
+          setShowModal(false);
+          setEditingInvestment(undefined);
+        }}
         editData={editingInvestment}
       />
     </div>
   );
 }
-

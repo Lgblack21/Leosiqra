@@ -1,17 +1,17 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import { Sparkles } from "lucide-react";
-import { cloudflareApi } from "@/lib/cloudflare-api";
-import { accountService, Account } from "@/lib/services/accountService";
-import { auth } from "@/lib/cf-client";
-import { notifyCollectionChanged, subscribeToCollectionChanges } from "@/lib/cf-firestore";
-import { CategorySelect } from "@/components/CategorySelect";
-import { NumberInput } from "@/components/ui/NumberInput";
-import { TxTypeToggle, TxType } from "@/components/app/TxTypeToggle";
-import { AccountPicker } from "@/components/app/AccountPicker";
-import { cn } from "@/lib/utils";
-import { attachmentService } from "@/lib/services/attachmentService";
+import { useEffect, useMemo, useState } from 'react';
+import { Sparkles } from 'lucide-react';
+import { cloudflareApi } from '@/lib/cloudflare-api';
+import { accountService, Account } from '@/lib/services/accountService';
+import { auth } from '@/lib/cf-client';
+import { notifyCollectionChanged, subscribeToCollectionChanges } from '@/lib/cf-firestore';
+import { CategorySelect } from '@/components/CategorySelect';
+import { NumberInput } from '@/components/ui/NumberInput';
+import { TxTypeToggle, TxType } from '@/components/app/TxTypeToggle';
+import { AccountPicker } from '@/components/app/AccountPicker';
+import { cn } from '@/lib/utils';
+import { attachmentService } from '@/lib/services/attachmentService';
 
 export interface ParsedTransactionSuggestion {
   type: TxType;
@@ -19,7 +19,7 @@ export interface ParsedTransactionSuggestion {
   category: string | null;
   sub_category: string | null;
   note: string | null;
-  confidence: "high" | "medium" | "low";
+  confidence: 'high' | 'medium' | 'low';
   account_id?: string | null;
   date?: string | null;
   /** Foto struk yang disimpan server saat scan (bukan dari AI). */
@@ -31,34 +31,34 @@ interface TransactionReviewFormProps {
   onSaved: () => void;
 }
 
-const CONFIDENCE_LABEL: Record<ParsedTransactionSuggestion["confidence"], string> = {
-  high: "Yakin",
-  medium: "Cukup yakin",
-  low: "Kurang yakin",
+const CONFIDENCE_LABEL: Record<ParsedTransactionSuggestion['confidence'], string> = {
+  high: 'Yakin',
+  medium: 'Cukup yakin',
+  low: 'Kurang yakin',
 };
 
 export function TransactionReviewForm({ suggestion, onSaved }: TransactionReviewFormProps) {
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [type, setType] = useState<TxType>(suggestion?.type ?? "pengeluaran");
-  const [amount, setAmount] = useState(suggestion?.amount ? String(suggestion.amount) : "");
-  const [accountId, setAccountId] = useState("");
-  const [category, setCategory] = useState(suggestion?.category ?? "");
-  const [subCategory, setSubCategory] = useState(suggestion?.sub_category ?? "");
-  const [note, setNote] = useState(suggestion?.note ?? "");
+  const [type, setType] = useState<TxType>(suggestion?.type ?? 'pengeluaran');
+  const [amount, setAmount] = useState(suggestion?.amount ? String(suggestion.amount) : '');
+  const [accountId, setAccountId] = useState('');
+  const [category, setCategory] = useState(suggestion?.category ?? '');
+  const [subCategory, setSubCategory] = useState(suggestion?.sub_category ?? '');
+  const [note, setNote] = useState(suggestion?.note ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
 
   useEffect(() => {
     const loadAccounts = () =>
       accountService
-        .getUserAccounts(auth.currentUser?.uid ?? "")
+        .getUserAccounts(auth.currentUser?.uid ?? '')
         .then((accs) => {
           setAccounts(accs);
-          setAccountId((prev) => prev || accs[0]?.id || "");
+          setAccountId((prev) => prev || accs[0]?.id || '');
         })
         .catch(() => setAccounts([]));
     loadAccounts();
-    return subscribeToCollectionChanges("accounts", loadAccounts);
+    return subscribeToCollectionChanges('accounts', loadAccounts);
   }, []);
 
   useEffect(() => {
@@ -67,26 +67,22 @@ export function TransactionReviewForm({ suggestion, onSaved }: TransactionReview
     return () => clearTimeout(timer);
   }, [feedback]);
 
-  const selectedAccount = useMemo(
-    () => accounts.find((a) => a.id === accountId),
-    [accounts, accountId]
-  );
+  const selectedAccount = useMemo(() => accounts.find((a) => a.id === accountId), [accounts, accountId]);
 
-  const amountNumber = Number(amount || "0");
+  const amountNumber = Number(amount || '0');
   // category wajib — kolom transactions.category di D1 punya constraint
   // NOT NULL, submit tanpa kategori gagal di server dengan error generik.
   // AI biasanya sudah ngisi category dari suggestion, tapi bisa kosong
   // kalau AI gak yakin/gagal nebak.
-  const canSubmit =
-    amountNumber > 0 && Boolean(selectedAccount) && category.trim().length > 0 && !submitting;
+  const canSubmit = amountNumber > 0 && Boolean(selectedAccount) && category.trim().length > 0 && !submitting;
 
   const handleSubmit = async () => {
     if (!canSubmit || !selectedAccount) return;
     setFeedback(null);
     setSubmitting(true);
     try {
-      const res = await cloudflareApi<{ id: string }>("/api/member/quick-transaction", {
-        method: "POST",
+      const res = await cloudflareApi<{ id: string }>('/api/member/quick-transaction', {
+        method: 'POST',
         json: {
           type,
           amount: amountNumber,
@@ -97,11 +93,11 @@ export function TransactionReviewForm({ suggestion, onSaved }: TransactionReview
         },
       });
       await attachmentService.link(suggestion?.attachment_id, res.id);
-      notifyCollectionChanged("transactions");
-      notifyCollectionChanged("accounts");
+      notifyCollectionChanged('transactions');
+      notifyCollectionChanged('accounts');
       onSaved();
     } catch (e) {
-      setFeedback({ ok: false, msg: e instanceof Error ? e.message : "Gagal menyimpan transaksi." });
+      setFeedback({ ok: false, msg: e instanceof Error ? e.message : 'Gagal menyimpan transaksi.' });
     } finally {
       setSubmitting(false);
     }
@@ -112,12 +108,12 @@ export function TransactionReviewForm({ suggestion, onSaved }: TransactionReview
       {suggestion && (
         <div
           className={cn(
-            "flex items-center gap-2 rounded-2xl px-4 py-3 text-xs font-bold",
-            suggestion.confidence === "high"
-              ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-              : suggestion.confidence === "medium"
-              ? "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400"
-              : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+            'flex items-center gap-2 rounded-2xl px-4 py-3 text-xs font-bold',
+            suggestion.confidence === 'high'
+              ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+              : suggestion.confidence === 'medium'
+                ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400',
           )}
         >
           <Sparkles size={14} />
@@ -135,10 +131,12 @@ export function TransactionReviewForm({ suggestion, onSaved }: TransactionReview
 
       <div className="bg-slate-50 dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 p-6">
         <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-          Nominal {selectedAccount ? `(${selectedAccount.currency})` : ""}
+          Nominal {selectedAccount ? `(${selectedAccount.currency})` : ''}
         </label>
         <div className="flex items-baseline gap-2 mt-2">
-          <span className="text-2xl font-black text-slate-300 dark:text-slate-600">{selectedAccount?.currency ?? "Rp"}</span>
+          <span className="text-2xl font-black text-slate-300 dark:text-slate-600">
+            {selectedAccount?.currency ?? 'Rp'}
+          </span>
           <NumberInput
             value={amount}
             onChange={setAmount}
@@ -153,7 +151,7 @@ export function TransactionReviewForm({ suggestion, onSaved }: TransactionReview
       <CategorySelect
         label="Kategori"
         value={category}
-        type={type === "pengeluaran" ? "expense" : "income"}
+        type={type === 'pengeluaran' ? 'expense' : 'income'}
         onChange={setCategory}
         onSubCategoryChange={setSubCategory}
         showBadge={false}
@@ -173,7 +171,7 @@ export function TransactionReviewForm({ suggestion, onSaved }: TransactionReview
         disabled={!canSubmit}
         className="w-full py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg shadow-indigo-200 disabled:opacity-40 disabled:shadow-none transition-all active:scale-[0.98]"
       >
-        {submitting ? "Menyimpan..." : "Simpan Transaksi"}
+        {submitting ? 'Menyimpan...' : 'Simpan Transaksi'}
       </button>
     </div>
   );

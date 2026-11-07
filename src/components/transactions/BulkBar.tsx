@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -13,7 +13,11 @@ import { cn, formatIDR, isInvestmentFlow } from '@/lib/utils';
 // halaman; komponen ini hanya tampilan.
 
 const short = (n: number) =>
-  n >= 1e6 ? `Rp${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 2 })} jt` : n >= 1e3 ? `Rp${Math.round(n / 1e3)} rb` : formatIDR(n);
+  n >= 1e6
+    ? `Rp${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 2 })} jt`
+    : n >= 1e3
+      ? `Rp${Math.round(n / 1e3)} rb`
+      : formatIDR(n);
 
 export function BulkActionBar({
   open,
@@ -51,16 +55,28 @@ export function BulkActionBar({
           transition={{ type: 'spring', stiffness: 420, damping: 34 }}
           className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] flex justify-center px-3 md:bottom-6 md:left-[84px] lg:left-72 print:hidden"
         >
-          <div role="toolbar" aria-label="Aksi transaksi terpilih" className="pointer-events-auto flex w-full max-w-2xl items-center gap-1.5 rounded-[22px] bg-[#0f172a] p-1.5 pl-4 text-white shadow-[0_24px_50px_-18px_rgba(15,23,42,0.75)] ring-1 ring-white/10">
+          <div
+            role="toolbar"
+            aria-label="Aksi transaksi terpilih"
+            className="pointer-events-auto flex w-full max-w-2xl items-center gap-1.5 rounded-[22px] bg-[#0f172a] p-1.5 pl-4 text-white shadow-[0_24px_50px_-18px_rgba(15,23,42,0.75)] ring-1 ring-white/10"
+          >
             <div className="min-w-0 flex-1">
               <p className="text-[14px] font-bold leading-tight">
                 {count > 0 ? `${count} dipilih` : 'Ketuk transaksi untuk memilih'}
               </p>
               {count > 0 && (
                 <p className="truncate text-[12px] text-white/60 tabular-nums">
-                  {out > 0 && <>keluar <span className="font-semibold text-white">{short(out)}</span></>}
+                  {out > 0 && (
+                    <>
+                      keluar <span className="font-semibold text-white">{short(out)}</span>
+                    </>
+                  )}
                   {out > 0 && inn > 0 && ' · '}
-                  {inn > 0 && <>masuk <span className="font-semibold text-emerald-300">{short(inn)}</span></>}
+                  {inn > 0 && (
+                    <>
+                      masuk <span className="font-semibold text-emerald-300">{short(inn)}</span>
+                    </>
+                  )}
                   {out === 0 && inn === 0 && 'transfer & pindah dana'}
                 </p>
               )}
@@ -71,7 +87,8 @@ export function BulkActionBar({
               disabled={Boolean(busy)}
               className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-semibold text-white/85 hover:bg-white/10 disabled:opacity-40"
             >
-              <CheckCheck size={16} /> <span className="hidden sm:inline">{allSelected ? 'Batal semua' : `Semua ${total}`}</span>
+              <CheckCheck size={16} />{' '}
+              <span className="hidden sm:inline">{allSelected ? 'Batal semua' : `Semua ${total}`}</span>
             </button>
             <button
               type="button"
@@ -91,7 +108,13 @@ export function BulkActionBar({
               {busy ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
               <span className="hidden sm:inline">{busy ?? 'Hapus'}</span>
             </button>
-            <button type="button" onClick={onClose} disabled={Boolean(busy)} aria-label="Keluar dari mode pilih" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/70 hover:bg-white/10 disabled:opacity-40">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={Boolean(busy)}
+              aria-label="Keluar dari mode pilih"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/70 hover:bg-white/10 disabled:opacity-40"
+            >
               <X size={18} />
             </button>
           </div>
@@ -138,12 +161,17 @@ export function BulkCategorySheet({
     <Modal isOpen onClose={onClose} title={`Pindahkan ${count} transaksi`} maxWidth="max-w-md">
       <div className="space-y-4">
         <p className="text-[13px] text-slate-500">
-          Pilih kategori {kind === 'pemasukan' ? 'pemasukan' : 'pengeluaran'} baru. Nominal & saldo tidak berubah — hanya kategorinya.
+          Pilih kategori {kind === 'pemasukan' ? 'pemasukan' : 'pengeluaran'} baru. Nominal & saldo tidak berubah —
+          hanya kategorinya.
         </p>
         {loading ? (
-          <div className="flex justify-center py-8"><Loader2 className="animate-spin text-slate-300" /></div>
+          <div className="flex justify-center py-8">
+            <Loader2 className="animate-spin text-slate-300" />
+          </div>
         ) : list.length === 0 ? (
-          <p className="rounded-2xl bg-slate-50 py-6 text-center text-[14px] text-slate-500">Belum ada kategori {kind}.</p>
+          <p className="rounded-2xl bg-slate-50 py-6 text-center text-[14px] text-slate-500">
+            Belum ada kategori {kind}.
+          </p>
         ) : (
           <div className="grid max-h-[46vh] grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3">
             {list.map((r) => {
@@ -157,13 +185,22 @@ export function BulkCategorySheet({
                   onClick={() => setPicked(r.name)}
                   className={cn(
                     'relative flex flex-col items-center gap-1.5 rounded-[18px] px-2 py-3 text-center ring-1 transition-all',
-                    active ? 'bg-indigo-50 ring-2 ring-indigo-500' : 'bg-white ring-slate-200 hover:bg-slate-50'
+                    active ? 'bg-indigo-50 ring-2 ring-indigo-500' : 'bg-white ring-slate-200 hover:bg-slate-50',
                   )}
                 >
-                  <span className={cn('flex h-11 w-11 items-center justify-center rounded-2xl text-[22px]', v.tile)} aria-hidden>{v.emoji}</span>
+                  <span
+                    className={cn('flex h-11 w-11 items-center justify-center rounded-2xl text-[22px]', v.tile)}
+                    aria-hidden
+                  >
+                    {v.emoji}
+                  </span>
                   <span className="line-clamp-2 text-[13px] font-semibold leading-tight text-slate-800">{r.name}</span>
                   {same && <span className="text-[10px] font-semibold text-slate-400">sekarang</span>}
-                  {active && <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-white"><Check size={13} /></span>}
+                  {active && (
+                    <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-white">
+                      <Check size={13} />
+                    </span>
+                  )}
                 </button>
               );
             })}

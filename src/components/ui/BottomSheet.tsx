@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import { motion, AnimatePresence, type PanInfo } from "framer-motion";
+import { useEffect } from 'react';
+import { motion, AnimatePresence, type PanInfo } from 'framer-motion';
 
 interface BottomSheetProps {
   isOpen: boolean;
@@ -26,12 +26,12 @@ const DISMISS_VELOCITY = 500;
 export function BottomSheet({ isOpen, onClose, title, children, footer, bare }: BottomSheetProps) {
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = "hidden";
+      document.body.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = "unset";
+      document.body.style.overflow = 'unset';
     }
     return () => {
-      document.body.style.overflow = "unset";
+      document.body.style.overflow = 'unset';
     };
   }, [isOpen]);
 
@@ -54,10 +54,10 @@ export function BottomSheet({ isOpen, onClose, title, children, footer, bare }: 
           />
 
           <motion.div
-            initial={{ y: "100%" }}
+            initial={{ y: '100%' }}
             animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 32, stiffness: 320 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 32, stiffness: 320 }}
             drag="y"
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.4 }}
@@ -67,8 +67,20 @@ export function BottomSheet({ isOpen, onClose, title, children, footer, bare }: 
             aria-label={title}
             className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[28px] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
           >
-            <div className={bare ? "pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center pt-2.5" : "shrink-0 flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing"}>
-              <div className={bare ? "w-10 h-1.5 rounded-full bg-white/50" : "w-10 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700"} />
+            <div
+              className={
+                bare
+                  ? 'pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center pt-2.5'
+                  : 'shrink-0 flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing'
+              }
+            >
+              <div
+                className={
+                  bare
+                    ? 'w-10 h-1.5 rounded-full bg-white/50'
+                    : 'w-10 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700'
+                }
+              />
             </div>
 
             {title && (
@@ -77,7 +89,11 @@ export function BottomSheet({ isOpen, onClose, title, children, footer, bare }: 
               </div>
             )}
 
-            <div className={bare ? "overflow-y-auto custom-scrollbar flex-1" : "px-6 pb-6 overflow-y-auto custom-scrollbar flex-1"}>
+            <div
+              className={
+                bare ? 'overflow-y-auto custom-scrollbar flex-1' : 'px-6 pb-6 overflow-y-auto custom-scrollbar flex-1'
+              }
+            >
               {children}
             </div>
 

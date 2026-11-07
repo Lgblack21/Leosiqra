@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useRef, useEffect } from 'react';
 import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -30,7 +30,7 @@ export const DatePicker = ({ value, onChange, className }: DatePickerProps) => {
       setViewMonth(value.getMonth());
       setViewYear(value.getFullYear());
     }
-    setIsOpen(o => !o);
+    setIsOpen((o) => !o);
   };
 
   useEffect(() => {
@@ -93,7 +93,10 @@ export const DatePicker = ({ value, onChange, className }: DatePickerProps) => {
         <span className="text-xs font-black text-slate-700">
           {new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }).format(value)}
         </span>
-        <ChevronDown size={12} className={`text-slate-400 transition-transform duration-300 ml-auto ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown
+          size={12}
+          className={`text-slate-400 transition-transform duration-300 ml-auto ${isOpen ? 'rotate-180' : ''}`}
+        />
       </button>
 
       <AnimatePresence>
@@ -112,7 +115,9 @@ export const DatePicker = ({ value, onChange, className }: DatePickerProps) => {
                 <ChevronLeft size={16} />
               </button>
               <span className="text-xs font-black text-slate-900">
-                {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(viewYear, viewMonth))}
+                {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(
+                  new Date(viewYear, viewMonth),
+                )}
               </span>
               <button
                 onClick={() => changeMonth(1)}
@@ -123,8 +128,10 @@ export const DatePicker = ({ value, onChange, className }: DatePickerProps) => {
             </div>
 
             <div className="grid grid-cols-7 gap-1 mb-1">
-              {WEEKDAY_LABELS.map(w => (
-                <span key={w} className="text-center text-[9px] font-black text-slate-400 uppercase py-1">{w}</span>
+              {WEEKDAY_LABELS.map((w) => (
+                <span key={w} className="text-center text-[9px] font-black text-slate-400 uppercase py-1">
+                  {w}
+                </span>
               ))}
             </div>
 
@@ -144,7 +151,7 @@ export const DatePicker = ({ value, onChange, className }: DatePickerProps) => {
                         : c.inCurrentMonth
                           ? 'text-slate-700 hover:bg-indigo-50 hover:text-indigo-600'
                           : 'text-slate-300 hover:bg-slate-50',
-                      isToday && !isSelected && 'ring-1 ring-inset ring-indigo-300'
+                      isToday && !isSelected && 'ring-1 ring-inset ring-indigo-300',
                     )}
                   >
                     {c.day}

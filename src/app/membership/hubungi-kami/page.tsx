@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { MessageCircle, Mail, Headphones, Copy, Check, ArrowRight } from 'lucide-react';
@@ -50,7 +50,8 @@ export default function HubungiKamiPage() {
         </div>
         <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Hubungi Kami</h1>
         <p className="text-sm font-medium text-slate-500 mt-2 leading-relaxed">
-          Ada pertanyaan, kendala, atau masukan soal Leosiqra? Langsung hubungi kami lewat WhatsApp atau email di bawah ini.
+          Ada pertanyaan, kendala, atau masukan soal Leosiqra? Langsung hubungi kami lewat WhatsApp atau email di bawah
+          ini.
         </p>
       </div>
 

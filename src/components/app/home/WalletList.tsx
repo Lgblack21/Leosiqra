@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { Wallet as WalletIcon } from "lucide-react";
-import { Account } from "@/lib/services/accountService";
-import { StaggerList, StaggerItem } from "@/components/app/FadeIn";
-import { useBalanceVisibility } from "@/lib/hooks/useBalanceVisibility";
+import { Wallet as WalletIcon } from 'lucide-react';
+import { Account } from '@/lib/services/accountService';
+import { StaggerList, StaggerItem } from '@/components/app/FadeIn';
+import { useBalanceVisibility } from '@/lib/hooks/useBalanceVisibility';
 
 interface WalletListProps {
   accounts: Account[];
@@ -11,9 +11,9 @@ interface WalletListProps {
 
 const formatBalance = (amount: number, currency: string) => {
   try {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: currency || "IDR",
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: currency || 'IDR',
       maximumFractionDigits: 0,
     }).format(amount);
   } catch {

@@ -68,17 +68,20 @@ const matchDomain = (accountName: string, entries: InstitutionEntry[]): string |
  *  rekening yang sudah ada dengan pilihan di pemilih akun. */
 export function institutionDomain(accountName: string, accountType: string): string | null {
   const entries = accountType === 'E-Wallet' ? EWALLET_ENTRIES : BANK_ENTRIES;
-  return matchDomain(accountName, entries) ?? (accountType === 'E-Wallet' ? null : matchDomain(accountName, EWALLET_ENTRIES));
+  return (
+    matchDomain(accountName, entries) ?? (accountType === 'E-Wallet' ? null : matchDomain(accountName, EWALLET_ENTRIES))
+  );
 }
 
 // Bank/e-wallet luar Indonesia (mis. "ABA Khmer") sengaja tidak ada di daftar
 // ini — tetap jatuh ke upload logo manual seperti biasa.
 export function matchIndonesianInstitutionLogo(accountName: string, accountType: string): string | null {
-  const entries = accountType === 'E-Wallet'
-    ? EWALLET_ENTRIES
-    : accountType === 'Bank Account' || accountType === 'Credit Card'
-      ? BANK_ENTRIES
-      : null;
+  const entries =
+    accountType === 'E-Wallet'
+      ? EWALLET_ENTRIES
+      : accountType === 'Bank Account' || accountType === 'Credit Card'
+        ? BANK_ENTRIES
+        : null;
   if (!entries) return null;
 
   const domain = matchDomain(accountName, entries);
