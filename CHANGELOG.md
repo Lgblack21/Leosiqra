@@ -53,6 +53,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.3.0 | 7 Nov 2026 | Makanku & Leo di tiap fitur |
 | 3.3.1 | 7 Nov 2026 | Makanku jadi Sehatku, layar penuh |
 | 3.4.0 | 7 Nov 2026 | Analisis makanan dari ketikan & bayar koin |
+| 3.5.0 | 7 Nov 2026 | Sehatku › Asuransi |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -66,6 +67,19 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.5.0 — 2026-11-07 — Sehatku › Asuransi
+
+- Tab **Asuransi** di Sehatku:
+  - **Biaya kesehatan tahun ini** — total & grafik per bulan dari transaksi kategori Kesehatan, rincian obat/dokter/
+    RS/lab/premi, dan tombol **Catat biaya kesehatan** langsung dari halaman ini.
+  - **Polisku** — simpan BPJS, asuransi swasta, atau dari kantor: premi, periode, jatuh tempo, uang pertanggungan,
+    nomor polis (hanya kamu yang lihat), plus catatan pribadi (agen, cara klaim, RS langganan). Pengingat H-3 & H-1
+    sebelum premi jatuh tempo. **Bayar premi** mencatat pengeluaran dan memajukan jatuh tempo otomatis.
+  - **Klaim** — lacak reimburse Diajukan → Disetujui → Cair; saat cair, uangnya langsung tercatat sebagai pemasukan.
+  - **Kenali asuransinya** — 23 perusahaan asuransi + BPJS: call center, WhatsApp, email, jam layanan, tautan cara klaim
+    & RS rekanan yang dibaca dari situs resminya (dengan tanggal baca), iuran BPJS Kesehatan, tombol **Ini asuransiku**.
+- Leo si Perawat di tab Asuransi: materi singkat & tanya-jawab soal asuransi dan biaya berobat.
 
 ## 3.4.0 — 2026-11-07 — Analisis makanan dari ketikan & bayar koin
 

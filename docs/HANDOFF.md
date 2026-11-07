@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live: rilis 3.4.0, run 42366120539; migrasi 0036 & 0037 menunggu Bos)
+Terakhir diperbarui: 2026-11-07 (live 3.4.0; 3.5.0 menunggu "gas"; migrasi 0036, 0037, 0038 menunggu Bos)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,24 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-07 — RILIS 3.5.0 (branch `claude/sehat-asuransi-20261107`): Sehatku › Asuransi. MIGRASI 0038 menunggu Bos.**
+  - **MIGRASI di D1 Console** (0038_health.sql, boleh sebelum/sesudah deploy): tabel `health_policies` + `health_claims`
+    (+ 3 index). Tanpa tabel: biaya kesehatan & direktori tetap jalan, Polisku/Klaim → ready:false / 503.
+  - Worker `handleMemberHealth` (/api/member/health/*): summary (biaya per bulan & sub dari kategori Kesehatan, polis,
+    klaim, rekening IDR), POST costs (pengeluaran Kesehatan, idem related_id=request_id), policies CRUD (maks 30),
+    POST policies/:id/pay (pengeluaran Kesehatan › Asuransi + next_due maju per periode, anchor due_day; idem
+    payload.premiumPayId), claims CRUD (maks 300) + PATCH status cair+account → pemasukan "Klaim Asuransi" sekali
+    (tx_id IS NULL). `sendPremiumReminders` di cron harian (H-3/H-1, reminded_for "tgl|tahap", toggle notify.bills).
+  - Direktori `src/lib/insurers.ts`: dibaca 7 Nov 2026 dari situs resmi (environment baru **leosiqra** dengan 20 host
+    asuransi + OJK — sesi lain tetap di Default). Terverifikasi: Allianz, Astra Life, Avrist, AXA Mandiri, Equity, FWD,
+    Generali, Manulife, Prudential (+BPJS dari Perpres 64/2020). Belum (situs 403/JS/redirect): AIA (aia.co.id belum
+    di-allow), BNI Life, BRI Life, Chubb, Great Eastern ID, Inhealth, MSIG, Panin, Sequis, Sinar Mas, Sun Life, Tokio
+    Marine, Zurich → hanya nama + situs. Tile inisial berwarna (bukan logo merek).
+  - AI chat page 'asuransi' (Leo si Perawat, aksesori topi perawat).
+  - Dites lokal: biaya 50rb + dobel; polis + validasi; bayar premi + dobel; jatuh tempo 31 Jan→28 Feb→31 Mar; klaim
+    disetujui 1,5jt → cair → pemasukan, cair lagi tidak dobel; saldo 1jt→1,55jt sesuai; cron H-3 menandai polis;
+    hapus polis melepas klaim. UI web 1366 + iPhone 13, 0 error JS.
 
 - **2026-11-07 — RILIS 3.4.0: LIVE (run 42366120539, commit b02d143, Release v3.4.0): analisis makanan dari ketikan + bayar koin. Tanpa SQL baru.**
   - `/api/member/meals/analyze` terima `text` (≥3, ≤300 karakter) tanpa foto. PATCH meals kini juga items/score/tip/ai.

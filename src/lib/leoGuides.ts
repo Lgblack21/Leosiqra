@@ -2,8 +2,8 @@
 // Pertanyaan dijawab langsung di popup (POST /api/member/ai/chat dengan `page` — nilai `page`
 // WAJIB ada di AI_CHAT_PAGES di Worker supaya model tahu konteks halamannya).
 
-export type LeoGuideTopic = 'makan' | 'cerita' | 'fokus' | 'ladang' | 'investasi';
-export type LeoAccessory = 'chef' | 'beret' | 'headphones' | 'sprout' | 'glasses';
+export type LeoGuideTopic = 'makan' | 'asuransi' | 'cerita' | 'fokus' | 'ladang' | 'investasi';
+export type LeoAccessory = 'chef' | 'nurse' | 'beret' | 'headphones' | 'sprout' | 'glasses';
 
 export type LeoGuide = {
   name: string;
@@ -43,6 +43,35 @@ export const LEO_GUIDES: Record<LeoGuideTopic, LeoGuide> = {
       'Kasih ide menu sehat di bawah Rp25 ribu',
       'Makanan tinggi protein yang murah apa aja?',
       'Gimana cara hemat uang makan tanpa ngorbanin gizi?',
+    ],
+  },
+  asuransi: {
+    name: 'Leo si Perawat',
+    greeting: 'Bingung soal asuransi & biaya berobat? Tanya aku pelan-pelan.',
+    accessory: 'nurse',
+    accent: 'from-teal-400 via-emerald-400 to-cyan-400',
+    facts: [
+      {
+        emoji: '🧾',
+        title: 'Simpan semua kuitansi',
+        body: 'Reimburse butuh kuitansi asli, resume medis, dan formulir klaim. Foto semuanya sebelum diserahkan.',
+      },
+      {
+        emoji: '⏰',
+        title: 'Perhatikan batas waktu',
+        body: 'Banyak polis membatasi pengajuan reimburse, misalnya 30–90 hari. Cek di polismu.',
+      },
+      {
+        emoji: '🛡️',
+        title: 'Premi tepat waktu',
+        body: 'Telat bayar bisa membuat polis tidak aktif. Leo mengingatkan H-3 dan H-1.',
+      },
+    ],
+    questions: [
+      'Berapa total biaya kesehatanku tahun ini?',
+      'Beda cashless dan reimburse apa?',
+      'Asuransi kesehatan dari kantor sudah cukup belum?',
+      'Gimana cara hemat biaya berobat?',
     ],
   },
   cerita: {

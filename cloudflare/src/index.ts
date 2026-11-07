@@ -8717,6 +8717,7 @@ async function handleAiQuota(request: Request, env: Env) {
 // Halaman fitur yang punya popup Leo (src/lib/leoGuides.ts). Nilai = keterangan untuk model.
 const AI_CHAT_PAGES: Record<string, string> = {
   makan: "Sehatku › Makan — catatan makan harian dari foto (kalori & gizi perkiraan AI), bisa langsung dicatat jadi pengeluaran Makanan & Minuman. Jawab soal makan, gizi umum, dan belanja makan; bukan diagnosis medis.",
+  asuransi: "Sehatku › Asuransi — biaya kesehatan setahun (kategori Kesehatan), polis milik user (premi, jatuh tempo), dan klaim reimburse. Jelaskan istilah asuransi dengan bahasa awam; jangan merekomendasikan produk/perusahaan tertentu dan bukan nasihat medis/hukum.",
   cerita: "Cerita Hari Ini — jurnal harian dengan mood, foto, ilustrasi AI, dan ringkasan uang hari itu.",
   fokus: "Fokus bareng Leo — timer fokus/pomodoro, musik, latihan napas.",
   ladang: "Ladangku — usaha (kasir, stok, tim), jual barang nganggur, dan tagih utang.",
@@ -13577,6 +13578,335 @@ async function handleMemberMeals(request: Request, env: Env, url: URL) {
     throw e;
   }
 }
+
+// ── Sehatku › Asuransi (migrasi 0038) ───────────────────────────────────────
+// Biaya kesehatan setahun (dari transaksi kategori Kesehatan), polis milik user (premi, jatuh tempo,
+// pengingat H-3/H-1, "Bayar premi" = pengeluaran + majukan jatuh tempo), dan pelacak klaim reimburse
+// (status Cair → pemasukan). Semua mutasi saldo lewat quickTxBalanceStatements dalam SATU batch,
+// anti dobel lewat kondisi di baris yang sama (request_id / tx_id IS NULL).
+const HEALTH_NOT_READY = "Asuransi di Sehatku sedang disiapkan di server (menunggu pembaruan database). Coba lagi nanti.";
+const healthTableMissing = (e: unknown) => e instanceof Error && /no such table: health_(policies|claims)/i.test(e.message);
+const HEALTH_CATEGORY = "Kesehatan";
+const HEALTH_COST_SUBS = ["Obat", "Dokter", "Rumah Sakit", "Lab", "Asuransi", "Lainnya"] as const;
+const POLICY_KINDS = ["kesehatan", "jiwa", "kritis", "kantor", "lainnya"] as const;
+const POLICY_PERIODS: Record<string, number> = { bulanan: 1, triwulan: 3, semester: 6, tahunan: 12, sekali: 0 };
+const CLAIM_STATUSES = ["diajukan", "disetujui", "ditolak", "cair"] as const;
+const hText = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/[\u0000-\u001f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, max) : "");
+const hMoney = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1e11 ? Math.round(v) : null);
+const hDate = (v: unknown) => (typeof v === "string" && STORY_DATE_RE.test(v) && isRealDateStr(v) && v >= "2000-01-01" && v <= "2100-12-31" ? v : null);
+const addMonthsAnchored = (date: string, months: number, day: number) => {
+  const [y, m] = date.split("-").map(Number);
+  const total = y * 12 + (m - 1) + months;
+  const yy = Math.floor(total / 12);
+  const mm = (total % 12) + 1;
+  const last = new Date(Date.UTC(yy, mm, 0)).getUTCDate();
+  return `${yy}-${String(mm).padStart(2, "0")}-${String(Math.min(day, last)).padStart(2, "0")}`;
+};
+const healthAccount = (env: Env, userId: string, id: unknown) =>
+  typeof id === "string" && id
+    ? env.DB.prepare("SELECT id FROM accounts WHERE id = ? AND user_id = ? AND COALESCE(currency, 'IDR') = 'IDR'").bind(id, userId).first<{ id: string }>()
+    : Promise.resolve(null);
+const publishTx = async (env: Env, userId: string, txId: string) => {
+  try {
+    const durableId = env.REALTIME_ROOM.idFromName(`member:${userId}`);
+    await env.REALTIME_ROOM.get(durableId).fetch("https://realtime.internal/publish", { method: "POST", body: JSON.stringify({ event: "transaction.created", payload: { id: txId, userId } }) });
+  } catch { /* realtime opsional */ }
+};
+const insertHealthTx = (env: Env, userId: string, p: { txId: string; type: "pengeluaran" | "pemasukan"; amount: number; category: string; sub: string; accountId: string; date: string; note: string; relatedId: string; relatedType: string; payload: Record<string, unknown>; guardSql: string; guardBinds: unknown[] }) => {
+  const now = nowIso();
+  return [
+    env.DB.prepare(
+      `INSERT INTO transactions (id, user_id, type, amount, amount_idr, category, sub_category, currency, account_id, date, display_date, note, status, related_id, related_type, payload_json, created_at, updated_at)
+       SELECT ?, ?, ?, ?, ?, ?, ?, 'IDR', ?, ?, ?, ?, 'VERIFIED', ?, ?, ?, ?, ? WHERE ${p.guardSql}`
+    ).bind(p.txId, userId, p.type, p.amount, p.amount, p.category, p.sub, p.accountId, p.date, p.date, p.note.slice(0, 200), p.relatedId, p.relatedType, JSON.stringify(p.payload), now, now, ...p.guardBinds),
+    ...quickTxBalanceStatements(env, userId, p.txId, p.accountId, p.type, p.amount),
+  ];
+};
+
+async function handleMemberHealth(request: Request, env: Env, url: URL) {
+  const auth = await requireSession(env, request);
+  if (auth.error) return auth.error;
+  const userId = auth.session.user.id;
+  const parts = url.pathname.split("/").filter(Boolean); // api, member, health, [summary|costs|policies|claims], [id], [pay]
+  const what = parts[3];
+  const id = parts[4];
+  const act = parts[5];
+  const today = todayWIB();
+  try {
+    if (what === "summary" && request.method === "GET") {
+      const y = /^\d{4}$/.test(url.searchParams.get("year") ?? "") ? url.searchParams.get("year")! : today.slice(0, 4);
+      const costs = await env.DB.prepare(
+        "SELECT COALESCE(sub_category, 'Lainnya') AS sub, substr(date, 6, 2) AS m, ROUND(SUM(COALESCE(amount_idr, amount))) AS s FROM transactions WHERE user_id = ? AND type = 'pengeluaran' AND category = ? AND substr(date, 1, 4) = ? GROUP BY sub, m"
+      ).bind(userId, HEALTH_CATEGORY, y).all<{ sub: string; m: string; s: number }>();
+      const bySub = new Map<string, number>();
+      const byMonth = Array.from({ length: 12 }, () => 0);
+      for (const r of costs.results ?? []) {
+        bySub.set(r.sub, (bySub.get(r.sub) ?? 0) + Number(r.s || 0));
+        const mi = Number(r.m) - 1;
+        if (mi >= 0 && mi < 12) byMonth[mi] += Number(r.s || 0);
+      }
+      const recent = await env.DB.prepare(
+        "SELECT id, amount, sub_category AS sub, note, substr(date, 1, 10) AS date FROM transactions WHERE user_id = ? AND type = 'pengeluaran' AND category = ? ORDER BY date DESC, created_at DESC LIMIT 6"
+      ).bind(userId, HEALTH_CATEGORY).all();
+      const accounts = await env.DB.prepare(
+        "SELECT id, name FROM accounts WHERE user_id = ? AND COALESCE(currency, 'IDR') = 'IDR' ORDER BY COALESCE(sort_order, 0), created_at LIMIT 30"
+      ).bind(userId).all<{ id: string; name: string }>().catch(() => ({ results: [] as { id: string; name: string }[] }));
+      let ready = true;
+      let policies: Record<string, unknown>[] = [];
+      let claims: Record<string, unknown>[] = [];
+      try {
+        policies = (await env.DB.prepare(
+          "SELECT id, insurer_key, insurer_name, kind, product, policy_no, premium, period, next_due, coverage, account_id, call_center, claim_note, hospitals_note, note, updated_at FROM health_policies WHERE user_id = ? ORDER BY CASE WHEN next_due IS NULL THEN 1 ELSE 0 END, next_due, created_at"
+        ).bind(userId).all<Record<string, unknown>>()).results ?? [];
+        claims = (await env.DB.prepare(
+          "SELECT c.id, c.policy_id, c.title, c.amount, c.approved_amount, c.status, c.submitted_at, c.paid_at, c.note, CASE WHEN c.tx_id IS NOT NULL AND EXISTS (SELECT 1 FROM transactions t WHERE t.id = c.tx_id AND t.user_id = c.user_id) THEN 1 ELSE 0 END AS recorded, p.insurer_name FROM health_claims c LEFT JOIN health_policies p ON p.id = c.policy_id AND p.user_id = c.user_id WHERE c.user_id = ? ORDER BY CASE c.status WHEN 'diajukan' THEN 0 WHEN 'disetujui' THEN 1 ELSE 2 END, c.submitted_at DESC LIMIT 100"
+        ).bind(userId).all<Record<string, unknown>>()).results ?? [];
+      } catch (e) {
+        if (!healthTableMissing(e)) throw e;
+        ready = false;
+      }
+      return json({
+        ready, year: y, today,
+        costs: { total: byMonth.reduce((a, b) => a + b, 0), bySub: [...bySub.entries()].map(([sub, total]) => ({ sub, total })).sort((a, b) => b.total - a.total), byMonth, recent: recent.results ?? [] },
+        policies, claims, accounts: accounts.results ?? [],
+      });
+    }
+
+    // Catat biaya kesehatan (pengeluaran kategori Kesehatan) langsung dari Sehatku.
+    if (what === "costs" && !id && request.method === "POST") {
+      const raw = await parseJson<Record<string, unknown>>(request);
+      const requestId = typeof raw.request_id === "string" && /^[0-9a-f-]{36}$/i.test(raw.request_id) ? raw.request_id.toLowerCase() : null;
+      const amount = hMoney(raw.amount);
+      const sub = (HEALTH_COST_SUBS as readonly unknown[]).includes(raw.sub) ? (raw.sub as string) : "Lainnya";
+      const date = hDate(raw.date) && (raw.date as string) <= today ? (raw.date as string) : today;
+      if (!requestId) return json({ error: "Permintaan tidak valid. Muat ulang halaman." }, { status: 400 });
+      if (!amount) return json({ error: "Isi nominal biayanya." }, { status: 400 });
+      const acc = await healthAccount(env, userId, raw.account_id);
+      if (!acc) return json({ error: "Pilih rekening Rupiah untuk biayanya." }, { status: 400 });
+      const txId = generateId();
+      const res = await env.DB.batch(insertHealthTx(env, userId, {
+        txId, type: "pengeluaran", amount, category: HEALTH_CATEGORY, sub, accountId: acc.id, date, note: hText(raw.note, 120) || sub,
+        relatedId: requestId, relatedType: "health", payload: { healthCostId: requestId },
+        guardSql: "NOT EXISTS (SELECT 1 FROM transactions WHERE user_id = ? AND related_type = 'health' AND related_id = ?)", guardBinds: [userId, requestId],
+      }));
+      if (!res[0]?.meta.changes) return json({ ok: true, duplicate: true });
+      await publishTx(env, userId, txId);
+      return json({ ok: true, tx_id: txId }, { status: 201 });
+    }
+
+    if (what === "policies") {
+      const readPolicy = (raw: Record<string, unknown>, partial: boolean) => {
+        const out: Record<string, unknown> = {};
+        if (!partial || raw.insurer_name !== undefined) {
+          const n = hText(raw.insurer_name, 80);
+          if (!n) return "Pilih atau tulis nama asuransinya.";
+          out.insurer_name = n;
+          out.insurer_key = hText(raw.insurer_key, 40) || null;
+        }
+        if (!partial || raw.kind !== undefined) {
+          if (!(POLICY_KINDS as readonly unknown[]).includes(raw.kind)) return "Pilih jenis asuransinya.";
+          out.kind = raw.kind;
+        }
+        if (!partial || raw.period !== undefined) {
+          const p = typeof raw.period === "string" && raw.period in POLICY_PERIODS ? raw.period : partial ? null : "bulanan";
+          if (!p) return "Periode premi tidak dikenal.";
+          out.period = p;
+        }
+        if (raw.next_due !== undefined) {
+          if (raw.next_due !== null && !hDate(raw.next_due)) return "Tanggal jatuh tempo tidak valid.";
+          out.next_due = raw.next_due === null ? null : raw.next_due;
+          out.due_day = raw.next_due === null ? null : Number(String(raw.next_due).slice(8, 10));
+          out.reminded_for = null;
+        }
+        for (const k of ["premium", "coverage"] as const) {
+          if (raw[k] === undefined) continue;
+          if (raw[k] !== null && hMoney(raw[k]) === null) return "Nominal tidak valid.";
+          out[k] = raw[k] === null ? null : hMoney(raw[k]);
+        }
+        for (const [k, max] of [["product", 80], ["policy_no", 60], ["call_center", 80], ["claim_note", 600], ["hospitals_note", 300], ["note", 300]] as const) {
+          if (raw[k] !== undefined) out[k] = hText(raw[k], max) || null;
+        }
+        return out;
+      };
+      if (!id && request.method === "POST") {
+        const raw = await parseJson<Record<string, unknown>>(request);
+        const data = readPolicy(raw, false);
+        if (typeof data === "string") return json({ error: data }, { status: 400 });
+        if (raw.account_id !== undefined && raw.account_id !== null) {
+          const acc = await healthAccount(env, userId, raw.account_id);
+          if (!acc) return json({ error: "Rekening tidak ditemukan." }, { status: 400 });
+          data.account_id = acc.id;
+        }
+        const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM health_policies WHERE user_id = ?").bind(userId).first<{ n: number }>();
+        if ((count?.n ?? 0) >= 30) return json({ error: "Maksimal 30 polis." }, { status: 400 });
+        const pid = generateId();
+        const now = nowIso();
+        const cols = ["id", "user_id", ...Object.keys(data), "created_at", "updated_at"];
+        await env.DB.prepare(`INSERT INTO health_policies (${cols.join(", ")}) VALUES (${cols.map(() => "?").join(", ")})`).bind(pid, userId, ...Object.values(data), now, now).run();
+        return json({ ok: true, id: pid }, { status: 201 });
+      }
+      if (!id) return json({ error: "Rute tidak dikenal." }, { status: 404 });
+      const pol = await env.DB.prepare("SELECT id, insurer_name, product, premium, period, next_due, due_day FROM health_policies WHERE id = ? AND user_id = ?").bind(id, userId).first<{ id: string; insurer_name: string; product: string | null; premium: number | null; period: string; next_due: string | null; due_day: number | null }>();
+      if (!pol) return json({ error: "Polis tidak ditemukan." }, { status: 404 });
+      if (!act && request.method === "PATCH") {
+        const raw = await parseJson<Record<string, unknown>>(request);
+        const data = readPolicy(raw, true);
+        if (typeof data === "string") return json({ error: data }, { status: 400 });
+        if (raw.account_id !== undefined) {
+          if (raw.account_id === null) data.account_id = null;
+          else {
+            const acc = await healthAccount(env, userId, raw.account_id);
+            if (!acc) return json({ error: "Rekening tidak ditemukan." }, { status: 400 });
+            data.account_id = acc.id;
+          }
+        }
+        if (!Object.keys(data).length) return json({ error: "Tidak ada yang diubah." }, { status: 400 });
+        await env.DB.prepare(`UPDATE health_policies SET ${Object.keys(data).map((k) => `${k} = ?`).join(", ")}, updated_at = ? WHERE id = ? AND user_id = ?`).bind(...Object.values(data), nowIso(), id, userId).run();
+        return json({ ok: true });
+      }
+      if (!act && request.method === "DELETE") {
+        // Riwayat pembayaran premi tetap ada di Transaksi; klaim yang menunjuk polis ini dilepas.
+        await env.DB.batch([
+          env.DB.prepare("UPDATE health_claims SET policy_id = NULL WHERE user_id = ? AND policy_id = ?").bind(userId, id),
+          env.DB.prepare("DELETE FROM health_policies WHERE id = ? AND user_id = ?").bind(id, userId),
+        ]);
+        return json({ ok: true });
+      }
+      // Bayar premi: pengeluaran Kesehatan › Asuransi + jatuh tempo maju satu periode (bersama, sekali per request_id).
+      if (act === "pay" && request.method === "POST") {
+        const raw = await parseJson<Record<string, unknown>>(request);
+        const requestId = typeof raw.request_id === "string" && /^[0-9a-f-]{36}$/i.test(raw.request_id) ? raw.request_id.toLowerCase() : null;
+        if (!requestId) return json({ error: "Permintaan tidak valid. Muat ulang halaman." }, { status: 400 });
+        const amount = hMoney(raw.amount) ?? pol.premium;
+        if (!amount) return json({ error: "Isi nominal preminya." }, { status: 400 });
+        const acc = await healthAccount(env, userId, raw.account_id);
+        if (!acc) return json({ error: "Pilih rekening untuk bayar premi." }, { status: 400 });
+        const months = POLICY_PERIODS[pol.period] ?? 0;
+        const nextDue = pol.next_due && months ? addMonthsAnchored(pol.next_due, months, pol.due_day ?? Number(pol.next_due.slice(8, 10))) : pol.next_due;
+        const txId = generateId();
+        const statements = [
+          ...insertHealthTx(env, userId, {
+            txId, type: "pengeluaran", amount, category: HEALTH_CATEGORY, sub: "Asuransi", accountId: acc.id, date: today,
+            note: `Premi ${pol.insurer_name}${pol.product ? ` · ${pol.product}` : ""}`, relatedId: pol.id, relatedType: "health_premium", payload: { premiumPayId: requestId, policyId: pol.id },
+            guardSql: "NOT EXISTS (SELECT 1 FROM transactions WHERE user_id = ? AND related_type = 'health_premium' AND json_valid(payload_json) AND json_extract(payload_json, '$.premiumPayId') = ?)", guardBinds: [userId, requestId],
+          }),
+          env.DB.prepare("UPDATE health_policies SET next_due = ?, reminded_for = NULL, updated_at = ? WHERE id = ? AND user_id = ? AND EXISTS (SELECT 1 FROM transactions WHERE id = ? AND user_id = ?)").bind(nextDue, nowIso(), pol.id, userId, txId, userId),
+        ];
+        const res = await env.DB.batch(statements);
+        if (!res[0]?.meta.changes) return json({ ok: true, duplicate: true });
+        await publishTx(env, userId, txId);
+        return json({ ok: true, tx_id: txId, next_due: nextDue }, { status: 201 });
+      }
+      return json({ error: "Rute tidak dikenal." }, { status: 404 });
+    }
+
+    if (what === "claims") {
+      if (!id && request.method === "POST") {
+        const raw = await parseJson<Record<string, unknown>>(request);
+        const title = hText(raw.title, 80);
+        const amount = hMoney(raw.amount);
+        if (!title) return json({ error: "Tulis untuk apa klaimnya, mis. rawat inap RS." }, { status: 400 });
+        if (!amount) return json({ error: "Isi nominal yang diklaim." }, { status: 400 });
+        let policyId: string | null = null;
+        if (typeof raw.policy_id === "string" && raw.policy_id) {
+          const p = await env.DB.prepare("SELECT id FROM health_policies WHERE id = ? AND user_id = ?").bind(raw.policy_id, userId).first<{ id: string }>();
+          if (!p) return json({ error: "Polis tidak ditemukan." }, { status: 400 });
+          policyId = p.id;
+        }
+        const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM health_claims WHERE user_id = ?").bind(userId).first<{ n: number }>();
+        if ((count?.n ?? 0) >= 300) return json({ error: "Maksimal 300 klaim." }, { status: 400 });
+        const cid = generateId();
+        const now = nowIso();
+        const submitted = hDate(raw.submitted_at) && (raw.submitted_at as string) <= today ? (raw.submitted_at as string) : today;
+        await env.DB.prepare("INSERT INTO health_claims (id, user_id, policy_id, title, amount, status, submitted_at, note, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'diajukan', ?, ?, ?, ?)").bind(cid, userId, policyId, title, amount, submitted, hText(raw.note, 300) || null, now, now).run();
+        return json({ ok: true, id: cid }, { status: 201 });
+      }
+      if (!id) return json({ error: "Rute tidak dikenal." }, { status: 404 });
+      const cl = await env.DB.prepare("SELECT c.id, c.title, c.amount, c.approved_amount, c.status, c.tx_id, p.insurer_name FROM health_claims c LEFT JOIN health_policies p ON p.id = c.policy_id AND p.user_id = c.user_id WHERE c.id = ? AND c.user_id = ?").bind(id, userId).first<{ id: string; title: string; amount: number; approved_amount: number | null; status: string; tx_id: string | null; insurer_name: string | null }>();
+      if (!cl) return json({ error: "Klaim tidak ditemukan." }, { status: 404 });
+      if (request.method === "DELETE") {
+        await env.DB.prepare("DELETE FROM health_claims WHERE id = ? AND user_id = ?").bind(id, userId).run();
+        return json({ ok: true, tx_kept: Boolean(cl.tx_id) });
+      }
+      if (request.method === "PATCH") {
+        const raw = await parseJson<Record<string, unknown>>(request);
+        const status = raw.status === undefined ? cl.status : raw.status;
+        if (!(CLAIM_STATUSES as readonly unknown[]).includes(status)) return json({ error: "Status klaim tidak dikenal." }, { status: 400 });
+        const approved = raw.approved_amount === undefined ? cl.approved_amount : raw.approved_amount === null ? null : hMoney(raw.approved_amount);
+        if (raw.approved_amount !== undefined && raw.approved_amount !== null && approved === null) return json({ error: "Nominal disetujui tidak valid." }, { status: 400 });
+        const now = nowIso();
+        const sets = ["status = ?", "approved_amount = ?", "updated_at = ?"];
+        const vals: unknown[] = [status, approved, now];
+        if (raw.note !== undefined) { sets.push("note = ?"); vals.push(hText(raw.note, 300) || null); }
+        if (raw.title !== undefined) {
+          const t = hText(raw.title, 80);
+          if (!t) return json({ error: "Tulis untuk apa klaimnya." }, { status: 400 });
+          sets.push("title = ?"); vals.push(t);
+        }
+        // Cair + rekening → pemasukan sekali (tx_id IS NULL), saldo ikut bertambah.
+        if (status === "cair" && raw.account_id !== undefined && raw.account_id !== null && !cl.tx_id) {
+          const acc = await healthAccount(env, userId, raw.account_id);
+          if (!acc) return json({ error: "Pilih rekening tempat uang klaim masuk." }, { status: 400 });
+          const money = approved ?? cl.amount;
+          const txId = generateId();
+          const res = await env.DB.batch([
+            env.DB.prepare(`UPDATE health_claims SET ${sets.join(", ")}, paid_at = ?, tx_id = ? WHERE id = ? AND user_id = ? AND tx_id IS NULL`).bind(...vals, today, txId, id, userId),
+            ...insertHealthTx(env, userId, {
+              txId, type: "pemasukan", amount: money, category: "Klaim Asuransi", sub: "Reimburse", accountId: acc.id, date: today,
+              note: `Klaim ${cl.title}${cl.insurer_name ? ` · ${cl.insurer_name}` : ""}`, relatedId: cl.id, relatedType: "health_claim", payload: { claimId: cl.id },
+              guardSql: "EXISTS (SELECT 1 FROM health_claims WHERE id = ? AND user_id = ? AND tx_id = ?)", guardBinds: [id, userId, txId],
+            }),
+          ]);
+          if (!res[0]?.meta.changes) return json({ ok: true, duplicate: true });
+          await publishTx(env, userId, txId);
+          return json({ ok: true, tx_id: txId });
+        }
+        if (status === "cair") { sets.push("paid_at = COALESCE(paid_at, ?)"); vals.push(today); }
+        await env.DB.prepare(`UPDATE health_claims SET ${sets.join(", ")} WHERE id = ? AND user_id = ?`).bind(...vals, id, userId).run();
+        return json({ ok: true });
+      }
+    }
+    return json({ error: "Rute tidak dikenal." }, { status: 404 });
+  } catch (e) {
+    if (healthTableMissing(e)) return json({ error: HEALTH_NOT_READY }, { status: 503 });
+    throw e;
+  }
+}
+
+// Pengingat premi H-3 & H-1 (cron harian bersama pengingat tagihan). reminded_for = "<tanggal>|<tahap>"
+// → tiap tahap sekali walau cron terpicu dua kali. Ikut toggle $.prefs.notify.bills.
+const sendPremiumReminders = async (env: Env) => {
+  const today = todayWIB();
+  for (const [days, stage] of [[3, "h3"], [1, "h1"]] as const) {
+    const target = shiftDateStr(today, days);
+    let rows: { id: string; user_id: string; insurer_name: string; product: string | null; premium: number | null }[] = [];
+    try {
+      rows = (await env.DB.prepare(
+        `SELECT p.id, p.user_id, p.insurer_name, p.product, p.premium FROM health_policies p JOIN users u ON u.id = p.user_id
+          WHERE p.next_due = ? AND COALESCE(p.reminded_for, '') <> ? AND COALESCE(u.status, '') <> 'NONAKTIF'
+            AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.bills') END, 1) <> 0
+          LIMIT 2000`
+      ).bind(target, `${target}|${stage}`).all<{ id: string; user_id: string; insurer_name: string; product: string | null; premium: number | null }>()).results ?? [];
+    } catch (e) {
+      if (healthTableMissing(e)) return;
+      throw e;
+    }
+    for (const r of rows) {
+      try {
+        const claim = await env.DB.prepare("UPDATE health_policies SET reminded_for = ? WHERE id = ? AND user_id = ? AND COALESCE(reminded_for, '') <> ?").bind(`${target}|${stage}`, r.id, r.user_id, `${target}|${stage}`).run();
+        if (!claim.meta.changes) continue;
+        await sendWebPushToUser(
+          env, r.user_id,
+          `🛡️ Premi ${r.insurer_name}${r.premium ? ` ${formatRupiahForPush(r.premium)}` : ""} — ${days === 1 ? "besok" : "3 hari lagi"}`,
+          `${r.product ? `${r.product}. ` : ""}Bayar tepat waktu supaya perlindunganmu tetap aktif. Catat di Sehatku › Asuransi.`,
+          "/membership/sehat#asuransi"
+        );
+      } catch (error) {
+        console.error(`Pengingat premi ${r.id} gagal:`, error);
+      }
+    }
+  }
+};
 
 async function handleMemberStories(request: Request, env: Env, url: URL) {
   const authResult = await requireSession(env, request);
@@ -20459,6 +20789,9 @@ const worker = {
       if (url.pathname === "/api/member/meals/analyze" && request.method === "POST") {
         return await withMealCharge(request, env, () => handleMealAnalyze(request, env));
       }
+      if (url.pathname.startsWith("/api/member/health/")) {
+        return await handleMemberHealth(request, env, url);
+      }
       if (url.pathname === "/api/member/meals" || url.pathname.startsWith("/api/member/meals/")) {
         return await handleMemberMeals(request, env, url);
       }
@@ -20763,6 +21096,7 @@ const worker = {
     ctx.waitUntil(sendPlanExpiryReminders(env).catch((error) => console.error("Pengingat masa aktif:", error)));
     // Tagihan/setoran rutin yang tercatat otomatis 3 hari lagi.
     ctx.waitUntil(sendBillReminders(env).catch((error) => console.error("Pengingat tagihan:", error)));
+    ctx.waitUntil(sendPremiumReminders(env).catch((error) => console.error("Pengingat premi:", error)));
     ctx.waitUntil(sendDebtDueReminders(env).catch((error) => console.error("Pengingat jatuh tempo hutang:", error)));
     ctx.waitUntil(sendWarrantyReminders(env).catch((error) => console.error("Pengingat garansi:", error)));
     ctx.waitUntil(sendSubscriptionReminders(env).catch((error) => console.error("Pengingat langganan:", error)));

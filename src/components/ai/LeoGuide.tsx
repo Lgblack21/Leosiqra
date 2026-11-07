@@ -26,6 +26,14 @@ function Accessory({ kind }: { kind: LeoAccessory }) {
           <path d="M48 30 V37 M60 30 V37 M72 30 V37" stroke="#F1F5F9" strokeWidth="2" />
         </g>
       );
+    case 'nurse':
+      return (
+        <g>
+          <path d="M32 30 Q32 10 60 8 Q88 10 88 30 Z" fill="#fff" stroke="#E2E8F0" strokeWidth="2" />
+          <rect x="55" y="13" width="10" height="14" rx="2" fill="#F43F5E" />
+          <rect x="53" y="15" width="14" height="10" rx="2" fill="#F43F5E" />
+        </g>
+      );
     case 'beret':
       return (
         <g>

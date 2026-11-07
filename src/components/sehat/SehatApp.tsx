@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, CalendarCheck, ShieldCheck, UtensilsCrossed } from 'lucide-react';
 import { LeoGuide, LeoBadge } from '@/components/ai/LeoGuide';
 import { MakanApp } from '@/components/makan/MakanApp';
+import { AsuransiView } from '@/components/sehat/AsuransiView';
 import { cn } from '@/lib/utils';
 
 // Sehatku — layar penuh seperti Ladangku: bar atas (kembali · judul tab · Leo) + menu melayang.
@@ -24,7 +25,7 @@ const TABS = [
     icon: ShieldCheck,
     title: 'Sehatku · Asuransi',
     sub: 'Biaya kesehatan, polis & premi',
-    ready: false,
+    ready: true,
   },
   {
     id: 'cek',
@@ -70,6 +71,11 @@ export function SehatApp({ variant }: { variant: 'web' | 'app' }) {
       /* abaikan */
     }
   };
+  const [toast, setToast] = useState('');
+  const say = (m: string) => {
+    setToast(m);
+    window.setTimeout(() => setToast(''), 3500);
+  };
   const current = TABS.find((t) => t.id === tab) ?? TABS[0];
   const app = variant === 'app';
 
@@ -97,11 +103,26 @@ export function SehatApp({ variant }: { variant: 'web' | 'app' }) {
           </h1>
           <p className="truncate text-[12px] text-slate-500 dark:text-slate-400">{current.sub}</p>
         </div>
-        <LeoGuide topic="makan" />
+        <LeoGuide topic={tab === 'asuransi' ? 'asuransi' : 'makan'} />
       </header>
 
-      <main>{tab === 'makan' ? <MakanApp variant={variant} embedded /> : <Segera label={current.label} />}</main>
+      <main>
+        {tab === 'makan' ? (
+          <MakanApp variant={variant} embedded />
+        ) : tab === 'asuransi' ? (
+          <AsuransiView onToast={say} />
+        ) : (
+          <Segera label={current.label} />
+        )}
+      </main>
 
+      {toast ? (
+        <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+96px)] z-[90] flex justify-center px-4">
+          <div className="rounded-full bg-slate-900 px-4 py-2.5 text-[13px] font-semibold text-white shadow-xl dark:bg-white dark:text-slate-900">
+            {toast}
+          </div>
+        </div>
+      ) : null}
       <nav
         aria-label="Menu Sehatku"
         className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+16px)] z-40 flex justify-center px-4 print:hidden"
