@@ -41,7 +41,7 @@ type TabId = (typeof TABS)[number]['id'];
 function Segera({ label }: { label: string }) {
   return (
     <div className="flex flex-col items-center rounded-[28px] border-2 border-dashed border-slate-200 px-6 py-16 text-center dark:border-slate-800">
-      <LeoBadge topic="makan" size={76} />
+      <LeoBadge topic="kesehatan" size={76} />
       <p className="mt-4 text-[17px] font-black text-slate-800 dark:text-slate-100">{label} segera hadir</p>
       <p className="mt-1 max-w-sm text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
         Leo lagi menyiapkan bagian ini. Sementara itu, catat makanmu di tab Makan — belanja makannya langsung masuk ke
@@ -103,7 +103,7 @@ export function SehatApp({ variant }: { variant: 'web' | 'app' }) {
           </h1>
           <p className="truncate text-[12px] text-slate-500 dark:text-slate-400">{current.sub}</p>
         </div>
-        <LeoGuide topic={tab === 'asuransi' ? 'asuransi' : 'makan'} />
+        <LeoGuide key={tab} topic={tab === 'asuransi' ? 'asuransi' : tab === 'cek' ? 'kesehatan' : 'makan'} />
       </header>
 
       <main>

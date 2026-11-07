@@ -54,6 +54,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.3.1 | 7 Nov 2026 | Makanku jadi Sehatku, layar penuh |
 | 3.4.0 | 7 Nov 2026 | Analisis makanan dari ketikan & bayar koin |
 | 3.5.0 | 7 Nov 2026 | Sehatku › Asuransi |
+| 3.5.1 | 7 Nov 2026 | Leo beda di tiap tab Sehatku |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -67,6 +68,12 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.5.1 — 2026-11-07 — Leo beda di tiap tab Sehatku
+
+- Sehatku punya tiga Leo berbeda, masing-masing dengan materi & pertanyaan sendiri: **Leo si Koki** (Makan),
+  **Leo si Pelindung** berperisai biru (Asuransi: polis, premi, klaim), dan **Leo si Dokter** dengan stetoskop (Cek:
+  cek kesehatan rutin). Obrolan dengan Leo terpisah per tab.
 
 ## 3.5.0 — 2026-11-07 — Sehatku › Asuransi
 

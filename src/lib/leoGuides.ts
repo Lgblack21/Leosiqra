@@ -2,8 +2,8 @@
 // Pertanyaan dijawab langsung di popup (POST /api/member/ai/chat dengan `page` — nilai `page`
 // WAJIB ada di AI_CHAT_PAGES di Worker supaya model tahu konteks halamannya).
 
-export type LeoGuideTopic = 'makan' | 'asuransi' | 'cerita' | 'fokus' | 'ladang' | 'investasi';
-export type LeoAccessory = 'chef' | 'nurse' | 'beret' | 'headphones' | 'sprout' | 'glasses';
+export type LeoGuideTopic = 'makan' | 'asuransi' | 'kesehatan' | 'cerita' | 'fokus' | 'ladang' | 'investasi';
+export type LeoAccessory = 'chef' | 'shield' | 'doctor' | 'beret' | 'headphones' | 'sprout' | 'glasses';
 
 export type LeoGuide = {
   name: string;
@@ -46,32 +46,61 @@ export const LEO_GUIDES: Record<LeoGuideTopic, LeoGuide> = {
     ],
   },
   asuransi: {
-    name: 'Leo si Perawat',
-    greeting: 'Bingung soal asuransi & biaya berobat? Tanya aku pelan-pelan.',
-    accessory: 'nurse',
-    accent: 'from-teal-400 via-emerald-400 to-cyan-400',
+    name: 'Leo si Pelindung',
+    greeting: 'Soal polis, premi, dan klaim — aku bantu jelaskan pakai bahasa sehari-hari.',
+    accessory: 'shield',
+    accent: 'from-blue-600 via-indigo-500 to-sky-400',
     facts: [
       {
         emoji: '🧾',
         title: 'Simpan semua kuitansi',
-        body: 'Reimburse butuh kuitansi asli, resume medis, dan formulir klaim. Foto semuanya sebelum diserahkan.',
+        body: 'Reimburse biasanya butuh kuitansi asli, resume medis, dan formulir klaim. Foto semuanya sebelum diserahkan.',
       },
       {
         emoji: '⏰',
-        title: 'Perhatikan batas waktu',
-        body: 'Banyak polis membatasi pengajuan reimburse, misalnya 30–90 hari. Cek di polismu.',
+        title: 'Perhatikan batas waktu klaim',
+        body: 'Banyak polis membatasi pengajuan reimburse, misalnya 30–90 hari setelah perawatan. Cek di polismu.',
       },
       {
         emoji: '🛡️',
         title: 'Premi tepat waktu',
-        body: 'Telat bayar bisa membuat polis tidak aktif. Leo mengingatkan H-3 dan H-1.',
+        body: 'Telat bayar bisa membuat polis tidak aktif. Leo mengingatkan H-3 dan H-1 sebelum jatuh tempo.',
       },
     ],
     questions: [
-      'Berapa total biaya kesehatanku tahun ini?',
       'Beda cashless dan reimburse apa?',
-      'Asuransi kesehatan dari kantor sudah cukup belum?',
-      'Gimana cara hemat biaya berobat?',
+      'Berapa total premi asuransiku setahun?',
+      'Asuransi dari kantor sudah cukup belum?',
+      'Kalau klaim ditolak, aku harus gimana?',
+    ],
+  },
+  kesehatan: {
+    name: 'Leo si Dokter',
+    greeting: 'Yuk jaga badan sebelum sakit — tanya aku soal cek kesehatan rutin.',
+    accessory: 'doctor',
+    accent: 'from-teal-500 via-emerald-400 to-lime-300',
+    facts: [
+      {
+        emoji: '🩺',
+        title: 'Cek rutin itu murah',
+        body: 'Cek tekanan darah, gula darah, dan berat badan setahun sekali jauh lebih murah daripada berobat saat sudah sakit.',
+      },
+      {
+        emoji: '🏥',
+        title: 'Ada yang gratis',
+        body: 'Pemerintah punya program Cek Kesehatan Gratis di puskesmas. Tanyakan jadwalnya di puskesmas terdekat.',
+      },
+      {
+        emoji: '📝',
+        title: 'Catat hasilnya',
+        body: 'Simpan angka hasil cek supaya perubahan dari tahun ke tahun kelihatan. Ini panduan umum, bukan diagnosis.',
+      },
+    ],
+    questions: [
+      'Cek kesehatan apa yang perlu aku lakukan tiap tahun?',
+      'Gimana cara ikut cek kesehatan gratis?',
+      'Berapa biaya kesehatanku tahun ini?',
+      'Tips hidup sehat yang hemat apa aja?',
     ],
   },
   cerita: {

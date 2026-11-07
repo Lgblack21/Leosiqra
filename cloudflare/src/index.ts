@@ -8717,6 +8717,7 @@ async function handleAiQuota(request: Request, env: Env) {
 // Halaman fitur yang punya popup Leo (src/lib/leoGuides.ts). Nilai = keterangan untuk model.
 const AI_CHAT_PAGES: Record<string, string> = {
   makan: "Sehatku › Makan — catatan makan harian dari foto (kalori & gizi perkiraan AI), bisa langsung dicatat jadi pengeluaran Makanan & Minuman. Jawab soal makan, gizi umum, dan belanja makan; bukan diagnosis medis.",
+  kesehatan: "Sehatku › Cek — cek kesehatan rutin & pencegahan (panduan umum, sebut sumber resmi seperti Kemenkes bila relevan). Bukan diagnosis; sarankan ke tenaga kesehatan untuk keluhan.",
   asuransi: "Sehatku › Asuransi — biaya kesehatan setahun (kategori Kesehatan), polis milik user (premi, jatuh tempo), dan klaim reimburse. Jelaskan istilah asuransi dengan bahasa awam; jangan merekomendasikan produk/perusahaan tertentu dan bukan nasihat medis/hukum.",
   cerita: "Cerita Hari Ini — jurnal harian dengan mood, foto, ilustrasi AI, dan ringkasan uang hari itu.",
   fokus: "Fokus bareng Leo — timer fokus/pomodoro, musik, latihan napas.",

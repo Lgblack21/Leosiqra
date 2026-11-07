@@ -26,12 +26,34 @@ function Accessory({ kind }: { kind: LeoAccessory }) {
           <path d="M48 30 V37 M60 30 V37 M72 30 V37" stroke="#F1F5F9" strokeWidth="2" />
         </g>
       );
-    case 'nurse':
+    case 'shield':
       return (
         <g>
-          <path d="M32 30 Q32 10 60 8 Q88 10 88 30 Z" fill="#fff" stroke="#E2E8F0" strokeWidth="2" />
-          <rect x="55" y="13" width="10" height="14" rx="2" fill="#F43F5E" />
-          <rect x="53" y="15" width="14" height="10" rx="2" fill="#F43F5E" />
+          <path d="M60 2 L82 10 V26 Q82 40 60 48 Q38 40 38 26 V10 Z" fill="#2563EB" stroke="#fff" strokeWidth="3" />
+          <path
+            d="M50 25 L57 32 L71 17"
+            stroke="#fff"
+            strokeWidth="5"
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </g>
+      );
+    case 'doctor':
+      return (
+        <g>
+          <path d="M26 30 Q60 4 94 30" stroke="#334155" strokeWidth="5" fill="none" strokeLinecap="round" />
+          <circle cx="60" cy="20" r="11" fill="#E2E8F0" stroke="#94A3B8" strokeWidth="3" />
+          <circle cx="60" cy="20" r="4" fill="#64748B" />
+          <path
+            d="M40 92 Q40 110 60 110 Q80 110 80 92"
+            stroke="#0D9488"
+            strokeWidth="5"
+            fill="none"
+            strokeLinecap="round"
+          />
+          <circle cx="60" cy="112" r="6" fill="#0D9488" stroke="#fff" strokeWidth="2" />
         </g>
       );
     case 'beret':
