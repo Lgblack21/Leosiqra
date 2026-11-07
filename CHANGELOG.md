@@ -26,7 +26,9 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 4. Setelah live, workflow otomatis membuat tag & GitHub Release `vX.Y.Z` (isi = catatan
    versi itu dari file ini) dan mengabari Telegram dengan versi + build. Kalau versinya
    sudah pernah dirilis (tidak dinaikkan), tag tidak dibuat ulang — Telegram menyebutnya.
-5. APK Android (*Rilis APK Android*) memakai versi yang sama dari `package.json`; APK
+5. Versi lama / catatan yang diubah: jalankan workflow *Sinkron Release* — membuat Release yang belum
+   ada (commit versi lama di `.github/release-targets.txt`) dan memperbarui catatan Release yang sudah ada.
+6. APK Android (*Rilis APK Android*) memakai versi yang sama dari `package.json`; APK
    ditempel ke Release `vX.Y.Z` yang sudah ada. APK hanya perlu dibuat ulang kalau bagian
    native berubah (isi app HP ikut web, update sendiri tanpa APK baru).
 

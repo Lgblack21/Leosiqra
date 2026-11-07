@@ -1,0 +1,11 @@
+# Commit untuk tag versi lama (sebelum Deploy main membuat tag sendiri). Dipakai workflow
+# "Sinkron Release" (sync-releases.yml). Format: <versi> <sha>. Versi 3.1.1 ke atas tidak perlu di sini.
+1.0.0 088c676d56cb5ca80dd1d4c790fdc9bbec73ffe4
+2.0.0 ef53f49b3821b17b8943516d517881b99f237dd5
+2.1.0 6326e939e9b1683635d619a502cdb9c3ee34c902
+2.2.0 2caf9015dcac5ec7b115a974e01741df38f1b9e9
+2.3.0 9b13d58ecaa78c41bc156715b3b5525e2159fec1
+2.4.0 31c2fd23ad542c6a54fd1d5e30ea90177408ae2f
+3.0.0 206161c8f4a6f5a27525ffde8e8614292d95086d
+3.0.1 bec8d84f5e271886d602316139b2fa87b698a1e2
+3.1.0 c961e63ddb58274919da26b44abdd9dc15d8644d

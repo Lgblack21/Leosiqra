@@ -1,0 +1,64 @@
+# Sinkron Release — membuat GitHub Release untuk versi di CHANGELOG.md yang belum punya
+# Release (versi lama 1.0.0–3.1.0, commit-nya di .github/release-targets.txt), dan
+# memperbarui catatan Release yang sudah ada kalau teks CHANGELOG-nya berubah.
+# Release lama tidak dijadikan "Latest" — Latest tetap versi tertinggi.
+name: Sinkron Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      perbarui_catatan:
+        description: 'Perbarui juga catatan Release yang sudah ada (ya/tidak)'
+        default: 'ya'
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-releases
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PERBARUI: ${{ inputs.perbarui_catatan }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sinkronkan
+        run: |
+          set -euo pipefail
+          TERTINGGI=$(node -p "require('./package.json').version")
+          grep -oE '^## [0-9]+\.[0-9]+\.[0-9]+ ' CHANGELOG.md | awk '{print $2}' | while read -r V; do
+            awk -v v="$V" '$0 ~ "^## " v " " {on=1; next} on && /^## / {exit} on' CHANGELOG.md \
+              | sed -e '/^<!--/d' > notes.md
+            JUDUL=$(grep -m1 "^## $V " CHANGELOG.md | sed -E 's/^## [^ ]+ — [0-9-]+( — )?//')
+            NAMA="Leosiqra $V${JUDUL:+ — $JUDUL}"
+            if gh release view "v$V" >/dev/null 2>&1; then
+              if [ "$PERBARUI" = "ya" ]; then
+                gh release edit "v$V" --title "$NAMA" --notes-file notes.md >/dev/null
+                echo "v$V: catatan diperbarui"
+              else
+                echo "v$V: sudah ada"
+              fi
+              continue
+            fi
+            SHA=$(awk -v v="$V" '$1 == v {print $2}' .github/release-targets.txt)
+            if [ -z "$SHA" ]; then
+              echo "v$V: belum dirilis dan tidak ada di release-targets.txt — dilewati (dibuat Deploy main)"
+              continue
+            fi
+            git merge-base --is-ancestor "$SHA" origin/main || { echo "v$V: $SHA bukan bagian dari main"; exit 1; }
+            LATEST=false
+            [ "$V" = "$TERTINGGI" ] && LATEST=true
+            printf '\n\n_Disusun ulang dari riwayat git pada 7 Nov 2026 (versi lama tidak dirilis per deploy)._\n' >> notes.md
+            gh release create "v$V" --target "$SHA" --title "$NAMA" --notes-file notes.md --latest=$LATEST >/dev/null
+            echo "v$V: Release dibuat di ${SHA:0:7}"
+          done

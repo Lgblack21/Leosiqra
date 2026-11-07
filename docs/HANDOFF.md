@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live: rilis 3.1.3, run 42360670539; migrasi 0036 menunggu Bos)
+Terakhir diperbarui: 2026-11-07 (live 3.1.3; 3.2.0 menunggu "gas"; migrasi 0036 menunggu Bos)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,18 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-07 — RILIS 3.2.0 siap di branch `claude/riwayat-versi-20261107`, BELUM live (tunggu "gas"). Tanpa SQL.**
+  - Halaman Riwayat versi: `/membership/versi` (link: Pengaturan › Riwayat versi + chip versi) dan `/app/versi`
+    (ketuk versi di Profil app HP). Timeline per generasi, filter era, buka/tutup, badge "Versi kamu". Data dari
+    CHANGELOG.md saat build (`src/lib/changelog.ts`) — format `## X.Y.Z — YYYY-MM-DD — Judul` WAJIB dijaga.
+  - CHANGELOG dirapikan (semua entri berjudul, bahasa user, peta versi lengkap). `npm run versi` kini menambah
+    baris peta versi otomatis (penanda `<!-- peta-baru -->`).
+  - GitHub Releases versi lama: session Claude TIDAK boleh membuat Release (403). Dibuat lewat workflow baru
+    **Sinkron Release** (`sync-releases.yml`, manual, contents: write): bikin v1.0.0–v3.1.0 di commit
+    `.github/release-targets.txt` (bukan Latest) + perbarui judul/catatan Release yang sudah ada. Jalankan SETELAH
+    3.2.0 masuk main. Deploy main kini memberi judul "Leosiqra X — Judul".
+  - Dicek: tsc, eslint, prettier, build; screenshot web 1366 + iPhone 13 terang/gelap, 0 error JS.
 
 - **2026-11-07 — RILIS 3.1.3: LIVE (run 42360670539, commit e3b1651, Release v3.1.3). MIGRASI 0036 menunggu Bos.**
   - **MIGRASI di D1 Console** (0036_stock_staff_id.sql, boleh sebelum/sesudah deploy):

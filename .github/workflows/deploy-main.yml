@@ -104,7 +104,8 @@ jobs:
           fi
           awk -v v="$VERSI" '$0 ~ "^## " v " " {on=1; next} on && /^## / {exit} on' CHANGELOG.md > notes.md
           [ -s notes.md ] || echo "Catatan rilis belum ditulis di CHANGELOG.md." > notes.md
-          gh release create "v$VERSI" --target "$GITHUB_SHA" --title "Leosiqra $VERSI" --notes-file notes.md
+          JUDUL=$(grep -m1 "^## $VERSI " CHANGELOG.md | sed -E 's/^## [^ ]+ — [0-9-]+( — )?//' || true)
+          gh release create "v$VERSI" --target "$GITHUB_SHA" --title "Leosiqra $VERSI${JUDUL:+ — $JUDUL}" --notes-file notes.md
           echo "status=rilis baru" >> "$GITHUB_OUTPUT"
 
       - name: Kabari Telegram (sukses)
