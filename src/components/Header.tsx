@@ -1,10 +1,12 @@
-"use client";
+'use client';
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
+import { InboxButton } from '@/components/InboxButton';
 import { NotificationBell } from '@/components/NotificationBell';
+import { keuanganNav } from '@/lib/navigation';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -18,11 +20,14 @@ export const HeaderSlot = ({ className }: { className?: string }) => (
   <span data-header-slot className={`flex shrink-0 items-center gap-1.5 print:hidden ${className ?? ''}`} />
 );
 
-// Header tanpa judul kecil (judul cukup satu, di halaman — permintaan Bos
-// 2026-10-28). Kalau halaman punya <HeaderSlot />, lonceng + tombol menu
-// dipindah ke sana lewat portal supaya satu baris dengan judul; kalau tidak,
-// tampil sebagai baris tipis di atas konten. Dropdown "Tambah Cepat" sudah
-// dihapus — mencatat lewat "Tambah transaksi" di menu samping / tombol +.
+// Kalau halaman punya <HeaderSlot />, lonceng + tombol menu dipindah ke sana lewat
+// portal supaya satu baris dengan judul; kalau tidak, tampil sebagai baris tipis.
+// Kotak Masuk + lonceng hanya di halaman kelompok Keuangan; halaman Fitur cukup
+// tombol menu di HP. Prefix diambil dari keuanganNav (…/transactions/daily → …/transactions).
+const KEUANGAN_PREFIXES = keuanganNav.map((n) => n.href.split('/').slice(0, 3).join('/'));
+const isKeuanganPage = (path: string | null) =>
+  !!path && KEUANGAN_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
+
 export const Header = ({ onMenuClick }: HeaderProps) => {
   const pathname = usePathname();
   const [slot, setSlot] = useState<HTMLElement | null>(null);
@@ -31,7 +36,11 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
   // dicari ulang tiap ada elemen yang ditambah/dihapus.
   useEffect(() => {
     const find = () =>
-      setSlot([...document.querySelectorAll<HTMLElement>('[data-header-slot]')].find((el) => el.getClientRects().length > 0) ?? null);
+      setSlot(
+        [...document.querySelectorAll<HTMLElement>('[data-header-slot]')].find(
+          (el) => el.getClientRects().length > 0,
+        ) ?? null,
+      );
     find();
     const mo = new MutationObserver(find);
     mo.observe(document.body, { childList: true, subtree: true });
@@ -53,12 +62,32 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
     </button>
   );
 
-  if (slot) return createPortal(<><NotificationBell />{menu}</>, slot);
+  const icons = isKeuanganPage(pathname);
+  if (slot)
+    return createPortal(
+      <>
+        {icons && (
+          <>
+            <InboxButton />
+            <NotificationBell />
+          </>
+        )}
+        {menu}
+      </>,
+      slot,
+    );
 
   return (
-    <header className="flex items-center justify-between gap-3 px-4 pt-3 md:justify-end md:px-8 md:pt-4 print:hidden">
+    <header
+      className={`flex items-center justify-between gap-3 px-4 pt-3 md:justify-end md:px-8 md:pt-4 print:hidden ${icons ? '' : 'md:hidden'}`}
+    >
       {menu}
-      <NotificationBell />
+      {icons && (
+        <span className="flex items-center gap-1.5">
+          <InboxButton />
+          <NotificationBell />
+        </span>
+      )}
     </header>
   );
 };

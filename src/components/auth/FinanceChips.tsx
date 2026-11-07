@@ -3,7 +3,8 @@ import { Camera, Check, Mic, ScanLine, TrendingUp } from 'lucide-react';
 // Kartu fitur Leosiqra yang melayang di latar /mulai & halaman masuk/daftar:
 // suara jadi transaksi, scan struk, budget, saldo. Murni dekorasi (aria-hidden),
 // nominalnya contoh — bukan data siapa pun.
-const chip = 'paper-float rounded-[22px] bg-white/90 p-4 shadow-[0_24px_48px_-20px_rgba(49,46,129,0.45)] ring-1 ring-white backdrop-blur';
+const chip =
+  'paper-float rounded-[22px] bg-white/90 p-4 shadow-[0_24px_48px_-20px_rgba(49,46,129,0.45)] ring-1 ring-white backdrop-blur';
 const float = (r: string, delay = '0s') => ({ '--r': r, animationDelay: delay }) as React.CSSProperties;
 
 export function VoiceChip({ className = '' }: { className?: string }) {
@@ -16,7 +17,11 @@ export function VoiceChip({ className = '' }: { className?: string }) {
         </span>
         <div className="flex h-7 flex-1 items-center gap-[3px]">
           {[40, 75, 55, 95, 60, 85, 35, 70, 50, 90, 45, 65].map((h, i) => (
-            <span key={i} className="voice-bar w-[3px] rounded-full bg-indigo-400" style={{ height: `${h}%`, animationDelay: `${i * 0.08}s` }} />
+            <span
+              key={i}
+              className="voice-bar w-[3px] rounded-full bg-indigo-400"
+              style={{ height: `${h}%`, animationDelay: `${i * 0.08}s` }}
+            />
           ))}
         </div>
       </div>
@@ -51,7 +56,16 @@ export function BudgetChip({ className = '' }: { className?: string }) {
       <div className="flex items-center gap-3.5">
         <svg viewBox="0 0 56 56" className="h-14 w-14 shrink-0 -rotate-90">
           <circle cx="28" cy="28" r={r} fill="none" stroke="#eef2ff" strokeWidth="7" />
-          <circle cx="28" cy="28" r={r} fill="none" stroke="#f59e0b" strokeWidth="7" strokeLinecap="round" strokeDasharray={`${(c * pct) / 100} ${c}`} />
+          <circle
+            cx="28"
+            cy="28"
+            r={r}
+            fill="none"
+            stroke="#f59e0b"
+            strokeWidth="7"
+            strokeLinecap="round"
+            strokeDasharray={`${(c * pct) / 100} ${c}`}
+          />
         </svg>
         <div>
           <p className="text-[12px] font-semibold text-slate-500">Budget makan</p>
@@ -89,7 +103,14 @@ export function BalanceChip({ className = '' }: { className?: string }) {
       <p className="mt-0.5 text-[20px] font-extrabold tracking-tight text-slate-900">Rp12.480.000</p>
       <div className="mt-2 flex items-end justify-between">
         <svg viewBox="0 0 120 32" className="h-8 w-28">
-          <path d="M2 26 L18 22 L34 24 L50 15 L66 18 L82 9 L98 12 L118 4" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M2 26 L18 22 L34 24 L50 15 L66 18 L82 9 L98 12 L118 4"
+            fill="none"
+            stroke="#6366f1"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
         <span className="flex items-center gap-1 text-[12px] font-bold text-emerald-600">
           <TrendingUp size={13} /> 4,2%

@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* Class-based dark mode buat /app/* — .dark diterapkan di wrapper div
    internal (src/app/app/layout.tsx), bukan <html> root, supaya gak
@@ -10,12 +10,12 @@ html {
 }
 
 :root {
-  --background: #F9F8F6;
+  --background: #f9f8f6;
   --foreground: #111827;
-  --accent-navy: #1D2641;
-  --font-geist-sans: var(--font-jakarta), "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
-  --font-geist-mono: "Cascadia Code", "Fira Code", "Consolas", "Courier New", monospace;
-  --font-serif: var(--font-serif-display), "DM Serif Display", "Georgia", "Times New Roman", serif;
+  --accent-navy: #1d2641;
+  --font-geist-sans: var(--font-jakarta), 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  --font-geist-mono: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
+  --font-serif: var(--font-serif-display), 'DM Serif Display', 'Georgia', 'Times New Roman', serif;
 }
 
 @theme inline {
@@ -38,7 +38,6 @@ html {
   --text-caption--line-height: 1rem;
 }
 
-
 body {
   background: var(--background);
   color: var(--foreground);
@@ -49,8 +48,12 @@ body {
    tailwindcss-animate/tw-animate-css gak ter-install, jadi sebelumnya class
    ini no-op. Cukup fade-in halus; varian slide/zoom tetap diabaikan. */
 @keyframes enter-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 .animate-in {
   animation: enter-fade 0.2s ease-out;
@@ -87,7 +90,7 @@ body {
 }
 .hero-aurora::before,
 .hero-aurora::after {
-  content: "";
+  content: '';
   position: absolute;
   border-radius: 9999px;
   filter: blur(110px);
@@ -120,8 +123,13 @@ body {
 
 /* Animasi mengambang lembut untuk kartu aksen */
 @keyframes floaty {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 .animate-floaty {
   animation: floaty 6s ease-in-out infinite;
@@ -129,8 +137,13 @@ body {
 
 /* Animasi lembut untuk logo sidebar (bob naik-turun halus) */
 @keyframes logo-bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
 }
 .animate-logo-bob {
   animation: logo-bob 3.5s ease-in-out infinite;
@@ -139,8 +152,15 @@ body {
 /* Glow ambient di belakang ikon mic (idle/listening) — satu animasi loop
    ringan (transform+opacity), gaya "Siri glow" tanpa perlu data audio asli. */
 @keyframes ambient-pulse {
-  0%, 100% { transform: scale(1); opacity: 0.5; }
-  50% { transform: scale(1.15); opacity: 0.8; }
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.8;
+  }
 }
 .animate-ambient-pulse {
   animation: ambient-pulse 2.4s ease-in-out infinite;
@@ -150,8 +170,13 @@ body {
    asli (plugin speech-recognition cuma kasih teks, bukan level suara),
    tapi kasih kesan "hidup" selama proses dengar berlangsung. */
 @keyframes voice-wave {
-  0%, 100% { transform: scaleY(0.3); }
-  50% { transform: scaleY(1); }
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
 }
 .animate-voice-wave {
   animation: voice-wave 1s ease-in-out infinite;
@@ -163,10 +188,20 @@ body {
    persentasenya relatif ke tinggi container foto, bukan ke elemen garis
    itu sendiri. */
 @keyframes scan-sweep {
-  0% { top: 0%; opacity: 0; }
-  10% { opacity: 1; }
-  90% { opacity: 1; }
-  100% { top: 100%; opacity: 0; }
+  0% {
+    top: 0%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
 }
 .animate-scan-sweep {
   animation: scan-sweep 1.8s ease-in-out infinite;
@@ -202,29 +237,47 @@ html.no-zoom {
   animation: lp-shine 8s ease-in-out infinite;
 }
 @keyframes lp-shine {
-  0%, 100% { background-position: 100% 50%; }
-  50% { background-position: 0% 50%; }
+  0%,
+  100% {
+    background-position: 100% 50%;
+  }
+  50% {
+    background-position: 0% 50%;
+  }
 }
 @layer components {
   .lp-card {
     background: #fff;
     border: 1px solid rgba(15, 23, 42, 0.06);
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 24px 60px -32px rgba(15, 23, 42, 0.22);
+    box-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.04),
+      0 24px 60px -32px rgba(15, 23, 42, 0.22);
   }
   .lp-btn {
     background: linear-gradient(135deg, #0f172a 0%, #312e81 55%, #4f46e5 100%);
     color: #fff;
     box-shadow: 0 12px 34px -12px rgba(79, 70, 229, 0.55);
   }
-  .lp-btn:hover { box-shadow: 0 16px 44px -12px rgba(79, 70, 229, 0.7); }
+  .lp-btn:hover {
+    box-shadow: 0 16px 44px -12px rgba(79, 70, 229, 0.7);
+  }
 }
 @keyframes marquee-x {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
 }
-.marquee-x { animation: marquee-x 40s linear infinite; }
+.marquee-x {
+  animation: marquee-x 40s linear infinite;
+}
 @media (prefers-reduced-motion: reduce) {
-  .lp-shine, .marquee-x { animation: none; }
+  .lp-shine,
+  .marquee-x {
+    animation: none;
+  }
 }
 
 /* ---- Animasi premium di dalam aplikasi -------------------------------------
@@ -234,48 +287,107 @@ html.no-zoom {
    jadi salah posisi (terverifikasi di browser). `backwards` hanya menahan
    keadaan awal selama jeda, lalu elemen kembali ke gaya aslinya (none). */
 @keyframes page-enter {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: none; }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 @keyframes rise-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: none; }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 @keyframes tab-enter {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: none; }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 /* Transisi antar halaman web setelah login (membership/template.tsx). */
-.page-enter { animation: page-enter 0.2s ease-out backwards; }
+.page-enter {
+  animation: page-enter 0.2s ease-out backwards;
+}
 /* Transisi antar tab aplikasi mobile (app/(tabs)/template.tsx) — tanpa blur, ringan di HP. */
-.tab-enter { animation: tab-enter 0.32s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.tab-enter {
+  animation: tab-enter 0.32s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
 
 /* Anak langsung muncul bergantian: .stagger-in untuk susunan section,
    .stagger-grid untuk kartu di dalam grid. */
-.stagger-in > *, .stagger-grid > * { animation: rise-in 0.3s ease-out backwards; }
-.stagger-in > :nth-child(2) { animation-delay: 0.03s; }
-.stagger-in > :nth-child(3) { animation-delay: 0.06s; }
-.stagger-in > :nth-child(4) { animation-delay: 0.09s; }
-.stagger-in > :nth-child(5) { animation-delay: 0.12s; }
-.stagger-in > :nth-child(6) { animation-delay: 0.15s; }
-.stagger-in > :nth-child(n + 7) { animation-delay: 0.18s; }
-.stagger-grid > :nth-child(2) { animation-delay: 0.03s; }
-.stagger-grid > :nth-child(3) { animation-delay: 0.06s; }
-.stagger-grid > :nth-child(4) { animation-delay: 0.09s; }
-.stagger-grid > :nth-child(n + 5) { animation-delay: 0.12s; }
+.stagger-in > *,
+.stagger-grid > * {
+  animation: rise-in 0.3s ease-out backwards;
+}
+.stagger-in > :nth-child(2) {
+  animation-delay: 0.03s;
+}
+.stagger-in > :nth-child(3) {
+  animation-delay: 0.06s;
+}
+.stagger-in > :nth-child(4) {
+  animation-delay: 0.09s;
+}
+.stagger-in > :nth-child(5) {
+  animation-delay: 0.12s;
+}
+.stagger-in > :nth-child(6) {
+  animation-delay: 0.15s;
+}
+.stagger-in > :nth-child(n + 7) {
+  animation-delay: 0.18s;
+}
+.stagger-grid > :nth-child(2) {
+  animation-delay: 0.03s;
+}
+.stagger-grid > :nth-child(3) {
+  animation-delay: 0.06s;
+}
+.stagger-grid > :nth-child(4) {
+  animation-delay: 0.09s;
+}
+.stagger-grid > :nth-child(n + 5) {
+  animation-delay: 0.12s;
+}
 
 /* Kartu yang bisa diklik: terangkat halus saat hover. */
-.lift { transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease; }
-.lift:hover { transform: translateY(-3px); box-shadow: 0 22px 44px -22px rgba(15, 23, 42, 0.3); }
+.lift {
+  transition:
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.35s ease;
+}
+.lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 22px 44px -22px rgba(15, 23, 42, 0.3);
+}
 
 /* Kilau cahaya yang menyapu kartu saldo sekali saat muncul. */
 @keyframes sheen-sweep {
-  from { transform: translateX(-120%) skewX(-18deg); }
-  to { transform: translateX(220%) skewX(-18deg); }
+  from {
+    transform: translateX(-120%) skewX(-18deg);
+  }
+  to {
+    transform: translateX(220%) skewX(-18deg);
+  }
 }
-.sheen { position: relative; overflow: hidden; }
+.sheen {
+  position: relative;
+  overflow: hidden;
+}
 .sheen::after {
-  content: "";
+  content: '';
   pointer-events: none;
   position: absolute;
   inset: 0 auto 0 0;
@@ -286,29 +398,72 @@ html.no-zoom {
 
 /* Tombol + mobile: cahaya lembut yang "bernapas". */
 @keyframes breathe {
-  0%, 100% { box-shadow: 0 10px 30px -8px rgba(79, 70, 229, 0.55), 0 0 0 0 rgba(99, 102, 241, 0.35); }
-  50% { box-shadow: 0 14px 38px -8px rgba(79, 70, 229, 0.7), 0 0 0 10px rgba(99, 102, 241, 0); }
+  0%,
+  100% {
+    box-shadow:
+      0 10px 30px -8px rgba(79, 70, 229, 0.55),
+      0 0 0 0 rgba(99, 102, 241, 0.35);
+  }
+  50% {
+    box-shadow:
+      0 14px 38px -8px rgba(79, 70, 229, 0.7),
+      0 0 0 10px rgba(99, 102, 241, 0);
+  }
 }
-.breathe { animation: breathe 3.2s ease-in-out infinite; }
+.breathe {
+  animation: breathe 3.2s ease-in-out infinite;
+}
 
 /* Gelombang cahaya di sekitar mic saat mendengarkan. */
 @keyframes mic-wave {
-  from { transform: scale(1); opacity: 0.55; }
-  to { transform: scale(2.1); opacity: 0; }
+  from {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  to {
+    transform: scale(2.1);
+    opacity: 0;
+  }
 }
-.mic-wave { position: absolute; inset: 0; border-radius: inherit; background: rgba(244, 63, 94, 0.45); animation: mic-wave 1.4s ease-out infinite; }
-.mic-wave:nth-child(2) { animation-delay: 0.7s; }
+.mic-wave {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(244, 63, 94, 0.45);
+  animation: mic-wave 1.4s ease-out infinite;
+}
+.mic-wave:nth-child(2) {
+  animation-delay: 0.7s;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .page-enter, .tab-enter, .stagger-in > *, .stagger-grid > *, .sheen::after, .breathe, .mic-wave { animation: none; }
-  .lift:hover { transform: none; }
+  .page-enter,
+  .tab-enter,
+  .stagger-in > *,
+  .stagger-grid > *,
+  .sheen::after,
+  .breathe,
+  .mic-wave {
+    animation: none;
+  }
+  .lift:hover {
+    transform: none;
+  }
 }
 
 /* Isi halaman legal (Privasi, Syarat). */
-.legal-body ul { list-style: none; padding: 0; display: grid; gap: 0.6rem; }
-.legal-body li { position: relative; padding-left: 1.4rem; }
+.legal-body ul {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+.legal-body li {
+  position: relative;
+  padding-left: 1.4rem;
+}
 .legal-body li::before {
-  content: "";
+  content: '';
   position: absolute;
   left: 0.25rem;
   top: 0.62em;
@@ -317,134 +472,595 @@ html.no-zoom {
   border-radius: 9999px;
   background: #a5b4fc;
 }
-.legal-body strong { color: #0f172a; font-weight: 700; }
-.legal-body a { color: #4f46e5; font-weight: 700; text-underline-offset: 3px; }
-.legal-body a:hover { text-decoration: underline; }
+.legal-body strong {
+  color: #0f172a;
+  font-weight: 700;
+}
+.legal-body a {
+  color: #4f46e5;
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+.legal-body a:hover {
+  text-decoration: underline;
+}
 
 /* Artikel panduan publik (/catatan-keuangan-*) */
-.guide-body > * + * { margin-top: 1.1rem; }
-.guide-body h2 { margin-top: 2.4rem; font-family: var(--font-serif-display), serif; font-size: 1.75rem; line-height: 1.25; color: #0f172a; }
-.guide-body h2:first-child { margin-top: 0; }
-.guide-body h3 { margin-top: 1.6rem; font-weight: 700; font-size: 1.05rem; color: #0f172a; }
-.guide-body ul, .guide-body ol { padding-left: 1.3rem; display: grid; gap: 0.5rem; }
-.guide-body ul { list-style: disc; }
-.guide-body ol { list-style: decimal; }
-.guide-body li::marker { color: #818cf8; font-weight: 700; }
-.guide-body strong { color: #0f172a; font-weight: 700; }
-.guide-body a { color: #4f46e5; font-weight: 700; text-underline-offset: 3px; }
-.guide-body a:hover { text-decoration: underline; }
-.guide-body .table-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 1rem; }
-.guide-body table { width: 100%; border-collapse: collapse; font-size: 0.875rem; white-space: nowrap; }
-.guide-body th { background: #f8fafc; text-align: left; font-weight: 700; color: #0f172a; }
-.guide-body th, .guide-body td { padding: 0.65rem 0.9rem; border-bottom: 1px solid #f1f5f9; }
-.guide-body tr:last-child td { border-bottom: 0; }
-.guide-body td.num, .guide-body th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.guide-body > * + * {
+  margin-top: 1.1rem;
+}
+.guide-body h2 {
+  margin-top: 2.4rem;
+  font-family: var(--font-serif-display), serif;
+  font-size: 1.75rem;
+  line-height: 1.25;
+  color: #0f172a;
+}
+.guide-body h2:first-child {
+  margin-top: 0;
+}
+.guide-body h3 {
+  margin-top: 1.6rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #0f172a;
+}
+.guide-body ul,
+.guide-body ol {
+  padding-left: 1.3rem;
+  display: grid;
+  gap: 0.5rem;
+}
+.guide-body ul {
+  list-style: disc;
+}
+.guide-body ol {
+  list-style: decimal;
+}
+.guide-body li::marker {
+  color: #818cf8;
+  font-weight: 700;
+}
+.guide-body strong {
+  color: #0f172a;
+  font-weight: 700;
+}
+.guide-body a {
+  color: #4f46e5;
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+.guide-body a:hover {
+  text-decoration: underline;
+}
+.guide-body .table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+}
+.guide-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+.guide-body th {
+  background: #f8fafc;
+  text-align: left;
+  font-weight: 700;
+  color: #0f172a;
+}
+.guide-body th,
+.guide-body td {
+  padding: 0.65rem 0.9rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+.guide-body tr:last-child td {
+  border-bottom: 0;
+}
+.guide-body td.num,
+.guide-body th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
 
 /* ===== Leo (maskot singa) & latar auth ===== */
-.leo-breathe { animation: leo-breathe 4.2s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
-@keyframes leo-breathe { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-2px) scale(1.012); } }
-.leo-mane { animation: leo-mane 6s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 50%; }
-@keyframes leo-mane { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
-.leo-ear-l, .leo-ear-r { transform-box: fill-box; transform-origin: 50% 100%; animation: leo-ear 7s ease-in-out infinite; }
-.leo-ear-r { animation-delay: 3.4s; }
-@keyframes leo-ear { 0%, 86%, 100% { transform: rotate(0); } 89% { transform: rotate(-14deg); } 92% { transform: rotate(8deg); } 95% { transform: rotate(-4deg); } }
-.leo-blink { transform-box: fill-box; transform-origin: 50% 50%; animation: leo-blink 5.5s infinite; }
-@keyframes leo-blink { 0%, 93%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.08); } 97% { transform: scaleY(1); } }
+.leo-breathe {
+  animation: leo-breathe 4.2s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+@keyframes leo-breathe {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-2px) scale(1.012);
+  }
+}
+.leo-mane {
+  animation: leo-mane 6s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+@keyframes leo-mane {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+}
+.leo-ear-l,
+.leo-ear-r {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: leo-ear 7s ease-in-out infinite;
+}
+.leo-ear-r {
+  animation-delay: 3.4s;
+}
+@keyframes leo-ear {
+  0%,
+  86%,
+  100% {
+    transform: rotate(0);
+  }
+  89% {
+    transform: rotate(-14deg);
+  }
+  92% {
+    transform: rotate(8deg);
+  }
+  95% {
+    transform: rotate(-4deg);
+  }
+}
+.leo-blink {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: leo-blink 5.5s infinite;
+}
+@keyframes leo-blink {
+  0%,
+  93%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.08);
+  }
+  97% {
+    transform: scaleY(1);
+  }
+}
 /* Langit auth per waktu — dipilih dari <html data-daypart> (lihat AuthScene). Default = sore. */
-.auth-sky { --sky-top: #4338CA; --sky-mid: #A855F7; --sky-bottom: #FDBA74; --sky-far: #7C5CC4; --sky-near: #3B2A7A; --sky-glow: #FFD8A8;
-  background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 55%, var(--sky-bottom) 100%); }
-html[data-daypart="pagi"] .auth-sky { --sky-top: #7DD3FC; --sky-mid: #C4B5FD; --sky-bottom: #FED7AA; --sky-far: #A5A1E8; --sky-near: #6D5BD0; --sky-glow: #FFF1D6; }
-html[data-daypart="siang"] .auth-sky { --sky-top: #3B82F6; --sky-mid: #818CF8; --sky-bottom: #E0E7FF; --sky-far: #8B93E8; --sky-near: #4F46E5; --sky-glow: #FFFFFF; }
-html[data-daypart="malam"] .auth-sky { --sky-top: #0F0B2E; --sky-mid: #2E1F6B; --sky-bottom: #5B3FA8; --sky-far: #2A2266; --sky-near: #140F38; --sky-glow: #C7B8FF; }
-.auth-sun { width: 120px; height: 120px; right: 14%; top: 38%; background: radial-gradient(circle, var(--sky-glow) 0%, color-mix(in srgb, var(--sky-glow) 67%, transparent) 40%, transparent 70%); }
-html[data-daypart="pagi"] .auth-sun { right: 70%; }
-html[data-daypart="siang"] .auth-sun { top: 12%; }
-.auth-moon { display: none; width: 70px; height: 70px; right: 14%; top: 14%; background: radial-gradient(circle at 35% 35%, #FFFBEB, #E9D5FF); box-shadow: 0 0 60px 10px rgba(199, 184, 255, .35); }
-.auth-night { display: none; }
-html[data-daypart="malam"] .auth-night, html[data-daypart="malam"] .auth-moon { display: block; }
-html[data-daypart="malam"] .auth-day, html[data-daypart="malam"] .auth-sun { display: none; }
-.auth-greet { display: none; }
-html:not([data-daypart]) .auth-greet[data-p="sore"],
-html[data-daypart="pagi"] .auth-greet[data-p="pagi"], html[data-daypart="siang"] .auth-greet[data-p="siang"],
-html[data-daypart="sore"] .auth-greet[data-p="sore"], html[data-daypart="malam"] .auth-greet[data-p="malam"] { display: inline; }
+.auth-sky {
+  --sky-top: #4338ca;
+  --sky-mid: #a855f7;
+  --sky-bottom: #fdba74;
+  --sky-far: #7c5cc4;
+  --sky-near: #3b2a7a;
+  --sky-glow: #ffd8a8;
+  background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 55%, var(--sky-bottom) 100%);
+}
+html[data-daypart='pagi'] .auth-sky {
+  --sky-top: #7dd3fc;
+  --sky-mid: #c4b5fd;
+  --sky-bottom: #fed7aa;
+  --sky-far: #a5a1e8;
+  --sky-near: #6d5bd0;
+  --sky-glow: #fff1d6;
+}
+html[data-daypart='siang'] .auth-sky {
+  --sky-top: #3b82f6;
+  --sky-mid: #818cf8;
+  --sky-bottom: #e0e7ff;
+  --sky-far: #8b93e8;
+  --sky-near: #4f46e5;
+  --sky-glow: #ffffff;
+}
+html[data-daypart='malam'] .auth-sky {
+  --sky-top: #0f0b2e;
+  --sky-mid: #2e1f6b;
+  --sky-bottom: #5b3fa8;
+  --sky-far: #2a2266;
+  --sky-near: #140f38;
+  --sky-glow: #c7b8ff;
+}
+.auth-sun {
+  width: 120px;
+  height: 120px;
+  right: 14%;
+  top: 38%;
+  background: radial-gradient(
+    circle,
+    var(--sky-glow) 0%,
+    color-mix(in srgb, var(--sky-glow) 67%, transparent) 40%,
+    transparent 70%
+  );
+}
+html[data-daypart='pagi'] .auth-sun {
+  right: 70%;
+}
+html[data-daypart='siang'] .auth-sun {
+  top: 12%;
+}
+.auth-moon {
+  display: none;
+  width: 70px;
+  height: 70px;
+  right: 14%;
+  top: 14%;
+  background: radial-gradient(circle at 35% 35%, #fffbeb, #e9d5ff);
+  box-shadow: 0 0 60px 10px rgba(199, 184, 255, 0.35);
+}
+.auth-night {
+  display: none;
+}
+html[data-daypart='malam'] .auth-night,
+html[data-daypart='malam'] .auth-moon {
+  display: block;
+}
+html[data-daypart='malam'] .auth-day,
+html[data-daypart='malam'] .auth-sun {
+  display: none;
+}
+.auth-greet {
+  display: none;
+}
+html:not([data-daypart]) .auth-greet[data-p='sore'],
+html[data-daypart='pagi'] .auth-greet[data-p='pagi'],
+html[data-daypart='siang'] .auth-greet[data-p='siang'],
+html[data-daypart='sore'] .auth-greet[data-p='sore'],
+html[data-daypart='malam'] .auth-greet[data-p='malam'] {
+  display: inline;
+}
 /* Animasi masuk pakai CSS (bukan JS) supaya jalan sejak frame pertama, tidak menunggu hydrate. */
-.auth-enter { animation: auth-enter .6s cubic-bezier(.16, 1, .3, 1) both; animation-delay: var(--d, 0s); }
-@keyframes auth-enter { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
-.auth-cloud { animation: auth-cloud linear infinite; }
-@keyframes auth-cloud { from { transform: translateX(-30%); } to { transform: translateX(130%); } }
-.auth-star { animation: auth-star 3.2s ease-in-out infinite; }
-@keyframes auth-star { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
-.auth-window { animation: auth-window 6s ease-in-out infinite; }
-@keyframes auth-window { 0%, 100% { opacity: 0.95; } 50% { opacity: 0.55; } }
+.auth-enter {
+  animation: auth-enter 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--d, 0s);
+}
+@keyframes auth-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.auth-cloud {
+  animation: auth-cloud linear infinite;
+}
+@keyframes auth-cloud {
+  from {
+    transform: translateX(-30%);
+  }
+  to {
+    transform: translateX(130%);
+  }
+}
+.auth-star {
+  animation: auth-star 3.2s ease-in-out infinite;
+}
+@keyframes auth-star {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.auth-window {
+  animation: auth-window 6s ease-in-out infinite;
+}
+@keyframes auth-window {
+  0%,
+  100% {
+    opacity: 0.95;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  .leo-breathe, .leo-mane, .leo-ear-l, .leo-ear-r, .leo-blink, .auth-cloud, .auth-star, .auth-window, .auth-enter { animation: none !important; }
+  .leo-breathe,
+  .leo-mane,
+  .leo-ear-l,
+  .leo-ear-r,
+  .leo-blink,
+  .auth-cloud,
+  .auth-star,
+  .auth-window,
+  .auth-enter {
+    animation: none !important;
+  }
 }
 
 /* ===== Kartu fitur melayang (/mulai, masuk/daftar) — lihat components/auth/FinanceChips ===== */
-.paper-float { transform: rotate(var(--r, 0deg)); animation: paper-float 7s ease-in-out infinite; }
-@keyframes paper-float { 0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); } 50% { transform: translateY(-8px) rotate(var(--r, 0deg)); } }
-.voice-bar { transform-origin: center; animation: voice-bar 1.1s ease-in-out infinite; }
-@keyframes voice-bar { 0%, 100% { transform: scaleY(0.45); } 50% { transform: scaleY(1); } }
-.scan-line { top: 8%; animation: scan-line 2.4s ease-in-out infinite; }
-@keyframes scan-line { 0%, 100% { top: 8%; } 50% { top: 88%; } }
-@media (prefers-reduced-motion: reduce) { .paper-float, .voice-bar, .scan-line { animation: none; } }
+.paper-float {
+  transform: rotate(var(--r, 0deg));
+  animation: paper-float 7s ease-in-out infinite;
+}
+@keyframes paper-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--r, 0deg));
+  }
+  50% {
+    transform: translateY(-8px) rotate(var(--r, 0deg));
+  }
+}
+.voice-bar {
+  transform-origin: center;
+  animation: voice-bar 1.1s ease-in-out infinite;
+}
+@keyframes voice-bar {
+  0%,
+  100% {
+    transform: scaleY(0.45);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+.scan-line {
+  top: 8%;
+  animation: scan-line 2.4s ease-in-out infinite;
+}
+@keyframes scan-line {
+  0%,
+  100% {
+    top: 8%;
+  }
+  50% {
+    top: 88%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .paper-float,
+  .voice-bar,
+  .scan-line {
+    animation: none;
+  }
+}
 
 /* ===== Panel Pengaturan ramping =====
    Scope .settings-compact di dialog SettingsPanel: semua jarak Tailwind v4
    dihitung dari --spacing → dikecilkan ±12%; ukuran teks arbitrer turun satu
    tingkat. Berlaku untuk semua tampilan di dalam panel sekaligus. */
-.settings-compact { --spacing: 0.22rem; }
+.settings-compact {
+  --spacing: 0.22rem;
+}
 @layer utilities {
-  .settings-compact .text-\[52px\] { font-size: 44px; }
-  .settings-compact .text-\[44px\] { font-size: 38px; }
-  .settings-compact .text-\[38px\] { font-size: 32px; }
-  .settings-compact .text-\[32px\] { font-size: 28px; }
-  .settings-compact .text-\[30px\] { font-size: 26px; }
-  .settings-compact .text-\[28px\] { font-size: 24px; }
-  .settings-compact .text-\[26px\] { font-size: 22px; }
-  .settings-compact .text-\[24px\] { font-size: 20px; }
-  .settings-compact .text-\[23px\] { font-size: 20px; }
-  .settings-compact .text-\[22px\] { font-size: 19px; }
-  .settings-compact .text-\[20px\] { font-size: 17px; }
-  .settings-compact .text-\[19px\] { font-size: 16px; }
-  .settings-compact .text-\[18px\] { font-size: 16px; }
-  .settings-compact .text-\[17px\] { font-size: 15px; }
-  .settings-compact .text-\[16px\] { font-size: 14px; }
-  .settings-compact .text-\[15px\] { font-size: 14px; }
-  .settings-compact .text-\[14px\] { font-size: 13px; }
-  .settings-compact .text-\[13px\] { font-size: 12px; }
-  .settings-compact .text-\[12px\] { font-size: 11.5px; }
+  .settings-compact .text-\[52px\] {
+    font-size: 44px;
+  }
+  .settings-compact .text-\[44px\] {
+    font-size: 38px;
+  }
+  .settings-compact .text-\[38px\] {
+    font-size: 32px;
+  }
+  .settings-compact .text-\[32px\] {
+    font-size: 28px;
+  }
+  .settings-compact .text-\[30px\] {
+    font-size: 26px;
+  }
+  .settings-compact .text-\[28px\] {
+    font-size: 24px;
+  }
+  .settings-compact .text-\[26px\] {
+    font-size: 22px;
+  }
+  .settings-compact .text-\[24px\] {
+    font-size: 20px;
+  }
+  .settings-compact .text-\[23px\] {
+    font-size: 20px;
+  }
+  .settings-compact .text-\[22px\] {
+    font-size: 19px;
+  }
+  .settings-compact .text-\[20px\] {
+    font-size: 17px;
+  }
+  .settings-compact .text-\[19px\] {
+    font-size: 16px;
+  }
+  .settings-compact .text-\[18px\] {
+    font-size: 16px;
+  }
+  .settings-compact .text-\[17px\] {
+    font-size: 15px;
+  }
+  .settings-compact .text-\[16px\] {
+    font-size: 14px;
+  }
+  .settings-compact .text-\[15px\] {
+    font-size: 14px;
+  }
+  .settings-compact .text-\[14px\] {
+    font-size: 13px;
+  }
+  .settings-compact .text-\[13px\] {
+    font-size: 12px;
+  }
+  .settings-compact .text-\[12px\] {
+    font-size: 11.5px;
+  }
 }
 
 /* Hiasan tema musiman di kartu Ringkasan (lib/season.ts). */
-@keyframes leo-season-float { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-8px) rotate(6deg); } }
-.leo-season-float { animation: leo-season-float 4.5s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) { .leo-season-float { animation: none; } }
+@keyframes leo-season-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-6deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(6deg);
+  }
+}
+.leo-season-float {
+  animation: leo-season-float 4.5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .leo-season-float {
+    animation: none;
+  }
+}
 
 /* Pemandangan kartu sapaan Ringkasan (components/dashboard/SkyScene.tsx). */
-@keyframes sky-twinkle { 0%, 100% { opacity: 0.25; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.15); } }
-.sky-twinkle { animation: sky-twinkle 3.2s ease-in-out infinite; }
-@keyframes sky-shoot { 0%, 86% { opacity: 0; transform: translate(0, 0) rotate(18deg); } 88% { opacity: 1; } 100% { opacity: 0; transform: translate(260px, 84px) rotate(18deg); } }
-.sky-shoot { animation: sky-shoot 9s ease-in infinite; }
-@keyframes sky-spin { to { transform: rotate(360deg); } }
-.sky-spin { animation: sky-spin 40s linear infinite; }
-@keyframes sky-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-.sky-pulse { animation: sky-pulse 4s ease-in-out infinite; }
-@keyframes sky-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-.sky-float { animation: sky-float 6s ease-in-out infinite; }
-@keyframes sky-cloud { from { transform: translateX(-180px); } to { transform: translateX(110vw); } }
-.sky-cloud { animation: sky-cloud linear infinite; }
-@keyframes sky-birds { from { transform: translate(-100px, 0); } 50% { transform: translate(55vw, -14px); } to { transform: translate(110vw, 6px); } }
-.sky-birds { animation: sky-birds 32s linear infinite; }
-@keyframes sky-flap { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.4); } }
-.sky-flap { transform-box: fill-box; transform-origin: center; animation: sky-flap 0.6s ease-in-out infinite; }
-@keyframes sky-window { 0%, 100% { opacity: 1; } 45% { opacity: 0.25; } }
-.sky-window { animation: sky-window 7s ease-in-out infinite; }
-@keyframes sky-blink { 0%, 60%, 100% { opacity: 0.2; } 70%, 90% { opacity: 1; } }
-.sky-blink { animation: sky-blink 2.4s linear infinite; }
+@keyframes sky-twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+.sky-twinkle {
+  animation: sky-twinkle 3.2s ease-in-out infinite;
+}
+@keyframes sky-shoot {
+  0%,
+  86% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(18deg);
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(260px, 84px) rotate(18deg);
+  }
+}
+.sky-shoot {
+  animation: sky-shoot 9s ease-in infinite;
+}
+@keyframes sky-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.sky-spin {
+  animation: sky-spin 40s linear infinite;
+}
+@keyframes sky-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+.sky-pulse {
+  animation: sky-pulse 4s ease-in-out infinite;
+}
+@keyframes sky-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+.sky-float {
+  animation: sky-float 6s ease-in-out infinite;
+}
+@keyframes sky-cloud {
+  from {
+    transform: translateX(-180px);
+  }
+  to {
+    transform: translateX(110vw);
+  }
+}
+.sky-cloud {
+  animation: sky-cloud linear infinite;
+}
+@keyframes sky-birds {
+  from {
+    transform: translate(-100px, 0);
+  }
+  50% {
+    transform: translate(55vw, -14px);
+  }
+  to {
+    transform: translate(110vw, 6px);
+  }
+}
+.sky-birds {
+  animation: sky-birds 32s linear infinite;
+}
+@keyframes sky-flap {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.4);
+  }
+}
+.sky-flap {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sky-flap 0.6s ease-in-out infinite;
+}
+@keyframes sky-window {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  45% {
+    opacity: 0.25;
+  }
+}
+.sky-window {
+  animation: sky-window 7s ease-in-out infinite;
+}
+@keyframes sky-blink {
+  0%,
+  60%,
+  100% {
+    opacity: 0.2;
+  }
+  70%,
+  90% {
+    opacity: 1;
+  }
+}
+.sky-blink {
+  animation: sky-blink 2.4s linear infinite;
+}
 @media (prefers-reduced-motion: reduce) {
-  .sky-twinkle, .sky-shoot, .sky-spin, .sky-pulse, .sky-float, .sky-cloud, .sky-birds, .sky-flap, .sky-window, .sky-blink { animation: none; }
-  .sky-shoot { display: none; }
+  .sky-twinkle,
+  .sky-shoot,
+  .sky-spin,
+  .sky-pulse,
+  .sky-float,
+  .sky-cloud,
+  .sky-birds,
+  .sky-flap,
+  .sky-window,
+  .sky-blink {
+    animation: none;
+  }
+  .sky-shoot {
+    display: none;
+  }
 }
 
 /* ===== Mode gelap web (bertahap) =====
@@ -593,25 +1209,207 @@ html[data-daypart="sore"] .auth-greet[data-p="sore"], html[data-daypart="malam"]
   --color-fuchsia-900: #f0abfc;
   --color-fuchsia-950: #f0abfc;
 }
+/* Kartu yang memang selalu gelap (mis. kartu saldo bergradien slate-900 →
+   indigo-950): kembalikan warna aslinya di dalam .web-dark supaya tidak ikut
+   dibalik jadi terang (teks putih di atas latar terang = tak terbaca). */
+.web-dark .web-keep {
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
+  --color-indigo-900: #312e81;
+  --color-indigo-950: #1e1b4b;
+  --color-emerald-900: #064e3b;
+  --color-emerald-950: #022c22;
+}
+/* Kartu .web-keep ber-bg-slate-900: teks tetap putih (aturan .web-dark
+   .bg-slate-900 di bawah menggelapkan teks untuk pil yang dibalik jadi terang). */
+.web-dark .web-keep.bg-slate-900,
+.web-dark .web-keep.bg-slate-950 {
+  color: #fff;
+}
 @layer utilities {
-  :where(.web-dark) .bg-white, :where(.web-dark) .hover\:bg-white:hover, :where(.web-dark) .focus\:bg-white:focus { background-color: var(--web-surface); }
-  :where(.web-dark) .bg-white\/95 { background-color: rgb(20 26 42 / 0.95); }
-  :where(.web-dark) .bg-white\/90 { background-color: rgb(20 26 42 / 0.9); }
-  :where(.web-dark) .bg-white\/80 { background-color: rgb(20 26 42 / 0.8); }
-  :where(.web-dark) .bg-white\/70, .web-dark .hover\:bg-white\/70:hover { background-color: rgb(20 26 42 / 0.7); }
-  :where(.web-dark) .bg-white\/60 { background-color: rgb(20 26 42 / 0.6); }
-  :where(.web-dark) .from-white { --tw-gradient-from: var(--web-surface); }
-  :where(.web-dark) .via-white { --tw-gradient-via: var(--web-surface); }
-  :where(.web-dark) .to-white { --tw-gradient-to: var(--web-surface); }
-  :where(.web-dark) .to-white\/0 { --tw-gradient-to: rgb(20 26 42 / 0); }
+  :where(.web-dark) .bg-white,
+  :where(.web-dark) .hover\:bg-white:hover,
+  :where(.web-dark) .focus\:bg-white:focus {
+    background-color: var(--web-surface);
+  }
+  :where(.web-dark) .bg-white\/95 {
+    background-color: rgb(20 26 42 / 0.95);
+  }
+  :where(.web-dark) .bg-white\/90 {
+    background-color: rgb(20 26 42 / 0.9);
+  }
+  :where(.web-dark) .bg-white\/80 {
+    background-color: rgb(20 26 42 / 0.8);
+  }
+  :where(.web-dark) .bg-white\/70,
+  .web-dark .hover\:bg-white\/70:hover {
+    background-color: rgb(20 26 42 / 0.7);
+  }
+  :where(.web-dark) .bg-white\/60 {
+    background-color: rgb(20 26 42 / 0.6);
+  }
+  :where(.web-dark) .from-white {
+    --tw-gradient-from: var(--web-surface);
+  }
+  :where(.web-dark) .via-white {
+    --tw-gradient-via: var(--web-surface);
+  }
+  :where(.web-dark) .to-white {
+    --tw-gradient-to: var(--web-surface);
+  }
+  :where(.web-dark) .to-white\/0 {
+    --tw-gradient-to: rgb(20 26 42 / 0);
+  }
   /* Tombol utama bg-slate-900 → terang dengan teks gelap (slate-900 sudah dibalik). */
-  .web-dark .bg-slate-900, .web-dark .bg-slate-800 { color: #0b1020; }
+  .web-dark .bg-slate-900,
+  .web-dark .bg-slate-800 {
+    color: #0b1020;
+  }
   /* Lapisan gelap modal/menu tetap gelap. */
-  .web-dark .bg-slate-900\/40 { background-color: rgb(0 0 0 / 0.55); }
-  .web-dark.web-page, .web-dark .web-page { background-color: var(--web-bg); }
+  .web-dark .bg-slate-900\/40 {
+    background-color: rgb(0 0 0 / 0.55);
+  }
+  .web-dark.web-page,
+  .web-dark .web-page {
+    background-color: var(--web-bg);
+  }
   /* Latar halaman & header kaca (warna arbitrer #f6f7fb). */
-  :where(.web-dark) .bg-\[\#f6f7fb\] { background-color: var(--web-bg); }
-  :where(.web-dark) .bg-\[\#f6f7fb\]\/85 { background-color: rgb(11 16 32 / 0.85); }
-  :where(.web-dark) .bg-\[\#f6f7fb\]\/95 { background-color: rgb(11 16 32 / 0.95); }
-  :where(.web-dark) :is(input, select, textarea) { color-scheme: dark; }
+  :where(.web-dark) .bg-\[\#f6f7fb\] {
+    background-color: var(--web-bg);
+  }
+  :where(.web-dark) .bg-\[\#f6f7fb\]\/85 {
+    background-color: rgb(11 16 32 / 0.85);
+  }
+  :where(.web-dark) .bg-\[\#f6f7fb\]\/95 {
+    background-color: rgb(11 16 32 / 0.95);
+  }
+  :where(.web-dark) :is(input, select, textarea) {
+    color-scheme: dark;
+  }
+}
+
+/* Fokus bareng Leo — adegan kamar */
+@keyframes focus-twinkle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+.focus-twinkle {
+  animation: focus-twinkle 3.2s ease-in-out infinite;
+}
+@keyframes focus-cloud {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(10px);
+  }
+}
+.focus-cloud {
+  animation: focus-cloud 14s ease-in-out infinite;
+}
+@keyframes focus-steam {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  40% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+.focus-steam path {
+  animation: focus-steam 2.6s ease-out infinite;
+}
+@keyframes focus-lamp {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.focus-lamp {
+  animation: focus-lamp 5s ease-in-out infinite;
+}
+@keyframes focus-firefly {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: translate(0, 0);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(4px, -6px);
+  }
+}
+.focus-firefly {
+  animation: focus-firefly 4.2s ease-in-out infinite;
+  filter: drop-shadow(0 0 2px #fde68a);
+}
+@keyframes focus-butterfly {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(14px, -8px);
+  }
+  50% {
+    transform: translate(26px, 2px);
+  }
+  75% {
+    transform: translate(10px, 8px);
+  }
+}
+.focus-butterfly {
+  animation: focus-butterfly 9s ease-in-out infinite;
+}
+@keyframes focus-wing {
+  0%,
+  100% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(0.35);
+  }
+}
+.focus-wing {
+  animation: focus-wing 0.35s ease-in-out infinite;
+}
+@keyframes focus-eq {
+  0%,
+  100% {
+    height: 3px;
+  }
+  50% {
+    height: 10px;
+  }
+}
+.focus-eq {
+  height: 3px;
+  animation: focus-eq 0.9s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .focus-twinkle,
+  .focus-cloud,
+  .focus-steam path,
+  .focus-lamp,
+  .focus-eq,
+  .focus-firefly,
+  .focus-butterfly,
+  .focus-wing {
+    animation: none !important;
+  }
 }

@@ -1,10 +1,11 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { MobileTabBar } from '@/components/MobileTabBar';
+import DevNoticeBanner from '@/components/DevNoticeBanner';
 import { SettingsPanel, type View as SettingsView } from '@/components/settings/SettingsPanel';
 import { OPEN_SETTINGS_EVENT, SETTINGS_VIEWS_FROM_URL } from '@/lib/settingsPanel';
 import { ModalProvider } from '@/context/ModalContext';
@@ -17,8 +18,13 @@ import { reportAppOpened } from '@/lib/appUsage';
 import { useCategoryTemplateSync } from '@/lib/categoryTemplateSync';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { isWebDarkReady } from '@/lib/webTheme';
+import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
+import { initNativePush } from '@/lib/nativePush';
 
 const ONBOARDING_PATH = '/membership/onboarding';
+// Halaman layar penuh: tanpa sidebar, header, dan tab bar HP (punya navigasi sendiri).
+const FULLSCREEN_PATHS = ['/membership/investment', '/membership/ladang', '/membership/fokus', '/membership/cerita']; // + /ladang/kasir
 
 // Tema (Sistem/Terang/Gelap) disimpan per perangkat, sama dengan aplikasi HP.
 export default function MembershipLayout({ children }: { children: React.ReactNode }) {
@@ -29,11 +35,7 @@ export default function MembershipLayout({ children }: { children: React.ReactNo
   );
 }
 
-function MembershipShell({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function MembershipShell({ children }: { children: React.ReactNode }) {
   useCategoryTemplateSync();
   const { resolvedTheme } = useTheme();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -47,7 +49,10 @@ function MembershipShell({
   // openSettings(view) dari halaman mana pun, atau ?pengaturan=<view> di URL
   // (dipakai pengalihan halaman lama Kategori/Budget & tautan dari luar layout).
   useEffect(() => {
-    const open = (view: SettingsView) => { setSettingsView(view); setSettingsOpen(true); };
+    const open = (view: SettingsView) => {
+      setSettingsView(view);
+      setSettingsOpen(true);
+    };
     const onEvent = (e: Event) => open((e as CustomEvent<SettingsView>).detail ?? 'menu');
     window.addEventListener(OPEN_SETTINGS_EVENT, onEvent);
     const params = new URLSearchParams(window.location.search);
@@ -62,12 +67,22 @@ function MembershipShell({
   }, [pathname]);
 
   useEffect(() => {
-    cloudflareApi<{ user?: { onboarded?: boolean } | null }>('/api/auth/me')
+    // Aplikasi native (tablet memakai tampilan ini): halaman masuk versi aplikasi.
+    const loginPath = Capacitor.isNativePlatform() ? '/masuk?next=%2Fapp' : '/auth/login';
+    cloudflareApi<{ user?: { id?: string; onboarded?: boolean } | null }>('/api/auth/me')
       .then((result) => {
         if (!result.user) {
           setLoading(false);
-          router.replace('/auth/login');
+          router.replace(loginPath);
           return;
+        }
+        // Tablet (aplikasi native): daftarkan push di sini juga — AppShell /app
+        // tidak dipasang. Ketuk notifikasi membuka URL web apa adanya.
+        if (Capacitor.isNativePlatform() && result.user.id) {
+          void initNativePush(result.user.id, (url) => {
+            if (url.startsWith('/input-cepat')) window.location.href = url;
+            else router.push(url);
+          });
         }
         // Datang dari tautan "Ajak teman" (?ref=) → pakai kodenya sekali.
         // Ditolak server (kode sendiri/sudah pakai/akun >30 hari) = buang;
@@ -76,7 +91,9 @@ function MembershipShell({
         if (refCode) {
           cloudflareApi('/api/member/coins/apply-code', { method: 'POST', json: { code: refCode } })
             .then(clearReferralCode)
-            .catch((e) => { if (!(e instanceof TypeError)) clearReferralCode(); });
+            .catch((e) => {
+              if (!(e instanceof TypeError)) clearReferralCode();
+            });
         }
         // User baru yang belum menyelesaikan setup awal dipaksa ke wizard
         // onboarding dulu — kecuali memang sedang berada di halamannya, supaya
@@ -91,11 +108,26 @@ function MembershipShell({
       })
       .catch(() => {
         setLoading(false);
-        router.replace('/auth/login');
+        router.replace(loginPath);
       });
   }, [router, pathname]);
 
-  // Hapus spinner agar transisi dari tombol login terasa instan.
+  // Tombol back Android (aplikasi di tablet): mundur satu halaman; di Ringkasan → keluar ke layar utama.
+  const pathRef = useRef(pathname);
+  useEffect(() => {
+    pathRef.current = pathname;
+  }, [pathname]);
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const handle = CapacitorApp.addListener('backButton', () => {
+      if (pathRef.current === '/membership/dashboard') void CapacitorApp.minimizeApp();
+      else router.back();
+    });
+    return () => {
+      void handle.then((h) => h.remove());
+    };
+  }, [router]);
+
   if (loading) return null;
 
   // Mode gelap bertahap: kerangka selalu ikut tema, isi halaman hanya untuk
@@ -105,43 +137,71 @@ function MembershipShell({
   // Pembungkus selalu dirender (display: contents) — hanya kelasnya yang
   // berubah, supaya Sidebar/Header/Panel tidak di-mount ulang.
   const frameClass = `contents${dark && !pageDark ? ' web-dark' : ''}`;
+  const fullscreen = FULLSCREEN_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+
+  if (fullscreen) {
+    return (
+      <FeedbackProvider>
+        <ModalProvider>
+          <div className={`web-page min-h-screen bg-[#f6f7fb]${pageDark ? ' web-dark' : ''}`}>
+            {children}
+            <div className={frameClass}>
+              <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} initialView={settingsView} />
+            </div>
+            <GlobalModalWrapper />
+          </div>
+        </ModalProvider>
+      </FeedbackProvider>
+    );
+  }
 
   return (
     <FeedbackProvider>
-    <ModalProvider>
-      <div className={`web-page flex min-h-screen bg-[#f6f7fb] relative overflow-x-hidden print:block print:min-h-0 print:h-auto${pageDark ? ' web-dark' : ''}`}>
-        {/* Mobile Backdrop */}
-        {isSidebarOpen && (
-          <div
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 md:hidden"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-        )}
+      <ModalProvider>
+        <div
+          className={`web-page flex min-h-screen bg-[#f6f7fb] relative overflow-x-hidden print:block print:min-h-0 print:h-auto${pageDark ? ' web-dark' : ''}`}
+        >
+          {isSidebarOpen && (
+            <div
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 md:hidden"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          )}
 
-        <div className={frameClass}><Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onOpenSettings={() => { setSettingsView('menu'); setSettingsOpen(true); }} /></div>
+          <div className={frameClass}>
+            <Sidebar
+              isOpen={isSidebarOpen}
+              onClose={() => setIsSidebarOpen(false)}
+              onOpenSettings={() => {
+                setSettingsView('menu');
+                setSettingsOpen(true);
+              }}
+            />
+          </div>
 
-        {/* Main Content */}
-        {/* print:block+print:h-auto: tanpa ini, konten cetak yang bersarang di
+          {/* print:block+print:h-auto: tanpa ini, konten cetak yang bersarang di
             dalam ancestor flex/min-h-screen kepotong di batas tinggi layar
             (bug pagination flexbox saat print di Chrome) alih-alih mengalir
             ke halaman berikutnya. */}
-        <main className="flex-1 md:ml-[84px] lg:ml-72 min-h-screen flex flex-col min-w-0 pb-24 md:pb-0 print:pb-0 print:block print:min-h-0 print:h-auto print:ml-0 print:pt-0">
-          <div className={frameClass}><Header onMenuClick={() => setIsSidebarOpen(true)} /></div>
+          <main className="flex-1 md:ml-[84px] lg:ml-72 min-h-screen flex flex-col min-w-0 pb-24 md:pb-0 print:pb-0 print:block print:min-h-0 print:h-auto print:ml-0 print:pt-0">
+            <div className={frameClass}>
+              <Header onMenuClick={() => setIsSidebarOpen(true)} />
+            </div>
+            <DevNoticeBanner saranHref="/membership/saran" />
 
-          {/* Page Content */}
-          <div className="p-4 md:p-8 max-w-7xl mx-auto w-full flex-1 print:p-0 print:m-0 print:max-w-none">
-            {children}
+            <div className="p-4 md:p-8 max-w-7xl mx-auto w-full flex-1 print:p-0 print:m-0 print:max-w-none">
+              {children}
+            </div>
+          </main>
+
+          <div className={frameClass}>
+            <MobileTabBar />
+            <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} initialView={settingsView} />
           </div>
-        </main>
-
-        <div className={frameClass}>
-          <MobileTabBar />
-          <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} initialView={settingsView} />
+          <GlobalModalWrapper />
+          <OnboardingTour />
         </div>
-        <GlobalModalWrapper />
-        <OnboardingTour />
-      </div>
-    </ModalProvider>
+      </ModalProvider>
     </FeedbackProvider>
   );
 }

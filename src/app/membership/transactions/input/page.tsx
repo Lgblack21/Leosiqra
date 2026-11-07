@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -28,19 +28,69 @@ import { Skeleton } from '@/components/ui/Skeleton';
 const isSameDay = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
-interface Action { id: ModalType; label: string; desc: string; icon: LucideIcon; color: string; href?: string }
+interface Action {
+  id: ModalType;
+  label: string;
+  desc: string;
+  icon: LucideIcon;
+  color: string;
+  href?: string;
+}
 
 const secondaryActions: Action[] = [
-  { id: 'topup_transfer', label: 'Transfer & Top Up', desc: 'Pindah dana antar rekening sendiri atau isi saldo e-wallet.', icon: ArrowLeftRight, color: 'bg-cyan-50 text-cyan-600' },
-  { id: null, label: 'Impor Mutasi', desc: 'PDF, Excel, CSV, atau tangkapan layar aplikasi bank — ditinjau dulu sebelum disimpan.', icon: FileSpreadsheet, color: 'bg-emerald-50 text-emerald-600', href: '/membership/impor' },
+  {
+    id: 'topup_transfer',
+    label: 'Transfer & Top Up',
+    desc: 'Pindah dana antar rekening sendiri atau isi saldo e-wallet.',
+    icon: ArrowLeftRight,
+    color: 'bg-cyan-50 text-cyan-600',
+  },
+  {
+    id: null,
+    label: 'Impor Mutasi',
+    desc: 'PDF, Excel, CSV, atau tangkapan layar aplikasi bank — ditinjau dulu sebelum disimpan.',
+    icon: FileSpreadsheet,
+    color: 'bg-emerald-50 text-emerald-600',
+    href: '/membership/impor',
+  },
 ];
 
 const otherActions: Action[] = [
-  { id: 'tabungan', label: 'Tabungan', desc: 'Setor atau tarik dana tabungan.', icon: PiggyBank, color: 'bg-rose-50 text-rose-600' },
-  { id: 'saham', label: 'Saham', desc: 'Beli/jual saham dan update portofolio.', icon: Briefcase, color: 'bg-blue-50 text-blue-600' },
-  { id: 'deposito', label: 'Deposito', desc: 'Penempatan dana berjangka & bunganya.', icon: Landmark, color: 'bg-indigo-50 text-indigo-600' },
-  { id: 'investasi_lain', label: 'Investasi Lainnya', desc: 'Emas, kripto, reksadana, properti.', icon: Coins, color: 'bg-purple-50 text-purple-600' },
-  { id: 'hutang_piutang', label: 'Hutang & Piutang', desc: 'Catat pinjaman, cicilan, dan tagihan.', icon: HandCoins, color: 'bg-orange-50 text-orange-600' },
+  {
+    id: 'tabungan',
+    label: 'Tabungan',
+    desc: 'Setor atau tarik dana tabungan.',
+    icon: PiggyBank,
+    color: 'bg-rose-50 text-rose-600',
+  },
+  {
+    id: 'saham',
+    label: 'Saham',
+    desc: 'Beli/jual saham dan update portofolio.',
+    icon: Briefcase,
+    color: 'bg-blue-50 text-blue-600',
+  },
+  {
+    id: 'deposito',
+    label: 'Deposito',
+    desc: 'Penempatan dana berjangka & bunganya.',
+    icon: Landmark,
+    color: 'bg-indigo-50 text-indigo-600',
+  },
+  {
+    id: 'investasi_lain',
+    label: 'Investasi Lainnya',
+    desc: 'Emas, kripto, reksadana, properti.',
+    icon: Coins,
+    color: 'bg-purple-50 text-purple-600',
+  },
+  {
+    id: 'hutang_piutang',
+    label: 'Hutang & Piutang',
+    desc: 'Catat pinjaman, cicilan, dan tagihan.',
+    icon: HandCoins,
+    color: 'bg-orange-50 text-orange-600',
+  },
 ];
 
 function ActionTile({ action, onClick }: { action: Action; onClick: () => void }) {
@@ -57,7 +107,10 @@ function ActionTile({ action, onClick }: { action: Action; onClick: () => void }
         <span className="block text-sm font-bold text-slate-900">{action.label}</span>
         <span className="block text-caption text-slate-400 mt-0.5">{action.desc}</span>
       </span>
-      <ChevronRight size={16} className="text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all shrink-0" />
+      <ChevronRight
+        size={16}
+        className="text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all shrink-0"
+      />
     </button>
   );
 }
@@ -73,12 +126,16 @@ export default function InputTransactionPage() {
     const load = () =>
       transactionService
         .getUserTransactions('session')
-        .then((items) => { if (active) setTransactions(items); })
+        .then((items) => {
+          if (active) setTransactions(items);
+        })
         .catch((err) => {
           console.error('Gagal memuat ringkasan transaksi hari ini:', err);
           if (active) setTransactions([]);
         })
-        .finally(() => { if (active) setLoadingSummary(false); });
+        .finally(() => {
+          if (active) setLoadingSummary(false);
+        });
 
     const unsubAuth = onAuthStateChanged(auth, (u) => {
       if (!u) {
@@ -122,7 +179,6 @@ export default function InputTransactionPage() {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        {/* Aksi utama */}
         <div className="lg:col-span-2 space-y-4 md:space-y-6">
           <button
             type="button"
@@ -161,19 +217,22 @@ export default function InputTransactionPage() {
           </div>
         </div>
 
-        {/* Ringkasan hari ini */}
         <Card className="p-5 md:p-6 h-fit">
           <CardHeader title="Hari ini" />
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-control bg-emerald-50/60 p-3">
               <p className="text-caption font-medium text-emerald-700">Masuk</p>
-              {loadingSummary ? <Skeleton className="h-5 mt-1" /> : (
+              {loadingSummary ? (
+                <Skeleton className="h-5 mt-1" />
+              ) : (
                 <p className="text-sm font-black text-emerald-600 tabular-nums truncate">{formatIDR(todayIn)}</p>
               )}
             </div>
             <div className="rounded-control bg-rose-50/60 p-3">
               <p className="text-caption font-medium text-rose-700">Keluar</p>
-              {loadingSummary ? <Skeleton className="h-5 mt-1" /> : (
+              {loadingSummary ? (
+                <Skeleton className="h-5 mt-1" />
+              ) : (
                 <p className="text-sm font-black text-rose-500 tabular-nums truncate">{formatIDR(todayOut)}</p>
               )}
             </div>
@@ -183,7 +242,11 @@ export default function InputTransactionPage() {
             Terakhir dicatat {!loadingSummary && `· ${todayEntries.length} transaksi`}
           </p>
           {loadingSummary ? (
-            <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-10" />)}</div>
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-10" />
+              ))}
+            </div>
           ) : todayEntries.length === 0 ? (
             <p className="text-sm text-slate-400 py-3">Belum ada transaksi hari ini.</p>
           ) : (
@@ -196,8 +259,14 @@ export default function InputTransactionPage() {
                       <p className="text-sm font-bold text-slate-800 truncate">{t.note || t.category}</p>
                       <p className="text-caption text-slate-400 truncate">{t.category}</p>
                     </div>
-                    <p className={cn('text-sm font-black tabular-nums whitespace-nowrap', incoming ? 'text-emerald-600' : 'text-rose-500')}>
-                      {incoming ? '+' : '−'}{formatIDR(toIdr(t))}
+                    <p
+                      className={cn(
+                        'text-sm font-black tabular-nums whitespace-nowrap',
+                        incoming ? 'text-emerald-600' : 'text-rose-500',
+                      )}
+                    >
+                      {incoming ? '+' : '−'}
+                      {formatIDR(toIdr(t))}
                     </p>
                   </li>
                 );

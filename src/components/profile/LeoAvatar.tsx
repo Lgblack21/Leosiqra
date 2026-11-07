@@ -17,7 +17,14 @@ export const AVATAR_FURS: Record<string, { label: string; mane: string; face: st
   putih: { label: 'Putih', mane: '#e8e2d6', face: '#fbf8f2', swatch: '#f4f1ea' },
 };
 export const AVATAR_BGS: Record<string, string> = {
-  krem: '#f1e8db', peach: '#fbd8c4', kuning: '#f8e3a1', mint: '#cdebdc', biru: '#cfe1f6', ungu: '#e0d9f5', pink: '#f6d3df', navy: '#262b45',
+  krem: '#f1e8db',
+  peach: '#fbd8c4',
+  kuning: '#f8e3a1',
+  mint: '#cdebdc',
+  biru: '#cfe1f6',
+  ungu: '#e0d9f5',
+  pink: '#f6d3df',
+  navy: '#262b45',
 };
 export const AVATAR_ACCS: { key: string; label: string }[] = [
   { key: 'none', label: 'Tanpa' },
@@ -87,7 +94,13 @@ function Accessory({ acc }: { acc: string }) {
       return (
         <g>
           {[0, 72, 144, 216, 288].map((d) => (
-            <circle key={d} cx={66 + Math.cos((d * Math.PI) / 180) * 4} cy={30 + Math.sin((d * Math.PI) / 180) * 4} r="3.6" fill="#f9a8d4" />
+            <circle
+              key={d}
+              cx={66 + Math.cos((d * Math.PI) / 180) * 4}
+              cy={30 + Math.sin((d * Math.PI) / 180) * 4}
+              r="3.6"
+              fill="#f9a8d4"
+            />
           ))}
           <circle cx="66" cy="30" r="2.6" fill="#facc15" />
         </g>
@@ -104,7 +117,9 @@ export function LeoAvatarSvg({ config, className }: { config: AvatarConfig; clas
   return (
     <svg viewBox="0 0 100 100" className={className} role="img" aria-label="Avatar singa Leo">
       <circle cx="50" cy="50" r="50" fill={bg} />
-      {MANE_POINTS.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="11" fill={fur.mane} />)}
+      {MANE_POINTS.map(([x, y], i) => (
+        <circle key={i} cx={x} cy={y} r="11" fill={fur.mane} />
+      ))}
       <circle cx="33" cy="34" r="7" fill={fur.face} />
       <circle cx="67" cy="34" r="7" fill={fur.face} />
       <circle cx="50" cy="55" r="23" fill={fur.face} />
@@ -113,20 +128,47 @@ export function LeoAvatarSvg({ config, className }: { config: AvatarConfig; clas
       <circle cx="35" cy="61" r="3.5" fill="#f9a8b8" opacity="0.7" />
       <circle cx="65" cy="61" r="3.5" fill="#f9a8b8" opacity="0.7" />
       <path d="M46 58 h8 l-4 4 Z" fill="#7c4a3a" />
-      <path d="M50 62 q-3 4 -6 2 M50 62 q3 4 6 2" fill="none" stroke="#7c4a3a" strokeWidth="1.6" strokeLinecap="round" />
+      <path
+        d="M50 62 q-3 4 -6 2 M50 62 q3 4 6 2"
+        fill="none"
+        stroke="#7c4a3a"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
       <Accessory acc={config.acc} />
     </svg>
   );
 }
 
-export function UserAvatar({ avatar, photoURL, name, size = 40, className }: { avatar?: AvatarConfig | null; photoURL?: string | null; name?: string; size?: number; className?: string }) {
+export function UserAvatar({
+  avatar,
+  photoURL,
+  name,
+  size = 40,
+  className,
+}: {
+  avatar?: AvatarConfig | null;
+  photoURL?: string | null;
+  name?: string;
+  size?: number;
+  className?: string;
+}) {
   const usePhoto = photoURL && (avatar?.mode === 'photo' || !avatar);
   return (
-    <span className={cn('relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full', className)} style={{ width: size, height: size }}>
+    <span
+      className={cn(
+        'relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full',
+        className,
+      )}
+      style={{ width: size, height: size }}
+    >
       {usePhoto ? (
         <Image src={photoURL} alt={name ?? 'Foto profil'} fill unoptimized className="object-cover" />
       ) : (
-        <LeoAvatarSvg config={avatar && avatar.mode === 'leo' ? avatar : { ...(avatar ?? DEFAULT_AVATAR), mode: 'leo' }} className="h-full w-full" />
+        <LeoAvatarSvg
+          config={avatar && avatar.mode === 'leo' ? avatar : { ...(avatar ?? DEFAULT_AVATAR), mode: 'leo' }}
+          className="h-full w-full"
+        />
       )}
     </span>
   );

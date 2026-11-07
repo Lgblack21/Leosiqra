@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { CheckCircle2, AlertTriangle, Info, X } from 'lucide-react';
@@ -11,7 +11,11 @@ import { cn } from '@/lib/utils';
 //   if (!(await confirm({ title: 'Hapus?', danger: true }))) return;
 
 type ToastTone = 'success' | 'error' | 'info';
-interface ToastItem { id: number; message: string; tone: ToastTone }
+interface ToastItem {
+  id: number;
+  message: string;
+  tone: ToastTone;
+}
 
 interface ConfirmOptions {
   title: string;
@@ -56,11 +60,14 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const push = useCallback((message: string, tone: ToastTone) => {
-    const id = ++nextId.current;
-    setToasts((prev) => [...prev.slice(-2), { id, message, tone }]);
-    setTimeout(() => dismiss(id), tone === 'error' ? 6000 : 3500);
-  }, [dismiss]);
+  const push = useCallback(
+    (message: string, tone: ToastTone) => {
+      const id = ++nextId.current;
+      setToasts((prev) => [...prev.slice(-2), { id, message, tone }]);
+      setTimeout(() => dismiss(id), tone === 'error' ? 6000 : 3500);
+    },
+    [dismiss],
+  );
 
   const [api] = useState<FeedbackApi>(() => ({
     toast: {
@@ -81,7 +88,9 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!pending) return;
     cancelBtnRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') settle(false); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') settle(false);
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [pending, settle]);
@@ -90,8 +99,10 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
     <FeedbackContext.Provider value={api}>
       {children}
 
-      {/* Toasts */}
-      <div aria-live="polite" className="fixed z-[96] bottom-24 left-4 right-4 sm:left-auto sm:right-6 md:bottom-6 flex flex-col gap-2 sm:w-96 pointer-events-none print:hidden">
+      <div
+        aria-live="polite"
+        className="fixed z-[96] bottom-24 left-4 right-4 sm:left-auto sm:right-6 md:bottom-6 flex flex-col gap-2 sm:w-96 pointer-events-none print:hidden"
+      >
         {toasts.map((t) => {
           const { icon: Icon, className } = toneStyles[t.tone];
           return (
@@ -102,7 +113,11 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
             >
               <Icon size={18} className={cn('shrink-0 mt-0.5', className)} />
               <p className="flex-1 text-sm font-medium text-slate-700">{t.message}</p>
-              <button onClick={() => dismiss(t.id)} aria-label="Tutup notifikasi" className="text-slate-300 hover:text-slate-500 shrink-0">
+              <button
+                onClick={() => dismiss(t.id)}
+                aria-label="Tutup notifikasi"
+                className="text-slate-300 hover:text-slate-500 shrink-0"
+              >
                 <X size={16} />
               </button>
             </div>
@@ -110,7 +125,6 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
         })}
       </div>
 
-      {/* Dialog konfirmasi */}
       {pending && (
         <div className="fixed inset-0 z-[95] flex items-center justify-center p-4 print:hidden">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in" onClick={() => settle(false)} />
@@ -120,7 +134,9 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
             aria-labelledby="confirm-title"
             className="relative w-full max-w-sm bg-white rounded-card shadow-2xl p-6 animate-in"
           >
-            <h2 id="confirm-title" className="text-base font-black text-slate-900">{pending.title}</h2>
+            <h2 id="confirm-title" className="text-base font-black text-slate-900">
+              {pending.title}
+            </h2>
             {pending.message && <p className="mt-2 text-sm text-slate-500">{pending.message}</p>}
             <div className="mt-6 flex gap-2 justify-end">
               <button
@@ -134,7 +150,7 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
                 onClick={() => settle(true)}
                 className={cn(
                   'px-4 py-2.5 rounded-control text-sm font-bold text-white transition-colors',
-                  pending.danger ? 'bg-rose-500 hover:bg-rose-600' : 'bg-indigo-600 hover:bg-indigo-700'
+                  pending.danger ? 'bg-rose-500 hover:bg-rose-600' : 'bg-indigo-600 hover:bg-indigo-700',
                 )}
               >
                 {pending.confirmLabel ?? 'Ya, lanjutkan'}

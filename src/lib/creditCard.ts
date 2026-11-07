@@ -7,8 +7,16 @@ import { toLocalDateString } from '@/lib/utils';
 // dimodelkan sebagai limit, bukan saldo kas. Fungsi di file ini adalah
 // SATU-SATUNYA sumber perhitungan terpakai/sisa limit — dipakai bersama oleh
 // Dashboard, Rekening, Kartu Saya, Profil, dan Input Cepat.
-export const isCreditAccountType = (type: string | undefined) =>
-  type === 'Credit Card' || type === 'kartu';
+export const isCreditAccountType = (type: string | undefined) => type === 'Credit Card' || type === 'kartu';
+
+// Jaringan kartu yang diterima Worker (CARD_NETWORKS di cloudflare/src/index.ts).
+export const CARD_NETWORK_OPTIONS = [
+  { key: 'visa', label: 'Visa' },
+  { key: 'mastercard', label: 'Mastercard' },
+  { key: 'jcb', label: 'JCB' },
+  { key: 'amex', label: 'Amex' },
+  { key: 'gpn', label: 'GPN' },
+] as const;
 
 export interface CreditUsage {
   limit: number;
@@ -19,16 +27,10 @@ export interface CreditUsage {
 // Konvensi: saldo (`balance`) kartu kredit = −tagihan terpakai. Semua alur
 // yang menggerakkan uang sudah memperbarui `balance` (belanja −, pembayaran +,
 // transfer/top up masuk +/keluar −, setoran tabungan & penempatan investasi −,
-// pelunasan hutang ±), jadi terpakai diturunkan langsung dari saldo.
-//
-// Dulu terpakai direkonstruksi dari daftar transaksi (initialBalance +
-// pengeluaran − pemasukan). Itu melewatkan pembayaran lewat Transfer & Top Up
-// (tipe `transfer`), pemakaian lewat top up dari kartu, setoran tabungan &
-// investasi dari kartu, dan menghitung catatan Hutang di kartu dengan arah
-// terbalik — sehingga sisa limit makin lama makin salah.
-//
-// Parameter `transactions` dipertahankan supaya pemanggil lama tidak perlu
-// diubah; tidak dipakai lagi.
+// pelunasan hutang ±), jadi terpakai diturunkan langsung dari saldo — jangan
+// direkonstruksi dari daftar transaksi (transfer, top up, setoran tabungan/
+// investasi dari kartu, dan arah catatan Hutang bikin sisa limit makin salah).
+// Parameter `transactions` cuma dipertahankan untuk pemanggil lama; tidak dipakai.
 export const computeCreditUsage = (account: Account, transactions?: Transaction[]): CreditUsage => {
   void transactions;
   const limit = account.creditLimit || 0;
@@ -40,8 +42,6 @@ export const computeCreditUsage = (account: Account, transactions?: Transaction[
 // form) → nilai `balance` yang disimpan.
 export const creditBalanceFromUsed = (used: number) => -Math.max(0, used || 0);
 
-// ---- Siklus tagihan (Tahap 3) ----------------------------------------------
-
 // Arus uang rekening kartu dari daftar transaksi: belanja/top up keluar
 // menambah terpakai (+), pembayaran/transfer masuk mengurangi (−). Catatan
 // Hutang/Piutang (type "debt") bukan arus uang — dilewati.
@@ -52,11 +52,21 @@ export const cardFlowsFromTransactions = (accountId: string, transactions: Trans
       const amount = Number(t.amount) || 0;
       const date = t.date instanceof Date ? toLocalDateString(t.date) : String(t.date).slice(0, 10);
       const isIncoming =
-        t.type === 'pemasukan' || ((t.type === 'transfer' || t.type === 'topup') && Boolean(t.subCategory?.includes('Masuk')));
+        t.type === 'pemasukan' ||
+        ((t.type === 'transfer' || t.type === 'topup') && Boolean(t.subCategory?.includes('Masuk')));
       return { date, delta: isIncoming ? -amount : amount };
     });
 
-export const getCardCycle = (account: Account, transactions: Transaction[], today: string = toLocalDateString()): CardCycle | null =>
+export const getCardCycle = (
+  account: Account,
+  transactions: Transaction[],
+  today: string = toLocalDateString(),
+): CardCycle | null =>
   account.id
-    ? computeCardCycle(computeCreditUsage(account).used, cardFlowsFromTransactions(account.id, transactions), account, today)
+    ? computeCardCycle(
+        computeCreditUsage(account).used,
+        cardFlowsFromTransactions(account.id, transactions),
+        account,
+        today,
+      )
     : null;

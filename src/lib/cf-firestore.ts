@@ -1,5 +1,5 @@
-import { cloudflareApi, clearApiCache } from "@/lib/cloudflare-api";
-import { auth } from "@/lib/cf-client";
+import { cloudflareApi, clearApiCache } from '@/lib/cloudflare-api';
+import { auth } from '@/lib/cf-client';
 
 // onSnapshot di bawah cuma fetch sekali, bukan live subscription beneran —
 // bus ini menyambungkan tiap mutasi ke listener aktif supaya auto-refetch.
@@ -15,10 +15,8 @@ const runLocalListeners = (collectionName: string) => {
 // "koleksi berubah" ke tab lain di browser yang sama, supaya input di satu
 // tab langsung tampil di tab lain tanpa F5.
 const syncChannel =
-  typeof window !== "undefined" && "BroadcastChannel" in window
-    ? new BroadcastChannel("leosiqra-data-sync")
-    : null;
-syncChannel?.addEventListener("message", (event: MessageEvent<{ collection?: string }>) => {
+  typeof window !== 'undefined' && 'BroadcastChannel' in window ? new BroadcastChannel('leosiqra-data-sync') : null;
+syncChannel?.addEventListener('message', (event: MessageEvent<{ collection?: string }>) => {
   if (event.data?.collection) runLocalListeners(event.data.collection);
 });
 
@@ -46,18 +44,18 @@ const refreshAllOnFocus = () => {
 
 // Data selalu langsung tersimpan di server (tidak ada antrean offline), jadi
 // "sinkron" = ambil ulang semua data yang sedang tampil dari server.
-export const DATA_SYNCED_EVENT = "leosiqra:data-synced";
+export const DATA_SYNCED_EVENT = 'leosiqra:data-synced';
 export const getLastSyncAt = () => lastFocusRefresh;
 export const refreshAllData = async () => {
   // Cek koneksi & sesi dulu supaya gagal sinkron terlihat, bukan diam-diam.
   clearApiCache();
-  await cloudflareApi("/api/auth/me");
+  await cloudflareApi('/api/auth/me');
   runAllListeners();
 };
-if (typeof window !== "undefined") {
-  window.addEventListener("focus", refreshAllOnFocus);
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") refreshAllOnFocus();
+if (typeof window !== 'undefined') {
+  window.addEventListener('focus', refreshAllOnFocus);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') refreshAllOnFocus();
   });
 }
 
@@ -74,23 +72,23 @@ export const subscribeToCollectionChanges = (collectionName: string, fn: () => v
 type AnyObj = Record<string, unknown>;
 
 type Constraint =
-  | { kind: "where"; field: string; op: string; value: unknown }
-  | { kind: "orderBy"; field: string; direction: "asc" | "desc" }
-  | { kind: "limit"; value: number };
+  | { kind: 'where'; field: string; op: string; value: unknown }
+  | { kind: 'orderBy'; field: string; direction: 'asc' | 'desc' }
+  | { kind: 'limit'; value: number };
 
 type CollectionRef = {
-  kind: "collection";
+  kind: 'collection';
   name: string;
 };
 
 type DocRef = {
-  kind: "doc";
+  kind: 'doc';
   collection: string;
   id: string;
 };
 
 type QueryRef = {
-  kind: "query";
+  kind: 'query';
   collection: string;
   constraints: Constraint[];
 };
@@ -132,44 +130,43 @@ export type DocumentSnapshot<T = DocumentData> = {
 };
 
 type IncrementSentinel = {
-  __op: "increment";
+  __op: 'increment';
   value: number;
 };
 
 const API_COLLECTIONS = new Set([
-  "users",
-  "payments",
-  "admin_logs",
-  "admin_settings",
-  "transactions",
-  "accounts",
-  "budgets",
-  "investments",
-  "categories",
-  "currencies",
-  "recurring",
-  "savings",
-  "ai_chats",
+  'users',
+  'payments',
+  'admin_logs',
+  'admin_settings',
+  'transactions',
+  'accounts',
+  'budgets',
+  'investments',
+  'categories',
+  'currencies',
+  'recurring',
+  'savings',
+  'ai_chats',
 ]);
 
 const isDateKey = (key: string) =>
   [
-    "created_at",
-    "updated_at",
-    "expired_at",
-    "next_date",
-    "date",
-    "timestamp",
-    "createdAt",
-    "updatedAt",
-    "expiredAt",
-    "nextDate",
-    // Dulu hilang dari daftar ini, jadi dateInvested/targetDate tampil salah
-    // (fallback ke hari ini / kosong) di halaman yang baca lewat onSnapshot.
-    "date_invested",
-    "target_date",
-    "dateInvested",
-    "targetDate",
+    'created_at',
+    'updated_at',
+    'expired_at',
+    'next_date',
+    'date',
+    'timestamp',
+    'createdAt',
+    'updatedAt',
+    'expiredAt',
+    'nextDate',
+    // Tanpa dua ini, dateInvested/targetDate tampil salah di halaman yang baca lewat onSnapshot.
+    'date_invested',
+    'target_date',
+    'dateInvested',
+    'targetDate',
   ].includes(key);
 
 const normalize = (input: unknown): unknown => {
@@ -182,25 +179,25 @@ const normalize = (input: unknown): unknown => {
   if (input instanceof Date) {
     return Timestamp.fromDate(input);
   }
-  if (!input || typeof input !== "object") {
+  if (!input || typeof input !== 'object') {
     return input;
   }
 
   const result: AnyObj = {};
   for (const [key, value] of Object.entries(input)) {
     const normalized =
-      typeof value === "string" && isDateKey(key) && !Number.isNaN(Date.parse(value))
+      typeof value === 'string' && isDateKey(key) && !Number.isNaN(Date.parse(value))
         ? Timestamp.fromDate(new Date(value))
         : normalize(value);
     result[key] = normalized;
-    if (key.includes("_")) {
+    if (key.includes('_')) {
       const camel = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
       result[camel] = normalized;
       // Kapitalisasi non-standar: app memakai `photoURL` (URL kapital), sedangkan
       // camelCase generik dari `photo_url` menghasilkan `photoUrl` — tanpa alias ini
       // foto profil terbaca undefined saat reload dan avatar hilang.
-      if (camel === "photoUrl") {
-        result["photoURL"] = normalized;
+      if (camel === 'photoUrl') {
+        result['photoURL'] = normalized;
       }
       // Sama untuk akhiran `_idr` (amount_idr, current_value_idr, dst) — app
       // memakai `amountIDR`/`currentValueIDR` (IDR kapital semua), sedangkan
@@ -209,7 +206,7 @@ const normalize = (input: unknown): unknown => {
       // wrapper) salah membaca nilai IDR-nya jadi undefined dan diam-diam
       // fallback ke amount mentah (bug nilai asing tampil seolah IDR 1:1).
       if (/Idr$/.test(camel)) {
-        result[camel.replace(/Idr$/, "IDR")] = normalized;
+        result[camel.replace(/Idr$/, 'IDR')] = normalized;
       }
     }
   }
@@ -217,11 +214,7 @@ const normalize = (input: unknown): unknown => {
 };
 
 const isIncrement = (value: unknown): value is IncrementSentinel =>
-  Boolean(
-    value &&
-      typeof value === "object" &&
-      (value as { __op?: string }).__op === "increment"
-  );
+  Boolean(value && typeof value === 'object' && (value as { __op?: string }).__op === 'increment');
 
 const toApiValue = (value: unknown): unknown => {
   if (value instanceof Timestamp) {
@@ -236,7 +229,7 @@ const toApiValue = (value: unknown): unknown => {
   if (isIncrement(value)) {
     return value;
   }
-  if (!value || typeof value !== "object") {
+  if (!value || typeof value !== 'object') {
     return value;
   }
   const output: AnyObj = {};
@@ -250,7 +243,7 @@ const applyIncrementFields = (target: AnyObj, patch: AnyObj) => {
   const next = { ...target };
   for (const [key, value] of Object.entries(patch)) {
     if (isIncrement(value)) {
-      const base = typeof next[key] === "number" ? next[key] : 0;
+      const base = typeof next[key] === 'number' ? next[key] : 0;
       next[key] = base + value.value;
     } else {
       next[key] = value;
@@ -260,7 +253,7 @@ const applyIncrementFields = (target: AnyObj, patch: AnyObj) => {
 };
 
 const getLocalDb = (): Record<string, AnyObj[]> => {
-  const globalKey = "__LEOSIQRA_CF_FIRESTORE__";
+  const globalKey = '__LEOSIQRA_CF_FIRESTORE__';
   const root = globalThis as Record<string, unknown>;
   if (!root[globalKey]) {
     root[globalKey] = {};
@@ -282,7 +275,7 @@ const writeLocalCollection = (name: string, items: AnyObj[]) => {
 };
 
 const makeSnapshotDoc = (row: AnyObj): QueryDocumentSnapshot => ({
-  id: String(row.id ?? ""),
+  id: String(row.id ?? ''),
   data: () => row,
 });
 
@@ -293,43 +286,44 @@ const applyConstraints = (items: AnyObj[], constraints: Constraint[]) => {
   const toComparable = (value: unknown) => {
     if (value instanceof Timestamp) return value.toDate().getTime();
     if (value instanceof Date) return value.getTime();
-    if (typeof value === "string") {
+    if (typeof value === 'string') {
       const parsed = Date.parse(value);
       if (!Number.isNaN(parsed)) return parsed;
       const numeric = Number(value);
       if (!Number.isNaN(numeric)) return numeric;
       return value;
     }
-    if (typeof value === "number" || typeof value === "boolean") return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return value;
     return value as Comparable;
   };
 
   for (const constraint of constraints) {
-    if (constraint.kind === "where") {
+    if (constraint.kind === 'where') {
       output = output.filter((row) => {
         const left = toComparable(row[constraint.field]);
         const right = toComparable(constraint.value);
         switch (constraint.op) {
-          case "==":
-          case "=":
+          case '==':
+          case '=':
             return left === right;
-          case "!=":
+          case '!=':
             return left !== right;
-          case ">":
+          case '>':
             return left != null && right != null ? left > right : false;
-          case ">=":
+          case '>=':
             return left != null && right != null ? left >= right : false;
-          case "<":
+          case '<':
             return left != null && right != null ? left < right : false;
-          case "<=":
+          case '<=':
             return left != null && right != null ? left <= right : false;
-          case "in":
-            return Array.isArray(constraint.value) ? (constraint.value as unknown[]).includes(row[constraint.field]) : false;
-          case "array-contains":
-            {
-              const fieldValue = row[constraint.field];
-              return Array.isArray(fieldValue) ? fieldValue.includes(constraint.value) : false;
-            }
+          case 'in':
+            return Array.isArray(constraint.value)
+              ? (constraint.value as unknown[]).includes(row[constraint.field])
+              : false;
+          case 'array-contains': {
+            const fieldValue = row[constraint.field];
+            return Array.isArray(fieldValue) ? fieldValue.includes(constraint.value) : false;
+          }
           default:
             return true;
         }
@@ -338,14 +332,14 @@ const applyConstraints = (items: AnyObj[], constraints: Constraint[]) => {
   }
 
   for (const constraint of constraints) {
-    if (constraint.kind === "orderBy") {
+    if (constraint.kind === 'orderBy') {
       output.sort((a, b) => {
         const av = toComparable(a[constraint.field]);
         const bv = toComparable(b[constraint.field]);
         if (av === bv) return 0;
         if (av == null) return 1;
         if (bv == null) return -1;
-        if (constraint.direction === "desc") {
+        if (constraint.direction === 'desc') {
           return av > bv ? -1 : 1;
         }
         return av > bv ? 1 : -1;
@@ -354,7 +348,7 @@ const applyConstraints = (items: AnyObj[], constraints: Constraint[]) => {
   }
 
   for (const constraint of constraints) {
-    if (constraint.kind === "limit") {
+    if (constraint.kind === 'limit') {
       output = output.slice(0, constraint.value);
     }
   }
@@ -363,60 +357,60 @@ const applyConstraints = (items: AnyObj[], constraints: Constraint[]) => {
 };
 
 const readApiCollection = async (name: string): Promise<AnyObj[]> => {
-  if (name === "users") {
-    const data = await cloudflareApi<{ items: AnyObj[] }>("/api/admin/users");
+  if (name === 'users') {
+    const data = await cloudflareApi<{ items: AnyObj[] }>('/api/admin/users');
     return (data.items ?? []).map((row) => normalize(row) as AnyObj);
   }
-  if (name === "payments") {
-    if (auth.currentUser?.role === "admin") {
-      const data = await cloudflareApi<{ items: AnyObj[] }>("/api/admin/payments");
+  if (name === 'payments') {
+    if (auth.currentUser?.role === 'admin') {
+      const data = await cloudflareApi<{ items: AnyObj[] }>('/api/admin/payments');
       return (data.items ?? []).map((row) => normalize(row) as AnyObj);
     }
     return [];
   }
-  if (name === "categories") {
-    const data = await cloudflareApi<{ items: AnyObj[] }>("/api/member/categories");
+  if (name === 'categories') {
+    const data = await cloudflareApi<{ items: AnyObj[] }>('/api/member/categories');
     return (data.items ?? []).map((row) => normalize(row) as AnyObj);
   }
-  if (name === "currencies") {
-    const data = await cloudflareApi<{ items: AnyObj[] }>("/api/member/currencies");
+  if (name === 'currencies') {
+    const data = await cloudflareApi<{ items: AnyObj[] }>('/api/member/currencies');
     return (data.items ?? []).map((row) => normalize(row) as AnyObj);
   }
-  if (name === "recurring") {
-    const data = await cloudflareApi<{ items: AnyObj[] }>("/api/member/recurring");
+  if (name === 'recurring') {
+    const data = await cloudflareApi<{ items: AnyObj[] }>('/api/member/recurring');
     return (data.items ?? []).map((row) => normalize(row) as AnyObj);
   }
-  if (name === "savings") {
-    const data = await cloudflareApi<{ items: AnyObj[] }>("/api/member/savings");
+  if (name === 'savings') {
+    const data = await cloudflareApi<{ items: AnyObj[] }>('/api/member/savings');
     return (data.items ?? []).map((row) => normalize(row) as AnyObj);
   }
-  if (name === "admin_logs") {
-    const data = await cloudflareApi<{ items: AnyObj[] }>("/api/admin/logs?limit=100");
+  if (name === 'admin_logs') {
+    const data = await cloudflareApi<{ items: AnyObj[] }>('/api/admin/logs?limit=100');
     return (data.items ?? []).map((row) => normalize(row) as AnyObj);
   }
-  if (name === "admin_settings") {
-    const data = await cloudflareApi<{ item?: AnyObj | null }>("/api/admin/settings");
+  if (name === 'admin_settings') {
+    const data = await cloudflareApi<{ item?: AnyObj | null }>('/api/admin/settings');
     if (!data.item) return [];
-    return [normalize({ id: "global_config", ...data.item }) as AnyObj];
+    return [normalize({ id: 'global_config', ...data.item }) as AnyObj];
   }
-  if (name === "transactions") {
-    const data = await cloudflareApi<{ items: AnyObj[] }>("/api/member/transactions?limit=2000");
+  if (name === 'transactions') {
+    const data = await cloudflareApi<{ items: AnyObj[] }>('/api/member/transactions?limit=2000');
     return (data.items ?? []).map((row) => normalize(row) as AnyObj);
   }
-  if (name === "accounts") {
-    const data = await cloudflareApi<{ items: AnyObj[] }>("/api/member/accounts");
+  if (name === 'accounts') {
+    const data = await cloudflareApi<{ items: AnyObj[] }>('/api/member/accounts');
     return (data.items ?? []).map((row) => normalize(row) as AnyObj);
   }
-  if (name === "budgets") {
-    const data = await cloudflareApi<{ items: AnyObj[] }>("/api/member/budgets");
+  if (name === 'budgets') {
+    const data = await cloudflareApi<{ items: AnyObj[] }>('/api/member/budgets');
     return (data.items ?? []).map((row) => normalize(row) as AnyObj);
   }
-  if (name === "investments") {
-    const data = await cloudflareApi<{ items: AnyObj[] }>("/api/member/investments");
+  if (name === 'investments') {
+    const data = await cloudflareApi<{ items: AnyObj[] }>('/api/member/investments');
     return (data.items ?? []).map((row) => normalize(row) as AnyObj);
   }
-  if (name === "ai_chats") {
-    const data = await cloudflareApi<{ item?: AnyObj | null }>("/api/member/ai/chat/history");
+  if (name === 'ai_chats') {
+    const data = await cloudflareApi<{ item?: AnyObj | null }>('/api/member/ai/chat/history');
     return data.item ? [normalize(data.item) as AnyObj] : [];
   }
   return [];
@@ -436,79 +430,79 @@ const readCollection = async (name: string) => {
 const writeDocViaApi = async (ref: DocRef, data: AnyObj) => {
   const payload = toApiValue(normalize(data)) as AnyObj;
 
-  if (ref.collection === "users") {
-    if (auth.currentUser?.role === "admin" && auth.currentUser?.uid !== ref.id) {
+  if (ref.collection === 'users') {
+    if (auth.currentUser?.role === 'admin' && auth.currentUser?.uid !== ref.id) {
       await cloudflareApi(`/api/admin/users/${ref.id}`, {
-        method: "PATCH",
+        method: 'PATCH',
         json: payload,
       });
       return;
     }
-    await cloudflareApi("/api/member/profile", {
-      method: "PATCH",
+    await cloudflareApi('/api/member/profile', {
+      method: 'PATCH',
       json: payload,
     });
     return;
   }
-  if (ref.collection === "payments") {
+  if (ref.collection === 'payments') {
     await cloudflareApi(`/api/admin/payments/${ref.id}`, {
-      method: "PATCH",
+      method: 'PATCH',
       json: payload,
     });
     return;
   }
-  if (ref.collection === "admin_settings") {
-    await cloudflareApi("/api/admin/settings", {
-      method: "PUT",
+  if (ref.collection === 'admin_settings') {
+    await cloudflareApi('/api/admin/settings', {
+      method: 'PUT',
       json: payload,
     });
     return;
   }
-  if (ref.collection === "transactions") {
+  if (ref.collection === 'transactions') {
     await cloudflareApi(`/api/member/transactions/${ref.id}`, {
-      method: "PUT",
+      method: 'PUT',
       json: payload,
     });
     return;
   }
-  if (ref.collection === "accounts") {
+  if (ref.collection === 'accounts') {
     await cloudflareApi(`/api/member/accounts/${ref.id}`, {
-      method: "PUT",
+      method: 'PUT',
       json: payload,
     });
     return;
   }
-  if (ref.collection === "budgets") {
+  if (ref.collection === 'budgets') {
     await cloudflareApi(`/api/member/budgets/${ref.id}`, {
-      method: "PUT",
+      method: 'PUT',
       json: payload,
     });
     return;
   }
-  if (ref.collection === "investments") {
+  if (ref.collection === 'investments') {
     await cloudflareApi(`/api/member/investments/${ref.id}`, {
-      method: "PUT",
+      method: 'PUT',
       json: payload,
     });
     return;
   }
-  if (ref.collection === "categories") {
+  if (ref.collection === 'categories') {
     await cloudflareApi(`/api/member/categories/${ref.id}`, {
-      method: "PUT",
+      method: 'PUT',
       json: payload,
     });
     return;
   }
-  if (ref.collection === "recurring") {
+  if (ref.collection === 'recurring') {
     await cloudflareApi(`/api/member/recurring/${ref.id}`, {
-      method: "PUT",
+      method: 'PUT',
       json: payload,
     });
     return;
   }
-  if (ref.collection === "ai_chats") {
-    await cloudflareApi("/api/member/ai/chat/history", {
-      method: "PUT",
+  if (ref.collection === 'ai_chats') {
+    await cloudflareApi('/api/member/ai/chat/history', {
+      method: 'PUT',
       json: {
         messages: payload.messages ?? [],
       },
@@ -518,139 +512,139 @@ const writeDocViaApi = async (ref: DocRef, data: AnyObj) => {
 };
 
 const deleteDocViaApi = async (ref: DocRef) => {
-  if (ref.collection === "users") {
-    if (auth.currentUser?.role === "admin" && auth.currentUser?.uid !== ref.id) {
+  if (ref.collection === 'users') {
+    if (auth.currentUser?.role === 'admin' && auth.currentUser?.uid !== ref.id) {
       await cloudflareApi(`/api/admin/users/${ref.id}`, {
-        method: "DELETE",
+        method: 'DELETE',
       });
       return;
     }
-    throw new Error("Menghapus profil sendiri via member API tidak diizinkan.");
+    throw new Error('Menghapus profil sendiri via member API tidak diizinkan.');
     return;
   }
-  if (ref.collection === "transactions") {
+  if (ref.collection === 'transactions') {
     await cloudflareApi(`/api/member/transactions/${ref.id}`, {
-      method: "DELETE",
+      method: 'DELETE',
     });
     return;
   }
-  if (ref.collection === "accounts") {
+  if (ref.collection === 'accounts') {
     await cloudflareApi(`/api/member/accounts/${ref.id}`, {
-      method: "DELETE",
+      method: 'DELETE',
     });
     return;
   }
-  if (ref.collection === "budgets") {
+  if (ref.collection === 'budgets') {
     await cloudflareApi(`/api/member/budgets/${ref.id}`, {
-      method: "DELETE",
+      method: 'DELETE',
     });
     return;
   }
-  if (ref.collection === "investments") {
+  if (ref.collection === 'investments') {
     await cloudflareApi(`/api/member/investments/${ref.id}`, {
-      method: "DELETE",
+      method: 'DELETE',
     });
     return;
   }
-  if (ref.collection === "categories") {
+  if (ref.collection === 'categories') {
     await cloudflareApi(`/api/member/categories/${ref.id}`, {
-      method: "DELETE",
+      method: 'DELETE',
     });
     return;
   }
-  if (ref.collection === "currencies") {
+  if (ref.collection === 'currencies') {
     await cloudflareApi(`/api/member/currencies/${ref.id}`, {
-      method: "DELETE",
+      method: 'DELETE',
     });
     return;
   }
-  if (ref.collection === "recurring") {
+  if (ref.collection === 'recurring') {
     await cloudflareApi(`/api/member/recurring/${ref.id}`, {
-      method: "DELETE",
+      method: 'DELETE',
     });
     return;
   }
-  if (ref.collection === "savings") {
+  if (ref.collection === 'savings') {
     await cloudflareApi(`/api/member/savings/${ref.id}`, {
-      method: "DELETE",
+      method: 'DELETE',
     });
     return;
   }
-  if (ref.collection === "ai_chats") {
-    await cloudflareApi("/api/member/ai/chat/history", {
-      method: "DELETE",
+  if (ref.collection === 'ai_chats') {
+    await cloudflareApi('/api/member/ai/chat/history', {
+      method: 'DELETE',
     });
   }
 };
 
 const addDocViaApi = async (collection: string, data: AnyObj): Promise<string> => {
   const payload = toApiValue(normalize(data)) as AnyObj;
-  if (collection === "transactions") {
-    const result = await cloudflareApi<{ item?: AnyObj }>("/api/member/transactions", {
-      method: "POST",
+  if (collection === 'transactions') {
+    const result = await cloudflareApi<{ item?: AnyObj }>('/api/member/transactions', {
+      method: 'POST',
       json: payload,
     });
     return String(result.item?.id ?? crypto.randomUUID());
   }
-  if (collection === "accounts") {
-    const result = await cloudflareApi<{ item?: AnyObj }>("/api/member/accounts", {
-      method: "POST",
+  if (collection === 'accounts') {
+    const result = await cloudflareApi<{ item?: AnyObj }>('/api/member/accounts', {
+      method: 'POST',
       json: payload,
     });
     return String(result.item?.id ?? crypto.randomUUID());
   }
-  if (collection === "budgets") {
-    const result = await cloudflareApi<{ item?: AnyObj }>("/api/member/budgets", {
-      method: "POST",
+  if (collection === 'budgets') {
+    const result = await cloudflareApi<{ item?: AnyObj }>('/api/member/budgets', {
+      method: 'POST',
       json: payload,
     });
     return String(result.item?.id ?? crypto.randomUUID());
   }
-  if (collection === "investments") {
-    const result = await cloudflareApi<{ item?: AnyObj }>("/api/member/investments", {
-      method: "POST",
+  if (collection === 'investments') {
+    const result = await cloudflareApi<{ item?: AnyObj }>('/api/member/investments', {
+      method: 'POST',
       json: payload,
     });
     return String(result.item?.id ?? crypto.randomUUID());
   }
-  if (collection === "categories") {
-    const result = await cloudflareApi<{ id?: string }>("/api/member/categories", {
-      method: "POST",
+  if (collection === 'categories') {
+    const result = await cloudflareApi<{ id?: string }>('/api/member/categories', {
+      method: 'POST',
       json: payload,
     });
     return result.id ?? crypto.randomUUID();
   }
-  if (collection === "currencies") {
-    const result = await cloudflareApi<{ id?: string }>("/api/member/currencies", {
-      method: "POST",
+  if (collection === 'currencies') {
+    const result = await cloudflareApi<{ id?: string }>('/api/member/currencies', {
+      method: 'POST',
       json: payload,
     });
     return result.id ?? crypto.randomUUID();
   }
-  if (collection === "recurring") {
-    const result = await cloudflareApi<{ id?: string }>("/api/member/recurring", {
-      method: "POST",
+  if (collection === 'recurring') {
+    const result = await cloudflareApi<{ id?: string }>('/api/member/recurring', {
+      method: 'POST',
       json: payload,
     });
     return result.id ?? crypto.randomUUID();
   }
-  if (collection === "savings") {
-    const result = await cloudflareApi<{ id?: string }>("/api/member/savings", {
-      method: "POST",
+  if (collection === 'savings') {
+    const result = await cloudflareApi<{ id?: string }>('/api/member/savings', {
+      method: 'POST',
       json: payload,
     });
     return result.id ?? crypto.randomUUID();
   }
-  if (collection === "payments") {
-    const result = await cloudflareApi<{ id?: string }>("/api/member/payments", {
-      method: "POST",
+  if (collection === 'payments') {
+    const result = await cloudflareApi<{ id?: string }>('/api/member/payments', {
+      method: 'POST',
       json: payload,
     });
     return result.id ?? crypto.randomUUID();
   }
-  if (collection === "admin_logs") {
-    await cloudflareApi("/api/admin/logs", {
-      method: "POST",
+  if (collection === 'admin_logs') {
+    await cloudflareApi('/api/admin/logs', {
+      method: 'POST',
       json: payload,
     });
     return crypto.randomUUID();
@@ -681,73 +675,63 @@ export class Timestamp {
 export const serverTimestamp = () => Timestamp.now();
 
 export const collection = (_db: unknown, name: string): CollectionRef => ({
-  kind: "collection",
+  kind: 'collection',
   name,
 });
 
-export const doc = (
-  parent: unknown,
-  collectionOrId: string,
-  maybeId?: string
-): DocRef => {
-  if (typeof maybeId === "string") {
+export const doc = (parent: unknown, collectionOrId: string, maybeId?: string): DocRef => {
+  if (typeof maybeId === 'string') {
     return {
-      kind: "doc",
+      kind: 'doc',
       collection: collectionOrId,
       id: maybeId,
     };
   }
 
-  if ((parent as { kind?: string } | null)?.kind === "collection") {
+  if ((parent as { kind?: string } | null)?.kind === 'collection') {
     return {
-      kind: "doc",
+      kind: 'doc',
       collection: (parent as { name: string }).name,
       id: collectionOrId,
     };
   }
 
   return {
-    kind: "doc",
-    collection: "unknown",
+    kind: 'doc',
+    collection: 'unknown',
     id: collectionOrId,
   };
 };
 
 export const where = (field: string, op: string, value: unknown): Constraint => ({
-  kind: "where",
+  kind: 'where',
   field,
   op,
   value,
 });
 
-export const orderBy = (
-  field: string,
-  direction: "asc" | "desc" = "asc"
-): Constraint => ({
-  kind: "orderBy",
+export const orderBy = (field: string, direction: 'asc' | 'desc' = 'asc'): Constraint => ({
+  kind: 'orderBy',
   field,
   direction,
 });
 
 export const limit = (value: number): Constraint => ({
-  kind: "limit",
+  kind: 'limit',
   value,
 });
 
-export const query = (
-  ref: CollectionRef,
-  ...constraints: Constraint[]
-): QueryRef => ({
-  kind: "query",
+export const query = (ref: CollectionRef, ...constraints: Constraint[]): QueryRef => ({
+  kind: 'query',
   collection: ref.name,
   constraints,
 });
 
 export const getDoc = async (ref: DocRef): Promise<DocumentSnapshot> => {
   if (API_COLLECTIONS.has(ref.collection)) {
-    if (ref.collection === "users") {
+    if (ref.collection === 'users') {
       try {
-        if (auth.currentUser?.role === "admin" && auth.currentUser?.uid !== ref.id) {
+        if (auth.currentUser?.role === 'admin' && auth.currentUser?.uid !== ref.id) {
           const data = await cloudflareApi<{ item?: AnyObj | null }>(`/api/admin/users/${ref.id}`);
           const normalized = normalize(data.item ?? null);
           return {
@@ -756,7 +740,7 @@ export const getDoc = async (ref: DocRef): Promise<DocumentSnapshot> => {
             data: () => normalized as DocumentData,
           };
         }
-        const data = await cloudflareApi<{ item?: AnyObj | null }>("/api/member/profile");
+        const data = await cloudflareApi<{ item?: AnyObj | null }>('/api/member/profile');
         const normalized = normalize(data.item ?? null);
         return {
           id: ref.id,
@@ -771,8 +755,8 @@ export const getDoc = async (ref: DocRef): Promise<DocumentSnapshot> => {
         };
       }
     }
-    if (ref.collection === "admin_settings") {
-      const data = await cloudflareApi<{ item?: AnyObj | null }>("/api/admin/settings");
+    if (ref.collection === 'admin_settings') {
+      const data = await cloudflareApi<{ item?: AnyObj | null }>('/api/admin/settings');
       const normalized = normalize(data.item ?? null);
       return {
         id: ref.id,
@@ -780,8 +764,8 @@ export const getDoc = async (ref: DocRef): Promise<DocumentSnapshot> => {
         data: () => normalized as DocumentData,
       };
     }
-    if (ref.collection === "ai_chats") {
-      const data = await cloudflareApi<{ item?: AnyObj | null }>("/api/member/ai/chat/history");
+    if (ref.collection === 'ai_chats') {
+      const data = await cloudflareApi<{ item?: AnyObj | null }>('/api/member/ai/chat/history');
       const normalized = normalize(data.item ?? null);
       return {
         id: ref.id,
@@ -803,10 +787,9 @@ export const getDoc = async (ref: DocRef): Promise<DocumentSnapshot> => {
 };
 
 export const getDocs = async (ref: QueryRef | CollectionRef): Promise<QuerySnapshot> => {
-  const collectionName = ref.kind === "query" ? ref.collection : ref.name;
+  const collectionName = ref.kind === 'query' ? ref.collection : ref.name;
   const rows = await readCollection(collectionName);
-  const filtered =
-    ref.kind === "query" ? applyConstraints(rows, ref.constraints) : rows;
+  const filtered = ref.kind === 'query' ? applyConstraints(rows, ref.constraints) : rows;
 
   return {
     docs: filtered.map((row) => makeSnapshotDoc(normalize(row) as AnyObj)),
@@ -818,23 +801,23 @@ export const getDocs = async (ref: QueryRef | CollectionRef): Promise<QuerySnaps
 export function onSnapshot(
   ref: DocRef,
   onNext: (snapshot: DocumentSnapshot) => void,
-  onError?: (error: Error & { code?: string }) => void
+  onError?: (error: Error & { code?: string }) => void,
 ): () => void;
 export function onSnapshot(
   ref: QueryRef | CollectionRef,
   onNext: (snapshot: QuerySnapshot) => void,
-  onError?: (error: Error & { code?: string }) => void
+  onError?: (error: Error & { code?: string }) => void,
 ): () => void;
 export function onSnapshot(
   ref: QueryRef | DocRef | CollectionRef,
   onNext: (snapshot: QuerySnapshot & DocumentSnapshot) => void,
-  onError?: (error: Error & { code?: string }) => void
+  onError?: (error: Error & { code?: string }) => void,
 ): () => void {
   let active = true;
   const run = async () => {
     try {
       if (!active) return;
-      if (ref.kind === "doc") {
+      if (ref.kind === 'doc') {
         const snap = await getDoc(ref);
         onNext(snap as QuerySnapshot & DocumentSnapshot);
         return;
@@ -845,7 +828,7 @@ export function onSnapshot(
       if (onError) {
         const e = error as Error & { code?: string };
         if (!e.code) {
-          e.code = "compat-error";
+          e.code = 'compat-error';
         }
         onError(e);
       }
@@ -853,7 +836,7 @@ export function onSnapshot(
   };
 
   void run();
-  const collectionName = ref.kind === "collection" ? ref.name : ref.collection;
+  const collectionName = ref.kind === 'collection' ? ref.name : ref.collection;
   const unsubscribeBus = subscribeToCollectionChanges(collectionName, () => {
     if (active) void run();
   });
@@ -861,13 +844,9 @@ export function onSnapshot(
     active = false;
     unsubscribeBus();
   };
-};
+}
 
-export const setDoc = async (
-  ref: DocRef,
-  data: AnyObj,
-  options?: { merge?: boolean }
-) => {
+export const setDoc = async (ref: DocRef, data: AnyObj, options?: { merge?: boolean }) => {
   if (API_COLLECTIONS.has(ref.collection)) {
     await writeDocViaApi(ref, data);
     notifyCollectionChanged(ref.collection);
@@ -877,9 +856,10 @@ export const setDoc = async (
   const rows = readLocalCollection(ref.collection);
   const index = rows.findIndex((item) => item.id === ref.id);
   const incoming = normalize(data) as AnyObj;
-  const merged = options?.merge && index >= 0
-    ? applyIncrementFields(rows[index], incoming)
-    : applyIncrementFields({ id: ref.id }, incoming);
+  const merged =
+    options?.merge && index >= 0
+      ? applyIncrementFields(rows[index], incoming)
+      : applyIncrementFields({ id: ref.id }, incoming);
   const next = {
     id: ref.id,
     ...(options?.merge && index >= 0 ? rows[index] : {}),
@@ -900,7 +880,7 @@ export const updateDoc = async (ref: DocRef, data: AnyObj) => {
 };
 
 export const increment = (value: number): IncrementSentinel => ({
-  __op: "increment",
+  __op: 'increment',
   value,
 });
 
@@ -934,4 +914,3 @@ export const addDoc = async (ref: CollectionRef, data: AnyObj) => {
   notifyCollectionChanged(ref.name);
   return { id };
 };
-

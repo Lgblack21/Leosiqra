@@ -17,7 +17,8 @@ export const metadata: Metadata = {
   alternates: { canonical: '/panduan/catatan-tabungan' },
   openGraph: {
     title: 'Catatan Tabungan: Contoh Harian, Bulanan, dan Target',
-    description: 'Kolom wajib, contoh catatan harian dan bulanan, dan cara menghitung setoran untuk mencapai target tabungan.',
+    description:
+      'Kolom wajib, contoh catatan harian dan bulanan, dan cara menghitung setoran untuk mencapai target tabungan.',
     url: 'https://www.leosiqra.com/panduan/catatan-tabungan',
     type: 'article',
     locale: 'id_ID',
@@ -26,7 +27,8 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary',
     title: 'Catatan Tabungan: Contoh Harian, Bulanan, dan Target',
-    description: 'Kolom wajib, contoh catatan harian dan bulanan, dan cara menghitung setoran untuk mencapai target tabungan.',
+    description:
+      'Kolom wajib, contoh catatan harian dan bulanan, dan cara menghitung setoran untuk mencapai target tabungan.',
     images: ['/images/Logo-new.png'],
   },
 };
@@ -62,9 +64,9 @@ export default function CatatanTabunganPage() {
     >
       <h2>1. Kenapa tabungan perlu dicatat</h2>
       <p>
-        Saldo rekening hanya menunjukkan angka hari ini. Catatan tabungan menunjukkan hal yang tidak terlihat dari saldo:
-        berapa yang rutin Anda sisihkan, kapan tabungan pernah diambil, dan berapa lagi yang dibutuhkan untuk mencapai
-        tujuan. Tanpa catatan, uang tabungan mudah tercampur dengan uang harian dan terpakai tanpa disadari.
+        Saldo rekening hanya menunjukkan angka hari ini. Catatan tabungan menunjukkan hal yang tidak terlihat dari
+        saldo: berapa yang rutin Anda sisihkan, kapan tabungan pernah diambil, dan berapa lagi yang dibutuhkan untuk
+        mencapai tujuan. Tanpa catatan, uang tabungan mudah tercampur dengan uang harian dan terpakai tanpa disadari.
       </p>
       <p>
         Catatan tabungan berbeda dari catatan belanja sehari-hari. Untuk belanja, formatnya ada di{' '}
@@ -73,32 +75,94 @@ export default function CatatanTabunganPage() {
 
       <h2>2. Kolom yang wajib ada</h2>
       <ol>
-        <li><strong>Tanggal</strong> — kapan uang disetor atau diambil.</li>
-        <li><strong>Jenis</strong> — setor (uang masuk ke tabungan) atau ambil (uang keluar dari tabungan).</li>
-        <li><strong>Nominal</strong> — jumlah yang disetor atau diambil.</li>
-        <li><strong>Saldo tabungan</strong> — saldo sebelumnya ditambah setoran atau dikurangi penarikan.</li>
-        <li><strong>Tujuan</strong> — untuk apa tabungan ini, misalnya dana darurat atau liburan.</li>
-        <li><strong>Disimpan di</strong> — celengan, rekening, atau tempat lain, supaya mudah dicocokkan.</li>
-        <li><strong>Keterangan</strong> — terutama untuk penarikan: dipakai untuk apa.</li>
+        <li>
+          <strong>Tanggal</strong> — kapan uang disetor atau diambil.
+        </li>
+        <li>
+          <strong>Jenis</strong> — setor (uang masuk ke tabungan) atau ambil (uang keluar dari tabungan).
+        </li>
+        <li>
+          <strong>Nominal</strong> — jumlah yang disetor atau diambil.
+        </li>
+        <li>
+          <strong>Saldo tabungan</strong> — saldo sebelumnya ditambah setoran atau dikurangi penarikan.
+        </li>
+        <li>
+          <strong>Tujuan</strong> — untuk apa tabungan ini, misalnya dana darurat atau liburan.
+        </li>
+        <li>
+          <strong>Disimpan di</strong> — celengan, rekening, atau tempat lain, supaya mudah dicocokkan.
+        </li>
+        <li>
+          <strong>Keterangan</strong> — terutama untuk penarikan: dipakai untuk apa.
+        </li>
       </ol>
 
       <h2>3. Contoh catatan tabungan harian</h2>
-      <p>Contoh <em>ilustrasi</em> seminggu menabung dari uang saku harian:</p>
+      <p>
+        Contoh <em>ilustrasi</em> seminggu menabung dari uang saku harian:
+      </p>
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Tanggal</th><th>Jenis</th><th className="num">Nominal (Rp)</th><th className="num">Saldo (Rp)</th><th>Keterangan</th>
+              <th>Tanggal</th>
+              <th>Jenis</th>
+              <th className="num">Nominal (Rp)</th>
+              <th className="num">Saldo (Rp)</th>
+              <th>Keterangan</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td>1 Nov</td><td>Setor</td><td className="num">10.000</td><td className="num">10.000</td><td></td></tr>
-            <tr><td>2 Nov</td><td>Setor</td><td className="num">10.000</td><td className="num">20.000</td><td></td></tr>
-            <tr><td>3 Nov</td><td>—</td><td className="num">0</td><td className="num">20.000</td><td>Tidak setor</td></tr>
-            <tr><td>4 Nov</td><td>Setor</td><td className="num">15.000</td><td className="num">35.000</td><td>Ada sisa uang makan</td></tr>
-            <tr><td>5 Nov</td><td>Setor</td><td className="num">10.000</td><td className="num">45.000</td><td></td></tr>
-            <tr><td>6 Nov</td><td>Ambil</td><td className="num">5.000</td><td className="num">40.000</td><td>Ongkos parkir</td></tr>
-            <tr><td>7 Nov</td><td>Setor</td><td className="num">10.000</td><td className="num">50.000</td><td></td></tr>
+            <tr>
+              <td>1 Nov</td>
+              <td>Setor</td>
+              <td className="num">10.000</td>
+              <td className="num">10.000</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>2 Nov</td>
+              <td>Setor</td>
+              <td className="num">10.000</td>
+              <td className="num">20.000</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>3 Nov</td>
+              <td>—</td>
+              <td className="num">0</td>
+              <td className="num">20.000</td>
+              <td>Tidak setor</td>
+            </tr>
+            <tr>
+              <td>4 Nov</td>
+              <td>Setor</td>
+              <td className="num">15.000</td>
+              <td className="num">35.000</td>
+              <td>Ada sisa uang makan</td>
+            </tr>
+            <tr>
+              <td>5 Nov</td>
+              <td>Setor</td>
+              <td className="num">10.000</td>
+              <td className="num">45.000</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>6 Nov</td>
+              <td>Ambil</td>
+              <td className="num">5.000</td>
+              <td className="num">40.000</td>
+              <td>Ongkos parkir</td>
+            </tr>
+            <tr>
+              <td>7 Nov</td>
+              <td>Setor</td>
+              <td className="num">10.000</td>
+              <td className="num">50.000</td>
+              <td></td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -116,13 +180,31 @@ export default function CatatanTabunganPage() {
         <table>
           <thead>
             <tr>
-              <th>Bulan</th><th className="num">Setoran (Rp)</th><th className="num">Penarikan (Rp)</th><th className="num">Saldo akhir (Rp)</th>
+              <th>Bulan</th>
+              <th className="num">Setoran (Rp)</th>
+              <th className="num">Penarikan (Rp)</th>
+              <th className="num">Saldo akhir (Rp)</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td>Agustus</td><td className="num">500.000</td><td className="num">0</td><td className="num">500.000</td></tr>
-            <tr><td>September</td><td className="num">500.000</td><td className="num">150.000</td><td className="num">850.000</td></tr>
-            <tr><td>Oktober</td><td className="num">600.000</td><td className="num">0</td><td className="num">1.450.000</td></tr>
+            <tr>
+              <td>Agustus</td>
+              <td className="num">500.000</td>
+              <td className="num">0</td>
+              <td className="num">500.000</td>
+            </tr>
+            <tr>
+              <td>September</td>
+              <td className="num">500.000</td>
+              <td className="num">150.000</td>
+              <td className="num">850.000</td>
+            </tr>
+            <tr>
+              <td>Oktober</td>
+              <td className="num">600.000</td>
+              <td className="num">0</td>
+              <td className="num">1.450.000</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -150,13 +232,31 @@ export default function CatatanTabunganPage() {
         <table>
           <thead>
             <tr>
-              <th>Target</th><th className="num">Nominal (Rp)</th><th className="num">Terkumpul (Rp)</th><th className="num">Progres</th>
+              <th>Target</th>
+              <th className="num">Nominal (Rp)</th>
+              <th className="num">Terkumpul (Rp)</th>
+              <th className="num">Progres</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td>Dana darurat</td><td className="num">9.000.000</td><td className="num">3.000.000</td><td className="num">33%</td></tr>
-            <tr><td>Liburan</td><td className="num">4.800.000</td><td className="num">800.000</td><td className="num">17%</td></tr>
-            <tr><td>HP baru</td><td className="num">3.000.000</td><td className="num">1.500.000</td><td className="num">50%</td></tr>
+            <tr>
+              <td>Dana darurat</td>
+              <td className="num">9.000.000</td>
+              <td className="num">3.000.000</td>
+              <td className="num">33%</td>
+            </tr>
+            <tr>
+              <td>Liburan</td>
+              <td className="num">4.800.000</td>
+              <td className="num">800.000</td>
+              <td className="num">17%</td>
+            </tr>
+            <tr>
+              <td>HP baru</td>
+              <td className="num">3.000.000</td>
+              <td className="num">1.500.000</td>
+              <td className="num">50%</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -187,10 +287,11 @@ export default function CatatanTabunganPage() {
 
       <h2>7. Supaya tabungan terisi rutin</h2>
       <p>
-        Catatan hanya mencatat; yang membuat tabungan terisi adalah kebiasaan menyisihkan di awal, bukan dari sisa di akhir
-        bulan. Caranya ada di <Link href="/panduan/cara-menabung-yang-benar">cara menabung yang benar</Link>. Masukkan
-        setoran tabungan sebagai pos tetap di <Link href="/panduan/cara-membuat-anggaran-bulanan">anggaran bulanan</Link>,
-        dan kalau penghasilan masih pas-pasan, lihat contoh pembagian di{' '}
+        Catatan hanya mencatat; yang membuat tabungan terisi adalah kebiasaan menyisihkan di awal, bukan dari sisa di
+        akhir bulan. Caranya ada di <Link href="/panduan/cara-menabung-yang-benar">cara menabung yang benar</Link>.
+        Masukkan setoran tabungan sebagai pos tetap di{' '}
+        <Link href="/panduan/cara-membuat-anggaran-bulanan">anggaran bulanan</Link>, dan kalau penghasilan masih
+        pas-pasan, lihat contoh pembagian di{' '}
         <Link href="/panduan/cara-mengatur-gaji-3-juta">cara mengatur gaji 3 juta</Link>.
       </p>
 
@@ -203,8 +304,10 @@ export default function CatatanTabunganPage() {
         selama 14 hari tanpa kartu kredit.
       </p>
       <p>
-        <em>Angka di panduan ini adalah ilustrasi. Panduan ini bersifat edukasi umum, bukan nasihat keuangan. Sesuaikan
-        dengan kondisi Anda.</em>
+        <em>
+          Angka di panduan ini adalah ilustrasi. Panduan ini bersifat edukasi umum, bukan nasihat keuangan. Sesuaikan
+          dengan kondisi Anda.
+        </em>
       </p>
     </GuideLayout>
   );

@@ -1,0 +1,566 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import { Check, Flame, Leaf } from 'lucide-react';
+import type { Transaction } from '@/lib/services/transactionService';
+import { DayReview } from '@/components/laporan/DayReview';
+import { categoryVisual } from '@/lib/categoryEmoji';
+import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
+
+// Bagian tambahan Laporan: kalender gelembung (bulanan), pola mingguan, dan
+// podium pengeluaran terbesar. Semua menerima daftar pengeluaran periode yang
+// sudah disaring halaman (tanpa transfer/investasi), nominal dalam IDR.
+
+const idr = (t: Transaction) => Number(t.amountIDR) || Number(t.amount) || 0;
+const short = (n: number) =>
+  n >= 1e6
+    ? `${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 1 })}jt`
+    : n >= 1e3
+      ? `${Math.round(n / 1e3)}rb`
+      : `${Math.round(n)}`;
+const rp = (n: number) => `Rp${short(n)}`;
+const DOW = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+const DOW_LONG = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+const dayIdx = (d: Date) => (d.getDay() + 6) % 7; // Senin = 0
+
+export function BubbleCalendar({
+  spend,
+  year,
+  month,
+  now,
+}: {
+  spend: Transaction[];
+  year: number;
+  month: number;
+  now: Date | null;
+}) {
+  const days = new Date(year, month + 1, 0).getDate();
+  const isCurMonth = !!now && now.getFullYear() === year && now.getMonth() === month;
+  const isFuture = !!now && (year > now.getFullYear() || (year === now.getFullYear() && month > now.getMonth()));
+  const lastDay = isFuture ? 0 : isCurMonth ? now!.getDate() : days;
+
+  const byDay = Array.from({ length: days + 1 }, () => [] as Transaction[]);
+  for (const t of spend) {
+    const d = new Date(t.date);
+    if (d.getFullYear() === year && d.getMonth() === month) byDay[d.getDate()].push(t);
+  }
+  const totals = byDay.map((l) => l.reduce((s, t) => s + idr(t), 0));
+  const past = totals.slice(1, lastDay + 1);
+  const avg = past.length ? past.reduce((s, v) => s + v, 0) / past.length : 0;
+  const max = Math.max(1, ...past);
+  const hemat = past.filter((v) => v === 0).length;
+  const hot = past.filter((v) => avg > 0 && v > avg * 1.5).length;
+  const peakDay = past.length ? past.indexOf(Math.max(...past)) + 1 : 0;
+
+  const [picked, setPicked] = useState<number | null>(null);
+  const [review, setReview] = useState<Date | null>(null);
+  const open = (d: number) => {
+    setPicked(d);
+    setReview(new Date(year, month, d));
+  };
+  const sel = picked && picked <= lastDay ? picked : isCurMonth ? lastDay : peakDay || null;
+  const offset = dayIdx(new Date(year, month, 1));
+  const cells = [...Array(offset).fill(null), ...Array.from({ length: days }, (_, i) => i + 1)];
+
+  return (
+    <section>
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Kalender belanja</h2>
+          <p className="text-[12px] text-slate-500">Makin besar gelembung, makin besar belanja hari itu.</p>
+        </div>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-1.5 text-[12px] font-semibold">
+        <span className="rounded-full bg-white px-3 py-1 text-slate-600 ring-1 ring-slate-200">
+          Rata-rata {rp(avg)}/hari
+        </span>
+        <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">
+          <Leaf size={12} /> {hemat} hari hemat
+        </span>
+        {hot > 0 && (
+          <span className="flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1 text-rose-700">
+            <Flame size={12} /> {hot} hari boros
+          </span>
+        )}
+        {peakDay > 0 && totals[peakDay] > 0 && (
+          <button
+            type="button"
+            onClick={() => open(peakDay)}
+            className="rounded-full bg-indigo-50 px-3 py-1 text-indigo-700 hover:bg-indigo-100"
+          >
+            Tertinggi tgl {peakDay} · {rp(totals[peakDay])}
+          </button>
+        )}
+      </div>
+
+      <div className="mt-3 rounded-[20px] bg-white p-3 ring-1 ring-slate-100 md:p-4">
+        <div className="grid grid-cols-7 gap-1 pb-1 text-center text-[11px] font-semibold text-slate-400">
+          {DOW.map((d, i) => (
+            <span key={d} className={cn(i >= 5 && 'text-indigo-400')}>
+              {d}
+            </span>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {cells.map((d, i) => {
+            if (d === null) return <span key={`e${i}`} />;
+            const v = totals[d];
+            const future = d > lastDay;
+            const today = isCurMonth && d === lastDay;
+            const size = v > 0 ? 14 + Math.sqrt(v / max) * 30 : 0; // px, maks 44
+            const hotDay = avg > 0 && v > avg * 1.5;
+            return (
+              <button
+                key={d}
+                type="button"
+                disabled={future}
+                onClick={() => open(d)}
+                aria-label={`${d}: ${future ? 'belum lewat' : formatIDR(v)}`}
+                className={cn(
+                  'relative flex aspect-square items-center justify-center rounded-2xl pt-3 transition-colors md:aspect-auto md:h-[58px] md:pt-0',
+                  sel === d ? 'bg-slate-900/[0.06] ring-2 ring-slate-900/70' : 'hover:bg-slate-50',
+                  future && 'cursor-default opacity-40',
+                )}
+              >
+                <span
+                  className={cn(
+                    'absolute left-1.5 top-1 text-[10px] font-bold md:left-2 md:text-[11px]',
+                    today ? 'text-indigo-600' : 'text-slate-400',
+                  )}
+                >
+                  {d}
+                </span>
+                {!future && byDay[d].length > 0 && byDay[d].every((t) => t.reviewed) && (
+                  <span
+                    className="absolute bottom-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-white ring-2 ring-white"
+                    title="Sudah dicek"
+                  >
+                    <Check size={9} strokeWidth={3.5} />
+                  </span>
+                )}
+                {future ? (
+                  <span className="h-2 w-2 rounded-full border border-dashed border-slate-300" />
+                ) : v === 0 ? (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                    <Check size={11} strokeWidth={3} />
+                  </span>
+                ) : (
+                  <span
+                    className={cn(
+                      'flex items-center justify-center rounded-full text-white shadow-sm transition-transform',
+                      hotDay
+                        ? 'bg-gradient-to-br from-rose-400 to-rose-600'
+                        : 'bg-gradient-to-br from-indigo-400 to-violet-600',
+                      sel === d && 'scale-105',
+                    )}
+                    style={{ width: `min(${size}px, 62%)`, aspectRatio: '1 / 1' }}
+                  >
+                    {size >= 32 && (
+                      <span className="hidden text-[9px] font-bold tabular-nums md:inline">{short(v)}</span>
+                    )}
+                  </span>
+                )}
+                {today && (
+                  <>
+                    <span
+                      className="pointer-events-none absolute inset-0.5 rounded-2xl ring-2 ring-indigo-500"
+                      aria-hidden
+                    />
+                    <span className="absolute right-1.5 top-1.5 flex h-2 w-2" aria-hidden>
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" />
+                    </span>
+                  </>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        <p className="mt-3 px-1 text-[12px] text-slate-400">
+          Ketuk satu hari untuk <b className="text-slate-600">Cek hari</b>: centang transaksi yang kategorinya sudah
+          benar. Lencana ✓ hijau = hari sudah dicek.
+        </p>
+      </div>
+      <DayReview
+        date={review}
+        onClose={() => setReview(null)}
+        onDate={(d) => {
+          setReview(d);
+          if (d.getFullYear() === year && d.getMonth() === month) setPicked(d.getDate());
+        }}
+      />
+    </section>
+  );
+}
+
+export function WeekdayPattern({ spend }: { spend: Transaction[] }) {
+  const data = useMemo(() => {
+    const sum = Array(7).fill(0) as number[];
+    const daysSeen = Array.from({ length: 7 }, () => new Set<string>());
+    for (const t of spend) {
+      const d = new Date(t.date);
+      const i = dayIdx(d);
+      sum[i] += idr(t);
+      daysSeen[i].add(toLocalDateString(d));
+    }
+    // Rata-rata per hari yang ada belanjanya di hari itu.
+    return sum.map((s, i) => (daysSeen[i].size ? s / daysSeen[i].size : 0));
+  }, [spend]);
+  const max = Math.max(1, ...data);
+  if (data.every((v) => v === 0)) return null;
+  const top = data.indexOf(Math.max(...data));
+  const low = data.reduce((best, v, i) => (v > 0 && (data[best] === 0 || v < data[best]) ? i : best), 0);
+  const weekend = (data[5] + data[6]) / 2;
+  const weekday = data.slice(0, 5).reduce((s, v) => s + v, 0) / 5;
+
+  return (
+    <section>
+      <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Pola mingguan</h2>
+      <p className="text-[12px] text-slate-500">
+        Paling boros hari <b className="text-slate-700">{DOW_LONG[top]}</b>, paling hemat hari{' '}
+        <b className="text-slate-700">{DOW_LONG[low]}</b>
+        {weekday > 0 && weekend > weekday * 1.2
+          ? ` · akhir pekan ${Math.round((weekend / weekday - 1) * 100)}% lebih boros`
+          : ''}
+        .
+      </p>
+      <div className="mt-3 flex h-36 items-end gap-2 rounded-[20px] bg-white p-4 ring-1 ring-slate-100 md:gap-4 md:px-6">
+        {data.map((v, i) => (
+          <div key={i} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
+            <span className={cn('text-[11px] font-bold tabular-nums', i === top ? 'text-rose-600' : 'text-slate-400')}>
+              {v > 0 ? short(v) : ''}
+            </span>
+            <div
+              className={cn(
+                'w-full max-w-[36px] rounded-t-lg rounded-b-md',
+                i === top ? 'bg-gradient-to-t from-rose-500 to-orange-400' : i >= 5 ? 'bg-indigo-300' : 'bg-indigo-500',
+              )}
+              style={{ height: `${Math.max(4, (v / max) * 100)}%` }}
+            />
+            <span className={cn('text-[12px] font-semibold', i === top ? 'text-slate-900' : 'text-slate-500')}>
+              {DOW[i]}
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export function TopExpenses({ spend }: { spend: Transaction[] }) {
+  const top = useMemo(() => [...spend].sort((a, b) => idr(b) - idr(a)).slice(0, 6), [spend]);
+  if (top.length === 0) return null;
+  const max = idr(top[0]);
+  const medal = ['🥇', '🥈', '🥉'];
+  const podium = [top[1], top[0], top[2]].filter(Boolean) as Transaction[];
+  const when = (t: Transaction) =>
+    new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(t.date));
+
+  return (
+    <section>
+      <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Pengeluaran terbesar</h2>
+      <p className="text-[12px] text-slate-500">Pembayaran tunggal paling besar di periode ini</p>
+      <div className="mt-3 grid grid-cols-3 items-end gap-2 md:gap-3">
+        {podium.map((t) => {
+          const rank = top.indexOf(t);
+          const v = categoryVisual(t.category, 'pengeluaran');
+          return (
+            <div
+              key={t.id}
+              className={cn(
+                'flex flex-col items-center rounded-[24px] px-2 pb-4 text-center ring-1',
+                rank === 0
+                  ? 'bg-gradient-to-b from-amber-50 to-white pt-5 ring-amber-200'
+                  : 'bg-white pt-3 ring-slate-100',
+              )}
+            >
+              <span className="text-[22px] leading-none" aria-label={`Peringkat ${rank + 1}`}>
+                {medal[rank]}
+              </span>
+              <span
+                className={cn('mt-1.5 flex h-9 w-9 items-center justify-center rounded-xl text-[17px]', v.tile)}
+                aria-hidden
+              >
+                {v.emoji}
+              </span>
+              <p className="mt-1.5 line-clamp-2 text-[13px] font-semibold leading-tight text-slate-900">
+                {t.note || t.category}
+              </p>
+              <p className="text-[11px] text-slate-500">
+                {when(t)} · {t.category}
+              </p>
+              <p
+                className={cn(
+                  'mt-1.5 font-extrabold tabular-nums text-slate-900',
+                  rank === 0 ? 'text-[15px] md:text-[17px]' : 'text-[13px] md:text-[15px]',
+                )}
+              >
+                {formatIDR(idr(t))}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+      {top.length > 3 && (
+        <ul className="mt-3 space-y-2">
+          {top.slice(3).map((t, i) => {
+            const v = categoryVisual(t.category, 'pengeluaran');
+            return (
+              <li
+                key={t.id}
+                className="relative overflow-hidden rounded-[18px] bg-white px-4 py-2.5 ring-1 ring-slate-100"
+              >
+                <span
+                  aria-hidden
+                  className="absolute inset-y-0 left-0 bg-indigo-50"
+                  style={{ width: `${(idr(t) / max) * 100}%` }}
+                />
+                <div className="relative flex items-center gap-3">
+                  <span className="w-5 text-center text-[12px] font-bold text-slate-400">{i + 4}</span>
+                  <span
+                    className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[15px]', v.tile)}
+                    aria-hidden
+                  >
+                    {v.emoji}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[14px] font-semibold text-slate-900">
+                      {t.note || t.category}
+                    </span>
+                    <span className="block text-[12px] text-slate-500">
+                      {when(t)} · {t.category}
+                    </span>
+                  </span>
+                  <span className="text-[13px] font-bold tabular-nums text-slate-900">{formatIDR(idr(t))}</span>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+// Tiap bulan: total keluar, batang dibanding rata-rata, dan cincin "% ditabung"
+// ((masuk − keluar) / masuk). 👑 bulan terhemat, 🔥 bulan terboros. Ketuk →
+// Laporan bulanan bulan itu. `all` = pengeluaran & pemasukan (tanpa
+// transfer/investasi) dari halaman.
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+
+export function YearMonths({
+  all,
+  year,
+  now,
+  onPick,
+}: {
+  all: Transaction[];
+  year: number;
+  now: Date | null;
+  onPick: (month: number) => void;
+}) {
+  const months = useMemo(() => {
+    const out = Array.from({ length: 12 }, () => ({ spend: 0, income: 0, cats: new Map<string, number>() }));
+    for (const t of all) {
+      const d = new Date(t.date);
+      if (d.getFullYear() !== year) continue;
+      const m = out[d.getMonth()];
+      if (t.type === 'pengeluaran') {
+        m.spend += idr(t);
+        m.cats.set(t.category || 'Lainnya', (m.cats.get(t.category || 'Lainnya') ?? 0) + idr(t));
+      } else if (t.type === 'pemasukan') m.income += idr(t);
+    }
+    return out;
+  }, [all, year]);
+
+  const lastIdx = !now || year < now.getFullYear() ? 11 : year > now.getFullYear() ? -1 : now.getMonth();
+  const active = months.map((m, i) => ({ ...m, i })).filter((m) => m.i <= lastIdx && (m.spend > 0 || m.income > 0));
+  const withSpend = active.filter((m) => m.spend > 0);
+  const avg = withSpend.length ? withSpend.reduce((s, m) => s + m.spend, 0) / withSpend.length : 0;
+  const max = Math.max(1, ...months.map((m) => m.spend));
+  const best = withSpend.length > 1 ? withSpend.reduce((a, b) => (b.spend < a.spend ? b : a)) : null;
+  const worst = withSpend.length > 1 ? withSpend.reduce((a, b) => (b.spend > a.spend ? b : a)) : null;
+  const totalIn = active.reduce((s, m) => s + m.income, 0);
+  const totalOut = active.reduce((s, m) => s + m.spend, 0);
+  const savedPct = totalIn > 0 ? Math.round(((totalIn - totalOut) / totalIn) * 100) : null;
+
+  // Kategori yang paling naik: bulan terakhir vs bulan sebelumnya (yang ada datanya).
+  const riser = (() => {
+    if (withSpend.length < 2) return null;
+    const cur = withSpend[withSpend.length - 1];
+    const prev = withSpend[withSpend.length - 2];
+    let top: { name: string; diff: number } | null = null;
+    for (const [name, v] of cur.cats) {
+      const diff = v - (prev.cats.get(name) ?? 0);
+      if (diff > 0 && (!top || diff > top.diff)) top = { name, diff };
+    }
+    return top ? { ...top, month: cur.i } : null;
+  })();
+
+  if (active.length === 0) return null;
+  // Mulai dari bulan pertama yang ada catatannya (bulan sebelum pakai Leosiqra tidak ditampilkan).
+  const firstIdx = active[0].i;
+  const R = 15;
+  const C = 2 * Math.PI * R;
+
+  return (
+    <section>
+      <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Bulan demi bulan</h2>
+      <p className="text-[12px] text-slate-500">
+        Cincin = bagian pemasukan yang tersisa (ditabung). Ketuk bulan untuk laporannya.
+        {firstIdx > 0 ? ` Catatan mulai ${MONTHS_SHORT[firstIdx]} ${year}.` : ''}
+      </p>
+
+      <div className="no-scrollbar -mx-4 mt-2 flex gap-1.5 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0">
+        <span className="shrink-0 rounded-2xl bg-white px-3 py-1.5 ring-1 ring-slate-200">
+          <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Rata-rata</span>
+          <span className="text-[13px] font-bold text-slate-900">{rp(avg)}/bln</span>
+        </span>
+        {savedPct !== null && (
+          <span className={cn('shrink-0 rounded-2xl px-3 py-1.5', savedPct >= 0 ? 'bg-emerald-50' : 'bg-rose-50')}>
+            <span
+              className={cn(
+                'block text-[11px] font-semibold uppercase tracking-wide',
+                savedPct >= 0 ? 'text-emerald-600' : 'text-rose-600',
+              )}
+            >
+              Ditabung
+            </span>
+            <span className={cn('text-[14px] font-bold', savedPct >= 0 ? 'text-emerald-700' : 'text-rose-700')}>
+              {savedPct}% pemasukan
+            </span>
+          </span>
+        )}
+        {best && (
+          <button
+            type="button"
+            onClick={() => onPick(best.i)}
+            className="shrink-0 rounded-2xl bg-amber-50 px-3 py-1.5 text-left hover:bg-amber-100"
+          >
+            <span className="block text-[10px] font-semibold uppercase tracking-wide text-amber-600">👑 Terhemat</span>
+            <span className="text-[13px] font-bold text-amber-800">
+              {MONTHS_SHORT[best.i]} · {rp(best.spend)}
+            </span>
+          </button>
+        )}
+        {worst && (
+          <button
+            type="button"
+            onClick={() => onPick(worst.i)}
+            className="shrink-0 rounded-2xl bg-rose-50 px-3 py-1.5 text-left hover:bg-rose-100"
+          >
+            <span className="block text-[10px] font-semibold uppercase tracking-wide text-rose-600">🔥 Terboros</span>
+            <span className="text-[13px] font-bold text-rose-800">
+              {MONTHS_SHORT[worst.i]} · {rp(worst.spend)}
+            </span>
+          </button>
+        )}
+        {riser && (
+          <span className="shrink-0 rounded-2xl bg-indigo-50 px-3 py-1.5">
+            <span className="block text-[10px] font-semibold uppercase tracking-wide text-indigo-500">
+              📈 Paling naik
+            </span>
+            <span className="text-[13px] font-bold text-indigo-800">
+              {riser.name} +{rp(riser.diff)} di {MONTHS_SHORT[riser.month]}
+            </span>
+          </span>
+        )}
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+        {months.map((m, i) => {
+          if (i < firstIdx) return null;
+          const future = i > lastIdx;
+          const empty = !future && m.spend === 0 && m.income === 0;
+          const saved = m.income > 0 ? (m.income - m.spend) / m.income : null;
+          const isCur = !!now && now.getFullYear() === year && now.getMonth() === i;
+          const crown = best?.i === i;
+          const fire = worst?.i === i;
+          const pct = saved === null ? 0 : Math.max(0, Math.min(1, saved));
+          return (
+            <button
+              key={i}
+              type="button"
+              disabled={future}
+              onClick={() => onPick(i)}
+              className={cn(
+                'group relative overflow-hidden rounded-[18px] p-3 text-left ring-1 transition-all',
+                future
+                  ? 'cursor-default border border-dashed border-slate-200 bg-transparent opacity-50 ring-0'
+                  : 'bg-white ring-slate-100 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-18px_rgba(49,46,129,0.45)]',
+                crown && 'bg-gradient-to-br from-amber-50 to-white ring-amber-200',
+                fire && 'bg-gradient-to-br from-rose-50 to-white ring-rose-200',
+                isCur && 'ring-2 ring-indigo-500',
+              )}
+            >
+              <div className="flex items-start justify-between gap-1">
+                <span
+                  className={cn(
+                    'flex items-center gap-1 text-[12px] font-bold',
+                    isCur ? 'text-indigo-600' : 'text-slate-500',
+                  )}
+                >
+                  {MONTHS_SHORT[i]}
+                  {(crown || fire) && (
+                    <span className="text-[12px]" aria-label={crown ? 'Terhemat' : 'Terboros'}>
+                      {crown ? '👑' : '🔥'}
+                    </span>
+                  )}
+                </span>
+                {!future && !empty && (
+                  <span
+                    className="relative -mr-1 -mt-1 h-8 w-8 shrink-0"
+                    title={saved === null ? 'Tidak ada pemasukan' : `${Math.round(saved * 100)}% ditabung`}
+                  >
+                    <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90">
+                      <circle cx="18" cy="18" r={R} fill="none" stroke="#f1f5f9" strokeWidth="4" />
+                      {saved !== null && (
+                        <circle
+                          cx="18"
+                          cy="18"
+                          r={R}
+                          fill="none"
+                          stroke={saved >= 0.2 ? '#10b981' : saved >= 0 ? '#f59e0b' : '#f43f5e'}
+                          strokeWidth="4"
+                          strokeLinecap="round"
+                          strokeDasharray={C}
+                          strokeDashoffset={C * (1 - (saved < 0 ? 1 : pct))}
+                        />
+                      )}
+                    </svg>
+                    <span
+                      className={cn(
+                        'absolute inset-0 flex items-center justify-center text-[9px] font-extrabold tabular-nums',
+                        saved === null ? 'text-slate-300' : saved < 0 ? 'text-rose-600' : 'text-slate-700',
+                      )}
+                    >
+                      {saved === null ? '—' : saved < 0 ? '−' : `${Math.round(saved * 100)}%`}
+                    </span>
+                  </span>
+                )}
+              </div>
+              <p
+                className={cn(
+                  'mt-0.5 truncate text-[15px] font-extrabold tracking-tight tabular-nums',
+                  future || empty ? 'text-slate-300' : 'text-slate-900',
+                )}
+              >
+                {future ? '—' : empty ? 'Rp0' : rp(m.spend)}
+              </p>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className={cn('h-full rounded-full', m.spend > avg * 1.2 ? 'bg-rose-400' : 'bg-indigo-500')}
+                  style={{ width: `${(m.spend / max) * 100}%` }}
+                />
+              </div>
+              <p className="mt-1.5 truncate text-[11px] text-slate-400">
+                {future ? 'belum lewat' : m.income > 0 ? `masuk ${rp(m.income)}` : 'tanpa pemasukan'}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}

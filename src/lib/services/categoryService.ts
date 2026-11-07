@@ -8,16 +8,17 @@ import {
   query,
   where,
   Timestamp,
-  notifyCollectionChanged
+  notifyCollectionChanged,
 } from '@/lib/cf-firestore';
 import { db } from '../cf-client';
 import { cloudflareApi } from '../cloudflare-api';
+import { reloadCategoryPrefs } from '../categoryEmoji';
 
 export interface Category {
   id?: string;
   userId: string;
-  category: string;     // e.g. Makanan, Transport
-  subCategory: string;  // e.g. Makan Siang, Bensin
+  category: string; // e.g. Makanan, Transport
+  subCategory: string; // e.g. Makan Siang, Bensin
   status: 'VERIFIED' | 'PENDING';
   // Urutan tampil subkategori di dalam grup kategorinya (drag-to-reorder di
   // halaman Nama Akun) — lebih kecil tampil lebih dulu.
@@ -32,23 +33,20 @@ export const categoryService = {
     const ref = collection(db, COLLECTION_NAME);
     const newDoc = await addDoc(ref, {
       ...data,
-      createdAt: Timestamp.now()
+      createdAt: Timestamp.now(),
     });
     return newDoc.id;
   },
 
   async getUserCategories(userId: string) {
-    const q = query(
-      collection(db, COLLECTION_NAME),
-      where('userId', '==', userId)
-    );
+    const q = query(collection(db, COLLECTION_NAME), where('userId', '==', userId));
     const snap = await getDocs(q);
-    return snap.docs.map(doc => {
+    return snap.docs.map((doc) => {
       const data = doc.data();
       return {
         ...data,
         id: doc.id,
-        createdAt: data.createdAt?.toDate?.() ?? new Date()
+        createdAt: data.createdAt?.toDate?.() ?? new Date(),
       } as Category;
     });
   },
@@ -71,6 +69,20 @@ export const categoryService = {
       json: { ids },
     });
     notifyCollectionChanged(COLLECTION_NAME);
-  }
-};
+  },
 
+  // Ganti nama satu grup kategori di semua tempat sekaligus (server):
+  // subkategori, transaksi, anggaran, transaksi berulang, ikon & jenis.
+  async renameGroup(from: string, to: string) {
+    const res = await cloudflareApi<{ ok: boolean; name: string; transactions: number }>(
+      '/api/member/categories/rename',
+      {
+        method: 'POST',
+        json: { from, to },
+      },
+    );
+    for (const c of [COLLECTION_NAME, 'transactions', 'budgets', 'recurring']) notifyCollectionChanged(c);
+    await reloadCategoryPrefs();
+    return res;
+  },
+};

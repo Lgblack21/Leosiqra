@@ -67,9 +67,10 @@ export default function CaraMengaturGaji3JutaPage() {
         panduan <Link href="/panduan/cara-mengatur-gaji">cara mengatur gaji</Link>.
       </p>
       <p>
-        Daripada memaksakan rumus, pakai patokan yang disesuaikan, misalnya: <strong>kebutuhan pokok sampai sekitar 70%</strong>,
-        <strong> tabungan minimal 10%</strong>, dan <strong>sisanya untuk keinginan</strong> serta cadangan. Ini bukan aturan baku,
-        hanya titik awal yang lebih jujur untuk penghasilan terbatas.
+        Daripada memaksakan rumus, pakai patokan yang disesuaikan, misalnya:{' '}
+        <strong>kebutuhan pokok sampai sekitar 70%</strong>,<strong> tabungan minimal 10%</strong>, dan{' '}
+        <strong>sisanya untuk keinginan</strong> serta cadangan. Ini bukan aturan baku, hanya titik awal yang lebih
+        jujur untuk penghasilan terbatas.
       </p>
 
       <h2>2. Contoh pembagian gaji 3 juta (anak kos)</h2>
@@ -79,33 +80,98 @@ export default function CaraMengaturGaji3JutaPage() {
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Pos</th><th className="num">Jumlah (Rp)</th><th className="num">Porsi</th></tr>
+            <tr>
+              <th>Pos</th>
+              <th className="num">Jumlah (Rp)</th>
+              <th className="num">Porsi</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td>Kos / tempat tinggal</td><td className="num">800.000</td><td className="num">±27%</td></tr>
-            <tr><td>Makan &amp; belanja dapur</td><td className="num">900.000</td><td className="num">30%</td></tr>
-            <tr><td>Transportasi</td><td className="num">300.000</td><td className="num">10%</td></tr>
-            <tr><td>Pulsa, internet, listrik</td><td className="num">150.000</td><td className="num">5%</td></tr>
-            <tr><td><strong>Subtotal kebutuhan pokok</strong></td><td className="num"><strong>2.150.000</strong></td><td className="num"><strong>±72%</strong></td></tr>
-            <tr><td>Tabungan &amp; dana darurat</td><td className="num">300.000</td><td className="num">10%</td></tr>
-            <tr><td>Keinginan (jajan, hiburan)</td><td className="num">250.000</td><td className="num">±8%</td></tr>
-            <tr><td>Kiriman keluarga / sosial</td><td className="num">200.000</td><td className="num">±7%</td></tr>
-            <tr><td>Cadangan tak terduga</td><td className="num">100.000</td><td className="num">±3%</td></tr>
-            <tr><td><strong>Total</strong></td><td className="num"><strong>3.000.000</strong></td><td className="num"><strong>100%</strong></td></tr>
+            <tr>
+              <td>Kos / tempat tinggal</td>
+              <td className="num">800.000</td>
+              <td className="num">±27%</td>
+            </tr>
+            <tr>
+              <td>Makan &amp; belanja dapur</td>
+              <td className="num">900.000</td>
+              <td className="num">30%</td>
+            </tr>
+            <tr>
+              <td>Transportasi</td>
+              <td className="num">300.000</td>
+              <td className="num">10%</td>
+            </tr>
+            <tr>
+              <td>Pulsa, internet, listrik</td>
+              <td className="num">150.000</td>
+              <td className="num">5%</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Subtotal kebutuhan pokok</strong>
+              </td>
+              <td className="num">
+                <strong>2.150.000</strong>
+              </td>
+              <td className="num">
+                <strong>±72%</strong>
+              </td>
+            </tr>
+            <tr>
+              <td>Tabungan &amp; dana darurat</td>
+              <td className="num">300.000</td>
+              <td className="num">10%</td>
+            </tr>
+            <tr>
+              <td>Keinginan (jajan, hiburan)</td>
+              <td className="num">250.000</td>
+              <td className="num">±8%</td>
+            </tr>
+            <tr>
+              <td>Kiriman keluarga / sosial</td>
+              <td className="num">200.000</td>
+              <td className="num">±7%</td>
+            </tr>
+            <tr>
+              <td>Cadangan tak terduga</td>
+              <td className="num">100.000</td>
+              <td className="num">±3%</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Total</strong>
+              </td>
+              <td className="num">
+                <strong>3.000.000</strong>
+              </td>
+              <td className="num">
+                <strong>100%</strong>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
       <p>
-        Pos &ldquo;cadangan tak terduga&rdquo; penting di gaji kecil: tanpa pos ini, satu pengeluaran mendadak (obat, ban bocor)
-        langsung menggerus tabungan. Kalau sampai akhir bulan tidak terpakai, pindahkan ke tabungan.
+        Pos &ldquo;cadangan tak terduga&rdquo; penting di gaji kecil: tanpa pos ini, satu pengeluaran mendadak (obat,
+        ban bocor) langsung menggerus tabungan. Kalau sampai akhir bulan tidak terpakai, pindahkan ke tabungan.
       </p>
 
       <h2>3. Urutan saat gajian</h2>
       <ol>
-        <li><strong>Bayar yang wajib dulu</strong> — kos, cicilan (kalau ada), tagihan.</li>
-        <li><strong>Sisihkan tabungan di hari yang sama</strong> — pindahkan ke rekening atau kantong terpisah sebelum uang terpakai.</li>
-        <li><strong>Tentukan jatah variabel</strong> — makan, transportasi, dan jajan diberi batas untuk sebulan.</li>
-        <li><strong>Baru sisanya</strong> untuk keinginan.</li>
+        <li>
+          <strong>Bayar yang wajib dulu</strong> — kos, cicilan (kalau ada), tagihan.
+        </li>
+        <li>
+          <strong>Sisihkan tabungan di hari yang sama</strong> — pindahkan ke rekening atau kantong terpisah sebelum
+          uang terpakai.
+        </li>
+        <li>
+          <strong>Tentukan jatah variabel</strong> — makan, transportasi, dan jajan diberi batas untuk sebulan.
+        </li>
+        <li>
+          <strong>Baru sisanya</strong> untuk keinginan.
+        </li>
       </ol>
       <p>
         Menabung dari sisa akhir bulan hampir selalu gagal di gaji berapa pun. Alasannya dibahas di{' '}
@@ -115,8 +181,8 @@ export default function CaraMengaturGaji3JutaPage() {
       <h2>4. Ubah jatah bulanan jadi jatah harian</h2>
       <p>
         Pos variabel paling mudah jebol karena dipakai sedikit-sedikit. Pecah jadi angka harian supaya terasa batasnya.
-        Pada contoh di atas, makan Rp900.000 dibagi 30 hari menjadi sekitar <strong>Rp30.000 per hari</strong>. Kalau hari ini
-        hanya terpakai Rp22.000, sisa Rp8.000 bisa menutup hari lain yang lebih mahal.
+        Pada contoh di atas, makan Rp900.000 dibagi 30 hari menjadi sekitar <strong>Rp30.000 per hari</strong>. Kalau
+        hari ini hanya terpakai Rp22.000, sisa Rp8.000 bisa menutup hari lain yang lebih mahal.
       </p>
       <p>
         Kalau gaji Anda dibayar per minggu, cara membagi tagihan bulanan ke jatah mingguan ada di panduan{' '}
@@ -125,17 +191,29 @@ export default function CaraMengaturGaji3JutaPage() {
 
       <h2>5. Tetap menabung walau kecil</h2>
       <p>
-        Rp300.000 per bulan terlihat kecil, tapi tetap membangun bantalan. Sebagai <em>ilustrasi</em>, dengan pengeluaran
-        pokok Rp2.150.000 per bulan:
+        Rp300.000 per bulan terlihat kecil, tapi tetap membangun bantalan. Sebagai <em>ilustrasi</em>, dengan
+        pengeluaran pokok Rp2.150.000 per bulan:
       </p>
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Target</th><th className="num">Jumlah (Rp)</th><th className="num">Waktu dengan Rp300.000/bulan</th></tr>
+            <tr>
+              <th>Target</th>
+              <th className="num">Jumlah (Rp)</th>
+              <th className="num">Waktu dengan Rp300.000/bulan</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td>Dana darurat awal (1× pengeluaran pokok)</td><td className="num">2.150.000</td><td className="num">±8 bulan</td></tr>
-            <tr><td>Dana darurat 3× pengeluaran pokok</td><td className="num">6.450.000</td><td className="num">±22 bulan</td></tr>
+            <tr>
+              <td>Dana darurat awal (1× pengeluaran pokok)</td>
+              <td className="num">2.150.000</td>
+              <td className="num">±8 bulan</td>
+            </tr>
+            <tr>
+              <td>Dana darurat 3× pengeluaran pokok</td>
+              <td className="num">6.450.000</td>
+              <td className="num">±22 bulan</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -150,8 +228,8 @@ export default function CaraMengaturGaji3JutaPage() {
         Pembagian di atas hanya titik awal. Catat semua pengeluaran selama dua minggu pertama, lalu bandingkan dengan
         jatahnya. Pos yang selalu lewat batas perlu dinaikkan dengan mengurangi pos lain, bukan dibiarkan. Kalau ada
         cicilan yang membuat kebutuhan pokok jauh di atas gaji, susun dulu rencana di panduan{' '}
-        <Link href="/panduan/cara-melunasi-utang">cara melunasi utang</Link>. Cara menyusun batas per kategori dijelaskan
-        di <Link href="/panduan/cara-membuat-anggaran-bulanan">cara membuat anggaran bulanan</Link>.
+        <Link href="/panduan/cara-melunasi-utang">cara melunasi utang</Link>. Cara menyusun batas per kategori
+        dijelaskan di <Link href="/panduan/cara-membuat-anggaran-bulanan">cara membuat anggaran bulanan</Link>.
       </p>
 
       <h2>Mengatur gaji 3 juta dengan Leosiqra</h2>
@@ -161,8 +239,10 @@ export default function CaraMengaturGaji3JutaPage() {
         nominal target dan progres dalam persen. Semua fitur bisa dicoba gratis selama 14 hari tanpa kartu kredit.
       </p>
       <p>
-        <em>Angka di panduan ini adalah ilustrasi. Panduan ini bersifat edukasi umum, bukan nasihat keuangan. Sesuaikan
-        dengan kondisi dan tujuan Anda.</em>
+        <em>
+          Angka di panduan ini adalah ilustrasi. Panduan ini bersifat edukasi umum, bukan nasihat keuangan. Sesuaikan
+          dengan kondisi dan tujuan Anda.
+        </em>
       </p>
     </GuideLayout>
   );

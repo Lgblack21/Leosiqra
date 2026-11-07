@@ -16,7 +16,8 @@ export const metadata: Metadata = {
   alternates: { canonical: '/panduan/catatan-hutang-piutang' },
   openGraph: {
     title: 'Catatan Hutang Piutang: Cara Mencatat dan Contohnya',
-    description: 'Kolom wajib, contoh tabel, cara mencatat cicilan dan pelunasan, dan kesalahan yang membuat sisa hutang salah.',
+    description:
+      'Kolom wajib, contoh tabel, cara mencatat cicilan dan pelunasan, dan kesalahan yang membuat sisa hutang salah.',
     url: 'https://www.leosiqra.com/panduan/catatan-hutang-piutang',
     type: 'article',
     locale: 'id_ID',
@@ -25,7 +26,8 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary',
     title: 'Catatan Hutang Piutang: Cara Mencatat dan Contohnya',
-    description: 'Kolom wajib, contoh tabel, cara mencatat cicilan dan pelunasan, dan kesalahan yang membuat sisa hutang salah.',
+    description:
+      'Kolom wajib, contoh tabel, cara mencatat cicilan dan pelunasan, dan kesalahan yang membuat sisa hutang salah.',
     images: ['/images/Logo-new.png'],
   },
 };
@@ -62,9 +64,9 @@ export default function CatatanHutangPiutangPage() {
       <h2>1. Kenapa hutang piutang perlu dicatat terpisah</h2>
       <p>
         Hutang dan piutang bukan pengeluaran atau pemasukan biasa. Saat meminjam, saldo Anda naik tetapi uangnya bukan
-        milik Anda. Saat meminjamkan, saldo turun tetapi uangnya masih hak Anda. Kalau dicampur dengan catatan pengeluaran
-        harian, laporan bulanan jadi menyesatkan: pengeluaran terlihat membengkak di bulan Anda meminjamkan uang, dan
-        penghasilan terlihat naik di bulan Anda meminjam.
+        milik Anda. Saat meminjamkan, saldo turun tetapi uangnya masih hak Anda. Kalau dicampur dengan catatan
+        pengeluaran harian, laporan bulanan jadi menyesatkan: pengeluaran terlihat membengkak di bulan Anda meminjamkan
+        uang, dan penghasilan terlihat naik di bulan Anda meminjam.
       </p>
       <p>
         Karena itu, buat satu catatan khusus hutang piutang. Catatan harian tetap dipakai untuk belanja sehari-hari —
@@ -73,38 +75,88 @@ export default function CatatanHutangPiutangPage() {
 
       <h2>2. Kolom yang wajib ada</h2>
       <ol>
-        <li><strong>Tanggal</strong> — kapan uang dipinjam atau dipinjamkan.</li>
-        <li><strong>Jenis</strong> — hutang (Anda yang membayar) atau piutang (Anda yang menerima).</li>
-        <li><strong>Nama pihak</strong> — orang, toko, atau lembaga. Tanpa nama, catatan cepat tidak berguna.</li>
-        <li><strong>Nominal awal</strong> — jumlah saat transaksi terjadi. Jangan diubah sesudahnya.</li>
-        <li><strong>Sudah dibayar</strong> — total pembayaran atau cicilan sejauh ini.</li>
-        <li><strong>Sisa</strong> — nominal awal dikurangi yang sudah dibayar.</li>
-        <li><strong>Rencana bayar</strong> — tanggal atau kesepakatan pengembalian, kalau ada.</li>
-        <li><strong>Keterangan</strong> — untuk apa, dan di mana buktinya (misalnya &ldquo;bukti transfer di chat&rdquo;).</li>
+        <li>
+          <strong>Tanggal</strong> — kapan uang dipinjam atau dipinjamkan.
+        </li>
+        <li>
+          <strong>Jenis</strong> — hutang (Anda yang membayar) atau piutang (Anda yang menerima).
+        </li>
+        <li>
+          <strong>Nama pihak</strong> — orang, toko, atau lembaga. Tanpa nama, catatan cepat tidak berguna.
+        </li>
+        <li>
+          <strong>Nominal awal</strong> — jumlah saat transaksi terjadi. Jangan diubah sesudahnya.
+        </li>
+        <li>
+          <strong>Sudah dibayar</strong> — total pembayaran atau cicilan sejauh ini.
+        </li>
+        <li>
+          <strong>Sisa</strong> — nominal awal dikurangi yang sudah dibayar.
+        </li>
+        <li>
+          <strong>Rencana bayar</strong> — tanggal atau kesepakatan pengembalian, kalau ada.
+        </li>
+        <li>
+          <strong>Keterangan</strong> — untuk apa, dan di mana buktinya (misalnya &ldquo;bukti transfer di chat&rdquo;).
+        </li>
       </ol>
 
       <h2>3. Contoh catatan hutang piutang</h2>
-      <p>Contoh <em>ilustrasi</em> catatan seorang karyawan di akhir bulan:</p>
+      <p>
+        Contoh <em>ilustrasi</em> catatan seorang karyawan di akhir bulan:
+      </p>
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Tanggal</th><th>Jenis</th><th>Pihak</th>
-              <th className="num">Nominal awal (Rp)</th><th className="num">Sudah dibayar (Rp)</th><th className="num">Sisa (Rp)</th>
+              <th>Tanggal</th>
+              <th>Jenis</th>
+              <th>Pihak</th>
+              <th className="num">Nominal awal (Rp)</th>
+              <th className="num">Sudah dibayar (Rp)</th>
+              <th className="num">Sisa (Rp)</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td>3 Okt</td><td>Hutang</td><td>Kakak</td><td className="num">1.500.000</td><td className="num">500.000</td><td className="num">1.000.000</td></tr>
-            <tr><td>10 Okt</td><td>Hutang</td><td>Cicilan HP di toko</td><td className="num">2.400.000</td><td className="num">400.000</td><td className="num">2.000.000</td></tr>
-            <tr><td>12 Okt</td><td>Piutang</td><td>Teman kantor</td><td className="num">300.000</td><td className="num">300.000</td><td className="num">0 (lunas)</td></tr>
-            <tr><td>20 Okt</td><td>Piutang</td><td>Sepupu</td><td className="num">750.000</td><td className="num">0</td><td className="num">750.000</td></tr>
+            <tr>
+              <td>3 Okt</td>
+              <td>Hutang</td>
+              <td>Kakak</td>
+              <td className="num">1.500.000</td>
+              <td className="num">500.000</td>
+              <td className="num">1.000.000</td>
+            </tr>
+            <tr>
+              <td>10 Okt</td>
+              <td>Hutang</td>
+              <td>Cicilan HP di toko</td>
+              <td className="num">2.400.000</td>
+              <td className="num">400.000</td>
+              <td className="num">2.000.000</td>
+            </tr>
+            <tr>
+              <td>12 Okt</td>
+              <td>Piutang</td>
+              <td>Teman kantor</td>
+              <td className="num">300.000</td>
+              <td className="num">300.000</td>
+              <td className="num">0 (lunas)</td>
+            </tr>
+            <tr>
+              <td>20 Okt</td>
+              <td>Piutang</td>
+              <td>Sepupu</td>
+              <td className="num">750.000</td>
+              <td className="num">0</td>
+              <td className="num">750.000</td>
+            </tr>
           </tbody>
         </table>
       </div>
       <p>
         Dari tabel ini terbaca dua angka penting: <strong>total sisa hutang Rp3.000.000</strong> (yang masih harus Anda
-        bayar) dan <strong>total sisa piutang Rp750.000</strong> (yang masih akan Anda terima). Piutang teman kantor yang
-        sudah lunas tetap disimpan sebagai riwayat, tetapi tidak dihitung lagi.
+        bayar) dan <strong>total sisa piutang Rp750.000</strong> (yang masih akan Anda terima). Piutang teman kantor
+        yang sudah lunas tetap disimpan sebagai riwayat, tetapi tidak dihitung lagi.
       </p>
 
       <h2>4. Cara mencatat cicilan dan pelunasan</h2>
@@ -121,8 +173,8 @@ export default function CatatanHutangPiutangPage() {
         </li>
       </ul>
       <p>
-        Kalau sisanya sudah nol, tandai <strong>lunas</strong> dan jangan hapus barisnya. Riwayat ini berguna kalau suatu
-        saat ada yang lupa sudah membayar atau belum.
+        Kalau sisanya sudah nol, tandai <strong>lunas</strong> dan jangan hapus barisnya. Riwayat ini berguna kalau
+        suatu saat ada yang lupa sudah membayar atau belum.
       </p>
 
       <h2>5. Kesalahan yang membuat sisa hutang salah</h2>
@@ -147,9 +199,9 @@ export default function CatatanHutangPiutangPage() {
 
       <h2>6. Setelah tercatat: susun rencana pelunasan</h2>
       <p>
-        Dengan sisa hutang yang jelas, Anda bisa menentukan mana yang dilunasi lebih dulu — dua strateginya dijelaskan di{' '}
-        <Link href="/panduan/cara-melunasi-utang">cara melunasi utang</Link>. Masukkan cicilan bulanan ke pos tetap di{' '}
-        <Link href="/panduan/cara-membuat-anggaran-bulanan">anggaran bulanan</Link>, dan sisihkan{' '}
+        Dengan sisa hutang yang jelas, Anda bisa menentukan mana yang dilunasi lebih dulu — dua strateginya dijelaskan
+        di <Link href="/panduan/cara-melunasi-utang">cara melunasi utang</Link>. Masukkan cicilan bulanan ke pos tetap
+        di <Link href="/panduan/cara-membuat-anggaran-bulanan">anggaran bulanan</Link>, dan sisihkan{' '}
         <Link href="/panduan/dana-darurat">dana darurat</Link> supaya kebutuhan mendadak tidak berujung pinjaman baru.
         Untuk usaha yang memberi tempo ke pelanggan, lihat juga{' '}
         <Link href="/panduan/catat-keuangan-usaha-kecil">catat keuangan usaha kecil</Link>.
@@ -158,14 +210,16 @@ export default function CatatanHutangPiutangPage() {
       <h2>Mencatat hutang piutang di Leosiqra</h2>
       <p>
         Di <strong>Leosiqra</strong> ada menu <strong>Hutang &amp; Piutang</strong> yang menampilkan total sisa hutang
-        dan total sisa piutang. Setiap catatan menyimpan nama pihak, nominal, dan rekening yang dipakai. Saat Anda mencatat
-        cicilan, sisanya dihitung dari total pembayaran dan catatan otomatis ditandai lunas begitu sisanya habis. Setiap
-        cicilan dan pelunasan juga tercatat sebagai transaksi, sehingga saldo rekening ikut disesuaikan. Semua fitur bisa
-        dicoba gratis selama 14 hari tanpa kartu kredit.
+        dan total sisa piutang. Setiap catatan menyimpan nama pihak, nominal, dan rekening yang dipakai. Saat Anda
+        mencatat cicilan, sisanya dihitung dari total pembayaran dan catatan otomatis ditandai lunas begitu sisanya
+        habis. Setiap cicilan dan pelunasan juga tercatat sebagai transaksi, sehingga saldo rekening ikut disesuaikan.
+        Semua fitur bisa dicoba gratis selama 14 hari tanpa kartu kredit.
       </p>
       <p>
-        <em>Angka di panduan ini adalah ilustrasi. Panduan ini bersifat edukasi umum, bukan nasihat keuangan atau hukum.
-        Sesuaikan dengan kondisi Anda.</em>
+        <em>
+          Angka di panduan ini adalah ilustrasi. Panduan ini bersifat edukasi umum, bukan nasihat keuangan atau hukum.
+          Sesuaikan dengan kondisi Anda.
+        </em>
       </p>
     </GuideLayout>
   );

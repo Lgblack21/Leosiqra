@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
@@ -18,7 +18,7 @@ interface StockInvestmentModalProps {
   userId: string;
   isOpen: boolean;
   onClose: () => void;
-  editData?: Investment; // Use this for editing
+  editData?: Investment;
   initialData?: Investment; // Keep this for selling mode
 }
 
@@ -28,7 +28,7 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [rates, setRates] = useState<ExchangeRates | null>(null);
   const [convertedAmount, setConvertedAmount] = useState<number>(0);
-  
+
   const [formData, setFormData] = useState({
     stockCode: '',
     logoUrl: '',
@@ -41,7 +41,7 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
     category: 'Saham',
     accountId: '',
     platform: '',
-    dateInvested: toLocalDateString()
+    dateInvested: toLocalDateString(),
   });
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -53,10 +53,10 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
     setUploading(true);
     try {
       const url = await uploadToCloudinary(file);
-      setFormData(prev => ({ ...prev, logoUrl: url }));
+      setFormData((prev) => ({ ...prev, logoUrl: url }));
     } catch (error) {
-      console.error("Upload failed:", error);
-      alert("Gagal mengunggah logo.");
+      console.error('Upload failed:', error);
+      alert('Gagal mengunggah logo.');
     } finally {
       setUploading(false);
     }
@@ -81,7 +81,7 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
           category: editData.category || 'Saham',
           accountId: editData.accountId || '',
           platform: editData.platform || '',
-          dateInvested: toLocalDateString(editData.dateInvested)
+          dateInvested: toLocalDateString(editData.dateInvested),
         });
       } else if (initialData) {
         setFormData({
@@ -96,13 +96,22 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
           category: 'Saham',
           accountId: initialData.accountId || '',
           platform: initialData.platform || '',
-          dateInvested: toLocalDateString()
+          dateInvested: toLocalDateString(),
         });
       } else {
-        setFormData({ 
-          stockCode: '', logoUrl: '', exchangeCode: 'IDX', currency: 'IDR', sharesCount: '', 
-          pricePerShare: '', currentValue: '', transactionType: 'Beli', category: 'Saham', 
-          accountId: '', platform: '', dateInvested: toLocalDateString() 
+        setFormData({
+          stockCode: '',
+          logoUrl: '',
+          exchangeCode: 'IDX',
+          currency: 'IDR',
+          sharesCount: '',
+          pricePerShare: '',
+          currentValue: '',
+          transactionType: 'Beli',
+          category: 'Saham',
+          accountId: '',
+          platform: '',
+          dateInvested: toLocalDateString(),
         });
       }
     }
@@ -112,7 +121,7 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
     const shares = parseFloat(formData.sharesCount) || 0;
     const price = parseFloat(formData.pricePerShare) || 0;
     const invested = shares * price;
-    
+
     if (invested && formData.currency && rates) {
       if (formData.currency === 'IDR') {
         setConvertedAmount(invested);
@@ -138,8 +147,7 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
 
     try {
       // Semua jalur disimpan server dalam satu batch atomik (posisi + transaksi
-      // tertaut + saldo + ringkasan) — dulu 4–6 request terpisah dari browser,
-      // dan edit memotong saldo lagi tanpa mengembalikan potongan lama.
+      // tertaut + saldo + ringkasan); edit membalikkan potongan saldo lama.
       if (initialData?.id && formData.transactionType === 'Jual') {
         await investmentService.sell(initialData.id, {
           quantity: shares,
@@ -173,9 +181,18 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
 
       onClose();
       setFormData({
-        stockCode: '', logoUrl: '', exchangeCode: 'IDX', currency: 'IDR', sharesCount: '',
-        pricePerShare: '', currentValue: '', transactionType: 'Beli', category: 'Saham',
-        accountId: '', platform: '', dateInvested: toLocalDateString()
+        stockCode: '',
+        logoUrl: '',
+        exchangeCode: 'IDX',
+        currency: 'IDR',
+        sharesCount: '',
+        pricePerShare: '',
+        currentValue: '',
+        transactionType: 'Beli',
+        category: 'Saham',
+        accountId: '',
+        platform: '',
+        dateInvested: toLocalDateString(),
       });
     } catch (e) {
       console.error(e);
@@ -186,7 +203,12 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={editData ? "Edit Posisi Saham" : (initialData ? "Jual Posisi Saham" : "Tambah Posisi Saham")} maxWidth="max-w-lg">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={editData ? 'Edit Posisi Saham' : initialData ? 'Jual Posisi Saham' : 'Tambah Posisi Saham'}
+      maxWidth="max-w-lg"
+    >
       <div className="space-y-4 max-h-[75vh] overflow-y-auto px-1 custom-scrollbar">
         {error && (
           <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-sm font-medium text-rose-600">
@@ -194,13 +216,12 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
           </div>
         )}
 
-        {/* Tipe Transaksi Dropdown */}
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe Transaksi</label>
           <div className="relative">
-            <select 
+            <select
               value={formData.transactionType}
-              onChange={e => setFormData(p => ({...p, transactionType: e.target.value}))}
+              onChange={(e) => setFormData((p) => ({ ...p, transactionType: e.target.value }))}
               // Jual hanya lewat tombol Jual pada posisi (menghitung modal &
               // untung/rugi dari posisi asal) — form baru selalu Beli.
               disabled
@@ -209,7 +230,10 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
               <option value="Beli">Beli (Pengeluaran)</option>
               <option value="Jual">Jual (Pemasukan)</option>
             </select>
-            <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <ChevronDown
+              size={14}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+            />
           </div>
         </div>
 
@@ -218,13 +242,15 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kode Saham</label>
             <StockCombobox
               value={formData.stockCode}
-              onChange={val => setFormData(p => ({...p, stockCode: val}))}
-              onSelect={(stock: StockSearchResult) => setFormData(p => ({
-                ...p,
-                stockCode: stock.symbol,
-                exchangeCode: stock.exchangeCode || p.exchangeCode,
-                logoUrl: stock.logoUrl || p.logoUrl,
-              }))}
+              onChange={(val) => setFormData((p) => ({ ...p, stockCode: val }))}
+              onSelect={(stock: StockSearchResult) =>
+                setFormData((p) => ({
+                  ...p,
+                  stockCode: stock.symbol,
+                  exchangeCode: stock.exchangeCode || p.exchangeCode,
+                  logoUrl: stock.logoUrl || p.logoUrl,
+                }))
+              }
               disabled={!!initialData}
               placeholder="Cari BBCA, TLKM, AAPL..."
               className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 pl-4 pr-9 text-sm font-bold text-slate-700 transition-all disabled:opacity-60"
@@ -240,15 +266,15 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
                   <ImageIcon className="text-slate-300" size={16} />
                 )}
               </div>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                className="hidden" 
-                accept="image/*" 
-                onChange={handleLogoUpload} 
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={handleLogoUpload}
                 disabled={!!initialData}
               />
-              <button 
+              <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading || !!initialData}
@@ -273,19 +299,23 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kode Bursa</label>
-            <input type="text" value={formData.exchangeCode} onChange={e => setFormData(p => ({...p, exchangeCode: e.target.value.toUpperCase()}))}
+            <input
+              type="text"
+              value={formData.exchangeCode}
+              onChange={(e) => setFormData((p) => ({ ...p, exchangeCode: e.target.value.toUpperCase() }))}
               disabled={!!initialData}
-              placeholder="IDX, NYSE..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all disabled:opacity-60" />
+              placeholder="IDX, NYSE..."
+              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all disabled:opacity-60"
+            />
           </div>
-          <CurrencySelect 
+          <CurrencySelect
             value={formData.currency}
-            onChange={(val) => setFormData({...formData, currency: val})}
+            onChange={(val) => setFormData({ ...formData, currency: val })}
             label="Mata Uang"
             className={initialData ? 'opacity-60 grayscale' : ''}
           />
         </div>
 
-        {/* Conversion Display */}
         {formData.currency !== 'IDR' && formData.sharesCount && formData.pricePerShare && (
           <div className="bg-emerald-50/50 border border-emerald-100/50 rounded-2xl p-4 flex items-center justify-between animate-in slide-in-from-top-2">
             <div className="flex items-center gap-3">
@@ -293,7 +323,9 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
                 <RefreshCw size={14} />
               </div>
               <div>
-                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">Total Terkonversi (IDR)</p>
+                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">
+                  Total Terkonversi (IDR)
+                </p>
                 <p className="text-sm font-black text-slate-900 leading-none">
                   ~ {formatCurrency(convertedAmount, 'IDR')}
                 </p>
@@ -306,30 +338,40 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Lembar (Qty)</label>
-            <input type="number" value={formData.sharesCount} onChange={e => setFormData(p => ({...p, sharesCount: e.target.value}))}
-              placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            <input
+              type="number"
+              value={formData.sharesCount}
+              onChange={(e) => setFormData((p) => ({ ...p, sharesCount: e.target.value }))}
+              placeholder="0"
+              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
+            />
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
               {formData.transactionType === 'Jual' ? 'Harga Jual / Lembar' : 'Harga Beli / Lembar'}
             </label>
-            <NumberInput value={formData.pricePerShare} onChange={val => setFormData(p => ({...p, pricePerShare: val}))}
-              placeholder={formData.transactionType === 'Jual' ? '9000' : '8000'} className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            <NumberInput
+              value={formData.pricePerShare}
+              onChange={(val) => setFormData((p) => ({ ...p, pricePerShare: val }))}
+              placeholder={formData.transactionType === 'Jual' ? '9000' : '8000'}
+              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
+            />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Rekening / RDN</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+              Rekening / RDN
+            </label>
             <div className="relative">
               <select
                 value={formData.accountId}
-                onChange={e => {
-                  const selectedAccount = accounts.find(acc => acc.id === e.target.value);
-                  setFormData(p => ({
+                onChange={(e) => {
+                  const selectedAccount = accounts.find((acc) => acc.id === e.target.value);
+                  setFormData((p) => ({
                     ...p,
                     accountId: e.target.value,
-                    // Ikuti mata uang rekening yang dipilih.
                     currency: selectedAccount?.currency || p.currency,
                   }));
                 }}
@@ -337,37 +379,64 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
                 className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer disabled:opacity-60"
               >
                 <option value="">Pilih Rekening</option>
-                {accounts.map(acc => (
-                  <option key={acc.id} value={acc.id}>{acc.name} ({acc.currency})</option>
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name} ({acc.currency})
+                  </option>
                 ))}
               </select>
-              <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <ChevronDown
+                size={14}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+              />
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Platform Broker</label>
-            <input type="text" value={formData.platform} onChange={e => setFormData(p => ({...p, platform: e.target.value}))}
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+              Platform Broker
+            </label>
+            <input
+              type="text"
+              value={formData.platform}
+              onChange={(e) => setFormData((p) => ({ ...p, platform: e.target.value }))}
               disabled={!!initialData}
-              placeholder="Stockbit, Ajaib..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all disabled:opacity-60" />
+              placeholder="Stockbit, Ajaib..."
+              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all disabled:opacity-60"
+            />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Valuasi Saat Ini (Estimasi)</label>
-            <NumberInput value={formData.currentValue} onChange={val => setFormData(p => ({...p, currentValue: val}))}
-              placeholder="Opsional" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+              Valuasi Saat Ini (Estimasi)
+            </label>
+            <NumberInput
+              value={formData.currentValue}
+              onChange={(val) => setFormData((p) => ({ ...p, currentValue: val }))}
+              placeholder="Opsional"
+              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
+            />
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
-            <input type="date" value={formData.dateInvested} onChange={e => setFormData(p => ({...p, dateInvested: e.target.value}))}
-              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            <input
+              type="date"
+              value={formData.dateInvested}
+              onChange={(e) => setFormData((p) => ({ ...p, dateInvested: e.target.value }))}
+              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
+            />
           </div>
         </div>
 
-        <button onClick={handleCreate} disabled={loading || !formData.stockCode || !formData.sharesCount || !formData.pricePerShare}
-          className="w-full bg-indigo-600 disabled:bg-slate-300 text-white py-4 rounded-xl text-sm font-black transition-all mt-6 shadow-xl shadow-indigo-100 flex items-center justify-center gap-2">
-          {loading ? 'Menyimpan...' : (
+        <button
+          onClick={handleCreate}
+          disabled={loading || !formData.stockCode || !formData.sharesCount || !formData.pricePerShare}
+          className="w-full bg-indigo-600 disabled:bg-slate-300 text-white py-4 rounded-xl text-sm font-black transition-all mt-6 shadow-xl shadow-indigo-100 flex items-center justify-center gap-2"
+        >
+          {loading ? (
+            'Menyimpan...'
+          ) : (
             <>
               <Save size={18} />
               {formData.transactionType === 'Jual' ? 'Konfirmasi Penjualan Saham' : 'Simpan Posisi Saham'}

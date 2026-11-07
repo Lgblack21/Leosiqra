@@ -74,6 +74,10 @@ jobs:
 
       - run: npm ci
       - run: npx tsc --noEmit
+      # Sama seperti deploy-main: tanpa ini public/logos kosong dan logo HD hilang dari produksi.
+      - name: Logo bank (HD)
+        continue-on-error: true
+        run: node scripts/fetch-logos.mjs
       - run: npm run build
 
       - name: Deploy

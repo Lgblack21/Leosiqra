@@ -15,8 +15,15 @@ interface AiSuggestion {
 // Baca transaksi dari teks (transkrip suara) atau foto struk lewat
 // /api/member/ai/parse-transaction. Server hanya mengembalikan kategori &
 // rekening yang benar-benar milik user, dan tanggal yang masuk akal.
-export const aiParse = async (input: { text: string } | { imageBase64: string }): Promise<QuickDraft & { confidence: AiSuggestion['confidence'] }> => {
-  const res = await cloudflareApi<{ ok: boolean; suggestion?: AiSuggestion; error?: string; attachmentId?: string | null }>('/api/member/ai/parse-transaction', {
+export const aiParse = async (
+  input: { text: string } | { imageBase64: string },
+): Promise<QuickDraft & { confidence: AiSuggestion['confidence'] }> => {
+  const res = await cloudflareApi<{
+    ok: boolean;
+    suggestion?: AiSuggestion;
+    error?: string;
+    attachmentId?: string | null;
+  }>('/api/member/ai/parse-transaction', {
     method: 'POST',
     json: input,
   });
@@ -47,11 +54,18 @@ export const imageFileToBase64 = (file: File, maxSide = 1600, quality = 0.8): Pr
       canvas.width = Math.round(img.width * scale);
       canvas.height = Math.round(img.height * scale);
       const ctx = canvas.getContext('2d');
-      if (!ctx) { URL.revokeObjectURL(url); reject(new Error('Gagal memproses foto.')); return; }
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        reject(new Error('Gagal memproses foto.'));
+        return;
+      }
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(url);
       resolve(canvas.toDataURL('image/jpeg', quality).split(',')[1] ?? '');
     };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('File bukan gambar yang bisa dibaca.')); };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('File bukan gambar yang bisa dibaca.'));
+    };
     img.src = url;
   });

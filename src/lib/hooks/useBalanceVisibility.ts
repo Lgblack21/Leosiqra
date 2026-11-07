@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore } from 'react';
 
-const STORAGE_KEY = "leosiqra-balance-hidden";
+const STORAGE_KEY = 'leosiqra-balance-hidden';
 const listeners = new Set<() => void>();
 
 // useState lokal per-komponen gak cukup di sini — BalanceCard, WalletList,
@@ -11,7 +11,7 @@ const listeners = new Set<() => void>();
 // di halaman yang sama (beda dari event `storage` yang cuma nyala antar
 // tab/window). useSyncExternalStore + pub/sub kecil ini yang bikin semua
 // instance ke-notify begitu salah satu toggle.
-const getSnapshot = () => (typeof window !== "undefined" && window.localStorage.getItem(STORAGE_KEY) === "1");
+const getSnapshot = () => typeof window !== 'undefined' && window.localStorage.getItem(STORAGE_KEY) === '1';
 const getServerSnapshot = () => false;
 
 const subscribe = (callback: () => void) => {
@@ -28,7 +28,7 @@ export function useBalanceVisibility() {
 
   const toggle = () => {
     const next = !hidden;
-    window.localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+    window.localStorage.setItem(STORAGE_KEY, next ? '1' : '0');
     notify();
   };
 

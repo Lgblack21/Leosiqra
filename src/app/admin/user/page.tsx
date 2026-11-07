@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import Image from 'next/image';
 import { Search, Clock, ShieldCheck } from 'lucide-react';
@@ -61,7 +61,7 @@ export default function AdminUserPage() {
       });
       setUsers((current) => current.filter((item) => item.id !== userId));
       alert('User berhasil dihapus.');
-  } catch {
+    } catch {
       alert('Gagal menghapus user.');
     }
   };
@@ -70,9 +70,7 @@ export default function AdminUserPage() {
     try {
       const now = new Date();
       // Jika sudah ada expiredAt dan belum basi, hitung dari tanggal tersebut. Jika tidak, dari hari ini.
-      const baseDate = (currentExpiredAt && new Date(currentExpiredAt) > now)
-        ? new Date(currentExpiredAt)
-        : now;
+      const baseDate = currentExpiredAt && new Date(currentExpiredAt) > now ? new Date(currentExpiredAt) : now;
 
       const nextMonth = new Date(baseDate);
       nextMonth.setMonth(nextMonth.getMonth() + 1);
@@ -87,10 +85,8 @@ export default function AdminUserPage() {
       });
       setUsers((current) =>
         current.map((item) =>
-          item.id === userId
-            ? { ...item, plan: 'PRO', status: 'AKTIF', expired_at: nextMonth.toISOString() }
-            : item
-        )
+          item.id === userId ? { ...item, plan: 'PRO', status: 'AKTIF', expired_at: nextMonth.toISOString() } : item,
+        ),
       );
       alert('Paket berhasil diperpanjang (akumulatif).');
     } catch {
@@ -119,10 +115,8 @@ export default function AdminUserPage() {
       });
       setUsers((current) =>
         current.map((item) =>
-          item.id === row.id
-            ? { ...item, plan: 'FREE', status: 'AKTIF', expired_at: activeExpiredAt }
-            : item
-        )
+          item.id === row.id ? { ...item, plan: 'FREE', status: 'AKTIF', expired_at: activeExpiredAt } : item,
+        ),
       );
       alert('Status diatur ke FREE');
     } catch {
@@ -133,8 +127,8 @@ export default function AdminUserPage() {
   const handleResetTwoFactor = async (row: AdminUserRow) => {
     const ok = confirm(
       `Reset verifikasi 2 langkah untuk ${row.email}?\n\n` +
-      `Pastikan dulu yang meminta benar pemilik akun (mis. menghubungi dari email akun tersebut). ` +
-      `Semua sesi login user ini akan dicabut, lalu ia bisa masuk hanya dengan password dan mengaktifkan 2FA lagi.`
+        `Pastikan dulu yang meminta benar pemilik akun (mis. menghubungi dari email akun tersebut). ` +
+        `Semua sesi login user ini akan dicabut, lalu ia bisa masuk hanya dengan password dan mengaktifkan 2FA lagi.`,
     );
     if (!ok) return;
     try {
@@ -146,12 +140,13 @@ export default function AdminUserPage() {
     }
   };
 
-  const filteredUsers = users.filter(u =>
-    (u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-     u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-     u.id?.includes(searchQuery)) &&
-     u.role === 'user' &&
-     u.status !== 'GUEST'
+  const filteredUsers = users.filter(
+    (u) =>
+      (u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.id?.includes(searchQuery)) &&
+      u.role === 'user' &&
+      u.status !== 'GUEST',
   );
 
   return (
@@ -176,7 +171,8 @@ export default function AdminUserPage() {
       <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-6">
         <div className="flex items-center justify-between">
           <p className="text-[12px] font-black text-slate-900">
-            {filteredUsers.length} member {searchQuery && `(dari ${users.filter(u => u.role === 'user' && u.status !== 'GUEST').length})`}
+            {filteredUsers.length} member{' '}
+            {searchQuery && `(dari ${users.filter((u) => u.role === 'user' && u.status !== 'GUEST').length})`}
           </p>
         </div>
 
@@ -185,7 +181,10 @@ export default function AdminUserPage() {
             <thead>
               <tr className="border-b border-slate-100">
                 {['ID', 'NAMA', 'EMAIL', 'PLAN', 'STATUS', 'EXPIRED', 'AKSI'].map((head) => (
-                  <th key={head} className="text-left py-3 px-3 text-[10px] font-black text-slate-400 tracking-widest uppercase">
+                  <th
+                    key={head}
+                    className="text-left py-3 px-3 text-[10px] font-black text-slate-400 tracking-widest uppercase"
+                  >
                     {head}
                   </th>
                 ))}
@@ -197,7 +196,9 @@ export default function AdminUserPage() {
                   <td colSpan={7} className="py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                      <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Memuat data member...</p>
+                      <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                        Memuat data member...
+                      </p>
                     </div>
                   </td>
                 </tr>
@@ -207,84 +208,91 @@ export default function AdminUserPage() {
                     Tidak ada pengguna yang ditemukan.
                   </td>
                 </tr>
-              ) : filteredUsers.map((row, idx) => (
-                <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="py-4 px-3 text-[12px] font-medium text-slate-400">{row.id?.slice(-4) || '-'}</td>
-                  <td className="py-4 px-3">
-                    <div className="flex items-center gap-2.5">
-                      {row.photo_url ? (
-                        <div className="relative w-7 h-7 rounded-lg overflow-hidden bg-slate-50 shrink-0">
-                          <Image src={row.photo_url} alt={row.name || 'User'} fill className="object-cover" />
+              ) : (
+                filteredUsers.map((row, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="py-4 px-3 text-[12px] font-medium text-slate-400">{row.id?.slice(-4) || '-'}</td>
+                    <td className="py-4 px-3">
+                      <div className="flex items-center gap-2.5">
+                        {row.photo_url ? (
+                          <div className="relative w-7 h-7 rounded-lg overflow-hidden bg-slate-50 shrink-0">
+                            <Image src={row.photo_url} alt={row.name || 'User'} fill className="object-cover" />
+                          </div>
+                        ) : (
+                          <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-[10px] font-black text-indigo-500 uppercase shrink-0">
+                            {row.name?.[0] || 'U'}
+                          </div>
+                        )}
+                        <p className="text-[13px] font-black text-slate-900">{row.name || 'Anonymous'}</p>
+                        {row.has_2fa ? (
+                          <span
+                            title="Verifikasi 2 langkah aktif"
+                            className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-black tracking-widest text-emerald-700"
+                          >
+                            <ShieldCheck size={10} /> 2FA
+                          </span>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="py-4 px-3 text-[13px] font-medium text-slate-500">{row.email}</td>
+                    <td className="py-4 px-3 text-[12px] font-bold text-slate-500">{row.plan || 'FREE'}</td>
+                    <td className="py-4 px-3">
+                      <span
+                        className={cn(
+                          'inline-flex px-2.5 py-1 rounded-full text-[10px] font-black tracking-widest',
+                          row.status === 'AKTIF' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800',
+                        )}
+                      >
+                        {row.status || 'NONAKTIF'}
+                      </span>
+                    </td>
+                    <td className="py-4 px-3">
+                      {row.expired_at ? (
+                        <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-600">
+                          <Clock size={12} className="text-slate-400" />
+                          {new Date(row.expired_at).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
                         </div>
                       ) : (
-                        <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-[10px] font-black text-indigo-500 uppercase shrink-0">
-                          {row.name?.[0] || 'U'}
-                        </div>
+                        <span className="text-[12px] text-slate-300 font-medium italic">Tidak ada paket</span>
                       )}
-                      <p className="text-[13px] font-black text-slate-900">{row.name || 'Anonymous'}</p>
-                      {row.has_2fa ? (
-                        <span title="Verifikasi 2 langkah aktif" className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-black tracking-widest text-emerald-700">
-                          <ShieldCheck size={10} /> 2FA
-                        </span>
-                      ) : null}
-                    </div>
-                  </td>
-                  <td className="py-4 px-3 text-[13px] font-medium text-slate-500">{row.email}</td>
-                  <td className="py-4 px-3 text-[12px] font-bold text-slate-500">{row.plan || 'FREE'}</td>
-                  <td className="py-4 px-3">
-                    <span className={cn(
-                      "inline-flex px-2.5 py-1 rounded-full text-[10px] font-black tracking-widest",
-                      row.status === 'AKTIF' ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
-                    )}>
-                      {row.status || 'NONAKTIF'}
-                    </span>
-                  </td>
-                  <td className="py-4 px-3">
-                    {row.expired_at ? (
-                      <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-600">
-                        <Clock size={12} className="text-slate-400" />
-                        {new Date(row.expired_at).toLocaleDateString('id-ID', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric'
-                        })}
-                      </div>
-                    ) : (
-                      <span className="text-[12px] text-slate-300 font-medium italic">Tidak ada paket</span>
-                    )}
-                  </td>
-                  <td className="py-4 px-3">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleExtendPro(row.id, row.email, row.expired_at ?? undefined)}
-                        className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] font-black text-slate-900 hover:border-indigo-600 hover:text-indigo-600 transition-all"
-                      >
-                        +1 Bulan
-                      </button>
-                      <button
-                        onClick={() => handleSetFree(row)}
-                        className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] font-black text-slate-900 hover:border-indigo-600 hover:text-indigo-600 transition-all"
-                      >
-                        Set Free
-                      </button>
-                      {row.has_2fa ? (
+                    </td>
+                    <td className="py-4 px-3">
+                      <div className="flex items-center gap-2">
                         <button
-                          onClick={() => handleResetTwoFactor(row)}
-                          className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-[11px] font-black hover:bg-amber-500 hover:text-white transition-all"
+                          onClick={() => handleExtendPro(row.id, row.email, row.expired_at ?? undefined)}
+                          className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] font-black text-slate-900 hover:border-indigo-600 hover:text-indigo-600 transition-all"
                         >
-                          Reset 2FA
+                          +1 Bulan
                         </button>
-                      ) : null}
-                      <button
-                        onClick={() => handleDeleteUser(row.id, row.email)}
-                        className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[11px] font-black hover:bg-rose-500 hover:text-white transition-all"
-                      >
-                        Hapus
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        <button
+                          onClick={() => handleSetFree(row)}
+                          className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] font-black text-slate-900 hover:border-indigo-600 hover:text-indigo-600 transition-all"
+                        >
+                          Set Free
+                        </button>
+                        {row.has_2fa ? (
+                          <button
+                            onClick={() => handleResetTwoFactor(row)}
+                            className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-[11px] font-black hover:bg-amber-500 hover:text-white transition-all"
+                          >
+                            Reset 2FA
+                          </button>
+                        ) : null}
+                        <button
+                          onClick={() => handleDeleteUser(row.id, row.email)}
+                          className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[11px] font-black hover:bg-rose-500 hover:text-white transition-all"
+                        >
+                          Hapus
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

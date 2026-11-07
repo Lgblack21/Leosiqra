@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useState } from 'react';
 import { Flame, Award, TrendingUp, Star, ChevronRight } from 'lucide-react';
@@ -12,9 +12,12 @@ export const GamificationStrip = () => {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    gamificationService.getUserGamification().then(setData).catch((error) => {
-      console.error('Error loading gamification data:', error);
-    });
+    gamificationService
+      .getUserGamification()
+      .then(setData)
+      .catch((error) => {
+        console.error('Error loading gamification data:', error);
+      });
   }, []);
 
   // Payload yang tidak sesuai bentuk (mis. API error yang tetap 200) tidak
@@ -40,9 +43,14 @@ export const GamificationStrip = () => {
               <Star size={15} fill="currentColor" />
             </span>
             <span className="min-w-[104px]">
-              <span className="block text-sm font-black text-indigo-700">Lv {level.level} · {level.name}</span>
+              <span className="block text-sm font-black text-indigo-700">
+                Lv {level.level} · {level.name}
+              </span>
               <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-indigo-100">
-                <span className="block h-full rounded-full bg-indigo-500" style={{ width: `${levelProgress(xp, level) * 100}%` }} />
+                <span
+                  className="block h-full rounded-full bg-indigo-500"
+                  style={{ width: `${levelProgress(xp, level) * 100}%` }}
+                />
               </span>
             </span>
             <ChevronRight size={16} className="text-indigo-400 transition-transform group-hover:translate-x-0.5" />
@@ -66,10 +74,10 @@ export const GamificationStrip = () => {
             key={badge.id}
             title={badge.description}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-widest whitespace-nowrap shrink-0 transition-all",
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-widest whitespace-nowrap shrink-0 transition-all',
               badge.unlocked
-                ? "bg-indigo-50 border-indigo-100 text-indigo-600"
-                : "bg-slate-50 border-slate-100 text-slate-300"
+                ? 'bg-indigo-50 border-indigo-100 text-indigo-600'
+                : 'bg-slate-50 border-slate-100 text-slate-300',
             )}
           >
             <Award size={12} />

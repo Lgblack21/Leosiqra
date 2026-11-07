@@ -1,28 +1,25 @@
 import {
+  Radar,
+  Sprout,
   LayoutDashboard,
   BarChart3,
   Bot,
   PlusCircle,
   ListOrdered,
-  ArrowLeftRight,
   Repeat,
   Building2,
-  CreditCard,
-  PiggyBank,
+  PieChart,
+  Footprints,
   TrendingUp,
   Briefcase,
   Landmark,
   Coins,
-  Globe,
   Target,
-  HandCoins,
   ShieldCheck,
-  CalendarRange,
   User,
   Compass,
   Headphones,
   MessageSquareHeart,
-  Users,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -57,11 +54,9 @@ export const keuanganNav: NavItem[] = [
 ];
 
 export const fiturNav: NavItem[] = [
-  { label: 'AI Leosiqra', href: '/membership/ai-leosiqra', icon: Bot },
-  { label: 'Kartu Saya', href: '/membership/cards', icon: CreditCard },
-  { label: 'Tabungan', href: '/membership/tabungan', icon: PiggyBank },
-  { label: 'Hutang & Piutang', href: '/membership/transactions/debt', icon: HandCoins },
-  { label: 'Investasi', href: '/membership/investment', icon: TrendingUp },
+  { label: 'AI Leo', href: '/membership/ai-leosiqra', icon: Bot },
+  { label: 'Investasiku', href: '/membership/investment', icon: TrendingUp },
+  { label: 'Kekayaan', href: '/membership/kekayaan', icon: PieChart },
 ];
 
 export const SEMUA_FITUR_HREF = '/membership/fitur';
@@ -77,8 +72,8 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: 'Catat Transaksi', href: '/membership/transactions/input', icon: PlusCircle },
       { label: 'Riwayat Transaksi', href: '/membership/transactions/daily', icon: ListOrdered },
-      { label: 'Transfer & Top Up', href: '/membership/transactions/topup', icon: ArrowLeftRight },
       { label: 'Transaksi Rutin', href: '/membership/recurring', icon: Repeat },
+      { label: 'Langgananku', href: '/membership/langganan', icon: Radar },
     ],
   },
   {
@@ -87,9 +82,8 @@ export const navGroups: NavGroup[] = [
     icon: Building2,
     items: [
       { label: 'Rekening', href: '/membership/rekening', icon: Building2 },
-      { label: 'Kartu Saya', href: '/membership/cards', icon: CreditCard },
-      { label: 'Tabungan', href: '/membership/tabungan', icon: PiggyBank },
-      { label: 'Dompet Bersama', href: '/membership/dompet-bersama', icon: Users },
+      { label: 'Kekayaan', href: '/membership/kekayaan', icon: PieChart },
+      { label: 'Ladangku', href: '/membership/ladang', icon: Sprout },
     ],
   },
   {
@@ -97,11 +91,10 @@ export const navGroups: NavGroup[] = [
     label: 'Investasi',
     icon: TrendingUp,
     items: [
-      { label: 'Ringkasan Portofolio', href: '/membership/investment', icon: TrendingUp },
+      { label: 'Investasiku', href: '/membership/investment', icon: TrendingUp },
       { label: 'Saham', href: '/membership/investasi/saham', icon: Briefcase },
       { label: 'Deposito', href: '/membership/investasi/deposito', icon: Landmark },
       { label: 'Investasi Lainnya', href: '/membership/investasi/lainnya', icon: Coins },
-      { label: 'Data Pasar', href: '/membership/market-data', icon: Globe },
     ],
   },
   {
@@ -109,8 +102,7 @@ export const navGroups: NavGroup[] = [
     label: 'Perencanaan & Laporan',
     icon: Target,
     items: [
-      { label: 'Hutang & Piutang', href: '/membership/transactions/debt', icon: HandCoins },
-      { label: 'Laporan Tahunan', href: '/membership/annual', icon: CalendarRange },
+      { label: 'Jejak Uang', href: '/membership/jejak-uang', icon: Footprints },
       { label: 'Pajak Center', href: '/membership/pajak-center', icon: ShieldCheck },
     ],
   },
@@ -133,6 +125,7 @@ const extraTitles: Record<string, string> = {
   '/membership/fitur': 'Semua fitur',
   '/membership/aplikasi': 'Aplikasi terhubung',
   '/membership/kotak-masuk': 'Kotak Masuk',
+  '/membership/dompet-bersama': 'Dompet Bersama',
   '/membership/impor': 'Impor',
   '/membership/laporan': 'Laporan',
   '/membership/budget': 'Kategori & Anggaran',

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from 'react';
 import { Save } from 'lucide-react';
@@ -45,14 +45,18 @@ export const LedgerModal = ({ isOpen, onClose, userId, presetCategory }: LedgerM
           userId: userId,
           category: formData.category,
           subCategory,
-          status: 'VERIFIED'
+          status: 'VERIFIED',
         });
       }
       onClose();
       setFormData({ category: '', subCategory: '' });
     } catch (error) {
-      console.error("Error creating category:", error);
-      setError(error instanceof Error ? error.message : 'Gagal menyimpan kategori. Sebagian mungkin sudah tersimpan — periksa daftar kategori lalu coba lagi untuk sisanya.');
+      console.error('Error creating category:', error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Gagal menyimpan kategori. Sebagian mungkin sudah tersimpan — periksa daftar kategori lalu coba lagi untuk sisanya.',
+      );
     } finally {
       setLoading(false);
     }
@@ -77,18 +81,20 @@ export const LedgerModal = ({ isOpen, onClose, userId, presetCategory }: LedgerM
             type="text"
             value={formData.category}
             disabled={Boolean(presetCategory)}
-            onChange={(e) => setFormData({...formData, category: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
             placeholder="Contoh: Kebutuhan Hiburan"
             className="w-full bg-[#e9f0f4] border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           />
         </div>
         <div className="space-y-3">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Subkategori Spesifik</label>
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Subkategori Spesifik
+          </label>
           <p className="text-[10px] text-slate-400 pl-1">Bisa isi lebih dari satu, pisahkan dengan koma.</p>
           <input
             type="text"
             value={formData.subCategory}
-            onChange={(e) => setFormData({...formData, subCategory: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, subCategory: e.target.value })}
             placeholder="Contoh: Bensin Kendaraan, Parkir, Tol"
             className="w-full bg-[#e9f0f4] border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all"
           />
@@ -105,4 +111,3 @@ export const LedgerModal = ({ isOpen, onClose, userId, presetCategory }: LedgerM
     </Modal>
   );
 };
-

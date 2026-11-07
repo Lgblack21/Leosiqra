@@ -1,29 +1,29 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { Plus, Wallet as WalletIcon, Eye, EyeOff } from "lucide-react";
-import { accountService, Account } from "@/lib/services/accountService";
-import { subscribeToCollectionChanges } from "@/lib/cf-firestore";
-import { auth } from "@/lib/cf-client";
-import { exchangeRateService, ExchangeRates } from "@/lib/services/exchangeRateService";
-import { AddWalletSheet } from "@/components/app/wallet/AddWalletSheet";
-import { FadeIn, StaggerList, StaggerItem } from "@/components/app/FadeIn";
-import { AnimatedNumber } from "@/components/app/AnimatedNumber";
-import { useBalanceVisibility } from "@/lib/hooks/useBalanceVisibility";
-import { lightTap } from "@/lib/haptics";
+import { useEffect, useState } from 'react';
+import { Plus, Wallet as WalletIcon, Eye, EyeOff } from 'lucide-react';
+import { accountService, Account } from '@/lib/services/accountService';
+import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
+import { auth } from '@/lib/cf-client';
+import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
+import { AddWalletSheet } from '@/components/app/wallet/AddWalletSheet';
+import { FadeIn, StaggerList, StaggerItem } from '@/components/app/FadeIn';
+import { AnimatedNumber } from '@/components/app/AnimatedNumber';
+import { useBalanceVisibility } from '@/lib/hooks/useBalanceVisibility';
+import { lightTap } from '@/lib/haptics';
 
 const GROUPS = [
-  { key: "Cash", label: "Cash" },
-  { key: "Bank Account", label: "Bank Accounts" },
-  { key: "E-Wallet", label: "E-Wallets" },
-  { key: "Lainnya", label: "Lainnya" },
+  { key: 'Cash', label: 'Cash' },
+  { key: 'Bank Account', label: 'Bank Accounts' },
+  { key: 'E-Wallet', label: 'E-Wallets' },
+  { key: 'Lainnya', label: 'Lainnya' },
 ] as const;
 
 const formatAmount = (amount: number, currency: string) => {
   try {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: currency || "IDR",
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: currency || 'IDR',
       maximumFractionDigits: 0,
     }).format(amount);
   } catch {
@@ -32,7 +32,7 @@ const formatAmount = (amount: number, currency: string) => {
 };
 
 const formatIDR = (n: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
 
 export default function WalletPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -42,27 +42,31 @@ export default function WalletPage() {
 
   useEffect(() => {
     const load = () =>
-      accountService.getUserAccounts(auth.currentUser?.uid ?? "").then(setAccounts).catch(() => setAccounts([]));
+      accountService
+        .getUserAccounts(auth.currentUser?.uid ?? '')
+        .then(setAccounts)
+        .catch(() => setAccounts([]));
     load();
-    return subscribeToCollectionChanges("accounts", load);
+    return subscribeToCollectionChanges('accounts', load);
   }, []);
 
   useEffect(() => {
-    exchangeRateService.getLatestRates().then(setFxRates).catch(() => {});
+    exchangeRateService
+      .getLatestRates()
+      .then(setFxRates)
+      .catch(() => {});
   }, []);
 
   const totalBalance = accounts.reduce(
-    (sum, acc) => sum + exchangeRateService.convert(acc.balance, acc.currency || "IDR", "IDR", fxRates),
-    0
+    (sum, acc) => sum + exchangeRateService.convert(acc.balance, acc.currency || 'IDR', 'IDR', fxRates),
+    0,
   );
 
-  const knownTypes = new Set<string>(["Cash", "Bank Account", "E-Wallet"]);
+  const knownTypes = new Set<string>(['Cash', 'Bank Account', 'E-Wallet']);
   const grouped = GROUPS.map((g) => ({
     ...g,
     accounts:
-      g.key === "Lainnya"
-        ? accounts.filter((a) => !knownTypes.has(a.type))
-        : accounts.filter((a) => a.type === g.key),
+      g.key === 'Lainnya' ? accounts.filter((a) => !knownTypes.has(a.type)) : accounts.filter((a) => a.type === g.key),
   })).filter((g) => g.accounts.length > 0);
 
   return (
@@ -78,7 +82,10 @@ export default function WalletPage() {
         </button>
       </FadeIn>
 
-      <FadeIn delay={0.05} className="rounded-3xl bg-gradient-to-br from-indigo-600 to-blue-500 text-white p-6 shadow-lg shadow-indigo-200">
+      <FadeIn
+        delay={0.05}
+        className="rounded-3xl bg-gradient-to-br from-indigo-600 to-blue-500 text-white p-6 shadow-lg shadow-indigo-200"
+      >
         <div className="flex items-center gap-2">
           <p className="text-xs font-bold text-white/70 uppercase tracking-widest">Total Saldo</p>
           <button
@@ -88,13 +95,13 @@ export default function WalletPage() {
               toggleHidden();
             }}
             className="text-white/70 p-0.5"
-            aria-label={hidden ? "Tampilkan saldo" : "Sembunyikan saldo"}
+            aria-label={hidden ? 'Tampilkan saldo' : 'Sembunyikan saldo'}
           >
             {hidden ? <EyeOff size={13} /> : <Eye size={13} />}
           </button>
         </div>
         <p className="text-3xl font-black mt-1 tabular-nums">
-          {hidden ? "Rp ••••••••" : <AnimatedNumber value={totalBalance} format={formatIDR} />}
+          {hidden ? 'Rp ••••••••' : <AnimatedNumber value={totalBalance} format={formatIDR} />}
         </p>
       </FadeIn>
 
@@ -118,7 +125,9 @@ export default function WalletPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{acc.name}</p>
-                      <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">{acc.type} &middot; {acc.currency}</p>
+                      <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                        {acc.type} &middot; {acc.currency}
+                      </p>
                     </div>
                     <p className="text-sm font-black text-slate-900 dark:text-white tabular-nums shrink-0">
                       {hidden ? `${acc.currency} ••••` : formatAmount(acc.balance, acc.currency)}

@@ -1,14 +1,4 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  getDocs, 
-  query, 
-  where, 
-  Timestamp 
-} from '@/lib/cf-firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, getDocs, query, where, Timestamp } from '@/lib/cf-firestore';
 import { db } from '../cf-client';
 import { cloudflareApi } from '../cloudflare-api';
 import type { RecurringInterval } from '../recurringIntervals';
@@ -59,24 +49,21 @@ export const recurringService = {
     const newDoc = await addDoc(ref, {
       ...data,
       nextDate: Timestamp.fromDate(data.nextDate),
-      createdAt: Timestamp.now()
+      createdAt: Timestamp.now(),
     });
     return newDoc.id;
   },
 
   async getUserRecurring(userId: string) {
-    const q = query(
-      collection(db, COLLECTION_NAME),
-      where('userId', '==', userId)
-    );
+    const q = query(collection(db, COLLECTION_NAME), where('userId', '==', userId));
     const snap = await getDocs(q);
-    return snap.docs.map(doc => {
+    return snap.docs.map((doc) => {
       const data = doc.data();
       return {
         ...data,
         id: doc.id,
         nextDate: data.nextDate?.toDate?.() ?? new Date(),
-        createdAt: data.createdAt?.toDate?.() ?? new Date()
+        createdAt: data.createdAt?.toDate?.() ?? new Date(),
       } as RecurringTransaction;
     });
   },
@@ -91,6 +78,5 @@ export const recurringService = {
   async deleteRecurring(id: string) {
     const docRef = doc(db, COLLECTION_NAME, id);
     await deleteDoc(docRef);
-  }
+  },
 };
-

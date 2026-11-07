@@ -1,3 +1,4 @@
+import { dueFromPayload, type DebtDue } from '@/lib/debtDue';
 import { cloudflareApi } from '../cloudflare-api';
 import { notifyCollectionChanged } from '../cf-firestore';
 
@@ -25,13 +26,19 @@ export interface Transaction {
   status: 'PENDING' | 'VERIFIED' | 'FAILED';
   paymentStatus?: 'lunas' | 'belum';
   relatedId?: string; // ID of the related entity (e.g., investmentId)
-  relatedType?: 'investasi' | 'tabungan' | 'debt';
+  relatedType?: 'investasi' | 'tabungan' | 'debt' | 'item' | 'shop' | 'import';
   // Hutang/piutang: saldo rekening langsung ikut berubah saat dicatat (server).
   applyBalance?: boolean;
   // Label bebas di luar kategori (payload_json.tags di server).
   tags?: string[];
+  // Sudah dicek user di "Cek hari" Laporan (payload_json.reviewed). Bukan data uang.
+  reviewed?: boolean;
+  // Hutang/piutang: jatuh tempo opsional (payload_json.due). null saat update = hapus.
+  due?: DebtDue | null;
   createdAt: Date;
 }
+
+const reviewedFromPayload = (raw: unknown): boolean => typeof raw === 'string' && /"reviewed"\s*:\s*true/.test(raw);
 
 const tagsFromPayload = (raw: unknown): string[] | undefined => {
   if (typeof raw !== 'string' || !raw.includes('"tags"')) return undefined;
@@ -44,19 +51,15 @@ const tagsFromPayload = (raw: unknown): string[] | undefined => {
 };
 
 export const transactionService = {
-  // Create
   async createTransaction(data: Omit<Transaction, 'id' | 'createdAt'>) {
     const result = await cloudflareApi<{ id: string }>('/api/member/transactions', {
       method: 'POST',
       json: {
         type: data.type,
         amount: Number(data.amount) || 0,
-        // Kalau amountIDR tidak dikirim (klien gagal konversi kurs, mis. API
-        // kurs kena blok firewall), biarkan field ini kosong — backend punya
-        // fallback konversi sendiri (fetchIdrConversionRate) yang jauh lebih
-        // andal karena jalan server-to-server tanpa hambatan CORS/firewall.
-        // Kalau di sini kita paksa isi dengan `data.amount` mentah, backend
-        // menganggap itu nilai IDR final dan tidak akan pernah mengoreksinya.
+        // amountIDR gagal dihitung klien → biarkan kosong supaya backend konversi
+        // sendiri (fetchIdrConversionRate). Jangan isi `data.amount` mentah: backend
+        // akan menganggapnya IDR final dan tidak pernah mengoreksinya.
         ...(typeof data.amountIDR === 'number' && Number.isFinite(data.amountIDR)
           ? { amount_idr: data.amountIDR }
           : {}),
@@ -79,6 +82,7 @@ export const transactionService = {
         status: data.status,
         ...(data.applyBalance ? { apply_balance: true } : {}),
         ...(data.tags?.length ? { tags: data.tags } : {}),
+        ...(data.type === 'debt' && data.due ? { due: data.due } : {}),
       },
     });
     notifyCollectionChanged('transactions');
@@ -86,7 +90,6 @@ export const transactionService = {
     return result.id;
   },
 
-  // Read all for user
   async getUserTransactions(_userId: string) {
     void _userId;
     // limit tinggi agar laporan bulanan/tahunan tidak kehilangan transaksi lama.
@@ -104,10 +107,12 @@ export const transactionService = {
         accountId: (data.account_id as string | undefined) ?? '',
         targetAccountId: (data.target_account_id as string | undefined) ?? undefined,
         lenderName: (data.lender_name as string | undefined) ?? undefined,
-        totalDebt: typeof data.total_debt === 'number' ? data.total_debt : (Number(data.total_debt) || 0),
-        installmentTenor: typeof data.installment_tenor === 'number' ? data.installment_tenor : (Number(data.installment_tenor) || 0),
-        monthlyInterest: typeof data.monthly_interest === 'number' ? data.monthly_interest : (Number(data.monthly_interest) || 0),
-        totalInterest: typeof data.total_interest === 'number' ? data.total_interest : (Number(data.total_interest) || 0),
+        totalDebt: typeof data.total_debt === 'number' ? data.total_debt : Number(data.total_debt) || 0,
+        installmentTenor:
+          typeof data.installment_tenor === 'number' ? data.installment_tenor : Number(data.installment_tenor) || 0,
+        monthlyInterest:
+          typeof data.monthly_interest === 'number' ? data.monthly_interest : Number(data.monthly_interest) || 0,
+        totalInterest: typeof data.total_interest === 'number' ? data.total_interest : Number(data.total_interest) || 0,
         status: (data.status as Transaction['status']) ?? 'VERIFIED',
         paymentStatus: (data.payment_status as 'lunas' | 'belum' | undefined) ?? undefined,
         displayDate: (data.display_date as string | undefined) ?? undefined,
@@ -115,20 +120,20 @@ export const transactionService = {
         relatedType: (data.related_type as 'investasi' | 'tabungan' | 'debt' | undefined) ?? undefined,
         note: (data.note as string | undefined) ?? undefined,
         tags: tagsFromPayload(data.payload_json),
+        reviewed: reviewedFromPayload(data.payload_json),
+        due: dueFromPayload(data.payload_json),
         currency: (data.currency as string | undefined) ?? 'IDR',
         date: data.date ? new Date(String(data.date)) : new Date(),
-        createdAt: data.created_at ? new Date(String(data.created_at)) : new Date()
+        createdAt: data.created_at ? new Date(String(data.created_at)) : new Date(),
       } as Transaction;
     });
   },
 
-  // Read by type
   async getTransactionsByType(userId: string, type: string) {
     const items = await this.getUserTransactions(userId);
     return items.filter((item) => item.type === type);
   },
 
-  // Update
   async updateTransaction(id: string, data: Partial<Omit<Transaction, 'id' | 'createdAt'>>) {
     await cloudflareApi(`/api/member/transactions/${id}`, {
       method: 'PUT',
@@ -152,6 +157,8 @@ export const transactionService = {
         ...(data.displayDate ? { display_date: data.displayDate } : {}),
         ...(data.note !== undefined ? { note: data.note } : {}),
         ...(data.tags !== undefined ? { tags: data.tags } : {}),
+        ...(data.reviewed !== undefined ? { reviewed: data.reviewed } : {}),
+        ...(data.due !== undefined ? { due: data.due } : {}),
       },
     });
     notifyCollectionChanged('transactions');
@@ -166,12 +173,12 @@ export const transactionService = {
   async deleteTransaction(tx: Transaction) {
     const result = await cloudflareApi<{ ok: boolean; deletedIds?: string[] }>(
       `/api/member/transactions/${tx.id}?reverse=1`,
-      { method: 'DELETE' }
+      { method: 'DELETE' },
     );
     notifyCollectionChanged('accounts');
     notifyCollectionChanged('transactions');
     return result.deletedIds ?? [];
-  }
+  },
 };
 
 type AddTransactionInput = {
@@ -196,9 +203,7 @@ type AddTransactionInput = {
 export const addTransaction = (data: AddTransactionInput) => {
   const normalizedType = data.type === 'pemasukkan' ? 'pemasukan' : data.type;
   const normalizedStatus: Transaction['status'] =
-    data.status === 'PENDING' || data.status === 'FAILED' || data.status === 'VERIFIED'
-      ? data.status
-      : 'VERIFIED';
+    data.status === 'PENDING' || data.status === 'FAILED' || data.status === 'VERIFIED' ? data.status : 'VERIFIED';
   const mappedData: Omit<Transaction, 'id' | 'createdAt'> = {
     ...data,
     userId: data.userId || '',
@@ -216,7 +221,7 @@ export const addTransaction = (data: AddTransactionInput) => {
     targetAccountId: data.targetAccountId,
     displayDate: data.displayDate,
     note: data.note || data.item || '',
-    status: normalizedStatus
+    status: normalizedStatus,
   };
   return transactionService.createTransaction(mappedData);
 };

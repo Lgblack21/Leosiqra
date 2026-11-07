@@ -1,20 +1,19 @@
-import { 
-  collection, 
-  doc, 
-  getDoc, 
-  setDoc, 
-  onSnapshot, 
-  query, 
-  orderBy, 
-  limit, 
+import {
+  collection,
+  doc,
+  getDoc,
+  setDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  limit,
   addDoc,
   serverTimestamp,
-  updateDoc
+  updateDoc,
 } from '@/lib/cf-firestore';
 import { db } from '../cf-client';
 import { cloudflareApi } from '../cloudflare-api';
 
-// TYPES
 export interface ProPackage {
   id: string;
   name: string;
@@ -150,7 +149,6 @@ const mapAppSettingsToPayload = (data: Partial<AppSettings>): Record<string, unk
   return payload;
 };
 
-// 1. APP SETTINGS SERVICE
 export const getAppSettings = async () => {
   const docRef = doc(db, SETTINGS_COLLECTION, 'global_config');
   const docSnap = await getDoc(docRef);
@@ -171,7 +169,8 @@ export const getMemberPaymentInfo = async (): Promise<AppSettings | null> => {
 
 export const subscribeAppSettings = (callback: (settings: AppSettings | null) => void) => {
   const docRef = doc(db, SETTINGS_COLLECTION, 'global_config');
-  return onSnapshot(docRef,
+  return onSnapshot(
+    docRef,
     (doc) => {
       if (doc.exists()) {
         callback(mapRowToAppSettings(doc.data() as Record<string, unknown>));
@@ -180,9 +179,9 @@ export const subscribeAppSettings = (callback: (settings: AppSettings | null) =>
       }
     },
     (error) => {
-      console.warn("Permasalahan perizinan pada settings (diabaikan):", error.message);
+      console.warn('Permasalahan perizinan pada settings (diabaikan):', error.message);
       callback(null);
-    }
+    },
   );
 };
 
@@ -191,77 +190,75 @@ export const saveAppSettings = async (data: Partial<AppSettings>) => {
   return await setDoc(docRef, mapAppSettingsToPayload(data), { merge: true });
 };
 
-// 2. LOGGING SERVICE
 export const addAdminLog = async (log: Omit<AdminLog, 'timestamp' | 'id'>) => {
   const colRef = collection(db, LOGS_COLLECTION);
   return await addDoc(colRef, {
     ...log,
-    timestamp: serverTimestamp()
+    timestamp: serverTimestamp(),
   });
 };
 
 export const subscribeAdminLogs = (limitCount: number = 20, callback: (logs: AdminLog[]) => void) => {
   const colRef = collection(db, LOGS_COLLECTION);
   const q = query(colRef, orderBy('timestamp', 'desc'), limit(limitCount));
-  
-  return onSnapshot(q, 
+
+  return onSnapshot(
+    q,
     (snapshot) => {
-      const logs = snapshot.docs.map(doc => ({
+      const logs = snapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
       })) as AdminLog[];
       callback(logs);
     },
     (error) => {
-      console.warn("Permasalahan perizinan pada admin_logs (diabaikan):", error.message);
+      console.warn('Permasalahan perizinan pada admin_logs (diabaikan):', error.message);
       callback([]);
-    }
+    },
   );
 };
 
-// 3. USER MANAGEMENT (FETCHING)
 export const subscribeAllUsers = (callback: (users: Record<string, unknown>[]) => void) => {
   const colRef = collection(db, USERS_COLLECTION);
   const q = query(colRef, orderBy('createdAt', 'desc'));
-  
-  return onSnapshot(q, 
+
+  return onSnapshot(
+    q,
     (snapshot) => {
-      const users = snapshot.docs.map(doc => ({
+      const users = snapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
       }));
       callback(users);
     },
     (error) => {
-      console.warn("Permasalahan perizinan pada users (diabaikan):", error.message);
+      console.warn('Permasalahan perizinan pada users (diabaikan):', error.message);
       callback([]);
-    }
+    },
   );
 };
 
-// 4. PAYMENT QUEUE (FETCHING)
 export const subscribeAllPayments = (callback: (payments: Record<string, unknown>[]) => void) => {
   const colRef = collection(db, PAYMENTS_COLLECTION);
   const q = query(colRef, orderBy('createdAt', 'desc'));
-  
-  return onSnapshot(q, 
+
+  return onSnapshot(
+    q,
     (snapshot) => {
-      const payments = snapshot.docs.map(doc => ({
+      const payments = snapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
       }));
       callback(payments);
     },
     (error) => {
-      console.warn("Permasalahan perizinan pada payments (diabaikan):", error.message);
+      console.warn('Permasalahan perizinan pada payments (diabaikan):', error.message);
       callback([]);
-    }
+    },
   );
 };
 
-// 5. ADMIN PROFILE MANAGEMENT
 export const updateAdminProfile = async (uid: string, data: Record<string, unknown>) => {
   const docRef = doc(db, USERS_COLLECTION, uid);
   return await updateDoc(docRef, data);
 };
-

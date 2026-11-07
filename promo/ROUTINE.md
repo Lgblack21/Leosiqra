@@ -21,21 +21,30 @@ ada dulu — tapi tetap maksimal 1 video terkirim per hari: kalau draft sudah
 sinkronisasi ke LGBLACK Tower (kantor 3D Bos). Setiap sesi WAJIB: baca otak
 tim → kerja → tulis pelajaran + status ke Tower.
 
-## Prinsip konten — NILAI DULU (sejak 2026-10-23)
+## Prinsip konten — FITUR + KONTEN MENARIK (arahan Bos 2026-11-04)
 
-Engagement lama ±0 karena semua video terasa iklan. Mulai sekarang:
-- Video harus berguna walaupun nama Leosiqra dihapus: penonton dapat angka,
-  cara, atau pemahaman baru dan pengin **menyimpan/membagikan**-nya.
-- **Mode NILAI (±2 dari 3 video):** tanpa scene `device`/`phone`, tanpa fitur,
-  harga, atau "coba gratis". CTA = simpan/komentar/follow, `button` mis.
-  "Simpan video ini". Set `"promo": false` di script.json.
-- **Mode PROMO (±1 dari 3, atau format `fitur`):** tetap mulai dari nilai,
-  maks 1–2 scene aplikasi, CTA boleh "Coba gratis 14 hari". `"promo": true`.
-  `plan.mjs` memilih slot otomatis dari riwayat (`promo` di history).
-- Hook = situasi/angka spesifik ("Gaji 5,4 juta, ngekos di Jakarta"), bukan
-  pertanyaan klise ("Uangmu habis ke mana?"). Cek 15 hook terakhir — jangan mirip.
-- Pilar topik bergiliran: hitung-hitungan, studi kasus gaji, cara praktis,
-  salah kaprah, mitos vs fakta, kuis, POV (lihat `FORMATS` di content.mjs).
+Bos: "Masa videonya semua hitung-hitungan mulu, gak ada promosi app dan semua
+fitur" → lalu: "hitungan boleh, terus buat juga konten-konten bagus yang
+menarik juga". Aturan lama "NILAI DULU" (±2 dari 3 video tanpa fitur) DICABUT.
+- **SETIAP video menampilkan app** (`"promo": true`, minimal 1 scene `device`/`phone`).
+  Tidak ada lagi video tanpa fitur.
+- **Pola tiap 3 video** (cek riwayat; `format` di history):
+  - **≥2 video FITUR** (`"format": "fitur"`): kenalkan SATU fitur dari `FEATURES`
+    content.mjs (atau tur 2–3 fitur), demo 2–3 scene. Fitur bergiliran —
+    jangan ulang fitur dari 5 video terakhir; semua fitur harus kebagian.
+  - **≤1 video KONTEN MENARIK bebas format**: hitung-hitungan, studi kasus,
+    mitos vs fakta, kuis, POV, challenge, tren/momen (gajian, tanggal tua,
+    akhir tahun). Hitungan BOLEH, tapi jangan 2 video hitungan berturut, dan
+    tutup dengan 1–2 scene fitur yang relevan ("catat ini otomatis di …").
+- Demo fitur: scene `device` rekaman asli untuk fitur yang punya shot di
+  `record.mjs` (quick, ai, budget, savings, stats, recurring, transactions,
+  wallet); scene `phone` ilustrasi untuk scan, voice, debt, level, market, tax.
+  CTA "Coba gratis 14 hari" (+ `landing`/`install` sesekali).
+- **Menarik = bikin berhenti scroll**: hook 2 detik pertama situasi/emosi
+  spesifik ("Struk numpuk di dompet?", "Catat jajan sambil antre kopi"),
+  variasi gaya/palet/kamera, istilah gamer boleh (terbukti menaikkan views).
+  Cek 15 hook terakhir — jangan mirip. Penonton selesai menonton harus tahu
+  "app ini bisa apa dan cara pakainya".
 
 ## Aturan keras (jangan dilanggar)
 
@@ -83,13 +92,17 @@ cd promo && npm ci --no-audit --no-fund && PROMO_SECRET=$PROMO_SECRET node lesso
 3. Pakai topi **Tim Analisis**: beri skor 1–10 untuk tiap ide (kekuatan hook,
    relevansi buat anak muda Indonesia, beda dari 3 video terakhir, cocok
    dengan pelajaran rating). Pilih 1, tulis alasannya.
-4. Tentukan mode (NILAI/PROMO, lihat Prinsip konten). Hanya video PROMO yang
-   memakai rekaman aplikasi asli (scene `device`, 1–2) — `plan.mjs` memaksa
-   minimal 1 `device` hanya di mode PROMO.
+4. Tentukan jenis video sesuai pola tiap 3 video (FITUR vs KONTEN MENARIK,
+   lihat Prinsip konten) dan fitur yang ditampilkan. Semua video `promo: true`;
+   `plan.mjs` memaksa minimal 1 `device` kalau naskah tidak punya.
 5. **Senin saja — Tim Promosi**: kampanye minggu ini (tema, seri 5 video,
    target views/rating) → simpan di draft `campaign` dan pakai sepanjang minggu
    (hari lain: baca `campaign` dari draft Senin, `draft-<tanggal Senin>`).
 6. Simpan draft `{stage: "ide", ideas, concept, shots, campaign?}`.
+   Sebelum menyimpan, tulis shot list ide terpilih ke file (array scene
+   `{type, text, say}`) lalu jalankan `node promo/cek-kata.mjs <file>` — jangan
+   menaksir jumlah kata manual. Exit ≠ 0 = revisi dulu (hook ≤ 6 kata, ≤ 25
+   kata/scene, total ≤ 75; `--total N` kalau playbook memakai batas lebih ketat).
 7. **Tower**: tulis `status/hari-ini` (stage 0), `metrik/ringkas`, dan
    `konten/<id>` (7 video terakhir, sudah termasuk rating & views kemarin);
    perbarui `otak/analisis` (+ `otak/promosi` hari Senin) — lihat TEAMS.md.
@@ -102,7 +115,8 @@ cd promo && npm ci --no-audit --no-fund && PROMO_SECRET=$PROMO_SECRET node lesso
    hashtag.
 2. Review kritis sebagai Tim Analisis: klaim hanya dari `content.mjs`,
    matematika benar, tanpa merek lain, `say` enak diucapkan (angka pakai kata),
-   hook ≤ 6 kata, total narasi ≤ 75 kata. Revisi sampai lolos.
+   hook ≤ 6 kata, total narasi ≤ 75 kata — dicek dengan
+   `node promo/cek-kata.mjs script.json` (bukan ditaksir). Revisi sampai lolos.
 3. Simpan draft `{stage: "naskah", …, script}`.
 4. **Tower**: `status/hari-ini` (stage 1) + perbarui `otak/konten` (pelajaran
    dari review: klaim/angka/hook yang diperbaiki).
@@ -157,6 +171,10 @@ F=${FFMPEG_PATH:-ffmpeg}
 $F -loglevel error -y -i out/leosiqra-promo.mp4 -vf "fps=1,scale=270:480,tile=8x4" -frames:v 1 out/sheet.jpg
 $F -i out/leosiqra-promo.mp4 -af ebur128=framelog=quiet -f null - 2>&1 | grep " I:"
 ```
+   `make.mjs` membersihkan `out/` di awal tiap render, **kecuali** `*.log`, `*.md`, dan file
+   berawalan `draft`/`tower`/`catatan`/`notes` — jadi log render simpan sebagai
+   `out/render.log` (`… make.mjs --no-send > out/render.log 2>&1`), draft mentah sebagai
+   `out/draft-raw.json`, file Tower sebagai `out/tower-*.json`. Nama lain di `out/` ikut terhapus.
 3. QA — **tiga lapis, semua wajib lulus**:
    - **Otomatis (gerbang keras)**: `make.mjs` sendiri menjalankan `qa.mjs`. Sebelum render ia mengecek
      teks keluar bingkai / saling tumpuk / gambar rusak di 3 titik tiap scene; sesudah render ia
@@ -191,14 +209,14 @@ PROMO_SEED=<seed> PROMO_SCRIPT_FILE=out/script.json node make.mjs
 
 Kalau gagal total setelah usaha wajar, kirim kabar singkat:
 ```bash
-curl -s -H "$H" -F "text=⚠️ Video promo hari ini gagal: <alasan singkat>" "$API/api/promo/telegram"
+curl -s -H "$H" --form-string "text=⚠️ Video promo hari ini gagal: <alasan singkat>" "$API/api/promo/telegram"
 ```
 
 ## Format naskah (`script.json`)
 
 ```json
 {
-  "format": "pov", "topic": "…", "promo": false,
+  "format": "fitur", "topic": "…", "promo": true,
   "style": { "palette": "sunset", "background": "studio", "transition": "flip", "subtitle": "karaoke", "font": "Poppins",
              "music": { "bpm": 110 } },
   "scenes": [

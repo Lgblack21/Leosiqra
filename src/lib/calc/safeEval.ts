@@ -4,11 +4,11 @@
 // matematis standar (× ÷ didahulukan dari + −), tanpa tanda kurung — cukup
 // buat quick-entry, bukan kalkulator ilmiah.
 
-export type CalcOperator = "+" | "-" | "×" | "÷";
+export type CalcOperator = '+' | '-' | '×' | '÷';
 export type CalcToken = string; // angka mentah (e.g. "1000", "12.5") atau salah satu CalcOperator
 
 const isOperator = (token: CalcToken): token is CalcOperator =>
-  token === "+" || token === "-" || token === "×" || token === "÷";
+  token === '+' || token === '-' || token === '×' || token === '÷';
 
 /**
  * Evaluasi array token angka/operator hasil bangunan tombol keypad.
@@ -25,7 +25,7 @@ export function evaluateExpression(tokens: CalcToken[]): number | null {
   let i = 0;
   while (i < tokens.length) {
     const token = tokens[i];
-    if (token === "×" || token === "÷") {
+    if (token === '×' || token === '÷') {
       const prevToken = pass1.pop();
       const nextToken = tokens[i + 1];
       const prev = Number(prevToken);
@@ -33,7 +33,7 @@ export function evaluateExpression(tokens: CalcToken[]): number | null {
       if (prevToken === undefined || nextToken === undefined || !Number.isFinite(prev) || !Number.isFinite(next)) {
         return null;
       }
-      if (token === "÷") {
+      if (token === '÷') {
         if (next === 0) return null;
         pass1.push(String(prev / next));
       } else {
@@ -53,8 +53,8 @@ export function evaluateExpression(tokens: CalcToken[]): number | null {
     const op = pass1[j];
     const num = Number(pass1[j + 1]);
     if (!Number.isFinite(num)) return null;
-    if (op === "+") result += num;
-    else if (op === "-") result -= num;
+    if (op === '+') result += num;
+    else if (op === '-') result -= num;
     else return null;
   }
 

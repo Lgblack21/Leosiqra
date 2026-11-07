@@ -40,7 +40,14 @@ export interface SharedWalletInvite {
 }
 
 export interface SharedWalletDetail {
-  wallet: { id: string; name: string; currency: string; archived_at: string | null; role: SharedWalletRole; me: string };
+  wallet: {
+    id: string;
+    name: string;
+    currency: string;
+    archived_at: string | null;
+    role: SharedWalletRole;
+    me: string;
+  };
   month: string;
   balance: number;
   income: number;
@@ -103,7 +110,10 @@ export const sharedWalletService = {
     });
   },
   updateTransaction(id: string, txId: string, patch: Partial<SharedTxInput>) {
-    return cloudflareApi<{ ok: true }>(`${w(id)}/transactions/${encodeURIComponent(txId)}`, { method: 'PATCH', json: patch });
+    return cloudflareApi<{ ok: true }>(`${w(id)}/transactions/${encodeURIComponent(txId)}`, {
+      method: 'PATCH',
+      json: patch,
+    });
   },
   deleteTransaction(id: string, txId: string) {
     return cloudflareApi<{ ok: true }>(`${w(id)}/transactions/${encodeURIComponent(txId)}`, { method: 'DELETE' });
@@ -121,10 +131,16 @@ export const sharedWalletService = {
     return cloudflareApi<{ ok: true }>(`${w(id)}/invites/${encodeURIComponent(inviteId)}`, { method: 'DELETE' });
   },
   join(token: string) {
-    return cloudflareApi<{ ok: true; walletId: string; alreadyMember?: boolean }>(`${base}/join`, { method: 'POST', json: { token } });
+    return cloudflareApi<{ ok: true; walletId: string; alreadyMember?: boolean }>(`${base}/join`, {
+      method: 'POST',
+      json: { token },
+    });
   },
   setMemberRole(id: string, userId: string, role: SharedWalletRole) {
-    return cloudflareApi<{ ok: true }>(`${w(id)}/members/${encodeURIComponent(userId)}`, { method: 'PATCH', json: { role } });
+    return cloudflareApi<{ ok: true }>(`${w(id)}/members/${encodeURIComponent(userId)}`, {
+      method: 'PATCH',
+      json: { role },
+    });
   },
   removeMember(id: string, userId: string) {
     return cloudflareApi<{ ok: true }>(`${w(id)}/members/${encodeURIComponent(userId)}`, { method: 'DELETE' });

@@ -11,7 +11,15 @@ export type Table = { headers: string[]; rows: string[][] };
 export type AmountMode = 'single' | 'debit_credit';
 // kind = kolom jenis transaksi (opsional), mis. "Jenis" di ekspor Leosiqra atau
 // "Type"/"Income/Expense" di ekspor aplikasi lain — nominalnya sering selalu positif.
-export type ColumnMapping = { date: string; note: string; mode: AmountMode; amount: string; debit: string; credit: string; kind: string };
+export type ColumnMapping = {
+  date: string;
+  note: string;
+  mode: AmountMode;
+  amount: string;
+  debit: string;
+  credit: string;
+  kind: string;
+};
 
 // Isi kolom jenis → arah. null = jenis lain (transfer, hutang, …) → baris dilewati,
 // karena impor mutasi hanya mencatat uang masuk/keluar satu rekening.
@@ -24,14 +32,35 @@ export function kindFromCell(value: string): ImportType | null | undefined {
   return null;
 }
 
-const HEADER_HINTS = ['tanggal', 'date', 'tgl', 'keterangan', 'deskripsi', 'description', 'nominal', 'amount', 'jumlah', 'debit', 'kredit', 'credit', 'mutasi'];
+const HEADER_HINTS = [
+  'tanggal',
+  'date',
+  'tgl',
+  'keterangan',
+  'deskripsi',
+  'description',
+  'nominal',
+  'amount',
+  'jumlah',
+  'debit',
+  'kredit',
+  'credit',
+  'mutasi',
+];
 
 // File bank sering diawali beberapa baris info (nama, no. rekening, periode)
 // sebelum header tabel — pakai baris pertama yang paling mirip header.
 const toTable = (all: string[][]): Table => {
   const clean = all.filter((r) => r.some((c) => String(c ?? '').trim() !== ''));
   let headerIdx = clean.findIndex(
-    (r) => r.filter((c) => HEADER_HINTS.some((h) => String(c ?? '').toLowerCase().includes(h))).length >= 2
+    (r) =>
+      r.filter((c) =>
+        HEADER_HINTS.some((h) =>
+          String(c ?? '')
+            .toLowerCase()
+            .includes(h),
+        ),
+      ).length >= 2,
   );
   if (headerIdx < 0) headerIdx = 0;
   const headers = (clean[headerIdx] ?? []).map((h, i) => String(h ?? '').trim() || `Kolom ${i + 1}`);
@@ -49,8 +78,8 @@ export async function tableFromXlsx(file: File): Promise<Table> {
         if (cell === null || cell === undefined) return '';
         if (cell instanceof Date) return toLocalDateString(cell);
         return String(cell);
-      })
-    )
+      }),
+    ),
   );
 }
 
@@ -70,7 +99,8 @@ export function guessMapping(headers: string[]): ColumnMapping {
   };
 }
 
-export const mappingReady = (m: ColumnMapping) => Boolean(m.date && (m.mode === 'single' ? m.amount : m.debit || m.credit));
+export const mappingReady = (m: ColumnMapping) =>
+  Boolean(m.date && (m.mode === 'single' ? m.amount : m.debit || m.credit));
 
 export function rowsFromTable(table: Table, m: ColumnMapping): ParsedRow[] {
   if (!mappingReady(m)) return [];
@@ -89,7 +119,8 @@ export function rowsFromTable(table: Table, m: ColumnMapping): ParsedRow[] {
       amount = Math.abs(raw);
       if (k >= 0) {
         const kind = kindFromCell(String(r[k] ?? ''));
-        if (kind === null) amount = 0; // jenis lain → disaring sebagai baris tidak valid
+        if (kind === null)
+          amount = 0; // jenis lain → disaring sebagai baris tidak valid
         else if (kind) type = kind;
       }
     } else {
@@ -145,4 +176,5 @@ export async function imageToJpegBase64(file: File, maxSide = 1600): Promise<str
   }
 }
 
-export const IMPORT_CSV_TEMPLATE = 'Tanggal,Keterangan,Nominal\n2026-10-01,Gaji Oktober,8000000\n2026-10-02,Makan siang,-45000\n2026-10-03,Bensin,-50000\n';
+export const IMPORT_CSV_TEMPLATE =
+  'Tanggal,Keterangan,Nominal\n2026-10-01,Gaji Oktober,8000000\n2026-10-02,Makan siang,-45000\n2026-10-03,Bensin,-50000\n';

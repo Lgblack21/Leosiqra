@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import Link from 'next/link';
 import { navGroups } from '@/lib/navigation';
@@ -26,7 +26,12 @@ const PALETTE = [
 
 const Tile = ({ href, label, icon: Icon, i }: { href: string; label: string; icon: React.ElementType; i: number }) => (
   <Link href={href} className="group flex flex-col items-center gap-2 rounded-2xl p-2 text-center">
-    <span className={cn('flex h-[72px] w-[72px] items-center justify-center rounded-[22px] transition-transform group-hover:-translate-y-0.5 md:h-20 md:w-20', PALETTE[i % PALETTE.length])}>
+    <span
+      className={cn(
+        'flex h-[72px] w-[72px] items-center justify-center rounded-[22px] transition-transform group-hover:-translate-y-0.5 md:h-20 md:w-20',
+        PALETTE[i % PALETTE.length],
+      )}
+    >
       <Icon size={32} strokeWidth={1.8} />
     </span>
     <span className="line-clamp-2 text-[13px] font-medium leading-tight text-slate-700 md:text-[14px]">{label}</span>
@@ -51,10 +56,18 @@ export default function SemuaFiturPage() {
       <section className="rounded-[24px] bg-white p-4 ring-1 ring-slate-100 md:p-6">
         <div className="mb-3 flex items-baseline justify-between px-1">
           <h2 className="text-[16px] font-bold text-slate-900">Fitur kamu</h2>
-          <button type="button" onClick={() => openSettings('fitur')} className="rounded-full bg-slate-100 px-3 py-1.5 text-[13px] font-semibold text-slate-700 hover:bg-slate-200">Atur</button>
+          <button
+            type="button"
+            onClick={() => openSettings('fitur')}
+            className="rounded-full bg-slate-100 px-3 py-1.5 text-[13px] font-semibold text-slate-700 hover:bg-slate-200"
+          >
+            Atur
+          </button>
         </div>
         <div className="grid grid-cols-3 gap-y-3 sm:grid-cols-4 lg:grid-cols-5">
-          {mine.map((f) => <Tile key={f.href} href={f.href} label={f.label} icon={f.icon} i={n++} />)}
+          {mine.map((f) => (
+            <Tile key={f.href} href={f.href} label={f.label} icon={f.icon} i={n++} />
+          ))}
         </div>
       </section>
 
@@ -65,7 +78,9 @@ export default function SemuaFiturPage() {
           <section key={g.id} className="rounded-[24px] bg-white p-4 ring-1 ring-slate-100 md:p-6">
             <h2 className="mb-3 px-1 text-[16px] font-bold text-slate-900">{g.label}</h2>
             <div className="grid grid-cols-3 gap-y-3 sm:grid-cols-4 lg:grid-cols-5">
-              {items.map((f) => <Tile key={f.href} href={f.href} label={f.label} icon={f.icon} i={n++} />)}
+              {items.map((f) => (
+                <Tile key={f.href} href={f.href} label={f.label} icon={f.icon} i={n++} />
+              ))}
             </div>
           </section>
         );

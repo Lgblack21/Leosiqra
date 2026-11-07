@@ -60,22 +60,46 @@ export default function CatatKeuanganRumahTanggaPage() {
     >
       <h2>Kenapa keuangan rumah tangga sering bocor?</h2>
       <ul>
-        <li><strong>Banyak pemegang uang</strong> — suami, istri, kadang orang tua atau asisten rumah tangga ikut belanja.</li>
-        <li><strong>Banyak pengeluaran kecil</strong> — jajan, parkir, ongkir, isi ulang pulsa — yang tidak terasa satu per satu.</li>
-        <li><strong>Pengeluaran tidak rutin</strong> — kondangan, servis kendaraan, biaya sekolah tahunan — yang tidak disiapkan.</li>
-        <li><strong>Tidak ada angka pembanding</strong>, sehingga sulit tahu apakah bulan ini lebih boros dari bulan lalu.</li>
+        <li>
+          <strong>Banyak pemegang uang</strong> — suami, istri, kadang orang tua atau asisten rumah tangga ikut belanja.
+        </li>
+        <li>
+          <strong>Banyak pengeluaran kecil</strong> — jajan, parkir, ongkir, isi ulang pulsa — yang tidak terasa satu
+          per satu.
+        </li>
+        <li>
+          <strong>Pengeluaran tidak rutin</strong> — kondangan, servis kendaraan, biaya sekolah tahunan — yang tidak
+          disiapkan.
+        </li>
+        <li>
+          <strong>Tidak ada angka pembanding</strong>, sehingga sulit tahu apakah bulan ini lebih boros dari bulan lalu.
+        </li>
       </ul>
 
       <h2>Kategori yang perlu dicatat</h2>
       <p>Mulai dengan kategori sedikit tapi jelas. Contoh susunan yang umum dipakai rumah tangga:</p>
       <ul>
-        <li><strong>Pemasukan</strong> — gaji, usaha sampingan, bonus/THR, pemasukan lain.</li>
-        <li><strong>Kebutuhan pokok</strong> — belanja dapur, listrik, air, gas, internet, pulsa.</li>
-        <li><strong>Cicilan &amp; utang</strong> — KPR/kontrakan, kendaraan, paylater, kartu kredit.</li>
-        <li><strong>Anak</strong> — sekolah, les, susu, popok, uang jajan.</li>
-        <li><strong>Transportasi</strong> — bensin, ojek, parkir, tol.</li>
-        <li><strong>Sosial</strong> — kondangan, arisan, sumbangan, keluarga besar.</li>
-        <li><strong>Tabungan &amp; dana darurat</strong> — dicatat sebagai pos tersendiri, bukan sisa.</li>
+        <li>
+          <strong>Pemasukan</strong> — gaji, usaha sampingan, bonus/THR, pemasukan lain.
+        </li>
+        <li>
+          <strong>Kebutuhan pokok</strong> — belanja dapur, listrik, air, gas, internet, pulsa.
+        </li>
+        <li>
+          <strong>Cicilan &amp; utang</strong> — KPR/kontrakan, kendaraan, paylater, kartu kredit.
+        </li>
+        <li>
+          <strong>Anak</strong> — sekolah, les, susu, popok, uang jajan.
+        </li>
+        <li>
+          <strong>Transportasi</strong> — bensin, ojek, parkir, tol.
+        </li>
+        <li>
+          <strong>Sosial</strong> — kondangan, arisan, sumbangan, keluarga besar.
+        </li>
+        <li>
+          <strong>Tabungan &amp; dana darurat</strong> — dicatat sebagai pos tersendiri, bukan sisa.
+        </li>
       </ul>
 
       <h2>Contoh tabel catatan satu bulan</h2>
@@ -83,16 +107,62 @@ export default function CatatKeuanganRumahTanggaPage() {
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Kategori</th><th className="num">Anggaran</th><th className="num">Realisasi</th><th className="num">Selisih</th></tr>
+            <tr>
+              <th>Kategori</th>
+              <th className="num">Anggaran</th>
+              <th className="num">Realisasi</th>
+              <th className="num">Selisih</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td>Kebutuhan pokok</td><td className="num">2.800.000</td><td className="num">3.050.000</td><td className="num">−250.000</td></tr>
-            <tr><td>Cicilan &amp; utang</td><td className="num">1.800.000</td><td className="num">1.800.000</td><td className="num">0</td></tr>
-            <tr><td>Anak</td><td className="num">1.000.000</td><td className="num">1.150.000</td><td className="num">−150.000</td></tr>
-            <tr><td>Transportasi</td><td className="num">600.000</td><td className="num">520.000</td><td className="num">+80.000</td></tr>
-            <tr><td>Sosial</td><td className="num">400.000</td><td className="num">650.000</td><td className="num">−250.000</td></tr>
-            <tr><td>Tabungan &amp; dana darurat</td><td className="num">1.400.000</td><td className="num">830.000</td><td className="num">−570.000</td></tr>
-            <tr><td><strong>Total</strong></td><td className="num"><strong>8.000.000</strong></td><td className="num"><strong>8.000.000</strong></td><td className="num"></td></tr>
+            <tr>
+              <td>Kebutuhan pokok</td>
+              <td className="num">2.800.000</td>
+              <td className="num">3.050.000</td>
+              <td className="num">−250.000</td>
+            </tr>
+            <tr>
+              <td>Cicilan &amp; utang</td>
+              <td className="num">1.800.000</td>
+              <td className="num">1.800.000</td>
+              <td className="num">0</td>
+            </tr>
+            <tr>
+              <td>Anak</td>
+              <td className="num">1.000.000</td>
+              <td className="num">1.150.000</td>
+              <td className="num">−150.000</td>
+            </tr>
+            <tr>
+              <td>Transportasi</td>
+              <td className="num">600.000</td>
+              <td className="num">520.000</td>
+              <td className="num">+80.000</td>
+            </tr>
+            <tr>
+              <td>Sosial</td>
+              <td className="num">400.000</td>
+              <td className="num">650.000</td>
+              <td className="num">−250.000</td>
+            </tr>
+            <tr>
+              <td>Tabungan &amp; dana darurat</td>
+              <td className="num">1.400.000</td>
+              <td className="num">830.000</td>
+              <td className="num">−570.000</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Total</strong>
+              </td>
+              <td className="num">
+                <strong>8.000.000</strong>
+              </td>
+              <td className="num">
+                <strong>8.000.000</strong>
+              </td>
+              <td className="num"></td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -104,12 +174,24 @@ export default function CatatKeuanganRumahTanggaPage() {
 
       <h2>Mencatat berdua: aturan sederhana</h2>
       <ol>
-        <li><strong>Satu catatan bersama</strong>, bukan dua buku terpisah yang tidak pernah digabung.</li>
-        <li><strong>Catat di hari yang sama</strong> saat transaksi terjadi — menunda sampai akhir pekan membuat banyak yang lupa.</li>
-        <li><strong>Sepakati kategori</strong> di awal supaya pengeluaran yang sama tidak masuk ke kategori berbeda.</li>
-        <li><strong>Rapat singkat di akhir bulan</strong> — 15 menit membandingkan anggaran dan realisasi, tanpa saling menyalahkan.</li>
-        <li><strong>Tetapkan pos tabungan di awal</strong>, dengan metode seperti di panduan{' '}
-          <Link href="/panduan/cara-mengatur-gaji">mengatur gaji bulanan</Link>.</li>
+        <li>
+          <strong>Satu catatan bersama</strong>, bukan dua buku terpisah yang tidak pernah digabung.
+        </li>
+        <li>
+          <strong>Catat di hari yang sama</strong> saat transaksi terjadi — menunda sampai akhir pekan membuat banyak
+          yang lupa.
+        </li>
+        <li>
+          <strong>Sepakati kategori</strong> di awal supaya pengeluaran yang sama tidak masuk ke kategori berbeda.
+        </li>
+        <li>
+          <strong>Rapat singkat di akhir bulan</strong> — 15 menit membandingkan anggaran dan realisasi, tanpa saling
+          menyalahkan.
+        </li>
+        <li>
+          <strong>Tetapkan pos tabungan di awal</strong>, dengan metode seperti di panduan{' '}
+          <Link href="/panduan/cara-mengatur-gaji">mengatur gaji bulanan</Link>.
+        </li>
       </ol>
 
       <h2>Setelah catatan rapi, lalu apa?</h2>
@@ -121,10 +203,11 @@ export default function CatatKeuanganRumahTanggaPage() {
 
       <h2>Mencatat keuangan rumah tangga dengan Leosiqra</h2>
       <p>
-        Di <strong>Leosiqra</strong>, transaksi bisa dicatat dengan mengetik singkat, lewat suara, atau dengan memindai foto
-        struk belanja. Setiap rekening — misalnya rekening gaji suami, rekening istri, dan dompet tunai — dicatat sebagai
-        sumber terpisah, lalu rekap bulanan per kategori tersusun otomatis sehingga rapat akhir bulan cukup melihat satu
-        layar. Lihat juga <Link href="/catatan-keuangan-pribadi">panduan catatan keuangan pribadi</Link> untuk dasar-dasarnya.
+        Di <strong>Leosiqra</strong>, transaksi bisa dicatat dengan mengetik singkat, lewat suara, atau dengan memindai
+        foto struk belanja. Setiap rekening — misalnya rekening gaji suami, rekening istri, dan dompet tunai — dicatat
+        sebagai sumber terpisah, lalu rekap bulanan per kategori tersusun otomatis sehingga rapat akhir bulan cukup
+        melihat satu layar. Lihat juga <Link href="/catatan-keuangan-pribadi">panduan catatan keuangan pribadi</Link>{' '}
+        untuk dasar-dasarnya.
       </p>
     </GuideLayout>
   );

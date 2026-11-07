@@ -41,7 +41,10 @@ export const transactionImportService = {
     });
   },
   async findDuplicates(accountId: string, rows: Pick<ImportRow, 'date' | 'note' | 'amount'>[]) {
-    const r = await cloudflareApi<{ duplicates: number[] }>('/api/member/imports/check', { method: 'POST', json: { accountId, rows } });
+    const r = await cloudflareApi<{ duplicates: number[] }>('/api/member/imports/check', {
+      method: 'POST',
+      json: { accountId, rows },
+    });
     return new Set(r.duplicates);
   },
   async readWithAi(input: { imageBase64: string } | { text: string }) {

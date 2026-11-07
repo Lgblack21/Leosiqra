@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -9,27 +9,59 @@ import { Navbar } from '@/components/Navbar';
 import { LandingFooter } from '@/components/LandingFooter';
 import { getPublicContact, PublicContact } from '@/lib/services/publicContactService';
 
-// Jawaban singkat untuk pertanyaan yang paling sering — merujuk ke fitur yang ada.
 const FAQ: Array<{ q: string; a: React.ReactNode }> = [
   {
     q: 'Saya lupa password',
-    a: <>Buka halaman <Link href="/auth/forgot-password" className="font-bold text-indigo-600 hover:underline">Lupa password</Link> dan masukkan email akun Anda — link untuk membuat password baru akan dikirim. Kalau Anda mendaftar dengan Google, cukup masuk lewat tombol &quot;Lanjutkan dengan Google&quot;.</>,
+    a: (
+      <>
+        Buka halaman{' '}
+        <Link href="/auth/forgot-password" className="font-bold text-indigo-600 hover:underline">
+          Lupa password
+        </Link>{' '}
+        dan masukkan email akun Anda — link untuk membuat password baru akan dikirim. Kalau Anda mendaftar dengan
+        Google, cukup masuk lewat tombol &quot;Lanjutkan dengan Google&quot;.
+      </>
+    ),
   },
   {
     q: 'Bagaimana cara upgrade ke Pro?',
-    a: <>Masuk ke akun Anda, buka halaman <strong>Konfirmasi Pembayaran Pro</strong>, pilih paket, transfer sesuai nominal, lalu unggah bukti transfernya. Pembayaran diverifikasi manual oleh tim kami, maksimal 1×24 jam.</>,
+    a: (
+      <>
+        Masuk ke akun Anda, buka halaman <strong>Konfirmasi Pembayaran Pro</strong>, pilih paket, transfer sesuai
+        nominal, lalu unggah bukti transfernya. Pembayaran diverifikasi manual oleh tim kami, maksimal 1×24 jam.
+      </>
+    ),
   },
   {
     q: 'Saya ganti HP dan kode Authenticator hilang',
-    a: <>Hubungi kami lewat WhatsApp atau email dari alamat email akun Anda. Kami akan membantu memverifikasi kepemilikan akun sebelum mengatur ulang verifikasi 2 langkah.</>,
+    a: (
+      <>
+        Hubungi kami lewat WhatsApp atau email dari alamat email akun Anda. Kami akan membantu memverifikasi kepemilikan
+        akun sebelum mengatur ulang verifikasi 2 langkah.
+      </>
+    ),
   },
   {
     q: 'Bagaimana menghapus data saya?',
-    a: <>Seluruh data keuangan bisa Anda hapus sendiri lewat <strong>Profil → Danger Zone</strong>. Untuk menghapus akun sepenuhnya, hubungi kami lewat kontak di atas.</>,
+    a: (
+      <>
+        Seluruh data keuangan bisa Anda hapus sendiri lewat <strong>Profil → Danger Zone</strong>. Untuk menghapus akun
+        sepenuhnya, hubungi kami lewat kontak di atas.
+      </>
+    ),
   },
   {
     q: 'Apakah data saya aman?',
-    a: <>Data Anda terikat ke akun Anda dan hanya bisa dibuka lewat sesi login Anda, dikirim lewat HTTPS, dan tidak pernah kami jual. Detail lengkapnya ada di <Link href="/privacy" className="font-bold text-indigo-600 hover:underline">Kebijakan Privasi</Link>.</>,
+    a: (
+      <>
+        Data Anda terikat ke akun Anda dan hanya bisa dibuka lewat sesi login Anda, dikirim lewat HTTPS, dan tidak
+        pernah kami jual. Detail lengkapnya ada di{' '}
+        <Link href="/privacy" className="font-bold text-indigo-600 hover:underline">
+          Kebijakan Privasi
+        </Link>
+        .
+      </>
+    ),
   },
 ];
 
@@ -37,9 +69,18 @@ function FaqItem({ q, a, open, onToggle }: { q: string; a: React.ReactNode; open
   const reduce = useReducedMotion();
   return (
     <div className="border-b border-slate-100 last:border-0">
-      <button type="button" onClick={onToggle} aria-expanded={open} className="flex w-full items-center justify-between gap-4 py-5 text-left">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-4 py-5 text-left"
+      >
         <span className="font-semibold text-slate-900">{q}</span>
-        <motion.span animate={{ rotate: open ? 45 : 0 }} transition={{ type: 'spring', stiffness: 400, damping: 24 }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+        <motion.span
+          animate={{ rotate: open ? 45 : 0 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 24 }}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600"
+        >
           <Plus size={16} />
         </motion.span>
       </button>
@@ -123,16 +164,21 @@ export default function PublicHubungiKamiPage() {
       <main className="relative flex-1 px-5 pb-24 sm:px-6">
         <div className="mx-auto max-w-4xl">
           {loading ? (
-            <div className="grid gap-5 md:grid-cols-2">
-              {[0, 1].map((i) => <div key={i} className="h-60 animate-pulse rounded-[28px] bg-white/70" />)}
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              {[0, 1].map((i) => (
+                <div key={i} className="h-60 animate-pulse rounded-[28px] bg-white/70" />
+              ))}
             </div>
           ) : (
-            <div className="grid gap-5 md:grid-cols-2">
-              {/* WhatsApp */}
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               <Reveal className="lp-card lift flex flex-col rounded-[28px] p-7 sm:p-8">
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100"><MessageCircle size={22} /></span>
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100">
+                  <MessageCircle size={22} />
+                </span>
                 <h2 className="mt-6 font-serif text-2xl">WhatsApp</h2>
-                <p className="mt-1 flex-1 text-sm text-slate-500">{normalizedWhatsApp ? `+${normalizedWhatsApp}` : 'Belum diatur'}</p>
+                <p className="mt-1 flex-1 text-sm text-slate-500">
+                  {normalizedWhatsApp ? `+${normalizedWhatsApp}` : 'Belum diatur'}
+                </p>
                 {normalizedWhatsApp ? (
                   <a
                     href={`https://wa.me/${normalizedWhatsApp}`}
@@ -147,14 +193,20 @@ export default function PublicHubungiKamiPage() {
                 )}
               </Reveal>
 
-              {/* Email */}
               <Reveal delay={0.08} className="lp-card lift flex flex-col rounded-[28px] p-7 sm:p-8">
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100"><Mail size={22} /></span>
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100">
+                  <Mail size={22} />
+                </span>
                 <h2 className="mt-6 font-serif text-2xl">Email</h2>
-                <p className="mt-1 flex-1 break-all text-sm text-slate-500">{contact?.billingEmail || 'Belum diatur'}</p>
+                <p className="mt-1 flex-1 break-all text-sm text-slate-500">
+                  {contact?.billingEmail || 'Belum diatur'}
+                </p>
                 {contact?.billingEmail ? (
                   <div className="mt-6 flex items-center gap-2">
-                    <a href={`mailto:${contact.billingEmail}`} className="lp-btn flex-1 rounded-2xl px-6 py-3.5 text-center text-sm font-bold transition-all hover:-translate-y-0.5">
+                    <a
+                      href={`mailto:${contact.billingEmail}`}
+                      className="lp-btn flex-1 rounded-2xl px-6 py-3.5 text-center text-sm font-bold transition-all hover:-translate-y-0.5"
+                    >
                       Kirim email
                     </a>
                     <button
@@ -164,7 +216,13 @@ export default function PublicHubungiKamiPage() {
                       className="shrink-0 rounded-2xl border border-slate-200 bg-white p-3.5 text-slate-500 transition-colors hover:text-slate-800"
                     >
                       <AnimatePresence mode="wait" initial={false}>
-                        <motion.span key={copiedEmail ? 'ok' : 'copy'} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }} className="flex">
+                        <motion.span
+                          key={copiedEmail ? 'ok' : 'copy'}
+                          initial={{ scale: 0.5, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0.5, opacity: 0 }}
+                          className="flex"
+                        >
                           {copiedEmail ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
                         </motion.span>
                       </AnimatePresence>
@@ -177,13 +235,20 @@ export default function PublicHubungiKamiPage() {
             </div>
           )}
 
-          {/* FAQ */}
           <Reveal className="mt-16">
-            <p className="text-center text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">Pertanyaan umum</p>
+            <p className="text-center text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-600">
+              Pertanyaan umum
+            </p>
             <h2 className="mt-3 text-center font-serif text-3xl sm:text-4xl">Mungkin jawabannya sudah ada di sini</h2>
             <div className="lp-card mt-10 rounded-[28px] px-6 sm:px-8">
               {FAQ.map((f, i) => (
-                <FaqItem key={f.q} q={f.q} a={f.a} open={openFaq === i} onToggle={() => setOpenFaq(openFaq === i ? null : i)} />
+                <FaqItem
+                  key={f.q}
+                  q={f.q}
+                  a={f.a}
+                  open={openFaq === i}
+                  onToggle={() => setOpenFaq(openFaq === i ? null : i)}
+                />
               ))}
             </div>
           </Reveal>
