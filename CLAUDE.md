@@ -116,6 +116,8 @@ Treat this as a live app with real users. Before a deploy:
   `src/lib/version.ts`, never hardcoded). Before asking for "gas", bump it with
   `npm run versi -- patch|minor|major "…"` and fill the entry in `CHANGELOG.md`
   (rules + history v1→v3 are at the top of that file). Deploy main tags the release.
+  The release notes are also rendered in-app (`/membership/versi`, `/app/versi`, parsed
+  from CHANGELOG.md at build time) — write them for users, keep the `## X.Y.Z — date — title` format.
 
 ## Handoff between sessions (two Claude Code accounts)
 

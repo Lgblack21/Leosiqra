@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import { LogOut, Mail, Moon, Star, Sun, Smartphone } from 'lucide-react';
 import { auth } from '@/lib/cf-client';
 import { cloudflareApi } from '@/lib/cloudflare-api';
@@ -204,9 +205,12 @@ export default function ProfilePage() {
           {loggingOut ? 'Keluar...' : 'Keluar'}
         </button>
       </FadeIn>
-      <p className="pb-2 text-center text-[11px] font-bold text-slate-400 dark:text-slate-500">
-        Leosiqra {APP_VERSION_LABEL}
-      </p>
+      <Link
+        href="/app/versi"
+        className="block pb-2 text-center text-[11px] font-bold text-slate-400 dark:text-slate-500"
+      >
+        Leosiqra {APP_VERSION_LABEL} · <span className="text-indigo-500 dark:text-indigo-400">Riwayat versi</span>
+      </Link>
     </div>
   );
 }

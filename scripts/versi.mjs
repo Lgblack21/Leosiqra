@@ -41,14 +41,22 @@ const lockNew = lock
 writeFileSync(lockPath, lockNew);
 
 const tanggal = new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);
+const BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+const [th, bl, hr] = tanggal.split('-').map(Number);
 const log = readFileSync(logPath, 'utf8');
 const anchor = '<!-- rilis-baru -->';
-if (!log.includes(anchor)) {
-  console.error(`CHANGELOG.md tidak punya penanda ${anchor}`);
-  process.exit(1);
+const peta = '<!-- peta-baru -->';
+for (const a of [anchor, peta]) {
+  if (!log.includes(a)) {
+    console.error(`CHANGELOG.md tidak punya penanda ${a}`);
+    process.exit(1);
+  }
 }
 const judul = ringkasan.join(' ').trim();
-const entri = `${anchor}\n\n## ${baru} — ${tanggal}${judul ? ` — ${judul}` : ''}\n\n- (tulis perubahan yang terasa user di sini)\n`;
-writeFileSync(logPath, log.replace(anchor, entri));
+if (!judul) console.warn('Tanpa ringkasan — isi judul versi di CHANGELOG.md (tampil di Riwayat versi aplikasi).');
+// Satu baris kosong antar-entri; judul ikut tampil di halaman Riwayat versi.
+const entri = `${anchor}\n\n## ${baru} — ${tanggal} — ${judul || '(judul singkat)'}\n\n- (tulis perubahan yang terasa user di sini)\n`;
+const baris = `| ${baru} | ${hr} ${BULAN[bl - 1]} ${th} | ${judul || '(judul singkat)'} |\n${peta}`;
+writeFileSync(logPath, log.replace(`${anchor}\n`, entri).replace(peta, baris));
 
 console.log(`Versi ${pkg.version} → ${baru}. Lengkapi catatan ${baru} di CHANGELOG.md, lalu commit.`);

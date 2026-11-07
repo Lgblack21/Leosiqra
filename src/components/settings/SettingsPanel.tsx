@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  History,
   LayoutGrid,
   Tags,
   Users,
@@ -978,6 +979,12 @@ export function SettingsPanel({
                       onClick={() => setView('privasi')}
                     />
                     <Row icon={FileText} title="Ketentuan & kebijakan" onClick={() => setView('legal')} />
+                    <Row
+                      icon={History}
+                      title="Riwayat versi"
+                      desc={`Leosiqra ${APP_VERSION_LABEL} · apa yang baru`}
+                      onClick={go('/membership/versi')}
+                    />
                   </Group>
 
                   <button
@@ -989,9 +996,13 @@ export function SettingsPanel({
                   </button>
 
                   <div className="flex flex-wrap justify-center gap-2 pt-1">
-                    <span className="rounded-full bg-indigo-50 px-3 py-1 text-[12px] font-semibold text-indigo-700">
+                    <button
+                      type="button"
+                      onClick={go('/membership/versi')}
+                      className="rounded-full bg-indigo-50 px-3 py-1 text-[12px] font-semibold text-indigo-700 hover:bg-indigo-100"
+                    >
                       Leosiqra {APP_VERSION_LABEL}
-                    </span>
+                    </button>
                     <span className="rounded-full bg-emerald-50 px-3 py-1 text-[12px] font-medium text-emerald-700">
                       Tersinkron ke akunmu
                     </span>
