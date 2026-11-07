@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (3.3.0 Makanku; migrasi 0036 & 0037 menunggu Bos)
+Terakhir diperbarui: 2026-11-07 (live: rilis 3.3.0, run 42364373366; migrasi 0036 & 0037 menunggu Bos)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-07 — RILIS 3.3.0 (branch `claude/makanku-20261107`): Makanku + popup Leo per fitur. MIGRASI 0037 menunggu Bos.**
+- **2026-11-07 — RILIS 3.3.0: LIVE (run 42364373366, commit 37f2743, Release v3.3.0): Makanku + popup Leo per fitur. MIGRASI 0037 menunggu Bos.**
   - **MIGRASI di D1 Console** (0037_meals.sql, boleh sebelum/sesudah deploy): tabel `meals` + index. Tanpa tabel:
     GET → ready:false (banner "sedang disiapkan"), simpan → 503.
   - Worker: `/api/member/meals` GET (hari + minggu Sen–Min + streak + target + belanja Makanan & Minuman minggu ini +
