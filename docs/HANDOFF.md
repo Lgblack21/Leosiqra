@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live: rilis 3.3.0, run 42364373366; migrasi 0036 & 0037 menunggu Bos)
+Terakhir diperbarui: 2026-11-07 (live 3.3.0; 3.3.1 Sehatku menunggu "gas"; migrasi 0036 & 0037 menunggu Bos)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,14 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-07 — RILIS 3.3.1 (branch `claude/sehatku-20261107`): Makanku → Sehatku (layar penuh). Tanpa SQL baru (0037 tetap perlu).**
+  - `src/components/sehat/SehatApp.tsx`: bar atas + dock (tab hash #makan/#asuransi/#cek; Asuransi & Cek = "segera").
+    Web `/membership/sehat` (masuk FULLSCREEN_PATHS), app `/app/sehat` (di luar grup tab). MakanApp `embedded`.
+  - `/membership/makan` & `/app/makan` = redirect ke `/sehat#makan`. Fitur id 'sehat' (label Sehatku, ikon HeartPulse);
+    'makan' lama dipetakan ke 'sehat' di normalizeFeatures dan tetap sah di PREF_FEATURES Worker.
+  - Berikutnya (rencana): tab Asuransi = kartu biaya kesehatan tahun ini + Polisku (premi & pengingat); Cek menyusul.
+  - Dicek: tsc, eslint, build; screenshot web 1366 (tanpa sidebar), iPhone 13 terang/gelap, tab segera, redirect, 0 error JS.
 
 - **2026-11-07 — RILIS 3.3.0: LIVE (run 42364373366, commit 37f2743, Release v3.3.0): Makanku + popup Leo per fitur. MIGRASI 0037 menunggu Bos.**
   - **MIGRASI di D1 Console** (0037_meals.sql, boleh sebelum/sesudah deploy): tabel `meals` + index. Tanpa tabel:

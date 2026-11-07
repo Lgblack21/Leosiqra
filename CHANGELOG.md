@@ -51,6 +51,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.1.3 | 7 Nov 2026 | Catatan stok tim lebih aman |
 | 3.2.0 | 7 Nov 2026 | Halaman Riwayat versi |
 | 3.3.0 | 7 Nov 2026 | Makanku & Leo di tiap fitur |
+| 3.3.1 | 7 Nov 2026 | Makanku jadi Sehatku, layar penuh |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -64,6 +65,11 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.3.1 — 2026-11-07 — Makanku jadi Sehatku, layar penuh
+
+- Makanku kini jadi tab **Makan** di fitur baru **Sehatku** — layar penuh seperti Ladangku, dengan menu
+  melayang di bawah. Tab Asuransi dan Cek sudah terlihat dan segera hadir. Alamat lama otomatis dialihkan.
 
 ## 3.3.0 — 2026-11-07 — Makanku & Leo di tiap fitur
 

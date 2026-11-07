@@ -8716,7 +8716,7 @@ async function handleAiQuota(request: Request, env: Env) {
 
 // Halaman fitur yang punya popup Leo (src/lib/leoGuides.ts). Nilai = keterangan untuk model.
 const AI_CHAT_PAGES: Record<string, string> = {
-  makan: "Makanku — catatan makan harian dari foto (kalori & gizi perkiraan AI), bisa langsung dicatat jadi pengeluaran Makanan & Minuman. Jawab soal makan, gizi umum, dan belanja makan; bukan diagnosis medis.",
+  makan: "Sehatku › Makan — catatan makan harian dari foto (kalori & gizi perkiraan AI), bisa langsung dicatat jadi pengeluaran Makanan & Minuman. Jawab soal makan, gizi umum, dan belanja makan; bukan diagnosis medis.",
   cerita: "Cerita Hari Ini — jurnal harian dengan mood, foto, ilustrasi AI, dan ringkasan uang hari itu.",
   fokus: "Fokus bareng Leo — timer fokus/pomodoro, musik, latihan napas.",
   ladang: "Ladangku — usaha (kasir, stok, tim), jual barang nganggur, dan tagih utang.",
@@ -8728,7 +8728,7 @@ const aiMealContext = async (env: Env, userId: string) => {
     const rows = await env.DB.prepare("SELECT date, time, slot, name, kcal, protein, carbs, fat, price FROM meals WHERE user_id = ? AND date >= ? ORDER BY date DESC, time DESC LIMIT 40").bind(userId, mealShift(today, -6)).all();
     return { hariIni: today, targetKkal: await readMealTarget(env, userId), makan7Hari: rows.results ?? [] };
   } catch {
-    return { catatan: "Makanku belum aktif / belum ada data." };
+    return { catatan: "Sehatku › Makan belum aktif / belum ada data." };
   }
 };
 
@@ -13194,7 +13194,7 @@ const storyImagePrompt = (text: string, mood: number | null, style: string, from
 // dicatat sebagai pengeluaran (Makanan & Minuman) dalam SATU batch dengan catatan makannya.
 // Anti dobel: id makanan = request_id dari klien (INSERT OR IGNORE); transaksi & saldo hanya
 // masuk kalau baris makanan yang baru itu benar-benar tersimpan dengan tx_id tersebut.
-const MEALS_NOT_READY = "Makanku sedang disiapkan di server (menunggu pembaruan database). Coba lagi nanti.";
+const MEALS_NOT_READY = "Sehatku sedang disiapkan di server (menunggu pembaruan database). Coba lagi nanti.";
 const mealsTableMissing = (e: unknown) => e instanceof Error && /no such table: meals/i.test(e.message);
 const MEAL_SLOTS = ["sarapan", "siang", "malam", "camilan"] as const;
 type MealSlot = (typeof MEAL_SLOTS)[number];
@@ -15703,7 +15703,7 @@ const PREF_INPUT_MODES = ["ketik", "suara", "foto"] as const;
 // Fitur yang tampil di menu samping (panel Pengaturan → Fitur). Hanya
 // visibilitas menu — mematikan fitur tidak menyentuh datanya. Sama dengan
 // FeatureId di src/lib/features.ts. null = bawaan (5 fitur lama).
-const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk", "jejak", "langganan", "ladang", "fokus", "cerita", "makan"] as const;
+const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk", "jejak", "langganan", "ladang", "fokus", "cerita", "makan", "sehat"] as const;
 // Jam pengingat per 30 menit (cron tiap 10 menit, lihat sendDailyReminders).
 const PREF_TIME_RE = /^([01]\d|2[0-3]):(00|30)$/;
 // Ikon & warna pilihan user per nama kategori (panel Kategori & Anggaran).

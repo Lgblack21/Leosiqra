@@ -141,7 +141,7 @@ function MealCard({ meal, index, onOpen }: { meal: Meal; index: number; onOpen: 
   );
 }
 
-export function MakanApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
+export function MakanApp({ variant = 'web', embedded = false }: { variant?: 'web' | 'app'; embedded?: boolean }) {
   const [date, setDate] = useState(wibToday);
   const [data, setData] = useState<MealDay | null>(null);
   const [error, setError] = useState('');
@@ -157,7 +157,7 @@ export function MakanApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
       setData(await mealService.day(date));
       setError('');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Gagal memuat Makanku.');
+      setError(e instanceof Error ? e.message : 'Gagal memuat catatan makan.');
     }
   }, [date]);
   useEffect(() => {
@@ -220,26 +220,28 @@ export function MakanApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
   return (
     <div
       className={cn(
-        'mx-auto max-w-6xl pb-28',
-        variant === 'app' ? 'px-4 pt-[calc(env(safe-area-inset-top)+14px)]' : 'px-1',
+        !embedded && 'mx-auto max-w-6xl pb-28',
+        !embedded && (variant === 'app' ? 'px-4 pt-[calc(env(safe-area-inset-top)+14px)]' : 'px-1'),
       )}
     >
-      <header className="mb-4 grid grid-cols-[auto_1fr_auto] items-center gap-3">
-        <Link
-          href={variant === 'app' ? '/app/more' : '/membership/dashboard'}
-          aria-label="Kembali"
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-800"
-        >
-          <ArrowLeft size={18} />
-        </Link>
-        <div className="min-w-0 text-center">
-          <h1 className="text-[20px] font-black tracking-tight text-slate-900 dark:text-white">Makanku</h1>
-          <p className="truncate text-[12px] text-slate-500 dark:text-slate-400">
-            Foto piringmu, Leo hitung gizi & belanjanya
-          </p>
-        </div>
-        <LeoGuide topic="makan" />
-      </header>
+      {embedded ? null : (
+        <header className="mb-4 grid grid-cols-[auto_1fr_auto] items-center gap-3">
+          <Link
+            href={variant === 'app' ? '/app/more' : '/membership/dashboard'}
+            aria-label="Kembali"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-800"
+          >
+            <ArrowLeft size={18} />
+          </Link>
+          <div className="min-w-0 text-center">
+            <h1 className="text-[20px] font-black tracking-tight text-slate-900 dark:text-white">Sehatku · Makan</h1>
+            <p className="truncate text-[12px] text-slate-500 dark:text-slate-400">
+              Foto piringmu, Leo hitung gizi & belanjanya
+            </p>
+          </div>
+          <LeoGuide topic="makan" />
+        </header>
+      )}
 
       <div className="mb-4 flex items-center justify-center gap-2">
         <button
@@ -271,7 +273,7 @@ export function MakanApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
 
       {notReady ? (
         <p className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-[13px] font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
-          Makanku sedang disiapkan di server — sebentar lagi bisa dipakai.
+          Sehatku sedang disiapkan di server — sebentar lagi bisa dipakai.
         </p>
       ) : null}
       {error ? (
@@ -494,7 +496,7 @@ export function MakanApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
                 <div className="text-[16px] font-black text-slate-900 dark:text-white">
                   {short(data?.foodSpendWeek ?? 0)}
                 </div>
-                <div className="truncate text-[11px] text-slate-400">{short(weekMealSpend)} dari Makanku</div>
+                <div className="truncate text-[11px] text-slate-400">{short(weekMealSpend)} dari catatan makan</div>
               </div>
             </div>
           </section>

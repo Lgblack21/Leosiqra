@@ -1,8 +1,11 @@
 'use client';
 
-import { MakanApp } from '@/components/makan/MakanApp';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
-// Makanku versi app HP (di dalam grup tab, komponen sama dengan web).
-export default function AppMakanPage() {
-  return <MakanApp variant="app" />;
+// Alamat lama (3.3.0) — Makan kini tab di Sehatku.
+export default function AppMakanRedirect() {
+  const router = useRouter();
+  useEffect(() => router.replace('/app/sehat#makan'), [router]);
+  return null;
 }

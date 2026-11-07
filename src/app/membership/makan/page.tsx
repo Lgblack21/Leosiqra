@@ -1,8 +1,11 @@
 'use client';
 
-import { MakanApp } from '@/components/makan/MakanApp';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
-// Makanku — catatan makan harian: foto → kalori & gizi (AI), bisa langsung jadi pengeluaran.
-export default function MakanPage() {
-  return <MakanApp variant="web" />;
+// Alamat lama (3.3.0) — Makan kini tab di Sehatku.
+export default function MakanRedirect() {
+  const router = useRouter();
+  useEffect(() => router.replace('/membership/sehat#makan'), [router]);
+  return null;
 }

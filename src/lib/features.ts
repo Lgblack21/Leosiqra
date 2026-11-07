@@ -9,7 +9,7 @@ import {
   Sprout,
   Timer,
   NotebookPen,
-  UtensilsCrossed,
+  HeartPulse,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -37,7 +37,7 @@ export type FeatureId =
   | 'ladang'
   | 'fokus'
   | 'cerita'
-  | 'makan';
+  | 'sehat';
 
 export type Feature = { id: FeatureId; label: string; href: string; icon: LucideIcon; tint: string };
 
@@ -100,10 +100,10 @@ export const FEATURES: Feature[] = [
     tint: 'from-amber-50 to-pink-100 text-pink-600',
   },
   {
-    id: 'makan',
-    label: 'Makanku',
-    href: '/membership/makan',
-    icon: UtensilsCrossed,
+    id: 'sehat',
+    label: 'Sehatku',
+    href: '/membership/sehat',
+    icon: HeartPulse,
     tint: 'from-orange-50 to-rose-100 text-orange-600',
   },
   {
@@ -135,7 +135,7 @@ export const DEFAULT_FEATURES: FeatureId[] = [
   'ladang',
   'fokus',
   'cerita',
-  'makan',
+  'sehat',
 ];
 
 const BY_ID = new Map(FEATURES.map((f) => [f.id, f]));
@@ -145,7 +145,8 @@ export const isShownFeature = (id: string) => BY_ID.has(id as FeatureId);
 export const normalizeFeatures = (ids: readonly string[]): FeatureId[] => {
   const out: FeatureId[] = [];
   for (const raw of ids) {
-    const id = (raw === 'hutang' ? 'tabungan' : raw) as FeatureId;
+    // 'makan' (3.3.0, Makanku) kini bagian dari Sehatku.
+    const id = (raw === 'hutang' ? 'tabungan' : raw === 'makan' ? 'sehat' : raw) as FeatureId;
     if (BY_ID.has(id) && !out.includes(id)) out.push(id);
   }
   return out;
