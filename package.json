@@ -1,6 +1,6 @@
 {
   "name": "finance-tracker",
-  "version": "3.0.1",
+  "version": "3.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -13,7 +13,8 @@
     "cf:d1:seed": "wrangler d1 execute leosiqra-db --local --file=./cloudflare/seeds/seed.sql",
     "cap:sync": "cap sync",
     "cap:android": "cap open android",
-    "cap:ios": "cap open ios"
+    "cap:ios": "cap open ios",
+    "versi": "node scripts/versi.mjs"
   },
   "dependencies": {
     "@block65/webcrypto-web-push": "^1.0.2",

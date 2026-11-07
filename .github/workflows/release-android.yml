@@ -1,5 +1,6 @@
 # Rilis APK Android ke GitHub Releases (halaman Releases repo, seperti developer lain).
-# Jalankan manual: Actions → "Rilis APK Android" → Run workflow → isi versi (mis. 3.1.0).
+# Jalankan manual: Actions → "Rilis APK Android" → Run workflow. Versi otomatis dari
+# package.json (lihat CHANGELOG.md); APK ditempel ke Release vX.Y.Z yang dibuat Deploy main.
 #
 # APK ditandatangani SATU kunci tetap (secret repo), jadi update tinggal ditimpa
 # tanpa hapus aplikasi. Secret yang dibutuhkan (Settings → Secrets → Actions):
@@ -14,8 +15,9 @@ on:
   workflow_dispatch:
     inputs:
       versi:
-        description: "Versi rilis, format 1.2.3 (tag jadi v1.2.3)"
-        required: true
+        description: "Kosongkan = versi dari package.json (disarankan). Isi 1.2.3 hanya kalau sengaja beda."
+        required: false
+        default: ""
       catatan:
         description: "Catatan rilis singkat (opsional; daftar commit ditambahkan otomatis)"
         required: false
@@ -35,14 +37,12 @@ jobs:
     steps:
       - name: Validasi versi & secret
         env:
-          VERSI: ${{ inputs.versi }}
           # Hanya "ada/kosong" per secret — nilainya tidak pernah dicetak.
           S1: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
           S2: ${{ secrets.ANDROID_KEYSTORE_PASSWORD != '' }}
           S3: ${{ secrets.ANDROID_KEY_ALIAS != '' }}
           S4: ${{ secrets.ANDROID_KEY_PASSWORD != '' }}
         run: |
-          [[ "$VERSI" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Versi harus format 1.2.3 (sekarang: $VERSI)"; exit 1; }
           missing=""
           [ "$S1" = "true" ] || missing="$missing ANDROID_KEYSTORE_BASE64"
           [ "$S2" = "true" ] || missing="$missing ANDROID_KEYSTORE_PASSWORD"
@@ -54,13 +54,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Tag belum dipakai
+      - name: Tentukan versi
         env:
-          VERSI: ${{ inputs.versi }}
+          INPUT_VERSI: ${{ inputs.versi }}
         run: |
-          if git rev-parse -q --verify "refs/tags/v$VERSI" >/dev/null; then
-            echo "::error::Tag v$VERSI sudah ada — pakai versi yang lebih baru"; exit 1
-          fi
+          VERSI="${INPUT_VERSI:-$(node -p "require('./package.json').version")}"
+          [[ "$VERSI" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Versi harus format 1.2.3 (sekarang: $VERSI)"; exit 1; }
+          echo "VERSI=$VERSI" >> "$GITHUB_ENV"
+          echo "Versi APK: $VERSI"
 
       - uses: actions/setup-node@v4
         with:
@@ -102,7 +103,7 @@ jobs:
       - name: Build APK rilis
         working-directory: android
         env:
-          LEOSIQRA_VERSION_NAME: ${{ inputs.versi }}
+          LEOSIQRA_VERSION_NAME: ${{ env.VERSI }}
           RUN_NUMBER: ${{ github.run_number }}
         run: |
           # Naik setiap rilis (APK debug lama = 1) → Android mau menimpa versi sebelumnya.
@@ -119,7 +120,6 @@ jobs:
       - name: Buat rilis
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSI: ${{ inputs.versi }}
           CATATAN: ${{ inputs.catatan }}
         run: |
           OUT="leosiqra-$VERSI.apk"
@@ -129,5 +129,10 @@ jobs:
             echo "**Cara pasang:** unduh \`$OUT\` di HP → buka → izinkan pasang dari sumber ini → Pasang."
             echo "Update berikutnya tinggal ditimpa (kunci tanda tangan sama)."
           } > notes.md
-          gh release create "v$VERSI" "$OUT" --target "$GITHUB_SHA" --title "Leosiqra $VERSI (Android)" --notes-file notes.md --generate-notes
+          if gh release view "v$VERSI" >/dev/null 2>&1; then
+            # Release dibuat Deploy main (catatan dari CHANGELOG.md) → cukup tempel APK.
+            gh release upload "v$VERSI" "$OUT" --clobber
+          else
+            gh release create "v$VERSI" "$OUT" --target "$GITHUB_SHA" --title "Leosiqra $VERSI" --notes-file notes.md --generate-notes
+          fi
           echo "### Rilis v$VERSI siap: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/v$VERSI" >> "$GITHUB_STEP_SUMMARY"

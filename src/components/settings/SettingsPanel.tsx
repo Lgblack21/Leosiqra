@@ -62,7 +62,7 @@ import { AccountSection, CloudSyncSection, AttachmentPrefSection } from '@/compo
 import { CoinSection, CoinProfileRows } from '@/components/settings/CoinViews';
 import { AppsSection } from '@/components/settings/ConnectedApps';
 import { UserAvatar, type AvatarConfig } from '@/components/profile/LeoAvatar';
-import { APP_VERSION } from '@/lib/version';
+import { APP_VERSION_LABEL } from '@/lib/version';
 import { LeoCoin } from '@/components/coin/LeoCoin';
 import { FeaturesView } from '@/components/settings/FeaturesView';
 import { RecurringView } from './RecurringView';
@@ -624,7 +624,7 @@ export function SettingsPanel({ open, onClose, initialView = 'menu' }: { open: b
                   </button>
 
                   <div className="flex flex-wrap justify-center gap-2 pt-1">
-                    <span className="rounded-full bg-indigo-50 px-3 py-1 text-[12px] font-semibold text-indigo-700">Leosiqra v{APP_VERSION}</span>
+                    <span className="rounded-full bg-indigo-50 px-3 py-1 text-[12px] font-semibold text-indigo-700">Leosiqra {APP_VERSION_LABEL}</span>
                     <span className="rounded-full bg-emerald-50 px-3 py-1 text-[12px] font-medium text-emerald-700">Tersinkron ke akunmu</span>
                   </div>
                 </div>
