@@ -36,7 +36,13 @@ export interface GuestOnboarding {
 }
 
 const KEY = 'leosiqra-guest-onboarding';
-export const EMPTY_GUEST: GuestOnboarding = { goals: [], inputMode: null, reminder: { on: false, time: '20:00' }, note: null, done: false };
+export const EMPTY_GUEST: GuestOnboarding = {
+  goals: [],
+  inputMode: null,
+  reminder: { on: false, time: '20:00' },
+  note: null,
+  done: false,
+};
 
 export const loadGuest = (): GuestOnboarding | null => {
   try {
@@ -48,10 +54,16 @@ export const loadGuest = (): GuestOnboarding | null => {
       inputMode: GUEST_INPUT_MODES.includes(v.inputMode as GuestInputMode) ? (v.inputMode as GuestInputMode) : null,
       reminder: {
         on: v.reminder?.on === true,
-        time: typeof v.reminder?.time === 'string' && /^([01]\d|2[0-3]):(00|30)$/.test(v.reminder.time) ? v.reminder.time : '20:00',
+        time:
+          typeof v.reminder?.time === 'string' && /^([01]\d|2[0-3]):(00|30)$/.test(v.reminder.time)
+            ? v.reminder.time
+            : '20:00',
       },
       note:
-        v.note && typeof v.note.amount === 'number' && v.note.amount > 0 && (v.note.type === 'pengeluaran' || v.note.type === 'pemasukan')
+        v.note &&
+        typeof v.note.amount === 'number' &&
+        v.note.amount > 0 &&
+        (v.note.type === 'pengeluaran' || v.note.type === 'pemasukan')
           ? v.note
           : null,
       done: v.done === true,

@@ -1,12 +1,12 @@
-import { cloudflareApi } from "@/lib/cloudflare-api";
-import { auth } from "@/lib/cf-client";
+import { cloudflareApi } from '@/lib/cloudflare-api';
+import { auth } from '@/lib/cf-client';
 
 export type User = {
   uid: string;
   email: string | null;
   displayName?: string | null;
   photoURL?: string | null;
-  role?: "admin" | "user";
+  role?: 'admin' | 'user';
   // false untuk akun Google (tidak punya password lokal) — dipakai untuk
   // menyesuaikan alur Ganti Password / Reset Data, yang keduanya butuh
   // verifikasi "password saat ini" yang tidak pernah ada untuk akun ini.
@@ -33,17 +33,14 @@ const toCompatUser = (payload: CompatUserPayload | null | undefined): User | nul
     email: payload.email ?? null,
     displayName: payload.name ?? null,
     photoURL: payload.photo_url ?? payload.photoURL ?? null,
-    role: payload.role === "admin" ? "admin" : "user",
+    role: payload.role === 'admin' ? 'admin' : 'user',
     hasPassword: payload.hasPassword ?? true,
   };
 };
 
-export const onAuthStateChanged = (
-  _auth: typeof auth,
-  callback: (user: User | null) => void
-) => {
+export const onAuthStateChanged = (_auth: typeof auth, callback: (user: User | null) => void) => {
   let active = true;
-  cloudflareApi<{ user?: CompatUserPayload | null }>("/api/auth/me")
+  cloudflareApi<{ user?: CompatUserPayload | null }>('/api/auth/me')
     .then((result) => {
       if (!active) return;
       const nextUser = toCompatUser(result.user ?? null);

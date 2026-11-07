@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1026152251340",
+    "project_id": "leosiqra-a02fe",
+    "storage_bucket": "leosiqra-a02fe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1026152251340:android:4a26c14c0c1f9db2f5a769",
+        "android_client_info": {
+          "package_name": "com.leosiqra.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCgwwsesnw9LZHAYkDyIZeFu9AxsvsGV7c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

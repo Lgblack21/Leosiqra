@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
@@ -33,14 +33,21 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
       .then((data) => {
         setProfile(data.user ?? null);
         setWhatsapp(data.maintenance?.whatsapp ?? null);
-        setSettings(data.maintenance ? {
-          maintenance: {
-            isActive: data.maintenance.isActive,
-            type: data.maintenance.type === 'code' || data.maintenance.type === 'image' ? data.maintenance.type : undefined,
-            code: data.maintenance.code ?? undefined,
-            imageUrl: data.maintenance.imageUrl ?? undefined,
-          }
-        } : null);
+        setSettings(
+          data.maintenance
+            ? {
+                maintenance: {
+                  isActive: data.maintenance.isActive,
+                  type:
+                    data.maintenance.type === 'code' || data.maintenance.type === 'image'
+                      ? data.maintenance.type
+                      : undefined,
+                  code: data.maintenance.code ?? undefined,
+                  imageUrl: data.maintenance.imageUrl ?? undefined,
+                },
+              }
+            : null,
+        );
       })
       .catch(() => {
         setProfile(null);
@@ -67,23 +74,18 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
     return digits;
   }, [whatsapp]);
 
-  // LOGIKA BYPASS & BLOKIR
-
-  // 1. Jika rute ADMIN, langsung berikan akses (AdminLayout akan handle selebihnya)
-  // Ini untuk menghindari flicker atau double loading di level global.
+  // Rute admin langsung lolos (AdminLayout yang menangani) — hindari flicker/double loading di level global.
   if (isAdminPage) return <>{children}</>;
 
   if (isChecking && settings?.maintenance?.isActive) return null;
 
-  // 2. Admin (setelah terdeteksi) SELALU bisa melihat semua halaman
   if (profile?.role === 'admin') return <>{children}</>;
 
-  // 2. Halaman Login SELALU terbuka agar Admin bisa masuk
+  // Halaman login selalu terbuka agar admin bisa masuk.
   if (isLoginPage) return <>{children}</>;
 
-  // 3. Jika maintenance aktif dan BUKAN Admin, blokir SEMUA halaman (termasuk landing & register).
-  // Admin tetap bisa masuk lewat /auth/login secara langsung (dibebaskan di atas) —
-  // sengaja tidak ada tombol/link menuju login di layar publik ini.
+  // Maintenance aktif & bukan admin: blokir semua halaman (termasuk landing & register).
+  // Sengaja tanpa tombol/link ke login di layar publik — admin masuk langsung lewat /auth/login.
   if (settings?.maintenance?.isActive) {
     if (settings.maintenance.type === 'code' && settings.maintenance.code) {
       return (
@@ -96,17 +98,10 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
     } else if (settings.maintenance.type === 'image' && settings.maintenance.imageUrl) {
       return (
         <div className="fixed inset-0 z-[9999] bg-black relative">
-          <Image
-            src={settings.maintenance.imageUrl}
-            alt="Maintenance"
-            fill
-            className="object-contain"
-          />
+          <Image src={settings.maintenance.imageUrl} alt="Maintenance" fill className="object-contain" />
         </div>
       );
     } else {
-      // Fallback — halaman maintenance default, dirancang tetap terasa premium
-      // dan konsisten dengan identitas visual Leosiqra (serif display + indigo/slate).
       return (
         <div className="fixed inset-0 z-[9999] bg-slate-950 overflow-y-auto overflow-x-hidden">
           <div
@@ -146,8 +141,8 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
                 Leosiqra Sedang Ditingkatkan
               </h1>
               <p className="text-slate-400 font-medium leading-relaxed text-[15px] [text-wrap:balance] mb-8">
-                Kami sedang melakukan pemeliharaan sistem untuk pengalaman yang lebih baik.
-                Mohon maaf atas ketidaknyamanannya — layanan akan segera aktif kembali.
+                Kami sedang melakukan pemeliharaan sistem untuk pengalaman yang lebih baik. Mohon maaf atas
+                ketidaknyamanannya — layanan akan segera aktif kembali.
               </p>
 
               {normalizedWhatsApp && (

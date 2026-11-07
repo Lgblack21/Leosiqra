@@ -1,11 +1,4 @@
-import { 
-  doc, 
-  getDoc, 
-  setDoc, 
-  onSnapshot,
-  updateDoc,
-  increment 
-} from '@/lib/cf-firestore';
+import { doc, getDoc, setDoc, onSnapshot, updateDoc, increment } from '@/lib/cf-firestore';
 import { db } from '../cf-client';
 
 export interface UserProfile {
@@ -33,7 +26,7 @@ const COLLECTION_NAME = 'users';
 export const getUserProfile = async (uid: string) => {
   const docRef = doc(db, COLLECTION_NAME, uid);
   const docSnap = await getDoc(docRef);
-  
+
   if (docSnap.exists()) {
     return { uid: docSnap.id, ...docSnap.data() } as UserProfile;
   }
@@ -42,7 +35,8 @@ export const getUserProfile = async (uid: string) => {
 
 export const subscribeUserProfile = (uid: string, callback: (profile: UserProfile | null) => void) => {
   const docRef = doc(db, COLLECTION_NAME, uid);
-  return onSnapshot(docRef, 
+  return onSnapshot(
+    docRef,
     (doc) => {
       if (doc.exists()) {
         callback({ uid: doc.id, ...doc.data() } as UserProfile);
@@ -51,9 +45,9 @@ export const subscribeUserProfile = (uid: string, callback: (profile: UserProfil
       }
     },
     (error) => {
-      console.warn("Permasalahan perizinan pada profile user (diabaikan):", error.message);
+      console.warn('Permasalahan perizinan pada profile user (diabaikan):', error.message);
       callback(null);
-    }
+    },
   );
 };
 
@@ -64,18 +58,17 @@ export const updateUserProfile = async (uid: string, data: Partial<UserProfile>)
 
 export const updateMemberTotals = async (userId: string, type: string, actualAmount: number) => {
   const userRef = doc(db, COLLECTION_NAME, userId);
-  
+
   const updates: Record<string, unknown> = {};
-  
+
   if (type === 'pemasukan') updates.totalIncome = increment(actualAmount);
   if (type === 'pengeluaran') updates.totalExpenses = increment(actualAmount);
   if (type === 'tabungan') updates.totalSavings = increment(actualAmount);
   if (type === 'investasi') updates.totalInvestment = increment(actualAmount);
-  
+
   // Calculate wealth (income - expenses)
   if (type === 'pemasukan') updates.totalWealth = increment(actualAmount);
   if (type === 'pengeluaran') updates.totalWealth = increment(-actualAmount);
-  
+
   await updateDoc(userRef, updates);
 };
-

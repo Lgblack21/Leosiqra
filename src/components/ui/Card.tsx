@@ -4,15 +4,15 @@ import { cn } from '@/lib/utils';
 // Permukaan dasar semua kartu di /membership — satu radius, border, dan
 // shadow yang sama supaya halaman gak lagi campur [20px]/[24px]/[32px].
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn('bg-white rounded-card border border-slate-100 shadow-sm', className)}
-      {...props}
-    />
-  );
+  return <div className={cn('bg-white rounded-card border border-slate-100 shadow-sm', className)} {...props} />;
 }
 
-export function CardHeader({ title, icon, action, className }: {
+export function CardHeader({
+  title,
+  icon,
+  action,
+  className,
+}: {
   title: React.ReactNode;
   icon?: React.ReactNode;
   action?: React.ReactNode;

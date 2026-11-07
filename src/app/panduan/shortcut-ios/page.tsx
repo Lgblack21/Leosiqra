@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Smartphone, ArrowRight } from "lucide-react";
-import { Navbar } from "@/components/Navbar";
-import { LandingFooter } from "@/components/LandingFooter";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Smartphone, ArrowRight } from 'lucide-react';
+import { Navbar } from '@/components/Navbar';
+import { LandingFooter } from '@/components/LandingFooter';
 
 // Halaman panduan Shortcut iOS ini sudah dipensiunkan: Shortcuts butuh file
 // bertanda-tangan (tidak bisa dibuat server) dan tetap ribet dirakit manual, jadi
@@ -16,7 +16,7 @@ export default function ShortcutIosRedirectPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const t = setTimeout(() => router.replace("/input-cepat"), 1500);
+    const t = setTimeout(() => router.replace('/input-cepat'), 1500);
     return () => clearTimeout(t);
   }, [router]);
 
@@ -32,7 +32,7 @@ export default function ShortcutIosRedirectPage() {
             Sekarang lebih gampang
           </h1>
           <p className="text-sm text-slate-500 font-medium leading-relaxed mb-8">
-            Cara Shortcut iOS sudah diganti dengan <strong>Input Cepat</strong> — halaman web yang jalan di{" "}
+            Cara Shortcut iOS sudah diganti dengan <strong>Input Cepat</strong> — halaman web yang jalan di{' '}
             <strong>iPhone maupun Android</strong>, tanpa app Shortcuts dan tanpa token. Mengalihkan otomatis…
           </p>
           <Link

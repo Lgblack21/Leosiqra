@@ -7,10 +7,26 @@ import { cloudflareApi } from '@/lib/cloudflare-api';
 const RULES: { keys: string[]; emoji: string; tile: string }[] = [
   { keys: ['kopi', 'coffee', 'cafe'], emoji: '☕', tile: 'bg-amber-50' },
   { keys: ['makan', 'minum', 'kuliner', 'resto', 'jajan', 'snack'], emoji: '🍛', tile: 'bg-orange-50' },
-  { keys: ['transport', 'ojek', 'bensin', 'bbm', 'parkir', 'tol', 'grab', 'gojek', 'kendaraan'], emoji: '🛵', tile: 'bg-indigo-50' },
-  { keys: ['belanja', 'groceries', 'supermarket', 'shopping', 'pakaian', 'fashion'], emoji: '🛒', tile: 'bg-emerald-50' },
-  { keys: ['listrik', 'pln', 'air', 'pdam', 'internet', 'wifi', 'pulsa', 'tagihan', 'langganan'], emoji: '💡', tile: 'bg-yellow-50' },
-  { keys: ['hiburan', 'film', 'netflix', 'spotify', 'game', 'nonton', 'liburan', 'wisata'], emoji: '🎬', tile: 'bg-violet-50' },
+  {
+    keys: ['transport', 'ojek', 'bensin', 'bbm', 'parkir', 'tol', 'grab', 'gojek', 'kendaraan'],
+    emoji: '🛵',
+    tile: 'bg-indigo-50',
+  },
+  {
+    keys: ['belanja', 'groceries', 'supermarket', 'shopping', 'pakaian', 'fashion'],
+    emoji: '🛒',
+    tile: 'bg-emerald-50',
+  },
+  {
+    keys: ['listrik', 'pln', 'air', 'pdam', 'internet', 'wifi', 'pulsa', 'tagihan', 'langganan'],
+    emoji: '💡',
+    tile: 'bg-yellow-50',
+  },
+  {
+    keys: ['hiburan', 'film', 'netflix', 'spotify', 'game', 'nonton', 'liburan', 'wisata'],
+    emoji: '🎬',
+    tile: 'bg-violet-50',
+  },
   { keys: ['rumah', 'sewa', 'kos', 'kontrakan', 'tempat tinggal'], emoji: '🏠', tile: 'bg-sky-50' },
   { keys: ['cicilan', 'kredit', 'angsuran', 'hutang', 'pinjaman'], emoji: '📆', tile: 'bg-rose-50' },
   { keys: ['kesehatan', 'obat', 'dokter', 'rumah sakit', 'apotek', 'bpjs'], emoji: '💊', tile: 'bg-teal-50' },
@@ -37,7 +53,7 @@ export function categoryVisual(category?: string, type?: string): { emoji: strin
   return { emoji: '🧾', tile: 'bg-slate-100' };
 }
 
-// ---- Ikon & warna pilihan user (disimpan di preferensi akun) ----------------
+// Ikon & warna pilihan user (disimpan di preferensi akun).
 // Komponen yang memakai categoryVisual memanggil useCategoryStyles() supaya
 // ikut tergambar ulang begitu gaya dimuat/diubah.
 
@@ -57,10 +73,54 @@ export const CATEGORY_COLORS: Record<string, { tile: string; swatch: string }> =
 };
 
 export const CATEGORY_ICONS = [
-  '🍜', '🍽️', '☕', '🧋', '🍔', '🍕', '🛒', '🛍️', '👕', '👟', '💄', '🎁',
-  '🛵', '🚕', '🚗', '⛽', '🚆', '✈️', '🏠', '🛋️', '💡', '💧', '📱', '💻',
-  '🧾', '💳', '🏦', '💰', '💵', '💼', '📈', '🐷', '🎬', '🎮', '🎵', '📚',
-  '💊', '🏥', '🏋️', '👶', '🐱', '🤝', '🤲', '🛡️', '📆', '🔁', '✨', '🎉',
+  '🍜',
+  '🍽️',
+  '☕',
+  '🧋',
+  '🍔',
+  '🍕',
+  '🛒',
+  '🛍️',
+  '👕',
+  '👟',
+  '💄',
+  '🎁',
+  '🛵',
+  '🚕',
+  '🚗',
+  '⛽',
+  '🚆',
+  '✈️',
+  '🏠',
+  '🛋️',
+  '💡',
+  '💧',
+  '📱',
+  '💻',
+  '🧾',
+  '💳',
+  '🏦',
+  '💰',
+  '💵',
+  '💼',
+  '📈',
+  '🐷',
+  '🎬',
+  '🎮',
+  '🎵',
+  '📚',
+  '💊',
+  '🏥',
+  '🏋️',
+  '👶',
+  '🐱',
+  '🤝',
+  '🤲',
+  '🛡️',
+  '📆',
+  '🔁',
+  '✨',
+  '🎉',
 ];
 
 export type CategoryStyle = { emoji: string; color: string };
@@ -75,32 +135,50 @@ const emit = () => listeners.forEach((l) => l());
 const LEGACY_KIND_KEY = 'leosiqra-category-kind';
 const migrateLegacyKinds = () => {
   let legacy: Record<string, CategoryKind> = {};
-  try { legacy = JSON.parse(localStorage.getItem(LEGACY_KIND_KEY) || '{}') as Record<string, CategoryKind>; } catch { return; }
+  try {
+    legacy = JSON.parse(localStorage.getItem(LEGACY_KIND_KEY) || '{}') as Record<string, CategoryKind>;
+  } catch {
+    return;
+  }
   const entries = Object.entries(legacy).filter(([, k]) => k === 'pengeluaran' || k === 'pemasukan');
   if (!entries.length) return;
   // Nama di petunjuk lama huruf kecil; cocokkan ke nama asli yang sudah dikenal kalau ada.
-  const merge = Object.fromEntries(entries.map(([n, k]) => [Object.keys(styles).find((s) => s.toLowerCase() === n) ?? n, k]));
-  cloudflareApi<{ item?: { categoryKinds?: Record<string, CategoryKind> } }>('/api/member/preferences', { method: 'PUT', json: { categoryKindsMerge: merge } })
+  const merge = Object.fromEntries(
+    entries.map(([n, k]) => [Object.keys(styles).find((s) => s.toLowerCase() === n) ?? n, k]),
+  );
+  cloudflareApi<{ item?: { categoryKinds?: Record<string, CategoryKind> } }>('/api/member/preferences', {
+    method: 'PUT',
+    json: { categoryKindsMerge: merge },
+  })
     .then((r) => {
       kinds = r.item?.categoryKinds ?? kinds;
       emit();
-      try { localStorage.removeItem(LEGACY_KIND_KEY); } catch { /* abaikan */ }
+      try {
+        localStorage.removeItem(LEGACY_KIND_KEY);
+      } catch {
+        /* abaikan */
+      }
     })
     .catch(() => undefined);
 };
 
 const fetchPrefs = () =>
-  cloudflareApi<{ item?: { categoryStyles?: Record<string, CategoryStyle>; categoryKinds?: Record<string, CategoryKind> } }>('/api/member/preferences')
-    .then((r) => {
-      styles = r.item?.categoryStyles ?? {};
-      kinds = r.item?.categoryKinds ?? {};
-      emit();
-    });
+  cloudflareApi<{
+    item?: { categoryStyles?: Record<string, CategoryStyle>; categoryKinds?: Record<string, CategoryKind> };
+  }>('/api/member/preferences').then((r) => {
+    styles = r.item?.categoryStyles ?? {};
+    kinds = r.item?.categoryKinds ?? {};
+    emit();
+  });
 
 const load = () => {
   if (loaded) return;
   loaded = true;
-  fetchPrefs().then(migrateLegacyKinds).catch(() => { loaded = false; });
+  fetchPrefs()
+    .then(migrateLegacyKinds)
+    .catch(() => {
+      loaded = false;
+    });
 };
 
 // Dipanggil setelah template kategori diterapkan server (ikon & jenis baru).
@@ -108,7 +186,13 @@ export const reloadCategoryPrefs = () => fetchPrefs().catch(() => undefined);
 
 export function useCategoryKinds() {
   return useSyncExternalStore(
-    (cb) => { listeners.add(cb); load(); return () => { listeners.delete(cb); }; },
+    (cb) => {
+      listeners.add(cb);
+      load();
+      return () => {
+        listeners.delete(cb);
+      };
+    },
     () => kinds,
     () => kinds,
   );
@@ -130,7 +214,13 @@ export async function setCategoryKind(name: string, kind: CategoryKind) {
 
 export function useCategoryStyles() {
   return useSyncExternalStore(
-    (cb) => { listeners.add(cb); load(); return () => { listeners.delete(cb); }; },
+    (cb) => {
+      listeners.add(cb);
+      load();
+      return () => {
+        listeners.delete(cb);
+      };
+    },
     () => styles,
     () => styles,
   );
@@ -143,11 +233,15 @@ export const getCategoryStyle = (name: string): CategoryStyle | undefined => sty
 export async function setCategoryStyle(name: string, style: CategoryStyle | null) {
   const prev = styles;
   const next = { ...styles };
-  if (style) next[name] = style; else delete next[name];
+  if (style) next[name] = style;
+  else delete next[name];
   styles = next;
   emit();
   try {
-    await cloudflareApi('/api/member/preferences', { method: 'PUT', json: { categoryStyle: style ? { name, ...style } : { name, remove: true } } });
+    await cloudflareApi('/api/member/preferences', {
+      method: 'PUT',
+      json: { categoryStyle: style ? { name, ...style } : { name, remove: true } },
+    });
   } catch (e) {
     styles = prev;
     emit();

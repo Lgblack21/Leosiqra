@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useState } from 'react';
 import {
@@ -23,9 +23,14 @@ import {
   RefreshCw,
   Paperclip,
   AlarmClock,
+  ShieldCheck as ShieldWarranty,
+  Radar as RadarNotify,
   Moon,
   TrendingUp,
   CalendarDays,
+  Target,
+  Repeat,
+  Layers,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { auth, db } from '@/lib/cf-client';
@@ -46,15 +51,16 @@ import {
   unsubscribeFromPush,
 } from '@/lib/pushNotifications';
 
-// Bagian akun di panel Pengaturan (dulu halaman /membership/profile):
-// Kontak, Keamanan (password, 2FA, perangkat), Notifikasi, Aplikasi
-// terhubung (MCP), dan Input Cepat & reset data. Logika & endpoint sama
-// persis dengan halaman lama — hanya dipindah tempat & tampilannya.
+// Bagian akun di panel Pengaturan: Kontak, Keamanan (password, 2FA, perangkat),
+// Notifikasi, Aplikasi terhubung (MCP), dan Input Cepat & reset data.
 
 export type AccountView = 'kontak' | 'keamanan' | 'notifikasi' | 'ai' | 'lainnya';
 
 // Jam pengingat tutup hari: tiap 30 menit 18:00–23:00 (cron tiap 10 menit di Worker).
-const REMINDER_TIMES = Array.from({ length: 11 }, (_, i) => `${String(18 + Math.floor(i / 2)).padStart(2, '0')}:${i % 2 ? '30' : '00'}`);
+const REMINDER_TIMES = Array.from(
+  { length: 11 },
+  (_, i) => `${String(18 + Math.floor(i / 2)).padStart(2, '0')}:${i % 2 ? '30' : '00'}`,
+);
 const RESET_CONFIRM_WORD = 'HAPUS SEMUA DATA';
 
 interface SessionInfo {
@@ -67,12 +73,26 @@ interface SessionInfo {
 }
 
 const Group = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-  <div className={cn('divide-y divide-slate-200/60 overflow-hidden rounded-[22px] bg-slate-50', className)}>{children}</div>
+  <div className={cn('divide-y divide-slate-200/60 overflow-hidden rounded-[22px] bg-slate-50', className)}>
+    {children}
+  </div>
 );
 
-const Label = ({ children }: { children: React.ReactNode }) => <p className="px-1 pb-2 pt-1 text-[14px] text-slate-500">{children}</p>;
+const Label = ({ children }: { children: React.ReactNode }) => (
+  <p className="px-1 pb-2 pt-1 text-[14px] text-slate-500">{children}</p>
+);
 
-function Toggle({ on, onClick, label, disabled }: { on: boolean; onClick: () => void; label: string; disabled?: boolean }) {
+function Toggle({
+  on,
+  onClick,
+  label,
+  disabled,
+}: {
+  on: boolean;
+  onClick: () => void;
+  label: string;
+  disabled?: boolean;
+}) {
   return (
     <button
       type="button"
@@ -80,14 +100,34 @@ function Toggle({ on, onClick, label, disabled }: { on: boolean; onClick: () => 
       disabled={disabled}
       aria-label={label}
       aria-pressed={on}
-      className={cn('relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-60', on ? 'bg-emerald-500' : 'bg-slate-300')}
+      className={cn(
+        'relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-60',
+        on ? 'bg-emerald-500' : 'bg-slate-300',
+      )}
     >
-      <span className={cn('absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all', on ? 'right-1' : 'left-1')} />
+      <span
+        className={cn(
+          'absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all',
+          on ? 'right-1' : 'left-1',
+        )}
+      />
     </button>
   );
 }
 
-function Row({ icon: Icon, title, desc, action, children }: { icon: React.ElementType; title: string; desc?: string; action?: React.ReactNode; children?: React.ReactNode }) {
+function Row({
+  icon: Icon,
+  title,
+  desc,
+  action,
+  children,
+}: {
+  icon: React.ElementType;
+  title: string;
+  desc?: string;
+  action?: React.ReactNode;
+  children?: React.ReactNode;
+}) {
   return (
     <div className="space-y-2 px-5 py-4">
       <div className="flex items-center gap-4">
@@ -103,7 +143,8 @@ function Row({ icon: Icon, title, desc, action, children }: { icon: React.Elemen
   );
 }
 
-const pill = 'shrink-0 rounded-full bg-white px-4 py-2 text-[14px] font-semibold text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100 disabled:opacity-60';
+const pill =
+  'shrink-0 rounded-full bg-white px-4 py-2 text-[14px] font-semibold text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100 disabled:opacity-60';
 
 // Profil yang dibutuhkan bagian ini (email, HP, alamat, status 2FA).
 function useAccountProfile() {
@@ -117,7 +158,12 @@ function useAccountProfile() {
       if (!u) return;
       unsubProfile = subscribeUserProfile(u.uid, (data) => {
         if (!data) return;
-        const extra = data as typeof data & { whatsapp?: string; phone?: string; address?: string; twoFactorEnabled?: number | boolean | null };
+        const extra = data as typeof data & {
+          whatsapp?: string;
+          phone?: string;
+          address?: string;
+          twoFactorEnabled?: number | boolean | null;
+        };
         setProfile({
           email: data.email || u.email || '',
           phone: extra.whatsapp || extra.phone || '',
@@ -126,7 +172,10 @@ function useAccountProfile() {
         });
       });
     });
-    return () => { unsubAuth(); unsubProfile?.(); };
+    return () => {
+      unsubAuth();
+      unsubProfile?.();
+    };
   }, []);
   return { user, profile, setProfile };
 }
@@ -140,7 +189,11 @@ function KontakView() {
     setSaving(true);
     try {
       // Hanya kontak — nama/foto/username diubah di Ubah profil.
-      await setDoc(doc(db, 'users', user.uid), { phone: profile.phone, address: profile.address, updatedAt: new Date() }, { merge: true });
+      await setDoc(
+        doc(db, 'users', user.uid),
+        { phone: profile.phone, address: profile.address, updatedAt: new Date() },
+        { merge: true },
+      );
       toast.success('Kontak disimpan.');
     } catch (e) {
       console.error(e);
@@ -149,25 +202,49 @@ function KontakView() {
       setSaving(false);
     }
   };
-  const input = 'mt-1.5 w-full rounded-2xl bg-white px-4 py-3 text-[16px] ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400';
+  const input =
+    'mt-1.5 w-full rounded-2xl bg-white px-4 py-3 text-[16px] ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-400';
   return (
     <div className="space-y-4">
       <div className="space-y-3 rounded-[22px] bg-slate-50 p-4">
         <label className="block">
-          <span className="flex items-center gap-1.5 px-1 text-[14px] text-slate-500"><Mail size={14} /> Email</span>
+          <span className="flex items-center gap-1.5 px-1 text-[14px] text-slate-500">
+            <Mail size={14} /> Email
+          </span>
           <input value={profile.email} disabled className={cn(input, 'text-slate-400')} />
           <span className="mt-1 block px-1 text-[12px] text-slate-400">Email tidak bisa diubah.</span>
         </label>
         <label className="block">
-          <span className="flex items-center gap-1.5 px-1 text-[14px] text-slate-500"><Phone size={14} /> Nomor HP</span>
-          <input value={profile.phone} onChange={(e) => setProfile((p) => ({ ...p, phone: e.target.value }))} placeholder="+62 …" inputMode="tel" className={input} />
+          <span className="flex items-center gap-1.5 px-1 text-[14px] text-slate-500">
+            <Phone size={14} /> Nomor HP
+          </span>
+          <input
+            value={profile.phone}
+            onChange={(e) => setProfile((p) => ({ ...p, phone: e.target.value }))}
+            placeholder="+62 …"
+            inputMode="tel"
+            className={input}
+          />
         </label>
         <label className="block">
-          <span className="flex items-center gap-1.5 px-1 text-[14px] text-slate-500"><MapPin size={14} /> Alamat</span>
-          <textarea rows={3} value={profile.address} onChange={(e) => setProfile((p) => ({ ...p, address: e.target.value }))} placeholder="Jl. …" className={cn(input, 'resize-none')} />
+          <span className="flex items-center gap-1.5 px-1 text-[14px] text-slate-500">
+            <MapPin size={14} /> Alamat
+          </span>
+          <textarea
+            rows={3}
+            value={profile.address}
+            onChange={(e) => setProfile((p) => ({ ...p, address: e.target.value }))}
+            placeholder="Jl. …"
+            className={cn(input, 'resize-none')}
+          />
         </label>
       </div>
-      <button type="button" onClick={save} disabled={saving || !user} className="w-full rounded-full bg-slate-900 py-3.5 text-[16px] font-bold text-white disabled:opacity-60">
+      <button
+        type="button"
+        onClick={save}
+        disabled={saving || !user}
+        className="w-full rounded-full bg-slate-900 py-3.5 text-[16px] font-bold text-white disabled:opacity-60"
+      >
         {saving ? 'Menyimpan…' : 'Simpan'}
       </button>
     </div>
@@ -195,7 +272,12 @@ function KeamananView() {
   }, []);
 
   const revoke = async (id: string) => {
-    const ok = await confirm({ title: 'Keluarkan perangkat ini?', message: 'Perangkat tersebut harus masuk lagi untuk memakai Leosiqra.', confirmLabel: 'Keluarkan', danger: true });
+    const ok = await confirm({
+      title: 'Keluarkan perangkat ini?',
+      message: 'Perangkat tersebut harus masuk lagi untuk memakai Leosiqra.',
+      confirmLabel: 'Keluarkan',
+      danger: true,
+    });
     if (!ok) return;
     setRevoking(id);
     try {
@@ -220,7 +302,10 @@ function KeamananView() {
   };
 
   const disable2FA = async () => {
-    if (!disablePw) { setDisableErr('Masukkan password saat ini.'); return; }
+    if (!disablePw) {
+      setDisableErr('Masukkan password saat ini.');
+      return;
+    }
     setDisableLoading(true);
     setDisableErr('');
     try {
@@ -235,7 +320,10 @@ function KeamananView() {
     }
   };
 
-  const fmt = (iso: string) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
+  const fmt = (iso: string) =>
+    new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(
+      new Date(iso),
+    );
 
   return (
     <div className="space-y-4">
@@ -244,18 +332,38 @@ function KeamananView() {
         <Row
           icon={Lock}
           title="Kata sandi"
-          desc={user?.hasPassword === false ? 'Akun ini masuk dengan Google — buat kata sandi agar bisa masuk dengan email juga.' : 'Mengganti kata sandi memutus semua koneksi AI.'}
-          action={<button type="button" onClick={() => setShowPassword(true)} className={pill}>{user?.hasPassword === false ? 'Buat' : 'Ganti'}</button>}
+          desc={
+            user?.hasPassword === false
+              ? 'Akun ini masuk dengan Google — buat kata sandi agar bisa masuk dengan email juga.'
+              : 'Mengganti kata sandi memutus semua koneksi AI.'
+          }
+          action={
+            <button type="button" onClick={() => setShowPassword(true)} className={pill}>
+              {user?.hasPassword === false ? 'Buat' : 'Ganti'}
+            </button>
+          }
         />
         <Row
           icon={KeyRound}
           title="Verifikasi 2 langkah"
-          desc={profile.twoFactorEnabled ? 'Aktif — kode authenticator diminta tiap masuk.' : 'Belum aktif — tambahkan kode authenticator saat masuk.'}
+          desc={
+            profile.twoFactorEnabled
+              ? 'Aktif — kode authenticator diminta tiap masuk.'
+              : 'Belum aktif — tambahkan kode authenticator saat masuk.'
+          }
           action={
             profile.twoFactorEnabled ? (
-              <button type="button" onClick={() => setShow2FADisable(true)} className={pill}>Nonaktifkan</button>
+              <button type="button" onClick={() => setShow2FADisable(true)} className={pill}>
+                Nonaktifkan
+              </button>
             ) : (
-              <button type="button" onClick={() => setShow2FASetup(true)} className="shrink-0 rounded-full bg-slate-900 px-4 py-2 text-[14px] font-semibold text-white">Aktifkan</button>
+              <button
+                type="button"
+                onClick={() => setShow2FASetup(true)}
+                className="shrink-0 rounded-full bg-slate-900 px-4 py-2 text-[14px] font-semibold text-white"
+              >
+                Aktifkan
+              </button>
             )
           }
         />
@@ -270,17 +378,34 @@ function KeamananView() {
         ) : (
           sessions.map((s) => (
             <div key={s.id} className="flex items-center gap-4 px-5 py-3.5">
-              {s.isPermanent ? <Smartphone size={20} className="shrink-0 text-slate-500" /> : <Monitor size={20} className="shrink-0 text-slate-500" />}
+              {s.isPermanent ? (
+                <Smartphone size={20} className="shrink-0 text-slate-500" />
+              ) : (
+                <Monitor size={20} className="shrink-0 text-slate-500" />
+              )}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[15px] font-medium text-slate-900">
                   {s.device}
-                  {s.isCurrent && <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">Perangkat ini</span>}
-                  {s.isPermanent && <span className="ml-2 rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">Aplikasi</span>}
+                  {s.isCurrent && (
+                    <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                      Perangkat ini
+                    </span>
+                  )}
+                  {s.isPermanent && (
+                    <span className="ml-2 rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">
+                      Aplikasi
+                    </span>
+                  )}
                 </p>
                 <p className="text-[13px] text-slate-500">Aktif terakhir {fmt(s.lastSeenAt)}</p>
               </div>
               {!s.isCurrent && (
-                <button type="button" onClick={() => revoke(s.id)} disabled={revoking === s.id} className={cn(pill, 'flex items-center gap-1.5 hover:text-rose-600')}>
+                <button
+                  type="button"
+                  onClick={() => revoke(s.id)}
+                  disabled={revoking === s.id}
+                  className={cn(pill, 'flex items-center gap-1.5 hover:text-rose-600')}
+                >
                   {revoking === s.id ? <Loader2 size={14} className="animate-spin" /> : <LogOut size={14} />} Keluarkan
                 </button>
               )}
@@ -289,19 +414,46 @@ function KeamananView() {
         )}
       </Group>
 
-      <ChangePasswordModal isOpen={showPassword} onClose={() => setShowPassword(false)} hasPassword={user?.hasPassword} />
-      <TwoFactorModal isOpen={show2FASetup} onClose={() => setShow2FASetup(false)} mode="setup" email={profile.email || user?.email || ''} onVerify={enable2FA} />
+      <ChangePasswordModal
+        isOpen={showPassword}
+        onClose={() => setShowPassword(false)}
+        hasPassword={user?.hasPassword}
+      />
+      <TwoFactorModal
+        isOpen={show2FASetup}
+        onClose={() => setShow2FASetup(false)}
+        mode="setup"
+        email={profile.email || user?.email || ''}
+        onVerify={enable2FA}
+      />
       <Modal
         isOpen={show2FADisable}
-        onClose={() => { setShow2FADisable(false); setDisablePw(''); setDisableErr(''); }}
+        onClose={() => {
+          setShow2FADisable(false);
+          setDisablePw('');
+          setDisableErr('');
+        }}
         title="Nonaktifkan 2FA"
         maxWidth="max-w-sm"
       >
         <div className="space-y-4">
-          <p className="text-sm text-slate-500">Menonaktifkan 2FA mengurangi keamanan akun. Masukkan kata sandi saat ini untuk melanjutkan.</p>
+          <p className="text-sm text-slate-500">
+            Menonaktifkan 2FA mengurangi keamanan akun. Masukkan kata sandi saat ini untuk melanjutkan.
+          </p>
           {disableErr && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-600">{disableErr}</p>}
-          <input type="password" value={disablePw} onChange={(e) => setDisablePw(e.target.value)} placeholder="Kata sandi saat ini" className="w-full rounded-xl bg-slate-50 px-4 py-3 text-sm ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-300" />
-          <button type="button" onClick={disable2FA} disabled={disableLoading} className="w-full rounded-full bg-rose-600 py-3 text-sm font-bold text-white disabled:bg-slate-300">
+          <input
+            type="password"
+            value={disablePw}
+            onChange={(e) => setDisablePw(e.target.value)}
+            placeholder="Kata sandi saat ini"
+            className="w-full rounded-xl bg-slate-50 px-4 py-3 text-sm ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-indigo-300"
+          />
+          <button
+            type="button"
+            onClick={disable2FA}
+            disabled={disableLoading}
+            className="w-full rounded-full bg-rose-600 py-3 text-sm font-bold text-white disabled:bg-slate-300"
+          >
             {disableLoading ? 'Memproses…' : 'Nonaktifkan 2FA'}
           </button>
         </div>
@@ -331,15 +483,33 @@ function NotifikasiView() {
   useEffect(() => {
     setSupported(isPushSupported());
     setIosNeedsInstall(isIosNeedsInstall());
-    getExistingSubscription().then((sub) => setPushOn(Boolean(sub))).catch(() => setPushOn(false));
-    cloudflareApi<{ item: { reminder: { on: boolean; time: string }; notify?: Record<NotifyKey, boolean> } }>('/api/member/preferences')
+    getExistingSubscription()
+      .then((sub) => setPushOn(Boolean(sub)))
+      .catch(() => setPushOn(false));
+    cloudflareApi<{ item: { reminder: { on: boolean; time: string }; notify?: Record<NotifyKey, boolean> } }>(
+      '/api/member/preferences',
+    )
       .then((res) => {
         setReminder(res.item.reminder);
-        setNotify(res.item.notify ?? { reminders: true, summary: true, weekly: true, monthly: true });
+        setNotify({
+          reminders: true,
+          summary: true,
+          weekly: true,
+          monthly: true,
+          budget: true,
+          bills: true,
+          warranty: true,
+          subscriptions: true,
+          collectibles: true,
+          ...(res.item.notify ?? {}),
+        });
       })
       .catch(() => setReminder(null));
     cloudflareApi<{ enabled: boolean; available: boolean }>('/api/member/email-report')
-      .then((res) => { setReportOn(res.enabled); setReportAvailable(res.available); })
+      .then((res) => {
+        setReportOn(res.enabled);
+        setReportAvailable(res.available);
+      })
       .catch(() => setReportAvailable(false))
       .finally(() => setReportLoading(false));
   }, []);
@@ -348,7 +518,13 @@ function NotifikasiView() {
     setPushError('');
     setPushLoading(true);
     try {
-      if (pushOn) { await unsubscribeFromPush(); setPushOn(false); } else { await subscribeToPush(); setPushOn(true); }
+      if (pushOn) {
+        await unsubscribeFromPush();
+        setPushOn(false);
+      } else {
+        await subscribeToPush();
+        setPushOn(true);
+      }
     } catch (e) {
       setPushError(e instanceof Error ? e.message : 'Gagal mengubah notifikasi.');
     } finally {
@@ -360,7 +536,10 @@ function NotifikasiView() {
     setReminderError('');
     setReminderSaving(true);
     try {
-      const res = await cloudflareApi<{ item: { reminder: { on: boolean; time: string } } }>('/api/member/preferences', { method: 'PUT', json: { reminder: next } });
+      const res = await cloudflareApi<{ item: { reminder: { on: boolean; time: string } } }>(
+        '/api/member/preferences',
+        { method: 'PUT', json: { reminder: next } },
+      );
       setReminder(res.item.reminder);
     } catch (e) {
       setReminderError(e instanceof Error ? e.message : 'Gagal menyimpan pengingat.');
@@ -374,7 +553,10 @@ function NotifikasiView() {
     setNotifyError('');
     setNotifySaving(key);
     try {
-      const res = await cloudflareApi<{ item: { notify: Record<NotifyKey, boolean> } }>('/api/member/preferences', { method: 'PUT', json: { notify: { [key]: !notify[key] } } });
+      const res = await cloudflareApi<{ item: { notify: Record<NotifyKey, boolean> } }>('/api/member/preferences', {
+        method: 'PUT',
+        json: { notify: { [key]: !notify[key] } },
+      });
       setNotify(res.item.notify);
     } catch (e) {
       setNotifyError(e instanceof Error ? e.message : 'Gagal menyimpan pilihan notifikasi.');
@@ -387,7 +569,10 @@ function NotifikasiView() {
     setReportError('');
     setReportLoading(true);
     try {
-      const res = await cloudflareApi<{ enabled: boolean }>('/api/member/email-report', { method: 'PUT', json: { enabled: !reportOn } });
+      const res = await cloudflareApi<{ enabled: boolean }>('/api/member/email-report', {
+        method: 'PUT',
+        json: { enabled: !reportOn },
+      });
       setReportOn(res.enabled);
     } catch (e) {
       setReportError(e instanceof Error ? e.message : 'Gagal mengubah laporan bulanan.');
@@ -405,12 +590,21 @@ function NotifikasiView() {
           title="Notifikasi push"
           desc="Pengingat & ringkasan ke HP atau browser ini."
           action={
-            iosNeedsInstall ? <span className="text-[12px] font-semibold text-amber-600">Pasang dulu</span>
-            : !supported ? <span className="text-[12px] text-slate-400">Tidak didukung</span>
-            : <Toggle on={pushOn} onClick={togglePush} label="Notifikasi push" disabled={pushLoading} />
+            iosNeedsInstall ? (
+              <span className="text-[12px] font-semibold text-amber-600">Pasang dulu</span>
+            ) : !supported ? (
+              <span className="text-[12px] text-slate-400">Tidak didukung</span>
+            ) : (
+              <Toggle on={pushOn} onClick={togglePush} label="Notifikasi push" disabled={pushLoading} />
+            )
           }
         >
-          {iosNeedsInstall && <p className="text-[12px] text-slate-500">Di iPhone, tambahkan Leosiqra ke Home Screen dulu: Share di Safari → &quot;Add to Home Screen&quot;, lalu buka dari ikon itu.</p>}
+          {iosNeedsInstall && (
+            <p className="text-[12px] text-slate-500">
+              Di iPhone, tambahkan Leosiqra ke Home Screen dulu: Share di Safari → &quot;Add to Home Screen&quot;, lalu
+              buka dari ikon itu.
+            </p>
+          )}
           {pushError && <p className="text-[12px] text-rose-600">{pushError}</p>}
         </Row>
         {reminder && (
@@ -418,7 +612,14 @@ function NotifikasiView() {
             icon={Clock}
             title="Pengingat tutup hari"
             desc={`Tiap malam jam ${reminder.time}; tidak dikirim kalau hari itu sudah ada catatan. Butuh notifikasi push aktif.`}
-            action={<Toggle on={reminder.on} onClick={() => saveReminder({ ...reminder, on: !reminder.on })} label="Pengingat tutup hari" disabled={reminderSaving} />}
+            action={
+              <Toggle
+                on={reminder.on}
+                onClick={() => saveReminder({ ...reminder, on: !reminder.on })}
+                label="Pengingat tutup hari"
+                disabled={reminderSaving}
+              />
+            }
           >
             {reminder.on && (
               <select
@@ -428,7 +629,11 @@ function NotifikasiView() {
                 aria-label="Jam pengingat"
                 className="rounded-xl bg-white px-3 py-2 text-[14px] text-slate-800 ring-1 ring-slate-200"
               >
-                {[...new Set([...REMINDER_TIMES, reminder.time])].sort().map((t) => <option key={t} value={t}>{t}</option>)}
+                {[...new Set([...REMINDER_TIMES, reminder.time])].sort().map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
               </select>
             )}
             {reminderError && <p className="text-[12px] text-rose-600">{reminderError}</p>}
@@ -439,8 +644,11 @@ function NotifikasiView() {
           title="Laporan bulanan via email"
           desc="Ringkasan pemasukan, pengeluaran & anggaran tiap awal bulan."
           action={
-            !reportAvailable && !reportOn && !reportLoading ? <span className="text-[12px] text-slate-400">Segera</span>
-            : <Toggle on={reportOn} onClick={toggleReport} label="Laporan bulanan via email" disabled={reportLoading} />
+            !reportAvailable && !reportOn && !reportLoading ? (
+              <span className="text-[12px] text-slate-400">Segera</span>
+            ) : (
+              <Toggle on={reportOn} onClick={toggleReport} label="Laporan bulanan via email" disabled={reportLoading} />
+            )
           }
         >
           {reportError && <p className="text-[12px] text-rose-600">{reportError}</p>}
@@ -451,23 +659,99 @@ function NotifikasiView() {
           <Label>Kirim notifikasi push untuk</Label>
           <Group>
             {NOTIFY_ROWS.map((r) => (
-              <Row key={r.key} icon={r.icon} title={r.title} desc={r.desc} action={<Toggle on={notify[r.key]} onClick={() => void toggleNotify(r.key)} label={r.title} disabled={notifySaving !== null} />} />
+              <Row
+                key={r.key}
+                icon={r.icon}
+                title={r.title}
+                desc={r.desc}
+                action={
+                  <Toggle
+                    on={notify[r.key]}
+                    onClick={() => void toggleNotify(r.key)}
+                    label={r.title}
+                    disabled={notifySaving !== null}
+                  />
+                }
+              />
             ))}
           </Group>
           {notifyError && <p className="px-1 text-[12px] text-rose-600">{notifyError}</p>}
-          {!pushOn && <p className="px-1 text-[12px] text-slate-500">Pilihan ini berlaku setelah notifikasi push dinyalakan di atas.</p>}
+          {!pushOn && (
+            <p className="px-1 text-[12px] text-slate-500">
+              Pilihan ini berlaku setelah notifikasi push dinyalakan di atas.
+            </p>
+          )}
         </>
       )}
     </div>
   );
 }
 
-type NotifyKey = 'reminders' | 'summary' | 'weekly' | 'monthly';
+type NotifyKey =
+  | 'reminders'
+  | 'summary'
+  | 'weekly'
+  | 'monthly'
+  | 'budget'
+  | 'bills'
+  | 'warranty'
+  | 'subscriptions'
+  | 'collectibles';
 const NOTIFY_ROWS: { key: NotifyKey; icon: React.ElementType; title: string; desc: string }[] = [
-  { key: 'reminders', icon: AlarmClock, title: 'Pengingat buatanmu', desc: 'Saat pengingat di menu Pengingat jatuh tempo.' },
-  { key: 'summary', icon: Moon, title: 'Ringkasan harian', desc: 'Lewat tengah malam: total keluar & masuk kemarin (kalau ada catatan).' },
-  { key: 'weekly', icon: TrendingUp, title: 'Wawasan mingguan', desc: 'Senin pagi: hal paling penting dari pengeluaran 7 hari terakhir.' },
-  { key: 'monthly', icon: CalendarDays, title: 'Wawasan bulanan', desc: 'Tanggal 1: rekap masuk, keluar & kategori terbesar bulan lalu.' },
+  {
+    key: 'reminders',
+    icon: AlarmClock,
+    title: 'Pengingat buatanmu',
+    desc: 'Saat pengingat di menu Pengingat jatuh tempo.',
+  },
+  {
+    key: 'summary',
+    icon: Moon,
+    title: 'Ringkasan harian',
+    desc: 'Lewat tengah malam: total keluar & masuk kemarin (kalau ada catatan).',
+  },
+  {
+    key: 'weekly',
+    icon: TrendingUp,
+    title: 'Wawasan mingguan',
+    desc: 'Senin pagi: hal paling penting dari pengeluaran 7 hari terakhir.',
+  },
+  {
+    key: 'monthly',
+    icon: CalendarDays,
+    title: 'Wawasan bulanan',
+    desc: 'Tanggal 1: rekap masuk, keluar & kategori terbesar bulan lalu.',
+  },
+  {
+    key: 'budget',
+    icon: Target,
+    title: 'Peringatan anggaran',
+    desc: 'Saat belanja satu kategori mencapai 80% dan 100% anggarannya.',
+  },
+  {
+    key: 'bills',
+    icon: Repeat,
+    title: 'Tagihan & jatuh tempo',
+    desc: '3 hari sebelum transaksi rutin tercatat, dan H-3/H-1 jatuh tempo hutang/piutang.',
+  },
+  {
+    key: 'subscriptions',
+    icon: RadarNotify,
+    title: 'Langganan',
+    desc: 'Sehari sebelum langganan ditagih, dan 2 hari sebelum masa coba gratis habis.',
+  },
+  {
+    key: 'warranty',
+    icon: ShieldWarranty,
+    title: 'Garansi barang',
+    desc: '30 & 7 hari sebelum garansi barang di Barangku habis.',
+  },
+  {
+    key: 'collectibles',
+    icon: Layers,
+    title: 'Harga koleksi',
+    desc: 'Saat harga kartu Pokémon / item Steam di Koleksiku naik atau turun ≥ 20%.',
+  },
 ];
 
 function LainnyaView() {
@@ -482,15 +766,26 @@ function LainnyaView() {
 
   const reset = async () => {
     setError('');
-    if (user?.hasPassword !== false && !pw) { setError('Masukkan kata sandi saat ini.'); return; }
-    if (confirmText.trim().toUpperCase() !== RESET_CONFIRM_WORD) { setError(`Ketik persis "${RESET_CONFIRM_WORD}" untuk konfirmasi.`); return; }
+    if (user?.hasPassword !== false && !pw) {
+      setError('Masukkan kata sandi saat ini.');
+      return;
+    }
+    if (confirmText.trim().toUpperCase() !== RESET_CONFIRM_WORD) {
+      setError(`Ketik persis "${RESET_CONFIRM_WORD}" untuk konfirmasi.`);
+      return;
+    }
     setLoading(true);
     try {
-      await cloudflareApi('/api/member/reset-data', { method: 'POST', json: user?.hasPassword !== false ? { currentPassword: pw } : {} });
+      await cloudflareApi('/api/member/reset-data', {
+        method: 'POST',
+        json: user?.hasPassword !== false ? { currentPassword: pw } : {},
+      });
       setDone(true);
       // Muat ulang penuh supaya cache data di klien ikut bersih.
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-      setTimeout(() => { window.location.href = '/membership/dashboard'; }, 2000);
+      setTimeout(() => {
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+        window.location.href = '/membership/dashboard';
+      }, 2000);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Gagal mereset data. Coba lagi.');
     } finally {
@@ -506,7 +801,9 @@ function LainnyaView() {
           <Smartphone size={20} className="shrink-0 text-slate-500" />
           <span className="min-w-0 flex-1">
             <span className="block text-[16px] font-medium text-slate-900">Buka Input Cepat</span>
-            <span className="block text-[13px] text-slate-500">Catat dari HP — tambahkan ke layar utama biar tinggal tap.</span>
+            <span className="block text-[13px] text-slate-500">
+              Catat dari HP — tambahkan ke layar utama biar tinggal tap.
+            </span>
           </span>
           <ChevronRight size={18} className="text-slate-400" />
         </a>
@@ -523,44 +820,88 @@ function LainnyaView() {
       <Label>Zona berbahaya</Label>
       <div className="space-y-3 rounded-[22px] bg-rose-50 p-4">
         <p className="text-[13px] leading-relaxed text-rose-700/90">
-          Menghapus permanen semua transaksi, rekening, anggaran, investasi, tabungan, kategori, mata uang, transaksi rutin, dan riwayat chat AI. Akun (login, paket, riwayat pembayaran) tidak terhapus.
+          Menghapus permanen semua transaksi, rekening, anggaran, investasi, tabungan, kategori, mata uang, transaksi
+          rutin, dan riwayat chat AI. Akun (login, paket, riwayat pembayaran) tidak terhapus.
         </p>
-        <button type="button" onClick={() => setOpen(true)} className="flex w-full items-center justify-center gap-2 rounded-full bg-rose-600 py-3 text-[15px] font-bold text-white hover:bg-rose-700">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-rose-600 py-3 text-[15px] font-bold text-white hover:bg-rose-700"
+        >
           <Trash2 size={16} /> Reset semua data
         </button>
       </div>
 
       <Modal
         isOpen={open}
-        onClose={() => { setOpen(false); setPw(''); setConfirmText(''); setError(''); setDone(false); }}
+        onClose={() => {
+          setOpen(false);
+          setPw('');
+          setConfirmText('');
+          setError('');
+          setDone(false);
+        }}
         title="Reset Semua Data"
         maxWidth="max-w-md"
       >
         {done ? (
-          <p className="rounded-xl bg-emerald-50 p-5 text-center text-sm text-emerald-700">Semua data berhasil dihapus. Mengalihkan ke Ringkasan…</p>
+          <p className="rounded-xl bg-emerald-50 p-5 text-center text-sm text-emerald-700">
+            Semua data berhasil dihapus. Mengalihkan ke Ringkasan…
+          </p>
         ) : (
           <div className="space-y-4">
             <div className="flex items-start gap-3 rounded-xl bg-rose-50 p-4">
               <AlertTriangle size={18} className="mt-0.5 shrink-0 text-rose-500" />
-              <p className="text-xs leading-relaxed text-rose-600">Tindakan ini <strong>permanen dan tidak bisa dibatalkan</strong>. Akun login tetap ada.</p>
+              <p className="text-xs leading-relaxed text-rose-600">
+                Tindakan ini <strong>permanen dan tidak bisa dibatalkan</strong>. Akun login tetap ada.
+              </p>
             </div>
             {error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-600">{error}</p>}
             {user?.hasPassword === false ? (
-              <p className="rounded-xl bg-slate-50 p-4 text-[12px] leading-relaxed text-slate-500">Akun ini masuk pakai Google — sesi yang aktif jadi bukti identitas. Ketik frasa konfirmasi di bawah.</p>
+              <p className="rounded-xl bg-slate-50 p-4 text-[12px] leading-relaxed text-slate-500">
+                Akun ini masuk pakai Google — sesi yang aktif jadi bukti identitas. Ketik frasa konfirmasi di bawah.
+              </p>
             ) : (
               <div className="relative">
-                <input type={showPw ? 'text' : 'password'} value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Kata sandi saat ini" className="w-full rounded-xl bg-slate-50 px-4 py-3 pr-11 text-sm ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-rose-200" />
-                <button type="button" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <input
+                  type={showPw ? 'text' : 'password'}
+                  value={pw}
+                  onChange={(e) => setPw(e.target.value)}
+                  placeholder="Kata sandi saat ini"
+                  className="w-full rounded-xl bg-slate-50 px-4 py-3 pr-11 text-sm ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-rose-200"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw((v) => !v)}
+                  aria-label={showPw ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                >
                   {showPw ? <EyeOff size={17} /> : <Eye size={17} />}
                 </button>
               </div>
             )}
             <label className="block text-[12px] text-slate-500">
               Ketik &quot;{RESET_CONFIRM_WORD}&quot; untuk konfirmasi
-              <input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder={RESET_CONFIRM_WORD} className="mt-1.5 w-full rounded-xl bg-slate-50 px-4 py-3 text-sm ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-rose-200" />
+              <input
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder={RESET_CONFIRM_WORD}
+                className="mt-1.5 w-full rounded-xl bg-slate-50 px-4 py-3 text-sm ring-1 ring-slate-200 outline-none focus:ring-2 focus:ring-rose-200"
+              />
             </label>
-            <button type="button" onClick={reset} disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-full bg-rose-600 py-3.5 text-sm font-bold text-white disabled:bg-slate-300">
-              {loading ? 'Menghapus…' : <><Trash2 size={16} /> Hapus semua data permanen</>}
+            <button
+              type="button"
+              onClick={reset}
+              disabled={loading}
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-rose-600 py-3.5 text-sm font-bold text-white disabled:bg-slate-300"
+            >
+              {loading ? (
+                'Menghapus…'
+              ) : (
+                <>
+                  <Trash2 size={16} /> Hapus semua data permanen
+                </>
+              )}
             </button>
           </div>
         )}
@@ -593,7 +934,10 @@ export function CloudSyncSection() {
       setSyncing(false);
     }
   };
-  const fmt = (t: number) => new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(t));
+  const fmt = (t: number) =>
+    new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(
+      new Date(t),
+    );
   return (
     <>
       <Label>Cloud</Label>
@@ -603,7 +947,13 @@ export function CloudSyncSection() {
           title="Sinkronkan data ke cloud"
           desc={last ? `Terakhir sinkron ${fmt(last)}` : 'Semua catatan tersimpan langsung di server.'}
           action={
-            <button type="button" onClick={sync} disabled={syncing} aria-label="Sinkronkan sekarang" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100 disabled:opacity-60">
+            <button
+              type="button"
+              onClick={sync}
+              disabled={syncing}
+              aria-label="Sinkronkan sekarang"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100 disabled:opacity-60"
+            >
               <RefreshCw size={17} className={cn(syncing && 'animate-spin')} />
             </button>
           }
@@ -627,7 +977,10 @@ export function AttachmentPrefSection() {
     if (on === null) return;
     setSaving(true);
     try {
-      const res = await cloudflareApi<{ item: { saveAttachments: boolean } }>('/api/member/preferences', { method: 'PUT', json: { saveAttachments: !on } });
+      const res = await cloudflareApi<{ item: { saveAttachments: boolean } }>('/api/member/preferences', {
+        method: 'PUT',
+        json: { saveAttachments: !on },
+      });
       setOn(res.item.saveAttachments);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Gagal menyimpan.');
@@ -643,7 +996,9 @@ export function AttachmentPrefSection() {
           icon={Paperclip}
           title="Simpan file lampiran"
           desc="Matikan untuk membaca foto struk tanpa menyimpannya di Leosiqra."
-          action={<Toggle on={Boolean(on)} onClick={toggle} label="Simpan file lampiran" disabled={on === null || saving} />}
+          action={
+            <Toggle on={Boolean(on)} onClick={toggle} label="Simpan file lampiran" disabled={on === null || saving} />
+          }
         />
       </Group>
     </>
@@ -652,10 +1007,15 @@ export function AttachmentPrefSection() {
 
 export function AccountSection({ view }: { view: AccountView }) {
   switch (view) {
-    case 'kontak': return <KontakView />;
-    case 'keamanan': return <KeamananView />;
-    case 'notifikasi': return <NotifikasiView />;
-    case 'ai': return <McpConnectCard />;
-    case 'lainnya': return <LainnyaView />;
+    case 'kontak':
+      return <KontakView />;
+    case 'keamanan':
+      return <KeamananView />;
+    case 'notifikasi':
+      return <NotifikasiView />;
+    case 'ai':
+      return <McpConnectCard />;
+    case 'lainnya':
+      return <LainnyaView />;
   }
 }

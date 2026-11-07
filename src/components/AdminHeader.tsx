@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
@@ -13,8 +13,7 @@ export const AdminHeader = ({ onMenuClick }: AdminHeaderProps) => {
   return (
     <header className="fixed top-0 right-0 left-0 lg:left-72 h-20 border-b border-slate-200 flex items-center justify-between px-4 md:px-8 bg-white/80 backdrop-blur-md z-30">
       <div className="flex items-center gap-3">
-        {/* Mobile Menu Toggle */}
-        <button 
+        <button
           onClick={onMenuClick}
           className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-all"
         >
@@ -29,12 +28,12 @@ export const AdminHeader = ({ onMenuClick }: AdminHeaderProps) => {
             {{
               '/admin/dashboard': 'Admin Dashboard Overview',
               '/admin/user': 'User Management',
-              '/admin/pembayaran': 'Payment Confirmations',
-              '/admin/koin': 'Koin & Tarik Tunai',
+              '/admin/pembayaran': 'Pembayaran',
+              '/admin/koin': 'Koin',
               '/admin/laporan': 'Executive Reports',
               '/admin/saran': 'Saran & Kritik',
               '/admin/ai': 'AI & Saldo',
-              '/admin/pengaturan': 'System Configuration'
+              '/admin/pengaturan': 'System Configuration',
             }[pathname] || 'Admin Panel'}
           </h1>
         </div>
@@ -42,7 +41,7 @@ export const AdminHeader = ({ onMenuClick }: AdminHeaderProps) => {
 
       <div className="flex items-center gap-4">
         <div className="hidden md:flex px-4 py-2 rounded-full bg-slate-900 text-[10px] font-black text-white uppercase tracking-widest">
-           Role: Master Admin
+          Role: Master Admin
         </div>
       </div>
     </header>

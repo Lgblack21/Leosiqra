@@ -1,17 +1,17 @@
-"use client";
+'use client';
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-export type ModalType = 
-  | null 
-  | 'harian' 
-  | 'saham' 
-  | 'deposito' 
-  | 'investasi_lain' 
-  | 'tabungan' 
-  | 'hutang_piutang' 
-  | 'topup_transfer' 
-  | 'budget_target' 
+export type ModalType =
+  | null
+  | 'harian'
+  | 'saham'
+  | 'deposito'
+  | 'investasi_lain'
+  | 'tabungan'
+  | 'hutang_piutang'
+  | 'topup_transfer'
+  | 'budget_target'
   | 'recurring'
   | 'ledger'
   | 'rekening'
@@ -35,16 +35,14 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     setModalData(data || null);
     setActiveModal(type);
   };
-  
+
   const closeModal = () => {
     setActiveModal(null);
     setModalData(null);
   };
 
   return (
-    <ModalContext.Provider value={{ activeModal, modalData, openModal, closeModal }}>
-      {children}
-    </ModalContext.Provider>
+    <ModalContext.Provider value={{ activeModal, modalData, openModal, closeModal }}>{children}</ModalContext.Provider>
   );
 }
 

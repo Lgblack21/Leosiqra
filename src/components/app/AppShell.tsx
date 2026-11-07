@@ -1,16 +1,19 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { Capacitor } from "@capacitor/core";
-import { SplashScreen } from "@capacitor/splash-screen";
-import { App as CapacitorApp } from "@capacitor/app";
-import { auth } from "@/lib/cf-client";
-import { onAuthStateChanged } from "@/lib/cf-auth";
-import { ThemeProvider, useTheme } from "@/context/ThemeContext";
-import { AppTour } from "@/components/app/AppTour";
-import { reportAppOpened } from "@/lib/appUsage";
-import { BrandSplash } from "@/components/app/BrandSplash";
+import { useEffect, useRef, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { Capacitor } from '@capacitor/core';
+import { SplashScreen } from '@capacitor/splash-screen';
+import { App as CapacitorApp } from '@capacitor/app';
+import { auth } from '@/lib/cf-client';
+import { onAuthStateChanged } from '@/lib/cf-auth';
+import { ThemeProvider, useTheme } from '@/context/ThemeContext';
+import { AppTour } from '@/components/app/AppTour';
+import { reportAppOpened } from '@/lib/appUsage';
+import { BrandSplash } from '@/components/app/BrandSplash';
+import { initNativePush } from '@/lib/nativePush';
+import { isNativeTablet } from '@/lib/device';
+import { openAppNotificationUrl } from '@/lib/txPrefill';
 
 // Native splash (drawable/splash.png) cuma nyala sekilas selama Android/iOS
 // nyiapin Activity — begitu WebView aktif dia langsung ilang, dan APK ini
@@ -25,16 +28,15 @@ const hideSplash = () => {
   }
 };
 
-export default function AppShell({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AppShell({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
+  // Sekali per pemasangan AppShell: daftar ulang token push walau user sama
+  // (logout → /mulai → login lagi = sesi baru).
+  const pushBoundRef = useRef(false);
   pathnameRef.current = pathname;
 
   // Tanpa ini, tombol back hardware Android langsung nutup app (keluar ke
@@ -43,8 +45,8 @@ export default function AppShell({
   // gak perlu re-attach tiap ganti rute.
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
-    const listenerPromise = CapacitorApp.addListener("backButton", () => {
-      if (pathnameRef.current === "/app") {
+    const listenerPromise = CapacitorApp.addListener('backButton', () => {
+      if (pathnameRef.current === '/app') {
         CapacitorApp.minimizeApp();
       } else {
         router.back();
@@ -76,11 +78,22 @@ export default function AppShell({
     const unsub = onAuthStateChanged(auth, (user) => {
       clearTimeout(safetyTimer);
       if (!user) {
-        router.replace(`/mulai?next=${encodeURIComponent(pathname)}`);
+        router.replace(`${Capacitor.isNativePlatform() ? '/masuk' : '/mulai'}?next=${encodeURIComponent(pathname)}`);
         hideSplash();
         return;
       }
-      reportAppOpened("leosiqra");
+      // Tablet (aplikasi native, layar ≥ 600dp): pakai tampilan web lengkap
+      // /membership yang dirancang untuk layar lebar; HP tetap /app.
+      if (isNativeTablet()) {
+        window.location.replace('/membership/dashboard');
+        return;
+      }
+      reportAppOpened('leosiqra');
+      // Android: izin & token push (sekali per buka app). Ketuk notifikasi →
+      // halaman versi app; pengingat bernominal → sheet Tambah Transaksi.
+      const forcePush = !pushBoundRef.current;
+      pushBoundRef.current = true;
+      void initNativePush(user.uid, (url) => openAppNotificationUrl(url, router.push), forcePush);
       setUserName(user.displayName ?? null);
       setLoading(false);
       hideSplash();
@@ -109,7 +122,7 @@ export default function AppShell({
 function ThemedShell({ children }: { children: React.ReactNode }) {
   const { resolvedTheme } = useTheme();
   return (
-    <div className={resolvedTheme === "dark" ? "dark" : ""}>
+    <div className={resolvedTheme === 'dark' ? 'dark' : ''}>
       {children}
       <AppTour />
     </div>

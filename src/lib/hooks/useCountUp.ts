@@ -19,8 +19,7 @@ export const useCountUp = (target: number, duration = 900) => {
     }
 
     const prefersReducedMotion =
-      typeof window !== 'undefined' &&
-      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) {
       fromRef.current = target;
       const raf = requestAnimationFrame(() => setDisplay(target));

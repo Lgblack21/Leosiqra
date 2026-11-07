@@ -7,6 +7,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+        <!-- Ikon & warna notifikasi push FCM saat app di latar belakang. -->
+        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_leosiqra" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/notification_accent" />
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"
@@ -34,6 +37,11 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Wajib bersama RECORD_AUDIO: BridgeWebChromeClient Capacitor meminta keduanya untuk getUserMedia
+         (perekam suara di WebView); tanpa ini permintaan mikrofon selalu ditolak. -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- Notifikasi push (FCM, @capacitor/push-notifications). Wajib sejak Android 13 agar dialog izin muncul. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Baca saldo kartu e-money (EmoneyPlugin). required=false: HP tanpa NFC tetap bisa memasang aplikasi. -->
     <uses-permission android:name="android.permission.NFC" />
     <uses-feature android:name="android.hardware.nfc" android:required="false" />

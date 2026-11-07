@@ -4,17 +4,729 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-10-30 (akun B selesai/jeda; semua live, main = run #92)
+Terakhir diperbarui: 2026-11-07 (live: pembayaran rapi + admin Koin, run 42303011955)
 
 ## Siapa sedang kerja
 
 | Akun | Status | Branch | Area |
 |---|---|---|---|
-| — | — | — | (akun B jeda: limit mingguan) |
+| — | — | — | (akun B selesai; main = live #146) |
 
 Isi baris ini saat mulai (mis. "akun B · aktif · claude/xyz · Worker inbox"),
 kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
+
+## Menunggu
+
+- **2026-11-07 — RILIS 3.1.1 siap di branch `claude/rapih-frontend-20261106` (sudah berisi alur-versi + fix-validasi-kategori). BELUM merge. Tanpa SQL.**
+  - Cukup merge branch ini (alur-versi & fix-validasi ikut). Setelah live, Deploy main membuat Release v3.1.1.
+  - **WAJIB tepat setelah merge:** 3 draf artikel (`claude/artikel-cara-mengatur-gaji-5-juta`, `-catatan-tabungan`,
+    `-laporan-keuangan-pribadi`, status `draf_menunggu_bos`) konflik 1 baris di `src/app/panduan/page.tsx` dengan main
+    yang sudah diformat → publish-article (merge otomatis saat Bos ✅) akan GAGAL. Perbaiki dengan merge main baru ke
+    tiap branch artikel (tanpa force-push), selesaikan konflik, `npx prettier --write` file artikelnya, push. Jangan
+    lakukan sebelum rapih masuk main (diff jadi 440 file → workflow menolak).
+  - Branch lama yang sudah setara dengan main (aman diabaikan/dihapus kalau Bos setuju): app-tag-lengkap,
+    fitur-fix-input-suara-20261012, friendly-galileo-7cxowa, friendly-galileo-7yleap, pengingat-pintar, push-fcm,
+    push-foreground, seo-meta-uang-kas-spt, seo-og-twitter-meta, sesi-app-native, skor-kesehatan, web-dark-bertahap,
+    web-dark-sisa.
+  - `claude/halaman-transaksi` (56 commit, 12–23 Okt, redesign "pola Oyenza": Peta 3D, Ingatan Leo, Pasar & belajar,
+    dll.) TIDAK pernah masuk main & bentrok 49 file + nomor migrasi 0010–0016 bentrok. Dianggap ditinggalkan; kalau
+    ada fitur yang mau diambil, port ulang sebagai pekerjaan baru di atas main.
+
+- **2026-11-07 (branch claude/alur-versi-20261107) — Alur versi + rilis 3.1.0, BELUM merge. Tanpa SQL.**
+  - Satu versi di package.json → tampil "v3.1.0 · build N"; `npm run versi -- patch|minor|major`; CHANGELOG.md berisi
+    aturan X.Y.Z + peta versi 1.0→3.1.0 (disusun ulang dari git). Deploy main membuat tag/Release vX.Y.Z setelah live
+    (permissions contents: write) & Telegram menyebut versi + build. APK ikut versi package.json, ditempel ke Release.
+  - Urutan merge disarankan: branch ini dulu (3.1.0), lalu rapih-frontend + fix-validasi-kategori sebagai 3.1.1
+    (naikkan versi di branch rapih setelah ini masuk main; konflik kecil di SettingsPanel/profile/version.ts).
+- **2026-11-06 (branch claude/rapih-frontend-20261106) — Rapikan komentar frontend (Tahap 1), BELUM merge. Tanpa SQL, tanpa perubahan perilaku.**
+  - 159 file di `src/`: ~780 baris komentar "keterangan" dihapus (label seksi JSX, komentar yang mengulang kode,
+    pembatas, catatan riwayat). Komentar KENAPA (keamanan, uang, drift D1, workaround native) + eslint-disable tetap.
+  - Bukti tidak ada kode berubah: pengecek token TypeScript vs origin/main → 0 beda di 159 file; tsc 0, build lolos,
+    ESLint sama dengan main. Merge sesudah branch claude/usahaku-web (Akun B) supaya konflik minimal.
+  - **Tahap 2 (2026-11-07, branch yang sama): Prettier** — `prettier@3.6.2` + `.prettierrc.json` (120 kolom, kutip
+    tunggal), `npm run format` / `format:check`, cakupan `src/` saja. 441 file diformat. Chunk JS build dibandingkan
+    sebelum/sesudah: identik setelah normalisasi (spasi JSX, nama variabel minifier, hash styled-jsx). 15
+    eslint-disable dipindah ke baris yang benar; ESLint = main. **Setelah merge, branch lain yang menyentuh `src/`
+    jalankan `npm run format` sebelum merge** supaya konflik formatnya hilang.
+  - **Tahap 3 (2026-11-07): komentar Worker** — 1.374 blok ditinjau: 52 dihapus, 55 diringkas, sisanya (alasan
+    keamanan/uang/D1/cron/API luar) tetap. Token kode index.ts identik, tsc Worker 0, bundle dry-run identik.
+  - **Uji runtime (wrangler dev lokal, main vs branch berdampingan, D1 lokal sama):** 28 endpoint GET identik (beda
+    hanya kode referral acak); alur Input Cepat via UI → saldo BCA 5.000.000→4.962.500 di keduanya, 0 error JS; jalur
+    AI chat identik (OpenRouter dummy → pesan ramah sama); 112 halaman × web/HP difoto: 0 beda di luar derau render
+    (main vs main sendiri pun ±0,2%), error JS sama persis (kurs diblokir tes, #418 hanya efek jam palsu).
+  - Temuan lama (ada di main juga) → branch terpisah `claude/fix-validasi-kategori-20261107`: POST transaksi tanpa
+    `category` sekarang 400, bukan 500. `account_id` kosong masih 500 — cek dulu NOT NULL di D1 produksi sebelum
+    divalidasi (mungkin ada alur sah tanpa rekening).
+
+- **2026-11-07 — Halaman pembayaran rapi + Admin › Koin lengkap: LIVE (run 42303011955, commit d5eae38). Tanpa SQL.**
+  - /membership/contact ditulis ulang jadi "Upgrade & Top up": tab PRO / Top up koin, kartu paket, kartu checkout (total + salin,
+    transfer/QRIS, unggah bukti, ref, catatan), riwayat pembayaranku. Baru di Worker: GET /api/member/payments (20 terakhir milik user).
+  - Admin › Koin (src/app/admin/koin): tab Ringkasan (beredar, bulan ini, asal koin, per jenis, antrean top up), Pengguna
+    (cari, saldo, riwayat, tambah/kurangi), Riwayat (filter grup), Aturan (read-only), Tarik tunai lama (hanya muncul kalau ada data).
+    Worker handleAdminCoins: GET /api/admin/coins/{summary,users,ledger}, POST /api/admin/coins/adjust (kind admin_adjust,
+    idem admin_adjust:<request_id>, tolak kalau saldo jadi minus → 409, |jumlah| ≤ 10 jt, alasan wajib, log COIN_ADJUST).
+    story_ai_refund dihitung di grup "pakai" (bersih dengan story_ai), bukan hadiah.
+  - Admin › Pembayaran: kartu per tiket, badge KOIN/PRO, filter jenis, konfirmasi spesifik ("Tambahkan N koin?"), toast (bukan alert),
+    catatan member + link WhatsApp, pendapatan PRO vs koin dipisah.
+  - Dites lokal: adjust +2500 → 201; request_id sama → 409; −999999 → 409 saldo kurang; alasan pendek/desimal → 400; tanpa login → 401.
+    Screenshot HP + web tanpa page error. Belum dites: data produksi asli (banyak user/tiket), QRIS/rekening asli (lokal kosong).
+
+- **2026-11-07 — Sistem koin baru + kuota AI FREE vs PRO: LIVE (run 42300089133, commit 73296e1). Tanpa SQL.**
+  - Keputusan Bos: satu jenis koin, 1 koin = Rp1, bisa dibeli; hadiah TIDAK lagi bisa dicairkan.
+    COIN_RULES: proMonthCost 2.000 → **15.000** (= harga PRO, beli koin tidak bisa jadi PRO lebih murah), refActiveReferrer
+    300→500, refActiveReferee 100→200, refPro 1.000→1.500 (tidak cashable), streak 50→100. POST /coins/withdraw → 410;
+    endpoint admin penarikan tetap ada untuk pengajuan lama.
+  - Top up koin: COIN_PACKAGES koin-10/25/50/100 (Rp10–100 rb, 1:1, TANPA bonus) lewat jalur pembayaran manual yang sama
+    (payment-info menambah paket koin ke pro_packages; package_json kind "coin"). Admin setuju → grantCoins topup:<id>.
+  - Bug lama diperbaiki: persetujuan pembayaran tidak idempoten (klik dobel = PRO dobel) → UPDATE bersyarat status.
+  - Kuota AI harian (withAiQuota di router; metadata $.aiq_<jenis>; gagal apa pun → jatah kembali):
+    chat FREE 5 / PRO 50, scan struk (parse dengan gambar) FREE 3 / PRO 30, suara FREE 5 / PRO 40; teks biasa tidak
+    dihitung. GET /api/member/ai/quota. Chat Leo menampilkan "Sisa x/y chat hari ini · PRO 50×/hari".
+  - Ilustrasi Cerita: PRO 10 gratis/BULAN (dulu 1/hari ≈ Rp19.500 biaya/bulan/user), FREE 0; selebihnya 1.000 koin.
+  - UI Koin: kartu "Bisa ditarik" → "Tukar PRO 15.000/bln", formulir tarik tunai diganti "Top up koin" (→ /membership/contact?package=koin-N).
+  - Dites lokal: FREE chat 6 → 429 pesan jelas; gagal → kuota kembali (0/5); teks tidak dihitung; top up koin-10 → +10.000,
+    setuju ganda → already; durationMonths palsu diabaikan; tukar PRO 10.600 koin → ditolak (butuh 15.000); tarik → 410.
+  - Catatan: pengguna lama yang punya koin kehilangan hak tarik & nilai tukar PRO naik — sudah disetujui Bos ("belum banyak yang pakai").
+
+- **2026-11-07 — Cerita: AI dari foto (anime/kartun) + Kalender bulan berfoto: LIVE (run 42296259066, commit 1c5582a). Tanpa SQL.**
+  - Laporan Bos: AI tidak bisa dipakai → penyebab: tombol AI mati kalau tulisan < 8 huruf (Bos punya foto tanpa tulisan).
+    Kini ada foto → foto DIUBAH jadi ilustrasi (image-to-image: foto dikirim sebagai image_url ke model gambar);
+    tanpa foto → dari tulisan. Gaya: Anime / Kartun 3D / Chibi / Cat air (generik, tanpa nama studio). Model cadangan
+    `google/gemini-2.5-flash-image-preview`; parsing gambar lebih longgar (images[]/content[], image_url/imageUrl);
+    pesan galat jelas (402 saldo OpenRouter admin habis, 429 ramai, filter keamanan). Ada foto + ilustrasi → toggle Ilustrasi/Asli.
+  - Bug: tab Setahun memakai scrollIntoView → ikut menggulir halaman yang dikunci → judul atas terpotong di semua tab.
+    Kini gulir kotak `[data-scroll]` saja + window.scrollTo(0,0) saat ganti tab.
+  - Tab "Kalender" (ganti "Setahun"): tampilan Bulan = tiap tanggal kartu berisi foto/ilustrasi hari itu, kalau tidak ada
+    = wajah Leo sesuai mood (`LeoFace`, SVG statis ringan), nomor tanggal + emoji cuaca, ringkasan bulan (jumlah hari,
+    sebaran mood, pengeluaran). Tampilan Tahun = 12 bulan mini (mood/uang), ketuk → buka bulan.
+  - Dites lokal: AI dari foto tanpa tulisan diterima (gagal hanya karena tanpa key), tanpa foto & tulisan 400; UI HP/tablet/web
+    0 error JS, scrollY halaman 0. **Ilustrasi asli belum dicoba** (tanpa API key di lokal).
+
+- **2026-11-07 — Fitur baru "Cerita Hari Ini" (jurnal harian): LIVE (run 42272516574, commit fae04cb). Migrasi 0035 SUDAH dijalankan Bos (2026-11-07).**
+  - **MIGRASI di D1 Console**: 0035_stories.sql (tabel `stories`, PK user_id+date). Tanpa tabel: GET → ready:false, simpan 503.
+  - Halaman layar penuh: `/membership/cerita` (FULLSCREEN_PATHS, fitur id `cerita`) & `/app/cerita` (grid Lainnya). Menu:
+    Tulis · Setahun · Kumpulan. Mood bertema cuaca (Badai/Mendung/Berawan/Cerah/Pelangi) + stiker Leo per mood (gratis),
+    foto (R2, ≤2 MB, JPG/PNG/WebP), ilustrasi AI (OpenRouter `google/gemini-2.5-flash-image`, bisa ditimpa var
+    OPENROUTER_IMAGE_MODEL; modalities image+text). Jatah: PRO 1 gratis/hari, FREE 0; selebihnya 1.000 koin
+    (STORY_AI_PRICE). Koin dipotong dulu (bersyarat saldo), gagal → dikembalikan (story_ai_refund); jatah gratis via
+    users.metadata_json $.storyAi {day,n}, dikembalikan saat gagal.
+  - Ringkasan hari otomatis: keluar/masuk/jumlah transaksi + menit fokus. Setahun = 12 kalender bulan, warna mood atau
+    intensitas pengeluaran (kuartil). Kumpulan: hari beruntun, total halaman, cari, daftar per bulan.
+  - `useFitHeight` dipindah ke src/lib (dipakai Fokus & Cerita).
+  - LeoMascot: animasi rx/ry/r (framer) memunculkan error konsol "Expected length, undefined" (termasuk yang lama: menguap,
+    bayangan bola, gelembung tidur, mengunyah) → semua diganti scale.
+  - Dites lokal: API (sebelum migrasi 503/ready:false, simpan & simpan mood saja, ringkasan Rp160.000/2 tx/fokus 50 mnt,
+    tanggal masa depan/ngawur 400, mood ngawur 400, foto 200 + GET image/png, foto palsu 400, AI tanpa key → jatah PRO
+    kembali & koin FREE −1000/+1000, koin kurang 402); UI HP/tablet/web 0 error JS, halaman terkunci. **Ilustrasi AI asli
+    belum dicoba** (tidak ada API key di lokal) — cek di produksi setelah deploy.
+
+- **2026-11-07 — Fokus bareng Leo: layar penuh ala Ladangku + tampilan baru "Bukit Fokus": LIVE (run 42272516574). Tanpa SQL.**
+  - Web `/membership/fokus` masuk FULLSCREEN_PATHS (tanpa sidebar/tab bawah); app pindah ke `/app/fokus` (di luar grup tab,
+    tanpa tab bawah & tombol +). Bar atas: tombol kembali (pil gelap) · judul per tab · ⚙️ (Fokus) / Leo AI; menu melayang
+    di bawah `[data-focus-dock]` (Fokus · Tenang · Rekap). Tinggi diukur sampai atas menu; diukur ulang setelah animasi masuk
+    halaman (transform induk sempat menggeser menu → ukuran pertama salah 468 vs 680 px). MIN_FIT 340 (iPhone SE muat).
+  - Tampilan baru (beda dari Oyenza — tanpa kamar/meja/lampu/jendela): `FocusScene` = Leo di puncak bukit, langit ikut jam,
+    matahari/bulan berjalan di lengkung langit sesuai progres sesi, timer besar di tengah lengkung (ukuran cqh), kunang-kunang
+    (malam) / kupu-kupu (siang), barang per jenis di rumput. Bukit viewBox -800…1200 → skala menurut tinggi (tidak naik di
+    layar lebar); Leo ukuran 0.4cqh. Musik & semua pengaturan di lembar ⚙️ / chip musik di langit.
+  - Tenang: bidang malam dengan bola cahaya + cincin bernapas, kontrol kaca di bawah.
+  - Dites lokal: iPhone 13 (/app & /membership), iPhone SE, tablet 1000×668, web 1366×860 — tidak bisa digulir, tombol
+    terbawah di atas menu, Leo tidak tidur 30 dtk, 0 error JS.
+  - Berikutnya (permintaan Bos): fitur jurnal harian ala Oyenza (nama & tampilan beda) — belum dimulai, perlu keputusan.
+
+- **2026-11-07 — Fokus bareng Leo: satu layar penuh + Leo bernapas: LIVE (run 42263962169, commit 5e1a06b). Tanpa SQL.**
+  - Satu layar (HP/tablet/web): `useFitHeight` di FocusApp mengukur ruang (top elemen → atas tab bawah `[data-bottom-bar]`
+    + 34px tombol +), mengunci gulir html/body; < 420px (HP landscape) tidak dikunci. Strip "Hari ini belum ada sesi" dihapus.
+    Pengaturan sesi + volume pindah ke tombol ⚙️ (lembar bawah HP / modal web). HP: musik jadi baris chip ringkas.
+    App HP: header = tombol kembali + tab + ⚙️ satu baris. Adegan `FocusScene fill` (container query, 16:10 tidak gepeng).
+    Tenang: lingkaran mengisi ruang; di HP pilihan disembunyikan selama latihan. Rekap gulir di dalam kartunya.
+  - Bug: Leo tertidur saat Tenang (timer kantuk 15/22 dtk tanpa sentuhan) → prop `stayAwake` (Fokus & Tenang).
+  - LeoMascot prop `breathing` + `breathAmt`: dada & surai mengembang ikut napas, mata terpejam, pipi menggembung saat
+    tahan, mulut "o" + embusan saat hembus.
+  - Catatan: offsetParent selalu null untuk position:fixed → deteksi tab bawah pakai ukuran + display.
+  - Dites lokal Playwright: iPhone 13 (/app & /membership), iPhone SE, tablet 1000×668, web 1366×860 — tidak bisa digulir,
+    tombol terbawah di atas tombol + (app 534 < 586), Leo tidak tidur setelah 30 dtk, 0 error JS.
+
+- **2026-11-07 — Fitur baru "Fokus bareng Leo": LIVE (run 42260880305, commit e28af25). Migrasi 0034 menunggu Bos.**
+  - **MIGRASI 0034 SUDAH dijalankan Bos (2026-11-07).** (0034_focus_sessions.sql; boleh sebelum/sesudah deploy — tanpa tabel, fitur tetap jalan,
+    rekap disimpan di perangkat lalu otomatis terkirim setelah tabel ada).
+  - Halaman: `/membership/fokus` (web, menu "Fokus bareng Leo", id fitur `fokus` — masuk DEFAULT_FEATURES; user yang sudah
+    pernah mengatur menu perlu nyalakan di Atur fitur) & `/app/fokus` (grid Lainnya).
+  - Tab Fokus: pomodoro 15/25/50/90/atur (5–180), jenis Belajar/Kerja/Baca/Usaha/Lainnya + catatan, istirahat pendek/panjang
+    tiap N sesi, auto istirahat/lanjut, jeda/+5/lewati/berhenti (≥1 mnt tetap tercatat), judul tab = sisa waktu, Wake Lock,
+    notifikasi + getar saat selesai, lonceng dijadwalkan di AudioContext (tepat walau tab di belakang). Timer dari endsAt
+    (localStorage `leosiqra:focus:run`, tahan refresh & sinkron antar tab).
+  - Musik: `src/lib/focus/audio.ts` — DISINTESIS Web Audio (lo-fi akor jazz + beat + vinyl, hujan, ombak, brown noise),
+    tanpa file lagu → bebas royalti. Otomatis menyala saat fokus mulai (dari klik). Setelah refresh perlu ketuk "Putar musik".
+  - Tab Tenang: napas lega / kotak 4×4 / 4-7-8, 1/3/5 mnt, lingkaran + Leo bernapas, getar per langkah, suara ombak opsional
+    (hanya mematikan suara miliknya sendiri). Tab Rekap: hari ini / 7 hari / beruntun (≥10 mnt/hari), grafik 7 hari, per jenis, riwayat + hapus.
+  - API `/api/member/focus` GET (90 hari) / POST (id UUID klien, ulang = 200 duplicate) / DELETE; validasi waktu, jam HP
+    kecepatan ≤2 hari digeser ke jam server; reset data & hapus user ikut menghapus focus_sessions.
+  - LeoMascot: prop `headphones` + `music` (not melayang). Adegan kamar SVG orisinal (`FocusScene`): langit jendela & lampu ikut jam,
+    jam dinding sungguhan, barang meja per jenis.
+  - Dites lokal: API (503 sebelum migrasi, 201/200 dobel, 400 data aneh, 401, delete 200/404); Playwright web 1366 + tablet 1000×668
+    + iPhone 13 (jam dipercepat): mulai → judul "24:56 · Fokus", musik jalan, jeda 1 mnt tidak mengurangi, selesai → "Mantap!"
+    → istirahat otomatis → selesai, sesi tersimpan 1500 dtk; Tenang selesai; Rekap tampil; 0 error JS. Suara asli belum didengar
+    di perangkat sungguhan (headless tanpa speaker).
+
+- **2026-11-06 — Kartu sapaan Ringkasan lebih ringkas + animasi Leo dirapikan: LIVE (run 42254697995, commit 4d769bb). Tanpa SQL.**
+  - Hero: padding/huruf lebih kecil (tablet 321→274px, HP 447→389px), kolom Tanya Leo lebih ramping.
+  - Gelembung LeoBuddy: maks 290px, teks 13–14px, kata ber-tanda-hubung ("rata-rata") tidak dipotong.
+  - LeoBuddy dulu dirender DUA kali (HP & desktop, timer/listener dobel) → satu instans, ukuran lewat mascotClassName.
+  - LeoMascot: prop `ledge` (ambang kaca, kaki tidak mengambang); bola memantul di atas kepala (irama 1,1 dtk, gepeng
+    saat kena, kepala mengangguk, bayangan) — dulu melayang jauh & kaki naik ke muka; koin dilempar di samping wajah,
+    tumpukan di ambang; timer boop dibersihkan saat unmount.
+  - Dites lokal: rekaman frame 21:30 & 23:30, tablet 1000×668 + iPhone 13, tap Leo, 0 error JS
+    (sisa peringatan recharts "width(-1)" sudah ada sebelumnya).
+
+- **2026-11-06 — Ringkasan/Beranda bersih: kartu "N usulan transaksi menunggu" dihapus: LIVE (run 42252405367, commit f83ebd5). Tanpa SQL.**
+  - InboxBanner dihapus (web Ringkasan & app Beranda). Penanda tinggal badge di ikon Kotak Masuk: web sudah ada di header;
+    app HP kini punya `InboxButton variant="app"` di samping lonceng (→ /app/inbox).
+  - Bug lama InboxButton: badge sering kosong di pemuatan pertama (effect jalan ulang → hasil fetch dibuang, fetch kedua
+    dilewati jeda 60 dtk). Kini angka disebar ke semua tombol yang tampil (listeners). Dites lokal: web & app "3 usulan", 0 error JS.
+
+- **2026-11-06 — Popup tidak mengganggu + grid HP + notif login tidak spam: LIVE (run 42250941798, commit fdc7de3). Tanpa SQL.**
+  - InstallBanner: hanya di beranda (/, /membership, /membership/dashboard, /app) + artikel publik, maksimal SEKALI per
+    sesi tab (sessionStorage `leosiqra:install-ad-shown`; useRef supaya yang sedang tampil tidak ikut hilang), ikon tidak
+    bergoyang terus, tablet: "Pasang Leosiqra di perangkat ini".
+  - DevNoticeBanner: satu baris tipis tanpa animasi ping, tutup = 14 hari (dulu 3), versi app HP hanya di Beranda /app.
+  - 46 grid responsif tanpa kolom dasar → `grid-cols-1` (minmax(0,1fr)). Bug nyata: Ringkasan HP kartu
+    "Catatan terbaru"/"Segera" 473px di layar 390px → nominal terpotong. Kini 358px.
+  - Transaksi HP: ringkasan "Rp 7,5 jt" (spasi sama dengan "Rp 819.000").
+  - Dites lokal Playwright: 34 halaman /membership × HP/tablet/web + 23 /app HP, 0 error JS, 0 scroll samping.
+  - Notif "Login Baru Terdeteksi": login ulang dari perangkat yang SAMA tidak dikirim lagi. Penanda = cookie
+    `<SESSION_COOKIE_NAME>_dev` (1 tahun, HttpOnly, id acak + HMAC SESSION_SECRET terikat user; tidak dihapus saat
+    logout). Browser/perangkat lain & cookie palsu tetap dikabari. Hanya login sandi (Google login memang tidak kirim notif).
+    Dites lokal: A pertama +1, A logout→login 0, B baru +1, B cookie palsu +1.
+
+- **2026-11-06 — Bersihkan data tim/stok + rapikan angka kasir: LIVE (run 42243711843, commit 198e387). Tanpa SQL.**
+  - Bug: Hapus semua data / admin hapus user TIDAK menghapus shop_staff, staff_sessions, shop_materials,
+    shop_stock_moves, shop_recipes (tanpa FK) → akun tim pemilik yang sudah reset MASIH BISA LOGIN.
+    Kini `deleteShopExtrasForUser` (best effort per tabel). Hapus satu usaha → `deleteShopExtras`: stok & resep usaha
+    itu dihapus + id usaha dicabut dari shop_staff.shop_ids (json_each). Transaksi lama tetap. Hapus akun tim: tidak berubah
+    (sesi dicabut + baris dihapus; transaksi & riwayat stok "oleh <nama>" tetap).
+  - `parseQty`: "1.500" dulu terbaca 1,5 → kini 1500 (titik + kelompok 3 angka = ribuan; "2.5"/"0.250" tetap desimal).
+  - `short` (UsahaView) menangani minus: "−Rp125 rb" (dulu formatIDR penuh → terpotong "−Rp 125…"). Kartu Biaya di
+    kasir/Usahaku/tim pakai short(-x). Kartu statistik: <380px jadi 2 kolom (yang ke-3 lebar penuh), font sedikit kecil.
+    "mulai Rp5 rb" tidak patah baris.
+  - Dites lokal (wrangler dev, D1 lokal): hapus Toko A → bahan/riwayat A 0, tim tinggal akses Toko B; reset data →
+    staff/sesi/bahan/riwayat/resep 0, login tim ditolak; UI iPhone SE/13 + web 0 error JS.
+  - Catatan (belum diubah): batalkan catatan stok oleh tim mencocokkan by_name, bukan id akun — tim baru bernama sama
+    di hari yang sama bisa membatalkan catatan tim lama. Perlu kolom staff id (migrasi) kalau mau dirapikan.
+  - Catatan: cloudflare/schema-production.sql (dump Juli) sudah usang (accounts/categories kurang sort_order,
+    transaction_type) — untuk tes lokal tambah kolom manual.
+
+- **2026-11-06 — Koreksi stok salah input: live #146.**
+  - Stok › Ubah: nama, satuan, batas minimum **+ stok sekarang** (perubahan stok = move opname "Diubah manual", selisih tercatat).
+  - Riwayat › **Batalkan** satu catatan manual (awal/masuk/pakai/opname): `POST …/stock/moves/:id/revert` (pemilik
+    `/api/member/shops/:id/stock/…`, tim `/api/staff/shops/:id/stock/…`). Stok −qty, reverted_at diisi, atomik & anti dobel.
+    Ditolak: catatan dari transaksi (hapus transaksinya), sudah ada opname sesudahnya (pakai Ubah), tim selain miliknya hari ini.
+    GET stok kini kirim `linked` (0/1) per move.
+  - Dites lokal: salah pakai 100 → batalkan → kembali; ulang 409; linked 400; sebelum opname 409; opname terakhir bisa;
+    tim batalkan miliknya 200, punya pemilik 403; UI HP Ubah 93→90 lalu batalkan → 93, 0 error JS.
+- **2026-11-06 — Stok oleh tim + mode tim dirapikan: live #145.**
+  - Worker: `/api/staff/shops/:id/stock[/materials|/moves]` → handleShopStock(..., { name }) — tim boleh lihat, tambah bahan,
+    pakai/masuk/hitung fisik (by_name = nama tim, tanggal dipaksa hari ini); ubah/arsip bahan & aturan per produk → 403;
+    respons tim tanpa cost/avg_cost & tanpa bahan arsip. Usaha tak diberikan → 403.
+  - StockView: context { api, staff, onBuy } (pemilik pakai stockService, tim staffStockService). Tombol **Beli <bahan>** di
+    tiap bahan → Catat pengeluaran dengan bahan terpilih (uang keluar + stok masuk sekaligus) — pemilik & tim.
+  - /tim ditulis ulang: header sapaan, menu bawah Ringkas / Kasir / Stok (badge hampir habis), pilihan usaha berupa chip,
+    kasir dengan Catat biaya & Stok + statistik (omzet, oleh kamu, biaya), Ringkas dengan kartu per usaha & peringatan stok.
+  - Dites lokal: API tim (pakai/opname/tambah 201 "Rina", ubah/arsip/aturan 403, usaha lain 403, cost disembunyikan);
+    Playwright HP+web: Beli Botol 50 pcs Rp125.000 → stok 198→248, biaya dari rekening kunci "oleh Rina"; 0 error JS, tanpa loop muat.
+- **2026-11-06 — live #144:** MCP stok (get_shop_stock / set_shop_stock /
+  set_shop_recipes — lihat entri Stok di bawah) + **kasir umum, bukan khusus top up**: "Cari produk…", contoh teks/prompt
+  netral, dan **kolom pembeli tidak lagi wajib otomatis untuk toko berkategori** — kini gaya kasir `buyer: opsional|wajib`
+  (Tampilan › Data pembeli; bawaan opsional; MCP set_kasir_style ikut). CXA Store perlu disetel "Wajib" oleh Bos.
+  Dites lokal: Toko Kue (berkategori) bayar tanpa pembeli OK + stok resep berkurang.
+- **2026-11-06 — Usahaku › Stok bahan + Resep produk: live #143** (run pertama gagal: Cloudflare API 503 "no healthy upstream", re-run sukses). Migrasi 0033 sudah dijalankan Bos.
+  - Tabel: `shop_materials` (stok sekarang), `shop_stock_moves` (buku stok: awal/beli/masuk/pakai/jual/opname,
+    qty bertanda, ref_tx_id, ref_key unik = anti dobel, reverted_at), `shop_recipes` (bahan per 1 produk, key "kategori|nama").
+  - Kasir tombol **Stok** (badge hampir habis): tab Bahan (tambah, pakai/masuk/hitung fisik, ubah, arsip), Resep
+    (bahan per produk + modal & untung per produk dari harga beli rata-rata), Riwayat. Kartu Usahaku: "N bahan hampir habis".
+  - Biaya bisa "Masuk ke stok" (kind beli, cost = nominal → harga rata-rata). Penjualan kasir (pemilik & tim) mengurangi
+    stok sesuai resep dalam batch yang sama dengan transaksi (dobel request_id → stok tidak terpotong lagi).
+    Webhook website BELUM mengurangi stok (tidak ada kunci produk).
+  - Umum untuk semua jenis usaha (bukan parfum saja): istilah "bahan / barang", tab Daftar / Per produk / Riwayat,
+    satuan bebas, tombol **"Jadikan stok 1:1"** (toko barang jadi: tiap produk = 1 barang stok, batch dari klien,
+    maks 100 bahan/usaha). Pilihan cepat Biaya: bahan/barang toko itu dulu, lalu umum (bahan baku, kemasan, ongkir, sewa, gaji…).
+  - Hapus transaksi (kedua jalur DELETE) → stok dikembalikan, KECUALI bahan yang sudah di-hitung fisik (opname) sesudahnya.
+  - Tim: `/api/staff/me` kirim `materials` (baca saja), Catat biaya + masuk stok boleh; ubah bahan/resep/opname hanya pemilik.
+  - Tanpa tabel 0033: semua alur lama jalan (stok dilewati), endpoint stok 503.
+  - MCP (gratis FREE, tulis butuh scope write): `get_shop_stock`, `set_shop_stock` (isi dari Excel/sheet: buat baru /
+    setel stok sisa sebagai opname, bawaan PRATINJAU, apply: true; idempotency_key), `set_shop_recipes` (bahan per produk
+    by i / name+group, bahan by nama). Dites lokal lewat /mcp: pratinjau tidak menulis, apply buat 2 + setel 1, tidak valid
+    dilaporkan, produk/bahan tak ketemu dilaporkan.
+  - Dites lokal: tambah bahan (dup 409, negatif 400), resep abaikan bahan asing, jual 2 → −2 botol −60,5 ml, dobel 409 stok
+    tetap, jual tim −1/−30,25 "oleh Rina", beli via biaya +100 (avg Rp2.500/pcs), bahan asing 400, opname delta & dobel 409,
+    hapus jual/biaya mengembalikan (yang ter-opname tidak), arsip → tidak dipotong, cookie tim → stok pemilik 401. UI HP+web 0 error JS.
+- **2026-11-06 — Pengeluaran usaha + rapikan HP: live #142.**
+  - Kasir (pemilik & tim) tombol **Biaya** → catat beli botol/dus/bahan: transaksi `pengeluaran` kategori
+    **"Biaya Usaha"** (sub: Bahan & Stok / Kemasan / Operasional / Lainnya), related_type 'shop', request_id
+    anti dobel (payload_json.expenseId), saldo rekening berkurang dalam satu batch. Tim: rekening kunci + hari ini.
+  - Endpoint: `POST /api/member/shops/:id/expense`, `POST /api/staff/shops/:id/expense`; `/api/staff/me` kini kirim `type`.
+  - Semua hitungan omzet kini HANYA pemasukan (sebelumnya semua tx related_type 'shop'); Usahaku menampilkan
+    Biaya & Bersih (omzet − biaya), kasir: Omzet hari ini / Biaya hari ini / Bersih bulan ini; daftar "Hari ini" campur (biaya merah).
+  - HP: tombol hero tidak terpotong, label tahap tidak numpuk, aksi kasir di baris sendiri, bar struk tidak menutupi daftar.
+  - Catatan: "Biaya Usaha" belum ada di daftar kategori bawaan (tidak diubah supaya user lama aman) — tampil sebagai
+    teks kategori di Transaksi/Rekap. Dites lokal: pemilik a2 −45.000, dobel 409, tim a3 −12.000 "· oleh Rina", usaha lain 403,
+    cookie silang 401; UI HP 0 error JS.
+- **2026-11-06 (branch claude/usahaku-web) — Usahaku › Tim (akun kasir) Tahap 1, **live #140/#141**. Migrasi 0032 sudah (Bos sempat buat & coba login akun tim). #141: "@" di depan username dibuang otomatis (login/buat), tampilan tanpa @.**
+  - Pemilik: tombol **Tim** di hero Usahaku → buat anggota (nama, username `toko-nama` — tanda hubung = penanda akun tim,
+    sandi awal, usaha yang boleh dibuka, rekening Rupiah non-kartu-kredit yang DIKUNCI). Batas FREE 1 / PRO 5.
+    Atur: ganti usaha/rekening, reset sandi, nonaktifkan, hapus (semua mencabut sesi).
+  - Anggota login di `/tim` (atau login biasa — username ber-tanda-hubung dialihkan ke `/tim`). Sesi terpisah
+    (cookie `<SESSION_COOKIE_NAME>_tim`, tabel staff_sessions) — tidak pernah lolos requireSession → /api/member/* 401.
+    Hanya Ringkas (omzet hari ini) + kasir usaha yang diberikan. Penjualan: rekening & tanggal dipaksa server
+    (rekening kunci, hari ini WIB), catatan "· oleh <nama>", request_id idempoten.
+  - Endpoint: `/api/staff/{login,logout,me,password,shops/:id/sale}`, `/api/member/staff[/:id]`.
+  - Dites lokal (wrangler dev): validasi (username/sandi/usaha asing/kartu kredit ditolak), limit FREE 409, dup 409,
+    cookie staff → member 401, cookie pemilik → /api/staff/me 401, /me tanpa link_url/hook/kontak, jual masuk Tunai +15.000,
+    ulang 409, usaha tak diberikan 403, reset sandi & nonaktifkan mencabut sesi, login nonaktif 403, logout. UI web + HP 0 error JS.
+  - Belum: Tahap 2 (peran Pengelola). Belum dicoba di HP asli / app Capacitor.
+- **2026-11-06 (branch claude/usahaku-web) — "Baca ulang website": cek katalog (tambah & hapus) via AI-mu, **live #139**. Tanpa SQL.**
+  - MCP baru `sync_shop_catalog` (tulis, gratis FREE): kirim SELURUH produk dari website → produk baru ditambah
+    (disisipkan setelah produk terakhir di kategori yang sama), yang tidak ada lagi DIHAPUS, harga diperbarui.
+    Bawaan `apply: false` = PRATINJAU (tambah/hapus/harga_berubah, total sebelum/sesudah), simpan dengan `apply: true`.
+    Penghapusan besar (>5 & >30% katalog) ditolak kecuali `allow_large_removal: true`. Penjualan lama tidak terpengaruh.
+  - Layar 💲 Harga: tab "Baca ulang website" dengan 2 pilihan — **Cek katalog** (sync_shop_catalog, pratinjau dulu) dan
+    **Cek harga** (update_shop_prices). Kelola › Website: kalau katalog sudah terisi, perintah AI memakai sync_shop_catalog
+    (pratinjau) — bukan set_shop_products replace.
+  - Dites lokal: pratinjau tidak mengubah DB; apply: +344 Diamond (di grup ML), −86 Diamond FF, 1 harga berubah; hapus 8/10
+    → pratinjau memperingatkan, apply tanpa izin ditolak, dengan izin tersimpan; UI HP 0 error JS.
+- **2026-11-05 (branch claude/usahaku-web) — Update harga "hanya yang sudah ada" lewat AI-mu, **live #138**. Tanpa SQL.**
+  - MCP baru `update_shop_prices` (tulis, gratis FREE): HANYA mengubah harga produk yang sudah ada, tidak pernah
+    menambah/menghapus. Cocok lewat `i` (get_shop kini mengirim `i` + `website`; kalau `name` ikut dikirim & tidak
+    cocok dengan i → tidak diubah) atau name+group persis; nama sama di beberapa kategori tanpa group → `ambiguous`
+    (tidak diubah). Laporan updated/unchanged/not_found/invalid_price/ambiguous; mengisi catalog_synced_at.
+  - Webhook `/products` mode baru `"prices"` (logika sama, `applyPriceUpdates`).
+  - Layar 💲 Harga: tab "Ubah manual" / "Dari website (AI-mu)" — kartu AiMcpCard dengan perintah langkah demi
+    langkah (get_shop → baca website → cocokkan yang ada → update_shop_prices → laporan). Catatan: Leosiqra tidak bisa
+    menjalankan AI pengguna terjadwal; sarankan fitur tugas terjadwal di aplikasi AI-nya atau webhook.
+  - Dites lokal: i, i+nama salah (tidak diubah), ambigu, dengan group, tidak ketemu, harga 0; webhook prices: 2 diubah,
+    1 not_found, jumlah produk tetap 5; UI HP 0 error JS.
+- **2026-11-05 (branch claude/usahaku-web) — Update harga manual & otomatis, **live #137**; migrasi 0031 SUDAH dijalankan Bos (jalan kedua kali → "duplicate column" = wajar, kolom sudah ada).**
+  - **MIGRASI di D1 Console** (0031_shop_catalog_sync.sql; boleh sebelum/sesudah deploy — tanpa kolom, sinkron tetap
+    jalan, cuma waktu "terakhir diperbarui" tidak tercatat): `ALTER TABLE shops ADD COLUMN catalog_synced_at TEXT;`
+  - Otomatis: `POST /api/hooks/shop/<id>/products` (kunci webhook yang sama, `authShopHook` dipakai bersama dengan
+    webhook penjualan) body `{ mode: "update"|"replace", products: [{ name, price, group?, unit? }] }` — update =
+    group+nama sama ikut harga, baru ditambah, lainnya tetap; balasan updated/added/unchanged; maks 120; harga 0 dibuang.
+  - Manual: tombol "Harga" di header kasir → `PriceEditor.tsx` (cari, naik/turun X% untuk hasil cari/semua, bulatkan
+    Rp100, edit per produk, selisih tampil, simpan sekali). HookSection: bagian "Perbarui harga otomatis" + contoh kode;
+    perintah AI ikut mencakup sinkron harga. Banner "Harga diperbarui otomatis dari website: …" di editor harga.
+  - Dites lokal: sebelum migrasi update jalan & GET tetap; setelah migrasi waktu tercatat; kunci salah 401, kosong/121
+    produk/harga 0 → 400, replace; editor web+HP: +5% bulat Rp100 hanya hasil cari "Diamond" + 60 UC manual → tersimpan.
+- **2026-11-05 (branch claude/usahaku-web) — Status "AI tersambung" di Ladangku & Pengaturan, **live #137**. Tanpa SQL.**
+  - `src/lib/mcpStatus.ts` (`useMcpStatus`, cache 30 dtk, muat ulang saat tab aktif, `refreshMcpStatus` dipanggil
+    McpConnectCard setelah load) dari `/api/member/mcp/tokens`: none / read / write + nama AI.
+  - `AiMcpCard` langkah 1: write → "✓ AI tersambung: Claude · izin mengubah aktif" + Atur; read → peringatan
+    "izin baca saja — sambungkan ulang & centang izin mengubah" + Atur; none → Hubungkan (seperti dulu).
+  - Pengaturan › Aplikasi terhubung: kartu Claude & ChatGPT badge "Terhubung" + "Tersambung: <nama> — Atur untuk
+    menambah AI lain", tombol Atur TETAP. McpConnectCard: baris status "N AI tersambung …" + cara menambah AI lain.
+  - Dites lokal (Playwright): tiga keadaan write/read/none di kasir › Tampilan, kartu Pengaturan & kartu MCP, 0 error JS.
+- **2026-11-05 (branch claude/usahaku-web) — Gambar katalog: skema MCP lengkap + ikon data:image, **live #137**.**
+  - Laporan Bos (balasan Claude-nya): `set_kasir_style` belum mencantumkan `logoUrl`/`categoryImages`, `list_shops`
+    belum memuat semua pilihan. Kini skema set_kasir_style punya logoUrl, categoryImages (DIGABUNG, "" = hapus),
+    browse, mode; `kasir_style_options` memuat semua pilihan + aturan gambar.
+  - Gambar boleh `data:image/(png|jpeg|webp|gif|svg+xml)` ≤8.000 karakter (ikon SVG orisinal buatan AI pengguna),
+    total ≤150.000; `data:text/html` dll ditolak. set_catalog_images melaporkan `rejected_invalid` + `dropped_total_limit`.
+  - Klien MCP (Claude/ChatGPT) memuat daftar alat saat chat dimulai → setelah deploy pengguna perlu chat BARU
+    (atau sambung ulang konektor) supaya skema baru terbaca.
+  - Dites lokal: skema 19 field, ikon SVG ML/PUBG + logo terpasang & Free Fire lama tetap, data:text/html dibuang,
+    data 9.000 karakter ditolak & dilaporkan, kasir web+HP menampilkan ikon, 0 error JS.
+- **2026-11-05 (branch claude/usahaku-web) — Logo toko & gambar per kategori, **live #136**. Tanpa SQL.**
+  - `style_json.logoUrl` + `categoryImages {group: url}` (maks 60). `safeImageUrl` = https saja (bukan http/data:/
+    javascript:, tanpa IP/localhost/.internal, ≤500 karakter). Tampil lewat `CatalogImage` (`<img>` lazy,
+    referrer dimatikan, gagal muat → inisial/emoji). Dipakai di header kasir, kotak katalog, chip, judul kategori, kartu
+    toko di Usahaku; juga dikirim ke desain bebas (`shop.logoUrl`, `shop.categoryImages`).
+  - MCP baru `set_catalog_images` (tulis, gratis FREE): merge per kategori, image_url kosong = hapus, melaporkan
+    `rejected_not_https` & `warning_unknown_categories`. Editor Tampilan: bagian "Logo & gambar kategori" (tautan
+    manual + kartu "Minta AI-mu memasang gambar"). Editor hanya mengirim field yang DIUBAH dan Worker
+    MENGGABUNGKAN dengan style tersimpan (PUT shops/:id style = merge) — perubahan AI via MCP saat editor terbuka
+    tidak tertimpa (dites: AI pasang logo+gambar, editor ganti tema → ketiganya tersimpan).
+  - **Akun Bos SENGAJA belum diisi gambar** (Bos mau tes sendiri lewat MCP).
+  - Dites lokal (gambar disimulasikan): MCP pasang logo + 2 kategori, http/data:/IP ditolak, kategori tak dikenal
+    diperingatkan, hapus per kategori; PUT javascript: dibuang; web+HP: 3 gambar tampil, gambar 404 & tanpa gambar →
+    inisial berwarna; 0 error JS.
+- **2026-11-05 (branch claude/usahaku-web) — Kasir "Katalog kategori", **live #135**. Tanpa SQL.**
+  - `style_json.browse` = 'katalog' (DEFAULT baru) | 'gulir'. Katalog: grid kotak per kategori/game (ikon inisial, jumlah
+    pilihan, "mulai Rp…", badge ×n kalau ada di struk) → ketuk = halaman daftar harga kategori itu + tombol "Kembali ke
+    katalog" (gulir ke atas). Chip geser disembunyikan; pencarian tetap lintas kategori. 'gulir' = tampilan lama (chip +
+    semua produk). Pilihan "Cara jelajah" di editor & `browse` di MCP set_kasir_style.
+  - Dites lokal web+HP: 4 kotak, buka Free Fire → 3 produk saja, tambah → Kembali → badge ×1, cari "uc" → 2 produk,
+    0 error JS.
+- **2026-11-05 (branch claude/usahaku-web) — Kasir mode BEBAS (desain HTML/CSS/JS sendiri), **live #135**. Tanpa SQL.**
+  - `style_json.mode` = 'bawaan' | 'bebas' + `customHtml` (maks 60 rb karakter). Desain TIDAK pernah dijalankan di
+    halaman Leosiqra: `CustomKasirFrame.tsx` → `<iframe sandbox="allow-scripts">` tanpa allow-same-origin (origin
+    kosong: tanpa cookie/localStorage/API sesi/halaman induk; tanpa forms/popup/top-navigation) + CSP di awal dokumen
+    (default-src 'none', tanpa koneksi; img https:/data:; Google Fonts). Jembatan `window.Leosiqra`: onData (katalog +
+    isi struk), add(i)/remove(i), checkout(), rupiah(n). Pesan dari iframe divalidasi (sumber, jenis, indeks) dan dibatasi
+    15/detik. Struk, ID pembeli & pencatatan uang tetap komponen Leosiqra.
+  - Editor Tampilan: "Gaya kasir: Bawaan / Bebas" — textarea kode, "Pakai contoh" (`KASIR_SAMPLE_HTML`), pratinjau
+    interaktif, kartu "Minta AI-mu mendesain". MCP baru `set_kasir_template` (tulis, gratis FREE) + `mode` di
+    set_kasir_style; list_shops tidak mengirim HTML (has_custom_html), get_shop mengirim.
+  - Dites lokal: desain contoh → klik produk masuk struk Leosiqra (70 Diamond ×2 + 86 Diamond = Rp40.000), Bayar di
+    desain membuka struk (web: panel samping, HP: sheet); desain JAHAT (cookie, localStorage, parent.document, fetch &
+    XHR ke /api/member/accounts, top.location, window.open) → semua diblokir, halaman induk tetap; set_kasir_template
+    via MCP akun FREE → tampil di HP. 0 error JS.
+  - Catatan risiko yang diterima: desain bisa menampilkan gambar https (bisa dipakai mengirim data yang DIKETIK DI
+    DALAM desain ke luar). Data yang diterima desain hanya katalog publik; teks peringatan "jangan ketik PIN/password
+    di dalam desain" tampil di kasir.
+- **2026-11-05 (branch claude/usahaku-web) — Sambungkan website (webhook) + rombak tampilan kasir, **live #134**; migrasi 0030 SUDAH dijalankan Bos.**
+  - **MIGRASI WAJIB di D1 Console** (file 0030_shop_hook.sql, boleh sebelum/sesudah deploy — Worker tahan kolom belum
+    ada: kasir jalan, "Sambungkan website" & webhook membalas 503):
+    `ALTER TABLE shops ADD COLUMN hook_hash TEXT;` / `ALTER TABLE shops ADD COLUMN hook_account_id TEXT;` /
+    `ALTER TABLE shops ADD COLUMN hook_last_at TEXT;`
+  - Webhook publik `POST /api/hooks/shop/<shopId>` (`handleShopHook`), header `Authorization: Bearer lsq_shk_…`. Kunci =
+    `mcpRandomSecret`, disimpan SHA-256 (`hook_hash`) — tidak pernah dikirim ke klien (GET hanya `hook_on`). Body:
+    `order_id` (wajib, unik → `payload_json.saleId = "web:<order_id>"`), `amount` (wajib, Rupiah), opsional product,
+    buyer (PIN/OTP ditolak), qty, date. Rekening tujuan = `hook_account_id` (dipilih user, IDR). Rate limit
+    MCP_RATE_LIMITER per usaha. Preflight browser tidak mengizinkan header authorization → hanya server-ke-server.
+    Catatan transaksi berakhiran " · via website" + `payload.source = 'website'` (badge 🌐 di kasir).
+  - Pencatatan kasir & webhook kini satu fungsi `recordShopSale` (batch atomik yang sama, saleKey anti dobel).
+  - Member: `POST /api/member/shops/:id/hook {account_id}` → kunci (SEKALI) + url; ganti = kunci lama mati;
+    `DELETE` = putus. UI `HookSection.tsx` di Kelola: status (Tersambung → rekening · terakhir masuk), contoh kode
+    Node/PHP/cURL, kartu AI-mu (perintah TANPA kunci).
+  - Tampilan kasir tambahan (style_json, tanpa migrasi baru): header besar/ringkas, posisi struk kiri/kanan, ukuran
+    tombol normal/besar, tampilkan omzet/cari/penjualan hari ini. Juga di MCP set_kasir_style.
+  - Dites lokal: sebelum migrasi (GET jalan, 503), tanpa/salah kunci 401, order_id/amount/PIN 400, sah 201 saldo +19.500,
+    kirim ulang = duplicate, 3× paralel → 1 tercatat (saldo +29.500 total), ganti kunci → lama 401, kunci toko lain 401,
+    putus → 401, tanpa sesi tidak bisa buat kunci; Playwright web+HP 0 error JS.
+- **2026-11-05 (branch claude/usahaku-web) — MCP Usahaku GRATIS untuk FREE, **live #134**. Tanpa SQL.**
+  - Keputusan Bos: tool tulis Usahaku (`create_shop`, `update_shop`, `set_shop_products`, `set_kasir_style`) boleh untuk
+    member FREE. Izin tulis (scope `write`) kini bisa dibuat semua member (token manual & OAuth); tool uang
+    `add_transaction` & `set_budget` ditandai `pro: true` dan tetap khusus PRO (`mcpCanUse` di tools/list + cek per
+    panggilan). Token baca-saja tetap tidak bisa menulis apa pun. Respons token/izin: `canWrite: true` +
+    `canWriteMoney` (= PRO). Teks layar izin (McpConnectCard, /izinkan-ai), tabel paket, dan /panduan/mcp diperbarui.
+  - Member FREE yang SUDAH terhubung dengan token/izin baca perlu menghubungkan ulang & mencentang izin mengubah.
+  - Dites lokal: FREE+tulis → tool Usahaku ada & set_kasir_style jalan, add_transaction ditolak (0 transaksi);
+    FREE+baca → tool tulis tidak ditawarkan, panggilan ditolak; PRO → semua tool.
+- **2026-11-05 (branch claude/usahaku-web) — Usahaku TANPA AI Leosiqra (keputusan Bos: semua lewat AI/MCP milik
+  pengguna), **live #133**. Tanpa SQL.**
+  - DIHAPUS dari Worker: `handleShopIdeas` (ide usaha), `handleShopImportPrices` + `handleShopImportPages` + semua
+    pengambil halaman (fetchDirectHtml/reader r.jina.ai/pickShopPages), kuota `shopIdeaAi`/`shopImportAi`, env
+    `SHOP_IMPORT_READER`. Rute lama (`/shops/ideas`, `/:id/import-prices`, `/:id/import-pages`) membalas **410**
+    `code: use_mcp` + pesan. Riwayat kode ada di git (commit sebelum ini) kalau perlu dikembalikan.
+  - MCP baru: `create_shop` (simpan ide usaha pilihan pengguna, + products & plan, maks 5 usaha) dan `update_shop`
+    (nama/tagline/deskripsi/emoji/WA/cara bayar/area/website/rencana) — pakai `sanitizeShopFields` yang sama dengan
+    aplikasi (PIN/OTP & tautan editor ditolak, WA → 62…). Instruksi server MCP: ambil harga website dengan alat web
+    milik AI-nya lalu `set_shop_products`.
+  - UI: komponen bersama `AiMcpCard` (1 Hubungkan · 2 Salin perintah · 3 Muat ulang + Buka Claude/ChatGPT) dipakai di
+    Usaha baru (ide), Kelola › Website (ambil harga), Tampilan kasir. Usahaku & Kasir memuat ulang otomatis saat tab
+    kembali aktif (`visibilitychange`). `shopService.ideas/importPrices/importPages` dihapus.
+  - **Akibat yang perlu Bos tahu**: menyimpan lewat AI = tool tulis MCP = **khusus PRO**. Member FREE masih bisa
+    daftar usaha & isi katalog manual, dan AI-nya bisa membaca, tapi tidak bisa menyimpan lewat AI.
+  - Dites lokal: 410 untuk 3 rute lama; create_shop/update_shop + validasi; Playwright web+HP 0 error JS.
+    **Belum**: dipanggil dari Claude/ChatGPT asli (termasuk apakah AI-nya mampu membuka semua halaman cxastore.id).
+- **2026-11-05 (branch claude/usahaku-web) — perbaikan kecil, **live #132**. Tanpa SQL.**
+  - Bug "Hubungkan AI macet" di Tampilan kasir (web): panel Pengaturan (z-80) terbuka DI BELAKANG Modal (z-88). Sekarang
+    popup ditutup dulu lalu `openSettings('app-mcp')` (langsung kartu Claude & ChatGPT). HP: tautan /app/profile + tutup.
+  - Nama kategori dari penemu halaman: teks link gabungan ("MOBILE LEGENDS Moonton MOBILE LEGENDS") → potongan yang
+    cocok dengan nama dari URL ("MOBILE LEGENDS"). Berlaku untuk impor BARU — kategori lama di katalog Bos tetap sampai
+    diambil ulang (Ganti semua).
+  - Placeholder Daftarkan usaha: "mis. Toko Kue Leosiqra" / "mis. Kue kering & bolu rumahan".
+- **2026-11-05 (branch claude/usahaku-web) — Ladangku layar penuh + tampilan kasir (manual & AI pengguna via MCP), **live #131** (migrasi 0029 SUDAH dijalankan Bos).**
+  - **MIGRASI WAJIB di D1 Console** (boleh sebelum/sesudah deploy — Worker tahan kolom belum ada: baca tanpa kolom,
+    simpan tampilan → 503 "belum aktif"): `ALTER TABLE shops ADD COLUMN style_json TEXT;` (file 0029_shop_style.sql).
+  - Web `/membership/ladang` (+ `/ladang/kasir`) masuk `FULLSCREEN_PATHS`: tanpa sidebar, header (Ringkasan · judul tab
+    · orb AI) + dock melayang seperti Investasiku. HP tetap tab pil.
+  - Halaman Usaha dirapikan: hero omzet bulan ini / hari ini / transaksi / jumlah usaha; kartu toko berwarna tema
+    kasirnya + Hari ini / Bulan ini / Produk; baris "langkah berikut" hanya kalau belum tahap Jualan.
+  - **Tampilan kasir** (`KasirStyleEditor.tsx`, tema di `kasirTheme.ts`): tema 8 warna, tata letak Kartu/Daftar/Ringkas,
+    kolom 2/3/4, gaya kartu, satuan, teks sambutan, penutup struk, urutan kategori. Worker `sanitizeKasirStyle` =
+    whitelist (tema/tata letak tak dikenal → nilai lama, teks tanpa `<>`, field lain dibuang). BUKAN HTML/CSS bebas.
+  - **MCP** (AI milik pengguna, tidak memakai kuota AI Leosiqra): `list_shops`, `get_shop` (baca), `set_kasir_style`,
+    `set_shop_products` (tulis — PRO + token izin tulis, sama dengan tool tulis lain; mode append cocok per group+nama,
+    harga 0 dibuang, maks 120). Instruksi server MCP ditambah. Editor punya "Salin perintah" + "Hubungkan AI".
+  - `Modal` & `BottomSheet` kini `role="dialog"` + `aria-label`.
+  - Dites lokal: tanpa kolom (GET jalan, simpan 503), sanitasi style nakal, MCP tools/list (FREE: tool tulis hilang,
+    panggil → ditolak), set_kasir_style/append/usaha orang lain → ditolak; Playwright web+HP 0 error JS.
+    **Belum**: dipanggil dari Claude/ChatGPT asli.
+- **2026-11-05 (branch claude/usahaku-web) — Halaman KASIR per usaha, **live #130**. Tanpa SQL.**
+  - Route baru `/membership/ladang/kasir?id=<usaha>` & `/app/ladang/kasir?id=` (`KasirView.tsx`). Klik usaha di Usahaku →
+    kasir (bukan popup lagi). Header: omzet hari ini / jumlah transaksi / bulan ini + "Kelola" (= `ShopDetail` lama:
+    kontak, produk, katalog, website — tanpa ringkasan jualan). Katalog: cari + chip kategori + kartu produk (ketuk = +1,
+    badge ×n). Struk (web ≥lg panel kanan; HP & web sempit bar bawah → sheet): item ±, "Item di luar katalog", Nama/ID
+    pembeli (wajib kalau produk berkategori), rekening (diingat per usaha di localStorage), tanggal, Total diterima bisa
+    diubah (potongan ditampilkan) → `POST /shops/:id/sale` (satu transaksi, request_id) → layar selesai + "Salin struk"
+    (teks WA) + "Transaksi baru". Daftar "Penjualan hari ini".
+  - Worker: sale menerima `items` (≤30, hanya catatan di `payload_json.items`; nominal tetap `amount`). `SaleForm` lama
+    di UsahaView dihapus. DevNoticeBanner disembunyikan di `/app/ladang/kasir` (menimpa bar struk). `BottomSheet` kini
+    `role="dialog"` + `aria-label` judul. Tombol Kelola di HP punya aria-label.
+  - Diuji lokal web + HP: 4 item (70rb) dipotong jadi 60rb, tanpa ID ditolak, catatan "[CXA Store] 70 Diamond ×2,
+    140 Diamond, 86 Diamond · 112233 (2001) · Rudi", items tersimpan, saldo +60rb per transaksi, struk tersalin, 0 error JS.
+- **2026-11-05 (branch claude/usahaku-web) — Baca SEMUA halaman game dari website toko, **live #130**. Tanpa SQL.**
+  - Permintaan Bos: toko top up (mis. https://cxastore.id/) punya halaman per game (`/id/mobile-legends`) — AI harus
+    membuka semuanya. **cxastore.id TIDAK bisa dibuka dari sandbox** — strukturnya asumsi, perlu dicek di produksi.
+  - Worker baru `POST /api/member/shops/:id/import-pages {url}` (tanpa AI, tanpa kuota, rate-limit biasa): ambil
+    beranda (`fetchDirectHtml`, pengaman SSRF sama) → link `<a href>` (+ alt gambar) → kalau < 3, pembaca r.jina.ai
+    dengan `x-with-links-summary` (markdown, termasuk link bergambar) → `pickShopPages`: domain sama saja, maks 60,
+    buang beranda/`/id`, login/cek transaksi/blog/kebijakan/akun/aset, query & hash dibuang; judul = teks link
+    (kata generik "Beli/Top up/Lagi" → dari URL).
+  - `import-prices` menerima `group` (nama halaman → kategori produk), teks per halaman ≤20 rb karakter, kuota baru
+    terpisah `$.shopImportAi` **60 halaman/hari** (dulu ikut kuota ide 5/hari). `shopQuota()` generik.
+  - UI Website: Ambil daftar harga → daftar halaman (centang, Pilih semua/Kosongkan) → baca satu per satu dengan
+    progres + "Berhenti & pakai hasil" (rate-limit ditunggu 12 dtk, ulang ≤3×; kuota habis = berhenti) → "N produk
+    dari M halaman" + daftar halaman tanpa harga → Ganti semua/Tambahkan. Tanpa sub-halaman → baca halaman itu saja.
+    Selama proses, kotak brief & kolom link disembunyikan (cuma baris alamat).
+  - Dites lokal (mock): 4 halaman ketemu dari beranda berisi login/cek-transaksi/blog/IG/logo/`/id`; halaman tanpa harga
+    → kuota dikembalikan (3 terpakai); situs JS → via pembaca, link bergambar ketemu; web + HP → kasir 3 kategori.
+- **2026-11-05 (branch claude/usahaku-web) — **live #129**. Tanpa SQL.**
+  - **Tagih › Nyicil**: tombol Nyicil per piutang → nominal (+ chip 25%/50%) → `debtService.pay` (endpoint lama,
+    atomik, server memotong kelebihan jadi pelunasan). Progres "Sudah kembali X dari Y". Diuji: 25rb + 30rb + Sudah
+    bayar 45rb = 100rb, status lunas, saldo +100rb persis.
+  - **Bug Kekayaan (laporan Bos)**: filter "Lunas" hanya menampilkan catatan yang DIBUAT di bulan terpilih → piutang
+    Oktober yang dilunasi November tidak muncul di mana pun. Sekarang ikut tampil kalau ada pembayaran di bulan itu
+    (`paidMonthsByDebtId`, HutangPanel). Diuji: sebelum fix hanya 1 dari 2, sesudah 2 dari 2.
+  - **Usahaku — AI ide ngaco** (Bos: "CXA Store, top up games" → keluar jastip makanan): prompt ide sekarang WAJIB di
+    bidang yang disebut user, usaha yang sudah ada = ide pertama pakai nama aslinya, top up/voucher game dinyatakan legal;
+    temperature 0.8 → 0.5. **Belum dites dengan AI asli.** + jalur **"Sudah punya usaha? Daftarkan langsung"**
+    (`DirectShopForm`: nama, ikon, jualan apa — tanpa AI, tanpa kuota) → detail usaha (isi WA, tempel website).
+- **2026-11-05 (branch claude/usahaku-web) — Usahaku › Website + kasir top up, **live #128**. Tanpa SQL baru.**
+  - Bagian "Website" di ShopDetail (`WebsiteSection`, `UsahaView.tsx`): belum ada link → kotak "Belum punya website?"
+    (Salin brief markdown `websiteBrief()` di `shopService.ts` + Buka Pabrik.AI `https://app.vantis.sh` + Lihat isi brief),
+    kolom tautan (DIPINDAH dari ContactForm), "Ambil daftar harga dari website" → pratinjau → Tambahkan (nama sama =
+    harga ikut website, sisanya ditambah, maks 20) / Ganti semua / batal. Tahap "Promosi" → "Online" (`promotedAt` ATAU
+    `linkUrl`).
+  - Worker `POST /api/member/shops/:id/import-prices` (lihat kode: `fetchPublicPage`, `pageHtmlToText`, cadangan
+    r.jina.ai, env `SHOP_IMPORT_READER=false` mematikan). Tambahan sesi ini: usaha bukan milik user → 404 sebelum fetch;
+    `shopMoney` membuang sen ",00"/".00" dulu ("Rp1.500.000,00" → 1.500.000, dulu jadi 150 juta).
+  - Dites lokal (wrangler + mock halaman/jina/AI): ditolak → http, localhost, 127.0.0.1, [::1], 2130706433,
+    leosiqra.com, *.internal, redirect ke 127.0.0.1, `/studio?sessionId=`, 403, bukan HTML — kuota TIDAK terpotong;
+    redirect ke halaman toko OK; halaman JS → `via: pembaca`; "Rp22.000" → 22000, harga 0 dibuang, `<script>` dinetralkan;
+    tanpa sesi 401; kuota 5/hari menolak ke-6. UI Playwright web + HP (`/membership/ladang#usaha`, `/app/ladang#usaha`):
+    salin brief, tautan editor ditolak, Tambahkan & Ganti semua tersimpan, tahap jadi Online, 0 error JS.
+  - **Belum diverifikasi di produksi**: AI & situs ASLI (r.jina.ai dan Pabrik.AI tidak bisa dijangkau dari sandbox). Rate-limit AI (12/menit)
+    ikut terpakai oleh permintaan yang ditolak validasi — sengaja dibiarkan (murah, mencegah spam).
+  - **+ Kasir & katalog berkategori (permintaan Bos: katalog top up FF/MLBB/PUBG).** Produk punya `group` opsional
+    (kategori, ≤40 karakter, di `products_json` — tanpa migrasi). `SHOP_PRODUCTS_MAX` 20 → **120** (frontend
+    `PRODUCTS_MAX` sama). AI import mengisi `group`, teks halaman ≤30 rb karakter, `max_tokens` 9000. "Catat penjualan"
+    jadi **"Buka kasir"** kalau ada kategori: pilih kategori (kotak + cari) → pilih nominal → **Nama / ID pembeli WAJIB**
+    → jumlah/total/rekening → simpan. Sale menerima `buyer` (≤60, PIN/OTP ditolak) → catatan transaksi
+    "[Usaha] Free Fire · 140 Diamond ×2 · 5550001 (2101) · Sari" + `payload_json.buyer`. Tambahkan saat import
+    mencocokkan kategori+nama. Katalog WA & brief dikelompokkan per kategori. Dites lokal (mock): import 8 produk
+    3 kategori, kasir web+HP, total 2×19.500 = 39.000, tanpa ID ditolak, saldo +10.000 sekali (kirim ulang 409),
+    0 error JS. Gambar katalog PNG tetap 7 produk pertama.
+- **2026-11-04 (branch claude/usahaku) — Usahaku + tab Ringkas + Jual pakai foto & Sedang dijual, live #127.**
+  - Tabel `shops` & `listings` dibuat Bos di D1 Console pakai versi PENDEK (CREATE minimal + ALTER ADD COLUMN, tanpa
+    FK/DEFAULT — baris panjang & tanda kutip rusak saat ditempel). Isinya setara file 0027/0028; hapus user/reset tetap
+    menghapus manual. Kalau perlu cek: `PRAGMA table_info(shops)` / `(listings)`.
+  - **Migrasi `cloudflare/migrations/0027_shops.sql` WAJIB dijalankan Bos di D1 Console sebelum deploy** (tabel `shops`).
+  - **+ Migrasi `cloudflare/migrations/0028_listings.sql` (tabel `listings`, "Sedang dijual") juga WAJIB sebelum deploy.**
+  - **Jual pakai foto**: `SellFlow` punya Foto/Galeri → `itemService.scan` mengisi nama/varian, foto ikut ke
+    `POST /items/appraise` (`image_base64`, ≤2 MB, magic bytes) → AI menilai kondisi (`appraisal.seen`). Setiap taksir
+    sukses OTOMATIS membuat/memperbarui baris `listings` (per `listing_id`, atau iklan aktif untuk `item_id` yang sama;
+    maks 50 aktif) + foto ke R2 `listings/<user>/…`. Ubah harga/judul/deskripsi → `PUT /api/member/listings/:id` (jeda
+    800 ms). `POST /listings/:id/sold` = satu batch: pemasukan (Pemasukan › Jual Barang, related_type 'item') opsional +
+    barang Barangku terjual + iklan terjual, bersyarat `status='dijual'` (diuji 3× paralel → 1×201 + 2×409). Tab Jual:
+    "Sedang dijual" + badge di daftar Barangku; "Sudah terjual" gabungan iklan & barang (tanpa dobel).
+  - Ladangku jadi 4 tab: `#ringkas` (default) / `#usaha` / `#jual` / `#tagih`.
+  - **Ringkas** (`RingkasView.tsx`): "Cuan bulan ini" HANYA dari hasil Ladangku — pemasukan `related_type` 'shop' / 'item'
+    atau sub 'Jual Barang' (gaji tidak ikut — alasan tab Target lama dihapus). Target opsional `prefs.cuanTarget`.
+    Kartu ke Usahaku / Jual / Tagih + "Uang masuk bulan ini".
+  - **Usahaku** (`UsahaView.tsx`, `shopService.ts`): `POST /api/member/shops/ideas` (AI, 3 rencana Rupiah, kuota 5/hari
+    `$.shopIdeaAi`, dikembalikan kalau gagal, tanpa web search), CRUD `/api/member/shops` (maks 5/user), `POST /:id/sale`
+    (pemasukan Usaha & Freelance › Penjualan + saldo, `request_id` → `payload_json.saleId` anti dobel). Tahap: Rencana →
+    Katalog (WA + produk) → Promosi (`promoted_at`, saat salin/bagikan katalog) → Jualan (≥1 penjualan).
+  - Katalog: teks WA, gambar PNG 1080×1350 (canvas di klien), tautan `wa.me/<62…>?text=`. TIDAK ada halaman publik.
+    Tautan toko online opsional: https saja, tautan editor (`/studio`, `sessionId=` dll) ditolak. Catatan bayar yang
+    memuat PIN/password/OTP/CVV ditolak. Nomor WA dinormalisasi ke 62….
+  - Diuji lokal (D1 + mock AI): ide (sanitasi `<script>`, rentang dibalik → diurutkan, ide kosong dibuang), validasi tautan
+    & PIN, penjualan 3× paralel → 1×201 + 2×409, saldo +44rb sekali, user lain → 404. **Belum**: respons AI asli.
+- **2026-11-04 (branch claude/ladangku-3) — tab Target Ladangku DIHAPUS (permintaan Bos: ikut menghitung gaji yang
+  kategorinya bukan "Gaji"), live #126.** `TargetView.tsx` dihapus; `#target` jatuh ke tab Jual. `prefs.cuanTarget`
+  di Worker dibiarkan (tidak dipakai UI, tidak berbahaya).
+- **2026-11-04 (branch claude/ladangku-2) — Ladangku tab Tagih & Target, live #125. Tanpa migrasi.**
+  - Ladangku jadi 3 tab (hash `#jual` / `#tagih` / `#target`) di `src/components/ladang/LadangView.tsx`.
+  - **Tagih** (`TagihView.tsx`): piutang belum lunas (`paidByDebt`/`debtRemaining`, hanya IDR), "Ingatkan" = `wa.me/?text=`
+    (3 nada, kontak dipilih user — tanpa API WA), "Sudah bayar" = `debtService.pay` lunas penuh.
+  - **Patungan** `POST /api/member/debts/split` (`handleSplitDebt`): bagi rata rupiah bulat (sisa ke orang pertama, jumlah =
+    total persis), maks 20 nama (dobel beda huruf besar dibuang), rekening IDR WAJIB (kolom account_id NOT NULL + FK —
+    'General' gagal FK). `apply_balance` (default true): saldo −(total−bagianku) untuk piutang (`balanceApplied`) +
+    pengeluaran bagianku (kategori pilihan) lewat `quickTxBalanceStatements`. Anti dobel: `request_id` UUID klien →
+    `payload_json.splitId`; baris berikutnya bersyarat EXISTS baris pertama. Diuji: 3× paralel → 1×201 + 2×409, saldo −350rb
+    sekali; 100rb/3 = 33.334+33.333+33.333; tanpa potong saldo → saldo tetap.
+  - **Target** (`TargetView.tsx`): cuan = pemasukan bulan ini selain Gaji/Hasil Investasi/kategori investasi, tanpa
+    related_type debt/transfer/investasi. Target per bulan di `prefs.cuanTarget` (PUT /api/member/preferences, 0–1e11).
+  - Buka toko (website publik) sengaja TIDAK dibuat (risiko hosting konten user/penipuan) — tunggu keputusan Bos.
+- **2026-11-04 (branch claude/ladangku) — Ladangku (jual barang nganggur), live #124. Tanpa migrasi.**
+  - Halaman `/membership/ladang` + `/app/ladang` (`src/components/ladang/*`), fitur `ladang` (menu Fitur, default nyala untuk
+    user tanpa preferensi; `PREF_FEATURES` Worker ikut). Tombol "Jual di Ladangku" di editor Barangku (`?item=<id>`).
+  - `POST /api/member/items/appraise`: AI (gemini-2.5-flash, fallback lite) + **plugin web OpenRouter (BERBAYAR per request,
+    disetujui Bos)** → harga bawah/wajar/atas/cepat laku + judul & deskripsi iklan. Kuota **5×/user/hari** (`metadata_json
+    $.appraiseAi`, atomik, dikembalikan kalau AI gagal) + `AI_PARSE_RATE_LIMITER`. Tautan iklan HANYA dari `annotations`
+    url_citation (tautan karangan model dibuang — diuji). Kill switch: var `OPENROUTER_APPRAISE_WEB=false`.
+  - `POST /api/member/items/:id/sell {price, account_id|null, date}`: satu batch — INSERT pemasukan (Pemasukan › Jual Barang,
+    related_type 'item') bersyarat `status='aktif'` + saldo/total via `quickTxBalanceStatements` + item `terjual`
+    (manual_value = harga laku). Diuji 3× paralel → 1×201 + 2×409, saldo naik sekali. Rekening wajib IDR.
+  - Barang di luar Barangku: "Sudah laku" = `addTransaction` pemasukan biasa (applyBalance).
+  - **Belum terverifikasi**: respons asli OpenRouter + plugin web (format `annotations`, kualitas harga) — lokal pakai mock.
+    Cek setelah deploy dengan 1–2 taksiran sungguhan.
+- **2026-11-04 (branch claude/koleksiku-2) — Koleksiku tahap 2, live #123:**
+  - **Migrasi `cloudflare/migrations/0026_collectible_alerts.sql` (ALTER TABLE collectibles ADD COLUMN alert_price REAL)
+    dijalankan Bos di D1 Console.** Tanpa kolom ini cron :45 diam (return), PUT cetakan tetap jalan (`.catch`).
+  - **Steam (CS2)**: `POST /api/member/collectibles/steam/import {profile?}` (URL /id/, /profiles/, steamID64; kosong = profil
+    tersimpan `users.metadata_json $.steam {id,syncedAt}`), jeda 2 menit/user. Inventaris publik
+    `steamcommunity.com/inventory/<id64>/730/2` (maks 2 halaman × 2000), hanya `marketable = 1`, dikelompokkan per
+    `market_hash_name` (= `ref_id`, kind `steam`). Sinkron ulang: jumlah diperbarui, yang hilang DIHAPUS (hanya kalau
+    inventaris lengkap & tidak terpotong batas 2000). `DELETE /steam` = putuskan + hapus semua item Steam.
+  - Harga Steam: Skinport `sales/history` (median 7 hari, 50 nama/panggilan). **Dari wrangler dev lokal Skinport selalu 406**
+    (header `Accept-Encoding: br` jadi `identity` di proxy sandbox — terlihat di httpbin) → cadangan **Steam Market
+    priceoverview** (USD, maks 15 nama/panggilan; harga Steam lebih tinggi dari Skinport). Di produksi BELUM terverifikasi
+    apakah Skinport lolos (flag `brotli_content_encoding` aktif via compat date) — cek log setelah deploy.
+  - **Progres set**: `GET /pokemon/sets` → kartu unik per set (`ref_id` sampai '-' terakhir) vs `cardCount.official` TCGdex
+    (`/v2/en/sets/:id`, cache 24 jam), maks 20 set.
+  - **Cron** (trigger tiap menit): menit :25 `refreshStaleCollectiblePrices` (8 kartu + 50 nama Steam paling basi lintas
+    user), menit :45 `sendCollectiblePriceAlerts` (selisih ≥20% DAN ≥Rp50.000 × jumlah vs `alert_price` → 1 push/user,
+    maks 12 user/jalan, klaim bersyarat `alert_price = old`; NULL = isi diam-diam). Toggle notifikasi `collectibles`.
+  - Diuji lokal (D1 lokal + mock inventaris): import, privat → pesan jelas, sinkron ulang (hapus 4 tambah 1), POST
+    kind steam ditolak, PUT nama/manual_value item steam diabaikan, sets, cron :25 update harga, cron :45 baseline lalu
+    1 push (gabung nama sama), jalan ulang tidak dobel, +5% tidak dikirim. **Belum**: inventaris CS2 publik asli (yang
+    dicoba semua privat/kosong), Skinport dari Cloudflare produksi.
+- **2026-11-04 (branch claude/koleksiku) — Koleksiku tahap 1, live #122:**
+  - **Migrasi `cloudflare/migrations/0025_collectibles.sql` WAJIB dijalankan Bos di D1 Console sebelum deploy** (2 tabel:
+    `collectibles`, `collectible_value_history`).
+  - Tab Kekayaan `#koleksi` + `/app/koleksi` (`src/components/koleksi/*`). Jenis: `pokemon` (data & harga dari **TCGdex**
+    api.tcgdex.net — publik, tanpa kunci; pokemontcg.io ditolak karena 5/8 percobaan 500/502) dan `lainnya` (nilai manual).
+    Steam = tahap 2 (Skinport API butuh header `Accept-Encoding: br`; inventaris Steam publik bisa dibaca).
+  - API `/api/member/collectibles` (+ `/pokemon/search`, `/pokemon/card/:id`, `/refresh`, `/:id`, `/:id/photo`), maks 2000/user.
+    Harga diperbarui saat Koleksiku dibuka (`POST /refresh`, kartu > 20 jam, cache 12 jam) — BUKAN cron (cron gratis 50
+    subrequest/jalan). Tiap refresh/perubahan → titik `collectible_value_history` hari itu (grafik).
+  - Nilai IDR: `src/lib/collectibles.ts unitValueIdr` (cek kurs ada — `convert()` mengembalikan angka mentah kalau kurs
+    kosong) = `snapshotCollectibleValue` Worker. Masuk Kekayaan bersih (`computeNetWorth.collectiblesValueIdr`).
+- **2026-11-04 (branch claude/langgananku) — Langgananku + Radar, live #120:**
+  - **Migrasi `cloudflare/migrations/0024_subscriptions.sql` WAJIB dijalankan Bos di D1 Console sebelum deploy.**
+  - Memantau langganan (BUKAN Transaksi Rutin; tidak mencatat transaksi). API `/api/member/subscriptions` (GET/POST,
+    `/:id` PUT/DELETE), maks 200/user. Jadwal = `anchor_date` + kelipatan siklus (mingguan/bulanan/3bulan/tahunan,
+    tgl 31 → hari terakhir bulan) — `src/lib/subscriptions.ts nextCharge` = SQL cron (diuji 0 beda).
+  - Cron harian `sendSubscriptionReminders`: H-1 sebelum ditagih (aktif), H-2 sebelum masa coba habis (coba), maks 30/user,
+    toggle notifikasi `subscriptions`. Push → `/membership/langganan` (app: `/app/langganan`).
+  - Katalog 47 layanan `src/lib/subscriptionCatalog.ts` (harga = PERKIRAAN). Logo (live #121): ikon HD diunduh SAAT DEPLOY
+    oleh `scripts/fetch-logos.mjs` ke `/logos/<domain>.png` (cek nama aplikasi `app:`), `SubLogo` tidak memakai /api/logo
+    (Worker gagal ke API Apple → favicon pecah & lambat); tanpa file → huruf warna merek. Radar: `radarScan` lokal (tanpa AI) atas pengeluaran **30 hari** (keputusan Bos):
+    cocok katalog = "pasti", nama sama ≥2× nominal ±15% jarak teratur = "mungkin". Animasi `RadarScan.tsx`.
+  - Juga di branch ini: Kotak Masuk + lonceng hanya di halaman Keuangan (`Header.tsx`, prefix dari `keuanganNav`);
+    Kekayaan dirapikan (judul+Tambah satu baris, tab baris sendiri & label pendek di HP, grup kosong → baris
+    "Belum dicatat", urutan Kas→Tabungan→Investasi→Barangku→Piutang→Kewajiban, komposisi "<1%", grafik HP 110px).
+  - Menu: fitur `langganan` (features.ts + PREF_FEATURES Worker, bawaan ON untuk user baru), navGroups Transaksi,
+    app Lainnya → Langgananku. Tahap 2 (belum): deteksi harga naik, cek dobel, status sudah dibayar.
+- **2026-11-04 security check (branch claude/security-cron-flood):** 🟠 cron pengingat bisa dibanjiri satu akun
+  (LIMIT global) → diperbaiki dengan batas per user `ROW_NUMBER() OVER (PARTITION BY user_id)` di 4 cron + hutang
+  disaring H-3/H-1 di SQL; foto barang ≤2 MB + 12/menit; tanggal 2026-02-31 ditolak. Rincian & bukti:
+  `.claude/skills/security-check/references/triaged.md`.
+- **2026-11-04 (branch claude/fitur-barang) — Barangku, live #117 (migrasi 0023 dijalankan Bos? cek "Fitur Barangku belum aktif"):**
+  - **Migrasi `cloudflare/migrations/0023_items.sql` WAJIB dijalankan Bos di D1 Console sebelum deploy**
+    (tanpa tabel: API balas 503 "belum aktif", Ringkasan Kekayaan tetap jalan, cron garansi dilewati).
+  - API `/api/member/items` (GET/POST), `/:id` (PUT/DELETE), `/:id/photo` (GET/PUT/DELETE, R2 `items/<user>/<id>-<acak>`,
+    JPG/PNG/WebP ≤5 MB, hanya pemilik). Maks 500 barang/user. Reset data & hapus user (admin) ikut hapus foto.
+  - Cron harian `sendWarrantyReminders`: H-30 & H-7 sebelum `warranty_until`, klaim `warranty_reminded_for`, toggle `warranty`.
+  - UI: tab Kekayaan `#barangku` + `/app/barangku` (komponen sama `src/components/barangku/*`), nilai sekarang
+    `src/lib/itemValue.ts` (susut per kategori, mode auto/tetap/manual), masuk Kekayaan bersih (`computeNetWorth.itemsValueIdr`).
+  - Teruji: wrangler dev lokal (CRUD, validasi, akses user lain 404, foto, cron 2× tanpa dobel, reset hapus foto) + Playwright mock.
+  - Tahap 2 live #118: `POST /api/member/items/scan` (AI OpenRouter baca foto barang/struk → saran,
+    tidak menyimpan; rate limit AI parse; harga/tanggal/garansi hanya kalau tercetak). Form: pilih foto barang baru → AI
+    otomatis, isi kolom kosong saja, foto struk tidak dipakai sebagai foto barang. "Jadikan barang": daftar transaksi web
+    (ikon 📦 saat hover / tombol di HP web) & detail transaksi app → `?dari=<id>` → form terisi nama, harga IDR, tanggal.
+    Fitur Koleksi terpisah (nanti).
+- **2026-11-04 (branch claude/app-skor-sisa):**
+  - Live #115: Skor Kesehatan di Beranda app HP (`AppHealthScore`), "Masa aktif sisa N hari" di /app/profile.
+  - Live #116: **jatuh tempo hutang/piutang** di `payload_json.due` (`{date}` sekali / `{day}` tiap bulan,
+    tanpa migrasi). POST/PUT `/api/member/transactions` terima `due` (hanya type debt; PUT `due:null` = hapus,
+    ganti due menghapus `dueRemindedFor`). `sendDebtDueReminders` (cron harian): H-3 & H-1, sisa = pokok − bayaran
+    tertaut, klaim `payload_json.dueRemindedFor`, ikut toggle `bills`. UI: DebtModal & HutangPanel web
+    (`DueDateInput`), AddDebtSheet/DebtDetailSheet/daftar app (`DueDateField`), helper `src/lib/debtDue.ts`.
+    appUrl: `/membership/kekayaan#hutang` → `/app/debts`, `?pengaturan=paket` → `/app/profile`.
+    Teruji: wrangler dev lokal (cron 2× tanpa dobel, validasi API) + Playwright mock. Belum: push sungguhan.
+- **2026-11-03 malam, deploy #114 (3 ide Tower di-ACC Bos):**
+  - Mode gelap web sisa: Investasiku, Kekayaan/Tabungan, Kotak Masuk (`.web-keep` di kartu yang selalu gelap).
+  - `sendPlanExpiryReminders` (cron harian): push H-3 & H-1 sebelum `expired_at` (trial/PRO), klaim
+    `$.prefs.planRemind`. Belum: email & "sisa N hari" di /app/profile.
+  - `sendBudgetAlerts` (cron menit, tiap jam menit ke-5): anggaran kategori 80% lalu 100%, state
+    `$.prefs.budgetAlert`, CAS. `sendBillReminders` (harian): transaksi rutin Pengeluaran/Tabungan H-3,
+    klaim `payload_json.remindedFor`. NOTIFY_KEYS + `budget`, `bills` (toggle di Pengaturan → Notifikasi).
+    Hutang/cicilan H-3 tidak bisa: tabel hutang tak punya tanggal jatuh tempo.
+  - Skor Kesehatan Finansial (`src/lib/healthScore.ts`, `HealthScoreCard`) di dashboard web saja, dihitung
+    di browser. Belum: versi HP, kartu bagikan.
+  - Belum terverifikasi di produksi: ketiga push baru (butuh kondisi data nyata).
+- **2026-11-03 malam (live setelah deploy ini):**
+  - Sesi app native permanen seperti PWA: /masuk & /auth/login kirim `isPwa: true` juga untuk Capacitor
+    (`isNativeApp`). Dulu 30 hari & dihitung sesi web (bisa ditendang MAX_CONCURRENT_WEB_SESSIONS).
+  - Tag HP lengkap: `src/components/app/AppTagChips.tsx` (pilih + "Tag baru" → prefs.tags), dipakai form & detail
+    transaksi (detail: tiap ketuk PUT {tags}, juga untuk transfer/tertaut).
+  - Mode gelap web +6 halaman (lihat komentar `src/lib/webTheme.ts`); kelas `.web-keep` untuk kartu yang selalu
+    gelap. Belum: Investasiku (pakai .web-keep di kartu nilai + tombol kembali + bar bawah), Kekayaan, Kotak Masuk.
+  - Tower: ide Import mutasi → diterapkan; ide Pengingat pintar diberi `catatanDev` (yang sudah/belum ada).
+    (Ketiga ide itu sudah dikerjakan — lihat entri deploy #114 di atas.)
+- **Cron pengingat per menit** (c15533c, live deploy #111): akun Cloudflare = **Workers Free, maks 5 cron per AKUN**
+  (deploy 273a32e gagal saat menambah trigger ke-4 di worker ini). Trigger `*/10` diganti `* * * * *`: tiap menit
+  `sendDueReminders`; menit kelipatan 10 (`event.scheduledTime`) tugas lama 10 menit (promo, pengingat harian, Gmail,
+  Slack). JANGAN menambah trigger baru — gabungkan ke cabang yang ada. Belum dipantau di produksi (cek pengingat ±1
+  menit & video promo/Gmail tetap jalan).
+- **Angka app HP = web** (6a54e55): beli/jual investasi netral (`txKind`), Beranda Pemasukan tanpa transfer masuk,
+  Statistik tanpa investasi, ringkasan /app/transactions via txKind.
+- **Tag di app HP** (`claude/app-tag`, 2026-11-03): sheet Tambah Transaksi menampilkan chip tag (prefs.tags, hanya
+  kalau Tag nyala & ada daftar; bukan transfer), maks 5; quickTxService kirim tag lewat PUT /transactions/:id setelah
+  quick-transaction (tanpa ubah Worker; gagal tag ≠ gagal transaksi). /app/transactions: chip tag per baris, filter
+  per tag, pencarian ikut nama tag. Belum: membuat tag baru dari HP (tetap lewat Pengaturan web), ubah tag transaksi
+  lama di HP.
+- **App HP Tabungan** (`claude/app-target-tabungan`, 2026-11-03): kartu target di `/app/savings` kini ikon + warna
+  (`targetIcon`/`targetColor` dari lib/targets, sama dengan web), nama target, progres berwarna, "🎉 Tercapai",
+  "N bln lagi · Rp X/bln" (`neededPerMonth`). Target tanpa setoran tetap tampil; target di depan. Daftar
+  "Setoran otomatis" hanya target dengan nominal > 0 (dulu "Rp 0 tiap bulan").
+- **Rilis APK ke GitHub Releases** (c10aa1e, 2026-11-03): workflow manual `release-android.yml` (isi versi 1.2.3 →
+  APK bertanda tangan kunci tetap → Release `v<versi>` + `leosiqra-<versi>.apk`). versionCode = 100 + nomor run.
+  BELUM bisa jalan sampai Bos mengisi secret `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
+  `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` (keystore dibuat Bos di Termux — bukan kunci Play Store). Pertama kali
+  pasang rilis: hapus APK debug dulu (beda kunci). Deploy #106 (tablet, /masuk, notifikasi) live; APK debug dengan
+  presentationOptions = run Build APK Android #3.
+- **App native: tablet, login app, notifikasi saat app dibuka** (`claude/app-tablet-login`, 2026-11-03):
+  - Tablet (Capacitor, sisi layar terpendek ≥ 600dp, `src/lib/device.ts` `isNativeTablet`) → AppShell mengalihkan ke
+    `/membership/dashboard` (tampilan web). Layout /membership di native: initNativePush + tombol back Android
+    (Ringkasan → minimize), belum login → `/masuk`. HP tetap /app.
+  - Halaman masuk app `/masuk` (email, sandi, Lupa sandi, "Belum punya akun? Daftar" → /auth/register): dipakai saat
+    belum login di native (AppShell, logout Profil /app, /membership). Web tetap /auth/login & /mulai. Tanpa Google
+    (OAuth Google diblokir di WebView).
+  - Push saat app di depan: Android tidak menampilkan notifikasi FCM; `capacitor.config.ts`
+    `PushNotifications.presentationOptions` ["badge","sound","alert"] → plugin menampilkan notifikasi sistem
+    (BUTUH APK BARU). Event `leosiqra:push` memuat ulang lonceng. Belum diuji di HP.
+- **Input suara app Android** (ea3f686, live 2026-11-03): perekam WebView selalu "Izin mikrofon ditolak" karena
+  manifest tidak punya `MODIFY_AUDIO_SETTINGS` (BridgeWebChromeClient Capacitor meminta itu + RECORD_AUDIO).
+  Sementara: di native, NotAllowedError → pengenal suara bawaan HP (plugin speech-recognition). Permanen: izin
+  sudah ditambah di manifest → perlu build APK baru (`build-android.yml`) & pasang ulang. Belum dicoba Bos di HP.
+- **Push native Android (FCM) AKTIF** (2026-11-03): migrasi 0022 dijalankan via API D1 (sesi Termux, atas
+  perintah Bos), secret `FCM_SERVICE_ACCOUNT` terpasang, APK debug (`leosiqra-debug-1`) dipasang di HP Bos →
+  token terdaftar → pengingat tes MUNCUL sebagai notifikasi HP. Sisa: rilis Play Store (keystore lama belum
+  ketemu, `versionCode` masih 1), iOS belum (perlu Firebase Messaging di app iOS).
+  Live juga (d28645a): di app HP, ketuk pengingat bernominal (push native & daftar Notifikasi /app) membuka
+  sheet **Tambah Transaksi** terisi nominal+catatan, kategori dikosongkan (wajib pilih) — `src/lib/txPrefill.ts`
+  (`openAppNotificationUrl`, antrean `pending` sampai layout tab terpasang). Web tetap ke Input Cepat. Belum dicoba
+  Bos di HP setelah deploy.
+- Live (2026-11-03 sore, `claude/input-hp-v2`): **form Tambah Transaksi app HP v2** (permintaan Bos, contoh disetujui):
+  panel warna atas (merah Keluar / hijau Masuk / ungu Transfer) berisi kapsul jenis, tombol kalkulator & ✨, nominal
+  besar, pil kategori + pil "rekening · tanggal"; kategori satu baris ikon bulat (`CategoryGrid layout="row"`,
+  "Lainnya" = semua petak); pil kedua membuka Detail (rekening/Dari-Ke, tanggal, catatan; keypad disembunyikan);
+  transfer = kotak Dari ⇄ Ke; keypad datar `AmountKeypad variant="flat"` (000 untuk IDR/KHR, "." untuk USD dll.,
+  kalkulator lewat tombol panel); satu tombol Simpan bergradasi. `BottomSheet bare`. Logika simpan TIDAK berubah
+  (diuji Playwright + API tiruan: payload quick-transaction benar, Batalkan muncul). Sheet lain yang memakai
+  AmountKeypad/BottomSheet tidak berubah (prop baru opsional).
+  v3 (masukan Bos dari HP): "Lainnya"/pil kategori membuka semua kategori TANPA keypad (keypad kembali setelah
+  kategori dipilih atau nominal diketuk — "Ketuk nominal untuk mengetik"); baris ringkas otomatis bergeser ke
+  kategori terpilih; pilihan rekening = kartu 2 kolom dengan logo (logoUrl → matchIndonesianInstitutionLogo →
+  emoji jenis) + saldo (ikut sembunyikan-saldo `useBalanceVisibility`; tanpa sen untuk IDR/KHR).
+  v4: lembar Detail + tombol Selesai DIHAPUS — semua satu halaman. Panel atas: pil kategori, pil rekening (logo
+  kecil), pil tanggal. Rekening & tanggal = pop-up di dalam sheet (`picker` "acc"/"to"/"date"), satu ketukan
+  memilih & menutup. Catatan = kolom tipis di bawah kategori. Transfer: Dari/Ke dengan logo, masing-masing pop-up.
+  v5: tombol ✨ = mode AI — keypad, kategori & catatan disembunyikan, tampil 3 tombol besar Suara / Foto struk / Ketik
+  (`SmartBar layout="tiles"`; layout bawaan "bar" di /input-cepat tidak berubah). Setelah AI mengisi, mode AI
+  tertutup otomatis → form biasa + catatan "Terisi dari …". Suara & foto memakai AI sungguhan (belum dicoba di HP
+  setelah perubahan ini; di headless hanya jalur Ketik yang diuji).
+- Live (0b277e8, 2026-11-03): **form Tambah Transaksi app HP satu layar** (pilihan Bos) — `AddTransactionSheet` +
+  `src/components/app/CategoryGrid.tsx` (petak ikon, urut paling sering dipakai, "Lainnya", pil sub-kategori),
+  rekening jadi pil (`AccountPills`), tanggal+Catatan satu baris, SmartBar dilipat ke tombol ✨, keypad tombol `000`
+  (AmountKeypad dipakai sheet lain juga). Diuji Playwright + API tiruan (tanpa font emoji); simpan sungguhan & data
+  asli belum dicoba Bos. Usulan terbuka: tampilan nominal "IDR 25,000" → "Rp 25.000".
+- Token D1 lokal (cek/migrasi dari HP) hanya ada di HP Termux: `/data/data/com.termux/files/home/.config/leosiqra/cloudflare.env`.
 
 ## Status produksi
 
@@ -138,7 +850,36 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     00:01 kini bisa dimatikan. BARU: push wawasan mingguan (Senin 10:00 WIB, `computeWeeklyInsights`) & bulanan
     (tgl 1, `buildMonthlyReport`), penanda `$.prefs.weeklySent/monthlySent`. Diuji lokal dengan wrangler dev + D1
     lokal (API, cron dobel, bulanan tgl 31, query kandidat) dan UI lewat Playwright → Worker lokal.
-  - Belum: menu Pengingat di aplikasi HP (`/app`). Push sungguhan belum dicoba Bos.
+  - (2026-11-03, AKTIF & teruji di HP Bos — migrasi 0022 + secret sudah) **Push native Android via FCM**: plugin
+    `@capacitor/push-notifications` (src/lib/nativePush.ts, dipanggil AppShell setelah login: izin → token →
+    POST /api/member/native-push-token). Worker `sendNativePushToUser` dipanggil dari `sendWebPushToUser` (semua
+    notifikasi lonceng ikut ke HP); OAuth service account RS256 via WebCrypto (diuji dengan kunci RSA nyata).
+    Token diikat ke SESI (JOIN sessions saat kirim; logout = berhenti; cron harian hapus token tanpa sesi).
+    Butuh: migrasi 0022, secret Worker `FCM_SERVICE_ACCOUNT` (JSON service account), `android/app/google-services.json`,
+    build ulang APK. iOS BELUM: APNs wajib HTTP/2, subrequest Worker HTTP/1.1 → perlu Firebase Messaging di app iOS.
+    Android: izin POST_NOTIFICATIONS, ikon status `ic_stat_leosiqra` (vector), warna `notification_accent`.
+    Status 2026-11-03 sore: `android/app/google-services.json` SUDAH di branch (248b402, project
+    `leosiqra-a02fe`). Review keamanan (sesi cloud): 🟠 token per user tidak dibatasi + token palsu (FCM 400
+    INVALID_ARGUMENT) tidak pernah dihapus → satu user bisa daftar ribuan token, tiap notifikasinya ribuan fetch →
+    cron pengingat/ringkasan habis jatah subrequest untuk user lain. **Wajib tambal sebelum deploy**: maks 5 token
+    per user (hapus tertua setelah INSERT) + hapus token saat FCM 400 INVALID_ARGUMENT. 🟡: flag `started` di
+    nativePush.ts → login akun lain tanpa tutup app tidak daftar ulang token; URL notif `/membership/*` membuka
+    UI web di app. Belum ada workflow build APK (Bos hanya punya Termux, tanpa PC) → usul `build-android.yml`
+    (assembleDebug, APK diunduh dari Actions); rilis Play Store butuh keystore lama (lokasi belum diketahui) +
+    naikkan `versionCode` (masih 1). Masih menunggu Bos: secret `FCM_SERVICE_ACCOUNT`, migrasi 0022, "gas".
+    **Ditambal (2026-11-03 malam, Termux)**: 🟠 maks 5 token/user (`NATIVE_PUSH_MAX_TOKENS`, batch upsert+prune;
+    kirim juga LIMIT 5) + hapus token saat FCM 400 soal "registration token" (400 lain, mis. payload salah, TIDAK
+    menghapus) — diuji SQLite (1000 token palsu → 5) & klasifikasi error. 🟡 `initNativePush(userId, openUrl, force)`
+    daftar ulang saat user berganti / AppShell dipasang ulang (logout→login sesi baru); `toAppUrl`
+    (src/lib/appUrl.ts) memetakan URL /membership/* ke /app/* untuk ketuk push & daftar lonceng app.
+    Workflow **`build-android.yml`**: APK debug (Actions → Artifacts), manual atau otomatis saat push branch
+    `claude/**` yang mengubah android/, package*.json, capacitor.config.ts. Keystore upload Play Store TIDAK ada
+    di HP Termux (cek ~/.config/leosiqra-android) — APK debug harus menggantikan versi Play Store (hapus dulu).
+  - Live (2026-11-03, deploy eb9effde) Aplikasi HP: `/app/notifikasi` (tab Notifikasi + Pengingat, `?tab=pengingat`),
+    lonceng + angka belum dibaca di Beranda `/app`, menu "Pengingat" di Lainnya. Daftar notifikasi dipakai bersama
+    (`src/components/notifications/NotificationList.tsx`) oleh lonceng web & HP. `RemindersView` punya varian dark:
+    (hanya aktif di /app). Native Capacitor TIDAK punya web push → banner "muncul di tab Notifikasi"; push native
+    (FCM/APNs, @capacitor/push-notifications) belum dibuat. Push sungguhan belum dicoba Bos.
 - Sudah live (run #52): **Tampilan**.
   - **Mode gelap web BERTAHAP** (keputusan Bos): Pengaturan → Mode gelap (`AppearanceView`, ThemeContext yang sama
     dengan /app, localStorage `leosiqra-theme`). Cara kerja: scope `.web-dark` di globals.css memetakan ulang
@@ -411,11 +1152,17 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 ## Migrasi D1
 
 Dijalankan manual oleh Bos lewat Console D1 (token GitHub belum punya izin D1).
+Cek/eksekusi dari HP (akun ini): token D1 lokal di `/data/data/com.termux/files/home/.config/leosiqra/cloudflare.env`
+(chmod 600, di luar repo, jangan dicetak). Pakai: `set -a; . <file>; set +a; cd cloudflare; npx wrangler d1 execute
+membersite_leosiqra_db --remote --command "..."`. SELECT boleh langsung; tulis/ubah skema → tanya Bos dulu.
 - `0017_coins.sql` — sudah (dikonfirmasi Bos).
-- `0018_transaction_attachments.sql` — diasumsikan sudah; cek sebelum mengandalkan.
+- `0018_transaction_attachments.sql` — sudah (dicek langsung ke D1 2026-11-03).
 - `0019_inbox.sql` — sudah (Kotak Masuk Gmail jalan di produksi).
 - `0020_reminders.sql` — sudah (Bos, 2026-10-28; Console D1 butuh SQL tanpa komentar `--` kalau ditempel satu baris).
-- `0021_notifications.sql` — **belum dikonfirmasi** Bos (riwayat lonceng; tanpa tabel lonceng kosong, bukan error).
+- `0021_notifications.sql` — sudah (dicek langsung ke D1 2026-11-03).
+- `0033_shop_stock.sql` — sudah (dikonfirmasi Bos 2026-11-06, 3 tabel ada).
+- `0032_shop_staff.sql` — sudah (Bos membuat akun tim di produksi 2026-11-06).
+- `0022_native_push_tokens.sql` — **BELUM** (token push Android/FCM; tanpa tabel: endpoint 503, kirim dilewati — aman).
 
 ## Belum terverifikasi di produksi
 
@@ -426,11 +1173,21 @@ Dijalankan manual oleh Bos lewat Console D1 (token GitHub belum punya izin D1).
 - Shortcut iPhone (Pintasan, Automasi SMS, tempel clipboard Safari) & mode "Ucapkan" (mic otomatis).
 - Asisten AI & MCP dengan awal periode anggaran ≠ 1.
 - (sesi akun B 2026-10-28) Impor PDF asli (BCA & PDF bersandi) setelah perbaikan pdf.js worker; impor balik CSV ekspor.
-- Pengingat: push sungguhan & ketuk → Input Cepat terisi; push wawasan mingguan pertama Senin 2 Nov 10:00 WIB.
+- Pengingat: push sungguhan & ketuk → Input Cepat terisi.
+- Wawasan mingguan: Senin 2 Nov jalan tapi 0 terkirim (2 pelanggan push tanpa transaksi; Bos tak punya langganan
+  push). Live 2026-11-03 (deploy 8996fe8c): kandidat = semua user aktif yg punya transaksi (8 hari / sejak awal
+  bulan), selalu masuk lonceng, push hanya pelanggan. **Cek lonceng Senin 9 Nov 10:00 WIB** (3 user: 7b434d,
+  dd335d, 0e02e0) & rekap November 1 Des. Catatan: penanda dipasang sebelum hitung → kalau hitung error, user
+  itu terlewat minggu itu (console.error saja).
+- User dd335d = akun demo `leowendry+demo@gmail.com` (routine Tim Konten): login harian 08.46 WIB (curl,
+  promo/demo-seed.mjs) & ±14.45 WIB (Chrome Linux, promo/record.mjs) itu NORMAL, bukan penyusup.
 - Resep Shortcut "Notifikasi aplikasi bank" (nama tindakan "Enkode URL"/variabel "Input Pintasan" di iPhone asli).
 - Kartu e-money NFC: perlu kapabilitas "NFC Tag Reading" di App ID Apple, build & rilis ulang iOS/Android, tes kartu
   asli (Swift belum pernah dikompilasi).
 - Tanya Leo dengan Ingatan asisten terisi (butuh OpenRouter produksi).
+- Uji UI di HP Termux ini: `workerd` (wrangler dev lokal) TIDAK bisa jalan (tcmalloc 48-bit VA). Pola yang jalan:
+  `npm run build` → `npx serve out -l 4173` → Playwright dengan API di-mock (`page.route`). Chromium dipasang manual
+  (unzip chromium-linux-arm64 build 1194 ke ~/.cache/ms-playwright/chromium-1194, executablePath eksplisit; lib via apt).
 - Mode gelap: halaman selain Ringkasan belum dicek → tambahkan ke WEB_DARK_READY satu per satu.
 
 ## Catatan Impor
@@ -441,6 +1198,15 @@ Dijalankan manual oleh Bos lewat Console D1 (token GitHub belum punya izin D1).
 - Sebelum perbaikan, menghapus satu transaksi impor dari halaman Transaksi web
   ikut membalik saldo & total → saldo rekening user yang pernah melakukannya
   mungkin sudah bergeser (tidak bisa dideteksi otomatis).
+  Dicek ke D1 2026-11-03: 0 baris impor, 0 user pernah pakai kuota AI impor, 0 payload importName
+  → tidak ada bukti user terdampak (23 user). Rekonsiliasi saldo: 26/33 rekening cocok
+  (initial_balance + transaksi = balance); 7 selisih bukan dari impor. Ditelusuri: BCA Platinum user 7b434d
+  = pengeluaran "Investasi" 280 jt bertanggal mundur (tak menggerakkan saldo) − piutang 5 jt; sisa ~14,8 jt
+  tak terlacak (dugaan: hapus transfer/piutang sebelum 27 Sep tidak membalik saldo). User 7b434d = akun Bos
+  (leo.wendry@gmail.com); Bos konfirmasi 2026-11-03 saldo BCA Platinum = saldo bank asli → tidak perlu tindakan. Cash KHR = baris Transfer Masuk lama tersimpan 32,50 USD
+  (tak dikonversi) + Top Up tanpa baris Masuk; saldo kemungkinan benar. Data TIDAK diubah.
+- Live (2026-11-03, deploy 353a2725): streak bulan surplus & konteks kategori AI kini juga mengecualikan
+  catatan investasi lama tanpa tautan (kategori Investasi/Saham/Deposito, sama dengan isInvestmentPurchaseRow).
 - Impor belum ada di aplikasi HP (`/app/*`) — baru versi web.
 
 ## Langkah berikutnya / ide
@@ -452,7 +1218,7 @@ Bos bilang **"gas"**. Menu Pengaturan yang sudah dibuat: Fitur, Target, Transaks
 periode anggaran, Tag, Cara catat utama, Keyboard nominal, Shortcut iPhone, Kategori & Anggaran, Pembaca Notifikasi, Impor mutasi (pop-up), Kartu e-money, Impor/ekspor CSV, Pengingat, Notifikasi.
 Semua menu Pengaturan dari screenshot Oyenza sudah dibuat (2026-10-28). Sisa: pindahan multi-dompet dari app
 lain (Money Manager dll — tunggu keputusan Bos soal saldo & pembuatan rekening), Bahasa English (dilewati),
-mode gelap halaman lain (bertahap), menu Pengingat di aplikasi HP.
+mode gelap halaman lain (bertahap), push native di aplikasi HP (FCM/APNs).
 Mode HP: Bos minta tampilan HP **simpel** — jangan menambah kepadatan di <768px.
 
 - Tunggu hasil tes Bos untuk poin di atas, perbaiki parser kalau perlu.
@@ -469,4 +1235,7 @@ Workflow menjalankan tsc + build lalu deploy, dan memberi kabar ke Telegram.
 Pasang di **satu akun saja**. Akun cadangan menyimpan salinan dalam keadaan
 nonaktif dan hanya dinyalakan saat akun utama kena limit (lalu dimatikan lagi)
 — kalau aktif di dua akun, notifikasi & aksi terjadi dua kali.
-- **Belum di-deploy** (akun B): `fetch-logos.mjs` — `term` boleh array; UOB coba beberapa nama (UOB TMRW/UOB Indonesia, seller /uob|united overseas/); Citibank seller diperketat /citigroup|citibank/ (kalau tak ketemu → jatuh ke /api/logo, bukan ikon salah). Cek log step "Logo bank (HD)" setelah deploy.
+- (2026-11-03) Perbaikan UOB/Citibank di `fetch-logos.mjs` sudah ter-deploy 30 Okt. Tapi workflow `publish-article.yml`
+  (deploy artikel 31 Okt) build TANPA `fetch-logos.mjs` → `public/logos` kosong di produksi (logo HD 404, jatuh ke
+  /api/logo/huruf). Diperbaiki: step "Logo bank (HD)" ditambahkan ke `publish-article.yml`, lalu deploy-main ulang.
+  Setiap workflow yang deploy WAJIB menjalankan `fetch-logos.mjs` sebelum build.

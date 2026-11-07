@@ -25,7 +25,7 @@ export const transferService = {
           note: input.note ?? '',
           ...(input.date ? { date: input.date } : {}),
         },
-      }
+      },
     );
     notifyCollectionChanged('transactions');
     notifyCollectionChanged('accounts');

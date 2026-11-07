@@ -12,7 +12,7 @@ export const insightService = {
   async getUserInsights() {
     const result = await cloudflareApi<{ items: UserInsight[] }>('/api/member/insights');
     return result.items;
-  }
+  },
 };
 
 export interface WeeklyInsight {
@@ -26,8 +26,8 @@ export interface WeeklyInsight {
 export const weeklyInsightService = {
   async getWeeklyInsights() {
     const result = await cloudflareApi<{ period: { start: string; end: string }; items: WeeklyInsight[] }>(
-      '/api/member/insights/weekly'
+      '/api/member/insights/weekly',
     );
     return Array.isArray(result.items) ? result.items : [];
-  }
+  },
 };

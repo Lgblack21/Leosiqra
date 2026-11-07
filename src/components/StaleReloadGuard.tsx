@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
+import { useEffect } from 'react';
 
-const RELOAD_GUARD_KEY = "leosiqra_last_reload_at";
-const HIDDEN_AT_KEY = "leosiqra_hidden_at";
+const RELOAD_GUARD_KEY = 'leosiqra_last_reload_at';
+const HIDDEN_AT_KEY = 'leosiqra_hidden_at';
 const IDLE_RELOAD_THRESHOLD_MS = 30 * 60 * 1000; // 30 menit
 
 const isChunkLoadError = (message: string) =>
   /Loading chunk [\d]+ failed|ChunkLoadError|Failed to fetch dynamically imported module|Importing a module script failed/i.test(
-    message
+    message,
   );
 
 // Menangani "halaman beku" di HP: tab yang lama tidak dibuka bisa dibekukan
@@ -27,20 +27,18 @@ export default function StaleReloadGuard() {
     };
 
     const onError = (event: ErrorEvent) => {
-      if (isChunkLoadError(event.message || "")) reloadOnce();
+      if (isChunkLoadError(event.message || '')) reloadOnce();
     };
     const onRejection = (event: PromiseRejectionEvent) => {
-      const message =
-        (event.reason && (event.reason as { message?: string }).message) ||
-        String(event.reason ?? "");
+      const message = (event.reason && (event.reason as { message?: string }).message) || String(event.reason ?? '');
       if (isChunkLoadError(message)) reloadOnce();
     };
 
-    window.addEventListener("error", onError);
-    window.addEventListener("unhandledrejection", onRejection);
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onRejection);
 
     const onVisibilityChange = () => {
-      if (document.visibilityState === "hidden") {
+      if (document.visibilityState === 'hidden') {
         sessionStorage.setItem(HIDDEN_AT_KEY, String(Date.now()));
         return;
       }
@@ -54,14 +52,14 @@ export default function StaleReloadGuard() {
       if (event.persisted) onVisibilityChange();
     };
 
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    window.addEventListener("pageshow", onPageShow);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('pageshow', onPageShow);
 
     return () => {
-      window.removeEventListener("error", onError);
-      window.removeEventListener("unhandledrejection", onRejection);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-      window.removeEventListener("pageshow", onPageShow);
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onRejection);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('pageshow', onPageShow);
     };
   }, []);
 

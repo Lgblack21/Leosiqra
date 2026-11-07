@@ -1,5 +1,13 @@
 // Pilihan selang transaksi rutin — harus sama dengan RECURRING_INTERVALS di Worker.
-export const RECURRING_INTERVALS = ['Harian', 'Mingguan', 'Dua Mingguan', 'Bulanan', 'Dua Bulanan', 'Tiga Bulanan', 'Tahunan'] as const;
+export const RECURRING_INTERVALS = [
+  'Harian',
+  'Mingguan',
+  'Dua Mingguan',
+  'Bulanan',
+  'Dua Bulanan',
+  'Tiga Bulanan',
+  'Tahunan',
+] as const;
 export type RecurringInterval = (typeof RECURRING_INTERVALS)[number];
 
 export const INTERVAL_LABEL: Record<RecurringInterval, string> = {

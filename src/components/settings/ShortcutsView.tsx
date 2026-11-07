@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState } from 'react';
 import { Mic, ScanLine, MessageSquareText, BellRing, Copy, Check, ChevronDown, ExternalLink } from 'lucide-react';
@@ -99,7 +99,14 @@ function CopyRow({ text, label }: { text: string; label: string }) {
       <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
       <div className="mt-1 flex items-center gap-2">
         <code className="min-w-0 flex-1 truncate text-[13px] text-slate-700">{text}</code>
-        <button type="button" onClick={() => void copy()} className={cn('flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-semibold', done ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-900 text-white')}>
+        <button
+          type="button"
+          onClick={() => void copy()}
+          className={cn(
+            'flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-semibold',
+            done ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-900 text-white',
+          )}
+        >
           {done ? <Check size={13} /> : <Copy size={13} />} {done ? 'Tersalin' : 'Salin'}
         </button>
       </div>
@@ -112,34 +119,58 @@ export function ShortcutsView({ initialOpen = null }: { initialOpen?: string | n
   const origin = base();
   return (
     <div className="space-y-4">
-      <p className="px-1 text-[14px] text-slate-600">Catat tanpa membuka menu: pasang sekali di app <b>Pintasan</b> iPhone. Tanpa token — memakai login Leosiqra di Safari. Hasilnya selalu kamu cek dulu sebelum tersimpan.</p>
+      <p className="px-1 text-[14px] text-slate-600">
+        Catat tanpa membuka menu: pasang sekali di app <b>Pintasan</b> iPhone. Tanpa token — memakai login Leosiqra di
+        Safari. Hasilnya selalu kamu cek dulu sebelum tersimpan.
+      </p>
       <div className="space-y-3">
         {ITEMS.map((it) => {
           const on = open === it.id;
           const url = it.url(origin);
           return (
-            <div key={it.id} className={cn('overflow-hidden rounded-[22px] transition', on ? 'bg-slate-50 ring-2 ring-indigo-200' : 'bg-white ring-1 ring-slate-200')}>
-              <button type="button" onClick={() => setOpen(on ? null : it.id)} aria-expanded={on} className="flex w-full items-center gap-3 p-4 text-left">
-                <span className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl', it.tint)}><it.icon size={22} /></span>
+            <div
+              key={it.id}
+              className={cn(
+                'overflow-hidden rounded-[22px] transition',
+                on ? 'bg-slate-50 ring-2 ring-indigo-200' : 'bg-white ring-1 ring-slate-200',
+              )}
+            >
+              <button
+                type="button"
+                onClick={() => setOpen(on ? null : it.id)}
+                aria-expanded={on}
+                className="flex w-full items-center gap-3 p-4 text-left"
+              >
+                <span className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl', it.tint)}>
+                  <it.icon size={22} />
+                </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-[15px] font-bold text-slate-900">{it.title}</span>
                   <span className="block text-[13px] leading-snug text-slate-500">{it.desc}</span>
                 </span>
-                <ChevronDown size={18} className={cn('shrink-0 text-slate-400 transition-transform', on && 'rotate-180')} />
+                <ChevronDown
+                  size={18}
+                  className={cn('shrink-0 text-slate-400 transition-transform', on && 'rotate-180')}
+                />
               </button>
               {on && (
                 <div className="space-y-3 px-4 pb-4">
                   <ol className="space-y-2.5">
                     {it.steps.map((s, i) => (
                       <li key={i} className="flex gap-3 text-[14px] leading-snug text-slate-700">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-[12px] font-bold text-white">{i + 1}</span>
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-[12px] font-bold text-white">
+                          {i + 1}
+                        </span>
                         <span className="pt-0.5">{s}</span>
                       </li>
                     ))}
                   </ol>
                   <CopyRow text={url} label={it.urlLabel} />
                   {it.id !== 'sms' && it.id !== 'notif' && (
-                    <a href={url} className="inline-flex items-center gap-1.5 px-1 text-[13px] font-semibold text-indigo-600 hover:underline">
+                    <a
+                      href={url}
+                      className="inline-flex items-center gap-1.5 px-1 text-[13px] font-semibold text-indigo-600 hover:underline"
+                    >
                       Coba sekarang <ExternalLink size={13} />
                     </a>
                   )}
@@ -149,7 +180,10 @@ export function ShortcutsView({ initialOpen = null }: { initialOpen?: string | n
           );
         })}
       </div>
-      <p className="px-1 text-[12px] leading-relaxed text-slate-500">Pastikan sudah login Leosiqra di Safari (atau aplikasi Leosiqra terpasang). Di Android, pakai widget Input Cepat di layar utama.</p>
+      <p className="px-1 text-[12px] leading-relaxed text-slate-500">
+        Pastikan sudah login Leosiqra di Safari (atau aplikasi Leosiqra terpasang). Di Android, pakai widget Input Cepat
+        di layar utama.
+      </p>
     </div>
   );
 }

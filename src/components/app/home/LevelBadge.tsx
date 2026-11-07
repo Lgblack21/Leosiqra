@@ -1,17 +1,17 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useState } from "react";
-import { AnimatePresence, motion, useAnimationControls } from "framer-motion";
-import { Star, PartyPopper } from "lucide-react";
-import { BottomSheet } from "@/components/ui/BottomSheet";
-import { ChallengeList } from "@/components/gamification/ChallengeList";
-import { gamificationService, type GamificationData } from "@/lib/services/gamificationService";
-import { subscribeToCollectionChanges } from "@/lib/cf-firestore";
-import { auth } from "@/lib/cf-client";
-import { lightTap } from "@/lib/haptics";
+import { useCallback, useEffect, useState } from 'react';
+import { AnimatePresence, motion, useAnimationControls } from 'framer-motion';
+import { Star, PartyPopper } from 'lucide-react';
+import { BottomSheet } from '@/components/ui/BottomSheet';
+import { ChallengeList } from '@/components/gamification/ChallengeList';
+import { gamificationService, type GamificationData } from '@/lib/services/gamificationService';
+import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
+import { auth } from '@/lib/cf-client';
+import { lightTap } from '@/lib/haptics';
 
 // Koleksi yang memengaruhi XP — level dihitung ulang setelah salah satunya berubah.
-const WATCH = ["transactions", "accounts", "savings", "investments", "budgets", "recurring"] as const;
+const WATCH = ['transactions', 'accounts', 'savings', 'investments', 'budgets', 'recurring'] as const;
 
 // Level terakhir yang sudah "dirayakan" disimpan per user di perangkat ini,
 // supaya animasi naik level cuma muncul sekali.

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -25,18 +25,59 @@ import { cn, formatMoney } from '@/lib/utils';
 
 // Penerbit kartu kredit — label = nama tampil; logo dari matchIndonesianInstitutionLogo.
 const BANKS = [
-  'BCA', 'Bank Mandiri', 'BRI', 'BNI', 'BSI', 'BTN', 'CIMB Niaga', 'Permata', 'Danamon', 'OCBC', 'Bank Jago', 'Jenius',
-  'SeaBank', 'blu by BCA', 'Allo Bank', 'Krom', 'Maybank', 'DBS', 'UOB', 'HSBC', 'Citibank', 'Standard Chartered', 'Panin', 'Bank Mega', 'Sinarmas',
+  'BCA',
+  'Bank Mandiri',
+  'BRI',
+  'BNI',
+  'BSI',
+  'BTN',
+  'CIMB Niaga',
+  'Permata',
+  'Danamon',
+  'OCBC',
+  'Bank Jago',
+  'Jenius',
+  'SeaBank',
+  'blu by BCA',
+  'Allo Bank',
+  'Krom',
+  'Maybank',
+  'DBS',
+  'UOB',
+  'HSBC',
+  'Citibank',
+  'Standard Chartered',
+  'Panin',
+  'Bank Mega',
+  'Sinarmas',
 ];
 const OTHER_BANK = 'Bank lain';
 // Monogram warna merek — tampil kalau logo bank gagal dimuat (tanpa globe).
 const BANK_BRAND: Record<string, [bg: string, fg: string, mark: string]> = {
-  BCA: ['#005EB8', '#fff', 'BCA'], 'Bank Mandiri': ['#003D79', '#FFB700', 'mdr'], BRI: ['#00529C', '#fff', 'BRI'], BNI: ['#F15A23', '#fff', 'BNI'],
-  BSI: ['#00A39D', '#fff', 'BSI'], BTN: ['#0057A8', '#fff', 'BTN'], 'CIMB Niaga': ['#AD1F23', '#fff', 'CIMB'], Permata: ['#00877A', '#fff', 'PB'],
-  Danamon: ['#F7941D', '#fff', 'D'], OCBC: ['#E30613', '#fff', 'OCBC'], 'Bank Jago': ['#FDB813', '#1f2937', 'jago'], Jenius: ['#00A9E0', '#fff', 'J'],
-  SeaBank: ['#FF6A00', '#fff', 'Sea'], 'blu by BCA': ['#00B5E2', '#fff', 'blu'], 'Allo Bank': ['#FFCD00', '#111827', 'allo'], Krom: ['#6C2BD9', '#fff', 'K'],
-  Maybank: ['#FFC72C', '#111827', 'May'], DBS: ['#E00000', '#fff', 'DBS'], UOB: ['#0B3B8C', '#fff', 'UOB'], HSBC: ['#DB0011', '#fff', 'HSBC'],
-  Citibank: ['#056DAE', '#fff', 'citi'], 'Standard Chartered': ['#0473EA', '#fff', 'SC'], Panin: ['#003E7E', '#fff', 'PNB'], 'Bank Mega': ['#F58220', '#fff', 'MEGA'],
+  BCA: ['#005EB8', '#fff', 'BCA'],
+  'Bank Mandiri': ['#003D79', '#FFB700', 'mdr'],
+  BRI: ['#00529C', '#fff', 'BRI'],
+  BNI: ['#F15A23', '#fff', 'BNI'],
+  BSI: ['#00A39D', '#fff', 'BSI'],
+  BTN: ['#0057A8', '#fff', 'BTN'],
+  'CIMB Niaga': ['#AD1F23', '#fff', 'CIMB'],
+  Permata: ['#00877A', '#fff', 'PB'],
+  Danamon: ['#F7941D', '#fff', 'D'],
+  OCBC: ['#E30613', '#fff', 'OCBC'],
+  'Bank Jago': ['#FDB813', '#1f2937', 'jago'],
+  Jenius: ['#00A9E0', '#fff', 'J'],
+  SeaBank: ['#FF6A00', '#fff', 'Sea'],
+  'blu by BCA': ['#00B5E2', '#fff', 'blu'],
+  'Allo Bank': ['#FFCD00', '#111827', 'allo'],
+  Krom: ['#6C2BD9', '#fff', 'K'],
+  Maybank: ['#FFC72C', '#111827', 'May'],
+  DBS: ['#E00000', '#fff', 'DBS'],
+  UOB: ['#0B3B8C', '#fff', 'UOB'],
+  HSBC: ['#DB0011', '#fff', 'HSBC'],
+  Citibank: ['#056DAE', '#fff', 'citi'],
+  'Standard Chartered': ['#0473EA', '#fff', 'SC'],
+  Panin: ['#003E7E', '#fff', 'PNB'],
+  'Bank Mega': ['#F58220', '#fff', 'MEGA'],
   Sinarmas: ['#E2231A', '#fff', 'SMS'],
 };
 function BankMark({ bank }: { bank: string }) {
@@ -48,21 +89,36 @@ function BankMark({ bank }: { bank: string }) {
       fallbackText={mark}
       className="h-full w-full object-cover"
       fallbackIcon={
-        <span className="flex h-full w-full items-center justify-center font-black tracking-tight" style={{ background: bg, color: fg, fontSize: mark.length > 3 ? 10 : 12 }}>
+        <span
+          className="flex h-full w-full items-center justify-center font-black tracking-tight"
+          style={{ background: bg, color: fg, fontSize: mark.length > 3 ? 10 : 12 }}
+        >
           {mark}
         </span>
       }
     />
   );
 }
-const BANK_LOGO: Record<string, string | null> = Object.fromEntries(BANKS.map((b) => [b, matchIndonesianInstitutionLogo(b, 'Credit Card')]));
-const normBank = (b: string) => b.toLowerCase().replace(/^(pt\.?\s+)?bank\s+/, '').replace(/\s+bank$/, '').trim();
+const BANK_LOGO: Record<string, string | null> = Object.fromEntries(
+  BANKS.map((b) => [b, matchIndonesianInstitutionLogo(b, 'Credit Card')]),
+);
+const normBank = (b: string) =>
+  b
+    .toLowerCase()
+    .replace(/^(pt\.?\s+)?bank\s+/, '')
+    .replace(/\s+bank$/, '')
+    .trim();
 // Nama kartu otomatis dari bank (tetap bisa diubah): "BCA" → "Kartu Kredit BCA".
-const autoName = (bank: string) => (bank && bank !== OTHER_BANK ? `Kartu Kredit ${bank.replace(/^Bank\s+|\s+Bank$/g, '')}` : '');
+const autoName = (bank: string) =>
+  bank && bank !== OTHER_BANK ? `Kartu Kredit ${bank.replace(/^Bank\s+|\s+Bank$/g, '')}` : '';
 // Tebak bank dari nama kartu lama (yang paling panjang dulu: "blu by BCA" sebelum "BCA").
 const bankFromName = (name: string) => {
   const n = name.toLowerCase();
-  return [...BANKS].sort((a, b) => b.length - a.length).find((b) => n.includes(b.toLowerCase()) || n.includes(normBank(b))) ?? '';
+  return (
+    [...BANKS]
+      .sort((a, b) => b.length - a.length)
+      .find((b) => n.includes(b.toLowerCase()) || n.includes(normBank(b))) ?? ''
+  );
 };
 const REMINDERS: { v: number; label: string }[] = [
   { v: 0, label: 'Mati' },
@@ -89,11 +145,35 @@ type Form = {
   color: string;
 };
 
-const emptyForm: Form = { bank: '', name: '', logoUrl: '', last4: '', statementDay: null, dueDay: null, used: '', limit: '', minPct: '', minAmount: '', reminder: 3, network: '', color: 'slate' };
+const emptyForm: Form = {
+  bank: '',
+  name: '',
+  logoUrl: '',
+  last4: '',
+  statementDay: null,
+  dueDay: null,
+  used: '',
+  limit: '',
+  minPct: '',
+  minAmount: '',
+  reminder: 3,
+  network: '',
+  color: 'slate',
+};
 
 const BANK_ALIASES: Record<string, string> = {
-  'central asia': 'BCA', 'negara indonesia': 'BNI', 'rakyat indonesia': 'BRI', 'syariah indonesia': 'BSI', 'tabungan negara': 'BTN',
-  cimb: 'CIMB Niaga', 'ocbc nisp': 'OCBC', mega: 'Bank Mega', mandiri: 'Bank Mandiri', jago: 'Bank Jago', allo: 'Allo Bank', blu: 'blu by BCA',
+  'central asia': 'BCA',
+  'negara indonesia': 'BNI',
+  'rakyat indonesia': 'BRI',
+  'syariah indonesia': 'BSI',
+  'tabungan negara': 'BTN',
+  cimb: 'CIMB Niaga',
+  'ocbc nisp': 'OCBC',
+  mega: 'Bank Mega',
+  mandiri: 'Bank Mandiri',
+  jago: 'Bank Jago',
+  allo: 'Allo Bank',
+  blu: 'blu by BCA',
 };
 
 const fromAccount = (a: Account): Form => ({
@@ -154,7 +234,7 @@ export function CreditCardForm({
     const prevLogoAuto = !cur.logoUrl || cur.logoUrl === BANK_LOGO[cur.bank];
     return {
       bank,
-      logoUrl: bank === OTHER_BANK ? (prevLogoAuto ? '' : cur.logoUrl) : BANK_LOGO[bank] ?? cur.logoUrl,
+      logoUrl: bank === OTHER_BANK ? (prevLogoAuto ? '' : cur.logoUrl) : (BANK_LOGO[bank] ?? cur.logoUrl),
       name: wasAuto ? autoName(bank) : cur.name,
     };
   };
@@ -179,12 +259,12 @@ export function CreditCardForm({
       // "Bank Mandiri", "PT Bank Central Asia" → cocokkan tanpa awalan umum.
       const bankText = normBank(res.bank ?? '');
       const known = bankText
-        ? BANKS.find((b) => bankText === normBank(b) || bankText.startsWith(`${normBank(b)} `)) ??
-          Object.entries(BANK_ALIASES).find(([alias]) => bankText.startsWith(alias))?.[1]
+        ? (BANKS.find((b) => bankText === normBank(b) || bankText.startsWith(`${normBank(b)} `)) ??
+          Object.entries(BANK_ALIASES).find(([alias]) => bankText.startsWith(alias))?.[1])
         : undefined;
       const found = [
         known ?? res.bank,
-        res.network ? CARD_NETWORK_OPTIONS.find((n) => n.key === res.network)?.label ?? res.network : null,
+        res.network ? (CARD_NETWORK_OPTIONS.find((n) => n.key === res.network)?.label ?? res.network) : null,
         res.last4 ? `•••• ${res.last4}` : null,
       ].filter((x): x is string => Boolean(x));
       setF((cur) => {
@@ -211,7 +291,8 @@ export function CreditCardForm({
     const name = f.name.trim();
     if (!name) return setError('Isi nama kartu.');
     if (f.last4 && !/^\d{4}$/.test(f.last4)) return setError('4 digit terakhir harus tepat 4 angka.');
-    if (f.statementDay && f.statementDay === f.dueDay) return setError('Tanggal cetak dan jatuh tempo tidak boleh sama.');
+    if (f.statementDay && f.statementDay === f.dueDay)
+      return setError('Tanggal cetak dan jatuh tempo tidak boleh sama.');
     const used = Number(f.used) || 0;
     const fields = {
       name,
@@ -275,13 +356,22 @@ export function CreditCardForm({
 
   const section = 'space-y-2.5 rounded-[18px] bg-slate-50 p-3.5';
   const label = 'text-[11px] font-semibold uppercase tracking-wide text-slate-400';
-  const input = 'w-full rounded-xl bg-white px-3 py-2 text-[14px] font-semibold text-slate-900 outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-400 placeholder:font-normal placeholder:text-slate-400';
-  const chip = (active: boolean) => cn('shrink-0 rounded-full px-2.5 py-1 text-[12px] font-semibold ring-1 transition-colors', active ? 'bg-slate-900 text-white ring-slate-900' : 'bg-white text-slate-600 ring-slate-200 hover:bg-slate-100');
+  const input =
+    'w-full rounded-xl bg-white px-3 py-2 text-[14px] font-semibold text-slate-900 outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-400 placeholder:font-normal placeholder:text-slate-400';
+  const chip = (active: boolean) =>
+    cn(
+      'shrink-0 rounded-full px-2.5 py-1 text-[12px] font-semibold ring-1 transition-colors',
+      active ? 'bg-slate-900 text-white ring-slate-900' : 'bg-white text-slate-600 ring-slate-200 hover:bg-slate-100',
+    );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={editing ? 'Ubah kartu kredit' : 'Kartu kredit baru'} maxWidth="max-w-md">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={editing ? 'Ubah kartu kredit' : 'Kartu kredit baru'}
+      maxWidth="max-w-md"
+    >
       <div className="space-y-3">
-        {/* Pratinjau + pindai */}
         <div className="relative mx-auto w-full max-w-[290px]">
           <CardFace
             name={f.name}
@@ -296,15 +386,32 @@ export function CreditCardForm({
             overlay={
               <AnimatePresence>
                 {scanning && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/55">
-                    <motion.span aria-hidden className="absolute inset-x-4 h-0.5 rounded-full bg-emerald-300 shadow-[0_0_12px_2px_rgba(110,231,183,0.8)]" animate={{ top: ['12%', '88%', '12%'] }} transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }} />
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/55"
+                  >
+                    <motion.span
+                      aria-hidden
+                      className="absolute inset-x-4 h-0.5 rounded-full bg-emerald-300 shadow-[0_0_12px_2px_rgba(110,231,183,0.8)]"
+                      animate={{ top: ['12%', '88%', '12%'] }}
+                      transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                    />
                     <p className="relative text-[13px] font-semibold">Leo lagi baca kartumu…</p>
                   </motion.div>
                 )}
               </AnimatePresence>
             }
           />
-          <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => void onScanFile(e.target.files?.[0])} />
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => void onScanFile(e.target.files?.[0])}
+          />
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
@@ -312,18 +419,27 @@ export function CreditCardForm({
             aria-label="Pindai kartu dari foto"
             className="absolute -bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-slate-900 shadow-[0_8px_20px_-8px_rgba(15,23,42,0.5)] ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-60"
           >
-            {scanning ? <Loader2 size={14} className="animate-spin" /> : <ScanLine size={14} className="text-indigo-600" />} Pindai
+            {scanning ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <ScanLine size={14} className="text-indigo-600" />
+            )}{' '}
+            Pindai
           </button>
         </div>
         <p className="pt-1 text-center text-[11px] text-slate-400">
-          {scanned.length ? `Terisi dari foto: ${scanned.join(' · ')}` : 'Pindai foto depan kartu untuk isi otomatis · foto tidak disimpan'}
+          {scanned.length
+            ? `Terisi dari foto: ${scanned.join(' · ')}`
+            : 'Pindai foto depan kartu untuk isi otomatis · foto tidak disimpan'}
         </p>
 
-        {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-[13px] font-medium text-rose-600 ring-1 ring-rose-100">{error}</p>}
+        {error && (
+          <p className="rounded-xl bg-rose-50 px-3 py-2 text-[13px] font-medium text-rose-600 ring-1 ring-rose-100">
+            {error}
+          </p>
+        )}
 
-        {/* Kartu */}
         <div className={section}>
-          {/* Bank: kolom pilihan → panel grid logo + cari (di dalam form) */}
           <div>
             <span className={label}>Bank</span>
             <button
@@ -331,7 +447,10 @@ export function CreditCardForm({
               onClick={() => setBankOpen((o) => !o)}
               aria-expanded={bankOpen}
               aria-label={`Bank: ${f.bank || 'pilih bank penerbit'}`}
-              className={cn('mt-1 flex w-full items-center gap-2.5 rounded-xl bg-white px-2.5 py-1.5 text-left ring-1', bankOpen ? 'ring-2 ring-indigo-400' : 'ring-slate-200')}
+              className={cn(
+                'mt-1 flex w-full items-center gap-2.5 rounded-xl bg-white px-2.5 py-1.5 text-left ring-1',
+                bankOpen ? 'ring-2 ring-indigo-400' : 'ring-slate-200',
+              )}
             >
               <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100">
                 {f.bank && f.bank !== OTHER_BANK ? (
@@ -340,16 +459,38 @@ export function CreditCardForm({
                   <Landmark size={16} className="text-slate-400" />
                 )}
               </span>
-              <span className={cn('min-w-0 flex-1 truncate text-[14px] font-semibold', f.bank ? 'text-slate-900' : 'font-normal text-slate-400')}>{f.bank || 'Pilih bank penerbit'}</span>
-              <ChevronDown size={16} className={cn('shrink-0 text-slate-400 transition-transform', bankOpen && 'rotate-180')} />
+              <span
+                className={cn(
+                  'min-w-0 flex-1 truncate text-[14px] font-semibold',
+                  f.bank ? 'text-slate-900' : 'font-normal text-slate-400',
+                )}
+              >
+                {f.bank || 'Pilih bank penerbit'}
+              </span>
+              <ChevronDown
+                size={16}
+                className={cn('shrink-0 text-slate-400 transition-transform', bankOpen && 'rotate-180')}
+              />
             </button>
             <AnimatePresence initial={false}>
               {bankOpen && (
-                <motion.div key="bank-grid" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                <motion.div
+                  key="bank-grid"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
                   <div className="mt-2 rounded-xl bg-white p-2 ring-1 ring-slate-200">
                     <label className="flex items-center gap-2 rounded-lg bg-slate-50 px-2.5">
                       <Search size={14} className="shrink-0 text-slate-400" />
-                      <input value={bankQuery} onChange={(e) => setBankQuery(e.target.value)} placeholder="Cari bank…" aria-label="Cari bank" className="w-full bg-transparent py-1.5 text-[13px] outline-none" />
+                      <input
+                        value={bankQuery}
+                        onChange={(e) => setBankQuery(e.target.value)}
+                        placeholder="Cari bank…"
+                        aria-label="Cari bank"
+                        className="w-full bg-transparent py-1.5 text-[13px] outline-none"
+                      />
                     </label>
                     <div className="mt-2 grid max-h-60 grid-cols-4 gap-1 overflow-y-auto sm:grid-cols-5">
                       {[...shownBanks, OTHER_BANK].map((b, i) => {
@@ -364,17 +505,22 @@ export function CreditCardForm({
                             initial={{ opacity: 0, scale: 0.85 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: Math.min(i, 16) * 0.015 }}
-                            className={cn('relative flex flex-col items-center gap-1 rounded-xl px-1 py-2 transition-colors', active ? 'bg-indigo-50 ring-2 ring-indigo-500' : 'hover:bg-slate-50')}
+                            className={cn(
+                              'relative flex flex-col items-center gap-1 rounded-xl px-1 py-2 transition-colors',
+                              active ? 'bg-indigo-50 ring-2 ring-indigo-500' : 'hover:bg-slate-50',
+                            )}
                           >
                             <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-slate-100 shadow-sm">
-                              {b === OTHER_BANK ? (
-                                <Plus size={16} className="text-slate-500" />
-                              ) : (
-                                <BankMark bank={b} />
-                              )}
+                              {b === OTHER_BANK ? <Plus size={16} className="text-slate-500" /> : <BankMark bank={b} />}
                             </span>
-                            <span className="line-clamp-1 w-full text-center text-[10.5px] font-semibold text-slate-700">{b.replace(/^Bank\s+/, '')}</span>
-                            {active && <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-white"><Check size={10} strokeWidth={3} /></span>}
+                            <span className="line-clamp-1 w-full text-center text-[10.5px] font-semibold text-slate-700">
+                              {b.replace(/^Bank\s+/, '')}
+                            </span>
+                            {active && (
+                              <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-white">
+                                <Check size={10} strokeWidth={3} />
+                              </span>
+                            )}
                           </motion.button>
                         );
                       })}
@@ -387,7 +533,14 @@ export function CreditCardForm({
           <div className="flex gap-2">
             <label className="block min-w-0 flex-1">
               <span className={label}>Nama kartu</span>
-              <input ref={nameRef} value={f.name} onChange={(e) => set({ name: e.target.value })} maxLength={60} placeholder="mis. Kartu Kredit BCA" className={cn(input, 'mt-1')} />
+              <input
+                ref={nameRef}
+                value={f.name}
+                onChange={(e) => set({ name: e.target.value })}
+                maxLength={60}
+                placeholder="mis. Kartu Kredit BCA"
+                className={cn(input, 'mt-1')}
+              />
             </label>
             <label className="block w-[92px] shrink-0">
               <span className={label}>4 digit</span>
@@ -401,25 +554,48 @@ export function CreditCardForm({
               />
             </label>
           </div>
-          {f.bank && f.name === autoName(f.bank) && <p className="-mt-1 text-[11px] text-slate-400">Nama terisi otomatis dari bank — boleh diubah.</p>}
+          {f.bank && f.name === autoName(f.bank) && (
+            <p className="-mt-1 text-[11px] text-slate-400">Nama terisi otomatis dari bank — boleh diubah.</p>
+          )}
         </div>
 
-        {/* Tanggal & pengingat */}
         <div className={section}>
           <div className="grid grid-cols-2 gap-2">
-            {([['statement', 'Tgl cetak', f.statementDay], ['due', 'Jatuh tempo', f.dueDay]] as const).map(([key, text, value]) => (
-              <button key={key} type="button" onClick={() => setPicker((p) => (p === key ? null : key))} className={cn('rounded-xl bg-white px-3 py-1.5 text-left ring-1', picker === key ? 'ring-2 ring-indigo-400' : 'ring-slate-200')}>
+            {(
+              [
+                ['statement', 'Tgl cetak', f.statementDay],
+                ['due', 'Jatuh tempo', f.dueDay],
+              ] as const
+            ).map(([key, text, value]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setPicker((p) => (p === key ? null : key))}
+                className={cn(
+                  'rounded-xl bg-white px-3 py-1.5 text-left ring-1',
+                  picker === key ? 'ring-2 ring-indigo-400' : 'ring-slate-200',
+                )}
+              >
                 <span className={label}>{text}</span>
                 <span className="flex items-center justify-between text-[14px] font-bold text-slate-900">
                   {value ? `Tgl ${value}` : <span className="font-normal text-slate-400">Pilih</span>}
-                  <ChevronDown size={15} className={cn('text-slate-400 transition-transform', picker === key && 'rotate-180')} />
+                  <ChevronDown
+                    size={15}
+                    className={cn('text-slate-400 transition-transform', picker === key && 'rotate-180')}
+                  />
                 </span>
               </button>
             ))}
           </div>
           <AnimatePresence initial={false}>
             {picker && (
-              <motion.div key="day-grid" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+              <motion.div
+                key="day-grid"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
                 <div className="grid grid-cols-7 gap-1 rounded-xl bg-white p-1.5 ring-1 ring-slate-200">
                   {DAYS.map((d) => {
                     const active = (picker === 'statement' ? f.statementDay : f.dueDay) === d;
@@ -433,7 +609,14 @@ export function CreditCardForm({
                           set(picker === 'statement' ? { statementDay: d } : { dueDay: d });
                           setPicker(picker === 'statement' && !f.dueDay ? 'due' : null);
                         }}
-                        className={cn('h-8 rounded-lg text-[12px] font-semibold transition-colors', active ? 'bg-slate-900 text-white' : other ? 'text-slate-300 line-through' : 'text-slate-700 hover:bg-indigo-50')}
+                        className={cn(
+                          'h-8 rounded-lg text-[12px] font-semibold transition-colors',
+                          active
+                            ? 'bg-slate-900 text-white'
+                            : other
+                              ? 'text-slate-300 line-through'
+                              : 'text-slate-700 hover:bg-indigo-50',
+                        )}
                       >
                         {d}
                       </button>
@@ -445,10 +628,20 @@ export function CreditCardForm({
           </AnimatePresence>
           <p className="text-[11px] text-slate-500">{dueHint}</p>
           <div className="flex items-center gap-2">
-            <span className="flex shrink-0 items-center gap-1 text-[12px] font-semibold text-slate-500">{f.reminder ? <Bell size={13} /> : <BellOff size={13} />} Ingatkan</span>
+            <span className="flex shrink-0 items-center gap-1 text-[12px] font-semibold text-slate-500">
+              {f.reminder ? <Bell size={13} /> : <BellOff size={13} />} Ingatkan
+            </span>
             <div className="flex flex-1 rounded-full bg-slate-200/70 p-0.5">
               {REMINDERS.map((r) => (
-                <button key={r.v} type="button" onClick={() => set({ reminder: r.v })} className={cn('flex-1 rounded-full py-1 text-[12px] font-semibold transition-colors', f.reminder === r.v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500')}>
+                <button
+                  key={r.v}
+                  type="button"
+                  onClick={() => set({ reminder: r.v })}
+                  className={cn(
+                    'flex-1 rounded-full py-1 text-[12px] font-semibold transition-colors',
+                    f.reminder === r.v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500',
+                  )}
+                >
                   {r.label}
                 </button>
               ))}
@@ -456,21 +649,34 @@ export function CreditCardForm({
           </div>
         </div>
 
-        {/* Tagihan & limit */}
         <div className={section}>
           <div className="grid grid-cols-2 gap-2">
             <label className="block min-w-0">
               <span className={label}>Tagihan saat ini</span>
-              <NumberInput value={f.used} onChange={(v) => set({ used: v })} placeholder="0" className={cn(input, 'mt-1')} />
+              <NumberInput
+                value={f.used}
+                onChange={(v) => set({ used: v })}
+                placeholder="0"
+                className={cn(input, 'mt-1')}
+              />
             </label>
             <label className="block min-w-0">
               <span className={label}>Limit · opsional</span>
-              <NumberInput value={f.limit} onChange={(v) => set({ limit: v })} placeholder="0" className={cn(input, 'mt-1')} />
+              <NumberInput
+                value={f.limit}
+                onChange={(v) => set({ limit: v })}
+                placeholder="0"
+                className={cn(input, 'mt-1')}
+              />
             </label>
           </div>
           <div className="flex items-center justify-between gap-2">
             <p className="text-[11px] text-slate-400">Yang terpakai hari ini · 0 kalau lunas</p>
-            <button type="button" onClick={() => setShowMin((v) => !v)} className="flex shrink-0 items-center gap-0.5 text-[12px] font-bold text-indigo-600">
+            <button
+              type="button"
+              onClick={() => setShowMin((v) => !v)}
+              className="flex shrink-0 items-center gap-0.5 text-[12px] font-bold text-indigo-600"
+            >
               Min. bayar <ChevronDown size={13} className={cn('transition-transform', showMin && 'rotate-180')} />
             </button>
           </div>
@@ -478,37 +684,77 @@ export function CreditCardForm({
             <div className="grid grid-cols-2 gap-2">
               <label className="block">
                 <span className={label}>Persen (%)</span>
-                <input type="number" inputMode="decimal" min={0} max={100} step="0.5" value={f.minPct} onChange={(e) => set({ minPct: e.target.value })} placeholder="10" className={cn(input, 'mt-1')} />
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  max={100}
+                  step="0.5"
+                  value={f.minPct}
+                  onChange={(e) => set({ minPct: e.target.value })}
+                  placeholder="10"
+                  className={cn(input, 'mt-1')}
+                />
               </label>
               <label className="block">
                 <span className={label}>Paling sedikit</span>
-                <NumberInput value={f.minAmount} onChange={(v) => set({ minAmount: v })} placeholder="50.000" className={cn(input, 'mt-1')} />
+                <NumberInput
+                  value={f.minAmount}
+                  onChange={(v) => set({ minAmount: v })}
+                  placeholder="50.000"
+                  className={cn(input, 'mt-1')}
+                />
               </label>
             </div>
           )}
         </div>
 
-        {/* Tampilan */}
         <div className={section}>
           <div className="-mx-3.5 flex gap-1.5 overflow-x-auto px-3.5 no-scrollbar">
             {CARD_NETWORK_OPTIONS.map((n) => (
-              <button key={n.key} type="button" onClick={() => set({ network: f.network === n.key ? '' : n.key })} className={chip(f.network === n.key)}>
+              <button
+                key={n.key}
+                type="button"
+                onClick={() => set({ network: f.network === n.key ? '' : n.key })}
+                className={chip(f.network === n.key)}
+              >
                 {n.label}
               </button>
             ))}
           </div>
           <div className="flex flex-wrap gap-2">
             {CARD_COLOR_OPTIONS.map((c) => (
-              <button key={c.key} type="button" onClick={() => set({ color: c.key })} aria-label={`Warna ${c.label}`} aria-pressed={f.color === c.key} className={cn('h-7 w-7 rounded-full transition-transform hover:scale-110', c.gradient, f.color === c.key && 'ring-2 ring-slate-900 ring-offset-2')} />
+              <button
+                key={c.key}
+                type="button"
+                onClick={() => set({ color: c.key })}
+                aria-label={`Warna ${c.label}`}
+                aria-pressed={f.color === c.key}
+                className={cn(
+                  'h-7 w-7 rounded-full transition-transform hover:scale-110',
+                  c.gradient,
+                  f.color === c.key && 'ring-2 ring-slate-900 ring-offset-2',
+                )}
+              />
             ))}
           </div>
         </div>
 
-        <button type="button" onClick={() => void save()} disabled={saving || scanning} className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-2.5 text-[14px] font-bold text-white disabled:opacity-50">
+        <button
+          type="button"
+          onClick={() => void save()}
+          disabled={saving || scanning}
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-2.5 text-[14px] font-bold text-white disabled:opacity-50"
+        >
           {saving && <Loader2 size={16} className="animate-spin" />} {editing ? 'Simpan perubahan' : 'Simpan kartu'}
         </button>
         {editing && (
-          <button type="button" onClick={() => void remove()} disabled={saving} className="flex w-full items-center justify-center gap-1.5 py-1 text-[12px] font-semibold text-rose-600 disabled:opacity-50">
+          <button
+            type="button"
+            onClick={() => void remove()}
+            disabled={saving}
+            className="flex w-full items-center justify-center gap-1.5 py-1 text-[12px] font-semibold text-rose-600 disabled:opacity-50"
+          >
             <Trash2 size={13} /> Hapus kartu
           </button>
         )}

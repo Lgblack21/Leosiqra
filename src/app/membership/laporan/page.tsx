@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
@@ -17,14 +17,27 @@ import { BubbleCalendar, TopExpenses, WeekdayPattern, YearMonths } from '@/compo
 // Hanya pemasukan/pengeluaran (amountIDR) — transfer, tabungan, beli/jual
 // investasi (isInvestmentFlow, sama dengan Worker) dan catatan hutang bukan
 // pengeluaran.
-// Cetak / PDF (dulu di halaman Laporan Tahunan, dihapus 2026-10-30): tombol
+// Cetak / PDF: tombol
 // memanggil dialog cetak browser ("Simpan sebagai PDF"); kop laporan & CSS
 // cetak di bawah hanya aktif saat print.
 
 type Mode = 'bulanan' | 'tahunan';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
-const MONTHS_LONG = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+const MONTHS_LONG = [
+  'Januari',
+  'Februari',
+  'Maret',
+  'April',
+  'Mei',
+  'Juni',
+  'Juli',
+  'Agustus',
+  'September',
+  'Oktober',
+  'November',
+  'Desember',
+];
 const COLORS = ['#4f46e5', '#ec4899', '#0ea5e9', '#f59e0b', '#10b981', '#8b5cf6', '#f97316', '#14b8a6'];
 const STACK = 4; // kategori terbesar yang punya warna sendiri di grafik batang
 
@@ -34,10 +47,13 @@ const inPeriod = (t: Transaction, y: number, m: number | null) => {
 };
 const idr = (t: Transaction) => Number(t.amountIDR) || Number(t.amount) || 0;
 const short = (n: number) =>
-  n >= 1e9 ? `Rp${(n / 1e9).toLocaleString('id-ID', { maximumFractionDigits: 2 })} M`
-  : n >= 1e6 ? `Rp${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 2 })} jt`
-  : n >= 1e3 ? `Rp${(n / 1e3).toLocaleString('id-ID', { maximumFractionDigits: 1 })} rb`
-  : formatIDR(n);
+  n >= 1e9
+    ? `Rp${(n / 1e9).toLocaleString('id-ID', { maximumFractionDigits: 2 })} M`
+    : n >= 1e6
+      ? `Rp${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 2 })} jt`
+      : n >= 1e3
+        ? `Rp${(n / 1e3).toLocaleString('id-ID', { maximumFractionDigits: 1 })} rb`
+        : formatIDR(n);
 // Batas atas sumbu yang "bulat" (1/2/5 × 10^n).
 const niceMax = (v: number) => {
   if (v <= 0) return 1;
@@ -63,7 +79,11 @@ export default function LaporanPage() {
     const load = () =>
       transactionService
         .getUserTransactions('session')
-        .then((list) => active && setAll(list.filter((t) => (t.type === 'pengeluaran' || t.type === 'pemasukan') && !isInvestmentFlow(t))))
+        .then(
+          (list) =>
+            active &&
+            setAll(list.filter((t) => (t.type === 'pengeluaran' || t.type === 'pemasukan') && !isInvestmentFlow(t))),
+        )
         .catch(console.error)
         .finally(() => active && setLoading(false));
     load();
@@ -74,19 +94,33 @@ export default function LaporanPage() {
     };
   }, []);
 
-  const prev = mode === 'tahunan' ? { y: year - 1, m: null as number | null } : { y: month === 0 ? year - 1 : year, m: month === 0 ? 11 : month - 1 };
+  const prev =
+    mode === 'tahunan'
+      ? { y: year - 1, m: null as number | null }
+      : { y: month === 0 ? year - 1 : year, m: month === 0 ? 11 : month - 1 };
   const cur = { y: year, m: mode === 'tahunan' ? null : month };
 
-  const spend = useMemo(() => all.filter((t) => t.type === 'pengeluaran' && inPeriod(t, cur.y, cur.m)), [all, cur.y, cur.m]);
-  const prevSpend = useMemo(() => all.filter((t) => t.type === 'pengeluaran' && inPeriod(t, prev.y, prev.m)), [all, prev.y, prev.m]);
-  const income = useMemo(() => all.filter((t) => t.type === 'pemasukan' && inPeriod(t, cur.y, cur.m)).reduce((s, t) => s + idr(t), 0), [all, cur.y, cur.m]);
+  const spend = useMemo(
+    () => all.filter((t) => t.type === 'pengeluaran' && inPeriod(t, cur.y, cur.m)),
+    [all, cur.y, cur.m],
+  );
+  const prevSpend = useMemo(
+    () => all.filter((t) => t.type === 'pengeluaran' && inPeriod(t, prev.y, prev.m)),
+    [all, prev.y, prev.m],
+  );
+  const income = useMemo(
+    () => all.filter((t) => t.type === 'pemasukan' && inPeriod(t, cur.y, cur.m)).reduce((s, t) => s + idr(t), 0),
+    [all, cur.y, cur.m],
+  );
   const total = spend.reduce((s, t) => s + idr(t), 0);
 
   // Kategori diurutkan dari yang terbesar.
   const cats = useMemo(() => {
     const m = new Map<string, number>();
     for (const t of spend) m.set(t.category || 'Lainnya', (m.get(t.category || 'Lainnya') ?? 0) + idr(t));
-    return [...m.entries()].sort((a, b) => b[1] - a[1]).map(([name, value], i) => ({ name, value, color: COLORS[i % COLORS.length] }));
+    return [...m.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, value], i) => ({ name, value, color: COLORS[i % COLORS.length] }));
   }, [spend]);
   const stackCats = cats.slice(0, STACK).map((c) => c.name);
 
@@ -106,9 +140,8 @@ export default function LaporanPage() {
     return rows;
   }, [spend, slots, mode, stackCats]);
   // Rata-rata hanya dari slot yang sudah lewat (bulan/hari berjalan ikut dihitung).
-  const elapsed = mode === 'tahunan'
-    ? (isCurYear && now ? now.getMonth() + 1 : 12)
-    : (isCurMonth && now ? now.getDate() : slots);
+  const elapsed =
+    mode === 'tahunan' ? (isCurYear && now ? now.getMonth() + 1 : 12) : isCurMonth && now ? now.getDate() : slots;
   // Tahunan: bulan tanpa catatan (mis. sebelum mulai pakai Leosiqra) tidak ikut dirata-rata.
   const passed = bars.slice(0, elapsed).filter((b) => mode === 'bulanan' || b.total > 0);
 
@@ -155,34 +188,47 @@ export default function LaporanPage() {
     return [...m.entries()].sort((a, b) => b[1].total - a[1].total).slice(0, 8);
   }, [spend]);
 
-  const periodLabel = mode === 'tahunan'
-    ? (elapsed === 12 ? `${year}` : `Jan–${MONTHS[Math.max(0, elapsed - 1)]} ${year}`)
-    : `${MONTHS_LONG[month]} ${year}`;
+  const periodLabel =
+    mode === 'tahunan'
+      ? elapsed === 12
+        ? `${year}`
+        : `Jan–${MONTHS[Math.max(0, elapsed - 1)]} ${year}`
+      : `${MONTHS_LONG[month]} ${year}`;
   const step = (dir: -1 | 1) => {
     if (mode === 'tahunan') return setYear((y) => y + dir);
     const d = new Date(year, month + dir, 1);
     setYear(d.getFullYear());
     setMonth(d.getMonth());
   };
-  const atLatest = now ? (mode === 'tahunan' ? year >= now.getFullYear() : year > now.getFullYear() || (year === now.getFullYear() && month >= now.getMonth())) : false;
+  const atLatest = now
+    ? mode === 'tahunan'
+      ? year >= now.getFullYear()
+      : year > now.getFullYear() || (year === now.getFullYear() && month >= now.getMonth())
+    : false;
   const perUnit = mode === 'tahunan' ? '/bln' : '/hari';
-  const txLink = (category: string) => `/membership/transactions/daily?kategori=${encodeURIComponent(category)}&periode=${mode === 'tahunan' && isCurYear ? 'tahun' : mode === 'bulanan' && isCurMonth ? 'bulan' : 'semua'}`;
+  const txLink = (category: string) =>
+    `/membership/transactions/daily?kategori=${encodeURIComponent(category)}&periode=${mode === 'tahunan' && isCurYear ? 'tahun' : mode === 'bulanan' && isCurMonth ? 'bulan' : 'semua'}`;
 
-  // Donat
   const R = 70;
   const C = 2 * Math.PI * R;
-  const offsets = cats.reduce<number[]>((acc, c, i) => [...acc, i === 0 ? 0 : acc[i - 1] + (cats[i - 1].value / total) * C], []);
+  const offsets = cats.reduce<number[]>(
+    (acc, c, i) => [...acc, i === 0 ? 0 : acc[i - 1] + (cats[i - 1].value / total) * C],
+    [],
+  );
   const focused = cats.find((c) => c.name === focus);
 
   return (
     <div className="laporan-print mx-auto max-w-5xl space-y-7 pb-12">
-      {/* Kop khusus cetak */}
       <div className="hidden items-end justify-between border-b-2 border-slate-900 pb-4 print:flex">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Leosiqra</p>
-          <p className="text-[22px] font-extrabold text-slate-900">Laporan Keuangan {mode === 'tahunan' ? `Tahun ${year}` : `${MONTHS_LONG[month]} ${year}`}</p>
+          <p className="text-[22px] font-extrabold text-slate-900">
+            Laporan Keuangan {mode === 'tahunan' ? `Tahun ${year}` : `${MONTHS_LONG[month]} ${year}`}
+          </p>
         </div>
-        <p className="text-right text-[11px] text-slate-500">Dicetak {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+        <p className="text-right text-[11px] text-slate-500">
+          Dicetak {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+        </p>
       </div>
       <div className="space-y-5 print:hidden">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -200,22 +246,55 @@ export default function LaporanPage() {
               <button
                 key={m}
                 type="button"
-                onClick={() => { setMode(m); setFocus(null); }}
-                className={cn('rounded-full px-4 py-1 text-[13px] font-semibold capitalize transition-colors', mode === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700')}
+                onClick={() => {
+                  setMode(m);
+                  setFocus(null);
+                }}
+                className={cn(
+                  'rounded-full px-4 py-1 text-[13px] font-semibold capitalize transition-colors',
+                  mode === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700',
+                )}
               >
                 {m}
               </button>
             ))}
           </div>
           <div className="flex items-center rounded-full bg-white ring-1 ring-slate-200">
-            <button type="button" onClick={() => step(-1)} aria-label="Periode sebelumnya" className="rounded-full p-1.5 text-slate-500 hover:bg-slate-50"><ChevronLeft size={16} /></button>
-            <span className="min-w-[90px] text-center text-[13px] font-bold text-slate-900">{mode === 'tahunan' ? year : `${MONTHS[month]} ${year}`}</span>
-            <button type="button" onClick={() => step(1)} disabled={atLatest} aria-label="Periode berikutnya" className="rounded-full p-1.5 text-slate-500 hover:bg-slate-50 disabled:opacity-30"><ChevronRight size={16} /></button>
+            <button
+              type="button"
+              onClick={() => step(-1)}
+              aria-label="Periode sebelumnya"
+              className="rounded-full p-1.5 text-slate-500 hover:bg-slate-50"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="min-w-[90px] text-center text-[13px] font-bold text-slate-900">
+              {mode === 'tahunan' ? year : `${MONTHS[month]} ${year}`}
+            </span>
+            <button
+              type="button"
+              onClick={() => step(1)}
+              disabled={atLatest}
+              aria-label="Periode berikutnya"
+              className="rounded-full p-1.5 text-slate-500 hover:bg-slate-50 disabled:opacity-30"
+            >
+              <ChevronRight size={16} />
+            </button>
           </div>
-          <Link href="/membership/budget" aria-label="Anggaran" className="ml-auto flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[13px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">
+          <Link
+            href="/membership/budget"
+            aria-label="Anggaran"
+            className="ml-auto flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[13px] font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+          >
             <Gauge size={15} /> <span className="hidden sm:inline">Anggaran</span>
           </Link>
-          <button type="button" onClick={() => window.print()} disabled={loading} aria-label="Cetak atau simpan PDF" className="flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-slate-800 disabled:opacity-40">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            disabled={loading}
+            aria-label="Cetak atau simpan PDF"
+            className="flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-slate-800 disabled:opacity-40"
+          >
             <Printer size={15} /> <span className="hidden sm:inline">Cetak / PDF</span>
           </button>
         </div>
@@ -235,11 +314,18 @@ export default function LaporanPage() {
               {[
                 { label: 'Keluar', v: total, cls: 'text-slate-900' },
                 { label: 'Masuk', v: income, cls: 'text-emerald-600' },
-                { label: income - total >= 0 ? 'Sisa' : 'Minus', v: Math.abs(income - total), cls: income - total >= 0 ? 'text-slate-900' : 'text-rose-600' },
+                {
+                  label: income - total >= 0 ? 'Sisa' : 'Minus',
+                  v: Math.abs(income - total),
+                  cls: income - total >= 0 ? 'text-slate-900' : 'text-rose-600',
+                },
               ].map((x) => (
                 <div key={x.label} className="min-w-0 px-3 md:px-5">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{x.label}</p>
-                  <p className={cn('truncate text-[15px] font-bold tabular-nums md:text-[19px]', x.cls)} title={formatIDR(x.v)}>
+                  <p
+                    className={cn('truncate text-[15px] font-bold tabular-nums md:text-[19px]', x.cls)}
+                    title={formatIDR(x.v)}
+                  >
                     <span className="md:hidden">{short(x.v)}</span>
                     <span className="hidden md:inline">{formatIDR(x.v)}</span>
                   </p>
@@ -249,7 +335,8 @@ export default function LaporanPage() {
             <p className="mt-1.5 flex flex-wrap gap-x-3 px-1 text-[12px] text-slate-500">
               {prevTotal > 0 && (
                 <span className={cn('font-semibold', total > prevTotal ? 'text-rose-600' : 'text-emerald-600')}>
-                  {total > prevTotal ? '▲' : '▼'} {short(Math.abs(total - prevTotal))} vs {mode === 'tahunan' ? year - 1 : MONTHS_LONG[prev.m ?? 0]}
+                  {total > prevTotal ? '▲' : '▼'} {short(Math.abs(total - prevTotal))} vs{' '}
+                  {mode === 'tahunan' ? year - 1 : MONTHS_LONG[prev.m ?? 0]}
                 </span>
               )}
               {income > 0 && <span>{Math.round((Math.max(0, income - total) / income) * 100)}% pemasukan tersisa</span>}
@@ -267,14 +354,13 @@ export default function LaporanPage() {
               onPick={(m) => {
                 setMode('bulanan');
                 setMonth(m);
-               
+
                 setFocus(null);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
             />
           )}
 
-          {/* Kumulatif vs periode sebelumnya */}
           <section>
             <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Tren pengeluaran</h2>
             <p className="text-[12px] text-slate-500">
@@ -282,21 +368,46 @@ export default function LaporanPage() {
               {prevTotal > 0 && ` (total ${short(prevTotal)})`}
             </p>
             <div className="mt-4 rounded-[20px] bg-white p-4 ring-1 ring-slate-100 md:p-6">
-              <svg viewBox="0 0 600 200" className="h-40 w-full md:h-44" preserveAspectRatio="none" role="img" aria-label="Grafik pengeluaran kumulatif">
-                {[0.5, 1].map((f) => <line key={f} x1="0" x2="600" y1={190 - f * 175} y2={190 - f * 175} stroke="#f1f5f9" />)}
+              <svg
+                viewBox="0 0 600 200"
+                className="h-40 w-full md:h-44"
+                preserveAspectRatio="none"
+                role="img"
+                aria-label="Grafik pengeluaran kumulatif"
+              >
+                {[0.5, 1].map((f) => (
+                  <line key={f} x1="0" x2="600" y1={190 - f * 175} y2={190 - f * 175} stroke="#f1f5f9" />
+                ))}
                 <line x1="0" x2="600" y1="190" y2="190" stroke="#e2e8f0" />
                 {(() => {
                   const x = (i: number) => (slots === 1 ? 0 : (i / (slots - 1)) * 600);
                   const y = (v: number) => 190 - (v / lineMax) * 175;
-                  const path = (pts: number[]) => pts.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+                  const path = (pts: number[]) =>
+                    pts.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
                   const last = curLine.length - 1;
                   return (
                     <>
-                      {prevLine.some((v) => v > 0) && <path d={path(prevLine)} fill="none" stroke="#cbd5e1" strokeWidth="2.5" strokeDasharray="6 6" vectorEffect="non-scaling-stroke" />}
+                      {prevLine.some((v) => v > 0) && (
+                        <path
+                          d={path(prevLine)}
+                          fill="none"
+                          stroke="#cbd5e1"
+                          strokeWidth="2.5"
+                          strokeDasharray="6 6"
+                          vectorEffect="non-scaling-stroke"
+                        />
+                      )}
                       {last >= 0 && (
                         <>
                           <path d={`${path(curLine)} L${x(last)},190 L0,190 Z`} fill="url(#lapGrad)" />
-                          <path d={path(curLine)} fill="none" stroke="#4f46e5" strokeWidth="3" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                          <path
+                            d={path(curLine)}
+                            fill="none"
+                            stroke="#4f46e5"
+                            strokeWidth="3"
+                            strokeLinejoin="round"
+                            vectorEffect="non-scaling-stroke"
+                          />
                         </>
                       )}
                       <defs>
@@ -312,22 +423,29 @@ export default function LaporanPage() {
               <div className="mt-2 flex items-center justify-between text-[12px] text-slate-400">
                 <span>{mode === 'tahunan' ? 'Jan' : '1'}</span>
                 <span className="flex gap-4">
-                  <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 rounded bg-indigo-600" /> {mode === 'tahunan' ? year : MONTHS[month]} · {short(total)}</span>
-                  <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 rounded border-t-2 border-dashed border-slate-300" /> {mode === 'tahunan' ? year - 1 : MONTHS[prev.m ?? 0]}</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-0.5 w-4 rounded bg-indigo-600" /> {mode === 'tahunan' ? year : MONTHS[month]} ·{' '}
+                    {short(total)}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-0.5 w-4 rounded border-t-2 border-dashed border-slate-300" />{' '}
+                    {mode === 'tahunan' ? year - 1 : MONTHS[prev.m ?? 0]}
+                  </span>
                 </span>
                 <span>{mode === 'tahunan' ? 'Des' : slots}</span>
               </div>
             </div>
           </section>
 
-          {/* Donat + daftar kategori */}
           <section>
             <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Ke mana uangnya</h2>
             <p className="text-[12px] text-slate-500">Ketuk kategori untuk lihat transaksinya</p>
             {cats.length === 0 ? (
-              <p className="mt-4 rounded-[20px] bg-white p-8 text-center text-[14px] text-slate-500 ring-1 ring-slate-100">Belum ada pengeluaran di periode ini.</p>
+              <p className="mt-4 rounded-[20px] bg-white p-8 text-center text-[14px] text-slate-500 ring-1 ring-slate-100">
+                Belum ada pengeluaran di periode ini.
+              </p>
             ) : (
-              <div className="mt-3 grid items-start gap-5 md:grid-cols-[190px_minmax(0,1fr)]">
+              <div className="mt-3 grid grid-cols-1 items-start gap-5 md:grid-cols-[190px_minmax(0,1fr)]">
                 <div className="flex justify-center md:sticky md:top-6">
                   <div className="relative h-44 w-44">
                     <svg viewBox="0 0 180 180" className="h-full w-full -rotate-90">
@@ -336,7 +454,10 @@ export default function LaporanPage() {
                         return (
                           <circle
                             key={c.name}
-                            cx="90" cy="90" r={R} fill="none"
+                            cx="90"
+                            cy="90"
+                            r={R}
+                            fill="none"
                             stroke={c.color}
                             strokeWidth={focus === c.name ? 24 : 18}
                             strokeDasharray={`${Math.max(0, len - 1.5)} ${C}`}
@@ -351,8 +472,12 @@ export default function LaporanPage() {
                     </svg>
                     <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
                       <span className="text-[13px] text-slate-500">{focused ? focused.name : 'Pengeluaran'}</span>
-                      <span className="text-[17px] font-extrabold tracking-tight text-slate-900">{short(focused ? focused.value : total)}</span>
-                      <span className="text-[13px] text-slate-500">{focused ? `${Math.round((focused.value / total) * 100)}%` : `${cats.length} kategori`}</span>
+                      <span className="text-[17px] font-extrabold tracking-tight text-slate-900">
+                        {short(focused ? focused.value : total)}
+                      </span>
+                      <span className="text-[13px] text-slate-500">
+                        {focused ? `${Math.round((focused.value / total) * 100)}%` : `${cats.length} kategori`}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -367,13 +492,26 @@ export default function LaporanPage() {
                           onMouseLeave={() => setFocus(null)}
                           className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 md:px-5"
                         >
-                          <span className={cn('relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[17px]', v.tile)} aria-hidden>
+                          <span
+                            className={cn(
+                              'relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[17px]',
+                              v.tile,
+                            )}
+                            aria-hidden
+                          >
                             {v.emoji}
-                            <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white" style={{ background: c.color }} />
+                            <span
+                              className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white"
+                              style={{ background: c.color }}
+                            />
                           </span>
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-[14px] font-semibold text-slate-900">{c.name}</p>
-                            <p className="text-[12px] text-slate-500">{Math.round((c.value / total) * 100)}% · {short(c.value / Math.max(1, mode === 'tahunan' ? passed.length : elapsed))}{perUnit}</p>
+                            <p className="text-[12px] text-slate-500">
+                              {Math.round((c.value / total) * 100)}% ·{' '}
+                              {short(c.value / Math.max(1, mode === 'tahunan' ? passed.length : elapsed))}
+                              {perUnit}
+                            </p>
                           </div>
                           <p className="text-[14px] font-bold tabular-nums text-slate-900">{formatIDR(c.value)}</p>
                           <ChevronRight size={17} className="text-slate-300" />
@@ -386,41 +524,64 @@ export default function LaporanPage() {
             )}
           </section>
 
-          {/* Heatmap kategori × bulan */}
           {mode === 'tahunan' && heat.length > 0 && (
             <section>
               <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Kategori dari waktu ke waktu</h2>
-              <p className="text-[12px] text-slate-500">Makin besar gelembung, makin besar belanja kategori itu di bulan tersebut</p>
+              <p className="text-[12px] text-slate-500">
+                Makin besar gelembung, makin besar belanja kategori itu di bulan tersebut
+              </p>
               <div className="mt-4 rounded-[20px] bg-white p-4 ring-1 ring-slate-100 md:p-6">
                 <div>
                   <div className="grid grid-cols-[104px_repeat(6,minmax(0,1fr))_64px] md:grid-cols-[170px_repeat(12,minmax(0,1fr))_120px] gap-1.5 pb-2 text-center text-[12px] text-slate-400">
                     <span />
-                    {MONTHS.map((m, i) => <span key={m} className={heatCell(i)}>{m}</span>)}
+                    {MONTHS.map((m, i) => (
+                      <span key={m} className={heatCell(i)}>
+                        {m}
+                      </span>
+                    ))}
                     <span />
                   </div>
                   {heat.map((row) => {
                     const v = categoryVisual(row.name, 'pengeluaran');
                     return (
-                      <div key={row.name} className="grid grid-cols-[104px_repeat(6,minmax(0,1fr))_64px] md:grid-cols-[170px_repeat(12,minmax(0,1fr))_120px] items-center gap-1.5 py-1">
+                      <div
+                        key={row.name}
+                        className="grid grid-cols-[104px_repeat(6,minmax(0,1fr))_64px] md:grid-cols-[170px_repeat(12,minmax(0,1fr))_120px] items-center gap-1.5 py-1"
+                      >
                         <span className="flex min-w-0 items-center gap-2">
-                          <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[15px]', v.tile)} aria-hidden>{v.emoji}</span>
+                          <span
+                            className={cn(
+                              'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[15px]',
+                              v.tile,
+                            )}
+                            aria-hidden
+                          >
+                            {v.emoji}
+                          </span>
                           <span className="truncate text-[13px] font-medium text-slate-700">{row.name}</span>
                         </span>
                         {row.per.map((val, i) => (
                           <span key={i} title={`${MONTHS_LONG[i]}: ${formatIDR(val)}`} className={heatCell(i)}>
                             <span className="flex h-10 items-center justify-center">
-                            <span
-                              className="rounded-full transition-transform hover:scale-110"
-                              style={
-                                val > 0
-                                  ? { width: 12 + 24 * Math.sqrt(val / row.max), height: 12 + 24 * Math.sqrt(val / row.max), background: row.color, opacity: 0.45 + 0.55 * (val / row.max) }
-                                  : { width: 6, height: 6, background: '#e2e8f0' }
-                              }
-                            />
+                              <span
+                                className="rounded-full transition-transform hover:scale-110"
+                                style={
+                                  val > 0
+                                    ? {
+                                        width: 12 + 24 * Math.sqrt(val / row.max),
+                                        height: 12 + 24 * Math.sqrt(val / row.max),
+                                        background: row.color,
+                                        opacity: 0.45 + 0.55 * (val / row.max),
+                                      }
+                                    : { width: 6, height: 6, background: '#e2e8f0' }
+                                }
+                              />
                             </span>
                           </span>
                         ))}
-                        <span className="whitespace-nowrap text-right text-[12px] font-bold tabular-nums text-slate-900 md:text-[14px]">{short(row.value)}</span>
+                        <span className="whitespace-nowrap text-right text-[12px] font-bold tabular-nums text-slate-900 md:text-[14px]">
+                          {short(row.value)}
+                        </span>
                       </div>
                     );
                   })}
@@ -431,7 +592,6 @@ export default function LaporanPage() {
 
           <WeekdayPattern spend={spend} />
 
-          {/* Tempat teratas */}
           {places.length > 0 && (
             <section>
               <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Tempat teratas</h2>
@@ -442,10 +602,20 @@ export default function LaporanPage() {
                   return (
                     <li key={name} className="flex items-center gap-3 px-4 py-2.5 md:px-5">
                       <span className="w-5 text-center text-[13px] font-bold text-slate-400">{i + 1}</span>
-                      <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[16px]', v.tile)} aria-hidden>{v.emoji}</span>
+                      <span
+                        className={cn(
+                          'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[16px]',
+                          v.tile,
+                        )}
+                        aria-hidden
+                      >
+                        {v.emoji}
+                      </span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[14px] font-semibold text-slate-900">{name}</p>
-                        <p className="text-[12px] text-slate-500">{p.n}× · {p.category}</p>
+                        <p className="text-[12px] text-slate-500">
+                          {p.n}× · {p.category}
+                        </p>
                       </div>
                       <p className="text-[14px] font-bold tabular-nums text-slate-900">{formatIDR(p.total)}</p>
                     </li>

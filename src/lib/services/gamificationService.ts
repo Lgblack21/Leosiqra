@@ -39,7 +39,7 @@ export interface GamificationData {
 export const gamificationService = {
   async getUserGamification() {
     return cloudflareApi<GamificationData>('/api/member/gamification');
-  }
+  },
 };
 
 // Progres ke level berikutnya, 0–1 (Lv 10 selalu penuh).

@@ -9,8 +9,18 @@ import type { SavingsGoal } from './services/savingsGoalService';
 // riwayat setorannya.
 
 export const TARGET_COLORS = [
-  '#6366f1', '#8b5cf6', '#a855f7', '#ec4899', '#f43f5e', '#f97316',
-  '#f59e0b', '#84cc16', '#10b981', '#14b8a6', '#0ea5e9', '#64748b',
+  '#6366f1',
+  '#8b5cf6',
+  '#a855f7',
+  '#ec4899',
+  '#f43f5e',
+  '#f97316',
+  '#f59e0b',
+  '#84cc16',
+  '#10b981',
+  '#14b8a6',
+  '#0ea5e9',
+  '#64748b',
 ];
 
 export const TARGET_ICONS: { group: string; items: string[] }[] = [
@@ -30,7 +40,10 @@ export const monthsUntil = (date: string | null | undefined, from = new Date()) 
   if (!date) return null;
   const d = new Date(`${date}T00:00:00`);
   if (Number.isNaN(d.getTime())) return null;
-  const months = (d.getFullYear() - from.getFullYear()) * 12 + (d.getMonth() - from.getMonth()) - (d.getDate() < from.getDate() ? 1 : 0);
+  const months =
+    (d.getFullYear() - from.getFullYear()) * 12 +
+    (d.getMonth() - from.getMonth()) -
+    (d.getDate() < from.getDate() ? 1 : 0);
   if (d.getTime() <= from.getTime()) return 0;
   return Math.max(1, months);
 };

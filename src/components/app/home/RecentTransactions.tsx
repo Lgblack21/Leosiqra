@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { ArrowDownCircle, ArrowUpCircle, Receipt } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { isIncomingTransaction } from "@/lib/utils";
-import { Transaction } from "@/lib/services/transactionService";
-import { StaggerList, StaggerItem } from "@/components/app/FadeIn";
+import Link from 'next/link';
+import { ArrowDownCircle, ArrowUpCircle, Receipt } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { isIncomingTransaction } from '@/lib/utils';
+import { Transaction } from '@/lib/services/transactionService';
+import { StaggerList, StaggerItem } from '@/components/app/FadeIn';
 
 interface RecentTransactionsProps {
   transactions: Transaction[];
@@ -13,9 +13,9 @@ interface RecentTransactionsProps {
 
 const formatAmount = (amount: number, currency: string) => {
   try {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: currency || "IDR",
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: currency || 'IDR',
       maximumFractionDigits: 0,
     }).format(amount);
   } catch {
@@ -24,13 +24,13 @@ const formatAmount = (amount: number, currency: string) => {
 };
 
 const formatDate = (d: Date) =>
-  new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(d);
+  new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(d);
 
 export function RecentTransactions({ transactions }: RecentTransactionsProps) {
   // Catatan Hutang/Piutang (type "debt") bukan arus uang — jangan tampil
   // sebagai uang keluar di sini (sama seperti halaman web).
   const recent = transactions
-    .filter((tx) => tx.type !== "debt")
+    .filter((tx) => tx.type !== 'debt')
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 8);
 
@@ -38,7 +38,9 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
     <div>
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-black text-slate-900 dark:text-white">Transaksi Terbaru</h2>
-        <Link href="/app/transactions" className="text-xs font-bold text-indigo-600 dark:text-indigo-400">Lihat semua</Link>
+        <Link href="/app/transactions" className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
+          Lihat semua
+        </Link>
       </div>
       {recent.length === 0 ? (
         <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-8 text-center">
@@ -54,24 +56,28 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
                 <div className="flex items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-3.5">
                   <div
                     className={cn(
-                      "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
-                      incoming ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-rose-50 dark:bg-rose-500/10 text-rose-500 dark:text-rose-400"
+                      'w-9 h-9 rounded-xl flex items-center justify-center shrink-0',
+                      incoming
+                        ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-rose-50 dark:bg-rose-500/10 text-rose-500 dark:text-rose-400',
                     )}
                   >
                     {incoming ? <ArrowDownCircle size={16} /> : <ArrowUpCircle size={16} />}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{tx.category || "Umum"}</p>
-                    <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">{formatDate(new Date(tx.date))}</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{tx.category || 'Umum'}</p>
+                    <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                      {formatDate(new Date(tx.date))}
+                    </p>
                   </div>
                   <p
                     className={cn(
-                      "text-sm font-black tabular-nums shrink-0",
-                      incoming ? "text-emerald-600" : "text-rose-500"
+                      'text-sm font-black tabular-nums shrink-0',
+                      incoming ? 'text-emerald-600' : 'text-rose-500',
                     )}
                   >
-                    {incoming ? "+" : "-"}
-                    {formatAmount(tx.amount, tx.currency || "IDR")}
+                    {incoming ? '+' : '-'}
+                    {formatAmount(tx.amount, tx.currency || 'IDR')}
                   </p>
                 </div>
               </StaggerItem>

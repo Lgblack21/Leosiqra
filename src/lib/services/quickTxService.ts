@@ -15,6 +15,7 @@ export const quickTxService = {
     note?: string;
     date?: string; // YYYY-MM-DD, kosong = hari ini
     attachmentId?: string; // foto struk dari scan AI
+    tags?: string[]; // label bebas (payload_json.tags), maks 5
   }) {
     const res = await cloudflareApi<{ ok: boolean; id: string; matchedAccount: string; currency: string }>(
       '/api/member/quick-transaction',
@@ -29,9 +30,16 @@ export const quickTxService = {
           note: input.note?.trim() ?? '',
           ...(input.date ? { date: input.date } : {}),
         },
-      }
+      },
     );
     await attachmentService.link(input.attachmentId, res.id);
+    // Tag disimpan setelah transaksi tercatat (PUT hanya menyentuh payload_json.tags,
+    // bukan nominal/saldo). Gagal di sini tidak membatalkan transaksinya.
+    if (input.tags?.length) {
+      await cloudflareApi(`/api/member/transactions/${res.id}`, { method: 'PUT', json: { tags: input.tags } }).catch(
+        (e) => console.warn('Tag gagal disimpan:', e),
+      );
+    }
     notifyCollectionChanged('transactions');
     notifyCollectionChanged('accounts');
     return res;

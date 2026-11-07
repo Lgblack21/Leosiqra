@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from 'react';
 import { ChevronDown, Save } from 'lucide-react';
@@ -18,11 +18,17 @@ interface RecurringModalProps {
   initialType?: RecurringTransaction['type'];
 }
 
-export const RecurringModal = ({ userId, isOpen, onClose, initialData = null, initialType = 'Pengeluaran' }: RecurringModalProps) => {
+export const RecurringModal = ({
+  userId,
+  isOpen,
+  onClose,
+  initialData = null,
+  initialType = 'Pengeluaran',
+}: RecurringModalProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [accounts, setAccounts] = useState<Account[]>([]);
-  
+
   const getToday = () => toLocalDateString();
 
   const [formData, setFormData] = useState({
@@ -34,12 +40,12 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null, in
     interval: 'Bulanan' as RecurringTransaction['interval'],
     nextDate: getToday(),
     note: '',
-    targetAmount: ''
+    targetAmount: '',
   });
 
   const isTabungan = formData.type === 'Tabungan';
 
-  const selectedAccount = accounts.find(acc => acc.id === formData.accountId);
+  const selectedAccount = accounts.find((acc) => acc.id === formData.accountId);
   const currencySymbol = getCurrencySymbol(selectedAccount?.currency || 'IDR');
 
   useEffect(() => {
@@ -56,7 +62,7 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null, in
           interval: initialData.interval || 'Bulanan',
           nextDate: toLocalDateString(new Date(initialData.nextDate)),
           note: initialData.note || '',
-          targetAmount: initialData.targetAmount ? String(initialData.targetAmount) : ''
+          targetAmount: initialData.targetAmount ? String(initialData.targetAmount) : '',
         });
       } else {
         setFormData({
@@ -68,7 +74,7 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null, in
           interval: 'Bulanan',
           nextDate: getToday(),
           note: '',
-          targetAmount: ''
+          targetAmount: '',
         });
       }
     }
@@ -111,10 +117,18 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null, in
       }
       onClose();
       setFormData({
-        name: '', type: 'Pengeluaran', category: '', accountId: '', amount: '', interval: 'Bulanan', nextDate: getToday(), note: '', targetAmount: ''
+        name: '',
+        type: 'Pengeluaran',
+        category: '',
+        accountId: '',
+        amount: '',
+        interval: 'Bulanan',
+        nextDate: getToday(),
+        note: '',
+        targetAmount: '',
       });
     } catch (error) {
-      console.error("Error creating recurring:", error);
+      console.error('Error creating recurring:', error);
       setError(error instanceof Error ? error.message : 'Gagal menyimpan transaksi berulang. Silakan coba lagi.');
     } finally {
       setLoading(false);
@@ -122,10 +136,16 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null, in
   };
 
   return (
-    <Modal 
-      isOpen={isOpen} 
-      onClose={onClose} 
-      title={initialData?.id ? 'Edit Transaksi Berulang' : initialType === 'Tabungan' ? 'Target baru' : 'Set Ringkasan Transaksi Berulang'}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={
+        initialData?.id
+          ? 'Edit Transaksi Berulang'
+          : initialType === 'Tabungan'
+            ? 'Target baru'
+            : 'Set Ringkasan Transaksi Berulang'
+      }
       maxWidth="max-w-xl"
     >
       <div className="space-y-5 px-1">
@@ -137,10 +157,10 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null, in
 
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nama Transaksi</label>
-          <input 
-            type="text" 
+          <input
+            type="text"
             value={formData.name}
-            onChange={e => setFormData({...formData, name: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="Contoh: Langganan Netflix"
             className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all"
           />
@@ -152,22 +172,29 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null, in
             <div className="relative">
               <select
                 value={formData.type}
-                onChange={e => setFormData({...formData, type: e.target.value as RecurringTransaction['type'], category: ''})}
+                onChange={(e) =>
+                  setFormData({ ...formData, type: e.target.value as RecurringTransaction['type'], category: '' })
+                }
                 className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all cursor-pointer"
               >
                 <option value="Pengeluaran">Pengeluaran</option>
                 <option value="Pemasukan">Pemasukan</option>
                 <option value="Tabungan">Tabungan (Goal Otomatis)</option>
               </select>
-              <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+              <ChevronDown
+                className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                size={16}
+              />
             </div>
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Interval</label>
             <div className="relative">
-              <select 
+              <select
                 value={formData.interval}
-                onChange={e => setFormData({...formData, interval: e.target.value as RecurringTransaction['interval']})}
+                onChange={(e) =>
+                  setFormData({ ...formData, interval: e.target.value as RecurringTransaction['interval'] })
+                }
                 className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all cursor-pointer"
               >
                 <option value="Harian">Harian</option>
@@ -178,7 +205,10 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null, in
                 <option value="Dua Bulanan">Tiap 2 bulan</option>
                 <option value="Tiga Bulanan">Tiap 3 bulan</option>
               </select>
-              <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+              <ChevronDown
+                className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                size={16}
+              />
             </div>
           </div>
         </div>
@@ -187,10 +217,12 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null, in
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
             <div className="relative">
-              <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">{currencySymbol}</span>
+              <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
+                {currencySymbol}
+              </span>
               <NumberInput
                 value={formData.amount}
-                onChange={val => setFormData({...formData, amount: val})}
+                onChange={(val) => setFormData({ ...formData, amount: val })}
                 placeholder="0"
                 className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 pl-12 pr-5 text-sm font-bold text-slate-700 transition-all"
               />
@@ -198,17 +230,26 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null, in
           </div>
           {isTabungan ? (
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Goal Tabungan</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+                Goal Tabungan
+              </label>
               <div className="relative">
                 <select
                   value={formData.category}
-                  onChange={e => setFormData({...formData, category: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all cursor-pointer"
                 >
                   <option value="">Pilih Goal</option>
-                  {SAVING_GOALS.map(g => <option key={g} value={g}>{g}</option>)}
+                  {SAVING_GOALS.map((g) => (
+                    <option key={g} value={g}>
+                      {g}
+                    </option>
+                  ))}
                 </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                <ChevronDown
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                  size={16}
+                />
               </div>
             </div>
           ) : (
@@ -216,7 +257,7 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null, in
               label="Kategori"
               value={formData.category}
               type={formData.type === 'Pemasukan' ? 'income' : 'expense'}
-              onChange={val => setFormData({...formData, category: val})}
+              onChange={(val) => setFormData({ ...formData, category: val })}
               showBadge={true}
             />
           )}
@@ -224,43 +265,58 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null, in
 
         {isTabungan && (
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Target Total (Opsional)</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+              Target Total (Opsional)
+            </label>
             <div className="relative">
-              <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">{currencySymbol}</span>
+              <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
+                {currencySymbol}
+              </span>
               <NumberInput
                 value={formData.targetAmount}
-                onChange={val => setFormData({...formData, targetAmount: val})}
+                onChange={(val) => setFormData({ ...formData, targetAmount: val })}
                 placeholder="Contoh: 10000000"
                 className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 pl-12 pr-5 text-sm font-bold text-slate-700 transition-all"
               />
             </div>
-            <p className="text-[10px] font-medium text-slate-400 pl-1">Isi kalau mau lihat progress bar menuju target. Kosongkan kalau cuma mau setoran rutin tanpa target.</p>
+            <p className="text-[10px] font-medium text-slate-400 pl-1">
+              Isi kalau mau lihat progress bar menuju target. Kosongkan kalau cuma mau setoran rutin tanpa target.
+            </p>
           </div>
         )}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Akun / Rekening</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+              Akun / Rekening
+            </label>
             <div className="relative">
-              <select 
+              <select
                 value={formData.accountId}
-                onChange={e => setFormData({...formData, accountId: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
                 className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all cursor-pointer"
               >
                 <option value="">Pilih Rekening</option>
-                {accounts.map(acc => (
-                  <option key={acc.id} value={acc.id}>{acc.name} ({acc.currency})</option>
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name} ({acc.currency})
+                  </option>
                 ))}
               </select>
-              <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <ChevronDown
+                size={14}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+              />
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Mulai Tanggal</label>
-            <input 
-              type="date" 
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+              Mulai Tanggal
+            </label>
+            <input
+              type="date"
               value={formData.nextDate}
-              onChange={e => setFormData({...formData, nextDate: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, nextDate: e.target.value })}
               className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all cursor-pointer select-none"
             />
           </div>
@@ -268,21 +324,23 @@ export const RecurringModal = ({ userId, isOpen, onClose, initialData = null, in
 
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Catatan</label>
-          <textarea 
+          <textarea
             rows={2}
             value={formData.note}
-            onChange={e => setFormData({...formData, note: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, note: e.target.value })}
             placeholder="Tambahkan detail tambahan..."
             className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all resize-none"
           />
         </div>
 
-        <button 
+        <button
           onClick={handleCreate}
           disabled={loading || !formData.name || !formData.amount || !formData.nextDate}
           className="w-full bg-indigo-600 disabled:bg-slate-300 text-white flex items-center justify-center gap-3 py-4 rounded-2xl text-sm font-black transition-all mt-6 shadow-xl shadow-indigo-100 group"
         >
-          {loading ? 'Menyimpan...' : (
+          {loading ? (
+            'Menyimpan...'
+          ) : (
             <>
               <Save size={18} className="transition-transform group-hover:scale-110" />
               {initialData?.id ? 'Simpan Perubahan' : 'Simpan Recurring'}

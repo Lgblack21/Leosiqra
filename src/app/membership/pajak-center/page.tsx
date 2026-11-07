@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import Image from 'next/image';
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -35,7 +35,7 @@ const TAX_BRACKETS = [
   { min: 0, max: 60_000_000, rate: 0.05 },
   { min: 60_000_000, max: 250_000_000, rate: 0.15 },
   { min: 250_000_000, max: 500_000_000, rate: 0.25 },
-  { min: 500_000_000, max: 5_000_000_000, rate: 0.30 },
+  { min: 500_000_000, max: 5_000_000_000, rate: 0.3 },
   { min: 5_000_000_000, max: Infinity, rate: 0.35 },
 ] as const;
 
@@ -80,7 +80,10 @@ export default function PajakCenterPage() {
   const showDisclaimer = disclaimerDismissed !== '1';
   const maritalStatus: 'TK' | 'K' = storedStatus === 'K' ? 'K' : 'TK';
   const parsedDependents = Number(storedDependents ?? 0);
-  const dependents = Number.isInteger(parsedDependents) && parsedDependents >= 0 && parsedDependents <= MAX_TANGGUNGAN ? parsedDependents : 0;
+  const dependents =
+    Number.isInteger(parsedDependents) && parsedDependents >= 0 && parsedDependents <= MAX_TANGGUNGAN
+      ? parsedDependents
+      : 0;
 
   useEffect(() => {
     exchangeRateService.getLatestRates().then(setFxRates).catch(console.error);
@@ -114,13 +117,20 @@ export default function PajakCenterPage() {
           where('userId', '==', u.uid),
           where('date', '>=', startOfYear),
           where('date', '<=', endOfYear),
-          orderBy('date', 'desc')
+          orderBy('date', 'desc'),
         );
         unsubTrx = onSnapshot(qTrx, (snap) => {
-          setTransactions(snap.docs.map(doc => {
-            const d = doc.data();
-            return { ...d, id: doc.id, amount: Number(d.amount) || 0, date: d.date?.toDate?.() ?? new Date() } as Transaction;
-          }));
+          setTransactions(
+            snap.docs.map((doc) => {
+              const d = doc.data();
+              return {
+                ...d,
+                id: doc.id,
+                amount: Number(d.amount) || 0,
+                date: d.date?.toDate?.() ?? new Date(),
+              } as Transaction;
+            }),
+          );
         });
 
         // Portofolio & rekening bersifat posisi terkini (all-time), bukan per-tahun.
@@ -128,31 +138,34 @@ export default function PajakCenterPage() {
         unsubInv = onSnapshot(qInv, (snap) => {
           setInvestments(
             snap.docs
-              .map(doc => ({ ...doc.data(), id: doc.id }) as Investment)
+              .map((doc) => ({ ...doc.data(), id: doc.id }) as Investment)
               // Deposito "Penempatan" otomatis punya baris proyeksi "(Hasil Akhir)"
               // berstatus Planned — bukan harta nyata, jangan ikut dihitung di
               // Daftar Harta (dulu bikin nilai harta dobel untuk SPT).
-              .filter(inv => inv.status !== 'Planned')
+              .filter((inv) => inv.status !== 'Planned'),
           );
         });
 
         const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
         unsubAcc = onSnapshot(qAcc, (snap) => {
-          setAccounts(snap.docs.map(doc => ({ ...doc.data(), id: doc.id }) as Account));
+          setAccounts(snap.docs.map((doc) => ({ ...doc.data(), id: doc.id }) as Account));
         });
 
         // Hutang & Piutang tercatat sebagai transaksi bertipe 'debt' (menu Hutang & Piutang),
         // bukan sebagai akun — sumber data yang benar untuk Daftar Kewajiban SPT.
-        const qDebt = query(
-          collection(db, 'transactions'),
-          where('userId', '==', u.uid),
-          where('type', '==', 'debt')
-        );
+        const qDebt = query(collection(db, 'transactions'), where('userId', '==', u.uid), where('type', '==', 'debt'));
         unsubDebt = onSnapshot(qDebt, (snap) => {
-          setDebtTransactions(snap.docs.map(doc => {
-            const d = doc.data();
-            return { ...d, id: doc.id, amount: Number(d.amount) || 0, date: d.date?.toDate?.() ?? new Date() } as Transaction;
-          }));
+          setDebtTransactions(
+            snap.docs.map((doc) => {
+              const d = doc.data();
+              return {
+                ...d,
+                id: doc.id,
+                amount: Number(d.amount) || 0,
+                date: d.date?.toDate?.() ?? new Date(),
+              } as Transaction;
+            }),
+          );
         });
       }
     });
@@ -172,14 +185,21 @@ export default function PajakCenterPage() {
   const toIDR = useCallback(
     (amount: number, currency: string | undefined) =>
       exchangeRateService.convert(amount, currency || 'IDR', 'IDR', fxRates),
-    [fxRates]
+    [fxRates],
   );
 
-  // SPT Specific Aggregations
   const daftarHarta = useMemo(() => {
     return [
-      ...accounts.map(acc => ({ name: acc.name, type: acc.type, value: toIDR(Number(acc.balance) || 0, acc.currency) })),
-      ...investments.map(inv => ({ name: inv.name, type: 'Investasi', value: Number(inv.amountIDR) || Number(inv.amountInvested) || 0 }))
+      ...accounts.map((acc) => ({
+        name: acc.name,
+        type: acc.type,
+        value: toIDR(Number(acc.balance) || 0, acc.currency),
+      })),
+      ...investments.map((inv) => ({
+        name: inv.name,
+        type: 'Investasi',
+        value: Number(inv.amountIDR) || Number(inv.amountInvested) || 0,
+      })),
     ];
   }, [accounts, investments, toIDR]);
 
@@ -188,7 +208,7 @@ export default function PajakCenterPage() {
       .filter((t) => t.category === 'Hutang' && t.paymentStatus !== 'lunas')
       .map((t) => ({
         name: t.lenderName || t.note || 'Hutang',
-        value: Number(t.amountIDR) || t.amount
+        value: Number(t.amountIDR) || t.amount,
       }));
   }, [debtTransactions]);
 
@@ -197,7 +217,7 @@ export default function PajakCenterPage() {
       .filter((t) => t.category === 'Piutang' && t.paymentStatus !== 'lunas')
       .map((t) => ({
         name: t.lenderName || t.note || 'Piutang',
-        value: Number(t.amountIDR) || t.amount
+        value: Number(t.amountIDR) || t.amount,
       }));
   }, [debtTransactions]);
 
@@ -205,14 +225,24 @@ export default function PajakCenterPage() {
   const totalUtang = daftarUtang.reduce((s, u) => s + u.value, 0);
   const totalPiutang = daftarPiutang.reduce((s, p) => s + p.value, 0);
 
-  // New Summary Calculations for PDF
-  const totalPemasukan = useMemo(() => transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0), [transactions]);
-  const totalPengeluaran = useMemo(() => transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0), [transactions]);
+  const totalPemasukan = useMemo(
+    () => transactions.filter((t) => t.type === 'pemasukan').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0),
+    [transactions],
+  );
+  const totalPengeluaran = useMemo(
+    () =>
+      transactions.filter((t) => t.type === 'pengeluaran').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0),
+    [transactions],
+  );
 
   const investasiPembelian = useMemo(() => {
     // Assuming transactions with category 'Investasi' or related are investment purchases
     return transactions
-      .filter(t => t.type === 'pengeluaran' && (t.category?.toLowerCase().includes('investasi') || t.category === 'Saham' || t.category === 'Deposito'))
+      .filter(
+        (t) =>
+          t.type === 'pengeluaran' &&
+          (t.category?.toLowerCase().includes('investasi') || t.category === 'Saham' || t.category === 'Deposito'),
+      )
       .reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0);
   }, [transactions]);
 
@@ -240,7 +270,10 @@ export default function PajakCenterPage() {
   // SPT resmi melaporkan nilai dalam Rupiah penuh (tanpa desimal) — desimal
   // di sini cuma bikin angka lebih panjang dan gampang kepotong di cetakan.
   const formatIDR = (val: number) => {
-    return 'Rp ' + new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(val));
+    return (
+      'Rp ' +
+      new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(val))
+    );
   };
 
   const formatIDRShort = (val: number) => {
@@ -262,7 +295,6 @@ export default function PajakCenterPage() {
     return `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}, ${now.getHours()}.${now.getMinutes().toString().padStart(2, '0')}.${now.getSeconds().toString().padStart(2, '0')}`;
   }, []);
 
-  // Export Funcs
   const handleExportExcel = () => {
     const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
@@ -278,9 +310,13 @@ export default function PajakCenterPage() {
     `;
 
     months.forEach((m, idx) => {
-      const monthTrx = transactions.filter(t => t.date.getMonth() === idx);
-      const inc = monthTrx.filter(t => t.type === 'pemasukan').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0);
-      const exp = monthTrx.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0);
+      const monthTrx = transactions.filter((t) => t.date.getMonth() === idx);
+      const inc = monthTrx
+        .filter((t) => t.type === 'pemasukan')
+        .reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0);
+      const exp = monthTrx
+        .filter((t) => t.type === 'pengeluaran')
+        .reduce((s, t) => s + (Number(t.amountIDR) || t.amount), 0);
       tableHtml += `
         <tr>
           <td style="padding: 8px;">${m}</td>
@@ -292,7 +328,11 @@ export default function PajakCenterPage() {
     });
     tableHtml += `</table>`;
 
-    const buildListTable = (title: string, rows: { name: string; value: number }[], extraCol?: (r: { name: string; type?: string }) => string) => {
+    const buildListTable = (
+      title: string,
+      rows: { name: string; value: number }[],
+      extraCol?: (r: { name: string; type?: string }) => string,
+    ) => {
       let html = `<h3>${title} (posisi terkini)</h3><table border="1"><tr style="background-color: #f1f5f9;"><th style="padding: 10px;">Nama</th>${extraCol ? '<th style="padding: 10px;">Tipe</th>' : ''}<th style="padding: 10px;">Nilai (Rp)</th></tr>`;
       if (rows.length === 0) {
         html += `<tr><td style="padding: 8px;" colspan="${extraCol ? 3 : 2}">Tidak ada data.</td></tr>`;
@@ -348,10 +388,10 @@ export default function PajakCenterPage() {
     tableHtml += `<p style="font-size: 10px; color: #94a3b8;">Draft pembanding pribadi &ndash; bukan pengganti pelaporan resmi via coretaxdjp.pajak.go.id</p>`;
 
     const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
-    const link = document.createElement("a");
+    const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Laporan_Pajak_${selectedYear}.xls`);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Laporan_Pajak_${selectedYear}.xls`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -364,39 +404,48 @@ export default function PajakCenterPage() {
 
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] print:p-0 print:m-0 print:bg-white print:max-w-none">
-      
       {/* 0. Print-Only Report — layout terinspirasi format SPT Tahunan 1770 */}
       <div className="hidden print:block font-sans text-slate-800 p-8 text-[11px] leading-relaxed">
-
-        {/* Kop Laporan */}
         <div className="flex items-center justify-between border-b-2 border-slate-800 pb-4 mb-6">
           <div className="flex items-center gap-3">
             <Image src="/images/Logo-new.png" alt="Leosiqra" width={40} height={40} className="rounded-lg" />
             <div>
               <p className="text-sm font-black tracking-tight">Leosiqra</p>
-              <p className="text-[9px] text-slate-400 uppercase tracking-widest">Personal Finance &amp; Tax Assistant</p>
+              <p className="text-[9px] text-slate-400 uppercase tracking-widest">
+                Personal Finance &amp; Tax Assistant
+              </p>
             </div>
           </div>
           <div className="text-right">
-            <h1 className="text-base font-black uppercase tracking-tight">Draft Perhitungan Pajak Penghasilan Orang Pribadi</h1>
-            <p className="text-[9px] text-slate-400">Tahun Pajak {selectedYear} &middot; Dicetak {generatedAt}</p>
+            <h1 className="text-base font-black uppercase tracking-tight">
+              Draft Perhitungan Pajak Penghasilan Orang Pribadi
+            </h1>
+            <p className="text-[9px] text-slate-400">
+              Tahun Pajak {selectedYear} &middot; Dicetak {generatedAt}
+            </p>
           </div>
         </div>
 
         <p className="text-[9px] text-slate-500 bg-slate-50 border border-slate-200 rounded p-2 mb-6">
-          Dokumen ini adalah <strong>draft perhitungan pribadi</strong> berdasarkan data yang Anda catat di Leosiqra, dibuat mengikuti struktur
-          SPT Tahunan 1770 sebagai alat bantu. Ini <strong>bukan dokumen resmi Direktorat Jenderal Pajak</strong> dan tidak menggantikan
-          pelaporan SPT yang sah melalui <strong>coretaxdjp.pajak.go.id</strong>. Verifikasi seluruh angka sebelum melapor resmi.
+          Dokumen ini adalah <strong>draft perhitungan pribadi</strong> berdasarkan data yang Anda catat di Leosiqra,
+          dibuat mengikuti struktur SPT Tahunan 1770 sebagai alat bantu. Ini{' '}
+          <strong>bukan dokumen resmi Direktorat Jenderal Pajak</strong> dan tidak menggantikan pelaporan SPT yang sah
+          melalui <strong>coretaxdjp.pajak.go.id</strong>. Verifikasi seluruh angka sebelum melapor resmi.
         </p>
 
-        {/* A. Identitas & Status PTKP */}
         <div className="mb-6">
-          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">A. Status Perpajakan (PTKP)</h2>
+          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">
+            A. Status Perpajakan (PTKP)
+          </h2>
           <table className="w-full border-collapse border border-slate-300 table-fixed">
             <tbody>
               <tr>
-                <td className="border border-slate-300 px-3 py-1.5 w-1/2 text-slate-500 break-words">Status Pernikahan</td>
-                <td className="border border-slate-300 px-3 py-1.5 font-bold">{maritalStatus === 'TK' ? 'Tidak Kawin (TK)' : 'Kawin (K)'}</td>
+                <td className="border border-slate-300 px-3 py-1.5 w-1/2 text-slate-500 break-words">
+                  Status Pernikahan
+                </td>
+                <td className="border border-slate-300 px-3 py-1.5 font-bold">
+                  {maritalStatus === 'TK' ? 'Tidak Kawin (TK)' : 'Kawin (K)'}
+                </td>
               </tr>
               <tr>
                 <td className="border border-slate-300 px-3 py-1.5 text-slate-500">Jumlah Tanggungan</td>
@@ -404,19 +453,24 @@ export default function PajakCenterPage() {
               </tr>
               <tr>
                 <td className="border border-slate-300 px-3 py-1.5 text-slate-500">Kategori PTKP</td>
-                <td className="border border-slate-300 px-3 py-1.5 font-bold">{maritalStatus}/{dependents}</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-bold">
+                  {maritalStatus}/{dependents}
+                </td>
               </tr>
               <tr>
-                <td className="border border-slate-300 px-3 py-1.5 text-slate-500">Penghasilan Tidak Kena Pajak (PTKP) Setahun</td>
+                <td className="border border-slate-300 px-3 py-1.5 text-slate-500">
+                  Penghasilan Tidak Kena Pajak (PTKP) Setahun
+                </td>
                 <td className="border border-slate-300 px-3 py-1.5 font-bold">{formatIDR(ptkp)}</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        {/* B. Penghasilan Neto & PKP */}
         <div className="mb-6">
-          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">B. Penghasilan Neto &amp; Penghasilan Kena Pajak (PKP)</h2>
+          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">
+            B. Penghasilan Neto &amp; Penghasilan Kena Pajak (PKP)
+          </h2>
           <table className="w-full border-collapse border border-slate-300 table-fixed">
             <tbody>
               <tr>
@@ -425,7 +479,9 @@ export default function PajakCenterPage() {
               </tr>
               <tr>
                 <td className="border border-slate-300 px-3 py-1.5 text-slate-500">Pengeluaran / Biaya Setahun</td>
-                <td className="border border-slate-300 px-3 py-1.5 font-bold">{formatIDR(totalPengeluaran - investasiPembelian)}</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-bold">
+                  {formatIDR(totalPengeluaran - investasiPembelian)}
+                </td>
               </tr>
               <tr>
                 <td className="border border-slate-300 px-3 py-1.5 text-slate-500">Penghasilan Neto Setahun</td>
@@ -436,20 +492,25 @@ export default function PajakCenterPage() {
                 <td className="border border-slate-300 px-3 py-1.5 font-bold">({formatIDR(ptkp)})</td>
               </tr>
               <tr className="bg-slate-100">
-                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">Penghasilan Kena Pajak (PKP)</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">
+                  Penghasilan Kena Pajak (PKP)
+                </td>
                 <td className="border border-slate-300 px-3 py-1.5 font-black">{formatIDR(pkp)}</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        {/* C. Perhitungan PPh Terutang (Pasal 17) */}
         <div className="mb-6">
-          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">C. Perhitungan PPh Terutang &ndash; Tarif Progresif Pasal 17 UU HPP</h2>
+          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">
+            C. Perhitungan PPh Terutang &ndash; Tarif Progresif Pasal 17 UU HPP
+          </h2>
           <table className="w-full border-collapse border border-slate-300 table-fixed">
             <thead>
               <tr className="bg-slate-100">
-                <th className="border border-slate-300 px-3 py-1.5 text-left w-[38%]">Lapisan Penghasilan Kena Pajak</th>
+                <th className="border border-slate-300 px-3 py-1.5 text-left w-[38%]">
+                  Lapisan Penghasilan Kena Pajak
+                </th>
                 <th className="border border-slate-300 px-3 py-1.5 text-right w-[12%]">Tarif</th>
                 <th className="border border-slate-300 px-3 py-1.5 text-right w-[25%]">Dasar Pengenaan</th>
                 <th className="border border-slate-300 px-3 py-1.5 text-right w-[25%]">PPh</th>
@@ -462,31 +523,47 @@ export default function PajakCenterPage() {
                     PKP Rp 0 atau di bawah PTKP &ndash; tidak ada dasar pengenaan pajak.
                   </td>
                 </tr>
-              ) : pphBreakdown.map((b, idx) => (
-                <tr key={idx}>
-                  <td className="border border-slate-300 px-3 py-1.5 break-words">
-                    {formatIDR(b.min)} s.d. {b.max === Infinity ? 'ke atas' : formatIDR(b.max)}
-                  </td>
-                  <td className="border border-slate-300 px-3 py-1.5 text-right">{(b.rate * 100).toFixed(0)}%</td>
-                  <td className="border border-slate-300 px-3 py-1.5 text-right break-words">{formatIDR(b.taxableInBracket)}</td>
-                  <td className="border border-slate-300 px-3 py-1.5 text-right break-words">{formatIDR(b.tax)}</td>
-                </tr>
-              ))}
+              ) : (
+                pphBreakdown.map((b, idx) => (
+                  <tr key={idx}>
+                    <td className="border border-slate-300 px-3 py-1.5 break-words">
+                      {formatIDR(b.min)} s.d. {b.max === Infinity ? 'ke atas' : formatIDR(b.max)}
+                    </td>
+                    <td className="border border-slate-300 px-3 py-1.5 text-right">{(b.rate * 100).toFixed(0)}%</td>
+                    <td className="border border-slate-300 px-3 py-1.5 text-right break-words">
+                      {formatIDR(b.taxableInBracket)}
+                    </td>
+                    <td className="border border-slate-300 px-3 py-1.5 text-right break-words">{formatIDR(b.tax)}</td>
+                  </tr>
+                ))
+              )}
               <tr className="bg-slate-100">
-                <td colSpan={3} className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">Total PPh Terutang Setahun</td>
+                <td
+                  colSpan={3}
+                  className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest"
+                >
+                  Total PPh Terutang Setahun
+                </td>
                 <td className="border border-slate-300 px-3 py-1.5 font-black text-right">{formatIDR(pphTerutang)}</td>
               </tr>
               {pph21WithheldNum > 0 && (
                 <>
                   <tr>
-                    <td colSpan={3} className="border border-slate-300 px-3 py-1.5">PPh Pasal 21 Sudah Dipotong Pemberi Kerja</td>
+                    <td colSpan={3} className="border border-slate-300 px-3 py-1.5">
+                      PPh Pasal 21 Sudah Dipotong Pemberi Kerja
+                    </td>
                     <td className="border border-slate-300 px-3 py-1.5 text-right">{formatIDR(pph21WithheldNum)}</td>
                   </tr>
                   <tr className="bg-slate-100">
-                    <td colSpan={3} className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">
+                    <td
+                      colSpan={3}
+                      className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest"
+                    >
                       {pphKurangBayar >= 0 ? 'PPh Kurang Bayar' : 'PPh Lebih Bayar (Restitusi)'}
                     </td>
-                    <td className="border border-slate-300 px-3 py-1.5 font-black text-right">{formatIDR(Math.abs(pphKurangBayar))}</td>
+                    <td className="border border-slate-300 px-3 py-1.5 font-black text-right">
+                      {formatIDR(Math.abs(pphKurangBayar))}
+                    </td>
                   </tr>
                 </>
               )}
@@ -499,9 +576,10 @@ export default function PajakCenterPage() {
           </p>
         </div>
 
-        {/* D. Daftar Harta */}
         <div className="mb-6" style={{ pageBreakInside: 'avoid' }}>
-          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">D. Daftar Harta (Posisi Terkini)</h2>
+          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">
+            D. Daftar Harta (Posisi Terkini)
+          </h2>
           <table className="w-full border-collapse border border-slate-300 table-fixed">
             <thead>
               <tr className="bg-slate-100">
@@ -512,25 +590,37 @@ export default function PajakCenterPage() {
             </thead>
             <tbody>
               {daftarHarta.length === 0 ? (
-                <tr><td colSpan={3} className="border border-slate-300 px-3 py-2 text-center italic text-slate-400">Belum ada aset yang tercatat.</td></tr>
-              ) : daftarHarta.map((h, idx) => (
-                <tr key={idx}>
-                  <td className="border border-slate-300 px-3 py-1.5 break-words">{h.name}</td>
-                  <td className="border border-slate-300 px-3 py-1.5 text-slate-500 break-words">{h.type}</td>
-                  <td className="border border-slate-300 px-3 py-1.5 text-right break-words">{formatIDR(h.value)}</td>
+                <tr>
+                  <td colSpan={3} className="border border-slate-300 px-3 py-2 text-center italic text-slate-400">
+                    Belum ada aset yang tercatat.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                daftarHarta.map((h, idx) => (
+                  <tr key={idx}>
+                    <td className="border border-slate-300 px-3 py-1.5 break-words">{h.name}</td>
+                    <td className="border border-slate-300 px-3 py-1.5 text-slate-500 break-words">{h.type}</td>
+                    <td className="border border-slate-300 px-3 py-1.5 text-right break-words">{formatIDR(h.value)}</td>
+                  </tr>
+                ))
+              )}
               <tr className="bg-slate-100">
-                <td colSpan={2} className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">Total Harta</td>
+                <td
+                  colSpan={2}
+                  className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest"
+                >
+                  Total Harta
+                </td>
                 <td className="border border-slate-300 px-3 py-1.5 font-black text-right">{formatIDR(totalHarta)}</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        {/* E. Daftar Utang */}
         <div className="mb-6" style={{ pageBreakInside: 'avoid' }}>
-          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">E. Daftar Utang (Kewajiban, Posisi Terkini)</h2>
+          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">
+            E. Daftar Utang (Kewajiban, Posisi Terkini)
+          </h2>
           <table className="w-full border-collapse border border-slate-300 table-fixed">
             <thead>
               <tr className="bg-slate-100">
@@ -540,24 +630,33 @@ export default function PajakCenterPage() {
             </thead>
             <tbody>
               {daftarUtang.length === 0 ? (
-                <tr><td colSpan={2} className="border border-slate-300 px-3 py-2 text-center italic text-slate-400">Tidak ada utang belum lunas yang tercatat.</td></tr>
-              ) : daftarUtang.map((u, idx) => (
-                <tr key={idx}>
-                  <td className="border border-slate-300 px-3 py-1.5 break-words">{u.name}</td>
-                  <td className="border border-slate-300 px-3 py-1.5 text-right break-words">{formatIDR(u.value)}</td>
+                <tr>
+                  <td colSpan={2} className="border border-slate-300 px-3 py-2 text-center italic text-slate-400">
+                    Tidak ada utang belum lunas yang tercatat.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                daftarUtang.map((u, idx) => (
+                  <tr key={idx}>
+                    <td className="border border-slate-300 px-3 py-1.5 break-words">{u.name}</td>
+                    <td className="border border-slate-300 px-3 py-1.5 text-right break-words">{formatIDR(u.value)}</td>
+                  </tr>
+                ))
+              )}
               <tr className="bg-slate-100">
-                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">Total Utang</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">
+                  Total Utang
+                </td>
                 <td className="border border-slate-300 px-3 py-1.5 font-black text-right">{formatIDR(totalUtang)}</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        {/* F. Daftar Piutang */}
         <div className="mb-6" style={{ pageBreakInside: 'avoid' }}>
-          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">F. Daftar Piutang (Posisi Terkini)</h2>
+          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">
+            F. Daftar Piutang (Posisi Terkini)
+          </h2>
           <table className="w-full border-collapse border border-slate-300 table-fixed">
             <thead>
               <tr className="bg-slate-100">
@@ -567,24 +666,33 @@ export default function PajakCenterPage() {
             </thead>
             <tbody>
               {daftarPiutang.length === 0 ? (
-                <tr><td colSpan={2} className="border border-slate-300 px-3 py-2 text-center italic text-slate-400">Tidak ada piutang belum lunas yang tercatat.</td></tr>
-              ) : daftarPiutang.map((p, idx) => (
-                <tr key={idx}>
-                  <td className="border border-slate-300 px-3 py-1.5 break-words">{p.name}</td>
-                  <td className="border border-slate-300 px-3 py-1.5 text-right break-words">{formatIDR(p.value)}</td>
+                <tr>
+                  <td colSpan={2} className="border border-slate-300 px-3 py-2 text-center italic text-slate-400">
+                    Tidak ada piutang belum lunas yang tercatat.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                daftarPiutang.map((p, idx) => (
+                  <tr key={idx}>
+                    <td className="border border-slate-300 px-3 py-1.5 break-words">{p.name}</td>
+                    <td className="border border-slate-300 px-3 py-1.5 text-right break-words">{formatIDR(p.value)}</td>
+                  </tr>
+                ))
+              )}
               <tr className="bg-slate-100">
-                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">Total Piutang</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">
+                  Total Piutang
+                </td>
                 <td className="border border-slate-300 px-3 py-1.5 font-black text-right">{formatIDR(totalPiutang)}</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        {/* G. Ringkasan Harta Bersih */}
         <div className="mb-6" style={{ pageBreakInside: 'avoid' }}>
-          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">G. Ringkasan Harta Bersih</h2>
+          <h2 className="text-xs font-black uppercase tracking-widest bg-slate-800 text-white px-3 py-1.5 mb-2">
+            G. Ringkasan Harta Bersih
+          </h2>
           <table className="w-full border-collapse border border-slate-300 table-fixed">
             <tbody>
               <tr>
@@ -600,18 +708,21 @@ export default function PajakCenterPage() {
                 <td className="border border-slate-300 px-3 py-1.5 font-bold">({formatIDR(totalUtang)})</td>
               </tr>
               <tr className="bg-slate-100">
-                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">Harta Bersih</td>
-                <td className="border border-slate-300 px-3 py-1.5 font-black">{formatIDR(totalHarta + totalPiutang - totalUtang)}</td>
+                <td className="border border-slate-300 px-3 py-1.5 font-black uppercase text-[10px] tracking-widest">
+                  Harta Bersih
+                </td>
+                <td className="border border-slate-300 px-3 py-1.5 font-black">
+                  {formatIDR(totalHarta + totalPiutang - totalUtang)}
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        {/* Footer */}
         <div className="pt-4 border-t border-slate-300 flex items-center justify-between">
           <p className="text-[9px] text-slate-400 max-w-md">
-            Dihasilkan otomatis oleh Leosiqra berdasarkan data yang Anda catat sendiri. Bukan dokumen resmi DJP/Coretax &mdash;
-            lapor SPT resmi melalui <strong>coretaxdjp.pajak.go.id</strong>.
+            Dihasilkan otomatis oleh Leosiqra berdasarkan data yang Anda catat sendiri. Bukan dokumen resmi DJP/Coretax
+            &mdash; lapor SPT resmi melalui <strong>coretaxdjp.pajak.go.id</strong>.
           </p>
           <div className="text-right">
             <p className="text-[9px] text-slate-400">Dicetak melalui</p>
@@ -620,7 +731,6 @@ export default function PajakCenterPage() {
         </div>
       </div>
 
-      {/* 1. Dashboard View Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-br from-white to-indigo-50/40 p-6 rounded-[24px] border border-slate-100 shadow-sm print:hidden">
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white items-center justify-center shadow-lg shadow-emerald-600/20 shrink-0">
@@ -628,7 +738,9 @@ export default function PajakCenterPage() {
           </div>
           <div>
             <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Pajak Center</h2>
-            <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Draft Ringkasan SPT · Tahun Pajak {selectedYear}</p>
+            <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+              Draft Ringkasan SPT · Tahun Pajak {selectedYear}
+            </p>
           </div>
         </div>
 
@@ -650,22 +762,36 @@ export default function PajakCenterPage() {
 
           <div className="w-px h-6 bg-slate-100 mx-1" />
 
-          <YearPicker
-            value={selectedYear}
-            onChange={(y) => setSelectedYear(y)}
-          />
+          <YearPicker value={selectedYear} onChange={(y) => setSelectedYear(y)} />
         </div>
       </div>
 
-      {/* 1b. Accuracy Disclaimer — penting untuk alat bantu cek SPT */}
       {showDisclaimer && (
         <div className="flex items-start gap-4 p-5 rounded-[20px] bg-amber-50 border border-amber-100 print:hidden">
           <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
           <p className="text-[11px] md:text-xs text-amber-800 leading-relaxed font-medium flex-1">
-            <strong>Daftar Harta, Utang, dan Piutang</strong> menampilkan <strong>posisi terkini (hari ini)</strong>, bukan posisi resmi per 31 Desember {selectedYear}
-            {!isCurrentYear && <> — karena Anda melihat tahun pajak yang sudah lewat, angka ini <strong>kemungkinan tidak sama</strong> dengan kondisi akhir tahun {selectedYear}</>}.
-            {' '}<strong>Penghasilan &amp; Pengeluaran</strong> di bawah sudah difilter khusus tahun {selectedYear}. Gunakan halaman ini sebagai draft pembanding, dan tetap verifikasi manual sebelum melapor resmi melalui{' '}
-            <a href="https://coretaxdjp.pajak.go.id/" target="_blank" rel="noopener noreferrer" className="underline font-bold hover:text-amber-900">coretaxdjp.pajak.go.id</a>.
+            <strong>Daftar Harta, Utang, dan Piutang</strong> menampilkan <strong>posisi terkini (hari ini)</strong>,
+            bukan posisi resmi per 31 Desember {selectedYear}
+            {!isCurrentYear && (
+              <>
+                {' '}
+                — karena Anda melihat tahun pajak yang sudah lewat, angka ini <strong>
+                  kemungkinan tidak sama
+                </strong>{' '}
+                dengan kondisi akhir tahun {selectedYear}
+              </>
+            )}
+            . <strong>Penghasilan &amp; Pengeluaran</strong> di bawah sudah difilter khusus tahun {selectedYear}.
+            Gunakan halaman ini sebagai draft pembanding, dan tetap verifikasi manual sebelum melapor resmi melalui{' '}
+            <a
+              href="https://coretaxdjp.pajak.go.id/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline font-bold hover:text-amber-900"
+            >
+              coretaxdjp.pajak.go.id
+            </a>
+            .
           </p>
           <button
             onClick={dismissDisclaimer}
@@ -677,30 +803,51 @@ export default function PajakCenterPage() {
         </div>
       )}
 
-      {/* 2. Top Info Cards — ringkasan kategori inti SPT (Penghasilan Neto / Harta / Kewajiban) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 print:hidden">
         <div className="p-6 rounded-[32px] bg-gradient-to-br from-slate-900 to-navy text-white space-y-2 shadow-xl shadow-slate-200/50">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Penghasilan Neto {selectedYear}</p>
-          <h3 className={cn("text-2xl font-black tracking-tight tabular-nums", netIncome >= 0 ? "text-white" : "text-rose-300")}>{formatIDRShort(animatedNetIncome)}</h3>
-          <p className="text-[11px] text-slate-400 leading-relaxed font-medium">Total pemasukan dikurangi pengeluaran sepanjang tahun {selectedYear}.</p>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            Penghasilan Neto {selectedYear}
+          </p>
+          <h3
+            className={cn(
+              'text-2xl font-black tracking-tight tabular-nums',
+              netIncome >= 0 ? 'text-white' : 'text-rose-300',
+            )}
+          >
+            {formatIDRShort(animatedNetIncome)}
+          </h3>
+          <p className="text-[11px] text-slate-400 leading-relaxed font-medium">
+            Total pemasukan dikurangi pengeluaran sepanjang tahun {selectedYear}.
+          </p>
         </div>
 
         <div className="p-6 rounded-[32px] bg-white border border-slate-100 space-y-2 shadow-sm">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Harta (Aset)</p>
-          <h3 className="text-2xl font-black tracking-tight text-slate-900 tabular-nums">{formatIDRShort(animatedTotalHarta)}</h3>
-          <p className="text-[11px] text-slate-400 leading-relaxed font-medium">Saldo rekening + nilai portofolio investasi, posisi terkini.</p>
+          <h3 className="text-2xl font-black tracking-tight text-slate-900 tabular-nums">
+            {formatIDRShort(animatedTotalHarta)}
+          </h3>
+          <p className="text-[11px] text-slate-400 leading-relaxed font-medium">
+            Saldo rekening + nilai portofolio investasi, posisi terkini.
+          </p>
         </div>
 
         <div className="p-6 rounded-[32px] bg-white border border-slate-100 space-y-2 shadow-sm">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Kewajiban (Utang)</p>
-          <h3 className={cn("text-2xl font-black tracking-tight tabular-nums", totalUtang > 0 ? "text-rose-500" : "text-slate-900")}>{formatIDRShort(animatedTotalUtang)}</h3>
-          <p className="text-[11px] text-slate-400 leading-relaxed font-medium">Hutang belum lunas dari menu Hutang &amp; Piutang.</p>
+          <h3
+            className={cn(
+              'text-2xl font-black tracking-tight tabular-nums',
+              totalUtang > 0 ? 'text-rose-500' : 'text-slate-900',
+            )}
+          >
+            {formatIDRShort(animatedTotalUtang)}
+          </h3>
+          <p className="text-[11px] text-slate-400 leading-relaxed font-medium">
+            Hutang belum lunas dari menu Hutang &amp; Piutang.
+          </p>
         </div>
       </div>
 
-      {/* 2b. Estimasi PPh Terutang (PTKP/PKP/Tarif Pasal 17) */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 print:hidden">
-        {/* Pengaturan PTKP */}
         <div className="lg:col-span-2 p-6 rounded-[32px] bg-white border border-slate-100 shadow-sm space-y-5">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
@@ -717,10 +864,10 @@ export default function PajakCenterPage() {
                   key={s}
                   onClick={() => updateMaritalStatus(s)}
                   className={cn(
-                    "flex-1 px-3 py-2 rounded-xl text-xs font-bold border transition-all",
+                    'flex-1 px-3 py-2 rounded-xl text-xs font-bold border transition-all',
                     maritalStatus === s
-                      ? "bg-indigo-600 border-indigo-600 text-white shadow-sm"
-                      : "bg-white border-slate-200 text-slate-500 hover:border-indigo-200"
+                      ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                      : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200',
                   )}
                 >
                   {s === 'TK' ? 'Tidak Kawin' : 'Kawin'}
@@ -737,10 +884,10 @@ export default function PajakCenterPage() {
                   key={n}
                   onClick={() => updateDependents(n)}
                   className={cn(
-                    "flex-1 px-3 py-2 rounded-xl text-xs font-bold border transition-all",
+                    'flex-1 px-3 py-2 rounded-xl text-xs font-bold border transition-all',
                     dependents === n
-                      ? "bg-indigo-600 border-indigo-600 text-white shadow-sm"
-                      : "bg-white border-slate-200 text-slate-500 hover:border-indigo-200"
+                      ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                      : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200',
                   )}
                 >
                   {n}
@@ -750,7 +897,9 @@ export default function PajakCenterPage() {
           </div>
 
           <div className="space-y-2">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">PPh 21 Sudah Dipotong Pemberi Kerja (Opsional)</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              PPh 21 Sudah Dipotong Pemberi Kerja (Opsional)
+            </p>
             <input
               type="number"
               min={0}
@@ -760,14 +909,17 @@ export default function PajakCenterPage() {
               className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-2.5 px-4 text-sm font-bold text-slate-700 transition-all"
             />
             <p className="text-[9px] font-medium text-slate-400 leading-relaxed">
-              Isi kalau kamu karyawan dan sudah dipotong PPh 21 bulanan (lihat slip gaji/bukti potong 1721-A1) — dipakai untuk hitung PPh Kurang/Lebih Bayar, bukan PPh Terutang Setahun.
+              Isi kalau kamu karyawan dan sudah dipotong PPh 21 bulanan (lihat slip gaji/bukti potong 1721-A1) — dipakai
+              untuk hitung PPh Kurang/Lebih Bayar, bukan PPh Terutang Setahun.
             </p>
           </div>
 
           <div className="pt-2 border-t border-slate-100 space-y-1.5">
             <div className="flex justify-between items-center text-xs">
               <span className="text-slate-500 font-medium">Kategori PTKP</span>
-              <span className="font-black text-slate-900">{maritalStatus}/{dependents}</span>
+              <span className="font-black text-slate-900">
+                {maritalStatus}/{dependents}
+              </span>
             </div>
             <div className="flex justify-between items-center text-xs">
               <span className="text-slate-500 font-medium">PTKP Setahun</span>
@@ -776,10 +928,11 @@ export default function PajakCenterPage() {
           </div>
         </div>
 
-        {/* Estimasi PPh Terutang */}
         <div className="lg:col-span-3 p-6 rounded-[32px] bg-gradient-to-br from-slate-900 to-navy text-white shadow-xl shadow-slate-200/50 space-y-5">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-black text-slate-300 uppercase tracking-widest">Estimasi PPh Terutang (Pasal 17 UU HPP)</h4>
+            <h4 className="text-xs font-black text-slate-300 uppercase tracking-widest">
+              Estimasi PPh Terutang (Pasal 17 UU HPP)
+            </h4>
             {pphTerutang > 0 ? (
               <span className="px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-300 text-[9px] font-black uppercase tracking-widest border border-rose-500/30">
                 Ada PPh Terutang
@@ -816,7 +969,8 @@ export default function PajakCenterPage() {
                 {pphBreakdown.map((b, i) => (
                   <div key={i} className="flex justify-between items-center text-[11px]">
                     <span className="text-slate-300">
-                      Lapisan {formatIDRShort(b.min)} &ndash; {b.max === Infinity ? 'ke atas' : formatIDRShort(b.max)} @ {(b.rate * 100).toFixed(0)}%
+                      Lapisan {formatIDRShort(b.min)} &ndash; {b.max === Infinity ? 'ke atas' : formatIDRShort(b.max)} @{' '}
+                      {(b.rate * 100).toFixed(0)}%
                     </span>
                     <span className="font-bold tabular-nums">{formatIDRShort(b.tax)}</span>
                   </div>
@@ -827,7 +981,9 @@ export default function PajakCenterPage() {
 
           <div className="pt-3 border-t border-white/10 flex justify-between items-center">
             <span className="text-xs font-black text-slate-300 uppercase tracking-widest">Total PPh Terutang</span>
-            <span className={cn("text-2xl font-black tabular-nums", pphTerutang > 0 ? "text-rose-300" : "text-emerald-300")}>
+            <span
+              className={cn('text-2xl font-black tabular-nums', pphTerutang > 0 ? 'text-rose-300' : 'text-emerald-300')}
+            >
               {formatIDRShort(animatedPphTerutang)}
             </span>
           </div>
@@ -842,7 +998,12 @@ export default function PajakCenterPage() {
                 <span className="text-xs font-black text-slate-300 uppercase tracking-widest">
                   {pphKurangBayar >= 0 ? 'PPh Kurang Bayar' : 'PPh Lebih Bayar (Restitusi)'}
                 </span>
-                <span className={cn("text-xl font-black tabular-nums", pphKurangBayar > 0 ? "text-rose-300" : "text-emerald-300")}>
+                <span
+                  className={cn(
+                    'text-xl font-black tabular-nums',
+                    pphKurangBayar > 0 ? 'text-rose-300' : 'text-emerald-300',
+                  )}
+                >
                   {formatIDRShort(Math.abs(pphKurangBayar))}
                 </span>
               </div>
@@ -851,10 +1012,7 @@ export default function PajakCenterPage() {
         </div>
       </div>
 
-      {/* 3. Main Data Section (Redesigned & Grouped) */}
       <div className="space-y-12 print:hidden">
-        
-        {/* Grup Asset */}
         <div className="space-y-6">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
@@ -867,11 +1025,16 @@ export default function PajakCenterPage() {
             {daftarHarta.length === 0 ? (
               <div className="col-span-full p-12 rounded-[32px] bg-slate-50 border border-dashed border-slate-200 text-center space-y-2">
                 <Info className="mx-auto text-slate-300" size={32} />
-                <p className="text-sm text-slate-500 font-medium">Belum ada aset yang tercatat. Tambahkan rekening atau investasi Anda.</p>
+                <p className="text-sm text-slate-500 font-medium">
+                  Belum ada aset yang tercatat. Tambahkan rekening atau investasi Anda.
+                </p>
               </div>
             ) : (
               daftarHarta.map((harta, i) => (
-                <div key={i} className="p-6 rounded-[32px] bg-white border border-slate-100 hover:border-indigo-100 hover:shadow-lg hover:shadow-indigo-500/5 transition-all group relative overflow-hidden">
+                <div
+                  key={i}
+                  className="p-6 rounded-[32px] bg-white border border-slate-100 hover:border-indigo-100 hover:shadow-lg hover:shadow-indigo-500/5 transition-all group relative overflow-hidden"
+                >
                   <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="flex items-center justify-between mb-4">
                     <span className="px-2.5 py-1 rounded-full bg-slate-50 text-slate-500 text-[9px] font-black uppercase tracking-widest border border-slate-100">
@@ -879,16 +1042,13 @@ export default function PajakCenterPage() {
                     </span>
                   </div>
                   <h5 className="text-sm font-bold text-slate-900 mb-1 truncate">{harta.name}</h5>
-                  <p className="text-lg font-black text-slate-900">
-                    Rp {harta.value.toLocaleString()}
-                  </p>
+                  <p className="text-lg font-black text-slate-900">Rp {harta.value.toLocaleString()}</p>
                 </div>
               ))
             )}
           </div>
         </div>
 
-        {/* Grup Utang */}
         <div className="space-y-6">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600">
@@ -904,7 +1064,10 @@ export default function PajakCenterPage() {
               </div>
             ) : (
               daftarUtang.map((utang, i) => (
-                <div key={i} className="p-6 rounded-[32px] bg-white border border-slate-100 hover:border-rose-100 hover:shadow-lg hover:shadow-rose-500/5 transition-all group relative overflow-hidden">
+                <div
+                  key={i}
+                  className="p-6 rounded-[32px] bg-white border border-slate-100 hover:border-rose-100 hover:shadow-lg hover:shadow-rose-500/5 transition-all group relative overflow-hidden"
+                >
                   <div className="absolute top-0 left-0 w-1 h-full bg-rose-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="flex items-center justify-between mb-4">
                     <span className="px-2.5 py-1 rounded-full bg-rose-50 text-rose-500 text-[9px] font-black uppercase tracking-widest border border-rose-100">
@@ -912,16 +1075,13 @@ export default function PajakCenterPage() {
                     </span>
                   </div>
                   <h5 className="text-sm font-bold text-slate-900 mb-1 truncate">{utang.name}</h5>
-                  <p className="text-lg font-black text-rose-600">
-                    Rp {utang.value.toLocaleString()}
-                  </p>
+                  <p className="text-lg font-black text-rose-600">Rp {utang.value.toLocaleString()}</p>
                 </div>
               ))
             )}
           </div>
         </div>
 
-        {/* Grup Piutang */}
         <div className="space-y-6">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center text-sky-600">
@@ -933,11 +1093,16 @@ export default function PajakCenterPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {daftarPiutang.length === 0 ? (
               <div className="col-span-full p-10 rounded-[32px] bg-slate-50 border border-dashed border-slate-200 text-center">
-                <p className="text-sm text-slate-400 font-medium italic">Tidak ada piutang belum lunas yang tercatat.</p>
+                <p className="text-sm text-slate-400 font-medium italic">
+                  Tidak ada piutang belum lunas yang tercatat.
+                </p>
               </div>
             ) : (
               daftarPiutang.map((piutang, i) => (
-                <div key={i} className="p-6 rounded-[32px] bg-white border border-slate-100 hover:border-sky-100 hover:shadow-lg hover:shadow-sky-500/5 transition-all group relative overflow-hidden">
+                <div
+                  key={i}
+                  className="p-6 rounded-[32px] bg-white border border-slate-100 hover:border-sky-100 hover:shadow-lg hover:shadow-sky-500/5 transition-all group relative overflow-hidden"
+                >
                   <div className="absolute top-0 left-0 w-1 h-full bg-sky-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="flex items-center justify-between mb-4">
                     <span className="px-2.5 py-1 rounded-full bg-sky-50 text-sky-600 text-[9px] font-black uppercase tracking-widest border border-sky-100">
@@ -945,22 +1110,19 @@ export default function PajakCenterPage() {
                     </span>
                   </div>
                   <h5 className="text-sm font-bold text-slate-900 mb-1 truncate">{piutang.name}</h5>
-                  <p className="text-lg font-black text-sky-600">
-                    Rp {piutang.value.toLocaleString()}
-                  </p>
+                  <p className="text-lg font-black text-sky-600">Rp {piutang.value.toLocaleString()}</p>
                 </div>
               ))
             )}
           </div>
         </div>
 
-        {/* Total Harta Bersih */}
         <div className="p-8 rounded-[32px] bg-gradient-to-br from-emerald-600 to-teal-700 text-white shadow-lg shadow-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <p className="text-[10px] font-black text-emerald-200 uppercase tracking-widest mb-1">Total Harta Bersih (Harta + Piutang − Utang)</p>
-            <p className="text-3xl font-black tabular-nums">
-              Rp {Math.round(animatedHartaBersih).toLocaleString()}
+            <p className="text-[10px] font-black text-emerald-200 uppercase tracking-widest mb-1">
+              Total Harta Bersih (Harta + Piutang − Utang)
             </p>
+            <p className="text-3xl font-black tabular-nums">Rp {Math.round(animatedHartaBersih).toLocaleString()}</p>
           </div>
           <div className="flex gap-6 text-right">
             <div>
@@ -979,7 +1141,6 @@ export default function PajakCenterPage() {
         </div>
       </div>
 
-      {/* 4. Footer Note Section (Dashboard View) */}
       <div className="bg-slate-50 p-8 rounded-[32px] border border-slate-100 flex items-start gap-6 border-l-4 border-l-slate-300 print:hidden">
         <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-slate-400 shrink-0 shadow-sm">
           <Info size={24} />
@@ -987,9 +1148,11 @@ export default function PajakCenterPage() {
         <div className="space-y-1">
           <h4 className="font-black text-slate-900 uppercase text-xs tracking-widest">Catatan Penting</h4>
           <p className="text-slate-500 text-sm leading-relaxed">
-            Data ini dikumpulkan dari saldo rekening, daftar aset investasi, dan utang/piutang yang belum lunas dari menu <strong>Hutang &amp; Piutang</strong>.
-            Pastikan seluruh data Anda sudah terupdate di menu <strong>Rekening</strong>, <strong>Investasi</strong>, dan <strong>Hutang &amp; Piutang</strong> untuk akurasi draft yang maksimal.
-            Halaman ini hanya membantu <strong>menghitung dan merangkum</strong> — pelaporan resmi tetap Anda lakukan sendiri melalui <strong>coretaxdjp.pajak.go.id</strong>.
+            Data ini dikumpulkan dari saldo rekening, daftar aset investasi, dan utang/piutang yang belum lunas dari
+            menu <strong>Hutang &amp; Piutang</strong>. Pastikan seluruh data Anda sudah terupdate di menu{' '}
+            <strong>Rekening</strong>, <strong>Investasi</strong>, dan <strong>Hutang &amp; Piutang</strong> untuk
+            akurasi draft yang maksimal. Halaman ini hanya membantu <strong>menghitung dan merangkum</strong> —
+            pelaporan resmi tetap Anda lakukan sendiri melalui <strong>coretaxdjp.pajak.go.id</strong>.
           </p>
         </div>
       </div>
@@ -1005,10 +1168,10 @@ export default function PajakCenterPage() {
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
           }
-          .print\\:hidden, 
-          header, 
-          aside, 
-          button, 
+          .print\\:hidden,
+          header,
+          aside,
+          button,
           .YearPicker {
             display: none !important;
           }
@@ -1023,7 +1186,8 @@ export default function PajakCenterPage() {
             table-layout: fixed !important;
             width: 100% !important;
           }
-          td, th {
+          td,
+          th {
             word-wrap: break-word;
             overflow-wrap: break-word;
           }
@@ -1032,4 +1196,3 @@ export default function PajakCenterPage() {
     </div>
   );
 }
-

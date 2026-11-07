@@ -22,5 +22,5 @@ export const savingsGoalService = {
   async getUserSavingsGoals() {
     const result = await cloudflareApi<{ items: SavingsGoal[] }>('/api/member/savings-goals');
     return result.items;
-  }
+  },
 };

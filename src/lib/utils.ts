@@ -17,7 +17,7 @@ export const formatCurrency = (val: number, currency: string = 'IDR') => {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
     currency: currency,
-    maximumFractionDigits: 0
+    maximumFractionDigits: 0,
   }).format(val);
 };
 
@@ -45,7 +45,7 @@ export const formatMoney = (amount: number, currency: string = 'IDR'): string =>
 };
 
 export const getCurrencySymbol = (code: string): string => {
-  return WORLD_CURRENCIES.find(c => c.code === code)?.symbol || code || 'Rp';
+  return WORLD_CURRENCIES.find((c) => c.code === code)?.symbol || code || 'Rp';
 };
 
 // Transfer internal antar rekening sendiri (TopUpModal) menyimpan KEDUA sisi
@@ -67,7 +67,10 @@ export const isIncomingTransaction = (trx: { type?: string; subCategory?: string
 // berkategori Investasi/Saham/Deposito (catatan lama tanpa tautan).
 export const isInvestmentFlow = (trx: { type?: string; category?: string; relatedType?: string }): boolean => {
   if (trx.relatedType === 'investasi') return true;
-  return trx.type === 'pengeluaran' && (!!trx.category?.toLowerCase().includes('investasi') || trx.category === 'Saham' || trx.category === 'Deposito');
+  return (
+    trx.type === 'pengeluaran' &&
+    (!!trx.category?.toLowerCase().includes('investasi') || trx.category === 'Saham' || trx.category === 'Deposito')
+  );
 };
 
 // "YYYY-MM-DD" dari tanggal LOKAL device (bukan UTC). `date.toISOString()`

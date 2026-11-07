@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useState, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
@@ -48,33 +48,53 @@ const STOPS: TourStop[] = [
     path: '/membership/dashboard',
     icon: LayoutDashboard,
     title: 'Dashboard — Beranda kamu',
-    content: 'Ini pusat kendali: total aset, pemasukan, pengeluaran, dan ringkasan keuangan kamu dalam satu layar. Semua angka di sini otomatis mengikuti transaksi yang kamu catat.',
+    content:
+      'Ini pusat kendali: total aset, pemasukan, pengeluaran, dan ringkasan keuangan kamu dalam satu layar. Semua angka di sini otomatis mengikuti transaksi yang kamu catat.',
     demo: 'dashboard',
-    how: ['Lihat saldo bersih semua rekening di kartu hijau', 'Pantau pemasukan vs pengeluaran bulan ini', 'Ganti bulan lewat pemilih tanggal di kanan atas'],
+    how: [
+      'Lihat saldo bersih semua rekening di kartu hijau',
+      'Pantau pemasukan vs pengeluaran bulan ini',
+      'Ganti bulan lewat pemilih tanggal di kanan atas',
+    ],
   },
   {
     path: '/membership/transactions/input',
     icon: PlusCircle,
     title: 'Input Transaksi',
-    content: 'Catat setiap pemasukan & pengeluaran di sini. Pilih rekening, kategori, dan nominal — saldo rekening langsung ter-update otomatis.',
+    content:
+      'Catat setiap pemasukan & pengeluaran di sini. Pilih rekening, kategori, dan nominal — saldo rekening langsung ter-update otomatis.',
     demo: 'input',
-    how: ['Ketik singkat seperti “25rb kopi gopay”', 'Nominal, kategori & rekening terisi otomatis', 'Tekan Simpan — saldo rekening langsung ter-update'],
+    how: [
+      'Ketik singkat seperti “25rb kopi gopay”',
+      'Nominal, kategori & rekening terisi otomatis',
+      'Tekan Simpan — saldo rekening langsung ter-update',
+    ],
   },
   {
     path: '/membership/rekening',
     icon: Building2,
     title: 'Rekening',
-    content: 'Semua rekening bank, e-wallet, uang tunai, dan kartu kredit/paylater kamu berkumpul di sini lengkap dengan saldonya.',
+    content:
+      'Semua rekening bank, e-wallet, uang tunai, dan kartu kredit/paylater kamu berkumpul di sini lengkap dengan saldonya.',
     demo: 'rekening',
-    how: ['Tambah rekening bank, e-wallet, atau tunai', 'Isi saldo saat ini sekali saja', 'Saldo berubah sendiri setiap kamu mencatat'],
+    how: [
+      'Tambah rekening bank, e-wallet, atau tunai',
+      'Isi saldo saat ini sekali saja',
+      'Saldo berubah sendiri setiap kamu mencatat',
+    ],
   },
   {
     path: '/membership/investment',
     icon: TrendingUp,
     title: 'Investasi',
-    content: 'Pantau saham, deposito, emas, dan aset lain. Harga saham/kripto tersinkron otomatis biar nilai portofoliomu selalu terkini.',
+    content:
+      'Pantau saham, deposito, emas, dan aset lain. Harga saham/kripto tersinkron otomatis biar nilai portofoliomu selalu terkini.',
     demo: 'investasi',
-    how: ['Catat pembelian saham, emas, atau deposito', 'Nilai & keuntungan dihitung otomatis', 'Lihat alokasi portofolio per jenis aset'],
+    how: [
+      'Catat pembelian saham, emas, atau deposito',
+      'Nilai & keuntungan dihitung otomatis',
+      'Lihat alokasi portofolio per jenis aset',
+    ],
   },
   {
     path: '/membership/kekayaan',
@@ -82,39 +102,63 @@ const STOPS: TourStop[] = [
     title: 'Kekayaan & Tabungan',
     content: 'Lihat kekayaan bersihmu (aset − utang) di satu tempat, buat target tabungan, dan catat hutang & piutang.',
     demo: 'tabungan',
-    how: ['Pilih tujuan: Dana Darurat, Liburan, dll', 'Catat setoran dari rekening mana saja', 'Pantau progres sampai target tercapai'],
+    how: [
+      'Pilih tujuan: Dana Darurat, Liburan, dll',
+      'Catat setoran dari rekening mana saja',
+      'Pantau progres sampai target tercapai',
+    ],
   },
   {
     path: '/membership/pajak-center',
     icon: Calculator,
     title: 'Pajak Center',
-    content: 'Hitung SPT/PPh otomatis dari data penghasilanmu — salah satu fitur andalan Leosiqra biar urusan pajak nggak bikin pusing.',
+    content:
+      'Hitung SPT/PPh otomatis dari data penghasilanmu — salah satu fitur andalan Leosiqra biar urusan pajak nggak bikin pusing.',
     demo: 'pajak',
-    how: ['Pilih status PTKP (TK/K & tanggungan)', 'Penghasilan setahun diringkas otomatis', 'Unduh draft SPT (Excel/PDF) untuk dicocokkan'],
+    how: [
+      'Pilih status PTKP (TK/K & tanggungan)',
+      'Penghasilan setahun diringkas otomatis',
+      'Unduh draft SPT (Excel/PDF) untuk dicocokkan',
+    ],
   },
   {
     path: '/membership/ai-leosiqra',
     icon: Sparkles,
     title: 'AI Leosiqra',
-    content: 'Asisten AI yang paham datamu. Tanya apa aja: "berapa pengeluaran bulan ini?", "aku boros di mana?", dan dapat jawaban langsung.',
+    content:
+      'Asisten AI yang paham datamu. Tanya apa aja: "berapa pengeluaran bulan ini?", "aku boros di mana?", dan dapat jawaban langsung.',
     demo: 'ai',
-    how: ['Ketik pertanyaan soal keuanganmu', 'AI membaca datamu dan menjawab langsung', 'Pakai pertanyaan cepat kalau bingung mulai'],
+    how: [
+      'Ketik pertanyaan soal keuanganmu',
+      'AI membaca datamu dan menjawab langsung',
+      'Pakai pertanyaan cepat kalau bingung mulai',
+    ],
   },
   {
     path: '/membership/fitur',
     icon: Tags,
     title: 'Semua Fitur & Kategori',
-    content: 'Semua fitur Leosiqra ada di sini. Nyalakan/matikan fitur di menu samping lewat Atur fitur (data tidak hilang). Kategori, anggaran & mata uang diatur di Pengaturan → Kategori & Anggaran.',
+    content:
+      'Semua fitur Leosiqra ada di sini. Nyalakan/matikan fitur di menu samping lewat Atur fitur (data tidak hilang). Kategori, anggaran & mata uang diatur di Pengaturan → Kategori & Anggaran.',
     demo: 'kategori',
-    how: ['Buka Pengaturan → Kategori & Anggaran', 'Tambah kategori, subkategori & anggaran bulanan', 'Dipakai di semua form pencatatan'],
+    how: [
+      'Buka Pengaturan → Kategori & Anggaran',
+      'Tambah kategori, subkategori & anggaran bulanan',
+      'Dipakai di semua form pencatatan',
+    ],
   },
   {
     path: '/membership/dashboard',
     icon: UserCircle,
     title: 'Profil & Pengaturan — Selesai! 🎉',
-    content: 'Profil, foto, keamanan 2FA, notifikasi, dan langganan ada di Pengaturan (foto profil di menu kiri). Itu dia keliling singkatnya — selamat menikmati Leosiqra!',
+    content:
+      'Profil, foto, keamanan 2FA, notifikasi, dan langganan ada di Pengaturan (foto profil di menu kiri). Itu dia keliling singkatnya — selamat menikmati Leosiqra!',
     demo: 'profil',
-    how: ['Pengaturan → Ubah profil untuk foto & username', 'Privasi & keamanan → Verifikasi 2 langkah', 'Pasang aplikasi di HP lewat tombol di bawah'],
+    how: [
+      'Pengaturan → Ubah profil untuk foto & username',
+      'Privasi & keamanan → Verifikasi 2 langkah',
+      'Pasang aplikasi di HP lewat tombol di bawah',
+    ],
   },
 ];
 
@@ -159,7 +203,7 @@ export const OnboardingTour = () => {
       const target = STOPS[clamped].path;
       if (pathname !== target) router.push(target);
     },
-    [pathname, router]
+    [pathname, router],
   );
 
   if (!active) return null;
@@ -176,10 +220,11 @@ export const OnboardingTour = () => {
       <div
         className="fixed inset-0 z-[9998] bg-slate-900/30 backdrop-blur-[1px] animate-in fade-in duration-300"
         aria-hidden
-        onClick={() => { /* sengaja tidak menutup — biar tidak ke-skip nggak sengaja */ }}
+        onClick={() => {
+          /* sengaja tidak menutup — biar tidak ke-skip nggak sengaja */
+        }}
       />
 
-      {/* Kartu: bottom-sheet di mobile, kartu mengambang di kanan-bawah desktop */}
       <div
         role="dialog"
         aria-modal="true"
@@ -187,7 +232,7 @@ export const OnboardingTour = () => {
         className={cn(
           'fixed z-[9999] bg-white shadow-2xl border border-slate-100 animate-in slide-in-from-bottom-4 fade-in duration-300',
           'inset-x-0 bottom-0 rounded-t-[28px] p-6 pb-8',
-          'max-h-[88vh] overflow-y-auto sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-[400px] sm:rounded-[28px] sm:pb-6'
+          'max-h-[88vh] overflow-y-auto sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-[400px] sm:rounded-[28px] sm:pb-6',
         )}
       >
         <div className="flex items-start justify-between gap-3 mb-4">
@@ -223,7 +268,6 @@ export const OnboardingTour = () => {
           </Link>
         )}
 
-        {/* Progress bar */}
         <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden my-4">
           <div
             className="h-full bg-indigo-600 rounded-full transition-all duration-500"

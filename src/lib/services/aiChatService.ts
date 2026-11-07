@@ -18,12 +18,8 @@ export const aiChatService = {
       if (data.messages && Array.isArray(data.messages)) {
         return data.messages
           .map((m: Record<string, unknown>) => {
-            const role: ChatMessage['role'] =
-              m.role === 'assistant' ? 'model' : (m.role === 'user' ? 'user' : 'model');
-            const text =
-              typeof m.text === 'string'
-                ? m.text
-                : (typeof m.content === 'string' ? m.content : '');
+            const role: ChatMessage['role'] = m.role === 'assistant' ? 'model' : m.role === 'user' ? 'user' : 'model';
+            const text = typeof m.text === 'string' ? m.text : typeof m.content === 'string' ? m.content : '';
             const timestamp = (() => {
               const rawTimestamp = m.timestamp as { toDate?: () => Date } | undefined;
               if (rawTimestamp?.toDate) {
@@ -50,19 +46,22 @@ export const aiChatService = {
 
   async saveUserChat(userId: string, messages: ChatMessage[]) {
     const docRef = doc(db, COLLECTION_NAME, userId);
-    await setDoc(docRef, {
-      userId,
-      messages: messages.map(m => ({
-        ...m,
-        timestamp: Timestamp.fromDate(m.timestamp)
-      })),
-      updatedAt: Timestamp.now()
-    }, { merge: true });
+    await setDoc(
+      docRef,
+      {
+        userId,
+        messages: messages.map((m) => ({
+          ...m,
+          timestamp: Timestamp.fromDate(m.timestamp),
+        })),
+        updatedAt: Timestamp.now(),
+      },
+      { merge: true },
+    );
   },
 
   async clearUserChat(userId: string) {
     const docRef = doc(db, COLLECTION_NAME, userId);
     await deleteDoc(docRef);
-  }
+  },
 };
-

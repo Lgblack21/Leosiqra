@@ -16,7 +16,8 @@ export const metadata: Metadata = {
   alternates: { canonical: '/panduan/cara-menabung-yang-benar' },
   openGraph: {
     title: 'Cara Menabung yang Benar: Urutan Prioritas dari Gaji',
-    description: 'Sisihkan di awal, isi dana darurat, lunasi utang berbunga tinggi, lalu tabung untuk tujuan — dengan contoh gaji 5 juta.',
+    description:
+      'Sisihkan di awal, isi dana darurat, lunasi utang berbunga tinggi, lalu tabung untuk tujuan — dengan contoh gaji 5 juta.',
     url: 'https://www.leosiqra.com/panduan/cara-menabung-yang-benar',
     type: 'article',
     locale: 'id_ID',
@@ -25,7 +26,8 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary',
     title: 'Cara Menabung yang Benar: Urutan Prioritas dari Gaji',
-    description: 'Sisihkan di awal, isi dana darurat, lunasi utang berbunga tinggi, lalu tabung untuk tujuan — dengan contoh gaji 5 juta.',
+    description:
+      'Sisihkan di awal, isi dana darurat, lunasi utang berbunga tinggi, lalu tabung untuk tujuan — dengan contoh gaji 5 juta.',
     images: ['/images/Logo-new.png'],
   },
 };
@@ -72,19 +74,22 @@ export default function CaraMenabungYangBenarPage() {
       </p>
 
       <h2>2. Urutan prioritas: dana darurat, utang, lalu tabungan tujuan</h2>
-      <p>Menabung tanpa urutan sering berakhir dengan tabungan liburan terpakai untuk biaya mendadak. Urutan yang umum dipakai:</p>
+      <p>
+        Menabung tanpa urutan sering berakhir dengan tabungan liburan terpakai untuk biaya mendadak. Urutan yang umum
+        dipakai:
+      </p>
       <ol>
         <li>
           <strong>Dana darurat awal</strong> — kumpulkan sekitar satu bulan pengeluaran dulu sebagai bantalan.
         </li>
         <li>
-          <strong>Utang berbunga tinggi</strong> — kartu kredit, paylater, atau pinjaman online. Bunga utang ini biasanya jauh
-          lebih besar daripada imbal hasil tabungan, jadi melunasinya adalah &ldquo;tabungan&rdquo; yang paling menguntungkan.
-          Lihat <Link href="/panduan/cara-melunasi-utang">metode snowball vs avalanche</Link>.
+          <strong>Utang berbunga tinggi</strong> — kartu kredit, paylater, atau pinjaman online. Bunga utang ini
+          biasanya jauh lebih besar daripada imbal hasil tabungan, jadi melunasinya adalah &ldquo;tabungan&rdquo; yang
+          paling menguntungkan. Lihat <Link href="/panduan/cara-melunasi-utang">metode snowball vs avalanche</Link>.
         </li>
         <li>
-          <strong>Dana darurat penuh</strong> — lanjutkan sampai target, misalnya 3–6 kali pengeluaran bulanan untuk lajang.
-          Patokan lengkapnya ada di panduan <Link href="/panduan/dana-darurat">dana darurat</Link>.
+          <strong>Dana darurat penuh</strong> — lanjutkan sampai target, misalnya 3–6 kali pengeluaran bulanan untuk
+          lajang. Patokan lengkapnya ada di panduan <Link href="/panduan/dana-darurat">dana darurat</Link>.
         </li>
         <li>
           <strong>Tabungan tujuan</strong> — DP rumah, pendidikan, liburan, kendaraan. Beri setiap tujuan nama, target
@@ -94,20 +99,44 @@ export default function CaraMenabungYangBenarPage() {
 
       <h2>3. Contoh gaji 5 juta</h2>
       <p>
-        Contoh pembagian porsi 20% (Rp1.000.000) dari gaji Rp5.000.000 untuk orang yang belum punya dana darurat dan masih
-        punya cicilan paylater (angka ilustrasi):
+        Contoh pembagian porsi 20% (Rp1.000.000) dari gaji Rp5.000.000 untuk orang yang belum punya dana darurat dan
+        masih punya cicilan paylater (angka ilustrasi):
       </p>
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Tahap</th><th>Pos</th><th className="num">Per bulan (Rp)</th></tr>
+            <tr>
+              <th>Tahap</th>
+              <th>Pos</th>
+              <th className="num">Per bulan (Rp)</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td>Bulan 1–4</td><td>Dana darurat awal (target 4 jt)</td><td className="num">1.000.000</td></tr>
-            <tr><td>Setelah itu</td><td>Pelunasan ekstra utang paylater</td><td className="num">700.000</td></tr>
-            <tr><td></td><td>Dana darurat (lanjut ke target penuh)</td><td className="num">300.000</td></tr>
-            <tr><td>Setelah utang lunas</td><td>Dana darurat</td><td className="num">600.000</td></tr>
-            <tr><td></td><td>Tabungan tujuan (misal liburan)</td><td className="num">400.000</td></tr>
+            <tr>
+              <td>Bulan 1–4</td>
+              <td>Dana darurat awal (target 4 jt)</td>
+              <td className="num">1.000.000</td>
+            </tr>
+            <tr>
+              <td>Setelah itu</td>
+              <td>Pelunasan ekstra utang paylater</td>
+              <td className="num">700.000</td>
+            </tr>
+            <tr>
+              <td></td>
+              <td>Dana darurat (lanjut ke target penuh)</td>
+              <td className="num">300.000</td>
+            </tr>
+            <tr>
+              <td>Setelah utang lunas</td>
+              <td>Dana darurat</td>
+              <td className="num">600.000</td>
+            </tr>
+            <tr>
+              <td></td>
+              <td>Tabungan tujuan (misal liburan)</td>
+              <td className="num">400.000</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -118,25 +147,34 @@ export default function CaraMenabungYangBenarPage() {
 
       <h2>4. Otomatiskan supaya tidak bergantung niat</h2>
       <ul>
-        <li><strong>Jadwalkan transfer di hari gajian</strong> ke rekening tabungan, supaya terjadi sebelum uangnya terpakai.</li>
-        <li><strong>Pisahkan rekening</strong>: satu untuk belanja harian, satu untuk tabungan, idealnya tanpa kartu debit.</li>
-        <li><strong>Naikkan porsi saat ada kesempatan</strong> — kenaikan gaji, bonus, THR, atau satu cicilan yang lunas.</li>
+        <li>
+          <strong>Jadwalkan transfer di hari gajian</strong> ke rekening tabungan, supaya terjadi sebelum uangnya
+          terpakai.
+        </li>
+        <li>
+          <strong>Pisahkan rekening</strong>: satu untuk belanja harian, satu untuk tabungan, idealnya tanpa kartu
+          debit.
+        </li>
+        <li>
+          <strong>Naikkan porsi saat ada kesempatan</strong> — kenaikan gaji, bonus, THR, atau satu cicilan yang lunas.
+        </li>
       </ul>
 
       <h2>5. Pantau, jangan hanya disimpan</h2>
       <p>
-        Tabungan yang tidak dipantau mudah &ldquo;dipinjam&rdquo; sendiri. Cek progres setiap bulan: sudah berapa persen dari
-        target, dan apakah pengeluaran bulan ini membuat setoran berikutnya terancam. Untuk itu Anda perlu tahu pengeluaran
-        yang sebenarnya — mulai dari{' '}
-        <Link href="/catatan-keuangan-harian">catatan keuangan harian</Link> yang sederhana.
+        Tabungan yang tidak dipantau mudah &ldquo;dipinjam&rdquo; sendiri. Cek progres setiap bulan: sudah berapa persen
+        dari target, dan apakah pengeluaran bulan ini membuat setoran berikutnya terancam. Untuk itu Anda perlu tahu
+        pengeluaran yang sebenarnya — mulai dari <Link href="/catatan-keuangan-harian">catatan keuangan harian</Link>{' '}
+        yang sederhana.
       </p>
 
       <h2>Menabung dengan Leosiqra</h2>
       <p>
-        Di <strong>Leosiqra</strong>, setiap tujuan — dana darurat, DP rumah, liburan — bisa dibuat sebagai tujuan tabungan
-        tersendiri dengan target nominal. Setoran tercatat dan saldo rekening sumbernya ikut berkurang, setoran bulanan bisa
-        dijadwalkan sebagai transaksi rutin, dan progres menuju target terlihat dalam persen. Pengeluaran harian bisa dicatat
-        dengan mengetik singkat, suara, atau foto struk, supaya Anda tahu ruang untuk menabung yang sebenarnya.
+        Di <strong>Leosiqra</strong>, setiap tujuan — dana darurat, DP rumah, liburan — bisa dibuat sebagai tujuan
+        tabungan tersendiri dengan target nominal. Setoran tercatat dan saldo rekening sumbernya ikut berkurang, setoran
+        bulanan bisa dijadwalkan sebagai transaksi rutin, dan progres menuju target terlihat dalam persen. Pengeluaran
+        harian bisa dicatat dengan mengetik singkat, suara, atau foto struk, supaya Anda tahu ruang untuk menabung yang
+        sebenarnya.
       </p>
       <p>
         <em>Panduan ini bersifat edukasi umum, bukan nasihat keuangan. Sesuaikan dengan kondisi dan tujuan Anda.</em>

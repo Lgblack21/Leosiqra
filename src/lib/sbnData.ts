@@ -9,7 +9,11 @@
 export const AS_OF = '2026-10-29';
 export const STALE_DAYS = 45;
 
-export const BI_RATE = { rate: 5.75, decided: '2026-10-21', source: 'https://www.bi.go.id/id/fungsi-utama/moneter/bi-rate/default.aspx' };
+export const BI_RATE = {
+  rate: 5.75,
+  decided: '2026-10-21',
+  source: 'https://www.bi.go.id/id/fungsi-utama/moneter/bi-rate/default.aspx',
+};
 export const LPS = {
   bankUmum: 3.75,
   bpr: 6.25,
@@ -21,7 +25,14 @@ export const LPS = {
 };
 
 export type SbnKind = 'ORI' | 'SR' | 'SBR' | 'ST';
-export type SbnSeries = { code: string; kind: SbnKind; coupon: number; tenorYears: number; floating: boolean; maturity?: string };
+export type SbnSeries = {
+  code: string;
+  kind: SbnKind;
+  coupon: number;
+  tenorYears: number;
+  floating: boolean;
+  maturity?: string;
+};
 
 // Seri ritel yang beredar & tercatat per AS_OF (urut kupon tertinggi).
 export const SBN_RETAIL: SbnSeries[] = [
@@ -53,6 +64,8 @@ export const TAX_SBN = 10;
 export const TAX_DEPOSITO = 20;
 
 /** Hasil bersih per bulan dari nominal tertentu. */
-export const monthlyNet = (amount: number, couponPct: number, taxPct: number) => Math.round((amount * (couponPct / 100) * (1 - taxPct / 100)) / 12);
+export const monthlyNet = (amount: number, couponPct: number, taxPct: number) =>
+  Math.round((amount * (couponPct / 100) * (1 - taxPct / 100)) / 12);
 
-export const isStale = (now = new Date()) => (now.getTime() - Date.parse(`${AS_OF}T00:00:00+07:00`)) / 86400000 > STALE_DAYS;
+export const isStale = (now = new Date()) =>
+  (now.getTime() - Date.parse(`${AS_OF}T00:00:00+07:00`)) / 86400000 > STALE_DAYS;

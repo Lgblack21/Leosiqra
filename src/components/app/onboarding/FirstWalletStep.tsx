@@ -1,35 +1,35 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Wallet, Landmark, Smartphone } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { accountService } from "@/lib/services/accountService";
-import { auth } from "@/lib/cf-client";
-import { NumberInput } from "@/components/ui/NumberInput";
+import { useState } from 'react';
+import { Wallet, Landmark, Smartphone } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { accountService } from '@/lib/services/accountService';
+import { auth } from '@/lib/cf-client';
+import { NumberInput } from '@/components/ui/NumberInput';
 
 interface FirstWalletStepProps {
   onDone: () => void;
 }
 
 const TYPES = [
-  { value: "Cash", label: "Cash", icon: Wallet },
-  { value: "Bank Account", label: "Bank", icon: Landmark },
-  { value: "E-Wallet", label: "E-Wallet", icon: Smartphone },
+  { value: 'Cash', label: 'Cash', icon: Wallet },
+  { value: 'Bank Account', label: 'Bank', icon: Landmark },
+  { value: 'E-Wallet', label: 'E-Wallet', icon: Smartphone },
 ] as const;
 
 export function FirstWalletStep({ onDone }: FirstWalletStepProps) {
-  const [name, setName] = useState("");
-  const [type, setType] = useState<(typeof TYPES)[number]["value"]>("Cash");
-  const [balance, setBalance] = useState("");
+  const [name, setName] = useState('');
+  const [type, setType] = useState<(typeof TYPES)[number]['value']>('Cash');
+  const [balance, setBalance] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   const canSubmit = name.trim().length > 0 && !submitting;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
     setSubmitting(true);
-    setError("");
+    setError('');
     try {
       // Currency di-hardcode IDR di sini (bukan pakai CurrencySelect) — user
       // baru belum tentu punya baris `currencies` sama sekali (currency
@@ -37,16 +37,16 @@ export function FirstWalletStep({ onDone }: FirstWalletStepProps) {
       // kosong dan bikin macet langkah wajib ini. IDR juga sudah jadi
       // mata uang utama di seluruh app.
       await accountService.createAccount({
-        userId: auth.currentUser?.uid ?? "",
+        userId: auth.currentUser?.uid ?? '',
         name: name.trim(),
         type,
-        currency: "IDR",
-        balance: Number(balance || "0"),
-        initialBalance: Number(balance || "0"),
+        currency: 'IDR',
+        balance: Number(balance || '0'),
+        initialBalance: Number(balance || '0'),
       });
       onDone();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal membuat rekening.");
+      setError(e instanceof Error ? e.message : 'Gagal membuat rekening.');
       setSubmitting(false);
     }
   };
@@ -54,7 +54,9 @@ export function FirstWalletStep({ onDone }: FirstWalletStepProps) {
   return (
     <div className="px-6 pt-12">
       <p className="text-[14px] font-semibold text-slate-500 dark:text-slate-400">Langkah terakhir</p>
-      <h1 className="mt-1.5 text-[34px] leading-[1.05] font-black tracking-[-0.03em] text-slate-900 dark:text-white">Rekening pertama.</h1>
+      <h1 className="mt-1.5 text-[34px] leading-[1.05] font-black tracking-[-0.03em] text-slate-900 dark:text-white">
+        Rekening pertama.
+      </h1>
       <p className="text-[16px] leading-relaxed text-slate-500 dark:text-slate-400 mt-3">
         Buat satu rekening dulu. Rekening lain bisa ditambah kapan saja.
       </p>
@@ -74,7 +76,9 @@ export function FirstWalletStep({ onDone }: FirstWalletStepProps) {
         </div>
 
         <div>
-          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1">Jenis</label>
+          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1">
+            Jenis
+          </label>
           <div className="grid grid-cols-3 gap-2 mt-2">
             {TYPES.map((t) => {
               const Icon = t.icon;
@@ -84,10 +88,10 @@ export function FirstWalletStep({ onDone }: FirstWalletStepProps) {
                   type="button"
                   onClick={() => setType(t.value)}
                   className={cn(
-                    "flex flex-col items-center gap-1.5 py-3.5 rounded-[18px] text-xs font-bold bg-white dark:bg-slate-900 transition-all",
+                    'flex flex-col items-center gap-1.5 py-3.5 rounded-[18px] text-xs font-bold bg-white dark:bg-slate-900 transition-all',
                     type === t.value
-                      ? "ring-2 ring-indigo-600 text-indigo-600 dark:text-indigo-400"
-                      : "ring-1 ring-slate-200/70 dark:ring-slate-800 text-slate-400 dark:text-slate-500"
+                      ? 'ring-2 ring-indigo-600 text-indigo-600 dark:text-indigo-400'
+                      : 'ring-1 ring-slate-200/70 dark:ring-slate-800 text-slate-400 dark:text-slate-500',
                   )}
                 >
                   <Icon size={18} />
@@ -125,7 +129,7 @@ export function FirstWalletStep({ onDone }: FirstWalletStepProps) {
           disabled={!canSubmit}
           className="w-full h-12 rounded-full bg-indigo-600 text-white font-bold text-[15px] disabled:opacity-40 transition-all active:scale-[0.98]"
         >
-          {submitting ? "Menyimpan..." : "Selesai"}
+          {submitting ? 'Menyimpan...' : 'Selesai'}
         </button>
       </div>
     </div>

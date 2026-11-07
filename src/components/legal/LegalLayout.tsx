@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -38,10 +38,12 @@ export function LegalLayout({
     const els = sections.map((s) => document.getElementById(s.id)).filter((e): e is HTMLElement => Boolean(e));
     const io = new IntersectionObserver(
       (entries) => {
-        const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
         if (visible[0]) setActive(visible[0].target.id);
       },
-      { rootMargin: '-20% 0px -65% 0px' }
+      { rootMargin: '-20% 0px -65% 0px' },
     );
     els.forEach((e) => io.observe(e));
     return () => io.disconnect();
@@ -56,7 +58,11 @@ export function LegalLayout({
           className={`relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors ${active === s.id ? 'font-bold text-indigo-700' : 'text-slate-500 hover:text-slate-800'}`}
         >
           {active === s.id && (
-            <motion.span layoutId="legal-toc" className="absolute inset-0 rounded-xl bg-indigo-50" transition={{ type: 'spring', stiffness: 420, damping: 36 }} />
+            <motion.span
+              layoutId="legal-toc"
+              className="absolute inset-0 rounded-xl bg-indigo-50"
+              transition={{ type: 'spring', stiffness: 420, damping: 36 }}
+            />
           )}
           <span className="relative w-5 text-xs tabular-nums text-slate-400">{String(i + 1).padStart(2, '0')}</span>
           <span className="relative">{s.title}</span>
@@ -88,8 +94,7 @@ export function LegalLayout({
       </header>
 
       <main className="relative flex-1 px-5 pb-24 sm:px-6">
-        <div className="mx-auto grid max-w-5xl gap-10 lg:grid-cols-[240px_1fr]">
-          {/* Daftar isi: menempel di desktop, lipatan di HP */}
+        <div className="mx-auto grid grid-cols-1 max-w-5xl gap-10 lg:grid-cols-[240px_1fr]">
           <aside className="lg:sticky lg:top-28 lg:self-start">
             <details className="lp-card rounded-2xl p-2 lg:hidden">
               <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-sm font-bold text-slate-700">
@@ -109,9 +114,13 @@ export function LegalLayout({
                 <section id={s.id} aria-labelledby={`${s.id}-h`}>
                   <div className="flex items-baseline gap-4">
                     <span className="font-serif text-2xl text-indigo-300">{String(i + 1).padStart(2, '0')}</span>
-                    <h2 id={`${s.id}-h`} className="font-serif text-2xl leading-snug text-slate-900">{s.title}</h2>
+                    <h2 id={`${s.id}-h`} className="font-serif text-2xl leading-snug text-slate-900">
+                      {s.title}
+                    </h2>
                   </div>
-                  <div className="legal-body mt-4 space-y-3 text-[15px] leading-relaxed text-slate-600">{s.content}</div>
+                  <div className="legal-body mt-4 space-y-3 text-[15px] leading-relaxed text-slate-600">
+                    {s.content}
+                  </div>
                 </section>
               </Reveal>
             ))}
@@ -121,7 +130,10 @@ export function LegalLayout({
                 <p className="font-serif text-2xl">Ada pertanyaan?</p>
                 <p className="mt-1 text-sm text-indigo-100/90">Tim kami siap membantu lewat WhatsApp atau email.</p>
               </div>
-              <Link href="/hubungi-kami" className="inline-flex shrink-0 items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-indigo-700 transition-transform hover:-translate-y-0.5">
+              <Link
+                href="/hubungi-kami"
+                className="inline-flex shrink-0 items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-indigo-700 transition-transform hover:-translate-y-0.5"
+              >
                 <MessageCircle size={16} /> Hubungi kami
               </Link>
             </Reveal>

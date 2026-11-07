@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useMemo, useState } from 'react';
 import { Check, Flame, Leaf } from 'lucide-react';
@@ -13,14 +13,27 @@ import { cn, formatIDR, toLocalDateString } from '@/lib/utils';
 
 const idr = (t: Transaction) => Number(t.amountIDR) || Number(t.amount) || 0;
 const short = (n: number) =>
-  n >= 1e6 ? `${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 1 })}jt` : n >= 1e3 ? `${Math.round(n / 1e3)}rb` : `${Math.round(n)}`;
+  n >= 1e6
+    ? `${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 1 })}jt`
+    : n >= 1e3
+      ? `${Math.round(n / 1e3)}rb`
+      : `${Math.round(n)}`;
 const rp = (n: number) => `Rp${short(n)}`;
 const DOW = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 const DOW_LONG = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 const dayIdx = (d: Date) => (d.getDay() + 6) % 7; // Senin = 0
 
-// ===== Kalender gelembung =====
-export function BubbleCalendar({ spend, year, month, now }: { spend: Transaction[]; year: number; month: number; now: Date | null }) {
+export function BubbleCalendar({
+  spend,
+  year,
+  month,
+  now,
+}: {
+  spend: Transaction[];
+  year: number;
+  month: number;
+  now: Date | null;
+}) {
   const days = new Date(year, month + 1, 0).getDate();
   const isCurMonth = !!now && now.getFullYear() === year && now.getMonth() === month;
   const isFuture = !!now && (year > now.getFullYear() || (year === now.getFullYear() && month > now.getMonth()));
@@ -41,8 +54,11 @@ export function BubbleCalendar({ spend, year, month, now }: { spend: Transaction
 
   const [picked, setPicked] = useState<number | null>(null);
   const [review, setReview] = useState<Date | null>(null);
-  const open = (d: number) => { setPicked(d); setReview(new Date(year, month, d)); };
-  const sel = picked && picked <= lastDay ? picked : (isCurMonth ? lastDay : peakDay || null);
+  const open = (d: number) => {
+    setPicked(d);
+    setReview(new Date(year, month, d));
+  };
+  const sel = picked && picked <= lastDay ? picked : isCurMonth ? lastDay : peakDay || null;
   const offset = dayIdx(new Date(year, month, 1));
   const cells = [...Array(offset).fill(null), ...Array.from({ length: days }, (_, i) => i + 1)];
 
@@ -55,11 +71,23 @@ export function BubbleCalendar({ spend, year, month, now }: { spend: Transaction
         </div>
       </div>
       <div className="mt-2 flex flex-wrap gap-1.5 text-[12px] font-semibold">
-        <span className="rounded-full bg-white px-3 py-1 text-slate-600 ring-1 ring-slate-200">Rata-rata {rp(avg)}/hari</span>
-        <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-emerald-700"><Leaf size={12} /> {hemat} hari hemat</span>
-        {hot > 0 && <span className="flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1 text-rose-700"><Flame size={12} /> {hot} hari boros</span>}
+        <span className="rounded-full bg-white px-3 py-1 text-slate-600 ring-1 ring-slate-200">
+          Rata-rata {rp(avg)}/hari
+        </span>
+        <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">
+          <Leaf size={12} /> {hemat} hari hemat
+        </span>
+        {hot > 0 && (
+          <span className="flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1 text-rose-700">
+            <Flame size={12} /> {hot} hari boros
+          </span>
+        )}
         {peakDay > 0 && totals[peakDay] > 0 && (
-          <button type="button" onClick={() => open(peakDay)} className="rounded-full bg-indigo-50 px-3 py-1 text-indigo-700 hover:bg-indigo-100">
+          <button
+            type="button"
+            onClick={() => open(peakDay)}
+            className="rounded-full bg-indigo-50 px-3 py-1 text-indigo-700 hover:bg-indigo-100"
+          >
             Tertinggi tgl {peakDay} · {rp(totals[peakDay])}
           </button>
         )}
@@ -67,7 +95,11 @@ export function BubbleCalendar({ spend, year, month, now }: { spend: Transaction
 
       <div className="mt-3 rounded-[20px] bg-white p-3 ring-1 ring-slate-100 md:p-4">
         <div className="grid grid-cols-7 gap-1 pb-1 text-center text-[11px] font-semibold text-slate-400">
-          {DOW.map((d, i) => <span key={d} className={cn(i >= 5 && 'text-indigo-400')}>{d}</span>)}
+          {DOW.map((d, i) => (
+            <span key={d} className={cn(i >= 5 && 'text-indigo-400')}>
+              {d}
+            </span>
+          ))}
         </div>
         <div className="grid grid-cols-7 gap-1">
           {cells.map((d, i) => {
@@ -87,34 +119,53 @@ export function BubbleCalendar({ spend, year, month, now }: { spend: Transaction
                 className={cn(
                   'relative flex aspect-square items-center justify-center rounded-2xl pt-3 transition-colors md:aspect-auto md:h-[58px] md:pt-0',
                   sel === d ? 'bg-slate-900/[0.06] ring-2 ring-slate-900/70' : 'hover:bg-slate-50',
-                  future && 'cursor-default opacity-40'
+                  future && 'cursor-default opacity-40',
                 )}
               >
-                <span className={cn('absolute left-1.5 top-1 text-[10px] font-bold md:left-2 md:text-[11px]', today ? 'text-indigo-600' : 'text-slate-400')}>{d}</span>
+                <span
+                  className={cn(
+                    'absolute left-1.5 top-1 text-[10px] font-bold md:left-2 md:text-[11px]',
+                    today ? 'text-indigo-600' : 'text-slate-400',
+                  )}
+                >
+                  {d}
+                </span>
                 {!future && byDay[d].length > 0 && byDay[d].every((t) => t.reviewed) && (
-                  <span className="absolute bottom-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-white ring-2 ring-white" title="Sudah dicek">
+                  <span
+                    className="absolute bottom-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-white ring-2 ring-white"
+                    title="Sudah dicek"
+                  >
                     <Check size={9} strokeWidth={3.5} />
                   </span>
                 )}
                 {future ? (
                   <span className="h-2 w-2 rounded-full border border-dashed border-slate-300" />
                 ) : v === 0 ? (
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"><Check size={11} strokeWidth={3} /></span>
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                    <Check size={11} strokeWidth={3} />
+                  </span>
                 ) : (
                   <span
                     className={cn(
                       'flex items-center justify-center rounded-full text-white shadow-sm transition-transform',
-                      hotDay ? 'bg-gradient-to-br from-rose-400 to-rose-600' : 'bg-gradient-to-br from-indigo-400 to-violet-600',
-                      sel === d && 'scale-105'
+                      hotDay
+                        ? 'bg-gradient-to-br from-rose-400 to-rose-600'
+                        : 'bg-gradient-to-br from-indigo-400 to-violet-600',
+                      sel === d && 'scale-105',
                     )}
                     style={{ width: `min(${size}px, 62%)`, aspectRatio: '1 / 1' }}
                   >
-                    {size >= 32 && <span className="hidden text-[9px] font-bold tabular-nums md:inline">{short(v)}</span>}
+                    {size >= 32 && (
+                      <span className="hidden text-[9px] font-bold tabular-nums md:inline">{short(v)}</span>
+                    )}
                   </span>
                 )}
                 {today && (
                   <>
-                    <span className="pointer-events-none absolute inset-0.5 rounded-2xl ring-2 ring-indigo-500" aria-hidden />
+                    <span
+                      className="pointer-events-none absolute inset-0.5 rounded-2xl ring-2 ring-indigo-500"
+                      aria-hidden
+                    />
                     <span className="absolute right-1.5 top-1.5 flex h-2 w-2" aria-hidden>
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
                       <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" />
@@ -126,14 +177,23 @@ export function BubbleCalendar({ spend, year, month, now }: { spend: Transaction
           })}
         </div>
 
-        <p className="mt-3 px-1 text-[12px] text-slate-400">Ketuk satu hari untuk <b className="text-slate-600">Cek hari</b>: centang transaksi yang kategorinya sudah benar. Lencana ✓ hijau = hari sudah dicek.</p>
+        <p className="mt-3 px-1 text-[12px] text-slate-400">
+          Ketuk satu hari untuk <b className="text-slate-600">Cek hari</b>: centang transaksi yang kategorinya sudah
+          benar. Lencana ✓ hijau = hari sudah dicek.
+        </p>
       </div>
-      <DayReview date={review} onClose={() => setReview(null)} onDate={(d) => { setReview(d); if (d.getFullYear() === year && d.getMonth() === month) setPicked(d.getDate()); }} />
+      <DayReview
+        date={review}
+        onClose={() => setReview(null)}
+        onDate={(d) => {
+          setReview(d);
+          if (d.getFullYear() === year && d.getMonth() === month) setPicked(d.getDate());
+        }}
+      />
     </section>
   );
 }
 
-// ===== Pola mingguan =====
 export function WeekdayPattern({ spend }: { spend: Transaction[] }) {
   const data = useMemo(() => {
     const sum = Array(7).fill(0) as number[];
@@ -158,18 +218,29 @@ export function WeekdayPattern({ spend }: { spend: Transaction[] }) {
     <section>
       <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Pola mingguan</h2>
       <p className="text-[12px] text-slate-500">
-        Paling boros hari <b className="text-slate-700">{DOW_LONG[top]}</b>, paling hemat hari <b className="text-slate-700">{DOW_LONG[low]}</b>
-        {weekday > 0 && weekend > weekday * 1.2 ? ` · akhir pekan ${Math.round((weekend / weekday - 1) * 100)}% lebih boros` : ''}.
+        Paling boros hari <b className="text-slate-700">{DOW_LONG[top]}</b>, paling hemat hari{' '}
+        <b className="text-slate-700">{DOW_LONG[low]}</b>
+        {weekday > 0 && weekend > weekday * 1.2
+          ? ` · akhir pekan ${Math.round((weekend / weekday - 1) * 100)}% lebih boros`
+          : ''}
+        .
       </p>
       <div className="mt-3 flex h-36 items-end gap-2 rounded-[20px] bg-white p-4 ring-1 ring-slate-100 md:gap-4 md:px-6">
         {data.map((v, i) => (
           <div key={i} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
-            <span className={cn('text-[11px] font-bold tabular-nums', i === top ? 'text-rose-600' : 'text-slate-400')}>{v > 0 ? short(v) : ''}</span>
+            <span className={cn('text-[11px] font-bold tabular-nums', i === top ? 'text-rose-600' : 'text-slate-400')}>
+              {v > 0 ? short(v) : ''}
+            </span>
             <div
-              className={cn('w-full max-w-[36px] rounded-t-lg rounded-b-md', i === top ? 'bg-gradient-to-t from-rose-500 to-orange-400' : i >= 5 ? 'bg-indigo-300' : 'bg-indigo-500')}
+              className={cn(
+                'w-full max-w-[36px] rounded-t-lg rounded-b-md',
+                i === top ? 'bg-gradient-to-t from-rose-500 to-orange-400' : i >= 5 ? 'bg-indigo-300' : 'bg-indigo-500',
+              )}
               style={{ height: `${Math.max(4, (v / max) * 100)}%` }}
             />
-            <span className={cn('text-[12px] font-semibold', i === top ? 'text-slate-900' : 'text-slate-500')}>{DOW[i]}</span>
+            <span className={cn('text-[12px] font-semibold', i === top ? 'text-slate-900' : 'text-slate-500')}>
+              {DOW[i]}
+            </span>
           </div>
         ))}
       </div>
@@ -177,14 +248,14 @@ export function WeekdayPattern({ spend }: { spend: Transaction[] }) {
   );
 }
 
-// ===== Podium pengeluaran terbesar =====
 export function TopExpenses({ spend }: { spend: Transaction[] }) {
   const top = useMemo(() => [...spend].sort((a, b) => idr(b) - idr(a)).slice(0, 6), [spend]);
   if (top.length === 0) return null;
   const max = idr(top[0]);
   const medal = ['🥇', '🥈', '🥉'];
   const podium = [top[1], top[0], top[2]].filter(Boolean) as Transaction[];
-  const when = (t: Transaction) => new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(t.date));
+  const when = (t: Transaction) =>
+    new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(t.date));
 
   return (
     <section>
@@ -199,14 +270,34 @@ export function TopExpenses({ spend }: { spend: Transaction[] }) {
               key={t.id}
               className={cn(
                 'flex flex-col items-center rounded-[24px] px-2 pb-4 text-center ring-1',
-                rank === 0 ? 'bg-gradient-to-b from-amber-50 to-white pt-5 ring-amber-200' : 'bg-white pt-3 ring-slate-100'
+                rank === 0
+                  ? 'bg-gradient-to-b from-amber-50 to-white pt-5 ring-amber-200'
+                  : 'bg-white pt-3 ring-slate-100',
               )}
             >
-              <span className="text-[22px] leading-none" aria-label={`Peringkat ${rank + 1}`}>{medal[rank]}</span>
-              <span className={cn('mt-1.5 flex h-9 w-9 items-center justify-center rounded-xl text-[17px]', v.tile)} aria-hidden>{v.emoji}</span>
-              <p className="mt-1.5 line-clamp-2 text-[13px] font-semibold leading-tight text-slate-900">{t.note || t.category}</p>
-              <p className="text-[11px] text-slate-500">{when(t)} · {t.category}</p>
-              <p className={cn('mt-1.5 font-extrabold tabular-nums text-slate-900', rank === 0 ? 'text-[15px] md:text-[17px]' : 'text-[13px] md:text-[15px]')}>{formatIDR(idr(t))}</p>
+              <span className="text-[22px] leading-none" aria-label={`Peringkat ${rank + 1}`}>
+                {medal[rank]}
+              </span>
+              <span
+                className={cn('mt-1.5 flex h-9 w-9 items-center justify-center rounded-xl text-[17px]', v.tile)}
+                aria-hidden
+              >
+                {v.emoji}
+              </span>
+              <p className="mt-1.5 line-clamp-2 text-[13px] font-semibold leading-tight text-slate-900">
+                {t.note || t.category}
+              </p>
+              <p className="text-[11px] text-slate-500">
+                {when(t)} · {t.category}
+              </p>
+              <p
+                className={cn(
+                  'mt-1.5 font-extrabold tabular-nums text-slate-900',
+                  rank === 0 ? 'text-[15px] md:text-[17px]' : 'text-[13px] md:text-[15px]',
+                )}
+              >
+                {formatIDR(idr(t))}
+              </p>
             </div>
           );
         })}
@@ -216,14 +307,30 @@ export function TopExpenses({ spend }: { spend: Transaction[] }) {
           {top.slice(3).map((t, i) => {
             const v = categoryVisual(t.category, 'pengeluaran');
             return (
-              <li key={t.id} className="relative overflow-hidden rounded-[18px] bg-white px-4 py-2.5 ring-1 ring-slate-100">
-                <span aria-hidden className="absolute inset-y-0 left-0 bg-indigo-50" style={{ width: `${(idr(t) / max) * 100}%` }} />
+              <li
+                key={t.id}
+                className="relative overflow-hidden rounded-[18px] bg-white px-4 py-2.5 ring-1 ring-slate-100"
+              >
+                <span
+                  aria-hidden
+                  className="absolute inset-y-0 left-0 bg-indigo-50"
+                  style={{ width: `${(idr(t) / max) * 100}%` }}
+                />
                 <div className="relative flex items-center gap-3">
                   <span className="w-5 text-center text-[12px] font-bold text-slate-400">{i + 4}</span>
-                  <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[15px]', v.tile)} aria-hidden>{v.emoji}</span>
+                  <span
+                    className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[15px]', v.tile)}
+                    aria-hidden
+                  >
+                    {v.emoji}
+                  </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[14px] font-semibold text-slate-900">{t.note || t.category}</span>
-                    <span className="block text-[12px] text-slate-500">{when(t)} · {t.category}</span>
+                    <span className="block truncate text-[14px] font-semibold text-slate-900">
+                      {t.note || t.category}
+                    </span>
+                    <span className="block text-[12px] text-slate-500">
+                      {when(t)} · {t.category}
+                    </span>
                   </span>
                   <span className="text-[13px] font-bold tabular-nums text-slate-900">{formatIDR(idr(t))}</span>
                 </div>
@@ -236,14 +343,23 @@ export function TopExpenses({ spend }: { spend: Transaction[] }) {
   );
 }
 
-// ===== Tahunan: 12 kartu bulan + rekor =====
 // Tiap bulan: total keluar, batang dibanding rata-rata, dan cincin "% ditabung"
 // ((masuk − keluar) / masuk). 👑 bulan terhemat, 🔥 bulan terboros. Ketuk →
 // Laporan bulanan bulan itu. `all` = pengeluaran & pemasukan (tanpa
 // transfer/investasi) dari halaman.
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
 
-export function YearMonths({ all, year, now, onPick }: { all: Transaction[]; year: number; now: Date | null; onPick: (month: number) => void }) {
+export function YearMonths({
+  all,
+  year,
+  now,
+  onPick,
+}: {
+  all: Transaction[];
+  year: number;
+  now: Date | null;
+  onPick: (month: number) => void;
+}) {
   const months = useMemo(() => {
     const out = Array.from({ length: 12 }, () => ({ spend: 0, income: 0, cats: new Map<string, number>() }));
     for (const t of all) {
@@ -292,10 +408,10 @@ export function YearMonths({ all, year, now, onPick }: { all: Transaction[]; yea
     <section>
       <h2 className="text-[17px] font-bold tracking-tight text-slate-900">Bulan demi bulan</h2>
       <p className="text-[12px] text-slate-500">
-        Cincin = bagian pemasukan yang tersisa (ditabung). Ketuk bulan untuk laporannya.{firstIdx > 0 ? ` Catatan mulai ${MONTHS_SHORT[firstIdx]} ${year}.` : ''}
+        Cincin = bagian pemasukan yang tersisa (ditabung). Ketuk bulan untuk laporannya.
+        {firstIdx > 0 ? ` Catatan mulai ${MONTHS_SHORT[firstIdx]} ${year}.` : ''}
       </p>
 
-      {/* Rekor tahun ini */}
       <div className="no-scrollbar -mx-4 mt-2 flex gap-1.5 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0">
         <span className="shrink-0 rounded-2xl bg-white px-3 py-1.5 ring-1 ring-slate-200">
           <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Rata-rata</span>
@@ -303,31 +419,55 @@ export function YearMonths({ all, year, now, onPick }: { all: Transaction[]; yea
         </span>
         {savedPct !== null && (
           <span className={cn('shrink-0 rounded-2xl px-3 py-1.5', savedPct >= 0 ? 'bg-emerald-50' : 'bg-rose-50')}>
-            <span className={cn('block text-[11px] font-semibold uppercase tracking-wide', savedPct >= 0 ? 'text-emerald-600' : 'text-rose-600')}>Ditabung</span>
-            <span className={cn('text-[14px] font-bold', savedPct >= 0 ? 'text-emerald-700' : 'text-rose-700')}>{savedPct}% pemasukan</span>
+            <span
+              className={cn(
+                'block text-[11px] font-semibold uppercase tracking-wide',
+                savedPct >= 0 ? 'text-emerald-600' : 'text-rose-600',
+              )}
+            >
+              Ditabung
+            </span>
+            <span className={cn('text-[14px] font-bold', savedPct >= 0 ? 'text-emerald-700' : 'text-rose-700')}>
+              {savedPct}% pemasukan
+            </span>
           </span>
         )}
         {best && (
-          <button type="button" onClick={() => onPick(best.i)} className="shrink-0 rounded-2xl bg-amber-50 px-3 py-1.5 text-left hover:bg-amber-100">
+          <button
+            type="button"
+            onClick={() => onPick(best.i)}
+            className="shrink-0 rounded-2xl bg-amber-50 px-3 py-1.5 text-left hover:bg-amber-100"
+          >
             <span className="block text-[10px] font-semibold uppercase tracking-wide text-amber-600">👑 Terhemat</span>
-            <span className="text-[13px] font-bold text-amber-800">{MONTHS_SHORT[best.i]} · {rp(best.spend)}</span>
+            <span className="text-[13px] font-bold text-amber-800">
+              {MONTHS_SHORT[best.i]} · {rp(best.spend)}
+            </span>
           </button>
         )}
         {worst && (
-          <button type="button" onClick={() => onPick(worst.i)} className="shrink-0 rounded-2xl bg-rose-50 px-3 py-1.5 text-left hover:bg-rose-100">
+          <button
+            type="button"
+            onClick={() => onPick(worst.i)}
+            className="shrink-0 rounded-2xl bg-rose-50 px-3 py-1.5 text-left hover:bg-rose-100"
+          >
             <span className="block text-[10px] font-semibold uppercase tracking-wide text-rose-600">🔥 Terboros</span>
-            <span className="text-[13px] font-bold text-rose-800">{MONTHS_SHORT[worst.i]} · {rp(worst.spend)}</span>
+            <span className="text-[13px] font-bold text-rose-800">
+              {MONTHS_SHORT[worst.i]} · {rp(worst.spend)}
+            </span>
           </button>
         )}
         {riser && (
           <span className="shrink-0 rounded-2xl bg-indigo-50 px-3 py-1.5">
-            <span className="block text-[10px] font-semibold uppercase tracking-wide text-indigo-500">📈 Paling naik</span>
-            <span className="text-[13px] font-bold text-indigo-800">{riser.name} +{rp(riser.diff)} di {MONTHS_SHORT[riser.month]}</span>
+            <span className="block text-[10px] font-semibold uppercase tracking-wide text-indigo-500">
+              📈 Paling naik
+            </span>
+            <span className="text-[13px] font-bold text-indigo-800">
+              {riser.name} +{rp(riser.diff)} di {MONTHS_SHORT[riser.month]}
+            </span>
           </span>
         )}
       </div>
 
-      {/* 12 kartu bulan */}
       <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
         {months.map((m, i) => {
           if (i < firstIdx) return null;
@@ -346,36 +486,73 @@ export function YearMonths({ all, year, now, onPick }: { all: Transaction[]; yea
               onClick={() => onPick(i)}
               className={cn(
                 'group relative overflow-hidden rounded-[18px] p-3 text-left ring-1 transition-all',
-                future ? 'cursor-default border border-dashed border-slate-200 bg-transparent opacity-50 ring-0' : 'bg-white ring-slate-100 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-18px_rgba(49,46,129,0.45)]',
+                future
+                  ? 'cursor-default border border-dashed border-slate-200 bg-transparent opacity-50 ring-0'
+                  : 'bg-white ring-slate-100 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-18px_rgba(49,46,129,0.45)]',
                 crown && 'bg-gradient-to-br from-amber-50 to-white ring-amber-200',
                 fire && 'bg-gradient-to-br from-rose-50 to-white ring-rose-200',
-                isCur && 'ring-2 ring-indigo-500'
+                isCur && 'ring-2 ring-indigo-500',
               )}
             >
               <div className="flex items-start justify-between gap-1">
-                <span className={cn('flex items-center gap-1 text-[12px] font-bold', isCur ? 'text-indigo-600' : 'text-slate-500')}>
+                <span
+                  className={cn(
+                    'flex items-center gap-1 text-[12px] font-bold',
+                    isCur ? 'text-indigo-600' : 'text-slate-500',
+                  )}
+                >
                   {MONTHS_SHORT[i]}
-                  {(crown || fire) && <span className="text-[12px]" aria-label={crown ? 'Terhemat' : 'Terboros'}>{crown ? '👑' : '🔥'}</span>}
+                  {(crown || fire) && (
+                    <span className="text-[12px]" aria-label={crown ? 'Terhemat' : 'Terboros'}>
+                      {crown ? '👑' : '🔥'}
+                    </span>
+                  )}
                 </span>
                 {!future && !empty && (
-                  <span className="relative -mr-1 -mt-1 h-8 w-8 shrink-0" title={saved === null ? 'Tidak ada pemasukan' : `${Math.round(saved * 100)}% ditabung`}>
+                  <span
+                    className="relative -mr-1 -mt-1 h-8 w-8 shrink-0"
+                    title={saved === null ? 'Tidak ada pemasukan' : `${Math.round(saved * 100)}% ditabung`}
+                  >
                     <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90">
                       <circle cx="18" cy="18" r={R} fill="none" stroke="#f1f5f9" strokeWidth="4" />
                       {saved !== null && (
-                        <circle cx="18" cy="18" r={R} fill="none" stroke={saved >= 0.2 ? '#10b981' : saved >= 0 ? '#f59e0b' : '#f43f5e'} strokeWidth="4" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - (saved < 0 ? 1 : pct))} />
+                        <circle
+                          cx="18"
+                          cy="18"
+                          r={R}
+                          fill="none"
+                          stroke={saved >= 0.2 ? '#10b981' : saved >= 0 ? '#f59e0b' : '#f43f5e'}
+                          strokeWidth="4"
+                          strokeLinecap="round"
+                          strokeDasharray={C}
+                          strokeDashoffset={C * (1 - (saved < 0 ? 1 : pct))}
+                        />
                       )}
                     </svg>
-                    <span className={cn('absolute inset-0 flex items-center justify-center text-[9px] font-extrabold tabular-nums', saved === null ? 'text-slate-300' : saved < 0 ? 'text-rose-600' : 'text-slate-700')}>
+                    <span
+                      className={cn(
+                        'absolute inset-0 flex items-center justify-center text-[9px] font-extrabold tabular-nums',
+                        saved === null ? 'text-slate-300' : saved < 0 ? 'text-rose-600' : 'text-slate-700',
+                      )}
+                    >
                       {saved === null ? '—' : saved < 0 ? '−' : `${Math.round(saved * 100)}%`}
                     </span>
                   </span>
                 )}
               </div>
-              <p className={cn('mt-0.5 truncate text-[15px] font-extrabold tracking-tight tabular-nums', future || empty ? 'text-slate-300' : 'text-slate-900')}>
+              <p
+                className={cn(
+                  'mt-0.5 truncate text-[15px] font-extrabold tracking-tight tabular-nums',
+                  future || empty ? 'text-slate-300' : 'text-slate-900',
+                )}
+              >
                 {future ? '—' : empty ? 'Rp0' : rp(m.spend)}
               </p>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
-                <div className={cn('h-full rounded-full', m.spend > avg * 1.2 ? 'bg-rose-400' : 'bg-indigo-500')} style={{ width: `${(m.spend / max) * 100}%` }} />
+                <div
+                  className={cn('h-full rounded-full', m.spend > avg * 1.2 ? 'bg-rose-400' : 'bg-indigo-500')}
+                  style={{ width: `${(m.spend / max) * 100}%` }}
+                />
               </div>
               <p className="mt-1.5 truncate text-[11px] text-slate-400">
                 {future ? 'belum lewat' : m.income > 0 ? `masuk ${rp(m.income)}` : 'tanpa pemasukan'}

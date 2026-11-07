@@ -51,7 +51,11 @@ export function GuestCarryOver({ onDone, dark = false }: { onDone: () => void; d
       cloudflareApi<{ items: Record<string, unknown>[] }>('/api/member/accounts')
         .then((res) => {
           const rows = res.items
-            .map((r) => ({ id: String(r.id ?? ''), name: String(r.name ?? ''), currency: typeof r.currency === 'string' ? r.currency : 'IDR' }))
+            .map((r) => ({
+              id: String(r.id ?? ''),
+              name: String(r.name ?? ''),
+              currency: typeof r.currency === 'string' ? r.currency : 'IDR',
+            }))
             // Nominal di /mulai dibaca sebagai rupiah — hanya tawarkan rekening IDR.
             .filter((r) => r.id && (r.currency ?? 'IDR') === 'IDR');
           setAccounts(rows);
@@ -148,11 +152,13 @@ export function GuestCarryOver({ onDone, dark = false }: { onDone: () => void; d
                     onChange={(e) => setAccountId(e.target.value)}
                     className={cn(
                       'mt-1.5 block w-full rounded-xl border px-3 py-2.5 text-[15px] font-semibold outline-none',
-                      dark ? 'border-slate-700 bg-slate-800 text-white' : 'border-slate-200 bg-white text-slate-900'
+                      dark ? 'border-slate-700 bg-slate-800 text-white' : 'border-slate-200 bg-white text-slate-900',
                     )}
                   >
                     {accounts.map((a) => (
-                      <option key={a.id} value={a.id}>{a.name}</option>
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
                     ))}
                   </select>
                 </label>
@@ -167,7 +173,11 @@ export function GuestCarryOver({ onDone, dark = false }: { onDone: () => void; d
                     {noteState === 'saving' && <Loader2 size={14} className="animate-spin" />}
                     Simpan
                   </button>
-                  <button type="button" onClick={() => setNoteState('skipped')} className={cn('h-10 px-4 text-[14px] font-semibold', muted)}>
+                  <button
+                    type="button"
+                    onClick={() => setNoteState('skipped')}
+                    className={cn('h-10 px-4 text-[14px] font-semibold', muted)}
+                  >
                     Tidak usah
                   </button>
                 </div>
@@ -185,7 +195,9 @@ export function GuestCarryOver({ onDone, dark = false }: { onDone: () => void; d
             <div className="min-w-0 flex-1">
               <p className={cn('text-[15px] font-bold', strong)}>Pengingat jam {guest.reminder.time}</p>
               <p className={cn('mt-0.5 text-[14px]', muted)}>
-                {pushState === 'on' ? 'Notifikasi aktif di perangkat ini.' : 'Izinkan notifikasi supaya pengingatnya sampai ke perangkat ini.'}
+                {pushState === 'on'
+                  ? 'Notifikasi aktif di perangkat ini.'
+                  : 'Izinkan notifikasi supaya pengingatnya sampai ke perangkat ini.'}
               </p>
             </div>
             {pushState === 'on' && <Check size={20} className="shrink-0 text-emerald-500" />}
@@ -197,7 +209,10 @@ export function GuestCarryOver({ onDone, dark = false }: { onDone: () => void; d
                 type="button"
                 onClick={enablePush}
                 disabled={pushState === 'working'}
-                className={cn('flex h-10 items-center gap-2 rounded-full px-5 text-[14px] font-bold disabled:opacity-60', dark ? 'bg-white text-slate-900' : 'bg-slate-900 text-white')}
+                className={cn(
+                  'flex h-10 items-center gap-2 rounded-full px-5 text-[14px] font-bold disabled:opacity-60',
+                  dark ? 'bg-white text-slate-900' : 'bg-slate-900 text-white',
+                )}
               >
                 {pushState === 'working' && <Loader2 size={14} className="animate-spin" />}
                 Aktifkan notifikasi

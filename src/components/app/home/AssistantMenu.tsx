@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { useRouter } from "next/navigation";
-import { Bot, MessageCircle, ScanLine, Mic } from "lucide-react";
+import { useRouter } from 'next/navigation';
+import { Bot, MessageCircle, ScanLine, Mic } from 'lucide-react';
 
 const ITEMS = [
-  { icon: Bot, label: "Assistant", href: "/app/assistant/chat" },
-  { icon: MessageCircle, label: "Chat", href: "/app/assistant/chat" },
-  { icon: ScanLine, label: "AI Scan", href: "/app/assistant/scan" },
-  { icon: Mic, label: "Voice", href: "/app/assistant/voice" },
+  { icon: Bot, label: 'Assistant', href: '/app/assistant/chat' },
+  { icon: MessageCircle, label: 'Chat', href: '/app/assistant/chat' },
+  { icon: ScanLine, label: 'AI Scan', href: '/app/assistant/scan' },
+  { icon: Mic, label: 'Voice', href: '/app/assistant/voice' },
 ] as const;
 
 export function AssistantMenu() {

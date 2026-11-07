@@ -1,23 +1,23 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { ChevronLeft, Camera as CameraIcon, RotateCcw, Sparkles } from "lucide-react";
-import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
-import { cloudflareApi } from "@/lib/cloudflare-api";
-import { TransactionReviewForm, ParsedTransactionSuggestion } from "@/components/app/assistant/TransactionReviewForm";
-import { lightTap } from "@/lib/haptics";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { ChevronLeft, Camera as CameraIcon, RotateCcw, Sparkles } from 'lucide-react';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { cloudflareApi } from '@/lib/cloudflare-api';
+import { TransactionReviewForm, ParsedTransactionSuggestion } from '@/components/app/assistant/TransactionReviewForm';
+import { lightTap } from '@/lib/haptics';
 
-type ScanState = "idle" | "captured" | "processing" | "ready" | "error";
+type ScanState = 'idle' | 'captured' | 'processing' | 'ready' | 'error';
 
 export default function AssistantScanPage() {
   const router = useRouter();
-  const [state, setState] = useState<ScanState>("idle");
+  const [state, setState] = useState<ScanState>('idle');
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [photoBase64, setPhotoBase64] = useState<string | null>(null);
   const [suggestion, setSuggestion] = useState<ParsedTransactionSuggestion | null>(null);
-  const [errorMsg, setErrorMsg] = useState("");
+  const [errorMsg, setErrorMsg] = useState('');
 
   const capture = async () => {
     lightTap();
@@ -31,7 +31,7 @@ export default function AssistantScanPage() {
       if (!photo.base64String) return;
       setPhotoBase64(photo.base64String);
       setPhotoDataUrl(`data:image/jpeg;base64,${photo.base64String}`);
-      setState("captured");
+      setState('captured');
     } catch {
       // User membatalkan kamera — tetap di state idle, bukan error.
     }
@@ -39,50 +39,55 @@ export default function AssistantScanPage() {
 
   const process = async () => {
     if (!photoBase64) return;
-    setState("processing");
+    setState('processing');
     try {
-      const result = await cloudflareApi<{ ok: boolean; suggestion?: ParsedTransactionSuggestion; error?: string; attachmentId?: string | null }>(
-        "/api/member/ai/parse-transaction",
-        { method: "POST", json: { imageBase64: photoBase64 } }
-      );
+      const result = await cloudflareApi<{
+        ok: boolean;
+        suggestion?: ParsedTransactionSuggestion;
+        error?: string;
+        attachmentId?: string | null;
+      }>('/api/member/ai/parse-transaction', { method: 'POST', json: { imageBase64: photoBase64 } });
       if (result.ok && result.suggestion) {
         setSuggestion({ ...result.suggestion, attachment_id: result.attachmentId ?? null });
-        setState("ready");
+        setState('ready');
       } else {
-        setErrorMsg(result.error || "AI tidak bisa membaca struk ini.");
-        setState("error");
+        setErrorMsg(result.error || 'AI tidak bisa membaca struk ini.');
+        setState('error');
       }
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : "AI tidak bisa membaca struk ini.");
-      setState("error");
+      setErrorMsg(e instanceof Error ? e.message : 'AI tidak bisa membaca struk ini.');
+      setState('error');
     }
   };
 
   const retake = () => {
     setPhotoDataUrl(null);
     setPhotoBase64(null);
-    setState("idle");
+    setState('idle');
   };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
       <div className="flex items-center gap-2 px-4 py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
-        <button type="button" onClick={() => router.back()} className="p-1.5 -ml-1.5 text-slate-500 dark:text-slate-400">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="p-1.5 -ml-1.5 text-slate-500 dark:text-slate-400"
+        >
           <ChevronLeft size={22} />
         </button>
         <h1 className="text-sm font-black text-slate-900 dark:text-white">AI Scan</h1>
       </div>
 
       <div className="flex-1 flex flex-col overflow-y-auto px-5 py-6 pb-[calc(env(safe-area-inset-bottom)+24px)]">
-        {state === "idle" && (
+        {state === 'idle' && (
           <div className="flex-1 flex flex-col items-center justify-center text-center">
             <div className="relative w-48 h-48 flex items-center justify-center">
-              {/* Bingkai sudut dekoratif — kesan "arahkan ke sini" */}
               {[
-                "top-0 left-0 border-t-2 border-l-2 rounded-tl-2xl",
-                "top-0 right-0 border-t-2 border-r-2 rounded-tr-2xl",
-                "bottom-0 left-0 border-b-2 border-l-2 rounded-bl-2xl",
-                "bottom-0 right-0 border-b-2 border-r-2 rounded-br-2xl",
+                'top-0 left-0 border-t-2 border-l-2 rounded-tl-2xl',
+                'top-0 right-0 border-t-2 border-r-2 rounded-tr-2xl',
+                'bottom-0 left-0 border-b-2 border-l-2 rounded-bl-2xl',
+                'bottom-0 right-0 border-b-2 border-r-2 rounded-br-2xl',
               ].map((cls) => (
                 <span key={cls} className={`absolute w-8 h-8 border-indigo-200 ${cls}`} />
               ))}
@@ -105,12 +110,12 @@ export default function AssistantScanPage() {
           </div>
         )}
 
-        {(state === "captured" || state === "processing") && photoDataUrl && (
+        {(state === 'captured' || state === 'processing') && photoDataUrl && (
           <div className="flex-1 flex flex-col items-center justify-center">
             <div className="relative w-full max-w-sm rounded-3xl overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={photoDataUrl} alt="Struk" className="w-full block" />
-              {state === "processing" && (
+              {state === 'processing' && (
                 <>
                   <div className="absolute inset-0 bg-indigo-950/10" />
                   <div className="absolute left-0 right-0 h-0.5 bg-indigo-400 shadow-[0_0_12px_2px_rgba(99,102,241,0.8)] animate-scan-sweep" />
@@ -121,17 +126,17 @@ export default function AssistantScanPage() {
               <motion.button
                 type="button"
                 onClick={process}
-                disabled={state === "processing"}
+                disabled={state === 'processing'}
                 whileTap={{ scale: 0.97 }}
                 className="w-full py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg shadow-indigo-200 disabled:opacity-60 flex items-center justify-center gap-2"
               >
                 <Sparkles size={16} />
-                {state === "processing" ? "Memproses..." : "Proses dengan AI"}
+                {state === 'processing' ? 'Memproses...' : 'Proses dengan AI'}
               </motion.button>
               <button
                 type="button"
                 onClick={retake}
-                disabled={state === "processing"}
+                disabled={state === 'processing'}
                 className="w-full py-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
               >
                 <RotateCcw size={14} /> Ambil Ulang
@@ -140,11 +145,11 @@ export default function AssistantScanPage() {
           </div>
         )}
 
-        {state === "ready" && suggestion && (
-          <TransactionReviewForm suggestion={suggestion} onSaved={() => router.push("/app")} />
+        {state === 'ready' && suggestion && (
+          <TransactionReviewForm suggestion={suggestion} onSaved={() => router.push('/app')} />
         )}
 
-        {state === "error" && (
+        {state === 'error' && (
           <div className="space-y-4">
             <div className="rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 px-4 py-3 text-xs font-bold text-rose-600 dark:text-rose-400">
               {errorMsg}
@@ -160,7 +165,7 @@ export default function AssistantScanPage() {
               type="button"
               onClick={() => {
                 setSuggestion(null);
-                setState("ready");
+                setState('ready');
               }}
               className="w-full py-3.5 rounded-2xl bg-slate-900 text-white font-bold text-sm"
             >

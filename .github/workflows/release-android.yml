@@ -1,0 +1,138 @@
+# Rilis APK Android ke GitHub Releases (halaman Releases repo, seperti developer lain).
+# Jalankan manual: Actions → "Rilis APK Android" → Run workflow. Versi otomatis dari
+# package.json (lihat CHANGELOG.md); APK ditempel ke Release vX.Y.Z yang dibuat Deploy main.
+#
+# APK ditandatangani SATU kunci tetap (secret repo), jadi update tinggal ditimpa
+# tanpa hapus aplikasi. Secret yang dibutuhkan (Settings → Secrets → Actions):
+#   ANDROID_KEYSTORE_BASE64   isi file .jks di-base64 (base64 -w0 leosiqra.jks)
+#   ANDROID_KEYSTORE_PASSWORD sandi keystore
+#   ANDROID_KEY_ALIAS         alias kunci (mis. leosiqra)
+#   ANDROID_KEY_PASSWORD      sandi kunci (sama dengan sandi keystore kalau dibuat dengan keytool -storepass saja)
+# Kunci ini BUKAN kunci upload Play Store lama — Play Store menyusul terpisah.
+name: Rilis APK Android
+
+on:
+  workflow_dispatch:
+    inputs:
+      versi:
+        description: "Kosongkan = versi dari package.json (disarankan). Isi 1.2.3 hanya kalau sengaja beda."
+        required: false
+        default: ""
+      catatan:
+        description: "Catatan rilis singkat (opsional; daftar commit ditambahkan otomatis)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-android
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Validasi versi & secret
+        env:
+          # Hanya "ada/kosong" per secret — nilainya tidak pernah dicetak.
+          S1: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+          S2: ${{ secrets.ANDROID_KEYSTORE_PASSWORD != '' }}
+          S3: ${{ secrets.ANDROID_KEY_ALIAS != '' }}
+          S4: ${{ secrets.ANDROID_KEY_PASSWORD != '' }}
+        run: |
+          missing=""
+          [ "$S1" = "true" ] || missing="$missing ANDROID_KEYSTORE_BASE64"
+          [ "$S2" = "true" ] || missing="$missing ANDROID_KEYSTORE_PASSWORD"
+          [ "$S3" = "true" ] || missing="$missing ANDROID_KEY_ALIAS"
+          [ "$S4" = "true" ] || missing="$missing ANDROID_KEY_PASSWORD"
+          [ -z "$missing" ] || { echo "::error::Secret kosong / belum ada:$missing"; exit 1; }
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tentukan versi
+        env:
+          INPUT_VERSI: ${{ inputs.versi }}
+        run: |
+          VERSI="${INPUT_VERSI:-$(node -p "require('./package.json').version")}"
+          [[ "$VERSI" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Versi harus format 1.2.3 (sekarang: $VERSI)"; exit 1; }
+          echo "VERSI=$VERSI" >> "$GITHUB_ENV"
+          echo "Versi APK: $VERSI"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - run: npm ci
+
+      - name: Capacitor sync
+        run: |
+          mkdir -p out
+          [ -f out/index.html ] || echo '<!doctype html><title>Leosiqra</title>' > out/index.html
+          npx cap sync android
+          test -f android/app/google-services.json || { echo "::error::android/app/google-services.json tidak ada — push tidak akan jalan"; exit 1; }
+
+      - name: Siapkan kunci tanda tangan
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          KS="$RUNNER_TEMP/leosiqra.jks"
+          printf '%s' "$KS_B64" | base64 -d > "$KS"
+          {
+            echo "storeFile=$KS"
+            echo "storePassword=$KS_PASS"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASS"
+          } > "$RUNNER_TEMP/keystore.properties"
+          echo "LEOSIQRA_KEYSTORE_PROPERTIES=$RUNNER_TEMP/keystore.properties" >> "$GITHUB_ENV"
+
+      - name: Build APK rilis
+        working-directory: android
+        env:
+          LEOSIQRA_VERSION_NAME: ${{ env.VERSI }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          # Naik setiap rilis (APK debug lama = 1) → Android mau menimpa versi sebelumnya.
+          export LEOSIQRA_VERSION_CODE=$((100 + RUN_NUMBER))
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease
+
+      - name: Cek tanda tangan
+        run: |
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          test -f "$APK" || { echo "::error::APK rilis tidak bertanda tangan / tidak ada"; ls -la android/app/build/outputs/apk/release || true; exit 1; }
+          "$ANDROID_HOME"/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apksigner verify --print-certs "$APK" | head -3
+
+      - name: Buat rilis
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CATATAN: ${{ inputs.catatan }}
+        run: |
+          OUT="leosiqra-$VERSI.apk"
+          cp android/app/build/outputs/apk/release/app-release.apk "$OUT"
+          {
+            [ -n "$CATATAN" ] && { echo "$CATATAN"; echo; }
+            echo "**Cara pasang:** unduh \`$OUT\` di HP → buka → izinkan pasang dari sumber ini → Pasang."
+            echo "Update berikutnya tinggal ditimpa (kunci tanda tangan sama)."
+          } > notes.md
+          if gh release view "v$VERSI" >/dev/null 2>&1; then
+            # Release dibuat Deploy main (catatan dari CHANGELOG.md) → cukup tempel APK.
+            gh release upload "v$VERSI" "$OUT" --clobber
+          else
+            gh release create "v$VERSI" "$OUT" --target "$GITHUB_SHA" --title "Leosiqra $VERSI" --notes-file notes.md --generate-notes
+          fi
+          echo "### Rilis v$VERSI siap: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/v$VERSI" >> "$GITHUB_STEP_SUMMARY"
