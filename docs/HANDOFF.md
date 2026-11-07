@@ -18,6 +18,13 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-07 (branch claude/alur-versi-20261107) — Alur versi + rilis 3.1.0, BELUM merge. Tanpa SQL.**
+  - Satu versi di package.json → tampil "v3.1.0 · build N"; `npm run versi -- patch|minor|major`; CHANGELOG.md berisi
+    aturan X.Y.Z + peta versi 1.0→3.1.0 (disusun ulang dari git). Deploy main membuat tag/Release vX.Y.Z setelah live
+    (permissions contents: write) & Telegram menyebut versi + build. APK ikut versi package.json, ditempel ke Release.
+  - Urutan merge disarankan: branch ini dulu (3.1.0), lalu rapih-frontend + fix-validasi-kategori sebagai 3.1.1
+    (naikkan versi di branch rapih setelah ini masuk main; konflik kecil di SettingsPanel/profile/version.ts).
+
 - **2026-11-07 — Halaman pembayaran rapi + Admin › Koin lengkap: LIVE (run 42303011955, commit d5eae38). Tanpa SQL.**
   - /membership/contact ditulis ulang jadi "Upgrade & Top up": tab PRO / Top up koin, kartu paket, kartu checkout (total + salin,
     transfer/QRIS, unggah bukti, ref, catatan), riwayat pembayaranku. Baru di Worker: GET /api/member/payments (20 terakhir milik user).
