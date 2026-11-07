@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-08 (live: rilis 3.6.3, run 42400196318; migrasi 0039 menunggu Bos)
+Terakhir diperbarui: 2026-11-08 (3.6.4 menunggu gas; live: rilis 3.6.3, run 42400196318; migrasi 0039 menunggu Bos)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,16 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-08 — 3.6.4 SIAP (branch claude/form-transaksi-20261108), menunggu "gas". Tanpa SQL.**
+  - `src/components/AccountSelect.tsx` (baru, web): dropdown inline logo (logoUrl → matchIndonesianInstitutionLogo) +
+    saldo / sisa limit kartu kredit (computeCreditUsage). "Tanpa rekening" dihapus; rekening pertama non-kartu-kredit
+    terpilih otomatis; submit tanpa rekening ditolak ("Pilih rekening dulu"); 0 rekening → link ke /membership/rekening.
+  - `CategorySelect` size="sm": daftar inline dengan emoji categoryVisual, sub kategori dipilih di daftar (input sub
+    kategori terpisah dihapus dari form). BUG lama diperbaiki: efek baca auth.currentUser sekali saat mount →
+    kosong kalau /api/auth/me belum selesai; sekarang menunggu onAuthStateChanged (berlaku untuk semua pemakai).
+  - Dicek lokal: simpan pengeluaran 45rb ke BCA → saldo 4.250.000 → 4.205.000, kategori+sub tersimpan. Logo bank
+    tidak bisa dicek lokal (public/logos diunduh saat deploy).
 
 - **2026-11-08 — RILIS 3.6.3: LIVE (run 42400196318, commit e8f4c7f). Tanpa SQL.** Form transaksi
   diringkas (Bos: "kebesaran"): modal 440px putih, nominal 26px di kartu tipis, chip kecil, tombol h-11.

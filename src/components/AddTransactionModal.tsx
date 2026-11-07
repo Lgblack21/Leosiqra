@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, TrendingUp, TrendingDown, RefreshCw, Wallet, CalendarDays, ChevronDown, Landmark } from 'lucide-react';
+import Link from 'next/link';
+import { X, TrendingUp, TrendingDown, RefreshCw, CalendarDays, ChevronDown } from 'lucide-react';
+import { AccountSelect } from './AccountSelect';
 import { Button } from './Button';
 import { Input } from './Input';
 import { NumberInput } from '@/components/ui/NumberInput';
@@ -48,7 +50,19 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
   useEffect(() => {
     if (isOpen && userId) {
       setError('');
-      accountService.getUserAccounts(userId).then(setAccounts).catch(console.error);
+      accountService
+        .getUserAccounts(userId)
+        .then((list) => {
+          setAccounts(list);
+          // Rekening wajib: pilih otomatis rekening pertama (bukan kartu kredit) kalau belum ada
+          // yang terpilih. Mata uang ikut rekening — lihat catatan di pickAccount.
+          setFormData((prev) => {
+            if (prev.accountId && list.some((a) => a.id === prev.accountId)) return prev;
+            const first = list.find((a) => !a.creditLimit) ?? list[0];
+            return first ? { ...prev, accountId: first.id ?? '', currency: first.currency || prev.currency } : prev;
+          });
+        })
+        .catch(console.error);
       exchangeRateService.getLatestRates().then(setRates).catch(console.error);
     }
   }, [isOpen, userId]);
@@ -80,6 +94,10 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
     }
     if (!amountNum || amountNum <= 0) {
       setError('Nominal harus lebih dari 0.');
+      return;
+    }
+    if (!formData.accountId) {
+      setError('Pilih rekening dulu.');
       return;
     }
 
@@ -278,27 +296,16 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <CategorySelect
-                label="Kategori"
-                size="sm"
-                showBadge={false}
-                value={formData.category}
-                type={isIncome ? 'income' : 'expense'}
-                onChange={(val) => setFormData((prev) => ({ ...prev, category: val }))}
-                onSubCategoryChange={(sub) => setFormData((prev) => ({ ...prev, subCategory: sub }))}
-              />
-              <div>
-                <span className={labelCls}>Sub kategori</span>
-                <input
-                  type="text"
-                  placeholder="Opsional"
-                  value={formData.subCategory}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, subCategory: e.target.value }))}
-                  className={fieldCls}
-                />
-              </div>
-            </div>
+            <CategorySelect
+              label="Kategori"
+              size="sm"
+              showBadge={false}
+              value={formData.category}
+              subValue={formData.subCategory}
+              type={isIncome ? 'income' : 'expense'}
+              onChange={(val) => setFormData((prev) => ({ ...prev, category: val }))}
+              onSubCategoryChange={(sub) => setFormData((prev) => ({ ...prev, subCategory: sub }))}
+            />
 
             <div>
               <span className={labelCls}>Tanggal</span>
@@ -337,32 +344,21 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
 
             <div>
               <span className={labelCls}>Rekening</span>
-              <div className="-mx-5 flex gap-1.5 overflow-x-auto px-5 pb-0.5">
-                {[{ id: '', name: 'Tanpa rekening', currency: '' }, ...accounts].map((acc) => {
-                  const active = formData.accountId === acc.id;
-                  return (
-                    <button
-                      key={acc.id || 'none'}
-                      type="button"
-                      onClick={() => pickAccount(acc.id ?? '')}
-                      className={cn(
-                        'flex shrink-0 items-center gap-1.5 rounded-full py-1.5 pl-2.5 pr-3 text-[12.5px] font-semibold transition-colors',
-                        active
-                          ? 'bg-slate-900 text-white'
-                          : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50',
-                      )}
-                    >
-                      {acc.id ? <Landmark size={13} /> : <Wallet size={13} />}
-                      <span className="max-w-[130px] truncate">{acc.name}</span>
-                      {acc.currency && acc.currency !== 'IDR' ? (
-                        <span className={cn('text-[11px]', active ? 'text-white/60' : 'text-slate-400')}>
-                          {acc.currency}
-                        </span>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
+              {accounts.length ? (
+                <AccountSelect accounts={accounts} value={formData.accountId} onChange={pickAccount} />
+              ) : (
+                <p className="rounded-xl border border-dashed border-slate-200 px-3.5 py-3 text-[12.5px] text-slate-500">
+                  Belum ada rekening.{' '}
+                  <Link
+                    href="/membership/rekening"
+                    onClick={onClose}
+                    className="font-semibold text-slate-900 underline"
+                  >
+                    Tambah rekening
+                  </Link>{' '}
+                  dulu supaya saldonya ikut tercatat.
+                </p>
+              )}
             </div>
 
             {tagsPref.enabled && (

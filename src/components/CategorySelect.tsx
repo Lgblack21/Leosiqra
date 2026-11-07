@@ -5,7 +5,8 @@ import { ChevronDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, query, where, onSnapshot } from '@/lib/cf-firestore';
 import { db, auth } from '@/lib/cf-client';
-import { useCategoryKinds } from '@/lib/categoryEmoji';
+import { onAuthStateChanged } from '@/lib/cf-auth';
+import { categoryVisual, useCategoryKinds, useCategoryStyles } from '@/lib/categoryEmoji';
 
 interface CategoryData {
   id: string;
@@ -41,37 +42,49 @@ export const CategorySelect = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    const q = query(collection(db, 'categories'), where('userId', '==', user.uid));
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        setCategories(
-          snap.docs.map(
-            (doc) =>
-              ({
-                id: doc.id,
-                ...doc.data(),
-              }) as CategoryData,
-          ),
-        );
-      },
-      (err) => {
-        if (err.code !== 'permission-denied') {
-          console.warn('[CategorySelect] Error listening to categories:', err);
-        }
-      },
-    );
-
-    return () => unsub();
+    // auth.currentUser baru terisi setelah /api/auth/me selesai — saat halaman baru dibuka
+    // komponen ini bisa mount lebih dulu dan daftarnya kosong selamanya. Tunggu user dulu.
+    let unsub: (() => void) | undefined;
+    let alive = true;
+    const start = (uid: string) => {
+      if (!alive || unsub) return;
+      const q = query(collection(db, 'categories'), where('userId', '==', uid));
+      unsub = onSnapshot(
+        q,
+        (snap) => {
+          setCategories(
+            snap.docs.map(
+              (doc) =>
+                ({
+                  id: doc.id,
+                  ...doc.data(),
+                }) as CategoryData,
+            ),
+          );
+        },
+        (err) => {
+          if (err.code !== 'permission-denied') {
+            console.warn('[CategorySelect] Error listening to categories:', err);
+          }
+        },
+      );
+    };
+    if (auth.currentUser) start(auth.currentUser.uid);
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      if (user) start(user.uid);
+    });
+    return () => {
+      alive = false;
+      unsubAuth();
+      unsub?.();
+    };
   }, []);
 
   // Satu entri per nama kategori. Kategori yang jenisnya tersimpan berlawanan
   // (mis. Gaji saat mencatat pengeluaran) disembunyikan; yang belum punya
   // jenis atau sedang terpilih tetap tampil.
   const kinds = useCategoryKinds();
+  useCategoryStyles(); // gambar ulang saat ikon kategori pilihan user dimuat
   const wantKind = type === 'income' ? 'pemasukan' : 'pengeluaran';
   const uniqueMainCategories = Array.from(new Map(categories.map((c) => [c.category, c])).values()).filter(
     (c) => c.category === value || !kinds[c.category] || kinds[c.category] === wantKind,
@@ -154,19 +167,109 @@ export const CategorySelect = ({
             isOpen && 'border-indigo-600 bg-white ring-4 ring-indigo-500/5 shadow-lg',
           )}
         >
-          <span className={cn('text-sm font-bold', !selectedCategory && 'text-slate-400')}>
-            {selectedCategory ? selectedCategory.category : 'Pilih Kategori'}
+          <span
+            className={cn(
+              'min-w-0 truncate font-bold',
+              size === 'sm' ? 'text-[13.5px] font-semibold' : 'text-sm',
+              !selectedCategory && 'text-slate-400',
+            )}
+          >
+            {size === 'sm' && selectedCategory ? (
+              <span className="mr-1.5">{categoryVisual(selectedCategory.category, wantKind).emoji}</span>
+            ) : null}
+            {selectedCategory ? selectedCategory.category : size === 'sm' ? 'Pilih' : 'Pilih Kategori'}
             {selectedCategory && subValue && subValue !== selectedCategory.category && (
               <span className="font-medium text-slate-400"> · {subValue}</span>
             )}
           </span>
           <ChevronDown
-            size={18}
-            className={cn('text-slate-400 transition-transform duration-300', isOpen && 'rotate-180 text-indigo-600')}
+            size={size === 'sm' ? 16 : 18}
+            className={cn(
+              'shrink-0 text-slate-400 transition-transform duration-300',
+              isOpen && 'rotate-180 text-indigo-600',
+            )}
           />
         </button>
 
-        {isOpen && (
+        {isOpen && size === 'sm' && (
+          <div className="mt-1.5 rounded-2xl border border-slate-100 bg-white p-1.5 shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
+            <div className="custom-scrollbar max-h-64 overflow-y-auto">
+              {expandedCategory ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedCategory(null)}
+                    className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-[12.5px] font-bold text-slate-700 hover:bg-slate-50"
+                  >
+                    <ChevronDown size={14} className="rotate-90 text-slate-400" />
+                    <span className="text-base leading-none">{categoryVisual(expandedCategory, wantKind).emoji}</span>
+                    {expandedCategory}
+                  </button>
+                  <div className="my-1 h-px bg-slate-100" />
+                  {getSubCategoryOptions(expandedCategory).map((sub) => (
+                    <button
+                      key={sub}
+                      type="button"
+                      onClick={() => handleSelectSubCategory(expandedCategory, sub)}
+                      className={cn(
+                        'flex w-full items-center justify-between rounded-xl py-2 pl-9 pr-2.5 text-left text-[13px] transition-colors',
+                        value === expandedCategory && subValue === sub
+                          ? 'bg-slate-900 font-semibold text-white'
+                          : 'font-medium text-slate-600 hover:bg-slate-50',
+                      )}
+                    >
+                      {sub}
+                      {value === expandedCategory && subValue === sub && <Check size={14} />}
+                    </button>
+                  ))}
+                </>
+              ) : uniqueMainCategories.length === 0 ? (
+                <p className="px-3 py-4 text-center text-[12.5px] text-slate-400">Belum ada kategori.</p>
+              ) : (
+                uniqueMainCategories.map((cat) => {
+                  const subOptions = getSubCategoryOptions(cat.category);
+                  const vis = categoryVisual(cat.category, wantKind);
+                  const active = value === cat.category;
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => handleSelectCategory(cat)}
+                      className={cn(
+                        'flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors',
+                        active ? 'bg-slate-100' : 'hover:bg-slate-50',
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[16px]',
+                          vis.tile,
+                        )}
+                      >
+                        {vis.emoji}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[13px] font-semibold text-slate-800">{cat.category}</span>
+                        {subOptions.length > 0 && (
+                          <span className="block truncate text-[11px] text-slate-400">
+                            {subOptions.length === 1 ? subOptions[0] : `${subOptions.length} sub kategori`}
+                          </span>
+                        )}
+                      </span>
+                      {subOptions.length > 1 ? (
+                        <ChevronDown size={15} className="-rotate-90 shrink-0 text-slate-300" />
+                      ) : active ? (
+                        <Check size={15} className="shrink-0 text-slate-900" />
+                      ) : null}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
+
+        {isOpen && size !== 'sm' && (
           <div className="absolute top-full left-0 w-full mt-3 p-2 bg-white border border-slate-100 rounded-2xl shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-200">
             <div className="max-h-72 overflow-y-auto custom-scrollbar">
               {expandedCategory ? (
