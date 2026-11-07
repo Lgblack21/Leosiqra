@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live: pembayaran rapi + admin Koin, run 42303011955)
+Terakhir diperbarui: 2026-11-07 (live: rilis 3.1.1, run 42358417617)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,14 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-07 — RILIS 3.1.1 siap di branch `claude/rapih-frontend-20261106` (sudah berisi alur-versi + fix-validasi-kategori). BELUM merge. Tanpa SQL.**
+- **2026-11-07 — RILIS 3.1.1: LIVE (run 42358417617, commit 1e0b916, Release v3.1.1). Berisi rapih-frontend Tahap 1–3 + alur-versi + fix-validasi-kategori. Tanpa SQL.**
+  - Push ke main dilakukan akun LGblack (kredit habis sebelum dispatch); deploy + sinkron artikel diselesaikan akun lain.
+  - 3 draf artikel SUDAH disinkronkan dengan main (merge main, bukan force-push; konflik panduan/page.tsx diselesaikan, prettier,
+    tsc 0): gaji-5-juta ff7346f, catatan-tabungan dcf10eb, laporan-keuangan-pribadi 7baca83. Siap dipublish lewat ✅ Telegram.
+  - 13 branch basi di bawah BELUM dihapus (izin hapus branch ditolak di session). Sudah dicek: semua isinya ada di main
+    (pengingat-pintar & skor-kesehatan = commit d95c777 di main, beda format saja). Hapus manual di GitHub kalau mau.
+  - Belum dicek langsung: leosiqra.com setelah deploy (sandbox tidak bisa akses domain produksi).
+  - (Catatan lama di bawah dibiarkan untuk riwayat.)
   - Cukup merge branch ini (alur-versi & fix-validasi ikut). Setelah live, Deploy main membuat Release v3.1.1.
   - **WAJIB tepat setelah merge:** 3 draf artikel (`claude/artikel-cara-mengatur-gaji-5-juta`, `-catatan-tabungan`,
     `-laporan-keuangan-pribadi`, status `draf_menunggu_bos`) konflik 1 baris di `src/app/panduan/page.tsx` dengan main
