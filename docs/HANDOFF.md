@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-08 (3.6.3 menunggu gas; live: rilis 3.6.2, run 42399274527; migrasi 0039 menunggu Bos)
+Terakhir diperbarui: 2026-11-08 (live: rilis 3.6.3, run 42400196318; migrasi 0039 menunggu Bos)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-08 — 3.6.3 SIAP (branch claude/form-transaksi-20261108), menunggu "gas". Tanpa SQL.** Form transaksi
+- **2026-11-08 — RILIS 3.6.3: LIVE (run 42400196318, commit e8f4c7f). Tanpa SQL.** Form transaksi
   diringkas (Bos: "kebesaran"): modal 440px putih, nominal 26px di kartu tipis, chip kecil, tombol h-11.
   `CategorySelect` dapat prop `size="sm"` (default tetap 'md', 11 pemakai lain tidak berubah); badge INCOME dimatikan di form ini.
 
