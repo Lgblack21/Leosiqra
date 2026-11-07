@@ -58,6 +58,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.6.0 | 7 Nov 2026 | Sehatku › Cek |
 | 3.6.1 | 8 Nov 2026 | Nama Leosiqra beranimasi |
 | 3.6.2 | 8 Nov 2026 | Tombol & form catat transaksi baru |
+| 3.6.3 | 8 Nov 2026 | Form catat transaksi lebih ringkas |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -71,6 +72,11 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.6.3 — 2026-11-08 — Form catat transaksi lebih ringkas
+
+- Form **Catat transaksi** dibuat lebih ringkas dan rapi: ukurannya lebih kecil, tulisan & tombol tidak kebesaran,
+  dan semua isian muat satu layar tanpa perlu scroll — di komputer maupun HP.
 
 ## 3.6.2 — 2026-11-08 — Tombol & form catat transaksi baru
 

@@ -22,6 +22,8 @@ interface CategorySelectProps {
   showBadge?: boolean;
   /** Sub-kategori terpilih, ditampilkan di tombol (mis. hasil isi otomatis). */
   subValue?: string;
+  /** Versi ringkas (form catat transaksi). */
+  size?: 'md' | 'sm';
 }
 
 export const CategorySelect = ({
@@ -32,6 +34,7 @@ export const CategorySelect = ({
   onSubCategoryChange,
   showBadge = true,
   subValue,
+  size = 'md',
 }: CategorySelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [categories, setCategories] = useState<CategoryData[]>([]);
@@ -128,8 +131,16 @@ export const CategorySelect = ({
   };
 
   return (
-    <div className="flex-1 space-y-2" ref={containerRef}>
-      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{label}</label>
+    <div className={cn('flex-1', size === 'sm' ? 'space-y-1.5' : 'space-y-2')} ref={containerRef}>
+      <label
+        className={
+          size === 'sm'
+            ? 'block text-[12px] font-semibold text-slate-500'
+            : 'text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1'
+        }
+      >
+        {label}
+      </label>
       <div className="relative">
         <button
           type="button"
@@ -138,7 +149,8 @@ export const CategorySelect = ({
             setExpandedCategory(null);
           }}
           className={cn(
-            'w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-slate-900 flex items-center justify-between transition-all hover:border-slate-300',
+            'w-full bg-slate-50 border border-slate-200 text-slate-900 flex items-center justify-between transition-all hover:border-slate-300',
+            size === 'sm' ? 'rounded-xl bg-white px-3.5 py-2.5' : 'rounded-2xl px-5 py-4',
             isOpen && 'border-indigo-600 bg-white ring-4 ring-indigo-500/5 shadow-lg',
           )}
         >
