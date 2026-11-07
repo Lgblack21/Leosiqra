@@ -3542,6 +3542,11 @@ async function handleCreateTransaction(request: Request, env: Env) {
   if (typeof payload.category !== "string") {
     return json({ error: "Kategori wajib dipilih." }, { status: 400 });
   }
+  // transactions.account_id NOT NULL di D1 (dicek di produksi 2026-11-07): tanpa cek ini klien dapat 500 generik.
+  // "", "General", "Wallet" (NON_ACCOUNT_IDS) tetap diterima seperti sebelumnya.
+  if (typeof payload.account_id !== "string") {
+    return json({ error: "Rekening wajib dipilih." }, { status: 400 });
+  }
   const due = payload.type === "debt" ? sanitizeDebtDue(payload.due) : undefined;
   if (payload.type === "debt" && payload.due != null && !due) return json({ error: "Jatuh tempo tidak valid." }, { status: 400 });
   const tagList = sanitizeTxTags(payload.tags);

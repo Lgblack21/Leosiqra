@@ -52,6 +52,11 @@ mewakili satu era, bukan satu deploy.
 
 <!-- rilis-baru -->
 
+## 3.1.2 — 2026-11-07 — Transaksi tanpa rekening ditolak dengan pesan jelas
+
+- Mencatat transaksi tanpa memilih rekening kini ditolak dengan pesan jelas ("Rekening wajib dipilih."),
+  bukan "Terjadi kesalahan pada server.".
+
 ## 3.1.1 — 2026-11-07 — Perapian kode & perbaikan kecil
 
 - Nomor versi & build tampil di Pengaturan dan Profil app HP (`v3.1.1 · build N`).

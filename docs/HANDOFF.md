@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live: rilis 3.1.1, run 42358417617)
+Terakhir diperbarui: 2026-11-07 (live 3.1.1; 3.1.2 menunggu "gas")
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,12 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-07 — RILIS 3.1.2 siap di branch `claude/fix-validasi-rekening-20261107`, BELUM live (tunggu "gas"). Tanpa SQL.**
+  - POST /api/member/transactions tanpa `account_id` (atau null) → 400 "Rekening wajib dipilih." (dulu 500). Dicek di D1 produksi:
+    transactions.account_id NOT NULL = 1. "", "General", "Wallet" tetap diterima seperti sebelumnya.
+  - Dites lokal (wrangler dev): tanpa/null 400; "" & General 201; rekening orang lain 400 "Rekening tidak ditemukan.". tsc Worker 0.
+    Catatan: D1 lokal account_id masih nullable (drift), jadi di lokal kode lama malah 201 — di produksi pasti 500.
 
 - **2026-11-07 — RILIS 3.1.1: LIVE (run 42358417617, commit 1e0b916, Release v3.1.1). Berisi rapih-frontend Tahap 1–3 + alur-versi + fix-validasi-kategori. Tanpa SQL.**
   - Push ke main dilakukan akun LGblack (kredit habis sebelum dispatch); deploy + sinkron artikel diselesaikan akun lain.
