@@ -30,7 +30,12 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     asuransi + OJK — sesi lain tetap di Default). Terverifikasi: Allianz, Astra Life, Avrist, AXA Mandiri, Equity, FWD,
     Generali, Manulife, Prudential (+BPJS dari Perpres 64/2020). Belum (situs 403/JS/redirect): AIA (aia.co.id belum
     di-allow), BNI Life, BRI Life, Chubb, Great Eastern ID, Inhealth, MSIG, Panin, Sequis, Sinar Mas, Sun Life, Tokio
-    Marine, Zurich → hanya nama + situs. Tile inisial berwarna (bukan logo merek).
+    Marine, Zurich → hanya nama + situs.
+  - Logo: ikon resmi (favicon/apple-touch-icon) diunduh dari situs perusahaan → `public/insurers/*.png|svg` (12: bpjs,
+    allianz, astralife, avrist, axamandiri, equity, generali, greateastern, manulife, prudential, sinarmas, zurich);
+    sisanya tile inisial. Catatan "Logo milik masing-masing perusahaan" di bawah grid. Tampilan sengaja beda dari
+    Oyenza: kartu polis gaya kartu fisik (carousel), panel ringkasan 4 angka, grid logo, header popup berwarna.
+    Carousel baru dirender setelah data ada (kalau tidak, snap menahan kartu "Tambah" → scrollLeft ke ujung).
   - AI chat page 'asuransi' (Leo si Perawat, aksesori topi perawat).
   - Dites lokal: biaya 50rb + dobel; polis + validasi; bayar premi + dobel; jatuh tempo 31 Jan→28 Feb→31 Mar; klaim
     disetujui 1,5jt → cair → pemasukan, cair lagi tidak dobel; saldo 1jt→1,55jt sesuai; cron H-3 menandai polis;

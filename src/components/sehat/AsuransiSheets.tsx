@@ -70,6 +70,16 @@ export function InsurerTile({ insurer, name, size = 44 }: { insurer: Insurer | n
       .map((w) => w[0])
       .join('')
       .toUpperCase();
+  if (insurer?.logo)
+    return (
+      <span
+        className="flex shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70"
+        style={{ width: size, height: size }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- ikon kecil statis di /public, export statis */}
+        <img src={insurer.logo} alt="" className="object-contain" style={{ width: size * 0.74, height: size * 0.74 }} />
+      </span>
+    );
   return (
     <span
       className={cn(
@@ -889,13 +899,13 @@ export function InsurerSheet({
       onClose={onClose}
       footer={<PrimaryButton onClick={onMine}>+ Ini asuransiku</PrimaryButton>}
     >
-      <div className="flex items-center gap-3">
+      <div className={cn('-mx-5 -mt-1 flex items-center gap-3 px-5 py-4 text-white', insurer.color)}>
         <InsurerTile insurer={insurer} name={insurer.name} size={56} />
         <div className="flex flex-wrap gap-1.5">
           {insurer.tags.map((t) => (
             <span
               key={t}
-              className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[12px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+              className="rounded-full bg-white/20 px-2.5 py-0.5 text-[12px] font-bold text-white backdrop-blur"
             >
               {t}
             </span>

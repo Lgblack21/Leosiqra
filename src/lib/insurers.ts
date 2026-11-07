@@ -8,7 +8,8 @@ export type Insurer = {
   key: string;
   name: string;
   initials: string;
-  color: string; // warna tile inisial (bukan logo perusahaan)
+  color: string; // warna kartu/tile
+  logo?: string; // ikon resmi dari situs perusahaan (public/insurers), hanya untuk identifikasi
   tags: string[];
   website: string;
   phone?: string;
@@ -33,6 +34,7 @@ export const INSURERS: Insurer[] = [
   {
     key: 'bpjs',
     name: 'BPJS Kesehatan',
+    logo: '/insurers/bpjs.png',
     initials: 'JKN',
     color: 'bg-emerald-600',
     tags: ['Kesehatan', 'Sosial'],
@@ -65,6 +67,7 @@ export const INSURERS: Insurer[] = [
   {
     key: 'allianz',
     name: 'Allianz Indonesia',
+    logo: '/insurers/allianz.png',
     initials: 'AZ',
     color: 'bg-blue-700',
     tags: ['Jiwa', 'Kesehatan', 'Umum'],
@@ -79,6 +82,7 @@ export const INSURERS: Insurer[] = [
   {
     key: 'astralife',
     name: 'Astra Life',
+    logo: '/insurers/astralife.png',
     initials: 'AL',
     color: 'bg-sky-600',
     tags: ['Jiwa', 'Kesehatan'],
@@ -96,6 +100,7 @@ export const INSURERS: Insurer[] = [
   {
     key: 'avrist',
     name: 'Avrist Assurance',
+    logo: '/insurers/avrist.png',
     initials: 'AV',
     color: 'bg-violet-700',
     tags: ['Jiwa', 'Kesehatan'],
@@ -111,6 +116,7 @@ export const INSURERS: Insurer[] = [
   {
     key: 'axamandiri',
     name: 'AXA Mandiri',
+    logo: '/insurers/axamandiri.png',
     initials: 'AM',
     color: 'bg-indigo-800',
     tags: ['Jiwa', 'Kesehatan'],
@@ -128,6 +134,7 @@ export const INSURERS: Insurer[] = [
   {
     key: 'equity',
     name: 'Equity Life Indonesia',
+    logo: '/insurers/equity.png',
     initials: 'EQ',
     color: 'bg-green-700',
     tags: ['Jiwa', 'Kesehatan'],
@@ -156,6 +163,7 @@ export const INSURERS: Insurer[] = [
   {
     key: 'generali',
     name: 'Generali Indonesia',
+    logo: '/insurers/generali.png',
     initials: 'GI',
     color: 'bg-red-700',
     tags: ['Jiwa', 'Kesehatan'],
@@ -175,6 +183,7 @@ export const INSURERS: Insurer[] = [
   {
     key: 'manulife',
     name: 'Manulife Indonesia',
+    logo: '/insurers/manulife.svg',
     initials: 'MLI',
     color: 'bg-emerald-700',
     tags: ['Jiwa', 'Kesehatan'],
@@ -190,6 +199,7 @@ export const INSURERS: Insurer[] = [
   {
     key: 'prudential',
     name: 'Prudential Indonesia',
+    logo: '/insurers/prudential.png',
     initials: 'PRU',
     color: 'bg-rose-700',
     tags: ['Jiwa', 'Kesehatan'],
@@ -241,6 +251,7 @@ export const INSURERS: Insurer[] = [
   {
     key: 'greateastern',
     name: 'Great Eastern Life Indonesia',
+    logo: '/insurers/greateastern.svg',
     initials: 'GE',
     color: 'bg-red-800',
     tags: ['Jiwa', 'Kesehatan'],
@@ -286,6 +297,7 @@ export const INSURERS: Insurer[] = [
   {
     key: 'sinarmas',
     name: 'Asuransi Sinar Mas',
+    logo: '/insurers/sinarmas.png',
     initials: 'SM',
     color: 'bg-red-500',
     tags: ['Umum', 'Kesehatan'],
@@ -313,6 +325,7 @@ export const INSURERS: Insurer[] = [
   {
     key: 'zurich',
     name: 'Zurich Indonesia',
+    logo: '/insurers/zurich.png',
     initials: 'ZI',
     color: 'bg-blue-800',
     tags: ['Jiwa', 'Umum'],

@@ -73,11 +73,12 @@ menjorok 2 spasi; **tebal** dan `kode` boleh.
 - Tab **Asuransi** di Sehatku:
   - **Biaya kesehatan tahun ini** — total & grafik per bulan dari transaksi kategori Kesehatan, rincian obat/dokter/
     RS/lab/premi, dan tombol **Catat biaya kesehatan** langsung dari halaman ini.
-  - **Polisku** — simpan BPJS, asuransi swasta, atau dari kantor: premi, periode, jatuh tempo, uang pertanggungan,
+  - **Polisku** — kartu asuransi bergaya kartu fisik (warna & logo perusahaan) yang bisa digeser. Simpan BPJS, asuransi swasta, atau dari kantor: premi, periode, jatuh tempo, uang pertanggungan,
     nomor polis (hanya kamu yang lihat), plus catatan pribadi (agen, cara klaim, RS langganan). Pengingat H-3 & H-1
     sebelum premi jatuh tempo. **Bayar premi** mencatat pengeluaran dan memajukan jatuh tempo otomatis.
   - **Klaim** — lacak reimburse Diajukan → Disetujui → Cair; saat cair, uangnya langsung tercatat sebagai pemasukan.
-  - **Kenali asuransinya** — 23 perusahaan asuransi + BPJS: call center, WhatsApp, email, jam layanan, tautan cara klaim
+  - **Kenali asuransinya** — grid logo 23 perusahaan asuransi + BPJS (logo resmi dari situs masing-masing, inisial bila
+    belum tersedia): call center, WhatsApp, email, jam layanan, tautan cara klaim
     & RS rekanan yang dibaca dari situs resminya (dengan tanggal baca), iuran BPJS Kesehatan, tombol **Ini asuransiku**.
 - Leo si Perawat di tab Asuransi: materi singkat & tanya-jawab soal asuransi dan biaya berobat.
 
