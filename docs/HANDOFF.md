@@ -18,6 +18,21 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-07 — RILIS 3.1.1 siap di branch `claude/rapih-frontend-20261106` (sudah berisi alur-versi + fix-validasi-kategori). BELUM merge. Tanpa SQL.**
+  - Cukup merge branch ini (alur-versi & fix-validasi ikut). Setelah live, Deploy main membuat Release v3.1.1.
+  - **WAJIB tepat setelah merge:** 3 draf artikel (`claude/artikel-cara-mengatur-gaji-5-juta`, `-catatan-tabungan`,
+    `-laporan-keuangan-pribadi`, status `draf_menunggu_bos`) konflik 1 baris di `src/app/panduan/page.tsx` dengan main
+    yang sudah diformat → publish-article (merge otomatis saat Bos ✅) akan GAGAL. Perbaiki dengan merge main baru ke
+    tiap branch artikel (tanpa force-push), selesaikan konflik, `npx prettier --write` file artikelnya, push. Jangan
+    lakukan sebelum rapih masuk main (diff jadi 440 file → workflow menolak).
+  - Branch lama yang sudah setara dengan main (aman diabaikan/dihapus kalau Bos setuju): app-tag-lengkap,
+    fitur-fix-input-suara-20261012, friendly-galileo-7cxowa, friendly-galileo-7yleap, pengingat-pintar, push-fcm,
+    push-foreground, seo-meta-uang-kas-spt, seo-og-twitter-meta, sesi-app-native, skor-kesehatan, web-dark-bertahap,
+    web-dark-sisa.
+  - `claude/halaman-transaksi` (56 commit, 12–23 Okt, redesign "pola Oyenza": Peta 3D, Ingatan Leo, Pasar & belajar,
+    dll.) TIDAK pernah masuk main & bentrok 49 file + nomor migrasi 0010–0016 bentrok. Dianggap ditinggalkan; kalau
+    ada fitur yang mau diambil, port ulang sebagai pekerjaan baru di atas main.
+
 - **2026-11-07 (branch claude/alur-versi-20261107) — Alur versi + rilis 3.1.0, BELUM merge. Tanpa SQL.**
   - Satu versi di package.json → tampil "v3.1.0 · build N"; `npm run versi -- patch|minor|major`; CHANGELOG.md berisi
     aturan X.Y.Z + peta versi 1.0→3.1.0 (disusun ulang dari git). Deploy main membuat tag/Release vX.Y.Z setelah live

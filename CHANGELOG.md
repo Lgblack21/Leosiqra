@@ -44,12 +44,22 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.0.1 | 27 Okt 2026 | Menu Profil baru, nomor versi mulai tampil di aplikasi |
 | 3.0.2 | 3 Nov 2026 | APK Android pertama di GitHub Releases |
 | 3.1.0 | 7 Nov 2026 | Usahaku, Koin, Cerita Hari Ini, Fokus bareng Leo, dan lainnya |
+| 3.1.1 | 7 Nov 2026 | Perapian kode menyeluruh, validasi kategori transaksi |
 
 Versi 1.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
 dinaikkan per fitur (package.json loncat dari 0.1.0 ke 3.0.1), jadi tiap versi lama
 mewakili satu era, bukan satu deploy.
 
 <!-- rilis-baru -->
+
+## 3.1.1 — 2026-11-07 — Perapian kode & perbaikan kecil
+
+- Nomor versi & build tampil di Pengaturan dan Profil app HP (`v3.1.1 · build N`).
+- Mencatat transaksi tanpa kategori kini ditolak dengan pesan jelas ("Kategori wajib
+  dipilih."), bukan "Terjadi kesalahan pada server".
+- Di balik layar: seluruh kode dirapikan (format seragam, komentar yang tidak perlu dibuang).
+  Tampilan dan perilaku aplikasi tidak berubah — sudah dibandingkan halaman per halaman.
+
 
 ## 3.1.0 — 2026-11-07 — Usahaku, Koin, Cerita, Fokus & banyak lagi
 
