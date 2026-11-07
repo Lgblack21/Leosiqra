@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live 3.5.1; 3.6.0 menunggu "gas"; migrasi 0039 menunggu Bos)
+Terakhir diperbarui: 2026-11-07 (live: rilis 3.6.0, run 42396910024; migrasi 0039 menunggu Bos)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-07 — RILIS 3.6.0 (branch `claude/sehat-cek-20261107`): Sehatku › Cek. MIGRASI 0039 menunggu Bos.**
+- **2026-11-07 — RILIS 3.6.0: LIVE (run 42396910024, commit 923789c, Release v3.6.0): Sehatku › Cek. MIGRASI 0039 menunggu Bos.**
   - **MIGRASI di D1 Console** (0039_health_checks.sql): tabel `health_checks` + 2 index. Tanpa tabel: info CKG tampil,
     pencatatan → ready:false / 503.
   - Worker (di handleMemberHealth): PUT /health/profile ($.healthProfile {birthYear, sex, catin}), GET/POST/DELETE
