@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live: rilis 3.1.2, run 42359676148)
+Terakhir diperbarui: 2026-11-07 (live 3.1.2; 3.1.3 + migrasi 0036 menunggu)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,15 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-07 — RILIS 3.1.3 siap di branch `claude/stok-staff-id-20261107`, BELUM live (tunggu "gas"). MIGRASI 0036 menunggu Bos.**
+  - **MIGRASI di D1 Console** (0036_stock_staff_id.sql, boleh sebelum/sesudah deploy):
+    `ALTER TABLE shop_stock_moves ADD COLUMN by_staff_id TEXT;` Tanpa kolom: Worker tidak menulisnya (perilaku = 3.1.2).
+    Cek kolom di-cache per isolate (ada → permanen, belum ada → dicek ulang tiap 60 dtk).
+  - Catatan stok manual oleh akun tim (awal/masuk/pakai/opname) kini menyimpan by_staff_id. Batalkan oleh tim: kalau
+    by_staff_id terisi → harus sama dengan id tim; kalau kosong (catatan lama) → tetap dicocokkan by_name + hari ini.
+  - Dites lokal (wrangler dev): sebelum migrasi tim batalkan miliknya 200; setelah migrasi catatan A punya by_staff_id,
+    A dihapus → tim B bernama sama batalkan catatan A 403, miliknya sendiri 200, pemilik batalkan catatan A 200. tsc Worker 0.
 
 - **2026-11-07 — RILIS 3.1.2: LIVE (run 42359676148, commit 36b4557, Release v3.1.2). Tanpa SQL.**
   - POST /api/member/transactions tanpa `account_id` (atau null) → 400 "Rekening wajib dipilih." (dulu 500). Dicek di D1 produksi:
@@ -225,7 +234,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     "mulai Rp5 rb" tidak patah baris.
   - Dites lokal (wrangler dev, D1 lokal): hapus Toko A → bahan/riwayat A 0, tim tinggal akses Toko B; reset data →
     staff/sesi/bahan/riwayat/resep 0, login tim ditolak; UI iPhone SE/13 + web 0 error JS.
-  - Catatan (belum diubah): batalkan catatan stok oleh tim mencocokkan by_name, bukan id akun — tim baru bernama sama
+  - Catatan (DIRAPIKAN di 3.1.3, lihat atas): batalkan catatan stok oleh tim mencocokkan by_name, bukan id akun — tim baru bernama sama
     di hari yang sama bisa membatalkan catatan tim lama. Perlu kolom staff id (migrasi) kalau mau dirapikan.
   - Catatan: cloudflare/schema-production.sql (dump Juli) sudah usang (accounts/categories kurang sort_order,
     transaction_type) — untuk tes lokal tambah kolom manual.

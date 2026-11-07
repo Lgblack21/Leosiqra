@@ -10023,15 +10023,31 @@ const STOCK_NOT_READY = "Stok bahan belum aktif (menunggu pembaruan database). C
 const STOCK_MAX_MATERIALS = 100;
 const r3 = (n: number) => Math.round(n * 1000) / 1000;
 const stockNum = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && Math.abs(v) <= 1e9 ? r3(v) : null);
-type StockMoveInput = { materialId: string; qty: number; kind: "awal" | "beli" | "masuk" | "pakai" | "jual"; key: string; cost?: number | null; note?: string | null; byName?: string | null };
+type StockMoveInput = { materialId: string; qty: number; kind: "awal" | "beli" | "masuk" | "pakai" | "jual"; key: string; cost?: number | null; note?: string | null; byName?: string | null; byStaffId?: string };
+// by_staff_id (migrasi 0036) hanya ditulis kalau kolomnya sudah ada — pemanggil mengisi byStaffId
+// setelah cek stockStaffIdReady, jadi sebelum migrasi perilaku sama persis dengan dulu.
+let stockStaffIdCol: { ok: boolean; at: number } | null = null;
+const stockStaffIdReady = async (env: Env) => {
+  if (stockStaffIdCol && (stockStaffIdCol.ok || Date.now() - stockStaffIdCol.at < 60_000)) return stockStaffIdCol.ok;
+  let ok = false;
+  try {
+    await env.DB.prepare("SELECT by_staff_id FROM shop_stock_moves LIMIT 0").all();
+    ok = true;
+  } catch (e) {
+    if (!(e instanceof Error && /no such column/i.test(e.message))) throw e;
+  }
+  stockStaffIdCol = { ok, at: Date.now() };
+  return ok;
+};
 const stockMoveStatements = (env: Env, ownerId: string, shopId: string, m: StockMoveInput, date: string, txId?: string) => {
   const id = generateId();
   const now = nowIso();
+  const sid = typeof m.byStaffId === "string";
   return [
     env.DB.prepare(
-      `INSERT OR IGNORE INTO shop_stock_moves (id, owner_id, shop_id, material_id, kind, qty, cost, note, ref_tx_id, ref_key, by_name, date, created_at)
-       SELECT ?, ?, ?, id, ?, ?, ?, ?, ?, ?, ?, ?, ? FROM shop_materials WHERE id = ? AND owner_id = ? AND shop_id = ? AND archived_at IS NULL${txId ? " AND EXISTS (SELECT 1 FROM transactions WHERE id = ? AND user_id = ?)" : ""}`
-    ).bind(id, ownerId, shopId, m.kind, m.qty, m.cost ?? null, m.note ?? null, txId ?? null, m.key, m.byName ?? null, date, now, m.materialId, ownerId, shopId, ...(txId ? [txId, ownerId] : [])),
+      `INSERT OR IGNORE INTO shop_stock_moves (id, owner_id, shop_id, material_id, kind, qty, cost, note, ref_tx_id, ref_key, by_name, date, created_at${sid ? ", by_staff_id" : ""})
+       SELECT ?, ?, ?, id, ?, ?, ?, ?, ?, ?, ?, ?, ?${sid ? ", ?" : ""} FROM shop_materials WHERE id = ? AND owner_id = ? AND shop_id = ? AND archived_at IS NULL${txId ? " AND EXISTS (SELECT 1 FROM transactions WHERE id = ? AND user_id = ?)" : ""}`
+    ).bind(id, ownerId, shopId, m.kind, m.qty, m.cost ?? null, m.note ?? null, txId ?? null, m.key, m.byName ?? null, date, now, ...(sid ? [m.byStaffId] : []), m.materialId, ownerId, shopId, ...(txId ? [txId, ownerId] : [])),
     env.DB.prepare("UPDATE shop_materials SET stock = ROUND(stock + ?, 3), updated_at = ? WHERE id = ? AND owner_id = ? AND EXISTS (SELECT 1 FROM shop_stock_moves WHERE id = ?)").bind(m.qty, now, m.materialId, ownerId, id),
   ];
 };
@@ -10115,18 +10131,23 @@ const expenseStockInput = async (env: Env, ownerId: string, shopId: string, raw:
 // staff = akun tim (Usahaku › Tim): boleh lihat, tambah bahan, pakai/masuk/hitung fisik — dicatat
 // "oleh <nama>", tanggal hari ini. Ubah/arsip bahan & aturan per produk hanya pemilik; harga beli
 // (cost/avg_cost) tidak dikirim ke tim.
-async function handleShopStock(request: Request, env: Env, userId: string, shop: { id: string; name: string }, sub: string[], staff?: { name: string }) {
+async function handleShopStock(request: Request, env: Env, userId: string, shop: { id: string; name: string }, sub: string[], staff?: { id: string; name: string }) {
   try {
     const [what, mid, act] = sub;
     const byName = staff?.name ?? null;
+    const sidReady = staff ? await stockStaffIdReady(env) : false;
+    const byStaffId = staff && sidReady ? staff.id : undefined;
     // Salah input → batalkan satu catatan manual (stok dikembalikan, baris dicoret di Riwayat).
     // Yang terkait transaksi (jual/beli) dibatalkan dengan menghapus transaksinya.
     if (what === "moves" && mid && act === "revert" && request.method === "POST") {
-      const mv = await env.DB.prepare("SELECT id, material_id, kind, qty, ref_tx_id, by_name, date, reverted_at FROM shop_stock_moves WHERE id = ? AND owner_id = ? AND shop_id = ?").bind(mid, userId, shop.id).first<{ id: string; material_id: string; kind: string; qty: number; ref_tx_id: string | null; by_name: string | null; date: string; reverted_at: string | null }>();
+      const mv = await env.DB.prepare(`SELECT id, material_id, kind, qty, ref_tx_id, by_name, date, reverted_at${sidReady ? ", by_staff_id" : ""} FROM shop_stock_moves WHERE id = ? AND owner_id = ? AND shop_id = ?`).bind(mid, userId, shop.id).first<{ id: string; material_id: string; kind: string; qty: number; ref_tx_id: string | null; by_name: string | null; date: string; reverted_at: string | null; by_staff_id?: string | null }>();
       if (!mv) return json({ error: "Catatan stok tidak ditemukan." }, { status: 404 });
       if (mv.reverted_at) return json({ error: "Catatan ini sudah dibatalkan." }, { status: 409 });
       if (mv.ref_tx_id) return json({ error: "Catatan ini dari penjualan/biaya — batalkan dengan menghapus transaksinya (stok ikut kembali)." }, { status: 400 });
-      if (staff && (mv.by_name !== staff.name || mv.date !== todayWIB())) return json({ error: "Akun tim hanya bisa membatalkan catatannya sendiri hari ini." }, { status: 403 });
+      // Catatan baru menyimpan id akun tim → dicocokkan by id (tim baru bernama sama tidak bisa
+      // membatalkan catatan tim lama). Catatan lama (by_staff_id kosong) tetap dicocokkan by nama.
+      const ownMove = mv.by_staff_id ? mv.by_staff_id === staff?.id : mv.by_name === staff?.name;
+      if (staff && (!ownMove || mv.date !== todayWIB())) return json({ error: "Akun tim hanya bisa membatalkan catatannya sendiri hari ini." }, { status: 403 });
       const later = await env.DB.prepare("SELECT 1 FROM shop_stock_moves WHERE material_id = ? AND owner_id = ? AND kind = 'opname' AND reverted_at IS NULL AND id != ? AND created_at > (SELECT created_at FROM shop_stock_moves WHERE id = ?) LIMIT 1").bind(mv.material_id, userId, mv.id, mv.id).first();
       if (later) return json({ error: "Sudah ada hitung fisik sesudah catatan ini — betulkan angkanya lewat Ubah › Stok sekarang." }, { status: 409 });
       const now = nowIso();
@@ -10175,7 +10196,7 @@ async function handleShopStock(request: Request, env: Env, userId: string, shop:
            SELECT ?, ?, ?, ?, ?, 0, ?, ?, ? WHERE (SELECT COUNT(*) FROM shop_materials WHERE owner_id = ? AND shop_id = ?) < ?
              AND NOT EXISTS (SELECT 1 FROM shop_materials WHERE owner_id = ? AND shop_id = ? AND archived_at IS NULL AND name = ? COLLATE NOCASE)`
         ).bind(id, userId, shop.id, name, unit, min, now, now, userId, shop.id, STOCK_MAX_MATERIALS, userId, shop.id, name),
-        ...(stock > 0 ? stockMoveStatements(env, userId, shop.id, { materialId: id, qty: stock, kind: "awal", key: `awal:${id}`, note: "Stok awal", byName }, todayWIB()) : []),
+        ...(stock > 0 ? stockMoveStatements(env, userId, shop.id, { materialId: id, qty: stock, kind: "awal", key: `awal:${id}`, note: "Stok awal", byName, byStaffId }, todayWIB()) : []),
       ]);
       if (!res[0]?.meta.changes) return json({ error: `Bahan "${name}" sudah ada, atau sudah ${STOCK_MAX_MATERIALS} bahan.` }, { status: 409 });
       return json({ ok: true, id }, { status: 201 });
@@ -10211,9 +10232,9 @@ async function handleShopStock(request: Request, env: Env, userId: string, shop:
         const now = nowIso();
         const res = await env.DB.batch([
           env.DB.prepare(
-            `INSERT OR IGNORE INTO shop_stock_moves (id, owner_id, shop_id, material_id, kind, qty, note, ref_key, by_name, date, created_at)
-             SELECT ?, ?, ?, id, 'opname', ROUND(? - stock, 3), ?, ?, ?, ?, ? FROM shop_materials WHERE id = ? AND owner_id = ? AND shop_id = ?`
-          ).bind(id, userId, shop.id, qty, note ?? `Hitung fisik: ${qty}`, `mv:${requestId}`, byName, date, now, mat.id, userId, shop.id),
+            `INSERT OR IGNORE INTO shop_stock_moves (id, owner_id, shop_id, material_id, kind, qty, note, ref_key, by_name, date, created_at${byStaffId ? ", by_staff_id" : ""})
+             SELECT ?, ?, ?, id, 'opname', ROUND(? - stock, 3), ?, ?, ?, ?, ?${byStaffId ? ", ?" : ""} FROM shop_materials WHERE id = ? AND owner_id = ? AND shop_id = ?`
+          ).bind(id, userId, shop.id, qty, note ?? `Hitung fisik: ${qty}`, `mv:${requestId}`, byName, date, now, ...(byStaffId ? [byStaffId] : []), mat.id, userId, shop.id),
           env.DB.prepare("UPDATE shop_materials SET stock = ?, updated_at = ? WHERE id = ? AND owner_id = ? AND EXISTS (SELECT 1 FROM shop_stock_moves WHERE id = ?)").bind(qty, now, mat.id, userId, id),
         ]);
         if (!res[0]?.meta.changes) return json({ error: "Perubahan stok ini sudah tercatat." }, { status: 409 });
@@ -10221,7 +10242,7 @@ async function handleShopStock(request: Request, env: Env, userId: string, shop:
       }
       if (kind !== "masuk" && kind !== "pakai") return json({ error: "Jenis perubahan stok tidak dikenal." }, { status: 400 });
       if (qty === null || qty <= 0) return json({ error: "Isi jumlahnya." }, { status: 400 });
-      const res = await env.DB.batch(stockMoveStatements(env, userId, shop.id, { materialId: mat.id, qty: kind === "masuk" ? qty : -qty, kind, key: `mv:${requestId}`, note, byName }, date));
+      const res = await env.DB.batch(stockMoveStatements(env, userId, shop.id, { materialId: mat.id, qty: kind === "masuk" ? qty : -qty, kind, key: `mv:${requestId}`, note, byName, byStaffId }, date));
       if (!res[0]?.meta.changes) return json({ error: "Perubahan stok ini sudah tercatat." }, { status: 409 });
       return json({ ok: true }, { status: 201 });
     }
@@ -10446,7 +10467,7 @@ async function handleStaffRoutes(request: Request, env: Env, pathname: string) {
       if (!ids.includes(sm[1])) return json({ error: "Usaha ini tidak diberikan untuk akunmu." }, { status: 403 });
       const stockShop = await env.DB.prepare("SELECT id, name FROM shops WHERE id = ? AND user_id = ?").bind(sm[1], staff.owner_id).first<{ id: string; name: string }>();
       if (!stockShop) return json({ error: "Usaha tidak ditemukan." }, { status: 404 });
-      return await handleShopStock(request, env, staff.owner_id, stockShop, sm[2].split("/").filter(Boolean), { name: staff.name });
+      return await handleShopStock(request, env, staff.owner_id, stockShop, sm[2].split("/").filter(Boolean), { id: staff.id, name: staff.name });
     }
     const m = /^\/api\/staff\/shops\/([0-9a-f-]{36})\/(sale|expense)$/i.exec(pathname);
     if (m && request.method === "POST") {

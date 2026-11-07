@@ -52,6 +52,12 @@ mewakili satu era, bukan satu deploy.
 
 <!-- rilis-baru -->
 
+## 3.1.3 — 2026-11-07 — Batalkan catatan stok oleh akun tim dicocokkan per akun
+
+- Usahaku › Stok: akun tim hanya bisa membatalkan catatan stok yang benar-benar dibuat akunnya sendiri. Dulu
+  dicocokkan dari nama, jadi akun tim baru yang namanya sama bisa membatalkan catatan akun tim lama di hari yang sama.
+
+
 ## 3.1.2 — 2026-11-07 — Transaksi tanpa rekening ditolak dengan pesan jelas
 
 - Mencatat transaksi tanpa memilih rekening kini ditolak dengan pesan jelas ("Rekening wajib dipilih."),
