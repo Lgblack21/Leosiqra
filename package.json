@@ -1,6 +1,6 @@
 {
   "name": "finance-tracker",
-  "version": "3.0.1",
+  "version": "3.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -15,7 +15,8 @@
     "cap:android": "cap open android",
     "cap:ios": "cap open ios",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\""
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
+    "versi": "node scripts/versi.mjs"
   },
   "dependencies": {
     "@block65/webcrypto-web-push": "^1.0.2",

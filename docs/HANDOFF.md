@@ -18,6 +18,12 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-07 (branch claude/alur-versi-20261107) — Alur versi + rilis 3.1.0, BELUM merge. Tanpa SQL.**
+  - Satu versi di package.json → tampil "v3.1.0 · build N"; `npm run versi -- patch|minor|major`; CHANGELOG.md berisi
+    aturan X.Y.Z + peta versi 1.0→3.1.0 (disusun ulang dari git). Deploy main membuat tag/Release vX.Y.Z setelah live
+    (permissions contents: write) & Telegram menyebut versi + build. APK ikut versi package.json, ditempel ke Release.
+  - Urutan merge disarankan: branch ini dulu (3.1.0), lalu rapih-frontend + fix-validasi-kategori sebagai 3.1.1
+    (naikkan versi di branch rapih setelah ini masuk main; konflik kecil di SettingsPanel/profile/version.ts).
 - **2026-11-06 (branch claude/rapih-frontend-20261106) — Rapikan komentar frontend (Tahap 1), BELUM merge. Tanpa SQL, tanpa perubahan perilaku.**
   - 159 file di `src/`: ~780 baris komentar "keterangan" dihapus (label seksi JSX, komentar yang mengulang kode,
     pembatas, catatan riwayat). Komentar KENAPA (keamanan, uang, drift D1, workaround native) + eslint-disable tetap.
