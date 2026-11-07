@@ -80,8 +80,7 @@ type AppUser = {
   status: "AKTIF" | "NONAKTIF" | "GUEST" | "PENDING";
   whatsapp?: string | null;
   // Status 2FA saja — kunci rahasia TOTP tidak pernah dikirim ke browser
-  // (dulu ikut terkirim lewat /api/auth/me, jadi siapa pun yang memegang sesi
-  // bisa menyalinnya dan membuat kode 2FA sendiri).
+  // (kalau terkirim, pemegang sesi bisa menyalinnya dan membuat kode 2FA sendiri).
   twoFactorEnabled?: boolean;
   // Kapan terakhir akun ini membuka aplikasi terpasang (dari layar utama) —
   // dipakai iklan "pasang aplikasi" supaya tidak tampil ke yang sudah pasang.
@@ -92,11 +91,8 @@ type AppUser = {
   // password asli) — dipakai frontend untuk skip verifikasi "password saat
   // ini" di Ganti Password / Reset Data, karena memang tidak pernah ada.
   hasPassword?: boolean;
-  // true kalau user sudah menyelesaikan onboarding awal (setup profil/mata
-  // uang/kategori/rekening). Dipakai membership layout untuk memaksa user baru
-  // ke /membership/onboarding sebelum boleh memakai aplikasi. Disimpan lewat
-  // kolom currency_initialized yang sudah ada (tanpa migrasi baru — lihat
-  // catatan drift schema production di tempat lain).
+  // true kalau onboarding awal selesai; membership layout memaksa user baru ke
+  // /membership/onboarding. Disimpan di kolom currency_initialized (tanpa migrasi baru — drift schema).
   onboarded?: boolean;
   expiredAt?: string | null;
   memberSince?: string | null;
@@ -138,11 +134,8 @@ const generateId = () => crypto.randomUUID();
 
 const nowIso = () => new Date().toISOString();
 
-// Tanggal "hari ini" versi WIB (UTC+7, tanpa DST) — dipakai untuk default
-// tanggal transaksi. Server Cloudflare Workers selalu UTC, jadi antara jam
-// 00:00-06:59 WIB, `new Date().toISOString()` masih menunjukkan tanggal UTC
-// KEMARIN (mis. jam 01:00 WIB tanggal 20 = jam 18:00 UTC tanggal 19) —
-// menggeser waktu +7 jam dulu sebelum diambil tanggalnya memperbaiki ini.
+// Tanggal hari ini versi WIB (UTC+7). Worker selalu UTC, jadi pukul 00:00–06:59 WIB
+// toISOString() masih memberi tanggal kemarin — geser +7 jam dulu.
 const todayWIB = () => new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
 // Dipakai buat kasih tahu admin lewat Telegram (permintaan akses baru,
@@ -166,12 +159,9 @@ const sendTelegramNotification = async (env: Env, message: string) => {
   }
 };
 
-// User baru langsung dapat akses penuh (status AKTIF) selama durasi Free Plan
-// yang di-set admin di Pengaturan (admin_settings.free_plan_days — field yang
-// sama dipakai tombol "Set Free" di halaman Kelola Pelanggan), tanpa perlu
-// approval manual. Dipakai bareng oleh registrasi email dan Google OAuth
-// supaya keduanya konsisten. Kalau durasinya 0/belum di-set, fallback ke
-// perilaku lama (GUEST, perlu approval manual lewat "Request Akses").
+// User baru langsung AKTIF selama admin_settings.free_plan_days (field yang sama dengan
+// tombol "Set Free"); dipakai registrasi email & Google OAuth. Durasi 0/kosong → GUEST
+// (perlu approval manual lewat "Request Akses").
 const computeTrialGrant = async (env: Env): Promise<{ status: "AKTIF" | "GUEST"; expiredAt: string | null }> => {
   const settings = await env.DB.prepare("SELECT free_plan_days FROM admin_settings WHERE id = 'global'")
     .first<{ free_plan_days: number | null }>();
@@ -352,12 +342,9 @@ const getCookieValue = (request: Request, name: string) => {
   return null;
 };
 
-// Cegah brute-force/credential-stuffing di login & spam di register — dicek
-// per-IP dan (khusus login) per-email juga, supaya penyerang yang nyebar
-// request dari banyak IP ke satu email korban tetap kena batas.
-// Fail-open hanya di luar produksi (dev lokal tanpa binding); di produksi fail-closed.
-// Produksi: kalau binding hilang (salah konfigurasi deploy), TOLAK (fail-closed) dan catat error —
-// lebih baik login sementara gagal daripada brute-force tanpa batas.
+// Cegah brute-force/credential-stuffing login & spam register: per-IP, dan (login) per-email
+// supaya serangan dari banyak IP ke satu email korban tetap kena batas.
+// Di luar produksi fail-open; di produksi binding hilang = TOLAK (fail-closed) + log error.
 const rateLimiterMissing = (env: Env, name: string) => {
   if (env.APP_ENV !== "production") return true;
   console.error(`${name} tidak terpasang di produksi — permintaan ditolak (fail-closed).`);
@@ -603,10 +590,8 @@ const readSession = async (env: Env, request: Request) => {
     return null;
   }
 
-  // Trial 14-hari (dan langganan PRO yang habis) sama-sama disimpan lewat
-  // kolom `expired_at` — tidak ada cron di Workers, jadi turunkan status ke
-  // GUEST secara "lazy" begitu ketahuan sudah lewat, di titik tunggal ini
-  // (dipakai semua request terautentikasi) supaya konsisten di mana pun.
+  // Trial & langganan PRO yang habis disimpan di expired_at; status diturunkan ke GUEST
+  // secara lazy di titik tunggal ini (dipakai semua request terautentikasi).
   if (result.status === "AKTIF" && result.expired_at && new Date(result.expired_at).getTime() <= Date.now()) {
     await env.DB.prepare("UPDATE users SET status = 'GUEST' WHERE id = ?").bind(result.user_id).run();
     result.status = "GUEST";
@@ -636,7 +621,6 @@ const readSession = async (env: Env, request: Request) => {
       avatar: readAvatar(result.metadata_json),
       hasPassword: !result.password_hash?.startsWith("oauth$"),
       onboarded: result.currency_initialized === 1,
-      // Untuk panel Pengaturan: masa aktif paket & "memakai Leosiqra sejak".
       expiredAt: result.expired_at ?? null,
       memberSince: result.user_created_at ?? null,
     } satisfies AppUser,
@@ -649,11 +633,9 @@ const readSession = async (env: Env, request: Request) => {
 // jadi pembatasannya dilakukan lewat pengecekan email persis di sini.
 const SUPERADMIN_EMAIL = "leo.wendry@yahoo.com";
 
-// Sesi dianggap "permanen" (PWA ter-install, lihat createSession) kalau masa
-// berlakunya jauh lebih panjang dari sesi web normal — dihitung dari selisih
-// expires_at/created_at, bukan kolom terpisah, supaya tidak perlu migrasi
-// schema baru (lihat catatan drift schema production di tempat lain).
-const PERMANENT_SESSION_THRESHOLD_MS = 1000 * 60 * 60 * 24 * 365; // > 1 tahun
+// Sesi "permanen" (PWA, lihat createSession) dideteksi dari selisih expires_at/created_at,
+// bukan kolom baru — hindari migrasi (drift schema production).
+const PERMANENT_SESSION_THRESHOLD_MS = 1000 * 60 * 60 * 24 * 365;
 const isPermanentSession = (createdAt: string, expiresAt: string) =>
   new Date(expiresAt).getTime() - new Date(createdAt).getTime() > PERMANENT_SESSION_THRESHOLD_MS;
 
@@ -768,9 +750,8 @@ const sanitizeMaintenanceHtml = (unsafeHtml?: string | null) => {
     .replaceAll(/\s(srcdoc|formaction|xlink:href|href|src|poster|action)\s*=\s*'(javascript:|data:text\/html)[^']*'/gi, "")
     .replaceAll(/\sstyle\s*=\s*"[^"]*(expression|url\s*\(\s*javascript:)[^"]*"/gi, "")
     .replaceAll(/\sstyle\s*=\s*'[^']*(expression|url\s*\(\s*javascript:)[^']*'/gi, "")
-    // Varian tanpa tanda kutip & setelah "/" (mis. <img src=x onerror=...>,
-    // <svg/onload=...>) — dulu lolos. Lapisan utama tetap iframe sandbox di
-    // frontend (SandboxedHtml); ini cuma cadangan.
+    // Varian tanpa tanda kutip & setelah "/" (mis. <img src=x onerror=...>, <svg/onload=...>).
+    // Lapisan utama tetap iframe sandbox di frontend (SandboxedHtml); ini cuma cadangan.
     .replaceAll(/[\s/]on\w+\s*=\s*[^\s>"']+/gi, " ")
     .replaceAll(/\s(srcdoc|formaction|xlink:href|href|src|poster|action)\s*=\s*(javascript:|data:text\/html)[^\s>]*/gi, "");
 };
@@ -804,12 +785,9 @@ const getMaintenanceSettings = async (env: Env) =>
     developer_quote: string | null;
   }>();
 
-// Konteks lengkap keuangan user untuk AI — sebelumnya cuma kirim sebagian
-// kolom (tanpa amount_idr/currency di transaksi, tanpa detail hutang, tanpa
-// recurring/currencies sama sekali) dengan limit kecil (40 transaksi dll),
-// jadi AI sering "buta" terhadap transaksi mata uang asing, hutang/piutang,
-// dan riwayat lama user. Sekarang ambil semua tabel keuangan dengan kolom
-// lengkap dan limit yang jauh lebih longgar.
+// Konteks lengkap keuangan user untuk AI: semua tabel keuangan dengan kolom lengkap
+// (amount_idr/currency, hutang, recurring, currencies) dan limit longgar, supaya AI tidak
+// "buta" terhadap transaksi valas, hutang/piutang, dan riwayat lama.
 const buildUserContext = async (env: Env, userId: string) => {
   const today = todayWIB();
   const currentYmWib = today.slice(0, 7);
@@ -916,12 +894,8 @@ const buildUserContext = async (env: Env, userId: string) => {
     };
   });
 
-  // AI sering keliru mengonversi lintas mata uang sendiri (mis. mengira
-  // saldo KHR sudah dalam Rupiah, atau tidak bisa konversi USD karena kurs
-  // di ringkasan pasar cuma mencakup beberapa mata uang). Hitung balanceIdr
-  // di server pakai kurs live yang sama dipakai transaksi/investasi
-  // (fetchIdrConversionRate), supaya AI tinggal baca angkanya, tidak perlu
-  // menghitung sendiri.
+  // AI sering keliru konversi lintas mata uang: hitung balanceIdr di server pakai kurs live
+  // yang sama dengan transaksi/investasi (fetchIdrConversionRate).
   const uniqueCurrencies = Array.from(
     new Set(accountsRaw.map((a) => a.currency).filter((c) => c && c !== "IDR"))
   );
@@ -939,29 +913,19 @@ const buildUserContext = async (env: Env, userId: string) => {
   const totalBalanceIdr = accountsClean.reduce((s, a) => s + (a.balanceIdr ?? 0), 0);
   const accountsMissingRate = accountsClean.filter((a) => a.balanceIdr === null).map((a) => a.currency);
 
-  // Ringkasan bulan berjalan, DIHITUNG & DIFORMAT DI SERVER — bukan dibiarkan
-  // ke AI untuk menjumlahkan/memformat sendiri dari daftar transaksi mentah.
-  // Sebelumnya AI sering menulis nominal tanpa titik ribuan (mis. "Rp93977366"
-  // alih-alih "Rp93.977.366") dan kadang membuat kesimpulan aneh/muter-muter
-  // saat pemasukan & pengeluaran kebetulan sama besar. Field siap-pakai di
-  // sini menghilangkan kebutuhan AI menghitung/memformat sendiri untuk
-  // pertanyaan umum seputar "aman tidak pengeluaran bulan ini".
+  // Ringkasan bulan berjalan dihitung & diformat di SERVER — kalau dibiarkan, AI sering salah
+  // format nominal (tanpa titik ribuan) atau menyimpulkan aneh saat pemasukan = pengeluaran.
   const formatRupiah = (n: number) => `Rp${Math.round(n).toLocaleString("id-ID")}`;
-  // Bulan berjalan menurut WIB — dulu jam server (UTC), jadi awal bulan sampai
-  // pukul 07.00 WIB masih terhitung bulan sebelumnya.
+  // Bulan berjalan menurut WIB, bukan jam server (UTC).
   const currentYm = currentYmWib;
   const monthTx = (transactions.results ?? []).filter((t) => {
     const row = t as { display_date?: string | null; date?: string | null };
     const d = String(row.display_date || row.date || "");
     return d.startsWith(currentYm);
   });
-  // Menaruh uang ke investasi (Deposito/Saham/dll) tersimpan sebagai type
-  // "pengeluaran" tapi BUKAN kerugian — cuma uang tunai berubah jadi
-  // instrumen investasi (sudah dihitung terpisah di "investments"). Kalau
-  // ikut dijumlah di sini, monthSummary jadi menyesatkan persis seperti bug
-  // yang ditemukan di Dashboard Tahunan (taruh Rp280jt ke deposito bikin
-  // kelihatan defisit besar padahal surplus) — lihat juga Pajak Center yang
-  // sudah lebih dulu mengecualikan kasus yang sama.
+  // Uang ke investasi (Deposito/Saham/dll) tersimpan sebagai "pengeluaran" tapi bukan kerugian
+  // (sudah dihitung di "investments"). Dikecualikan supaya monthSummary tidak tampak defisit
+  // palsu — sama seperti Dashboard Tahunan & Pajak Center.
   const isInvestmentPurchaseRow = (t: unknown) => {
     const row = t as { type?: string; category?: string; related_type?: string | null };
     if (row.related_type === "investasi") return true;
@@ -989,13 +953,8 @@ const buildUserContext = async (env: Env, userId: string) => {
           : "Seimbang (total pemasukan dan pengeluaran bulan ini persis sama)",
   };
 
-  // Ringkasan tabungan PER GOAL (kategori), DIHITUNG & DIFORMAT DI SERVER —
-  // alasan sama seperti monthSummary di atas. Kasus nyata yang memicu ini:
-  // AI diminta "sisa target tabungan Dana Darurat" dan menjumlahkan beberapa
-  // baris "savings" mentah sendiri, lalu salah tulis ulang hasilnya jadi 10x
-  // lipat (Rp389 juta padahal aslinya Rp38,9 juta) — bukan data yang salah,
-  // AI-nya yang salah transkrip angka besar. Field siap-pakai di sini
-  // menghilangkan kebutuhan itu sama sekali untuk pertanyaan seperti itu.
+  // Ringkasan tabungan PER GOAL dihitung & diformat di server — AI pernah salah transkrip
+  // angka besar (10x lipat) saat menjumlahkan baris savings mentah sendiri.
   const savingsTotalByCategory = new Map<string, number>();
   for (const row of (savings.results ?? []) as Array<{
     category?: string;
@@ -1178,27 +1137,18 @@ const buildUserContext = async (env: Env, userId: string) => {
 type MarketSnapshot = { text: string; fetchedAt: number; degraded: boolean };
 let marketSnapshotCache: MarketSnapshot | null = null;
 const MARKET_CACHE_MS = 5 * 60 * 1000;
-// Kalau hasil fetch-nya "degradasi" (ada harga inti yang hilang padahal
-// response CoinGecko-nya 200 OK — pernah kejadian berulang, kemungkinan
-// rate-limit/anti-bot CoinGecko yang selektif per-ID untuk trafik dari IP
-// Cloudflare), jangan simpan itu selama 5 menit penuh — cache pendek supaya
-// permintaan berikutnya cepat coba lagi alih-alih ikut kena "tidak tersedia"
-// selama 5 menit ke semua user.
+// Hasil "degradasi" (harga inti hilang walau CoinGecko 200 OK — kemungkinan rate-limit
+// selektif ke IP Cloudflare) di-cache pendek saja supaya cepat dicoba ulang, bukan 5 menit
+// "tidak tersedia" untuk semua user.
 const MARKET_DEGRADED_CACHE_MS = 20 * 1000;
-// "v2": versi baru cache key supaya entri lama (yang mungkin degradasi dan
-// masih ke-cache 5 menit) tidak ikut kepakai saat perubahan ini pertama kali
-// di-deploy.
+// "v2": versi cache key baru supaya entri lama (mungkin degradasi) tidak ikut terpakai.
 const MARKET_CACHE_KEY = new Request("https://cache.internal.leosiqra.com/market-snapshot-v2");
 
 type CryptoPrices = Record<string, { usd?: number; usd_24h_change?: number }>;
 const EXPECTED_CRYPTO_IDS = ["bitcoin", "ethereum", "solana", "holotoken", "pax-gold"];
 
-// CoinGecko dengan API key (Demo tier, gratis) jadi provider utama lagi —
-// endpoint publik anonim (tanpa key) kena rate-limit (429) dari IP Cloudflare
-// Workers karena berbagi pool IP dengan jutaan Workers script lain di dunia;
-// API key dapat kuota terpisah per-akun, bukan ikut limit bersama itu. Kalau
-// COINGECKO_API_KEY belum diisi di Cloudflare, tetap coba endpoint publik
-// (mungkin gagal seperti sebelumnya) supaya tidak keras-mati.
+// CoinGecko dengan API key (Demo tier) jadi provider utama — endpoint anonim kena 429 dari
+// pool IP bersama Cloudflare Workers. Tanpa COINGECKO_API_KEY tetap coba endpoint publik.
 const fetchCryptoFromCoinGecko = async (apiKey?: string): Promise<CryptoPrices | null> => {
   try {
     const headers: Record<string, string> = {
@@ -1221,12 +1171,9 @@ const fetchCryptoFromCoinGecko = async (apiKey?: string): Promise<CryptoPrices |
   }
 };
 
-// Binance publik sebagai cadangan kalau CoinGecko gagal (mis. key belum
-// dipasang, atau CoinGecko sedang bermasalah) — tetap punya semua instrumen
-// yang kita perlukan: BTC/ETH/SOL/HOT via pair *USDT, emas via PAXGUSDT (Pax
-// Gold, token yang sama yang dipakai CoinGecko sebagai proksi harga emas).
-// Catatan: Binance pernah kebalikin 403 (blokir region/IP) dari Cloudflare
-// Workers juga, jadi ini bukan jaminan, cuma percobaan tambahan.
+// Cadangan Binance publik kalau CoinGecko gagal: BTC/ETH/SOL/HOT via *USDT, emas via PAXGUSDT
+// (proksi emas yang sama dengan CoinGecko). Binance juga pernah 403 (blokir region/IP) dari
+// Workers — bukan jaminan.
 const BINANCE_SYMBOL_TO_ID: Record<string, string> = {
   BTCUSDT: "bitcoin",
   ETHUSDT: "ethereum",
@@ -1259,12 +1206,9 @@ const fetchCryptoFromBinance = async (): Promise<CryptoPrices | null> => {
   }
 };
 
-// Proxy CoinGecko untuk halaman member/admin. Browser dulu memanggil
-// api.coingecko.com langsung — sebagian koneksi (terlihat dari ISP Indonesia)
-// diblokir CloudFront CoinGecko (403 tanpa header CORS), jadi harga kripto di
-// Dashboard/Data Pasar/Investasi Lainnya kosong. Lewat Worker: pakai
-// COINGECKO_API_KEY, hasil di-cache di edge, dan cuma path + parameter yang
-// memang dipakai aplikasi yang diteruskan (bukan open proxy).
+// Proxy CoinGecko untuk halaman member/admin: akses langsung dari browser sebagian ISP
+// Indonesia diblokir (403 tanpa CORS). Pakai COINGECKO_API_KEY, cache edge, dan hanya path +
+// parameter yang dipakai aplikasi yang diteruskan (bukan open proxy).
 const COINGECKO_PROXY_RULES: Record<string, { params: string[]; ttl: number }> = {
   "simple/price": { params: ["ids", "vs_currencies", "include_24hr_change"], ttl: 60 },
   "coins/markets": { params: ["vs_currency", "ids", "price_change_percentage"], ttl: 60 },
@@ -1445,17 +1389,10 @@ ${aiMemoryBlock(memory)}
 ## Data keuangan user (JSON)
 ${JSON.stringify(userContext)}`;
 
-// Beberapa provider di balik OpenRouter membatasi akses berdasarkan region IP
-// pemanggil — IP edge Cloudflare Workers bisa saja diblokir oleh satu provider
-// meski modelnya sendiri valid. Kirim beberapa kandidat model sekaligus
-// (fitur routing/fallback bawaan OpenRouter) supaya jika satu provider
-// menolak, permintaan otomatis dicoba ke provider/model berikutnya.
-// Model chat AI Leosiqra (dipilih pemilik aplikasi, 30 Sep 2026): Gemini 2.5
-// Flash Lite — ±5x lebih murah dari Gemini 3 Flash (±Rp35 vs Rp182 per pesan
-// untuk akun ber-data besar); angka analisis sudah dihitung server, jadi model
-// cukup merangkum. Cadangan otomatis kalau provider pertama menolak/gangguan.
-// Sengaja di-pin di sini (bukan dari secret OPENROUTER_MODEL yang nilainya
-// tidak terlihat di repo); bisa ditimpa lewat var OPENROUTER_CHAT_MODEL.
+// Beberapa provider di balik OpenRouter memblokir region IP Cloudflare: kirim beberapa
+// kandidat model (fallback bawaan OpenRouter) supaya otomatis dicoba ke berikutnya.
+// Model utama Gemini 2.5 Flash Lite (pilihan pemilik, jauh lebih murah; angka analisis sudah
+// dihitung server). Sengaja di-pin di sini; bisa ditimpa var OPENROUTER_CHAT_MODEL.
 const OPENROUTER_FALLBACK_MODELS = [
   "google/gemini-2.5-flash-lite",
   "google/gemini-2.5-flash",
@@ -1473,7 +1410,6 @@ const runOpenRouterAssistant = async (
     return "AI-nya belum aktif nih — admin perlu memasang API key OpenRouter dulu.";
   }
 
-  // Batasi riwayat agar konteks tidak membengkak tanpa batas.
   const recentHistory = history.slice(-20);
 
   const preferredModel = env.OPENROUTER_CHAT_MODEL;
@@ -1499,13 +1435,8 @@ const runOpenRouterAssistant = async (
       ],
       temperature: 0.7,
       max_tokens: 900,
-      // Web search (plugin OpenRouter) — model dasar cuma tahu data sampai
-      // cutoff training-nya (mis. tidak tahu presiden Indonesia saat ini),
-      // plugin ini nyuntik hasil pencarian web sebagai konteks tambahan
-      // sebelum model menjawab. INI DIKENAKAN BIAYA TAMBAHAN PER REQUEST oleh
-      // OpenRouter (di luar biaya token biasa) — toggle via env var
-      // OPENROUTER_WEB_SEARCH kalau ternyata kebutuhan biayanya berubah,
-      // tanpa perlu ubah kode lagi.
+      // Plugin web search OpenRouter (model cuma tahu data sampai cutoff training). Dikenakan
+      // BIAYA TAMBAHAN per request — toggle lewat env OPENROUTER_WEB_SEARCH.
       ...(env.OPENROUTER_WEB_SEARCH === "true" ? { plugins: [{ id: "web" }] } : {}),
     }),
   });
@@ -2558,8 +2489,7 @@ async function handleRegister(request: Request, env: Env) {
   if (!payload.name || !payload.email || !payload.password) {
     return json({ error: "Nama, email, dan password wajib diisi." }, { status: 400 });
   }
-  // Aturan sama dengan reset/ganti password — dulu pendaftaran menerima
-  // password sepanjang apa pun (bahkan 1 karakter) karena hanya dicek di klien.
+  // Aturan sama dengan reset/ganti password — wajib dicek di server, tidak cukup di klien.
   if (payload.password.length < 8) {
     return json({ error: "Password minimal 8 karakter." }, { status: 400 });
   }
@@ -2589,13 +2519,10 @@ async function handleRegister(request: Request, env: Env) {
       return json({ error: "Email admin tidak bisa diregister ulang." }, { status: 409 });
     }
 
-    // Email yang sudah terdaftar SELALU ditolak. Dulu akun Google-only
-    // (password_hash sentinel `oauth$google`) boleh "diklaim" lewat register —
-    // itu account takeover: siapa pun yang tahu email user Google bisa set
-    // password + 2FA baru dan langsung dapat sesi sebagai korban tanpa
-    // verifikasi apa pun. User Google yang ingin punya password lokal harus
-    // lewat Lupa Password (membuktikan kepemilikan email) atau Profil (sesi
-    // yang sudah login).
+    // Email yang sudah terdaftar SELALU ditolak, termasuk akun Google-only (sentinel `oauth$google`):
+    // kalau bisa "diklaim" lewat register = account takeover (siapa pun yang tahu emailnya bisa set
+    // password + 2FA dan dapat sesi korban). User Google yang ingin password lokal harus lewat
+    // Lupa Password (bukti kepemilikan email) atau Profil (sesi yang sudah login).
     if (existing.password_hash.startsWith("oauth$")) {
       return json(
         { error: "Email ini sudah terdaftar lewat Google. Silakan masuk dengan tombol \"Lanjutkan dengan Google\"." },
@@ -3079,10 +3006,9 @@ const parseSignupSourceJson = (raw: string | null | undefined) => {
   }
 };
 
-// Login Google untuk akun yang mengaktifkan 2FA: sesi BELUM dibuat di callback.
-// Cookie sementara bertanda tangan (5 menit) menyimpan user & tujuan, lalu
-// kode Authenticator diverifikasi di POST /api/auth/google/2fa. Dulu login
-// Google langsung masuk tanpa kode — melewati 2FA yang sengaja dipasang user.
+// Login Google untuk akun ber-2FA: sesi BELUM dibuat di callback. Cookie sementara bertanda
+// tangan (5 menit) menyimpan user & tujuan; kode Authenticator diverifikasi di
+// POST /api/auth/google/2fa — tanpa ini login Google melewati 2FA.
 const GOOGLE_2FA_COOKIE = "oauth_2fa";
 const GOOGLE_2FA_TTL_SECONDS = 300;
 const createGoogle2faCookie = async (env: Env, userId: string, next: string) => {
@@ -3644,14 +3570,6 @@ async function handleCreateTransaction(request: Request, env: Env) {
   return json({ ok: true, id, balance_applied: balanceApplied }, { status: 201 });
 }
 
-// Impor mutasi bank/e-wallet dari CSV (parsing & pemetaan kolom dilakukan di
-// klien — lihat ImportTransactionsModal). SENGAJA TIDAK menyentuh
-// accounts.balance: baris yang diimpor adalah histori yang sudah terjadi dan
-// biasanya saldo akunnya sudah benar/di-maintain manual oleh user, jadi ikut
-// menambah/mengurangi saldo di sini akan menghitung dobel — beda dengan alur
-// input manual/recurring yang memang transaksi baru yang belum pernah
-// tercermin di saldo. Dedup terhadap transaksi yang sudah ada (tanggal+
-// nominal+catatan sama) supaya re-upload file yang sama tidak menggandakan.
 // ── Impor mutasi (/membership/impor) ───────────────────────────────────────
 // Baris impor = riwayat: TIDAK mengubah saldo rekening maupun total member
 // (saldo di Leosiqra biasanya sudah benar; mutasi bank = yang sudah terjadi).
@@ -4350,8 +4268,8 @@ async function handleQuickTransaction(request: Request, env: Env) {
   const id = generateId();
   const now = nowIso();
 
-  // Catat transaksi + ubah saldo dalam satu batch atomik (dulu dua langkah:
-  // kalau update saldo gagal, transaksi tercatat tapi saldo tertinggal).
+  // Catat transaksi + ubah saldo dalam satu batch atomik — kalau dipisah, update saldo
+  // yang gagal membuat transaksi tercatat tapi saldo tertinggal.
   await env.DB.batch([
     env.DB.prepare(
       `INSERT INTO transactions (
@@ -4668,7 +4586,7 @@ async function handleListAccounts(request: Request, env: Env) {
   return json({ items: rows.results });
 }
 
-// Pengaturan siklus tagihan kartu kredit (Tahap 3) — dititipkan di
+// Pengaturan siklus tagihan kartu kredit — dititipkan di
 // payload_json seperti cardColor/creditLimit. Nilai null = hapus pengaturan.
 // Tanggal dibatasi 1–28 supaya selalu ada di setiap bulan (termasuk Februari).
 const CARD_CYCLE_FIELDS: Array<[string, string, (v: number) => number | null]> = [
@@ -5487,9 +5405,8 @@ async function handleDeleteAccount(request: Request, env: Env, accountId: string
   const userId = authResult.session.user.id;
 
   // transactions.account_id punya FOREIGN KEY ... ON DELETE RESTRICT di
-  // skema produksi — rekening yang masih punya transaksi tidak bisa dihapus
-  // (sebelumnya jadi error 500 generik). Cek dulu supaya user dapat alasan
-  // yang jelas, bukan "Terjadi kesalahan pada server".
+  // skema produksi — rekening yang masih punya transaksi tidak bisa dihapus.
+  // Cek dulu supaya user dapat alasan yang jelas, bukan "Terjadi kesalahan pada server".
   const usage = await env.DB.prepare(
     "SELECT COUNT(*) AS total FROM transactions WHERE account_id = ? AND user_id = ?"
   )
@@ -5745,7 +5662,7 @@ async function handleStockPrice(request: Request, env: Env) {
 type StockSearchResult = { symbol: string; name: string; exchangeCode: string; logoUrl: string };
 
 async function fetchStockSearch(query: string, env: Env): Promise<StockSearchResult[]> {
-  // v3 (2026-10-30): ETF ikut dicari. v2: cache key sengaja diganti supaya entri lama dengan logoUrl yang salah
+  // Versi di cache key sengaja dinaikkan supaya entri lama dengan logoUrl salah
   // (simbol tanpa akhiran bursa, lihat catatan logoUrl di bawah) tidak kepakai lagi.
   const cacheKey = new Request(`https://cache.internal.leosiqra.com/stock-search-v3/${encodeURIComponent(query.toLowerCase())}`);
   const edgeCache = caches.default;
@@ -7608,7 +7525,7 @@ async function handlePutAiChatHistory(request: Request, env: Env) {
   if (authResult.error) return authResult.error;
   const payload = await parseJson<{ messages?: unknown[] }>(request);
   // Hanya bentuk pesan yang wajar, maksimal 200 pesan terakhir & 20rb karakter
-  // per pesan — dulu isi apa pun sebesar apa pun disimpan apa adanya.
+  // per pesan.
   const messages = (Array.isArray(payload.messages) ? payload.messages : [])
     .filter((m): m is Record<string, unknown> => typeof m === "object" && m !== null)
     .slice(-200)
@@ -7743,7 +7660,7 @@ async function handleAdminSettings(request: Request, env: Env) {
     });
 
   // Belum ada kolom khusus untuk daftar paket Pro — disimpan sebagai JSON di
-  // kolom value_json yang sudah ada (sebelumnya tidak terpakai sama sekali).
+  // kolom value_json yang sudah ada.
   if (payload.pro_packages !== undefined) {
     sanitizedEntries.push(["value_json", JSON.stringify({ proPackages: payload.pro_packages })]);
   }
@@ -7780,9 +7697,8 @@ async function handleAdminSettings(request: Request, env: Env) {
 
 // Subset admin_settings yang aman dibaca member biasa (bukan admin) untuk
 // menyelesaikan pembayaran Pro: rekening/QRIS/paket/kontak. Sengaja endpoint
-// terpisah dari /api/admin/settings (admin-only) — sebelumnya halaman
-// Konfirmasi Pembayaran memakai endpoint admin itu langsung sehingga member
-// non-admin selalu gagal fetch (403) dan rekening/QRIS/WA/email kosong.
+// terpisah dari /api/admin/settings (admin-only) supaya member non-admin tidak
+// kena 403 dan rekening/QRIS/WA/email tetap tampil.
 async function handleMemberPaymentInfo(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) {
@@ -7858,7 +7774,7 @@ async function handleAdminUsers(request: Request, env: Env) {
 // statement (D1 menjalankan tulis berurutan), lalu efeknya (PRO / pengajuan
 // tarik) di-batch dengan syarat baris ledger-nya ada — tidak ada celah
 // "saldo dicek, lalu dipotong" yang bisa diserbu request paralel.
-// 2026-11-07 (keputusan Bos): satu jenis koin, 1 koin = Rp1, bisa DIBELI (top up) → koin tidak
+// Satu jenis koin, 1 koin = Rp1, bisa DIBELI (top up) → koin tidak
 // boleh lebih murah dari langganan: tukar PRO = 15.000 koin/bulan (= harga PRO Rp15.000).
 // Hadiah (referral, streak) TIDAK lagi bisa dicairkan jadi uang; penarikan baru ditutup
 // (pengajuan lama tetap diproses admin). withdrawMin/idrPerCoin dipertahankan untuk riwayat.
@@ -8248,7 +8164,7 @@ async function handleAdminCoinWithdrawalById(request: Request, env: Env, id: str
   return json({ ok: true });
 }
 
-// ── Admin › Koin (2026-11-07) ────────────────────────────────────────────────
+// ── Admin › Koin ─────────────────────────────────────────────────────────────
 // GET  /api/admin/coins/summary        → ringkasan ekonomi koin
 // GET  /api/admin/coins/users?q=       → pengguna + saldo (cari nama/email)
 // GET  /api/admin/coins/ledger?kind=&user= → riwayat (maks 300)
@@ -8352,7 +8268,7 @@ async function handleCoinRoutes(request: Request, env: Env, pathname: string) {
     if (pathname === "/api/member/coins/team" && method === "GET") return await handleCoinTeam(request, env);
     if (pathname === "/api/member/coins/apply-code" && method === "POST") return await handleApplyReferralCode(request, env);
     if (pathname === "/api/member/coins/redeem-pro" && method === "POST") return await handleRedeemCoinsForPro(request, env);
-    // Penarikan koin ditutup 2026-11-07 (koin kini bisa dibeli; hadiah bukan uang).
+    // Penarikan koin ditutup (koin kini bisa dibeli; hadiah bukan uang).
     if (pathname === "/api/member/coins/withdraw" && method === "POST") return json({ error: "Penarikan koin sudah ditutup. Koin bisa dipakai untuk PRO & fitur AI." }, { status: 410 });
     if (pathname === "/api/admin/coin-withdrawals" && method === "GET") return await handleAdminCoinWithdrawals(request, env);
     if (pathname.startsWith("/api/admin/coin-withdrawals/") && method === "PATCH") {
@@ -8419,7 +8335,7 @@ async function handleAdminUserById(request: Request, env: Env, userId: string) {
     }
 
     // Pemilik dompet bersama tidak bisa dihapus sebelum kepemilikan diserahkan
-    // (keputusan Bos; FK sw_wallets.owner_id RESTRICT). Sebelum migrasi 0009
+    // (FK sw_wallets.owner_id RESTRICT). Sebelum migrasi 0009
     // diterapkan tabelnya belum ada → lewati cek.
     const ownedWallets = await env.DB.prepare("SELECT COUNT(*) AS n FROM sw_wallets WHERE owner_id = ?")
       .bind(userId)
@@ -8700,7 +8616,7 @@ async function handleAdminLogs(request: Request, env: Env) {
   return json({ items: rows.results });
 }
 
-// ── Kuota AI harian FREE vs PRO (2026-11-07) ───────────────────────────────
+// ── Kuota AI harian FREE vs PRO ──────────────────────────────────────────────
 // Fitur AI memanggil model berbayar → dibatasi per hari (tanggal WIB). Disimpan di
 // users.metadata_json "$.aiq_<jenis>" = { day, n }, diambil atomik (UPDATE bersyarat) SEBELUM
 // handler jalan; dikembalikan kalau permintaan gagal (status bukan 2xx / error). Teks biasa (parse
@@ -8833,8 +8749,8 @@ async function handleAiChat(request: Request, env: Env) {
   // Riwayat percakapan sebelumnya diteruskan ke model agar AI ingat konteks
   // obrolan, bukan hanya menjawab satu pertanyaan tanpa memori.
   // Terima dua format: dari server (role user/assistant + content) dan format
-  // lama yang dulu disimpan ulang oleh browser (role model + text) — dulu
-  // format kedua tersaring habis sehingga AI "lupa" obrolan sebelumnya.
+  // lama yang disimpan ulang oleh browser (role model + text) — kalau tersaring,
+  // AI "lupa" obrolan sebelumnya.
   const history = (nextMessages as Array<Record<string, unknown>>)
     .map((m) => {
       const role = m.role === "user" ? "user" : m.role === "assistant" || m.role === "model" ? "assistant" : null;
@@ -9571,8 +9487,8 @@ Kalau struk berisi banyak barang, pilih barang termahal yang tahan lama. Hari in
 }
 
 // ── Ladangku: taksir harga jual barang bekas + tulis iklan (AI + web search) ──
-// Web search = plugin "web" OpenRouter (biaya tambahan per request, disetujui Bos
-// 2026-11-04) → dibatasi APPRAISE_DAILY_LIMIT per user per hari (kuota atomik di
+// Web search = plugin "web" OpenRouter (biaya tambahan per request)
+// → dibatasi APPRAISE_DAILY_LIMIT per user per hari (kuota atomik di
 // metadata_json $.appraiseAi, dikembalikan kalau AI gagal). Tautan iklan pembanding
 // HANYA yang benar-benar ada di kutipan hasil pencarian (annotations url_citation) —
 // tautan karangan model dibuang. Matikan pencarian: env OPENROUTER_APPRAISE_WEB=false.
@@ -10655,7 +10571,7 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
   const userId = authResult.session.user.id;
   try {
     // Ide usaha & baca harga website kini lewat AI milik pengguna (MCP: create_shop,
-    // set_shop_products) — tidak memakai AI/kuota Leosiqra (keputusan Bos 2026-11-05).
+    // set_shop_products) — tidak memakai AI/kuota Leosiqra.
     if (pathname === "/api/member/shops/ideas") return json({ error: USAHA_AI_MOVED, code: "use_mcp" }, { status: 410 });
     if (pathname === "/api/member/shops") {
       if (request.method === "GET") {
@@ -10851,7 +10767,6 @@ async function handleListingRoutes(request: Request, env: Env, pathname: string)
   try {
     if (pathname === "/api/member/listings") {
       if (request.method !== "GET") return json({ error: "Method not allowed" }, { status: 405 });
-      // Yang dijual + yang laku/batal 90 hari terakhir.
       const since = new Date(Date.now() - 90 * 864e5).toISOString();
       const rows = await env.DB.prepare(
         `SELECT ${LISTING_COLUMNS} FROM listings l LEFT JOIN items i ON i.id = l.item_id AND i.user_id = l.user_id
@@ -11440,7 +11355,7 @@ const fetchSteamInventory = async (id64: string): Promise<{ ok: true; items: Ste
   return { ok: true, items: [...byName.values()].map((i) => ({ ...i, count: Math.min(9999, i.count) })), complete };
 };
 
-// ── Progres set Pokémon (TCGdex /sets/{id}, cache 24 jam) ───────────────────
+// Progres set Pokémon (TCGdex /sets/{id}, cache 24 jam).
 type TcgSet = { id: string; name: string; logo: string | null; symbol: string | null; official: number; total: number };
 const tcgdexSet = async (id: string): Promise<TcgSet | null> => {
   if (!TCGDEX_ID_RE.test(id)) return null;
@@ -11620,7 +11535,6 @@ async function handleCollectibleRoutes(request: Request, env: Env, pathname: str
       return json({ items: sets.filter(Boolean) });
     }
 
-    // Impor / sinkron ulang inventaris CS2 publik.
     if (pathname === "/api/member/collectibles/steam/import" && request.method === "POST") {
       if (!(await checkCollectibleRateLimit(env, userId))) return json({ error: "Terlalu cepat. Coba lagi sebentar." }, { status: 429 });
       const raw = await parseJson<{ profile?: unknown }>(request);
@@ -14266,7 +14180,6 @@ async function handleNativePushToken(request: Request, env: Env) {
   }
 }
 
-// Kirim ke SEMUA perangkat/subscription milik satu user (bisa lebih dari satu).
 const sendWebPushToUser = async (env: Env, userId: string, title: string, body: string, url: string) => {
   await recordNotification(env, userId, title, body, url);
   const { results } = await env.DB.prepare(
@@ -14348,12 +14261,8 @@ const computeUserInsights = async (env: Env, userId: string): Promise<UserInsigh
     .bind(userId, historyStart)
     .all<MonthlyCategoryRow>();
 
-  // Menaruh uang ke investasi (Deposito/Saham/dll) tersimpan sebagai type
-  // "pengeluaran" tapi BUKAN kerugian — sama seperti bug yang ditemukan di
-  // Dashboard Tahunan & monthSummary AI chat. Kalau ikut dijumlah di sini,
-  // "tren pengeluaran" jadi salah, dan naik-turunnya alokasi investasi bisa
-  // salah dianggap "anomali pengeluaran" padahal itu perilaku menabung yang
-  // baik, bukan masalah.
+  // Beli investasi (Deposito/Saham/dll) tersimpan sebagai "pengeluaran" tapi BUKAN
+  // kerugian — kalau ikut dijumlah, tren pengeluaran salah dan menabung dikira anomali.
   const isInvestmentCategory = (category: string) =>
     category?.toLowerCase().includes("investasi") || category === "Saham" || category === "Deposito";
 
@@ -14676,7 +14585,6 @@ const computeUserGamification = async (
   const todayStr = todayWIB();
   const currentYm = todayStr.slice(0, 7);
 
-  // --- Streak mencatat transaksi (hari berturut-turut) ---
   const { results: dateRows } = await env.DB.prepare(
     `SELECT DISTINCT substr(date, 1, 10) as d FROM transactions WHERE user_id = ? AND date >= ?`
   )
@@ -14728,7 +14636,6 @@ const computeUserGamification = async (
     }
   }
 
-  // --- Data pendukung badge lain ---
   const investmentCount = await env.DB.prepare(`SELECT COUNT(*) as c FROM investments WHERE user_id = ?`)
     .bind(userId)
     .first<{ c: number }>();
@@ -14742,8 +14649,7 @@ const computeUserGamification = async (
     .bind(userId)
     .first<{ outstanding: number | null; total: number }>();
 
-  // Hanya setoran — penarikan juga tersimpan sebagai baris bernominal positif
-  // di tabel savings, jadi dulu ikut menambah "total setoran".
+  // Hanya setoran — penarikan juga tersimpan sebagai baris bernominal positif di tabel savings.
   const savingsTotal = await env.DB.prepare(
     `SELECT SUM(COALESCE(NULLIF(amount_idr, 0), amount)) as total, COUNT(*) as n
        FROM savings WHERE user_id = ? AND COALESCE(transaction_type, 'Setoran') = 'Setoran'`
@@ -15132,7 +15038,6 @@ const sendDailySummaryNotifications = async (env: Env) => {
   const skip = new Set((optedOut ?? []).map((r) => r.id));
 
   for (const [userId, totals] of totalsByUser) {
-    // Tidak ada aktivitas sama sekali kemarin -> jangan kirim apa-apa.
     if (totals.pengeluaran <= 0 && totals.pemasukan <= 0) continue;
     if (skip.has(userId)) continue;
     try {
@@ -15423,9 +15328,8 @@ const CATEGORY_COLORS = ["blue", "sky", "indigo", "teal", "green", "amber", "ora
 const CATEGORY_STYLES_MAX = 200;
 const CATEGORY_EMOJI_RE = /^[^\x00-\x7F]{1,16}$/u;
 type CategoryStyle = { emoji: string; color: string };
-// Jenis kategori (pengeluaran/pemasukan) per nama grup — dulu hanya ditebak
-// & disimpan di localStorage browser, sekarang di akun supaya sama di semua
-// perangkat. $.prefs.categoryKinds.
+// Jenis kategori (pengeluaran/pemasukan) per nama grup, disimpan di akun supaya
+// sama di semua perangkat. $.prefs.categoryKinds.
 const CATEGORY_KINDS = ["pengeluaran", "pemasukan"] as const;
 type CategoryKindPref = (typeof CATEGORY_KINDS)[number];
 const sanitizeCategoryKinds = (raw: unknown): Record<string, CategoryKindPref> => {
@@ -15473,7 +15377,6 @@ type UserPrefs = {
   budgetStartDay: number;
   // Tag transaksi: dinyalakan user + daftar tag (nama unik, warna CATEGORY_COLORS).
   tags: { enabled: boolean; list: { name: string; color: string }[] };
-  // Kolom nominal: keyboard angka biasa atau kalkulator mini.
   amountKeypad: "standar" | "kalkulator";
   // Jenis notifikasi push yang boleh dikirim (default semua nyala).
   notify: NotifyPrefs;
@@ -16350,9 +16253,8 @@ const nextDebtDue = (due: DebtDue, today: string): string | null => {
 // Pengingat jatuh tempo hutang/piutang yang belum lunas: H-3 & H-1 (harian 10:00 WIB).
 // Klaim payload_json.dueRemindedFor = "<tanggal>|<tahap>" → tiap tahap sekali, aman
 // kalau cron terpicu dua kali. Ikut toggle $.prefs.notify.bills.
-// Batas baris per user di cron pengingat: satu akun yang membuat ribuan baris
-// tidak boleh menghabiskan LIMIT global sehingga user lain tidak diingatkan
-// (pola insiden 2026-10-29 & audit 2026-11-04).
+// Batas baris per user di cron pengingat: satu akun dengan ribuan baris tidak
+// boleh menghabiskan LIMIT global sehingga user lain tidak diingatkan.
 const CRON_PER_USER_DEBTS = 20;
 const CRON_PER_USER_BILLS = 20;
 const CRON_PER_USER_WARRANTY = 30;
@@ -16908,9 +16810,7 @@ const dayDiff = (fromDay: string, toDay: string) =>
 // uang rekening itu sendiri, tanpa konversi — sama seperti alur input manual/
 // Input Cepat), baru kirim notifikasi "sudah tercatat".
 //
-// Dulu cuma mengambil jadwal yang next_date-nya PERSIS hari ini — sekali cron
-// terlewat (gagal/deploy/jadwal dibuat dengan tanggal lampau), jadwal itu
-// macet selamanya. Sekarang semua yang jatuh tempo <= hari ini diproses:
+// Semua yang jatuh tempo <= hari ini diproses (cron bisa terlewat):
 // telat <= RECURRING_CATCHUP_DAYS dieksekusi dengan tanggal jatuh temponya,
 // yang lebih lama dilompati tanpa menyentuh saldo.
 const processDueRecurringTransactions = async (env: Env) => {
@@ -17119,11 +17019,8 @@ const processMaturedDeposits = async (env: Env) => {
   }
 };
 
-// App-nya same-origin (frontend + API disajikan dari Worker yang sama), jadi
-// CORS lintas-origin normalnya tidak pernah dipakai — daftar ini cuma buat
-// jaga-jaga (preview domain, dev lokal), bukan wildcard "*" yang kebuka lebar.
 // ===== Dompet Bersama (Mode Keluarga/Patungan) fase 1 =====
-// Rancangan: docs/rancangan/shared-wallet.md (ACC Bos 2026-10-12). Buku kas
+// Rancangan: docs/rancangan/shared-wallet.md. Buku kas
 // TERPISAH (tabel sw_*): tidak menyentuh transactions/accounts/budgets pribadi,
 // jadi isolasi data pribadi tetap seperti sebelumnya. Setiap akses ke dompet
 // lewat requireWalletRole (keanggotaan dibaca dengan user_id dari sesi);
@@ -17771,8 +17668,7 @@ async function handleSharedWallets(request: Request, env: Env, url: URL) {
 }
 
 // ---------------------------------------------------------------------------
-// Leosiqra MCP (tahap 1+2: token manual, tool baca, tool tulis) — ACC Bos
-// 2026-10-12, keputusan Bos 2026-10-23, rancangan docs/rancangan/mcp.md.
+// Leosiqra MCP (token manual, tool baca, tool tulis) — docs/rancangan/mcp.md.
 // Jalur auth TERPISAH dari cookie: token MCP hanya dikenali requireMcpToken di
 // POST /mcp, tidak pernah oleh requireSession (/api/member/*, /api/admin/*).
 // User ID hanya dari token — tidak ada tool yang menerima user_id.
@@ -17860,8 +17756,8 @@ const requireMcpToken = async (env: Env, request: Request): Promise<McpAuth | nu
   };
 };
 
-// Izin tulis untuk semua akun (keputusan Bos 2026-11-05: Usahaku gratis lewat AI);
-// tool bertanda `pro` (uang: transaksi, budget) tetap khusus PRO, dicek per tool.
+// Izin tulis untuk semua akun; tool bertanda `pro` (uang: transaksi, budget)
+// tetap khusus PRO, dicek per tool.
 const mcpCanUse = (auth: McpAuth, t: McpToolDef) => !t.write || (auth.scopes.has("write") && (!t.pro || auth.plan === "PRO"));
 
 const mcpRateLimit = async (env: Env, auth: McpAuth, write: boolean): Promise<boolean> => {
@@ -18487,7 +18383,7 @@ const mcpSetCatalogImages: McpToolDef["run"] = async (env, auth, args) => {
     const o = c && typeof c === "object" ? (c as Record<string, unknown>) : {};
     const group = shopText(o.group, 40);
     if (!group) continue;
-    if (o.image_url === "" || o.image_url === null) { delete images[group]; continue; } // kosong = hapus
+    if (o.image_url === "" || o.image_url === null) { delete images[group]; continue; }
     const u = safeImageUrl(o.image_url);
     if (u) images[group] = u; else rejected.push(group);
   }
@@ -19107,7 +19003,7 @@ async function handleMemberMcp(request: Request, env: Env, url: URL) {
 
 // ---------------------------------------------------------------------------
 // Leosiqra MCP tahap 3: OAuth 2.1 supaya bisa dipasang dari claude.ai & ChatGPT
-// ("Add custom connector" → login Leosiqra → Izinkan). Keputusan Bos 2026-10-23:
+// ("Add custom connector" → login Leosiqra → Izinkan). Keputusan:
 // #1 OAuth 2.1 + PKCE, #2 DCR terbuka + rate limit + domain klien di layar izin.
 // - Authorization code + PKCE S256 wajib; kode 10 menit, sekali pakai.
 // - Access token = token lsq_mcp_ biasa (1 jam) di mcp_tokens source='oauth',
@@ -19615,6 +19511,8 @@ async function handleMcpOAuthPublic(request: Request, env: Env, url: URL) {
   }
 }
 
+// App same-origin (frontend + API dari Worker yang sama); daftar ini cuma untuk preview
+// domain & dev lokal — sengaja bukan wildcard "*".
 const ALLOWED_ORIGINS = new Set([
   "https://www.leosiqra.com",
   "https://leosiqra.com",
@@ -19647,9 +19545,7 @@ const worker = {
         return Response.redirect(url.toString(), 301);
       }
 
-      // Kanonis-kan ke www — Search Console melaporkan leosiqra.com (apex)
-      // dan www.leosiqra.com sama-sama 200 OK sebagai halaman terpisah tanpa
-      // versi kanonis ("Duplikat, tanpa ada versi kanonis pilihan pengguna").
+      // Kanonis-kan ke www — apex & www sama-sama 200 dianggap duplikat oleh Search Console.
       if ((request.method === "GET" || request.method === "HEAD") && url.hostname === "leosiqra.com") {
         url.hostname = "www.leosiqra.com";
         return Response.redirect(url.toString(), 301);
@@ -19665,11 +19561,8 @@ const worker = {
         return Response.redirect(normalized, 308);
       }
 
-      // Kanonis-kan file .html mentah (artefak nama file Next static export)
-      // ke URL bersih tanpa ekstensi — Search Console melaporkan
-      // /index.html, /privacy.html, /terms.html sebagai halaman "dengan
-      // pengalihan"/duplikat terpisah dari versi bersihnya (/, /privacy,
-      // /terms) yang dipakai di sitemap & seluruh link internal.
+      // Kanonis-kan file .html mentah (artefak static export) ke URL bersih tanpa
+      // ekstensi — Search Console menganggapnya duplikat versi bersih di sitemap.
       if (
         (request.method === "GET" || request.method === "HEAD") &&
         url.pathname.endsWith(".html") &&
@@ -20302,8 +20195,6 @@ const worker = {
       }
 
       // Admin-only: broadcast push notification ke SEMUA user (bukan cuma satu).
-      // Dipakai untuk pengumuman fitur, jadi isi title/body dikontrol manual
-      // oleh admin, bukan hardcoded.
       if (url.pathname === "/api/admin/debug/broadcast-notification" && request.method === "POST") {
         const authResult = await requireSession(env, request, "admin");
         if (authResult.error) return authResult.error;
