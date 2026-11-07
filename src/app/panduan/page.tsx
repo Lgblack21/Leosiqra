@@ -19,6 +19,7 @@ import { LandingFooter } from '@/components/LandingFooter';
 import { ClipboardList } from 'lucide-react';
 import { Target } from 'lucide-react';
 import { Bot } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Panduan Keuangan Pribadi | Leosiqra',
