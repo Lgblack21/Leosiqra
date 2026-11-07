@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-08 (3.6.4 menunggu gas; live: rilis 3.6.3, run 42400196318; migrasi 0039 menunggu Bos)
+Terakhir diperbarui: 2026-11-08 (live: rilis 3.6.4, run 42403091544; migrasi 0039 menunggu Bos)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-08 — 3.6.4 SIAP (branch claude/form-transaksi-20261108), menunggu "gas". Tanpa SQL.**
+- **2026-11-08 — RILIS 3.6.4: LIVE (run 42403091544, commit 36d6649). Tanpa SQL. Belum dicek: logo bank di prod.**
   - `src/components/AccountSelect.tsx` (baru, web): dropdown inline logo (logoUrl → matchIndonesianInstitutionLogo) +
     saldo / sisa limit kartu kredit (computeCreditUsage). "Tanpa rekening" dihapus; rekening pertama non-kartu-kredit
     terpilih otomatis; submit tanpa rekening ditolak ("Pilih rekening dulu"); 0 rekening → link ke /membership/rekening.
