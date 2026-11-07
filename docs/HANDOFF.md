@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live: rilis 3.5.1, run 42369534906; migrasi 0036, 0037, 0038 menunggu Bos)
+Terakhir diperbarui: 2026-11-07 (live: rilis 3.5.1, run 42369534906; migrasi 0036, 0037, 0038 SUDAH dijalankan Bos)
 
 ## Siapa sedang kerja
 
@@ -23,7 +23,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     (aksesori `doctor`: cermin dahi + stetoskop, teal) untuk tab Cek; `makan` tetap Leo si Koki. Aksesori `nurse`
     dihapus (mirip topi koki). AI_CHAT_PAGES Worker + `kesehatan`. SehatApp: LeoGuide `key={tab}` → obrolan per tab.
 
-- **2026-11-07 — RILIS 3.5.0: LIVE (run 42369027648, commit 5a5afd4, Release v3.5.0): Sehatku › Asuransi. MIGRASI 0038 menunggu Bos.**
+- **2026-11-07 — RILIS 3.5.0: LIVE (run 42369027648, commit 5a5afd4, Release v3.5.0): Sehatku › Asuransi. MIGRASI 0038 SUDAH dijalankan Bos (2026-11-07).**
   - **MIGRASI di D1 Console** (0038_health.sql, boleh sebelum/sesudah deploy): tabel `health_policies` + `health_claims`
     (+ 3 index). Tanpa tabel: biaya kesehatan & direktori tetap jalan, Polisku/Klaim → ready:false / 503.
   - Worker `handleMemberHealth` (/api/member/health/*): summary (biaya per bulan & sub dari kategori Kesehatan, polis,
@@ -65,7 +65,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   - Berikutnya (rencana): tab Asuransi = kartu biaya kesehatan tahun ini + Polisku (premi & pengingat); Cek menyusul.
   - Dicek: tsc, eslint, build; screenshot web 1366 (tanpa sidebar), iPhone 13 terang/gelap, tab segera, redirect, 0 error JS.
 
-- **2026-11-07 — RILIS 3.3.0: LIVE (run 42364373366, commit 37f2743, Release v3.3.0): Makanku + popup Leo per fitur. MIGRASI 0037 menunggu Bos.**
+- **2026-11-07 — RILIS 3.3.0: LIVE (run 42364373366, commit 37f2743, Release v3.3.0): Makanku + popup Leo per fitur. MIGRASI 0037 SUDAH dijalankan Bos (2026-11-07).**
   - **MIGRASI di D1 Console** (0037_meals.sql, boleh sebelum/sesudah deploy): tabel `meals` + index. Tanpa tabel:
     GET → ready:false (banner "sedang disiapkan"), simpan → 503.
   - Worker: `/api/member/meals` GET (hari + minggu Sen–Min + streak + target + belanja Makanan & Minuman minggu ini +
@@ -99,7 +99,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     3.2.0 masuk main (sudah). Deploy main kini memberi judul "Leosiqra X — Judul".
   - Dicek: tsc, eslint, prettier, build; screenshot web 1366 + iPhone 13 terang/gelap, 0 error JS.
 
-- **2026-11-07 — RILIS 3.1.3: LIVE (run 42360670539, commit e3b1651, Release v3.1.3). MIGRASI 0036 menunggu Bos.**
+- **2026-11-07 — RILIS 3.1.3: LIVE (run 42360670539, commit e3b1651, Release v3.1.3). MIGRASI 0036 SUDAH dijalankan Bos (2026-11-07).**
   - **MIGRASI di D1 Console** (0036_stock_staff_id.sql, boleh sebelum/sesudah deploy):
     `ALTER TABLE shop_stock_moves ADD COLUMN by_staff_id TEXT;` Tanpa kolom: Worker tidak menulisnya (perilaku = 3.1.2).
     Cek kolom di-cache per isolate (ada → permanen, belum ada → dicek ulang tiap 60 dtk).
