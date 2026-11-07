@@ -3611,6 +3611,11 @@ async function handleCreateTransaction(request: Request, env: Env) {
   if (!payload.type || !payload.amount || !payload.date) {
     return json({ error: "type, amount, dan date wajib diisi." }, { status: 400 });
   }
+  // transactions.category NOT NULL di D1: tanpa cek ini klien dapat 500 generik.
+  // String kosong tetap diterima seperti sebelumnya (lolos NOT NULL, dipakai beberapa form).
+  if (typeof payload.category !== "string") {
+    return json({ error: "Kategori wajib dipilih." }, { status: 400 });
+  }
   const due = payload.type === "debt" ? sanitizeDebtDue(payload.due) : undefined;
   if (payload.type === "debt" && payload.due != null && !due) return json({ error: "Jatuh tempo tidak valid." }, { status: 400 });
   const tagList = sanitizeTxTags(payload.tags);
