@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live 3.3.0; 3.3.1 Sehatku menunggu "gas"; migrasi 0036 & 0037 menunggu Bos)
+Terakhir diperbarui: 2026-11-07 (live: rilis 3.3.1, run 42365175967; migrasi 0036 & 0037 menunggu Bos)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-07 — RILIS 3.3.1 (branch `claude/sehatku-20261107`): Makanku → Sehatku (layar penuh). Tanpa SQL baru (0037 tetap perlu).**
+- **2026-11-07 — RILIS 3.3.1: LIVE (run 42365175967, commit 271a2ea, Release v3.3.1): Makanku → Sehatku (layar penuh). Tanpa SQL baru (0037 tetap perlu).**
   - `src/components/sehat/SehatApp.tsx`: bar atas + dock (tab hash #makan/#asuransi/#cek; Asuransi & Cek = "segera").
     Web `/membership/sehat` (masuk FULLSCREEN_PATHS), app `/app/sehat` (di luar grup tab). MakanApp `embedded`.
   - `/membership/makan` & `/app/makan` = redirect ke `/sehat#makan`. Fitur id 'sehat' (label Sehatku, ikon HeartPulse);
