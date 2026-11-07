@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useFitHeight } from '@/lib/useFitHeight';
 import Link from 'next/link';
 import { ArrowLeft, Leaf, ListChecks, Settings2, Timer } from 'lucide-react';
-import { AiOrb } from '@/components/ai/AiChat';
+import { LeoGuide } from '@/components/ai/LeoGuide';
 import { FocusTimer } from './FocusTimer';
 import { BreathView } from './BreathView';
 import { RecapView } from './RecapView';
@@ -79,13 +79,7 @@ export function FocusApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
             <Settings2 size={19} />
           </button>
         ) : (
-          <Link
-            href={variant === 'app' ? '/app/assistant/chat' : '/membership/ai-leosiqra'}
-            aria-label="Tanya Leo"
-            className="rounded-full ring-2 ring-white transition-transform hover:scale-105"
-          >
-            <AiOrb size={44} />
-          </Link>
+          <LeoGuide topic="fokus" />
         )}
       </header>
 

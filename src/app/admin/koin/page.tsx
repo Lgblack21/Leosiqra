@@ -655,7 +655,12 @@ function RulesTab({ s }: { s: Summary }) {
       note: `PRO dapat ${r.storyAiFreePro} gratis per bulan`,
     },
   ];
-  const AI_LABEL: Record<string, string> = { chat: 'Chat Leo', scan: 'Scan struk', voice: 'Catat lewat suara' };
+  const AI_LABEL: Record<string, string> = {
+    chat: 'Chat Leo',
+    scan: 'Scan struk',
+    voice: 'Catat lewat suara',
+    meal: 'Analisis makanan',
+  };
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <Card>

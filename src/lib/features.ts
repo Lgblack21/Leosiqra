@@ -9,6 +9,7 @@ import {
   Sprout,
   Timer,
   NotebookPen,
+  UtensilsCrossed,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -35,7 +36,8 @@ export type FeatureId =
   | 'langganan'
   | 'ladang'
   | 'fokus'
-  | 'cerita';
+  | 'cerita'
+  | 'makan';
 
 export type Feature = { id: FeatureId; label: string; href: string; icon: LucideIcon; tint: string };
 
@@ -98,6 +100,13 @@ export const FEATURES: Feature[] = [
     tint: 'from-amber-50 to-pink-100 text-pink-600',
   },
   {
+    id: 'makan',
+    label: 'Makanku',
+    href: '/membership/makan',
+    icon: UtensilsCrossed,
+    tint: 'from-orange-50 to-rose-100 text-orange-600',
+  },
+  {
     id: 'rutin',
     label: 'Transaksi Rutin',
     href: '/membership/recurring',
@@ -126,6 +135,7 @@ export const DEFAULT_FEATURES: FeatureId[] = [
   'ladang',
   'fokus',
   'cerita',
+  'makan',
 ];
 
 const BY_ID = new Map(FEATURES.map((f) => [f.id, f]));

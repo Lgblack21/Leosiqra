@@ -50,6 +50,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.1.2 | 7 Nov 2026 | Pesan jelas saat rekening belum dipilih |
 | 3.1.3 | 7 Nov 2026 | Catatan stok tim lebih aman |
 | 3.2.0 | 7 Nov 2026 | Halaman Riwayat versi |
+| 3.3.0 | 7 Nov 2026 | Makanku & Leo di tiap fitur |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -63,6 +64,17 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.3.0 — 2026-11-07 — Makanku & Leo di tiap fitur
+
+- Fitur baru **Makanku**: foto piringmu, Leo mengenali menunya lalu menaksir kalori, protein, karbohidrat, dan
+  lemak, plus skor keseimbangan gizi dan satu tips kecil. Harga (perkiraan Leo, bisa diubah) bisa langsung dicatat
+  sebagai pengeluaran Makanan & Minuman dari rekening pilihanmu. Ada lingkaran kalori vs target harian, grafik
+  Minggu ini, total belanja makan, dan hari beruntun. Bisa juga catat manual tanpa foto. Analisis foto: FREE 3×,
+  PRO 30× per hari.
+- **Leo di tiap fitur:** tombol Leo di Makanku, Cerita Hari Ini, Fokus, Ladangku, dan Investasiku kini membuka
+  popup — Leo dengan gaya berbeda per halaman, materi singkat, pertanyaan yang pas, dan obrolan langsung di
+  halaman itu tanpa pindah ke AI Leo.
 
 ## 3.2.0 — 2026-11-07 — Halaman Riwayat versi
 

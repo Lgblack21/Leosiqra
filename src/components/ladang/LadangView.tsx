@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { AiOrb } from '@/components/ai/AiChat';
+import { LeoGuide } from '@/components/ai/LeoGuide';
 import { ArrowLeft, Camera, ChevronRight, HandCoins, LayoutGrid, Sprout, Store, Tag } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -94,13 +94,7 @@ export function LadangView({ variant, toast }: { variant: 'web' | 'app'; toast?:
             </h1>
             <p className="truncate text-[12px] text-slate-500">{current.sub}</p>
           </div>
-          <Link
-            href="/membership/ai-leosiqra"
-            aria-label="Tanya Leo"
-            className="rounded-full ring-2 ring-white transition-transform hover:scale-105"
-          >
-            <AiOrb size={44} />
-          </Link>
+          <LeoGuide topic="ladang" />
         </header>
         <main className="space-y-4">{content}</main>
         <nav

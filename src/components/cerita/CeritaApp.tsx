@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, BookOpen, CalendarDays, PenLine } from 'lucide-react';
-import { AiOrb } from '@/components/ai/AiChat';
+import { LeoGuide } from '@/components/ai/LeoGuide';
 import { TulisView } from './TulisView';
 import { KalenderView } from './KalenderView';
 import { KumpulanView } from './KumpulanView';
@@ -86,13 +86,7 @@ export function CeritaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
           </h1>
           <p className="truncate text-[12px] text-slate-500 dark:text-slate-400">{current.sub}</p>
         </div>
-        <Link
-          href={variant === 'app' ? '/app/assistant/chat' : '/membership/ai-leosiqra'}
-          aria-label="Tanya Leo"
-          className="rounded-full ring-2 ring-white transition-transform hover:scale-105"
-        >
-          <AiOrb size={44} />
-        </Link>
+        <LeoGuide topic="cerita" />
       </header>
 
       {notReady && (

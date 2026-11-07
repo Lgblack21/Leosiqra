@@ -6,7 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ArrowLeft, BarChart3, GraduationCap, Newspaper, Sparkles } from 'lucide-react';
 import { useMarketData } from '@/lib/hooks/useMarketData';
 import { cloudflareApi } from '@/lib/cloudflare-api';
-import { AiOrb } from '@/components/ai/AiChat';
+import { LeoGuide } from '@/components/ai/LeoGuide';
 import { TabInvestasiku } from '@/components/investasi/TabInvestasiku';
 import { TabKabar, type KabarItem, type KabarState } from '@/components/investasi/TabKabar';
 import { TabSbn } from '@/components/investasi/TabSbn';
@@ -85,13 +85,7 @@ export function InvestShell() {
             {tab === 'investasiku' && <p className="text-[12px] text-slate-500">Portofolio, simulasi & harga pasar</p>}
           </motion.div>
         </AnimatePresence>
-        <Link
-          href="/membership/ai-leosiqra"
-          aria-label="Tanya Leo"
-          className="rounded-full ring-2 ring-white transition-transform hover:scale-105"
-        >
-          <AiOrb size={44} />
-        </Link>
+        <LeoGuide topic="investasi" />
       </header>
 
       <AnimatePresence mode="wait" initial={false}>

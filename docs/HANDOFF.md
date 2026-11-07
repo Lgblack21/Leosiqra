@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live: rilis 3.2.0, run 42361611192; migrasi 0036 menunggu Bos)
+Terakhir diperbarui: 2026-11-07 (3.3.0 Makanku; migrasi 0036 & 0037 menunggu Bos)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,26 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-07 — RILIS 3.3.0 (branch `claude/makanku-20261107`): Makanku + popup Leo per fitur. MIGRASI 0037 menunggu Bos.**
+  - **MIGRASI di D1 Console** (0037_meals.sql, boleh sebelum/sesudah deploy): tabel `meals` + index. Tanpa tabel:
+    GET → ready:false (banner "sedang disiapkan"), simpan → 503.
+  - Worker: `/api/member/meals` GET (hari + minggu Sen–Min + streak + target + belanja Makanan & Minuman minggu ini +
+    rekening IDR non-kartu + kuota), POST (id = request_id, INSERT OR IGNORE; pengeluaran opsional kategori Makanan &
+    Minuman, sub Makan/Jajan & Kopi, related_type 'meal', saldo via quickTxBalanceStatements dalam SATU batch, hanya
+    kalau baris meal baru dengan tx_id itu ada), PATCH, DELETE (transaksi SENGAJA tetap), GET :id/photo (R2 meals/…),
+    PUT target (800–6000, metadata $.mealTarget). `/api/member/meals/analyze` lewat withAiQuota kind **meal**
+    (FREE 3 / PRO 30) — OpenRouter PARSE_TRANSACTION_MODELS, JSON gizi + price_idr + score + tip.
+  - AI chat: `page` opsional (AI_CHAT_PAGES: makan/cerita/fokus/ladang/investasi) → konteks `halamanAktif`
+    (+ data makan 7 hari untuk makan). Riwayat chat tidak berubah formatnya.
+  - Frontend: `src/components/makan/*`, `src/components/ai/LeoGuide.tsx` (aksesori Leo per halaman + popup chat),
+    `src/lib/leoGuides.ts`, halaman `/membership/makan` & `/app/makan`, fitur 'makan' (FEATURES/DEFAULT/PREF_FEATURES).
+    AiOrb-link di Cerita/Fokus/Ladangku/Investasiku diganti LeoGuide (Fokus: hanya di tab non-Fokus, seperti dulu).
+  - Dites lokal (wrangler): simpan+pengeluaran 25rb → saldo 100rb→75rb, 1 tx; request sama → duplicate tanpa tx kedua;
+    rekening asing 400; nama kosong 400; PATCH; target 1800 ok / 99 → 400; analyze tanpa AI → 503 & kuota kembali 0;
+    DELETE → tx tetap; tanpa login 401; GET hari/minggu/belanja benar. UI web 1366 + iPhone 13 terang/gelap, popup
+    Leo + chat, sheet tambah/edit, 0 page error. **Belum dites: AI asli** (analisis foto & jawaban popup — OpenRouter
+    tidak terjangkau dari sandbox; D1 lokal drift membuat /ai/chat 500 di lokal, bukan di produksi).
 
 - **2026-11-07 — RILIS 3.2.0: LIVE (run 42361611192, commit 2924e0c, Release v3.2.0). Tanpa SQL.**
   - Sinkron Release SUDAH dijalankan (run 42361808455): Release v1.0.0–v3.1.0 dibuat, judul/catatan v3.0.2–v3.2.0

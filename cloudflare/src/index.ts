@@ -8631,9 +8631,9 @@ async function handleAdminLogs(request: Request, env: Env) {
 // users.metadata_json "$.aiq_<jenis>" = { day, n }, diambil atomik (UPDATE bersyarat) SEBELUM
 // handler jalan; dikembalikan kalau permintaan gagal (status bukan 2xx / error). Teks biasa (parse
 // "makan 20rb") tidak dihitung — murah & inti pencatatan.
-const AI_LIMITS = { chat: { FREE: 5, PRO: 50 }, scan: { FREE: 3, PRO: 30 }, voice: { FREE: 5, PRO: 40 } } as const;
+const AI_LIMITS = { chat: { FREE: 5, PRO: 50 }, scan: { FREE: 3, PRO: 30 }, voice: { FREE: 5, PRO: 40 }, meal: { FREE: 3, PRO: 30 } } as const;
 type AiKind = keyof typeof AI_LIMITS;
-const AI_KIND_LABEL: Record<AiKind, string> = { chat: "chat Leo", scan: "scan struk", voice: "catat lewat suara" };
+const AI_KIND_LABEL: Record<AiKind, string> = { chat: "chat Leo", scan: "scan struk", voice: "catat lewat suara", meal: "analisis makanan" };
 const isProUser = async (env: Env, userId: string) => {
   const row = await env.DB.prepare("SELECT plan, expired_at FROM users WHERE id = ?").bind(userId).first<{ plan: string | null; expired_at: string | null }>();
   return row?.plan === "PRO" && (!row.expired_at || row.expired_at > nowIso());
@@ -8714,13 +8714,31 @@ async function handleAiQuota(request: Request, env: Env) {
   });
 }
 
+// Halaman fitur yang punya popup Leo (src/lib/leoGuides.ts). Nilai = keterangan untuk model.
+const AI_CHAT_PAGES: Record<string, string> = {
+  makan: "Makanku — catatan makan harian dari foto (kalori & gizi perkiraan AI), bisa langsung dicatat jadi pengeluaran Makanan & Minuman. Jawab soal makan, gizi umum, dan belanja makan; bukan diagnosis medis.",
+  cerita: "Cerita Hari Ini — jurnal harian dengan mood, foto, ilustrasi AI, dan ringkasan uang hari itu.",
+  fokus: "Fokus bareng Leo — timer fokus/pomodoro, musik, latihan napas.",
+  ladang: "Ladangku — usaha (kasir, stok, tim), jual barang nganggur, dan tagih utang.",
+  investasi: "Investasiku — portofolio saham, reksa dana, deposito, emas, kripto.",
+};
+const aiMealContext = async (env: Env, userId: string) => {
+  try {
+    const today = todayWIB();
+    const rows = await env.DB.prepare("SELECT date, time, slot, name, kcal, protein, carbs, fat, price FROM meals WHERE user_id = ? AND date >= ? ORDER BY date DESC, time DESC LIMIT 40").bind(userId, mealShift(today, -6)).all();
+    return { hariIni: today, targetKkal: await readMealTarget(env, userId), makan7Hari: rows.results ?? [] };
+  } catch {
+    return { catatan: "Makanku belum aktif / belum ada data." };
+  }
+};
+
 async function handleAiChat(request: Request, env: Env) {
   const authResult = await requireSession(env, request);
   if (authResult.error) {
     return authResult.error;
   }
 
-  const payload = await parseJson<{ prompt?: string }>(request);
+  const payload = await parseJson<{ prompt?: string; page?: unknown }>(request);
   if (!payload.prompt?.trim()) {
     return json({ error: "Prompt wajib diisi." }, { status: 400 });
   }
@@ -8769,7 +8787,10 @@ async function handleAiChat(request: Request, env: Env) {
     })
     .filter((m): m is { role: "user" | "assistant"; content: string } => m !== null);
 
-  const userContext = await buildUserContext(env, authResult.session.user.id);
+  const baseContext = await buildUserContext(env, authResult.session.user.id);
+  // Ditanya dari popup Leo di halaman fitur → model tahu halaman yang sedang dibuka.
+  const page = typeof payload.page === "string" && AI_CHAT_PAGES[payload.page] ? payload.page : null;
+  const userContext = page ? { ...baseContext, halamanAktif: { halaman: AI_CHAT_PAGES[page], ...(page === "makan" ? { makanku: await aiMealContext(env, authResult.session.user.id) } : {}) } } : baseContext;
   const { aiMemory } = await readUserPrefs(env, authResult.session.user.id);
   let answer: string;
   try {
@@ -13168,6 +13189,338 @@ const storyImagePrompt = (text: string, mood: number | null, style: string, from
     text ? `Cerita hari ini (Bahasa Indonesia), pakai untuk suasana/latar: """${text.slice(0, STORY_TEXT_MAX)}"""` : "",
   ].filter(Boolean).join("\n");
 
+// ── Makanku (migrasi 0037) ──────────────────────────────────────────────────
+// Catatan makan harian: foto → AI menaksir nama, porsi, kalori & gizi; harga bisa langsung
+// dicatat sebagai pengeluaran (Makanan & Minuman) dalam SATU batch dengan catatan makannya.
+// Anti dobel: id makanan = request_id dari klien (INSERT OR IGNORE); transaksi & saldo hanya
+// masuk kalau baris makanan yang baru itu benar-benar tersimpan dengan tx_id tersebut.
+const MEALS_NOT_READY = "Makanku sedang disiapkan di server (menunggu pembaruan database). Coba lagi nanti.";
+const mealsTableMissing = (e: unknown) => e instanceof Error && /no such table: meals/i.test(e.message);
+const MEAL_SLOTS = ["sarapan", "siang", "malam", "camilan"] as const;
+type MealSlot = (typeof MEAL_SLOTS)[number];
+const MEAL_PHOTO_MAX_BYTES = 2 * 1024 * 1024;
+const MEAL_TARGET_DEFAULT = 2000;
+const MEAL_FOOD_CATEGORY = "Makanan & Minuman";
+const mealSlotOf = (time: string): MealSlot => {
+  const h = Number(time.slice(0, 2));
+  return h >= 4 && h < 10 ? "sarapan" : h >= 10 && h < 15 ? "siang" : h >= 17 && h < 22 ? "malam" : "camilan";
+};
+const mealNum = (v: unknown, max: number) => (typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= max ? Math.round(v * 10) / 10 : null);
+const mealText = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/[\u0000-\u001f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, max) : "");
+type MealItem = { name: string; portion: string; kcal: number | null; protein: number | null; carbs: number | null; fat: number | null };
+const cleanMealItems = (raw: unknown): MealItem[] =>
+  (Array.isArray(raw) ? raw : [])
+    .map((x) => {
+      const r = (x && typeof x === "object" ? x : {}) as Record<string, unknown>;
+      const name = mealText(r.name, 60);
+      return name ? { name, portion: mealText(r.portion, 40), kcal: mealNum(r.kcal, 5000), protein: mealNum(r.protein, 500), carbs: mealNum(r.carbs, 1000), fat: mealNum(r.fat, 500) } : null;
+    })
+    .filter((x): x is MealItem => x !== null)
+    .slice(0, 12);
+const mealMondayOf = (date: string) => {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
+};
+const mealShift = (date: string, days: number) => {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+};
+const readMealTarget = async (env: Env, userId: string) => {
+  const row = await env.DB.prepare("SELECT CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.mealTarget') END AS t FROM users WHERE id = ?").bind(userId).first<{ t: number | null }>();
+  const t = Number(row?.t);
+  return Number.isFinite(t) && t >= 800 && t <= 6000 ? Math.round(t) : MEAL_TARGET_DEFAULT;
+};
+
+// Analisis foto makanan (dipanggil lewat withAiQuota "meal"). Foto tidak disimpan di sini.
+async function handleMealAnalyze(request: Request, env: Env) {
+  const auth = await requireSession(env, request);
+  if (auth.error) return auth.error;
+  if (!(await checkAiParseRateLimit(env, auth.session.user.id))) return json({ error: "Terlalu sering. Coba lagi sebentar lagi." }, { status: 429 });
+  const payload = await parseJson<{ imageBase64?: unknown; hint?: unknown }>(request);
+  const b64 = typeof payload.imageBase64 === "string" ? payload.imageBase64.replace(/^data:[^,]*,/, "").replace(/\s/g, "") : "";
+  if (!b64) return json({ error: "Foto makanan wajib dikirim." }, { status: 400 });
+  if (b64.length > Math.ceil((MEAL_PHOTO_MAX_BYTES * 4) / 3) + 100) return json({ error: "Foto terlalu besar (maks 2 MB)." }, { status: 413 });
+  const hint = mealText(payload.hint, 120);
+  const openRouter = await getOpenRouterKey(env);
+  if (!openRouter) return json({ error: "AI belum aktif (API key OpenRouter belum dipasang admin).", code: "ai_unavailable" }, { status: 503 });
+  const systemPrompt = `Kamu ahli gizi yang menaksir makanan dari foto, untuk orang Indonesia.
+Balas HANYA satu objek JSON valid tanpa teks lain:
+{"is_food": boolean, "name": string, "emoji": string, "items": [{"name": string, "portion": string, "kcal": number, "protein": number, "carbs": number, "fat": number}], "price_idr": number | null, "score": 1-5, "tip": string}
+Aturan:
+- is_food=false kalau foto bukan makanan/minuman (lalu name="" dan items=[]).
+- name: nama hidangan singkat dalam Bahasa Indonesia (mis. "Nasi goreng telur"), maks 50 karakter.
+- items: tiap komponen yang terlihat (nasi, lauk, sayur, minuman), portion perkiraan ("1 piring", "150 g").
+- kcal, protein, carbs, fat (gram) = PERKIRAAN wajar per komponen sesuai porsi di foto; angka saja.
+- price_idr: perkiraan harga wajar beli di Indonesia (warung/kafe sesuai tampilan) dalam rupiah bulat; null kalau masakan rumah atau tidak bisa ditebak.
+- score: keseimbangan gizi 1 (kurang seimbang) – 5 (sangat seimbang).
+- tip: satu kalimat santai & positif, saran kecil yang praktis (bukan diagnosis medis), maks 140 karakter.`;
+  let raw = "";
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${openRouter.key}`, "http-referer": env.APP_URL || "https://www.leosiqra.com", "x-title": env.APP_NAME || "Leosiqra" },
+      body: JSON.stringify({
+        models: PARSE_TRANSACTION_MODELS,
+        route: "fallback",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: [{ type: "text", text: hint ? `Keterangan dari pengguna: ${hint}` : "Taksir makanan di foto ini." }, { type: "image_url", image_url: { url: `data:image/jpeg;base64,${b64}` } }] },
+        ],
+        temperature: 0.2,
+        max_tokens: 1200,
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!response.ok) throw new Error(`OpenRouter request gagal (${response.status}): ${(await response.text()).slice(0, 300)}`);
+    const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    raw = data.choices?.[0]?.message?.content?.trim() ?? "";
+  } catch (error) {
+    if (isAiQuotaError(error)) {
+      await notifyAiQuotaOnce(env);
+      return json({ error: AI_QUOTA_MESSAGE, code: "ai_quota" }, { status: 503 });
+    }
+    console.error("Makanku: AI gagal", error instanceof Error ? error.message : error);
+    return json({ error: "AI sedang gangguan. Coba lagi sebentar lagi.", code: "ai_unavailable" }, { status: 503 });
+  }
+  let parsed: Record<string, unknown> = {};
+  try {
+    parsed = JSON.parse(stripJsonFences(raw)) as Record<string, unknown>;
+  } catch {
+    return json({ error: "Leo belum bisa mengenali foto ini. Coba foto lebih dekat & terang." }, { status: 422 });
+  }
+  const items = cleanMealItems(parsed.items);
+  const name = mealText(parsed.name, 60);
+  if (parsed.is_food === false || !name || !items.length) return json({ error: "Sepertinya ini bukan makanan. Coba foto piringnya dari atas ya." }, { status: 422 });
+  const sum = (k: "kcal" | "protein" | "carbs" | "fat") => Math.round(items.reduce((a, i) => a + (i[k] ?? 0), 0) * 10) / 10;
+  const price = typeof parsed.price_idr === "number" && Number.isFinite(parsed.price_idr) && parsed.price_idr > 0 && parsed.price_idr < 10_000_000 ? Math.round(parsed.price_idr / 500) * 500 : null;
+  const score = Number.isInteger(parsed.score) && (parsed.score as number) >= 1 && (parsed.score as number) <= 5 ? (parsed.score as number) : null;
+  return json({
+    name,
+    emoji: mealText(parsed.emoji, 8) || "🍽️",
+    items,
+    kcal: Math.round(sum("kcal")),
+    protein: sum("protein"),
+    carbs: sum("carbs"),
+    fat: sum("fat"),
+    price_estimate: price,
+    score,
+    tip: mealText(parsed.tip, 160),
+  });
+}
+
+async function handleMemberMeals(request: Request, env: Env, url: URL) {
+  const auth = await requireSession(env, request);
+  if (auth.error) return auth.error;
+  const userId = auth.session.user.id;
+  const parts = url.pathname.split("/").filter(Boolean); // api, member, meals, [id|target], [photo]
+  const id = parts[3];
+  const sub = parts[4];
+  try {
+    if (!id && request.method === "GET") {
+      const today = todayWIB();
+      const qd = url.searchParams.get("date") ?? "";
+      const date = STORY_DATE_RE.test(qd) && isRealDateStr(qd) && qd <= today && qd >= "2000-01-01" ? qd : today;
+      const monday = mealMondayOf(date);
+      const sunday = mealShift(monday, 6);
+      let ready = true;
+      let items: Record<string, unknown>[] = [];
+      let week: { date: string; count: number; kcal: number; spend: number }[] = [];
+      let streak = 0;
+      try {
+        const rows = await env.DB.prepare(
+          "SELECT id, date, time, slot, name, items_json, kcal, protein, carbs, fat, score, tip, price, note, ai, CASE WHEN photo_key IS NULL THEN 0 ELSE 1 END AS has_photo, CASE WHEN tx_id IS NOT NULL AND EXISTS (SELECT 1 FROM transactions t WHERE t.id = meals.tx_id AND t.user_id = meals.user_id) THEN 1 ELSE 0 END AS recorded, updated_at FROM meals WHERE user_id = ? AND date = ? ORDER BY time, created_at"
+        ).bind(userId, date).all<Record<string, unknown>>();
+        items = (rows.results ?? []).map((r) => {
+          let parsedItems: MealItem[] = [];
+          try { parsedItems = cleanMealItems(JSON.parse(String(r.items_json ?? "[]"))); } catch { /* kosong */ }
+          const { items_json: _drop, ...rest } = r;
+          void _drop;
+          return { ...rest, items: parsedItems };
+        });
+        const wk = await env.DB.prepare(
+          "SELECT date, COUNT(*) AS c, COALESCE(SUM(kcal), 0) AS k, COALESCE(SUM(CASE WHEN tx_id IS NOT NULL AND EXISTS (SELECT 1 FROM transactions t WHERE t.id = meals.tx_id AND t.user_id = meals.user_id) THEN price ELSE 0 END), 0) AS s FROM meals WHERE user_id = ? AND date BETWEEN ? AND ? GROUP BY date"
+        ).bind(userId, monday, sunday).all<{ date: string; c: number; k: number; s: number }>();
+        const byDate = new Map((wk.results ?? []).map((r) => [r.date, r]));
+        week = Array.from({ length: 7 }, (_, i) => {
+          const d = mealShift(monday, i);
+          const r = byDate.get(d);
+          return { date: d, count: Number(r?.c) || 0, kcal: Math.round(Number(r?.k) || 0), spend: Math.round(Number(r?.s) || 0) };
+        });
+        const recent = await env.DB.prepare("SELECT DISTINCT date FROM meals WHERE user_id = ? AND date <= ? ORDER BY date DESC LIMIT 400").bind(userId, today).all<{ date: string }>();
+        const set = new Set((recent.results ?? []).map((r) => r.date));
+        for (let d = 0; d < 400; d++) {
+          const key = mealShift(today, -d);
+          if (set.has(key)) streak += 1;
+          else if (d > 0) break;
+        }
+      } catch (e) {
+        if (!mealsTableMissing(e)) throw e;
+        ready = false;
+        week = Array.from({ length: 7 }, (_, i) => ({ date: mealShift(monday, i), count: 0, kcal: 0, spend: 0 }));
+      }
+      // Belanja makan sungguhan minggu ini (semua transaksi kategori Makanan & Minuman, bukan cuma dari Makanku).
+      const food = await env.DB.prepare(
+        "SELECT ROUND(COALESCE(SUM(COALESCE(amount_idr, amount)), 0)) AS s FROM transactions WHERE user_id = ? AND type = 'pengeluaran' AND category = ? AND substr(date, 1, 10) BETWEEN ? AND ?"
+      ).bind(userId, MEAL_FOOD_CATEGORY, monday, sunday).first<{ s: number }>();
+      const accounts = await env.DB.prepare(
+        "SELECT id, name FROM accounts WHERE user_id = ? AND COALESCE(currency, 'IDR') = 'IDR' AND COALESCE(type, '') NOT IN ('Credit Card', 'kartu') ORDER BY COALESCE(sort_order, 0), created_at LIMIT 30"
+      ).bind(userId).all<{ id: string; name: string }>().catch(() => ({ results: [] as { id: string; name: string }[] }));
+      const pro = await isProUser(env, userId);
+      const used = await aiQuotaUsed(env, userId);
+      return json({
+        ready,
+        date,
+        today,
+        items,
+        week,
+        streak,
+        target: await readMealTarget(env, userId),
+        foodSpendWeek: Math.round(Number(food?.s) || 0),
+        accounts: accounts.results ?? [],
+        ai: { used: used.meal, limit: AI_LIMITS.meal[pro ? "PRO" : "FREE"], pro, proLimit: AI_LIMITS.meal.PRO },
+      });
+    }
+
+    if (id === "target" && request.method === "PUT") {
+      const raw = await parseJson<{ kcal?: unknown }>(request);
+      const kcal = typeof raw.kcal === "number" && Number.isInteger(raw.kcal) && raw.kcal >= 800 && raw.kcal <= 6000 ? raw.kcal : null;
+      if (!kcal) return json({ error: "Target kalori 800–6.000 kkal." }, { status: 400 });
+      await env.DB.prepare("UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.mealTarget', ?) WHERE id = ?").bind(kcal, userId).run();
+      return json({ ok: true, target: kcal });
+    }
+
+    if (!id && request.method === "POST") {
+      const raw = await parseJson<Record<string, unknown>>(request);
+      const requestId = typeof raw.request_id === "string" && /^[0-9a-f-]{36}$/i.test(raw.request_id) ? raw.request_id.toLowerCase() : null;
+      if (!requestId) return json({ error: "Permintaan tidak valid. Muat ulang halaman." }, { status: 400 });
+      const name = mealText(raw.name, 60);
+      if (!name) return json({ error: "Isi nama makanannya." }, { status: 400 });
+      const today = todayWIB();
+      const date = typeof raw.date === "string" && STORY_DATE_RE.test(raw.date) && isRealDateStr(raw.date) && raw.date <= today && raw.date >= "2000-01-01" ? raw.date : today;
+      const time = typeof raw.time === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(raw.time) ? raw.time : new Date(Date.now() + 7 * 3600_000).toISOString().slice(11, 16);
+      const slot: MealSlot = (MEAL_SLOTS as readonly unknown[]).includes(raw.slot) ? (raw.slot as MealSlot) : mealSlotOf(time);
+      const items = cleanMealItems(raw.items);
+      const kcal = mealNum(raw.kcal, 10000);
+      const price = typeof raw.price === "number" && Number.isFinite(raw.price) && raw.price >= 0 && raw.price <= 1e9 ? Math.round(raw.price) : null;
+      const recordExpense = raw.record_expense === true && price !== null && price > 0;
+      const score = Number.isInteger(raw.score) && (raw.score as number) >= 1 && (raw.score as number) <= 5 ? (raw.score as number) : null;
+      let accountId: string | null = null;
+      if (recordExpense) {
+        const acc = typeof raw.account_id === "string" ? raw.account_id : "";
+        const owned = acc
+          ? await env.DB.prepare("SELECT id FROM accounts WHERE id = ? AND user_id = ? AND COALESCE(currency, 'IDR') = 'IDR' AND COALESCE(type, '') NOT IN ('Credit Card', 'kartu')").bind(acc, userId).first<{ id: string }>()
+          : null;
+        if (!owned) return json({ error: "Pilih rekening Rupiah untuk pengeluarannya." }, { status: 400 });
+        accountId = owned.id;
+      }
+      // Foto (opsional) disimpan dulu; kalau ternyata permintaan dobel, fotonya dibuang lagi.
+      let photoKey: string | null = null;
+      if (typeof raw.photoBase64 === "string" && raw.photoBase64) {
+        if (!env.FILES_BUCKET) return json({ error: "Penyimpanan foto belum aktif." }, { status: 503 });
+        let bytes: Uint8Array;
+        try {
+          const binary = atob(raw.photoBase64.replace(/^data:[^,]*,/, "").replace(/\s/g, ""));
+          bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+        } catch {
+          return json({ error: "Foto tidak terbaca." }, { status: 400 });
+        }
+        if (bytes.length > MEAL_PHOTO_MAX_BYTES) return json({ error: "Foto terlalu besar (maks 2 MB)." }, { status: 413 });
+        const type = sniffImageType(bytes);
+        if (!type) return json({ error: "Format foto harus JPG, PNG, atau WebP." }, { status: 400 });
+        photoKey = `meals/${userId}/${requestId}`;
+        await env.FILES_BUCKET.put(photoKey, bytes, { httpMetadata: { contentType: type } });
+      }
+      const now = nowIso();
+      const txId = recordExpense ? generateId() : null;
+      const statements: D1PreparedStatement[] = [
+        env.DB.prepare(
+          `INSERT OR IGNORE INTO meals (id, user_id, date, time, slot, name, items_json, kcal, protein, carbs, fat, score, tip, price, tx_id, photo_key, note, ai, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+          requestId, userId, date, time, slot, name, JSON.stringify(items), kcal === null ? null : Math.round(kcal),
+          mealNum(raw.protein, 2000), mealNum(raw.carbs, 4000), mealNum(raw.fat, 2000), score, mealText(raw.tip, 160) || null,
+          price, txId, photoKey, mealText(raw.note, 200) || null, raw.ai === true ? 1 : 0, now, now
+        ),
+      ];
+      if (txId && accountId && price) {
+        statements.push(
+          env.DB.prepare(
+            `INSERT INTO transactions (id, user_id, type, amount, amount_idr, category, sub_category, currency, account_id, date, display_date, note, status, related_id, related_type, payload_json, created_at, updated_at)
+             SELECT ?, ?, 'pengeluaran', ?, ?, ?, ?, 'IDR', ?, ?, ?, ?, 'VERIFIED', ?, 'meal', ?, ?, ?
+              WHERE EXISTS (SELECT 1 FROM meals WHERE id = ? AND user_id = ? AND tx_id = ?)`
+          ).bind(txId, userId, price, price, MEAL_FOOD_CATEGORY, slot === "camilan" ? "Jajan & Kopi" : "Makan", accountId, date, date, name, requestId, JSON.stringify({ mealId: requestId }), now, now, requestId, userId, txId),
+          ...quickTxBalanceStatements(env, userId, txId, accountId, "pengeluaran", price)
+        );
+      }
+      const res = await env.DB.batch(statements);
+      if (!res[0]?.meta.changes) {
+        if (photoKey && env.FILES_BUCKET) {
+          const keep = await env.DB.prepare("SELECT photo_key FROM meals WHERE id = ? AND user_id = ?").bind(requestId, userId).first<{ photo_key: string | null }>();
+          if (keep?.photo_key !== photoKey) await env.FILES_BUCKET.delete(photoKey).catch(() => undefined);
+        }
+        return json({ ok: true, id: requestId, duplicate: true });
+      }
+      if (txId) {
+        try {
+          const durableId = env.REALTIME_ROOM.idFromName(`member:${userId}`);
+          await env.REALTIME_ROOM.get(durableId).fetch("https://realtime.internal/publish", { method: "POST", body: JSON.stringify({ event: "transaction.created", payload: { id: txId, userId } }) });
+        } catch { /* realtime opsional */ }
+      }
+      return json({ ok: true, id: requestId, tx_id: txId }, { status: 201 });
+    }
+
+    if (!id) return json({ error: "Rute tidak dikenal." }, { status: 404 });
+    const row = await env.DB.prepare("SELECT id, photo_key, tx_id FROM meals WHERE id = ? AND user_id = ?").bind(id, userId).first<{ id: string; photo_key: string | null; tx_id: string | null }>();
+    if (!row) return json({ error: "Catatan makan tidak ditemukan." }, { status: 404 });
+
+    if (sub === "photo" && request.method === "GET") {
+      const obj = row.photo_key ? await env.FILES_BUCKET?.get(row.photo_key) : null;
+      if (!obj) return json({ error: "Belum ada foto." }, { status: 404 });
+      return new Response(obj.body, { headers: { "content-type": obj.httpMetadata?.contentType || "image/jpeg", "cache-control": "private, max-age=86400", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'" } });
+    }
+    if (!sub && request.method === "PATCH") {
+      const raw = await parseJson<Record<string, unknown>>(request);
+      const sets: string[] = [];
+      const vals: unknown[] = [];
+      if (raw.name !== undefined) {
+        const n = mealText(raw.name, 60);
+        if (!n) return json({ error: "Isi nama makanannya." }, { status: 400 });
+        sets.push("name = ?"); vals.push(n);
+      }
+      if (raw.slot !== undefined) {
+        if (!(MEAL_SLOTS as readonly unknown[]).includes(raw.slot)) return json({ error: "Waktu makan tidak dikenal." }, { status: 400 });
+        sets.push("slot = ?"); vals.push(raw.slot);
+      }
+      if (raw.time !== undefined) {
+        if (typeof raw.time !== "string" || !/^([01]\d|2[0-3]):[0-5]\d$/.test(raw.time)) return json({ error: "Jam tidak valid." }, { status: 400 });
+        sets.push("time = ?"); vals.push(raw.time);
+      }
+      for (const [k, max] of [["kcal", 10000], ["protein", 2000], ["carbs", 4000], ["fat", 2000]] as const) {
+        if (raw[k] === undefined) continue;
+        if (raw[k] !== null && mealNum(raw[k], max) === null) return json({ error: "Angka gizi tidak valid." }, { status: 400 });
+        sets.push(`${k} = ?`); vals.push(raw[k] === null ? null : k === "kcal" ? Math.round(mealNum(raw[k], max)!) : mealNum(raw[k], max));
+      }
+      if (raw.note !== undefined) { sets.push("note = ?"); vals.push(mealText(raw.note, 200) || null); }
+      if (!sets.length) return json({ error: "Tidak ada yang diubah." }, { status: 400 });
+      await env.DB.prepare(`UPDATE meals SET ${sets.join(", ")}, updated_at = ? WHERE id = ? AND user_id = ?`).bind(...vals, nowIso(), id, userId).run();
+      return json({ ok: true });
+    }
+    if (!sub && request.method === "DELETE") {
+      // Pengeluarannya (kalau ada) sengaja TIDAK ikut terhapus: uangnya memang keluar.
+      // Hapus di Transaksi kalau memang salah catat.
+      await env.DB.prepare("DELETE FROM meals WHERE id = ? AND user_id = ?").bind(id, userId).run();
+      if (row.photo_key) await env.FILES_BUCKET?.delete(row.photo_key).catch(() => undefined);
+      return json({ ok: true, tx_kept: Boolean(row.tx_id) });
+    }
+    return json({ error: "Rute tidak dikenal." }, { status: 404 });
+  } catch (e) {
+    if (mealsTableMissing(e)) return json({ error: MEALS_NOT_READY }, { status: 503 });
+    throw e;
+  }
+}
+
 async function handleMemberStories(request: Request, env: Env, url: URL) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -15350,7 +15703,7 @@ const PREF_INPUT_MODES = ["ketik", "suara", "foto"] as const;
 // Fitur yang tampil di menu samping (panel Pengaturan → Fitur). Hanya
 // visibilitas menu — mematikan fitur tidak menyentuh datanya. Sama dengan
 // FeatureId di src/lib/features.ts. null = bawaan (5 fitur lama).
-const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk", "jejak", "langganan", "ladang", "fokus", "cerita"] as const;
+const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk", "jejak", "langganan", "ladang", "fokus", "cerita", "makan"] as const;
 // Jam pengingat per 30 menit (cron tiap 10 menit, lihat sendDailyReminders).
 const PREF_TIME_RE = /^([01]\d|2[0-3]):(00|30)$/;
 // Ikon & warna pilihan user per nama kategori (panel Kategori & Anggaran).
@@ -20044,6 +20397,13 @@ const worker = {
 
       if (url.pathname === "/api/member/focus" || url.pathname.startsWith("/api/member/focus/")) {
         return await handleMemberFocus(request, env, url.pathname);
+      }
+
+      if (url.pathname === "/api/member/meals/analyze" && request.method === "POST") {
+        return await withAiQuota(request, env, "meal", () => handleMealAnalyze(request, env));
+      }
+      if (url.pathname === "/api/member/meals" || url.pathname.startsWith("/api/member/meals/")) {
+        return await handleMemberMeals(request, env, url);
       }
 
       if (url.pathname === "/api/member/stories" || url.pathname.startsWith("/api/member/stories/")) {

@@ -30,6 +30,7 @@ import {
   Sprout,
   Timer,
   NotebookPen,
+  UtensilsCrossed,
 } from 'lucide-react';
 import { lightTap } from '@/lib/haptics';
 import { FadeIn, StaggerList, StaggerItem } from '@/components/app/FadeIn';
@@ -121,6 +122,12 @@ const IN_APP: MenuItem[] = [
     href: '/app/cerita',
     icon: NotebookPen,
     color: 'bg-pink-50 text-pink-600 dark:bg-pink-500/10 dark:text-pink-400',
+  },
+  {
+    label: 'Makanku',
+    href: '/app/makan',
+    icon: UtensilsCrossed,
+    color: 'bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400',
   },
   {
     label: 'Kartu Kredit',
