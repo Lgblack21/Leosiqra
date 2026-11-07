@@ -53,7 +53,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
 dinaikkan per fitur (package.json loncat dari 0.1.0 ke 3.0.1), jadi tiap versi lama
 mewakili satu era, bukan satu deploy. Tag & GitHub Release versi lama menunjuk ke commit
-terakhir di `main` pada tanggal versi itu (3.1.0: commit yang menaikkan versinya).
+terakhir di `main` pada tanggal versi itu (3.0.1 & 3.1.0: commit yang menaikkan versinya).
 
 Catatan di bawah tampil juga di aplikasi (Pengaturan › Riwayat versi, app HP: Profil ›
 versi), jadi tulis dengan bahasa user. Format tiap entri:
