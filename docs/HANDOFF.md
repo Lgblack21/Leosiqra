@@ -28,7 +28,15 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     sebelum/sesudah: identik setelah normalisasi (spasi JSX, nama variabel minifier, hash styled-jsx). 15
     eslint-disable dipindah ke baris yang benar; ESLint = main. **Setelah merge, branch lain yang menyentuh `src/`
     jalankan `npm run format` sebelum merge** supaya konflik formatnya hilang.
-  - Belum: Worker `cloudflare/src/index.ts` (Tahap 3).
+  - **Tahap 3 (2026-11-07): komentar Worker** — 1.374 blok ditinjau: 52 dihapus, 55 diringkas, sisanya (alasan
+    keamanan/uang/D1/cron/API luar) tetap. Token kode index.ts identik, tsc Worker 0, bundle dry-run identik.
+  - **Uji runtime (wrangler dev lokal, main vs branch berdampingan, D1 lokal sama):** 28 endpoint GET identik (beda
+    hanya kode referral acak); alur Input Cepat via UI → saldo BCA 5.000.000→4.962.500 di keduanya, 0 error JS; jalur
+    AI chat identik (OpenRouter dummy → pesan ramah sama); 112 halaman × web/HP difoto: 0 beda di luar derau render
+    (main vs main sendiri pun ±0,2%), error JS sama persis (kurs diblokir tes, #418 hanya efek jam palsu).
+  - Temuan lama (ada di main juga) → branch terpisah `claude/fix-validasi-kategori-20261107`: POST transaksi tanpa
+    `category` sekarang 400, bukan 500. `account_id` kosong masih 500 — cek dulu NOT NULL di D1 produksi sebelum
+    divalidasi (mungkin ada alur sah tanpa rekening).
 
 - **2026-11-07 — Halaman pembayaran rapi + Admin › Koin lengkap: LIVE (run 42303011955, commit d5eae38). Tanpa SQL.**
   - /membership/contact ditulis ulang jadi "Upgrade & Top up": tab PRO / Top up koin, kartu paket, kartu checkout (total + salin,
