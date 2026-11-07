@@ -23,7 +23,12 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     pembatas, catatan riwayat). Komentar KENAPA (keamanan, uang, drift D1, workaround native) + eslint-disable tetap.
   - Bukti tidak ada kode berubah: pengecek token TypeScript vs origin/main → 0 beda di 159 file; tsc 0, build lolos,
     ESLint sama dengan main. Merge sesudah branch claude/usahaku-web (Akun B) supaya konflik minimal.
-  - Belum: Worker `cloudflare/src/index.ts` (Tahap 3) dan Prettier (Tahap 2, tunggu branch lain masuk main).
+  - **Tahap 2 (2026-11-07, branch yang sama): Prettier** — `prettier@3.6.2` + `.prettierrc.json` (120 kolom, kutip
+    tunggal), `npm run format` / `format:check`, cakupan `src/` saja. 441 file diformat. Chunk JS build dibandingkan
+    sebelum/sesudah: identik setelah normalisasi (spasi JSX, nama variabel minifier, hash styled-jsx). 15
+    eslint-disable dipindah ke baris yang benar; ESLint = main. **Setelah merge, branch lain yang menyentuh `src/`
+    jalankan `npm run format` sebelum merge** supaya konflik formatnya hilang.
+  - Belum: Worker `cloudflare/src/index.ts` (Tahap 3).
 
 - **2026-11-07 — Halaman pembayaran rapi + Admin › Koin lengkap: LIVE (run 42303011955, commit d5eae38). Tanpa SQL.**
   - /membership/contact ditulis ulang jadi "Upgrade & Top up": tab PRO / Top up koin, kartu paket, kartu checkout (total + salin,
