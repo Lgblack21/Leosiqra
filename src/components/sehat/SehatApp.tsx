@@ -6,6 +6,7 @@ import { ArrowLeft, CalendarCheck, ShieldCheck, UtensilsCrossed } from 'lucide-r
 import { LeoGuide, LeoBadge } from '@/components/ai/LeoGuide';
 import { MakanApp } from '@/components/makan/MakanApp';
 import { AsuransiView } from '@/components/sehat/AsuransiView';
+import { CekView } from '@/components/sehat/CekView';
 import { cn } from '@/lib/utils';
 
 // Sehatku — layar penuh seperti Ladangku: bar atas (kembali · judul tab · Leo) + menu melayang.
@@ -33,7 +34,7 @@ const TABS = [
     icon: CalendarCheck,
     title: 'Sehatku · Cek',
     sub: 'Jadwal cek kesehatan rutin',
-    ready: false,
+    ready: true,
   },
 ] as const;
 type TabId = (typeof TABS)[number]['id'];
@@ -111,6 +112,8 @@ export function SehatApp({ variant }: { variant: 'web' | 'app' }) {
           <MakanApp variant={variant} embedded />
         ) : tab === 'asuransi' ? (
           <AsuransiView onToast={say} />
+        ) : tab === 'cek' ? (
+          <CekView onToast={say} />
         ) : (
           <Segera label={current.label} />
         )}

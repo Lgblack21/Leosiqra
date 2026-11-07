@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live: rilis 3.5.1, run 42369534906; migrasi 0036, 0037, 0038 SUDAH dijalankan Bos)
+Terakhir diperbarui: 2026-11-07 (live 3.5.1; 3.6.0 menunggu "gas"; migrasi 0039 menunggu Bos)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,19 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-07 — RILIS 3.6.0 (branch `claude/sehat-cek-20261107`): Sehatku › Cek. MIGRASI 0039 menunggu Bos.**
+  - **MIGRASI di D1 Console** (0039_health_checks.sql): tabel `health_checks` + 2 index. Tanpa tabel: info CKG tampil,
+    pencatatan → ready:false / 503.
+  - Worker (di handleMemberHealth): PUT /health/profile ($.healthProfile {birthYear, sex, catin}), GET/POST/DELETE
+    /health/checks (id = request_id, biaya opsional → pengeluaran Kesehatan › Lab/Dokter, related_type health_check,
+    satu batch + guard). `sendCheckReminders` di cron harian: catatan terbaru per jenis (bukan vaksin) yang genap 1
+    tahun dalam 7 hari → 1 push per user, `reminded=1`.
+  - Isi `src/lib/healthChecks.ts` dari **Kepmenkes HK.01.07/MENKES/84/2026** (Juknis CKG, 9 Feb 2026, bab II.D/B &
+    persiapan; dibaca 7 Nov 2026 dari kesprimkom.kemkes.go.id — host Kemenkes ditambah ke environment leosiqra).
+    CKG setahun sekali; syarat usia/jenis kelamin persis juknis. Vaksin dewasa TIDAK diatur juknis → hanya catat dosis.
+  - Dites lokal: profil + validasi, cek gratis, cek berbayar 75rb + dobel (saldo 200rb→125rb, masuk biaya Lab),
+    tanggal masa depan/key aneh 400, vaksin dosis, cron H-7 menandai, hapus (tx tetap). UI web 1366 + iPhone 13.
 
 - **2026-11-07 — RILIS 3.5.1: LIVE (run 42369534906, commit 0f40bd9, Release v3.5.1): Leo beda per tab Sehatku. Tanpa SQL.**
   - leoGuides: topik `asuransi` = Leo si Pelindung (aksesori `shield`, biru), topik baru `kesehatan` = Leo si Dokter

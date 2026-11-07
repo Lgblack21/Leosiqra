@@ -55,6 +55,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.4.0 | 7 Nov 2026 | Analisis makanan dari ketikan & bayar koin |
 | 3.5.0 | 7 Nov 2026 | Sehatku › Asuransi |
 | 3.5.1 | 7 Nov 2026 | Leo beda di tiap tab Sehatku |
+| 3.6.0 | 7 Nov 2026 | Sehatku › Cek |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -68,6 +69,17 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.6.0 — 2026-11-07 — Sehatku › Cek
+
+- Tab **Cek** di Sehatku:
+  - **Rapor cek tahunanmu** — berapa cek rutin yang masih berlaku, mana yang belum pernah atau sudah lewat setahun.
+  - **Cek rutin** sesuai usia & jenis kelaminmu, mengikuti isi paket Cek Kesehatan Gratis (CKG) dari petunjuk teknis
+    resmi Kemenkes 2026: tekanan darah, gula darah, status gizi, TBC, kanker (sesuai usia), mata, telinga, gigi, jiwa,
+    hepatitis, dan lainnya. Catat tanggal, tempat, hasil, dan biayanya — biaya otomatis masuk ke biaya kesehatan.
+  - **Pengingat** seminggu sebelum genap setahun dari cek terakhir.
+  - **Cek Kesehatan Gratis**: cara daftar (SATUSEHAT Mobile / WA Chatbot Kemenkes), persiapan, dan yang perlu dibawa.
+  - **Kartu vaksinku** — catat dosis vaksin dewasa yang sudah kamu terima.
 
 ## 3.5.1 — 2026-11-07 — Leo beda di tiap tab Sehatku
 

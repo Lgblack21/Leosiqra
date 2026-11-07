@@ -13586,7 +13586,7 @@ async function handleMemberMeals(request: Request, env: Env, url: URL) {
 // (status Cair → pemasukan). Semua mutasi saldo lewat quickTxBalanceStatements dalam SATU batch,
 // anti dobel lewat kondisi di baris yang sama (request_id / tx_id IS NULL).
 const HEALTH_NOT_READY = "Asuransi di Sehatku sedang disiapkan di server (menunggu pembaruan database). Coba lagi nanti.";
-const healthTableMissing = (e: unknown) => e instanceof Error && /no such table: health_(policies|claims)/i.test(e.message);
+const healthTableMissing = (e: unknown) => e instanceof Error && /no such table: health_(policies|claims|checks)/i.test(e.message);
 const HEALTH_CATEGORY = "Kesehatan";
 const HEALTH_COST_SUBS = ["Obat", "Dokter", "Rumah Sakit", "Lab", "Asuransi", "Lainnya"] as const;
 const POLICY_KINDS = ["kesehatan", "jiwa", "kritis", "kantor", "lainnya"] as const;
@@ -13693,6 +13693,84 @@ async function handleMemberHealth(request: Request, env: Env, url: URL) {
       if (!res[0]?.meta.changes) return json({ ok: true, duplicate: true });
       await publishTx(env, userId, txId);
       return json({ ok: true, tx_id: txId }, { status: 201 });
+    }
+
+    // Sehatku › Cek: profil singkat (tahun lahir, jenis kelamin, calon pengantin) di metadata user.
+    if (what === "profile" && request.method === "PUT") {
+      const raw = await parseJson<Record<string, unknown>>(request);
+      const y = Number(raw.birth_year);
+      const birthYear = Number.isInteger(y) && y >= 1900 && y <= Number(today.slice(0, 4)) ? y : null;
+      const sex = raw.sex === "p" || raw.sex === "l" ? raw.sex : null;
+      if (!birthYear || !sex) return json({ error: "Isi tahun lahir dan jenis kelamin." }, { status: 400 });
+      const profile = { birthYear, sex, catin: raw.catin === true };
+      await env.DB.prepare("UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.healthProfile', json(?)) WHERE id = ?").bind(JSON.stringify(profile), userId).run();
+      return json({ ok: true, profile });
+    }
+    if (what === "checks") {
+      if (!id && request.method === "GET") {
+        const prof = await env.DB.prepare("SELECT CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.healthProfile') END AS p FROM users WHERE id = ?").bind(userId).first<{ p: string | null }>();
+        let profile: unknown = null;
+        try { profile = prof?.p ? JSON.parse(prof.p) : null; } catch { profile = null; }
+        const accounts = await env.DB.prepare(
+          "SELECT id, name FROM accounts WHERE user_id = ? AND COALESCE(currency, 'IDR') = 'IDR' ORDER BY COALESCE(sort_order, 0), created_at LIMIT 30"
+        ).bind(userId).all<{ id: string; name: string }>().catch(() => ({ results: [] as { id: string; name: string }[] }));
+        let ready = true;
+        let records: Record<string, unknown>[] = [];
+        try {
+          records = (await env.DB.prepare(
+            "SELECT id, item_key, date, place, free, cost, dose, note, CASE WHEN tx_id IS NOT NULL AND EXISTS (SELECT 1 FROM transactions t WHERE t.id = health_checks.tx_id AND t.user_id = health_checks.user_id) THEN 1 ELSE 0 END AS recorded FROM health_checks WHERE user_id = ? ORDER BY date DESC, created_at DESC LIMIT 500"
+          ).bind(userId).all<Record<string, unknown>>()).results ?? [];
+        } catch (e) {
+          if (!healthTableMissing(e)) throw e;
+          ready = false;
+        }
+        return json({ ready, today, profile, records, accounts: accounts.results ?? [] });
+      }
+      if (!id && request.method === "POST") {
+        const raw = await parseJson<Record<string, unknown>>(request);
+        const requestId = typeof raw.request_id === "string" && /^[0-9a-f-]{36}$/i.test(raw.request_id) ? raw.request_id.toLowerCase() : null;
+        if (!requestId) return json({ error: "Permintaan tidak valid. Muat ulang halaman." }, { status: 400 });
+        const itemKey = typeof raw.item_key === "string" && /^[a-z0-9:_-]{2,40}$/.test(raw.item_key) ? raw.item_key : null;
+        if (!itemKey) return json({ error: "Jenis cek tidak dikenal." }, { status: 400 });
+        const date = hDate(raw.date) && (raw.date as string) <= today ? (raw.date as string) : null;
+        if (!date) return json({ error: "Tanggal cek tidak valid (tidak boleh di masa depan)." }, { status: 400 });
+        const free = raw.free === true;
+        const cost = free ? null : hMoney(raw.cost);
+        const dose = Number.isInteger(raw.dose) && (raw.dose as number) >= 1 && (raw.dose as number) <= 10 ? (raw.dose as number) : null;
+        let accountId: string | null = null;
+        if (cost) {
+          const acc = await healthAccount(env, userId, raw.account_id);
+          if (!acc) return json({ error: "Pilih rekening untuk biayanya." }, { status: 400 });
+          accountId = acc.id;
+        }
+        const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM health_checks WHERE user_id = ?").bind(userId).first<{ n: number }>();
+        if ((count?.n ?? 0) >= 2000) return json({ error: "Catatan cek sudah terlalu banyak." }, { status: 400 });
+        const txId = cost && accountId ? generateId() : null;
+        const place = hText(raw.place, 80) || null;
+        const label = hText(raw.label, 80) || itemKey;
+        const statements: D1PreparedStatement[] = [
+          env.DB.prepare("INSERT OR IGNORE INTO health_checks (id, user_id, item_key, date, place, free, cost, dose, tx_id, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+            .bind(requestId, userId, itemKey, date, place, free ? 1 : 0, cost, dose, txId, hText(raw.note, 200) || null, nowIso()),
+        ];
+        if (txId && accountId && cost) {
+          statements.push(...insertHealthTx(env, userId, {
+            txId, type: "pengeluaran", amount: cost, category: HEALTH_CATEGORY, sub: itemKey.startsWith("vaksin:") ? "Dokter" : "Lab", accountId, date,
+            note: `Cek ${label}${place ? ` · ${place}` : ""}`, relatedId: requestId, relatedType: "health_check", payload: { checkId: requestId },
+            guardSql: "EXISTS (SELECT 1 FROM health_checks WHERE id = ? AND user_id = ? AND tx_id = ?)", guardBinds: [requestId, userId, txId],
+          }));
+        }
+        const res = await env.DB.batch(statements);
+        if (!res[0]?.meta.changes) return json({ ok: true, duplicate: true });
+        if (txId) await publishTx(env, userId, txId);
+        return json({ ok: true, id: requestId, tx_id: txId }, { status: 201 });
+      }
+      if (id && request.method === "DELETE") {
+        const row = await env.DB.prepare("SELECT tx_id FROM health_checks WHERE id = ? AND user_id = ?").bind(id, userId).first<{ tx_id: string | null }>();
+        if (!row) return json({ error: "Catatan tidak ditemukan." }, { status: 404 });
+        await env.DB.prepare("DELETE FROM health_checks WHERE id = ? AND user_id = ?").bind(id, userId).run();
+        return json({ ok: true, tx_kept: Boolean(row.tx_id) });
+      }
+      return json({ error: "Rute tidak dikenal." }, { status: 404 });
     }
 
     if (what === "policies") {
@@ -13873,6 +13951,45 @@ async function handleMemberHealth(request: Request, env: Env, url: URL) {
     throw e;
   }
 }
+
+// Pengingat cek rutin: 7 hari sebelum genap setahun dari cek terakhir (CKG setahun sekali).
+// Hanya catatan terbaru per jenis cek (bukan vaksin); `reminded` di baris itu → sekali saja.
+const sendCheckReminders = async (env: Env) => {
+  const today = todayWIB();
+  const due = shiftDateStr(today, 7);
+  const target = `${Number(due.slice(0, 4)) - 1}${due.slice(4)}`;
+  let rows: { id: string; user_id: string; item_key: string }[] = [];
+  try {
+    rows = (await env.DB.prepare(
+      `SELECT c.id, c.user_id, c.item_key FROM health_checks c JOIN users u ON u.id = c.user_id
+        WHERE c.date = ? AND c.reminded = 0 AND c.item_key NOT LIKE 'vaksin:%'
+          AND NOT EXISTS (SELECT 1 FROM health_checks n WHERE n.user_id = c.user_id AND n.item_key = c.item_key AND n.date > c.date)
+          AND COALESCE(u.status, '') <> 'NONAKTIF'
+          AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.bills') END, 1) <> 0
+        LIMIT 2000`
+    ).bind(target).all<{ id: string; user_id: string; item_key: string }>()).results ?? [];
+  } catch (e) {
+    if (healthTableMissing(e)) return;
+    throw e;
+  }
+  const byUser = new Map<string, string[]>();
+  for (const r of rows) {
+    const claim = await env.DB.prepare("UPDATE health_checks SET reminded = 1 WHERE id = ? AND reminded = 0").bind(r.id).run().catch(() => null);
+    if (claim?.meta.changes) byUser.set(r.user_id, [...(byUser.get(r.user_id) ?? []), r.item_key]);
+  }
+  for (const [userId, keys] of byUser) {
+    try {
+      await sendWebPushToUser(
+        env, userId,
+        `🩺 Sudah hampir setahun sejak cek terakhirmu`,
+        `${keys.length} cek kesehatan rutin jatuh tempo minggu depan. Ingat, ada Cek Kesehatan Gratis setahun sekali di puskesmas.`,
+        "/membership/sehat#cek"
+      );
+    } catch (error) {
+      console.error(`Pengingat cek ${userId} gagal:`, error);
+    }
+  }
+};
 
 // Pengingat premi H-3 & H-1 (cron harian bersama pengingat tagihan). reminded_for = "<tanggal>|<tahap>"
 // → tiap tahap sekali walau cron terpicu dua kali. Ikut toggle $.prefs.notify.bills.
@@ -21098,6 +21215,7 @@ const worker = {
     // Tagihan/setoran rutin yang tercatat otomatis 3 hari lagi.
     ctx.waitUntil(sendBillReminders(env).catch((error) => console.error("Pengingat tagihan:", error)));
     ctx.waitUntil(sendPremiumReminders(env).catch((error) => console.error("Pengingat premi:", error)));
+    ctx.waitUntil(sendCheckReminders(env).catch((error) => console.error("Pengingat cek:", error)));
     ctx.waitUntil(sendDebtDueReminders(env).catch((error) => console.error("Pengingat jatuh tempo hutang:", error)));
     ctx.waitUntil(sendWarrantyReminders(env).catch((error) => console.error("Pengingat garansi:", error)));
     ctx.waitUntil(sendSubscriptionReminders(env).catch((error) => console.error("Pengingat langganan:", error)));
