@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live 3.5.0; 3.5.1 menunggu "gas"; migrasi 0036, 0037, 0038 menunggu Bos)
+Terakhir diperbarui: 2026-11-07 (live: rilis 3.5.1, run 42369534906; migrasi 0036, 0037, 0038 menunggu Bos)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-07 — RILIS 3.5.1 (branch `claude/leo-sehat-20261107`): Leo beda per tab Sehatku. Tanpa SQL.**
+- **2026-11-07 — RILIS 3.5.1: LIVE (run 42369534906, commit 0f40bd9, Release v3.5.1): Leo beda per tab Sehatku. Tanpa SQL.**
   - leoGuides: topik `asuransi` = Leo si Pelindung (aksesori `shield`, biru), topik baru `kesehatan` = Leo si Dokter
     (aksesori `doctor`: cermin dahi + stetoskop, teal) untuk tab Cek; `makan` tetap Leo si Koki. Aksesori `nurse`
     dihapus (mirip topi koki). AI_CHAT_PAGES Worker + `kesehatan`. SehatApp: LeoGuide `key={tab}` → obrolan per tab.
