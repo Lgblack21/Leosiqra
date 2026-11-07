@@ -1,35 +1,38 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, PieChart } from "lucide-react";
-import { transactionService, Transaction } from "@/lib/services/transactionService";
-import { subscribeToCollectionChanges } from "@/lib/cf-firestore";
-import { auth } from "@/lib/cf-client";
-import { TxTypeToggle, TxType } from "@/components/app/TxTypeToggle";
-import { CategoryBreakdownChart, CategorySlice } from "@/components/app/statistics/CategoryBreakdownChart";
-import { FadeIn } from "@/components/app/FadeIn";
-import { AnimatedNumber } from "@/components/app/AnimatedNumber";
+import { useEffect, useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight, PieChart } from 'lucide-react';
+import { transactionService, Transaction } from '@/lib/services/transactionService';
+import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
+import { auth } from '@/lib/cf-client';
+import { isInvestmentFlow } from '@/lib/utils';
+import { TxTypeToggle, TxType } from '@/components/app/TxTypeToggle';
+import { CategoryBreakdownChart, CategorySlice } from '@/components/app/statistics/CategoryBreakdownChart';
+import { FadeIn } from '@/components/app/FadeIn';
+import { AnimatedNumber } from '@/components/app/AnimatedNumber';
 
 const MAX_SLICES = 6;
 
 const formatIDR = (n: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
 
-const monthLabel = (d: Date) =>
-  new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric" }).format(d);
+const monthLabel = (d: Date) => new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(d);
 
 const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 
 export default function StatisticsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(() => startOfMonth(new Date()));
-  const [type, setType] = useState<TxType>("pengeluaran");
+  const [type, setType] = useState<TxType>('pengeluaran');
 
   useEffect(() => {
     const load = () =>
-      transactionService.getUserTransactions(auth.currentUser?.uid ?? "").then(setTransactions).catch(() => setTransactions([]));
+      transactionService
+        .getUserTransactions(auth.currentUser?.uid ?? '')
+        .then(setTransactions)
+        .catch(() => setTransactions([]));
     load();
-    return subscribeToCollectionChanges("transactions", load);
+    return subscribeToCollectionChanges('transactions', load);
   }, []);
 
   const monthTx = useMemo(() => {
@@ -37,6 +40,7 @@ export default function StatisticsPage() {
       const d = new Date(t.date);
       return (
         t.type === type &&
+        !isInvestmentFlow(t) && // beli/jual investasi = pindah dana, bukan belanja/penghasilan
         d.getFullYear() === selectedMonth.getFullYear() &&
         d.getMonth() === selectedMonth.getMonth()
       );
@@ -47,7 +51,7 @@ export default function StatisticsPage() {
     const byCategory = new Map<string, number>();
     for (const t of monthTx) {
       const amt = Number(t.amountIDR) || Number(t.amount) || 0;
-      const key = t.category?.trim() || "Umum";
+      const key = t.category?.trim() || 'Umum';
       byCategory.set(key, (byCategory.get(key) ?? 0) + amt);
     }
     const sorted = Array.from(byCategory.entries())
@@ -58,7 +62,7 @@ export default function StatisticsPage() {
     if (sorted.length > MAX_SLICES) {
       const head = sorted.slice(0, MAX_SLICES - 1);
       const tailSum = sorted.slice(MAX_SLICES - 1).reduce((s, x) => s + x.amount, 0);
-      result = [...head, { category: "Lainnya", amount: tailSum }];
+      result = [...head, { category: 'Lainnya', amount: tailSum }];
     }
     const total = sorted.reduce((s, x) => s + x.amount, 0);
     return { slices: result, total };
@@ -74,11 +78,16 @@ export default function StatisticsPage() {
         <h1 className="text-lg font-black text-slate-900 dark:text-white">Statistik</h1>
       </FadeIn>
 
-      <FadeIn delay={0.03} className="flex items-center justify-between bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 px-4 py-3">
+      <FadeIn
+        delay={0.03}
+        className="flex items-center justify-between bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 px-4 py-3"
+      >
         <button type="button" onClick={() => shiftMonth(-1)} className="p-1 text-slate-400 dark:text-slate-500">
           <ChevronLeft size={18} />
         </button>
-        <span className="text-sm font-black text-slate-900 dark:text-white capitalize">{monthLabel(selectedMonth)}</span>
+        <span className="text-sm font-black text-slate-900 dark:text-white capitalize">
+          {monthLabel(selectedMonth)}
+        </span>
         <button type="button" onClick={() => shiftMonth(1)} className="p-1 text-slate-400 dark:text-slate-500">
           <ChevronRight size={18} />
         </button>
@@ -86,9 +95,12 @@ export default function StatisticsPage() {
 
       <TxTypeToggle value={type} onChange={setType} />
 
-      <FadeIn delay={0.06} className="rounded-3xl bg-gradient-to-br from-indigo-600 to-blue-500 text-white p-6 shadow-lg shadow-indigo-200">
+      <FadeIn
+        delay={0.06}
+        className="rounded-3xl bg-gradient-to-br from-indigo-600 to-blue-500 text-white p-6 shadow-lg shadow-indigo-200"
+      >
         <p className="text-xs font-bold text-white/70 uppercase tracking-widest">
-          Total {type === "pengeluaran" ? "Pengeluaran" : "Pemasukan"}
+          Total {type === 'pengeluaran' ? 'Pengeluaran' : 'Pemasukan'}
         </p>
         <p className="text-3xl font-black mt-1 tabular-nums">
           <AnimatedNumber value={total} format={formatIDR} />
@@ -102,7 +114,9 @@ export default function StatisticsPage() {
         {slices.length === 0 ? (
           <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-8 text-center">
             <PieChart size={24} className="mx-auto text-slate-300 dark:text-slate-600" />
-            <p className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-2">Belum ada transaksi bulan ini.</p>
+            <p className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-2">
+              Belum ada transaksi bulan ini.
+            </p>
           </div>
         ) : (
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-4">

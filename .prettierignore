@@ -1,0 +1,11 @@
+node_modules
+.next
+out
+android
+ios
+public
+cloudflare
+promo
+docs
+*.md
+package-lock.json

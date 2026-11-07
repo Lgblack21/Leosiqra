@@ -50,7 +50,9 @@ export function parseCsv(text: string): string[][] {
 // ribuan, koma = desimal) atau gaya internasional "1,234,567.89" — deteksi
 // dari pemisah mana yang muncul terakhir/paling banyak.
 export function parseIndoNumber(raw: string): number {
-  let s = String(raw ?? '').trim().replace(/[^0-9.,-]/g, '');
+  let s = String(raw ?? '')
+    .trim()
+    .replace(/[^0-9.,-]/g, '');
   if (!s) return 0;
 
   const negative = s.includes('-');
@@ -92,7 +94,9 @@ export function parseIndoNumber(raw: string): number {
 // +/- atau kolom debit/kredit terpisah — misalnya "50.000,00 DB". Deteksi ini
 // duluan; kalau tidak ketemu, caller jatuh balik ke tanda +/- pada angkanya.
 export function detectDbCrType(raw: string): 'pemasukan' | 'pengeluaran' | null {
-  const s = String(raw ?? '').trim().toLowerCase();
+  const s = String(raw ?? '')
+    .trim()
+    .toLowerCase();
   if (/\b(cr|kredit|credit|masuk)\b/.test(s)) return 'pemasukan';
   if (/\b(db|debit|keluar)\b/.test(s)) return 'pengeluaran';
   return null;

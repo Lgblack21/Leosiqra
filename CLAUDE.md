@@ -112,6 +112,10 @@ Treat this as a live app with real users. Before a deploy:
   feature, mass migrations) always need explicit confirmation first — stop and ask.
 - **Deploys need explicit confirmation.** State that a deploy is ready and wait —
   the user confirms with "gas". Don't deploy proactively just because a build succeeded.
+- **Versioning**: one product version in `package.json` (shown in-app via
+  `src/lib/version.ts`, never hardcoded). Before asking for "gas", bump it with
+  `npm run versi -- patch|minor|major "…"` and fill the entry in `CHANGELOG.md`
+  (rules + history v1→v3 are at the top of that file). Deploy main tags the release.
 
 ## Handoff between sessions (two Claude Code accounts)
 

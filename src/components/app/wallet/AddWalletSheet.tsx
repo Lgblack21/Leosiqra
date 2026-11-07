@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Wallet, Landmark, Smartphone } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { accountService } from "@/lib/services/accountService";
-import { auth } from "@/lib/cf-client";
-import { NumberInput } from "@/components/ui/NumberInput";
-import { CurrencySelect } from "@/components/CurrencySelect";
-import { BottomSheet } from "@/components/ui/BottomSheet";
+import { useState } from 'react';
+import { Wallet, Landmark, Smartphone } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { accountService } from '@/lib/services/accountService';
+import { auth } from '@/lib/cf-client';
+import { NumberInput } from '@/components/ui/NumberInput';
+import { CurrencySelect } from '@/components/CurrencySelect';
+import { BottomSheet } from '@/components/ui/BottomSheet';
 
 interface AddWalletSheetProps {
   isOpen: boolean;
@@ -15,45 +15,45 @@ interface AddWalletSheetProps {
 }
 
 const TYPES = [
-  { value: "Cash", label: "Cash", icon: Wallet },
-  { value: "Bank Account", label: "Bank", icon: Landmark },
-  { value: "E-Wallet", label: "E-Wallet", icon: Smartphone },
+  { value: 'Cash', label: 'Cash', icon: Wallet },
+  { value: 'Bank Account', label: 'Bank', icon: Landmark },
+  { value: 'E-Wallet', label: 'E-Wallet', icon: Smartphone },
 ] as const;
 
 export function AddWalletSheet({ isOpen, onClose }: AddWalletSheetProps) {
-  const [name, setName] = useState("");
-  const [type, setType] = useState<(typeof TYPES)[number]["value"]>("Cash");
-  const [currency, setCurrency] = useState("IDR");
-  const [balance, setBalance] = useState("");
+  const [name, setName] = useState('');
+  const [type, setType] = useState<(typeof TYPES)[number]['value']>('Cash');
+  const [currency, setCurrency] = useState('IDR');
+  const [balance, setBalance] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   const canSubmit = name.trim().length > 0 && currency.trim().length > 0 && !submitting;
 
   const reset = () => {
-    setName("");
-    setType("Cash");
-    setBalance("");
-    setError("");
+    setName('');
+    setType('Cash');
+    setBalance('');
+    setError('');
   };
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
     setSubmitting(true);
-    setError("");
+    setError('');
     try {
       await accountService.createAccount({
-        userId: auth.currentUser?.uid ?? "",
+        userId: auth.currentUser?.uid ?? '',
         name: name.trim(),
         type,
         currency,
-        balance: Number(balance || "0"),
-        initialBalance: Number(balance || "0"),
+        balance: Number(balance || '0'),
+        initialBalance: Number(balance || '0'),
       });
       reset();
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal membuat rekening.");
+      setError(e instanceof Error ? e.message : 'Gagal membuat rekening.');
     } finally {
       setSubmitting(false);
     }
@@ -82,7 +82,9 @@ export function AddWalletSheet({ isOpen, onClose }: AddWalletSheetProps) {
         </div>
 
         <div>
-          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1">Jenis</label>
+          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1">
+            Jenis
+          </label>
           <div className="grid grid-cols-3 gap-2 mt-2">
             {TYPES.map((t) => {
               const Icon = t.icon;
@@ -92,10 +94,10 @@ export function AddWalletSheet({ isOpen, onClose }: AddWalletSheetProps) {
                   type="button"
                   onClick={() => setType(t.value)}
                   className={cn(
-                    "flex flex-col items-center gap-1.5 py-3.5 rounded-2xl text-xs font-bold border-2 transition-all",
+                    'flex flex-col items-center gap-1.5 py-3.5 rounded-2xl text-xs font-bold border-2 transition-all',
                     type === t.value
-                      ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100"
-                      : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-400 dark:text-slate-500"
+                      ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100'
+                      : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-400 dark:text-slate-500',
                   )}
                 >
                   <Icon size={18} />
@@ -109,9 +111,11 @@ export function AddWalletSheet({ isOpen, onClose }: AddWalletSheetProps) {
         <CurrencySelect label="Mata Uang" value={currency} onChange={setCurrency} />
 
         <div className="bg-slate-50 dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 p-6">
-          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Saldo Awal</label>
+          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+            Saldo Awal
+          </label>
           <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-2xl font-black text-slate-300 dark:text-slate-600">{currency || "Rp"}</span>
+            <span className="text-2xl font-black text-slate-300 dark:text-slate-600">{currency || 'Rp'}</span>
             <NumberInput
               value={balance}
               onChange={setBalance}
@@ -127,7 +131,7 @@ export function AddWalletSheet({ isOpen, onClose }: AddWalletSheetProps) {
           disabled={!canSubmit}
           className="w-full py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg shadow-indigo-200 disabled:opacity-40 disabled:shadow-none transition-all active:scale-[0.98]"
         >
-          {submitting ? "Menyimpan..." : "Simpan Rekening"}
+          {submitting ? 'Menyimpan...' : 'Simpan Rekening'}
         </button>
       </div>
     </BottomSheet>

@@ -16,7 +16,8 @@ export const metadata: Metadata = {
   alternates: { canonical: '/panduan/laporan-keuangan-pribadi' },
   openGraph: {
     title: 'Laporan Keuangan Pribadi: Contoh Sederhana dan Cara Membuatnya',
-    description: 'Contoh laporan arus kas bulanan dan kekayaan bersih, cara membacanya, dan kesalahan yang membuat laporan menyesatkan.',
+    description:
+      'Contoh laporan arus kas bulanan dan kekayaan bersih, cara membacanya, dan kesalahan yang membuat laporan menyesatkan.',
     url: 'https://www.leosiqra.com/panduan/laporan-keuangan-pribadi',
     type: 'article',
     locale: 'id_ID',
@@ -25,7 +26,8 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary',
     title: 'Laporan Keuangan Pribadi: Contoh Sederhana dan Cara Membuatnya',
-    description: 'Contoh laporan arus kas bulanan dan kekayaan bersih, cara membacanya, dan kesalahan yang membuat laporan menyesatkan.',
+    description:
+      'Contoh laporan arus kas bulanan dan kekayaan bersih, cara membacanya, dan kesalahan yang membuat laporan menyesatkan.',
     images: ['/images/Logo-new.png'],
   },
 };
@@ -68,8 +70,8 @@ export default function LaporanKeuanganPribadiPage() {
         </li>
         <li>
           <strong>Laporan kekayaan bersih</strong> — semua yang Anda miliki (aset) dikurangi semua yang harus Anda bayar
-          (utang) pada satu tanggal (misalnya 31 Oktober). Menjawab pertanyaan: <em>kondisi keuangan saya makin kuat atau
-          makin lemah?</em>
+          (utang) pada satu tanggal (misalnya 31 Oktober). Menjawab pertanyaan:{' '}
+          <em>kondisi keuangan saya makin kuat atau makin lemah?</em>
         </li>
       </ul>
       <p>
@@ -83,8 +85,12 @@ export default function LaporanKeuanganPribadiPage() {
           <strong>Catatan transaksi sebulan</strong> — setiap pemasukan dan pengeluaran beserta kategorinya. Kalau belum
           punya, mulai dari format di <Link href="/catatan-keuangan-harian">catatan keuangan harian</Link>.
         </li>
-        <li><strong>Saldo semua rekening</strong> pada tanggal laporan: bank, e-wallet, dan uang tunai.</li>
-        <li><strong>Nilai tabungan dan investasi</strong> pada tanggal yang sama.</li>
+        <li>
+          <strong>Saldo semua rekening</strong> pada tanggal laporan: bank, e-wallet, dan uang tunai.
+        </li>
+        <li>
+          <strong>Nilai tabungan dan investasi</strong> pada tanggal yang sama.
+        </li>
         <li>
           <strong>Sisa utang dan piutang</strong> — termasuk tagihan kartu kredit dan cicilan. Cara mencatatnya ada di{' '}
           <Link href="/panduan/catatan-hutang-piutang">catatan hutang piutang</Link>.
@@ -92,54 +98,171 @@ export default function LaporanKeuanganPribadiPage() {
       </ol>
 
       <h2>3. Contoh laporan arus kas bulanan</h2>
-      <p>Contoh <em>ilustrasi</em> laporan bulan Oktober seorang karyawan:</p>
+      <p>
+        Contoh <em>ilustrasi</em> laporan bulan Oktober seorang karyawan:
+      </p>
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Pos</th><th className="num">Jumlah (Rp)</th></tr>
+            <tr>
+              <th>Pos</th>
+              <th className="num">Jumlah (Rp)</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td><strong>Pemasukan</strong></td><td className="num"></td></tr>
-            <tr><td>Gaji</td><td className="num">6.000.000</td></tr>
-            <tr><td>Penghasilan sampingan</td><td className="num">500.000</td></tr>
-            <tr><td><strong>Total pemasukan</strong></td><td className="num"><strong>6.500.000</strong></td></tr>
-            <tr><td><strong>Pengeluaran</strong></td><td className="num"></td></tr>
-            <tr><td>Tempat tinggal</td><td className="num">1.500.000</td></tr>
-            <tr><td>Makan &amp; minum</td><td className="num">1.800.000</td></tr>
-            <tr><td>Transportasi</td><td className="num">600.000</td></tr>
-            <tr><td>Tagihan (listrik, pulsa, internet)</td><td className="num">400.000</td></tr>
-            <tr><td>Cicilan</td><td className="num">500.000</td></tr>
-            <tr><td>Lain-lain</td><td className="num">700.000</td></tr>
-            <tr><td><strong>Total pengeluaran</strong></td><td className="num"><strong>5.500.000</strong></td></tr>
-            <tr><td><strong>Sisa (surplus)</strong></td><td className="num"><strong>1.000.000</strong></td></tr>
+            <tr>
+              <td>
+                <strong>Pemasukan</strong>
+              </td>
+              <td className="num"></td>
+            </tr>
+            <tr>
+              <td>Gaji</td>
+              <td className="num">6.000.000</td>
+            </tr>
+            <tr>
+              <td>Penghasilan sampingan</td>
+              <td className="num">500.000</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Total pemasukan</strong>
+              </td>
+              <td className="num">
+                <strong>6.500.000</strong>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Pengeluaran</strong>
+              </td>
+              <td className="num"></td>
+            </tr>
+            <tr>
+              <td>Tempat tinggal</td>
+              <td className="num">1.500.000</td>
+            </tr>
+            <tr>
+              <td>Makan &amp; minum</td>
+              <td className="num">1.800.000</td>
+            </tr>
+            <tr>
+              <td>Transportasi</td>
+              <td className="num">600.000</td>
+            </tr>
+            <tr>
+              <td>Tagihan (listrik, pulsa, internet)</td>
+              <td className="num">400.000</td>
+            </tr>
+            <tr>
+              <td>Cicilan</td>
+              <td className="num">500.000</td>
+            </tr>
+            <tr>
+              <td>Lain-lain</td>
+              <td className="num">700.000</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Total pengeluaran</strong>
+              </td>
+              <td className="num">
+                <strong>5.500.000</strong>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Sisa (surplus)</strong>
+              </td>
+              <td className="num">
+                <strong>1.000.000</strong>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
       <p>
-        Sisa Rp1.000.000 berarti sekitar 15% dari pemasukan berhasil disisihkan (1.000.000 ÷ 6.500.000). Sisa inilah yang
-        bisa dipindah ke tabungan atau dana darurat. Pemindahan itu tidak ditulis lagi sebagai pengeluaran.
+        Sisa Rp1.000.000 berarti sekitar 15% dari pemasukan berhasil disisihkan (1.000.000 ÷ 6.500.000). Sisa inilah
+        yang bisa dipindah ke tabungan atau dana darurat. Pemindahan itu tidak ditulis lagi sebagai pengeluaran.
       </p>
 
       <h2>4. Contoh laporan kekayaan bersih</h2>
-      <p>Masih <em>ilustrasi</em> orang yang sama, posisi per 31 Oktober:</p>
+      <p>
+        Masih <em>ilustrasi</em> orang yang sama, posisi per 31 Oktober:
+      </p>
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Pos</th><th className="num">Jumlah (Rp)</th></tr>
+            <tr>
+              <th>Pos</th>
+              <th className="num">Jumlah (Rp)</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td><strong>Aset</strong></td><td className="num"></td></tr>
-            <tr><td>Rekening bank &amp; uang tunai</td><td className="num">3.200.000</td></tr>
-            <tr><td>E-wallet</td><td className="num">300.000</td></tr>
-            <tr><td>Tabungan (target dana darurat)</td><td className="num">4.000.000</td></tr>
-            <tr><td>Investasi (nilai saat ini)</td><td className="num">5.500.000</td></tr>
-            <tr><td>Piutang (uang yang dipinjam orang)</td><td className="num">750.000</td></tr>
-            <tr><td><strong>Total aset</strong></td><td className="num"><strong>13.750.000</strong></td></tr>
-            <tr><td><strong>Utang</strong></td><td className="num"></td></tr>
-            <tr><td>Tagihan kartu kredit</td><td className="num">1.200.000</td></tr>
-            <tr><td>Sisa cicilan HP</td><td className="num">2.000.000</td></tr>
-            <tr><td><strong>Total utang</strong></td><td className="num"><strong>3.200.000</strong></td></tr>
-            <tr><td><strong>Kekayaan bersih</strong></td><td className="num"><strong>10.550.000</strong></td></tr>
+            <tr>
+              <td>
+                <strong>Aset</strong>
+              </td>
+              <td className="num"></td>
+            </tr>
+            <tr>
+              <td>Rekening bank &amp; uang tunai</td>
+              <td className="num">3.200.000</td>
+            </tr>
+            <tr>
+              <td>E-wallet</td>
+              <td className="num">300.000</td>
+            </tr>
+            <tr>
+              <td>Tabungan (target dana darurat)</td>
+              <td className="num">4.000.000</td>
+            </tr>
+            <tr>
+              <td>Investasi (nilai saat ini)</td>
+              <td className="num">5.500.000</td>
+            </tr>
+            <tr>
+              <td>Piutang (uang yang dipinjam orang)</td>
+              <td className="num">750.000</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Total aset</strong>
+              </td>
+              <td className="num">
+                <strong>13.750.000</strong>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Utang</strong>
+              </td>
+              <td className="num"></td>
+            </tr>
+            <tr>
+              <td>Tagihan kartu kredit</td>
+              <td className="num">1.200.000</td>
+            </tr>
+            <tr>
+              <td>Sisa cicilan HP</td>
+              <td className="num">2.000.000</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Total utang</strong>
+              </td>
+              <td className="num">
+                <strong>3.200.000</strong>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Kekayaan bersih</strong>
+              </td>
+              <td className="num">
+                <strong>10.550.000</strong>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -157,12 +280,12 @@ export default function LaporanKeuanganPribadiPage() {
       <ul>
         <li>
           <strong>Sisa arus kas</strong> — positif atau negatif? Kalau minus dua bulan berturut-turut, cek kategori
-          pengeluaran terbesar dan tetapkan batasnya di <Link href="/panduan/cara-membuat-anggaran-bulanan">anggaran
-          bulanan</Link>.
+          pengeluaran terbesar dan tetapkan batasnya di{' '}
+          <Link href="/panduan/cara-membuat-anggaran-bulanan">anggaran bulanan</Link>.
         </li>
         <li>
-          <strong>Kekayaan bersih dibanding bulan lalu</strong> — naik, tetap, atau turun? Angka ini juga dipengaruhi naik
-          turunnya harga investasi, jadi jangan panik karena satu bulan saja; lihat arahnya dalam beberapa bulan.
+          <strong>Kekayaan bersih dibanding bulan lalu</strong> — naik, tetap, atau turun? Angka ini juga dipengaruhi
+          naik turunnya harga investasi, jadi jangan panik karena satu bulan saja; lihat arahnya dalam beberapa bulan.
         </li>
         <li>
           <strong>Porsi utang terhadap aset</strong> — kalau makin besar dari bulan ke bulan, prioritaskan pelunasan.
@@ -185,7 +308,8 @@ export default function LaporanKeuanganPribadiPage() {
           tagihannya baru dibayar bulan depan.
         </li>
         <li>
-          <strong>Investasi dinilai dengan harga beli.</strong> Kekayaan bersih jadi tidak mencerminkan nilai sebenarnya.
+          <strong>Investasi dinilai dengan harga beli.</strong> Kekayaan bersih jadi tidak mencerminkan nilai
+          sebenarnya.
         </li>
         <li>
           <strong>Saldo di laporan tidak dicocokkan.</strong> Sebelum menutup laporan, samakan saldo rekening di catatan
@@ -215,8 +339,10 @@ export default function LaporanKeuanganPribadiPage() {
         terhadap aset. Semua fitur bisa dicoba gratis selama 14 hari tanpa kartu kredit.
       </p>
       <p>
-        <em>Angka di panduan ini adalah ilustrasi. Panduan ini bersifat edukasi umum, bukan nasihat keuangan atau pajak.
-        Sesuaikan dengan kondisi Anda.</em>
+        <em>
+          Angka di panduan ini adalah ilustrasi. Panduan ini bersifat edukasi umum, bukan nasihat keuangan atau pajak.
+          Sesuaikan dengan kondisi Anda.
+        </em>
       </p>
     </GuideLayout>
   );

@@ -40,30 +40,221 @@ export const DEMO_BUDGETS = [
   { category: 'Hiburan', limit: 400_000 },
 ];
 
-const SPEND: { title: string; category: string; emoji: string; min: number; max: number; account: string; weight: number; hours: [number, number] }[] = [
-  { title: 'Kopi susu', category: 'Makan & Minum', emoji: '☕', min: 18_000, max: 32_000, account: 'ewallet', weight: 5, hours: [7, 10] },
-  { title: 'Makan siang', category: 'Makan & Minum', emoji: '🍛', min: 20_000, max: 45_000, account: 'tunai', weight: 6, hours: [11, 13] },
-  { title: 'Nasi padang', category: 'Makan & Minum', emoji: '🍛', min: 25_000, max: 38_000, account: 'tunai', weight: 2, hours: [12, 19] },
-  { title: 'Bakso', category: 'Makan & Minum', emoji: '🍜', min: 18_000, max: 28_000, account: 'tunai', weight: 2, hours: [17, 20] },
-  { title: 'Ojek online', category: 'Transportasi', emoji: '🛵', min: 12_000, max: 35_000, account: 'ewallet', weight: 5, hours: [7, 9] },
-  { title: 'Parkir', category: 'Transportasi', emoji: '🅿️', min: 2_000, max: 5_000, account: 'tunai', weight: 3, hours: [9, 20] },
-  { title: 'Bensin', category: 'Transportasi', emoji: '⛽', min: 30_000, max: 60_000, account: 'tunai', weight: 1, hours: [7, 18] },
-  { title: 'Minimarket', category: 'Belanja Harian', emoji: '🛒', min: 25_000, max: 95_000, account: 'ewallet', weight: 3, hours: [18, 21] },
-  { title: 'Belanja dapur', category: 'Belanja Harian', emoji: '🥬', min: 60_000, max: 180_000, account: 'bank', weight: 1, hours: [9, 11] },
-  { title: 'Nonton bioskop', category: 'Hiburan', emoji: '🎬', min: 45_000, max: 90_000, account: 'ewallet', weight: 1, hours: [19, 21] },
+const SPEND: {
+  title: string;
+  category: string;
+  emoji: string;
+  min: number;
+  max: number;
+  account: string;
+  weight: number;
+  hours: [number, number];
+}[] = [
+  {
+    title: 'Kopi susu',
+    category: 'Makan & Minum',
+    emoji: '☕',
+    min: 18_000,
+    max: 32_000,
+    account: 'ewallet',
+    weight: 5,
+    hours: [7, 10],
+  },
+  {
+    title: 'Makan siang',
+    category: 'Makan & Minum',
+    emoji: '🍛',
+    min: 20_000,
+    max: 45_000,
+    account: 'tunai',
+    weight: 6,
+    hours: [11, 13],
+  },
+  {
+    title: 'Nasi padang',
+    category: 'Makan & Minum',
+    emoji: '🍛',
+    min: 25_000,
+    max: 38_000,
+    account: 'tunai',
+    weight: 2,
+    hours: [12, 19],
+  },
+  {
+    title: 'Bakso',
+    category: 'Makan & Minum',
+    emoji: '🍜',
+    min: 18_000,
+    max: 28_000,
+    account: 'tunai',
+    weight: 2,
+    hours: [17, 20],
+  },
+  {
+    title: 'Ojek online',
+    category: 'Transportasi',
+    emoji: '🛵',
+    min: 12_000,
+    max: 35_000,
+    account: 'ewallet',
+    weight: 5,
+    hours: [7, 9],
+  },
+  {
+    title: 'Parkir',
+    category: 'Transportasi',
+    emoji: '🅿️',
+    min: 2_000,
+    max: 5_000,
+    account: 'tunai',
+    weight: 3,
+    hours: [9, 20],
+  },
+  {
+    title: 'Bensin',
+    category: 'Transportasi',
+    emoji: '⛽',
+    min: 30_000,
+    max: 60_000,
+    account: 'tunai',
+    weight: 1,
+    hours: [7, 18],
+  },
+  {
+    title: 'Minimarket',
+    category: 'Belanja Harian',
+    emoji: '🛒',
+    min: 25_000,
+    max: 95_000,
+    account: 'ewallet',
+    weight: 3,
+    hours: [18, 21],
+  },
+  {
+    title: 'Belanja dapur',
+    category: 'Belanja Harian',
+    emoji: '🥬',
+    min: 60_000,
+    max: 180_000,
+    account: 'bank',
+    weight: 1,
+    hours: [9, 11],
+  },
+  {
+    title: 'Nonton bioskop',
+    category: 'Hiburan',
+    emoji: '🎬',
+    min: 45_000,
+    max: 90_000,
+    account: 'ewallet',
+    weight: 1,
+    hours: [19, 21],
+  },
 ];
 
-const MONTHLY: { day: number; title: string; category: string; emoji: string; amount: number; account: string; type: DemoType; toAccount?: string }[] = [
-  { day: 1, title: 'Gaji bulanan', category: 'Gaji', emoji: '💼', amount: 8_500_000, account: 'bank', type: 'pemasukan' },
-  { day: 2, title: 'Bayar kos', category: 'Tempat Tinggal', emoji: '🏠', amount: 1_800_000, account: 'bank', type: 'pengeluaran' },
-  { day: 3, title: 'Isi saldo dompet digital', category: 'Transfer', emoji: '🔁', amount: 2_700_000, account: 'bank', type: 'transfer', toAccount: 'ewallet' },
-  { day: 3, title: 'Setor tabungan mudik', category: 'Transfer', emoji: '🔁', amount: 1_000_000, account: 'bank', type: 'transfer', toAccount: 'tabungan' },
-  { day: 5, title: 'Paket internet', category: 'Tagihan', emoji: '📶', amount: 150_000, account: 'ewallet', type: 'pengeluaran' },
-  { day: 8, title: 'Token listrik', category: 'Tagihan', emoji: '💡', amount: 200_000, account: 'ewallet', type: 'pengeluaran' },
-  { day: 12, title: 'Langganan musik', category: 'Hiburan', emoji: '🎧', amount: 54_990, account: 'ewallet', type: 'pengeluaran' },
-  { day: 1, title: 'Tarik tunai', category: 'Transfer', emoji: '🔁', amount: 1_500_000, account: 'bank', type: 'transfer', toAccount: 'tunai' },
-  { day: 20, title: 'Cicilan HP', category: 'Cicilan', emoji: '📱', amount: 625_000, account: 'bank', type: 'pengeluaran' },
-  { day: 25, title: 'Freelance desain', category: 'Pendapatan Lain', emoji: '🎨', amount: 1_200_000, account: 'bank', type: 'pemasukan' },
+const MONTHLY: {
+  day: number;
+  title: string;
+  category: string;
+  emoji: string;
+  amount: number;
+  account: string;
+  type: DemoType;
+  toAccount?: string;
+}[] = [
+  {
+    day: 1,
+    title: 'Gaji bulanan',
+    category: 'Gaji',
+    emoji: '💼',
+    amount: 8_500_000,
+    account: 'bank',
+    type: 'pemasukan',
+  },
+  {
+    day: 2,
+    title: 'Bayar kos',
+    category: 'Tempat Tinggal',
+    emoji: '🏠',
+    amount: 1_800_000,
+    account: 'bank',
+    type: 'pengeluaran',
+  },
+  {
+    day: 3,
+    title: 'Isi saldo dompet digital',
+    category: 'Transfer',
+    emoji: '🔁',
+    amount: 2_700_000,
+    account: 'bank',
+    type: 'transfer',
+    toAccount: 'ewallet',
+  },
+  {
+    day: 3,
+    title: 'Setor tabungan mudik',
+    category: 'Transfer',
+    emoji: '🔁',
+    amount: 1_000_000,
+    account: 'bank',
+    type: 'transfer',
+    toAccount: 'tabungan',
+  },
+  {
+    day: 5,
+    title: 'Paket internet',
+    category: 'Tagihan',
+    emoji: '📶',
+    amount: 150_000,
+    account: 'ewallet',
+    type: 'pengeluaran',
+  },
+  {
+    day: 8,
+    title: 'Token listrik',
+    category: 'Tagihan',
+    emoji: '💡',
+    amount: 200_000,
+    account: 'ewallet',
+    type: 'pengeluaran',
+  },
+  {
+    day: 12,
+    title: 'Langganan musik',
+    category: 'Hiburan',
+    emoji: '🎧',
+    amount: 54_990,
+    account: 'ewallet',
+    type: 'pengeluaran',
+  },
+  {
+    day: 1,
+    title: 'Tarik tunai',
+    category: 'Transfer',
+    emoji: '🔁',
+    amount: 1_500_000,
+    account: 'bank',
+    type: 'transfer',
+    toAccount: 'tunai',
+  },
+  {
+    day: 20,
+    title: 'Cicilan HP',
+    category: 'Cicilan',
+    emoji: '📱',
+    amount: 625_000,
+    account: 'bank',
+    type: 'pengeluaran',
+  },
+  {
+    day: 25,
+    title: 'Freelance desain',
+    category: 'Pendapatan Lain',
+    emoji: '🎨',
+    amount: 1_200_000,
+    account: 'bank',
+    type: 'pemasukan',
+  },
 ];
 
 // mulberry32 — cukup untuk data contoh yang sama setiap kali dibuka.
@@ -74,7 +265,8 @@ const rng = (seed: number) => () => {
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 };
 
-const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const ymd = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const round500 = (n: number) => Math.round(n / 500) * 500;
 
 /** Transaksi rekaan dari awal bulan ke-2 sebelumnya sampai hari ini (jam sekarang), terbaru dulu. */
@@ -100,7 +292,18 @@ export const buildDemoTransactions = (now: Date): DemoTx[] => {
       if (d.getDate() !== m.day) continue;
       const hm = 9 * 60 + Math.floor(r() * 60);
       if (isToday && hm > nowHm) continue;
-      out.push({ id: `d${n++}`, date, time: `${String(Math.floor(hm / 60)).padStart(2, '0')}:${String(hm % 60).padStart(2, '0')}`, title: m.title, category: m.category, type: m.type, amount: m.amount, account: m.account, toAccount: m.toAccount, emoji: m.emoji });
+      out.push({
+        id: `d${n++}`,
+        date,
+        time: `${String(Math.floor(hm / 60)).padStart(2, '0')}:${String(hm % 60).padStart(2, '0')}`,
+        title: m.title,
+        category: m.category,
+        type: m.type,
+        amount: m.amount,
+        account: m.account,
+        toAccount: m.toAccount,
+        emoji: m.emoji,
+      });
     }
     const weekend = d.getDay() === 0 || d.getDay() === 6;
     const count = (weekend ? 2 : 3) + Math.floor(r() * 3);
@@ -141,13 +344,32 @@ export const demoBalances = (txs: DemoTx[]) => {
 export const sumBy = (txs: DemoTx[], type: DemoType) => txs.reduce((s, t) => (t.type === type ? s + t.amount : s), 0);
 
 export const DEMO_CATEGORIES = {
-  pengeluaran: ['Makan & Minum', 'Transportasi', 'Belanja Harian', 'Hiburan', 'Tagihan', 'Tempat Tinggal', 'Cicilan', 'Lainnya'],
+  pengeluaran: [
+    'Makan & Minum',
+    'Transportasi',
+    'Belanja Harian',
+    'Hiburan',
+    'Tagihan',
+    'Tempat Tinggal',
+    'Cicilan',
+    'Lainnya',
+  ],
   pemasukan: ['Gaji', 'Pendapatan Lain', 'Bonus'],
 } as const;
 
 const CATEGORY_EMOJI: Record<string, string> = {
-  'Makan & Minum': '🍛', Transportasi: '🛵', 'Belanja Harian': '🛒', Hiburan: '🎬', Tagihan: '💡', 'Tempat Tinggal': '🏠',
-  Cicilan: '📱', Lainnya: '🧾', Gaji: '💼', 'Pendapatan Lain': '🎨', Bonus: '🎁', Transfer: '🔁',
+  'Makan & Minum': '🍛',
+  Transportasi: '🛵',
+  'Belanja Harian': '🛒',
+  Hiburan: '🎬',
+  Tagihan: '💡',
+  'Tempat Tinggal': '🏠',
+  Cicilan: '📱',
+  Lainnya: '🧾',
+  Gaji: '💼',
+  'Pendapatan Lain': '🎨',
+  Bonus: '🎁',
+  Transfer: '🔁',
 };
 export const emojiFor = (category: string) => CATEGORY_EMOJI[category] ?? '🧾';
 
@@ -175,9 +397,22 @@ export const loadDemo = (now: Date): { txs: DemoTx[]; edited: boolean } => {
     const v = raw ? (JSON.parse(raw) as DemoStore) : null;
     if (v && Array.isArray(v.txs) && /^\d{4}-\d{2}-\d{2}$/.test(v.base) && v.edited) {
       const [y, m, d] = v.base.split('-').map(Number);
-      const days = Math.max(0, Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() - new Date(y, m - 1, d).getTime()) / DAY));
+      const days = Math.max(
+        0,
+        Math.round(
+          (new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() - new Date(y, m - 1, d).getTime()) /
+            DAY,
+        ),
+      );
       const txs = v.txs
-        .filter((t) => t && typeof t.amount === 'number' && Number.isInteger(t.amount) && t.amount > 0 && /^\d{4}-\d{2}-\d{2}$/.test(t.date))
+        .filter(
+          (t) =>
+            t &&
+            typeof t.amount === 'number' &&
+            Number.isInteger(t.amount) &&
+            t.amount > 0 &&
+            /^\d{4}-\d{2}-\d{2}$/.test(t.date),
+        )
         .map((t) => (days ? { ...t, date: shiftDate(t.date, days) } : t));
       if (days) saveDemo(txs, true, now);
       return { txs, edited: true };

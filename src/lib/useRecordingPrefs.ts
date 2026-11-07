@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useCallback, useEffect, useState } from 'react';
 import { cloudflareApi } from './cloudflare-api';
@@ -16,8 +16,12 @@ let shared: RecordingPrefs | null = null;
 let loading: Promise<RecordingPrefs> | null = null;
 
 const load = () => {
-  loading ??= cloudflareApi<{ item?: { inputMode?: InputMode | null; amountKeypad?: AmountKeypad } }>('/api/member/preferences')
-    .then((r) => (shared = { inputMode: r.item?.inputMode ?? 'ketik', amountKeypad: r.item?.amountKeypad ?? 'standar' }))
+  loading ??= cloudflareApi<{ item?: { inputMode?: InputMode | null; amountKeypad?: AmountKeypad } }>(
+    '/api/member/preferences',
+  )
+    .then(
+      (r) => (shared = { inputMode: r.item?.inputMode ?? 'ketik', amountKeypad: r.item?.amountKeypad ?? 'standar' }),
+    )
     .catch(() => {
       loading = null;
       return DEFAULTS;

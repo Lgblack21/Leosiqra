@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { cloudflareApi } from "@/lib/cloudflare-api";
-import { isStandaloneDisplay } from "@/lib/pushNotifications";
+import { cloudflareApi } from '@/lib/cloudflare-api';
+import { isStandaloneDisplay } from '@/lib/pushNotifications';
 
-export type InstalledApp = "leosiqra" | "input-cepat";
+export type InstalledApp = 'leosiqra' | 'input-cepat';
 
 const REPORT_EVERY_MS = 12 * 60 * 60 * 1000;
 
@@ -12,7 +12,7 @@ const REPORT_EVERY_MS = 12 * 60 * 60 * 1000;
 // ke akun yang masih memakai aplikasinya — dan muncul lagi kalau aplikasinya
 // lama tidak dibuka (kemungkinan sudah dihapus). Dibatasi ±sekali per 12 jam.
 export function reportAppOpened(app: InstalledApp) {
-  if (typeof window === "undefined" || !isStandaloneDisplay()) return;
+  if (typeof window === 'undefined' || !isStandaloneDisplay()) return;
   const key = `leosiqra:app-opened-reported:${app}`;
   try {
     const last = Number(localStorage.getItem(key) || 0);
@@ -21,7 +21,7 @@ export function reportAppOpened(app: InstalledApp) {
   } catch {
     /* storage diblokir — tetap kirim, server yang menyimpan */
   }
-  cloudflareApi("/api/member/app-opened", { method: "POST", json: { app } }).catch(() => {
+  cloudflareApi('/api/member/app-opened', { method: 'POST', json: { app } }).catch(() => {
     /* tidak penting kalau gagal — dicoba lagi saat dibuka berikutnya */
   });
 }

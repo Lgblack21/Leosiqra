@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -57,8 +57,16 @@ export default function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <AuthCard mood="sad" badge="Link tidak valid" title="Link reset tidak lengkap" subtitle="Buka link langsung dari email reset password, atau minta link baru.">
-        <Link href="/auth/forgot-password" className="block text-center w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-bold shadow-lg shadow-indigo-500/25 hover:-translate-y-0.5 transition-all">
+      <AuthCard
+        mood="sad"
+        badge="Link tidak valid"
+        title="Link reset tidak lengkap"
+        subtitle="Buka link langsung dari email reset password, atau minta link baru."
+      >
+        <Link
+          href="/auth/forgot-password"
+          className="block text-center w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-bold shadow-lg shadow-indigo-500/25 hover:-translate-y-0.5 transition-all"
+        >
           Minta link baru
         </Link>
       </AuthCard>
@@ -67,12 +75,22 @@ export default function ResetPasswordPage() {
 
   if (done) {
     return (
-      <AuthCard mood="happy" badge="Berhasil" title="Password sudah diganti" subtitle="Silakan login dengan password baru. Demi keamanan, semua perangkat yang sebelumnya login sudah dikeluarkan.">
+      <AuthCard
+        mood="happy"
+        badge="Berhasil"
+        title="Password sudah diganti"
+        subtitle="Silakan login dengan password baru. Demi keamanan, semua perangkat yang sebelumnya login sudah dikeluarkan."
+      >
         <div className="flex items-center gap-3 p-4 rounded-2xl bg-emerald-50 border border-emerald-100">
           <CheckCircle2 size={20} className="text-emerald-600 shrink-0" />
-          <p className="text-sm text-emerald-800">Kalau akunmu memakai 2FA, kode Authenticator tetap diminta saat login.</p>
+          <p className="text-sm text-emerald-800">
+            Kalau akunmu memakai 2FA, kode Authenticator tetap diminta saat login.
+          </p>
         </div>
-        <Link href="/auth/login" className="block text-center w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-bold shadow-lg shadow-indigo-500/25 hover:-translate-y-0.5 transition-all">
+        <Link
+          href="/auth/login"
+          className="block text-center w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-bold shadow-lg shadow-indigo-500/25 hover:-translate-y-0.5 transition-all"
+        >
           Ke halaman login
         </Link>
       </AuthCard>
@@ -80,12 +98,22 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <AuthCard mood={error ? 'sad' : typingPw ? (showPassword ? 'peek' : 'hide') : 'idle'} badge="Password baru" title="Buat password baru" subtitle="Minimal 8 karakter. Gunakan kombinasi huruf, angka, dan simbol.">
+    <AuthCard
+      mood={error ? 'sad' : typingPw ? (showPassword ? 'peek' : 'hide') : 'idle'}
+      badge="Password baru"
+      title="Buat password baru"
+      subtitle="Minimal 8 karakter. Gunakan kombinasi huruf, angka, dan simbol."
+    >
       {error && (
-        <div role="alert" className="py-2.5 px-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 text-sm font-medium">
+        <div
+          role="alert"
+          className="py-2.5 px-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 text-sm font-medium"
+        >
           {error}
           {error.includes('kedaluwarsa') && (
-            <Link href="/auth/forgot-password" className="block mt-1 font-bold underline">Minta link baru</Link>
+            <Link href="/auth/forgot-password" className="block mt-1 font-bold underline">
+              Minta link baru
+            </Link>
           )}
         </div>
       )}
@@ -94,8 +122,25 @@ export default function ResetPasswordPage() {
           <span className={authLabel}>Password baru</span>
           <span className={authInputWrap}>
             <Lock size={18} className="shrink-0 text-slate-400 transition-colors group-focus-within:text-indigo-500" />
-            <input type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="Minimal 8 karakter" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} onFocus={() => setTypingPw(true)} onBlur={() => setTypingPw(false)} className={authInput} />
-            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => setShowPassword((v) => !v)} aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'} className="shrink-0 rounded-lg p-1 text-slate-400 transition-colors hover:text-indigo-600">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              placeholder="Minimal 8 karakter"
+              required
+              minLength={8}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onFocus={() => setTypingPw(true)}
+              onBlur={() => setTypingPw(false)}
+              className={authInput}
+            />
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+              className="shrink-0 rounded-lg p-1 text-slate-400 transition-colors hover:text-indigo-600"
+            >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </span>
@@ -104,11 +149,25 @@ export default function ResetPasswordPage() {
           <span className={authLabel}>Ulangi password baru</span>
           <span className={authInputWrap}>
             <Lock size={18} className="shrink-0 text-slate-400 transition-colors group-focus-within:text-indigo-500" />
-            <input type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="Ketik ulang password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} onFocus={() => setTypingPw(true)} onBlur={() => setTypingPw(false)} className={authInput} />
+            <input
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              placeholder="Ketik ulang password"
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              onFocus={() => setTypingPw(true)}
+              onBlur={() => setTypingPw(false)}
+              className={authInput}
+            />
           </span>
         </label>
         <button type="submit" disabled={loading} className={authPrimaryBtn}>
-          {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : 'Simpan password baru'}
+          {loading ? (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+          ) : (
+            'Simpan password baru'
+          )}
         </button>
       </form>
     </AuthCard>

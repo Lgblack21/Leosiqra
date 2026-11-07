@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { MessageSquareHeart } from 'lucide-react';
 import { FeedbackPanel } from '@/components/feedback/Feedback';

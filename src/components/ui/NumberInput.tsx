@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { InputHTMLAttributes, useLayoutEffect, useRef } from 'react';
 
@@ -47,9 +47,10 @@ const parseRawFallback = (display: string) => {
   const isNegative = display.trim().startsWith('-');
   const noSign = display.replace(/-/g, '');
   const decimalIndex = Math.max(noSign.lastIndexOf('.'), noSign.lastIndexOf(','));
-  const cleaned = decimalIndex === -1
-    ? noSign.replace(/[^0-9]/g, '')
-    : `${noSign.slice(0, decimalIndex).replace(/[^0-9]/g, '')}.${noSign.slice(decimalIndex + 1).replace(/[^0-9]/g, '')}`;
+  const cleaned =
+    decimalIndex === -1
+      ? noSign.replace(/[^0-9]/g, '')
+      : `${noSign.slice(0, decimalIndex).replace(/[^0-9]/g, '')}.${noSign.slice(decimalIndex + 1).replace(/[^0-9]/g, '')}`;
   return isNegative && cleaned ? `-${cleaned}` : cleaned;
 };
 
@@ -90,7 +91,7 @@ const computeNewRaw = (value: string, rawInput: string, cursorPos: number): stri
           negative,
           intPart: intPart.slice(0, digitsBefore),
           hasDot: true,
-          fracPart: intPart.slice(digitsBefore)
+          fracPart: intPart.slice(digitsBefore),
         });
       }
       if (insertedChar === '-') {

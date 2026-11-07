@@ -1,4 +1,4 @@
-import { FolderOpen } from "lucide-react";
+import { FolderOpen } from 'lucide-react';
 
 interface EmptyStateProps {
   title: string;

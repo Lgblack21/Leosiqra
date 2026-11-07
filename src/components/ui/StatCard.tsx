@@ -17,8 +17,16 @@ interface StatCardProps {
 }
 
 export function StatCard({
-  label, icon, value, valueClassName, badge, progress, progressClassName = 'bg-slate-800',
-  caption, loading, className,
+  label,
+  icon,
+  value,
+  valueClassName,
+  badge,
+  progress,
+  progressClassName = 'bg-slate-800',
+  caption,
+  loading,
+  className,
 }: StatCardProps) {
   return (
     <Card className={cn('p-5 md:p-6 flex flex-col', className)}>
@@ -31,7 +39,10 @@ export function StatCard({
         // kelihatan tanpa loncatan kasar.
         <p
           key={typeof value === 'string' || typeof value === 'number' ? String(value) : undefined}
-          className={cn('text-xl md:text-2xl font-black text-slate-900 tracking-tight tabular-nums mb-5 truncate animate-in', valueClassName)}
+          className={cn(
+            'text-xl md:text-2xl font-black text-slate-900 tracking-tight tabular-nums mb-5 truncate animate-in',
+            valueClassName,
+          )}
         >
           {value}
         </p>
@@ -47,7 +58,11 @@ export function StatCard({
             </div>
           )}
           {caption && (
-            <span className={cn('text-caption font-medium text-slate-400', progress !== undefined && 'whitespace-nowrap')}>{caption}</span>
+            <span
+              className={cn('text-caption font-medium text-slate-400', progress !== undefined && 'whitespace-nowrap')}
+            >
+              {caption}
+            </span>
           )}
         </div>
       )}

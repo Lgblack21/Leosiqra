@@ -9,8 +9,18 @@ export interface BcaTransaction {
 }
 
 const INDO_MONTHS: Record<string, number> = {
-  JANUARI: 1, FEBRUARI: 2, MARET: 3, APRIL: 4, MEI: 5, JUNI: 6,
-  JULI: 7, AGUSTUS: 8, SEPTEMBER: 9, OKTOBER: 10, NOVEMBER: 11, DESEMBER: 12,
+  JANUARI: 1,
+  FEBRUARI: 2,
+  MARET: 3,
+  APRIL: 4,
+  MEI: 5,
+  JUNI: 6,
+  JULI: 7,
+  AGUSTUS: 8,
+  SEPTEMBER: 9,
+  OKTOBER: 10,
+  NOVEMBER: 11,
+  DESEMBER: 12,
 };
 
 // Header e-statement BCA selalu punya baris "PERIODE : <BULAN> <TAHUN>" —
@@ -42,7 +52,10 @@ export function parseBcaStatementText(text: string): BcaTransaction[] {
   const period = extractStatementPeriod(text);
   if (!period) return [];
 
-  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+  const lines = text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
   const results: BcaTransaction[] = [];
 
   let i = 0;

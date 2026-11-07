@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -8,9 +8,6 @@ import { cn } from '@/lib/utils';
 import { LeoMascot, type LeoActivity, type LeoMood } from '@/components/mascot/LeoMascot';
 import type { Season } from '@/lib/season';
 
-// Leo di Ringkasan: ngobrol soal keuanganmu hari ini. Setiap "kata" disusun
-// halaman dari data asli (budget, hari ini, pengingat, kebiasaan). Ketuk Leo →
-// kaget-ketawa lalu pindah ke kata berikutnya; ekspresinya ikut isi pesan.
 export type LeoTip = {
   id: string;
   text: string;
@@ -18,8 +15,6 @@ export type LeoTip = {
   action?: { label: string; href?: string; onClick?: () => void };
 };
 
-// Kesibukan Leo saat tidak sedang ngomong — ikut jam perangkat: malam tidur,
-// jam makan makan, selebihnya gantian main bola, main koin, makan, santai.
 const ACT_LABEL: Record<LeoActivity, string> = {
   eat: 'Leo lagi makan 🍗',
   play: 'Leo lagi main bola ⚽',
@@ -36,7 +31,32 @@ const pickActivity = (n: number): LeoActivity | null => {
 const ACT_EVERY = 12000;
 const TALK_FOR = 6500;
 
-export function LeoBuddy({ tips, season, size = 150, className }: { tips: LeoTip[]; season: Season | null; size?: number; className?: string }) {
+// "rata-rata", "Rp1,2 jt-an" dst. tidak dipotong di tanda hubung saat teks turun baris.
+const keepHyphenated = (text: string) =>
+  text.split(/(\S+-\S+)/).map((part, k) =>
+    k % 2 ? (
+      <span key={k} className="whitespace-nowrap">
+        {part}
+      </span>
+    ) : (
+      part
+    ),
+  );
+
+// Satu instans untuk semua layar (timer & listener tidak dobel); ukuran maskot lewat mascotClassName.
+export function LeoBuddy({
+  tips,
+  season,
+  size = 150,
+  className,
+  mascotClassName,
+}: {
+  tips: LeoTip[];
+  season: Season | null;
+  size?: number;
+  className?: string;
+  mascotClassName?: string;
+}) {
   const reduce = useReducedMotion();
   const [i, setI] = useState(0);
   const [pets, setPets] = useState(0);
@@ -49,7 +69,6 @@ export function LeoBuddy({ tips, season, size = 150, className }: { tips: LeoTip
     setI(0);
   }, [key]);
 
-  // Aktivitas berganti tiap ACT_EVERY; diketuk → berhenti sebentar untuk ngomong.
   const [activity, setActivity] = useState<LeoActivity | null>(null);
   const [talking, setTalking] = useState(false);
   useEffect(() => {
@@ -79,11 +98,12 @@ export function LeoBuddy({ tips, season, size = 150, className }: { tips: LeoTip
   };
 
   const action = tip?.action;
-  const actionCls = 'mt-2.5 inline-flex items-center gap-1 rounded-full bg-indigo-600 px-3.5 py-1.5 text-[13px] font-bold text-white hover:bg-indigo-700';
+  const actionCls =
+    'mt-2 inline-flex items-center gap-1 rounded-full bg-indigo-600 px-3 py-1 text-[12px] font-bold text-white transition-colors hover:bg-indigo-700 md:text-[13px]';
 
   return (
     <div className={cn('flex items-end gap-2', className)}>
-      <div className="relative min-w-0 flex-1 pb-6">
+      <div className="relative min-w-0 max-w-[290px] flex-1 pb-6">
         <AnimatePresence mode="wait">
           {tip && (
             <motion.div
@@ -92,29 +112,51 @@ export function LeoBuddy({ tips, season, size = 150, className }: { tips: LeoTip
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={reduce ? undefined : { opacity: 0, y: -6, scale: 0.97 }}
               transition={{ duration: 0.22 }}
-              className="relative rounded-[22px] rounded-br-md bg-white px-4 py-3 text-slate-800 shadow-[0_18px_40px_-22px_rgba(15,23,42,0.55)]"
+              className="relative rounded-[18px] rounded-br-md bg-white/95 px-3.5 py-2.5 text-slate-800 shadow-[0_14px_32px_-20px_rgba(15,23,42,0.6)] backdrop-blur-sm"
               aria-live="polite"
             >
-              <p className="text-[14px] font-semibold leading-snug md:text-[15px]">{tip.text}</p>
-              {action && (action.href ? (
-                <Link href={action.href} className={actionCls}>{action.label} <ChevronRight size={14} /></Link>
-              ) : (
-                <button type="button" onClick={action.onClick} className={actionCls}>{action.label} <ChevronRight size={14} /></button>
-              ))}
-              <span aria-hidden className="absolute -right-1.5 bottom-2 h-4 w-4 rotate-45 rounded-sm bg-white" />
+              <p className="text-[13px] font-semibold leading-snug md:text-[14px]">{keepHyphenated(tip.text)}</p>
+              {action &&
+                (action.href ? (
+                  <Link href={action.href} className={actionCls}>
+                    {action.label} <ChevronRight size={14} />
+                  </Link>
+                ) : (
+                  <button type="button" onClick={action.onClick} className={actionCls}>
+                    {action.label} <ChevronRight size={14} />
+                  </button>
+                ))}
+              <span aria-hidden className="absolute -right-1 bottom-2.5 h-3 w-3 rotate-45 rounded-[3px] bg-white/95" />
             </motion.div>
           )}
         </AnimatePresence>
-        <div className="absolute bottom-0 left-1 flex items-center gap-1.5 text-[12px] font-semibold text-white/80">
+        <div className="absolute bottom-0 left-1 flex items-center gap-1.5 text-[11px] font-semibold text-white/75 md:text-[12px]">
           {tips.length > 1 && (
             <span className="flex gap-1" aria-hidden>
               {tips.map((t, k) => (
-                <span key={t.id} className={cn('h-1.5 rounded-full transition-all', k === i % tips.length ? 'w-4 bg-white' : 'w-1.5 bg-white/45')} />
+                <span
+                  key={t.id}
+                  className={cn(
+                    'h-1.5 rounded-full transition-all',
+                    k === i % tips.length ? 'w-4 bg-white' : 'w-1.5 bg-white/45',
+                  )}
+                />
               ))}
             </span>
           )}
-          <motion.span key={busy ?? 'hint'} initial={reduce ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-1">
-            {busy ? ACT_LABEL[busy] : <><Hand size={12} /> {pets === 0 ? 'Ketuk Leo' : pets < 5 ? 'Ketuk lagi' : `Dielus ${pets}×`}</>}
+          <motion.span
+            key={busy ?? 'hint'}
+            initial={reduce ? false : { opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-1"
+          >
+            {busy ? (
+              ACT_LABEL[busy]
+            ) : (
+              <>
+                <Hand size={12} /> {pets === 0 ? 'Ketuk Leo' : pets < 5 ? 'Ketuk lagi' : `Dielus ${pets}×`}
+              </>
+            )}
           </motion.span>
         </div>
       </div>
@@ -124,7 +166,15 @@ export function LeoBuddy({ tips, season, size = 150, className }: { tips: LeoTip
         aria-label="Ketuk Leo untuk pesan berikutnya"
         className="relative -mb-2 shrink-0 rounded-full outline-none focus-visible:ring-4 focus-visible:ring-white/60"
       >
-        <LeoMascot mood={busy ? 'idle' : tip?.mood ?? 'idle'} activity={busy} size={size} season={season} interactive />
+        <LeoMascot
+          mood={busy ? 'idle' : (tip?.mood ?? 'idle')}
+          activity={busy}
+          size={size}
+          season={season}
+          interactive
+          ledge
+          className={mascotClassName}
+        />
       </button>
     </div>
   );

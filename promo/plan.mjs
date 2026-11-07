@@ -223,9 +223,9 @@ export const buildPlan = async ({ seed, history, lessons = "" }) => {
   const usedTopics = new Set(recent.map((h) => h.topic));
   const fresh = FORMATS[format].topics.filter((t) => !usedTopics.has(t));
   const topic = rng.pick(fresh.length ? fresh : FORMATS[format].topics);
-  // Slot promo: format "fitur" selalu promo; selain itu promo hanya kalau 2
-  // video terakhir sama-sama bukan promo (jadi ±1 dari 3 video).
-  let promo = format === "fitur" || recent.slice(-2).every((h) => h.promo === false);
+  // Sejak 2026-11-04 (perintah Bos): semua video mengenalkan fitur app,
+  // jadi selalu promo. Naskah routine tetap boleh menimpa lewat raw.promo.
+  let promo = true;
 
   let script;
   let source = "ai";

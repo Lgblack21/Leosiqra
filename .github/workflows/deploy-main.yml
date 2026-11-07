@@ -27,7 +27,7 @@ on:
         default: ""
 
 permissions:
-  contents: read
+  contents: write # hanya untuk tag & GitHub Release vX.Y.Z setelah deploy sukses
 
 concurrency:
   group: deploy-main
@@ -62,7 +62,14 @@ jobs:
 
       - run: npm ci
       - run: npx tsc --noEmit
-      - run: npm run build
+      # Ikon aplikasi bank/e-wallet HD → public/logos (lihat skripnya). Gagal tidak menghentikan deploy.
+      - name: Logo bank (HD)
+        continue-on-error: true
+        run: node scripts/fetch-logos.mjs
+      - name: Build
+        env:
+          LEOSIQRA_BUILD: ${{ github.run_number }} # tampil di app sebagai "· build N"
+        run: npm run build
 
       - name: Migrasi D1
         if: inputs.migrasi != ''
@@ -81,12 +88,33 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy cloudflare/src/index.ts
 
+      # Versi dari package.json (lihat CHANGELOG.md). Rilis dibuat sekali per versi;
+      # deploy ulang versi yang sama hanya menaikkan nomor build.
+      - name: Tag & Release versi
+        id: rilis
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSI=$(node -p "require('./package.json').version")
+          echo "versi=$VERSI" >> "$GITHUB_OUTPUT"
+          if gh release view "v$VERSI" >/dev/null 2>&1; then
+            echo "status=sudah ada (versi belum dinaikkan)" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          awk -v v="$VERSI" '$0 ~ "^## " v " " {on=1; next} on && /^## / {exit} on' CHANGELOG.md > notes.md
+          [ -s notes.md ] || echo "Catatan rilis belum ditulis di CHANGELOG.md." > notes.md
+          gh release create "v$VERSI" --target "$GITHUB_SHA" --title "Leosiqra $VERSI" --notes-file notes.md
+          echo "status=rilis baru" >> "$GITHUB_OUTPUT"
+
       - name: Kabari Telegram (sukses)
         if: success()
         env:
           PROMO_SECRET: ${{ secrets.PROMO_SECRET }}
+          VERSI: ${{ steps.rilis.outputs.versi }}
+          STATUS_RILIS: ${{ steps.rilis.outputs.status }}
         run: |
-          curl -sS --fail-with-body -H "x-promo-secret: $PROMO_SECRET" -F "text=✅ Deploy main LIVE ($(git rev-parse --short HEAD)). Migrasi: ${MIGRASI:-tidak ada}." "$API/api/promo/telegram"
+          curl -sS --fail-with-body -H "x-promo-secret: $PROMO_SECRET" --form-string "text=✅ Deploy main LIVE: v${VERSI:-?} · build $GITHUB_RUN_NUMBER ($(git rev-parse --short HEAD)) — ${STATUS_RILIS:-tag gagal dibuat, cek log}. Migrasi: ${MIGRASI:-tidak ada}." "$API/api/promo/telegram"
 
       - name: Kabari Telegram (gagal)
         if: failure()

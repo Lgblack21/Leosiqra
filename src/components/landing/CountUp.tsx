@@ -1,12 +1,19 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState } from "react";
-import { animate, useInView, useReducedMotion } from "framer-motion";
+import { useEffect, useRef, useState } from 'react';
+import { animate, useInView, useReducedMotion } from 'framer-motion';
 
-// Angka yang "berjalan" dari 0 ke nilai akhir saat terlihat di layar.
-export function CountUp({ to, format, duration = 2.2 }: { to: number; format: (n: number) => string; duration?: number }) {
+export function CountUp({
+  to,
+  format,
+  duration = 2.2,
+}: {
+  to: number;
+  format: (n: number) => string;
+  duration?: number;
+}) {
   const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-40px" });
+  const inView = useInView(ref, { once: true, margin: '-40px' });
   const reduce = useReducedMotion();
   const [value, setValue] = useState(reduce ? to : 0);
 

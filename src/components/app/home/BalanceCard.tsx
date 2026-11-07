@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { ArrowDownCircle, ArrowUpCircle, Eye, EyeOff } from "lucide-react";
-import { Account } from "@/lib/services/accountService";
-import { Transaction } from "@/lib/services/transactionService";
-import { exchangeRateService, ExchangeRates } from "@/lib/services/exchangeRateService";
-import { isIncomingTransaction } from "@/lib/utils";
-import { AnimatedNumber } from "@/components/app/AnimatedNumber";
-import { useBalanceVisibility } from "@/lib/hooks/useBalanceVisibility";
-import { lightTap } from "@/lib/haptics";
+import { useEffect, useState } from 'react';
+import { ArrowDownCircle, ArrowUpCircle, Eye, EyeOff } from 'lucide-react';
+import { Account } from '@/lib/services/accountService';
+import { Transaction } from '@/lib/services/transactionService';
+import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
+import { isInvestmentFlow } from '@/lib/utils';
+import { AnimatedNumber } from '@/components/app/AnimatedNumber';
+import { useBalanceVisibility } from '@/lib/hooks/useBalanceVisibility';
+import { lightTap } from '@/lib/haptics';
 
 interface BalanceCardProps {
   accounts: Account[];
@@ -16,19 +16,22 @@ interface BalanceCardProps {
 }
 
 const formatIDR = (n: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
 
 export function BalanceCard({ accounts, transactions }: BalanceCardProps) {
   const [fxRates, setFxRates] = useState<ExchangeRates>({});
   const [hidden, toggleHidden] = useBalanceVisibility();
 
   useEffect(() => {
-    exchangeRateService.getLatestRates().then(setFxRates).catch(() => {});
+    exchangeRateService
+      .getLatestRates()
+      .then(setFxRates)
+      .catch(() => {});
   }, []);
 
   const totalBalance = accounts.reduce(
-    (sum, acc) => sum + exchangeRateService.convert(acc.balance, acc.currency || "IDR", "IDR", fxRates),
-    0
+    (sum, acc) => sum + exchangeRateService.convert(acc.balance, acc.currency || 'IDR', 'IDR', fxRates),
+    0,
   );
 
   // Bulan berjalan — sama seperti kartu ringkasan di dashboard web.
@@ -37,11 +40,13 @@ export function BalanceCard({ accounts, transactions }: BalanceCardProps) {
     const d = new Date(t.date);
     return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
   });
+  // Pemasukan/pengeluaran riil (sama dengan dashboard web): transfer antar
+  // rekening sendiri & beli/jual investasi tidak dihitung.
   const income = monthTx
-    .filter((t) => isIncomingTransaction(t))
+    .filter((t) => t.type === 'pemasukan' && !isInvestmentFlow(t))
     .reduce((s, t) => s + (Number(t.amountIDR) || Number(t.amount) || 0), 0);
   const expense = monthTx
-    .filter((t) => t.type === "pengeluaran")
+    .filter((t) => t.type === 'pengeluaran' && !isInvestmentFlow(t))
     .reduce((s, t) => s + (Number(t.amountIDR) || Number(t.amount) || 0), 0);
 
   return (
@@ -55,13 +60,13 @@ export function BalanceCard({ accounts, transactions }: BalanceCardProps) {
             toggleHidden();
           }}
           className="text-white/70 p-0.5"
-          aria-label={hidden ? "Tampilkan saldo" : "Sembunyikan saldo"}
+          aria-label={hidden ? 'Tampilkan saldo' : 'Sembunyikan saldo'}
         >
           {hidden ? <EyeOff size={13} /> : <Eye size={13} />}
         </button>
       </div>
       <p className="text-3xl font-black mt-1 tabular-nums">
-        {hidden ? "Rp ••••••••" : <AnimatedNumber value={totalBalance} format={formatIDR} />}
+        {hidden ? 'Rp ••••••••' : <AnimatedNumber value={totalBalance} format={formatIDR} />}
       </p>
       <div className="grid grid-cols-2 gap-3 mt-5">
         <div className="bg-white/15 rounded-2xl px-4 py-3">
@@ -69,7 +74,7 @@ export function BalanceCard({ accounts, transactions }: BalanceCardProps) {
             <ArrowDownCircle size={13} /> Pemasukan
           </div>
           <p className="text-sm font-black mt-1 tabular-nums">
-            {hidden ? "Rp ••••" : <AnimatedNumber value={income} format={formatIDR} />}
+            {hidden ? 'Rp ••••' : <AnimatedNumber value={income} format={formatIDR} />}
           </p>
         </div>
         <div className="bg-white/15 rounded-2xl px-4 py-3">
@@ -77,7 +82,7 @@ export function BalanceCard({ accounts, transactions }: BalanceCardProps) {
             <ArrowUpCircle size={13} /> Pengeluaran
           </div>
           <p className="text-sm font-black mt-1 tabular-nums">
-            {hidden ? "Rp ••••" : <AnimatedNumber value={expense} format={formatIDR} />}
+            {hidden ? 'Rp ••••' : <AnimatedNumber value={expense} format={formatIDR} />}
           </p>
         </div>
       </div>

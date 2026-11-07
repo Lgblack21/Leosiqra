@@ -16,7 +16,8 @@ export const metadata: Metadata = {
   alternates: { canonical: '/panduan/cara-menabung-10-juta' },
   openGraph: {
     title: 'Cara Menabung 10 Juta dalam 3 Bulan (Hitungan Realistis)',
-    description: 'Jatah per bulan, minggu, dan hari, cara mengecek apakah targetnya masuk akal, dan alternatif 6 atau 12 bulan.',
+    description:
+      'Jatah per bulan, minggu, dan hari, cara mengecek apakah targetnya masuk akal, dan alternatif 6 atau 12 bulan.',
     url: 'https://www.leosiqra.com/panduan/cara-menabung-10-juta',
     type: 'article',
     locale: 'id_ID',
@@ -25,7 +26,8 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary',
     title: 'Cara Menabung 10 Juta dalam 3 Bulan (Hitungan Realistis)',
-    description: 'Jatah per bulan, minggu, dan hari, cara mengecek apakah targetnya masuk akal, dan alternatif 6 atau 12 bulan.',
+    description:
+      'Jatah per bulan, minggu, dan hari, cara mengecek apakah targetnya masuk akal, dan alternatif 6 atau 12 bulan.',
     images: ['/images/Logo-new.png'],
   },
 };
@@ -67,12 +69,32 @@ export default function CaraMenabung10JutaPage() {
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Setoran</th><th className="num">Jumlah setoran</th><th className="num">Per setoran (Rp)</th><th className="num">Total (Rp)</th></tr>
+            <tr>
+              <th>Setoran</th>
+              <th className="num">Jumlah setoran</th>
+              <th className="num">Per setoran (Rp)</th>
+              <th className="num">Total (Rp)</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td>Bulanan</td><td className="num">3</td><td className="num">3.340.000</td><td className="num">10.020.000</td></tr>
-            <tr><td>Mingguan</td><td className="num">13</td><td className="num">770.000</td><td className="num">10.010.000</td></tr>
-            <tr><td>Harian</td><td className="num">90</td><td className="num">111.200</td><td className="num">10.008.000</td></tr>
+            <tr>
+              <td>Bulanan</td>
+              <td className="num">3</td>
+              <td className="num">3.340.000</td>
+              <td className="num">10.020.000</td>
+            </tr>
+            <tr>
+              <td>Mingguan</td>
+              <td className="num">13</td>
+              <td className="num">770.000</td>
+              <td className="num">10.010.000</td>
+            </tr>
+            <tr>
+              <td>Harian</td>
+              <td className="num">90</td>
+              <td className="num">111.200</td>
+              <td className="num">10.008.000</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -89,13 +111,20 @@ export default function CaraMenabung10JutaPage() {
         Rp2.660.000. Untuk sebagian orang itu mungkin; untuk banyak orang tidak.
       </p>
       <ul>
-        <li><strong>Di bawah 20% pemasukan</strong> — umumnya bisa dari gaji saja dengan sedikit penyesuaian.</li>
-        <li><strong>20–40%</strong> — perlu memangkas beberapa pos dengan sengaja selama 3 bulan.</li>
-        <li><strong>Di atas 40%</strong> — hampir pasti butuh tambahan pemasukan atau tenggat yang lebih panjang.</li>
+        <li>
+          <strong>Di bawah 20% pemasukan</strong> — umumnya bisa dari gaji saja dengan sedikit penyesuaian.
+        </li>
+        <li>
+          <strong>20–40%</strong> — perlu memangkas beberapa pos dengan sengaja selama 3 bulan.
+        </li>
+        <li>
+          <strong>Di atas 40%</strong> — hampir pasti butuh tambahan pemasukan atau tenggat yang lebih panjang.
+        </li>
       </ul>
       <p>
         Patokan ini bukan aturan baku, hanya alat bantu untuk jujur pada diri sendiri sebelum mulai. Pastikan juga
-        kebutuhan wajib, cicilan, dan <Link href="/panduan/dana-darurat">dana darurat</Link> tidak dikorbankan demi target ini.
+        kebutuhan wajib, cicilan, dan <Link href="/panduan/dana-darurat">dana darurat</Link> tidak dikorbankan demi
+        target ini.
       </p>
 
       <h2>3. Cari Rp3,34 juta per bulan dari mana</h2>
@@ -104,10 +133,20 @@ export default function CaraMenabung10JutaPage() {
         sumber setoran dari empat arah:
       </p>
       <ul>
-        <li><strong>Pos variabel</strong> — makan di luar, jajan, ongkir, hiburan. Pos kecil yang berulang sering paling besar totalnya.</li>
-        <li><strong>Langganan</strong> — layanan yang jarang dipakai bisa dihentikan sementara selama 3 bulan.</li>
-        <li><strong>Pengeluaran besar yang bisa ditunda</strong> — ganti gawai, belanja pakaian, liburan.</li>
-        <li><strong>Pemasukan tambahan</strong> — bonus, menjual barang yang tidak terpakai, lembur, atau kerja sampingan. Semuanya langsung masuk tabungan.</li>
+        <li>
+          <strong>Pos variabel</strong> — makan di luar, jajan, ongkir, hiburan. Pos kecil yang berulang sering paling
+          besar totalnya.
+        </li>
+        <li>
+          <strong>Langganan</strong> — layanan yang jarang dipakai bisa dihentikan sementara selama 3 bulan.
+        </li>
+        <li>
+          <strong>Pengeluaran besar yang bisa ditunda</strong> — ganti gawai, belanja pakaian, liburan.
+        </li>
+        <li>
+          <strong>Pemasukan tambahan</strong> — bonus, menjual barang yang tidak terpakai, lembur, atau kerja sampingan.
+          Semuanya langsung masuk tabungan.
+        </li>
       </ul>
       <p>
         Cara menyusun batas per kategori setelah tahu pengeluaran nyata dijelaskan di panduan{' '}
@@ -116,10 +155,10 @@ export default function CaraMenabung10JutaPage() {
 
       <h2>4. Sisihkan di awal, simpan terpisah</h2>
       <p>
-        Setoran yang menunggu &ldquo;sisa akhir bulan&rdquo; hampir selalu gagal. Transfer jatahnya di hari gajian (atau di hari
-        yang sama setiap minggu) ke rekening atau kantong tabungan yang terpisah dari uang belanja. Untuk target 3 bulan,
-        pilih tempat yang aman dan bisa dicairkan tepat waktu; imbal hasil kecil tidak masalah. Alasan urutan ini dibahas
-        di <Link href="/panduan/cara-menabung-yang-benar">cara menabung yang benar</Link>.
+        Setoran yang menunggu &ldquo;sisa akhir bulan&rdquo; hampir selalu gagal. Transfer jatahnya di hari gajian (atau
+        di hari yang sama setiap minggu) ke rekening atau kantong tabungan yang terpisah dari uang belanja. Untuk target
+        3 bulan, pilih tempat yang aman dan bisa dicairkan tepat waktu; imbal hasil kecil tidak masalah. Alasan urutan
+        ini dibahas di <Link href="/panduan/cara-menabung-yang-benar">cara menabung yang benar</Link>.
       </p>
 
       <h2>5. Pantau setiap minggu</h2>
@@ -129,12 +168,28 @@ export default function CaraMenabung10JutaPage() {
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Akhir minggu ke-</th><th className="num">Seharusnya terkumpul (Rp)</th><th className="num">Progres</th></tr>
+            <tr>
+              <th>Akhir minggu ke-</th>
+              <th className="num">Seharusnya terkumpul (Rp)</th>
+              <th className="num">Progres</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td>4</td><td className="num">3.080.000</td><td className="num">±31%</td></tr>
-            <tr><td>8</td><td className="num">6.160.000</td><td className="num">±62%</td></tr>
-            <tr><td>13</td><td className="num">10.010.000</td><td className="num">100%</td></tr>
+            <tr>
+              <td>4</td>
+              <td className="num">3.080.000</td>
+              <td className="num">±31%</td>
+            </tr>
+            <tr>
+              <td>8</td>
+              <td className="num">6.160.000</td>
+              <td className="num">±62%</td>
+            </tr>
+            <tr>
+              <td>13</td>
+              <td className="num">10.010.000</td>
+              <td className="num">100%</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -148,12 +203,28 @@ export default function CaraMenabung10JutaPage() {
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Tenggat</th><th className="num">Per bulan (Rp)</th><th className="num">Per minggu (Rp)</th></tr>
+            <tr>
+              <th>Tenggat</th>
+              <th className="num">Per bulan (Rp)</th>
+              <th className="num">Per minggu (Rp)</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td>3 bulan</td><td className="num">3.340.000</td><td className="num">770.000 × 13</td></tr>
-            <tr><td>6 bulan</td><td className="num">1.670.000</td><td className="num">385.000 × 26</td></tr>
-            <tr><td>12 bulan</td><td className="num">835.000</td><td className="num">193.000 × 52</td></tr>
+            <tr>
+              <td>3 bulan</td>
+              <td className="num">3.340.000</td>
+              <td className="num">770.000 × 13</td>
+            </tr>
+            <tr>
+              <td>6 bulan</td>
+              <td className="num">1.670.000</td>
+              <td className="num">385.000 × 26</td>
+            </tr>
+            <tr>
+              <td>12 bulan</td>
+              <td className="num">835.000</td>
+              <td className="num">193.000 × 52</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -166,12 +237,14 @@ export default function CaraMenabung10JutaPage() {
       <p>
         Di <strong>Leosiqra</strong>, target seperti ini bisa dibuat sebagai goal tabungan dengan nominal target dan
         setoran otomatis berkala, lalu progresnya terlihat dalam persen. Pengeluaran harian dicatat lewat Input Cepat —
-        ketik singkat, ucapkan, atau foto struk — sehingga Anda tahu pos mana yang bisa dipangkas untuk setoran berikutnya.
-        Semua fitur bisa dicoba gratis selama 14 hari tanpa kartu kredit.
+        ketik singkat, ucapkan, atau foto struk — sehingga Anda tahu pos mana yang bisa dipangkas untuk setoran
+        berikutnya. Semua fitur bisa dicoba gratis selama 14 hari tanpa kartu kredit.
       </p>
       <p>
-        <em>Angka di panduan ini adalah ilustrasi. Panduan ini bersifat edukasi umum, bukan nasihat keuangan. Sesuaikan
-        dengan kondisi dan tujuan Anda.</em>
+        <em>
+          Angka di panduan ini adalah ilustrasi. Panduan ini bersifat edukasi umum, bukan nasihat keuangan. Sesuaikan
+          dengan kondisi dan tujuan Anda.
+        </em>
       </p>
     </GuideLayout>
   );

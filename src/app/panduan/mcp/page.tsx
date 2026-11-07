@@ -22,7 +22,8 @@ export const metadata: Metadata = {
   alternates: { canonical: '/panduan/mcp' },
   openGraph: {
     title: 'Hubungkan Leosiqra ke Claude & ChatGPT (MCP)',
-    description: 'Tanya keuangan dan catat transaksi langsung dari Claude atau ChatGPT, dengan izin yang bisa dicabut kapan saja.',
+    description:
+      'Tanya keuangan dan catat transaksi langsung dari Claude atau ChatGPT, dengan izin yang bisa dicabut kapan saja.',
     url: 'https://www.leosiqra.com/panduan/mcp',
     type: 'article',
     locale: 'id_ID',
@@ -31,7 +32,8 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary',
     title: 'Hubungkan Leosiqra ke Claude & ChatGPT (MCP)',
-    description: 'Tanya keuangan dan catat transaksi langsung dari Claude atau ChatGPT, dengan izin yang bisa dicabut kapan saja.',
+    description:
+      'Tanya keuangan dan catat transaksi langsung dari Claude atau ChatGPT, dengan izin yang bisa dicabut kapan saja.',
     images: ['/images/Logo-new.png'],
   },
 };
@@ -43,7 +45,7 @@ const faq: GuideFaq[] = [
   },
   {
     q: 'Apakah fitur ini gratis?',
-    a: 'Menghubungkan AI dan membaca data (saldo, transaksi, laporan, budget, kategori) bisa dipakai semua member. Izin mencatat transaksi dan mengatur budget lewat AI khusus member PRO. Biaya langganan Claude atau ChatGPT mengikuti aturan masing-masing penyedia.',
+    a: 'Menghubungkan AI dan membaca data (saldo, transaksi, laporan, budget, kategori) bisa dipakai semua member. Mengatur Usahaku lewat AI (membuat usaha, mengisi katalog dari website, mengubah tampilan kasir) gratis untuk semua member dengan izin mengubah. Mencatat transaksi dan mengatur budget lewat AI khusus member PRO. Biaya langganan Claude atau ChatGPT mengikuti aturan masing-masing penyedia.',
   },
   {
     q: 'Bagaimana cara memutus akses AI?',
@@ -67,7 +69,10 @@ export default function PanduanMcpPage() {
       lead="Tanya “berapa pengeluaranku bulan ini?” atau minta “catat kopi 25rb dari e-wallet” langsung dari Claude atau ChatGPT. Panduan ini menjelaskan apa itu MCP, apa yang boleh dan tidak boleh dilakukan AI di akun Anda, langkah pemasangan, dan cara memutus akses."
       updated="26 Oktober 2026"
       faq={faq}
-      related={{ href: '/panduan/cara-mencatat-keuangan-di-hp', label: 'Cara mencatat pengeluaran dan pemasukan di HP' }}
+      related={{
+        href: '/panduan/cara-mencatat-keuangan-di-hp',
+        label: 'Cara mencatat pengeluaran dan pemasukan di HP',
+      }}
     >
       <h2>1. Apa itu MCP?</h2>
       <p>
@@ -85,27 +90,57 @@ export default function PanduanMcpPage() {
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Izin</th><th>Yang bisa dilakukan AI</th><th>Siapa</th></tr>
+            <tr>
+              <th>Izin</th>
+              <th>Yang bisa dilakukan AI</th>
+              <th>Siapa</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td>Membaca</td><td>Rekening &amp; saldo, transaksi per bulan, laporan bulanan, budget, kategori</td><td>Semua member</td></tr>
-            <tr><td>Mencatat</td><td>Menambah transaksi pemasukan/pengeluaran, membuat atau mengubah budget bulanan</td><td>Member PRO, dicentang sendiri</td></tr>
-            <tr><td>Tidak pernah</td><td>Menghapus data, transfer, mengubah password atau data akun</td><td>—</td></tr>
+            <tr>
+              <td>Membaca</td>
+              <td>Rekening &amp; saldo, transaksi per bulan, laporan bulanan, budget, kategori</td>
+              <td>Semua member</td>
+            </tr>
+            <tr>
+              <td>Usahaku</td>
+              <td>Membuat usaha, mengubah info toko, mengisi katalog, mengubah tampilan kasir</td>
+              <td>Semua member, dicentang sendiri</td>
+            </tr>
+            <tr>
+              <td>Mencatat</td>
+              <td>Menambah transaksi pemasukan/pengeluaran, membuat atau mengubah budget bulanan</td>
+              <td>Member PRO, dicentang sendiri</td>
+            </tr>
+            <tr>
+              <td>Tidak pernah</td>
+              <td>Menghapus data, transfer, mengubah password atau data akun</td>
+              <td>—</td>
+            </tr>
           </tbody>
         </table>
       </div>
       <p>
-        Izin mencatat <strong>tidak pernah aktif otomatis</strong> — Anda harus mencentangnya sendiri saat menghubungkan.
-        Semua yang dilakukan AI tercatat di <strong>Profil → Hubungkan ke AI → Aktivitas AI terakhir</strong>.
+        Izin mencatat <strong>tidak pernah aktif otomatis</strong> — Anda harus mencentangnya sendiri saat
+        menghubungkan. Semua yang dilakukan AI tercatat di{' '}
+        <strong>Profil → Hubungkan ke AI → Aktivitas AI terakhir</strong>.
       </p>
 
       <h2>3. Hubungkan ke Claude (claude.ai)</h2>
       <p>Tidak perlu token — Anda cukup login Leosiqra di layar izin.</p>
       <ol>
-        <li>Di claude.ai, buka <strong>Customize → Connectors</strong>.</li>
-        <li>Klik <strong>Add custom connector</strong>.</li>
-        <li>Isi nama (mis. Leosiqra) dan URL server <code>{MCP_URL}</code>, lalu klik <strong>Add</strong>.</li>
-        <li>Klik <strong>Connect</strong> pada connector Leosiqra. Halaman Leosiqra terbuka — login kalau diminta.</li>
+        <li>
+          Di claude.ai, buka <strong>Customize → Connectors</strong>.
+        </li>
+        <li>
+          Klik <strong>Add custom connector</strong>.
+        </li>
+        <li>
+          Isi nama (mis. Leosiqra) dan URL server <code>{MCP_URL}</code>, lalu klik <strong>Add</strong>.
+        </li>
+        <li>
+          Klik <strong>Connect</strong> pada connector Leosiqra. Halaman Leosiqra terbuka — login kalau diminta.
+        </li>
         <li>
           Di layar <strong>Hubungkan aplikasi AI</strong>, cek domain di kotak &ldquo;Akan kembali ke&rdquo; (harus
           claude.ai atau claude.com). Centang izin mencatat kalau perlu, lalu tekan <strong>Izinkan</strong>.
@@ -127,12 +162,25 @@ export default function PanduanMcpPage() {
         pengaturan workspace Anda. Langkah dari dokumentasi OpenAI saat panduan ini ditulis:
       </p>
       <ol>
-        <li>Buka <strong>chatgpt.com/plugins</strong>, tekan tombol <strong>+</strong>, pilih <strong>Add custom MCP server</strong>.</li>
+        <li>
+          Buka <strong>chatgpt.com/plugins</strong>, tekan tombol <strong>+</strong>, pilih{' '}
+          <strong>Add custom MCP server</strong>.
+        </li>
         <li>Isi nama (mis. Leosiqra) dan deskripsi singkat.</li>
-        <li>Di bagian <strong>Connection</strong>, masukkan URL <code>{MCP_URL}</code> dan pilih autentikasi OAuth.</li>
-        <li>Baca peringatan risikonya, pilih <strong>I understand and want to continue</strong>, lalu <strong>Create as a plugin</strong>.</li>
-        <li>Login Leosiqra di layar izin, cek domain (harus chatgpt.com atau openai.com), lalu tekan <strong>Izinkan</strong>.</li>
-        <li>Pasang plugin-nya, mulai percakapan baru, ketik <strong>@</strong> dan pilih Leosiqra.</li>
+        <li>
+          Di bagian <strong>Connection</strong>, masukkan URL <code>{MCP_URL}</code> dan pilih autentikasi OAuth.
+        </li>
+        <li>
+          Baca peringatan risikonya, pilih <strong>I understand and want to continue</strong>, lalu{' '}
+          <strong>Create as a plugin</strong>.
+        </li>
+        <li>
+          Login Leosiqra di layar izin, cek domain (harus chatgpt.com atau openai.com), lalu tekan{' '}
+          <strong>Izinkan</strong>.
+        </li>
+        <li>
+          Pasang plugin-nya, mulai percakapan baru, ketik <strong>@</strong> dan pilih Leosiqra.
+        </li>
       </ol>
 
       <h2>5. Claude Code &amp; klien MCP lain (pakai token)</h2>
@@ -142,7 +190,9 @@ export default function PanduanMcpPage() {
         Claude Code, salin perintah yang muncul, bentuknya:
       </p>
       <p>
-        <code>claude mcp add --transport http leosiqra {MCP_URL} --header &quot;Authorization: Bearer &lt;token&gt;&quot;</code>
+        <code>
+          claude mcp add --transport http leosiqra {MCP_URL} --header &quot;Authorization: Bearer &lt;token&gt;&quot;
+        </code>
       </p>
       <p>
         Klien lain: pakai URL yang sama dengan header <code>Authorization: Bearer &lt;token&gt;</code>. Jangan pernah
@@ -166,12 +216,12 @@ export default function PanduanMcpPage() {
       <h2>7. Keamanan &amp; memutus akses</h2>
       <ul>
         <li>
-          <strong>Satu koneksi = satu kunci</strong>. Setiap koneksi AI tampil di Profil → Hubungkan ke AI, lengkap dengan
-          kapan terakhir dipakai, dan bisa diputus sendiri-sendiri.
+          <strong>Satu koneksi = satu kunci</strong>. Setiap koneksi AI tampil di Profil → Hubungkan ke AI, lengkap
+          dengan kapan terakhir dipakai, dan bisa diputus sendiri-sendiri.
         </li>
         <li>
-          <strong>Ganti password = semua koneksi putus</strong>. Kalau merasa ada yang aneh, ganti password lalu hubungkan
-          ulang AI yang Anda percaya.
+          <strong>Ganti password = semua koneksi putus</strong>. Kalau merasa ada yang aneh, ganti password lalu
+          hubungkan ulang AI yang Anda percaya.
         </li>
         <li>
           <strong>Cek domain di layar izin</strong>. Leosiqra menandai &ldquo;resmi&rdquo; hanya untuk claude.ai,

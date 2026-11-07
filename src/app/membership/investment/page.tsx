@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { InvestShell } from '@/components/investasi/InvestShell';
 

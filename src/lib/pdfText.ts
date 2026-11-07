@@ -60,7 +60,12 @@ export async function extractPdfText(file: File, password?: string): Promise<str
 
     lines.sort((a, b) => b[0].y - a[0].y);
     const pageText = lines
-      .map((line) => line.sort((a, b) => a.x - b.x).map((it) => it.str).join(' '))
+      .map((line) =>
+        line
+          .sort((a, b) => a.x - b.x)
+          .map((it) => it.str)
+          .join(' '),
+      )
       .join('\n');
     pageTexts.push(pageText);
   }

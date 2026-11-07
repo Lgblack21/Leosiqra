@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from 'react';
 import { Save, ChevronDown, RefreshCw } from 'lucide-react';
@@ -10,6 +10,8 @@ import { updateMemberTotals } from '@/lib/services/userService';
 import { CurrencySelect } from '@/components/CurrencySelect';
 import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
 import { formatCurrency, getCurrencySymbol, toLocalDateString } from '@/lib/utils';
+import { DueDateInput } from '@/components/debts/DueDateInput';
+import type { DebtDue } from '@/lib/debtDue';
 
 interface DebtModalProps {
   userId: string;
@@ -27,7 +29,8 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [rates, setRates] = useState<ExchangeRates | null>(null);
   const [convertedAmount, setConvertedAmount] = useState<number>(0);
-  
+  const [due, setDue] = useState<DebtDue | null>(null);
+
   const [formData, setFormData] = useState({
     debtType: 'hutang' as 'hutang' | 'piutang',
     paymentStatus: 'belum' as 'lunas' | 'belum',
@@ -39,7 +42,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
     accountId: '',
     installmentTenor: '',
     interestPct: '', // bunga per bulan dalam persen (%)
-    date: toLocalDateString()
+    date: toLocalDateString(),
   });
 
   // Perhitungan bunga otomatis (flat/bunga tetap per bulan):
@@ -91,9 +94,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
       const isHutang = formData.debtType === 'hutang';
       // Kalau kurs gagal dikonversi, jangan kirim amount mentah sebagai
       // amountIDR — biarkan backend menghitung ulang lewat kurs server-side.
-      const canConvert =
-        formData.currency === 'IDR' ||
-        Boolean(rates && rates[formData.currency] && rates['IDR']);
+      const canConvert = formData.currency === 'IDR' || Boolean(rates && rates[formData.currency] && rates['IDR']);
 
       // Penyimpanan inti — catatan hutang/piutangnya sendiri.
       await transactionService.createTransaction({
@@ -120,6 +121,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
         // Saldo rekening terpilih langsung ikut berubah (piutang keluar,
         // hutang tunai masuk) — dihitung server dalam satu batch.
         applyBalance: true,
+        due: isLunas ? null : due,
       });
 
       // Sinkronisasi lanjutan (dampak keuangan saat langsung ditandai lunas)
@@ -139,7 +141,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
             date: selectedDate,
             displayDate,
             note: `[Lunas] ${isHutang ? 'Hutang' : 'Piutang'} ${formData.lenderName ? `ke/dari ${formData.lenderName}` : ''} - ${formData.note || ''}`.trim(),
-            status: 'VERIFIED'
+            status: 'VERIFIED',
           });
           await updateMemberTotals(userId, financeType, amount);
           if (formData.accountId) {
@@ -152,10 +154,19 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
       }
 
       onClose();
+      setDue(null);
       setFormData({
-        debtType: 'hutang', paymentStatus: 'belum', debtKind: 'Pinjol', amount: '', currency: 'IDR', lenderName: '', note: '', accountId: '',
-        installmentTenor: '', interestPct: '',
-        date: toLocalDateString()
+        debtType: 'hutang',
+        paymentStatus: 'belum',
+        debtKind: 'Pinjol',
+        amount: '',
+        currency: 'IDR',
+        lenderName: '',
+        note: '',
+        accountId: '',
+        installmentTenor: '',
+        interestPct: '',
+        date: toLocalDateString(),
       });
     } catch (e) {
       console.error(e);
@@ -174,47 +185,65 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
           </div>
         )}
 
-        {/* Tipe */}
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe</label>
           <div className="grid grid-cols-2 gap-3">
-            {(['hutang', 'piutang'] as const).map(type => (
-              <button key={type} type="button" onClick={() => setFormData(p => ({...p, debtType: type}))}
+            {(['hutang', 'piutang'] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setFormData((p) => ({ ...p, debtType: type }))}
                 className={`py-3.5 rounded-2xl text-sm font-black capitalize transition-all ${
                   formData.debtType === type
-                    ? type === 'hutang' ? 'bg-rose-500 text-white shadow-lg shadow-rose-100' : 'bg-emerald-600 text-white shadow-lg shadow-emerald-100'
+                    ? type === 'hutang'
+                      ? 'bg-rose-500 text-white shadow-lg shadow-rose-100'
+                      : 'bg-emerald-600 text-white shadow-lg shadow-emerald-100'
                     : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
                 }`}
-              >{type}</button>
+              >
+                {type}
+              </button>
             ))}
           </div>
         </div>
 
-        {/* Jenis hutang (untuk pemilahan di Dashboard) */}
         {formData.debtType === 'hutang' && (
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Jenis Hutang</label>
             <div className="flex flex-wrap gap-2">
-              {DEBT_KINDS.map(k => (
-                <button key={k} type="button" onClick={() => setFormData(p => ({ ...p, debtKind: k }))}
+              {DEBT_KINDS.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setFormData((p) => ({ ...p, debtKind: k }))}
                   className={`px-3 py-2 rounded-xl text-[11px] font-black transition-all ${
-                    formData.debtKind === k ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                    formData.debtKind === k
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
                   }`}
-                >{k}</button>
+                >
+                  {k}
+                </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* Status Pembayaran */}
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Status Pembayaran</label>
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Status Pembayaran
+          </label>
           <div className="grid grid-cols-2 gap-3">
-            {(['belum', 'lunas'] as const).map(s => (
-              <button key={s} type="button" onClick={() => setFormData(p => ({...p, paymentStatus: s}))}
+            {(['belum', 'lunas'] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setFormData((p) => ({ ...p, paymentStatus: s }))}
                 className={`py-3.5 rounded-2xl text-sm font-black capitalize transition-all ${
                   formData.paymentStatus === s
-                    ? s === 'lunas' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100' : 'bg-slate-700 text-white shadow-lg shadow-slate-200'
+                    ? s === 'lunas'
+                      ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100'
+                      : 'bg-slate-700 text-white shadow-lg shadow-slate-200'
                     : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
                 }`}
               >
@@ -224,28 +253,36 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
           </div>
           {formData.paymentStatus === 'lunas' && (
             <p className="text-[10px] font-bold text-emerald-600 pl-1 mt-1">
-              Status lunas akan otomatis mencatat {formData.debtType === 'hutang' ? 'pengeluaran' : 'pemasukan'} saat disimpan.
+              Status lunas akan otomatis mencatat {formData.debtType === 'hutang' ? 'pengeluaran' : 'pemasukan'} saat
+              disimpan.
             </p>
           )}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal Pokok</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+              Nominal Pokok
+            </label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">{getCurrencySymbol(formData.currency)}</span>
-              <NumberInput value={formData.amount} onChange={val => setFormData(p => ({...p, amount: val}))}
-                placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 pl-11 pr-4 text-sm font-bold text-slate-700 transition-all" />
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
+                {getCurrencySymbol(formData.currency)}
+              </span>
+              <NumberInput
+                value={formData.amount}
+                onChange={(val) => setFormData((p) => ({ ...p, amount: val }))}
+                placeholder="0"
+                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 pl-11 pr-4 text-sm font-bold text-slate-700 transition-all"
+              />
             </div>
           </div>
-          <CurrencySelect 
+          <CurrencySelect
             value={formData.currency}
-            onChange={(val) => setFormData({...formData, currency: val})}
+            onChange={(val) => setFormData({ ...formData, currency: val })}
             label="Mata Uang"
           />
         </div>
 
-        {/* Conversion Display */}
         {formData.currency !== 'IDR' && formData.amount && (
           <div className="bg-emerald-50/50 border border-emerald-100/50 rounded-2xl p-4 flex items-center justify-between animate-in slide-in-from-top-2">
             <div className="flex items-center gap-3">
@@ -253,7 +290,9 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
                 <RefreshCw size={14} />
               </div>
               <div>
-                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">Terkonversi ke IDR</p>
+                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">
+                  Terkonversi ke IDR
+                </p>
                 <p className="text-sm font-black text-slate-900 leading-none">
                   ~ {formatCurrency(convertedAmount, 'IDR')}
                 </p>
@@ -265,32 +304,45 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Pemberi / Penerima</label>
-            <input type="text" value={formData.lenderName} onChange={e => setFormData(p => ({...p, lenderName: e.target.value}))}
-              placeholder="Nama orang/bank..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-4 text-sm font-bold text-slate-700 transition-all" />
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+              Pemberi / Penerima
+            </label>
+            <input
+              type="text"
+              value={formData.lenderName}
+              onChange={(e) => setFormData((p) => ({ ...p, lenderName: e.target.value }))}
+              placeholder="Nama orang/bank..."
+              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-4 text-sm font-bold text-slate-700 transition-all"
+            />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Rekening Terkait</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+              Rekening Terkait
+            </label>
             <div className="relative">
               <select
                 value={formData.accountId}
-                onChange={e => {
-                  const selectedAccount = accounts.find(acc => acc.id === e.target.value);
-                  setFormData(p => ({
+                onChange={(e) => {
+                  const selectedAccount = accounts.find((acc) => acc.id === e.target.value);
+                  setFormData((p) => ({
                     ...p,
                     accountId: e.target.value,
-                    // Ikuti mata uang rekening yang dipilih.
                     currency: selectedAccount?.currency || p.currency,
                   }));
                 }}
                 className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer"
               >
                 <option value="">Pilih Rekening</option>
-                {accounts.map(acc => (
-                  <option key={acc.id} value={acc.id}>{acc.name} ({acc.currency})</option>
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name} ({acc.currency})
+                  </option>
                 ))}
               </select>
-              <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <ChevronDown
+                size={14}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+              />
             </div>
             {formData.accountId && (
               <p className="text-[11px] font-medium text-slate-400 pl-1">
@@ -307,22 +359,38 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tenor (Bln)</label>
-            <input type="number" value={formData.installmentTenor} onChange={e => setFormData(p => ({...p, installmentTenor: e.target.value}))}
-              placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-4 text-sm font-bold text-slate-700 transition-all" />
+            <input
+              type="number"
+              value={formData.installmentTenor}
+              onChange={(e) => setFormData((p) => ({ ...p, installmentTenor: e.target.value }))}
+              placeholder="0"
+              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-4 text-sm font-bold text-slate-700 transition-all"
+            />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Bunga/bln (%)</label>
-            <input type="number" step="0.01" value={formData.interestPct} onChange={e => setFormData(p => ({...p, interestPct: e.target.value}))}
-              placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-4 text-sm font-bold text-slate-700 transition-all" />
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+              Bunga/bln (%)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={formData.interestPct}
+              onChange={(e) => setFormData((p) => ({ ...p, interestPct: e.target.value }))}
+              placeholder="0"
+              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-4 text-sm font-bold text-slate-700 transition-all"
+            />
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
-            <input type="date" value={formData.date} onChange={e => setFormData(p => ({...p, date: e.target.value}))}
-              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-4 text-sm font-bold text-slate-700 transition-all" />
+            <input
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))}
+              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-4 text-sm font-bold text-slate-700 transition-all"
+            />
           </div>
         </div>
 
-        {/* Ringkasan bunga & cicilan — dihitung otomatis dari pokok, tenor, & %bunga. */}
         {(calc.tenor > 0 || calc.totalBunga > 0) && (
           <div className="bg-slate-900 rounded-2xl p-4 grid grid-cols-3 gap-3 text-center">
             <div>
@@ -335,25 +403,36 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
             </div>
             <div>
               <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Total Hutang</p>
-              <p className="text-xs font-black text-emerald-300">{formatCurrency(calc.totalHutang, formData.currency)}</p>
+              <p className="text-xs font-black text-emerald-300">
+                {formatCurrency(calc.totalHutang, formData.currency)}
+              </p>
             </div>
           </div>
         )}
 
+        {formData.paymentStatus !== 'lunas' && <DueDateInput value={due} onChange={setDue} />}
+
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Deskripsi / Catatan</label>
-          <textarea 
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+            Deskripsi / Catatan
+          </label>
+          <textarea
             rows={2}
-            value={formData.note} 
-            onChange={e => setFormData(p => ({...p, note: e.target.value}))}
-            placeholder="Keterangan tambahan..." 
-            className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all resize-none" 
+            value={formData.note}
+            onChange={(e) => setFormData((p) => ({ ...p, note: e.target.value }))}
+            placeholder="Keterangan tambahan..."
+            className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all resize-none"
           />
         </div>
 
-        <button onClick={handleCreate} disabled={loading || !formData.amount}
-          className="w-full bg-black disabled:bg-slate-300 text-white py-4 rounded-xl text-sm font-black transition-all mt-6 shadow-xl shadow-slate-200 flex items-center justify-center gap-2">
-          {loading ? 'Menyimpan...' : (
+        <button
+          onClick={handleCreate}
+          disabled={loading || !formData.amount}
+          className="w-full bg-black disabled:bg-slate-300 text-white py-4 rounded-xl text-sm font-black transition-all mt-6 shadow-xl shadow-slate-200 flex items-center justify-center gap-2"
+        >
+          {loading ? (
+            'Menyimpan...'
+          ) : (
             <>
               <Save size={18} />
               Simpan Catatan

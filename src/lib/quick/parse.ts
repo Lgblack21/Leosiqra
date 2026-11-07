@@ -28,14 +28,30 @@ export interface ParseContext {
 }
 
 const MULTIPLIERS: Record<string, number> = {
-  rb: 1e3, ribu: 1e3, k: 1e3, rbu: 1e3,
-  jt: 1e6, juta: 1e6, jta: 1e6,
-  m: 1e9, miliar: 1e9, milyar: 1e9, M: 1e9,
+  rb: 1e3,
+  ribu: 1e3,
+  k: 1e3,
+  rbu: 1e3,
+  jt: 1e6,
+  juta: 1e6,
+  jta: 1e6,
+  m: 1e9,
+  miliar: 1e9,
+  milyar: 1e9,
+  M: 1e9,
 };
 
-// ---- Angka dalam kata ("lima puluh ribu", "seratus dua puluh lima ribu") ----
+// Angka dalam kata ("lima puluh ribu", "seratus dua puluh lima ribu").
 const UNITS: Record<string, number> = {
-  satu: 1, dua: 2, tiga: 3, empat: 4, lima: 5, enam: 6, tujuh: 7, delapan: 8, sembilan: 9,
+  satu: 1,
+  dua: 2,
+  tiga: 3,
+  empat: 4,
+  lima: 5,
+  enam: 6,
+  tujuh: 7,
+  delapan: 8,
+  sembilan: 9,
 };
 const FIXED: Record<string, number> = { sepuluh: 10, sebelas: 11, seratus: 100 };
 
@@ -48,19 +64,46 @@ export const wordsToDigits = (text: string) => {
   let active = false;
   const flush = () => {
     if (active) out.push(String(total + current));
-    total = 0; current = 0; lastUnit = 0; active = false;
+    total = 0;
+    current = 0;
+    lastUnit = 0;
+    active = false;
   };
   for (const raw of text.split(/\s+/)) {
     const t = raw.toLowerCase().replace(/[.,!?]$/, '');
-    if (t in UNITS) { lastUnit = UNITS[t]; current += lastUnit; active = true; }
-    else if (t in FIXED) { current += FIXED[t]; lastUnit = 0; active = true; }
-    else if (t === 'seribu') { total += 1000; lastUnit = 0; active = true; }
-    else if (active && t === 'belas') { current += 10; lastUnit = 0; }
-    else if (active && t === 'puluh') { current += lastUnit * 9; lastUnit = 0; }
-    else if (active && t === 'ratus') { current += lastUnit * 99; lastUnit = 0; }
-    else if (active && (t === 'ribu' || t === 'rb')) { total += (current || 1) * 1e3; current = 0; lastUnit = 0; }
-    else if (active && t === 'juta') { total += (current || 1) * 1e6; current = 0; lastUnit = 0; }
-    else { flush(); out.push(raw); }
+    if (t in UNITS) {
+      lastUnit = UNITS[t];
+      current += lastUnit;
+      active = true;
+    } else if (t in FIXED) {
+      current += FIXED[t];
+      lastUnit = 0;
+      active = true;
+    } else if (t === 'seribu') {
+      total += 1000;
+      lastUnit = 0;
+      active = true;
+    } else if (active && t === 'belas') {
+      current += 10;
+      lastUnit = 0;
+    } else if (active && t === 'puluh') {
+      current += lastUnit * 9;
+      lastUnit = 0;
+    } else if (active && t === 'ratus') {
+      current += lastUnit * 99;
+      lastUnit = 0;
+    } else if (active && (t === 'ribu' || t === 'rb')) {
+      total += (current || 1) * 1e3;
+      current = 0;
+      lastUnit = 0;
+    } else if (active && t === 'juta') {
+      total += (current || 1) * 1e6;
+      current = 0;
+      lastUnit = 0;
+    } else {
+      flush();
+      out.push(raw);
+    }
   }
   flush();
   return out.join(' ');
@@ -112,19 +155,41 @@ export const parseDate = (text: string, today: string): { date?: string; match?:
   return {};
 };
 
-const INCOME_WORDS = /\b(gaji|gajian|terima|diterima|nerima|dapat|dapet|masuk|pemasukan|bonus|thr|refund|cashback|dibayar|dibayarin|jual|jualan|untung|transferan|kiriman|dikasih|hadiah|bunga|dividen)\b/i;
+const INCOME_WORDS =
+  /\b(gaji|gajian|terima|diterima|nerima|dapat|dapet|masuk|pemasukan|bonus|thr|refund|cashback|dibayar|dibayarin|jual|jualan|untung|transferan|kiriman|dikasih|hadiah|bunga|dividen)\b/i;
 const EXPENSE_WORDS = /\b(beli|bayar|belanja|jajan|keluar|pengeluaran|makan|isi|top ?up|langganan|sewa|cicil)\b/i;
 const FILLER = /\b(pakai|pake|pk|via|lewat|dari|ke|di|untuk|buat|sama|dengan|dgn|yang|yg|dan|rp\.?)\b/gi;
-const GENERIC_ACCOUNT_TOKENS = new Set(['bank', 'card', 'kartu', 'kredit', 'debit', 'akun', 'rekening', 'tabungan', 'wallet', 'usd', 'idr']);
+const GENERIC_ACCOUNT_TOKENS = new Set([
+  'bank',
+  'card',
+  'kartu',
+  'kredit',
+  'debit',
+  'akun',
+  'rekening',
+  'tabungan',
+  'wallet',
+  'usd',
+  'idr',
+]);
 
-const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
+const norm = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 const hasWord = (haystack: string, needle: string) => ` ${haystack} `.includes(` ${needle} `);
 // Cocok utuh, atau kata di teks berawalan nama itu ("gajian" → "Gaji"), min. 4 huruf.
 const mentions = (haystack: string, name: string) =>
-  hasWord(haystack, name) || (name.length >= 4 && !name.includes(' ') && haystack.split(' ').some((w) => w.startsWith(name)));
+  hasWord(haystack, name) ||
+  (name.length >= 4 && !name.includes(' ') && haystack.split(' ').some((w) => w.startsWith(name)));
 
 /** Rekening yang disebut: nama lengkap paling panjang, atau satu token khas yang hanya dimiliki satu rekening. */
-export const matchAccount = (text: string, accounts: ParseContext['accounts']): { id: string; match: string } | null => {
+export const matchAccount = (
+  text: string,
+  accounts: ParseContext['accounts'],
+): { id: string; match: string } | null => {
   const t = norm(text);
   const full = accounts
     .filter((a) => a.id && norm(a.name) && hasWord(t, norm(a.name)))
@@ -143,7 +208,10 @@ const matchCategory = (text: string, ctx: ParseContext, type?: QuickType) => {
   const t = norm(text);
   if (!t) return null;
   const subs = ctx.categories.flatMap((c) =>
-    c.subCategory.split(',').map((s) => ({ category: c.category, subCategory: s.trim() })).filter((x) => x.subCategory)
+    c.subCategory
+      .split(',')
+      .map((s) => ({ category: c.category, subCategory: s.trim() }))
+      .filter((x) => x.subCategory),
   );
   const bySub = subs
     .filter((x) => norm(x.subCategory).length >= 3 && mentions(t, norm(x.subCategory)))
@@ -161,7 +229,8 @@ const matchCategory = (text: string, ctx: ParseContext, type?: QuickType) => {
   for (const h of ctx.history) {
     if (!h.category || (type && h.type !== type)) continue;
     const hay = norm(`${h.note ?? ''} ${h.subCategory ?? ''}`);
-    if (words.some((w) => hasWord(hay, w))) return { category: h.category, subCategory: h.subCategory ?? '', type: h.type };
+    if (words.some((w) => hasWord(hay, w)))
+      return { category: h.category, subCategory: h.subCategory ?? '', type: h.type };
   }
   return null;
 };

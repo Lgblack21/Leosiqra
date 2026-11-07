@@ -1,12 +1,20 @@
-"use client";
+'use client';
 
 import { motion, useReducedMotion } from 'framer-motion';
-import { ArrowLeftRight, Award, ExternalLink, LineChart, Receipt, ShieldAlert, ShieldCheck, TrendingDown } from 'lucide-react';
+import {
+  ArrowLeftRight,
+  Award,
+  ExternalLink,
+  LineChart,
+  Receipt,
+  ShieldAlert,
+  ShieldCheck,
+  TrendingDown,
+} from 'lucide-react';
 import { BI_RATE, LPS, SBN_RETAIL, TAX_DEPOSITO, TAX_SBN, monthlyNet } from '@/lib/sbnData';
 import { formatIDR } from '@/lib/utils';
 
-// Tab Belajar: materi singkat & stabil (aturan, bukan harga). Contoh angka
-// diambil dari lib/sbnData supaya ikut terbarui bersama tab SBN.
+// Contoh angka diambil dari lib/sbnData supaya ikut terbarui bersama tab SBN.
 
 const pct = (n: number) => `${n.toLocaleString('id-ID', { maximumFractionDigits: 2 })}%`;
 // Kelas ditulis utuh supaya terbaca Tailwind (bukan dirakit dari string).
@@ -19,7 +27,15 @@ const DOT: Record<string, string> = {
   'bg-rose-50 text-rose-600': 'bg-rose-500',
   'bg-red-50 text-red-600': 'bg-red-500',
 };
-type Card = { icon: typeof Award; tone: string; title: string; points: string[]; extra?: React.ReactNode; links: { label: string; url: string }[]; wide?: boolean };
+type Card = {
+  icon: typeof Award;
+  tone: string;
+  title: string;
+  points: string[];
+  extra?: React.ReactNode;
+  links: { label: string; url: string }[];
+  wide?: boolean;
+};
 
 export function TabBelajar() {
   const reduce = useReducedMotion();
@@ -53,8 +69,10 @@ export function TabBelajar() {
           <p className="text-[11px] font-semibold text-slate-500">{floating.code}</p>
           <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[14px] font-bold">
             <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">BI {pct(BI_RATE.rate)}</span> +
-            <span className="rounded-full bg-teal-50 px-2.5 py-1 text-teal-700">spread {pct(Math.round((floating.coupon - BI_RATE.rate) * 100) / 100)}</span> =
-            <span className="text-[17px] text-slate-900">{pct(floating.coupon)}</span>
+            <span className="rounded-full bg-teal-50 px-2.5 py-1 text-teal-700">
+              spread {pct(Math.round((floating.coupon - BI_RATE.rate) * 100) / 100)}
+            </span>{' '}
+            =<span className="text-[17px] text-slate-900">{pct(floating.coupon)}</span>
           </p>
         </div>
       ) : undefined,
@@ -83,13 +101,31 @@ export function TabBelajar() {
         <div className="space-y-2 rounded-2xl bg-slate-50 p-3">
           <p className="text-[11px] font-semibold text-slate-500">Rp10 jt sebulan, setelah pajak</p>
           {[
-            { label: `${top.code} · ${pct(top.coupon)}`, value: monthlyNet(10_000_000, top.coupon, TAX_SBN), color: '#0d9488' },
-            { label: `Deposito · ${pct(LPS.bankUmum)}`, value: monthlyNet(10_000_000, LPS.bankUmum, TAX_DEPOSITO), color: '#94a3b8' },
+            {
+              label: `${top.code} · ${pct(top.coupon)}`,
+              value: monthlyNet(10_000_000, top.coupon, TAX_SBN),
+              color: '#0d9488',
+            },
+            {
+              label: `Deposito · ${pct(LPS.bankUmum)}`,
+              value: monthlyNet(10_000_000, LPS.bankUmum, TAX_DEPOSITO),
+              color: '#94a3b8',
+            },
           ].map((r, i, arr) => (
             <div key={r.label}>
-              <div className="flex justify-between text-[13px]"><span className="text-slate-700">{r.label}</span><span className="font-bold text-slate-900 tabular-nums">{formatIDR(r.value)}</span></div>
+              <div className="flex justify-between text-[13px]">
+                <span className="text-slate-700">{r.label}</span>
+                <span className="font-bold text-slate-900 tabular-nums">{formatIDR(r.value)}</span>
+              </div>
               <div className="mt-1 h-2 overflow-hidden rounded-full bg-white">
-                <motion.div initial={reduce ? false : { width: 0 }} whileInView={{ width: `${(r.value / Math.max(...arr.map((x) => x.value))) * 100}%` }} viewport={{ once: true }} transition={{ duration: 0.7 }} className="h-full rounded-full" style={{ background: r.color }} />
+                <motion.div
+                  initial={reduce ? false : { width: 0 }}
+                  whileInView={{ width: `${(r.value / Math.max(...arr.map((x) => x.value))) * 100}%` }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.7 }}
+                  className="h-full rounded-full"
+                  style={{ background: r.color }}
+                />
               </div>
             </div>
           ))}
@@ -108,8 +144,15 @@ export function TabBelajar() {
       ],
       extra: (
         <div className="grid grid-cols-3 gap-2 rounded-2xl bg-slate-50 p-3 text-center">
-          {[['Bank umum', LPS.bankUmum], ['BPR', LPS.bpr], ['Valas', LPS.valas]].map(([l, v]) => (
-            <div key={l as string}><p className="text-[11px] text-slate-500">{l}</p><p className="text-[18px] font-extrabold text-slate-900">{pct(v as number)}</p></div>
+          {[
+            ['Bank umum', LPS.bankUmum],
+            ['BPR', LPS.bpr],
+            ['Valas', LPS.valas],
+          ].map(([l, v]) => (
+            <div key={l as string}>
+              <p className="text-[11px] text-slate-500">{l}</p>
+              <p className="text-[18px] font-extrabold text-slate-900">{pct(v as number)}</p>
+            </div>
           ))}
         </div>
       ),
@@ -140,7 +183,7 @@ export function TabBelajar() {
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       {cards.map((c, i) => (
         <motion.section
           key={c.title}
@@ -151,7 +194,9 @@ export function TabBelajar() {
           className={`space-y-3 rounded-[28px] bg-white p-5 ring-1 ring-slate-100${c.wide ? ' md:col-span-2' : ''}`}
         >
           <div className="flex items-center gap-3">
-            <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${c.tone}`}><c.icon size={20} /></span>
+            <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${c.tone}`}>
+              <c.icon size={20} />
+            </span>
             <h3 className="text-[18px] font-bold tracking-tight text-slate-900">{c.title}</h3>
           </div>
           <ul className="space-y-2">
@@ -165,7 +210,13 @@ export function TabBelajar() {
           {c.extra}
           <div className="flex flex-wrap gap-x-4 gap-y-1">
             {c.links.map((l) => (
-              <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[12px] text-slate-500 hover:text-slate-900">
+              <a
+                key={l.url}
+                href={l.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[12px] text-slate-500 hover:text-slate-900"
+              >
                 <ExternalLink size={12} /> {l.label}
               </a>
             ))}

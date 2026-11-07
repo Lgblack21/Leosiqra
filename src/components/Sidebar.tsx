@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -78,7 +78,9 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
     return () => window.removeEventListener('keydown', onKey);
   }, [activeModal, openModal]);
 
-  const closeOnMobile = () => { if (window.innerWidth < 768) onClose?.(); };
+  const closeOnMobile = () => {
+    if (window.innerWidth < 768) onClose?.();
+  };
 
   const handleRequestPro = async () => {
     if (!profile?.id) return;
@@ -112,7 +114,7 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
         aria-current={active ? 'page' : undefined}
         className={cn(
           'relative flex items-center gap-3 rounded-xl px-3 py-2 text-[14px] transition-colors md:max-lg:justify-center md:max-lg:px-0 md:max-lg:py-2.5',
-          active ? 'font-bold text-indigo-700' : 'font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+          active ? 'font-bold text-indigo-700' : 'font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900',
         )}
       >
         {/* Latar item aktif meluncur halus dari item sebelumnya (shared layout). */}
@@ -123,7 +125,11 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
             transition={{ type: 'spring', stiffness: 420, damping: 36 }}
           />
         )}
-        <item.icon size={19} strokeWidth={active ? 2.3 : 1.9} className={cn('relative shrink-0', active ? 'text-indigo-600' : 'text-slate-400')} />
+        <item.icon
+          size={19}
+          strokeWidth={active ? 2.3 : 1.9}
+          className={cn('relative shrink-0', active ? 'text-indigo-600' : 'text-slate-400')}
+        />
         <span className={cn('relative flex-1 truncate', fullOnly)}>{item.label}</span>
         {badge && <span className={cn('relative text-[12px] font-semibold text-slate-400', fullOnly)}>{badge}</span>}
       </Link>
@@ -136,26 +142,37 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
     <aside
       className={cn(
         'fixed left-0 top-0 z-50 flex h-full w-72 flex-col border-r border-slate-100 bg-white transition-transform duration-300 ease-in-out md:w-[84px] md:translate-x-0 lg:w-72 print:hidden',
-        isOpen ? 'translate-x-0' : '-translate-x-full'
+        isOpen ? 'translate-x-0' : '-translate-x-full',
       )}
     >
-      {/* Logo + pengaturan */}
       <div className="flex shrink-0 items-center justify-between px-5 pb-3 pt-5 md:max-lg:justify-center md:max-lg:px-0">
-        <Link href="/membership/dashboard" onClick={closeOnMobile} className="flex select-none items-center gap-2.5" title="Ringkasan">
+        <Link
+          href="/membership/dashboard"
+          onClick={closeOnMobile}
+          className="flex select-none items-center gap-2.5"
+          title="Ringkasan"
+        >
           <Image src="/images/Logo-new.png" alt="" width={34} height={34} className="object-contain" />
           <span className={cn('text-[19px] font-extrabold tracking-tight text-slate-900', fullOnly)}>Leosiqra</span>
         </Link>
         <div className={cn('flex items-center gap-1', fullOnly)}>
           <button
             type="button"
-            onClick={() => { onOpenSettings?.(); closeOnMobile(); }}
+            onClick={() => {
+              onOpenSettings?.();
+              closeOnMobile();
+            }}
             aria-label="Pengaturan"
             title="Pengaturan"
             className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
           >
             <Settings size={18} />
           </button>
-          <button onClick={onClose} aria-label="Tutup menu" className="rounded-xl p-2 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-600 md:hidden">
+          <button
+            onClick={onClose}
+            aria-label="Tutup menu"
+            className="rounded-xl p-2 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-600 md:hidden"
+          >
             <X size={20} />
           </button>
         </div>
@@ -179,10 +196,14 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
             <div className={cn('space-y-5 px-2 py-8 text-center', fullOnly)}>
               <div className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-indigo-100 bg-indigo-50 text-indigo-600">
                 <ShieldCheck size={30} />
-                {profile?.status === 'PENDING' && <div className="absolute inset-0 animate-spin rounded-2xl border-2 border-indigo-600 border-t-transparent" />}
+                {profile?.status === 'PENDING' && (
+                  <div className="absolute inset-0 animate-spin rounded-2xl border-2 border-indigo-600 border-t-transparent" />
+                )}
               </div>
               <div className="space-y-2">
-                <h3 className="text-[15px] font-bold text-slate-900">{profile?.status === 'PENDING' ? 'Sedang diverifikasi' : 'Akses terbatas'}</h3>
+                <h3 className="text-[15px] font-bold text-slate-900">
+                  {profile?.status === 'PENDING' ? 'Sedang diverifikasi' : 'Akses terbatas'}
+                </h3>
                 <p className="text-[13px] leading-relaxed text-slate-500">
                   {profile?.status === 'PENDING'
                     ? 'Permintaan aksesmu sudah terkirim. Admin akan memverifikasi segera.'
@@ -196,12 +217,23 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
                     disabled={isRequesting}
                     className="flex w-full items-center justify-center gap-2 rounded-full bg-indigo-600 py-3 text-[14px] font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-70"
                   >
-                    {isRequesting ? 'Mengirim…' : <>Ajukan akses <ChevronRight size={15} /></>}
+                    {isRequesting ? (
+                      'Mengirim…'
+                    ) : (
+                      <>
+                        Ajukan akses <ChevronRight size={15} />
+                      </>
+                    )}
                   </button>
                 ) : (
-                  <div className="w-full rounded-full bg-slate-100 py-3 text-[13px] font-semibold text-slate-500">Menunggu konfirmasi…</div>
+                  <div className="w-full rounded-full bg-slate-100 py-3 text-[13px] font-semibold text-slate-500">
+                    Menunggu konfirmasi…
+                  </div>
                 )}
-                <Link href="/membership/contact" className="flex w-full items-center justify-center gap-2 rounded-full border border-indigo-200 bg-white py-3 text-[14px] font-bold text-indigo-600 hover:bg-indigo-50">
+                <Link
+                  href="/membership/contact"
+                  className="flex w-full items-center justify-center gap-2 rounded-full border border-indigo-200 bg-white py-3 text-[14px] font-bold text-indigo-600 hover:bg-indigo-50"
+                >
                   Bayar / upgrade ke PRO <ChevronRight size={15} />
                 </Link>
               </div>
@@ -213,23 +245,40 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
         ) : (
           <div className="space-y-5">
             <div data-tour="sidebar-group-keuangan">
-              <p className={cn('px-3 pb-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400', fullOnly)}>Keuangan</p>
+              <p
+                className={cn('px-3 pb-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400', fullOnly)}
+              >
+                Keuangan
+              </p>
               <div className="space-y-0.5">{keuanganNav.map((item) => renderItem(item))}</div>
             </div>
-            <div data-tour="sidebar-group-fitur" className="md:max-lg:border-t md:max-lg:border-slate-100 md:max-lg:pt-4">
-              <p className={cn('px-3 pb-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400', fullOnly)}>Fitur</p>
+            <div
+              data-tour="sidebar-group-fitur"
+              className="md:max-lg:border-t md:max-lg:border-slate-100 md:max-lg:pt-4"
+            >
+              <p
+                className={cn('px-3 pb-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400', fullOnly)}
+              >
+                Fitur
+              </p>
               <div className="space-y-0.5">
-                {featuresFromIds(features.active).map((f) => renderItem({ label: f.label, href: f.href, icon: f.icon }))}
-                {/* Atur fitur = pop-up Fitur di panel Pengaturan (× matikan, + aktifkan). */}
+                {featuresFromIds(features.active).map((f) =>
+                  renderItem({ label: f.label, href: f.href, icon: f.icon }),
+                )}
                 <button
                   type="button"
-                  onClick={() => { openSettings('fitur'); closeOnMobile(); }}
+                  onClick={() => {
+                    openSettings('fitur');
+                    closeOnMobile();
+                  }}
                   title="Atur fitur"
                   className="relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-[14px] font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 md:max-lg:justify-center md:max-lg:px-0 md:max-lg:py-2.5"
                 >
                   <LayoutGrid size={19} strokeWidth={1.9} className="relative shrink-0 text-slate-400" />
                   <span className={cn('relative flex-1 truncate', fullOnly)}>Atur fitur</span>
-                  <span className={cn('relative text-[12px] font-semibold text-slate-400', fullOnly)}>{features.active.length} aktif</span>
+                  <span className={cn('relative text-[12px] font-semibold text-slate-400', fullOnly)}>
+                    {features.active.length} aktif
+                  </span>
                 </button>
               </div>
             </div>
@@ -237,23 +286,30 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
         )}
       </nav>
 
-      {/* Tambah transaksi + profil */}
       <div className="shrink-0 space-y-2 border-t border-slate-100 p-3">
         {profile && !restricted && (
           <button
             type="button"
-            onClick={() => { primaryAdd(); closeOnMobile(); }}
+            onClick={() => {
+              primaryAdd();
+              closeOnMobile();
+            }}
             title="Tambah transaksi (N)"
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 py-3.5 text-[15px] font-bold text-white shadow-[0_12px_24px_-12px_rgba(79,70,229,0.7)] transition hover:brightness-110"
           >
             <Plus size={19} strokeWidth={2.6} />
             <span className={fullOnly}>Tambah transaksi</span>
-            <kbd className="ml-1 hidden h-5 min-w-5 items-center justify-center rounded-md bg-white/20 px-1.5 text-[11px] font-bold lg:inline-flex">N</kbd>
+            <kbd className="ml-1 hidden h-5 min-w-5 items-center justify-center rounded-md bg-white/20 px-1.5 text-[11px] font-bold lg:inline-flex">
+              N
+            </kbd>
           </button>
         )}
         <button
           type="button"
-          onClick={() => { onOpenSettings?.(); closeOnMobile(); }}
+          onClick={() => {
+            onOpenSettings?.();
+            closeOnMobile();
+          }}
           title="Profil & pengaturan"
           className="flex w-full items-center gap-3 rounded-xl px-1.5 py-1 text-left transition-colors hover:bg-slate-50 md:max-lg:justify-center md:max-lg:px-0"
         >
@@ -264,7 +320,12 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
           )}
           <span className={cn('flex min-w-0 flex-1 flex-col', fullOnly)}>
             <span className="truncate text-[14px] font-semibold text-slate-900">{profile?.name || 'Memuat…'}</span>
-            <span className={cn('truncate text-[12px] font-medium', profile?.plan === 'PRO' ? 'text-violet-600' : 'text-slate-400')}>
+            <span
+              className={cn(
+                'truncate text-[12px] font-medium',
+                profile?.plan === 'PRO' ? 'text-violet-600' : 'text-slate-400',
+              )}
+            >
               {profile?.plan === 'PRO' ? 'PRO' : 'Gratis'}
               {profile?.plan === 'PRO' && remainingDays !== null && ` · sisa ${remainingDays} hari`}
             </span>

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
@@ -19,7 +19,11 @@ const APPS: Record<InstallApp, { tagline: string; points: string[]; when: string
   },
   'input-cepat': {
     tagline: 'Catat kilat',
-    points: ['Langsung terbuka di form catat', 'Ketik “25rb kopi”, suara, atau foto struk', 'Ringan — beberapa detik selesai'],
+    points: [
+      'Langsung terbuka di form catat',
+      'Ketik “25rb kopi”, suara, atau foto struk',
+      'Ringan — beberapa detik selesai',
+    ],
     when: 'Untuk mencatat transaksi secepat mungkin, kapan saja.',
   },
 };
@@ -93,7 +97,6 @@ export default function InstallPage() {
 
       <main className="relative flex-1 px-5 pb-24 sm:px-6">
         <div className="mx-auto max-w-5xl space-y-6">
-          {/* Peringatan kondisi khusus */}
           {env.native && (
             <Callout tone="emerald" icon={Check}>
               Kamu sedang memakai aplikasi Leosiqra — tidak perlu dipasang lagi. Input Cepat tetap bisa dipasang dari
@@ -102,8 +105,8 @@ export default function InstallPage() {
           )}
           {env.inApp && (
             <Callout tone="amber" icon={AlertTriangle}>
-              Halaman ini terbuka di dalam aplikasi lain (mis. Instagram atau WhatsApp) yang tidak bisa memasang aplikasi.
-              Buka <b>leosiqra.com/install</b> di <b>{platform === 'ios' ? 'Safari' : 'Chrome'}</b> dulu.
+              Halaman ini terbuka di dalam aplikasi lain (mis. Instagram atau WhatsApp) yang tidak bisa memasang
+              aplikasi. Buka <b>leosiqra.com/install</b> di <b>{platform === 'ios' ? 'Safari' : 'Chrome'}</b> dulu.
             </Callout>
           )}
           {env.detected === 'desktop' && (
@@ -118,8 +121,13 @@ export default function InstallPage() {
                 >
                   <MessageCircle size={14} /> Kirim lewat WhatsApp
                 </a>
-                <button type="button" onClick={copyLink} className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200">
-                  {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />} {copied ? 'Tersalin' : 'Salin link'}
+                <button
+                  type="button"
+                  onClick={copyLink}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200"
+                >
+                  {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}{' '}
+                  {copied ? 'Tersalin' : 'Salin link'}
                 </button>
               </span>
             </Callout>
@@ -130,8 +138,7 @@ export default function InstallPage() {
             </Callout>
           )}
 
-          {/* Dua pilihan aplikasi */}
-          <div className="grid gap-5 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             {(['leosiqra', 'input-cepat'] as InstallApp[]).map((app, i) => {
               const info = APP_INFO[app];
               const meta = APPS[app];
@@ -159,7 +166,9 @@ export default function InstallPage() {
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500">{meta.when}</p>
+                  <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500">
+                    {meta.when}
+                  </p>
                   <div className="mt-5 flex flex-col gap-2 sm:flex-row">
                     {app === 'leosiqra' ? (
                       promptState === 'installed' ? (
@@ -167,16 +176,26 @@ export default function InstallPage() {
                           <Check size={16} /> Sudah terpasang
                         </span>
                       ) : promptState === 'available' ? (
-                        <button type="button" onClick={installLeosiqra} className="lp-btn inline-flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-bold">
+                        <button
+                          type="button"
+                          onClick={installLeosiqra}
+                          className="lp-btn inline-flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-bold"
+                        >
                           <Download size={16} /> Pasang Leosiqra
                         </button>
                       ) : (
-                        <a href="/app" className="lp-btn inline-flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-bold">
+                        <a
+                          href="/app"
+                          className="lp-btn inline-flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-bold"
+                        >
                           <Smartphone size={16} /> Buka Leosiqra
                         </a>
                       )
                     ) : (
-                      <a href="/input-cepat?install=1" className="lp-btn inline-flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-bold">
+                      <a
+                        href="/input-cepat?install=1"
+                        className="lp-btn inline-flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-bold"
+                      >
                         <Download size={16} /> Pasang Input Cepat
                       </a>
                     )}
@@ -193,7 +212,6 @@ export default function InstallPage() {
             })}
           </div>
 
-          {/* Berdampingan */}
           <div className="lp-card flex flex-col items-center gap-6 rounded-[28px] p-7 sm:flex-row sm:p-8">
             <div className="flex shrink-0 items-end gap-4 rounded-3xl bg-gradient-to-b from-indigo-300 via-violet-300 to-rose-200 px-6 pb-4 pt-6">
               {(['leosiqra', 'input-cepat'] as InstallApp[]).map((app, i) => (
@@ -206,7 +224,13 @@ export default function InstallPage() {
                   className="flex flex-col items-center gap-1.5"
                 >
                   <span className="relative block h-14 w-14 overflow-hidden rounded-[16px] bg-white shadow-lg">
-                    <Image src={APP_INFO[app].icon} alt={`Ikon ${APP_INFO[app].name}`} fill sizes="56px" className="object-cover" />
+                    <Image
+                      src={APP_INFO[app].icon}
+                      alt={`Ikon ${APP_INFO[app].name}`}
+                      fill
+                      sizes="56px"
+                      className="object-cover"
+                    />
                   </span>
                   <span className="text-[10px] font-bold text-white drop-shadow">{APP_INFO[app].name}</span>
                 </motion.div>
@@ -215,14 +239,14 @@ export default function InstallPage() {
             <div>
               <h2 className="font-serif text-2xl">Boleh pasang dua-duanya</h2>
               <p className="mt-2 text-sm leading-relaxed text-slate-500">
-                Keduanya aplikasi terpisah dengan ikon berbeda — <b>Leosiqra</b> untuk melihat & mengatur semua keuangan,
-                <b> Input Cepat</b> untuk mencatat dalam hitungan detik. Datanya sama dan selalu sinkron, jadi transaksi dari
-                Input Cepat langsung muncul di Leosiqra.
+                Keduanya aplikasi terpisah dengan ikon berbeda — <b>Leosiqra</b> untuk melihat & mengatur semua
+                keuangan,
+                <b> Input Cepat</b> untuk mencatat dalam hitungan detik. Datanya sama dan selalu sinkron, jadi transaksi
+                dari Input Cepat langsung muncul di Leosiqra.
               </p>
             </div>
           </div>
 
-          {/* Tutorial beranimasi */}
           <section id="cara-pasang" className="lp-card scroll-mt-28 rounded-[28px] p-6 sm:p-9">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="font-serif text-3xl">Cara memasang</h2>
@@ -250,19 +274,32 @@ export default function InstallPage() {
             </div>
           </section>
 
-          {/* Tanya-jawab */}
           <section className="lp-card rounded-[28px] p-6 sm:p-9">
             <h2 className="font-serif text-3xl">Kalau ada kendala</h2>
             <div className="mt-5 divide-y divide-slate-100">
               {[
-                ['Menu “Instal aplikasi” / “Tambahkan ke Layar Utama” tidak ada', 'Pastikan halaman dibuka di Chrome (Android) atau Safari (iPhone), bukan dari dalam Instagram, WhatsApp, atau aplikasi lain. Di iPhone, pemasangan hanya bisa lewat Safari.'],
-                ['Aplikasinya sudah terpasang tapi ingin memasang lagi', 'Hapus ikonnya dari layar utama terlebih dahulu, lalu ulangi langkah pemasangan.'],
-                ['Apakah perlu login di tiap aplikasi?', 'Login sekali di masing-masing aplikasi setelah dipasang. Setelah itu kamu tetap masuk sampai memilih keluar.'],
-                ['Apakah memakan banyak memori?', 'Tidak. Aplikasinya ringan dan diperbarui otomatis setiap kali dibuka — tidak ada update manual.'],
+                [
+                  'Menu “Instal aplikasi” / “Tambahkan ke Layar Utama” tidak ada',
+                  'Pastikan halaman dibuka di Chrome (Android) atau Safari (iPhone), bukan dari dalam Instagram, WhatsApp, atau aplikasi lain. Di iPhone, pemasangan hanya bisa lewat Safari.',
+                ],
+                [
+                  'Aplikasinya sudah terpasang tapi ingin memasang lagi',
+                  'Hapus ikonnya dari layar utama terlebih dahulu, lalu ulangi langkah pemasangan.',
+                ],
+                [
+                  'Apakah perlu login di tiap aplikasi?',
+                  'Login sekali di masing-masing aplikasi setelah dipasang. Setelah itu kamu tetap masuk sampai memilih keluar.',
+                ],
+                [
+                  'Apakah memakan banyak memori?',
+                  'Tidak. Aplikasinya ringan dan diperbarui otomatis setiap kali dibuka — tidak ada update manual.',
+                ],
               ].map(([q, a]) => (
                 <details key={q} className="group py-4">
                   <summary className="cursor-pointer list-none font-semibold text-slate-900">
-                    <span className="mr-2 inline-block text-indigo-500 transition-transform group-open:rotate-45">+</span>
+                    <span className="mr-2 inline-block text-indigo-500 transition-transform group-open:rotate-45">
+                      +
+                    </span>
                     {q}
                   </summary>
                   <p className="mt-2 pl-5 text-sm leading-relaxed text-slate-600">{a}</p>
@@ -270,7 +307,11 @@ export default function InstallPage() {
               ))}
             </div>
             <p className="mt-6 text-sm text-slate-500">
-              Masih bingung? <Link href="/hubungi-kami" className="font-bold text-indigo-600 hover:underline">Hubungi kami</Link>.
+              Masih bingung?{' '}
+              <Link href="/hubungi-kami" className="font-bold text-indigo-600 hover:underline">
+                Hubungi kami
+              </Link>
+              .
             </p>
           </section>
         </div>
@@ -281,7 +322,15 @@ export default function InstallPage() {
   );
 }
 
-function Callout({ tone, icon: Icon, children }: { tone: 'amber' | 'emerald' | 'indigo'; icon: React.ElementType; children: React.ReactNode }) {
+function Callout({
+  tone,
+  icon: Icon,
+  children,
+}: {
+  tone: 'amber' | 'emerald' | 'indigo';
+  icon: React.ElementType;
+  children: React.ReactNode;
+}) {
   const tones = {
     amber: 'bg-amber-50 text-amber-900 ring-amber-100',
     emerald: 'bg-emerald-50 text-emerald-900 ring-emerald-100',
@@ -295,7 +344,15 @@ function Callout({ tone, icon: Icon, children }: { tone: 'amber' | 'emerald' | '
   );
 }
 
-function Segmented({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: [string, string][] }) {
+function Segmented({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: [string, string][];
+}) {
   return (
     <div className="inline-flex rounded-full bg-slate-100 p-1">
       {options.map(([v, label]) => (
@@ -303,7 +360,10 @@ function Segmented({ value, onChange, options }: { value: string; onChange: (v: 
           key={v}
           type="button"
           onClick={() => onChange(v)}
-          className={cn('rounded-full px-4 py-1.5 text-xs font-bold transition-all', value === v ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}
+          className={cn(
+            'rounded-full px-4 py-1.5 text-xs font-bold transition-all',
+            value === v ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700',
+          )}
         >
           {label}
         </button>

@@ -1,14 +1,24 @@
 import type { Metadata } from 'next';
 import { CalendarClock } from 'lucide-react';
 import Link from 'next/link';
-import { ArrowRight, CalendarDays, FileSpreadsheet, HandCoins, Store, Home, LifeBuoy, NotebookPen, PiggyBank, Wallet } from 'lucide-react';
+import {
+  ArrowRight,
+  CalendarDays,
+  FileSpreadsheet,
+  HandCoins,
+  Store,
+  Home,
+  LifeBuoy,
+  NotebookPen,
+  PiggyBank,
+  Wallet,
+} from 'lucide-react';
 import { FileCheck, Smartphone, Users } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { LandingFooter } from '@/components/LandingFooter';
 import { ClipboardList } from 'lucide-react';
 import { Target } from 'lucide-react';
 import { Bot } from 'lucide-react';
-import { BarChart3 } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Panduan Keuangan Pribadi | Leosiqra',
@@ -32,26 +42,132 @@ export const metadata: Metadata = {
 };
 
 const GUIDES = [
-  { href: '/catatan-keuangan-pribadi', icon: NotebookPen, title: 'Catatan Keuangan Pribadi', desc: 'Apa saja yang dicatat, contoh format, dan cara memulainya.' },
-  { href: '/catatan-keuangan-harian', icon: CalendarDays, title: 'Catatan Keuangan Harian', desc: 'Contoh format harian dan tips agar konsisten mencatat.' },
-  { href: '/panduan/cara-mengatur-gaji', icon: Wallet, title: 'Cara Mengatur Gaji Bulanan', desc: 'Metode 50/30/20 dengan contoh pembagian gaji 5 juta.' },
-  { href: '/panduan/mengatur-gaji-mingguan', icon: CalendarClock, title: 'Cara Mengatur Gaji Mingguan', desc: 'Tagihan bulanan jadi jatah mingguan, bulan 5 minggu, contoh 500 ribu per minggu.' },
-  { href: '/panduan/dana-darurat', icon: LifeBuoy, title: 'Dana Darurat', desc: 'Berapa idealnya, disimpan di mana, dan cara mengumpulkannya.' },
-  { href: '/panduan/cara-membuat-anggaran-bulanan', icon: ClipboardList, title: 'Cara Membuat Anggaran Bulanan', desc: 'Dari pengeluaran nyata ke batas per kategori, contoh gaji 4 juta, cek laju di tengah bulan.' },
-  { href: '/panduan/laporan-keuangan-pribadi', icon: BarChart3, title: 'Laporan Keuangan Pribadi', desc: 'Contoh laporan arus kas bulanan dan kekayaan bersih, cara membacanya, dan kesalahan yang sering terjadi.' },
-  { href: '/panduan/cara-melunasi-utang', icon: HandCoins, title: 'Cara Melunasi Utang', desc: 'Metode snowball vs avalanche, lengkap dengan contoh urutan.' },
-  { href: '/panduan/catat-keuangan-rumah-tangga', icon: Home, title: 'Catatan Keuangan Rumah Tangga', desc: 'Kategori yang dicatat, contoh tabel sebulan, dan cara mencatat berdua.' },
-  { href: '/panduan/catat-pengeluaran-di-excel', icon: FileSpreadsheet, title: 'Catat Pengeluaran di Excel vs Aplikasi', desc: 'Template Excel sederhana, rumus SUMIF, dan kapan sebaiknya pindah ke aplikasi.' },
-  { href: '/panduan/aplikasi-pencatat-pengeluaran', icon: Smartphone, title: 'Memilih Aplikasi Pencatat Pengeluaran', desc: '7 hal yang perlu dicek: kecepatan mencatat, banyak rekening, budget, biaya, privasi.' },
-  { href: '/panduan/catat-keuangan-usaha-kecil', icon: Store, title: 'Catatan Keuangan Jualan (UMKM)', desc: 'Pisahkan uang usaha, catat omzet, HPP, dan biaya, lalu hitung untung bersih.' },
-  { href: '/panduan/bukti-lapor-spt-coretax', icon: FileCheck, title: 'Bukti Lapor SPT Coretax (BPE)', desc: 'Di mana BPE SPT Tahunan ditemukan, cara menyimpannya, dan langkah kalau belum muncul.' },
-  { href: '/panduan/cara-mencatat-uang-kas', icon: Users, title: 'Cara Mencatat Uang Kas', desc: 'Buku kas kelas, RT, arisan: kolom wajib, contoh tabel sebulan, cara melapor ke anggota.' },
-  { href: '/panduan/cara-menabung-yang-benar', icon: PiggyBank, title: 'Cara Menabung yang Benar', desc: 'Sisihkan di awal, urutan dana darurat–utang–tujuan, contoh gaji 5 juta.' },
-  { href: '/panduan/cara-menabung-10-juta', icon: Target, title: 'Cara Menabung 10 Juta dalam 3 Bulan', desc: 'Jatah per bulan, minggu, dan hari, cek realistis dari gaji, alternatif 6 atau 12 bulan.' },
-  { href: '/panduan/cara-mengatur-gaji-3-juta', icon: Wallet, title: 'Cara Mengatur Gaji 3 Juta', desc: 'Contoh pembagian untuk anak kos, jatah makan per hari, tetap menabung walau kecil.' },
-  { href: '/panduan/cara-mencatat-keuangan-di-hp', icon: Smartphone, title: 'Cara Mencatat Keuangan di HP', desc: 'Pilih alat, format catatan beberapa detik, contoh sehari, dan transfer yang bukan pengeluaran.' },
-  { href: '/panduan/catatan-hutang-piutang', icon: HandCoins, title: 'Catatan Hutang Piutang', desc: 'Kolom wajib, contoh tabel, mencatat cicilan dan pelunasan, dan kesalahan yang membuat sisa salah.' },
-  { href: '/panduan/mcp', icon: Bot, title: 'Hubungkan ke Claude & ChatGPT', desc: 'Tanya saldo dan catat transaksi lewat AI (MCP), plus cara memutus akses kapan saja.' },
+  {
+    href: '/catatan-keuangan-pribadi',
+    icon: NotebookPen,
+    title: 'Catatan Keuangan Pribadi',
+    desc: 'Apa saja yang dicatat, contoh format, dan cara memulainya.',
+  },
+  {
+    href: '/catatan-keuangan-harian',
+    icon: CalendarDays,
+    title: 'Catatan Keuangan Harian',
+    desc: 'Contoh format harian dan tips agar konsisten mencatat.',
+  },
+  {
+    href: '/panduan/cara-mengatur-gaji',
+    icon: Wallet,
+    title: 'Cara Mengatur Gaji Bulanan',
+    desc: 'Metode 50/30/20 dengan contoh pembagian gaji 5 juta.',
+  },
+  {
+    href: '/panduan/mengatur-gaji-mingguan',
+    icon: CalendarClock,
+    title: 'Cara Mengatur Gaji Mingguan',
+    desc: 'Tagihan bulanan jadi jatah mingguan, bulan 5 minggu, contoh 500 ribu per minggu.',
+  },
+  {
+    href: '/panduan/dana-darurat',
+    icon: LifeBuoy,
+    title: 'Dana Darurat',
+    desc: 'Berapa idealnya, disimpan di mana, dan cara mengumpulkannya.',
+  },
+  {
+    href: '/panduan/cara-membuat-anggaran-bulanan',
+    icon: ClipboardList,
+    title: 'Cara Membuat Anggaran Bulanan',
+    desc: 'Dari pengeluaran nyata ke batas per kategori, contoh gaji 4 juta, cek laju di tengah bulan.',
+  },
+  {
+    href: '/panduan/laporan-keuangan-pribadi',
+    icon: BarChart3,
+    title: 'Laporan Keuangan Pribadi',
+    desc: 'Contoh laporan arus kas bulanan dan kekayaan bersih, cara membacanya, dan kesalahan yang sering terjadi.',
+  },
+  {
+    href: '/panduan/cara-melunasi-utang',
+    icon: HandCoins,
+    title: 'Cara Melunasi Utang',
+    desc: 'Metode snowball vs avalanche, lengkap dengan contoh urutan.',
+  },
+  {
+    href: '/panduan/catat-keuangan-rumah-tangga',
+    icon: Home,
+    title: 'Catatan Keuangan Rumah Tangga',
+    desc: 'Kategori yang dicatat, contoh tabel sebulan, dan cara mencatat berdua.',
+  },
+  {
+    href: '/panduan/catat-pengeluaran-di-excel',
+    icon: FileSpreadsheet,
+    title: 'Catat Pengeluaran di Excel vs Aplikasi',
+    desc: 'Template Excel sederhana, rumus SUMIF, dan kapan sebaiknya pindah ke aplikasi.',
+  },
+  {
+    href: '/panduan/aplikasi-pencatat-pengeluaran',
+    icon: Smartphone,
+    title: 'Memilih Aplikasi Pencatat Pengeluaran',
+    desc: '7 hal yang perlu dicek: kecepatan mencatat, banyak rekening, budget, biaya, privasi.',
+  },
+  {
+    href: '/panduan/catat-keuangan-usaha-kecil',
+    icon: Store,
+    title: 'Catatan Keuangan Jualan (UMKM)',
+    desc: 'Pisahkan uang usaha, catat omzet, HPP, dan biaya, lalu hitung untung bersih.',
+  },
+  {
+    href: '/panduan/bukti-lapor-spt-coretax',
+    icon: FileCheck,
+    title: 'Bukti Lapor SPT Coretax (BPE)',
+    desc: 'Di mana BPE SPT Tahunan ditemukan, cara menyimpannya, dan langkah kalau belum muncul.',
+  },
+  {
+    href: '/panduan/cara-mencatat-uang-kas',
+    icon: Users,
+    title: 'Cara Mencatat Uang Kas',
+    desc: 'Buku kas kelas, RT, arisan: kolom wajib, contoh tabel sebulan, cara melapor ke anggota.',
+  },
+  {
+    href: '/panduan/cara-menabung-yang-benar',
+    icon: PiggyBank,
+    title: 'Cara Menabung yang Benar',
+    desc: 'Sisihkan di awal, urutan dana darurat–utang–tujuan, contoh gaji 5 juta.',
+  },
+  {
+    href: '/panduan/cara-menabung-10-juta',
+    icon: Target,
+    title: 'Cara Menabung 10 Juta dalam 3 Bulan',
+    desc: 'Jatah per bulan, minggu, dan hari, cek realistis dari gaji, alternatif 6 atau 12 bulan.',
+  },
+  {
+    href: '/panduan/cara-mengatur-gaji-3-juta',
+    icon: Wallet,
+    title: 'Cara Mengatur Gaji 3 Juta',
+    desc: 'Contoh pembagian untuk anak kos, jatah makan per hari, tetap menabung walau kecil.',
+  },
+  {
+    href: '/panduan/cara-mengatur-gaji-2-juta',
+    icon: Wallet,
+    title: 'Cara Mengatur Gaji 2 Juta',
+    desc: 'Contoh tinggal dengan orang tua dan anak kos, saat ada cicilan, dan kalau gaji 2,5 juta.',
+  },
+  {
+    href: '/panduan/cara-mencatat-keuangan-di-hp',
+    icon: Smartphone,
+    title: 'Cara Mencatat Keuangan di HP',
+    desc: 'Pilih alat, format catatan beberapa detik, contoh sehari, dan transfer yang bukan pengeluaran.',
+  },
+  {
+    href: '/panduan/catatan-hutang-piutang',
+    icon: HandCoins,
+    title: 'Catatan Hutang Piutang',
+    desc: 'Kolom wajib, contoh tabel, mencatat cicilan dan pelunasan, dan kesalahan yang membuat sisa salah.',
+  },
+  {
+    href: '/panduan/mcp',
+    icon: Bot,
+    title: 'Hubungkan ke Claude & ChatGPT',
+    desc: 'Tanya saldo dan catat transaksi lewat AI (MCP), plus cara memutus akses kapan saja.',
+  },
 ];
 
 export default function PanduanIndexPage() {
@@ -70,7 +186,7 @@ export default function PanduanIndexPage() {
         </div>
       </header>
       <main className="relative flex-1 px-5 pb-24 sm:px-6">
-        <div className="mx-auto grid max-w-4xl gap-5 sm:grid-cols-2">
+        <div className="mx-auto grid grid-cols-1 max-w-4xl gap-5 sm:grid-cols-2">
           {GUIDES.map((g) => (
             <Link key={g.href} href={g.href} className="lp-card lift group flex h-full flex-col rounded-[28px] p-7">
               <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100">
@@ -92,23 +208,50 @@ export default function PanduanIndexPage() {
           </p>
           <ol className="mt-6 list-decimal space-y-3 pl-6 leading-relaxed text-slate-600">
             <li>
-              <strong className="text-slate-900">Catat dulu selama dua minggu.</strong> Tanpa catatan, semua rencana hanya
-              tebakan. Mulai dari <Link href="/catatan-keuangan-harian" className="font-semibold text-indigo-600 hover:underline">catatan keuangan harian</Link>,
-              atau pakai <Link href="/panduan/catat-pengeluaran-di-excel" className="font-semibold text-indigo-600 hover:underline">Excel</Link> kalau
-              lebih nyaman. Untuk keluarga, lihat <Link href="/panduan/catat-keuangan-rumah-tangga" className="font-semibold text-indigo-600 hover:underline">catatan rumah tangga</Link>.
+              <strong className="text-slate-900">Catat dulu selama dua minggu.</strong> Tanpa catatan, semua rencana
+              hanya tebakan. Mulai dari{' '}
+              <Link href="/catatan-keuangan-harian" className="font-semibold text-indigo-600 hover:underline">
+                catatan keuangan harian
+              </Link>
+              , atau pakai{' '}
+              <Link
+                href="/panduan/catat-pengeluaran-di-excel"
+                className="font-semibold text-indigo-600 hover:underline"
+              >
+                Excel
+              </Link>{' '}
+              kalau lebih nyaman. Untuk keluarga, lihat{' '}
+              <Link
+                href="/panduan/catat-keuangan-rumah-tangga"
+                className="font-semibold text-indigo-600 hover:underline"
+              >
+                catatan rumah tangga
+              </Link>
+              .
             </li>
             <li>
               <strong className="text-slate-900">Bagi gaji dengan sadar.</strong> Setelah tahu ke mana uang pergi, susun
-              pembagian gaji bulanan dengan <Link href="/panduan/cara-mengatur-gaji" className="font-semibold text-indigo-600 hover:underline">metode 50/30/20</Link>.
+              pembagian gaji bulanan dengan{' '}
+              <Link href="/panduan/cara-mengatur-gaji" className="font-semibold text-indigo-600 hover:underline">
+                metode 50/30/20
+              </Link>
+              .
             </li>
             <li>
-              <strong className="text-slate-900">Bangun dana darurat.</strong> Sisihkan sedikit tiap bulan sampai mencapai
-              target <Link href="/panduan/dana-darurat" className="font-semibold text-indigo-600 hover:underline">dana darurat</Link>, supaya kejadian
-              mendadak tidak menambah utang baru.
+              <strong className="text-slate-900">Bangun dana darurat.</strong> Sisihkan sedikit tiap bulan sampai
+              mencapai target{' '}
+              <Link href="/panduan/dana-darurat" className="font-semibold text-indigo-600 hover:underline">
+                dana darurat
+              </Link>
+              , supaya kejadian mendadak tidak menambah utang baru.
             </li>
             <li>
               <strong className="text-slate-900">Lunasi utang berbunga.</strong> Pilih urutan pelunasan dengan
-              <Link href="/panduan/cara-melunasi-utang" className="font-semibold text-indigo-600 hover:underline"> metode snowball atau avalanche</Link>.
+              <Link href="/panduan/cara-melunasi-utang" className="font-semibold text-indigo-600 hover:underline">
+                {' '}
+                metode snowball atau avalanche
+              </Link>
+              .
             </li>
           </ol>
           <p className="mt-6 text-sm leading-relaxed text-slate-500">

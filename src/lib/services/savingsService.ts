@@ -1,6 +1,4 @@
-import {
-  collection, getDocs, query, orderBy, notifyCollectionChanged
-} from '@/lib/cf-firestore';
+import { collection, getDocs, query, orderBy, notifyCollectionChanged } from '@/lib/cf-firestore';
 import { db } from '../cf-client';
 import { cloudflareApi } from '../cloudflare-api';
 
@@ -11,7 +9,7 @@ export interface Saving {
   amount: number;
   amountIDR?: number;
   currency: string;
-  category: string;  // 'Dana Darurat', 'Liburan', dll
+  category: string; // 'Dana Darurat', 'Liburan', dll
   subCategory?: string;
   fromAccount: string;
   toGoal: string;
@@ -27,8 +25,7 @@ const COLLECTION_NAME = 'savings';
 
 export const savingsService = {
   // Simpan setoran/penarikan + ubah saldo rekening sumber dalam satu batch
-  // atomik di server (apply_balance) — dulu dua request terpisah, jadi kalau
-  // yang kedua gagal setoran tercatat tapi saldo tidak berubah.
+  // atomik di server (apply_balance) — supaya setoran tidak tercatat tanpa saldo ikut berubah.
   async createSaving(data: Omit<Saving, 'id' | 'createdAt' | 'userId'> & { userId?: string }) {
     // Kalau amountIDR tidak berhasil dihitung di klien (mis. fetch kurs gagal),
     // jangan kirim amount mentah sebagai IDR final — biarkan backend hitung
@@ -58,25 +55,18 @@ export const savingsService = {
 
   async getUserSavings(_userId: string) {
     void _userId;
-    // /api/member/savings (dipanggil lewat readApiCollection di cf-firestore)
-    // sudah di-scope ke user sesi yang login di backend — filter where('userId')
-    // di sini cuma akan cocok kalau caller kebetulan mengoper UID asli yang
-    // sama persis, dan diam-diam mengembalikan array kosong kalau dioper
-    // placeholder seperti 'session' (konvensi dipakai getUserTransactions/
-    // getUserInvestments). Makanya di sini query-nya dibiarkan tanpa filter
-    // userId, konsisten dengan cara service lain menangani ini.
-    const q = query(
-      collection(db, COLLECTION_NAME),
-      orderBy('date', 'desc')
-    );
+    // Sengaja tanpa where('userId'): /api/member/savings sudah di-scope ke sesi di
+    // backend, dan caller sering mengoper placeholder 'session' (bukan UID asli)
+    // yang akan membuat filter klien diam-diam mengembalikan array kosong.
+    const q = query(collection(db, COLLECTION_NAME), orderBy('date', 'desc'));
     const snap = await getDocs(q);
-    return snap.docs.map(doc => {
+    return snap.docs.map((doc) => {
       const data = doc.data();
       return {
         ...data,
         id: doc.id,
         date: data.date?.toDate?.() ?? new Date(),
-        createdAt: data.createdAt?.toDate?.() ?? new Date()
+        createdAt: data.createdAt?.toDate?.() ?? new Date(),
       } as Saving;
     });
   },
@@ -87,6 +77,5 @@ export const savingsService = {
     await cloudflareApi(`/api/member/savings/${saving.id}?reverse=1`, { method: 'DELETE' });
     notifyCollectionChanged('savings');
     notifyCollectionChanged('accounts');
-  }
+  },
 };
-

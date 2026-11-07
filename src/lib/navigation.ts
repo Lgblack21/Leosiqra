@@ -1,4 +1,6 @@
 import {
+  Radar,
+  Sprout,
   LayoutDashboard,
   BarChart3,
   Bot,
@@ -7,6 +9,7 @@ import {
   Repeat,
   Building2,
   PieChart,
+  Footprints,
   TrendingUp,
   Briefcase,
   Landmark,
@@ -70,6 +73,7 @@ export const navGroups: NavGroup[] = [
       { label: 'Catat Transaksi', href: '/membership/transactions/input', icon: PlusCircle },
       { label: 'Riwayat Transaksi', href: '/membership/transactions/daily', icon: ListOrdered },
       { label: 'Transaksi Rutin', href: '/membership/recurring', icon: Repeat },
+      { label: 'Langgananku', href: '/membership/langganan', icon: Radar },
     ],
   },
   {
@@ -79,6 +83,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: 'Rekening', href: '/membership/rekening', icon: Building2 },
       { label: 'Kekayaan', href: '/membership/kekayaan', icon: PieChart },
+      { label: 'Ladangku', href: '/membership/ladang', icon: Sprout },
     ],
   },
   {
@@ -97,6 +102,7 @@ export const navGroups: NavGroup[] = [
     label: 'Perencanaan & Laporan',
     icon: Target,
     items: [
+      { label: 'Jejak Uang', href: '/membership/jejak-uang', icon: Footprints },
       { label: 'Pajak Center', href: '/membership/pajak-center', icon: ShieldCheck },
     ],
   },

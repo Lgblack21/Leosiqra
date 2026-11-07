@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { ChevronLeft, Mic, Square, Sparkles } from "lucide-react";
-import { startSpeech, type SpeechSession } from "@/lib/speech";
-import { cloudflareApi } from "@/lib/cloudflare-api";
-import { TransactionReviewForm, ParsedTransactionSuggestion } from "@/components/app/assistant/TransactionReviewForm";
-import { lightTap } from "@/lib/haptics";
+import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { ChevronLeft, Mic, Square, Sparkles } from 'lucide-react';
+import { startSpeech, type SpeechSession } from '@/lib/speech';
+import { cloudflareApi } from '@/lib/cloudflare-api';
+import { TransactionReviewForm, ParsedTransactionSuggestion } from '@/components/app/assistant/TransactionReviewForm';
+import { lightTap } from '@/lib/haptics';
 
-type VoiceState = "idle" | "listening" | "transcribed" | "processing" | "ready" | "error";
+type VoiceState = 'idle' | 'listening' | 'transcribed' | 'processing' | 'ready' | 'error';
 
 const WAVE_DELAYS = [0, 0.12, 0.24, 0.12, 0];
 
@@ -32,11 +32,11 @@ function WaveformBars() {
 
 export default function AssistantVoicePage() {
   const router = useRouter();
-  const [state, setState] = useState<VoiceState>("idle");
-  const [transcript, setTranscript] = useState("");
+  const [state, setState] = useState<VoiceState>('idle');
+  const [transcript, setTranscript] = useState('');
   const [suggestion, setSuggestion] = useState<ParsedTransactionSuggestion | null>(null);
-  const [errorMsg, setErrorMsg] = useState("");
-  const transcriptRef = useRef("");
+  const [errorMsg, setErrorMsg] = useState('');
+  const transcriptRef = useRef('');
   const sessionRef = useRef<SpeechSession | null>(null);
 
   useEffect(() => () => sessionRef.current?.stop(), []);
@@ -45,9 +45,9 @@ export default function AssistantVoicePage() {
   // browser/PWA (plugin native tidak punya implementasi web).
   const startListening = async () => {
     lightTap();
-    transcriptRef.current = "";
-    setTranscript("");
-    setState("listening");
+    transcriptRef.current = '';
+    setTranscript('');
+    setState('listening');
     const session = await startSpeech({
       onPartial: (text) => {
         transcriptRef.current = text;
@@ -59,12 +59,12 @@ export default function AssistantVoicePage() {
           transcriptRef.current = text;
           setTranscript(text);
         }
-        setState(transcriptRef.current.trim() ? "transcribed" : "idle");
+        setState(transcriptRef.current.trim() ? 'transcribed' : 'idle');
       },
       onError: (message) => {
         sessionRef.current = null;
         setErrorMsg(message);
-        setState("error");
+        setState('error');
       },
     });
     sessionRef.current = session;
@@ -77,42 +77,46 @@ export default function AssistantVoicePage() {
 
   const process = async () => {
     if (!transcriptRef.current.trim()) return;
-    setState("processing");
+    setState('processing');
     try {
       const result = await cloudflareApi<{ ok: boolean; suggestion?: ParsedTransactionSuggestion; error?: string }>(
-        "/api/member/ai/parse-transaction",
-        { method: "POST", json: { text: transcriptRef.current.trim() } }
+        '/api/member/ai/parse-transaction',
+        { method: 'POST', json: { text: transcriptRef.current.trim() } },
       );
       if (result.ok && result.suggestion) {
         setSuggestion(result.suggestion);
-        setState("ready");
+        setState('ready');
       } else {
-        setErrorMsg(result.error || "AI tidak bisa membaca transaksi dari ucapan ini.");
-        setState("error");
+        setErrorMsg(result.error || 'AI tidak bisa membaca transaksi dari ucapan ini.');
+        setState('error');
       }
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : "AI tidak bisa membaca transaksi dari ucapan ini.");
-      setState("error");
+      setErrorMsg(e instanceof Error ? e.message : 'AI tidak bisa membaca transaksi dari ucapan ini.');
+      setState('error');
     }
   };
 
   const reset = () => {
-    transcriptRef.current = "";
-    setTranscript("");
-    setState("idle");
+    transcriptRef.current = '';
+    setTranscript('');
+    setState('idle');
   };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
       <div className="flex items-center gap-2 px-4 py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
-        <button type="button" onClick={() => router.back()} className="p-1.5 -ml-1.5 text-slate-500 dark:text-slate-400">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="p-1.5 -ml-1.5 text-slate-500 dark:text-slate-400"
+        >
           <ChevronLeft size={22} />
         </button>
         <h1 className="text-sm font-black text-slate-900 dark:text-white">Voice</h1>
       </div>
 
       <div className="flex-1 flex flex-col overflow-y-auto px-5 py-6 pb-[calc(env(safe-area-inset-bottom)+24px)]">
-        {state === "idle" && (
+        {state === 'idle' && (
           <div className="flex-1 flex flex-col items-center justify-center text-center">
             <div className="relative flex items-center justify-center">
               <span className="absolute w-32 h-32 rounded-full bg-indigo-200/60 blur-xl animate-ambient-pulse" />
@@ -133,7 +137,7 @@ export default function AssistantVoicePage() {
               <Mic size={28} />
             </motion.button>
             <div className="flex flex-wrap gap-2 justify-center mt-10 max-w-xs">
-              {["Beli kopi 25rb", "Gajian 5jt", "Bayar listrik 200rb"].map((hint) => (
+              {['Beli kopi 25rb', 'Gajian 5jt', 'Bayar listrik 200rb'].map((hint) => (
                 <span
                   key={hint}
                   className="text-[11px] font-bold text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-full px-3 py-1.5"
@@ -145,7 +149,7 @@ export default function AssistantVoicePage() {
           </div>
         )}
 
-        {state === "listening" && (
+        {state === 'listening' && (
           <div className="flex-1 flex flex-col items-center justify-center text-center">
             <div className="relative flex items-center justify-center">
               <span className="absolute w-32 h-32 rounded-full bg-rose-300/50 blur-xl animate-ambient-pulse" />
@@ -153,9 +157,11 @@ export default function AssistantVoicePage() {
                 <WaveformBars />
               </div>
             </div>
-            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mt-6 uppercase tracking-widest">Mendengarkan...</p>
+            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mt-6 uppercase tracking-widest">
+              Mendengarkan...
+            </p>
             <p className="text-base font-bold text-slate-900 dark:text-white mt-3 max-w-xs min-h-[3lh]">
-              {transcript || "Silakan bicara..."}
+              {transcript || 'Silakan bicara...'}
             </p>
             <motion.button
               type="button"
@@ -168,10 +174,12 @@ export default function AssistantVoicePage() {
           </div>
         )}
 
-        {state === "transcribed" && (
+        {state === 'transcribed' && (
           <div className="space-y-5 pt-6">
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5">
-              <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Hasil Ucapan</label>
+              <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                Hasil Ucapan
+              </label>
               <p className="text-base font-bold text-slate-900 dark:text-white mt-2">{transcript}</p>
             </div>
             <button
@@ -181,36 +189,44 @@ export default function AssistantVoicePage() {
             >
               <Sparkles size={16} /> Proses dengan AI
             </button>
-            <button type="button" onClick={reset} className="w-full py-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold text-sm">
+            <button
+              type="button"
+              onClick={reset}
+              className="w-full py-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold text-sm"
+            >
               Ulangi
             </button>
           </div>
         )}
 
-        {state === "processing" && (
+        {state === 'processing' && (
           <div className="flex flex-col items-center pt-16">
             <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
             <p className="text-sm font-bold text-slate-400 dark:text-slate-500 mt-4">Memproses...</p>
           </div>
         )}
 
-        {state === "ready" && suggestion && (
-          <TransactionReviewForm suggestion={suggestion} onSaved={() => router.push("/app")} />
+        {state === 'ready' && suggestion && (
+          <TransactionReviewForm suggestion={suggestion} onSaved={() => router.push('/app')} />
         )}
 
-        {state === "error" && (
+        {state === 'error' && (
           <div className="space-y-4">
             <div className="rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 px-4 py-3 text-xs font-bold text-rose-600 dark:text-rose-400">
               {errorMsg}
             </div>
-            <button type="button" onClick={reset} className="w-full py-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-sm">
+            <button
+              type="button"
+              onClick={reset}
+              className="w-full py-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-sm"
+            >
               Coba Lagi
             </button>
             <button
               type="button"
               onClick={() => {
                 setSuggestion(null);
-                setState("ready");
+                setState('ready');
               }}
               className="w-full py-3.5 rounded-2xl bg-slate-900 text-white font-bold text-sm"
             >

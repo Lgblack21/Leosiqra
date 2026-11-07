@@ -16,7 +16,8 @@ export const metadata: Metadata = {
   alternates: { canonical: '/panduan/cara-membuat-anggaran-bulanan' },
   openGraph: {
     title: 'Cara Membuat Anggaran Bulanan yang Benar-Benar Dipakai',
-    description: 'Mulai dari pengeluaran nyata, sisihkan tabungan di depan, beri batas tiap kategori, lalu cek lajunya di tengah bulan.',
+    description:
+      'Mulai dari pengeluaran nyata, sisihkan tabungan di depan, beri batas tiap kategori, lalu cek lajunya di tengah bulan.',
     url: 'https://www.leosiqra.com/panduan/cara-membuat-anggaran-bulanan',
     type: 'article',
     locale: 'id_ID',
@@ -25,7 +26,8 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary',
     title: 'Cara Membuat Anggaran Bulanan yang Benar-Benar Dipakai',
-    description: 'Mulai dari pengeluaran nyata, sisihkan tabungan di depan, beri batas tiap kategori, lalu cek lajunya di tengah bulan.',
+    description:
+      'Mulai dari pengeluaran nyata, sisihkan tabungan di depan, beri batas tiap kategori, lalu cek lajunya di tengah bulan.',
     images: ['/images/Logo-new.png'],
   },
 };
@@ -61,28 +63,29 @@ export default function CaraMembuatAnggaranBulananPage() {
     >
       <h2>1. Mulai dari pengeluaran nyata, bukan perkiraan</h2>
       <p>
-        Kesalahan paling umum adalah menulis anggaran berdasarkan &ldquo;rasanya segini&rdquo;. Lihat dulu ke mana uang Anda
-        benar-benar pergi selama 1–3 bulan terakhir: mutasi rekening, riwayat e-wallet, struk, atau{' '}
-        <Link href="/catatan-keuangan-harian">catatan keuangan harian</Link>. Kelompokkan ke beberapa kategori, lalu hitung
-        rata-ratanya. Angka inilah titik awal anggaran Anda.
+        Kesalahan paling umum adalah menulis anggaran berdasarkan &ldquo;rasanya segini&rdquo;. Lihat dulu ke mana uang
+        Anda benar-benar pergi selama 1–3 bulan terakhir: mutasi rekening, riwayat e-wallet, struk, atau{' '}
+        <Link href="/catatan-keuangan-harian">catatan keuangan harian</Link>. Kelompokkan ke beberapa kategori, lalu
+        hitung rata-ratanya. Angka inilah titik awal anggaran Anda.
       </p>
 
       <h2>2. Tentukan pemasukan yang pasti</h2>
       <p>
-        Pakai pemasukan bersih yang benar-benar masuk ke rekening (gaji setelah potongan), bukan gaji kotor. Pemasukan yang
-        tidak tentu — bonus, lembur, hasil jualan sampingan — sebaiknya tidak dipakai untuk menutup kebutuhan rutin. Kalau
-        penghasilan Anda tidak tetap, pakai angka bulan terendah dalam beberapa bulan terakhir sebagai dasar.
+        Pakai pemasukan bersih yang benar-benar masuk ke rekening (gaji setelah potongan), bukan gaji kotor. Pemasukan
+        yang tidak tentu — bonus, lembur, hasil jualan sampingan — sebaiknya tidak dipakai untuk menutup kebutuhan
+        rutin. Kalau penghasilan Anda tidak tetap, pakai angka bulan terendah dalam beberapa bulan terakhir sebagai
+        dasar.
       </p>
 
       <h2>3. Susun pos: tetap, tabungan di depan, lalu variabel</h2>
       <ol>
         <li>
-          <strong>Pos tetap</strong> — sewa/kos, cicilan, listrik, internet, iuran. Nominalnya hampir sama tiap bulan, jadi
-          masukkan lebih dulu.
+          <strong>Pos tetap</strong> — sewa/kos, cicilan, listrik, internet, iuran. Nominalnya hampir sama tiap bulan,
+          jadi masukkan lebih dulu.
         </li>
         <li>
-          <strong>Tabungan dan dana darurat</strong> — perlakukan sebagai &ldquo;tagihan&rdquo; yang dibayar di hari gajian,
-          bukan dari sisa. Urutan prioritasnya dibahas di panduan{' '}
+          <strong>Tabungan dan dana darurat</strong> — perlakukan sebagai &ldquo;tagihan&rdquo; yang dibayar di hari
+          gajian, bukan dari sisa. Urutan prioritasnya dibahas di panduan{' '}
           <Link href="/panduan/cara-menabung-yang-benar">cara menabung yang benar</Link>.
         </li>
         <li>
@@ -90,27 +93,69 @@ export default function CaraMembuatAnggaranBulananPage() {
           penting, karena pos ini yang biasanya bocor.
         </li>
         <li>
-          <strong>Cadangan kecil</strong> — sedikit ruang untuk hal tak terduga yang bukan darurat (hadiah, servis kecil),
-          supaya satu kejadian tidak merusak seluruh anggaran.
+          <strong>Cadangan kecil</strong> — sedikit ruang untuk hal tak terduga yang bukan darurat (hadiah, servis
+          kecil), supaya satu kejadian tidak merusak seluruh anggaran.
         </li>
       </ol>
 
       <h2>4. Contoh anggaran bulanan gaji 4 juta</h2>
-      <p>Contoh untuk lajang yang tinggal di kos tanpa cicilan (angka ilustrasi, sesuaikan dengan kota dan kondisi Anda):</p>
+      <p>
+        Contoh untuk lajang yang tinggal di kos tanpa cicilan (angka ilustrasi, sesuaikan dengan kota dan kondisi Anda):
+      </p>
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Kategori</th><th>Jenis</th><th className="num">Anggaran (Rp)</th></tr>
+            <tr>
+              <th>Kategori</th>
+              <th>Jenis</th>
+              <th className="num">Anggaran (Rp)</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td>Tabungan &amp; dana darurat</td><td>Di depan</td><td className="num">600.000</td></tr>
-            <tr><td>Kos</td><td>Tetap</td><td className="num">1.000.000</td></tr>
-            <tr><td>Listrik, air, pulsa &amp; internet</td><td>Tetap</td><td className="num">300.000</td></tr>
-            <tr><td>Transportasi</td><td>Variabel</td><td className="num">400.000</td></tr>
-            <tr><td>Makan &amp; belanja dapur</td><td>Variabel</td><td className="num">1.100.000</td></tr>
-            <tr><td>Hiburan &amp; jajan</td><td>Variabel</td><td className="num">300.000</td></tr>
-            <tr><td>Cadangan</td><td>Variabel</td><td className="num">300.000</td></tr>
-            <tr><td><strong>Total</strong></td><td></td><td className="num"><strong>4.000.000</strong></td></tr>
+            <tr>
+              <td>Tabungan &amp; dana darurat</td>
+              <td>Di depan</td>
+              <td className="num">600.000</td>
+            </tr>
+            <tr>
+              <td>Kos</td>
+              <td>Tetap</td>
+              <td className="num">1.000.000</td>
+            </tr>
+            <tr>
+              <td>Listrik, air, pulsa &amp; internet</td>
+              <td>Tetap</td>
+              <td className="num">300.000</td>
+            </tr>
+            <tr>
+              <td>Transportasi</td>
+              <td>Variabel</td>
+              <td className="num">400.000</td>
+            </tr>
+            <tr>
+              <td>Makan &amp; belanja dapur</td>
+              <td>Variabel</td>
+              <td className="num">1.100.000</td>
+            </tr>
+            <tr>
+              <td>Hiburan &amp; jajan</td>
+              <td>Variabel</td>
+              <td className="num">300.000</td>
+            </tr>
+            <tr>
+              <td>Cadangan</td>
+              <td>Variabel</td>
+              <td className="num">300.000</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Total</strong>
+              </td>
+              <td></td>
+              <td className="num">
+                <strong>4.000.000</strong>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -123,36 +168,45 @@ export default function CaraMembuatAnggaranBulananPage() {
       <p>
         Anggaran baru berguna kalau dicek sebelum bulan berakhir. Cara sederhana: bandingkan persen anggaran yang sudah
         terpakai dengan persen bulan yang sudah lewat. Misalnya di tanggal 15 (sekitar 50% bulan), kategori makan sudah
-        terpakai Rp700.000 dari Rp1.100.000 atau sekitar 64%. Dengan laju yang sama, akhir bulan kategori ini akan mencapai
-        sekitar Rp1.400.000 — lewat Rp300.000 dari batas (angka ilustrasi).
+        terpakai Rp700.000 dari Rp1.100.000 atau sekitar 64%. Dengan laju yang sama, akhir bulan kategori ini akan
+        mencapai sekitar Rp1.400.000 — lewat Rp300.000 dari batas (angka ilustrasi).
       </p>
       <p>
-        Saat itu Anda masih punya waktu untuk menyesuaikan: kurangi makan di luar selama dua minggu ke depan, atau pindahkan
-        sebagian anggaran hiburan. Kalau baru dicek di akhir bulan, yang tersisa hanya penyesalan.
+        Saat itu Anda masih punya waktu untuk menyesuaikan: kurangi makan di luar selama dua minggu ke depan, atau
+        pindahkan sebagian anggaran hiburan. Kalau baru dicek di akhir bulan, yang tersisa hanya penyesalan.
       </p>
 
       <h2>6. Evaluasi di akhir bulan</h2>
       <ul>
-        <li><strong>Kategori yang selalu lewat batas</strong> tiga bulan berturut-turut: batasnya terlalu kecil, naikkan dan ambil dari pos lain.</li>
-        <li><strong>Kategori yang selalu bersisa jauh</strong>: kecilkan batasnya dan alihkan selisihnya ke tabungan.</li>
-        <li><strong>Pengeluaran tahunan</strong> (pajak kendaraan, perpanjangan langganan, biaya sekolah): bagi dua belas dan sisihkan tiap bulan supaya tidak mengejutkan.</li>
+        <li>
+          <strong>Kategori yang selalu lewat batas</strong> tiga bulan berturut-turut: batasnya terlalu kecil, naikkan
+          dan ambil dari pos lain.
+        </li>
+        <li>
+          <strong>Kategori yang selalu bersisa jauh</strong>: kecilkan batasnya dan alihkan selisihnya ke tabungan.
+        </li>
+        <li>
+          <strong>Pengeluaran tahunan</strong> (pajak kendaraan, perpanjangan langganan, biaya sekolah): bagi dua belas
+          dan sisihkan tiap bulan supaya tidak mengejutkan.
+        </li>
       </ul>
 
       <h2>Kapan butuh aplikasi budgeting?</h2>
       <p>
-        Buku atau spreadsheet sudah cukup kalau Anda rutin mencatat dan menghitung ulang setiap minggu — template dan rumusnya
-        ada di panduan <Link href="/panduan/catat-pengeluaran-di-excel">catat pengeluaran di Excel</Link>. Aplikasi
-        budgeting mulai terasa manfaatnya ketika pencatatan sering tertunda, atau ketika menghitung realisasi tiap kategori
-        secara manual mulai jadi pekerjaan tersendiri.
+        Buku atau spreadsheet sudah cukup kalau Anda rutin mencatat dan menghitung ulang setiap minggu — template dan
+        rumusnya ada di panduan <Link href="/panduan/catat-pengeluaran-di-excel">catat pengeluaran di Excel</Link>.
+        Aplikasi budgeting mulai terasa manfaatnya ketika pencatatan sering tertunda, atau ketika menghitung realisasi
+        tiap kategori secara manual mulai jadi pekerjaan tersendiri.
       </p>
 
       <h2>Membuat anggaran di Leosiqra</h2>
       <p>
-        Di <strong>Leosiqra</strong>, menu <strong>Budget &amp; Target</strong> memungkinkan Anda memasang target per kategori
-        untuk pengeluaran maupun pemasukan, dengan periode bulanan atau tahunan. Realisasinya dihitung dari transaksi yang
-        Anda catat, lengkap dengan persentase dan bilah progres yang berubah merah saat pengeluaran melewati batas. Di halaman
-        AI Leosiqra, muncul peringatan bila laju belanja sebuah kategori diproyeksikan melewati targetnya sebelum akhir bulan.
-        Transaksi bisa dicatat dengan mengetik singkat, suara, atau foto struk, di web maupun aplikasi Android.
+        Di <strong>Leosiqra</strong>, menu <strong>Budget &amp; Target</strong> memungkinkan Anda memasang target per
+        kategori untuk pengeluaran maupun pemasukan, dengan periode bulanan atau tahunan. Realisasinya dihitung dari
+        transaksi yang Anda catat, lengkap dengan persentase dan bilah progres yang berubah merah saat pengeluaran
+        melewati batas. Di halaman AI Leosiqra, muncul peringatan bila laju belanja sebuah kategori diproyeksikan
+        melewati targetnya sebelum akhir bulan. Transaksi bisa dicatat dengan mengetik singkat, suara, atau foto struk,
+        di web maupun aplikasi Android.
       </p>
       <p>
         <em>Panduan ini bersifat edukasi umum, bukan nasihat keuangan. Sesuaikan dengan kondisi dan tujuan Anda.</em>

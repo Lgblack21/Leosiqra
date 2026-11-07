@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -12,7 +12,7 @@ import {
   CreditCard,
   Users,
   FileText,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
@@ -92,20 +92,31 @@ export default function AdminDashboard() {
     };
   }, []);
 
-  const userList = users.filter(u => u.role === 'user' && u.status !== 'GUEST');
+  const userList = users.filter((u) => u.role === 'user' && u.status !== 'GUEST');
 
-  const totalRevenue = payments.filter(p => p.status === 'DISETUJUI').reduce((acc, curr) => acc + (curr.amount || 0), 0);
-  const pendingRevenue = payments.filter(p => p.status === 'MENUNGGU').reduce((acc, curr) => acc + (curr.amount || 0), 0);
-  const pendingTickets = payments.filter(p => p.status === 'MENUNGGU').length;
-  const activePro = userList.filter(u => u.plan === 'PRO' && u.status === 'AKTIF').length;
-  const revenueThisMonth = payments.filter(p => {
-    if (p.status !== 'DISETUJUI') return false;
-    const approvedAt = p.approvedAt ? new Date(p.approvedAt) : null;
-    return approvedAt && approvedAt.getMonth() === new Date().getMonth() && approvedAt.getFullYear() === new Date().getFullYear();
-  }).reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  const totalRevenue = payments
+    .filter((p) => p.status === 'DISETUJUI')
+    .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  const pendingRevenue = payments
+    .filter((p) => p.status === 'MENUNGGU')
+    .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  const pendingTickets = payments.filter((p) => p.status === 'MENUNGGU').length;
+  const activePro = userList.filter((u) => u.plan === 'PRO' && u.status === 'AKTIF').length;
+  const revenueThisMonth = payments
+    .filter((p) => {
+      if (p.status !== 'DISETUJUI') return false;
+      const approvedAt = p.approvedAt ? new Date(p.approvedAt) : null;
+      return (
+        approvedAt &&
+        approvedAt.getMonth() === new Date().getMonth() &&
+        approvedAt.getFullYear() === new Date().getFullYear()
+      );
+    })
+    .reduce((acc, curr) => acc + (curr.amount || 0), 0);
 
-  const conversionRate = userList.length > 0 ? (userList.filter(u => u.plan === 'PRO').length / userList.length * 100).toFixed(1) : '0';
-  const newUsersToday = userList.filter(u => {
+  const conversionRate =
+    userList.length > 0 ? ((userList.filter((u) => u.plan === 'PRO').length / userList.length) * 100).toFixed(1) : '0';
+  const newUsersToday = userList.filter((u) => {
     const createdTime = u.createdAt || u.created_at;
     const d = createdTime ? new Date(createdTime) : null;
     return d && d.toDateString() === new Date().toDateString();
@@ -118,25 +129,33 @@ export default function AdminDashboard() {
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(now.getDate() - i);
-      const dailyRevenue = payments.filter(p => {
-        if (p.status !== 'DISETUJUI') return false;
-        const ad = p.approvedAt ? new Date(p.approvedAt) : null;
-        return ad && ad.toDateString() === d.toDateString();
-      }).reduce((acc, curr) => acc + (curr.amount || 0), 0);
+      const dailyRevenue = payments
+        .filter((p) => {
+          if (p.status !== 'DISETUJUI') return false;
+          const ad = p.approvedAt ? new Date(p.approvedAt) : null;
+          return ad && ad.toDateString() === d.toDateString();
+        })
+        .reduce((acc, curr) => acc + (curr.amount || 0), 0);
       data.push({ day: days[d.getDay()], val: dailyRevenue, date: d.toDateString() });
     }
     return data;
   })();
 
-  const approvedPayments = payments.filter(p => p.status === 'DISETUJUI');
-  const avgApprovedAmount = approvedPayments.length > 0
-    ? approvedPayments.reduce((s, p) => s + (p.amount || 0), 0) / approvedPayments.length
-    : 0;
+  const approvedPayments = payments.filter((p) => p.status === 'DISETUJUI');
+  const avgApprovedAmount =
+    approvedPayments.length > 0
+      ? approvedPayments.reduce((s, p) => s + (p.amount || 0), 0) / approvedPayments.length
+      : 0;
 
   const latestUsers = userList.slice(0, 4);
 
   const quickActions = [
-    { label: 'Verifikasi Pembayaran', note: `${pendingTickets} tiket menunggu`, icon: CreditCard, href: '/admin/pembayaran' },
+    {
+      label: 'Verifikasi Pembayaran',
+      note: `${pendingTickets} tiket menunggu`,
+      icon: CreditCard,
+      href: '/admin/pembayaran',
+    },
     { label: 'Kelola Pelanggan', note: `${userList.length} akun terdaftar`, icon: Users, href: '/admin/user' },
     { label: 'Buka Laporan', note: 'Audit aktivitas admin', icon: FileText, href: '/admin/laporan' },
     { label: 'Atur Billing', note: 'Konfigurasi sistem', icon: SettingsIcon, href: '/admin/pengaturan' },
@@ -162,16 +181,42 @@ export default function AdminDashboard() {
         }
       />
 
-      {/* Core metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <AdminStatCard label="Total Pendapatan" value={`Rp ${totalRevenue.toLocaleString()}`} note="Akumulasi global" icon={TrendingUp} color="text-emerald-600" bg="bg-emerald-50" />
-        <AdminStatCard label="Bulan Ini" value={`Rp ${revenueThisMonth.toLocaleString()}`} note="Periode berjalan" icon={Activity} color="text-blue-600" bg="bg-blue-50" />
-        <AdminStatCard label="Menunggu" value={`Rp ${pendingRevenue.toLocaleString()}`} note={`${pendingTickets} tiket pending`} icon={Clock} color="text-orange-600" bg="bg-orange-50" />
-        <AdminStatCard label="Rata-Rata Transaksi" value={`Rp ${Math.round(avgApprovedAmount).toLocaleString()}`} note={`${approvedPayments.length} disetujui`} icon={Zap} color="text-indigo-600" bg="bg-indigo-50" />
+        <AdminStatCard
+          label="Total Pendapatan"
+          value={`Rp ${totalRevenue.toLocaleString()}`}
+          note="Akumulasi global"
+          icon={TrendingUp}
+          color="text-emerald-600"
+          bg="bg-emerald-50"
+        />
+        <AdminStatCard
+          label="Bulan Ini"
+          value={`Rp ${revenueThisMonth.toLocaleString()}`}
+          note="Periode berjalan"
+          icon={Activity}
+          color="text-blue-600"
+          bg="bg-blue-50"
+        />
+        <AdminStatCard
+          label="Menunggu"
+          value={`Rp ${pendingRevenue.toLocaleString()}`}
+          note={`${pendingTickets} tiket pending`}
+          icon={Clock}
+          color="text-orange-600"
+          bg="bg-orange-50"
+        />
+        <AdminStatCard
+          label="Rata-Rata Transaksi"
+          value={`Rp ${Math.round(avgApprovedAmount).toLocaleString()}`}
+          note={`${approvedPayments.length} disetujui`}
+          icon={Zap}
+          color="text-indigo-600"
+          bg="bg-indigo-50"
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: signals + weekly chart */}
         <div className="lg:col-span-2 space-y-6">
           <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-5">
             <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Sinyal Prioritas</h3>
@@ -197,14 +242,22 @@ export default function AdminDashboard() {
           <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-5">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Tren Mingguan</h3>
-              <p className="text-[11px] font-bold text-slate-400">{weeklyChartData.reduce((s, d) => s + (d.val > 0 ? 1 : 0), 0)} hari aktif</p>
+              <p className="text-[11px] font-bold text-slate-400">
+                {weeklyChartData.reduce((s, d) => s + (d.val > 0 ? 1 : 0), 0)} hari aktif
+              </p>
             </div>
             <div className="flex items-end justify-between px-2 h-40 gap-2">
               {weeklyChartData.map((bar) => (
                 <div key={bar.date} className="flex flex-col items-center gap-2 flex-1">
-                  <div className="w-full h-28 bg-slate-50 rounded-lg relative overflow-hidden" title={`Rp ${bar.val.toLocaleString()}`}>
+                  <div
+                    className="w-full h-28 bg-slate-50 rounded-lg relative overflow-hidden"
+                    title={`Rp ${bar.val.toLocaleString()}`}
+                  >
                     <div
-                      className={cn("absolute bottom-0 left-0 w-full transition-all duration-700 rounded-lg", bar.val > 0 ? "bg-indigo-500" : "bg-transparent")}
+                      className={cn(
+                        'absolute bottom-0 left-0 w-full transition-all duration-700 rounded-lg',
+                        bar.val > 0 ? 'bg-indigo-500' : 'bg-transparent',
+                      )}
                       style={{ height: bar.val > 0 ? `${Math.min((bar.val / 100000) * 100, 100)}%` : '0%' }}
                     />
                   </div>
@@ -217,7 +270,10 @@ export default function AdminDashboard() {
           <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Aktivitas Terbaru</h3>
-              <button onClick={() => router.push('/admin/laporan')} className="text-[11px] font-black text-indigo-600 hover:underline flex items-center gap-1">
+              <button
+                onClick={() => router.push('/admin/laporan')}
+                className="text-[11px] font-black text-indigo-600 hover:underline flex items-center gap-1"
+              >
                 Lihat Semua <ChevronRight size={12} />
               </button>
             </div>
@@ -228,21 +284,33 @@ export default function AdminDashboard() {
             ) : (
               <div className="space-y-2">
                 {logs.map((log, i) => (
-                  <div key={i} className="flex items-center justify-between gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors">
+                  <div
+                    key={i}
+                    className="flex items-center justify-between gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors"
+                  >
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className={cn(
-                        "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0",
-                        log.color === 'indigo' ? "bg-indigo-50 text-indigo-600" :
-                        log.color === 'orange' ? "bg-orange-50 text-orange-600" :
-                        log.color === 'emerald' ? "bg-emerald-50 text-emerald-600" :
-                        log.color === 'rose' ? "bg-rose-50 text-rose-600" : "bg-slate-100 text-slate-600"
-                      )}>
+                      <span
+                        className={cn(
+                          'px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0',
+                          log.color === 'indigo'
+                            ? 'bg-indigo-50 text-indigo-600'
+                            : log.color === 'orange'
+                              ? 'bg-orange-50 text-orange-600'
+                              : log.color === 'emerald'
+                                ? 'bg-emerald-50 text-emerald-600'
+                                : log.color === 'rose'
+                                  ? 'bg-rose-50 text-rose-600'
+                                  : 'bg-slate-100 text-slate-600',
+                        )}
+                      >
                         {log.action}
                       </span>
                       <span className="text-[12px] font-medium text-slate-400 truncate">{log.admin_email}</span>
                     </div>
                     <span className="text-[11px] font-bold text-slate-300 shrink-0">
-                      {log.created_at ? new Date(log.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : ''}
+                      {log.created_at
+                        ? new Date(log.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                        : ''}
                     </span>
                   </div>
                 ))}
@@ -251,7 +319,6 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Right: quick actions + latest members */}
         <div className="space-y-6">
           <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-3">
             <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-2">Akses Cepat</h3>
@@ -268,7 +335,10 @@ export default function AdminDashboard() {
                   <p className="text-[13px] font-black text-slate-900">{action.label}</p>
                   <p className="text-[11px] font-medium text-slate-400 truncate">{action.note}</p>
                 </div>
-                <ChevronRight size={14} className="text-slate-300 group-hover:text-indigo-600 transition-colors shrink-0" />
+                <ChevronRight
+                  size={14}
+                  className="text-slate-300 group-hover:text-indigo-600 transition-colors shrink-0"
+                />
               </button>
             ))}
           </div>
@@ -282,26 +352,42 @@ export default function AdminDashboard() {
                 {latestUsers.map((member, i) => (
                   <div
                     key={i}
-                    onClick={() => router.push(`/admin/user?q=${encodeURIComponent(member.email || member.name || '')}`)}
+                    onClick={() =>
+                      router.push(`/admin/user?q=${encodeURIComponent(member.email || member.name || '')}`)
+                    }
                     className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-all cursor-pointer group"
                   >
-                    {(member.photoURL || member.photo_url) ? (
+                    {member.photoURL || member.photo_url ? (
                       <div className="relative w-9 h-9 rounded-lg overflow-hidden bg-slate-100 shrink-0">
-                        <Image src={member.photoURL || member.photo_url || ''} alt={member.name || member.email || 'User'} fill className="object-cover" />
+                        <Image
+                          src={member.photoURL || member.photo_url || ''}
+                          alt={member.name || member.email || 'User'}
+                          fill
+                          className="object-cover"
+                        />
                       </div>
                     ) : (
-                      <div className={cn(
-                        "w-9 h-9 rounded-lg flex items-center justify-center text-[11px] font-black text-white shrink-0",
-                        member.plan === 'PRO' ? "bg-indigo-600" : "bg-slate-400"
-                      )}>
+                      <div
+                        className={cn(
+                          'w-9 h-9 rounded-lg flex items-center justify-center text-[11px] font-black text-white shrink-0',
+                          member.plan === 'PRO' ? 'bg-indigo-600' : 'bg-slate-400',
+                        )}
+                      >
                         {member.name?.[0]?.toUpperCase() || 'U'}
                       </div>
                     )}
                     <div className="flex flex-col min-w-0 flex-1">
-                      <span className="text-[13px] font-black text-slate-900 truncate">{member.name || 'User Anonymous'}</span>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{member.plan || 'FREE'} &middot; {member.status || 'AKTIF'}</span>
+                      <span className="text-[13px] font-black text-slate-900 truncate">
+                        {member.name || 'User Anonymous'}
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                        {member.plan || 'FREE'} &middot; {member.status || 'AKTIF'}
+                      </span>
                     </div>
-                    <ChevronRight size={14} className="text-slate-300 group-hover:text-indigo-600 transition-colors shrink-0" />
+                    <ChevronRight
+                      size={14}
+                      className="text-slate-300 group-hover:text-indigo-600 transition-colors shrink-0"
+                    />
                   </div>
                 ))}
               </div>

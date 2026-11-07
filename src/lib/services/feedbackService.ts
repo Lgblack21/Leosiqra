@@ -22,7 +22,13 @@ export interface FeedbackItem {
 export const FEEDBACK_MAX_CHARS = 1000;
 
 export const feedbackService = {
-  send(input: { category: FeedbackCategory; rating: number | null; message: string; page?: string; platform: 'web' | 'app' }) {
+  send(input: {
+    category: FeedbackCategory;
+    rating: number | null;
+    message: string;
+    page?: string;
+    platform: 'web' | 'app';
+  }) {
     return cloudflareApi<{ ok: true; id: string }>('/api/member/feedback', { method: 'POST', json: input });
   },
   async mine() {
@@ -34,6 +40,9 @@ export const feedbackService = {
     return r.items;
   },
   adminUpdate(id: string, patch: { status?: FeedbackStatus; reply?: string }) {
-    return cloudflareApi<{ ok: true }>(`/api/admin/feedback/${encodeURIComponent(id)}`, { method: 'PATCH', json: patch });
+    return cloudflareApi<{ ok: true }>(`/api/admin/feedback/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      json: patch,
+    });
   },
 };

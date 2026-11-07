@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from 'react';
 import { ChevronDown, Save } from 'lucide-react';
@@ -21,7 +21,7 @@ export const BudgetModal = ({ userId, isOpen, onClose }: BudgetModalProps) => {
     type: 'pengeluaran' as Budget['type'],
     category: '',
     amount: '',
-    period: 'monthly' as Budget['period']
+    period: 'monthly' as Budget['period'],
   });
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
@@ -30,7 +30,7 @@ export const BudgetModal = ({ userId, isOpen, onClose }: BudgetModalProps) => {
     if (!userId || !isOpen) return;
     const q = query(collection(db, 'categories'), where('userId', '==', userId));
     const unsub = onSnapshot(q, (snap) => {
-      const names = snap.docs.map(doc => doc.data().category as string);
+      const names = snap.docs.map((doc) => doc.data().category as string);
       const uniqueNames = Array.from(new Set(names));
       setAvailableCategories(uniqueNames);
     });
@@ -47,12 +47,12 @@ export const BudgetModal = ({ userId, isOpen, onClose }: BudgetModalProps) => {
         type: formData.type,
         category: formData.category,
         amount: parseFloat(formData.amount),
-        period: formData.period
+        period: formData.period,
       });
       onClose();
       setFormData({ type: 'pengeluaran', category: '', amount: '', period: 'monthly' });
     } catch (err) {
-      console.error("Error creating budget:", err);
+      console.error('Error creating budget:', err);
       setError(err instanceof Error ? err.message : 'Gagal menyimpan budget. Silakan coba lagi.');
     } finally {
       setLoading(false);
@@ -60,12 +60,7 @@ export const BudgetModal = ({ userId, isOpen, onClose }: BudgetModalProps) => {
   };
 
   return (
-    <Modal 
-      isOpen={isOpen} 
-      onClose={onClose} 
-      title="Set Budget Limit Baru"
-      maxWidth="max-w-md"
-    >
+    <Modal isOpen={isOpen} onClose={onClose} title="Set Budget Limit Baru" maxWidth="max-w-md">
       <div className="space-y-5">
         {error && (
           <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-sm font-medium text-rose-600">
@@ -77,72 +72,89 @@ export const BudgetModal = ({ userId, isOpen, onClose }: BudgetModalProps) => {
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe</label>
             <div className="relative">
-              <select 
+              <select
                 value={formData.type}
-                onChange={(e) => setFormData({...formData, type: e.target.value as Budget['type']})}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value as Budget['type'] })}
                 className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-6 text-sm font-bold text-slate-700 transition-all cursor-pointer capitalize"
               >
                 <option value="pengeluaran">Pengeluaran</option>
                 <option value="pemasukan">Pemasukan</option>
               </select>
-              <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+              <ChevronDown
+                className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                size={16}
+              />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kategori Budget</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+              Kategori Budget
+            </label>
             <div className="relative">
-              <select 
+              <select
                 value={formData.category}
-                onChange={(e) => setFormData({...formData, category: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-6 text-sm font-bold text-slate-700 transition-all cursor-pointer"
               >
                 <option value="">Pilih Kategori</option>
                 {availableCategories.map((cat, idx) => (
-                  <option key={idx} value={cat}>{cat}</option>
+                  <option key={idx} value={cat}>
+                    {cat}
+                  </option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+              <ChevronDown
+                className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                size={16}
+              />
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal Limit</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+              Nominal Limit
+            </label>
             <div className="relative">
               <span className="absolute left-6 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
               <NumberInput
                 value={formData.amount}
-                onChange={(val) => setFormData({...formData, amount: val})}
+                onChange={(val) => setFormData({ ...formData, amount: val })}
                 placeholder="0"
                 className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 pl-14 pr-6 text-sm font-bold text-slate-700 transition-all"
               />
             </div>
           </div>
-          
+
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Periode</label>
             <div className="relative">
-              <select 
+              <select
                 value={formData.period}
-                onChange={(e) => setFormData({...formData, period: e.target.value as 'monthly' | 'yearly'})}
+                onChange={(e) => setFormData({ ...formData, period: e.target.value as 'monthly' | 'yearly' })}
                 className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-6 text-sm font-bold text-slate-700 transition-all cursor-pointer"
               >
                 <option value="monthly">Bulanan</option>
                 <option value="yearly">Tahunan</option>
               </select>
-              <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+              <ChevronDown
+                className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                size={16}
+              />
             </div>
           </div>
         </div>
 
-        <button 
+        <button
           onClick={handleCreate}
           disabled={loading || !formData.category || !formData.amount}
           className="w-full bg-indigo-600 disabled:bg-slate-300 flex items-center justify-center gap-3 py-4 rounded-xl text-sm font-black text-white transition-all shadow-xl shadow-indigo-100 mt-6"
         >
-          {loading ? 'Menyimpan...' : (
+          {loading ? (
+            'Menyimpan...'
+          ) : (
             <>
               <Save size={18} />
               Simpan Budget
@@ -153,4 +165,3 @@ export const BudgetModal = ({ userId, isOpen, onClose }: BudgetModalProps) => {
     </Modal>
   );
 };
-

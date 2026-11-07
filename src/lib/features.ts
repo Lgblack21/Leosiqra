@@ -1,5 +1,14 @@
 import {
-  Bot, PieChart, TrendingUp, Repeat, ShieldCheck,
+  Bot,
+  Footprints,
+  PieChart,
+  TrendingUp,
+  Repeat,
+  ShieldCheck,
+  Radar,
+  Sprout,
+  Timer,
+  NotebookPen,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -9,30 +18,115 @@ import {
 // Daftar id WAJIB sama dengan PREF_FEATURES di Worker (validasi server).
 
 export type FeatureId =
-  | 'ai' | 'kartu' | 'tabungan' | 'hutang' | 'investasi' | 'transfer' | 'rutin'
-  | 'dompet_bersama' | 'pasar' | 'tahunan' | 'pajak' | 'impor' | 'kotak_masuk';
+  | 'ai'
+  | 'kartu'
+  | 'tabungan'
+  | 'hutang'
+  | 'investasi'
+  | 'transfer'
+  | 'rutin'
+  | 'dompet_bersama'
+  | 'pasar'
+  | 'tahunan'
+  | 'pajak'
+  | 'impor'
+  | 'kotak_masuk'
+  | 'jejak'
+  | 'langganan'
+  | 'ladang'
+  | 'fokus'
+  | 'cerita';
 
 export type Feature = { id: FeatureId; label: string; href: string; icon: LucideIcon; tint: string };
 
 export const FEATURES: Feature[] = [
-  { id: 'ai', label: 'AI Leo', href: '/membership/ai-leosiqra', icon: Bot, tint: 'from-indigo-50 to-indigo-100 text-indigo-600' },
-  { id: 'investasi', label: 'Investasiku', href: '/membership/investment', icon: TrendingUp, tint: 'from-blue-50 to-blue-100 text-blue-600' },
+  {
+    id: 'ai',
+    label: 'AI Leo',
+    href: '/membership/ai-leosiqra',
+    icon: Bot,
+    tint: 'from-indigo-50 to-indigo-100 text-indigo-600',
+  },
+  {
+    id: 'investasi',
+    label: 'Investasiku',
+    href: '/membership/investment',
+    icon: TrendingUp,
+    tint: 'from-blue-50 to-blue-100 text-blue-600',
+  },
   // id 'tabungan' dipertahankan (preferensi tersimpan & validasi Worker); isinya kini halaman Kekayaan.
-  { id: 'tabungan', label: 'Kekayaan', href: '/membership/kekayaan', icon: PieChart, tint: 'from-emerald-50 to-emerald-100 text-emerald-600' },
-  { id: 'rutin', label: 'Transaksi Rutin', href: '/membership/recurring', icon: Repeat, tint: 'from-teal-50 to-teal-100 text-teal-600' },
-  { id: 'pajak', label: 'Pajak Center', href: '/membership/pajak-center', icon: ShieldCheck, tint: 'from-emerald-50 to-emerald-100 text-emerald-600' },
+  {
+    id: 'tabungan',
+    label: 'Kekayaan',
+    href: '/membership/kekayaan',
+    icon: PieChart,
+    tint: 'from-emerald-50 to-emerald-100 text-emerald-600',
+  },
+  {
+    id: 'jejak',
+    label: 'Jejak Uang',
+    href: '/membership/jejak-uang',
+    icon: Footprints,
+    tint: 'from-lime-50 to-lime-100 text-lime-600',
+  },
+  {
+    id: 'langganan',
+    label: 'Langgananku',
+    href: '/membership/langganan',
+    icon: Radar,
+    tint: 'from-violet-50 to-violet-100 text-violet-600',
+  },
+  {
+    id: 'ladang',
+    label: 'Ladangku',
+    href: '/membership/ladang',
+    icon: Sprout,
+    tint: 'from-emerald-50 to-emerald-100 text-emerald-600',
+  },
+  {
+    id: 'fokus',
+    label: 'Fokus bareng Leo',
+    href: '/membership/fokus',
+    icon: Timer,
+    tint: 'from-indigo-50 to-violet-100 text-indigo-600',
+  },
+  {
+    id: 'cerita',
+    label: 'Cerita Hari Ini',
+    href: '/membership/cerita',
+    icon: NotebookPen,
+    tint: 'from-amber-50 to-pink-100 text-pink-600',
+  },
+  {
+    id: 'rutin',
+    label: 'Transaksi Rutin',
+    href: '/membership/recurring',
+    icon: Repeat,
+    tint: 'from-teal-50 to-teal-100 text-teal-600',
+  },
+  {
+    id: 'pajak',
+    label: 'Pajak Center',
+    href: '/membership/pajak-center',
+    icon: ShieldCheck,
+    tint: 'from-emerald-50 to-emerald-100 text-emerald-600',
+  },
 ];
 
 // Bawaan = isi menu samping sebelum fitur ini ada (perilaku lama tidak berubah).
-// 'kartu' (Kartu Saya) dihapus 2026-10-28 — dilebur ke Rekening; 'pasar' (Data
-// Pasar) dihapus 2026-10-29 — dilebur ke Investasiku; 'transfer' (Transfer &
-// Top Up) dihapus 2026-10-29 — datanya di Riwayat Transaksi (filter Transfer);
-// 'hutang' (Hutang & Piutang) dilebur 2026-10-30 ke Kekayaan (= id 'tabungan'),
-// lihat normalizeFeatures. 2026-10-30: 'tahunan' dihapus (dobel dengan Laporan →
-// Tahunan); 'dompet_bersama' & 'impor' keluar dari menu (ada di Pengaturan /
-// Catat Transaksi); 'kotak_masuk' pindah ke ikon di samping lonceng. Id-nya tetap sah di tipe
-// & Worker (preferensi lama), tapi tidak lagi ditampilkan.
-export const DEFAULT_FEATURES: FeatureId[] = ['ai', 'tabungan', 'investasi'];
+// Id yang sudah dilebur/keluar menu (kartu, pasar, transfer, hutang, tahunan,
+// dompet_bersama, impor, kotak_masuk) tetap sah di tipe & Worker untuk
+// preferensi lama, tapi tidak lagi ditampilkan — lihat normalizeFeatures.
+export const DEFAULT_FEATURES: FeatureId[] = [
+  'ai',
+  'tabungan',
+  'investasi',
+  'jejak',
+  'langganan',
+  'ladang',
+  'fokus',
+  'cerita',
+];
 
 const BY_ID = new Map(FEATURES.map((f) => [f.id, f]));
 export const isShownFeature = (id: string) => BY_ID.has(id as FeatureId);
