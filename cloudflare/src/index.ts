@@ -8684,7 +8684,7 @@ const withAiQuota = async (request: Request, env: Env, kind: AiKind | "scan-if-i
       code: "ai_limit", kind: k, limit: q.limit, pro: q.pro,
     }, { status: 429 });
   }
-  // Gagal apa pun (validasi, AI belum aktif, gangguan, atau handler melempar error) → jatah kembali.
+  // Gagal sebelum/karena AI (validasi, AI belum aktif, gangguan, atau handler melempar error) → jatah kembali.
   let res: Response;
   try {
     res = await run();
@@ -8692,7 +8692,12 @@ const withAiQuota = async (request: Request, env: Env, kind: AiKind | "scan-if-i
     await releaseAiQuota(env, userId, k);
     throw e;
   }
-  if (!res.ok) await releaseAiQuota(env, userId, k);
+  // 422 tanpa code ai_unavailable = model SUDAH dipanggil (berbayar) tapi hasilnya "bukan transaksi"
+  // → jatah tetap terpakai; kalau dikembalikan, foto apa saja bisa di-scan tanpa batas.
+  if (!res.ok) {
+    const billed = res.status === 422 && (await res.clone().json().then((b: { code?: unknown }) => b?.code !== "ai_unavailable").catch(() => false));
+    if (!billed) await releaseAiQuota(env, userId, k);
+  }
   return res;
 };
 
@@ -13126,9 +13131,11 @@ const storyAiQuota = async (env: Env, userId: string, plan: string) => {
 // photo (opsional) = foto pengguna yang diubah jadi ilustrasi (image-to-image). Model cadangan
 // dicoba kalau yang pertama menolak / tidak tersedia di akun OpenRouter.
 const STORY_IMAGE_MODELS = ["google/gemini-2.5-flash-image", "google/gemini-2.5-flash-image-preview"];
+// Pesan galat yang memang ditulis untuk pengguna — selain ini (D1/R2/jaringan) jangan diteruskan mentah.
+class StoryAiError extends Error {}
 const generateStoryImage = async (env: Env, prompt: string, photo?: { bytes: Uint8Array; type: string } | null) => {
   const openRouter = await getOpenRouterKey(env);
-  if (!openRouter) throw new Error("AI belum aktif (API key OpenRouter belum dipasang admin).");
+  if (!openRouter) throw new StoryAiError("AI belum aktif (API key OpenRouter belum dipasang admin).");
   const models = env.OPENROUTER_IMAGE_MODEL ? [env.OPENROUTER_IMAGE_MODEL, ...STORY_IMAGE_MODELS.filter((m) => m !== env.OPENROUTER_IMAGE_MODEL)] : STORY_IMAGE_MODELS;
   const content = photo
     ? [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: `data:${photo.type};base64,${bytesToBase64(photo.bytes)}` } }]
@@ -13169,7 +13176,7 @@ const generateStoryImage = async (env: Env, prompt: string, photo?: { bytes: Uin
     if (!type || bytes.length > 8 * 1024 * 1024) { lastError = "Gambar dari AI tidak valid."; continue; }
     return { bytes, type };
   }
-  throw new Error(lastError);
+  throw new StoryAiError(lastError);
 };
 
 // Gaya ilustrasi (generik — tanpa nama studio/merek).
@@ -14064,7 +14071,7 @@ async function handleMemberStories(request: Request, env: Env, url: URL) {
       return json({
         story: row ? { date: row.date, mood: row.mood, text: row.text, has_photo: Boolean(row.photo_key), has_ai: Boolean(row.ai_key), updated_at: row.updated_at } : null,
         summary: await storyDaySummary(env, userId, date),
-        ai: await storyAiQuota(env, userId, user.plan),
+        ai: await storyAiQuota(env, userId, (await isProUser(env, userId)) ? "PRO" : "FREE"),
       });
     }
     if (!sub && request.method === "PUT") {
@@ -14147,7 +14154,9 @@ async function handleMemberStories(request: Request, env: Env, url: URL) {
       // 1) Pakai jatah gratis bulan ini (atomik) ATAU potong koin (atomik, bersyarat saldo cukup).
       // Kunci "day" berisi bulan (YYYY-MM) — nama kolom lama dipertahankan.
       const today = todayWIB().slice(0, 7);
-      const free = user.plan === "PRO" ? STORY_AI_FREE_PRO : STORY_AI_FREE_FREE;
+      // PRO yang sudah habis: plan tetap "PRO" di DB (readSession hanya menurunkan status) → cek expired_at.
+      const pro = await isProUser(env, userId);
+      const free = pro ? STORY_AI_FREE_PRO : STORY_AI_FREE_FREE;
       let charged: "free" | "coin" | null = null;
       const chargeKey = `story_ai:${userId}:${generateId()}`;
       if (free > 0) {
@@ -14177,7 +14186,6 @@ async function handleMemberStories(request: Request, env: Env, url: URL) {
         await env.FILES_BUCKET.put(key, img.bytes, { httpMetadata: { contentType: img.type } });
         await env.DB.prepare("UPDATE stories SET ai_key = ?, updated_at = ? WHERE user_id = ? AND date = ?").bind(key, nowIso(), userId, date).run();
         if (row?.ai_key) await env.FILES_BUCKET.delete(row.ai_key).catch(() => undefined);
-        return json({ ok: true, charged, ai: await storyAiQuota(env, userId, user.plan) });
       } catch (e) {
         if (charged === "free") {
           await env.DB.prepare(
@@ -14186,8 +14194,11 @@ async function handleMemberStories(request: Request, env: Env, url: URL) {
         } else {
           await grantCoins(env, userId, STORY_AI_PRICE, "story_ai_refund", `refund:${chargeKey}`, `Pengembalian ilustrasi ${date}`).catch(() => undefined);
         }
-        return json({ error: e instanceof Error ? e.message : "Gagal membuat ilustrasi." }, { status: 502 });
+        if (!(e instanceof StoryAiError)) console.error("Ilustrasi Cerita gagal:", e instanceof Error ? e.message : String(e));
+        return json({ error: e instanceof StoryAiError ? e.message : "Gagal membuat ilustrasi. Coba lagi sebentar lagi." }, { status: 502 });
       }
+      // Di luar try: gambar sudah tersimpan — galat saat membaca sisa jatah tidak boleh me-refund.
+      return json({ ok: true, charged, ai: await storyAiQuota(env, userId, pro ? "PRO" : "FREE").catch(() => null) });
     }
     return json({ error: "Not found" }, { status: 404 });
   } catch (e) {
