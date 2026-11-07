@@ -52,6 +52,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.2.0 | 7 Nov 2026 | Halaman Riwayat versi |
 | 3.3.0 | 7 Nov 2026 | Makanku & Leo di tiap fitur |
 | 3.3.1 | 7 Nov 2026 | Makanku jadi Sehatku, layar penuh |
+| 3.4.0 | 7 Nov 2026 | Analisis makanan dari ketikan & bayar koin |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -65,6 +66,14 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.4.0 — 2026-11-07 — Analisis makanan dari ketikan & bayar koin
+
+- Sehatku › Makan: Leo kini juga bisa menghitung kalori, protein, karbohidrat, dan lemak **dari ketikan** — tulis
+  menunya (mis. "nasi goreng telur + es teh manis") lalu tekan **Hitung pakai Leo**. Catatan lama juga bisa dihitung
+  ulang.
+- Analisis makanan (foto atau ketikan) gratis 1× per hari (PRO 10×). Setelah itu 200 koin per analisis; kalau
+  analisisnya gagal, jatah atau koinnya otomatis dikembalikan.
 
 ## 3.3.1 — 2026-11-07 — Makanku jadi Sehatku, layar penuh
 

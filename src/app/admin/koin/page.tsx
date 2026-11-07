@@ -85,6 +85,8 @@ const KIND: Record<string, { label: string; group: Group }> = {
   story_ai_refund: { label: 'Refund ilustrasi AI', group: 'pakai' },
   redeem_pro: { label: 'Tukar PRO', group: 'pakai' },
   story_ai: { label: 'Ilustrasi AI', group: 'pakai' },
+  meal_ai: { label: 'Analisis makanan', group: 'pakai' },
+  meal_ai_refund: { label: 'Refund analisis makanan', group: 'pakai' },
   app_activation: { label: 'Aktivasi app', group: 'pakai' },
   withdraw: { label: 'Tarik tunai', group: 'tarik' },
   withdraw_refund: { label: 'Refund tarik tunai', group: 'tarik' },

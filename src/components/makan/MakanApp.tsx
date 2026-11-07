@@ -387,10 +387,17 @@ export function MakanApp({ variant = 'web', embedded = false }: { variant?: 'web
               }}
             />
             {ai ? (
-              <p className="mt-2.5 flex items-center justify-center gap-1.5 text-center text-[12px] text-slate-500 dark:text-slate-400">
+              <p className="mt-2.5 flex flex-wrap items-center justify-center gap-x-1.5 text-center text-[12px] text-slate-500 dark:text-slate-400">
                 <Sparkles size={13} className="text-amber-500" />
-                Analisis AI tersisa {aiLeft} dari {ai.limit} hari ini
-                {!ai.pro ? ` · PRO ${ai.proLimit}×/hari` : ''}
+                {aiLeft > 0 ? (
+                  <span>
+                    Gratis {aiLeft}× lagi hari ini · berikutnya {num(ai.price)} koin
+                  </span>
+                ) : (
+                  <span>Jatah gratis hari ini habis · {num(ai.price)} koin per analisis</span>
+                )}
+                <span className="font-semibold text-slate-600 dark:text-slate-300">· saldo {num(ai.coins)} koin</span>
+                {!ai.pro ? <span>· PRO gratis {ai.proLimit}×/hari</span> : null}
               </p>
             ) : null}
           </section>
@@ -528,7 +535,10 @@ export function MakanApp({ variant = 'web', embedded = false }: { variant?: 'web
           date={date}
           today={today}
           day={data}
-          onClose={() => setSheet(null)}
+          onClose={() => {
+            setSheet(null);
+            void load(); // jatah/koin analisis mungkin sudah terpakai
+          }}
           onSaved={(msg) => {
             setSheet(null);
             setToast(msg);

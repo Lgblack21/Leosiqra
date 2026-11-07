@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live: rilis 3.3.1, run 42365175967; migrasi 0036 & 0037 menunggu Bos)
+Terakhir diperbarui: 2026-11-07 (live 3.3.1; 3.4.0 menunggu "gas"; migrasi 0036 & 0037 menunggu Bos)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,17 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-07 — RILIS 3.4.0 (branch `claude/makan-ai-teks-20261107`): analisis makanan dari ketikan + bayar koin. Tanpa SQL baru.**
+  - `/api/member/meals/analyze` terima `text` (≥3, ≤300 karakter) tanpa foto. PATCH meals kini juga items/score/tip/ai.
+  - Biaya (keputusan Bos): AI_LIMITS.meal FREE 1 / PRO 10 per hari gratis, lalu MEAL_AI_PRICE = 200 koin.
+    `withMealCharge` (menggantikan withAiQuota utk meal): ambil jatah → kalau habis debit koin atomik bersyarat saldo
+    (kind `meal_ai`) → gagal/!ok → release jatah / refund `meal_ai_refund` (idem `refund:<kunci>`). Tak cukup → 402
+    code no_coins. Respons sukses + `charged` ('free'|'coin') & `price`. Grup admin: pakai.
+  - UI: tombol "Hitung pakai Leo / Hitung ulang" di samping kolom Makan apa?, chip "−200 koin"/"jatah gratis", info
+    jatah + saldo koin di bawah tombol Foto.
+  - Dites lokal: tanpa input 400; jatah gratis + AI gagal → jatah 0 lagi; jatah habis & koin 0 → 402; koin 500 →
+    −200 lalu +200 refund (saldo 500, 2 baris ledger); GET ai {used, limit, price, coins}. **Belum: AI asli.**
 
 - **2026-11-07 — RILIS 3.3.1: LIVE (run 42365175967, commit 271a2ea, Release v3.3.1): Makanku → Sehatku (layar penuh). Tanpa SQL baru (0037 tetap perlu).**
   - `src/components/sehat/SehatApp.tsx`: bar atas + dock (tab hash #makan/#asuransi/#cek; Asuransi & Cek = "segera").

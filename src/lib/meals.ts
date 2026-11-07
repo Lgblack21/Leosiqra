@@ -41,7 +41,7 @@ export type MealDay = {
   target: number;
   foodSpendWeek: number;
   accounts: { id: string; name: string }[];
-  ai: { used: number; limit: number; pro: boolean; proLimit: number };
+  ai: { used: number; limit: number; pro: boolean; proLimit: number; price: number; coins: number };
 };
 export type MealAnalysis = {
   name: string;
@@ -54,6 +54,8 @@ export type MealAnalysis = {
   price_estimate: number | null;
   score: number | null;
   tip: string;
+  charged?: 'free' | 'coin';
+  price?: number;
 };
 export type NewMeal = {
   request_id: string;
@@ -96,8 +98,9 @@ export const newRequestId = () =>
 
 export const mealService = {
   day: (date: string) => cloudflareApi<MealDay>(`/api/member/meals?date=${date}`, { cache: 'no-store' }),
-  analyze: (imageBase64: string, hint?: string) =>
-    cloudflareApi<MealAnalysis>('/api/member/meals/analyze', { method: 'POST', json: { imageBase64, hint } }),
+  // Dari foto (imageBase64) ATAU dari ketikan menu (text). Kuota "analisis makanan" yang sama.
+  analyze: (input: { imageBase64?: string; text?: string }) =>
+    cloudflareApi<MealAnalysis>('/api/member/meals/analyze', { method: 'POST', json: input }),
   create: (meal: NewMeal) =>
     cloudflareApi<{ ok: true; id: string; tx_id?: string | null; duplicate?: boolean }>('/api/member/meals', {
       method: 'POST',
@@ -105,7 +108,9 @@ export const mealService = {
     }),
   update: (
     id: string,
-    patch: Partial<Pick<Meal, 'name' | 'slot' | 'time' | 'kcal' | 'protein' | 'carbs' | 'fat' | 'note'>>,
+    patch: Partial<
+      Pick<Meal, 'name' | 'slot' | 'time' | 'kcal' | 'protein' | 'carbs' | 'fat' | 'note' | 'items' | 'score' | 'tip'>
+    > & { ai?: boolean },
   ) => cloudflareApi<{ ok: true }>(`/api/member/meals/${id}`, { method: 'PATCH', json: patch }),
   remove: (id: string) =>
     cloudflareApi<{ ok: true; tx_kept: boolean }>(`/api/member/meals/${id}`, { method: 'DELETE' }),

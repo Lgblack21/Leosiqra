@@ -93,6 +93,35 @@ export function MealSheet({
     };
   }, [onClose]);
 
+  const apply = (a: MealAnalysis) => {
+    setAnalysis(a);
+    setName(a.name);
+    setItems(a.items);
+    setKcal(toStr(a.kcal));
+    setProtein(toStr(a.protein));
+    setCarbs(toStr(a.carbs));
+    setFat(toStr(a.fat));
+    if (a.price_estimate && !editing) {
+      setPrice(String(a.price_estimate));
+      setRecord(accounts.length > 0);
+    }
+  };
+  // Tanpa foto (atau AI salah tebak): ketik menunya, Leo hitung gizinya.
+  const [textBusy, setTextBusy] = useState(false);
+  const analyzeText = async () => {
+    const t = name.trim();
+    if (t.length < 3 || textBusy) return;
+    setTextBusy(true);
+    setError('');
+    try {
+      apply(await mealService.analyze({ text: [t, note.trim()].filter(Boolean).join(' — ') }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Leo belum bisa menghitung. Coba lagi.');
+    } finally {
+      setTextBusy(false);
+    }
+  };
+
   // Foto baru: perkecil → pratinjau → minta Leo menaksir. Gagal → tetap bisa isi manual.
   useEffect(() => {
     if (!file) return;
@@ -103,19 +132,9 @@ export function MealSheet({
         if (cancelled) return;
         setPhotoB64(b64);
         setPreview(`data:image/jpeg;base64,${b64}`);
-        const a = await mealService.analyze(b64);
+        const a = await mealService.analyze({ imageBase64: b64 });
         if (cancelled) return;
-        setAnalysis(a);
-        setName(a.name);
-        setItems(a.items);
-        setKcal(toStr(a.kcal));
-        setProtein(toStr(a.protein));
-        setCarbs(toStr(a.carbs));
-        setFat(toStr(a.fat));
-        if (a.price_estimate) {
-          setPrice(String(a.price_estimate));
-          setRecord(accounts.length > 0);
-        }
+        apply(a);
       } catch (e) {
         if (!cancelled) setError(`${e instanceof Error ? e.message : 'Analisis gagal.'} Kamu tetap bisa isi manual.`);
       } finally {
@@ -151,6 +170,7 @@ export function MealSheet({
           carbs: numOrNull(carbs),
           fat: numOrNull(fat),
           note: note.trim() || null,
+          ...(analysis ? { items, score: analysis.score, tip: analysis.tip || null, ai: true } : {}),
         });
         onSaved('Catatan makan diperbarui.');
       } else {
@@ -284,6 +304,20 @@ export function MealSheet({
             </div>
           ) : null}
 
+          {analysis?.charged ? (
+            <p
+              className={cn(
+                'rounded-full px-3 py-1 text-center text-[11.5px] font-bold',
+                analysis.charged === 'coin'
+                  ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'
+                  : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
+              )}
+            >
+              {analysis.charged === 'coin'
+                ? `−${analysis.price ?? 200} koin dipakai untuk analisis ini`
+                : 'Pakai jatah analisis gratis hari ini'}
+            </p>
+          ) : null}
           {tip ? (
             <p className="flex gap-2 rounded-2xl bg-amber-50 px-3.5 py-2.5 text-[13px] leading-relaxed text-amber-900 dark:bg-amber-500/10 dark:text-amber-100">
               <Sparkles size={15} className="mt-0.5 shrink-0 text-amber-500" /> {tip}
@@ -296,14 +330,31 @@ export function MealSheet({
             </p>
           ) : null}
 
-          <Field label="Nama makanan">
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={60}
-              placeholder="mis. Nasi goreng telur"
-              className={inputCls}
-            />
+          <Field label="Makan apa?">
+            <div className="flex gap-2">
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !analysis && void analyzeText()}
+                maxLength={60}
+                placeholder="mis. Nasi goreng telur + es teh manis"
+                className={inputCls}
+              />
+              <button
+                type="button"
+                onClick={() => void analyzeText()}
+                disabled={name.trim().length < 3 || textBusy || analyzing}
+                className="flex shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-3 text-[13px] font-bold text-white shadow-md shadow-rose-500/20 disabled:opacity-40"
+              >
+                {textBusy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                <span className="whitespace-nowrap">{analysis ? 'Hitung ulang' : 'Hitung pakai Leo'}</span>
+              </button>
+            </div>
+            {!analysis && !img ? (
+              <span className="mt-1 block text-[11.5px] text-slate-400">
+                Ketik menunya, Leo hitung kalori, protein, karbo & lemaknya.
+              </span>
+            ) : null}
           </Field>
 
           <div>

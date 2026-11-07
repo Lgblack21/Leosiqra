@@ -8182,7 +8182,7 @@ async function handleAdminCoinWithdrawalById(request: Request, env: Env, id: str
 const COIN_KIND_GROUP: Record<string, "beli" | "hadiah" | "pakai" | "tarik" | "admin"> = {
   topup: "beli",
   signup: "hadiah", ref_active: "hadiah", ref_active_referee: "hadiah", ref_pro: "hadiah", streak: "hadiah",
-  redeem_pro: "pakai", story_ai: "pakai", story_ai_refund: "pakai", app_activation: "pakai",
+  redeem_pro: "pakai", story_ai: "pakai", story_ai_refund: "pakai", meal_ai: "pakai", meal_ai_refund: "pakai", app_activation: "pakai",
   withdraw: "tarik", withdraw_refund: "tarik",
   admin_adjust: "admin",
 };
@@ -8631,7 +8631,7 @@ async function handleAdminLogs(request: Request, env: Env) {
 // users.metadata_json "$.aiq_<jenis>" = { day, n }, diambil atomik (UPDATE bersyarat) SEBELUM
 // handler jalan; dikembalikan kalau permintaan gagal (status bukan 2xx / error). Teks biasa (parse
 // "makan 20rb") tidak dihitung — murah & inti pencatatan.
-const AI_LIMITS = { chat: { FREE: 5, PRO: 50 }, scan: { FREE: 3, PRO: 30 }, voice: { FREE: 5, PRO: 40 }, meal: { FREE: 3, PRO: 30 } } as const;
+const AI_LIMITS = { chat: { FREE: 5, PRO: 50 }, scan: { FREE: 3, PRO: 30 }, voice: { FREE: 5, PRO: 40 }, meal: { FREE: 1, PRO: 10 } } as const;
 type AiKind = keyof typeof AI_LIMITS;
 const AI_KIND_LABEL: Record<AiKind, string> = { chat: "chat Leo", scan: "scan struk", voice: "catat lewat suara", meal: "analisis makanan" };
 const isProUser = async (env: Env, userId: string) => {
@@ -13233,26 +13233,77 @@ const readMealTarget = async (env: Env, userId: string) => {
   return Number.isFinite(t) && t >= 800 && t <= 6000 ? Math.round(t) : MEAL_TARGET_DEFAULT;
 };
 
-// Analisis foto makanan (dipanggil lewat withAiQuota "meal"). Foto tidak disimpan di sini.
+// Biaya analisis: jatah gratis harian (AI_LIMITS.meal) dulu, lalu MEAL_AI_PRICE koin. Koin dipotong
+// atomik bersyarat saldo cukup SEBELUM memanggil AI; analisis gagal (respons bukan 2xx / error) →
+// jatah dikembalikan atau koin di-refund (idem `refund:<kunci>`), jadi user tidak pernah rugi.
+const MEAL_AI_PRICE = 200;
+const withMealCharge = async (request: Request, env: Env, run: () => Promise<Response>) => {
+  const auth = await requireSession(env, request);
+  if (auth.error) return auth.error;
+  const userId = auth.session.user.id;
+  let charged: "free" | "coin" | null = null;
+  const q = await takeAiQuota(env, userId, "meal");
+  if (q.ok) charged = "free";
+  const chargeKey = `meal_ai:${userId}:${generateId()}`;
+  if (!charged) {
+    try {
+      const debit = await env.DB.prepare(
+        `INSERT INTO coin_ledger (id, user_id, amount, kind, cashable, idem_key, note, created_at)
+         SELECT ?, ?, ?, 'meal_ai', 0, ?, 'Analisis makanan', ? WHERE (SELECT COALESCE(SUM(amount), 0) FROM coin_ledger WHERE user_id = ?) >= ?`
+      ).bind(generateId(), userId, -MEAL_AI_PRICE, chargeKey, nowIso(), userId, MEAL_AI_PRICE).run();
+      if (debit.meta.changes) charged = "coin";
+    } catch (e) {
+      if (!coinTableMissing(e)) throw e;
+    }
+  }
+  if (!charged) {
+    return json({
+      error: `Jatah gratis hari ini (${q.limit}×) habis. Analisis berikutnya ${MEAL_AI_PRICE} koin — koinmu belum cukup. Top up koin di Profil › Koin.`,
+      code: "no_coins", price: MEAL_AI_PRICE, limit: q.limit, pro: q.pro,
+    }, { status: 402 });
+  }
+  const refund = async () => {
+    if (charged === "free") await releaseAiQuota(env, userId, "meal");
+    else await grantCoins(env, userId, MEAL_AI_PRICE, "meal_ai_refund", `refund:${chargeKey}`, "Pengembalian analisis makanan").catch(() => undefined);
+  };
+  let res: Response;
+  try {
+    res = await run();
+  } catch (e) {
+    await refund();
+    throw e;
+  }
+  if (!res.ok) {
+    await refund();
+    return res;
+  }
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  return json({ ...data, charged, price: charged === "coin" ? MEAL_AI_PRICE : 0 });
+};
+
+// Analisis makanan dari foto atau ketikan (lewat withMealCharge). Foto tidak disimpan di sini.
 async function handleMealAnalyze(request: Request, env: Env) {
   const auth = await requireSession(env, request);
   if (auth.error) return auth.error;
   if (!(await checkAiParseRateLimit(env, auth.session.user.id))) return json({ error: "Terlalu sering. Coba lagi sebentar lagi." }, { status: 429 });
-  const payload = await parseJson<{ imageBase64?: unknown; hint?: unknown }>(request);
+  const payload = await parseJson<{ imageBase64?: unknown; hint?: unknown; text?: unknown }>(request);
   const b64 = typeof payload.imageBase64 === "string" ? payload.imageBase64.replace(/^data:[^,]*,/, "").replace(/\s/g, "") : "";
-  if (!b64) return json({ error: "Foto makanan wajib dikirim." }, { status: 400 });
+  // Tanpa foto → cukup ketikan menu (mis. "nasi goreng telur + es teh manis").
+  const text = mealText(payload.text, 300);
+  if (!b64 && text.length < 3) return json({ error: "Kirim foto makanan atau ketik menunya dulu." }, { status: 400 });
   if (b64.length > Math.ceil((MEAL_PHOTO_MAX_BYTES * 4) / 3) + 100) return json({ error: "Foto terlalu besar (maks 2 MB)." }, { status: 413 });
   const hint = mealText(payload.hint, 120);
   const openRouter = await getOpenRouterKey(env);
   if (!openRouter) return json({ error: "AI belum aktif (API key OpenRouter belum dipasang admin).", code: "ai_unavailable" }, { status: 503 });
-  const systemPrompt = `Kamu ahli gizi yang menaksir makanan dari foto, untuk orang Indonesia.
+  const systemPrompt = `Kamu ahli gizi yang menaksir makanan dari foto atau dari ketikan menu, untuk orang Indonesia.
 Balas HANYA satu objek JSON valid tanpa teks lain:
 {"is_food": boolean, "name": string, "emoji": string, "items": [{"name": string, "portion": string, "kcal": number, "protein": number, "carbs": number, "fat": number}], "price_idr": number | null, "score": 1-5, "tip": string}
 Aturan:
-- is_food=false kalau foto bukan makanan/minuman (lalu name="" dan items=[]).
+- is_food=false kalau foto/ketikan bukan makanan/minuman (lalu name="" dan items=[]).
+- Dari ketikan: pakai porsi umum yang wajar kalau porsi tidak disebut; ikuti jumlah yang ditulis (mis. "2 potong").
 - name: nama hidangan singkat dalam Bahasa Indonesia (mis. "Nasi goreng telur"), maks 50 karakter.
 - items: tiap komponen yang terlihat (nasi, lauk, sayur, minuman), portion perkiraan ("1 piring", "150 g").
-- kcal, protein, carbs, fat (gram) = PERKIRAAN wajar per komponen sesuai porsi di foto; angka saja.
+- kcal, protein, carbs, fat (gram) = PERKIRAAN wajar per komponen sesuai porsi; angka saja.
 - price_idr: perkiraan harga wajar beli di Indonesia (warung/kafe sesuai tampilan) dalam rupiah bulat; null kalau masakan rumah atau tidak bisa ditebak.
 - score: keseimbangan gizi 1 (kurang seimbang) – 5 (sangat seimbang).
 - tip: satu kalimat santai & positif, saran kecil yang praktis (bukan diagnosis medis), maks 140 karakter.`;
@@ -13266,7 +13317,9 @@ Aturan:
         route: "fallback",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: [{ type: "text", text: hint ? `Keterangan dari pengguna: ${hint}` : "Taksir makanan di foto ini." }, { type: "image_url", image_url: { url: `data:image/jpeg;base64,${b64}` } }] },
+          b64
+            ? { role: "user", content: [{ type: "text", text: hint || text ? `Keterangan dari pengguna: ${hint || text}` : "Taksir makanan di foto ini." }, { type: "image_url", image_url: { url: `data:image/jpeg;base64,${b64}` } }] }
+            : { role: "user", content: `Menu yang dimakan (ketikan pengguna): """${text}"""` },
         ],
         temperature: 0.2,
         max_tokens: 1200,
@@ -13288,11 +13341,11 @@ Aturan:
   try {
     parsed = JSON.parse(stripJsonFences(raw)) as Record<string, unknown>;
   } catch {
-    return json({ error: "Leo belum bisa mengenali foto ini. Coba foto lebih dekat & terang." }, { status: 422 });
+    return json({ error: b64 ? "Leo belum bisa mengenali foto ini. Coba foto lebih dekat & terang." : "Leo belum paham menunya. Coba tulis lebih jelas, mis. \"nasi + ayam goreng + sayur\"." }, { status: 422 });
   }
   const items = cleanMealItems(parsed.items);
   const name = mealText(parsed.name, 60);
-  if (parsed.is_food === false || !name || !items.length) return json({ error: "Sepertinya ini bukan makanan. Coba foto piringnya dari atas ya." }, { status: 422 });
+  if (parsed.is_food === false || !name || !items.length) return json({ error: b64 ? "Sepertinya ini bukan makanan. Coba foto piringnya dari atas ya." : "Sepertinya itu bukan makanan atau minuman. Coba tulis nama menunya." }, { status: 422 });
   const sum = (k: "kcal" | "protein" | "carbs" | "fat") => Math.round(items.reduce((a, i) => a + (i[k] ?? 0), 0) * 10) / 10;
   const price = typeof parsed.price_idr === "number" && Number.isFinite(parsed.price_idr) && parsed.price_idr > 0 && parsed.price_idr < 10_000_000 ? Math.round(parsed.price_idr / 500) * 500 : null;
   const score = Number.isInteger(parsed.score) && (parsed.score as number) >= 1 && (parsed.score as number) <= 5 ? (parsed.score as number) : null;
@@ -13379,7 +13432,7 @@ async function handleMemberMeals(request: Request, env: Env, url: URL) {
         target: await readMealTarget(env, userId),
         foodSpendWeek: Math.round(Number(food?.s) || 0),
         accounts: accounts.results ?? [],
-        ai: { used: used.meal, limit: AI_LIMITS.meal[pro ? "PRO" : "FREE"], pro, proLimit: AI_LIMITS.meal.PRO },
+        ai: { used: used.meal, limit: AI_LIMITS.meal[pro ? "PRO" : "FREE"], pro, proLimit: AI_LIMITS.meal.PRO, price: MEAL_AI_PRICE, coins: await coinBalances(env, userId).then((b) => b.balance).catch(() => 0) },
       });
     }
 
@@ -13503,6 +13556,10 @@ async function handleMemberMeals(request: Request, env: Env, url: URL) {
         sets.push(`${k} = ?`); vals.push(raw[k] === null ? null : k === "kcal" ? Math.round(mealNum(raw[k], max)!) : mealNum(raw[k], max));
       }
       if (raw.note !== undefined) { sets.push("note = ?"); vals.push(mealText(raw.note, 200) || null); }
+      if (raw.items !== undefined) { sets.push("items_json = ?"); vals.push(JSON.stringify(cleanMealItems(raw.items))); }
+      if (raw.score !== undefined) { sets.push("score = ?"); vals.push(Number.isInteger(raw.score) && (raw.score as number) >= 1 && (raw.score as number) <= 5 ? raw.score : null); }
+      if (raw.tip !== undefined) { sets.push("tip = ?"); vals.push(mealText(raw.tip, 160) || null); }
+      if (raw.ai === true) sets.push("ai = 1");
       if (!sets.length) return json({ error: "Tidak ada yang diubah." }, { status: 400 });
       await env.DB.prepare(`UPDATE meals SET ${sets.join(", ")}, updated_at = ? WHERE id = ? AND user_id = ?`).bind(...vals, nowIso(), id, userId).run();
       return json({ ok: true });
@@ -20400,7 +20457,7 @@ const worker = {
       }
 
       if (url.pathname === "/api/member/meals/analyze" && request.method === "POST") {
-        return await withAiQuota(request, env, "meal", () => handleMealAnalyze(request, env));
+        return await withMealCharge(request, env, () => handleMealAnalyze(request, env));
       }
       if (url.pathname === "/api/member/meals" || url.pathname.startsWith("/api/member/meals/")) {
         return await handleMemberMeals(request, env, url);
