@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-07 (live 3.3.1; 3.4.0 menunggu "gas"; migrasi 0036 & 0037 menunggu Bos)
+Terakhir diperbarui: 2026-11-07 (live: rilis 3.4.0, run 42366120539; migrasi 0036 & 0037 menunggu Bos)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-07 — RILIS 3.4.0 (branch `claude/makan-ai-teks-20261107`): analisis makanan dari ketikan + bayar koin. Tanpa SQL baru.**
+- **2026-11-07 — RILIS 3.4.0: LIVE (run 42366120539, commit b02d143, Release v3.4.0): analisis makanan dari ketikan + bayar koin. Tanpa SQL baru.**
   - `/api/member/meals/analyze` terima `text` (≥3, ≤300 karakter) tanpa foto. PATCH meals kini juga items/score/tip/ai.
   - Biaya (keputusan Bos): AI_LIMITS.meal FREE 1 / PRO 10 per hari gratis, lalu MEAL_AI_PRICE = 200 koin.
     `withMealCharge` (menggantikan withAiQuota utk meal): ambil jatah → kalau habis debit koin atomik bersyarat saldo
