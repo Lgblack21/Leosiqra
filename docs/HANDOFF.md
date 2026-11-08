@@ -25,8 +25,9 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   - Kebocoran biaya AI ditutup (422 setelah model dipanggil = jatah terpakai; Cerita PRO cek expired_at; Makanku).
     Diverifikasi routine dengan mock OpenRouter, tidak diulang. Efek ke user: foto bukan struk/makanan memakan jatah.
   - Cek live: beranda 200, endpoint tanpa sesi 401, string "3.6.5" ada di bundle dashboard, tag v3.6.5 ada.
-  - Data lama: barang yang SUDAH terlanjur tercatat 2× sebelum 3.6.5 tidak dikoreksi otomatis (perlu dicek di D1 kalau
-    mau dibersihkan: transaksi related_type item + listing terjual untuk item yang sama).
+  - Data lama (tercatat 2× sebelum 3.6.5): SQL koreksi di `cloudflare/maintenance/2026-11-08-koreksi-jual-dobel/`
+    (1-cek.sql baca saja; 2-koreksi.sql balikkan saldo rekening + total member lalu hapus transaksi dobel dari "Laku").
+    Diuji di D1 lokal (2,6 jt → 1,8 jt, data kontrol tidak berubah, aman diulang). Dijalankan Bos di D1 Console.
 
 - **2026-11-08 — Bersih-bersih branch (akun ini).**
   - 3 draf artikel (`claude/artikel-cara-mengatur-gaji-5-juta`, `-catatan-tabungan`, `-laporan-keuangan-pribadi`)
