@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (3.13.0 siap, menunggu gas)
+Terakhir diperbarui: 2026-11-09 (3.13.0 live, run #183)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-09 — 3.13.0 SIAP (branch `claude/kanvas-v2-20261108`), BELUM DEPLOY. Tanpa SQL.** Rapor Keuangan
+- **2026-11-09 — 3.13.0 LIVE (run #183, commit 1b7b25b). Tanpa SQL.** Rapor Keuangan
   (rute tetap `/membership/cek-keuangan`, fitur id `cek`): `src/lib/rapor.ts` (7 indikator, bobot WEIGHTS, nilai
   A–E, mode penuh/perkiraan/kosong, prevScore, `simulate`) + `CekKeuanganApp.tsx` ditulis ulang. Batas = pedoman umum
   (bukan kutipan buku OJK). Dites Playwright 1440/1000/Pixel 7, 0 error JS. Akun tes lokal diubah GUEST→ACTIVE (lokal).
