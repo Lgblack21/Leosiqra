@@ -62,7 +62,6 @@ function NumberInput({
       <div className="flex items-center gap-2 rounded-2xl bg-slate-50 px-4 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-indigo-400 dark:bg-slate-900 dark:ring-slate-700">
         {card.unit === 'rp' ? <span className="text-[15px] font-bold text-slate-400">Rp</span> : null}
         <input
-          autoFocus
           inputMode={card.unit === 'rp' ? 'numeric' : 'decimal'}
           aria-label={card.label}
           value={draft}
