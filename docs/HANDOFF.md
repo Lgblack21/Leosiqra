@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-08 (live: rilis 3.6.4, run 42403091544; migrasi 0039 menunggu Bos)
+Terakhir diperbarui: 2026-11-08 (3.6.5 live, run #172)
 
 ## Siapa sedang kerja
 
@@ -18,6 +18,16 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-08 — 3.6.5 LIVE (run #172, commit 927faab, Release v3.6.5 otomatis). Tanpa SQL.**
+  - Hasil jual tidak tercatat 2× (Barangku jual menutup iklan Ladangku; Laku menolak barang terjual, guard atomik).
+    Dites lokal main vs rilis: main 1 jt → 2,6 jt (2 pemasukan), rilis 1 jt → 1,8 jt; urutan terbalik & iklan tanpa
+    barang juga benar.
+  - Kebocoran biaya AI ditutup (422 setelah model dipanggil = jatah terpakai; Cerita PRO cek expired_at; Makanku).
+    Diverifikasi routine dengan mock OpenRouter, tidak diulang. Efek ke user: foto bukan struk/makanan memakan jatah.
+  - Cek live: beranda 200, endpoint tanpa sesi 401, string "3.6.5" ada di bundle dashboard, tag v3.6.5 ada.
+  - Data lama: barang yang SUDAH terlanjur tercatat 2× sebelum 3.6.5 tidak dikoreksi otomatis (perlu dicek di D1 kalau
+    mau dibersihkan: transaksi related_type item + listing terjual untuk item yang sama).
+
 - **2026-11-08 — Bersih-bersih branch (akun ini).**
   - 3 draf artikel (`claude/artikel-cara-mengatur-gaji-5-juta`, `-catatan-tabungan`, `-laporan-keuangan-pribadi`)
     dicek ulang terhadap main 3.6.4: merge bersih, lolos aturan workflow Terbitkan artikel, tsc + build gabungan OK.
@@ -28,9 +38,9 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     `claude/halaman-transaksi` diarsipkan sebagai tag **`arsip/halaman-transaksi`** (5a95b7e) lalu branch-nya dihapus.
     Sisa branch `claude/` (dicek 2026-11-08, semua merge bersih ke main kecuali yang ditandai):
     - draf artikel (tunggu ✅ Bos): artikel-cara-mengatur-gaji-5-juta, artikel-catatan-tabungan, artikel-laporan-keuangan-pribadi
-    - patch menunggu Bos: fix-jual-dobel-listing-20261105 (BUG UANG: hasil jual tercatat 2×, prioritas),
-      fix-biaya-ai-20261107 + fix-biaya-makanku-20261108 (kebocoran biaya AI; makanku sudah memuat fix-biaya-ai),
-      fix-kesalahan-hashtag-typo-aturuang (promo/cek-kata ejaan hashtag)
+    - patch menunggu Bos: fix-kesalahan-hashtag-typo-aturuang (promo/cek-kata ejaan hashtag)
+    - fix-jual-dobel-listing-20261105, fix-biaya-ai-20261107, fix-biaya-makanku-20261108: SUDAH LIVE di 3.6.5
+      (boleh dihapus)
     - usulan aturan tim: belajar-20261025, belajar-20261101 (promo/TEAMS.md)
     - fix-merge-queue-shallow-20261028: isinya sudah 100% di main (konflik cuma karena urutan) → boleh dihapus
     Session cloud tidak bisa hapus branch/push tag (proxy 403) — pakai Termux `gh api` (lihat riwayat chat 2026-11-08).
