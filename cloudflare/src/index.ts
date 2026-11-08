@@ -13904,7 +13904,8 @@ async function handleMemberHealth(request: Request, env: Env, url: URL) {
           ...insertHealthTx(env, userId, {
             txId, type: "pengeluaran", amount, category: HEALTH_CATEGORY, sub: "Asuransi", accountId: acc.id, date: today,
             note: `Premi ${pol.insurer_name}${pol.product ? ` · ${pol.product}` : ""}`, relatedId: pol.id, relatedType: "health_premium", payload: { premiumPayId: requestId, policyId: pol.id },
-            guardSql: "NOT EXISTS (SELECT 1 FROM transactions WHERE user_id = ? AND related_type = 'health_premium' AND json_valid(payload_json) AND json_extract(payload_json, '$.premiumPayId') = ?)", guardBinds: [userId, requestId],
+            // + next_due masih sama dengan yang dibaca: bayar paralel dari dua perangkat tidak memajukan jadwal sekali saja.
+            guardSql: "NOT EXISTS (SELECT 1 FROM transactions WHERE user_id = ? AND related_type = 'health_premium' AND json_valid(payload_json) AND json_extract(payload_json, '$.premiumPayId') = ?) AND EXISTS (SELECT 1 FROM health_policies WHERE id = ? AND user_id = ? AND next_due IS ?)", guardBinds: [userId, requestId, pol.id, userId, pol.next_due],
           }),
           env.DB.prepare("UPDATE health_policies SET next_due = ?, reminded_for = NULL, updated_at = ? WHERE id = ? AND user_id = ? AND EXISTS (SELECT 1 FROM transactions WHERE id = ? AND user_id = ?)").bind(nextDue, nowIso(), pol.id, userId, txId, userId),
         ];
@@ -13964,6 +13965,7 @@ async function handleMemberHealth(request: Request, env: Env, url: URL) {
           const acc = await healthAccount(env, userId, raw.account_id);
           if (!acc) return json({ error: "Pilih rekening tempat uang klaim masuk." }, { status: 400 });
           const money = approved ?? cl.amount;
+          if (!money || money <= 0) return json({ error: "Isi nominal klaim yang cair." }, { status: 400 });
           const txId = generateId();
           const res = await env.DB.batch([
             env.DB.prepare(`UPDATE health_claims SET ${sets.join(", ")}, paid_at = ?, tx_id = ? WHERE id = ? AND user_id = ? AND tx_id IS NULL`).bind(...vals, today, txId, id, userId),
@@ -13991,35 +13993,47 @@ async function handleMemberHealth(request: Request, env: Env, url: URL) {
 
 // Pengingat cek rutin: 7 hari sebelum genap setahun dari cek terakhir (CKG setahun sekali).
 // Hanya catatan terbaru per jenis cek (bukan vaksin); `reminded` di baris itu → sekali saja.
+// Paket Workers Free: ±50 query/subrequest per invocation, dipakai bersama tugas cron harian lain →
+// klaim dalam SATU UPDATE … RETURNING, maks CRON_HEALTH_USERS user per hari (sisanya besok, jendela 7 hari).
+const CRON_HEALTH_USERS = 25;
 const sendCheckReminders = async (env: Env) => {
   const today = todayWIB();
   const due = shiftDateStr(today, 7);
   const target = `${Number(due.slice(0, 4)) - 1}${due.slice(4)}`;
+  // Jendela susulan: cron yang terlewat / user di luar kuota hari ini / tanggal 29 Feb tetap kebagian.
+  const from = shiftDateStr(target, -7);
   let rows: { id: string; user_id: string; item_key: string }[] = [];
   try {
     rows = (await env.DB.prepare(
-      `SELECT c.id, c.user_id, c.item_key FROM health_checks c JOIN users u ON u.id = c.user_id
-        WHERE c.date = ? AND c.reminded = 0 AND c.item_key NOT LIKE 'vaksin:%'
-          AND NOT EXISTS (SELECT 1 FROM health_checks n WHERE n.user_id = c.user_id AND n.item_key = c.item_key AND n.date > c.date)
-          AND COALESCE(u.status, '') <> 'NONAKTIF'
-          AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.bills') END, 1) <> 0
-        LIMIT 2000`
-    ).bind(target).all<{ id: string; user_id: string; item_key: string }>()).results ?? [];
+      `UPDATE health_checks SET reminded = 1
+        WHERE reminded = 0 AND id IN (
+          SELECT c.id FROM health_checks c JOIN users u ON u.id = c.user_id
+           WHERE c.date BETWEEN ? AND ? AND c.reminded = 0 AND c.item_key NOT LIKE 'vaksin:%'
+             AND NOT EXISTS (SELECT 1 FROM health_checks n WHERE n.user_id = c.user_id AND n.item_key = c.item_key AND n.date > c.date)
+             AND COALESCE(u.status, '') <> 'NONAKTIF'
+             AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.bills') END, 1) <> 0
+             AND c.user_id IN (
+               SELECT DISTINCT c2.user_id FROM health_checks c2 JOIN users u2 ON u2.id = c2.user_id
+                WHERE c2.date BETWEEN ? AND ? AND c2.reminded = 0 AND c2.item_key NOT LIKE 'vaksin:%'
+                  AND NOT EXISTS (SELECT 1 FROM health_checks n2 WHERE n2.user_id = c2.user_id AND n2.item_key = c2.item_key AND n2.date > c2.date)
+                  AND COALESCE(u2.status, '') <> 'NONAKTIF'
+                  AND COALESCE(CASE WHEN json_valid(u2.metadata_json) THEN json_extract(u2.metadata_json, '$.prefs.notify.bills') END, 1) <> 0
+                ORDER BY c2.user_id LIMIT ${CRON_HEALTH_USERS})
+           LIMIT 500)
+        RETURNING id, user_id, item_key`
+    ).bind(from, target, from, target).all<{ id: string; user_id: string; item_key: string }>()).results ?? [];
   } catch (e) {
     if (healthTableMissing(e)) return;
     throw e;
   }
   const byUser = new Map<string, string[]>();
-  for (const r of rows) {
-    const claim = await env.DB.prepare("UPDATE health_checks SET reminded = 1 WHERE id = ? AND reminded = 0").bind(r.id).run().catch(() => null);
-    if (claim?.meta.changes) byUser.set(r.user_id, [...(byUser.get(r.user_id) ?? []), r.item_key]);
-  }
+  for (const r of rows) byUser.set(r.user_id, [...(byUser.get(r.user_id) ?? []), r.item_key]);
   for (const [userId, keys] of byUser) {
     try {
       await sendWebPushToUser(
         env, userId,
         `🩺 Sudah hampir setahun sejak cek terakhirmu`,
-        `${keys.length} cek kesehatan rutin jatuh tempo minggu depan. Ingat, ada Cek Kesehatan Gratis setahun sekali di puskesmas.`,
+        `${keys.length} cek kesehatan rutin jatuh tempo dalam seminggu ini. Ingat, ada Cek Kesehatan Gratis setahun sekali di puskesmas.`,
         "/membership/sehat#cek"
       );
     } catch (error) {
@@ -14034,30 +14048,47 @@ const sendPremiumReminders = async (env: Env) => {
   const today = todayWIB();
   for (const [days, stage] of [[3, "h3"], [1, "h1"]] as const) {
     const target = shiftDateStr(today, days);
+    const mark = `${target}|${stage}`;
     let rows: { id: string; user_id: string; insurer_name: string; product: string | null; premium: number | null }[] = [];
     try {
       rows = (await env.DB.prepare(
-        `SELECT p.id, p.user_id, p.insurer_name, p.product, p.premium FROM health_policies p JOIN users u ON u.id = p.user_id
-          WHERE p.next_due = ? AND COALESCE(p.reminded_for, '') <> ? AND COALESCE(u.status, '') <> 'NONAKTIF'
-            AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.bills') END, 1) <> 0
-          LIMIT 2000`
-      ).bind(target, `${target}|${stage}`).all<{ id: string; user_id: string; insurer_name: string; product: string | null; premium: number | null }>()).results ?? [];
+        `UPDATE health_policies SET reminded_for = ?
+          WHERE COALESCE(reminded_for, '') <> ? AND id IN (
+            SELECT p.id FROM health_policies p JOIN users u ON u.id = p.user_id
+             WHERE p.next_due = ? AND COALESCE(p.reminded_for, '') <> ? AND COALESCE(u.status, '') <> 'NONAKTIF'
+               AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.bills') END, 1) <> 0
+               AND p.user_id IN (
+                 SELECT DISTINCT p2.user_id FROM health_policies p2 JOIN users u2 ON u2.id = p2.user_id
+                  WHERE p2.next_due = ? AND COALESCE(p2.reminded_for, '') <> ?
+                    AND COALESCE(u2.status, '') <> 'NONAKTIF'
+                    AND COALESCE(CASE WHEN json_valid(u2.metadata_json) THEN json_extract(u2.metadata_json, '$.prefs.notify.bills') END, 1) <> 0
+                  ORDER BY p2.user_id LIMIT ${CRON_HEALTH_USERS})
+             LIMIT 500)
+          RETURNING id, user_id, insurer_name, product, premium`
+      ).bind(mark, mark, target, mark, target, mark).all<{ id: string; user_id: string; insurer_name: string; product: string | null; premium: number | null }>()).results ?? [];
     } catch (e) {
       if (healthTableMissing(e)) return;
       throw e;
     }
-    for (const r of rows) {
+    // Satu push per user (beberapa polis jatuh tempo bersamaan digabung) supaya subrequest tetap sedikit.
+    const byUser = new Map<string, typeof rows>();
+    for (const r of rows) byUser.set(r.user_id, [...(byUser.get(r.user_id) ?? []), r]);
+    for (const [userId, list] of byUser) {
+      const r = list[0];
+      const when = days === 1 ? "besok" : "3 hari lagi";
       try {
-        const claim = await env.DB.prepare("UPDATE health_policies SET reminded_for = ? WHERE id = ? AND user_id = ? AND COALESCE(reminded_for, '') <> ?").bind(`${target}|${stage}`, r.id, r.user_id, `${target}|${stage}`).run();
-        if (!claim.meta.changes) continue;
         await sendWebPushToUser(
-          env, r.user_id,
-          `🛡️ Premi ${r.insurer_name}${r.premium ? ` ${formatRupiahForPush(r.premium)}` : ""} — ${days === 1 ? "besok" : "3 hari lagi"}`,
-          `${r.product ? `${r.product}. ` : ""}Bayar tepat waktu supaya perlindunganmu tetap aktif. Catat di Sehatku › Asuransi.`,
+          env, userId,
+          list.length === 1
+            ? `🛡️ Premi ${r.insurer_name}${r.premium ? ` ${formatRupiahForPush(r.premium)}` : ""} — ${when}`
+            : `🛡️ ${list.length} premi asuransi jatuh tempo ${when}`,
+          list.length === 1
+            ? `${r.product ? `${r.product}. ` : ""}Bayar tepat waktu supaya perlindunganmu tetap aktif. Catat di Sehatku › Asuransi.`
+            : `${list.map((x) => x.insurer_name).join(", ").slice(0, 120)}. Bayar tepat waktu supaya perlindunganmu tetap aktif.`,
           "/membership/sehat#asuransi"
         );
       } catch (error) {
-        console.error(`Pengingat premi ${r.id} gagal:`, error);
+        console.error(`Pengingat premi ${userId} gagal:`, error);
       }
     }
   }

@@ -61,6 +61,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.6.3 | 8 Nov 2026 | Form catat transaksi lebih ringkas |
 | 3.6.4 | 8 Nov 2026 | Pilih rekening & kategori lebih rapi |
 | 3.6.5 | 8 Nov 2026 | Hasil jual tidak tercatat dua kali, kebocoran biaya AI ditutup |
+| 3.6.6 | 8 Nov 2026 | Pengingat Sehatku lebih andal |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -74,6 +75,15 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.6.6 — 2026-11-08 — Pengingat Sehatku lebih andal
+
+- Pengingat cek kesehatan tahunan dan premi asuransi tetap terkirim walau banyak pengguna jatuh
+  tempo di hari yang sama; yang belum kebagian hari ini diingatkan besok.
+- Beberapa premi yang jatuh tempo bersamaan digabung jadi satu notifikasi.
+- Cek kesehatan bertanggal 29 Februari kini ikut diingatkan setahun kemudian.
+- Klaim asuransi tidak bisa dicatat cair dengan nominal Rp0; bayar premi dari dua perangkat
+  sekaligus tidak lagi membuat jadwal jatuh tempo meleset.
 
 ## 3.6.5 — 2026-11-08 — Perbaikan uang & biaya AI
 
