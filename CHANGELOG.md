@@ -70,6 +70,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.11.1 | 8 Nov 2026 | Perbaikan Kanvas |
 | 3.12.0 | 8 Nov 2026 | Semua Fitur yang hidup |
 | 3.12.1 | 8 Nov 2026 | Atur fitur pakai tampilan baru |
+| 3.12.2 | 8 Nov 2026 | Semua fitur lebih rapi |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -83,6 +84,14 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.12.2 — 2026-11-08 — Semua fitur lebih rapi
+
+- **Menu samping lebih ringkas**: hanya 5 fitur teratas (plus fitur yang sedang dibuka); sisanya lewat tombol
+  **Semua fitur** yang menunjukkan berapa fitur lainnya.
+- Halaman **Semua fitur** dirapikan: hanya tombol fitur, dikelompokkan dalam kolom yang tertata dengan urutan tetap,
+  lengkap dengan status singkat tiap fitur. Tanpa sakelar on/off dan tanpa animasi yang mengganggu.
+- Cari fitur tetap bisa dari mana saja dengan **Ctrl + K**.
 
 ## 3.12.1 — 2026-11-08 — Atur fitur pakai tampilan baru
 

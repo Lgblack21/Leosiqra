@@ -139,6 +139,15 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings, focusHidden = false }
   };
 
   const restricted = profile?.status === 'GUEST' || profile?.status === 'PENDING';
+  const allFeatures = featuresFromIds(features.active);
+  const sidebarFeatures = (() => {
+    const shown = allFeatures.slice(0, 5);
+    const current = allFeatures.find(
+      (f) => !shown.includes(f) && (pathname === f.href || pathname?.startsWith(`${f.href}/`)),
+    );
+    if (current) shown.push(current);
+    return { shown, more: allFeatures.length - shown.length };
+  })();
 
   return (
     <aside
@@ -270,23 +279,24 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings, focusHidden = false }
                 Fitur
               </p>
               <div className="space-y-0.5">
-                {featuresFromIds(features.active).map((f) =>
-                  renderItem({ label: f.label, href: f.href, icon: f.icon }),
-                )}
+                {/* Ringkas: maksimal 5 fitur (+ fitur yang sedang dibuka); sisanya lewat Semua fitur. */}
+                {sidebarFeatures.shown.map((f) => renderItem({ label: f.label, href: f.href, icon: f.icon }))}
                 <Link
-                  href="/membership/fitur?atur=1"
+                  href="/membership/fitur"
                   onClick={closeOnMobile}
-                  title="Atur fitur"
+                  title="Semua fitur"
                   className={cn(
                     'relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-[14px] font-medium transition-colors hover:bg-slate-50 hover:text-slate-900 md:max-lg:justify-center md:max-lg:px-0 md:max-lg:py-2.5',
                     pathname === '/membership/fitur' ? 'bg-slate-100 text-slate-900' : 'text-slate-600',
                   )}
                 >
                   <LayoutGrid size={19} strokeWidth={1.9} className="relative shrink-0 text-slate-400" />
-                  <span className={cn('relative flex-1 truncate', fullOnly)}>Atur fitur</span>
-                  <span className={cn('relative text-[12px] font-semibold text-slate-400', fullOnly)}>
-                    {features.active.length} aktif
-                  </span>
+                  <span className={cn('relative flex-1 truncate', fullOnly)}>Semua fitur</span>
+                  {sidebarFeatures.more ? (
+                    <span className={cn('relative text-[12px] font-semibold text-slate-400', fullOnly)}>
+                      +{sidebarFeatures.more}
+                    </span>
+                  ) : null}
                 </Link>
               </div>
             </div>

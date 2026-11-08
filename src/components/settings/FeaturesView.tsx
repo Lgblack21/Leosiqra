@@ -110,17 +110,15 @@ export function FeaturesView({ editing, open }: { editing: boolean; open: (href:
       <div className="space-y-5">
         <button
           type="button"
-          onClick={() => open('/membership/fitur?atur=1')}
+          onClick={() => open('/membership/fitur')}
           className="flex w-full items-center gap-3 rounded-[20px] bg-slate-950 p-4 text-left text-white"
         >
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-500 to-orange-400 text-[18px]">
             ✨
           </span>
           <span className="flex-1">
-            <span className="block text-[14.5px] font-black">Buka tampilan baru Semua fitur</span>
-            <span className="block text-[12.5px] text-white/65">
-              Status langsung tiap fitur, saran Leo, cari, dan atur menu
-            </span>
+            <span className="block text-[14.5px] font-black">Lihat Semua fitur</span>
+            <span className="block text-[12.5px] text-white/65">Semua fitur dengan status terbarunya</span>
           </span>
           <span className="text-white/60">›</span>
         </button>

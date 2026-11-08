@@ -7,7 +7,6 @@ import { GOALS, TONE, markSeen, searchFitur, toneOf } from '@/lib/fiturCatalog';
 import { cn } from '@/lib/utils';
 
 // Ctrl/⌘ + K dari halaman mana saja (web): cari fitur lalu Enter untuk membuka.
-// Di halaman Semua Fitur, pintasan yang sama memfokuskan kolom cari di halaman itu.
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
@@ -22,7 +21,7 @@ export function CommandPalette() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && pathname !== '/membership/fitur') {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setOpen((o) => !o);
         setQ('');
