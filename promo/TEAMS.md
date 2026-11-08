@@ -64,6 +64,28 @@ Siklus SETIAP run — aturan lengkapnya di **`promo/BELAJAR.md`** (wajib dibaca)
 Pelajaran harus spesifik dan bisa ditindaklanjuti ("video POV + rekaman
 Input Cepat dapat views 2× rata-rata"), bukan klise ("buat konten menarik").
 
+## Aturan tetap dari evaluasi mingguan
+
+Pelajaran `strategi` yang lolos ambang BELAJAR.md (yakin >= 0.8, uji >= 4) dan
+di-ACC Bos. Berlaku untuk Tim Analisis, Konten, Promosi, dan CEO.
+(Menggantikan usulan `claude/belajar-20261025` & `claude/belajar-20261101` —
+cukup merge branch ini.)
+
+1. **Nilai views di H+3 dengan >= 3 sampel** (2026-W45, uji 5, yakin 0.86).
+   Views YouTube Shorts tidak stabil: 2026-W45 463 dari 716 views 7 hari
+   berasal dari 1 video (11-04), video lain 8–104; kuis 10-08 = 139 vs kuis
+   10-09 = 2. Jangan ubah skor ide, format, atau target kampanye dari video yang
+   belum H+3 atau dari 1 video viral; target kampanye dari median, bukan outlier.
+2. **Gaya teks ajakan komentar bukan tuas** (2026-W44, uji 14, yakin 0.94).
+   14 gaya ajakan komentar di 14 video YT 10-07..10-29 = 0 komentar semuanya di
+   H+3 (2026-W45 juga 0 komentar dari 6 video terukur). CTA tetap ada
+   (simpan/komentar/follow), tapi eksperimen diarahkan ke topik/hook/views.
+3. **Likes/komentar bukan target kampanye** (2026-W45, uji 4, yakin 0.83).
+   4 kampanye berturut mencapai views tapi tidak likes: Level Up 10-12 (2),
+   Boss Fight 10-19 (2→0), Bocor Halus 10-26 (0), Early Game November 11-02
+   (2 likes dari 612 views di 5 video). Target kampanye = views H+3 (median) &
+   rating Bos; likes/komentar dicatat sebagai metrik pendamping saja.
+
 ## Plugin tiap tim (`.claude/settings.json`, sejak 2026-10-23)
 
 Kalau plugin aktif di sesi routine, pakai sesuai peran:
