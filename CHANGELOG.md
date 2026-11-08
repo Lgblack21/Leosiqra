@@ -66,6 +66,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.8.0 | 8 Nov 2026 | Stikerku: fitur stiker sendiri, 1 layar + stiker Struk |
 | 3.9.0 | 8 Nov 2026 | Sehatku makin lengkap |
 | 3.10.0 | 8 Nov 2026 | Kanvas: rencanakan keuangan di papan bebas |
+| 3.11.0 | 8 Nov 2026 | Kanvas versi 2 + Cek Keuangan |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -79,6 +80,21 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.11.0 — 2026-11-08 — Kanvas versi 2 + Cek Keuangan
+
+- **Kanvas dirombak**: semua kanvas kini ada di satu layar dengan tab (Dari catatanmu · kanvasmu · + Kanvas baru),
+  langsung di dalam menu web. Tiap bab punya warna sendiri, kartu ringkas yang tinggal diketuk, dan panel jawab
+  bersama Leo: pilih jawaban, "Lewati dulu", atau "Batalkan jawabanku". Setelah menjawab, otomatis lanjut ke kartu
+  berikutnya.
+- **Navigasi bab** di atas papan: ketuk nomor bab untuk meluncur ke sana, dan lihat bab mana yang sudah selesai.
+- **Persiapan Nikah 7 bab**: Pendapatan, Keuangan bersama, Tanggungan & rumah, Pengeluaran, Aset, Pajak & pra-nikah,
+  Utang & cicilan — diakhiri tabel **Arus Kas Keluarga** dan **Neraca Keluarga** yang terisi dari catatanmu, lalu
+  kartu **Rencana keluarga** berisi langkah berikutnya yang muncul dari jawabanmu.
+- Semua papan lain (Dana Darurat, KPR, Pensiun, Pendidikan, Lunas Utang, Usaha) ikut memakai tampilan baru.
+- Fitur baru **Cek Keuangan**: periksa menabung rutin, dana darurat, utang dibanding aset, cicilan dibanding
+  pemasukan, dan harta bersih — dengan status Aman/Waspada dan saran perbaikannya.
+- Catatan: isian papan Persiapan Nikah dari versi 3.10.0 tidak terbawa karena pertanyaannya diganti.
 
 ## 3.10.0 — 2026-11-08 — Kanvas: rencanakan keuangan di papan bebas
 

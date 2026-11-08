@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-08 (3.10.0 live, run #177)
+Terakhir diperbarui: 2026-11-08 (3.11.0 deploy setelah gas)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,17 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-08 — 3.11.0 (branch `claude/kanvas-v2-20261108`): Kanvas v2 + Cek Keuangan. Tanpa SQL baru (pakai 0041).**
+  - Kanvas web tidak lagi layar penuh (dihapus dari FULLSCREEN_PATHS); app tetap layar penuh. Tab + picker template,
+    `?id=` / `?baru=<template>` (dipakai saran kartu akhir).
+  - Template v2 (`src/lib/kanvas/templates.ts`): kartu data/tanya/cek/tugas/angka/hitung/info; selesai = dijawab,
+    dilewati (`done['skip.<id>']`), atau angka otomatis tersedia. Persiapan Nikah 7 bab (id `nk*`) — jawaban 3.10.0
+    tidak terbawa (id lama). Acuan rasio ditulis sebagai pedoman umum; kutipan buku OJK dari Oyenza TIDAK disalin.
+  - Komponen: Board (focus/onReady), cards (bab berwarna, Leo di Mulai, kartu akhir gelap), Panel, FlowBoard,
+    useFinance, CekKeuanganApp. Fitur id baru `cek` (features.ts + PREF_FEATURES Worker).
+  - Dites lokal Playwright web 1440 & Pixel 7: alur Bab 1–3 dengan auto-lanjut, Bab 4 terlewati otomatis (angka
+    terisi), navigasi bab, kartu akhir + saran, reload tersimpan, 0 error JS. Belum dites: dark mode v2, perangkat asli.
 
 - **2026-11-08 — 3.10.0 LIVE (run #177, commit 22bddf6). PERLU SQL 0041 (Bos konfirmasi dengan "gas").**
   - Cek live: `/api/member/canvas` tanpa sesi 401, bundle /membership/kanvas berisi "Arus Uangku".

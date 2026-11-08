@@ -784,7 +784,7 @@ function TemplateBoard({
             const [x, y] = at('mulai');
             board.current?.focus(
               x - 8,
-              narrow ? y - 8 : Math.min(y, at(t.chapters[0].id)[1]) - 8,
+              (narrow ? y : Math.min(y, at(t.chapters[0].id)[1])) - 64,
               narrow ? 1 : 0.85,
               false,
             );
