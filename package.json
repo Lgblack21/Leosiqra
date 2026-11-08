@@ -1,6 +1,6 @@
 {
   "name": "finance-tracker",
-  "version": "3.6.6",
+  "version": "3.7.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -34,6 +34,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.38.0",
+    "html-to-image": "1.11.13",
     "lucide-react": "^1.8.0",
     "next": "^16.4.2",
     "otplib": "^13.4.0",

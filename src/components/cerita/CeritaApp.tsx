@@ -2,18 +2,19 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, BookOpen, CalendarDays, PenLine } from 'lucide-react';
+import { ArrowLeft, BookOpen, CalendarDays, PenLine, Sticker } from 'lucide-react';
 import { LeoGuide } from '@/components/ai/LeoGuide';
 import { TulisView } from './TulisView';
 import { KalenderView } from './KalenderView';
 import { KumpulanView } from './KumpulanView';
+import { StikerView } from './StikerView';
 import { storyService, wibToday, type StoryYear } from '@/lib/stories';
 import { useFitHeight } from '@/lib/useFitHeight';
 import { cn } from '@/lib/utils';
 
 // Cerita Hari Ini — layar penuh seperti Fokus/Ladangku: bar atas (kembali · judul · Leo AI)
-// + menu melayang (Tulis · Setahun · Kumpulan). Dipakai web (/membership/cerita) & app (/app/cerita).
-type Tab = 'tulis' | 'kalender' | 'kumpulan';
+// + menu melayang (Tulis · Setahun · Kumpulan · Stiker). Dipakai web (/membership/cerita) & app (/app/cerita).
+type Tab = 'tulis' | 'kalender' | 'kumpulan' | 'stiker';
 const TABS: { id: Tab; label: string; icon: typeof PenLine; title: string; sub: string }[] = [
   { id: 'tulis', label: 'Tulis', icon: PenLine, title: 'Cerita Hari Ini', sub: 'Satu halaman untuk hari ini' },
   {
@@ -24,6 +25,13 @@ const TABS: { id: Tab; label: string; icon: typeof PenLine; title: string; sub: 
     sub: 'Foto & mood di tiap tanggal',
   },
   { id: 'kumpulan', label: 'Kumpulan', icon: BookOpen, title: 'Kumpulan cerita', sub: 'Cari & baca lagi ceritamu' },
+  {
+    id: 'stiker',
+    label: 'Stiker',
+    icon: Sticker,
+    title: 'Stiker cerita',
+    sub: 'Foto + angka keuanganmu, siap dibagikan',
+  },
 ];
 const noop = () => () => {};
 
@@ -109,6 +117,11 @@ export function CeritaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
         {client && tab === 'kumpulan' && (
           <div data-scroll className="h-full overflow-y-auto overscroll-contain">
             <KumpulanView data={data} onOpen={open} onWrite={() => open(wibToday())} />
+          </div>
+        )}
+        {client && tab === 'stiker' && (
+          <div data-scroll className="h-full overflow-y-auto overscroll-contain">
+            <StikerView />
           </div>
         )}
         {!client && (

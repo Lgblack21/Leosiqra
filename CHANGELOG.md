@@ -62,6 +62,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.6.4 | 8 Nov 2026 | Pilih rekening & kategori lebih rapi |
 | 3.6.5 | 8 Nov 2026 | Hasil jual tidak tercatat dua kali, kebocoran biaya AI ditutup |
 | 3.6.6 | 8 Nov 2026 | Pengingat Sehatku lebih andal |
+| 3.7.0 | 8 Nov 2026 | Stiker cerita: bagikan angka keuanganmu |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -75,6 +76,20 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.7.0 — 2026-11-08 — Stiker cerita: bagikan angka keuanganmu
+
+- Tab baru **Stiker** di Cerita Hari Ini (web & aplikasi HP): pilih foto hari ini dari kamera atau
+  galeri (atau latar warna), tempel stiker angka keuanganmu, lalu bagikan ke Story atau simpan.
+- 27 stiker dalam 5 kelompok — Angka (angka besar, neon, papan skor, tiket, kalender sobek,
+  koran Harian Leo), Grafik (batang, donat kategori, podium, speedometer, hari tanpa belanja),
+  Leo (Leo bilang, Leo pegang papan, cap Leosiqra, meteran mood, polaroid), Gaya (nota warung,
+  chat dari Leo, boarding pass, HUD game, kartu member, sticky note) dan Label.
+- Stiker bisa digeser, diputar & diperbesar; rentang Hari ini / Minggu ini / Bulan ini; ukuran
+  Story 9:16 atau Post 4:5 (gambar 1080 px); "Sembunyikan nominal" untuk hanya menampilkan
+  jumlah & persen.
+- Angka sama dengan Ringkasan: beli investasi & transfer tidak dihitung sebagai pengeluaran.
+- Gambar dibuat di perangkatmu; foto tidak diunggah ke server.
 
 ## 3.6.6 — 2026-11-08 — Pengingat Sehatku lebih andal
 

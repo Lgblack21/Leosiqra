@@ -18,6 +18,17 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-08 (branch claude/stiker-cerita-20261108) — RILIS 3.7.0 siap, BELUM deploy (tunggu "gas"). Tanpa SQL.**
+  - Tab baru Stiker di Cerita (`src/components/cerita/StikerView.tsx`, `stiker/stickers.tsx` 27 stiker,
+    `src/lib/storyStats.ts`). Data dari `transactionService.getUserTransactions` (sama dengan Ringkasan: isSpend =
+    pengeluaran non-investasi). Ekspor PNG di perangkat dengan `html-to-image@1.11.13` (dependency baru, lock hanya +1
+    entri): kanvas logis 360×640/450, diskalakan ke layar, ekspor pixelRatio 3 → 1080×1920 / 1080×1350.
+  - Desain sendiri (Leo, Leosiqra), bukan tiruan Oyenza (referensi Bos hanya untuk konsep).
+  - Dites lokal (Playwright web 1366 & iPhone 13): hari ini 3 pengeluaran (beli saham 2 jt TIDAK dihitung), tambah/
+    geser/putar stiker, ekspor Story 1080×1920 & Post 1080×1350 + sembunyikan nominal, 27 stiker diekspor per
+    kelompok & dicek visual; 0 error JS, tanpa scroll samping. Belum dites: tombol Bagikan (navigator.share dengan file)
+    di HP sungguhan — headless tidak punya share sheet; fallback = simpan file.
+
 - **2026-11-08 — 3.6.6 LIVE (run #173, commit ef397f5, Release v3.6.6): perbaikan Sehatku. Tanpa SQL.**
   - Review Sehatku (backend + uji API/UI lokal). Diperbaiki: cron pengingat Cek & premi klaim dalam 1 UPDATE…RETURNING,
     maks 25 user/putaran, push digabung per user, cek pakai jendela susulan 7 hari (29 Feb ikut); guard bayar premi
