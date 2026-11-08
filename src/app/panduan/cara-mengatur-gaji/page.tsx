@@ -118,8 +118,7 @@ export default function CaraMengaturGajiPage() {
       </div>
       <p>
         Angka di atas hanya ilustrasi. Yang penting bukan persentasenya persis, tapi setiap rupiah sudah punya tujuan
-        sebelum bulan berjalan. Contoh yang lebih rinci untuk lajang yang ngekos, rumah tangga dengan anak, dan saat ada
-        cicilan ada di <Link href="/panduan/cara-mengatur-gaji-5-juta">cara mengatur gaji 5 juta per bulan</Link>.
+        sebelum bulan berjalan.
       </p>
 
       <h2>Urutan prioritas saat gajian</h2>
