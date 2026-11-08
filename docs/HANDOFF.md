@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-08 (3.6.5 live, run #172)
+Terakhir diperbarui: 2026-11-08 (3.6.6 live, run #173)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-08 (branch claude/fix-sehatku-20261108) — RILIS 3.6.6 siap, BELUM deploy (tunggu "gas"). Tanpa SQL.**
+- **2026-11-08 — 3.6.6 LIVE (run #173, commit ef397f5, Release v3.6.6): perbaikan Sehatku. Tanpa SQL.**
   - Review Sehatku (backend + uji API/UI lokal). Diperbaiki: cron pengingat Cek & premi klaim dalam 1 UPDATE…RETURNING,
     maks 25 user/putaran, push digabung per user, cek pakai jendela susulan 7 hari (29 Feb ikut); guard bayar premi
     paralel (next_due harus sama); klaim cair Rp0 ditolak. Dites: 32 user/60 catatan penyerang → 25 lalu 6, notif mati
