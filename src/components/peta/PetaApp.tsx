@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, MapPin, Search, Trash2, X } from 'lucide-react';
-import { PlaceMap, type MapMarker } from '@/components/peta/PlaceMap';
+import { ArrowLeft, MapPin, Search, ShieldCheck, Trash2, X } from 'lucide-react';
+import type { Map as MlMap } from 'maplibre-gl';
+import { PlaceMap, type MapLib, type MapMarker } from '@/components/peta/PlaceMap';
+import { JejakPanel, useReplay } from '@/components/peta/JejakView';
+import { LocationSettings } from '@/components/peta/LocationSettings';
 import { LocationPicker, type PickedPlace } from '@/components/peta/LocationPicker';
-import { groupPlaces, idrOf, placeService, type Place, type PlacedTx } from '@/lib/places';
+import { dayTrips, groupPlaces, idrOf, placeService, type Place, type PlacedTx } from '@/lib/places';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
 import { categoryVisual } from '@/lib/categoryEmoji';
 import { rp, short } from '@/lib/kanvas/data';
@@ -37,6 +40,11 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
     start?: { lat: number; lng: number };
   } | null>(null);
   const [err, setErr] = useState('');
+  const [tab, setTab] = useState<'peta' | 'jejak'>('peta');
+  const [day, setDay] = useState<string | null>(null);
+  const [settings, setSettings] = useState(false);
+  const [mapInst, setMapInst] = useState<{ m: MlMap; ml: MapLib } | null>(null);
+  const onMapReady = useCallback((m: MlMap, ml: MapLib) => setMapInst({ m, ml }), []);
 
   const load = useCallback(async () => {
     try {
@@ -86,7 +94,38 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
     .slice(0, 6);
   const selected = places.find((p) => p.key === sel) ?? null;
 
-  const markers: MapMarker[] = useMemo(
+  const trips = useMemo(() => dayTrips(items ?? []), [items]);
+  const trip = tab === 'jejak' ? (trips.find((t) => t.day === day) ?? trips[0] ?? null) : null;
+  const replay = useReplay(trip, mapInst);
+  const activeStop = replay.current ? (replay.current.kind === 'stay' ? replay.current.i : replay.current.i + 1) : -1;
+  const tripMarkers: MapMarker[] = useMemo(
+    () =>
+      (trip?.stops ?? [])
+        .map(
+          (s, i): MapMarker => ({
+            key: s.tx_id,
+            lat: s.lat,
+            lng: s.lng,
+            emoji: categoryVisual(s.category, 'pengeluaran').emoji,
+            label: s.time ? `${s.time} · ${short(idrOf(s))}` : short(idrOf(s)),
+            order: i + 1,
+            active: i === activeStop,
+          }),
+        )
+        .concat(
+          (trip?.extra ?? []).map((s) => ({
+            key: s.tx_id,
+            lat: s.lat,
+            lng: s.lng,
+            emoji: categoryVisual(s.category, 'pengeluaran').emoji,
+            label: short(idrOf(s)),
+            active: false,
+          })),
+        ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cukup saat hari / perhentian aktif berubah
+    [trip?.day, trip?.stops.length, activeStop],
+  );
+  const placeMarkers: MapMarker[] = useMemo(
     () =>
       places.map((p) => ({
         key: p.key,
@@ -100,6 +139,7 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- cukup berubah saat isi/pilihan berubah
     [places.map((p) => `${p.key}:${p.total}:${p.visits}`).join('|'), sel],
   );
+  const markers = tab === 'jejak' ? tripMarkers : placeMarkers;
   const choose = useCallback(
     (key: string) => {
       setSel(key);
@@ -116,6 +156,13 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
     await load();
     setFocus({ lat: p.lat, lng: p.lng, zoom: 16, seq: Date.now() });
   };
+  const focusStop = useCallback(
+    (key: string) => {
+      const st = [...(trip?.stops ?? []), ...(trip?.extra ?? [])].find((x) => x.tx_id === key);
+      if (st) setFocus({ lat: st.lat, lng: st.lng, zoom: 16, seq: Date.now() });
+    },
+    [trip],
+  );
   const removePlace = async (txId: string) => {
     try {
       await placeService.remove(txId);
@@ -125,7 +172,7 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
     }
   };
 
-  const panel = (
+  const placePanel = (
     <div className="space-y-5">
       {!ready ? (
         <p className="rounded-2xl bg-amber-50 px-4 py-3 text-[13px] font-semibold text-amber-800">
@@ -275,13 +322,75 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
       ) : null}
 
       <p className="text-[11.5px] leading-relaxed text-slate-400">
-        Lokasi hanya tersimpan saat kamu menandainya — Leosiqra tidak melacak posisimu. Data peta © kontributor
-        OpenStreetMap.
+        Lokasi hanya tersimpan saat kamu menandainya atau saat mencatat dengan lokasi otomatis — tidak ada pelacakan di
+        latar belakang. Atur di 🛡️ Lokasi &amp; privasi. Data peta © kontributor OpenStreetMap.
       </p>
     </div>
   );
 
-  const map = <PlaceMap markers={markers} onMarker={choose} focus={focus} />;
+  const tabs = (
+    <div className="flex items-center gap-2">
+      <div className="flex flex-1 gap-1 rounded-full bg-slate-200/70 p-1 dark:bg-slate-800">
+        {(
+          [
+            ['peta', 'Peta'],
+            ['jejak', 'Jejak'],
+          ] as const
+        ).map(([k, l]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setTab(k)}
+            className={cn(
+              'h-10 flex-1 rounded-full text-[14px] font-black transition-colors',
+              tab === k ? 'bg-white shadow-sm dark:bg-slate-950' : 'text-slate-500',
+            )}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={() => setSettings(true)}
+        aria-label="Lokasi & privasi"
+        title="Lokasi & privasi"
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-emerald-700 ring-1 ring-slate-200 hover:ring-emerald-300 dark:bg-slate-900 dark:text-emerald-300 dark:ring-slate-700"
+      >
+        <ShieldCheck size={20} />
+      </button>
+    </div>
+  );
+  const panel = (
+    <div className="space-y-5">
+      {tabs}
+      {tab === 'peta' ? (
+        placePanel
+      ) : (
+        <JejakPanel
+          trips={trips}
+          trip={trip}
+          onDay={setDay}
+          replay={replay}
+          onStop={(i) => trip && focusStop(trip.stops[i].tx_id)}
+          onFocus={focusStop}
+        />
+      )}
+    </div>
+  );
+
+  const map = (
+    <div className="relative h-full w-full">
+      <PlaceMap
+        markers={markers}
+        onMarker={tab === 'jejak' ? focusStop : choose}
+        focus={focus}
+        fitKey={tab === 'jejak' ? `j:${trip?.day ?? ''}` : 'peta'}
+        onMapReady={onMapReady}
+      />
+      {replay.hud}
+    </div>
+  );
   return (
     <div
       className={cn(
@@ -320,6 +429,7 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
           </div>
         </div>
       )}
+      {settings ? <LocationSettings items={items ?? []} onClose={() => setSettings(false)} onChanged={load} /> : null}
       {pick ? (
         <LocationPicker
           title={pick.title}

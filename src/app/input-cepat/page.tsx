@@ -35,6 +35,7 @@ import { transactionService, Transaction } from '@/lib/services/transactionServi
 import { isCreditAccountType, computeCreditUsage } from '@/lib/creditCard';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { quickTxService } from '@/lib/services/quickTxService';
+import { usePlaceDraft, type StrukPlace } from '@/components/peta/PlaceDraft';
 import { useQuickContext } from '@/lib/quick/useQuickContext';
 import type { QuickDraft } from '@/lib/quick/parse';
 import { SmartBar, type DraftSource } from '@/components/quick/SmartBar';
@@ -84,6 +85,9 @@ export default function InputCepatPage() {
   const [hint, setHint] = useState<{ source: DraftSource; text?: string } | null>(null);
   // Foto struk dari scan AI (disimpan server) — ditautkan setelah transaksi tersimpan.
   const [attachmentId, setAttachmentId] = useState<string | undefined>();
+  // Peta Belanja: tempat dari struk + lokasi transaksi (otomatis/manual).
+  const [struk, setStruk] = useState<StrukPlace>(null);
+  const place = usePlaceDraft({ type, date: date ?? undefined, struk });
   const [undoItem, setUndoItem] = useState<UndoItem | null>(null);
   const [uid, setUid] = useState('');
   // Nominal "meletup" sebentar saat terisi dari ketik pintar / suara / struk.
@@ -260,7 +264,10 @@ export default function InputCepatPage() {
       setDate(draft.date === today ? null : draft.date);
       setShowDatePicker(false);
     }
-    if (source === 'scan') setAttachmentId(draft.attachmentId);
+    if (source === 'scan') {
+      setAttachmentId(draft.attachmentId);
+      setStruk(draft.place ?? null);
+    }
     setHint({ source, text: info });
   };
 
@@ -273,6 +280,8 @@ export default function InputCepatPage() {
     setShowDatePicker(false);
     setHint(null);
     setAttachmentId(undefined);
+    setStruk(null);
+    place.reset();
   };
 
   const handleSubmit = async () => {
@@ -292,6 +301,7 @@ export default function InputCepatPage() {
         ...(date ? { date } : {}),
         attachmentId,
       });
+      void place.commit(res.id, note);
       saved(
         res.id,
         `${type === 'pengeluaran' ? 'Pengeluaran' : 'Pemasukan'} ${res.currency} ${groupDigits(amount)} · ${res.matchedAccount}`,
@@ -637,6 +647,7 @@ export default function InputCepatPage() {
                 className="flex-1 min-w-0 text-sm font-bold text-slate-800 bg-transparent outline-none placeholder:text-slate-300 placeholder:font-medium"
               />
             </label>
+            {type === 'pengeluaran' ? <div className="px-4 pb-3.5">{place.chip}</div> : null}
           </div>
 
           <InputCepatInstall />

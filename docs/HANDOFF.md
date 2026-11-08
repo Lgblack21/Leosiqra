@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (3.14.0 live, run #184)
+Terakhir diperbarui: 2026-11-09 (3.15.0 siap deploy, menunggu "gas" — tanpa SQL)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,24 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-09 — 3.15.0 Peta Belanja Rilis 2 (Jejak + lokasi otomatis) — BELUM DEPLOY. Tanpa SQL.**
+  - Worker: GET /api/member/places ikut `t.created_at` (jam di Jejak); `DELETE /api/member/places` = hapus semua lokasi
+    user (transaksi utuh); `aiExtractTransaction` (foto saja) mengembalikan `suggestion.place {name,address}` dari struk.
+  - `src/lib/places.ts`: `placePrefs` (localStorage `leosiqra-peta-zona`, `leosiqra-peta-otomatis` — TIDAK ke server),
+    `zoneAt`, `nearestKnown` (±60 m), `MAX_AUTO_ACCURACY` 100 m, `dayTrips` (rute hanya dari perhentian berjam; yang
+    dicatat di hari lain masuk `extra`).
+  - `components/peta/PlaceDraft.tsx` (`usePlaceDraft` → chip + `commit(txId)`), dipasang di AddTransactionModal (web),
+    AddTransactionSheet (app), input-cepat, TransactionReviewForm (AI Scan/Voice). Struk: alamat dicari via
+    /places/search kalau GPS tidak dipakai.
+  - `JejakView.tsx` (`useReplay`: rAF di luar React, layer `jejak`/`jejak-trail`, HUD), `LocationSettings.tsx`
+    (otomatis, zona + radius, hapus lokasi lama di zona, hapus semua).
+  - **Bug 3.14.0 diperbaiki**: `.peta-pin{position:relative}` menimpa `position:absolute` marker MapLibre → pin
+    bertumpuk dan tergeser ke bawah (makin banyak pin makin jauh). Sekarang `absolute`.
+  - Dites lokal (Playwright 1440 + Pixel 7, TZ Jakarta): Jejak 7 Nov, putar ulang sampai Selesai, setelan otomatis,
+    zona Rumah → chip "Di zona Rumah", di luar zona → "Uniqlo Senayan City · ±18 m", hapus semua (26→0, transaksi
+    45 tetap), 401 tanpa login, 0 error JS. Belum dites: baca alamat struk (butuh OpenRouter), GPS HP asli.
+  - Berikutnya: Rilis 3 (rekap per kecamatan + 3D).
 
 - **2026-11-09 — 3.14.0 Peta Belanja (Rilis 1 dari 3) LIVE (run #184, commit 5e4ed17).**
   - SQL 0042 (`tx_places`) dijalankan Bos di D1 Console sebelum deploy (belum diverifikasi lewat query).

@@ -12,6 +12,7 @@ import { TxTypeToggle, TxType } from '@/components/app/TxTypeToggle';
 import { AccountPicker } from '@/components/app/AccountPicker';
 import { cn } from '@/lib/utils';
 import { attachmentService } from '@/lib/services/attachmentService';
+import { usePlaceDraft } from '@/components/peta/PlaceDraft';
 
 export interface ParsedTransactionSuggestion {
   type: TxType;
@@ -24,6 +25,8 @@ export interface ParsedTransactionSuggestion {
   date?: string | null;
   /** Foto struk yang disimpan server saat scan (bukan dari AI). */
   attachment_id?: string | null;
+  /** Nama & alamat toko dari struk (scan foto) — untuk Peta Belanja. */
+  place?: { name: string | null; address: string | null } | null;
 }
 
 interface TransactionReviewFormProps {
@@ -47,6 +50,8 @@ export function TransactionReviewForm({ suggestion, onSaved }: TransactionReview
   const [note, setNote] = useState(suggestion?.note ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
+  // Transaksi dari form ini selalu tercatat hari ini (tanggal tidak dikirim), jadi lokasi otomatis boleh dipakai.
+  const place = usePlaceDraft({ type, struk: suggestion?.place });
 
   useEffect(() => {
     const loadAccounts = () =>
@@ -93,6 +98,7 @@ export function TransactionReviewForm({ suggestion, onSaved }: TransactionReview
         },
       });
       await attachmentService.link(suggestion?.attachment_id, res.id);
+      await place.commit(res.id, note);
       notifyCollectionChanged('transactions');
       notifyCollectionChanged('accounts');
       onSaved();
@@ -164,6 +170,7 @@ export function TransactionReviewForm({ suggestion, onSaved }: TransactionReview
         placeholder="Catatan (opsional)"
         className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-5 py-4 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-indigo-500/5"
       />
+      {type === 'pengeluaran' ? place.chip : null}
 
       <button
         type="button"

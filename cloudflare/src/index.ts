@@ -8867,6 +8867,8 @@ type ParsedTransactionSuggestion = {
   account_id?: string | null;
   /** Tanggal yang disebut (mis. "kemarin"), YYYY-MM-DD, maks 60 hari ke belakang. */
   date?: string | null;
+  /** Nama & alamat toko yang tercetak di struk (hanya scan foto) — untuk Peta Belanja. */
+  place?: { name: string | null; address: string | null } | null;
 };
 
 // Model kadang tetap membungkus JSON dalam code fence markdown walau sudah
@@ -8994,7 +8996,9 @@ Balas HANYA dengan satu objek JSON valid, TANPA teks lain, TANPA markdown code f
   "note": <string ringkas, misal nama merchant/deskripsi, atau null>,
   "confidence": "high" | "medium" | "low",
   "account": <nama rekening PERSIS dari daftar rekening di bawah kalau pengguna menyebutnya (mis. "pakai BCA", "dari cash"), atau null>,
-  "date": <"YYYY-MM-DD" kalau pengguna menyebut waktu (mis. "kemarin", "2 hari lalu", "tanggal 25") atau tanggal tercetak di struk, atau null>
+  "date": <"YYYY-MM-DD" kalau pengguna menyebut waktu (mis. "kemarin", "2 hari lalu", "tanggal 25") atau tanggal tercetak di struk, atau null>,
+  "place_name": <nama toko/merchant PERSIS seperti tercetak di struk (mis. "Indomaret Cipete Raya"), atau null kalau bukan struk / tidak ada>,
+  "place_address": <alamat toko PERSIS seperti tercetak di struk (jalan, kelurahan/kecamatan, kota), atau null kalau tidak tercetak — JANGAN menebak>
 }
 
 Hari ini (WIB): ${today}.
@@ -9111,6 +9115,12 @@ ${JSON.stringify(userAccounts.map((a) => ({ name: a.name, type: a.type, currency
   const aiDate = String(parsed.date ?? "").trim().slice(0, 10);
   if (/^\d{4}-\d{2}-\d{2}$/.test(aiDate) && aiDate <= today && daysBetween(aiDate, today) <= 60) {
     suggestion.date = aiDate;
+  }
+  // Tempat dari struk (hanya foto): dipakai klien untuk menandai lokasi di Peta Belanja kalau GPS tidak ada.
+  if (hasImage) {
+    const placeName = typeof parsed.place_name === "string" ? parsed.place_name.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 120) : "";
+    const placeAddress = typeof parsed.place_address === "string" ? parsed.place_address.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 240) : "";
+    if (placeName || placeAddress) suggestion.place = { name: placeName || null, address: placeAddress || null };
   }
 
   return { ok: true as const, suggestion };
@@ -13104,6 +13114,7 @@ async function handleMemberFocus(request: Request, env: Env, pathname: string) {
 // GET    /api/member/places?days=30     → transaksi berlokasi (maks 3000) { items, ready }
 // PUT    /api/member/places/:txId       → simpan { lat, lng, name?, address?, source }
 // DELETE /api/member/places/:txId
+// DELETE /api/member/places              → hapus SEMUA lokasi milik user (transaksi tidak tersentuh)
 // GET    /api/member/places/search?q=   → cari tempat (Nominatim/OpenStreetMap, di-cache 30 hari)
 // Lokasi ikut dihapus bersama transaksinya (tabel belum ada = tidak ada yang perlu dihapus).
 const deletePlacesForTransactions = async (env: Env, userId: string, ids: string[]) => {
@@ -13159,11 +13170,16 @@ async function handleMemberPlaces(request: Request, env: Env, url: URL) {
       const days = Math.min(400, Math.max(1, Number(url.searchParams.get("days")) || 90));
       const since = new Date(Date.now() + 7 * 3600_000 - days * 86400_000).toISOString().slice(0, 10);
       const rows = await env.DB.prepare(
-        `SELECT p.tx_id, p.lat, p.lng, p.name, p.address, p.source, t.date, t.type, t.amount, t.amount_idr, t.currency, t.category, t.sub_category, t.note
+        `SELECT p.tx_id, p.lat, p.lng, p.name, p.address, p.source, t.date, t.created_at, t.type, t.amount, t.amount_idr, t.currency, t.category, t.sub_category, t.note
            FROM tx_places p JOIN transactions t ON t.id = p.tx_id AND t.user_id = p.user_id
           WHERE p.user_id = ? AND t.date >= ? ORDER BY t.date DESC LIMIT 3000`
       ).bind(userId, since).all();
       return json({ items: rows.results ?? [], ready: true });
+    }
+    // Hapus semua lokasiku (Pengaturan lokasi di Peta Belanja). Transaksinya tetap ada.
+    if (pathname === "/api/member/places" && request.method === "DELETE") {
+      const r = await env.DB.prepare("DELETE FROM tx_places WHERE user_id = ?").bind(userId).run();
+      return json({ ok: true, deleted: r.meta?.changes ?? 0 });
     }
     const m = /^\/api\/member\/places\/([A-Za-z0-9_-]{1,64})$/.exec(pathname);
     if (m && request.method === "PUT") {

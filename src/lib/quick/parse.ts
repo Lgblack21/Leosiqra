@@ -16,6 +16,8 @@ export interface QuickDraft {
   date?: string;
   /** Foto struk yang disimpan server saat scan — ditautkan setelah transaksi tersimpan. */
   attachmentId?: string;
+  /** Nama & alamat toko dari struk (scan) — untuk menandai lokasi di Peta Belanja. */
+  place?: { name: string | null; address: string | null };
 }
 
 export interface ParseContext {

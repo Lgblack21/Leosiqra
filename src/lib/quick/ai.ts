@@ -10,6 +10,7 @@ interface AiSuggestion {
   confidence: 'high' | 'medium' | 'low';
   account_id?: string | null;
   date?: string | null;
+  place?: { name: string | null; address: string | null } | null;
 }
 
 // Baca transaksi dari teks (transkrip suara) atau foto struk lewat
@@ -38,6 +39,7 @@ export const aiParse = async (
     accountId: s.account_id ?? undefined,
     date: s.date ?? undefined,
     attachmentId: res.attachmentId ?? undefined,
+    place: s.place ?? undefined,
     confidence: s.confidence,
   };
 };

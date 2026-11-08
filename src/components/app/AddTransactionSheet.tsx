@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { AmountKeypad, groupDigits } from '@/components/app/AmountKeypad';
 import { lightTap } from '@/lib/haptics';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
+import { usePlaceDraft, type StrukPlace } from '@/components/peta/PlaceDraft';
 import { quickTxService } from '@/lib/services/quickTxService';
 import { useQuickContext } from '@/lib/quick/useQuickContext';
 import type { QuickDraft } from '@/lib/quick/parse';
@@ -238,6 +239,9 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
   // null = "hari ini" (default server-side, sengaja gak dikirim ke payload
   // supaya perilaku default gak berubah dari sebelumnya).
   const [date, setDate] = useState<string | null>(null);
+  // Peta Belanja: tempat dari struk + lokasi transaksi (otomatis/manual).
+  const [struk, setStruk] = useState<StrukPlace>(null);
+  const place = usePlaceDraft({ type: isTransfer ? 'transfer' : type, date: date ?? undefined, struk, active: isOpen });
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
   const [fromReminder, setFromReminder] = useState<string | null>(null);
@@ -345,6 +349,8 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
     setDate(null);
     setHint(null);
     setAttachmentId(undefined);
+    setStruk(null);
+    place.reset();
     setFromReminder(null);
     setShowSmart(false);
     setPicker(null);
@@ -370,7 +376,10 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
     if (draft.date) {
       setDate(draft.date === toISODate(new Date()) ? null : draft.date);
     }
-    if (source === 'scan') setAttachmentId(draft.attachmentId);
+    if (source === 'scan') {
+      setAttachmentId(draft.attachmentId);
+      setStruk(draft.place ?? null);
+    }
     setHint({ source, text: info });
   };
 
@@ -405,6 +414,7 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
         attachmentId,
         tags: txTags,
       });
+      void place.commit(res.id, note);
       setUndoItem({
         id: res.id,
         label: `${subCategory || category} · ${res.currency} ${groupDigits(amount)} · ${res.matchedAccount}`,
@@ -716,6 +726,10 @@ export function AddTransactionSheet({ isOpen, onClose, prefill }: AddTransaction
               className="min-w-0 flex-1 bg-transparent text-[13px] font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none dark:text-white"
             />
           </label>
+        )}
+
+        {!catsOpen && !showSmart && !isTransfer && type === 'pengeluaran' && (
+          <div className="px-4 pt-1">{place.chip}</div>
         )}
 
         {!catsOpen && !showSmart && !isTransfer && tagPref.enabled && (

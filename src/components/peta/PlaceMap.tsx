@@ -22,20 +22,29 @@ export type MapMarker = {
   emoji: string;
   label?: string;
   count?: number;
+  /** Nomor urut perhentian (Jejak) — selalu tampil di pojok pin. */
+  order?: number;
   active?: boolean;
 };
+export type MapLib = typeof import('maplibre-gl');
 
 export function PlaceMap({
   markers,
   onMarker,
   picker,
   focus,
+  fitKey,
+  onMapReady,
   className,
 }: {
   markers: MapMarker[];
   onMarker?: (key: string) => void;
   picker?: { onMove: (lat: number, lng: number) => void };
   focus?: { lat: number; lng: number; zoom?: number; seq: number } | null;
+  /** Ganti nilai ini untuk menyesuaikan ulang tampilan ke semua pin (mis. ganti hari di Jejak). */
+  fitKey?: string;
+  /** Akses peta mentah (garis rute & animasi Jejak) setelah peta siap; dipanggil lagi tiap peta dibuat ulang. */
+  onMapReady?: (map: MlMap, ml: MapLib) => void;
   className?: string;
 }) {
   const box = useRef<HTMLDivElement>(null);
@@ -43,7 +52,11 @@ export function PlaceMap({
   const pins = useRef<Marker[]>([]);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
-  const fitted = useRef(false);
+  const fitted = useRef<string | null>(null);
+  const readyCb = useRef(onMapReady);
+  useEffect(() => {
+    readyCb.current = onMapReady;
+  });
   const pickerRef = useRef(picker);
   useEffect(() => {
     pickerRef.current = picker;
@@ -73,7 +86,11 @@ export function PlaceMap({
         attributionControl: { compact: true },
       });
       m.addControl(new ml.NavigationControl({ showCompass: false }), 'top-right');
-      m.on('load', () => alive && setReady(true));
+      m.on('load', () => {
+        if (!alive || !m) return;
+        setReady(true);
+        readyCb.current?.(m, ml);
+      });
       m.on('moveend', () => {
         const c = m!.getCenter();
         pickerRef.current?.onMove(c.lat, c.lng);
@@ -107,7 +124,11 @@ export function PlaceMap({
         el.className = 'peta-pin';
         el.dataset.active = mk.active ? '1' : '0';
         el.innerHTML = `<span class="peta-pin-dot">${mk.emoji}</span>${
-          mk.count && mk.count > 1 ? `<span class="peta-pin-count">${mk.count}</span>` : ''
+          mk.order
+            ? `<span class="peta-pin-count">${mk.order}</span>`
+            : mk.count && mk.count > 1
+              ? `<span class="peta-pin-count">${mk.count}</span>`
+              : ''
         }${mk.label ? `<span class="peta-pin-label"></span>` : ''}`;
         if (mk.label) (el.querySelector('.peta-pin-label') as HTMLElement).textContent = mk.label;
         el.addEventListener('click', (e) => {
@@ -116,20 +137,21 @@ export function PlaceMap({
         });
         return new ml.Marker({ element: el, anchor: 'bottom' }).setLngLat([mk.lng, mk.lat]).addTo(m);
       });
-      if (!fitted.current && markers.length && !picker) {
-        fitted.current = true;
+      const key = fitKey ?? 'awal';
+      if (fitted.current !== key && markers.length && !picker) {
+        fitted.current = key;
         if (markers.length === 1) m.jumpTo({ center: [markers[0].lng, markers[0].lat], zoom: 15 });
         else {
           const b = new ml.LngLatBounds();
           markers.forEach((mk) => b.extend([mk.lng, mk.lat]));
-          m.fitBounds(b, { padding: 70, maxZoom: 15, duration: 0 });
+          m.fitBounds(b, { padding: { top: 90, bottom: 40, left: 50, right: 50 }, maxZoom: 15, duration: 0 });
         }
       }
     })();
     return () => {
       alive = false;
     };
-  }, [markers, ready, onMarker, picker]);
+  }, [markers, ready, onMarker, picker, fitKey]);
 
   useEffect(() => {
     const m = map.current;
@@ -151,7 +173,7 @@ export function PlaceMap({
         </p>
       ) : null}
       <style>{`
-        .peta-pin{position:relative;display:flex;flex-direction:column;align-items:center;cursor:pointer;background:none;border:0;padding:0}
+        .peta-pin{position:absolute;top:0;left:0;display:flex;flex-direction:column;align-items:center;cursor:pointer;background:none;border:0;padding:0}
         .peta-pin-dot{display:flex;height:42px;width:42px;align-items:center;justify-content:center;border-radius:9999px;background:#fff;font-size:20px;box-shadow:0 6px 16px -6px rgba(15,23,42,.45);border:3px solid #6366f1;transition:transform .15s}
         .peta-pin[data-active="1"] .peta-pin-dot{border-color:#f97316;transform:scale(1.15)}
         .peta-pin-count{position:absolute;top:-8px;right:-8px;min-width:20px;height:20px;padding:0 5px;border-radius:9999px;background:#4f46e5;color:#fff;font:800 11px/20px system-ui,sans-serif}

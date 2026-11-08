@@ -74,6 +74,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.12.3 | 8 Nov 2026 | Fitur lainnya + label PRO |
 | 3.13.0 | 9 Nov 2026 | Rapor Keuangan |
 | 3.14.0 | 9 Nov 2026 | Peta Belanja |
+| 3.15.0 | 9 Nov 2026 | Jejak & lokasi otomatis |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -87,6 +88,28 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.15.0 — 2026-11-09 — Jejak & lokasi otomatis
+
+- **Baru: Jejak** di Peta Belanja: lihat perjalanan belanjamu dalam satu hari.
+  - Pilih hari, lalu lihat urutan tempat yang kamu datangi lengkap dengan jam, nominal, dan perkiraan jarak serta
+    waktu tempuh (jalan kaki atau kendaraan).
+  - **Putar ulang perjalanan**: titik berjalan dari tempat ke tempat di peta, garis rute tergambar perlahan, dan
+    uang yang terpakai bertambah setiap kali tiba. Bisa dijeda, dihentikan, dan dipercepat 2× atau 4×.
+- **Lokasi otomatis saat mencatat** (bisa dinyalakan di 🛡️ Lokasi & privasi):
+  - Saat mencatat pengeluaran hari ini, lokasimu diambil sekali dan ditempel ke transaksinya. Kamu bisa
+    menghapus atau mengubahnya sebelum menyimpan.
+  - Kalau kamu pernah ke tempat itu, namanya langsung disarankan.
+  - Hanya dipakai kalau sinyal lokasi cukup akurat. Tidak ada pelacakan di latar belakang.
+  - Berlaku di Catat transaksi (web), aplikasi HP, Input Cepat, dan AI Scan/Voice.
+- **Zona privat Rumah & Kantor** dengan radius 100/200/500 m:
+  - Di dalam zona, lokasi otomatis tidak menyimpan titik apa pun.
+  - Titik zona hanya tersimpan di perangkatmu, tidak pernah dikirim ke server.
+  - Ada tombol untuk menghapus lokasi lama yang terlanjur tersimpan di dalam zona.
+- **Struk dibaca alamatnya**: saat scan struk, nama dan alamat toko dibaca AI lalu ditandai di peta (kalau lokasi
+  otomatis tidak dipakai).
+- **Hapus semua lokasiku**: satu tombol untuk menghapus semua lokasi. Transaksinya tetap utuh.
+- Perbaikan: pin di Peta Belanja kadang tergeser dari titik sebenarnya kalau tempatnya banyak.
 
 ## 3.14.0 — 2026-11-09 — Peta Belanja
 

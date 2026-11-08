@@ -21,7 +21,10 @@ export function LocationPicker({
   start,
   onSave,
   onClose,
+  zone,
 }: {
+  /** Dipakai untuk memilih titik zona privat: tanpa kolom nama, teks disesuaikan. */
+  zone?: boolean;
   title: string;
   defaultName: string;
   start?: { lat: number; lng: number } | null;
@@ -95,7 +98,9 @@ export function LocationPicker({
       >
         <div className="flex items-center gap-3 border-b border-slate-100 px-5 py-3.5 dark:border-slate-800">
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Tandai lokasi</p>
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+              {zone ? 'Zona privat' : 'Tandai lokasi'}
+            </p>
             <p className="truncate text-[16px] font-black text-slate-900 dark:text-white">{title}</p>
           </div>
           <button
@@ -108,7 +113,7 @@ export function LocationPicker({
           </button>
         </div>
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
-          <label className="block">
+          <label className={cn('block', zone && 'hidden')}>
             <span className="text-[12px] font-bold text-slate-500">Nama tempat</span>
             <input
               value={name}
@@ -178,8 +183,9 @@ export function LocationPicker({
             />
           </div>
           <p className="text-[11.5px] text-slate-400">
-            Geser peta sampai pin 📍 tepat di tempatnya. Lokasi hanya disimpan untuk transaksi ini — Leosiqra tidak
-            melacak posisimu.
+            {zone
+              ? 'Geser peta sampai pin 📍 tepat di tengah zona. Titik ini hanya disimpan di perangkat ini, tidak dikirim ke server.'
+              : 'Geser peta sampai pin 📍 tepat di tempatnya. Lokasi hanya disimpan untuk transaksi ini — Leosiqra tidak melacak posisimu.'}
           </p>
         </div>
         <div className="border-t border-slate-100 px-5 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 dark:border-slate-800">
@@ -192,7 +198,7 @@ export function LocationPicker({
               center ? 'bg-emerald-600' : 'bg-slate-400',
             )}
           >
-            {busy === 'simpan' ? 'Menyimpan…' : 'Simpan lokasi'}
+            {busy === 'simpan' ? 'Menyimpan…' : zone ? 'Simpan zona' : 'Simpan lokasi'}
           </button>
         </div>
       </div>
