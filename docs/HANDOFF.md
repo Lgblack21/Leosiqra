@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-08 (3.12.2 live, run #181)
+Terakhir diperbarui: 2026-11-08 (3.12.3 live, run #182)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,12 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-08 — 3.12.3 LIVE (run #182, commit dab329b). Tanpa SQL.** `SIDEBAR_LIMIT = 6` + `sidebarFeatures()` di
+  features.ts; sidebar "Fitur lainnya +N"; halaman /membership/fitur menyembunyikan fitur yang sudah di sidebar (+ menu
+  Keuangan & Catat), kolom diseimbangkan otomatis. Label PRO (akun Gratis, `usePlan` / profile di Sidebar) dari
+  `Fitur.pro` di fiturCatalog — hanya fitur yang jatahnya memang lebih besar di Worker (AI_LIMITS, STORY_AI, SW_LIMITS,
+  STAFF_LIMIT); tidak ada fitur yang terkunci. Belum dites dengan akun PRO (label harus hilang).
 
 - **2026-11-08 — 3.12.2 LIVE (run #181, commit 9913184). Tanpa SQL.** Sidebar: maks 5 fitur (+ fitur yang sedang
   dibuka) lalu "Semua fitur +N" (`/membership/fitur`). Halaman Semua fitur = hanya tombol, kolom tetap (LAYOUT3/LAYOUT2),
