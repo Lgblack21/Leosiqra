@@ -5,7 +5,7 @@ import { useFinance } from '@/components/kanvas/useFinance';
 import { canvasService, type CanvasMeta } from '@/lib/kanvas/service';
 import { subscriptionService } from '@/lib/services/subscriptionService';
 import { recurringService, type RecurringTransaction } from '@/lib/services/recurringService';
-import { CEK } from '@/lib/kanvas/templates';
+import { computeRapor } from '@/lib/rapor';
 import { isIncome, isSpend, rp, short } from '@/lib/kanvas/data';
 import { toLocalDateString } from '@/lib/utils';
 
@@ -80,17 +80,15 @@ export function useFiturStatus() {
       if (m.ready) {
         st.kekayaan = { text: `Bersih ${rp(m.net)}`, tone: m.net >= 0 ? 'good' : 'bad' };
         st.investasi = { text: m.investments ? `Nilai ${rp(m.investments)}` : 'Belum ada investasi' };
-        const checks = [CEK.tabung, CEK.darurat, CEK.utang, CEK.cicilan, CEK.bersih]
-          .map((c) => c.calc(m))
-          .filter(Boolean);
-        const aman = checks.filter((c) => c!.status === 'aman').length;
-        if (checks.length)
-          st.cek = {
-            text: `${aman} dari ${checks.length} aman`,
-            tone: aman === checks.length ? 'good' : aman >= checks.length / 2 ? 'warn' : 'bad',
-            progress: aman / checks.length,
-          };
-        else st.cek = { text: `Siap ${m.readyLabel}` };
+        const rapor = computeRapor(tx, m);
+        st.cek =
+          rapor.score !== null && rapor.grade
+            ? {
+                text: `Nilai ${rapor.score} · ${rapor.grade.letter} ${rapor.grade.label.toLowerCase()}`,
+                tone: rapor.score >= 70 ? 'good' : rapor.score >= 55 ? 'warn' : 'bad',
+                progress: rapor.score / 100,
+              }
+            : { text: 'Catat dulu, nilainya langsung muncul' };
       }
       if (!todayCount)
         saran.push({

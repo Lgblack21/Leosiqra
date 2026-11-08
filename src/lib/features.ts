@@ -121,7 +121,7 @@ export const FEATURES: Feature[] = [
   },
   {
     id: 'cek',
-    label: 'Cek Keuangan',
+    label: 'Rapor Keuangan',
     href: '/membership/cek-keuangan',
     icon: Gauge,
     tint: 'from-emerald-50 to-indigo-100 text-indigo-600',

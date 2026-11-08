@@ -77,7 +77,7 @@ const pct = (x: number) => `${Math.round(x * 100)}%`;
 // ── Tautan ke fitur lain ───────────────────────────────────────────────────
 const L = {
   kekayaan: { href: '/membership/kekayaan', label: 'Buka Kekayaan' },
-  cek: { href: '/membership/cek-keuangan', label: 'Buka Cek Keuangan' },
+  cek: { href: '/membership/cek-keuangan', label: 'Buka Rapor Keuangan' },
   sehat: { href: '/membership/sehat', label: 'Buka Sehatku' },
   rutin: { href: '/membership/recurring', label: 'Atur transaksi rutin' },
   bersama: { href: '/membership/dompet-bersama', label: 'Buka Dompet Bersama' },

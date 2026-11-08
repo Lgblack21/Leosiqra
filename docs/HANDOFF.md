@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-08 (3.12.3 live, run #182)
+Terakhir diperbarui: 2026-11-09 (3.13.0 siap, menunggu gas)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,11 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-09 — 3.13.0 SIAP (branch `claude/kanvas-v2-20261108`), BELUM DEPLOY. Tanpa SQL.** Rapor Keuangan
+  (rute tetap `/membership/cek-keuangan`, fitur id `cek`): `src/lib/rapor.ts` (7 indikator, bobot WEIGHTS, nilai
+  A–E, mode penuh/perkiraan/kosong, prevScore, `simulate`) + `CekKeuanganApp.tsx` ditulis ulang. Batas = pedoman umum
+  (bukan kutipan buku OJK). Dites Playwright 1440/1000/Pixel 7, 0 error JS. Akun tes lokal diubah GUEST→ACTIVE (lokal).
 
 - **2026-11-08 — 3.12.3 LIVE (run #182, commit dab329b). Tanpa SQL.** `SIDEBAR_LIMIT = 6` + `sidebarFeatures()` di
   features.ts; sidebar "Fitur lainnya +N"; halaman /membership/fitur menyembunyikan fitur yang sudah di sidebar (+ menu

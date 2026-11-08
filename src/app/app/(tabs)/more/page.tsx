@@ -144,7 +144,7 @@ const IN_APP: MenuItem[] = [
     color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400',
   },
   {
-    label: 'Cek Keuangan',
+    label: 'Rapor Keuangan',
     href: '/app/cek-keuangan',
     icon: Gauge,
     color: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400',

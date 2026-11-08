@@ -72,6 +72,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.12.1 | 8 Nov 2026 | Atur fitur pakai tampilan baru |
 | 3.12.2 | 8 Nov 2026 | Semua fitur lebih rapi |
 | 3.12.3 | 8 Nov 2026 | Fitur lainnya + label PRO |
+| 3.13.0 | 9 Nov 2026 | Rapor Keuangan |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -85,6 +86,21 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.13.0 — 2026-11-09 — Rapor Keuangan
+
+- **Cek Keuangan kini menjadi Rapor Keuangan**:
+  - **Nilai 0–100 dan huruf A–E** dari tujuh indikator: arus kas, menabung rutin, dana darurat, cicilan, utang
+    dibanding aset, harta yang bertumbuh, dan kebiasaan mencatat — lengkap dengan naik/turun dari bulan lalu.
+  - **Langsung bisa dinilai** tanpa menunggu sebulan penuh: kalau belum ada bulan penuh, nilai dihitung sebagai
+    perkiraan dari bulan berjalan.
+  - Setiap indikator bisa dibuka untuk melihat **rumus dengan angka aslimu**, kenapa penting, dan cara memperbaikinya.
+  - **Grafik masuk vs keluar 6 bulan**.
+  - **Simulasi "Bagaimana kalau…"**: geser pangkas pengeluaran / tambahan pemasukan, lihat nilai baru, sisa per bulan,
+    dan berapa bulan lagi dana darurat 3× tercapai.
+  - **Rencana perbaikan** berurutan dari yang paling berdampak, langsung ke fitur yang tepat (Kanvas, Transaksi
+    rutin, Investasiku).
+- Halaman Fitur & menu menampilkan nilai rapormu (mis. "Nilai 72 · B sehat").
 
 ## 3.12.3 — 2026-11-08 — Fitur lainnya + label PRO
 

@@ -37,8 +37,8 @@ export const isSpend = (t: Transaction) => t.type === 'pengeluaran' && !isInvest
 export const isIncome = (t: Transaction) => t.type === 'pemasukan' && !isInvestmentFlow(t) && t.relatedType !== 'debt';
 const monthKey = (d: Date | string) => toLocalDateString(new Date(d)).slice(0, 7);
 
-const SOSIAL_RE = /keluarga|sosial|donasi|zakat|sedekah|infak|kirim|bantuan/i;
-const CICILAN_RE = /cicilan|angsuran|kredit|kpr|pinjaman/i;
+export const SOSIAL_RE = /keluarga|sosial|donasi|zakat|sedekah|infak|kirim|bantuan/i;
+export const CICILAN_RE = /cicilan|angsuran|kredit|kpr|pinjaman/i;
 const MONTH_LONG = [
   'Januari',
   'Februari',

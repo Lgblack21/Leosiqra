@@ -242,15 +242,15 @@ export const FITUR: Fitur[] = [
   },
   {
     key: 'cek',
-    label: 'Cek Keuangan',
-    sub: 'Lima cek kesehatan keuangan',
+    label: 'Rapor Keuangan',
+    sub: 'Nilai A–E dari tujuh indikator',
     href: '/membership/cek-keuangan',
     appHref: '/app/cek-keuangan',
     icon: Gauge,
     goal: 'rencana',
     feature: 'cek',
     since: '3.11.0',
-    keywords: 'rasio sehat dana darurat utang',
+    keywords: 'rapor nilai skor cek kesehatan rasio dana darurat utang',
   },
   {
     key: 'pajak',
