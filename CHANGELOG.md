@@ -60,6 +60,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.6.2 | 8 Nov 2026 | Tombol & form catat transaksi baru |
 | 3.6.3 | 8 Nov 2026 | Form catat transaksi lebih ringkas |
 | 3.6.4 | 8 Nov 2026 | Pilih rekening & kategori lebih rapi |
+| 3.6.5 | 8 Nov 2026 | Hasil jual tidak tercatat dua kali, kebocoran biaya AI ditutup |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -73,6 +74,17 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.6.5 — 2026-11-08 — Perbaikan uang & biaya AI
+
+- Hasil jual barang tidak lagi tercatat dua kali: menjual lewat Barangku otomatis menutup
+  iklannya di Ladangku, dan tombol "Laku" menolak barang yang sudah terjual (sebelumnya saldo &
+  pemasukan bisa bertambah dua kali lipat).
+- Jatah AI harian (scan struk, Makanku) tetap terpakai kalau AI sudah membaca tapi hasilnya
+  "bukan struk/makanan"; kalau layanan AI sedang gangguan, jatah tetap dikembalikan.
+- Ilustrasi AI Cerita: jatah PRO hanya untuk PRO yang masih aktif.
+- Pesan galat ilustrasi Cerita tidak lagi menampilkan detail teknis; periode polis asuransi
+  divalidasi lebih ketat; foto Makanku yang terlalu besar ditolak lebih awal.
 
 ## 3.6.4 — 2026-11-08 — Pilih rekening & kategori lebih rapi
 
