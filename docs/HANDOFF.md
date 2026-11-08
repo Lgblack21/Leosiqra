@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-08 (3.11.0 live, run #178)
+Terakhir diperbarui: 2026-11-08 (3.12.0 live, run #179)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-08 — 3.12.0 SIAP (branch `claude/kanvas-v2-20261108`, termasuk 3.11.1), BELUM DEPLOY. Tanpa SQL.**
+- **2026-11-08 — 3.12.0 LIVE (run #179, commit 8baa83e; termasuk 3.11.1). Tanpa SQL.**
   - Semua Fitur baru: `src/lib/fiturCatalog.ts` (katalog per tujuan, `since` untuk lencana Baru, riwayat buka di
     localStorage `leosiqra-fitur-dibuka`), `src/components/fitur/{FiturHub,useFiturStatus,CommandPalette,AppSaranStrip}`.
     Ctrl/⌘+K global di layout membership (di /membership/fitur memfokuskan kolom cari). App: /app/more ditambah
