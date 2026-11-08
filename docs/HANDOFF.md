@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-08 (3.10.0 siap di branch claude/kanvas-20261108, menunggu gas)
+Terakhir diperbarui: 2026-11-08 (3.10.0 live, run #177)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,8 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-08 — 3.10.0 SIAP (branch `claude/kanvas-20261108`), BELUM DEPLOY. PERLU SQL 0041.**
+- **2026-11-08 — 3.10.0 LIVE (run #177, commit 22bddf6). PERLU SQL 0041 (Bos konfirmasi dengan "gas").**
+  - Cek live: `/api/member/canvas` tanpa sesi 401, bundle /membership/kanvas berisi "Arus Uangku".
   - **MIGRASI 0041 (`cloudflare/migrations/0041_canvases.sql`)**: tabel `canvases` (id, user_id, template, title,
     state_json, rev, created_at, updated_at). Tanpa 0041: GET daftar `{ready:false}` → klien menyimpan kanvas di
     localStorage (`leosiqra-kanvas-v1`) dengan banner "disimpan di perangkat ini" (dites).
