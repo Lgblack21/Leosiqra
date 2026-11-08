@@ -1,6 +1,7 @@
 import {
   Bot,
   Footprints,
+  Gauge,
   HeartPulse,
   NotebookPen,
   PieChart,
@@ -41,7 +42,8 @@ export type FeatureId =
   | 'cerita'
   | 'sehat'
   | 'stiker'
-  | 'kanvas';
+  | 'kanvas'
+  | 'cek';
 
 export type Feature = { id: FeatureId; label: string; href: string; icon: LucideIcon; tint: string };
 
@@ -118,6 +120,13 @@ export const FEATURES: Feature[] = [
     tint: 'from-slate-100 to-emerald-100 text-emerald-700',
   },
   {
+    id: 'cek',
+    label: 'Cek Keuangan',
+    href: '/membership/cek-keuangan',
+    icon: Gauge,
+    tint: 'from-emerald-50 to-indigo-100 text-indigo-600',
+  },
+  {
     id: 'sehat',
     label: 'Sehatku',
     href: '/membership/sehat',
@@ -155,6 +164,7 @@ export const DEFAULT_FEATURES: FeatureId[] = [
   'cerita',
   'stiker',
   'kanvas',
+  'cek',
   'sehat',
 ];
 

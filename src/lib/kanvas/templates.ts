@@ -1,35 +1,59 @@
 import { rp, short, type Metrics } from '@/lib/kanvas/data';
 
-// Template Kanvas. Isi bersifat panduan umum, bukan nasihat keuangan pribadi; angka acuan regulasi
-// diberi sumber singkat. Id kartu/item dipakai sebagai kunci jawaban tersimpan — JANGAN diganti
-// setelah rilis (jawaban user lama akan hilang dari kartunya).
+// Template Kanvas v2: tiap papan = bab-bab berisi kartu ringkas yang dijawab lewat panel.
+// Isi bersifat panduan umum, bukan nasihat keuangan pribadi. Acuan angka ditulis sebagai pedoman
+// umum (bukan kutipan) kecuali sumbernya bisa dipastikan. Id kartu = kunci jawaban tersimpan —
+// JANGAN diganti setelah rilis.
 
-export type Ctx = { m: Metrics; n: Record<string, number>; done: Record<string, true> };
+export type Ctx = { m: Metrics; n: Record<string, number>; a: Record<string, string>; done: Record<string, true> };
 export type Calc = { value: string; note?: string; tone?: 'good' | 'warn' | 'bad' };
+export type Status = 'aman' | 'waspada' | 'bahaya';
 export type Unit = 'rp' | 'bulan' | 'tahun' | 'persen' | 'kali';
+export type Link = { href: string; label: string };
 
 export type Card =
-  | { kind: 'data'; id: string; label: string; get: (m: Metrics) => string; note?: (m: Metrics) => string }
-  | { kind: 'tanya'; id: string; q: string; hint?: string }
-  | { kind: 'angka'; id: string; label: string; unit: Unit; hint?: string; suggest?: (m: Metrics) => number | null }
+  | {
+      kind: 'data';
+      id: string;
+      label: string;
+      desc: string;
+      value: (m: Metrics) => number | null;
+      needsMonth?: boolean;
+      link?: Link;
+    }
+  | { kind: 'tanya'; id: string; q: string; why: string; options: string[]; link?: Link }
+  | {
+      kind: 'cek';
+      id: string;
+      label: string;
+      desc: string;
+      ref: string;
+      calc: (m: Metrics) => { text: string; status: Status } | null;
+      link?: Link;
+    }
+  | { kind: 'tugas'; id: string; label: string; why: string; link?: Link }
+  | { kind: 'angka'; id: string; label: string; unit: Unit; why?: string; suggest?: (m: Metrics) => number | null }
   | { kind: 'hitung'; id: string; label: string; calc: (c: Ctx) => Calc | null }
-  | { kind: 'cek'; id: string; title: string; items: { id: string; text: string }[] }
-  | { kind: 'tugas'; id: string; title: string; items: { id: string; text: string }[] }
-  | { kind: 'tabel'; id: string; table: 'neraca' | 'aruskas' | 'utang' }
-  | { kind: 'info'; id: string; text: string; source?: string };
+  | { kind: 'info'; id: string; label: string; text: string; source?: string };
 
-export type Chapter = { id: string; title: string; emoji: string; color: Color; cards: Card[] };
 export type Color = 'indigo' | 'emerald' | 'amber' | 'rose' | 'sky' | 'violet' | 'teal';
+export type Chapter = { id: string; title: string; emoji: string; cards: Card[] };
+export type TableKind = 'aruskas' | 'neraca' | 'utang';
+export type Saran = { text: string; href?: string; card?: string };
+export type TemplateId = 'nikah' | 'darurat' | 'rumah' | 'pensiun' | 'pendidikan' | 'lunas-utang' | 'usaha' | 'kosong';
 export type Template = {
   id: TemplateId;
   title: string;
   emoji: string;
   tagline: string;
   color: Color;
+  start: string; // teks lingkaran "Mulai"
+  finalTitle: string;
   chapters: Chapter[];
-  goal?: (c: Ctx) => Calc | null; // ringkasan utama di kartu akhir
+  tables?: { id: string; kind: TableKind; after: string }[];
+  goal?: (c: Ctx) => Calc | null;
+  saran?: (c: Ctx) => Saran[];
 };
-export type TemplateId = 'nikah' | 'darurat' | 'rumah' | 'pensiun' | 'pendidikan' | 'lunas-utang' | 'usaha' | 'kosong';
 
 // ── Rumus ──────────────────────────────────────────────────────────────────
 export const pmt = (loan: number, ratePct: number, months: number) => {
@@ -38,7 +62,6 @@ export const pmt = (loan: number, ratePct: number, months: number) => {
   return r === 0 ? loan / months : (loan * r) / (1 - (1 + r) ** -months);
 };
 export const futureValue = (now: number, ratePct: number, years: number) => now * (1 + ratePct / 100) ** years;
-// Setoran bulanan agar mencapai target dalam n bulan dengan imbal hasil tahunan r%.
 export const monthlyToReach = (target: number, months: number, returnPct: number) => {
   if (target <= 0) return 0;
   if (months <= 0) return target;
@@ -49,251 +72,380 @@ const num = (c: Ctx, k: string) => (Number.isFinite(c.n[k]) ? c.n[k] : 0);
 const has = (c: Ctx, ...k: string[]) => k.every((x) => Number.isFinite(c.n[x]) && c.n[x] > 0);
 const months = (x: number) =>
   x >= 24 ? `${(x / 12).toLocaleString('id-ID', { maximumFractionDigits: 1 })} tahun` : `${Math.ceil(x)} bulan`;
+const pct = (x: number) => `${Math.round(x * 100)}%`;
 
-// Kartu data yang dipakai banyak template.
+// ── Tautan ke fitur lain ───────────────────────────────────────────────────
+const L = {
+  kekayaan: { href: '/membership/kekayaan', label: 'Buka Kekayaan' },
+  cek: { href: '/membership/cek-keuangan', label: 'Buka Cek Keuangan' },
+  sehat: { href: '/membership/sehat', label: 'Buka Sehatku' },
+  rutin: { href: '/membership/recurring', label: 'Atur transaksi rutin' },
+  bersama: { href: '/membership/dompet-bersama', label: 'Buka Dompet Bersama' },
+  pajak: { href: '/membership/pajak-center', label: 'Buka Pajak Center' },
+  transaksi: { href: '/membership/transactions', label: 'Lihat transaksi' },
+} satisfies Record<string, Link>;
+
+// ── Kartu bersama ──────────────────────────────────────────────────────────
+export const CEK = {
+  tabung: {
+    kind: 'cek',
+    id: 'c-tabung',
+    label: 'Menabung rutin',
+    desc: 'Pemasukan dikurangi pengeluaran (tanpa investasi), dibagi pemasukan.',
+    ref: 'Pedoman umum: sisihkan minimal 10% penghasilan untuk menabung atau berinvestasi.',
+    calc: (m) =>
+      m.months && m.incomeAvg > 0
+        ? {
+            text: `${pct(m.leftAvg / m.incomeAvg)} dari pemasukan · minimal 10%`,
+            status: m.leftAvg / m.incomeAvg >= 0.1 ? 'aman' : m.leftAvg >= 0 ? 'waspada' : 'bahaya',
+          }
+        : null,
+    link: L.cek,
+  },
+  darurat: {
+    kind: 'cek',
+    id: 'c-darurat',
+    label: 'Dana darurat',
+    desc: 'Saldo rekening, dompet & uang elektronik (tanpa kartu kredit), tabungan, dan deposito di Kekayaan, dibagi pengeluaran sebulan.',
+    ref: 'Pedoman umum: minimal 3× pengeluaran bulanan; 6× atau lebih kalau sudah berkeluarga atau penghasilan tidak tetap.',
+    calc: (m) =>
+      m.months && m.expenseAvg > 0
+        ? {
+            text: `${(m.liquid / m.expenseAvg).toLocaleString('id-ID', { maximumFractionDigits: 1 })}× pengeluaran · minimal 3×`,
+            status: m.liquid / m.expenseAvg >= 3 ? 'aman' : m.liquid / m.expenseAvg >= 1 ? 'waspada' : 'bahaya',
+          }
+        : null,
+    link: L.cek,
+  },
+  utang: {
+    kind: 'cek',
+    id: 'c-utang',
+    label: 'Utang dibanding aset',
+    desc: 'Utang di Kekayaan ditambah tagihan kartu kredit, dibagi semua aset di Kekayaan.',
+    ref: 'Pedoman umum: total utang sebaiknya tidak lebih dari 50% total aset.',
+    calc: (m) =>
+      m.ready
+        ? m.assets > 0
+          ? {
+              text: `${pct(m.liabilities / m.assets)} dari aset · maksimal 50%`,
+              status: m.liabilities / m.assets <= 0.3 ? 'aman' : m.liabilities / m.assets <= 0.5 ? 'waspada' : 'bahaya',
+            }
+          : {
+              text: m.liabilities ? 'Ada utang, belum ada aset tercatat' : 'Belum ada aset & utang tercatat',
+              status: m.liabilities ? 'bahaya' : 'aman',
+            }
+        : null,
+    link: L.cek,
+  },
+  cicilan: {
+    kind: 'cek',
+    id: 'c-cicilan',
+    label: 'Cicilan dibanding pemasukan',
+    desc: 'Rata-rata bayar utang & cicilan per bulan, dibagi pemasukan per bulan.',
+    ref: 'Pedoman umum: total cicilan sebaiknya tidak lebih dari 30% pemasukan.',
+    calc: (m) =>
+      m.months && m.incomeAvg > 0
+        ? {
+            text: `${pct(m.split.cicilan / m.incomeAvg)} dari pemasukan · maksimal 30%`,
+            status:
+              m.split.cicilan / m.incomeAvg <= 0.3
+                ? 'aman'
+                : m.split.cicilan / m.incomeAvg <= 0.4
+                  ? 'waspada'
+                  : 'bahaya',
+          }
+        : null,
+    link: L.rutin,
+  },
+  bersih: {
+    kind: 'cek',
+    id: 'c-bersih',
+    label: 'Harta bersih',
+    desc: 'Semua aset di Kekayaan dikurangi utang & tagihan kartu kredit.',
+    ref: 'Harta bersih yang positif dan naik dari waktu ke waktu menandakan keuangan bertumbuh.',
+    calc: (m) =>
+      m.ready ? { text: rp(m.net), status: m.net > 0 ? 'aman' : m.net === 0 ? 'waspada' : 'bahaya' } : null,
+    link: L.kekayaan,
+  },
+} satisfies Record<string, Card>;
+
 const D = {
   income: {
     kind: 'data',
     id: 'd-income',
-    label: 'Pemasukan rata-rata / bulan',
-    get: (m) => rp(m.incomeAvg),
-    note: (m) => (m.months ? `${m.months} bulan terakhir` : 'belum ada catatan bulan penuh'),
+    label: 'Pemasukan sebulan',
+    desc: 'Rata-rata uang masuk di bulan-bulan penuh terakhir (sampai 3 bulan).',
+    value: (m) => m.incomeAvg,
+    needsMonth: true,
+    link: L.transaksi,
   },
   expense: {
     kind: 'data',
     id: 'd-expense',
-    label: 'Pengeluaran rata-rata / bulan',
-    get: (m) => rp(m.expenseAvg),
-    note: (m) => (m.topExpenses[0] ? `terbesar: ${m.topExpenses[0].name} ${short(m.topExpenses[0].avg)}` : ''),
+    label: 'Pengeluaran sebulan',
+    desc: 'Rata-rata semua pengeluaran di bulan-bulan penuh terakhir, di luar investasi & bayar utang.',
+    value: (m) => m.expenseAvg,
+    needsMonth: true,
+    link: L.transaksi,
+  },
+  sosial: {
+    kind: 'data',
+    id: 'd-sosial',
+    label: 'Kirim ke orang sebulan',
+    desc: 'Rata-rata pengeluaran kategori Keluarga & Sosial — misalnya bantuan untuk orang tua atau gaji asisten.',
+    value: (m) => m.split.sosial,
+    needsMonth: true,
+    link: L.transaksi,
   },
   left: {
     kind: 'data',
     id: 'd-left',
-    label: 'Sisa rata-rata / bulan',
-    get: (m) => rp(m.leftAvg),
-    note: (m) => (m.saveRate === null ? '' : `${Math.round(m.saveRate * 100)}% dari pemasukan`),
+    label: 'Sisa sebulan',
+    desc: 'Pemasukan dikurangi pengeluaran rata-rata.',
+    value: (m) => m.leftAvg,
+    needsMonth: true,
+  },
+  assets: {
+    kind: 'data',
+    id: 'd-assets',
+    label: 'Aset di Kekayaan',
+    desc: 'Semua yang ada di Kekayaan per hari ini: rekening, tabungan, investasi, piutang, barang & koleksi.',
+    value: (m) => m.assets,
+    link: L.kekayaan,
+  },
+  debt: {
+    kind: 'data',
+    id: 'd-debt',
+    label: 'Utang tercatat',
+    desc: 'Tagihan kartu kredit dan sisa utang di Kekayaan, per hari ini.',
+    value: (m) => m.liabilities,
+    link: L.kekayaan,
   },
   liquid: {
     kind: 'data',
     id: 'd-liquid',
-    label: 'Kas + tabungan',
-    get: (m) => rp(m.liquid),
-    note: (m) =>
-      m.emergencyMonths === null
-        ? ''
-        : `cukup ±${m.emergencyMonths.toLocaleString('id-ID', { maximumFractionDigits: 1 })} bulan pengeluaran`,
+    label: 'Dana siap pakai',
+    desc: 'Rekening, dompet, uang elektronik, tabungan & deposito (tanpa kartu kredit).',
+    value: (m) => m.liquid,
+    link: L.kekayaan,
+  },
+  invest: {
+    kind: 'data',
+    id: 'd-invest',
+    label: 'Investasi',
+    desc: 'Nilai investasi di Kekayaan per hari ini.',
+    value: (m) => m.investments,
+    link: L.kekayaan,
   },
   net: {
     kind: 'data',
     id: 'd-net',
     label: 'Harta bersih',
-    get: (m) => rp(m.net),
-    note: (m) => `aset ${short(m.assets)} − utang ${short(m.liabilities)}`,
+    desc: 'Aset dikurangi utang & tagihan kartu.',
+    value: (m) => m.net,
+    link: L.kekayaan,
   },
-  debt: {
-    kind: 'data',
-    id: 'd-debt',
-    label: 'Total utang & tagihan kartu',
-    get: (m) => rp(m.liabilities),
-    note: (m) => (m.debts.length ? `${m.debts.length} pos utang` : 'tidak ada utang tercatat 🎉'),
-  },
-  invest: { kind: 'data', id: 'd-invest', label: 'Investasi', get: (m) => rp(m.investments) },
 } satisfies Record<string, Card>;
 
 const OJK: Card = {
   kind: 'info',
   id: 'i-ojk',
-  text: 'Cek izin lembaga keuangan di Kontak OJK 157 (telepon) atau WhatsApp 081-157-157-157. Tawaran imbal hasil tinggi tanpa risiko = tanda bahaya.',
+  label: 'Cek izin OJK',
+  text: 'Sebelum memakai produk pinjaman atau investasi, cek izinnya di Kontak OJK 157 (telepon) atau WhatsApp 081-157-157-157. Imbal hasil tinggi tanpa risiko adalah tanda bahaya.',
   source: 'OJK',
 };
 const LPS: Card = {
   kind: 'info',
   id: 'i-lps',
+  label: 'Penjaminan LPS',
   text: 'Simpanan di bank peserta LPS dijamin sampai Rp2 miliar per nasabah per bank, selama bunganya tidak melebihi tingkat bunga penjaminan LPS.',
   source: 'LPS',
 };
+
+const ans = (c: Ctx, id: string) => c.a[id] ?? '';
 
 export const TEMPLATES: Template[] = [
   {
     id: 'nikah',
     title: 'Persiapan Nikah',
     emoji: '💍',
-    tagline: 'Dari biaya acara sampai keuangan keluarga setelahnya',
+    tagline: 'Tujuh bab menyiapkan keuangan sebelum menikah, berakhir di dua tabel keluarga',
     color: 'rose',
+    start: 'MULAI · BERDUA ·',
+    finalTitle: 'Rencana keluarga',
     chapters: [
       {
-        id: 'b1',
-        title: 'Kondisi kita sekarang',
-        emoji: '🧭',
-        color: 'indigo',
+        id: 'nk1',
+        title: 'Pendapatan',
+        emoji: '💼',
         cards: [
           D.income,
-          D.expense,
-          D.liquid,
-          { kind: 'angka', id: 'n-partner-income', label: 'Pemasukan pasangan / bulan', unit: 'rp' },
-          { kind: 'angka', id: 'n-partner-savings', label: 'Tabungan pasangan', unit: 'rp' },
-          { kind: 'tanya', id: 'q-bawa-utang', q: 'Ada utang yang dibawa masing-masing? Sudah saling terbuka?' },
-        ],
-      },
-      {
-        id: 'b2',
-        title: 'Mimpi pernikahan',
-        emoji: '✨',
-        color: 'rose',
-        cards: [
-          { kind: 'tanya', id: 'q-konsep', q: 'Konsep acara yang kalian mau? (akad saja, resepsi kecil, adat, dll.)' },
-          { kind: 'angka', id: 'n-budget', label: 'Anggaran total acara', unit: 'rp' },
-          { kind: 'angka', id: 'n-bulan', label: 'Berapa bulan lagi?', unit: 'bulan' },
-          { kind: 'angka', id: 'n-siap', label: 'Dana yang sudah disisihkan (berdua)', unit: 'rp' },
           {
-            kind: 'hitung',
-            id: 'h-nabung',
-            label: 'Perlu disisihkan / bulan',
-            calc: (c) => {
-              if (!has(c, 'n-budget', 'n-bulan')) return null;
-              const need = Math.max(0, num(c, 'n-budget') - num(c, 'n-siap'));
-              const per = need / num(c, 'n-bulan');
-              const room = c.m.leftAvg + num(c, 'n-partner-income') * 0.3;
-              return {
-                value: rp(per),
-                note:
-                  need === 0 ? 'Dana acara sudah cukup 🎉' : `kurang ${rp(need)} · sisa bulananmu ${rp(c.m.leftAvg)}`,
-                tone: need === 0 || per <= c.m.leftAvg ? 'good' : per <= room ? 'warn' : 'bad',
-              };
-            },
-          },
-        ],
-      },
-      {
-        id: 'b3',
-        title: 'Rincian biaya',
-        emoji: '🧾',
-        color: 'amber',
-        cards: [
-          {
-            kind: 'tugas',
-            id: 't-biaya',
-            title: 'Pos biaya yang perlu dihitung',
-            items: [
-              { id: 'venue', text: 'Tempat / gedung' },
-              { id: 'katering', text: 'Katering' },
-              { id: 'busana', text: 'Busana & rias' },
-              { id: 'dekor', text: 'Dekorasi' },
-              { id: 'dok', text: 'Foto & video' },
-              { id: 'mahar', text: 'Cincin, mahar & seserahan' },
-              { id: 'undangan', text: 'Undangan & suvenir' },
-              { id: 'kua', text: 'Biaya pencatatan nikah' },
-            ],
-          },
-          {
-            kind: 'info',
-            id: 'i-kua',
-            text: 'Nikah di KUA pada hari & jam kerja tidak dipungut biaya; di luar KUA atau di luar jam kerja dikenai PNBP Rp600.000.',
-            source: 'Kemenag (PNBP biaya nikah)',
+            kind: 'tanya',
+            id: 'nk-kerja',
+            q: 'Kalian berdua bekerja?',
+            why: 'Satu atau dua penghasilan menentukan cara kalian membagi biaya rumah tangga.',
+            options: ['Ya, dua-duanya', 'Salah satu dari kami'],
           },
           {
             kind: 'tanya',
-            id: 'q-prioritas',
-            q: 'Kalau anggaran harus dipotong, pos mana yang paling bisa dikurangi?',
+            id: 'nk-terbuka',
+            q: 'Sudah saling terbuka soal semua pemasukan, termasuk THR dan bonus?',
+            why: 'Rencana hanya bisa berjalan kalau semua uang yang masuk terlihat oleh kalian berdua.',
+            options: ['Ya', 'Belum'],
           },
         ],
       },
       {
-        id: 'b4',
-        title: 'Cek sebelum bayar',
-        emoji: '🛡️',
-        color: 'sky',
+        id: 'nk2',
+        title: 'Keuangan bersama',
+        emoji: '🤝',
         cards: [
           {
-            kind: 'cek',
-            id: 'c-vendor',
-            title: 'Vendor & pembayaran',
-            items: [
-              { id: 'kontrak', text: 'Ada kontrak tertulis: rincian, jadwal DP & pelunasan, aturan batal' },
-              { id: 'ulasan', text: 'Alamat & ulasan vendor jelas, bukan hanya akun media sosial' },
-              { id: 'rek', text: 'Transfer ke rekening atas nama usaha/pemilik yang sama dengan kontrak' },
-              { id: 'pinjam', text: 'Kalau pakai pinjaman: lembaganya terdaftar & berizin OJK' },
-            ],
+            kind: 'tanya',
+            id: 'nk-pengatur',
+            q: 'Siapa yang mengatur uang rumah tangga?',
+            why: 'Dua-duanya bisa berhasil. Yang penting kalian sepakat dan sama-sama tahu kondisinya.',
+            options: ['Kami berdua', 'Salah satu dari kami'],
           },
-          OJK,
-          LPS,
-        ],
-      },
-      {
-        id: 'b5',
-        title: 'Keuangan keluarga',
-        emoji: '🏡',
-        color: 'emerald',
-        cards: [
-          { kind: 'tabel', id: 'tb-neraca', table: 'neraca' },
-          { kind: 'tabel', id: 'tb-arus', table: 'aruskas' },
-          { kind: 'tanya', id: 'q-sistem', q: 'Sistem kelola uang: digabung, dipisah, atau sebagian digabung?' },
-          { kind: 'tanya', id: 'q-peran', q: 'Siapa yang bayar tagihan rutin, siapa yang pegang tabungan?' },
-        ],
-      },
-      {
-        id: 'b6',
-        title: 'Proteksi',
-        emoji: '☂️',
-        color: 'teal',
-        cards: [
           {
-            kind: 'hitung',
-            id: 'h-darurat',
-            label: 'Target dana darurat keluarga (6× pengeluaran)',
-            calc: (c) => {
-              if (!c.m.expenseAvg) return null;
-              const target = c.m.expenseAvg * 6;
-              const have = c.m.liquid + num(c, 'n-partner-savings');
-              return { value: rp(target), note: `sudah ada ${rp(have)}`, tone: have >= target ? 'good' : 'warn' };
-            },
+            kind: 'tanya',
+            id: 'nk-rekening',
+            q: 'Pakai rekening bersama untuk biaya rumah?',
+            why: 'Banyak pasangan tetap punya rekening masing-masing, ditambah satu rekening khusus biaya bersama.',
+            options: ['Ya, satu rekening bersama', 'Belum, masing-masing dulu'],
+            link: L.bersama,
+          },
+        ],
+      },
+      {
+        id: 'nk3',
+        title: 'Tanggungan dan rumah',
+        emoji: '🏠',
+        cards: [
+          D.sosial,
+          {
+            kind: 'tanya',
+            id: 'nk-bantu',
+            q: 'Ada orang tua atau saudara yang kalian bantu tiap bulan?',
+            why: 'Bantuan rutin masuk rencana sebagai biaya bulanan, bukan sisa uang.',
+            options: ['Ada', 'Tidak ada'],
+          },
+          {
+            kind: 'tanya',
+            id: 'nk-tinggal',
+            q: 'Setelah menikah, tinggal di mana?',
+            why: 'Sewa atau cicilan rumah biasanya menjadi biaya bulanan terbesar.',
+            options: ['Rumah sendiri', 'Sewa', 'Bersama orang tua', 'Mau beli rumah'],
           },
           {
             kind: 'tugas',
-            id: 't-proteksi',
-            title: 'Lindungi keluarga baru',
-            items: [
-              { id: 'bpjs', text: 'BPJS Kesehatan: pindahkan ke satu Kartu Keluarga' },
-              { id: 'jiwa', text: 'Asuransi jiwa untuk pencari nafkah (kalau ada tanggungan)' },
-              { id: 'waris', text: 'Perbarui ahli waris di rekening, asuransi & BPJS Ketenagakerjaan' },
-            ],
+            id: 'nk-bpjs',
+            label: 'Pastikan BPJS Kesehatan kalian berdua aktif',
+            why: 'Jaminan kesehatan menjaga tabungan kalian saat ada biaya rumah sakit. Setelah menikah, data keluarga bisa disatukan.',
+            link: L.sehat,
           },
         ],
       },
       {
-        id: 'b7',
-        title: 'Setelah menikah',
-        emoji: '📋',
-        color: 'violet',
+        id: 'nk4',
+        title: 'Pengeluaran',
+        emoji: '🧾',
+        cards: [D.expense, CEK.tabung, CEK.darurat],
+      },
+      {
+        id: 'nk5',
+        title: 'Aset',
+        emoji: '🏦',
+        cards: [
+          D.assets,
+          {
+            kind: 'tanya',
+            id: 'nk-aset-nama',
+            q: 'Aset kalian atas nama siapa?',
+            why: 'Ini menunjukkan apa yang dibawa masing-masing ke pernikahan.',
+            options: ['Atas nama masing-masing', 'Sebagian sudah bersama', 'Belum punya aset'],
+          },
+          {
+            kind: 'tanya',
+            id: 'nk-aset-bersama',
+            q: 'Setelah menikah, jadi milik bersama?',
+            why: 'Tidak ada jawaban yang salah. Putuskan berdua, lalu catat kesepakatannya.',
+            options: ['Ya, semuanya', 'Sebagian', 'Tidak, tetap masing-masing'],
+          },
+        ],
+      },
+      {
+        id: 'nk6',
+        title: 'Pajak dan pra-nikah',
+        emoji: '📜',
         cards: [
           {
-            kind: 'tugas',
-            id: 't-admin',
-            title: 'Administrasi',
-            items: [
-              { id: 'kk', text: 'Urus Kartu Keluarga baru & perubahan status KTP' },
-              { id: 'npwp', text: 'Tentukan pajak: satu NPWP keluarga atau masing-masing (pisah harta)' },
-              { id: 'perjanjian', text: 'Diskusikan perjanjian perkawinan kalau diperlukan' },
-            ],
+            kind: 'tanya',
+            id: 'nk-pajak',
+            q: 'Ada pajak tahunan yang perlu disiapkan, seperti PBB atau pajak kendaraan?',
+            why: 'Tagihan tahunan terasa lebih ringan kalau disisihkan sedikit tiap bulan.',
+            options: ['Ada', 'Tidak ada'],
+            link: L.rutin,
           },
-          { kind: 'tanya', id: 'q-mimpi', q: 'Tiga mimpi keuangan kalian 5 tahun ke depan?' },
+          {
+            kind: 'tanya',
+            id: 'nk-perjanjian',
+            q: 'Mau membuat perjanjian perkawinan?',
+            why: 'Perjanjian perkawinan dibuat dengan akta notaris dan bisa dibuat sebelum maupun selama pernikahan. Pertanyaan ini boleh dilewati.',
+            options: ['Ya', 'Masih ragu', 'Tidak'],
+          },
+        ],
+      },
+      {
+        id: 'nk7',
+        title: 'Utang dan cicilan',
+        emoji: '⛓️',
+        cards: [
+          D.debt,
+          CEK.utang,
+          {
+            kind: 'tanya',
+            id: 'nk-lunasi',
+            q: 'Ada utang yang ingin dilunasi sebelum menikah?',
+            why: 'Memulai tanpa utang lama membuat rencana bersama lebih longgar.',
+            options: ['Ada', 'Tidak ada'],
+          },
+          {
+            kind: 'tanya',
+            id: 'nk-pinjol',
+            q: 'Ada pinjaman online yang sedang berjalan?',
+            why: 'Pastikan pinjaman online kalian terdaftar & berizin OJK — cek lewat Kontak OJK 157 atau WhatsApp 081-157-157-157.',
+            options: ['Tidak ada', 'Ada'],
+          },
         ],
       },
     ],
-    goal: (c) => {
-      if (!has(c, 'n-budget', 'n-bulan')) return null;
-      const need = Math.max(0, num(c, 'n-budget') - num(c, 'n-siap'));
-      const per = need / num(c, 'n-bulan');
-      return {
-        tone:
-          need === 0 || per <= c.m.leftAvg
-            ? 'good'
-            : per <= c.m.leftAvg + num(c, 'n-partner-income') * 0.3
-              ? 'warn'
-              : 'bad',
-        value: `${rp(per)}/bulan`,
-        note: `selama ${num(c, 'n-bulan')} bulan untuk acara ${rp(num(c, 'n-budget'))}`,
-      };
+    tables: [
+      { id: 't-aruskas', kind: 'aruskas', after: 'nk4' },
+      { id: 't-neraca', kind: 'neraca', after: 'nk7' },
+    ],
+    saran: (c) => {
+      const s: Saran[] = [];
+      if (ans(c, 'nk-terbuka') === 'Belum')
+        s.push({ text: 'Bicarakan soal terbuka tentang pemasukan', card: 'nk-terbuka' });
+      if (ans(c, 'nk-rekening').startsWith('Belum'))
+        s.push({ text: 'Bicarakan rekening bersama', href: L.bersama.href });
+      if (ans(c, 'nk-bantu') === 'Ada')
+        s.push({ text: 'Masukkan bantuan keluarga sebagai biaya rutin', href: L.rutin.href });
+      if (ans(c, 'nk-tinggal') === 'Mau beli rumah')
+        s.push({ text: 'Hitung kemampuan KPR di papan Beli Rumah', href: '/membership/kanvas?baru=rumah' });
+      if (!c.done['nk-bpjs']) s.push({ text: 'Cek BPJS Kesehatan kalian berdua', card: 'nk-bpjs' });
+      if (ans(c, 'nk-pajak') === 'Ada')
+        s.push({ text: 'Sisihkan pajak tahunan sedikit tiap bulan', href: L.rutin.href });
+      if (ans(c, 'nk-lunasi') === 'Ada')
+        s.push({ text: 'Buat rencana melunasi utang sebelum menikah', href: '/membership/kanvas?baru=lunas-utang' });
+      if (ans(c, 'nk-pinjol') === 'Ada')
+        s.push({ text: 'Pastikan pinjaman online terdaftar di OJK', card: 'nk-pinjol' });
+      const d = CEK.darurat.calc(c.m);
+      if (d && d.status !== 'aman')
+        s.push({ text: 'Lengkapi dana darurat sampai minimal 3× pengeluaran', href: L.cek.href });
+      return s;
     },
   },
   {
@@ -302,36 +454,37 @@ export const TEMPLATES: Template[] = [
     emoji: '🛟',
     tagline: 'Bantalan saat kena PHK, sakit, atau kejadian mendadak',
     color: 'teal',
+    start: 'MULAI · AMAN ·',
+    finalTitle: 'Rencana dana darurat',
     chapters: [
       {
-        id: 'b1',
-        title: 'Pengeluaran wajibmu',
+        id: 'dd1',
+        title: 'Pengeluaran wajib',
         emoji: '🧾',
-        color: 'indigo',
         cards: [
           D.expense,
           {
             kind: 'angka',
             id: 'n-wajib',
-            label: 'Pengeluaran wajib / bulan',
+            label: 'Pengeluaran wajib per bulan',
             unit: 'rp',
-            hint: 'makan, tempat tinggal, cicilan, transport, tagihan — tanpa jajan & hiburan',
+            why: 'Makan, tempat tinggal, cicilan, transport, tagihan — tanpa jajan & hiburan.',
             suggest: (m) => (m.expenseAvg ? Math.round((m.expenseAvg * 0.7) / 10000) * 10000 : null),
           },
         ],
       },
       {
-        id: 'b2',
-        title: 'Berapa yang cukup?',
+        id: 'dd2',
+        title: 'Berapa yang cukup',
         emoji: '🎯',
-        color: 'rose',
         cards: [
           {
-            kind: 'info',
-            id: 'i-kali',
-            text: 'Acuan umum: lajang 3–6×, menikah 6–9×, punya anak 9–12× pengeluaran wajib. Penghasilan tidak tetap? Pilih angka yang lebih tinggi.',
+            kind: 'tanya',
+            id: 'dd-kondisi',
+            q: 'Kondisimu sekarang?',
+            why: 'Makin banyak tanggungan atau makin tidak tetap penghasilan, makin besar dana darurat yang dibutuhkan.',
+            options: ['Lajang', 'Menikah', 'Menikah & punya anak', 'Penghasilan tidak tetap'],
           },
-          { kind: 'angka', id: 'n-kali', label: 'Target berapa kali pengeluaran?', unit: 'kali', suggest: () => 6 },
           {
             kind: 'hitung',
             id: 'h-target',
@@ -339,21 +492,25 @@ export const TEMPLATES: Template[] = [
             calc: (c) => {
               const wajib = num(c, 'n-wajib') || c.m.expenseAvg;
               if (!wajib) return null;
-              const target = wajib * (num(c, 'n-kali') || 6);
+              const k =
+                { Lajang: 3, Menikah: 6, 'Menikah & punya anak': 9, 'Penghasilan tidak tetap': 12 }[
+                  ans(c, 'dd-kondisi')
+                ] ?? 6;
+              const target = wajib * k;
               return {
                 value: rp(target),
-                note: `sudah ada ${rp(c.m.liquid)} (kas + tabungan)`,
+                note: `${k}× pengeluaran wajib · sudah ada ${rp(c.m.liquid)}`,
                 tone: c.m.liquid >= target ? 'good' : 'warn',
               };
             },
           },
+          CEK.darurat,
         ],
       },
       {
-        id: 'b3',
+        id: 'dd3',
         title: 'Rencana mengisi',
         emoji: '🪣',
-        color: 'emerald',
         cards: [
           D.left,
           {
@@ -370,78 +527,80 @@ export const TEMPLATES: Template[] = [
             calc: (c) => {
               const wajib = num(c, 'n-wajib') || c.m.expenseAvg;
               if (!wajib || !has(c, 'n-setor')) return null;
-              const gap = Math.max(0, wajib * (num(c, 'n-kali') || 6) - c.m.liquid);
+              const k =
+                { Lajang: 3, Menikah: 6, 'Menikah & punya anak': 9, 'Penghasilan tidak tetap': 12 }[
+                  ans(c, 'dd-kondisi')
+                ] ?? 6;
+              const gap = Math.max(0, wajib * k - c.m.liquid);
               if (!gap) return { value: 'Sudah tercapai 🎉', tone: 'good' };
               const n = gap / num(c, 'n-setor');
               return { value: months(n), note: `kurang ${rp(gap)}`, tone: n <= 24 ? 'good' : 'warn' };
             },
           },
+          {
+            kind: 'tugas',
+            id: 'dd-otomatis',
+            label: 'Jadwalkan setoran otomatis setelah gajian',
+            why: 'Menabung di awal bulan lebih berhasil daripada menunggu sisa.',
+            link: L.rutin,
+          },
         ],
       },
       {
-        id: 'b4',
+        id: 'dd4',
         title: 'Simpan di mana',
         emoji: '🏦',
-        color: 'sky',
         cards: [
           {
-            kind: 'cek',
-            id: 'c-tempat',
-            title: 'Syarat tempat dana darurat',
-            items: [
-              { id: 'cair', text: 'Bisa dicairkan dalam 1–2 hari kerja' },
-              { id: 'pisah', text: 'Terpisah dari rekening belanja harian' },
-              { id: 'aman', text: 'Bank peserta LPS, atau reksa dana pasar uang dari manajer investasi berizin OJK' },
-              { id: 'bukan', text: 'Bukan saham, kripto, atau barang yang nilainya naik-turun' },
-            ],
+            kind: 'tugas',
+            id: 'dd-pisah',
+            label: 'Pisahkan dari rekening belanja harian',
+            why: 'Dana yang terlihat setiap hari lebih mudah terpakai.',
+          },
+          {
+            kind: 'tugas',
+            id: 'dd-cair',
+            label: 'Pilih tempat yang bisa dicairkan dalam 1–2 hari kerja',
+            why: 'Tabungan atau deposito di bank peserta LPS, atau reksa dana pasar uang dari manajer investasi berizin OJK. Bukan saham atau kripto.',
           },
           LPS,
-          OJK,
-        ],
-      },
-      {
-        id: 'b5',
-        title: 'Aturan pakai',
-        emoji: '📜',
-        color: 'violet',
-        cards: [
-          { kind: 'tanya', id: 'q-darurat', q: 'Apa saja yang kamu anggap darurat? (dan yang bukan)' },
-          { kind: 'tanya', id: 'q-isi-ulang', q: 'Kalau terpakai, bagaimana cara mengisinya kembali?' },
         ],
       },
     ],
     goal: (c) => {
       const wajib = num(c, 'n-wajib') || c.m.expenseAvg;
       if (!wajib) return null;
-      const target = wajib * (num(c, 'n-kali') || 6);
-      const pct = Math.min(100, Math.round((c.m.liquid / target) * 100));
+      const k =
+        { Lajang: 3, Menikah: 6, 'Menikah & punya anak': 9, 'Penghasilan tidak tetap': 12 }[ans(c, 'dd-kondisi')] ?? 6;
+      const p = Math.min(100, Math.round((c.m.liquid / (wajib * k)) * 100));
       return {
-        value: `${pct}% terkumpul`,
-        note: `${rp(c.m.liquid)} dari ${rp(target)}`,
-        tone: pct >= 100 ? 'good' : 'warn',
+        value: `${p}% terkumpul`,
+        note: `${rp(c.m.liquid)} dari ${rp(wajib * k)}`,
+        tone: p >= 100 ? 'good' : 'warn',
       };
     },
   },
   {
     id: 'rumah',
     title: 'Beli Rumah (KPR)',
-    emoji: '🏠',
+    emoji: '🏡',
     tagline: 'Hitung DP, cicilan, dan biaya yang sering terlupa',
     color: 'emerald',
+    start: 'MULAI · RUMAH ·',
+    finalTitle: 'Rencana rumah',
     chapters: [
       {
-        id: 'b1',
-        title: 'Kemampuanmu',
+        id: 'kp1',
+        title: 'Kemampuan',
         emoji: '🧭',
-        color: 'indigo',
         cards: [
           D.income,
-          D.debt,
           {
             kind: 'angka',
             id: 'n-partner-income',
-            label: 'Pemasukan pasangan / bulan (kalau joint income)',
+            label: 'Pemasukan pasangan per bulan',
             unit: 'rp',
+            why: 'Isi kalau pengajuan KPR memakai penghasilan berdua (joint income).',
           },
           {
             kind: 'hitung',
@@ -449,19 +608,24 @@ export const TEMPLATES: Template[] = [
             label: 'Cicilan aman maksimal (±30% pemasukan)',
             calc: (c) => {
               const inc = c.m.incomeAvg + num(c, 'n-partner-income');
-              if (!inc) return null;
-              return { value: rp(inc * 0.3), note: 'acuan umum bank; cicilan lain ikut dihitung' };
+              return inc ? { value: rp(inc * 0.3), note: 'acuan umum bank; cicilan lain ikut dihitung' } : null;
             },
           },
+          CEK.utang,
         ],
       },
       {
-        id: 'b2',
+        id: 'kp2',
         title: 'Rumah incaran',
-        emoji: '🏡',
-        color: 'emerald',
+        emoji: '🏠',
         cards: [
-          { kind: 'tanya', id: 'q-lokasi', q: 'Lokasi & tipe rumah yang dicari? Seberapa dekat ke kantor/sekolah?' },
+          {
+            kind: 'tanya',
+            id: 'kp-lokasi',
+            q: 'Rumah di mana yang dicari?',
+            why: 'Lokasi menentukan harga, ongkos harian, dan waktu di jalan.',
+            options: ['Dekat kantor', 'Dekat keluarga', 'Pinggir kota, lebih murah', 'Belum tahu'],
+          },
           { kind: 'angka', id: 'n-harga', label: 'Harga rumah', unit: 'rp' },
           { kind: 'angka', id: 'n-dp', label: 'Uang muka (DP)', unit: 'persen', suggest: () => 20 },
           { kind: 'angka', id: 'n-tenor', label: 'Tenor', unit: 'tahun', suggest: () => 15 },
@@ -475,16 +639,15 @@ export const TEMPLATES: Template[] = [
         ],
       },
       {
-        id: 'b3',
+        id: 'kp3',
         title: 'Hitungan KPR',
         emoji: '🧮',
-        color: 'amber',
         cards: [
           {
             kind: 'hitung',
             id: 'h-dp',
             label: 'Uang muka',
-            calc: (c) => (has(c, 'n-harga') ? { value: rp((num(c, 'n-harga') * (num(c, 'n-dp') || 0)) / 100) } : null),
+            calc: (c) => (has(c, 'n-harga') ? { value: rp((num(c, 'n-harga') * num(c, 'n-dp')) / 100) } : null),
           },
           {
             kind: 'hitung',
@@ -492,16 +655,14 @@ export const TEMPLATES: Template[] = [
             label: 'Cicilan per bulan (bunga floating)',
             calc: (c) => {
               if (!has(c, 'n-harga', 'n-tenor')) return null;
-              const loan = num(c, 'n-harga') * (1 - (num(c, 'n-dp') || 0) / 100);
+              const loan = num(c, 'n-harga') * (1 - num(c, 'n-dp') / 100);
               const pay = pmt(loan, num(c, 'n-bunga') || 10, num(c, 'n-tenor') * 12);
               const inc = c.m.incomeAvg + num(c, 'n-partner-income');
               const ratio = inc ? pay / inc : null;
               return {
                 value: rp(pay),
                 note:
-                  ratio === null
-                    ? `pinjaman ${rp(loan)}`
-                    : `${Math.round(ratio * 100)}% dari pemasukan · pinjaman ${short(loan)}`,
+                  ratio === null ? `pinjaman ${rp(loan)}` : `${pct(ratio)} dari pemasukan · pinjaman ${short(loan)}`,
                 tone: ratio === null ? undefined : ratio <= 0.3 ? 'good' : ratio <= 0.4 ? 'warn' : 'bad',
               };
             },
@@ -509,7 +670,7 @@ export const TEMPLATES: Template[] = [
           {
             kind: 'hitung',
             id: 'h-ekstra',
-            label: 'Siapkan biaya tambahan (±5–10% harga)',
+            label: 'Biaya tambahan (±5–10% harga)',
             calc: (c) =>
               has(c, 'n-harga')
                 ? {
@@ -521,45 +682,51 @@ export const TEMPLATES: Template[] = [
           {
             kind: 'info',
             id: 'i-promo',
-            text: 'Bunga promo biasanya hanya 1–5 tahun pertama. Hitung cicilan dengan bunga floating supaya tidak kaget.',
+            label: 'Bunga promo',
+            text: 'Bunga promo biasanya hanya berlaku 1–5 tahun pertama. Hitung cicilan dengan bunga floating supaya tidak kaget.',
           },
         ],
       },
       {
-        id: 'b4',
+        id: 'kp4',
         title: 'Cek legalitas',
         emoji: '🛡️',
-        color: 'sky',
         cards: [
           {
-            kind: 'cek',
-            id: 'c-legal',
-            title: 'Sebelum tanda tangan',
-            items: [
-              { id: 'sertif', text: 'Sertifikat jelas (SHM/SHGB) & dicek di BPN/notaris' },
-              { id: 'pbg', text: 'Izin bangunan (PBG/IMB) ada' },
-              { id: 'slik', text: 'Cek riwayat kreditmu sendiri di SLIK OJK (iDebKu) sebelum mengajukan' },
-              { id: 'dev', text: 'Developer punya rekam jejak; pembayaran ke rekening resmi' },
-            ],
+            kind: 'tugas',
+            id: 'kp-sertif',
+            label: 'Cek sertifikat (SHM/SHGB) di BPN atau lewat notaris',
+            why: 'Sertifikat yang jelas melindungi uangmu dari sengketa.',
+          },
+          {
+            kind: 'tugas',
+            id: 'kp-pbg',
+            label: 'Pastikan izin bangunan (PBG/IMB) ada',
+            why: 'Bangunan tanpa izin bisa bermasalah saat dijual atau diagunkan.',
+          },
+          {
+            kind: 'tugas',
+            id: 'kp-slik',
+            label: 'Cek riwayat kreditmu di SLIK OJK (iDebKu)',
+            why: 'Bank melihat riwayat ini saat menilai pengajuan KPR.',
           },
           OJK,
         ],
       },
       {
-        id: 'b5',
+        id: 'kp5',
         title: 'Rencana DP',
         emoji: '🪙',
-        color: 'violet',
         cards: [
           D.liquid,
-          { kind: 'angka', id: 'n-bulan', label: 'Target beli berapa bulan lagi?', unit: 'bulan' },
+          { kind: 'angka', id: 'n-bulan', label: 'Target beli berapa bulan lagi', unit: 'bulan' },
           {
             kind: 'hitung',
             id: 'h-nabung',
             label: 'Nabung DP + biaya per bulan',
             calc: (c) => {
               if (!has(c, 'n-harga', 'n-bulan')) return null;
-              const need = num(c, 'n-harga') * ((num(c, 'n-dp') || 0) / 100 + 0.07) - c.m.liquid;
+              const need = num(c, 'n-harga') * (num(c, 'n-dp') / 100 + 0.07) - c.m.liquid;
               if (need <= 0) return { value: 'Dana DP sudah cukup 🎉', tone: 'good' };
               const per = need / num(c, 'n-bulan');
               return { value: rp(per), note: `kurang ${rp(need)}`, tone: per <= c.m.leftAvg ? 'good' : 'warn' };
@@ -568,9 +735,10 @@ export const TEMPLATES: Template[] = [
         ],
       },
     ],
+    tables: [{ id: 't-neraca', kind: 'neraca', after: 'kp5' }],
     goal: (c) => {
       if (!has(c, 'n-harga', 'n-tenor')) return null;
-      const loan = num(c, 'n-harga') * (1 - (num(c, 'n-dp') || 0) / 100);
+      const loan = num(c, 'n-harga') * (1 - num(c, 'n-dp') / 100);
       return {
         value: `${rp(pmt(loan, num(c, 'n-bunga') || 10, num(c, 'n-tenor') * 12))}/bulan`,
         note: `rumah ${rp(num(c, 'n-harga'))}, tenor ${num(c, 'n-tenor')} tahun`,
@@ -583,12 +751,13 @@ export const TEMPLATES: Template[] = [
     emoji: '🌴',
     tagline: 'Berapa yang perlu dikumpulkan supaya tetap tenang nanti',
     color: 'amber',
+    start: 'MULAI · TENANG ·',
+    finalTitle: 'Rencana pensiun',
     chapters: [
       {
-        id: 'b1',
+        id: 'ps1',
         title: 'Hari ini',
         emoji: '🧭',
-        color: 'indigo',
         cards: [
           D.expense,
           D.invest,
@@ -597,32 +766,36 @@ export const TEMPLATES: Template[] = [
         ],
       },
       {
-        id: 'b2',
+        id: 'ps2',
         title: 'Gaya hidup nanti',
         emoji: '🌅',
-        color: 'amber',
         cards: [
-          { kind: 'tanya', id: 'q-gaya', q: 'Mau pensiun seperti apa? (tinggal di mana, kegiatan, tanggungan)' },
+          {
+            kind: 'tanya',
+            id: 'ps-gaya',
+            q: 'Mau pensiun seperti apa?',
+            why: 'Gaya hidup saat pensiun menentukan besar dana yang perlu disiapkan.',
+            options: ['Sederhana di kampung', 'Tetap di kota', 'Masih produktif (usaha kecil)', 'Banyak jalan-jalan'],
+          },
           {
             kind: 'angka',
             id: 'n-biaya',
-            label: 'Biaya hidup / bulan (nilai hari ini)',
+            label: 'Biaya hidup per bulan (nilai hari ini)',
             unit: 'rp',
             suggest: (m) => (m.expenseAvg ? Math.round((m.expenseAvg * 0.8) / 10000) * 10000 : null),
           },
-          { kind: 'angka', id: 'n-inflasi', label: 'Asumsi inflasi / tahun', unit: 'persen', suggest: () => 4 },
+          { kind: 'angka', id: 'n-inflasi', label: 'Asumsi inflasi per tahun', unit: 'persen', suggest: () => 4 },
         ],
       },
       {
-        id: 'b3',
+        id: 'ps3',
         title: 'Dana yang dibutuhkan',
         emoji: '🧮',
-        color: 'emerald',
         cards: [
           {
             kind: 'hitung',
             id: 'h-nanti',
-            label: 'Biaya hidup / bulan saat pensiun',
+            label: 'Biaya hidup per bulan saat pensiun',
             calc: (c) => {
               if (!has(c, 'n-usia', 'n-pensiun', 'n-biaya')) return null;
               const yrs = Math.max(0, num(c, 'n-pensiun') - num(c, 'n-usia'));
@@ -648,15 +821,14 @@ export const TEMPLATES: Template[] = [
         ],
       },
       {
-        id: 'b4',
+        id: 'ps4',
         title: 'Cara mengumpulkan',
         emoji: '📈',
-        color: 'violet',
         cards: [
           {
             kind: 'angka',
             id: 'n-return',
-            label: 'Asumsi imbal hasil investasi / tahun',
+            label: 'Asumsi imbal hasil investasi per tahun',
             unit: 'persen',
             suggest: () => 7,
           },
@@ -678,14 +850,16 @@ export const TEMPLATES: Template[] = [
             },
           },
           {
-            kind: 'cek',
-            id: 'c-pilar',
-            title: 'Pilar dana pensiun',
-            items: [
-              { id: 'jht', text: 'Cek saldo JHT & Jaminan Pensiun di aplikasi JMO (BPJS Ketenagakerjaan)' },
-              { id: 'dplk', text: 'Pertimbangkan DPLK / program pensiun kantor' },
-              { id: 'izin', text: 'Produk investasi dari lembaga berizin OJK' },
-            ],
+            kind: 'tugas',
+            id: 'ps-jht',
+            label: 'Cek saldo JHT & Jaminan Pensiun di aplikasi JMO',
+            why: 'Saldo BPJS Ketenagakerjaan adalah salah satu pilar dana pensiunmu.',
+          },
+          {
+            kind: 'tugas',
+            id: 'ps-dplk',
+            label: 'Pertimbangkan DPLK atau program pensiun kantor',
+            why: 'Program pensiun memaksa disiplin menabung jangka panjang.',
           },
           OJK,
         ],
@@ -706,28 +880,34 @@ export const TEMPLATES: Template[] = [
     emoji: '🎓',
     tagline: 'Biaya sekolah naik tiap tahun — mulai lebih awal lebih ringan',
     color: 'sky',
+    start: 'MULAI · SEKOLAH ·',
+    finalTitle: 'Rencana pendidikan',
     chapters: [
       {
-        id: 'b1',
-        title: 'Jenjang yang disiapkan',
+        id: 'pd1',
+        title: 'Jenjang',
         emoji: '🏫',
-        color: 'indigo',
         cards: [
-          { kind: 'tanya', id: 'q-jenjang', q: 'Untuk jenjang apa & sekolah/kampus mana yang diincar?' },
+          {
+            kind: 'tanya',
+            id: 'pd-jenjang',
+            q: 'Untuk jenjang apa?',
+            why: 'Tiap jenjang punya waktu & besar biaya yang berbeda.',
+            options: ['TK / SD', 'SMP / SMA', 'Kuliah S1', 'Kuliah luar negeri'],
+          },
           { kind: 'angka', id: 'n-biaya', label: 'Biaya masuk + tahun pertama (harga hari ini)', unit: 'rp' },
-          { kind: 'angka', id: 'n-tahun', label: 'Dibutuhkan berapa tahun lagi?', unit: 'tahun' },
+          { kind: 'angka', id: 'n-tahun', label: 'Dibutuhkan berapa tahun lagi', unit: 'tahun' },
         ],
       },
       {
-        id: 'b2',
+        id: 'pd2',
         title: 'Kenaikan biaya',
         emoji: '📈',
-        color: 'amber',
         cards: [
           {
             kind: 'angka',
             id: 'n-inflasi',
-            label: 'Asumsi kenaikan biaya pendidikan / tahun',
+            label: 'Asumsi kenaikan biaya pendidikan per tahun',
             unit: 'persen',
             suggest: () => 10,
           },
@@ -743,14 +923,13 @@ export const TEMPLATES: Template[] = [
         ],
       },
       {
-        id: 'b3',
+        id: 'pd3',
         title: 'Rencana menabung',
         emoji: '🪙',
-        color: 'emerald',
         cards: [
           D.left,
           { kind: 'angka', id: 'n-siap', label: 'Dana yang sudah ada', unit: 'rp' },
-          { kind: 'angka', id: 'n-return', label: 'Asumsi imbal hasil / tahun', unit: 'persen', suggest: () => 6 },
+          { kind: 'angka', id: 'n-return', label: 'Asumsi imbal hasil per tahun', unit: 'persen', suggest: () => 6 },
           {
             kind: 'hitung',
             id: 'h-setor',
@@ -767,35 +946,33 @@ export const TEMPLATES: Template[] = [
         ],
       },
       {
-        id: 'b4',
+        id: 'pd4',
         title: 'Cek produk',
         emoji: '🛡️',
-        color: 'sky',
         cards: [
           {
-            kind: 'cek',
-            id: 'c-produk',
-            title: 'Sebelum memilih produk',
-            items: [
-              { id: 'pisah', text: 'Rekening/produk khusus, terpisah dari tabungan lain' },
-              { id: 'izin', text: 'Lembaga & produknya terdaftar di OJK' },
-              {
-                id: 'biaya',
-                text: 'Paham biaya & aturan pencairan (asuransi pendidikan/unit link sering berbiaya tinggi)',
-              },
-            ],
+            kind: 'tugas',
+            id: 'pd-pisah',
+            label: 'Siapkan rekening/produk khusus pendidikan',
+            why: 'Dana yang dipisah tidak ikut terpakai untuk kebutuhan lain.',
+          },
+          {
+            kind: 'tugas',
+            id: 'pd-biaya',
+            label: 'Pahami biaya & aturan pencairan produknya',
+            why: 'Asuransi pendidikan atau unit link sering punya biaya tinggi di tahun-tahun awal.',
           },
           OJK,
         ],
       },
     ],
-    goal: (c) => {
-      if (!has(c, 'n-biaya', 'n-tahun')) return null;
-      return {
-        value: rp(futureValue(num(c, 'n-biaya'), num(c, 'n-inflasi') || 10, num(c, 'n-tahun'))),
-        note: `dalam ${num(c, 'n-tahun')} tahun`,
-      };
-    },
+    goal: (c) =>
+      has(c, 'n-biaya', 'n-tahun')
+        ? {
+            value: rp(futureValue(num(c, 'n-biaya'), num(c, 'n-inflasi') || 10, num(c, 'n-tahun'))),
+            note: `dalam ${num(c, 'n-tahun')} tahun`,
+          }
+        : null,
   },
   {
     id: 'lunas-utang',
@@ -803,33 +980,34 @@ export const TEMPLATES: Template[] = [
     emoji: '⛓️',
     tagline: 'Urutkan, bayar, dan jangan gali lubang tutup lubang',
     color: 'violet',
+    start: 'MULAI · BEBAS ·',
+    finalTitle: 'Rencana bebas utang',
     chapters: [
+      { id: 'lu1', title: 'Peta utang', emoji: '🗺️', cards: [D.debt, CEK.utang, D.left] },
       {
-        id: 'b1',
-        title: 'Peta utangmu',
-        emoji: '🗺️',
-        color: 'indigo',
-        cards: [D.debt, { kind: 'tabel', id: 'tb-utang', table: 'utang' }, D.left],
-      },
-      {
-        id: 'b2',
-        title: 'Pilih strategi',
+        id: 'lu2',
+        title: 'Strategi',
         emoji: '♟️',
-        color: 'amber',
         cards: [
           {
             kind: 'info',
             id: 'i-strategi',
+            label: 'Dua cara populer',
             text: 'Bola salju: lunasi yang saldonya paling kecil dulu (cepat terasa menang). Longsoran: lunasi yang bunganya paling tinggi dulu (paling hemat bunga).',
           },
-          { kind: 'tanya', id: 'q-strategi', q: 'Strategi mana yang kamu pilih, dan utang mana yang pertama?' },
+          {
+            kind: 'tanya',
+            id: 'lu-strategi',
+            q: 'Strategi mana yang kamu pilih?',
+            why: 'Strategi yang cocok dengan sifatmu lebih mungkin dijalani sampai lunas.',
+            options: ['Bola salju (saldo terkecil dulu)', 'Longsoran (bunga tertinggi dulu)', 'Belum tahu'],
+          },
         ],
       },
       {
-        id: 'b3',
+        id: 'lu3',
         title: 'Rencana bayar',
         emoji: '🧮',
-        color: 'emerald',
         cards: [
           {
             kind: 'angka',
@@ -852,38 +1030,43 @@ export const TEMPLATES: Template[] = [
               };
             },
           },
+          {
+            kind: 'tugas',
+            id: 'lu-auto',
+            label: 'Atur pembayaran otomatis tepat setelah gajian',
+            why: 'Uang yang dibayar duluan tidak sempat terpakai untuk hal lain.',
+            link: L.rutin,
+          },
         ],
       },
       {
-        id: 'b4',
+        id: 'lu4',
         title: 'Rem & pagar',
         emoji: '🛑',
-        color: 'rose',
         cards: [
           {
-            kind: 'cek',
-            id: 'c-rem',
-            title: 'Selama melunasi',
-            items: [
-              { id: 'stop', text: 'Tidak menambah utang konsumtif baru' },
-              { id: 'pinjol', text: 'Hindari pinjol ilegal — cek daftar berizin di OJK' },
-              { id: 'nego', text: 'Kalau berat, ajukan restrukturisasi ke pemberi pinjaman' },
-              { id: 'slik', text: 'Cek SLIK OJK (iDebKu) agar tahu semua catatan kreditmu' },
-            ],
+            kind: 'tugas',
+            id: 'lu-stop',
+            label: 'Berhenti menambah utang konsumtif baru',
+            why: 'Melunasi sambil menambah utang membuat targetnya terus mundur.',
           },
-          OJK,
           {
             kind: 'tugas',
-            id: 't-rutin',
-            title: 'Kebiasaan',
-            items: [
-              { id: 'auto', text: 'Atur pembayaran otomatis tepat setelah gajian' },
-              { id: 'catat', text: 'Catat setiap pembayaran di Leosiqra' },
-            ],
+            id: 'lu-nego',
+            label: 'Kalau berat, ajukan restrukturisasi ke pemberi pinjaman',
+            why: 'Lebih baik bicara di awal daripada menunggak.',
           },
+          {
+            kind: 'tugas',
+            id: 'lu-slik',
+            label: 'Cek semua catatan kreditmu di SLIK OJK (iDebKu)',
+            why: 'Supaya tidak ada utang yang terlupa.',
+          },
+          OJK,
         ],
       },
     ],
+    tables: [{ id: 't-utang', kind: 'utang', after: 'lu1' }],
     goal: (c) => ({
       value: rp(c.m.liabilities),
       note: c.m.liabilities ? 'sisa utang tercatat' : 'Bebas utang 🎉',
@@ -896,26 +1079,38 @@ export const TEMPLATES: Template[] = [
     emoji: '🏪',
     tagline: 'Modal, titik impas, dan memisahkan uang usaha',
     color: 'indigo',
+    start: 'MULAI · USAHA ·',
+    finalTitle: 'Rencana usaha',
     chapters: [
       {
-        id: 'b1',
+        id: 'us1',
         title: 'Ide usaha',
         emoji: '💡',
-        color: 'amber',
         cards: [
-          { kind: 'tanya', id: 'q-ide', q: 'Jual apa, ke siapa, dan kenapa mereka beli darimu?' },
-          { kind: 'tanya', id: 'q-uji', q: 'Bagaimana cara menguji idenya dengan modal kecil dulu?' },
+          {
+            kind: 'tanya',
+            id: 'us-ide',
+            q: 'Usaha di bidang apa?',
+            why: 'Ide yang jelas pembelinya lebih cepat balik modal.',
+            options: ['Makanan & minuman', 'Jasa', 'Produk online', 'Titip jual / reseller'],
+          },
+          {
+            kind: 'tanya',
+            id: 'us-uji',
+            q: 'Cara menguji ide dengan modal kecil?',
+            why: 'Menguji kecil-kecilan mengurangi risiko modal habis.',
+            options: ['Pre-order dulu', 'Jual ke teman & keluarga', 'Buka lapak online', 'Ikut bazar'],
+          },
         ],
       },
       {
-        id: 'b2',
+        id: 'us2',
         title: 'Modal',
         emoji: '🧰',
-        color: 'emerald',
         cards: [
           D.liquid,
           { kind: 'angka', id: 'n-modal', label: 'Modal awal (alat, stok, izin)', unit: 'rp' },
-          { kind: 'angka', id: 'n-tetap', label: 'Biaya tetap / bulan (sewa, gaji, listrik)', unit: 'rp' },
+          { kind: 'angka', id: 'n-tetap', label: 'Biaya tetap per bulan (sewa, gaji, listrik)', unit: 'rp' },
           {
             kind: 'hitung',
             id: 'h-aman',
@@ -928,10 +1123,9 @@ export const TEMPLATES: Template[] = [
         ],
       },
       {
-        id: 'b3',
+        id: 'us3',
         title: 'Titik impas',
         emoji: '⚖️',
-        color: 'sky',
         cards: [
           { kind: 'angka', id: 'n-harga', label: 'Harga jual per unit', unit: 'rp' },
           { kind: 'angka', id: 'n-hpp', label: 'Modal (HPP) per unit', unit: 'rp' },
@@ -952,29 +1146,36 @@ export const TEMPLATES: Template[] = [
         ],
       },
       {
-        id: 'b4',
+        id: 'us4',
         title: 'Rapi sejak awal',
         emoji: '🗂️',
-        color: 'violet',
         cards: [
           {
             kind: 'tugas',
-            id: 't-rapi',
-            title: 'Langkah awal',
-            items: [
-              { id: 'rek', text: 'Rekening terpisah untuk usaha' },
-              { id: 'nib', text: 'Daftar NIB lewat OSS (gratis)' },
-              { id: 'gaji', text: 'Gaji dirimu sendiri dari usaha, jangan ambil acak' },
-              { id: 'catat', text: 'Catat penjualan harian (Ladangku di Leosiqra)' },
-            ],
+            id: 'us-rek',
+            label: 'Buka rekening terpisah untuk usaha',
+            why: 'Uang usaha dan uang pribadi yang tercampur membuat untung-rugi tidak terlihat.',
+          },
+          {
+            kind: 'tugas',
+            id: 'us-nib',
+            label: 'Daftar NIB lewat OSS (gratis)',
+            why: 'Izin dasar usaha, dibutuhkan untuk banyak kemitraan & pembiayaan.',
+          },
+          {
+            kind: 'tugas',
+            id: 'us-catat',
+            label: 'Catat penjualan harian di Ladangku',
+            why: 'Catatan harian membuat titik impas bisa dipantau.',
+            link: { href: '/membership/ladang', label: 'Buka Ladangku' },
           },
           {
             kind: 'info',
             id: 'i-pph',
-            text: 'UMKM orang pribadi dengan omzet sampai Rp500 juta setahun tidak dikenai PPh final 0,5%; di atasnya ada aturan tarif & batas waktunya.',
+            label: 'Pajak UMKM',
+            text: 'Wajib pajak orang pribadi UMKM dengan omzet sampai Rp500 juta setahun tidak dikenai PPh final 0,5% atas omzet tersebut.',
             source: 'PP 55/2022',
           },
-          OJK,
         ],
       },
     ],
@@ -989,35 +1190,47 @@ export const TEMPLATES: Template[] = [
     emoji: '🗒️',
     tagline: 'Mulai dari angka catatanmu, susun sendiri pakai catatan tempel',
     color: 'teal',
-    chapters: [
-      { id: 'b1', title: 'Dari catatanmu', emoji: '📒', color: 'indigo', cards: [D.income, D.expense, D.left, D.net] },
-    ],
+    start: 'MULAI · BEBAS ·',
+    finalTitle: 'Ringkasan',
+    chapters: [{ id: 'ks1', title: 'Dari catatanmu', emoji: '📒', cards: [D.income, D.expense, D.left, D.net] }],
+    tables: [{ id: 't-neraca', kind: 'neraca', after: 'ks1' }],
   },
 ];
 
 export const templateById = (id: string) => TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[TEMPLATES.length - 1];
 
-// Progres: tugas & cek dicentang + pertanyaan dijawab + angka diisi.
-export function progressOf(
-  t: Template,
-  s: { answers: Record<string, string>; done: Record<string, true>; nums: Record<string, number> },
-) {
-  let total = 0;
+// ── Status kartu ───────────────────────────────────────────────────────────
+// Kartu dihitung selesai kalau dijawab, dilewati, atau (data/cek) angkanya sudah tersedia.
+export type CardState = 'answered' | 'skipped' | 'auto' | 'waiting' | 'open';
+export type StateLike = { answers: Record<string, string>; done: Record<string, true>; nums: Record<string, number> };
+export const skipKey = (id: string) => `skip.${id}`;
+export const counts = (card: Card) => card.kind !== 'info' && card.kind !== 'hitung';
+
+export function cardState(card: Card, s: StateLike, m: Metrics): CardState {
+  if (card.kind === 'tanya' && s.answers[card.id]) return 'answered';
+  if (card.kind === 'tugas' && s.done[card.id]) return 'answered';
+  if (card.kind === 'angka' && Number.isFinite(s.nums[card.id])) return 'answered';
+  if (s.done[skipKey(card.id)]) return 'skipped';
+  if (card.kind === 'data') return m.ready && (!card.needsMonth || m.months > 0) ? 'auto' : 'waiting';
+  if (card.kind === 'cek') return card.calc(m) ? 'auto' : 'waiting';
+  return 'open';
+}
+export const isDone = (st: CardState) => st === 'answered' || st === 'skipped' || st === 'auto';
+
+export function chapterProgress(ch: Chapter, s: StateLike, m: Metrics) {
+  const list = ch.cards.filter(counts);
+  const got = list.filter((c) => isDone(cardState(c, s, m))).length;
+  return { got, total: list.length, done: list.length > 0 && got === list.length };
+}
+export function progressOf(t: Template, s: StateLike, m: Metrics) {
   let got = 0;
-  for (const ch of t.chapters)
-    for (const c of ch.cards) {
-      if (c.kind === 'tanya') {
-        total++;
-        if (s.answers[c.id]?.trim()) got++;
-      } else if (c.kind === 'angka') {
-        total++;
-        if (Number.isFinite(s.nums[c.id])) got++;
-      } else if (c.kind === 'cek' || c.kind === 'tugas') {
-        for (const it of c.items) {
-          total++;
-          if (s.done[`${c.id}.${it.id}`]) got++;
-        }
-      }
-    }
-  return { total, got, pct: total ? Math.round((got / total) * 100) : 0 };
+  let total = 0;
+  let babDone = 0;
+  for (const ch of t.chapters) {
+    const p = chapterProgress(ch, s, m);
+    got += p.got;
+    total += p.total;
+    if (p.done) babDone++;
+  }
+  return { got, total, babDone, babTotal: t.chapters.length, pct: total ? Math.round((got / total) * 100) : 0 };
 }

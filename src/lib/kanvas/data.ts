@@ -23,8 +23,12 @@ export type Metrics = {
   hutang: number;
   liabilities: number;
   net: number;
-  liquid: number; // kas + tabungan
+  liquid: number; // kas & rekening (tanpa kartu kredit) + tabungan + deposito
+  deposito: number;
   emergencyMonths: number | null;
+  // Rata-rata per bulan, dipecah untuk tabel Arus Kas Keluarga.
+  split: { kebutuhan: number; cicilan: number; investasi: number; sosial: number };
+  readyLabel: string; // "1 Desember 2026" — kapan rata-rata bulan penuh pertama tersedia
   debts: { name: string; remaining: number }[];
 };
 
@@ -32,6 +36,23 @@ const idr = (t: Transaction) => Number(t.amountIDR) || Number(t.amount) || 0;
 export const isSpend = (t: Transaction) => t.type === 'pengeluaran' && !isInvestmentFlow(t) && t.relatedType !== 'debt';
 export const isIncome = (t: Transaction) => t.type === 'pemasukan' && !isInvestmentFlow(t) && t.relatedType !== 'debt';
 const monthKey = (d: Date | string) => toLocalDateString(new Date(d)).slice(0, 7);
+
+const SOSIAL_RE = /keluarga|sosial|donasi|zakat|sedekah|infak|kirim|bantuan/i;
+const CICILAN_RE = /cicilan|angsuran|kredit|kpr|pinjaman/i;
+const MONTH_LONG = [
+  'Januari',
+  'Februari',
+  'Maret',
+  'April',
+  'Mei',
+  'Juni',
+  'Juli',
+  'Agustus',
+  'September',
+  'Oktober',
+  'November',
+  'Desember',
+];
 
 const lastFullMonths = (now: Date, n: number) =>
   Array.from({ length: n }, (_, i) => monthKey(new Date(now.getFullYear(), now.getMonth() - 1 - i, 1)));
@@ -54,7 +75,18 @@ export function computeMetrics(transactions: Transaction[], nw: NetWorth | null,
     .slice(0, 4)
     .map(([name, v]) => ({ name, avg: Math.round(v / Math.max(1, n)) }));
   const t = nw?.totals;
-  const liquid = (t?.cash ?? 0) + (t?.savings ?? 0);
+  const deposito = (nw?.investments ?? []).filter((i) => i.inv.type === 'Deposito').reduce((s, i) => s + i.value, 0);
+  const liquid = (t?.cash ?? 0) + (t?.savings ?? 0) + deposito;
+  const avg = (v: number) => (n ? Math.round(v / n) : 0);
+  const sosial = spend.filter((x) => SOSIAL_RE.test(x.category || '')).reduce((s2, x) => s2 + idr(x), 0);
+  const cicilanCat = spend.filter((x) => CICILAN_RE.test(x.category || '')).reduce((s2, x) => s2 + idr(x), 0);
+  const debtPaid = transactions
+    .filter((x) => x.type === 'pengeluaran' && x.relatedType === 'debt' && inMonths(x))
+    .reduce((s2, x) => s2 + idr(x), 0);
+  const invested = transactions
+    .filter((x) => x.type === 'pengeluaran' && isInvestmentFlow(x) && inMonths(x))
+    .reduce((s2, x) => s2 + idr(x), 0);
+  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   return {
     ready: Boolean(nw),
     months: n,
@@ -74,7 +106,15 @@ export function computeMetrics(transactions: Transaction[], nw: NetWorth | null,
     liabilities: t?.liabilities ?? 0,
     net: t?.net ?? 0,
     liquid,
+    deposito,
     emergencyMonths: expenseAvg > 0 ? liquid / expenseAvg : null,
+    split: {
+      kebutuhan: avg(expense - sosial - cicilanCat),
+      cicilan: avg(cicilanCat + debtPaid),
+      investasi: avg(invested),
+      sosial: avg(sosial),
+    },
+    readyLabel: `1 ${MONTH_LONG[next.getMonth()]} ${next.getFullYear()}`,
     debts: [
       ...(nw?.hutang ?? []).map((h) => ({ name: h.name, remaining: h.remaining })),
       ...(nw?.cards ?? []).filter((c) => c.used > 0).map((c) => ({ name: c.account.name, remaining: c.used })),
