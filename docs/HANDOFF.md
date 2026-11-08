@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (3.14.0 siap deploy, menunggu "gas" + migrasi 0042)
+Terakhir diperbarui: 2026-11-09 (3.14.0 live, run #184)
 
 ## Siapa sedang kerja
 
@@ -18,9 +18,14 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-09 — 3.14.0 Peta Belanja (Rilis 1 dari 3) — BELUM DEPLOY, branch `claude/kanvas-v2-20261108`.**
-  - **SQL: jalankan `cloudflare/migrations/0042_tx_places.sql` di D1 Console** (tabel `tx_places`). Tanpa tabel itu
-    halaman tetap jalan (`ready:false`, daftar kosong) tapi simpan lokasi gagal.
+- **2026-11-09 — 3.14.0 Peta Belanja (Rilis 1 dari 3) LIVE (run #184, commit 5e4ed17).**
+  - SQL 0042 (`tx_places`) dijalankan Bos di D1 Console sebelum deploy (belum diverifikasi lewat query).
+  - Keputusan peta: coba MapLibre + OpenFreeMap + Nominatim dulu; kalau pencarian jelek → ganti pencarian saja
+    (HERE/Foursquare/Photon), Google paling akhir (billing + ToS: data Places wajib di peta Google, tak boleh disimpan).
+  - Rilis 2 yang disepakati arahnya: auto-lokasi saat catat (opt-in, hanya transaksi hari ini, akurasi ≤100 m),
+    Zona Rumah/Kantor + radius (disimpan di perangkat, tidak dikirim ke server), tab Jejak + putar ulang,
+    alamat dari struk, tombol Hapus semua lokasiku. Pin otomatis 'diam 20–30 menit' TIDAK (butuh lokasi latar
+    belakang: web tak bisa, Play Store ketat).
   - Worker: `handleMemberPlaces` — `GET /api/member/places?days=`, `PUT|DELETE /api/member/places/:txId` (cek pemilik
     transaksi), `GET /api/member/places/search?q=` (proxy Nominatim, countrycodes=id, cache 30 hari di caches.default,
     rate limit `AI_PARSE_RATE_LIMITER` key `geo:user:`). Hapus transaksi → `deletePlacesForTransactions`.
