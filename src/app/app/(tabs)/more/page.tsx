@@ -26,6 +26,7 @@ import {
   ShieldCheck,
   Sprout,
   Sticker,
+  Waypoints,
   Target,
   Timer,
   TrendingUp,
@@ -129,6 +130,12 @@ const IN_APP: MenuItem[] = [
     href: '/app/stiker',
     icon: Sticker,
     color: 'bg-fuchsia-50 text-fuchsia-600 dark:bg-fuchsia-500/10 dark:text-fuchsia-400',
+  },
+  {
+    label: 'Kanvas',
+    href: '/app/kanvas',
+    icon: Waypoints,
+    color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400',
   },
   {
     label: 'Sehatku',

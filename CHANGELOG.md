@@ -65,6 +65,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.7.0 | 8 Nov 2026 | Stiker cerita: bagikan angka keuanganmu |
 | 3.8.0 | 8 Nov 2026 | Stikerku: fitur stiker sendiri, 1 layar + stiker Struk |
 | 3.9.0 | 8 Nov 2026 | Sehatku makin lengkap |
+| 3.10.0 | 8 Nov 2026 | Kanvas: rencanakan keuangan di papan bebas |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -78,6 +79,19 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.10.0 — 2026-11-08 — Kanvas: rencanakan keuangan di papan bebas
+
+- Fitur baru **Kanvas** (menu Fitur di web, grid Lainnya di aplikasi HP): papan bebas yang bisa digeser,
+  di-zoom (cubit di HP, Ctrl+scroll di komputer), dan disusun ulang dengan tombol **Rapikan**.
+- **Arus Uangku**: diagram dari catatanmu sendiri — uang masuk dari mana, lewat rekening mana, habis ke kategori
+  apa. Pilih bulan ini, bulan lalu, atau 3 bulan. Transfer, beli investasi & utang-piutang tidak dihitung.
+- **7 papan rencana siap pakai**: Persiapan Nikah, Dana Darurat, Beli Rumah (KPR), Pensiun, Dana Pendidikan Anak,
+  Lunas Utang, dan Mulai Usaha — plus Kanvas kosong. Tiap papan berisi bab-bab dengan angka dari catatanmu,
+  pertanyaan untuk dijawab, hitungan otomatis (cicilan KPR, target dana darurat, dana pensiun, titik impas, dll.),
+  daftar cek (izin OJK, penjaminan LPS, legalitas rumah), tugas, serta tabel Neraca & Arus Kas Keluarga.
+- Tambah **catatan tempel** berwarna di mana saja. Jawabanmu tersimpan di akun, jadi bisa dilanjutkan dari HP atau
+  komputer.
 
 ## 3.9.0 — 2026-11-08 — Sehatku makin lengkap
 

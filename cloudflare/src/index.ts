@@ -13096,6 +13096,126 @@ async function handleMemberFocus(request: Request, env: Env, pathname: string) {
   }
 }
 
+// ── Kanvas (migrasi 0041) ───────────────────────────────────────────────────
+// Papan rencana keuangan (template: nikah, darurat, rumah, ...). Angka "dari catatanmu" dihitung
+// di klien dari data user sendiri; yang disimpan hanya isian user (state_json, disaring ketat).
+// GET    /api/member/canvas        → daftar kanvas (tanpa isi) { items, ready }
+// POST   /api/member/canvas        → buat { id (UUID klien), template, title } — ulang = 200, tidak dobel
+// GET    /api/member/canvas/:id    → satu kanvas + isi
+// PUT    /api/member/canvas/:id    → simpan { title?, state, rev } — rev basi = 409 + versi terbaru
+// DELETE /api/member/canvas/:id
+const CANVAS_TEMPLATES = ["nikah", "darurat", "rumah", "pensiun", "pendidikan", "lunas-utang", "usaha", "kosong"] as const;
+const CANVAS_MAX_PER_USER = 30;
+const CANVAS_STATE_MAX = 48_000;
+const canvasTableMissing = (e: unknown) => e instanceof Error && /no such table: canvases/i.test(e.message);
+const CANVAS_KEY = /^[a-z0-9][a-z0-9._-]{0,47}$/i;
+const sanitizeCanvasState = (raw: unknown) => {
+  const src = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  const obj = (v: unknown) => (v && typeof v === "object" && !Array.isArray(v) ? Object.entries(v as Record<string, unknown>).slice(0, 400) : []);
+  const coord = (n: unknown) => (typeof n === "number" && Number.isFinite(n) ? Math.max(-20000, Math.min(20000, Math.round(n))) : null);
+  const answers: Record<string, string> = {};
+  for (const [k, v] of obj(src.answers)) if (CANVAS_KEY.test(k) && typeof v === "string" && v.trim()) answers[k] = v.slice(0, 1000);
+  const done: Record<string, true> = {};
+  for (const [k, v] of obj(src.done)) if (CANVAS_KEY.test(k) && v === true) done[k] = true;
+  const nums: Record<string, number> = {};
+  for (const [k, v] of obj(src.nums)) if (CANVAS_KEY.test(k) && typeof v === "number" && Number.isFinite(v) && Math.abs(v) <= 1e15) nums[k] = Math.round(v * 100) / 100;
+  const pos: Record<string, [number, number]> = {};
+  for (const [k, v] of obj(src.pos)) {
+    if (!CANVAS_KEY.test(k) || !Array.isArray(v)) continue;
+    const x = coord(v[0]);
+    const y = coord(v[1]);
+    if (x !== null && y !== null) pos[k] = [x, y];
+  }
+  const notes = (Array.isArray(src.notes) ? src.notes : []).slice(0, 40).flatMap((n) => {
+    const r = n && typeof n === "object" ? (n as Record<string, unknown>) : {};
+    const x = coord(r.x);
+    const y = coord(r.y);
+    if (typeof r.id !== "string" || !CANVAS_KEY.test(r.id) || typeof r.text !== "string" || x === null || y === null) return [];
+    const color = typeof r.color === "string" && /^(kuning|hijau|biru|pink|ungu)$/.test(r.color) ? r.color : "kuning";
+    return [{ id: r.id, text: r.text.slice(0, 300), x, y, color }];
+  });
+  return { v: 1, answers, done, nums, pos, notes };
+};
+async function handleMemberCanvas(request: Request, env: Env, pathname: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  try {
+    if (pathname === "/api/member/canvas" && request.method === "GET") {
+      const rows = await env.DB.prepare(
+        "SELECT id, template, title, rev, created_at, updated_at, length(state_json) AS size FROM canvases WHERE user_id = ? ORDER BY updated_at DESC LIMIT ?"
+      ).bind(userId, CANVAS_MAX_PER_USER).all();
+      return json({ items: rows.results ?? [], ready: true });
+    }
+    if (pathname === "/api/member/canvas" && request.method === "POST") {
+      const raw = await parseJson<Record<string, unknown>>(request);
+      const id = typeof raw.id === "string" && /^[0-9a-f-]{36}$/i.test(raw.id) ? raw.id.toLowerCase() : null;
+      const template = (CANVAS_TEMPLATES as readonly unknown[]).includes(raw.template) ? (raw.template as string) : null;
+      const title = typeof raw.title === "string" ? raw.title.trim().slice(0, 80) : "";
+      if (!id || !template || !title) return json({ error: "Data kanvas tidak lengkap." }, { status: 400 });
+      const now = nowIso();
+      // Batas jumlah dicek di dalam INSERT yang sama (tidak bisa dilewati dengan klik beruntun).
+      const res = await env.DB.prepare(
+        `INSERT OR IGNORE INTO canvases (id, user_id, template, title, state_json, rev, created_at, updated_at)
+         SELECT ?, ?, ?, ?, '{}', 0, ?, ? WHERE (SELECT COUNT(*) FROM canvases WHERE user_id = ?) < ?`
+      ).bind(id, userId, template, title, now, now, userId, CANVAS_MAX_PER_USER).run();
+      if (!res.meta.changes) {
+        const own = await env.DB.prepare("SELECT 1 FROM canvases WHERE id = ? AND user_id = ?").bind(id, userId).first();
+        if (own) return json({ ok: true, duplicate: true });
+        return json({ error: `Maksimal ${CANVAS_MAX_PER_USER} kanvas. Hapus yang tidak dipakai dulu.` }, { status: 409 });
+      }
+      return json({ ok: true }, { status: 201 });
+    }
+    const m = /^\/api\/member\/canvas\/([0-9a-f-]{36})$/i.exec(pathname);
+    if (!m) return json({ error: "Not found" }, { status: 404 });
+    const id = m[1].toLowerCase();
+    const load = () =>
+      env.DB.prepare("SELECT id, template, title, state_json, rev, created_at, updated_at FROM canvases WHERE id = ? AND user_id = ?")
+        .bind(id, userId)
+        .first<{ id: string; template: string; title: string; state_json: string; rev: number; created_at: string; updated_at: string }>();
+    const shape = (r: NonNullable<Awaited<ReturnType<typeof load>>>) => {
+      let state: unknown = {};
+      try { state = JSON.parse(r.state_json); } catch { state = {}; }
+      const { state_json: _drop, ...rest } = r;
+      return { ...rest, state: sanitizeCanvasState(state) };
+    };
+    if (request.method === "GET") {
+      const r = await load();
+      return r ? json({ canvas: shape(r) }) : json({ error: "Kanvas tidak ditemukan." }, { status: 404 });
+    }
+    if (request.method === "PUT") {
+      const raw = await parseJson<Record<string, unknown>>(request);
+      const rev = Number.isInteger(raw.rev) ? (raw.rev as number) : null;
+      if (rev === null) return json({ error: "Versi kanvas tidak ada." }, { status: 400 });
+      const state = JSON.stringify(sanitizeCanvasState(raw.state));
+      if (state.length > CANVAS_STATE_MAX) return json({ error: "Isi kanvas terlalu besar. Kurangi catatan atau jawaban yang panjang." }, { status: 413 });
+      const title = typeof raw.title === "string" && raw.title.trim() ? raw.title.trim().slice(0, 80) : null;
+      const res = await env.DB.prepare(
+        "UPDATE canvases SET state_json = ?, title = COALESCE(?, title), rev = rev + 1, updated_at = ? WHERE id = ? AND user_id = ? AND rev = ?"
+      ).bind(state, title, nowIso(), id, userId, rev).run();
+      if (!res.meta.changes) {
+        const r = await load();
+        if (!r) return json({ error: "Kanvas tidak ditemukan." }, { status: 404 });
+        return json({ error: "Kanvas ini baru diubah dari perangkat lain.", canvas: shape(r) }, { status: 409 });
+      }
+      return json({ ok: true, rev: rev + 1 });
+    }
+    if (request.method === "DELETE") {
+      const res = await env.DB.prepare("DELETE FROM canvases WHERE id = ? AND user_id = ?").bind(id, userId).run();
+      if (!res.meta.changes) return json({ error: "Kanvas tidak ditemukan." }, { status: 404 });
+      return json({ ok: true });
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (e) {
+    if (canvasTableMissing(e)) {
+      if (request.method === "GET" && pathname === "/api/member/canvas") return json({ items: [], ready: false });
+      return json({ error: "Kanvas belum aktif (menunggu pembaruan database). Isianmu disimpan di perangkat dulu." }, { status: 503 });
+    }
+    if (e instanceof Error && e.message === "Payload JSON tidak valid.") return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    throw e;
+  }
+}
+
 // ── Cerita Hari Ini (migrasi 0035) ──────────────────────────────────────────
 // Satu halaman per hari: mood 1–5, tulisan ≤ 500, foto (unggah) dan/atau ilustrasi AI.
 // GET    /api/member/stories?year=YYYY      → daftar setahun + pengeluaran per hari (warna kalender)
@@ -16362,7 +16482,7 @@ const PREF_INPUT_MODES = ["ketik", "suara", "foto"] as const;
 // Fitur yang tampil di menu samping (panel Pengaturan → Fitur). Hanya
 // visibilitas menu — mematikan fitur tidak menyentuh datanya. Sama dengan
 // FeatureId di src/lib/features.ts. null = bawaan (5 fitur lama).
-const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk", "jejak", "langganan", "ladang", "fokus", "cerita", "makan", "sehat", "stiker"] as const;
+const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk", "jejak", "langganan", "ladang", "fokus", "cerita", "makan", "sehat", "stiker", "kanvas"] as const;
 // Jam pengingat per 30 menit (cron tiap 10 menit, lihat sendDailyReminders).
 const PREF_TIME_RE = /^([01]\d|2[0-3]):(00|30)$/;
 // Ikon & warna pilihan user per nama kategori (panel Kategori & Anggaran).
@@ -21066,6 +21186,10 @@ const worker = {
 
       if (url.pathname === "/api/member/focus" || url.pathname.startsWith("/api/member/focus/")) {
         return await handleMemberFocus(request, env, url.pathname);
+      }
+
+      if (url.pathname === "/api/member/canvas" || url.pathname.startsWith("/api/member/canvas/")) {
+        return await handleMemberCanvas(request, env, url.pathname);
       }
 
       if (url.pathname === "/api/member/meals/analyze" && request.method === "POST") {

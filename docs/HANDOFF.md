@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-08 (3.9.0 live, run #176)
+Terakhir diperbarui: 2026-11-08 (3.10.0 siap di branch claude/kanvas-20261108, menunggu gas)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,24 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-08 — 3.10.0 SIAP (branch `claude/kanvas-20261108`), BELUM DEPLOY. PERLU SQL 0041.**
+  - **MIGRASI 0041 (`cloudflare/migrations/0041_canvases.sql`)**: tabel `canvases` (id, user_id, template, title,
+    state_json, rev, created_at, updated_at). Tanpa 0041: GET daftar `{ready:false}` → klien menyimpan kanvas di
+    localStorage (`leosiqra-kanvas-v1`) dengan banner "disimpan di perangkat ini" (dites).
+  - Worker `handleMemberCanvas` (/api/member/canvas[/:id]): requireSession, semua query `AND user_id = ?`, maks 30
+    kanvas (dicek di dalam INSERT…SELECT, uji 31 paralel → 29 masuk), id UUID klien (ulang = 200), PUT dengan `rev`
+    (basi = 409, klien memuat versi server), state disaring `sanitizeCanvasState` (kunci regex, ≤1000 char jawaban,
+    angka finite, koordinat ±20000, ≤40 catatan, warna whitelist), maks 48 KB (413). `kanvas` masuk PREF_FEATURES.
+  - Frontend: `src/lib/kanvas/{data,templates,service}.ts`, `src/components/kanvas/{Board,cards,KanvasApp}.tsx`,
+    halaman `/membership/kanvas` (FULLSCREEN_PATHS) & `/app/kanvas`, fitur id `kanvas` (default menyala; user yang
+    sudah menyimpan pilihan fitur perlu menyalakannya). Rute di dalam halaman via `?id=` / `?arus=1`.
+  - Template: id kartu = kunci jawaban tersimpan, JANGAN diganti. Fakta regulasi yang dipakai: Kontak OJK 157 /
+    WA 081-157-157-157, LPS Rp2 M, PNBP nikah di luar KUA Rp600rb, PP 55/2022 omzet ≤ Rp500 jt bebas PPh final.
+  - Dites lokal (D1 0041 & tanpa 0041; Playwright web 1440, Pixel 7, dark mode): API (401 anon, dobel, 409, 413,
+    sanitasi), buat/isi/centang/catatan/seret/reload tersimpan, Rapikan, Arus Uangku 3 periode (HP: tata letak
+    atas-bawah), hitung KPR dicek manual. 0 error JS (selain kurs eksternal yang memang diblokir di tes).
+    Belum dites: dua perangkat sungguhan bersamaan, gestur cubit di HP sungguhan.
 
 - **2026-11-08 — 3.9.0 LIVE (run #176, commit b7a84c5). PERLU SQL 0040 (Bos konfirmasi dengan "gas").**
   - Cek live: beranda 200, `/api/member/health/checks` tanpa sesi 401, string 3.9.0 & kartu "Kesehatan & Asuransi" ada di bundle.

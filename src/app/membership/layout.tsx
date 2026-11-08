@@ -31,6 +31,7 @@ const FULLSCREEN_PATHS = [
   '/membership/cerita',
   '/membership/sehat',
   '/membership/stiker',
+  '/membership/kanvas',
 ]; // + /ladang/kasir
 
 // Tema (Sistem/Terang/Gelap) disimpan per perangkat, sama dengan aplikasi HP.

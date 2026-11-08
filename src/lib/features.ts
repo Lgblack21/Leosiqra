@@ -11,6 +11,7 @@ import {
   Sticker,
   Timer,
   TrendingUp,
+  Waypoints,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -39,7 +40,8 @@ export type FeatureId =
   | 'fokus'
   | 'cerita'
   | 'sehat'
-  | 'stiker';
+  | 'stiker'
+  | 'kanvas';
 
 export type Feature = { id: FeatureId; label: string; href: string; icon: LucideIcon; tint: string };
 
@@ -109,6 +111,13 @@ export const FEATURES: Feature[] = [
     tint: 'from-fuchsia-50 to-amber-100 text-fuchsia-600',
   },
   {
+    id: 'kanvas',
+    label: 'Kanvas',
+    href: '/membership/kanvas',
+    icon: Waypoints,
+    tint: 'from-slate-100 to-emerald-100 text-emerald-700',
+  },
+  {
     id: 'sehat',
     label: 'Sehatku',
     href: '/membership/sehat',
@@ -145,6 +154,7 @@ export const DEFAULT_FEATURES: FeatureId[] = [
   'fokus',
   'cerita',
   'stiker',
+  'kanvas',
   'sehat',
 ];
 
