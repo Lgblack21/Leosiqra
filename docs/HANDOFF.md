@@ -24,6 +24,12 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     Artikel gaji 5 juta: perubahan `src/app/panduan/cara-mengatur-gaji/page.tsx` (tautan internal) DIKELUARKAN —
     file itu di luar daftar izin workflow sehingga terbit selalu gagal. Tambahkan tautannya terpisah setelah terbit.
   - 13 branch lama yang sudah setara main SUDAH DIHAPUS (2026-11-08, Bos lewat Termux; dicek ulang dari session).
+  - Bersih-bersih lanjutan (Termux): ~87 branch `claude/` yang sudah ter-merge / setara main dihapus.
+    `claude/halaman-transaksi` diarsipkan sebagai tag **`arsip/halaman-transaksi`** (5a95b7e) lalu branch-nya dihapus.
+    Sisa 16 branch = yang punya isi di luar main (draf artikel, patch menunggu Bos, catatan belajar, sisa lama).
+    Session cloud tidak bisa hapus branch/push tag (proxy 403) — pakai Termux `gh api` (lihat riwayat chat 2026-11-08).
+    Kalau branch kerja yang sudah di-merge ikut terhapus (mis. form-transaksi-20261108, wordmark-anim-20261108) dan
+    masih dipakai di sesi lain, push saja lagi — isinya sudah ada di main.
   - Deploy run #171 (dipicu akun ini 08:30 UTC) = main d4ae39a, kode sama dengan 3.6.4 yang sudah live di #170.
 
 - **2026-11-08 — RILIS 3.6.4: LIVE (run 42403091544, commit 36d6649). Tanpa SQL. Belum dicek: logo bank di prod.**
