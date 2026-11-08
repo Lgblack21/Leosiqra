@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-08 (3.8.0 live, run #175)
+Terakhir diperbarui: 2026-11-08 (3.9.0 siap di branch claude/sehat-pajak-20261108, menunggu gas)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,24 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-08 — 3.9.0 SIAP (branch `claude/sehat-pajak-20261108`), BELUM DEPLOY. PERLU SQL 0040.**
+  - **MIGRASI 0040 (`cloudflare/migrations/0040_health_followup_results.sql`)** — jalankan di D1 Console SETELAH 0038
+    & 0039: `health_claims.followup_at`, `health_checks.results_json`. Tanpa 0040 kode tetap jalan (fallback
+    `isMissingColumn`): angka hasil tidak tersimpan (respons `results_saved:false`, toast memberi tahu), pengingat
+    klaim dilewati diam-diam.
+  - Pajak Center: `src/components/pajak/PajakKesehatan.tsx` (data `healthService.summary(year)`).
+  - Cron harian `sendClaimFollowups`: klaim `diajukan` ≥14 hari, 1 UPDATE…RETURNING, maks CRON_HEALTH_USERS user,
+    ikut toggle notify.bills, diulang tiap 14 hari selama masih diajukan. Badge di AsuransiView.
+  - Angka hasil cek: `CHECK_RESULT_FIELDS` (Worker) = `RESULT_FIELDS` (healthChecks.ts), angka di luar batas dibuang
+    server-side, field asing diabaikan. Grafik tren + IMT (Kemenkes) di CheckSheet. Tanpa label diagnosis tensi/gula.
+  - Stikerku "Bln lalu" (`computeStoryStats(…, past)`, `?periode=bulan-lalu`). TIDAK ada push baru: push rekap
+    tanggal 1 yang sudah ada (`sendInsightPushes`) diarahkan ke stiker kalau fitur stiker menyala (tetap 1 push/bulan).
+  - Dites lokal (wrangler + D1 lokal 0040 & tanpa 0040, Playwright Pixel 7 & web 1366): sanitasi angka, fallback,
+    cron klaim (lama ditandai, baru tidak, tidak dobel), SQL flag stiker (array/tanpa/rusak), UI 0 error JS.
+    Belum dites: cabang tanggal 1 sendInsightPushes end-to-end (butuh tanggal 1); push di HP sungguhan.
+  - Berikutnya: **Kanvas (3.10.0)** — diagram arus uang "Dari catatanmu" + papan rencana bertemplate (Persiapan Nikah
+    dst.), pan/zoom, jawaban tersimpan di akun. Desain sendiri, referensi Oyenza hanya konsep.
 
 - **2026-11-08 — 3.8.0 LIVE (run #175, commit e4b191a, Release v3.8.0): Stikerku fitur sendiri. Tanpa SQL.**
   - Stikerku jadi fitur terpisah: `/membership/stiker` (FULLSCREEN_PATHS) & `/app/stiker`, fitur id `stiker`

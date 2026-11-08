@@ -41,10 +41,12 @@ const BACKGROUNDS = [
   { id: 'leo', name: 'Leo', css: 'repeating-linear-gradient(45deg,#F59E0B 0 22px,#FBBF24 22px 44px)' },
   { id: 'hitam', name: 'Hitam', css: '#0B0B0F' },
 ];
-const RANGES: { id: StoryRange; label: string }[] = [
+type RangeId = StoryRange | 'bulan-lalu';
+const RANGES: { id: RangeId; label: string }[] = [
   { id: 'hari', label: 'Hari' },
   { id: 'minggu', label: 'Minggu' },
   { id: 'bulan', label: 'Bulan' },
+  { id: 'bulan-lalu', label: 'Bln lalu' },
 ];
 const uid = () => Math.random().toString(36).slice(2, 10);
 const DEFAULT: Omit<Placed, 'uid'>[] = [
@@ -56,7 +58,7 @@ const DEFAULT: Omit<Placed, 'uid'>[] = [
 export function StikerApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
   const [txs, setTxs] = useState<Transaction[] | null>(null);
   const [loadErr, setLoadErr] = useState(false);
-  const [range, setRange] = useState<StoryRange>('hari');
+  const [range, setRange] = useState<RangeId>('hari');
   const [size, setSize] = useState<Size>('story');
   const [bg, setBg] = useState(BACKGROUNDS[0].id);
   const [photo, setPhoto] = useState<string | null>(null);
@@ -98,6 +100,11 @@ export function StikerApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
       alive = false;
     };
   }, []);
+  // Dari notifikasi rekap bulanan (tgl 1): ?periode=bulan-lalu langsung memilih bulan lalu.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get('periode');
+    if (p && RANGES.some((r) => r.id === p)) setRange(p as RangeId);
+  }, []);
   useEffect(() => () => void (photo && URL.revokeObjectURL(photo)), [photo]);
   // Area kanvas mengikuti sisa layar; kanvas diskalakan agar muat penuh (lebar & tinggi).
   useEffect(() => {
@@ -115,7 +122,13 @@ export function StikerApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  const stats = useMemo(() => computeStoryStats(txs ?? [], range), [txs, range]);
+  const stats = useMemo(
+    () =>
+      range === 'bulan-lalu'
+        ? computeStoryStats(txs ?? [], 'bulan', new Date(), true)
+        : computeStoryStats(txs ?? [], range),
+    [txs, range],
+  );
   const W = BASE_W;
   const H = Math.round(BASE_W * SIZES[size].ratio);
   const k = box.w && box.h ? Math.min(box.w / W, box.h / H) : 0;
@@ -359,7 +372,7 @@ export function StikerApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
   const settings = (
     <div className="space-y-2.5">
       <div className="flex items-center gap-2">
-        <div className="grid flex-1 grid-cols-3 gap-1 rounded-full bg-slate-100 p-1 dark:bg-slate-800">
+        <div className="grid flex-1 grid-cols-4 gap-1 rounded-full bg-slate-100 p-1 dark:bg-slate-800">
           {RANGES.map((r) => (
             <button
               key={r.id}

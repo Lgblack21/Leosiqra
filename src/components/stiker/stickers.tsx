@@ -30,7 +30,8 @@ const short = (n: number) =>
         : `${Math.round(n)}`;
 const money = (c: StickerCtx, n: number, compact = false) => (c.hide ? 'Rp•••' : compact ? `Rp${short(n)}` : rp(n));
 const emoji = (cat: string) => categoryVisual(cat, 'pengeluaran').emoji;
-const range = (s: StoryStats) => (s.range === 'hari' ? 'HARI INI' : s.range === 'minggu' ? 'MINGGU INI' : 'BULAN INI');
+const range = (s: StoryStats) =>
+  s.past ? 'BULAN LALU' : s.range === 'hari' ? 'HARI INI' : s.range === 'minggu' ? 'MINGGU INI' : 'BULAN INI';
 const changeText = (s: StoryStats) =>
   s.changePct === null
     ? 'data pertama'
@@ -38,7 +39,7 @@ const changeText = (s: StoryStats) =>
       ? 'sama persis'
       : `${s.changePct > 0 ? '▲' : '▼'} ${Math.abs(s.changePct)}%`;
 const prevName = (s: StoryStats) =>
-  s.range === 'hari' ? 'kemarin' : s.range === 'minggu' ? 'minggu lalu' : 'bulan lalu';
+  s.past ? 'bulan sebelumnya' : s.range === 'hari' ? 'kemarin' : s.range === 'minggu' ? 'minggu lalu' : 'bulan lalu';
 const leoLine = (s: StoryStats) => {
   if (s.verdict === 'kosong') return `Belum keluar sepeser pun ${s.shortLabel}. Dompetku bangga!`;
   if (s.verdict === 'hemat')

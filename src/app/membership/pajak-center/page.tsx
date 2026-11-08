@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { PajakKesehatan } from '@/components/pajak/PajakKesehatan';
 import {
   TrendingDown,
   TrendingUp,
@@ -1140,6 +1141,8 @@ export default function PajakCenterPage() {
           </div>
         </div>
       </div>
+
+      <PajakKesehatan year={selectedYear} />
 
       <div className="bg-slate-50 p-8 rounded-[32px] border border-slate-100 flex items-start gap-6 border-l-4 border-l-slate-300 print:hidden">
         <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-slate-400 shrink-0 shadow-sm">

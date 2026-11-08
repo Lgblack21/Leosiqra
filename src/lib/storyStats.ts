@@ -20,6 +20,7 @@ export type StoryStats = {
   noSpendDays: number;
   daysInRange: number;
   verdict: 'hemat' | 'pas' | 'boros' | 'kosong';
+  past: boolean;
   now: Date;
 };
 
@@ -69,7 +70,15 @@ const sumBetween = (spend: Transaction[], from: Date, to: Date) => {
   }, 0);
 };
 
-export function computeStoryStats(transactions: Transaction[], range: StoryRange, now = new Date()): StoryStats {
+// past = rekap bulan lalu: `now` digeser ke hari terakhir bulan lalu, label ikut disesuaikan.
+export function computeStoryStats(
+  transactions: Transaction[],
+  range: StoryRange,
+  realNow = new Date(),
+  past = false,
+): StoryStats {
+  const now = past && range === 'bulan' ? new Date(realNow.getFullYear(), realNow.getMonth(), 0) : realNow;
+  past = past && range === 'bulan';
   const spendAll = transactions.filter(isSpend);
   const [from, to] = bounds(range, now);
   const a = toLocalDateString(from);
@@ -166,7 +175,13 @@ export function computeStoryStats(transactions: Transaction[], range: StoryRange
       : range === 'minggu'
         ? `${from.getDate()}${from.getMonth() !== to.getMonth() ? ` ${MONTH[from.getMonth()].slice(0, 3)}` : ''}–${to.getDate()} ${MONTH[to.getMonth()].slice(0, 3)} ${to.getFullYear()}`
         : `${MONTH[from.getMonth()]} ${from.getFullYear()}`;
-  const shortLabel = range === 'hari' ? 'hari ini' : range === 'minggu' ? 'minggu ini' : 'bulan ini';
+  const shortLabel = past
+    ? 'bulan lalu'
+    : range === 'hari'
+      ? 'hari ini'
+      : range === 'minggu'
+        ? 'minggu ini'
+        : 'bulan ini';
 
   return {
     range,
@@ -185,6 +200,7 @@ export function computeStoryStats(transactions: Transaction[], range: StoryRange
     noSpendDays,
     daysInRange,
     verdict,
+    past,
     now,
   };
 }

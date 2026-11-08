@@ -28,7 +28,30 @@ export type CheckRecord = {
   dose: number | null;
   note: string | null;
   recorded: number;
+  results?: Record<string, number> | null;
 };
+
+// Angka hasil cek yang bisa dicatat (batas wajar sama dengan Worker). Hanya untuk dipantau trennya —
+// tidak ada label diagnosis kecuali IMT (klasifikasi Kemenkes dewasa).
+export type ResultField = { key: string; label: string; unit: string; min: number; max: number };
+export const RESULT_FIELDS: Record<string, ResultField[]> = {
+  'tekanan-darah': [
+    { key: 'sis', label: 'Sistolik', unit: 'mmHg', min: 50, max: 300 },
+    { key: 'dia', label: 'Diastolik', unit: 'mmHg', min: 30, max: 200 },
+  ],
+  'gula-darah': [{ key: 'gd', label: 'Gula darah', unit: 'mg/dL', min: 20, max: 800 }],
+  'status-gizi': [
+    { key: 'bb', label: 'Berat badan', unit: 'kg', min: 2, max: 400 },
+    { key: 'tb', label: 'Tinggi badan', unit: 'cm', min: 40, max: 250 },
+    { key: 'lp', label: 'Lingkar perut', unit: 'cm', min: 30, max: 250 },
+  ],
+  'risiko-stroke-jantung-ginjal': [{ key: 'kol', label: 'Kolesterol total', unit: 'mg/dL', min: 50, max: 1000 }],
+};
+
+export const bmiOf = (r?: Record<string, number> | null) =>
+  r?.bb && r?.tb ? Math.round((r.bb / (r.tb / 100) ** 2) * 10) / 10 : null;
+// Klasifikasi IMT dewasa Kemenkes (P2PTM): <18,5 kurus · 18,5–25,0 normal · >25,0–27,0 gemuk · >27,0 obesitas.
+export const bmiClass = (b: number) => (b < 18.5 ? 'Kurus' : b <= 25 ? 'Normal' : b <= 27 ? 'Gemuk' : 'Obesitas');
 export type ChecksData = {
   ready: boolean;
   today: string;
@@ -187,7 +210,12 @@ export const checkService = {
     account_id: string | null;
     dose: number | null;
     note: string;
-  }) => cloudflareApi<{ ok: true; tx_id?: string | null }>('/api/member/health/checks', { method: 'POST', json: body }),
+    results?: Record<string, number>;
+  }) =>
+    cloudflareApi<{ ok: true; tx_id?: string | null; results_saved?: boolean }>('/api/member/health/checks', {
+      method: 'POST',
+      json: body,
+    }),
   remove: (id: string) =>
     cloudflareApi<{ ok: true; tx_kept: boolean }>(`/api/member/health/checks/${id}`, { method: 'DELETE' }),
 };

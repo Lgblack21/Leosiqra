@@ -383,6 +383,11 @@ export function AsuransiView({ onToast }: { onToast: (m: string) => void }) {
                       <div className="text-[12px] text-slate-500 dark:text-slate-400">
                         {c.insurer_name ?? 'Tanpa polis'} · {dmy(c.submitted_at)}
                       </div>
+                      {c.status === 'diajukan' && -daysUntil(c.submitted_at, today) >= 14 && (
+                        <div className="mt-1 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                          Belum ada kabar {-daysUntil(c.submitted_at, today)} hari · hubungi asuransi
+                        </div>
+                      )}
                     </div>
                     <div className="shrink-0 text-right text-[14px] font-black text-slate-900 dark:text-white">
                       {short(c.approved_amount ?? c.amount)}

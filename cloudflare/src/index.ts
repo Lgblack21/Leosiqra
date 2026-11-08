@@ -13625,6 +13625,13 @@ async function handleMemberMeals(request: Request, env: Env, url: URL) {
 const HEALTH_NOT_READY = "Asuransi di Sehatku sedang disiapkan di server (menunggu pembaruan database). Coba lagi nanti.";
 const healthTableMissing = (e: unknown) => e instanceof Error && /no such table: health_(policies|claims|checks)/i.test(e.message);
 const HEALTH_CATEGORY = "Kesehatan";
+// Sehatku › Cek: angka hasil yang boleh dicatat per jenis cek (rentang wajar, bukan batas normal medis).
+const CHECK_RESULT_FIELDS: Record<string, Record<string, [number, number]>> = {
+  "tekanan-darah": { sis: [50, 300], dia: [30, 200] },
+  "gula-darah": { gd: [20, 800] },
+  "status-gizi": { bb: [2, 400], tb: [40, 250], lp: [30, 250] },
+  "risiko-stroke-jantung-ginjal": { kol: [50, 1000] },
+};
 const HEALTH_COST_SUBS = ["Obat", "Dokter", "Rumah Sakit", "Lab", "Asuransi", "Lainnya"] as const;
 const POLICY_KINDS = ["kesehatan", "jiwa", "kritis", "kantor", "lainnya"] as const;
 const POLICY_PERIODS: Record<string, number> = { bulanan: 1, triwulan: 3, semester: 6, tahunan: 12, sekali: 0 };
@@ -13754,9 +13761,18 @@ async function handleMemberHealth(request: Request, env: Env, url: URL) {
         let ready = true;
         let records: Record<string, unknown>[] = [];
         try {
-          records = (await env.DB.prepare(
-            "SELECT id, item_key, date, place, free, cost, dose, note, CASE WHEN tx_id IS NOT NULL AND EXISTS (SELECT 1 FROM transactions t WHERE t.id = health_checks.tx_id AND t.user_id = health_checks.user_id) THEN 1 ELSE 0 END AS recorded FROM health_checks WHERE user_id = ? ORDER BY date DESC, created_at DESC LIMIT 500"
-          ).bind(userId).all<Record<string, unknown>>()).results ?? [];
+          const sel = (cols: string) =>
+            env.DB.prepare(
+              `SELECT id, item_key, date, place, free, cost, dose, note${cols}, CASE WHEN tx_id IS NOT NULL AND EXISTS (SELECT 1 FROM transactions t WHERE t.id = health_checks.tx_id AND t.user_id = health_checks.user_id) THEN 1 ELSE 0 END AS recorded FROM health_checks WHERE user_id = ? ORDER BY date DESC, created_at DESC LIMIT 500`
+            ).bind(userId).all<Record<string, unknown>>();
+          // results_json dari migrasi 0040 — tanpa kolom itu catatan tetap tampil (tanpa angka hasil).
+          records = ((await sel(", results_json").catch((e) => (isMissingColumn(e) ? sel("") : Promise.reject(e)))).results ?? []).map((r) => {
+            let results: unknown = null;
+            try { results = typeof r.results_json === "string" ? JSON.parse(r.results_json) : null; } catch { results = null; }
+            const { results_json: _drop, ...rest } = r;
+            void _drop;
+            return { ...rest, results };
+          });
         } catch (e) {
           if (!healthTableMissing(e)) throw e;
           ready = false;
@@ -13785,10 +13801,24 @@ async function handleMemberHealth(request: Request, env: Env, url: URL) {
         const txId = cost && accountId ? generateId() : null;
         const place = hText(raw.place, 80) || null;
         const label = hText(raw.label, 80) || itemKey;
-        const statements: D1PreparedStatement[] = [
-          env.DB.prepare("INSERT OR IGNORE INTO health_checks (id, user_id, item_key, date, place, free, cost, dose, tx_id, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-            .bind(requestId, userId, itemKey, date, place, free ? 1 : 0, cost, dose, txId, hText(raw.note, 200) || null, nowIso()),
-        ];
+        // Angka hasil cek (tensi, gula, IMT, kolesterol) — hanya field yang dikenal & dalam rentang wajar.
+        const spec = CHECK_RESULT_FIELDS[itemKey];
+        let resultsJson: string | null = null;
+        if (spec && raw.results && typeof raw.results === "object") {
+          const out: Record<string, number> = {};
+          for (const [k, [lo, hi]] of Object.entries(spec)) {
+            const v = Number((raw.results as Record<string, unknown>)[k]);
+            if (Number.isFinite(v) && v >= lo && v <= hi) out[k] = Math.round(v * 10) / 10;
+          }
+          if (Object.keys(out).length) resultsJson = JSON.stringify(out);
+        }
+        const insertCheck = (withResults: boolean) =>
+          withResults
+            ? env.DB.prepare("INSERT OR IGNORE INTO health_checks (id, user_id, item_key, date, place, free, cost, dose, tx_id, note, results_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+              .bind(requestId, userId, itemKey, date, place, free ? 1 : 0, cost, dose, txId, hText(raw.note, 200) || null, resultsJson, nowIso())
+            : env.DB.prepare("INSERT OR IGNORE INTO health_checks (id, user_id, item_key, date, place, free, cost, dose, tx_id, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+              .bind(requestId, userId, itemKey, date, place, free ? 1 : 0, cost, dose, txId, hText(raw.note, 200) || null, nowIso());
+        const statements: D1PreparedStatement[] = [insertCheck(resultsJson !== null)];
         if (txId && accountId && cost) {
           statements.push(...insertHealthTx(env, userId, {
             txId, type: "pengeluaran", amount: cost, category: HEALTH_CATEGORY, sub: itemKey.startsWith("vaksin:") ? "Dokter" : "Lab", accountId, date,
@@ -13796,10 +13826,19 @@ async function handleMemberHealth(request: Request, env: Env, url: URL) {
             guardSql: "EXISTS (SELECT 1 FROM health_checks WHERE id = ? AND user_id = ? AND tx_id = ?)", guardBinds: [requestId, userId, txId],
           }));
         }
-        const res = await env.DB.batch(statements);
+        let res: D1Result[];
+        try {
+          res = await env.DB.batch(statements);
+        } catch (e) {
+          // Migrasi 0040 belum jalan: simpan tanpa angka hasil (batch atomik → aman diulang).
+          if (!(resultsJson && e instanceof Error && /no (such )?column/i.test(e.message))) throw e;
+          statements[0] = insertCheck(false);
+          res = await env.DB.batch(statements);
+          resultsJson = null;
+        }
         if (!res[0]?.meta.changes) return json({ ok: true, duplicate: true });
         if (txId) await publishTx(env, userId, txId);
-        return json({ ok: true, id: requestId, tx_id: txId }, { status: 201 });
+        return json({ ok: true, id: requestId, tx_id: txId, results_saved: resultsJson !== null }, { status: 201 });
       }
       if (id && request.method === "DELETE") {
         const row = await env.DB.prepare("SELECT tx_id FROM health_checks WHERE id = ? AND user_id = ?").bind(id, userId).first<{ tx_id: string | null }>();
@@ -14038,6 +14077,49 @@ const sendCheckReminders = async (env: Env) => {
       );
     } catch (error) {
       console.error(`Pengingat cek ${userId} gagal:`, error);
+    }
+  }
+};
+
+// Klaim asuransi "diajukan" yang 14 hari belum ada kabar → ingatkan follow up ke asuransi, lalu tiap 14 hari
+// selama statusnya belum berubah. followup_at (migrasi 0040) = tanggal pengingat terakhir; tanpa kolom → lewati.
+// Klaim dalam SATU UPDATE … RETURNING, maks CRON_HEALTH_USERS user per hari (sisanya besok).
+const sendClaimFollowups = async (env: Env) => {
+  const cutoff = shiftDateStr(todayWIB(), -14);
+  let rows: { id: string; user_id: string; title: string }[] = [];
+  try {
+    rows = (await env.DB.prepare(
+      `UPDATE health_claims SET followup_at = ?
+        WHERE status = 'diajukan' AND submitted_at <= ? AND (followup_at IS NULL OR followup_at <= ?) AND id IN (
+          SELECT c.id FROM health_claims c JOIN users u ON u.id = c.user_id
+           WHERE c.status = 'diajukan' AND c.submitted_at <= ? AND (c.followup_at IS NULL OR c.followup_at <= ?)
+             AND COALESCE(u.status, '') <> 'NONAKTIF'
+             AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.bills') END, 1) <> 0
+             AND c.user_id IN (
+               SELECT DISTINCT c2.user_id FROM health_claims c2 JOIN users u2 ON u2.id = c2.user_id
+                WHERE c2.status = 'diajukan' AND c2.submitted_at <= ? AND (c2.followup_at IS NULL OR c2.followup_at <= ?)
+                  AND COALESCE(u2.status, '') <> 'NONAKTIF'
+                  AND COALESCE(CASE WHEN json_valid(u2.metadata_json) THEN json_extract(u2.metadata_json, '$.prefs.notify.bills') END, 1) <> 0
+                ORDER BY c2.user_id LIMIT ${CRON_HEALTH_USERS})
+           LIMIT 500)
+        RETURNING id, user_id, title`
+    ).bind(todayWIB(), cutoff, cutoff, cutoff, cutoff, cutoff, cutoff).all<{ id: string; user_id: string; title: string }>()).results ?? [];
+  } catch (e) {
+    if (healthTableMissing(e) || isMissingColumn(e)) return;
+    throw e;
+  }
+  const byUser = new Map<string, string[]>();
+  for (const r of rows) byUser.set(r.user_id, [...(byUser.get(r.user_id) ?? []), r.title]);
+  for (const [userId, titles] of byUser) {
+    try {
+      await sendWebPushToUser(
+        env, userId,
+        titles.length === 1 ? `📋 Klaim "${titles[0].slice(0, 40)}" belum ada kabar` : `📋 ${titles.length} klaim asuransi belum ada kabar`,
+        "Sudah 14 hari sejak diajukan. Coba hubungi call center asuransimu, lalu perbarui statusnya di Sehatku.",
+        "/membership/sehat#asuransi"
+      );
+    } catch (error) {
+      console.error(`Pengingat klaim ${userId} gagal:`, error);
     }
   }
 };
@@ -17535,7 +17617,12 @@ const sendSubscriptionReminders = async (env: Env) => {
 const INSIGHT_PUSH_MAX_PER_RUN = 300;
 const insightPushCandidates = async (env: Env, flag: "weekly" | "monthly", sentKey: string, marker: string, since: string) => {
   const { results } = await env.DB.prepare(
-    `SELECT u.id FROM users u
+    // stiker = fitur Stikerku menyala (bawaan menyala kalau user belum pernah mengatur menu).
+    `SELECT u.id,
+            CASE WHEN json_valid(u.metadata_json) AND json_type(u.metadata_json, '$.prefs.features') = 'array'
+                 THEN EXISTS (SELECT 1 FROM json_each(u.metadata_json, '$.prefs.features') f WHERE f.value = 'stiker')
+                 ELSE 1 END AS stiker
+       FROM users u
       WHERE COALESCE(u.status, '') <> 'NONAKTIF'
         AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.notify.${flag}') END, 1) <> 0
         AND COALESCE(CASE WHEN json_valid(u.metadata_json) THEN json_extract(u.metadata_json, '$.prefs.${sentKey}') END, '') <> ?
@@ -17543,8 +17630,8 @@ const insightPushCandidates = async (env: Env, flag: "weekly" | "monthly", sentK
       LIMIT ?`
   )
     .bind(marker, since, INSIGHT_PUSH_MAX_PER_RUN)
-    .all<{ id: string }>();
-  return (results ?? []).map((r) => r.id);
+    .all<{ id: string; stiker: number }>();
+  return results ?? [];
 };
 const claimInsightPush = async (env: Env, userId: string, sentKey: string, marker: string) => {
   const res = await env.DB.prepare(
@@ -17560,7 +17647,7 @@ const sendInsightPushes = async (env: Env) => {
   const today = todayWIB();
   const weekday = new Date(`${today}T00:00:00Z`).getUTCDay(); // 1 = Senin
   if (weekday === 1) {
-    for (const userId of await insightPushCandidates(env, "weekly", "weeklySent", today, shiftDateStr(today, -8))) {
+    for (const { id: userId } of await insightPushCandidates(env, "weekly", "weeklySent", today, shiftDateStr(today, -8))) {
       try {
         if (!(await claimInsightPush(env, userId, "weeklySent", today))) continue;
         const { items } = await computeWeeklyInsights(env, userId);
@@ -17576,7 +17663,7 @@ const sendInsightPushes = async (env: Env) => {
     const [y, m] = today.slice(0, 7).split("-").map(Number);
     const period = new Date(Date.UTC(y, m - 2, 1)).toISOString().slice(0, 7);
     const monthName = new Intl.DateTimeFormat("id-ID", { month: "long", timeZone: "UTC" }).format(new Date(`${period}-01T00:00:00Z`));
-    for (const userId of await insightPushCandidates(env, "monthly", "monthlySent", period, `${period}-01`)) {
+    for (const { id: userId, stiker } of await insightPushCandidates(env, "monthly", "monthlySent", period, `${period}-01`)) {
       try {
         if (!(await claimInsightPush(env, userId, "monthlySent", period))) continue;
         const r = await buildMonthlyReport(env, userId, period);
@@ -17587,7 +17674,12 @@ const sendInsightPushes = async (env: Env) => {
           `Masuk ${formatRupiahForPush(r.income)} · Keluar ${formatRupiahForPush(r.expense)}` +
           (top ? ` · Terbesar: ${top.category} (${formatRupiahForPush(top.total)})` : "") +
           (net >= 0 ? `. Sisa ${formatRupiahForPush(net)} 👍` : `. Minus ${formatRupiahForPush(-net)}.`);
-        await sendWebPushToUser(env, userId, `🗓️ Rekap ${monthName}`, body, "/membership/laporan");
+        // Stikerku menyala → rekap langsung jadi stiker bulan lalu, siap dibagikan (tetap satu push sebulan).
+        await sendWebPushToUser(
+          env, userId, `🗓️ Rekap ${monthName}`,
+          stiker ? `${body} Ketuk untuk jadikan stiker.` : body,
+          stiker ? "/membership/stiker?periode=bulan-lalu" : "/membership/laporan"
+        );
       } catch (error) {
         console.error(`Gagal mengirim wawasan bulanan ke ${userId}:`, error);
       }
@@ -21288,6 +21380,7 @@ const worker = {
     ctx.waitUntil(sendBillReminders(env).catch((error) => console.error("Pengingat tagihan:", error)));
     ctx.waitUntil(sendPremiumReminders(env).catch((error) => console.error("Pengingat premi:", error)));
     ctx.waitUntil(sendCheckReminders(env).catch((error) => console.error("Pengingat cek:", error)));
+    ctx.waitUntil(sendClaimFollowups(env).catch((error) => console.error("Pengingat klaim:", error)));
     ctx.waitUntil(sendDebtDueReminders(env).catch((error) => console.error("Pengingat jatuh tempo hutang:", error)));
     ctx.waitUntil(sendWarrantyReminders(env).catch((error) => console.error("Pengingat garansi:", error)));
     ctx.waitUntil(sendSubscriptionReminders(env).catch((error) => console.error("Pengingat langganan:", error)));

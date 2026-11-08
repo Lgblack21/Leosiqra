@@ -64,6 +64,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.6.6 | 8 Nov 2026 | Pengingat Sehatku lebih andal |
 | 3.7.0 | 8 Nov 2026 | Stiker cerita: bagikan angka keuanganmu |
 | 3.8.0 | 8 Nov 2026 | Stikerku: fitur stiker sendiri, 1 layar + stiker Struk |
+| 3.9.0 | 8 Nov 2026 | Sehatku makin lengkap |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -77,6 +78,18 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.9.0 — 2026-11-08 — Sehatku makin lengkap
+
+- **Pajak Center** kini punya rekap **Kesehatan & Asuransi** setahun: total biaya kesehatan per jenis, premi,
+  klaim yang cair, dan daftar polis — lengkap dengan penjelasan mana yang masuk SPT (polis bernilai tunai di daftar
+  harta) dan bahwa biaya berobat tidak mengurangi pajak.
+- **Pengingat klaim macet**: klaim asuransi yang sudah 14 hari "diajukan" tanpa kabar dikirimi notifikasi untuk
+  menghubungi asuransi, dan diberi tanda "Belum ada kabar N hari" di layar Asuransi.
+- **Cek kesehatan dengan angka**: catat tensi, gula darah, berat/tinggi/lingkar perut, dan kolesterol, lalu lihat
+  grafik trennya dari waktu ke waktu. IMT dihitung otomatis dengan klasifikasi Kemenkes.
+- **Stikerku bulan lalu**: pilihan baru "Bln lalu" untuk membagikan rekap bulan sebelumnya. Notifikasi rekap
+  tanggal 1 kini langsung membuka stikernya (kalau Stikerku menyala).
 
 ## 3.8.0 — 2026-11-08 — Stikerku: fitur stiker sendiri, 1 layar + stiker Struk
 

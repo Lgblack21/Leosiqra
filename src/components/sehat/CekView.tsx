@@ -6,15 +6,19 @@ import { Field, inputCls, MoneyInput, PrimaryButton, SheetShell } from '@/compon
 import {
   ageOf,
   appliesTo,
+  bmiClass,
+  bmiOf,
   CHECK_ITEMS,
   checkService,
   CKG_SOURCE,
   nextDueOf,
+  RESULT_FIELDS,
   VACCINES,
   type CheckItem,
   type CheckRecord,
   type ChecksData,
   type HealthProfile,
+  type ResultField,
   type Sex,
 } from '@/lib/healthChecks';
 import { daysUntil } from '@/lib/health';
@@ -153,6 +157,65 @@ function ProfileSheet({
   );
 }
 
+// Grafik tren kecil per angka hasil: titik terlama di kiri, nilai terakhir disorot.
+function TrendChart({ field, points }: { field: ResultField; points: { date: string; v: number }[] }) {
+  if (!points.length) return null;
+  const W = 280;
+  const H = 64;
+  const vals = points.map((p) => p.v);
+  const lo = Math.min(...vals);
+  const hi = Math.max(...vals);
+  const pad = (hi - lo) * 0.15 || Math.max(1, hi * 0.05);
+  const y = (v: number) => H - 8 - ((v - (lo - pad)) / (hi - lo + 2 * pad)) * (H - 16);
+  const x = (i: number) => (points.length === 1 ? W / 2 : 10 + (i * (W - 20)) / (points.length - 1));
+  const last = points[points.length - 1];
+  const prev = points[points.length - 2];
+  const diff = prev ? Math.round((last.v - prev.v) * 10) / 10 : null;
+  const fmt = (v: number) => v.toLocaleString('id-ID', { maximumFractionDigits: 1 });
+  return (
+    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
+      <div className="flex items-baseline justify-between">
+        <span className="text-[12px] font-bold text-slate-500">{field.label}</span>
+        <span className="text-[13px] font-black text-slate-800 dark:text-slate-100">
+          {fmt(last.v)} <span className="text-[11px] font-semibold text-slate-400">{field.unit}</span>
+          {diff !== null && diff !== 0 ? (
+            <span className="ml-1.5 text-[11px] font-bold text-slate-500">
+              {diff > 0 ? '▲' : '▼'} {fmt(Math.abs(diff))}
+            </span>
+          ) : null}
+        </span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="mt-1 h-16 w-full" role="img" aria-label={`Tren ${field.label}`}>
+        {points.length > 1 ? (
+          <polyline
+            points={points.map((p, i) => `${x(i)},${y(p.v)}`).join(' ')}
+            fill="none"
+            stroke="#0d9488"
+            strokeWidth={2}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        ) : null}
+        {points.map((p, i) => (
+          <circle
+            key={i}
+            cx={x(i)}
+            cy={y(p.v)}
+            r={i === points.length - 1 ? 4 : 2.5}
+            fill={i === points.length - 1 ? '#0d9488' : '#99f6e4'}
+          >
+            <title>{`${dmy(p.date)}: ${fmt(p.v)} ${field.unit}`}</title>
+          </circle>
+        ))}
+      </svg>
+      <div className="flex justify-between text-[10.5px] text-slate-400">
+        <span>{dmy(points[0].date)}</span>
+        {points.length > 1 ? <span>{dmy(last.date)}</span> : null}
+      </div>
+    </div>
+  );
+}
+
 function CheckSheet({
   item,
   records,
@@ -178,11 +241,26 @@ function CheckSheet({
   const [acc, setAcc] = useState(accounts[0]?.id ?? '');
   const [dose, setDose] = useState(String((records.length || 0) + 1));
   const [note, setNote] = useState('');
+  const fields = useMemo(() => (vaccine ? [] : (RESULT_FIELDS[item.key] ?? [])), [vaccine, item.key]);
+  const [vals, setVals] = useState<Record<string, string>>({});
+  const results = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const f of fields) {
+      const v = Number((vals[f.key] ?? '').replace(',', '.'));
+      if (vals[f.key] && Number.isFinite(v) && v >= f.min && v <= f.max) out[f.key] = Math.round(v * 10) / 10;
+    }
+    return out;
+  }, [fields, vals]);
+  const badField = fields.find((f) => vals[f.key] && results[f.key] === undefined);
+  const bmi = item.key === 'status-gizi' ? bmiOf(results) : null;
+  const history = useMemo(() => records.filter((r) => r.results && Object.keys(r.results).length).reverse(), [records]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const costNum = Number(cost.replace(/\D/g, '')) || 0;
   const save = async () => {
     if (!free && costNum && !acc) return setErr('Pilih rekening untuk biayanya.');
+    if (badField)
+      return setErr(`${badField.label} di luar batas wajar (${badField.min}–${badField.max} ${badField.unit}).`);
     setBusy(true);
     setErr('');
     try {
@@ -197,8 +275,14 @@ function CheckSheet({
         account_id: !free && costNum ? acc : null,
         dose: vaccine ? Number(dose) || null : null,
         note,
+        ...(Object.keys(results).length ? { results } : {}),
       });
-      onSaved(r.tx_id ? `Tercatat · ${formatIDR(costNum)} masuk ke biaya kesehatan.` : `${item.label} tercatat.`);
+      const base = r.tx_id ? `Tercatat · ${formatIDR(costNum)} masuk ke biaya kesehatan.` : `${item.label} tercatat.`;
+      onSaved(
+        Object.keys(results).length && r.results_saved === false
+          ? `${base} Angka hasil belum bisa disimpan, coba lagi nanti.`
+          : base,
+      );
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Gagal menyimpan.');
       setBusy(false);
@@ -295,6 +379,59 @@ function CheckSheet({
           </Field>
         </div>
       ) : null}
+      {fields.length ? (
+        <div>
+          <div
+            className={cn(
+              'grid gap-2',
+              fields.length === 1 ? 'grid-cols-1' : fields.length === 2 ? 'grid-cols-2' : 'grid-cols-3',
+            )}
+          >
+            {fields.map((f) => (
+              <Field key={f.key} label={`${f.label} (${f.unit})`}>
+                <input
+                  inputMode="decimal"
+                  value={vals[f.key] ?? ''}
+                  onChange={(e) =>
+                    setVals((v) => ({ ...v, [f.key]: e.target.value.replace(/[^\d.,]/g, '').slice(0, 6) }))
+                  }
+                  placeholder="opsional"
+                  className={inputCls}
+                />
+              </Field>
+            ))}
+          </div>
+          {bmi ? (
+            <p className="mt-2 text-[12.5px] text-slate-600 dark:text-slate-300">
+              IMT <b>{bmi.toLocaleString('id-ID')}</b> · {bmiClass(bmi)}{' '}
+              <span className="text-slate-400">(klasifikasi Kemenkes untuk dewasa)</span>
+            </p>
+          ) : null}
+          <p className="mt-1.5 text-[11.5px] text-slate-400">
+            Angka dicatat untuk melihat tren. Artinya untukmu, tanyakan ke tenaga kesehatan.
+          </p>
+        </div>
+      ) : null}
+      {history.length ? (
+        <div className="space-y-2">
+          <h3 className="text-[13px] font-black text-slate-800 dark:text-slate-100">Tren hasil</h3>
+          {fields.map((f) => (
+            <TrendChart
+              key={f.key}
+              field={f}
+              points={history
+                .filter((r) => r.results?.[f.key] != null)
+                .map((r) => ({ date: r.date, v: r.results![f.key] }))}
+            />
+          ))}
+          {item.key === 'status-gizi' && history.some((r) => bmiOf(r.results)) ? (
+            <TrendChart
+              field={{ key: 'imt', label: 'IMT', unit: 'kg/m²', min: 0, max: 99 }}
+              points={history.filter((r) => bmiOf(r.results)).map((r) => ({ date: r.date, v: bmiOf(r.results)! }))}
+            />
+          ) : null}
+        </div>
+      ) : null}
       <Field label="Catatan hasil (opsional)">
         <input
           value={note}
@@ -319,7 +456,15 @@ function CheckSheet({
                     {r.dose ? ` · dosis ${r.dose}` : ''}
                   </div>
                   <div className="truncate text-[12px] text-slate-500">
-                    {[r.place, r.free ? 'gratis' : r.cost ? formatIDR(r.cost) : null, r.note]
+                    {[
+                      fields
+                        .filter((f) => r.results?.[f.key] != null)
+                        .map((f) => `${f.label} ${r.results![f.key].toLocaleString('id-ID')}`)
+                        .join(', ') || null,
+                      r.place,
+                      r.free ? 'gratis' : r.cost ? formatIDR(r.cost) : null,
+                      r.note,
+                    ]
                       .filter(Boolean)
                       .join(' · ') || '—'}
                   </div>
