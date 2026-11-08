@@ -75,6 +75,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.13.0 | 9 Nov 2026 | Rapor Keuangan |
 | 3.14.0 | 9 Nov 2026 | Peta Belanja |
 | 3.15.0 | 9 Nov 2026 | Jejak & lokasi otomatis |
+| 3.15.1 | 9 Nov 2026 | AI Scan pakai tanggal & rekening dari struk |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -88,6 +89,13 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.15.1 — 2026-11-09 — AI Scan pakai tanggal & rekening dari struk
+
+- **AI Scan & Voice (aplikasi HP) kini memakai tanggal dari struk.** Dulu transaksi selalu tercatat hari ini walau
+  struknya dari beberapa hari lalu atau kamu bilang "kemarin". Sekarang tanggalnya terisi otomatis dan bisa diubah
+  sebelum disimpan.
+- **Rekening yang kamu sebut ikut dipakai** (mis. "pakai GoPay"). Dulu selalu kembali ke rekening pertama.
 
 ## 3.15.0 — 2026-11-09 — Jejak & lokasi otomatis
 

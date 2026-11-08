@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (3.15.0 live, run #185)
+Terakhir diperbarui: 2026-11-09 (3.15.1 siap deploy, menunggu "gas" — tanpa SQL)
 
 ## Siapa sedang kerja
 
@@ -18,8 +18,11 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-09 — 3.15.1 — BELUM DEPLOY. Tanpa SQL.** TransactionReviewForm (AI Scan/Voice app): kirim `date` dari
+  saran AI (kolom Tanggal + "Hari ini", max hari ini) dan pakai `account_id` saran AI kalau milik user. Dites
+  Playwright (respons AI dicegat): tersimpan 2026-11-05 di GoPay, lokasi struk tersimpan (source struk).
+
 - **2026-11-09 — 3.15.0 Peta Belanja Rilis 2 (Jejak + lokasi otomatis) LIVE (run #185, commit 10273a0). Tanpa SQL.**
-  - Temuan belum dikerjakan: TransactionReviewForm (AI Scan/Voice app) tidak mengirim `date` dari struk → selalu hari ini.
   - Worker: GET /api/member/places ikut `t.created_at` (jam di Jejak); `DELETE /api/member/places` = hapus semua lokasi
     user (transaksi utuh); `aiExtractTransaction` (foto saja) mengembalikan `suggestion.place {name,address}` dari struk.
   - `src/lib/places.ts`: `placePrefs` (localStorage `leosiqra-peta-zona`, `leosiqra-peta-otomatis` — TIDAK ke server),

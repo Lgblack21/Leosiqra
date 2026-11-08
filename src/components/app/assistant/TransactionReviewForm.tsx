@@ -34,6 +34,11 @@ interface TransactionReviewFormProps {
   onSaved: () => void;
 }
 
+const localToday = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 const CONFIDENCE_LABEL: Record<ParsedTransactionSuggestion['confidence'], string> = {
   high: 'Yakin',
   medium: 'Cukup yakin',
@@ -50,21 +55,27 @@ export function TransactionReviewForm({ suggestion, onSaved }: TransactionReview
   const [note, setNote] = useState(suggestion?.note ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
-  // Transaksi dari form ini selalu tercatat hari ini (tanggal tidak dikirim), jadi lokasi otomatis boleh dipakai.
-  const place = usePlaceDraft({ type, struk: suggestion?.place });
+  // Tanggal dari struk/ucapan ("kemarin") — server AI sudah membatasi maks 60 hari ke belakang & bukan masa depan.
+  const today = localToday();
+  const [date, setDate] = useState(suggestion?.date && suggestion.date <= today ? suggestion.date : today);
+  // Lokasi otomatis hanya berlaku kalau tanggalnya hari ini (diatur di dalam usePlaceDraft).
+  const place = usePlaceDraft({ type, date, struk: suggestion?.place });
 
+  const namedAccount = suggestion?.account_id ?? null;
   useEffect(() => {
     const loadAccounts = () =>
       accountService
         .getUserAccounts(auth.currentUser?.uid ?? '')
         .then((accs) => {
           setAccounts(accs);
-          setAccountId((prev) => prev || accs[0]?.id || '');
+          // Rekening yang disebut (mis. "pakai BCA") dipakai kalau memang milik user.
+          const named = namedAccount && accs.some((a) => a.id === namedAccount) ? namedAccount : null;
+          setAccountId((prev) => prev || named || accs[0]?.id || '');
         })
         .catch(() => setAccounts([]));
     loadAccounts();
     return subscribeToCollectionChanges('accounts', loadAccounts);
-  }, []);
+  }, [namedAccount]);
 
   useEffect(() => {
     if (!feedback) return;
@@ -95,6 +106,7 @@ export function TransactionReviewForm({ suggestion, onSaved }: TransactionReview
           sub_category: subCategory.trim(),
           account: selectedAccount.name,
           note: note.trim(),
+          ...(date && date !== today ? { date } : {}),
         },
       });
       await attachmentService.link(suggestion?.attachment_id, res.id);
@@ -153,6 +165,28 @@ export function TransactionReviewForm({ suggestion, onSaved }: TransactionReview
       </div>
 
       <AccountPicker accounts={accounts} value={accountId} onChange={setAccountId} />
+
+      <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3 dark:border-slate-700 dark:bg-slate-800">
+        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+          Tanggal
+        </span>
+        <input
+          type="date"
+          value={date}
+          max={today}
+          onChange={(e) => setDate(e.target.value || today)}
+          className="min-w-0 flex-1 bg-transparent text-right text-sm font-bold text-slate-900 outline-none dark:text-white"
+        />
+        {date !== today ? (
+          <button
+            type="button"
+            onClick={() => setDate(today)}
+            className="shrink-0 text-[11px] font-bold text-indigo-600 dark:text-indigo-400"
+          >
+            Hari ini
+          </button>
+        ) : null}
+      </label>
 
       <CategorySelect
         label="Kategori"
