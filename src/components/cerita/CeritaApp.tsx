@@ -7,14 +7,13 @@ import { LeoGuide } from '@/components/ai/LeoGuide';
 import { TulisView } from './TulisView';
 import { KalenderView } from './KalenderView';
 import { KumpulanView } from './KumpulanView';
-import { StikerView } from './StikerView';
 import { storyService, wibToday, type StoryYear } from '@/lib/stories';
 import { useFitHeight } from '@/lib/useFitHeight';
 import { cn } from '@/lib/utils';
 
 // Cerita Hari Ini — layar penuh seperti Fokus/Ladangku: bar atas (kembali · judul · Leo AI)
-// + menu melayang (Tulis · Setahun · Kumpulan · Stiker). Dipakai web (/membership/cerita) & app (/app/cerita).
-type Tab = 'tulis' | 'kalender' | 'kumpulan' | 'stiker';
+// + menu melayang (Tulis · Setahun · Kumpulan). Dipakai web (/membership/cerita) & app (/app/cerita).
+type Tab = 'tulis' | 'kalender' | 'kumpulan';
 const TABS: { id: Tab; label: string; icon: typeof PenLine; title: string; sub: string }[] = [
   { id: 'tulis', label: 'Tulis', icon: PenLine, title: 'Cerita Hari Ini', sub: 'Satu halaman untuk hari ini' },
   {
@@ -25,13 +24,6 @@ const TABS: { id: Tab; label: string; icon: typeof PenLine; title: string; sub: 
     sub: 'Foto & mood di tiap tanggal',
   },
   { id: 'kumpulan', label: 'Kumpulan', icon: BookOpen, title: 'Kumpulan cerita', sub: 'Cari & baca lagi ceritamu' },
-  {
-    id: 'stiker',
-    label: 'Stiker',
-    icon: Sticker,
-    title: 'Stiker cerita',
-    sub: 'Foto + angka keuanganmu, siap dibagikan',
-  },
 ];
 const noop = () => () => {};
 
@@ -119,11 +111,6 @@ export function CeritaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
             <KumpulanView data={data} onOpen={open} onWrite={() => open(wibToday())} />
           </div>
         )}
-        {client && tab === 'stiker' && (
-          <div data-scroll className="h-full overflow-y-auto overscroll-contain">
-            <StikerView />
-          </div>
-        )}
         {!client && (
           <div className="h-full min-h-[420px] animate-pulse rounded-[28px] bg-slate-100 dark:bg-slate-800" />
         )}
@@ -156,6 +143,14 @@ export function CeritaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
               </button>
             );
           })}
+          <Link
+            href={variant === 'app' ? '/app/stiker' : '/membership/stiker'}
+            aria-label="Stikerku — bagikan angka hari ini"
+            title="Stikerku"
+            className="flex h-12 w-12 items-center justify-center rounded-full text-white/70 hover:bg-white/10"
+          >
+            <Sticker size={20} strokeWidth={1.9} />
+          </Link>
         </div>
       </nav>
     </div>

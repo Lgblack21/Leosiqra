@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import type { StoryStats } from '@/lib/storyStats';
-import { LeoFace } from '../LeoFace';
+import { LeoFace } from '@/components/cerita/LeoFace';
 import { categoryVisual } from '@/lib/categoryEmoji';
 
 // Stiker Cerita — desain Leosiqra sendiri. Tiap stiker = komponen mandiri berlebar dasar `w`
@@ -479,6 +479,90 @@ export const STICKERS: StickerDef[] = [
     ),
   },
   // ── Gaya ───────────────────────────────────────────────────────────────
+  {
+    id: 'struk',
+    name: 'Struk',
+    group: 'Gaya',
+    w: 250,
+    render: (c) => {
+      const teeth = (flip: boolean) => (
+        <svg
+          viewBox="0 0 250 10"
+          preserveAspectRatio="none"
+          className="block h-[10px] w-full"
+          style={flip ? { transform: 'scaleY(-1)' } : undefined}
+        >
+          <path
+            d={`M0 10 ${Array.from({ length: 25 }, (_, i) => `L${i * 10 + 5} 0 L${i * 10 + 10} 10`).join(' ')} Z`}
+            fill="#FFFDF7"
+          />
+        </svg>
+      );
+      const items = c.s.items.slice(0, 5);
+      const line = <div className="my-1.5 border-t-2 border-dashed border-slate-300" />;
+      const now = c.s.now;
+      return (
+        <div
+          className="relative font-mono text-[10.5px] text-slate-800"
+          style={{ filter: 'drop-shadow(0 10px 18px rgba(0,0,0,0.3))', transform: 'rotate(-2deg)' }}
+        >
+          {teeth(false)}
+          <div className="bg-[#FFFDF7] px-4 pb-2 pt-1">
+            <div className="text-center">
+              <div className="text-[15px] font-black tracking-[0.25em]">LEOSIQRA</div>
+              <div className="text-[9px] tracking-widest text-slate-500">STRUK {range(c.s)}</div>
+              <div className="text-[9px] text-slate-500">
+                {c.s.label}
+                {c.s.range === 'hari'
+                  ? ` · ${now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`
+                  : ''}
+              </div>
+            </div>
+            {line}
+            {items.length === 0 && <div className="text-center text-slate-500">— belum ada belanja —</div>}
+            {items.map((it, i) => (
+              <div key={i} className="flex justify-between gap-2 leading-[1.45]">
+                <span className="truncate">
+                  {String(i + 1).padStart(2, '0')} {it.note}
+                </span>
+                <span className="shrink-0">{c.hide ? '•••' : short(it.amount)}</span>
+              </div>
+            ))}
+            {c.s.count > items.length && <div className="text-slate-500">+{c.s.count - items.length} lainnya</div>}
+            {line}
+            <div className="flex justify-between">
+              <span>JUMLAH</span>
+              <span>{c.s.count} trx</span>
+            </div>
+            <div className="flex justify-between text-[14px] font-black">
+              <span>TOTAL</span>
+              <span>{money(c, c.s.total)}</span>
+            </div>
+            {topCat(c.s) && (
+              <div className="flex justify-between text-slate-500">
+                <span>TERBANYAK</span>
+                <span className="truncate pl-2">{topCat(c.s).name}</span>
+              </div>
+            )}
+            {line}
+            <div className="mx-auto flex h-8 w-[85%] items-stretch justify-between">
+              {Array.from({ length: 34 }, (_, i) => (
+                <span key={i} className="bg-slate-900" style={{ width: [1, 2, 1, 3, 1, 2][(i * 7 + c.s.count) % 6] }} />
+              ))}
+            </div>
+            <div className="mt-1 text-center text-[9px] tracking-widest text-slate-500">
+              TERIMA KASIH SUDAH MENCATAT
+            </div>
+            <div className="absolute -right-5 top-5 flex h-[58px] w-[58px] rotate-[14deg] bg-[#FFFDF7]/70 flex-col items-center justify-center rounded-full border-[3px] border-pink-500/80 text-pink-600/90">
+              <LeoFace mood={verdictMood[c.s.verdict]} className="h-6 w-6" />
+              <span className="text-[8px] font-black tracking-wider">TERCATAT</span>
+            </div>
+          </div>
+          {teeth(true)}
+        </div>
+      );
+    },
+  },
   {
     id: 'nota',
     name: 'Nota warung',

@@ -63,6 +63,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.6.5 | 8 Nov 2026 | Hasil jual tidak tercatat dua kali, kebocoran biaya AI ditutup |
 | 3.6.6 | 8 Nov 2026 | Pengingat Sehatku lebih andal |
 | 3.7.0 | 8 Nov 2026 | Stiker cerita: bagikan angka keuanganmu |
+| 3.8.0 | 8 Nov 2026 | Stikerku: fitur stiker sendiri, 1 layar + stiker Struk |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -76,6 +77,16 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.8.0 — 2026-11-08 — Stikerku: fitur stiker sendiri, 1 layar + stiker Struk
+
+- **Stikerku** kini fitur sendiri (menu Fitur di web, grid Lainnya di aplikasi HP), tidak lagi
+  tab di Cerita Hari Ini. Dari Cerita tetap ada pintasan di menu bawah.
+- Tampilan satu layar: halaman tidak menggulir — kanvas & pengaturan diam, hanya daftar stiker yang
+  digeser (di HP satu baris ke samping, di layar lebar ke bawah). Tablet mendatar memakai tampilan
+  kanvas kiri + panel kanan.
+- Stiker baru **Struk**: struk kertas bergerigi berisi daftar belanja, total, jumlah transaksi,
+  kategori terbanyak, barcode, dan cap "TERCATAT" bergambar Leo. Total 28 stiker.
 
 ## 3.7.0 — 2026-11-08 — Stiker cerita: bagikan angka keuanganmu
 

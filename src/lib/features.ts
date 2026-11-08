@@ -1,15 +1,16 @@
 import {
   Bot,
   Footprints,
+  HeartPulse,
+  NotebookPen,
   PieChart,
-  TrendingUp,
+  Radar,
   Repeat,
   ShieldCheck,
-  Radar,
   Sprout,
+  Sticker,
   Timer,
-  NotebookPen,
-  HeartPulse,
+  TrendingUp,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -37,7 +38,8 @@ export type FeatureId =
   | 'ladang'
   | 'fokus'
   | 'cerita'
-  | 'sehat';
+  | 'sehat'
+  | 'stiker';
 
 export type Feature = { id: FeatureId; label: string; href: string; icon: LucideIcon; tint: string };
 
@@ -100,6 +102,13 @@ export const FEATURES: Feature[] = [
     tint: 'from-amber-50 to-pink-100 text-pink-600',
   },
   {
+    id: 'stiker',
+    label: 'Stikerku',
+    href: '/membership/stiker',
+    icon: Sticker,
+    tint: 'from-fuchsia-50 to-amber-100 text-fuchsia-600',
+  },
+  {
     id: 'sehat',
     label: 'Sehatku',
     href: '/membership/sehat',
@@ -135,6 +144,7 @@ export const DEFAULT_FEATURES: FeatureId[] = [
   'ladang',
   'fokus',
   'cerita',
+  'stiker',
   'sehat',
 ];
 

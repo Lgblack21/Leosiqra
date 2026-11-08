@@ -18,6 +18,17 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-08 (branch claude/fitur-stiker-20261108) — RILIS 3.8.0 siap, BELUM deploy (tunggu "gas"). Tanpa SQL.**
+  - Stikerku jadi fitur terpisah: `/membership/stiker` (FULLSCREEN_PATHS) & `/app/stiker`, fitur id `stiker`
+    (features.ts + PREF_FEATURES Worker + grid Lainnya HP). Komponen pindah ke `src/components/stiker/` (StikerApp,
+    stickers). Tab Stiker dicabut dari CeritaApp (kembali ke versi 86262b1) + ikon pintasan di dock Cerita.
+    User yang sudah menyimpan pilihan fitur perlu menyalakan Stikerku di panel Fitur (sama seperti fitur baru lain).
+  - Satu layar: root `fixed inset-0`, kanvas diskalakan ke sisa ruang (ResizeObserver, min lebar/tinggi), hanya
+    `[data-scroll]` daftar stiker yang menggulir (HP: horizontal 1 baris; lebar ≥1024 atau ≥768 mendatar: grid
+    vertikal di panel kanan). Layar ≤640px tinggi: subjudul & baris info disembunyikan.
+  - Stiker baru `struk` (28 total). Dites Playwright web 1366, tablet 1000×668, iPhone 13, iPhone SE: halaman tidak
+    menggulir, daftar stiker menggulir, tombol terlihat, ekspor 1080×1920, 0 error JS; Cerita 3 tab + pintasan OK.
+
 - **2026-11-08 — 3.7.0 LIVE (run #174, commit aacc78d, Release v3.7.0): Stiker cerita. Tanpa SQL.**
   - Tab baru Stiker di Cerita (`src/components/cerita/StikerView.tsx`, `stiker/stickers.tsx` 27 stiker,
     `src/lib/storyStats.ts`). Data dari `transactionService.getUserTransactions` (sama dengan Ringkasan: isSpend =
