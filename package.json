@@ -1,9 +1,11 @@
 {
   "name": "finance-tracker",
-  "version": "3.13.0",
+  "version": "3.14.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/salin-maplibre-worker.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/salin-maplibre-worker.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -36,6 +38,7 @@
     "framer-motion": "^12.38.0",
     "html-to-image": "1.11.13",
     "lucide-react": "^1.8.0",
+    "maplibre-gl": "6.15.0",
     "next": "^16.4.2",
     "otplib": "^13.4.0",
     "pdfjs-dist": "^6.2.108",

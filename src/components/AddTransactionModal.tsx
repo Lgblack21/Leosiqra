@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { currentPosition, placeService } from '@/lib/places';
 import Link from 'next/link';
 import { X, TrendingUp, TrendingDown, RefreshCw, CalendarDays, ChevronDown } from 'lucide-react';
 import { AccountSelect } from './AccountSelect';
@@ -33,6 +34,9 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
   const [convertedAmount, setConvertedAmount] = useState<number>(0);
   const { tags: tagsPref } = useTags();
   const [tags, setTags] = useState<string[]>([]);
+  // Lokasi opsional (pengeluaran): GPS diambil sekali saat tombol ditekan, bukan pelacakan.
+  const [loc, setLoc] = useState<{ lat: number; lng: number } | null>(null);
+  const [locMsg, setLocMsg] = useState('');
 
   const [formData, setFormData] = useState({
     date: toLocalDateString(),
@@ -112,7 +116,7 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
 
       // Penyimpanan inti — jika ini gagal, tidak ada apa pun yang tersimpan
       // dan aman untuk user mencoba lagi.
-      await transactionService.createTransaction({
+      const newId = await transactionService.createTransaction({
         userId,
         type: type === 'pemasukan' || type === 'pengeluaran' ? type : 'pemasukan',
         amount: amountNum,
@@ -129,6 +133,13 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
         status: 'VERIFIED',
         tags,
       });
+
+      // Lokasi (Peta Belanja) non-fatal: transaksi sudah tersimpan walau lokasi gagal.
+      if (loc && newId && type === 'pengeluaran') {
+        await placeService
+          .set(newId, { ...loc, name: formData.note || null, source: 'gps' })
+          .catch((locErr) => console.error('Transaksi tersimpan, lokasi gagal disimpan:', locErr));
+      }
 
       // Sinkronisasi lanjutan (ringkasan & saldo akun) bersifat non-fatal —
       // transaksinya sendiri sudah tersimpan, jadi kegagalan di sini tidak
@@ -147,6 +158,8 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
       onClose();
 
       setTags([]);
+      setLoc(null);
+      setLocMsg('');
       setFormData({
         date: toLocalDateString(),
         note: '',
@@ -294,6 +307,31 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
                 required
                 className={fieldCls}
               />
+              {!isIncome ? (
+                <div className="mt-1.5 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (loc) {
+                        setLoc(null);
+                        setLocMsg('');
+                        return;
+                      }
+                      setLocMsg('Mencari lokasimu…');
+                      try {
+                        setLoc(await currentPosition());
+                        setLocMsg('');
+                      } catch (gpsErr) {
+                        setLocMsg(gpsErr instanceof Error ? gpsErr.message : 'Lokasi belum bisa didapat.');
+                      }
+                    }}
+                    className={chipCls(Boolean(loc))}
+                  >
+                    {loc ? '📍 Lokasi ditandai · hapus' : '📍 Tandai lokasi di sini'}
+                  </button>
+                  {locMsg ? <span className="text-[11.5px] text-slate-500">{locMsg}</span> : null}
+                </div>
+              ) : null}
             </div>
 
             <CategorySelect

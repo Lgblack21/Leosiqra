@@ -73,6 +73,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.12.2 | 8 Nov 2026 | Semua fitur lebih rapi |
 | 3.12.3 | 8 Nov 2026 | Fitur lainnya + label PRO |
 | 3.13.0 | 9 Nov 2026 | Rapor Keuangan |
+| 3.14.0 | 9 Nov 2026 | Peta Belanja |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -86,6 +87,20 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.14.0 — 2026-11-09 — Peta Belanja
+
+- **Baru: Peta Belanja** — lihat ke mana uangmu dibelanjakan, langsung di peta:
+  - Setiap tempat jadi **pin dengan emoji kategori**, jumlah kunjungan, dan total belanjanya; ketuk pin untuk melihat
+    semua transaksimu di tempat itu.
+  - **Ringkasan per periode** (30 hari / 3 bulan / 1 tahun): total belanja, jumlah tempat, kunjungan, dan tempat baru.
+  - **Tempat langgananmu**: tempat yang paling sering kamu datangi.
+  - Cari tempat atau saring per kategori.
+- **Tandai lokasi transaksi** dengan tiga cara: pakai lokasimu sekarang, cari nama tempat, atau geser peta ke pinnya.
+  - Saat mencatat pengeluaran ada tombol **📍 Tandai lokasi di sini**.
+  - Di Peta Belanja ada daftar **Lengkapi lokasi** untuk pengeluaran 30 hari terakhir yang belum punya tempat.
+- **Privasi**: lokasi hanya disimpan saat kamu menandainya sendiri. Leosiqra tidak melacak posisimu. Lokasi ikut
+  terhapus saat transaksinya dihapus.
 
 ## 3.13.0 — 2026-11-09 — Rapor Keuangan
 

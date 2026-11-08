@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (3.13.0 live, run #183)
+Terakhir diperbarui: 2026-11-09 (3.14.0 siap deploy, menunggu "gas" + migrasi 0042)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,23 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-09 — 3.14.0 Peta Belanja (Rilis 1 dari 3) — BELUM DEPLOY, branch `claude/kanvas-v2-20261108`.**
+  - **SQL: jalankan `cloudflare/migrations/0042_tx_places.sql` di D1 Console** (tabel `tx_places`). Tanpa tabel itu
+    halaman tetap jalan (`ready:false`, daftar kosong) tapi simpan lokasi gagal.
+  - Worker: `handleMemberPlaces` — `GET /api/member/places?days=`, `PUT|DELETE /api/member/places/:txId` (cek pemilik
+    transaksi), `GET /api/member/places/search?q=` (proxy Nominatim, countrycodes=id, cache 30 hari di caches.default,
+    rate limit `AI_PARSE_RATE_LIMITER` key `geo:user:`). Hapus transaksi → `deletePlacesForTransactions`.
+  - Frontend: `src/lib/places.ts` (groupPlaces: nama sama ≤150 m / tanpa nama ≤40 m, lewati investasi),
+    `src/components/peta/{PlaceMap,LocationPicker,PetaApp}.tsx`, rute `/membership/peta` + `/app/peta`, tombol
+    "📍 Tandai lokasi di sini" di AddTransactionModal (pengeluaran). Fitur id `peta` (features + fiturCatalog + /app/more).
+  - MapLibre GL 6.15.0 + gaya OpenFreeMap (gratis, atribusi OSM). Worker MapLibre disalin ke
+    `public/maplibre-gl-worker.mjs` oleh `predev`/`prebuild` (`scripts/salin-maplibre-worker.mjs`, file di-gitignore +
+    eslint ignore) dan dipakai via `setWorkerUrl`. Kotak peta harus `h-full w-full` (CSS maplibre memaksa
+    `position:relative`, jadi `absolute inset-0` membuat tinggi peta salah).
+  - Dites lokal (wrangler dev --local + Playwright 1440 & Pixel 7): peta & pin tampil, pilih pin, Tandai → GPS →
+    Simpan (pin 5→6), API 401/400/404 benar, 0 error JS. Belum dites: GPS di HP asli, Nominatim dari Worker produksi.
+  - Berikutnya: Rilis 2 (struk baca alamat + tab Jejak/replay), Rilis 3 (rekap per kecamatan + 3D).
 
 - **2026-11-09 — 3.13.0 LIVE (run #183, commit 1b7b25b). Tanpa SQL.** Rapor Keuangan
   (rute tetap `/membership/cek-keuangan`, fitur id `cek`): `src/lib/rapor.ts` (7 indikator, bobot WEIGHTS, nilai

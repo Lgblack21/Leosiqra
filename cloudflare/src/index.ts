@@ -4543,6 +4543,7 @@ async function handleDeleteTransaction(request: Request, env: Env, transactionId
     }
 
     await deleteAttachmentsForTransactions(env, userId, [transactionId]);
+    await deletePlacesForTransactions(env, userId, [transactionId]);
     return json({ ok: true, deletedIds: [transactionId] });
   }
 
@@ -4575,6 +4576,7 @@ async function handleDeleteTransaction(request: Request, env: Env, transactionId
   await env.DB.batch(statements);
 
   await deleteAttachmentsForTransactions(env, userId, rows.map((item) => item.id));
+  await deletePlacesForTransactions(env, userId, rows.map((item) => item.id));
   return json({ ok: true, deletedIds: rows.map((item) => item.id) });
 }
 
@@ -13096,6 +13098,109 @@ async function handleMemberFocus(request: Request, env: Env, pathname: string) {
   }
 }
 
+// ── Peta Belanja (migrasi 0042) ─────────────────────────────────────────────
+// Lokasi transaksi HANYA dari tindakan user (GPS sekali saat mencatat, cari tempat, geser pin) —
+// tidak ada pelacakan latar. Semua query terikat user_id sesi.
+// GET    /api/member/places?days=30     → transaksi berlokasi (maks 3000) { items, ready }
+// PUT    /api/member/places/:txId       → simpan { lat, lng, name?, address?, source }
+// DELETE /api/member/places/:txId
+// GET    /api/member/places/search?q=   → cari tempat (Nominatim/OpenStreetMap, di-cache 30 hari)
+// Lokasi ikut dihapus bersama transaksinya (tabel belum ada = tidak ada yang perlu dihapus).
+const deletePlacesForTransactions = async (env: Env, userId: string, ids: string[]) => {
+  if (!ids.length) return;
+  await env.DB.prepare(`DELETE FROM tx_places WHERE user_id = ? AND tx_id IN (${ids.map(() => "?").join(",")})`)
+    .bind(userId, ...ids)
+    .run()
+    .catch((e) => {
+      if (!placesTableMissing(e)) console.error("Hapus lokasi transaksi gagal:", e);
+    });
+};
+const PLACE_SOURCES = ["gps", "cari", "pin", "struk"] as const;
+const placesTableMissing = (e: unknown) => e instanceof Error && /no such table: tx_places/i.test(e.message);
+const cleanText = (v: unknown, max: number) =>
+  typeof v === "string" ? v.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, max) || null : null;
+async function handleMemberPlaces(request: Request, env: Env, url: URL) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const pathname = url.pathname;
+  try {
+    if (pathname === "/api/member/places/search" && request.method === "GET") {
+      const q = (url.searchParams.get("q") ?? "").trim().replace(/\s+/g, " ");
+      if (q.length < 3 || q.length > 100) return json({ error: "Ketik minimal 3 huruf nama tempat." }, { status: 400 });
+      if (env.AI_PARSE_RATE_LIMITER) {
+        const { success } = await env.AI_PARSE_RATE_LIMITER.limit({ key: `geo:user:${userId}` });
+        if (!success) return json({ error: "Terlalu banyak pencarian. Coba lagi sebentar." }, { status: 429 });
+      }
+      const target = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=0&limit=6&countrycodes=id&accept-language=id&q=${encodeURIComponent(q)}`;
+      // Cache bersama (bukan per user): kueri yang sama tidak membebani Nominatim lagi.
+      const cacheKey = new Request(`https://cache.leosiqra.internal/geo?q=${encodeURIComponent(q.toLowerCase())}`);
+      const cache = (caches as unknown as { default: Cache }).default;
+      let res = await cache.match(cacheKey);
+      if (!res) {
+        const upstream = await fetch(target, {
+          headers: { "User-Agent": "Leosiqra/3 (+https://www.leosiqra.com)", Referer: "https://www.leosiqra.com/" },
+          signal: AbortSignal.timeout(8000),
+        }).catch(() => null);
+        if (!upstream || !upstream.ok) return json({ error: "Pencarian tempat sedang tidak tersedia. Geser pin di peta saja." }, { status: 502 });
+        const raw = (await upstream.json().catch(() => [])) as { lat?: string; lon?: string; name?: string; display_name?: string }[];
+        const items = (Array.isArray(raw) ? raw : []).slice(0, 6).flatMap((r) => {
+          const lat = Number(r.lat);
+          const lng = Number(r.lon);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return [];
+          return [{ lat, lng, name: cleanText(r.name, 120) ?? cleanText(r.display_name, 120), address: cleanText(r.display_name, 240) }];
+        });
+        res = new Response(JSON.stringify({ items }), { headers: { "content-type": "application/json", "cache-control": "public, max-age=2592000" } });
+        await cache.put(cacheKey, res.clone());
+      }
+      return new Response(res.body, { headers: { "content-type": "application/json", "cache-control": "no-store" } });
+    }
+    if (pathname === "/api/member/places" && request.method === "GET") {
+      const days = Math.min(400, Math.max(1, Number(url.searchParams.get("days")) || 90));
+      const since = new Date(Date.now() + 7 * 3600_000 - days * 86400_000).toISOString().slice(0, 10);
+      const rows = await env.DB.prepare(
+        `SELECT p.tx_id, p.lat, p.lng, p.name, p.address, p.source, t.date, t.type, t.amount, t.amount_idr, t.currency, t.category, t.sub_category, t.note
+           FROM tx_places p JOIN transactions t ON t.id = p.tx_id AND t.user_id = p.user_id
+          WHERE p.user_id = ? AND t.date >= ? ORDER BY t.date DESC LIMIT 3000`
+      ).bind(userId, since).all();
+      return json({ items: rows.results ?? [], ready: true });
+    }
+    const m = /^\/api\/member\/places\/([A-Za-z0-9_-]{1,64})$/.exec(pathname);
+    if (m && request.method === "PUT") {
+      const raw = await parseJson<Record<string, unknown>>(request);
+      const lat = Number(raw.lat);
+      const lng = Number(raw.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+        return json({ error: "Koordinat tidak valid." }, { status: 400 });
+      }
+      const source = (PLACE_SOURCES as readonly unknown[]).includes(raw.source) ? (raw.source as string) : "pin";
+      const own = await env.DB.prepare("SELECT 1 FROM transactions WHERE id = ? AND user_id = ?").bind(m[1], userId).first();
+      if (!own) return json({ error: "Transaksi tidak ditemukan." }, { status: 404 });
+      const now = nowIso();
+      await env.DB.prepare(
+        `INSERT INTO tx_places (tx_id, user_id, lat, lng, name, address, source, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(tx_id) DO UPDATE SET lat = excluded.lat, lng = excluded.lng, name = excluded.name,
+           address = excluded.address, source = excluded.source, updated_at = excluded.updated_at
+         WHERE tx_places.user_id = excluded.user_id`
+      ).bind(m[1], userId, Math.round(lat * 1e6) / 1e6, Math.round(lng * 1e6) / 1e6, cleanText(raw.name, 120), cleanText(raw.address, 240), source, now, now).run();
+      return json({ ok: true });
+    }
+    if (m && request.method === "DELETE") {
+      await env.DB.prepare("DELETE FROM tx_places WHERE tx_id = ? AND user_id = ?").bind(m[1], userId).run();
+      return json({ ok: true });
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (e) {
+    if (placesTableMissing(e)) {
+      if (request.method === "GET" && pathname === "/api/member/places") return json({ items: [], ready: false });
+      return json({ error: "Peta Belanja belum aktif (menunggu pembaruan database)." }, { status: 503 });
+    }
+    if (e instanceof Error && e.message === "Payload JSON tidak valid.") return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    throw e;
+  }
+}
+
 // ── Kanvas (migrasi 0041) ───────────────────────────────────────────────────
 // Papan rencana keuangan (template: nikah, darurat, rumah, ...). Angka "dari catatanmu" dihitung
 // di klien dari data user sendiri; yang disimpan hanya isian user (state_json, disaring ketat).
@@ -16482,7 +16587,7 @@ const PREF_INPUT_MODES = ["ketik", "suara", "foto"] as const;
 // Fitur yang tampil di menu samping (panel Pengaturan → Fitur). Hanya
 // visibilitas menu — mematikan fitur tidak menyentuh datanya. Sama dengan
 // FeatureId di src/lib/features.ts. null = bawaan (5 fitur lama).
-const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk", "jejak", "langganan", "ladang", "fokus", "cerita", "makan", "sehat", "stiker", "kanvas", "cek"] as const;
+const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk", "jejak", "langganan", "ladang", "fokus", "cerita", "makan", "sehat", "stiker", "kanvas", "cek", "peta"] as const;
 // Jam pengingat per 30 menit (cron tiap 10 menit, lihat sendDailyReminders).
 const PREF_TIME_RE = /^([01]\d|2[0-3]):(00|30)$/;
 // Ikon & warna pilihan user per nama kategori (panel Kategori & Anggaran).
@@ -21186,6 +21291,10 @@ const worker = {
 
       if (url.pathname === "/api/member/focus" || url.pathname.startsWith("/api/member/focus/")) {
         return await handleMemberFocus(request, env, url.pathname);
+      }
+
+      if (url.pathname === "/api/member/places" || url.pathname.startsWith("/api/member/places/")) {
+        return await handleMemberPlaces(request, env, url);
       }
 
       if (url.pathname === "/api/member/canvas" || url.pathname.startsWith("/api/member/canvas/")) {

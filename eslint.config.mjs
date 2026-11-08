@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Salinan worker MapLibre (hasil build, lihat scripts/salin-maplibre-worker.mjs).
+    "public/maplibre-gl-worker.mjs",
   ]),
 ]);
 

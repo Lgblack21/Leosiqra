@@ -63,3 +63,4 @@ resources/
 
 # Diunduh saat deploy oleh scripts/fetch-logos.mjs
 public/logos/
+public/maplibre-gl-worker.mjs
