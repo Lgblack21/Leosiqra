@@ -264,6 +264,7 @@ export function KanvasApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
           <FlowBoard tx={fin?.tx ?? null} accounts={fin?.accounts ?? []} />
         ) : active ? (
           <TemplateBoard
+            variant={variant}
             key={active.id}
             id={active.id}
             metrics={metrics}
@@ -386,6 +387,7 @@ function TemplateBoard({
   api,
   onTitle,
   onSaranHref,
+  variant,
 }: {
   id: string;
   metrics: Metrics;
@@ -393,6 +395,7 @@ function TemplateBoard({
   api: React.MutableRefObject<{ tidy: () => void } | null>;
   onTitle: (t: string) => void;
   onSaranHref: (h: string) => void;
+  variant: 'web' | 'app';
 }) {
   const [canvas, setCanvas] = useState<Canvas | null>(null);
   const [error, setError] = useState('');
@@ -401,7 +404,33 @@ function TemplateBoard({
   const [sizes, setSizes] = useState<Record<string, Size>>({});
   const [narrow, setNarrow] = useState(false);
   const [wide, setWide] = useState(false);
+  // Web ≥768px: panel jawaban menggantikan sidebar (sidebar meluncur keluar, panel meluncur masuk).
+  const [side, setSide] = useState(false);
+  const [lastOpen, setLastOpen] = useState<string | null>(null);
+  useEffect(() => {
+    if (variant !== 'web') return;
+    const f = () => setSide(window.innerWidth >= 768);
+    f();
+    window.addEventListener('resize', f);
+    return () => window.removeEventListener('resize', f);
+  }, [variant]);
   const [open, setOpen] = useState<string | null>(null);
+  useEffect(() => {
+    if (open) setLastOpen(open);
+  }, [open]);
+  useEffect(() => {
+    if (!side) return;
+    window.dispatchEvent(new CustomEvent('leosiqra:focus-mode', { detail: { on: Boolean(open) } }));
+  }, [side, open]);
+  useEffect(
+    () => () => void window.dispatchEvent(new CustomEvent('leosiqra:focus-mode', { detail: { on: false } })),
+    [],
+  );
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(null);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   const board = useRef<BoardHandle>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const latest = useRef<Canvas | null>(null);
@@ -415,7 +444,7 @@ function TemplateBoard({
     const el = wrap.current;
     if (!el) return;
     const f = () => {
-      setNarrow(el.clientWidth < 640);
+      setNarrow(window.innerWidth < 640);
       setWide(el.clientWidth >= 900);
     };
     f();
@@ -696,7 +725,8 @@ function TemplateBoard({
     const [x, y] = at(nid);
     board.current?.focus(x - 8, y - 56, narrow ? 1 : 0.9);
   };
-  const openItem = open ? flat.find((x) => x.card.id === open) : null;
+  const shownId = open ?? (side ? lastOpen : null);
+  const openItem = shownId ? flat.find((x) => x.card.id === shownId) : null;
   const panel = openItem ? (
     <Panel
       key={openItem.card.id}
@@ -802,18 +832,28 @@ function TemplateBoard({
           }
         />
       </div>
-      {panel && wide ? (
+      {side && openItem ? (
+        <div
+          className={cn(
+            'fixed left-0 top-0 z-[60] flex h-full w-[400px] flex-col overflow-hidden border-r border-slate-200 bg-white shadow-[12px_0_40px_-20px_rgba(15,23,42,.35)] transition-transform duration-300 ease-out dark:border-slate-800 dark:bg-slate-950',
+            open ? 'translate-x-0 delay-150' : '-translate-x-full',
+          )}
+        >
+          {panel}
+        </div>
+      ) : null}
+      {panel && wide && !side ? (
         <aside className="w-[400px] shrink-0 border-l border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
           {panel}
         </aside>
       ) : null}
-      {panel && !wide && !narrow ? (
+      {panel && !wide && !narrow && !side ? (
         // Tablet: kartu melayang di kanan papan — papan tetap terlihat, tidak menutup layar.
         <div className="absolute bottom-3 right-3 top-3 z-30 flex w-[min(380px,calc(100%-24px))] flex-col overflow-hidden rounded-[24px] bg-white shadow-[0_24px_60px_-20px_rgba(15,23,42,.45)] ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-slate-800">
           {panel}
         </div>
       ) : null}
-      {panel && narrow ? (
+      {panel && narrow && !side ? (
         <div className="fixed inset-0 z-[55] flex items-end bg-slate-950/30" onClick={() => setOpen(null)}>
           <div
             onClick={(e) => e.stopPropagation()}

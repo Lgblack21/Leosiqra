@@ -30,6 +30,8 @@ interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
   onOpenSettings?: () => void;
+  /** Mode fokus (mis. menjawab di Kanvas): sidebar meluncur keluar di semua ukuran layar. */
+  focusHidden?: boolean;
 }
 
 type Profile = {
@@ -46,7 +48,7 @@ type Profile = {
 // Teks yang hanya tampil di mode penuh (HP & laptop), disembunyikan di rel tablet.
 const fullOnly = 'md:max-lg:hidden';
 
-export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
+export const Sidebar = ({ isOpen, onClose, onOpenSettings, focusHidden = false }: SidebarProps) => {
   const pathname = usePathname();
   const { toast } = useFeedback();
   const { openModal, activeModal } = useModal();
@@ -142,8 +144,14 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings }: SidebarProps) => {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-50 flex h-full w-72 flex-col border-r border-slate-100 bg-white transition-transform duration-300 ease-in-out md:w-[84px] md:translate-x-0 lg:w-72 print:hidden',
-        isOpen ? 'translate-x-0' : '-translate-x-full',
+        'fixed left-0 top-0 z-50 flex h-full w-72 flex-col border-r border-slate-100 bg-white transition-transform duration-300 ease-in-out md:w-[84px] lg:w-72 print:hidden',
+        focusHidden
+          ? '-translate-x-full'
+          : isOpen
+            ? 'translate-x-0 md:translate-x-0'
+            : '-translate-x-full md:translate-x-0',
+        // Kembali setelah panel fokus selesai meluncur keluar.
+        !focusHidden && 'md:delay-150',
       )}
     >
       <div className="flex shrink-0 items-center justify-between px-5 pb-3 pt-5 md:max-lg:justify-center md:max-lg:px-0">

@@ -46,6 +46,13 @@ function MembershipShell({ children }: { children: React.ReactNode }) {
   useCategoryTemplateSync();
   const { resolvedTheme } = useTheme();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  // Mode fokus: halaman (mis. Kanvas saat menjawab) meminta sidebar minggir dan memakai sisi kiri sendiri.
+  const [focusMode, setFocusMode] = useState(false);
+  useEffect(() => {
+    const on = (e: Event) => setFocusMode(Boolean((e as CustomEvent<{ on: boolean }>).detail?.on));
+    window.addEventListener('leosiqra:focus-mode', on);
+    return () => window.removeEventListener('leosiqra:focus-mode', on);
+  }, []);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsView, setSettingsView] = useState<SettingsView>('menu');
 
@@ -177,6 +184,7 @@ function MembershipShell({ children }: { children: React.ReactNode }) {
 
           <div className={frameClass}>
             <Sidebar
+              focusHidden={focusMode}
               isOpen={isSidebarOpen}
               onClose={() => setIsSidebarOpen(false)}
               onOpenSettings={() => {
@@ -190,7 +198,9 @@ function MembershipShell({ children }: { children: React.ReactNode }) {
             dalam ancestor flex/min-h-screen kepotong di batas tinggi layar
             (bug pagination flexbox saat print di Chrome) alih-alih mengalir
             ke halaman berikutnya. */}
-          <main className="flex-1 md:ml-[84px] lg:ml-72 min-h-screen flex flex-col min-w-0 pb-24 md:pb-0 print:pb-0 print:block print:min-h-0 print:h-auto print:ml-0 print:pt-0">
+          <main
+            className={`flex-1 ${focusMode ? 'md:ml-[400px]' : 'md:ml-[84px] lg:ml-72'} min-h-screen flex flex-col min-w-0 pb-24 md:pb-0 transition-[margin] duration-300 ease-in-out print:pb-0 print:block print:min-h-0 print:h-auto print:ml-0 print:pt-0`}
+          >
             <div className={frameClass}>
               <Header onMenuClick={() => setIsSidebarOpen(true)} />
             </div>

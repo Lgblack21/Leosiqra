@@ -87,8 +87,9 @@ menjorok 2 spasi; **tebal** dan `kode` boleh.
 - Diagram **Dari catatanmu** di Kanvas kembali tampil (sebelumnya kosong di 3.11.0).
 - Tab kanvas dibuat lebih ringkas dan tidak terpotong lagi; tab yang aktif kini terlihat jelas.
 - Tombol periode dan navigasi bab tidak lagi menutupi bagian atas diagram saat "pas layar".
-- Panel jawab di tablet kini berupa kartu ringkas di sisi kanan papan (tidak lagi menutupi layar), dan keyboard
-  tidak langsung muncul sebelum kolom angka diketuk.
+- Di web, saat menjawab kartu Kanvas **sidebar meluncur keluar dan digantikan panel jawaban**; setelah panel ditutup
+  (✕ atau tombol Esc) sidebar kembali. Isi panel lebih ringkas dan keyboard tidak langsung muncul.
+- Bab yang hanya berisi hitungan (mis. Hitungan KPR) kini ikut dihitung selesai, sehingga kartu akhir bisa terbuka.
 
 ## 3.11.0 — 2026-11-08 — Kanvas versi 2 + Cek Keuangan
 

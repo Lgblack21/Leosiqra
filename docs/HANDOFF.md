@@ -18,6 +18,13 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-08 — 3.11.1 SIAP (branch `claude/kanvas-v2-20261108`), BELUM DEPLOY. Tanpa SQL.**
+  - FlowBoard kosong di 3.11.0 (wadah `flex-1` tanpa tinggi) → `absolute inset-0`. Tab Kanvas h-9, tidak terpotong.
+  - Mode fokus web ≥768px: event `leosiqra:focus-mode` {on}; layout menggeser `main` (md:ml-[400px]) dan Sidebar
+    `focusHidden`; panel jawaban fixed kiri 400px meluncur masuk (delay 150ms), Esc/✕ menutup. HP tetap sheet bawah.
+  - `chapterProgress.done` kini juga untuk bab tanpa kartu yang dihitung (bab hitungan saja).
+  - Dites Playwright 1440, 1000×668, Pixel 7: sidebar −288/−84 saat panel buka, kembali 0 saat tutup, 0 error JS.
+
 - **2026-11-08 — 3.11.0 LIVE (run #178, commit f8551dd): Kanvas v2 + Cek Keuangan. Tanpa SQL baru (pakai 0041).**
   - Kanvas web tidak lagi layar penuh (dihapus dari FULLSCREEN_PATHS); app tetap layar penuh. Tab + picker template,
     `?id=` / `?baru=<template>` (dipakai saran kartu akhir).

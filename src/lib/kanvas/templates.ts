@@ -1220,7 +1220,7 @@ export const isDone = (st: CardState) => st === 'answered' || st === 'skipped' |
 export function chapterProgress(ch: Chapter, s: StateLike, m: Metrics) {
   const list = ch.cards.filter(counts);
   const got = list.filter((c) => isDone(cardState(c, s, m))).length;
-  return { got, total: list.length, done: list.length > 0 && got === list.length };
+  return { got, total: list.length, done: got === list.length };
 }
 export function progressOf(t: Template, s: StateLike, m: Metrics) {
   let got = 0;
