@@ -26,7 +26,13 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
   - 13 branch lama yang sudah setara main SUDAH DIHAPUS (2026-11-08, Bos lewat Termux; dicek ulang dari session).
   - Bersih-bersih lanjutan (Termux): ~87 branch `claude/` yang sudah ter-merge / setara main dihapus.
     `claude/halaman-transaksi` diarsipkan sebagai tag **`arsip/halaman-transaksi`** (5a95b7e) lalu branch-nya dihapus.
-    Sisa 16 branch = yang punya isi di luar main (draf artikel, patch menunggu Bos, catatan belajar, sisa lama).
+    Sisa branch `claude/` (dicek 2026-11-08, semua merge bersih ke main kecuali yang ditandai):
+    - draf artikel (tunggu ✅ Bos): artikel-cara-mengatur-gaji-5-juta, artikel-catatan-tabungan, artikel-laporan-keuangan-pribadi
+    - patch menunggu Bos: fix-jual-dobel-listing-20261105 (BUG UANG: hasil jual tercatat 2×, prioritas),
+      fix-biaya-ai-20261107 + fix-biaya-makanku-20261108 (kebocoran biaya AI; makanku sudah memuat fix-biaya-ai),
+      fix-kesalahan-hashtag-typo-aturuang (promo/cek-kata ejaan hashtag)
+    - usulan aturan tim: belajar-20261025, belajar-20261101 (promo/TEAMS.md)
+    - fix-merge-queue-shallow-20261028: isinya sudah 100% di main (konflik cuma karena urutan) → boleh dihapus
     Session cloud tidak bisa hapus branch/push tag (proxy 403) — pakai Termux `gh api` (lihat riwayat chat 2026-11-08).
     Kalau branch kerja yang sudah di-merge ikut terhapus (mis. form-transaksi-20261108, wordmark-anim-20261108) dan
     masih dipakai di sesi lain, push saja lagi — isinya sudah ada di main.
