@@ -166,14 +166,19 @@ export function KanvasApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
         ) : null}
       </div>
 
-      <div className={cn('relative mt-3 flex items-center gap-2 overflow-x-auto pb-1', variant === 'app' && 'px-4')}>
+      <div
+        className={cn(
+          'relative mt-2.5 flex items-center gap-2 overflow-x-auto px-0.5 py-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+          variant === 'app' && 'px-4',
+        )}
+      >
         <button
           type="button"
           onClick={() => go('arus')}
           className={cn(
-            'h-10 shrink-0 rounded-full px-4 text-[13.5px] font-bold ring-1 transition',
+            'h-9 shrink-0 rounded-full px-3.5 text-[13px] font-bold ring-1 transition',
             tab === 'arus'
-              ? 'bg-white ring-slate-900 dark:bg-slate-900 dark:ring-white'
+              ? 'bg-slate-900 text-white ring-slate-900 dark:bg-white dark:text-slate-900 dark:ring-white'
               : 'text-slate-500 ring-slate-200 hover:text-slate-700 dark:ring-slate-700',
           )}
         >
@@ -187,15 +192,15 @@ export function KanvasApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
                 type="button"
                 onClick={() => (on ? setMenu((m) => !m) : go(c.id))}
                 className={cn(
-                  'flex h-10 items-center gap-1.5 rounded-full px-4 text-[13.5px] font-bold ring-1 transition',
+                  'flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-bold ring-1 transition',
                   on
-                    ? 'bg-white ring-slate-900 dark:bg-slate-900 dark:ring-white'
+                    ? 'bg-slate-900 text-white ring-slate-900 dark:bg-white dark:text-slate-900 dark:ring-white'
                     : 'text-slate-500 ring-slate-200 hover:text-slate-700 dark:ring-slate-700',
                 )}
               >
                 <span>{templateById(c.template).emoji}</span>
                 <span className="max-w-[11rem] truncate">{c.title}</span>
-                {on ? <MoreHorizontal size={16} className="text-slate-400" /> : null}
+                {on ? <MoreHorizontal size={16} className="opacity-60" /> : null}
               </button>
             </span>
           );
@@ -204,7 +209,7 @@ export function KanvasApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
           type="button"
           disabled={!list}
           onClick={() => setPicker(true)}
-          className="flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-[13.5px] font-bold text-slate-600 ring-1 ring-dashed ring-slate-300 hover:bg-white disabled:opacity-50 dark:text-slate-300 dark:ring-slate-600 dark:hover:bg-slate-900"
+          className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-dashed border-slate-300 px-3.5 text-[13px] font-bold text-slate-600 hover:bg-white disabled:opacity-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-900"
         >
           <Plus size={16} /> Kanvas baru
         </button>
@@ -780,6 +785,7 @@ function TemplateBoard({
           edges={edges}
           onMove={onMove}
           onSizes={setSizes}
+          padTop={64}
           onReady={() => {
             const [x, y] = at('mulai');
             board.current?.focus(
@@ -801,13 +807,19 @@ function TemplateBoard({
           {panel}
         </aside>
       ) : null}
-      {panel && !wide ? (
+      {panel && !wide && !narrow ? (
+        // Tablet: kartu melayang di kanan papan — papan tetap terlihat, tidak menutup layar.
+        <div className="absolute bottom-3 right-3 top-3 z-30 flex w-[min(380px,calc(100%-24px))] flex-col overflow-hidden rounded-[24px] bg-white shadow-[0_24px_60px_-20px_rgba(15,23,42,.45)] ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-slate-800">
+          {panel}
+        </div>
+      ) : null}
+      {panel && narrow ? (
         <div className="fixed inset-0 z-[55] flex items-end bg-slate-950/30" onClick={() => setOpen(null)}>
           <div
             onClick={(e) => e.stopPropagation()}
-            className="max-h-[85dvh] w-full overflow-hidden rounded-t-[28px] bg-white shadow-2xl dark:bg-slate-950"
+            className="max-h-[78dvh] w-full overflow-hidden rounded-t-[28px] bg-white shadow-2xl dark:bg-slate-950"
           >
-            <div className="flex max-h-[85dvh] flex-col">{panel}</div>
+            <div className="flex max-h-[78dvh] flex-col">{panel}</div>
           </div>
         </div>
       ) : null}

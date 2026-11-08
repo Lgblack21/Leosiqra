@@ -67,6 +67,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.9.0 | 8 Nov 2026 | Sehatku makin lengkap |
 | 3.10.0 | 8 Nov 2026 | Kanvas: rencanakan keuangan di papan bebas |
 | 3.11.0 | 8 Nov 2026 | Kanvas versi 2 + Cek Keuangan |
+| 3.11.1 | 8 Nov 2026 | Perbaikan Kanvas |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -80,6 +81,12 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.11.1 — 2026-11-08 — Perbaikan Kanvas
+
+- Diagram **Dari catatanmu** di Kanvas kembali tampil (sebelumnya kosong di 3.11.0).
+- Tab kanvas dibuat lebih ringkas dan tidak terpotong lagi; tab yang aktif kini terlihat jelas.
+- Tombol periode dan navigasi bab tidak lagi menutupi bagian atas diagram saat "pas layar".
 
 ## 3.11.0 — 2026-11-08 — Kanvas versi 2 + Cek Keuangan
 

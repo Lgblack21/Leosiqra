@@ -76,7 +76,7 @@ function NumberInput({
           }}
           onBlur={commit}
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-          className="h-14 min-w-0 flex-1 bg-transparent text-[20px] font-black text-slate-900 outline-none dark:text-white"
+          className="h-12 min-w-0 flex-1 bg-transparent text-[18px] font-black text-slate-900 outline-none dark:text-white"
         />
         {card.unit !== 'rp' ? (
           <span className="text-[15px] font-bold text-slate-400">
@@ -193,10 +193,10 @@ export function Panel({
           </span>
         </div>
       </div>
-      <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+      <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
         {bab.done ? (
           <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 p-3.5 ring-1 ring-emerald-100 dark:bg-emerald-500/10 dark:ring-emerald-500/20">
-            <LeoBadge topic="investasi" size={52} />
+            <LeoBadge topic="investasi" size={44} />
             <div>
               <p className="text-[15px] font-black text-slate-900 dark:text-white">
                 Bab {index + 1} selesai: {ch.title.toLowerCase()}
@@ -207,13 +207,13 @@ export function Panel({
             </div>
           </div>
         ) : card.kind === 'tanya' || card.kind === 'tugas' || card.kind === 'angka' ? (
-          <LeoBadge topic="investasi" size={60} />
+          <LeoBadge topic="investasi" size={44} />
         ) : null}
 
         {card.kind === 'data' ? (
           <>
             <p className="text-[14px] text-slate-500">{card.label}</p>
-            <p className="text-[28px] font-black tracking-tight text-slate-900 dark:text-white">
+            <p className="text-[24px] font-black tracking-tight text-slate-900 dark:text-white">
               {skipped
                 ? 'Dilewati dulu'
                 : st === 'auto'
@@ -234,7 +234,7 @@ export function Panel({
             const r = card.calc(c.m);
             return (
               <>
-                <p className="text-[22px] font-black leading-tight text-slate-900 dark:text-white">{card.label}</p>
+                <p className="text-[19px] font-black leading-snug text-slate-900 dark:text-white">{card.label}</p>
                 {r ? (
                   <>
                     <p className="text-[15px] text-slate-600 dark:text-slate-300">{r.text}</p>
@@ -291,11 +291,11 @@ export function Panel({
           </>
         ) : (
           <>
-            <p className="text-[22px] font-black leading-tight text-slate-900 dark:text-white">{cardTitle(card)}</p>
+            <p className="text-[19px] font-black leading-snug text-slate-900 dark:text-white">{cardTitle(card)}</p>
             {card.kind === 'tanya' || card.kind === 'tugas' ? (
-              <p className="text-[15px] leading-relaxed text-slate-500 dark:text-slate-400">{card.why}</p>
+              <p className="text-[14px] leading-relaxed text-slate-500 dark:text-slate-400">{card.why}</p>
             ) : card.why ? (
-              <p className="text-[15px] leading-relaxed text-slate-500 dark:text-slate-400">{card.why}</p>
+              <p className="text-[14px] leading-relaxed text-slate-500 dark:text-slate-400">{card.why}</p>
             ) : null}
             {card.kind === 'tanya' ? (
               <div className="space-y-2">
@@ -313,7 +313,7 @@ export function Panel({
                         if (first && hasNext) setTimeout(act.next, 450);
                       }}
                       className={cn(
-                        'flex w-full items-center gap-3 rounded-2xl px-4 py-4 text-left text-[16px] font-semibold transition',
+                        'flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-[15px] font-semibold transition',
                         on
                           ? 'bg-white ring-2 ring-slate-900 dark:bg-slate-900 dark:ring-white'
                           : 'bg-slate-50 ring-1 ring-transparent hover:ring-slate-200 dark:bg-slate-900/60 dark:hover:ring-slate-700',
@@ -342,7 +342,7 @@ export function Panel({
                   if (first && hasNext) setTimeout(act.next, 450);
                 }}
                 className={cn(
-                  'flex h-14 w-full items-center justify-center gap-2 rounded-full text-[17px] font-bold',
+                  'flex h-12 w-full items-center justify-center gap-2 rounded-full text-[16px] font-bold',
                   answered
                     ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
                     : 'bg-slate-900 text-white dark:bg-white dark:text-slate-900',

@@ -209,13 +209,13 @@ export function FlowBoard({ tx, accounts }: { tx: Transaction[] | null; accounts
           </span>
         ) : null}
       </div>
-      <div className="relative flex-1">
+      <div className="absolute inset-0">
         {flow && !flow.links.length ? (
           <p className="absolute left-1/2 top-24 z-10 w-[min(90%,22rem)] -translate-x-1/2 rounded-2xl bg-white p-4 text-center text-[13.5px] font-semibold text-slate-600 shadow ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700">
             Belum ada pemasukan/pengeluaran di periode ini. Coba periode lain, atau catat transaksi dulu.
           </p>
         ) : null}
-        <Board ref={board} nodes={nodes} edges={edges} onMove={onMove} fitOnSizes />
+        <Board ref={board} nodes={nodes} edges={edges} onMove={onMove} fitOnSizes padTop={72} />
       </div>
     </>
   );

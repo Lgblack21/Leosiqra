@@ -37,6 +37,7 @@ export function Board({
   toolbar,
   fitOnSizes,
   onReady,
+  padTop = 24,
 }: {
   nodes: BoardNode[];
   edges: BoardEdge[];
@@ -47,6 +48,8 @@ export function Board({
   fitOnSizes?: boolean;
   // Dipanggil sekali saat semua kartu sudah terukur (mis. untuk posisi awal sendiri).
   onReady?: () => void;
+  // Ruang kosong di atas saat "pas layar" (untuk tombol yang melayang di atas papan).
+  padTop?: number;
 }) {
   const view = useRef<HTMLDivElement>(null);
   const [cam, setCam] = useState({ x: 40, y: 40, k: 1 });
@@ -86,13 +89,15 @@ export function Board({
     }
     const pad = 24;
     const bottom = 84; // ruang untuk toolbar zoom di bawah
-    const k = clampK(Math.min((el.clientWidth - pad * 2) / (x1 - x0), (el.clientHeight - pad - bottom) / (y1 - y0), 1));
+    const k = clampK(
+      Math.min((el.clientWidth - pad * 2) / (x1 - x0), (el.clientHeight - padTop - bottom) / (y1 - y0), 1),
+    );
     setCam({
       k,
       x: (el.clientWidth - (x1 - x0) * k) / 2 - x0 * k,
-      y: Math.max(pad, (el.clientHeight - bottom + pad - (y1 - y0) * k) / 2) - y0 * k,
+      y: Math.max(padTop, (el.clientHeight - bottom + padTop - (y1 - y0) * k) / 2) - y0 * k,
     });
-  }, []);
+  }, [padTop]);
   useImperativeHandle(
     ref,
     () => ({
