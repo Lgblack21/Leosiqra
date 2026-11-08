@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-08 (3.6.6 live, run #173)
+Terakhir diperbarui: 2026-11-08 (3.7.0 live, run #174)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-08 (branch claude/stiker-cerita-20261108) — RILIS 3.7.0 siap, BELUM deploy (tunggu "gas"). Tanpa SQL.**
+- **2026-11-08 — 3.7.0 LIVE (run #174, commit aacc78d, Release v3.7.0): Stiker cerita. Tanpa SQL.**
   - Tab baru Stiker di Cerita (`src/components/cerita/StikerView.tsx`, `stiker/stickers.tsx` 27 stiker,
     `src/lib/storyStats.ts`). Data dari `transactionService.getUserTransactions` (sama dengan Ringkasan: isSpend =
     pengeluaran non-investasi). Ekspor PNG di perangkat dengan `html-to-image@1.11.13` (dependency baru, lock hanya +1
