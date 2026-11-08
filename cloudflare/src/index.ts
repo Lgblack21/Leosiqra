@@ -9755,6 +9755,7 @@ async function handleItemSell(request: Request, env: Env, userId: string, itemId
   if (!record) {
     const res = await env.DB.prepare("UPDATE items SET status = 'terjual', manual_value = ?, value_mode = 'manual', updated_at = ? WHERE id = ? AND user_id = ? AND status = 'aktif'").bind(price, now, itemId, userId).run();
     if (!res.meta.changes) return json({ error: "Barang ini baru saja berubah. Muat ulang lalu coba lagi." }, { status: 409 });
+    await closeListingsForSoldItem(env, userId, itemId, price, date, now);
     return json({ ok: true, transactionId: null });
   }
   const account = typeof raw.account_id === "string"
@@ -9776,12 +9777,26 @@ async function handleItemSell(request: Request, env: Env, userId: string, itemId
     ).bind(price, now, itemId, userId, txId, userId),
   ]);
   if (!results[0]?.meta.changes) return json({ error: "Barang ini baru saja berubah. Muat ulang lalu coba lagi." }, { status: 409 });
+  await closeListingsForSoldItem(env, userId, itemId, price, date, now);
   try {
     const durableId = env.REALTIME_ROOM.idFromName(`member:${userId}`);
     await env.REALTIME_ROOM.get(durableId).fetch("https://realtime.internal/publish", { method: "POST", body: JSON.stringify({ event: "transaction.created", payload: { id: txId, userId } }) });
   } catch { /* realtime opsional */ }
   return json({ ok: true, transactionId: txId }, { status: 201 });
 }
+
+// Barang laku lewat Barangku → iklan Ladangku-nya (masih 'dijual') ikut ditutup, supaya
+// tombol "Laku" di Ladangku tidak mencatat pemasukan + saldo untuk kedua kalinya.
+// Terpisah dari batch: tabel listings belum ada (migrasi 0028) tidak boleh menggagalkan jual.
+// Kalau penutupan ini gagal, /listings/:id/sold tetap menolak barang yang sudah 'terjual'.
+const closeListingsForSoldItem = async (env: Env, userId: string, itemId: string, price: number, date: string, now: string) => {
+  try {
+    await env.DB.prepare("UPDATE listings SET status = 'terjual', sold_price = ?, sold_at = ?, updated_at = ? WHERE item_id = ? AND user_id = ? AND status = 'dijual'")
+      .bind(Math.round(price), date, now, itemId, userId).run();
+  } catch (error) {
+    if (!listingsTableMissing(error)) console.error("Tutup iklan barang terjual gagal:", error instanceof Error ? error.message : error);
+  }
+};
 
 // ── Usahaku (migrasi 0027) ──────────────────────────────────────────────────
 // Rencana usaha sampingan: AI menyusun 3 ide dari "aku bisa …" (Rupiah, konteks
@@ -10878,8 +10893,18 @@ async function handleListingRoutes(request: Request, env: Env, pathname: string)
       if (row.status !== "dijual") return json({ error: "Iklan ini sudah tidak aktif." }, { status: 409 });
       const date = isRealDateStr(raw.date) && raw.date <= todayWIB() && raw.date >= "2000-01-01" ? raw.date : todayWIB();
       const now = nowIso();
+      // Barang sudah dicatat laku dari Barangku → jangan catat pemasukan kedua; tutup iklannya saja.
+      if (row.item_id) {
+        const item = await env.DB.prepare("SELECT status, manual_value FROM items WHERE id = ? AND user_id = ?").bind(row.item_id, userId).first<{ status: string; manual_value: number | null }>();
+        if (item?.status === "terjual") {
+          await env.DB.prepare("UPDATE listings SET status = 'terjual', sold_price = ?, sold_at = ?, updated_at = ? WHERE id = ? AND user_id = ? AND status = 'dijual'")
+            .bind(Math.round(Number(item.manual_value) || price), date, now, id, userId).run();
+          return json({ error: "Barang ini sudah dicatat laku di Barangku, jadi tidak dicatat lagi. Iklannya sudah ditutup." }, { status: 409 });
+        }
+      }
       const stmts: D1PreparedStatement[] = [];
-      const listingOpen = "EXISTS (SELECT 1 FROM listings WHERE id = ? AND user_id = ? AND status = 'dijual')";
+      // Iklan masih dibuka DAN barang Barangku-nya (kalau ada) belum terjual — atomik di batch.
+      const listingOpen = "EXISTS (SELECT 1 FROM listings l WHERE l.id = ? AND l.user_id = ? AND l.status = 'dijual' AND NOT EXISTS (SELECT 1 FROM items i WHERE i.id = l.item_id AND i.user_id = l.user_id AND i.status = 'terjual'))";
       let txId: string | null = null;
       if (raw.account_id) {
         const account = typeof raw.account_id === "string"
