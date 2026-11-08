@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-08 (3.9.0 siap di branch claude/sehat-pajak-20261108, menunggu gas)
+Terakhir diperbarui: 2026-11-08 (3.9.0 live, run #176)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,8 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-08 — 3.9.0 SIAP (branch `claude/sehat-pajak-20261108`), BELUM DEPLOY. PERLU SQL 0040.**
+- **2026-11-08 — 3.9.0 LIVE (run #176, commit b7a84c5). PERLU SQL 0040 (Bos konfirmasi dengan "gas").**
+  - Cek live: beranda 200, `/api/member/health/checks` tanpa sesi 401, string 3.9.0 & kartu "Kesehatan & Asuransi" ada di bundle.
   - **MIGRASI 0040 (`cloudflare/migrations/0040_health_followup_results.sql`)** — jalankan di D1 Console SETELAH 0038
     & 0039: `health_claims.followup_at`, `health_checks.results_json`. Tanpa 0040 kode tetap jalan (fallback
     `isMissingColumn`): angka hasil tidak tersimpan (respons `results_saved:false`, toast memberi tahu), pengingat
