@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-08 (3.12.1 live, run #180)
+Terakhir diperbarui: 2026-11-08 (3.12.2 live, run #181)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,11 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-08 — 3.12.2 LIVE (run #181, commit 9913184). Tanpa SQL.** Sidebar: maks 5 fitur (+ fitur yang sedang
+  dibuka) lalu "Semua fitur +N" (`/membership/fitur`). Halaman Semua fitur = hanya tombol, kolom tetap (LAYOUT3/LAYOUT2),
+  tanpa sakelar/animasi/kartu saran; atur fitur menu tetap via Pengaturan → Fitur. /app/more (HP) masih versi 3.12.0
+  (strip saran + cari) — belum disamakan.
 
 - **2026-11-08 — 3.12.1 LIVE (run #180, commit 737911c). Tanpa SQL.** "Atur fitur" di sidebar → `/membership/fitur?atur=1`
   (mode Atur langsung; kartu "Fitur kamu" disembunyikan saat Atur). Pop-up Pengaturan → Fitur diberi tombol ke tampilan
