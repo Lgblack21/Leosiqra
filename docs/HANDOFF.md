@@ -18,6 +18,16 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-08 (branch claude/fix-sehatku-20261108) — RILIS 3.6.6 siap, BELUM deploy (tunggu "gas"). Tanpa SQL.**
+  - Review Sehatku (backend + uji API/UI lokal). Diperbaiki: cron pengingat Cek & premi klaim dalam 1 UPDATE…RETURNING,
+    maks 25 user/putaran, push digabung per user, cek pakai jendela susulan 7 hari (29 Feb ikut); guard bayar premi
+    paralel (next_due harus sama); klaim cair Rp0 ditolak. Dites: 32 user/60 catatan penyerang → 25 lalu 6, notif mati
+    tidak pernah; 24 cek API (saldo, dobel, IDOR) lolos; UI web/tablet/HP 0 error JS.
+  - **MIGRASI 0039 (health_checks) belum dikonfirmasi dijalankan** — kalau belum, tab Cek tidak bisa menyimpan catatan.
+  - Catatan ⚪ belum dikerjakan: `item_key` cek bebas (tidak di-whitelist), JSON rusak → 500 generik, foto meal yatim di R2
+    kalau batch gagal, Asuransi menerima kartu kredit sedangkan Makanku tidak, hapus catatan makan/cek tidak menghapus
+    transaksinya (disengaja, respons `tx_kept`).
+
 - **2026-11-08 — 3.6.5 LIVE (run #172, commit 927faab, Release v3.6.5 otomatis). Tanpa SQL.**
   - Hasil jual tidak tercatat 2× (Barangku jual menutup iklan Ladangku; Laku menolak barang terjual, guard atomik).
     Dites lokal main vs rilis: main 1 jt → 2,6 jt (2 pemasukan), rilis 1 jt → 1,8 jt; urutan terbalik & iklan tanpa
