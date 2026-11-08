@@ -122,7 +122,7 @@ export const navGroups: NavGroup[] = [
 const extraTitles: Record<string, string> = {
   '/membership/contact': 'Upgrade ke PRO',
   '/membership/onboarding': 'Setup Awal',
-  '/membership/fitur': 'Semua fitur',
+  '/membership/fitur': 'Fitur lainnya',
   '/membership/aplikasi': 'Aplikasi terhubung',
   '/membership/kotak-masuk': 'Kotak Masuk',
   '/membership/dompet-bersama': 'Dompet Bersama',

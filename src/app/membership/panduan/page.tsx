@@ -255,7 +255,7 @@ const buildTourSteps = (): TourStep[] => {
       demo: 'menu',
       how: [
         'Menu kiri: Keuangan (Ringkasan, Transaksi, Laporan, Rekening) & Fitur',
-        '"Semua fitur" membuka daftar lengkap',
+        '"Fitur lainnya" membuka fitur yang belum ada di menu, Ctrl + K mencari semua fitur',
         'Tombol "Tambah transaksi" (atau tekan N) selalu siap',
       ],
     },

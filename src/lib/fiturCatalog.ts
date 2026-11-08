@@ -44,6 +44,8 @@ export type Fitur = {
   feature?: FeatureId;
   since?: string;
   keywords?: string;
+  /** Fitur tetap bisa dipakai paket Gratis; PRO dapat jatah lebih besar (dijalankan di Worker). */
+  pro?: string;
 };
 
 export const GOALS: { id: GoalId; label: string; sub: string; tone: string }[] = [
@@ -224,6 +226,7 @@ export const FITUR: Fitur[] = [
     icon: Users,
     goal: 'harta',
     keywords: 'pasangan keluarga patungan',
+    pro: 'PRO: 5 dompet, 10 anggota',
   },
   {
     key: 'kanvas',
@@ -278,6 +281,7 @@ export const FITUR: Fitur[] = [
     goal: 'hidup',
     feature: 'sehat',
     keywords: 'kesehatan bpjs asuransi makan kalori',
+    pro: 'PRO: analisis makanan 10×/hari',
   },
   {
     key: 'fokus',
@@ -300,6 +304,7 @@ export const FITUR: Fitur[] = [
     goal: 'hidup',
     feature: 'cerita',
     keywords: 'jurnal diary mood',
+    pro: 'PRO: 10 ilustrasi AI/bulan',
   },
   {
     key: 'stiker',
@@ -323,6 +328,7 @@ export const FITUR: Fitur[] = [
     goal: 'usaha',
     feature: 'ladang',
     keywords: 'usaha toko kasir jualan umkm',
+    pro: 'PRO: 5 akun tim',
   },
   {
     key: 'ai',
@@ -334,6 +340,7 @@ export const FITUR: Fitur[] = [
     goal: 'leo',
     feature: 'ai',
     keywords: 'chat asisten tanya',
+    pro: 'PRO: 50 chat/hari',
   },
   {
     key: 'panduan',
@@ -403,3 +410,6 @@ export const readSeen = (): Set<string> => {
     return new Set();
   }
 };
+
+// Jatah PRO per href fitur (untuk label PRO di menu samping).
+export const proHint = (href: string) => FITUR.find((f) => f.href === href)?.pro;

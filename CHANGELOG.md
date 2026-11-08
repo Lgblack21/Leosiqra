@@ -71,6 +71,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.12.0 | 8 Nov 2026 | Semua Fitur yang hidup |
 | 3.12.1 | 8 Nov 2026 | Atur fitur pakai tampilan baru |
 | 3.12.2 | 8 Nov 2026 | Semua fitur lebih rapi |
+| 3.12.3 | 8 Nov 2026 | Fitur lainnya + label PRO |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -84,6 +85,15 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.12.3 — 2026-11-08 — Fitur lainnya + label PRO
+
+- Menu samping kini memuat **6 fitur** (sampai Ladangku), lalu tombol **Fitur lainnya** untuk sisanya.
+- Halaman **Fitur lainnya** hanya berisi fitur yang belum ada di menu samping, jadi tidak ada yang dobel; kolomnya
+  menyesuaikan isi supaya tetap rapi.
+- Label **PRO** untuk akun Gratis pada fitur yang jatahnya lebih besar di paket PRO: AI Leo (50 chat/hari), Sehatku
+  (analisis makanan 10×/hari), Cerita Hari Ini (10 ilustrasi AI/bulan), Dompet Bersama (5 dompet, 10 anggota), dan
+  Ladangku (5 akun tim). Fiturnya tetap bisa dipakai dengan akun Gratis.
 
 ## 3.12.2 — 2026-11-08 — Semua fitur lebih rapi
 

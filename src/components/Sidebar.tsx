@@ -10,7 +10,8 @@ import { ChevronRight, X, ShieldCheck, Plus, Settings, Sparkles, LayoutGrid } fr
 import { cn } from '@/lib/utils';
 import { cloudflareApi } from '@/lib/cloudflare-api';
 import { keuanganNav, type NavItem } from '@/lib/navigation';
-import { featuresFromIds } from '@/lib/features';
+import { featuresFromIds, SIDEBAR_LIMIT } from '@/lib/features';
+import { proHint } from '@/lib/fiturCatalog';
 import { useFeatures } from '@/lib/useFeatures';
 import { useFeedback } from '@/components/ui/Feedback';
 import { useModal } from '@/context/ModalContext';
@@ -133,15 +134,31 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings, focusHidden = false }
           className={cn('relative shrink-0', active ? 'text-indigo-600' : 'text-slate-400')}
         />
         <span className={cn('relative flex-1 truncate', fullOnly)}>{item.label}</span>
-        {badge && <span className={cn('relative text-[12px] font-semibold text-slate-400', fullOnly)}>{badge}</span>}
+        {badge === 'PRO' ? (
+          <span
+            title={proHint(item.href)}
+            className={cn(
+              'relative rounded-md bg-gradient-to-r from-violet-500 to-fuchsia-500 px-1.5 py-px text-[10px] font-black tracking-wider text-white',
+              fullOnly,
+            )}
+          >
+            PRO
+          </span>
+        ) : badge ? (
+          <span className={cn('relative text-[12px] font-semibold text-slate-400', fullOnly)}>{badge}</span>
+        ) : null}
       </Link>
     );
   };
 
   const restricted = profile?.status === 'GUEST' || profile?.status === 'PENDING';
   const allFeatures = featuresFromIds(features.active);
+  // Member Gratis: label PRO pada fitur yang jatahnya lebih besar di paket PRO.
+  const isProActive =
+    profile?.plan === 'PRO' && (!profile.expiredAt || new Date(profile.expiredAt).getTime() > Date.now());
+  const proBadge = (href: string) => (profile && !isProActive && proHint(href) ? 'PRO' : undefined);
   const sidebarFeatures = (() => {
-    const shown = allFeatures.slice(0, 5);
+    const shown = allFeatures.slice(0, SIDEBAR_LIMIT);
     const current = allFeatures.find(
       (f) => !shown.includes(f) && (pathname === f.href || pathname?.startsWith(`${f.href}/`)),
     );
@@ -279,19 +296,21 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings, focusHidden = false }
                 Fitur
               </p>
               <div className="space-y-0.5">
-                {/* Ringkas: maksimal 5 fitur (+ fitur yang sedang dibuka); sisanya lewat Semua fitur. */}
-                {sidebarFeatures.shown.map((f) => renderItem({ label: f.label, href: f.href, icon: f.icon }))}
+                {/* Ringkas: maksimal SIDEBAR_LIMIT fitur (+ fitur yang sedang dibuka); sisanya lewat Fitur lainnya. */}
+                {sidebarFeatures.shown.map((f) =>
+                  renderItem({ label: f.label, href: f.href, icon: f.icon }, proBadge(f.href)),
+                )}
                 <Link
                   href="/membership/fitur"
                   onClick={closeOnMobile}
-                  title="Semua fitur"
+                  title="Fitur lainnya"
                   className={cn(
                     'relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-[14px] font-medium transition-colors hover:bg-slate-50 hover:text-slate-900 md:max-lg:justify-center md:max-lg:px-0 md:max-lg:py-2.5',
                     pathname === '/membership/fitur' ? 'bg-slate-100 text-slate-900' : 'text-slate-600',
                   )}
                 >
                   <LayoutGrid size={19} strokeWidth={1.9} className="relative shrink-0 text-slate-400" />
-                  <span className={cn('relative flex-1 truncate', fullOnly)}>Semua fitur</span>
+                  <span className={cn('relative flex-1 truncate', fullOnly)}>Fitur lainnya</span>
                   {sidebarFeatures.more ? (
                     <span className={cn('relative text-[12px] font-semibold text-slate-400', fullOnly)}>
                       +{sidebarFeatures.more}

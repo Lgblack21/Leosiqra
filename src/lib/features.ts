@@ -189,3 +189,8 @@ export const featuresFromIds = (ids: readonly string[]) =>
     .map((id) => BY_ID.get(id as FeatureId))
     .filter((f): f is Feature => Boolean(f))
     .sort((a, b) => (ORDER.get(a.id) ?? 99) - (ORDER.get(b.id) ?? 99));
+
+// Menu samping memuat paling banyak SIDEBAR_LIMIT fitur aktif (urutan FEATURES); sisanya ada di
+// halaman Fitur lainnya. Halaman itu menyembunyikan fitur yang sudah tampil di menu samping.
+export const SIDEBAR_LIMIT = 6;
+export const sidebarFeatures = (ids: readonly string[]) => featuresFromIds(ids).slice(0, SIDEBAR_LIMIT);

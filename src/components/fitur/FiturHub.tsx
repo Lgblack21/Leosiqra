@@ -4,20 +4,29 @@ import Link from 'next/link';
 import { HeaderSlot } from '@/components/Header';
 import { FITUR, GOALS, TONE, isNew, type Fitur, type GoalId } from '@/lib/fiturCatalog';
 
-const LAYOUT3: GoalId[][] = [
-  ['catat', 'usaha'],
-  ['harta', 'rencana', 'leo'],
-  ['hidup', 'bantuan'],
-];
-const LAYOUT2: GoalId[][] = [
-  ['catat', 'rencana', 'leo'],
-  ['harta', 'hidup', 'usaha', 'bantuan'],
-];
+const SIDEBAR_KEUANGAN = [...keuanganNav.map((n) => n.href), '/membership/transactions/input'];
+
+// Bagi kelompok ke n kolom: tiap kelompok (urutan GOALS) masuk ke kolom yang paling pendek, supaya kolom seimbang
+// walau isi berkurang (fitur yang sudah di menu samping disembunyikan).
+const balance = (groups: { id: GoalId; n: number }[], cols: number) => {
+  const out: GoalId[][] = Array.from({ length: cols }, () => []);
+  const h = Array(cols).fill(0);
+  for (const g of groups) {
+    const c = h.indexOf(Math.min(...h));
+    out[c].push(g.id);
+    h[c] += g.n + 1.5; // + judul kelompok
+  }
+  return out;
+};
 import { useFiturStatus, type Status } from '@/components/fitur/useFiturStatus';
+import { useFeatures } from '@/lib/useFeatures';
+import { usePlan } from '@/lib/usePlan';
+import { sidebarFeatures } from '@/lib/features';
+import { keuanganNav } from '@/lib/navigation';
 import { APP_VERSION } from '@/lib/version';
 import { cn } from '@/lib/utils';
 
-// Semua fitur: hanya tombol fitur, dikelompokkan per tujuan dalam kolom yang rapi.
+// Fitur lainnya: hanya tombol fitur yang belum ada di menu samping, dikelompokkan per tujuan dalam kolom tetap.
 // Baris kedua tiap tombol = status singkat dari data user (kalau ada), selain itu subjudul.
 const toneText = (s?: Status) =>
   s?.tone === 'good'
@@ -28,7 +37,7 @@ const toneText = (s?: Status) =>
         ? 'text-rose-600 dark:text-rose-400'
         : 'text-slate-500 dark:text-slate-400';
 
-function FiturButton({ f, s, to }: { f: Fitur; s?: Status; to: string }) {
+function FiturButton({ f, s, to, showPro }: { f: Fitur; s?: Status; to: string; showPro: boolean }) {
   const t = TONE[GOALS.find((g) => g.id === f.goal)?.tone ?? 'slate'];
   const Icon = f.icon;
   return (
@@ -47,6 +56,14 @@ function FiturButton({ f, s, to }: { f: Fitur; s?: Status; to: string }) {
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
           <span className="truncate text-[15px] font-bold text-slate-900 dark:text-white">{f.label}</span>
+          {showPro && f.pro ? (
+            <span
+              title={f.pro}
+              className="shrink-0 rounded-md bg-gradient-to-r from-violet-500 to-fuchsia-500 px-1.5 py-px text-[9.5px] font-black tracking-wider text-white"
+            >
+              PRO
+            </span>
+          ) : null}
           {isNew(f, APP_VERSION) ? (
             <span className="shrink-0 rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-400 px-1.5 py-px text-[9.5px] font-black uppercase tracking-wider text-white">
               Baru
@@ -63,10 +80,18 @@ function FiturButton({ f, s, to }: { f: Fitur; s?: Status; to: string }) {
 
 export function FiturHub({ variant = 'web' }: { variant?: 'web' | 'app' }) {
   const { status } = useFiturStatus();
+  const { active } = useFeatures();
+  const isPro = usePlan();
+  // Yang sudah ada di menu samping tidak diulang: menu Keuangan, tombol Catat, dan fitur yang tampil di sana.
+  const inSidebar = new Set<string>([...SIDEBAR_KEUANGAN, ...sidebarFeatures(active).map((f) => f.href)]);
+  const visible = (f: Fitur) => !inSidebar.has(f.href);
+  const sizes = GOALS.map((g) => ({ id: g.id, n: FITUR.filter((f) => f.goal === g.id && visible(f)).length })).filter(
+    (g) => g.n > 0,
+  );
   const href = (f: Fitur) => (variant === 'app' && f.appHref ? f.appHref : f.href);
   const group = (id: GoalId) => {
     const g = GOALS.find((x) => x.id === id)!;
-    const items = FITUR.filter((f) => f.goal === id);
+    const items = FITUR.filter((f) => f.goal === id && visible(f));
     if (!items.length) return null;
     const t = TONE[g.tone];
     return (
@@ -82,7 +107,7 @@ export function FiturHub({ variant = 'web' }: { variant?: 'web' | 'app' }) {
           <p className="pl-[18px] text-[12.5px] text-slate-400">{g.sub}</p>
         </div>
         {items.map((f) => (
-          <FiturButton key={f.key} f={f} s={status[f.key]} to={href(f)} />
+          <FiturButton key={f.key} f={f} s={status[f.key]} to={href(f)} showPro={isPro === false} />
         ))}
       </section>
     );
@@ -92,9 +117,9 @@ export function FiturHub({ variant = 'web' }: { variant?: 'web' | 'app' }) {
     <div className={cn('mx-auto max-w-6xl pb-14 text-slate-900 dark:text-white', variant === 'app' && 'px-4 pt-2')}>
       <div className="mb-7 flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-[30px] font-black tracking-tight md:text-[38px]">Semua fitur</h1>
+          <h1 className="text-[30px] font-black tracking-tight md:text-[38px]">Fitur lainnya</h1>
           <p className="text-[14.5px] text-slate-500 dark:text-slate-400">
-            Semua alat keuanganmu dalam satu tempat. Tekan Ctrl + K untuk mencari dari mana saja.
+            Fitur yang belum ada di menu samping. Tekan Ctrl + K untuk mencari semua fitur dari mana saja.
           </p>
         </div>
         {variant === 'web' ? <HeaderSlot /> : null}
@@ -102,14 +127,14 @@ export function FiturHub({ variant = 'web' }: { variant?: 'web' | 'app' }) {
 
       {/* Kolom tetap (bukan CSS columns) supaya urutan kelompok selalu sama di semua layar. */}
       <div className="hidden grid-cols-3 items-start gap-5 xl:grid">
-        {LAYOUT3.map((col, ci) => (
+        {balance(sizes, 3).map((col, ci) => (
           <div key={ci} className="space-y-5">
             {col.map((id) => group(id))}
           </div>
         ))}
       </div>
       <div className="hidden grid-cols-2 items-start gap-5 md:grid xl:hidden">
-        {LAYOUT2.map((col, ci) => (
+        {balance(sizes, 2).map((col, ci) => (
           <div key={ci} className="space-y-5">
             {col.map((id) => group(id))}
           </div>
