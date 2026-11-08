@@ -68,6 +68,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.10.0 | 8 Nov 2026 | Kanvas: rencanakan keuangan di papan bebas |
 | 3.11.0 | 8 Nov 2026 | Kanvas versi 2 + Cek Keuangan |
 | 3.11.1 | 8 Nov 2026 | Perbaikan Kanvas |
+| 3.12.0 | 8 Nov 2026 | Semua Fitur yang hidup |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -81,6 +82,21 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.12.0 — 2026-11-08 — Semua Fitur yang hidup
+
+- Halaman **Semua fitur** dirombak total:
+  - **Status langsung di tiap fitur** dari datamu sendiri — Kekayaan "Bersih Rp…", Kanvas "3 kanvas · Beli Rumah",
+    Cek Keuangan "4 dari 5 aman", Langganan per bulan, transaksi rutin berikutnya, catatan hari ini, rantai Fokus.
+  - **Untukmu hari ini** bersama Leo: saran yang paling berguna sekarang (mis. dana darurat masih tipis, lanjutkan
+    kanvas, catat hari ini).
+  - **Fitur kamu** tampil sebagai kartu besar dengan grafik mini dan cincin progres.
+  - Fitur dikelompokkan **per tujuan**: Catat & pantau, Tumbuhkan harta, Rencanakan, Sehat & tenang, Usaha, Leo,
+    Bantuan — kini semua fitur tampil, termasuk yang belum dipasang di menu.
+  - Lencana **Baru** untuk fitur terbaru dan ajakan **Coba** untuk fitur yang belum pernah kamu buka.
+  - **Atur menu** langsung di halaman: sakelar tampil/sembunyi per fitur.
+- **Cari fitur dari mana saja**: tekan **Ctrl + K** (⌘ + K di Mac) di web, ketik, lalu Enter.
+- Aplikasi HP: halaman **Lainnya** kini punya "Untukmu hari ini", kolom cari, status singkat, dan lencana Baru.
 
 ## 3.11.1 — 2026-11-08 — Perbaikan Kanvas
 

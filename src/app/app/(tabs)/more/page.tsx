@@ -1,6 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
+import { AppSaranStrip } from '@/components/fitur/AppSaranStrip';
+import { useFiturStatus } from '@/components/fitur/useFiturStatus';
+import { FITUR, isNew } from '@/lib/fiturCatalog';
+import { APP_VERSION } from '@/lib/version';
 import {
   AlarmClock,
   BarChart3,
@@ -212,24 +217,58 @@ const WEB_FEATURES: MenuItem[] = [
   },
 ];
 
+// Status singkat & lencana "Baru" dari katalog fitur yang sama dengan halaman web.
+const catalogOf = (href: string) => FITUR.find((f) => f.appHref === href || f.href === href);
+
 export default function AppMorePage() {
+  const { status, saran } = useFiturStatus();
+  const [q, setQ] = useState('');
+  const term = q.trim().toLowerCase();
+  const items = term
+    ? IN_APP.filter((i) =>
+        `${i.label} ${catalogOf(i.href)?.keywords ?? ''} ${catalogOf(i.href)?.sub ?? ''}`.toLowerCase().includes(term),
+      )
+    : IN_APP;
   return (
     <div className="max-w-md mx-auto px-5 pt-8 space-y-6">
       <FadeIn>
         <h1 className="text-xl font-black text-slate-900 dark:text-white">Lainnya</h1>
       </FadeIn>
+      <AppSaranStrip saran={saran} />
+      <input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Cari fitur…"
+        className="h-11 w-full rounded-2xl bg-white px-4 text-sm font-semibold text-slate-900 outline-none ring-1 ring-slate-200 placeholder:font-medium placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-400 dark:bg-slate-900 dark:text-white dark:ring-slate-700"
+      />
 
       <StaggerList className="grid grid-cols-4 gap-3">
-        {IN_APP.map(({ label, href, icon: Icon, color }) => (
-          <StaggerItem key={href}>
-            <Link href={href} onClick={lightTap} className="flex flex-col items-center gap-2 text-center">
-              <span className={`w-14 h-14 rounded-2xl flex items-center justify-center ${color}`}>
-                <Icon size={22} />
-              </span>
-              <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 leading-tight">{label}</span>
-            </Link>
-          </StaggerItem>
-        ))}
+        {items.map(({ label, href, icon: Icon, color }) => {
+          const f = catalogOf(href);
+          const st = f ? status[f.key] : undefined;
+          return (
+            <StaggerItem key={href}>
+              <Link href={href} onClick={lightTap} className="relative flex flex-col items-center gap-1.5 text-center">
+                {f && isNew(f, APP_VERSION) ? (
+                  <span className="absolute -top-1.5 right-0 z-10 rounded-full bg-gradient-to-r from-fuchsia-500 to-orange-400 px-1.5 py-px text-[8.5px] font-black uppercase text-white">
+                    Baru
+                  </span>
+                ) : null}
+                <span className={`w-14 h-14 rounded-2xl flex items-center justify-center ${color}`}>
+                  <Icon size={22} />
+                </span>
+                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 leading-tight">{label}</span>
+                {st ? (
+                  <span
+                    className={`line-clamp-1 text-[9.5px] font-semibold leading-tight ${st.tone === 'warn' ? 'text-amber-600' : st.tone === 'bad' ? 'text-rose-600' : st.tone === 'good' ? 'text-emerald-600' : 'text-slate-400'}`}
+                  >
+                    {st.text}
+                  </span>
+                ) : null}
+              </Link>
+            </StaggerItem>
+          );
+        })}
       </StaggerList>
 
       <Link

@@ -21,6 +21,7 @@ import { isWebDarkReady } from '@/lib/webTheme';
 import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 import { initNativePush } from '@/lib/nativePush';
+import { CommandPalette } from '@/components/fitur/CommandPalette';
 
 const ONBOARDING_PATH = '/membership/onboarding';
 // Halaman layar penuh: tanpa sidebar, header, dan tab bar HP (punya navigasi sendiri).
@@ -217,6 +218,7 @@ function MembershipShell({ children }: { children: React.ReactNode }) {
           </div>
           <GlobalModalWrapper />
           <OnboardingTour />
+          <CommandPalette />
         </div>
       </ModalProvider>
     </FeedbackProvider>
