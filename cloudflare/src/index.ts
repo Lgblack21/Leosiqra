@@ -13244,7 +13244,7 @@ const readMealTarget = async (env: Env, userId: string) => {
 
 // Biaya analisis: jatah gratis harian (AI_LIMITS.meal) dulu, lalu MEAL_AI_PRICE koin. Koin dipotong
 // atomik bersyarat saldo cukup SEBELUM memanggil AI; analisis gagal (respons bukan 2xx / error) →
-// jatah dikembalikan atau koin di-refund (idem `refund:<kunci>`), jadi user tidak pernah rugi.
+// jatah dikembalikan atau koin di-refund (idem `refund:<kunci>`) — kecuali 422 (model sudah dipanggil).
 const MEAL_AI_PRICE = 200;
 const withMealCharge = async (request: Request, env: Env, run: () => Promise<Response>) => {
   const auth = await requireSession(env, request);
@@ -13283,7 +13283,10 @@ const withMealCharge = async (request: Request, env: Env, run: () => Promise<Res
     throw e;
   }
   if (!res.ok) {
-    await refund();
+    // 422 = model SUDAH dipanggil (berbayar) tapi hasilnya "bukan makanan"/tak terbaca → tetap terpakai;
+    // kalau dikembalikan, foto/ketikan apa saja bisa dianalisis tanpa batas. Validasi (400/413), rate
+    // limit (429) & gangguan provider (503) terjadi sebelum/tanpa tagihan → tetap dikembalikan.
+    if (res.status !== 422) await refund();
     return res;
   }
   const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
@@ -13481,6 +13484,8 @@ async function handleMemberMeals(request: Request, env: Env, url: URL) {
       let photoKey: string | null = null;
       if (typeof raw.photoBase64 === "string" && raw.photoBase64) {
         if (!env.FILES_BUCKET) return json({ error: "Penyimpanan foto belum aktif." }, { status: 503 });
+        // Tolak sebelum atob (longgar 10% untuk prefix/spasi; batas pasti tetap dicek sesudah decode).
+        if (raw.photoBase64.length > Math.ceil(((MEAL_PHOTO_MAX_BYTES * 4) / 3) * 1.1) + 200) return json({ error: "Foto terlalu besar (maks 2 MB)." }, { status: 413 });
         let bytes: Uint8Array;
         try {
           const binary = atob(raw.photoBase64.replace(/^data:[^,]*,/, "").replace(/\s/g, ""));
@@ -13794,7 +13799,7 @@ async function handleMemberHealth(request: Request, env: Env, url: URL) {
           out.kind = raw.kind;
         }
         if (!partial || raw.period !== undefined) {
-          const p = typeof raw.period === "string" && raw.period in POLICY_PERIODS ? raw.period : partial ? null : "bulanan";
+          const p = typeof raw.period === "string" && Object.hasOwn(POLICY_PERIODS, raw.period) ? raw.period : partial ? null : "bulanan";
           if (!p) return "Periode premi tidak dikenal.";
           out.period = p;
         }
