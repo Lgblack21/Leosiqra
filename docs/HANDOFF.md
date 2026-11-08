@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-08 (3.11.0 deploy setelah gas)
+Terakhir diperbarui: 2026-11-08 (3.11.0 live, run #178)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-08 — 3.11.0 (branch `claude/kanvas-v2-20261108`): Kanvas v2 + Cek Keuangan. Tanpa SQL baru (pakai 0041).**
+- **2026-11-08 — 3.11.0 LIVE (run #178, commit f8551dd): Kanvas v2 + Cek Keuangan. Tanpa SQL baru (pakai 0041).**
   - Kanvas web tidak lagi layar penuh (dihapus dari FULLSCREEN_PATHS); app tetap layar penuh. Tab + picker template,
     `?id=` / `?baru=<template>` (dipakai saran kartu akhir).
   - Template v2 (`src/lib/kanvas/templates.ts`): kartu data/tanya/cek/tugas/angka/hitung/info; selesai = dijawab,
