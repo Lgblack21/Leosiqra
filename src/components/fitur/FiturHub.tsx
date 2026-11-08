@@ -182,6 +182,7 @@ export function FiturHub({ variant = 'web' }: { variant?: 'web' | 'app' }) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- riwayat buka fitur hanya ada di perangkat (setelah hydrate)
     setSeen(readSeen());
+    if (new URLSearchParams(window.location.search).get('atur')) setAtur(true);
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
@@ -356,7 +357,7 @@ export function FiturHub({ variant = 'web' }: { variant?: 'web' | 'app' }) {
             </div>
           </section>
 
-          {pinned.length ? (
+          {pinned.length && !atur ? (
             <section>
               <div className="mb-3 flex items-baseline justify-between">
                 <h2 className="text-[17px] font-black">Fitur kamu</h2>

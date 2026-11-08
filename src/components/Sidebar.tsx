@@ -12,7 +12,6 @@ import { cloudflareApi } from '@/lib/cloudflare-api';
 import { keuanganNav, type NavItem } from '@/lib/navigation';
 import { featuresFromIds } from '@/lib/features';
 import { useFeatures } from '@/lib/useFeatures';
-import { openSettings } from '@/lib/settingsPanel';
 import { useFeedback } from '@/components/ui/Feedback';
 import { useModal } from '@/context/ModalContext';
 import { usePrimaryAdd } from '@/lib/useRecordingPrefs';
@@ -274,21 +273,21 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings, focusHidden = false }
                 {featuresFromIds(features.active).map((f) =>
                   renderItem({ label: f.label, href: f.href, icon: f.icon }),
                 )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    openSettings('fitur');
-                    closeOnMobile();
-                  }}
+                <Link
+                  href="/membership/fitur?atur=1"
+                  onClick={closeOnMobile}
                   title="Atur fitur"
-                  className="relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-[14px] font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 md:max-lg:justify-center md:max-lg:px-0 md:max-lg:py-2.5"
+                  className={cn(
+                    'relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-[14px] font-medium transition-colors hover:bg-slate-50 hover:text-slate-900 md:max-lg:justify-center md:max-lg:px-0 md:max-lg:py-2.5',
+                    pathname === '/membership/fitur' ? 'bg-slate-100 text-slate-900' : 'text-slate-600',
+                  )}
                 >
                   <LayoutGrid size={19} strokeWidth={1.9} className="relative shrink-0 text-slate-400" />
                   <span className={cn('relative flex-1 truncate', fullOnly)}>Atur fitur</span>
                   <span className={cn('relative text-[12px] font-semibold text-slate-400', fullOnly)}>
                     {features.active.length} aktif
                   </span>
-                </button>
+                </Link>
               </div>
             </div>
           </div>

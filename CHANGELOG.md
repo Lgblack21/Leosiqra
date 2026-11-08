@@ -69,6 +69,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.11.0 | 8 Nov 2026 | Kanvas versi 2 + Cek Keuangan |
 | 3.11.1 | 8 Nov 2026 | Perbaikan Kanvas |
 | 3.12.0 | 8 Nov 2026 | Semua Fitur yang hidup |
+| 3.12.1 | 8 Nov 2026 | Atur fitur pakai tampilan baru |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -82,6 +83,12 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.12.1 — 2026-11-08 — Atur fitur pakai tampilan baru
+
+- **Atur fitur** di menu samping kini membuka halaman Semua fitur yang baru langsung dalam mode Atur: sakelar
+  tampil/sembunyi per fitur, dikelompokkan per tujuan, lengkap dengan status tiap fitur.
+- Pop-up Pengaturan → Fitur yang lama diberi tombol ke tampilan baru.
 
 ## 3.12.0 — 2026-11-08 — Semua Fitur yang hidup
 
