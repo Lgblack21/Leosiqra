@@ -23,10 +23,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     dicek ulang terhadap main 3.6.4: merge bersih, lolos aturan workflow Terbitkan artikel, tsc + build gabungan OK.
     Artikel gaji 5 juta: perubahan `src/app/panduan/cara-mengatur-gaji/page.tsx` (tautan internal) DIKELUARKAN —
     file itu di luar daftar izin workflow sehingga terbit selalu gagal. Tambahkan tautannya terpisah setelah terbit.
-  - 13 branch lama sudah setara main (isi sama, beda commit) — BELUM terhapus (hapus branch remote diblokir mode
-    otomatis). Hapus manual di GitHub › Branches kalau mau: app-tag-lengkap, fitur-fix-input-suara-20261012,
-    friendly-galileo-7cxowa, friendly-galileo-7yleap, pengingat-pintar, push-fcm, push-foreground,
-    seo-meta-uang-kas-spt, seo-og-twitter-meta, sesi-app-native, skor-kesehatan, web-dark-bertahap, web-dark-sisa.
+  - 13 branch lama yang sudah setara main SUDAH DIHAPUS (2026-11-08, Bos lewat Termux; dicek ulang dari session).
   - Deploy run #171 (dipicu akun ini 08:30 UTC) = main d4ae39a, kode sama dengan 3.6.4 yang sudah live di #170.
 
 - **2026-11-08 — RILIS 3.6.4: LIVE (run 42403091544, commit 36d6649). Tanpa SQL. Belum dicek: logo bank di prod.**
