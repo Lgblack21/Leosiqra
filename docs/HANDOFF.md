@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-08 (3.7.0 live, run #174)
+Terakhir diperbarui: 2026-11-08 (3.8.0 live, run #175)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-08 (branch claude/fitur-stiker-20261108) — RILIS 3.8.0 siap, BELUM deploy (tunggu "gas"). Tanpa SQL.**
+- **2026-11-08 — 3.8.0 LIVE (run #175, commit e4b191a, Release v3.8.0): Stikerku fitur sendiri. Tanpa SQL.**
   - Stikerku jadi fitur terpisah: `/membership/stiker` (FULLSCREEN_PATHS) & `/app/stiker`, fitur id `stiker`
     (features.ts + PREF_FEATURES Worker + grid Lainnya HP). Komponen pindah ke `src/components/stiker/` (StikerApp,
     stickers). Tab Stiker dicabut dari CeritaApp (kembali ke versi 86262b1) + ikon pintasan di dock Cerita.
