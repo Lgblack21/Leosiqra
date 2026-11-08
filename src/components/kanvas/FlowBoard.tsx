@@ -5,7 +5,7 @@ import type { Account } from '@/lib/services/accountService';
 import type { Transaction } from '@/lib/services/transactionService';
 import { computeFlow, rp, short, type FlowPeriod } from '@/lib/kanvas/data';
 import { Board, type BoardEdge, type BoardHandle, type BoardNode } from '@/components/kanvas/Board';
-import { StartNode } from '@/components/kanvas/cards';
+import { LeoBadge } from '@/components/ai/LeoGuide';
 import { cn } from '@/lib/utils';
 
 // "Dari catatanmu": uang masuk → rekening → kategori pengeluaran, tebal garis = besar uang.
@@ -74,12 +74,12 @@ export function FlowBoard({ tx, accounts }: { tx: Transaction[] | null; accounts
     }
     // Lingkaran "Uang masuk" di depan kolom pemasukan.
     layout.mulai = narrow
-      ? [W + 6 - 54, -150]
+      ? [W + 6 - 85, -190]
       : [
-          -210,
+          -250,
           70 +
             (Math.max(1, cols[0].length) * (FLOW_H + FLOW_GAP)) / 2 -
-            54 +
+            60 +
             ((tallest - cols[0].length) * (FLOW_H + FLOW_GAP)) / 2,
         ];
     const at = (id: string) => moved[id] ?? layout[id] ?? [0, 0];
@@ -87,8 +87,19 @@ export function FlowBoard({ tx, accounts }: { tx: Transaction[] | null; accounts
       id: 'mulai',
       x: at('mulai')[0],
       y: at('mulai')[1],
-      width: 108,
-      content: <StartNode text="UANG · MASUK · UANG · MASUK ·" />,
+      width: 170,
+      content: (
+        <div
+          data-handle="mulai"
+          className="cursor-grab rounded-[24px] bg-white p-3 text-center shadow-[0_14px_36px_-18px_rgba(15,23,42,.35)] ring-1 ring-slate-200/80 active:cursor-grabbing dark:bg-slate-900 dark:ring-slate-800"
+        >
+          <div className="flex justify-center">
+            <LeoBadge topic="investasi" size={48} />
+          </div>
+          <p className="mt-1 text-[10.5px] font-black uppercase tracking-[0.18em] text-slate-400">Mulai</p>
+          <p className="text-[14px] font-black text-slate-900 dark:text-white">Uangmu datang</p>
+        </div>
+      ),
     });
     edges.push({ from: 'mulai', to: 'h-in', color: '#10b981', width: 2.5 });
     cols.forEach((list, c) => {

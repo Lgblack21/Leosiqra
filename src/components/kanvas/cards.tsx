@@ -1,10 +1,12 @@
 'use client';
 
 import { Check, ChevronRight, Lock, Trash2 } from 'lucide-react';
+import { LeoBadge } from '@/components/ai/LeoGuide';
 import { rp, type Metrics } from '@/lib/kanvas/data';
 import {
   cardState,
   chapterProgress,
+  counts,
   type Card,
   type CardState,
   type Chapter,
@@ -106,25 +108,39 @@ function StatusLine({ card, st, s, m, c }: { card: Card; st: CardState; s: State
   return <span className="text-[12px] text-slate-400">Belum dijawab</span>;
 }
 
-function Ring({ got, total, done }: { got: number; total: number; done: boolean }) {
+// Warna per bab (berurutan) — tiap bab punya identitas sendiri di papan.
+export const BAB_COLORS: Color[] = ['indigo', 'emerald', 'amber', 'rose', 'sky', 'violet', 'teal'];
+export const babColor = (i: number) => COLORS[BAB_COLORS[i % BAB_COLORS.length]];
+
+const CHIP: Record<Card['kind'], string> = {
+  data: 'bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300',
+  tanya: 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
+  cek: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
+  tugas: 'bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300',
+  angka: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300',
+  hitung: 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300',
+  info: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+};
+
+function Ring({ got, total }: { got: number; total: number }) {
   const r = 15;
   const len = 2 * Math.PI * r;
   return (
-    <span className="relative flex h-10 w-10 shrink-0 items-center justify-center">
+    <span className="relative flex h-11 w-11 shrink-0 items-center justify-center">
       <svg viewBox="0 0 36 36" className="absolute inset-0 -rotate-90">
-        <circle cx="18" cy="18" r={r} fill="none" strokeWidth="3" className="stroke-slate-200 dark:stroke-slate-700" />
+        <circle cx="18" cy="18" r={r} fill="none" strokeWidth="3.5" className="stroke-white/25" />
         <circle
           cx="18"
           cy="18"
           r={r}
           fill="none"
-          strokeWidth="3"
+          strokeWidth="3.5"
           strokeLinecap="round"
-          className={done ? 'stroke-indigo-500' : 'stroke-indigo-400'}
+          className="stroke-white transition-all duration-500"
           strokeDasharray={`${total ? (got / total) * len : 0} ${len}`}
         />
       </svg>
-      <span className="text-[10.5px] font-black tabular-nums text-slate-700 dark:text-slate-200">
+      <span className="text-[11px] font-black tabular-nums text-white">
         {got}/{total}
       </span>
     </span>
@@ -147,30 +163,34 @@ export function ChapterNode({
   onOpen: (id: string) => void;
 }) {
   const p = chapterProgress(ch, s, c.m);
+  const col = babColor(index);
   return (
     <div
       className={cn(
-        'rounded-[24px] p-2.5 ring-1 transition-colors',
-        p.done
-          ? 'bg-indigo-50/90 ring-indigo-200 dark:bg-indigo-500/10 dark:ring-indigo-500/30'
-          : 'bg-slate-100/80 ring-slate-200 dark:bg-slate-900/80 dark:ring-slate-800',
+        'overflow-hidden rounded-[26px] bg-white shadow-[0_14px_36px_-18px_rgba(15,23,42,.35)] ring-1 transition-shadow dark:bg-slate-900',
+        p.done ? 'ring-2 ring-emerald-400/70' : 'ring-slate-200/80 dark:ring-slate-800',
       )}
     >
       <div
         data-handle={ch.id}
-        className="flex cursor-grab items-center gap-2 px-1.5 pb-2.5 pt-1 active:cursor-grabbing"
+        className={cn(
+          'flex cursor-grab items-center gap-3 bg-gradient-to-br px-4 py-3.5 text-white active:cursor-grabbing',
+          col.head,
+        )}
       >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-[20px] backdrop-blur">
+          {ch.emoji}
+        </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[10.5px] font-black uppercase tracking-[0.18em] text-slate-400">
-            Bab {index + 1} <span className="ml-0.5">{ch.emoji}</span>
-          </p>
-          <p className="truncate text-[15px] font-black leading-tight text-slate-900 dark:text-white">{ch.title}</p>
+          <p className="text-[10.5px] font-black uppercase tracking-[0.2em] text-white/75">Bab {index + 1}</p>
+          <p className="truncate text-[16px] font-black leading-tight">{ch.title}</p>
         </div>
-        <Ring got={p.got} total={p.total} done={p.done} />
+        <Ring got={p.got} total={p.total} />
       </div>
-      <div className="space-y-2">
+      <div className="space-y-2 bg-slate-50/70 p-2.5 dark:bg-slate-950/40">
         {ch.cards.map((card) => {
           const st = cardState(card, s, c.m);
+          const done = st === 'answered' || st === 'auto';
           return (
             <button
               key={card.id}
@@ -178,19 +198,31 @@ export function ChapterNode({
               data-card={card.id}
               onClick={() => onOpen(card.id)}
               className={cn(
-                'block w-full rounded-2xl bg-white p-3 text-left shadow-[0_1px_2px_rgba(15,23,42,.06)] ring-1 transition hover:ring-slate-300 dark:bg-slate-950 dark:hover:ring-slate-600',
+                'relative block w-full rounded-2xl bg-white p-3 pl-3.5 text-left ring-1 transition hover:-translate-y-px hover:shadow-md dark:bg-slate-900',
                 selected === card.id
-                  ? 'ring-2 ring-indigo-500 dark:ring-indigo-400'
+                  ? 'shadow-md ring-2 ring-slate-900 dark:ring-white'
                   : 'ring-slate-200/80 dark:ring-slate-800',
               )}
             >
-              <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+              <span className="flex items-center gap-1.5">
+                <span className={cn('rounded-full px-2 py-0.5 text-[10.5px] font-bold', CHIP[card.kind])}>
+                  {KIND_LABEL[card.kind]}
+                </span>
                 {card.kind === 'data' && st === 'auto' ? (
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  <span className="text-[10.5px] font-semibold text-emerald-600 dark:text-emerald-400">● terisi</span>
                 ) : null}
-                {KIND_LABEL[card.kind]}
+                <span className="flex-1" />
+                {done ? (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500">
+                    <Check size={12} strokeWidth={3.5} className="text-white" />
+                  </span>
+                ) : st === 'skipped' ? (
+                  <span className="h-5 w-5 rounded-full border-2 border-dashed border-slate-300 dark:border-slate-600" />
+                ) : counts(card) ? (
+                  <span className="h-5 w-5 rounded-full border-2 border-slate-200 dark:border-slate-700" />
+                ) : null}
               </span>
-              <span className="mt-1 block text-[13.5px] font-bold leading-snug text-slate-800 dark:text-slate-100">
+              <span className="mt-1.5 block text-[13.5px] font-bold leading-snug text-slate-800 dark:text-slate-100">
                 {cardTitle(card)}
               </span>
               <span className="mt-1.5 block">
@@ -199,12 +231,12 @@ export function ChapterNode({
             </button>
           );
         })}
+        {p.done ? (
+          <p className="flex items-center justify-center gap-1.5 rounded-2xl bg-emerald-50 py-2 text-[12px] font-black text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+            <Check size={14} strokeWidth={3} /> Bab {index + 1} selesai
+          </p>
+        ) : null}
       </div>
-      {p.done ? (
-        <span className="mt-2.5 inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-1 text-[10.5px] font-black uppercase tracking-[0.14em] text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300">
-          <Check size={12} strokeWidth={3} /> Bab selesai
-        </span>
-      ) : null}
     </div>
   );
 }
@@ -294,27 +326,22 @@ export function TableNode({ kind, m, a }: { kind: TableKind; m: Metrics; a: Reco
   );
 }
 
-export function StartNode({ text }: { text: string }) {
-  const chars = text.split('');
+export function StartNode({ t, prog }: { t: Template; prog: { got: number; total: number } }) {
   return (
-    <div data-handle="mulai" className="relative h-[108px] w-[108px] cursor-grab active:cursor-grabbing">
-      <svg viewBox="0 0 108 108" className="absolute inset-0 animate-[spin_24s_linear_infinite]">
-        {chars.map((ch, i) => (
-          <text
-            key={i}
-            x="54"
-            y="10"
-            textAnchor="middle"
-            className="fill-slate-500 text-[10px] font-black dark:fill-slate-400"
-            transform={`rotate(${(i * 360) / chars.length} 54 54)`}
-          >
-            {ch}
-          </text>
-        ))}
-      </svg>
-      <span className="absolute inset-[26px] flex items-center justify-center rounded-full bg-slate-900 text-[24px] text-white shadow-lg dark:bg-white dark:text-slate-900">
-        ↓
-      </span>
+    <div
+      data-handle="mulai"
+      className="w-[220px] cursor-grab rounded-[26px] bg-white p-4 text-center shadow-[0_14px_36px_-18px_rgba(15,23,42,.35)] ring-1 ring-slate-200/80 active:cursor-grabbing dark:bg-slate-900 dark:ring-slate-800"
+    >
+      <div className="flex justify-center">
+        <LeoBadge topic="investasi" size={64} />
+      </div>
+      <p className="mt-2 text-[10.5px] font-black uppercase tracking-[0.2em] text-slate-400">Mulai di sini</p>
+      <p className="text-[16px] font-black text-slate-900 dark:text-white">
+        {t.emoji} {t.title}
+      </p>
+      <p className="mt-0.5 text-[12px] text-slate-500">
+        {t.chapters.length} bab · {prog.total} kartu · ±{Math.max(3, Math.round(prog.total * 0.4))} menit
+      </p>
     </div>
   );
 }
@@ -334,54 +361,75 @@ export function FinalNode({
 }) {
   const unlocked = prog.babDone === prog.babTotal;
   const g = t.goal?.(c) ?? null;
+  const pctDone = prog.total ? Math.round((prog.got / prog.total) * 100) : 0;
   return (
     <div
       data-handle="akhir"
-      className="cursor-grab rounded-[24px] bg-white p-5 shadow-[0_18px_40px_-16px_rgba(15,23,42,.35)] ring-1 ring-slate-200 active:cursor-grabbing dark:bg-slate-950 dark:ring-slate-800"
+      className="cursor-grab overflow-hidden rounded-[28px] bg-slate-950 p-5 text-white shadow-[0_24px_50px_-18px_rgba(15,23,42,.6)] ring-1 ring-white/10 active:cursor-grabbing"
     >
-      <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-        {unlocked ? <Check size={12} strokeWidth={3} className="text-emerald-500" /> : <Lock size={11} />} Selesai
-      </p>
-      <p className="mt-0.5 text-[19px] font-black text-slate-900 dark:text-white">
-        {t.emoji} {t.finalTitle}
-      </p>
-      <p className="text-[12.5px] text-slate-500">
-        {unlocked ? 'Semua bab selesai — ini langkah berikutnya.' : `Terbuka setelah ${prog.babTotal} bab selesai`}
-      </p>
-      {g ? (
-        <div className="mt-3 rounded-2xl bg-slate-50 p-3 dark:bg-slate-900">
-          <p className={cn('text-[19px] font-black', g.tone ? TONE_CLS[g.tone] : 'text-slate-900 dark:text-white')}>
-            {g.value}
+      <div className="flex items-center gap-3">
+        <span
+          className={cn(
+            'flex h-11 w-11 items-center justify-center rounded-2xl text-[22px]',
+            unlocked ? 'bg-emerald-400/20' : 'bg-white/10',
+          )}
+        >
+          {unlocked ? t.emoji : <Lock size={18} className="text-white/70" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10.5px] font-black uppercase tracking-[0.2em] text-amber-300">
+            {unlocked ? 'Siap dijalankan' : 'Hasil akhir'}
           </p>
-          {g.note ? <p className="text-[12px] text-slate-500">{g.note}</p> : null}
+          <p className="truncate text-[19px] font-black">{t.finalTitle}</p>
         </div>
-      ) : null}
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+        <span className="text-[22px] font-black tabular-nums text-white/90">{pctDone}%</span>
+      </div>
+      <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-white/10">
         <div
-          className="h-full rounded-full bg-indigo-500 transition-all"
-          style={{ width: `${prog.total ? (prog.got / prog.total) * 100 : 0}%` }}
+          className="h-full rounded-full bg-gradient-to-r from-amber-300 via-emerald-300 to-emerald-400 transition-all duration-500"
+          style={{ width: `${pctDone}%` }}
         />
       </div>
-      <p className="mt-1.5 text-[12px] text-slate-500">
-        {prog.babDone} dari {prog.babTotal} bab · {prog.got} dari {prog.total} kartu
+      <p className="mt-1.5 text-[12px] text-white/55">
+        {prog.babDone} dari {prog.babTotal} bab selesai · {prog.got} dari {prog.total} kartu
+        {unlocked ? '' : ` · terbuka penuh setelah ${prog.babTotal} bab selesai`}
       </p>
-      {saran.length ? (
-        <div className="mt-3 space-y-1.5">
-          {saran.slice(0, 6).map((s, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => onSaran(s)}
-              className="flex w-full items-center gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-left text-[13px] font-semibold text-slate-700 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
-              <span className="flex-1">{s.text}</span>
-              <ChevronRight size={16} className="shrink-0 text-slate-400" />
-            </button>
-          ))}
+      {g ? (
+        <div className="mt-3 rounded-2xl bg-white/[.07] p-3 ring-1 ring-white/10">
+          <p
+            className={cn(
+              'text-[20px] font-black',
+              g.tone === 'bad' ? 'text-rose-300' : g.tone === 'warn' ? 'text-amber-300' : 'text-emerald-300',
+            )}
+          >
+            {g.value}
+          </p>
+          {g.note ? <p className="text-[12px] text-white/60">{g.note}</p> : null}
         </div>
       ) : null}
-      <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
-        Hitungan ini perkiraan untuk membantu merencanakan, bukan nasihat keuangan pribadi.
+      {saran.length ? (
+        <div className="mt-3">
+          <p className="mb-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-white/45">Langkah berikutnya</p>
+          <div className="space-y-1.5">
+            {saran.slice(0, 6).map((s, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => onSaran(s)}
+                className="flex w-full items-center gap-2.5 rounded-2xl bg-white/[.07] px-3 py-2.5 text-left text-[13px] font-semibold text-white/90 ring-1 ring-white/10 transition hover:bg-white/[.12]"
+              >
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-[11px] font-black">
+                  {i + 1}
+                </span>
+                <span className="flex-1">{s.text}</span>
+                <ChevronRight size={16} className="shrink-0 text-white/40" />
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      <p className="mt-3 text-[11px] leading-relaxed text-white/35">
+        Perkiraan untuk membantu merencanakan, bukan nasihat keuangan pribadi.
       </p>
     </div>
   );

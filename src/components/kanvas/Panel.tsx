@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Check, ExternalLink, X } from 'lucide-react';
+import { ArrowRight, Check, ChevronLeft, ChevronRight, ExternalLink, X } from 'lucide-react';
 import { LeoBadge } from '@/components/ai/LeoGuide';
 import { rp } from '@/lib/kanvas/data';
 import {
@@ -14,7 +14,7 @@ import {
   type Ctx,
   type StateLike,
 } from '@/lib/kanvas/templates';
-import { KIND_LABEL, STATUS_PILL, TONE_CLS, cardTitle, fmtNum } from '@/components/kanvas/cards';
+import { KIND_LABEL, STATUS_PILL, TONE_CLS, babColor, cardTitle, fmtNum } from '@/components/kanvas/cards';
 import { cn } from '@/lib/utils';
 
 export type PanelActions = {
@@ -23,6 +23,7 @@ export type PanelActions = {
   num: (id: string, v: number | null) => void;
   skip: (id: string, on: boolean) => void;
   next: () => void;
+  prev: () => void;
   close: () => void;
   href: (h: string) => string;
 };
@@ -107,6 +108,7 @@ export function Panel({
   c,
   act,
   hasNext,
+  step,
 }: {
   ch: Chapter;
   index: number;
@@ -115,6 +117,7 @@ export function Panel({
   c: Ctx;
   act: PanelActions;
   hasNext: boolean;
+  step: { i: number; n: number };
 }) {
   const st = cardState(card, s, c.m);
   const bab = chapterProgress(ch, s, c.m);
@@ -147,25 +150,52 @@ export function Panel({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-start gap-3 border-b border-slate-100 px-5 pb-3 pt-4 dark:border-slate-800">
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
-            Bab {index + 1} · {ch.title}
-          </p>
-          <p className="text-[13px] text-slate-500">{KIND_LABEL[card.kind]}</p>
+      <div className={cn('bg-gradient-to-br px-5 pb-3 pt-4 text-white', babColor(index).head)}>
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-[20px]">
+            {ch.emoji}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[11px] font-black uppercase tracking-[0.18em] text-white/75">Bab {index + 1}</p>
+            <p className="truncate text-[16px] font-black leading-tight">{ch.title}</p>
+          </div>
+          <button
+            type="button"
+            aria-label="Kartu sebelumnya"
+            onClick={act.prev}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 hover:bg-white/25"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <button
+            type="button"
+            aria-label="Kartu selanjutnya"
+            onClick={act.next}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 hover:bg-white/25"
+          >
+            <ChevronRight size={18} />
+          </button>
+          <button
+            type="button"
+            aria-label="Tutup"
+            onClick={act.close}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 hover:bg-white/25"
+          >
+            <X size={18} />
+          </button>
         </div>
-        <button
-          type="button"
-          aria-label="Tutup"
-          onClick={act.close}
-          className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
-        >
-          <X size={18} />
-        </button>
+        <div className="mt-3 flex items-center gap-1.5">
+          {Array.from({ length: step.n }, (_, k) => (
+            <span key={k} className={cn('h-1.5 flex-1 rounded-full', k < step.i ? 'bg-white' : 'bg-white/25')} />
+          ))}
+          <span className="ml-1.5 text-[11.5px] font-bold text-white/85">
+            {KIND_LABEL[card.kind]} · {step.i}/{step.n}
+          </span>
+        </div>
       </div>
       <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
         {bab.done ? (
-          <div className="flex items-center gap-3 rounded-2xl bg-indigo-50 p-3.5 dark:bg-indigo-500/10">
+          <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 p-3.5 ring-1 ring-emerald-100 dark:bg-emerald-500/10 dark:ring-emerald-500/20">
             <LeoBadge topic="investasi" size={52} />
             <div>
               <p className="text-[15px] font-black text-slate-900 dark:text-white">
@@ -276,8 +306,11 @@ export function Panel({
                       key={o}
                       type="button"
                       onClick={() => {
+                        const first = !answered;
                         act.answer(card.id, o);
                         act.skip(card.id, false);
+                        // Jawaban pertama → lanjut otomatis ke kartu berikutnya yang belum selesai.
+                        if (first && hasNext) setTimeout(act.next, 450);
                       }}
                       className={cn(
                         'flex w-full items-center gap-3 rounded-2xl px-4 py-4 text-left text-[16px] font-semibold transition',
@@ -303,8 +336,10 @@ export function Panel({
               <button
                 type="button"
                 onClick={() => {
+                  const first = !answered;
                   act.toggle(card.id, true);
                   act.skip(card.id, false);
+                  if (first && hasNext) setTimeout(act.next, 450);
                 }}
                 className={cn(
                   'flex h-14 w-full items-center justify-center gap-2 rounded-full text-[17px] font-bold',

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, CloudOff, LayoutGrid, MoreHorizontal, Plus, StickyNote, X } from 'lucide-react';
+import { ArrowLeft, Check, CloudOff, LayoutGrid, MoreHorizontal, Plus, StickyNote, X } from 'lucide-react';
 import { computeMetrics, type Metrics } from '@/lib/kanvas/data';
 import { useFinance } from '@/components/kanvas/useFinance';
 import {
@@ -31,7 +31,7 @@ import {
 } from '@/lib/kanvas/service';
 import { newRequestId } from '@/lib/meals';
 import { Board, type BoardEdge, type BoardHandle, type BoardNode, type Size } from '@/components/kanvas/Board';
-import { ChapterNode, COLORS, FinalNode, NoteNode, StartNode, TableNode } from '@/components/kanvas/cards';
+import { babColor, ChapterNode, COLORS, FinalNode, NoteNode, StartNode, TableNode } from '@/components/kanvas/cards';
 import { Panel, type PanelActions } from '@/components/kanvas/Panel';
 import { FlowBoard } from '@/components/kanvas/FlowBoard';
 import { cn } from '@/lib/utils';
@@ -322,9 +322,11 @@ export function KanvasApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
 
 // ── Papan template ─────────────────────────────────────────────────────────
 const NODE_W = 300;
+const COLORS_HEAD = (i: number) => babColor(i).head;
 const GAP_X = 72;
 const GAP_Y = 90;
-const START = 108;
+const START = 220; // lebar kartu "Mulai di sini"
+const START_H = 190;
 
 type Layout = { pos: Record<string, [number, number]>; rows: string[][] };
 
@@ -336,7 +338,7 @@ function computeLayout(t: Template, sizes: Record<string, Size>, narrow: boolean
   if (narrow) {
     let y = 0;
     pos.mulai = [(NODE_W - START) / 2, y];
-    y += START + 60;
+    y += START_H + 60;
     for (const id of ids) {
       pos[id] = [0, y];
       y += h(id) + 70;
@@ -350,7 +352,7 @@ function computeLayout(t: Template, sizes: Record<string, Size>, narrow: boolean
   }
   const split = ids.length >= 5 ? Math.ceil(ids.length / 2) : ids.length;
   const rows = [ids.slice(0, split), ids.slice(split)].filter((r) => r.length);
-  const x0 = START + 90;
+  const x0 = START + 80;
   let y = 0;
   let maxX = 0;
   const rowMid: number[] = [];
@@ -367,7 +369,7 @@ function computeLayout(t: Template, sizes: Record<string, Size>, narrow: boolean
     rowMid.push(y + 60);
     y += rowH + GAP_Y;
   });
-  pos.mulai = [0, rows.length > 1 ? y / 2 - GAP_Y / 2 - START / 2 : rowMid[0]];
+  pos.mulai = [0, rows.length > 1 ? y / 2 - GAP_Y / 2 - START_H / 2 : rowMid[0]];
   pos.akhir = [maxX, rows.length > 1 ? Math.max(0, y / 2 - GAP_Y / 2 - 200) : 0];
   return { pos, rows };
 }
@@ -545,6 +547,10 @@ function TemplateBoard({
         else delete done[skipKey(k)];
         return { ...s, done };
       }),
+    prev: () => {
+      const i = flat.findIndex((x) => x.card.id === open);
+      if (i > 0) setOpen(flat[i - 1].card.id);
+    },
     next: () => {
       const i = flat.findIndex((x) => x.card.id === open);
       const rest = [...flat.slice(i + 1), ...flat.slice(0, i)];
@@ -567,8 +573,11 @@ function TemplateBoard({
       }),
   ];
   const onSaran = (s: Saran) => {
-    if (s.card) setOpen(s.card);
-    else if (s.href) onSaranHref(s.href);
+    if (s.card) {
+      setOpen(s.card);
+      const it = flat.find((x) => x.card.id === s.card);
+      if (it && narrow) goTo(it.ch.id);
+    } else if (s.href) onSaranHref(s.href);
   };
 
   const nodes: BoardNode[] = [
@@ -577,7 +586,7 @@ function TemplateBoard({
       x: at('mulai')[0],
       y: at('mulai')[1],
       width: START,
-      content: <StartNode text={t.start + ' ' + t.start} />,
+      content: <StartNode t={t} prog={prog} />,
     },
     ...t.chapters.map((ch, i) => ({
       id: ch.id,
@@ -618,19 +627,37 @@ function TemplateBoard({
     })),
   ];
 
-  const solid = '#6366f1';
   const dash = '#94a3b8';
   const edges: BoardEdge[] = [];
   const rowEnds: string[] = [];
   layout.rows.forEach((row) => {
-    if (row.length) edges.push({ from: 'mulai', to: row[0], color: solid, width: 2.5 });
+    if (row.length)
+      edges.push({
+        from: 'mulai',
+        to: row[0],
+        color: babColor(t.chapters.findIndex((c) => c.id === row[0])).stroke,
+        width: 3,
+      });
     row.forEach((cid, i) => {
+      const col = babColor(t.chapters.findIndex((c) => c.id === cid)).stroke;
       const tabs = (t.tables ?? []).filter((x) => x.after === cid).map((x) => x.id);
       const nextId = row[i + 1];
       if (nextId)
-        edges.push({ from: cid, to: nextId, color: babDone(cid) ? solid : dash, dashed: !babDone(cid), width: 2.5 });
+        edges.push({
+          from: cid,
+          to: nextId,
+          color: babDone(cid) ? col : dash,
+          dashed: !babDone(cid),
+          width: babDone(cid) ? 3 : 2,
+        });
       tabs.forEach((tb) =>
-        edges.push({ from: cid, to: tb, color: babDone(cid) ? solid : dash, dashed: !babDone(cid), width: 2.5 }),
+        edges.push({
+          from: cid,
+          to: tb,
+          color: babDone(cid) ? col : dash,
+          dashed: !babDone(cid),
+          width: babDone(cid) ? 3 : 2,
+        }),
       );
     });
     const last = row[row.length - 1];
@@ -642,7 +669,7 @@ function TemplateBoard({
   });
   const allDone = prog.babDone === prog.babTotal;
   rowEnds.forEach((e) =>
-    edges.push({ from: e, to: 'akhir', color: allDone ? solid : dash, dashed: !allDone, width: 2.5 }),
+    edges.push({ from: e, to: 'akhir', color: allDone ? '#10b981' : dash, dashed: !allDone, width: allDone ? 3 : 2 }),
   );
 
   const onMove = (nid: string, x: number, y: number) => {
@@ -660,6 +687,10 @@ function TemplateBoard({
     }));
   };
 
+  const goTo = (nid: string) => {
+    const [x, y] = at(nid);
+    board.current?.focus(x - 8, y - 56, narrow ? 1 : 0.9);
+  };
   const openItem = open ? flat.find((x) => x.card.id === open) : null;
   const panel = openItem ? (
     <Panel
@@ -671,6 +702,7 @@ function TemplateBoard({
       c={ctx}
       act={act}
       hasNext={flat.length > 1}
+      step={{ i: openItem.ch.cards.findIndex((x) => x.id === openItem.card.id) + 1, n: openItem.ch.cards.length }}
     />
   ) : null;
   const pill =
@@ -688,6 +720,49 @@ function TemplateBoard({
             {msg} <span className="opacity-60">· tutup</span>
           </button>
         ) : null}
+        <div className="absolute left-3 right-28 top-3 z-10 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
+          {t.chapters.map((ch, i) => {
+            const p = chapterProgress(ch, state, metrics);
+            return (
+              <button
+                key={ch.id}
+                type="button"
+                title={`Bab ${i + 1}: ${ch.title}`}
+                onClick={() => goTo(ch.id)}
+                className={cn(
+                  'flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-bold shadow-sm ring-1 backdrop-blur transition',
+                  p.done
+                    ? 'bg-emerald-500 text-white ring-emerald-500'
+                    : 'bg-white/95 text-slate-700 ring-slate-200 hover:ring-slate-300 dark:bg-slate-900/95 dark:text-slate-200 dark:ring-slate-700',
+                )}
+              >
+                <span
+                  className={cn(
+                    'h-2 w-2 rounded-full',
+                    p.done ? 'bg-white' : 'bg-gradient-to-br',
+                    !p.done && COLORS_HEAD(i),
+                  )}
+                />
+                {i + 1}
+                <span className="hidden lg:inline">· {ch.title}</span>
+                {p.done ? (
+                  <Check size={13} strokeWidth={3} />
+                ) : (
+                  <span className="text-slate-400">
+                    {p.got}/{p.total}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => goTo('akhir')}
+            className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-slate-900 px-3 text-[12.5px] font-bold text-white shadow-sm dark:bg-white dark:text-slate-900"
+          >
+            🎯 {t.finalTitle}
+          </button>
+        </div>
         <span className="pointer-events-none absolute right-3 top-3 z-10 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-slate-500 ring-1 ring-slate-200 dark:bg-slate-900/90 dark:ring-slate-700">
           {save === 'saving'
             ? 'Menyimpan…'
@@ -705,7 +780,15 @@ function TemplateBoard({
           edges={edges}
           onMove={onMove}
           onSizes={setSizes}
-          fitOnSizes={!narrow}
+          onReady={() => {
+            const [x, y] = at('mulai');
+            board.current?.focus(
+              x - 8,
+              narrow ? y - 8 : Math.min(y, at(t.chapters[0].id)[1]) - 8,
+              narrow ? 1 : 0.85,
+              false,
+            );
+          }}
           toolbar={
             <button type="button" aria-label="Catatan" onClick={addNote} className={pill}>
               <StickyNote size={16} /> <span className="hidden sm:inline">Catatan</span>

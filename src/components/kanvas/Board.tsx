@@ -14,7 +14,12 @@ import { Minus, Plus, Scan } from 'lucide-react';
 
 export type BoardNode = { id: string; x: number; y: number; width: number; content: ReactNode; draggable?: boolean };
 export type BoardEdge = { from: string; to: string; width?: number; color?: string; dashed?: boolean; label?: string };
-export type BoardHandle = { fit: () => void; center: () => { x: number; y: number } };
+export type BoardHandle = {
+  fit: () => void;
+  center: () => { x: number; y: number };
+  // Geser kamera supaya titik dunia (x, y) ada di kiri-atas layar (dengan jarak), pada zoom k.
+  focus: (x: number, y: number, k?: number, animate?: boolean) => void;
+};
 export type Size = { w: number; h: number };
 
 const MIN_K = 0.2;
@@ -31,6 +36,7 @@ export function Board({
   ref,
   toolbar,
   fitOnSizes,
+  onReady,
 }: {
   nodes: BoardNode[];
   edges: BoardEdge[];
@@ -39,6 +45,8 @@ export function Board({
   ref?: Ref<BoardHandle>;
   toolbar?: ReactNode;
   fitOnSizes?: boolean;
+  // Dipanggil sekali saat semua kartu sudah terukur (mis. untuk posisi awal sendiri).
+  onReady?: () => void;
 }) {
   const view = useRef<HTMLDivElement>(null);
   const [cam, setCam] = useState({ x: 40, y: 40, k: 1 });
@@ -89,6 +97,28 @@ export function Board({
     ref,
     () => ({
       fit,
+      focus: (x, y, k, animate = true) => {
+        const el = view.current;
+        if (!el) return;
+        const nk = clampK(k ?? camRef.current.k);
+        const pad = el.clientWidth < 640 ? 16 : 40;
+        const target = { k: nk, x: pad - x * nk, y: 24 - y * nk };
+        if (!animate) return setCam(target);
+        // Animasi singkat (easeOutCubic) supaya pindah bab terasa meluncur, bukan melompat.
+        const from = camRef.current;
+        const t0 = performance.now();
+        const step = (now: number) => {
+          const p = Math.min(1, (now - t0) / 380);
+          const e = 1 - (1 - p) ** 3;
+          setCam({
+            k: from.k + (target.k - from.k) * e,
+            x: from.x + (target.x - from.x) * e,
+            y: from.y + (target.y - from.y) * e,
+          });
+          if (p < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      },
       center: () => {
         const el = view.current;
         const c = camRef.current;
@@ -134,11 +164,12 @@ export function Board({
   );
   useEffect(() => {
     onSizes?.(sizes);
-    if (fitOnSizes && !fitted.current && nodes.length && nodes.every((n) => sizes[n.id])) {
+    if (!fitted.current && nodes.length && nodes.every((n) => sizes[n.id])) {
       fitted.current = true;
-      fit();
+      if (onReady) onReady();
+      else if (fitOnSizes) fit();
     }
-  }, [sizes, onSizes, fitOnSizes, nodes, fit]);
+  }, [sizes, onSizes, fitOnSizes, onReady, nodes, fit]);
 
   const zoomAt = useCallback((k: number, mx: number, my: number) => {
     setCam((c) => {
