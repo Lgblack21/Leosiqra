@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (live: 3.23.4 run #195, commit 0f6dc0f)
+Terakhir diperbarui: 2026-11-09 (live: 3.23.5 run #196, commit 380549f)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-09 — 3.23.5 Panel auth diam (sticky), form bergulir — BELUM DEPLOY, menunggu "gas". Tanpa SQL.**
+- **2026-11-09 — 3.23.5 Panel auth diam (sticky), form bergulir — LIVE (run #196, commit 380549f, Release v3.23.5). Tanpa SQL.**
   Branch `claude/auth-panel-diam-20261109`. Permintaan Bos: panel diam, form yang geser.
   - Aside `lg:sticky lg:top-0 lg:h-screen lg:self-start` (self-start wajib di grid supaya sticky jalan), isi tetap rata
     atas tanpa overflow-y. Layar ≤ 620px tinggi: subjudul keunggulan disembunyikan, pita & header dirapatkan.
