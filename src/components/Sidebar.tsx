@@ -257,7 +257,9 @@ export const Sidebar = ({ isOpen, onClose, onOpenSettings, focusHidden = false }
         >
           <Search size={16} className="shrink-0" />
           <span className="flex-1 truncate text-left">Cari fitur…</span>
-          <kbd className="hidden rounded-md bg-slate-100 px-1.5 py-0.5 fs-10.5 font-bold text-slate-500 lg:inline">Ctrl K</kbd>
+          <kbd className="hidden rounded-md bg-slate-100 px-1.5 py-0.5 fs-10.5 font-bold text-slate-500 lg:inline">
+            Ctrl K
+          </kbd>
         </button>
         <Link
           href="/membership/ai-leosiqra"

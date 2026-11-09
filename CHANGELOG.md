@@ -86,6 +86,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.21.0 | 9 Nov 2026 | Teduh baru: renungan harian, Pelajari, audio Al-Qur'an |
 | 3.21.1 | 9 Nov 2026 | Foto kamera & galeri di Stikerku bisa disimpan lagi |
 | 3.22.0 | 9 Nov 2026 | Menu samping baru |
+| 3.22.1 | 9 Nov 2026 | Halaman daftar tidak lagi langsung lompat ke langkah terakhir |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -99,6 +100,13 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.22.1 — 2026-11-09 — Halaman daftar tidak lagi langsung lompat ke langkah terakhir
+
+- Tombol "Daftar Gratis" kini selalu membuka halaman sambutan. Kalau kamu pernah mengisi pilihan awal
+  sebelumnya, ada pilihan "Lanjutkan daftar" atau "Mulai dari awal" (sebelumnya langsung loncat ke langkah
+  terakhir tanpa penjelasan).
+- Di langkah terakhir ada tombol "Ulangi dari awal".
 
 ## 3.22.0 — 2026-11-09 — Menu samping baru
 

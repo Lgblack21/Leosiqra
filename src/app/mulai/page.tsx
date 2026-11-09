@@ -32,6 +32,7 @@ import { DEFAULT_CATEGORY_GROUPS, GUEST_CATEGORY_HINTS } from '@/lib/defaultCate
 import {
   EMPTY_GUEST,
   GUEST_GOALS,
+  clearGuest,
   loadGuest,
   saveGuest,
   type GuestGoal,
@@ -95,6 +96,9 @@ export default function MulaiPage() {
   const [next, setNext] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [now, setNow] = useState<Date | null>(null);
+  // Isian lama yang sudah selesai: TIDAK langsung lompat ke langkah terakhir (dari tombol "Daftar" terlihat
+  // seperti bug) — tampilkan pilihan Lanjutkan / Mulai dari awal di layar sambutan.
+  const [resumable, setResumable] = useState(false);
 
   // Pulihkan pilihan sebelumnya; yang sudah login tidak perlu lewat sini.
   useEffect(() => {
@@ -105,7 +109,7 @@ export default function MulaiPage() {
     if (saved) {
       setG(saved);
       if (saved.note) setText(saved.note.text);
-      if (saved.done) setStep(LAST);
+      if (saved.done) setResumable(true);
     }
     setNow(new Date());
     cloudflareApi<{ user?: unknown }>('/api/auth/me')
@@ -150,6 +154,14 @@ export default function MulaiPage() {
       done: true,
     });
     go(LAST);
+  };
+
+  const restart = () => {
+    clearGuest();
+    setG(EMPTY_GUEST);
+    setText('');
+    setResumable(false);
+    go(1);
   };
 
   const registerHref = withNext('/auth/register', next);
@@ -204,7 +216,33 @@ export default function MulaiPage() {
               <p className="mt-5 max-w-md fs-17 leading-relaxed text-slate-500 sm:fs-19">
                 Ketik, ngomong, atau foto struk. Leo yang merapikan jadi saldo, budget, dan laporan — tanpa spreadsheet.
               </p>
-              <div className="mt-9 flex flex-wrap gap-3">
+              {resumable && (
+                <div className="mt-8 max-w-md rounded-3xl bg-indigo-50/70 p-5 ring-1 ring-indigo-100">
+                  <p className="fs-15 font-bold text-slate-900">Pilihanmu sebelumnya masih tersimpan</p>
+                  <p className="mt-1 fs-14 text-slate-500">
+                    {[
+                      g.goals.length ? `${g.goals.length} tujuan dipilih` : null,
+                      g.note ? `catatan pertama ${formatIDR(g.note.amount)}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ') || 'Pilihan awalmu sudah diisi'}
+                    . Lanjut buat akun, atau ulangi dari awal.
+                  </p>
+                  <div className="mt-4 flex flex-wrap items-center gap-4">
+                    <button type="button" onClick={() => go(LAST)} className={pillMain}>
+                      Lanjutkan daftar <ArrowRight size={18} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={restart}
+                      className="fs-14 font-semibold text-slate-500 hover:text-slate-800"
+                    >
+                      Mulai dari awal
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div className={cn('mt-9 flex flex-wrap gap-3', resumable && 'hidden')}>
                 <button type="button" onClick={() => go(1)} className={cn(pillMain, 'min-w-[12rem]')}>
                   Mulai sekarang <ArrowRight size={18} />
                 </button>
@@ -498,6 +536,10 @@ export default function MulaiPage() {
                   <Link href={loginHref} className="font-bold text-indigo-600 hover:underline">
                     Masuk
                   </Link>
+                  <span className="mx-2 text-slate-300">·</span>
+                  <button type="button" onClick={restart} className="font-semibold hover:text-slate-800">
+                    Ulangi dari awal
+                  </button>
                 </p>
               </div>
             </>

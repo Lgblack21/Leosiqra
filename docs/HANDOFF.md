@@ -18,6 +18,14 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-09 — 3.22.1 /mulai: isian tamu lama tidak lagi melompat ke langkah terakhir — BELUM DEPLOY, menunggu "gas".
+  Tanpa SQL.** Branch `claude/mulai-lanjut-20261109`.
+  - Laporan Bos: klik Daftar → langsung "Hari pertama, beres." Penyebab: `leosiqra-guest-onboarding.done` di
+    localStorage → `setStep(LAST)` saat halaman dibuka. Sekarang `resumable` → kartu "Lanjutkan daftar / Mulai dari
+    awal" di layar sambutan; "Ulangi dari awal" di langkah terakhir (`clearGuest`).
+  - Dites Playwright (build lokal): kartu muncul, Lanjutkan → langkah terakhir, Ulangi/Mulai dari awal → Langkah 1
+    + localStorage terhapus, reload tanpa kartu, 0 error JS. Sidebar.tsx ikut dirapikan Prettier (tanpa ubah perilaku).
+
 - **2026-11-09 — 3.22.0 Menu samping baru — LIVE (run #192, commit f004177, Release v3.22.0). Tanpa SQL.**
   - `Sidebar.tsx` hanya tampilan: ubin ikon berwarna (fitur pakai `tint` features.ts, 4 halaman inti `KEUANGAN_TINT`),
     item aktif = kartu putih + garis aksen (layoutId `sidebar-active`), `GroupLabel`, kartu profil (pil Gratis/PRO).
