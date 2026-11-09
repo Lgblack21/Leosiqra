@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (live: 3.23.2 run #193, commit bb2db55)
+Terakhir diperbarui: 2026-11-09 (live: 3.23.3 run #194, commit eaab081)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-09 — 3.23.3 Logo & layar pendek halaman auth — BELUM DEPLOY, menunggu "gas". Tanpa SQL.**
+- **2026-11-09 — 3.23.3 Logo & layar pendek halaman auth — LIVE (run #194, commit eaab081, Release v3.23.3). Tanpa SQL.**
   Branch `claude/auth-logo-20261109`.
   - Laporan Bos (tablet ±1100×540 CSS px): logo jelek, nama "Leo/siqra" dua warna jelek, panel kiri bertumpuk.
   - Aset baru `public/images/logo-emblem.png` (256 px, potongan lambang dari Logo-new.png, latar transparan) dipakai
