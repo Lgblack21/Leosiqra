@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (3.16.1 siap deploy, menunggu "gas" — tanpa SQL)
+Terakhir diperbarui: 2026-11-09 (3.16.1 live, run #187)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-09 — 3.16.1 — BELUM DEPLOY. Tanpa SQL.** `components/peta/MapControls.tsx`: tumpukan tombol (3D global
+- **2026-11-09 — 3.16.1 LIVE (run #187, commit 2b04b06). Tanpa SQL.** `components/peta/MapControls.tsx`: tumpukan tombol (3D global
   semua tab + pitch, lapisan kepadatan `tempat-heat` (heatmap), Lokasiku (GPS sekali, marker `.peta-me`, tidak
   disimpan), kompas saat miring), `usePlaceLayers` (tiang `tempat-3d` per tempat, memudar zoom 13→14,5 karena
   `building-3d` gaya liberty muncul zoom ≥14). PlaceMap: `attributionControl:false` + kredit kecil sendiri
