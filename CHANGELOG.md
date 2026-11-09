@@ -82,6 +82,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.18.0 | 9 Nov 2026 | Teduh |
 | 3.19.0 | 9 Nov 2026 | Tanggal merah & jadwal sholat |
 | 3.20.0 | 9 Nov 2026 | Alkitab & data API Indonesia |
+| 3.20.1 | 9 Nov 2026 | Pelafalan Alkitab |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -95,6 +96,12 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.20.1 — 2026-11-09 — Pelafalan Alkitab
+
+- **Alkitab — Dengarkan lebih enak didengar**: kata "Allah" kini diucapkan "Alah" (bukan "Alloh"), kata kapital
+  seperti TUHAN dibaca biasa (tidak dieja), dan aplikasi memilih suara bahasa Indonesia paling natural yang tersedia
+  di perangkatmu. Teks yang tampil tetap persis sesuai Alkitab TB.
 
 ## 3.20.0 — 2026-11-09 — Alkitab & data API Indonesia
 

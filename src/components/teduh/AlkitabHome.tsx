@@ -686,6 +686,20 @@ function PasalReader({
 }
 
 const SPEEDS = [0.9, 1, 1.2];
+// Teks untuk diucapkan (tampilan tetap persis teks TB):
+// - "ALLAH"/"Allah" dalam Alkitab diucapkan "Alah" (mesin suara cenderung melafalkan "Alloh").
+// - Kata KAPITAL (TUHAN, ALLAH) dibaca sebagai kata biasa, bukan dieja huruf per huruf.
+const ucapan = (t: string) =>
+  t
+    .replace(/\bALLAH\b|\bAllah\b/g, 'Alah')
+    .replace(/\b([A-Z])([A-Z]{2,})\b/g, (_, a: string, b: string) => a + b.toLowerCase());
+// Pilih suara bahasa Indonesia paling natural yang tersedia (Neural/Natural/Online/Google lebih baik dari suara standar).
+const pilihSuara = () => {
+  const id = window.speechSynthesis.getVoices().filter((x) => x.lang?.toLowerCase().replace('_', '-').startsWith('id'));
+  const skor = (v: SpeechSynthesisVoice) =>
+    (/natural|neural/i.test(v.name) ? 4 : 0) + (/online|google/i.test(v.name) ? 2 : 0) + (v.localService ? 0 : 1);
+  return id.sort((a, b) => skor(b) - skor(a))[0];
+};
 // Membacakan ayat dengan suara bawaan perangkat (Web Speech API, bahasa Indonesia), ayat demi ayat.
 function useBacakan(data: Pasal | null, onFocus: (i: number) => void) {
   const bisa = typeof window !== 'undefined' && 'speechSynthesis' in window;
@@ -712,10 +726,10 @@ function useBacakan(data: Pasal | null, onFocus: (i: number) => void) {
     }
     setIndex(i);
     onFocus(i);
-    const u = new SpeechSynthesisUtterance(data.ayat[i].teks);
+    const u = new SpeechSynthesisUtterance(ucapan(data.ayat[i].teks));
     u.lang = 'id-ID';
-    u.rate = speedRef.current;
-    const v = window.speechSynthesis.getVoices().find((x) => x.lang?.toLowerCase().startsWith('id'));
+    u.rate = speedRef.current * 0.95;
+    const v = pilihSuara();
     if (v) u.voice = v;
     u.onend = () => ucap(i + 1, id);
     window.speechSynthesis.speak(u);
