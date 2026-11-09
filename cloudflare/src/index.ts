@@ -13592,6 +13592,73 @@ const sanitizeCanvasState = (raw: unknown) => {
   });
   return { v: 1, answers, done, nums, pos, notes };
 };
+// ── Pajak Center: setelan pajak per tahun (migrasi 0043). Semua field disaring; field asing dibuang.
+const TAX_DOC_KEYS = ["a1", "npwp", "efin", "harta", "utang", "rekening", "zakat", "setoran", "coretax"] as const;
+const taxMoney = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.min(1e13, Math.max(0, Math.round(v))) : 0);
+const taxMonthKey = (k: string) => /^(0[1-9]|1[0-2])$/.test(k);
+function sanitizeTaxSettings(raw: unknown) {
+  const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const months = (v: unknown) => (v && typeof v === "object" ? Object.entries(v as Record<string, unknown>).filter(([k]) => taxMonthKey(k)) : []);
+  const out: Record<string, unknown> = {
+    status: r.status === "K" ? "K" : "TK",
+    tanggungan: Math.min(3, Math.max(0, Math.floor(Number(r.tanggungan) || 0))),
+    karyawan: r.karyawan === true,
+    gajiBruto: r.gajiBruto === null || r.gajiBruto === undefined ? null : taxMoney(r.gajiBruto),
+    iuranPensiun: taxMoney(r.iuranPensiun),
+    pph21Dipotong: taxMoney(r.pph21Dipotong),
+    usahaMode: r.usahaMode === "final" || r.usahaMode === "pembukuan" ? r.usahaMode : "tidak",
+    umkmMulai: Number.isInteger(r.umkmMulai) && (r.umkmMulai as number) >= 2009 && (r.umkmMulai as number) <= 2100 ? r.umkmMulai : null,
+    omzetManual: Object.fromEntries(months(r.omzetManual).map(([k, v]) => [k, taxMoney(v)])),
+    umkmSetor: Object.fromEntries(
+      months(r.umkmSetor).map(([k, v]) => {
+        const o = v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+        return [k, { paid: o.paid === true, ...(isRealDateStr(o.date) ? { date: o.date } : {}) }];
+      }),
+    ),
+    zakat: r.zakat === null || r.zakat === undefined ? null : taxMoney(r.zakat),
+    penghasilanLain: taxMoney(r.penghasilanLain),
+    sptLapor: r.sptLapor === true,
+    sptTanggal: isRealDateStr(r.sptTanggal) ? r.sptTanggal : null,
+    dokumen: Object.fromEntries(TAX_DOC_KEYS.map((k) => [k, (r.dokumen as Record<string, unknown> | undefined)?.[k] === true])),
+  };
+  return out;
+}
+async function handleMemberTax(request: Request, env: Env, url: URL) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  if (url.pathname !== "/api/member/tax/settings") return json({ error: "Not found" }, { status: 404 });
+  const year = Number(url.searchParams.get("year"));
+  if (!Number.isInteger(year) || year < 2009 || year > 2100) return json({ error: "Tahun pajak tidak valid." }, { status: 400 });
+  try {
+    if (request.method === "GET") {
+      const row = await env.DB.prepare("SELECT data_json, updated_at FROM tax_settings WHERE user_id = ? AND year = ?").bind(userId, year).first<{ data_json: string; updated_at: string }>();
+      let data: unknown = null;
+      if (row) { try { data = sanitizeTaxSettings(JSON.parse(row.data_json)); } catch { data = null; } }
+      return json({ ready: true, year, settings: data, updated_at: row?.updated_at ?? null });
+    }
+    if (request.method === "PUT") {
+      const text = await request.text();
+      if (text.length > 16_000) return json({ error: "Data terlalu besar." }, { status: 413 });
+      let raw: unknown = null;
+      try { raw = JSON.parse(text); } catch { return json({ error: "Format data tidak valid." }, { status: 400 }); }
+      const clean = JSON.stringify(sanitizeTaxSettings((raw as Record<string, unknown> | null)?.settings ?? raw));
+      const now = nowIso();
+      await env.DB.prepare(
+        "INSERT INTO tax_settings (user_id, year, data_json, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, year) DO UPDATE SET data_json = excluded.data_json, updated_at = excluded.updated_at"
+      ).bind(userId, year, clean, now).run();
+      return json({ ok: true, updated_at: now });
+    }
+    return json({ error: "Method not allowed" }, { status: 405 });
+  } catch (e) {
+    if (e instanceof Error && /no such table: tax_settings/i.test(e.message)) {
+      if (request.method === "GET") return json({ ready: false, year, settings: null });
+      return json({ error: "Setelan pajak belum bisa disimpan ke akun (menunggu pembaruan database).", code: "not_ready" }, { status: 503 });
+    }
+    throw e;
+  }
+}
+
 async function handleMemberCanvas(request: Request, env: Env, pathname: string) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -21657,6 +21724,10 @@ const worker = {
 
       if (url.pathname === "/api/member/places" || url.pathname.startsWith("/api/member/places/")) {
         return await handleMemberPlaces(request, env, url);
+      }
+
+      if (url.pathname.startsWith("/api/member/tax/")) {
+        return await handleMemberTax(request, env, url);
       }
 
       if (url.pathname === "/api/member/canvas" || url.pathname.startsWith("/api/member/canvas/")) {

@@ -95,6 +95,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.23.5 | 9 Nov 2026 | Panel halaman masuk/daftar diam, form yang bergulir |
 | 3.23.6 | 9 Nov 2026 | Masuk, Daftar & Mulai tampil terang dan lebih ringan |
 | 3.24.0 | 9 Nov 2026 | Laporan Usahaku + unduh PDF & Excel |
+| 3.25.0 | 9 Nov 2026 | Pajak Center baru |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -108,6 +109,20 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.25.0 — 2026-11-09 — Pajak Center baru
+
+- **PPh final UMKM 0,5%**: omzet otomatis dari Usahaku & pemasukan Usaha & Freelance, batas Rp500 jt/tahun bebas
+  pajak, PPh per bulan, tandai sudah setor, koreksi omzet per bulan, pengingat batas 7 tahun & Rp4,8 M.
+- **Asisten SPT Tahunan**: status PTKP, gaji (otomatis dari kategori Gaji atau isi dari bukti potong A1), biaya jabatan
+  5% (maks Rp6 jt), iuran pensiun/JHT, zakat resmi, laba usaha (pembukuan) — hasil kurang/lebih bayar per lapisan
+  tarif, plus tombol salin angka untuk diisi di Coretax.
+- **Kalender pajak**: tenggat setor bulanan & lapor SPT, otomatis digeser bila jatuh di akhir pekan/tanggal merah,
+  hitung mundur & tandai selesai.
+- Daftar dokumen SPT, harta/utang/piutang, dan unduh Excel (.xlsx).
+- Setelan pajak kini **tersimpan di akun** (bukan hanya di perangkat).
+- Perbaikan: penghasilan neto tidak lagi dihitung dari "semua pemasukan dikurangi semua pengeluaran" — belanja
+  harian bukan pengurang pajak.
 
 ## 3.24.0 — 2026-11-09 — Laporan Usahaku + unduh PDF & Excel
 

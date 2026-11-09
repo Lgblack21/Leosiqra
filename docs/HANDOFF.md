@@ -18,6 +18,22 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-09 — 3.25.0 Pajak Center baru — BELUM DEPLOY, menunggu "gas". PERLU SQL 0043 (boleh sebelum/sesudah deploy).**
+  Branch `claude/pajak-center-20261109`.
+  - **MIGRASI 0043 (`cloudflare/migrations/0043_tax_settings.sql`)**: tabel `tax_settings(user_id, year, data_json,
+    updated_at, PK(user_id,year))`. Tanpa 0043: GET → ready:false, PUT → 503 not_ready, klien simpan di localStorage
+    (`leosiqra-pajak-<tahun>`); setelan lama (`pajak-center-marital-status`, `-dependents`, `-pph21-<tahun>`) ikut terbawa.
+  - Worker `handleMemberTax` (`/api/member/tax/settings?year=`): requireSession, `sanitizeTaxSettings` (whitelist,
+    clamp, bulan 01–12, dokumen TAX_DOC_KEYS), maks 16 KB (413).
+  - Frontend: `src/lib/pajak/rules.ts` (SEMUA angka aturan: PTKP, tarif Pasal 17, biaya jabatan 5%/6 jt, UMKM 0,5% /
+    Rp500 jt / Rp4,8 M / 7 th, tenggat + geser hari kerja via hariLibur), `settings.ts`, `pajakXlsx.ts`,
+    `components/pajak/PajakCenter.tsx` (5 tab). page.tsx lama (1197 baris) diganti; PajakKesehatan tetap dipakai.
+  - Mode usaha `final` TIDAK masuk tarif progresif; `pembukuan` = omzet − Biaya Usaha masuk neto. Neto lama (semua
+    pemasukan − pengeluaran) DIBUANG — salah untuk karyawan.
+  - Dites: 18 kasus hitung manual (esbuild + node) cocok; E2E wrangler dev lokal (gaji 135 jt, omzet 675,85 jt, zakat
+    2,5 jt) → UMKM 879.270, PKP 72,5 jt, PPh 4.875.000 cocok; setelan tersimpan di akun & bertahan reload; xlsx 4 sheet;
+    HP 390 tanpa overflow; API tanpa tabel/401/400/413/sanitasi. Belum: cetak PDF dicek visual (pakai window.print biasa).
+
 - **2026-11-09 — 3.24.0 Laporan Usahaku + PDF/Excel — LIVE (run #200, commit 0f7aad0, Release v3.24.0). Tanpa SQL.**
   Branch `claude/usaha-laporan-20261109`. (Rilis 2 berikutnya: Pajak Center baru — lihat "Langkah berikutnya".)
   - Worker `GET /api/member/shops/:id/report?from&to` (BACA SAJA, di handleShopRoutes → requireSession + cek
@@ -1773,7 +1789,7 @@ membersite_leosiqra_db --remote --command "..."`. SELECT boleh langsung; tulis/u
 
 ## Langkah berikutnya / ide
 
-- **Pajak Center baru (sudah disetujui Bos 2026-11-09, belum dikerjakan):** PPh final UMKM 0,5% dari omzet Usahaku
+- ~~Pajak Center baru~~ → dikerjakan di 3.25.0 (lihat Menunggu). Catatan lama: PPh final UMKM 0,5% dari omzet Usahaku
   (batas Rp500 jt/tahun tidak kena, setor tgl 15), asisten SPT tahunan (karyawan/usaha/campuran, biaya jabatan 5% maks
   Rp6 jt, zakat pengurang), kalender & pengingat pajak, setelan pajak disimpan di akun (butuh migrasi D1 baru), ekspor
   .xlsx (exceljs sudah ada), desain & animasi baru. Pajak Center sekarang: `src/app/membership/pajak-center/page.tsx`
