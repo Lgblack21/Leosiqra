@@ -94,6 +94,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.23.4 | 9 Nov 2026 | Panel halaman masuk/daftar tidak lagi berantakan |
 | 3.23.5 | 9 Nov 2026 | Panel halaman masuk/daftar diam, form yang bergulir |
 | 3.23.6 | 9 Nov 2026 | Masuk, Daftar & Mulai tampil terang dan lebih ringan |
+| 3.24.0 | 9 Nov 2026 | Laporan Usahaku + unduh PDF & Excel |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -107,6 +108,15 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.24.0 — 2026-11-09 — Laporan Usahaku + unduh PDF & Excel
+
+- Usahaku punya halaman **Laporan** per toko (tombol "Laporan & unduh" di samping Buka kasir): omzet, biaya,
+  laba & margin, grafik per hari/bulan, produk terlaris, biaya per jenis, penjualan per kasir, rincian penjualan &
+  biaya, dan stok bahan — memakai logo dan warna tema tokomu.
+- Pilih periode: bulan ini, bulan lalu, 3 bulan, tahun ini, atau tanggal bebas.
+- **Unduh PDF** (lewat dialog cetak → Simpan sebagai PDF) dan **Unduh Excel** (.xlsx: Ringkasan, Penjualan per
+  item, Produk, Biaya, Per hari/bulan, Stok — angka bisa langsung dihitung).
 
 ## 3.23.6 — 2026-11-09 — Masuk, Daftar & Mulai tampil terang dan lebih ringan
 

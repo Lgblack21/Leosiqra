@@ -10739,6 +10739,68 @@ async function handleShopRoutes(request: Request, env: Env, pathname: string) {
       return json({ ok: true });
     }
     // Catat penjualan: pemasukan + saldo dalam satu batch; request_id anti dobel.
+    // Laporan usaha (BACA SAJA) untuk halaman Laporan + PDF/Excel: penjualan dengan rincian item,
+    // pembeli & kasir (dari payload_json), biaya per jenis, dan stok bahan pada rentang tanggal.
+    if (action === "report" && request.method === "GET") {
+      const q = new URL(request.url).searchParams;
+      const today = todayWIB();
+      const to = isRealDateStr(q.get("to")) && q.get("to")! <= today ? q.get("to")! : today;
+      const fromRaw = q.get("from");
+      let from = isRealDateStr(fromRaw) && fromRaw <= to ? fromRaw : `${to.slice(0, 8)}01`;
+      // Maks ±13 bulan per laporan supaya tetap ringan.
+      const minFrom = new Date(Date.parse(`${to}T00:00:00Z`) - 400 * 86400e3).toISOString().slice(0, 10);
+      if (from < minFrom) from = minFrom;
+      const shopRow = (await selectShops(env, userId, " AND id = ?", [id]))[0] ?? {};
+      const style = parseKasirStyle(shopRow.style_json);
+      const REPORT_MAX = 5000;
+      const rows = (await env.DB.prepare(
+        `SELECT t.id, t.type, t.amount_idr AS amount, t.sub_category, substr(t.date, 1, 10) AS date, t.note, t.payload_json, t.created_at, a.name AS account_name
+           FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id AND a.user_id = t.user_id
+          WHERE t.user_id = ? AND t.related_type = 'shop' AND t.related_id = ? AND substr(t.date, 1, 10) BETWEEN ? AND ?
+          ORDER BY t.date ASC, t.created_at ASC LIMIT ?`
+      ).bind(userId, id, from, to, REPORT_MAX + 1).all<{ id: string; type: string; amount: number; sub_category: string | null; date: string; note: string | null; payload_json: string | null; created_at: string; account_name: string | null }>()).results ?? [];
+      const txt = (v: unknown, n: number) => (typeof v === "string" ? v.trim().slice(0, n) : "");
+      const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+      const sales: unknown[] = [];
+      const expenses: unknown[] = [];
+      for (const r of rows.slice(0, REPORT_MAX)) {
+        let p: Record<string, unknown> = {};
+        try { const v = r.payload_json ? JSON.parse(r.payload_json) : null; if (v && typeof v === "object") p = v as Record<string, unknown>; } catch { /* payload rusak → abaikan rincian */ }
+        const base = { id: r.id, date: r.date, amount: Math.round(num(r.amount)), account: r.account_name ?? null, staff: txt(p.staffName, 60) || null };
+        if (r.type === "pemasukan") {
+          const items = Array.isArray(p.items)
+            ? (p.items as unknown[]).slice(0, 60).flatMap((it) => {
+                const o = it as Record<string, unknown>;
+                const name = txt(o?.name, 80);
+                return name ? [{ name, price: Math.round(num(o.price)), qty: Math.max(0, num(o.qty)) }] : [];
+              })
+            : [];
+          sales.push({ ...base, product: txt(p.product, 120) || null, qty: Math.max(0, num(p.qty)) || null, buyer: txt(p.buyer, 80) || null, source: p.source === "website" ? "website" : "kasir", items, note: r.note ?? "" });
+        } else if (r.type === "pengeluaran") {
+          expenses.push({ ...base, kind: r.sub_category || "Lainnya", item: txt(p.item, 80) || null, note: r.note ?? "" });
+        }
+      }
+      let materials: unknown[] = [];
+      let moves: unknown[] = [];
+      try {
+        materials = (await listMaterials(env, userId, [id], false)).map((m) => ({ id: m.id, name: m.name, unit: m.unit, stock: m.stock, min_stock: m.min_stock }));
+        moves = (await env.DB.prepare(
+          `SELECT material_id, kind, qty, cost, note, by_name, date FROM shop_stock_moves WHERE owner_id = ? AND shop_id = ? AND reverted_at IS NULL AND date BETWEEN ? AND ? ORDER BY date ASC, created_at ASC LIMIT 2000`
+        ).bind(userId, id, from, to).all()).results ?? [];
+      } catch (e) { if (!stockTableMissing(e)) throw e; }
+      return json({
+        shop: {
+          id, name: shop.name, tagline: shopRow.tagline ?? null, emoji: shopRow.emoji ?? null, contact_wa: shopRow.contact_wa ?? null,
+          area: shopRow.area ?? null, link_url: shopRow.link_url ?? null, theme: style.theme, logo_url: style.logoUrl || null, receipt_footer: style.receiptFooter || null,
+        },
+        range: { from, to },
+        sales,
+        expenses,
+        materials,
+        moves,
+        truncated: rows.length > REPORT_MAX,
+      });
+    }
     // Sambungan website: buat/ganti kunci (ditampilkan SEKALI) atau putuskan.
     if (action === "hook" && (request.method === "POST" || request.method === "DELETE")) {
       try {

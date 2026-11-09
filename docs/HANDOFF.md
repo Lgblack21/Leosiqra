@@ -18,6 +18,21 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-09 — 3.24.0 Laporan Usahaku + PDF/Excel — BELUM DEPLOY, menunggu "gas". Tanpa SQL.**
+  Branch `claude/usaha-laporan-20261109`. (Rilis 2 berikutnya: Pajak Center baru — lihat "Langkah berikutnya".)
+  - Worker `GET /api/member/shops/:id/report?from&to` (BACA SAJA, di handleShopRoutes → requireSession + cek
+    `shops.user_id`): penjualan dengan items/pembeli/kasir/sumber dari payload_json, biaya per jenis, bahan & riwayat
+    stok; maks ±400 hari & 5.000 transaksi (`truncated`). Dites wrangler dev lokal: 401 tanpa login, 404 toko user lain.
+  - Frontend: `src/lib/shopReport.ts` (fetch + `summarize`), `components/ladang/LaporanUsaha.tsx` (rute
+    `/membership/ladang/laporan?id=` & `/app/ladang/laporan?id=`), tombol "Laporan & unduh" di UsahaView.
+    PDF = `window.print()` dengan CSS cetak (hanya `#laporan-sheet`, rincian mulai halaman 2).
+    Excel = `src/lib/shopReportXlsx.ts`, **dependency baru `exceljs@4.4.0`** dimuat lewat import() build browser
+    `exceljs/dist/exceljs.min.js` (shim tipe `src/types/exceljs-browser.d.ts`).
+  - Dites E2E (wrangler dev --local + out, 21 penjualan/3 biaya): angka cocok manual (omzet 854.000, biaya 475.000),
+    xlsx 6 sheet dibuka openpyxl, PDF 3 halaman, web 1280 & HP 390, 0 error JS.
+  - Tes lokal: D1 lokal dibuat dari `cloudflare/schema-production.sql` + migrasi 0027/0029–0033/0036 + `ALTER TABLE
+    accounts ADD sort_order`; butuh `.dev.vars` SESSION_SECRET (di-gitignore) dan `wrangler dev --local-protocol https`.
+
 - **2026-11-09 — Tema TERANG untuk landing, /mulai, masuk & daftar (ikut 3.23.6) — LIVE (run #199, commit 0eae434,
   Release v3.23.6). Tanpa SQL.** Branch `claude/tema-terang-20261109` (berisi juga perbaikan blur 3.23.6 + hapus ScrollTilt).
   - Bos: "jangan hitam-hitam, buat putih, bersih tapi tetap keren". Navy dibuang: `Aurora` kini pastel
@@ -1757,6 +1772,12 @@ membersite_leosiqra_db --remote --command "..."`. SELECT boleh langsung; tulis/u
 - Impor belum ada di aplikasi HP (`/app/*`) — baru versi web.
 
 ## Langkah berikutnya / ide
+
+- **Pajak Center baru (sudah disetujui Bos 2026-11-09, belum dikerjakan):** PPh final UMKM 0,5% dari omzet Usahaku
+  (batas Rp500 jt/tahun tidak kena, setor tgl 15), asisten SPT tahunan (karyawan/usaha/campuran, biaya jabatan 5% maks
+  Rp6 jt, zakat pengurang), kalender & pengingat pajak, setelan pajak disimpan di akun (butuh migrasi D1 baru), ekspor
+  .xlsx (exceljs sudah ada), desain & animasi baru. Pajak Center sekarang: `src/app/membership/pajak-center/page.tsx`
+  (1197 baris, setelan PTKP/PPh21 hanya localStorage, ekspor .xls HTML + window.print).
 
 Pola kerja dengan Bos (lanjutkan sama): Bos kirim screenshot Oyenza per menu Pengaturan →
 bikin versi Leosiqra yang **fiturnya nyata tapi desainnya beda** (jangan sama) → uji lokal

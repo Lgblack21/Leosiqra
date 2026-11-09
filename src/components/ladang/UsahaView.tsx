@@ -19,6 +19,7 @@ import {
   Users,
   Wand2,
   X,
+  FileBarChart,
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -735,12 +736,20 @@ export function ShopDetail({
               {month.length} penjualan · total {sales.length}
             </p>
           </div>
-          <Link
-            href={kasirLink}
-            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-emerald-600 py-3 fs-14 font-bold text-white hover:bg-emerald-700"
-          >
-            <Store size={16} /> Buka kasir
-          </Link>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Link
+              href={kasirLink}
+              className="flex items-center justify-center gap-1.5 rounded-full bg-emerald-600 py-3 fs-14 font-bold text-white hover:bg-emerald-700"
+            >
+              <Store size={16} /> Buka kasir
+            </Link>
+            <Link
+              href={kasirLink.replace('/ladang/kasir?', '/ladang/laporan?')}
+              className="flex items-center justify-center gap-1.5 rounded-full bg-white py-3 fs-14 font-bold text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-50 dark:bg-slate-900 dark:text-emerald-300 dark:ring-emerald-500/30"
+            >
+              <FileBarChart size={16} /> Laporan & unduh
+            </Link>
+          </div>
         </section>
       )}
 
