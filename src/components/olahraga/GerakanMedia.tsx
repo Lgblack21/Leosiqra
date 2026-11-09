@@ -1,60 +1,64 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { PlayCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Play, PlayCircle } from 'lucide-react';
+import { VIDEO_GERAKAN } from '@/lib/olahraga/video';
 import type { Gerakan } from '@/lib/olahraga/types';
 import { cn } from '@/lib/utils';
 
-// Ilustrasi gerakan: 4 frame (dibuat admin, disimpan di R2) diputar bergantian seperti video pendek.
-// Belum ada gambar → emoji. Plus tombol pencarian YouTube (selalu tersedia, tanpa video mati).
-const FRAMES = 4;
+// Media gerakan: video YouTube yang dikurasi per gerakan (src/lib/olahraga/video.ts, diverifikasi oEmbed).
+// Hemat kuota: yang dimuat dulu hanya thumbnail; pemutar (youtube-nocookie) baru dimuat saat diketuk.
+// Belum ada video yang cocok → tombol cari di YouTube.
+// Ilustrasi AI (R2, /api/fit/gerakan/…) sengaja TIDAK ditampilkan: hasil uji 2026-11-10 tidak konsisten antar frame
+// dan ada variasi gerakan yang salah (plank lutut tergambar plank penuh) — berisiko ditiru pemula.
 
 export const youtubeUrl = (g: Pick<Gerakan, 'nama' | 'duduk'>) =>
   `https://www.youtube.com/results?search_query=${encodeURIComponent(`${g.nama.replace(/\s*\(.*\)/, '')} ${g.duduk ? 'duduk di kursi ' : ''}cara pemula`)}`;
 
 export function GerakanMedia({ g, className }: { g: Gerakan; className?: string }) {
-  const [ok, setOk] = useState<boolean[]>(() => Array(FRAMES).fill(false));
-  const [gagal0, setGagal0] = useState(false);
-  const [i, setI] = useState(0);
-  const siap = ok.filter(Boolean).length;
-  useEffect(() => {
-    if (siap < 2) return;
-    const t = window.setInterval(() => setI((x) => (x + 1) % FRAMES), 750);
-    return () => window.clearInterval(t);
-  }, [siap]);
-  const tampil = ok[i] ? i : 0;
+  const v = VIDEO_GERAKAN[g.key] ?? null;
+  const [main, setMain] = useState(false);
   return (
     <div className={cn('space-y-2', className)}>
-      {!gagal0 ? (
-        <div className="relative aspect-square w-full max-w-[260px] overflow-hidden rounded-2xl bg-[#f6efe2]">
-          {Array.from({ length: FRAMES }, (_, n) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={n}
-              src={`/api/fit/gerakan/${g.key}/${n}`}
-              alt={n === 0 ? `Ilustrasi ${g.nama}` : ''}
-              loading="lazy"
-              onLoad={() => setOk((o) => o.map((v, j) => (j === n ? true : v)))}
-              onError={() => n === 0 && setGagal0(true)}
-              className={cn(
-                'absolute inset-0 h-full w-full object-cover transition-opacity duration-200',
-                n === tampil && ok[n] ? 'opacity-100' : 'opacity-0',
-              )}
+      {v ? (
+        <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-slate-900">
+          {main ? (
+            <iframe
+              src={`https://www.youtube-nocookie.com/embed/${v.id}?autoplay=1&rel=0&modestbranding=1&playsinline=1`}
+              title={v.judul}
+              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+              allowFullScreen
+              referrerPolicy="strict-origin-when-cross-origin"
+              className="absolute inset-0 h-full w-full"
             />
-          ))}
-          {!ok[0] ? (
-            <span className="absolute inset-0 flex items-center justify-center text-[56px]">{g.emoji}</span>
-          ) : null}
+          ) : (
+            <button type="button" onClick={() => setMain(true)} className="group absolute inset-0" aria-label={`Putar video ${g.nama}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`} alt="" loading="lazy" className="h-full w-full object-cover opacity-90" />
+              <span className="absolute inset-0 flex items-center justify-center">
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-rose-600 text-white shadow-lg transition-transform group-hover:scale-105">
+                  <Play size={26} fill="currentColor" />
+                </span>
+              </span>
+            </button>
+          )}
         </div>
       ) : null}
-      <a
-        href={youtubeUrl(g)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex h-10 items-center gap-2 rounded-full bg-rose-50 px-4 fs-13 font-bold text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"
-      >
-        <PlayCircle size={17} /> Lihat video di YouTube
-      </a>
+      {v ? (
+        <p className="fs-11 text-slate-400">
+          Video: {v.kanal}
+          {v.bahasa === 'en' ? ' · bahasa Inggris (lihat gerakannya)' : ''}
+        </p>
+      ) : (
+        <a
+          href={youtubeUrl(g)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex h-10 items-center gap-2 rounded-full bg-rose-50 px-4 fs-13 font-bold text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"
+        >
+          <PlayCircle size={17} /> Cari video di YouTube
+        </a>
+      )}
     </div>
   );
 }

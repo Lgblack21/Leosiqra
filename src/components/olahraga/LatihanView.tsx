@@ -344,7 +344,7 @@ export function LatihanView({
           })}
         </div>
         <p className="mt-3 fs-12 text-slate-400 dark:text-slate-500">
-          Ilustrasi gerakan menyusul. Mulai pelan, berhenti kalau nyeri dada, pusing berat, atau sesak tidak biasa.
+          Ketuk gerakan untuk lihat video & caranya. Mulai pelan, berhenti kalau nyeri dada, pusing berat, atau sesak tidak biasa.
         </p>
       </div>
 

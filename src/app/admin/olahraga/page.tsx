@@ -60,7 +60,7 @@ export default function AdminOlahragaPage() {
     <div className="space-y-6">
       <AdminPageHeader
         title="Olahragaku · Ilustrasi gerakan"
-        description="Gambar 4 frame per gerakan (diputar seperti video pendek di aplikasi). Disimpan di R2 — cukup dibuat sekali."
+        description="Gambar 4 frame per gerakan, disimpan di R2. SAAT INI TIDAK DITAMPILKAN ke member: hasil uji 10-11 tidak konsisten antar frame & ada variasi gerakan yang salah. Member melihat video YouTube yang dikurasi."
       />
       <div className="flex flex-wrap gap-3">
         <button
