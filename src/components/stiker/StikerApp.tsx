@@ -55,6 +55,27 @@ const DEFAULT: Omit<Placed, 'uid'>[] = [
   { id: 'leo-cap', x: 0.82, y: 0.2, scale: 0.8, rot: -8 },
 ];
 
+const PHOTO_MAX = 2160; // sisi terpanjang; cukup untuk ekspor 1080×1920 (foto menutupi kanvas)
+
+async function photoToDataUrl(f: File): Promise<string> {
+  const url = URL.createObjectURL(f);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode(); // orientasi EXIF sudah diterapkan browser (image-orientation: from-image)
+    const s = Math.min(1, PHOTO_MAX / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(img.naturalWidth * s));
+    c.height = Math.max(1, Math.round(img.naturalHeight * s));
+    const ctx = c.getContext('2d');
+    if (!ctx) throw new Error('canvas');
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', 0.9);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 export function StikerApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
   const [txs, setTxs] = useState<Transaction[] | null>(null);
   const [loadErr, setLoadErr] = useState(false);
@@ -105,7 +126,6 @@ export function StikerApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
     const p = new URLSearchParams(window.location.search).get('periode');
     if (p && RANGES.some((r) => r.id === p)) setRange(p as RangeId);
   }, []);
-  useEffect(() => () => void (photo && URL.revokeObjectURL(photo)), [photo]);
   // Area kanvas mengikuti sisa layar; kanvas diskalakan agar muat penuh (lebar & tinggi).
   useEffect(() => {
     const el = stage.current;
@@ -134,9 +154,17 @@ export function StikerApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
   const k = box.w && box.h ? Math.min(box.w / W, box.h / H) : 0;
   const selected = placed.find((p) => p.uid === sel) ?? null;
 
-  const pickFile = (f: File | undefined) => {
+  // Foto disimpan sebagai data URL yang sudah diperkecil. Jangan pakai blob: URL langsung — html-to-image
+  // (cacheBust) menambahkan "?waktu" ke URL gambar, dan blob: URL ber-query gagal di-fetch → ekspor gagal.
+  // Diperkecil juga supaya foto kamera 12 MP tidak membuat HP kehabisan memori saat ekspor.
+  const pickFile = async (f: File | undefined) => {
     if (!f || !f.type.startsWith('image/')) return;
-    setPhoto(URL.createObjectURL(f));
+    setMsg(null);
+    try {
+      setPhoto(await photoToDataUrl(f));
+    } catch {
+      setMsg('Foto tidak bisa dibuka. Coba foto lain (format JPG/PNG).');
+    }
   };
   const add = (id: string) => {
     const p: Placed = { uid: uid(), id, x: 0.5, y: 0.5, scale: 0.8, rot: 0 };
@@ -458,14 +486,20 @@ export function StikerApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
           accept="image/*"
           capture="environment"
           className="hidden"
-          onChange={(e) => pickFile(e.target.files?.[0])}
+          onChange={(e) => {
+            void pickFile(e.target.files?.[0]);
+            e.target.value = '';
+          }}
         />
         <input
           ref={galIn}
           type="file"
           accept="image/*"
           className="hidden"
-          onChange={(e) => pickFile(e.target.files?.[0])}
+          onChange={(e) => {
+            void pickFile(e.target.files?.[0]);
+            e.target.value = '';
+          }}
         />
       </div>
     </div>

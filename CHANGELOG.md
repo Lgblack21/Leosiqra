@@ -84,6 +84,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.20.0 | 9 Nov 2026 | Alkitab & data API Indonesia |
 | 3.20.1 | 9 Nov 2026 | Pelafalan Alkitab |
 | 3.21.0 | 9 Nov 2026 | Teduh baru: renungan harian, Pelajari, audio Al-Qur'an |
+| 3.21.1 | 9 Nov 2026 | Foto kamera & galeri di Stikerku bisa disimpan lagi |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -97,6 +98,13 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.21.1 — 2026-11-09 — Foto kamera & galeri di Stikerku bisa disimpan lagi
+
+- Stikerku: gambar dengan latar foto dari Kamera atau Galeri kini bisa disimpan dan dibagikan lagi
+  (sebelumnya muncul "Gagal membuat gambar").
+- Foto besar diperkecil dulu di perangkat, jadi pembuatan gambar lebih ringan di HP. Foto tetap tidak diunggah.
+- Foto yang tidak bisa dibuka (mis. format HEIC di browser yang belum mendukung) sekarang diberi pesan yang jelas.
 
 ## 3.21.0 — 2026-11-09 — Teduh baru: renungan harian, Pelajari, audio Al-Qur'an
 
