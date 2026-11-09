@@ -130,7 +130,7 @@ export default function RegisterPage() {
   return (
     <AuthLayout
       headline="Mulai rapikan keuanganmu hari ini."
-      sub="Gratis 14 hari, tanpa kartu kredit. Catat rekening, kartu, tabungan, dan investasi — Leo dan AI Leosiqra yang merangkumnya."
+      sub="Catat rekening, kartu, tabungan, dan investasi di satu tempat — Leo dan AI Leosiqra yang merangkumnya."
       mood={leoMood}
       lookX={Math.min(1, typing.length / 28)}
       footer={

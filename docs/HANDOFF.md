@@ -18,6 +18,16 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-09 — 3.23.0 Halaman daftar & masuk baru — BELUM DEPLOY, menunggu "gas" (bersama 3.22.1). Tanpa SQL.**
+  Branch `claude/daftar-baru-20261109` (di atas `claude/mulai-lanjut-20261109`).
+  - Hanya tampilan `components/auth/AuthLayout.tsx` (dipakai /auth/register & /auth/login): laptop = 2 kolom, panel
+    brand navy-emas sticky (aurora `.auth-aurora` di globals.css, 3 PERKS, TxChip/VoiceChip/BudgetChip) + form kanan;
+    HP = pita gelap atas + kartu form `-mt-[120px]`. Props AuthLayout tidak berubah; logika form tidak diubah.
+  - Klaim di panel dijaga faktual (Gratis 14 hari tanpa kartu kredit, verifikasi 2 langkah tersedia). Desain sendiri,
+    bukan tiruan Oyenza.
+  - Dites Playwright: register 1440 & Pixel-ish 390, login 1440 & 390, submit daftar (mock) → body benar + "Akunmu
+    siap", 0 error JS.
+
 - **2026-11-09 — 3.22.1 /mulai: isian tamu lama tidak lagi melompat ke langkah terakhir — BELUM DEPLOY, menunggu "gas".
   Tanpa SQL.** Branch `claude/mulai-lanjut-20261109`.
   - Laporan Bos: klik Daftar → langsung "Hari pertama, beres." Penyebab: `leosiqra-guest-onboarding.done` di

@@ -87,6 +87,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.21.1 | 9 Nov 2026 | Foto kamera & galeri di Stikerku bisa disimpan lagi |
 | 3.22.0 | 9 Nov 2026 | Menu samping baru |
 | 3.22.1 | 9 Nov 2026 | Halaman daftar tidak lagi langsung lompat ke langkah terakhir |
+| 3.23.0 | 9 Nov 2026 | Halaman daftar & masuk baru |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -100,6 +101,13 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.23.0 — 2026-11-09 — Halaman daftar & masuk baru
+
+- Tampilan baru halaman Daftar dan Masuk: di laptop ada panel biru-emas khas Leosiqra berisi keunggulan
+  utama dan kartu fitur yang bergerak pelan, form di sisi kanan.
+- Di HP: bagian atas bergradien dengan judul dan ringkasan keunggulan, form menumpuk rapi di bawahnya.
+- Isi dan cara daftar/masuk tidak berubah (Google, email, password, WhatsApp opsional).
 
 ## 3.22.1 — 2026-11-09 — Halaman daftar tidak lagi langsung lompat ke langkah terakhir
 

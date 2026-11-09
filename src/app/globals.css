@@ -823,6 +823,24 @@ html[data-daypart='malam'] .auth-greet[data-p='malam'] {
   }
 }
 
+/* Cahaya aurora pelan di panel brand masuk/daftar (AuthLayout). */
+.auth-aurora {
+  animation: auth-aurora 18s ease-in-out infinite alternate;
+}
+@keyframes auth-aurora {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(40px, 30px) scale(1.15);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-aurora {
+    animation: none;
+  }
+}
+
 /* ===== Kartu fitur melayang (/mulai, masuk/daftar) — lihat components/auth/FinanceChips ===== */
 .paper-float {
   transform: rotate(var(--r, 0deg));
