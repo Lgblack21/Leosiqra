@@ -42,6 +42,7 @@ import {
   CincinProgres,
   JedaSejenak,
   LangitHero,
+  sapaWaktu,
   LembarTab,
   TeduhShell,
   TitikMingguan,
@@ -76,18 +77,7 @@ const DOA = [
 ];
 const useProgres = () => useSyncExternalStore(progresAlkitab.subscribe, progresAlkitab.snapshot, () => null);
 const useCatatan = () => useSyncExternalStore(catatan.subscribe, catatan.snapshot, () => null);
-const greet = () => {
-  const h = new Date().getHours();
-  return h < 4
-    ? 'Selamat malam'
-    : h < 11
-      ? 'Selamat pagi'
-      : h < 15
-        ? 'Selamat siang'
-        : h < 18
-          ? 'Selamat sore'
-          : 'Selamat malam';
-};
+const greet = () => sapaWaktu();
 const usePasal = (kitab: Kitab | undefined, c: number) => {
   const [p, setP] = useState<{ key: string; data: Pasal | null; gagal: boolean } | null>(null);
   const key = `${kitab?.abbr}:${c}`;

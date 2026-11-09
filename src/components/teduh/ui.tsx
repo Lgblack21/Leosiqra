@@ -239,22 +239,59 @@ export function CincinProgres({
 }
 
 // ── Langit sesuai waktu ──
-type Fase = { id: string; label: string; bg: string; malam: boolean };
-export function faseLangit(d: Date): Fase {
-  const h = d.getHours() + d.getMinutes() / 60;
-  if (h >= 4 && h < 6)
-    return { id: 'fajar', label: 'Menjelang fajar', bg: 'from-indigo-950 via-violet-800 to-rose-500', malam: true };
-  if (h >= 6 && h < 10) return { id: 'pagi', label: 'Pagi', bg: 'from-sky-700 via-sky-500 to-amber-300', malam: false };
-  if (h >= 10 && h < 15)
-    return { id: 'siang', label: 'Siang', bg: 'from-sky-800 via-cyan-600 to-teal-400', malam: false };
-  if (h >= 15 && h < 18.5)
-    return { id: 'senja', label: 'Senja', bg: 'from-indigo-800 via-rose-600 to-amber-400', malam: false };
-  return { id: 'malam', label: 'Malam', bg: 'from-slate-950 via-indigo-950 to-indigo-800', malam: true };
+// ── Langit Teduh: warna, matahari, bulan & bintang mengikuti jam (berubah halus tiap menit) ──
+// Titik kunci warna langit [jam, atas, tengah, cakrawala]; di antaranya diinterpolasi.
+const LANGIT: [number, string, string, string][] = [
+  [0, '#060b1f', '#0d1636', '#1b2550'],
+  [4.3, '#070c22', '#151a45', '#2a2a5e'],
+  [5.2, '#1b1f52', '#4b3a7a', '#c0708a'],
+  [5.9, '#3b5a9c', '#c98aa0', '#ffc28a'],
+  [7, '#3f7fd0', '#79b4ea', '#ffe2b0'],
+  [10, '#2f78d6', '#5aa6ee', '#bfe4ff'],
+  [14, '#2b6fcf', '#4f9ee9', '#b4dcff'],
+  [16.4, '#3567be', '#7aa6dc', '#ffd59a'],
+  [17.4, '#3a4f9a', '#c27a8a', '#ffa45c'],
+  [18, '#2a2f6e', '#7a4a86', '#f08a5a'],
+  [18.6, '#151b48', '#36306a', '#7a4f7e'],
+  [19.4, '#0a1030', '#141c45', '#252c5c'],
+  [24, '#060b1f', '#0d1636', '#1b2550'],
+];
+const TERBIT = 5.85;
+const TERBENAM = 17.95;
+const hex = (c: string) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
+const campur = (a: string, b: string, t: number) => {
+  const [x, y] = [hex(a), hex(b)];
+  return `rgb(${x.map((v, i) => Math.round(v + (y[i] - v) * t)).join(',')})`;
+};
+export function warnaLangit(h: number) {
+  const i = Math.max(0, LANGIT.findIndex((k) => k[0] > h) - 1);
+  const [h0, ...a] = LANGIT[i];
+  const [h1, ...b] = LANGIT[Math.min(i + 1, LANGIT.length - 1)];
+  const t = h1 === h0 ? 0 : (h - h0) / (h1 - h0);
+  return a.map((c, k) => campur(c, b[k], t)) as [string, string, string];
 }
+/** Sapaan yang selaras dengan langit. */
+export const sapaWaktu = (d = new Date()) => {
+  const h = d.getHours() + d.getMinutes() / 60;
+  return h < 4
+    ? 'Selamat malam'
+    : h < 10.5
+      ? 'Selamat pagi'
+      : h < 15
+        ? 'Selamat siang'
+        : h < 18.25
+          ? 'Selamat sore'
+          : 'Selamat malam';
+};
 const acak = (i: number) => {
   const x = Math.sin(i * 9301 + 49297) * 233280;
   return x - Math.floor(x);
 };
+const jamSekarang = () => {
+  const d = new Date();
+  return d.getHours() + d.getMinutes() / 60;
+};
+
 export function LangitHero({
   nada,
   sapa,
@@ -269,83 +306,149 @@ export function LangitHero({
   children?: React.ReactNode;
 }) {
   const reduce = useReducedMotion();
-  const [now] = useState(() => new Date());
-  const f = faseLangit(now);
-  const h = now.getHours() + now.getMinutes() / 60;
-  // Posisi matahari (06–18) atau bulan (18–06) di busur langit, 0..1.
-  const t = f.malam ? (h >= 18 ? h - 18 : h + 6) / 12 : (h - 6) / 12;
+  const [h, setH] = useState(jamSekarang);
+  useEffect(() => {
+    const id = setInterval(() => setH(jamSekarang()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const [atas, tengah, cakrawala] = warnaLangit(h);
+  // Matahari: 0 saat terbit → 1 saat terbenam; tinggi = sinus (sedikit di bawah 0 = tenggelam di balik bukit).
+  const tm = (h - TERBIT) / (TERBENAM - TERBIT);
+  const siang = tm > -0.04 && tm < 1.04;
+  // Bulan: dari terbenam sampai terbit esok.
+  const malamPanjang = 24 - TERBENAM + TERBIT;
+  const tb = (((h - TERBENAM + 24) % 24) + 0.0001) / malamPanjang;
+  const gelap = Math.min(1, Math.max(0, siang ? (Math.abs(tm - 0.5) - 0.42) * 6 : 1));
+  const busur = (v: number) => ({
+    left: `${50 + v * 44}%`,
+    top: `${92 - Math.sin(Math.PI * Math.min(1, Math.max(0, v))) * 70 + (v < 0 || v > 1 ? 10 : 0)}%`,
+  });
+  const dekatCakrawala = siang && (tm < 0.12 || tm > 0.88);
   const bintang = useMemo(
     () =>
-      Array.from({ length: 22 }, (_, i) => ({
+      Array.from({ length: 34 }, (_, i) => ({
         x: acak(i) * 100,
-        y: acak(i + 50) * 70,
-        s: 1 + acak(i + 99) * 2,
+        y: acak(i + 50) * 62,
+        s: 1 + acak(i + 99) * 1.8,
         d: acak(i + 7) * 3,
       })),
     [],
   );
-  // Busur di separuh kanan (teks & angka di kiri tidak tertutup).
-  const pos = (v: number) => ({ left: `${56 + v * 36}%`, top: `${58 - Math.sin(Math.PI * v) * 40}%` });
+  const awan = !siang || gelap > 0.6 ? 0 : 1;
   return (
     <section
-      className={cn(
-        'web-keep relative isolate overflow-hidden rounded-[30px] bg-gradient-to-br p-5 text-white shadow-[0_24px_60px_-28px_rgba(30,27,75,0.65)] md:p-7',
-        f.bg,
-      )}
+      className="web-keep relative isolate overflow-hidden rounded-[30px] p-5 text-white shadow-[0_24px_60px_-28px_rgba(15,23,42,0.6)] transition-[background] duration-[2000ms] md:p-7"
+      style={{ background: `linear-gradient(180deg, ${atas} 0%, ${tengah} 58%, ${cakrawala} 100%)` }}
     >
-      {/* Bintang berkelip */}
-      {f.malam
-        ? bintang.map((b, i) => (
-            <motion.span
-              key={i}
-              aria-hidden
-              className="absolute -z-10 rounded-full bg-white"
-              style={{ left: `${b.x}%`, top: `${b.y}%`, width: b.s, height: b.s }}
-              animate={reduce ? undefined : { opacity: [0.15, 0.95, 0.15] }}
-              transition={{ duration: 2.4 + b.d, repeat: Infinity, delay: b.d, ease: 'easeInOut' }}
-            />
-          ))
-        : null}
-      {/* Awan melayang */}
-      {!f.malam
-        ? [0, 1].map((i) => (
-            <motion.span
-              key={i}
-              aria-hidden
-              className="absolute -z-10 h-10 w-40 rounded-full bg-white/25 blur-xl"
-              style={{ top: `${18 + i * 34}%` }}
-              initial={{ x: i ? '-30%' : '40%' }}
-              animate={reduce ? undefined : { x: ['-40%', '420%'] }}
-              transition={{ duration: 46 + i * 18, repeat: Infinity, ease: 'linear', delay: -i * 20 }}
-            />
-          ))
-        : null}
-      {/* Matahari / bulan bergerak ke posisinya */}
-      <motion.span
-        aria-hidden
-        className="absolute -z-10 -translate-x-1/2 -translate-y-1/2"
-        initial={reduce ? pos(t) : pos(Math.max(0, t - 0.25))}
-        animate={pos(t)}
-        transition={{ duration: 1.6, ease: [0.22, 1, 0.36, 1] }}
-      >
-        {f.malam ? (
-          <span className="relative block h-12 w-12 rounded-full bg-amber-50 shadow-[0_0_40px_10px_rgba(254,243,199,0.35)]">
-            <span className="absolute -right-1 -top-1 h-11 w-11 rounded-full bg-indigo-950/90" />
-          </span>
-        ) : (
+      {/* Bintang (makin terang saat gelap) */}
+      {gelap > 0.05 &&
+        bintang.map((b, i) => (
           <motion.span
-            className="block h-14 w-14 rounded-full bg-amber-200 shadow-[0_0_60px_20px_rgba(253,230,138,0.55)]"
-            animate={reduce ? undefined : { scale: [1, 1.08, 1] }}
-            transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+            key={i}
+            aria-hidden
+            className="absolute -z-10 rounded-full bg-white"
+            style={{ left: `${b.x}%`, top: `${b.y}%`, width: b.s, height: b.s, opacity: 0.6 * gelap }}
+            animate={reduce ? undefined : { opacity: [0.15 * gelap, 0.95 * gelap, 0.15 * gelap] }}
+            transition={{ duration: 2.4 + b.d, repeat: Infinity, delay: b.d, ease: 'easeInOut' }}
           />
-        )}
-      </motion.span>
+        ))}
+      {/* Bintang jatuh sesekali di malam hari */}
+      {gelap > 0.8 && !reduce && (
+        <motion.span
+          aria-hidden
+          className="absolute -z-10 h-px w-24 bg-gradient-to-r from-transparent via-white to-transparent"
+          style={{ top: '18%', left: '30%', rotate: '-20deg' }}
+          animate={{ x: [0, 260], y: [0, 90], opacity: [0, 1, 0] }}
+          transition={{ duration: 1.4, repeat: Infinity, repeatDelay: 9, ease: 'easeOut' }}
+        />
+      )}
+      {/* Awan tipis melayang di siang hari */}
+      {awan
+        ? [0, 1, 2].map((i) => (
+            <motion.span
+              key={i}
+              aria-hidden
+              className="absolute -z-10 rounded-full bg-white/30 blur-2xl"
+              style={{ top: `${14 + i * 22}%`, width: 180 - i * 30, height: 36 - i * 6 }}
+              initial={{ x: `${-20 + i * 140}%` }}
+              animate={reduce ? undefined : { x: ['-60%', '520%'] }}
+              transition={{ duration: 70 + i * 25, repeat: Infinity, ease: 'linear', delay: -i * 25 }}
+            />
+          ))
+        : null}
+      {/* Matahari */}
+      {siang && (
+        <motion.span
+          aria-hidden
+          className="absolute -z-10 -translate-x-1/2 -translate-y-1/2"
+          initial={reduce ? busur(tm) : busur(tm - 0.08)}
+          animate={busur(tm)}
+          transition={{ duration: 2.2, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <span
+            className="absolute left-1/2 top-1/2 h-48 w-48 -translate-x-1/2 -translate-y-1/2 rounded-full"
+            style={{
+              background: `radial-gradient(circle, ${dekatCakrawala ? 'rgba(255,170,90,0.55)' : 'rgba(255,240,190,0.5)'} 0%, transparent 65%)`,
+            }}
+          />
+          <motion.span
+            className="relative block h-14 w-14 rounded-full"
+            style={{
+              background: dekatCakrawala
+                ? 'radial-gradient(circle at 40% 40%, #fff3d6, #ffb36b 70%)'
+                : 'radial-gradient(circle at 40% 40%, #fffdf0, #ffe28a 70%)',
+            }}
+            animate={reduce ? undefined : { scale: [1, 1.05, 1] }}
+            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        </motion.span>
+      )}
+      {/* Bulan sabit */}
+      {!siang && (
+        <motion.span
+          aria-hidden
+          className="absolute -z-10 -translate-x-1/2 -translate-y-1/2"
+          initial={reduce ? busur(tb) : busur(tb - 0.08)}
+          animate={busur(tb)}
+          transition={{ duration: 2.2, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <span className="absolute left-1/2 top-1/2 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(226,232,255,0.28),transparent_65%)]" />
+          <svg viewBox="0 0 48 48" className="relative h-12 w-12 drop-shadow-[0_0_12px_rgba(255,248,220,0.6)]">
+            <defs>
+              <mask id="sabit">
+                <rect width="48" height="48" fill="white" />
+                <circle cx="32" cy="18" r="18" fill="black" />
+              </mask>
+            </defs>
+            <circle cx="24" cy="24" r="20" fill="#fdf6dc" mask="url(#sabit)" />
+          </svg>
+        </motion.span>
+      )}
+      {/* Siluet bukit berlapis (warna mengikuti langit) */}
+      <svg
+        aria-hidden
+        viewBox="0 0 400 80"
+        preserveAspectRatio="none"
+        className="absolute inset-x-0 bottom-0 -z-10 h-[34%] w-full"
+      >
+        <path
+          d="M0 52 C 50 34, 90 40, 140 46 S 230 26, 290 38 S 370 30, 400 36 V80 H0Z"
+          fill="#1e2350"
+          opacity={0.18 + gelap * 0.12}
+        />
+        <path
+          d="M0 64 C 60 50, 120 58, 180 54 S 280 44, 330 54 S 385 50, 400 52 V80 H0Z"
+          fill="#0b1026"
+          opacity={0.28 + gelap * 0.2}
+        />
+        <path d="M0 74 C 80 66, 160 72, 240 68 S 360 64, 400 70 V80 H0Z" fill="#070b1c" opacity={0.42 + gelap * 0.25} />
+      </svg>
       {/* Motif: bintang segi delapan (Islam) atau berkas cahaya (Kristen/Katolik) */}
       {nada === 'islam' ? (
         <motion.svg
           aria-hidden
           viewBox="0 0 100 100"
-          className="absolute -bottom-16 -right-14 -z-10 h-64 w-64 text-white/[0.09]"
+          className="absolute -right-14 -top-16 -z-10 h-64 w-64 text-white/[0.07]"
           animate={reduce ? undefined : { rotate: 360 }}
           transition={{ duration: 160, repeat: Infinity, ease: 'linear' }}
         >
@@ -376,11 +479,16 @@ export function LangitHero({
       ) : (
         <motion.span
           aria-hidden
-          className="absolute -right-24 -top-24 -z-10 h-80 w-80 rounded-full opacity-25 [background:repeating-conic-gradient(from_0deg,rgba(255,255,255,0.55)_0deg_6deg,transparent_6deg_18deg)] [mask-image:radial-gradient(circle,black_20%,transparent_70%)]"
+          className="absolute -right-24 -top-24 -z-10 h-80 w-80 rounded-full opacity-[0.16] [background:repeating-conic-gradient(from_0deg,rgba(255,255,255,0.55)_0deg_6deg,transparent_6deg_18deg)] [mask-image:radial-gradient(circle,black_20%,transparent_70%)]"
           animate={reduce ? undefined : { rotate: 360 }}
           transition={{ duration: 120, repeat: Infinity, ease: 'linear' }}
         />
       )}
+      {/* Penjaga keterbacaan teks di kiri */}
+      <span
+        aria-hidden
+        className="absolute inset-y-0 left-0 -z-10 w-2/3 bg-gradient-to-r from-black/25 to-transparent"
+      />
       <div className="flex items-center justify-between gap-2">
         <motion.p
           initial={reduce ? false : { opacity: 0, y: 6 }}
@@ -422,7 +530,7 @@ export function TitikMingguan({ days, todayKey }: { days: Record<string, number>
             transition={{ delay: 0.25 + i * 0.06, type: 'spring', stiffness: 380, damping: 20 }}
             className={cn(
               'flex h-7 w-7 items-center justify-center rounded-full fs-10 font-black',
-              w.on ? 'bg-amber-300 text-amber-950 shadow-[0_0_14px_rgba(252,211,77,0.7)]' : 'bg-white/15 text-white/60',
+              w.on ? 'bg-amber-300 text-amber-950 shadow-[0_0_14px_rgba(252,211,77,0.7)]' : 'bg-white/15 text-white/60 ring-1 ring-white/20',
               w.hariIni && !w.on && 'ring-1 ring-white/50',
             )}
           >

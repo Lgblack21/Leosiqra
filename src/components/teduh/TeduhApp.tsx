@@ -17,6 +17,7 @@ import {
   CincinProgres,
   JedaSejenak,
   LangitHero,
+  sapaWaktu,
   TeduhShell,
   TitikMingguan,
   TombolJeda,
@@ -89,18 +90,7 @@ const DZIKIR = [
   'Hasbunallah — cukuplah Allah bagi kami',
 ];
 
-export const greet = () => {
-  const h = new Date().getHours();
-  return h < 4
-    ? 'Selamat malam'
-    : h < 11
-      ? 'Selamat pagi'
-      : h < 15
-        ? 'Selamat siang'
-        : h < 18
-          ? 'Selamat sore'
-          : 'Selamat malam';
-};
+export const greet = () => sapaWaktu();
 const tanggalHijriah = (d: Date) => {
   try {
     return new Intl.DateTimeFormat('id-ID-u-ca-islamic-umalqura', {

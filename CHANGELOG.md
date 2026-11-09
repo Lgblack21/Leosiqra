@@ -88,6 +88,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.22.0 | 9 Nov 2026 | Menu samping baru |
 | 3.22.1 | 9 Nov 2026 | Halaman daftar tidak lagi langsung lompat ke langkah terakhir |
 | 3.23.0 | 9 Nov 2026 | Halaman daftar & masuk baru |
+| 3.23.1 | 9 Nov 2026 | Langit Teduh mengikuti jam |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -101,6 +102,13 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.23.1 — 2026-11-09 — Langit Teduh mengikuti jam
+
+- Langit di atas halaman Teduh kini berubah halus mengikuti jam: subuh, pagi, siang, golden hour, matahari
+  terbenam di balik bukit, sampai malam berbintang dengan bulan sabit.
+- Sapaan (pagi/siang/sore/malam) kini selaras dengan langitnya — tidak lagi "Selamat malam" dengan matahari masih
+  bersinar.
 
 ## 3.23.0 — 2026-11-09 — Halaman daftar & masuk baru
 
