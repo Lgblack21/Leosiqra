@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (live: 3.24.0 run #200, commit 0f7aad0 — Laporan Usahaku)
+Terakhir diperbarui: 2026-11-09 (live: 3.25.0 run #201, commit e9d2355 — Pajak Center baru; migrasi 0043 BELUM dikonfirmasi)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,9 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-09 — 3.25.0 Pajak Center baru — BELUM DEPLOY, menunggu "gas". PERLU SQL 0043 (boleh sebelum/sesudah deploy).**
+- **2026-11-09 — 3.25.0 Pajak Center baru — LIVE (run #201, commit e9d2355, Release v3.25.0). MIGRASI 0043 belum
+  dikonfirmasi Bos dijalankan** (tanpa itu setelan pajak hanya tersimpan di perangkat; cek: buka Pajak Center → teks
+  "Setelan tersimpan di akunmu" vs "di perangkat ini").
   Branch `claude/pajak-center-20261109`.
   - **MIGRASI 0043 (`cloudflare/migrations/0043_tax_settings.sql`)**: tabel `tax_settings(user_id, year, data_json,
     updated_at, PK(user_id,year))`. Tanpa 0043: GET → ready:false, PUT → 503 not_ready, klien simpan di localStorage
@@ -1740,6 +1742,7 @@ membersite_leosiqra_db --remote --command "..."`. SELECT boleh langsung; tulis/u
 - `0021_notifications.sql` — sudah (dicek langsung ke D1 2026-11-03).
 - `0033_shop_stock.sql` — sudah (dikonfirmasi Bos 2026-11-06, 3 tabel ada).
 - `0032_shop_staff.sql` — sudah (Bos membuat akun tim di produksi 2026-11-06).
+- `0043_tax_settings.sql` — **BELUM dikonfirmasi** (Pajak Center 3.25.0; tanpa tabel → setelan di perangkat, aman).
 - `0022_native_push_tokens.sql` — **BELUM** (token push Android/FCM; tanpa tabel: endpoint 503, kirim dilewati — aman).
 
 ## Belum terverifikasi di produksi
