@@ -76,6 +76,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.14.0 | 9 Nov 2026 | Peta Belanja |
 | 3.15.0 | 9 Nov 2026 | Jejak & lokasi otomatis |
 | 3.15.1 | 9 Nov 2026 | AI Scan pakai tanggal & rekening dari struk |
+| 3.16.0 | 9 Nov 2026 | Rekap per wilayah & peta 3D |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -89,6 +90,19 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.16.0 — 2026-11-09 — Rekap per wilayah & peta 3D
+
+- **Baru: Rekap** di Peta Belanja: lihat wilayah mana yang paling banyak menghabiskan uangmu.
+  - **Wilayah terboros** per periode (30 hari / 3 bulan / 1 tahun), lengkap dengan porsi belanjanya.
+  - Peringkat semua wilayah (kecamatan) dengan nominal, jumlah tempat, dan **naik/turun dibanding periode
+    sebelumnya**. Wilayah yang baru kamu datangi ikut ditandai.
+  - **Radius belanja**: 80% belanjamu terjadi dalam berapa km dari pusat belanjamu.
+  - Ketuk wilayah untuk melihat tempat-tempat teratas di sana dan langsung menuju ke wilayahnya di peta.
+- **Peta 3D**: tiap wilayah jadi tiang yang tingginya sesuai nominal belanja. Makin tinggi dan makin ungu, makin
+  boros. Bisa ganti 2D/3D kapan saja.
+- Nama wilayah diambil dari data OpenStreetMap. Kalau kecamatannya belum terdata, wilayah ditampilkan per
+  kelurahan.
 
 ## 3.15.1 — 2026-11-09 — AI Scan pakai tanggal & rekening dari struk
 

@@ -257,3 +257,104 @@ export function dayTrips(items: PlacedTx[]) {
     });
 }
 export type DayTrip = ReturnType<typeof dayTrips>[number];
+
+// ── Rekap per wilayah ───────────────────────────────────────────────────────
+export type PlaceArea = { kel: string | null; kec: string | null; kota: string | null; prov: string | null };
+export const areaKey = (p: { lat: number; lng: number }) => `${p.lat.toFixed(3)},${p.lng.toFixed(3)}`;
+export const areaService = {
+  lookup: (points: { lat: number; lng: number }[]) =>
+    cloudflareApi<{ areas: Record<string, PlaceArea | null>; pending: number }>('/api/member/places/areas', {
+      method: 'POST',
+      json: { points },
+    }),
+};
+const AREA_KEY = 'leosiqra-peta-wilayah';
+export const areaCache = {
+  read(): Record<string, PlaceArea | null> {
+    try {
+      const v = JSON.parse(store.get(AREA_KEY) ?? '{}');
+      return v && typeof v === 'object' ? v : {};
+    } catch {
+      return {};
+    }
+  },
+  write(add: Record<string, PlaceArea | null>) {
+    const all = { ...areaCache.read(), ...add };
+    const keys = Object.keys(all);
+    // Batasi ±600 titik supaya penyimpanan perangkat tetap kecil.
+    const trimmed = keys.length > 600 ? Object.fromEntries(keys.slice(-600).map((k) => [k, all[k]])) : all;
+    store.set(AREA_KEY, JSON.stringify(trimmed));
+  },
+};
+
+export type AreaGroup = {
+  key: string;
+  name: string;
+  /** kec = kecamatan; kel = kecamatan tak terdata di OSM, dikelompokkan per kelurahan; kota = hanya kota. */
+  level: 'kec' | 'kel' | 'kota' | 'lain';
+  kota: string | null;
+  total: number;
+  visits: number;
+  places: Place[];
+  lat: number;
+  lng: number;
+  share: number;
+  prev: number;
+};
+export function groupAreas(places: Place[], areas: Record<string, PlaceArea | null>, prevPlaces: Place[] = []) {
+  const keyOf = (p: Place) => {
+    const a = areas[areaKey(p)];
+    if (a === undefined) return null; // belum dikenali
+    if (a?.kec) return { key: `kec|${a.kec}|${a.kota ?? ''}`, name: a.kec, level: 'kec' as const, kota: a.kota };
+    if (a?.kel) return { key: `kel|${a.kel}|${a.kota ?? ''}`, name: a.kel, level: 'kel' as const, kota: a.kota };
+    if (a?.kota) return { key: `kota|${a.kota}`, name: a.kota, level: 'kota' as const, kota: a.kota };
+    return { key: 'lain', name: 'Wilayah tak dikenal', level: 'lain' as const, kota: null };
+  };
+  const map = new Map<string, AreaGroup>();
+  let pending = 0;
+  for (const p of places) {
+    const k = keyOf(p);
+    if (!k) {
+      pending++;
+      continue;
+    }
+    const g = map.get(k.key) ?? { ...k, total: 0, visits: 0, places: [], lat: 0, lng: 0, share: 0, prev: 0 };
+    g.total += p.total;
+    g.visits += p.visits;
+    g.places.push(p);
+    map.set(k.key, g);
+  }
+  for (const p of prevPlaces) {
+    const k = keyOf(p);
+    const g = k && map.get(k.key);
+    if (g) g.prev += p.total;
+  }
+  const sum = [...map.values()].reduce((a, g) => a + g.total, 0) || 1;
+  const groups = [...map.values()]
+    .map((g) => {
+      // Titik tengah tertimbang nominal belanja.
+      const w = g.places.reduce((a, p) => a + (p.total || 1), 0) || 1;
+      return {
+        ...g,
+        lat: g.places.reduce((a, p) => a + p.lat * (p.total || 1), 0) / w,
+        lng: g.places.reduce((a, p) => a + p.lng * (p.total || 1), 0) / w,
+        share: g.total / sum,
+        places: [...g.places].sort((a, b) => b.total - a.total),
+      };
+    })
+    .sort((a, b) => b.total - a.total);
+  // Radius belanja: jarak dari pusat belanja yang mencakup 80% nominal.
+  const all = places;
+  const W = all.reduce((a, p) => a + p.total, 0) || 1;
+  const cLat = all.reduce((a, p) => a + p.lat * p.total, 0) / W;
+  const cLng = all.reduce((a, p) => a + p.lng * p.total, 0) / W;
+  const byDist = all.map((p) => ({ d: distanceKm({ lat: cLat, lng: cLng }, p), t: p.total })).sort((a, b) => a.d - b.d);
+  let acc = 0;
+  let radius80 = 0;
+  for (const x of byDist) {
+    acc += x.t;
+    radius80 = x.d;
+    if (acc >= W * 0.8) break;
+  }
+  return { groups, pending, radius80: all.length ? radius80 : 0, center: { lat: cLat, lng: cLng } };
+}

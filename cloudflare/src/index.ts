@@ -13116,6 +13116,7 @@ async function handleMemberFocus(request: Request, env: Env, pathname: string) {
 // DELETE /api/member/places/:txId
 // DELETE /api/member/places              → hapus SEMUA lokasi milik user (transaksi tidak tersentuh)
 // GET    /api/member/places/search?q=   → cari tempat (Nominatim/OpenStreetMap, di-cache 30 hari)
+// POST   /api/member/places/areas {points} → wilayah per titik untuk Rekap { areas, pending }
 // Lokasi ikut dihapus bersama transaksinya (tabel belum ada = tidak ada yang perlu dihapus).
 const deletePlacesForTransactions = async (env: Env, userId: string, ids: string[]) => {
   if (!ids.length) return;
@@ -13130,12 +13131,71 @@ const PLACE_SOURCES = ["gps", "cari", "pin", "struk"] as const;
 const placesTableMissing = (e: unknown) => e instanceof Error && /no such table: tx_places/i.test(e.message);
 const cleanText = (v: unknown, max: number) =>
   typeof v === "string" ? v.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, max) || null : null;
+type PlaceArea = { kel: string | null; kec: string | null; kota: string | null; prov: string | null };
+// Format alamat OSM berbeda per kota (Jakarta: suburb = kecamatan; Bandung: district = kecamatan & suburb =
+// kelurahan; Surabaya: municipality = kecamatan). Kecamatan tak terdata → null (klien mengelompokkan per kelurahan).
+const parsePlaceArea = (a: Record<string, string> | undefined | null): PlaceArea | null => {
+  if (!a || a.country_code !== "id") return null;
+  const clean = (v: string | undefined) => cleanText(v, 80);
+  const jakarta = /jakarta/i.test(a.city ?? "") || a["ISO3166-2-lvl4"] === "ID-JK";
+  const kec = clean(a.district ?? a.municipality ?? (jakarta || a.village ? a.suburb : undefined));
+  const kel = clean(a.village ?? (a.district ? a.suburb : undefined) ?? a.quarter ?? a.hamlet);
+  const kota = clean(jakarta ? (a.city_district ?? a.city) : (a.city ?? a.county ?? a.regency ?? a.town));
+  const prov = clean(a.state ?? (jakarta ? "DKI Jakarta" : undefined));
+  if (!kec && !kel && !kota) return null;
+  return { kel, kec, kota, prov };
+};
 async function handleMemberPlaces(request: Request, env: Env, url: URL) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
   const userId = authResult.session.user.id;
   const pathname = url.pathname;
   try {
+    // Wilayah (kelurahan/kecamatan/kota) per titik untuk Rekap. Kunci = koordinat dibulatkan 3 desimal (±110 m),
+    // di-cache bersama 90 hari. Nominatim membatasi ±1 permintaan/detik: per panggilan maks 4 titik baru,
+    // berjeda 1,1 detik; sisanya dikembalikan sebagai `pending` dan klien memanggil lagi.
+    if (pathname === "/api/member/places/areas" && request.method === "POST") {
+      const raw = await parseJson<{ points?: unknown }>(request);
+      const keys = [...new Set(
+        (Array.isArray(raw.points) ? raw.points : []).slice(0, 60).flatMap((p) => {
+          const lat = Number((p as { lat?: unknown })?.lat);
+          const lng = Number((p as { lng?: unknown })?.lng);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return [];
+          return [`${lat.toFixed(3)},${lng.toFixed(3)}`];
+        })
+      )].slice(0, 40);
+      const cache = (caches as unknown as { default: Cache }).default;
+      const keyReq = (k: string) => new Request(`https://cache.leosiqra.internal/area?k=${encodeURIComponent(k)}`);
+      const areas: Record<string, PlaceArea | null> = {};
+      const misses: string[] = [];
+      for (const k of keys) {
+        const hit = await cache.match(keyReq(k));
+        if (hit) areas[k] = ((await hit.json().catch(() => ({ area: null }))) as { area: PlaceArea | null }).area;
+        else misses.push(k);
+      }
+      let done = 0;
+      if (misses.length && env.AI_PARSE_RATE_LIMITER) {
+        const { success } = await env.AI_PARSE_RATE_LIMITER.limit({ key: `geo-area:user:${userId}` });
+        if (!success) return json({ areas, pending: misses.length });
+      }
+      for (const k of misses.slice(0, 4)) {
+        if (done > 0) await new Promise((r) => setTimeout(r, 1100));
+        const [lat, lng] = k.split(",");
+        const upstream = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=14&addressdetails=1&accept-language=id`,
+          { headers: { "User-Agent": "Leosiqra/3 (+https://www.leosiqra.com)", Referer: "https://www.leosiqra.com/" }, signal: AbortSignal.timeout(6000) }
+        ).catch(() => null);
+        if (!upstream || !upstream.ok) break; // gangguan/ditolak: jangan di-cache, coba lagi nanti
+        const body = (await upstream.json().catch(() => null)) as { address?: Record<string, string> } | null;
+        const area = parsePlaceArea(body?.address);
+        areas[k] = area;
+        done++;
+        await cache.put(keyReq(k), new Response(JSON.stringify({ area }), {
+          headers: { "content-type": "application/json", "cache-control": `public, max-age=${area ? 7776000 : 604800}` },
+        }));
+      }
+      return json({ areas, pending: misses.length - done });
+    }
     if (pathname === "/api/member/places/search" && request.method === "GET") {
       const q = (url.searchParams.get("q") ?? "").trim().replace(/\s+/g, " ");
       if (q.length < 3 || q.length > 100) return json({ error: "Ketik minimal 3 huruf nama tempat." }, { status: 400 });

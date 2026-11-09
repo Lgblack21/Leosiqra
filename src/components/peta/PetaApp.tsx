@@ -7,8 +7,9 @@ import type { Map as MlMap } from 'maplibre-gl';
 import { PlaceMap, type MapLib, type MapMarker } from '@/components/peta/PlaceMap';
 import { JejakPanel, useReplay } from '@/components/peta/JejakView';
 import { LocationSettings } from '@/components/peta/LocationSettings';
+import { RekapPanel, ThreeDToggle, useAreaLayer, useAreas } from '@/components/peta/RekapView';
 import { LocationPicker, type PickedPlace } from '@/components/peta/LocationPicker';
-import { dayTrips, groupPlaces, idrOf, placeService, type Place, type PlacedTx } from '@/lib/places';
+import { dayTrips, groupAreas, groupPlaces, idrOf, placeService, type Place, type PlacedTx } from '@/lib/places';
 import { transactionService, type Transaction } from '@/lib/services/transactionService';
 import { categoryVisual } from '@/lib/categoryEmoji';
 import { rp, short } from '@/lib/kanvas/data';
@@ -40,7 +41,9 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
     start?: { lat: number; lng: number };
   } | null>(null);
   const [err, setErr] = useState('');
-  const [tab, setTab] = useState<'peta' | 'jejak'>('peta');
+  const [tab, setTab] = useState<'peta' | 'jejak' | 'rekap'>('peta');
+  const [threeD, setThreeD] = useState(false);
+  const [areaSel, setAreaSel] = useState<string | null>(null);
   const [day, setDay] = useState<string | null>(null);
   const [settings, setSettings] = useState(false);
   const [mapInst, setMapInst] = useState<{ m: MlMap; ml: MapLib } | null>(null);
@@ -66,6 +69,20 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
 
   const inPeriod = useMemo(() => (items ?? []).filter((t) => t.date >= sinceIso(days)), [items, days]);
   const allPlaces = useMemo(() => groupPlaces(inPeriod), [inPeriod]);
+  // Rekap per wilayah + pembanding periode sebelumnya (data dimuat 365 hari, jadi "1 tahun" tanpa pembanding).
+  const prevPlaces = useMemo(
+    () =>
+      days >= 365
+        ? []
+        : groupPlaces((items ?? []).filter((t) => t.date >= sinceIso(days * 2) && t.date < sinceIso(days))),
+    [items, days],
+  );
+  const areaState = useAreas(allPlaces, tab === 'rekap');
+  const rekap = useMemo(
+    () => groupAreas(allPlaces, areaState.areas, prevPlaces),
+    [allPlaces, areaState.areas, prevPlaces],
+  );
+  useAreaLayer(mapInst, tab === 'rekap' ? rekap.groups : null, threeD);
   const cats = useMemo(() => {
     const m = new Map<string, number>();
     allPlaces.forEach((p) => m.set(p.category, (m.get(p.category) ?? 0) + 1));
@@ -139,7 +156,46 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- cukup berubah saat isi/pilihan berubah
     [places.map((p) => `${p.key}:${p.total}:${p.visits}`).join('|'), sel],
   );
-  const markers = tab === 'jejak' ? tripMarkers : placeMarkers;
+  const areaMarkers: MapMarker[] = useMemo(
+    () =>
+      rekap.groups.slice(0, 12).map((g, i) =>
+        // 3D: cukup nomor peringkat supaya tiangnya yang terlihat.
+        threeD
+          ? { key: g.key, lat: g.lat, lng: g.lng, emoji: String(i + 1), active: g.key === areaSel }
+          : {
+              key: g.key,
+              lat: g.lat,
+              lng: g.lng,
+              emoji: categoryVisual(g.places[0]?.category ?? '', 'pengeluaran').emoji,
+              label: `${g.name} · ${short(g.total)}`,
+              order: i + 1,
+              active: g.key === areaSel,
+            },
+      ),
+    [rekap.groups, areaSel, threeD],
+  );
+  const markers = tab === 'jejak' ? tripMarkers : tab === 'rekap' ? areaMarkers : placeMarkers;
+  const selectArea = useCallback(
+    (key: string | null) => {
+      setAreaSel(key);
+      const g = rekap.groups.find((x) => x.key === key);
+      const mm = mapInst;
+      if (!g || !mm) return;
+      // 3D: cukup arahkan ke tiangnya, jangan terlalu dekat (tiang setinggi ±2,7 km).
+      if (threeD) {
+        mm.m.flyTo({ center: [g.lng, g.lat], zoom: 12.8, duration: 700 });
+        return;
+      }
+      if (g.places.length === 1) {
+        mm.m.flyTo({ center: [g.places[0].lng, g.places[0].lat], zoom: 15, duration: 700 });
+        return;
+      }
+      const b = new mm.ml.LngLatBounds();
+      g.places.forEach((p) => b.extend([p.lng, p.lat]));
+      mm.m.fitBounds(b, { padding: { top: 90, bottom: 40, left: 50, right: 50 }, maxZoom: 15, duration: 700 });
+    },
+    [rekap.groups, mapInst, threeD],
+  );
   const choose = useCallback(
     (key: string) => {
       setSel(key);
@@ -172,6 +228,23 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
     }
   };
 
+  const periodChips = (
+    <div className="flex gap-1 rounded-full bg-slate-100 p-1 dark:bg-slate-800">
+      {PERIODS.map((p) => (
+        <button
+          key={p.days}
+          type="button"
+          onClick={() => setDays(p.days)}
+          className={cn(
+            'h-9 flex-1 rounded-full text-[13px] font-bold',
+            days === p.days ? 'bg-white shadow-sm dark:bg-slate-950' : 'text-slate-500',
+          )}
+        >
+          {p.label}
+        </button>
+      ))}
+    </div>
+  );
   const placePanel = (
     <div className="space-y-5">
       {!ready ? (
@@ -181,21 +254,7 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
       ) : null}
       {err ? <p className="rounded-2xl bg-rose-50 px-4 py-3 text-[13px] font-semibold text-rose-700">{err}</p> : null}
 
-      <div className="flex gap-1 rounded-full bg-slate-100 p-1 dark:bg-slate-800">
-        {PERIODS.map((p) => (
-          <button
-            key={p.days}
-            type="button"
-            onClick={() => setDays(p.days)}
-            className={cn(
-              'h-9 flex-1 rounded-full text-[13px] font-bold',
-              days === p.days ? 'bg-white shadow-sm dark:bg-slate-950' : 'text-slate-500',
-            )}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
+      {periodChips}
 
       <div className="rounded-[22px] bg-gradient-to-br from-indigo-600 to-violet-600 p-4 text-white">
         <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/70">
@@ -335,6 +394,7 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
           [
             ['peta', 'Peta'],
             ['jejak', 'Jejak'],
+            ['rekap', 'Rekap'],
           ] as const
         ).map(([k, l]) => (
           <button
@@ -366,6 +426,18 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
       {tabs}
       {tab === 'peta' ? (
         placePanel
+      ) : tab === 'rekap' ? (
+        <div className="space-y-4">
+          {periodChips}
+          <RekapPanel
+            rekap={rekap}
+            status={areaState}
+            periodLabel={PERIODS.find((p) => p.days === days)?.label ?? ''}
+            hasPrev={prevPlaces.length > 0}
+            sel={areaSel}
+            onSelect={(g) => selectArea(g?.key ?? null)}
+          />
+        </div>
       ) : (
         <JejakPanel
           trips={trips}
@@ -383,12 +455,15 @@ export function PetaApp({ variant = 'web' }: { variant?: 'web' | 'app' }) {
     <div className="relative h-full w-full">
       <PlaceMap
         markers={markers}
-        onMarker={tab === 'jejak' ? focusStop : choose}
+        onMarker={tab === 'jejak' ? focusStop : tab === 'rekap' ? selectArea : choose}
         focus={focus}
-        fitKey={tab === 'jejak' ? `j:${trip?.day ?? ''}` : 'peta'}
+        fitKey={
+          tab === 'jejak' ? `j:${trip?.day ?? ''}` : tab === 'rekap' ? `r:${days}:${rekap.groups.length}` : 'peta'
+        }
         onMapReady={onMapReady}
       />
       {replay.hud}
+      {tab === 'rekap' && rekap.groups.length ? <ThreeDToggle on={threeD} onChange={setThreeD} /> : null}
     </div>
   );
   return (
