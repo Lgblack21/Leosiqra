@@ -90,6 +90,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.23.0 | 9 Nov 2026 | Halaman daftar & masuk baru |
 | 3.23.1 | 9 Nov 2026 | Langit Teduh mengikuti jam |
 | 3.23.2 | 9 Nov 2026 | Halaman Mulai senada tampilan baru |
+| 3.23.3 | 9 Nov 2026 | Logo & tata letak halaman masuk/daftar di layar pendek |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -103,6 +104,13 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.23.3 — 2026-11-09 — Logo & tata letak halaman masuk/daftar di layar pendek
+
+- Logo di halaman Masuk, Daftar, dan Mulai kini hanya lambang LS yang tajam (tanpa tulisan kecil yang terpotong),
+  dan nama Leosiqra ditulis polos.
+- Di tablet/laptop berlayar pendek, isi panel kiri tidak lagi saling bertumpuk; kartu dekorasi disembunyikan bila
+  ruangnya tidak cukup.
 
 ## 3.23.2 — 2026-11-09 — Halaman Mulai senada tampilan baru
 

@@ -174,12 +174,16 @@ export default function MulaiPage() {
         <header className="flex h-12 items-center justify-between">
           {step === 0 ? (
             <Link href="/" className="flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-white shadow-[0_6px_16px_-8px_rgba(15,23,42,0.5)] ring-1 ring-slate-200/70">
-                <Image src="/images/Logo-new.png" alt="Leosiqra" width={36} height={36} className="scale-125" />
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white p-1 shadow-[0_6px_16px_-8px_rgba(15,23,42,0.5)] ring-1 ring-slate-200/70">
+                <Image
+                  src="/images/logo-emblem.png"
+                  alt="Leosiqra"
+                  width={28}
+                  height={28}
+                  className="h-7 w-7 object-contain"
+                />
               </span>
-              <span className="fs-19 font-extrabold tracking-tight">
-                Leo<span className="text-amber-500">siqra</span>
-              </span>
+              <span className="fs-19 font-extrabold tracking-tight">Leosiqra</span>
             </Link>
           ) : (
             <button

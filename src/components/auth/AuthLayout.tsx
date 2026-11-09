@@ -34,13 +34,11 @@ export function Aurora() {
 }
 
 const Brand = ({ light = false }: { light?: boolean }) => (
-  <Link href="/" className="flex items-center gap-2.5">
-    <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white shadow-[0_6px_16px_-6px_rgba(0,0,0,0.5)]">
-      <Image src="/images/Logo-new.png" alt="Leosiqra" width={40} height={40} className="scale-125" />
+  <Link href="/" className="flex items-center gap-3">
+    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] bg-white p-1 shadow-[0_8px_20px_-8px_rgba(0,0,0,0.55)] ring-1 ring-black/5">
+      <Image src="/images/logo-emblem.png" alt="Leosiqra" width={32} height={32} className="h-8 w-8 object-contain" />
     </span>
-    <span className={`fsh-21 font-extrabold tracking-tight ${light ? 'text-white' : 'text-slate-900'}`}>
-      Leo<span className="text-amber-300">siqra</span>
-    </span>
+    <span className={`fsh-21 font-extrabold tracking-tight ${light ? 'text-white' : 'text-slate-900'}`}>Leosiqra</span>
   </Link>
 );
 
@@ -76,13 +74,13 @@ export function AuthLayout({
   return (
     <div className="min-h-screen bg-[#f5f6fb] font-sans text-slate-900 selection:bg-indigo-100 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       {/* ── Panel brand (laptop) ── */}
-      <aside className="relative hidden overflow-hidden bg-gradient-to-br lg:sticky lg:top-0 lg:h-screen from-[#070d1f] via-[#0d1638] to-[#1b1150] text-white lg:flex lg:flex-col">
+      <aside className="relative hidden overflow-hidden bg-gradient-to-br no-scrollbar lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto from-[#070d1f] via-[#0d1638] to-[#1b1150] text-white lg:flex lg:flex-col">
         <Aurora />
-        <div className="relative flex items-center gap-4 px-12 pt-10 xl:px-16">
+        <div className="relative flex shrink-0 items-center gap-4 px-12 pt-10 xl:px-16">
           {back}
           <Brand light />
         </div>
-        <div className="relative flex flex-1 flex-col justify-center px-12 pb-6 xl:px-16">
+        <div className="relative flex flex-1 shrink-0 flex-col justify-center px-12 pb-8 pt-10 xl:px-16">
           <span
             style={d(0)}
             className="auth-enter inline-flex w-fit items-center gap-2 rounded-full bg-amber-300/15 px-3.5 py-1.5 fs-13 font-bold text-amber-200 ring-1 ring-amber-300/30"
@@ -112,7 +110,7 @@ export function AuthLayout({
             ))}
           </ul>
         </div>
-        <div aria-hidden className="relative h-[240px] shrink-0">
+        <div aria-hidden className="relative h-[240px] shrink-0 [@media(max-height:860px)]:hidden">
           <TxChip className="absolute left-12 top-0 xl:left-16" />
           <VoiceChip className="absolute right-10 top-10" />
           <BudgetChip className="absolute left-[30%] top-[118px] hidden xl:block" />

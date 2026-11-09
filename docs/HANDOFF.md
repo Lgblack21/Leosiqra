@@ -18,6 +18,14 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-09 — 3.23.3 Logo & layar pendek halaman auth — BELUM DEPLOY, menunggu "gas". Tanpa SQL.**
+  Branch `claude/auth-logo-20261109`.
+  - Laporan Bos (tablet ±1100×540 CSS px): logo jelek, nama "Leo/siqra" dua warna jelek, panel kiri bertumpuk.
+  - Aset baru `public/images/logo-emblem.png` (256 px, potongan lambang dari Logo-new.png, latar transparan) dipakai
+    di `Brand` AuthLayout & header /mulai (tile putih). Nama polos "Leosiqra".
+  - Panel brand: `lg:overflow-y-auto`, header & isi `shrink-0`, kartu dekorasi `[@media(max-height:860px)]:hidden`.
+  - Dites Playwright 1100×540 (login, daftar, mulai), 1280×720, 1440×900, 390×844: tidak bertumpuk, 0 error JS.
+
 - **2026-11-09 — 3.23.1 Langit Teduh + 3.23.2 /mulai senada — LIVE (run #193, commit bb2db55, Release v3.23.2;
   ikut 3.22.1 & 3.23.0). Tanpa SQL.** Rantai branch: mulai-lanjut → daftar-baru → teduh-langit → `claude/mulai-baru-20261109`
   (paling ujung, berisi semuanya).
