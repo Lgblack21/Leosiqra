@@ -5,6 +5,7 @@ import { AlertTriangle, Check, ChevronDown, Plus, Trash2 } from 'lucide-react';
 import { GerakanMedia } from '@/components/olahraga/GerakanMedia';
 import { SheetShell } from '@/components/sehat/AsuransiSheets';
 import { deleteWorkout, saveWorkout, type FitData } from '@/lib/olahraga/api';
+import { gambarGerakan } from '@/lib/olahraga/gambar';
 import { GERAKAN, GERAKAN_BY_KEY } from '@/lib/olahraga/gerakan';
 import { gerakanAman, hariKe, latihanHariIni, perkiraanLatihan, type LatihanItem } from '@/lib/olahraga/program';
 import type { Gerakan, GerakanKategori } from '@/lib/olahraga/types';
@@ -324,7 +325,19 @@ export function LatihanView({
                   !ok && 'opacity-55',
                 )}
               >
-                <span className="text-[30px] leading-none">{x.emoji}</span>
+                {gambarGerakan(x.key) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={gambarGerakan(x.key)!}
+                    alt=""
+                    loading="lazy"
+                    width={72}
+                    height={72}
+                    className="h-[72px] w-[72px] rounded-xl bg-[#f6efe2] object-cover"
+                  />
+                ) : (
+                  <span className="text-[30px] leading-none">{x.emoji}</span>
+                )}
                 <span className="mt-2 fs-14 font-black leading-tight text-slate-900 dark:text-white">{x.nama}</span>
                 <span className="mt-1 fs-12 text-slate-500 dark:text-slate-400">{x.otot}</span>
                 <span className="mt-2 flex flex-wrap gap-1">
@@ -344,7 +357,8 @@ export function LatihanView({
           })}
         </div>
         <p className="mt-3 fs-12 text-slate-400 dark:text-slate-500">
-          Ketuk gerakan untuk lihat video & caranya. Mulai pelan, berhenti kalau nyeri dada, pusing berat, atau sesak tidak biasa.
+          Ketuk gerakan untuk lihat video & caranya. Mulai pelan, berhenti kalau nyeri dada, pusing berat, atau sesak
+          tidak biasa.
         </p>
       </div>
 

@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-10 (live: 3.27.1 video gerakan, run #204, commit 4e55562 — tanpa SQL)
+Terakhir diperbarui: 2026-11-10 (3.27.2 gambar gerakan siap di branch, BELUM deploy; live: 3.27.1 run #204. Sesi Olahragaku selesai — lihat ringkasan di bawah)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,32 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-10 — RINGKASAN SESI OLAHRAGAKU (akun ini, 9–10 Nov) — baca ini dulu kalau lanjut Olahragaku.**
+  - **Live**: 3.26.0 (R1+R2, run #202) → 3.27.0 (R3, run #203) → 3.27.1 (video, run #204). **3.27.2 belum deploy**
+    (branch `claude/friendly-galileo-omr8xf`, tanpa SQL): gambar posisi awal statis kembali tampil.
+  - **SQL**: hanya 0044 (`fit_*`), sudah dijalankan Bos. Shift kerja & pengingat pakai `users.metadata_json`
+    (`$.fitKerja`, `$.fitRemind`); target Makanku `$.mealTarget` ikut target program.
+  - **Fitur**: profil tubuh + hitungan (hitung.ts), 20 metode + kuis (metode.ts/rules.ts), program 4 minggu AI
+    (PRO, 5.000 koin), tab Latihan (40 gerakan, gerakan.ts), menu harian (gratis 1×/hari, ulang 300), evaluasi mingguan
+    (1.500), tanya coach (3 gratis/hari, lalu 300), shift kerja (≤4 shift, jendela buka 1 jam sebelum shift),
+    pengingat jendela makan (cron menit 0), video YouTube per gerakan (video.ts), gambar posisi awal (gambar.ts).
+    Rancangan & keputusan Bos: `docs/rancangan/olahragaku.md`.
+  - **Saldo OpenRouter Bos HABIS (10 Nov dini hari)** → program/menu/evaluasi/tanya coach membalas "AI sedang
+    gangguan" dan koin member DIKEMBALIKAN otomatis (kecuali tanya coach jawaban kosong). Isi saldo = langsung jalan.
+  - **Ilustrasi AI**: 138/160 dibuat (R2 `olahraga/gerakan/<key>/<0-3>`) sebelum saldo habis. Frame 2–4 TIDAK dipakai
+    (orang berganti, plank lutut tergambar plank penuh, teks ngawur). Frame 1 dicek visual & bagus → dikecilkan
+    384 px WebP (±5 KB) ke `public/olahraga/gerakan/<key>.webp` (35 file). **Belum ada gambar** (saldo habis):
+    peregangan-hamstring-duduk, rotasi-bahu, cat-cow, child-pose, peregangan-pinggang-duduk (peregangan-dada sudah).
+    Kalau saldo ada & mau lengkap: Admin › Olahragaku → "Buat yang belum ada" cukup frame 1 (frame lain tak dipakai —
+    bisa diubah tombolnya agar hanya frame 0), lalu unduh `/api/fit/gerakan/<key>/0`, kecilkan dengan sharp
+    (`resize(384).webp({quality:78})`), simpan ke public/olahraga/gerakan, tambah key di `src/lib/olahraga/gambar.ts`.
+  - **Video**: 38/40 (semua bahasa Inggris, kanal fisioterapis/RS/pelatih). Kosong: naik-turun-tangga, wall-sit.
+    Belum ditonton manusia: ayun-lengan-duduk, row-dumbbell, peregangan-dada, tinju-duduk, jalan-cepat, tendang-duduk.
+  - **Belum terverifikasi di produksi**: kualitas program/menu/evaluasi/jawaban dari AI asli (belum ada yang beli
+    program sungguhan), notifikasi pengingat jendela (lonceng & push), alur bayar koin nyata.
+  - **Ide berikutnya (belum diminta)**: menu harian otomatis tiap pagi, rekam video sendiri untuk 10 gerakan utama
+    (Tim Konten), video berbahasa Indonesia, statistik latihan mingguan, ganti 2 video kosong.
 
 - **2026-11-10 — 3.27.1 Video gerakan — LIVE (run #204, commit 4e55562). Tanpa SQL.** Cek live: /versi 3.27.1, olahraga 200,
   chunk berisi youtube-nocookie. Branch `claude/friendly-galileo-omr8xf`.

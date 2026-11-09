@@ -99,6 +99,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.26.0 | 9 Nov 2026 | Olahragaku |
 | 3.27.0 | 10 Nov 2026 | Olahragaku: shift kerja & coach |
 | 3.27.1 | 10 Nov 2026 | Video gerakan |
+| 3.27.2 | 10 Nov 2026 | Gambar gerakan kembali |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -112,6 +113,11 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.27.2 — 2026-11-10 — Gambar gerakan kembali
+
+- Perpustakaan gerakan di Olahragaku › Latihan kembali bergambar: tiap gerakan menampilkan ilustrasi posisi awal
+  (ringan, ±5 KB per gambar), lalu video contoh di bawahnya untuk gerakan lengkap.
 
 ## 3.27.1 — 2026-11-10 — Video contoh tiap gerakan
 
