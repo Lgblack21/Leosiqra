@@ -4,7 +4,7 @@ import { Camera, Check, Mic, ScanLine, TrendingUp } from 'lucide-react';
 // suara jadi transaksi, scan struk, budget, saldo. Murni dekorasi (aria-hidden),
 // nominalnya contoh — bukan data siapa pun.
 const chip =
-  'paper-float rounded-[22px] bg-white/90 p-4 shadow-[0_24px_48px_-20px_rgba(49,46,129,0.45)] ring-1 ring-white backdrop-blur';
+  'paper-float rounded-[22px] bg-white p-4 shadow-[0_24px_48px_-20px_rgba(49,46,129,0.45)] ring-1 ring-white';
 const float = (r: string, delay = '0s') => ({ '--r': r, animationDelay: delay }) as React.CSSProperties;
 
 export function VoiceChip({ className = '' }: { className?: string }) {

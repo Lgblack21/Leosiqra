@@ -213,8 +213,8 @@ export default function LandingPage() {
     reduce
       ? {}
       : {
-          initial: { opacity: 0, y: 24, filter: 'blur(10px)' },
-          animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
+          initial: { opacity: 0, y: 24 },
+          animate: { opacity: 1, y: 0 },
           transition: { duration: 1, delay: 0.15 + i * 0.12, ease: [0.16, 1, 0.3, 1] as const },
         };
 
@@ -258,7 +258,7 @@ export default function LandingPage() {
             </Link>
             <Link
               href="/auth/login"
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-white/[0.06] px-8 py-4 text-sm font-bold text-white ring-1 ring-white/20 backdrop-blur transition-colors hover:bg-white/[0.12]"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-white/[0.06] px-8 py-4 text-sm font-bold text-white ring-1 ring-white/20 transition-colors hover:bg-white/[0.12]"
             >
               Masuk ke akun
             </Link>
@@ -279,7 +279,7 @@ export default function LandingPage() {
         >
           <div
             aria-hidden
-            className="absolute -inset-x-10 -top-10 bottom-10 -z-10 rounded-[60px] bg-gradient-to-b from-amber-300/25 via-indigo-500/20 to-transparent blur-3xl"
+            className="absolute -inset-x-24 -top-24 bottom-0 -z-10 bg-[radial-gradient(ellipse_at_50%_20%,rgba(251,191,36,0.22),rgba(99,102,241,0.14)_40%,transparent_70%)]"
           />
           <ScrollTilt>
             <AppShowcase />
@@ -313,7 +313,7 @@ export default function LandingPage() {
 
         <div className="relative mx-auto mt-14 grid max-w-5xl grid-cols-2 gap-px overflow-hidden rounded-3xl bg-white/10 ring-1 ring-white/10 lg:grid-cols-4">
           {FACTS.map(([big, small], i) => (
-            <Reveal key={big} delay={i * 0.08} y={14} className="bg-[#0b1430]/80 px-5 py-6 text-center backdrop-blur">
+            <Reveal key={big} delay={i * 0.08} y={14} className="bg-[#0b1430] px-5 py-6 text-center">
               <p className="text-lg font-extrabold tracking-tight text-white sm:text-xl">{big}</p>
               <p className="mt-1 text-xs text-white/50">{small}</p>
             </Reveal>

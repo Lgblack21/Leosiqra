@@ -682,9 +682,9 @@ export function AppShowcase() {
     <AnimatePresence mode="wait">
       <motion.div
         key={screen.key + runId}
-        initial={reduce ? false : { opacity: 0, y: 16, filter: 'blur(6px)' }}
-        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-        exit={{ opacity: 0, y: -10, filter: 'blur(6px)' }}
+        initial={reduce ? false : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
         transition={{ duration: 0.45, ease }}
         className="@container"
       >

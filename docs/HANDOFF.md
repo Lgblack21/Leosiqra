@@ -18,6 +18,17 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-09 — 3.23.6 + landing: animasi tanpa kedip — BELUM DEPLOY, menunggu "gas". Tanpa SQL.**
+  Branch `claude/landing-flicker-20261109`.
+  - Bos: demo landing kedap-kedip/lag. Penyebab: blur yang di-render ulang tiap frame — `Aurora` (blob `blur-[90px]`
+    yang bergerak), glow `blur-3xl` di belakang AppShowcase, transisi layar demo `filter: blur(6px)`, heroItem
+    `filter: blur(10px)`, dan `backdrop-blur` di Navbar dark (fixed, di atas konten bergerak), tombol, kotak fakta,
+    serta `FinanceChips`.
+  - Semua diganti: Aurora = `radial-gradient` tanpa filter (hanya transform bergerak), glow = radial-gradient,
+    transisi demo = opacity+y, Navbar dark = latar hampir pekat tanpa backdrop-filter, chip = `bg-white` tanpa blur.
+  - Ukur rAF 12 s di 1280×656 (headless): landing 20 fps/±70 jank → 60 fps/0 jank; /auth/login 17 fps/93 jank →
+    60 fps/0 jank. ATURAN: jangan pakai `filter: blur` / `backdrop-blur` pada elemen yang bergerak atau di atasnya.
+
 - **2026-11-09 — Landing: demo AppShowcase tampilan baru, pita kartu dicabut — BELUM DEPLOY, menunggu "gas". TANPA naik
   versi. Tanpa SQL.** Branch `claude/landing-showcase-20261109`.
   - Bos: hero ngelag karena pita kartu (`.auth-ticker` + FinanceChips ber-backdrop-blur) → pita & Leo di atas mockup

@@ -49,7 +49,7 @@ export const Navbar = ({ variant = 'light' }: { variant?: 'light' | 'dark' }) =>
       <div
         className={
           dark
-            ? `w-full max-w-7xl h-16 sm:h-[72px] backdrop-blur-xl border rounded-full flex items-center justify-between px-4 sm:px-6 relative transition-all duration-500 ${scrolled ? 'bg-[#0a1029]/85 border-white/10 shadow-[0_20px_60px_-20px_rgba(2,6,23,0.9)]' : 'bg-white/[0.05] border-white/10'}`
+            ? `w-full max-w-7xl h-16 sm:h-[72px] border rounded-full flex items-center justify-between px-4 sm:px-6 relative transition-[background-color,box-shadow] duration-500 ${scrolled ? 'bg-[#0a1029]/[0.97] border-white/10 shadow-[0_20px_60px_-20px_rgba(2,6,23,0.9)]' : 'bg-white/[0.05] border-white/10'}`
             : 'w-full max-w-7xl h-20 bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] rounded-[32px] flex items-center justify-between px-6 sm:px-8 relative'
         }
       >
@@ -127,7 +127,7 @@ export const Navbar = ({ variant = 'light' }: { variant?: 'light' | 'dark' }) =>
 
         {isOpen && (
           <div
-            className={`absolute top-[calc(100%+12px)] left-0 right-0 backdrop-blur-xl border shadow-2xl rounded-[32px] p-6 flex flex-col gap-4 lg:hidden animate-in outline-none slide-in-from-top-4 duration-300 ${dark ? 'bg-[#0a1029]/95 border-white/10' : 'bg-white/95 border-white/40'}`}
+            className={`absolute top-[calc(100%+12px)] left-0 right-0 border shadow-2xl rounded-[32px] p-6 flex flex-col gap-4 lg:hidden animate-in outline-none slide-in-from-top-4 duration-300 ${dark ? 'bg-[#0a1029]/[0.98] border-white/10' : 'bg-white/95 border-white/40'}`}
           >
             <div
               className={`flex flex-col gap-4 text-xs font-black uppercase tracking-widest px-2 ${dark ? 'text-white/65' : 'text-slate-500'}`}

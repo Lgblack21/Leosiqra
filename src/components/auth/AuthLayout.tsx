@@ -17,15 +17,16 @@ const PERKS = [
 ];
 
 export function Aurora() {
+  // Tanpa filter blur (berat & bikin kedip di tablet): gradasi radial biasa yang lembut, hanya transform yang bergerak.
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="auth-aurora absolute -left-24 -top-24 h-[420px] w-[420px] rounded-full bg-indigo-600/40 blur-[90px]" />
+      <div className="auth-aurora absolute -left-40 -top-40 h-[640px] w-[640px] rounded-full bg-[radial-gradient(circle,rgba(79,70,229,0.45),transparent_65%)]" />
       <div
-        className="auth-aurora absolute -right-20 top-1/3 h-[360px] w-[360px] rounded-full bg-amber-400/25 blur-[90px]"
+        className="auth-aurora absolute -right-32 top-1/4 h-[560px] w-[560px] rounded-full bg-[radial-gradient(circle,rgba(251,191,36,0.22),transparent_65%)]"
         style={{ animationDelay: '-6s' }}
       />
       <div
-        className="auth-aurora absolute -bottom-32 left-1/4 h-[380px] w-[380px] rounded-full bg-violet-600/30 blur-[100px]"
+        className="auth-aurora absolute -bottom-48 left-1/4 h-[600px] w-[600px] rounded-full bg-[radial-gradient(circle,rgba(124,58,237,0.32),transparent_65%)]"
         style={{ animationDelay: '-11s' }}
       />
       <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.09)_1px,transparent_1px)] [background-size:22px_22px]" />
