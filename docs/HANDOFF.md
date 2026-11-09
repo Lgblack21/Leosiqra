@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-10 (3.27.1 video gerakan siap di branch claude/friendly-galileo-omr8xf, BELUM deploy — tanpa SQL; live: 3.27.0 run #203)
+Terakhir diperbarui: 2026-11-10 (live: 3.27.1 video gerakan, run #204, commit 4e55562 — tanpa SQL)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,8 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-10 — 3.27.1 Video gerakan — BELUM DEPLOY. Tanpa SQL.** Branch `claude/friendly-galileo-omr8xf`.
+- **2026-11-10 — 3.27.1 Video gerakan — LIVE (run #204, commit 4e55562). Tanpa SQL.** Cek live: /versi 3.27.1, olahraga 200,
+  chunk berisi youtube-nocookie. Branch `claude/friendly-galileo-omr8xf`.
   - Ilustrasi AI (Admin › Olahragaku) dibuat 138/160 sebelum saldo OpenRouter Bos habis, tapi **tidak layak**: orang
     berganti antar frame, plank lutut tergambar plank penuh, teks ngawur, ±800 KB/gambar. → TIDAK ditampilkan
     (gambar tetap di R2 `olahraga/gerakan/*`, endpoint & halaman admin tetap ada dengan catatan). Jangan lanjut buat.
