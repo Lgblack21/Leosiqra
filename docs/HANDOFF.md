@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (live: 3.23.5 run #196, commit 380549f)
+Terakhir diperbarui: 2026-11-09 (live: 3.23.6 run #199, commit 0eae434 — tema terang landing/mulai/masuk/daftar)
 
 ## Siapa sedang kerja
 
@@ -18,8 +18,8 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-09 — Tema TERANG untuk landing, /mulai, masuk & daftar (ikut 3.23.6) — BELUM DEPLOY, menunggu "gas".
-  Tanpa SQL.** Branch `claude/tema-terang-20261109` (berisi juga perbaikan blur 3.23.6 + hapus ScrollTilt).
+- **2026-11-09 — Tema TERANG untuk landing, /mulai, masuk & daftar (ikut 3.23.6) — LIVE (run #199, commit 0eae434,
+  Release v3.23.6). Tanpa SQL.** Branch `claude/tema-terang-20261109` (berisi juga perbaikan blur 3.23.6 + hapus ScrollTilt).
   - Bos: "jangan hitam-hitam, buat putih, bersih tapi tetap keren". Navy dibuang: `Aurora` kini pastel
     (indigo .18 / amber .2 / ungu .14 + titik indigo), panel/pita auth & aside /mulai = gradien `#eef0ff → white →
     #fff5e4`, teks slate. Landing: hero terang, judul `.lp-ink` (indigo→ungu→emas, globals.css), tombol utama emas,
@@ -27,7 +27,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     putih + lambang LS + tombol emas.
   - Dites 1280×656 (landing, masuk, daftar, mulai) & 390×844: 0 error JS; gulir landing 60 fps/0 jank, login 60 fps.
 
-- **2026-11-09 — 3.23.6 + landing: animasi tanpa kedip — BELUM DEPLOY, menunggu "gas". Tanpa SQL.**
+- **2026-11-09 — 3.23.6 + landing: animasi tanpa kedip — LIVE (run #199). Tanpa SQL.**
   Branch `claude/landing-flicker-20261109`.
   - Bos: demo landing kedap-kedip/lag. Penyebab: blur yang di-render ulang tiap frame — `Aurora` (blob `blur-[90px]`
     yang bergerak), glow `blur-3xl` di belakang AppShowcase, transisi layar demo `filter: blur(6px)`, heroItem
@@ -41,7 +41,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     + perspective + useSpring ikut scroll) pada lapisan 1120×680. ScrollTilt DIHAPUS (file juga). Gulir terus 8 s:
     20 fps/30 jank → 60 fps/0 jank. Jangan pasang transform 3D yang mengikuti scroll di elemen besar.
 
-- **2026-11-09 — Landing: demo AppShowcase tampilan baru, pita kartu dicabut — BELUM DEPLOY, menunggu "gas". TANPA naik
+- **2026-11-09 — Landing: demo AppShowcase tampilan baru, pita kartu dicabut — LIVE (run #198). TANPA naik
   versi. Tanpa SQL.** Branch `claude/landing-showcase-20261109`.
   - Bos: hero ngelag karena pita kartu (`.auth-ticker` + FinanceChips ber-backdrop-blur) → pita & Leo di atas mockup
     DIHAPUS dari landing. Jangan tambah animasi berat di hero landing; ubah yang sudah ada.
@@ -51,7 +51,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     animasi bergantung ini). Tab HP pakai ikon bulat berwarna. `.auth-aurora` + `will-change: transform`.
   - Dites Playwright 1280×656 & 390×844: kursor tetap pas di menu, halaman tidak tergulir sendiri, 0 error JS.
 
-- **2026-11-09 — Landing page (/) baru — BELUM DEPLOY, menunggu "gas". TANPA naik versi (keputusan Bos: landing di
+- **2026-11-09 — Landing page (/) baru — LIVE (run #197). TANPA naik versi (keputusan Bos: landing di
   luar versi aplikasi) → CHANGELOG tidak disentuh, Release tidak dibuat. Tanpa SQL.** Branch `claude/landing-baru-20261109`.
   - Hero gelap navy-emas (`Aurora` dari AuthLayout), badge `.auth-shine`, judul sans + `.lp-gold` (globals.css), CTA
     emas, pita `.auth-ticker` berisi FinanceChips, AppShowcase + Leo mengintip + 2 kartu `paper-float`, FACTS kaca gelap,
