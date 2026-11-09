@@ -7,6 +7,7 @@ import { useFiturStatus } from '@/components/fitur/useFiturStatus';
 import { FITUR, isNew } from '@/lib/fiturCatalog';
 import { APP_VERSION } from '@/lib/version';
 import {
+  Dumbbell,
   AlarmClock,
   BarChart3,
   ChevronRight,
@@ -168,6 +169,12 @@ const IN_APP: MenuItem[] = [
     href: '/app/sehat',
     icon: HeartPulse,
     color: 'bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400',
+  },
+  {
+    label: 'Olahragaku',
+    href: '/app/olahraga',
+    icon: Dumbbell,
+    color: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400',
   },
   {
     label: 'Kartu Kredit',

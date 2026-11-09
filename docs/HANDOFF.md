@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (live: 3.25.0 run #201, commit e9d2355 — Pajak Center baru; migrasi 0043 sudah dijalankan Bos)
+Terakhir diperbarui: 2026-11-09 (3.26.0 Olahragaku R1 siap di branch claude/friendly-galileo-omr8xf, BELUM deploy — butuh SQL 0044)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,32 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-09 — 3.26.0 Olahragaku (Rilis 1 dari 3) — BELUM DEPLOY. BUTUH SQL 0044.** Branch
+  `claude/friendly-galileo-omr8xf` (juga membawa c6fe32e langkah unshallow routine + triase audit 09-11).
+  Rancangan & keputusan Bos: `docs/rancangan/olahragaku.md` (bagian 9).
+  - **MIGRASI 0044 (`cloudflare/migrations/0044_olahraga.sql`)**, additive: `fit_profiles`, `fit_weights`
+    (UNIQUE user+tanggal), `fit_programs` (index unik parsial 1 aktif/user), `fit_workouts`, `fit_coach` — 3 terakhir untuk
+    R2/R3. Tanpa 0044: GET → ready:false (+prefill), tulis → 503, klien simpan di localStorage `leosiqra-olahraga`.
+  - Worker `handleMemberFit` (`/api/member/fit*`): requireSession, `sanitizeFitProfile` (whitelist dari
+    `src/lib/olahraga/types.ts`), FREE hanya 7 hari riwayat timbangan, prefill dari `$.healthProfile` + cek status-gizi
+    Sehatku, `deleteFitForUser` dipanggil di reset data & hapus user admin. PREF_FEATURES + "olahraga".
+  - Frontend: `src/lib/olahraga/{types,hitung,rules,metode,api}.ts` (hitung = Mifflin-St Jeor, IMT Kemenkes, batas
+    1.200/1.500 kkal, maks 1%/minggu; rules = kunci metode per kondisi + tingkat lanjut butuh "rutin"; metode = 20
+    metode, 104 pertanyaan), `components/olahraga/*`, rute `/membership/olahraga` & `/app/olahraga`, fitur id
+    `olahraga`. **Makanku pindah ke Olahragaku** (tab Makan); Sehatku = Asuransi + Cek, `#makan` lama dialihkan;
+    alias fitur lama `makan` → `olahraga`. Kebijakan privasi + poin data kesehatan.
+  - Keputusan Bos: FREE hanya baca metode (+kuis); mengikuti = PRO + 5.000 koin (program AI, R2). Tombol "Ikuti" saat
+    ini: FREE web → panel Paket, PRO → "segera hadir" (nonaktif). App HP tidak punya halaman beli PRO → teks saja.
+  - Dites lokal (wrangler dev --local https + D1 skema produksi + 0033/0037–0040/0044, Playwright 1280 & Pixel 7):
+    401 tanpa login, sebelum 0044 ready:false/503, validasi (tanggal 2026-02-30 ditolak — bug ketemu & diperbaiki),
+    FREE 7 hari / PRO semua, IDOR hapus timbangan user lain → 404, hapus semua; UI: prefill dari Sehatku, hitungan
+    cocok manual (P 36 th 158 cm 92,5 kg → BMR 1.572, TDEE 1.886, target 1.386), 5 metode terkunci untuk maag+pemula,
+    kuis → hasil, saran alternatif hanya metode yang boleh, timbangan tersimpan, sehat#makan → olahraga#makan, HP tanpa
+    overflow, 0 error JS (selain beacon Cloudflare Insights di localhost).
+  - Belum: R2 (mulai program AI 5.000 koin, ±40 gerakan + ilustrasi sendiri, latihan harian), R3 (evaluasi mingguan
+    1.500, tanya coach 3/hari lalu 300, pengingat jendela makan). Fakta konten yang perlu dicek Bos/ahli: batas gula
+    50 g, protein 1,2–1,6 g/kg berat target, keto 20–50 g karbo, tahap 5:2 800 kkal (karangan, bukan standar).
 
 - **2026-11-09 — 3.25.0 Pajak Center baru — LIVE (run #201, commit e9d2355, Release v3.25.0). MIGRASI 0043 SUDAH
   dijalankan Bos (dikonfirmasi 2026-11-09).**

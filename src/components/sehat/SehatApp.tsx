@@ -2,24 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CalendarCheck, ShieldCheck, UtensilsCrossed } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, CalendarCheck, ShieldCheck } from 'lucide-react';
 import { LeoGuide, LeoBadge } from '@/components/ai/LeoGuide';
-import { MakanApp } from '@/components/makan/MakanApp';
 import { AsuransiView } from '@/components/sehat/AsuransiView';
 import { CekView } from '@/components/sehat/CekView';
 import { cn } from '@/lib/utils';
 
 // Sehatku — layar penuh seperti Ladangku: bar atas (kembali · judul tab · Leo) + menu melayang.
-// Tab di hash (#makan, #asuransi, #cek). Asuransi & Cek menyusul (tahap berikutnya).
+// Tab di hash (#asuransi, #cek). Makan pindah ke Olahragaku (3.26.0) — #makan lama diarahkan ke sana.
 const TABS = [
-  {
-    id: 'makan',
-    label: 'Makan',
-    icon: UtensilsCrossed,
-    title: 'Sehatku · Makan',
-    sub: 'Foto piringmu, Leo hitung gizi & belanjanya',
-    ready: true,
-  },
   {
     id: 'asuransi',
     label: 'Asuransi',
@@ -45,24 +37,28 @@ function Segera({ label }: { label: string }) {
       <LeoBadge topic="kesehatan" size={76} />
       <p className="mt-4 fs-17 font-black text-slate-800 dark:text-slate-100">{label} segera hadir</p>
       <p className="mt-1 max-w-sm fs-13 leading-relaxed text-slate-500 dark:text-slate-400">
-        Leo lagi menyiapkan bagian ini. Sementara itu, catat makanmu di tab Makan — belanja makannya langsung masuk ke
-        keuanganmu.
+        Leo lagi menyiapkan bagian ini.
       </p>
     </div>
   );
 }
 
 export function SehatApp({ variant }: { variant: 'web' | 'app' }) {
-  const [tab, setTab] = useState<TabId>('makan');
+  const [tab, setTab] = useState<TabId>('asuransi');
+  const router = useRouter();
   useEffect(() => {
     const read = () => {
       const h = window.location.hash.slice(1);
+      if (h === 'makan') {
+        router.replace(variant === 'app' ? '/app/olahraga#makan' : '/membership/olahraga#makan');
+        return;
+      }
       if (TABS.some((t) => t.id === h)) setTab(h as TabId);
     };
     read(); // hash baru terbaca di klien (static export)
     window.addEventListener('hashchange', read);
     return () => window.removeEventListener('hashchange', read);
-  }, []);
+  }, [router, variant]);
   const go = (t: TabId) => {
     setTab(t);
     window.scrollTo(0, 0);
@@ -104,13 +100,11 @@ export function SehatApp({ variant }: { variant: 'web' | 'app' }) {
           </h1>
           <p className="truncate fs-12 text-slate-500 dark:text-slate-400">{current.sub}</p>
         </div>
-        <LeoGuide key={tab} topic={tab === 'asuransi' ? 'asuransi' : tab === 'cek' ? 'kesehatan' : 'makan'} />
+        <LeoGuide key={tab} topic={tab === 'asuransi' ? 'asuransi' : 'kesehatan'} />
       </header>
 
       <main>
-        {tab === 'makan' ? (
-          <MakanApp variant={variant} embedded />
-        ) : tab === 'asuransi' ? (
+        {tab === 'asuransi' ? (
           <AsuransiView onToast={say} />
         ) : tab === 'cek' ? (
           <CekView onToast={say} />

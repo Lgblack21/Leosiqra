@@ -234,7 +234,7 @@ export function MakanApp({ variant = 'web', embedded = false }: { variant?: 'web
             <ArrowLeft size={18} />
           </Link>
           <div className="min-w-0 text-center">
-            <h1 className="fsh-20 font-black tracking-tight text-slate-900 dark:text-white">Sehatku · Makan</h1>
+            <h1 className="fsh-20 font-black tracking-tight text-slate-900 dark:text-white">Olahragaku · Makan</h1>
             <p className="truncate fs-12 text-slate-500 dark:text-slate-400">
               Foto piringmu, Leo hitung gizi & belanjanya
             </p>
@@ -273,7 +273,7 @@ export function MakanApp({ variant = 'web', embedded = false }: { variant?: 'web
 
       {notReady ? (
         <p className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 fs-13 font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
-          Sehatku sedang disiapkan di server — sebentar lagi bisa dipakai.
+          Makanku sedang disiapkan di server — sebentar lagi bisa dipakai.
         </p>
       ) : null}
       {error ? (

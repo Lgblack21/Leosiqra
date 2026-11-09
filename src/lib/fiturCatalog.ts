@@ -1,4 +1,5 @@
 import {
+  Dumbbell,
   BarChart3,
   Bot,
   Building2,
@@ -301,14 +302,27 @@ export const FITUR: Fitur[] = [
   {
     key: 'sehat',
     label: 'Sehatku',
-    sub: 'Makan, cek kesehatan, asuransi',
+    sub: 'Cek kesehatan & asuransi',
     href: '/membership/sehat',
     appHref: '/app/sehat',
     icon: HeartPulse,
     goal: 'hidup',
     feature: 'sehat',
-    keywords: 'kesehatan bpjs asuransi makan kalori',
-    pro: 'PRO: analisis makanan 10×/hari',
+    keywords: 'kesehatan bpjs asuransi cek tensi gula darah vaksin polis klaim',
+  },
+  {
+    key: 'olahraga',
+    label: 'Olahragaku',
+    sub: 'Diet, makan sehat & berat badan',
+    href: '/membership/olahraga',
+    appHref: '/app/olahraga',
+    icon: Dumbbell,
+    goal: 'hidup',
+    feature: 'olahraga',
+    since: '3.26.0',
+    keywords:
+      'olahraga diet gym kurus gemuk obesitas berat badan imt bmi kalori makan puasa intermittent fasting 16:8 keto',
+    pro: 'PRO: analisis makanan 10×/hari, riwayat timbangan lengkap',
   },
   {
     key: 'fokus',

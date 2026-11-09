@@ -22,6 +22,13 @@ const sections: LegalSection[] = [
           hutang/piutang, budget, transaksi rutin, kategori, dan catatan lain yang Anda masukkan.
         </li>
         <li>
+          <strong>Data kesehatan & tubuh (opsional):</strong> hanya kalau Anda memakai Sehatku atau Olahragaku — mis.
+          berat, tinggi, lingkar perut, tahun lahir, jenis kelamin, kondisi kesehatan yang Anda centang, hasil cek, dan
+          catatan makan. Dipakai hanya untuk menghitung angka & menyaring saran untuk Anda sendiri, tidak dibagikan ke
+          pihak lain kecuali ke penyedia AI saat Anda sendiri memakai fitur AI (mis. analisis foto makanan), dan data
+          Olahragaku bisa dihapus kapan saja dari halamannya.
+        </li>
+        <li>
           <strong>Bukti pembayaran:</strong> gambar bukti transfer saat Anda mengonfirmasi pembayaran paket Pro.
         </li>
         <li>

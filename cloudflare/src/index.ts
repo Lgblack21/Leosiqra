@@ -8,6 +8,7 @@ import {
   type VapidKeys,
 } from "@block65/webcrypto-web-push";
 import { computeCardCycle, clampCycleDay, lastStatementDate, dueDateFor, daysBetween, type CardCycleSettings } from "../../src/lib/creditCycle";
+import { AKTIVITAS, KONDISI } from "../../src/lib/olahraga/types";
 
 export interface Env {
   DB: D1Database;
@@ -6766,6 +6767,7 @@ async function handleResetMemberData(request: Request, env: Env) {
   await env.DB.prepare("DELETE FROM shops WHERE user_id = ?").bind(user.id).run().catch(() => undefined);
   await deleteShopExtrasForUser(env, user.id);
   await env.DB.prepare("DELETE FROM focus_sessions WHERE user_id = ?").bind(user.id).run().catch(() => undefined);
+  await deleteFitForUser(env, user.id);
   await deleteAllStoriesForUser(env, user.id);
   await deleteAllListingsForUser(env, user.id);
   // Kotak Masuk (migrasi 0019) — best effort, tabelnya bisa belum ada.
@@ -8374,6 +8376,7 @@ async function handleAdminUserById(request: Request, env: Env, userId: string) {
     await env.DB.prepare("DELETE FROM shops WHERE user_id = ?").bind(userId).run().catch(() => undefined);
     await deleteShopExtrasForUser(env, userId);
     await env.DB.prepare("DELETE FROM focus_sessions WHERE user_id = ?").bind(userId).run().catch(() => undefined);
+    await deleteFitForUser(env, userId);
     await deleteAllStoriesForUser(env, userId);
     await deleteAllListingsForUser(env, userId);
     await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
@@ -8732,7 +8735,7 @@ async function handleAiQuota(request: Request, env: Env) {
 
 // Halaman fitur yang punya popup Leo (src/lib/leoGuides.ts). Nilai = keterangan untuk model.
 const AI_CHAT_PAGES: Record<string, string> = {
-  makan: "Sehatku › Makan — catatan makan harian dari foto (kalori & gizi perkiraan AI), bisa langsung dicatat jadi pengeluaran Makanan & Minuman. Jawab soal makan, gizi umum, dan belanja makan; bukan diagnosis medis.",
+  makan: "Olahragaku › Makan — catatan makan harian dari foto (kalori & gizi perkiraan AI), bisa langsung dicatat jadi pengeluaran Makanan & Minuman. Jawab soal makan, gizi umum, dan belanja makan; bukan diagnosis medis.",
   kesehatan: "Sehatku › Cek — cek kesehatan rutin & pencegahan (panduan umum, sebut sumber resmi seperti Kemenkes bila relevan). Bukan diagnosis; sarankan ke tenaga kesehatan untuk keluhan.",
   asuransi: "Sehatku › Asuransi — biaya kesehatan setahun (kategori Kesehatan), polis milik user (premi, jatuh tempo), dan klaim reimburse. Jelaskan istilah asuransi dengan bahasa awam; jangan merekomendasikan produk/perusahaan tertentu dan bukan nasihat medis/hukum.",
   cerita: "Cerita Hari Ini — jurnal harian dengan mood, foto, ilustrasi AI, dan ringkasan uang hari itu.",
@@ -8746,7 +8749,7 @@ const aiMealContext = async (env: Env, userId: string) => {
     const rows = await env.DB.prepare("SELECT date, time, slot, name, kcal, protein, carbs, fat, price FROM meals WHERE user_id = ? AND date >= ? ORDER BY date DESC, time DESC LIMIT 40").bind(userId, mealShift(today, -6)).all();
     return { hariIni: today, targetKkal: await readMealTarget(env, userId), makan7Hari: rows.results ?? [] };
   } catch {
-    return { catatan: "Sehatku › Makan belum aktif / belum ada data." };
+    return { catatan: "Olahragaku › Makan belum aktif / belum ada data." };
   }
 };
 
@@ -13659,6 +13662,158 @@ async function handleMemberTax(request: Request, env: Env, url: URL) {
   }
 }
 
+// ── Olahragaku (migrasi 0044) ───────────────────────────────────────────────
+// Data tubuh = data sensitif: semua query terikat user_id sesi, tidak dikirim ke mana pun (R1 tanpa AI).
+// GET    /api/member/fit               → { ready, pro, profile, weights, prefill } (FREE: timbangan 7 hari terakhir)
+// PUT    /api/member/fit/profile       → { profile } — berat ikut dicatat sebagai timbangan hari ini
+// POST   /api/member/fit/weights       → { date, kg, waist_cm? } — satu catatan per tanggal (ulang = ditimpa)
+// DELETE /api/member/fit/weights/:date
+// DELETE /api/member/fit               → hapus SEMUA data Olahragaku milik user
+// Tabel belum ada: GET { ready:false }, tulis 503 → klien menyimpan di perangkat dulu.
+const FIT_TABLES = ["fit_coach", "fit_workouts", "fit_programs", "fit_weights", "fit_profiles"] as const;
+const fitTableMissing = (e: unknown) => e instanceof Error && /no such table: fit_/i.test(e.message);
+const FIT_FREE_DAYS = 7;
+const FIT_KONDISI = KONDISI.map((k) => k.key) as readonly string[];
+const FIT_AKTIVITAS = AKTIVITAS.map((a) => a.key) as readonly string[];
+const fitNum = (v: unknown, lo: number, hi: number, d = 1) => {
+  const n = typeof v === "number" ? v : typeof v === "string" && v.trim() ? Number(v) : NaN;
+  return Number.isFinite(n) && n >= lo && n <= hi ? Math.round(n * 10 ** d) / 10 ** d : null;
+};
+const sanitizeFitProfile = (raw: unknown, today: string) => {
+  const r = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  const year = Number(today.slice(0, 4));
+  const sex = r.sex === "l" || r.sex === "p" ? r.sex : null;
+  const birthYear = Number.isInteger(r.birthYear) && (r.birthYear as number) >= year - 100 && (r.birthYear as number) <= year - 10 ? (r.birthYear as number) : null;
+  const heightCm = fitNum(r.heightCm, 100, 250);
+  const weightKg = fitNum(r.weightKg, 25, 400);
+  if (!sex || !birthYear || !heightCm || !weightKg) return null;
+  const activity = FIT_AKTIVITAS.includes(r.activity as string) ? (r.activity as string) : "duduk";
+  const conditions = [...new Set((Array.isArray(r.conditions) ? r.conditions : []).filter((c): c is string => typeof c === "string" && FIT_KONDISI.includes(c)))];
+  return {
+    sex, birthYear, heightCm, weightKg,
+    waistCm: fitNum(r.waistCm, 40, 250),
+    activity,
+    goalKg: fitNum(r.goalKg, 25, 400),
+    conditions,
+    equipment: r.equipment === "dumbbell" || r.equipment === "gym" ? r.equipment : "tanpa",
+    experience: r.experience === "pernah" || r.experience === "rutin" ? r.experience : "belum",
+  };
+};
+const fitDateOk = (d: unknown, today: string): d is string =>
+  typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(`${d}T00:00:00Z`)) && new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) === d && d <= today && d >= shiftDateStr(today, -730);
+const upsertFitWeight = (env: Env, userId: string, date: string, kg: number, waist: number | null) =>
+  env.DB.prepare(
+    `INSERT INTO fit_weights (id, user_id, date, kg, waist_cm, created_at) VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(user_id, date) DO UPDATE SET kg = excluded.kg, waist_cm = COALESCE(excluded.waist_cm, fit_weights.waist_cm)`
+  ).bind(generateId(), userId, date, kg, waist, nowIso());
+const deleteFitForUser = async (env: Env, userId: string) => {
+  for (const t of FIT_TABLES) await env.DB.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(userId).run().catch(() => undefined);
+};
+// Isi awal dari Sehatku › Cek (tahun lahir, jenis kelamin, cek status gizi terakhir) — semuanya milik user sendiri.
+const fitPrefill = async (env: Env, userId: string) => {
+  const out: Record<string, unknown> = {};
+  const prof = await env.DB.prepare("SELECT CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.healthProfile') END AS p FROM users WHERE id = ?")
+    .bind(userId).first<{ p: string | null }>().catch(() => null);
+  try {
+    const p = prof?.p ? (JSON.parse(prof.p) as { birthYear?: unknown; sex?: unknown }) : null;
+    if (p && Number.isInteger(p.birthYear)) out.birthYear = p.birthYear;
+    if (p && (p.sex === "l" || p.sex === "p")) out.sex = p.sex;
+  } catch { /* abaikan */ }
+  const gizi = await env.DB.prepare(
+    "SELECT date, results_json FROM health_checks WHERE user_id = ? AND item_key = 'status-gizi' AND results_json IS NOT NULL ORDER BY date DESC, created_at DESC LIMIT 1"
+  ).bind(userId).first<{ date: string; results_json: string }>().catch(() => null);
+  try {
+    const r = gizi ? (JSON.parse(gizi.results_json) as Record<string, unknown>) : null;
+    if (r) {
+      if (fitNum(r.bb, 25, 400)) out.weightKg = fitNum(r.bb, 25, 400);
+      if (fitNum(r.tb, 100, 250)) out.heightCm = fitNum(r.tb, 100, 250);
+      if (fitNum(r.lp, 40, 250)) out.waistCm = fitNum(r.lp, 40, 250);
+      out.fromCheck = gizi!.date;
+    }
+  } catch { /* abaikan */ }
+  return out;
+};
+async function handleMemberFit(request: Request, env: Env, pathname: string) {
+  const authResult = await requireSession(env, request);
+  if (authResult.error) return authResult.error;
+  const userId = authResult.session.user.id;
+  const today = todayWIB();
+  try {
+    if (pathname === "/api/member/fit" && request.method === "GET") {
+      const pro = await isProUser(env, userId);
+      const row = await env.DB.prepare(
+        "SELECT sex, birth_year, height_cm, activity, goal_kg, conditions_json, equipment, experience, updated_at FROM fit_profiles WHERE user_id = ?"
+      ).bind(userId).first<{ sex: string; birth_year: number; height_cm: number; activity: string; goal_kg: number | null; conditions_json: string; equipment: string; experience: string; updated_at: string }>();
+      const since = shiftDateStr(today, pro ? -730 : -(FIT_FREE_DAYS - 1));
+      const weights = (await env.DB.prepare(
+        "SELECT date, kg, waist_cm FROM fit_weights WHERE user_id = ? AND date >= ? ORDER BY date DESC LIMIT 800"
+      ).bind(userId, since).all<{ date: string; kg: number; waist_cm: number | null }>()).results ?? [];
+      // Berat terakhir dibaca tanpa batas tanggal (FREE yang lama tidak menimbang tetap punya berat di profil).
+      const last = await env.DB.prepare("SELECT kg, waist_cm FROM fit_weights WHERE user_id = ? ORDER BY date DESC LIMIT 1")
+        .bind(userId).first<{ kg: number; waist_cm: number | null }>();
+      let conditions: unknown = [];
+      try { conditions = row ? JSON.parse(row.conditions_json) : []; } catch { conditions = []; }
+      const profile = row
+        ? sanitizeFitProfile({
+            sex: row.sex, birthYear: row.birth_year, heightCm: row.height_cm, weightKg: last?.kg, waistCm: last?.waist_cm,
+            activity: row.activity, goalKg: row.goal_kg, conditions, equipment: row.equipment, experience: row.experience,
+          }, today)
+        : null;
+      return json({
+        ready: true, pro, today, profile, updated_at: row?.updated_at ?? null, weights,
+        history_days: pro ? null : FIT_FREE_DAYS,
+        prefill: profile ? null : await fitPrefill(env, userId),
+      });
+    }
+    if (pathname === "/api/member/fit/profile" && request.method === "PUT") {
+      const raw = await parseJson<Record<string, unknown>>(request);
+      const p = sanitizeFitProfile(raw.profile ?? raw, today);
+      if (!p) return json({ error: "Isi jenis kelamin, tahun lahir (umur 10–100), tinggi 100–250 cm, dan berat 25–400 kg." }, { status: 400 });
+      const now = nowIso();
+      await env.DB.batch([
+        env.DB.prepare(
+          `INSERT INTO fit_profiles (user_id, sex, birth_year, height_cm, activity, goal_kg, conditions_json, equipment, experience, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(user_id) DO UPDATE SET sex = excluded.sex, birth_year = excluded.birth_year, height_cm = excluded.height_cm,
+             activity = excluded.activity, goal_kg = excluded.goal_kg, conditions_json = excluded.conditions_json,
+             equipment = excluded.equipment, experience = excluded.experience, updated_at = excluded.updated_at`
+        ).bind(userId, p.sex, p.birthYear, p.heightCm, p.activity, p.goalKg, JSON.stringify(p.conditions), p.equipment, p.experience, now),
+        upsertFitWeight(env, userId, today, p.weightKg, p.waistCm),
+      ]);
+      return json({ ok: true, profile: p, updated_at: now });
+    }
+    if (pathname === "/api/member/fit/weights" && request.method === "POST") {
+      const raw = await parseJson<Record<string, unknown>>(request);
+      const date = raw.date === undefined ? today : raw.date;
+      if (!fitDateOk(date, today)) return json({ error: "Tanggal tidak valid (maks hari ini, paling lama 2 tahun lalu)." }, { status: 400 });
+      const kg = fitNum(raw.kg, 25, 400);
+      if (!kg) return json({ error: "Berat harus 25–400 kg." }, { status: 400 });
+      const waist = raw.waist_cm === undefined || raw.waist_cm === null || raw.waist_cm === "" ? null : fitNum(raw.waist_cm, 40, 250);
+      if (raw.waist_cm !== undefined && raw.waist_cm !== null && raw.waist_cm !== "" && waist === null) return json({ error: "Lingkar perut harus 40–250 cm." }, { status: 400 });
+      await upsertFitWeight(env, userId, date, kg, waist).run();
+      return json({ ok: true, date, kg, waist_cm: waist }, { status: 201 });
+    }
+    const m = /^\/api\/member\/fit\/weights\/(\d{4}-\d{2}-\d{2})$/.exec(pathname);
+    if (m && request.method === "DELETE") {
+      const res = await env.DB.prepare("DELETE FROM fit_weights WHERE user_id = ? AND date = ?").bind(userId, m[1]).run();
+      if (!res.meta.changes) return json({ error: "Catatan timbangan tidak ditemukan." }, { status: 404 });
+      return json({ ok: true });
+    }
+    if (pathname === "/api/member/fit" && request.method === "DELETE") {
+      await deleteFitForUser(env, userId);
+      return json({ ok: true });
+    }
+    return json({ error: "Not found" }, { status: 404 });
+  } catch (e) {
+    if (fitTableMissing(e)) {
+      if (request.method === "GET") return json({ ready: false, profile: null, weights: [], prefill: await fitPrefill(env, userId) });
+      return json({ error: "Olahragaku belum aktif (menunggu pembaruan database). Datamu disimpan di perangkat dulu.", code: "not_ready" }, { status: 503 });
+    }
+    if (e instanceof Error && e.message === "Payload JSON tidak valid.") return json({ error: "Payload JSON tidak valid." }, { status: 400 });
+    throw e;
+  }
+}
+
 async function handleMemberCanvas(request: Request, env: Env, pathname: string) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -17005,7 +17160,7 @@ const PREF_INPUT_MODES = ["ketik", "suara", "foto"] as const;
 // Fitur yang tampil di menu samping (panel Pengaturan → Fitur). Hanya
 // visibilitas menu — mematikan fitur tidak menyentuh datanya. Sama dengan
 // FeatureId di src/lib/features.ts. null = bawaan (5 fitur lama).
-const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk", "jejak", "langganan", "ladang", "fokus", "cerita", "makan", "sehat", "stiker", "kanvas", "cek", "peta", "teduh"] as const;
+const PREF_FEATURES = ["ai", "kartu", "tabungan", "hutang", "investasi", "transfer", "rutin", "dompet_bersama", "pasar", "tahunan", "pajak", "impor", "kotak_masuk", "jejak", "langganan", "ladang", "fokus", "cerita", "makan", "sehat", "olahraga", "stiker", "kanvas", "cek", "peta", "teduh"] as const;
 // Jam pengingat per 30 menit (cron tiap 10 menit, lihat sendDailyReminders).
 const PREF_TIME_RE = /^([01]\d|2[0-3]):(00|30)$/;
 // Ikon & warna pilihan user per nama kategori (panel Kategori & Anggaran).
@@ -21732,6 +21887,10 @@ const worker = {
 
       if (url.pathname === "/api/member/canvas" || url.pathname.startsWith("/api/member/canvas/")) {
         return await handleMemberCanvas(request, env, url.pathname);
+      }
+
+      if (url.pathname === "/api/member/fit" || url.pathname.startsWith("/api/member/fit/")) {
+        return await handleMemberFit(request, env, url.pathname);
       }
 
       if (url.pathname === "/api/member/meals/analyze" && request.method === "POST") {

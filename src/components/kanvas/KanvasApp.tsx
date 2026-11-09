@@ -41,6 +41,7 @@ const APP_ROUTES: Record<string, string> = {
   '/membership/kekayaan': '/app/wallet',
   '/membership/cek-keuangan': '/app/cek-keuangan',
   '/membership/sehat': '/app/sehat',
+  '/membership/olahraga': '/app/olahraga',
   '/membership/recurring': '/app/recurring',
   '/membership/dompet-bersama': '/app/dompet-bersama',
   '/membership/transactions': '/app/transactions',

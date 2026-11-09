@@ -31,6 +31,7 @@ const FULLSCREEN_PATHS = [
   '/membership/fokus',
   '/membership/cerita',
   '/membership/sehat',
+  '/membership/olahraga',
   '/membership/stiker',
   '/membership/teduh',
 ]; // + /ladang/kasir

@@ -1,5 +1,6 @@
 import {
   Bot,
+  Dumbbell,
   Footprints,
   Gauge,
   Map as MapIcon,
@@ -43,6 +44,7 @@ export type FeatureId =
   | 'fokus'
   | 'cerita'
   | 'sehat'
+  | 'olahraga'
   | 'stiker'
   | 'kanvas'
   | 'cek'
@@ -152,6 +154,13 @@ export const FEATURES: Feature[] = [
     tint: 'from-orange-50 to-rose-100 text-orange-600',
   },
   {
+    id: 'olahraga',
+    label: 'Olahragaku',
+    href: '/membership/olahraga',
+    icon: Dumbbell,
+    tint: 'from-emerald-50 to-lime-100 text-emerald-600',
+  },
+  {
     id: 'rutin',
     label: 'Transaksi Rutin',
     href: '/membership/recurring',
@@ -186,6 +195,7 @@ export const DEFAULT_FEATURES: FeatureId[] = [
   'teduh',
   'cek',
   'sehat',
+  'olahraga',
 ];
 
 const BY_ID = new Map(FEATURES.map((f) => [f.id, f]));
@@ -195,8 +205,8 @@ export const isShownFeature = (id: string) => BY_ID.has(id as FeatureId);
 export const normalizeFeatures = (ids: readonly string[]): FeatureId[] => {
   const out: FeatureId[] = [];
   for (const raw of ids) {
-    // 'makan' (3.3.0, Makanku) kini bagian dari Sehatku.
-    const id = (raw === 'hutang' ? 'tabungan' : raw === 'makan' ? 'sehat' : raw) as FeatureId;
+    // 'makan' (3.3.0, Makanku) kini bagian dari Olahragaku (dulu Sehatku).
+    const id = (raw === 'hutang' ? 'tabungan' : raw === 'makan' ? 'olahraga' : raw) as FeatureId;
     if (BY_ID.has(id) && !out.includes(id)) out.push(id);
   }
   return out;

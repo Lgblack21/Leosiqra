@@ -96,6 +96,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.23.6 | 9 Nov 2026 | Masuk, Daftar & Mulai tampil terang dan lebih ringan |
 | 3.24.0 | 9 Nov 2026 | Laporan Usahaku + unduh PDF & Excel |
 | 3.25.0 | 9 Nov 2026 | Pajak Center baru |
+| 3.26.0 | 9 Nov 2026 | Olahragaku |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -109,6 +110,22 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.26.0 — 2026-11-09 — Olahragaku: diet & berat badan
+
+- Fitur baru **Olahragaku** (menu Fitur lainnya, web & HP) — teman diet untuk yang mau menurunkan berat badan,
+  termasuk yang baru mulai.
+- **Kenali tubuhmu**: isi berat, tinggi, umur, aktivitas, dan kondisi kesehatan → Leo menghitung IMT (patokan
+  Kemenkes), kebutuhan kalori harian, target kalori yang aman, protein harian, lingkar perut berisiko, dan perkiraan
+  waktu capai berat target. Data dari cek status gizi di Sehatku langsung terisi.
+- **20 metode diet** untuk dipilih — Isi Piringku, Porsi Tangan, Defisit Kalori, Tinggi Protein, jendela makan
+  12:12 sampai 20:4, 5:2, Mediterania, DASH, Keto, dan lainnya. Tiap metode ada penjelasan, contoh menu sehari,
+  kelebihan & tantangan, lalu beberapa pertanyaan untuk melihat apakah metode itu cocok untukmu.
+- **Aman lebih dulu**: metode yang berisiko untuk kondisimu (mis. puasa panjang untuk penderita maag atau pengguna
+  obat diabetes) dikunci dan diganti saran metode lain. Metode tingkat lanjut terbuka setelah kamu terbiasa.
+- **Progres**: catat timbangan & lingkar perut, lihat grafik berat menuju target.
+- **Makanku pindah ke Olahragaku** (tab Makan). Sehatku kini khusus Cek kesehatan & Asuransi.
+- Membaca semua metode gratis. Program 4 minggu yang disusun AI untuk tubuhmu (PRO + koin) menyusul.
 
 ## 3.25.0 — 2026-11-09 — Pajak Center baru
 

@@ -1,6 +1,6 @@
 # Rancangan — Olahragaku (diet + olahraga + coach AI)
 
-Status: **rancangan, menunggu ACC Bos** (2026-11-09). Belum ada kode.
+Status: **DI-ACC Bos 2026-11-09** (jawaban bagian 9). **R1 selesai di branch (3.26.0), belum deploy.**
 Keputusan Bos yang sudah ada (chat 2026-11-09):
 
 1. Halaman baru **Olahragaku**; Makanku pindah ke sini. **Sehatku** tinggal Cek + Asuransi.
@@ -220,10 +220,15 @@ Endpoint (semua `requireSession`, `/api/member/fit/*`): `GET/PUT profile`, `GET/
 Tiap rilis: tsc, build, uji lokal (wrangler dev + D1 lokal, Playwright web 1280 & HP 390), security-check untuk
 endpoint baru, lalu minta "gas".
 
-## 9. Keputusan yang masih ditunggu
+## 9. Keputusan Bos (2026-11-09)
 
-1. User yang sudah menyalakan Sehatku otomatis dapat Olahragaku? (usul: ya)
-2. FREE boleh **memulai** metode dengan template non-AI (jadwal standar, tanpa personalisasi)? (usul: ya — AI
-   personal tetap PRO + koin)
-3. Gambar gerakan: buat ilustrasi sendiri ±40 gerakan (usul) atau pakai wger dengan kredit CC-BY-SA?
-4. Jatah tanya coach gratis PRO: 3/hari (usul)?
+1. Belum ada member yang memakai Makanku → cukup dipindah, tanpa migrasi fitur/alias khusus.
+2. **FREE hanya sampai membaca penjelasan metode** (+ kuis kecocokan, tanpa AI, gratis — tafsiran dev, bisa
+   diubah). **Mengikuti metode = PRO + koin**: memulai program = program 4 minggu dibuat AI (5.000 koin).
+   Tidak ada "template non-AI" untuk FREE.
+3. Gambar gerakan: ilustrasi sendiri ±40 gerakan.
+4. Tanya coach: jatah PRO 3/hari gratis, lalu 300 koin.
+
+Akibat ke rilis: **R1** = halaman + pindah Makanku + profil & hitungan + 20 metode (penjelasan & kuis) +
+catat berat. **R2** = mulai program (PRO + 5.000 koin, AI) + latihan & gambar. **R3** = evaluasi mingguan,
+tanya coach, pengingat jendela makan.
