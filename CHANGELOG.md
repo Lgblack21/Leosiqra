@@ -80,6 +80,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.16.1 | 9 Nov 2026 | Tombol peta baru & 3D di tab Peta |
 | 3.17.0 | 9 Nov 2026 | Ukuran teks & tampilan lebih ramping |
 | 3.18.0 | 9 Nov 2026 | Teduh |
+| 3.19.0 | 9 Nov 2026 | Tanggal merah & jadwal sholat |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -93,6 +94,19 @@ versi), jadi tulis dengan bahasa user. Format tiap entri:
 menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
+
+## 3.19.0 — 2026-11-09 — Tanggal merah & jadwal sholat
+
+- **Baru: Tanggal merah** — libur nasional & cuti bersama 2026–2027 sesuai SKB 3 Menteri.
+  - Kartu **Libur berikutnya** di Ringkasan (web) dan Beranda (HP): kapan, berapa hari, dan tanda **libur panjang**.
+  - Saran keuangan: transfer & bayar tagihan sebelum bank tutup, dan ajakan **menyiapkan anggaran liburan**
+    menjelang libur panjang.
+  - **Kalender tanggal merah** setahun penuh, lengkap dengan daftar libur panjang.
+  - **Transaksi rutin** yang jatuh di tanggal merah atau akhir pekan kini diberi peringatan, beserta hari kerja
+    sebelumnya yang paling aman untuk bayar.
+- **Baru di Teduh: Jadwal sholat** hari ini dan hitung mundur ke sholat berikutnya (Imsak sampai Isya).
+  - Dihitung langsung di perangkatmu dengan metode Kemenag, tanpa koneksi ke layanan lain.
+  - Lokasi diambil sekali dari GPS atau pilih kota; hanya disimpan di perangkatmu.
 
 ## 3.18.0 — 2026-11-09 — Teduh
 

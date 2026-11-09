@@ -53,6 +53,7 @@ import { computeHealthScore } from '@/lib/healthScore';
 import { computeNetWorth } from '@/lib/netWorth';
 import { reminderService, type Reminder } from '@/lib/services/reminderService';
 import { HeaderSlot } from '@/components/Header';
+import { LiburCard } from '@/components/libur/LiburCard';
 
 // Ringkasan (dashboard member): kartu sapaan hari ini → catatan hari ini →
 // pengeluaran bulan terpilih per kategori + budget → transaksi terbaru →
@@ -1058,6 +1059,8 @@ export default function MonthlyDashboard() {
       </section>
 
       {!statsLoading && <HealthScoreCard result={health} />}
+
+      <LiburCard />
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <div className={cn(card, 'p-5 md:p-6')}>

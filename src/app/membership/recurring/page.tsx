@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Pause, Play, Pencil, Trash2, CalendarClock, PiggyBank, ArrowRight } from 'lucide-react';
+import { LiburHint } from '@/components/libur/LiburHint';
 import { cn, formatCurrency } from '@/lib/utils';
 import { recurringService, type RecurringTransaction } from '@/lib/services/recurringService';
 import { accountService, type Account } from '@/lib/services/accountService';
@@ -369,6 +370,7 @@ export default function RecurringPage() {
                   {income ? '+' : '−'}
                   {formatCurrency(r.amount, currencyOf(r.accountId))}
                 </p>
+                {!paused ? <LiburHint date={r.nextDate} className="mt-2" /> : null}
                 <p className="fs-12 text-slate-500">
                   {INTERVAL_LABEL[r.interval as RecurringInterval] ?? r.interval} · {income ? 'ke' : 'dari'}{' '}
                   {accountName(r.accountId)}

@@ -8,6 +8,7 @@ import { recurringService, RecurringTransaction } from '@/lib/services/recurring
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { subscribeToCollectionChanges } from '@/lib/cf-firestore';
 import { auth } from '@/lib/cf-client';
+import { LiburHint } from '@/components/libur/LiburHint';
 import { cn, formatIDR, formatMoney, toLocalDateString } from '@/lib/utils';
 import { lightTap } from '@/lib/haptics';
 import { FadeIn } from '@/components/app/FadeIn';
@@ -213,6 +214,7 @@ export default function AppRecurringPage() {
                     </div>
                   </div>
                 </button>
+                {!paused && !stuck ? <LiburHint date={new Date(r.nextDate)} className="mt-3" /> : null}
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <p
                     className={cn(

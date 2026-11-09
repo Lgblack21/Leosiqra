@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (3.18.0 siap deploy, menunggu "gas" — tanpa SQL)
+Terakhir diperbarui: 2026-11-09 (3.18.0 + 3.19.0 siap deploy, menunggu "gas" — tanpa SQL)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,20 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-09 — 3.19.0 Tanggal merah + jadwal sholat — BELUM DEPLOY (bersama 3.18.0). Tanpa SQL.**
+  - `src/lib/hariLibur.ts`: daftar SKB 3 Menteri 2026 (Setneg) & 2027 (Kemenag), dicek jumlah (17+8, 18+8) & nama
+    hari. **Tambah tahun berikutnya saat SKB terbit (±September)**; tanggal Hijriah bisa digeser KMA → perbarui.
+    Helper: isHariKerja, hariKerjaSebelum, rentangLibur (libur panjang), liburBerikutnya.
+  - `components/libur/LiburCard.tsx` (Ringkasan web setelah HealthScoreCard, Beranda /app setelah WeeklyInsights;
+    dihitung di browser via useSyncExternalStore — build statis tak tahu "hari ini") + modal kalender;
+    `LiburHint` di /membership/recurring & /app/recurring.
+  - Jadwal sholat: `src/lib/teduh/sholat.ts` (adhan 4.4.3 MIT; Subuh 20°, Isya 18°, Syafi'i, ihtiyat
+    Subuh/Ashar/Isya +2, Dzuhur/Maghrib +3, pembulatan ke atas — dikalibrasi ke Bimas Islam Kemenag Jakarta Nov 2026,
+    selisih ≤1 menit), lokasi localStorage `leosiqra-teduh-lokasi` (dibulatkan 2 desimal), `JadwalSholat.tsx`.
+  - API Indonesia TIDAK dipakai (perantara berbayar per request); data diambil dari sumber aslinya.
+  - Dites Playwright web + Pixel 7: kartu Natal 45 hari lagi / 4 hari, kalender 2027, hint rutin 25 Des → Rab 23
+    Des, jadwal sholat GPS Bogor, 0 error JS.
 
 - **2026-11-09 — 3.18.0 Teduh (Rilis 1: Al-Qur'an) — BELUM DEPLOY. Tanpa SQL.**
   - Data statis: `scripts/teduh/build-quran.mjs` dari `data/teduh/quran/` (Tanzil Uthmani 1.1 **XML** — basmalah di

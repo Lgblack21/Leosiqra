@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Amiri_Quran } from 'next/font/google';
 import { ArrowLeft, BookOpen, Bookmark, ChevronRight, Home, Search, Sparkles } from 'lucide-react';
 import { QuranReader } from '@/components/teduh/QuranReader';
+import { JadwalSholat } from '@/components/teduh/JadwalSholat';
 import { AGAMA, agamaPilihan, type AgamaId } from '@/lib/teduh/agama';
 import {
   TEMA,
@@ -391,6 +392,8 @@ function Beranda({
           </div>
         </div>
       </section>
+
+      <JadwalSholat />
 
       <AyatCard k={hari.k} list={list} label={`Ayat hari ini · ${hari.tema.judul}`} go={go} />
 
