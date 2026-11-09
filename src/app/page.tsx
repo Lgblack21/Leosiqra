@@ -219,15 +219,15 @@ export default function LandingPage() {
 
   return (
     <div id="beranda" className="min-h-screen overflow-x-clip scroll-mt-20 bg-[#f7f8fb] text-slate-900">
-      <Navbar variant="dark" />
+      <Navbar variant="clean" />
 
-      {/* ── Hero: langit navy-emas (senada halaman Masuk/Daftar & Mulai) ── */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#070d1f] via-[#0d1638] to-[#1b1150] px-5 pb-0 pt-32 text-white sm:px-6 sm:pt-40">
+      {/* ── Hero: terang & bersih dengan cahaya pastel (senada halaman Masuk/Daftar & Mulai) ── */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#eef0ff] via-white to-[#f7f8fb] px-5 pb-20 pt-32 text-slate-900 sm:px-6 sm:pb-28 sm:pt-40">
         <Aurora />
         <div className="relative mx-auto max-w-4xl text-center">
           <motion.div
             {...heroItem(0)}
-            className="relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-amber-300/15 px-4 py-1.5 fs-12 font-bold text-amber-200 ring-1 ring-amber-300/30"
+            className="relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-amber-100 px-4 py-1.5 fs-12 font-bold text-amber-800 ring-1 ring-amber-200"
           >
             <span aria-hidden className="auth-shine" />
             <Sparkles size={14} className="auth-twinkle" />
@@ -239,11 +239,11 @@ export default function LandingPage() {
           >
             Semua uang Anda,
             <br />
-            <span className="lp-gold">dalam satu layar.</span>
+            <span className="lp-ink">dalam satu layar.</span>
           </motion.h1>
           <motion.p
             {...heroItem(2)}
-            className="mx-auto mt-7 max-w-2xl text-base leading-relaxed text-white/65 sm:text-lg"
+            className="mx-auto mt-7 max-w-2xl text-base leading-relaxed text-slate-500 sm:text-lg"
           >
             Catatan keuangan harian dalam hitungan detik — rekening, kartu kredit, tabungan, hutang, dan investasi
             tercatat rapi, terhitung otomatis, lengkap dengan ringkasan SPT tahunan. Tanpa spreadsheet, tanpa pusing.
@@ -257,14 +257,14 @@ export default function LandingPage() {
             </Link>
             <Link
               href="/auth/login"
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-white/[0.06] px-8 py-4 text-sm font-bold text-white ring-1 ring-white/20 transition-colors hover:bg-white/[0.12]"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-8 py-4 text-sm font-bold text-slate-800 shadow-sm ring-1 ring-slate-200 transition-colors hover:bg-slate-50"
             >
               Masuk ke akun
             </Link>
           </motion.div>
-          <motion.p {...heroItem(4)} className="mt-6 text-xs text-white/45">
+          <motion.p {...heroItem(4)} className="mt-6 text-xs text-slate-400">
             Tanpa kartu kredit · Android, iPhone & web · Bahasa Indonesia ·{' '}
-            <Link href="/install" className="font-bold text-amber-300 hover:underline">
+            <Link href="/install" className="font-bold text-indigo-600 hover:underline">
               Pasang di HP →
             </Link>
           </motion.p>
@@ -309,23 +309,14 @@ export default function LandingPage() {
           </div>
         </motion.div>
 
-        <div className="relative mx-auto mt-14 grid max-w-5xl grid-cols-2 gap-px overflow-hidden rounded-3xl bg-white/10 ring-1 ring-white/10 lg:grid-cols-4">
+        <div className="relative mx-auto mt-14 grid max-w-5xl grid-cols-2 gap-px overflow-hidden rounded-3xl bg-slate-200/80 shadow-sm ring-1 ring-slate-200/80 lg:grid-cols-4">
           {FACTS.map(([big, small], i) => (
-            <Reveal key={big} delay={i * 0.08} y={14} className="bg-[#0b1430] px-5 py-6 text-center">
-              <p className="text-lg font-extrabold tracking-tight text-white sm:text-xl">{big}</p>
-              <p className="mt-1 text-xs text-white/50">{small}</p>
+            <Reveal key={big} delay={i * 0.08} y={14} className="bg-white px-5 py-6 text-center">
+              <p className="text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl">{big}</p>
+              <p className="mt-1 text-xs text-slate-500">{small}</p>
             </Reveal>
           ))}
         </div>
-        {/* Lengkung ke bagian terang */}
-        <svg
-          aria-hidden
-          viewBox="0 0 1440 90"
-          preserveAspectRatio="none"
-          className="relative -mx-5 mt-16 block h-16 w-[calc(100%+2.5rem)] sm:-mx-6 sm:h-24 sm:w-[calc(100%+3rem)]"
-        >
-          <path d="M0 90 C 360 0, 1080 0, 1440 90 Z" fill="#f7f8fb" />
-        </svg>
       </section>
 
       <div className="relative border-b border-slate-200/70 bg-white/60 py-5 [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
@@ -702,15 +693,15 @@ export default function LandingPage() {
       )}
 
       <section className="relative px-5 py-20 sm:px-6 sm:py-28">
-        <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[40px] bg-gradient-to-br from-[#070d1f] via-[#0d1638] to-[#1b1150] px-6 py-16 text-center text-white shadow-[0_40px_100px_-40px_rgba(15,23,42,0.8)] sm:px-12 sm:py-24">
+        <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[40px] bg-gradient-to-br from-[#eef0ff] via-white to-[#fff5e4] px-6 py-16 text-center text-slate-900 shadow-[0_40px_100px_-50px_rgba(79,70,229,0.45)] ring-1 ring-slate-200/80 sm:px-12 sm:py-24">
           <Aurora />
           <div className="relative">
             <h2 className="text-4xl font-extrabold leading-[1.08] tracking-[-0.03em] sm:text-6xl">
               Mulai hari ini.
               <br />
-              <span className="lp-gold">Tenang seterusnya.</span>
+              <span className="lp-ink">Tenang seterusnya.</span>
             </h2>
-            <p className="mx-auto mt-6 max-w-md text-white/65">
+            <p className="mx-auto mt-6 max-w-md text-slate-500">
               Buat akun gratis dan lihat kondisi keuangan Anda dengan jernih — dalam hitungan menit.
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -726,7 +717,7 @@ export default function LandingPage() {
               </Link>
               <Link
                 href="/hubungi-kami"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/30 px-9 py-4 text-sm font-bold text-white transition-colors hover:bg-white/10 sm:w-auto"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-9 py-4 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 sm:w-auto"
               >
                 <Globe2 size={16} /> Hubungi kami
               </Link>

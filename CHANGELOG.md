@@ -93,7 +93,7 @@ Jadi deploy kecil berkali-kali tidak wajib menaikkan versi; build-nya yang membe
 | 3.23.3 | 9 Nov 2026 | Logo & tata letak halaman masuk/daftar di layar pendek |
 | 3.23.4 | 9 Nov 2026 | Panel halaman masuk/daftar tidak lagi berantakan |
 | 3.23.5 | 9 Nov 2026 | Panel halaman masuk/daftar diam, form yang bergulir |
-| 3.23.6 | 9 Nov 2026 | Animasi halaman masuk/daftar lebih ringan |
+| 3.23.6 | 9 Nov 2026 | Masuk, Daftar & Mulai tampil terang dan lebih ringan |
 <!-- peta-baru -->
 
 Versi 1.0.0–3.0.2 disusun ulang dari riwayat git pada 7 Nov 2026: dulu angka versi tidak
@@ -108,10 +108,11 @@ menjorok 2 spasi; **tebal** dan `kode` boleh.
 
 <!-- rilis-baru -->
 
-## 3.23.6 — 2026-11-09 — Animasi halaman masuk/daftar lebih ringan
+## 3.23.6 — 2026-11-09 — Masuk, Daftar & Mulai tampil terang dan lebih ringan
 
-- Halaman Masuk, Daftar, dan Mulai kini berjalan mulus tanpa kedip di tablet & HP: latar cahaya dan kartu yang
-  bergerak tidak lagi memakai efek blur yang berat.
+- Halaman Masuk, Daftar, dan Mulai kembali bertema terang yang bersih: latar putih dengan cahaya pastel lembut,
+  aksen emas, dan kartu fitur yang bergerak.
+- Animasi berjalan mulus tanpa kedip di tablet & HP — efek blur yang berat sudah tidak dipakai.
 
 ## 3.23.5 — 2026-11-09 — Panel halaman masuk/daftar diam, form yang bergulir
 

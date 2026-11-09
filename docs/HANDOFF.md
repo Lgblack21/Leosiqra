@@ -18,6 +18,15 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-09 — Tema TERANG untuk landing, /mulai, masuk & daftar (ikut 3.23.6) — BELUM DEPLOY, menunggu "gas".
+  Tanpa SQL.** Branch `claude/tema-terang-20261109` (berisi juga perbaikan blur 3.23.6 + hapus ScrollTilt).
+  - Bos: "jangan hitam-hitam, buat putih, bersih tapi tetap keren". Navy dibuang: `Aurora` kini pastel
+    (indigo .18 / amber .2 / ungu .14 + titik indigo), panel/pita auth & aside /mulai = gradien `#eef0ff → white →
+    #fff5e4`, teks slate. Landing: hero terang, judul `.lp-ink` (indigo→ungu→emas, globals.css), tombol utama emas,
+    kotak fakta putih, lengkung SVG dihapus, CTA penutup kartu pastel. `Navbar variant="clean"` (dulu "dark") = kaca
+    putih + lambang LS + tombol emas.
+  - Dites 1280×656 (landing, masuk, daftar, mulai) & 390×844: 0 error JS; gulir landing 60 fps/0 jank, login 60 fps.
+
 - **2026-11-09 — 3.23.6 + landing: animasi tanpa kedip — BELUM DEPLOY, menunggu "gas". Tanpa SQL.**
   Branch `claude/landing-flicker-20261109`.
   - Bos: demo landing kedap-kedip/lag. Penyebab: blur yang di-render ulang tiap frame — `Aurora` (blob `blur-[90px]`

@@ -6,10 +6,10 @@ import { ChevronLeft, Mic, ShieldCheck, Sparkles } from 'lucide-react';
 import { LeoMascot, type LeoMood } from '@/components/mascot/LeoMascot';
 import { BalanceChip, BudgetChip, TxChip, VoiceChip } from './FinanceChips';
 
-// Kerangka halaman masuk/daftar.
-// - Laptop (≥ lg): dua kolom — kiri panel brand navy-emas (senada logo) berisi judul, 3 keunggulan, dan kartu
-//   fitur yang melayang; kanan form di kartu putih dengan Leo mengintip di tepi atas.
-// - HP/tablet: pita gelap di atas (logo, judul, chip keunggulan), kartu form menumpuk di atasnya.
+// Kerangka halaman masuk/daftar (tema terang, bersih).
+// - Laptop (≥ lg): dua kolom — kiri panel brand pastel (diam saat digulir) berisi judul, 3 keunggulan, dan pita
+//   kartu fitur; kanan form di kartu putih dengan Leo mengintip di tepi atas.
+// - HP/tablet: pita pastel di atas (logo, judul, chip keunggulan), kartu form menumpuk di atasnya.
 const PERKS = [
   { icon: Mic, title: 'Catat 5 detik', sub: 'Ketik, ngomong, atau foto struk.' },
   { icon: Sparkles, title: 'Leo yang merangkum', sub: 'Saldo, budget, dan laporan tersusun sendiri.' },
@@ -17,19 +17,20 @@ const PERKS = [
 ];
 
 export function Aurora() {
-  // Tanpa filter blur (berat & bikin kedip di tablet): gradasi radial biasa yang lembut, hanya transform yang bergerak.
+  // Cahaya pastel di latar terang. Tanpa filter blur (berat & bikin kedip di tablet): gradasi radial biasa,
+  // hanya transform yang bergerak.
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="auth-aurora absolute -left-40 -top-40 h-[640px] w-[640px] rounded-full bg-[radial-gradient(circle,rgba(79,70,229,0.45),transparent_65%)]" />
+      <div className="auth-aurora absolute -left-40 -top-40 h-[640px] w-[640px] rounded-full bg-[radial-gradient(circle,rgba(99,102,241,0.18),transparent_65%)]" />
       <div
-        className="auth-aurora absolute -right-32 top-1/4 h-[560px] w-[560px] rounded-full bg-[radial-gradient(circle,rgba(251,191,36,0.22),transparent_65%)]"
+        className="auth-aurora absolute -right-32 top-1/4 h-[560px] w-[560px] rounded-full bg-[radial-gradient(circle,rgba(251,191,36,0.2),transparent_65%)]"
         style={{ animationDelay: '-6s' }}
       />
       <div
-        className="auth-aurora absolute -bottom-48 left-1/4 h-[600px] w-[600px] rounded-full bg-[radial-gradient(circle,rgba(124,58,237,0.32),transparent_65%)]"
+        className="auth-aurora absolute -bottom-48 left-1/4 h-[600px] w-[600px] rounded-full bg-[radial-gradient(circle,rgba(168,85,247,0.14),transparent_65%)]"
         style={{ animationDelay: '-11s' }}
       />
-      <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.09)_1px,transparent_1px)] [background-size:22px_22px]" />
+      <div className="absolute inset-0 bg-[radial-gradient(rgba(79,70,229,0.09)_1px,transparent_1px)] [background-size:22px_22px]" />
     </div>
   );
 }
@@ -66,25 +67,25 @@ export function AuthLayout({
     <Link
       href={backHref}
       aria-label="Kembali"
-      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-white ring-1 ring-white/15 backdrop-blur transition-colors hover:bg-white/20"
+      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-slate-700 shadow-sm ring-1 ring-slate-200 transition-colors hover:bg-slate-50"
     >
       <ChevronLeft size={20} />
     </Link>
   );
 
   return (
-    <div className="min-h-screen bg-[#f5f6fb] font-sans text-slate-900 selection:bg-indigo-100 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+    <div className="min-h-screen bg-[#f7f8fb] font-sans text-slate-900 selection:bg-indigo-100 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       {/* ── Panel brand (laptop) ── */}
-      <aside className="relative hidden overflow-hidden bg-gradient-to-br from-[#070d1f] via-[#0d1638] to-[#1b1150] text-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:self-start">
+      <aside className="relative hidden overflow-hidden border-r border-slate-200/70 bg-gradient-to-br from-[#eef0ff] via-white to-[#fff5e4] text-slate-900 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:self-start">
         <Aurora />
         <div className="relative flex shrink-0 items-center gap-4 px-12 pt-10 xl:px-16 [@media(max-height:620px)]:pt-6">
           {back}
-          <Brand light />
+          <Brand />
         </div>
         <div className="relative flex flex-col px-12 pb-6 pt-[clamp(20px,6vh,72px)] xl:px-16">
           <span
             style={d(0)}
-            className="auth-enter relative inline-flex w-fit items-center gap-2 overflow-hidden rounded-full bg-amber-300/15 px-3.5 py-1.5 fs-13 font-bold text-amber-200 ring-1 ring-amber-300/30"
+            className="auth-enter relative inline-flex w-fit items-center gap-2 overflow-hidden rounded-full bg-amber-100 px-3.5 py-1.5 fs-13 font-bold text-amber-800 ring-1 ring-amber-200"
           >
             <span aria-hidden className="auth-shine" />
             <Sparkles size={14} className="auth-twinkle" /> Gratis 14 hari · tanpa kartu kredit
@@ -97,7 +98,7 @@ export function AuthLayout({
           </h1>
           <p
             style={d(2)}
-            className="auth-enter mt-4 max-w-md fs-16 leading-relaxed text-white/60 [@media(max-height:760px)]:hidden"
+            className="auth-enter mt-4 max-w-md fs-16 leading-relaxed text-slate-500 [@media(max-height:760px)]:hidden"
           >
             {sub}
           </p>
@@ -121,14 +122,14 @@ export function AuthLayout({
             {PERKS.map((p, i) => (
               <li key={p.title} style={d(3 + i)} className="auth-enter flex items-start gap-4">
                 <span
-                  className="paper-float flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-300 to-orange-400 text-slate-950 shadow-[0_10px_24px_-10px_rgba(251,191,36,0.8)]"
+                  className="paper-float flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-300 to-orange-400 text-slate-950 shadow-[0_10px_24px_-10px_rgba(251,191,36,0.9)]"
                   style={{ animationDelay: `${-i * 1.6}s`, animationDuration: '4.5s' } as React.CSSProperties}
                 >
                   <p.icon size={19} strokeWidth={2.4} />
                 </span>
                 <span>
                   <span className="block fs-15.5 font-bold">{p.title}</span>
-                  <span className="block fs-14 text-white/55 [@media(max-height:620px)]:hidden">{p.sub}</span>
+                  <span className="block fs-14 text-slate-500 [@media(max-height:620px)]:hidden">{p.sub}</span>
                 </span>
               </li>
             ))}
@@ -139,11 +140,11 @@ export function AuthLayout({
       {/* ── Kolom form ── */}
       <main className="relative flex min-h-screen flex-col">
         {/* Pita atas (HP/tablet) */}
-        <div className="relative overflow-hidden rounded-b-[36px] bg-gradient-to-br from-[#070d1f] via-[#0d1638] to-[#1b1150] px-5 pb-32 pt-5 text-white sm:px-8 lg:hidden">
+        <div className="relative overflow-hidden rounded-b-[36px] bg-gradient-to-br from-[#eef0ff] via-white to-[#fff5e4] px-5 pb-32 pt-5 text-slate-900 ring-1 ring-slate-200/60 sm:px-8 lg:hidden">
           <Aurora />
           <div className="relative flex items-center gap-3">
             {back}
-            <Brand light />
+            <Brand />
           </div>
           <h1
             style={d(0)}
@@ -155,9 +156,9 @@ export function AuthLayout({
             {PERKS.map((p) => (
               <span
                 key={p.title}
-                className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 fs-12 font-semibold text-white/85 ring-1 ring-white/10"
+                className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 fs-12 font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200"
               >
-                <p.icon size={13} className="text-amber-300" /> {p.title}
+                <p.icon size={13} className="text-amber-500" /> {p.title}
               </span>
             ))}
           </div>

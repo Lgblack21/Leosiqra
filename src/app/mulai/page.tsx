@@ -556,7 +556,7 @@ export default function MulaiPage() {
         </div>
       </section>
 
-      <aside className="relative mx-4 mb-4 min-h-[540px] overflow-hidden rounded-[32px] bg-gradient-to-br from-[#070d1f] via-[#0d1638] to-[#1b1150] lg:sticky lg:top-4 lg:m-4 lg:h-[calc(100vh-2rem)] lg:min-h-0">
+      <aside className="relative mx-4 mb-4 min-h-[540px] overflow-hidden rounded-[32px] bg-gradient-to-br from-[#eef0ff] via-white to-[#fff5e4] ring-1 ring-slate-200/70 lg:sticky lg:top-4 lg:m-4 lg:h-[calc(100vh-2rem)] lg:min-h-0">
         <Aurora />
         {step === 0 ? (
           <WelcomeScene />
@@ -598,7 +598,7 @@ function WelcomeScene() {
 
 function Phone({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative w-[280px] rounded-[46px] bg-slate-900 p-[9px] shadow-[0_40px_90px_-30px_rgba(0,0,0,0.8),0_0_80px_-20px_rgba(251,191,36,0.35)] ring-1 ring-white/15 sm:w-[300px]">
+    <div className="relative w-[280px] rounded-[46px] bg-slate-900 p-[9px] shadow-[0_40px_90px_-30px_rgba(30,27,75,0.55),0_0_80px_-24px_rgba(251,191,36,0.45)] sm:w-[300px]">
       <div className="relative h-[560px] overflow-hidden rounded-[38px] bg-[#f6f7fb] sm:h-[600px]">
         <div className="absolute left-1/2 top-2 z-20 h-6 w-24 -translate-x-1/2 rounded-full bg-slate-900" />
         {children}
