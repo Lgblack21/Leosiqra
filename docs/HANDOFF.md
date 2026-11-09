@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (3.26.0 Olahragaku R1+R2 siap di branch claude/friendly-galileo-omr8xf, BELUM deploy — butuh SQL 0044)
+Terakhir diperbarui: 2026-11-09 (live: 3.26.0 Olahragaku R1+R2, run #202, commit 4e44ae8; SQL 0044 dijalankan Bos)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,9 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-09 — 3.26.0 Olahragaku (Rilis 1 + 2 dari 3) — BELUM DEPLOY. BUTUH SQL 0044.** Branch
+- **2026-11-09 — 3.26.0 Olahragaku (Rilis 1 + 2 dari 3) — LIVE (run #202, commit 4e44ae8). SQL 0044 dijalankan Bos
+  (belum diverifikasi lewat query oleh dev).** Cek live: /membership/olahraga & /app/olahraga 200, /api/member/fit 401
+  tanpa login, /versi 3.26.0. **Berikutnya: Bos uji beli 1 program dengan AI asli.** Branch
   `claude/friendly-galileo-omr8xf` (juga membawa c6fe32e langkah unshallow routine + triase audit 09-11).
   Rancangan & keputusan Bos: `docs/rancangan/olahragaku.md` (bagian 9).
   - **MIGRASI 0044 (`cloudflare/migrations/0044_olahraga.sql`)**, additive: `fit_profiles`, `fit_weights`
