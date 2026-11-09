@@ -18,6 +18,16 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
+- **2026-11-09 — Landing: demo AppShowcase tampilan baru, pita kartu dicabut — BELUM DEPLOY, menunggu "gas". TANPA naik
+  versi. Tanpa SQL.** Branch `claude/landing-showcase-20261109`.
+  - Bos: hero ngelag karena pita kartu (`.auth-ticker` + FinanceChips ber-backdrop-blur) → pita & Leo di atas mockup
+    DIHAPUS dari landing. Jangan tambah animasi berat di hero landing; ubah yang sudah ada.
+  - `AppShowcase.tsx`: sidebar mockup pakai lambang `logo-emblem.png`, ubin ikon berwarna (`tint` per SCREENS, senada
+    Sidebar.tsx), item aktif kartu putih + garis aksen, tombol "Catat transaksi" gelap + kartu profil PRO; header
+    "Cari fitur… Ctrl K" + tombol Leo gradien (ganti "Tambah Cepat" hijau). Tinggi item tetap 42 px/langkah (kursor
+    animasi bergantung ini). Tab HP pakai ikon bulat berwarna. `.auth-aurora` + `will-change: transform`.
+  - Dites Playwright 1280×656 & 390×844: kursor tetap pas di menu, halaman tidak tergulir sendiri, 0 error JS.
+
 - **2026-11-09 — Landing page (/) baru — BELUM DEPLOY, menunggu "gas". TANPA naik versi (keputusan Bos: landing di
   luar versi aplikasi) → CHANGELOG tidak disentuh, Release tidak dibuat. Tanpa SQL.** Branch `claude/landing-baru-20261109`.
   - Hero gelap navy-emas (`Aurora` dari AuthLayout), badge `.auth-shine`, judul sans + `.lp-gold` (globals.css), CTA

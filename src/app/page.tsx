@@ -37,8 +37,6 @@ import { AppShowcase } from '@/components/landing/AppShowcase';
 import { ScrollTilt } from '@/components/landing/ScrollTilt';
 import { QuickInputShowcase } from '@/components/landing/QuickInputShowcase';
 import { Aurora } from '@/components/auth/AuthLayout';
-import { BalanceChip, BudgetChip, ScanChip, TxChip, VoiceChip } from '@/components/auth/FinanceChips';
-import { LeoMascot } from '@/components/mascot/LeoMascot';
 
 // Semua klaim di halaman ini mengacu ke fitur yang benar-benar ada di aplikasi.
 const MARQUEE = [
@@ -273,27 +271,8 @@ export default function LandingPage() {
           </motion.p>
         </div>
 
-        {/* Pita kartu fitur yang berjalan */}
         <motion.div
-          {...heroItem(5)}
-          aria-hidden
-          className="relative -mx-5 mt-14 overflow-hidden py-4 [mask-image:linear-gradient(90deg,transparent,black_10%,black_90%,transparent)] sm:-mx-6"
-        >
-          <div className="auth-ticker flex w-max items-center gap-6 pl-6">
-            {[0, 1].map((k) => (
-              <div key={k} className="flex shrink-0 items-center gap-6">
-                <TxChip />
-                <VoiceChip />
-                <BudgetChip />
-                <ScanChip />
-                <BalanceChip />
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        <motion.div
-          className="relative mx-auto mt-10 max-w-6xl"
+          className="relative mx-auto mt-16 max-w-6xl sm:mt-20"
           initial={reduce ? false : { opacity: 0, y: 60, scale: 0.97 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 1.2, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
@@ -302,9 +281,6 @@ export default function LandingPage() {
             aria-hidden
             className="absolute -inset-x-10 -top-10 bottom-10 -z-10 rounded-[60px] bg-gradient-to-b from-amber-300/25 via-indigo-500/20 to-transparent blur-3xl"
           />
-          <div className="pointer-events-none absolute -top-[86px] left-1/2 z-10 hidden -translate-x-1/2 sm:block">
-            <LeoMascot mood="happy" size={120} />
-          </div>
           <ScrollTilt>
             <AppShowcase />
           </ScrollTilt>

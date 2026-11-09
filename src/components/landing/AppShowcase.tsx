@@ -10,6 +10,7 @@ import {
   PiggyBank,
   FileText,
   Search,
+  Sparkles,
   Bell,
   Plus,
   ArrowUpRight,
@@ -24,13 +25,50 @@ const H = 680;
 const SIDEBAR_W = 216;
 const DURATION = 5200; // ms per layar
 
+// tint = warna ubin ikon, sama dengan menu samping aplikasi (Sidebar.tsx / features.ts).
 const SCREENS = [
-  { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, title: 'Dashboard Bulanan' },
-  { key: 'transaksi', label: 'Transaksi', icon: ListOrdered, title: 'Data Transaksi' },
-  { key: 'kartu', label: 'Rekening & Kartu', icon: CreditCard, title: 'Kartu Saya' },
-  { key: 'investasi', label: 'Investasi', icon: TrendingUp, title: 'Portofolio Investasi' },
-  { key: 'tabungan', label: 'Tabungan & Budget', icon: PiggyBank, title: 'Tabungan & Budget' },
-  { key: 'pajak', label: 'Pajak Center', icon: FileText, title: 'Pajak Center' },
+  {
+    key: 'dashboard',
+    label: 'Ringkasan',
+    icon: LayoutDashboard,
+    title: 'Dashboard Bulanan',
+    tint: 'from-sky-50 to-indigo-100 text-indigo-600',
+  },
+  {
+    key: 'transaksi',
+    label: 'Transaksi',
+    icon: ListOrdered,
+    title: 'Data Transaksi',
+    tint: 'from-orange-50 to-rose-100 text-orange-600',
+  },
+  {
+    key: 'kartu',
+    label: 'Rekening & Kartu',
+    icon: CreditCard,
+    title: 'Kartu Saya',
+    tint: 'from-emerald-50 to-teal-100 text-emerald-700',
+  },
+  {
+    key: 'investasi',
+    label: 'Investasi',
+    icon: TrendingUp,
+    title: 'Portofolio Investasi',
+    tint: 'from-blue-50 to-blue-100 text-blue-600',
+  },
+  {
+    key: 'tabungan',
+    label: 'Tabungan & Budget',
+    icon: PiggyBank,
+    title: 'Tabungan & Budget',
+    tint: 'from-violet-50 to-violet-100 text-violet-600',
+  },
+  {
+    key: 'pajak',
+    label: 'Pajak Center',
+    icon: FileText,
+    title: 'Pajak Center',
+    tint: 'from-amber-50 to-pink-100 text-pink-600',
+  },
 ] as const;
 type ScreenKey = (typeof SCREENS)[number]['key'];
 
@@ -685,7 +723,7 @@ export function AppShowcase() {
             <div style={{ height: winH - 44 }} className="flex flex-col bg-[#fafbfc]">
               <div
                 ref={tabsRef}
-                className="no-scrollbar flex shrink-0 gap-1.5 overflow-x-auto border-b border-slate-100 bg-white px-3 py-2.5"
+                className="no-scrollbar flex shrink-0 gap-1.5 overflow-x-auto border-b border-slate-100 bg-slate-50 px-3 py-2"
               >
                 {SCREENS.map((s, i) => {
                   const Icon = s.icon;
@@ -696,16 +734,21 @@ export function AppShowcase() {
                       data-i={i}
                       type="button"
                       onClick={() => go(i)}
-                      className={`relative flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 fs-12 font-bold ${on ? 'text-indigo-600' : 'text-slate-500'}`}
+                      className={`relative flex shrink-0 items-center gap-1.5 rounded-full py-1.5 pl-1.5 pr-3 fs-12 font-bold ${on ? 'text-slate-900' : 'text-slate-500'}`}
                     >
                       {on && (
                         <motion.span
                           layoutId="showcase-tab"
-                          className="absolute inset-0 rounded-full bg-indigo-50 ring-1 ring-indigo-100"
+                          className="absolute inset-0 rounded-full bg-white shadow-sm ring-1 ring-slate-200"
                           transition={{ type: 'spring', stiffness: 420, damping: 36 }}
                         />
                       )}
-                      <Icon size={14} className="relative" /> <span className="relative">{s.label}</span>
+                      <span
+                        className={`relative flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br ${s.tint}`}
+                      >
+                        <Icon size={12} strokeWidth={2.4} />
+                      </span>
+                      <span className="relative">{s.label}</span>
                     </button>
                   );
                 })}
@@ -726,14 +769,13 @@ export function AppShowcase() {
           ) : (
             <div className="flex" style={{ height: winH - 44 }}>
               <aside
-                className="flex flex-col border-r border-slate-100 bg-slate-50/60 p-3"
+                className="flex flex-col border-r border-slate-200/70 bg-gradient-to-b from-white to-slate-50 p-3"
                 style={{ width: SIDEBAR_W }}
               >
                 <div className="flex items-center gap-2 px-2 py-2">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 to-violet-600 fs-11 font-black text-white">
-                    L
-                  </span>
-                  <span className="fs-13 font-black text-slate-900">Leosiqra</span>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- ikon kecil statis di mockup */}
+                  <img src="/images/logo-emblem.png" alt="" className="h-7 w-7 object-contain" />
+                  <span className="fs-14 font-extrabold tracking-tight text-slate-900">Leosiqra</span>
                 </div>
                 <nav className="mt-4 space-y-1">
                   {SCREENS.map((s, i) => {
@@ -744,28 +786,48 @@ export function AppShowcase() {
                         key={s.key}
                         type="button"
                         onClick={() => go(i)}
-                        className={`relative flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left fs-12 font-bold transition-colors ${on ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-800'}`}
+                        className={`relative flex h-[38px] w-full items-center gap-2.5 rounded-xl px-1.5 text-left fs-12 font-bold transition-colors ${on ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'}`}
                       >
                         {on && (
                           <motion.span
                             layoutId="showcase-nav"
-                            className="absolute inset-0 rounded-xl bg-white shadow-sm ring-1 ring-slate-200/70"
+                            className="absolute inset-0 rounded-xl bg-white shadow-[0_6px_16px_-10px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/80"
                             transition={{ type: 'spring', stiffness: 420, damping: 36 }}
-                          />
+                          >
+                            <span className="absolute -left-3 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-gradient-to-b from-indigo-500 to-violet-500" />
+                          </motion.span>
                         )}
-                        <Icon size={15} className="relative" />
+                        <span
+                          className={`relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${s.tint}`}
+                        >
+                          <Icon size={14} strokeWidth={2.3} />
+                        </span>
                         <span className="relative">{s.label}</span>
                       </button>
                     );
                   })}
                 </nav>
-                <div className="mt-auto flex items-center gap-2 rounded-xl bg-white p-2.5 shadow-sm ring-1 ring-slate-100">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 fs-10 font-black text-white">
-                    AD
-                  </span>
-                  <span className="fs-11 font-bold text-slate-700">
-                    Akun Demo<span className="block fs-9 font-black text-emerald-600">PRO</span>
-                  </span>
+                <div className="mt-auto space-y-2">
+                  <div className="flex items-center gap-2 rounded-2xl bg-slate-950 p-1.5 text-white shadow-[0_10px_22px_-12px_rgba(2,6,23,0.8)]">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-gradient-to-br from-amber-300 via-orange-400 to-rose-500 text-slate-950">
+                      <Plus size={15} strokeWidth={2.8} />
+                    </span>
+                    <span className="leading-tight">
+                      <span className="block fs-11 font-extrabold">Catat transaksi</span>
+                      <span className="block fs-9 text-white/55">Masuk / keluar, 10 detik</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-2xl bg-white p-2 ring-1 ring-slate-200/80">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-orange-400 fs-10 font-black text-slate-950">
+                      AD
+                    </span>
+                    <span className="fs-11 font-bold text-slate-800">
+                      Akun Demo
+                      <span className="mt-0.5 block w-fit rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-1.5 fs-8 font-black tracking-wider text-white">
+                        PRO
+                      </span>
+                    </span>
+                  </div>
                 </div>
               </aside>
 
@@ -787,8 +849,12 @@ export function AppShowcase() {
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-400">
                       <Bell size={14} />
                     </span>
-                    <span className="flex items-center gap-1.5 rounded-lg bg-emerald-800 px-3 py-2 fs-11 font-black text-white">
-                      <Plus size={13} /> Tambah Cepat
+                    <span className="flex w-44 items-center gap-1.5 rounded-lg bg-white px-2.5 py-2 fs-11 text-slate-400 ring-1 ring-slate-200">
+                      <Search size={12} /> Cari fitur…
+                      <span className="ml-auto rounded bg-slate-100 px-1 fs-9 font-bold text-slate-500">Ctrl K</span>
+                    </span>
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 text-white">
+                      <Sparkles size={14} />
                     </span>
                   </div>
                 </div>

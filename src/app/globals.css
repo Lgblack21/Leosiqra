@@ -873,6 +873,7 @@ html[data-daypart='malam'] .auth-greet[data-p='malam'] {
 /* Cahaya aurora pelan di panel brand masuk/daftar (AuthLayout). */
 .auth-aurora {
   animation: auth-aurora 18s ease-in-out infinite alternate;
+  will-change: transform;
 }
 @keyframes auth-aurora {
   from {
