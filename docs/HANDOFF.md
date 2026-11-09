@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-10 (live: 3.27.0 Olahragaku R3, run #203, commit d963821 — tanpa SQL)
+Terakhir diperbarui: 2026-11-10 (3.27.1 video gerakan siap di branch claude/friendly-galileo-omr8xf, BELUM deploy — tanpa SQL; live: 3.27.0 run #203)
 
 ## Siapa sedang kerja
 
@@ -17,6 +17,17 @@ kosongkan lagi saat selesai. Kalau ada akun lain tercatat aktif di area yang
 sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
+
+- **2026-11-10 — 3.27.1 Video gerakan — BELUM DEPLOY. Tanpa SQL.** Branch `claude/friendly-galileo-omr8xf`.
+  - Ilustrasi AI (Admin › Olahragaku) dibuat 138/160 sebelum saldo OpenRouter Bos habis, tapi **tidak layak**: orang
+    berganti antar frame, plank lutut tergambar plank penuh, teks ngawur, ±800 KB/gambar. → TIDAK ditampilkan
+    (gambar tetap di R2 `olahraga/gerakan/*`, endpoint & halaman admin tetap ada dengan catatan). Jangan lanjut buat.
+  - Pengganti: `src/lib/olahraga/video.ts` — 40 gerakan, 38 video YouTube (kurasi web search, semua lolos oEmbed 200,
+    kanal fisioterapis/RS/pelatih: NHS Plymouth, Margaret Martin PT, NASM, SilverSneakers, AskDoctorJo, NUH, dll.;
+    semua bahasa Inggris), `naik-turun-tangga` & `wall-sit` = null (variasi di video tak pasti sama) → tombol cari.
+    `GerakanMedia`: thumbnail i.ytimg.com dulu, iframe youtube-nocookie saat diketuk. Dites Playwright Pixel 7.
+  - Belum ditonton manusia (dipilih dari judul/kanal): ayun-lengan-duduk, row-dumbbell (versi bangku), peregangan-dada,
+    jalan-cepat (kanal kecil), tinju-duduk (workout 5 menit), tendang-duduk ≈ angkat-kaki-duduk. Cek & ganti di video.ts.
 
 - **2026-11-10 — 3.27.0 Olahragaku R3 — LIVE (run #203, commit d963821). Tanpa SQL** (pakai tabel 0044 + `users.metadata_json`).
   Cek live: /versi 3.27.0, /membership|app|admin/olahraga 200, PUT /api/member/fit/kerja & admin gambar 401 tanpa login.

@@ -21,12 +21,7 @@ export const VIDEO_GERAKAN: Record<string, VideoGerakan | null> = {
   },
   'march-duduk': { id: 'xxf93bq9-vA', judul: 'Seated March', kanal: 'Institute of Sports and Spines', bahasa: 'en' },
   'sepeda-statis': { id: 'rlOOqDgDU3U', judul: 'How to Set Up Exercise Bike', kanal: "DICK'S", bahasa: 'en' },
-  'naik-turun-tangga': {
-    id: '5DiSWwwQMC8',
-    judul: 'Help Going Up and Down Steps/Stairs',
-    kanal: 'ChadGOrthoOT',
-    bahasa: 'en',
-  },
+  'naik-turun-tangga': null, // dikosongkan: variasi di video belum pasti sama (2026-11-10)
   'step-touch': {
     id: 'Jr0fQlcAadU',
     judul: 'Step touch. Basic fitness steps - HOW TO DO? What for?',
@@ -120,12 +115,7 @@ export const VIDEO_GERAKAN: Record<string, VideoGerakan | null> = {
     kanal: 'PartnerMD',
     bahasa: 'en',
   },
-  'wall-sit': {
-    id: 'sT0jUNnb9dk',
-    judul: 'Wall Sit Tutorial | Proper Form & Lower-Body Strength',
-    kanal: 'Great River Health',
-    bahasa: 'en',
-  },
+  'wall-sit': null, // dikosongkan: variasi di video belum pasti sama (2026-11-10)
   'row-dumbbell': {
     id: '4YpqVbvjCXo',
     judul: 'Dumbbell Row Tutorial',
