@@ -34,7 +34,6 @@ import { getDeveloperInfo, PublicDeveloperInfo } from '@/lib/services/publicCont
 import { isStandaloneDisplay } from '@/lib/pushNotifications';
 import { Reveal } from '@/components/landing/Reveal';
 import { AppShowcase } from '@/components/landing/AppShowcase';
-import { ScrollTilt } from '@/components/landing/ScrollTilt';
 import { QuickInputShowcase } from '@/components/landing/QuickInputShowcase';
 import { Aurora } from '@/components/auth/AuthLayout';
 
@@ -281,9 +280,8 @@ export default function LandingPage() {
             aria-hidden
             className="absolute -inset-x-24 -top-24 bottom-0 -z-10 bg-[radial-gradient(ellipse_at_50%_20%,rgba(251,191,36,0.22),rgba(99,102,241,0.14)_40%,transparent_70%)]"
           />
-          <ScrollTilt>
-            <AppShowcase />
-          </ScrollTilt>
+          {/* Tanpa efek miring 3D saat digulir: lapisan besar itu bikin jendela demo kosong/berkedip di tablet. */}
+          <AppShowcase />
           <div className="absolute -left-14 top-[60%] hidden xl:block">
             <div
               className="paper-float flex items-center gap-3 rounded-2xl bg-white px-4 py-3 text-slate-900 shadow-[0_24px_48px_-20px_rgba(2,6,23,0.6)]"

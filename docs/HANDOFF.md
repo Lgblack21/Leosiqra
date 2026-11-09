@@ -28,6 +28,9 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     transisi demo = opacity+y, Navbar dark = latar hampir pekat tanpa backdrop-filter, chip = `bg-white` tanpa blur.
   - Ukur rAF 12 s di 1280×656 (headless): landing 20 fps/±70 jank → 60 fps/0 jank; /auth/login 17 fps/93 jank →
     60 fps/0 jank. ATURAN: jangan pakai `filter: blur` / `backdrop-blur` pada elemen yang bergerak atau di atasnya.
+  - Rekaman layar Bos (run #198): saat digulir jendela demo SEBAGIAN KOSONG/PUTIH → penyebab `ScrollTilt` (rotateX 3D
+    + perspective + useSpring ikut scroll) pada lapisan 1120×680. ScrollTilt DIHAPUS (file juga). Gulir terus 8 s:
+    20 fps/30 jank → 60 fps/0 jank. Jangan pasang transform 3D yang mengikuti scroll di elemen besar.
 
 - **2026-11-09 — Landing: demo AppShowcase tampilan baru, pita kartu dicabut — BELUM DEPLOY, menunggu "gas". TANPA naik
   versi. Tanpa SQL.** Branch `claude/landing-showcase-20261109`.
