@@ -1,7 +1,11 @@
 'use client';
 
 import { AlertTriangle, BookOpen, Flame, Pencil, Ruler, Scale, Sparkles, Target } from 'lucide-react';
+import { useState } from 'react';
+import type { ProgramAktif } from '@/lib/olahraga/api';
 import { hitung } from '@/lib/olahraga/hitung';
+import { METODE_BY_KEY } from '@/lib/olahraga/metode';
+import { PROGRAM_HARI, hariKe, latihanHariIni } from '@/lib/olahraga/program';
 import type { FitProfile } from '@/lib/olahraga/types';
 import { KONDISI } from '@/lib/olahraga/types';
 import { cn } from '@/lib/utils';
@@ -30,16 +34,133 @@ function Angka({ icon: Icon, label, value, sub }: { icon: typeof Scale; label: s
   );
 }
 
+function ProgramAktifCard({
+  program,
+  today,
+  onEnd,
+  onLatihan,
+}: {
+  program: ProgramAktif;
+  today: string;
+  onEnd: () => Promise<void>;
+  onLatihan: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const m = METODE_BY_KEY[program.diet_key];
+  const hari = hariKe(program.start, today);
+  const plan = program.plan;
+  const h = plan ? latihanHariIni(plan, hari) : null;
+  return (
+    <div className="space-y-4 rounded-[28px] bg-slate-950 p-5 text-white shadow-sm md:p-6 dark:ring-1 dark:ring-slate-800">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="fs-12 font-black uppercase tracking-wider text-lime-300">
+            Programmu · {m?.nama ?? program.diet_key}
+          </p>
+          <p className="mt-1 fsh-24 font-black tracking-tight">
+            Hari {Math.max(1, hari)} dari {PROGRAM_HARI}
+            {h ? <span className="ml-2 fs-14 font-bold text-white/60">Minggu {h.minggu.ke}</span> : null}
+          </p>
+        </div>
+        <span className="text-[34px] leading-none">{m?.emoji}</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-white/15">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-lime-300"
+          style={{ width: `${Math.min(100, (Math.max(1, hari) / PROGRAM_HARI) * 100)}%` }}
+        />
+      </div>
+      {plan?.ringkasan ? <p className="fs-14 leading-relaxed text-white/80">{plan.ringkasan}</p> : null}
+      {plan?.jendela ? (
+        <p className="fs-13 font-semibold text-lime-200">
+          Jendela makan {plan.jendela.mulai.replace(':', '.')} · {plan.jendela.makan} jam makan, {plan.jendela.puasa}{' '}
+          jam puasa
+        </p>
+      ) : null}
+      <p className="fs-13 text-white/70">
+        Target {plan?.targetKalori.toLocaleString('id-ID')} kkal · protein {plan?.proteinG.min}–{plan?.proteinG.max} g
+        per hari
+      </p>
+      {h ? (
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-2xl bg-white/10 p-4">
+            <p className="fs-12 font-black uppercase tracking-wide text-white/60">Fokus minggu ini</p>
+            <p className="mt-1 fs-14 font-bold">{h.minggu.fokus}</p>
+            <ul className="mt-2 space-y-1 fs-13 text-white/80">
+              {h.minggu.tips.map((t) => (
+                <li key={t}>• {t}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="rounded-2xl bg-white/10 p-4">
+            <p className="fs-12 font-black uppercase tracking-wide text-white/60">
+              Contoh menu hari ini · {h.menu.nama}
+            </p>
+            <ul className="mt-2 space-y-1.5 fs-13">
+              {h.menu.makan.map((x) => (
+                <li key={x.jam + x.isi} className="flex gap-2">
+                  <span className="w-11 shrink-0 font-black text-lime-300">{x.jam}</span>
+                  <span className="text-white/85">{x.isi}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ) : null}
+      {plan?.aturanMakan.length ? (
+        <ul className="space-y-1 fs-13 text-white/80">
+          {plan.aturanMakan.map((t) => (
+            <li key={t}>✓ {t}</li>
+          ))}
+        </ul>
+      ) : null}
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={onLatihan}
+          className="h-11 rounded-full bg-gradient-to-r from-emerald-400 to-lime-300 px-5 fs-14 font-black text-slate-950"
+        >
+          {h?.latihan.gerakan.length ? `Latihan hari ini: ${h.latihan.judul}` : 'Hari ini istirahat aktif'}
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={async () => {
+            if (!window.confirm('Hentikan program ini? Koin tidak dikembalikan, catatanmu tetap tersimpan.')) return;
+            setBusy(true);
+            try {
+              await onEnd();
+            } finally {
+              setBusy(false);
+            }
+          }}
+          className="h-11 rounded-full bg-white/10 px-5 fs-13 font-bold text-white/80 hover:bg-white/15"
+        >
+          Hentikan program
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function ProgramView({
   profile,
   pro,
+  program,
+  today,
   onEdit,
   onPilihMetode,
+  onEnd,
+  onLatihan,
 }: {
   profile: FitProfile;
   pro: boolean;
+  program: ProgramAktif | null;
+  today: string;
   onEdit: () => void;
   onPilihMetode: () => void;
+  onEnd: () => Promise<void>;
+  onLatihan: () => void;
 }) {
   const h = hitung(profile);
   const dokter = profile.conditions.some(
@@ -84,6 +205,8 @@ export function ProgramView({
           </p>
         </div>
       ) : null}
+
+      {program ? <ProgramAktifCard program={program} today={today} onEnd={onEnd} onLatihan={onLatihan} /> : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className={card}>
@@ -155,24 +278,26 @@ export function ProgramView({
         </p>
       ) : null}
 
-      <div className="rounded-[28px] bg-gradient-to-br from-emerald-500 to-lime-400 p-6 text-slate-950 shadow-sm">
-        <p className="fs-12 font-black uppercase tracking-wider opacity-70">Langkah berikutnya</p>
-        <p className="mt-1 fsh-22 font-black leading-tight">Pilih metode diet yang cocok untukmu</p>
-        <p className="mt-2 max-w-xl fs-14 leading-relaxed">
-          Ada 20 metode — dari Isi Piringku sampai jendela makan. Baca penjelasannya, jawab beberapa pertanyaan, dan Leo
-          bilang cocok atau tidak.{' '}
-          {pro
-            ? 'Program 4 minggu yang disusun AI untuk tubuhmu segera hadir.'
-            : 'Mengikuti program butuh PRO + koin; membaca semua metode gratis.'}
-        </p>
-        <button
-          type="button"
-          onClick={onPilihMetode}
-          className="mt-4 flex h-12 items-center gap-2 rounded-full bg-slate-950 px-5 fs-14 font-black text-white"
-        >
-          <BookOpen size={17} /> Lihat metode diet
-        </button>
-      </div>
+      {program ? null : (
+        <div className="rounded-[28px] bg-gradient-to-br from-emerald-500 to-lime-400 p-6 text-slate-950 shadow-sm">
+          <p className="fs-12 font-black uppercase tracking-wider opacity-70">Langkah berikutnya</p>
+          <p className="mt-1 fsh-22 font-black leading-tight">Pilih metode diet yang cocok untukmu</p>
+          <p className="mt-2 max-w-xl fs-14 leading-relaxed">
+            Ada 20 metode — dari Isi Piringku sampai jendela makan. Baca penjelasannya, jawab beberapa pertanyaan, dan
+            Leo bilang cocok atau tidak.{' '}
+            {pro
+              ? 'Setelah cocok, Leo menyusun program 4 minggu (menu & latihan harian) untuk tubuhmu.'
+              : 'Mengikuti program butuh PRO + koin; membaca semua metode gratis.'}
+          </p>
+          <button
+            type="button"
+            onClick={onPilihMetode}
+            className="mt-4 flex h-12 items-center gap-2 rounded-full bg-slate-950 px-5 fs-14 font-black text-white"
+          >
+            <BookOpen size={17} /> Lihat metode diet
+          </button>
+        </div>
+      )}
     </div>
   );
 }

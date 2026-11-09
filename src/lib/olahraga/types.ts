@@ -102,3 +102,25 @@ export type FitProfile = {
   equipment: Alat;
   experience: Pengalaman;
 };
+
+// ── Gerakan (perpustakaan latihan, rilis 2) ───────────────────────────────────
+export type GerakanKategori = 'kardio' | 'kekuatan' | 'kelenturan';
+export type GerakanAlat = 'tanpa' | 'kursi' | 'dumbbell' | 'gym';
+export type Gerakan = {
+  key: string; // kebab-case, unik
+  nama: string;
+  emoji: string;
+  kategori: GerakanKategori;
+  otot: string; // bagian tubuh utama, bahasa awam ("paha & bokong")
+  alat: GerakanAlat; // alat minimal yang dibutuhkan
+  tingkat: Tingkat;
+  lowImpact: boolean; // tanpa lompatan/benturan — aman untuk lutut & IMT tinggi
+  duduk: boolean; // bisa dilakukan sambil duduk di kursi
+  satuan: 'ulang' | 'detik' | 'menit';
+  bawaan: { set: number; jumlah: number }; // dosis pemula (jumlah = ulangan/detik/menit per set)
+  met: number; // perkiraan MET (kkal = MET × kg × jam)
+  cara: string[]; // 3–5 langkah
+  tips: string; // 1 kalimat kesalahan umum / cara lebih mudah
+  hindariKalau: KondisiKey[]; // kondisi yang membuat gerakan ini sebaiknya dilewati
+  gambar?: string; // /olahraga/gerakan/<key>.webp (ilustrasi sendiri, menyusul)
+};

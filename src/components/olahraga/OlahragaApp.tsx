@@ -2,14 +2,24 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, BookOpen, Dumbbell, LineChart, UtensilsCrossed } from 'lucide-react';
+import { Activity, ArrowLeft, BookOpen, Dumbbell, LineChart, UtensilsCrossed } from 'lucide-react';
 import { LeoGuide } from '@/components/ai/LeoGuide';
 import { MakanApp } from '@/components/makan/MakanApp';
+import { LatihanView } from '@/components/olahraga/LatihanView';
+import { MakanBanner } from '@/components/olahraga/MakanBanner';
 import { MetodeView } from '@/components/olahraga/MetodeView';
 import { ProfilForm } from '@/components/olahraga/ProfilForm';
 import { ProgramView } from '@/components/olahraga/ProgramView';
 import { ProgresView } from '@/components/olahraga/ProgresView';
-import { deleteAllFit, deleteWeight, loadFit, saveProfile, saveWeight, type FitData } from '@/lib/olahraga/api';
+import {
+  deleteAllFit,
+  deleteWeight,
+  endProgram,
+  loadFit,
+  saveProfile,
+  saveWeight,
+  type FitData,
+} from '@/lib/olahraga/api';
 import { cn } from '@/lib/utils';
 
 // Olahragaku — layar penuh (pola Sehatku): Program · Makan · Metode · Progres. Tab di hash.
@@ -22,6 +32,13 @@ const TABS = [
     icon: UtensilsCrossed,
     title: 'Olahragaku · Makan',
     sub: 'Foto piringmu, Leo hitung gizi & belanjanya',
+  },
+  {
+    id: 'latihan',
+    label: 'Latihan',
+    icon: Activity,
+    title: 'Olahragaku · Latihan',
+    sub: 'Latihan hari ini & perpustakaan gerakan',
   },
   {
     id: 'metode',
@@ -141,7 +158,10 @@ export function OlahragaApp({ variant }: { variant: 'web' | 'app' }) {
 
       <main>
         {tab === 'makan' ? (
-          <MakanApp variant={variant} embedded />
+          <>
+            {data?.program?.plan ? <MakanBanner plan={data.program.plan} today={data.today} /> : null}
+            <MakanApp variant={variant} embedded />
+          </>
         ) : !data ? (
           <div className="flex justify-center py-20">
             <span
@@ -156,12 +176,34 @@ export function OlahragaApp({ variant }: { variant: 'web' | 'app' }) {
             <ProgramView
               profile={data.profile}
               pro={data.pro}
+              program={data.program}
+              today={data.today}
               onEdit={() => setEditing(true)}
               onPilihMetode={() => go('metode')}
+              onLatihan={() => go('latihan')}
+              onEnd={async () => {
+                if (!data.program) return;
+                await endProgram(data.program.id).catch(() => undefined);
+                say('Program dihentikan.');
+                await reload();
+              }}
             />
           )
         ) : tab === 'metode' ? (
-          <MetodeView profile={data.profile} pro={data.pro} app={app} />
+          <MetodeView
+            profile={data.profile}
+            pro={data.pro}
+            app={app}
+            coins={data.coins}
+            aktif={data.program}
+            onStarted={async () => {
+              say('Programmu siap! Mulai dari hari ini.');
+              await reload();
+              go('program');
+            }}
+          />
+        ) : tab === 'latihan' ? (
+          <LatihanView data={data} onChanged={reload} onToast={say} onPilihMetode={() => go('metode')} />
         ) : (
           <ProgresView
             weights={data.weights}

@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, ChevronRight, Lock, XCircle } from 'lucide-react';
 import { SheetShell } from '@/components/sehat/AsuransiSheets';
 import { METODE, METODE_BY_KEY } from '@/lib/olahraga/metode';
+import { startProgram, type ProgramAktif } from '@/lib/olahraga/api';
+import { PROGRAM_PRICE } from '@/lib/olahraga/program';
 import { nilaiKuis, statusMetode, type JawabanSanggup } from '@/lib/olahraga/rules';
 import type { FitProfile, Kelompok, Metode, MetodeKey } from '@/lib/olahraga/types';
 import { openSettings } from '@/lib/settingsPanel';
@@ -11,8 +13,6 @@ import { cn } from '@/lib/utils';
 
 // Tab Metode: 20 metode diet. Semua orang boleh membaca + menjawab pertanyaan (aturan, tanpa AI).
 // Mengikuti metode (program 4 minggu disusun AI) = PRO + koin — rilis berikutnya.
-
-export const PROGRAM_PRICE = 5000; // koin — harus sama dengan Worker saat program AI dirilis
 
 const KELOMPOK: { key: Kelompok | 'semua'; label: string }[] = [
   { key: 'semua', label: 'Semua' },
@@ -61,22 +61,53 @@ function Detail({
   profile,
   pro,
   app,
+  coins,
+  aktif,
   onClose,
   onOpen,
+  onStarted,
 }: {
   m: Metode;
   profile: FitProfile | null;
   pro: boolean;
   app: boolean;
+  coins: number | null;
+  aktif: ProgramAktif | null;
   onClose: () => void;
   onOpen: (k: MetodeKey) => void;
+  onStarted: (p: ProgramAktif) => void;
 }) {
   const status = profile ? statusMetode(m.key, profile) : null;
   const saran = saranUntuk(m, profile);
-  const [step, setStep] = useState<'baca' | 'tanya' | 'hasil'>('baca');
+  const [step, setStep] = useState<'baca' | 'tanya' | 'hasil' | 'mulai'>('baca');
+  const [requestId] = useState(() => crypto.randomUUID()); // satu id per sheet → klik ganda tidak potong koin dua kali
+  const [jamMulai, setJamMulai] = useState('12:00');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const kurang = coins !== null && coins < PROGRAM_PRICE;
+  const mulai = async () => {
+    setBusy(true);
+    setErr('');
+    try {
+      const p = await startProgram({
+        requestId,
+        dietKey: m.key,
+        jawaban: jawab,
+        jendelaMulai: m.jendela ? jamMulai : undefined,
+      });
+      onStarted(p);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Gagal memulai program. Coba lagi.');
+    } finally {
+      setBusy(false);
+    }
+  };
   const [jawab, setJawab] = useState<Record<string, JawabanSanggup | number>>({});
   const lengkap = m.pertanyaan.every((q) => jawab[q.id] !== undefined);
-  const hasil = useMemo(() => (step === 'hasil' ? nilaiKuis(m.pertanyaan, jawab) : null), [step, m, jawab]);
+  const hasil = useMemo(
+    () => (step === 'hasil' || step === 'mulai' ? nilaiKuis(m.pertanyaan, jawab) : null),
+    [step, m, jawab],
+  );
 
   return (
     <SheetShell
@@ -109,13 +140,24 @@ function Detail({
           >
             Ubah jawaban
           </button>
+        ) : pro && step === 'mulai' ? (
+          <button
+            type="button"
+            onClick={mulai}
+            disabled={busy || kurang}
+            className="h-12 w-full rounded-full bg-gradient-to-r from-emerald-400 to-lime-300 fs-15 font-black text-slate-950 disabled:opacity-60"
+          >
+            {busy
+              ? 'Leo menyusun programmu… (±30 detik)'
+              : `Bayar ${PROGRAM_PRICE.toLocaleString('id-ID')} koin & mulai`}
+          </button>
         ) : pro ? (
           <button
             type="button"
-            disabled
-            className="h-12 w-full rounded-full bg-gradient-to-r from-emerald-400 to-lime-300 fs-15 font-black text-slate-950 opacity-60"
+            onClick={() => setStep('mulai')}
+            className="h-12 w-full rounded-full bg-gradient-to-r from-emerald-400 to-lime-300 fs-15 font-black text-slate-950"
           >
-            Program 4 minggu oleh AI — segera hadir
+            Ikuti program ini — {PROGRAM_PRICE.toLocaleString('id-ID')} koin
           </button>
         ) : (
           <button
@@ -249,6 +291,61 @@ function Detail({
               </fieldset>
             ))}
           </div>
+        ) : step === 'mulai' ? (
+          <div className="space-y-4">
+            <p className="fs-15 leading-relaxed text-slate-700 dark:text-slate-300">
+              Leo menyusun <b>program 4 minggu</b> khusus untuk tubuhmu dengan metode <b>{m.nama}</b>: contoh menu tiap
+              minggu, latihan harian yang naik pelan, dan tips. Target kalori & protein memakai hitunganmu di tab
+              Program.
+            </p>
+            {m.jendela ? (
+              <label className="block">
+                <span className="mb-1.5 block fs-13 font-bold text-slate-700 dark:text-slate-200">
+                  Jendela makanmu buka jam ({m.jendela.makan} jam makan)
+                </span>
+                <select
+                  value={jamMulai}
+                  onChange={(e) => setJamMulai(e.target.value)}
+                  className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 fs-15 font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                >
+                  {Array.from({ length: 12 }, (_, i) => `${String(i + 6).padStart(2, '0')}:00`).map((j) => (
+                    <option key={j} value={j}>
+                      {j} – {String((Number(j.slice(0, 2)) + (m.jendela?.makan ?? 8)) % 24).padStart(2, '0')}:00
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            <div className="rounded-2xl bg-slate-50 p-4 fs-14 dark:bg-slate-800/60">
+              <p className="flex justify-between font-bold text-slate-900 dark:text-white">
+                <span>Biaya program</span>
+                <span>{PROGRAM_PRICE.toLocaleString('id-ID')} koin</span>
+              </p>
+              <p className="mt-1 flex justify-between text-slate-600 dark:text-slate-300">
+                <span>Saldo koinmu</span>
+                <span>{coins === null ? '–' : coins.toLocaleString('id-ID')} koin</span>
+              </p>
+            </div>
+            {kurang ? (
+              <p className="rounded-2xl bg-amber-50 px-4 py-3 fs-13 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">
+                Koinmu belum cukup. Top up koin di {app ? 'Profil › Koin' : 'Pengaturan › Koin'}, lalu kembali ke sini.
+              </p>
+            ) : null}
+            {aktif ? (
+              <p className="fs-13 text-slate-500 dark:text-slate-400">
+                Program yang sedang berjalan ({METODE_BY_KEY[aktif.diet_key]?.nama ?? aktif.diet_key}) akan dihentikan
+                dan diganti program ini.
+              </p>
+            ) : null}
+            <p className="fs-12 text-slate-500 dark:text-slate-400">
+              Kalau Leo gagal menyusun program, koinmu dikembalikan otomatis. Program bukan pengganti saran dokter.
+            </p>
+            {err ? (
+              <p className="rounded-2xl bg-rose-50 px-4 py-3 fs-13 font-semibold text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+                {err}
+              </p>
+            ) : null}
+          </div>
         ) : hasil ? (
           <div className="space-y-4">
             {hasil.hasil === 'cocok' ? (
@@ -316,8 +413,8 @@ function Detail({
             </div>
             {hasil.hasil !== 'belum' && !pro ? (
               <p className="fs-13 leading-relaxed text-slate-500 dark:text-slate-400">
-                Untuk mengikuti metode ini, Leo menyusun program 4 minggu sesuai tubuhmu (menu & latihan harian,
-                evaluasi tiap minggu). Khusus PRO, {PROGRAM_PRICE.toLocaleString('id-ID')} koin per program.
+                Untuk mengikuti metode ini, Leo menyusun program 4 minggu sesuai tubuhmu (menu & latihan harian). Khusus
+                PRO, {PROGRAM_PRICE.toLocaleString('id-ID')} koin per program.
               </p>
             ) : null}
           </div>
@@ -327,7 +424,21 @@ function Detail({
   );
 }
 
-export function MetodeView({ profile, pro, app }: { profile: FitProfile | null; pro: boolean; app: boolean }) {
+export function MetodeView({
+  profile,
+  pro,
+  app,
+  coins,
+  aktif,
+  onStarted,
+}: {
+  profile: FitProfile | null;
+  pro: boolean;
+  app: boolean;
+  coins: number | null;
+  aktif: ProgramAktif | null;
+  onStarted: (p: ProgramAktif) => void;
+}) {
   const [filter, setFilter] = useState<Kelompok | 'semua'>('semua');
   const [open, setOpen] = useState<MetodeKey | null>(null);
   const list = METODE.filter((m) => filter === 'semua' || m.kelompok === filter);
@@ -400,8 +511,14 @@ export function MetodeView({ profile, pro, app }: { profile: FitProfile | null; 
           profile={profile}
           pro={pro}
           app={app}
+          coins={coins}
+          aktif={aktif}
           onClose={() => setOpen(null)}
           onOpen={setOpen}
+          onStarted={(p) => {
+            setOpen(null);
+            onStarted(p);
+          }}
         />
       ) : null}
     </div>

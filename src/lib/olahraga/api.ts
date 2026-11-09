@@ -1,10 +1,21 @@
 import { cloudflareApi } from '@/lib/cloudflare-api';
-import type { FitProfile } from './types';
+import type { LatihanItem, Plan } from './program';
+import type { FitProfile, MetodeKey } from './types';
 
 // Olahragaku — data di akun (/api/member/fit, migrasi 0044). Tabel belum ada (ready:false / 503) →
 // profil & timbangan disimpan di perangkat (localStorage) seperti Kanvas & Pajak Center.
 
 export type Timbangan = { date: string; kg: number; waist_cm: number | null };
+export type Latihan = {
+  id: string;
+  date: string;
+  program_id: string | null;
+  kind: 'program' | 'bebas';
+  minutes: number | null;
+  kcal: number | null;
+  items: LatihanItem[];
+};
+export type ProgramAktif = { id: string; diet_key: MetodeKey; start: string; plan: Plan | null };
 export type FitData = {
   ready: boolean;
   where: 'akun' | 'perangkat';
@@ -13,6 +24,9 @@ export type FitData = {
   profile: FitProfile | null;
   weights: Timbangan[]; // terbaru dulu
   historyDays: number | null; // FREE: 7, PRO: null (semua)
+  workouts: Latihan[];
+  program: ProgramAktif | null;
+  coins: number | null;
   prefill: Partial<FitProfile> & { fromCheck?: string };
 };
 
@@ -47,6 +61,9 @@ type Raw = {
   today?: string;
   profile: FitProfile | null;
   weights: Timbangan[];
+  workouts?: Latihan[];
+  program?: ProgramAktif | null;
+  coins?: number | null;
   history_days?: number | null;
   prefill?: FitData['prefill'] | null;
 };
@@ -64,6 +81,9 @@ export async function loadFit(): Promise<FitData> {
         profile: r.profile,
         weights: r.weights ?? [],
         historyDays: r.history_days ?? null,
+        workouts: r.workouts ?? [],
+        program: r.program ?? null,
+        coins: r.coins ?? null,
         prefill: { ...(r.prefill ?? {}), ...(local.profile ?? {}) },
       };
     }
@@ -75,6 +95,9 @@ export async function loadFit(): Promise<FitData> {
       profile: local.profile,
       weights: local.weights,
       historyDays: null,
+      workouts: [],
+      program: null,
+      coins: null,
       prefill: r.prefill ?? {},
     };
   } catch {
@@ -86,6 +109,9 @@ export async function loadFit(): Promise<FitData> {
       profile: local.profile,
       weights: local.weights,
       historyDays: null,
+      workouts: [],
+      program: null,
+      coins: null,
       prefill: {},
     };
   }
@@ -144,3 +170,32 @@ export async function deleteAllFit() {
     /* tabel belum ada → tidak ada data di akun */
   }
 }
+
+// ── Rilis 2: program & latihan (butuh akun; tidak ada cadangan di perangkat) ─────────────────────────
+export async function startProgram(input: {
+  requestId: string;
+  dietKey: MetodeKey;
+  jawaban: Record<string, string | number>;
+  jendelaMulai?: string;
+}): Promise<ProgramAktif> {
+  const r = await cloudflareApi<{ program: ProgramAktif }>('/api/member/fit/programs', {
+    method: 'POST',
+    json: {
+      request_id: input.requestId,
+      diet_key: input.dietKey,
+      jawaban: input.jawaban,
+      jendela_mulai: input.jendelaMulai,
+    },
+  });
+  return r.program;
+}
+
+export const endProgram = (id: string) => cloudflareApi(`/api/member/fit/programs/${id}/end`, { method: 'POST' });
+
+export const saveWorkout = (w: { id: string; date: string; items: LatihanItem[]; programId?: string | null }) =>
+  cloudflareApi<{ minutes: number; kcal: number }>('/api/member/fit/workouts', {
+    method: 'POST',
+    json: { id: w.id, date: w.date, items: w.items, program_id: w.programId ?? undefined },
+  });
+
+export const deleteWorkout = (id: string) => cloudflareApi(`/api/member/fit/workouts/${id}`, { method: 'DELETE' });

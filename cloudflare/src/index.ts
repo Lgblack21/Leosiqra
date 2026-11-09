@@ -8,7 +8,12 @@ import {
   type VapidKeys,
 } from "@block65/webcrypto-web-push";
 import { computeCardCycle, clampCycleDay, lastStatementDate, dueDateFor, daysBetween, type CardCycleSettings } from "../../src/lib/creditCycle";
-import { AKTIVITAS, KONDISI } from "../../src/lib/olahraga/types";
+import { AKTIVITAS, KONDISI, METODE_KEYS, type FitProfile, type Gerakan, type Metode, type MetodeKey } from "../../src/lib/olahraga/types";
+import { METODE_BY_KEY } from "../../src/lib/olahraga/metode";
+import { GERAKAN, GERAKAN_BY_KEY } from "../../src/lib/olahraga/gerakan";
+import { statusMetode, nilaiKuis, type JawabanSanggup } from "../../src/lib/olahraga/rules";
+import { hitung as hitungFit } from "../../src/lib/olahraga/hitung";
+import { PROGRAM_HARI, PROGRAM_PRICE, gerakanAman, hariKe, perkiraanLatihan, sanitizePlan, type Plan } from "../../src/lib/olahraga/program";
 
 export interface Env {
   DB: D1Database;
@@ -13664,7 +13669,11 @@ async function handleMemberTax(request: Request, env: Env, url: URL) {
 
 // ── Olahragaku (migrasi 0044) ───────────────────────────────────────────────
 // Data tubuh = data sensitif: semua query terikat user_id sesi, tidak dikirim ke mana pun (R1 tanpa AI).
-// GET    /api/member/fit               → { ready, pro, profile, weights, prefill } (FREE: timbangan 7 hari terakhir)
+// GET    /api/member/fit               → { ready, pro, profile, weights, workouts, program, coins, prefill } (FREE: timbangan 7 hari terakhir)
+// POST   /api/member/fit/programs      → { request_id, diet_key, jawaban, jendela_mulai? } PRO + PROGRAM_PRICE koin → AI
+// POST   /api/member/fit/programs/:id/end
+// POST   /api/member/fit/workouts      → { id (UUID klien), date, items:[{key,set,jumlah}], program_id? } — ulang = 200
+// DELETE /api/member/fit/workouts/:id
 // PUT    /api/member/fit/profile       → { profile } — berat ikut dicatat sebagai timbangan hari ini
 // POST   /api/member/fit/weights       → { date, kg, waist_cm? } — satu catatan per tanggal (ulang = ditimpa)
 // DELETE /api/member/fit/weights/:date
@@ -13733,6 +13742,195 @@ const fitPrefill = async (env: Env, userId: string) => {
   } catch { /* abaikan */ }
   return out;
 };
+// ── Olahragaku R2: program 4 minggu (AI, PRO + koin) & catatan latihan ─────────────────────────────────
+// Program: koin dipotong atomik (idem per request_id) SEBELUM model dipanggil. Input ke AI hanya angka &
+// pilihan dari whitelist (tanpa teks bebas user) → refund saat AI gagal/hasil tak layak tidak bisa
+// disalahgunakan untuk memanggil model gratis berulang (beda dengan Makanku yang menerima teks/foto bebas).
+const FIT_PROGRAM_MODELS = ["google/gemini-2.5-flash", "google/gemini-2.5-flash-lite"];
+const wibDate = (iso: string) => new Date(Date.parse(iso) + 7 * 3600_000).toISOString().slice(0, 10);
+const readFitProfile = async (env: Env, userId: string, today: string) => {
+  const row = await env.DB.prepare(
+    "SELECT sex, birth_year, height_cm, activity, goal_kg, conditions_json, equipment, experience, updated_at FROM fit_profiles WHERE user_id = ?"
+  ).bind(userId).first<{ sex: string; birth_year: number; height_cm: number; activity: string; goal_kg: number | null; conditions_json: string; equipment: string; experience: string; updated_at: string }>();
+  if (!row) return null;
+  const last = await env.DB.prepare("SELECT kg, waist_cm FROM fit_weights WHERE user_id = ? ORDER BY date DESC LIMIT 1")
+    .bind(userId).first<{ kg: number; waist_cm: number | null }>();
+  let conditions: unknown = [];
+  try { conditions = JSON.parse(row.conditions_json); } catch { conditions = []; }
+  const profile = sanitizeFitProfile({
+    sex: row.sex, birthYear: row.birth_year, heightCm: row.height_cm, weightKg: last?.kg, waistCm: last?.waist_cm,
+    activity: row.activity, goalKg: row.goal_kg, conditions, equipment: row.equipment, experience: row.experience,
+  }, today) as FitProfile | null;
+  return profile ? { profile, updated_at: row.updated_at } : null;
+};
+type FitProgramRow = { id: string; diet_key: string; status: string; plan_json: string | null; started_at: string; quiz_json: string | null };
+const readActiveProgram = async (env: Env, userId: string, today: string) => {
+  const row = await env.DB.prepare("SELECT id, diet_key, status, plan_json, started_at, quiz_json FROM fit_programs WHERE user_id = ? AND status = 'aktif' LIMIT 1")
+    .bind(userId).first<FitProgramRow>();
+  if (!row) return null;
+  const start = wibDate(row.started_at);
+  if (hariKe(start, today) > PROGRAM_HARI) {
+    await env.DB.prepare("UPDATE fit_programs SET status = 'selesai', ended_at = ?, end_reason = 'selesai' WHERE id = ? AND user_id = ? AND status = 'aktif'")
+      .bind(nowIso(), row.id, userId).run();
+    return null;
+  }
+  let plan: unknown = null;
+  try { plan = row.plan_json ? JSON.parse(row.plan_json) : null; } catch { plan = null; }
+  return { id: row.id, diet_key: row.diet_key, start, plan };
+};
+const fitProgramPrompt = (p: FitProfile, m: Metode, h: ReturnType<typeof hitungFit>, catatan: string | null, jendela: Plan["jendela"], gerakan: Gerakan[]) => {
+  const kondisi = KONDISI.filter((k) => p.conditions.includes(k.key)).map((k) => k.label);
+  const akt = AKTIVITAS.find((a) => a.key === p.activity)?.label ?? p.activity;
+  return `Kamu pelatih kebugaran & ahli gizi untuk orang Indonesia. Susun program 4 minggu yang AMAN, realistis, dan ramah pemula.
+
+PROFIL (angka sudah dihitung, JANGAN diubah):
+- ${p.sex === "l" ? "Laki-laki" : "Perempuan"}, ${h.umur} tahun, tinggi ${p.heightCm} cm, berat ${p.weightKg} kg${p.goalKg ? `, target ${p.goalKg} kg` : ""}, IMT ${h.imt ?? "-"} (${h.kategori ?? "-"})
+- Aktivitas: ${akt}. Pengalaman: ${p.experience === "belum" ? "baru mulai" : p.experience === "pernah" ? "pernah, lalu berhenti" : "sudah rutin"}. Alat: ${p.equipment === "tanpa" ? "tanpa alat (di rumah)" : p.equipment === "dumbbell" ? "dumbbell/karet di rumah" : "akses gym"}.
+- Kondisi kesehatan: ${kondisi.length ? kondisi.join("; ") : "tidak ada yang dicentang"}.
+- Target kalori ${h.targetKalori} kkal/hari, protein ${h.proteinG.min}–${h.proteinG.max} g/hari.
+
+METODE DIET: ${m.nama} — ${m.ringkas}
+${m.caraKerja.join(" ")}
+${jendela ? `Jendela makan: mulai ${jendela.mulai}, makan ${jendela.makan} jam, puasa ${jendela.puasa} jam. SEMUA jam makan di menu WAJIB di dalam jendela ini.` : ""}
+${catatan ? `Catatan kecocokan: ${catatan}` : ""}
+
+GERAKAN YANG BOLEH DIPAKAI (key | nama | kategori | satuan | dosis pemula set×jumlah). HANYA pakai key dari daftar ini:
+${gerakan.map((g) => `${g.key} | ${g.nama} | ${g.kategori} | ${g.satuan} | ${g.bawaan.set}×${g.bawaan.jumlah}`).join("\n")}
+
+ATURAN:
+- Minggu 1 pakai dosis pemula; naik pelan (maks ±20% per minggu). 3–5 hari latihan per minggu, sisanya "Istirahat aktif" (boleh jalan santai atau gerakan [] kosong).
+- Tiap hari latihan 3–7 gerakan: pemanasan ringan, inti, peregangan. Sesuaikan dengan kondisi kesehatan (tanpa lompatan kalau berat badan tinggi/lutut sakit).
+- Menu: makanan lokal sederhana & terjangkau, porsi wajar mendekati target kalori, 2 contoh hari per minggu, 3–5 waktu makan per hari, jam format "HH.MM".
+- Bahasa Indonesia santai, pakai "kamu". Tanpa klaim medis, tanpa janji angka kg, tanpa suplemen/obat.
+
+Balas HANYA satu objek JSON valid:
+{"ringkasan": string (≤ 300 karakter), "aturanMakan": [string, 3–6 butir], "minggu": [{"ke": 1-4, "fokus": string, "tips": [string, 2–3], "menu": [{"nama": string, "makan": [{"jam": "HH.MM", "isi": string}]}], "latihan": [{"hari": 1-7, "judul": string, "gerakan": [{"key": string, "set": number, "jumlah": number}]}]}]}
+"minggu" berisi tepat 4 objek (ke 1–4), "latihan" tiap minggu berisi 7 hari.`;
+};
+async function handleFitProgramStart(request: Request, env: Env, userId: string, today: string) {
+  if (!(await isProUser(env, userId))) return json({ error: "Mengikuti program khusus PRO.", code: "pro_only" }, { status: 403 });
+  const raw = await parseJson<Record<string, unknown>>(request);
+  const requestId = typeof raw.request_id === "string" && /^[0-9a-f-]{36}$/i.test(raw.request_id) ? raw.request_id.toLowerCase() : null;
+  const m = typeof raw.diet_key === "string" && (METODE_KEYS as readonly string[]).includes(raw.diet_key) ? METODE_BY_KEY[raw.diet_key as MetodeKey] : null;
+  if (!requestId || !m) return json({ error: "Data program tidak lengkap." }, { status: 400 });
+  // Klik ulang dengan request_id sama → kembalikan program yang sudah jadi, tanpa potong koin lagi.
+  const done = await env.DB.prepare("SELECT id FROM fit_programs WHERE id = ? AND user_id = ?").bind(requestId, userId).first();
+  if (done) return json({ ok: true, duplicate: true, program: await readActiveProgram(env, userId, today) });
+  const fp = await readFitProfile(env, userId, today);
+  if (!fp) return json({ error: "Isi profil tubuhmu dulu di tab Program." }, { status: 400 });
+  const p = fp.profile;
+  const st = statusMetode(m.key, p);
+  if (!st.boleh) return json({ error: st.alasan[0] ?? "Metode ini tidak disarankan untukmu.", code: "locked" }, { status: 400 });
+  const jawaban = raw.jawaban && typeof raw.jawaban === "object" && !Array.isArray(raw.jawaban) ? (raw.jawaban as Record<string, unknown>) : {};
+  const jw: Record<string, JawabanSanggup | number | undefined> = {};
+  for (const q of m.pertanyaan) {
+    const v = jawaban[q.id];
+    jw[q.id] = q.jenis === "sanggup" ? (v === "ya" || v === "mungkin" || v === "tidak" ? v : undefined) : Number.isInteger(v) ? (v as number) : undefined;
+  }
+  if (m.pertanyaan.some((q) => jw[q.id] === undefined)) return json({ error: "Jawab semua pertanyaan kecocokan dulu." }, { status: 400 });
+  const kuis = nilaiKuis(m.pertanyaan, jw);
+  if (kuis.hasil === "belum") return json({ error: "Dari jawabanmu, metode ini belum cocok. Coba metode lain.", code: "quiz" }, { status: 400 });
+  let jendela: Plan["jendela"] = null;
+  if (m.jendela) {
+    const mulai = typeof raw.jendela_mulai === "string" && /^([01]\d|2[0-3]):00$/.test(raw.jendela_mulai) ? raw.jendela_mulai : "12:00";
+    jendela = { mulai, puasa: m.jendela.puasa, makan: m.jendela.makan };
+  }
+  if (!(await checkAiParseRateLimit(env, userId))) return json({ error: "Terlalu sering. Coba lagi sebentar lagi." }, { status: 429 });
+  const openRouter = await getOpenRouterKey(env);
+  if (!openRouter) return json({ error: "AI belum aktif. Koinmu tidak dipotong.", code: "ai_unavailable" }, { status: 503 });
+
+  const chargeKey = `fit_program:${userId}:${requestId}`;
+  let debit: D1Result;
+  try {
+    debit = await env.DB.prepare(
+      `INSERT OR IGNORE INTO coin_ledger (id, user_id, amount, kind, cashable, idem_key, note, created_at)
+       SELECT ?, ?, ?, 'fit_program', 0, ?, ?, ? WHERE (SELECT COALESCE(SUM(amount), 0) FROM coin_ledger WHERE user_id = ?) >= ?`
+    ).bind(generateId(), userId, -PROGRAM_PRICE, chargeKey, `Program Olahragaku · ${m.nama}`, nowIso(), userId, PROGRAM_PRICE).run();
+  } catch (e) {
+    if (coinTableMissing(e)) return json({ error: "Koin belum aktif.", code: "no_coins", price: PROGRAM_PRICE }, { status: 402 });
+    throw e;
+  }
+  if (!debit.meta.changes) {
+    const dup = await env.DB.prepare("SELECT 1 FROM coin_ledger WHERE idem_key = ?").bind(chargeKey).first();
+    if (dup) return json({ error: "Programmu sedang disusun. Tunggu sebentar lalu muat ulang.", code: "in_progress" }, { status: 409 });
+    const bal = await coinBalances(env, userId).catch(() => ({ balance: 0 }));
+    return json({ error: `Koinmu belum cukup (butuh ${PROGRAM_PRICE.toLocaleString("id-ID")} koin). Top up koin di Profil › Koin.`, code: "no_coins", price: PROGRAM_PRICE, balance: bal.balance }, { status: 402 });
+  }
+  const refund = () => grantCoins(env, userId, PROGRAM_PRICE, "fit_program_refund", `refund:${chargeKey}`, "Pengembalian program Olahragaku").catch((e) => console.error("Refund program gagal:", e));
+
+  const h = hitungFit(p, new Date(Date.now() + 7 * 3600_000));
+  const allowed = gerakanAman(GERAKAN, p);
+  const allowedByKey = Object.fromEntries(allowed.map((g) => [g.key, g]));
+  const prompt = fitProgramPrompt(p, m, h, kuis.hasil === "catatan" ? m.bilaMungkin : null, jendela, allowed);
+  let plan: Plan | null = null;
+  try {
+    for (let attempt = 0; attempt < 2 && !plan; attempt++) {
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${openRouter.key}`, "http-referer": env.APP_URL || "https://www.leosiqra.com", "x-title": env.APP_NAME || "Leosiqra" },
+        body: JSON.stringify({
+          models: FIT_PROGRAM_MODELS,
+          route: "fallback",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.4,
+          max_tokens: 9000,
+          response_format: { type: "json_object" },
+        }),
+        signal: AbortSignal.timeout(90_000),
+      });
+      if (!response.ok) throw new Error(`OpenRouter request gagal (${response.status}): ${(await response.text()).slice(0, 300)}`);
+      const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+      const content = data.choices?.[0]?.message?.content?.trim() ?? "";
+      try {
+        plan = sanitizePlan(JSON.parse(stripJsonFences(content)), allowedByKey, { targetKalori: h.targetKalori, proteinG: h.proteinG, jendela });
+      } catch {
+        plan = null;
+      }
+      if (!plan) console.error("Olahragaku: rencana AI tidak layak (percobaan", attempt + 1, ")", content.slice(0, 200));
+    }
+  } catch (error) {
+    await refund();
+    if (isAiQuotaError(error)) {
+      await notifyAiQuotaOnce(env);
+      return json({ error: `${AI_QUOTA_MESSAGE} Koinmu sudah dikembalikan.`, code: "ai_quota" }, { status: 503 });
+    }
+    console.error("Olahragaku: AI gagal", error instanceof Error ? error.message : error);
+    return json({ error: "AI sedang gangguan. Koinmu sudah dikembalikan — coba lagi sebentar lagi.", code: "ai_unavailable" }, { status: 503 });
+  }
+  if (!plan) {
+    await refund();
+    return json({ error: "Leo belum berhasil menyusun programmu. Koinmu sudah dikembalikan — coba lagi.", code: "ai_invalid" }, { status: 502 });
+  }
+  const now = nowIso();
+  try {
+    await env.DB.batch([
+      env.DB.prepare("UPDATE fit_programs SET status = 'berhenti', ended_at = ?, end_reason = 'ganti' WHERE user_id = ? AND status = 'aktif'").bind(now, userId),
+      env.DB.prepare(
+        `INSERT INTO fit_programs (id, user_id, diet_key, workout_key, status, quiz_json, plan_json, ai, started_at, created_at)
+         VALUES (?, ?, ?, NULL, 'aktif', ?, ?, 1, ?, ?)`
+      ).bind(requestId, userId, m.key, JSON.stringify({ hasil: kuis.hasil, jawaban: jw }), JSON.stringify(plan), now, now),
+      // Target harian Makanku ikut target program (rentang yang sama dengan readMealTarget).
+      env.DB.prepare("UPDATE users SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.mealTarget', ?) WHERE id = ?")
+        .bind(Math.min(6000, Math.max(800, plan.targetKalori)), userId),
+    ]);
+  } catch (e) {
+    await refund();
+    throw e;
+  }
+  return json({ ok: true, price: PROGRAM_PRICE, program: { id: requestId, diet_key: m.key, start: wibDate(now), plan } }, { status: 201 });
+}
+const sanitizeWorkoutItems = (raw: unknown) =>
+  (Array.isArray(raw) ? raw : []).slice(0, 12).flatMap((x) => {
+    const r = (x ?? {}) as Record<string, unknown>;
+    const g = typeof r.key === "string" ? GERAKAN_BY_KEY[r.key] : undefined;
+    if (!g) return [];
+    const max = g.satuan === "menit" ? 240 : g.satuan === "detik" ? 600 : 200;
+    const set = Math.round(Number(r.set));
+    const jumlah = Math.round(Number(r.jumlah));
+    if (!Number.isFinite(set) || set < 1 || set > 10 || !Number.isFinite(jumlah) || jumlah < 1 || jumlah > max) return [];
+    return [{ key: g.key, set, jumlah }];
+  });
+
 async function handleMemberFit(request: Request, env: Env, pathname: string) {
   const authResult = await requireSession(env, request);
   if (authResult.error) return authResult.error;
@@ -13741,29 +13939,62 @@ async function handleMemberFit(request: Request, env: Env, pathname: string) {
   try {
     if (pathname === "/api/member/fit" && request.method === "GET") {
       const pro = await isProUser(env, userId);
-      const row = await env.DB.prepare(
-        "SELECT sex, birth_year, height_cm, activity, goal_kg, conditions_json, equipment, experience, updated_at FROM fit_profiles WHERE user_id = ?"
-      ).bind(userId).first<{ sex: string; birth_year: number; height_cm: number; activity: string; goal_kg: number | null; conditions_json: string; equipment: string; experience: string; updated_at: string }>();
+      const fp = await readFitProfile(env, userId, today);
       const since = shiftDateStr(today, pro ? -730 : -(FIT_FREE_DAYS - 1));
       const weights = (await env.DB.prepare(
         "SELECT date, kg, waist_cm FROM fit_weights WHERE user_id = ? AND date >= ? ORDER BY date DESC LIMIT 800"
       ).bind(userId, since).all<{ date: string; kg: number; waist_cm: number | null }>()).results ?? [];
-      // Berat terakhir dibaca tanpa batas tanggal (FREE yang lama tidak menimbang tetap punya berat di profil).
-      const last = await env.DB.prepare("SELECT kg, waist_cm FROM fit_weights WHERE user_id = ? ORDER BY date DESC LIMIT 1")
-        .bind(userId).first<{ kg: number; waist_cm: number | null }>();
-      let conditions: unknown = [];
-      try { conditions = row ? JSON.parse(row.conditions_json) : []; } catch { conditions = []; }
-      const profile = row
-        ? sanitizeFitProfile({
-            sex: row.sex, birthYear: row.birth_year, heightCm: row.height_cm, weightKg: last?.kg, waistCm: last?.waist_cm,
-            activity: row.activity, goalKg: row.goal_kg, conditions, equipment: row.equipment, experience: row.experience,
-          }, today)
-        : null;
-      return json({
-        ready: true, pro, today, profile, updated_at: row?.updated_at ?? null, weights,
-        history_days: pro ? null : FIT_FREE_DAYS,
-        prefill: profile ? null : await fitPrefill(env, userId),
+      const workouts = ((await env.DB.prepare(
+        "SELECT id, date, program_id, kind, minutes, kcal, items_json FROM fit_workouts WHERE user_id = ? AND date >= ? ORDER BY date DESC, created_at DESC LIMIT 300"
+      ).bind(userId, shiftDateStr(today, pro ? -90 : -(FIT_FREE_DAYS - 1))).all<{ id: string; date: string; program_id: string | null; kind: string; minutes: number | null; kcal: number | null; items_json: string | null }>()).results ?? []).map(({ items_json, ...w }) => {
+        let items: unknown = [];
+        try { items = items_json ? JSON.parse(items_json) : []; } catch { items = []; }
+        return { ...w, items };
       });
+      const program = await readActiveProgram(env, userId, today);
+      const coins = await coinBalances(env, userId).then((b) => b.balance).catch(() => null);
+      return json({
+        ready: true, pro, today, profile: fp?.profile ?? null, updated_at: fp?.updated_at ?? null, weights, workouts, program, coins,
+        program_price: PROGRAM_PRICE,
+        history_days: pro ? null : FIT_FREE_DAYS,
+        prefill: fp ? null : await fitPrefill(env, userId),
+      });
+    }
+    if (pathname === "/api/member/fit/programs" && request.method === "POST") {
+      return await handleFitProgramStart(request, env, userId, today);
+    }
+    const pe = /^\/api\/member\/fit\/programs\/([0-9a-f-]{36})\/end$/i.exec(pathname);
+    if (pe && request.method === "POST") {
+      const res = await env.DB.prepare("UPDATE fit_programs SET status = 'berhenti', ended_at = ?, end_reason = 'berhenti' WHERE id = ? AND user_id = ? AND status = 'aktif'")
+        .bind(nowIso(), pe[1].toLowerCase(), userId).run();
+      if (!res.meta.changes) return json({ error: "Program aktif tidak ditemukan." }, { status: 404 });
+      return json({ ok: true });
+    }
+    if (pathname === "/api/member/fit/workouts" && request.method === "POST") {
+      const raw = await parseJson<Record<string, unknown>>(request);
+      const id = typeof raw.id === "string" && /^[0-9a-f-]{36}$/i.test(raw.id) ? raw.id.toLowerCase() : null;
+      const date = raw.date === undefined ? today : raw.date;
+      if (!id || !fitDateOk(date, today)) return json({ error: "Data latihan tidak valid." }, { status: 400 });
+      const items = sanitizeWorkoutItems(raw.items);
+      if (!items.length) return json({ error: "Pilih minimal satu gerakan." }, { status: 400 });
+      let programId: string | null = null;
+      if (typeof raw.program_id === "string") {
+        const own = await env.DB.prepare("SELECT id FROM fit_programs WHERE id = ? AND user_id = ?").bind(raw.program_id.toLowerCase(), userId).first<{ id: string }>();
+        programId = own?.id ?? null;
+      }
+      const last = await env.DB.prepare("SELECT kg FROM fit_weights WHERE user_id = ? ORDER BY date DESC LIMIT 1").bind(userId).first<{ kg: number }>();
+      const est = perkiraanLatihan(items, GERAKAN_BY_KEY, last?.kg ?? 70);
+      const res = await env.DB.prepare(
+        `INSERT OR IGNORE INTO fit_workouts (id, user_id, date, program_id, kind, minutes, kcal, items_json, note, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)`
+      ).bind(id, userId, date, programId, programId ? "program" : "bebas", est.menit, est.kkal, JSON.stringify(items), nowIso()).run();
+      return json({ ok: true, duplicate: !res.meta.changes, minutes: est.menit, kcal: est.kkal }, { status: res.meta.changes ? 201 : 200 });
+    }
+    const wd = /^\/api\/member\/fit\/workouts\/([0-9a-f-]{36})$/i.exec(pathname);
+    if (wd && request.method === "DELETE") {
+      const res = await env.DB.prepare("DELETE FROM fit_workouts WHERE id = ? AND user_id = ?").bind(wd[1].toLowerCase(), userId).run();
+      if (!res.meta.changes) return json({ error: "Catatan latihan tidak ditemukan." }, { status: 404 });
+      return json({ ok: true });
     }
     if (pathname === "/api/member/fit/profile" && request.method === "PUT") {
       const raw = await parseJson<Record<string, unknown>>(request);
@@ -13806,7 +14037,7 @@ async function handleMemberFit(request: Request, env: Env, pathname: string) {
     return json({ error: "Not found" }, { status: 404 });
   } catch (e) {
     if (fitTableMissing(e)) {
-      if (request.method === "GET") return json({ ready: false, profile: null, weights: [], prefill: await fitPrefill(env, userId) });
+      if (request.method === "GET") return json({ ready: false, profile: null, weights: [], workouts: [], program: null, prefill: await fitPrefill(env, userId) });
       return json({ error: "Olahragaku belum aktif (menunggu pembaruan database). Datamu disimpan di perangkat dulu.", code: "not_ready" }, { status: 503 });
     }
     if (e instanceof Error && e.message === "Payload JSON tidak valid.") return json({ error: "Payload JSON tidak valid." }, { status: 400 });

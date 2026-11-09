@@ -4,7 +4,7 @@ Catatan bersama untuk semua session Claude Code (dua akun memakai repo yang
 sama, tidak ada ingatan yang terbagi selain file ini dan riwayat git).
 **Baca di awal session, perbarui di akhir session, commit & push.**
 
-Terakhir diperbarui: 2026-11-09 (3.26.0 Olahragaku R1 siap di branch claude/friendly-galileo-omr8xf, BELUM deploy — butuh SQL 0044)
+Terakhir diperbarui: 2026-11-09 (3.26.0 Olahragaku R1+R2 siap di branch claude/friendly-galileo-omr8xf, BELUM deploy — butuh SQL 0044)
 
 ## Siapa sedang kerja
 
@@ -18,7 +18,7 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
 
 ## Menunggu
 
-- **2026-11-09 — 3.26.0 Olahragaku (Rilis 1 dari 3) — BELUM DEPLOY. BUTUH SQL 0044.** Branch
+- **2026-11-09 — 3.26.0 Olahragaku (Rilis 1 + 2 dari 3) — BELUM DEPLOY. BUTUH SQL 0044.** Branch
   `claude/friendly-galileo-omr8xf` (juga membawa c6fe32e langkah unshallow routine + triase audit 09-11).
   Rancangan & keputusan Bos: `docs/rancangan/olahragaku.md` (bagian 9).
   - **MIGRASI 0044 (`cloudflare/migrations/0044_olahraga.sql`)**, additive: `fit_profiles`, `fit_weights`
@@ -40,7 +40,17 @@ sama, jangan ubah file yang sama — tanya Bos dulu.
     cocok manual (P 36 th 158 cm 92,5 kg → BMR 1.572, TDEE 1.886, target 1.386), 5 metode terkunci untuk maag+pemula,
     kuis → hasil, saran alternatif hanya metode yang boleh, timbangan tersimpan, sehat#makan → olahraga#makan, HP tanpa
     overflow, 0 error JS (selain beacon Cloudflare Insights di localhost).
-  - Belum: R2 (mulai program AI 5.000 koin, ±40 gerakan + ilustrasi sendiri, latihan harian), R3 (evaluasi mingguan
+  - **R2 (sesi yang sama)**: `POST /api/member/fit/programs` (PRO, `PROGRAM_PRICE` 5.000 koin di `src/lib/olahraga/program.ts`,
+    debit atomik idem `fit_program:<uid>:<request_id>` → OpenRouter gemini-2.5-flash/lite max_tokens 9000, 2 percobaan →
+    `sanitizePlan` → batch tutup program lama + insert + set `$.mealTarget`; gagal → refund `refund:<idem>`),
+    `/programs/:id/end`, `/fit/workouts` (kkal MET server). `src/lib/olahraga/gerakan.ts` 40 gerakan (tanpa gambar),
+    `gerakanAman` (alat, kondisi, IMT ≥30/sendi → low-impact, jantung/pingsan → duduk/peregangan/MET ≤3). UI: sheet
+    bayar di detail metode, kartu program aktif (tab Program), tab Latihan, `MakanBanner`. Dites dengan mock OpenRouter
+    (salinan index.ts, URL di-sed ke 127.0.0.1:8790): FREE 403, terkunci/kuis 400 tanpa potong, AI ngawur & 500 →
+    refund, sukses 6.000→1.000, id sama tanpa potong, koin kurang 402, klik ganda bersamaan 1× potong + 409, IDOR 404,
+    gerakan palsu dibuang, dosis dibatasi, menu di luar jendela dibuang; Playwright Pixel 7 & 1280 alur beli → latihan →
+    banner, 0 error JS. **Belum dites dengan model asli** (kualitas program Gemini sungguhan + waktu respons, timeout 90 s).
+  - Belum: ilustrasi gerakan (butuh OpenRouter key di sesi atau dibuat setelah deploy), R3 (evaluasi mingguan
     1.500, tanya coach 3/hari lalu 300, pengingat jendela makan). Fakta konten yang perlu dicek Bos/ahli: batas gula
     50 g, protein 1,2–1,6 g/kg berat target, keto 20–50 g karbo, tahap 5:2 800 kkal (karangan, bukan standar).
 

@@ -125,7 +125,14 @@ menjorok 2 spasi; **tebal** dan `kode` boleh.
   obat diabetes) dikunci dan diganti saran metode lain. Metode tingkat lanjut terbuka setelah kamu terbiasa.
 - **Progres**: catat timbangan & lingkar perut, lihat grafik berat menuju target.
 - **Makanku pindah ke Olahragaku** (tab Makan). Sehatku kini khusus Cek kesehatan & Asuransi.
-- Membaca semua metode gratis. Program 4 minggu yang disusun AI untuk tubuhmu (PRO + koin) menyusul.
+- **Program 4 minggu oleh Leo (PRO, 5.000 koin)**: setelah metode dinyatakan cocok, Leo menyusun program khusus
+  untukmu — contoh menu tiap minggu (sesuai jendela makanmu), latihan harian yang naik pelan, fokus & tips mingguan.
+  Target kalori & protein tetap dari hitunganmu. Kalau Leo gagal menyusun, koin dikembalikan otomatis.
+- **Latihan**: latihan hari ini dari programmu (cara tiap gerakan, tandai selesai), catat latihan lain, riwayat
+  latihan dengan perkiraan menit & kalori, dan **perpustakaan 40 gerakan** yang ditandai aman untuk kondisi & alatmu
+  (banyak versi duduk di kursi untuk pemula, lutut sakit, atau berat badan tinggi).
+- Tab Makan menampilkan jendela makan (buka/tutup), kalori & protein hari ini dibanding target programmu.
+- Membaca semua metode diet, kuis kecocokan, perpustakaan gerakan, dan catat latihan bisa dipakai akun Gratis.
 
 ## 3.25.0 — 2026-11-09 — Pajak Center baru
 
